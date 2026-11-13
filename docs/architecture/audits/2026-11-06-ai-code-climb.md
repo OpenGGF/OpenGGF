@@ -2666,3 +2666,3968 @@ lifecycle branch/worktree and PR269 are retained for unified delivery accounting
 Only ai-code-climb is authorized for publication to existing draft PR266; no
 destination branch merge/push, new PR, additional review or future-sweep patch
 belongs to this batch. The wider contributor-score goal remains unmet.
+
+### Follow-up: report gate ownership and visible scene operations — 2026-11-08
+
+PR266 was published at ce5742f69 and then merged into develop as f6287642a.
+The user explicitly selected a new follow-up draft PR for this local cleanup
+and subsequent increments. Its isolated branch is feature/ai-code-climb-followup,
+based on updated origin/develop at f6287642a. The unrelated upstream KIS2 life-icon
+conversion, art provider/player-art, test and discrepancy changes are retained.
+The main workspace's branch and its dirty submodules/untracked files were not
+changed. The new worktree uses tracked-file reflinks, with no build-tree copying.
+
+Sol's bounded implementation removes two competing ReplayGate models and the
+normal writer-side serialize/parse/append/re-encode stage. DivergenceReport now
+owns the value and strict optional wire codec. The replay driver still declares
+completion; zero comparisons never imply an incomplete gate, and a matching
+prefix never implies completion. The writer retains scope agreement and ordered
+report/context/owner publication; triage consumes the report-owned observation.
+Absent legacy metadata remains UNKNOWN. Present malformed metadata, wrong types,
+missing fields, nonpositive/overflow rows and noncanonical scope values fail;
+extra fields remain accepted. Internal Java gate references migrated together;
+there is no Mod API descriptor/signature/version change.
+
+ScenePresentationPass's existing owner now spells out setup, terrain boundaries,
+capture, restoration and abort in operation order, with braced control bodies.
+The source token order and comments are preserved apart from braces around the
+existing single-statement bodies. Opus independently checked this, including GL
+queries/field initialization, texture units 0–6, draw/read framebuffers, viewport
+and shader caches, and saved-state retirement before cleanup. No new scene state,
+facade or renderer helper was introduced. This is a local readability change;
+no contributor-trial score is inferred from it.
+
+The first seven-class focused run passed 105 cases without failures/errors/skips.
+Opus nevertheless found a genuine guard regression: the initial refactor changed
+the old broad-catch fingerprint and introduced a second catch-and-fallback site.
+A targeted guard witness executed four cases with exactly that one assertion
+failure and no errors/skips. Its three exact key differences are retained in
+the original worktree's target/code-climb/gate-broad-catch-red-surefire.
+Queue/Maven times were 54s/89s for the first selection and 25s/33.360s for RED.
+
+The repair uses one serialization attempt and one existing broad error-document
+boundary for both overloads. A private Serialization result carries the existing
+success/error-document distinction; only the error-document path performs the
+historical parse/append/re-encode. Malformed error documents still fail before
+publication, while formerly valid error documents retain their gate. The original
+error literal is unchanged. The inventory rekeys exactly one row from toJson()
+hash 825b6185 to serialize(ReplayGate) hash ac044080. All 1015 allowances across
+1013 rows remain; scanner, guard and budgets are unchanged. Opus explicitly
+approved this as relocation of the same owning boundary, not an additional
+recovery allowance. Its original unresolved-debt reason is retained as a prefix:
+this cleanup does not decide whether returning an error document is the right
+legacy policy or remove it from unresolved debt. Independent prefix counts remain
+525 rows on both the new base and this follow-up.
+
+Other review repairs seed distinguishable prior-owner bytes before a failed
+republish, exercise the actual producer-to-CLI path for malformed wire values,
+cover every enum scope, and correct the design's obsolete test-only wording.
+The repaired eight-class selection passed 125 cases, zero failures/errors/skips,
+at the frozen ce574-plus-diff source approved by Opus. Queue/Maven: 26s/93s.
+The final follow-up adds four missing-field CLI cases and retains the debt wording;
+reviewed production files are byte-identical after transfer to the new base.
+
+The source-specific HCZ pair used trace-segments with Java25/Lua5.4, unset
+displays, surfaceless EGL, one alphabetical fork and fresh output directories.
+Both reports are byte-identical to the retained 33c baseline: HCZ1 passes with
+3519 comparisons/3574 planned rows; HCZ2 retains 26 errors across 14149
+comparisons/14208 planned rows. All-scope gates are reached, bootstrap and report
+warnings remain zero, and eight advertised auxiliary schemas remain absent.
+The pair exits1 from the inherited HCZ2 assertion, not from an invocation error
+or skip. Exact paths: original ai-code-climb worktree's
+target/code-climb/gate-scene-hcz-{surefire,reports}; log gate-scene-hcz.log.
+These checks ran before the upstream KIS2-only reconciliation and are not claimed
+as new-base route certification. No trace frontier moved.
+
+Limits: reviews were static. No repository subclass overrides toJson(), but the
+gated path no longer dispatches that overridable method. Removing normal JSON
+reparsing also removes its incidental Jackson read limit for strings exceeding
+20 million characters; this is not exercised by the bounded report fixtures.
+The error-document fallback remains unresolved debt. No score reassessment or
+new whole-suite pass is claimed. The old complete broad qualification and its
+raw FAILED verdict remain prior-source evidence only.
+
+Current-worktree focused checks and final publication evidence follow below.
+
+On the updated f6287642a base, the eight named classes executed 129 cases with
+zero failures/errors/skips. Fresh XML includes all four BroadCatchSwallowingGuard
+cases and all 65 triage cases. The command was:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Dopenggf.surefire.reports=target/code-climb/followup-focused-surefire '-Dtest=TestDivergenceReport,TestTraceGateCompletionReport,TestTraceTriageTool,TestTraceReplayReportPolicy,TestScenePresentationPass,TestBackgroundRendererStateRestoration,TestBackgroundPlaneSpriteOcclusion,TestBroadCatchSwallowingGuard' test
+```
+
+Queue waited 123s; Maven reported 100s. Wall/user wait were not separately
+measured. The final production source matches the source Opus approved; only
+the four missing-field test cases, restored debt-reason prefix and prose changed
+after that review. No additional review loop was needed for those bounded P3
+corrections. The full guard profile is checked separately because its inventory
+changed; no new broad-smoke verdict is implied by this focused selection.
+
+The current-worktree full guard profile also passed: 843 cases across 103 suites,
+zero failures/errors/skips. Command: `python3 tools/testing/maven_queue.py
+-Dmse=off -Pguards -Dopenggf.headless.gl=surfaceless-egl
+-Dopenggf.surefire.reports=target/code-climb/followup-guards-surefire test -B`
+with the same Java25/Lua5.4 and displays-unset environment. Queue waited 334s;
+Maven reported 183s. Fresh XML and terminal exit0 were inspected. There is no
+new category VERDICT or full-suite claim. Log: target/code-climb/followup-guards.log.
+
+PR269 was already closed when final accounting checked its unchanged 8fbf86ea
+head; no closure write was needed. Its later lifecycle source and that head are
+ancestors of merged PR266. Old source trees and diagnostics remain retained;
+no cleanup of unknown or user-owned files was performed.
+
+### Original trace journey after df33 publication — 2026-11-08
+
+PR271 is the authorised follow-up draft, published initially at df33ea098.
+A fresh Opus blind assessment of original trial F and its report-completion
+holdouts read normal source/guides, not task audits, history, target artifacts or
+earlier reviews. It returned [2,2,2,5/3,5/3,2,5/3,2], weighted 565/12 =
+47.0833/100. The displayed 1.67 ratings are rounded thirds. Earlier assessments
+used integer ratings; this fresh reader also examined the complete entry/movie/
+lane/evidence journey. The raw judgment is retained rather than rounded upward,
+replaced by a narrower parser trial, or presented as a measured causal regression.
+The wider per-task/per-axis goal remains unmet.
+
+The report-owned gate was judged clean, but the surrounding route still imposed
+false choices. Root verified the omitted trace-segments lane and triage link in
+the owning skill, incomplete movie-placement guidance, stale flat paths/raw Maven
+commands and removed collision-owner names in the old runbook/index, the obsolete
+HCZ slice class name and ungrounded fixed BOM/CRLF claim. Report comparison keys
+come from TraceFrame.frame(), parsed from the CSV frame column; loop ordinals and
+native clocks are separate. The skill's blanket "not the CSV frame" wording was
+incorrect. These are routing/source facts, not new runtime parity measurements.
+
+The entry skill now routes to the existing diagnosis guide for all three lanes,
+movie resolution and the printed exact triage command. The old runbook becomes
+a short routing/checklist page instead of a second command/report specification.
+The tool index points to that canonical entry. The guide and HCZ2 leaf comment
+explain that hcz_2 is a segment ordinal entering engine act0 and crossing the act
+transition, not an act-2-only label. Recorded fixture notes/payloads were not edited.
+Skill changes remain canonical under .agents and are mirrored by sync_skills.py.
+New/changed Markdown local targets resolve and fences balance; six distinct
+pre-existing links target the optional, uninitialised TraceChaser checkout.
+
+Sol's separate two-file triage change makes no-gate UNKNOWN truthful for current
+producers too, exposes advertised-but-missing aux schemas as reference limits and
+states when no gameplay comparison coverage exists. It does not infer an
+incomplete gate from zero comparisons, change mismatch/warning counts, require
+optional metadata, or alter exit/lookup/loading behavior. Actual CLI cases cover
+those distinctions and the existing multiple-report refusal with explicit-path
+recovery. Execution is recorded below; source review alone was not counted as a
+pass.
+
+The same investigation confirmed a reachable stale-evidence risk: stable JUnit
+identity gives repeated selections the same allocation; prerequisite/setup exits
+before binder creation can leave the old report/context/sidecar untouched. No
+timestamp, owner hash or saved-report brief proves invocation freshness. Existing
+fresh-directory/Surefire guidance remains necessary. Sol prepared a bounded
+method-entry retirement using the existing owner-sidecar protocol, preserving
+foreign, scoped, malformed/orphaned and linked artifacts rather than deleting by
+logical filename. It introduces no new provenance registry and fabricates no
+comparison report for an early failure. Pre-method conditions/extensions and
+invalid scope/output resolution remain outside that boundary.
+
+The tests-first artifact is code-climb-attempt-retirement-test-only.patch in the
+external agent scratch directory (SHA256 c39df1a89c077f32ddbf8235844290bd0bddf8c565da60c1a9e8adb524be534e).
+It contains only a new Launcher witness of the real inherited HCZ replay method,
+using existing APIs. Root preserved the GREEN five-file source with hashes, then
+temporarily restored only the four owned existing harness/helper/unit-test files
+to df33 for a discriminating RED run. Other workers' changes are unaffected.
+The new witness covers six early exits, with separate preservation controls;
+execution outcomes and subsequent GREEN/restoration evidence follow below.
+
+The assessment's command-execution gap concerns committed automated checks.
+The earlier actual emitted HCZ POSIX command execution remains its own bounded
+evidence, not a new quote/Windows test or reason to discard that gap. Likewise,
+strict native measurement acceptance in measure_native.py is intentionally
+stronger than a diagnostic brief's factual gate display; no consumer policy was
+weakened to harmonise their labels.
+
+The inherited-entry RED run completed at 17:12:53Z: six cases, exactly six stale
+artifact assertion failures, zero errors/skips. Child Launcher summaries first
+verified the intended missing-fixture abort, malformed-metadata IOException or
+sentinel hook failure, so these were not fixture/setup failures presented as a
+retirement witness. Queue wait was 0s; Maven reported 1m34s. Wrapper wall time and
+investigation time were not separately measured; user wait was 0.
+
+After exact hash-verified restoration of the five GREEN files, one focused
+trace-segments selection completed at 17:18:11Z: 212 cases in 14 fresh XML suites,
+zero failures/errors/skips. It includes all six entry witnesses, owner discovery,
+invocation, publication/gate/triage policy, dynamic-art terminal behavior, both
+Sonic3kLevelLoading classes and the other three required S3K startup selectors,
+comparison-only and hardware-timing authority guards. TestTraceReplayConsole was
+also named in the selector but no such test class exists; no console test pass is
+claimed. Queue 0s, Maven 44.751s; wrapper wall and investigation not separately
+measured, user wait 0. ROM discovery reported missing=none. The actual six
+retirement cases preserve separate class/method/parameter/invocation/lane/profile/
+scope artifacts plus malformed, orphaned, tampered and linked evidence.
+
+The real trace-segments HCZ pair then ran into fresh XML/report directories:
+HCZ1 passes with 3519/3574 comparisons/planned rows; HCZ2 retains one assertion
+failure, 14149/14208 comparisons/planned rows, 26 errors (2 physics, 24 animation),
+zero counted trace warnings. Both publish an ALL gate reached, no invocation
+errors or skips. First mismatch remains frame6640 player_animation_id expected
+0x0013/actual0x0005. Both JSON reports are byte-for-byte identical to the retained
+33c baseline reports, SHA256 b43925e671d1c573d152c6a69bd07ee5c8acdf6fbdc757e35d08a3f6f8004ad2
+and dc73d662529d145fc96f67211ddaaf7b09a160deb326e362ba70692d9c1b98eb respectively.
+All eight advertised missing aux schemas remain visible coverage limits; FAST
+without a manifest and blocked presentation-shadow SFX remain log warnings. The
+pair is not a route certification or warning-free log. Queue 0s, Maven 41.136s;
+wrapper wall not separately measured, user wait 0.
+
+Root executed the HCZ2 triage command exactly as printed, passing its tokenized
+argument array without shell evaluation: exit0, COMPLETE, first mismatch6640 and
+the eight missing schemas shown as reference limits. Its receipt records command,
+UTC start and wall1.236s; queue0, Maven0.517s, user wait0, remaining0.719s wrapper
+and admission overhead not separated. This is an ordinary Linux path execution,
+not Windows/embedded-quote command certification. The native documentation fact
+check caught one overbroad printed-route promise: it is provided by the standalone
+AbstractTraceReplayTest driver, not the current special-stage/credits producers.
+The skill, guide and routing runbook now state that boundary explicitly.
+
+Raw logs/fresh XML and reports are under target/code-climb/attempt-retirement-red-*
+and trace-journey-{green,hcz,emitted-triage}-*. Existing failed RED diagnostics are
+retained. No test counts are substituted for a fresh contributor assessment.
+
+Opus scrutiny of the frozen 17-file increment (HEAD df33, tracked-diff fingerprint
+41538832f6691e5eb8f69086bab6b4659343419e935921675ec96ae586372532,
+plus individual tracked/untracked hashes) found no blocking runtime defect and
+confirmed canonical deletion targets, scope/identity/lane/profile isolation and
+unchanged strict triage/count/gate/exit behavior. It found a weakened publication
+count witness and an untested explicit-directory owner-key boundary. Root repaired
+both: reportOutputDir is again only a query; a no-op post-publication observer in
+the private write helper counts actual completed writes, and an explicit legacy
+basename case rejects another invocation and lane without changing bytes.
+
+Two isolated negative-control mutations then demonstrated discrimination: inserting
+a second actual final report write made both terminal tests report 2 instead of1;
+removing the owner-key comparison made the explicit-directory negative case fail.
+The RED command ran 13 cases, exactly3 intended failures, zero errors/skips.
+Queue75s, Maven35.143s; wrapper wall not separately measured, user wait0. Both
+source mutations were removed by exact hash restoration before GREEN.
+
+The final focused selection passed214 cases in15 fresh XML suites, zero failures,
+errors or skips, at17:50:44Z. It repeats the earlier 212-case selection with the
+new ownership case and hydrate-default guard; it includes the repaired terminal
+observer and new link/directory-context preservation controls in all three scopes.
+Queue12s, Maven49.004s; wrapper wall and investigation not separately measured,
+user wait0. These are root verification results, not tests performed by Opus.
+Small bounded review repairs were made by root without commissioning another
+review round; the review itself predates the observer/tests/docs corrections.
+
+The S2 release-gate lane also passed EHZ1 and the hydrate-default guard (2 cases,
+zero failures/errors/skips):5852/5852 comparisons, ALL gate reached, zero counted
+errors/warnings, report byte-identical to retained33c baseline with SHA256
+4a9945c494d44ce80b5cf37760cc847c05a19578defbab6208b4d1a322ec72d6.
+Queue0s, Maven37.483s; wrapper wall not separately measured, user wait0. This
+EHZ/HCZ evidence predates the later no-op publication observer; only the terminal
+test overrides that observer, and the final focused run executes both S2 terminal
+paths after it. No new gameplay implementation changed.
+
+Review documentation corrections restore scope selection/default/CSVv7 guidance,
+qualify standalone route/entry promises, correct the framework-reference
+finalization overclaim and explain that clean credits reruns can leave an older
+failing report. Conservative retirement deliberately refuses linked report trees
+(including symbolic ancestors), unverified owners and whole triples whose context
+is a link/directory; publication still follows its existing path rules. These are
+now explicit limits, not a freshness guarantee for macOS/IDE/linked layouts.
+Malformed optional auxiliary-limit shapes remain best effort and ignored; no
+absence of a note certifies reference coverage. Windows/macOS behavior was not
+executed. The Probe name exclusion is documented next to the Launcher-only child.
+The existing sidecar schema remains implemented by publisher, Java verifier and
+Python validation; no new ownership/provenance registry was introduced.
+
+Because TestSessionOutputPaths and the shared replay harness changed, the category
+planner selects all4491 smoke classes plus guards. The final source will be frozen
+for one --base df33 --workers2 surfaceless-EGL run, default40-minute execution cap
+excluding queue waits. Existing qualified negative/skip evidence is retained for
+exact identity/assertion/skip/selection comparison. No standalone full-guards run
+will duplicate that lane. The broad verdict and comparison remain pending here;
+this focused/domain evidence is not a smoke/full-suite pass or a new trial grade.
+
+### Frozen trace journey reassessment and recovery accounting — 2026-11-08
+
+The independent HCZ2 main-journey assessment read the same frozen source at
+18:56:45Z and 19:09:52Z: HEAD df33ea098, tracked-diff fingerprint caca2a864ecbcec0935ffc65c659ab0946d93c14bacaa8fe656d4615962e95a8,
+and untracked entry-witness SHA256 544b8e56f317ade9ec00d28c2b4b734695e86ba8b3c76506f0aec087622eccdf.
+Its vector was [3,8/3,8/3,8/3,8/3,8/3,7/3,7/3], weighted 795/12 = 265/4 =
+66.25/100. Holdouts were separate. The target remains unmet; this is static
+source usability, not runtime certification or a whole-repository grade.
+
+Root introduced a granularity ambiguity: the formal rubric names 1 and 3 as
+intermediate ratings, while later briefs used "1/3" and the latest explicitly
+permitted thirds. Preserve this raw judgment without rounding or claiming a
+causal trend. Future briefs should quote the written scale verbatim. The
+historical all-six b63 table and earlier HCZ2 assessment retain their own
+readers, source/coverage and interpolation qualifications. The first/second HCZ
+leaves are not interchangeable runtime fixtures, though both exercise diagnosis.
+
+Verified residual gaps: the two real terminal-driver tests do not assert their
+published completion gates; movie-placement statements and a frame-count line
+still contradict the canonical diagnosis route; one aux method name is stale.
+Root added the small real-driver gate assertions and reference/routing corrections
+only after the terminal handoff; their separate final verification is recorded below. An uninitialised disassembly is not a replay/build
+prerequisite: root AGENTS makes those references optional. Manual execution of
+the printed HCZ command is retained evidence, while a committed command/quoting
+round-trip test remains absent. Do not confuse either qualification with an
+assessor-run runtime check.
+
+Source inspection also confirms a pre-existing scoped-triage concern: reports
+publish all verification groups, the writer selects context by scope, but the
+CLI discards per-divergence verification_group and chooses the earliest group
+globally. A producer-backed RED is required before a later behavioral repair;
+no new test job or runtime fix was added during the frozen run. Broad provenance,
+producer-schema or comparison-driver suggestions remain separate work, not
+automatic requirements applied from a static usability assessment.
+
+The first category attempt, 20261108T175521Z-7caa2b80, exited143 while batch52
+queued: 51/91 batches, 20849 cases, no observed failures/errors, 24 allowed skips,
+no guards and no final VERDICT. Both whole-run comparisons refused this coverage.
+Its artifacts remain unchanged and unacknowledged. Execution including prep was
+630.96s; reported queue wait at least649s; user wait0; termination/wrapper overhead
+is not exactly separated. The 40-minute execution budget was not exhausted.
+No cause was attributed from143 or the empty known-PID journal queries.
+
+One complete replacement, 20261108T182506Z-5a0cf1b9, finished under the single
+Sol-owned detached user service with the same frozen source/selection/environment/
+execution cap. It selected4491 classes and completed91/91 ordinary batches plus
+1/1 full guards:37228 ordinary cases/29 failures/0errors/49allowed skips, and843
+guards/0failures/errors/skips in103 suites. Raw verdict, retained without relabeling:
+
+```text
+VERDICT FAILED: head=df33ea09864e source=93fb43728f6e change-based 4491/4491 candidate classes; ordinary 91/91 batches; guards 1/1 batches; tests=38071 failures=29 errors=0 skipped=49 (allowed=49 unexplained=0); missing ROM properties=none; skip inputs audio_reference_files=false,gl=false,s1_bizhawk_reference=false,s2_bk2=false,s3k_observations=false; bounded smoke selection, not a full-suite pass
+```
+
+Root consumed the source, selection, full negative/skip and omission exports.
+Compared with the prior qualification, all29 failure identities/kinds/types match;
+25 assertions are literal matches and4 are the same explicitly reviewed display
+classes (default identity hashes and Set order). Exact before/after values and
+unchanged source proofs are retained; there is no blanket normalization. All49
+complete skip dictionaries, including projection metadata, match both retained
+references. No omissions or causal truncation were reported. All4490 prior classes
+remain plus the upstream KIS2 lives-name test; the 33c reference additionally
+retains the previously documented network TEST-fixture improvement. These are
+retained qualified references, not fresh exact-df33 baseline executions or proof
+of a closed transitive source graph. A selection is not a claim every source
+class produced XML. The runner deletes completed-batch XML; complete runner
+exports and receipts are distinguished from unavailable full raw XML.
+
+Queue1624s across92 admissions; execution/preparation1820.04s; wall3462.848s;
+user wait0; overhead/unknown18.808s. The raw terminal source fingerprint is
+93fb43728f6e89e14dc43d432ebf4035cdca9bcfc224d307e37a15f1906b5ab6.
+Full exports/commands/dispositions are under target/code-climb/
+trace-journey-category-recovery. Root verified source hashes on ownership return.
+After exporting terminal properties (no PID/cgroup members), root stopped/reset
+only its completed user unit; it is now not-found/inactive/dead, no live jobs.
+
+
+Read-only next-boundary work recovered the historical all-six assessment and
+verified unchanged blobs for ObjectPopulation, ObjectSolidContactController and
+SolidContactState against b63. Contact retirement is the next structural priority.
+The older placed-reload investigation at422 supplied only an unexecuted reply
+sketch and established no observable history defect: ordinary execution follows
+another beginInlineFrame. A manager-driven range-unload/re-entry witness remains
+the safe next characterization; the score does not authorize unifying lifetimes.
+
+Other bounded candidates remain secondary: a lexical inventory parsed all609
+exact policy entries and showed that deriving the existing six special CAPTURED
+fields reproduces the same complete mapping; this is not Java/wire validation.
+Keep registry precedence/cache behavior and both schema routes. Removing the
+generic recreate registry branch or collapsing two resolver calls was rejected:
+direct helper callers test that behavior and ModAPI resolver lifetime is observable.
+Dense native-overwrite operations can be expanded while preserving their exact
+registration/callback order; ordinary DeleteObject retirement is a different path.
+
+All ten lifecycle handoff commits through e7c919250 and PR269 head8fbf86ea4 are
+ancestors of published ce574 and merged develop f628. GitHub reports269 already
+merged/closed; root performed no write/merge. Candidate cleanup remains pending:
+ignored ROM/config/save/reference/documentation contents are preserved, not
+assumed generated. Baseline33c and the old ai-code-climb tree remain comparison
+inputs. No unknown work, ROM, source tree or branch was discarded.
+
+### Final trace-only assertions and routing corrections
+
+After that frozen broad run, root added exact ReplayGate record assertions to the
+two real-driver terminal tests: planned5852/ALL/true for completed comparison,
+planned5852/ALL/false for actual frontier stop. Missing metadata cannot pass as
+false. The skill now starts at the canonical class/lane command rather than a
+release-gate placeholder. Other guides link the movie lookup, name the actual
+getEventsForFrame API, read completion from the gate, and label old scope tables
+as history with pom profile authority. Agent workflow text routes tests through
+the queue. Two detached Javadocs were attached to their owning methods with
+all non-comment Java tokens identical.
+
+The final focused run passed58 cases in5 fresh XML suites, no failures/errors/
+skips, at19:28:33Z. It covers the two real terminal paths, writer-gate/policy,
+comparison-only and hardware-timing authority. Queue3s; Maven52.929s; wrapper wall
+not separately measured, user wait0. Missing ROM properties none. Exact command:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py --normal -Dmse=off -Ptrace-replay -Dsurefire.forkCount=1 -Dopenggf.headless.gl=surfaceless-egl -Dtrace.verification=all -Dopenggf.surefire.reports=target/code-climb/post-smoke-delta/surefire -Dtest=TestAbstractTraceReplayDynamicArtTerminal,TestTraceGateCompletionReport,TestTraceReplayReportPolicy,TestTraceReplayInvariantGuard,TestHardwareTimingAuthorityGuard test -B
+```
+
+Production Java remains byte-identical as source to the broad-tested snapshot.
+Post-broad executable changes are assertions in the trace-only terminal test,
+which is excluded from ordinary smoke; the shared driver change is comments only.
+Relevant source guards are included in the58-case run. No new all-category verdict
+is manufactured for this scoped composition. The full843-guard evidence refers
+to the frozen broad source; final changed scope is qualified separately.
+
+Skill mirror and whitespace checks pass. Markdown fences balance and275 local
+links resolve; seven inherited file/link pairs remain unresolved in optional or
+existing reference material, with no new missing target. No provenance schema,
+ModAPI/version/signature, fixture, timing authority, tolerance or gameplay input
+was changed. The static66.25 assessment precedes these final small corrections;
+no new grade or achieved target is inferred. Scoped triage's global-first-error
+selection remains a source-identified pre-existing gap requiring its own
+producer-backed RED; it was not silently changed in this publication batch.
+
+After consuming the complete exported plans/results/negatives/skips and exact
+comparison evidence, root acknowledged only these two owned category run
+directories through run_categories.py --acknowledge. Original terminal exports
+and raw-verdict/source receipts remain in target/code-climb, including the
+interrupted run's incomplete identity. Baseline/reference trees and unrelated
+diagnostics were retained. No ROM, config, save or unknown content was deleted.
+
+Before publication, origin/develop was observed at c4ca46472e75a0df6f23dfd410e347ab8ed52a70,
+after the tested f628 base. The stage-to-PR snapshot is not qualified as a merge
+with that newer upstream. PR271 is open/draft and reported MERGEABLE; task remote
+head remained df33. Preserve the source-specific checks here and reconcile the
+newer development line explicitly before the next structural increment, rather
+than claim the completed run covered it. No destination branch was changed.
+
+
+### 2026-11-08 — package-private contact-memory boundary
+
+This bounded increment starts from clean `ccf2a3d24ac54bbd501a2f6dc52772e2ce9b95a0`
+in the existing `feature/ai-code-climb-followup` checkout. It follows the local
+`target/code-climb/contact-memory-boundary/decision.json`: retain the cohesive
+mutable owner, colocate it with its sole production consumer, and remove its
+unnecessary public surface and duplicate simple name. The owner is now
+package-private final `level.objects.SolidContactMemory`; the controller field
+remains `contactState`. Manager/controller/population boundaries are unchanged.
+No compatibility shim, generic lifetime protocol or new creator API was added.
+
+`TestDynamicSolidContactRetirement#placedRangeUnloadExpiresBitsBeforeEqualSpawnReentry`
+is reused unchanged. It already existed at `7a93b4f2e0`, before `f628`; it is a
+ROM-free placed unload/reentry and retained-player witness, not evidence of an
+ordinary per-frame-history bug. This refactor makes no usability-score claim.
+
+The incoming mutable-owner blob is `ed9428d07c68874ba7740852bd8fc4dbb2da6d0d`
+(5,009 Java tokens); controller blob is
+`a28cc4aeb9dfcbbfbf6164aeb4ff455fc6eed0fd` (18,316 tokens); direct-test blob is
+`d38e75429202f61e6c5e56e751060a77628cad97` (3,275 tokens). The complete immutable
+`ObjectManagerSnapshot.java` blob remains
+`359a7773a86d8326b7a2d36d9e04c03b6bd960c7`, including the exact
+`ObjectManagerSnapshot.SolidContactState` name, definition and schema.
+
+Local reproducible evidence is retained under
+`target/code-climb/contact-memory-boundary/`: `before.json`, incoming source and
+token files, `preserve.py`, `preservation.json`, and `visibility.json`. Run
+`python3 target/code-climb/contact-memory-boundary/preserve.py` from this checkout.
+It reconstructs the expected bytes from pinned `ccf` blobs with explicit
+package/import/type/declaration-access/Javadoc edits only, then requires exact
+byte equality and records before/after token digests. The immutable qualified
+record name is excluded from mutable-name substitution. This preserves every
+executable body/expression, callback count/order and dispatch guard, all
+spawn/instance/occurrence/piece equality, field names and initialization order,
+frame-only history, retained rides/status, rewind/transfer and upstream
+`repairSwappedStanding`. The guard adaptation is also matched against an exact
+edit allowlist; classifier bodies, regexes and budgets remain byte-identical.
+
+Visibility changes (the old declarations below were public and are now
+package-private, with the mutable type renamed to `SolidContactMemory`; existing
+private members stay private):
+
+- `final class SolidContactState`
+- `interface Access`
+- `SolidContactState(Access access)`
+- `static final class Ride`
+- `ObjectInstance object()`
+- `int pieceIndex()`
+- `void markStandingBitEstablishedThisFrame(PlayableEntity player, ObjectInstance instance, int pieceIndex)`
+- `Object resolvedOwnerKey(ObjectInstance instance)`
+- `void evictResolvedOwnerKey(Object key)`
+- `void setObjectStandingBit(PlayableEntity player, ObjectInstance instance)`
+- `void setObjectStandingBit(PlayableEntity player, ObjectInstance instance, int pieceIndex)`
+- `boolean hasObjectStandingBit(PlayableEntity player, ObjectInstance instance)`
+- `boolean hasObjectStandingBit(PlayableEntity player, ObjectInstance instance, int pieceIndex)`
+- `boolean wasStandingBitEstablishedThisFrame(PlayableEntity player, ObjectInstance instance, int pieceIndex)`
+- `void setObjectPushingBit(PlayableEntity player, ObjectInstance instance)`
+- `void releaseObjectPushLatchForAllPlayers(ObjectInstance instance)`
+- `void releaseObjectStandingLatchForAllPlayers(ObjectInstance instance)`
+- `void releaseObjectLatchesForAllPlayers(ObjectInstance instance)`
+- `boolean releaseObjectPushLatch(PlayableEntity player, ObjectInstance instance)`
+- `boolean hasPushingLatch(PlayableEntity player)`
+- `boolean clearObjectPushingBit(PlayableEntity player, ObjectInstance instance)`
+- `void clearObjectStandingBit(PlayableEntity player, ObjectInstance instance)`
+- `void clearObjectStandingBit(PlayableEntity player, ObjectInstance instance, int pieceIndex)`
+- `void snapshotObjectStandingBit(PlayableEntity player, ObjectInstance instance)`
+- `void snapshotObjectStandingBit(PlayableEntity player, ObjectInstance instance, int pieceIndex)`
+- `void rememberAndClearStandingBit(PlayableEntity player, ObjectInstance instance, int pieceIndex)`
+- `boolean wasObjectStandingBitSetThisFrame(PlayableEntity player, ObjectInstance instance)`
+- `boolean wasObjectStandingBitSetThisFrame(PlayableEntity player, ObjectInstance instance, int pieceIndex)`
+- `void evictLatchForDestroyedSpawn(ObjectSpawn spawn)`
+- `void evictLatchForDestroyedInstance(ObjectInstance instance)`
+- `void inheritRetainedSstContacts(SolidContactState previous, Collection<? extends ObjectInstance> carried)`
+- `ObjectManagerSnapshot.SolidContactState captureRewindState()`
+- `ObjectManagerSnapshot.SolidContactState captureRewindState(RewindCaptureContext context)`
+- `void restoreRewindState(ObjectManagerSnapshot.SolidContactState state)`
+- `void restoreRewindState(ObjectManagerSnapshot.SolidContactState state, RewindCaptureContext context)`
+- `void restoreRewindState(List<ObjectManagerSnapshot.SolidContactRidingEntry> entries)`
+- `boolean isRidingObject(PlayableEntity player)`
+- `boolean isAnyPlayerRiding()`
+- `boolean isPlayerRiding(PlayableEntity player, ObjectInstance instance)`
+- `boolean isAnyPlayerRiding(ObjectInstance instance)`
+- `void clearRidingObject(PlayableEntity player)`
+- `void clearSameFrameMonitorBreakBounces()`
+- `void markSameFrameMonitorBreakBounce(PlayableEntity player)`
+- `boolean hadSameFrameMonitorBreakBounce(PlayableEntity player)`
+- `ObjectInstance getRidingObject(PlayableEntity player)`
+- `int getRidingPieceIndex(PlayableEntity player)`
+- `Ride rideFor(PlayableEntity player)`
+- `void repairSwappedStanding(com.openggf.sprites.playable.AbstractPlayableSprite p1, com.openggf.sprites.playable.AbstractPlayableSprite p2, java.util.function.Function<com.openggf.sprites.playable.AbstractPlayableSprite, ObjectInstance> occupant)`
+- `void ride(PlayableEntity player, ObjectInstance object, int pieceIndex)`
+- `void forEachRide(BiConsumer<PlayableEntity, Ride> action)`
+- `int frameCounter()`
+- `void beginFrame()`
+- `void reset()`
+- `void rememberControllerRelease(PlayableEntity player, ObjectInstance object)`
+- `boolean consumeControllerRelease(PlayableEntity player, ObjectInstance object)`
+
+`Ride(ObjectInstance, int)` additionally narrows from package-private to private,
+because only the enclosing memory constructs it. `Access` methods remain
+implicitly public abstract as required by Java; controller and test-harness
+implementation overrides remain public. The only production consumer remains
+`ObjectSolidContactController`. The direct tests share the owner's package; the
+rewind guard loads the actual nonpublic class via
+`Class.forName(name, false, loader)` and still classifies its real source path.
+No genuine external consumer, API descriptor/signature-pin edit or guard
+allowance/budget change was found or needed.
+
+At `4086b7d545`, the existing guard's `NonActorFactory` declared
+`public void restoreRewindState(Object state)` and its classification case checked
+that declaration while rejecting the helper as an actor. Independent review
+subsequently found that this did not exercise the override counter's nonactor
+filter: the counter scans main sources, not this nested test fixture. The initial
+claim that the original regression boundary remained covered was incorrect. The
+counter-level witness and mutation check are recorded in the follow-up below.
+
+Exact JUnit identity mapping follows. Every row maps the old class
+`com.openggf.level.objects.contact.TestSolidContactState` to the new class
+`com.openggf.level.objects.TestSolidContactMemory`; each listed method name is
+identical on both sides. All 11 case bodies and annotations are preserved modulo
+the mutable type rename; no case disappears. Full old/new `class#method` strings
+are also retained in `preservation.json`.
+
+| Old method (old class above) | New method (new class above) |
+| --- | --- |
+| `nextFrameExpiresHistoryButKeepsLiveObjectBitsAndTheSameRideHolder` | `nextFrameExpiresHistoryButKeepsLiveObjectBitsAndTheSameRideHolder` |
+| `objectRetirementExpiresBothPlayersLiveBitsWithoutChangingTheirRideOrPhysicalState` | `objectRetirementExpiresBothPlayersLiveBitsWithoutChangingTheirRideOrPhysicalState` |
+| `permanentInstanceRetirementExpiresPieceHistoryWithoutDroppingTheRide` | `permanentInstanceRetirementExpiresPieceHistoryWithoutDroppingTheRide` |
+| `occurrenceExpiryCannotClearAnotherInstanceSharingTheSameSpawnValue` | `occurrenceExpiryCannotClearAnotherInstanceSharingTheSameSpawnValue` |
+| `retainedMultipartSstKeepsLivePieceBitButDoesNotRecreateAnExplicitlyClearedBit` | `retainedMultipartSstKeepsLivePieceBitButDoesNotRecreateAnExplicitlyClearedBit` |
+| `successfulRestoreDiscardsUncapturedFutureFrameObservationsWithoutAdvancingTheSavedClock` | `successfulRestoreDiscardsUncapturedFutureFrameObservationsWithoutAdvancingTheSavedClock` |
+| `failedStructuralRoleResolutionPreservesLiveAndFrameState` | `failedStructuralRoleResolutionPreservesLiveAndFrameState` |
+| `structuralSnapshotRestoresFreshRoleAndPieceOwnerOnTwoSuccessiveIncarnations` | `structuralSnapshotRestoresFreshRoleAndPieceOwnerOnTwoSuccessiveIncarnations` |
+| `invalidatingKeyCallbackIsRejectedBeforeAnyLiveBitIsPublished` | `invalidatingKeyCallbackIsRejectedBeforeAnyLiveBitIsPublished` |
+| `pieceIdentityCallbacksValidateTheOriginalOuterAndInnerReservationsInOrder` | `pieceIdentityCallbacksValidateTheOriginalOuterAndInnerReservationsInOrder` |
+| `fullResetDropsRidesAllLiveAndFrameStateAndRestoresTheInitialClock` | `fullResetDropsRidesAllLiveAndFrameStateAndRestoresTheInitialClock` |
+
+The current package Javadoc, contributor architecture/testing guides, engine
+map and existing prerelease contributor-readability entry describe the new
+internal owner and unchanged saved form. Earlier audit entries and plans are
+historical and were not rewritten. No trace frontier, ROM policy, configuration,
+version/signature pin, agent instruction or skill changed.
+
+The single bounded focused invocation completed successfully against the changed
+source from `ccf2a3d24a`. The command below uses a checkout-relative report path;
+`command.txt` retains the exact invocation with its absolute resolved report path:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=lua5.4 python3 tools/testing/maven_queue.py --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Dopenggf.surefire.reports=target/code-climb/contact-memory-boundary/surefire -Dtest=TestSolidContactMemory,TestDynamicSolidContactRetirement,TestObjectSolidContactController,TestSolidObjectManager,TestObjectManagerRewindSnapshot,TestTasS3kOrtExhaustion,TestObjectRemovalCallbackOwnership,TestInitialObjectDispatchSuccessorOwnership,TestInitialDispatchNestedFreshLoad,TestInitialSolidCallbackLifetime,TestInitialSolidAdapterLifetime,TestInitialCollisionCallbackLifetime,TestNativeCompetitionFixedSstAccess,TestNativeObjectQueries,TestRewindArchitectureGuard,TestModApiSignatureSurface test > target/code-climb/contact-memory-boundary/focused.log 2>&1
+```
+
+Java was OpenJDK `25.0.5.0.3`; Lua was `5.4.9`. `DISPLAY` and `WAYLAND_DISPLAY`
+were unset, `LUA_BIN=lua5.4`, `-Dmse=off`, surfaceless EGL, and `--normal`
+selected the normal-memory lane. The wrapper found all six ROM properties, with
+none missing; no ROM files or links were changed. The fresh, initially empty
+report directory is this increment's own `surefire/` directory.
+
+| Fresh suite | Cases | Failures / errors / skips |
+| --- | ---: | --- |
+| `com.openggf.game.rewind.TestRewindArchitectureGuard` | 8 | 0 / 0 / 0 |
+| `com.openggf.level.objects.TestDynamicSolidContactRetirement` | 15 | 0 / 0 / 0 |
+| `com.openggf.level.objects.TestInitialCollisionCallbackLifetime` | 6 | 0 / 0 / 0 |
+| `com.openggf.level.objects.TestInitialDispatchNestedFreshLoad` | 2 | 0 / 0 / 0 |
+| `com.openggf.level.objects.TestInitialObjectDispatchSuccessorOwnership` | 15 | 0 / 0 / 0 |
+| `com.openggf.level.objects.TestInitialSolidAdapterLifetime` | 6 | 0 / 0 / 0 |
+| `com.openggf.level.objects.TestInitialSolidCallbackLifetime` | 6 | 0 / 0 / 0 |
+| `com.openggf.level.objects.TestNativeCompetitionFixedSstAccess` | 20 | 0 / 0 / 0 |
+| `com.openggf.level.objects.TestNativeObjectQueries` | 11 | 0 / 0 / 0 |
+| `com.openggf.level.objects.TestObjectManagerRewindSnapshot` | 19 | 0 / 0 / 0 |
+| `com.openggf.level.objects.TestObjectRemovalCallbackOwnership` | 15 | 0 / 0 / 0 |
+| `com.openggf.level.objects.TestObjectSolidContactController` | 17 | 0 / 0 / 0 |
+| `com.openggf.level.objects.TestSolidContactMemory` | 11 | 0 / 0 / 0 |
+| `com.openggf.level.objects.TestSolidObjectManager` | 88 | 0 / 0 / 0 |
+| `com.openggf.level.objects.TestTasS3kOrtExhaustion` | 10 | 0 / 0 / 0 |
+| `com.openggf.mods.TestModApiSignatureSurface` | 12 | 0 / 0 / 0 |
+
+Total: **261 cases / 16 suites**, zero failures, errors or skips. Fresh XML
+identities include every requested suite, all 11 mapped direct cases exactly
+once, and the unchanged placed unload/reentry witness.
+`TestModApiSignatureSurface` includes the candidate signature and engine-internal
+terminal checks; no descriptor, signature pin or internal-type allowance changed.
+No source/inherited failure attribution run was needed in this exact selection.
+The test-source manifest was unchanged before, during and after the invocation;
+its SHA-256 is `9cde9c0ad1e233e6d7d03f812c87dbbe30737c0f353fddb5d826b71e24656f1f`.
+
+Timing covers this wrapper invocation: queue **388 s** (rounded admission log),
+Maven **104 s** (reported total), wall **493.069348 s**, user wait **0 s**,
+residual wrapper/startup/teardown time **1.069348 s**. Coding and investigation
+were not separately instrumented. `focused-result.json` retains the full fresh
+case identities, suite/XML hashes, ROM discovery and timing; `run.json`,
+`command.txt`, `focused.log` and `tested-source.json` retain the raw job context.
+`docs-checks.json` records changed Markdown fences/relative links, canonical type
+names and resolvable test-command classes. The historical audit prefix and the
+existing reentry witness remain byte-identical to the base. `git diff --check`
+and the operation/token proof passed.
+
+This is a focused pass only. Category `VERDICT` is not applicable because no
+category run or guards lane was launched. Root owns the live immutable c4
+baseline, final combined broad comparison, independent Opus review and any
+publication to draft PR271. That baseline was not observed, changed, built,
+cancelled or relaunched here. No delegate, reviewer, watcher, task/destination
+push, PR write or integration was performed. Local commit identity, source/test
+manifest and the exact remaining handoff are recorded in
+`target/code-climb/contact-memory-boundary/handoff.json`.
+
+### Original C/F measurement and counter-coverage repair — 2026-11-08
+
+Both independent Opus 5.5 tasks completed at clean
+`4086b7d5455c3344b0954fa03edbb1514c874e14`, tree
+`120cd795820e160e4a5e36d6ed3e69aa400b0f0f`, with maximum effort and fast mode off.
+Neither ran tests or JVMs, edited source, observed the baseline job or read the
+remote. The correctness reviewer checked the contact move and upstream merge;
+the separate blind assessor read ordinary source/guides/tests, without the diff,
+audits, validation results, prior scores or targets. Both reported the same clean
+source at start and finish.
+
+The exact original trial statements were recovered before this assessment.
+Original F uses `TestS3kSonicTailsHczSegmentTraceReplay` as its primary journey;
+the later act-spanning HCZ2 leaf is a holdout. Earlier HCZ2-first readings remain
+variant evidence and do not establish a new original-F grade. The rubric uses
+integer 0–4 ratings, with 1 and 3 interpolating between the written anchors.
+
+| Original trial at 4086 | Owner | Browse | Understand | Locality | Concepts | Verify | Rules | Readability | /100 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| C: standing/pushing expiry across unload | 3 | 3 | 3 | 2 | 2 | 4 | 3 | 3 | 71.25 |
+| F: first HCZ Sonic/Tails trace diagnosis | 3 | 2 | 3 | 2 | 2 | 3 | 2 | 3 | 62.50 |
+
+Sol independently recomputed both weighted totals. The per-trial target remains
+unmet, including the minimum-axis and owner/understanding/readability requirements.
+A/B/D/E were not regraded. These are static task-specific judgments, not human
+onboarding measurements, runtime certification or a whole-repository score.
+Different reviewers and revisions do not establish a causal improvement trend.
+
+C's bounded reading set is the memory owner, population retirement, three manager
+sites, dynamic surviving-owner expiry, one entry guide and focused tests. Its
+remaining burdens include the three retirement schedules, callback guards,
+shared-key policies and forwarding methods. Multipart and occurrence holdouts
+were kept separate. The placed-to-dynamic shared-key policy and missing-owner
+restore fallback were hypotheses, not demonstrated defects; no runtime rule was
+changed on their account.
+
+F found the actual `hcz` fixture, segment 9 and its giant-ring transition into
+`ss_5`. Its remaining burdens include the long driver/run-chain harness, repeated
+comparison arguments, duplicate filename conventions and unreported carried-state
+conditions. The run-wide fixture notes remain insufficient to identify this leaf's
+span; fixture payloads were not hand-edited. A complete segment comparison remains
+conditional instrumentation, not run-chain evidence.
+
+#### Review finding and actual counter witness
+
+The correctness review found no runtime blocker. Its P3 was valid: narrowing the
+memory's public restores removed the only main-source nonactor reaching the
+public capture/restore counter. The nested declaration-only fixture did not
+exercise that filter. A future removal of the filter could therefore pass all
+eight guard cases. The earlier coverage statement above and the 4086 commit's
+claim are superseded by this finding and repair.
+
+The normal counter now delegates to an overload accepting source paths, with the
+same `objectSources()` input and unchanged classifier, patterns and budgets.
+The existing secondary-top-level classification case feeds real actor and
+restore-shaped nonactor fixture sources into that counter and expects only the
+actor's restore entry. The actor fixture supplies a real override; the helper
+fixture supplies a public restore-shaped method. The tautological nested method
+and declaration assertion were removed. All eight existing JUnit identities remain.
+No production operation, allowance or baseline was changed.
+
+Root verified the new witness by temporarily bypassing the real nonactor filter.
+The case failed because the actual map included
+`RewindNonActorSourceFixture.java#restoreRewindState`, while the expected map
+contained only the actor. Root then restored the exact filter and ran the whole
+guard class. Exact wrapper argument arrays, environment, source hashes, XML,
+causal assertion and timings are retained under
+`target/code-climb/guard-exclusion-repair/{red,green}/`.
+
+```bash
+python3 target/code-climb/guard-exclusion-repair/run-phase.py red
+python3 target/code-climb/guard-exclusion-repair/run-phase.py green
+```
+
+Both commands invoke the queued normal-memory wrapper with Java 25, Lua 5.4,
+`-Dmse=off`, displays unset and surfaceless EGL. RED selects the existing
+secondary-top-level classification case; GREEN selects `TestRewindArchitectureGuard`.
+
+| Witness | Cases | Failures / errors / skips | Queue | Maven execution | Wall | User wait | Unseparated overhead |
+| --- | ---: | --- | ---: | ---: | ---: | ---: | ---: |
+| Filter bypassed, RED | 1 | 1 intended / 0 / 0 | 30s | 34.964s | 65.798s | 0s | 0.834s |
+| Exact filter restored, GREEN | 8 | 0 / 0 / 0 | 74s | 35.048s | 110.138s | 0s | 1.090s |
+
+These are focused results, not a complete guards lane or smoke verdict. Queue
+values are rounded wrapper reports; investigation time was not separately timed.
+
+#### Routing corrections after the assessment
+
+Small source/guide corrections address demonstrated false leads: the object
+reference names the actual contact/touch controllers; the memory Javadoc states
+which trigger clears live bits versus history and explains dispatch-guard order;
+the first HCZ leaf describes its act mapping and real span; the testing guide
+provides its exact selector, current POM authority and diagnostic switches; and
+`TraceReportWriter` describes both standalone level and special-stage consumers.
+These follow the assessment and receive no automatic score increase. Java
+noncomment-token equality is checked separately for the comment-only edits.
+No carried-state publication, fixture regeneration, lifetime-policy change or
+additional review round is included.
+
+The existing root-owned c4 baseline is still the qualification input. Candidate
+selection plans retain all 4,625 smoke classes modulo the explicit 11-case contact
+class mapping. Trace-driver controls are outside ordinary smoke; the ccf focused
+322-case selection included the real attempt and terminal driver tests. Combined
+candidate smoke/guards and matched new-source EHZ/HCZ checks remain pending here.
+The durable launcher requires an exact-source review-clearance receipt before it
+can start. No destination branch was changed or pushed.
+
+
+### c4/c9 qualification and catalogue attribution
+
+Completed on 2026-11-08, with root as the sole validation/delivery owner.
+The pinned develop baseline is `c4ca46472e75a0df6f23dfd410e347ab8ed52a70`;
+the tested, clean candidate is `c9f8e75679671dde068db25893f1f0a9bf1fa6cb`.
+Its executable source includes the ccf reconciliation, 4086 contact boundary
+and c9 guard repair described above. Subsequent delivery edits are this audit
+and the testing README only; their source-equivalence proof is retained with
+the delivery receipt. No new cleanup implementation is included.
+
+#### Complete smoke and guards
+
+Each immutable tree ran the following command with Java 25, Lua 5.4 and displays
+unset. Each selected 4,625 smoke source classes, 94 ordinary batches with two
+workers, and one complete guards batch. The execution cap was 40 minutes,
+excluding queue admission. This is bounded smoke, not full-suite or route
+certification.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --category all --workers 2 --headless-gl surfaceless-egl --keep-diagnostics --run
+```
+
+| Tree | Ordinary cases | Failures | Errors | Allowed skips | Guards |
+| --- | ---: | ---: | ---: | ---: | --- |
+| c4 baseline | 37,650 | 28 | 0 | 49 | 843 passed, no errors/skips |
+| c9 candidate | 37,691 | 29 | 0 | 49 | 843 passed, no errors/skips |
+
+The original final lines remain unchanged:
+
+```text
+VERDICT FAILED: head=c4ca46472e75 source=752f90728b9e focused 4625/4625 candidate classes; ordinary 94/94 batches; guards 1/1 batches; tests=38493 failures=28 errors=0 skipped=49 (allowed=49 unexplained=0); missing ROM properties=none; skip inputs audio_reference_files=false,gl=false,s1_bizhawk_reference=false,s2_bk2=false,s3k_observations=false; bounded smoke selection, not a full-suite pass
+VERDICT FAILED: head=c9f8e7567967 source=87fdb14ab8fa focused 4625/4625 candidate classes; ordinary 94/94 batches; guards 1/1 batches; tests=38534 failures=29 errors=0 skipped=49 (allowed=49 unexplained=0); missing ROM properties=none; skip inputs audio_reference_files=false,gl=false,s1_bizhawk_reference=false,s2_bk2=false,s3k_observations=false; bounded smoke selection, not a full-suite pass
+```
+
+All 49 complete skip dictionaries match, with no unexplained/required skips,
+omitted records or capped causal assertions. Actual selection retains every
+class modulo the previously recorded 11-case contact class move. POM, category,
+runner, comparator and skip-policy inputs are unchanged. Both source/config
+fingerprints match their launch identities after execution. Complete passed-case
+XML is not retained: the category runner removes it after each batch.
+
+The original strict negative comparison is **different**, and remains so.
+Of the candidate's 29 failures, 22 have literal baseline assertions. Three MHZ
+Sonic/Tails/widescreen assertions differ only in printed Set iteration order:
+the complete expected and observed member sets match, the test blobs are
+unchanged, and the assertions compare `Set.of(...)` with `HashSet`.
+Four Three Islands outcomes require the matched-input attribution below.
+`TestEngineSuspensionRendering#capturesSceneBeforeOverlaysAndResumesAfterPublishedZoom`
+is absent from the candidate negatives; no intentional fix or reproducible
+improvement is claimed. No blanket normalization or revised category verdict
+was used.
+
+#### Runtime catalogue control
+
+The verified test properties select the active fixture ROM through
+`RomTestUtils`. Optional scene games follow a separate path:
+`ExampleModHarness` → `SceneRomLibrary` → `RomManager.catalogue()` →
+`RomLocationResolver`. That catalogue uses configuration defaults and
+`user.dir`; `@RequiresRom` resets loaded YAML/session configuration before
+methods. The original baseline had no root `.gen` entries, while the task
+worktree had ten pre-existing links. Equal property lists/config hashes alone
+therefore did not establish equal optional scene-ROM availability. Directory
+counts alone were not treated as causal proof.
+
+Root ran `TestThreeIslandsScene` once per source in each common-directory mode.
+Only the fork's discovery directory changed between modes. Each invocation used
+Java 25, Lua 5.4, MSE off, surfaceless EGL, normal memory, `-Psmoke`,
+`-Ptest-concurrent`, one fork, alphabetical class order, and fresh absolute
+report/temp paths in its own worktree. The fork-only control was one argument:
+
+```text
+-Dtest.cds.argLine=-Xshare:off -Duser.dir=<COMMON_DIRECTORY>
+```
+
+The two common directories were resolved absolutely from the checkout root:
+`.worktrees/ai-code-climb-c4-baseline-20261108` and
+`.worktrees/ai-code-climb-followup`.
+The Three Islands project, harness and tests are identical across c4/c9.
+Fresh XML proves the effective fork property, own-tree classpaths, all twelve
+method identities, zero errors/skips and unchanged source/config in all four
+invocations. No ROM was copied, linked, removed or renamed; build trees were
+not shared. Java-relative fixture lookups also follow the controlled directory,
+so their input equivalence was checked explicitly.
+
+| Common runtime directory | c4 failures / 12 cases | c9 failures / 12 cases |
+| --- | ---: | ---: |
+| BASE | 6 | 6 |
+| Task | 8 | 8 |
+
+At each directory, every case outcome, exception type and assertion message
+matches literally between source heads. The BASE controls reproduce the old
+S3K-only assertion boundaries; the task-directory controls reproduce the newly
+exposed optional chapter boundaries:
+
+- `aSonic1ZonePlaysItsOwnRomSongWithoutPlaceholderSwitches`: line 290,
+  expected `DUNGEON`, actual `STORY`; the unavailable chapter returns at 265.
+- `tailsJoinsInTheFieldAndTheTravellingShopReturnsToTheSameSpot`: line 547,
+  expected true, actual false; the unavailable chapter returns at 538.
+- `allStoryLandmarksHavePlayableInteriorsWithIndependentGatesSavesAndRewards`:
+  the first available zone changes AIZ → GHZ at the same dungeon assertion,
+  line 682.
+- `physicalTrailsConnectFieldsAndBattleUsesTheEncounterField`: the optional
+  GHZ branch fails at 485; without it, the later assertion fails at 500.
+  Between broad and focused task-directory runs, only the printed
+  `FieldScreen`/`StoryScreen` identity hashes differ at 485.
+
+This attributes the four candidate Three Islands outcomes to existing c4
+behavior under matched discovery inputs. Early-returned optional paths are
+not certified by the twelve-case total or by the absence of JUnit skips.
+The source investigation and all complete before/after texts are retained;
+no test or runtime implementation was changed to obtain this attribution.
+
+#### Matched trace evidence
+
+Each source then ran the queued normal-memory wrapper with one fork,
+alphabetical order, MSE off, surfaceless EGL and `trace.print.summary=true`:
+`-Ptrace-replay -Dtest=TestS2Ehz1TraceReplay`, followed by
+`-Ptrace-segments -Dtest=TestS3kSonicTailsHczSegmentTraceReplay,TestS3kSonicTailsHcz2SegmentTraceReplay`.
+Each used fresh own-tree `target/code-climb/c4-domain/` report directories.
+
+All three full report payloads, bytes, owner sidecars and contexts are identical
+across c4/c9. Fresh Surefire class/method identities, complete owner hashes,
+physical paths and gates were verified independently; canonical report
+validation passed. Both HCZ reports have logical key `s3k_hcz1`, so they were
+paired by concrete class and owner, never that shared prefix.
+
+| Replay | Compared / planned rows | Gameplay errors / warnings | Bootstrap errors / warnings | Gate |
+| --- | --- | --- | --- | --- |
+| EHZ1 | 5,852 / 5,852 | 0 / 0 | 0 / 0 | reached, ALL |
+| First HCZ | 3,519 / 3,574 | 0 / 0 | 0 / 0 | reached, ALL |
+| HCZ2 | 14,149 / 14,208 | 26 / 0 | 0 / 0 | reached, ALL |
+
+HCZ2 retains two physics and 24 animation errors: first animation mismatch at
+6640, first camera-Y span at 6784–6792. Each HCZ report retains eight unavailable
+advertised aux schemas. These are coverage limits, not counted trace warnings.
+Logs separately retain FAST-without-manifest and SMPS presentation warnings.
+Neither this pair nor a loading test certifies a whole route.
+
+#### Cost and retained evidence
+
+Times below are seconds per invocation. Queue values are rounded reported
+admissions; execution includes Maven preparation/build where stated. User-input
+wait was zero throughout. Investigation time was not independently instrumented;
+concurrent tree wall times must not be summed as user latency.
+
+| Invocation | Queue | Execution/preparation | Wall | Unseparated overhead |
+| --- | ---: | ---: | ---: | ---: |
+| c4 smoke + guards, 95 admissions | 6,086 | 1,899.260 | 8,007.666 | 22.406 |
+| c9 smoke + guards, 95 admissions | 5,756 | 1,902.390 | 7,673.065 | 14.675 |
+| Task-directory control, c4 | 7 | 38.310 | 46.516 | 1.206 |
+| Task-directory control, c9 | 11 | 34.657 | 46.247 | 0.590 |
+| BASE-directory control, c4 | 2 | 34.717 | 37.933 | 1.216 |
+| BASE-directory control, c9 | 15 | 35.082 | 50.973 | 0.891 |
+| c4 EHZ1 | 39 | 42.806 | 82.555 | 0.749 |
+| c4 HCZ pair | 10 | 46.536 | 57.367 | 0.831 |
+| c9 EHZ1 | 17 | 35.087 | 52.568 | 0.481 |
+| c9 HCZ pair | 10 | 40.483 | 51.115 | 0.632 |
+
+The provenance-bearing delivery receipt is
+`target/code-climb/combined-4086-category/delivery-evidence.json`.
+It indexes both original terminal exports, exact command arrays, full negative
+and skip records, unchanged strict comparison, all 29 case dispositions, the
+four complete directory controls, trace payload/context comparison, source
+proofs, timings, acknowledgement and retention status. The original negative
+comparison remains false; qualification uses the explicit matched-input and
+display evidence above. No replacement category VERDICT is invented.
+
+The executable change remains covered by the independent Opus review and the
+root P3 repair's RED/GREEN evidence. The original C/F scores at 4086 remain
+71.25 and 62.5; A/B/D/E were not regraded, and later routing prose receives no
+automatic score credit. The goal target remains unmet. All owned validation
+jobs are terminal. Task/older worktrees and ignored saves/configuration remain
+retained pending complete ownership accounting; only consumed category
+outputs may be acknowledged through the runner's official command.
+
+
+### Three Islands test catalogue binding — 2026-11-09
+
+`TestThreeIslandsScene` now binds the supplied optional S1/S2 images through its
+existing `RomCatalogueFixture` after the primary S3K fixture boots. Both ordinary
+scene entry and the custom audio entry use that binding. Required-S1 entry keeps
+its explicit requirement and reuses the same owned fixture, retaining the first
+resolved-value restoration snapshot. Missing optional images are omitted from the
+binding, leaving the existing catalogue configuration and unavailable-ROM
+behavior in place. Production scene/runtime code, global discovery and shared
+fixture contracts are unchanged. No ROM was copied, linked, renamed or removed.
+
+The new real-runtime witness runs after the class-scoped example compilation,
+sets `user.dir` to an empty temporary directory before boot, and confirms boot
+preserves that logical discovery directory. NIO relative project paths continue
+to use the JVM's original working directory. It supplies absolute optional test
+paths, reads the literal `SEGA` header bytes through the scene's `SceneRomLibrary`
+view, verifies the catalogue's actual source paths, and enters GHZ/EHZ with
+ROM-backed terrain. Requiring S1 again must preserve the original restoration
+snapshot; the resolved-configuration checks detect an overwritten first snapshot.
+They do not independently prove fixture close, because level disposal first resets
+configuration to defaults. The caller JVM properties are restored in a `finally`
+block as test cleanup, without claiming a separate restoration witness. It makes
+no private absent-key-presence claim.
+
+The first attempt had a witness reflection setup error (`Game.art()` instead of
+the public field) and is invalid RED evidence. After correcting that test-only
+mistake, the unmodified fixture failed with `AssertionFailedError`:
+`s1 supplied test image reaches SceneRomLibrary ==> expected: not <null>`.
+The repaired fixture passed the witness, existing native-water check, all twelve
+`TestRomCatalogueFixture` cases, three `TestSceneRomLibrary` cases and four backend
+property-isolation cases: **21 tests, zero failures/errors/skips**.
+
+One bounded whole-class characterization retained all twelve original JUnit
+identities and added the passing witness: **13 tests, eight failures, zero errors
+or skips**. The eight identities and failure types match both earlier common
+task-directory controls. Seven messages match literally; the physical-trail
+message differs only in the printed object identity hashes. Every failure is
+`org.opentest4j.AssertionFailedError`:
+
+| Existing method | Observed failure |
+| --- | --- |
+| `tailsJoinsInTheFieldAndTheTravellingShopReturnsToTheSameSpot` | Expected true, got false. |
+| `aSonic1ZonePlaysItsOwnRomSongWithoutPlaceholderSwitches` | Expected `DUNGEON`, got `STORY`. |
+| `startupIsPlayableAndArrivalDialogueAndRestStayInTheField` | Expected `FIELD`, got `STORY`. |
+| `greenHillMysteriesUseRealInteractionsAndPersistThroughContinue` | Expected `FIELD`, got `STORY`. |
+| `physicalTrailsConnectFieldsAndBattleUsesTheEncounterField` | The sealed Star Light trail expected the existing `FieldScreen`, got `StoryScreen`. |
+| `allStoryLandmarksHavePlayableInteriorsWithIndependentGatesSavesAndRewards` | GHZ doorway expected `DUNGEON`, got `MENU_ROOT`. |
+| `travellerDialogueWaitsForTheDiscoveryOrRescueItDescribes` | Expected `STORY`, got `MENU_ROOT`. |
+| `explorationUsesTwoAxesAndStoryDiscoveriesPersistAcrossContinue` | Discovery expected `STORY`, got `FIELD`. |
+
+All invocations used `maven_queue.py --normal`, Java 25, `LUA_BIN=/usr/bin/lua5.4`,
+MSE off, displays unset and surfaceless EGL. Exact argv, source hashes, ROM
+found/missing lines, fresh XML and complete failure texts are retained under
+`target/code-climb/scene-rom-fixture/{red,red-runtime,green,characterization}/`;
+`disposition.json` compares every original identity against both prior controls.
+The initial invalid RED remains separately labelled. Queue/execution costs are
+separated below; user wait was zero in every invocation. Residual time is rounded
+wrapper/startup/teardown overhead, and coding/investigation time is unmeasured.
+
+| Invocation | Queue seconds | Maven seconds | Residual seconds |
+| --- | ---: | ---: | ---: |
+| Invalid witness setup | 16 | 33.320 | 0.809 |
+| Valid missing-binding RED | 15 | 34.094 | 0.438 |
+| Focused GREEN | 62 | 35.614 | 1.130 |
+| Whole-class characterization | 13 | 35.713 | 0.571 |
+
+This is a bounded test-fixture repair, with the inherited gameplay failures
+reported rather than repaired. No category/full-suite run or replacement
+category `VERDICT` was produced; prior raw qualification verdicts are unchanged.
+Root retains review and publication ownership for draft PR271.
+
+
+### Optional-ROM fixture review repairs (2026-11-09)
+
+Opus 5.5 reviewed `78f3ebc2..ce7ef00c` read-only and found no blocker. Its two
+low-severity findings were useful: the custom-audio entry could silently skip
+its donor chapter, and the restoration wording exceeded what the witness
+proved. Root handled these findings without another delegated review round.
+
+Both normal and audio entry now share `open(boolean withAudio)`. The real
+empty-discovery-directory witness executes both paths, always covers required
+S1, and additionally covers S2 when supplied. It compares the scene's full
+256-byte ROM header/title block with the supplied image, checks the actual
+catalogue source and enters decoded GHZ/EHZ fields. S1 is checked first for a
+deterministic missing-binding failure. Optional S2 absence no longer skips the
+S1 witness. The repeated-required-binding checks detect overwriting the first
+fixture snapshot; shared fixture tests own independent close/restoration
+coverage. JVM-property cleanup is a `finally` obligation, not a self-asserted
+restoration test. The tautological post-cleanup assertion was removed.
+
+Final command, with Java 25, Lua 5.4, displays unset and normal queue admission:
+
+```bash
+python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  -Dopenggf.surefire.reports=<task-target>/scene-rom-fixture/review-final/surefire \
+  '-Dtest=TestThreeIslandsScene,TestRomCatalogueFixture,TestSceneRomLibrary,TestHeadlessBackendPropertyIsolation' test
+```
+
+Fresh XML contains **33 cases: 25 passed, eight inherited failures, zero errors
+and zero skips**. Both normal/audio witness invocations pass. All twelve original
+scene identities and their outcomes/types remain unchanged. Seven failing
+messages are literal matches; the physical-trail assertion retains its
+FieldScreen/StoryScreen failure with two different JVM identity displays. The
+complete old/new texts are retained in
+`target/code-climb/scene-rom-fixture/review-final-disposition.json`. Every ROM
+property was found, with `missing=none`. Queue wait was 0 seconds, Maven
+execution 38.553 seconds, wall time 39.628 seconds, user wait 0 and residual
+1.075 seconds. Investigation/edit time was not measured.
+
+Only this test class and the existing audit changed. Production, shared fixture,
+selection, skip policy and prior broad/trace evidence are unchanged. This is
+bounded fixture qualification; the earlier raw category verdicts remain FAILED,
+and no new full-smoke, full-suite or contributor-score claim follows from it.
+
+
+### Retire the unreachable private S3K comparison seed (2026-11-09)
+
+The proposed shared assembly helper was rejected before implementation. Its
+premise was incomplete: the duplicate seeded branch exists in the standalone
+driver, but no real inherited entry can reach it. The direct bootstrap call
+returns only `ReplayStartState(cursor, -1)` or `DEFAULT(0, -1)`; the compatibility
+seeded entrypoint delegates to the same unseeded result. `hasSeededTraceState()`
+requires a nonnegative second field. The existing disabled-seeding policies are
+unchanged. A forced seeded witness would require reflection, a mock, or a new
+bootstrap hook and would not establish a reachable production path.
+
+After that finite call-graph proof, root authorized deleting only the private
+seeded comparison branch and its unreachable previous-frame ternary arm. No
+shared helper, public API, input import, fixture, tolerance or policy was added.
+The reachable prefix/frame-zero checkpoint initialization stays intact. A scoped
+mechanical projection verifies the whole source prefix before `replayS3kTrace`,
+both surviving checkpoint bodies and the entire tail from frame-counter
+alignment onward byte-for-byte. This covers the general replay path, live S3K
+assembly, row-versus-CSV-frame lookups, both sprite evaluations, diagnostic-hook
+ordering, scheduling, auxiliary comparisons, frontier and report lifecycle.
+The driver falls from 1,679 to 1,633 lines; that size reduction earns no automatic
+contributor score. Public replay-start records, compatibility methods and all
+other consumers remain unchanged.
+
+One bounded post-change check used Java 25, Lua 5.4, displays unset and queued
+normal-memory execution:
+
+```bash
+python3 tools/testing/maven_queue.py --normal -Dmse=off -Ptrace-segments \
+  -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical \
+  -Dopenggf.headless.gl=surfaceless-egl -Dtrace.print.summary=true \
+  -Dopenggf.surefire.reports=<task-target>/s3k-private-seed-retirement/focused/surefire \
+  -Dopenggf.trace.reports=<task-target>/s3k-private-seed-retirement/focused/reports \
+  '-Dtest=TestS3kReplayReferenceClosureIntegration,TestTraceReplayStartPositionPolicy,TestTraceBinder,TestTraceExecutionModel,TestTraceBinderComparisonDedup,TestTraceReplayInvariantGuard,TestTraceReplayReferenceClosureGuard' test
+```
+
+All seven requested suites actually ran: **155 cases passed, zero failures,
+errors or skips**, with every ROM property found (`missing=none`). The existing
+S3K inherited-entry integration passed its positive closure-validation assertion.
+Its fresh owner-keyed AIZ report contains 26,041 gameplay comparisons against
+26,228 planned rows, an ALL gate reached and zero gameplay/bootstrap mismatch
+errors or warnings. It retains eight unavailable advertised auxiliary schemas;
+compiler/runtime log warnings are retained separately. This is one focused
+integration witness, not a dynamic execution of deleted seeded behavior, a
+paired-domain result, whole-route certification or a full-suite pass.
+
+Queue wait was 0 seconds; Maven execution 65 seconds; wall time 66.732 seconds;
+user wait 0 and residual 1.732 seconds. Rounded durations include wrapper
+uncertainty; investigation/edit time was not measured. Exact argv, fresh XML,
+report/owner identities, source projection and hashes are retained under
+`target/code-climb/s3k-private-seed-retirement/`. The prior investigation handoff
+under `target/code-climb/s3k-comparison-assembly/` records the rejected extraction
+and wider public-consumer boundary. Root owns independent review, final combined
+qualification, integration and publication to the existing draft PR271.
+
+
+### Saved-scope trace diagnosis and private-driver integration (2026-11-09)
+
+The report producer deliberately retains both verification groups and global
+counts/summary. Its context writer uses the selected gate scope, but triage
+previously discarded `verification_group` and selected the earliest global
+mismatch. A physics brief could therefore select animation evidence, miss its
+actual context and focus compressed auxiliary evidence on the wrong frame.
+Animation diagnosis could similarly prioritize a physics bootstrap discrepancy.
+
+The reader now retains the canonical group and derives one private diagnostic
+selection from the published gate. Brief, bootstrap, context/auxiliary focus and
+frontier-log hint use that selection. Bootstrap discrepancies remain physics.
+Global counts, arrays, summary and the public global first-divergence/bootstrap
+accessors remain intact for saved-baseline consumers. Narrow headings explain
+why the selected mismatch can differ from the global summary. Unknown group
+membership fails narrow evidence reading with no brief; ALL and absent-gate
+reports preserve their legacy global behavior. Primary malformed evidence is
+validated before selection. Wire publication, replay completion, comparison
+collection, gameplay and input contracts are unchanged.
+
+The first real producer/writer/CLI RED selection had two failures, one per
+narrow scope: an out-of-scope mismatch at frame 2 incorrectly displaced the
+selected mismatch at frame 9. Those new, unpublished cases moved unchanged into
+`TestTraceTriageVerificationScope`, beside bootstrap, warning, no-selected-error,
+legacy and malformed-group neighbors. The expanded RED run had **30 cases,
+21 intended failures, nine passing controls, zero errors/skips**. GREEN had
+**104 passing cases** across the old 74-case reader suite and the new 30-case
+scope suite. Four report/protocol suites added **53 passing cases**, including
+the non-opt-in saved-baseline reader check. Every selected suite ran; no opt-in
+report-backed baseline audit was claimed.
+
+Component commands use Java 25, Lua 5.4, MSE off, displays unset, surfaceless EGL,
+normal queued memory and distinct fresh reports. Evidence remains in the owned
+triage-scope worktree under `target/code-climb/triage-scope/`: exact command
+arrays, source hashes, fresh XML, complete RED messages and
+`focused-qualification.json`. Timing separates queue/Maven/wall/user/residual:
+
+| Component | Cases | Queue s | Maven s | Wall s | User s | Residual s |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Primary RED | 2 failures | 0 | 100 | 101.781 | 0 | 1.781 |
+| Expanded RED | 21 failures / 9 controls | 552 | 36.346 | 589.129 | 0 | 0.783 |
+| Reader GREEN | 104 passed | 52 | 91 | 144.516 | 0 | 1.516 |
+| Report/protocol | 53 passed | 48 | 33.208 | 82.147 | 0 | 0.939 |
+
+The separate Sol retirement in `8fc54d6793` passed 155 cases and is documented
+above. Integration `6c148777e2` kept all four scope-change blobs exact and the
+driver blob exact, with no conflicts. These are **312 component-case passes on
+separately tested source blobs**, not a combined-head smoke or route verdict.
+Root independently reproduced the whole-file projection removing only the
+constant-unreachable seeded branch/ternary arm. Source and receipt proofs remain
+under `target/code-climb/triage-scope-integration/` and
+`target/code-climb/s3k-private-seed-retirement/` in the PR worktree.
+
+Combined independent review and qualification remain pending at this checkpoint.
+No original contributor trial was regraded and no score credit is inferred.
+The sole delivery remains follow-up draft PR271; no destination branch was
+written. Both source trees, their generated resources and original evidence are
+retained pending final accounting.
+
+
+### Combined Opus review and direct-model invariant repair (2026-11-09)
+
+Opus reviewed `700ff4dd2d..dd1972ca2d` read-only and found no blocker. It confirmed
+ALL/absent-gate compatibility, scoped frontier/context/auxiliary agreement, the
+finite unreachable-branch proof and the exact integrated source blobs. It found
+missing warning-array rejection coverage, a latent direct-constructor bypass,
+and an unexplained ALL-context compatibility condition. Root repaired these
+without another delegated review round.
+
+The immutable parsed model now enforces classification at construction for
+narrow gates and snapshots its lists. Both direct callers and JSON readers obey
+the same rule; the parser translates construction failure back to its existing
+checked IOException contract. A caller cannot mutate its original error/warning
+list and quietly erase the selected frontier. ALL/absent-gate legacy data and
+raw global accessors remain unchanged. The context condition now states why ALL
+retains legacy reads while a narrow empty selection avoids unrelated evidence.
+
+The malformed-group table now covers both arrays explicitly. An intentional
+one-line warning-validation mutant demonstrated **14 warning-case failures**;
+four direct-constructor cases and two caller-mutation cases independently exposed
+the pre-fix model gap. That RED had **50 cases, 20 failures, zero errors/skips**;
+it is not described as twenty shipped runtime defects. The mutant was restored
+before the repair. GREEN has **124 reader cases** (74 original plus 50 scoped
+cases), and the separate four-suite report/protocol check has **53 cases**;
+both have zero failures/errors/skips. Fresh XML, full negative messages, source
+hashes and argv are retained under
+`target/code-climb/triage-scope-integration/review-{red,green,protocol}/`.
+`review-repair-qualification.json` records exact timing and identities. No broad
+or route verdict is inferred from these checks. The separate carried-entry
+metadata work remains outside this candidate until its own later accounting,
+review and qualification.
+
+
+### Scoped diagnosis and private-seed qualification (2026-11-09)
+
+The combined candidate was tested clean and frozen at `893e0568eefc`, after the
+Opus review and bounded direct-model repair above. The complete change-based
+smoke selected **4,626/4,626 source classes**, completed **94/94 ordinary batches**
+and the full guard lane. Ordinary results were **37,743 cases, 29 failures,
+zero errors and 49 allowed skips**; all **843 guards passed without skips**.
+The original runner verdict remains **FAILED** (38,586 total cases), not a
+full-suite pass.
+
+The command used Java 25, Lua 5.4, MSE off, displays unset and:
+
+```text
+python3 tools/testing/run_categories.py --base c4ca46472e75a0df6f23dfd410e347ab8ed52a70 --max-minutes 40 --workers 2 --headless-gl surfaceless-egl --keep-diagnostics --run
+```
+
+Every c9 selected class remains. The sole class addition is the 50-case
+scoped-reader suite; the earlier 11-case contact move retains its explicit
+identity mapping. The two new fixture witnesses explain the other case-count
+increase. Planned validation flags, ROM discovery, skip inputs and budgets
+match the retained c4/c9 plans; the effective optional-catalogue difference is
+accounted for below. All 49 complete skip dictionaries are literally equal, and
+no identity or causal message was omitted or capped. Against c9, 26 failure messages match literally;
+two Set displays retain identical expected/actual memberships and the physical
+trail message changes only its two JVM identity hashes. Unchanged test blobs,
+the published fixture repair, and every full message are recorded separately.
+The c4 strict comparison remains different: its four runtime-catalogue outcomes
+retain the previously demonstrated matched-input attribution, its three Set
+displays remain explicit, and its absent rendering failure is not claimed fixed.
+No normalization or replacement runner verdict was introduced.
+
+Fresh EHZ1 and first-HCZ/HCZ2 commands used the same profiles, selectors, normal
+queued memory, fork count and inputs as c4, with separate report paths containing
+spaces. All three complete payloads and contexts are byte-identical to c4;
+owner identities and actual physical paths were verified, and both report roots
+passed the canonical validator. EHZ1 compares 5,852/5,852 rows cleanly; first HCZ
+compares 3,519/3,574 cleanly; HCZ2 retains 26 errors across 14,149/14,208 comparisons.
+All three publish the ALL completion gate. Both HCZ reports still lack eight
+advertised auxiliary schemas. Existing FAST/SMPS log warnings remain; neither
+clean payload counts nor completion certify a whole route.
+
+Both actual printed HCZ triage commands were executed unchanged through the
+POSIX shell. They correctly read paths containing spaces, report the primary
+clean result and select HCZ2's frame-6640 animation mismatch with its context and
+compressed auxiliary evidence. This does not certify Windows quoting. The first
+runner attempt stopped before Maven because its own path check compared a
+relative printed path with an absolute export; that preparation error and the
+resolved-path repair are retained separately from source/test outcomes.
+
+| Check | Queue s | Execution/preparation s | Wall s | User s | Residual s |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Complete smoke and guards | 254.000 | 1,784.990 | 2,052.925 | 0 | 13.935 |
+| EHZ1 | 23 | 35.029 | 58.588 | 0 | 0.559 |
+| HCZ pair | 0 | 41.945 | 42.750 | 0 | 0.805 |
+| Two printed triage commands | 0 | 0.855 | 2.278 | 0 | 1.423 |
+
+Evidence remains under `target/code-climb/scope-seed-category/` and
+`target/code-climb/scope-seed-domain/`: original terminal export/verdict, both
+strict comparisons, per-identity disposition, selection/input proof, all skip
+records, 96 actual command arrays, logs, owner checks and fresh domain XML.
+Consumed category diagnostics were acknowledged through the runner after these
+exports. All four owned units are terminal and retired. Source worktrees and
+useful evidence remain retained; the separate carried-entry increment is not
+part of this candidate. No original trial was regraded or receives inferred
+score credit. The wider goal remains unmet and delivery stays in draft PR271.
+
+
+### Retain the computed carried-entry diagnostic evaluation (2026-11-09)
+
+This bounded increment starts from local alignment head `e5b5e6d574`, whose
+tracked tree exactly equals reviewed candidate `dd1972ca2d`. The existing
+`applyStartPositionAndGroundSnap` entry helper already computes one
+`TraceSegmentCarriedState`, uses it for camera and post-initialization restoration,
+and previously discarded it. Both overloads now return that same record; paths
+that never computed one return null. The standalone driver retains the reference
+and projects only its existing provenance, disagreement and unresolved strings
+at final publication. No import, resolution, gameplay read, callback or state
+operation was added, removed or reordered. Continuous, special-stage and credits
+publication paths do not acquire this standalone diagnostic claim.
+
+`DivergenceReport.CarriedEntryDiagnostics` is the single immutable diagnostic
+projection and strict optional wire codec. The original report instance receives
+it only at serialization time through the existing report writer, preserving
+virtual summary behavior and the existing serialization-error publication path.
+A base-class copy attachment was rejected because it could erase a subclass's
+throwing summary and turn a producer failure into ordinary evidence. The JSON
+contains no gameplay scalars. Absent metadata means not reported/unknown; malformed
+present metadata fails evidence reading with CLI status 1 and empty stdout.
+Triage displays the strings separately from mismatches and completion and states
+that even empty note lists do not establish imported gameplay state, complete
+provenance or run-chain parity. Default report publication without attached
+metadata retains its bytes. Counters, warnings, verification groups, selected
+frontier, gate, comparison coverage and the three-field owner schema are unchanged.
+
+Mechanical inverse projections reconstruct the whole bootstrap and standalone
+driver source files byte-for-byte after removing only return/diagnostic plumbing.
+The serialization attempt reconstructs its original block after removing only
+the diagnostic parameter and conditional append; its sole catch body is unchanged.
+Every existing helper caller remains a statement invocation, and all main and
+5,582 test sources were compiled with the new Java return descriptors. The public
+helper and reader-record constructor are internal tooling Java surfaces, outside
+the pinned Mod API; precompiled consumers need recompilation. Source searches
+found no guard pinned to the helper's former void signature. Existing invariant,
+source-policy, clock, configuration and carried-resolution checks executed; no
+renamed signature was silently omitted by a method-body lookup.
+
+The original three-case RED used literal wire injection and the real inherited
+first-HCZ entry. It failed at the expected assertions: missing displayed literal
+notes, accepted malformed present metadata, and dropped diagnostics after a real
+post-binder abort. It had zero errors/skips, rather than a missing-new-API compiler
+failure. The expanded first GREEN ran 208 cases: 206 passed and two new error-document
+cases errored because this test initially omitted `.json` in its owner-sidecar
+filename. That test setup was corrected; those errors are retained in the receipts.
+The corrected 25-case diagnostic suite passes, including literal data through
+the real writer/CLI, malformed-present cases, ALL/narrow/no-gate neighbors,
+zero comparisons, defensive copies and both valid/malformed serialization-error
+publication with diagnostics attached. Existing report/reader/policy suites
+contribute 183 passing cases; configuration, clock, resolver and three selected
+source-policy checks contribute another 26 passing cases.
+
+The real witness inherits `TestS3kSonicTailsHczSegmentTraceReplay`: committed
+`hcz`, segment 9, engine act 0 / recorded act 1. Its existing rewind-closure
+observer deliberately aborts before the first gameplay comparison, after binder
+creation. Publication runs exactly once and leaves a fresh owner-keyed INCOMPLETE
+report with 3,574 planned rows, zero comparisons, zero errors/warnings and literal
+provenance `s3k-sonic-tails-complete-emeralds segment 9 (hcz)`. Independently
+inspected manifest/fixture evidence establishes the expected empty diagnostic
+lists: the four earlier stages end with `clear_routine=3`, their counts match the
+recorded emerald array, complete entry RAM removes the giant-ring unknown, and
+zero `act3_flag` adds no continuation note. Expectations are literals, never a
+second resolver/import call. The nested helper's `Probe` name intentionally keeps
+its inherited test out of independent trace-profile discovery. This conditional
+entry witness compares no gameplay rows and does not certify a whole leaf, route or
+run-chain parity; HCZ2 remains an unrun holdout.
+
+The broad-catch guard initially reported only the expected old/new site mismatch.
+Root authorized a local one-for-one proposal, preserving allowance count 1 and
+the exact reason prefix, “Unresolved legacy recovery; investigate the caller and
+attempted operation before narrowing this boundary.” The key changes from
+`serialize(ReplayGate)` fingerprint
+`ac0440803ac7cf7ca5d4c69e3edba085d07072dd763411698fcd03bbd63f93a5`
+to `serialize(ReplayGate,CarriedEntryDiagnostics)` fingerprint
+`8605ab231ec928aa366822d293172f147f217b07397099f41def83539e0e622e`.
+Total allowances remain 1,013. No handler, fallback, scanner relaxation or allowance
+was added. Its four cases pass after the row-only update. This guard pass is not
+independent approval of recovery semantics: fresh Opus approval is still pending
+before publication of this increment.
+
+All four bounded commands used Java 25, Lua 5.4, MSE off, displays unset,
+surfaceless EGL, normal queued memory and fresh per-invocation reports:
+
+```bash
+python3 tools/testing/maven_queue.py --normal -Dmse=off -Ptrace-segments \
+  -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  -Dopenggf.surefire.reports=<task-target>/final-guard/surefire \
+  -Dopenggf.trace.reports=<task-target>/final-guard/trace-reports \
+  '-Dtest=TestTraceCarriedEntryDiagnostics,TestBroadCatchSwallowingGuard' test
+```
+
+The final command ran exactly those two concrete suites: **29 passed, zero
+failures/errors/skips**. Across the focused components, 238 distinct cases have
+passing evidence after accounting for the corrected setup and one-for-one guard
+proposal; this is not a category or full-suite verdict. Every invocation found
+all six ROM properties (`missing=none`) and fresh XML; compiler/runtime warnings
+remain in the ignored logs. No category, full-HCZ, paired-domain or broad rerun
+was performed.
+
+| Attempt | Cases / disposition | Queue s | Maven s | Wall s | User s | Residual s |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| Primary RED | 3 intended failures | 0 | 35.622 | 36.737 | 0 | 1.115 |
+| Expanded GREEN | 206 pass / 2 setup errors | 0 | 100 | 101.472 | 0 | 1.472 |
+| Corrected / guard | 54 pass / 1 expected inventory failure | 0 | 46.058 | 47.091 | 0 | 1.033 |
+| Final guard / diagnostics | 29 pass | 0 | 40.894 | 41.893 | 0 | 0.999 |
+
+Maven's minute-format duration is rounded; residual includes wrapper/clock
+uncertainty. Investigation and editing time was not measured. `git diff --check`
+and the staged new-citation guard pass. An unnecessary repository-wide
+`disasm_citations.py check` exited 1 on existing pinned-reference debt: all three
+local disassembly checkouts differ from their pins, and the summary includes
+2,042 stale, 121 missing-file, 32 out-of-range and 202 unresolved-file records.
+No new citation text was added; the staged guard reports no added stale citations.
+No unrelated citations or disassembly pins were repaired. Exact argv, source
+hashes, complete failure messages, fresh XML/case identities, retained first-HCZ
+report/owner and inverse proofs are under
+`target/code-climb/carried-entry-diagnostics/` in the owned worktree. No raw or
+regenerable output is committed. Guide/changelog text is folded into existing
+owners; no frontier or discrepancy status changed. Root owns reconciling its
+separate constructor-invariant repair, combined reader/metadata qualification,
+independent review and eventual integration/publication to draft PR271. No push,
+destination write or PR update occurred in this increment.
+
+
+### Reconcile carried-entry publication with the published reader invariant (2026-11-09)
+
+The future carried-entry branch merged published PR271 head `7d17a84f7d` into
+local task head `ef64a0e27d` in its existing isolated worktree. No PR/main tree,
+destination branch or remote was written. There were exactly two content
+conflicts. In `TraceTriageTool`, the upstream parser construction and the new
+metadata argument overlapped: the resolution retains the upstream compact
+constructor's defensive list copies and narrow-group validation, the checked
+`IOException` translation, and the metadata codec in that single construction
+path. The conflicting audit append preserves both parents' complete prose
+byte-for-byte, with the published review/qualification section before the
+future carried-entry section. The automatic changelog merge retains both
+features' descriptions. No reviewed qualification prose was rewritten.
+
+Two direct `TraceReport` construction sites in the scoped tests now pass null
+for absent carried-entry metadata in the canonical constructor. No compatibility
+overload, facade or new hook was introduced. Removing only those two arguments
+reconstructs the published 50-case test source exactly. Removing only metadata
+plumbing reconstructs the complete published `TraceTriageTool` source exactly,
+including raw global evidence accessors and ALL/no-gate behavior. Bootstrap,
+`DivergenceReport`, standalone driver, writer, carried-entry tests and broad-catch
+inventory remain exact `ef64a0e27d` blobs; their previous whole-file/handler
+preservation proof is reused. The existing sole broad-catch handler and reason
+prefix are untouched. Inventory remains 1,011 TSV rows and a sum of 1,013
+allowances. Its one-for-one re-key still requires independent Opus approval;
+a passing source guard does not approve recovery semantics.
+
+One fresh, normal-memory queued invocation selected exactly eleven concrete
+suites and ran **260 unique JUnit cases: all passed, zero failures/errors/skips**.
+The original 74 reader identities and all 25 carried-entry identities match
+their prior fresh XML sets, with no additions/removals. All 50 scoped cases ran:
+28 malformed/unclassifiable error-and-warning cases, four direct-constructor
+rejections, two caller-alias controls and sixteen other scope cases. Gate
+completion, report/context/owner protocol, six real attempt-lifecycle controls,
+bootstrap policy/invariants and the broad-catch guard all executed. The six
+attempt-lifecycle controls deliberately exercise nested failures/assumption
+aborts; none silently skips the outer required witness or a missing ROM.
+This is a single-invocation count, not a sum of repeated component passes.
+
+```bash
+python3 tools/testing/maven_queue.py --normal -Dmse=off -Ptrace-segments \
+  -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  -Dopenggf.surefire.reports=<task-target>/reconcile-published/focused/surefire \
+  -Dopenggf.trace.reports=<task-target>/reconcile-published/focused/trace-reports \
+  '-Dtest=TestTraceCarriedEntryDiagnostics,TestTraceTriageTool,TestTraceTriageVerificationScope,TestTraceGateCompletionReport,TestDivergenceReport,TestTraceReplayReportPolicy,TestTraceReplayAttemptReports,TestSessionOutputPathsTest,TestTraceReplayInvariantGuard,TestTraceReplayStartPositionPolicy,TestBroadCatchSwallowingGuard' test
+```
+
+Java 25, Lua 5.4, MSE off, displays unset and surfaceless EGL were used. Verified
+ROM discovery found all six properties (`missing=none`). Every selected suite
+has fresh XML and full class/case identities retained with source hashes and
+exact argv under `target/code-climb/carried-entry-diagnostics/reconcile-published/`.
+The real first-HCZ post-binder abort again publishes exactly once with the
+original literal provenance, empty diagnostic lists, zero comparisons/errors/
+warnings and an INCOMPLETE gate over 3,574 planned rows. Its owner schema remains
+exactly three fields. Empty notes and zero compared rows do not certify complete
+entry provenance, whole-leaf, route or run-chain parity. HCZ2 remains unrun here.
+
+Queue wait was 0 seconds, Maven execution 110 seconds, wall time 110.982 seconds,
+user wait 0 and residual/unknown time 0.982 seconds. Maven's minute-format duration
+is rounded; investigation/editing/parent-coordination time was not measured.
+No category, full-suite, exhaustive, whole-leaf/domain or repository-wide citation
+check was run in this reconciliation. Normal staged checks/hooks apply to the
+local merge commit. All owned validation jobs are terminal. Root retains
+independent Opus review, broader/domain qualification, final integration and
+publication into the same draft PR271; no delivery or contributor-score gain is
+inferred from this bounded pass.
+
+
+### Carried-entry Opus approval and private-probe repair (2026-11-09)
+
+Opus reviewed clean `79a06ea620` without a blocker and accepted the one-for-one
+serialization-boundary re-key. The handler is unchanged; the new append contains
+immutable diagnostic lists and nullable provenance. The allowance reason now preserves its original
+unresolved-debt prefix and relocation history, and records that approval. Keys,
+counts, scanner and budgets are unchanged: 1,011 rows, 1,013 allowances.
+
+Its Low finding was a test-isolation defect: the intentional HCZ abort used the
+configured trace-report root, leaving a fake standalone report in normal lookup.
+Root added independent report/sidecar containment assertions. The real inherited
+case failed exactly once against the old directory choice, with zero errors or
+skips; it now always uses its JUnit-owned temporary directory. GREEN has 29 distinct
+cases across the complete diagnostics suite and broad-catch guard, all passing
+without skips. The configured report root contains no probe folder. The fixture
+still proves only a post-binder abort, zero comparisons and an incomplete gate;
+empty notes do not certify broader entry state or route parity.
+
+Only that test, the allowance reason and audit prose changed after review;
+production, driver/writer and scoped-model sources remain exact reviewed blobs.
+Exact argv, fresh XML, full RED assertion, source hashes and unit receipts are in
+`target/code-climb/carried-entry-diagnostics/review-repair/`. RED used 0s queue,
+36.954s Maven and 37.843s wall; GREEN used 0s queue, 34.649s Maven and 35.454s wall.
+User wait is zero; residuals are 0.889s and 0.805s. No broad/domain verdict or new
+score is inferred. The test's wording and earlier ambiguous “certify no” prose
+now explicitly say “do not certify”.
+
+
+### Original trial-A coarse-X kernel consolidation (2026-11-09)
+
+The protected coarse-X adapter now delegates to the existing caller-bound
+`ObjectRangeOps` kernel, and its viewport bound delegates with one width read.
+Saw's skipped-delete placement release uses the existing two-argument native
+640 predicate against `origX`. Its skip/tracked guards, camera and service read
+cadence, release callback, live SST, slot and rewind identity remain unchanged.
+This consolidates arithmetic; it changes no gameplay or window policy. Buzz
+retains its live-X widened veto, moving blocks retain their widened origin
+window, and signed, extended-left, render and Stageplay policies are untouched.
+
+An independent division/modulo oracle covers all **262,144 coarse-word pairs**
+and **144 extreme-int pairs**, with twelve caller bounds including negative,
+nonstandard and extreme values. Equal unsigned deltas preserve comparison for
+any caller int bound, including 16-bit wrapping and inclusive chunk boundaries.
+A changing-width witness checks one read. An actual type-0A moving block travels
+128 pixels before its origin and live X occupy different range chunks; native,
+widened and next-camera-chunk controls distinguish the retained policy. All
+previous JUnit identities and assertions remain.
+
+Three deliberate mutants (discarded custom bound, extra width read and
+moving-block live-X anchor) produced **three intended assertion failures, zero
+errors/skips**. They were restored before the final refactor; these are not
+three shipped defects. The final normal-memory queued selection passed **60
+cases, zero failures/errors/skips**, across `TestObjectRangeOps`,
+`TestAbstractObjectInstanceRange`, `TestObjectRangeHelpers`,
+`TestBuzzBomberLifecycle`, `TestSonic1SawPlacementReentry`,
+`TestSonic1MovingBlockObjectInstance` and `TestStageplayActivationPolicy`.
+
+Both commands used Java 25, Lua 5.4, MSE off, displays unset, surfaceless EGL and
+fresh report/tmp roots. Printed queue/Maven times and measured wall time were
+39/93/133.031 seconds for intentional RED, and 0/88/89.448 seconds for GREEN;
+user wait was zero. The respective 1.031/1.448-second residuals include wrapper
+overhead and printed-time rounding. Original XML, full case identities, exact
+argv/environment, source hashes and proof are retained under
+`target/code-climb/range-kernel/`. The existing FAST/NONE manifest warning remains
+explicit in the logs. This bounded selection is not combined-head, route or
+full-suite qualification. Root owns independent review, combined qualification
+and delivery through the same draft PR271; no original trial is regraded and
+no rubric credit is inferred.
+
+
+### Native SST source composition (2026-11-09)
+
+Root expanded the compressed registration helper in `ObjectNativeSstOverwrite`
+from 137 to 197 lines: one mutation per line, explicit nested loops/conditionals,
+readable record components and four local-name expansions (`s`, `o`, `a`, `found`).
+No helper/facade, API, ownership operation or algorithm was introduced. The partial
+write, fixed/prefix replacement, collision rebinding, callback and cursor paths
+remain separate and ordered as before.
+
+The lexical proof preserves every non-brace token after the explicit alpha-name
+mapping, all nine comments modulo whitespace, and every literal/operator/call.
+Fourteen added brace pairs wrap only prior single statements or nested loop bodies
+(3 in create, 6 in replaceValidated, 3 in currentOwner, 1 each in occupant/residue).
+That proof does not replace review of block association. Four existing native
+query/fixed/prefix/word2C suites passed **67 distinct cases**, zero failures/errors
+or skips. Queue was 0s, Maven 92s (rounded), wall 93.286s, user wait 0s and residual
+1.286s. Source hashes stayed frozen; edit/coordination time was not separately
+measured. These are source-composition and focused
+registration checks, not an ownership redesign, combined smoke or rubric grade.
+
+The prepared projection, before-source snapshot, token proof, exact command,
+source hashes and fresh XML remain in `target/code-climb/native-sst-readability/`.
+The component is based on the verified range commit `4b1df83611a3`; root independently
+checked its four touched Java hashes and 60 distinct passing XML identities.
+Separate carried-entry integration and combined qualification remain pending.
+
+
+### Range, registration and carried-entry integration (2026-11-09)
+
+Root combined the source-composition/range head `5d3a334c61` with reviewed carried
+entry and private-probe repair `b24a8da5a3`, from published base `7d17a84f7d`.
+Only appended audit prose conflicted. The resolution retains the exact common
+prefix, then both complete carried-entry and range/registration suffixes; source,
+resource, guide and changelog changes are disjoint. Full-tree three-way blob/mode
+accounting is retained in `target/code-climb/combined-range-carried/`.
+
+Component evidence is 60 range cases, 67 native-registration cases, 260 cases on
+the reconciled metadata source and 29 bounded review-repair cases. These are
+separate source/selection results, with overlaps; they are not summed into a
+combined pass. Metadata recovery semantics have independent Opus approval;
+range/registration correctness review and combined broad/domain qualification
+remain pending. Source worktrees and useful evidence are retained. No push,
+destination merge, fresh score or automatic usability credit is claimed here.
+
+
+### Range, registration and carried-entry qualification (2026-11-09)
+
+Independent Opus scrutiny of clean `7908d321064d` found no correctness blocker.
+It independently checked the range arithmetic, fourteen registration brace
+associations, local name binding and complete merge accounting. The moving-block
+witness is a retained-policy control; it does not execute the changed adapter.
+The adapter itself is exercised against the independent arithmetic oracle.
+This records completion of the review marked pending in the integration note.
+The earlier carried-entry boundary re-key is approved, and the intentional abort
+probe now stays in its private temporary directory. No additional recovery
+allowance, guard budget or runtime policy is introduced.
+
+A fresh original-trial assessment on that same head scores A (Buzz lifetime)
+**82.5**, vector `[4,3,3,4,2,4,3,3]`, and F (first-HCZ diagnosis) **72.5**, vector
+`[4,2,3,3,2,3,3,3]`. The eight weights remain 15/15/15/15/10/10/10/10. This is
+a static contributor journey, not runtime certification. No other trial was
+regraded. The target of at least 85 per trial, no axis below 3, and 4 for owner,
+understanding and readability remains unmet. Concept overload, crowded helper
+names and the long replay driver remain concrete work for the next increment.
+
+The required S3K obligation selection ran all five concrete suites selected by
+the four documented short names: **60 unique cases passed, zero failures, errors
+or skips**. The complete change-based smoke then selected **4,627 classes**,
+finished all **94 ordinary batches and one guards batch**, and ran **38,614 cases**.
+Ordinary results are 37,771 cases, 29 inherited failures, zero errors and 49 allowed
+skips; all 843 guards passed without skips. Its original verdict is retained:
+
+```text
+VERDICT FAILED: head=7908d321064d source=71b63bfac277 change-based 4627/4627 candidate classes; ordinary 94/94 batches; guards 1/1 batches; tests=38614 failures=29 errors=0 skipped=49 (allowed=49 unexplained=0); missing ROM properties=none; skip inputs audio_reference_files=false,gl=false,s1_bizhawk_reference=false,s2_bk2=false,s3k_observations=false; bounded smoke selection, not a full-suite pass
+```
+
+Against qualified source `893e0568eefc`, all 29 failure identities, kinds and types
+match: 27 full assertion messages are literal, while Sonic and Tails MHZ assertions
+only change their expected Set display order. Each complete expected and actual
+membership is equal; the rest of each full stack is literal. All sixteen failing
+test sources and nine runner/policy sources retain their previous blobs. The
+original c4 comparison remains DIFFERENT: four optional-ROM scene outcomes have
+the earlier matched-catalogue reproduction, three Set displays have explicit
+review, and the absent rendering failure is not claimed fixed. Those original
+comparisons and the complete per-case disposition ledger remain intact. No
+blanket normalization is enabled.
+
+All 49 complete raw skip dictionaries match both c4 and the previous candidate.
+All input, ROM, GL, worker, budget and skip-policy fields match. The only additional
+class since the previous candidate is the 25-case carried-entry diagnostics
+suite; the range selection adds three passing cases. Relative to c4, the existing
+eleven-case contact test rename remains explicitly mapped. No prior selected
+class is missing, and no omission or causal-cap indicator is nonzero. The source,
+configuration and pre-existing ROM entries stayed frozen throughout validation.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/run_categories.py \
+  --base c4ca46472e75a0df6f23dfd410e347ab8ed52a70 \
+  --max-minutes 40 --workers 2 --headless-gl surfaceless-egl \
+  --keep-diagnostics --run
+```
+
+Category timing is 407.000 seconds of reported queue wait across 95 admissions,
+1,789.850 seconds of execution including preparation, 2,210.240 seconds wall,
+zero user wait and 13.390 seconds unseparated overhead. S3K obligations used
+0 seconds queue, 90 seconds Maven (rounded), 91.929 seconds wall, zero user wait
+and 1.929 seconds residual. Investigation and editing were not separately timed.
+Full commands, source identities, full assertions/skips, untouched comparisons
+and explicit dispositions are retained under
+`target/code-climb/combined-7908-category/`; original evidence is not relabelled
+as a passing suite.
+
+The matched EHZ1/HCZ pair used the same pinned profiles, selectors, Java 25/Lua
+5.4 environment, normal memory, MSE-off/EGL settings, single fork and alphabetical
+order as c4. Fresh report paths deliberately contain spaces. EHZ1 passes
+5,852/5,852 rows; first HCZ passes with 3,519 comparisons over 3,574 planned rows.
+HCZ2 retains 14,149 comparisons over 14,208 planned rows and the same 26 errors
+(two physics, 24 animation), beginning at animation frame 6,640. All three gates
+are ALL and reached; there are no counted warnings or bootstrap errors. Both
+HCZ reports still list eight unavailable advertised auxiliary schemas. The
+FAST-without-manifest and blocked SMPS messages remain in the full logs; those
+logs are not described as warning-free.
+
+Each fresh report has exactly the reviewed final `carried_entry_diagnostics`
+field added. First HCZ names segment 9 (`hcz`); HCZ2 names segment 11 (`hcz_2`);
+both have empty disagreement/unresolved lists. EHZ has null provenance and the
+explicit unresolved note “no run manifest names this segment”. A strict checker
+detaches only that one final top-level field from the original byte stream and
+requires every remaining byte to match the actual c4 report. It rejects duplicate
+keys and malformed metadata and detects a changed old counter. All three checks
+pass; all context bytes also match c4. The original new reports are retained,
+so this is not a claim that raw report bytes are unchanged. The canonical owner
+validator verifies all three owner keys, logical keys and actual physical paths.
+
+```bash
+python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl -Ptrace-replay \
+  -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical \
+  -Dtrace.print.summary=true -Dtest=TestS2Ehz1TraceReplay test -B
+python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl -Ptrace-segments \
+  -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical \
+  -Dtrace.print.summary=true \
+  '-Dtest=TestS3kSonicTailsHczSegmentTraceReplay,TestS3kSonicTailsHcz2SegmentTraceReplay' \
+  test -B
+```
+
+Those concise commands omit only the fresh Surefire/report-directory properties;
+complete argv, environment, source identity and fresh XML are retained in
+`target/code-climb/combined-7908-domain/control/`. EHZ queue/Maven/wall times are
+0/34.532/35.323 seconds; the HCZ pair uses 186/43.879/230.927 seconds. User wait
+is zero; their residuals are 0.791 and 1.048 seconds. Recorded gate completion
+does not certify route, chain, unclassified runtime paths or the missing auxiliary
+observations. No full-suite or exhaustive audit was run.
+
+Both actual emitted HCZ triage commands were executed unchanged through the
+POSIX shell, including the report paths containing spaces. They return COMPLETE;
+the first-HCZ brief has no divergence, and HCZ2 selects frame 6,640's animation
+error and reads the matching context and compressed auxiliary evidence. Both
+briefs retain coverage limits and the diagnostic-only carried-entry disclaimer.
+The inherited context diagnostic-length truncation remains visible. No Windows
+command-execution or run-chain claim is made. Queue wait is zero for both;
+Maven/wall/residual times are 0.410/1.157/0.747 and 0.517/1.166/0.649 seconds,
+with zero user wait.
+
+All three owned validation units are terminal and retired. The exact completed
+category run was acknowledged only after exporting its full plan, preparation,
+results, 96 command arrays, three original logs, all negative/skip records and
+explicit dispositions. Useful source worktrees, raw domain reports, XML and
+comparison/owner receipts remain retained. The publication commit adds this
+audit section only; its runtime/test/resource blobs remain the tested head.
+Only `feature/ai-code-climb-followup` is authorized for publication to draft
+PR271; no destination branch merge or push is part of this delivery. The wider
+code-climb goal remains active.
+
+
+### General replay comparison flow (2026-11-09)
+
+From published base `85d9e60ea1c0`, the remaining general-game row loop now lives
+in same-file private `void replayGeneralTrace`, taking the existing trace,
+metadata, fixture, binder, replay start and frontier stopper. The public entry
+shows fixture/bootstrap assembly, binder creation, named comparison dispatch,
+terminal/timing finalization, assertions and final publication in order. Its
+381 lines become 263; that size change alone is not correctness evidence. No
+context, fields, result model, protocol, test identity or public/protected API
+was added. No fixture, tolerance, hydration, snapshot or report format changed.
+
+The moved 120-line block retains every statement, lambda, method reference,
+getter, comparison, branch and row/frame-key use. The S3K helper's boolean still
+means hardware timing was already closed. Both outer `stoppedEarly()` reads,
+binder assignment, final gate assignment, report rebuilds and writer-once
+publication stay at their original lifecycle points. No directly affected
+Javadoc was detached or reattached.
+
+An independent checker reads the immutable base from Git, locates the new
+member by its signature and braces, reinlines its body and removes only that
+member. The reconstructed entire Java file is byte-identical to the base,
+including all 767 moved executable tokens in order, the S3K signature/body and
+the outer catch/finally. Five in-memory negative controls reject changed
+observer, ordinal/frame-key, gate, primary-suppression and S3K-body tokens. The
+expected extra private stack frame remains a diagnostic shape difference; this
+source proof does not assert unmeasured runtime coverage.
+
+One focused normal-memory queued invocation used Java 25, Lua 5.4, MSE off,
+surfaceless EGL, no display variables, one fork and alphabetical order. Its
+comma-joined `-Dtest` selection is exactly:
+
+```text
+TestAbstractTraceReplayDynamicArtTerminal#completedAdvertisedReplayReportsStaleTerminalSnapshot+actualEarlyFrontierStopSuppressesUnproducedTerminalExpectation
+TestTraceReplayInvariantGuard
+TestTraceLifeCountComparisonGuard
+TestTraceReplayReferenceClosureGuard
+TestTraceGateCompletionReport
+TestFrontierReplayStopper
+TestBuildToolingGuard#regeneratedS3kAizFullRunReplayIsReleaseBlocking
+```
+
+The actual command is `python3 tools/testing/maven_queue.py --normal -Dmse=off
+-Dopenggf.headless.gl=surfaceless-egl -Dsurefire.forkCount=1
+-Dsurefire.runOrder=alphabetical` followed by the selection above and `test -B`;
+its complete argument array, including the four fresh output-directory
+properties, is retained in
+`target/code-climb/replay-flow-readability/focused-command.json`.
+Fresh XML contains **53 unique cases across seven classes, zero failures,
+errors or skips**. Both real inherited S2 driver completion/frontier methods and
+the exact source-sensitive replay, life-count and delegation guard identities
+are present. All verified ROM properties were found. Compilation deprecation,
+FAST-without-manifest and blocked SMPS presentation warnings remain in the full
+log; it is not warning-free. No failed case required baseline attribution.
+
+The tested Java SHA-256 is
+`0be58b095154d2ce8b1a2ed06e779bbba2026764926b703f7f9ed0dd8b82deac`.
+Queue telemetry reports 0.0 seconds waiting and 39.5 seconds execution hold,
+both rounded; Maven reports 38.650 seconds and command wall is 39.571 seconds.
+User wait is zero; the remaining wall-minus-queue/hold interval is 0.071 seconds,
+with editing/coordination time unmeasured. Independent reconstruction, negative
+controls, full command/environment, original log, per-case XML identities and
+own completed queue telemetry remain under
+`target/code-climb/replay-flow-readability/`; existing evidence is preserved.
+
+This is a bounded source extraction and focused check. Existing completion
+probes intentionally assert divergent/frontier outcomes; these results do not
+certify a clean route or every getter cadence. No new behavior test was needed
+for the literal movement. Independent correctness review, combined smoke,
+matched replay qualification and publication remain root-owned and pending for
+this increment. No push, destination update or PR write was performed here.
+
+
+### Primary replay route composition (2026-11-09)
+
+After publication of `85d9e60ea1`, Sol extracted the complete general comparison
+loop into one private, same-file `void replayGeneralTrace` method with six
+existing collaborators. The entry method is 381 to 263 lines; all 120 moved
+lines and 767 executable tokens retain their order. Inlining the call and
+removing the helper reconstructs the entire original class byte-for-byte. The
+S3K helper, outer catch/finally and both outer frontier reads remain exact.
+The S3K boolean still means hardware timing already closed, not completion.
+Five in-memory negative controls break the proof as intended; they are not
+shipped defects or runtime mutation tests. No new context, result model, API,
+field, fixture, tolerance or gameplay authority is added.
+
+One normal-memory queued selection passes **53 unique cases in seven suites,
+zero failures/errors/skips**, including the real inherited S2 completion/frontier
+cases and source-sensitive replay/life-count guards. Root independently checked
+the source hash and all seven fresh XML hashes/identities. This proves the
+selected paths only; it is not a clean whole-leaf, combined smoke or full-suite
+result. Exact argv, source reconstruction and receipts are retained in
+`target/code-climb/replay-flow-readability/`. Queue wait is 0.0 seconds; queue execution hold is 39.5 seconds (rounded),
+Maven is 38.650 seconds and wall is 39.571 seconds. The 0.071-second residual is
+wall minus hold; these overlapping labels are not summed. User wait is zero;
+editing and coordination time were not measured. Existing warnings remain in the logs.
+
+The diagnosis guide now presents the normal first-HCZ journey in four steps
+before scope controls and producer/freshness exceptions. The primary route is
+49 lines including its heading; the complete section grows from 115 to 126
+lines because all material caveats are retained. It does not claim whole-file
+shrinkage or a score improvement. The skill corrects first HCZ versus HCZ2 and
+links to that recipe without duplicating it. The segment-profile POM comment
+uses the queued concrete-class example; every byte outside that comment is
+unchanged. Fixture metadata is untouched.
+
+Root checked all 25 relative links in the guide and skill, unchanged link
+multisets, code fences, the new command's shell syntax, XML syntax, exact POM
+comment isolation and the generated skill mirror. The fresh-output properties,
+completion/scope rules, absent-gate behavior, carried-entry limits and retirement
+caveats remain explicit. No new trace invocation was run for documentation.
+`target/code-climb/replay-flow-route-review/` retains the root verification.
+Independent Opus review and combined qualification remain pending; this local
+increment is not pushed. The same draft PR271 remains the sole destination.
+
+
+### Replay-flow review repairs and named integration evidence (2026-11-09)
+
+Opus independently reconstructed the original 1,639-line class byte-for-byte
+by inlining the new helper. It found no Java correctness blocker and mapped
+every documentation rule to the new route. Its evidence finding was material:
+the 53-case selector ran the reference-closure guard's fourteen unit cases,
+not the package-private S1/S2 integration classes declared in the same file.
+Those earlier 53 passes did not assert the moved observer callback fired.
+
+A fresh normal-memory queued selection now passes **55 unique cases across nine
+suites, zero failures/errors/skips**. It retains every earlier 53 identity and
+adds exactly `TestS1ReplayReferenceClosureIntegration#replayMatchesTrace` and
+`TestS2ReplayReferenceClosureIntegration#replayMatchesTrace`. Both inherited
+GHZ1/EHZ1 replays return successfully, reaching their positive callback assertions.
+This verifies callback execution in both real general replay paths; it does not
+claim a callback count for every possible phase. Root checked both names, all
+fresh XML hashes, all counts and the immutable selected-source receipt. The
+reviewed extraction blob remains unchanged.
+
+The reviewer also found an existing fixture typo: the early-frontier case set
+and cleared `trace.contextRadius`, while the driver reads `trace.context.radius`.
+Root added a behavioral witness recording the last validated raw frame and
+comparing it with the report's first error. With the old property it fails
+exactly once: expected frame 0, actual frame 2. After correcting both setup and
+cleanup keys, that assertion passes in the 55-case selection. An initial witness
+run incorrectly queried JSON `frame` instead of `start_frame`; its failed type
+assertion is retained and explicitly excluded from valid RED evidence. Neither
+that witness error nor the existing property typo was a defect in the extraction.
+
+The guide now asks for gate confirmation when reading the report/brief, after
+fresh Surefire inspection, and explicitly identifies setup/skips before report
+publication as stale-report risks in reused directories. The overlapping timing labels above
+are corrected: queue hold is 39.5 seconds (rounded), Maven 38.650, wall 39.571;
+the 0.071 residual is wall minus hold. Three stale source comments now name
+`replayS3kTrace` or `replayGeneralTrace` rather than a drifting line/old branch.
+Reversing those literal comment changes reconstructs their original files.
+
+Before these bounded test/comment repairs, one matched pair ran on clean
+`0b3ab89ac8`: EHZ1 passes all 5,852 rows, first HCZ compares 3,519 rows cleanly,
+and HCZ2 retains its 26 mismatches. All three complete raw report bytes, including
+carried-entry diagnostics, and all context bytes equal qualified `7908d321064d`.
+No projection or normalization is used. All owner keys/physical paths pass the
+canonical validator; both emitted POSIX triage commands run unchanged with
+paths containing spaces. Existing auxiliary, context-length and log warnings
+remain. This is source-specific evidence at 0b3, not a new invocation at the
+repair commit: production, resources, shared replay driver/helpers and all three
+selected domain classes remain exact; only an unselected test fixture has an
+executable delta. The reuse proof and original outputs are retained.
+
+All commands used Java 25, Lua 5.4, MSE off, displays unset and surfaceless EGL;
+verified ROM discovery reports missing=none. Valid RED queue/Maven/wall times
+are 0/34.254/35.302 seconds; GREEN is 0/41.781/42.522, with residuals 1.048 and
+0.741. The invalid witness run is 0/35.551/36.364, residual 0.813. User wait is
+zero; editing/research time is unmeasured. Exact commands, source hashes, complete
+assertions and fresh XML are in `target/code-climb/replay-flow-review-repairs/`;
+matched reports are under `target/code-climb/replay-flow-route-domain/`.
+All owned focused/domain jobs are terminal and retired. Complete change-based smoke
+and guards remain pending on the final frozen repair head. Nothing after
+published `85d9e60ea1` is pushed, and no new usability score is inferred.
+
+Matched-domain timing (user wait zero throughout):
+
+- ehz1 queue/Maven/wall: 0/37.754/38.579s; residual 0.825s.
+- hcz queue/Maven/wall: 0/40.706/41.565s; residual 0.859s.
+- hcz1 triage queue/Maven/wall: 0/0.310/1.036s; residual 0.726s.
+- hcz2 triage queue/Maven/wall: 0/0.530/1.201s; residual 0.671s.
+
+
+### Replay-flow combined qualification and original-F result (2026-11-09)
+
+Clean `4da34da064d3` completed the one root-owned change-based run against
+pinned develop `c4ca46472e75`: **4,627/4,627 classes**, **94/94 ordinary batches**
+and **1/1 guards batch**, **38,614 cases**. Ordinary has 37,771 cases, 29 inherited
+failures, zero errors and 49 allowed skips. All 843 guards pass without skips.
+The original terminal verdict is retained verbatim:
+
+```text
+VERDICT FAILED: head=4da34da064d3 source=4a73f21abf35 change-based 4627/4627 candidate classes; ordinary 94/94 batches; guards 1/1 batches; tests=38614 failures=29 errors=0 skipped=49 (allowed=49 unexplained=0); missing ROM properties=none; skip inputs audio_reference_files=false,gl=false,s1_bizhawk_reference=false,s2_bk2=false,s3k_observations=false; bounded smoke selection, not a full-suite pass
+```
+
+Against qualified `7908d321064d`, all 29 failure identities, kinds and types match.
+**26 complete records are literal**, including their causal details. The other
+three are Sonic/Tails/wide MHZ expected-Set display orders: every expected and
+actual membership is identical, and replacing only the displayed assertion
+reconstructs the remaining complete record exactly. Those test blobs are exact
+c4/7908/current blobs. The strict comparator remains DIFFERENT; no blanket
+normalization is enabled. The original c4 attribution remains explicit: four
+scene outcomes have the prior matched-ROM-catalogue reproduction, three Set
+displays are reviewed, and the absent baseline rendering failure is not claimed
+fixed. Nothing in that older evidence is relabelled.
+
+All 49 complete raw skip dictionaries match both baselines, with zero unexplained
+or required skips, omissions or causal-cap indicators. The selected class set
+is identical to 7908; the existing eleven-case contact rename versus c4 remains
+mapped. All runtime input/worker/GL/ROM/skip/budget fields match. Sixteen known
+failing-test sources and eight runner/policy files are exact 7908 blobs; the
+ninth is the POM's one comment-only queued-command correction, with every byte
+outside comments unchanged. Production, resources and tools remain exact 7908.
+The source, configuration and ten pre-existing ROM entries stayed frozen.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/run_categories.py \
+  --base c4ca46472e75a0df6f23dfd410e347ab8ed52a70 \
+  --max-minutes 40 --workers 2 --headless-gl surfaceless-egl \
+  --keep-diagnostics --run
+```
+
+Queue wait is 93.000 seconds across 95 admissions, execution including
+preparation 1,784.660 seconds, wall 1,890.903 seconds, user wait zero and residual
+overhead 13.243 seconds. This is bounded smoke, not a full-suite or route pass.
+The source-specific 55-case integration/frontier proof and matched EHZ/HCZ
+byte comparisons above remain separate selections; their counts are not added
+to this run. All runtime jobs are terminal and retired. The exact raw run was
+acknowledged only after retaining its complete plan/results/preparation, all
+negative/skip dictionaries, 96 command arrays and three original logs.
+`target/code-climb/replay-flow-route-category/` retains the full comparison,
+source proof, timing and explicit per-case dispositions.
+
+A new blind original-F contributor journey on 4da scores **60.0/100**, vector
+`[3,2,3,2,2,3,2,2]` with weights 15/15/15/15/10/10/10/10. It is a static task
+assessment, not runtime evidence; the other five trials were not regraded.
+The target remains unmet. It identifies the mandatory hazard-catalogue reading,
+misleading game/subsystem hints, split scope authority and the dense S3K driver
+as remaining costs. Those observations are not treated as defects introduced
+by the byte-preserving extraction. The assessor did not inspect execution logs;
+the retained actual POSIX triage executions remain valid, while the source's
+string-only command tests do not themselves prove execution.
+
+The next sweep will address those concrete boundaries after publication, rather
+than infer a score gain from tests, extraction or document reordering. The
+publication commit adds only this evidence. Sole destination remains draft
+PR271 on `feature/ai-code-climb-followup`; no destination branch push or merge
+is authorized by this delivery. Useful worktrees and evidence remain retained.
+
+
+### One invocation scope authority (2026-11-09)
+
+The original-F assessment exposed two inconsistent scope reads in the standalone
+replay path. The entry already resolved `verificationScope()` before fixture
+assembly, but frontier creation re-read the JVM property and the release
+assertion re-invoked the override later. A subclass-selected animation run could
+therefore stop on physics errors, or publish an animation gate while failing a
+physics assertion after its scope provider changed during fixture assembly.
+
+Two real S2/EHZ1 driver witnesses use the existing private dynamic-art fixture,
+whose deliberately mismatched evidence is PHYSICS while recorded character
+animation is valid. No canonical payload, input, tolerance or gameplay state
+is changed. One chooses ANIMATION against a PHYSICS system property; the other
+changes its provider after assembly with frontier stopping disabled. Both fail
+against the old code, exactly two assertion failures with zero errors/skips:
+wrong incomplete ANIMATION gate, and a release failure on out-of-scope physics.
+These failures are not inherited gameplay defects.
+
+The existing resolved enum is now passed into frontier construction and release
+assertions in both standalone and credits drivers. Credits publication receives
+that same value. There is no new state object, mode, context, fallback overload
+or runtime policy. Two internal protected test-helper signatures now accept the
+scope explicitly; all repository callers are adapted. This is test support, not
+a Mod API surface/version change. The normal default scope remains selected
+from the existing JVM property once. Reporting/retirement use the original
+selection; changing a provider during assembly does not change an invocation.
+
+One fresh normal-memory queued GREEN selection passes **68 unique cases in ten
+suites**, zero failures/errors/skips: every prior 55 identity, both new real
+driver witnesses and eleven report-policy cases. The new assertions require
+a complete ANIMATION gate, all 5,852 comparisons, the final validated frame, one
+publication and still-present global physics errors as the out-of-scope control.
+The fixture restores its caller's verification property. Credits uses the same
+explicit data flow and compiles with its report-policy checks; the real-driver
+witness is S2, not a new credits route certification.
+
+Java 25, Lua 5.4, MSE off, displays unset, surfaceless EGL and fresh paths were
+used; verified ROM discovery reports missing=none. RED queue/Maven/wall times
+are 0/40.220/41.159 seconds, residual 0.939. GREEN is 0/44.498/45.391, residual
+0.893. User wait is zero; editing/coordination time is unmeasured. Full commands,
+all failure messages, fresh XML and immutable source hashes are retained in
+`target/code-climb/scope-diagnosis/`. Both units are terminal and retired.
+
+This component is local after published `c42764c8a5`. Game-aware diagnostic hints
+and the verified hazard-entry design remain to be implemented before combined
+review, qualification and delivery into the same draft PR271. No broad/domain
+pass or new contributor score is inferred from these focused cases.
+
+
+### Native diagnosis hints and bounded measurement reading — 2026-11-09
+
+The fresh original-F assessment at `4da34da` remains **60/100**, vector
+`[3,2,3,2,2,3,2,2]`. It identified player `routine` being classified as an object
+and S1/S2 native hints being offered for S3K, plus the mandatory hazard catalogue
+as a browsing barrier. No new grade is claimed by the repairs below.
+
+Ten focused cases were run before the hint repair: **nine intended assertion
+failures, one passing S2 control, zero errors/skips**. The cases use the existing
+producer/reader/brief path, rather than a newly invented API. They distinguish
+plain/player routine and subpixel fields, native player vocabularies in all
+three games, S3K animation/solid labels, and unknown-game fallback. Existing
+sidekick/object-slot controls retain their ownership.
+
+Triage now uses the CLI's declared or fixture-resolved game for native search
+terms. Three
+small exhaustive subsystem switches supply native labels/families; unknown
+games retain only the recorded field. Search order, deduplication and raw-field
+fallback remain explicit. Canonical player fields precede generic object-routine
+classification; Tails and indexed object routines retain their separate paths.
+The internal tool helper now requires the game argument; all repository callers
+compile. It is not a pinned Mod API. Suggested tests are still heuristic; this
+change makes native search terms game-aware, not every recommendation causal.
+
+Root checked all emitted terms against the **exact gitlink objects**, not the
+off-pin working reference copies: S1 `28872a46`, S2 `34fc7f13`, S3K `8b2cf3c4`.
+Each label/family exists there. This is search-vocabulary evidence, not proof
+that a suggested routine caused a particular mismatch. No optional reference
+checkout, asset, canonical trace payload or runtime gameplay owner was changed.
+
+One fresh GREEN selection passes **134 unique cases in two suites**, zero
+failures/errors/skips: the complete triage and verification-scope selections.
+Both runs used Java 25, Lua 5.4, normal memory, MSE off, displays unset,
+surfaceless EGL and fresh output directories; ROM discovery says missing=none.
+RED queue/Maven/wall seconds: 0/33.999/34.851, residual 0.852. GREEN:
+0/91.000/91.816, residual 0.816; Maven reports whole seconds for that run.
+User wait is zero; editing/coordination time is unmeasured. Source fingerprints
+match before/after each run. Both owned units are terminal and retired.
+
+The required measurement anchor now ends at a higher-level catalogue boundary:
+**37 lines / 676 words**, containing nine current rules and a ten-condition
+finder, versus the former 1,819-line section. Historical material remains
+conditional reference. The canonical replay skill links directly to the current
+table and finder; its generated mirror is identical. Root independently checked
+all **139 IDs and their table occurrences**, all **150 old heading targets**
+(two explicit legacy anchors), and all **49 original link instances**. The old
+long body's nonempty lines retain exact order/content after inserted headings;
+**136 unreviewed level-two sections are byte-identical**. All 75 distinct added
+local link targets resolve under a static heading/explicit-anchor check.
+
+Only three numbered lessons change meaning: rule 2 now names frame/field
+presentation priority rather than alphabetical causality; rules 98/111 separate
+Surefire filename selection from JUnit tag gates. Current report source and the
+pinned Surefire 3.2.5 descriptor supplied that verification. Historical examples,
+Mutator notes and unresolved older prescriptions remain; current owning
+contracts take precedence. The shorter entry grants no additional timing,
+input, cleanup or validation authority. This is navigation preservation and
+source correction, not semantic certification of every historical anecdote.
+
+Full commands, fresh XML, all RED assertions, exact source hashes, pinned-label
+checks and independent conservation/link evidence remain in
+`target/code-climb/native-triage-hints/`. The external Sol docs candidate and
+preservation receipt are retained outside the checkout; only the applied
+canonical/mirror/doc changes are delivered. No raw output is committed.
+
+This component and the local resolved-scope repair at `b2d558da` await one
+combined independent Opus correctness review, appropriate combined qualification
+and publication to the same draft PR271. Published head remains `c42764c8a5`.
+No broad/domain pass or contributor-score increase is inferred from these
+focused results or the reduced required-reading span.
+
+
+### Combined scope/hints/reading review repairs — 2026-11-09
+
+Opus 5.5, maximum effort and fast mode off, reviewed published `c42764c8a5`
+through clean local `6c59972921`, read-only. It ran no builds, tests or JVMs.
+The resolved-scope dataflow and hint routing were correct by source inspection,
+with no blocking runtime defect. It found one medium navigation issue and
+three low issues; root repaired these without adding another reviewer.
+
+The conservation checks had missed a structural reading error: nine newly
+named note sections swallowed unrelated dated notes. Each of the 18 named
+sections now contains exactly its first note paragraph, with neutral headings
+closing the nine spans that contained more notes. Selection, freshness and
+attribution families link the unindexed examples explicitly. The catalogue
+states that these further notes span topics and are selectively indexed. The
+current 37-line/676-word entry remains bounded. All 139 IDs/table occurrences,
+150 old heading targets and 49 original link instances survive; old note text
+and ordering are unchanged. All 76 distinct added local link targets resolve
+under root's static anchor check. New in-file links use the corrected heading
+slugs; explicit legacy anchors remain for old inbound links.
+
+Root verified Surefire 3.2.5's local descriptor and bytecode before correcting
+rule 98. An explicit filename selector with no matching class is governed by
+`surefire.failIfNoSpecifiedTests` (default true). Post-run zero execution,
+including all-tag-excluded classes, is governed by `failIfNoTests` (default
+false); `-DfailIfNoTests=true` catches that empty result. The category runner's
+intentional empty-batch accounting is distinct. No runner, POM, skip policy or
+selection behavior changed.
+
+Four native-hint witnesses were RED before repair. Exact pinned source confirms
+S1 `HurtSonic` performs the ring-loss/hurt transition, S3K `ScreenEvents` dispatches
+zone/act events, and mutable layout owners are S1 `v_lvllayout` and S3K
+`Level_layout_header`/`Level_layout_main`. These replace weaker hurt-state and
+load-time/data hints. The remaining native terms were rechecked at all three
+pins. Existence and owner routing remain search evidence, not causal diagnosis.
+
+Three fixture-lifetime cases cover absent, empty and nonempty values of
+`trace.verification`, `trace.frontierOnly` and `trace.context.radius`. The old
+fixture passes the absent control but fails empty/custom restoration. The
+fixture now saves all three before mutation, pins its own ALL/non-frontier/
+radius-two baseline, and restores exact caller values afterward. The witnesses
+also check that explicit fixture baseline; the original four replay cases
+remain and pass. This isolates test configuration, not production sweep input.
+
+The single RED invocation ran **7 cases: 6 intended failures, one passing
+control, zero errors/skips**. One combined GREEN invocation ran **209 unique
+cases**, zero failures/errors/skips, retaining both earlier focused selections
+and adding the seven repair cases. Fresh XML, complete failures, command arrays
+and matching before/after source hashes are retained. Java 25, Lua 5.4, normal
+memory, MSE off, displays unset and surfaceless EGL were used; missing ROMs=none.
+RED queue/Maven/wall: 0/32.574/33.378 seconds (residual 0.804).
+GREEN queue/Maven/wall: 25/109.000/135.081 seconds (residual 1.081; Maven's
+minute-scale output is rounded). User wait is zero; investigation/editing time
+is unmeasured. Both owned units are terminal and retired.
+
+Before these repairs, the clean `6c59972921` domain pair completed. EHZ1's
+5,852 comparisons and HCZ1's 3,519/3,574 comparisons are clean; HCZ2's
+14,149/14,208 retains all 26 errors (2 physics, 24 animation). All three ALL
+gates are reached. Complete report bytes, including carried-entry metadata,
+and all context bytes exactly match published qualification; no projection or
+normalization was applied. Canonical validation checked all three owner-keyed
+reports. The actual two printed HCZ commands executed unchanged, with paths
+containing spaces, and the HCZ2 brief displayed the S3K animation vocabulary.
+EHZ queue/Maven/wall: 0/36.714/37.568 seconds; HCZ: 0/42.388/43.176.
+CLI commands: 120/0.381/121.083 and 0/0.515/1.257 seconds. User wait is zero;
+residuals are 0.854/0.788/0.702/0.742 respectively. Both domain/CLI units are
+terminal and retired. Missing advertised auxiliary schemas, FAST/SMPS log
+warnings and bounded context remain; neither whole-route nor Windows command
+certification is claimed.
+
+Those domain invocations tested `6c599`, not the later repair commit. Reuse must
+be supported by exact source proof: only two test classes unselected by the domain commands and CLI
+hint tables change executable source during repair; standalone/credits drivers,
+report publication, gameplay, fixtures, timing/input policy and all selected
+domain classes remain exact. The changed native tables are exercised by the
+combined 209-case selection. No fresh final-head domain run is invented.
+
+Evidence: `target/code-climb/scope-hints-review-repairs/`,
+`target/code-climb/scope-hints-reading-domain/control/`, and the retained original
+Opus result under `target/code-climb/native-triage-hints/`. Combined change-based
+smoke plus guards and exact negative/skip comparison remain required before
+pushing the task branch to draft PR271. No new contributor score is inferred.
+The external ordinary-plan preservation prototype remains unapplied for the
+next structural increment after this publication.
+
+## 2026-11-09 — frozen scope, native hints and required-reading qualification
+
+Source: `2dd029ebbd7c20b4698426438d5f88dcf757e7c7`, clean task branch
+`feature/ai-code-climb-followup`. Published PR271 remains at `c42764c8a5`;
+this batch is unpublished. This section is a prepared draft, not delivery clearance.
+
+The batch resolves verification scope once per replay invocation, supplies
+game-specific native search hints, and routes required measurement reading by
+condition. The Opus review of `c427..6c599` found no runtime blocker and one
+medium navigation finding plus three low findings. Root's `2dd` repairs close
+the dated-note heading spans, distinguish the two Surefire empty-selection
+switches, refine the pinned label vocabulary, and restore all three caller
+properties in the dynamic-art fixture. No additional review of those bounded
+repairs is claimed.
+
+Focused repair evidence: 209 unique cases in 12 fresh suites passed, with no
+failures, errors or skips. The property-restoration witnesses first produced six
+intended failures and one unset-property control. These are bounded focused
+results, not a broad or full-suite pass.
+
+### Complete category result and exact comparison
+
+One complete change-based run, `20261109T084137Z-634ccab5`, selected all 4,627
+candidate classes and finished 94/94 ordinary batches plus 1/1 guards batches.
+Ordinary: 37,785 cases, 30 failures, zero errors, 49 allowed skips. Guards:
+843 passed, zero failures/errors/skips. Source fingerprint remained
+`8f066f4d9e428111f0b8ac424dcd24862ea084d0af7ee44d0890ca95e6d08310`.
+The original final verdict is retained unchanged:
+
+```text
+VERDICT FAILED: head=2dd029ebbd7c source=8f066f4d9e42 change-based 4627/4627 candidate classes; ordinary 94/94 batches; guards 1/1 batches; tests=38628 failures=30 errors=0 skipped=49 (allowed=49 unexplained=0); missing ROM properties=none; skip inputs audio_reference_files=false,gl=false,s1_bizhawk_reference=false,s2_bk2=false,s3k_observations=false; bounded smoke selection, not a full-suite pass
+```
+
+Compared with the retained qualified `4da` invocation, no selected class or
+run-input field changed. All 49 complete skip dictionaries, including projection
+metadata, are equal to both that invocation and the pinned C4 baseline. The
+contact-test rename and two added tool classes relative to C4 remain explicitly
+accounted for. No failed/skip records were omitted and no causal text was cut
+at the configured caps.
+
+Twenty-five inherited failure messages matched literally. Four changed messages
+have narrow, source-backed dispositions, retained with both full records:
+
+- The Three Islands trail assertion changes only the two `Object.toString`
+  identity-hash suffixes on the unchanged final `FieldScreen` and `StoryScreen`
+  classes. The test source, all other fields, and the full remaining stack agree.
+- Three MHZ assertions change only expected `Set` iteration display order.
+  Expected membership is identical, actual display is literal, and the rest of
+  each complete record agrees.
+
+The strict comparator still reports DIFFERENT. No global hash stripping,
+set sorting, baseline rewriting or comparator/skip-policy change was applied.
+
+### Unmatched competition pixel assertion: publication blocked
+
+The new identity is
+`TestSonic2CompetitionFieldPixels#retainedPlaneAndWholeSpriteProjectionMatchIndependentNativeRowOracle`.
+It reports the first opaque sample of `SatEntry[rawY=265, size=9, link=1,
+word=9, rawX=144]` at local `(3,0)`: expected `-3407821`, actual `-16777216`.
+The original record does not identify the batching iteration. Its full
+assertion and stack are retained; it is not qualified as an inherited failure.
+
+The reconstructed 50-class cohort passed preliminary paired arms, but the first
+six omitted category TMPDIR/TMP/TEMP forwarding. They are retained with that
+limitation. A corrected baseline/candidate pair passed 293 cases on each side,
+with those variables forwarded. These passing controls do not attribute the
+original failed fork, whose exact predecessor assignment was not preserved.
+Current retained bytecode for 70 classes across the inspected rendering/test
+owners is identical between C4 and candidate; this does not prove which bytes
+the original fork loaded or establish baseline flakiness.
+
+The initial source-only investigation incorrectly treated the passing plane
+oracle as even-bank-only. Whole-cell V flip also exchanges parity in
+`Sonic2CompetitionPlanes.descriptorAt`: row 0/column 1 selects pattern 1033,
+and plane pixel `(11,7)` checks its local `(3,0)` sample, the same art sample
+later checked by sprite pixel `(19,5)`. The successful plane pass therefore
+already witnesses that art in the earlier draw; it does not settle later art
+publication or sprite state/coverage. No cause was demonstrated. One
+observer-assisted C4 run passed all 293 cases, with no observer errors.
+The odd-bank CPU/GPU value remained 12 through every plane pass and sprite
+draw; palette and resulting pixel matched. All 591 comparable initial loaded
+class byte hashes matched the retained C4 files. It does not reproduce the
+original failure or establish harmlessness of observer scheduling changes.
+The field-pattern ownership fixture ran in the other fork. A subsequent
+uninstrumented C4 isolation probe forced that fixture and FieldPixels into one
+reused JVM: all three cases passed (queue 71s, Maven 3.446s, wall 74.966s,
+user wait 0s, residual 0.520s). Thus the simple predecessor hypothesis also
+remains unsupported. Both probes are terminal; no further rerun is active.
+Neither passing result supplies publication clearance.
+No oracle, renderer, skip, tolerance or source modification has been made to
+address the unmatched outcome.
+
+### Domain evidence and current contributor assessment
+
+The actual matched EHZ1/HCZ domain invocation tested `6c599`, not `2dd`. Its
+reports and context files are byte-identical to the retained qualification:
+EHZ1 compared all 5,852 planned rows without counted errors/warnings; HCZ1
+compared 3,519 of 3,574 planned rows with its gate reached and no counted
+errors/warnings; HCZ2 compared 14,149 of 14,208 planned rows with its gate
+reached and retained 26 errors (2 physics, 24 animation). The eight advertised
+missing auxiliary schemas and separate FAST/SMPS log limitations remain. Both
+actual printed HCZ triage commands executed on POSIX paths containing spaces.
+This is no Windows or run-chain certification.
+
+A source-specific reuse proof accounts for root's later vocabulary/test/docs
+repairs: runtime, selected drivers, selected domain tests, fixtures and report
+serialization are unchanged; the changed hints are covered by the focused run.
+No fresh `2dd` domain invocation is claimed.
+
+Fresh blind Opus assessment of the original Trial F at clean `2dd` is
+`[3,2,2,3,1,3,3,2]` = **60/100**. It was static only and did not use runtime
+results, audits or prior grades. Other five trials were not regraded. The wider
+85-per-trial goal remains unmet; passing checks and file movement earn no
+automatic usability credit. The reported unsupported S3K object-near opt-in
+requires separate design: its current comparator truncates full code pointers,
+so simply enabling that call would not repair the contract. No such change was
+made in this batch.
+
+Timing for the complete category invocation: reported shared queue wait 192s
+across 95 admissions; execution including preparation 1,803.68s; wall
+2,008.679s; user wait 0s; 12.999s overhead/unknown. Queue figures are printed
+whole-second values and the residual is not separately measured. Original
+diagnostics and exact export/comparison/timing receipts remain unacknowledged
+under `target/code-climb/scope-hints-reading-category/` while attribution is
+open. The external observer handoff and all 150 retained artifact hashes were
+verified before ownership returned to root. No source change is proposed as
+a pixel repair; no root or delegate job remains live. The broader result is a bounded smoke selection, never a full-suite pass.
+
+### 2026-11-09 publication and parity-evidence correction
+
+The user authorized draft-only publication with the unmatched pixel failure
+explicitly retained and merging blocked. Reviewed executable source `2dd`
+plus audit-only commit `171b727f23` was pushed only to the PR271 task branch;
+the exact published head/body were verified OPEN+DRAFT against develop.
+All seven draft checks were skipped and there were no GitHub reviews.
+No destination branch was merged or pushed.
+
+The source-only even-bank explanation in `171b` was incorrect and is corrected
+above after root independently checked the descriptor and oracle arithmetic.
+At plane `(11,7)`, cell 9 is V-flipped: descriptor selects `1024 + 9` and
+field row 0, corresponding to native row 1. The sprite at `(19,5)` samples
+that same native texel with another palette. This correction changes no
+assertion, test result or failure disposition. The original negative and
+original investigation receipt are retained; neither is silently rewritten.
+
+A separate local ordinary-field preservation prototype passed all four cases
+on unchanged `171b` (queue 79s; Maven 43.179s; wall 123.800s; user wait 0s;
+1.621s residual/unknown). This is not an ownership refactor or a pixel repair.
+Its source remains outside this documentation-only publication.
+
+### Ordinary field discovery and failure evidence — 2026-11-09
+
+Hypothesis for original trial D: one owner for ordinary superclass traversal and
+an audit view of the concrete capture projection remove conflicting answers about
+which fields ride rewind. This does not consolidate constructor recipes, all field
+policies or the general/manual capture contract, and earns no automatic rubric
+credit. The latest original-D reading remains the older b63 static assessment.
+
+The local increment starts at `36b37a173740e6312852970fe0241a3ae372144d`.
+The final focused working-tree fingerprint was
+`e10d8b2630be6512d5eb5099c9ba0dba85dd5bc9f7ea8a876dd971bb74be98f3`; it matched at both command boundaries.
+`RewindSchemaRegistry` derives both ordinary projections using the same hierarchy,
+excluding the manually captured badnik base and sorting superclass-first by field
+name/type. `GenericFieldCapturer` retains its original legacy cache lifetime,
+scalar admission, cloning and restore path. Compact support, schema-ID allocation,
+unsupported-class fallback, field/write order and snapshot format are preserved.
+
+The selection view exposes captured membership as immutable `FieldKey` values and
+fresh inspection metadata. The registry's separate scalar derivation returns fresh
+fields; it does not expose the legacy runtime cache. The existing Generic audit API
+keeps its previous contract. A real capture witness disables access on derived
+metadata and verifies that scalar and compact capture still work independently.
+General policy registrations cannot certify ordinary membership. Inventory and
+coverage use the concrete selection, explicit exclusions and built-in structural
+roles; coverage separately retains the badnik base's manual inspection. A direct
+disposition audit now reports `<not-ordinary>` instead of silently auditing nothing.
+Annotation counts remain available, but removal advice is withheld for actors,
+including abstract/manual bases whose fields subclasses may inherit.
+
+Two source-only Opus reviews found no runtime/snapshot regression, but exposed
+real diagnostic defects. The initial inventory changed from four inherited rows
+to 55, adding 51 structural-handle reports. Root's first final-only correction
+was too broad: a 292-case selection had one disposition-guard failure and one
+existing optional measurement skip; its inventory retained 22 non-final renderer
+reports. Those 22 keys matched the guard exactly. The final catalogue preserves
+replaceable renderer caches while other built-in handles require a final identity;
+a replaceable `PatternDesc`, unrelated mutable helpers and unsupported mutable
+values remain reportable. The fixed declared-type membership remains the same 18
+types, including array/list policy lookup. No baseline, skip rule, scanner budget,
+signature pin or codec allowance was enlarged.
+
+The subsequent four-case RED selection had exactly three intended failures:
+mutable access to cached scalar reflection fields broke an actual capture; direct
+manual auditing passed vacuously; and failure images ignored configured diagnostics
+routing. The real absent/empty temporary-property control passed. Root implemented
+the bounded review repairs; no third independent review or runtime certification
+by Opus is claimed.
+
+Final focused command (Java25, Lua5.4, displays unset, verified ROM discovery):
+
+```bash
+python3 tools/testing/maven_queue.py --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Pguards '-Dtest=TestOrdinaryActorPlanPreservation,TestRewindSchemaRegistry,TestRewindPolicyRegistry,TestCompactFieldCapturer,TestCompactFieldCapturerPolicy,TestGenericFieldCapturer,TestRewindObjectReferenceCodecs,TestRewindCollectionCodecs,TestRewindHelperCodecs,TestRewindFieldDispositionAudit,TestRewindFieldDispositionGuard,TestRewindCoverageAnalyzer,TestRewindCoverageGuard,TestHelperStateRewindCoverageGuard,TestRewindFieldInventoryTool,TestSonic2CompetitionFieldPixels,TestIczMinibossFieldDisposition,TestLbzKnucklesInventoryRewind,TestRewindArchitectureGuard,TestCapturedPolicyCompactReachabilityGuard' -Dopenggf.surefire.reports=target/code-climb/ordinary-plan-ownership/final-focused/surefire test -B
+```
+
+The equivalent worktree-relative report path is shown; the local `steps.json`
+retains the exact launched argument array.
+
+All **196 cases / 20 fresh suites passed**, zero failures, errors or skips; every
+selector ran and none unrequested ran. The five preservation cases include exact
+ordered payload/identity/restore checks and metadata isolation. All four pixel
+cases ran with the S2 ROM present. Queue was 321s, Maven 102s (rounded), wall
+425.253903s, user wait 0s, residual startup/teardown 2.253903s. The separate actual
+inventory command was `python3 tools/testing/maven_queue.py --normal -Dmse=off
+-Dexec.mainClass=com.openggf.tools.rewind.RewindFieldInventoryTool compile exec:java
+-B`. Its four complete rows matched the retained baseline literally. Both raw CLI
+exits remain 1 because inherited unsupported fields remain. Queue was 531s, wall
+532.896054s and user wait 0s; the remaining 1.896054s includes Maven execution and
+startup, not separately timed because the CLI exits before a Maven total is printed.
+Coding/investigation time was not separately instrumented.
+
+Pixel diagnostics preserve the oracle, rendering cadence and original expected/
+actual assertion. Only a mismatch saves the already captured framebuffer, requested
+mode, actual batching flags, PID and fork label; no GL readback/state query or pass-
+path supplier was added. The shared diagnostics router honors caller output roots,
+and the default PNG namespace survives category report/tmp compaction. Actual image
+pixels, unavailable-writer handling, configured routing and absent/empty property
+restoration are checked. The helper is retained/indexed as a recurring method.
+After the focused run, the pixel fixture changed only in its Javadoc; the method
+index and this entry are documentation. The inverse comment replacement is byte-exact. The original broad black-pixel assertion remains
+unattributed and still blocks merging; these passes establish diagnostics only.
+
+Raw RED/failed runs, full fresh XML identities/hashes, literal inventory comparison,
+source freezes, timing and review results remain under
+`target/code-climb/ordinary-plan-ownership/`. The focused unit is terminal and
+retired. Broad/domain qualification and exact comparison remain pending, followed
+by task-branch-only delivery to draft PR271. No destination branch push or merge,
+new PR or current-tree usability score is claimed by this entry.
+
+## Ordinary field ownership: completed qualification (2026-11-09)
+
+Tested source is clean `0edbb73281133b7e03c0598fc9c5445814eb25bd`, tree fingerprint
+`bbb9fe02097facbffc025dd018dbac9c0d4964d0eeeb46fb7c601e1210450846`.
+Local code `efe8811eb1` was merged with develop `735fbbcb8ed1` without conflicts.
+That destination-side increment changes nine Markdown files only; its runtime,
+test, tool, POM, policy and hook inputs equal retained C4. The candidate field
+changes are separately qualified here. The configuration SHA-256 remains
+`9938bc5500e2dd48ddf2b46d1ec3ddd98e1b03b291a33e7e7b0d04319920608e`.
+The earlier 196-case focused result and literal four-row inventory comparison
+remain bounded evidence with their documented source/comment preservation proofs.
+The new broad/domain commands below execute the actual merged head.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base 735fbbcb8ed10e07ff74e7f24b1d898e3ac83cd3 --workers 2 --headless-gl surfaceless-egl --max-minutes 40 --keep-diagnostics --run
+```
+
+Run `20261109T132003Z-680efa5f` completed **4,628/4,628 selected candidate
+classes, 94/94 ordinary batches and 1/1 guards**. Ordinary: 37,812 cases,
+29 failures, zero errors, 49 allowed skips. Guards: **843 cases / 103 suites**,
+zero failures, errors or skips. No missing ROM properties, unexplained skips,
+omitted records or causal-message caps. Source/configuration match before/after.
+The exact raw verdict is retained; this is bounded smoke, not a full-suite pass:
+
+```text
+VERDICT FAILED: head=0edbb7328113 source=bbb9fe02097f change-based 4628/4628 candidate classes; ordinary 94/94 batches; guards 1/1 batches; tests=38655 failures=29 errors=0 skipped=49 (allowed=49 unexplained=0); missing ROM properties=none; skip inputs audio_reference_files=false,gl=false,s1_bizhawk_reference=false,s2_bk2=false,s3k_observations=false; bounded smoke selection, not a full-suite pass
+```
+
+All 29 negative identities, kinds and types equal the prior qualified `4da34da064d3`.
+Twenty-seven complete assertions **and full details** are literal. Two explicit
+reviews retain both exact texts: Three Islands' two default `Object` identity
+hashes, and MHZ widescreen's expected `Set` iteration order. The relevant test,
+screen and policy source blobs are unchanged; expected/actual Set memberships
+are identical. Every detail after its first line, including nested causes,
+is literal for all 29. No normalization is enabled; strict comparison remains
+DIFFERENT, and the original FAILED verdict is not relabelled.
+
+Relative to the original C4 broad run, the two absent Three Islands negatives and
+changed catalogue branches retain the earlier paired C4 reproductions with matched
+runtime discovery; all four actual control XML hashes were reverified. The three
+MHZ Set displays retain explicit source-backed membership review. The absent C4
+EngineSuspension negative is not claimed fixed. All **49 complete skip dictionaries**
+match C4, qualified4da and observed2dd, including projection metadata. Recorded
+selection/environment inputs match. The sole class addition since qualified4da
+is `TestOrdinaryActorPlanPreservation`; no class was removed. Against C4, the
+contact test rename preserves all 11 method identities and its reviewed body;
+the two earlier trace-diagnostic classes are accounted additions.
+
+The original `2dd029ebbd7c` competition black-pixel failure did not recur. This
+establishes no cause, fix or flake classification. Its negative remains retained
+and **blocks merging**. Draft-only publication is the authorized delivery mode.
+
+Fresh matched domain commands, sequential normal queue, Java25/Lua5.4,
+displays unset and verified ROM discovery:
+
+```bash
+python3 tools/testing/maven_queue.py --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Ptrace-replay -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical -Dtrace.print.summary=true -Dopenggf.surefire.reports=target/code-climb/ordinary-fields-domain/ehz1-surefire '-Dopenggf.trace.reports=target/code-climb/ordinary-fields-domain/ehz1-reports with spaces' -Dtest=TestS2Ehz1TraceReplay test -B
+python3 tools/testing/maven_queue.py --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Ptrace-segments -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical -Dtrace.print.summary=true -Dopenggf.surefire.reports=target/code-climb/ordinary-fields-domain/hcz-surefire '-Dopenggf.trace.reports=target/code-climb/ordinary-fields-domain/hcz-reports with spaces' '-Dtest=TestS3kSonicTailsHczSegmentTraceReplay,TestS3kSonicTailsHcz2SegmentTraceReplay' test -B
+```
+
+EHZ1 passes: **5,852/5,852** compared rows. First HCZ passes:
+**3,519/3,574**. HCZ2 retains its assertion failure: **14,149/14,208**, the same
+26 mismatches (2 physics, 24 animation), first animation at frame 6640. All gates
+are reached with ALL verification; trace/bootstrap counted warnings and bootstrap
+errors are zero. Each exact class ran once, with no errors/skips; process outcomes
+are checked separately from report content. All three owner identities and actual
+paths validate. Reports/contexts match C4 exactly except the reviewed final
+carried-entry field. They also match the entire current-format report/context bytes
+at actual `0b3ab89ac8` and `7908d32106`, **including** that metadata.
+
+Both exact printed POSIX HCZ triage commands execute successfully with report paths
+containing spaces. HCZ2 identifies frame 6640/player animation; first HCZ reports
+no per-frame divergence. These are real command executions, not substring tests.
+No Windows/quote-character or whole-route certification is inferred. Eight missing
+advertised HCZ auxiliary schemas, FAST/SMPS log warnings and bounded excerpts
+remain limitations. EHZ's carried-entry diagnostics still say no run manifest
+names the segment. Empty HCZ note lists do not certify complete entry provenance.
+
+| Command | Reported queue s | Execution s | User wait s | Unknown/rounding s | Wall s |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Category, including preparation | 8298 | 1924.230 | 0 | 18.313 | 10240.543 |
+| EHZ1 | 101 | 37.121 | 0 | 0.902 | 139.023 |
+| HCZ pair | 96 | 49.437 | 0 | 0.784 | 146.221 |
+| Emitted HCZ1 triage | 97 | 0.387 | 0 | 0.745 | 98.132 |
+| Emitted HCZ2 triage | 48 | 0.556 | 0 | 0.462 | 49.018 |
+
+The sequential domain pipeline wall is 433.123s; about 0.729s lies outside its four
+command intervals. Category execution includes preparation; other execution cells
+are Maven totals. Exact values/arrays remain in existing task diagnostics. Coding,
+research and inter-command investigation gaps were not separately timed, and some
+research overlapped queue waits; the table is not an end-to-end delivery clock.
+
+Fresh blind **original D** at this same head is **53.75/100**, vector
+`[3,2,2,2,1,3,2,2]`. This is source-only contributor usability, not runtime evidence;
+the other five trials were not regraded. The stronger per-trial/per-axis target
+remains unmet. Field-name policies, recipe/probe sprawl, local constructor-family
+coverage and competing parent relinks still impose substantial knowledge burden.
+Existing context already carries family identity and manager; a new context API is
+unnecessary. Two real-family witness patches are prepared externally, not applied
+or run; no RED claim. A broad interface collapse was not justified: the 23 level
+interfaces include 19 constructor recipes and distinct public/deferred roles.
+An EHZ constructor-family coverage candidate was identified, but a declaration
+alone must not count as proof, and removal of its real recreate hook is unproven.
+These investigations receive no automatic rubric credit.
+
+Raw category verdicts, exact assertions/skips, source proofs and dispositions are
+under `target/code-climb/ordinary-plan-ownership/category/`; fresh reports, owner
+checks, current-format byte comparison and actual emitted-command evidence are
+under `target/code-climb/ordinary-fields-domain/`. All owned validation jobs are
+terminal and their units retired. Diagnostics, original pixel evidence and retained
+baseline/worker trees remain preserved; unknown work is not discarded. The task
+branch/worktree stays for draft PR271. No destination merge/push or new PR is
+part of this increment. The following publication commit changes audit prose only.
+
+## Updated develop qualification and owned fixtures — 2026-11-09
+
+The reconciled runtime was frozen at `6752c370c5c61d9a7d0787218ea4a0c518e8f1f5`
+against updated develop `d314e7f2e35dde7b9ee603a9969beab4d49e0c29`.
+Both full source selections completed: baseline 4,632 classes, candidate 4,635;
+94/94 ordinary batches and 1/1 full guard batch each. The raw final lines remain:
+
+```text
+VERDICT FAILED: head=d314e7f2e35d source=c2a9c482f5f6 focused 4632/4632 candidate classes; ordinary 94/94 batches; guards 1/1 batches; tests=38561 failures=28 errors=0 skipped=49 (allowed=49 unexplained=0); missing ROM properties=none; skip inputs audio_reference_files=false,gl=false,s1_bizhawk_reference=false,s2_bk2=false,s3k_observations=false; bounded smoke selection, not a full-suite pass
+VERDICT FAILED: head=6752c370c5c6 source=2387479368e5 change-based 4635/4635 candidate classes; ordinary 94/94 batches; guards 1/1 batches; tests=38723 failures=29 errors=1 skipped=49 (allowed=49 unexplained=0); missing ROM properties=none; skip inputs audio_reference_files=false,gl=false,s1_bizhawk_reference=false,s2_bk2=false,s3k_observations=false; bounded smoke selection, not a full-suite pass
+```
+
+The selection has four added source paths and one removed contact-state path.
+The eleven-case contact class moves to its package-private-memory counterpart;
+method identities map exactly.
+All declared ROM properties, configuration hash, worker/GL/budget/skip inputs,
+and the full 49 skip dictionaries match. Omission and truncation-cap counters are
+zero. The baseline has no root ROM files/links while the existing candidate has
+ten; both layouts were preserved. No identical-ambient-filesystem claim is made.
+
+The one OOZ rewind error reproduced on unchanged d314 in a fresh class fork:
+`TestOOZPoppingPlatformMultiSidekick#capturedRiseRestoresAndReplaysEveryUpdateThroughExactApex`
+requires the gameplay timer owner. Primary type/message and complete causal stack
+are literal matches. The original baseline cohort's successful result remains
+unchanged; no specific preceding provider or flakiness cause was established.
+The existing ROM-free Sonic 2 game-module fixture now opens before each test and
+`resetEngineOnly` retires it afterward. All eleven original bodies, identities and
+assertions are byte-preserved after removing only the setup/import additions.
+The single-class control passed 11/11; the resulting task commit is
+`a45c0110935727d0ba4d880151cbed321f7ee61a` (source patch from local `f34d133d6f`).
+No production file changed after the source-frozen category/domain checks.
+
+One post-repair job ran the exact candidate batch-32 fifty-class cohort under
+`-Psmoke -Ptest-concurrent` and normal/EGL, then `-Pguards`: 307/307 and 843/843
+fresh cases respectively, zero failures/errors/skips. The immutable includes file
+was independently re-derived from the sealed selection and runner partition.
+Class membership is established; Surefire execution order and a leaking
+predecessor are not inferred. The eleven OOZ identities are individually green.
+Original raw results/verdicts remain intact; the qualification is an explicitly
+provenance-bearing composition, with no invented category VERDICT.
+
+The optional-ROM scene fixture was separately copied onto unchanged d314 production
+and run under the same smoke/concurrent profiles: fourteen cases, eight failures,
+zero errors/skips. All eight identities/types reproduce the candidate. Seven full
+messages and causal details are literal; the remaining full message differs only
+in its two Java identity hashes and has identical remaining stack text. This
+accounts for the newly reached scene assertions rather than treating old early
+returns as successful product checks. The owned test copy was restored after the
+control terminated. The original broad baseline was never modified or rebuilt.
+
+Against that matched-fixture reference, the composed candidate retains 29 failures:
+25 full assertions/causal details are literal and four display changes are reviewed
+individually (one FieldScreen/StoryScreen identity display and three MHZ set orders).
+Both exact texts are retained, and the MHZ test source blobs are unchanged.
+No blanket normalization is applied. The baseline suspension-rendering negative is
+absent from candidate negatives; this establishes no cause or fix. Original/raw,
+matched-fixture and composed comparison views remain distinct.
+
+Fresh matched domain commands selected `TestS2Ehz1TraceReplay` in `trace-replay`
+and both HCZ Sonic/Tails leaves in `trace-segments`, with normal memory, Java25,
+Lua5.4, displays unset, EGL, forkCount1, alphabetical order, summary printing and
+fresh output paths containing spaces. EHZ1 compares 5,852/5,852 and HCZ1 3,519/3,574,
+both clean; HCZ2 compares 14,149/14,208 with the same 26 gameplay errors. All three
+declared gates are reached and no test skips. Removing only the approved final
+carried-entry diagnostic field per report reproduces every baseline report byte;
+context bytes are identical. Each full candidate report also equals its previous
+qualified candidate report. EHZ's unknown-manifest note and the two exact HCZ
+provenance strings are retained. Eight missing advertised HCZ aux schemas and
+separate log warnings remain limits; no route/run-chain or whole-log-clean claim.
+
+Timing is reported separately below; user wait is zero. Category execution includes
+preparation and excludes shared admission wait. Queue totals use reported integer
+waits; residuals include unseparated overhead and rounding. These overlapping jobs
+are not an end-to-end total. Exact arrays, fresh XML, source seals, raw negatives,
+full skip/selection checks and component provenance remain under
+`target/code-climb/reconcile-d314/`, with the d314 baseline control evidence in its
+own tree and the fresh OOZ/scene controls in their owned staging tree.
+
+| Command | Queue s | Execution/preparation or Maven s | Wall s | Unknown/rounding s |
+| --- | ---: | ---: | ---: | ---: |
+| d314 baseline | 4747 | 2028.960 | 6794.990806 | 19.030806 |
+| 6752 candidate | 5727 | 1936.150 | 7680.800511 | 17.650511 |
+| post-fixture cohort | 8 | 37.180 | 46.182634 | 1.002634 |
+| post-fixture guards | 25 | 187.000 | 214.167180 | 2.167180 |
+
+Opus's bounded static reconciliation/ordinary-field review found no blocking or
+medium issue and executed no tests. All owned jobs/supervisors are terminal and
+retired. Draft PR271 is the sole publication destination. The original 2dd
+Competition black-pixel failure remains unattributed and blocks merging; later
+passes do not label it fixed, flaky or inherited. The captured-parent `430d5137`
+staging branch is reviewed and retained, unintegrated. During this freeze develop
+advanced to `c06efe67`; that newer tip is not part of the tested runtime snapshot
+and is reserved for a subsequent reconciliation. Diagnostic/source trees remain
+intentionally retained while this draft and its open attribution need them.
+
+
+## Exact captured parents for routine children — 2026-11-09
+
+This isolated increment starts at `6752c370c5c61d9a7d0787218ea4a0c518e8f1f5`
+(tree `e176236c0957420072ad092ec5acb7057b3c894f`), alongside the separately frozen
+`d314`/`6752` reconciliation qualification. It is local, unintegrated and unpushed.
+No contributor score or shipped-route trigger is established here.
+
+Two normally initialized nearby Clamers or S1 Orbinauts exposed wrong-parent
+reconstruction: the child's actual captured spawn is nearer the other parent.
+The existing owned-spawn capture already stores the correct family identity.
+The two recreate hooks now resolve that typed identity through the restoring
+manager. Known absence, a missing manager/identity or the wrong type returns null;
+it never authorizes a different nearby parent. Null/unknown family metadata keeps
+the existing class-specific nearest-parent compatibility path. Exact identity
+retains the captured owner rather than applying a live-only geometric filter.
+Native update routines, child admission, snapshot/API formats, field codecs and
+shared parent/sibling proximity helpers have no executable changes.
+
+The first prototype attempt stopped at three missing checked-exception declarations
+in new Clamer test readers: zero cases ran, so it is not behavioral RED. After
+that test-only repair, the same two-class selection ran 16 cases: exactly six
+predicted assertion failures, ten passing controls, zero errors/skips. The two
+ordinary-birth graph witnesses reached their wrong-parent identity assertions;
+the other failures rejected borrowing for explicit invalid family metadata.
+Those invalid metadata inputs are contract controls, not shipped gameplay claims.
+Clamer invalid-family controls stop at the real generic hook: a deliberately
+inconsistent parent-side strict child reference may correctly fail later field
+restore. Orbinaut controls exercise the full manager restore and inventories.
+
+After the two-hook repair, 155 cases across 16 exact fresh suites passed with
+zero failures/errors/skips. Every former RED identity is individually present and
+green. Selection includes ordinary constructor families, dynamic retries, two-phase
+references, manager snapshots, creator-owned graphs, pending shields, exact SST
+adoption, S3K child graphs, the architecture guard and all required S3K anchors
+(including both classes named `TestSonic3kLevelLoading`). This is focused evidence,
+not a full-suite, route, pixel, trace or original-D rubric certification.
+
+Command arrays below retain the actual wrapper flags and selectors; `<worktree>`
+replaces only the local invocation root. Original absolute arguments remain in the
+retained command receipts. Environment: Java25,
+Lua5.4, displays and inherited Maven/JVM option variables unset, normal memory;
+GREEN explicitly selected surfaceless EGL. ROM discovery used the main checkout.
+The source seal before/after GREEN was
+`15f13c5aeb18b6489c8e126dc86222bad8cfcf345d821b6296c857b5f0196bf7`.
+Afterward only docs/routing and one context Javadoc paragraph changed: all four
+tested program/test files keep their exact hashes, and removing that paragraph
+reproduces the previous context bytes.
+
+RED2 command:
+
+```json
+[
+  "python3",
+  "tools/testing/maven_queue.py",
+  "--normal",
+  "-Dmse=off",
+  "-Dsurefire.forkCount=1",
+  "-Dsurefire.runOrder=alphabetical",
+  "-Dtest=com.openggf.game.rewind.TestS1BadnikChildGraphRewind,com.openggf.game.rewind.TestS3kClamerGraphRewind",
+  "-Dopenggf.surefire.reports=<worktree>/target/code-climb/parent-family/red2/surefire",
+  "-Dopenggf.trace.reports=<worktree>/target/code-climb/parent-family/red2/trace-reports",
+  "-Dopenggf.test.diagnostics=<worktree>/target/code-climb/parent-family/red2/diagnostics",
+  "test",
+  "-B"
+]
+```
+
+GREEN command:
+
+```json
+[
+  "python3",
+  "tools/testing/maven_queue.py",
+  "--normal",
+  "-Dmse=off",
+  "-Dopenggf.headless.gl=surfaceless-egl",
+  "-Dsurefire.forkCount=1",
+  "-Dsurefire.runOrder=alphabetical",
+  "-Dtest=com.openggf.game.rewind.TestS1BadnikChildGraphRewind,com.openggf.game.rewind.TestS3kClamerGraphRewind,com.openggf.level.objects.TestConstructorChildFamilyRewind,com.openggf.level.objects.TestObjectManagerDynamicChainRewindRestore,com.openggf.level.objects.TestTwoPhaseRestoreOrdering,com.openggf.level.objects.TestObjectManagerRewindSnapshot,com.openggf.mods.code.TestModOwnedDynamicObjectRewind,com.openggf.level.objects.TestShieldRewindPendingRestore,com.openggf.level.objects.TestObjectRewindExactAdoption,com.openggf.game.rewind.TestS3kBadnikChildGraphRewind,com.openggf.game.rewind.TestRewindArchitectureGuard,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils",
+  "-Dopenggf.surefire.reports=<worktree>/target/code-climb/parent-family/green/surefire",
+  "-Dopenggf.trace.reports=<worktree>/target/code-climb/parent-family/green/trace-reports",
+  "-Dopenggf.test.diagnostics=<worktree>/target/code-climb/parent-family/green/diagnostics",
+  "test",
+  "-B"
+]
+```
+
+Timing per command (seconds; user wait zero):
+
+| Attempt | Queue | Maven | Wall | Unseparated overhead/rounding |
+| --- | ---: | ---: | ---: | ---: |
+| Prototype compile failure | 114 | 104 (rounded) | 218.948893 | 0.948893 |
+| Behavioral RED2 | 102 | 32.539 | 135.394063 | 0.855063 |
+| Focused GREEN | 623 | 103 (rounded) | 727.421976 | 1.421976 |
+
+Source preparation, investigation and future review time are not separately
+instrumented; these overlapping command timings are not an end-to-end total.
+All three exact owned supervisors are terminal and retired; command receipts,
+fresh XML, full assertions, source seals and proof are retained under
+`target/code-climb/parent-family/{red,red2,green}`. Current broad qualification
+remains separately owned by root; its diagnostic/pixel obligations are not waived.
+Independent correctness review, combined qualification and PR271 integration of
+this isolated increment remain pending.
+
+### Captured-parent review follow-up — 2026-11-09
+
+Independent Opus 5.5 static scrutiny of `6752c370..786e245bc7` found no blocking
+correctness defect. It verified both exact-parent hooks, retry side effects,
+parent inventories and the adversarial witnesses. It ran no JVM or tests; the
+155-case result above remains root-observed evidence. This supersedes only the
+pending-review state above; combined qualification and integration remain pending.
+
+The review's suggested reused-Clamer witness rests on an incorrect eligibility
+assumption. `ObjectRewindTypeSafety.compute` checks the scalar field projection:
+`GenericFieldCapturer.isDefaultObjectValueField` excludes object references, and
+the mutable `ClamerObjectInstance.springChildSlot` cannot satisfy the final-only
+noncaptured-field rule. Clamer therefore cannot reuse in place today. No runtime
+eligibility rule was changed to accommodate the review. The adversarial test now
+leaves the manager's production default enabled, and still verifies fresh parents,
+fresh springs and both links through two restores and an intervening update and
+recapture. Both graph suites passed again: 16 cases, zero failures/errors/skips.
+The source seal was `4a2a593923874d966f4121f2e0e8b90d0369c0a2911132a767d00b6d41f16295`
+before and after that run. Both reviewed gameplay source files remain byte-identical
+to `786e245bc7`; the later test edit adds only one blank line.
+
+This bounded follow-up also replaces two negated-boolean assertions with
+`assertFalse`, removes the Clamer legacy-hook assertion that could not fail,
+clarifies the context's preferred manager accessor, and corrects the coverage
+note: Orbinaut satellites move; the Clamer parents do not. The exact command is
+the RED2 two-class selection above with the GREEN normal/EGL flags and fresh
+`target/code-climb/parent-family/review-followup/{surefire,trace-reports,diagnostics}`
+outputs. Queue wait was 44 seconds, Maven 99 seconds (rounded), wall 145.099285
+seconds, user wait zero, and unseparated overhead/rounding 2.099285 seconds.
+All sixteen fresh case identities and XML remain in the terminal receipt.
+
+Remaining exposure is explicit in the coverage backlog. Only two hooks were
+migrated; roughly 56 proximity lookups across 43 files remain to classify, not
+all of them parent links. The owned Shellcracker claw's
+`Sonic2BadnikChildRewindLinks` lookup has the same potential family ambiguity and
+is unassessed here. Clamer probe construction still requires an available live
+Clamer before the new hook runs; accepting an exact destroyed parent inside the
+hook does not repair that earlier availability limit. Null-manager compatibility
+branches and Stageplay admission refusal have no runtime witness in this change.
+The latter may fail a required parent-side reference rather than borrow an
+unrelated owner. No speculative runtime change was made for either case.
+The positional snapshot-copy fixture and repeated setup remain local test
+maintenance costs. This follow-up grants no contributor-score or route credit.
+
+### Reviewed parent integration and c06 reconciliation — 2026-11-09
+
+The reviewed parent repair through `430d5137bab0ef0569020c30c0235c87dc74d0c4`
+was integrated with published `495670099c` in `54f4f26f9c`. The only conflict was
+the audit append: literal common prefix, then the published qualification suffix,
+then the complete parent/follow-up suffix. All 17,034 paths were checked; ten
+parent-only paths and the published OOZ fixture remain exact, with one audit
+union. The full production tree equals the reviewed parent tree, and only the
+independently qualified OOZ test differs among test sources.
+
+The next merge imports develop `c06efe67da766c1de1a68dfb327b85e400940fb8`.
+All 17,056 paths were compared: 16,917 unchanged, 77 task-only, 59 upstream-only,
+three documentation overlaps and zero blob/mode/deletion violations. No manual
+source resolution was required. Changelog, workflow README and coverage backlog
+match the automatic merge tree `d7ccbd3f72567786a4af4760c1e2fd643da761e3`.
+
+One source-frozen focused command covered all 21 upstream changed/added test
+classes plus the 16 graph/required-S3K boundary classes: 367 cases in 37 fresh
+suites, zero failures/errors/skips. Java25, Lua5.4, normal memory, displays unset,
+EGL, forkCount1 and alphabetical ordering; actual arrays, XML/source hashes and
+queue/execution/user/unknown timing remain in
+`target/code-climb/parent-locality-wave/root-focused`. Both same-name loading
+classes and the racing sources added by the root POM actually ran. After that
+run this audit note alone changed; program/test/POM bytes remain exact.
+
+The c06 independent baseline is frozen separately at the exact upstream SHA:
+4,637 smoke classes, 94 ordinary batches plus full guards, workers2, forty-minute
+execution cap excluding queue wait. It is pending, not a qualification result.
+The local Mantis declaration increment is independently owned by Sol in the
+existing parent staging tree. No candidate broad run or new combined Opus review
+has started. PR271 remains the sole destination and the historical pixel merge
+blocker is unchanged.
+
+
+### Local Mantis reference ownership — 2026-11-09
+
+This increment starts at `430d5137bab0ef0569020c30c0235c87dc74d0c4` in the
+isolated parent-family tree. Mantis now declares its mutable `child` and the
+visual child's `parent` with the internal `@RewindCapturedReference` marker.
+The existing `DefaultObjectRewindPolicies` owner reads that declaration; its two
+Mantis string-keyed `CAPTURED` exceptions are removed. All other catalogue bytes
+and all 91 compatibility field names remain unchanged. This removes two remote
+ownership decisions, not a net amount of Java source or the whole legacy catalogue.
+
+The marker requests the existing strict object-reference codec in ordinary compact
+capture. Explicit exclusions still win; final and non-object declarations are
+invalid. General registry precedence remains unchanged. A concrete subclass that
+falls back to scalar capture still omits its references. The supported/fallback
+sibling witness checks actual restore behavior and the existing coverage,
+inventory and disposition results. All three report the fallback's omitted link;
+no disposition-predicate correction or baseline growth was needed.
+
+The compile-valid RED stage added the marker type and declarations and removed
+only the two catalogue rows, with the policy reader unchanged. Twelve cases
+executed: nine intended assertion failures, zero errors and zero skips. In
+particular, the real Mantis field disappeared from the plan and the existing
+unregistered-parent test stopped throwing. Laziness, exclusions and SnaleBlaster
+controls passed. The reader then passed 130 focused cases across ten suites,
+including actual Mantis and SnaleBlaster graph reconstruction, strict missing
+identity, null/reference payload order and scalar fallback. A final focused guard
+selection passed 47 cases across five suites, including all eleven local-reference
+cases, exact-policy, compact-reachability, field-disposition and Mod API surface
+checks. Both real Mantis classes select compact capture and include their marked
+fields. Public API and signature pins were not edited.
+
+All invocations used the queue, `--normal`, Java 25, Lua 5.4 and `-Dmse=off`, with
+both display variables unset. No drawing or EGL selection was required. Exact
+commands, all fresh XML case identities/assertions and full source manifests
+including the then-untracked Java files are retained under
+`target/code-climb/local-reference-ownership/{red,green,guards}`. The RED selector
+was `TestRewindCapturedReference` plus the existing Mantis missing-parent-ID case.
+GREEN selected the local-reference class, ordinary-plan preservation, object
+reference/schema/policy tests, coverage/inventory/disposition tests and the three
+real Mantis/Snale graph controls. The final `-Pguards` selector was
+`TestRewindCapturedReference,TestExactRewindPolicyGuard,TestCapturedPolicyCompactReachabilityGuard,TestRewindFieldDispositionGuard,TestModApiSignatureSurface`.
+
+| Focused invocation | Queue seconds | Maven seconds | Wrapper wall seconds | User wait | Unseparated overhead/rounding |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| RED | 6 | 93 | 100.235431 | 0 | 1.235431 |
+| GREEN | 51 | 104 | 155.381165 | 0 | 0.381165 |
+| Focused guards | 97 | 37.203 | 134.920778 | 0 | 0.717778 |
+
+Queue and Maven printed durations are rounded; source preparation and review time
+are outside these command measurements. All three owned invocations are terminal.
+The recreation hooks, lifecycle, snapshots, schema traversal, codecs, scalar
+capture and SnaleBlaster contracts remain byte-identical to the starting commit.
+The preceding parent-family section and its history are retained unchanged.
+Root still owns independent review, combined qualification, integration and any
+PR271 publication. This bounded pass does not explain the historical pixel failure
+or grant contributor-score, route or merge clearance.
+
+### Local-reference review repairs and original-D assessment — 2026-11-09
+
+Independent Opus 5.5 source scrutiny of `ec159203541cf14e5a9c3bf06be012e84b463517`
+found no blocker. Its two Low findings and diagnostic nit are addressed here.
+The exact-policy guard now inspects the union of the existing central disposition
+and exceptional-codec keys and rejects any key whose field also carries a local
+capture declaration. A collision control exercises that same census, and a
+class-initialization sentinel checks that metadata inspection does not initialize
+the owner. The policy reader and every catalogue, codec exception, snapshot and
+capture/restore algorithm remain unchanged. No allowance or baseline was added.
+
+The exclusion witness now combines invalid marker types/finality with static,
+transient, scratch and deferred exclusions. Moving invalid-marker validation
+ahead of an exclusion would fail it. The marker contract and contributor guide
+name field-local exclusion precedence, and the disposition failure message gives
+the current local-or-catalogue advice.
+
+One queued normal/EGL `-Pguards` invocation selected the exact seven classes:
+`TestCapturedPolicyCompactReachabilityGuard`, `TestExactRewindPolicyGuard`,
+`TestOrdinaryActorPlanPreservation`, `TestRewindCapturedReference`,
+`TestRewindFieldDispositionGuard`, `TestRewindSchemaRegistry` and
+`TestModApiSignatureSurface`. All seven fresh suites ran: 82 cases, zero failures,
+errors or skips. Java 25, Lua 5.4, displays unset, one fork, alphabetical order;
+source seal `d897d68dafa54a45d39654b85d17d8f94276d339b3c86810e2d5d246ddb148e7`
+matched before and after. Queue wait was 413 seconds; Maven 96 seconds (rounded);
+wrapper wall 510.909751 seconds; user wait zero; unseparated overhead/rounding
+1.909751 seconds. Exact argv, case identities and XML/source hashes remain in
+`target/code-climb/parent-locality-wave/review-repairs`. The owned finite unit is
+terminal and retired. Subsequent edits add only this note and changelog prose.
+
+The separate original constructor-child journey at clean `ec159203` scored
+`[4,3,3,4,2,3,3,3]`, weighted 80.0/100. It was source-only, not runtime
+certification. The reviewer disclosed an incidental broad documentation grep
+that surfaced forbidden audit/plan lines, excluded those lines from scoring and
+rechecked scoring claims against allowed source. The receipt retains this limit;
+the result is not represented as uncontaminated. The stronger target is unmet:
+concept count, retirement/coverage routing and understanding/readability remain
+obstacles. No score is inferred for the review repairs above.
+
+The independent c06 smoke baseline is still running, and the combined candidate
+broad/domain checks have not started. An independent c06 production-source scene
+fixture control completed 14 cases with eight assertion failures and no errors or
+skips; seven full assertions match the earlier d314 control literally, and one
+differs only in a Java object identity display. That is retained control evidence,
+not a candidate comparison or a rewritten baseline. The repeated suspension-pixel
+failure has an onboarding-interception source hypothesis under a separate bounded
+runtime investigation. It does not explain the original Competition black-pixel
+failure, which remains an explicit merge blocker. PR271 is the sole destination;
+this local repair makes no publication or whole-suite claim.
+
+### Retired constructor-child inventory witness — 2026-11-09
+
+The original-D assessment identified a missing ordinary surviving-parent/retired-
+child example. The new case in `TestConstructorChildFamilyRewind` removes a child
+through the real manager, verifies ordinary unload detached the parent's captured
+link and uncaptured active inventory, then captures only the surviving parent.
+Restore constructs a fresh unmatched child. The test checks phase 2 restored the
+captured link to null before checking that drop notification emptied the separate
+inventory, retired the candidate and published neither membership nor identity.
+Recapture must still contain only the parent. The original nine test bodies and
+all production code remain unchanged.
+
+A compile-valid fixture-only no-op drop callback produced exactly one intended
+assertion failure on the uncaptured inventory, after the captured link was already
+null. Restoring that callback passed 20 cases in six fresh suites: the complete
+constructor-family class, dynamic-chain retry, two-phase references, all five EHZ
+wheel-orphan cases, two TurboSpiker retirement cases and the strict unregistered-
+reference case. No errors or skips occurred in either invocation. This negative
+control demonstrates that the witness detects missing owner cleanup; it is not a
+newly discovered production defect.
+
+Both checks used queued normal-memory Java25/Lua5.4 commands with displays unset
+and explicit surfaceless EGL. RED queue/Maven/wall/user/unseparated seconds were
+7/36.648/44.198881/0/0.550881; GREEN was 77/31.771/109.439524/0/0.668524.
+Commands, fresh XML hashes, exact case identities, source manifests and the
+temporary mutation are retained in the parent staging tree under
+`target/code-climb/retired-constructor-child`. Root verified all artifact hashes
+and copied the tested Java file byte-for-byte. Both focused jobs are terminal.
+The estimate of sixteen GREEN cases was corrected to twenty after reading the
+five cases in the selected EHZ class; no selector changed and no rerun was added.
+
+The guide now names ordinary and unmatched-drop detach, strict retired-reference
+capture, the hook/codec gate, per-class isolated versus named graph declarations,
+and the four related guards by role. A graph declaration does not execute its
+named test. The original graph command is retained, with a separate targeted
+retirement-neighbor command. The stale pitfalls advice to update totals now
+points to the actual binary-class inventory and per-class outcomes. These are
+source-derived routing corrections; the guards named in that text were not run
+by this focused worker. No coverage baseline, API pin, allowance or runtime
+contract changed, and no new contributor score is inferred. Combined candidate
+qualification and the original Competition pixel attribution remain outstanding.
+
+### Suspension fixture: observed onboarding interception — 2026-11-09
+
+The repeated `TestEngineSuspensionRendering` failure was reproduced on an owned
+temporary merge with all 5,151 main-source files byte-identical to c06. The first
+arm changed only read-only diagnostic logging. Its original pixel assertion
+failed exactly: `published full-size pixel 80,60`, expected 255, actual 464190
+(`0x07153e`). Onboarding was active before Enter; afterward its browser was open,
+`resumeZooming` remained false and the zoom counter stayed 32. At the nominal
+full-size opportunity the scene had still drawn once. Thus this local failure
+measured the onboarding screen, not a missing captured blue scene.
+
+The control sent normal Back and a neutral logic step before the original Enter.
+Onboarding and its child-input gate cleared; Enter started resume zoom; its
+counter reached zero and the four original colours were blue, red, magenta and
+yellow. The original later resume-publication and draw-count assertions passed.
+No private state write, ROM prerequisite, render-state reset, retry, tolerance or
+production change was added. The final fixture retains assertions for dismissal,
+gate release and actual resume admission, and all seven display-frame call sites,
+loop bounds, captures and original assertions. Two logic-only menu opportunities
+are conditional on onboarding. Temporary logging, including the prior GL vendor
+line, is absent from the final source and retained in the diagnostic logs.
+
+The natural RED ran one case with one assertion failure and no errors/skips.
+The public-input control and the final logging-free fixture each passed that same
+single JUnit identity with no errors/skips. RED queue/Maven/wall/user/unseparated
+seconds were 19/96 (rounded)/116.732804/0/1.732804; control was
+58/34.829/94.487493/0/1.658493; final was
+186/33.972/221.364600/0/1.392600. All used queued normal-memory Java25/Lua5.4,
+displays unset, one fork and explicit surfaceless EGL. Source/analysis/between-job
+time was separately recorded as 498.178693 seconds, not labelled test execution.
+After final GREEN only three leading indents changed; root verified every line
+and identical Java tokens/literals. Root consumed the exact resulting patch and
+all 42 recorded artifact hashes and three fresh XML files.
+
+The task-local `target/code-climb/parent-locality-wave/suspension-consumption.json`
+indexes the durable handoff and source/RED/control/final evidence.
+All owned focused jobs are terminal. No forced no-catalogue layout was needed;
+the existing layout reproduced the modal despite verified ROM test properties.
+The image-present catalogue branch was not separately exercised. Earlier broad
+failures have the identical assertion but no recorded modal-state transcript;
+the local reproduction does not invent one for those runs. This is a test
+precondition repair, not a production rendering fix or an explanation of the
+separate original Competition black-pixel failure. That merge blocker remains.
+The final combined candidate still requires smoke/guards and matched domains.
+
+### Captured-parent and local-reference combined qualification — 2026-11-09
+
+The combined source is `c327c5487e7b33737e79498457fff7d801d54b2d`,
+clean before and after validation, fingerprint
+`f838d85b685a90d7737901dd3d0510d4716994ef1fef24d51ec766495cde630b`.
+It includes the c06 reconciliation, Clamer/Orbinaut captured-parent hooks, local
+Mantis reference declarations, review repairs, retired-constructor-child witness
+and the test-only suspension precondition repair described above. Independent
+Opus scrutiny of ec159 found no blocker; the bounded diagnostic findings were
+repaired in 914. This qualification adds no new runtime change or score claim.
+
+The unchanged category runner selected 4,641 candidate classes against c06.
+All 94 ordinary batches and the full guards lane completed. Candidate ordinary
+results were 37,938 cases, 29 failures, zero errors and 49 allowed skips; all
+846 guard cases passed. The independent c06 baseline completed 4,637 classes,
+94 ordinary batches and full guards: 37,755 ordinary cases, 29 failures, zero
+errors and 49 allowed skips, plus 843 passing guards. Both raw verdicts remain
+FAILED; neither is represented as a full-suite pass.
+
+```text
+VERDICT FAILED: head=c06efe67da76 source=b3978581a01f focused 4637/4637 candidate classes; ordinary 94/94 batches; guards 1/1 batches; tests=38598 failures=29 errors=0 skipped=49 (allowed=49 unexplained=0); missing ROM properties=none; skip inputs audio_reference_files=false,gl=false,s1_bizhawk_reference=false,s2_bk2=false,s3k_observations=false; bounded smoke selection, not a full-suite pass
+VERDICT FAILED: head=c327c5487e7b source=f838d85b685a change-based 4641/4641 candidate classes; ordinary 94/94 batches; guards 1/1 batches; tests=38784 failures=29 errors=0 skipped=49 (allowed=49 unexplained=0); missing ROM properties=none; skip inputs audio_reference_files=false,gl=false,s1_bizhawk_reference=false,s2_bk2=false,s3k_observations=false; bounded smoke selection, not a full-suite pass
+```
+
+Exact full causal comparison retained every raw difference. Twenty-five
+candidate failures match an actual source-specific reference literally; four
+are individually reviewed display differences: one FieldScreen/StoryScreen
+object-identity display and three MHZ expected-Set ordering displays. Source,
+actual memberships and full causal tails support those four dispositions. No
+blanket normalization was applied. Two scene failure identities absent from the
+original c06 run were reproduced on unchanged c06 production source with the
+exact candidate scene fixture. All eight scene failures are accounted for by
+that control, not by changing the original baseline.
+
+Two baseline failures are absent: the suspension case has the separately
+recorded natural RED and normal-input/final GREEN; the physical-display-world
+case is merely an observed absence, not a fix. Its unchanged baseline source
+failed before its intended assertion because no gameplay mode was active.
+Current ambient-state attribution is unknown. All 49 complete skip dictionaries,
+classification inputs and selected baseline classes are preserved. The four new
+classes and the 11-case contact-memory package/type rename are explicitly
+mapped; omission and causal truncation counters are zero. Runner, comparator,
+skip policy and executable POM configuration are unchanged. Baseline and candidate
+root ROM layouts remain different and untouched (zero versus ten existing files
+or links); verified absolute ROM properties and configuration inputs match.
+
+The guard log freshly reports all 17 exact-policy cases passing. The existing
+focused XML names the three new guard cases on byte-identical test source.
+Category execution deliberately removes raw per-batch XML after summarizing;
+none is recreated or claimed retained. An additional collection check initially
+expected such XML and stopped before writing any disposition. It was corrected
+to use the actual retained log and focused XML; no tests were rerun.
+
+The single planned candidate domain pair is complete, on that same frozen
+source, with three fresh JUnit owners independently verified from identity hashes.
+There were no JUnit errors or skips; EHZ and HCZ1 passed, HCZ2 failed identically
+to c06. All gates were reached with ALL verification and zero bootstrap errors
+or warnings.
+
+| Standalone replay | Compared / planned rows | Gameplay errors / warnings |
+| --- | ---: | ---: |
+| EHZ1 | 5,852 / 5,852 | 0 / 0 |
+| HCZ1 | 3,519 / 3,574 | 0 / 0 |
+| HCZ2 | 14,149 / 14,208 | 26 / 0 |
+
+HCZ2 retains two physics and 24 animation errors; the first is frame 6640,
+`player_animation_id`, expected `0x0013`, actual `0x0005`. Full report bytes and
+context bytes equal c06 after detaching only the exact previously approved final
+`carried_entry_diagnostics` field. The complete candidate reports are also byte-
+identical to the preceding qualified candidate. Nothing was reserialized or
+normalized for comparison. HCZ1/HCZ2 share a logical key, so pairing uses each
+full class/method and independently derived owner key.
+
+Both HCZ reports retain eight missing advertised auxiliary schemas: cage state,
+cage execution, velocity writes, position writes, Sonic record position, Tails CPU
+normal step, CNZ cylinder state and cylinder execution. These are coverage limits,
+not counted trace warnings. Logs separately retain FAST-without-manifest/NONE
+and blocked presentation-shadow SMPS warnings; the whole logs are not warning-
+free. Standalone completion does not certify route or run-chain parity.
+
+| Invocation | Queue seconds | Execution/preparation seconds | Wall seconds | User wait | Unseparated overhead/rounding |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| c06 baseline smoke and guards | 2905 | 1936.38 | 4855.759522 | 0 | 14.379522 |
+| Candidate smoke and guards | 3244 | 1923.42 | 5190.903233 | 0 | 23.483233 |
+| c06 ehz1 | 3 | 40.066 | 43.651444 | 0 | 0.585444 |
+| c06 hcz | 26 | 42.026 | 69.248308 | 0 | 1.222308 |
+| Candidate ehz1 | 55 | 39.395 | 95.640867 | 0 | 1.245867 |
+| Candidate hcz | 950 | 44.637 | 995.254576 | 0 | 0.617576 |
+
+Broad commands use Java25/Lua5.4, displays unset, surfaceless EGL, two workers
+and a 40-minute execution cap excluding queue admission. Candidate command:
+`python3 tools/testing/run_categories.py --base c06efe67da766c1de1a68dfb327b85e400940fb8 --workers 2 --headless-gl surfaceless-egl --max-minutes 40 --keep-diagnostics --run`.
+Exact argv, complete source/selection/negative/skip/input/cap exports, source-
+specific controls and raw verdicts are indexed by
+`target/code-climb/parent-locality-wave/candidate-category/publication-disposition.json`;
+domain ownership and raw payloads are retained under the adjacent `domain/`
+directory. Original diagnostics remain unacknowledged.
+
+Further design research rejected the optional-comparison-family facade because
+it introduced a second phase/frame protocol without solving a contributor
+barrier. Legacy null-family constructors are retained: source comments explicitly
+promise host compatibility, and absence of an in-repo persisted reader does not
+prove external consumers absent. Neither alternative is implemented. Original D
+remains 80.0 on ec159; later tests and guide corrections imply no new score, and
+the stronger six-trial target remains unmet.
+
+The original 2dd Competition black-pixel failure is still unattributed and blocks
+merging. The suspension precondition and these later passes do not explain it.
+Publication is only to the existing draft PR271; no destination branch merge,
+push, release, route certification or full-suite qualification is authorized.
+Only this audit prose changes after c327 validation. All production, test, POM,
+policy, fixture and submodule bytes remain those actually tested. Owned units
+are terminal and retired; source trees, original receipts and unknown ignored
+assets are retained. PR269 is already merged and was not written or retired here.
+
+### Retained trace field evidence and review repairs — 2026-11-10
+
+The original trace journey could not tell which fields had retained results
+without rebuilding the driver's optional-comparison rules. The new optional
+`recorded_fields` array derives solely from the final
+`FrameComparison.fields` map keys already owned by `DivergenceReport`.
+It includes MATCH, observed-mismatch, WARNING and ERROR results, deduplicated and
+sorted globally. It introduces no comparator-family table, instrumentation,
+phase model, fixture input or admission rule. Bootstrap storage is mismatch-only
+and cannot supply an execution census; frame replacement also retains only the
+final stored row. These limits rule out presenting this array as executed-family
+coverage. The rejected intended-family facade would duplicate policy rather
+than establish observed execution.
+
+Triage distinguishes unpublished/unknown metadata from a present empty census.
+Its list is global even during narrow verification; gate, scope, totals,
+severity, bootstrap, grouping, context and frontier decisions are unchanged.
+A listed name may represent an exempt MATCH and never proves strict equality.
+The brief says per-frame only and explicitly excludes bootstrap. Indexed slot
+and art keys can make its literal line long; the JSON remains exact. A future
+name containing comma-space could be ambiguous in the joined brief, not in JSON.
+No completeness or score gain is inferred from this diagnostic addition.
+
+Present metadata is fail-closed for malformed arrays, non-text/blank/duplicate
+names, a nonempty census with zero retained rows, or omission of any published
+per-frame divergence. Older absent metadata remains readable. The public tooling
+record gains an optional component; its in-repository direct callers are updated,
+and the caller list is copied before validating the exact retained snapshot.
+This is not a candidate Mod API or signature-pin change. Saved-state formats,
+native execution, binder comparisons, trace inputs and fixture payloads are
+untouched. Adjacent comments and the guide now describe `total_frames` as
+retained comparison rows, including structural-only rows, rather than claiming
+it counts only gameplay comparisons.
+
+Compile-valid RED on unchanged production source ran 106 cases with exactly
+18 intended assertion failures, zero errors/skips and 88 prior passing cases.
+The first functional characterization ran 230 cases: all 226 functional cases
+and three guard controls passed; its only failure was the expected old/new
+fingerprint mismatch for the existing serialization handler. That raw failure
+is retained, not renamed GREEN.
+
+Independent Opus 5.5 source scrutiny found no runtime blocker and approved that
+one-for-one inventory re-key. It identified a Medium test-validity gap: blank
+and duplicate inputs on a zero-row report could be rejected by the wrong rule.
+Those cases now use one retained empty row; only the zero-row contradiction
+uses zero rows. A compile-valid temporary mutation disabled blank/duplicate
+rejection while retaining set insertion, null/type validation and the zero-row
+rule. Its eleven cases produced exactly three intended failures (blank,
+whitespace and duplicate) and eight passing controls, with zero errors/skips.
+The exact good source was then restored, verified against all eight file hashes.
+This control, rather than the initial broad RED alone, establishes the repaired
+cases discriminate against missing name checks.
+
+Final focused GREEN passed 230 cases in six fresh suites, with zero failures,
+errors or skips. The selection was `TestTraceTriageTool` (110),
+`TestTraceTriageVerificationScope` (50), `TestDivergenceReport` (33),
+`TestTraceGateCompletionReport` (8), `TestTraceCarriedEntryDiagnostics` (25)
+and `TestBroadCatchSwallowingGuard` (4). The repaired cases and all inventory
+checks are present and green in the fresh XML. Tested source fingerprint:
+`ecf9e2804ae27e190323168511b5155e61c3a2b75865351b9054581182f9afb0`
+on base `a1756270a674299c7774512ba40b8147ed06662d` with the recorded dirty
+eight-file patch. Only this audit prose is appended after that GREEN.
+
+The existing catch type and handler/error document are unchanged. Its single
+count-1 row moves from fingerprint `8605ab231ec928aa366822d293172f147f217b07397099f41def83539e0e622e` to `f7303e52dacf223d7a54601c45cb297721fbc67fa4e2cb1cadac56b8dd22bfd8`. No inventory
+row, allowance, scanner or budget grows; the unresolved-legacy-recovery reason
+and relocation history remain, followed by the explicit Opus decision.
+A null or concurrently changed externally supplied map could theoretically
+reach the existing error-document recovery through the new census calculation;
+all in-repository producers use valid fixed/prefixed keys. This is a retained
+limit, not a new allowance or a claim the legacy recovery debt is resolved.
+
+| Invocation | Reported queue seconds | Maven seconds | Wrapper wall seconds | User wait | Unseparated overhead/rounding |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Initial compile-valid RED | 72 | 37.427 | 110.867325 | 0 | 1.440325 |
+| Functional/inventory characterization | 308 | 102 | 411.955275 | 0 | 1.955275 |
+| Repaired-test negative control | 16 | 96 | 113.977172 | 0 | 1.977172 |
+| Final focused GREEN | 0 | 234 | 235.934362 | 0 | 1.934362 |
+
+All invocations used queued normal-memory Java25/Lua5.4, displays unset, one fork,
+alphabetical order and explicit surfaceless EGL. Initial RED and the eleven-case
+control used ordinary selectors; characterization and GREEN used `-Pguards`
+with the six explicit classes. Printed Maven/queue durations can be rounded.
+Exact argv, source patches/hashes, complete named-case XML, the temporary
+mutation and restoration, full guard failure and approval are indexed by
+`target/code-climb/recorded-field-evidence/continuation.json`. Root-owned
+focused units are terminal and retired. An initial observer clean-tree assumption
+was corrected to use its existing sealed-dirty-source mode; the original job
+stayed alive.
+
+Read-only compatibility inspection found count-only validators ignore this
+additional diagnostic key. The release comparator preserves full payload keys
+and will flag the intentional change; it remains strict and unmodified.
+Generic comparators and validators are not taught to normalize or ignore it.
+
+Final combined qualification remains pending. The unchanged impact planner
+selects all 4,641 smoke classes plus guards. The actual retained `c327` run
+has that same ordered selection; `a175` differs from it only in audit prose,
+so its actual tested source is reused without relabeling its SHA or verdict.
+Root plans one complete candidate run with two workers and a 40-minute execution
+cap excluding queue, then an original HCZ leaf and execution of its actual printed
+triage command through a path with spaces/quotes. No broad or domain result is
+claimed here. PR271 remains the sole draft destination. The original Competition
+black-pixel failure still blocks merging; the stronger six-trial target remains
+unmet, and no new rubric score or route/run-chain certification is inferred.
+
+### Recorded-field qualification and actual diagnostic command — 2026-11-10
+
+The single planned candidate run completed on clean
+`4d5e5921655d7f26d569359923f3b67ae9f66559`, fingerprint
+`cdc234e36a3575b8509a4bb65411217fb6c27a7c8b755823d52b4d412536afc3`.
+It selected the same ordered 4,641 classes as the actual retained `c327` run:
+94/94 ordinary batches and 1/1 full guards. Ordinary results were 37,960 cases,
+29 failures, zero errors and 49 allowed skips; all 846 guards passed. The raw
+result is retained exactly, rather than relabeled green:
+
+```text
+VERDICT FAILED: head=4d5e5921655d source=cdc234e36a35 change-based 4641/4641 candidate classes; ordinary 94/94 batches; guards 1/1 batches; tests=38806 failures=29 errors=0 skipped=49 (allowed=49 unexplained=0); missing ROM properties=none; skip inputs audio_reference_files=false,gl=false,s1_bizhawk_reference=false,s2_bk2=false,s3k_observations=false; bounded smoke selection, not a full-suite pass
+```
+
+The baseline remains the source actually tested, `c327c5487e`, not a renamed
+`a175` result. Their program, test, fixture, policy, POM and submodule bytes are
+identical; only audit prose differs. The current command was
+`python3 tools/testing/run_categories.py --base a1756270a674299c7774512ba40b8147ed06662d --workers 2 --headless-gl surfaceless-egl --max-minutes 40 --keep-diagnostics --run`.
+It used Java25/Lua5.4, displays unset and the same configuration, ROM discovery,
+skip inputs, worker/batch policy and execution cap. The cap excludes queue wait.
+
+All 29 failure identities, kinds and types match. Twenty-five complete assertion
+and stack records are byte-identical. Four differences were reviewed separately:
+the Three Islands field/story assertion differs only in its two default object
+identity hashes; the Sonic, Tails and wide MHZ assertions differ only in expected
+`Set.of` display order. Expected members and multiplicities, complete actual
+renderings, source lines and trailing stacks are equal. All four test blobs are
+unchanged. These are explicit source-specific dispositions; neither comparator
+nor evidence was normalized. The original strict comparator still asks for
+review of those differences.
+
+Every one of the 49 complete skip dictionaries, including projection metadata,
+matches. Unclassified, required, undeclared and unidentified skips are all zero.
+The ordered selection and all compared input fields match; omission counters and
+message/detail/skip cap checks are clear. Fresh guards output explicitly includes
+the four passing broad-catch cases. Category XML is deliberately removed by the
+runner after summarization; retained class logs and the existing focused named-
+case XML supply the actual evidence, without inventing category XML or reruns.
+
+One fresh original HCZ leaf then passed, with exactly one fresh JUnit owner and
+zero failures, errors or skips. Its ALL gate was reached with 3,519 retained rows
+and 3,574 planned rows, zero gameplay/bootstrap errors and zero counted warnings.
+Its independently derived owner key is
+`69be43f91cad214294a85197202569a6ed612cf7dfd6b75e68198a394231c219`.
+The report contains 46 canonical recorded field names. Removing only the exact
+new root `recorded_fields` JSON member yields the complete baseline report bytes,
+SHA-256 `481b5a554c03165ecc8d2d12dc9cbcf1c1594518febf25677e045a336a32ab70`.
+No reserialization or count/string/order normalization was used. Neither report
+needs a context file.
+
+The report directory deliberately contains spaces and literal double quotes.
+The supervisor extracted this run's single actual printed `triage:` command,
+parsed its outer POSIX quoting with `shlex.split`, and executed the resulting
+unchanged wrapper arguments without a shell. Maven's real argument parser and
+the actual CLI then exited zero, reading the published file and displaying the
+same 46-name list, explicit exempt-MATCH/bootstrap disclaimer, gate and counts.
+This establishes this Linux/Maven command boundary; it does not certify a shell
+process, PowerShell, Windows, all pathname characters or automatic compilation
+by `exec:java`. The preceding HCZ invocation compiled this exact source.
+
+The HCZ report still advertises eight absent auxiliary schemas, listed in the
+preceding qualification. The actual log retains deprecation and FAST-without-
+manifest/NONE warnings; zero counted trace warnings is not a warning-free log.
+The EHZ1 and HCZ2 evidence remains the preceding `c327` qualification and was not
+rerun for this reporting-only increment. No chain or route parity is inferred.
+
+| Invocation | Reported queue seconds | Execution/preparation seconds | Wall seconds | User wait | Unseparated overhead/rounding |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Complete candidate smoke and guards | 2296 | 1962.86 | 4275.250197 | 0 | 16.390197 |
+| Original HCZ leaf | 346 | 43.202 | 390.923222 | 0 | 1.721222 |
+| Actual printed triage command | 0 | 0.336 | 1.378956 | 0 | 1.042956 |
+
+The broad run had 95 admissions. Exact argv, full negative/skip/selection/input
+exports, individually reviewed display differences, guard logs and timing are
+indexed by `target/code-climb/recorded-field-evidence/candidate-category/publication-disposition.json`.
+Fresh owner/XML/report hashes, the actual printed command and executed argv,
+and the raw-byte proof are in the adjacent
+`domain/control/paired-report-and-route-proof.json`. A collector initially used
+the wrong package for an optional guard-log check and stopped before writing
+any disposition; it was corrected from `tests` to the actual `tools` package.
+A status path/object mismatch interrupted bookkeeping after domain launch; the
+durable receipt and exact existing PID were recovered without restarting or
+duplicating the job. Both owned units are terminal and retired. Raw diagnostics,
+source trees and unknown ignored assets remain retained for unified accounting.
+
+Fresh original-F static assessment at `4d5` scored 68.75/100, vector
+`[3, 2.5, 2.5, 3, 2, 3, 3, 3]`. No runtime or first-divergence result was known
+to the assessor. User memory-index summaries were preloaded and one AGENTS
+content comparison was performed despite the no-diff brief; those disclosures
+remain attached, and this is not represented as uncontaminated. Pinned source
+checks were used rather than an off-pin checkout. Root separately verified that
+the older `trace-replay.md` example names an S1 test, for which its profile is
+correct; it is not a drop-in HCZ command. A clean incomplete prefix can also
+accompany an assertion failure, not only a Surefire error. Neither qualification
+nor these factual notes adjusts the assessor's score. Other trial grades remain
+at their own earlier sources; the stronger six-trial target remains unmet.
+
+Bounded next-sweep source research corroborated Shellcracker's exact parent link
+and independently falling lifetime at S2 pin
+`34fc7f130a96db171e1a1c43e28e0bad81cd6ca7`, read from the existing main submodule
+object store without changing any checkout. The spawn stores its actual body
+address at `loc_38296 (s2.asm:75918-75939)`; parent loss selects routine4/timer
+`$40` and returns at `loc_381D0 (s2.asm:75812-75815)`. Falling executes independently
+at `loc_38280 (s2.asm:75907-75911)`. Pinned configuration uses `fixBugs=0`.
+This supports an ordinary two-parent RED witness plus a surviving FALLING
+control, not immediate deletion when a parent is missing. A separate possible
+pre-existing Java mismatch processes falling on the parent-loss row instead of
+the next execution; it is recorded as untested and is not silently bundled into
+this increment. No next-sweep patch or test job was started before publication.
+
+Only this audit prose changes after `4d5` qualification. Publication remains
+task-branch-only to draft PR271; no destination branch write or merge is
+authorized. The original `2dd` Competition black-pixel failure is still
+unattributed and merge-blocking. Later passes do not explain it.
+
+### Authoritative parent handoff and Shellcracker witnesses — 2026-11-10
+
+> Historical intermediate design: the supplied-parent protocol described here
+> was rejected in “Captured-parent admission correction — 2026-11-10” below.
+
+After the preceding increment was published to draft PR271 at
+`118a26ca9966fe9b39b6c004cc3cd4a65abf1e81`, bounded source research and runtime
+witnesses established the next defect. A real Shellcracker body spawns eight
+claws through its existing factory and owned `spawnChild` helper. A second body
+at claw zero's position is nearer than the captured owner. The old recreate hook
+selects that decoy despite known construction-family metadata. Already-FALLING
+claws also borrow a surviving decoy after their actual parent retires.
+
+The first seven-case characterization was compile-valid with two failures and
+five passing controls, but only one failure proved the defect: the falling claw
+borrowed the decoy. The other stopped at an invalid fixture assumption that the
+parent must be rebuilt. It is not counted as a second ownership RED. The repaired
+test runs both normal reuse permission and a forced fresh reference path, requiring
+fresh parents only in the latter. That eight-case check reached exactly three
+intended ownership failures, with five controls and zero errors/skips. It proves
+the wrong owner under both permissions, not that the optimizer must reuse.
+
+A separate nullable-parent consumer check then established the additional risk:
+after its init-only execution, an active claw dereferences its missing parent.
+The nine-case RED reached four intended assertion failures and the same five
+controls, with zero errors/skips. Its exception is asserted with `assertDoesNotThrow`,
+so the recorded failure is an assertion carrying the actual NPE and
+`checkParentAlive` stack. No production code changed during these RED checks.
+
+The reconstruction owner already resolves the captured parent from its restore
+identity table before adoption or recreation. Re-querying live-world membership
+inside each hook adds another source of truth: directed Stageplay admission can
+refuse membership while the restore table still registers the parent. The repair
+forwards the existing result through `DynamicObjectRecreateContext` and
+`RewindRecreateContext`, then exposes `hasKnownConstructionFamily()` and the typed
+`capturedParent(Class)` accessor. An authoritative null remains null. Neither
+supplied result uses the manager query or filters a destroyed flag before phase-2
+field restoration. The duplicated known-family lookup is removed from Clamer and
+Orbinaut; their concrete unknown/legacy branches are byte-identical.
+
+The compatibility cost is explicit: both internal context records gain a nullable
+parent and a provenance bit. Impossible unprovided/non-null combinations are
+rejected; a supplied non-null parent also requires known, non-null family identity.
+Old 3/4/5-argument hook-context and 1/2-argument dynamic-context constructor
+descriptors and old accessors remain. Those callers retain lazy exact-ID lookup,
+including the existing manager/services fallback. Record component counts and
+generated equality/hash/toString/reflection shape change; this is not a claim of
+complete engine-host reflective compatibility. These contexts are outside the
+candidate Mod API. No descriptor or signature pin changes.
+
+A query-only facade was rejected because it would keep the membership visibility
+gap. A separate `genericRecreate` overload was rejected because it would move the
+existing registry catch and add an unnecessary context/entry association. The
+chosen path keeps that signature, catch, registry fallback and constructor-probe
+selection unchanged. No inventory allowance, policy, snapshot layout or codec
+changes. Fixed-point retries, adoption, captured identity/slot publication,
+competition player rebinding, all-fields-before-settling and deferred player
+effects retain their schedules.
+
+For Shellcracker, known family metadata supplies the exact body or authoritative
+absence; unknown/legacy metadata retains the old nearest-or-drop behavior. A known
+missing body no longer drops an independent falling claw. Phase 2 restores its
+captured state, motion and remaining timer. The active consumer adds only the null
+case to its existing parent-loss condition. Init-only execution and existing
+parent-loss-row motion, gravity application and timer order are unchanged. The
+separate pinned-source timing discrepancy remains uncorrected and explicitly
+outside this patch. The current Clamer probe still needs a live Clamer before its
+hook runs; this does not repair probe availability or certify Stageplay admission.
+
+Focused GREEN passed 275 cases in 22 fresh suites, with zero failures, errors or
+skips. All four previously failing cases are present and green, as are the five
+original controls and 17 new context cases. The latter include a real custom
+recreate hook reached through `genericRecreate`: a supplied parent is invisible to
+the live query, and supplied absence faces a misleading live result. Losing either
+the forwarded value or its provenance fails those checks. Other cases cover
+destroyed/type-mismatched/missing parents, unknown and legacy metadata, lazy old
+constructors and their descriptors, and invalid supplied-state combinations.
+No full Stageplay route or usability score is inferred from these unit controls.
+
+The selection also ran constructor families, dynamic-chain retries, two-phase and
+reference closure, object snapshots, deferred shields, creator-owned dynamics,
+competition owner rebinding, Clamer and S1/S2 graph neighbors, the four named S3K
+keep-green checks (both loading classes explicitly), and the architectural,
+rewind-architecture and broad-catch guards. The command used queued normal-memory
+Java25/Lua5.4, displays unset, surfaceless EGL, one alphabetical fork and `-Pguards`
+with all 22 explicit fully qualified class selectors. Exact argv and named-case
+XML are in `target/code-climb/shellcracker-parent-contract/green/accepted-green.json`
+and its terminal receipt. Tested dirty source on `118a26ca99` was
+`9e9a56a3009f26da2e203e72a9766bb4dfb93c0c68d008fdcd6d393fc80631a3`,
+including the new untracked test's bytes; all 13 sealed file hashes were verified.
+Only this audit prose is appended afterward.
+
+| Invocation | Queue seconds | Maven seconds | Wall seconds | User wait | Unseparated overhead/rounding |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Initial characterization: one defect, one fixture gap | 0 | 34.812 | 37.254193 | 0 | 2.442193 |
+| Corrected three-ownership RED | 0 | 32.539 | 33.405792 | 0 | 0.866792 |
+| Four-RED absence-consumer selection | 0 | 34.589 | 35.981312 | 0 | 1.392312 |
+| Combined 22-class GREEN | 84 | 107 | 191.624372 | 0 | 0.624372 |
+
+Original patches, complete XML/negative records, fixture correction, pinned-source
+research, the rejected designs and static preservation proofs remain under
+`target/code-climb/shellcracker-parent-contract/`. All owned validation units are
+terminal and retired. This is a local focused increment pending independent Opus
+scrutiny and combined baseline/domain qualification; it is not pushed or claimed
+as a broad pass. PR271 remains the sole delivery destination. The original
+Competition black-pixel merge blocker and the unmet six-trial target remain.
+
+
+## Captured-parent admission correction — 2026-11-10
+
+The independent review of local `630c65ce9a` identified a plausible scene-admission
+regression. A real Stageplay policy/objects/direction restore reproduced it:
+with `clearObjects=true`, eight active Shellcracker claws retained an alive placed
+parent that admission had refused. The parent-only readmission probe failed
+independently. Source and fixture used public authored casting and actual
+`spawnClawPieces` → `spawnChild`, not edited family metadata or mocked admission.
+
+The initial three-class run completed 29 cases with exactly those two assertion
+failures, no errors/skips, and 27 passing controls. Queue/Maven/wall were
+8/104/113.649549 seconds (user wait 0; residual 1.649549). The new full-lifecycle
+forwarding case passed. Both normal and disabled-reuse cases passed an explicit
+second-restore identity assertion; the review's claim that neither could reuse
+missed the within-pass class-cache insertion.
+
+Changing only the lifecycle context construction to its former lazy constructor
+made the child-safety case pass, while the parent-only failure remained. The
+intermediate forwarding test then failed, as intended. The first bounded control
+omitted the S2 prefix, so it was not used as the exact matched comparison. A second
+control kept all 29 case identities and the original three-class selection:
+29 cases, those latter two failures, no errors/skips. Queue/Maven/wall were
+126/33.485/160.813879 seconds (user wait 0; residual 1.328879). Only the single
+context call differed in source; full literal negatives and hashes are retained
+in `target/code-climb/shellcracker-parent-contract/matched-handoff-causal-proof.json`.
+The extra bounded control cost is retained, not hidden.
+
+The unpublished supplied-parent/provenance protocol is rejected. Registration in
+the restore table is not admission authority. The repair retains one shared exact-ID
+lookup in the admitted population, using the original context record shapes.
+`DynamicObjectRecreateContext`, `ObjectRewindDynamicCodecs` and
+`ObjectRewindLifecycle` are byte-identical to published `118a26ca99`. The Clamer
+and Orbinaut lookups still reject a missing/wrong-type owner; the Shellcracker
+hook may construct an independent null-parent claw. Native parent-loss execution
+and gravity order remain unchanged. The misleading fixBugs conditional wording
+was removed from the unconditional ObjA0 citation.
+
+The parent-only probe source and failed XML are preserved under `review-witness/`.
+That diagnostic was never published coverage. Its unresolved authored-placement
+readmission defect is recorded in the coverage backlog; the permanent child-safety
+witness permits dropped or null-parent pieces in that lane and certifies no family
+retention. No baseline/skip/guard allowance is added. Fresh repaired-source checks,
+independent scrutiny and combined qualification remain pending at this entry.
+
+The completed original-D assessment at `630c65ce9a` scored 69.375/100, vector
+[3.5,2.5,3,3,2,2.5,2.5,2.75]. It disclosed preloaded memory/main AGENTS and narrow
+pitfalls/testing reads; no tests, target, history or PR were read. This is a
+source-specific static assessment, below the goal, not a grade for this repair.
+
+A separate forensic handoff verified 16 retained artifact hashes and 27 source
+revision hashes for the original 2dd competition pixel failure. Its full negative
+export remains, but the original raw run/XML/fork history and frame were not
+retained. Later passing controls cannot reconstruct those facts. No new causal
+evidence was found; that merge blocker remains unresolved. Receipt and exact
+retention limits are in `competition-forensics-consumption.json` beside the above
+causal proof. No random repeat or speculative renderer patch was added.
+
+
+Repaired-source focused validation completed: 303 cases across 24 fresh suites,
+zero failures/errors/skips. It included the exact-ID helper and real lifecycle
+witness, both rebuilt/reused Shellcracker controls, the two permanent scene safety
+cases, all existing Stageplay direction cases, graph/reference/deferred/creator
+neighbors, both loading classes and the four required S3K checks. The selected
+architecture/broad-catch guards passed; this was not the full guards lane.
+Queue/Maven/wall were 9/119/129.416915 seconds, user wait 0 and residual 1.416915.
+Actual source was `630c65ce9a` plus sealed dirty fingerprint
+`6c63157f9e8b439906f7e3c20747e6f9f3c16617c37ab7fc1da4813bb06b9ebb`.
+All program/test/document bytes matched the seal at terminal; only this prose
+receipt follows the run. Command, fresh XML, exact selectors, source hashes and
+limits are under `review-repair-green/`. The durable unit is terminal and no worker
+remains. Independent scrutiny of this changed design and the single combined
+smoke/guards plus relevant domain qualification are still required before push.
+The 4,643-class broad selection is prepared only; none of its prior 4,642 classes
+is removed or reordered. No broad run or new rubric score is claimed here.
+
+
+### Admitted-parent review closure and domain evidence — 2026-11-10
+
+Fresh independent Opus scrutiny of clean `1f84b28463` found no static blocker.
+It verified the unchanged lifecycle/codec/context blobs and exact old lookup
+semantics for Clamer and Orbinaut. It ran no build, test or JVM. Five Low findings
+and one audit nit were addressed without changing production code: the same-position
+decoy now precedes the owner and its live-query order is asserted; the ordinary
+scene lane requires the exact rebuilt owner; the cleared lane requires eight
+null-parent pieces, FALLING after init/parent-loss execution and bounded expiry.
+The unused parent-only fixture switch was removed. The previous forwarding section
+now points to its rejection below. The coverage backlog records inherited,
+unexecuted constructor-adoption/refused-parent and off-screen-body retirement gaps.
+Those paths are not claimed fixed.
+
+The two modified test classes completed 11 cases with no failures/errors/skips.
+Queue/Maven/wall were 68/35.609/104.189765 seconds; user wait 0, residual 0.580765.
+Actual source was `1f84b28463` plus sealed fingerprint
+`fae21febf2811637d3449a7103f124d8acc1396c7eae687a757dd16223101293`.
+This checks the stronger witnesses; the previous 303-case check remains evidence
+for its actual source. No further reviewer was started for these small findings.
+
+While the frozen main source was independently reviewed, one sequential
+observational domain unit ran the existing EHZ1 and HCZ pair. It tested actual
+clean `1f84b28463`: EHZ1 passed 5,852/5,852 rows; HCZ1 passed with 3,519 retained
+comparisons/3,574 planned rows; HCZ2 retained its assertion failure with 14,149
+comparisons/14,208 planned rows and 26 gameplay mismatches. All three declared ALL
+gates reached completion, with no counted warnings, bootstrap negatives or skips.
+The raw supervisor exit remains 1. HCZ2's full JUnit negative and context are literal
+baseline matches. Every pre-existing payload field and raw byte matches actual
+`c327c5487e`; only the already-published `recorded_fields` diagnostic is detached
+by one exact byte span. There is no old census counterpart to claim equal. HCZ1's
+entire current-format report also matches actual `4d5e592165` byte for byte.
+Eight advertised aux schemas remain missing for each HCZ leaf; raw log warnings
+are retained and are not called warning-free.
+
+Total domain queue/Maven/wall were 263/83.939/348.681177 seconds; user wait 0,
+residual 1.742177. Exact commands, per-command timing, owner-derived report paths,
+fresh XML, literal negatives and context comparison are retained under
+`target/code-climb/shellcracker-parent-contract/admission-domain/`. The changed
+tests/docs do not alter main, trace driver/fixture, tool, POM or configuration
+inputs; the domain evidence remains labelled as actual `1f84`, not relabelled as
+a later head. Its execution before smoke was observational and waived no category
+or publication gate. All owned units are terminal. One complete 4,643-class
+candidate smoke/guards run and full negative/skip/input comparison remain required
+before task-branch-only draft PR271 publication. Original pixel attribution and
+the wider six-trial goal remain unresolved.
+
+
+### Final admitted-parent batch qualification — 2026-11-10
+
+The single frozen candidate run `20261110T043251Z-3060cb0c` tested clean
+`ec29ef9300e1cafc2c163f1218f6b943d4e8d2c0`, fingerprint
+`a9c5bb4bf5d4bc1f7b85c724aae5edea506ec1cdfcbe428ae2067088112997bd`.
+It completed 4,643/4,643 selected source classes, 94/94 ordinary batches and the
+full guard lane. Ordinary: 37,975 cases, 29 failures, 0 errors, 49 allowed skips.
+Guards: 846 cases in 103 suites, no failures/errors/skips. The raw final line is:
+
+```text
+VERDICT FAILED: head=ec29ef9300e1 source=a9c5bb4bf5d4 change-based 4643/4643 candidate classes; ordinary 94/94 batches; guards 1/1 batches; tests=38821 failures=29 errors=0 skipped=49 (allowed=49 unexplained=0); missing ROM properties=none; skip inputs audio_reference_files=false,gl=false,s1_bizhawk_reference=false,s2_bk2=false,s3k_observations=false; bounded smoke selection, not a full-suite pass
+```
+
+Command: `env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base 118a26ca9966fe9b39b6c004cc3cd4a65abf1e81 --workers 2 --headless-gl surfaceless-egl --max-minutes 40 --keep-diagnostics --run`.
+The sealed effective environment also clears Maven/Java argument overrides.
+The existing `config.yaml` link and its baseline-matching content were preserved;
+an initial preparation check wrongly assumed it was not a link and stopped before
+launch. Only the private config snapshot is a new regular file; no live config
+or ROM was altered.
+
+The actual baseline remains `4d5e592165`, program-identical to pre-task `118a`.
+All 29 failure identities/kinds/types match. Twenty-five full negative dictionaries
+are literal matches. The remaining four were individually source-reviewed:
+Three Islands differs only in default FieldScreen/StoryScreen identity suffixes;
+MHZ Sonic/Tails/Wide differ only in the display order of the expected `Set.of`.
+Their complete actual strings, expected members/multiplicity and trailing stacks
+match. Every implicated test and screen source blob is identical between tested
+sources. The strict comparator still reports those four display differences;
+its output and both full texts are retained, with no blanket normalization.
+All 49 complete skip dictionaries, including classification metadata, match.
+No omitted identities, unexplained/required skips or capped causal records exist.
+
+All 4,641 baseline classes remain in relative order, plus the two new boundary
+classes. Actual runtime selection, ROM discovery, backend, worker, budget and skip
+inputs match. Runner, comparator, POM and skip policy are unchanged. The stronger
+11-case focus XML and prior 303-case scope are retained separately; category
+compaction does not preserve every per-class positive XML/log line. No such raw
+positive-XML retention is claimed. Complete exported negatives/skips and raw final
+verdicts remain authoritative for this comparison.
+
+Queue was 472 seconds across 95 admissions; execution plus preparation 1,957.7
+seconds; job wall 2,447.869154 seconds; user wait during the job 0; residual/unknown
+18.169154 seconds. Later terminal-to-observation residence and investigation are
+outside that job timing, with no cause assigned. The owned unit is terminal and
+retired, all diagnostics retained. Domain evidence remains actual `1f84`, with
+reviewed relevant main/trace/fixture/tool/POM inputs unchanged through `ec29`.
+The fetched develop tip is still `c06efe67da`; no reconciliation was needed.
+
+Exact comparisons, full source-specific display reviews, timing, source/config
+seals and terminal export are in
+`target/code-climb/shellcracker-parent-contract/admission-candidate-category/`.
+The export SHA-256 is
+`da35734e55cdf122e65cada9225e5ae613214553292d8d99e88e5fd01a3ed11c`.
+Within this bounded scope no new or worsened outcome blocks draft publication.
+This is not a full-suite, whole-route or usability-target completion claim.
+The original 2dd competition pixel failure remains unattributed and merge-blocking;
+its unavailable raw-frame/fork evidence is not reconstructed by later passes.
+Only this final audit prose follows the tested source. Task-branch-only publication
+to existing draft PR271 is authorized; no destination push or merge is authorized.
+
+
+## Captured placed-population restoration — 2026-11-10
+
+Published `346ad0afd4` remained clean for the original-E assessment. The next
+increment used a separate root-owned cow worktree at that head, with 17,054
+reflinked files, no copied build tree and no new ROM links. The worktree resource
+hook was excluded only from creation because it would create those links; normal
+commit/push hooks were installed. The existing config is an explicit relative
+symlink to the same resolved input, not a copied or substituted configuration.
+
+A current-source causal RED selected the new captured-placement witness and the
+existing scene-parent safety class: six cases, exactly two intended assertion
+failures, zero errors/skips, four passing controls. The real Shellcracker body
+was absent under `clearObjects`. The constructor-family case first resolved the
+actual adopted child and both constructor links, then failed because its alive
+placed parent was absent from live membership. The previously source-only
+constructor-adoption consequence is therefore now reproduced. No family metadata
+or admission response was fabricated. RED queue/Maven/wall were 0/98/99.364281
+seconds; user wait 0 and residual 1.364281 seconds. Maven time is rounded as logged.
+
+`ObjectPopulation` now distinguishes captured publication from fresh admission,
+as its existing dynamic restore path already does. A private helper shares only
+the four placed membership/reverse-association/native-identity writes, in their
+old order. The ordinary admission body is text-identical after inlining that
+helper. Captured placement retains identity installation, creator registration,
+restore-table registration and execution-slot order, but does not request the
+fresh Stageplay gate, refusal/removal or new-admission authorship notification.
+The factory/provenance boundary, snapshot formats, reconstruction/adoption,
+phase-2 field restore and late target-direction restore are unchanged. Raw manager
+snapshots are not authenticated credentials; this change adds no public bypass
+or authored claim and makes no stronger security claim about that existing API.
+
+The new checks retain actual parent membership, exact child links, IDs, slots,
+identity ordinal and target names across repeated restore/recapture. A separate
+side-effect-free placement is rebuilt once, then the second restore asserts the
+same instance and unchanged factory count, proving real warm reuse. Future actor
+claims/roster disappear and a fresh unclaimed placement is still refused. The old
+scene safety cases now require the captured parent instead of accepting its loss.
+Independent null-parent/falling expiry remains covered by the existing real
+retired-body S2 graph witness; this is distinct from losing a captured parent.
+The ordinary constructor-family retired-child/drop neighbor also remains selected;
+no new placed unmatched-child cleanup breadth is claimed.
+
+Focused GREEN passed 335 cases in all 25 requested fresh suites, zero failures,
+errors or skips, including both loading classes, four S3K keep-green checks,
+creator/host ownership, Stageplay, graph/reference/deferred-effect neighbors and
+selected source guards. Actual tested head was `346ad0afd4` plus tracked fingerprint
+`17f67b7071afbbc5f26961b006bd475bd59de102715a08b1cddd01e25b5317e2`
+and new test SHA-256
+`cb87c33a4689bdf5992670d61d61685c5362f47839cea76d0240363fb8083437`.
+Source seals match before/after. Queue/Maven/wall were 0/110/111.308972 seconds,
+user wait 0 and residual 1.308972 seconds; Maven time is rounded as logged.
+Exact commands, XML identities, full negatives, configuration and preservation
+proofs remain under `target/code-climb/authored-readmission/` in the isolated
+readmission tree. Independent correctness review, combined qualification and
+publication remain pending; this is not a full guards, smoke or domain result.
+
+The completed original-E assessment at clean published `346ad0afd4` scored
+55.625/100: [3.25, 2, 1.5, 2.25, 1.5, 1.75, 2.75, 2.75], with the original weights.
+It is a static contributor journey, not a runtime or regression verdict. Preloaded
+memory-index/main instructions and incidental dated matrix/status exposure were
+disclosed; no historical claim was credited. Its timing/shake concerns received a
+separate source-and-pinned-ROM fact check. That identifies a coherent HCZ frame,
+clock and publication ownership boundary, but requires native phase evidence
+before moving collision/event generations. No HCZ source or test expectations
+were changed, and the earlier tiny end-helper proposal is not substituted for
+that full journey. All six original trial targets remain unmet or unproven.
+The unexplained Original2dd Competition pixel failure remains a merge blocker.
+
+
+### Captured-population review and witness consolidation
+
+Independent Opus source review of `346ad0af..9391e7c3` found no blocking or
+correctness defect. It confirmed captured publication, policy/direction ordering,
+creator/host checks and unchanged ordinary admission. Four low test/doc findings
+were handled by root: remove the duplicated scene-parent fixture, select the new
+witness and creator-owner control in the guide, replace stale refused-parent
+wording, and observe actual execution/allocator behavior. No new review was
+started for these bounded repairs.
+
+The retired `TestRewindParentAdmission` two parameter cases map to the new
+Shellcracker family's clear=false/true cases, retaining every membership,
+identity, owner-eligibility, fresh-factory and alive-parent check. The replacement
+also checks slots, captured family/ordinal and target names. This deliberate
+source-class retirement must be accounted in combined selection comparison;
+no old negative or skip is removed. The owned build output was checked for retired
+fixture bytecode after compilation; none remained, and root deleted no files.
+
+Repeated constructor restoration now executes the actual manager and checks the
+parent slot runs before its child; the warm reused placement also executes.
+Recapture checks the exact used-slot bitmap. Fresh focused checks passed nine
+cases in two named suites, zero failures/errors/skips, including all four existing
+course/creator restore-owner controls. Queue/Maven/wall were
+59/99/159.961566 seconds; user wait 0 and residual 1.961566 seconds, with Maven
+rounded as logged. Source matched before/after. These nine overlap the earlier
+335 selection and are not added to it. Only context Javadoc and test/guide/audit
+content changed after the reviewed population logic. A directed placed-root
+witness and the inherited manager-replacement adapter-order hypothesis remain
+unqualified; this is not scene/route certification. Exact mapping, XML, source
+proof and timing are under `target/code-climb/authored-readmission/`.
+
+### Captured-population complete qualification and native HCZ evidence
+
+The one complete category run tested clean `ef2f309376`, fingerprint
+`7442baefc9d8272e00bfc24002672acb90fe8ea9420a0e338a62cac01630ef37`,
+with Java 25, Lua 5.4, displays unset, surfaceless EGL, requested workers 2
+and the unchanged 40-minute execution cap. The durable unit terminated normally
+with exit 1. Run `20261110T094018Z-1f0f7971` selected 4,643/4,643 classes and
+completed 94/94 ordinary batches plus full guards. Its raw **VERDICT FAILED**
+is retained: 38,824 cases, 29 failures, zero errors and 49 allowed skips.
+Ordinary contributed 37,978 cases; all 846 guards in 103 suites passed.
+No new or revised category verdict is substituted for that result.
+
+Against actual retained `ec29ef9300`, all 29 negative identities/kinds/types
+match. Twenty-five complete negative dictionaries are literal matches. The
+remaining four were reviewed individually against unchanged source blobs:
+Three Islands changes only default FieldScreen/StoryScreen identity suffixes;
+the Sonic, Tails and wide MHZ assertions change only expected Set display order.
+Expected members and multiplicities, complete actual strings and trailing stacks
+match. All 49 full skip dictionaries match, with no unexplained/required skips,
+omission, capped causal text or normalization. Runtime inputs and configuration
+match. Selection deliberately replaces the retired two-case scene-parent class
+with its stronger five-case captured-population owner; the mapping above applies.
+This accounts for the three added cases and does not claim every old source class
+remained selected. No new or worsened bounded outcome blocks draft publication.
+
+Queue wait was 1,267 seconds across 95 admissions, as rounded in the log;
+execution plus preparation was 1,921.35 seconds and unit wall 3,204.715329 seconds.
+User wait was zero; the remaining 16.365329 seconds include orchestration and
+rounding. Full raw results, comparison and source-specific decisions remain in
+`target/code-climb/authored-readmission/qualification/`. Terminal export SHA-256:
+`e84484e4c0080f57b16e86cbd7662e69f13537f8cab505badfef6a0f621f831d`.
+This final audit addition changes no tested source. Standalone EHZ/HCZ evidence
+is retained by source equivalence: their absent scene direction already bypassed
+the old fresh-admission gate. No new domain execution or route claim is made.
+
+Separately, an external pinned TraceChaser/official BizHawk 2.11 investigation
+ran the original Sonic/Tails movie from power-on, with no state load, RAM/register
+write, input substitution or engine edit. A GUI-only config bootstrap crashed
+before producing configuration or ROM observations; its evidence is retained,
+and it was not retried. The stock headless GPGX route succeeded. The cold pass
+calibrates 2,417 completed frames against existing native fixture state. Raw
+individual-button masks remain distinct from the recorder's logical Jump mask;
+all 246 representation differences are retained and explained, not normalized.
+
+One subsequent byte-verified execute-observer pass records 26,179 events. All
+2,417 completed five-region snapshots match the cold pass exactly. Root also
+independently decoded 155,727 values at 11,979 actual P1/Tails BG floor/wall reads:
+all use the preceding completed camera/diff/wall/shake publication, before the
+same target's HCZ foreground/background updates. Every read differs from that
+target's eventual publication in at least one field. Shake setup is absent on
+targets 39,407 through 39,421 and resumes at 39,422, after 16 background dispatches
+counting the end target. This supports an explicit semantic publication contract,
+not VDP simulation or an immediate engine timing change. Timed-positive shake,
+death/restart, Knuckles and other object consumers remain unobserved.
+
+The external `code-climb-hcz-native-phase-20261110/phase-hooks/receipt.json`
+SHA-256 is `274a87172daa36efba81501c108336b95fcfcfe3b4ffcb164cfb99e391cf053e`;
+root verified all 33 artifact hashes, eight site/guard opcode sets and raw
+publication comparisons. Phase execution/queue/wall were
+21.097186/6.126859/28.859097 seconds, with preparation separately recorded.
+No native jobs remain. These observations certify neither trace parity nor a
+contributor score. The Original2dd Competition pixel blocker and six-trial goal
+remain open; PR271 stays draft and unmerged.
+
+### Preserve the native HCZ diagnostic method
+
+The recurring phase question now has a repository-owned diagnostic profile:
+`tools/bizhawk/S3kHczPhaseProbe.cs`, its exact checked site manifest and an
+offline raw-evidence comparator, indexed in the existing workflow map. The
+initially promoted phase C# has 2,437 identical non-comment tokens under root's
+tokenizer after the sole public-class rename; independent tokenizers differ in
+counts but confirm equality. Formatting changes no strings, callbacks, input
+application, sampling, cleanup or exit behavior. The first formatter attempt split a string literal;
+string splitting was disabled before deriving the exact preservation proof.
+The compiled promoted source passes the same pinned compiler/API check, with
+no host rebuild and no new native execution. Build activity wait was 0.003895
+seconds, execution 0.843058 and wall 0.908772; user wait was zero.
+
+Independent Opus review found no observer-preservation blocker but identified
+three medium evidence gaps: window-wide discrimination hid constant read fields,
+terminal event completeness/provenance was unchecked, and the cold producer was
+not promoted. Root repaired these without another reviewer. The exact cold
+producer is now preserved too, including its optional serialization-only native
+checkpoint. The phase producer adds only a pre-core movie-hash summary field;
+removing that metadata entry restores token identity to the executed prototype.
+
+The comparator now requires both terminal summaries, actual JSONL/site hashes,
+matching declared window/sample/event/site counts, positive hits at all eight
+sites, registration/disposal and callback-free cold/movie provenance. An older
+phase summary requires its explicit original movie provenance; no identity is
+defaulted. Fifteen focused controls pass, including truncated events even after
+their content hash is recomputed, incomplete frame windows, separate registered
+and observed PCs, actor/order/raw schema checks, both producer identities and
+actual CLI/overwrite controls. Source/API compilation of both producers passes
+with unchanged runtime binding and no host rebuild: activity wait 0.005053 seconds,
+execution 1.408274, wall 1.502739, user wait zero. No core was run again.
+
+The retained data still has 2,417 samples, 26,179 events, 11,979 collision reads
+and 155,727 equal raw-decoded values. Those facts do not discriminate the timing
+of every field. This narrows the preceding published `310de62` wording that
+all reads use the preceding camera/diff publication: EE40 (`camera_y_diff`) never
+changes at these reads, so Y generation is not discriminated by value equality.
+Floor X changes on 4,995/5,991 reads; the other 996 floor reads and all 5,988
+wall-Y reads do not distinguish their instruction-read values' generation.
+Changes in unrelated wall/shake/camera fields do not supply that control. The
+comparison prints every field's count, including zeros, and reports
+`values_match_timing_partial`. Native event sequence and pinned instruction
+ordering remain separate evidence. The 16-dispatch end transition is described
+and root-cross-checked, not silently asserted by a matching-value exit status.
+This is saved-evidence validation, not another native run or an engine fix.
+Commands, source equivalence, compile and analysis receipts remain under
+`target/code-climb/hcz-publication/` in the isolated HCZ publication worktree.
+
+
+## HCZ completed publication and final wrap-up qualification — 2026-11-10
+
+This increment replaces HCZ's pre-physics advance/fallback/pending-shake protocol
+with one post-object/post-camera producer. `Sonic3kHCZEvents` owns the completed
+foreground/background words, collision differences, full wall accumulator,
+software redraw continuation and all three shared shake words. P1, Tails and the
+wall slot read the preceding publication; the wall captures its own latched pose.
+`HczZoneRuntimeState` is a noncapturing adapter and `SwScrlHcz` only projects output.
+
+Fresh background initialization runs before initial player processing/placements,
+uses the native cleared LF=0, does not call shake setup and does not enable
+collision. Its geometry gate is separate from seamless ordinary background state
+0, whose failed wall allocation still advances to state 4 without retry. The
+completing HCZ1 reload dispatch publishes HCZ1 deformation from the shifted copied
+camera before the first HCZ2 background dispatch. The end pulse is consumed once;
+a positive shake flag survives sixteen held row dispatches including the end
+dispatch, followed by eight refresh pairs. The geyser's LoadArt falls through to
+StartRumble in one dispatch, then the signed $5F wait consumes 96 dispatches.
+Registered P1 and native raw routine precedence govern movement/setup; the LF-1,
+LF&$3F and V-int&7 clocks remain distinct.
+
+The same-build HCZ payload is magic/version 1/scalar length/scalars/three shake
+words. It rejects prior scalar-only HCZ payloads, noncanonical scalar encodings,
+invalid stages/countdowns and out-of-word copies before manager base mutation.
+Other handlers retain their prior malformed-extra behavior. Scroll/adapter rebuild
+consumes no setup, redraw row or wall admission. This is not cross-build snapshot
+compatibility.
+
+Private held-view projection now translates from the completed publication's
+unshaken camera origin, rather than a newer director-camera metadata value.
+Native literal foreground zero remains explicit. The Typing Hedgehog witness
+retains original-view terrain/body and state/reversibility checks, then repeats
+its pixel oracle in a deliberately displaced view. Removing projection must fail
+that displaced view; an unchanged stationary native view may legitimately already
+have aligned terrain. No camera/gameplay tick, palette change or relaxed pixel
+threshold is used to hide the control failure.
+
+The final access-guard repair moves the identical nullable sprite lookup behind
+`Sonic3kZoneEvents.spriteManagerOrNull`, retaining the original hasRuntime
+conditional and null behavior. Exact reconstruction reproduces both old files
+byte-for-byte after removing only that helper/substituting its call. The existing
+shared composition bridge already owns this access; no guard allowance changed.
+
+### Review, causal controls and rejected evidence
+
+The independent Opus source review of frozen fingerprint `5e72c10f…` approved two
+one-for-one manager rollback-catch rekeys and retirement of two deleted resolver
+rows, preserving each original reason and unresolved-debt classification. It found
+the seamless zero-scroll frame and late geyser ST; both were reproduced by causal
+RED cases before correction. The later private-view/access repairs were validated
+by their causal/guard and complete qualification evidence, not a new Opus review.
+
+The actual consumer RED uses a full native 320px Sonic/Tails component load:
+112 P1 and 112 Tails prior-publication assertions plus one wall-slot assertion
+failed against the prior runtime. The earlier shared-level/unchanging-X setup was
+invalid evidence and is retained as such. Current witnesses cover actual sensor
+reads, no-observer full-world controls, before-first restore, first-player fresh
+initialization inside/outside the arena, the real seamless reload, and two whole
+registered-world suffix replays from actual held and refresh middle points,
+including every horizontal scroll word. Malformed payload tests include canonical
+boolean and word-range controls. Native routine, threshold, fraction, audio-clock,
+allocation-failure/no-retry and explicit-zero/projection-origin checks are bounded
+component evidence. A separate first-initial-placement-slot runtime witness is
+not added; the first-player boundary checks alone do not certify that ordering.
+
+The C80/700 rewind inlet died before reaching the transition and is not a route
+witness. The declared C9F/82C edge inlet can reach held state 8 on its first ordinary
+frame; its initial publication is observed read-only, never restored as a world.
+Saved/replayed middle points are actual completed worlds. A normal deformation's
+BG-X anchor is the documented MIN_VALUE sentinel, not the held wall's explicit
+copied BG-X; the witness now checks the phase contract and all actual scroll words.
+
+All compilation failures, invalid setup attempts, the interrupted 75/94 smoke run
+and the complete run with the one new direct-runtime-access guard failure remain
+raw failed/incomplete records. None is relabeled green or combined into a new
+category verdict. The original2dd Competition black-pixel failure is still
+unexplained: original frame/fork evidence is unavailable, and later passing pixel
+controls do not attribute it. It remains a MERGE BLOCKER.
+
+### Final source-specific qualification
+
+Tested source was HEAD `29980ec2e80f1a7fc012ec9c26bc179dc740c5d3` plus sealed working
+tree `c90e00150cddd8f62c3c8a4a673cb143a417d7ebf34b7d3eac31ea4c153ce621`.
+The 28-file manifest, complete command arrays, fresh XML identities, source/config
+hashes and root independent consumption are retained under
+`target/code-climb/hcz-frame/boundary-final-qualification/`. Only this final audit
+and documentation clarifications are appended after qualification. Three citation
+comments also name the actual pinned branch labels, with exact inverse/source-hash
+and unchanged-line-count proof; no executable tokens changed. All other tested
+code/test/inventory bytes are checked again before delivery.
+
+- Focused selection: 402/402 cases in 20 exact classes, no failures/errors/skips;
+  this retains the earlier 390 identities and all twelve runtime-boundary guard cases.
+- Matched ALL-scope EHZ: 5852/5852 compared, gate reached, no gameplay/bootstrap
+  errors or warnings. HCZ1: 3519/3574 compared, gate reached, no errors/warnings.
+  HCZ2: 14149/14208 compared, gate reached, the same 26 retained errors (2 physics,
+  24 animation), no counted warnings/bootstrap errors. Full reports, owner hashes,
+  contexts and JUnit negatives match actual1f84 controls byte-for-byte. Each HCZ
+  report lacks eight advertised auxiliary schemas; logs also retain their separate
+  FAST/no-manifest and SMPS warnings. Shared logical prefixes are not report identity.
+- Complete smoke: all 4646 source classes, all ten categories, 94/94 ordinary
+  batches and 1/1 full guard batch. Ordinary: 38070 cases, 29 retained failures,
+  zero errors, 49 allowed skips. Full guards: 846/846 in 103 suites, no skips.
+- Compared to actual ef2 baseline run `20261110T094018Z-1f0f7971`: all 4643 baseline
+  source classes retained plus three new test classes; no missing selection.
+  Every negative kind/type/cause/detail and all 49 complete skip dictionaries,
+  including projection metadata, were reviewed. Twenty-five negative dictionaries
+  are literal; four exact pairs differ only in the Three Islands object-identity
+  display or MHZ expected-Set display order, with unchanged source/blob proof and
+  literal trailing stacks. No blanket normalization, omission or causal truncation.
+  Validation tools/POM/skip policy/config/ROM inputs are unchanged. Seven positive
+  method renames are explicitly mapped in the retained selection evidence.
+
+Actual broad command (Java 25/Lua 5.4; displays and Java/Maven override variables
+unset):
+
+```bash
+python3 tools/testing/run_categories.py --base c06efe67da766c1de1a68dfb327b85e400940fb8 --workers 2 --headless-gl surfaceless-egl --max-minutes 40 --keep-diagnostics --run
+```
+
+The raw final line is retained exactly:
+
+```text
+VERDICT FAILED: head=29980ec2e80f source=c90e00150cdd change-based 4646/4646 candidate classes; ordinary 94/94 batches; guards 1/1 batches; tests=38916 failures=29 errors=0 skipped=49 (allowed=49 unexplained=0); missing ROM properties=none; skip inputs audio_reference_files=false,gl=false,s1_bizhawk_reference=false,s2_bk2=false,s3k_observations=false; bounded smoke selection, not a full-suite pass
+```
+
+| Final job | Queue s | Execution/preparation s | Wall s | User wait s | Other/unknown s |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Focused | 91 | 110 (rounded Maven total) | 203.122 | 0 | 2.122 |
+| EHZ | 60 | 39.157 | 100.081 | 0 | 0.924 |
+| HCZ pair | 0 | 42.339 | 43.279 | 0 | 0.940 |
+| Complete smoke/guards | 122 across 95 admissions | 1914.33 | 2055.682 | 0 | 19.352 |
+
+Category execution includes 35.64s preparation, 1700.20s ordinary and 178.49s
+guards. Queue values are printed/rounded; other wall time is not CPU attribution.
+Investigation/observation and earlier failed attempts are not separately timed by
+this table. Exact earlier receipts remain retained.
+
+This is bounded no-new/worse qualification with retained failures, not a full-suite,
+route, native-pixel/audio or six-trial score certification. The retained native
+observation discriminates changing X reads; constant Y does not prove Y timing.
+Cold route/run-chain, other viewports/donors/teams and unobserved native branches
+keep their separate obligations. Automatic sweeps are paused at the user's request;
+only this already-authorized draft PR271 delivery is being closed out. No merge,
+destination push, new assessment or further sweep is authorized by this record.

@@ -2,10 +2,13 @@ package com.openggf.game.rewind;
 
 import com.openggf.camera.Camera;
 import com.openggf.game.rewind.identity.ObjectRefId;
+import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.objects.ClamerObjectInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.level.objects.DynamicObjectRecreateContext;
+import com.openggf.level.objects.ObjectRewindDynamicCodecs;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectPlayerQuery;
@@ -19,12 +22,15 @@ import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -43,6 +49,183 @@ class TestS3kClamerGraphRewind {
     @AfterEach
     void tearDown() {
         GraphicsManager.getInstance().resetState();
+    }
+
+    @Test
+    void twoRoutineClamerSpringsKeepTheirCapturedParentsWhenAnotherClamerIsCloser() throws Exception {
+        // Clamer SPRING_OFFSET_Y: the spring is eight pixels above its actual parent.
+        int springOffsetY = -8;
+        ObjectSpawn upperSpawn = new ObjectSpawn(
+                CLAMER_SPAWN.x(), CLAMER_SPAWN.y() + springOffsetY,
+                Sonic3kObjectIds.CLAMER, 0, 0, false,
+                CLAMER_SPAWN.y() + springOffsetY, CLAMER_SPAWN.layoutIndex() + 1);
+        Harness harness = Harness.create(List.of(CLAMER_SPAWN, upperSpawn));
+        ObjectManager manager = harness.objectManager();
+        // Keep the production default: Clamer's mutable spring link makes it
+        // ineligible for in-place reuse, even after a prior reconstruction.
+        // First pass leaves WAIT_OFFSCREEN; the second initializes through owned spawnChild.
+        manager.update(harness.camera().getX(), null, List.of(), 0);
+        manager.update(harness.camera().getX(), null, List.of(), 1);
+
+        List<ClamerObjectInstance> parents = manager.activeObjectsOfType(ClamerObjectInstance.class);
+        assertEquals(2, parents.size(), "fixture must have two normally placed Clamers");
+        ClamerObjectInstance lower = parents.stream()
+                .filter(parent -> parent.getY() == CLAMER_SPAWN.y()).findFirst().orElseThrow();
+        ClamerObjectInstance upper = parents.stream()
+                .filter(parent -> parent.getY() == upperSpawn.y()).findFirst().orElseThrow();
+        ObjectInstance lowerSpring = (ObjectInstance) readObjectField(lower, "springChildSlot");
+        assertNotNull(lowerSpring, "the normal Clamer initialization must create its spring");
+        assertEquals(2, liveSprings(manager).size());
+
+        Map<ObjectRefId, ObjectRefId> expectedParents = new LinkedHashMap<>();
+        for (ClamerObjectInstance parent : List.of(lower, upper)) {
+            ObjectInstance spring = (ObjectInstance) readObjectField(parent, "springChildSlot");
+            assertNotNull(spring);
+            assertSame(parent, readObjectField(spring, "parent"), "normal owned birth must use its real parent");
+            expectedParents.put(objectId(manager, spring), objectId(manager, parent));
+        }
+        var adapter = manager.rewindSnapshottable();
+        ObjectManagerSnapshot snapshot = adapter.capture();
+        assertCapturedSpringFamilies(snapshot, expectedParents);
+        var capturedLowerSpring = snapshot.dynamicObjects().stream()
+                .filter(entry -> objectId(manager, lowerSpring).equals(entry.objectId()))
+                .findFirst().orElseThrow();
+        assertEquals(lowerSpring.getX(), capturedLowerSpring.spawn().x(),
+                "the dynamic entry must capture the spring's parent-relative x");
+        assertEquals(lowerSpring.getY(), capturedLowerSpring.spawn().y(),
+                "the dynamic entry must capture the spring's parent-relative y");
+        assertTrue(distanceSquared(upper, capturedLowerSpring.spawn())
+                        < distanceSquared(lower, capturedLowerSpring.spawn()),
+                "the snapshot spawn passed to the hook must be strictly closer to the other Clamer");
+
+        for (int restore = 0; restore < 2; restore++) {
+            Map<ObjectRefId, ObjectInstance> previous = new LinkedHashMap<>();
+            for (var family : expectedParents.entrySet()) {
+                previous.put(family.getKey(), manager.objectQuery().resolve(family.getKey()).orElseThrow());
+                previous.put(family.getValue(), manager.objectQuery().resolve(family.getValue()).orElseThrow());
+            }
+            adapter.restore(snapshot);
+            assertEquals(2, liveSprings(manager).size(), "fresh restore must retain exactly two springs");
+            for (var family : expectedParents.entrySet()) {
+                ObjectInstance spring = manager.objectQuery().resolve(family.getKey()).orElseThrow();
+                ClamerObjectInstance parent = (ClamerObjectInstance)
+                        manager.objectQuery().resolve(family.getValue()).orElseThrow();
+                assertNotSame(previous.get(family.getKey()), spring,
+                        "the spring must be freshly recreated, not retained from the source graph");
+                assertNotSame(previous.get(family.getValue()), parent,
+                        "the Clamer parent must be freshly reconstructed");
+                assertSame(parent, readObjectField(spring, "parent"),
+                        "spring must use its captured family parent even when another Clamer is closer");
+                assertSame(spring, readObjectField(parent, "springChildSlot"),
+                        "each Clamer must point back at its own captured spring id");
+                assertEquals(parent.getX(), spring.getX());
+                assertEquals(parent.getY() + springOffsetY, spring.getY());
+            }
+            if (restore == 0) {
+                manager.update(harness.camera().getX(), null, List.of(), 2);
+                snapshot = adapter.capture();
+                assertCapturedSpringFamilies(snapshot, expectedParents);
+            }
+        }
+    }
+
+    @Test
+    void clamerKnownMissingWrongTypeAndExplicitNoParentNeverUseNearestFallback() throws Exception {
+        ClamerFamilyBoundary boundary = clamerFamilyBoundary();
+        var entry = boundary.entry();
+        ObjectRefId ownerId = entry.constructionFamily().parentId();
+        ObjectRefId absentId = new ObjectRefId(ownerId.slotIndex(), ownerId.generation() + 1,
+                ownerId.spawnId(), ownerId.dynamicId(), ownerId.kind());
+        assertTrue(boundary.manager().objectQuery().resolve(absentId).isEmpty(),
+                "boundary input must name an absent parent identity");
+        assertSame(boundary.sourceSpring(), boundary.manager().objectQuery()
+                .resolve(entry.objectId()).orElseThrow(),
+                "wrong-type input must name a real managed spring, not a Clamer");
+        // Deliberately altered snapshot metadata tests the hook contract, not a normal birth.
+        for (var family : List.of(
+                new ObjectManagerSnapshot.ConstructionFamily(true, absentId),
+                new ObjectManagerSnapshot.ConstructionFamily(true, entry.objectId()),
+                new ObjectManagerSnapshot.ConstructionFamily(true, null))) {
+            ObjectInstance recreated = ObjectRewindDynamicCodecs.genericRecreate(
+                    clamerEntryWithFamily(entry, family),
+                    new DynamicObjectRecreateContext(boundary.manager()));
+            assertNull(recreated,
+                    "known Clamer family must not borrow the nearest unrelated parent: " + family);
+        }
+    }
+
+    @Test
+    void clamerLegacyAndUnknownFamiliesKeepNearestParentCompatibility() throws Exception {
+        ClamerFamilyBoundary boundary = clamerFamilyBoundary();
+        for (var family : new ObjectManagerSnapshot.ConstructionFamily[] {
+                null, new ObjectManagerSnapshot.ConstructionFamily(false, null)}) {
+            ObjectInstance recreated = ObjectRewindDynamicCodecs.genericRecreate(
+                    clamerEntryWithFamily(boundary.entry(), family),
+                    new DynamicObjectRecreateContext(boundary.manager()));
+            assertNotNull(recreated, "legacy/unknown family must keep its historical recreate hook");
+            assertSame(boundary.nearest(), readObjectField(recreated, "parent"),
+                    "legacy/unknown Clamer family must retain nearest-parent compatibility");
+        }
+    }
+
+    private static ClamerFamilyBoundary clamerFamilyBoundary() throws Exception {
+        int springOffsetY = -8; // Clamer SPRING_OFFSET_Y.
+        ObjectSpawn upperSpawn = new ObjectSpawn(CLAMER_SPAWN.x(), CLAMER_SPAWN.y() + springOffsetY,
+                Sonic3kObjectIds.CLAMER, 0, 0, false, CLAMER_SPAWN.y() + springOffsetY,
+                CLAMER_SPAWN.layoutIndex() + 1);
+        Harness harness = Harness.create(List.of(CLAMER_SPAWN, upperSpawn));
+        ObjectManager manager = harness.objectManager();
+        manager.update(harness.camera().getX(), null, List.of(), 0);
+        manager.update(harness.camera().getX(), null, List.of(), 1);
+        ClamerObjectInstance lower = manager.activeObjectsOfType(ClamerObjectInstance.class).stream()
+                .filter(parent -> parent.getY() == CLAMER_SPAWN.y()).findFirst().orElseThrow();
+        ClamerObjectInstance upper = manager.activeObjectsOfType(ClamerObjectInstance.class).stream()
+                .filter(parent -> parent.getY() == upperSpawn.y()).findFirst().orElseThrow();
+        ObjectInstance spring = (ObjectInstance) readObjectField(lower, "springChildSlot");
+        assertNotNull(spring, "normal routine initialization must create the source spring");
+        assertSame(lower, readObjectField(spring, "parent"));
+        var entry = manager.rewindSnapshottable().capture().dynamicObjects().stream()
+                .filter(candidate -> objectId(manager, spring).equals(candidate.objectId()))
+                .findFirst().orElseThrow();
+        assertNotNull(entry.constructionFamily());
+        assertTrue(entry.constructionFamily().known());
+        assertEquals(objectId(manager, lower), entry.constructionFamily().parentId(),
+                "the unmodified capture must name the normal source owner");
+        assertEquals(spring.getX(), entry.spawn().x());
+        assertEquals(spring.getY(), entry.spawn().y());
+        assertTrue(distanceSquared(upper, entry.spawn()) < distanceSquared(lower, entry.spawn()),
+                "nearest fallback must choose the other Clamer from the actual captured spawn");
+        return new ClamerFamilyBoundary(manager, upper, spring, entry);
+    }
+
+    private record ClamerFamilyBoundary(ObjectManager manager, ClamerObjectInstance nearest,
+            ObjectInstance sourceSpring, ObjectManagerSnapshot.DynamicObjectEntry entry) { }
+
+    private static ObjectManagerSnapshot.DynamicObjectEntry clamerEntryWithFamily(
+            ObjectManagerSnapshot.DynamicObjectEntry entry,
+            ObjectManagerSnapshot.ConstructionFamily family) {
+        return new ObjectManagerSnapshot.DynamicObjectEntry(entry.className(), entry.spawn(), entry.slotIndex(),
+                entry.state(), entry.playerOwner(), entry.objectId(), entry.ownerModId(),
+                entry.rewindableAuxiliary(), entry.playerOwnerId(), family);
+    }
+
+    private static void assertCapturedSpringFamilies(
+            ObjectManagerSnapshot snapshot, Map<ObjectRefId, ObjectRefId> expectedParents) {
+        for (var family : expectedParents.entrySet()) {
+            var child = snapshot.dynamicObjects().stream()
+                    .filter(entry -> family.getKey().equals(entry.objectId())).findFirst().orElseThrow();
+            assertEquals(SPRING_CLASS, child.className());
+            assertNotNull(child.constructionFamily(), "owned routine spring birth must record family metadata");
+            assertTrue(child.constructionFamily().known());
+            assertEquals(family.getValue(), child.constructionFamily().parentId(),
+                    "captured spring family id must already name its normal source owner");
+        }
+    }
+
+    private static long distanceSquared(ObjectInstance parent, ObjectSpawn capturedSpawn) {
+        long dx = parent.getX() - capturedSpawn.x();
+        long dy = parent.getY() - capturedSpawn.y();
+        return dx * dx + dy * dy;
     }
 
     @Test
@@ -140,6 +323,10 @@ class TestS3kClamerGraphRewind {
 
     private record Harness(ObjectManager objectManager, Camera camera, ObjectServices services) {
         static Harness create() {
+            return create(List.of(CLAMER_SPAWN));
+        }
+
+        static Harness create(List<ObjectSpawn> spawns) {
             ObjectManager[] holder = new ObjectManager[1];
             Camera camera = mockCameraAtClamer();
             ObjectPlayerQuery playerQuery = new ObjectPlayerQuery(() -> null, List::of);
@@ -150,7 +337,7 @@ class TestS3kClamerGraphRewind {
                 @Override public ObjectPlayerQuery playerQuery() { return playerQuery; }
             };
             ObjectManager objectManager = new ObjectManager(
-                    List.of(CLAMER_SPAWN),
+                    spawns,
                     new Sonic3kObjectRegistry(),
                     0,
                     null,

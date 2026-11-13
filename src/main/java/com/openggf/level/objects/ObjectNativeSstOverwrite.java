@@ -1,6 +1,7 @@
 package com.openggf.level.objects;
 
 import com.openggf.game.rewind.identity.ObjectRefId;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -11,127 +12,186 @@ import java.util.function.Supplier;
 
 /** Registration-only code replacement: no delete, respawn mutation or onUnload. */
 final class ObjectNativeSstOverwrite {
-    private ObjectNativeSstOverwrite() { }
-    record Surface(ObjectServices services,ObjectSlotLayout layout,SlotAllocator allocator,
-            Map<ObjectSpawn,ObjectInstance> active,Map<ObjectInstance,ObjectSpawn> inverse,
-            List<ObjectInstance> dynamic,ObjectCallbackRouter callbacks,DynamicObjectOwnership ownership,
-            Map<ObjectInstance,ObjectRefId> identities,Set<ObjectInstance> deferred,ObjectInstance[] exec,
-            IntUnaryOperator execIndex,boolean updating,int currentExec,Consumer<ObjectInstance> add,Runnable dirty,
-            ObjectNativeSstWord2C word2C) { }
-    static <T extends AbstractObjectInstance> T create(Surface s,Function<NativeSstState,T> writer) {
-        int free=s.allocator().firstFreeSlot();
-        int slot=free>=0?free:s.layout().lastDynamicSlotExclusive()-1;
-        ObjectInstance old=free>=0?null:occupant(s,slot);
-        NativeSstState residue=old==null?NativeSstState.CLEARED:s.callbacks().call(old,()->residue(old));
-        T next=ObjectConstructionContext.with(s.services(),slot,()->writer.apply(residue));
-        if(next==null)throw new IllegalStateException("Native partial writer returned no dispatch owner");
-        s.word2C().preserve(slot);
-        ObjectSpawn placed=old==null?null:s.inverse().remove(old);
-        ObjectRefId identity=old==null?null:s.identities().remove(old);
-        if(old!=null){
-            s.dynamic().remove(old);s.ownership().remove(old);s.deferred().remove(old);s.callbacks().unregister(old);
-        }
-        if(identity!=null)s.identities().put(next,identity);
-        s.add().accept(next);
-        if(placed!=null){
-            s.dynamic().remove(next);s.active().put(placed,next);s.inverse().put(next,placed);
-        }
-        int exec=s.execIndex().applyAsInt(slot);
-        if(s.updating()&&exec<=s.currentExec())s.exec()[exec]=next;
-        // Earlier/current slots wait; add() publishes later slots in the current walk.
-        s.dirty().run();return next;
+    private ObjectNativeSstOverwrite() {
     }
 
-    /** Native fixed-address write; construction succeeds before the old code owner is retired. */
-    static <T extends AbstractObjectInstance> T replaceFixed(Surface s,
-            ObjectCollisionResponseList collisions, int slot, Supplier<T> factory) {
-        if (slot < s.layout().lastDynamicSlotExclusive() || slot >= s.layout().lastProcessSlotExclusive()) {
-            throw new IllegalArgumentException("Native fixed write requires a processed fixed SST slot: " + slot);
-        }
-        return replaceValidated(s, collisions, slot, factory);
+    record Surface(
+            ObjectServices services,
+            ObjectSlotLayout layout,
+            SlotAllocator allocator,
+            Map<ObjectSpawn, ObjectInstance> active,
+            Map<ObjectInstance, ObjectSpawn> inverse,
+            List<ObjectInstance> dynamic,
+            ObjectCallbackRouter callbacks,
+            DynamicObjectOwnership ownership,
+            Map<ObjectInstance, ObjectRefId> identities,
+            Set<ObjectInstance> deferred,
+            ObjectInstance[] exec,
+            IntUnaryOperator execIndex,
+            boolean updating,
+            int currentExec,
+            Consumer<ObjectInstance> add,
+            Runnable dirty,
+            ObjectNativeSstWord2C word2C) {
     }
 
-    /** Native fixed prefix write, excluding both player SSTs and the allocatable window. */
-    static <T extends AbstractObjectInstance> T replacePrefix(Surface s,
-            ObjectCollisionResponseList collisions, int slot, Supplier<T> factory) {
-        if (slot < 2 || slot >= s.layout().firstDynamicSlot()) {
-            throw new IllegalArgumentException("Native prefix write requires a non-player prefix SST slot: " + slot);
+    static <T extends AbstractObjectInstance> T create(
+            Surface surface, Function<NativeSstState, T> writer) {
+        int free = surface.allocator().firstFreeSlot();
+        int slot = free >= 0 ? free : surface.layout().lastDynamicSlotExclusive() - 1;
+        ObjectInstance old = free >= 0 ? null : occupant(surface, slot);
+        NativeSstState residue = old == null
+                ? NativeSstState.CLEARED
+                : surface.callbacks().call(old, () -> residue(old));
+        T next = ObjectConstructionContext.with(surface.services(), slot, () -> writer.apply(residue));
+        if (next == null) {
+            throw new IllegalStateException("Native partial writer returned no dispatch owner");
         }
-        return replaceValidated(s, collisions, slot, factory);
-    }
-
-    private static <T extends AbstractObjectInstance> T replaceValidated(Surface s,
-            ObjectCollisionResponseList collisions, int slot, Supplier<T> factory) {
-        java.util.Objects.requireNonNull(factory, "factory");
-        AbstractObjectInstance old = registeredOwner(s, slot);
-        T next = ObjectConstructionContext.with(s.services(), slot, factory);
-        if (next == null) throw new IllegalStateException("Native fixed writer returned no dispatch owner");
-        if (s.identities().containsKey(next)) {
-            throw new IllegalArgumentException("Native fixed writer must construct a new dispatch owner");
-        }
-        s.word2C().preserve(slot);
-        next.setSlotIndex(slot);
-        ObjectRefId identity = old == null ? null : s.identities().remove(old);
+        surface.word2C().preserve(slot);
+        ObjectSpawn placed = old == null ? null : surface.inverse().remove(old);
+        ObjectRefId identity = old == null ? null : surface.identities().remove(old);
         if (old != null) {
-            ObjectSpawn placed = s.inverse().remove(old);
-            if (placed != null) s.active().remove(placed);
-            s.dynamic().remove(old);
-            s.ownership().remove(old);
-            s.deferred().remove(old);
-            s.callbacks().unregister(old);
-            for (int i = 0; i < s.exec().length; i++) {
-                if (s.exec()[i] == old) s.exec()[i] = null;
-            }
+            surface.dynamic().remove(old);
+            surface.ownership().remove(old);
+            surface.deferred().remove(old);
+            surface.callbacks().unregister(old);
         }
-        if (identity != null) s.identities().put(next, identity);
-        // Preassigned fixed SSTs bypass allocation. Existing registration publishes
-        // ahead of the cursor; at/before it waits, without invoking the new routine.
-        s.add().accept(next);
-        int exec = s.execIndex().applyAsInt(slot);
-        if (s.updating() && exec <= s.currentExec()) s.exec()[exec] = next;
-        // The canonical list contains RAM addresses. Rebind its Java aliases,
-        // retaining duplicates/order/capacity and the already-captured identity.
-        // Also update restored bindings so a later late-bind cannot resurrect old.
-        if (identity != null) collisions.bindRestoredObject(identity, next);
-        collisions.refreshNativePointerOwners();
-        s.dirty().run();
+        if (identity != null) {
+            surface.identities().put(next, identity);
+        }
+        surface.add().accept(next);
+        if (placed != null) {
+            surface.dynamic().remove(next);
+            surface.active().put(placed, next);
+            surface.inverse().put(next, placed);
+        }
+        int exec = surface.execIndex().applyAsInt(slot);
+        if (surface.updating() && exec <= surface.currentExec()) {
+            surface.exec()[exec] = next;
+        }
+        // Earlier/current slots wait; add() publishes later slots in the current walk.
+        surface.dirty().run();
         return next;
     }
 
-    private static AbstractObjectInstance registeredOwner(Surface s, int slot) {
-        AbstractObjectInstance found = null;
-        for (var group : List.of(s.active().values(), s.dynamic())) {
-            for (ObjectInstance instance : group) {
-                if (instance instanceof AbstractObjectInstance object
-                        && s.callbacks().call(object, object::getSlotIndex) == slot) {
-                    if (found != null && found != object) {
-                        throw new IllegalStateException("Multiple native SST dispatch owners: " + slot);
-                    }
-                    found = object;
+    /** Native fixed-address write; construction succeeds before the old code owner is retired. */
+    static <T extends AbstractObjectInstance> T replaceFixed(
+            Surface surface, ObjectCollisionResponseList collisions, int slot, Supplier<T> factory) {
+        if (slot < surface.layout().lastDynamicSlotExclusive()
+                || slot >= surface.layout().lastProcessSlotExclusive()) {
+            throw new IllegalArgumentException("Native fixed write requires a processed fixed SST slot: " + slot);
+        }
+        return replaceValidated(surface, collisions, slot, factory);
+    }
+
+    /** Native fixed prefix write, excluding both player SSTs and the allocatable window. */
+    static <T extends AbstractObjectInstance> T replacePrefix(
+            Surface surface, ObjectCollisionResponseList collisions, int slot, Supplier<T> factory) {
+        if (slot < 2 || slot >= surface.layout().firstDynamicSlot()) {
+            throw new IllegalArgumentException("Native prefix write requires a non-player prefix SST slot: " + slot);
+        }
+        return replaceValidated(surface, collisions, slot, factory);
+    }
+
+    private static <T extends AbstractObjectInstance> T replaceValidated(
+            Surface surface, ObjectCollisionResponseList collisions, int slot, Supplier<T> factory) {
+        java.util.Objects.requireNonNull(factory, "factory");
+        AbstractObjectInstance old = registeredOwner(surface, slot);
+        T next = ObjectConstructionContext.with(surface.services(), slot, factory);
+        if (next == null) {
+            throw new IllegalStateException("Native fixed writer returned no dispatch owner");
+        }
+        if (surface.identities().containsKey(next)) {
+            throw new IllegalArgumentException("Native fixed writer must construct a new dispatch owner");
+        }
+        surface.word2C().preserve(slot);
+        next.setSlotIndex(slot);
+        ObjectRefId identity = old == null ? null : surface.identities().remove(old);
+        if (old != null) {
+            ObjectSpawn placed = surface.inverse().remove(old);
+            if (placed != null) {
+                surface.active().remove(placed);
+            }
+            surface.dynamic().remove(old);
+            surface.ownership().remove(old);
+            surface.deferred().remove(old);
+            surface.callbacks().unregister(old);
+            for (int i = 0; i < surface.exec().length; i++) {
+                if (surface.exec()[i] == old) {
+                    surface.exec()[i] = null;
                 }
             }
         }
-        return found;
+        if (identity != null) {
+            surface.identities().put(next, identity);
+        }
+        // Preassigned fixed SSTs bypass allocation. Existing registration publishes
+        // ahead of the cursor; at/before it waits, without invoking the new routine.
+        surface.add().accept(next);
+        int exec = surface.execIndex().applyAsInt(slot);
+        if (surface.updating() && exec <= surface.currentExec()) {
+            surface.exec()[exec] = next;
+        }
+        // The canonical list contains RAM addresses. Rebind its Java aliases,
+        // retaining duplicates/order/capacity and the already-captured identity.
+        // Also update restored bindings so a later late-bind cannot resurrect old.
+        if (identity != null) {
+            collisions.bindRestoredObject(identity, next);
+        }
+        collisions.refreshNativePointerOwners();
+        surface.dirty().run();
+        return next;
     }
-    static AbstractObjectInstance currentOwner(java.util.Collection<ObjectInstance> placed,
-            List<ObjectInstance> dynamic,ObjectCallbackRouter callbacks,int slot) {
-        AbstractObjectInstance found=null;
-        for(var group:List.of(placed,dynamic))for(var o:group)
-            if(o instanceof AbstractObjectInstance a&&callbacks.call(o,a::getSlotIndex)==slot
-                    &&!callbacks.call(o,a::isDestroyed)){
-                if(found!=null&&found!=a)throw new IllegalStateException("Multiple native SST dispatch owners: "+slot);
-                found=a;
+
+    private static AbstractObjectInstance registeredOwner(Surface surface, int slot) {
+        AbstractObjectInstance owner = null;
+        for (var group : List.of(surface.active().values(), surface.dynamic())) {
+            for (ObjectInstance instance : group) {
+                if (instance instanceof AbstractObjectInstance object
+                        && surface.callbacks().call(object, object::getSlotIndex) == slot) {
+                    if (owner != null && owner != object) {
+                        throw new IllegalStateException("Multiple native SST dispatch owners: " + slot);
+                    }
+                    owner = object;
+                }
             }
-        return found;
+        }
+        return owner;
     }
-    private static ObjectInstance occupant(Surface s,int slot) {
-        var found=currentOwner(s.active().values(),s.dynamic(),s.callbacks(),slot);
-        if(found==null)throw new IllegalStateException("Occupied native SST has no live field owner: "+slot);
-        return found;
+
+    static AbstractObjectInstance currentOwner(
+            java.util.Collection<ObjectInstance> placed,
+            List<ObjectInstance> dynamic,
+            ObjectCallbackRouter callbacks,
+            int slot) {
+        AbstractObjectInstance owner = null;
+        for (var group : List.of(placed, dynamic)) {
+            for (var instance : group) {
+                if (instance instanceof AbstractObjectInstance object
+                        && callbacks.call(instance, object::getSlotIndex) == slot
+                        && !callbacks.call(instance, object::isDestroyed)) {
+                    if (owner != null && owner != object) {
+                        throw new IllegalStateException("Multiple native SST dispatch owners: " + slot);
+                    }
+                    owner = object;
+                }
+            }
+        }
+        return owner;
     }
+
+    private static ObjectInstance occupant(Surface surface, int slot) {
+        var owner = currentOwner(surface.active().values(), surface.dynamic(), surface.callbacks(), slot);
+        if (owner == null) {
+            throw new IllegalStateException("Occupied native SST has no live field owner: " + slot);
+        }
+        return owner;
+    }
+
     private static NativeSstState residue(ObjectInstance old) {
-        if(!(old instanceof NativeSstStateSource source))
-            throw new IllegalStateException("Unchecked native overwrite needs a live projection: "+old.getClass().getName());
-        return java.util.Objects.requireNonNull(source.nativeSstState(),"native SST projection");
+        if (!(old instanceof NativeSstStateSource source)) {
+            throw new IllegalStateException("Unchecked native overwrite needs a live projection: " + old.getClass().getName());
+        }
+        return java.util.Objects.requireNonNull(source.nativeSstState(), "native SST projection");
     }
 }

@@ -23,9 +23,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * disposition is state that silently fails to ride rewind keyframes — the MGZ
  * spinning-top grab map was lost across rewind exactly this way.
  *
- * <p>New gap keys fail the guard: give the field a disposition (a central
- * policy entry in {@link DefaultObjectRewindPolicies} is preferred over
- * annotations) or make the class compact-reachable. Only intentionally
+ * <p>New gap keys fail the guard: give the field an actual disposition through
+ * a local reference declaration or the existing policy catalogue, or make the
+ * class compact-reachable. Capture intent alone is insufficient. Only intentionally
  * deferred debt belongs in the baseline. Resolved keys must be removed so a
  * recurrence cannot inherit an old exemption. The current audit result is also
  * written to the session diagnostics rewind namespace to make
@@ -66,7 +66,8 @@ class TestRewindFieldDispositionGuard {
                         + regressions.stream()
                                 .map(key -> key + "  # " + current.get(key))
                                 .collect(Collectors.joining("\n  "))
-                        + "\nGive each field a disposition (central policy entry preferred), make the "
+                        + "\nGive each field an actual disposition through a local reference declaration "
+                        + "or the existing policy catalogue, make the "
                         + "class compact-reachable, or (only if intentional debt) add the key to "
                         + BASELINE + ".");
 

@@ -3,7 +3,9 @@ package com.openggf.game.sonic2.objects.badniks;
 import com.openggf.level.objects.ObjectSpawn;
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 class TestShellcrackerClawInstance {
 
@@ -25,5 +27,21 @@ class TestShellcrackerClawInstance {
         claw.update(2, null);
         assertEquals(0x0613, claw.getX(),
                 "First active ObjectMove happens on the following ExecuteObjects pass");
+    }
+
+    @Test
+    void missingParentEntersIndependentFallAfterTheInitExecution() throws ReflectiveOperationException {
+        ObjectSpawn parentSpawn = new ObjectSpawn(0x063F, 0x01F3, 0x9F, 0x24, 0, false, 0x01F3);
+        ShellcrackerClawInstance claw = new ShellcrackerClawInstance(
+                parentSpawn, null, 0x0617, 0x01EB, 0, false);
+
+        claw.update(0, null);
+        assertDoesNotThrow(() -> claw.update(1, null),
+                "an absent reconstructed body must take the ordinary parent-loss path");
+        assertFalse(claw.isDestroyed(), "parent loss must not delete an independently falling claw");
+        var state = ShellcrackerClawInstance.class.getDeclaredField("state");
+        state.setAccessible(true);
+        assertEquals("FALLING", state.get(claw).toString());
+        // The separate native parent-loss-row motion/timer discrepancy is intentionally unpinned here.
     }
 }

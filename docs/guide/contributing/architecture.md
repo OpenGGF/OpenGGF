@@ -93,13 +93,15 @@ Start at the responsibility, rather than reading `ObjectManager` end to end:
 | Correct one object's movement, lifetime tail or render-flag branch | Its existing `game.sonic*/objects` routine and production-entity test |
 | Live membership, slot and identity storage, and ordinary admission/retirement | `ObjectPopulation`; trusted placement-transfer, streaming, adoption and native-overwrite writers remain |
 | Recreate linked objects, adopt construction children, or order a restore | `ObjectRewindLifecycle` |
-| Standing/pushing latch identity, ride lifetime, frame markers, or saved contacts | `contact.SolidContactState` |
+| Standing/pushing latch identity, ride lifetime, frame markers, or saved contacts | `SolidContactMemory` (package-private) |
 | Classify a solid contact or decide its gameplay response | `ObjectSolidContactController` |
 | Coarse X-range arithmetic or its native/viewport bound | `ObjectRangeOps`; the calling object/manager still chooses lifetime policy |
 | When a manager range check runs and how retirement releases slots/respawn state | `ObjectManager.updateCounterBasedExecThenLoad`, `runExecLoop` and `unloadIfOutsideLifetimeWindow` |
 
 `ObjectManager` keeps the existing runtime entry points. The capability owners
 hold the state and rules behind them; they are not alternate public creator APIs.
+`SolidContactMemory` stays beside its sole runtime consumer, the solid-contact
+controller; the immutable saved form remains `ObjectManagerSnapshot.SolidContactState`.
 Their Javadoc defines the local invariants. For example, removing a solid clears
 its object-side bits without clearing the player's riding flags.
 
@@ -466,7 +468,7 @@ across placed/dynamic boundaries remain a separate limitation. Player ride/statu
 survives object-side expiry. Start at
 `ObjectSolidContactController.evictRetiredDynamic`, then `ObjectPopulation` for the
 explicit-removal versus destroyed-cleanup ordering. Focused witnesses:
-`TestDynamicSolidContactRetirement`, `TestSolidContactState`,
+`TestDynamicSolidContactRetirement`, `TestSolidContactMemory`,
 `TestObjectSolidContactController`, `TestTasS3kOrtExhaustion`,
 and `TestObjectRemovalCallbackOwnership`.
 

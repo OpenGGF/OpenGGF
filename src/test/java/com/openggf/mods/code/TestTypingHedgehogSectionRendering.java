@@ -156,6 +156,23 @@ class TestTypingHedgehogSectionRendering {
 
     private static void pixels(GameplayCaptureSession session, Object course, SceneSprite cpuBody,
             String game, String phase) throws Exception {
+        pixelsAtView(session, course, cpuBody, game, phase, false);
+        var camera = GameServices.camera();
+        var savedCamera = camera.capture();
+        try {
+            // A stationary held scene can already have aligned native foreground.
+            // Move only the director's view by one tile row so removing projection
+            // must discriminate, independently of incidental native shake/fade.
+            camera.setY((short) (camera.getY() + 16));
+            pixelsAtView(session, course, cpuBody, game, phase + "-shifted-view", true);
+        } finally {
+            camera.restore(savedCamera);
+        }
+        assertEquals(savedCamera, camera.capture(), "the displaced control restores its caller's camera");
+    }
+
+    private static void pixelsAtView(GameplayCaptureSession session, Object course, SceneSprite cpuBody,
+            String game, String phase, boolean displacedView) throws Exception {
         var player = session.player();
         var level = GameServices.level();
         var camera = GameServices.camera();
@@ -201,8 +218,10 @@ class TestTypingHedgehogSectionRendering {
         assertTrue(positive.coloured() > 20, "the floor gate must contain revealed ROM colours, not black equality");
         assertTrue(positive.matched() >= positive.tested() * .8,
                 "rendered terrain must align with the native feet: " + positive);
-        assertTrue(negative.matched() < negative.tested() * .8,
-                "disabling projection must fail the same native terrain alignment/reveal gate: " + negative);
+        if (displacedView) {
+            assertTrue(negative.matched() < negative.tested() * .8,
+                    "disabling projection must fail the deliberately displaced terrain gate: " + negative);
+        }
         assertTrue(body.mask() > 100 && body.inside() > 100, "actual Sonic body pixels must be visible: " + body);
         assertTrue(body.inside() >= body.mask() * .7 && body.outside() <= 8,
                 "visible differences must follow the independently decoded ROM Sonic mask: " + body);

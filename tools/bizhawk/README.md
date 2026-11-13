@@ -112,6 +112,124 @@ children and release it before queued tests. Engine captures continue through
 GameplayCaptureTool. The Lua exporter host above remains available for its
 explicit isolated diagnostic workflow.
 
+### HCZ phase publication diagnostic
+
+[`S3kHczPhaseProbe.cs`](S3kHczPhaseProbe.cs) preserves the read-only original-E
+observation profile from 2026-11-10. It runs the original
+`s3k-complete-sonic-tails.bk2` from power-on and observes completed frames
+37,055–39,471. ROM and movie hashes, neutral P2 input and exact movie length are
+checked; original named buttons and sync settings are applied. This is a fixed
+diagnostic profile, not a canonical recorder or an engine input port.
+
+[`S3kHczColdProbe.cs`](S3kHczColdProbe.cs) supplies the separate callback-free
+producer. It accepts `ABSOLUTE_ROM ABSOLUTE_BK2 NEW_OUTPUT_DIR` and writes the
+same fixed window with individual-button `input_mask`. Its optional checkpoint
+at 37,054 invokes the pinned host's non-public `CloneSavestate` only to serialize
+an owned state; it never loads that state. Both probes use the original movie
+and sync settings from power-on.
+
+Compile both against the pinned TraceChaser headless host and official BizHawk
+2.11 DLLs. Own the source,
+host classes and build-activity leases through compiler-child cleanup, even when
+the output is external. Release them before ordinary shared native admission.
+Bind and verify the actual host/runtime/source hashes and strict installation
+preflight; a matching filename alone does not authorize reuse. No GUI or video
+backend is needed. `CSC` is the reviewed Mono Roslyn compiler; `TRACECHASER`,
+`BIZHAWK_HOME`, `TASK_DIR`, `ROM` and `BK2` are absolute paths. These are compiler
+and runtime payloads for the owned launcher, not commands that bypass those
+leases/admission and process-group cleanup:
+
+```bash
+export MONO_PATH="$BIZHAWK_HOME/dll"
+export LD_LIBRARY_PATH="$BIZHAWK_HOME/dll"
+bash "$TRACECHASER/bizhawk/preflight_bizhawk_2_11.sh" --bizhawk-home "$BIZHAWK_HOME"
+mono "$CSC" -version
+for probe in S3kHczColdProbe S3kHczPhaseProbe; do
+  mono "$CSC" /nologo /deterministic+ /langversion:7.3 \
+    "/out:$TASK_DIR/$probe.exe" \
+    "/reference:$TRACECHASER/bizhawk-headless/bin/Release/BizHawk.Headless.Gpgx.exe" \
+    "/reference:$BIZHAWK_HOME/dll/BizHawk.Emulation.Cores.dll" \
+    "/reference:$BIZHAWK_HOME/dll/BizHawk.Emulation.Common.dll" \
+    "/reference:$BIZHAWK_HOME/dll/Newtonsoft.Json.dll" \
+    /reference:/usr/lib/mono/4.8-api/Facades/netstandard.dll \
+    "$PWD/tools/bizhawk/$probe.cs"
+done
+export MONO_PATH="$TRACECHASER/bizhawk-headless/bin/Release:$BIZHAWK_HOME/dll"
+mono "$TASK_DIR/S3kHczColdProbe.exe" "$ROM" "$BK2" "$TASK_DIR/cold"
+mono "$TASK_DIR/S3kHczPhaseProbe.exe" "$ROM" "$BK2" \
+  "$PWD/tools/bizhawk/s3k_hcz_phase_sites.json" "$TASK_DIR/observed"
+```
+
+Compiler/preflight/version payloads require source/classes/build-activity leases;
+each native payload requires its own ordinary shared admission after compiler
+cleanup and lease release. Clear display variables and retain actual command,
+runtime binding, source/input hashes, completion and owned-child cleanup receipts.
+The prebuilt phase probe takes four positional arguments:
+
+```text
+S3kHczPhaseProbe.exe ABSOLUTE_ROM ABSOLUTE_BK2 ABSOLUTE_SITES_JSON NEW_OUTPUT_DIR
+```
+
+Use [`s3k_hcz_phase_sites.json`](s3k_hcz_phase_sites.json), whose eight registration
+sites and optional guard byte sequences are checked against the original ROM
+before callbacks are installed. Callbacks retain the registered trigger address
+separately from independently read CPU PC: the host's Action wrapper discards the
+backend callback-address parameter. Each event retains fourteen selected registers, stack,
+five MainRAM regions, inflight input and host completed-frame identity. The probe
+does not write RAM/registers or load states. Require `summary.json` completion,
+all expected site hits and a separate cold-pass comparison; exit 0 alone is not
+acceptance. The raw window does not establish timed shake, death, Knuckles,
+unsampled callers, pixels or route parity.
+
+The executed fixed profile had 2,417 samples and 26,179 events: ProcessSprites
+2,404; HCZ screen and BG 2,387 each; wall move and diff publication 2,325 each;
+shake setup 2,372; floor read 5,991; wall-Y read 5,988. These are source-specific
+observations, not counts to manufacture in a producer summary.
+
+[`compare_hcz_phase_observations.py`](compare_hcz_phase_observations.py) analyzes
+saved files only. It decodes the thirteen publication values from raw bytes,
+checks P1/Tails collision ordering and literal cold-pass bytes/identities, and
+retains every difference. Both passes must cover the explicitly declared window.
+Completed terminal summaries must bind actual file hashes, samples, event counts,
+all eight positive site-hit counts, registration/disposal and the original movie.
+The cold summary must declare zero callbacks, RAM writes and state loads.
+It rejects empty, incomplete or discontinuous evidence and refuses
+to qualify a comparison that has no changing publication control. Individual
+A/B/C masks are compared with the cold observer's individual mask; they are never
+normalized to the recorder's logical Jump mask.
+
+```bash
+python3 -B tools/bizhawk/compare_hcz_phase_observations.py \
+  --frames "$TASK_DIR/observed/completed-frames.jsonl" \
+  --events "$TASK_DIR/observed/execute-events.jsonl" \
+  --sites tools/bizhawk/s3k_hcz_phase_sites.json \
+  --cold-frames "$TASK_DIR/cold/completed-frames.jsonl" \
+  --summary "$TASK_DIR/observed/summary.json" \
+  --cold-summary "$TASK_DIR/cold/summary.json" \
+  --first-frame 37055 --last-frame 39471 \
+  --output "$TASK_DIR/new-comparison.json"
+python3 -B tools/bizhawk/test_hcz_phase_observations.py -v
+```
+
+Older executed phase summaries lack `movie_sha256`; supply their original
+`--phase-provenance "$TASK_DIR/phase-provenance.json"` containing the recorded
+`movie.sha256`. The current producer writes that identity directly. Missing or
+conflicting provenance is rejected; no movie identity is defaulted.
+
+Exit 0 means this saved comparison has no reported value differences; 1 preserves
+differences and 2 rejects invalid/incomplete evidence. `values_match_timing_partial`
+explicitly means some instruction-read fields have no changing-value control.
+Every field, including zero counts, and each site's actual read fields are shown.
+In the original window EE40 (`camera_y_diff`) never changes at either read site:
+Y timing is not discriminated. Floor X differs on 4,995/5,991 reads; the other
+996 floor reads and all 5,988 wall-Y reads do not distinguish the generation of
+the instruction's read values. Changes to unrelated fields cannot fill that gap.
+Event order is separate evidence; end-transition output is descriptive rather
+than an expected-transition assertion. The source-specific audit records
+the executed native profile and preservation proof; reformatting/promoting the
+probe is not another native run. All generated binaries and observations remain
+outside Git.
+
 ### S2 fixed-tail pressure diagnostic
 
 [`run_s2_fixed_tail_pressure.py`](run_s2_fixed_tail_pressure.py) builds the pinned

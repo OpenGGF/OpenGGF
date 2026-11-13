@@ -6,7 +6,6 @@ import org.junit.jupiter.api.Test;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
-import com.openggf.level.objects.contact.SolidContactState;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -24,6 +23,7 @@ import javax.tools.DiagnosticCollector;
 import javax.tools.JavaFileObject;
 import javax.tools.ToolProvider;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -412,10 +412,11 @@ class TestRewindArchitectureGuard {
     }
 
     @Test
-    void objectOverrideClassificationUsesActorTypesIncludingNestedActors() {
+    void objectOverrideClassificationUsesActorTypesIncludingNestedActors() throws ReflectiveOperationException {
         assertTrue(containsObjectType(AbstractObjectInstance.class));
         assertTrue(containsObjectType(ActorContainer.class));
-        assertFalse(containsObjectType(SolidContactState.class));
+        assertFalse(containsObjectType(Class.forName("com.openggf.level.objects.SolidContactMemory", false,
+                TestRewindArchitectureGuard.class.getClassLoader())));
         assertFalse(containsObjectType(ObjectManager.class));
         assertFalse(containsObjectType(NonActorFactory.class));
     }
@@ -432,10 +433,18 @@ class TestRewindArchitectureGuard {
 
     @Test
     void objectOverrideClassificationIncludesSecondaryTopLevelActors() throws IOException {
-        assertTrue(containsObjectType(Path.of(
-                "src/test/java/com/openggf/game/rewind/RewindActorSourceFixture.java")));
+        Path actorSource = Path.of(
+                "src/test/java/com/openggf/game/rewind/RewindActorSourceFixture.java");
+        Path helperSource = Path.of(
+                "src/test/java/com/openggf/game/rewind/RewindNonActorSourceFixture.java");
+        assertTrue(containsObjectType(actorSource));
+        assertFalse(containsObjectType(helperSource));
         assertFalse(containsObjectType(Path.of(
-                "src/main/java/com/openggf/level/objects/contact/SolidContactState.java")));
+                "src/main/java/com/openggf/level/objects/SolidContactMemory.java")));
+        assertEquals(Map.of(
+                        "src/test/java/com/openggf/game/rewind/RewindActorSourceFixture.java#restoreRewindState", 1),
+                objectRewindOverrideCounts(List.of(actorSource, helperSource)),
+                "count actor overrides while excluding restore-shaped non-actor helpers");
     }
 
     private static final class ActorContainer {
@@ -535,8 +544,12 @@ class TestRewindArchitectureGuard {
     }
 
     private static Map<String, Integer> objectRewindOverrideCounts() throws IOException {
+        return objectRewindOverrideCounts(objectSources());
+    }
+
+    private static Map<String, Integer> objectRewindOverrideCounts(List<Path> sources) throws IOException {
         Map<String, Integer> counts = new LinkedHashMap<>();
-        for (Path source : objectSources()) {
+        for (Path source : sources) {
             String text = Files.readString(source);
             long captureCount = CAPTURE_OVERRIDE.matcher(text).results().count();
             long restoreCount = RESTORE_OVERRIDE.matcher(text).results().count();

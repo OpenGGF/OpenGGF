@@ -1,19 +1,134 @@
 # Briefing a trace round
 
-Distilled from ~25 consecutive S3K/S2 trace rounds on 2026-08-14/15, in which **the
-orchestrator's candidate causes were wrong eight rounds running** and every round that ignored
-them and instrumented the decision site was right. This is not a confession; it is a measured
-result about what makes these rounds succeed. Brief this way.
+Use the current measurement entry before reporting numbers, and retrieve
+detailed failure patterns by their observed condition.
 
 Companion to [trace-replay-bug-fixing](../../.agents/skills/trace-replay-bug-fixing) — that
 skill is the procedure, this is how to hand the work over.
 
 ## Index
 
-One hundred and twenty-six rules and several worked sections, accumulated across many rounds. The narrative
-below is the argument for each; this table is for finding one mid-round. **The measurement
-hazards are the ones to re-read before reporting a number** — every single one produces output
-that looks like a real result.
+The catalogue retains rules 1–135 plus four suffixed entries and worked
+examples. Read the current table below before reporting a measurement;
+open a detailed pattern only when its stated condition applies. Historical
+counts and commands do not replace the current owning contracts.
+
+### Measurement hazards — all produce plausible output
+
+Read this current table before reporting a measurement. Use the
+[four-step replay route](../guide/contributing/testing.md#diagnose-one-trace-replay)
+for a concrete invocation, then open only the matching conditions below.
+
+| Before measuring or reporting | Current rule | Details when needed |
+| --- | --- | --- |
+| Select the test and inputs | Use Java 25 and the queued command. Confirm the concrete class, owning profile, fixture/movie and verified ROM. An explicit `-Dtest` changes filename selection; tags still filter. The command alone never proves execution or matrix coverage. | [Selection](#selection-and-executed-coverage) |
+| Own a stable execution | Keep sources and runtime inputs unchanged until the admitted job ends. Give each worktree its own output tree. Respect queue/build ownership and concurrency limits; never delete locks or stop another owner's process to gain admission. | [Ownership](#freshness-ownership-and-isolation) |
+| Establish fresh completion | Use unused Surefire and trace directories. Check this class's fresh results, errors, skips and process completion, then its prescribed replay gate. An incomplete prefix is not complete; absent gate means UNKNOWN. Saved triage, a file name or owner hash does not establish freshness. | [Freshness](#freshness-ownership-and-isolation) |
+| Attribute against matched controls | Pin source SHAs and match commands, inputs, environment, run order and relevant owner/catalogue state. Compare full test identities, assertions and skips at matched coverage. New/worsened failures block delivery; keep unresolved attribution and missing coverage explicit. | [Attribution](#matched-baselines-and-failure-attribution) |
+| Name the metric and its scope | Grouped spans/counts are not raw row/field errors; start values do not describe every span row. Inspect all relevant fields at the actual first compared key. Headline order is presentation, not causality. Preserve selected scope, global totals and unmatched suffix/aux coverage. | [Report meaning](#report-groups-scope-and-evidence-parsing) |
+| Name clocks and sample points | Separate CSV `TraceFrame.frame()`, row ordinal, movie input, completed-frame provenance and ROM counters. Align an independently observed event/boundary before converting or subtracting them; do not apply a universal row-offset formula. | [Sampling](#clocks-sampling-and-timing-boundaries) |
+| Qualify the observer | Prove the instrument compiled, ran in the intended harness and can disagree on a known control. Compare actual measured values and coverage, not a proxy or empty output. Reproduce the disputed unobserved outcome before attributing an observer-assisted result. | [Controls](#probes-surveys-and-controls) |
+| Preserve authority and ROM behavior | Observations grant no new input authority. Use only the named once-at-entry carried-state import and exact hardware-timing contract at their declared boundaries; retain production submission, matching kind/ordinal/stable fingerprint/service boundary and genuine resumability restrictions. Never hydrate mid-run, fit frame/route constants, simulate forbidden hardware protocols or infer implemented coverage from contract scope. | [Authority](#rom-causality-and-input-authority) |
+| Bound the claim and handoff | Report command, tested SHA, completed selection, failures/skips, gate, compared fields/rows and limits. A standalone segment, partial pass, video or matching picture establishes only its observed contract, not run-chain/route parity. Hand off the measured symptom; a hypothesis remains a hypothesis. | [Handoff](#briefing-and-handoff) |
+
+### Find the matching failure pattern
+
+| Observable condition | Start here; follow only the matching note or rule |
+| --- | --- |
+| Requested test is absent/zero or selection is wider | [Filename and tag gates](#selection-and-executed-coverage) |
+| Output may be old, inputs moved, or ownership/setup is disputed | [Freshness and ownership](#freshness-ownership-and-isolation) |
+| A changed failure, count or depth is being attributed | [Matched controls](#matched-baselines-and-failure-attribution) |
+| Headline field/count or saved scope is misleading | [Groups, fields and scope](#report-groups-scope-and-evidence-parsing) |
+| Suspected frame offset, callback phase or load/return mismatch | [Clocks and sampling](#clocks-sampling-and-timing-boundaries) |
+| New probe, comparator, null result or survey | [Instrument controls](#probes-surveys-and-controls) |
+| Implementing a causal fix, entry import or timing change | [ROM and input authority](#rom-causality-and-input-authority) |
+| Slot/object identity, intra-frame dispatch or restore | [Object lifecycle](#object-slots-dispatch-and-lifecycle) |
+| Pixels, audio, native debugger, memory/CPU or desktop | [Capture and native tools](#capture-native-and-performance-tools) |
+| Delegating or reporting a frontier | [Briefing and handoff](#briefing-and-handoff) |
+
+The current table and finder end here. The catalogue is conditional reference,
+not additional linear reading before every number. Applicable detailed
+obligations still apply; this boundary grants no test, cleanup or input authority.
+
+## Failure-pattern catalogue
+
+The following cases preserve their original provenance and lessons. Use the
+condition links to retrieve a relevant case, not as a checklist to read end to
+end. The family lists are retrieval metadata, not a requalification of every
+historical measurement or prescription. Current [AGENTS](../../AGENTS.md),
+[test/skip/ownership policy](../../tools/testing/README.md), and the named entry
+and timing contracts govern over historical commands or row formulas.
+
+### Selection and executed coverage
+
+For filename selection versus tags, read [rule 98](#ninety-eighth-rule-a-focused-selector-does-not-prove-profile-coverage) and [rule 111](#one-hundred-and-eleventh-rule--dtest-overrides-a-profiles-patterns-not-its-tag-filter). For setup, use the [current test procedure](../../tools/testing/README.md) and [Surefire validation note](#surefire-validation-prerequisites). ArchUnit selectors have a separate [actual-identity note](#archunit-selector-identities).
+
+Further dated examples for this condition may be among the [unindexed notes](#measurement-examples); search there if no precise link above matches.
+
+Related rule IDs: 5, 8, 15, 25, 25a, 35, 64, 98, 111, 118, 118a, 122.
+
+### Freshness, ownership and isolation
+
+For old outputs, read [rule 73](#seventy-third-rule-resetting-the-tree-does-not-reset-target) and [rule 103](#one-hundred-and-third-rule-a-failed-run-leaves-the-previous-runs-output-in-place), then the [current replay publication/retirement procedure](../guide/contributing/testing.md#diagnose-one-trace-replay). For changing sources or inputs, read the [source-freeze](#sources-during-compilation) and [fixture-input](#fixtures-are-live-inputs) notes. For catalogue/CWD differences, read [ROM catalogue inputs](#rom-catalogue-inputs).
+
+Further dated examples for this condition may be among the [unindexed notes](#measurement-examples); search there if no precise link above matches.
+
+Related rule IDs: 6, 16, 22, 26, 27, 34, 36, 38, 39, 43, 51, 70, 73, 97, 103.
+
+### Matched baselines and failure attribution
+
+For changed failures, start with [rule 24](#twenty-fourth-rule-diff-failure-messages-not-class-names) and [rule 42](#forty-second-rule-diff-the-whole-failure-message-not-a-truncated-prefix); for truncation/depth, [rule 41](#forty-first-rule-prove-an-arm-was-not-truncated-dont-infer-it-from-its-total) and [rule 44](#forty-fourth-rule-an-axis-count-is-only-comparable-when-both-arms-reach-the-same-depth); for nested identities, [rule 50](#fiftieth-rule-preserve-nested-class-names-when-diffing-failure-sets). Use [rule 131](#one-hundred-and-thirty-first-rule-a-conversion-onto-manager-supplied-state-silently-breaks-every-direct-drive-unit-test) only for the corresponding direct-drive harness conversion. Observer-assisted controls also need [reproduction qualification](#observer-assisted-reproduction).
+
+Further dated examples for this condition may be among the [unindexed notes](#measurement-examples); search there if no precise link above matches.
+
+Related rule IDs: 20, 21, 24, 29, 30, 37, 41, 42, 44, 50, 52, 55, 69, 75, 76, 77, 106, 131, 134.
+
+### Report groups, scope and evidence parsing
+
+For a headline field, read [rule 2](#second-rule-report-order-is-presentation-not-causality). For counts versus actual row fields, read [grouped counts](#grouped-counts-and-raw-observations). For saved scopes, use the [current verification procedure](../guide/contributing/testing.md#scope-controls-and-shortened-runs). An intentional prefix has separate [grading limits](#prefix-comparison-gates).
+
+Related rule IDs: 2, 13, 23, 28, 31, 65, 66, 82, 83, 86, 88, 90, 94, 102, 109, 115, 128.
+
+### Clocks, sampling and timing boundaries
+
+For a frame offset, start with [rule 54](#fifty-fourth-rule-sample-where-the-comparator-samples) and [rule 62](#sixty-second-rule-anchor-a-probe-on-a-landmark-not-on-row-arithmetic). For a callback label, read the [pre-step sampling note](#callback-sampling-boundaries) and [rule 121](#one-hundred-and-twenty-first-rule-a-probe-log-without-a-frame-delimiter-is-ambiguous-and-both-readings-fit-the-bytes). The older formulas below require their exact recorder/driver boundary; they do not override the [hardware-timing authority](../architecture/designs/2026-07-27-cross-game-hardware-timing-trace-contract.md).
+
+Related rule IDs: 12, 14, 19, 32, 33, 47, 53, 54, 57, 62, 74, 78, 84, 85, 87, 101, 119, 121, 122a, 122b, 124, 126.
+
+### Probes, surveys and controls
+
+For a null probe, read [rule 45](#forty-fifth-rule-before-believing-a-null-result-verify-the-instrument-is-installed) and [rule 49](#forty-ninth-rule-prove-your-edit-is-on-the-path-before-believing-a-null). For a new classifier/comparison, use [rule 71](#seventy-first-rule-validate-a-classifier-against-a-case-you-already-know) and [rule 81](#eighty-first-rule-break-every-new-comparison-on-purpose-before-trusting-its-green). Survey/compile/harness failures have distinct conditions in [rule 123](#one-hundred-and-twenty-third-rule-run-a-class-survey-so-the-known-member-must-appear-in-its-output), [rule 125](#one-hundred-and-twenty-fifth-rule-a-probe-that-never-compiled-looks-exactly-like-a-predicate-that-never-fires) and [rule 127](#one-hundred-and-twenty-seventh-rule-a-probe-can-fire-in-the-right-class-and-still-be-in-the-wrong-harness).
+
+Related rule IDs: 11, 45, 46, 49, 67, 71, 72, 81, 92, 93, 100, 110, 116, 123, 125, 127, 132.
+
+### ROM causality and input authority
+
+For a candidate fix, read [rule 3](#third-rule-name-the-fitted-constant-trap-explicitly-in-the-brief), [rule 40](#fortieth-rule-a-comment-narrating-engine-bookkeeping-is-the-tell-for-a-fitted-constant) and the applicable shipped `FixBugs=0` branch ([rule 95](#ninety-fifth-rule-read-both-arms-of-a-fixbugs-conditional--it-may-only-reorder)). Entry imports remain owned by the [carried-state design](../architecture/designs/2026-11-03-segment-carried-run-state.md); timing/lag/readiness inputs remain owned by the [hardware-timing contract](../architecture/designs/2026-07-27-cross-game-hardware-timing-trace-contract.md). Both retain their exact restrictions; comparison/aux data supplies no additional authority.
+
+Related rule IDs: 3, 9, 10, 17, 18, 40, 56, 58, 59, 60, 61, 63, 79, 80, 91, 95, 99, 104, 105, 113, 114, 117, 120, 130.
+
+### Object slots, dispatch and lifecycle
+
+For occupied-slot identity, read [rule 68](#sixty-eighth-rule-an-in-place-routine-change-is-not-a-spawn) and [rule 128](#one-hundred-and-twenty-eighth-rule-stand_on_obj-is-a-slot-index-not-an-object-id). For intra-frame dispatch, read [rule 48](#forty-eighth-rule-object-execution-order-is-observable-behaviour), [rule 107](#one-hundred-and-seventh-rule-installing-a-routine-costs-the-rest-of-that-dispatch) and [rule 108](#one-hundred-and-eighth-rule-the-symptom-is-one-frame-the-class-is-one-intra-frame-slot). After whole-world restore, use the [live-object reference note](#live-object-references-after-restore).
+
+Related rule IDs: 48, 68, 89, 107, 108, 112, 129, 133.
+
+### Capture, native and performance tools
+
+Choose the exact observation: [RGB pixel evidence](#rgb-pixel-evidence), [graphics-backend ownership](#graphics-backend-ownership), [memory observer](#memory-observer-qualification), [native debugger](#native-debugger-sampling), or [CPU timing](#process-cpu-timing). For audio, use [backend ownership](#audio-backend-ownership), [PCM publication](#audio-publication-and-capture) and [signal evidence](#audio-signal-evidence). Interactive capture also has the retained [Mutator notes](#mutator-captures-and-validation) and [desktop-service isolation](#clearing-display-variables-does-not-isolate-desktop-services). Native hardware observations are diagnostic tooling, not engine implementation authority.
+
+### Briefing and handoff
+
+For a handoff, read [rule 1](#the-one-rule-that-matters-most), [rule 4](#fourth-rule-make-found-not-fixed-a-full-success-in-writing) and [rule 135](#one-hundred-and-thirty-fifth-rule-brief-how-to-measure-not-what-to-expect). Report the tested command/SHA, owners, completed checks and their limits; preserve a measured found-not-fixed outcome.
+
+Related rule IDs: 1, 4, 7, 96, 135.
+
+Original briefing provenance:
+
+Distilled from ~25 consecutive S3K/S2 trace rounds on 2026-08-14/15, in which **the
+orchestrator's candidate causes were wrong eight rounds running** and every round that ignored
+them and instrumented the decision site was right. This is not a confession; it is a measured
+result about what makes these rounds succeed. Brief this way.
 
 ### Briefing and framing
 
@@ -21,7 +136,7 @@ that looks like a real result.
 |---|---|
 | The one that matters most | Supply the measured symptom, never your hypothesis |
 | 1 | Supply the measured symptom, never your hypothesis |
-| 2 | The first-reported field is alphabetical, not causal |
+| 2 | Report order is presentation, not causality; inspect all relevant fields |
 | 9 | A latent correction can be worth more as evidence than as a fix |
 | 17 | A compensation stack is load-bearing — remove it in one move |
 | 3 | Name the fitted-constant trap explicitly, in the brief |
@@ -69,7 +184,14 @@ that looks like a real result.
 | 71 | Validate a classifier against a hand-verified control, or discard its output |
 | 72 | Prove a new assertion fires; never place one where a `finally` can swallow the real failure |
 
-### Measurement hazards — all produce plausible output
+### Measurement examples
+
+The named headings identify individual notes, not themes for everything that
+follows. Neutral headings separate further dated notes, which span topics and
+are not exhaustively indexed. Use text search here when the condition finder
+has no precise entry; current owning contracts still take precedence.
+
+#### ROM catalogue inputs
 
 Absolute ROM test properties do not describe every input to UI and creator
 checks. Some catalogue readers scan configured filenames and `roms.directory`,
@@ -80,6 +202,8 @@ pixel failure only in the same worktree: empty stock availability opened master
 title onboarding before Resume could consume Enter. Match the catalogue/CWD
 before attributing it, and never create or move ROM links to force a result.
 
+#### Surefire validation prerequisites
+
 A copied category command running `surefire:test` skips Maven's `validate` phase.
 Create both `${openggf.test.tmpdir}/fork-1` and `fork-2` as the category runner
 does, along with its report directory. Merely creating their shared parent is
@@ -87,6 +211,8 @@ insufficient under `-Ptest-concurrent`: JUnit temp-directory and Mockito agent
 initialization errors can cascade through otherwise valid tests. Preserve such
 an invocation as invalid setup evidence, repair the prerequisite, and rerun the
 same selection before comparing source outcomes.
+
+#### Further dated notes (not indexed)
 
 A native recorder test can inspect a different checkout from the one that was
 built (2026-11-03, S3K loading). Positional parent-directory walks in a nested
@@ -98,6 +224,8 @@ Correcting those paths exposed 52 inherited audio/source-lock failures in both
 trees; the new initialization cases passed. Compare identities and assertions,
 including build-dependent executable seals, rather than totals alone.
 
+#### Grouped counts and raw observations
+
 Grouped report counts are not raw field-error totals. `DivergenceReport` counts
 error groups and records only each group's starting values; an unchanged group
 can hide a changed engine value later in its span. Live comparator counts instead
@@ -106,6 +234,8 @@ accumulate field mismatches. For an exact added-error gate, compare complete
 into assumed observations. The [Mega segment2 audit](../architecture/audits/2026-11-03-s3k-mega-segment2.md)
 uses a full standalone capture to distinguish these metrics.
 
+#### Observer-assisted reproduction
+
 A comparison-only observer can change which run-context outcome is reproduced
 (2026-11-04, ICZ2). Pairing two observed sources proves equality only for those
 observed runs; first reproduce the disputed unobserved outcome before assigning
@@ -113,6 +243,8 @@ its cause. Preserve full assertions, input hashes and actual row fields. The
 [exact field comparator](../../tools/traces/compare_frame_comparisons.py) reports
 added tuples and unmatched coverage, but does not turn grouped summaries,
 missing suffixes or identical observed controls into a universal parity proof.
+
+#### Further dated notes (not indexed)
 
 An aborted replay may never construct a final report containing every row
 (2026-11-04, AIZ2). Capture each already-completed `FrameComparison` before the
@@ -132,6 +264,8 @@ After a collection error, inspect each completed Maven result and copied XML;
 the shell exit alone proves neither missing validation nor successful collection.
 See the [segment2 audit](../architecture/audits/2026-11-03-s3k-mega-segment2.md).
 
+#### Live object references after restore
+
 A Java object reference can become stale after whole-world restore (2026-11-02,
 MHZ2 boss capture). The captured world and replayed pixels matched, but a local
 boss reference still pointed at the retired instance. Sampling it logged a frozen
@@ -140,6 +274,8 @@ objects from ObjectManager after restore before sampling or staging another acti
 The [MHZ2 lifecycle record](../architecture/validation/levels/s3k-mhz-act2.md#end-boss-lifecycle-follow-up--2026-11-02)
 records the fixture correction; no runtime timer was changed to accommodate it.
 
+#### Callback sampling boundaries
+
 A callback's row label does not establish its sampling boundary (2026-10-29,
 starpost continuation). `productionOutputRowObserver` is called by
 `stateMovieLogicalRow()` before `loop.step()`, with upcoming movie row + 1.
@@ -147,6 +283,8 @@ A pre-step print labelled98468 therefore observes the state after completed
 input98467. Use `afterProductionStep` for an end-of-step observation, or label
 and translate the pre-step state explicitly; do not fit a one-frame gameplay
 adjustment to the misleading print. See the [bounded starpost record](../architecture/audits/2026-10-29-s3k-campaign-terminal-certification.md#starpost-invitation-correction-and-bounded-continuation--2026-10-29).
+
+#### Prefix comparison gates
 
 A reached run-prefix assertion need not grade its active destination segment
 (2026-10-29, S3K terminal candidate). `ReplayPrefixReached` stops before normal
@@ -157,6 +295,8 @@ outcome is required. Canonical and candidate first-return witnesses both passed,
 then matched at the later ownership rejection with identical incomplete segment
 reports. See the [candidate consumption audit](../architecture/audits/2026-10-29-s3k-native-terminal-evidence.md#current-source-candidate-consumption--bounded-java-evidence).
 
+#### RGB pixel evidence
+
 Quantized RGB differences can disappear during grayscale conversion (2026-10-29,
 parity design). A one-pixel Pillow control yields RGB `(0, 0, 1)` but luminance
 zero. `compare_trace_checkpoint_pixels.py` converts its 0..7 channel differences
@@ -165,6 +305,8 @@ qualify that path as exact pixel evidence until channel-wise adversarial control
 and its measurement provenance pass. The raw-RGB comparator has a separate
 comparison contract; its success does not qualify this path. See the
 [parity measurement design](../architecture/designs/2026-10-29-quantitative-stock-parity.md#domain-diagnostics).
+
+#### Memory observer qualification
 
 Successful cases do not validate their memory observer (2026-10-28, local
 throughput qualification). A Maven exit of zero and complete case inventory
@@ -181,6 +323,8 @@ that heap. Separate normal-memory preparation from the measured test invocation,
 and register only the execution lane actually qualified.
 See the [local cost record](../architecture/research/2026-10-27-local-validation-cost.md).
 
+#### Native debugger sampling
+
 Native gdb PC sampling needs an external interrupt timer (2026-10-27 native
 ablation). `continue` holds gdb Python's GIL, so `threading.Timer` cannot stop it.
 Use an external timer signalling the owned child through a pidfd; a late timer
@@ -195,6 +339,8 @@ waits and startup unless the sampling window excludes them, and stacks without
 Java DWARF/frame-pointer support may not unwind. Keep debugger timings out of the
 acceptance matrix; absent samples or symbols alone do not prove inlining.
 
+#### Process CPU timing
+
 Linux process-CPU counters can report nanoseconds while resolving only in clock
 ticks (2026-10-27 native optimization study). HotSpot's process CPU MXBean uses
 `times(2)` on Linux; sub-millisecond per-frame medians and p99 values from its
@@ -204,6 +350,8 @@ comparisons, and keep elapsed update/render time separate: `glFinish` includes
 GPU waits, while all-thread process CPU can exceed elapsed time. Exclude digest,
 readback and output work from both timing boundaries. See the
 [native study](../architecture/research/2026-10-08-graalvm-native-mod-feasibility.md#linux-optimization-and-oracle-comparison-2026-10-27).
+
+#### Further dated notes (not indexed)
 
 A JUnit case can hide a whole subprocess suite (2026-10-27, local validation).
 `TestBuildToolingGuard#releaseGateToolsShouldRejectCorruptAndChangedEvidence`
@@ -398,6 +546,8 @@ diff or fitting test teardown. The exact original batch remains the integration
 check; the deterministic regression prevents accidental green heap layouts from
 being mistaken for a repair.
 
+#### ArchUnit selector identities
+
 ArchUnit field rules can ignore Surefire's method filter (2026-10-24, held
 reverse-target extraction). A selector naming two `TestArchUnitRules` members
 executed all 27 field rules and the selected cycle method: the intended 48-case
@@ -405,6 +555,8 @@ guard selection actually executed 74 cases. Inspect physical XML identities and
 counts before reporting coverage or adding totals; a `Class#method` argument
 alone does not establish the executed set. The [ownership evidence](../architecture/plans/2026-10-24-architecture-continuation.md#held-reverse-target-owner-reviewed-extraction)
 records the unchanged selection and its actual expansion.
+
+#### Further dated notes (not indexed)
 
 ArchUnit's field engine can report `TestArchUnitRules` as its XML testcase
 classname while Jupiter reports `com.openggf.tests.TestArchUnitRules`. The
@@ -470,6 +622,8 @@ assert an uncontrolled scene starts native music before trusting a stopped scene
 absence. `TestStageplayAudioLifecycle.authoredMusicOwnsTheLateNativeLevelEntry`
 uses both the no-control case and actual presented requests.
 
+#### Audio publication and capture
+
 Final PCM capture belongs to the current presentation producer. A Stageplay native
 shot replacement retires that producer and its capture lease even when the audio
 manager survives (2026-10-24, Day Off corrections, base `81f25c89f`). Follow the
@@ -477,6 +631,8 @@ exporter's close/reopen capture sequence at the boundary. Pair final-window PCM
 energy with the active source identity and both driver/sequencer fade state;
 nonzero samples alone can belong to the previous song. The audio lifecycle matrix
 checks the last second after entry cues at 0/8/40, rather than only request lists.
+
+#### Further dated notes (not indexed)
 
 A synthetic route probe using `SpriteArtSet.EMPTY` cannot certify posture-gated
 native abilities (2026-10-23, Stageplay route motion). It has no animation profile,
@@ -509,12 +665,16 @@ separate commands for two IDs that the allocator placed on the same page. Use
 `PatternAtlas.Entry.atlasIndex()` as the oracle and a deliberately small atlas
 when the test needs forced physical page transitions.
 
+#### Audio backend ownership
+
 An injected offline audio backend can be replaced at a later launch boundary
 (2026-10-21, full Time Attack capture). EGL and `java.awt.headless` isolate no
 audio devices. Ordinary Engine launch preparation previously replaced the supplied
 headless backend with LWJGL. Verify exact backend and no-device sink ownership
 through startup, level launch and return, and check the production PCM packets;
 startup identity alone does not establish isolation for the recording.
+
+#### Further dated notes (not indexed)
 
 A live scene can simulate correctly and render valid scenery while every actor is
 outside the picture (2026-10-21, Stageplay live-world review). ROM level maxima
@@ -533,6 +693,8 @@ director offsets; preserve native background phase and restore published state
 after drawing. A transparent native floor-art tile can have valid collision, so
 contact oracles must distinguish missing art from a displaced rendered surface.
 
+#### Sources during compilation
+
 Source edits during compilation can survive as stale bytecode even on the next
 incremental build (2026-10-23, Stageplay holder continuation). Javac had already
 read a class before a later source edit, then wrote its old class after the new
@@ -541,6 +703,8 @@ stable from submission until the job exits. If this boundary was violated,
 force recompilation of the affected source and repeat its checks before making a
 claim about the new field or behavior. A newer class-file timestamp alone does
 not prove that it contains the current source.
+
+#### Graphics-backend ownership
 
 A JVM launch property is mutable test state (2026-10-21, Stageplay smoke).
 `TestSurfacelessEglContext` formerly cleared `openggf.headless.gl`; a later
@@ -559,6 +723,8 @@ runs the actual clearing fixture through JUnit before inspecting the property;
 the fixture itself remains a negative control for removing that restoration.
 See the [historical attribution](../architecture/plans/2026-10-24-architecture-continuation.md#completed-composed-smoke-and-baseline-attribution)
 and [correction evidence](../architecture/audits/2026-10-24-recurring-agent-mistakes.md).
+
+#### Further dated notes (not indexed)
 
 A mock-only OpenGL test can terminate the JVM when a helper adds an unmocked
 GL owner (2026-10-22, Stageplay smoke). `FboHelper` began preserving unpack-PBO
@@ -1123,6 +1289,8 @@ measured query loop and read per-thread counters directly around it; retain the
 zero-byte assertion and verify it rejects a deliberate escaping allocation.
 The isolated pass alone does not establish the cause of the CI-only bytes.
 
+#### Fixtures are live inputs
+
 Committed fixtures are live validation inputs (2026-10-08, Sitar Hero delivery):
 freeze test sources, BK2 files and scripts alongside runtime code. A fixture merge
 during an ordinary run makes the invocation incomplete even if already compiled
@@ -1131,6 +1299,8 @@ complete input delta before reusing evidence. A HEAD change confined to prose an
 standalone probes can preserve completed ordinary execution, but the runner's
 fingerprint still correctly suppresses later lanes; qualify those lanes separately
 against the actual source and label the interrupted combined invocation accurately.
+
+#### Further dated notes (not indexed)
 
 A dead command session does not prove Maven stopped (2026-10-08, Sitar Hero
 delivery): an unexpected native exit 143 left the exact Maven/test children alive
@@ -1311,6 +1481,8 @@ it still retains the native exit tail. Use a rendered production-route capture
 to cover the visible title-card phase, and restore the initial shot checkpoint
 to verify that completed title text does not return on rollback.
 
+#### Audio signal evidence
+
 Nonzero PCM can be constant DC (2026-10-06, Putt Putt Paradise polish): a
 captured Sonic 2 music track measured about −21 dBFS RMS while long windows
 contained an almost constant offset rather than music. Inspect mean and
@@ -1320,6 +1492,8 @@ Compare stock and controlled playback through the same presentation/capture
 path, and interleave each service with its corresponding synthesized packet.
 The corrected course-entry path leaves the ROM-timed music publication in
 charge and services its pending countdown on held presentation rows.
+
+#### Further dated notes (not indexed)
 
 Palette publication can survive resource cleanup (2026-10-06): at `c20731b13`,
 S3K presentation followed by the first S2 native-graphics scene produced 24,783
@@ -1665,6 +1839,8 @@ profile/scripts and mappings before certifying interaction or reload coverage.
 A retained configuration string or an instantiated sprite is insufficient. Do not
 repair an unsupported debug combination by changing shared combat rules.
 
+### Numbered measurement-hazard index
+
 | Rule | Signature | What it looks like |
 |---|---|---|
 | 25 | `-Dmse=off` missing | CLI `-D` properties silently never reach the fork |
@@ -1925,7 +2101,19 @@ Worked examples from one session:
 
 Four candidate causes offered on the camera round: none was involved.
 
-## Second rule: the first-reported field is alphabetical, not causal
+<a id="second-rule-the-first-reported-field-is-alphabetical-not-causal"></a>
+
+## Second rule: report order is presentation, not causality
+
+Current `DivergenceReport.buildGroups` sorts by `startFrame`, then
+`fieldSummaryPriority`: movement/subpixel/speed, routine, ordinary fields,
+then status bytes. Selected-scope bootstrap errors are handled before
+per-frame groups. Neither precedence establishes a cause. A group retains
+its opening expected/actual values; inspect the actual compared rows when
+exact field values matter. See [DivergenceReport](../../src/main/java/com/openggf/trace/DivergenceReport.java)
+and [saved-scope triage](../../src/main/java/com/openggf/tools/TraceTriageTool.java).
+
+Historical examples behind inspecting every differing field:
 
 **Tell every round to dump every field that differs on the first failing frame before forming a
 hypothesis.** In one session this misled four times, and twice the decisive clue was a column
@@ -4309,12 +4497,22 @@ sessions this is the default, not a precaution for long runs.
 what makes the ref unstable for everyone still measuring — so the fix belongs on the measuring
 side, not in slowing merges.
 
-## Ninety-eighth rule: `-Dtest=` silently overrides profile selection
+<a id="ninety-eighth-rule--dtest-silently-overrides-profile-selection"></a>
 
-Running a single class with `-Dtest=` does not respect the profile's includes: the class runs
-even when the profile you passed would never have selected it. So a class can be measured green
-"under `-Ptrace-replay`" while living in a profile that arm never runs, and the result reads as
-covered when it is not.
+## Ninety-eighth rule: a focused selector does not prove profile coverage
+
+The pinned Surefire 3.2.5 `test` parameter overrides filename `includes`
+and `excludes`; it does not remove JUnit `groups`/`excludedGroups` tag
+filters (see [rule 111](#one-hundred-and-eleventh-rule--dtest-overrides-a-profiles-patterns-not-its-tag-filter)). Check both gates in [root pom.xml](../../pom.xml),
+the class/nested tags and its fresh executed test identities, counts and
+skips. A focused green does not establish that the owning lane or matrix
+selected the class. With an explicit `-Dtest`, a filename pattern matching no
+class fails by default; `-Dsurefire.failIfNoSpecifiedTests=false` suppresses that
+scan-time failure. Tag filters can still leave zero executed tests and pass by
+default; `-DfailIfNoTests=true` catches that post-run empty result. Verify actual
+executed identities in either case; do not disable a check to hide an accidental
+empty selection. The category runner deliberately handles empty batches with
+its own coverage accounting rather than treating them as completed tests.
 
 One round measured a landmark class that way and only discovered afterwards that the class
 belongs to a profile its matrix omitted entirely. Same family as the two-clocks trap: a selector
@@ -4661,14 +4859,19 @@ not proof. Confirmed-and-unlanded is an honest state, not a stalled one.
 
 ## One hundred and eleventh rule: `-Dtest=` overrides a profile's PATTERNS, not its tag filter
 
-Rule 98 says `-Dtest=` silently overrides profile selection. That is true of a profile's
-include/exclude **patterns** and false of its `<excludedGroups>` **tag** filter.
+Filename patterns and tag filters are separate gates, as [rule 98](#ninety-eighth-rule-a-focused-selector-does-not-prove-profile-coverage)
+now distinguishes. `-Dtest=` overrides the filename patterns; it does not
+override JUnit `groups`/`excludedGroups`. The pinned Surefire 3.2.5 plugin
+descriptor documents these parameters independently; root pom.xml keeps
+the `trace-replay` filename exclusions and `trace-scope-r7` tag filter
+separate.
 
-Measured against the same profile in one round: `TestS3kHczZoneSliceTraceReplay` is *pattern*-
+Historical example against the same profile in one round: `TestS3kHczZoneSliceTraceReplay` is *pattern*-
 excluded from `trace-replay` and `-Dtest=` **ran it anyway** (2 tests); a chain class dropped by
-`@Tag("trace-scope-r7")` against that profile's `<excludedGroups>` (`pom.xml:259`) ran **nothing**
+`@Tag("trace-scope-r7")` against that profile's `<excludedGroups>` ran **nothing**
 under the identical flag shape. Same invocation, opposite outcomes, and the only difference is the
-kind of exclusion.
+kind of exclusion. These are past observations, not current test counts; inspect
+the current [profile configuration](../../pom.xml) and fresh results.
 
 **From outside, both look like `BUILD SUCCESS`.** A class that never ran and a class that ran
 clean are indistinguishable in the exit status — so check `Tests run:` for the class you targeted,

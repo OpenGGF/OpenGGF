@@ -8,8 +8,10 @@ import java.nio.file.Path;
 
 /**
  * Compared replay of segment {@code hcz_2} of the committed
- * {@code s3k-sonic-tails-complete-emeralds} run -- zone_id 1, act 1,
- * bk2 offset 63075, 14208 rows.
+ * {@code s3k-sonic-tails-complete-emeralds} run. It enters zone_id 1,
+ * engine act index 0 (recorded act 1), at BK2 offset 63075 for 14208 rows.
+ * The directory suffix denotes the second HCZ segment, not an act-2-only
+ * fixture; this segment crosses the act transition.
  *
  * <p><b>New frontier harness: expected RED.</b> It was added deliberately, to
  * say WHERE this third S3K route diverges, not as a regression. Nothing is

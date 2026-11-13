@@ -1,8 +1,7 @@
 package com.openggf.level.objects;
 
 import com.openggf.camera.Camera;
-import com.openggf.level.objects.contact.SolidContactState;
-import com.openggf.level.objects.contact.SolidContactState.Ride;
+import com.openggf.level.objects.SolidContactMemory.Ride;
 import com.openggf.game.CanonicalAnimation;
 import com.openggf.game.CollisionModel;
 import com.openggf.game.GameStateManager;
@@ -38,7 +37,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.logging.Logger;
 
-/** Applies solid-contact rules and player writes; {@link SolidContactState} owns contact memory. */
+/** Applies solid-contact rules and player writes; {@link SolidContactMemory} owns contact memory. */
 public final class ObjectSolidContactController {
     /**
      * Expected entry count for the per-player maps built in the solid path:
@@ -54,7 +53,7 @@ public final class ObjectSolidContactController {
     private static final Logger LOGGER = Logger.getLogger(ObjectSolidContactController.class.getName());
     private static final int OBJ85_ID = 0x85;
     private final ObjectManager objectManager;
-    private final SolidContactState contactState;
+    private final SolidContactMemory contactState;
     private boolean checkpointPushingLastFrame;
     private final Map<PlayableEntity, Integer> execStartPlayerCentreY =
             new IdentityHashMap<>(2);
@@ -152,22 +151,22 @@ public final class ObjectSolidContactController {
                 && InitialObjectDispatchController.afterCallback(initialDispatch, provider.defersAirborneRiderUnseatThisFrame(player));
     }
 
-    /** Clears object-side pushing bits without changing players; see {@link SolidContactState#releaseObjectPushLatchForAllPlayers}. */
+    /** Clears object-side pushing bits without changing players; see {@link SolidContactMemory#releaseObjectPushLatchForAllPlayers}. */
     public void releaseObjectPushLatchForAllPlayers(ObjectInstance instance) {
         contactState.releaseObjectPushLatchForAllPlayers(instance);
     }
 
-    /** Clears object-side standing bits without releasing player rides; see {@link SolidContactState#releaseObjectStandingLatchForAllPlayers}. */
+    /** Clears object-side standing bits without releasing player rides; see {@link SolidContactMemory#releaseObjectStandingLatchForAllPlayers}. */
     public void releaseObjectStandingLatchForAllPlayers(ObjectInstance instance) {
         contactState.releaseObjectStandingLatchForAllPlayers(instance);
     }
 
-    /** Expires both live object-side latch kinds while occurrence ownership is available; see {@link SolidContactState#releaseObjectLatchesForAllPlayers}. */
+    /** Expires both live object-side latch kinds while occurrence ownership is available; see {@link SolidContactMemory#releaseObjectLatchesForAllPlayers}. */
     void releaseObjectLatchesForAllPlayers(ObjectInstance instance) {
         contactState.releaseObjectLatchesForAllPlayers(instance);
     }
 
-    /** Clears one player's object-side push bit and reports its previous value; see {@link SolidContactState#releaseObjectPushLatch}. */
+    /** Clears one player's object-side push bit and reports its previous value; see {@link SolidContactMemory#releaseObjectPushLatch}. */
     public boolean releaseObjectPushLatch(PlayableEntity player, ObjectInstance instance) {
         return contactState.releaseObjectPushLatch(player, instance);
     }
@@ -346,7 +345,7 @@ public final class ObjectSolidContactController {
 
     ObjectSolidContactController(ObjectManager objectManager) {
         this.objectManager = objectManager;
-        this.contactState = new SolidContactState(new SolidContactState.Access() {
+        this.contactState = new SolidContactMemory(new SolidContactMemory.Access() {
             @Override
             public boolean usesOccurrenceKey(ObjectInstance object) {
                 return objectManager.usesOccurrenceSolidStateKey(object);

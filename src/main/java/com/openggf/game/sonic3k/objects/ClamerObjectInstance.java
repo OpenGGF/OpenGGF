@@ -766,8 +766,16 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
 
         @Override
         public ClamerSpringChild recreateForRewind(RewindRecreateContext ctx) {
-            ClamerObjectInstance restoredParent =
-                    RewindRecreateObjectLinks.nearestLiveObject(ctx, ClamerObjectInstance.class);
+            if (ctx == null) {
+                return null;
+            }
+            ClamerObjectInstance restoredParent;
+            if (ctx.hasKnownConstructionFamily()) {
+                restoredParent = ctx.capturedParent(ClamerObjectInstance.class);
+            } else {
+                restoredParent =
+                        RewindRecreateObjectLinks.nearestLiveObject(ctx, ClamerObjectInstance.class);
+            }
             return restoredParent == null ? null : new ClamerSpringChild(restoredParent);
         }
 

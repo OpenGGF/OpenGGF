@@ -1258,21 +1258,25 @@ public final class TraceReplaySessionBootstrap {
         }
     }
 
-    public static void applyStartPositionAndGroundSnap(TraceData trace,
+    /**
+     * @return the existing entry evaluation, or {@code null} when this path did
+     * not compute one; an evaluation does not establish which values were applied
+     */
+    public static TraceSegmentCarriedState applyStartPositionAndGroundSnap(TraceData trace,
                                                        TraceReplayFixture fixture) {
-        applyStartPositionAndGroundSnap(trace, fixture, false);
+        return applyStartPositionAndGroundSnap(trace, fixture, false);
     }
 
     /** Continuous runs keep the load camera; declared-position replays resnap it. */
-    static void applyStartPositionAndGroundSnap(TraceData trace,
+    static TraceSegmentCarriedState applyStartPositionAndGroundSnap(TraceData trace,
                                                TraceReplayFixture fixture,
                                                boolean preserveProductionLoadCamera) {
         if (!TraceReplayBootstrap.shouldApplyMetadataStartPositionForTraceReplay(trace)) {
-            return;
+            return null;
         }
         AbstractPlayableSprite sprite = fixture.sprite();
         if (sprite == null) {
-            return;
+            return null;
         }
         TraceMetadata meta = trace.metadata();
 
@@ -1348,6 +1352,7 @@ public final class TraceReplaySessionBootstrap {
                 && !shouldPreserveFreshGroundedStatusUntilFirstDispatch(trace)) {
             collision.placeOnTerrain(sprite, 14);
         }
+        return carried;
     }
 
     /**

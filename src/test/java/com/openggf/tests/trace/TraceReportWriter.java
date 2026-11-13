@@ -1,40 +1,80 @@
 package com.openggf.tests.trace;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.openggf.tests.SessionInvocationExtension.SessionInvocation;
 import com.openggf.tests.TestSessionOutputPaths;
 import com.openggf.trace.DivergenceReport;
+import com.openggf.trace.DivergenceReport.ReplayGate;
+import com.openggf.trace.DivergenceReport.CarriedEntryDiagnostics;
+import com.openggf.trace.TraceMetadata;
 import com.openggf.trace.TraceVerificationScope;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
-import java.util.Locale;
-import java.util.Objects;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
- * Shared report-writing helper for the special-stage trace replay bases
- * (S1/S2/S3K). Their {@code writeReport(report, ssIndex)} bodies were identical
- * except for the filename prefix; this hoists the body and parameterizes it by
- * output directory, prefix, and context radius so the three bases cannot drift.
+ * Shared report publication for standalone level and special-stage replay drivers.
+ * Owns the session-allocated report, context and owner-sidecar paths, including
+ * verification-scoped context and retirement of verified earlier standalone attempts.
  */
 public final class TraceReportWriter {
 
-    /** Completion of the driver's prescribed gate, distinct from gameplay comparison count. */
-    public record ReplayGate(int plannedTraceRows, boolean comparisonGateReached,
-                             TraceVerificationScope verification) {
-        public ReplayGate {
-            if (plannedTraceRows <= 0) {
-                throw new IllegalArgumentException("Replay gate requires positive planned trace rows");
+    private TraceReportWriter() {
+    }
+
+    /** The standalone driver's key convention, including its independent verification scope. */
+    static String standaloneLogicalKey(TraceMetadata metadata, TraceVerificationScope scope) {
+        return metadata.game() + "_" + metadata.zone() + metadata.act() + standaloneScopeSuffix(scope);
+    }
+
+    /** Retires only verified earlier evidence for a standalone method attempt that is now starting. */
+    static void retireStandaloneAttemptReports(
+            Path outputDirectory, SessionInvocation invocation, TraceVerificationScope scope) throws IOException {
+        List<TestSessionOutputPaths.ReportAllocation> owned = usesDefaultOutputDirectory(outputDirectory)
+                ? TestSessionOutputPaths.findOwnedReports("trace", invocation, "single")
+                : TestSessionOutputPaths.findOwnedReports(outputDirectory, "trace", invocation, "single");
+        for (TestSessionOutputPaths.ReportAllocation allocation : owned) {
+            if (!hasStandaloneScope(allocation.logicalKey(), scope)) continue;
+            Path context = contextPath(allocation.physicalPath());
+            if (Files.exists(context, LinkOption.NOFOLLOW_LINKS)
+                    && !Files.isRegularFile(context, LinkOption.NOFOLLOW_LINKS)) {
+                continue; // A symlink or directory is not this writer's context artifact.
             }
-            Objects.requireNonNull(verification);
+            for (Path artifact : List.of(allocation.physicalPath(), context, allocation.metadataPath())) {
+                try {
+                    Files.deleteIfExists(artifact);
+                } catch (IOException failure) {
+                    throw publicationFailure(allocation, artifact, "prior attempt retirement", failure);
+                }
+            }
         }
     }
 
-    private TraceReportWriter() {
+    private static String standaloneScopeSuffix(TraceVerificationScope scope) {
+        return switch (scope) {
+            case ALL -> "";
+            case PHYSICS -> "_physics";
+            case ANIMATION -> "_animation";
+        };
+    }
+
+    private static boolean hasStandaloneScope(String logicalKey, TraceVerificationScope scope) {
+        String suffix = standaloneScopeSuffix(scope);
+        if (!logicalKey.endsWith(suffix)) return false;
+        String prefix = logicalKey.substring(0, logicalKey.length() - suffix.length());
+        // The unsuffixed key ends in metadata's decimal act number. Requiring
+        // that boundary also preserves unknown/noncanonical scope conventions.
+        return !prefix.isEmpty() && prefix.charAt(prefix.length() - 1) >= '0'
+                && prefix.charAt(prefix.length() - 1) <= '9';
+    }
+
+    private static boolean usesDefaultOutputDirectory(Path outputDirectory) {
+        return outputDirectory == null || outputDirectory.toAbsolutePath().normalize().equals(
+                TestSessionOutputPaths.traceReports().toAbsolutePath().normalize());
     }
 
     public static TestSessionOutputPaths.ReportAllocation writeSpecialStageReport(
@@ -85,14 +125,28 @@ public final class TraceReportWriter {
             TraceVerificationScope scope,
             int contextRadius,
             ReplayGate replayGate) throws IOException {
+        return writeReport(outputDirectory, report, profile, invocation, laneId, logicalKey,
+                scope, contextRadius, replayGate, null);
+    }
+
+    /** Optional diagnostic strings never participate in publication scope or mismatch decisions. */
+    public static TestSessionOutputPaths.ReportAllocation writeReport(
+            Path outputDirectory,
+            DivergenceReport report,
+            String profile,
+            SessionInvocation invocation,
+            String laneId,
+            String logicalKey,
+            TraceVerificationScope scope,
+            int contextRadius,
+            ReplayGate replayGate,
+            CarriedEntryDiagnostics diagnostics) throws IOException {
         if (replayGate != null && replayGate.verification() != scope) {
             throw new IllegalArgumentException("Replay gate verification must match report scope");
         }
         assertGroupAccountingHolds(report);
         TestSessionOutputPaths.ReportAllocation allocation =
-                outputDirectory == null
-                        || outputDirectory.toAbsolutePath().normalize().equals(
-                                TestSessionOutputPaths.traceReports().toAbsolutePath().normalize())
+                usesDefaultOutputDirectory(outputDirectory)
                         ? TestSessionOutputPaths.allocateReport(profile,
                                 invocation.className(), invocation.methodName(),
                                 invocation.parameterIndex(), invocation.invocationId(),
@@ -101,7 +155,8 @@ public final class TraceReportWriter {
                                 profile, invocation.className(), invocation.methodName(),
                                 invocation.parameterIndex(), invocation.invocationId(),
                                 laneId, logicalKey, ".json");
-        publish(allocation, allocation.physicalPath(), reportJson(report, replayGate), "report");
+        publish(allocation, allocation.physicalPath(), diagnostics == null
+                ? report.toJson(replayGate) : report.toJson(replayGate, diagnostics), "report");
         if (report.hasErrors(scope)) {
             Path contextPath = contextPath(allocation.physicalPath());
             publish(allocation, contextPath,
@@ -123,21 +178,6 @@ public final class TraceReportWriter {
                     failure);
         }
         return allocation;
-    }
-
-    private static String reportJson(DivergenceReport report, ReplayGate replayGate) throws IOException {
-        String json = report.toJson();
-        if (replayGate == null) {
-            return json;
-        }
-        ObjectMapper mapper = new ObjectMapper();
-        ObjectNode payload = (ObjectNode) mapper.readTree(json);
-        ObjectNode gate = payload.putObject("replay_gate");
-        gate.put("schema", 1);
-        gate.put("comparison_gate_reached", replayGate.comparisonGateReached());
-        gate.put("planned_trace_rows", replayGate.plannedTraceRows());
-        gate.put("verification", replayGate.verification().name().toLowerCase(Locale.ROOT));
-        return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(payload);
     }
 
     private static void publish(

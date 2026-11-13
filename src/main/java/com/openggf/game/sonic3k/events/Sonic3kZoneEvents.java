@@ -105,6 +105,10 @@ public abstract class Sonic3kZoneEvents {
         return GameServices.sprites();
     }
 
+    protected SpriteManager spriteManagerOrNull() {
+        return GameServices.spritesOrNull();
+    }
+
     protected GraphicsManager graphics() {
         return GameServices.graphics();
     }

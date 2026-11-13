@@ -9,14 +9,20 @@ import com.openggf.tools.TraceTriageTool.Divergence;
 import com.openggf.tools.TraceTriageTool.Subsystem;
 import com.openggf.tools.TraceTriageTool.TraceReport;
 import com.openggf.trace.DivergenceReport;
+import com.openggf.trace.DivergenceReport.ReplayGate;
 import com.openggf.trace.BootstrapDivergence;
 import com.openggf.trace.FieldComparison;
 import com.openggf.trace.FrameComparison;
 import com.openggf.trace.Severity;
+import com.openggf.trace.TraceEvent;
+import com.openggf.trace.TraceFixtures;
+import com.openggf.trace.TraceMetadata;
 import com.openggf.trace.TraceVerificationScope;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.ByteArrayOutputStream;
@@ -25,6 +31,7 @@ import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -120,15 +127,17 @@ class TestTraceTriageTool {
         Path reportPath = publishReport(tempDir, produced, true);
 
         TraceReport parsed = TraceTriageTool.parseReport(Files.readString(reportPath));
-        String context = Files.readString(TraceTriageTool.contextPathForReport(reportPath));
-        String excerpt = TraceTriageTool.extractContextNearFrame(context, 7, 2, 12);
-        String brief = TraceTriageTool.renderBrief("s2", "ehz1", parsed, excerpt, "");
+        TriageResult result = runTriage("--report", reportPath.toString());
+        assertEquals(0, result.status(), result.errors());
+        String brief = result.output();
 
         assertEquals(1, parsed.errorCount());
         assertEquals(1, parsed.totalFrames());
         assertEquals(7, parsed.firstDivergence().startFrame());
         assertEquals("0x0100", parsed.firstDivergence().expectedAtStart());
         assertEquals("0x0101", parsed.firstDivergence().actualAtStart());
+        assertTrue(brief.contains("Replay completion: COMPLETE"));
+        assertFalse(brief.contains("Comparison coverage: absent"));
         assertTrue(brief.contains("ROM: routine=02 object=0x41"));
         assertTrue(brief.contains("ENG: routine=04 object=0x41"));
     }
@@ -147,27 +156,241 @@ class TestTraceTriageTool {
         assertEquals(1, parsed.totalFrames());
         assertTrue(brief.toLowerCase(Locale.ROOT).contains("incomplete"),
                 "A matching prefix whose published replay gate was not reached must be visibly incomplete.");
+        TriageResult result = runTriage("--report", reportPath.toString());
+        assertEquals(0, result.status(), result.errors());
+        assertTrue(result.output().contains("Replay completion: INCOMPLETE"));
+        assertFalse(result.output().contains("Comparison coverage: absent"));
     }
 
-    @Test
-    void declaredGateCompletionDoesNotDependOnComparisonCount(@TempDir Path tempDir) throws Exception {
-        Path reportPath = publishReport(tempDir, new DivergenceReport(List.of()), true);
+    @ParameterizedTest
+    @EnumSource(TraceVerificationScope.class)
+    void declaredGateCompletionDoesNotDependOnComparisonCount(
+            TraceVerificationScope scope, @TempDir Path tempDir) throws Exception {
+        String scopeLabel = scope.name().toLowerCase(Locale.ROOT);
+        Path reportPath = publishReport(tempDir, new DivergenceReport(List.of()), true, scope);
         TraceReport parsed = TraceTriageTool.parseReport(Files.readString(reportPath));
 
         assertEquals(0, parsed.totalFrames());
         assertTrue(parsed.replayGate().comparisonGateReached());
         assertEquals(10, parsed.replayGate().plannedTraceRows());
-        assertTrue(TraceTriageTool.renderBrief("s2", "ehz1", parsed, "", "")
-                .contains("Replay completion: COMPLETE"));
+        TriageResult result = runTriage("--report", reportPath.toString());
+        assertEquals(0, result.status(), result.errors());
+        assertEquals("", result.errors());
+        assertTrue(result.output().contains("Replay completion: COMPLETE"));
+        assertTrue(result.output().contains("10 planned trace rows; " + scopeLabel + " verification"));
+        assertTrue(result.output().contains("Totals: 0 errors, 0 warnings, 0 frames compared"));
+        assertTrue(result.output().contains("Comparison coverage: absent (0 frames compared)"));
+        assertTrue(result.output().contains("Recorded comparison fields: none retained."));
+        assertTrue(result.output().contains("gameplay comparison coverage is not established"));
+        assertFalse(result.output().contains("Replay completion: INCOMPLETE"),
+                "No compared frames must not override the driver's completed gate.");
+        assertTrue(result.output().contains("check this invocation's Surefire result and process completion"));
     }
 
     @Test
-    void legacyReportHasUnknownCompletion() throws Exception {
-        TraceReport parsed = TraceTriageTool.parseReport(new DivergenceReport(List.of()).toJson());
+    void currentProducerWithoutReplayGateHasUnknownCompletion(@TempDir Path tempDir) throws Exception {
+        Path reportPath = tempDir.resolve("report_without_gate.json");
+        Files.writeString(reportPath, new DivergenceReport(List.of()).toJson());
+        TraceReport parsed = TraceTriageTool.parseReport(Files.readString(reportPath));
 
         assertNull(parsed.replayGate());
-        assertTrue(TraceTriageTool.renderBrief("s2", "ehz1", parsed, "", "")
-                .contains("Replay completion: UNKNOWN"));
+        TriageResult result = runTriage("--report", reportPath.toString());
+        assertEquals(0, result.status(), result.errors());
+        assertEquals("", result.errors());
+        assertTrue(result.output().contains("Replay completion: UNKNOWN (no replay_gate published)"));
+        assertFalse(result.output().contains("legacy report"),
+                "Current report producers also legitimately omit the optional gate.");
+        assertTrue(result.output().contains("Comparison coverage: absent (0 frames compared)"));
+        assertFalse(result.output().contains("Replay completion: INCOMPLETE"));
+    }
+
+    @ParameterizedTest
+    @EnumSource(TraceVerificationScope.class)
+    void recordedFieldsDescribeRetainedMapKeysAcrossEveryResultAndScope(
+            TraceVerificationScope scope, @TempDir Path tempDir) throws Exception {
+        DivergenceReport report = new DivergenceReport(List.of(
+                new FrameComparison(0, Map.of(
+                        "z_match", new FieldComparison("z_match", "1", "1", Severity.MATCH, 0),
+                        "warning_field", new FieldComparison("warning_field", "1", "2", Severity.WARNING, 1),
+                        "animation_field", FieldComparison.animation("animation_field", "1", "2", Severity.ERROR, 1),
+                        "tolerated", new FieldComparison("tolerated", "1", "2", Severity.MATCH, 1, true))),
+                new FrameComparison(1, Map.of(
+                        "z_match", new FieldComparison("z_match", "1", "1", Severity.MATCH, 0),
+                        "map_key", new FieldComparison("different_internal_name", "1", "1", Severity.MATCH, 0))),
+                new FrameComparison(2, Map.of())), null, List.of(new BootstrapDivergence(
+                        "bootstrap_only", BootstrapDivergence.Severity.ERROR, "1", "2", "prelude")));
+        Path reportPath = publishReport(tempDir, report, true, scope);
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode payload = (ObjectNode) mapper.readTree(reportPath.toFile());
+
+        assertEquals(mapper.readTree("[\"animation_field\",\"map_key\",\"tolerated\",\"warning_field\",\"z_match\"]"),
+                payload.get("recorded_fields"), "Record all retained result keys, including MATCH, once in canonical order");
+        assertEquals(3, payload.path("total_frames").intValue());
+        assertEquals(2, payload.path("error_count").intValue());
+        assertEquals(1, payload.path("warning_count").intValue());
+        TriageResult result = runTriage("--report", reportPath.toString());
+        assertEquals(0, result.status(), result.errors());
+        assertTrue(result.output().contains("Recorded comparison fields (all verification groups): "
+                + "animation_field, map_key, tolerated, warning_field, z_match"));
+        assertTrue(result.output().contains("Per-frame results only; listed fields may be exempt MATCHes; bootstrap is excluded. Not a census of executed comparators or full reference coverage."));
+        assertTrue(result.output().contains("Replay completion: COMPLETE"));
+    }
+
+    @ParameterizedTest
+    @EnumSource(TraceVerificationScope.class)
+    void aRetainedEmptyRowDoesNotInventFieldsOrClaimBootstrapCoverage(
+            TraceVerificationScope scope, @TempDir Path tempDir) throws Exception {
+        DivergenceReport report = new DivergenceReport(List.of(new FrameComparison(0, Map.of())),
+                null, List.of(new BootstrapDivergence("bootstrap_only", BootstrapDivergence.Severity.ERROR,
+                        "1", "2", "prelude")));
+        Path path = publishReport(tempDir, report, true, scope);
+        ObjectNode payload = (ObjectNode) new ObjectMapper().readTree(path.toFile());
+        assertEquals(new ObjectMapper().readTree("[]"), payload.get("recorded_fields"));
+        TriageResult result = runTriage("--report", path.toString());
+        assertEquals(0, result.status(), result.errors());
+        assertTrue(result.output().contains("Totals: 1 errors, 0 warnings, 1 frames compared"));
+        assertTrue(result.output().contains("Recorded comparison fields: none retained."));
+        assertTrue(result.output().contains("Replay completion: COMPLETE"));
+    }
+
+    @Test
+    void oldReportsHaveUnknownRecordedFieldsRatherThanAnEmptyCensus(@TempDir Path tempDir)
+            throws Exception {
+        Path path = tempDir.resolve("old-report.json");
+        Files.writeString(path, SYNTHETIC_REPORT);
+        TriageResult result = runTriage("--report", path.toString());
+        assertEquals(0, result.status(), result.errors());
+        assertTrue(result.output().contains("Recorded comparison fields: not reported (unknown)."));
+        assertFalse(result.output().contains("Recorded comparison fields: none retained."));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"null", "{}", "42", "false", "[null]", "[7]", "[\"\"]",
+            "[\" \"]", "[\"x\",\"x\"]", "[\"x\",false]", "[\"x\"]"})
+    void malformedRecordedFieldsFailBeforeAnyBrief(String literal, @TempDir Path tempDir)
+            throws Exception {
+        // Keep only the zero-row contradiction on an empty report. Other
+        // invalid names must fail their own rule, not the zero-row rule.
+        List<FrameComparison> rows = literal.equals("[\"x\"]") ? List.of()
+                : List.of(new FrameComparison(0, Map.of()));
+        Path path = publishReport(tempDir, new DivergenceReport(rows), true);
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode payload = (ObjectNode) mapper.readTree(path.toFile());
+        payload.set("recorded_fields", mapper.readTree(literal));
+        Files.writeString(path, payload.toString());
+        TriageResult result = runTriage("--report", path.toString());
+        assertEquals(1, result.status());
+        assertEquals("", result.output());
+        assertTrue(result.errors().contains("recorded_fields"));
+    }
+
+    @Test
+    void recordedFieldReaderAcceptsUnknownNamesAndPreservesLiteralEvidence(@TempDir Path tempDir)
+            throws Exception {
+        DivergenceReport report = new DivergenceReport(List.of(new FrameComparison(0, Map.of(
+                "z.future", new FieldComparison("z.future", "1", "1", Severity.MATCH, 0),
+                "a.future", new FieldComparison("a.future", "1", "1", Severity.MATCH, 0)))));
+        Path path = publishReport(tempDir, report, false);
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode payload = (ObjectNode) mapper.readTree(path.toFile());
+        payload.set("recorded_fields", mapper.readTree("[\"z.future\",\"a.future\"]"));
+        Files.writeString(path, payload.toString());
+        TriageResult result = runTriage("--report", path.toString());
+        assertEquals(0, result.status(), result.errors());
+        assertTrue(result.output().contains("Recorded comparison fields (all verification groups): z.future, a.future"));
+        assertTrue(result.output().contains("Replay completion: INCOMPLETE"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"errors", "warnings"})
+    void recordedFieldsCannotOmitPublishedDivergenceGroups(String omitted, @TempDir Path tempDir)
+            throws Exception {
+        DivergenceReport report = new DivergenceReport(List.of(new FrameComparison(0, Map.of(
+                "error_field", new FieldComparison("error_field", "1", "2", Severity.ERROR, 1),
+                "warning_field", new FieldComparison("warning_field", "1", "2", Severity.WARNING, 1)))));
+        Path path = publishReport(tempDir, report, true);
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode payload = (ObjectNode) mapper.readTree(path.toFile());
+        payload.set("recorded_fields", mapper.createArrayNode().add(
+                omitted.equals("errors") ? "warning_field" : "error_field"));
+        Files.writeString(path, payload.toString());
+        TriageResult result = runTriage("--report", path.toString());
+        assertEquals(1, result.status());
+        assertEquals("", result.output());
+        assertTrue(result.errors().contains("recorded_fields omits published field"));
+    }
+
+    @Test
+    void callerCannotEraseRecordedFieldsAfterModelValidation() {
+        var fields = new ArrayList<>(List.of("x"));
+        TraceReport report = new TraceReport(0, 0, 1, "matching row", List.of(), List.of(), List.of(),
+                null, null, List.of(), fields);
+        fields.clear();
+        assertTrue(TraceTriageTool.renderBrief("s2", "ehz1", report, "", "")
+                .contains("Recorded comparison fields (all verification groups): x"));
+        assertThrows(UnsupportedOperationException.class, () -> report.recordedFields().add("late"));
+    }
+
+    @ParameterizedTest
+    @CsvSource({"true, false, COMPLETE", "false, false, INCOMPLETE", "true, true, COMPLETE"})
+    void advertisedAuxAvailabilityLimitsReferencesWithoutChangingGateOrMismatchTotals(
+            boolean completed, boolean hasAuxEvidence, String completion, @TempDir Path tempDir)
+            throws Exception {
+        TraceMetadata metadata = new ObjectMapper().readValue("""
+                {
+                  "game": "s2", "zone": "ehz", "zone_id": 0, "act": 1,
+                  "trace_schema": 5, "trace_frame_count": 10,
+                  "start_x": "0x0080", "start_y": "0x03A0",
+                  "aux_schema_extras": ["velocity_write_per_frame", "position_write_per_frame"]
+                }
+                """, TraceMetadata.class);
+        Map<Integer, List<TraceEvent>> events = hasAuxEvidence
+                ? Map.of(7, List.of(
+                        new TraceEvent.VelocityWrite(7, "sonic", List.of(), List.of()),
+                        new TraceEvent.PositionWrite(7, "sonic", List.of(), List.of())))
+                : Map.of();
+        DivergenceReport produced = new DivergenceReport(List.of(new FrameComparison(7, Map.of(
+                "x", new FieldComparison("x", "0x0100", "0x0101", Severity.ERROR, 1),
+                "camera_x", new FieldComparison("camera_x", "0x0200", "0x0201", Severity.WARNING, 1)))),
+                TraceFixtures.trace(metadata, List.of(), events));
+        Path reportPath = publishReport(tempDir, produced, completed);
+
+        TriageResult result = runTriage("--report", reportPath.toString());
+
+        assertEquals(0, result.status(), result.errors());
+        assertEquals("", result.errors());
+        assertTrue(result.output().contains("Replay completion: " + completion + " (10 planned trace rows"));
+        assertTrue(result.output().contains("Totals: 1 errors, 1 warnings, 1 frames compared"));
+        assertTrue(result.output().contains("FIRST DIVERGENCE"));
+        assertTrue(result.output().contains("frame    : 7"));
+        assertFalse(result.output().contains("Comparison coverage: absent"));
+        if (hasAuxEvidence) {
+            assertFalse(result.output().contains("Reference/coverage limits:"));
+        } else {
+            assertTrue(result.output().contains(
+                    "Reference/coverage limits: missing advertised aux schemas: "
+                            + "velocity_write_per_frame, position_write_per_frame"));
+            assertTrue(result.output().contains("replay gate and mismatch totals remain as published"));
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"null", "[]", "{}", "\"unknown optional shape\"", "[null, 7, true]"})
+    void unrecognizedOrEmptyOptionalAuxLimitsDoNotInvalidateReport(
+            String optionalJson, @TempDir Path tempDir) throws Exception {
+        Path reportPath = publishReport(tempDir, new DivergenceReport(List.of()), true);
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode payload = (ObjectNode) mapper.readTree(reportPath.toFile());
+        payload.set("missing_advertised_aux_schemas", mapper.readTree(optionalJson));
+        Files.writeString(reportPath, payload.toString());
+
+        TriageResult result = runTriage("--report", reportPath.toString());
+
+        assertEquals(0, result.status(), result.errors());
+        assertEquals("", result.errors());
+        assertTrue(result.output().contains("Replay completion: COMPLETE"));
+        assertTrue(result.output().contains("Totals: 0 errors, 0 warnings, 0 frames compared"));
+        assertFalse(result.output().contains("Reference/coverage limits:"));
     }
 
     @Test
@@ -200,6 +423,93 @@ class TestTraceTriageTool {
     }
 
     @ParameterizedTest
+    @ValueSource(strings = {
+            "null",
+            "{\"schema\":2,\"comparison_gate_reached\":true,\"planned_trace_rows\":10,\"verification\":\"all\"}",
+            "{\"schema\":1,\"comparison_gate_reached\":true,\"planned_trace_rows\":0,\"verification\":\"all\"}",
+            "{\"schema\":1,\"comparison_gate_reached\":true,\"planned_trace_rows\":10,\"verification\":\"both\"}",
+            "{\"schema\":1,\"comparison_gate_reached\":true,\"planned_trace_rows\":10,\"verification\":\"\"}"
+    })
+    void malformedPresentGateFailsCliInsteadOfLookingLikeLegacy(String gateJson, @TempDir Path tempDir)
+            throws Exception {
+        Path reportPath = publishReport(tempDir, new DivergenceReport(List.of()), true);
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode payload = (ObjectNode) mapper.readTree(reportPath.toFile());
+        payload.set("replay_gate", mapper.readTree(gateJson));
+        Files.writeString(reportPath, payload.toString());
+
+        TriageResult result = runTriage("--report", reportPath.toString());
+
+        assertEquals(1, result.status());
+        assertEquals("", result.output(), "malformed completion evidence must not produce a reassuring brief");
+        assertTrue(result.errors().contains("Failed to read diagnostic evidence"));
+    }
+
+    @Test
+    void extraGateEvidenceDoesNotPreventCliDiagnosis(@TempDir Path tempDir) throws Exception {
+        Path reportPath = publishReport(tempDir, new DivergenceReport(List.of()), true);
+        ObjectNode payload = (ObjectNode) new ObjectMapper().readTree(reportPath.toFile());
+        ((ObjectNode) payload.get("replay_gate")).put("future_observation", "retained by another reader");
+        Files.writeString(reportPath, payload.toString());
+
+        TriageResult result = runTriage("--report", reportPath.toString());
+
+        assertEquals(0, result.status(), result.errors());
+        assertTrue(result.output().contains("Replay completion: COMPLETE"));
+    }
+
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+            "schema | \"1\"",
+            "schema | 1.0",
+            "schema | -1",
+            "schema | 2147483648",
+            "schema | null",
+            "planned_trace_rows | \"10\"",
+            "planned_trace_rows | 10.5",
+            "planned_trace_rows | -1",
+            "planned_trace_rows | 2147483648",
+            "planned_trace_rows | null",
+            "comparison_gate_reached | \"true\"",
+            "comparison_gate_reached | 1",
+            "verification | \"ALL\"",
+            "verification | \" all\"",
+            "verification | \"all \"",
+            "verification | null"
+    })
+    void gateWireTypesAndCanonicalScopeCannotBeCoerced(
+            String field, String jsonValue, @TempDir Path tempDir) throws Exception {
+        Path reportPath = publishReport(tempDir, new DivergenceReport(List.of()), true);
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode payload = (ObjectNode) mapper.readTree(reportPath.toFile());
+        ((ObjectNode) payload.get("replay_gate")).set(field, mapper.readTree(jsonValue));
+        Files.writeString(reportPath, payload.toString());
+
+        TriageResult result = runTriage("--report", reportPath.toString());
+
+        assertEquals(1, result.status());
+        assertEquals("", result.output());
+        assertTrue(result.errors().contains("Failed to read diagnostic evidence"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"schema", "planned_trace_rows", "comparison_gate_reached", "verification"})
+    void missingGateFieldsCannotDefaultToCompletedEvidence(String field, @TempDir Path tempDir)
+            throws Exception {
+        Path reportPath = publishReport(tempDir, new DivergenceReport(List.of()), true);
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode payload = (ObjectNode) mapper.readTree(reportPath.toFile());
+        ((ObjectNode) payload.get("replay_gate")).remove(field);
+        Files.writeString(reportPath, payload.toString());
+
+        TriageResult result = runTriage("--report", reportPath.toString());
+
+        assertEquals(1, result.status());
+        assertEquals("", result.output());
+        assertTrue(result.errors().contains("Failed to read diagnostic evidence"));
+    }
+
+    @ParameterizedTest
     @ValueSource(strings = {"bootstrap", "errors", "warnings"})
     void rejectsMalformedDivergenceArrays(String field) throws Exception {
         ObjectNode payload = (ObjectNode) new ObjectMapper().readTree(new DivergenceReport(List.of()).toJson());
@@ -218,11 +528,16 @@ class TestTraceTriageTool {
 
     private Path publishReport(Path directory, DivergenceReport report, boolean completed)
             throws IOException {
+        return publishReport(directory, report, completed, TraceVerificationScope.ALL);
+    }
+
+    private Path publishReport(Path directory, DivergenceReport report, boolean completed,
+                               TraceVerificationScope scope) throws IOException {
         SessionInvocation invocation = new SessionInvocation(
                 getClass().getName(), "publishedReport", 0, "0123456789abcdef", "published report");
         return TraceReportWriter.writeReport(directory, report, "trace", invocation,
-                "single", "s2_ehz1", TraceVerificationScope.ALL, 2,
-                new TraceReportWriter.ReplayGate(10, completed, TraceVerificationScope.ALL))
+                "single", "s2_ehz1", scope, 2,
+                new ReplayGate(10, completed, scope))
                 .physicalPath();
     }
 
@@ -250,10 +565,81 @@ class TestTraceTriageTool {
         assertEquals("0x0019", boot.actual());
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"routine", "player_routine", "x_sub", "y_sub"})
+    void canonicalPlayerStateStaysWithPlayerPhysics(String field) {
+        assertEquals(Subsystem.PLAYER_PHYSICS, TraceTriageTool.classifySubsystem(field, false));
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "s1, Sonic_Control, Obj01",
+            "s2, Obj01, Sonic_Control",
+            "s3k, Sonic_Control, Obj01"
+    })
+    void nativePlayerHintsUseTheReportedGame(String game, String expected, String foreign)
+            throws Exception {
+        String brief = TraceTriageTool.renderBrief(game, "zone", hintReport("x"), "", "");
+
+        assertTrue(brief.contains("  - " + expected + "\n"));
+        assertFalse(brief.contains("  - " + foreign + "\n"));
+    }
+
+    @Test
+    void unknownGameDoesNotBorrowAnotherGamesNativeHints() throws Exception {
+        String brief = TraceTriageTool.renderBrief("custom", "zone", hintReport("x"), "", "");
+
+        assertFalse(brief.contains("  - Sonic_Move\n"));
+        assertFalse(brief.contains("  - Obj01\n"));
+        assertTrue(brief.contains("  - x\n"), "the recorded field remains a generic search term");
+    }
+
+    @Test
+    void sonic3kAnimationHintsUseItsNativeVocabulary() throws Exception {
+        String brief = TraceTriageTool.renderBrief(
+                "s3k", "zone", hintReport("player_animation_id"), "", "");
+
+        assertTrue(brief.contains("  - Animate_Sprite\n"));
+        assertFalse(brief.contains("  - AnimateSprite\n"));
+    }
+
+    @Test
+    void sonic3kSolidHintsUseItsNativeVocabulary() throws Exception {
+        String brief = TraceTriageTool.renderBrief(
+                "s3k", "zone", hintReport("object_slot[5].routine"), "", "");
+
+        assertTrue(brief.contains("  - SolidObjectFull\n"));
+        assertFalse(brief.contains("  - SolidObject\n"));
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "s1, rings, HurtSonic",
+            "s3k, camera_y, ScreenEvents",
+            "s1, layout, v_lvllayout",
+            "s3k, layout, Level_layout_main"
+    })
+    void nativeHintsReachTheBehaviorOrMutableStateOwner(String game, String field, String owner)
+            throws Exception {
+        String brief = TraceTriageTool.renderBrief(game, "zone", hintReport(field), "", "");
+
+        assertTrue(brief.contains("  - " + owner + "\n"));
+    }
+
+    private static TraceReport hintReport(String field) throws IOException {
+        FieldComparison comparison = field.equals("player_animation_id")
+                ? FieldComparison.animation(field, "0x01", "0x02", Severity.ERROR, 1)
+                : new FieldComparison(field, "0x01", "0x02", Severity.ERROR, 1);
+        DivergenceReport report = new DivergenceReport(List.of(
+                new FrameComparison(7, Map.of(field, comparison))));
+        return TraceTriageTool.parseReport(report.toJson());
+    }
+
     @Test
     void classifiesSidekickField() {
         assertEquals(Subsystem.SIDEKICK, TraceTriageTool.classifySubsystem("tails_air", false));
         assertEquals(Subsystem.SIDEKICK, TraceTriageTool.classifySubsystem("tails_x", false));
+        assertEquals(Subsystem.SIDEKICK, TraceTriageTool.classifySubsystem("tails_routine", false));
     }
 
     @Test
@@ -570,5 +956,28 @@ class TestTraceTriageTool {
 
         assertEquals(sessionReport, TraceTriageTool.resolveDefaultReportPath(
                 tempDir.toString(), "s2", "mtz1"));
+    }
+
+    @Test
+    void positionalLookupRefusesMultipleReportsEvenWithLegacyFallback(@TempDir Path tempDir)
+            throws Exception {
+        Files.writeString(tempDir.resolve("s2_mtz1_report.json"), SYNTHETIC_REPORT);
+        Path first = tempDir.resolve("trace/s2_mtz1-first-0123456789abcdef.json");
+        Path second = tempDir.resolve("trace/s2_mtz1-second-fedcba9876543210.json");
+        Files.createDirectories(first.getParent());
+        Files.writeString(first, SYNTHETIC_REPORT);
+        Files.writeString(second, SYNTHETIC_REPORT);
+
+        TriageResult ambiguous = runTriage("s2", "mtz1", "--dir", tempDir.toString());
+
+        assertEquals(1, ambiguous.status());
+        assertEquals("", ambiguous.output(), "Ambiguous evidence must not produce a chosen report's brief.");
+        assertTrue(ambiguous.errors().contains("multiple nested reports match s2 mtz1"));
+        assertTrue(ambiguous.errors().contains("--report <path>"));
+
+        TriageResult explicit = runTriage("--report", first.toString());
+        assertEquals(0, explicit.status(), explicit.errors());
+        assertTrue(explicit.output().contains("Report: " + first));
+        assertTrue(explicit.output().contains("FIRST DIVERGENCE"));
     }
 }

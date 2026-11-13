@@ -42,7 +42,6 @@ class TestEngineSuspensionRendering {
         var entryServices = EngineServices.current();
         try (var context = PresentationOffscreenTestContext.openConfigured(
                 704, 512, PresentationOffscreenTestContext.LegacyProfile.CORE_41)) {
-            System.out.println("Owned suspension GL: " + glGetString(GL_VENDOR) + " / " + glGetString(GL_RENDERER) + " / " + glGetString(GL_VERSION));
             var config = SonicConfigurationService.createStandalone(directory);
             config.setConfigValue(SonicConfiguration.TEST_MODE_ENABLED, false);
             config.setConfigValue(SonicConfiguration.AUDIO_ENABLED, false);
@@ -138,8 +137,22 @@ class TestEngineSuspensionRendering {
                 int zoomTicks = get(title, "SUSPEND_ZOOM_TICKS");
                 for (int i = 0; i < zoomTicks + 2; i++) call(engine, "displayFrame");
                 title.setStateForTest(MasterTitleScreen.State.ACTIVE);
+                if (get(title, "onboarding") != null) {
+                    // This rendering fixture can have no catalogue images. Leave first-run onboarding through
+                    // its normal Back/neutral input path before asking the selected suspended card to resume.
+                    // Logic-only menu steps preserve the display/capture publication cadence under test.
+                    input.handleKeyEvent(GLFW_KEY_ESCAPE, GLFW_PRESS);
+                    engine.getGameLoop().step();
+                    input.handleKeyEvent(GLFW_KEY_ESCAPE, GLFW_RELEASE);
+                    engine.getGameLoop().step();
+                    assertNull(get(title, "onboarding"), "Back dismisses first-run onboarding before Resume");
+                    assertFalse(SuspensionTestAccess.<Boolean>get(title, "childInputPending"),
+                            "the neutral input opportunity releases the title's child-input gate");
+                }
                 input.handleKeyEvent(GLFW_KEY_ENTER, GLFW_PRESS);
                 call(engine, "displayFrame");
+                assertTrue(SuspensionTestAccess.<Boolean>get(title, "resumeZooming"),
+                        "Enter reaches Resume after first-run onboarding is dismissed");
                 input.handleKeyEvent(GLFW_KEY_ENTER, GLFW_RELEASE);
                 for (int i = 0; i < zoomTicks; i++) {
                     call(engine, "displayFrame");

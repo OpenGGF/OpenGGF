@@ -47,7 +47,8 @@ public record ObjectCoverage(
      *       {@code unIdObjectRefFields}</li>
      *   <li>{@code className + "#" + field + "#uncaptured-helper-state"} — per entry in
      *       {@code uncapturedHelperStateFields} (a mutable plain-helper field whose
-     *       type has no {@code RewindCodecs} codec, so it is silently dropped on rewind)</li>
+     *       state is absent from the ordinary actor's selected projection, or lacks
+     *       codec coverage on the general/manual path)</li>
      * </ul>
      */
     public List<String> gapKeys() {

@@ -474,25 +474,67 @@ under the matching area heading; see the
 
 - **Contributor readability:** live objects, slots and stable identities share
   population storage; actor reconstruction and contact memory have separate owners
-  behind the existing runtime entry points. Retiring multipart solids expires
+  behind the existing runtime entry points. Mutable contact memory is package-private
+  beside its collision controller, distinct from the immutable saved contact state.
+  Retiring multipart solids expires
   owned contact bits and frame history without releasing player state. Contact
   restore discards uncaptured future observations. Sole spawn-keyed dynamic solids
   now expire contact bits without clearing surviving shared owners. Constructor-child
   rewind adoption uses captured parent families, preserving interleaved structural
-  links; independent children can recreate when a parent defers to player refresh,
-  and CNZ defeat candidates retain their ship family. Generic recreation installs
+  links. Routine-spawned Clamer springs, Orbinaut satellites and Shellcracker claws
+  share exact captured-parent lookup in the admitted population; legacy and unknown
+  families retain their existing proximity lookup. Detached claws preserve their
+  independent falling state after parent retirement. Restoring captured placed
+  actors publishes their saved membership before child reconstruction, retaining
+  authored families even when fresh scene admission is closed. Independent children can
+  recreate when a parent defers to player refresh, and CNZ defeat candidates retain
+  their ship family. Generic recreation installs
   construction services centrally; supported exact-spawn recipes rebuild once,
   avoiding discarded constructor graphs while preserving custom hooks and the
   fallback for declarations without that constructor. Destroyed
   object paths share unload and retirement phases within their existing schedules.
   Ordinary family/reference/coverage guidance points to the actual owners.
+  Compact and scalar subclass fields share hierarchy ownership; diagnostic tools
+  check actual capture membership and distinguish structural handles from dropped
+  state. Mantis declares its captured parent/child references on their fields;
+  the exact-policy guard rejects duplicate central ownership, and scalar fallback
+  still reports links it omits. Pixel-oracle failures retain the
+  rendering mode and captured frame.
   Production badnik and contact witnesses, shared coarse-X arithmetic with
   explicit native/wider bounds, and
   a typed rewind HUD frame make contribution paths easier to follow. HCZ owns
-  its next screen-shake value without using the renderer as scratch state.
-  Failed trace replays print their exact test/report/triage route; triage reads
+  its completed screen/collision publication and all three shake words in one
+  validated rewind payload; objects consume the preceding publication and
+  rendering only projects it. The seamless reload retains HCZ1 deformation,
+  and the geyser begins shaking on its native first dispatch.
+  Standalone trace replays print their exact test/report/triage route; triage reads
   compressed fixture auxiliaries, preserves pre-trace evidence and distinguishes
-  incomplete or unknown completion from a completed comparison. Retained raw-field
+  incomplete or unknown completion from a completed comparison. Standalone replay
+  method entry retires verified prior evidence for the same invocation and scope
+  before loading the fixture; pre-method conditions and extensions remain outside
+  that boundary. Triage exposes missing auxiliary references and absent comparison
+  coverage without changing the published gate or mismatch totals. Replay guidance
+  routes segment diagnosis through the correct lane, movie and report owners.
+  Native search hints use each game's behavior routines and mutable layout
+  owners; canonical player routine/subpixel fields stay with player physics. Required measurement reading
+  is a current rule table and condition finder, with historical cases retained
+  for selective lookup.
+  Triage selects its first divergence, bootstrap and evidence window from the
+  saved verification scope while retaining global counts and legacy global views.
+  Replay stopping, release assertions and publication share the verification scope
+  resolved before fixture assembly, including subclass-provided scopes.
+  Unclassifiable groups fail a narrow diagnosis through both JSON and direct-model
+  entry; caller mutation cannot alter the captured evidence.
+  Replay completion metadata has one report-owned value and strict wire codec; ordinary publication
+  no longer reparses and rewrites its own JSON. Standalone reports retain the
+  existing carried-entry evaluation's provenance, disagreements and unresolved
+  notes; triage keeps those conditional entry diagnostics separate from mismatch
+  and completion decisions. Reports also identify retained per-frame result fields,
+  including matches, while distinguishing an unpublished list from an empty one.
+  Triage keeps this evidence separate from completion and does not equate field
+  presence with strict equality, comparator execution or bootstrap coverage.
+  Scene presentation spells out
+  capture, restoration and failure cleanup in operation order. Retained raw-field
   diagnostics follow that storage and are exercised on successful test paths.
 
 - **Fresh-level admission:** named phases expose title completion, initial

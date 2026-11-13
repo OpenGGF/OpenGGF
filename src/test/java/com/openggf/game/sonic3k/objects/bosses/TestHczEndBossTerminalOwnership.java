@@ -12,6 +12,9 @@ import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
+import com.openggf.game.sonic3k.audio.Sonic3kSfx;
+import com.openggf.game.sonic3k.objects.HCZWaterRushObjectInstance;
+import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.game.sonic3k.objects.S3kIncLevelEndXGradualInstance;
 import com.openggf.game.sonic3k.objects.S3kResultsScreenObjectInstance;
 import com.openggf.graphics.GLCommand;
@@ -267,14 +270,22 @@ class TestHczEndBossTerminalOwnership {
     @Test
     void secondaryGeyserUsesFirstFreeHoleAtTheDeclaredEndOfShakeBoundary() throws Exception {
         World world = new World("sonic");
+        var zones = TestEnvironment.objectServices().zoneRuntimeRegistry();
+        var hcz = spy(S3kRuntimeStates.currentHcz(zones).orElseThrow());
+        zones.install(hcz);
+        var sounds = new ArrayList<Integer>();
+        ObjectServices recording = mock(ObjectServices.class, delegatesTo(TestEnvironment.objectServices()));
+        doAnswer(call -> { sounds.add(call.getArgument(0)); return null; })
+                .when(recording).playSfx(anyInt());
         SlotFiller lower = world.manager.createDynamicObject(SlotFiller::new);
         var geyser = world.manager.createDynamicObject(() -> new HczEndBossGeyserCutscene(0, 0));
+        geyser.setServices(recording);
         int lowerSlot = lower.getSlotIndex();
         world.manager.removeDynamicObject(lower);
         // Component inlet is the already-loaded SHAKE tail, not an art/timing oracle.
         set(geyser, "artLoaded", true);
         set(geyser, "initialRoutineDispatchesRemaining", 0);
-        set(geyser, "timer", 1);
+        set(geyser, "timer", 0);
         assertNotNull(world.nativeP2());
         geyser.update(0, world.main);
         var secondary = world.live(HczEndBossGeyserCutscene.class).stream()
@@ -282,6 +293,56 @@ class TestHczEndBossTerminalOwnership {
         assertEquals(lowerSlot, secondary.getSlotIndex());
         assertTrue((boolean) get(secondary, "targetsNativeP2"));
         assertEquals(4, get(secondary, "timer"));
+        verify(hcz).startContinuousScreenShake(); // Primary Init also uses ST; it never clears.
+        assertEquals(1, sounds.stream().filter(id -> id == Sonic3kSfx.GEYSER.id).count());
+
+        secondary.setServices(recording);
+        HCZWaterRushObjectInstance.HCZWaterRushPaletteCycleGate.setActive(false);
+        for (int dispatch = 1; dispatch <= 5; dispatch++) {
+            secondary.update(dispatch, world.main);
+        }
+
+        assertEquals(1, get(secondary, "phase"));
+        verify(hcz, times(1)).startContinuousScreenShake();
+        assertFalse(HCZWaterRushObjectInstance.HCZWaterRushPaletteCycleGate.isActive(),
+                "the delayed P2 Init skips the primary palette/shake/audio branch");
+        assertEquals(1, sounds.stream().filter(id -> id == Sonic3kSfx.GEYSER.id).count());
+    }
+
+    @Test
+    void primaryGeyserWritesShakeAtStartRumbleAndInitButNotDuringWait() throws Exception {
+        World world = new World("sonic");
+        var zones = TestEnvironment.objectServices().zoneRuntimeRegistry();
+        var hcz = spy(S3kRuntimeStates.currentHcz(zones).orElseThrow());
+        zones.install(hcz);
+        var sounds = new ArrayList<Integer>();
+        ObjectServices recording = mock(ObjectServices.class, delegatesTo(TestEnvironment.objectServices()));
+        doAnswer(call -> { sounds.add(call.getArgument(0)); return null; })
+                .when(recording).playSfx(anyInt());
+        var geyser = world.manager.createDynamicObject(() -> new HczEndBossGeyserCutscene(0, 0));
+        geyser.setServices(recording);
+        set(geyser, "artLoaded", true); // Separate already-loaded object-stage inlet.
+
+        geyser.update(0x25, world.main);
+        verify(hcz).startContinuousScreenShake();
+        assertEquals(0x5F, get(geyser, "timer"),
+                "LoadArt falls through to StartRumble without consuming Obj_Wait");
+        geyser.update(0x26, world.main);
+        assertEquals(0x5E, get(geyser, "timer"));
+
+        // Deliberately nonconsecutive dispatch clocks reject a private eight-tick counter.
+        geyser.update(0x27, world.main);
+        geyser.update(0x28, world.main);
+        geyser.update(0x38, world.main);
+        assertEquals(List.of(Sonic3kSfx.RUMBLE_2.id, Sonic3kSfx.RUMBLE_2.id), sounds);
+        assertEquals(0x5B, get(geyser, "timer"));
+        verify(hcz, times(1)).startContinuousScreenShake();
+
+        set(geyser, "timer", 0); // Obj_Wait dispatches its continuation only after becoming negative.
+        geyser.update(0x3F, world.main);
+        verify(hcz, times(2)).startContinuousScreenShake();
+        assertEquals(1, get(geyser, "phase"));
+        assertEquals(1, sounds.stream().filter(id -> id == Sonic3kSfx.GEYSER.id).count());
     }
 
     @Test

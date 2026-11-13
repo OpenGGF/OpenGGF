@@ -1,16 +1,107 @@
 package com.openggf.game.rewind.coverage;
 
 import com.openggf.game.GameId;
+import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.GenericRewindEligibility;
+import com.openggf.game.rewind.FieldKey;
+import com.openggf.game.rewind.schema.CompactFieldCapturer;
+import com.openggf.game.rewind.schema.RewindFieldPolicy;
+import com.openggf.game.rewind.schema.RewindPolicyRegistry;
+import com.openggf.game.rewind.schema.RewindSchemaRegistry;
+import com.openggf.graphics.GLCommand;
+import com.openggf.level.objects.AbstractBadnikInstance;
+import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectSpawn;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.List;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class TestRewindCoverageAnalyzer {
+
+    @BeforeEach
+    @AfterEach
+    void clearPoliciesAndSchemas() {
+        RewindSchemaRegistry.clearForTest();
+    }
+
+    @Test
+    void inheritedReferenceCoverageFollowsTheConcreteOrdinaryCaptureRoute() throws Exception {
+        assertTrue(CompactFieldCapturer.supportsDefaultObjectSubclassScalars(SupportedActor.class));
+        assertFalse(CompactFieldCapturer.supportsDefaultObjectSubclassScalars(FallbackActor.class));
+        assertEquals(List.of(), objectRefGaps(SupportedActor.class));
+        assertEquals(List.of("peer"), objectRefGaps(FallbackActor.class));
+    }
+
+    @Test
+    void generalCapturedPolicyDoesNotCertifyAnOrdinaryFallbackReference() throws Exception {
+        RewindPolicyRegistry.registerDeclaredTypePolicy(ObjectInstance.class, RewindFieldPolicy.CAPTURED);
+        assertEquals(RewindFieldPolicy.CAPTURED, RewindPolicyRegistry.policyForAudit(
+                ActorReferences.class.getDeclaredField("peer")).orElseThrow());
+        assertFalse(CompactFieldCapturer.supportsDefaultObjectSubclassScalars(FallbackActor.class));
+        assertEquals(List.of("peer"), objectRefGaps(FallbackActor.class));
+        assertEquals(List.of(), objectRefGaps(SupportedActor.class));
+        assertEquals(List.of(), objectRefGaps(ObjectRefFixture.class),
+                "the general nonactor contract still honors its registered capture policy");
+    }
+
+    @Test
+    void badnikReferenceCoverageUsesTheDefaultBadnikRoute() throws Exception {
+        assertFalse(GenericRewindEligibility.usesDefaultObjectSubclassCapture(SupportedBadnik.class));
+        assertTrue(GenericRewindEligibility.usesDefaultBadnikSubclassCapture(SupportedBadnik.class));
+        assertTrue(CompactFieldCapturer.supportsDefaultObjectSubclassScalars(SupportedBadnik.class));
+        assertFalse(CompactFieldCapturer.supportsDefaultObjectSubclassScalars(FallbackBadnik.class));
+        assertEquals(List.of(), objectRefGaps(SupportedBadnik.class));
+        assertEquals(List.of("peer"), objectRefGaps(FallbackBadnik.class));
+    }
+
+    @ParameterizedTest
+    @EnumSource(GeneralPolicyRoute.class)
+    void generalHelperExclusionDoesNotHideAnOrdinaryHelperGap(GeneralPolicyRoute route) throws Exception {
+        switch (route) {
+            case FIELD -> {
+                RewindPolicyRegistry.registerFieldPolicy(FieldKey.of(HelperActor.class.getDeclaredField("gate")),
+                        RewindFieldPolicy.TRANSIENT);
+                RewindPolicyRegistry.registerFieldPolicy(FieldKey.of(HelperStateFixture.class.getDeclaredField("gate")),
+                        RewindFieldPolicy.TRANSIENT);
+            }
+            case DECLARED_TYPE -> RewindPolicyRegistry.registerDeclaredTypePolicy(
+                    FixtureGate.class, RewindFieldPolicy.TRANSIENT);
+            case ASSIGNABLE_TYPE -> RewindPolicyRegistry.registerAssignableTypePolicy(
+                    FixtureGate.class, RewindFieldPolicy.TRANSIENT);
+            case PACKAGE -> RewindPolicyRegistry.registerPackagePolicy(
+                    FixtureGate.class.getPackageName(), RewindFieldPolicy.TRANSIENT);
+        }
+        assertEquals(List.of("gate"), fieldGaps("findUncapturedHelperStateFields", HelperActor.class));
+        assertEquals(List.of(), fieldGaps("findUncapturedHelperStateFields", HelperStateFixture.class),
+                "nonactor utility policy remains independent of ordinary actor capture");
+    }
+
+    private enum GeneralPolicyRoute { FIELD, DECLARED_TYPE, ASSIGNABLE_TYPE, PACKAGE }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void badnikCoverageStillInspectsItsSeparatelyCapturedBase() throws Exception {
+        Method inspection = RewindCoverageAnalyzer.class.getDeclaredMethod("fieldsForAudit", Class.class);
+        inspection.setAccessible(true);
+        List<Field> inspected = (List<Field>) inspection.invoke(null, SupportedBadnik.class);
+        assertTrue(inspected.containsAll(List.of(AbstractBadnikInstance.class.getDeclaredFields())),
+                "ordinary subclass selection must not remove the hand-written badnik base from coverage");
+        var ordinary = RewindSchemaRegistry.defaultObjectFieldSelectionForAudit(SupportedBadnik.class)
+                .orElseThrow();
+        assertTrue(ordinary.inspectedFields().stream()
+                .noneMatch(field -> field.getDeclaringClass() == AbstractBadnikInstance.class),
+                "the runtime subclass projection must still leave the base to manual capture");
+    }
 
     @Test
     void enumeratesSpawnableObjectsForS3k() {
@@ -198,6 +289,74 @@ class TestRewindCoverageAnalyzer {
         Method method = RewindCoverageAnalyzer.class.getDeclaredMethod("isUncapturedFinalScalar", Field.class);
         method.setAccessible(true);
         return (boolean) method.invoke(null, field);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static List<String> fieldGaps(String query, Class<?> concreteOwner) throws Exception {
+        Method method = RewindCoverageAnalyzer.class.getDeclaredMethod(query, String.class);
+        method.setAccessible(true);
+        return (List<String>) method.invoke(null, concreteOwner.getName());
+    }
+
+    private static List<String> objectRefGaps(Class<?> concreteOwner) throws Exception {
+        return fieldGaps("findUnIdObjectRefFields", concreteOwner);
+    }
+
+    @Test
+    void ordinaryPresentationHandlesDoNotBecomeGameplayGaps() throws Exception {
+        assertTrue(fieldGaps("findUncapturedHelperStateFields", PresentationActor.class).isEmpty(),
+                "renderer caches and the reusable tile descriptor are presentation state");
+        var selection = RewindSchemaRegistry.defaultObjectFieldSelectionForAudit(PresentationActor.class)
+                .orElseThrow();
+        for (Field field : PresentationActor.class.getDeclaredFields()) {
+            assertFalse(selection.captures(field), "structural does not mean captured: " + field.getName());
+        }
+        assertEquals(List.of("gate"), fieldGaps("findUncapturedHelperStateFields", HelperActor.class),
+                "an unrelated mutable helper still needs captured state");
+    }
+
+    private static final class PresentationActor extends ActorReferences {
+        private final com.openggf.level.render.PatternSpriteRenderer renderer = null;
+        private final com.openggf.sprites.render.PlayerSpriteRenderer playerRenderer = null;
+        private final com.openggf.level.PatternDesc renderDesc = null;
+    }
+
+    private abstract static class ActorReferences extends AbstractObjectInstance {
+        private ObjectInstance peer;
+
+        private ActorReferences() {
+            super(new ObjectSpawn(0, 0, 0, 0, 0, false, 0), "coverage fixture");
+        }
+
+        @Override public void appendRenderCommands(List<GLCommand> commands) { }
+    }
+
+    private static final class SupportedActor extends ActorReferences { }
+
+    private static final class FallbackActor extends ActorReferences {
+        private String[] labels;
+    }
+
+    private abstract static class BadnikReferences extends AbstractBadnikInstance {
+        private ObjectInstance peer;
+
+        private BadnikReferences() {
+            super(new ObjectSpawn(0, 0, 0, 0, 0, false, 0), "coverage badnik fixture");
+        }
+
+        @Override protected void updateMovement(int vIntRunCount, PlayableEntity player) { }
+        @Override protected int getCollisionSizeIndex() { return 0; }
+        @Override public void appendRenderCommands(List<GLCommand> commands) { }
+    }
+
+    private static final class SupportedBadnik extends BadnikReferences { }
+
+    private static final class FallbackBadnik extends BadnikReferences {
+        private String[] labels;
+    }
+
+    private static final class HelperActor extends ActorReferences {
+        private final FixtureGate gate = new FixtureGate();
     }
 
     private static boolean isUnIdObjectRef(Field field) throws Exception {

@@ -11,6 +11,7 @@ import com.openggf.game.rewind.schema.RewindCodec;
 import com.openggf.game.rewind.schema.RewindCodecs;
 import com.openggf.game.rewind.schema.RewindFieldPolicy;
 import com.openggf.game.rewind.schema.RewindPolicyRegistry;
+import com.openggf.game.rewind.schema.RewindSchemaRegistry;
 import com.openggf.level.objects.AbstractObjectInstance;
 
 import java.lang.reflect.Field;
@@ -160,6 +161,11 @@ public final class RewindFieldInventoryTool {
     static List<RedundantTransientAnnotation> redundantTransientAnnotationsForClasses(List<Class<?>> classes) {
         List<RedundantTransientAnnotation> redundant = new ArrayList<>();
         for (Class<?> cls : classes) {
+            // General utility policies prove neither a manual actor's capture nor
+            // the ordinary selection of subclasses inheriting an annotated field.
+            if (AbstractObjectInstance.class.isAssignableFrom(cls)) {
+                continue;
+            }
             for (Field field : cls.getDeclaredFields()) {
                 if (!field.isAnnotationPresent(RewindTransient.class)) {
                     continue;
@@ -181,6 +187,19 @@ public final class RewindFieldInventoryTool {
 
     static List<String> unsupportedFieldsForClass(Class<?> cls) {
         List<String> unsupported = new ArrayList<>();
+        var ordinary = RewindSchemaRegistry.defaultObjectFieldSelectionForAudit(cls).orElse(null);
+        if (ordinary != null) {
+            for (Field field : ordinary.inspectedFields()) {
+                if (ordinary.captures(field) || RewindSchemaRegistry.isExplicitDefaultObjectExclusion(field)
+                        || RewindPolicyRegistry.isBuiltInStructuralHandle(field)
+                        || GenericFieldCapturer.hasDefaultObjectCaptureDecision(field)) {
+                    continue;
+                }
+                unsupported.add(cls.getName() + "#" + field.getName()
+                        + " : " + field.getType().getName());
+            }
+            return unsupported;
+        }
         for (Field field : cls.getDeclaredFields()) {
             int mods = field.getModifiers();
             if (Modifier.isStatic(mods)
@@ -194,10 +213,6 @@ public final class RewindFieldInventoryTool {
             if (registeredPolicy != null
                     && (registeredPolicy != RewindFieldPolicy.CAPTURED
                     || RewindCodecs.codecFor(field).isPresent())) {
-                continue;
-            }
-            if (GenericRewindEligibility.usesDefaultObjectSubclassCapture(cls)
-                    && GenericFieldCapturer.hasDefaultObjectCaptureDecision(field)) {
                 continue;
             }
             if (inferredPolicyWithoutTransientAnnotation(field) != RewindFieldPolicy.UNSUPPORTED) {
@@ -270,8 +285,7 @@ public final class RewindFieldInventoryTool {
     }
 
     private static boolean isGenericEligible(Class<?> cls) {
-        return GenericRewindEligibility.isEligible(cls)
-                || GenericRewindEligibility.usesDefaultObjectSubclassCapture(cls);
+        return GenericRewindEligibility.isEligible(cls);
     }
 
     private static String packageName(Class<?> cls) {

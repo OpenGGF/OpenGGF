@@ -3,10 +3,18 @@ package com.openggf.tests.trace;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openggf.game.session.SessionManager;
+import com.openggf.tests.TestSessionOutputPaths.ReportAllocation;
 import com.openggf.tests.rules.SonicGame;
+import com.openggf.trace.DivergenceReport.ReplayGate;
+import com.openggf.trace.TraceExecutionPhase;
+import com.openggf.trace.TraceFrame;
+import com.openggf.trace.TraceVerificationScope;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -18,6 +26,7 @@ import java.util.Map;
 import java.util.zip.GZIPInputStream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -32,17 +41,73 @@ class TestAbstractTraceReplayDynamicArtTerminal
     Path tempDir;
     private Path activeTrace;
     private Path activeReports;
+    private Path expectedReportPath;
+    private TraceVerificationScope selectedScope;
+    private TraceVerificationScope scopeAfterFixtureBuild;
+    private String priorSystemScope;
+    private String priorFrontierOnly;
+    private String priorContextRadius;
     private int reportPublications;
+    private int lastValidatedFrame;
+
+    @BeforeEach
+    void saveAndConfigureReplayProperties() {
+        priorSystemScope = System.getProperty("trace.verification");
+        priorFrontierOnly = System.getProperty("trace.frontierOnly");
+        priorContextRadius = System.getProperty("trace.context.radius");
+        System.setProperty("trace.verification", "all");
+        System.setProperty("trace.frontierOnly", "false");
+        System.setProperty("trace.context.radius", "2");
+    }
 
     @AfterEach
-    void clearFrontierProperties() {
-        System.clearProperty("trace.frontierOnly");
-        System.clearProperty("trace.contextRadius");
+    void restoreReplayProperties() {
+        setOrClearProperty("trace.verification", priorSystemScope);
+        setOrClearProperty("trace.frontierOnly", priorFrontierOnly);
+        setOrClearProperty("trace.context.radius", priorContextRadius);
+    }
+
+    @ParameterizedTest
+    @CsvSource(value = {
+            "<unset>, <unset>, <unset>",
+            "'', '', ''",
+            "physics, true, 7"
+    }, nullValues = "<unset>")
+    void fixtureRestoresEveryCallerProperty(String scope, String frontier, String radius) {
+        setOrClearProperty("trace.verification", scope);
+        setOrClearProperty("trace.frontierOnly", frontier);
+        setOrClearProperty("trace.context.radius", radius);
+        var nestedFixture = new TestAbstractTraceReplayDynamicArtTerminal();
+        nestedFixture.saveAndConfigureReplayProperties();
+        try {
+            assertAll(
+                    () -> assertEquals("all", System.getProperty("trace.verification")),
+                    () -> assertEquals("false", System.getProperty("trace.frontierOnly")),
+                    () -> assertEquals("2", System.getProperty("trace.context.radius")));
+            System.setProperty("trace.verification", "animation");
+            System.setProperty("trace.frontierOnly", "false");
+            System.setProperty("trace.context.radius", "0");
+        } finally {
+            nestedFixture.restoreReplayProperties();
+        }
+
+        assertAll(
+                () -> assertEquals(scope, System.getProperty("trace.verification")),
+                () -> assertEquals(frontier, System.getProperty("trace.frontierOnly")),
+                () -> assertEquals(radius, System.getProperty("trace.context.radius")));
+    }
+
+    private static void setOrClearProperty(String key, String value) {
+        if (value == null) {
+            System.clearProperty(key);
+        } else {
+            System.setProperty(key, value);
+        }
     }
 
     @Override
     public void replayMatchesTrace() {
-        // The two tests below call the complete inherited replay explicitly
+        // Replay tests below call the complete inherited replay explicitly
         // after preparing their advertised fixture and policy.
     }
 
@@ -55,6 +120,9 @@ class TestAbstractTraceReplayDynamicArtTerminal
 
         assertEquals(1, reportPublications, "a divergent replay publishes its final report once");
         String report = Files.readString(reportPath());
+        assertEquals(new ReplayGate(FINAL_FRAME + 1, true, TraceVerificationScope.ALL),
+                ReplayGate.readOptionalFrom(new ObjectMapper().readTree(report)),
+                "the completed driver publishes its gate despite the terminal mismatch");
         assertTrue(report.contains("\"field\" : \"dynamic_art.frame\""));
         assertTrue(report.contains("\"end_frame\" : " + FINAL_FRAME),
                 "completed replay must report the terminal expectation");
@@ -65,15 +133,71 @@ class TestAbstractTraceReplayDynamicArtTerminal
             throws Exception {
         prepareAdvertisedFixture();
         System.setProperty("trace.frontierOnly", "true");
-        System.setProperty("trace.contextRadius", "0");
+        System.setProperty("trace.context.radius", "0");
 
         assertThrows(AssertionError.class, super::replayMatchesTrace);
 
         assertEquals(1, reportPublications, "an early frontier publishes its final report once");
         String report = Files.readString(reportPath());
+        assertEquals(new ReplayGate(FINAL_FRAME + 1, false, TraceVerificationScope.ALL),
+                ReplayGate.readOptionalFrom(new ObjectMapper().readTree(report)),
+                "the actual frontier stop publishes an incomplete gate");
+        var published = new ObjectMapper().readTree(report);
+        var errors = published.path("errors");
+        assertTrue(errors.isArray() && !errors.isEmpty(),
+                "the frontier has a real per-frame error");
+        var firstErrorFrame = errors.get(0).path("start_frame");
+        assertTrue(firstErrorFrame.canConvertToInt());
+        assertEquals(firstErrorFrame.intValue(), lastValidatedFrame,
+                "zero context stops at the first erroneous row");
         assertTrue(report.contains("\"field\" : \"dynamic_art.frame\""));
         assertFalse(report.contains("\"end_frame\" : " + FINAL_FRAME),
                 "an actually-taken early frontier must not invent terminal data");
+    }
+
+    @Test
+    void frontierUsesTheResolvedScopeRatherThanTheSystemProperty() throws Exception {
+        prepareAdvertisedFixture();
+        selectedScope = TraceVerificationScope.ANIMATION;
+        expectedReportPath = activeReports.resolve("s2_ehz1_animation_report.json");
+        System.setProperty("trace.verification", "physics");
+        System.setProperty("trace.frontierOnly", "true");
+        System.setProperty("trace.context.radius", "0");
+
+        super.replayMatchesTrace();
+
+        assertCompleteAnimationReport();
+    }
+
+    @Test
+    void cleanlinessUsesTheScopeResolvedBeforeFixtureAssembly() throws Exception {
+        prepareAdvertisedFixture();
+        selectedScope = TraceVerificationScope.ANIMATION;
+        scopeAfterFixtureBuild = TraceVerificationScope.PHYSICS;
+        expectedReportPath = activeReports.resolve("s2_ehz1_animation_report.json");
+        System.setProperty("trace.verification", "animation");
+        System.setProperty("trace.frontierOnly", "false");
+
+        super.replayMatchesTrace();
+
+        assertCompleteAnimationReport();
+    }
+
+    private void assertCompleteAnimationReport() throws IOException {
+        assertEquals(1, reportPublications);
+        var report = new ObjectMapper().readTree(Files.readString(reportPath()));
+        assertEquals(new ReplayGate(FINAL_FRAME + 1, true, TraceVerificationScope.ANIMATION),
+                ReplayGate.readOptionalFrom(report),
+                "stopping, cleanliness and publication use the same resolved scope");
+        assertEquals(FINAL_FRAME + 1, report.path("total_frames").asInt());
+        assertEquals(FINAL_FRAME, lastValidatedFrame);
+        assertTrue(report.path("error_count").asInt() > 0,
+                "the intentionally mismatched physics evidence remains as an out-of-scope control");
+    }
+
+    @Override
+    protected TraceVerificationScope verificationScope() {
+        return selectedScope != null ? selectedScope : super.verificationScope();
     }
 
     @Override
@@ -82,12 +206,19 @@ class TestAbstractTraceReplayDynamicArtTerminal
         gameplay.endDynamicArtComparisonSegment();
         gameplay.plcFrameLifecycle()
                 .setComparisonSegmentsExternallyManaged(true);
+        if (scopeAfterFixtureBuild != null) {
+            selectedScope = scopeAfterFixtureBuild;
+        }
     }
 
     private void prepareAdvertisedFixture() throws IOException {
         activeTrace = tempDir.resolve("trace");
         activeReports = tempDir.resolve("reports");
+        expectedReportPath = activeReports.resolve("s2_ehz1_report.json");
+        selectedScope = null;
+        scopeAfterFixtureBuild = null;
         reportPublications = 0;
+        lastValidatedFrame = -1;
         Files.createDirectories(activeTrace);
         // The committed payload is gzipped -- TestTraceFixtureCompressionGuard
         // forbids an uncompressed physics.csv under src/test/resources/traces,
@@ -145,7 +276,7 @@ class TestAbstractTraceReplayDynamicArtTerminal
     }
 
     private Path reportPath() {
-        return activeReports.resolve("s2_ehz1_report.json");
+        return expectedReportPath;
     }
 
     @Override protected SonicGame game() { return SonicGame.SONIC_2; }
@@ -154,7 +285,18 @@ class TestAbstractTraceReplayDynamicArtTerminal
     @Override protected Path traceDirectory() { return activeTrace; }
     @Override
     protected Path reportOutputDir() {
-        reportPublications++;
         return activeReports;
+    }
+
+    @Override
+    protected void onRewindReferenceClosureValidated(
+            int traceIndex, TraceFrame frame, TraceExecutionPhase phase) {
+        lastValidatedFrame = frame.frame();
+    }
+
+    @Override
+    protected void onReportPublished(ReportAllocation allocation) {
+        assertEquals(reportPath(), allocation.physicalPath());
+        reportPublications++;
     }
 }

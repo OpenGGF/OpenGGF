@@ -8,11 +8,13 @@ import java.nio.file.Path;
 
 /**
  * Compared replay of segment {@code hcz} of the committed
- * {@code s3k-sonic-tails-complete-emeralds} run -- zone_id 1, act 1,
- * bk2 offset 53608, 3574 rows.
+ * {@code s3k-sonic-tails-complete-emeralds} run: recorded act 1 maps to engine act
+ * index 0. It begins at the start-table boundary and ends at the giant-ring
+ * transition into {@code ss_5}; the later {@code hcz_2} segment spans the act change.
  *
- * <p>The release lane and regression policy are owned by
- * {@code docs/status/trace-scope-release-6.md}. Dated measurements and first
+ * <p>The current selection lane is {@code trace-segments} in {@code pom.xml};
+ * {@code docs/status/trace-scope-release-6.md} records historical scope.
+ * Dated measurements and first
  * errors belong in {@code docs/status/trace-frontier-log.md}; this fixture
  * declaration does not duplicate mutable pass/fail status. For the focused
  * command and result checks, see the trace diagnosis entry in

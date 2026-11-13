@@ -339,7 +339,7 @@ public class Sonic1OrbinautBadnikInstance extends AbstractBadnikInstance impleme
 
         @Override
         public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-            Sonic1OrbinautBadnikInstance restoredParent = nearestLiveOrbinautParentForRewind(ctx);
+            Sonic1OrbinautBadnikInstance restoredParent = parentForRewind(ctx);
             if (restoredParent == null) {
                 return null;
             }
@@ -348,8 +348,11 @@ public class Sonic1OrbinautBadnikInstance extends AbstractBadnikInstance impleme
             return restored;
         }
 
-        private static Sonic1OrbinautBadnikInstance nearestLiveOrbinautParentForRewind(
+        private static Sonic1OrbinautBadnikInstance parentForRewind(
                 RewindRecreateContext ctx) {
+            if (ctx.hasKnownConstructionFamily()) {
+                return ctx.capturedParent(Sonic1OrbinautBadnikInstance.class);
+            }
             ObjectServices services = ctx.objectServices();
             ObjectManager objectManager = services != null ? services.objectManager() : null;
             ObjectSpawn capturedSpawn = ctx.spawn();

@@ -173,6 +173,14 @@ roundtrip reproduced four second-title errors before the repair, then passed
 actual disk/session reloads; see the
 [task evidence](plans/2026-10-13-s3k-playable-completion.md#saved-slot-hpz-to-ssz-roundtrips-2026-10-17).
 
+**Verified test ROM properties do not populate a standalone title catalogue.**
+A rendering fixture can boot with mocked ROM services while `MasterTitleScreen`
+finds no catalogue images and enters onboarding. Before testing Resume, dismiss
+that modal through normal Back and neutral input and assert resume zoom actually
+started. Otherwise Enter can open the onboarding browser and a pixel assertion
+measures that screen. `TestEngineSuspensionRendering` preserves this precondition
+without requiring a ROM or changing its scene colours and publication cadence.
+
 
 **Changing dispatch order must preserve captured physical parent ownership.**
 S3K `CreateChild1_Normal` stores the parent's SST address in `parent3`, not a
@@ -874,9 +882,13 @@ uncaptured `final` scalar, or an object reference not captured as a rewind id fa
 fails `TestStaticStateRewindCoverageGuard` — fix it with a `RewindSnapshottable` adapter,
 not a baseline entry, unless the gap is genuinely intentional.
 New concrete object classes also change `TestRemainingRewindTailInventory`, an
-ordinary-suite check outside `-Pguards`. Run its real round-trip sweep and update
-the test/resource totals only after verifying the new class passes or has honest
-graph coverage. A passing coverage guard alone does not check those totals.
+ordinary-suite check outside `-Pguards`. It compares discovered class identities
+with `isolated-round-trip-classes.txt` and the named graph dispositions in
+`RewindRoundTripHarness`; aggregate totals cannot substitute for a class. Declare
+the actual isolated round-trip or focused graph route, verify its execution, and
+retain its per-class outcome through `TestRewindHarnessCoverageRatchet`. A named
+graph row does not execute its test, and a passing coverage guard does not prove
+the inventory or the graph behavior.
 
 **A completed gameplay tick may precede completed publication.** The outer PLC
 frame publishes dynamic-art diagnostics in `finish()`, after the gameplay body

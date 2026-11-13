@@ -560,7 +560,9 @@
           after cursor N"; a segment red names the zone) and cheap to iterate on,
           but not evidence of parity.
 
-            mvn -Ptrace-segments test
+            python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-segments \
+              -Dsurefire.forkCount=1 \
+              '-Dtest=TestS3kSonicTailsHczSegmentTraceReplay' test
 
           The run chains are the gate: they play through and earn every piece of
           run state, so their greens are parity claims.
