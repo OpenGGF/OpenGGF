@@ -17,6 +17,20 @@ under the matching area heading; see the
   upload only those tiles, joining neighbours in a row (about 0.02 ms there). The tilemap shader also no longer looks up its uniform
   locations on every draw. Pixels are unchanged.
 
+- **Layout-edit frame hitches in every zone:** any change to a level's layout,
+  block or chunk data made the engine rebuild and re-upload the whole foreground
+  layer: 7-57 ms and 2-4 MB in one frame. Marble Garden 2's collapse did this about
+  every seven frames; Sandopolis doors and passages, Flying Battery and Launch Base
+  area swaps, the Angel Island battleship, the Casino Night 2 boss walls, the Wing
+  Fortress rivet and the Hill Top 2 earthquake (which changes only the background)
+  all stuttered. The foreground now keeps a record of the layout it was drawn from,
+  redraws only the layout cells whose layout, block or chunk data differ (about
+  2 microseconds a cell) and uploads only those rows, as separate spans when the
+  cells are far apart. This covers every writer, tiles written straight into the
+  image, prebuilt act-transition images and rewind restores; tests check each
+  writer's result against a full rebuild. The Lava Reef crusher's single-cell path
+  is folded into it. Pixels are unchanged.
+
 - **Blue Spheres:** new under **Extras** when the Sonic 3&K and Sonic 1 ROMs
   are both present. It is the game Sonic & Knuckles starts with Sonic 1 locked
   on, rebuilt from the S&K ROM: the title and menu, endless generated stages,

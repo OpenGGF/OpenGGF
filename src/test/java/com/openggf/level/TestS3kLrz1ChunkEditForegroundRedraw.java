@@ -1,8 +1,6 @@
 package com.openggf.level;
 
 import com.openggf.game.GameServices;
-import com.openggf.game.mutation.LayoutMutationContext;
-import com.openggf.game.mutation.LevelMutationSurface;
 import com.openggf.game.mutation.MutationEffects;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
@@ -15,6 +13,9 @@ import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
+import static com.openggf.level.LayoutRedrawEquivalence.Foreground.CHANGED;
+import static com.openggf.level.LayoutRedrawEquivalence.Foreground.UNCHANGED;
+import static com.openggf.level.LayoutRedrawEquivalence.assertWriterRedrawsCellsInPlace;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -46,78 +47,40 @@ class TestS3kLrz1ChunkEditForegroundRedraw {
     }
 
     @Test
-    void effectsBeyondAForegroundRedrawKeepTheirOrdinaryHandling() {
-        HeadlessTestFixture.builder().withZoneAndAct(Sonic3kZoneIds.ZONE_LRZ, 0).build();
-        LevelManager manager = GameServices.level();
-        LevelTilemapManager tilemaps = manager.getTilemapManager();
-        manager.ensureForegroundTilemapData();
-        int fullBuilds = tilemaps.foregroundFullBuildCount;
-        var sink = LevelLayoutCellRedrawAccess.effectSinkForCell(manager, 0, 29, 14);
-        sink.accept(MutationEffects.redrawAllTilemaps());
-        manager.ensureForegroundTilemapData();
-        assertEquals(fullBuilds + 1, tilemaps.foregroundFullBuildCount,
-                "a whole-tilemap redraw request still rebuilds the foreground");
-        // A pending full rebuild absorbs a later cell request instead of patching a stale image.
-        manager.invalidateForegroundTilemap();
-        sink.accept(MutationEffects.foregroundRedraw());
-        manager.ensureForegroundTilemapData();
-        assertEquals(fullBuilds + 2, tilemaps.foregroundFullBuildCount);
-        assertEquals(0, tilemaps.foregroundCellRedrawCount);
+    void aWholeTilemapRequestWithoutALayoutChangeRewritesNoCell() {
+        LevelManager manager = load();
+        assertWriterRedrawsCellsInPlace(manager, UNCHANGED,
+                () -> manager.applyMutationEffects(MutationEffects.redrawAllTilemaps()));
     }
 
     @Test
-    void cellWritesThroughTheMutationPipelineMatchAFullRebuild() {
-        HeadlessTestFixture.builder().withZoneAndAct(Sonic3kZoneIds.ZONE_LRZ, 0).build();
-        LevelManager manager = GameServices.level();
+    void aTileWrittenStraightIntoTheImageIsReplacedByTheNextRedraw() {
+        LevelManager manager = load();
         LevelTilemapManager tilemaps = manager.getTilemapManager();
         manager.ensureForegroundTilemapData();
+        byte[] before = tilemaps.getForegroundTilemapData().clone();
         int fullBuilds = tilemaps.foregroundFullBuildCount;
-        Level level = manager.getCurrentLevel();
-        // Edge and interior cells, including the last column and row of the layout.
-        int lastColumn = tilemaps.getForegroundTilemapWidthTiles() * 8 / level.getBlockPixelSize() - 1;
-        int lastRow = tilemaps.getForegroundTilemapHeightTiles() * 8 / level.getBlockPixelSize() - 1;
-        int[][] cells = {{0, 0}, {lastColumn, lastRow}, {12, 7}};
-        for (int[] cell : cells) {
-            LayoutMutationContext context = new LayoutMutationContext(LevelMutationSurface.forLevel(level),
-                    LevelLayoutCellRedrawAccess.effectSinkForCell(manager, 0, cell[0], cell[1]));
-            GameServices.zoneLayoutMutationPipeline().applyImmediately(
-                    ctx -> ctx.surface().setBlockInMap(0, cell[0], cell[1], 0x44), context);
-        }
+        assertTrue(manager.setForegroundTileDescriptorAtWorld(0x120, 0x88, 0x07FF));
+        manager.invalidateForegroundTilemap();
         manager.ensureForegroundTilemapData();
         assertEquals(fullBuilds, tilemaps.foregroundFullBuildCount);
-        assertEquals(1, tilemaps.foregroundCellRedrawCount);
-        assertMatchesFullRebuild(manager, tilemaps);
+        assertArrayEquals(before, tilemaps.getForegroundTilemapData(),
+                "a redraw replaces a direct tile write, as a full rebuild would");
+    }
+
+    private static LevelManager load() {
+        HeadlessTestFixture.builder().withZoneAndAct(Sonic3kZoneIds.ZONE_LRZ, 0).build();
+        return GameServices.level();
     }
 
     private static void assertRequestRedrawsCellsInPlace(int request) {
-        HeadlessTestFixture.builder().withZoneAndAct(Sonic3kZoneIds.ZONE_LRZ, 0).build();
-        LevelManager manager = GameServices.level();
-        LevelTilemapManager tilemaps = manager.getTilemapManager();
-        manager.ensureForegroundTilemapData();
-        byte[] image = tilemaps.getForegroundTilemapData();
-        byte[] before = image.clone();
-        int fullBuilds = tilemaps.foregroundFullBuildCount;
-
-        S3kRuntimeStates.currentLrz(GameServices.zoneRuntimeRegistry()).orElseThrow()
-                .setChunkEditRequest(request);
-        ((Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider())
-                .getLrzEventsForTest().update(0, 1);
-        manager.ensureForegroundTilemapData();
-
-        assertSame(image, tilemaps.getForegroundTilemapData(), "the level image is patched in place");
-        assertEquals(fullBuilds, tilemaps.foregroundFullBuildCount, "no full foreground rebuild");
-        assertEquals(1, tilemaps.foregroundCellRedrawCount);
-        assertFalse(java.util.Arrays.equals(before, image), "the edit must be visible in the image");
-        assertMatchesFullRebuild(manager, tilemaps);
-    }
-
-    private static void assertMatchesFullRebuild(LevelManager manager, LevelTilemapManager tilemaps) {
-        byte[] retained = tilemaps.getForegroundTilemapData().clone();
-        int width = tilemaps.getForegroundTilemapWidthTiles();
-        manager.invalidateForegroundTilemap();
-        manager.ensureForegroundTilemapData();
-        assertEquals(width, tilemaps.getForegroundTilemapWidthTiles());
-        assertArrayEquals(retained, tilemaps.getForegroundTilemapData(),
-                "the patched image differs from a full rebuild of the edited layout");
+        LevelManager manager = load();
+        long cells = assertWriterRedrawsCellsInPlace(manager, CHANGED, () -> {
+            S3kRuntimeStates.currentLrz(GameServices.zoneRuntimeRegistry()).orElseThrow()
+                    .setChunkEditRequest(request);
+            ((Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider())
+                    .getLrzEventsForTest().update(0, 1);
+        });
+        assertTrue(cells <= 6, "only the edited cells are rewritten: " + cells);
     }
 }
