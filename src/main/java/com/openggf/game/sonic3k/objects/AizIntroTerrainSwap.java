@@ -103,6 +103,11 @@ public final class AizIntroTerrainSwap {
         if (overlay == null) {
             return;
         }
+        // A streamed foreground needs no whole-level image ahead of the swap: the swap's
+        // invalidation redraws changed cells or streams the image from the camera out.
+        if (!com.openggf.level.LevelTilemapPrebuildAccess.prebuildsTransitionTilemaps(levelManager)) {
+            return;
+        }
         Level level = levelManager.getCurrentLevel();
         if (!(level instanceof Sonic3kLevel sonic3kLevel)) {
             return;

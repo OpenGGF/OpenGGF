@@ -31,6 +31,18 @@ under the matching area heading; see the
   writer's result against a full rebuild. The Lava Reef crusher's single-cell path
   is folded into it. Pixels are unchanged.
 
+- **Level load frame hitches:** every death respawn, act change and new game
+  built the whole level's foreground layer in the frame that finished the load
+  (9-16 ms, about 50 ms for Icecap 1), on top of the reload itself. A load now
+  draws only the columns around the camera; the rest of the layer is drawn a slice
+  per frame (about 1 ms) over the following frames, nearest the camera first, from
+  the layout recorded at the load, and every foreground draw first draws any column
+  it is about to show, so no visible pixel comes from an undrawn part, whatever the
+  camera jump, picture width or per-line scroll. A respawn in the same act keeps the
+  drawn layer and redraws only the cells the reloaded layout changes, and the Angel
+  Island intro and fire transition no longer build whole-level layers in advance.
+  Tests check every step against a whole-level build. Pixels are unchanged.
+
 - **Art upload stutters:** changing level art, animated tiles or a tilemap no
   longer makes the frame wait for the graphics driver. Uploading straight from
   memory made the engine wait until the driver had worked through everything

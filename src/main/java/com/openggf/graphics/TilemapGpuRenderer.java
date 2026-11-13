@@ -44,9 +44,10 @@ public class TilemapGpuRenderer {
         if (cinematicBackgroundActive) throw new IllegalStateException("Nested cinematic background residency");
         // Pending row spans belong to the native foreground texture; escalate them to a
         // full upload so the restored residency republishes them after the private draw.
-        if (foregroundPendingSpanCount > 0) {
+        if (foregroundPendingSpanCount > 0 || foregroundPendingColumns.count() > 0) {
             foregroundDirty = true;
             foregroundPendingSpanCount = 0;
+            foregroundPendingColumns.clear();
         }
         BackgroundResidencyState saved = captureBackgroundResidency();
         var savedForeground = new ForegroundResidencyState(foregroundTexture, foregroundWindowTexture,
@@ -215,6 +216,15 @@ public class TilemapGpuRenderer {
     private final int[] foregroundPendingSpanFirst = new int[MAX_FOREGROUND_ROW_SPANS + 1];
     private final int[] foregroundPendingSpanEnd = new int[MAX_FOREGROUND_ROW_SPANS + 1];
     private int foregroundPendingSpanCount;
+    // Disjoint tile-column spans awaiting upload: columns a streamed image drew since
+    // its last upload (see ForegroundCoverage).
+    private final PendingSpans foregroundPendingColumns = new PendingSpans(MAX_FOREGROUND_ROW_SPANS);
+    // Owner of a foreground image still being drawn; consulted before each foreground draw.
+    private ForegroundCoverage foregroundCoverage;
+    // Range of the per-line foreground H-scroll words of the next draw, when known.
+    private boolean perLineForegroundRangeKnown;
+    private int perLineForegroundMinScroll;
+    private int perLineForegroundMaxScroll;
 
     private byte[] lookupData;
     private int lookupSize;
@@ -298,11 +308,16 @@ public class TilemapGpuRenderer {
 
     public void setTilemapData(Layer layer, byte[] data, int widthTiles, int heightTiles) {
         if (layer == Layer.FOREGROUND) {
+            if (data != foregroundData) {
+                // A coverage owner describes one array; another array needs its own registration.
+                this.foregroundCoverage = null;
+            }
             this.foregroundData = data;
             this.foregroundWidthTiles = widthTiles;
             this.foregroundHeightTiles = heightTiles;
             this.foregroundDirty = true;
             this.foregroundPendingSpanCount = 0;
+            this.foregroundPendingColumns.clear();
         } else {
             this.backgroundData = data;
             this.backgroundWidthTiles = widthTiles;
@@ -346,6 +361,93 @@ public class TilemapGpuRenderer {
         if (foregroundPendingSpanCount > MAX_FOREGROUND_ROW_SPANS) {
             mergeClosestForegroundPendingSpans();
         }
+    }
+
+    /**
+     * Republishes tile columns {@code firstColumn..firstColumn+columnCount-1} (every row)
+     * of the foreground array that is already resident. Any other array or geometry, or a
+     * pending full upload, takes the ordinary {@link #setTilemapData} path.
+     */
+    void setForegroundTilemapColumns(byte[] data, int widthTiles, int heightTiles,
+                                     int firstColumn, int columnCount) {
+        if (foregroundDirty || data != foregroundData || widthTiles != foregroundWidthTiles
+                || heightTiles != foregroundHeightTiles || columnCount <= 0
+                || firstColumn < 0 || firstColumn > widthTiles - columnCount) {
+            setTilemapData(Layer.FOREGROUND, data, widthTiles, heightTiles);
+            return;
+        }
+        foregroundPendingColumns.add(firstColumn, firstColumn + columnCount);
+    }
+
+    /**
+     * Registers the owner of the resident foreground array while parts of it are still
+     * undrawn, or clears it ({@code null}). Replacing the array clears it as well.
+     */
+    void setForegroundCoverage(byte[] data, ForegroundCoverage coverage) {
+        if (coverage == null) {
+            foregroundCoverage = null;
+        } else if (data == foregroundData) {
+            foregroundCoverage = coverage;
+        }
+    }
+
+    ForegroundCoverage foregroundCoverageForDiagnostics() { return foregroundCoverage; }
+
+    int foregroundPendingColumnCountForDiagnostics() { return foregroundPendingColumns.total(); }
+
+    /**
+     * Asks the coverage owner to draw what this foreground draw can sample: screen X
+     * {@code 0..windowWidth-1} shifted by the uniform world offset, or by each line's
+     * H-scroll word when per-line scroll is active (plus the at most 3px LZ shimmer).
+     * Per-line scroll whose words are not known here (a texture supplied by another
+     * owner) covers the whole image.
+     */
+    private void coverForegroundDraw(int windowWidth, float worldOffsetX) {
+        ForegroundCoverage coverage = foregroundCoverage;
+        byte[] data = foregroundData;
+        int first;
+        int last;
+        if (perLineScroll) {
+            if (!perLineForegroundRangeKnown) {
+                coverage.coverAll(data);
+                return;
+            }
+            first = -perLineForegroundMaxScroll;
+            last = -perLineForegroundMinScroll + windowWidth - 1;
+        } else {
+            first = (int) Math.floor(worldOffsetX);
+            last = first + windowWidth;
+        }
+        coverage.coverColumns(data, first - FOREGROUND_COVERAGE_SLACK_PX, last + FOREGROUND_COVERAGE_SLACK_PX);
+    }
+
+    /** Shimmer (3px) and fractional offsets, rounded up to a tile pair. */
+    private static final int FOREGROUND_COVERAGE_SLACK_PX = 16;
+
+    private void recordPerLineForegroundRange(IntIndexedView packedHScroll) {
+        int min = Integer.MAX_VALUE;
+        int max = Integer.MIN_VALUE;
+        for (int i = 0, n = packedHScroll.size(); i < n; i++) {
+            int word = (short) (packedHScroll.get(i) >>> 16);
+            min = Math.min(min, word);
+            max = Math.max(max, word);
+        }
+        perLineForegroundMinScroll = min;
+        perLineForegroundMaxScroll = max;
+        perLineForegroundRangeKnown = true;
+    }
+
+    private void recordPerLineForegroundRange(int[] packedHScroll) {
+        int min = Integer.MAX_VALUE;
+        int max = Integer.MIN_VALUE;
+        for (int packed : packedHScroll) {
+            int word = (short) (packed >>> 16);
+            min = Math.min(min, word);
+            max = Math.max(max, word);
+        }
+        perLineForegroundMinScroll = min;
+        perLineForegroundMaxScroll = max;
+        perLineForegroundRangeKnown = true;
     }
 
     private void removeForegroundPendingSpan(int index) {
@@ -476,6 +578,7 @@ public class TilemapGpuRenderer {
     public void enablePerLineScroll(int hScrollTextureId, float screenHeight,
             float vdpWrapWidth, float nametableBase, float sampleYOffsetPx) {
         this.perLineScroll = true;
+        this.perLineForegroundRangeKnown = false;
         this.perLineHScrollTextureId = hScrollTextureId;
         this.perLineScreenHeight = screenHeight;
         this.perLineVdpWrapWidth = vdpWrapWidth;
@@ -504,6 +607,7 @@ public class TilemapGpuRenderer {
         }
         foregroundLineScrollBuffer.upload(packedHScroll);
         enablePerLineScroll(foregroundLineScrollBuffer.getTextureId(), foregroundLineScrollBuffer.lineCount(), 0.0f, 0.0f, 0.0f);
+        if (foregroundCoverage != null) recordPerLineForegroundRange(packedHScroll);
     }
 
     public void enablePerLineForegroundScroll(IntIndexedView packedHScroll) {
@@ -513,6 +617,7 @@ public class TilemapGpuRenderer {
         }
         foregroundLineScrollBuffer.upload(packedHScroll);
         enablePerLineScroll(foregroundLineScrollBuffer.getTextureId(), foregroundLineScrollBuffer.lineCount(), 0.0f, 0.0f, 0.0f);
+        if (foregroundCoverage != null) recordPerLineForegroundRange(packedHScroll);
     }
 
     /**
@@ -670,10 +775,23 @@ public class TilemapGpuRenderer {
         }
 
         if (layer == Layer.FOREGROUND) {
+            if (foregroundCoverage != null) {
+                // Draws undrawn parts of the image this pass samples; queues their columns.
+                coverForegroundDraw(windowWidth, worldOffsetX);
+            }
             if (foregroundDirty) {
                 tilemapTexture.upload(tilemapData, tilemapWidthTiles, tilemapHeightTiles);
                 foregroundDirty = false;
             } else {
+                for (int i = 0; i < foregroundPendingColumns.count(); i++) {
+                    int first = foregroundPendingColumns.first(i);
+                    if (!tilemapTexture.uploadColumns(tilemapData, tilemapWidthTiles, tilemapHeightTiles,
+                            first, first, foregroundPendingColumns.end(i) - first)) {
+                        tilemapTexture.upload(tilemapData, tilemapWidthTiles, tilemapHeightTiles);
+                        foregroundPendingSpanCount = 0;
+                        break;
+                    }
+                }
                 for (int i = 0; i < foregroundPendingSpanCount; i++) {
                     int first = foregroundPendingSpanFirst[i];
                     if (!tilemapTexture.uploadRows(tilemapData, tilemapWidthTiles, tilemapHeightTiles,
@@ -685,6 +803,7 @@ public class TilemapGpuRenderer {
                 }
             }
             foregroundPendingSpanCount = 0;
+            foregroundPendingColumns.clear();
         } else if (backgroundDirty) {
             tilemapTexture.upload(tilemapData, tilemapWidthTiles, tilemapHeightTiles);
             backgroundDirty = false;
@@ -904,6 +1023,7 @@ public class TilemapGpuRenderer {
         foregroundWindow = null;
         foregroundVerticalScrollSplit = null;
         perLineScroll = false;
+        perLineForegroundRangeKnown = false;
         perLineScrollSampleYOffsetPx = 0.0f;
         upperBandWrapHeightPx = 0.0f;
         upperBandWrapWidthTiles = 0.0f;

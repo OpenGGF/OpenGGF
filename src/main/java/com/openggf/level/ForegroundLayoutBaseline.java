@@ -22,6 +22,13 @@ import java.util.BitSet;
  * <p>Tiles written straight into the image ({@code setForegroundTileDescriptorAtWorld})
  * do not come from the layout; their cells are recorded so the next redraw replaces
  * them, as a full rebuild would.
+ *
+ * <p>A streamed image ({@link #beginStream}) starts with no cell column drawn. Because
+ * this record holds every input of a full build, an undrawn column is later drawn from
+ * the record ({@link #cellBlock}, {@link #blockDescriptor}, {@link #chunkPattern}), not
+ * from the live level: a layout written without a redraw request between the load and
+ * the column's turn cannot reach the image, exactly as with a whole-level build at the
+ * load. A redraw request updates the record first, so the column then shows the edit.
  */
 final class ForegroundLayoutBaseline {
     /** Pattern-slot value recorded for a null chunk; real descriptors are 16-bit. */
@@ -45,6 +52,8 @@ final class ForegroundLayoutBaseline {
     private int[] chunkPatterns = new int[0];
 
     private final BitSet overwrittenCells = new BitSet();
+    // Cell columns of a streamed image not drawn yet; empty once complete.
+    private final BitSet undrawnColumns = new BitSet();
     private final BitSet changedChunks = new BitSet();
     private final BitSet changedBlocks = new BitSet();
     private int[] changedCells = new int[16];
@@ -55,6 +64,7 @@ final class ForegroundLayoutBaseline {
         image = null;
         level = null;
         overwrittenCells.clear();
+        undrawnColumns.clear();
     }
 
     /** Records the layout {@code image} (a full flat build of {@code level}) was drawn from. */
@@ -81,6 +91,8 @@ final class ForegroundLayoutBaseline {
         this.blockSlots = blockCount;
         this.chunkSlots = chunkCount;
         overwrittenCells.clear();
+        // A capture describes a complete image; beginStream() marks it undrawn.
+        undrawnColumns.clear();
 
         if (cells.length != wide * high) cells = new byte[wide * high];
         for (int cy = 0; cy < high; cy++) {
@@ -205,6 +217,137 @@ final class ForegroundLayoutBaseline {
         }
         overwrittenCells.clear();
         return changedCellCount;
+    }
+
+    /**
+     * Marks every cell column of the just-captured image undrawn; the image bytes are
+     * then filled column by column from this record.
+     */
+    void beginStream() {
+        if (image == null) {
+            return;
+        }
+        undrawnColumns.set(0, cellsWide);
+    }
+
+    /** True while some cell column of the recorded image has not been drawn yet. */
+    boolean streaming() {
+        return image != null && !undrawnColumns.isEmpty();
+    }
+
+    boolean columnDrawn(int cellX) {
+        return !undrawnColumns.get(cellX);
+    }
+
+    void markColumnDrawn(int cellX) {
+        undrawnColumns.clear(cellX);
+    }
+
+    int undrawnColumnCount() {
+        return undrawnColumns.cardinality();
+    }
+
+    /**
+     * The undrawn cell column nearest {@code focusCellX} (ties go right), or -1 when
+     * every column is drawn.
+     */
+    int nearestUndrawnColumn(int focusCellX) {
+        int focus = Math.max(0, Math.min(cellsWide - 1, focusCellX));
+        int right = undrawnColumns.nextSetBit(focus);
+        int left = focus == 0 ? -1 : undrawnColumns.previousSetBit(focus - 1);
+        if (right < 0) {
+            return left;
+        }
+        if (left < 0) {
+            return right;
+        }
+        return right - focus <= focus - left ? right : left;
+    }
+
+    int cellsWide() {
+        return cellsWide;
+    }
+
+    int cellsHigh() {
+        return cellsHigh;
+    }
+
+    int widthPx() {
+        return widthPx;
+    }
+
+    int heightPx() {
+        return heightPx;
+    }
+
+    /** The recorded block index (0-255) placed at cell ({@code cellX}, {@code cellY}). */
+    int cellBlock(int cellX, int cellY) {
+        return cells[cellY * cellsWide + cellX] & 0xFF;
+    }
+
+    /**
+     * The recorded chunk descriptor ({@code chunkIndex << 2 | vFlip << 1 | hFlip}) in
+     * slot {@code (slotX, slotY)} of {@code block}, or {@link #NULL_BLOCK} when the block
+     * was absent (beyond the table or null): such a block draws empty chunks.
+     */
+    int blockDescriptor(int block, int slotX, int slotY) {
+        if (block >= blockSlots) {
+            return NULL_BLOCK;
+        }
+        return blockDescriptors[block * gridSide * gridSide + slotY * gridSide + slotX];
+    }
+
+    /**
+     * The recorded pattern descriptor of {@code chunk} at ({@code x}, {@code y}), or a
+     * negative value when the chunk was absent (beyond the table or null): such a
+     * chunk draws empty tiles.
+     */
+    int chunkPattern(int chunk, int x, int y) {
+        if (chunk < 0 || chunk >= chunkSlots) {
+            return NULL_CHUNK;
+        }
+        return chunkPatterns[chunk * Chunk.PATTERNS_PER_CHUNK + y * 2 + x];
+    }
+
+    static boolean isNullBlockDescriptor(int descriptor) {
+        return descriptor == NULL_BLOCK;
+    }
+
+    /**
+     * Records that the image now belongs to {@code level}, which replaced the recorded
+     * level with the same geometry (a reload of the same act). The recorded inputs are
+     * kept, so the next {@link #collectChangedCells} finds exactly the cells where the
+     * new level's layout differs from what the image shows.
+     */
+    void rebind(Level level) {
+        if (image != null) {
+            this.level = level;
+        }
+    }
+
+    /** Moves {@code other}'s record (and its image reference) here, leaving {@code other} empty. */
+    void takeFrom(ForegroundLayoutBaseline other) {
+        image = other.image;
+        level = other.level;
+        widthPx = other.widthPx;
+        heightPx = other.heightPx;
+        blockPixelSize = other.blockPixelSize;
+        gridSide = other.gridSide;
+        cellsWide = other.cellsWide;
+        cellsHigh = other.cellsHigh;
+        blockSlots = other.blockSlots;
+        chunkSlots = other.chunkSlots;
+        cells = other.cells;
+        blockDescriptors = other.blockDescriptors;
+        chunkPatterns = other.chunkPatterns;
+        overwrittenCells.clear();
+        overwrittenCells.or(other.overwrittenCells);
+        undrawnColumns.clear();
+        undrawnColumns.or(other.undrawnColumns);
+        other.cells = new byte[0];
+        other.blockDescriptors = new int[0];
+        other.chunkPatterns = new int[0];
+        other.invalidate();
     }
 
     /** Packed {@code (cellY << 16) | cellX} of the {@code i}th changed cell. */

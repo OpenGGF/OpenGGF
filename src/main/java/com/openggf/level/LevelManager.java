@@ -805,6 +805,12 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         if (prepared == null || tilemapManager == null) {
             return;
         }
+        // With a GPU renderer the first draw streams the foreground (the camera's columns
+        // first, the rest over later frames) and builds the background, so a whole-level
+        // build of both here would only move that cost onto the install frame.
+        if (tilemapManager.streamsForegroundBuild()) {
+            return;
+        }
         // Wrapping policy belongs to the installed target and its live zone state.
         // Build on the frame thread, after installation; ROM decoding remains async.
         PrebuiltTilemaps tilemaps = LevelTilemapPrebuilder.build(
@@ -915,7 +921,11 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                 level, blockPixelSize, overlayManager, graphicsManager,
                 cachedScreenWidth, cachedScreenHeight));
         cacheLevelDimensions();
+        LevelTilemapManager previous = tilemapManager;
         tilemapManager = new LevelTilemapManager(buildGeometry(), graphicsManager, gameState);
+        // A reload of the same geometry (death respawn, restart) keeps the drawn foreground
+        // and redraws only the cells the new layout changes.
+        tilemapManager.adoptForegroundImage(previous);
     }
 
     /** Re-reads the picture size after the aspect changes mid-level; see {@link LevelDisplayWidth}. */
@@ -2245,8 +2255,14 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
 
     void ensureForegroundTilemapData() {
         if (tilemapManager != null) {
+            if (camera != null) {
+                tilemapManager.setForegroundStreamFocus(camera.getX(), cachedScreenWidth);
+            }
             tilemapManager.ensureForegroundTilemapData(this::getBlockAtPosition,
                     zoneFeatureProvider, currentZone, parallaxManager, verticalWrapEnabled);
+            // The render-side ensure draws one slice of a streamed foreground; gameplay
+            // readers of single tiles go to the tilemap manager and never advance it.
+            tilemapManager.advanceForegroundStream();
         }
     }
 
