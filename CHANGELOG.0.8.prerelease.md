@@ -487,6 +487,17 @@ under the matching area heading; see the
   a stack walk. The Lava Reef 1 allocation profile put about 30% of the game's
   per-frame allocation in these walks; this is not a frame-rate claim.
 
+- **Sonic 3&K level load and respawn cost:** every Sonic 3&K level load, including
+  each death respawn, read the spring mapping tables using a frame count taken
+  from their first offset word. That word points past the neighbouring table,
+  so each load decoded about 646,000 meaningless sprite pieces that no spring
+  ever drew. The spring entries now read their own 11 frames; the frames that
+  are drawn are unchanged. Player sprite renderers also digest their art one
+  tile at a time instead of one pixel at a time, with the same result. In a
+  headless Lava Reef 1 measurement a respawn now allocates 8.8 MB instead of
+  65.6 MB and takes about 10-15 ms instead of 21-28 ms once warm; the first load
+  allocates about 103 MB instead of 160 MB.
+
 - **Sprite presentation performance:** the native SAT post-pass evaluates each
   scanline from primitive per-entry arrays and only over lines that sprites cover.
   SAT ingress, mask clipping, sprite preparation, native tile drawing and the
