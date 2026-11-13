@@ -103,6 +103,8 @@ public class GraphicsManager {
     SpriteSatEntry.PixelOperation currentSpritePixelOperation = SpriteSatEntry.PixelOperation.NORMAL;
     Shadow15Backdrop currentShadow15Backdrop;
     private NativeSpriteOwnership nativeSpriteOwnership;
+    /** Native SAT scratch stencil/backup images; created once per GL context, deleted by cleanup. */
+    private NativeSpriteScratch nativeSpriteScratch = new NativeSpriteScratch();
 	private final List<SpriteSatEntry> spriteSatEntries = new ArrayList<>();
 	// Reusable buffers/scratch for endSpriteSatCollectionAndReplay() — avoids per-frame
 	// ArrayList and PatternDesc allocations on the SAT replay hot path.
@@ -423,6 +425,8 @@ public class GraphicsManager {
 			return;
 		}
 		this.glInitialized = true;
+		// Names from any earlier context are meaningless on this one.
+		this.nativeSpriteScratch = new NativeSpriteScratch();
 		this.patternAtlas = new PatternAtlas(ATLAS_WIDTH, ATLAS_HEIGHT, profiler);
 		this.patternAtlas.init();
 		this.defaultShaderProgram = new ShaderProgram(BASIC_VERTEX_SHADER_PATH, pixelShaderPath); // Load default shader
@@ -1492,6 +1496,7 @@ public class GraphicsManager {
 		discardCommands(commands, 0);
 		commands.clear();
 		if (headlessMode || !glInitialized) {
+			nativeSpriteScratch.forget();
 			// In headless mode, just clear the tracking maps
 			if (patternAtlas != null) {
 				patternAtlas.cleanupHeadless();
@@ -1539,6 +1544,7 @@ public class GraphicsManager {
 		if (tilePriorityFBO != null) {
 			tilePriorityFBO.cleanup();
 		}
+		nativeSpriteScratch.delete();
 		// Reset fade manager
 		if (fadeManager != null) {
             fadeManager.bindPaletteGraphics(null);
@@ -1745,6 +1751,7 @@ public class GraphicsManager {
 	}
 
     boolean nativeSpriteOwnershipActive() { return nativeSpriteOwnership != null; }
+    NativeSpriteScratch nativeSpriteScratch() { return nativeSpriteScratch; }
 
     SpritePriorityShaderProgram nativeShadowShader() {
         if (nativeShadowShaderProgram == null) throw new IllegalStateException("Native shadow shader unavailable");
