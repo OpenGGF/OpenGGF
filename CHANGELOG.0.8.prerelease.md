@@ -17,6 +17,19 @@ under the matching area heading; see the
   upload only those tiles, joining neighbours in a row (about 0.02 ms there). The tilemap shader also no longer looks up its uniform
   locations on every draw. Pixels are unchanged.
 
+- **Art upload stutters:** changing level art, animated tiles or a tilemap no
+  longer makes the frame wait for the graphics driver. Uploading straight from
+  memory made the engine wait until the driver had worked through everything
+  queued before it. On an integrated GPU that also draws the desktop, one small
+  update could take 100-700 ms: the Angel Island 1 intro, Hydrocity, Flying
+  Battery, and about 230 ms at the Marble Garden act change. The art now goes
+  through a pixel buffer that the GPU copies from, so the frame carries on. Over
+  twelve runs per side on the integrated GPU, uploads slower than 16.7 ms after
+  the level had loaded went from seven (worst 701 ms) to none (worst 8 ms); the
+  discrete GPU was already below 12 ms. Waits while a level loads remain. Each
+  art upload also stopped allocating a version record and a boxed tile number,
+  about 16% of Angel Island's per-frame allocation. Pixels are unchanged.
+
 - **Blue Spheres:** new under **Extras** when the Sonic 3&K and Sonic 1 ROMs
   are both present. It is the game Sonic & Knuckles starts with Sonic 1 locked
   on, rebuilt from the S&K ROM: the title and menu, endless generated stages,
