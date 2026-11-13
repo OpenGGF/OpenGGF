@@ -47,6 +47,8 @@ class TestRingDrawEmission {
         assertEquals(List.of(40, 60), rings.attractedRenderEntries().stream().map(e -> e.slot()).toList());
         assertEquals(List.of(40), RingDrawInternalAccess.slottedAttracted(rings, 1).stream().map(e -> e.slot()).toList());
         assertEquals(List.of(60), RingDrawInternalAccess.slottedAttracted(rings, 2).stream().map(e -> e.slot()).toList());
+        assertTrue(rings.reservesNativeSlot(40) && rings.reservesNativeSlot(60));
+        assertFalse(rings.reservesNativeSlot(50), "an empty slot without a reserved ring needs no owner lookup");
         var pass = RingDrawInternalAccess.attractedPass(rings);
         assertEquals(List.of(40), pass.slotted(1).stream().map(e -> e.slot()).toList());
         assertEquals(List.of(60), pass.slotted(2).stream().map(e -> e.slot()).toList());

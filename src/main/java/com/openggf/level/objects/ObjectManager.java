@@ -164,7 +164,10 @@ public class ObjectManager {
 
     private void dispatchExternalSpriteSlot(int cameraX, PlayableEntity player) {
         int slot = slotIndexForExec(currentExecSlot);
-        if (nativeSpriteExternalSlotDispatch != null && currentNativeSstOwner(slot) == null) {
+        // The owner lookup scans every object, so ask the dispatcher first: an empty
+        // execution slot with no reserved occupant (no attracted ring) needs neither.
+        if (nativeSpriteExternalSlotDispatch != null && nativeSpriteExternalSlotDispatch.mayDispatch(slot)
+                && currentNativeSstOwner(slot) == null) {
             nativeSpriteExternalSlotDispatch.dispatch(slot, player, vblaCounter, cameraX);
         }
     }
