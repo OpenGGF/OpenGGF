@@ -493,6 +493,12 @@ Use the internal `EngineCallerAccess` inspection bridge for new admission gates;
 its immutable JDK walker comes from the `EngineContext` bootstrap factory, without
 locating a live gameplay session. Keep lower-level consumers on the utility bridge
 and inspect a module-lineage provider's actual defining loader before calling it.
+Each inspection walks and allocates stack frames, so a per-tile or per-bucket
+gate on the draw path is a measurable garbage source. Hot engine loops take
+a checked handle once per batch (`PresentationGraphicsAccess.batch`,
+`ObjectDrawInternalAccess.bucketPass`, `RingDrawInternalAccess.attractedPass`)
+and keep it in locals or engine-private fields; never cache a verdict keyed
+on a reported caller.
 Origin: [October 7 mod framework readiness](plans/2026-10-07-mod-framework-product-readiness.md).
 
 **Returned concrete values can contain deferred creator callbacks.** An owned

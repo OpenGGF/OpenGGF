@@ -468,6 +468,13 @@ under the matching area heading; see the
   run loop. A JVM pays about three times the old per-frame cost for its first
   second of FM sound while that compile runs.
 
+- **Draw-path caller checks:** engine renderers now pass the engine-caller
+  stack check once per picture or sprite-table pass, not once per frozen
+  pattern, tile or bucket. Calls from mod-loaded classes, including method
+  references, are still refused. Physics reads the local-fluid flag without
+  a stack walk. The Lava Reef 1 allocation profile put about 30% of the game's
+  per-frame allocation in these walks; this is not a frame-rate claim.
+
 - **Engine quality and contributions:** the README and contributor entry point now
   acknowledge maintainability weaknesses and invite focused improvements to object
   lifetime, collision contact, rewind reconstruction, trace diagnosis and navigation.

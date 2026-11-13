@@ -30,5 +30,17 @@ public final class RingDrawInternalAccess {
             RingManager manager, int bucket) {
         engineCaller(); return manager.legacyAttractedRenderEntries().stream().filter(e -> e.bucket() == bucket).toList();
     }
+    /** One caller check for a whole sprite-table pass instead of one stack walk per bucket. */
+    public static AttractedPass attractedPass(RingManager manager) {
+        engineCaller(); return new AttractedPass(java.util.Objects.requireNonNull(manager));
+    }
+    /** Admitted engine pass; hold it only in the renderer's locals. */
+    public static final class AttractedPass {
+        private final RingManager manager;
+        private AttractedPass(RingManager manager) { this.manager = manager; }
+        public java.util.List<com.openggf.level.render.SpriteSlotEmission> slotted(int bucket) {
+            return manager.legacyAttractedRenderEntries().stream().filter(e -> e.bucket() == bucket).toList();
+        }
+    }
 
 }

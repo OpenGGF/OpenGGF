@@ -210,12 +210,14 @@ public final class SpritePresentationRenderer {
         boolean ghostColour = graphics.isGhostRenderColourPreserved();
         float alpha = graphics.getGhostRenderAlpha();
         PatternDesc desc = new PatternDesc();
+        // One engine-caller check per picture, not one stack walk per frozen pattern or tile.
+        var presentation = com.openggf.graphics.PresentationGraphicsAccess.batch(graphics);
         graphics.beginPatternAtlasBatch();
         try {
             for (var entry : frame.patternVersions().entrySet())
-                com.openggf.graphics.PresentationGraphicsAccess.restoreFrozenPattern(graphics, entry.getValue(), entry.getKey());
+                presentation.restoreFrozenPattern(entry.getValue(), entry.getKey());
         } finally { graphics.endPatternAtlasBatch(); }
-        var viewport = com.openggf.graphics.PresentationGraphicsAccess.viewport(graphics);
+        var viewport = presentation.viewport();
         var cameraMotion = com.openggf.graphics.SpriteMotionInternalAccess.cameraOffset(graphics);
         Tile previous = null;
         boolean previousPictureGeometry = false;
@@ -274,7 +276,7 @@ public final class SpritePresentationRenderer {
                 if (previous == null || previousPictureGeometry != pictureGeometry || previous.priorityShader() != tile.priorityShader()
                         || previous.pixelOperation() != tile.pixelOperation()
                         || ((previous.priority() ? 0 : previous.occlusionMask()) != tileMask
-                            && !com.openggf.graphics.PresentationGraphicsAccess.maskIsPerInstance(graphics))
+                            && !presentation.maskIsPerInstance())
                         || previous.ghost() != tile.ghost() || previous.ghostAlpha() != tile.ghostAlpha()
                         || previous.ghostColour() != tile.ghostColour()) {
                     graphics.flushPatternBatch();
@@ -300,9 +302,9 @@ public final class SpritePresentationRenderer {
                     com.openggf.graphics.SpriteSatInternalAccess.renderShadowTile(graphics, tile, cameraX, cameraY,
                             quad, opacity);
                 } else if(pictureGeometry) {
-                    com.openggf.graphics.PresentationGraphicsAccess.render(graphics, tile.patternId(), tile.palette(),
+                    presentation.render(tile.patternId(), tile.palette(),
                             tile.hFlip(), tile.vFlip(), tile.priority(), tile.rowStart(), tile.rowEnd(),
-                            quad,transform.hue(),opacity);
+                            quad,transform.hue(),opacity,0);
                 } else if (tile.rowClipped()) {
                     SpritePresentation.renderTileRows(graphics, tile, desc, (int) x, (int) y);
                 } else if (tile.width() == 8 && tile.height() == 8 && x == (int) x && y == (int) y) {

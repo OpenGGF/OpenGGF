@@ -85,6 +85,9 @@ class TestObjectDrawSlotEmissions {
         observed.clear();
         ObjectDrawInternalAccess.drawBucket(manager, 2, graphics, List.of());
         assertEquals(List.of(30, 70, 40, 70), observed);
+        observed.clear();
+        ObjectDrawInternalAccess.bucketPass(manager, graphics).draw(2, List.of());
+        assertEquals(List.of(30, 70, 40, 70), observed, "an admitted pass draws exactly like the checked bridge");
         assertEquals(ledger, NativeSpriteSubmissionAccess.admissions(manager));
     }
 

@@ -205,6 +205,8 @@ public final class HomingAttackEffects {
         if (graphics == null || (flame.isEmpty() && shards.isEmpty() && embers.isEmpty())) return;
         int base = bankBase(graphics);
         int next = 0;
+        // One engine-caller check for every restore and quad below.
+        var presentation = PresentationGraphicsAccess.batch(graphics);
         graphics.flushPatternBatch();
         // Embers stream behind the live sprites, so they wrap the leader instead of speckling him.
         for (var ember : embers) {
@@ -225,9 +227,9 @@ public final class HomingAttackEffects {
                 if (id == null) {
                     id = base + next++;
                     ids.put(tile.patternId(), id);
-                    PresentationGraphicsAccess.restoreFrozenPattern(graphics, pose.versions().get(tile.patternId()), id);
+                    presentation.restoreFrozenPattern(pose.versions().get(tile.patternId()), id);
                 }
-                render(graphics, id, tile, quad(tile, tile.x() + pose.cameraX(), tile.y() + pose.cameraY(), 0),
+                render(presentation, id, tile, quad(tile, tile.x() + pose.cameraX(), tile.y() + pose.cameraY(), 0),
                         pose.hue(), opacity, pose.tint());
             }
         }
@@ -241,12 +243,12 @@ public final class HomingAttackEffects {
             int id = piece.tile().patternId();
             if (piece.version() != null) {
                 id = base + next++;
-                PresentationGraphicsAccess.restoreFrozenPattern(graphics, piece.version(), id);
+                presentation.restoreFrozenPattern(piece.version(), id);
             }
             int left = HomingAttackRuntime.SHARD_TICKS - shard.age();
             float opacity = left >= 12 ? 1f : left / 12f;
             float spin = ((shard.index() % 5) - 2 + 0.5f) * 0.18f;
-            render(graphics, id, piece.tile(), quad(piece.tile(), shard.x() / 256f - piece.tile().width() / 2,
+            render(presentation, id, piece.tile(), quad(piece.tile(), shard.x() / 256f - piece.tile().width() / 2,
                     shard.y() / 256f - piece.tile().height() / 2, spin * shard.age()), 0, opacity, 0);
         }
         for (var shard : sparks) {
@@ -341,9 +343,9 @@ public final class HomingAttackEffects {
         graphics.registerCommand(GLCommand.screenSpaceRect(graphics, LOGICAL_HEIGHT, x, y, width, height, argb));
     }
 
-    private static void render(GraphicsManager graphics, int id, SpritePresentation.Tile tile, float[] quad,
-                               float hue, float opacity, int tint) {
-        PresentationGraphicsAccess.render(graphics, id, tile.palette(), tile.hFlip(), tile.vFlip(), tile.priority(),
+    private static void render(PresentationGraphicsAccess.Batch presentation, int id, SpritePresentation.Tile tile,
+                               float[] quad, float hue, float opacity, int tint) {
+        presentation.render(id, tile.palette(), tile.hFlip(), tile.vFlip(), tile.priority(),
                 tile.rowStart(), tile.rowEnd(), quad, hue, opacity, tint);
     }
 

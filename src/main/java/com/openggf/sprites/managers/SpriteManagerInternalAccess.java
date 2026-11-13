@@ -124,6 +124,16 @@ public final class SpriteManagerInternalAccess {
         return sprite.getMovementManager() instanceof PlayableSpriteMovement movement ? movement.motionMutators : null;
     }
 
+    /**
+     * Whether a bound motion mutator holds this sprite in local fluid. Unchecked on purpose: it publishes
+     * only the boolean that {@code PlayerFluidContextAccess} already answers to every caller, never the
+     * runtime, and physics asks it several times per frame.
+     */
+    public static boolean motionFluidActive(com.openggf.sprites.playable.AbstractPlayableSprite sprite) {
+        var motion = sprite.getMovementManager() instanceof PlayableSpriteMovement movement ? movement.motionMutators : null;
+        return motion != null && motion.movementFluidActive(sprite);
+    }
+
     public static void prepareMotionInputForNativeTick(SpriteManager manager) {
         requireEngineCaller();
         manager.prepareMotionInputForNativeTick();

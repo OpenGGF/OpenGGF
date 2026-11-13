@@ -2152,6 +2152,11 @@ public final class LevelRenderer {
                 com.openggf.level.rings.RingDrawInternalAccess.drawPlaced(ringManager, lm.frameCounter,
                         lm.camera.getYWithShake(), lm.camera.screenYWrapValue());
             }
+            // One engine-caller check per pass, not one stack walk per bucket.
+            var objectPass = objectManager == null ? null
+                    : com.openggf.level.objects.ObjectDrawInternalAccess.bucketPass(objectManager, graphicsManager);
+            var attractedRings = objectPass == null || ringManager == null ? null
+                    : com.openggf.level.rings.RingDrawInternalAccess.attractedPass(ringManager);
             // SAT collection must follow sprite-table order, not painter order.
             // Draw_Sprite inserts into Sprite_table_input by ascending priority bucket,
             // and lower sprite slots end up in front later during rasterization.
@@ -2164,11 +2169,9 @@ public final class LevelRenderer {
                     // them like the players they stand for but never arms on them.
                     spriteManager.drawPreparedUnifiedBucketWithPriority(bucket, graphicsManager, ghostLayerHook);
                 }
-                if (objectManager != null) {
+                if (objectPass != null) {
                     SpritePresentation.layer(graphicsManager, SpritePresentation.Layer.OBJECT);
-                    com.openggf.level.objects.ObjectDrawInternalAccess.drawBucket(objectManager, bucket, graphicsManager,
-                            ringManager == null ? java.util.List.of()
-                                    : com.openggf.level.rings.RingDrawInternalAccess.slottedAttracted(ringManager, bucket));
+                    objectPass.draw(bucket, attractedRings == null ? java.util.List.of() : attractedRings.slotted(bucket));
                 }
                 if (!(lm.gameModule instanceof com.openggf.game.internal.SpriteTableBuildProfile))
                     drawStageRingsForBucket(ringManager, graphicsManager, bucket, true);

@@ -43,6 +43,63 @@ class TestPresentationGraphicsAccess {
             assertThrows(SecurityException.class,()->hidden.apply(new GraphicsManager(),new Object()));
         }
     }
+    @Test void foreignDirectAndHiddenCallersCannotOpenBatchOrPassHandles() throws Exception {
+        var source=temp.resolve("BatchProbe.java");Files.writeString(source,"""
+            package foreign;
+            import com.openggf.graphics.*;
+            import com.openggf.level.objects.*;
+            import com.openggf.level.rings.*;
+            import java.util.function.*;
+            public class BatchProbe {
+                public static Object batch(GraphicsManager g){return PresentationGraphicsAccess.batch(g);}
+                public static Function<GraphicsManager,Object> hiddenBatch(){return PresentationGraphicsAccess::batch;}
+                public static Object objects(ObjectManager m,GraphicsManager g){return ObjectDrawInternalAccess.bucketPass(m,g);}
+                public static BiFunction<ObjectManager,GraphicsManager,Object> hiddenObjects(){return ObjectDrawInternalAccess::bucketPass;}
+                public static Object rings(RingManager m){return RingDrawInternalAccess.attractedPass(m);}
+                public static Function<RingManager,Object> hiddenRings(){return RingDrawInternalAccess::attractedPass;}
+            }
+            """);
+        assertEquals(0,ToolProvider.getSystemJavaCompiler().run(null,null,null,"--release","25","-classpath",System.getProperty("java.class.path"),"-d",temp.toString(),source.toString()));
+        try(var loader=new URLClassLoader(new java.net.URL[]{temp.toUri().toURL()},getClass().getClassLoader())) {
+            var probe=Class.forName("foreign.BatchProbe",true,loader);
+            var graphics=new GraphicsManager();
+            for(var direct:new Object[][]{{"batch",new Class<?>[]{GraphicsManager.class},new Object[]{graphics}},
+                    {"objects",new Class<?>[]{com.openggf.level.objects.ObjectManager.class,GraphicsManager.class},new Object[]{null,graphics}},
+                    {"rings",new Class<?>[]{com.openggf.level.rings.RingManager.class},new Object[]{null}}}) {
+                var denied=assertThrows(InvocationTargetException.class,
+                        ()->probe.getMethod((String)direct[0],(Class<?>[])direct[1]).invoke(null,(Object[])direct[2]));
+                assertInstanceOf(SecurityException.class,denied.getCause(),(String)direct[0]);
+            }
+            @SuppressWarnings("unchecked")var batch=(java.util.function.Function<GraphicsManager,Object>)probe.getMethod("hiddenBatch").invoke(null);
+            assertThrows(SecurityException.class,()->batch.apply(graphics));
+            @SuppressWarnings("unchecked")var objects=(java.util.function.BiFunction<com.openggf.level.objects.ObjectManager,GraphicsManager,Object>)probe.getMethod("hiddenObjects").invoke(null);
+            assertThrows(SecurityException.class,()->objects.apply(null,graphics));
+            @SuppressWarnings("unchecked")var rings=(java.util.function.Function<com.openggf.level.rings.RingManager,Object>)probe.getMethod("hiddenRings").invoke(null);
+            assertThrows(SecurityException.class,()->rings.apply(null));
+        }
+    }
+    @Test void anAdmittedBatchAnswersLikeTheCheckedBridgeWithoutAllocatingPerCall() {
+        var graphics=new GraphicsManager();graphics.initHeadless();
+        try {
+            var batch=PresentationGraphicsAccess.batch(graphics);
+            assertTrue(batch.boundTo(graphics));
+            assertFalse(batch.boundTo(new GraphicsManager()));
+            assertEquals(PresentationGraphicsAccess.maskIsPerInstance(graphics),batch.maskIsPerInstance());
+            assertEquals(PresentationGraphicsAccess.viewport(graphics),batch.viewport());
+            var threads=(com.sun.management.ThreadMXBean)java.lang.management.ManagementFactory.getThreadMXBean();
+            long thread=Thread.currentThread().threadId();
+            int calls=2000;
+            long start=threads.getThreadAllocatedBytes(thread);
+            for(int i=0;i<calls;i++) batch.maskIsPerInstance();
+            long batched=threads.getThreadAllocatedBytes(thread)-start;
+            start=threads.getThreadAllocatedBytes(thread);
+            for(int i=0;i<calls;i++) PresentationGraphicsAccess.maskIsPerInstance(graphics);
+            long checked=threads.getThreadAllocatedBytes(thread)-start;
+            // The checked bridge walks the stack each call; the measurement must be able to tell them apart.
+            assertTrue(checked>=(long)calls*64,"checked bridge allocated "+checked+" bytes for "+calls+" calls");
+            assertTrue(batched<calls,"admitted batch allocated "+batched+" bytes for "+calls+" calls");
+        } finally { graphics.cleanup(); }
+    }
     @Test void simultaneousWorldOwnersReserveDistinctNumericRangesAndReleaseOnlyTheirPixels() {
         var graphics=new GraphicsManager();graphics.initHeadless();
         Object firstOwner=new Object(),secondOwner=new Object();
