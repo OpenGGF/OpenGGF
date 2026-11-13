@@ -480,6 +480,13 @@ under the matching area heading; see the
   run loop. A JVM pays about three times the old per-frame cost for its first
   second of FM sound while that compile runs.
 
+- **Draw-path caller checks:** engine renderers now pass the engine-caller
+  stack check once per picture or sprite-table pass, not once per frozen
+  pattern, tile or bucket. Calls from mod-loaded classes, including method
+  references, are still refused. Physics reads the local-fluid flag without
+  a stack walk. The Lava Reef 1 allocation profile put about 30% of the game's
+  per-frame allocation in these walks; this is not a frame-rate claim.
+
 - **Sprite presentation performance:** the native SAT post-pass evaluates each
   scanline from primitive per-entry arrays and only over lines that sprites cover.
   SAT ingress, mask clipping, sprite preparation, native tile drawing and the

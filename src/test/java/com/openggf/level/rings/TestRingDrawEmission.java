@@ -47,6 +47,9 @@ class TestRingDrawEmission {
         assertEquals(List.of(40, 60), rings.attractedRenderEntries().stream().map(e -> e.slot()).toList());
         assertEquals(List.of(40), RingDrawInternalAccess.slottedAttracted(rings, 1).stream().map(e -> e.slot()).toList());
         assertEquals(List.of(60), RingDrawInternalAccess.slottedAttracted(rings, 2).stream().map(e -> e.slot()).toList());
+        var pass = RingDrawInternalAccess.attractedPass(rings);
+        assertEquals(List.of(40), pass.slotted(1).stream().map(e -> e.slot()).toList());
+        assertEquals(List.of(60), pass.slotted(2).stream().map(e -> e.slot()).toList());
         var attractedFrame = prepare(() -> RingDrawInternalAccess.drawAttracted(rings, 0));
         assertEquals(List.of(160f, 120f), attractedFrame.tiles().stream().map(SpritePresentation.Tile::x).toList(),
                 "prepared painter list reverses native reserved-slot emission");
