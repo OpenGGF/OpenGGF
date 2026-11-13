@@ -19,6 +19,12 @@ public final class TilemapGpuRendererInternalAccess {
         renderer.setForegroundVerticalScrollSplit(split);
     }
 
+    /** Republishes a row span of the resident foreground tilemap array. */
+    public static void setForegroundTilemapRows(TilemapGpuRenderer renderer, byte[] data,
+            int widthTiles, int heightTiles, int firstRow, int rowCount) {
+        renderer.setForegroundTilemapRows(data, widthTiles, heightTiles, firstRow, rowCount);
+    }
+
     public static void setClipHorizontal(TilemapGpuRenderer renderer, boolean clip) {
         renderer.setClipHorizontal(clip);
     }

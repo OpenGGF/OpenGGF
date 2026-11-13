@@ -10,10 +10,11 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Verifies the dirty-rect pattern atlas upload path: small batch changes upload
- * individual tiles under one bind, larger changes upload the dirty bounding
- * rectangle, and the bytes pushed through the upload sink stay proportional to
- * the actual change instead of the full 1 MB page.
+ * Verifies the dirty-rect pattern atlas upload path: batch changes up to the
+ * exact-tracking limit upload horizontal runs of dirty tiles under one bind,
+ * larger changes upload the dirty bounding rectangle, and the bytes pushed
+ * through the upload sink stay proportional to the actual change instead of
+ * the full 1 MB page.
  *
  * Runs headless: the package-private {@link PatternAtlas.AtlasUploadSink} seam
  * replaces the GL calls with a recording sink.
@@ -136,7 +137,8 @@ public class TestPatternAtlasDirtyUploads {
         f.writePattern(2);
         f.atlas().endBatch();
         assertEquals(1, f.sink().begins);
-        assertEquals(3, f.sink().uploads.size());
+        assertEquals(1, f.sink().uploads.size(), "slots 0..2 are adjacent: one run");
+        assertEquals(3L * TILE_BYTES, f.sink().bytesUploaded);
         for (var upload : f.sink().uploads) assertUploadMatchesExpected(f.expectedPage(), f.pageWidth(), upload);
         f.atlas().endBatch();
         assertEquals(1, f.sink().ends, "a redundant end remains harmless");
@@ -195,47 +197,123 @@ public class TestPatternAtlasDirtyUploads {
 
     @Test
     public void overflowFallsBackToDirtyBoundingRect() {
-        // 128x128 page = 16x16 tiles, 256 slots. 65 distinct dirty slots overflows
-        // the 64-entry exact tracker -> single bounding-rect upload.
-        Fixture f = newFixture(128, 65);
+        // 256x256 page = 32x32 tiles, 1024 slots. LIMIT+1 distinct dirty slots
+        // overflows the exact tracker -> single bounding-rect upload.
+        int limit = PatternAtlas.DIRTY_SLOT_TRACK_LIMIT;
+        Fixture f = newFixture(256, limit + 1);
 
         f.atlas().beginBatch();
-        for (int i = 0; i < 65; i++) {
+        for (int i = 0; i <= limit; i++) {
             f.writePattern(i);
         }
         f.atlas().endBatch();
 
         assertEquals(1, f.sink().uploads.size(), "overflow must collapse to one rect upload");
         RecordingSink.Upload u = f.sink().uploads.get(0);
-        // Slots 0..64 fill tile rows 0..3 fully plus (0,4): union = cols 0..15, rows 0..4.
+        int fullRows = (limit + 1) / 32;
+        int rows = fullRows + ((limit + 1) % 32 == 0 ? 0 : 1);
         assertEquals(0, u.x());
         assertEquals(0, u.y());
-        assertEquals(128, u.width());
-        assertEquals(5 * TILE, u.height());
-        assertEquals(128, u.srcStride(), "rect path reads the page mirror at page stride");
-        assertEquals(128L * 5 * TILE, f.sink().bytesUploaded);
+        assertEquals(256, u.width());
+        assertEquals(rows * TILE, u.height());
+        assertEquals(256, u.srcStride(), "rect path reads the page mirror at page stride");
+        assertEquals(256L * rows * TILE, f.sink().bytesUploaded);
         assertUploadMatchesExpected(f.expectedPage(), f.pageWidth(), u);
     }
 
     @Test
     public void boundsKeepUpdatingAfterSlotListOverflow() {
-        Fixture f = newFixture(128, 256);
+        int limit = PatternAtlas.DIRTY_SLOT_TRACK_LIMIT;
+        Fixture f = newFixture(256, 1024);
 
         f.atlas().beginBatch();
-        for (int i = 0; i < 65; i++) {
+        for (int i = 0; i <= limit; i++) {
             f.writePattern(i); // overflow the exact tracker
         }
-        f.writePattern(200);   // tile (8, 12) — must still widen the bounds
+        f.writePattern(1000);  // tile (8, 31) — must still widen the bounds
         f.atlas().endBatch();
 
         assertEquals(1, f.sink().uploads.size());
         RecordingSink.Upload u = f.sink().uploads.get(0);
         assertEquals(0, u.x());
         assertEquals(0, u.y());
-        assertEquals(128, u.width());
-        assertEquals((f.entries()[200].tileY() + 1) * TILE, u.height(),
+        assertEquals(256, u.width());
+        assertEquals((f.entries()[1000].tileY() + 1) * TILE, u.height(),
                 "rect must cover the union including post-overflow writes");
         assertUploadMatchesExpected(f.expectedPage(), f.pageWidth(), u);
+    }
+
+    @Test
+    public void adjacentDirtyTilesCoalesceIntoRowRuns() {
+        // 128x128 page = 16 tiles per row. Slots 0..64 fill tile rows 0..3 plus (0,4):
+        // four full-row runs and one single tile, never the bounding rectangle.
+        Fixture f = newFixture(128, 65);
+
+        f.atlas().beginBatch();
+        for (int i = 64; i >= 0; i--) {
+            f.writePattern(i); // reverse order: runs must not depend on write order
+        }
+        f.atlas().endBatch();
+
+        assertEquals(5, f.sink().uploads.size());
+        assertEquals(1, f.sink().begins, "single bind for the whole page flush");
+        assertEquals(65L * TILE_BYTES, f.sink().bytesUploaded, "bytes must equal the dirty tiles");
+        for (int row = 0; row < 4; row++) {
+            RecordingSink.Upload u = f.sink().uploads.get(row);
+            assertEquals(0, u.x());
+            assertEquals(row * TILE, u.y());
+            assertEquals(128, u.width());
+            assertEquals(TILE, u.height());
+            assertEquals(128, u.srcStride(), "a run reads the page mirror at page stride");
+        }
+        RecordingSink.Upload single = f.sink().uploads.get(4);
+        assertEquals(0, single.x());
+        assertEquals(4 * TILE, single.y());
+        assertEquals(TILE, single.width());
+        assertEquals(TILE, single.srcStride(), "a lone tile is tightly packed");
+        for (RecordingSink.Upload u : f.sink().uploads) {
+            assertUploadMatchesExpected(f.expectedPage(), f.pageWidth(), u);
+        }
+    }
+
+    @Test
+    public void scatteredPresentationAboveSixtyFourTilesStaysExact() {
+        // S3K LRZ1 sprite presentation restored ~65-70 scattered tiles per frame; that
+        // must upload those tiles, not their ~37x larger bounding rectangle.
+        Fixture f = newFixture(1024, 600);
+
+        f.atlas().beginBatch();
+        for (int i = 0; i < 70; i++) {
+            f.writePattern(i * 8);
+        }
+        f.atlas().endBatch();
+
+        assertEquals(70, f.sink().uploads.size());
+        assertEquals(70L * TILE_BYTES, f.sink().bytesUploaded);
+        for (RecordingSink.Upload u : f.sink().uploads) {
+            assertEquals(TILE, u.width());
+            assertEquals(TILE, u.height());
+            assertUploadMatchesExpected(f.expectedPage(), f.pageWidth(), u);
+        }
+    }
+
+    @Test
+    public void dirtySlotDeduplicationResetsAfterEachFlush() {
+        Fixture f = newFixture(1024, 4);
+
+        f.atlas().beginBatch();
+        f.writePattern(2);
+        f.writePattern(2);
+        f.atlas().endBatch();
+        assertEquals(1, f.sink().uploads.size());
+
+        // The same slot dirtied in the next batch must upload again.
+        f.sink().reset();
+        f.atlas().beginBatch();
+        f.writePattern(2);
+        f.atlas().endBatch();
+        assertEquals(1, f.sink().uploads.size());
+        assertUploadMatchesExpected(f.expectedPage(), f.pageWidth(), f.sink().uploads.get(0));
     }
 
     @Test
@@ -257,7 +335,7 @@ public class TestPatternAtlasDirtyUploads {
         // Dirty state must reset after the flush: next batch is incremental again.
         f.sink().reset();
         f.atlas().beginBatch();
-        f.writePattern(1);
+        f.writePattern(0); // listed before the full-page mark: its dedupe bit must be clear
         f.atlas().endBatch();
         assertEquals(1, f.sink().uploads.size());
         assertEquals((long) TILE_BYTES, f.sink().bytesUploaded);

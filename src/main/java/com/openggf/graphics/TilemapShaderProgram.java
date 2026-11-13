@@ -58,7 +58,14 @@ public class TilemapShaderProgram extends ShaderProgram {
 
     @Override
     public void cacheUniformLocations() {
+        // Locations are fixed at link time (GL 4.1 section 2.11.7). The renderer calls this
+        // every draw; re-query only after setProgramId cleared the inherited flag,
+        // which it does for a same-ID reassignment after relink as well.
+        boolean cached = uniformsCached;
         super.cacheUniformLocations();
+        if (cached) {
+            return;
+        }
         int programId = getProgramId();
         tilemapTextureLocation = glGetUniformLocation(programId, "TilemapTexture");
         patternLookupLocation = glGetUniformLocation(programId, "PatternLookup");
