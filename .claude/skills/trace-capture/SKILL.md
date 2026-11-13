@@ -50,6 +50,7 @@ the repository for durable captures; `target/trace-videos` is disposable output.
 | `--clip frames:START:END` | None | Fast-forward from the original start, then capture the inclusive zero-based trace-row window, retaining elapsed-VBlank title/lag frames; explicit windows do not add `--tail-frames` |
 | `--no-ghosts` / `--ghosts` | `TRACE_SHOW_DESYNC_GHOSTS=true` | Desync ghost visibility |
 | `--no-sprite-limits` | Native sprite limits on | Render without native sprite dropout, as normal play does by default; for promotional footage, not ROM image comparison |
+| `--no-music` | Music recorded | Silence music and keep the sound effects on the audio track: a sound-effects stem of the run for footage that gets its own music. The picture does not change |
 
 A full-run capture presents no frame on trace lag rows (`lag_counter` != 0): MKV frame
 n is row n only until the first lag row, then row minus the lag rows before it (measured
