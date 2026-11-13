@@ -7,7 +7,7 @@ package com.openggf.graphics;
  */
 public record ArenaMaskState(int left, int right, int noiseFrame, float[] opacity) {
     public ArenaMaskState(int left, int right, int noiseFrame) { this(left, right, noiseFrame, null); }
-    public ArenaMaskState { opacity = opacity == null ? null : opacity.clone(); }
+    public ArenaMaskState { opacity = opacity == null ? null : Rows.share(opacity); }
     @Override public float[] opacity() { return opacity == null ? null : opacity.clone(); }
     public float opacityAt(int x) { return opacity == null ? targetOpacity(x) : opacity[x]; }
     public float targetOpacity(int x) {
@@ -43,4 +43,29 @@ public record ArenaMaskState(int left, int right, int noiseFrame, float[] opacit
         return false;
     }
     private static int clamp(int value, int width) { return Math.max(0, Math.min(width, value)); }
+
+    /**
+     * Private immutable opacity rows. A row never aliases the caller's array, and the accessor
+     * still returns a copy, so states (and rewind snapshots of them) cannot be mutated through
+     * each other. Rows are never written after construction, so states with bitwise-equal
+     * contents may share one: a mask transition builds seven rows per frame and in steady play
+     * they repeat, which made the defensive clones about 6% of all allocation.
+     */
+    private static final class Rows {
+        private static final java.util.concurrent.atomic.AtomicReferenceArray<float[]> RECENT =
+                new java.util.concurrent.atomic.AtomicReferenceArray<>(8);
+        private static final java.util.concurrent.atomic.AtomicInteger NEXT =
+                new java.util.concurrent.atomic.AtomicInteger();
+
+        static float[] share(float[] source) {
+            for (int i = 0; i < RECENT.length(); i++) {
+                float[] row = RECENT.get(i);
+                // Arrays.equals(float[]) compares floatToIntBits, so a shared row is bitwise identical.
+                if (row != null && java.util.Arrays.equals(row, source)) return row;
+            }
+            float[] copy = source.clone();
+            RECENT.set(Math.floorMod(NEXT.getAndIncrement(), RECENT.length()), copy);
+            return copy;
+        }
+    }
 }
