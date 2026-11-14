@@ -38,6 +38,14 @@ to preserve existing enum ordinals. The mutable `0.7` signature pin and
 release descriptor remains unpublished candidate `0.7.0` with no published
 baselines or branch-policy changes.
 
+`SonicConfiguration.WIDESCREEN_DRAW_MODE` (`display.widescreenDrawMode`, `EDGE` or
+`NATIVE`) and `SonicConfiguration.WIDESCREEN_DORMANT_STYLE`
+(`display.widescreenDormantStyle`) are appended to preserve existing ordinals. Their
+renderer helpers live in non-API access classes, so `Camera`, `RewindRegistry` and
+`ObjectManager` gain no members. The mutable `0.7` signature pin and `ModApiVersion`
+candidate description include the two constants; descriptor candidate `0.7.0` and the
+empty published-baseline set are unchanged.
+
 The saved `SonicConfiguration.UI_LANGUAGE` preference adds an open-ended BCP 47
 host-interface language tag, with `auto` following the system language. Language catalogs,
 selection, layout and activation remain internal host owners. Existing enum ordinals are

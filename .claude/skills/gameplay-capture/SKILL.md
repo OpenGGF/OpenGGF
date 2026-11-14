@@ -78,6 +78,8 @@ Use a task directory outside the repository for captures the user should keep.
 | `--x`, `--y` | level start | Teleport the leader (ROM `x_pos`/`y_pos`, hex `0x`/`$` ok) |
 | `--star-post` | off | Save a checkpoint at `--x/--y` and restart from it, instead of teleporting. Required wherever the act's `ScreenInit` runs a scripted intro that overrides `--x/--y` outright (S3K SSZ act 1) |
 | `--width <px>` | `320` | 320, 352, 400, 528 or 800; height is always 224 |
+| `--draw-mode edge\|native` | `edge` | Widescreen draw mode, pinned so the user's `display.widescreenDrawMode` never changes a capture. `native` keeps gameplay at 320 and draws frozen dormant objects in the extra width |
+| `--dormant-style` | `greyscale` | With `--draw-mode native`: `greyscale`, `normal` or `hidden` |
 | `--main`, `--sidekick` | `sonic`, `none` | Characters; `--sidekick tails` for a team |
 | `--donor off\|s1\|s2\|s3k` | `off` | Cross-game donation; ROM from configuration unless `--donor-rom` |
 | `--input <file>` | none | `Input Log.txt` or `.bk2`; neutral input after it ends |

@@ -207,8 +207,10 @@ public class Sonic1TitleCardManager implements TitleCardProvider {
         // Extend each element's off-screen entry/exit endpoint so the elements
         // slide fully on/off a wider-than-320 viewport. Zero at native 320 —
         // byte-identical. Without this, the centred (xOffset-shifted) elements
-        // do not fully leave the screen at widescreen widths.
-        int edgeMargin = Math.max(0, viewportWidth() - SCREEN_WIDTH);
+        // do not fully leave the screen at widescreen widths. The slide length is level-start
+        // timing, so it follows the gameplay screen width, never a wider picture.
+        int edgeMargin = Math.max(0,
+                com.openggf.camera.CameraPresentationAccess.simulationScreenWidth() - SCREEN_WIDTH);
         for (TitleCardElement element : elements) {
             element.setEdgeMargin(edgeMargin);
         }

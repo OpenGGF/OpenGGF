@@ -1,5 +1,6 @@
 package com.openggf.level;
 
+import com.openggf.camera.CameraPresentationAccess;
 import com.openggf.game.render.AdvancedRenderFrameState;
 import com.openggf.graphics.ArenaMaskState;
 
@@ -141,8 +142,10 @@ final class LevelScrollPresentation {
             }
         }
         var bounds = LevelBoundsMaskGeometry.select(level, currentMaxX);
-        return ArenaMaskState.fromBounds(bounds.minX(), bounds.maxX(), camera.getXWithShake(),
-                camera.getWidth(), level.objectManager == null ? level.frameCounter : level.objectManager.getFrameCounter(),
+        // Presentation coordinates: equal to the camera window except in NATIVE
+        // widescreen draw mode, whose picture adds an inset each side.
+        return ArenaMaskState.fromBounds(bounds.minX(), bounds.maxX(), CameraPresentationAccess.leftWithShake(camera),
+                CameraPresentationAccess.width(camera), level.objectManager == null ? level.frameCounter : level.objectManager.getFrameCounter(),
                 level.zoneFeatureProvider != null && level.zoneFeatureProvider.foregroundWrapsHorizontally());
     }
 
@@ -400,6 +403,21 @@ final class LevelScrollPresentation {
         if (left < 0 || top < 0 || width <= 0 || height <= 0) {
             throw new IllegalArgumentException("Invalid cinematic scroll tile");
         }
+        return rebase(left, top, width, height, mask);
+    }
+
+    /**
+     * NATIVE widescreen draw mode: widen this native 320-pixel raster by {@code inset}
+     * presentation-only pixels on each side. The ROM's own per-line scroll words are
+     * shifted, which is what a wider VDP would show for the same scroll RAM; per-column
+     * vertical scroll repeats its edge columns into the margins.
+     */
+    LevelScrollPresentation insetForPresentation(int inset, int width, ArenaMaskState mask) {
+        if (inset < 0 || width <= 0) throw new IllegalArgumentException("Invalid presentation inset");
+        return rebase(-inset, 0, width, horizontal.length, mask);
+    }
+
+    private LevelScrollPresentation rebase(int left, int top, int width, int height, ArenaMaskState mask) {
         int[] words = new int[height];
         for (int row = 0; row < height; row++) {
             int value = horizontal[Math.min(top + row, horizontal.length - 1)];
@@ -408,6 +426,7 @@ final class LevelScrollPresentation {
                             | ((short) ((short) value - left) & 0xffff);
         }
         int columns = (width + Math.floorMod(left, 16) + 15) / 16;
+        int firstColumn = Math.floorDiv(left, 16);
         var view =
                 new Registers(
                         registers.cameraX() + left,
@@ -431,9 +450,9 @@ final class LevelScrollPresentation {
                 view,
                 words,
                 backgroundTileLines(top, height),
-                shiftedColumns(backgroundColumns, left / 16, columns, 0),
-                shiftedColumns(foregroundColumns, left / 16, columns, 0),
-                shiftedColumns(overrideColumns, left / 16, columns, 0),
+                shiftedColumns(backgroundColumns, firstColumn, columns, 0),
+                shiftedColumns(foregroundColumns, firstColumn, columns, 0),
+                shiftedColumns(overrideColumns, firstColumn, columns, 0),
                 phase,
                 Math.floorMod(left, 16),
                 tilemapMode,
@@ -466,7 +485,7 @@ final class LevelScrollPresentation {
             com.openggf.util.ShortIndexedView source, int first, int count) {
         short[] copy = new short[count];
         for (int i = 0; i < count; i++)
-            copy[i] = source.get(Math.min(first + i, source.size() - 1));
+            copy[i] = source.get(Math.clamp(first + i, 0, source.size() - 1));
         return new com.openggf.util.ShortIndexedView() {
             public int size() {
                 return copy.length;
@@ -497,7 +516,7 @@ final class LevelScrollPresentation {
     private static short[] slicedLines(short[] source, int first, int count) {
         if (source == null || source.length == 0) return null;
         short[] result = new short[count];
-        for (int i = 0; i < count; i++) result[i] = source[Math.min(first + i, source.length - 1)];
+        for (int i = 0; i < count; i++) result[i] = source[Math.clamp(first + i, 0, source.length - 1)];
         return result;
     }
 

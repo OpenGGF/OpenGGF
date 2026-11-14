@@ -104,6 +104,22 @@
   "@settings.key.widescreen_deadzone_mode.help": {
     "description": "Settings help for stable configuration key WIDESCREEN_DEADZONE_MODE. Technical YAML documentation remains separate."
   },
+  "settings.key.widescreen_draw_mode.label": "Wide screen gameplay",
+  "@settings.key.widescreen_draw_mode.label": {
+    "description": "Settings label for stable configuration key WIDESCREEN_DRAW_MODE (display.widescreenDrawMode)."
+  },
+  "settings.key.widescreen_draw_mode.help": "Edge lets objects wake up across the whole wide screen. Native keeps the original game's screen for gameplay and shows the extra width as scenery, so every screen size plays the same.",
+  "@settings.key.widescreen_draw_mode.help": {
+    "description": "Settings help for stable configuration key WIDESCREEN_DRAW_MODE. Technical YAML documentation remains separate."
+  },
+  "settings.key.widescreen_dormant_style.label": "Sleeping objects",
+  "@settings.key.widescreen_dormant_style.label": {
+    "description": "Settings label for stable configuration key WIDESCREEN_DORMANT_STYLE (display.widescreenDormantStyle)."
+  },
+  "settings.key.widescreen_dormant_style.help": "In Native mode, how objects that have not woken up yet look in the extra width.",
+  "@settings.key.widescreen_dormant_style.help": {
+    "description": "Settings help for stable configuration key WIDESCREEN_DORMANT_STYLE. Technical YAML documentation remains separate."
+  },
   "settings.key.display_hud_anchor.label": "HUD position",
   "@settings.key.display_hud_anchor.label": {
     "description": "Settings label for stable configuration key DISPLAY_HUD_ANCHOR (display.hudAnchor)."
@@ -1527,6 +1543,26 @@
   "settings.value.LEFT_EDGE": "Left edge",
   "@settings.value.LEFT_EDGE": {
     "description": "OpenGGF host UI: settings.value.LEFT_EDGE. Translate the complete message; preserve named arguments."
+  },
+  "settings.value.EDGE": "Edge",
+  "@settings.value.EDGE": {
+    "description": "OpenGGF host UI: settings.value.EDGE. Translate the complete message; preserve named arguments."
+  },
+  "settings.value.NATIVE": "Native",
+  "@settings.value.NATIVE": {
+    "description": "OpenGGF host UI: settings.value.NATIVE. Translate the complete message; preserve named arguments."
+  },
+  "settings.value.GREYSCALE": "Greyscale",
+  "@settings.value.GREYSCALE": {
+    "description": "OpenGGF host UI: settings.value.GREYSCALE. Translate the complete message; preserve named arguments."
+  },
+  "settings.value.NORMAL": "Normal colour",
+  "@settings.value.NORMAL": {
+    "description": "OpenGGF host UI: settings.value.NORMAL. Translate the complete message; preserve named arguments."
+  },
+  "settings.value.HIDDEN": "Hidden",
+  "@settings.value.HIDDEN": {
+    "description": "OpenGGF host UI: settings.value.HIDDEN. Translate the complete message; preserve named arguments."
   },
   "settings.value.PROPORTIONAL": "Scale with screen width",
   "@settings.value.PROPORTIONAL": {

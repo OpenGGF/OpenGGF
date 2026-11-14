@@ -11,6 +11,7 @@ public final class ModApiVersion {
     // Rebuild matching creator artifacts after this intentional package migration.
     /**
      * Optional final-orientation stage drawings preserve native selectors, timing, priority and fades.
+     * Appended WIDESCREEN_DRAW_MODE and WIDESCREEN_DORMANT_STYLE preferences extend the unpublished candidate.
      * Sidekick-owned S2/S3K Tornado cockpit crops and explicit solo companion banks extend the unpublished candidate.
      * Solo companion search photos, both S3K cockpit seats, the mid-size S3K Tornado's rider and cockpit head, and
      * the partner's seat on the final S3 graphics card extend the unpublished candidate.

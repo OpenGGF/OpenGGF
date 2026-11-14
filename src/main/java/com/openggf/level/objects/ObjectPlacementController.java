@@ -1258,6 +1258,28 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
         return index >= 0 && remembered.get(index);
     }
 
+    /**
+     * Presentation-only query for the NATIVE widescreen dormant layer: true when a
+     * layout spawn that is not live will not be reloaded by the native loader. It
+     * reads the same latches as the loaders ({@link #canLoadTwoAxisRespawn},
+     * {@link #admitStageplayPlacement}) and never writes placement state.
+     */
+    boolean isRetiredForPresentation(ObjectSpawn spawn) {
+        int spawnIndex = getSpawnIndex(spawn);
+        if (spawnIndex < 0) return false;
+        int index = respawnStateIndex(spawn);
+        if (index >= 0 && (destroyedInWindow.get(index) || (remembered.get(index) && !stayActive.get(index))))
+            return true;
+        if (destroyedInWindow.get(spawnIndex) || (remembered.get(spawnIndex) && !stayActive.get(spawnIndex)))
+            return true;
+        if (counterBasedRespawn && spawn.respawnTracked() && !spawnToCounter.containsKey(spawn)) {
+            // S1 ObjPosLoad counters: an unloaded entry's byte is its cursor-projected
+            // counter; bit 7 still set while it is not loaded means it was destroyed.
+            return (objState[projectedCounter(cursorIndex, fwdCounter, spawnIndex)] & 0x80) != 0;
+        }
+        return false;
+    }
+
     boolean isStayActive(ObjectSpawn spawn) {
         int index = respawnStateIndex(spawn);
         return index >= 0 && stayActive.get(index);

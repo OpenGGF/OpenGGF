@@ -723,6 +723,15 @@ public enum SonicConfiguration {
 	REWIND_BUDGET_SECONDS,
 	REWIND_REFILL_ON_LIFE_LOSS,
 	REWIND_BONUS_STAGES,
-	REWIND_SPECIAL_STAGES;
+	REWIND_SPECIAL_STAGES,
+
+	/**
+	 * Widescreen draw mode: EDGE runs objects and the camera at the full display
+	 * width; NATIVE keeps the simulation at the native 320 pixels and draws the
+	 * extra width as a presentation-only margin. Appended to preserve ordinals.
+	 */
+	WIDESCREEN_DRAW_MODE,
+	/** How NATIVE draw mode presents not-yet-loaded objects in the margins: GREYSCALE, NORMAL or HIDDEN. */
+	WIDESCREEN_DORMANT_STYLE;
 
 }

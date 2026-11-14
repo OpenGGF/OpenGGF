@@ -374,6 +374,24 @@ Available presets:
 | `"ULTRA_21_9"` | 528 | Experimental; best-effort coverage |
 | `"SUPER_32_9"` | 800 | Experimental; exploratory coverage |
 
+### Same game at every width
+
+Wide screens normally wake objects up across the whole screen, so a 16:9 game plays a
+little differently from a 4:3 one. To play exactly the original game at any width:
+
+```yaml
+display:
+  aspect: "WIDE_16_9"
+  widescreenDrawMode: "NATIVE"
+  widescreenDormantStyle: "GREYSCALE"
+```
+
+`NATIVE` keeps the game on the original 320-pixel screen and draws the extra width as
+scenery. Objects and rings there that the original game has not woken up yet are shown frozen
+where they start: `GREYSCALE` (the default), `NORMAL` colours, or `HIDDEN`. They come to
+life when the original screen reaches them. `EDGE` (the default draw mode) keeps the
+existing behaviour. Both settings take effect at the next level load.
+
 By default (`display.windowAutosize: true`), the OS window is automatically sized to
 twice the preset pixel width (e.g. `WIDE_16_9` → 800×448). To keep a custom window size,
 set `display.windowAutosize` to `false` and configure `debug.window.width` /

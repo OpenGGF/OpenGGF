@@ -1,5 +1,6 @@
 package com.openggf;
 
+import com.openggf.level.objects.DormantObjectPresentationAccess;
 import com.openggf.camera.Camera;
 import com.openggf.game.BonusStageProvider;
 import com.openggf.game.GameStateManager;
@@ -293,6 +294,14 @@ public final class LevelFrameStep {
         if (levelManager.consumePendingInitialProcessSpritesPass()) {
             LevelSpritePresentation.prepare(levelManager, context.spriteManager());
             return LevelFrameResult.SETUP_ONLY;
+        }
+
+        // NATIVE widescreen: bake presentation-only dormant poses at the frame boundary,
+        // rolled back in full before any of this frame's work runs.
+        var dormantObjects = levelManager.getObjectManager();
+        if (dormantObjects != null) {
+            var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+            DormantObjectPresentationAccess.prepare(dormantObjects, mode == null ? null : mode.getRewindRegistry());
         }
 
         boolean raceSwapBoundary = com.openggf.game.arena.RaceSwapRuntime.active(context);
