@@ -757,7 +757,12 @@ final class LevelPlayableArtInitializer {
     }
 
     private static void propagateSidekickPaletteContext(AbstractPlayableSprite sidekick, RenderContext ctx) {
-        if (sidekick.getSpindashDustController() != null
+        // A mod character's context holds its own sheet palette, but its dust is the
+        // host's Sonic dust (loadSpindashDustArt), drawn in host palette indices: on
+        // the mod palette its white came out near black. It keeps the context it was
+        // given (host or donor), as a mod main character's dust does.
+        if (sidekick.characterKey().isBuiltin()
+                && sidekick.getSpindashDustController() != null
                 && sidekick.getSpindashDustController().getRenderer() != null) {
             sidekick.getSpindashDustController().getRenderer().setRenderContext(ctx);
         }

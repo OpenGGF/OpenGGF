@@ -434,6 +434,38 @@ class TestLevelPlayableArtInitializerModArt {
     }
 
     @Test
+    void modSidekickDustKeepsHostPaletteInsteadOfTheCharacterSheetPalette() throws Exception {
+        CharacterKey sideKey = CharacterKey.mod("owner", "side");
+        Palette sheetPalette = new Palette();
+        sheetPalette.colors[1].r = sheetPalette.colors[1].g = sheetPalette.colors[1].b = (byte) 36;
+        PlayableCharacterRegistry registry = PlayableCharacterRegistry.empty()
+                .register(sideKey, definition(sideKey, code -> art(4), code -> sheetPalette));
+        AbstractPlayableSprite sidekick = sprite(sideKey, sideKey.persisted());
+        Fixture fixture = fixture(registry, CharacterKey.SONIC, List.of(sidekick));
+        com.openggf.game.Game game = mock(com.openggf.game.Game.class, withSettings().extraInterfaces(
+                com.openggf.sprites.art.PlayerSpriteArtProvider.class,
+                com.openggf.sprites.art.SpindashDustArtProvider.class));
+        fixture.level().game = game;
+        when(((com.openggf.sprites.art.PlayerSpriteArtProvider) game).loadPlayerSpriteArt("sonic"))
+                .thenReturn(art(4));
+        when(((com.openggf.sprites.art.SpindashDustArtProvider) game).loadSpindashDustArt("sonic"))
+                .thenReturn(art(1));
+        var dust = new java.util.concurrent.atomic.AtomicReference<
+                com.openggf.sprites.managers.SpindashDustController>();
+        doAnswer(call -> { dust.set(call.getArgument(0)); return null; })
+                .when(sidekick).setSpindashDustController(any());
+        when(sidekick.getSpindashDustController()).thenAnswer(call -> dust.get());
+
+        fixture.initializer().initialize();
+
+        RenderContext sideContext = rendererContext(capturedRenderer(sidekick));
+        assertEquals(sheetPalette, sideContext.getPalette(0));
+        org.junit.jupiter.api.Assertions.assertNotNull(dust.get(), "the sidekick has spin dash dust");
+        // The dust is the host's Sonic dust: drawn on the sheet palette, its white turned near black.
+        org.junit.jupiter.api.Assertions.assertNull(rendererContext(dust.get().getRenderer()));
+    }
+
+    @Test
     void rejectedDirectReservationDoesNotAdvanceCursor() {
         Fixture fixture = fixture(PlayableCharacterRegistry.empty(), CharacterKey.SONIC, List.of());
         int capacity = com.openggf.graphics.PatternAtlasRange.SIDEKICK_BANKS.size();
