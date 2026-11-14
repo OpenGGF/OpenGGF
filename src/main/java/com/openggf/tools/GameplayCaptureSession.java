@@ -171,13 +171,30 @@ public final class GameplayCaptureSession implements AutoCloseable {
 
     /** Boots the level, consumes the title card, and optionally teleports the leader. */
     public void boot(Path romPath, int zone, int act, Settings settings) throws IOException {
+        boot(() -> boot.boot(romPath, zone, act), settings);
+    }
+
+    /**
+     * Boots a stock game hosted from media other than a cartridge ROM (Sonic CD's disc); the
+     * caller owns {@code source}. Everything after the load is the ROM boot's.
+     */
+    public void boot(com.openggf.game.GameDataSource source, com.openggf.game.GameModule module, int zone, int act,
+                     Settings settings) throws IOException {
+        boot(() -> boot.boot(source, module, zone, act), settings);
+    }
+
+    private interface LoopBoot {
+        com.openggf.GameLoop boot() throws IOException;
+    }
+
+    private void boot(LoopBoot loopBoot, Settings settings) throws IOException {
         if (loop != null) {
             throw new IllegalStateException("session is already booted");
         }
         if (startAtTitle && settings.endOfLevel()) {
             throw new IllegalArgumentException("--end-of-level requires direct-level capture, not --title-screen");
         }
-        loop = boot.boot(romPath, zone, act);
+        loop = loopBoot.boot();
         org.lwjgl.opengl.GL11.glViewport(0, 0, width, HEIGHT);
         GameServices.graphics().setViewport(0, 0, width, HEIGHT);
         if (GameServices.configuration().getBoolean(SonicConfiguration.LIVE_REWIND_VHS_EFFECT)) {
@@ -474,6 +491,17 @@ public final class GameplayCaptureSession implements AutoCloseable {
         drawFrame(true);
     }
 
+    /**
+     * The gameplay pass ({@code drawWithSpritePriority}'s options), without the game HUD when the capture leaves it
+     * out ({@code debug.traceRender.showGameHud} false, as {@code --no-hud} sets).
+     */
+    private static LevelManager.LevelRenderOptions renderOptions(boolean includeSprites) {
+        if (!includeSprites) return LevelManager.LevelRenderOptions.tilesOnly();
+        return GameServices.configuration().getBoolean(SonicConfiguration.TRACE_SHOW_GAME_HUD)
+                ? LevelManager.LevelRenderOptions.gameplay()
+                : new LevelManager.LevelRenderOptions(true, true, true, false, true, true, true);
+    }
+
     private int presentationHeight() {
         var screen = com.openggf.NativeMenuPresentationAccess.screen(loop);
         return com.openggf.game.nativemenu.NativeMenuController.handles(loop.getCurrentGameMode()) && screen != null
@@ -539,7 +567,7 @@ public final class GameplayCaptureSession implements AutoCloseable {
                 || nativeTitle || shown.isOverlayActive()) ? shown : null;
         boolean titleCardDrawn = false;
         if (nativeTitle || controller == null || !controller.drawScene()) {
-            Runnable levelDraw = () -> level.drawWithSpritePriority(GameServices.sprites(), includeSprites);
+            Runnable levelDraw = () -> level.drawWithRenderOptions(GameServices.sprites(), renderOptions(includeSprites));
             if (com.openggf.game.internal.TitleCardBeneathLevelHud.appliesTo(titleCard)) {
                 // Engine.drawLevelWithTitleCard: the card sits beneath the level HUD.
                 titleCardDrawn = com.openggf.level.LevelHudUnderlay.draw(level, levelDraw, () -> {
@@ -689,7 +717,7 @@ public final class GameplayCaptureSession implements AutoCloseable {
      * instead of vanishing from the log: telling "there is no Player 2" apart from "Player 2 is
      * parked somewhere" is the whole reason these columns exist.
      */
-    private String sidekickState() {
+    private static String sidekickState(AbstractPlayableSprite player) {
         List<AbstractPlayableSprite> sidekicks = GameServices.sprites().getRegisteredSidekicks();
         for (AbstractPlayableSprite sidekick : sidekicks) {
             if (sidekick == player) {
@@ -702,6 +730,14 @@ public final class GameplayCaptureSession implements AutoCloseable {
 
     public String stateLine(int frame, Bk2FrameInput input) {
         requireBooted();
+        return stateLine(frame, player, String.valueOf(loop.getCurrentGameMode()), input);
+    }
+
+    /**
+     * One {@link #stateHeader()} row for {@code player} and the current camera; the trace capture
+     * writes the same columns for its frames.
+     */
+    static String stateLine(long frame, AbstractPlayableSprite player, String mode, Bk2FrameInput input) {
         Camera camera = GameServices.camera();
         return frame
                 + "," + (player.getCentreX() & 0xFFFF)
@@ -718,9 +754,9 @@ public final class GameplayCaptureSession implements AutoCloseable {
                 + "," + player.getMappingFrame()
                 + "," + (camera.getX() & 0xFFFF)
                 + "," + (camera.getY() & 0xFFFF)
-                + "," + sidekickState()
+                + "," + sidekickState(player)
                 + "," + (player.isHighPriority() ? 1 : 0)
-                + "," + loop.getCurrentGameMode()
+                + "," + mode
                 + "," + (input == null ? "" : input.rawLine());
     }
 

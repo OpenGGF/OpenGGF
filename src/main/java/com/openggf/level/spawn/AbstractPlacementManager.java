@@ -45,6 +45,8 @@ public abstract class AbstractPlacementManager<T extends SpawnPoint> {
      */
     private static final Comparator<SpawnPoint> CHUNK_GRANULAR_ORDER =
             Comparator.comparingInt(p -> p.x() & 0xFF80);
+    /** See {@link #retainStoredOrder(List)}: the list keeps its source order, never sorted. */
+    private boolean storedOrder;
     protected final Set<T> active = new LinkedHashSet<>();
     protected final Collection<T> activeUnmodifiable = Collections.unmodifiableCollection(active);
     protected final Map<T, Integer> spawnIndexMap = new IdentityHashMap<>();
@@ -92,11 +94,23 @@ public abstract class AbstractPlacementManager<T extends SpawnPoint> {
         active.clear();
         spawnIndexMap.clear();
         ArrayList<T> sorted = new ArrayList<>(newSpawns);
-        sorted.sort(CHUNK_GRANULAR_ORDER);
+        if (!storedOrder) sorted.sort(CHUNK_GRANULAR_ORDER);
         this.spawns = Collections.unmodifiableList(sorted);
         for (int i = 0; i < this.spawns.size(); i++) {
             spawnIndexMap.put(this.spawns.get(i), i);
         }
+    }
+
+    /**
+     * A spawner whose cursors walk the layout exactly as stored, stopping at the first entry
+     * beyond the window, keeps that order: entries a level stores out of X order (across
+     * chunks as well as within one) are visited, and given slots, in their stored order.
+     * Replaces the list with {@code source} in its own order; later replacements keep it.
+     * Call before the first window scan.
+     */
+    protected void retainStoredOrder(List<T> source) {
+        storedOrder = true;
+        replaceSpawns(source);
     }
 
     public List<T> getAllSpawns() {

@@ -82,6 +82,7 @@ public interface TraceExecutionModel {
             case "s1" -> TraceExecutionModel::deriveSonic1Phase;
             case "s2" -> TraceExecutionModel::deriveSonic2Phase;
             case "s3", "s3k" -> TraceExecutionModel::deriveSonic3kPhase;
+            case "scd" -> TraceExecutionModel::deriveSonicCdPhase;
             default -> throw new IllegalArgumentException("Unsupported trace game: " + game);
         };
     }
@@ -98,6 +99,16 @@ public interface TraceExecutionModel {
         // Sonic 2 follows the same phase split with different ROM symbols:
         // WaitForVint -> Level_frame_counter on full frames, Vint_Lag for
         // VBlank-only frames that still bump Vint_runcount.
+        return deriveCounterDrivenPhase(previous, current);
+    }
+
+    private static TraceExecutionPhase deriveSonicCdPhase(
+            TraceFrame previous, TraceFrame current) {
+        // Sonic CD keeps Sonic 1's split under its own symbols: levelFrames
+        // advances once per unpaused main-loop iteration (scddisasm
+        // src/Level/Main.asm:400) and levelVIntCounter on every V-INT
+        // (Main.asm:712), so a levelFrames plateau is a frame the loop did
+        // not complete.
         return deriveCounterDrivenPhase(previous, current);
     }
 

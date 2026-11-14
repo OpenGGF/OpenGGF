@@ -322,6 +322,7 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
                     com.openggf.game.internal.ScoreAdditionPolicy.class);
             this.score = policy == null ? score + amount
                     : (int) Math.min(policy.maximumScore(), (long) score + amount);
+            if (policy != null) policy.scoreAdded(this, score);
         }
     }
 

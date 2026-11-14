@@ -12,6 +12,7 @@ import com.openggf.game.rules.ObjectInteractionRules;
 import com.openggf.game.rules.PlayerMovementRules;
 import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
 import com.openggf.game.rewind.schema.RewindCaptureContext;
+import com.openggf.game.internal.ReevaluatingSolidRules;
 import com.openggf.game.solid.ContactKind;
 import com.openggf.game.solid.PlayerSolidContactResult;
 import com.openggf.game.solid.PlayerStandingState;
@@ -76,6 +77,8 @@ public final class ObjectSolidContactController {
         Integer y = execStartPlayerCentreY.get(player);
         return y != null ? y : (player != null ? player.getCentreY() : 0);
     }
+
+    private final ReevaluatingSolidRoutine reevaluatingRoutine = new ReevaluatingSolidRoutine(this);
 
     private boolean hasAnyMultiPieceStandingBitOrSnapshot(
             PlayableEntity player, ObjectInstance instance, MultiPieceSolidProvider multiPiece) {
@@ -597,6 +600,70 @@ public final class ObjectSolidContactController {
         contactState.markSameFrameMonitorBreakBounce(player);
     }
 
+    private ReevaluatingSolidRules reevaluatingSolidRules() {
+        var services = objectManager.services();
+        var module = services == null ? null : services.gameModule();
+        return module == null ? null : module.getGameService(ReevaluatingSolidRules.class);
+    }
+
+    /** An object's own {@code jsr GetOffObject} (Object Solid.asm:15-55) in the re-evaluating family. */
+    void reevaluatingGetOffObject(PlayableEntity player, ObjectInstance instance) {
+        ReevaluatingSolidRules rules = reevaluatingSolidRules();
+        if (rules != null && player instanceof AbstractPlayableSprite sprite) {
+            reevaluatingRoutine.getOffObject(instance, sprite, rules);
+        }
+    }
+
+    // --- ReevaluatingSolidRoutine's ROM bits: object bit 3, oPlayerStandObj, bit 5, oPlayerPushObj.
+    // SolidContactState owns them, as it owns every other solid-contact memory.
+    boolean standingLatch(PlayableEntity player, ObjectInstance instance) {
+        return contactState.hasObjectStandingBit(player, instance);
+    }
+
+    void setStandingLatch(PlayableEntity player, ObjectInstance instance) {
+        contactState.setStandingBitWithoutEviction(player, instance);
+    }
+
+    void clearStandingLatch(PlayableEntity player, ObjectInstance instance) {
+        contactState.clearObjectStandingBit(player, instance);
+    }
+
+    ObjectInstance standObject(PlayableEntity player) {
+        return getRidingObject(player);
+    }
+
+    void setStandObject(PlayableEntity player, ObjectInstance instance) {
+        contactState.setStandObject(player, instance);
+    }
+
+    void clearStandObject(PlayableEntity player) {
+        contactState.clearRidingObject(player);
+    }
+
+    void setPushLatch(PlayableEntity player, ObjectInstance instance) {
+        contactState.setObjectPushingBit(player, instance);
+    }
+
+    void clearPushLatch(PlayableEntity player, ObjectInstance instance) {
+        contactState.clearObjectPushingBit(player, instance);
+    }
+
+    boolean pushLatch(PlayableEntity player, ObjectInstance instance) {
+        return contactState.hasObjectPushingBit(player, instance);
+    }
+
+    ObjectInstance pushTarget(PlayableEntity player) {
+        return contactState.pushTarget(player);
+    }
+
+    void setPushTarget(PlayableEntity player, ObjectInstance instance) {
+        contactState.setPushTarget(player, instance);
+    }
+
+    void clearPushTarget(PlayableEntity player) {
+        contactState.clearPushTarget(player);
+    }
+
     ObjectInstance getRidingObject(PlayableEntity player) {
         return contactState.getRidingObject(player);
     }
@@ -935,6 +1002,14 @@ public final class ObjectSolidContactController {
         var initialDispatch = InitialObjectDispatchController.currentReservation(objectManager);
         if (player == null || objectManager == null) {
             return null;
+        }
+        ReevaluatingSolidRules reevaluating = reevaluatingSolidRules();
+        if (reevaluating != null) {
+            // The game's whole solid family is the re-evaluating routine; it owns its gates.
+            return instance instanceof ReevaluatingSolidObject solid
+                    && player instanceof AbstractPlayableSprite sprite
+                    ? reevaluatingRoutine.resolve(instance, solid, sprite, reevaluating)
+                    : null;
         }
         if (player.getDead()) {
             clearDyingPlayerNativeSolidPush(player, instance);

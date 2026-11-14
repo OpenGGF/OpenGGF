@@ -160,6 +160,16 @@ class TestGameplayCaptureToolArgs {
     }
 
     @Test
+    void noHudIsOffByDefaultAndAcceptsNoValue() {
+        assertFalse(GameplayCaptureTool.Arguments.parse(new String[] {
+                "--zone", "ghz", "--act", "1", "--out-dir", "out"}).noHud());
+        var hidden = GameplayCaptureTool.Arguments.parse(new String[] {
+                "--no-hud", "--zone", "ghz", "--act", "1", "--out-dir", "out", "--width", "528"});
+        assertTrue(hidden.noHud());
+        assertEquals(528, hidden.width());
+    }
+
+    @Test
     void previousFullArgumentsConstructorRetainsEveryOperandAndDefaultsEndOfLevelOff() {
         var expected = GameplayCaptureTool.Arguments.parse(new String[] {
                 "--game", "s3k", "--rom", "host.gen", "--zone", "mhz", "--act", "1",

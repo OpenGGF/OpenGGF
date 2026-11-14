@@ -17,9 +17,10 @@ import static org.lwjgl.opengl.GL33.GL_SAMPLER_BINDING;
 import static org.lwjgl.opengl.GL33.glBindSampler;
 
 /**
- * One native SAT draw's opaque-source coverage. Owns all temporary GL objects and
- * preserves an existing stencil image instead of borrowing its contents as scratch.
- * Resources exist only while the queued begin/end pair is executing on its context.
+ * One native SAT draw's opaque-source coverage. Preserves an existing stencil image
+ * instead of borrowing its contents as scratch. Its scratch stencil renderbuffer and
+ * backup framebuffer belong to the render host's context ({@link NativeSpriteScratch});
+ * a scope only attaches them while the queued begin/end pair is executing.
  */
 final class NativeSpriteOwnership implements AutoCloseable {
     /** One contiguous source-order span; 255 remains the unclaimed stencil value. */
@@ -137,12 +138,13 @@ final class NativeSpriteOwnership implements AutoCloseable {
     private final int clearStencil = glGetInteger(GL_STENCIL_CLEAR_VALUE);
     private final Face front = Face.capture(false);
     private final Face back = Face.capture(true);
+    private final NativeSpriteScratch scratch;
     private int ownedStencil;
-    private int backupFramebuffer;
     private int originalDepthRenderbuffer;
     private boolean attached;
     private boolean backedUp;
     private boolean contentsChanged;
+    private boolean begun;
     private boolean closed;
 
     private NativeSpriteOwnership(GraphicsManager graphics) {
@@ -152,6 +154,7 @@ final class NativeSpriteOwnership implements AutoCloseable {
     private NativeSpriteOwnership(GraphicsManager graphics, boolean layered) {
         this.graphics = graphics;
         this.layered = layered;
+        this.scratch = graphics.nativeSpriteScratch();
         for (int unit = 0; unit < textures.length; unit++) {
             glActiveTexture(GL_TEXTURE0 + unit);
             textures[unit] = glGetInteger(GL_TEXTURE_BINDING_2D);
@@ -212,10 +215,7 @@ final class NativeSpriteOwnership implements AutoCloseable {
             width = Math.addExact(viewport[0], viewport[2]);
             height = Math.addExact(viewport[1], viewport[3]);
         }
-        ownedStencil = glGenRenderbuffers();
-        glBindRenderbuffer(GL_RENDERBUFFER, ownedStencil);
-        if (samples > 0) glRenderbufferStorageMultisample(GL_RENDERBUFFER, samples, format, width, height);
-        else glRenderbufferStorage(GL_RENDERBUFFER, format, width, height);
+        ownedStencil = scratch.renderbuffer(format, samples, width, height);
         glDisable(GL_SCISSOR_TEST);
         if (bits == 0) {
             // Separate foreign depth and scratch stencil images are not guaranteed supported.
@@ -230,13 +230,9 @@ final class NativeSpriteOwnership implements AutoCloseable {
             requireComplete(GL_DRAW_FRAMEBUFFER);
         } else {
             // Keep foreign stencil attachments and their full viewport contents intact.
-            backupFramebuffer = glGenFramebuffers();
-            glBindFramebuffer(GL_DRAW_FRAMEBUFFER, backupFramebuffer);
-            glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER,
-                    format == GL_STENCIL_INDEX8 ? GL_STENCIL_ATTACHMENT : GL_DEPTH_STENCIL_ATTACHMENT,
-                    GL_RENDERBUFFER, ownedStencil);
+            scratch.bindBackup(format == GL_STENCIL_INDEX8 ? GL_STENCIL_ATTACHMENT : GL_DEPTH_STENCIL_ATTACHMENT);
             glDrawBuffer(GL_NONE);
-            glBindFramebuffer(GL_READ_FRAMEBUFFER, backupFramebuffer);
+            glBindFramebuffer(GL_READ_FRAMEBUFFER, scratch.backupFramebuffer());
             glReadBuffer(GL_NONE);
             requireComplete(GL_DRAW_FRAMEBUFFER);
             glBindFramebuffer(GL_READ_FRAMEBUFFER, drawFramebuffer);
@@ -264,6 +260,7 @@ final class NativeSpriteOwnership implements AutoCloseable {
         glDisable(GL_DEPTH_TEST);
         glDepthMask(false);
         glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD);
+        begun = true;
     }
 
     private void selectLayer(int rank, boolean ghost) {
@@ -283,7 +280,7 @@ final class NativeSpriteOwnership implements AutoCloseable {
             PatternRenderCommand.cleanupFrameState(graphics);
             glDisable(GL_SCISSOR_TEST);
             if (backedUp && contentsChanged) {
-                glBindFramebuffer(GL_READ_FRAMEBUFFER, backupFramebuffer);
+                glBindFramebuffer(GL_READ_FRAMEBUFFER, scratch.backupFramebuffer());
                 glBindFramebuffer(GL_DRAW_FRAMEBUFFER, drawFramebuffer);
                 glBlitFramebuffer(0, 0, viewport[2], viewport[3], viewport[0], viewport[1],
                         viewport[0] + viewport[2], viewport[1] + viewport[3], GL_STENCIL_BUFFER_BIT, GL_NEAREST);
@@ -300,8 +297,9 @@ final class NativeSpriteOwnership implements AutoCloseable {
             }
             glBindFramebuffer(GL_READ_FRAMEBUFFER, readFramebuffer);
             glBindRenderbuffer(GL_RENDERBUFFER, renderbuffer);
-            if (backupFramebuffer != 0) glDeleteFramebuffers(backupFramebuffer);
-            if (ownedStencil != 0) glDeleteRenderbuffers(ownedStencil);
+            // A failed begin may leave scratch storage or attachments half specified; the
+            // next scope recreates them. Completed scopes keep the context-owned images.
+            if (!begun) scratch.delete();
             front.restore(GL_FRONT);
             back.restore(GL_BACK);
             glClearStencil(clearStencil);

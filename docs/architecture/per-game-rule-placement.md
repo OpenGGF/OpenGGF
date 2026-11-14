@@ -1,6 +1,6 @@
 # Per-Game Rule Placement
 
-Use this guide when adding or moving a Sonic 1, Sonic 2, or Sonic 3&K behavior divergence. The goal is to choose the smallest accurate owner instead of adding another broad rule bag.
+Use this guide when adding or moving a Sonic 1, Sonic 2, Sonic 3&K or Sonic CD behavior divergence. The goal is to choose the smallest accurate owner instead of adding another broad rule bag.
 
 This guide describes the ownership model for per-game rule gates. Game-wide shared runtime gates should use the narrowest typed `GameRules` record. Provider, profile, registry, zone, and object-local ownership rules apply when they are the smaller accurate owner. Do not add broad feature-set bags as a parallel rule source.
 
@@ -38,8 +38,35 @@ Every new per-game divergence must document:
 - Scope: game-wide, character-wide, object-family, zone-local, or data/provider-owned.
 - Owner: exact rule record, provider, profile, or registry.
 - Boundary rationale: why this owner is the smallest accurate owner, and why narrower object/zone/provider owners do or do not apply.
-- Cross-game value table: Sonic 1, Sonic 2, and Sonic 3&K values.
+- Cross-game value table: Sonic 1, Sonic 2, Sonic 3&K and, where it reads the rule, Sonic CD values.
 - Verification: focused unit test, trace replay, or explicit reason trace coverage is not applicable.
+
+## Sonic CD placement
+
+Sonic CD's level engine is Sonic 1's with additions, so its owners start from
+Sonic 1's and record only routine-level differences:
+
+- **Game-wide:** `game/soniccd/player/SonicCdRules` builds `GameRules` from
+  `GameRules.SONIC_1`, changing a component only where the CD routine differs
+  (each change cites the CD routine). New components it needs go in the
+  narrowest existing record with a value for every game.
+- **Per stage or zone:** every stage program carries its own engine copy;
+  `tools/soniccd/variant_census.py` lists the real differences, and each
+  becomes a `CdZoneFragment` entry (scroll, palette, tiles, water, events,
+  player hooks) or catalogue data, never a stage or zone name test in shared
+  code.
+- **Player call sites:** `PlayerStageRoutines` on the physics provider, one
+  method per native call site in the player routine.
+- **Level data shape:** interfaces in `game.internal` that the loaded `CdLevel`
+  implements (collision windows, loop chunks, vertical wrap).
+- **Engine-wide execution order or object model:** `game.internal` services
+  returned from `SonicCdGameModule.getGameService` (spawner order, stored
+  layout order, the re-evaluating solid routine, the object-drawn HUD).
+- **Objects:** one class per object, registered by its owner's fragment
+  (`common`, `shared`, a zone, or an act 3 boss), resolved by stage.
+
+The [engine map](engine-map.md#sonic-cd-module-and-shared-seams) lists every
+shared seam and what selects it.
 
 ## Review Rules
 

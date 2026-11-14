@@ -37,6 +37,8 @@ public class HudRenderManager {
             java.util.logging.Logger.getLogger(HudRenderManager.class.getName());
 
     private final GraphicsManager graphicsManager;
+    /** Admitted once for this render host instead of one engine-caller stack walk per frame. */
+    private com.openggf.graphics.SpriteSatInternalAccess.Engine satAccess;
     private final Camera camera;
     private final GameStateManager gameState;
     private final PatternDesc staticPieceDesc = new PatternDesc();
@@ -260,7 +262,8 @@ public class HudRenderManager {
             }
             appendOptionalTimeGeometry(geometry, satOrigin, player);
             collectingSatFragments = true;
-            try { com.openggf.graphics.SpriteSatInternalAccess.submitGroups(graphicsManager, geometry, () -> draw(levelGamestate, player)); }
+            if (satAccess == null) satAccess = com.openggf.graphics.SpriteSatInternalAccess.engine(graphicsManager);
+            try { satAccess.submitGroups(geometry, () -> draw(levelGamestate, player)); }
             finally { collectingSatFragments = false; }
             return;
         }

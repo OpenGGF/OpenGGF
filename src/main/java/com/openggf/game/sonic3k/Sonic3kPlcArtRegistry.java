@@ -25,6 +25,16 @@ public final class Sonic3kPlcArtRegistry {
     private static final int[] SPRING_VERTICAL_FRAMES = {0, 1, 2};
     private static final int[] SPRING_HORIZONTAL_FRAMES = {3, 4, 5};
     private static final int[] SPRING_DIAGONAL_FRAMES = {7, 8, 9};
+    /**
+     * Map_Spring (sonic3k.asm:48449-48450) lists 11 frames and Map_Spring2's
+     * 11-frame offset table follows it directly (Map_Spring_ and Map_Spring2_,
+     * General/Sprites/Level Misc/Map - Spring.asm:1-25). Their first offset words
+     * ($2C, $3A) point past both tables, so a count taken from the first word reads
+     * the neighbouring table and frame bodies as offsets and decodes about 150,000
+     * garbage pieces per sheet on every level load. The selected frames (0-9) are
+     * the same either way.
+     */
+    private static final int SPRING_MAPPING_FRAME_COUNT = 11;
     private static final int[] HCZ_WATER_DROP_VISIBLE_FRAMES = {0, 1, 2, 3, 4, 5};
     private static final int[] DOOR_VERTICAL_HCZ_FRAMES = {0};
     private static final int[] DOOR_VERTICAL_CNZ_FRAMES = {1};
@@ -192,7 +202,9 @@ public final class Sonic3kPlcArtRegistry {
                     Sonic3kConstants.ARTTILE_SPIKES_SPRINGS + 0x10,
                     0,
                     null,
-                    SPRING_VERTICAL_FRAMES
+                    SPRING_VERTICAL_FRAMES,
+                    S3kSpriteDataLoader.MappingFormat.STANDARD,
+                    SPRING_MAPPING_FRAME_COUNT
             ),
             new LevelArtEntry(
                     Sonic3kObjectArtKeys.SPRING_VERTICAL_YELLOW,
@@ -200,7 +212,9 @@ public final class Sonic3kPlcArtRegistry {
                     Sonic3kConstants.ARTTILE_SPIKES_SPRINGS + 0x10,
                     0,
                     null,
-                    SPRING_VERTICAL_FRAMES
+                    SPRING_VERTICAL_FRAMES,
+                    S3kSpriteDataLoader.MappingFormat.STANDARD,
+                    SPRING_MAPPING_FRAME_COUNT
             ),
             new LevelArtEntry(
                     Sonic3kObjectArtKeys.SPRING_HORIZONTAL,
@@ -208,7 +222,9 @@ public final class Sonic3kPlcArtRegistry {
                     Sonic3kConstants.ARTTILE_SPIKES_SPRINGS + 0x20,
                     0,
                     null,
-                    SPRING_HORIZONTAL_FRAMES
+                    SPRING_HORIZONTAL_FRAMES,
+                    S3kSpriteDataLoader.MappingFormat.STANDARD,
+                    SPRING_MAPPING_FRAME_COUNT
             ),
             new LevelArtEntry(
                     Sonic3kObjectArtKeys.SPRING_HORIZONTAL_YELLOW,
@@ -216,7 +232,9 @@ public final class Sonic3kPlcArtRegistry {
                     Sonic3kConstants.ARTTILE_SPIKES_SPRINGS + 0x20,
                     0,
                     null,
-                    SPRING_HORIZONTAL_FRAMES
+                    SPRING_HORIZONTAL_FRAMES,
+                    S3kSpriteDataLoader.MappingFormat.STANDARD,
+                    SPRING_MAPPING_FRAME_COUNT
             ),
             new LevelArtEntry(
                     Sonic3kObjectArtKeys.SPRING_DIAGONAL,
@@ -224,7 +242,9 @@ public final class Sonic3kPlcArtRegistry {
                     Sonic3kConstants.ARTTILE_DIAGONAL_SPRING,
                     0,
                     null,
-                    SPRING_DIAGONAL_FRAMES
+                    SPRING_DIAGONAL_FRAMES,
+                    S3kSpriteDataLoader.MappingFormat.STANDARD,
+                    SPRING_MAPPING_FRAME_COUNT
             ),
             new LevelArtEntry(
                     Sonic3kObjectArtKeys.SPRING_DIAGONAL_YELLOW,
@@ -232,7 +252,9 @@ public final class Sonic3kPlcArtRegistry {
                     Sonic3kConstants.ARTTILE_DIAGONAL_SPRING,
                     0,
                     null,
-                    SPRING_DIAGONAL_FRAMES
+                    SPRING_DIAGONAL_FRAMES,
+                    S3kSpriteDataLoader.MappingFormat.STANDARD,
+                    SPRING_MAPPING_FRAME_COUNT
             )
     );
 
@@ -480,7 +502,8 @@ public final class Sonic3kPlcArtRegistry {
                 0,
                 Sonic3kConstants.MAP_SPRING_ADDR,
                 0,
-                -1
+                -1,
+                SPRING_MAPPING_FRAME_COUNT
         ));
     }
 
@@ -1168,12 +1191,14 @@ public final class Sonic3kPlcArtRegistry {
         levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.SPRING_DIAGONAL,
                 Sonic3kConstants.MAP_SPRING_ADDR,
                 Sonic3kConstants.ARTTILE_MGZ_MHZ_DIAGONAL_SPRING,
-                0, null, SPRING_DIAGONAL_FRAMES));
+                0, null, SPRING_DIAGONAL_FRAMES,
+                S3kSpriteDataLoader.MappingFormat.STANDARD, SPRING_MAPPING_FRAME_COUNT));
         levelArt.removeIf(e -> e.key().equals(Sonic3kObjectArtKeys.SPRING_DIAGONAL_YELLOW));
         levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.SPRING_DIAGONAL_YELLOW,
                 Sonic3kConstants.MAP_SPRING2_ADDR,
                 Sonic3kConstants.ARTTILE_MGZ_MHZ_DIAGONAL_SPRING,
-                0, null, SPRING_DIAGONAL_FRAMES));
+                0, null, SPRING_DIAGONAL_FRAMES,
+                S3kSpriteDataLoader.MappingFormat.STANDARD, SPRING_MAPPING_FRAME_COUNT));
 
         // Breakable Wall: art_tile = $001, palette 2
         levelArt.add(new LevelArtEntry(
@@ -2262,12 +2287,14 @@ public final class Sonic3kPlcArtRegistry {
         levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.SPRING_DIAGONAL,
                 Sonic3kConstants.MAP_SPRING_ADDR,
                 Sonic3kConstants.ARTTILE_MGZ_MHZ_DIAGONAL_SPRING,
-                0, null, SPRING_DIAGONAL_FRAMES));
+                0, null, SPRING_DIAGONAL_FRAMES,
+                S3kSpriteDataLoader.MappingFormat.STANDARD, SPRING_MAPPING_FRAME_COUNT));
         levelArt.removeIf(e -> e.key().equals(Sonic3kObjectArtKeys.SPRING_DIAGONAL_YELLOW));
         levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.SPRING_DIAGONAL_YELLOW,
                 Sonic3kConstants.MAP_SPRING2_ADDR,
                 Sonic3kConstants.ARTTILE_MGZ_MHZ_DIAGONAL_SPRING,
-                0, null, SPRING_DIAGONAL_FRAMES));
+                0, null, SPRING_DIAGONAL_FRAMES,
+                S3kSpriteDataLoader.MappingFormat.STANDARD, SPRING_MAPPING_FRAME_COUNT));
 
         // Breakable Wall: art_tile = ArtTile_MHZMisc + $4 = $034B, palette 2
         levelArt.add(new LevelArtEntry(

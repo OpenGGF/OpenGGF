@@ -101,6 +101,16 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
 
     private boolean counterBasedRespawn;
     private boolean execThenLoadPlacement;
+    /** Sonic CD frame order: the spawner runs before the object pass, not after it. */
+    private boolean spawnerBeforeObjectPass;
+    /** A reset positioned the first window without creating it; the next frame-start pass creates it first. */
+    private boolean firstWindowPending;
+    /** See {@link #spawnUntrackedEntriesWhileLive()}. */
+    private boolean untrackedEntriesSpawnWhileLive;
+    /** See {@link #unmarkEntryOnFailedSpawn()}. */
+    private boolean failedSpawnUnmarksEntry;
+    private SpawnCallback frameStartCreate;
+    private Runnable frameStartLoad;
     private boolean twoAxisCursorPlacement;
     /**
      * ROM parity: per-game windowing strategy. When it
@@ -144,6 +154,13 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
      * syncActiveSpawnsLoad uses this to sort new spawns accordingly.
      */
     private boolean lastScrollBackward;
+    private Comparator<ObjectSpawn> forwardLoadOrder = Comparator
+            .comparingInt(ObjectSpawn::x)
+            .thenComparingInt(this::getSpawnIndex);
+    private Comparator<ObjectSpawn> backwardLoadOrder = Comparator
+            .comparingInt(ObjectSpawn::x)
+            .reversed()
+            .thenComparing(Comparator.comparingInt(this::getSpawnIndex).reversed());
 
     /**
      * Callback for inline instance creation during cursor advancement.
@@ -318,6 +335,119 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
 
     void enableExecThenLoadPlacement() {
         this.execThenLoadPlacement = true;
+    }
+
+    /**
+     * Binds the owning manager's creation and load passes used by the frame-start
+     * spawner. The manager binds them once at construction; they run only while
+     * {@link #enableSpawnerBeforeObjectPass()} is in effect.
+     */
+    void bindFrameStartSpawner(SpawnCallback create, Runnable load) {
+        this.frameStartCreate = create;
+        this.frameStartLoad = load;
+    }
+
+    /**
+     * Counter-based placement whose spawner runs before the object pass, as Sonic CD's
+     * {@code SpawnObjects; RunObjects} (Level/Main.asm:402-403) with the camera the previous
+     * frame left, instead of Sonic 1's ObjPosLoad after DeformLayers. The cursor and respawn
+     * semantics are unchanged; only the point in the frame moves.
+     *
+     * <p>The level's first window loads in that same pass: {@code objSpawnRoutine} 0 runs
+     * {@code SpawnObjects_Init} and falls into the forward walk inside the first main-loop
+     * iteration's {@code SpawnObjects} (Object Spawner.asm:26-107; Level/Main.asm:400-403), after
+     * level initialization has filled its fixed slots, including Tidal Tempest's water surface
+     * written straight into the first dynamic slot ({@code move.b #4,object_spawn_pool+obj.id},
+     * r4/main.asm:249). A reset therefore positions the cursors without creating the window;
+     * {@link #runSpawnerBeforeObjectPass(int)} creates it into the slots those writes left free.
+     */
+    void enableSpawnerBeforeObjectPass() {
+        this.spawnerBeforeObjectPass = true;
+    }
+
+    /**
+     * The spawner walks the layout in stored order and loads, in that order, every entry it
+     * passes before the first one beyond the window: Sonic CD {@code SpawnObjects_Forward}
+     * ({@code addq.w #oeSize} walk, Object Spawner.asm:183-196), {@code SpawnObjects_Backward}
+     * ({@code subq.w #oeSize}, :125-142) and the first window after {@code SpawnObjects_Init}
+     * (:42-101, falling into the forward pass). No sort by X: an entry stored before one with a
+     * lower X is spawned, and takes its free slot, first. Call before the first window scan.
+     */
+    void useStoredLayoutOrder() {
+        retainStoredOrder(nativePlacementSource);
+        forwardLoadOrder = Comparator.comparingInt(this::getSpawnIndex);
+        backwardLoadOrder = forwardLoadOrder.reversed();
+    }
+
+    /**
+     * An entry without a saved-flags bit is spawned every time a cursor walks over it, whether or not an earlier
+     * object from it is still live: Sonic CD {@code SpawnObject} skips an entry only through its saved-flags
+     * {@code bset #7} (Object Spawner.asm:267-279); otherwise {@code .Spawn} (:281-282) takes the first free slot
+     * through {@code FindObjSlot} (:329-340), with no test of the slots already in use. An object that never despawns (or is still in range when its entry
+     * leaves the window and comes back) is copied again. Without this rule an entry has at most one live object.
+     */
+    void spawnUntrackedEntriesWhileLive() {
+        this.untrackedEntriesSpawnWhileLive = true;
+    }
+
+    /**
+     * A saved-flags entry whose spawn finds no free slot has its loaded bit cleared again before the scan stops
+     * (Sonic CD {@code .SpawnFailed}, {@code bclr #7,2(a2,d3.w)}, Object Spawner.asm:144-151, 198-201; see
+     * {@link com.openggf.game.internal.FailedSpawnUnmarksEntry}). Without the rule the bit stays set, as in Sonic 1.
+     */
+    void unmarkEntryOnFailedSpawn() {
+        this.failedSpawnUnmarksEntry = true;
+    }
+
+    /**
+     * The key of a further live copy of {@code source}, whose earlier object is still registered, under
+     * {@link #spawnUntrackedEntriesWhileLive()}; {@code null} (no new object) for a tracked entry or without the
+     * rule. The copy is a new identity bound to the source's layout index, so each copy keeps its own registration.
+     */
+    ObjectSpawn untrackedLiveCopy(ObjectSpawn source) {
+        int index = untrackedEntriesSpawnWhileLive && !source.respawnTracked() ? getSpawnIndex(source) : -1;
+        if (index < 0) return null;
+        ObjectSpawn copy = identityCopy(source);
+        spawnIndexMap.put(copy, index);
+        return copy;
+    }
+
+    private static ObjectSpawn identityCopy(ObjectSpawn source) {
+        return new ObjectSpawn(source.x(), source.y(), source.objectId(), source.subtype(),
+                source.renderFlags(), source.respawnTracked(), source.rawYWord(), source.layoutIndex(),
+                source.ownerModId(), source.objectKey(), source.authoredProperties());
+    }
+
+    /**
+     * The order a batch of newly admitted spawns is created in, so FindFreeObj hands out
+     * ascending slots in the spawner's walk order: forward scans walk the layout forwards
+     * ({@code a0 += 6}), backward scans backwards ({@code a0 -= 6}). By X, then by layout
+     * index, unless {@link #useStoredLayoutOrder()} keeps the stored order.
+     */
+    Comparator<ObjectSpawn> newSpawnLoadOrder() {
+        return lastScrollBackward ? backwardLoadOrder : forwardLoadOrder;
+    }
+
+    boolean spawnerBeforeObjectPass() {
+        return spawnerBeforeObjectPass;
+    }
+
+    /**
+     * Runs the frame-start spawner pass. A game whose reserved slots run in its own fixed pass
+     * calls this first, because the spawner precedes every slot (Level/Main.asm:402-403); the
+     * ordinary object pass then finds the cursors already at this camera and adds nothing.
+     * A no-op unless {@link #enableSpawnerBeforeObjectPass()} is in effect.
+     */
+    void runSpawnerBeforeObjectPass(int cameraX) {
+        if (!spawnerBeforeObjectPass) return;
+        if (firstWindowPending) {
+            // The reset's window is the front of the same layout walk: create it before the cursor
+            // continues to this pass's camera, so one walk hands out slots in stored order.
+            firstWindowPending = false;
+            frameStartLoad.run();
+        }
+        extendForPostCamera(cameraX, frameStartCreate);
+        frameStartLoad.run();
     }
 
     void setTwoAxisCursorPlacement(boolean twoAxisCursorPlacement) {
@@ -926,6 +1056,7 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
         }
         if (counterBasedRespawn) {
             resetCounterBased(cameraX);
+            firstWindowPending = spawnerBeforeObjectPass;
         } else {
             lastCameraX = cameraX;
             lastCameraChunk = toCoarseChunk(cameraX);
@@ -1495,9 +1626,7 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
         var reference = occurrenceKeys.get(key);
         ObjectSpawn occurrence = reference == null ? null : reference.get();
         if (occurrence == null) {
-            occurrence = new ObjectSpawn(source.x(), source.y(), source.objectId(), source.subtype(),
-                    source.renderFlags(), source.respawnTracked(), source.rawYWord(), source.layoutIndex(),
-                    source.ownerModId(), source.objectKey(), source.authoredProperties());
+            occurrence = identityCopy(source);
             occurrenceKeys.put(key, new java.lang.ref.WeakReference<>(occurrence));
         }
         return occurrence;
@@ -1509,8 +1638,9 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
         }
     }
 
+    /** A second (or later) live copy's key of one layout entry: two-axis occurrences and untracked live copies. */
     boolean isNoncanonicalOccurrence(ObjectSpawn occurrence) {
-        Integer source = spawnIndexMap.get(occurrence);
+        Integer source = occurrence == null ? null : spawnIndexMap.get(occurrence);
         return source != null && spawns.get(source) != occurrence;
     }
 
@@ -2028,6 +2158,7 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
             if (!created) {
                 active.remove(spawn);
                 spawnToCounter.remove(spawn);
+                if (failedSpawnUnmarksEntry) objState[counter & 0xFF] &= ~0x80;
                 return false;
             }
         }

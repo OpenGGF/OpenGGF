@@ -17,6 +17,8 @@ final class RingSlotDispatch implements NativeSpriteSubmissionAccess.ExternalSlo
 
     @Override public void beginPass() { rings.beginNativeSlotPass(); }
 
+    @Override public boolean mayDispatch(int slot) { return rings.reservesNativeSlot(slot); }
+
     @Override public void dispatch(int slot, PlayableEntity player, int vIntRunCount, int cameraX) {
         // AttractedRing_Move has no V-int input. RingManager preserves its original
         // LevelManager.frameCounter+1 clock for the optional ring field policy.

@@ -2,9 +2,10 @@ package com.openggf.game;
 
 import java.util.Objects;
 
-/** Immutable master-title selection model for stock and standalone games, and a suspended one. */
+/** Immutable master-title selection model for stock, hosted-media and standalone games, and a suspended one. */
 public sealed interface MasterTitleEntry
-        permits MasterTitleEntry.Stock, MasterTitleEntry.Standalone, MasterTitleEntry.Suspended {
+        permits MasterTitleEntry.Stock, MasterTitleEntry.Hosted, MasterTitleEntry.Standalone,
+        MasterTitleEntry.Suspended {
     String displayName();
     String menuLabel();
     String gameId();
@@ -16,6 +17,27 @@ public sealed interface MasterTitleEntry
         @Override public String displayName() { return game.displayName; }
         @Override public String menuLabel() { return game.menuLabel; }
         @Override public String gameId() { return game.gameId; }
+    }
+
+    /**
+     * A stock game hosted from media other than a cartridge ROM ({@link GameModuleRegistry.MediaKind#HOSTED_MEDIA}):
+     * its module finds and opens the media ({@link com.openggf.game.internal.HostedGameMedia}). It has no
+     * launch profile, ROM preview or ROM locator; Start boots it with the stock team.
+     */
+    record Hosted(GameId game, String displayName, String menuLabel) implements MasterTitleEntry {
+        public Hosted {
+            Objects.requireNonNull(game, "game");
+            Objects.requireNonNull(displayName, "displayName");
+            Objects.requireNonNull(menuLabel, "menuLabel");
+        }
+
+        /** The entry for a hosted stock game, named by its media service. */
+        public static Hosted of(GameId game) {
+            var media = GameModuleRegistry.hostedMedia(game);
+            return new Hosted(game, media.displayName(), media.menuLabel());
+        }
+
+        @Override public String gameId() { return game.code(); }
     }
 
     record Standalone(String owner, String displayName, boolean continueAvailable)

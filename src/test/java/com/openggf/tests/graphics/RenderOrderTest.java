@@ -289,16 +289,17 @@ public class RenderOrderTest {
         String source = Files.readString(Path.of("src/main/java/com/openggf/level/LevelRenderer.java"));
         String preparation = sourceBetween(source, "private void prepareOrDrawLiveSprites(",
                 "private void renderGhostsForLayer(");
-        int placed = preparation.indexOf("RingDrawInternalAccess.drawPlaced(ringManager,");
+        int placed = preparation.indexOf("ringAccess(ringManager).drawPlaced(lm.frameCounter,");
         int buckets = preparation.indexOf(
                 "for (int bucket = RenderPriority.MIN; bucket <= RenderPriority.MAX; bucket++)");
         assertTrue(preparation.contains("profile.placedRingEmission() == "
                 + "com.openggf.game.internal.SpriteTableBuildProfile.PlacedRings.BEFORE_OBJECT_BUCKETS"));
         assertTrue(placed >= 0 && placed < buckets,
                 "the native ring-list profile emits its rows before object buckets");
-        assertTrue(preparation.contains("RingDrawInternalAccess.attractedPass(ringManager)")
+        assertTrue(preparation.contains("var attractedRings = objectPass == null || ringManager == null ? null"
+                        + " : ringAccess(ringManager);")
                         && preparation.contains("objectPass.draw(bucket, attractedRings == null ? java.util.List.of()"
-                        + " : attractedRings.slotted(bucket));"),
+                        + " : attractedRings.slottedAttracted(bucket));"),
                 "physical ring slots join the matching object bucket instead of a late global draw");
         int legacyGuard = preparation.indexOf(
                 "if (!(lm.gameModule instanceof com.openggf.game.internal.SpriteTableBuildProfile))");

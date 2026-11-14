@@ -18,7 +18,10 @@ public class TilemapTexture {
     private int heightTiles = 0;
     private ByteBuffer uploadBuffer;
     private int uploadBufferCapacity;
-    private TilemapTextureUploadOps uploadOps = TilemapTextureUploadOps.openGl();
+    // Uploads are queued GPU copies from this stream instead of client-memory reads
+    // that make the frame thread wait for the driver queue (see PixelUnpackStream).
+    private final PixelUnpackStream unpackStream = new PixelUnpackStream(1024 * 1024);
+    private TilemapTextureUploadOps uploadOps = new UnpackBufferUploadOps();
 
     public void init(int widthTiles, int heightTiles) {
         if (widthTiles <= 0 || heightTiles <= 0) {
@@ -53,10 +56,35 @@ public class TilemapTexture {
         uploadBuffer.clear();
         uploadBuffer.put(data, 0, requiredBytes);
         uploadBuffer.flip();
-        glBindTexture(GL_TEXTURE_2D, textureId);
-        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, widthTiles, heightTiles,
-                GL_RGBA, GL_UNSIGNED_BYTE, uploadBuffer);
-        glBindTexture(GL_TEXTURE_2D, 0);
+        uploadRegion(textureId, 0, 0, widthTiles, heightTiles, uploadBuffer);
+    }
+
+    /** Stages tightly packed RGBA8 texels and copies them into the texture on the GPU. */
+    private void uploadRegion(int texture, int x, int y, int width, int height, ByteBuffer texels) {
+        try {
+            long offset = unpackStream.stage(texels);
+            glBindTexture(GL_TEXTURE_2D, texture);
+            glTexSubImage2D(GL_TEXTURE_2D, 0, x, y, width, height,
+                    GL_RGBA, GL_UNSIGNED_BYTE, offset);
+        } finally {
+            // Every other upload in the engine reads client memory.
+            glBindTexture(GL_TEXTURE_2D, 0);
+            PixelUnpackStream.unbind();
+        }
+    }
+
+    private final class UnpackBufferUploadOps implements TilemapTextureUploadOps {
+        @Override
+        public void uploadColumns(int texture, int destinationColumn, int columnCount,
+                int rows, ByteBuffer packedRows) {
+            uploadRegion(texture, destinationColumn, 0, columnCount, rows, packedRows);
+        }
+
+        @Override
+        public void uploadRows(int texture, int destinationRow, int columns,
+                int rowCount, ByteBuffer contiguousRows) {
+            uploadRegion(texture, 0, destinationRow, columns, rowCount, contiguousRows);
+        }
     }
 
     /**
@@ -169,6 +197,7 @@ public class TilemapTexture {
         if (textureId != 0) {
             glDeleteTextures(textureId);
         }
+        unpackStream.delete();
         textureId = 0;
         widthTiles = 0;
         heightTiles = 0;

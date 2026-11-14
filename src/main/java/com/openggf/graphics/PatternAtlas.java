@@ -71,8 +71,9 @@ public class PatternAtlas {
     // must only free that slot when the last reference is removed. Key encoding:
     //   ((long) atlasIndex << 32) | (slot & 0xFFFFFFFFL)
     private final Map<Long, Integer> slotRefCounts = new HashMap<>();
-    // Lazily allocated to avoid LWJGL native library loading in headless tests
-    private ByteBuffer patternUploadBuffer;
+    // Streams sink sessions to the GPU without waiting on draws that sample the atlas.
+    // Sized for several full-page sessions before the buffer is orphaned.
+    private final PixelUnpackStream unpackStream = new PixelUnpackStream(4 * 1024 * 1024);
     private boolean initialized = false;
 
     // Batch upload support: CPU-side pixel buffer mirrors the GPU atlas.
@@ -95,7 +96,7 @@ public class PatternAtlas {
     private boolean batchMode = false;
     private int batchDepth;
     private byte[] patternUploadScratch;
-    private final Map<Integer, SpritePresentation.PatternVersion> scenePatternSamples = new HashMap<>();
+    private final PatternSampleTable scenePatternSamples = new PatternSampleTable();
     private final PerformanceProfiler profiler;
     // GL upload seam: production sink issues the real GL calls; tests install a
     // recording sink so dirty-tracking/upload decisions run without a GL context.
@@ -259,21 +260,10 @@ public class PatternAtlas {
         this.tilesPerColumn = atlasHeight / TILE_SIZE;
         this.maxSlots = tilesPerRow * tilesPerColumn;
         this.profiler = profiler;
-        // patternUploadBuffer is lazily allocated when first needed
     }
 
-    /**
-     * Lazily allocate the pattern upload buffer.
-     * This avoids triggering LWJGL native library loading during construction.
-     */
-    private ByteBuffer ensurePatternUploadBuffer() {
-        if (patternUploadBuffer == null) {
-            patternUploadBuffer = MemoryUtil.memAlloc(TILE_SIZE * TILE_SIZE);
-        }
-        return patternUploadBuffer;
-    }
-
-    // Lazily allocated full-page upload buffer for endBatch()
+    // Lazily allocated (no LWJGL native loading at construction) packed staging
+    // buffer for one upload-sink session; a session never exceeds one page.
     private ByteBuffer fullPageUploadBuffer;
 
     private ByteBuffer ensureFullPageUploadBuffer() {
@@ -433,7 +423,8 @@ public class PatternAtlas {
             return null;
         }
         if (pattern != null) {
-            scenePatternSamples.put(patternId, uploadPattern(pattern, initialized ? entry : null));
+            uploadPattern(pattern, initialized ? entry : null);
+            scenePatternSamples.put(patternId, patternUploadScratch);
         }
         return entry;
     }
@@ -441,7 +432,8 @@ public class PatternAtlas {
     public Entry cachePatternHeadless(Pattern pattern, int patternId) {
         Entry entry = ensureEntry(patternId, true);
         if (entry != null && pattern != null) {
-            scenePatternSamples.put(patternId, uploadPattern(pattern, null));
+            uploadPattern(pattern, null);
+            scenePatternSamples.put(patternId, patternUploadScratch);
         }
         return entry;
     }
@@ -614,6 +606,7 @@ public class PatternAtlas {
                 glDeleteTextures(page.textureId());
             }
         }
+        unpackStream.delete();
         cleanupCommon();
     }
 
@@ -641,10 +634,6 @@ public class PatternAtlas {
         dirtyMinTileY = null;
         dirtyMaxTileX = null;
         dirtyMaxTileY = null;
-        if (patternUploadBuffer != null) {
-            MemoryUtil.memFree(patternUploadBuffer);
-            patternUploadBuffer = null;
-        }
         if (fullPageUploadBuffer != null) {
             MemoryUtil.memFree(fullPageUploadBuffer);
             fullPageUploadBuffer = null;
@@ -872,12 +861,15 @@ public class PatternAtlas {
         return switch (word) { case 0 -> version.a(); case 1 -> version.b(); case 2 -> version.c(); default -> version.d(); };
     }
 
-    /** A null entry samples CPU art without touching GL (headless or pre-initialization). */
-    SpritePresentation.PatternVersion uploadPattern(Pattern pattern, Entry entry) {
+    /**
+     * Copies the pattern into {@link #patternUploadScratch} (where callers sample it)
+     * and writes it to the entry's slot; a null entry samples CPU art without
+     * touching GL (headless or pre-initialization).
+     */
+    void uploadPattern(Pattern pattern, Entry entry) {
         byte[] patternPixels = ensurePatternUploadScratch();
         pattern.copyInto(patternPixels, 0);
-        var version = SpritePresentation.patternVersion(patternPixels);
-        if (entry == null) return version;
+        if (entry == null) return;
         int pixelX = entry.tileX() * TILE_SIZE;
         int pixelY = entry.tileY() * TILE_SIZE;
 
@@ -894,7 +886,7 @@ public class PatternAtlas {
         if (batchMode) {
             // Record the dirty tile — actual GL upload deferred to endBatch()
             markTileDirty(entry.atlasIndex(), entry.slot(), entry.tileX(), entry.tileY());
-            return version;
+            return;
         }
 
         // Immediate upload (non-batch path): bind, upload one tile, unbind.
@@ -912,50 +904,81 @@ public class PatternAtlas {
             markTileDirty(entry.atlasIndex(), entry.slot(), entry.tileX(), entry.tileY());
             throw failure;
         }
-        return version;
     }
 
-    /** Production sink: stages CPU pixels into a direct buffer and issues the GL calls. */
+    /**
+     * Production sink. A begin/end session collects every rectangle into one packed
+     * direct buffer, stages it through {@link PixelUnpackStream} with one buffer
+     * write, and issues each {@code glTexSubImage2D} from the unpack buffer at
+     * {@link #end()}. Uploads from client memory made the frame thread wait for the
+     * driver to drain its queue (see {@link PixelUnpackStream}); buffer-sourced
+     * uploads are queued copies with the same result.
+     */
     private final class GlUploadSink implements AtlasUploadSink {
+        // Per pending rectangle: x, y, width, height, offset in the packed staging buffer.
+        private static final int PENDING_FIELDS = 5;
+        private int[] pending = new int[PENDING_FIELDS * 64];
+        private int pendingCount;
+        private int sessionTexture;
+
         @Override
         public void begin(int textureId) {
-            glBindTexture(GL_TEXTURE_2D, textureId);
+            sessionTexture = textureId;
+            pendingCount = 0;
+            ensureFullPageUploadBuffer().clear();
         }
 
         @Override
         public void upload(byte[] src, int srcOffset, int srcStride, int x, int y,
                 int width, int height) {
+            // A session holds either the exact runs (at most DIRTY_SLOT_TRACK_LIMIT
+            // tiles) or one rectangle inside the page, so a page-sized buffer fits it.
+            ByteBuffer staging = ensureFullPageUploadBuffer();
+            int stagingOffset = staging.position();
             if (srcStride == width) {
-                // Tightly packed source rows: stage exactly width*height bytes.
-                int length = width * height;
-                ByteBuffer buf = length <= TILE_SIZE * TILE_SIZE
-                        ? ensurePatternUploadBuffer() : ensureFullPageUploadBuffer();
-                buf.clear();
-                buf.put(src, srcOffset, length);
-                buf.flip();
-                glTexSubImage2D(GL_TEXTURE_2D, 0, x, y, width, height,
-                        GL_RED, GL_UNSIGNED_BYTE, buf);
-                return;
+                staging.put(src, srcOffset, width * height);
+            } else {
+                // Pack the rectangle's rows tightly instead of staging the page stride.
+                for (int row = 0; row < height; row++) {
+                    staging.put(src, srcOffset + row * srcStride, width);
+                }
             }
-            // Strided source (dirty rectangle inside a page row): stage the spanning
-            // bytes once and let GL_UNPACK_ROW_LENGTH skip the non-dirty columns.
-            ByteBuffer buf = ensureFullPageUploadBuffer();
-            buf.clear();
-            buf.put(src, srcOffset, (height - 1) * srcStride + width);
-            buf.flip();
-            glPixelStorei(GL_UNPACK_ROW_LENGTH, srcStride);
-            try {
-                glTexSubImage2D(GL_TEXTURE_2D, 0, x, y, width, height,
-                        GL_RED, GL_UNSIGNED_BYTE, buf);
-            } finally {
-                // Reset so later uploads are not poisoned by stale pixel-store state.
-                glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+            int base = pendingCount * PENDING_FIELDS;
+            if (base + PENDING_FIELDS > pending.length) {
+                pending = Arrays.copyOf(pending, pending.length * 2);
             }
+            pending[base] = x;
+            pending[base + 1] = y;
+            pending[base + 2] = width;
+            pending[base + 3] = height;
+            pending[base + 4] = stagingOffset;
+            pendingCount++;
         }
 
         @Override
         public void end() {
-            glBindTexture(GL_TEXTURE_2D, 0);
+            if (pendingCount == 0) {
+                return;
+            }
+            ByteBuffer staging = ensureFullPageUploadBuffer();
+            staging.flip();
+            try {
+                long bufferOffset = unpackStream.stage(staging);
+                glBindTexture(GL_TEXTURE_2D, sessionTexture);
+                // Width is a whole number of 8-pixel tiles, so GL_UNPACK_ALIGNMENT
+                // (1 to 8) never pads the tightly packed GL_RED rows.
+                for (int i = 0; i < pendingCount; i++) {
+                    int base = i * PENDING_FIELDS;
+                    glTexSubImage2D(GL_TEXTURE_2D, 0, pending[base], pending[base + 1],
+                            pending[base + 2], pending[base + 3], GL_RED, GL_UNSIGNED_BYTE,
+                            bufferOffset + pending[base + 4]);
+                }
+            } finally {
+                // Every other upload in the engine reads client memory.
+                pendingCount = 0;
+                glBindTexture(GL_TEXTURE_2D, 0);
+                PixelUnpackStream.unbind();
+            }
         }
     }
 

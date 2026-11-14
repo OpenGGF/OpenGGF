@@ -877,10 +877,12 @@ public class Sonic3kLevel extends AbstractLevel implements com.openggf.game.inte
     private void decodePatterns(byte[] data, GraphicsManager graphics) {
         patternCount = data.length / Pattern.PATTERN_SIZE_IN_ROM;
         patterns = new Pattern[patternCount];
+        // fromSegaFormat only reads its argument, so one tile buffer serves every pattern.
+        byte[] tile = new byte[Pattern.PATTERN_SIZE_IN_ROM];
         for (int i = 0; i < patternCount; i++) {
             patterns[i] = new Pattern();
-            patterns[i].fromSegaFormat(Arrays.copyOfRange(data,
-                    i * Pattern.PATTERN_SIZE_IN_ROM, (i + 1) * Pattern.PATTERN_SIZE_IN_ROM));
+            System.arraycopy(data, i * Pattern.PATTERN_SIZE_IN_ROM, tile, 0, Pattern.PATTERN_SIZE_IN_ROM);
+            patterns[i].fromSegaFormat(tile);
             if (graphics != null) {
                 graphics.cachePatternTexture(patterns[i], i);
             }

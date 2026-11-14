@@ -507,6 +507,13 @@ final class LevelScrollPresentation {
         return result;
     }
     int[] horizontal() { return horizontal.clone(); }
+    // Read-only views for the renderer's per-frame command staging, which copies them into
+    // command-owned buffers exactly as it does the parallax manager's live arrays. These
+    // arrays are never written after construction; callers must not write them either.
+    int[] horizontalView() { return horizontal; }
+    short[] backgroundLinesView() { return backgroundLines; }
+    short[] backgroundColumnsView() { return backgroundColumns; }
+    short[] foregroundColumnsView() { return foregroundColumns; }
     short[] backgroundLines() { return copy(backgroundLines); }
     short[] backgroundColumns() { return copy(backgroundColumns); }
     short[] foregroundColumns() { return copy(foregroundColumns); }

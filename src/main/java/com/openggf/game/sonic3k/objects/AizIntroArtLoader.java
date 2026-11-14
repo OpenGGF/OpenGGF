@@ -1003,28 +1003,9 @@ public class AizIntroArtLoader {
     // Internal helpers
     // -----------------------------------------------------------------------
 
-    /**
-     * Decompresses KosinskiM data from the given ROM address.
-     * Reads enough data from ROM to cover the compressed stream, then
-     * delegates to {@link KosinskiReader#decompressModuled(byte[], int)}.
-     */
+    /** Decompresses KosinskiM data straight from the given ROM address. */
     private static byte[] decompressKosinskiModuled(Rom rom, int romAddr) throws IOException {
-        // Read KosM 2-byte BE header: total decompressed size
-        byte[] header = rom.readBytes(romAddr, 2);
-        int fullSize = ((header[0] & 0xFF) << 8) | (header[1] & 0xFF);
-
-        // Compressed data is smaller than decompressed. Read enough for input.
-        // Add padding for module alignment. Cap at 256KB.
-        int inputSize = Math.min(Math.max(fullSize + 256, 0x10000), 0x40000);
-
-        // Guard against reading past end of ROM
-        long romSize = rom.getSize();
-        if (romAddr + inputSize > romSize) {
-            inputSize = (int) (romSize - romAddr);
-        }
-
-        byte[] romData = rom.readBytes(romAddr, inputSize);
-        return KosinskiReader.decompressModuled(romData, 0);
+        return KosinskiReader.decompressModuled(RomByteReader.fromRom(rom), romAddr);
     }
 
     /**

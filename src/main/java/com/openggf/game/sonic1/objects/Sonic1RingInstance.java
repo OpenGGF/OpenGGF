@@ -83,6 +83,9 @@ public class Sonic1RingInstance extends AbstractObjectInstance
 
     private State state;
     private int displayPriority = 2;
+    // Admitted once per ring manager (in update) instead of one engine-caller stack walk per draw.
+    @com.openggf.game.rewind.RewindTransient(reason = "engine draw admission handle; reacquired for the live ring manager")
+    private com.openggf.level.rings.RingDrawInternalAccess.Engine ringDraw;
 
     /**
      * Creates a parent ring instance from a layout entry.
@@ -160,6 +163,11 @@ public class Sonic1RingInstance extends AbstractObjectInstance
 
     @Override
     public void update(int vIntRunCount, PlayableEntity player) {
+        // Admit the draw handle here, not on the draw path, which must not write object fields.
+        RingManager drawManager = services().ringManager();
+        if (drawManager != null && (ringDraw == null || !ringDraw.boundTo(drawManager))) {
+            ringDraw = com.openggf.level.rings.RingDrawInternalAccess.engine(drawManager);
+        }
         switch (state) {
             case INIT -> {
                 RingManager ringManager = services().ringManager();
@@ -377,7 +385,9 @@ public class Sonic1RingInstance extends AbstractObjectInstance
         if (manager == null || state == State.INIT) return;
         var level = services().levelManager();
         int frame = level != null ? level.getFrameCounter() : 0;
-        com.openggf.level.rings.RingDrawInternalAccess.drawPlacedObject(manager, ringSpawn.getFirst(), frame);
+        var draw = ringDraw;
+        if (draw != null && draw.boundTo(manager)) draw.drawPlacedObject(ringSpawn.getFirst(), frame);
+        else com.openggf.level.rings.RingDrawInternalAccess.drawPlacedObject(manager, ringSpawn.getFirst(), frame);
     }
 
     @Override

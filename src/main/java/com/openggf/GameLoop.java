@@ -2581,7 +2581,7 @@ public class GameLoop {
             var gameModule = GameServices.module();
 
             audioManager.setAudioProfile(gameModule.getAudioProfile());
-            audioManager.setRom(rom);
+            audioManager.setRom(gameModule.getAudioProfile() instanceof com.openggf.audio.RomlessSmpsSource ? null : rom);
         } catch (IOException e) {
             throw new RuntimeException("Failed to load ROM for title screen", e);
         }
@@ -2882,7 +2882,7 @@ public class GameLoop {
 
             // Initialize audio system with game module's audio profile
             audioManager.setAudioProfile(gameModule.getAudioProfile());
-            audioManager.setRom(rom);
+            audioManager.setRom(gameModule.getAudioProfile() instanceof com.openggf.audio.RomlessSmpsSource ? null : rom);
         } catch (IOException e) {
             throw new RuntimeException("Failed to load ROM for level select", e);
         }
@@ -2999,6 +2999,8 @@ public class GameLoop {
             levelSelect.reset();
             LOGGER.info("Level select sound test (no level transition)");
 
+        } else if (com.openggf.game.internal.TitleReturningLevelSelect.exitToTitle(levelSelect)) {
+            GameLoopPlcLifecycle.startToBlack(resolveGameplayModeContext(), fadeManager, continueScreen::returnToTitleScreen);
         } else {
             // Load selected zone/act
             int zone = levelSelect.getSelectedZone();

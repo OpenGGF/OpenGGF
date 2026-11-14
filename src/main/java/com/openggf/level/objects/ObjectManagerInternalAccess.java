@@ -99,6 +99,60 @@ public final class ObjectManagerInternalAccess {
     }
     private ObjectManagerInternalAccess() { }
 
+    /**
+     * A ROM write to the object loop counter made by the main player's slot, which the engine runs before the object
+     * pass: this frame's pass walks only {@code remainingSlots} further slots (see
+     * {@link ObjectLoopSlotBudget}). Callers cite the ROM's number.
+     */
+    public static void overrideRemainingObjectLoopSlotsAfterPlayerSlot(ObjectManager manager, int remainingSlots) {
+        if (manager != null) manager.objectLoopBudget.overrideBeforePass(0, remainingSlots);
+    }
+
+    /** Sonic CD SpawnObjects; RunObjects order: see {@link ObjectPlacementController#enableSpawnerBeforeObjectPass()}. */
+    public static void enableSpawnerBeforeObjectPass(ObjectManager manager) {
+        manager.placement.enableSpawnerBeforeObjectPass();
+    }
+
+    /**
+     * The counter-based spawner's game rules: {@link com.openggf.game.internal.SpawnerBeforeObjectPass} (see
+     * {@link ObjectPlacementController#enableSpawnerBeforeObjectPass()}) and
+     * {@link com.openggf.game.internal.StoredOrderObjectLayout} (see {@link ObjectPlacementController#useStoredLayoutOrder()})
+     * and {@link com.openggf.game.internal.UntrackedEntriesSpawnWhileLive} (see
+     * {@link ObjectPlacementController#spawnUntrackedEntriesWhileLive()}) and
+     * {@link com.openggf.game.internal.FailedSpawnUnmarksEntry} (see {@link ObjectPlacementController#unmarkEntryOnFailedSpawn()}).
+     */
+    public static void configureCounterSpawner(ObjectManager manager, com.openggf.game.GameModule module) {
+        if (module.getGameService(com.openggf.game.internal.SpawnerBeforeObjectPass.class) != null) {
+            manager.placement.enableSpawnerBeforeObjectPass();
+        }
+        if (module.getGameService(com.openggf.game.internal.StoredOrderObjectLayout.class) != null) {
+            manager.placement.useStoredLayoutOrder();
+        }
+        if (module.getGameService(com.openggf.game.internal.UntrackedEntriesSpawnWhileLive.class) != null) {
+            manager.placement.spawnUntrackedEntriesWhileLive();
+        }
+        if (module.getGameService(com.openggf.game.internal.FailedSpawnUnmarksEntry.class) != null) {
+            manager.placement.unmarkEntryOnFailedSpawn();
+        }
+    }
+
+    /** The object's pushed bit for this player ({@code btst #5,oFlags(a0)}) in the re-evaluating solid family. */
+    public static boolean objectPushedBy(ObjectManager manager, com.openggf.game.PlayableEntity player,
+                                         ObjectInstance instance) {
+        return manager.solidContacts().pushLatch(player, instance);
+    }
+
+    /** An object's own {@code jsr GetOffObject} in the re-evaluating solid family. */
+    public static void releaseFromReevaluatingSolid(ObjectManager manager, com.openggf.game.PlayableEntity player,
+                                                    ObjectInstance instance) {
+        if (manager != null) manager.solidContacts().reevaluatingGetOffObject(player, instance);
+    }
+
+    /** Frame-start spawner pass for a game's fixed-slot owner; a no-op unless enabled. */
+    public static void runSpawnerBeforeObjectPass(ObjectManager manager, int cameraX) {
+        manager.placement.runSpawnerBeforeObjectPass(cameraX);
+    }
+
     public static void clearNativeScreen(ObjectManager manager) {
         manager.resyncSpawnList(java.util.List.of());
         manager.reset(0, null, false, false);

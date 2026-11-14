@@ -2577,17 +2577,9 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
      * Decompresses KosinskiModuled art from the ROM into Pattern arrays.
      */
     private static Pattern[] decompressKosinskiModuled(Rom rom, int romAddr) throws IOException {
-        byte[] header = rom.readBytes(romAddr, 2);
-        if (header.length < 2) return new Pattern[0];
-        int fullSize = ((header[0] & 0xFF) << 8) | (header[1] & 0xFF);
-        int inputSize = Math.min(Math.max(fullSize + 256, 0x10000), 0x40000);
-        long romSize = rom.getSize();
-        if (romAddr + inputSize > romSize) {
-            inputSize = (int) (romSize - romAddr);
-        }
-        byte[] compressed = rom.readBytes(romAddr, inputSize);
-        byte[] data = KosinskiReader.decompressModuled(compressed, 0);
-        return PatternDecompressor.fromBytes(data);
+        if (romAddr + 2 > rom.getSize()) return new Pattern[0];
+        return PatternDecompressor.fromBytes(
+                KosinskiReader.decompressModuled(RomByteReader.fromRom(rom), romAddr));
     }
 
     /**

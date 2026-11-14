@@ -45,6 +45,10 @@ public final class HScrollBuffer {
     // every frame). Lazily allocated on first upload (after GL init, so headless
     // code paths never touch native memory); freed in cleanup().
     private FloatBuffer uploadBuffer;
+    // What the texture currently holds. A stationary camera re-stages identical lines every
+    // frame; only this class writes the texture, so equal staged data needs no upload.
+    private float[] uploadedData = new float[0];
+    private boolean uploadedValid;
 
     public HScrollBuffer() {
         this(false);
@@ -64,6 +68,7 @@ public final class HScrollBuffer {
         }
 
         allocatedLines = VISIBLE_LINES;
+        uploadedValid = false;
         textureId = glGenTextures();
 
         glBindTexture(GL_TEXTURE_1D, textureId);
@@ -126,6 +131,10 @@ public final class HScrollBuffer {
     }
 
     private void uploadStagedData() {
+        if (uploadedValid && allocatedLines == scrollData.length
+                && java.util.Arrays.equals(uploadedData, scrollData)) {
+            return;
+        }
         if (uploadBuffer == null || uploadBuffer.capacity() < scrollData.length) {
             if (uploadBuffer != null) MemoryUtil.memFree(uploadBuffer);
             uploadBuffer = MemoryUtil.memAllocFloat(scrollData.length);
@@ -148,6 +157,9 @@ public final class HScrollBuffer {
                 GL_FLOAT,
                 uploadBuffer);
         glBindTexture(GL_TEXTURE_1D, 0);
+        if (uploadedData.length != scrollData.length) uploadedData = new float[scrollData.length];
+        System.arraycopy(scrollData, 0, uploadedData, 0, scrollData.length);
+        uploadedValid = true;
     }
 
     /** Uploads a logical-size read-only view, zero-filling missing scanlines. */
@@ -207,6 +219,7 @@ public final class HScrollBuffer {
             textureId = -1;
         }
         initialized = false;
+        uploadedValid = false;
         if (uploadBuffer != null) {
             MemoryUtil.memFree(uploadBuffer);
             uploadBuffer = null;

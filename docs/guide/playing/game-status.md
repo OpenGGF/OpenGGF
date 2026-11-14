@@ -14,6 +14,7 @@ This documentation review did not rerun those gameplay checks.
 | [Sonic 1](#sonic-the-hedgehog-s1) | Broadly playable from start to finish | [Known gaps](#known-gaps) |
 | [Sonic 2](#sonic-the-hedgehog-2-s2) | Broadly playable from start to finish, with remaining parity gaps | [Known gaps](#known-gaps-1) |
 | [Sonic 3 & Knuckles](#sonic-3--knuckles-s3k) | Broad playable campaign implementation, with remaining route and parity gaps | [Remaining limits](#remaining-limits) and [S3K known bugs](../../status/s3k-known-bugs.md) |
+| [Sonic CD](#sonic-cd-development-preview) | Development preview on `next`, from your own USA disc image | [Known gaps](#known-gaps-2) |
 
 ---
 
@@ -155,6 +156,105 @@ route instead of treating an old pass as a current whole-game guarantee.
 Sonic 3 and Sonic & Knuckles images can supply the combined S3K game through ROM
 discovery. That does not promise each standalone cartridge's complete original
 campaign behavior. See [ROM discovery](../../../CONFIGURATION.md#rom-files).
+
+---
+
+## Sonic CD (development preview)
+
+**Status: on the `next` development line. It is on the master title shelf when
+your USA disc image is in the ROM folder; it also runs in tests, trace replay
+and the capture tools.**
+
+Sonic CD runs from your own copy of the **USA** Mega-CD release. Nothing from
+the disc is in the repository. The engine reads the disc image directly: the
+data track's program files and the CD audio tracks. No BIOS image is needed;
+the backup RAM format the BIOS writes is reimplemented. The Japanese and
+European releases are not supported: the sound and backup RAM loaders refuse
+a disc whose header is not the USA release. A header check does not certify a
+dump.
+
+### Disc setup
+
+Point the engine at the disc image (the `.cue` sheet with all 35 track files
+beside it) in either of two ways:
+
+- set `roms.soniccd` in `config.yaml` (or the **Sonic CD disc (.cue)** row of
+  master-title **Settings**) to the `.cue` file's path; or
+- leave it blank and put the disc in a folder of its own inside your ROM folder
+  (the folder holding `config.yaml`, or the one `roms.directory` names). The
+  engine looks there and up to two sub-folders down, and recognises the disc by
+  its data track's header, not by file names.
+
+Sonic CD then appears on the master title shelf; with the master title turned
+off, `roms.default: scd` starts it directly. A `roms.soniccd` path that is not
+the USA disc is refused, not replaced by the folder search.
+
+When you start it, the engine checks every track against the USA release
+(Redump 29188) before the title appears. Another release, a missing track or a
+damaged or re-encoded track is refused with a message that says which, as a
+wrong cartridge ROM is. If no disc is found, the card reads DISC MISSING and
+Start shows where the engine looked.
+
+For tests and the capture tools, the JVM property
+`-Dsoniccd.media.root=<parent>` names a folder whose `USA` sub-folder holds
+the `.cue`; when set, it is used instead of `roms.soniccd` and the ROM folder. See
+[configuration](../../../CONFIGURATION.md#sonic-cd-disc-and-native-captures).
+For example, `GameplayCaptureTool --game scd --zone R11A` films Palmtree Panic
+act 1 Present; `--zone ppz --act N` counts a zone's stages 1 to 10 (act 1
+Present, Past, Good Future, Bad Future; act 2 the same; act 3 Good and Bad
+Future). `SonicCdEndingCaptureTool --ending good|bad` films an ending.
+
+### What works
+
+- All 70 stage programs load: seven zones, acts 1 and 2 in four time
+  periods each, act 3 in the Good and Bad Future.
+- Zone presentation (scrolling, palette cycles, animated tiles, water) and the
+  zones' objects, badniks and all seven bosses.
+- Sonic on Sonic 1's movement with Sonic CD's own rules: spin dash, super
+  peel-out, the extended camera, 3D ramps, the per-zone player routines and the
+  idle timer: left alone long enough, Sonic gives up: he jumps, falls and dies.
+- Time travel: time posts, the warp and its cutscene, good and bad futures.
+- Special stages (floor, UFOs, timer and presentation), the title screen, the
+  stage-select secret, Time Attack, the sound test and its secrets, best
+  staff times, the opening video and both endings with credits.
+- Saves: the backup RAM, in the format the BIOS writes, is kept in
+  `saves/soniccd/slot0.json` beside the other games' saves (`openggf.saveRoot`
+  moves the folder). It is written whenever the game writes its backup RAM:
+  New Game, the save after each zone, Time Attack records and initials, and
+  the title's unlocks. CONTINUE, Time Attack times and unlocked menu entries
+  survive a restart. A missing file starts like a console with new backup
+  RAM; a damaged file is kept as `slot0.json.corrupt` and the game starts on
+  fresh backup RAM. The RAM DATA screen is not hosted, so the in-game way to
+  erase a save is missing: delete `saves/soniccd/slot0.json` to start over.
+- FM sound effects, CD audio tracks, and PCM music and sound.
+
+### Known gaps
+
+- Not hosted: Visual Mode, D.A. Garden, the pencil test, Thank You, Comin'
+  Soon, the attract demos (the opening video plays; the stage and special
+  stage demos do not), the backup RAM manager (RAM DATA), Special Stage 8
+  from the sound test. Each is a recorded "not
+  hosted" step: choosing RAM DATA, D.A. Garden or Visual Mode on the title
+  menu (the last two appear once unlocked) fades out and returns to the
+  title, and an attract demo is skipped.
+- The master title has no Setup page for Sonic CD: it always starts with
+  Sonic alone, under the all-games display and rewind settings.
+- Special stage results graphics, pause and exit fade are not drawn.
+- Robotnik's projector in the Past can be destroyed, but the animals in its
+  hologram are not drawn.
+- Native frames dropped while the CPU is busy (lag frames) are not modelled;
+  the engine reimplements the game, not the console's CPU timing. How long a
+  stage load and the opening video's disc wait take follows timings measured on
+  an emulator under `gameplay.loadTimeSimulation` (`FAST`, the default, and
+  `PROFILED`); `NONE` uses no measured timing. Other disc loads are not
+  paced. See
+  [known discrepancies](../../status/known-discrepancies.md#sonic-cd-hardware-timings-not-modelled).
+- Whether the music keeps playing while paused has not been checked against a
+  console.
+- Wider views draw full pictures, but no native reference exists to check
+  them.
+- Accuracy is measured against native recordings; how far each stage is
+  certified is in the [Sonic CD stage matrix](../../architecture/validation/levels/scd-stages.md).
 
 ---
 

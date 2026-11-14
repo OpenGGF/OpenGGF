@@ -85,6 +85,8 @@ final class GameLoopMenuTransitions {
         fadeManager.startFadeToBlack(() -> {
             if (launch != null && launch.entry() instanceof MasterTitleEntry.Standalone) {
                 exitCoordinator.exitStandalone(launch);
+            } else if (launch != null && launch.entry() instanceof MasterTitleEntry.Hosted) {
+                exitCoordinator.exitHosted(launch);
             } else {
                 exitCoordinator.exitStock(selectedGameId, programmaticSelection);
             }

@@ -119,7 +119,7 @@ ui:
 | `FPS` | `display.fps` | AUTO or int | `AUTO` | Window rendering limit beside Interpolation in Display → Picture, applied immediately. `AUTO` (case-insensitive) follows the advertised display refresh, or the region rate if unknown. Numeric values are bounded to 1–1,000,000,000. Simulation and audio use 60 Hz NTSC or 50 Hz PAL independently of this value. VSync and rendering cost can limit actual presentation. |
 | `DISPLAY_INTERPOLATION` | `display.interpolation` | boolean | `false` | Render-only motion interpolation. Smooths pictures above the region rate with the default Auto rendering limit; adds up to one tick of visual latency. Recordings and screenshots stay exact. Applied immediately. |
 | `DISPLAY_PACING` | `display.pacing` | enum | `AUTO` | Live window cadence, applied immediately. `AUTO` locks region services to the display when its advertised refresh is within 1 Hz of a whole multiple of the region rate, `display.fps` is at least the region rate and the speaker is rate-regulated; a two-second probe must confirm that swaps block at that rate within 0.2%. Locked play runs at the measured display speed (59.94 Hz is 0.1% slow) and falls back to `EXACT` on repeated missed vblanks, non-blocking swaps or an out-of-band rate. `EXACT` keeps services on host time at nominal speed on any display. Tick-indexed gameplay, recordings, captures and traces are identical in both modes. |
-| `LOAD_TIME_SIMULATION` | `gameplay.loadTimeSimulation` | enum | `FAST` | Normal-play ROM-load timing: `NONE` completes as soon as production preparation allows; `PROFILED` uses the generator-owned measured profile data; `FAST` (default) uses the hand-tuned copy of that data (`load-time-profiles/s3k-fast-v1.json`, which also carries the S3K title-screen Sonic frame decodes taken from the original hardware capture), and warns then behaves as `NONE` for a game without a FAST manifest; `REALISTIC` is a retained reserved alias that warns when the profile is resolved and returns `PROFILED`. S1/S2 resolve through their default module factory to the supplied immediate profile; their ROM-derived PLC and dynamic-art/DPLC lifecycles remain game-owned and are not retimed by this setting. Trace replay uses its recorded hardware-timing policy and does not consume this setting; queue-state trace diagnostics are comparison-only and never alter this configuration. |
+| `LOAD_TIME_SIMULATION` | `gameplay.loadTimeSimulation` | enum | `FAST` | Normal-play ROM-load timing: `NONE` completes as soon as production preparation allows; `PROFILED` uses the generator-owned measured profile data; `FAST` (default) uses the hand-tuned copy of that data (`load-time-profiles/s3k-fast-v1.json`, which also carries the S3K title-screen Sonic frame decodes taken from the original hardware capture), and warns then behaves as `NONE` for a game without a FAST manifest; `REALISTIC` is a retained reserved alias that warns when the profile is resolved and returns `PROFILED`. Sonic CD has its own pair, `load-time-profiles/soniccd-v1.json` (generator-owned, `tools/soniccd/load_time_manifest.py`, measured on the emulator) and `soniccd-fast-v1.json` (the copy FAST reads): `FAST` and `PROFILED` start each stage's `levelVIntCounter` from the measured V-INTs of its load and delay the three video streams' first sector by the measured read (16 V-ints after the request); `NONE` keeps the counter at 0 and the video's fixed 20-V-int seek. These are estimates from emulator timing; a real disc varies read to read. S1/S2 resolve through their default module factory to the supplied immediate profile; their ROM-derived PLC and dynamic-art/DPLC lifecycles remain game-owned and are not retimed by this setting. Trace replay uses its recorded hardware-timing policy and does not consume this setting; queue-state trace diagnostics are comparison-only and never alter this configuration. |
 | `CONFIG_PRESERVE_EXPLICIT_DEFAULTS` | `config.preserveExplicitDefaults` | bool | `false` | Developer override: retain explicitly listed recognized settings, including values equal to defaults, when converting an older full configuration to sparse format. |
 | `DISPLAY_COLOR_PROFILE` | `display.colorProfile` | string | `"RAW_RGB"` | Palette presentation profile. `"RAW_RGB"` keeps the current direct 8-bit expansion, `"MD_ANALOG"` applies a darker Mega Drive-style analog ramp, and `"NTSC_SOFT"` applies the analog ramp plus mild desaturation. |
 | `DISPLAY_COLOR_EXPANSION` | `display.colorExpansion` | string | `"FULL"` | Independent palette RGB output range, selectable as Full or Limited in Settings → Display. Full preserves current output (maximum 255); Limited applies rounded 238/255 gain after fades and the selected profile, including arbitrary creator palette RGB. The saved choice applies to cached normal and underwater palettes, the palette colour-0 backdrop and clear colour, and headless gameplay captures (applied at each capture boot through the same owner as the window). RAW_RGB + LIMITED matches GPGX normal digital ROM channel levels; this is not video 16–235 range or shadow/highlight emulation. |
@@ -242,11 +242,12 @@ costs a few header reads at startup.
 
 | Key | YAML path | Type | Default | Description |
 |-----|-----------|------|---------|-------------|
-| `DEFAULT_ROM` | `roms.default` | string | `"s2"` | Which game to boot: `"s1"`, `"s2"`, or `"s3k"`. Selects the corresponding ROM key below. |
+| `DEFAULT_ROM` | `roms.default` | string | `"s2"` | Which game to boot: `"s1"`, `"s2"`, `"s3k"` or `"scd"`. Selects the corresponding ROM key below; `"scd"` boots the Sonic CD disc found in `roms.directory`. |
 | `SONIC_1_ROM` | `roms.sonic1` | string | `"s1.gen"` | Explicit image for Sonic 1. May name any image that contains it, including an S&K + Sonic 1 lock-on dump. Blank, or the default name when that file is absent, means the catalogue scan applies; any other missing file is an error. |
 | `SONIC_2_ROM` | `roms.sonic2` | string | `"s2.gen"` | Explicit image for Sonic 2. May name any image that contains it, including an S&K + Sonic 2 lock-on dump. Blank, or the default name when that file is absent, means the catalogue scan applies; any other missing file is an error. |
 | `SONIC_3K_ROM` | `roms.sonic3k` | string | `"s3k.gen"` | Explicit image for Sonic 3 & Knuckles: a 4 MiB lock-on dump. Blank, or the default name when that file is absent, means the catalogue scan applies (including the Sonic 3 + Sonic & Knuckles composite); any other missing file is an error. |
-| `ROMS_DIRECTORY` | `roms.directory` | string | `"."` | Directory scanned for images (`*.gen`, `*.bin`, `*.md`), relative to the working directory. |
+| `SONIC_CD_DISC` | `roms.soniccd` | string | `""` | Path of the Sonic CD (USA) disc image's `.cue` sheet, with its 35 track files beside it, relative to the working directory. Blank means the disc is found by its header in `roms.directory` and two sub-folders below. A path that is not the USA disc is refused, not replaced by the search. |
+| `ROMS_DIRECTORY` | `roms.directory` | string | `"."` | Directory scanned for images (`*.gen`, `*.bin`, `*.md`), relative to the working directory. A Sonic CD disc image (`*.cue` with its tracks) is found here or up to two sub-folders down. |
 | `ROMS_PREFER_COMPOSITE` | `roms.preferComposite` | bool | `false` | When true, a Sonic 3 & Knuckles assembled from separate Sonic 3 and Sonic & Knuckles images is preferred over a single lock-on dump. |
 
 ### Image identity
@@ -280,6 +281,46 @@ The S&K + Sonic 2 dump is the only source of the Knuckles in Sonic 2 chip; the
 engine identifies it by the size and hashes above and has no other way to obtain
 it. The catalogue only exposes the dump's windows to the engine; Knuckles in Sonic 2
 playability is tracked by the KiS2 patch design, not by this table.
+
+### Sonic CD disc and native captures
+
+A player's Sonic CD disc is resolved in this order, first match wins:
+
+1. the `soniccd.media.root` system property below (tests and tools);
+2. `roms.soniccd` (`SONIC_CD_DISC`), the path of the disc's `.cue` sheet;
+3. when that key is blank, the ROM folder (`roms.directory`, default the working
+   directory) and up to two sub-folders below it: the `.cue` sheet whose data track
+   carries the USA release's header.
+
+A configured sheet that is not the USA disc is refused with the same message as a
+wrong disc found by the search. The disc is verified against the USA release when
+the game starts, and `roms.default: scd` boots it without the master title. Sonic CD
+has no launch profile. Its saves
+are `<save root>/soniccd/slot0.json`. Tests and tools name the disc, and the
+native recordings the tests compare with, by JVM system properties
+(`-D<name>=<value>`); nothing of either is committed. See
+[game status](docs/guide/playing/game-status.md#sonic-cd-development-preview).
+
+| Property | Read by | Meaning |
+|----------|---------|---------|
+| `soniccd.media.root` | Sonic CD tests; `GameplayCaptureTool --game scd`, `TraceCaptureTool` for a Sonic CD trace directory, `SonicCdEndingCaptureTool`; the launcher | Directory holding `USA/<disc>.cue` (the first `.cue` there, with its track files). When set, it wins over `roms.soniccd` and the ROM-folder search. Unset: the launcher and tools search the ROM folder; the tests skip. |
+| `soniccd.native.root` | Sonic CD tests | Root of the user-local BizHawk recordings (traces, movies, screenshots, RAM probes). Default `<soniccd.media.root>/../native`. Absent files skip the test. |
+| `soniccd.fixtures.root` | `TestSonicCdFixtureFrontier`, `TestObj3Probe` | Fixture set to replay. Default `<native root>/rehost-fixtures` (14-second stage fixtures); `<native root>/rehost-long` holds the full-act routes. |
+| `soniccd.fixture.payloads` | `TestSonicCdFixtureFrontier` | Comma-separated stage programs (`R11A,R31B`); default all 70. |
+| `soniccd.frontier.out` | `TestSonicCdFixtureFrontier` | Also write the per-stage frontier table (Markdown) to this file. |
+| `soniccd.frontier.continue` | `TestSonicCdFixtureFrontier` | `true` reports a second-divergence view after each stage's first divergence. |
+| `soniccd.trace.frontier`, `soniccd.trace.dumpFrom`, `soniccd.trace.dumpTo` | `TestSonicCdR11aTraceReplay` | Expected first-error row, and a row range to print. |
+| `soniccd.special.native.root` | special stage native tests | Special stage recordings. Default `<soniccd.media.root>/../native/rehost-special`. |
+| `soniccd.pcm.fixtures`, `soniccd.pcm.musicFixtures` | `TestCdPcmNativeContinuations`, `TestCdPcmNativeMusic` | Native PCM chip captures. Unset: skipped. |
+| `soniccd.stamp.fixtures`, `soniccd.stamp.ownerLedger` | `TestCdStampNativeContinuations`, `TestCdStampOwnerLedgerSourceModel` | Native stamp renderer captures and owner ledger. Unset: skipped. |
+| `obj3.probe`, `obj3.warp`, `obj3.census`, `obj3.idle` and their modifiers (`obj3.dump`, `obj3.slots`, `obj3.poke`, `obj3.warp.from`, `obj3.census.ids`, `obj6.floor`, `obj6.water`) | `TestObj3Probe` | Explicit diagnostics that print engine state beside a fixture's rows; each method skips unless its property is set. |
+| `boss1.diagRow`, `qqzboss.diagRow`, `ttzboss.arenaX`, `ttzboss.chaseRewindRow`, `ttzboss.timelineFrames` | boss native, rewind and timeline tests | Diagnostic rows and timeline overrides for one boss check. |
+
+In a category run, test JVMs see these properties only through `MAVEN_ARGS`
+or a JVM option variable. The runner declares the disc, the native root and the
+stamp ledger present when `soniccd.media.root`, `soniccd.native.root` or
+`soniccd.stamp.ownerLedger` is set, and classifies skips with
+`tools/testing/release-skip-policy.json`.
 
 ---
 

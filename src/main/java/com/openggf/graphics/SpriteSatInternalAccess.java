@@ -13,6 +13,40 @@ public final class SpriteSatInternalAccess {
         }
     }
 
+    /**
+     * One caller check for an engine renderer's lifetime instead of one stack walk per frame.
+     * The check only admits a fixed engine call site, so the handle carries that verdict.
+     * Hold it in engine-private state bound to its render host; never hand it to creator code.
+     */
+    public static Engine engine(GraphicsManager graphics) {
+        engineCaller();
+        return new Engine(java.util.Objects.requireNonNull(graphics, "graphics"));
+    }
+
+    /** Admitted SAT assembly for one render host; methods match the checked static bridges. */
+    public static final class Engine {
+        private final GraphicsManager graphics;
+        private Engine(GraphicsManager graphics) { this.graphics = graphics; }
+        public boolean boundTo(GraphicsManager graphics) { return this.graphics == graphics; }
+        public void beginCollection(SpriteSatMaskPostProcessor.Raster raster) {
+            graphics.beginSpriteSatCollection(raster);
+        }
+        public void beginLogicalCollection(SpriteSatMaskPostProcessor.LogicalViewport viewport) {
+            graphics.beginLogicalSpriteSatCollection(viewport);
+        }
+        public void submitGroups(List<SpriteSatEntry> geometry, Runnable producer) {
+            graphics.submitSpriteSatGroups(geometry, producer);
+        }
+        public void renderShadowTile(SpritePresentation.Tile tile, int cameraX, int cameraY, float[] quad,
+                                     float opacity) {
+            graphics.renderShadowTile(tile, cameraX, cameraY, quad, opacity);
+        }
+        public <T> void replayNativeLayers(List<T> frontToBack, java.util.function.Predicate<T> isGhost,
+                                           java.util.function.Consumer<List<T>> emitter) {
+            graphics.replayNativeLayers(frontToBack, isGhost, emitter);
+        }
+    }
+
     public static void beginCollection(GraphicsManager graphics, SpriteSatMaskPostProcessor.Raster raster) {
         engineCaller();
         graphics.beginSpriteSatCollection(raster);

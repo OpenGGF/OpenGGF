@@ -1,0 +1,1323 @@
+{
+  "formatVersion": 1,
+  "profile": "soniccd-fast",
+  "serviceModel": "soniccd-load-v1",
+  "fixtures": [
+    "rehost-fixtures/R11A",
+    "rehost-long/R11A",
+    "rehost-player3/idle/R11A",
+    "rehost-timetravel/present-to-future",
+    "rehost-timetravel/present-to-past",
+    "rehost-fixtures/R11B",
+    "rehost-long/R11B",
+    "rehost-loop/R11B-loop",
+    "rehost-fixtures/R11C",
+    "rehost-long/R11C",
+    "rehost-fixtures/R11D",
+    "rehost-fixtures-ppz/ext/R12A",
+    "rehost-fixtures-ppz/ext3600/R12A",
+    "rehost-fixtures/R12A",
+    "rehost-long/R12A",
+    "rehost-fixtures-ppz/ext/R12B",
+    "rehost-fixtures/R12B",
+    "rehost-fixtures-ppz/ext/R12C",
+    "rehost-fixtures/R12C",
+    "rehost-fixtures-ppz/ext/R12D",
+    "rehost-fixtures/R12D",
+    "rehost-boss-ppz/R13C-actend",
+    "rehost-boss-ppz/R13C-bumper",
+    "rehost-boss-ppz/R13C-death",
+    "rehost-boss-ppz/R13C-fight",
+    "rehost-boss-ppz/R13C-hit",
+    "rehost-fixtures/R13C",
+    "rehost-boss-ppz/R13D-fight",
+    "rehost-fixtures/R13D",
+    "rehost-fixtures/R31A",
+    "rehost-long/R31A",
+    "rehost-fixtures/R31B",
+    "rehost-long/R31B",
+    "rehost-fixtures/R31C",
+    "rehost-long/R31C",
+    "rehost-fixtures/R31D",
+    "rehost-fixtures/R32A",
+    "rehost-long/R32A",
+    "rehost-fixtures/R32B",
+    "rehost-fixtures/R32C",
+    "rehost-fixtures/R32D",
+    "rehost-boss-ccz/R33C-fight",
+    "rehost-boss-ccz/R33C-top",
+    "rehost-fixtures/R33C",
+    "rehost-boss-ccz/R33D-fight",
+    "rehost-boss-ccz/R33D-top",
+    "rehost-fixtures/R33D",
+    "rehost-fixtures/R41A",
+    "rehost-long/R41A",
+    "rehost-fixtures/R41B",
+    "rehost-long/R41B",
+    "rehost-fixtures/R41C",
+    "rehost-long/R41C",
+    "rehost-zph/current-R41C",
+    "rehost-zph/drown-R41C",
+    "rehost-zph/drown-R41C-left",
+    "rehost-fixtures/R41D",
+    "rehost-fixtures/R42A",
+    "rehost-long/R42A",
+    "rehost-fixtures/R42B",
+    "rehost-fixtures/R42C",
+    "rehost-fixtures/R42D",
+    "rehost-boss-ttz/R43C-chase",
+    "rehost-boss-ttz/R43C-fight",
+    "rehost-boss-ttz/R43C-hit",
+    "rehost-boss-ttz/R43C-idle",
+    "rehost-boss-ttz/R43C-wrap",
+    "rehost-fixtures/R43C",
+    "rehost-boss-ttz/R43D-chase",
+    "rehost-boss-ttz/R43D-fight",
+    "rehost-boss-ttz/R43D-idle",
+    "rehost-fixtures/R43D",
+    "rehost-fixtures/R51A",
+    "rehost-long/R51A",
+    "rehost-fixtures/R51B",
+    "rehost-long/R51B",
+    "rehost-fixtures/R51C",
+    "rehost-long/R51C",
+    "rehost-fixtures/R51D",
+    "rehost-fixtures/R52A",
+    "rehost-long/R52A",
+    "rehost-fixtures/R52B",
+    "rehost-fixtures/R52C",
+    "rehost-fixtures/R52D",
+    "rehost-boss-qqz/R53C-death",
+    "rehost-boss-qqz/R53C-fight",
+    "rehost-fixtures/R53C",
+    "rehost-boss-qqz/R53D-fight",
+    "rehost-fixtures/R53D",
+    "rehost-fixtures/R61A",
+    "rehost-long/R61A",
+    "rehost-wwzp/charge-R61A",
+    "rehost-fixtures/R61B",
+    "rehost-long/R61B",
+    "rehost-fixtures/R61C",
+    "rehost-long/R61C",
+    "rehost-fixtures/R61D",
+    "rehost-fixtures/R62A",
+    "rehost-long/R62A",
+    "rehost-fixtures/R62B",
+    "rehost-fixtures/R62C",
+    "rehost-fixtures/R62D",
+    "rehost-wwzp/pole-left-R62D",
+    "rehost-boss-wwz/R63C-climb",
+    "rehost-boss-wwz/R63C-death",
+    "rehost-boss-wwz/R63C-defeat",
+    "rehost-boss-wwz/R63C-hit",
+    "rehost-fixtures/R63C",
+    "rehost-boss-wwz/R63D-death",
+    "rehost-boss-wwz/R63D-defeat",
+    "rehost-fixtures/R63D",
+    "rehost-fixtures/R71A",
+    "rehost-long/R71A",
+    "rehost-zph/long-R71A",
+    "rehost-fixtures/R71B",
+    "rehost-long/R71B",
+    "rehost-fixtures/R71C",
+    "rehost-long/R71C",
+    "rehost-fixtures/R71D",
+    "rehost-fixtures/R72A",
+    "rehost-long/R72A",
+    "rehost-fixtures/R72B",
+    "rehost-fixtures/R72C",
+    "rehost-fixtures/R72D",
+    "rehost-boss-ssz/R73C-amyjump",
+    "rehost-boss-ssz/R73C-hit",
+    "rehost-boss-ssz/R73C-hug",
+    "rehost-boss-ssz/R73C-laser",
+    "rehost-boss-ssz/R73C-lose",
+    "rehost-boss-ssz/R73C-neck",
+    "rehost-boss-ssz/R73C-shield",
+    "rehost-boss-ssz/R73C-win",
+    "rehost-fixtures/R73C",
+    "rehost-boss-ssz/R73D-laser",
+    "rehost-boss-ssz/R73D-lose",
+    "rehost-boss-ssz/R73D-win",
+    "rehost-fixtures/R73D",
+    "rehost-fixtures/R81A",
+    "rehost-long/R81A",
+    "rehost-fixtures-mmz2/m-scarab/R81B",
+    "rehost-fixtures/R81B",
+    "rehost-long/R81B",
+    "rehost-fixtures/R81C",
+    "rehost-long/R81C",
+    "rehost-fixtures/R81D",
+    "rehost-fixtures/R82A",
+    "rehost-long/R82A",
+    "rehost-player3/mini/R82A",
+    "rehost-zph4/disc/R82A",
+    "rehost-zph4/layer/R82A",
+    "rehost-zph4/layer2/R82A",
+    "rehost-fixtures/R82B",
+    "rehost-fixtures/R82C",
+    "rehost-fixtures/R82D",
+    "rehost-boss-mmz/R83C-approach",
+    "rehost-boss-mmz/R83C-fight",
+    "rehost-fixtures/R83C",
+    "rehost-boss-mmz/R83D-fight",
+    "rehost-fixtures/R83D",
+    "rehost-flow/act-clear@3941",
+    "rehost-flow/death-checkpoint@2935",
+    "rehost-flow/death-start@2769",
+    "rehost-flow/special-stage@10067",
+    "rehost-flow/warp-future@4844",
+    "rehost-programs/opening-attract",
+    "rehost-programs/vm-badend",
+    "rehost-programs/vm-badend-discover",
+    "rehost-programs/vm-goodend",
+    "rehost-programs/vm-goodend-discover",
+    "header: soniccd-fast-v1.json is the hand-tunable copy of the generator-owned soniccd-v1.json; entries resting on a single recording: cd_read_ready rehost-programs/opening-attract, scd_stage_load rehost-fixtures/R52B, scd_stage_load rehost-fixtures/R82B, scd_stage_load rehost-flow/death-checkpoint@2935, scd_stage_load rehost-fixtures/R51D, scd_stage_load rehost-fixtures/R61D, scd_stage_load rehost-fixtures/R42C, scd_stage_load rehost-fixtures/R62C, scd_stage_load rehost-flow/warp-future@4844, scd_stage_load rehost-fixtures/R31D, scd_stage_load rehost-fixtures/R82D, scd_stage_load rehost-fixtures/R62B, scd_stage_load rehost-fixtures/R42D, scd_stage_load rehost-fixtures/R81D, scd_stage_load rehost-fixtures/R72C, scd_stage_load rehost-fixtures/R32C, scd_stage_load rehost-fixtures/R32D, scd_stage_load rehost-fixtures/R71D, scd_stage_load rehost-fixtures/R42B, scd_stage_load rehost-fixtures/R11D, scd_stage_load rehost-fixtures/R72D, scd_stage_load rehost-fixtures/R82C, scd_stage_load rehost-fixtures/R52D, scd_stage_load rehost-fixtures/R52C, scd_stage_load rehost-fixtures/R32B, scd_stage_load rehost-fixtures/R41D, scd_stage_load rehost-fixtures/R72B"
+  ],
+  "entries": [
+    {
+      "kind": "cd_read_ready",
+      "submissionFingerprint": "sha256:1e9d2fe74b46ff4c0dcd3479dae67abd08c89473a80f9d207c63acc9430cb630",
+      "serviceFrames": 16,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 1,
+      "minFrames": 16,
+      "maxFrames": 16,
+      "fixtureIndexes": [
+        164
+      ]
+    },
+    {
+      "kind": "cd_read_ready",
+      "submissionFingerprint": "sha256:7f3d694b2c7801ad8712770aba52e622327f5face630e8bf1098626f59267c23",
+      "serviceFrames": 16,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 2,
+      "minFrames": 16,
+      "maxFrames": 16,
+      "fixtureIndexes": [
+        167,
+        168
+      ]
+    },
+    {
+      "kind": "cd_read_ready",
+      "submissionFingerprint": "sha256:d85ed18076172d5a0349347201160181f6aaf7269b086fcdee77c4b7ca966a76",
+      "serviceFrames": 16,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 2,
+      "minFrames": 16,
+      "maxFrames": 16,
+      "fixtureIndexes": [
+        165,
+        166
+      ]
+    },
+    {
+      "kind": "scd_stage_load",
+      "submissionFingerprint": "sha256:00ebe9ee39cea29b1f289d7c87c949fd4572b0f593fa70df68d04195dfd8cb00",
+      "serviceFrames": 45,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 2,
+      "minFrames": 45,
+      "maxFrames": 45,
+      "fixtureIndexes": [
+        19,
+        20
+      ]
+    },
+    {
+      "kind": "scd_stage_load",
+      "submissionFingerprint": "sha256:0244647501c1be7f8ced36419f471baf8cf37d18484121f4a7aa929fd2abf536",
+      "serviceFrames": 49,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 1,
+      "minFrames": 49,
+      "maxFrames": 49,
+      "fixtureIndexes": [
+        81
+      ]
+    },
+    {
+      "kind": "scd_stage_load",
+      "submissionFingerprint": "sha256:0650197c98da304313e694ce031176796ff6c064ad0da1c911b8094628fb7bfc",
+      "serviceFrames": 42,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 2,
+      "minFrames": 42,
+      "maxFrames": 42,
+      "fixtureIndexes": [
+        33,
+        34
+      ]
+    },
+    {
+      "kind": "scd_stage_load",
+      "submissionFingerprint": "sha256:067548c1287da2725a0045cbed868b114fe6b8a51fb33dd49631c397590a0529",
+      "serviceFrames": 42,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 2,
+      "minFrames": 42,
+      "maxFrames": 42,
+      "fixtureIndexes": [
+        29,
+        30
+      ]
+    },
+    {
+      "kind": "scd_stage_load",
+      "submissionFingerprint": "sha256:06ac67a0923f95075c915e2c54a2f47e77ec69fd1785b192b8f60a3344d39db1",
+      "serviceFrames": 39,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 1,
+      "minFrames": 39,
+      "maxFrames": 39,
+      "fixtureIndexes": [
+        151
+      ]
+    },
+    {
+      "kind": "scd_stage_load",
+      "submissionFingerprint": "sha256:0ab8d1b82dcf254d1d9e02e46aa9801cab4faf866cd731bc67ea2d46f2d3c0c2",
+      "serviceFrames": 45,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 2,
+      "minFrames": 45,
+      "maxFrames": 45,
+      "fixtureIndexes": [
+        27,
+        28
+      ]
+    },
+    {
+      "kind": "scd_stage_load",
+      "submissionFingerprint": "sha256:0ad197b3f74955f743b0de0bd5e62004c8bb96286db1c873e8b47e0ce177559f",
+      "serviceFrames": 48,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 6,
+      "minFrames": 48,
+      "maxFrames": 48,
+      "fixtureIndexes": [
+        62,
+        63,
+        64,
+        65,
+        66,
+        67
+      ]
+    },
+    {
+      "kind": "scd_stage_load",
+      "submissionFingerprint": "sha256:0b2eadb4ed96b97973c64c42472275c38567d6a38a47b872c22d451f49a7e118",
+      "serviceFrames": 44,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 2,
+      "minFrames": 44,
+      "maxFrames": 44,
+      "fixtureIndexes": [
+        15,
+        16
+      ]
+    },
+    {
+      "kind": "scd_stage_load",
+      "submissionFingerprint": "sha256:0f9877b1ada06fb1e119a1dc7b361f784eea459b28327145ba66b8b89d74a843",
+      "serviceFrames": 73,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 1,
+      "minFrames": 73,
+      "maxFrames": 73,
+      "fixtureIndexes": [
+        160
+      ]
+    },
+    {
+      "kind": "scd_stage_load",
+      "submissionFingerprint": "sha256:119589407976150f5dd6d168aa9f434882990bc31ea6b01e3a8034c0897f32d4",
+      "serviceFrames": 47,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 2,
+      "minFrames": 47,
+      "maxFrames": 47,
+      "fixtureIndexes": [
+        72,
+        73
+      ]
+    },
+    {
+      "kind": "scd_stage_load",
+      "submissionFingerprint": "sha256:13cf7d08293eca231a1efa8f5bd9f196e8035e37bff2d480c3766d5a2c360356",
+      "serviceFrames": 44,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 6,
+      "minFrames": 44,
+      "maxFrames": 45,
+      "fixtureIndexes": [
+        11,
+        12,
+        13,
+        14,
+        159,
+        162
+      ]
+    },
+    {
+      "kind": "scd_stage_load",
+      "submissionFingerprint": "sha256:1938b0f5dbf3c4e6171fb2cebb9073d950555860ec6df76c1496de51d1f89c60",
+      "serviceFrames": 45,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 2,
+      "minFrames": 45,
+      "maxFrames": 45,
+      "fixtureIndexes": [
+        17,
+        18
+      ]
+    },
+    {
+      "kind": "scd_stage_load",
+      "submissionFingerprint": "sha256:1ca268650cc18e2749ae8e11ecf5d40a0e9727395b974b2721a4ed5b8b6e0d36",
+      "serviceFrames": 47,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 1,
+      "minFrames": 47,
+      "maxFrames": 47,
+      "fixtureIndexes": [
+        78
+      ]
+    },
+    {
+      "kind": "scd_stage_load",
+      "submissionFingerprint": "sha256:1d16c58c19a4dcfe73149ad4d084fcd5dfaf4eeb790d8a9e141a052c063476fd",
+      "serviceFrames": 41,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 3,
+      "minFrames": 41,
+      "maxFrames": 41,
+      "fixtureIndexes": [
+        41,
+        42,
+        43
+      ]
+    },
+    {
+      "kind": "scd_stage_load",
+      "submissionFingerprint": "sha256:1e308b0a91b8fb4088b084f692784ebbba0966195907b5177eedb2c878888713",
+      "serviceFrames": 45,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 1,
+      "minFrames": 45,
+      "maxFrames": 45,
+      "fixtureIndexes": [
+        96
+      ]
+    },
+    {
+      "kind": "scd_stage_load",
+      "submissionFingerprint": "sha256:2147aa01a31bb366a638a95640b09700a8f6b188831ec107ed0a37c748f68576",
+      "serviceFrames": 48,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 2,
+      "minFrames": 48,
+      "maxFrames": 48,
+      "fixtureIndexes": [
+        74,
+        75
+      ]
+    },
+    {
+      "kind": "scd_stage_load",
+      "submissionFingerprint": "sha256:246bdc4666f1d79247ea19227bd5df09368befa9e67b49ea680664290177cdc9",
+      "serviceFrames": 38,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 2,
+      "minFrames": 38,
+      "maxFrames": 38,
+      "fixtureIndexes": [
+        57,
+        58
+      ]
+    },
+    {
+      "kind": "scd_stage_load",
+      "submissionFingerprint": "sha256:2840faa4f012ebea100005afabdc26a0b13305c749451cde2d1fb743236e373d",
+      "serviceFrames": 37,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 3,
+      "minFrames": 37,
+      "maxFrames": 37,
+      "fixtureIndexes": [
+        154,
+        155,
+        156
+      ]
+    },
+    {
+      "kind": "scd_stage_load",
+      "submissionFingerprint": "sha256:2a54011594fa00ee6f390e5466a51a4ef145a91f26535bd337de1a3d7ef2bf77",
+      "serviceFrames": 48,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 1,
+      "minFrames": 48,
+      "maxFrames": 48,
+      "fixtureIndexes": [
+        60
+      ]
+    },
+    {
+      "kind": "scd_stage_load",
+      "submissionFingerprint": "sha256:2b314a44f3d3ddc37e0de5af45d0020c9b33dcbb607b92fe38d2f9b830350925",
+      "serviceFrames": 40,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 2,
+      "minFrames": 40,
+      "maxFrames": 40,
+      "fixtureIndexes": [
+        142,
+        143
+      ]
+    },
+    {
+      "kind": "scd_stage_load",
+      "submissionFingerprint": "sha256:2be66f58a35380acd9b06f94d0005eb80e4e600c2a290070ba0777d634958133",
+      "serviceFrames": 38,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 2,
+      "minFrames": 38,
+      "maxFrames": 38,
+      "fixtureIndexes": [
+        137,
+        138
+      ]
+    },
+    {
+      "kind": "scd_stage_load",
+      "submissionFingerprint": "sha256:2ef2d3cadc5be19457181d6a04f50fa9838c0af3d43b0b06c6489b770a97b6f0",
+      "serviceFrames": 50,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 4,
+      "minFrames": 50,
+      "maxFrames": 50,
+      "fixtureIndexes": [
+        133,
+        134,
+        135,
+        136
+      ]
+    },
+    {
+      "kind": "scd_stage_load",
+      "submissionFingerprint": "sha256:36dbb098b708ac40774a7d22277549a7c4afa0c683eda51151fa587a8abe872a",
+      "serviceFrames": 43,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 1,
+      "minFrames": 43,
+      "maxFrames": 43,
+      "fixtureIndexes": [
+        100
+      ]
+    },
+    {
+      "kind": "scd_stage_load",
+      "submissionFingerprint": "sha256:3a0d77b4ed922130a4b3557d82ec552a25546b736393cf8e1d7ea1b809476480",
+      "serviceFrames": 43,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 9,
+      "minFrames": 43,
+      "maxFrames": 43,
+      "fixtureIndexes": [
+        124,
+        125,
+        126,
+        127,
+        128,
+        129,
+        130,
+        131,
+        132
+      ]
+    },
+    {
+      "kind": "scd_stage_load",
+      "submissionFingerprint": "sha256:3c8880aa36a6fc63e114715b773d6ca833896b8d69686042387d45c48d32b796",
+      "serviceFrames": 43,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 2,
+      "minFrames": 43,
+      "maxFrames": 43,
+      "fixtureIndexes": [
+        116,
+        117
+      ]
+    },
+    {
+      "kind": "scd_stage_load",
+      "submissionFingerprint": "sha256:3fe6419a929fe7b2d0a3845f401565004263820ca341ab6f16ead8a8fafe74f6",
+      "serviceFrames": 80,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 1,
+      "minFrames": 80,
+      "maxFrames": 80,
+      "fixtureIndexes": [
+        163
+      ]
+    },
+    {
+      "kind": "scd_stage_load",
+      "submissionFingerprint": "sha256:42e16ef3eba20d6b73e6ea0f2a8ce58da39234a79ae98fac3d31b69bd2433308",
+      "serviceFrames": 45,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 3,
+      "minFrames": 45,
+      "maxFrames": 45,
+      "fixtureIndexes": [
+        108,
+        109,
+        110
+      ]
+    },
+    {
+      "kind": "scd_stage_load",
+      "submissionFingerprint": "sha256:456abd7411e735f71063d4d5ebfbf2ce73ea8e470ebf8382fef0f4f53b15b362",
+      "serviceFrames": 43,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 1,
+      "minFrames": 43,
+      "maxFrames": 43,
+      "fixtureIndexes": [
+        35
+      ]
+    },
+    {
+      "kind": "scd_stage_load",
+      "submissionFingerprint": "sha256:4a912e04abaf2e48da36ba47985e6feb06e525c041df101ee6ffd1394001e35b",
+      "serviceFrames": 43,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 2,
+      "minFrames": 43,
+      "maxFrames": 43,
+      "fixtureIndexes": [
+        36,
+        37
+      ]
+    },
+    {
+      "kind": "scd_stage_load",
+      "submissionFingerprint": "sha256:4df8581b12f22eb3fdd7cbbea6dcd73304c47b96e57fe7ae583e363d2e42e535",
+      "serviceFrames": 39,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 1,
+      "minFrames": 39,
+      "maxFrames": 39,
+      "fixtureIndexes": [
+        153
+      ]
+    },
+    {
+      "kind": "scd_stage_load",
+      "submissionFingerprint": "sha256:58896d58b505771eaa5d5d1ec9c05ca15cb2d3ad7273ea6dc7f5a4d00c04f185",
+      "serviceFrames": 43,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 1,
+      "minFrames": 43,
+      "maxFrames": 43,
+      "fixtureIndexes": [
+        99
+      ]
+    },
+    {
+      "kind": "scd_stage_load",
+      "submissionFingerprint": "sha256:5a29d6748fbfcac2481b5c591ec37aebc778d0b9385947dbb7e449bda899c928",
+      "serviceFrames": 41,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 1,
+      "minFrames": 41,
+      "maxFrames": 41,
+      "fixtureIndexes": [
+        61
+      ]
+    },
+    {
+      "kind": "scd_stage_load",
+      "submissionFingerprint": "sha256:615487c9f47bfbe042c3595a2420c038370d3f3df30531615a6ad60baabf1bd7",
+      "serviceFrames": 44,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 3,
+      "minFrames": 44,
+      "maxFrames": 44,
+      "fixtureIndexes": [
+        84,
+        85,
+        86
+      ]
+    },
+    {
+      "kind": "scd_stage_load",
+      "submissionFingerprint": "sha256:6344c0c96f863348f65f8f5c8ae8b5cf656a49af3241665ce1826384b737472b",
+      "serviceFrames": 38,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 1,
+      "minFrames": 38,
+      "maxFrames": 38,
+      "fixtureIndexes": [
+        144
+      ]
+    },
+    {
+      "kind": "scd_stage_load",
+      "submissionFingerprint": "sha256:6e8c9f049a3bc49adb554440a0f533f76e8d94542151568b752ca5b98bb9e755",
+      "serviceFrames": 47,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 6,
+      "minFrames": 47,
+      "maxFrames": 47,
+      "fixtureIndexes": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        161
+      ]
+    },
+    {
+      "kind": "scd_stage_load",
+      "submissionFingerprint": "sha256:6fade03d2a5fcfafbbd47e74dda456050502ced8736d76910ebc0d1e240eb62c",
+      "serviceFrames": 43,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 2,
+      "minFrames": 43,
+      "maxFrames": 43,
+      "fixtureIndexes": [
+        31,
+        32
+      ]
+    },
+    {
+      "kind": "scd_stage_load",
+      "submissionFingerprint": "sha256:79d0e097a94b6cbd70e354e0032d7b3be7d805d24ca2468e1dde94f4a0702b2e",
+      "serviceFrames": 46,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 2,
+      "minFrames": 46,
+      "maxFrames": 46,
+      "fixtureIndexes": [
+        101,
+        102
+      ]
+    },
+    {
+      "kind": "scd_stage_load",
+      "submissionFingerprint": "sha256:7c94780e207167dbe5afb0e75a669369517dd83f5baaae3c60a203ae8d2701e4",
+      "serviceFrames": 43,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 1,
+      "minFrames": 43,
+      "maxFrames": 43,
+      "fixtureIndexes": [
+        122
+      ]
+    },
+    {
+      "kind": "scd_stage_load",
+      "submissionFingerprint": "sha256:89794f8a6d2f01878c191ae52734cbc37e31fb6163497277ef3ae6538ce2b648",
+      "serviceFrames": 47,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 2,
+      "minFrames": 47,
+      "maxFrames": 47,
+      "fixtureIndexes": [
+        79,
+        80
+      ]
+    },
+    {
+      "kind": "scd_stage_load",
+      "submissionFingerprint": "sha256:8a2d42add989943e9c1305e85ffe8493b46e5d7a7a49820617c1a14fdf5c9779",
+      "serviceFrames": 46,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 2,
+      "minFrames": 46,
+      "maxFrames": 46,
+      "fixtureIndexes": [
+        87,
+        88
+      ]
+    },
+    {
+      "kind": "scd_stage_load",
+      "submissionFingerprint": "sha256:8babfb6602a403d288602eef16321e4f3a2fe16aac8453b53cdc6f54d3bf4f1b",
+      "serviceFrames": 42,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 1,
+      "minFrames": 42,
+      "maxFrames": 42,
+      "fixtureIndexes": [
+        39
+      ]
+    },
+    {
+      "kind": "scd_stage_load",
+      "submissionFingerprint": "sha256:8c5a5c92d6df65e21b31c054ecd4bc082fe856f05c6beb9a5446095dad993d60",
+      "serviceFrames": 43,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 2,
+      "minFrames": 43,
+      "maxFrames": 43,
+      "fixtureIndexes": [
+        92,
+        93
+      ]
+    },
+    {
+      "kind": "scd_stage_load",
+      "submissionFingerprint": "sha256:93449a1cd75d1bcd6fc8a477b18e1179e2f38ff688d58d49039b33892fe7ee5d",
+      "serviceFrames": 46,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 2,
+      "minFrames": 46,
+      "maxFrames": 46,
+      "fixtureIndexes": [
+        76,
+        77
+      ]
+    },
+    {
+      "kind": "scd_stage_load",
+      "submissionFingerprint": "sha256:93ae60968538fe1b71040056ee91401a3a36f07244b31d0be030812811027633",
+      "serviceFrames": 43,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 1,
+      "minFrames": 43,
+      "maxFrames": 43,
+      "fixtureIndexes": [
+        40
+      ]
+    },
+    {
+      "kind": "scd_stage_load",
+      "submissionFingerprint": "sha256:95bcb24df6921841803807126fc7560200031c0a3f4ff021bb8ce866a59848c8",
+      "serviceFrames": 43,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 2,
+      "minFrames": 43,
+      "maxFrames": 43,
+      "fixtureIndexes": [
+        47,
+        48
+      ]
+    },
+    {
+      "kind": "scd_stage_load",
+      "submissionFingerprint": "sha256:9c3c9a01439ca9e60484256ade9aaa34a20b411b2a8f7cf6789d2d2f24776662",
+      "serviceFrames": 49,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 1,
+      "minFrames": 49,
+      "maxFrames": 49,
+      "fixtureIndexes": [
+        118
+      ]
+    },
+    {
+      "kind": "scd_stage_load",
+      "submissionFingerprint": "sha256:a7253a2d197dce650d36427c331cfba19a1c238b1817cc7c58993ad2a9ae5eb2",
+      "serviceFrames": 44,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 2,
+      "minFrames": 44,
+      "maxFrames": 44,
+      "fixtureIndexes": [
+        114,
+        115
+      ]
+    },
+    {
+      "kind": "scd_stage_load",
+      "submissionFingerprint": "sha256:a88d3b9c410ddccad7327f11fd1b523fb95fe299a1be9d4f7d688c4acec7d622",
+      "serviceFrames": 45,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 6,
+      "minFrames": 45,
+      "maxFrames": 45,
+      "fixtureIndexes": [
+        21,
+        22,
+        23,
+        24,
+        25,
+        26
+      ]
+    },
+    {
+      "kind": "scd_stage_load",
+      "submissionFingerprint": "sha256:af25b691989e9024f8ea3e6524550615d7c0678470926ce22356f0fb481ddb7f",
+      "serviceFrames": 41,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 1,
+      "minFrames": 41,
+      "maxFrames": 41,
+      "fixtureIndexes": [
+        59
+      ]
+    },
+    {
+      "kind": "scd_stage_load",
+      "submissionFingerprint": "sha256:b886db38e8f80eaa8e5bd210e5aab9f2c496f113fe046d0c2e725cd6a68daeb8",
+      "serviceFrames": 45,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 1,
+      "minFrames": 45,
+      "maxFrames": 45,
+      "fixtureIndexes": [
+        10
+      ]
+    },
+    {
+      "kind": "scd_stage_load",
+      "submissionFingerprint": "sha256:ba85858fd8b967b9ae0ae77f2f351544c0d212987b0315fb4de8990cadd29c61",
+      "serviceFrames": 48,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 3,
+      "minFrames": 48,
+      "maxFrames": 48,
+      "fixtureIndexes": [
+        111,
+        112,
+        113
+      ]
+    },
+    {
+      "kind": "scd_stage_load",
+      "submissionFingerprint": "sha256:c019840a5c182e27d2fa669067d264226c1b81e97969b3ac859c30eec8ca6a10",
+      "serviceFrames": 40,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 6,
+      "minFrames": 40,
+      "maxFrames": 40,
+      "fixtureIndexes": [
+        145,
+        146,
+        147,
+        148,
+        149,
+        150
+      ]
+    },
+    {
+      "kind": "scd_stage_load",
+      "submissionFingerprint": "sha256:c2b22aa6d2f51d21fe5d8b63038e52a3ff89bc8c045f2a2965ed68e25ef68385",
+      "serviceFrames": 50,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 1,
+      "minFrames": 50,
+      "maxFrames": 50,
+      "fixtureIndexes": [
+        123
+      ]
+    },
+    {
+      "kind": "scd_stage_load",
+      "submissionFingerprint": "sha256:c64a012f9f174bde566f38114dc5e014ffbd5748fe3de2164671b38c9f9c57a7",
+      "serviceFrames": 41,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 1,
+      "minFrames": 41,
+      "maxFrames": 41,
+      "fixtureIndexes": [
+        152
+      ]
+    },
+    {
+      "kind": "scd_stage_load",
+      "submissionFingerprint": "sha256:c68d357013d6a89768a49e039baa1577488cf1636c2aa5a76a6e8bde9b9245a6",
+      "serviceFrames": 48,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 2,
+      "minFrames": 48,
+      "maxFrames": 48,
+      "fixtureIndexes": [
+        119,
+        120
+      ]
+    },
+    {
+      "kind": "scd_stage_load",
+      "submissionFingerprint": "sha256:cd6502634eb0d4db947be697d0df1719d664043d2589df2f6dcb0636a226a04e",
+      "serviceFrames": 43,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 4,
+      "minFrames": 43,
+      "maxFrames": 43,
+      "fixtureIndexes": [
+        68,
+        69,
+        70,
+        71
+      ]
+    },
+    {
+      "kind": "scd_stage_load",
+      "submissionFingerprint": "sha256:cdea5e4fce0dd375275cd1b25610c94bfe4f4adb41d3efa7714e144d03a6e367",
+      "serviceFrames": 38,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 3,
+      "minFrames": 38,
+      "maxFrames": 38,
+      "fixtureIndexes": [
+        139,
+        140,
+        141
+      ]
+    },
+    {
+      "kind": "scd_stage_load",
+      "submissionFingerprint": "sha256:d20ce12b142358be91d32cb968f1934bfbfa3ce37a0e1799880e272e3aba2938",
+      "serviceFrames": 43,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 5,
+      "minFrames": 43,
+      "maxFrames": 43,
+      "fixtureIndexes": [
+        103,
+        104,
+        105,
+        106,
+        107
+      ]
+    },
+    {
+      "kind": "scd_stage_load",
+      "submissionFingerprint": "sha256:d86d65aec509ef69331a9e143122eca3a04681d70723787bceddab5afe1c8143",
+      "serviceFrames": 42,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 2,
+      "minFrames": 42,
+      "maxFrames": 42,
+      "fixtureIndexes": [
+        94,
+        95
+      ]
+    },
+    {
+      "kind": "scd_stage_load",
+      "submissionFingerprint": "sha256:dd747c0bc001480e845e12c1ac0c3875a70fa423db0696bb73c32c01f44f9060",
+      "serviceFrames": 44,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 2,
+      "minFrames": 44,
+      "maxFrames": 44,
+      "fixtureIndexes": [
+        97,
+        98
+      ]
+    },
+    {
+      "kind": "scd_stage_load",
+      "submissionFingerprint": "sha256:e0480ceb6bfa93b3607dc92aa9cb07be562d6ce5332ee40f90286433bf33cf78",
+      "serviceFrames": 37,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 2,
+      "minFrames": 37,
+      "maxFrames": 37,
+      "fixtureIndexes": [
+        157,
+        158
+      ]
+    },
+    {
+      "kind": "scd_stage_load",
+      "submissionFingerprint": "sha256:e09ca42aba82930cd50fb9d564d5c945848bf465aacb1ea83c4a461781b5dc8a",
+      "serviceFrames": 41,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 3,
+      "minFrames": 41,
+      "maxFrames": 41,
+      "fixtureIndexes": [
+        44,
+        45,
+        46
+      ]
+    },
+    {
+      "kind": "scd_stage_load",
+      "submissionFingerprint": "sha256:e36260279af09bf4aaf4ed24288aeb2fb99367afd3a5f3c79f06f10851933d2c",
+      "serviceFrames": 44,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 2,
+      "minFrames": 44,
+      "maxFrames": 44,
+      "fixtureIndexes": [
+        8,
+        9
+      ]
+    },
+    {
+      "kind": "scd_stage_load",
+      "submissionFingerprint": "sha256:e7a3ae892293cd08294102bd674b9be84e77df31267daf60b40c2822d03bec3c",
+      "serviceFrames": 41,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 2,
+      "minFrames": 41,
+      "maxFrames": 41,
+      "fixtureIndexes": [
+        49,
+        50
+      ]
+    },
+    {
+      "kind": "scd_stage_load",
+      "submissionFingerprint": "sha256:f5f9e5643ecf9563b641e20082bbcea906324fee032fc4732f37070602bb8a92",
+      "serviceFrames": 47,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 1,
+      "minFrames": 47,
+      "maxFrames": 47,
+      "fixtureIndexes": [
+        83
+      ]
+    },
+    {
+      "kind": "scd_stage_load",
+      "submissionFingerprint": "sha256:f62922ec6ab71704ab0431fbe5068271160890dee682568fccecceb15704d76b",
+      "serviceFrames": 46,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 1,
+      "minFrames": 46,
+      "maxFrames": 46,
+      "fixtureIndexes": [
+        82
+      ]
+    },
+    {
+      "kind": "scd_stage_load",
+      "submissionFingerprint": "sha256:f7b9fac96af03548adb87eadce13625d7f75cd70fc1cabdbb1fe7018cf8398cb",
+      "serviceFrames": 43,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 3,
+      "minFrames": 43,
+      "maxFrames": 43,
+      "fixtureIndexes": [
+        5,
+        6,
+        7
+      ]
+    },
+    {
+      "kind": "scd_stage_load",
+      "submissionFingerprint": "sha256:f8de95916512eee09573d823a31083ce6055cb7956b78cd2c199ac0c63d952a1",
+      "serviceFrames": 43,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 1,
+      "minFrames": 43,
+      "maxFrames": 43,
+      "fixtureIndexes": [
+        38
+      ]
+    },
+    {
+      "kind": "scd_stage_load",
+      "submissionFingerprint": "sha256:fa6ae3205a87240c53b64148a64f27432ea67b2c3d66f24f68357466934de869",
+      "serviceFrames": 48,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 5,
+      "minFrames": 48,
+      "maxFrames": 48,
+      "fixtureIndexes": [
+        51,
+        52,
+        53,
+        54,
+        55
+      ]
+    },
+    {
+      "kind": "scd_stage_load",
+      "submissionFingerprint": "sha256:fc99e1bbbfa3cf2622df91984262b49be54b83dc8216bb3f1fb9c3cfb2ecbf11",
+      "serviceFrames": 42,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 3,
+      "minFrames": 42,
+      "maxFrames": 42,
+      "fixtureIndexes": [
+        89,
+        90,
+        91
+      ]
+    },
+    {
+      "kind": "scd_stage_load",
+      "submissionFingerprint": "sha256:ff32d48b35c19b79acc3140b9983f4f9837c73d3816a2399cb046af24bf1be04",
+      "serviceFrames": 41,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 1,
+      "minFrames": 41,
+      "maxFrames": 41,
+      "fixtureIndexes": [
+        56
+      ]
+    },
+    {
+      "kind": "scd_stage_load",
+      "submissionFingerprint": "sha256:ffe3ddb31643600fe9813eeb802fddc24d59a1ec8df2f5a9804e689bc62cce50",
+      "serviceFrames": 44,
+      "eligibleBoundaries": [
+        "vint_service"
+      ],
+      "sampleCount": 1,
+      "minFrames": 44,
+      "maxFrames": 44,
+      "fixtureIndexes": [
+        121
+      ]
+    }
+  ]
+}

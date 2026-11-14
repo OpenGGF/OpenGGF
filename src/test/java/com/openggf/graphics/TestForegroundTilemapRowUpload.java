@@ -59,19 +59,46 @@ class TestForegroundTilemapRowUpload {
                 assertRowColour(row, published ? 0 : 255, published ? 255 : 0, 0);
             }
 
-            // Spans union into one range; a different array escalates to a full upload.
+            // Separate spans stay separate uploads: rows 5 and 1 publish, rows 2..4 are not re-sent.
+            byte[] blue = TilemapGpuRenderer.packWindowDescriptors(new int[]{3});
+            for (int x = 0; x < 8; x++) System.arraycopy(blue, 0, data, (1 * 8 + x) * 4, 4);
+            for (int x = 0; x < 8; x++) System.arraycopy(blue, 0, data, (4 * 8 + x) * 4, 4);
             renderer.setForegroundTilemapRows(data, 8, 8, 5, 1);
             renderer.setForegroundTilemapRows(data, 8, 8, 1, 1);
             assertEquals(1, renderer.foregroundPendingFirstRowForDiagnostics());
-            assertEquals(5, renderer.foregroundPendingRowCountForDiagnostics());
+            assertEquals(2, renderer.foregroundPendingRowCountForDiagnostics());
+            assertEquals(2, renderer.foregroundPendingSpanCountForDiagnostics());
+            draw(renderer, atlas, palette);
+            assertRowColour(1, 0, 0, 255);
+            assertRowColour(4, 255, 0, 0);
+            assertRowColour(5, 0, 255, 0);
+            // Touching spans join; past the cap the two closest merge.
+            renderer.setForegroundTilemapRows(data, 8, 8, 0, 1);
+            renderer.setForegroundTilemapRows(data, 8, 8, 1, 1);
+            assertEquals(1, renderer.foregroundPendingSpanCountForDiagnostics());
+            assertEquals(2, renderer.foregroundPendingRowCountForDiagnostics());
+            draw(renderer, atlas, palette);
             renderer.setForegroundTilemapRows(data.clone(), 8, 8, 0, 1);
             assertTrue(renderer.foregroundFullUploadPendingForDiagnostics());
             assertEquals(0, renderer.foregroundPendingRowCountForDiagnostics());
             draw(renderer, atlas, palette);
             for (int row = 0; row < 8; row++) {
-                boolean green5 = row == 2 || row == 3 || row == 5;
-                assertRowColour(row, green5 ? 0 : 255, green5 ? 255 : 0, 0);
+                boolean greenRow = row == 2 || row == 3 || row == 5;
+                boolean blueRow = row == 1 || row == 4;
+                assertRowColour(row, greenRow || blueRow ? 0 : 255, greenRow ? 255 : 0, blueRow ? 255 : 0);
             }
+            assertEquals(GL_NO_ERROR, glGetError());
+
+            // Past the span cap the two closest spans merge, so no edit is ever dropped.
+            byte[] tall = TilemapGpuRenderer.packWindowDescriptors(new int[8 * 32]);
+            renderer.setTilemapData(TilemapGpuRenderer.Layer.FOREGROUND, tall, 8, 32);
+            draw(renderer, atlas, palette);
+            for (int row = 0; row < 20; row += 2) renderer.setForegroundTilemapRows(tall, 8, 32, row, 1);
+            assertEquals(8, renderer.foregroundPendingSpanCountForDiagnostics());
+            assertEquals(12, renderer.foregroundPendingRowCountForDiagnostics(),
+                    "ten one-row spans, two merges across one-row gaps");
+            draw(renderer, atlas, palette);
+            assertEquals(0, renderer.foregroundPendingSpanCountForDiagnostics());
             assertEquals(GL_NO_ERROR, glGetError());
         } finally {
             // GL objects need the current context: release them before closing it.

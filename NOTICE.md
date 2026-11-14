@@ -109,6 +109,77 @@ its large-argument path). `tools/audio/native-pcm/musl_sin.c` reproduces the
 "3 Band EQ", (c) Neil C / Etanza Systems 2K6, after Paul Kellet's filter. The
 author placed it in the public domain.
 
+## buram
+
+The Sega CD backup-RAM code in `src/main/java/com/openggf/game/soniccd/backupram/`
+translates parts of buram, a Mega CD / Sega CD backup-RAM image tool. The BIOS
+owns this format, so it is not on the game disc.
+
+- Copyright (c) 2022 Ian Karlsson
+- Upstream: https://github.com/superctr/buram, commit
+  `98c27a650be9c8f8e35271f44f5d127ba450edb6` (`buram.c` sha256
+  `bcb41a1b90b865fa1122279af33ad494cde7180fcf3c9968e3b3c3b7575f114e`)
+- Licence: MIT; the upstream `COPYING` is `LICENSES/buram-MIT.txt`
+- Modified 2026-11 by the OpenGGF contributors: translated from C to Java.
+  - `CdBramEcc` translates the protected-block code: `buram_rs_init`,
+    `buram_rs_add_mod`, `buram_rs_encode`, `buram_rs_decode`,
+    `buram_crc_init`, `buram_crc`, the data, RS6 and RS8 interleave functions,
+    `buram_encode` and `buram_decode`, with upstream's generator-polynomial
+    and byte-order tables. A block with an uncorrectable symbol is rejected.
+  - `CdBackupRamVolume` translates the file-system functions `buram_format`,
+    `buram_read_repeat_code`, `buram_write_repeat_code`,
+    `buram_update_counters`, `buram_search`, `buram_read`, `buram_write` and
+    `buram_delete`, and the directory addressing of `buram_decode_buffer` and
+    `buram_encode_buffer`. It adds the BIOS's format check and `BRMVERIFY`,
+    and a read fails on any uncorrectable block.
+  - `CdBackupRamFile` writes and reads the 16-byte directory descriptor in
+    upstream's layout (`buram_write_file_desc`, `buram_read_file_desc`) with
+    its own code.
+
+  The two translated files record this in their headers. The other classes
+  in the package come from the Sonic CD disassembly and native captures, not
+  from buram.
+
+## MAME: RF5C164 PCM and Mega-CD graphics
+
+Sonic CD's PCM sound chip and stamp-graphics ("image rotation") unit in
+`src/main/java/com/openggf/game/soniccd/device/` translate parts of MAME.
+MAME as a whole is GPL-2.0; these files are individually BSD-3-Clause, as
+their SPDX headers state.
+
+- Upstream: https://github.com/mamedev/mame, commit
+  `9cf98d883e72e2ab8d4d73a7104989b4b306dda7`
+- `src/devices/sound/rf5c68.cpp` (sha256
+  `71e94d93dd9fdbbcf2c396c62ab2aa50d948bfcc2be688391f2f58268522aea9`) and
+  `rf5c68.h` (sha256
+  `00f9fa677404d17c151f31aa0dd52e3ae82b883749ce36d977e725d88e634785`):
+  copyright-holders Olivier Galibert, Aaron Giles
+- `src/mame/sega/megacd.cpp` (sha256
+  `4911ede42feb8f7cc48e1bdd35390cd5d4d917b61eba23a6962f44ca089e3f97`):
+  copyright-holders David Haywood
+- Licence: BSD-3-Clause; MAME's `docs/legal/BSD-3-Clause` is
+  `LICENSES/MAME-BSD-3-Clause.txt`
+- Modified 2026-11 by the OpenGGF contributors: translated from C++ to Java.
+  - `pcm/CdPcmDevice` translates `rf5c68_device::rf5c68_w`, `rf5c68_r`,
+    `rf5c68_mem_r`, `rf5c68_mem_w`, `sound_stream_update` and the
+    `rf5c164_map` decode. Where the native captures disagree, it follows them:
+    negative channel products round down and a loop jump is not stepped in the
+    same sample. Reset sets PAN to FF, which has no source. OpenGGF adds
+    `stepSplit`, not in MAME: the same sample, also reporting the part of the
+    channel sum from a given set of channels, so the host mix can apply music
+    and effect volumes.
+  - `CdStampGraphics` translates `segacd_trace_vector_base_address_w`,
+    `read_pixel_from_stampmap` and `write_pixel`, run line by line; reserved
+    priority mode 3 keeps the destination, which has no source.
+  - `CdStampGeometry` translates the stamp-map decoders
+    (`SCD_GET_TILE_INFO_*`), the `get_stampmap_*_tile_info_pixel` samplers and
+    the stamp `gfx_layout` tables, with the flipped quarter turns following the
+    native captures.
+
+  The three translated files carry the licence in their headers.
+  `CdPcmState`, `CdStampRenderRequest` and `CdStampRenderState` describe the
+  same registers and cite MAME for their decode without translating its code.
+
 ## Bundled fonts: Fusion Pixel, Noto and GNU Unifont
 
 Host interface text (`com.openggf.graphics.text.HostText`, drawn by `MenuPixelFont`) and

@@ -44,9 +44,9 @@ public class TilemapGpuRenderer {
         if (cinematicBackgroundActive) throw new IllegalStateException("Nested cinematic background residency");
         // Pending row spans belong to the native foreground texture; escalate them to a
         // full upload so the restored residency republishes them after the private draw.
-        if (foregroundPendingRowCount > 0) {
+        if (foregroundPendingSpanCount > 0) {
             foregroundDirty = true;
-            foregroundPendingRowCount = 0;
+            foregroundPendingSpanCount = 0;
         }
         BackgroundResidencyState saved = captureBackgroundResidency();
         var savedForeground = new ForegroundResidencyState(foregroundTexture, foregroundWindowTexture,
@@ -208,9 +208,13 @@ public class TilemapGpuRenderer {
     private int foregroundWidthTiles;
     private int foregroundHeightTiles;
     private boolean foregroundDirty = false;
-    // Contiguous row span of foregroundData awaiting upload into the existing texture.
-    private int foregroundPendingFirstRow;
-    private int foregroundPendingRowCount;
+    // Disjoint row spans [first, end) of foregroundData awaiting upload into the existing
+    // texture. Edits in separate parts of the level stay separate uploads; past the cap
+    // the two closest spans merge.
+    private static final int MAX_FOREGROUND_ROW_SPANS = 8;
+    private final int[] foregroundPendingSpanFirst = new int[MAX_FOREGROUND_ROW_SPANS + 1];
+    private final int[] foregroundPendingSpanEnd = new int[MAX_FOREGROUND_ROW_SPANS + 1];
+    private int foregroundPendingSpanCount;
 
     private byte[] lookupData;
     private int lookupSize;
@@ -298,7 +302,7 @@ public class TilemapGpuRenderer {
             this.foregroundWidthTiles = widthTiles;
             this.foregroundHeightTiles = heightTiles;
             this.foregroundDirty = true;
-            this.foregroundPendingRowCount = 0;
+            this.foregroundPendingSpanCount = 0;
         } else {
             this.backgroundData = data;
             this.backgroundWidthTiles = widthTiles;
@@ -316,7 +320,8 @@ public class TilemapGpuRenderer {
     /**
      * Republishes rows {@code firstRow..firstRow+rowCount-1} of the foreground array that
      * is already resident. Any other array or geometry, or a pending full upload, takes
-     * the ordinary {@link #setTilemapData} path; spans union into one contiguous range.
+     * the ordinary {@link #setTilemapData} path. Overlapping or adjacent spans join;
+     * separate ones upload separately, up to {@link #MAX_FOREGROUND_ROW_SPANS}.
      */
     void setForegroundTilemapRows(byte[] data, int widthTiles, int heightTiles, int firstRow, int rowCount) {
         if (foregroundDirty || data != foregroundData || widthTiles != foregroundWidthTiles
@@ -325,19 +330,67 @@ public class TilemapGpuRenderer {
             setTilemapData(Layer.FOREGROUND, data, widthTiles, heightTiles);
             return;
         }
-        if (foregroundPendingRowCount > 0) {
-            int end = Math.max(foregroundPendingFirstRow + foregroundPendingRowCount, firstRow + rowCount);
-            foregroundPendingFirstRow = Math.min(foregroundPendingFirstRow, firstRow);
-            foregroundPendingRowCount = end - foregroundPendingFirstRow;
-        } else {
-            foregroundPendingFirstRow = firstRow;
-            foregroundPendingRowCount = rowCount;
+        int first = firstRow;
+        int end = firstRow + rowCount;
+        // Absorb every pending span the new one overlaps or touches.
+        for (int i = foregroundPendingSpanCount - 1; i >= 0; i--) {
+            if (foregroundPendingSpanFirst[i] <= end && first <= foregroundPendingSpanEnd[i]) {
+                first = Math.min(first, foregroundPendingSpanFirst[i]);
+                end = Math.max(end, foregroundPendingSpanEnd[i]);
+                removeForegroundPendingSpan(i);
+            }
+        }
+        foregroundPendingSpanFirst[foregroundPendingSpanCount] = first;
+        foregroundPendingSpanEnd[foregroundPendingSpanCount] = end;
+        foregroundPendingSpanCount++;
+        if (foregroundPendingSpanCount > MAX_FOREGROUND_ROW_SPANS) {
+            mergeClosestForegroundPendingSpans();
         }
     }
 
-    /** Diagnostics: pending foreground row span (count 0 = none). */
-    int foregroundPendingRowCountForDiagnostics() { return foregroundPendingRowCount; }
-    int foregroundPendingFirstRowForDiagnostics() { return foregroundPendingFirstRow; }
+    private void removeForegroundPendingSpan(int index) {
+        foregroundPendingSpanCount--;
+        foregroundPendingSpanFirst[index] = foregroundPendingSpanFirst[foregroundPendingSpanCount];
+        foregroundPendingSpanEnd[index] = foregroundPendingSpanEnd[foregroundPendingSpanCount];
+    }
+
+    /** Joins the two disjoint spans with the fewest rows between them. */
+    private void mergeClosestForegroundPendingSpans() {
+        int bestA = 0;
+        int bestB = 1;
+        int bestGap = Integer.MAX_VALUE;
+        for (int a = 0; a < foregroundPendingSpanCount; a++) {
+            for (int b = a + 1; b < foregroundPendingSpanCount; b++) {
+                int gap = Math.max(foregroundPendingSpanFirst[a], foregroundPendingSpanFirst[b])
+                        - Math.min(foregroundPendingSpanEnd[a], foregroundPendingSpanEnd[b]);
+                if (gap < bestGap) {
+                    bestGap = gap;
+                    bestA = a;
+                    bestB = b;
+                }
+            }
+        }
+        foregroundPendingSpanFirst[bestA] = Math.min(foregroundPendingSpanFirst[bestA], foregroundPendingSpanFirst[bestB]);
+        foregroundPendingSpanEnd[bestA] = Math.max(foregroundPendingSpanEnd[bestA], foregroundPendingSpanEnd[bestB]);
+        removeForegroundPendingSpan(bestB);
+    }
+
+    /** Diagnostics: pending foreground rows, first pending row and span count (0 = none). */
+    int foregroundPendingRowCountForDiagnostics() {
+        int rows = 0;
+        for (int i = 0; i < foregroundPendingSpanCount; i++) {
+            rows += foregroundPendingSpanEnd[i] - foregroundPendingSpanFirst[i];
+        }
+        return rows;
+    }
+
+    int foregroundPendingFirstRowForDiagnostics() {
+        int first = Integer.MAX_VALUE;
+        for (int i = 0; i < foregroundPendingSpanCount; i++) first = Math.min(first, foregroundPendingSpanFirst[i]);
+        return first;
+    }
+
+    int foregroundPendingSpanCountForDiagnostics() { return foregroundPendingSpanCount; }
     boolean foregroundFullUploadPendingForDiagnostics() { return foregroundDirty; }
 
     /**
@@ -620,14 +673,18 @@ public class TilemapGpuRenderer {
             if (foregroundDirty) {
                 tilemapTexture.upload(tilemapData, tilemapWidthTiles, tilemapHeightTiles);
                 foregroundDirty = false;
-            } else if (foregroundPendingRowCount > 0) {
-                if (!tilemapTexture.uploadRows(tilemapData, tilemapWidthTiles, tilemapHeightTiles,
-                        foregroundPendingFirstRow, foregroundPendingFirstRow, foregroundPendingRowCount)) {
-                    // Texture recreated or resized since the last full upload.
-                    tilemapTexture.upload(tilemapData, tilemapWidthTiles, tilemapHeightTiles);
+            } else {
+                for (int i = 0; i < foregroundPendingSpanCount; i++) {
+                    int first = foregroundPendingSpanFirst[i];
+                    if (!tilemapTexture.uploadRows(tilemapData, tilemapWidthTiles, tilemapHeightTiles,
+                            first, first, foregroundPendingSpanEnd[i] - first)) {
+                        // Texture recreated or resized since the last full upload.
+                        tilemapTexture.upload(tilemapData, tilemapWidthTiles, tilemapHeightTiles);
+                        break;
+                    }
                 }
             }
-            foregroundPendingRowCount = 0;
+            foregroundPendingSpanCount = 0;
         } else if (backgroundDirty) {
             tilemapTexture.upload(tilemapData, tilemapWidthTiles, tilemapHeightTiles);
             backgroundDirty = false;
@@ -1162,7 +1219,7 @@ public class TilemapGpuRenderer {
         foregroundLineScrollBuffer.cleanup();
         backgroundTexture.cleanup();
         foregroundTexture.cleanup();
-        foregroundPendingRowCount = 0;
+        foregroundPendingSpanCount = 0;
         foregroundWindowTexture.cleanup();
         uploadedWindowDescriptors = null;
         foregroundWindow = null;

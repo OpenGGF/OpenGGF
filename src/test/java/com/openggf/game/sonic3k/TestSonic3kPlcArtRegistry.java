@@ -1088,7 +1088,7 @@ public class TestSonic3kPlcArtRegistry {
             RomByteReader reader = RomByteReader.fromRom(rom);
             Sonic3kObjectArt art = new Sonic3kObjectArt(null, reader);
 
-            for (int zone : new int[] {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 0x16, 0x17}) {
+            for (int zone : new int[] {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 0x13, 0x14, 0x15, 0x16, 0x17}) {
                 for (int act = 0; act <= 1; act++) {
                     Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(zone, act);
                     String context = "zone 0x" + Integer.toHexString(zone) + " act " + act;
@@ -1102,6 +1102,9 @@ public class TestSonic3kPlcArtRegistry {
                                 reader, entry.mappingAddr(), entry.mappingFrameCount(), entry.mappingFormat())
                                 : S3kSpriteDataLoader.loadMappingFrames(
                                 reader, entry.mappingAddr(), entry.mappingFormat());
+                        // The whole parsed table is decoded on every level load, so a frame
+                        // filter must not hide a table read past its end.
+                        assertSaneMappingFrames(context + " level art table " + entry.key(), frames, -1);
                         if (entry.frameFilter() != null) {
                             List<SpriteMappingFrame> filtered = new ArrayList<>();
                             for (int frameIndex : entry.frameFilter()) {
@@ -1117,6 +1120,59 @@ public class TestSonic3kPlcArtRegistry {
                     }
                 }
             }
+        }
+    }
+
+    @Test
+    public void springLevelArtParsesOnlyItsOwnElevenFrameTables() throws IOException {
+        File romFile = RomTestUtils.ensureSonic3kRomAvailable();
+        assumeTrue(romFile != null && romFile.exists(), "Sonic 3K ROM not available");
+
+        try (Rom rom = new Rom()) {
+            assumeTrue(rom.open(romFile.getPath()), "Failed to open Sonic 3K ROM");
+            RomByteReader reader = RomByteReader.fromRom(rom);
+            for (int zone : new int[] {0, Sonic3kZoneIds.ZONE_MGZ, Sonic3kZoneIds.ZONE_LRZ}) {
+                for (Sonic3kPlcArtRegistry.LevelArtEntry entry : Sonic3kPlcArtRegistry.getPlan(zone, 0).levelArt()) {
+                    if (entry.mappingAddr() != Sonic3kConstants.MAP_SPRING_ADDR
+                            && entry.mappingAddr() != Sonic3kConstants.MAP_SPRING2_ADDR) {
+                        continue;
+                    }
+                    assertEquals(11, entry.mappingFrameCount(), entry.key());
+                    // The selected frames are the same frames a first-word count reaches;
+                    // only the neighbouring table's garbage tail is no longer decoded.
+                    List<SpriteMappingFrame> bounded = S3kSpriteDataLoader.loadMappingFrames(
+                            reader, entry.mappingAddr(), entry.mappingFrameCount(), entry.mappingFormat());
+                    List<SpriteMappingFrame> unbounded = S3kSpriteDataLoader.loadMappingFrames(
+                            reader, entry.mappingAddr(), entry.mappingFormat());
+                    assertTrue(unbounded.size() > bounded.size(), entry.key());
+                    assertEquals(unbounded.subList(0, bounded.size()), bounded, entry.key());
+                    for (int frame : entry.frameFilter()) {
+                        assertTrue(frame < bounded.size(), entry.key() + " frame " + frame);
+                    }
+                }
+            }
+            // The Gumball bonus stage's dispenser springs load Map_Spring as a standalone sheet.
+            Sonic3kObjectArt art = new Sonic3kObjectArt(null, reader);
+            int standaloneSprings = 0;
+            for (Sonic3kPlcArtRegistry.StandaloneArtEntry entry
+                    : Sonic3kPlcArtRegistry.getPlan(Sonic3kZoneIds.ZONE_GUMBALL, 0).standaloneArt()) {
+                if (entry.mappingAddr() != Sonic3kConstants.MAP_SPRING_ADDR
+                        && entry.mappingAddr() != Sonic3kConstants.MAP_SPRING2_ADDR) {
+                    continue;
+                }
+                standaloneSprings++;
+                assertEquals(11, entry.mappingFrameCount(), entry.key());
+                List<SpriteMappingFrame> unbounded = S3kSpriteDataLoader.loadMappingFrames(
+                        reader, entry.mappingAddr(), entry.mappingFormat());
+                List<SpriteMappingFrame> sheetFrames = new ArrayList<>();
+                var sheet = art.loadStandaloneSheet(rom, entry);
+                for (int frame = 0; frame < sheet.getFrameCount(); frame++) {
+                    sheetFrames.add(sheet.getFrame(frame));
+                }
+                assertEquals(11, sheetFrames.size(), entry.key());
+                assertEquals(unbounded.subList(0, 11), sheetFrames, entry.key());
+            }
+            assertEquals(1, standaloneSprings, "Gumball standalone spring sheets");
         }
     }
 

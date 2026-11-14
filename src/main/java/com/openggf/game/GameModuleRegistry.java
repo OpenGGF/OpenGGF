@@ -58,8 +58,45 @@ public final class GameModuleRegistry {
             case S1 -> new com.openggf.game.sonic1.Sonic1GameModule();
             case S2 -> new Sonic2GameModule();
             case S3K -> new com.openggf.game.sonic3k.Sonic3kGameModule();
+            case SCD -> new com.openggf.game.soniccd.SonicCdGameModule();
             case STANDALONE -> throw new IllegalArgumentException("Standalone has no stock game host");
         };
+    }
+
+    /** What a stock game boots from. */
+    public enum MediaKind {
+        /** A cartridge ROM image, found by the ROM catalogue and identified by its ROM detector. */
+        CARTRIDGE_ROM,
+        /** Other user media its module opens itself ({@link com.openggf.game.internal.HostedGameMedia}). */
+        HOSTED_MEDIA
+    }
+
+    /** The media a stock game boots from; the launcher lists and boots each kind its own way. */
+    public static MediaKind mediaKind(GameId gameId) {
+        return switch (java.util.Objects.requireNonNull(gameId, "gameId")) {
+            case S1, S2, S3K -> MediaKind.CARTRIDGE_ROM;
+            case SCD -> MediaKind.HOSTED_MEDIA;
+            case STANDALONE -> throw new IllegalArgumentException("Standalone has no stock media");
+        };
+    }
+
+    /** The stock games hosted from media other than a ROM, in {@link GameId} order. */
+    public static java.util.List<GameId> hostedMediaGames() {
+        return java.util.Arrays.stream(GameId.values())
+                .filter(id -> id != GameId.STANDALONE && mediaKind(id) == MediaKind.HOSTED_MEDIA).toList();
+    }
+
+    /**
+     * A fresh stock module of a {@link MediaKind#HOSTED_MEDIA} game and its media service, without
+     * touching the bootstrap default or any session.
+     */
+    public static com.openggf.game.internal.HostedGameMedia hostedMedia(GameId gameId) {
+        if (mediaKind(gameId) != MediaKind.HOSTED_MEDIA) {
+            throw new IllegalArgumentException(gameId + " boots from a cartridge ROM");
+        }
+        return java.util.Objects.requireNonNull(
+                com.openggf.game.internal.HostedGameMedia.of(createStockModule(gameId)),
+                () -> gameId + " registers no hosted media service");
     }
 
     /** Resolve the card's stock presentation without consulting or replacing a live session. */
@@ -70,7 +107,7 @@ public final class GameModuleRegistry {
             case S1 -> new com.openggf.game.sonic1.titlescreen.Sonic1TitlePreviewProvider();
             case S2 -> new com.openggf.game.sonic2.titlescreen.Sonic2TitlePreviewProvider();
             case S3K -> new com.openggf.game.sonic3k.titlescreen.Sonic3kTitlePreviewProvider();
-            case STANDALONE -> com.openggf.game.preview.TitlePreviewProvider.NONE;
+            case SCD, STANDALONE -> com.openggf.game.preview.TitlePreviewProvider.NONE;
         };
     }
 
@@ -83,6 +120,7 @@ public final class GameModuleRegistry {
                     com.openggf.game.sonic2.audio.Sonic2Music.TITLE.id);
             case S3K -> new StockMenuAudio(new com.openggf.game.sonic3k.audio.Sonic3kAudioProfile(),
                     com.openggf.game.sonic3k.audio.Sonic3kMusic.TITLE.id);
+            case SCD -> throw new IllegalArgumentException("Sonic CD title audio is not hosted yet");
             case STANDALONE -> throw new IllegalArgumentException("Standalone has no stock title theme");
         };
     }
@@ -93,6 +131,7 @@ public final class GameModuleRegistry {
             case S1 -> com.openggf.game.sonic1.audio.Sonic1AudioProfile.nativeSounds();
             case S2 -> com.openggf.game.sonic2.audio.Sonic2AudioProfile.nativeSounds();
             case S3K -> com.openggf.game.sonic3k.audio.Sonic3kAudioProfile.nativeSounds();
+            case SCD -> throw new IllegalArgumentException("Sonic CD has no cartridge ROM sound catalog");
             case STANDALONE -> throw new IllegalArgumentException("Standalone has no ROM sound catalog");
         };
     }

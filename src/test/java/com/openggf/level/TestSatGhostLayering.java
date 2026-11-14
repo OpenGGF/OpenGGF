@@ -48,7 +48,8 @@ class TestSatGhostLayering {
     @Test
     void levelRendererPassesTheGhostHookThroughTheAuthoritativeTablePreparation() throws Exception {
         String source = Files.readString(Path.of("src/main/java/com/openggf/level/LevelRenderer.java"));
-        int sat = source.indexOf("com.openggf.graphics.SpriteSatInternalAccess.beginCollection(graphicsManager,");
+        // The renderer keeps an admitted SAT access handle; the collection still starts here.
+        int sat = source.indexOf("satAccess.beginCollection(");
         int replay = source.indexOf("graphicsManager.endSpriteSatCollectionAndReplay();", sat);
         assertTrue(sat >= 0 && replay > sat);
         String satPath = source.substring(sat, replay);
