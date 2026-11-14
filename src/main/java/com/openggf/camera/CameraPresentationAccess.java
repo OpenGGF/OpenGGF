@@ -37,6 +37,17 @@ public final class CameraPresentationAccess {
 
     private static final int NATIVE_WIDTH = 320;
 
+    /**
+     * Pixels to draw a wide picture further left while the focused player runs off the right
+     * of the ROM screen at the camera's right limit; see {@code Camera.rightWallRunOffSlide}.
+     * {@code rightMargin} is the picture width drawn right of the 320-pixel window. For a
+     * renderer that draws a wider picture from the camera's own left edge (recorded-run
+     * capture); it is not part of {@link #inset}.
+     */
+    public static int runOffSlide(Camera camera, int rightMargin) {
+        return camera.rightWallRunOffSlide(rightMargin);
+    }
+
     /** Detached camera whose window is the drawn picture; never used for gameplay. */
     public static Camera projection(Camera camera) { return camera.presentationProjection(); }
 }

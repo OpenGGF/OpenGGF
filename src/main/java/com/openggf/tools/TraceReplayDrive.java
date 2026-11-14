@@ -1,5 +1,6 @@
 package com.openggf.tools;
 
+import com.openggf.camera.CameraPresentationAccess;
 import com.openggf.LevelFrameResult;
 import com.openggf.debug.PerformanceProfiler;
 import com.openggf.game.GameServices;
@@ -161,10 +162,24 @@ final class TraceReplayDrive {
         GraphicsManager graphicsManager = GameServices.graphics();
         levelManager.setClearColor();
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        levelManager.drawWithSpritePriority(GameServices.sprites());
         var camera = GameServices.camera();
-        graphicsManager.flushWithCamera(camera.getXWithShake(), camera.getYWithShake(),
-                (short) presentationWidth, camera.getHeight());
+        // The picture is drawn from the camera's left edge, so all of its extra width lies
+        // right of the ROM screen. While the player runs off the right of that screen at the
+        // level's end, draw from further left so the picture's right edge ends on the ROM
+        // screen's and the player leaves the picture as in the original. The replay camera is
+        // restored before anything else reads it.
+        short liveX = camera.getX(), copyX = camera.getXCopy();
+        int slide = CameraPresentationAccess.runOffSlide(camera, presentationWidth - camera.getWidth());
+        try {
+            camera.setXAfterRenderCopy((short) (liveX - slide));
+            camera.setXCopy((short) (copyX - slide));
+            levelManager.drawWithSpritePriority(GameServices.sprites());
+            graphicsManager.flushWithCamera(camera.getXWithShake(), camera.getYWithShake(),
+                    (short) presentationWidth, camera.getHeight());
+        } finally {
+            camera.setXAfterRenderCopy(liveX);
+            camera.setXCopy(copyX);
+        }
         // Engine.drawLevel keeps the active title overlay above the scene;
         // explicit loading clips must retain that presentation as well.
         var title = GameServices.module().getTitleCardProvider();

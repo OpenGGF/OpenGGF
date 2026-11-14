@@ -1132,6 +1132,27 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		return x - Math.clamp(left, x - extra, x);
 	}
 
+	/**
+	 * Presentation-only pixels to move a wide picture left while the focused player runs
+	 * off the right of the ROM screen, given {@code rightMargin} picture pixels drawn right
+	 * of the 320-pixel window. Sonic_LevelBound stops the player at
+	 * {@code v_limitright2 + $128} under a screen lock and {@code + $128 + $40} otherwise,
+	 * Sonic_LevelBound (_incObj/01 Sonic.asm:1057-1079; s2.asm:37233-37251):
+	 * the extra $40 puts the player wholly off a 320-pixel screen, which is how the S1/S2
+	 * act-end run-off leaves the picture. A wider picture still shows that spot, so it
+	 * gives up its right margin across those $40 pixels and its right edge ends on the ROM
+	 * screen's. Gameplay is not touched; it is zero unless the camera is at its right limit.
+	 * Used by recorded-run capture, which draws its wider picture from the camera's left
+	 * edge; {@link #getPresentationInset()} does not apply it.
+	 */
+	int rightWallRunOffSlide(int rightMargin) {
+		if (rightMargin <= 0 || focusedSprite == null || x != maxX) return 0;
+		int pastLockedWall = focusedSprite.getCentreX() - (maxX + ROM_SCREEN_WIDTH - RIGHT_WALL_INSET);
+		return Math.clamp(pastLockedWall, 0, RIGHT_WALL_RUN_OFF) * rightMargin / RIGHT_WALL_RUN_OFF;
+	}
+
+	private static final int ROM_SCREEN_WIDTH = 320, RIGHT_WALL_INSET = 24, RIGHT_WALL_RUN_OFF = 0x40;
+
 	/** Left edge of the drawn picture, including shake. */
 	short getPresentationXWithShake() {
 		return (short) (getXWithShake() - getPresentationInset());

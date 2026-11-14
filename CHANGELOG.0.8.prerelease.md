@@ -581,6 +581,18 @@ under the matching area heading; see the
   manifest. A row left out gets no audio either, so sound stays in sync. Off by
   default; replay, comparison and gameplay are unchanged.
 
+- **Wide trace captures let the act-end run-off leave the picture:** at the end
+  of a Sonic 1 or Sonic 2 act the player runs right until the level's wall, which
+  the ROM places 40 pixels past the right edge of its 320-pixel screen. A trace
+  capture wider than 320 draws its extra width to the right of that screen, so
+  the player stopped in view and ran on the spot through the results (400 wide:
+  Green Hill 3 after the capsule, Emerald Hill 1 after the signpost). While the
+  player crosses those last 64 pixels at the camera's right limit, the capture
+  now draws from further left until the picture's right edge is the ROM
+  screen's, and the player leaves it as in the original. Only the capture's
+  picture moves: the replay camera, comparison, audio and 320-wide output are
+  unchanged.
+
 - **Seeded Data Select captures:** `GameplayCaptureTool --save-slots <file.json>`
   writes declared save slots through the production save manager into the
   capture's private save root before a title-first capture, and `--extra-teams`
