@@ -27,6 +27,17 @@ under the matching area heading; see the
   frame. The capture tool gained `--draw-mode` and `--dormant-style`; both are pinned so
   a personal setting never changes a capture.
 
+- **Walking partners jump back in where there is no floor:** a CPU partner that
+  returns by walking in (a Sonic partner, or a walking mod character) used to wait
+  off screen for good wherever the level had no terrain floor to walk in on, such
+  as the Sonic 3 & Knuckles final boss arena, whose floor is made of objects. After
+  three failed walk-in attempts it now jumps in from below the screen with the
+  jump sound, arcs over the leader, and follows again as soon as it lands on
+  terrain or on a solid object. It takes no damage until it lands, and if it falls
+  out again it waits and retries. Where the walk-in already worked it is unchanged.
+  This is an engine extension; see "Multi-Sidekick Daisy Chain" in
+  [known discrepancies](docs/status/known-discrepancies.md#multi-sidekick-daisy-chain).
+
 - **Lava Reef 1 frame hitches:** two stutters on the Lava Reef Act 1 route are
   gone. When the rock crusher opens the floor, the engine rebuilt the whole
   foreground layer (10-60 ms in a frame); it now redraws only the rewritten layout
