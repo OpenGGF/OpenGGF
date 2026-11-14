@@ -291,7 +291,9 @@ under the matching area heading; see the
     twice, with full-size Sonic, Tails and Knuckles (and ghosts) posed and angled
     from the original animations. They still pass behind foreground scenery, and
     TIME, laps and the countdown keep their screen size. The item icon sits under
-    TIME and is hidden when monitors are off.
+    TIME and is hidden when monitors are off. A wider display shows more of the
+    arena to each side at the same scale, with the scenery where the racers
+    stand on it.
   - A player who jumps or falls off a platform, spring or blade stops counting
     as standing on it, as in the original. Before, the flag stayed set, sometimes for
     the rest of the race, so slopes stopped turning the player and the pose kept

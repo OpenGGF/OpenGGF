@@ -64,6 +64,90 @@ class TestS3kArenaZoomPixels {
         return equal / (double) total;
     }
 
+    /** The split view and the zoom over the route's first frames at one logical width, every 50th frame from 300. */
+    private static List<RgbaImage[]> pictures(int width, int frames) throws Exception {
+        var route = TestS3kArenaZoomFraming.route();
+        var settings = new GameplayCaptureSession.Settings(width, "sonic", "", "off", null, null, null);
+        var pictures = new java.util.ArrayList<RgbaImage[]>();
+        try (var capture = new GameplayCaptureSession(settings)) {
+            capture.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 0, 0, settings);
+            capture.step(null);
+            var engine = EngineServices.current();
+            var view = new java.util.concurrent.atomic.AtomicReference<S3kSoloArenaViews>();
+            var provider = new S3kHostedArenaProvider(ctx -> {
+                var next = new S3kSoloArenaViews(ctx.engine().graphics());
+                view.set(next);
+                return next;
+            });
+            try (var session = provider.open(new HostedArenaRequest(TestS3kArenaZoomFraming.DESERT_PALACE, "sonic", false),
+                    new NativeMenuHostContext(engine, new Sonic3kGameModule(), new InputHandler(), capture.loop()::setGameplayMode))) {
+                var context = SessionManager.getCurrentGameplayMode();
+                var competition = GameplayRunPolicy.competition();
+                context.beginGameplayRun(new GameplayRunPolicy(competition.specialStageEntry(), competition.bonusStageEntry(),
+                        competition.actCompletion(), competition.liveRewind(), competition.editorEntry(),
+                        competition.deathRestart(), competition.livesCounter(), competition.zoneIntros(), MonitorRule.OFF),
+                        TestS3kArenaZoomFraming.DESERT_PALACE, 0);
+                var host = (S3kCompetitionNativeHost) NativeCompetitionRoster.from(context.getWorldSession());
+                int previous = 0;
+                for (int frame = 0; frame < frames; frame++) {
+                    var in = TestS3kArenaZoomFraming.input(route.get(frame), previous);
+                    previous = route.get(frame);
+                    context.plcFrameLifecycle().runLogicalIteration(() -> { }, token -> {
+                        NativeCompetitionIterationAccess.runAdmitted(token, () -> session.step(in));
+                        return null;
+                    });
+                    if (frame < 300 || frame % 50 != 0) continue;
+                    var split = draw(() -> view.get().nativeViews().drawArena(context, host, host.scroll()));
+                    glViewport(0, 0, width, 224);
+                    glClearColor(1, 0, 1, 1);
+                    glClear(GL_COLOR_BUFFER_BIT);
+                    session.draw();
+                    pictures.add(new RgbaImage[] {split, ScreenshotCapture.captureFramebuffer(width, 224)});
+                }
+            }
+        }
+        return pictures;
+    }
+
+    /**
+     * The native split picture is 320 columns at every logical width, and a wider zoom shows
+     * more of those columns at the same scale. A widescreen display must not rescale the planes
+     * under bodies that are placed by window column.
+     */
+    @Test void aWiderDisplayShowsMoreColumnsOfTheSameNativePicture() throws Exception {
+        assumeTrue(PresentationOffscreenTestContext.requested(), "requires owned EGL");
+        Files.createDirectories(PICTURES);
+        var narrow = pictures(320, 801);
+        var wide = pictures(400, 801);
+        assertEquals(narrow.size(), wide.size());
+        assertTrue(narrow.size() >= 10, "too few compared frames: " + narrow.size());
+        int inset = (400 - 320) / 2, rows = 2 * S3kCompetitionScroll.PLAYER_1_RASTER_LINES;
+        for (int i = 0; i < narrow.size(); i++) {
+            int frame = 300 + 50 * i;
+            if (!sameRgb(narrow.get(i)[0], wide.get(i)[0])) {
+                ScreenshotCapture.savePNG(narrow.get(i)[0], PICTURES.resolve("split-320-" + frame + ".png"));
+                ScreenshotCapture.savePNG(wide.get(i)[0], PICTURES.resolve("split-400-" + frame + ".png"));
+                fail("the native split view changed with the logical width at frame " + frame);
+            }
+            // The 320 zoom is the middle of the 400 zoom: same planes, same body, 40 pixels further in.
+            // Screen-anchored HUD pieces sit in the same place by design, so most, not all, pixels agree.
+            var zoom = narrow.get(i)[1];
+            var wideZoom = wide.get(i)[1];
+            int equal = 0, shifted = 0;
+            for (int y = 0; y < rows; y++) for (int x = 0; x < 320; x++) {
+                if ((zoom.argb(x, y) & 0xFFFFFF) == (wideZoom.argb(x + inset, y) & 0xFFFFFF)) equal++;
+                if ((zoom.argb(x, y) & 0xFFFFFF) == (wideZoom.argb(x + inset + 2, y) & 0xFFFFFF)) shifted++;
+            }
+            double exact = equal / (double) (320 * rows), control = shifted / (double) (320 * rows);
+            if (exact <= 0.9) {
+                ScreenshotCapture.savePNG(zoom, PICTURES.resolve("zoom-320-" + frame + ".png"));
+                ScreenshotCapture.savePNG(wideZoom, PICTURES.resolve("zoom-400-" + frame + ".png"));
+            }
+            assertTrue(exact > 0.9, "the 400 zoom is not the 320 zoom with more columns at frame " + frame + ": " + exact);
+            assertTrue(exact > control + 0.02, "column control did not separate at frame " + frame);
+        }
+    }
+
     @Test void zoomMagnifiesTheNativeP1BandAndKeepsTilePriority() throws Exception {
         assumeTrue(PresentationOffscreenTestContext.requested(), "requires owned EGL");
         Files.createDirectories(PICTURES);

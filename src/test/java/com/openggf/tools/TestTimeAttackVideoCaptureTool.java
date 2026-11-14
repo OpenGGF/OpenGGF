@@ -3,6 +3,7 @@ package com.openggf.tools;
 import com.openggf.game.session.EngineContext;
 import com.openggf.mods.ui.LevelOverlayCanvas;
 import com.openggf.tests.TestEnvironment;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.api.parallel.Isolated;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -10,6 +11,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.lwjgl.system.MemoryStack;
 
 import java.nio.file.Path;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
@@ -19,6 +21,23 @@ import static org.lwjgl.opengl.GL11.*;
 @Isolated
 class TestTimeAttackVideoCaptureTool {
     @TempDir Path directory;
+
+    /** Extras lists the engine's own extras (Blue Spheres with S3&K present) above the mods' entries. */
+    @Test void timeAttackIsFoundByItsLabelWhereverExtrasListsIt() throws Exception {
+        assertEquals(0, TimeAttackVideoCaptureTool.extrasRow(List.of("Time Attack"),
+                TimeAttackVideoCaptureTool.TIME_ATTACK_LABEL));
+        assertEquals(1, TimeAttackVideoCaptureTool.extrasRow(List.of("Blue Spheres", "Time Attack"),
+                TimeAttackVideoCaptureTool.TIME_ATTACK_LABEL));
+        var missing = assertThrows(IllegalStateException.class, () -> TimeAttackVideoCaptureTool.extrasRow(
+                List.of("Blue Spheres"), TimeAttackVideoCaptureTool.TIME_ATTACK_LABEL));
+        assertTrue(missing.getMessage().contains("Blue Spheres"), missing.getMessage());
+        // The driver reads the list from the live title screen; both fields must stay where it looks.
+        var owner = TimeAttackVideoCaptureTool.field(com.openggf.Engine.class,
+                TimeAttackVideoCaptureTool.EXTRAS_OWNER_FIELD);
+        assertEquals(com.openggf.game.MasterTitleScreen.class, owner.getType());
+        assertEquals(List.class, TimeAttackVideoCaptureTool.field(owner.getType(),
+                TimeAttackVideoCaptureTool.EXTRAS_LABELS_FIELD).getType());
+    }
 
     @ParameterizedTest
     @ValueSource(ints = {320, 400})
