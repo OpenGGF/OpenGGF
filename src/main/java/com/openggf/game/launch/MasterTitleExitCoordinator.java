@@ -70,6 +70,16 @@ public final class MasterTitleExitCoordinator {
         finishExit(standalone.owner());
     }
 
+    /** A hosted-media stock game: the stock exit without a launch profile ({@link MasterTitleLaunchCoordinator#prepareHostedExit}). */
+    public void exitHosted(MasterTitleEntry.Launch launch) {
+        if (!(Objects.requireNonNull(launch, "launch").entry() instanceof MasterTitleEntry.Hosted hosted)) {
+            throw new IllegalArgumentException("Hosted exit requires a hosted entry");
+        }
+        launchCoordinator().prepareHostedExit();
+        if (stockExitHandler != null) stockExitHandler.accept(hosted.gameId());
+        finishExit(hosted.gameId());
+    }
+
     public void startStandaloneCompletion() {
         LOGGER.info("Starting standalone completion save and master-title return");
         progressionSave.run();

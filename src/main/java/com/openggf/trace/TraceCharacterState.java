@@ -110,7 +110,13 @@ public record TraceCharacterState(
             return override;
         }
         if (sprite.getDead()) {
-            return 0x06;
+            // Once the corpse crosses the restart row the death routine advances its own
+            // routine by 2 to the restart/gone routine 8: S1 Sonic_HandleDeath
+            // (docs/s1disasm/_incObj/01 Sonic.asm:2013), S2 CheckGameOver
+            // (docs/s2disasm/s2.asm:38281), S3K loc_12432/loc_12478
+            // (docs/skdisasm/sonic3k.asm:24582,24599) and Sonic CD ObjSonic_DeadChkGone
+            // (scddisasm src/Level/_Objects/Sonic/Main.asm:2417).
+            return sprite.isInDeathRestartRoutine() ? 0x08 : 0x06;
         }
         if (sprite.isDrowningPreDeath()
                 && sprite.getGameRules() != null

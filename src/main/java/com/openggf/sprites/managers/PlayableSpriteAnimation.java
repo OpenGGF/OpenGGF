@@ -399,7 +399,7 @@ public class PlayableSpriteAnimation {
             }
             resetScriptState();
         }
-        var script = animationSet.getScript(sprite.getAnimationId());
+        var script = animationSet.getScript(scriptIdFor(sprite.getAnimationId()));
         if (script == null || script.frames().isEmpty()) {
             applyDefaultFacingRenderFlips();
             return;
@@ -489,11 +489,71 @@ public class PlayableSpriteAnimation {
             case 0xFF -> updateWalkRun(script, remaining);
             case 0xFE -> updateRoll(script, remaining);
             case 0xFD -> updatePush(script, remaining);
-            default -> updateScriptWithDelay(script, 0, 0);
+            default -> {
+                ScriptedVelocityAnimationProfile profile = resolveVelocityProfile();
+                if (profile != null && profile.isStaticFrameScriptFlags()) {
+                    updateStaticFrame(script);
+                } else {
+                    updateScriptWithDelay(script, 0, 0);
+                }
+            }
         }
     }
 
+    /**
+     * A static-frame script (see {@link ScriptedVelocityAnimationProfile#setStaticFrameScriptFlags}):
+     * {@code move.b 1(a1,d1.w),obj.sprite_frame(a0); move.b #0,obj.anim_timer(a0)}, the
+     * index left where the owning routine put it.
+     */
+    private void updateStaticFrame(SpriteAnimationScript script) {
+        int frameIndex = Math.max(0, sprite.getAnimationFrameIndex());
+        int frame = script.flatByteAt(frameIndex);
+        if (frame >= 0) publishMappingFrame(frame);
+        sprite.setAnimationTick(0);
+    }
+
+    /** The script an animation ID reads: itself, or the active mini form's mapping. */
+    private int scriptIdFor(int animId) {
+        ScriptedVelocityAnimationProfile.MiniForm form = activeMiniForm();
+        return form == null ? animId : form.scriptMap().applyAsInt(animId);
+    }
+
+    private ScriptedVelocityAnimationProfile.MiniForm activeMiniForm() {
+        ScriptedVelocityAnimationProfile profile = resolveVelocityProfile();
+        ScriptedVelocityAnimationProfile.MiniForm form = profile != null ? profile.getMiniForm() : null;
+        return form != null && form.active().test(sprite) ? form : null;
+    }
+
+    /**
+     * The mini form's walk/run handler ({@code PlayerAnimateShrunkDynamic}, scddisasm src/objects/player.asm:2740-2789):
+     * the flips follow the facing only; an angle outside the walkable range (facing-adjusted angle + $40 at $60 or
+     * more) sets the rolling flag with the standing radii and runs the roll handler; otherwise the walk or, from
+     * $600, the run script with the speed timer and no slope frame offset.
+     */
+    private void updateMiniWalk(ScriptedVelocityAnimationProfile.MiniForm form, int remaining) {
+        clearSineCosineInputFraction();
+        boolean facingLeft = Direction.LEFT.equals(sprite.getDirection());
+        int d0 = sprite.getAngle() & 0xFF;
+        if (!facingLeft) d0 = ~d0 & 0xFF;                                  // not.b d0
+        sprite.setRenderFlips(facingLeft, false);                          // andi.b #$FC; or.b d2
+        d0 = (d0 + 0x10 + 0x30) & 0xFF;                                    // addi.b #$10 / addi.b #$30
+        if (d0 >= 0x60) {                                                  // cmpi.b #$60,d0; bcs
+            sprite.setRollingFlagPreserveRadii(true);                      // bset #2,obj.flags(a0)
+            sprite.applyStandingRadii(false);                              // height $A, width 5
+            updateRoll(sprite.getAnimationSet().getScript(form.rollAnimId()), remaining);
+            return;
+        }
+        int speed = Math.abs(sprite.getGSpeed());
+        SpriteAnimationScript active = sprite.getAnimationSet().getScript(speed >= 0x600 ? form.runAnimId() : form.walkAnimId());
+        updateScriptWithDelay(active, computeSpeedDelay(speed, 0x800, 8), 0);
+    }
+
     private void updateWalkRun(SpriteAnimationScript baseScript, int remaining) {
+        ScriptedVelocityAnimationProfile.MiniForm miniForm = activeMiniForm();
+        if (miniForm != null) {
+            updateMiniWalk(miniForm, remaining);
+            return;
+        }
         clearSineCosineInputFraction(); // loc_126C8/loc_12724 (sonic3k.asm:24852-24904)
 
         int flipAngle = sprite.getFlipAngle();
@@ -524,9 +584,15 @@ public class PlayableSpriteAnimation {
                 && profile.getHighSpeedWalkRunThreshold() > 0
                 && speed >= profile.getHighSpeedWalkRunThreshold();
         boolean runTier = !highSpeedTier && speed >= runThreshold;
+        // Sonic CD .CheckSpeed: on a 3D ramp SonAni_Run3D replaces every speed tier
+        // (scddisasm src/Level/_Objects/Sonic/Main.asm:2761-2770).
+        boolean rampTier = profile != null && profile.getPseudo3dRampRunAnimId() >= 0 && onPseudo3dRamp();
         SpriteAnimationScript active;
         int slopeStride;
-        if (highSpeedTier) {
+        if (rampTier) {
+            active = resolveScript(profile.getPseudo3dRampRunAnimId(), baseScript);
+            slopeStride = 0;
+        } else if (highSpeedTier) {
             active = resolveScript(profile.getHighSpeedWalkRunAnimId(), baseScript);
             slopeStride = profile.getHighSpeedSlopeFrameStride();
         } else if (runTier) {
@@ -546,7 +612,7 @@ public class PlayableSpriteAnimation {
         // the push bit is only tested when the animation step expires
         // (01 Sonic.asm:2253-2282,2353-2376). Do not replace the raw animation
         // id or reset the shared special-animation frame index when push begins.
-        int slopeOffset = resolveSlopeOffset(active, slopeStride);
+        int slopeOffset = rampTier ? resolvePseudo3dRampSlopeOffset() : resolveSlopeOffset(active, slopeStride);
         int delay = computeSpeedDelay(speed, 0x800, 8);
         if (pushUsesWalkSpecialHandler() && sprite.getPushing()) {
             // S2 Sonic publishes the already-selected walk/run mapping before
@@ -740,6 +806,14 @@ public class PlayableSpriteAnimation {
         int rollId = profile != null ? profile.getRollAnimId() : -1;
         int roll2Id = profile != null ? profile.getRoll2AnimId() : -1;
         int activeId = (speed >= runThreshold && roll2Id >= 0) ? roll2Id : rollId;
+        if (profile != null && profile.getPseudo3dRampRollAnimId() >= 0 && onPseudo3dRamp()) {
+            // Sonic CD .CheckSpeed2: on a 3D ramp SonAni_RollFast at any speed, or
+            // SonAni_Roll3D while (angle + $10) & $C0 is non-zero (Main.asm:2819-2830).
+            activeId = ((sprite.getAngle() + 0x10) & 0xC0) == 0 ? roll2Id : profile.getPseudo3dRampRollAnimId();
+        }
+        // The mini form's test comes first natively (tst.b player_shrunk_state; bne, src/objects/player.asm:2663-2666).
+        ScriptedVelocityAnimationProfile.MiniForm miniForm = activeMiniForm();
+        if (miniForm != null) activeId = miniForm.rollAnimId();           // lea PlayerRollShrunkAnim,a1
         SpriteAnimationScript active = resolveScript(activeId, baseScript);
         if (active == null) {
             active = baseScript;
@@ -759,6 +833,8 @@ public class PlayableSpriteAnimation {
         ScriptedVelocityAnimationProfile profile = resolveVelocityProfile();
 
         int pushId = profile != null ? profile.getPushAnimId() : -1;
+        ScriptedVelocityAnimationProfile.MiniForm miniForm = activeMiniForm();
+        if (miniForm != null) pushId = miniForm.pushAnimId();              // lea PlayerPushShrunkAnim,a1
         SpriteAnimationScript active = resolveScript(pushId, baseScript);
         if (active == null) {
             active = baseScript;
@@ -965,6 +1041,32 @@ public class PlayableSpriteAnimation {
      * frame count: {@code offset = d0 * (framesPerSet / 2)} where framesPerSet is the
      * number of frames in the base angle set (the script's frame list size).
      */
+    private boolean onPseudo3dRamp() {
+        return sprite.getMovementManager() instanceof PlayableSpriteMovement movement
+                && movement.isOnPseudo3dRamp();
+    }
+
+    /**
+     * Sonic CD's 3D-ramp angle step: the angle (NOT'd facing right) is centred by +8,
+     * not +$10, the same sign test picks the flips, and {@code lsr.b #4 / lsl.b #1 /
+     * andi.b #$E} then {@code add.b d0,d0} give eight steps of four frames
+     * (scddisasm src/Level/_Objects/Sonic/Main.asm:2730-2770, 2787).
+     */
+    private int resolvePseudo3dRampSlopeOffset() {
+        int d0 = sprite.getAngle() & 0xFF;
+        boolean facingLeft = Direction.LEFT.equals(sprite.getDirection());
+        if (!facingLeft) {
+            d0 = (~d0) & 0xFF;
+        }
+        d0 = (d0 + 8) & 0xFF;
+        if ((d0 & 0x80) != 0) {
+            sprite.setRenderFlips(!facingLeft, true);
+        } else {
+            sprite.setRenderFlips(facingLeft, false);
+        }
+        return (((d0 >> 4) << 1) & 0xE) * 2;
+    }
+
     private int resolveSlopeOffset(SpriteAnimationScript activeScript, int configuredStride) {
         int d0 = sprite.getAngle() & 0xFF;
 

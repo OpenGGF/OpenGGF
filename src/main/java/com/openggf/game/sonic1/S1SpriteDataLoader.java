@@ -5,7 +5,6 @@ import com.openggf.game.common.CommonSpriteDataLoader;
 import com.openggf.level.Pattern;
 import com.openggf.level.render.SpriteDplcFrame;
 import com.openggf.level.render.SpriteMappingFrame;
-import com.openggf.level.render.SpriteMappingPiece;
 import com.openggf.level.render.TileLoadRequest;
 import com.openggf.sprites.animation.SpriteAnimationScript;
 import com.openggf.sprites.animation.SpriteAnimationSet;
@@ -51,14 +50,7 @@ public final class S1SpriteDataLoader {
      * @return list of mapping frames
      */
     public static List<SpriteMappingFrame> loadMappingFrames(RomByteReader reader, int mappingAddr) {
-        int firstOffset = reader.readU16BE(mappingAddr);
-        int frameCount = firstOffset / 2;
-        if (frameCount <= 0 || frameCount > 512) {
-            throw new IllegalArgumentException(String.format(
-                    "S1 mapping table at 0x%X has implausible frame count %d (first word=0x%04X) - wrong address?",
-                    mappingAddr, frameCount, firstOffset));
-        }
-        return loadMappingFrames(reader, mappingAddr, frameCount);
+        return CommonSpriteDataLoader.loadVer1MappingFrames(reader, mappingAddr);
     }
 
     /**
@@ -67,14 +59,7 @@ public final class S1SpriteDataLoader {
      */
     public static List<SpriteMappingFrame> loadMappingFramesWithSignedOffsets(
             RomByteReader reader, int mappingAddr) {
-        int firstOffset = reader.readU16BE(mappingAddr);
-        int frameCount = firstOffset / 2;
-        if (frameCount <= 0 || frameCount > 512) {
-            throw new IllegalArgumentException(String.format(
-                    "S1 mapping table at 0x%X has implausible frame count %d (first word=0x%04X) - wrong address?",
-                    mappingAddr, frameCount, firstOffset));
-        }
-        return loadMappingFramesWithSignedOffsets(reader, mappingAddr, frameCount);
+        return CommonSpriteDataLoader.loadVer1MappingFramesWithSignedOffsets(reader, mappingAddr);
     }
 
     /**
@@ -82,24 +67,12 @@ public final class S1SpriteDataLoader {
      */
     public static List<SpriteMappingFrame> loadMappingFramesWithSignedOffsets(
             RomByteReader reader, int mappingAddr, int frameCount) {
-        List<SpriteMappingFrame> frames = new ArrayList<>(frameCount);
-        for (int i = 0; i < frameCount; i++) {
-            int frameOffset = (short) reader.readU16BE(mappingAddr + i * 2);
-            int frameAddr = mappingAddr + frameOffset;
-            frames.add(loadMappingFrameAt(reader, frameAddr));
-        }
-        return frames;
+        return CommonSpriteDataLoader.loadVer1MappingFramesWithSignedOffsets(reader, mappingAddr, frameCount);
     }
 
     /**
-     * Loads S1-format sprite mappings with an explicit frame count.
-     *
-     * <p>S1 format (SonicMappingsVer=1):
-     * <ul>
-     *   <li>Offset table: {@code frameCount} x word (offset from table start to frame data)</li>
-     *   <li>Per frame: byte (piece count) + pieces x 5 bytes</li>
-     *   <li>Piece format: y:signed_byte, size:byte, tileHi:byte, tileLo:byte, x:signed_byte</li>
-     * </ul>
+     * Loads S1-format sprite mappings with an explicit frame count
+     * ({@link CommonSpriteDataLoader#loadVer1MappingFrames(RomByteReader, int, int)}).
      *
      * @param reader ROM byte reader
      * @param mappingAddr ROM address of mapping table
@@ -107,41 +80,7 @@ public final class S1SpriteDataLoader {
      * @return list of mapping frames
      */
     public static List<SpriteMappingFrame> loadMappingFrames(RomByteReader reader, int mappingAddr, int frameCount) {
-        List<SpriteMappingFrame> frames = new ArrayList<>(frameCount);
-        for (int i = 0; i < frameCount; i++) {
-            int frameOffset = reader.readU16BE(mappingAddr + i * 2);
-            int frameAddr = mappingAddr + frameOffset;
-            frames.add(loadMappingFrameAt(reader, frameAddr));
-        }
-        return frames;
-    }
-
-    private static SpriteMappingFrame loadMappingFrameAt(RomByteReader reader, int frameAddr) {
-        int pieceCount = reader.readU8(frameAddr);
-        frameAddr += 1;
-
-        List<SpriteMappingPiece> pieces = new ArrayList<>(pieceCount);
-        for (int p = 0; p < pieceCount; p++) {
-            int yOffset = (byte) reader.readU8(frameAddr);
-            int size = reader.readU8(frameAddr + 1);
-            int tileHi = reader.readU8(frameAddr + 2);
-            int tileLo = reader.readU8(frameAddr + 3);
-            int xOffset = (byte) reader.readU8(frameAddr + 4);
-            frameAddr += 5;
-
-            int widthTiles = ((size >> 2) & 0x3) + 1;
-            int heightTiles = (size & 0x3) + 1;
-
-            int tileWord = (tileHi << 8) | tileLo;
-            pieces.add(new SpriteMappingPiece(
-                    xOffset, yOffset, widthTiles, heightTiles,
-                    tileWord & 0x7FF,
-                    (tileWord & 0x800) != 0,
-                    (tileWord & 0x1000) != 0,
-                    (tileWord >> 13) & 0x3,
-                    (tileWord & 0x8000) != 0));
-        }
-        return new SpriteMappingFrame(pieces);
+        return CommonSpriteDataLoader.loadVer1MappingFrames(reader, mappingAddr, frameCount);
     }
 
     /**

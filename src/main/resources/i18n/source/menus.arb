@@ -618,6 +618,15 @@
       }
     }
   },
+  "hub.choose_game_disc": "Put your {game} disc image in your ROM folder",
+  "@hub.choose_game_disc": {
+    "description": "OpenGGF host UI: hub.choose_game_disc. Translate the complete message; preserve named arguments.",
+    "placeholders": {
+      "game": {
+        "type": "String"
+      }
+    }
+  },
   "hub.paused_in": "Paused in {location}",
   "@hub.paused_in": {
     "description": "OpenGGF host UI: hub.paused_in. Translate the complete message; preserve named arguments.",
@@ -922,6 +931,14 @@
   "hub.ui.locate_rom_below": "Locate ROM below",
   "@hub.ui.locate_rom_below": {
     "description": "OpenGGF host UI: hub.ui.locate_rom_below. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.disc_missing_caps": "DISC MISSING",
+  "@hub.ui.disc_missing_caps": {
+    "description": "OpenGGF host UI: hub.ui.disc_missing_caps. Translate the complete message; preserve named arguments."
+  },
+  "hub.ui.start_for_details": "Start for details",
+  "@hub.ui.start_for_details": {
+    "description": "OpenGGF host UI: hub.ui.start_for_details. Translate the complete message; preserve named arguments."
   },
   "hub.ui.mod_game_caps": "MOD GAME",
   "@hub.ui.mod_game_caps": {

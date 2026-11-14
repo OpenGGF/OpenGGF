@@ -62,9 +62,6 @@ public class ObjectManager {
     private final BitSet slotsFreedDuringObjectPass = new BitSet();
     private final List<PlayableEntity> activePlayersScratch = new ArrayList<>(4);
     private final List<ObjectSpawn> newSpawnsScratch = new ArrayList<>();
-    // Cached spawn-order comparators (built lazily; placement is constructor-set).
-    private Comparator<ObjectSpawn> forwardSpawnOrder;
-    private Comparator<ObjectSpawn> backwardSpawnOrder;
     private final List<GLCommand> renderCommands = new ArrayList<>();
     private final ObjectDrawInternalAccess.Drawing objectDrawing;
     private int frameCounter;
@@ -94,7 +91,7 @@ public class ObjectManager {
     private int currentExecSlot = -1; // -1 when not in update loop
 
     /** ROM object-loop counter for the current pass; see ObjectLoopSlotBudget. */
-    private final ObjectLoopSlotBudget objectLoopBudget = new ObjectLoopSlotBudget();
+    final ObjectLoopSlotBudget objectLoopBudget = new ObjectLoopSlotBudget();
 
     /**
      * Rewrites the remaining length of this frame's object walk from the calling
@@ -244,6 +241,7 @@ public class ObjectManager {
         this.placement.setStageplayActivation(stageplayActivation);
         this.placement.setTwoAxisCursorPlacement(population.slots.twoAxisCursorPlacement());
         this.placement.setWindowingStrategy(windowingStrategy);
+        this.placement.bindFrameStartSpawner(this::inlineCreateObject, () -> syncActiveSpawnsLoad(false));
         // Indexed by execution slot, which spans the process slots (next's fixed
         // SST slots sit above the dynamic range), not just the dynamic count.
 
@@ -490,7 +488,7 @@ public class ObjectManager {
         // active window until a later ObjectPlacementController delta occurs.
         // S2 ObjectsManager_Init falls through to the same X-only loading pass
         // as runtime ObjectsManager (s2.asm: ObjectsManager_Init / loc_17B3E).
-        if (materializeInitialWindow) {
+        if (materializeInitialWindow && !placement.spawnerBeforeObjectPass()) {
             syncActiveSpawnsLoad(skipVerticalSpawnLoadFilterForGame);
         }
     }
@@ -1022,6 +1020,7 @@ public class ObjectManager {
     private void updateCounterBasedExecThenLoad(int cameraX, PlayableEntity player,
             List<? extends PlayableEntity> sidekicks,
             boolean inlineSolidResolution, boolean solidPostMovement) {
+        placement.runSpawnerBeforeObjectPass(cameraX);
         // Phase 1: Snapshot positions and build exec order from EXISTING objects.
         for (ObjectInstance inst : population.placed.values()) {
             if (!ObjectDirectionAccess.suspended(this, inst))
@@ -1205,7 +1204,7 @@ public class ObjectManager {
         // Phase 3: ObjPosLoad — load new objects AFTER ExecuteObjects.
         // Slots freed during the exec loop and child slots allocated during exec
         // are now reflected in the allocator. New objects get the correct slot numbers.
-        syncActiveSpawnsLoad(false);
+        if (!placement.spawnerBeforeObjectPass()) syncActiveSpawnsLoad(false);
 
     }
 
@@ -1454,7 +1453,8 @@ public class ObjectManager {
         if (allocationLayout == ObjectSlotLayout.SONIC_2) {
             s2LatchedObjectManagerCameraX = postCameraX;
         }
-        if (population.slots.twoAxisCursorPlacement()) {
+        if (placement.spawnerBeforeObjectPass() || population.slots.twoAxisCursorPlacement()) {
+            // A spawner-before-object-pass game already ran it this frame (Sonic CD).
             // S3K Load_Sprites runs at the start of LevelLoop before
             // Process_Sprites/DeformBgLayer, so post-camera ObjectPlacementController catch-up
             // would create objects one ROM loader call early
@@ -1482,8 +1482,9 @@ public class ObjectManager {
      * costing the object one update relative to the ROM (e.g. CNZ {@code ObjD4}
      * arriving 1px behind, s2.asm:58759-58799).
      */
-    private boolean inlineCreateObject(ObjectSpawn spawn, int counterValue) {
-        if (population.placed.containsKey(spawn) || !placementAdmission.allows(spawn)) return true;
+    private boolean inlineCreateObject(ObjectSpawn source, int counterValue) {
+        ObjectSpawn spawn = population.placed.containsKey(source) ? placement.untrackedLiveCopy(source) : source;
+        if (spawn == null || !placementAdmission.allows(spawn)) return true;
         if (!stageplayAllowsPlacement(spawn)) {
             noteStageplayFactorySuppression(spawn);
             return true; // Loader state advances, but authoring admission forbids native AI.
@@ -3452,20 +3453,10 @@ public class ObjectManager {
                 sortedNewSpawns.add(spawn);
             }
         }
-        if (forwardSpawnOrder == null) {
-            forwardSpawnOrder = Comparator
-                    .comparingInt(ObjectSpawn::x)
-                    .thenComparingInt(placement::getSpawnIndex);
-            backwardSpawnOrder = Comparator
-                    .comparingInt(ObjectSpawn::x)
-                    .reversed()
-                    .thenComparing(Comparator.comparingInt(placement::getSpawnIndex).reversed());
-        }
-        sortedNewSpawns.sort(
-                placement.isLastScrollBackward() ? backwardSpawnOrder : forwardSpawnOrder);
+        sortedNewSpawns.sort(placement.newSpawnLoadOrder());
 
         // Allocate parent slots for all new objects (matching ObjPosLoad).
-        // ROM parity: ObjPosLoad assigns one slot per object in X order.
+        // ROM parity: ObjPosLoad assigns one slot per object in the spawner's walk order.
         // Pre-allocate each parent slot BEFORE running the constructor, so that
         // if the constructor spawns children (e.g., GlassBlock's reflection),
         // getSlotIndex() returns the correct value and allocateSlotAfter()
@@ -3686,9 +3677,7 @@ public class ObjectManager {
      * on restore. Equal coordinates or record values never select occurrence keys.
      */
     boolean usesOccurrenceSolidStateKey(ObjectInstance instance) {
-        ObjectSpawn occurrence = population.spawnByInstance.get(instance);
-        return occurrence != null && population.slots.twoAxisCursorPlacement()
-                && placement.isNoncanonicalOccurrence(occurrence);
+        return placement.isNoncanonicalOccurrence(population.spawnByInstance.get(instance));
     }
 
     void registerActiveObject(ObjectSpawn spawn, ObjectInstance instance) {

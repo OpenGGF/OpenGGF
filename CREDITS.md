@@ -21,7 +21,7 @@ This project uses documentation, tools, and reference implementations from many 
 | **Maxim**            | SN76489 PSG documentation (SMS Power!) <br/> <br/> https://www.smspower.org/Development/SN76489                                                                             |
 | **Stephan Dittrich** | Gens YM2612 Java port (`YM2612.java.example`), an earlier development reference                                                                                     |
 | **Xeeynamo**         | SMPSPlay contributions (wave output, channel muting)                                                                            |
-| **Eke-Eke**          | Genesis Plus GX - historical FM/PSG implementations used by OpenGGF, since replaced; reference emulation through BizHawk, and modifications to the blip_buf implementation used by `BlipDeltaBuffer` <br/><br/> https://github.com/ekeeke/Genesis-Plus-GX |
+| **Eke-Eke**          | Genesis Plus GX - historical FM/PSG implementations used by OpenGGF, since replaced; reference emulation through BizHawk (for Sonic CD, the only use: native measurements of PCM, stamp graphics, CD drive and FMV, never a source for its code), and modifications to the blip_buf implementation used by `BlipDeltaBuffer` <br/><br/> https://github.com/ekeeke/Genesis-Plus-GX |
 | **Jarek Burczynski, Tatsuyuki Satoh (MAME)** | Original `fm.c` YM2612 implementation underlying the Genesis Plus GX / libvgm core formerly ported in OpenGGF |
 | **Nemesis, Sauraen** | YM2612 hardware tests and die-shot analysis; Nemesis's published envelope and phase research also informs the fast FM core <br/><br/> http://gendev.spritesmind.net/forum/viewtopic.php?t=386 |
 | **Alexey Khokholov (Nuke.YKT)** | Nuked OPN2 - cycle-accurate YM3438/YM2612 emulator from the die shot (LGPL 2.1+), ported as `NukedOpn2` (see *Emulation cores* below) <br/><br/> https://github.com/nukeykt/Nuked-OPN2 |
@@ -89,7 +89,7 @@ Shay Green's LGPL blip_buf remain credited separately above.
 |---------|--------------|
 | **BizHawk** <br/> https://tasvideos.org/BizHawk | Emulator and BK2 movie format behind the optional pinned TraceChaser recorder in `tools/tracechaser/bizhawk-headless/`; its Genesis Plus GX core produces the reference physics, aux-state, and audio traces the `*TraceReplay` suites compare against. OpenGGF does not distribute BizHawk; TraceChaser verifies the official 2.11 release. |
 | **TASVideos** <br/> https://tasvideos.org | Hosts BizHawk and the movie-format documentation the recorder relies on |
-| **Genesis Plus GX** (Eke-Eke) | Emulation core inside BizHawk used for reference trace capture |
+| **Genesis Plus GX** (Eke-Eke) | Emulation core inside BizHawk used for reference trace capture. Sonic CD's native PCM and owner-ledger probes instrument a local build of it; their `tools/soniccd/*_patch.py` generators insert OpenGGF-written hooks at short anchors, and the generated core patches are kept outside the repository |
 
 ## Physics & Collision
 
@@ -142,12 +142,25 @@ https://github.com/sonicretro/skdisasm
 | **clownacy**       | Disassembly contributions                                                           |
 | **Natsumi**        | Disassembly contributions                                                           |
 
+### Sonic CD Disassembly (scddisasm)
+
+https://github.com/OpenGGF/scddisasm (pinned at `1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff`)
+
+| Contributor        | Contribution                                                                        |
+|--------------------|-------------------------------------------------------------------------------------|
+| **Devon (DevonArtmeier)** | Created the Sonic CD disassembly                                             |
+| **flamewing**      | Disassembly help and contributions, especially R11A in its early stages (2015)      |
+| **TheStoneBanana** | Disassembly help and contributions, especially R11A in its early stages (2015)      |
+| **jamesj999**      | Completion and annotation of the disassembly in the OpenGGF repository              |
+
 ### General ROM & Hardware Research
 
 | Contributor        | Contribution                                                                         |
 |--------------------|--------------------------------------------------------------------------------------|
 | **Sonic Retro**    | SCHG documentation and community disassembly hosting <br/><br/> https://info.sonicretro.org |
 | **Brett Kosinski** | Kosinski compression research <br/><br/> https://segaretro.org/Kosinski_compression  |
+| **MAME (Olivier Galibert, Aaron Giles; David Haywood)** | RF5C68/RF5C164 PCM controller and Mega-CD graphics (stamp rotation) emulation (BSD-3-Clause). Sonic CD's `CdPcmDevice`, `CdStampGraphics` and `CdStampGeometry` translate parts of `rf5c68.cpp` and `megacd.cpp`; see `NOTICE.md` <br/><br/> https://github.com/mamedev/mame |
+| **Ian Karlsson (superctr)** | buram, the Mega CD backup-RAM tool (MIT). Sonic CD's `CdBramEcc` and `CdBackupRamVolume` translate its protected-block and file-system code; see `NOTICE.md` <br/><br/> https://github.com/superctr/buram |
 
 ## Compression & Tools
 

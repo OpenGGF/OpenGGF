@@ -19,7 +19,7 @@ public final class CharacterIconPalette {
             case S1 -> CharacterPresentation.Host.S1;
             case S2 -> CharacterPresentation.Host.S2;
             case S3K -> CharacterPresentation.Host.S3K;
-            case STANDALONE -> null;
+            case SCD, STANDALONE -> null;
         };
         var art = host == null ? null : presentation.art().get(host);
         return art != null && art.hudLifeIcon() != null;

@@ -74,6 +74,12 @@ public final class ArenaMaskRenderer {
             if (scissor) glEnable(GL_SCISSOR_TEST);
         }
     }
+    /** A closed context's names: dropped without GL calls, recreated on the next draw. */
+    void forgetObjectsOfPreviousContext() {
+        shader = null;
+        opacityTexture = 0;
+        vao = 0;
+    }
     void cleanup() {
         if (shader != null) { shader.cleanup(); shader = null; }
         if (opacityTexture != 0) { glDeleteTextures(opacityTexture); opacityTexture = 0; }

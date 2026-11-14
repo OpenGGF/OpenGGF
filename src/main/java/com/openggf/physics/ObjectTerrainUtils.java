@@ -298,11 +298,13 @@ public final class ObjectTerrainUtils {
 
         ChunkDesc desc = lm.getChunkDescAt(layer, x, y);
         SolidTile tile = getSolidTile(lm, desc, solidityBit, secondaryCollisionPath);
-        byte metric = getHeightMetric(tile, desc, x);
+        byte metric = getFloorHeightMetric(lm, tile, desc, x);
         if (metric == 0) {
             // No surface - extend 16 pixels down
-            return checkFloorExtension(lm, layer, x, y, flipAwareAngle, secondaryCollisionPath, solidityBit);
+            return checkFloorExtension(lm, layer, tile, desc, x, y, flipAwareAngle, secondaryCollisionPath, solidityBit);
         }
+
+        if (metric < 0 && negativeFloorIsFlatFull(lm)) return createFlatFullFloorResult(desc, y, y);
 
         // ROM: neg.w produces negative metric for V-flipped tiles.
         // FindFloor handles this via the negative metric path (s2.asm:43406-43422).
@@ -311,7 +313,7 @@ public final class ObjectTerrainUtils {
             int adjusted = metric + yInTile;
             if (adjusted >= 0) {
                 // No collision in this tile - extend to next tile
-                return checkFloorExtension(lm, layer, x, y, flipAwareAngle, secondaryCollisionPath, solidityBit);
+                return checkFloorExtension(lm, layer, tile, desc, x, y, flipAwareAngle, secondaryCollisionPath, solidityBit);
             }
             // Collision found - regress to previous tile
             return checkFloorRegress(lm, layer, tile, desc, x, y, flipAwareAngle, secondaryCollisionPath, solidityBit);
@@ -328,16 +330,18 @@ public final class ObjectTerrainUtils {
     }
 
     private static TerrainCheckResult checkFloorExtension(LevelManager lm, byte layer,
+                                                           SolidTile firstTile, ChunkDesc firstDesc,
                                                            int x, int y, boolean flipAwareAngle,
                                                            boolean secondaryCollisionPath, int solidityBit) {
         int nextY = y + 16;
         ChunkDesc desc = lm.getChunkDescAt(layer, x, nextY);
         SolidTile tile = getSolidTile(lm, desc, solidityBit, secondaryCollisionPath);
-        byte metric = getHeightMetric(tile, desc, x);
+        byte metric = getFloorHeightMetric(lm, tile, desc, x);
 
         if (metric > 0) {
             return createFloorResult(tile, desc, metric, y, nextY, flipAwareAngle);
         }
+        if (metric < 0 && negativeFloorIsFlatFull(lm)) return createFlatFullFloorResult(desc, y, nextY);
         // Handle negative metric in extension (FindFloor2 path)
         if (metric < 0) {
             int yInTile = y & 0x0F;
@@ -347,6 +351,17 @@ public final class ObjectTerrainUtils {
                 int dist = ~yInTile + 16; // +16 for extension tile offset
                 return new TerrainCheckResult(dist, getAngle(tile, desc, flipAwareAngle), getTileIndex(desc));
             }
+        }
+        if (com.openggf.game.internal.ObjectFloorProbeBlankBlocks.forHost(lm.getGameModule())
+                == com.openggf.game.internal.ObjectFloorProbeBlankBlocks.NEXT_BLOCK_DISTANCE) {
+            // FindLevelFloor2 .IsBlank returns $F - (y & $F) and FindLevelFloor adds $10
+            // (scddisasm src/Level/Collision Floor.asm:697-702, 788-793). Each solid block read
+            // writes its angle first (.IsSolid, :704-711, 795-802), so the angle is the last
+            // solid block's, else the caller's preset 0 (ObjGetFloorDist, Collision Check.asm:166-167).
+            SolidTile angleTile = tile != null ? tile : firstTile;
+            ChunkDesc angleDesc = tile != null ? desc : firstDesc;
+            return new TerrainCheckResult(0x1F - (y & 0x0F), getAngle(angleTile, angleDesc, flipAwareAngle),
+                    angleTile != null ? getTileIndex(angleDesc) : -1);
         }
         return TerrainCheckResult.noCollision();
     }
@@ -359,7 +374,7 @@ public final class ObjectTerrainUtils {
         int prevY = y - 16;
         ChunkDesc desc = lm.getChunkDescAt(layer, x, prevY);
         SolidTile tile = getSolidTile(lm, desc, solidityBit, secondaryCollisionPath);
-        byte metric = getHeightMetric(tile, desc, x);
+        byte metric = getFloorHeightMetric(lm, tile, desc, x);
 
         return createPreviousFloorResult(tile, desc, origTile, origDesc, metric, x, y, prevY, flipAwareAngle);
     }
@@ -379,7 +394,9 @@ public final class ObjectTerrainUtils {
         int prevY = y - 16;
         ChunkDesc desc = lm.getChunkDescAt(layer, x, prevY);
         SolidTile tile = getSolidTile(lm, desc, solidityBit, secondaryCollisionPath);
-        byte metric = getHeightMetric(tile, desc, x);
+        byte metric = getFloorHeightMetric(lm, tile, desc, x);
+        // .MaxFloor keeps a3 = $10, so FindLevelFloor2's .CheckNegFloor applies to the tile above.
+        if (metric < 0 && negativeFloorIsFlatFull(lm)) return createFlatFullFloorResult(desc, y, prevY);
 
         return createPreviousFloorResult(tile, desc, origTile, origDesc, metric, x, y, prevY, flipAwareAngle);
     }
@@ -426,6 +443,35 @@ public final class ObjectTerrainUtils {
         }
         return new TerrainCheckResult(
                 distance, getAngle(origTile, origDesc, flipAwareAngle), getTileIndex(origDesc));
+    }
+
+    /**
+     * Sonic CD's {@code FindLevelFloor}/{@code FindLevelFloor2} {@code .CheckNegFloor}: a downward
+     * probe ({@code cmpa.w #$10,a3}) that meets a negative height forces height $10 and angle 0 and
+     * takes {@code .FoundFloor} (scddisasm src/Level/Collision Floor.asm:754-759, 843-848).
+     */
+    private static boolean negativeFloorIsFlatFull(LevelManager lm) {
+        return lm != null && com.openggf.game.internal.FloorProbeNegativeHeight.forHost(lm.getGameModule())
+                == com.openggf.game.internal.FloorProbeNegativeHeight.FULL_HEIGHT_FLAT;
+    }
+
+    /**
+     * The floor probe's height: {@link #getHeightMetric}, except that on a
+     * {@code .CheckNegFloor} host a vertically flipped full column is the negative $F0 the
+     * ROM's {@code neg.w d0} makes. Elsewhere +16 and -16 take the same branches
+     * ({@code .maxfloor}; FindFloor2's {@code not.w} equals 15 - (y + 16)), so the sign is kept.
+     */
+    private static byte getFloorHeightMetric(LevelManager lm, SolidTile tile, ChunkDesc desc, int x) {
+        byte metric = getHeightMetric(tile, desc, x);
+        if (metric == FULL_TILE && desc != null && desc.getVFlip() && negativeFloorIsFlatFull(lm)) {
+            return (byte) -FULL_TILE;
+        }
+        return metric;
+    }
+
+    private static TerrainCheckResult createFlatFullFloorResult(ChunkDesc desc, int checkY, int tileY) {
+        int dist = 15 - (FULL_TILE + (tileY & 0x0F)) + (tileY - checkY);
+        return new TerrainCheckResult(dist, (byte) 0, getTileIndex(desc));
     }
 
     private static TerrainCheckResult createFloorResult(SolidTile tile, ChunkDesc desc,
@@ -529,6 +575,21 @@ public final class ObjectTerrainUtils {
                                                                  int x, int y, int yRadius) {
         if (levelManager == null) return TerrainCheckResult.noCollision();
         return checkNativeUpwardCeilingDistAtPoint(levelManager, x, y - yRadius, false);
+    }
+
+    /**
+     * Native ObjCheckCeilingDist on an explicit collision path: {@code FindFloor} entered at
+     * {@code (y - yRadius) ^ $F} with {@code a3 = -$10}, {@code d6 = $1000} and the all-sides solidity
+     * bit (Sonic CD {@code ObjGetCeilDist}/{@code CheckBlockUp}, scddisasm src/Level/Collision
+     * Check.asm:318-339, src/common/object_block_collide.asm:301-327), as the explicit-path wall
+     * probes take it, instead of the focused player's path.
+     */
+    public static TerrainCheckResult checkNativeUpwardCeilingDist(LevelManager levelManager,
+                                                                 boolean secondaryCollisionPath,
+                                                                 int x, int y, int yRadius) {
+        if (levelManager == null) return TerrainCheckResult.noCollision();
+        return checkNativeUpwardCeilingDistAtPoint(levelManager, (byte) 0, x, y - yRadius, false,
+                SOLIDITY_ALL, secondaryCollisionPath);
     }
 
     // Internal authoring probes use explicit owners/path selection. Native callers
@@ -652,6 +713,13 @@ public final class ObjectTerrainUtils {
                                                             int x, int y,
                                                             boolean checkingLeft,
                                                             boolean flipAwareAngle) {
+        if (checkingLeft && com.openggf.game.internal.ObjectLeftWallProbeEntry.forHost(lm.getGameModule())
+                == com.openggf.game.internal.ObjectLeftWallProbeEntry.RAW) {
+            // The wall read below models the eori.w #$F the other games' left probe applies;
+            // a host whose probe passes X unflipped (Sonic CD's ObjGetLWallDist / CheckBlockLeft,
+            // scddisasm src/Level/Collision Check.asm:401-409, FixBugs = 0) undoes it here.
+            x ^= 0x0F;
+        }
 
         TerrainCheckResult foreground = checkWallDistAtPoint(
                 lm, (byte) 0, x, y, checkingLeft, flipAwareAngle, secondaryCollisionPath);
@@ -671,6 +739,10 @@ public final class ObjectTerrainUtils {
                                                             int x, int y, boolean checkingLeft,
                                                             boolean flipAwareAngle,
                                                             boolean secondaryCollisionPath) {
+        if (com.openggf.game.internal.ObjectWallProbeWidth.forHost(lm.getGameModule())
+                == com.openggf.game.internal.ObjectWallProbeWidth.NEGATE) {
+            return signedWidthWallDist(lm, layer, x, y, checkingLeft, flipAwareAngle, secondaryCollisionPath);
+        }
 
         ChunkDesc desc = lm.getChunkDescAt(layer, x, y);
         SolidTile tile = getSolidTile(lm, desc, SOLIDITY_ALL, secondaryCollisionPath);
@@ -689,6 +761,73 @@ public final class ObjectTerrainUtils {
         }
 
         return createWallResult(tile, desc, metric, x, checkingLeft, 0, flipAwareAngle);
+    }
+
+    /**
+     * {@code FindLevelWall}/{@code FindLevelWall2} with the signed width (scddisasm
+     * src/Level/Collision Floor.asm:874-1028), entered as the object probes enter it: the right
+     * probe at X with {@code a3 = $10}, {@code d6 = 0}; the left probe at {@code X ^ $F} with
+     * {@code a3 = -$10}, {@code d6 = $800}, which flips the H-flip test. A flipped width is negated;
+     * zero or a blank block reads the next block (+16), a full width or a probe inside a negative
+     * width regresses to the previous block (-16), and the regress block's negative width returns
+     * {@code ~(x & $F)} (:1021-1027). The angle is the last solid block's, as each read writes it.
+     */
+    private static TerrainCheckResult signedWidthWallDist(LevelManager lm, byte layer, int x, int y,
+                                                          boolean checkingLeft, boolean flipAwareAngle,
+                                                          boolean secondaryCollisionPath) {
+        int probeX = checkingLeft ? x ^ 0x0F : x;
+        int step = checkingLeft ? -FULL_TILE : FULL_TILE;
+        SignedWidthRead first = signedWidthRead(lm, layer, probeX, y, checkingLeft, secondaryCollisionPath);
+        int xInTile = probeX & 0x0F;
+        int width = first.width();
+        SignedWidthRead last = first;
+        int distance;
+        if (width == 0 || width < 0 && xInTile + width >= 0) {
+            last = signedWidthRead(lm, layer, probeX + step, y, checkingLeft, secondaryCollisionPath);
+            distance = signedWidthNextBlock(last, (probeX + step) & 0x0F) + FULL_TILE;
+            if (last.tile() == null) last = first;
+        } else if (width < 0 || width == FULL_TILE) {
+            last = signedWidthRead(lm, layer, probeX - step, y, checkingLeft, secondaryCollisionPath);
+            distance = signedWidthNextBlock(last, (probeX - step) & 0x0F) - FULL_TILE;
+            if (last.tile() == null) last = first;
+        } else {
+            distance = 15 - (xInTile + width);
+        }
+        if (last.tile() == null) {
+            return new TerrainCheckResult(distance, (byte) 0, -1);
+        }
+        return new TerrainCheckResult(distance, getAngle(last.tile(), last.desc(), flipAwareAngle),
+                getTileIndex(last.desc()));
+    }
+
+    /** {@code FindLevelWall2}: the distance from the next or previous block, with no further step. */
+    private static int signedWidthNextBlock(SignedWidthRead read, int xInTile) {
+        int width = read.width();
+        if (width > 0) {
+            return 15 - (xInTile + width);
+        }
+        if (width < 0 && xInTile + width < 0) {
+            return ~xInTile;
+        }
+        return 15 - xInTile;
+    }
+
+    private record SignedWidthRead(SolidTile tile, ChunkDesc desc, int width) { }
+
+    /** One block's row width: Y flipped by the block's V-flip, negated when its H-flip differs from the probe's. */
+    private static SignedWidthRead signedWidthRead(LevelManager lm, byte layer, int x, int y,
+                                                   boolean checkingLeft, boolean secondaryCollisionPath) {
+        ChunkDesc desc = lm.getChunkDescAt(layer, x, y);
+        SolidTile tile = getSolidTile(lm, desc, SOLIDITY_ALL, secondaryCollisionPath);
+        if (tile == null) {
+            return new SignedWidthRead(null, desc, 0);
+        }
+        int row = desc.getVFlip() ? ~y : y;
+        int width = tile.getWidthAt((byte) (row & 0x0F));
+        if (desc.getHFlip() != checkingLeft) {
+            width = -width;
+        }
+        return new SignedWidthRead(tile, desc, width);
     }
 
     private static TerrainCheckResult checkWallExtension(LevelManager lm, byte layer,

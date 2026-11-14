@@ -567,10 +567,13 @@ never preserved.
 - Release publication/skipped jobs: `release-publishing` and
   [publishing guide](../project/release-publishing.md).
 - Architecture/services: [engine map](../architecture/engine-map.md).
-- Objects/bosses: matching `s1-`, `s2-`, or `s3k-implement-*` skill and
+- Objects/bosses: matching `s1-`, `s2-`, `s3k-` or `scd-implement-*` skill and
   [implementation reference](../architecture/object-implementation-reference.md).
-- Disassembly lookup: matching `s1disasm-guide`, `s2disasm-guide`, or
-  `s3k-disasm-guide` skill.
+- Disassembly lookup: matching `s1disasm-guide`, `s2disasm-guide`,
+  `s3k-disasm-guide` or `scddisasm-guide` skill.
+- Sonic CD: [re-host plan](../architecture/plans/2026-11-12-sonic-cd-rehost.md)
+  (rules, engine variants, status), [stage matrix](../architecture/validation/levels/scd-stages.md),
+  disc and capture properties in [CONFIGURATION.md](../../CONFIGURATION.md#sonic-cd-disc-and-native-captures).
 - Trace failures: `trace-replay-bug-fixing`; multiple independent traces:
   `trace-green-fleet`; video: `trace-capture`; recording: `bizhawk-headless-trace`.
 - Native BizHawk screenshots or state observations for ROM corroboration:

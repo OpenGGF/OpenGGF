@@ -127,7 +127,13 @@ public final class PlayableSpriteInternalAccess {
                 own.preMoveBalanceDirection(),
                 incoming.latchedNextTilt(),
                 incoming.latchedTilt(),
-                own.deathElapsedFrames());
+                own.deathElapsedFrames(),
+                own.chargeTimer(),
+                own.lookMode(),
+                own.upPrevious(),
+                own.downPrevious(),
+                own.pseudo3dRamp(),
+                own.stageControlState());
     }
 
     public static void applyNativeTeleportEffects(AbstractPlayableSprite player,
@@ -257,7 +263,21 @@ public final class PlayableSpriteInternalAccess {
     }
 
     public static boolean fixedCountdownOwnsDrowning(AbstractPlayableSprite sprite) {
-        return sprite.fixedLevelObjectOwnsDrowningBubbleCadence();
+        return PlayerStageHooks.fixedObjectOwnsDrowningCadence(sprite);
+    }
+
+    /**
+     * Engine-only: the standing and rolling radii (and the box heights derived from them) that
+     * the player's later radius writes use, for a stage that changes the player's size (Sonic
+     * CD's shrunk player). The current radii are not changed.
+     */
+    public static void setBodyRadii(AbstractPlayableSprite sprite, int standX, int standY, int rollX, int rollY) {
+        sprite.standXRadius = (short) standX;
+        sprite.standYRadius = (short) standY;
+        sprite.rollXRadius = (short) rollX;
+        sprite.rollYRadius = (short) rollY;
+        sprite.runHeight = (short) (standY * 2);
+        sprite.rollHeight = (short) (rollY * 2);
     }
 
     /** The fixed countdown is the sole lifetime owner for the native player slots. */

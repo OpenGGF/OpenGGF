@@ -540,14 +540,37 @@ public final class HeadlessGameBoot implements AutoCloseable {
                 services.romDetection().detectAndCreateModule(rom);
         GameModule rootModule = detected.orElseThrow(() ->
                 new IOException("No game module detected for ROM: " + description));
+        return bootSession(rootModule, com.openggf.game.StockGameDataSources.pinned(rom, rootModule),
+                zone, act, initialRngSeed, admissionPolicy);
+    }
+
+    /**
+     * Boots a stock module whose session source is not a cartridge ROM (Sonic CD's disc).
+     * The caller keeps ownership of the source; everything after the source is the same
+     * session, manager, team and level-load path as a ROM boot.
+     */
+    public GameLoop boot(com.openggf.game.GameDataSource source, GameModule rootModule, int zone, int act)
+            throws IOException {
+        java.util.Objects.requireNonNull(source, "source");
+        java.util.Objects.requireNonNull(rootModule, "rootModule");
+        if (source.rom().isPresent()) {
+            throw new IllegalArgumentException("ROM sources boot through the cartridge path");
+        }
+        com.openggf.graphics.color.DisplayColorProfileController.applySavedSettings(
+                engineServices.configuration(), engineServices.graphics());
+        return bootSession(rootModule, source, zone, act, null, HardwareReadinessAdmissionPolicy.LIVE);
+    }
+
+    private GameLoop bootSession(GameModule rootModule, com.openggf.game.GameDataSource source, int zone, int act,
+            Long initialRngSeed, HardwareReadinessAdmissionPolicy admissionPolicy) throws IOException {
+        EngineContext services = engineServices;
         // --- gameplay session + managers --------------------------------
         SessionManager.armNextGameplayAdmissionPolicy(admissionPolicy);
         disableExternalContentForDeterminism();
         var request = GameplayLaunchRequest.fromConfig(services.configuration(), rootModule.getGameId().code());
         GameModule resolved = services.moduleResolutionService().resolveForLaunch(
                 moduleDecorator.apply(rootModule, request), request, ModuleResolutionService.LaunchPolicy.DETERMINISTIC);
-        GameplayModeContext mode = SessionManager.openGameplaySession(rootModule, resolved,
-                com.openggf.game.StockGameDataSources.pinned(rom, rootModule), null);
+        GameplayModeContext mode = SessionManager.openGameplaySession(rootModule, resolved, source, null);
         GameModule module = mode.getWorldSession().resolvedGameModule();
         GameplaySessionFactory.attachManagers(mode, services, createGameplayCamera(services));
         if (!mode.isGameplayRuntimeReady()) {

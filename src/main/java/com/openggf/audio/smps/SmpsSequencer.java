@@ -98,7 +98,7 @@ public class SmpsSequencer implements CoordFlagContext {
     public void setSampleRate(double sampleRate) {
         if (sampleRate > 0.0) {
             this.sampleRate = sampleRate;
-            this.samplesPerFrame = sampleRate / region.frameRate;
+            this.samplesPerFrame = sampleRate / serviceRate();
         }
     }
 
@@ -957,9 +957,16 @@ public class SmpsSequencer implements CoordFlagContext {
         }
     }
 
+    /** Video-frame cadence of the region unless the configuration names a timer-clocked driver. */
+    private double serviceRate() {
+        int clock = config.getServiceClockNumerator();
+        int clocksPerService = config.getServiceClockDenominator();
+        return clock > 0 && clocksPerService > 0 ? (double) clock / clocksPerService : region.frameRate;
+    }
+
     public void setRegion(Region region) {
         this.region = region;
-        this.samplesPerFrame = sampleRate / region.frameRate;
+        this.samplesPerFrame = sampleRate / serviceRate();
         calculateTempo();
     }
 
@@ -1007,7 +1014,7 @@ public class SmpsSequencer implements CoordFlagContext {
         }
         // SFX tick every tempo frame; keep frame pacing tied to region to avoid
         // double-speed playback.
-        this.samplesPerFrame = sampleRate / region.frameRate;
+        this.samplesPerFrame = sampleRate / serviceRate();
         calculateTempo();
 
         // Safety: cap SFX to a reasonable tick budget so bad data doesn't hang forever.

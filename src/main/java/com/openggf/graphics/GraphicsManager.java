@@ -425,6 +425,7 @@ public class GraphicsManager {
 			return;
 		}
 		this.glInitialized = true;
+		forgetObjectsOfPreviousContext();
 		// Names from any earlier context are meaningless on this one.
 		this.nativeSpriteScratch = new NativeSpriteScratch();
 		this.patternAtlas = new PatternAtlas(ATLAS_WIDTH, ATLAS_HEIGHT, profiler);
@@ -462,6 +463,25 @@ public class GraphicsManager {
 		this.spritePriorityShaderProgram.cacheUniformLocations();
 		this.tilePriorityFBO = new TilePriorityFBO();
 		// FBO will be initialized when first needed with actual screen dimensions
+	}
+
+	/**
+	 * Drops every GL object name a previous context left, without GL calls. Everything {@link #init} creates is made
+	 * for the new context, but some owners create their objects lazily and keep the names in static or long-lived
+	 * fields: the palette textures, the immediate and batched command VAOs/VBOs and their bind caches, the parallax
+	 * background renderer (scroll textures, shader, quad VAO) and the arena mask. A context closed without
+	 * {@link #cleanup} (a second {@code HeadlessGameBoot} in one process) leaves those names behind; in the new context
+	 * they name nothing or another object (GL_INVALID_OPERATION/VALUE on first use, a texture bound to the wrong
+	 * target), so the owners recreate them on first use instead.
+	 */
+	private void forgetObjectsOfPreviousContext() {
+		paletteTextures.forgetPaletteTexturesOfPreviousContext();
+		GLCommand.cleanupHeadless();
+		PatternRenderCommand.cleanupHeadless();
+		if (batchedRenderer != null) batchedRenderer.cleanupHeadless();
+		batchedRenderer = null;
+		backgroundRenderer = null;
+		arenaMaskRenderer.forgetObjectsOfPreviousContext();
 	}
 
 	/**

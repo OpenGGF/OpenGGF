@@ -46,11 +46,20 @@ final class LevelIterationAdmissionController {
 
     void beginIteration() {
         freshLoadThisIteration = false;
+        // A first-iteration mark left by a load outside this iteration (a harness or headless boot) is not ours.
+        var loadRunsFirst = loadRunsFirstIteration();
+        if (loadRunsFirst != null) loadRunsFirst.forgetIterationRunByLoad();
     }
 
     void loadedFreshBoundary(boolean pending) {
         freshLoadThisIteration = pending;
         freshAdmissionPhase = FreshAdmissionPhase.AWAITING_TITLE;
+    }
+
+    private static com.openggf.game.internal.LevelLoadRunsFirstIteration loadRunsFirstIteration() {
+        var world = com.openggf.game.session.SessionManager.getCurrentWorldSession();
+        return world == null ? null
+                : com.openggf.game.internal.LevelLoadRunsFirstIteration.forHost(world.getGameModule());
     }
 
     private int lastAppliedPlaybackFrame = -1;
@@ -110,6 +119,12 @@ final class LevelIterationAdmissionController {
         if (mode != GameMode.LEVEL) {
             activateRepresentedHardwareTiming.run();
             return LevelFrameResult.GAMEPLAY_FRAME;
+        }
+        var loadRunsFirst = loadRunsFirstIteration();
+        if (loadRunsFirst != null && loadRunsFirst.consumeIterationRunByLoad()) {
+            // The load in this iteration's fade callback already ran the level's first iteration
+            // (LoadedLevelFrameCounter): this row is that iteration's, as the destination row is the fade's below.
+            return LevelFrameResult.SETUP_ONLY;
         }
         boolean pauseAlreadyChecked = false;
         if (levelManager.hasPendingFreshLevelTransitionBoundary()) {

@@ -47,7 +47,7 @@ the repository for durable captures; `target/trace-videos` is disposable output.
 | `--scale <n>` | `CAPTURE_SCALE=4` | Integer nearest-neighbor scaling of 320×224 |
 | `--fps <n>` | `CAPTURE_FPS=60` | Capture/engine cadence; a region-pinned rate such as PAL 50 takes precedence |
 | `--codec <name>` | `CAPTURE_CODEC=ffv1` | Video codec; changing it may change losslessness |
-| `--clip frames:START:END` | None | Fast-forward from the original start, then capture the inclusive zero-based trace-row window, retaining elapsed-VBlank title/lag frames; explicit windows do not add `--tail-frames` |
+| `--clip frames:START:END` | None | Fast-forward from the original start, then capture the inclusive zero-based trace-row window, retaining elapsed-VBlank title/lag frames; explicit windows do not add `--tail-frames`; a Sonic CD (disc) trace may end the window up to 2000 rows past its last row: the production loop then carries on from the movie's own rows (neutral past it), under the New Game route, so a warp's cutscene and arrival are filmed. Nothing is compared past the trace; `state.csv` gives the mode per frame (empty player columns on screens with no player) |
 | `--no-ghosts` / `--ghosts` | `TRACE_SHOW_DESYNC_GHOSTS=true` | Desync ghost visibility |
 | `--no-sprite-limits` | Native sprite limits on | Render without native sprite dropout, as normal play does by default; for promotional footage, not ROM image comparison |
 | `--no-music` | Music recorded | Silence music and keep the sound effects on the audio track: a sound-effects stem of the run for footage that gets its own music. The picture does not change |
@@ -64,7 +64,7 @@ sessions in both live playback and capture.
 Audio uses the no-device `HeadlessSmpsAudioBackend`, fixed at 48 kHz stereo.
 The capture runtime must be the sole PCM consumer: a live device backend draining
 the same FIFO causes fast/out-of-sync audio. The capture pins the music and SFX
-volume settings to 100, so saved player volumes do not reach the evidence. For
+volume settings to 100 (music 0 with `--no-music`), so saved player volumes do not reach the evidence. For
 silence, check `AUDIO_ENABLED` and backend installation; inspect the output with
 `ffmpeg -i <mkv> -af volumedetect -f null -`. Unexpected speaker output likewise
 indicates that the wrong backend was installed.

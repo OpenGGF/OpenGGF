@@ -1,6 +1,6 @@
 # Known Discrepancies from Original ROMs
 
-This document tracks **intentional deviations** from the original Sonic 1 / 2 / 3&K ROMs that apply engine-wide (cross-game) or to Sonic 1 / Sonic 2 specifically. Entries here are architectural choices we've made (cleaner code, added features, deliberate corrections of known ROM bugs) that we accept and do not plan to revert. Runtime gameplay behavior is preserved unless a rationale explicitly justifies a visible change (e.g., the multi-sidekick entry adds gameplay that the ROM never supported).
+This document tracks **intentional deviations** from the original Sonic 1 / 2 / 3&K ROMs and the Sonic CD disc that apply engine-wide (cross-game) or to Sonic 1 / Sonic 2 / Sonic CD specifically. Entries here are architectural choices we've made (cleaner code, added features, deliberate corrections of known ROM bugs) that we accept and do not plan to revert. Runtime gameplay behavior is preserved unless a rationale explicitly justifies a visible change (e.g., the multi-sidekick entry adds gameplay that the ROM never supported).
 
 **What does NOT belong here:**
 - Bugs, incomplete implementations, and parity gaps that we *intend to fix* → [known-bugs.md](known-bugs.md)
@@ -129,6 +129,127 @@ no discrepancy entry was added or reclassified by the cutover.
 38. [Knuckles in Sonic 2 Runs Tier Two With the Lock-On Dump and Tier One Without It](#knuckles-in-sonic-2-runs-tier-two-with-the-lock-on-dump-and-tier-one-without-it)
 39. [Fixed Native Sprite Capacity in Wider Presentation](#fixed-native-sprite-capacity-in-wider-presentation)
 40. [S2 Sideways Platform Safe Admission and Owned-Child Retirement](#s2-sideways-platform-safe-admission-and-owned-child-retirement)
+41. [Sonic CD Hardware Timings Not Modelled](#sonic-cd-hardware-timings-not-modelled)
+
+---
+
+## Sonic CD Hardware Timings Not Modelled
+
+**Location:** `game/soniccd/fmv/CdFmvStreamer.java`, `game/soniccd/audio/CdCddaPlayer.java`,
+`game/soniccd/objects/boss/wwz/WwzBossEggman.java`, `game/soniccd/CdLevelVIntCounter.java`,
+`game/soniccd/CdLoadTiming.java`;
+test-side sampling in `CdFixtureReplay.completedRow`; replay's lost-V-INT admission in
+`trace/replay/TraceVIntServiceCoordinator.java`.
+**Disc reference:** `docs/scddisasm` (USA build).
+
+Sonic CD is hosted under the same [reimplementation boundary](../architecture/engine-map.md#reimplementation-boundary)
+as the cartridge games: the engine runs the game's algorithms, not the 68000s,
+the drive or the BIOS. These timings come from the hardware, not from code on
+the disc, so they are not modelled:
+
+- **Lag frames.** When a main-loop pass overruns its frame, `VInterrupt`
+  (Level/Main.asm:681-686) finds `vintRoutine` clear and takes `VInt_Lag`
+  (Level/Main.asm:738-766): no pad read, DMA or tile work that frame, then
+  `VInt_Finish` (Level/Main.asm:704-712) still runs the boredom and time-warp
+  timers and the V-INT counter. The engine runs one pass per frame and never
+  overruns. The V-INT work that is game logic is kept (Tidal Tempest's water,
+  the time-warp timer and the counter). Trace replay compares each engine row
+  with the last native row of the same level frame, which only chooses the
+  comparison row and never moves the engine. The boredom timer's lag-frame
+  ticks are not reproduced.
+- **V-INTs taken by a stage load: estimated from emulator timing in `FAST` and
+  `PROFILED`, not in `NONE`.** `LevelStart` clears `levelVIntCounter`
+  (`.ClearFlowers`, Level/Main.asm:178-184), then the load runs for 37 to 80
+  V-INTs before the first `Level_MainLoop` pass: the `.WaitPLC2` loop
+  (Level/Main.asm:253-259), the palette fade (:319, :325) and every V-INT that
+  arrives while the 68000 decompresses with interrupts on (from :239). That
+  count is hardware time. The engine's load is synchronous; with
+  `gameplay.loadTimeSimulation` `FAST` (the default) or `PROFILED` it submits
+  the load as `SCD_STAGE_LOAD` work and starts the counter from the count the
+  emulator measured for that stage file and entry
+  (`load-time-profiles/soniccd-v1.json`, `game/soniccd/CdLevelVIntCounter.java`):
+  every fresh entry of the 70 stage programs, one checkpoint restart (R11A)
+  and one time-warp arrival (R11D); other checkpoint, warp and past or future
+  death restarts have no measurement and start from 0. Each of those two
+  measurements is a single sample, and has not been compared with native in an
+  engine run. A checkpoint or warp entry also depends on which pattern-load list
+  the stage's `LoadLevelData` queues; the engine's rule for that list disagrees
+  with the disassembly for 12 stages (R31C, R31D, R32C, R32D, R51A, R51C, R51D,
+  R52A, R52C, R52D, R53C and R53D), so their checkpoint and warp keys may name
+  the wrong list. Their fresh entries are measured and unaffected. Loads between
+  programs (title, Time Attack, special stage, the warp cutscene) are not
+  measured or paced. A real disc's timing
+  varies read to read; the emulator's does not. Known difference: R12A entered
+  after an act clear or a special stage takes one V-INT more natively (46)
+  than from the stage select (45); the manifest keeps 45. With `NONE` every
+  stage starts the counter at 0 and the first pass sees 1. The player's loop
+  runs no V-INT for a native lag or held frame (above), so in play the counter
+  falls behind native from the stage's first lag frame. Two things
+  read the counter's low bits: a spilled ring tests the floor only when
+  `(levelVIntCounter + d7) & 3` is 0 (Level/_Objects/Ring/Main.asm:413-418),
+  and the HUD's RINGS label flips colour when its low nibble is 0 with no
+  rings (HUD and Points/Main.asm:120-131). Where the counter differs, a player
+  sees spilled rings settle on different frames than on the console (so a
+  re-collection can come out one ring different) and the RINGS flash on a
+  different phase. Trace replay ignores the setting: it seeds the native count once before the load,
+  the hardware-relative initial base of the
+  [timing contract](../architecture/designs/2026-07-27-cross-game-hardware-timing-trace-contract.md#4-hardware-relative-initial-base)
+  that the other games' replays also take, and the counter then equals native
+  on every row.
+- **Lost V-INTs.** A V-INT handler still running when the next VBlank arrives
+  drops that VBlank: it produces no `VInterrupt` entry (Level/Main.asm:681),
+  so native counts one V-INT fewer than frames. This happens 9 times in
+  412,883 recorded rows, all on Quartz Quadrant's full-act recordings. Whether
+  a handler overruns is 68000 cycle time, so play never models it: the
+  engine services one V-INT every frame, and a player's counter, spilled-ring
+  floor checks and RINGS flash run one V-INT ahead of a console that dropped
+  one. Trace replay admits the drop under the timing contract's
+  [lost-V-INT extension](../architecture/designs/2026-07-27-cross-game-hardware-timing-trace-contract.md#2026-11-13-approved-extension-unserviced-vblank-lost-v-int-admission).
+  On a row whose recording observed no interrupt entry, replay services no
+  V-INT, and the counter and ring count then equal native on every row.
+  Recordings made before the recorder observed entry carry no stream, and
+  replay services every row of them: 18 Quartz Quadrant recordings and control
+  traces were re-recorded, and the counter census shows no lost V-INT in the
+  other 140. The HUD's RINGS flash phase has no native row to check against.
+- **Disc drive seeks: the video reads estimated from emulator timing in `FAST`
+  and `PROFILED`, not in `NONE`.** The video player waits for the BIOS read that
+  `ReadFMVSectors` (CD System Program/SP.asm:720-746) starts; the seek before
+  the first sector is a drive time. In `FAST` and `PROFILED` the read is
+  submitted as `CD_READ_READY` work and its first sector arrives 16 V-ints
+  after the request, the emulator's measurement for all three streams, so the
+  first bank shows 75 V-ints after the request as natively. The engine issues
+  the request at the program's start; natively `FileEngine_LoadFMV` first
+  counts the file's sectors (`.GetSectors`, SP.asm:691-699), 2 frames for the
+  opening and 6 for the endings, CPU time that is not modelled, so from the
+  program's start the first bank shows that much earlier than native. With
+  `NONE` (or a stream with no measurement) the engine uses one constant,
+  `CdFmvStreamer.SEEK_VINTS` (20 V-ints). Any value from 12 to 46 leaves every
+  picture and PCM copy unchanged; only when the first bank shows moves with it.
+  A real disc's seek varies with the head's position and from read to read;
+  other disc reads are not paced. CD audio
+  started through `LoopCDDA` (CD System Program/SPX.asm:1877-1881) plays at
+  once; native starts 41 to 83 frames later, growing with the track's distance
+  on the disc. No seek model exists and no constant is fitted for music.
+- **Chip edge cases with no source.** The PCM chip is a translation of MAME's
+  `rf5c68` and the stamp renderer of MAME's `megacd` (BSD-3-Clause); both
+  depart from MAME where native recordings required it (negative channel
+  products round down and a loop jump is not stepped in the same sample;
+  stamp flip is applied before rotation), each pinned by native fixtures. A few
+  behaviours have no source and nothing measured depends on them: the PCM's
+  pan after reset and its reads of unmapped registers, the stamp renderer's
+  priority mode 3, and the register widths for its V cell, H dot and V dot
+  counts (Sonic CD's values fit all of them). The stamp operation's cost is
+  measured only at widths 256 and 304.
+- **Blocking fades inside an object.** Wacky Workbench's Eggman calls
+  `FadeToWhite` and `BossFadeObjectsFromWhite` from his own update
+  (`EggmanDefeatSequenceFadeScreen`, objects/r6/boss.asm:545-559): each fade
+  loops on V-INT for 22 frames while the rest of the object pass waits. The
+  engine applies each fade within one frame and does not hold the pass in
+  live play. Under the comparison rule above, the fight's slots and the
+  palette-cycle timers equal native through both fades.
+
+**Shipped bugs.** Sonic CD code models `FixBugs = 0` as the other games do. No
+intentional correction of a Sonic CD bug is recorded.
 
 ---
 

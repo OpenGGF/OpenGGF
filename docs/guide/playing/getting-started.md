@@ -59,6 +59,12 @@ defaults or blank to let the engine find your images, or set one to a file that 
 exist. See the [image identity table](../../../CONFIGURATION.md#image-identity)
 for all recognised layouts.
 
+Sonic CD is a disc, not a ROM. On the `next` development line, set `roms.soniccd` to
+your USA disc image's `.cue` sheet (its 35 track files beside it), or leave it blank
+and put the disc in a folder inside the ROM folder; Sonic CD then appears on the
+master title shelf. See
+[Sonic CD](game-status.md#sonic-cd-development-preview).
+
 REV00/REV01 selection is automatic from the original bytes. If both are available,
 set the per-game file to the revision you want to play. A revision name in a
 filename or header alone does not verify a modified image. Console-region

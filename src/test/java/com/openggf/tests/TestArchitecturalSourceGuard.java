@@ -2408,6 +2408,53 @@ class TestArchitecturalSourceGuard {
                 new MethodSpan("following", "Example#following()", 11, 11)), source.methods());
     }
 
+    /**
+     * Genesis Plus GX is licensed non-commercial, which GPL-3.0-only cannot carry, so Sonic CD
+     * production code may name it only as the measured reference (BizHawk's core), never cite its
+     * source files, lines or commit as the origin of behaviour. Scoped to the Sonic CD packages: the
+     * S3K timing owners still cite it and are outside this rule (see the LICENCE lane report).
+     */
+    @Test
+    void sonicCdProductionSourcesDoNotCiteGenesisPlusGxSource() throws IOException {
+        List<String> violations = new ArrayList<>();
+        for (String root : List.of("com/openggf/game/soniccd", "com/openggf/data/cd")) {
+            for (Path file : productionFilesUnder(root)) {
+                String relative = SRC_MAIN.relativize(file).toString().replace('\\', '/');
+                violations.addAll(genesisPlusGxSourceCitations(relative, Files.readString(file)));
+            }
+        }
+        assertNoViolations("Sonic CD sources must not cite Genesis Plus GX source as the origin of behaviour", violations);
+    }
+
+    @Test
+    void genesisPlusGxCitationSamplesFailWhileMeasuredReferencesPass() {
+        for (String cited : List.of("// pcm_run, core/cd_hw/pcm.c", " * Semantics: GPGX 051d430d3d1b, gfx_start",
+                " * one timer clock = 384 cycles, gpgx scd.c:1453-1454", "// derived from gfx.c (gfx_render)",
+                " * Genesis Plus GX 051d430d, cdd.c")) {
+            assertFalse(genesisPlusGxSourceCitations("Sample.java", cited).isEmpty(), cited);
+        }
+        for (String measured : List.of(" * Under BizHawk 2.11 (gpgx, BIOS US 1.10) the fade takes 19 frames",
+                "// Native (Genesis Plus GX) runs the drive at 59.937 frames a second",
+                " * measured under BizHawk 2.11 by tools/soniccd/pcm_native_run.py", "// see CdPcmDevice.java")) {
+            assertTrue(genesisPlusGxSourceCitations("Sample.java", measured).isEmpty(), measured);
+        }
+    }
+
+    private static final Pattern GENESIS_PLUS_GX_SOURCE_CITATION = Pattern.compile(
+            "(?i)core/cd_hw/|\\b(?:gfx|pcm|scd|cdd|cdc|mem68k|m68kcpu)\\.[ch]\\b"
+                    + "|\\b(?:gpgx|genesis plus gx)\\s+[0-9a-f]{7,40}\\b");
+
+    private static List<String> genesisPlusGxSourceCitations(String relative, String source) {
+        List<String> violations = new ArrayList<>();
+        String[] lines = source.split("\n", -1);
+        for (int i = 0; i < lines.length; i++) {
+            if (GENESIS_PLUS_GX_SOURCE_CITATION.matcher(lines[i]).find()) {
+                violations.add(relative + ":" + (i + 1) + " - " + lines[i].strip());
+            }
+        }
+        return violations;
+    }
+
     private static List<Path> productionFiles() throws IOException {
         if (!Files.isDirectory(SRC_MAIN)) {
             return List.of();

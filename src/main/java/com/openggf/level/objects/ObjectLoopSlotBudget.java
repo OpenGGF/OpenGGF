@@ -10,7 +10,12 @@ package com.openggf.level.objects;
  * lengthens the REST OF THAT FRAME's walk and nothing beyond it, which is why
  * this is reset at the top of every pass and never captured for rewind.
  *
- * <p>Held by {@link ObjectManager} and driven through its two public methods;
+ * <p>A write made by the player slot is the exception to "at the top of every
+ * pass": the engine runs the player slot before the object pass, so such a write
+ * is held as pending and becomes the pass's counter when the pass resets it.
+ *
+ * <p>Held by {@link ObjectManager} and driven through its public methods and,
+ * for the player slot's pre-pass write, {@link ObjectManagerInternalAccess};
  * nothing else may write it.
  */
 final class ObjectLoopSlotBudget {
@@ -18,9 +23,27 @@ final class ObjectLoopSlotBudget {
     /** Last slot the walk may reach, inclusive, or {@code -1} for the whole table. */
     private int lastSlotInclusive = -1;
 
-    /** Clears the override at the top of a pass, restoring the full walk. */
+    /** A player-slot write made before this frame's pass, or {@code -1}. */
+    private int pendingLastSlotInclusive = -1;
+
+    /**
+     * Clears the override at the top of a pass, restoring the full walk, unless the
+     * player slot wrote the counter before the pass (then that write applies).
+     */
     void reset() {
-        lastSlotInclusive = -1;
+        lastSlotInclusive = pendingLastSlotInclusive;
+        pendingLastSlotInclusive = -1;
+    }
+
+    /**
+     * Rewrites the remaining walk length from a slot the engine runs before the
+     * object pass (the player slot); applied when the coming pass resets.
+     */
+    void overrideBeforePass(int sourceSlot, int remainingSlots) {
+        if (sourceSlot < 0 || remainingSlots < 0) {
+            return;
+        }
+        pendingLastSlotInclusive = sourceSlot + remainingSlots;
     }
 
     /**

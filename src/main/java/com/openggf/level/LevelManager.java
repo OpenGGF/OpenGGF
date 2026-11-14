@@ -1057,6 +1057,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                 && gameRules.collision() != null
                 && gameRules.collision().collisionModel() == com.openggf.game.CollisionModel.UNIFIED) {
             objectManager.enableCounterBasedRespawn();
+            com.openggf.level.objects.ObjectManagerInternalAccess.configureCounterSpawner(objectManager, gameModule);
         } else {
             objectManager.enableExecThenLoadPlacement();
             objectManager.enforceSlotLimit();
@@ -1803,6 +1804,13 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             LOGGER.info("Initializing Object Art. Base Index: " + OBJECT_PATTERN_BASE);
             refreshObjectArtPatterns();
 
+            if (gameModule.getGameService(com.openggf.game.internal.ObjectDrawnHud.class) != null) {
+                // The game's HUD is drawn by its own level objects; install no overlay HUD.
+                hudRenderManager = null;
+                if (graphicsManager.getUiRenderPipeline() != null) {
+                    graphicsManager.getUiRenderPipeline().setHudRenderManager(null);
+                }
+            } else {
             hudRenderManager = new HudRenderManager(graphicsManager, camera, gameState);
             HudPaletteBridgeAccess.setCharacterLifeIcon(hudRenderManager,
                     com.openggf.game.presentation.CharacterIconPalette.hasHudIcon());
@@ -1833,53 +1841,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                 graphicsManager.getUiRenderPipeline().setHudRenderManager(hudRenderManager);
             }
 
-            // HUD uses a fixed pattern base to avoid collisions with dynamically registered object sheets
-            int hudBaseIndex = HUD_PATTERN_BASE;
-            Pattern[] hudDigits = provider.getHudDigitPatterns();
-            if (hudDigits != null) {
-                LOGGER.info("Cached " + hudDigits.length + " HUD Digit patterns at index " + hudBaseIndex);
-                for (int i = 0; i < hudDigits.length; i++) {
-                    graphicsManager.cachePatternTexture(hudDigits[i], hudBaseIndex + i);
-                }
-                hudRenderManager.setDigitPatternIndex(hudBaseIndex);
-                HudProfileAccess.measureTimeSeparators(hudRenderManager, hudDigits);
-
-                int nextHudIndex = hudBaseIndex + hudDigits.length;
-                com.openggf.level.objects.HudProfileAccess.installSatLayout(hudRenderManager,
-                        provider instanceof com.openggf.game.internal.HudSatLayoutSource nativeHud
-                                ? nativeHud.getHudSatLayout() : null);
-                HudStaticArt staticHudArt = provider.getHudStaticArt();
-                if (staticHudArt != null && staticHudArt.patterns() != null) {
-                    LOGGER.info("Cached " + staticHudArt.patterns().length
-                            + " HUD Static patterns at index " + nextHudIndex);
-                    for (int i = 0; i < staticHudArt.patterns().length; i++) {
-                        graphicsManager.cachePatternTexture(staticHudArt.patterns()[i], nextHudIndex + i);
-                    }
-                    hudRenderManager.setStaticHudArt(nextHudIndex, staticHudArt);
-                    hudRenderManager.setLivesPaletteOverrideSupplier(provider::getHudLivesPaletteOverride);
-                    nextHudIndex += staticHudArt.patterns().length;
-                }
-
-                Pattern[] hudLivesNumbers = provider.getHudLivesNumbers();
-                if (hudLivesNumbers != null) {
-                    LOGGER.info("Cached " + hudLivesNumbers.length + " HUD Lives Numbers patterns at index "
-                            + nextHudIndex);
-                    for (int i = 0; i < hudLivesNumbers.length; i++) {
-                        graphicsManager.cachePatternTexture(hudLivesNumbers[i], nextHudIndex + i);
-                    }
-                    hudRenderManager.setLivesNumbersPatternIndex(nextHudIndex);
-                    nextHudIndex += hudLivesNumbers.length;
-                }
-
-                Pattern[] hudHexDigits = provider.getHudHexDigitPatterns();
-                if (hudHexDigits != null) {
-                    LOGGER.info("Cached " + hudHexDigits.length + " HUD Hex Digit patterns at index "
-                            + nextHudIndex);
-                    for (int i = 0; i < hudHexDigits.length; i++) {
-                        graphicsManager.cachePatternTexture(hudHexDigits[i], nextHudIndex + i);
-                    }
-                    hudRenderManager.setHexDigitsPatternIndex(nextHudIndex);
-                }
+            LevelHudArtPatterns.cache(provider, graphicsManager, hudRenderManager, HUD_PATTERN_BASE);
             }
 
         } catch (IOException e) {
@@ -2296,6 +2258,9 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     }
 
     private int resolveCollisionLayoutYMask() {
+        if (level instanceof com.openggf.game.internal.CollisionLayoutRowWindow window) {
+            return window.collisionLayoutYMask();
+        }
         GameRules rules = gameRulesFor(gameModule);
         if (rules == null || rules.collision() == null) {
             return 0;
@@ -3131,6 +3096,9 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                 checkpointCoordinator.consumePersistentRespawnForCameraSnap();
         int preSnapCameraX = camera.getX();
         camera.setFrozen(false);
+        // Sonic CD LevelSizeLoad: move.w #320/2,camXCenter.w (scddisasm
+        // src/Level/Palmtree Panic/Scroll (Act 1 Present).asm:34).
+        camera.resetHorizontalFocusOffset();
         camera.setFocusedSprite(playable);
         camera.updatePosition(true);
 
@@ -3156,7 +3124,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             } else {
                 camera.setVerticalWrapEnabled(false);
             }
-            verticalWrapEnabled = camera.isVerticalWrapEnabled();
+            verticalWrapEnabled = com.openggf.game.internal.VerticalScrollWrapAtTop.apply(currentLevel, camera);
             camera.updatePosition(true);
             if (initializeLoadRegisters && getZoneFeatureProvider() instanceof
                     com.openggf.game.internal.LevelStartCameraPosition initialCamera) {
@@ -3174,7 +3142,9 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                     && (objectManager.usesTwoAxisCursorPlacement()
                             || (camera.getX() != preSnapCameraX
                                     && (!objectManager.usesCounterBasedRespawn()
-                                            || resetCounterPlacementAfterCameraSnap)))) {
+                                            || resetCounterPlacementAfterCameraSnap
+                                            || com.openggf.game.internal.StageLoadClearsStageRam
+                                                    .appliesTo(activeGameModule()))))) {
                 // The object manager is constructed before the level-start
                 // camera snap. Rebuild its initial window once Camera_X_pos
                 // matches the new start, otherwise full reloads can seed
@@ -3672,8 +3642,9 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             // their native timing.
             // A session's first object clock continues the power-on V_int_run_count
             // (CrossResetRAM, never cleared by Level: sonic3k.asm:558-559).
-            int inheritedVblaCounter = objectManager != null
-                    ? objectManager.getVblaCounter()
+            // A game whose stage load clears its V-int count starts each stage's clock from zero.
+            int inheritedVblaCounter = com.openggf.game.internal.StageLoadClearsStageRam.appliesTo(activeGameModule())
+                    ? 0 : objectManager != null ? objectManager.getVblaCounter()
                     : com.openggf.game.session.EngineTiming.vIntRunCounter(engineServices).objectClockSeed();
             int inheritedVIntRunCounterPhaseOffset = objectManager != null
                     ? objectManager.getVIntRunCounterPhaseOffset()
@@ -3727,11 +3698,14 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             restoreCheckpointRuntimeState(ctx);
 
             if (objectManager != null && nativeLoads.ordinal == nativeLoadOrdinalBefore) {
-                objectManager.initVblaCounter(inheritedVblaCounter);
+                // A host whose load clears and sets its V-INT clock keeps the value its load left.
+                if (!com.openggf.game.internal.LevelLoadSetsVIntCounter.forHost(gameModule)) {
+                    objectManager.initVblaCounter(inheritedVblaCounter);
+                }
                 objectManager.initVIntRunCounterPhaseOffset(inheritedVIntRunCounterPhaseOffset);
             }
 
-            frameCounter = 0;
+            frameCounter = com.openggf.game.internal.LoadedLevelFrameCounter.forHost(gameModule);
             seamlessTransitionExecutor.resetFrameCounterBridge();
             activateScheduledPlaybackForLoadedLevel();
             // BEGIN HCZ1_DIRECT_FF_OUTER_LOAD_SUCCESS
@@ -4024,7 +3998,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         } else {
             cam.setVerticalWrapEnabled(false);
         }
-        verticalWrapEnabled = cam.isVerticalWrapEnabled();
+        verticalWrapEnabled = com.openggf.game.internal.VerticalScrollWrapAtTop.apply(currentLevel, cam);
     }
 
     void applyPostTransitionCameraOverrides(SeamlessLevelTransitionRequest request, Camera cam) {
@@ -4167,6 +4141,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                 && gameRules.collision() != null
                 && gameRules.collision().collisionModel() == com.openggf.game.CollisionModel.UNIFIED) {
             objectManager.enableCounterBasedRespawn();
+            com.openggf.level.objects.ObjectManagerInternalAccess.configureCounterSpawner(objectManager, gameModule);
         } else {
             objectManager.enableExecThenLoadPlacement();
             objectManager.enforceSlotLimit();

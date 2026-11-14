@@ -68,6 +68,16 @@ class TraceCaptureToolArgsTest {
     }
 
     @Test
+    void noHudFlagLeavesTheGameHudOutAndTheHudIsDrawnByDefault() {
+        assertTrue(TraceCaptureTool.Args.parse(new String[]{"--trace", "aiz1"}).showGameHud());
+        assertFalse(TraceCaptureTool.Args.parse(new String[]{"--trace", "aiz1"}).noMusic());
+        assertTrue(TraceCaptureTool.Args.parse(new String[]{"--trace", "aiz1", "--no-music"}).noMusic());
+        TraceCaptureTool.Args a = TraceCaptureTool.Args.parse(new String[]{"--trace", "aiz1", "--no-hud"});
+        assertFalse(a.showGameHud());
+        assertTrue(a.showGhosts());
+    }
+
+    @Test
     void nativeSpriteLimitsStayOnUnlessPromotionalFootageTurnsThemOff() {
         assertTrue(TraceCaptureTool.Args.parse(new String[]{"--trace", "aiz1"}).nativeSpriteLimits());
         assertFalse(TraceCaptureTool.Args.parse(

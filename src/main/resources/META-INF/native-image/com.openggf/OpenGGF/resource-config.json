@@ -17,6 +17,7 @@
       { "pattern": "net/chat/.*\\.txt" },
       { "pattern": "presentation/heads/.*\\.txt" },
       { "pattern": "presentation/heads/profiles\\.list" },
+      { "pattern": "soniccd/.*\\.tsv" },
       { "pattern": "\\QMETA-INF/services/com.openggf.level.resources.AuthoredLevelDecoder\\E" },
       { "pattern": "\\QMETA-INF/services/com.sun.source.util.Plugin\\E" },
       { "pattern": "\\QMETA-INF/openggf-mod-sdk/templates/\\E.*" },

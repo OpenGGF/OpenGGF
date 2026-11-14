@@ -91,6 +91,8 @@ public record GameRules(
                     false,
                     false,
                     null,
+                    false,
+                    false,
                     false
             ),
             new CollisionRules(
@@ -120,7 +122,9 @@ public record GameRules(
                     true,
                     false,
                     false,
-                    TailsTailPushDetection.UNSUPPORTED
+                    TailsTailPushDetection.UNSUPPORTED,
+                    false,
+                    false
             ),
             new CameraRules(
                     (short) 0,
@@ -242,6 +246,8 @@ public record GameRules(
                     false,
                     false,
                     new short[]{0x0B00, 0x0B80, 0x0C00, 0x0C80, 0x0D00, 0x0D80, 0x0E00, 0x0E80, 0x0F00},
+                    false,
+                    false,
                     false
             ),
             new CollisionRules(
@@ -278,7 +284,9 @@ public record GameRules(
                     // frame therefore publishes fresh angles for either character,
                     // the same shape S3K already models.
                     true,
-                    TailsTailPushDetection.STATUS_BIT_ONLY
+                    TailsTailPushDetection.STATUS_BIT_ONLY,
+                    false,
+                    false
             ),
             new CameraRules(
                     (short) 120,
@@ -400,7 +408,9 @@ public record GameRules(
                     true,
                     true,
                     new short[]{0x0B00, 0x0B80, 0x0C00, 0x0C80, 0x0D00, 0x0D80, 0x0E00, 0x0E80, 0x0F00},
-                    true
+                    true,
+                    false,
+                    false
             ),
             new CollisionRules(
                     CollisionModel.DUAL_PATH,
@@ -430,7 +440,9 @@ public record GameRules(
                     false,
                     true,
                     true,
-                    TailsTailPushDetection.STATUS_BIT_AND_PUSH_MAPPING_FRAMES
+                    TailsTailPushDetection.STATUS_BIT_AND_PUSH_MAPPING_FRAMES,
+                    false,
+                    false
             ),
             new CameraRules(
                     (short) 120,

@@ -1411,6 +1411,7 @@ public final class RewindRoundTripHarness {
             case S1 -> new Sonic1ObjectRegistry();
             case S2 -> new Sonic2ObjectRegistry();
             case S3K -> new Sonic3kObjectRegistry();
+            case SCD -> new com.openggf.game.soniccd.objects.SonicCdObjectRegistry();
             case STANDALONE -> throw new IllegalArgumentException(
                     "Standalone object registries require an owning module");
         };

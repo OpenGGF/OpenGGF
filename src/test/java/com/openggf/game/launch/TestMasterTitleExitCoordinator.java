@@ -62,6 +62,30 @@ class TestMasterTitleExitCoordinator {
     }
 
     @Test
+    void hostedExitBootsThroughTheStockHandlerWithoutALaunchProfile() {
+        MasterTitleLaunchCoordinator launchCoordinator = mock(MasterTitleLaunchCoordinator.class);
+        AtomicBoolean atMasterTitle = new AtomicBoolean(true);
+        AtomicBoolean runtimeReady = new AtomicBoolean(false);
+        AtomicReference<String> handled = new AtomicReference<>();
+        MasterTitleExitCoordinator coordinator = coordinator(launchCoordinator, atMasterTitle,
+                runtimeReady, new AtomicBoolean(), new AtomicReference<>());
+        coordinator.setStockExitHandler(gameId -> {
+            handled.set(gameId);
+            runtimeReady.set(true);
+        });
+
+        coordinator.exitHosted(new MasterTitleEntry.Launch(
+                new MasterTitleEntry.Hosted(com.openggf.game.GameId.SCD, "Sonic CD", "Sonic CD"),
+                MasterTitleEntry.Action.NEW_GAME));
+
+        assertSame("scd", handled.get());
+        assertFalse(atMasterTitle.get());
+        verify(launchCoordinator).prepareHostedExit();
+        verify(launchCoordinator, org.mockito.Mockito.never()).prepareExit("scd", false);
+        verify(launchCoordinator).stagePendingLaunchCallback();
+    }
+
+    @Test
     void standaloneCompletionSavesAndClearsPendingWhenFadeCompletes() {
         MasterTitleLaunchCoordinator launchCoordinator = mock(MasterTitleLaunchCoordinator.class);
         AtomicBoolean saved = new AtomicBoolean(false);
