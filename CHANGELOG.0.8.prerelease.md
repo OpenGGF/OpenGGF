@@ -342,7 +342,9 @@ under the matching area heading; see the
     twice, with full-size Sonic, Tails and Knuckles (and ghosts) posed and angled
     from the original animations. They still pass behind foreground scenery, and
     TIME, laps and the countdown keep their screen size. The item icon sits under
-    TIME and is hidden when monitors are off.
+    TIME and is hidden when monitors are off. A wider display shows more of the
+    arena to each side at the same scale, with the scenery where the racers
+    stand on it.
   - A player who jumps or falls off a platform, spring or blade stops counting
     as standing on it, as in the original. Before, the flag stayed set, sometimes for
     the rest of the race, so slopes stopped turning the player and the pose kept
@@ -395,6 +397,13 @@ under the matching area heading; see the
   names no art, and the whole team's art was then dropped without a word. It is
   asked for by character now, and a team whose art cannot be loaded says so in
   the log.
+
+- **Dust of mod sidekicks:** a mod character in a sidekick slot drew its spin
+  dash dust, skid dust and water splash near black, as MICA's and TALON's did,
+  while the same character leading the team drew them white. The dust is the
+  host game's own Sonic dust, drawn in that game's palette, but a sidekick's
+  dust was given the mod character's palette, whose matching colour is a dark
+  grey. A mod sidekick's dust now keeps the host palette, as a leader's does.
 
 - **MICA, an original character framework example:** The complete MICA and TALON
   mod now ships bundled with JVM and native distributions, disabled by default.
@@ -796,35 +805,26 @@ under the matching area heading; see the
   validated rewind payload; objects consume the preceding publication and
   rendering only projects it. The seamless reload retains HCZ1 deformation,
   and the geyser begins shaking on its native first dispatch.
-  Standalone trace replays print their exact test/report/triage route; triage reads
+  Failed trace replays print their exact test/report/triage route; triage reads
   compressed fixture auxiliaries, preserves pre-trace evidence and distinguishes
-  incomplete or unknown completion from a completed comparison. Standalone replay
-  method entry retires verified prior evidence for the same invocation and scope
-  before loading the fixture; pre-method conditions and extensions remain outside
-  that boundary. Triage exposes missing auxiliary references and absent comparison
-  coverage without changing the published gate or mismatch totals. Replay guidance
-  routes segment diagnosis through the correct lane, movie and report owners.
-  Native search hints use each game's behavior routines and mutable layout
-  owners; canonical player routine/subpixel fields stay with player physics. Required measurement reading
-  is a current rule table and condition finder, with historical cases retained
-  for selective lookup.
-  Triage selects its first divergence, bootstrap and evidence window from the
-  saved verification scope while retaining global counts and legacy global views.
-  Replay stopping, release assertions and publication share the verification scope
-  resolved before fixture assembly, including subclass-provided scopes.
-  Unclassifiable groups fail a narrow diagnosis through both JSON and direct-model
-  entry; caller mutation cannot alter the captured evidence.
-  Replay completion metadata has one report-owned value and strict wire codec; ordinary publication
-  no longer reparses and rewrites its own JSON. Standalone reports retain the
-  existing carried-entry evaluation's provenance, disagreements and unresolved
-  notes; triage keeps those conditional entry diagnostics separate from mismatch
-  and completion decisions. Reports also identify retained per-frame result fields,
-  including matches, while distinguishing an unpublished list from an empty one.
-  Triage keeps this evidence separate from completion and does not equate field
-  presence with strict equality, comparator execution or bootstrap coverage.
-  Scene presentation spells out
-  capture, restoration and failure cleanup in operation order. Retained raw-field
+  incomplete or unknown completion from a completed comparison. Scene presentation
+  spells out capture, restoration and failure cleanup in operation order. Retained raw-field
   diagnostics follow that storage and are exercised on successful test paths.
+
+- **Trace replay diagnosis:** standalone replay method entry retires verified
+  prior evidence for the same invocation and scope before loading the fixture.
+  Replay stopping, release assertions and publication share the verification
+  scope resolved before fixture assembly, and triage selects its first
+  divergence, bootstrap and evidence window from that saved scope while keeping
+  global counts. Triage reports missing auxiliary references and absent
+  comparison coverage without changing the published gate or mismatch totals.
+  Completion metadata has one report-owned value and a strict codec. Reports
+  keep carried-entry provenance and disagreements, and list retained per-frame
+  result fields, separate from completion. Unclassifiable groups fail a narrow
+  diagnosis through both JSON and direct-model entry. Native search hints use
+  each game's behavior routines and mutable layout owners. Replay guidance routes
+  segment diagnosis through the correct lane, movie and report owners, and
+  required measurement reading is a current rule table and condition finder.
 
 - **Fresh-level admission:** named phases expose title completion, initial
   boundary publication and player assembly while preserving their existing
