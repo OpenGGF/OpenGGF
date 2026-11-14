@@ -69,6 +69,11 @@ import java.util.List;
  * the player saved. {@code --no-music} silences the music and keeps the sound
  * effects: a sound-effects stem of the recorded run, for a film that lays its
  * own music over the footage. The picture is the same either way.
+ *
+ * <p>A {@code --clip frames:START:END} window films every row the original
+ * displayed, its lag frames included, so the picture repeats where the original
+ * could not keep up. {@code --skip-lag-frames} leaves those rows out of the
+ * picture and the sound; see {@link TraceCaptureLagFrames}.
  */
 public final class TraceCaptureTool {
 
@@ -88,7 +93,8 @@ public final class TraceCaptureTool {
      */
     public record Args(String trace, Path outDir, int width, int scale, int fps, String codec,
                        boolean showGhosts, int[] verifyFrames,
-                       String clip, int tailFrames, boolean nativeSpriteLimits, boolean noMusic) {
+                       String clip, int tailFrames, boolean nativeSpriteLimits, boolean noMusic,
+                       boolean skipLagFrames) {
 
         /** Without a sprite-limit choice: native dropout stays on for ROM image comparison. */
         public Args(String trace, Path outDir, int width, int scale, int fps, String codec,
@@ -102,6 +108,14 @@ public final class TraceCaptureTool {
                     boolean nativeSpriteLimits) {
             this(trace, outDir, width, scale, fps, codec, showGhosts, verifyFrames, clip, tailFrames,
                     nativeSpriteLimits, false);
+        }
+
+        /** Without a lag-frame choice: a frame window keeps the original's lag frames. */
+        public Args(String trace, Path outDir, int width, int scale, int fps, String codec,
+                    boolean showGhosts, int[] verifyFrames, String clip, int tailFrames,
+                    boolean nativeSpriteLimits, boolean noMusic) {
+            this(trace, outDir, width, scale, fps, codec, showGhosts, verifyFrames, clip, tailFrames,
+                    nativeSpriteLimits, noMusic, false);
         }
 
         public static Args parse(String[] argv) {
@@ -123,6 +137,7 @@ public final class TraceCaptureTool {
             int tailFrames = 150;
             boolean nativeSpriteLimits = true;
             boolean noMusic = false;
+            boolean skipLagFrames = false;
 
             for (int i = 0; i < argv.length; i++) {
                 String arg = argv[i];
@@ -140,6 +155,7 @@ public final class TraceCaptureTool {
                     case "--no-music" -> noMusic = true;
                     case "--verify" -> verifyFrames = parseFrameList(CliArguments.requireValue(argv, ++i, arg));
                     case "--clip" -> clip = CliArguments.requireValue(argv, ++i, arg);
+                    case "--skip-lag-frames" -> skipLagFrames = true;
                     case "--tail-frames" -> tailFrames = CliArguments.parseInt(CliArguments.requireValue(argv, ++i, arg));
                     default -> throw new IllegalArgumentException("Unknown argument: " + arg);
                 }
@@ -147,9 +163,14 @@ public final class TraceCaptureTool {
             if (trace == null || trace.isBlank()) {
                 throw new IllegalArgumentException("--trace <id|name|dir> is required");
             }
+            if (skipLagFrames && (clip == null || !clip.startsWith("frames:"))) {
+                throw new IllegalArgumentException(
+                        "--skip-lag-frames needs --clip frames:START:END: only a frame window"
+                                + " films the original's lag frames");
+            }
             TraceCaptureDimensions.validateLogicalWidth(width);
             return new Args(trace, Path.of(outDir), width, scale, fps, codec, showGhosts,
-                    verifyFrames, clip, tailFrames, nativeSpriteLimits, noMusic);
+                    verifyFrames, clip, tailFrames, nativeSpriteLimits, noMusic, skipLagFrames);
         }
 
         private static int[] parseFrameList(String spec) {
@@ -179,6 +200,7 @@ public final class TraceCaptureTool {
                 + " clip=" + (args.clip() == null ? "none" : args.clip())
                 + " comparison=native_320x224"
                 + (args.noMusic() ? " audio=sfx-only" : "")
+                + (args.skipLagFrames() ? " lag-frames=skipped" : "")
                 + (verifyOnly ? " (no video output)" : "");
     }
 
@@ -241,11 +263,20 @@ public final class TraceCaptureTool {
     static Path publishCaptureManifest(Path output, TraceEntry entry,
             TraceMetadata trace, TraceCaptureDimensions dimensions,
             String clip, int tailFrames) throws java.io.IOException {
+        return publishCaptureManifest(output, entry, trace, dimensions, clip, tailFrames,
+                TraceCaptureLagFrames.KEEP);
+    }
+
+    static Path publishCaptureManifest(Path output, TraceEntry entry,
+            TraceMetadata trace, TraceCaptureDimensions dimensions,
+            String clip, int tailFrames, TraceCaptureLagFrames lagFrames)
+            throws java.io.IOException {
         if (!Files.isRegularFile(output) || Files.size(output) <= 0) {
             throw new java.io.IOException("capture output is missing or empty: " + output);
         }
         return TraceCaptureManifest.write(output, entry, trace,
-                dimensions, clip, clip != null && clip.startsWith("frames:") ? 0 : tailFrames);
+                dimensions, clip, clip != null && clip.startsWith("frames:") ? 0 : tailFrames,
+                lagFrames);
     }
 
     public static void main(String[] argv) {
@@ -431,12 +462,16 @@ public final class TraceCaptureTool {
         HeadlessOuterAudioFrames audioFrames =
                 new HeadlessOuterAudioFrames(audioTap);
 
+        TraceCaptureLagFrames lagFrames = args.skipLagFrames()
+                ? TraceCaptureLagFrames.skipLagFrames()
+                : TraceCaptureLagFrames.KEEP;
         long captured = 0;
         boolean captureSucceeded = false;
         try {
             captured = args.clip() != null
                     ? driveClip(trace, frameDriver, replayStart, grabber, audioFrames,
-                            recorder, args.clip(), args.tailFrames(), dimensions, fixture)
+                            recorder, args.clip(), args.tailFrames(), dimensions, fixture,
+                            lagFrames)
                     : driveAndCapture(trace, meta, frameDriver, replayStart,
                             loop, grabber, audioFrames, recorder, dimensions);
             requireCapturedFrames(captured);
@@ -456,7 +491,8 @@ public final class TraceCaptureTool {
                     Path out = recorder.stop();
                     System.out.println("Captured " + captured + " frames -> " + out.toAbsolutePath());
                     Path manifest = publishCaptureManifest(
-                            out, entry, meta, dimensions, args.clip(), args.tailFrames());
+                            out, entry, meta, dimensions, args.clip(), args.tailFrames(),
+                            lagFrames);
                     System.out.println("Output size: " + Files.size(out) + " bytes");
                     System.out.println("Capture manifest: " + manifest.toAbsolutePath());
                 } else {
@@ -723,7 +759,8 @@ public final class TraceCaptureTool {
                            HeadlessOuterAudioFrames audioFrames,
                            CaptureRecorder recorder, String clipName, int tailFrames,
                            TraceCaptureDimensions dimensions,
-                           TraceReplayDrive.DriverFixture fixture)
+                           TraceReplayDrive.DriverFixture fixture,
+                           TraceCaptureLagFrames lagFrames)
             throws Exception {
         int[] frameWindow = parseFrameWindow(clipName);
         if (frameWindow != null && frameWindow[1] >= trace.frameCount()) {
@@ -781,6 +818,16 @@ public final class TraceCaptureTool {
             boolean presentRow = frameWindow == null
                     ? shouldPresentOuterFrame(outcome, phase)
                     : shouldPresentFrameWindowRow(outcome, phase, previousDriveFrame, driveFrame);
+            if (presentRow && frameWindow != null
+                    && lagFrames.skips(phase, trace, driveTraceIndex)) {
+                // The row is driven like any other; it only goes unfilmed. No
+                // picture and no audio packet belong to it, before the window
+                // as inside it, so the sound stays on the pictures it is cut to.
+                presentRow = false;
+                if (driveTraceIndex >= frameWindow[0]) {
+                    lagFrames.skipped(driveTraceIndex);
+                }
+            }
             if (presentRow) {
                 if (!capturing) {
                     Sonic3kAIZEvents live = resolveAizEvents();
@@ -806,6 +853,7 @@ public final class TraceCaptureTool {
                     recorder.submit(new CapturedFrame(rgba, dimensions.physicalWidth(),
                             dimensions.physicalHeight(),
                             pcmBuffer, sampleCount, frameIndex++));
+                    lagFrames.filmed(driveTraceIndex);
                     boolean stop = frameWindow != null ? driveTraceIndex >= frameWindow[1]
                             : fireTransitionClip
                             ? isFireTransitionClipStop(resolveAizEvents())
@@ -836,6 +884,12 @@ public final class TraceCaptureTool {
         } else if (frameWindow == null && stopAtFrame < 0) {
             System.out.println("clip: WARNING semantic stop never detected; captured to end of "
                     + "trace (" + frameIndex + " frames)");
+        }
+        if (lagFrames.skipping()) {
+            System.out.println("clip: left out " + lagFrames.skippedRows().size()
+                    + " lag frame(s) at trace rows " + lagFrames.skippedRows());
+            System.out.println("clip: output frame -> trace row: "
+                    + lagFrames.describeFrameRows());
         }
         return frameIndex;
     }

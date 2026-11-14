@@ -48,6 +48,7 @@ the repository for durable captures; `target/trace-videos` is disposable output.
 | `--fps <n>` | `CAPTURE_FPS=60` | Capture/engine cadence; a region-pinned rate such as PAL 50 takes precedence |
 | `--codec <name>` | `CAPTURE_CODEC=ffv1` | Video codec; changing it may change losslessness |
 | `--clip frames:START:END` | None | Fast-forward from the original start, then capture the inclusive zero-based trace-row window, retaining elapsed-VBlank title/lag frames; explicit windows do not add `--tail-frames` |
+| `--skip-lag-frames` | Lag frames kept | With `--clip frames:START:END` only: leave the original's lag frames out of the picture and the sound, for footage that should not repeat a picture where the original could not keep up |
 | `--no-ghosts` / `--ghosts` | `TRACE_SHOW_DESYNC_GHOSTS=true` | Desync ghost visibility |
 | `--no-sprite-limits` | Native sprite limits on | Render without native sprite dropout, as normal play does by default; for promotional footage, not ROM image comparison |
 | `--no-music` | Music recorded | Silence music and keep the sound effects on the audio track: a sound-effects stem of the run for footage that gets its own music. The picture does not change |
@@ -55,6 +56,33 @@ the repository for durable captures; `target/trace-videos` is disposable output.
 A full-run capture presents no frame on trace lag rows (`lag_counter` != 0): MKV frame
 n is row n only until the first lag row, then row minus the lag rows before it (measured
 on `soz_completerun`, 2026-09-17).
+
+A frame window keeps those rows, because it films every row the original displayed.
+The recording is of the original on its own hardware, so on a lag row gameplay stood
+still while the display went on, and the clip shows the previous picture again: 19
+times in `s2/cpz2` rows 4439 to 4505, which a viewer reads as the engine stuttering.
+`--skip-lag-frames` leaves them out:
+
+- **What counts as lag** comes from the recording's counters, never from comparing
+  pictures (a still scene repeats pictures too): the replay ran no gameplay frame for the
+  row, `vblank_counter` advanced, `gameplay_frame_counter` held, and the hold is at most
+  four rows long. In the committed traces of all three games a level loop that fell
+  behind held for one row, rarely two. Every longer hold there is five rows or more,
+  and is the game running outside its level loop (a title card, a fade, a load): not
+  lag, so it stays in. `lag_counter` is not read: only Sonic 3&K records one.
+- **The window still means trace rows** START to END. The clip is shorter by the lag
+  rows inside it. The tool prints the rows it left out and the output-frame to trace-row
+  mapping (`clip: output frame -> trace row: 0-138 -> 4300-4438, 139-142 -> 4440-4443,
+  ...`), and the capture manifest carries the same as `clip.skipped_lag_rows` and
+  `clip.frame_rows`, so a film can still cut on events.
+- **Audio is supported**, with `--no-music` or without. A row left out gets no audio
+  packet either, from the start of the trace and not only inside the window, so the
+  track is as long as the picture and every sound effect starts on the frame that makes
+  it. The music plays through without a gap; it simply does not advance over a lag
+  frame, where the original's sound driver did.
+- Only what is filmed changes. Every row is still driven, in the same order with the
+  same input, so the replay, its comparison and the gameplay are those of a capture
+  without the option.
 
 HUD visibility uses config rather than CLI flags:
 `TRACE_SHOW_GAME_HUD=true`, `TRACE_SHOW_DEBUG_HUD=false`; enabled debug panels

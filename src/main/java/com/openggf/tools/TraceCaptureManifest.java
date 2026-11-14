@@ -44,9 +44,24 @@ final class TraceCaptureManifest {
         return write(output, entry, trace, dimensions, clip, tailFrames, new FileOps() { });
     }
 
+    /** As above, recording which trace rows a lag-skipping clip filmed. */
+    static Path write(Path output, TraceEntry entry, TraceMetadata trace,
+            TraceCaptureDimensions dimensions, String clip, int tailFrames,
+            TraceCaptureLagFrames lagFrames) throws IOException {
+        return write(output, entry, trace, dimensions, clip, tailFrames, lagFrames,
+                new FileOps() { });
+    }
+
     static Path write(Path output, TraceEntry entry, TraceMetadata trace,
             TraceCaptureDimensions dimensions, String clip, int tailFrames,
             FileOps fileOps) throws IOException {
+        return write(output, entry, trace, dimensions, clip, tailFrames,
+                TraceCaptureLagFrames.KEEP, fileOps);
+    }
+
+    static Path write(Path output, TraceEntry entry, TraceMetadata trace,
+            TraceCaptureDimensions dimensions, String clip, int tailFrames,
+            TraceCaptureLagFrames lagFrames, FileOps fileOps) throws IOException {
         Map<String, Object> root = new LinkedHashMap<>();
         root.put("capture_schema", 1);
         root.put("output", output.getFileName().toString());
@@ -81,6 +96,13 @@ final class TraceCaptureManifest {
         Map<String, Object> clipMetadata = new LinkedHashMap<>();
         clipMetadata.put("name", clip);
         clipMetadata.put("tail_frames", tailFrames);
+        if (lagFrames.skipping()) {
+            // Output frame n shows trace row frame_rows[n]; a clip that keeps
+            // its lag frames gains none of these fields.
+            clipMetadata.put("skip_lag_frames", true);
+            clipMetadata.put("skipped_lag_rows", lagFrames.skippedRows());
+            clipMetadata.put("frame_rows", lagFrames.frameRows());
+        }
         root.put("clip", clipMetadata);
 
         Path manifest = manifestPath(output);
