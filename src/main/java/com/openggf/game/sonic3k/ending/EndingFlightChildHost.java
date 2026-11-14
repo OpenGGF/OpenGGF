@@ -12,4 +12,8 @@ interface EndingFlightChildHost extends ObjectInstance, NativeSstStateSource {
     boolean flightChildHidden();
     int flightFrame();
     boolean flightPowered();
+    /** Leader of the group this sprite crosses a wider picture with; null keeps its native place ({@link EndingWideStage}). */
+    EndingFlightChildHost stageLeader();
+    /** A leader's own 16.16 native screen X, zero at the native left edge. */
+    int stageScreenX();
 }

@@ -228,6 +228,8 @@ public final class EndingKnucklesFlightObjectInstance extends AbstractObjectInst
     @Override public boolean flightChildHidden(){return routine>=18;}
     @Override public int flightFrame(){return animation.mappingFrame;}
     @Override public boolean flightPowered(){return ending().progress()>=0;}
+    @Override public EndingFlightChildHost stageLeader(){return this;}
+    @Override public int stageScreenX(){return EndingWideStage.screenFromWorld(xFixed,nativeCameraX(true));}
     private void setX(int x){xFixed=((x&0xFFFF)<<16)|(xFixed&0xFFFF);}
     private void setY(int y){yFixed=((y&0xFFFF)<<16)|(yFixed&0xFFFF);}
     private void move(){xFixed+=xVelocity<<8;yFixed+=yVelocity<<8;}
@@ -254,6 +256,7 @@ public final class EndingKnucklesFlightObjectInstance extends AbstractObjectInst
         int map=planeMode==0?S3kEndingResources.MAP_KNUCKLES_FLIGHT:S3kEndingResources.MAP_ENDING_PLANE_EXTRA;
         int tile=planeMode==0?0x310:0x26E,palette=planeMode==2?1:0;
         EndingSpriteRenderSupport.draw(services(),"s3k-knuckles-flight-"+planeMode,map,tile,palette,
-                animation.mappingFrame,getX(),getY(),flipX,isHighPriority(),getPriorityBucket());
+                animation.mappingFrame,getX()+EndingWideStage.groupShift(services(),this),getY(),
+                flipX,isHighPriority(),getPriorityBucket());
     }
 }

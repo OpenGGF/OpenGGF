@@ -196,9 +196,13 @@ final class SszAct2Deformation {
         // ROM supplies twenty columns. Beyond that native window, continue the
         // final column's vertical offset, rather than reading unrelated work RAM.
         // Native columns and the horizontal wave remain byte-for-byte unchanged.
+        // In Knuckles' ending the island plane stands one margin into a wider picture
+        // (EndingWidePlanes.islandColumn) and its column words stand there with it: each
+        // picture column takes the native column under its centre.
+        int margin = state.act2EndingActive() ? com.openggf.game.sonic3k.ending.EndingWideStage.margin(width) : 0;
         for (int i = 0; i < columns.length; i++)
-            columns[i] =
-                    (short) (word(state, 0x170 + Math.min(i, 19) * 2) - state.backgroundCameraY());
+            columns[i] = (short) (word(state, 0x170 + Math.clamp(Math.floorDiv(i * 16 - margin + 8, 16), 0, 19) * 2)
+                    - state.backgroundCameraY());
         return columns;
     }
 

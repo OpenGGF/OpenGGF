@@ -145,6 +145,23 @@ under the matching area heading; see the
   screen, and the engine did so only when the ring was entered or paid out. It
   now restores them off screen too, and the flashing script stands still there.
 
+- **Sonic 3 & Knuckles endings fill a wide screen:** on any screen wider than
+  4:3 the endings were a 320-pixel picture between two dark bars, and inside it
+  the sky, sea and island were drawn one bar's width to the left of the aircraft
+  and characters (at the widest setting the island sat behind the left bar while
+  its waterfalls hung in open sky). The endings now fill the screen with the
+  original picture in the middle: Sonic's and Tails's rescue, Angel Island rising
+  or being returned its emerald, the credits flight, and Knuckles' flight from Sky
+  Sanctuary with its credits. The sky, sea and cloud layers continue to both
+  edges, Angel Island slides in from the real edge of the screen, and the Tornado
+  and the clouds enter and leave at the real edges instead of appearing or
+  vanishing where the old 320-pixel edge was. Every scene keeps its original
+  timing at every width, and at 4:3 the picture is unchanged pixel for pixel.
+  Only the closing art on black (the Eggman or Mecha Sonic picture and the large
+  Sonic 3 & Knuckles logo) stays 4:3 between the bars: it is 320 pixels of art
+  with nothing beside it. What the wider picture adds is described under
+  [ending scenes in a wider picture](docs/S3K_KNOWN_DISCREPANCIES.md#ending-scenes-in-a-wider-picture).
+
 - **Separate music and sound-effect volumes:** Settings → Audio has Music
   volume and Sound effects volume sliders (`audio.musicVolume`,
   `audio.sfxVolume`, 0–100%, applied on save). Each sound-chip channel takes

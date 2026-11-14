@@ -29,8 +29,10 @@ class TestS3kEndingSpriteDmaCapture {
             assertPlaneBodyPixels(picture,width);
         }
     }
+    // The FG8 sample is taken once Tails' small plane has come out from behind Angel Island
+    // (it is behind the island from about input 2900 to 3100, at every width).
     @ParameterizedTest
-    @CsvSource({"2000,4","3000,8","3700,12"})
+    @CsvSource({"2000,4","3140,8","3700,12"})
     void tailsSuperDepartureUsesRenderCopiesForItsNativeScreenPlane(int input,int foreground) throws Exception {
         var settings=new GameplayCaptureSession.Settings(800,"tails","","off",null,null,null,"3333333",false,false);
         try(var session=new GameplayCaptureSession(settings)) {
@@ -39,18 +41,25 @@ class TestS3kEndingSpriteDmaCapture {
             // VInt latches the preceding loop's CRAM with its sprite table.
             // During native FG12 fade, current CPU colours can be one dispatch ahead.
             int[][] displayedPalette=paletteRgb();
+            // Likewise the sprite table: a wider picture carries the aircraft towards the real edge it
+            // crosses (EndingWideStage), by the amount this pass drew it with.
+            int displayedCarry=carried();
             session.step(null);var picture=session.render();var camera=GameServices.camera();
             var zone=(com.openggf.game.sonic3k.runtime.EndingZoneRuntimeState)GameServices.zoneRuntimeState();
             assertEquals(2,zone.ending().progress());assertEquals(foreground,zone.screen().foregroundRoutine);
             // Ending_ScreenInit retains physical $200; foregroundPosition updates only the copy.
             assertEquals(0x200,camera.getX());assertEquals(608,camera.getXCopy());
+            // The departure fills the wider picture itself: no native-window mask, and the native
+            // screen origin stands 240 pixels into it, measured from the render copy.
             var framing=(com.openggf.game.internal.NativeArenaCameraFraming)GameServices.level().getZoneFeatureProvider();
-            int origin=framing.presentationNativeHorizontalOrigin().orElseThrow();
-            var mask=com.openggf.graphics.ArenaMaskState.fromBounds(origin,origin,camera.getXWithShake(),800,input,false);
-            assertEquals(240,mask.left());assertEquals(560,mask.right());assertEquals(0,mask.opacityAt(400));
+            assertTrue(framing.ownsWidescreenMargins());assertTrue(framing.presentationNativeHorizontalOrigin().isEmpty());
+            assertEquals(camera.getXCopy()+240,
+                    com.openggf.game.sonic3k.ending.EndingScreenProjection.nativeHorizontalOrigin(camera));
             var player=GameServices.sprites().getMainPlayable();
+            // The rider is carried with the aircraft, by this pass's amount.
+            int carried=carried();
             if(foreground!=12){
-                assertEquals(player.getCentreX()+112,player.getRenderCentreX()-camera.getXWithShake(),
+                assertEquals(player.getCentreX()+112+carried,player.getRenderCentreX()-camera.getXWithShake(),
                         "P1's derived offsets refresh after ScreenEvents publishes the copies");
                 assertEquals(player.getCentreY()-128,player.getRenderCentreY()-camera.getYWithShake());
             }
@@ -61,16 +70,16 @@ class TestS3kEndingSpriteDmaCapture {
             // Tails' reversed small plane. FG12's aircraft has already exited.
             if(foreground==4){var owner=director.orElseThrow();assertEquals(4,owner.getSlotIndex());
                 assertEquals(24,owner.routine());assertTrue(owner.getX()<0x140);
-                assertDeparturePlanePixels(picture,owner,1,0,false,displayedPalette);}
+                assertDeparturePlanePixels(picture,owner,1,0,false,displayedPalette,displayedCarry);}
             else if(foreground==8){var owner=director.orElseThrow();assertEquals(4,owner.getSlotIndex());
                 assertEquals(30,owner.routine());
-                assertDeparturePlanePixels(picture,owner,6,1,true,displayedPalette);}
+                assertDeparturePlanePixels(picture,owner,6,1,true,displayedPalette,displayedCarry);}
             else {
                 assertTrue(director.isEmpty(),"loc_5DE3A signals FG12 and deletes the rescue owner");
                 java.util.Set<Integer> colors=new java.util.HashSet<>();
                 for(var line:displayedPalette)for(int rgb:line)colors.add(rgb);
                 int samples=0,matches=0;
-                for(int y=0;y<224;y+=4)for(int x=240;x<560;x+=4){
+                for(int y=0;y<224;y+=4)for(int x=0;x<800;x+=4){
                     samples++;if(colors.contains(picture.argb(x,y)&0xFFFFFF))matches++;
                 }
                 assertTrue(matches>samples*0.99,"native fade pixels replaced by mask grain: "+matches+"/"+samples);
@@ -106,12 +115,21 @@ class TestS3kEndingSpriteDmaCapture {
         }
     }
 
+    /** How far a wider picture is carrying the rescue aircraft and everything on it, this pass. */
+    private static int carried(){
+        return GameServices.level().getObjectManager().activeObjectsOfType(EndingRescueDirectorObjectInstance.class)
+                .stream().filter(o->o.sequence()==EndingRescueDirectorObjectInstance.RESCUE).findFirst()
+                .map(o->com.openggf.game.sonic3k.ending.EndingWideStage.groupShift(
+                        com.openggf.tests.TestEnvironment.objectServices(),o)).orElse(0);
+    }
+
     private static void assertDeparturePlanePixels(com.openggf.graphics.RgbaImage picture,
-            EndingRescueDirectorObjectInstance owner,int frameIndex,int paletteBase,boolean flip,int[][] palette) throws Exception {
+            EndingRescueDirectorObjectInstance owner,int frameIndex,int paletteBase,boolean flip,int[][] palette,
+            int carried) throws Exception {
         var level=GameServices.level().getCurrentLevel();
         var frame=S3kSpriteDataLoader.loadMappingFrames(com.openggf.data.RomByteReader.fromRom(GameServices.rom().getRom()),
                 S3kEndingResources.MAP_ENDING_PLANE_EXTRA).get(frameIndex);
-        int originX=owner.getX()+112,originY=owner.getY()-128,samples=0,matches=0;
+        int originX=owner.getX()+112+carried,originY=owner.getY()-128,samples=0,matches=0;
         for(var piece:frame.pieces())for(int column=0;column<piece.widthTiles();column++)for(int row=0;row<piece.heightTiles();row++){
             var pattern=level.getPattern(0x26E+piece.tileIndex()+column*piece.heightTiles()+row);
             for(int y=0;y<8;y++)for(int x=0;x<8;x++){
@@ -119,7 +137,7 @@ class TestS3kEndingSpriteDmaCapture {
                 int px=originX+(flip?-piece.xOffset()-piece.widthTiles()*8:piece.xOffset())
                         +((piece.hFlip()^flip)?piece.widthTiles()*8-1-column*8-x:column*8+x);
                 int py=originY+piece.yOffset()+(piece.vFlip()?piece.heightTiles()*8-1-row*8-y:row*8+y);
-                if(px<240||px>=560||py<0||py>=224)continue;
+                if(px<0||px>=800||py<0||py>=224)continue;
                 samples++;if((picture.argb(px,py)&0xFFFFFF)==palette[(paletteBase+piece.paletteIndex())&3][nibble])matches++;
             }
         }
