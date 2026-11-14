@@ -486,6 +486,18 @@ under the matching area heading; see the
   finalizer cannot clear resources acquired by a recording started after close.
   S2 music requests now use native ROM mailbox bytes while retaining playback IDs, fixing CNZ 2P audio crashes and music priority/classification.
 
+- **Trace clips without the original's lag frames:** `TraceCaptureTool
+  --skip-lag-frames`, with `--clip frames:START:END`, leaves out the frames on
+  which the recorded game could not keep up. A frame window films every row the
+  original displayed, so on those rows the picture repeated and the footage
+  looked as if the engine stuttered. Lag is read from the recording's own
+  counters: the gameplay frame counter held over an elapsed V-blank for at most
+  four rows, so title cards, fades, loads and pauses stay. The window still
+  selects trace rows, the clip is shorter by the rows left out, and the tool
+  prints the output-frame to trace-row mapping and writes it to the capture
+  manifest. A row left out gets no audio either, so sound stays in sync. Off by
+  default; replay, comparison and gameplay are unchanged.
+
 - **Seeded Data Select captures:** `GameplayCaptureTool --save-slots <file.json>`
   writes declared save slots through the production save manager into the
   capture's private save root before a title-first capture, and `--extra-teams`
