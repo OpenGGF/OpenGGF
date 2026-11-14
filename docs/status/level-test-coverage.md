@@ -1,5 +1,45 @@
 # Level test coverage backlog
 
+HCZ retained screen publication (2026-11-10): the
+[HCZ2 matrix](../architecture/validation/levels/s3k-hcz2.md) records one event/capture
+owner, fresh versus seamless initialization, previous-publication consumption,
+signed redraw/shake continuation and the geyser's first-dispatch flag. Real P1/Tails
+reads and complete registered-world held/refresh suffix replays have focused
+witnesses. These positioned 320px Sonic/Tails checks do not establish cold-route,
+run-chain, native pixel/audio, other viewport/donor/team or unobserved native
+branch coverage. The retained native window discriminates X timing, not Y timing.
+
+
+Parent-linked rewind maintenance (2026-11-10): the Clamer and S1 badnik graph
+witnesses named in the [rewind guide](../guide/contributing/rewind-system.md#ordinary-dynamic-objects-and-constructor-children)
+check routine-spawned children against two nearby same-class parents, including
+fresh reconstruction after Orbinaut satellite movement and metadata boundary/legacy
+controls; the Clamer parents remain stationary.
+These injected-service graph checks establish neither a native route trigger nor
+act, viewport, donor/team or whole-route rewind coverage; those obligations remain
+inherited. The Shellcracker graph checks add real owned spawning with a closer
+decoy, explicitly verified warm reuse and forced fresh rebuilding, plus an independently
+falling family after public parent retirement. The active null-parent unit checks
+ordinary parent loss without claiming the native transition row's motion/timer.
+Existing motion/gravity/timer order is untouched; the separately identified native
+timing discrepancy remains uncorrected and no MTZ act or viewport breadth is certified.
+These three hooks share an exact captured-ID lookup in the admitted population;
+other proximity relinks remain unassessed. Saved-state and context record layouts
+are unchanged. Scene-policy restore now retains the captured placed parent and
+all eight exact-parent claws even when fresh admission is closed. A separate
+placed constructor-family witness reproduced adoption of a child whose alive
+parent was missing from live membership; restored population publication repairs
+the parent itself. These checks cover forced rebuilding, repeated restore and
+recapture, target versus future claims, and explicitly confirmed warm reuse of a
+side-effect-free placement. Fresh unclaimed placement admission stays closed.
+The existing retired-body graph witness retains independent falling-piece and
+expiry coverage; a captured parent is no longer incorrectly treated as absent.
+These injected-service checks certify no scene or native route parity.
+A Shellcracker body unloaded off-screen
+without destruction may also leave extending claws whose behavior changes after
+rewind; the destroyed-parent witness does not establish that inherited case.
+The Clamer constructor probe still requires a live Clamer before its hook can run.
+
 S2 Competition monitor outcomes (2026-11-09): eight cold-title EHZ1 fixtures
 exercise P1 breaking for all eight outcomes and hold the award for six seconds.
 The [bounded matrix](../architecture/plans/2026-11-07-s2-competition-parity.md#question-mark-monitor-outcomes-2026-11-09)

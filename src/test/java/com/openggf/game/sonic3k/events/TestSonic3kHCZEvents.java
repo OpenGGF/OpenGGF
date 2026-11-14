@@ -1,5 +1,9 @@
 package com.openggf.game.sonic3k.events;
 
+import com.openggf.game.sonic3k.audio.Sonic3kSfx;
+
+import com.openggf.audio.AudioManager;
+
 import com.openggf.tests.HardwareBoundaryPump;
 import com.openggf.tests.TestEnvironment;
 
@@ -49,10 +53,18 @@ import java.util.function.Supplier;
 import com.openggf.level.SeamlessLevelTransitionRequest;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -198,37 +210,37 @@ class TestSonic3kHCZEvents {
     }
 
     @Test
-    void wallShakePublishesPreviousSetupAndRestoresPendingPhase() throws Exception {
-        SwScrlHcz handler = new SwScrlHcz();
-        installParallaxHandler(Sonic3kZoneIds.ZONE_HCZ, handler);
-        placePlayer(0x0B00, 0x0700);
-        GameServices.camera().setX((short) 0x0800);
-        GameServices.camera().setY((short) 0x0600);
-        Sonic3kHCZEvents events = new Sonic3kHCZEvents(() -> 0);
-        events.init(1);
+    void wallShakePublishesPreviousSetupAndRestoresThePreparedOffset() throws Exception {
+        Sonic3kHCZEvents events = movingWallEvents();
+        SwScrlHcz handler = installEventScroll(events);
 
         // HCZ2_ScreenEvent reads the previous ShakeScreen_Setup result.
         tickAct2(events, 3);
-        assertEquals(0, handler.getShakeOffsetY(), "first screen event precedes first setup");
-        var saved = com.openggf.game.rewind.schema.ZoneEventSchemaSidecar.capture(events);
+        assertEquals(0, events.screenPublication().shakeOffset(), "first screen event precedes first setup");
+        compose(handler, 3);
+        assertEquals(0, handler.getShakeOffsetY());
+        var saved = events.captureHczState();
         tickAct2(events, 4);
-        assertEquals(3, handler.getShakeOffsetY(), "ScreenShakeArray2[3], not [4]");
+        assertEquals(3, events.screenPublication().shakeOffset(), "ScreenShakeArray2[3], not [4]");
         tickAct2(events, 5);
-        assertEquals(1, handler.getShakeOffsetY(), "ScreenShakeArray2[4]");
-        com.openggf.game.rewind.schema.ZoneEventSchemaSidecar.restore(events, saved);
+        assertEquals(1, events.screenPublication().shakeOffset(), "ScreenShakeArray2[4]");
+        events.restoreHczState(saved);
         tickAct2(events, 4);
-        assertEquals(3, handler.getShakeOffsetY(), "pending native offset survives rewind");
+        assertEquals(3, events.screenPublication().shakeOffset(), "prepared native offset survives rewind");
+        compose(handler, 4);
+        assertEquals(3, handler.getShakeOffsetY(), "renderer reads the restored completed publication");
     }
 
     @Test
     void naturalWallStopPublishesThePreviousContinuousThenTheSignedTimedSequence() throws Exception {
-        SwScrlHcz handler = new SwScrlHcz();
-        Sonic3kHCZEvents events = movingWallEvents(handler);
+        Sonic3kHCZEvents events = movingWallEvents();
         int nextFrame = advanceWallToStop(events);
 
-        assertEquals(-0x600, events.getWallOffsetPixels());
-        assertEquals(0x0E, events.getShakeTimer(), "the stop dispatch installs the timed flag");
-        assertTrue(handler.getShakeOffsetY() >= 0 && handler.getShakeOffsetY() <= 3,
+        // 1229 subtractions of $14000 cross -$600 without clamping the fraction.
+        assertEquals(-0x6004000, events.getWallOffsetFixed());
+        assertEquals(-0x601, events.getWallOffsetPixels(), "the signed high word keeps the overshoot");
+        assertEquals(0x0D, events.getShakeTimer(), "the stop installs $E, then its reached setup decrements it");
+        assertTrue(events.screenPublication().shakeOffset() >= 0 && events.screenPublication().shakeOffset() <= 3,
                 "the stop screen still consumes the preceding continuous setup");
 
         // ScreenShakeArray (sonic3k.asm:104277-104279) supplies these signed
@@ -236,189 +248,346 @@ class TestSonic3kHCZEvents {
         int[] timedScreenOffsets = {-4, 4, -3, 3, -3, 3, -2, 2, -2, 2, -1, 1, -1, 1};
         for (int index = 0; index < timedScreenOffsets.length; index++) {
             tickAct2(events, nextFrame++);
-            assertEquals(timedScreenOffsets[index], handler.getShakeOffsetY(),
+            assertEquals(timedScreenOffsets[index], events.screenPublication().shakeOffset(),
                     "retained timed setup " + index);
-            assertEquals(0x0D - index, events.getShakeTimer(), "one countdown step per dispatch");
-            assertEquals(-0x600, events.getWallOffsetPixels(), "a stopped wall cannot restart");
+            assertEquals(Math.max(0, 0x0C - index), events.getShakeTimer(), "one reached setup per dispatch");
+            assertEquals(-0x6004000, events.getWallOffsetFixed(), "a stopped wall cannot restart or clamp");
         }
         tickAct2(events, nextFrame);
-        assertEquals(0, handler.getShakeOffsetY(), "the zero setup follows the final timed screen");
+        assertEquals(0, events.screenPublication().shakeOffset(), "the zero setup follows the final timed screen");
         assertEquals(0, events.getShakeTimer());
     }
 
     @Test
-    void timedWallExitConsumesTheFgSignalWithoutRepeatingMovementCountdownOrPublication() throws Exception {
-        SwScrlHcz handler = new SwScrlHcz();
-        Sonic3kHCZEvents events = movingWallEvents(handler);
+    void timedWallExitHoldsThePositiveFlagAndBackgroundUntilNativeRefreshResumes() throws Exception {
+        Sonic3kHCZEvents events = movingWallEvents();
         int frame = advanceWallToStop(events);
-        tickAct2(events, frame++); // publish the first timed setup, retaining +4
-
-        events.updatePrePhysics(1, frame++);
-        int prePhysicsOffset = events.getWallOffsetFixed();
+        tickAct2(events, frame++); // publish timed table[13] = -4, prepare table[12] = +4
+        int offset = events.getWallOffsetFixed();
+        var held = events.screenPublication();
         assertEquals(12, events.getShakeTimer());
-        assertEquals(4, handler.getShakeOffsetY());
         assertTrue(GameServices.gameState().isBackgroundCollisionFlag());
 
-        // The normal camera pass crosses $C00 between the two event hooks.
         GameServices.camera().setX((short) 0x0C00);
-        events.update(1, frame - 1);
-        assertTrue(events.isEventsFg5());
-        assertEquals(8, events.getAct2BgRoutine(), "only the chase-end handoff runs after physics");
-        assertEquals(prePhysicsOffset, events.getWallOffsetFixed());
-        assertEquals(12, events.getShakeTimer(), "the handoff does not run another countdown");
-        assertEquals(4, handler.getShakeOffsetY(), "the handoff does not replace this screen publication");
+        tickAct2(events, frame++); // end branch consumes the first held row, not another setup
+        assertFalse(events.isEventsFg5());
+        assertEquals(8, events.getAct2BgRoutine());
+        assertEquals(offset, events.getWallOffsetFixed());
+        assertEquals(12, events.getShakeTimer());
+        assertEquals(4, events.screenPublication().shakeOffset(), "FG consumes the last prepared offset");
+        assertEquals(held.backgroundX(), events.screenPublication().backgroundX());
+        assertEquals(held.backgroundY(), events.screenPublication().backgroundY());
         assertFalse(GameServices.gameState().isBackgroundCollisionFlag());
-        assertTrue(events.isWallChaseBgOverlayActive(), "normal transition owns overlay release");
+        assertTrue(events.isWallChaseBgOverlayActive(), "held wall picture retains its overlay");
 
-        tickAct2(events, frame++);
+        for (int dispatch = 2; dispatch <= 15; dispatch++) {
+            tickAct2(events, frame++);
+            assertEquals(8, events.getAct2BgRoutine());
+            assertEquals(12, events.getShakeTimer(), "held rows never reach ShakeScreen_Setup");
+            assertEquals(4, events.screenPublication().shakeOffset());
+            assertEquals(held.backgroundX(), events.screenPublication().backgroundX());
+            assertEquals(held.backgroundY(), events.screenPublication().backgroundY());
+        }
+        tickAct2(events, frame++); // sixteenth held row falls through to the first refresh pair
         assertEquals(0x0C, events.getAct2BgRoutine());
-        assertEquals(SwScrlHcz.Hcz2BgPhase.NORMAL, handler.getHcz2BgPhase());
-        assertEquals(-3, handler.getShakeOffsetY(), "transition consumes the preceding timed setup");
-        assertEquals(11, events.getShakeTimer());
+        assertEquals(11, events.getShakeTimer(), "first refresh reaches setup exactly once");
+        assertEquals(4, events.screenPublication().shakeOffset());
+        assertFalse(events.screenPublication().wallPlane());
         assertFalse(events.isWallChaseBgOverlayActive());
-
-        tickAct2(events, frame++);
-        assertEquals(0x10, events.getAct2BgRoutine());
-        assertEquals(0, handler.getShakeOffsetY(), "transition's zero setup wins over its countdown");
-        assertEquals(10, events.getShakeTimer());
-
         tickAct2(events, frame);
-        assertEquals(-3, handler.getShakeOffsetY(), "refresh retains the continuing timed setup");
-        assertEquals(9, events.getShakeTimer());
+        assertEquals(0x0C, events.getAct2BgRoutine());
+        assertEquals(-3, events.screenPublication().shakeOffset(), "next FG consumes timed table[11]");
+        assertEquals(10, events.getShakeTimer());
     }
 
     @Test
-    void act2PostPhysicsFallbackAdvancesAndPublishesWithoutThePrePhysicsHook() throws Exception {
-        SwScrlHcz handler = new SwScrlHcz();
-        Sonic3kHCZEvents events = movingWallEvents(handler);
+    void singleScreenEventDispatchAdvancesAndPublishesThePreviousSetup() throws Exception {
+        Sonic3kHCZEvents events = movingWallEvents();
 
         events.update(1, 3);
         assertEquals(4, events.getAct2BgRoutine());
         assertEquals(-0x14000, events.getWallOffsetFixed(), "init falls through to its first fast step");
-        assertEquals(0, handler.getShakeOffsetY());
+        assertEquals(0, events.screenPublication().shakeOffset());
         assertTrue(GameServices.gameState().isBackgroundCollisionFlag());
 
         events.update(1, 4);
         assertEquals(-0x28000, events.getWallOffsetFixed());
-        assertEquals(3, handler.getShakeOffsetY(), "fallback also publishes the preceding level-clock setup");
+        assertEquals(3, events.screenPublication().shakeOffset(), "one dispatch publishes the preceding LF setup");
 
         GameServices.camera().setX((short) 0x0C00);
         events.update(1, 5);
         assertEquals(8, events.getAct2BgRoutine());
-        assertEquals(-0x28000, events.getWallOffsetFixed(), "FG signals before the fallback BG dispatch");
-        assertEquals(1, handler.getShakeOffsetY());
+        assertEquals(-0x28000, events.getWallOffsetFixed(), "FG signals before this same BG dispatch");
+        assertEquals(1, events.screenPublication().shakeOffset());
+        assertFalse(events.isEventsFg5());
         assertFalse(GameServices.gameState().isBackgroundCollisionFlag());
     }
 
     @Test
-    void missingScrollHandlerRetainsPendingShakeWhileTheWallContinuesMoving() throws Exception {
-        SwScrlHcz handler = new SwScrlHcz();
-        Sonic3kHCZEvents events = movingWallEvents(handler);
-        tickAct2(events, 3); // retain ScreenShakeArray2[3] = 3
+    void endPulseIsConsumedByTheSameNativeBackgroundDispatch() throws Exception {
+        Sonic3kHCZEvents events = screenEventWallEvents();
+        events.update(1, 3);
+        int beforeEnd = events.getWallOffsetFixed();
+
+        // HCZ2_Resize raises the signal, then loc_50F64 consumes it before
+        // another wall/setup step (sonic3k.asm:106099-106139).
+        GameServices.camera().setX((short) 0x0C00);
+        events.update(1, 4);
+        assertAll("one admitted ScreenEvents dispatch",
+                () -> assertFalse(events.isEventsFg5(), "the native FG pulse is consumed once"),
+                () -> assertEquals(8, events.getAct2BgRoutine()),
+                () -> assertEquals(beforeEnd, events.getWallOffsetFixed(), "no wall step on the end branch"),
+                () -> assertFalse(GameServices.gameState().isBackgroundCollisionFlag()));
+    }
+
+    @Test
+    void normalTransitionHoldsSixteenSoftwareRowDispatchesBeforeRefresh() throws Exception {
+        Sonic3kHCZEvents events = screenEventWallEvents();
+        events.update(1, 3);
+        int heldBgX = events.screenPublication().backgroundX();
+        int heldBgY = events.screenPublication().backgroundY();
+        GameServices.camera().setX((short) 0x0C00);
+        events.update(1, 4); // first transition row is consumed on the end dispatch
+        assertEquals(8, events.getAct2BgRoutine());
+
+        // Draw_delayed_rowcount starts at $F. The single-row branch returns
+        // while its decremented word is nonnegative: sixteen dispatches,
+        // not sixteen fitted movie frames (sonic3k.asm:103487-103503,106124-106148).
+        for (int dispatch = 2; dispatch <= 15; dispatch++) {
+            GameServices.camera().setX((short) (0x0C00 + dispatch));
+            GameServices.camera().setY((short) (0x0600 + dispatch));
+            events.update(1, dispatch + 3);
+            assertEquals(8, events.getAct2BgRoutine(), "held transition dispatch " + dispatch);
+            assertEquals(heldBgX, events.screenPublication().backgroundX(), "hold the preceding BG X publication");
+            assertEquals(heldBgY, events.screenPublication().backgroundY(), "hold the preceding BG Y publication");
+        }
+        events.update(1, 19); // sixteenth single-row step, then the first refresh pair
+        assertEquals(0x0C, events.getAct2BgRoutine());
+        for (int refresh = 2; refresh <= 7; refresh++) {
+            events.update(1, 18 + refresh);
+            assertEquals(0x0C, events.getAct2BgRoutine(), "two-row refresh dispatch " + refresh);
+        }
+        events.update(1, 26); // eighth pair completes Draw_PlaneVertBottomUp
+        assertEquals(0x10, events.getAct2BgRoutine());
+    }
+
+    @Test
+    void endTransitionKeepsPositiveShakeFlagUntilSetupIsReached() throws Exception {
+        Sonic3kHCZEvents events = screenEventWallEvents();
+        int nextFrame = advanceWallToStop(events);
+        int timedBeforeEnd = events.getShakeTimer();
+        assertTrue(timedBeforeEnd > 0, "ordinary movement reached the native timed stop");
+        GameServices.camera().setX((short) 0x0C00);
+        events.update(1, nextFrame);
+        assertEquals(timedBeforeEnd, events.getShakeTimer(),
+                "loc_50F64 clears only a negative flag; held redraw does not call setup");
+    }
+
+    private static Sonic3kHCZEvents screenEventWallEvents() {
+        return movingWallEvents();
+    }
+
+    @Test
+    void missingScrollHandlerDoesNotHoldPreparedShakeWhileTheWallContinuesMoving() throws Exception {
+        Sonic3kHCZEvents events = movingWallEvents();
+        SwScrlHcz handler = installEventScroll(events);
+        tickAct2(events, 3);
+        compose(handler, 3);
+        assertEquals(0, handler.getShakeOffsetY());
 
         installParallaxHandler(Sonic3kZoneIds.ZONE_HCZ, null);
         tickAct2(events, 4);
         assertEquals(-0x28000, events.getWallOffsetFixed(), "scroll absence does not hold event motion");
-        assertEquals(0, handler.getShakeOffsetY(), "the absent consumer receives no publication");
+        assertEquals(3, events.screenPublication().shakeOffset(), "producer advances without a consumer");
+        assertEquals(0, handler.getShakeOffsetY(), "an unsampled consumer retains only its old picture cache");
 
         installParallaxHandler(Sonic3kZoneIds.ZONE_HCZ, handler);
         tickAct2(events, 5);
-        assertEquals(3, handler.getShakeOffsetY(), "absence retains the older pending setup");
+        compose(handler, 5);
+        assertEquals(1, handler.getShakeOffsetY(), "returning consumer reads the current publication");
         tickAct2(events, 6);
-        assertEquals(2, handler.getShakeOffsetY(), "the resumed owner prepares the next setup normally");
+        compose(handler, 6);
+        assertEquals(2, handler.getShakeOffsetY());
     }
 
     @Test
-    void wallStartedWithoutAScrollHandlerHasNoPendingShakeToPublishOnItsReturn() throws Exception {
-        Sonic3kHCZEvents events = movingWallEvents(null);
+    void wallStartedWithoutAScrollHandlerStillPreparesShakeForItsReturn() throws Exception {
+        Sonic3kHCZEvents events = movingWallEvents();
+        installParallaxHandler(Sonic3kZoneIds.ZONE_HCZ, null);
         tickAct2(events, 3);
         assertEquals(-0x14000, events.getWallOffsetFixed());
 
-        SwScrlHcz handler = new SwScrlHcz();
-        installParallaxHandler(Sonic3kZoneIds.ZONE_HCZ, handler);
+        SwScrlHcz handler = installEventScroll(events);
         tickAct2(events, 4);
-        assertEquals(0, handler.getShakeOffsetY(), "missing initial consumer leaves the pending setup at zero");
+        compose(handler, 4);
+        assertEquals(3, handler.getShakeOffsetY(), "the producer prepared table[3] without a scroll handler");
         tickAct2(events, 5);
+        compose(handler, 5);
         assertEquals(1, handler.getShakeOffsetY());
     }
 
     @Test
-    void act2WallChasePrimesBgCollisionCameraBeforePhysics() throws Exception {
-        SwScrlHcz handler = new SwScrlHcz();
-        installParallaxHandler(Sonic3kZoneIds.ZONE_HCZ, handler);
-
-        AbstractPlayableSprite player = placePlayer(0x0B00, 0x0700);
-        GameServices.camera().setX((short) 0x0800);
-        GameServices.camera().setY((short) 0x0600);
-
-        Sonic3kHCZEvents events = new Sonic3kHCZEvents(() -> 0);
-        events.init(1);
+    void act2WallChasePublishesRetainedCollisionAfterItsScreenEvent() {
+        Sonic3kHCZEvents events = movingWallEvents();
+        var player = GameServices.sprites().getMainPlayable();
 
         tickAct2(events, 0);
-        assertEquals(SwScrlHcz.Hcz2BgPhase.WALL_CHASE, handler.getHcz2BgPhase());
-        assertEquals(0x05FE, handler.getBgCameraX(),
-                "wall init should fall through and subtract its first fast movement step");
+        assertTrue(events.screenPublication().wallPlane());
+        assertEquals(0x05FE, events.screenPublication().backgroundX(),
+                "wall init falls through and subtracts its first fast movement step");
+        assertEquals(new com.openggf.physics.BackgroundPlaneCollisionProvider.State(true, 0x202, 0x500),
+                events.backgroundCollisionState());
 
         tickAct2(events, 1);
-        assertTrue(GameServices.gameState().isBackgroundCollisionFlag(),
-                "state 4 should gate Background_collision_flag on before physics");
-        assertEquals(0x05FD, handler.getBgCameraX(),
-                "the armed wall should continue its 16.16 movement on the next dispatch");
+        assertTrue(GameServices.gameState().isBackgroundCollisionFlag());
+        assertEquals(0x05FD, events.screenPublication().backgroundX());
+        assertEquals(1, events.screenPublication().shakeOffset());
 
         player.setCentreX((short) 0x0B20);
         tickAct2(events, 2);
-        assertEquals(0x05FC, handler.getBgCameraX(),
-                "BG camera X should publish the current Events_bg+$00 high word");
-        assertEquals((short) 0x0100, handler.getVscrollFactorBG(),
-                "HCZ2 wall-chase BG camera Y should stay at cameraY - $500");
+        assertEquals(0x05FC, events.screenPublication().backgroundX(),
+                "BG camera X publishes the completed Events_bg+$00 high word");
+        assertEquals(0x0102, events.screenPublication().backgroundY(),
+                "the same retained shake is applied to foreground and wall background");
+        assertEquals(new com.openggf.physics.BackgroundPlaneCollisionProvider.State(true, 0x204, 0x500),
+                events.backgroundCollisionState(), "common vertical shake cancels in the published differences");
     }
 
     @Test
-    void act2WallChaseConsumesFgEndSignalInSameFrame() throws Exception {
-        SwScrlHcz handler = new SwScrlHcz();
-        installParallaxHandler(Sonic3kZoneIds.ZONE_HCZ, handler);
-
-        placePlayer(0x0B00, 0x0700);
-        GameServices.camera().setX((short) 0x0800);
-        GameServices.camera().setY((short) 0x0600);
-
-        Sonic3kHCZEvents events = new Sonic3kHCZEvents(() -> 0);
-        events.init(1);
-
+    void act2WallChaseConsumesFgEndSignalInSameFrame() {
+        Sonic3kHCZEvents events = movingWallEvents();
         tickAct2(events, 0);
         tickAct2(events, 1);
-        assertTrue(GameServices.gameState().isBackgroundCollisionFlag(),
-                "wall chase should be active before the FG end signal frame");
+        assertTrue(GameServices.gameState().isBackgroundCollisionFlag());
+        int beforeEndOffset = events.getWallOffsetFixed();
 
         GameServices.camera().setX((short) 0x0C00);
-        events.updatePrePhysics(1, 2);
-        int prePhysicsOffset = events.getWallOffsetFixed();
-        int prePhysicsShake = handler.getShakeOffsetY();
-        events.update(1, 2);
-
-        assertTrue(events.isEventsFg5(), "FG end signal should be raised at Camera X >= $C00");
-        assertFalse(GameServices.gameState().isBackgroundCollisionFlag(),
-                "BG should consume Events_fg_5 in the same frame and clear background collision");
+        tickAct2(events, 2);
+        assertFalse(events.isEventsFg5(), "the same BG dispatch consumes the one-shot FG pulse");
+        assertFalse(GameServices.gameState().isBackgroundCollisionFlag());
         assertEquals(8, events.getAct2BgRoutine());
-        assertEquals(prePhysicsOffset, events.getWallOffsetFixed(), "FG handoff cannot advance movement twice");
-        assertEquals(prePhysicsShake, handler.getShakeOffsetY(), "FG handoff cannot republish shake");
+        assertEquals(beforeEndOffset, events.getWallOffsetFixed(), "the end branch never advances wall movement");
+        assertEquals(2, events.screenPublication().shakeOffset(), "FG consumes the previously prepared table[1]");
+        assertEquals(0, events.getScreenShakeFlag(), "the end branch clears a negative constant flag");
     }
 
     @Test
-    void act2WallChaseUsesFastSpeedAtNativeThreshold() throws Exception {
-        SwScrlHcz handler = new SwScrlHcz();
-        installParallaxHandler(Sonic3kZoneIds.ZONE_HCZ, handler);
-
-        placePlayer(0x0A88, 0x0700);
-        GameServices.camera().setX((short) 0x0800);
-        GameServices.camera().setY((short) 0x0600);
-
-        Sonic3kHCZEvents events = new Sonic3kHCZEvents(() -> 0);
-        events.init(1);
+    void act2WallChaseUsesFastSpeedAtNativeThreshold() {
+        Sonic3kHCZEvents events = movingWallEvents();
+        GameServices.sprites().getMainPlayable().setCentreX((short) 0x0A88);
         tickAct2(events, 0);
-
         assertEquals(-0x14000, events.getWallOffsetFixed(),
                 "ROM cmpi/blo selects the fast wall speed when Player_1 x_pos equals $A88");
+    }
+
+    @Test
+    void wallTriggerAndSpeedRespectBothNativeThresholds() {
+        Sonic3kHCZEvents events = movingWallEvents();
+        var primary = GameServices.sprites().getMainPlayable();
+        primary.setCentreX((short) 0x067F);
+        tickAct2(events, 0);
+        assertEquals(0, events.getWallOffsetFixed(), "below $680 cannot start the wall");
+        assertEquals(0, events.getScreenShakeFlag());
+
+        primary.setCentreX((short) 0x0680);
+        tickAct2(events, 1);
+        assertEquals(-0xE000, events.getWallOffsetFixed(), "at $680 starts with the native base step");
+        primary.setCentreX((short) 0x0A87);
+        tickAct2(events, 2);
+        assertEquals(-0x1C000, events.getWallOffsetFixed(), "below $A88 keeps the base step");
+        primary.setCentreX((short) 0x0A88);
+        tickAct2(events, 3);
+        assertEquals(-0x30000, events.getWallOffsetFixed(), "at $A88 selects the fast step");
+    }
+
+    @Test
+    void wallMovementAndCollisionUseRegisteredPrimaryInsteadOfCameraFocus() {
+        Sonic3kHCZEvents events = movingWallEvents();
+        var primary = GameServices.sprites().getMainPlayable();
+        primary.setCentreX((short) 0x067F);
+        TestablePlayableSprite sidekick = new TestablePlayableSprite("tails", (short) 0, (short) 0);
+        sidekick.setCentreX((short) 0x0B00);
+        sidekick.setCentreY((short) 0x0700);
+        sidekick.setCpuControlled(true);
+        sidekick.setObjectRoutineOverride(6);
+        GameServices.sprites().addSprite(sidekick, "tails");
+        GameServices.camera().setFocusedSprite(sidekick);
+        assertSame(primary, GameServices.sprites().getMainPlayable());
+
+        tickAct2(events, 3);
+        assertEquals(0, events.getWallOffsetFixed(), "a focused follower beyond the trigger is not P1");
+        primary.setCentreX((short) 0x0B00);
+        sidekick.setCentreX((short) 0x0100);
+        sidekick.setCentreY((short) 0x0500);
+        tickAct2(events, 4);
+        assertEquals(-0x14000, events.getWallOffsetFixed(), "normal P1 moves despite focused routine >=6");
+        assertTrue(events.backgroundCollisionState().active(), "P1's corridor gates collision, not the focus");
+    }
+
+    @Test
+    void absentPrimaryNeverBorrowsTheFocusedActor() {
+        TestablePlayableSprite focused = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        focused.setCentreX((short) 0x0B00);
+        focused.setCentreY((short) 0x0700);
+        GameServices.camera().setFocusedSprite(focused);
+        GameServices.camera().setX((short) 0x0800);
+        GameServices.camera().setY((short) 0x0600);
+        assertNull(GameServices.sprites().getMainPlayable(), "focused actor is deliberately unregistered");
+        Sonic3kHCZEvents events = new Sonic3kHCZEvents(() -> 0);
+        events.init(1);
+
+        tickAct2(events, 3);
+        assertEquals(0, events.getWallOffsetFixed());
+        assertEquals(0, events.getScreenShakeFlag());
+        assertFalse(events.backgroundCollisionState().active());
+        assertEquals(0x0600, events.screenPublication().backgroundX(), "absent P1 still reaches camera publication");
+        assertEquals(0x0100, events.screenPublication().backgroundY());
+    }
+
+    @Test
+    void nativeRoutineGateHoldsMotionAndFlagButStillPublishesCameraCopies() {
+        Sonic3kHCZEvents events = movingWallEvents();
+        var primary = GameServices.sprites().getMainPlayable();
+        tickAct2(events, 3); // prepare continuous table[3] = 3
+        int offset = events.getWallOffsetFixed();
+        int flag = events.getScreenShakeFlag();
+        assertTrue(flag < 0);
+        primary.setObjectRoutineOverride(6);
+        assertFalse(primary.getDead(), "raw primary routine, not the managed dead hint, supplies this gate");
+        GameServices.camera().setX((short) 0x0900);
+        GameServices.camera().setY((short) 0x0700);
+
+        tickAct2(events, 4);
+        assertEquals(offset, events.getWallOffsetFixed());
+        assertEquals(flag, events.getScreenShakeFlag(), "dead/restart setup retains the flag");
+        assertEquals(3, events.screenPublication().shakeOffset(), "FG consumes the preceding prepared offset");
+        assertEquals(0x0703, events.screenPublication().foregroundY());
+        assertEquals(0x0203, events.screenPublication().backgroundY());
+        assertEquals(0x06FE, events.screenPublication().backgroundX());
+        assertEquals(new com.openggf.physics.BackgroundPlaneCollisionProvider.State(true, 0x202, 0x500),
+                events.backgroundCollisionState(), "routine gate does not suppress copied-word publication");
+        tickAct2(events, 5);
+        assertEquals(0, events.screenPublication().shakeOffset(), "the reached dead setup prepared zero");
+        assertEquals(offset, events.getWallOffsetFixed());
+        assertEquals(flag, events.getScreenShakeFlag());
+    }
+
+    @Test
+    void continuousFlagPreservesTheLowByteAndSetupUsesItsSuppliedLevelClock() {
+        Sonic3kHCZEvents events = movingWallEvents();
+        events.setShakeTimer(0x000E);
+        events.startContinuousScreenShake();
+        assertEquals((short) 0xFF0E, events.getScreenShakeFlag(), "native ST changes only the high byte");
+        assertNotEquals(3, GameServices.level().getFrameCounter() & 0xFFFF,
+                "direct component dispatch deliberately differs from the live manager clock");
+        tickAct2(events, 3);
+        tickAct2(events, 0x11);
+        assertEquals(3, events.screenPublication().shakeOffset(), "previous setup sampled supplied LF 3");
+        tickAct2(events, 0x12);
+        assertEquals(0, events.screenPublication().shakeOffset(), "LF $11 samples the zero table entry");
+        tickAct2(events, 0x13);
+        assertEquals(3, events.screenPublication().shakeOffset(), "LF $12 samples the following nonzero entry");
+        assertEquals(-0x50000, events.getWallOffsetFixed(), "one movement step per dispatch, independent of clock gaps");
     }
 
     @Test
@@ -628,13 +797,118 @@ class TestSonic3kHCZEvents {
         assertEquals(0x30, events.transitionBubbleCount());
     }
 
+    @Test
+    void rumbleSamplesLfMinusOneAndTheRawRoutineGateSuppressesAudio() {
+        var audio = mock(AudioManager.class);
+        Sonic3kHCZEvents events = movingWallEventsWithAudio(audio);
+        tickAct2(events, 1);
+        verify(audio).playSfx(
+                Sonic3kSfx.RUMBLE_2.id);
+        tickAct2(events, 16); // LF - 1 is not divisible by $10
+        verifyNoMoreInteractions(audio);
+        tickAct2(events, 17);
+        verify(audio, times(2)).playSfx(
+                Sonic3kSfx.RUMBLE_2.id);
+        assertEquals(-0x3C000, events.getWallOffsetFixed());
+
+        var primary = GameServices.sprites().getMainPlayable();
+        primary.setObjectRoutineOverride(6);
+        int flag = events.getScreenShakeFlag();
+        GameServices.camera().setX((short) 0x0900);
+        GameServices.camera().setY((short) 0x0700);
+        tickAct2(events, 33); // cadence would fire without the routine gate
+        verifyNoMoreInteractions(audio);
+        assertEquals(-0x3C000, events.getWallOffsetFixed());
+        assertEquals(flag, events.getScreenShakeFlag());
+        assertEquals(0x06FC, events.screenPublication().backgroundX(),
+                "the routine gate still publishes camera $900 - $200 plus high word -4");
+        assertEquals(0x0200, events.screenPublication().backgroundY());
+    }
+
+    @Test
+    void stopDispatchCrashesOnceWithoutRumblingOrDiscardingTheFraction() {
+        var audio = mock(AudioManager.class);
+        Sonic3kHCZEvents events = movingWallEventsWithAudio(audio);
+        tickAct2(events, 3); // movement without a rumble slot
+        events.setWallOffsetFixed(-0x06004000);
+        events.startContinuousScreenShake();
+
+        tickAct2(events, 33); // eligible cadence, but signed stop wins first
+        verify(audio).playSfx(
+                Sonic3kSfx.CRASH.id);
+        verifyNoMoreInteractions(audio);
+        assertEquals(-0x06004000, events.getWallOffsetFixed());
+        assertEquals(13, events.getScreenShakeFlag(), "$E installed, then one reached setup");
+        tickAct2(events, 49);
+        verifyNoMoreInteractions(audio);
+        assertEquals(-0x06004000, events.getWallOffsetFixed());
+        assertEquals(12, events.getScreenShakeFlag());
+    }
+
+    private static Sonic3kHCZEvents movingWallEventsWithAudio(AudioManager audio) {
+        placePlayer(0x0B00, 0x0700);
+        GameServices.camera().setX((short) 0x0800);
+        GameServices.camera().setY((short) 0x0600);
+        Sonic3kHCZEvents events = new Sonic3kHCZEvents(() -> 0) {
+            @Override
+            protected AudioManager audio() {
+                return audio;
+            }
+        };
+        events.init(1);
+        return events;
+    }
+
+    @Test
+    void freshBackgroundInitUsesTheClearedNativeClockWithoutPreparingShake() {
+        var audio = mock(AudioManager.class);
+        var events = movingWallEventsWithAudio(audio);
+        GameServices.level().setFrameCounter(1); // previous level's still-live clock during load
+        events.initializeAct2BackgroundAtLoad(GameServices.sprites().getMainPlayable());
+        verifyNoInteractions(audio);
+        assertEquals(1, GameServices.level().getFrameCounter(), "init cannot rewrite the live load clock");
+        assertEquals(4, events.getAct2BgRoutine());
+        assertEquals(-0x14000, events.getWallOffsetFixed());
+        assertEquals(0, events.screenPublication().shakeOffset());
+        assertFalse(events.backgroundCollisionState().active());
+        var saved = java.nio.ByteBuffer.wrap(events.captureHczState());
+        assertEquals(0, saved.getInt(saved.limit() - 8), "fresh init never calls shake setup");
+        assertEquals(0, saved.getInt(saved.limit() - 4));
+    }
+
+    @Test
+    void failedWallAllocationIsNotRetriedAfterRestoringItsActualPayload() {
+        var attempts = new AtomicInteger();
+        placePlayer(0x0B00, 0x0700);
+        GameServices.camera().setX((short) 0x0800);
+        GameServices.camera().setY((short) 0x0600);
+        var events = new Sonic3kHCZEvents(() -> 0) {
+            @Override
+            protected <T extends ObjectInstance> T spawnObject(Supplier<T> factory) {
+                attempts.incrementAndGet();
+                return null;
+            }
+        };
+        events.init(1);
+        tickAct2(events, 1);
+        assertEquals(1, attempts.get());
+        assertEquals(4, events.getAct2BgRoutine());
+        byte[] failedAdmission = events.captureHczState();
+        for (int replay = 0; replay < 2; replay++) {
+            events.restoreHczState(failedAdmission);
+            assertArrayEquals(failedAdmission, events.captureHczState());
+            for (int frame = 2; frame < 0x42; frame++) {
+                tickAct2(events, frame);
+            }
+            assertEquals(1, attempts.get(), "state 4 never retries the failed state-0 allocation");
+        }
+    }
+
     private static void tickAct2(Sonic3kHCZEvents events, int frame) {
-        events.updatePrePhysics(1, frame);
         events.update(1, frame);
     }
 
-    private static Sonic3kHCZEvents movingWallEvents(SwScrlHcz handler) throws Exception {
-        installParallaxHandler(Sonic3kZoneIds.ZONE_HCZ, handler);
+    private static Sonic3kHCZEvents movingWallEvents() {
         placePlayer(0x0B00, 0x0700);
         GameServices.camera().setX((short) 0x0800);
         GameServices.camera().setY((short) 0x0600);
@@ -643,20 +917,37 @@ class TestSonic3kHCZEvents {
         return events;
     }
 
+    private static SwScrlHcz installEventScroll(Sonic3kHCZEvents events) throws Exception {
+        SwScrlHcz handler = new SwScrlHcz(null, events::screenPublication);
+        installParallaxHandler(Sonic3kZoneIds.ZONE_HCZ, handler);
+        return handler;
+    }
+
+    private static void compose(SwScrlHcz handler, int frame) {
+        var camera = GameServices.camera();
+        handler.update(new int[224], camera.getX(), camera.getY(), frame, 1);
+    }
+
     private static int advanceWallToStop(Sonic3kHCZEvents events) {
         int nextFrame = 0;
-        // Even the slower native $E000 speed covers $600 pixels in fewer
-        // than $800 dispatches. No event fields are set to manufacture a stop.
-        while (!events.isWallStopped() && nextFrame < 0x800) {
+        // Reaching the signed stop high word precedes its stop dispatch. Wait
+        // until that dispatch installs $E and its setup decrements it to $D.
+        while ((!events.isWallStopped() || events.getScreenShakeFlag() <= 0) && nextFrame < 0x800) {
             tickAct2(events, nextFrame++);
         }
-        assertTrue(events.isWallStopped(), "the ordinary BG dispatch must reach its native stop");
+        assertTrue(events.isWallStopped(), "ordinary BG dispatch reaches the native stop");
+        assertTrue(events.getScreenShakeFlag() > 0, "ordinary stop dispatch installs the positive flag");
         return nextFrame;
     }
 
     private static AbstractPlayableSprite placePlayer(int x, int y) {
-        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) x, (short) y);
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        player.setCentreX((short) x);
+        player.setCentreY((short) y);
+        player.setCpuControlled(false);
+        GameServices.sprites().addSprite(player, "sonic");
         GameServices.camera().setFocusedSprite(player);
+        assertSame(player, GameServices.sprites().getMainPlayable(), "actual registered primary fixture owner");
         return player;
     }
 
@@ -685,10 +976,10 @@ class TestSonic3kHCZEvents {
         registry.register(new com.openggf.game.rewind.RewindSnapshottable<byte[]>() {
             public String key() { return "hcz-events"; }
             public byte[] capture() {
-                return com.openggf.game.rewind.schema.ZoneEventSchemaSidecar.capture(events);
+                return events.captureHczState();
             }
             public void restore(byte[] state) {
-                com.openggf.game.rewind.schema.ZoneEventSchemaSidecar.restore(events, state);
+                events.restoreHczState(state);
             }
         });
         for (int index = 0; index < pair.size(); index++) {
@@ -842,8 +1133,6 @@ class TestSonic3kHCZEvents {
 
     @Test
     void directedEntryReadinessFollowsNativeWallTransitionWithoutDispatchingIt() throws Exception {
-        SwScrlHcz handler = new SwScrlHcz();
-        installParallaxHandler(Sonic3kZoneIds.ZONE_HCZ, handler);
         AbstractPlayableSprite player = placePlayer(0x0B00, 0x0700);
         var camera = GameServices.camera();
         camera.setX((short) 0x0800);
@@ -851,9 +1140,10 @@ class TestSonic3kHCZEvents {
         Sonic3kLevelEventManager manager = new Sonic3kLevelEventManager();
         manager.initLevel(Sonic3kZoneIds.ZONE_HCZ, 1);
         Sonic3kHCZEvents events = manager.getHczEventsForTest();
+        SwScrlHcz handler = installEventScroll(events);
         List<DirectedEntryState> states = new ArrayList<>();
 
-        tickAct2(events, 0); // HCZ2BGE_WallMoveInit falls through into WallMove.
+        tickAct2(events, 0);
         camera.setX((short) 0x0BFF);
         states.add(new DirectedEntryState("wall before $C00", manager.capture(), camera.capture(), true));
         camera.setX((short) 0x0C00);
@@ -861,23 +1151,39 @@ class TestSonic3kHCZEvents {
         camera.setX((short) 0x0C01);
         states.add(new DirectedEntryState("after $C00 before FG dispatch", manager.capture(), camera.capture(), false));
 
-        tickAct2(events, 1); // HCZ2_Resize signals Events_fg_5; WallMove selects state 8.
-        assertTrue(events.isEventsFg5());
+        tickAct2(events, 1); // end dispatch consumes the first of sixteen held rows
+        assertFalse(events.isEventsFg5());
+        assertEquals(8, events.getAct2BgRoutine());
         camera.setX((short) 0x0BFF);
-        states.add(new DirectedEntryState("signalled transition below $C00",
+        states.add(new DirectedEntryState("held transition below $C00 after pulse consumption",
                 manager.capture(), camera.capture(), false));
         camera.setX((short) 0x0C00);
-        tickAct2(events, 2); // HCZ2BGE_NormalTransition selects the Plane B refresh.
-        assertEquals(SwScrlHcz.Hcz2BgPhase.NORMAL, handler.getHcz2BgPhase());
-        states.add(new DirectedEntryState("normal deformation still awaiting refresh",
+        for (int dispatch = 2; dispatch <= 15; dispatch++) {
+            tickAct2(events, dispatch);
+            assertEquals(8, events.getAct2BgRoutine());
+        }
+        states.add(new DirectedEntryState("last held row before continuation",
                 manager.capture(), camera.capture(), false));
-        tickAct2(events, 3); // HCZ2BGE_NormalRefresh reaches HCZ2BGE_Normal.
-        assertTrue(events.isEventsFg5(), "normal readiness does not require clearing the native FG signal");
-        states.add(new DirectedEntryState("normal after refresh", manager.capture(), camera.capture(), true));
+        tickAct2(events, 16); // last held row, first refresh pair
+        assertEquals(0x0C, events.getAct2BgRoutine());
+        assertEquals(SwScrlHcz.Hcz2BgPhase.NORMAL, handler.getHcz2BgPhase());
+        camera.setX((short) 0x0BFF);
+        states.add(new DirectedEntryState("normal deformation awaiting refresh below $C00",
+                manager.capture(), camera.capture(), false));
+        camera.setX((short) 0x0C00);
+        for (int refresh = 2; refresh <= 7; refresh++) {
+            tickAct2(events, 15 + refresh);
+            assertEquals(0x0C, events.getAct2BgRoutine());
+        }
+        tickAct2(events, 23); // eighth refresh pair completes
+        assertEquals(0x10, events.getAct2BgRoutine());
+        assertFalse(events.isEventsFg5());
+        states.add(new DirectedEntryState("normal after complete refresh", manager.capture(), camera.capture(), true));
 
         for (DirectedEntryState state : states) {
             manager.restore(state.events());
             camera.restore(state.camera());
+            compose(handler, 23);
             assertReadinessQueryLeavesState(manager, events, List.of(player), handler,
                     state.settled(), state.description());
         }

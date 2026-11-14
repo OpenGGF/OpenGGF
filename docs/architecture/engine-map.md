@@ -271,6 +271,15 @@ when moving behavior; put new bounded work in the collaborator that owns it:
 
 Level loading reads from the ROM through classes in `com.openggf.data`.
 
+HCZ2's `Sonic3kHCZEvents` owns the completed camera/background/collision words,
+software redraw continuation and three shake words. `HczZoneRuntimeState` exposes
+them without a second capture; `SwScrlHcz` projects held views from the published
+unshaken origin rather than newer camera metadata. P1, Tails and the
+wall's own slot consume the preceding publication before the post-camera event.
+Fresh background initialization and the completing HCZ1 reload dispatch have
+separate owners. The [HCZ2 matrix](validation/levels/s3k-hcz2.md) records the
+same-build payload contract and remaining route/visual obligations.
+
 S3K endings also retain their native level owners: Sonic/Tails use `$0D01` and
 Knuckles continues in `$0A01` after SSZ2. `Sonic3kEndingEvents`,
 `EndingZoneRuntimeState`/`SszZoneRuntimeState` and `S3kEndingCoordinator` compose
@@ -300,7 +309,9 @@ this; editor commands and initial layout decoders (e.g. `Sonic3kLevel`) are exem
 
 - **`ObjectManager`** coordinates placement, touch responses and plane switching.
   `ObjectSolidContactController` applies riding/landing/ceiling/side collision;
-  `level.objects.contact.SolidContactState` owns rides, bits and frame history.
+  package-private `level.objects.SolidContactMemory` owns rides, bits and frame
+  history beside its sole runtime caller, `ObjectSolidContactController`. The
+  immutable saved form remains `ObjectManagerSnapshot.SolidContactState`.
   `ObjectPopulation` owns membership/identity; `ObjectRewindLifecycle` owns actor
   capture, construction-family adoption and reconstruction. The manager injects
   `ObjectServices` at construction.

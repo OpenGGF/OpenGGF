@@ -407,7 +407,14 @@ public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile
                         if (GameServices.module().getLevelEventProvider() instanceof Sonic3kLevelEventManager events)
                             events.deferEndingScreenInitToLevelSetup(ctx.isQueueFreshLevelRuntimeArt());
                     }));
-            steps.add(initLevelEventsStep());
+            InitStep events = initLevelEventsStep();
+            steps.add(new InitStep(events.name(),
+                    "LevelSetup: initialize events/background before Load_Sprites", () -> {
+                        events.execute();
+                        if (ctx.permitsInitialProcessSpritesRequest()) {
+                            levelEventManager.initializeFreshHczBackground();
+                        }
+                    }));
             // BEGIN HCZ1_DIRECT_FF_FRESH: Level $6310 water producer after camera/ScreenInit.
             if (ctx.permitsInitialProcessSpritesRequest()) {
                 steps.add(new InitStep("RetainFreshWaterNemesisSchedule",
