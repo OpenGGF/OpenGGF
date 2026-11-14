@@ -231,20 +231,12 @@ public class Sonic2SuperStateController extends SuperStateController
             return;
         }
         // Play transformation SFX
-        try {
-            GameServices.audio().playSfx(Sonic2AudioConstants.SFX_SUPER_TRANSFORM);
-        } catch (Exception e) {
-            LOGGER.fine("Could not play transformation SFX: " + e.getMessage());
-        }
+        GameServices.audio().playSfx(Sonic2AudioConstants.SFX_SUPER_TRANSFORM);
         // This request follows PlaySound on the SAME Sonic_CheckGoSuper call,
         // not PalCycle_SuperSonic's later control release ($1AB90-$1ABA3).
         // Native $96 and the engine playlist ID are different namespaces:
         // GameMusic.SUPER resolves the loader's legacy Super key, not raw $96.
-        try {
-            GameServices.audio().playMusic(GameMusic.SUPER);
-        } catch (Exception e) {
-            LOGGER.fine("Could not play Super Sonic music: " + e.getMessage());
-        }
+        GameServices.audio().playMusic(GameMusic.SUPER);
     }
 
     /**
@@ -267,16 +259,8 @@ public class Sonic2SuperStateController extends SuperStateController
      */
     private void startDonatedTransformationAudio() {
         String donorGameId = GameServices.crossGameFeatures().getDonorGameId();
-        try {
-            GameServices.audio().playDonorMusic(donorGameId, GameMusic.SUPER);
-        } catch (Exception e) {
-            LOGGER.fine("Could not play Super Sonic music: " + e.getMessage());
-        }
-        try {
-            GameServices.audio().playDonorSfx(donorGameId, Sonic2AudioConstants.SFX_SUPER_TRANSFORM);
-        } catch (Exception e) {
-            LOGGER.fine("Could not play transformation SFX: " + e.getMessage());
-        }
+        GameServices.audio().playDonorMusic(donorGameId, GameMusic.SUPER);
+        GameServices.audio().playDonorSfx(donorGameId, Sonic2AudioConstants.SFX_SUPER_TRANSFORM);
     }
 
     @Override
