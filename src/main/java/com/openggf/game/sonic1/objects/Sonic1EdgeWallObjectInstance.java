@@ -3,6 +3,7 @@ package com.openggf.game.sonic1.objects;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ClimbableWall;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectVisualFacing;
@@ -11,6 +12,8 @@ import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.game.PlayableEntity;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.SecondaryAbility;
 
 import java.util.List;
 
@@ -37,7 +40,7 @@ import java.util.List;
  * Reference: docs/s1disasm/_incObj/44 GHZ Edge Walls.asm
  */
 public class Sonic1EdgeWallObjectInstance extends AbstractObjectInstance
-        implements SpawnRewindRecreatable, SolidObjectProvider, ObjectVisualFacing.NonDirectional {
+        implements SpawnRewindRecreatable, SolidObjectProvider, ClimbableWall, ObjectVisualFacing.NonDirectional {
 
 // Edge-wall light/shadow mapping sections are static terrain geometry without horizontal facing.
 
@@ -47,8 +50,13 @@ public class Sonic1EdgeWallObjectInstance extends AbstractObjectInstance
     // From disassembly: move.w #$28,d2
     private static final int HALF_HEIGHT = 0x28;
 
+    // From disassembly: move.b #16/2,obActWid(a0). The strip is 16 pixels wide; d1 is that
+    // half-width plus the 11 pixels every Sonic 1 solid adds for the player's side.
+    private static final int FACE_HALF_WIDTH = 16 / 2;
+
     private int frameIndex;
     private boolean solid;
+    private ClimbableWall.Box wall;
 
     public Sonic1EdgeWallObjectInstance(ObjectSpawn spawn) {
         super(spawn, "EdgeWall");
@@ -80,9 +88,36 @@ public class Sonic1EdgeWallObjectInstance extends AbstractObjectInstance
         return SolidObjectParams.of(HALF_WIDTH, HALF_HEIGHT, HALF_HEIGHT);
     }
 
+    /**
+     * Engine extension, with no counterpart in Sonic 1: the solid strip as a wall for a climber's
+     * probes, as wide as it is drawn and as tall as Edge_Solid's d2. A display-only wall is none.
+     */
+    @Override
+    public ClimbableWall.Box climbableWall() {
+        if (solid && wall == null) {
+            wall = new ClimbableWall.Box(getX() - FACE_HALF_WIDTH, getY() - HALF_HEIGHT,
+                    getX() + FACE_HALF_WIDTH - 1, getY() + HALF_HEIGHT - 1);
+        }
+        return wall;
+    }
+
     @Override
     public boolean isSolidFor(PlayableEntity playerEntity) {
-        return solid;
+        return solid && !readsTheWallHimself(playerEntity);
+    }
+
+    /**
+     * double_jump_flag 1, 4 and 5: Knuckles' glide, wall climb and pull-up. Their own probes find this
+     * wall and place him against it. EdgeWall_SolidWall would stop a glide a pixel short of the contact
+     * those probes need for a grab, and push the first steps of a pull-up back off the ledge.
+     */
+    private static boolean readsTheWallHimself(PlayableEntity playerEntity) {
+        if (!(playerEntity instanceof AbstractPlayableSprite player)
+                || player.getSecondaryAbility() != SecondaryAbility.GLIDE) {
+            return false;
+        }
+        int state = player.getDoubleJumpFlag();
+        return state == 1 || state == 4 || state == 5;
     }
 
 }

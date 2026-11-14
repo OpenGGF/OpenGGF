@@ -67,6 +67,14 @@ under the matching area heading; see the
   cartridges unlock is not offered. Blue Spheres is an extra of Sonic 3&K, not a
   separate game.
 
+- **Knuckles climbs Green Hill's cliffs in Sonic 1:** with Sonic 3&K donating,
+  Knuckles could not grab a Green Hill cliff face unless terrain lay behind it,
+  and there he pulled up short of the top and fell back. The faces are edge-wall objects,
+  not terrain, and his grab and climb read terrain only. His probes now also see
+  those walls, and a wall leaves him alone while he glides, climbs and pulls up.
+  This is a rule of the engine's own, recorded in the known discrepancies; the
+  original games are unchanged because none of their levels has such a wall.
+
 - **Sonic 1 end-of-act PLC replacement:** NewPLC and ClearPLC cancel the active
   decoder as well as waiting cues, matching the ROM. Positioned GHZ starts near
   the signpost no longer fail when the signpost art replaces unfinished work.
