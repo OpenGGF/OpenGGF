@@ -245,6 +245,12 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance imp
                 || isWithinRenderSpriteBounds(OFFSCREEN_HALF_EXTENT, OFFSCREEN_HALF_EXTENT)) {
             return;
         }
+        // SSEntryRing_Display takes loc_61928 while render_flags bit 7 is clear. Near or far, that
+        // branch writes the three colours the rotation script changes back to their normal values
+        // (move.l #$EE0088,(Normal_palette_line_2+$A).w / move.w #$44,(Normal_palette_line_2+$1E).w,
+        // sonic3k.asm:128477-128478 and 128483-128484). The HUD draws with the first two, so without
+        // this it keeps the ring's last colours once the player has run past a Super Emerald ring.
+        restoreRingPalette();
         Camera camera = services().camera();
         if (camera == null) {
             return;
@@ -306,7 +312,12 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance imp
             releasedThisFrame = true;
             return;
         }
-        updateSuperEmeraldPalette();
+        // SSEntryRing_Display runs Run_PalRotationScript only on the branch taken while the ring is on
+        // screen (tst.b 4(a0) / bpl.s loc_61928, sonic3k.asm:128452-128456): off screen the script
+        // stands still and the display pass restores the colours.
+        if (isWithinRenderSpriteBounds(OFFSCREEN_HALF_EXTENT, OFFSCREEN_HALF_EXTENT)) {
+            updateSuperEmeraldPalette();
+        }
 
         // ROM: jsr (Animate_Raw).l — advance animation using down-counter
         advanceAnimation();

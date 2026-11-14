@@ -378,6 +378,26 @@ class TestMhzSwingBarHorizontalObjectInstance {
         verify(renderer).drawFrameIndex(0, 0x2200, 0x0700, false, false);
     }
 
+    @Test
+    void horizontalSwingBarIsMirroredByItsLayoutFlipBits() {
+        for (int flags = 0; flags <= 3; flags++) {
+            PatternSpriteRenderer renderer = mock(PatternSpriteRenderer.class);
+            when(renderer.isReady()).thenReturn(true);
+            ObjectRenderManager renderManager = mock(ObjectRenderManager.class);
+            when(renderManager.getRenderer(Sonic3kObjectArtKeys.MHZ_SWING_BAR_HORIZONTAL)).thenReturn(renderer);
+            LevelManager levelManager = mock(LevelManager.class);
+            when(levelManager.getObjectRenderManager()).thenReturn(renderManager);
+            MhzSwingBarHorizontalObjectInstance bar = new MhzSwingBarHorizontalObjectInstance(new ObjectSpawn(
+                    0x2200, 0x0700, MHZ_SWING_BAR_HORIZONTAL, 0, flags, false, 0));
+            bar.setServices(new TestObjectServices().withLevelManager(levelManager));
+
+            bar.appendRenderCommands(new ArrayList<>());
+
+            // Obj_MHZSwingBarHorizontal ORs only bit 2 into render_flags: the layout's bits 0 and 1 stay.
+            verify(renderer).drawFrameIndex(0, 0x2200, 0x0700, (flags & 1) != 0, (flags & 2) != 0);
+        }
+    }
+
     private static final class ZoneForTestRegistry extends Sonic3kObjectRegistry {
         private final int zoneId;
 
