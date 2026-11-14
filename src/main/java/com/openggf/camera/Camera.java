@@ -1147,11 +1147,12 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	 */
 	int rightWallRunOffSlide(int rightMargin) {
 		if (rightMargin <= 0 || focusedSprite == null || x != maxX) return 0;
-		int pastLockedWall = focusedSprite.getCentreX() - (maxX + ROM_SCREEN_WIDTH - RIGHT_WALL_INSET);
+		int pastLockedWall = focusedSprite.getCentreX() - (maxX + LOCKED_RIGHT_WALL);
 		return Math.clamp(pastLockedWall, 0, RIGHT_WALL_RUN_OFF) * rightMargin / RIGHT_WALL_RUN_OFF;
 	}
 
-	private static final int ROM_SCREEN_WIDTH = 320, RIGHT_WALL_INSET = 24, RIGHT_WALL_RUN_OFF = 0x40;
+	/** Sonic_LevelBound's right wall past {@code v_limitright2}: $128 locked, $40 more otherwise. */
+	private static final int LOCKED_RIGHT_WALL = 0x128, RIGHT_WALL_RUN_OFF = 0x40;
 
 	/** Left edge of the drawn picture, including shake. */
 	short getPresentationXWithShake() {
