@@ -354,6 +354,14 @@ under the matching area heading; see the
   panels were right. The text renderer scaled positions back by a fixed 320
   while the picture is drawn 400 wide; it now uses the configured width.
 
+- **Built-in sidekicks beside mod sidekicks:** a team that put Tails, Knuckles
+  or a second Sonic in a sidekick slot together with a mod character anywhere in
+  the team drew every character, the leader included, as a white box. The
+  built-in sidekick's art was asked for by its slot code (`tails_p2`), which
+  names no art, and the whole team's art was then dropped without a word. It is
+  asked for by character now, and a team whose art cannot be loaded says so in
+  the log.
+
 - **MICA, an original character framework example:** The complete MICA and TALON
   mod now ships bundled with JVM and native distributions, disabled by default.
   Enable it in the mod manager; saved enable/disable choices survive upgrades. TALON’s S3K lives label now
