@@ -770,18 +770,31 @@ under the matching area heading; see the
 
 - **Contributor readability:** live objects, slots and stable identities share
   population storage; actor reconstruction and contact memory have separate owners
-  behind the existing runtime entry points. Retiring multipart solids expires
+  behind the existing runtime entry points. Mutable contact memory is package-private
+  beside its collision controller, distinct from the immutable saved contact state.
+  Retiring multipart solids expires
   owned contact bits and frame history without releasing player state. Contact
   restore discards uncaptured future observations. Sole spawn-keyed dynamic solids
   now expire contact bits without clearing surviving shared owners. Constructor-child
   rewind adoption uses captured parent families, preserving interleaved structural
-  links; independent children can recreate when a parent defers to player refresh,
-  and CNZ defeat candidates retain their ship family. Generic recreation installs
+  links. Routine-spawned Clamer springs, Orbinaut satellites and Shellcracker claws
+  share exact captured-parent lookup in the admitted population; legacy and unknown
+  families retain their existing proximity lookup. Detached claws preserve their
+  independent falling state after parent retirement. Restoring captured placed
+  actors publishes their saved membership before child reconstruction, retaining
+  authored families even when fresh scene admission is closed. Independent children can
+  recreate when a parent defers to player refresh, and CNZ defeat candidates retain
+  their ship family. Generic recreation installs
   construction services centrally; supported exact-spawn recipes rebuild once,
   avoiding discarded constructor graphs while preserving custom hooks and the
   fallback for declarations without that constructor. Destroyed
   object paths share unload and retirement phases within their existing schedules.
   Ordinary family/reference/coverage guidance points to the actual owners.
+  Compact and scalar subclass fields share hierarchy ownership; diagnostic tools
+  check actual capture membership and distinguish structural handles from dropped
+  state. Mantis declares its captured parent/child references on their fields;
+  the exact-policy guard rejects duplicate central ownership, and scalar fallback
+  still reports links it omits.
   Production badnik and contact witnesses, shared coarse-X arithmetic with
   explicit native/wider bounds, and
   a typed rewind HUD frame make contribution paths easier to follow. HCZ owns

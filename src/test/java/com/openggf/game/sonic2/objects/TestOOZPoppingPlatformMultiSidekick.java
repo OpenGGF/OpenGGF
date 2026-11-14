@@ -9,7 +9,11 @@ import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TestObjectServices;
+import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.TestablePlayableSprite;
+import com.openggf.tests.rules.SonicGame;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -25,6 +29,16 @@ import static org.mockito.Mockito.*;
 import static org.mockito.Mockito.when;
 
 class TestOOZPoppingPlatformMultiSidekick {
+
+    @BeforeEach
+    void setUpPlayerRuntime() {
+        TestEnvironment.configureGameModuleFixture(SonicGame.SONIC_2);
+    }
+
+    @AfterEach
+    void tearDownPlayerRuntime() {
+        TestEnvironment.resetEngineOnly();
+    }
 
     @Test
     void playerTriggeredPlatformLocksMainAndThreeStandingSidekicks() {

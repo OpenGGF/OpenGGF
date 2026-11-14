@@ -35,8 +35,7 @@ public final class CompactFieldCapturer {
 
     public static boolean supportsDefaultObjectSubclassScalars(Class<?> type) {
         Objects.requireNonNull(type, "type");
-        RewindClassSchema schema = RewindSchemaRegistry.defaultObjectSubclassSchemaFor(type);
-        return !schema.capturedFields().isEmpty() && schema.unsupportedFields().isEmpty();
+        return RewindSchemaRegistry.supportsDefaultObjectSubclassScalars(type);
     }
 
     public static RewindObjectStateBlob captureDefaultObjectSubclassScalars(AbstractObjectInstance target) {

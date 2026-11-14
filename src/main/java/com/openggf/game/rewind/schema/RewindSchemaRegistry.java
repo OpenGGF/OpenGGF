@@ -2,6 +2,7 @@ package com.openggf.game.rewind.schema;
 
 import com.openggf.game.rewind.FieldKey;
 import com.openggf.game.rewind.GenericFieldCapturer;
+import com.openggf.game.rewind.GenericRewindEligibility;
 import com.openggf.game.rewind.RewindDeferred;
 import com.openggf.game.rewind.RewindTransient;
 import com.openggf.level.objects.AbstractBadnikInstance;
@@ -11,17 +12,16 @@ import com.openggf.level.objects.ObjectInstance;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
-import java.util.Queue;
-import java.util.Deque;
+import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 public final class RewindSchemaRegistry {
     private static final ConcurrentMap<Class<?>, RewindClassSchema> SCHEMAS = new ConcurrentHashMap<>();
@@ -42,6 +42,64 @@ public final class RewindSchemaRegistry {
         }
         return DEFAULT_OBJECT_SUBCLASS_SCHEMAS.computeIfAbsent(type,
                 RewindSchemaRegistry::buildDefaultObjectSubclassSchema);
+    }
+
+    static boolean supportsDefaultObjectSubclassScalars(Class<?> type) {
+        return supportsDefaultObjectSubclassScalars(defaultObjectSubclassSchemaFor(type));
+    }
+
+    private static boolean supportsDefaultObjectSubclassScalars(RewindClassSchema schema) {
+        return !schema.capturedFields().isEmpty() && schema.unsupportedFields().isEmpty();
+    }
+
+    /**
+     * Current field selection for an ordinary concrete actor, including the badnik
+     * route. Manual actors and nonactors retain their separate diagnostic contracts.
+     * This describes capture now; it cannot predict selection after an annotation edit.
+     * Queries initialize the same cached schemas (and schema IDs) as runtime capture.
+     * Planning failures propagate, so an incomplete inventory cannot appear successful.
+     * Inspected fields are freshly discovered; captured membership exposes only keys.
+     */
+    public static Optional<DefaultObjectFieldSelection> defaultObjectFieldSelectionForAudit(Class<?> type) {
+        Objects.requireNonNull(type, "type");
+        if (!GenericRewindEligibility.usesDefaultSubclassCapture(type)) {
+            return Optional.empty();
+        }
+        RewindClassSchema schema = defaultObjectSubclassSchemaFor(type);
+        boolean compact = supportsDefaultObjectSubclassScalars(schema);
+        List<Field> captured = compact
+                ? schema.capturedFields().stream().map(RewindFieldPlan::field).toList()
+                : GenericFieldCapturer.defaultObjectSubclassCapturedFieldsForAudit(type);
+        List<Field> inspected = new ArrayList<>();
+        for (Class<?> cls : defaultObjectSubclassHierarchy(type)) {
+            inspected.addAll(sortedDeclaredFields(cls));
+        }
+        return Optional.of(new DefaultObjectFieldSelection(compact, inspected,
+                captured.stream().map(FieldKey::of).collect(Collectors.toSet())));
+    }
+
+    public record DefaultObjectFieldSelection(boolean compact, List<Field> inspectedFields,
+                                               Set<FieldKey> capturedFields) {
+        public DefaultObjectFieldSelection {
+            inspectedFields = List.copyOf(inspectedFields);
+            capturedFields = Set.copyOf(capturedFields);
+        }
+
+        public boolean captures(Field field) {
+            return capturedFields.contains(FieldKey.of(field));
+        }
+    }
+
+    /** Authored/catalogue exclusions, independent of the selected capture projection. */
+    public static boolean isExplicitDefaultObjectExclusion(Field field) {
+        int mods = field.getModifiers();
+        if (Modifier.isStatic(mods) || Modifier.isTransient(mods) || field.isSynthetic()
+                || field.isAnnotationPresent(RewindTransient.class)
+                || field.isAnnotationPresent(RewindDeferred.class)) {
+            return true;
+        }
+        RewindFieldPolicy policy = DefaultObjectRewindPolicies.policyFor(field);
+        return policy == RewindFieldPolicy.TRANSIENT || policy == RewindFieldPolicy.DEFERRED;
     }
 
     public static void clearForTest() {
@@ -81,19 +139,8 @@ public final class RewindSchemaRegistry {
     }
 
     private static List<RewindFieldPlan> defaultObjectSubclassPlannedFields(Class<?> type) {
-        List<Class<?>> hierarchy = new ArrayList<>();
-        for (Class<?> cls = type;
-                cls != null && cls != Object.class && cls != AbstractObjectInstance.class;
-                cls = cls.getSuperclass()) {
-            hierarchy.add(cls);
-        }
-        Collections.reverse(hierarchy);
-
         List<RewindFieldPlan> fields = new ArrayList<>();
-        for (Class<?> cls : hierarchy) {
-            if (cls == AbstractBadnikInstance.class) {
-                continue;
-            }
+        for (Class<?> cls : defaultObjectSubclassHierarchy(type)) {
             for (Field field : sortedDeclaredFields(cls)) {
                 RewindFieldPolicy configuredPolicy = DefaultObjectRewindPolicies.policyFor(field);
                 if (configuredPolicy == RewindFieldPolicy.TRANSIENT
@@ -114,6 +161,41 @@ public final class RewindSchemaRegistry {
             }
         }
         return fields;
+    }
+
+    /**
+     * Derives independent scalar metadata without a schema ID. GenericFieldCapturer
+     * owns the legacy runtime cache; this result does not expose its reflection
+     * handles. Nonactor metadata queries retain their existing hierarchy contract.
+     */
+    public static List<Field> deriveDefaultObjectSubclassScalarFields(Class<?> type) {
+        Objects.requireNonNull(type, "type");
+        List<Field> fields = new ArrayList<>();
+        for (Class<?> cls : defaultObjectSubclassHierarchy(type)) {
+            // Discover separately from compact planning: accepted fields change their
+            // accessibility, and admission/codec failures must stay lazy per projection.
+            for (Field field : sortedDeclaredFields(cls)) {
+                if (GenericFieldCapturer.isCapturedByDefaultObjectScalarPolicy(field)) {
+                    field.setAccessible(true);
+                    fields.add(field);
+                }
+            }
+        }
+        return List.copyOf(fields);
+    }
+
+    private static List<Class<?>> defaultObjectSubclassHierarchy(Class<?> type) {
+        List<Class<?>> hierarchy = new ArrayList<>();
+        for (Class<?> cls = type;
+                cls != null && cls != Object.class && cls != AbstractObjectInstance.class;
+                cls = cls.getSuperclass()) {
+            if (cls != AbstractBadnikInstance.class) {
+                hierarchy.add(cls);
+            }
+        }
+        Collections.reverse(hierarchy);
+
+        return hierarchy;
     }
 
     /**

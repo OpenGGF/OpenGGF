@@ -3,10 +3,7 @@ package com.openggf.game.rewind.schema;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.GenericFieldCapturer;
 import com.openggf.game.rewind.GenericRewindEligibility;
-import com.openggf.game.rewind.RewindDeferred;
 import com.openggf.game.rewind.RewindScanSupport;
-import com.openggf.game.rewind.RewindTransient;
-import com.openggf.level.objects.AbstractBadnikInstance;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 
@@ -15,7 +12,6 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -60,11 +56,7 @@ final class RewindFieldDispositionAudit {
                     || Modifier.isAbstract(cls.getModifiers())) {
                 continue;
             }
-            boolean badnik = AbstractBadnikInstance.class.isAssignableFrom(cls);
-            boolean defaultCapture = badnik
-                    ? GenericRewindEligibility.usesDefaultBadnikSubclassCapture(cls)
-                    : GenericRewindEligibility.usesDefaultObjectSubclassCapture(cls);
-            if (!defaultCapture) {
+            if (!GenericRewindEligibility.usesDefaultSubclassCapture(cls)) {
                 continue; // Hand-written capture overrides own their coverage.
             }
             auditClass(cls, gaps);
@@ -82,62 +74,34 @@ final class RewindFieldDispositionAudit {
     }
 
     static void auditClass(Class<?> cls, List<Gap> gaps) {
-        boolean compact;
+        RewindSchemaRegistry.DefaultObjectFieldSelection selection;
         try {
-            compact = CompactFieldCapturer.supportsDefaultObjectSubclassScalars(cls);
+            selection = RewindSchemaRegistry.defaultObjectFieldSelectionForAudit(cls).orElse(null);
         } catch (RuntimeException e) {
             gaps.add(new Gap(cls.getName() + "#<schema-error>", e.toString()));
             return;
         }
-        Set<Field> captured = new HashSet<>();
-        if (compact) {
-            for (RewindFieldPlan plan : RewindSchemaRegistry.defaultObjectSubclassSchemaFor(cls).capturedFields()) {
-                captured.add(plan.field());
-            }
-        } else {
-            captured.addAll(GenericFieldCapturer.defaultObjectSubclassCapturedFieldsForAudit(cls));
+        if (selection == null) {
+            gaps.add(new Gap(cls.getName() + "#<not-ordinary>",
+                    "direct field audit requires ordinary subclass capture; "
+                            + "manual owners need their own coverage"));
+            return;
         }
 
-        for (Class<?> c = cls; c != null && c != AbstractObjectInstance.class; c = c.getSuperclass()) {
-            if (c == AbstractBadnikInstance.class) {
-                continue; // Hand-audited: movement state rides BadnikRewindExtra.
+        for (Field field : selection.inspectedFields()) {
+            if (RewindSchemaRegistry.isExplicitDefaultObjectExclusion(field)
+                    || selection.captures(field) || isStructuralFinal(field)
+                    || RewindPolicyRegistry.isBuiltInStructuralHandle(field)
+                    || GenericFieldCapturer.hasDefaultObjectCaptureDecision(field)) {
+                continue;
             }
-            for (Field field : c.getDeclaredFields()) {
-                if (isExplicitlyDisposed(field) || captured.contains(field) || isStructuralFinal(field)
-                        || isStructuralHandleType(field)
-                        || GenericFieldCapturer.hasDefaultObjectCaptureDecision(field)) {
-                    continue;
-                }
-                String path = compact ? "compact" : "generic-fallback";
-                gaps.add(new Gap(
-                        cls.getName() + "#" + field.getName(),
-                        "type=" + field.getType().getSimpleName()
-                                + " path=" + path
-                                + (compact ? "" : " (class falls back; field dropped silently)")));
-            }
+            String path = selection.compact() ? "compact" : "generic-fallback";
+            gaps.add(new Gap(
+                    cls.getName() + "#" + field.getName(),
+                    "type=" + field.getType().getSimpleName()
+                            + " path=" + path
+                            + (selection.compact() ? "" : " (class falls back; field dropped silently)")));
         }
-    }
-
-    private static boolean isExplicitlyDisposed(Field field) {
-        int mods = field.getModifiers();
-        if (Modifier.isStatic(mods) || Modifier.isTransient(mods) || field.isSynthetic()
-                || field.isAnnotationPresent(RewindTransient.class)
-                || field.isAnnotationPresent(RewindDeferred.class)) {
-            return true;
-        }
-        RewindFieldPolicy policy = DefaultObjectRewindPolicies.policyFor(field);
-        return policy == RewindFieldPolicy.TRANSIENT || policy == RewindFieldPolicy.DEFERRED;
-    }
-
-    /**
-     * Render/art handle types that carry no gameplay state: lazily-cached
-     * draw helpers the constructor (or first render) re-derives.
-     */
-    private static boolean isStructuralHandleType(Field field) {
-        String name = field.getType().getName();
-        return name.equals("com.openggf.level.render.PatternSpriteRenderer")
-                || name.equals("com.openggf.sprites.render.PlayerSpriteRenderer")
-                || name.endsWith(".PlayerSpriteRenderer");
     }
 
     /**

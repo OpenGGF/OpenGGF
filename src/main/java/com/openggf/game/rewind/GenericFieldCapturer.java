@@ -6,9 +6,9 @@ import com.openggf.game.rewind.schema.RewindCodecs;
 import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.game.rewind.schema.RewindCodec;
 import com.openggf.game.rewind.schema.RewindObjectStateBlob;
+import com.openggf.game.rewind.schema.RewindSchemaRegistry;
 import com.openggf.game.rewind.schema.RewindStateBuffer;
 import com.openggf.level.Pattern;
-import com.openggf.level.objects.AbstractBadnikInstance;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpriteSheet;
 import com.openggf.level.objects.ObjectAnimationState;
@@ -213,6 +213,11 @@ public final class GenericFieldCapturer {
         return List.copyOf(capturableFields(type));
     }
 
+    private static List<Field> objectSubclassValueFields(Class<?> type) {
+        return OBJECT_SUBCLASS_VALUE_FIELDS_CACHE.computeIfAbsent(type,
+                RewindSchemaRegistry::deriveDefaultObjectSubclassScalarFields);
+    }
+
     private static List<Field> capturableFields(Class<?> type) {
         return CAPTURABLE_FIELDS_CACHE.computeIfAbsent(type, GenericFieldCapturer::buildCapturableFields);
     }
@@ -228,35 +233,6 @@ public final class GenericFieldCapturer {
         for (Class<?> cls : hierarchy) {
             for (Field field : sortedDeclaredFields(cls)) {
                 if (!isSkipped(field)) {
-                    field.setAccessible(true);
-                    fields.add(field);
-                }
-            }
-        }
-        return List.copyOf(fields);
-    }
-
-    private static List<Field> objectSubclassValueFields(Class<?> type) {
-        return OBJECT_SUBCLASS_VALUE_FIELDS_CACHE.computeIfAbsent(type,
-                GenericFieldCapturer::buildObjectSubclassValueFields);
-    }
-
-    private static List<Field> buildObjectSubclassValueFields(Class<?> type) {
-        List<Class<?>> hierarchy = new ArrayList<>();
-        for (Class<?> cls = type;
-                cls != null && cls != Object.class && cls != AbstractObjectInstance.class;
-                cls = cls.getSuperclass()) {
-            hierarchy.add(cls);
-        }
-        Collections.reverse(hierarchy);
-
-        List<Field> fields = new ArrayList<>();
-        for (Class<?> cls : hierarchy) {
-            if (cls == AbstractBadnikInstance.class) {
-                continue;
-            }
-            for (Field field : sortedDeclaredFields(cls)) {
-                if (isDefaultObjectValueField(field)) {
                     field.setAccessible(true);
                     fields.add(field);
                 }
