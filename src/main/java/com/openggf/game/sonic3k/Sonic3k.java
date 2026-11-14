@@ -420,8 +420,50 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, com.opengg
             S3kSeamlessMutationExecutor.prepareLayoutForMutation(level, mutationKey);
             int[] zoneAct = zoneAndActOf(levelIndex);
             warmKosInspections(zoneAct[0], zoneAct[1], inputs.bootstrap());
-            return new PreparedSonic3kLevelBuild(levelIndex, level, inputs.frontendPatterns());
+            return new PreparedSonic3kLevelBuild(levelIndex, level, inputs.frontendPatterns(), null);
         };
+    }
+
+    /**
+     * A reload's synchronous {@link #loadLevel} builds from {@link #captureLevelBuildInputs}
+     * with no resident predecessor definitions unless it is a seamless transition or a
+     * native continuation; those keep the live Block_table and chunk patterns
+     * ({@code Load_Level} does not clear them), so they stay synchronous here. Otherwise
+     * the build is a function of these inputs and the ROM alone.
+     */
+    @Override
+    public Callable<PreparedLevelBuild> prepareReloadBuildTask(int levelIndex) {
+        LevelBuildInputs inputs = captureLevelBuildInputs(levelIndex, true);
+        if (inputs.retainResidentDefinitions()) {
+            return null;
+        }
+        return () -> {
+            Sonic3kLevel level = buildLevel(levelIndex, DeferredLevelResourceTracker.none(), false, inputs);
+            int[] zoneAct = zoneAndActOf(levelIndex);
+            warmKosInspections(zoneAct[0], zoneAct[1], inputs.bootstrap());
+            return new PreparedSonic3kLevelBuild(levelIndex, level, inputs.frontendPatterns(), inputs);
+        };
+    }
+
+    @Override
+    public boolean reloadInputsStillMatch(PreparedLevelBuild build) {
+        if (!(build instanceof PreparedSonic3kLevelBuild prepared) || prepared.reloadInputs() == null) {
+            return false;
+        }
+        return sameBuildInputs(prepared.reloadInputs(), captureLevelBuildInputs(prepared.levelIndex(), true));
+    }
+
+    private static boolean sameBuildInputs(LevelBuildInputs a, LevelBuildInputs b) {
+        var seedA = a.frontendPatterns();
+        var seedB = b.frontendPatterns();
+        boolean sameSeed = seedA == null ? seedB == null : seedB != null && seedA.owner() == seedB.owner()
+                && seedA.generation() == seedB.generation()
+                && java.util.Arrays.equals(seedA.packed(), seedB.packed());
+        return sameSeed && a.bootstrapMode() == b.bootstrapMode()
+                && java.util.Objects.equals(a.mainCharacter(), b.mainCharacter())
+                && a.omitSecondaryLevelPlc() == b.omitSecondaryLevelPlc()
+                && a.retainResidentDefinitions() == b.retainResidentDefinitions()
+                && java.util.Arrays.equals(a.residentBlocks(), b.residentBlocks());
     }
 
     /** Publishes graphics and builds live-service-dependent art on the frame thread. */
@@ -441,8 +483,10 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, com.opengg
         return level;
     }
 
+    /** {@code reloadInputs} is set only for a reload build, which must match them at install. */
     private record PreparedSonic3kLevelBuild(int levelIndex, Sonic3kLevel level,
-            com.openggf.game.sonic3k.resources.S3kFrontendPatternResidency.Seed frontendPatterns)
+            com.openggf.game.sonic3k.resources.S3kFrontendPatternResidency.Seed frontendPatterns,
+            LevelBuildInputs reloadInputs)
             implements PreparedLevelBuild {
     }
 

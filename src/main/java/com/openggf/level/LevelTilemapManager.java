@@ -117,6 +117,40 @@ public class LevelTilemapManager {
     // the cells whose inputs differ from this record instead of the level image.
     private final ForegroundLayoutBaseline foregroundBaseline = new ForegroundLayoutBaseline();
     private long foregroundDescriptorRevision;
+    // Streamed foreground image: a whole-level build is deferred column by column. The
+    // load frame draws the columns around the camera; each later ensure draws a slice of
+    // about FOREGROUND_STREAM_CHUNK_BUDGET chunks nearest the camera; and every foreground
+    // draw first draws any undrawn column it can sample (TilemapGpuRenderer consults
+    // foregroundCoverage), so no visible pixel ever comes from an undrawn column.
+    // Measured: a full build writes chunks at about 60 ns each (9-16 ms for a level).
+    static final int FOREGROUND_STREAM_CHUNK_BUDGET = 16384;
+    // Columns either side of the camera drawn on the load frame, beyond the picture.
+    static final int FOREGROUND_STREAM_MARGIN_PX = 256;
+    private int foregroundStreamFocusX;
+    private boolean foregroundStreamBeganThisEnsure;
+    private int foregroundStreamFocusWidthPx;
+    // Test seam: stream without a GPU renderer (headless has no draws to cover).
+    static boolean streamWithoutRendererForTests;
+    // Diagnostics (package tests): columns drawn by stream slices and by draw coverage.
+    int foregroundStreamedColumnCount;
+    int foregroundCoveredColumnCount;
+    int foregroundStreamStartCount;
+    final com.openggf.graphics.ForegroundCoverage foregroundCoverage =
+            new com.openggf.graphics.ForegroundCoverage() {
+                @Override
+                public void coverColumns(byte[] data, int firstWorldX, int lastWorldX) {
+                    if (data == foregroundTilemapData) {
+                        drawForegroundColumnsCovering(firstWorldX, lastWorldX);
+                    }
+                }
+
+                @Override
+                public void coverAll(byte[] data) {
+                    if (data == foregroundTilemapData) {
+                        completeForegroundStream();
+                    }
+                }
+            };
     // Derived images only: rewind restores the owner, then invalidates these keys.
     private final RetainedPlaneDescriptorSource[] retainedSources = new RetainedPlaneDescriptorSource[2];
     private final RetainedPlaneDescriptorSource.Plane[] retainedPlanes = new RetainedPlaneDescriptorSource.Plane[2];
@@ -243,6 +277,14 @@ public class LevelTilemapManager {
         copy.persistentBgPublishedData = null;
         copy.patternLookupData = patternLookupData == null ? null : patternLookupData.clone();
         copy.foregroundTilemapData = foregroundTilemapData == null ? null : foregroundTilemapData.clone();
+        if (copy.foregroundTilemapData != null && foregroundBaseline.streaming()) {
+            // The copy has no layout record or coverage owner: draw the native image's undrawn
+            // columns into the clone from the native record, leaving native residency untouched.
+            for (int column = foregroundBaseline.nearestUndrawnColumn(0); column >= 0;
+                    column = foregroundBaseline.nextUndrawnColumnAfter(column)) {
+                drawRecordedColumn(copy.foregroundTilemapData, column);
+            }
+        }
         copy.foregroundTilemapWidthTiles = foregroundTilemapWidthTiles;
         copy.foregroundTilemapHeightTiles = foregroundTilemapHeightTiles;
         // The layout baseline is not carried into the copy; a pending redraw rebuilds it in full.
@@ -1076,11 +1118,17 @@ public class LevelTilemapManager {
                                             ParallaxManager parallaxManager,
                                             boolean verticalWrapEnabled) {
         BgBuildParams params = computeBuildParams((byte) 0, zoneFeatureProvider, currentZone);
-        TilemapData data = buildTilemapData((byte) 0, params, blockLookup);
         int ringRows = cinematicParameters != null ? cinematicParameters.foregroundRingRows()
                 : foregroundDescriptorRevision != 0
                 && zoneFeatureProvider instanceof com.openggf.game.internal.ForegroundDescriptorOverride ring
                 ? ring.foregroundDescriptorRingRows() : 0;
+        boolean wraps = cinematicParameters != null ? cinematicParameters.foregroundWraps()
+                : zoneFeatureProvider != null && zoneFeatureProvider.foregroundWrapsHorizontally();
+        if (ringRows == 0 && !wraps && flatForegroundImage(params) && streamsForeground()
+                && beginForegroundStream(params, blockLookup)) {
+            return;
+        }
+        TilemapData data = buildTilemapData((byte) 0, params, blockLookup);
         if (ringRows > 0) {
             // A retained VDP plane ring replaces the layout rows: build exactly its height
             // so the shader's WrapY (mod TilemapHeight) repeats it where the VDP does.
@@ -1262,14 +1310,25 @@ public class LevelTilemapManager {
             return;
         }
 
-        boolean chunkHFlip = chunkDesc.getHFlip();
-        boolean chunkVFlip = chunkDesc.getVFlip();
+        writeChunkTiles(data, widthTiles, heightTiles, targetTileX, targetTileY,
+                chunk.getPatternDesc(0, 0).get(), chunk.getPatternDesc(1, 0).get(),
+                chunk.getPatternDesc(0, 1).get(), chunk.getPatternDesc(1, 1).get(),
+                chunkDesc.getHFlip(), chunkDesc.getVFlip());
+    }
+
+    /**
+     * Writes the four tiles of one chunk whose pattern descriptors are {@code p00}
+     * (top left), {@code p10}, {@code p01} and {@code p11}, flipped as the block places
+     * it. Shared by the whole-image builders and the streamed column writer, so both
+     * produce the same bytes (and keep the same code hot).
+     */
+    private void writeChunkTiles(byte[] data, int widthTiles, int heightTiles, int targetTileX, int targetTileY,
+                                 int p00, int p10, int p01, int p11, boolean chunkHFlip, boolean chunkVFlip) {
         for (int cY = 0; cY < CHUNK_TILE_SPAN; cY++) {
             for (int cX = 0; cX < CHUNK_TILE_SPAN; cX++) {
                 int logicalX = chunkHFlip ? 1 - cX : cX;
                 int logicalY = chunkVFlip ? 1 - cY : cY;
-                PatternDesc patternDesc = chunk.getPatternDesc(logicalX, logicalY);
-                int newIndex = patternDesc.get();
+                int newIndex = logicalY == 0 ? (logicalX == 0 ? p00 : p10) : (logicalX == 0 ? p01 : p11);
                 if (chunkHFlip) newIndex ^= 0x800;
                 if (chunkVFlip) newIndex ^= 0x1000;
                 reusablePatternDesc.set(newIndex);
@@ -1574,6 +1633,10 @@ public class LevelTilemapManager {
         changedForegroundCellRows.clear();
         for (int i = 0; i < changed; i++) {
             int packed = foregroundBaseline.changedCell(i);
+            if (!foregroundBaseline.columnDrawn(packed & 0xFFFF)) {
+                // Not drawn yet: the record now holds the edit, which the column will draw.
+                continue;
+            }
             int x0 = (packed & 0xFFFF) * blockPixelSize;
             int y0 = (packed >>> 16) * blockPixelSize;
             int x1 = Math.min(x0 + blockPixelSize, params.builtWidthPx());
@@ -1614,6 +1677,300 @@ public class LevelTilemapManager {
             renderer.setPatternLookupData(patternLookupData, patternLookupSize);
         }
         return true;
+    }
+
+    /** Streaming needs draws to consult the coverage owner, so only with a GPU renderer. */
+    private boolean streamsForeground() {
+        return streamWithoutRendererForTests || graphicsManager.getTilemapGpuRenderer() != null;
+    }
+
+    /** True when a whole-level foreground build here would be streamed instead. */
+    boolean streamsForegroundBuild() {
+        return streamsForeground();
+    }
+
+    /**
+     * Where the camera is: the load frame draws the columns around it first and later
+     * slices continue outward from it. Pushed by {@code LevelManager} before each ensure.
+     */
+    void setForegroundStreamFocus(int cameraX, int pictureWidthPx) {
+        foregroundStreamFocusX = cameraX;
+        foregroundStreamFocusWidthPx = pictureWidthPx;
+    }
+
+    /**
+     * Starts a streamed build of the flat image for {@code params}: records the layout,
+     * allocates an undrawn image and draws the columns around the camera. The rest is
+     * drawn by later slices and by draw coverage. Returns false when the layout cannot be
+     * recorded (the caller builds the whole image instead).
+     */
+    private boolean beginForegroundStream(BgBuildParams params, BlockLookup blockLookup) {
+        int widthTiles = params.builtWidthPx() / Pattern.PATTERN_WIDTH;
+        int heightTiles = params.builtHeightPx() / Pattern.PATTERN_HEIGHT;
+        byte[] image = new byte[widthTiles * heightTiles * 4];
+        foregroundBaseline.capture(geometry.level(), image,
+                params.builtWidthPx(), params.builtHeightPx(), geometry.blockPixelSize());
+        if (!foregroundBaseline.describes(geometry.level(), image,
+                params.builtWidthPx(), params.builtHeightPx(), geometry.blockPixelSize())) {
+            return false;
+        }
+        foregroundTilemapData = image;
+        foregroundTilemapWidthTiles = widthTiles;
+        foregroundTilemapHeightTiles = heightTiles;
+        foregroundFullBuildCount++;
+        foregroundStreamStartCount++;
+        foregroundBaseline.beginStream();
+        foregroundStreamBeganThisEnsure = true;
+        int focus = foregroundStreamFocusX;
+        int width = Math.max(foregroundStreamFocusWidthPx, VDP_BG_PLANE_WIDTH_PX);
+        // The record was taken from the live layout just now, so the camera's columns can be
+        // drawn with the whole-image writer itself (fillChunkColumn), which keeps that writer
+        // compiled for the background and prebuilt images that still use it.
+        int blockPixelSize = geometry.blockPixelSize();
+        int widthPx = params.builtWidthPx();
+        int first = Math.floorDiv(focus - FOREGROUND_STREAM_MARGIN_PX, blockPixelSize);
+        int last = Math.floorDiv(focus + width + FOREGROUND_STREAM_MARGIN_PX, blockPixelSize);
+        int columnsWide = foregroundBaseline.cellsWide();
+        if (last - first + 1 >= columnsWide) {
+            first = 0;
+            last = columnsWide - 1;
+        }
+        Level level = geometry.level();
+        for (int column = first; column <= last; column++) {
+            int cellX = Math.floorMod(column, columnsWide);
+            if (foregroundBaseline.columnDrawn(cellX)) {
+                continue;
+            }
+            for (int x = cellX * blockPixelSize; x < Math.min(widthPx, (cellX + 1) * blockPixelSize);
+                    x += LevelConstants.CHUNK_WIDTH) {
+                fillChunkColumn(image, widthTiles, heightTiles, (byte) 0, x, params, blockLookup,
+                        level, blockPixelSize);
+            }
+            foregroundBaseline.markColumnDrawn(cellX);
+            foregroundCoveredColumnCount++;
+            pendingStreamColumns.set(cellX * blockPixelSize / Pattern.PATTERN_WIDTH,
+                    Math.min(widthTiles, (cellX + 1) * blockPixelSize / Pattern.PATTERN_WIDTH));
+        }
+        publishForegroundStreamProgress();
+        return true;
+    }
+
+    /**
+     * Draws one budgeted slice of undrawn columns, nearest the camera first. Called once
+     * per rendered frame by {@code LevelManager}; gameplay reads never advance it.
+     */
+    void advanceForegroundStream() {
+        if (foregroundStreamBeganThisEnsure) {
+            // The load frame already drew the camera's columns; slices start next frame.
+            foregroundStreamBeganThisEnsure = false;
+            return;
+        }
+        if (!foregroundBaseline.streaming()) {
+            return;
+        }
+        int blockPixelSize = geometry.blockPixelSize();
+        int chunksPerColumn = foregroundBaseline.cellsHigh()
+                * (blockPixelSize / LevelConstants.CHUNK_WIDTH) * (blockPixelSize / LevelConstants.CHUNK_HEIGHT);
+        int columns = Math.max(1, FOREGROUND_STREAM_CHUNK_BUDGET / Math.max(1, chunksPerColumn));
+        int focusCell = Math.floorDiv(foregroundStreamFocusX + foregroundStreamFocusWidthPx / 2, blockPixelSize);
+        for (int i = 0; i < columns; i++) {
+            int column = foregroundBaseline.nearestUndrawnColumn(focusCell);
+            if (column < 0) {
+                break;
+            }
+            drawForegroundColumn(column);
+            foregroundStreamedColumnCount++;
+        }
+        publishForegroundStreamProgress();
+    }
+
+    /** Draws every undrawn column now (a reader or draw that needs the whole image). */
+    void completeForegroundStream() {
+        if (!foregroundBaseline.streaming()) {
+            return;
+        }
+        for (int column = foregroundBaseline.nearestUndrawnColumn(0); column >= 0;
+                column = foregroundBaseline.nearestUndrawnColumn(column)) {
+            drawForegroundColumn(column);
+            foregroundCoveredColumnCount++;
+        }
+        publishForegroundStreamProgress();
+    }
+
+    /**
+     * Draws the undrawn columns under world X {@code firstWorldX..lastWorldX}; the image
+     * repeats horizontally, as the shader samples it.
+     */
+    private void drawForegroundColumnsCovering(int firstWorldX, int lastWorldX) {
+        if (!foregroundBaseline.streaming()) {
+            return;
+        }
+        int widthPx = foregroundBaseline.widthPx();
+        if ((long) lastWorldX - firstWorldX + 1 >= widthPx) {
+            completeForegroundStream();
+            return;
+        }
+        int blockPixelSize = geometry.blockPixelSize();
+        int position = Math.floorMod(firstWorldX, widthPx);
+        int end = position + (lastWorldX - firstWorldX);
+        while (position <= end) {
+            // Past the right edge the image repeats from column 0.
+            int wrapped = position % widthPx;
+            int column = wrapped / blockPixelSize;
+            if (!foregroundBaseline.columnDrawn(column)) {
+                drawForegroundColumn(column);
+                foregroundCoveredColumnCount++;
+            }
+            position += Math.min((column + 1) * blockPixelSize, widthPx) - wrapped;
+        }
+        publishForegroundStreamProgress();
+    }
+
+    /** Draws the column holding tile column {@code tileX} if it is undrawn. */
+    private void drawForegroundColumnAtTile(int tileX) {
+        if (!foregroundBaseline.streaming()) {
+            return;
+        }
+        int column = tileX * Pattern.PATTERN_WIDTH / geometry.blockPixelSize();
+        if (!foregroundBaseline.columnDrawn(column)) {
+            drawForegroundColumn(column);
+            foregroundCoveredColumnCount++;
+            publishForegroundStreamProgress();
+        }
+    }
+
+    // Tile columns drawn since the last publication, queued as column spans.
+    private final java.util.BitSet pendingStreamColumns = new java.util.BitSet();
+
+    /**
+     * Draws cell column {@code cellX} of the streamed image from the recorded layout,
+     * chunk by chunk in the order and with the writes of a full build
+     * ({@link #fillChunkColumn} / {@link #writeChunkAt}).
+     */
+    private void drawForegroundColumn(int cellX) {
+        drawRecordedColumn(foregroundTilemapData, cellX);
+        foregroundBaseline.markColumnDrawn(cellX);
+        int blockPixelSize = geometry.blockPixelSize();
+        int firstTile = cellX * blockPixelSize / Pattern.PATTERN_WIDTH;
+        int endTile = Math.min(foregroundTilemapWidthTiles, (cellX + 1) * blockPixelSize / Pattern.PATTERN_WIDTH);
+        pendingStreamColumns.set(firstTile, endTile);
+    }
+
+    /** Writes cell column {@code cellX} of the recorded layout into {@code data} (an image of this geometry). */
+    private void drawRecordedColumn(byte[] data, int cellX) {
+        ForegroundLayoutBaseline record = foregroundBaseline;
+        int widthTiles = foregroundTilemapWidthTiles;
+        int heightTiles = foregroundTilemapHeightTiles;
+        int blockPixelSize = geometry.blockPixelSize();
+        int side = blockPixelSize / LevelConstants.CHUNK_WIDTH;
+        int widthPx = record.widthPx();
+        int heightPx = record.heightPx();
+        int x0 = cellX * blockPixelSize;
+        for (int cellY = 0; cellY < record.cellsHigh(); cellY++) {
+            int block = record.cellBlock(cellX, cellY);
+            int y0 = cellY * blockPixelSize;
+            for (int slotY = 0; slotY < side && y0 + slotY * LevelConstants.CHUNK_HEIGHT < heightPx; slotY++) {
+                int chunkY = (y0 + slotY * LevelConstants.CHUNK_HEIGHT) / LevelConstants.CHUNK_HEIGHT;
+                for (int slotX = 0; slotX < side && x0 + slotX * LevelConstants.CHUNK_WIDTH < widthPx; slotX++) {
+                    int chunkX = (x0 + slotX * LevelConstants.CHUNK_WIDTH) / LevelConstants.CHUNK_WIDTH;
+                    writeRecordedChunk(data, widthTiles, heightTiles, chunkX, chunkY,
+                            record.blockDescriptor(block, slotX, slotY));
+                }
+            }
+        }
+    }
+
+    /** {@link #writeChunkAt} for a recorded chunk descriptor instead of a live block lookup. */
+    private void writeRecordedChunk(byte[] data, int widthTiles, int heightTiles,
+                                    int chunkX, int chunkY, int blockDescriptor) {
+        if (ForegroundLayoutBaseline.isNullBlockDescriptor(blockDescriptor)) {
+            writeEmptyChunk(data, widthTiles, heightTiles, chunkX, chunkY);
+            return;
+        }
+        int chunk = blockDescriptor >> 2;
+        if (foregroundBaseline.chunkPattern(chunk, 0, 0) < 0) {
+            writeEmptyChunk(data, widthTiles, heightTiles, chunkX, chunkY);
+            return;
+        }
+        ForegroundLayoutBaseline record = foregroundBaseline;
+        writeChunkTiles(data, widthTiles, heightTiles, chunkX * CHUNK_TILE_SPAN, chunkY * CHUNK_TILE_SPAN,
+                record.chunkPattern(chunk, 0, 0), record.chunkPattern(chunk, 1, 0),
+                record.chunkPattern(chunk, 0, 1), record.chunkPattern(chunk, 1, 1),
+                (blockDescriptor & 1) != 0, (blockDescriptor & 2) != 0);
+    }
+
+    /**
+     * Queues the columns drawn since the last call for upload (contiguous runs as single
+     * spans) and, once every column is drawn, retires the renderer's coverage owner.
+     */
+    private void publishForegroundStreamProgress() {
+        TilemapGpuRenderer renderer = graphicsManager.getTilemapGpuRenderer();
+        if (renderer != null && foregroundTilemapData != null) {
+            for (int first = pendingStreamColumns.nextSetBit(0); first >= 0;
+                    first = pendingStreamColumns.nextSetBit(first)) {
+                int end = first + 1;
+                while (pendingStreamColumns.get(end)) {
+                    end++;
+                }
+                com.openggf.graphics.TilemapGpuRendererInternalAccess.setForegroundTilemapColumns(renderer,
+                        foregroundTilemapData, foregroundTilemapWidthTiles, foregroundTilemapHeightTiles,
+                        first, end - first);
+                first = end;
+            }
+            if (!foregroundBaseline.streaming()) {
+                com.openggf.graphics.TilemapGpuRendererInternalAccess.setForegroundCoverage(
+                        renderer, foregroundTilemapData, null);
+            }
+        }
+        pendingStreamColumns.clear();
+    }
+
+    /**
+     * Keeps {@code previous}'s flat foreground image across a reload whose level has the
+     * same foreground geometry (a death respawn or restart of the same act). The image
+     * and its layout record move here and the record is rebound to this manager's level;
+     * the first ensure then redraws only the cells whose layout, block or chunk inputs
+     * differ from what the image shows ({@link #redrawChangedForegroundCells}), or
+     * rebuilds when more than half of them do. Any other image is left behind.
+     */
+    void adoptForegroundImage(LevelTilemapManager previous) {
+        if (previous == null || previous == this || foregroundTilemapData != null) {
+            return;
+        }
+        Level level = geometry.level();
+        LevelGeometry old = previous.geometry;
+        byte[] image = previous.foregroundTilemapData;
+        if (level == null || old == null || image == null
+                || old.fgWidthPx() != geometry.fgWidthPx() || old.fgHeightPx() != geometry.fgHeightPx()
+                || old.blockPixelSize() != geometry.blockPixelSize()
+                || !previous.foregroundCellRedrawEligible() || !foregroundCellRedrawEligible()
+                || !previous.foregroundBaseline.describes(old.level(), image,
+                        geometry.fgWidthPx(), geometry.fgHeightPx(), geometry.blockPixelSize())) {
+            return;
+        }
+        foregroundBaseline.takeFrom(previous.foregroundBaseline);
+        foregroundBaseline.rebind(level);
+        foregroundTilemapData = image;
+        foregroundTilemapWidthTiles = previous.foregroundTilemapWidthTiles;
+        foregroundTilemapHeightTiles = previous.foregroundTilemapHeightTiles;
+        foregroundTilemapDirty = true;
+        lastForegroundWrap = Boolean.FALSE;
+        previous.foregroundTilemapData = null;
+        previous.foregroundTilemapDirty = true;
+        foregroundAdoptedImageCount++;
+        TilemapGpuRenderer renderer = graphicsManager.getTilemapGpuRenderer();
+        if (renderer != null && foregroundBaseline.streaming()) {
+            com.openggf.graphics.TilemapGpuRendererInternalAccess.setForegroundCoverage(
+                    renderer, image, foregroundCoverage);
+        }
+    }
+
+    /** Diagnostic: foreground images kept across a reload (package tests). */
+    int foregroundAdoptedImageCount;
+
+    /** True while the foreground image still has undrawn columns (package tests). */
+    boolean isForegroundStreaming() {
+        return foregroundBaseline.streaming();
     }
 
     private final java.util.BitSet changedForegroundCellRows = new java.util.BitSet();
@@ -1936,6 +2293,10 @@ public class LevelTilemapManager {
         renderer.setTilemapData(TilemapGpuRenderer.Layer.FOREGROUND, foregroundTilemapData,
                 foregroundTilemapWidthTiles, foregroundTilemapHeightTiles);
         renderer.setPatternLookupData(patternLookupData, patternLookupSize);
+        if (foregroundBaseline.streaming()) {
+            com.openggf.graphics.TilemapGpuRendererInternalAccess.setForegroundCoverage(
+                    renderer, foregroundTilemapData, foregroundCoverage);
+        }
     }
 
     /**
@@ -2079,6 +2440,7 @@ public class LevelTilemapManager {
                 || tileY >= foregroundTilemapHeightTiles) {
             return false;
         }
+        drawForegroundColumnAtTile(tileX);
 
         int offset = (tileY * foregroundTilemapWidthTiles + tileX) * 4;
         if (!writeTilemapDescriptor(foregroundTilemapData, offset, descriptor)) {
@@ -2163,6 +2525,7 @@ public class LevelTilemapManager {
                 || tileY >= foregroundTilemapHeightTiles) {
             return 0;
         }
+        drawForegroundColumnAtTile(tileX);
 
         int offset = (tileY * foregroundTilemapWidthTiles + tileX) * 4;
         int r = foregroundTilemapData[offset] & 0xFF;

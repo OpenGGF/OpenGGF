@@ -1632,6 +1632,28 @@ all five widths and rewind. LRZ3 already required the same release for its
 `DrawBGAsYouMove`/`DrawTilesVDeform2` paths.
 
 
+### A streamed foreground draws from its layout record, not the live level
+
+Level loads draw the flat foreground image column by column
+(`LevelTilemapManager.beginForegroundStream`): the camera's columns on the load
+frame, a budgeted slice per rendered frame, and any column a foreground draw is
+about to sample first (`TilemapGpuRenderer` asks the registered
+`ForegroundCoverage` owner with the draw's real X range, including per-line
+H-scroll). An undrawn column is drawn from `ForegroundLayoutBaseline`'s record,
+never from the live map: a layout written without a redraw request must not reach
+the image, exactly as with the whole-level build it replaces. A redraw request
+updates the record first, so later columns show the edit. Gameplay tile reads and
+writes draw only their own column; they must not advance the stream (one slice
+per render-side ensure). `TestStreamedForegroundBuild` and
+`TestForegroundCoverageDraw` are the oracles (2026-11-13 streamed level load).
+
+Moving work off a path can leave that path cold. Once the foreground streamed,
+the whole-image writer (`writeChunkAt`) no longer ran before the AIZ1 fire
+transition's install-frame prebuild, which then took 43 ms instead of about 13:
+the same code, not yet compiled while the load filled the compiler queue. Both
+writers now share `writeChunkTiles`, and a streamed load skips that prebuild.
+Compare a moved cost against the old frame on the same build before crediting it.
+
 ### HUD warning phase is not elapsed time
 
 S3K `Render_HUD` / `loc_DB68` selects warning mappings using bit 3 of
