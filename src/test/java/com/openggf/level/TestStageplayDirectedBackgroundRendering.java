@@ -72,6 +72,11 @@ class TestStageplayDirectedBackgroundRendering {
                 drawOrdinary(level);
                 errors.assertClean("first ordinary native draw before directed rendering");
                 var nativeTiles = level.tilemapManager;
+                // A loaded level's foreground is drawn over the following frames, so ordinary
+                // native draws legitimately add columns. This test is about directed drawing:
+                // start from the complete native image (TestStreamedForegroundBuild covers a
+                // directed copy taken mid-stream).
+                nativeTiles.completeForegroundStream();
                 var foreground = captureForeground(nativeTiles);
                 if (act == 1) assertTrue(foreground.seeded());
                 byte[] ordinary = grabber.grab().clone();

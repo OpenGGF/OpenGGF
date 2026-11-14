@@ -50,6 +50,9 @@ public class TilemapGpuRenderer {
             foregroundPendingColumns.clear();
         }
         BackgroundResidencyState saved = captureBackgroundResidency();
+        // The private draw publishes its own foreground array, which clears the coverage owner
+        // of the native one; the native image may still be streaming, so restore it with it.
+        ForegroundCoverage savedCoverage = foregroundCoverage;
         var savedForeground = new ForegroundResidencyState(foregroundTexture, foregroundWindowTexture,
                 foregroundData, foregroundWidthTiles, foregroundHeightTiles, foregroundDirty,
                 foregroundWindow, foregroundVerticalScrollSplit, uploadedWindowDescriptors);
@@ -75,6 +78,7 @@ public class TilemapGpuRenderer {
             foregroundWidthTiles = savedForeground.width(); foregroundHeightTiles = savedForeground.height();
             foregroundDirty = savedForeground.dirty(); foregroundWindow = savedForeground.window();
             foregroundVerticalScrollSplit = savedForeground.split(); uploadedWindowDescriptors = savedForeground.uploadedWindow();
+            foregroundCoverage = savedCoverage;
             clipHorizontal = savedClipHorizontal;
             patternLookup = savedLookupTexture;
             lookupData = savedLookup; lookupSize = savedLookupSize; lookupDirty = savedLookupDirty;

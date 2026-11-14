@@ -264,6 +264,11 @@ final class ForegroundLayoutBaseline {
         return right - focus <= focus - left ? right : left;
     }
 
+    /** The next undrawn cell column after {@code cellX}, or -1. */
+    int nextUndrawnColumnAfter(int cellX) {
+        return undrawnColumns.nextSetBit(cellX + 1);
+    }
+
     int cellsWide() {
         return cellsWide;
     }

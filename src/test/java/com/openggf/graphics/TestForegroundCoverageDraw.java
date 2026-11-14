@@ -112,6 +112,16 @@ class TestForegroundCoverageDraw {
             draw(renderer, atlas, palette, 0);
             assertEquals(1, owner.coverAllCalls);
 
+            // A directed view publishes its own private foreground array; the native owner
+            // must come back with the native array afterwards.
+            try (var residency = new CinematicBackgroundResidency()) {
+                TilemapGpuRenderer directed = renderer;
+                renderer.withCinematicBackground(residency, () -> directed.setTilemapData(
+                        TilemapGpuRenderer.Layer.FOREGROUND, new byte[data.length], WIDTH_TILES, HEIGHT_TILES));
+            }
+            assertSame(owner, renderer.foregroundCoverageForDiagnostics(),
+                    "the native coverage owner survives a directed draw");
+
             // Retired owner: no more requests.
             int requests = owner.requests.size();
             renderer.setForegroundCoverage(data, null);

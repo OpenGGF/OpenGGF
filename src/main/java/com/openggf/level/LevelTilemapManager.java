@@ -244,9 +244,6 @@ public class LevelTilemapManager {
 
     /** Snapshot native residency before directing another view; never mutate its descriptor arrays. */
     LevelTilemapManager cinematicBackgroundCopy() {
-        // The copy clones the foreground array and has no layout record or coverage owner,
-        // so a streamed image must be complete before it is cloned.
-        completeForegroundStream();
         var copy = new LevelTilemapManager(geometry, graphicsManager, gameState);
         copy.cinematicBackground = true;
         copy.backgroundDescriptorRevision = backgroundDescriptorRevision;
@@ -280,6 +277,14 @@ public class LevelTilemapManager {
         copy.persistentBgPublishedData = null;
         copy.patternLookupData = patternLookupData == null ? null : patternLookupData.clone();
         copy.foregroundTilemapData = foregroundTilemapData == null ? null : foregroundTilemapData.clone();
+        if (copy.foregroundTilemapData != null && foregroundBaseline.streaming()) {
+            // The copy has no layout record or coverage owner: draw the native image's undrawn
+            // columns into the clone from the native record, leaving native residency untouched.
+            for (int column = foregroundBaseline.nearestUndrawnColumn(0); column >= 0;
+                    column = foregroundBaseline.nextUndrawnColumnAfter(column)) {
+                drawRecordedColumn(copy.foregroundTilemapData, column);
+            }
+        }
         copy.foregroundTilemapWidthTiles = foregroundTilemapWidthTiles;
         copy.foregroundTilemapHeightTiles = foregroundTilemapHeightTiles;
         // The layout baseline is not carried into the copy; a pending redraw rebuilds it in full.
@@ -1843,8 +1848,17 @@ public class LevelTilemapManager {
      * ({@link #fillChunkColumn} / {@link #writeChunkAt}).
      */
     private void drawForegroundColumn(int cellX) {
+        drawRecordedColumn(foregroundTilemapData, cellX);
+        foregroundBaseline.markColumnDrawn(cellX);
+        int blockPixelSize = geometry.blockPixelSize();
+        int firstTile = cellX * blockPixelSize / Pattern.PATTERN_WIDTH;
+        int endTile = Math.min(foregroundTilemapWidthTiles, (cellX + 1) * blockPixelSize / Pattern.PATTERN_WIDTH);
+        pendingStreamColumns.set(firstTile, endTile);
+    }
+
+    /** Writes cell column {@code cellX} of the recorded layout into {@code data} (an image of this geometry). */
+    private void drawRecordedColumn(byte[] data, int cellX) {
         ForegroundLayoutBaseline record = foregroundBaseline;
-        byte[] data = foregroundTilemapData;
         int widthTiles = foregroundTilemapWidthTiles;
         int heightTiles = foregroundTilemapHeightTiles;
         int blockPixelSize = geometry.blockPixelSize();
@@ -1864,10 +1878,6 @@ public class LevelTilemapManager {
                 }
             }
         }
-        record.markColumnDrawn(cellX);
-        int firstTile = x0 / Pattern.PATTERN_WIDTH;
-        int endTile = Math.min(widthTiles, (x0 + blockPixelSize) / Pattern.PATTERN_WIDTH);
-        pendingStreamColumns.set(firstTile, endTile);
     }
 
     /** {@link #writeChunkAt} for a recorded chunk descriptor instead of a live block lookup. */

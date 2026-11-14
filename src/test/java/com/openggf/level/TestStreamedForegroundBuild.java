@@ -159,16 +159,19 @@ class TestStreamedForegroundBuild {
 
     /**
      * A directed (cinematic) view clones the native image and has no record or coverage
-     * owner of its own, so the copy must be the complete image.
+     * owner of its own, so the copy must be the complete image, while the native image and
+     * its stream stay exactly as they were (a directed view leaves native residency alone).
      */
     @Test
-    void cinematicCopyOfAStreamingImageIsComplete() {
+    void cinematicCopyOfAStreamingImageIsCompleteAndLeavesTheNativeImageAlone() {
         LevelManager manager = load(Sonic3kZoneIds.ZONE_ICZ, 0);
         byte[] full = manager.buildForegroundImageForComparison();
         LevelTilemapManager tilemaps = startStream(manager, 0x200);
+        byte[] nativeBefore = tilemaps.getForegroundTilemapData().clone();
         LevelTilemapManager copy = tilemaps.cinematicBackgroundCopy();
-        assertFalse(tilemaps.isForegroundStreaming());
         assertArrayEquals(full, copy.getForegroundTilemapData());
+        assertTrue(tilemaps.isForegroundStreaming());
+        assertArrayEquals(nativeBefore, tilemaps.getForegroundTilemapData());
     }
 
     /** A draw for a different array (a stale registration) draws nothing. */
