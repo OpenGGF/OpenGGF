@@ -161,6 +161,8 @@ public final class EndingKnucklesFlightChildObjectInstance extends AbstractObjec
     @Override public boolean flightChildHidden(){return (flags38&2)!=0;}
     @Override public int flightFrame(){return frame;}
     @Override public boolean flightPowered(){return powered;}
+    @Override public EndingFlightChildHost stageLeader(){return parent() instanceof EndingFlightChildHost host?host.stageLeader():null;}
+    @Override public int stageScreenX(){return EndingWideStage.screenFromVdp(x<<16);}
     @Override public void appendRenderCommands(List<GLCommand> commands) {
         if(isDestroyed()||!initialized||!draw)return;
         int map=role==TORNADO||role==PILOT&&nativeMode<=1?S3kEndingResources.MAP_ENDING_PLANE:
@@ -176,6 +178,7 @@ public final class EndingKnucklesFlightChildObjectInstance extends AbstractObjec
     private void draw(int map,int mapping,int drawX,int drawY) {
         if((renderFlags&4)==0){drawX=EndingScreenProjection.worldX(services().camera(),drawX);
             drawY=EndingScreenProjection.worldY(services().camera(),drawY);}
+        drawX+=EndingWideStage.groupShift(services(),this);
         EndingSpriteRenderSupport.draw(services(),"ending-flight-child-"+role,map,artTile&0x7FF,
                 (artTile>>>13)&3,mapping,drawX,drawY,(renderFlags&1)!=0,(renderFlags&2)!=0,
                 isHighPriority(),getPriorityBucket());

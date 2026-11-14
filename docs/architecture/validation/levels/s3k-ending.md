@@ -1059,3 +1059,41 @@ owners; this is authored presentation evidence, not ROM pixel parity.
 The final strengthened renderer selection/private palette contract passes
 3/0/0/0. This asserts actual use of every expected authored scene surface, not
 only asset availability. Fixed-palette surfaces retain every packaged RGB entry.
+
+
+### Ending scenes in a wider picture (2026-11-14)
+
+Until now every ending scene was masked to its 320-pixel window at wider
+presets, and inside the mask its tile planes stood one margin left of its
+sprites (at 800 the `$0D01` island and the Sky Sanctuary island were behind the
+left bar). The scenes now fill the picture; the closing art on black keeps the
+bars. Design and limits:
+[S3K known discrepancies](../../../S3K_KNOWN_DISCREPANCIES.md#ending-scenes-in-a-wider-picture).
+
+Evidence is engine-side only; no native capture exists for a wider picture.
+
+- Native width: captures of Sonic/Chaos `$0D01` (15,400 frames) and Knuckles/Super
+  SSZ2 (inputs 8500-24,400 after the maintained final-fight movie), every tenth
+  frame, are pixel-identical before and after the change (1540 and 1590 pictures)
+  and their state CSVs are byte-identical. The state CSVs at 400 and 800 are
+  unchanged too, so no scene's timing moved at any width.
+- `TestS3kEndingWidescreen` (ROM, GPU): at 400 and 800 the tile planes inside the
+  native window equal the 320 picture on five `$0D01` frames and on the Knuckles
+  credits; the island is in the margin before it reaches the native window; the
+  parked Tornado and the flown-off Tornado show in neither margin; the Sky
+  Sanctuary island stands whole at its native place; the script state is equal
+  on every frame.
+- Looked at, not asserted: 352 and 528 for both endings; Sonic with no emeralds
+  and with Super Emeralds, and Knuckles with no emeralds, at 400.
+
+Inherited gaps, unchanged by this work and present at 320 as well. None was
+compared with the cartridge and none has an established cause:
+
+- A dark grey shape over the rider on the Tornado's distant pass, in two steps
+  16 frames apart. The first step falls between inputs 2100 and 2110, where the
+  director's X passes `$140` and `Animate_RawMultiDelay` starts script `$60253`.
+- Black rectangles in Knuckles' rising scene from about input 10,689 to 11,336.
+  They lie inside the island's 256-pixel box and follow Plane A's rows. They are
+  not `loc_591D6`'s mask squares, which are allocated at input 11,450.
+- An 8-pixel jump of the island and cloud bank at input 10,196, with the camera
+  and every object at rest.

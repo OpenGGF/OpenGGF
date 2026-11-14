@@ -91,7 +91,9 @@ public final class SszEndingIslandMask extends AbstractObjectInstance implements
     // the credits scroll (sub_5B18E) moves after ScreenEvents' copy; project with the
     // same words so the squares stay on the island box's pixels.
     int childWorldX(com.openggf.camera.Camera camera, int column) {
-        return camera.getXWithShake() - 0x80 + 0xA2 + column * 0x40;
+        // A wider picture stands the native window, and the island box, one margin further right.
+        return camera.getXWithShake() - 0x80 + 0xA2 + column * 0x40
+                + com.openggf.game.sonic3k.ending.EndingWideStage.margin(camera);
     }
 
     int childWorldY(com.openggf.camera.Camera camera, int row) {
