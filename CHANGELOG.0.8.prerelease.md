@@ -18,8 +18,12 @@ under the matching area heading; see the
   (`display.widescreenDormantStyle`: `GREYSCALE`, `NORMAL` or `HIDDEN`). They come to
   life when the original screen reaches them and freeze again when it leaves them,
   unless they were destroyed for good. Rings work the same way: uncollected rings
-  waiting in the extra width sit still, and rings you have collected stay gone. Tests run Sonic 1, Sonic 2 and Sonic 3 & Knuckles
-  at 32:9 and 4:3 with the same input and check that the game state matches on every
+  waiting in the extra width sit still, and rings you have collected stay gone. Title
+  cards and results screens time their exits from the game's own screen rather than the
+  picture, so a wider picture never delays the next act or the enemies' art. That also
+  lets recorded Sonic 3 & Knuckles runs be filmed wider than 320: Hydrocity and Marble
+  Garden used to stop with a full KosM queue. Tests run Sonic 1, Sonic 2 and Sonic 3 &
+  Knuckles at 32:9 and 4:3 with the same input and check that the game state matches on every
   frame. The capture tool gained `--draw-mode` and `--dormant-style`; both are pinned so
   a personal setting never changes a capture.
 

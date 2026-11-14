@@ -108,6 +108,16 @@ A presentation-only layer, `DormantObjectLayer` (level/objects), owned by the
 - **Style:** `GREYSCALE` draws through the existing ghost shader mode with alpha
   1.0 (opaque desaturated); `NORMAL` draws plainly; `HIDDEN` skips the layer.
 
+### 4. ROM screen checks that start or end work
+
+Render_Sprites-style "has it left the screen" tests whose result ends an object or
+starts work (title-card teardown and `LoadEnemyArt`, results-element retirement and
+the act handover, S1 title-card slide length, ring windows) read the gameplay screen:
+the camera's width via `CameraPresentationAccess.simulationScreenWidth()` or
+`PlacementViewportWidth.simulation()`. Drawing offsets that centre a 320 composition
+keep the projection width. In `EDGE` the two are equal; in `NATIVE` and in recorded-run
+capture (which always plays on a 320 camera) only the picture is wider (D14).
+
 The layer never writes gameplay state, is not rewind-snapshotted (it is derived
 from snapshotted placement state), and is inactive whenever the inset is 0, so
 trace replay (always `NATIVE_4_3`) cannot observe it.
@@ -166,3 +176,4 @@ recorded here and then folded into the section text.
 | D11 | 2026-11-13 | Probe restores run all derived-state post-restore callbacks but Engine's `live-scheduling` callback skips them (`isPresentationProbeRestore`) | Skip all callbacks; no rewind bracket | That callback discards queued gameplay input and restarts pacing, which would make a NATIVE run diverge from 4:3 at the bake frame. The other callbacks re-derive state the restore needs. |
 | D12 | 2026-11-13 | Frozen rings: uncollected stage-list rings outside the ring window are drawn on spin frame 0 in the dormant style, from `RingManager` (collected and active sets only); S1 ring objects' poses hold spin frame 0 | Leave rings to the object layer only; animate dormant rings | User request ("we should show frozen rings too"). S2/S3K rings are not objects, so the object layer never saw them. A fixed frame matches the other frozen poses. The collected `BitSet` persists across unloads, so a collected ring never reappears. |
 | D13 | 2026-11-14 | **Erratum to D5.** Probe and dormant-draw failures propagate; no catch-and-skip. `PlacementViewportWidth.current()` keeps its original body and a new `simulation()` applies the draw mode. `CameraPresentationAccess` returns the camera's own window when there is no margin | Fail-closed catches around probe and draw; editing the legacy catch body | `TestBroadCatchSwallowingGuard` rejected the new broad catches and the changed legacy site (project rule: no defensive containment). Removing the catches left pose counts unchanged on all three equivalence routes, so no probe there was failing. The smoke run also showed `captureArenaMask` reading presentation values from camera mocks that stub only `getWidth`. |
+| D14 | 2026-11-14 | Lifetime and work-triggering screen checks read the gameplay camera's width, not the projection width; drawing keeps the projection width | Leave them on the projection width; per-site config reads | Investigation report (task-lxbBdWm6): at a 400 picture over a 320 camera the S3K title-card teardown fired `LoadEnemyArt` 2 frames late (row 36 vs 34) and results elements handed the act over 2 frames late, so recorded KosM completions never matched and `hcz_completerun`/`mgz_completerun` captures overflowed the KosM FIFO. The same delay would break `NATIVE`'s same-game claim after any title card or results screen. Ring windows also read the display width; harmless in HCZ but a real leak. |

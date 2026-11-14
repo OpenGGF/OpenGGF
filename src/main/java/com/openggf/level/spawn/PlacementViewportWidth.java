@@ -24,10 +24,12 @@ public final class PlacementViewportWidth {
     }
 
     /**
-     * Simulation width for placement windows: {@link #current()} except in NATIVE widescreen
-     * draw mode, which keeps the ROM's 320-pixel windows on a wider display.
+     * Simulation width for placement windows: the gameplay camera's width when a gameplay
+     * runtime exists (as the object window already uses), else {@link #current()} with
+     * NATIVE widescreen draw mode keeping the ROM's 320-pixel windows on a wider display.
      */
     public static int simulation() {
+        if (GameServices.hasRuntime()) return GameServices.camera().getWidth();
         int display = current();
         if (display <= NATIVE) return display;
         return com.openggf.configuration.SimulationViewport.width(display,

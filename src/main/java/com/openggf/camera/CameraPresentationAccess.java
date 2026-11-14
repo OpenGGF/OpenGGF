@@ -24,6 +24,19 @@ public final class CameraPresentationAccess {
         return camera.hasPresentationMargin() ? camera.getPresentationXWithShake() : camera.getXWithShake();
     }
 
+    /**
+     * Screen width for ROM lifetime and visibility checks (Render_Sprites bounds that end or
+     * start gameplay work): the gameplay camera's width, or 320 without a gameplay runtime.
+     * Drawing offsets that centre a 320 composition use the projection width instead, so a
+     * wider picture never changes when the ROM considers something to have left the screen.
+     */
+    public static int simulationScreenWidth() {
+        return com.openggf.game.GameServices.hasRuntime()
+                ? Math.max(NATIVE_WIDTH, com.openggf.game.GameServices.camera().getWidth()) : NATIVE_WIDTH;
+    }
+
+    private static final int NATIVE_WIDTH = 320;
+
     /** Detached camera whose window is the drawn picture; never used for gameplay. */
     public static Camera projection(Camera camera) { return camera.presentationProjection(); }
 }

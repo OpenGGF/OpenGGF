@@ -1,7 +1,5 @@
 package com.openggf.game.sonic3k.titlecard;
 
-import com.openggf.game.GameServices;
-import com.openggf.graphics.GraphicsManager;
 
 /**
  * Models the residual ROM lifetime of the title-card owner object after the
@@ -109,8 +107,8 @@ public final class Sonic3kTitleCardTeardownModel {
         }
 
         /** Render_Sprites bounds test for a render_flags $40 sprite — 36444-36468. */
-        private boolean visible() {
-            return screenElementVisible(x,y,width,height);
+        private boolean visible(int screenWidth) {
+            return screenElementVisible(x,y,width,height,screenWidth);
         }
 
         /**
@@ -118,7 +116,7 @@ public final class Sonic3kTitleCardTeardownModel {
          *
          * @return {@code true} when this frame decrements {@code objoff_30}
          */
-        boolean step(int cardStagger) {
+        boolean step(int cardStagger, int screenWidth) {
             if (retired) {
                 return false;
             }
@@ -134,7 +132,7 @@ public final class Sonic3kTitleCardTeardownModel {
                     x += EXIT_STEP;
                 }
             }
-            onScreen = visible();
+            onScreen = visible(screenWidth);
             return false;
         }
     }
@@ -176,9 +174,19 @@ public final class Sonic3kTitleCardTeardownModel {
         return STANDARD_ELEMENTS[index];
     }
 
-    /** Render_Sprites' $40 screen-coordinate bounds, also used without visual presentation. */
+    /**
+     * Render_Sprites' $40 screen-coordinate bounds, also used without visual presentation.
+     * Its result ends the card and fires LoadEnemyArt, so it reads the gameplay screen width,
+     * never a wider picture.
+     */
     public static boolean screenElementVisible(int x,int y,int width,int height) {
-        int logicalWidth=viewportWidth();
+        return screenElementVisible(x,y,width,height,
+                com.openggf.camera.CameraPresentationAccess.simulationScreenWidth());
+    }
+
+    /** {@link #screenElementVisible(int,int,int,int)} against an explicit gameplay screen width. */
+    public static boolean screenElementVisible(int x,int y,int width,int height,int screenWidth) {
+        int logicalWidth=Math.max(SCREEN_WIDTH,screenWidth);
         int xOffset=(logicalWidth-SCREEN_WIDTH)/2;
         int dx=x-SCREEN_ORIGIN+xOffset;
         if (dx+width<0 || dx-width>=logicalWidth) return false;
@@ -187,19 +195,16 @@ public final class Sonic3kTitleCardTeardownModel {
     }
 
     public Sonic3kTitleCardTeardownModel() {
+        this(com.openggf.camera.CameraPresentationAccess::simulationScreenWidth);
+    }
+
+    /** A model whose Render_Sprites bounds use {@code screenWidth}, the gameplay screen width. */
+    public Sonic3kTitleCardTeardownModel(java.util.function.IntSupplier screenWidth) {
+        this.screenWidth = java.util.Objects.requireNonNull(screenWidth, "screenWidth");
         elementsLeft = elements.length;
     }
 
-    /** Reads the active logical projection for every visibility pass. */
-    private static int viewportWidth() {
-        try {
-            GraphicsManager graphics = GameServices.graphics();
-            int width = graphics.getProjectionWidth();
-            return width > 0 ? width : SCREEN_WIDTH;
-        } catch (Exception ignored) {
-            return SCREEN_WIDTH;
-        }
-    }
+    private final java.util.function.IntSupplier screenWidth;
 
     /**
      * Advances one level-loop frame.
@@ -221,8 +226,9 @@ public final class Sonic3kTitleCardTeardownModel {
         // higher-slot children execute and can decrement $30 — 62256-62261.
         if (elementsLeft > 0) {
             cardStagger++;
+            int screenWidth = this.screenWidth.getAsInt();
             for (Element element : elements) {
-                if (element.step(cardStagger)) {
+                if (element.step(cardStagger, screenWidth)) {
                     elementsLeft--;
                 }
             }
