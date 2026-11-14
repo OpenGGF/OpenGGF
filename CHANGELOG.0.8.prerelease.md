@@ -396,6 +396,13 @@ under the matching area heading; see the
   asked for by character now, and a team whose art cannot be loaded says so in
   the log.
 
+- **Dust of mod sidekicks:** a mod character in a sidekick slot drew its spin
+  dash dust, skid dust and water splash near black, as MICA's and TALON's did,
+  while the same character leading the team drew them white. The dust is the
+  host game's own Sonic dust, drawn in that game's palette, but a sidekick's
+  dust was given the mod character's palette, whose matching colour is a dark
+  grey. A mod sidekick's dust now keeps the host palette, as a leader's does.
+
 - **MICA, an original character framework example:** The complete MICA and TALON
   mod now ships bundled with JVM and native distributions, disabled by default.
   Enable it in the mod manager; saved enable/disable choices survive upgrades. TALON’s S3K lives label now
