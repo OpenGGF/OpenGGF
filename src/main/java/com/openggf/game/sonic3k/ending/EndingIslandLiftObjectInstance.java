@@ -1,6 +1,5 @@
 package com.openggf.game.sonic3k.ending;
 
-import com.openggf.camera.NativeViewportFraming;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.objects.S3kRawAnimation;
 import com.openggf.game.sonic3k.S3kSpriteDataLoader;
@@ -125,7 +124,7 @@ public final class EndingIslandLiftObjectInstance extends AbstractObjectInstance
         if(!drawAdmitted || isDestroyed())return;
         var camera=services().camera();
         int x,y;
-        if(worldCoordinates){x=getX()+NativeViewportFraming.inset(camera.getWidth());y=getY();}
+        if(worldCoordinates){x=getX()+EndingWideStage.margin(camera);y=getY();}
         else {
             try { if(mappings==null)mappings=S3kSpriteDataLoader.loadMappingFrames(services().romReader(),S3kEndingResources.MAP_ISLAND_LIFT); }
             catch(IOException failure){throw new UncheckedIOException(failure);}

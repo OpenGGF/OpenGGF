@@ -1205,7 +1205,9 @@ not a claim of a native widescreen reference.
 
 
 The seeded island presentation also extends its last native visible Plane B
-tile column into the extra width. The ROM draws a512px plane but shows320px;
+tile column into the extra width (both margins, around a centred native window,
+from the start of Knuckles' ending: see
+[ending scenes in a wider picture](#ending-scenes-in-a-wider-picture)). The ROM draws a512px plane but shows320px;
 reading the wider authored layout exposed unrelated cloud strips. This separate
 projection preserves native columns, priority and vertical sampling. Its native
 viewport remains byte-identical in the inspected checkpoint, while the extra
@@ -1243,6 +1245,67 @@ emulator's original active RGB exactly after a 70-pixel old-code GPU failure.
 This is one SSZ2 component checkpoint; whole-terminal, cold, PAL/PCM, wide and
 donor presentation limits remain in the
 [ending matrix](architecture/validation/levels/s3k-ending.md#knuckles-eyecatch-native-sat-priority--2026-10-17).
+
+## Ending scenes in a wider picture
+
+The cartridge shows 320 pixels. On a wider display the ending scenes fill the
+picture: the internal level `$0D01` (the rescue, Angel Island's rise or the
+Super Emerald return, the reunion and credits) and Knuckles' ending in Sky
+Sanctuary act 2, from the white screen of Mecha Sonic's final defeat. Their
+closing art on black (the terminal pictures and the large logo, ending flag 3)
+is 320 pixels of art with nothing beside it and stays between the usual
+locked-arena bars. The native 320-pixel window in the middle is the cartridge's
+picture; everything beside it is engine presentation that the cartridge never
+drew. `EndingWidePlanes` and `EndingWideStage` own it, and both return the
+native answer at 320 pixels.
+
+**Tile planes.** The scenes draw their sprites at native screen positions,
+centred in the wider picture. Their planes are scrolled by native words, which
+the tile pass measures from the picture's left edge, so each plane image is
+handed to the tile pass one margin further right. Before this the planes stood
+one margin left of the sprites behind the mask.
+
+- `$0D01` Plane B is drawn 512 pixels wide and scrolled line by line: it
+  repeats beside the native window, as the VDP's name table does.
+- `$0D01` Plane A keeps the retained name table inside the native window, stale
+  cells included. Beside it, Angel Island's own level layout (the Super Emerald
+  return) simply continues. The rescue's layout is a scratch sheet that keeps
+  other shots' art just outside what each shot draws (the opening starfield lies
+  beside the island), so during the island pan only the columns the pan itself
+  draws are shown (`$290`-`$3BF`: `loc_5AB36` parks the plane at `$140`, the pan
+  ends at `$260`, and `DrawTilesAsYouMove` draws `$150` ahead), ahead of its
+  leading edge as well as behind it. Elsewhere the name table's own cell is
+  shown while it still holds what was last drawn there, and nothing once the
+  leading edge has reused it.
+- Sky Sanctuary's island Plane B repeats its nearest native column in each
+  margin (see the section above), and the twenty column words of `loc_58F46`
+  that float the island follow it: each 16-pixel picture column takes the native
+  column under its centre. That is exact at 352 and 800 pixels; at 400 and 528
+  the margin is half a column, so a strip of up to 8 pixels beside the island's
+  box takes its neighbour's word.
+
+**Sprites.** The ending scripts are written in native screen coordinates and
+use them as their clock (an aircraft waits at `$40`, turns at `$220`, a cloud
+is deleted at `$200`), so no position word changes. A group that moves together
+(an aircraft with its pilot, rider, flames and tow) is drawn displaced by one
+shared amount taken from the group's native extent: the whole margin while its
+tail is outside a native edge or its head has reached one, nothing while it is
+clear of both, eased over 32 pixels. It therefore enters and leaves at the real
+edge on the frame it enters or leaves the cartridge's screen, and near an edge
+it crosses the margin faster than its native speed (about twice at 400 pixels,
+more at wider settings). Clouds are independent and are spread evenly over the
+wider picture. Sprites that never cross an edge (the island's own sprites, the
+birds and dolphins, the logo and pose art, the credits text) keep their native
+places.
+
+**Limits.** In Knuckles' flight the drifting cloud layers of Plane A take their
+parallax from the centred arena camera, as in every centred arena, so inside
+the native window they are not at the cartridge's phase. Plane B repeats every
+512 pixels, which shows at 528 and 800. At 800 the Super Emerald return shows a
+few pixels of unloaded art at the right edge, past the end of Angel Island's
+layout. None of this has a native reference: it is an intentional presentation
+extension. `TestEndingWideStage`, `TestEndingWidePlanes` and
+`TestS3kEndingWidescreen` cover it.
 
 ## Sprite_OnScreen_Test lifetime audit
 

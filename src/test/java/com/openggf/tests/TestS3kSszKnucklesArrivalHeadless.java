@@ -260,7 +260,7 @@ class TestS3kSszKnucklesArrivalHeadless {
     }
 
     @ParameterizedTest @ValueSource(ints = {320, 800})
-    void seededIslandBackgroundPreservesNativeColumnsAndExtendsOnlyTheWideMargin(int width) {
+    void seededIslandBackgroundPreservesNativeColumnsAndExtendsOnlyTheWideMargins(int width) {
         var fixture = boot(width); fixture.stepIdleFrames(300);
         fixture.sprite().setDebugMode(true);
         var state = (com.openggf.game.sonic3k.runtime.SszZoneRuntimeState) GameServices.zoneRuntimeState();
@@ -273,15 +273,21 @@ class TestS3kSszKnucklesArrivalHeadless {
             return;
         }
         assertTrue(provider.backgroundDescriptorRevision() != 0);
+        // The native window stands one margin into the picture, with the sprites; the tile
+        // pass draws tilemap column X at picture pixel X - $5E.
+        int margin = com.openggf.game.sonic3k.ending.EndingWideStage.margin(width);
         boolean discardedDifferentArt = false;
         for (int y = 0; y < 1024; y += 8) {
             for (int x = 0x58; x <= 0x198; x += 8) {
                 assertEquals(GameServices.level().getBackgroundTileDescriptorAtWorld(x, y),
-                        provider.backgroundDescriptorAt(x, y), "native visible tile unchanged");
+                        provider.backgroundDescriptorAt(x + margin, y), "native visible tile unchanged");
             }
+            int first = GameServices.level().getBackgroundTileDescriptorAtWorld(0x58, y);
+            for (int x = 0; x < 0x58 + margin; x += 8)
+                assertEquals(first, provider.backgroundDescriptorAt(x, y), "extended ROM sky edge on the left");
             int edge = GameServices.level().getBackgroundTileDescriptorAtWorld(0x198, y);
             for (int x = 0x1A0; x < 0x400; x += 8) {
-                assertEquals(edge, provider.backgroundDescriptorAt(x, y), "extended ROM sky edge");
+                assertEquals(edge, provider.backgroundDescriptorAt(x + margin, y), "extended ROM sky edge");
                 discardedDifferentArt |= edge != GameServices.level().getBackgroundTileDescriptorAtWorld(x, y);
             }
         }

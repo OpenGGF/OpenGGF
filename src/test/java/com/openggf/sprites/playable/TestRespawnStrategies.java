@@ -200,6 +200,121 @@ class TestRespawnStrategies {
     }
 
     @Test
+    void sonicWalkInOnTerrainFloorNeverJumpsIn() {
+        installFlatFloorLevelManager();
+
+        TestableSprite sk = new TestableSprite("sonic_p2");
+        TestableSprite main = new TestableSprite("sonic");
+        SidekickCpuController ctrl = new SidekickCpuController(sk, main);
+        SonicRespawnStrategy strategy = new SonicRespawnStrategy(ctrl);
+
+        for (int attempt = 0; attempt < SonicRespawnStrategy.JUMP_IN_AFTER_FAILED_FLOOR_PROBES + 2; attempt++) {
+            assertTrue(strategy.beginApproach(sk, main));
+            assertFalse(strategy.isJumpingIn(), "A terrain floor keeps the ordinary walk-in");
+            assertFalse(sk.getAir());
+            assertTrue(strategy.requiresPhysics());
+            assertTrue(strategy.approachMovementUsesPhysics());
+        }
+    }
+
+    @Test
+    void sonicJumpsInAfterRepeatedFloorlessWalkInAttempts() {
+        installNoTerrainLevelManager();
+
+        TestableSprite sk = new TestableSprite("sonic_p2");
+        sk.setCpuControlled(true);
+        TestableSprite main = new TestableSprite("sonic");
+        main.setCentreX((short) 0x00A0);
+        main.setCentreY((short) 0x0070);
+        SidekickCpuController ctrl = new SidekickCpuController(sk, main);
+        SonicRespawnStrategy strategy = new SonicRespawnStrategy(ctrl);
+        ctrl.setRespawnStrategy(strategy);
+        sk.setCpuController(ctrl);
+
+        for (int attempt = 1; attempt < SonicRespawnStrategy.JUMP_IN_AFTER_FAILED_FLOOR_PROBES; attempt++) {
+            assertFalse(strategy.beginApproach(sk, main),
+                    "The walk-in keeps its chances before the jump-in fallback");
+            assertFalse(strategy.isJumpingIn());
+        }
+        assertTrue(strategy.beginApproach(sk, main),
+                "With no terrain floor to walk in on, the sidekick jumps in");
+        ctrl.forceStateForTest(SidekickCpuController.State.APPROACHING, 0);
+
+        assertTrue(strategy.isJumpingIn());
+        assertFalse(strategy.requiresPhysics(), "The rise is scripted");
+        assertTrue(sk.getCentreY() > sk.currentCamera().getY() + sk.currentCamera().getHeight(),
+                "The jump-in starts below the screen");
+        assertTrue(sk.getRolling());
+        assertTrue(sk.getAir());
+        assertTrue(sk.isControlLocked());
+        assertTrue(sk.getYSpeed() < 0);
+
+        int frames = 0;
+        while (!strategy.requiresPhysics()) {
+            assertFalse(strategy.updateApproaching(sk, main, frames));
+            assertTrue(++frames < 200, "The rise must reach its peak");
+        }
+        assertTrue(sk.getCentreY() < main.getCentreY(), "The arc peaks above the leader");
+        assertTrue(Math.abs(sk.getCentreX() - main.getCentreX()) <= 8,
+                "The arc carries the sidekick over the leader");
+        assertFalse(sk.isControlLocked());
+        assertFalse(sk.isObjectControlled());
+        assertTrue(sk.getAir());
+
+        sk.setRingCount(5);
+        assertFalse(sk.applyHurtOrDeath(main.getCentreX(), false, true),
+                "A sidekick jumping in takes no damage before it lands");
+        assertTrue(sk.getInvulnerable());
+        assertFalse(sk.isHurt());
+
+        assertFalse(strategy.updateApproaching(sk, main, frames), "Still falling");
+        sk.setAir(false);
+        assertTrue(strategy.updateApproaching(sk, main, frames + 1),
+                "Landing completes the approach so normal following resumes");
+        assertFalse(strategy.isJumpingIn());
+        assertFalse(sk.getInvulnerable(), "Protection ends on landing");
+    }
+
+    @Test
+    void sonicJumpInThatFallsOutWaitsAndRetriesLater() {
+        installNoTerrainLevelManager();
+
+        TestableSprite sk = new TestableSprite("sonic_p2");
+        sk.setCpuControlled(true);
+        TestableSprite main = new TestableSprite("sonic");
+        main.setCentreX((short) 0x00A0);
+        main.setCentreY((short) 0x0070);
+        SidekickCpuController ctrl = new SidekickCpuController(sk, main);
+        SonicRespawnStrategy strategy = new SonicRespawnStrategy(ctrl);
+        ctrl.setRespawnStrategy(strategy);
+        sk.setCpuController(ctrl);
+
+        for (int attempt = 1; attempt < SonicRespawnStrategy.JUMP_IN_AFTER_FAILED_FLOOR_PROBES; attempt++) {
+            assertFalse(strategy.beginApproach(sk, main));
+        }
+        assertTrue(strategy.beginApproach(sk, main));
+        ctrl.forceStateForTest(SidekickCpuController.State.APPROACHING, 0);
+        int frames = 0;
+        while (!strategy.requiresPhysics()) {
+            strategy.updateApproaching(sk, main, frames++);
+        }
+
+        // Nothing caught the fall: the sidekick is now well below the screen.
+        sk.setCentreY((short) (sk.currentCamera().getY() + sk.currentCamera().getHeight() + 64));
+        assertFalse(strategy.updateApproaching(sk, main, frames));
+
+        assertFalse(strategy.isJumpingIn());
+        assertEquals(SidekickCpuController.State.SPAWNING, ctrl.getState(),
+                "A jump-in with nothing to land on returns to the spawn wait");
+        for (int attempt = 1; attempt < SonicRespawnStrategy.JUMP_IN_AFTER_FAILED_FLOOR_PROBES; attempt++) {
+            assertFalse(strategy.beginApproach(sk, main),
+                    "The next jump-in waits for the full run of failed walk-in attempts again");
+        }
+        assertTrue(strategy.beginApproach(sk, main));
+        assertTrue(strategy.isJumpingIn());
+    }
+
+    @Test
     void sonicRunInSpeedOutpacesFastMovingLeader() {
         installFlatFloorLevelManager();
 
@@ -876,6 +991,16 @@ class TestRespawnStrategies {
         when(levelManager.getCurrentLevel()).thenReturn(mock(Level.class));
         when(levelManager.getChunkDescAt(eq((byte) 0), anyInt(), anyInt())).thenReturn(solidFloor);
         when(levelManager.getSolidTileForChunkDesc(eq(solidFloor), eq(0x0C), anyBoolean())).thenReturn(flatTile);
+
+        mode.attachLevelManagers(mode.getWaterSystem(), mode.getParallaxManager(),
+                mode.getTerrainCollisionManager(), mode.getCollisionSystem(),
+                mode.getSpriteManager(), levelManager);
+    }
+
+    private static void installNoTerrainLevelManager() {
+        GameplayModeContext mode = TestEnvironment.activeGameplayMode();
+        LevelManager levelManager = mock(LevelManager.class);
+        when(levelManager.getCurrentLevel()).thenReturn(mock(Level.class));
 
         mode.attachLevelManagers(mode.getWaterSystem(), mode.getParallaxManager(),
                 mode.getTerrainCollisionManager(), mode.getCollisionSystem(),

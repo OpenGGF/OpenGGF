@@ -27,6 +27,17 @@ under the matching area heading; see the
   frame. The capture tool gained `--draw-mode` and `--dormant-style`; both are pinned so
   a personal setting never changes a capture.
 
+- **Walking partners jump back in where there is no floor:** a CPU partner that
+  returns by walking in (a Sonic partner, or a walking mod character) used to wait
+  off screen for good wherever the level had no terrain floor to walk in on, such
+  as the Sonic 3 & Knuckles final boss arena, whose floor is made of objects. After
+  three failed walk-in attempts it now jumps in from below the screen with the
+  jump sound, arcs over the leader, and follows again as soon as it lands on
+  terrain or on a solid object. It takes no damage until it lands, and if it falls
+  out again it waits and retries. Where the walk-in already worked it is unchanged.
+  This is an engine extension; see "Multi-Sidekick Daisy Chain" in
+  [known discrepancies](docs/status/known-discrepancies.md#multi-sidekick-daisy-chain).
+
 - **Crash page:** an engine fault during play or on a menu no longer closes
   OpenGGF. The game that failed is torn down to the game shelf and a crash page
   opens over it, with a MICA gag for the kind of fault (holding the bomb, an
@@ -162,6 +173,23 @@ under the matching area heading; see the
   the HUD draws with; the original puts them back on every frame the ring is off
   screen, and the engine did so only when the ring was entered or paid out. It
   now restores them off screen too, and the flashing script stands still there.
+
+- **Sonic 3 & Knuckles endings fill a wide screen:** on any screen wider than
+  4:3 the endings were a 320-pixel picture between two dark bars, and inside it
+  the sky, sea and island were drawn one bar's width to the left of the aircraft
+  and characters (at the widest setting the island sat behind the left bar while
+  its waterfalls hung in open sky). The endings now fill the screen with the
+  original picture in the middle: Sonic's and Tails's rescue, Angel Island rising
+  or being returned its emerald, the credits flight, and Knuckles' flight from Sky
+  Sanctuary with its credits. The sky, sea and cloud layers continue to both
+  edges, Angel Island slides in from the real edge of the screen, and the Tornado
+  and the clouds enter and leave at the real edges instead of appearing or
+  vanishing where the old 320-pixel edge was. Every scene keeps its original
+  timing at every width, and at 4:3 the picture is unchanged pixel for pixel.
+  Only the closing art on black (the Eggman or Mecha Sonic picture and the large
+  Sonic 3 & Knuckles logo) stays 4:3 between the bars: it is 320 pixels of art
+  with nothing beside it. What the wider picture adds is described under
+  [ending scenes in a wider picture](docs/S3K_KNOWN_DISCREPANCIES.md#ending-scenes-in-a-wider-picture).
 
 - **Separate music and sound-effect volumes:** Settings → Audio has Music
   volume and Sound effects volume sliders (`audio.musicVolume`,
@@ -354,6 +382,14 @@ under the matching area heading; see the
   from the left edge, so the sensor labels sat on the player. Lines, boxes and
   panels were right. The text renderer scaled positions back by a fixed 320
   while the picture is drawn 400 wide; it now uses the configured width.
+
+- **Built-in sidekicks beside mod sidekicks:** a team that put Tails, Knuckles
+  or a second Sonic in a sidekick slot together with a mod character anywhere in
+  the team drew every character, the leader included, as a white box. The
+  built-in sidekick's art was asked for by its slot code (`tails_p2`), which
+  names no art, and the whole team's art was then dropped without a word. It is
+  asked for by character now, and a team whose art cannot be loaded says so in
+  the log.
 
 - **MICA, an original character framework example:** The complete MICA and TALON
   mod now ships bundled with JVM and native distributions, disabled by default.

@@ -1484,6 +1484,22 @@ public class SidekickCpuController {
         catchUpTargetY = respawnStrategy.diagnosticTargetY(catchUpTargetY & 0xFFFF) & 0xFFFF;
     }
 
+    /**
+     * Engine extension: true while a walk-in sidekick is jumping in because it
+     * found no terrain floor ({@link SonicRespawnStrategy}). The sidekick takes
+     * no damage until it lands.
+     */
+    boolean isRespawnEntryDamageImmune() {
+        return state == State.APPROACHING
+                && respawnStrategy instanceof SonicRespawnStrategy walkIn
+                && walkIn.isJumpingIn();
+    }
+
+    /** A jump-in that found nothing to land on waits off screen for the next attempt. */
+    void returnFailedJumpInToSpawning() {
+        applyDespawnMarker();
+    }
+
     void returnApproachToSpawningAfterFlyingTimeout() {
         state = State.SPAWNING;
         controlCounter = 0;
@@ -3326,6 +3342,14 @@ public class SidekickCpuController {
             // begun, additional LEVEL_BOUNDARY triggers are no-ops until the
             // dispatcher returns to a non-dead routine.
             if (state == State.DEAD_FALLING) {
+                return;
+            }
+            if (isRespawnEntryDamageImmune()) {
+                // Engine extension: a jump-in that falls past the bottom of the
+                // level has not rejoined play, so it returns to the spawn wait
+                // without the death bounce.
+                ((SonicRespawnStrategy) respawnStrategy).cancelJumpIn();
+                applyDespawnMarker();
                 return;
             }
             beginLevelBoundaryKill();
