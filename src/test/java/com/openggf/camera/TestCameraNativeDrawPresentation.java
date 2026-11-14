@@ -64,6 +64,42 @@ class TestCameraNativeDrawPresentation {
         assertEquals(0x2C00 - (0x2C30 - 240), wider.getPresentationInset());
     }
 
+    private static Camera followed(Camera camera, int playerCentreX) {
+        var player = mock(com.openggf.sprites.playable.AbstractPlayableSprite.class);
+        when(player.getCentreX()).thenReturn((short) playerCentreX);
+        short x = camera.getX();
+        camera.setFocusedSprite(player); // snaps the camera to the sprite
+        camera.setX(x);
+        return camera;
+    }
+
+    /**
+     * Sonic_LevelBound stops the S1/S2 act-end run-off $128 + $40 past the right limit, off
+     * a 320-pixel screen. Recorded-run capture draws a wider picture from the camera's left
+     * edge, which still shows that spot, so the picture gives up its right margin as the
+     * player crosses the extra $40 and they leave the picture as they leave the ROM screen.
+     */
+    @Test
+    void theRunOffSlideOnlyActsAtTheRightLimit() {
+        // A player ahead of a camera that is still scrolling is ordinary play.
+        var scrolling = followed(at(camera(320, "EDGE"), 0x1000, 0x1000, 0x2AC0), 0x1000 + 0x168);
+        assertEquals(0, CameraPresentationAccess.runOffSlide(scrolling, 80));
+        // No picture right of the ROM screen: nothing to give up.
+        var native320 = followed(at(camera(320, "EDGE"), 0x2AC0, 0x2AC0, 0x2AC0), 0x2AC0 + 0x168);
+        assertEquals(0, CameraPresentationAccess.runOffSlide(native320, 0));
+    }
+
+    @Test
+    void aLeftAnchoredWidePictureGivesUpItsWholeRightMargin() {
+        int limit = 0x2AC0;
+        var camera = at(camera(320, "EDGE"), limit, limit, limit);
+        assertEquals(0, CameraPresentationAccess.runOffSlide(camera, 80), "no followed player");
+        assertEquals(0, CameraPresentationAccess.runOffSlide(followed(camera, limit + 0x128), 80));
+        assertEquals(40, CameraPresentationAccess.runOffSlide(followed(camera, limit + 0x128 + 0x20), 80));
+        assertEquals(80, CameraPresentationAccess.runOffSlide(followed(camera, limit + 0x128 + 0x40), 80));
+        assertEquals(limit, camera.getX(), "the gameplay camera is not moved");
+    }
+
     @Test
     void nativeAspectHasNoMarginInEitherMode() {
         var camera = at(camera(320, "NATIVE"), 0x1000, 0, 0x4000);
