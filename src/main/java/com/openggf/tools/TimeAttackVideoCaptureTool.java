@@ -197,6 +197,10 @@ public final class TimeAttackVideoCaptureTool implements AutoCloseable {
         tap(GLFW_KEY_RIGHT);
         tap(GLFW_KEY_ENTER);
         frames(30);
+        // Extras lists the engine's own extras before the mods' entries, so Time Attack's row
+        // depends on which ROMs are present. The list opens on its first row.
+        int row = extrasRow(extrasLabels(), TIME_ATTACK_LABEL);
+        for (int i = 0; i < row; i++) tap(GLFW_KEY_DOWN);
         png("03-extras.png");
         tap(GLFW_KEY_ENTER);
         frames(80);
@@ -210,6 +214,30 @@ public final class TimeAttackVideoCaptureTool implements AutoCloseable {
     }
 
     private static final String TIME_ATTACK_SCENE = "openggf.timeattack.TimeAttackScene";
+    /** The label TimeAttackMod registers its title entry under. */
+    static final String TIME_ATTACK_LABEL = "Time Attack";
+
+    /** The row of an Extras entry by its label. */
+    static int extrasRow(java.util.List<String> labels, String label) {
+        for (int i = 0; i < labels.size(); i++) if (labels.get(i).equalsIgnoreCase(label)) return i;
+        throw new IllegalStateException("Extras has no " + label + " entry: " + labels);
+    }
+
+    /** The open title screen's Extras labels, in display order (capture inspection only). */
+    private java.util.List<String> extrasLabels() throws ReflectiveOperationException {
+        Object title = field(Engine.class, EXTRAS_OWNER_FIELD).get(engine);
+        if (title == null) throw new IllegalStateException("no title screen is open");
+        Object labels = field(title.getClass(), EXTRAS_LABELS_FIELD).get(title);
+        return ((java.util.List<?>) labels).stream().map(String::valueOf).toList();
+    }
+
+    static final String EXTRAS_OWNER_FIELD = "masterTitleScreen", EXTRAS_LABELS_FIELD = "titleEntries";
+
+    static java.lang.reflect.Field field(Class<?> owner, String name) throws NoSuchFieldException {
+        java.lang.reflect.Field field = owner.getDeclaredField(name);
+        field.setAccessible(true);
+        return field;
+    }
 
     /** The creator's open scene, read from the game loop's scene host (capture inspection only). */
     public Object openScene() throws ReflectiveOperationException {
