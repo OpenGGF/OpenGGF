@@ -242,7 +242,7 @@ public class ObjectManager {
                 ? registry.objectWindowingStrategy()
                 : ObjectWindowingStrategy.LEGACY;
         this.placement = new ObjectPlacementController(stageplayController.sourceSpawns(),
-                camera != null ? camera::getWidth : com.openggf.level.spawn.PlacementViewportWidth::current);
+                camera != null ? camera::getWidth : com.openggf.level.spawn.PlacementViewportWidth::simulation);
         this.placement.setStageplayActivation(stageplayActivation);
         this.placement.setTwoAxisCursorPlacement(population.slots.twoAxisCursorPlacement());
         this.placement.setWindowingStrategy(windowingStrategy);

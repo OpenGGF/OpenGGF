@@ -17,8 +17,6 @@ import com.openggf.level.rings.RingDrawInternalAccess;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * NATIVE widescreen draw mode's presentation-only layer: layout objects the native
@@ -29,14 +27,14 @@ import java.util.logging.Logger;
  * and run for one update with the camera centred on it, then never updated again.
  * Its side effects are rolled back by one rewind capture/restore around the whole
  * bake, with audio requests suppressed and child spawns unregistered. A copy that
- * fails to construct, update or draw has no pose. Live objects always win; once the
- * native loader unloads an object its frozen pose is drawn again, unless the native
- * latches say it will never reload.
+ * cannot be constructed (no registry entry or a placeholder) has no pose; a failure
+ * while constructing, updating or drawing one propagates like any engine failure.
+ * Live objects always win; once the native loader unloads an object its frozen pose
+ * is drawn again, unless the native latches say it will never reload.
  *
  * <p>See docs/architecture/designs/2026-11-13-widescreen-native-draw-mode.md.
  */
 final class DormantObjectLayer {
-    private static final Logger LOG = Logger.getLogger(DormantObjectLayer.class.getName());
     /** Dormant entries sort after every live SST slot, so they draw behind live objects. */
     static final int SLOT_BASE = 0x10000;
     /** Allowance for sprite extents around a spawn's centre. */
@@ -47,7 +45,6 @@ final class DormantObjectLayer {
 
     private final ObjectManager manager;
     private final List<Pose> poses = new ArrayList<>();
-    private final BitSet broken = new BitSet();
     private final List<GLCommand> scratch = new ArrayList<>();
     private List<ObjectSpawn> bakedFor;
     private boolean baking;
@@ -85,7 +82,6 @@ final class DormantObjectLayer {
         List<ObjectSpawn> spawns = manager.getAllSpawns();
         if (spawns == bakedFor) return;
         poses.clear();
-        broken.clear();
         bakedFor = spawns;
         if (registry == null || spawns.isEmpty()) return;
         baking = true;
@@ -109,50 +105,43 @@ final class DormantObjectLayer {
     /** Forget poses; the next frame boundary bakes the current layout again. */
     void reset() {
         poses.clear();
-        broken.clear();
         bakedFor = null;
     }
 
     private Pose probe(ObjectSpawn spawn) {
         if (manager.registry == null || spawn.objectId() == 0) return null;
         Camera camera = manager.camera();
-        try {
-            // Centre the camera on the spawn so on-screen and out-of-range tests in the
-            // object's first routine see it as the native loader would when admitting it.
-            camera.setX((short) (spawn.x() - camera.getWidth() / 2));
-            camera.setY((short) (spawn.y() - camera.getHeight() / 2));
-            manager.refreshCameraBoundsAfterPresentationProbe();
-            ObjectInstance instance = ObjectConstructionContext.withProbeConstruction(() ->
-                    ObjectConstructionContext.with(manager.objectServices, -1,
-                            () -> manager.objectCallbacks.construct(spawn, () -> manager.registry.create(spawn))));
-            if (instance == null || instance instanceof PlaceholderObjectInstance) return null;
-            if (instance instanceof AbstractObjectInstance object) {
-                manager.runObjectCallback(object, () -> manager.bindObjectServices(object));
-            }
-            PlayableEntity player = camera.getFocusedSprite();
-            int vint = manager.getVblaCounter();
-            ObjectConstructionContext.withProbeConstruction(() -> {
-                manager.runObjectCallback(instance, () -> instance.update(vint, player));
-                return null;
-            });
-            @SuppressWarnings("unchecked")
-            List<ObjectRenderParts.RenderEntry>[] unified = new List[BUCKET_COUNT];
-            @SuppressWarnings("unchecked")
-            List<ObjectRenderParts.RenderEntry>[] low = new List[BUCKET_COUNT];
-            @SuppressWarnings("unchecked")
-            List<ObjectRenderParts.RenderEntry>[] high = new List[BUCKET_COUNT];
-            for (int i = 0; i < BUCKET_COUNT; i++) {
-                unified[i] = new ArrayList<>();
-                low[i] = new ArrayList<>();
-                high[i] = new ArrayList<>();
-            }
-            ObjectRenderParts.addToRenderBuckets(instance, unified, low, high);
-            return new Pose(spawn, instance, unified);
-        } catch (RuntimeException | LinkageError | StackOverflowError failure) {
-            LOG.log(Level.FINE, failure, () -> "No dormant pose for object 0x"
-                    + Integer.toHexString(spawn.objectId()) + " at " + spawn.x() + "," + spawn.y());
-            return null;
+        // Centre the camera on the spawn so on-screen and out-of-range tests in the
+        // object's first routine see it as the native loader would when admitting it.
+        camera.setX((short) (spawn.x() - camera.getWidth() / 2));
+        camera.setY((short) (spawn.y() - camera.getHeight() / 2));
+        manager.refreshCameraBoundsAfterPresentationProbe();
+        ObjectInstance instance = ObjectConstructionContext.withProbeConstruction(() ->
+                ObjectConstructionContext.with(manager.objectServices, -1,
+                        () -> manager.objectCallbacks.construct(spawn, () -> manager.registry.create(spawn))));
+        if (instance == null || instance instanceof PlaceholderObjectInstance) return null;
+        if (instance instanceof AbstractObjectInstance object) {
+            manager.runObjectCallback(object, () -> manager.bindObjectServices(object));
         }
+        PlayableEntity player = camera.getFocusedSprite();
+        int vint = manager.getVblaCounter();
+        ObjectConstructionContext.withProbeConstruction(() -> {
+            manager.runObjectCallback(instance, () -> instance.update(vint, player));
+            return null;
+        });
+        @SuppressWarnings("unchecked")
+        List<ObjectRenderParts.RenderEntry>[] unified = new List[BUCKET_COUNT];
+        @SuppressWarnings("unchecked")
+        List<ObjectRenderParts.RenderEntry>[] low = new List[BUCKET_COUNT];
+        @SuppressWarnings("unchecked")
+        List<ObjectRenderParts.RenderEntry>[] high = new List[BUCKET_COUNT];
+        for (int i = 0; i < BUCKET_COUNT; i++) {
+            unified[i] = new ArrayList<>();
+            low[i] = new ArrayList<>();
+            high[i] = new ArrayList<>();
+        }
+        ObjectRenderParts.addToRenderBuckets(instance, unified, low, high);
+        return new Pose(spawn, instance, unified);
     }
 
     /**
@@ -180,7 +169,6 @@ final class DormantObjectLayer {
         for (ObjectSpawn key : placed.keySet()) if (key.layoutIndex() >= 0) liveLayout.set(key.layoutIndex());
         for (int poseIndex = 0; poseIndex < poses.size(); poseIndex++) {
             Pose pose = poses.get(poseIndex);
-            if (broken.get(poseIndex)) continue;
             var entries = pose.buckets()[index];
             if (entries.isEmpty()) continue;
             ObjectSpawn spawn = pose.spawn();
@@ -193,9 +181,8 @@ final class DormantObjectLayer {
             for (var entry : entries) {
                 int slot = SLOT_BASE + poseIndex;
                 var dormant = new ObjectRenderParts.RenderEntry(entry.instance(), entry.high(), slot);
-                int poseSlot = poseIndex;
                 merged.add(new SpriteSlotEmission(slot, bucket, ObjectRenderParts.tileOcclusionPaletteMask(dormant),
-                        () -> draw(dormant, bucket, graphics, greyscale, poseSlot)));
+                        () -> draw(dormant, bucket, graphics, greyscale)));
             }
         }
         return merged == null ? external : merged;
@@ -208,7 +195,7 @@ final class DormantObjectLayer {
     }
 
     private void draw(ObjectRenderParts.RenderEntry entry, int bucket, GraphicsManager graphics,
-                      boolean greyscale, int poseIndex) {
+                      boolean greyscale) {
         if (greyscale) {
             graphics.flushPatternBatch();
             graphics.beginGhostRenderEffect(1.0f, false);
@@ -222,9 +209,6 @@ final class DormantObjectLayer {
             // Ring objects (S1) draw through the live ring manager; hold them on one spin frame.
             if (rings != null) RingDrawInternalAccess.withFrozenSpin(rings, append);
             else append.run();
-        } catch (RuntimeException failure) {
-            broken.set(poseIndex);
-            LOG.log(Level.FINE, failure, () -> "Dormant pose stopped drawing: " + entry.instance());
         } finally {
             scratch.clear();
             if (greyscale) {

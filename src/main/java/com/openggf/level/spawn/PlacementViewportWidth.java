@@ -1,5 +1,6 @@
 package com.openggf.level.spawn;
 
+import com.openggf.configuration.SonicConfiguration;
 import com.openggf.game.GameServices;
 
 /**
@@ -16,10 +17,21 @@ public final class PlacementViewportWidth {
 
     public static int current() {
         try {
-            // Simulation width: NATIVE widescreen keeps the ROM's 320-pixel windows.
-            return com.openggf.configuration.SimulationViewport.width(GameServices.configuration());
+            return GameServices.configuration().getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS);
         } catch (RuntimeException ex) {
             return NATIVE;
         }
+    }
+
+    /**
+     * Simulation width for placement windows: {@link #current()} except in NATIVE widescreen
+     * draw mode, which keeps the ROM's 320-pixel windows on a wider display.
+     */
+    public static int simulation() {
+        int display = current();
+        if (display <= NATIVE) return display;
+        return com.openggf.configuration.SimulationViewport.width(display,
+                com.openggf.configuration.WidescreenDrawMode.parse(
+                        GameServices.configuration().getString(SonicConfiguration.WIDESCREEN_DRAW_MODE)));
     }
 }

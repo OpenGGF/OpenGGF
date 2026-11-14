@@ -1813,7 +1813,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
 
         private RingPlacement(List<RingSpawn> spawns, boolean useRawCameraWindow) {
             super(sortedByX(spawns), EXTRA_AHEAD, UNLOAD_BEHIND,
-                    com.openggf.level.spawn.PlacementViewportWidth::current);
+                    com.openggf.level.spawn.PlacementViewportWidth::simulation);
             this.useRawCameraWindow = useRawCameraWindow;
             this.sparkleStartFrames = new int[this.spawns.size()];
             Arrays.fill(this.sparkleStartFrames, NO_SPARKLE);
@@ -2055,7 +2055,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             // S3K loc_E942 uses the equivalent native $150. Preserve that
             // eight-pixel margin at wider viewports so visible rings load.
             // The ROM end pointer is exclusive, hence the final -1.
-            return cameraX + com.openggf.level.spawn.PlacementViewportWidth.current()
+            return cameraX + com.openggf.level.spawn.PlacementViewportWidth.simulation()
                     + RAW_WINDOW_MARGIN - 1;
         }
 
