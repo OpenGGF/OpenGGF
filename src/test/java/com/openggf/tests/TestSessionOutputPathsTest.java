@@ -1,5 +1,8 @@
 package com.openggf.tests;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.openggf.tests.SessionInvocationExtension.SessionInvocation;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -9,8 +12,10 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -171,5 +176,94 @@ class TestSessionOutputPathsTest {
         assertEquals(outputDirectory.resolve("s2_mtz1_report.json"),
                 allocation.physicalPath());
         assertTrue(allocation.metadataPath().startsWith(outputDirectory));
+        TestSessionOutputPaths.publish(allocation.physicalPath(), "explicit evidence");
+        TestSessionOutputPaths.publishOwnerMetadata(allocation);
+        SessionInvocation invocation = new SessionInvocation("com.openggf.tests.ExampleTest", "replay", 2,
+                "0123456789abcdef", "explicit owner");
+        assertEquals(List.of(allocation), TestSessionOutputPaths.findOwnedReports(
+                outputDirectory, "trace", invocation, "lane-a"));
+    }
+
+    @Test
+    void explicitDirectoryPreservesAnotherOwnerAndLane() throws IOException {
+        Path outputDirectory = tempDir.resolve("explicit reports");
+        SessionInvocation owner = new SessionInvocation("Example", "replay", 0,
+                "invocation-a", "owner A");
+        TestSessionOutputPaths.ReportAllocation allocation = TestSessionOutputPaths.allocateReport(
+                outputDirectory, "trace", owner.className(), owner.methodName(), owner.parameterIndex(),
+                owner.invocationId(), "single", "s3k_hcz1", ".json");
+        TestSessionOutputPaths.publish(allocation.physicalPath(), "owner A evidence");
+        TestSessionOutputPaths.publishOwnerMetadata(allocation);
+        byte[] metadata = Files.readAllBytes(allocation.metadataPath());
+        SessionInvocation other = new SessionInvocation(owner.className(), owner.methodName(),
+                owner.parameterIndex(), "invocation-b", "owner B");
+
+        assertTrue(TestSessionOutputPaths.findOwnedReports(
+                outputDirectory, "trace", other, "single").isEmpty());
+        assertTrue(TestSessionOutputPaths.findOwnedReports(
+                outputDirectory, "trace", owner, "other-lane").isEmpty());
+        assertEquals("owner A evidence", Files.readString(allocation.physicalPath()));
+        assertArrayEquals(metadata, Files.readAllBytes(allocation.metadataPath()));
+    }
+
+    @Test
+    void ownerDiscoveryDoesNotTraverseASymbolicProfileDirectory() throws IOException {
+        Path reports = tempDir.resolve("reports");
+        Path outside = tempDir.resolve("outside");
+        Files.createDirectories(reports);
+        Files.createDirectories(outside);
+        SessionInvocation invocation = new SessionInvocation("Example", "replay", 0,
+                "0123456789abcdef", "owner");
+        System.setProperty(TRACE_REPORTS, reports.toString());
+        Files.createSymbolicLink(reports.resolve("trace"), outside);
+        TestSessionOutputPaths.ReportAllocation allocation = TestSessionOutputPaths.allocateReport(
+                "trace", invocation.className(), invocation.methodName(), invocation.parameterIndex(),
+                invocation.invocationId(), "single", "s3k_hcz1", ".json");
+        TestSessionOutputPaths.publish(allocation.physicalPath(), "outside evidence");
+        TestSessionOutputPaths.publishOwnerMetadata(allocation);
+
+        assertTrue(TestSessionOutputPaths.findOwnedReports("trace", invocation, "single").isEmpty());
+        assertEquals("outside evidence", Files.readString(allocation.physicalPath()));
+    }
+
+    @Test
+    void ownerDiscoveryRejectsDuplicateMetadataFields() throws IOException {
+        Path reports = tempDir.resolve("reports");
+        System.setProperty(TRACE_REPORTS, reports.toString());
+        SessionInvocation invocation = new SessionInvocation("Example", "replay", 0,
+                "0123456789abcdef", "owner");
+        TestSessionOutputPaths.ReportAllocation allocation = TestSessionOutputPaths.allocateReport(
+                "trace", invocation.className(), invocation.methodName(), invocation.parameterIndex(),
+                invocation.invocationId(), "single", "s3k_hcz1", ".json");
+        TestSessionOutputPaths.publish(allocation.physicalPath(), "untrusted evidence");
+        TestSessionOutputPaths.publishOwnerMetadata(allocation);
+        String owner = Files.readString(allocation.metadataPath());
+        Files.writeString(allocation.metadataPath(), owner.replaceFirst("\\{", "{\"logical_key\":\"other\","));
+
+        assertTrue(TestSessionOutputPaths.findOwnedReports("trace", invocation, "single").isEmpty());
+        assertEquals("untrusted evidence", Files.readString(allocation.physicalPath()));
+    }
+
+    @Test
+    void ownerDiscoveryDoesNotSelectASidecarsTraversalTarget() throws IOException {
+        Path reports = tempDir.resolve("reports");
+        System.setProperty(TRACE_REPORTS, reports.toString());
+        SessionInvocation invocation = new SessionInvocation("Example", "replay", 0,
+                "0123456789abcdef", "owner");
+        TestSessionOutputPaths.ReportAllocation allocation = TestSessionOutputPaths.allocateReport(
+                "trace", invocation.className(), invocation.methodName(), invocation.parameterIndex(),
+                invocation.invocationId(), "single", "s3k_hcz1", ".json");
+        TestSessionOutputPaths.publish(allocation.physicalPath(), "owned evidence");
+        TestSessionOutputPaths.publishOwnerMetadata(allocation);
+        Path victim = reports.resolve("unrelated.json");
+        Files.writeString(victim, "foreign evidence");
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode owner = (ObjectNode) mapper.readTree(allocation.metadataPath().toFile());
+        owner.put("physical_path", reports.resolve("trace/../unrelated.json").toString());
+        Files.writeString(allocation.metadataPath(), owner.toString());
+
+        assertTrue(TestSessionOutputPaths.findOwnedReports("trace", invocation, "single").isEmpty());
+        assertEquals("foreign evidence", Files.readString(victim));
+        assertEquals("owned evidence", Files.readString(allocation.physicalPath()));
     }
 }

@@ -805,8 +805,8 @@ The base JUnit-5 test class. Subclasses override `game()`, `zone()`, `act()`,
 
 1. Resolve the canonical or candidate fixture root and gate on required fixture
    payloads/ROMs. Missing inputs may skip the test; inspect skips before claiming parity.
-2. Parse strict v5 data, validate replay eligibility and resolve the movie from
-   metadata's shared `_movies/<source_bk2>` placement or a retained local `.bk2`.
+2. Parse strict v5 data, validate replay eligibility and resolve the movie using
+   the [canonical lookup](testing.md#diagnose-one-trace-replay).
 3. Prepare the recorded team and ROM-backed level through `TraceReplaySessionBootstrap`,
    `TraceReplayBootstrap` and `HeadlessTestFixture`. Some entry profiles require a
    fresh level load rather than a reused `SharedLevel`. The declared-position entry
@@ -821,13 +821,18 @@ The base JUnit-5 test class. Subclasses override `game()`, `zone()`, `act()`,
 5. Capture engine snapshots and compare the selected verification groups with
    `TraceBinder`. Physics/aux rows are comparison evidence, never gameplay write-back.
 6. Publish an owner-keyed report and validate group accounting, warnings/errors,
-   rewind closure and timing closure as applicable. The finalization path regenerates
-   the report even when replay fails early so stale evidence cannot mask that failure.
+   rewind closure and timing closure as applicable. Once a binder exists, finalization
+   publishes its comparison prefix on replay failure. Earlier standalone method exits
+   rely on verified prior-report retirement at entry; pre-method conditions/extensions
+   and unverified artifacts remain outside that boundary. Use fresh output directories
+   and the current invocation's Surefire/process result to establish freshness.
 
-Reports live under
+Default reports live under
 `target/trace-reports/<profile>/<logical-key>-<lane>-<owner-hash>.json`, with
-ownership sidecars and divergence context. Consult the report's completed frame
-count and selected groups, not just Maven's exit status.
+ownership sidecars and divergence context. Use the published completion gate and
+selected scope alongside this invocation's Surefire/process result, following the
+[diagnosis guide](testing.md#diagnose-one-trace-replay). Comparison counts alone
+never establish completion.
 
 ### 6.2 `AbstractCreditsDemoTraceReplayTest`
 
