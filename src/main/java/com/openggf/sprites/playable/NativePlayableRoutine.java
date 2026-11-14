@@ -33,6 +33,17 @@ public enum NativePlayableRoutine {
      * The caller supplies the already resolved primary player.
      */
     public static boolean isAtOrBeyondDeathForNativeRead(AbstractPlayableSprite player) {
-        return player.nativePrimaryRoutineAtLeast6ForRead();
+        // Same package: read stored fields, not creator-overridable getters.
+        Integer override = player.objectRoutineOverride;
+        if (override != null) {
+            return (override & 0xFF) >= 6;
+        }
+        if (player.dead) {
+            return true;
+        }
+        var rules = player.gameRules;
+        return player.drowningDeath && player.drownPreDeathTimer > 0
+                && rules != null && rules.drowningBubble() != null
+                && rules.drowningBubble().drownInstallsDedicatedPlayerRoutine();
     }
 }

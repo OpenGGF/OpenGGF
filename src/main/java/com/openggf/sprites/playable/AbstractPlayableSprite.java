@@ -561,7 +561,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         private PhysicsProfile physicsProfile;
         private GameModule runtimeBoundStateModule;
         private PhysicsModifiers physicsModifiers;
-        private GameRules gameRules;
+        GameRules gameRules; // package access: NativePlayableRoutine reads the bound rules
 
         /**
          * Canonical "reset" profile — the base used for water/shoes modifier math.
@@ -2758,16 +2758,6 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          */
         public Integer getObjectRoutineOverride() {
                 return objectRoutineOverride;
-        }
-
-        /** Stored unsigned primary-routine threshold, separate from virtual dispatch queries. */
-        final boolean nativePrimaryRoutineAtLeast6ForRead() {
-                if (objectRoutineOverride != null) {
-                        return (objectRoutineOverride & 0xFF) >= 6;
-                }
-                return dead || (drowningDeath && drownPreDeathTimer > 0
-                        && gameRules != null && gameRules.drowningBubble() != null
-                        && gameRules.drowningBubble().drownInstallsDedicatedPlayerRoutine());
         }
 
         /**
