@@ -267,6 +267,13 @@ under the matching area heading; see the
 
 ## Modding and tools
 
+- **Debug labels on widescreen:** with a display aspect wider than 4:3, debug
+  text tied to a place in the level (sensor, object and plane labels, the
+  object-debug text) was drawn too far left: at 400 wide, at 0.8 of its distance
+  from the left edge, so the sensor labels sat on the player. Lines, boxes and
+  panels were right. The text renderer scaled positions back by a fixed 320
+  while the picture is drawn 400 wide; it now uses the configured width.
+
 - **MICA, an original character framework example:** The complete MICA and TALON
   mod now ships bundled with JVM and native distributions, disabled by default.
   Enable it in the mod manager; saved enable/disable choices survive upgrades. TALON’s S3K lives label now
