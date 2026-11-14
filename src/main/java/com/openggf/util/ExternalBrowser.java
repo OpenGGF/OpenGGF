@@ -51,6 +51,37 @@ public final class ExternalBrowser {
         }
     }
 
+    /**
+     * Opens {@code address} with an already percent-encoded {@code query}, such as a pre-filled
+     * issue form. The address follows {@link #open(String, Launcher)}'s rules; the query may not
+     * carry a fragment, and a query that does not parse is refused.
+     */
+    public static boolean open(String address, String query, Launcher launcher) {
+        Objects.requireNonNull(launcher, "launcher");
+        Objects.requireNonNull(query, "query");
+        URI plain;
+        URI uri;
+        try {
+            plain = new URI("https://" + Objects.requireNonNull(address, "address"));
+            uri = new URI("https://" + address + "?" + query);
+        } catch (URISyntaxException invalid) {
+            LOGGER.warning("Not a web address with a query: " + address);
+            return false;
+        }
+        if (plain.getHost() == null || plain.getQuery() != null || plain.getFragment() != null
+                || plain.getUserInfo() != null || uri.getFragment() != null) {
+            LOGGER.warning("Not a plain web address with a query: " + address);
+            return false;
+        }
+        try {
+            launcher.start(command(uri.toASCIIString(), System.getProperty("os.name", "")));
+            return true;
+        } catch (IOException failure) {
+            LOGGER.warning("Could not open " + plain + " in a browser: " + failure.getMessage());
+            return false;
+        }
+    }
+
     static List<String> command(String url, String osName) {
         String os = osName.toLowerCase(Locale.ROOT);
         if (os.contains("win")) return List.of("rundll32", "url.dll,FileProtocolHandler", url);
