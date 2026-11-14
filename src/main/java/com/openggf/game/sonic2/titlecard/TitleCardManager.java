@@ -614,11 +614,16 @@ public class TitleCardManager implements TitleCardProvider, TitleCardLoopTail,
 
         // Cache all patterns in the VRAM-aligned array
         int cachedCount = 0;
-        for (int i = 0; i < combinedPatterns.length; i++) {
-            if (combinedPatterns[i] != null) {
-                graphicsManager.cachePatternTexture(combinedPatterns[i], PATTERN_BASE + i);
-                cachedCount++;
+        graphicsManager.beginPatternAtlasBatch();
+        try {
+            for (int i = 0; i < combinedPatterns.length; i++) {
+                if (combinedPatterns[i] != null) {
+                    graphicsManager.cachePatternTexture(combinedPatterns[i], PATTERN_BASE + i);
+                    cachedCount++;
+                }
             }
+        } finally {
+            graphicsManager.endPatternAtlasBatch();
         }
         LOGGER.info("Cached " + cachedCount + " title card patterns to GPU");
 

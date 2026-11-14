@@ -255,10 +255,15 @@ public class Sonic1TitleCardManager implements TitleCardProvider {
             return;
         }
 
-        for (int i = 0; i < patterns.length; i++) {
-            if (patterns[i] != null) {
-                graphicsManager.cachePatternTexture(patterns[i], PATTERN_BASE + i);
+        graphicsManager.beginPatternAtlasBatch();
+        try {
+            for (int i = 0; i < patterns.length; i++) {
+                if (patterns[i] != null) {
+                    graphicsManager.cachePatternTexture(patterns[i], PATTERN_BASE + i);
+                }
             }
+        } finally {
+            graphicsManager.endPatternAtlasBatch();
         }
         LOGGER.info("Cached " + patterns.length + " S1 title card patterns to GPU");
 

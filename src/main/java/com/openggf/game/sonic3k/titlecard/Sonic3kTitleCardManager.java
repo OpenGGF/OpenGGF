@@ -1891,10 +1891,15 @@ public class Sonic3kTitleCardManager
         GraphicsManager gm = GameServices.graphics();
         if (gm == null) return;
 
-        for (int i = 0; i < combinedPatterns.length; i++) {
-            if (combinedPatterns[i] != null) {
-                gm.cachePatternTexture(combinedPatterns[i], PATTERN_BASE + i);
+        gm.beginPatternAtlasBatch();
+        try {
+            for (int i = 0; i < combinedPatterns.length; i++) {
+                if (combinedPatterns[i] != null) {
+                    gm.cachePatternTexture(combinedPatterns[i], PATTERN_BASE + i);
+                }
             }
+        } finally {
+            gm.endPatternAtlasBatch();
         }
         artCached = true;
     }
