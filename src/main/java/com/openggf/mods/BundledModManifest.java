@@ -37,7 +37,7 @@ public record BundledModManifest(List<Entry> mods) {
     private static final Pattern FILE = Pattern.compile("[a-z0-9][a-z0-9._-]{0,123}\\.jar");
     private static final Pattern SHA256 = Pattern.compile("[0-9a-f]{64}");
     private static final Set<String> ROOT_FIELDS = Set.of("formatVersion", "mods");
-    private static final Set<String> ENTRY_FIELDS = Set.of("id", "version", "file", "sha256", "size");
+    private static final Set<String> ENTRY_FIELDS = Set.of("id", "version", "file", "sha256", "size", "enabledByDefault");
 
     public BundledModManifest {
         mods = List.copyOf(Objects.requireNonNull(mods, "mods"));
@@ -60,7 +60,10 @@ public record BundledModManifest(List<Entry> mods) {
     public boolean isEmpty() { return mods.isEmpty(); }
 
     /** One shipped jar: its manifest identity, file name, exact SHA-256 and byte size. */
-    public record Entry(String id, SemanticVersion version, String file, String sha256, long size) {
+    public record Entry(String id, SemanticVersion version, String file, String sha256, long size, boolean enabledByDefault) {
+        public Entry(String id, SemanticVersion version, String file, String sha256, long size) {
+            this(id, version, file, sha256, size, true);
+        }
         public Entry {
             id = ModKeySyntax.requireManifestId(id);
             Objects.requireNonNull(version, "version");
@@ -132,6 +135,7 @@ public record BundledModManifest(List<Entry> mods) {
     private static Entry parseEntry(JsonParser parser) throws IOException {
         String id = null, version = null, file = null, sha256 = null;
         Long size = null;
+        boolean enabledByDefault = true;
         Set<String> seen = new HashSet<>();
         while (parser.nextToken() == JsonToken.FIELD_NAME) {
             String field = parser.currentName();
@@ -139,7 +143,12 @@ public record BundledModManifest(List<Entry> mods) {
                 throw new IllegalArgumentException("Unexpected bundled mod field: " + field);
             }
             JsonToken value = parser.nextToken();
-            if (field.equals("size")) {
+            if (field.equals("enabledByDefault")) {
+                if (value != JsonToken.VALUE_TRUE && value != JsonToken.VALUE_FALSE) {
+                    throw new IllegalArgumentException("enabledByDefault must be boolean");
+                }
+                enabledByDefault = parser.getBooleanValue();
+            } else if (field.equals("size")) {
                 expect(value, JsonToken.VALUE_NUMBER_INT);
                 size = parser.getLongValue();
             } else {
@@ -153,10 +162,10 @@ public record BundledModManifest(List<Entry> mods) {
             }
         }
         expect(parser.currentToken(), JsonToken.END_OBJECT);
-        if (seen.size() != ENTRY_FIELDS.size()) {
+        if (!seen.containsAll(Set.of("id", "version", "file", "sha256", "size"))) {
             throw new IllegalArgumentException("Bundled mod entry requires " + ENTRY_FIELDS);
         }
-        return new Entry(id, SemanticVersion.parse(version), file, sha256, size);
+        return new Entry(id, SemanticVersion.parse(version), file, sha256, size, enabledByDefault);
     }
 
     private static void expect(JsonToken actual, JsonToken expected) {
@@ -180,6 +189,7 @@ public record BundledModManifest(List<Entry> mods) {
                 out.writeStringField("file", entry.file());
                 out.writeStringField("sha256", entry.sha256());
                 out.writeNumberField("size", entry.size());
+                out.writeBooleanField("enabledByDefault", entry.enabledByDefault());
                 out.writeEndObject();
             }
             out.writeEndArray();

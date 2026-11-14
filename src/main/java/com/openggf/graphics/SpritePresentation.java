@@ -12,6 +12,16 @@ public final class SpritePresentation {
         PLAYER, OBJECT, RINGS, HUD, HUD_COUNTERS;
         public boolean isHud() { return this == HUD || this == HUD_COUNTERS; }
     }
+    private static final Layer[] LAYERS = Layer.values();
+
+    /**
+     * {@link Layer#valueOf} for SAT debug sources. Submission stores {@link Layer#name()}
+     * itself, so an identity match avoids the enum directory lookup on every replayed entry.
+     */
+    static Layer layerNamed(String name) {
+        for (Layer layer : LAYERS) if (layer.name() == name) return layer;
+        return Layer.valueOf(name);
+    }
 
     /** Semantic display ownership, independent of native sprite admission and gameplay flags. */
     public enum Part { WORLD, BODY, APPENDAGE, ATTACHED_EFFECT, OBJECT_BODY }
@@ -184,17 +194,19 @@ public final class SpritePresentation {
 
     /** Mutable only while the loop-tail producer runs; finish makes a defensive immutable copy. */
     static final class Builder {
-        final List<Tile> tiles = new ArrayList<>();
+        final ArrayList<Tile> tiles;
         final List<Primitive> primitives = new ArrayList<>();
-        final Map<Integer, PatternVersion> patternVersions = new HashMap<>();
+        final HashMap<Integer, PatternVersion> patternVersions;
         int firstPatternVersion = Integer.MAX_VALUE;
         int lastPatternVersion = Integer.MIN_VALUE;
         final int cameraX, cameraY;
         final Function<Object, Attributes> descriptorDecoder;
         Layer layer = Layer.OBJECT;
-        Builder(int cameraX, int cameraY, Function<Object, Attributes> descriptorDecoder) {
+        Builder(int cameraX, int cameraY, Function<Object, Attributes> descriptorDecoder, Scratch scratch) {
             this.cameraX = cameraX; this.cameraY = cameraY; this.descriptorDecoder = descriptorDecoder;
+            this.tiles = scratch.tiles; this.patternVersions = scratch.patternVersions;
         }
+
         void add(GraphicsManager graphics, int id, Object descriptor,
                  float x, float y, float width, float height) {
             Attributes desc = descriptorDecoder.apply(descriptor);
@@ -223,6 +235,17 @@ public final class SpritePresentation {
         }
     }
 
+    /**
+     * Renderer-owned working storage for one preparation at a time. Preparation runs every
+     * frame and only publishes defensive immutable copies, so its growable buffers are reused.
+     */
+    static final class Scratch {
+        final ArrayList<Tile> tiles = new ArrayList<>();
+        final HashMap<Integer, PatternVersion> patternVersions = new HashMap<>();
+        final java.util.BitSet referenced = new java.util.BitSet();
+        void clear() { tiles.clear(); patternVersions.clear(); referenced.clear(); }
+    }
+
     private SpritePresentation() { }
 
     /** The owning renderer decodes its opaque descriptor; this buffer knows only primitive attributes. */
@@ -230,7 +253,11 @@ public final class SpritePresentation {
                                 Function<Object, Attributes> descriptorDecoder) {
         if (graphics.spritePresentationBuilder != null || graphics.isSpriteSatCollectionActive())
             throw new IllegalStateException("nested sprite preparation");
-        Builder builder = new Builder(cameraX, cameraY, descriptorDecoder);
+        // Preparation is never nested; a reentrant caller would still get private storage.
+        Scratch scratch = graphics.spritePresentationScratch != null ? graphics.spritePresentationScratch : new Scratch();
+        graphics.spritePresentationScratch = null;
+        scratch.clear();
+        Builder builder = new Builder(cameraX, cameraY, descriptorDecoder, scratch);
         boolean priority = graphics.isUseSpritePriorityShader();
         int mask = graphics.getCurrentSpriteTileOcclusionPaletteMask();
         boolean ghost = graphics.isGhostRenderEffectActive();
@@ -242,23 +269,48 @@ public final class SpritePresentation {
             // This is the displayed sprite table's art, not a snapshot of every
             // staging-bank slot. Unreferenced DPLC tails retain arbitrary older
             // animation data and cannot affect this frame's presentation.
-            Map<Integer, PatternVersion> referencedPatterns = new HashMap<>();
-            for (Tile tile : builder.tiles) {
-                // Most tiles reference static ROM art. Avoid boxing every static
-                // address merely to discover it has no mutable DPLC generation.
-                int id = tile.patternId();
-                if (id < builder.firstPatternVersion || id > builder.lastPatternVersion) continue;
-                PatternVersion version = builder.patternVersions.get(id);
-                if (version != null) referencedPatterns.put(tile.patternId(), version);
-            }
-            return new Frame(builder.tiles, builder.primitives, referencedPatterns);
+            return new Frame(builder.tiles, builder.primitives, referencedPatterns(builder, scratch.referenced));
         } finally {
+            scratch.clear();
+            graphics.spritePresentationScratch = scratch;
             graphics.spritePresentationBuilder = null;
             graphics.cancelSpritePresentationCollection();
             if (ghost) graphics.beginGhostRenderEffect(alpha, ghostColour); else graphics.endGhostRenderEffect();
             graphics.setUseSpritePriorityShader(priority);
             graphics.setCurrentSpriteTileOcclusionPaletteMask(mask);
         }
+    }
+
+    private static final long MAX_REFERENCED_RANGE = 1 << 20;
+
+    private static Map<Integer, PatternVersion> referencedPatterns(Builder builder, java.util.BitSet referenced) {
+        Map<Integer, PatternVersion> referencedPatterns = new HashMap<>();
+        int first = builder.firstPatternVersion, last = builder.lastPatternVersion;
+        if (first > last) return referencedPatterns;
+        List<Tile> tiles = builder.tiles;
+        if ((long) last - first < MAX_REFERENCED_RANGE) {
+            // Mark referenced versioned addresses, then publish the already boxed keys:
+            // tiles repeat addresses, and static ROM art has no mutable DPLC generation.
+            for (int i = 0, n = tiles.size(); i < n; i++) {
+                int id = tiles.get(i).patternId();
+                if (id >= first && id <= last) referenced.set(id - first);
+            }
+            if (referenced.isEmpty()) return referencedPatterns;
+            for (Map.Entry<Integer, PatternVersion> entry : builder.patternVersions.entrySet()) {
+                if (entry.getValue() != null && referenced.get(entry.getKey() - first))
+                    referencedPatterns.put(entry.getKey(), entry.getValue());
+            }
+            return referencedPatterns;
+        }
+        for (int i = 0, n = tiles.size(); i < n; i++) {
+            // Most tiles reference static ROM art. Avoid boxing every static
+            // address merely to discover it has no mutable DPLC generation.
+            int id = tiles.get(i).patternId();
+            if (id < first || id > last) continue;
+            PatternVersion version = builder.patternVersions.get(id);
+            if (version != null) referencedPatterns.put(id, version);
+        }
+        return referencedPatterns;
     }
 
     /** Draws the visible pixel rows of a prepared 8x8 tile whose top is at {@code y}. */
@@ -299,6 +351,21 @@ public final class SpritePresentation {
             builder.firstPatternVersion = Math.min(builder.firstPatternVersion, id);
             builder.lastPatternVersion = Math.max(builder.lastPatternVersion, id);
         }
+    }
+
+    /**
+     * Lambda-free form of {@link #withSubject} for per-tile loops: installs {@code subject}
+     * and returns the previous tag, which the caller restores with {@link #restoreSubject}
+     * in a {@code finally} block.
+     */
+    public static Subject enterSubject(GraphicsManager graphics, Subject subject) {
+        Subject previous = graphics.spritePresentationSubject;
+        graphics.spritePresentationSubject = java.util.Objects.requireNonNull(subject, "subject");
+        return previous;
+    }
+
+    public static void restoreSubject(GraphicsManager graphics, Subject previous) {
+        graphics.spritePresentationSubject = previous;
     }
 
     /** Scope tags at the producer; SAT replay carries the immutable tag through its native post-pass. */

@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k.dataselect;
 
 import com.openggf.data.RomByteReader;
+import com.openggf.data.RomChannel;
 import com.openggf.game.sonic3k.S3kSpriteDataLoader;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
@@ -11,10 +12,8 @@ import com.openggf.data.compression.KosinskiReader;
 import com.openggf.data.compression.NemesisReader;
 import com.openggf.util.PatternDecompressor;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.Channels;
 import java.util.List;
 import java.util.Objects;
 
@@ -269,25 +268,24 @@ public final class S3kDataSelectDataLoader implements S3kDataSelectAssetSource {
         return PatternDecompressor.fromBytes(decompressKosinski(address));
     }
 
+    // The decompressors read the stream from its start until its own terminator, so they
+    // read straight from the ROM rather than from a copy of everything up to the ROM's end.
     private Pattern[] loadNemesisPatterns(int address) throws IOException {
-        byte[] compressed = reader.slice(address, reader.size() - address);
-        try (ByteArrayInputStream input = new ByteArrayInputStream(compressed)) {
-            return PatternDecompressor.fromBytes(NemesisReader.decompress(Channels.newChannel(input)));
+        try (var channel = RomChannel.at(reader, address)) {
+            return PatternDecompressor.fromBytes(NemesisReader.decompress(channel));
         }
     }
 
     private byte[] decompressKosinski(int address) throws IOException {
-        byte[] compressed = reader.slice(address, reader.size() - address);
-        try (ByteArrayInputStream input = new ByteArrayInputStream(compressed)) {
-            return KosinskiReader.decompress(Channels.newChannel(input));
+        try (var channel = RomChannel.at(reader, address)) {
+            return KosinskiReader.decompress(channel);
         }
     }
 
     private int[] decompressEnigmaWords(int address, int startingArtTile) throws IOException {
-        byte[] compressed = reader.slice(address, reader.size() - address);
         byte[] decompressed;
-        try (ByteArrayInputStream input = new ByteArrayInputStream(compressed)) {
-            decompressed = EnigmaReader.decompress(Channels.newChannel(input), startingArtTile);
+        try (var channel = RomChannel.at(reader, address)) {
+            decompressed = EnigmaReader.decompress(channel, startingArtTile);
         }
         return wordsFromBytes(decompressed);
     }

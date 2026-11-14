@@ -12,6 +12,12 @@ final class LevelBoundsMaskTransition implements RewindSnapshottable<LevelBounds
     record State(int cameraX, int width, int tick, ArenaMaskState sample, Edge left, Edge right) { }
     private static final State EMPTY = new State(0, 0, 0, null, null, null);
     private State state;
+    // Working rows only: ArenaMaskState copies its opacity, so published (and rewind
+    // captured) states never alias these per-frame buffers.
+    private float[] previousRow = new float[0];
+    private float[] sourceRow = new float[0];
+    private float[] targetRow = new float[0];
+    private float[] opacityRow = new float[0];
 
     void advance(ArenaMaskState geometry, int cameraX, int width) {
         if (state != null && state.tick() == geometry.noiseFrame() && state.width() == width) return;
@@ -19,18 +25,18 @@ final class LevelBoundsMaskTransition implements RewindSnapshottable<LevelBounds
                 && Math.abs((long) cameraX - state.cameraX()) < width;
         Edge left = advanceEdge(geometry, cameraX, width, true, history ? state.left() : null);
         Edge right = advanceEdge(geometry, cameraX, width, false, history ? state.right() : null);
-        float[] opacity = new float[width];
+        float[] opacity = opacityRow = row(opacityRow, width);
         for (int x = 0; x < width; x++) {
             opacity[x] = Math.max(left.sample().opacityAt(x), right.sample().opacityAt(x));
         }
         state = new State(cameraX, width, geometry.noiseFrame(),
-                new ArenaMaskState(geometry.left(), geometry.right(), geometry.noiseFrame(), opacity), left, right);
+                mask(geometry, opacity), left, right);
     }
 
     private Edge advanceEdge(ArenaMaskState geometry, int cameraX, int width, boolean left, Edge old) {
-        float[] previous = new float[width];
-        float[] source = new float[width];
-        float[] target = new float[width];
+        float[] previous = previousRow = row(previousRow, width);
+        float[] source = sourceRow = row(sourceRow, width);
+        float[] target = targetRow = row(targetRow, width);
         boolean changed = false;
         for (int x = 0; x < width; x++) {
             target[x] = width > ArenaMaskState.NATIVE_WIDTH
@@ -52,7 +58,7 @@ final class LevelBoundsMaskTransition implements RewindSnapshottable<LevelBounds
         int elapsed = old == null ? FADE_FRAMES : changed ? 1 : Math.min(FADE_FRAMES, old.elapsed() + 1);
         if (changed) source = previous;
         float progress = (float) elapsed / FADE_FRAMES;
-        float[] opacity = new float[width];
+        float[] opacity = opacityRow = row(opacityRow, width);
         for (int x = 0; x < width; x++) {
             opacity[x] = source[x] + (target[x] - source[x]) * progress;
         }
@@ -61,6 +67,11 @@ final class LevelBoundsMaskTransition implements RewindSnapshottable<LevelBounds
 
     private static ArenaMaskState mask(ArenaMaskState geometry, float[] opacity) {
         return new ArenaMaskState(geometry.left(), geometry.right(), geometry.noiseFrame(), opacity);
+    }
+
+    /** An exact-width working row; every element is overwritten before it is read. */
+    private static float[] row(float[] row, int width) {
+        return row.length == width ? row : new float[width];
     }
 
     ArenaMaskState sample() { return state == null ? null : state.sample(); }

@@ -1,0 +1,80 @@
+package micaandtalon;
+
+import com.openggf.game.*;
+import com.openggf.io.ModAssetRoot;
+import com.openggf.level.objects.PlayableSheetMaterializer;
+
+import java.io.IOException;
+import java.util.List;
+import java.util.Map;
+import java.util.EnumSet;
+import java.util.Set;
+
+/** SuperFormProfile for TALON, including Solar palette cycles and native flight physics. */
+final class TalonSolar {
+    static final String EFFECTS = "art/talon/powered/effects/effects.txt";
+
+    private TalonSolar() {}
+
+    static SuperFormProfile profile(ModAssetRoot assets) throws IOException {
+        var colors = FrameTable.colors(assets, "art/talon/powered/palettes.txt");
+        var fade = colors.get("fade");
+        var s2Bank = bank(assets, "s2");
+        var s3kBank = bank(assets, "s3k");
+        var solar = EffectsTable.read(assets, EFFECTS).effects("super");
+        var s2 =
+                new SuperFormProfile.Form(
+                        fade,
+                        colors.get("s2"),
+                        List.of(),
+                        8,
+                        4,
+                        PhysicsProfile.SONIC_3K_SUPER_TAILS,
+                        CanonicalAnimation.SUPER_TRANSFORM,
+                        Map.of(),
+                        false,
+                        false,
+                        s2Bank,
+                        solar);
+        var s3k =
+                new SuperFormProfile.Form(
+                        fade,
+                        colors.get("s3k"),
+                        List.of(),
+                        7,
+                        2,
+                        PhysicsProfile.SONIC_3K_SUPER_TAILS,
+                        CanonicalAnimation.SUPER_TRANSFORM,
+                        Map.of(),
+                        false,
+                        false,
+                        s3kBank,
+                        solar);
+        // Solar retains its authored motes, flare and heat trail, with no Hyper or Flickies.
+        return new SuperFormProfile(
+                Map.of(
+                        GameId.S1,
+                        Map.of(SuperFormProfile.Tier.SUPER,
+                                new SuperFormProfile.Form(fade, colors.get("s2"), List.of(), 8, 4,
+                                        PhysicsProfile.SONIC_3K_SUPER_TAILS, CanonicalAnimation.SUPER_TRANSFORM,
+                                        Map.of(), false, false, s2Bank, solar)),
+                        GameId.S2,
+                        Map.of(SuperFormProfile.Tier.SUPER, s2),
+                        GameId.S3K,
+                        Map.of(SuperFormProfile.Tier.SUPER, s3k)));
+    }
+    private static PoweredPlayableSheet bank(ModAssetRoot assets, String game) throws IOException {
+        var art = PlayableSheetMaterializer.read(assets.readBounded(
+                "art/talon-powered-" + game + ".ggfp", assets.limits().maxAssetBytes())).art();
+        var aliases = EnumSet.allOf(CanonicalAnimation.class);
+        aliases.removeAll(Set.of(CanonicalAnimation.WAIT, CanonicalAnimation.WALK, CanonicalAnimation.RUN,
+                CanonicalAnimation.TAILS_FLY, CanonicalAnimation.TAILS_FLY_ASCEND,
+                CanonicalAnimation.SUPER_TRANSFORM, CanonicalAnimation.ROLL, CanonicalAnimation.ROLL2,
+                CanonicalAnimation.DUCK, CanonicalAnimation.LOOK_UP, CanonicalAnimation.HURT,
+                CanonicalAnimation.SKID, CanonicalAnimation.BALANCE, CanonicalAnimation.PUSH,
+                CanonicalAnimation.SPRING, CanonicalAnimation.SPINDASH));
+        // Carry contact geometry and the remaining rare poses stay explicit normal-bank aliases.
+        return new PoweredPlayableSheet(art, aliases);
+    }
+
+}

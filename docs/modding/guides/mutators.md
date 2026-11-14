@@ -126,6 +126,11 @@ are slotless Obj37 continuations rather than claimed SST slots); the monitor/rin
 without reindexing native placements; stage-entry permits retain an already
 captured transition; Game Speed schedules complete presentation-loop ticks; and
 Violent Explosions amplifies only the resolved native badnik rebound;
+The policy below remains Mutator Lab's declarative client of the shared world-owned
+homing capability. Character mods use `com.openggf.sprites.playable.HomingAttack`
+(`start`, `startIfTarget`, `divebomb`, `requestReticle`) instead of enabling a mutator or importing
+`game.mutators` runtime classes; see [character abilities](../characters.md#ability-and-super-form-rules).
+
 `HomingAttack(mode, characters)` steers the admitted leader's native roll at a live
 target, leaving contact, breakage and defeat to the native owners. Big Head
 composes reviewed anatomical masks after native SAT admission, with native

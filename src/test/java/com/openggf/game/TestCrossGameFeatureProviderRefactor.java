@@ -37,6 +37,72 @@ import static org.mockito.Mockito.spy;
 
 class TestCrossGameFeatureProviderRefactor {
 
+    @Test @RequiresRom(SonicGame.SONIC_1)
+    void sonicFamiliesKeepS1HostTiming() throws Exception { assertSonicFamilyTiming(new com.openggf.game.sonic1.Sonic1GameModule()); }
+
+    @Test @RequiresRom(SonicGame.SONIC_2)
+    void sonicFamiliesKeepS2HostTiming() throws Exception { assertSonicFamilyTiming(new com.openggf.game.sonic2.Sonic2GameModule()); }
+
+    private void assertSonicFamilyTiming(GameModule host) throws Exception {
+        GameModuleRegistry.setCurrent(host);
+        SessionManager.openGameplaySession(host);
+        var configuration = GameServices.configuration();
+        String previous = configuration.getString(SonicConfiguration.SONIC_3K_ROM);
+        configuration.setConfigValue(SonicConfiguration.SONIC_3K_ROM, RomTestUtils.ensureSonic3kRomAvailable().getAbsolutePath());
+        try {
+            var provider = CrossGameFeatureProvider.getInstance();
+            provider.initialize("s3k");
+            var donated = provider.loadPlayerSpriteArt("sonic");
+            var sprite = new com.openggf.tests.TestablePlayableSprite("sonic", (short) 0, (short) 0);
+            sprite.setAnimationSet(donated.animationSet());
+            sprite.setAnimationProfile(donated.animationProfile());
+            var completed = java.util.Set.of(CanonicalAnimation.STOP, CanonicalAnimation.FLOAT3,
+                    CanonicalAnimation.FLOAT4, CanonicalAnimation.GET_AIR, CanonicalAnimation.BURNT,
+                    CanonicalAnimation.WATER_SLIDE, CanonicalAnimation.SLIDE, CanonicalAnimation.NULL_ANIM,
+                    CanonicalAnimation.HURT2, CanonicalAnimation.TAILS_CARRIED, CanonicalAnimation.HANG2,
+                    CanonicalAnimation.BLINK, CanonicalAnimation.GET_UP, CanonicalAnimation.WAIT);
+            for (var animation : completed) {
+                int id = provider.resolveDonatedAnimation(animation);
+                assertTrue(id >= 0, animation.name());
+                assertNotNull(donated.animationSet().getScript(id), animation.name());
+                assertEquals(id, sprite.resolveAnimationId(animation), animation.name());
+            }
+            java.util.List<? extends AnimationId> nativeIds = host instanceof com.openggf.game.sonic1.Sonic1GameModule
+                    ? java.util.Arrays.asList(com.openggf.game.sonic1.constants.Sonic1AnimationIds.values())
+                    : java.util.Arrays.asList(com.openggf.game.sonic2.constants.Sonic2AnimationIds.values());
+            for (var animation : nativeIds) if (animation.toCanonical() != null && completed.contains(animation.toCanonical())) {
+                sprite.setAnimationId(animation);
+                assertEquals(provider.resolveDonatedAnimation(animation.toCanonical()), sprite.getAnimationId());
+            }
+            var nativeHost = host.getDonorCapabilities().getPlayerArtProvider(
+                    com.openggf.data.RomByteReader.fromRom(RomManager.getInstance().getRom())).loadPlayerSpriteArt("sonic");
+            var nativeProfile = (ScriptedVelocityAnimationProfile) nativeHost.animationProfile();
+            var translatedProfile = (ScriptedVelocityAnimationProfile) donated.animationProfile();
+            assertEquals(provider.resolveFamilyAnimation(CanonicalAnimation.WAIT), translatedProfile.getIdleAnimId());
+            assertEquals(nativeProfile.getBlinkAnimId() < 0 ? -1 : provider.resolveFamilyAnimation(CanonicalAnimation.BLINK),
+                    translatedProfile.getBlinkAnimId());
+            assertEquals(nativeProfile.getGetUpAnimId() < 0 ? -1 : provider.resolveFamilyAnimation(CanonicalAnimation.GET_UP),
+                    translatedProfile.getGetUpAnimId());
+            int count = 0;
+            for (var entry : host.getDonorCapabilities().getAnimationFamilies().entrySet()) {
+                var animation = entry.getValue().animation();
+                if (animation == null) continue;
+                int id = provider.resolveFamilyAnimation(animation);
+                if (id < 0) continue;
+                var script = donated.animationSet().getScript(id);
+                var original = nativeHost.animationSet().getScript(entry.getKey());
+                assertEquals(original.delay(), script.delay(), animation.name());
+                assertEquals(original.endAction(), script.endAction(), animation.name());
+                assertEquals(original.frames().size(), script.frames().size(), animation.name());
+                if (script.endAction() != com.openggf.sprites.animation.SpriteAnimationEndAction.SWITCH)
+                    assertEquals(original.endParam(), script.endParam(), animation.name());
+                count++;
+            }
+            assertTrue(count > 0, "host-specific families are installed");
+        } finally { configuration.setConfigValue(SonicConfiguration.SONIC_3K_ROM, previous); }
+    }
+
+
     @Nested
     @RequiresRom(SonicGame.SONIC_3K)
     class S3kTailsDonationIntegration {
@@ -46,7 +112,7 @@ class TestCrossGameFeatureProviderRefactor {
             assertS3kTailsScriptsSurviveTranslation(new com.openggf.game.sonic1.Sonic1GameModule());
         }
 
-        @Test
+            @Test
         void s3kTailsScriptsSurviveTranslationIntoS2Host() throws Exception {
             assertS3kTailsScriptsSurviveTranslation(new com.openggf.game.sonic2.Sonic2GameModule());
         }
@@ -67,12 +133,21 @@ class TestCrossGameFeatureProviderRefactor {
                         RomManager.getInstance(), configuration);
                 provider.initialize("s3k");
 
+                var originalFamilies = host.getDonorCapabilities().getAnimationFamilies();
+                host.getDonorCapabilities().forPlayableCharacter(PlayerCharacter.TAILS_ALONE);
+                assertSame(originalFamilies, host.getDonorCapabilities().getAnimationFamilies());
                 SpriteArtSet donated = provider.loadPlayerSpriteArt("tails");
 
                 assertNotNull(donated);
                 assertInstanceOf(ScriptedVelocityAnimationProfile.class, donated.animationProfile());
                 assertNotNull(donated.animationSet());
+                var nativeTails = new com.openggf.game.sonic3k.Sonic3kPlayerArt(
+                        new com.openggf.data.RomByteReader(java.nio.file.Files.readAllBytes(
+                                RomTestUtils.ensureSonic3kRomAvailable().toPath())))
+                        .loadForCharacter("tails");
                 for (int animationId = 0x20; animationId <= 0x28; animationId++) {
+                    assertEquals(nativeTails.animationSet().getScript(animationId),
+                            donated.animationSet().getScript(animationId), "native flight/swim script is unchanged");
                     assertNotNull(donated.animationSet().getScript(animationId),
                             "host " + host.getGameId() + " lost donated Tails script 0x"
                                     + Integer.toHexString(animationId));

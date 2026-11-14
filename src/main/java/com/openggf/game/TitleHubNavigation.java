@@ -13,7 +13,7 @@ import com.openggf.control.MenuInput;
 final class TitleHubNavigation {
     enum Zone { TABS, CARD, ACTIONS }
 
-    /** Engine-wide header tabs. Extras appears only when mods register title entries. */
+    /** Engine-wide header tabs. Extras appears only when a built-in extra or a mod title entry exists. */
     enum Tab {
         MODS("MODS"), SETTINGS("SETTINGS"), EXTRAS("EXTRAS"), ADVANCED("ADVANCED"), QUIT("QUIT");
         final String label;

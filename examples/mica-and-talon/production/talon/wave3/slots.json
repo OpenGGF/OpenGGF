@@ -1,0 +1,82 @@
+[
+  {
+    "id": 0,
+    "native_id": 150,
+    "file": "../../../art/talon/stage-poses/s3k-slot-96.png",
+    "dimensions": [
+      29,
+      29
+    ],
+    "hotspot": [
+      14,
+      14
+    ],
+    "native_source_label": "word_149B4C",
+    "alias": "../../../art/talon/sheet/frames/roll-00.png",
+    "mapping_source": "docs/skdisasm/General/Sprites/Tails/Map - Tails.asm"
+  },
+  {
+    "id": 1,
+    "native_id": 151,
+    "file": "../../../art/talon/stage-poses/s3k-slot-97.png",
+    "dimensions": [
+      29,
+      29
+    ],
+    "hotspot": [
+      14,
+      14
+    ],
+    "native_source_label": "word_149B54",
+    "alias": "../../../art/talon/sheet/frames/roll-01.png",
+    "mapping_source": "docs/skdisasm/General/Sprites/Tails/Map - Tails.asm"
+  },
+  {
+    "id": 2,
+    "native_id": 152,
+    "file": "../../../art/talon/stage-poses/s3k-slot-98.png",
+    "dimensions": [
+      29,
+      29
+    ],
+    "hotspot": [
+      14,
+      14
+    ],
+    "native_source_label": "word_149B5C",
+    "alias": "../../../art/talon/sheet/frames/roll-02.png",
+    "mapping_source": "docs/skdisasm/General/Sprites/Tails/Map - Tails.asm"
+  },
+  {
+    "id": 3,
+    "native_id": 153,
+    "file": "../../../art/talon/stage-poses/s3k-slot-99.png",
+    "dimensions": [
+      25,
+      17
+    ],
+    "hotspot": [
+      16,
+      1
+    ],
+    "native_source_label": "Map_Tails_ / goal-fade Sonic-roll selector",
+    "alias": "../../../art/talon/sheet/frames/duck-00.png",
+    "mapping_source": "docs/skdisasm/General/Sprites/Tails/Map - Tails.asm"
+  },
+  {
+    "id": 4,
+    "native_id": 154,
+    "file": "../../../art/talon/stage-poses/s3k-slot-9a.png",
+    "dimensions": [
+      27,
+      31
+    ],
+    "hotspot": [
+      13,
+      12
+    ],
+    "native_source_label": "Map_Tails_ / goal-fade Sonic-roll selector",
+    "alias": "../../../art/talon/sheet/frames/family-balance-00.png",
+    "mapping_source": "docs/skdisasm/General/Sprites/Tails/Map - Tails.asm"
+  }
+]

@@ -14,10 +14,13 @@ import com.openggf.util.ShortIndexedView;
 public final class DezPlanetBackground {
     private Level sourceLevel;
     private int sourceWidth;
+    private int sourceNativeLeft;
     private int sourceEndY;
     private Columns columns;
     private Level projectionLevel;
     private int projectionEndY;
+    private Horizon horizon;
+    private Horizon projectionHorizon;
     private com.openggf.game.internal.BackgroundColumnProjection projection;
 
     public Columns columns(LevelManager manager, int width) {
@@ -25,14 +28,23 @@ public final class DezPlanetBackground {
     }
 
     public Columns columns(LevelManager manager, int width, int endY) {
+        return columns(manager, width, (width - 320) / 2, endY);
+    }
+
+    /**
+     * {@code nativeLeft} is where the native 320px window starts in the raster: centred in
+     * a wide gameplay camera, but 0 when a native camera is drawn into a wider raster.
+     */
+    public Columns columns(LevelManager manager, int width, int nativeLeft, int endY) {
         Level level = manager.getCurrentLevel();
         if (level == null || width <= 320) return null;
-        if (sourceLevel == level && sourceWidth == width && sourceEndY == endY) return columns;
-        var captured = captureProjection(manager, endY);
-        columns = captured == null ? null : captured.sample(
-                new com.openggf.level.scroll.ScrollView(0, 0, width, 224));
+        if (sourceLevel == level && sourceWidth == width && sourceNativeLeft == nativeLeft
+                && sourceEndY == endY) return columns;
+        var captured = captureHorizon(manager, endY);
+        columns = captured == null ? null : captured.columns(width, nativeLeft);
         sourceLevel = level;
         sourceWidth = width;
+        sourceNativeLeft = nativeLeft;
         sourceEndY = endY;
         return columns;
     }
@@ -40,35 +52,48 @@ public final class DezPlanetBackground {
     /** Freeze the indexed ROM silhouette once; new director widths never query the live level. */
     public com.openggf.game.internal.BackgroundColumnProjection captureProjection(
             LevelManager manager, int endY) {
+        var captured = captureHorizon(manager, endY);
+        if (captured == null) return null;
+        if (projection == null || projectionHorizon != captured)
+            projection = view -> captured.columns(view.width(), (view.width() - 320) / 2);
+        projectionHorizon = captured;
+        return projection;
+    }
+
+    private record Horizon(int[] heights, int minimum, int first, int last, int endY) {
+        Columns columns(int width, int nativeLeft) {
+            return projectedColumns(heights, minimum, first, last, width, nativeLeft, endY);
+        }
+    }
+
+    private Horizon captureHorizon(LevelManager manager, int endY) {
         Level level = manager.getCurrentLevel();
         if (level == null) return null;
-        if (projectionLevel == level && projectionEndY == endY && projection != null)
-            return projection;
-        int[] horizon = new int[320];
+        if (projectionLevel == level && projectionEndY == endY && horizon != null)
+            return horizon;
+        int[] heights = new int[320];
         int minimum = 224, first = 0, last = 0;
         for (int x = 0; x < 320; x++) {
             // Read the indexed art, not live RGB: a palette fade must not
             // change the inferred silhouette or get cached as another shape.
             int space = paletteIndex(manager, level, x, 0);
-            while (horizon[x] < 224 && paletteIndex(manager, level, x, horizon[x]) == space)
-                horizon[x]++;
-            if (horizon[x] < minimum) {
-                minimum = horizon[x];
+            while (heights[x] < 224 && paletteIndex(manager, level, x, heights[x]) == space)
+                heights[x]++;
+            if (heights[x] < minimum) {
+                minimum = heights[x];
                 first = x;
             }
-            if (horizon[x] == minimum) last = x;
+            if (heights[x] == minimum) last = x;
         }
 
-        int lowest = minimum, apexFirst = first, apexLast = last;
-        projection =
-                view -> projectedColumns(horizon, lowest, apexFirst, apexLast, view.width(), endY);
+        horizon = new Horizon(heights, minimum, first, last, endY);
         projectionLevel = level;
         projectionEndY = endY;
-        return projection;
+        return horizon;
     }
 
     private static Columns projectedColumns(
-            int[] horizon, int minimum, int first, int last, int width, int endY) {
+            int[] horizon, int minimum, int first, int last, int width, int nativeLeft, int endY) {
         if (width <= 320) return null;
         // Three authored silhouette points determine the circle. The centre of
         // the flat, pixel-rounded apex avoids selecting its first lit column.
@@ -85,7 +110,7 @@ public final class DezPlanetBackground {
         double radius = Math.hypot(centreX, centreY - leftY);
         short[] xs = new short[width], ys = new short[width];
         for (int x = 0; x < width; x++) {
-            int local = x - (width - 320) / 2;
+            int local = x - nativeLeft;
             int sourceX = local;
             if (local < 0 || local >= 320) {
                 boolean left = local < 0;

@@ -1,8 +1,9 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.sprites.playable.PlayableArchetype;
+
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.SidekickCpuController;
-import com.openggf.sprites.playable.Tails;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
@@ -50,7 +51,7 @@ public class Mgz2EndEggCapsuleInstance extends AbstractS3kFloatingEndEggCapsuleI
     }
 
     private boolean isTails(AbstractPlayableSprite player) {
-        return player instanceof Tails || "tails".equalsIgnoreCase(player.getCode());
+        return PlayableArchetype.isTails(player) || "tails".equalsIgnoreCase(player.getCode());
     }
 
     private boolean isSonicActivelyCarriedByTails() {

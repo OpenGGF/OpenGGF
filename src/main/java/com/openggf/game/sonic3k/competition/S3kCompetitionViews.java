@@ -121,7 +121,7 @@ public final class S3kCompetitionViews implements S3kCompetitionNativeHost.Views
                     SpritePresentation.bindPatternVersion(graphics, base + tile,
                             SpritePresentationRenderer.version(sheet.getPatterns()[tile]));
                 SpritePieceRenderer.preparePiece(mapping, piece.screenX(), piece.screenY(), base,
-                        -1, false, false, false, graphics::submitSpriteSatPiece);
+                        art.paletteLine(piece.artKey()), false, false, false, graphics::submitSpriteSatPiece);
             }
             }
         });

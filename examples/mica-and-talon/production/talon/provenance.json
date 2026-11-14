@@ -1,0 +1,1248 @@
+{
+  "method": "8x nearest real-palette native pose + TALON concept; GPT Image; aspect-safe crop/reduce; no painting.",
+  "frames": {
+    "wait-00": {
+      "group": "wait",
+      "cell": 0,
+      "attempt": 2,
+      "native": {
+        "size": [
+          32,
+          31
+        ],
+        "hotspot": [
+          20,
+          15
+        ],
+        "mapping": 1,
+        "tail": 9
+      }
+    },
+    "wait-01": {
+      "group": "wait",
+      "cell": 1,
+      "attempt": 2,
+      "native": {
+        "size": [
+          35,
+          31
+        ],
+        "hotspot": [
+          23,
+          15
+        ],
+        "mapping": 2,
+        "tail": 10
+      }
+    },
+    "wait-02": {
+      "group": "wait",
+      "cell": 2,
+      "attempt": 2,
+      "native": {
+        "size": [
+          36,
+          31
+        ],
+        "hotspot": [
+          24,
+          15
+        ],
+        "mapping": 3,
+        "tail": 11
+      }
+    },
+    "wait-03": {
+      "group": "wait",
+      "cell": 3,
+      "attempt": 2,
+      "native": {
+        "size": [
+          36,
+          31
+        ],
+        "hotspot": [
+          24,
+          15
+        ],
+        "mapping": 5,
+        "tail": 12
+      }
+    },
+    "wait-04": {
+      "group": "wait",
+      "cell": 4,
+      "attempt": 2,
+      "native": {
+        "size": [
+          35,
+          31
+        ],
+        "hotspot": [
+          23,
+          15
+        ],
+        "mapping": 6,
+        "tail": 13
+      }
+    },
+    "wait-05": {
+      "group": "wait",
+      "cell": 5,
+      "attempt": 2,
+      "native": {
+        "size": [
+          32,
+          31
+        ],
+        "hotspot": [
+          20,
+          15
+        ],
+        "mapping": 7,
+        "tail": 9
+      }
+    },
+    "wait-06": {
+      "group": "wait",
+      "cell": 6,
+      "attempt": 2,
+      "native": {
+        "size": [
+          35,
+          31
+        ],
+        "hotspot": [
+          23,
+          15
+        ],
+        "mapping": 8,
+        "tail": 10
+      }
+    },
+    "walk-00": {
+      "round": 2,
+      "group": "walk",
+      "cell": 0,
+      "attempt": 3,
+      "native": {
+        "size": [
+          26,
+          39
+        ],
+        "hotspot": [
+          13,
+          19
+        ],
+        "mapping": 15,
+        "label": "Map_Sonic_0332",
+        "tail": 0
+      }
+    },
+    "walk-01": {
+      "round": 2,
+      "group": "walk",
+      "cell": 1,
+      "attempt": 3,
+      "native": {
+        "size": [
+          29,
+          40
+        ],
+        "hotspot": [
+          15,
+          20
+        ],
+        "mapping": 16,
+        "label": "Map_Sonic_034C",
+        "tail": 0
+      }
+    },
+    "walk-02": {
+      "round": 2,
+      "group": "walk",
+      "cell": 2,
+      "attempt": 3,
+      "native": {
+        "size": [
+          39,
+          40
+        ],
+        "hotspot": [
+          18,
+          21
+        ],
+        "mapping": 17,
+        "label": "Map_Sonic_035E",
+        "tail": 0
+      }
+    },
+    "walk-03": {
+      "round": 2,
+      "group": "walk",
+      "cell": 3,
+      "attempt": 3,
+      "native": {
+        "size": [
+          39,
+          39
+        ],
+        "hotspot": [
+          19,
+          20
+        ],
+        "mapping": 18,
+        "label": "Map_Sonic_0378",
+        "tail": 0
+      }
+    },
+    "walk-04": {
+      "round": 2,
+      "group": "walk",
+      "cell": 4,
+      "attempt": 3,
+      "native": {
+        "size": [
+          26,
+          39
+        ],
+        "hotspot": [
+          13,
+          19
+        ],
+        "mapping": 19,
+        "label": "Map_Sonic_039A",
+        "tail": 0
+      }
+    },
+    "walk-05": {
+      "round": 2,
+      "group": "walk",
+      "cell": 5,
+      "attempt": 3,
+      "native": {
+        "size": [
+          28,
+          40
+        ],
+        "hotspot": [
+          14,
+          20
+        ],
+        "mapping": 20,
+        "label": "Map_Sonic_03B4",
+        "tail": 0
+      }
+    },
+    "walk-06": {
+      "round": 2,
+      "group": "walk",
+      "cell": 6,
+      "attempt": 3,
+      "native": {
+        "size": [
+          40,
+          38
+        ],
+        "hotspot": [
+          20,
+          21
+        ],
+        "mapping": 13,
+        "label": "Map_Sonic_02F6",
+        "tail": 0
+      }
+    },
+    "walk-07": {
+      "round": 2,
+      "group": "walk",
+      "cell": 7,
+      "attempt": 3,
+      "native": {
+        "size": [
+          39,
+          39
+        ],
+        "hotspot": [
+          19,
+          20
+        ],
+        "mapping": 14,
+        "label": "Map_Sonic_0310",
+        "tail": 0
+      }
+    },
+    "run-00": {
+      "round": 2,
+      "group": "run",
+      "cell": 0,
+      "attempt": 2,
+      "native": {
+        "size": [
+          31,
+          35
+        ],
+        "hotspot": [
+          15,
+          15
+        ],
+        "mapping": 45,
+        "label": "Map_Sonic_06D6",
+        "tail": 0
+      }
+    },
+    "run-01": {
+      "round": 2,
+      "group": "run",
+      "cell": 1,
+      "attempt": 2,
+      "native": {
+        "size": [
+          31,
+          36
+        ],
+        "hotspot": [
+          15,
+          16
+        ],
+        "mapping": 46,
+        "label": "Map_Sonic_06E8",
+        "tail": 0
+      }
+    },
+    "run-02": {
+      "round": 2,
+      "group": "run",
+      "cell": 2,
+      "attempt": 2,
+      "native": {
+        "size": [
+          30,
+          35
+        ],
+        "hotspot": [
+          14,
+          15
+        ],
+        "mapping": 47,
+        "label": "Map_Sonic_06FA",
+        "tail": 0
+      }
+    },
+    "run-03": {
+      "round": 2,
+      "group": "run",
+      "cell": 3,
+      "attempt": 2,
+      "native": {
+        "size": [
+          31,
+          36
+        ],
+        "hotspot": [
+          15,
+          16
+        ],
+        "mapping": 48,
+        "label": "Map_Sonic_070C",
+        "tail": 0
+      }
+    },
+    "roll-00": {
+      "group": "roll",
+      "cell": 0,
+      "attempt": 2,
+      "native": {
+        "size": [
+          48,
+          28
+        ],
+        "hotspot": [
+          34,
+          14
+        ],
+        "mapping": 72,
+        "tail": 73
+      }
+    },
+    "roll-01": {
+      "group": "roll",
+      "cell": 1,
+      "attempt": 2,
+      "native": {
+        "size": [
+          48,
+          28
+        ],
+        "hotspot": [
+          34,
+          14
+        ],
+        "mapping": 71,
+        "tail": 74
+      }
+    },
+    "roll-02": {
+      "group": "roll",
+      "cell": 2,
+      "attempt": 2,
+      "native": {
+        "size": [
+          48,
+          28
+        ],
+        "hotspot": [
+          34,
+          14
+        ],
+        "mapping": 70,
+        "tail": 75
+      }
+    },
+    "roll-03": {
+      "group": "roll",
+      "cell": 3,
+      "attempt": 2,
+      "native": {
+        "size": [
+          48,
+          28
+        ],
+        "hotspot": [
+          34,
+          14
+        ],
+        "mapping": 70,
+        "tail": 75
+      }
+    },
+    "spindash-00": {
+      "group": "spindash",
+      "cell": 0,
+      "attempt": 2,
+      "native": {
+        "size": [
+          43,
+          25
+        ],
+        "hotspot": [
+          30,
+          9
+        ],
+        "mapping": 96,
+        "tail": 129
+      }
+    },
+    "spindash-01": {
+      "group": "spindash",
+      "cell": 1,
+      "attempt": 2,
+      "native": {
+        "size": [
+          44,
+          24
+        ],
+        "hotspot": [
+          30,
+          8
+        ],
+        "mapping": 97,
+        "tail": 130
+      }
+    },
+    "spindash-02": {
+      "group": "spindash",
+      "cell": 2,
+      "attempt": 2,
+      "native": {
+        "size": [
+          44,
+          25
+        ],
+        "hotspot": [
+          30,
+          9
+        ],
+        "mapping": 98,
+        "tail": 131
+      }
+    },
+    "spindash-03": {
+      "group": "spindash",
+      "cell": 3,
+      "attempt": 2,
+      "native": {
+        "size": [
+          44,
+          25
+        ],
+        "hotspot": [
+          30,
+          9
+        ],
+        "mapping": 98,
+        "tail": 131
+      }
+    },
+    "spring-00": {
+      "group": "spring-alternatives",
+      "cell": 0,
+      "attempt": "two alternatives after two rejected pose-strip attempts",
+      "native": {
+        "mapping": 89,
+        "size": [
+          22,
+          47
+        ],
+        "hotspot": [
+          14,
+          23
+        ]
+      }
+    },
+    "hurt-00": {
+      "group": "poses",
+      "cell": 1,
+      "attempt": 1,
+      "native": {
+        "size": [
+          32,
+          31
+        ],
+        "hotspot": [
+          16,
+          15
+        ],
+        "mapping": 92,
+        "tail": 0
+      }
+    },
+    "death-00": {
+      "group": "poses",
+      "cell": 2,
+      "attempt": 1,
+      "native": {
+        "size": [
+          29,
+          32
+        ],
+        "hotspot": [
+          14,
+          16
+        ],
+        "mapping": 93,
+        "tail": 0
+      }
+    },
+    "duck-00": {
+      "group": "poses",
+      "cell": 3,
+      "attempt": 1,
+      "native": {
+        "size": [
+          40,
+          20
+        ],
+        "hotspot": [
+          24,
+          4
+        ],
+        "mapping": 91,
+        "tail": 12
+      }
+    },
+    "look_up-00": {
+      "group": "poses",
+      "cell": 4,
+      "attempt": 1,
+      "native": {
+        "size": [
+          23,
+          31
+        ],
+        "hotspot": [
+          11,
+          15
+        ],
+        "mapping": 4,
+        "tail": 0
+      }
+    },
+    "skid-00": {
+      "group": "poses",
+      "cell": 5,
+      "attempt": 1,
+      "native": {
+        "size": [
+          43,
+          31
+        ],
+        "hotspot": [
+          27,
+          16
+        ],
+        "mapping": 103,
+        "tail": 136
+      }
+    },
+    "skid-01": {
+      "group": "poses",
+      "cell": 6,
+      "attempt": 1,
+      "native": {
+        "size": [
+          43,
+          32
+        ],
+        "hotspot": [
+          27,
+          16
+        ],
+        "mapping": 104,
+        "tail": 135
+      }
+    },
+    "fly-00": {
+      "group": "fly",
+      "cell": 0,
+      "attempt": 2,
+      "wing_phase": "high V",
+      "native_reference": "S3K body A0 + tails 27/28",
+      "cleanup": "Flight round 2: fly2 cell 0; high V; fixed 480px crop / 10 reduction, registered generated body plate, detached speck cleanup only."
+    },
+    "fly-01": {
+      "group": "fly",
+      "cell": 1,
+      "attempt": 1,
+      "wing_phase": "upper downstroke extended",
+      "native_reference": "S3K body A0 + tails 27/28",
+      "cleanup": "Flight round 2: fly1 cell 1; upper downstroke extended; fixed 480px crop / 10 reduction, registered generated body plate, detached speck cleanup only."
+    },
+    "fly_tired-00": {
+      "group": "fly_tired",
+      "cell": 0,
+      "attempt": 2,
+      "wing_phase": "shallow raised droop",
+      "native_reference": "S3K body A3/A4 + tails 27/28",
+      "cleanup": "Flight round 2: tired2 cell 0; shallow raised droop; fixed 480px crop / 10 reduction, registered generated body plate, detached speck cleanup only."
+    },
+    "fly_tired-01": {
+      "group": "fly_tired",
+      "cell": 1,
+      "attempt": 2,
+      "wing_phase": "horizontal laboured downstroke",
+      "native_reference": "S3K body A3/A4 + tails 27/28",
+      "cleanup": "Flight round 2: tired2 cell 1; horizontal laboured downstroke; fixed 480px crop / 10 reduction, registered generated body plate, detached speck cleanup only."
+    },
+    "fly-02": {
+      "group": "fly",
+      "cell": 2,
+      "attempt": 2,
+      "wing_phase": "horizontal power stroke",
+      "native_reference": "S3K body A0 + tails 27/28",
+      "cleanup": "Flight round 2: fly2 cell 2; horizontal power stroke; fixed 480px crop / 10 reduction, registered generated body plate, detached speck cleanup only."
+    },
+    "fly-03": {
+      "group": "fly",
+      "cell": 3,
+      "attempt": 2,
+      "wing_phase": "low fully swept",
+      "native_reference": "S3K body A0 + tails 27/28",
+      "cleanup": "Flight round 2: fly2 cell 3; low fully swept; fixed 480px crop / 10 reduction, registered generated body plate, detached speck cleanup only."
+    },
+    "fly-04": {
+      "group": "fly",
+      "cell": 4,
+      "attempt": 1,
+      "wing_phase": "folded mid upstroke",
+      "native_reference": "S3K body A0 + tails 27/28",
+      "cleanup": "Flight round 2: fly1 cell 4; folded mid upstroke; fixed 480px crop / 10 reduction, registered generated body plate, detached speck cleanup only."
+    },
+    "fly-05": {
+      "group": "fly",
+      "cell": 5,
+      "attempt": 2,
+      "wing_phase": "upper recovery reopening",
+      "native_reference": "S3K body A0 + tails 27/28",
+      "cleanup": "Flight round 2: fly2 cell 5; upper recovery reopening; fixed 480px crop / 10 reduction, registered generated body plate, detached speck cleanup only."
+    },
+    "fly_tired-02": {
+      "group": "fly_tired",
+      "cell": 2,
+      "attempt": 2,
+      "wing_phase": "low shallow beat",
+      "native_reference": "S3K body A3/A4 + tails 27/28",
+      "cleanup": "Flight round 2: tired2 cell 2; low shallow beat; fixed 480px crop / 10 reduction, registered generated body plate, detached speck cleanup only."
+    },
+    "fly_tired-03": {
+      "group": "fly_tired",
+      "cell": 3,
+      "attempt": 2,
+      "wing_phase": "deep sag",
+      "native_reference": "S3K body A3/A4 + tails 27/28",
+      "cleanup": "Flight round 2: tired2 cell 3; deep sag; fixed 480px crop / 10 reduction, registered generated body plate, detached speck cleanup only."
+    },
+    "fly_tired-04": {
+      "group": "fly_tired",
+      "cell": 4,
+      "attempt": 2,
+      "wing_phase": "folded low recovery",
+      "native_reference": "S3K body A3/A4 + tails 27/28",
+      "cleanup": "Flight round 2: tired2 cell 4; folded low recovery; fixed 480px crop / 10 reduction, registered generated body plate, detached speck cleanup only."
+    },
+    "fly_tired-05": {
+      "group": "fly_tired",
+      "cell": 5,
+      "attempt": 2,
+      "wing_phase": "bent horizontal recovery",
+      "native_reference": "S3K body A3/A4 + tails 27/28",
+      "cleanup": "Flight round 2: tired2 cell 5; bent horizontal recovery; fixed 480px crop / 10 reduction, registered generated body plate, detached speck cleanup only."
+    }
+  },
+  "nativeScripts": {
+    "WAIT": {
+      "mappingSequence": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        3,
+        2,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        3,
+        2,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        6,
+        7,
+        8,
+        7,
+        8,
+        7,
+        8,
+        7,
+        8,
+        7,
+        8,
+        6
+      ],
+      "duration": 8,
+      "loopBack": 28
+    }
+  },
+  "limitations": [
+    "Owner-requested blur interleaves adapt native three-frame Tails roll/spindash.",
+    "Owner-requested single spring uses 48-tick hold; native Tails spring alternates two poses.",
+    "TAILS_FLY maps native single body A0 onto two integrated wing drawings synchronized with tail rotor.",
+    "WAIT partial-loop start unsupported by current converter."
+  ],
+  "cleanup": "Palette shading only: right/front shoe area on walk5-7 and run0-1 changes red to red-shadow and white to glove-shadow; no limb painting.",
+  "round2": {
+    "method": "Built-in GPT Image native-pose transformations, native-aspect crop/reduction, shared existing palette. No hand-painted limbs. Only RUN far-boot palette shading after reduction. Slopes derive_slopes only.",
+    "selection": {
+      "walk": [
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "run": [
+        2,
+        2,
+        2,
+        2
+      ]
+    },
+    "limbTable": {
+      "WALK": [
+        [
+          "passing: left/near returning",
+          "passing: right/far coming forward",
+          "left near lit; right far shaded"
+        ],
+        [
+          "left/near lifting forward",
+          "right/far forward; left/near back",
+          "left near lit; right far shaded"
+        ],
+        [
+          "left/near extended forward",
+          "right/far forward; left/near back",
+          "left near lit; right far shaded"
+        ],
+        [
+          "left/near heel contact forward",
+          "right/far forward; left/near back",
+          "left near lit; right far shaded"
+        ],
+        [
+          "passing: right/far returning",
+          "passing: left/near coming forward",
+          "left near lit; right far shaded"
+        ],
+        [
+          "right/far lifting forward",
+          "left/near forward; right/far back",
+          "left near lit; right far shaded"
+        ],
+        [
+          "right/far extended forward",
+          "left/near forward; right/far back",
+          "left near lit; right far shaded"
+        ],
+        [
+          "right/far heel contact forward",
+          "left/near forward; right/far back",
+          "left near lit; right far shaded"
+        ]
+      ],
+      "RUN": [
+        [
+          "near shoe back/up; far shoe forward/down, circular blur",
+          "both wings back; upper flutter extreme",
+          "near lit / far shaded"
+        ],
+        [
+          "near shoe forward/up; far shoe down/back, circular blur",
+          "both wings back; mid downstroke",
+          "near lit / far shaded"
+        ],
+        [
+          "near shoe forward/down; far shoe back/up, circular blur",
+          "both wings back; lower flutter extreme",
+          "near lit / far shaded"
+        ],
+        [
+          "near shoe down/back; far shoe forward/up, circular blur",
+          "both wings back; mid upstroke",
+          "near lit / far shaded"
+        ]
+      ]
+    },
+    "review": "$HOME/scratch/agent-tmp/talon-art-r2-20261109/review.html",
+    "rejected": {
+      "walk-1": "Tails reference failed arm reversal",
+      "walk-2": "Sonic arm reversal passed but far boot too bright",
+      "run-1": "Wing amplitude rescales the body; second attempt steadier"
+    },
+    "remaining": [
+      "RUN 1/3 silhouettes are close, differentiated by near/far shoe shade and wing stroke direction; native run also uses closely related blur silhouettes.",
+      "Runtime contact not certified; review only."
+    ]
+  },
+  "flightRound2": {
+    "review": "$HOME/scratch/agent-tmp/talon-flight-20261109/review.html",
+    "selection": {
+      "fly": [
+        "fly2",
+        "fly1",
+        "fly2",
+        "fly2",
+        "fly1",
+        "fly2"
+      ],
+      "fly_tired": [
+        "tired2",
+        "tired2",
+        "tired2",
+        "tired2",
+        "tired2",
+        "tired2"
+      ]
+    },
+    "phases": {
+      "fly": [
+        "high V",
+        "upper downstroke extended",
+        "horizontal power stroke",
+        "low fully swept",
+        "folded mid upstroke",
+        "upper recovery reopening"
+      ],
+      "fly_tired": [
+        "shallow raised droop",
+        "horizontal laboured downstroke",
+        "low shallow beat",
+        "deep sag",
+        "folded low recovery",
+        "bent horizontal recovery"
+      ]
+    },
+    "body": "Fixed generated plate per cycle; no bob. Crop 480x480 before uniform 10:1 reduction; goggle translation only.",
+    "timing": "Six frames x2 ticks flight; six x4 tired. Sheet scripts drive host 0x20/0x24 without native count truncation.",
+    "method": "Built-in GPT Image whole strips, two attempts per cycle; tired attempt 1 rejected for white halo. No painted contours."
+  },
+  "round3": {
+    "method": "Uniform re-reduction of original generated source, no regeneration or hand editing. Source alpha crop; Lanczos; existing palette; inside outline.",
+    "source": "${ART_SCRATCH}/talon-art-r2-20261109/run-attempt-2.png",
+    "sourceSha256": "08a8ba5a9cd21c726a428574819913ea09d361416bb2dd66573f29496ffb5cb6",
+    "crop": [
+      86,
+      171,
+      450,
+      569
+    ],
+    "oldSourcePixelsPerNativePixel": 11.741935483870968,
+    "newSourcePixelsPerNativePixel": 13.343108504398828,
+    "outputSize": [
+      27,
+      30
+    ],
+    "hotspot": [
+      11,
+      11
+    ],
+    "attemptedFactors": [
+      0.86,
+      0.88,
+      0.9,
+      0.92
+    ],
+    "selectedFactor": 0.88,
+    "alignment": "Beak right edge centre+15; goggle top centre-8, matching run-01/03. Pose-dependent crest and wing bounds excluded.",
+    "review": "${ART_SCRATCH}/talon-art-r3-20261109/review.html"
+  },
+  "consistency20261109": {
+    "review": "${ART_SCRATCH}/talon-consistency-20261109/review.html",
+    "landmarks": "consistency-landmarks.json",
+    "scales": {
+      "walk-00": {
+        "method": "re-reduced",
+        "factor": 0.8,
+        "source": "${ART_SCRATCH}/talon-art-r2-20261109/walk-attempt-3.png",
+        "sha256": "70988345fd08fc9257de7c6c4e43ff50c12275ddeebaed1862ea7f3c92f307ba",
+        "sourcePixelsPerGamePixel": 8.237179487179485,
+        "cell": 0,
+        "size": [
+          19,
+          31
+        ]
+      },
+      "walk-01": {
+        "method": "re-reduced",
+        "factor": 0.8,
+        "source": "${ART_SCRATCH}/talon-art-r2-20261109/walk-attempt-3.png",
+        "sha256": "70988345fd08fc9257de7c6c4e43ff50c12275ddeebaed1862ea7f3c92f307ba",
+        "sourcePixelsPerGamePixel": 8.03125,
+        "cell": 1,
+        "size": [
+          22,
+          32
+        ]
+      },
+      "walk-02": {
+        "method": "re-reduced",
+        "factor": 0.8,
+        "source": "${ART_SCRATCH}/talon-art-r2-20261109/walk-attempt-3.png",
+        "sha256": "70988345fd08fc9257de7c6c4e43ff50c12275ddeebaed1862ea7f3c92f307ba",
+        "sourcePixelsPerGamePixel": 8.03125,
+        "cell": 2,
+        "size": [
+          27,
+          32
+        ]
+      },
+      "walk-03": {
+        "method": "re-reduced",
+        "factor": 0.8,
+        "source": "${ART_SCRATCH}/talon-art-r2-20261109/walk-attempt-3.png",
+        "sha256": "70988345fd08fc9257de7c6c4e43ff50c12275ddeebaed1862ea7f3c92f307ba",
+        "sourcePixelsPerGamePixel": 8.237179487179485,
+        "cell": 3,
+        "size": [
+          27,
+          31
+        ]
+      },
+      "walk-04": {
+        "method": "re-reduced",
+        "factor": 0.8,
+        "source": "${ART_SCRATCH}/talon-art-r2-20261109/walk-attempt-3.png",
+        "sha256": "70988345fd08fc9257de7c6c4e43ff50c12275ddeebaed1862ea7f3c92f307ba",
+        "sourcePixelsPerGamePixel": 8.237179487179485,
+        "cell": 4,
+        "size": [
+          19,
+          31
+        ]
+      },
+      "walk-05": {
+        "method": "re-reduced",
+        "factor": 0.8,
+        "source": "${ART_SCRATCH}/talon-art-r2-20261109/walk-attempt-3.png",
+        "sha256": "70988345fd08fc9257de7c6c4e43ff50c12275ddeebaed1862ea7f3c92f307ba",
+        "sourcePixelsPerGamePixel": 8.03125,
+        "cell": 5,
+        "size": [
+          22,
+          32
+        ]
+      },
+      "walk-06": {
+        "method": "re-reduced",
+        "factor": 0.8,
+        "source": "${ART_SCRATCH}/talon-art-r2-20261109/walk-attempt-3.png",
+        "sha256": "70988345fd08fc9257de7c6c4e43ff50c12275ddeebaed1862ea7f3c92f307ba",
+        "sourcePixelsPerGamePixel": 8.453947368421053,
+        "cell": 6,
+        "size": [
+          27,
+          30
+        ]
+      },
+      "walk-07": {
+        "method": "re-reduced",
+        "factor": 0.8,
+        "source": "${ART_SCRATCH}/talon-art-r2-20261109/walk-attempt-3.png",
+        "sha256": "70988345fd08fc9257de7c6c4e43ff50c12275ddeebaed1862ea7f3c92f307ba",
+        "sourcePixelsPerGamePixel": 8.237179487179485,
+        "cell": 7,
+        "size": [
+          26,
+          31
+        ]
+      },
+      "hurt-00": {
+        "method": "re-reduced",
+        "factor": 0.9,
+        "source": "${ART_SCRATCH}/talon-art-20261109/poses-attempt-1.png",
+        "sha256": "137c7b05885aa91358d57982d6e2fc2f10fe8bc6d8e9d3e6965bad7f1af5146f",
+        "sourcePixelsPerGamePixel": 8.125,
+        "cell": 1,
+        "size": [
+          29,
+          28
+        ]
+      },
+      "duck-00": {
+        "method": "re-reduced",
+        "factor": 0.85,
+        "source": "${ART_SCRATCH}/talon-art-20261109/poses-attempt-1.png",
+        "sha256": "137c7b05885aa91358d57982d6e2fc2f10fe8bc6d8e9d3e6965bad7f1af5146f",
+        "sourcePixelsPerGamePixel": 10.411764705882353,
+        "cell": 3,
+        "size": [
+          25,
+          17
+        ]
+      },
+      "skid-00": {
+        "method": "re-reduced",
+        "factor": 0.9,
+        "source": "${ART_SCRATCH}/talon-art-20261109/poses-attempt-1.png",
+        "sha256": "137c7b05885aa91358d57982d6e2fc2f10fe8bc6d8e9d3e6965bad7f1af5146f",
+        "sourcePixelsPerGamePixel": 8.064516129032258,
+        "cell": 5,
+        "size": [
+          33,
+          28
+        ]
+      },
+      "skid-01": {
+        "method": "re-reduced",
+        "factor": 0.9,
+        "source": "${ART_SCRATCH}/talon-art-20261109/poses-attempt-1.png",
+        "sha256": "137c7b05885aa91358d57982d6e2fc2f10fe8bc6d8e9d3e6965bad7f1af5146f",
+        "sourcePixelsPerGamePixel": 7.986111111111111,
+        "cell": 6,
+        "size": [
+          32,
+          29
+        ]
+      },
+      "spindash-00": {
+        "method": "re-reduced",
+        "factor": 0.9,
+        "source": "${ART_SCRATCH}/talon-art-20261109/spindash-attempt-2.png",
+        "sha256": "983a2bad39ee8845ea6be51802cdcfcb91142e82ddd152f731b0e213d27b8936",
+        "sourcePixelsPerGamePixel": 14.67432950191571,
+        "cell": 0,
+        "size": [
+          26,
+          24
+        ]
+      },
+      "spindash-01": {
+        "method": "re-reduced",
+        "factor": 0.9,
+        "source": "${ART_SCRATCH}/talon-art-20261109/spindash-attempt-2.png",
+        "sha256": "983a2bad39ee8845ea6be51802cdcfcb91142e82ddd152f731b0e213d27b8936",
+        "sourcePixelsPerGamePixel": 15.057471264367814,
+        "cell": 1,
+        "size": [
+          26,
+          25
+        ]
+      },
+      "spindash-02": {
+        "method": "re-reduced",
+        "factor": 0.9,
+        "source": "${ART_SCRATCH}/talon-art-20261109/spindash-attempt-2.png",
+        "sha256": "983a2bad39ee8845ea6be51802cdcfcb91142e82ddd152f731b0e213d27b8936",
+        "sourcePixelsPerGamePixel": 15.977011494252872,
+        "cell": 2,
+        "size": [
+          26,
+          23
+        ]
+      },
+      "spindash-03": {
+        "method": "re-reduced",
+        "factor": 0.9,
+        "source": "${ART_SCRATCH}/talon-art-20261109/spindash-attempt-2.png",
+        "sha256": "983a2bad39ee8845ea6be51802cdcfcb91142e82ddd152f731b0e213d27b8936",
+        "sourcePixelsPerGamePixel": 15.095785440613026,
+        "cell": 3,
+        "size": [
+          26,
+          24
+        ]
+      },
+      "fly_tired-00": {
+        "method": "regenerated",
+        "source": "${ART_SCRATCH}/talon-consistency-20261109/tired-1.png",
+        "sha256": "dbc4cf9a242c08bcf92792e7a572827bc3fbf3411e41583f13d69c39215b17a9",
+        "sourcePixelsPerGamePixel": 6.8,
+        "cell": 0,
+        "attempt": 1,
+        "size": [
+          29,
+          32
+        ]
+      },
+      "fly_tired-01": {
+        "method": "regenerated",
+        "source": "${ART_SCRATCH}/talon-consistency-20261109/tired-1.png",
+        "sha256": "dbc4cf9a242c08bcf92792e7a572827bc3fbf3411e41583f13d69c39215b17a9",
+        "sourcePixelsPerGamePixel": 6.8,
+        "cell": 1,
+        "attempt": 1,
+        "size": [
+          32,
+          32
+        ]
+      },
+      "fly_tired-02": {
+        "method": "regenerated",
+        "source": "${ART_SCRATCH}/talon-consistency-20261109/tired-1.png",
+        "sha256": "dbc4cf9a242c08bcf92792e7a572827bc3fbf3411e41583f13d69c39215b17a9",
+        "sourcePixelsPerGamePixel": 6.8,
+        "cell": 2,
+        "attempt": 1,
+        "size": [
+          30,
+          32
+        ]
+      },
+      "fly_tired-03": {
+        "method": "regenerated",
+        "source": "${ART_SCRATCH}/talon-consistency-20261109/tired-1.png",
+        "sha256": "dbc4cf9a242c08bcf92792e7a572827bc3fbf3411e41583f13d69c39215b17a9",
+        "sourcePixelsPerGamePixel": 6.8,
+        "cell": 3,
+        "attempt": 1,
+        "size": [
+          27,
+          33
+        ]
+      },
+      "fly_tired-04": {
+        "method": "regenerated",
+        "source": "${ART_SCRATCH}/talon-consistency-20261109/tired-1.png",
+        "sha256": "dbc4cf9a242c08bcf92792e7a572827bc3fbf3411e41583f13d69c39215b17a9",
+        "sourcePixelsPerGamePixel": 6.8,
+        "cell": 4,
+        "attempt": 1,
+        "size": [
+          31,
+          32
+        ]
+      },
+      "fly_tired-05": {
+        "method": "regenerated",
+        "source": "${ART_SCRATCH}/talon-consistency-20261109/tired-1.png",
+        "sha256": "dbc4cf9a242c08bcf92792e7a572827bc3fbf3411e41583f13d69c39215b17a9",
+        "sourcePixelsPerGamePixel": 6.8,
+        "cell": 5,
+        "attempt": 1,
+        "size": [
+          31,
+          32
+        ]
+      },
+      "spring-00": {
+        "method": "regenerated",
+        "source": "${ART_SCRATCH}/talon-consistency-20261109/spring-2.png",
+        "sha256": "8de072146e92e9c80af3286bbb1ed1a19ba3a0d3b32a655022eb815ae2052f30",
+        "sourcePixelsPerGamePixel": 18,
+        "cell": 1,
+        "attempt": 2,
+        "size": [
+          28,
+          30
+        ]
+      }
+    },
+    "identity": "Approved WAIT + approved FLY; all existing FLY drawings unchanged.",
+    "selection": {
+      "tired": [
+        "attempt 1",
+        "attempt 1",
+        "attempt 1",
+        "attempt 1",
+        "attempt 1",
+        "attempt 1"
+      ],
+      "tiredAttempt2Rejected": "Broader spread and stronger wingbeat; attempt 1 better expresses shallow labour across all six cells. Each phase compared separately.",
+      "spring": "attempt 2, second cell; compact torso and true launch, instead of elongated first attempt or oversized third attempt.",
+      "springLimit": "Raised wings differ from native tucked-arm pose."
+    },
+    "hotspot": "Tired goggles (amber slots 14/15, top ten rows) translated to the approved fly-02 goggle centroid relative to hotspot; no body plate pasted or contour painted.",
+    "scripts": "Preserved exact pre-task scripts, including WAIT loop-back 28 (recipe was stale).",
+    "limits": [
+      "Manual landmarks have about one pixel placement uncertainty.",
+      "Native per-frame anatomy measurements remain uncertified.",
+      "Runtime slope contact remains unverified."
+    ]
+  }
+}

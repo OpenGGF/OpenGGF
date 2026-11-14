@@ -13,6 +13,18 @@ reconcile current desired identities after checkpoint removal without restoring 
 The descriptor and `ModApiVersion` description remain unpublished candidate `0.7.0`;
 the normalized signature pin includes these additions. No published baseline changes.
 
+`EndingSpriteSet.Surface` gains four constants, appended to preserve existing ordinals:
+`S2_SOLO_PHOTOS` (a solo lead's companion search photos), `S3K_MINI_TORNADO_PILOT` and
+`S3K_SOLO_MINI_TORNADO_PILOT` (the mid-size Tornado's cockpit head, native selectors 12 and 13),
+and `S3K_SOLO_EYECATCH` (the partner's seat on the final S3 graphics card). Three existing
+constants change meaning. `S3K_TORNADO_PILOT` and its solo form also accept selector 11, the
+Sonic seat a Tails-role lead flies with. `S3K_EYECATCH` also accepts the Tails-seat body
+selectors 10 and 11. `S3K_PASSENGER` now addresses the mid-size Tornado's rider, native
+selectors 14 and 15; it previously addressed selectors 22 and 23, which are that plane's exhaust
+flame, so any set authored for those selectors must be redrawn for the rider. The mutable `0.7`
+signature pin and `ModApiVersion` description include the additions; the descriptor remains
+unpublished candidate `0.7.0` with no published baseline.
+
 The five saved rewind allowance preferences (`REWIND_BUDGET_SCOPE`,
 `REWIND_BUDGET_SECONDS`, `REWIND_REFILL_ON_LIFE_LOSS`, `REWIND_BONUS_STAGES`,
 `REWIND_SPECIAL_STAGES`) are appended to `SonicConfiguration`, preserving existing
@@ -25,6 +37,14 @@ to preserve existing enum ordinals. The mutable `0.7` signature pin and
 `ModApiVersion` candidate description include the addition; the reviewed
 release descriptor remains unpublished candidate `0.7.0` with no published
 baselines or branch-policy changes.
+
+`SonicConfiguration.WIDESCREEN_DRAW_MODE` (`display.widescreenDrawMode`, `EDGE` or
+`NATIVE`) and `SonicConfiguration.WIDESCREEN_DORMANT_STYLE`
+(`display.widescreenDormantStyle`) are appended to preserve existing ordinals. Their
+renderer helpers live in non-API access classes, so `Camera`, `RewindRegistry` and
+`ObjectManager` gain no members. The mutable `0.7` signature pin and `ModApiVersion`
+candidate description include the two constants; descriptor candidate `0.7.0` and the
+empty published-baseline set are unchanged.
 
 The saved `SonicConfiguration.UI_LANGUAGE` preference adds an open-ended BCP 47
 host-interface language tag, with `auto` following the system language. Language catalogs,
@@ -1207,6 +1227,15 @@ candidate remains `0.7.0`; descriptor topology/status and published baselines
 are unchanged. Competition activation still requires a connected native session,
 arena and results provider; the mode names alone expose no playable product.
 
+### Blue Spheres host mode (2026-11-12)
+
+The S&K Blue Spheres extra adds one appended `GameMode` value, `BLUE_SPHERES`,
+for its native title, level-code menu and results screens. Existing enum
+positions are unchanged. The Blue Spheres session, stage generator and
+special-stage return route are engine internals outside the creator surface.
+The exact mutable `0.7` pin gains only that field; the candidate remains
+`0.7.0`, and descriptor topology/status and published baselines are unchanged.
+
 ### Stageplay unified worlds (2026-10-22)
 
 The unpublished engine-aligned 0.7.0 candidate has one `LIVE` world policy.
@@ -1289,3 +1318,15 @@ terminal-bearing default bridge is allowed; calling, referencing or overriding i
 is unsupported. Creator annotations and the legacy validator allowlist grant no
 supported access. The SDK's `OpenGGFSupported` javac plugin checks attributed source
 before constant folding; `ModValidator.SUPPORTED_ONLY` checks compiled payloads.
+
+The unpublished playable-sheet v2 animation record now carries canonical timing,
+end-action, next-animation and slope-set metadata. The 0.7 candidate signature
+pin is regenerated from the compiled surface; the API version remains 0.7.0.
+Host animation binding remains engine-owned and art suppliers need no game context.
+
+S3K Competition miniature body/tail surfaces reuse `StageSpriteSet` native IDs
+and hotspots, with missing-ID native fallback. Configured registered creator
+characters substitute their archetype wheel slot without supplying miniature
+physics. This additive change updates the mutable 0.7 signatures and runtime
+description under the release descriptor's unchanged unpublished candidate
+0.7.0 policy. No published baseline changes.

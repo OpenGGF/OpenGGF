@@ -16,6 +16,8 @@ display:
   shaderPickerKey: BACKSLASH   # Runtime key to open the searchable display shader picker
   shaderDefaultPhase: PRESENTATION   # Fallback render phase for standalone display shaders
   deadzoneMode: "PROPORTIONAL"   # Camera horizontal deadzone behaviour on wide screens
+  widescreenDrawMode: "EDGE"   # EDGE: objects run to the screen edge; NATIVE: gameplay stays 320 wide, extra width is drawn only
+  widescreenDormantStyle: "GREYSCALE"   # NATIVE mode: GREYSCALE, NORMAL or HIDDEN for not-yet-loaded objects in the extra width
   hudAnchor: "DEFAULT"   # Widescreen HUD position: centered native frame or screen left edge
   hudTimeHundredths: false   # TIME in hundredths (0:00.00), as Sonic CD shows it; the original games show whole seconds
   spriteScanlineLimit: false  # Enable native per-row count/pixel budgets for ROM image comparisons
@@ -70,6 +72,8 @@ audio:
   hubMusicEnabled: false   # Optional filtered ROM title theme in the hub
   hubMusicVolume: 20   # Hub theme volume, 0 to 100 percent
   enabled: true   # Enable music and SFX
+  musicVolume: 100   # Music volume, 0 to 100 percent; 0 keeps sound effects without music
+  sfxVolume: 100   # Sound-effect volume, 0 to 100 percent
   region: "NTSC"   # Region for audio timing
   dacInterpolate: false   # Optional DAC smoothing (no hardware counterpart); true interpolates between PCM samples
   fmCore: fast   # FM core: accurate (cycle-exact Nuked-OPN2) or fast (register-level clean-room core)

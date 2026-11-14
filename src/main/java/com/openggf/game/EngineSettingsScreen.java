@@ -258,7 +258,7 @@ public final class EngineSettingsScreen {
             return;
         }
         ConfigType type = ConfigCatalog.meta(selected()).type();
-        if (selected() == SonicConfiguration.AUDIO_HUB_MUSIC_VOLUME) return;
+        if (EngineSettingsDraft.isVolume(selected())) return;
         if (type == ConfigType.KEY) { keyMenu = true; choice = 0; }
         else if (selected() == SonicConfiguration.FPS || type == ConfigType.BOOL || type == ConfigType.ENUM) {
             choosing = true;
@@ -326,7 +326,7 @@ public final class EngineSettingsScreen {
                 focusRow(index);
                 MenuFeedback.emit(NAVIGATE);
             }
-            if (selected() == SonicConfiguration.AUDIO_HUB_MUSIC_VOLUME && pointer.leftPressed() && pointer.x() >= frame.width() - 126) {
+            if (EngineSettingsDraft.isVolume(selected()) && pointer.leftPressed() && pointer.x() >= frame.width() - 126) {
                 int sliderX = frame.width() - 126;
                 int percent = Math.clamp((pointer.x() - sliderX) * 100 / 85, 0, 100);
                 draft.set(selected(), Integer.toString(percent)); MenuFeedback.emit(NAVIGATE); return true;
@@ -491,7 +491,7 @@ public final class EngineSettingsScreen {
             int labelRoom = labelWidth + valueWidth <= budget ? budget - valueWidth
                     : Math.clamp((int) ((long) budget * labelWidth / Math.max(1, labelWidth + valueWidth)), minimum, budget - minimum);
             int valueRoom = Math.max(1, budget - labelRoom);
-            if (key == SonicConfiguration.AUDIO_HUB_MUSIC_VOLUME) labelRoom = frame.width() - 150;
+            if (EngineSettingsDraft.isVolume(key)) labelRoom = frame.width() - 150;
             var labelLines = host.wrap(label, Math.max(1, labelRoom), face, language);
             var valueLines = host.wrap(value, valueRoom, face, language);
             lines = Math.max(lines, Math.min(2, Math.max(labelLines.size(), valueLines.size())));
@@ -1026,7 +1026,7 @@ public final class EngineSettingsScreen {
             if (nonDefault) MenuChrome.changedMarker(font, 11 + indent, y + 3);
             float[] valueColor = !live ? MenuChrome.DIM : nonDefault ? MenuChrome.AMBER : MenuChrome.WHITE;
             float[] labelColor = focused ? MenuChrome.WHITE : live ? MenuChrome.TEXT : MenuChrome.DIM;
-            if (key == SonicConfiguration.AUDIO_HUB_MUSIC_VOLUME) {
+            if (EngineSettingsDraft.isVolume(key)) {
                 int sliderX = width - 126;
                 int percent = Integer.parseInt(draft.text(key));
                 MenuChrome.fill(font, sliderX, y + 4, 85, 2, MenuChrome.EDGE);
@@ -1199,7 +1199,7 @@ public final class EngineSettingsScreen {
         if (!tabsFocused && !saveFocused && !resetFocused && !groupsFocused) {
             ConfigType type = ConfigCatalog.meta(selected()).type();
             String verb = type == ConfigType.KEY ? UiMessages.text("settings.screen.rebind_caps") : type == ConfigType.BOOL || type == ConfigType.ENUM ? UiMessages.text("settings.screen.choose_caps") : UiMessages.text("settings.screen.edit_caps");
-            List<MenuChrome.Hint> hints = List.of(selected() == SonicConfiguration.AUDIO_HUB_MUSIC_VOLUME
+            List<MenuChrome.Hint> hints = List.of(EngineSettingsDraft.isVolume(selected())
                             ? MenuChrome.leftRight(lastInput, UiMessages.text("settings.screen.volume_caps")) : MenuChrome.hint(MenuChrome.confirmKey(lastInput), verb),
                     MenuChrome.hint(MenuChrome.detailsKey(lastInput), UiMessages.text("settings.screen.details_caps")));
             MenuChrome.hints(font, 14, descriptionHintY(), hints, MenuChrome.controller(lastInput), MenuChrome.MUTED);

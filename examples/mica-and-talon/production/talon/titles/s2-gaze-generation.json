@@ -1,0 +1,152 @@
+{
+  "origin": "Owner TALON S2 camera-gaze brief, 2026-11-11; base fada66cea4",
+  "method": "Fresh built-in GPT Image transformation of real-palette native 8x title references, approved model and WAIT. Two independent atlas rows; no edit chain. Generated face-only crops reduced with Lanczos, binary alpha 128 and nearest unchanged native indexed palette; original pixels retained outside face windows. Restore original pixels wherever any title tick overlaps MICA alpha, preserving approved occlusion.",
+  "prompt": "Use case: identity-preserve. Original 1992 16-bit title sprite atlas, FIVE columns and TWO rows of independent alternatives. Reference1 is TALON's approved five title busts 0,1,2,3,4 in order; reference2 is native Tails at same five selectors rendered real title palette 8x nearest with rotor tails removed; reference3 is TALON model; reference4 approved WAIT scale. Generate a fresh native-pose transformation, NOT a chained edit. Correct ONLY head gaze on each approved bust: head turns three-quarter toward viewer with BOTH large eyes readable, brown pupils aimed directly AT CAMERA, never screen-right. Keep established hooked yellow beak and amber goggles on top, slate crest and dark falcon cheek stripe. Col0 head bowed but three-quarter; col1 lifts head eyes closing, both eye shapes; col2 opens BOTH eyes toward camera; col3 both eyes looking camera; col4 settled open-beak smile with BOTH eyes toward camera. Col4 most important. Keep exact wings (folded0, outward1, halfopen2, tucked3, raised4), outfit, cream striped chest, courier strap, compact head/torso scale and original pose. DO NOT shrink head for wing extent. Head must have two eyes even with hooked beak. Crisp cel pixel art, dark one-pixel outlines, 2 shade steps per material, upper left highlights, no dithering/no airbrush,15-colour Sega Mega Drive palette. Transparent background. Busts only, no hands/gloves, fox tails, rotor, extra parts, text, logos, legs or shadows. Each row same five poses, two independent fresh alternatives. Keep generous empty spacing between cells and all bust bottoms aligned. Match approved silhouette and body; no redesign.",
+  "selection": "Upper row BODY0..4. Lower independent alternatives rejected for brow/head proportion drift. BODY1 retains native closed-eye phase.",
+  "source": "$HOME/scratch/agent-tmp/mt-talon-gaze-20261111/attempts.png",
+  "native_refs": "$HOME/scratch/agent-tmp/title-s2-roles/tails-native-no-rotors-8x.png; full native tail footprint retained in area denominator",
+  "review": "$HOME/scratch/agent-tmp/mt-talon-gaze-20261111/review.html",
+  "limits": "MICA-led S2 title only; inherited alternate-role banks, S1/S3K and gameplay unchanged. Existing authored rows stay authored; no audit movement.",
+  "source_sha256": "03bd3dd901d181d97b7c018fd1283a609586f0edbc0249d42673dc07a68df79c",
+  "frames": [
+    {
+      "selector": 0,
+      "native_area": 2226,
+      "before_area": 2501,
+      "authored_area": 2486,
+      "source_face_box": [
+        145,
+        142,
+        296,
+        246
+      ],
+      "native_face_box": [
+        25,
+        24,
+        56,
+        45
+      ],
+      "native_canvas": [
+        56,
+        64
+      ]
+    },
+    {
+      "selector": 1,
+      "native_area": 2482,
+      "before_area": 2482,
+      "authored_area": 2457,
+      "source_face_box": [
+        679,
+        147,
+        802,
+        250
+      ],
+      "native_face_box": [
+        65,
+        25,
+        92,
+        44
+      ],
+      "native_canvas": [
+        96,
+        64
+      ]
+    },
+    {
+      "selector": 2,
+      "native_area": 2468,
+      "before_area": 2859,
+      "authored_area": 2821,
+      "source_face_box": [
+        1133,
+        128,
+        1265,
+        237
+      ],
+      "native_face_box": [
+        58,
+        21,
+        88,
+        43
+      ],
+      "native_canvas": [
+        88,
+        64
+      ]
+    },
+    {
+      "selector": 3,
+      "native_area": 2759,
+      "before_area": 2200,
+      "authored_area": 2144,
+      "source_face_box": [
+        1575,
+        128,
+        1705,
+        243
+      ],
+      "native_face_box": [
+        65,
+        22,
+        95,
+        44
+      ],
+      "native_canvas": [
+        96,
+        64
+      ]
+    },
+    {
+      "selector": 4,
+      "native_area": 2930,
+      "before_area": 3171,
+      "authored_area": 3061,
+      "source_face_box": [
+        2021,
+        147,
+        2165,
+        266
+      ],
+      "native_face_box": [
+        63,
+        25,
+        93,
+        49
+      ],
+      "native_canvas": [
+        96,
+        72
+      ]
+    }
+  ],
+  "overlap_restored_pixels": {
+    "0": 0,
+    "1": 54,
+    "2": 19,
+    "3": 12,
+    "4": 4
+  },
+  "sqrt_mean_opaque_area_ratio": 1.0040338384227985,
+  "verification": {
+    "ticks": 900,
+    "native_states_equal": true,
+    "mica_mask_pixels": 3453727,
+    "mica_changed_ticks": [],
+    "selector_ticks": {
+      "1": 691,
+      "0": 689,
+      "2": 693,
+      "3": 695,
+      "4": 899
+    },
+    "size_ratio": 1.0040338384227985
+  },
+  "final_png_sha256": {
+    "0": "1f8229c95558487a9412bc97858fa06609fbc02d71c1b4c75414b967252ade36",
+    "1": "c9002c73774beff0aa3a172c1839906a03696263f9f7a4a71ee6fdfff8954a58",
+    "2": "ba2e1a9110630d477bf680d2f67000f885d080acdc8b1f40174aceab4249cd11",
+    "3": "82594604a0a6c2c9d638beda47dac21a438f48cab7e28f5c9f5aea15653c2fa6",
+    "4": "c5c27abba5f80302acfed502c4f74505b13ce27ee3c819957b1604b73494eed7"
+  }
+}

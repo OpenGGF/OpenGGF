@@ -1,0 +1,197 @@
+{
+  "frames": [
+    {
+      "selector": 0,
+      "native_size": [
+        72,
+        88
+      ],
+      "native_hotspot": [
+        0,
+        -8
+      ],
+      "head_target": [
+        7,
+        0,
+        72,
+        61
+      ],
+      "torso_target": [
+        10,
+        58,
+        50,
+        88
+      ],
+      "method": "Manual native head/neck/belly landmarks at native1x, shown at identical source-canvas placement; final5/6/7 share a generated head/torso with only native hand-region substitution."
+    },
+    {
+      "selector": 1,
+      "native_size": [
+        80,
+        88
+      ],
+      "native_hotspot": [
+        0,
+        -16
+      ],
+      "head_target": [
+        6,
+        0,
+        80,
+        62
+      ],
+      "torso_target": [
+        17,
+        58,
+        51,
+        83
+      ],
+      "method": "Manual native head/neck/belly landmarks at native1x, shown at identical source-canvas placement; final5/6/7 share a generated head/torso with only native hand-region substitution."
+    },
+    {
+      "selector": 2,
+      "native_size": [
+        80,
+        80
+      ],
+      "native_hotspot": [
+        0,
+        -16
+      ],
+      "head_target": [
+        6,
+        0,
+        80,
+        62
+      ],
+      "torso_target": [
+        17,
+        58,
+        51,
+        80
+      ],
+      "method": "Manual native head/neck/belly landmarks at native1x, shown at identical source-canvas placement; final5/6/7 share a generated head/torso with only native hand-region substitution."
+    },
+    {
+      "selector": 3,
+      "native_size": [
+        80,
+        88
+      ],
+      "native_hotspot": [
+        -8,
+        -8
+      ],
+      "head_target": [
+        0,
+        2,
+        58,
+        62
+      ],
+      "torso_target": [
+        3,
+        61,
+        48,
+        88
+      ],
+      "method": "Manual native head/neck/belly landmarks at native1x, shown at identical source-canvas placement; final5/6/7 share a generated head/torso with only native hand-region substitution."
+    },
+    {
+      "selector": 4,
+      "native_size": [
+        72,
+        88
+      ],
+      "native_hotspot": [
+        -16,
+        -8
+      ],
+      "head_target": [
+        0,
+        0,
+        48,
+        69
+      ],
+      "torso_target": [
+        0,
+        65,
+        42,
+        96
+      ],
+      "method": "Manual native head/neck/belly landmarks at native1x, shown at identical source-canvas placement; final5/6/7 share a generated head/torso with only native hand-region substitution."
+    },
+    {
+      "selector": 5,
+      "native_size": [
+        88,
+        96
+      ],
+      "native_hotspot": [
+        0,
+        0
+      ],
+      "head_target": [
+        0,
+        0,
+        85,
+        70
+      ],
+      "torso_target": [
+        10,
+        66,
+        54,
+        96
+      ],
+      "method": "Manual native head/neck/belly landmarks at native1x, shown at identical source-canvas placement; final5/6/7 share a generated head/torso with only native hand-region substitution."
+    },
+    {
+      "selector": 6,
+      "native_size": [
+        88,
+        96
+      ],
+      "native_hotspot": [
+        0,
+        0
+      ],
+      "head_target": [
+        0,
+        0,
+        85,
+        70
+      ],
+      "torso_target": [
+        10,
+        66,
+        54,
+        96
+      ],
+      "method": "Manual native head/neck/belly landmarks at native1x, shown at identical source-canvas placement; final5/6/7 share a generated head/torso with only native hand-region substitution."
+    },
+    {
+      "selector": 7,
+      "native_size": [
+        88,
+        96
+      ],
+      "native_hotspot": [
+        0,
+        0
+      ],
+      "head_target": [
+        0,
+        0,
+        85,
+        70
+      ],
+      "torso_target": [
+        10,
+        66,
+        54,
+        96
+      ],
+      "method": "Manual native head/neck/belly landmarks at native1x, shown at identical source-canvas placement; final5/6/7 share a generated head/torso with only native hand-region substitution."
+    }
+  ],
+  "limits": "Guide rectangles are anatomical placement guides, not claims of identical character contours. Pangolin plates differ from native quills."
+}

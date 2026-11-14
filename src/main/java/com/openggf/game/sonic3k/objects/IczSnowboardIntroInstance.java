@@ -182,6 +182,7 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance implements
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
         if (sonicSnowboardOverlayActive) {
+            if (IczSnowboardArtLoader.drawCustomPlayer(services(), currentMappingFrame, currentX, currentY)) return;
             PatternSpriteRenderer sonicRenderer = IczSnowboardArtLoader.sonicSnowboardRenderer(services());
             if (sonicRenderer != null && sonicRenderer.isReady()) {
                 sonicRenderer.drawFrameIndex(clampFrame(currentMappingFrame,
@@ -190,7 +191,7 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance implements
         } else {
             PatternSpriteRenderer boardRenderer = IczSnowboardArtLoader.snowboardRenderer(services());
             if (boardRenderer != null && boardRenderer.isReady()) {
-                boardRenderer.drawFrameIndex(clampFrame(currentMappingFrame,
+                IczSnowboardArtLoader.drawNative(services(), boardRenderer, clampFrame(currentMappingFrame,
                         Sonic3kConstants.MAP_SNOWBOARD_FRAMES), currentX, currentY);
             }
         }
@@ -716,7 +717,7 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance implements
             if (renderer != null && renderer.isReady()) {
                 int frameCount = Sonic3kConstants.MAP_SNOWBOARD_FRAMES;
                 int frame = frameCount > 0 ? Math.min(mappingFrame, frameCount - 1) : 0;
-                renderer.drawFrameIndex(frame, motion.x, motion.y);
+                IczSnowboardArtLoader.drawNative(services(), renderer, frame, motion.x, motion.y);
             }
         }
 
@@ -774,7 +775,7 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance implements
         public void appendRenderCommands(List<GLCommand> commands) {
             PatternSpriteRenderer renderer = IczSnowboardArtLoader.dustRenderer(services());
             if (renderer != null && renderer.isReady()) {
-                renderer.drawFrameIndex(frame, x, y);
+                IczSnowboardArtLoader.drawNative(services(), renderer, frame, x, y);
             }
         }
 

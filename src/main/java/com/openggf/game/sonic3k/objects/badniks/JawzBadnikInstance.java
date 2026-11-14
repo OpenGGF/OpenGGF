@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects.badniks;
 
+import com.openggf.sprites.playable.PlayableArchetype;
+
 import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.mutators.PlayerFluidContextAccess;
 import com.openggf.game.PlayableEntity;
@@ -13,7 +15,6 @@ import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.Knuckles;
-import com.openggf.sprites.playable.Tails;
 
 /**
  * S3K Obj $93 - Jawz (HCZ Act 2).
@@ -158,7 +159,7 @@ public final class JawzBadnikInstance extends AbstractS3kBadnikInstance
             int ability = player.getDoubleJumpFlag();
             return ability == 1 || ability == 3;
         }
-        if (player instanceof Tails tails && player.getDoubleJumpFlag() != 0 && !PlayerFluidContextAccess.movementUnderwater(tails)) {
+        if (player instanceof AbstractPlayableSprite tails && PlayableArchetype.isTails(player) && player.getDoubleJumpFlag() != 0 && !PlayerFluidContextAccess.movementUnderwater(tails)) {
             int dx = (short) (player.getCentreX() - currentX);
             int dy = (short) (player.getCentreY() - currentY);
             int angle = (int) Math.round(Math.atan2(dy, dx) * 128.0 / Math.PI) & 0xFF;

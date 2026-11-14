@@ -59,6 +59,29 @@ public final class ObjectDrawInternalAccess {
         manager.drawBucketWithSlotEmissions(bucket, graphics, external);
     }
 
+    /** One caller check for a whole sprite-table pass instead of one stack walk per bucket. */
+    public static BucketPass bucketPass(ObjectManager manager, GraphicsManager graphics) {
+        Class<?> caller = com.openggf.util.EngineCallerAccess.callerOutside(ObjectDrawInternalAccess.class);
+        if (caller.getClassLoader() != ObjectDrawInternalAccess.class.getClassLoader()) {
+            throw new SecurityException("Native slot composition belongs to the engine renderer");
+        }
+        return new BucketPass(java.util.Objects.requireNonNull(manager), graphics);
+    }
+    /** Admitted engine pass; hold it only in the renderer's locals or engine-private fields. */
+    public static final class BucketPass {
+        private final ObjectManager manager;
+        private final GraphicsManager graphics;
+        private BucketPass(ObjectManager manager, GraphicsManager graphics) {
+            this.manager = manager; this.graphics = graphics;
+        }
+        public boolean boundTo(ObjectManager manager, GraphicsManager graphics) {
+            return this.manager == manager && this.graphics == graphics;
+        }
+        public void draw(int bucket, List<SpriteSlotEmission> external) {
+            manager.drawBucketWithSlotEmissions(bucket, graphics, external);
+        }
+    }
+
     public interface NativeDisplayOrderVisitor {
         void admission(int bucket, int slot, ObjectInstance owner, boolean nativeSubmission);
     }
@@ -87,6 +110,8 @@ public final class ObjectDrawInternalAccess {
         private final Runnable ensureBuckets;
         private final IntFunction<AbstractObjectInstance> currentOwner;
         private final Supplier<IntFunction<SpriteSlotEmission>> externalResolver;
+        /** Checked once per render host; this engine collaborator is always the caller it admits. */
+        private PresentationGraphicsAccess.Batch presentation;
 
         Drawing(ObjectManager manager, GraphicsManager graphicsManager, Camera camera, ObjectServices objectServices,
                 ObjectCallbackRouter objectCallbacks, List<GLCommand> renderCommands,
@@ -109,9 +134,20 @@ public final class ObjectDrawInternalAccess {
             this.externalResolver = externalResolver;
         }
 
+        /** Rebuilt per population; nothing in it survives into simulation or rewind state. */
+        private final ObjectNativeSstOverwrite.OwnerIndex ownerIndex = new ObjectNativeSstOverwrite.OwnerIndex();
+        private final IntFunction<AbstractObjectInstance> indexedOwner = ownerIndex::owner;
+
         void populateBuckets(Collection<ObjectInstance> active, List<ObjectInstance> dynamic,
                 NativeSpriteSubmissionQueue queue) {
-            ObjectRenderParts.populateBuckets(active, dynamic, queue, currentOwner, externalResolver,
+            // Population is a read-only presentation pass: no object moves slot or is destroyed
+            // while queued slots resolve, so one index answers exactly like a scan per slot.
+            IntFunction<AbstractObjectInstance> owners = currentOwner;
+            if (queue.size() > 0) {
+                ownerIndex.rebuild(active, dynamic, objectCallbacks);
+                owners = indexedOwner;
+            }
+            ObjectRenderParts.populateBuckets(active, dynamic, queue, owners, externalResolver,
                     manager.stageplayDirection, unifiedBuckets, lowPriorityBuckets, highPriorityBuckets);
         }
 
@@ -197,19 +233,28 @@ public final class ObjectDrawInternalAccess {
             // (The InstancedPatternRenderer bakes priority per-instance and doesn't
             // need the flush, but it's harmless — empty flushes are no-ops.)
 
-            drawBucketInstancesWithPriority(unifiedBuckets[idx], idx + RenderPriority.MIN, gfx);
+            int target = idx + RenderPriority.MIN;
+            drawBucketInstancesWithPriority(unifiedBuckets[idx], target, gfx,
+                    manager.dormantLayer.withDormantEmissions(target, gfx, List.of()));
         }
 
         void drawBucketWithSlotEmissions(int bucket, GraphicsManager graphics,
                 List<com.openggf.level.render.SpriteSlotEmission> external) {
             ensureBuckets.run();
             int index = RenderPriority.clamp(bucket) - RenderPriority.MIN;
-            drawBucketInstancesWithPriority(unifiedBuckets[index], index + RenderPriority.MIN, graphics, external);
+            int target = index + RenderPriority.MIN;
+            drawBucketInstancesWithPriority(unifiedBuckets[index], target, graphics,
+                    manager.dormantLayer.withDormantEmissions(target, graphics, external));
         }
 
         private void drawBucketInstancesWithPriority(List<ObjectRenderParts.RenderEntry> entries, int bucket,
                                                      GraphicsManager gfx) {
             drawBucketInstancesWithPriority(entries, bucket, gfx, List.of());
+        }
+
+        private boolean maskIsPerInstance(GraphicsManager gfx) {
+            if (presentation == null || !presentation.boundTo(gfx)) presentation = PresentationGraphicsAccess.batch(gfx);
+            return presentation.maskIsPerInstance();
         }
 
         void drawBucketInstancesWithPriority(List<ObjectRenderParts.RenderEntry> entries, int bucket,
@@ -241,7 +286,7 @@ public final class ObjectDrawInternalAccess {
                             ? !entry.nativeSubmission() && next.slot() < entry.slot()
                             : entry.nativeSubmission() || next.slot() > entry.slot()))) {
                         if (gfx.getCurrentSpriteTileOcclusionPaletteMask() != next.tileOcclusionPaletteMask()) {
-                            boolean perInstance = PresentationGraphicsAccess.maskIsPerInstance(gfx);
+                            boolean perInstance = maskIsPerInstance(gfx);
                             if (!perInstance) gfx.flushPatternBatch();
                             gfx.setCurrentSpriteTileOcclusionPaletteMask(next.tileOcclusionPaletteMask());
                             if (!perInstance) gfx.beginPatternBatch();
@@ -257,7 +302,7 @@ public final class ObjectDrawInternalAccess {
                     objectCallbacks.run(entry.instance(), () -> {
                         int mask = ObjectRenderParts.tileOcclusionPaletteMask(entry);
                         if (gfx.getCurrentSpriteTileOcclusionPaletteMask() != mask) {
-                            boolean perInstance = PresentationGraphicsAccess.maskIsPerInstance(gfx);
+                            boolean perInstance = maskIsPerInstance(gfx);
                             if (!perInstance) gfx.flushPatternBatch();
                             gfx.setCurrentSpriteTileOcclusionPaletteMask(mask);
                             if (!perInstance) gfx.beginPatternBatch();

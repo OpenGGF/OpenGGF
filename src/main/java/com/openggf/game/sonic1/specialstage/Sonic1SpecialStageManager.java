@@ -287,9 +287,14 @@ public final class Sonic1SpecialStageManager implements com.openggf.game.interna
         // Load palette
         loadPalette();
 
-        // Load and cache art patterns
-        loadArt();
-        loadSonicSprite();
+        // Load and cache art patterns: one atlas flush instead of one upload per tile.
+        graphicsManager.beginPatternAtlasBatch();
+        try {
+            loadArt();
+            loadSonicSprite();
+        } finally {
+            graphicsManager.endPatternAtlasBatch();
+        }
 
         // Initialize background renderer
         initBgRenderer();
@@ -1680,7 +1685,8 @@ public final class Sonic1SpecialStageManager implements com.openggf.game.interna
 
     private void loadSonicSprite() throws IOException {
         Rom rom = GameServices.rom().getRom();
-        SpriteArtSet sonicArt = new Sonic1PlayerArt(RomByteReader.fromRom(rom)).loadSonic();
+        SpriteArtSet sonicArt = com.openggf.game.presentation.StageCharacterPresentation.playable(
+                new Sonic1PlayerArt(RomByteReader.fromRom(rom)).loadSonic());
         if (sonicArt == null) {
             sonicSpriteRenderer = null;
             sonicSpriteFrame = 0;
@@ -1690,6 +1696,8 @@ public final class Sonic1SpecialStageManager implements com.openggf.game.interna
         }
 
         sonicSpriteRenderer = new PlayerSpriteRenderer(sonicArt);
+        com.openggf.game.presentation.StageCharacterPresentation.bindPalette(sonicSpriteRenderer,
+                com.openggf.game.presentation.StageCharacterPresentation.activeDefinition());
         sonicSpriteRenderer.ensureCached(graphicsManager);
         sonicRollScript = sonicArt.animationSet() != null
                 ? sonicArt.animationSet().getScript(Sonic1AnimationIds.ROLL)

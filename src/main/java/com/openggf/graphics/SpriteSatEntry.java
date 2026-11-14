@@ -124,6 +124,13 @@ public record SpriteSatEntry(
                 tileOcclusionPaletteMask, pixelOperation, ghost, motionOwner);
     }
 
+    /** {@link #clipRect} then {@link #withVisibleScanlines}, as one envelope for the SAT post-pass. */
+    SpriteSatEntry clipRectAndScanlines(int col, int cols, int row, int rows, int top, int bottom) {
+        return new SpriteSatEntry(priorityBucket, piece.clipRect(col, cols, row, rows),
+                top, bottom, presentationSubject, replayFragments,
+                tileOcclusionPaletteMask, pixelOperation, ghost, motionOwner);
+    }
+
     public SpriteSatEntry clipRows(int row, int rows) {
         return clipRect(piece.startColTile(), piece.colCountTiles(), row, rows);
     }

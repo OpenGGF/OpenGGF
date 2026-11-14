@@ -1,0 +1,760 @@
+{
+  "method": "Built-in GPT Image native-pose transformation, aspect-preserving indexed reduction; deterministic Scale2x rotations only for slopes",
+  "raw": [
+    {
+      "file": "exec-a4b37d60-419a-4e5a-b5d8-097debbad487.png",
+      "sha256": "b314f003e705ec2c847b336b8ede146b82713b2061d0d05ba26916606f4cdf4d"
+    },
+    {
+      "file": "exec-f71cda38-6d44-451c-8f42-a0df1dfdbdac.png",
+      "sha256": "64ce49ce84c1f7f1fc8dc6c5778ca5c6fb72d5906c21f3a85400b944f06fe920"
+    },
+    {
+      "file": "exec-84075caa-79aa-4f4e-8964-2340f73ff337.png",
+      "sha256": "5ef7f20bb644d350a3032863cb7e0e1e0ea04c6f4fd61ebb87283a2c254bab75"
+    }
+  ],
+  "prompts": [
+    "37 native pose contact sheet transformed to original Gilded MICA; native motion, rounded pangolin scales, locked WAIT head/torso",
+    "12 native S2 walk/balance/duck contacts transformed to same model",
+    "Two native S3K blink phases transformed to Gilded MICA, half-closed and closed eyes, same native pose and approved model"
+  ],
+  "selected": [
+    {
+      "id": "s3k-walk-0",
+      "family": "WALK",
+      "reference": "s3k-01",
+      "native_opaque_area": 802,
+      "authored_opaque_area": 804,
+      "size_ratio": 1.0012461064024343,
+      "size": [
+        35,
+        37
+      ],
+      "hotspot": [
+        18,
+        17
+      ],
+      "attempt": 1,
+      "cell": 17
+    },
+    {
+      "id": "s3k-walk-1",
+      "family": "WALK",
+      "reference": "s3k-02",
+      "native_opaque_area": 767,
+      "authored_opaque_area": 791,
+      "size_ratio": 1.015524860924217,
+      "size": [
+        36,
+        37
+      ],
+      "hotspot": [
+        18,
+        16
+      ],
+      "attempt": 1,
+      "cell": 18
+    },
+    {
+      "id": "s3k-walk-2",
+      "family": "WALK",
+      "reference": "s3k-03",
+      "native_opaque_area": 672,
+      "authored_opaque_area": 678,
+      "size_ratio": 1.0044543650303739,
+      "size": [
+        33,
+        37
+      ],
+      "hotspot": [
+        21,
+        15
+      ],
+      "attempt": 1,
+      "cell": 19
+    },
+    {
+      "id": "s3k-walk-3",
+      "family": "WALK",
+      "reference": "s3k-04",
+      "native_opaque_area": 791,
+      "authored_opaque_area": 825,
+      "size_ratio": 1.0212656682310723,
+      "size": [
+        32,
+        40
+      ],
+      "hotspot": [
+        19,
+        20
+      ],
+      "attempt": 1,
+      "cell": 20
+    },
+    {
+      "id": "s3k-walk-4",
+      "family": "WALK",
+      "reference": "s3k-05",
+      "native_opaque_area": 809,
+      "authored_opaque_area": 846,
+      "size_ratio": 1.0226120847594986,
+      "size": [
+        36,
+        41
+      ],
+      "hotspot": [
+        17,
+        21
+      ],
+      "attempt": 1,
+      "cell": 21
+    },
+    {
+      "id": "s3k-walk-5",
+      "family": "WALK",
+      "reference": "s3k-06",
+      "native_opaque_area": 772,
+      "authored_opaque_area": 783,
+      "size_ratio": 1.007099153342516,
+      "size": [
+        37,
+        37
+      ],
+      "hotspot": [
+        18,
+        16
+      ],
+      "attempt": 1,
+      "cell": 22
+    },
+    {
+      "id": "s3k-walk-6",
+      "family": "WALK",
+      "reference": "s3k-07",
+      "native_opaque_area": 665,
+      "authored_opaque_area": 688,
+      "size_ratio": 1.017146236371847,
+      "size": [
+        27,
+        41
+      ],
+      "hotspot": [
+        17,
+        19
+      ],
+      "attempt": 1,
+      "cell": 23
+    },
+    {
+      "id": "s3k-walk-7",
+      "family": "WALK",
+      "reference": "s3k-08",
+      "native_opaque_area": 753,
+      "authored_opaque_area": 766,
+      "size_ratio": 1.0085951993879505,
+      "size": [
+        29,
+        42
+      ],
+      "hotspot": [
+        18,
+        22
+      ],
+      "attempt": 1,
+      "cell": 24
+    },
+    {
+      "id": "s2-walk-0",
+      "family": "WALK",
+      "reference": "s2-75",
+      "native_opaque_area": 776,
+      "authored_opaque_area": 804,
+      "size_ratio": 1.0178813654973766,
+      "size": [
+        33,
+        40
+      ],
+      "hotspot": [
+        16,
+        23
+      ],
+      "attempt": 2,
+      "cell": 0
+    },
+    {
+      "id": "s2-walk-1",
+      "family": "WALK",
+      "reference": "s2-76",
+      "native_opaque_area": 759,
+      "authored_opaque_area": 790,
+      "size_ratio": 1.0202172390017032,
+      "size": [
+        31,
+        42
+      ],
+      "hotspot": [
+        15,
+        23
+      ],
+      "attempt": 2,
+      "cell": 1
+    },
+    {
+      "id": "s2-walk-2",
+      "family": "WALK",
+      "reference": "s2-77",
+      "native_opaque_area": 653,
+      "authored_opaque_area": 679,
+      "size_ratio": 1.0197137994416974,
+      "size": [
+        29,
+        41
+      ],
+      "hotspot": [
+        14,
+        21
+      ],
+      "attempt": 2,
+      "cell": 2
+    },
+    {
+      "id": "s2-walk-3",
+      "family": "WALK",
+      "reference": "s2-78",
+      "native_opaque_area": 765,
+      "authored_opaque_area": 805,
+      "size_ratio": 1.025810694864967,
+      "size": [
+        31,
+        42
+      ],
+      "hotspot": [
+        16,
+        22
+      ],
+      "attempt": 2,
+      "cell": 3
+    },
+    {
+      "id": "s2-walk-4",
+      "family": "WALK",
+      "reference": "s2-79",
+      "native_opaque_area": 757,
+      "authored_opaque_area": 796,
+      "size_ratio": 1.0254360801909905,
+      "size": [
+        35,
+        40
+      ],
+      "hotspot": [
+        16,
+        21
+      ],
+      "attempt": 2,
+      "cell": 4
+    },
+    {
+      "id": "s2-walk-5",
+      "family": "WALK",
+      "reference": "s2-7a",
+      "native_opaque_area": 734,
+      "authored_opaque_area": 754,
+      "size_ratio": 1.0135324150727838,
+      "size": [
+        31,
+        41
+      ],
+      "hotspot": [
+        15,
+        22
+      ],
+      "attempt": 2,
+      "cell": 5
+    },
+    {
+      "id": "s2-walk-6",
+      "family": "WALK",
+      "reference": "s2-7b",
+      "native_opaque_area": 646,
+      "authored_opaque_area": 678,
+      "size_ratio": 1.0244684493507694,
+      "size": [
+        27,
+        41
+      ],
+      "hotspot": [
+        14,
+        21
+      ],
+      "attempt": 2,
+      "cell": 6
+    },
+    {
+      "id": "s2-walk-7",
+      "family": "WALK",
+      "reference": "s2-7c",
+      "native_opaque_area": 710,
+      "authored_opaque_area": 742,
+      "size_ratio": 1.022286859220645,
+      "size": [
+        28,
+        41
+      ],
+      "hotspot": [
+        14,
+        21
+      ],
+      "attempt": 2,
+      "cell": 7
+    },
+    {
+      "id": "run-0",
+      "family": "RUN",
+      "reference": "s2-b5",
+      "native_opaque_area": 616,
+      "authored_opaque_area": 614,
+      "size_ratio": 0.998375303557358,
+      "size": [
+        36,
+        31
+      ],
+      "hotspot": [
+        17,
+        15
+      ],
+      "attempt": 1,
+      "cell": 0
+    },
+    {
+      "id": "run-1",
+      "family": "RUN",
+      "reference": "s2-b9",
+      "native_opaque_area": 626,
+      "authored_opaque_area": 631,
+      "size_ratio": 1.0039856674511267,
+      "size": [
+        38,
+        33
+      ],
+      "hotspot": [
+        17,
+        18
+      ],
+      "attempt": 1,
+      "cell": 4
+    },
+    {
+      "id": "push-0",
+      "family": "PUSH",
+      "reference": "s2-bd",
+      "native_opaque_area": 808,
+      "authored_opaque_area": 825,
+      "size_ratio": 1.010465043413376,
+      "size": [
+        30,
+        39
+      ],
+      "hotspot": [
+        20,
+        19
+      ],
+      "attempt": 1,
+      "cell": 6
+    },
+    {
+      "id": "push-1",
+      "family": "PUSH",
+      "reference": "s2-be",
+      "native_opaque_area": 774,
+      "authored_opaque_area": 781,
+      "size_ratio": 1.004511785719102,
+      "size": [
+        29,
+        40
+      ],
+      "hotspot": [
+        18,
+        20
+      ],
+      "attempt": 1,
+      "cell": 7
+    },
+    {
+      "id": "push-2",
+      "family": "PUSH",
+      "reference": "s2-bf",
+      "native_opaque_area": 803,
+      "authored_opaque_area": 815,
+      "size_ratio": 1.007444271485743,
+      "size": [
+        30,
+        39
+      ],
+      "hotspot": [
+        19,
+        19
+      ],
+      "attempt": 1,
+      "cell": 8
+    },
+    {
+      "id": "push-3",
+      "family": "PUSH",
+      "reference": "s2-c0",
+      "native_opaque_area": 731,
+      "authored_opaque_area": 763,
+      "size_ratio": 1.0216533902428953,
+      "size": [
+        32,
+        42
+      ],
+      "hotspot": [
+        20,
+        22
+      ],
+      "attempt": 1,
+      "cell": 9
+    },
+    {
+      "id": "s2-wait-0",
+      "family": "WAIT",
+      "reference": "s2-72",
+      "native_opaque_area": 650,
+      "authored_opaque_area": 654,
+      "size_ratio": 1.0030722038586486,
+      "size": [
+        25,
+        39
+      ],
+      "hotspot": [
+        14,
+        19
+      ],
+      "attempt": 1,
+      "cell": 10
+    },
+    {
+      "id": "s2-wait-1",
+      "family": "WAIT",
+      "reference": "s2-73",
+      "native_opaque_area": 657,
+      "authored_opaque_area": 669,
+      "size_ratio": 1.00909109607738,
+      "size": [
+        25,
+        40
+      ],
+      "hotspot": [
+        14,
+        20
+      ],
+      "attempt": 1,
+      "cell": 11
+    },
+    {
+      "id": "s2-wait-2",
+      "family": "WAIT",
+      "reference": "s2-74",
+      "native_opaque_area": 660,
+      "authored_opaque_area": 671,
+      "size_ratio": 1.0082988974836116,
+      "size": [
+        25,
+        40
+      ],
+      "hotspot": [
+        14,
+        20
+      ],
+      "attempt": 1,
+      "cell": 12
+    },
+    {
+      "id": "s3k-wait-0",
+      "family": "WAIT",
+      "reference": "s3k-ba",
+      "native_opaque_area": 718,
+      "authored_opaque_area": 735,
+      "size_ratio": 1.0117691832739528,
+      "size": [
+        25,
+        41
+      ],
+      "hotspot": [
+        15,
+        21
+      ],
+      "attempt": 1,
+      "cell": 31
+    },
+    {
+      "id": "s3k-wait-1",
+      "family": "WAIT",
+      "reference": "s3k-bb",
+      "native_opaque_area": 708,
+      "authored_opaque_area": 732,
+      "size_ratio": 1.01680789979462,
+      "size": [
+        25,
+        40
+      ],
+      "hotspot": [
+        15,
+        20
+      ],
+      "attempt": 1,
+      "cell": 32
+    },
+    {
+      "id": "balance-0",
+      "family": "BALANCE",
+      "reference": "s2-c2",
+      "native_opaque_area": 676,
+      "authored_opaque_area": 673,
+      "size_ratio": 0.9977785977748345,
+      "size": [
+        23,
+        43
+      ],
+      "hotspot": [
+        19,
+        23
+      ],
+      "attempt": 2,
+      "cell": 9
+    },
+    {
+      "id": "balance-1",
+      "family": "BALANCE",
+      "reference": "s2-c3",
+      "native_opaque_area": 679,
+      "authored_opaque_area": 698,
+      "size_ratio": 1.0138946330617393,
+      "size": [
+        24,
+        44
+      ],
+      "hotspot": [
+        20,
+        24
+      ],
+      "attempt": 2,
+      "cell": 10
+    },
+    {
+      "id": "balance-2",
+      "family": "BALANCE",
+      "reference": "s2-c4",
+      "native_opaque_area": 682,
+      "authored_opaque_area": 697,
+      "size_ratio": 1.0109372556679077,
+      "size": [
+        24,
+        44
+      ],
+      "hotspot": [
+        20,
+        24
+      ],
+      "attempt": 2,
+      "cell": 11
+    },
+    {
+      "id": "balance-3",
+      "family": "BALANCE",
+      "reference": "s2-c5",
+      "native_opaque_area": 669,
+      "authored_opaque_area": 690,
+      "size_ratio": 1.0155737957081938,
+      "size": [
+        26,
+        42
+      ],
+      "hotspot": [
+        21,
+        22
+      ],
+      "attempt": 1,
+      "cell": 13
+    },
+    {
+      "id": "balance-4",
+      "family": "BALANCE",
+      "reference": "s2-c6",
+      "native_opaque_area": 672,
+      "authored_opaque_area": 695,
+      "size_ratio": 1.0169691197259583,
+      "size": [
+        26,
+        42
+      ],
+      "hotspot": [
+        20,
+        22
+      ],
+      "attempt": 1,
+      "cell": 14
+    },
+    {
+      "id": "balance-5",
+      "family": "BALANCE",
+      "reference": "s2-c7",
+      "native_opaque_area": 675,
+      "authored_opaque_area": 710,
+      "size_ratio": 1.02559828970794,
+      "size": [
+        25,
+        43
+      ],
+      "hotspot": [
+        20,
+        23
+      ],
+      "attempt": 1,
+      "cell": 15
+    },
+    {
+      "id": "duck-0",
+      "family": "DUCK",
+      "reference": "s2-c1",
+      "native_opaque_area": 680,
+      "authored_opaque_area": 686,
+      "size_ratio": 1.004402075571215,
+      "size": [
+        33,
+        29
+      ],
+      "hotspot": [
+        16,
+        9
+      ],
+      "attempt": 2,
+      "cell": 8
+    }
+  ],
+  "size_check": [
+    {
+      "family": "BALANCE",
+      "drawings": 6,
+      "native_mean": 675.5,
+      "authored_mean": 693.8333333333334,
+      "ratio": 1.0134793484993616
+    },
+    {
+      "family": "DUCK",
+      "drawings": 1,
+      "native_mean": 680.0,
+      "authored_mean": 686.0,
+      "ratio": 1.004402075571215
+    },
+    {
+      "family": "PUSH",
+      "drawings": 4,
+      "native_mean": 779.0,
+      "authored_mean": 796.0,
+      "ratio": 1.0108525361334588
+    },
+    {
+      "family": "RUN",
+      "drawings": 2,
+      "native_mean": 621.0,
+      "authored_mean": 622.5,
+      "ratio": 1.0012070010428404
+    },
+    {
+      "family": "WAIT",
+      "drawings": 5,
+      "native_mean": 678.6,
+      "authored_mean": 692.2,
+      "ratio": 1.0099709210767267
+    },
+    {
+      "family": "WALK",
+      "drawings": 16,
+      "native_mean": 739.4375,
+      "authored_mean": 764.3125,
+      "ratio": 1.0166810887108788
+    }
+  ],
+  "attempts": [
+    {
+      "file": "exec-17ac7508-e30f-469e-b241-6508428213f9.png",
+      "sha256": "66dcfe775cd903be3b545ab550e2e1e1346dd1abd81a8d14243171c3e3cdfcbb",
+      "decision": "Rejected in favor of the 8x-native variant: rounder lower-detail scale clusters match approved WAIT better."
+    },
+    {
+      "file": "exec-a4b37d60-419a-4e5a-b5d8-097debbad487.png",
+      "decision": "Selected 8x-native reference variant, reviewed at native size and common baseline."
+    }
+  ],
+  "pilot_decision": "Not installed; regenerated stance passes size and native/approved WAIT lineup checks.",
+  "per_host_size_check": [
+    {
+      "game": "s2",
+      "family": "walk",
+      "ratio": 1.0211555320761159
+    },
+    {
+      "game": "s2",
+      "family": "run",
+      "ratio": 1.0012070010428404
+    },
+    {
+      "game": "s2",
+      "family": "push",
+      "ratio": 1.0108525361334588
+    },
+    {
+      "game": "s2",
+      "family": "wait",
+      "ratio": 1.0068398517321886
+    },
+    {
+      "game": "s2",
+      "family": "balance",
+      "ratio": 1.0134793484993616
+    },
+    {
+      "game": "s2",
+      "family": "duck",
+      "ratio": 1.004402075571215
+    },
+    {
+      "game": "s3k",
+      "family": "walk",
+      "ratio": 1.0123593715989077
+    },
+    {
+      "game": "s3k",
+      "family": "run",
+      "ratio": 0.9708078220757609
+    },
+    {
+      "game": "s3k",
+      "family": "push",
+      "ratio": 1.035574697706614
+    },
+    {
+      "game": "s3k",
+      "family": "wait",
+      "ratio": 1.01427400299706
+    },
+    {
+      "game": "s3k",
+      "family": "balance",
+      "ratio": 0.9744203145947592
+    },
+    {
+      "game": "s3k",
+      "family": "duck",
+      "ratio": 0.9801960588196069
+    }
+  ],
+  "excluded_attempts": [
+    {
+      "file": "exec-84075caa-79aa-4f4e-8964-2340f73ff337.png",
+      "reason": "Not installed: S3K Blink interrupt belongs to competition control; native single-player powered WAIT does not select it. C7 additionally requires retained bank context; it is not an established normal geometry alias."
+    }
+  ]
+}

@@ -60,6 +60,23 @@ class TestNativeImageResourceGuard {
                         + RESOURCE_CONFIG + ": " + unreachable);
     }
 
+    @Test
+    void animationProfileRecordsExposeJacksonReflectionMetadata() throws IOException {
+        var required = new java.util.HashSet<>(List.of(
+                com.openggf.game.AnimationFamilies.Binding.class.getName(),
+                com.openggf.game.DonorCapabilities.NativeFramePose.class.getName()));
+        var metadata = new com.fasterxml.jackson.databind.ObjectMapper().readTree(
+                RESOURCE_CONFIG.resolveSibling("reflect-config.json").toFile());
+        for (var entry : metadata) {
+            if (required.remove(entry.path("name").asText())) {
+                for (String access : List.of("allDeclaredConstructors", "allDeclaredMethods", "allDeclaredFields")) {
+                    assertTrue(entry.path(access).asBoolean(), entry.path("name") + " requires " + access);
+                }
+            }
+        }
+        assertTrue(required.isEmpty(), "animation profile records missing native-image reflection: " + required);
+    }
+
     private static List<Pattern> readIncludePatterns() throws IOException {
         String json = Files.readString(RESOURCE_CONFIG, StandardCharsets.UTF_8);
         Matcher matcher = Pattern.compile("\"pattern\"\\s*:\\s*\"((?:[^\"\\\\]|\\\\.)*)\"")

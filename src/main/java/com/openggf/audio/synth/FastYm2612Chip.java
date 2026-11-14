@@ -61,6 +61,8 @@ public final class FastYm2612Chip implements FmChip {
     private final int[] channelOut = new int[FmDsp.CHANNELS];
     private final BlipResampler resampler = new BlipResampler(INTERNAL_RATE, Ym2612Chip.getDefaultOutputRate());
     private final boolean[] mutes = new boolean[6];
+    /** Presentation gains ({@link FmChip#setOutputGain}); never part of a snapshot or backup. */
+    private final int[] outputGains = {UNITY_GAIN, UNITY_GAIN, UNITY_GAIN, UNITY_GAIN, UNITY_GAIN, UNITY_GAIN};
     /** Bit 0 = left enabled, bit 1 = right enabled, from register 0xB4+ch bits 7/6. */
     private final int[] pan = new int[6];
     private final int[] latchedRegister = new int[2];
@@ -261,6 +263,13 @@ public final class FastYm2612Chip implements FmChip {
         if (ch >= 0 && ch < 6) {
             mutes[ch] = mute;
                 emitBoundary(ChipWriteObserver.PhysicalTimelineBoundary.MODEL_MUTATION);
+        }
+    }
+
+    @Override
+    public void setOutputGain(int ch, int gain) {
+        if (ch >= 0 && ch < 6) {
+            outputGains[ch] = Math.clamp(gain, 0, UNITY_GAIN);
         }
     }
 
@@ -518,6 +527,9 @@ public final class FastYm2612Chip implements FmChip {
                 continue;
             }
             int scaled = (channelOut[ch] * 3) >> 2;
+            if (outputGains[ch] != UNITY_GAIN) {
+                scaled = (scaled * outputGains[ch]) >> 8;
+            }
             if ((pan[ch] & 1) != 0) {
                 leftSum += scaled;
             }

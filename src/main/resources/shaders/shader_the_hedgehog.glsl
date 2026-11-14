@@ -14,12 +14,17 @@ out vec4 FragColor;
 
 uniform float PresentationHue = 0.0;
 uniform float PresentationOpacity = 1.0;
+// rgb tint and blend weight; zero weight keeps the rotated native colour.
+uniform vec4 PresentationTint = vec4(0.0);
 
 vec3 presentationColour(vec3 colour) {
     // Rotate colour around the neutral RGB axis; native palette textures remain untouched.
     vec3 axis = vec3(0.57735026919);
     float c = cos(PresentationHue), s = sin(PresentationHue);
-    return clamp(colour*c + cross(axis,colour)*s + axis*dot(axis,colour)*(1.0-c),0.0,1.0);
+    vec3 rotated = clamp(colour*c + cross(axis,colour)*s + axis*dot(axis,colour)*(1.0-c),0.0,1.0);
+    // A tint keeps the art's shading: dark pixels take a dark tint, bright pixels a bright one.
+    float luma = dot(colour, vec3(0.299, 0.587, 0.114));
+    return mix(rotated, clamp(PresentationTint.rgb * (0.3 + 0.9 * luma), 0.0, 1.0), PresentationTint.a);
 }
 
 void main()

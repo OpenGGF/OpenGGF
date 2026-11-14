@@ -43,11 +43,11 @@ public final class Sonic1PlcService
         this.queue = Objects.requireNonNull(queue, "queue");
     }
 
-    /** Models S1 {@code NewPLC}: replace idle waiting descriptors from one ROM PLC. */
+    /** Models S1 {@code NewPLC}: cancel active decoding and replace descriptors from one ROM PLC. */
     public void replaceQueued(int plcId) throws IOException {
         Submission submission = readSubmission(plcId);
         requireReplacementFits(submission.definition());
-        queue.replaceQueued(submission.definition(), submission.patternCounts());
+        queue.replaceIncludingActive(submission.definition(), submission.patternCounts());
     }
 
     /** Models S1 {@code AddPLC}: append every descriptor from one ROM PLC. */
@@ -57,25 +57,28 @@ public final class Sonic1PlcService
         queue.append(submission.definition(), submission.patternCounts());
     }
 
-    /** Models S1 {@code ClearPLC}; an active decoder is never interrupted. */
+    /**
+     * ClearPLC (sonic.asm:1363-1372) clears through v_plc_buffer_end,
+     * including v_plc_patternsleft (_Variables.asm:165-177). NewPLC calls
+     * it before copying the replacement (sonic.asm:1336-1355). This cancels
+     * active decoding; AddPLC alone preserves it. FixBugs=0 is retained:
+     * no change to RunPLC's early counter publication or sixteenth-slot policy.
+     */
     public void clearQueued() {
-        queue.clearQueued();
+        queue.clearIncludingActive();
     }
 
     /** Preflights and atomically commits an ordered native Clear/New/Add PLC sequence. */
     public void transact(Operation... operations) throws IOException {
         List<PreparedOperation> prepared = new java.util.ArrayList<>(operations.length);
         int occupied = occupiedDescriptorCount();
-        boolean active = queue.capture().activeEntry() != null;
         for (Operation operation : operations) {
             Submission submission = operation.kind() == OperationKind.CLEAR ? null : readSubmission(operation.plcId());
             switch (operation.kind()) {
                 case CLEAR -> {
-                    if (active) throw new IllegalStateException("cannot mutate queued PLC entries while the decoder is active");
                     occupied = 0;
                 }
                 case REPLACE -> {
-                    if (active) throw new IllegalStateException("cannot mutate queued PLC entries while the decoder is active");
                     occupied = submission.definition().entries().size();
                 }
                 case APPEND -> occupied += submission.definition().entries().size();
@@ -84,8 +87,8 @@ public final class Sonic1PlcService
             prepared.add(new PreparedOperation(operation.kind(), submission));
         }
         for (PreparedOperation operation : prepared) {
-            if (operation.kind() == OperationKind.CLEAR) queue.clearQueued();
-            else if (operation.kind() == OperationKind.REPLACE) queue.replaceQueued(operation.submission().definition(), operation.submission().patternCounts());
+            if (operation.kind() == OperationKind.CLEAR) queue.clearIncludingActive();
+            else if (operation.kind() == OperationKind.REPLACE) queue.replaceIncludingActive(operation.submission().definition(), operation.submission().patternCounts());
             else queue.append(operation.submission().definition(), operation.submission().patternCounts());
         }
     }

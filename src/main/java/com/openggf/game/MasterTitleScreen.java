@@ -252,6 +252,7 @@ public class MasterTitleScreen {
     private List<String> titleEntries = List.of();
     private java.util.function.ObjIntConsumer<List<String>> titleEntryOpener = (games, index) -> { };
     private boolean extrasOpen;
+    private boolean extrasIncludeBuiltIns;
     private int extrasIndex;
     private int standaloneActionIndex;
 
@@ -679,6 +680,16 @@ public class MasterTitleScreen {
      * how to open one; the opener receives the games whose ROMs are present.
      */
     public void setTitleEntries(List<String> labels, java.util.function.ObjIntConsumer<List<String>> opener) {
+        setTitleEntries(labels, false, opener);
+    }
+
+    /**
+     * Extras entries: built-in extras (when {@code includesBuiltIns}) followed by
+     * mod-contributed entries; the opener receives the games whose ROMs are present.
+     */
+    public void setTitleEntries(List<String> labels, boolean includesBuiltIns,
+                                java.util.function.ObjIntConsumer<List<String>> opener) {
+        extrasIncludeBuiltIns = includesBuiltIns;
         titleEntries = List.copyOf(labels);
         titleEntryOpener = Objects.requireNonNull(opener, "opener");
         navigation.setExtrasVisible(!titleEntries.isEmpty());
@@ -1689,7 +1700,8 @@ public class MasterTitleScreen {
             return;
         }
         if (extrasOpen) {
-            drawChooser(UiMessages.text("hub.ui.extras_caps"), UiMessages.text("hub.ui.modes_added_by_your_mods"), titleEntries.stream()
+            drawChooser(UiMessages.text("hub.ui.extras_caps"), UiMessages.text(extrasIncludeBuiltIns
+                    ? "hub.ui.extra_modes" : "hub.ui.modes_added_by_your_mods"), titleEntries.stream()
                     .toList(), extrasIndex, UiMessages.text("hub.ui.open_caps"));
             return;
         }
@@ -2048,7 +2060,8 @@ public class MasterTitleScreen {
                 case SETTINGS -> restartPending() ? UiMessages.text("hub.ui.restart_openggf_to_finish_applying_saved_settings")
                         : suspended != null ? UiMessages.text("hub.ui.for_all_games_some_reach_your_paused_game")
                         : UiMessages.text("hub.ui.display_sound_controls_and_more_for_all_games");
-                case EXTRAS -> UiMessages.text("hub.ui.extra_modes_added_by_your_mods");
+                case EXTRAS -> UiMessages.text(extrasIncludeBuiltIns
+                        ? "hub.ui.extra_modes" : "hub.ui.extra_modes_added_by_your_mods");
                 case ADVANCED -> UiMessages.text("hub.ui.playback_browser_advanced_settings_and_tools");
                 case QUIT -> UiMessages.text("hub.ui.close_openggf");
             };

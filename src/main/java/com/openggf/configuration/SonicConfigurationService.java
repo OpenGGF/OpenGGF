@@ -746,6 +746,8 @@ public class SonicConfigurationService {
 		putDefaultKey(SonicConfiguration.DISPLAY_INTERPOLATION_TOGGLE_KEY, GLFW_KEY_N);
 		putDefault(SonicConfiguration.DISPLAY_ASPECT, "NATIVE_4_3");
 		putDefault(SonicConfiguration.WIDESCREEN_DEADZONE_MODE, "PROPORTIONAL");
+		putDefault(SonicConfiguration.WIDESCREEN_DRAW_MODE, "EDGE");
+		putDefault(SonicConfiguration.WIDESCREEN_DORMANT_STYLE, "GREYSCALE");
 		putDefault(SonicConfiguration.DISPLAY_HUD_ANCHOR, "DEFAULT");
 		putDefault(SonicConfiguration.DISPLAY_HUD_TIME_HUNDREDTHS, false);
 		putDefault(SonicConfiguration.DISPLAY_SPRITE_SCANLINE_LIMIT, false);
@@ -761,6 +763,8 @@ public class SonicConfigurationService {
 		putDefault(SonicConfiguration.DAC_INTERPOLATE, false);
 		putDefault(SonicConfiguration.FM6_DAC_OFF, true); // Default true for Sonic 2 parity
 		putDefault(SonicConfiguration.AUDIO_ENABLED, true);
+        putDefault(SonicConfiguration.AUDIO_MUSIC_VOLUME, 100);
+        putDefault(SonicConfiguration.AUDIO_SFX_VOLUME, 100);
         putDefault(SonicConfiguration.AUDIO_HUB_MUSIC_ENABLED, false);
         putDefault(SonicConfiguration.AUDIO_HUB_MUSIC_VOLUME, 20);
         putDefault(SonicConfiguration.MULTIPLAYER_CENSOR_PROFANITY, true);

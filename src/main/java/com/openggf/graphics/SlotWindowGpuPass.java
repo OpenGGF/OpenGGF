@@ -17,6 +17,7 @@ public final class SlotWindowGpuPass {
     private final int[] viewportScratch = new int[4];
     private int locSlotFaceTexture = -1;
     private int locPalette = -1;
+    private int locPortraitAtlas = -1;
     private int locSlotFace0 = -1;
     private int locSlotFace1 = -1;
     private int locSlotFace2 = -1;
@@ -57,6 +58,14 @@ public final class SlotWindowGpuPass {
                                int face0, int face1, int face2,
                                int nextFace0, int nextFace1, int nextFace2,
                                float offset0, float offset1, float offset2) {
+        draw(textureId, paletteTextureId, screenX, screenY, paletteLine,
+                face0, face1, face2, nextFace0, nextFace1, nextFace2, offset0, offset1, offset2, false);
+    }
+
+    /** An explicit atlas flag keeps the existing single-channel native-texture contract. */
+    public void draw(int textureId, int paletteTextureId, int screenX, int screenY, float paletteLine,
+            int face0, int face1, int face2, int nextFace0, int nextFace1, int nextFace2,
+            float offset0, float offset1, float offset2, boolean portraitAtlas) {
         // Get viewport dimensions to handle scaling
         glGetIntegerv(GL_VIEWPORT, viewportScratch);
         int viewportWidth = viewportScratch[2];
@@ -83,6 +92,7 @@ public final class SlotWindowGpuPass {
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, textureId);
         glUniform1i(locSlotFaceTexture, 0);
+        glUniform1i(locPortraitAtlas, portraitAtlas ? 1 : 0);
 
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, paletteTextureId);
@@ -146,6 +156,7 @@ public final class SlotWindowGpuPass {
         int programId = shader.getProgramId();
         locSlotFaceTexture = glGetUniformLocation(programId, "SlotFaceTexture");
         locPalette = glGetUniformLocation(programId, "Palette");
+        locPortraitAtlas = glGetUniformLocation(programId, "PortraitAtlas");
         locSlotFace0 = glGetUniformLocation(programId, "SlotFace0");
         locSlotFace1 = glGetUniformLocation(programId, "SlotFace1");
         locSlotFace2 = glGetUniformLocation(programId, "SlotFace2");
@@ -174,6 +185,7 @@ public final class SlotWindowGpuPass {
     private void resetUniformLocations() {
         locSlotFaceTexture = -1;
         locPalette = -1;
+        locPortraitAtlas = -1;
         locSlotFace0 = -1;
         locSlotFace1 = -1;
         locSlotFace2 = -1;

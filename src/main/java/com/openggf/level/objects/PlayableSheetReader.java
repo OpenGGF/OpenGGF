@@ -15,7 +15,7 @@ import java.util.*;
 @ModApi
 public final class PlayableSheetReader {
     static final int BASE = tag("BASE"), META = tag("META"), FRAM = tag("FRAM"),
-            ANIM = tag("ANIM"), APND = tag("APND");
+            ANIM = tag("ANIM"), APND = tag("APND"), NFRM = tag("NFRM");
     private PlayableSheetReader() {}
 
     public static PlayableSheet read(byte[] bytes) throws IOException {
@@ -47,7 +47,7 @@ public final class PlayableSheetReader {
             byte[] framePayload = required(sections, FRAM);
             byte[] animPayload = required(sections, ANIM);
             for (int tag : sections.keySet()) {
-                if (tag != BASE && tag != META && tag != FRAM && tag != ANIM && tag != APND
+                if (tag != BASE && tag != META && tag != FRAM && tag != ANIM && tag != APND && tag != NFRM
                         && (tag & 0x80000000) == 0) throw invalid("unknown required section");
             }
             byte[] ggfs = parseBase(basePayload, limits);
@@ -58,7 +58,8 @@ public final class PlayableSheetReader {
             Map<String, Animation> animations = parseAnimations(animPayload, frames.size(), limits);
             Map<String, List<Integer>> appendages = sections.containsKey(APND)
                     ? parseAppendages(sections.get(APND), frames.size(), limits) : Map.of();
-            return new PlayableSheet(ggfs, meta, frames, animations, appendages);
+            return new PlayableSheet(ggfs, meta, frames, animations, appendages,
+                    sections.containsKey(NFRM) ? parseNativeFrames(sections.get(NFRM), frames.size()) : Map.of());
         } catch (EOFException failure) {
             throw invalid("truncated container", failure);
         }
@@ -122,7 +123,7 @@ public final class PlayableSheetReader {
             long totalSteps = 0;
             for (int i = 0; i < count; i++) {
                 String key = string(in);
-                try { ModKeySyntax.requireLocalName(key); }
+                try { com.openggf.game.CanonicalAnimation.valueOf(key); }
                 catch (IllegalArgumentException rejected) { throw invalid("invalid animation key", rejected); }
                 if (prior != null && compareUtf8(prior, key) >= 0) throw invalid("animation keys not sorted/unique");
                 prior = key; int steps = in.readUnsignedShort();
@@ -131,11 +132,55 @@ public final class PlayableSheetReader {
                 for (int s = 0; s < steps; s++) {
                     int frame = in.readUnsignedShort(), duration = in.readUnsignedShort();
                     int flags = in.readUnsignedByte(), reserved = in.readUnsignedByte();
-                    if (frame >= frames || duration == 0 || (flags & ~1) != 0 || reserved != 0)
+                    if (frame >= frames || duration == 0 || (flags & ~1) != 0 || reserved != 0
+                            || (flags == 1 && s + 1 != steps))
                         throw invalid("invalid animation step");
                     values.add(new AnimationStep(frame, duration, (flags & 1) != 0));
                 }
-                result.put(key, new Animation(values));
+                int speed = in.readUnsignedByte();
+                int end = in.readUnsignedByte();
+                int loopBackSteps = end == 3 ? in.readUnsignedShort() : 0;
+                String next = string(in);
+                int slopeCount = in.readUnsignedByte();
+                if (speed > 1 || end > 3
+                        || (end == 3 && (loopBackSteps == 0 || loopBackSteps > steps))
+                        || (slopeCount != 0 && slopeCount != 4))
+                    throw invalid("invalid animation metadata");
+                try { com.openggf.game.CanonicalAnimation.valueOf(next); }
+                catch (IllegalArgumentException e) { throw invalid("invalid next animation", e); }
+                totalSteps += (long) slopeCount * steps;
+                if (totalSteps > limits.maxSheetPieces()) throw invalid("slope frames exceed limit");
+                List<List<Integer>> slopes = new ArrayList<>();
+                for (int a = 0; a < slopeCount; a++) {
+                    List<Integer> set = new ArrayList<>();
+                    for (int f = 0; f < steps; f++) {
+                        int index = in.readUnsignedShort();
+                        if (index >= frames) throw invalid("dangling slope frame");
+                        set.add(index);
+                    }
+                    slopes.add(List.copyOf(set));
+                }
+                if (slopeCount != 0 && (!key.equals("WALK") && !key.equals("RUN")
+                        || speed == 0 || steps % 2 != 0)) throw invalid("invalid slope animation");
+                if (speed == 1 && values.stream().anyMatch(step -> step.duration() != 1))
+                    throw invalid("speed-driven steps require unit duration");
+                boolean nativeSpeed = Set.of("WALK", "RUN", "ROLL", "ROLL2", "PUSH").contains(key);
+                if ((speed == 1) != nativeSpeed)
+                    throw invalid("locomotion requires native speed timing; other poses require fixed durations");
+                result.put(key, new Animation(values, speed == 1,
+                        switch (end) {
+                            case 0 -> com.openggf.sprites.animation.SpriteAnimationEndAction.LOOP;
+                            case 1 -> com.openggf.sprites.animation.SpriteAnimationEndAction.HOLD;
+                            case 2 -> com.openggf.sprites.animation.SpriteAnimationEndAction.SWITCH;
+                            case 3 -> com.openggf.sprites.animation.SpriteAnimationEndAction.LOOP_BACK;
+                            default -> throw invalid("invalid end action");
+                        },
+                        next, slopes, loopBackSteps));
+            }
+            if (!result.containsKey("WAIT")) throw invalid("animation table requires WAIT");
+            for (var animation : result.values()) {
+                if (animation.endAction() == com.openggf.sprites.animation.SpriteAnimationEndAction.SWITCH
+                        && !result.containsKey(animation.nextAnimation())) throw invalid("missing next animation");
             }
             requireEnd(in, "ANIM"); return Collections.unmodifiableMap(result);
         }
@@ -163,14 +208,36 @@ public final class PlayableSheetReader {
         }
     }
 
+    private static Map<String, Integer> parseNativeFrames(byte[] payload, int frames) throws IOException {
+        try (var in = input(payload)) {
+            int count = in.readUnsignedShort();
+            if (count > 1024) throw invalid("too many native poses");
+            var result = new LinkedHashMap<String, Integer>();
+            String prior = null;
+            for (int i = 0; i < count; i++) {
+                String key = string(in);
+                if (!key.matches("[a-z][a-z0-9-]*/[a-z0-9-]+") || key.length() > 128
+                        || prior != null && compareUtf8(prior, key) >= 0) throw invalid("invalid native pose key/order");
+                int frame = in.readUnsignedShort();
+                if (frame >= frames) throw invalid("dangling native pose frame");
+                result.put(key, frame); prior = key;
+            }
+            requireEnd(in, "NFRM");
+            return Collections.unmodifiableMap(result);
+        }
+    }
+
     private static void requireOrder(Set<Integer> tags) throws IOException {
         List<Integer> list = new ArrayList<>(tags);
         if (list.size() < 4 || list.get(0) != BASE || list.get(1) != META || list.get(2) != FRAM || list.get(3) != ANIM)
             throw invalid("required sections out of order");
-        boolean sawOptionalUnknown = false;
+        boolean sawOptionalUnknown = false, sawNativeFrames = false;
         for (int i = 4; i < list.size(); i++) {
             int tag = list.get(i);
-            if (tag == APND) { if (sawOptionalUnknown) throw invalid("APND out of order"); }
+            if (tag == APND || tag == NFRM) {
+                if (sawOptionalUnknown || tag == APND && sawNativeFrames) throw invalid("optional known section out of order");
+                if (tag == NFRM) sawNativeFrames = true;
+            }
             else { sawOptionalUnknown = true; if ((tag & 0x80000000) == 0) throw invalid("unknown required section"); }
         }
     }
@@ -200,10 +267,32 @@ public final class PlayableSheetReader {
     @ModApi public record DplcRun(int sourceTile, int tileCount, int bankOffset) {}
     @ModApi public record Frame(int originX, int originY, int collisionWidth, int collisionHeight, List<DplcRun> runs) { public Frame { runs = List.copyOf(runs); } }
     @ModApi public record AnimationStep(int frameIndex, int duration, boolean loop) {}
-    @ModApi public record Animation(List<AnimationStep> steps) { public Animation { steps = List.copyOf(steps); } }
+    /** loopBackSteps counts final authored steps, before duration expansion; zero for other endings. */
+    @ModApi public record Animation(List<AnimationStep> steps, boolean speedDriven,
+            com.openggf.sprites.animation.SpriteAnimationEndAction endAction,
+            String nextAnimation, List<List<Integer>> slopes, int loopBackSteps) {
+        public Animation {
+            steps = List.copyOf(steps);
+            slopes = slopes.stream().map(List::copyOf).toList();
+        }
+        public Animation(List<AnimationStep> steps, boolean speedDriven,
+                com.openggf.sprites.animation.SpriteAnimationEndAction endAction,
+                String nextAnimation, List<List<Integer>> slopes) {
+            this(steps, speedDriven, endAction, nextAnimation, slopes, 0);
+        }
+        public Animation(List<AnimationStep> steps) {
+            this(steps, false, steps.getLast().loop()
+                    ? com.openggf.sprites.animation.SpriteAnimationEndAction.LOOP
+                    : com.openggf.sprites.animation.SpriteAnimationEndAction.HOLD, "WAIT", List.of());
+        }
+    }
     @ModApi public record PlayableSheet(byte[] baseSheetV1, Meta meta, List<Frame> frames,
-            Map<String, Animation> animations, Map<String, List<Integer>> appendages) {
+            Map<String, Animation> animations, Map<String, List<Integer>> appendages, Map<String, Integer> nativeFrames) {
+        public PlayableSheet(byte[] baseSheetV1, Meta meta, List<Frame> frames, Map<String, Animation> animations, Map<String, List<Integer>> appendages) {
+            this(baseSheetV1, meta, frames, animations, appendages, Map.of());
+        }
         public PlayableSheet {
+            nativeFrames = Map.copyOf(nativeFrames);
             baseSheetV1 = baseSheetV1.clone();
             frames = List.copyOf(frames);
             animations = Collections.unmodifiableMap(new LinkedHashMap<>(animations));
@@ -215,7 +304,7 @@ public final class PlayableSheetReader {
         @Override public boolean equals(Object other) { return other instanceof PlayableSheet that
                 && Arrays.equals(baseSheetV1, that.baseSheetV1) && meta.equals(that.meta)
                 && frames.equals(that.frames) && animations.equals(that.animations)
-                && appendages.equals(that.appendages); }
-        @Override public int hashCode() { return Objects.hash(Arrays.hashCode(baseSheetV1), meta, frames, animations, appendages); }
+                && appendages.equals(that.appendages) && nativeFrames.equals(that.nativeFrames); }
+        @Override public int hashCode() { return Objects.hash(Arrays.hashCode(baseSheetV1), meta, frames, animations, appendages, nativeFrames); }
     }
 }

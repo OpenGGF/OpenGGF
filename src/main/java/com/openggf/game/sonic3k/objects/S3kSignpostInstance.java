@@ -97,6 +97,7 @@ public class S3kSignpostInstance extends AbstractObjectInstance
     // ---- Animation ----
     private int animFrame;
     private int animIndex;
+    private final transient com.openggf.game.presentation.CharacterSignRenderer characterSign = new com.openggf.game.presentation.CharacterSignRenderer();
     private int animTimer;
 
     /**
@@ -837,6 +838,10 @@ public class S3kSignpostInstance extends AbstractObjectInstance
         if (renderer == null || !renderer.isReady()) {
             return;
         }
+        if (characterSign.draw(services(), com.openggf.game.CharacterPresentation.Host.S3K,
+                services().renderManager().getSheet(Sonic3kObjectArtKeys.END_SIGN),
+                animFrame, FACE_FRAMES[getPlayerCharacter().ordinal()], -1, 4, 5, 6,
+                worldX, worldY)) return;
         renderer.drawFrameIndex(animFrame, worldX, worldY, false, false);
     }
 

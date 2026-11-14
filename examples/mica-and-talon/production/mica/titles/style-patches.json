@@ -1,0 +1,76 @@
+{
+  "source_sha256": "8146a58155434da352a7568d693580fe3daa83143aaf24d18f6e1252381555a0",
+  "selection": "TakeA matches round glove volume and stronger upper-left light; takeB retained in scratch.",
+  "method": "Fresh native8x GPT Image patches; silhouette-only resting-hand split; normal generated face crop supplies identical borders around independently generated eye inset. No backing pixels painted.",
+  "hand_origin": [
+    160,
+    63
+  ],
+  "wink_origin": [
+    128,
+    40
+  ],
+  "resting_glove_pixels": 705,
+  "coverage": "Final owned pixels use per-pixel native aperture indices0/15; see aperture-provenance.json",
+  "finger_size_check": {
+    "native_anatomical_areas": [
+      1141,
+      1184
+    ],
+    "authored_areas": [
+      1066,
+      1178
+    ],
+    "sqrt_mean_area_ratio": 0.9824262264020545,
+    "native_raw_cell_areas": [
+      2623,
+      2623
+    ],
+    "raw_cell_ratio": 0.6540294179954809,
+    "reference_scope": "Native cells contain blue hood and opaque black aperture context. Anatomical reference excludes exact native blue ramp RGBs and black backing; it keeps white/grey glove and warm forearm. The mod supplies only glove/forearm; production native coverage now owns the aperture.",
+    "excluded_context_rgb": [
+      [
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        109
+      ],
+      [
+        0,
+        0,
+        255
+      ],
+      [
+        0,
+        73,
+        255
+      ],
+      [
+        73,
+        146,
+        255
+      ],
+      [
+        36,
+        109,
+        255
+      ]
+    ]
+  },
+  "wink_size_check": {
+    "native_areas": [
+      1526,
+      1526
+    ],
+    "authored_areas": [
+      1536,
+      1536
+    ],
+    "sqrt_mean_area_ratio": 1.0032711896329802,
+    "reference_scope": "Full generated eye patch retains identical normal portrait border, matching native contextual patch coverage."
+  }
+}

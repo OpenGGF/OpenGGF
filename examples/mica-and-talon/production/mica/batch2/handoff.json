@@ -1,0 +1,155 @@
+{
+  "framesAdded": 60,
+  "generatedDrawings": 52,
+  "derivedWarpRotations": 3,
+  "shrinkReductionsFromOriginal": 4,
+  "blankFrames": 1,
+  "framesTotal": 192,
+  "animationsTotal": 52,
+  "maxTilesPerFrame": 30,
+  "generationTool": "built-in GPT Image",
+  "generationRequests": 22,
+  "attempts": "2 per strip (9 strips), 4 isolated S2 GET_UP attempts; first two GET_UP attempts rejected as unrelated strips.",
+  "coverage": {
+    "S1": [
+      "ROLL2",
+      "WARP1",
+      "WARP2",
+      "WARP3",
+      "WARP4",
+      "FLOAT",
+      "FLOAT2",
+      "LEAP1",
+      "LEAP2",
+      "SURF",
+      "BURNT",
+      "SHRINK",
+      "WATER_SLIDE",
+      "NULL_ANIM",
+      "FLOAT3",
+      "FLOAT4"
+    ],
+    "S2": [
+      "ROLL2",
+      "BLINK",
+      "GET_UP",
+      "BALANCE2",
+      "FLOAT",
+      "FLOAT2",
+      "HANG2",
+      "BUBBLE",
+      "HURT2",
+      "SLIDE",
+      "BALANCE3",
+      "BALANCE4",
+      "FLY"
+    ],
+    "S3K": [
+      "ROLL2",
+      "BLINK",
+      "GET_UP",
+      "BALANCE2",
+      "FLOAT",
+      "FLOAT2",
+      "VICTORY",
+      "HANG2",
+      "BUBBLE",
+      "HURT_FALL",
+      "BALANCE3",
+      "BALANCE4",
+      "TAILS_CARRIED",
+      "BLANK"
+    ]
+  },
+  "engineHandoff": [
+    {
+      "script": "S1/LEAP1",
+      "current": "hold",
+      "requiredEnd": "loopBack",
+      "backSteps": 1
+    },
+    {
+      "script": "S1/LEAP2",
+      "current": "hold",
+      "requiredEnd": "loopBack",
+      "backSteps": 1
+    },
+    {
+      "script": "S1/SHRINK",
+      "current": "hold",
+      "requiredEnd": "loopBack",
+      "backSteps": 1
+    },
+    {
+      "script": "S2/BALANCE4",
+      "current": "loop",
+      "requiredEnd": "loopBack",
+      "backSteps": 4
+    },
+    {
+      "script": "S3K/VICTORY",
+      "current": "loop",
+      "requiredEnd": "loopBack",
+      "backSteps": 4
+    },
+    {
+      "script": "S3K/BALANCE4",
+      "current": "loop",
+      "requiredEnd": "loopBack",
+      "backSteps": 4
+    }
+  ],
+  "finiteScripts": {
+    "S1/NULL_ANIM": {
+      "ticks": 120,
+      "steps": 1,
+      "next": "WALK"
+    },
+    "S1/FLOAT4": {
+      "ticks": 4,
+      "steps": 1,
+      "next": "WALK"
+    },
+    "S2/BLINK": {
+      "ticks": 2,
+      "steps": 1,
+      "next": "WALK"
+    },
+    "S2/GET_UP": {
+      "ticks": 4,
+      "steps": 1,
+      "next": "WALK"
+    },
+    "S2/BUBBLE": {
+      "ticks": 12,
+      "steps": 4,
+      "next": "WALK"
+    },
+    "S3K/BLINK": {
+      "ticks": 10,
+      "steps": 20,
+      "next": "WALK"
+    },
+    "S3K/BUBBLE": {
+      "ticks": 12,
+      "steps": 4,
+      "next": "WALK"
+    }
+  },
+  "additionalEngineDebt": [
+    "Existing WAIT needs LOOP_BACK 6 (S2), 2 (S1), 53 (S3K); no new drawing.",
+    "Shared canonical converter script selects S2 where present. Exact per-host sequences are in native-scripts.json; host script selection is not implemented in this art lane."
+  ],
+  "knownIssues": [
+    "Burnt attempt1 reads darker than attempt2 but retains cream/jade flecks; not fully soot black.",
+    "Head and torso measurements in review use explicit jade-cap / lower-cream pixel regions as proxies; no semantic segmentation claim.",
+    "Some independent poses retain small proportional/glove/boot changes at 1x.",
+    "No Java build, runtime binding, route, contact or visual-in-engine certification."
+  ],
+  "scaleCorrections": {
+    "variant-s2-c8": 0.93,
+    "variant-s3k-b0": 0.91,
+    "variant-s3k-b2": 0.91
+  },
+  "review": "$MICA_BATCH2_REVIEW_ROOT/review.html"
+}

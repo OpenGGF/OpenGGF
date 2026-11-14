@@ -70,6 +70,7 @@ public final class EndingCloudObjectInstance extends AbstractObjectInstance impl
     @Override public void appendRenderCommands(List<GLCommand> commands){
         if(role==0||isDestroyed())return;var camera=services().camera();
         EndingSpriteRenderSupport.draw(services(),"ending-cloud",0x53518,0x3B6,knuckles()?0:1,mappingFrame,
-                EndingScreenProjection.worldX(camera,getX()),EndingScreenProjection.worldY(camera,getY()),false,false,6);
+                EndingScreenProjection.worldX(camera,getX())+EndingWideStage.particleShift(camera,xFixed),
+                EndingScreenProjection.worldY(camera,getY()),false,false,6);
     }
 }

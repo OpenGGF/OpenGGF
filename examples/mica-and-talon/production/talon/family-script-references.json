@@ -1,0 +1,1131 @@
+{
+  "ROLL2": {
+    "host": "S2",
+    "character": "talon",
+    "script": "3",
+    "native": {
+      "delay": 1,
+      "frames": [
+        72,
+        71,
+        70
+      ],
+      "endAction": "LOOP",
+      "endParam": 0,
+      "trailingBytes": []
+    }
+  },
+  "PUSH": {
+    "host": "S2",
+    "character": "talon",
+    "script": "4",
+    "native": {
+      "delay": 253,
+      "frames": [
+        99,
+        100,
+        101,
+        102
+      ],
+      "endAction": "LOOP",
+      "endParam": 0,
+      "trailingBytes": []
+    }
+  },
+  "BALANCE": {
+    "host": "S2",
+    "character": "talon",
+    "script": "6",
+    "native": {
+      "delay": 9,
+      "frames": [
+        105,
+        105,
+        106,
+        106,
+        105,
+        105,
+        106,
+        106,
+        105,
+        105,
+        106,
+        106,
+        105,
+        105,
+        106,
+        106,
+        105,
+        105,
+        106,
+        106,
+        105,
+        106
+      ],
+      "endAction": "LOOP",
+      "endParam": 0,
+      "trailingBytes": []
+    }
+  },
+  "FLOAT": {
+    "host": "S2",
+    "character": "talon",
+    "script": "14",
+    "native": {
+      "delay": 9,
+      "frames": [
+        110,
+        115
+      ],
+      "endAction": "LOOP",
+      "endParam": 0,
+      "trailingBytes": []
+    }
+  },
+  "FLOAT2": {
+    "host": "S2",
+    "character": "talon",
+    "script": "15",
+    "native": {
+      "delay": 9,
+      "frames": [
+        110,
+        111,
+        112,
+        113,
+        114
+      ],
+      "endAction": "LOOP",
+      "endParam": 0,
+      "trailingBytes": []
+    }
+  },
+  "HANG": {
+    "host": "S2",
+    "character": "talon",
+    "script": "17",
+    "native": {
+      "delay": 5,
+      "frames": [
+        108,
+        109
+      ],
+      "endAction": "LOOP",
+      "endParam": 0,
+      "trailingBytes": []
+    }
+  },
+  "BLINK": {
+    "host": "S2",
+    "character": "talon",
+    "script": "18",
+    "native": {
+      "delay": 15,
+      "frames": [
+        1,
+        2,
+        3
+      ],
+      "endAction": "LOOP_BACK",
+      "endParam": 1,
+      "trailingBytes": []
+    }
+  },
+  "HANG2": {
+    "host": "S2",
+    "character": "talon",
+    "script": "20",
+    "native": {
+      "delay": 19,
+      "frames": [
+        133,
+        134
+      ],
+      "endAction": "LOOP",
+      "endParam": 0,
+      "trailingBytes": []
+    }
+  },
+  "BUBBLE": {
+    "host": "S2",
+    "character": "talon",
+    "script": "21",
+    "native": {
+      "delay": 11,
+      "frames": [
+        116,
+        116,
+        18,
+        19
+      ],
+      "endAction": "SWITCH",
+      "endParam": 0,
+      "trailingBytes": []
+    }
+  },
+  "BURNT": {
+    "host": "S2",
+    "character": "talon",
+    "script": "22",
+    "native": {
+      "delay": 32,
+      "frames": [
+        93
+      ],
+      "endAction": "LOOP",
+      "endParam": 0,
+      "trailingBytes": []
+    }
+  },
+  "DROWN": {
+    "host": "S2",
+    "character": "talon",
+    "script": "23",
+    "native": {
+      "delay": 47,
+      "frames": [
+        93
+      ],
+      "endAction": "LOOP",
+      "endParam": 0,
+      "trailingBytes": []
+    }
+  },
+  "HURT2": {
+    "host": "S2",
+    "character": "talon",
+    "script": "25",
+    "native": {
+      "delay": 3,
+      "frames": [
+        93
+      ],
+      "endAction": "LOOP",
+      "endParam": 0,
+      "trailingBytes": []
+    }
+  },
+  "SLIDE": {
+    "host": "S2",
+    "character": "talon",
+    "script": "27",
+    "native": {
+      "delay": 9,
+      "frames": [
+        107,
+        92
+      ],
+      "endAction": "LOOP",
+      "endParam": 0,
+      "trailingBytes": []
+    }
+  },
+  "NULL_ANIM": {
+    "host": "S2",
+    "character": "talon",
+    "script": "28",
+    "native": {
+      "delay": 119,
+      "frames": [
+        0
+      ],
+      "endAction": "SWITCH",
+      "endParam": 0,
+      "trailingBytes": []
+    }
+  },
+  "BALANCE2": {
+    "host": "S3K",
+    "character": "talon",
+    "script": "12",
+    "native": {
+      "delay": 9,
+      "frames": [
+        164,
+        155
+      ],
+      "endAction": "LOOP",
+      "endParam": 0,
+      "trailingBytes": [
+        255,
+        3,
+        142,
+        143,
+        142,
+        143,
+        253,
+        0,
+        9,
+        181,
+        255,
+        9,
+        181,
+        182,
+        183,
+        184,
+        185,
+        186,
+        187,
+        188,
+        255,
+        3,
+        139,
+        140,
+        139,
+        140,
+        139,
+        140,
+        139,
+        140,
+        139,
+        140
+      ]
+    }
+  },
+  "HURT_FALL": {
+    "host": "S3K",
+    "character": "talon",
+    "script": "27",
+    "native": {
+      "delay": 9,
+      "frames": [
+        137,
+        138
+      ],
+      "endAction": "LOOP",
+      "endParam": 0,
+      "trailingBytes": [
+        255,
+        119,
+        0,
+        255,
+        3,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        255,
+        3,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        255,
+        255,
+        195,
+        196,
+        255,
+        255,
+        255,
+        255,
+        255
+      ]
+    }
+  },
+  "BLANK": {
+    "host": "S3K",
+    "character": "talon",
+    "script": "28",
+    "native": {
+      "delay": 119,
+      "frames": [
+        0
+      ],
+      "endAction": "LOOP",
+      "endParam": 0,
+      "trailingBytes": [
+        255,
+        3,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        255,
+        3,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        255,
+        255,
+        195,
+        196,
+        255,
+        255,
+        255,
+        255,
+        255,
+        255,
+        255,
+        31
+      ]
+    }
+  },
+  "TAILS_FLY_ASCEND": {
+    "host": "S3K",
+    "character": "talon",
+    "script": "33",
+    "native": {
+      "delay": 31,
+      "frames": [
+        160
+      ],
+      "endAction": "LOOP",
+      "endParam": 0,
+      "trailingBytes": [
+        255,
+        31,
+        162,
+        255,
+        31,
+        161,
+        255,
+        11,
+        163,
+        164,
+        255,
+        7,
+        189,
+        190,
+        191,
+        192,
+        193,
+        255,
+        3,
+        189,
+        190,
+        191,
+        192,
+        193,
+        255,
+        4,
+        207,
+        208,
+        255,
+        11,
+        194,
+        205
+      ]
+    },
+    "visualAdaptation": "Six integrated wing phases, two ticks per phase like approved FLY. Native body family still binds its single phase and native 32-tick loop; TALON private presentation selects the authored wing cycle. Native LOOP terminator retained."
+  },
+  "TAILS_FLY_CARRY": {
+    "host": "S3K",
+    "character": "talon",
+    "script": "34",
+    "native": {
+      "delay": 31,
+      "frames": [
+        162
+      ],
+      "endAction": "LOOP",
+      "endParam": 0,
+      "trailingBytes": [
+        255,
+        31,
+        161,
+        255,
+        11,
+        163,
+        164,
+        255,
+        7,
+        189,
+        190,
+        191,
+        192,
+        193,
+        255,
+        3,
+        189,
+        190,
+        191,
+        192,
+        193,
+        255,
+        4,
+        207,
+        208,
+        255,
+        11,
+        194,
+        205,
+        206,
+        255,
+        2
+      ]
+    },
+    "visualAdaptation": "Six integrated wing phases, two ticks per phase like approved FLY. Native body family still binds its single phase and native 32-tick loop; TALON private presentation selects the authored wing cycle. Native LOOP terminator retained."
+  },
+  "TAILS_FLY_CARRY_ASCEND": {
+    "host": "S3K",
+    "character": "talon",
+    "script": "35",
+    "native": {
+      "delay": 31,
+      "frames": [
+        161
+      ],
+      "endAction": "LOOP",
+      "endParam": 0,
+      "trailingBytes": [
+        255,
+        11,
+        163,
+        164,
+        255,
+        7,
+        189,
+        190,
+        191,
+        192,
+        193,
+        255,
+        3,
+        189,
+        190,
+        191,
+        192,
+        193,
+        255,
+        4,
+        207,
+        208,
+        255,
+        11,
+        194,
+        205,
+        206,
+        255,
+        2,
+        235,
+        235,
+        236
+      ]
+    },
+    "visualAdaptation": "Six integrated wing phases, two ticks per phase like approved FLY. Native body family still binds its single phase and native 32-tick loop; TALON private presentation selects the authored wing cycle. Native LOOP terminator retained."
+  },
+  "TAILS_SWIM": {
+    "host": "S3K",
+    "character": "talon",
+    "script": "37",
+    "native": {
+      "delay": 7,
+      "frames": [
+        189,
+        190,
+        191,
+        192,
+        193
+      ],
+      "endAction": "LOOP",
+      "endParam": 0,
+      "trailingBytes": [
+        255,
+        3,
+        189,
+        190,
+        191,
+        192,
+        193,
+        255,
+        4,
+        207,
+        208,
+        255,
+        11,
+        194,
+        205,
+        206,
+        255,
+        2,
+        235,
+        235,
+        236,
+        237,
+        236,
+        237,
+        236,
+        237,
+        236,
+        237,
+        236,
+        237,
+        253,
+        0
+      ]
+    }
+  },
+  "TAILS_SWIM_ASCEND": {
+    "host": "S3K",
+    "character": "talon",
+    "script": "38",
+    "native": {
+      "delay": 3,
+      "frames": [
+        189,
+        190,
+        191,
+        192,
+        193
+      ],
+      "endAction": "LOOP",
+      "endParam": 0,
+      "trailingBytes": [
+        255,
+        4,
+        207,
+        208,
+        255,
+        11,
+        194,
+        205,
+        206,
+        255,
+        2,
+        235,
+        235,
+        236,
+        237,
+        236,
+        237,
+        236,
+        237,
+        236,
+        237,
+        236,
+        237,
+        253,
+        0,
+        112,
+        0,
+        16,
+        40,
+        0,
+        34,
+        176
+      ]
+    }
+  },
+  "TAILS_SWIM_CARRY": {
+    "host": "S3K",
+    "character": "talon",
+    "script": "39",
+    "native": {
+      "delay": 4,
+      "frames": [
+        207,
+        208
+      ],
+      "endAction": "LOOP",
+      "endParam": 0,
+      "trailingBytes": [
+        255,
+        11,
+        194,
+        205,
+        206,
+        255,
+        2,
+        235,
+        235,
+        236,
+        237,
+        236,
+        237,
+        236,
+        237,
+        236,
+        237,
+        236,
+        237,
+        253,
+        0,
+        112,
+        0,
+        16,
+        40,
+        0,
+        34,
+        176,
+        56,
+        247,
+        223,
+        103
+      ]
+    }
+  },
+  "TAILS_SWIM_TIRED": {
+    "host": "S3K",
+    "character": "talon",
+    "script": "40",
+    "native": {
+      "delay": 11,
+      "frames": [
+        194,
+        205,
+        206
+      ],
+      "endAction": "LOOP",
+      "endParam": 0,
+      "trailingBytes": [
+        255,
+        2,
+        235,
+        235,
+        236,
+        237,
+        236,
+        237,
+        236,
+        237,
+        236,
+        237,
+        236,
+        237,
+        253,
+        0,
+        112,
+        0,
+        16,
+        40,
+        0,
+        34,
+        176,
+        56,
+        247,
+        223,
+        103,
+        0,
+        0,
+        132,
+        17,
+        192
+      ]
+    }
+  },
+  "SUPER_TRANSFORM": {
+    "host": "S3K",
+    "character": "talon",
+    "script": "41",
+    "native": {
+      "delay": 2,
+      "frames": [
+        235,
+        235,
+        236,
+        237,
+        236,
+        237,
+        236,
+        237,
+        236,
+        237,
+        236,
+        237
+      ],
+      "endAction": "SWITCH",
+      "endParam": 0,
+      "trailingBytes": [
+        253,
+        0,
+        112,
+        0,
+        16,
+        40,
+        0,
+        34,
+        176,
+        56,
+        247,
+        223,
+        103,
+        0,
+        0,
+        132,
+        17,
+        192,
+        247,
+        223,
+        69,
+        249,
+        0,
+        52,
+        77,
+        116,
+        208,
+        64,
+        212,
+        242,
+        0,
+        0
+      ]
+    }
+  },
+  "GET_UP": {
+    "host": "S2",
+    "character": "mica",
+    "script": "11",
+    "native": {
+      "delay": 3,
+      "frames": [
+        10
+      ],
+      "endAction": "SWITCH",
+      "endParam": 0,
+      "trailingBytes": []
+    }
+  },
+  "BALANCE3": {
+    "host": "S2",
+    "character": "mica",
+    "script": "29",
+    "native": {
+      "delay": 19,
+      "frames": [
+        208,
+        209
+      ],
+      "endAction": "LOOP",
+      "endParam": 0,
+      "trailingBytes": []
+    }
+  },
+  "BALANCE4": {
+    "host": "S2",
+    "character": "mica",
+    "script": "30",
+    "native": {
+      "delay": 3,
+      "frames": [
+        207,
+        200,
+        201,
+        202,
+        203
+      ],
+      "endAction": "LOOP_BACK",
+      "endParam": 4,
+      "trailingBytes": []
+    }
+  },
+  "VICTORY": {
+    "host": "S3K",
+    "character": "mica",
+    "script": "19",
+    "native": {
+      "delay": 7,
+      "frames": [
+        176,
+        178,
+        178,
+        178,
+        178,
+        178,
+        178,
+        177,
+        178,
+        179,
+        178
+      ],
+      "endAction": "LOOP_BACK",
+      "endParam": 4,
+      "trailingBytes": [
+        254,
+        4,
+        19,
+        145,
+        255,
+        11,
+        172,
+        172,
+        3,
+        4,
+        253,
+        0,
+        32,
+        168,
+        255,
+        32,
+        169,
+        255,
+        32,
+        167,
+        255,
+        9,
+        215,
+        216,
+        255,
+        64,
+        141,
+        255,
+        9,
+        140,
+        141,
+        255
+      ]
+    }
+  },
+  "TAILS_CARRIED": {
+    "host": "S3K",
+    "character": "mica",
+    "script": "34",
+    "native": {
+      "delay": 11,
+      "frames": [
+        144,
+        145,
+        146,
+        145
+      ],
+      "endAction": "LOOP",
+      "endParam": 0,
+      "trailingBytes": [
+        255,
+        11,
+        144,
+        145,
+        146,
+        145,
+        253,
+        0,
+        0,
+        0,
+        64,
+        0,
+        74,
+        254,
+        200,
+        254,
+        210,
+        0,
+        84,
+        0,
+        94,
+        0,
+        98,
+        255,
+        88,
+        0,
+        103,
+        255,
+        98,
+        255,
+        110,
+        255
+      ]
+    }
+  },
+  "GET_AIR": {
+    "host": "S1",
+    "character": "mica",
+    "script": "21",
+    "native": {
+      "delay": 11,
+      "frames": [
+        86,
+        86,
+        10,
+        11
+      ],
+      "endAction": "SWITCH",
+      "endParam": 0,
+      "trailingBytes": [
+        253,
+        0,
+        0,
+        32,
+        75,
+        255,
+        0,
+        47,
+        76,
+        255,
+        0,
+        3,
+        77,
+        255,
+        0,
+        3,
+        78,
+        79,
+        80,
+        81,
+        82,
+        0,
+        254,
+        1,
+        0,
+        3,
+        85,
+        255,
+        0,
+        7,
+        85,
+        87
+      ]
+    }
+  },
+  "WATER_SLIDE": {
+    "host": "S1",
+    "character": "mica",
+    "script": "27",
+    "native": {
+      "delay": 7,
+      "frames": [
+        85,
+        87
+      ],
+      "endAction": "LOOP",
+      "endParam": 0,
+      "trailingBytes": [
+        255,
+        119,
+        0,
+        253,
+        0,
+        3,
+        60,
+        61,
+        83,
+        62,
+        84,
+        255,
+        0,
+        3,
+        60,
+        253,
+        0,
+        112,
+        0,
+        16,
+        40,
+        0,
+        26,
+        176,
+        56,
+        247,
+        102,
+        103,
+        76,
+        17,
+        192,
+        247
+      ]
+    }
+  },
+  "FLOAT3": {
+    "host": "S1",
+    "character": "mica",
+    "script": "29",
+    "native": {
+      "delay": 3,
+      "frames": [
+        60,
+        61,
+        83,
+        62,
+        84
+      ],
+      "endAction": "LOOP",
+      "endParam": 0,
+      "trailingBytes": [
+        255,
+        0,
+        3,
+        60,
+        253,
+        0,
+        112,
+        0,
+        16,
+        40,
+        0,
+        26,
+        176,
+        56,
+        247,
+        102,
+        103,
+        76,
+        17,
+        192,
+        247,
+        102,
+        69,
+        249,
+        0,
+        2,
+        35,
+        16,
+        208,
+        64,
+        212,
+        242
+      ]
+    }
+  },
+  "FLOAT4": {
+    "host": "S1",
+    "character": "mica",
+    "script": "30",
+    "native": {
+      "delay": 3,
+      "frames": [
+        60
+      ],
+      "endAction": "SWITCH",
+      "endParam": 0,
+      "trailingBytes": [
+        253,
+        0,
+        112,
+        0,
+        16,
+        40,
+        0,
+        26,
+        176,
+        56,
+        247,
+        102,
+        103,
+        76,
+        17,
+        192,
+        247,
+        102,
+        69,
+        249,
+        0,
+        2,
+        35,
+        16,
+        208,
+        64,
+        212,
+        242,
+        0,
+        0,
+        114,
+        0
+      ]
+    }
+  }
+}

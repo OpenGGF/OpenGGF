@@ -1,0 +1,188 @@
+{
+  "date": "2026-11-10",
+  "integration_source": "5278d637cd",
+  "separate_from_blur": "Source plane13 and sprite assets are the approved integration bytes; this patch has no dependency on heavy-blur helpers or runtime changes.",
+  "method": "Full anatomy/material/contour ownership replaces the old grey-only split. Existing FINGER4 rest option supplies complete static glove;0/1 keep their approved anatomical pixels and now carry exact handless cape context.",
+  "prompt": "Production localized sprite-background reconstruction. Input1 approved MICA S3K baked-CGI title portrait enlarged8x, including pointing glove on viewer RIGHT. Input2 native Sonic title supplies native3D shading/context convention. Remove ONLY the viewer-right pointing hand/glove and its foreground arm: reveal continuous shaded overlapping jade cloak/back scales BEHIND that hand. Keep the rest of her portrait unchanged. Output TWO independent close-up patch candidates side by side, each exactly the region native screen x160..216,y60..120 of input1 (56x60 native pixels enlarged8x). This patch shows ONLY shadow-side jade armour scales continuing behind the removed glove, and the natural black aperture at the cape's lower-right silhouette; NO hand, finger, thumb, glove, white highlight, cream muzzle, ears, text or ring. Camera and scale match input1: plates about12\u201320nativepixels across, dark jade #004949/#006d49/#00926d, upper-left baked specular light subdued here because it is the cape shadow side. Native1994 pre-rendered CGI with ordered pixel dithering, not vector cel. Smooth continuous scale anatomy, no rectangle/cut hole/black halo. Patch edges should match neighbouring jade cape in input1. Two fresh attempts, 56:60 patch aspect each; no labels, pure black outside silhouette. This is only backing behind a separately owned glove sprite.",
+  "attempts": "Two fresh background candidates from approved full portrait/native8x; A chosen for shadow-side plate continuation. Raw source remains scratch. Background registered at68x72 then cropped to56x60 to match neighbouring cape landmarks; only old hand ownership region changes.",
+  "background_sha256": "21407b3356b8b21d44b1d38d7b26a5227d5afaf1f987929e482c9aa5340e39a3",
+  "before": {
+    "plane_hand_material_residue_pixels": 136,
+    "unowned_context_pixels_by_selector": {
+      "0": 611,
+      "1": 603,
+      "4": 747
+    }
+  },
+  "after": {
+    "presentations": 900,
+    "plane_hand_residue": 0,
+    "missing_sprite_ownership": 0,
+    "ownership_pixel_checks": 967608,
+    "unoccluded_render_pixel_checks": 900812,
+    "render_failures": [],
+    "render_failure_count": 0,
+    "outside_hand_failures": [],
+    "outside_hand_failure_count": 0,
+    "selectors_seen": {
+      "1": 400,
+      "4": 406,
+      "0": 508
+    },
+    "note": "Opaque identical backing owns old hand footprint in0/1/4. Transparent parts of moved poses never expose a second plane glove; native banner priority is preserved."
+  },
+  "timing": {
+    "capture_state_identical_to_before": true,
+    "observed_wag_runs": [
+      [
+        340,
+        0,
+        6
+      ],
+      [
+        352,
+        1,
+        6
+      ],
+      [
+        364,
+        0,
+        6
+      ],
+      [
+        376,
+        1,
+        6
+      ],
+      [
+        388,
+        0,
+        6
+      ],
+      [
+        400,
+        1,
+        6
+      ],
+      [
+        508,
+        0,
+        6
+      ],
+      [
+        520,
+        1,
+        6
+      ],
+      [
+        532,
+        0,
+        6
+      ],
+      [
+        544,
+        1,
+        6
+      ],
+      [
+        556,
+        0,
+        6
+      ],
+      [
+        568,
+        1,
+        6
+      ],
+      [
+        676,
+        0,
+        6
+      ],
+      [
+        688,
+        1,
+        6
+      ],
+      [
+        700,
+        0,
+        6
+      ],
+      [
+        712,
+        1,
+        6
+      ],
+      [
+        724,
+        0,
+        6
+      ],
+      [
+        736,
+        1,
+        6
+      ],
+      [
+        844,
+        0,
+        6
+      ],
+      [
+        856,
+        1,
+        6
+      ],
+      [
+        868,
+        0,
+        6
+      ],
+      [
+        880,
+        1,
+        6
+      ],
+      [
+        892,
+        0,
+        6
+      ]
+    ],
+    "native_duration": "delay5 -> six presentations; byte_4B36 (General/Title/Anim - S3 Sonic Finger.asm:3-4)"
+  },
+  "ownership": "Native0/1 use four mapped pieces covering48x56 with hood/aperture context; native4 is empty and its rest hand is in the plane. MICA uses the existing authored4 slot to remove its plane hand completely while retaining the native selector clock.",
+  "references": [
+    "Obj_TitleSonicFinger (sonic3k.asm:6239-6258)",
+    "word_4F96 and word_4FB0 (General/Title/Map - S3 Sonic Anim.asm:7-16)",
+    "word_4FE6 (General/Title/Map - S3 Sonic Anim.asm:23-23)"
+  ],
+  "area_checks": [
+    {
+      "selector": 0,
+      "anatomy_pixels": 1134,
+      "native_anatomy_pixels": 1141,
+      "ratio": 0.9969277961190803
+    },
+    {
+      "selector": 1,
+      "anatomy_pixels": 1099,
+      "native_anatomy_pixels": 1184,
+      "ratio": 0.9634362768027055
+    }
+  ],
+  "unchanged_intro_pngs": 296,
+  "review": "$HOME/scratch/agent-tmp/title-s3k-finger/review.html",
+  "checks": "59 focused Java tests pass,0 skips;60 Python tests pass,0 skips, including real assets and broken-context/baked-thumb negative controls; capture selector/scroll/banner CSV is byte-identical, and every0/1 run is six presentations.",
+  "limits": "Ownership and raster checks prove replacement/context coverage, not a general automatic anatomical classifier; each of the three hand poses is also visually inspected at4x.",
+  "rebuild_byte_idempotent": true,
+  "unchanged_approved_assets": [
+    "plane13-left",
+    "wink2/3",
+    "palette",
+    "all title art before13"
+  ],
+  "video": "168-frame complete wag period at60Hz, native left/fixed right,4x nearest",
+  "coverage": "Six title rows authored -> authored; no fallback rows moved."
+}

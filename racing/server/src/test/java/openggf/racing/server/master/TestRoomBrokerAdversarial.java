@@ -7,6 +7,7 @@ import com.openggf.net.hub.HubConnection;
 import com.openggf.net.hub.RoomHost;
 import com.openggf.net.hub.TrackValidationProfileSource;
 import com.openggf.net.identity.PlayerIdentity;
+import com.openggf.net.identity.ProofOfWork;
 import com.openggf.net.protocol.AuthenticationTranscript;
 import com.openggf.net.protocol.ControlMessage;
 import com.openggf.net.protocol.GhostPackets;
@@ -471,9 +472,21 @@ class TestRoomBrokerAdversarial {
                         ownToken = assertInstanceOf(ControlMessage.JoinAccepted.class,
                                 attack.last()).sessionToken();
                     }
+                    long joinNonce = random.nextLong();
+                    if (stage == Stage.JOIN_POW) {
+                        // Attack mode asks for only 8 bits, so about 1 random nonce in 256 is a
+                        // valid proof for the server's random challenge; the forgery must be wrong.
+                        ControlMessage.PowChallenge join = assertInstanceOf(
+                                ControlMessage.PowChallenge.class, attack.last(), context);
+                        assertEquals("JOIN", join.kind(), context);
+                        byte[] prefix = Base64.getDecoder().decode(join.prefixBase64());
+                        while (ProofOfWork.verify(prefix, joinNonce, join.difficultyBits())) {
+                            joinNonce = random.nextLong();
+                        }
+                    }
                     List<ControlMessage> corpus = List.of(
                             new ControlMessage.AuthProof("%%%"),
-                            new ControlMessage.PowSolution("JOIN", random.nextLong()),
+                            new ControlMessage.PowSolution("JOIN", joinNonce),
                             new ControlMessage.RelayAttach(room, "forged", 1),
                             new ControlMessage.RoomLeave(room),
                             new ControlMessage.RoomTrackUpdate(room, 0, 1),

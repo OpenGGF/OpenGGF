@@ -57,6 +57,9 @@ public final class AudioPresentationProducer {
     private final IdentityTokenRegistry diagnosticIdentityTokens =
             new IdentityTokenRegistry();
     private final SmpsDriverSession smpsSession;
+    /* Presentation-only music/SFX balance last applied, 256 = unity (the mixer's and chips' default). */
+    private int musicGain = AudioPresentationMixer.UNITY_GAIN;
+    private int sfxGain = AudioPresentationMixer.UNITY_GAIN;
     private final AudioPresentationForwardService forwardService;
     private final Consumer<AudioCommand> forwardCommandSink;
     private final AudioPresentationCommandResolver forwardResolver;
@@ -1099,6 +1102,23 @@ public final class AudioPresentationProducer {
      */
     public boolean isClosed() {
         return closed;
+    }
+
+    /**
+     * Scales music and sound-effect output: PCM voices in the mixer, chip
+     * channels by the track kind that last drove them. Presentation only; the
+     * driver, snapshots and history inputs are unaffected.
+     */
+    public void setMixGains(int musicGain, int sfxGain) {
+        if (musicGain == this.musicGain && sfxGain == this.sfxGain) {
+            return;
+        }
+        this.musicGain = musicGain;
+        this.sfxGain = sfxGain;
+        mixer.setGains(musicGain, sfxGain);
+        if (smpsSession != null) {
+            smpsSession.setMixGains(musicGain, sfxGain);
+        }
     }
 
     public void close() {

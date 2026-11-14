@@ -1,0 +1,483 @@
+{
+  "walk-1": {
+    "prompt": "Use case: style-transfer. Original production 16-bit pixel sprite strip for TALON, peregrine falcon courier, matching concept image 2 normal slate blue grey version only. Reference image 1 is a native Tails pose strip at 8x nearest: use ONLY its per-cell action, framing and limb choreography; independently redraw as the original falcon, NEVER recolour/trace Tails. No fox ears, muzzle, twin tails. Hooked yellow beak, amber goggles above large eye, cream barred chest, swept feather crown, brown satchel strap and pouch, white gloves, red white courier shoes. Wings belong to body. Transparent background. EXACTLY 8 equally spaced cells ONE horizontal row, left to right match all native WALK poses, including near/far contact phases. Body and head stay steady, facing right. Near leg lighter in FRONT, far leg darker BEHIND, opposite arm forward; phases 0-3 advance near foot, 4-7 advance far foot. Preserve alternating step and passing/extended/support sequence. Minimal crisp pixel clusters readable reduced to about 40 pixels tall. No text/grid/shadow.",
+    "raw_path": "$HOME/scratch/agent-tmp/talon-art-20261109/walk-attempt-1.png",
+    "method": "Built-in GPT Image, model version not exposed.",
+    "raw_sha256": "a9049f6fc51bf230666c1e624960758ab555bc38bf89c58792d764b49d691fb6"
+  },
+  "walk-2": {
+    "prompt": "Create an original pixel art game animation of the peregrine falcon courier from image2, normal slate blue gray plumage, amber goggles, cream chest, courier bag and red white shoes. Image1 shows the eight walking poses to follow. Output one horizontal row with exactly eight evenly spaced frames, transparent background. Clear alternating left and right steps, opposite arm forward, darker far leg and lighter near leg. Keep body/head steady and consistent across the entire cycle. Wings folded into body. Crisp readable chunky pixel art for reducing to native game sprite size. No text.",
+    "raw_path": "$HOME/scratch/agent-tmp/talon-art-20261109/walk-attempt-2.png",
+    "method": "Built-in GPT Image",
+    "raw_sha256": "4724969aebb13c4cd1378e0b4eb647bce6832445437075089a68b30e747b7601"
+  },
+  "run-1": {
+    "prompt": "Use case: style-transfer. Create an ORIGINAL 16-bit pixel playable sprite strip of TALON the peregrine falcon courier. Image1 native Tails strip is pose/choreography reference ONLY; Image2 is TALON identity reference, use normal slate blue grey form only. Hooked yellow beak (no fox muzzle/ears), amber goggles, swept feather crown, cream barred chest, brown courier satchel/strap, white gloves, red and white shoes. Integrated feather wings, NEVER fox tails. Independently draw each pose, never trace/recolour native. Transparent background, crisp big pixel clusters, no text, grid, labels or shadow. Exactly one horizontal row of equal-width cells. Maintain consistent head/body scale, readable at 40px tall. EXACTLY FOUR cells, same four RUN poses as native. Complete circular foot contact arc: 0 near leg back low/far front up; 1 near leg back up/far front down; 2 near leg front up/far back low; 3 near leg front down/far back up. Near leg always brighter in front, far leg dark behind; opposite arm forward. Keep head at identical height and position, no judder.",
+    "raw_path": "$HOME/scratch/agent-tmp/talon-art-20261109/run-attempt-1.png",
+    "method": "Built-in GPT Image, model version not exposed.",
+    "raw_sha256": "7d47b339af45dcc503feb22cca6e9986b8ec7c5b8799294c4f5e4900c50f1c2b"
+  },
+  "wait-1": {
+    "prompt": "Use case: style-transfer. Create an ORIGINAL 16-bit pixel playable sprite strip of TALON the peregrine falcon courier. Image1 native Tails strip is pose/choreography reference ONLY; Image2 is TALON identity reference, use normal slate blue grey form only. Hooked yellow beak (no fox muzzle/ears), amber goggles, swept feather crown, cream barred chest, brown courier satchel/strap, white gloves, red and white shoes. Integrated feather wings, NEVER fox tails. Independently draw each pose, never trace/recolour native. Transparent background, crisp big pixel clusters, no text, grid, labels or shadow. Exactly one horizontal row of equal-width cells. Maintain consistent head/body scale, readable at 40px tall. EXACTLY SEVEN cells matching seven idle drawings. 0 neutral right, 1 eyes half closed, 2 blink closed, 3 turn head to viewer, 4 yawn small open beak, 5 bigger yawn, 6 end yawn. Shoes planted identically, subtle wing movement; transform tail swishes into folded-wing/feather fidget, never add tails.",
+    "raw_path": "$HOME/scratch/agent-tmp/talon-art-20261109/wait-attempt-1.png",
+    "method": "Built-in GPT Image, model version not exposed.",
+    "raw_sha256": "8047e0ecf180a5d642c6f0e1114baeb92baedac6c13a322da762383c6e290d9b"
+  },
+  "roll-1": {
+    "prompt": "Use case: style-transfer. Create an ORIGINAL 16-bit pixel playable sprite strip of TALON the peregrine falcon courier. Image1 native Tails strip is pose/choreography reference ONLY; Image2 is TALON identity reference, use normal slate blue grey form only. Hooked yellow beak (no fox muzzle/ears), amber goggles, swept feather crown, cream barred chest, brown courier satchel/strap, white gloves, red and white shoes. Integrated feather wings, NEVER fox tails. Independently draw each pose, never trace/recolour native. Transparent background, crisp big pixel clusters, no text, grid, labels or shadow. Exactly one horizontal row of equal-width cells. Maintain consistent head/body scale, readable at 40px tall. EXACTLY FOUR cells: first three reference rolling poses transformed as tight clockwise feather sphere, fourth solid slate blur ball with bright cream SPECULAR HIGHLIGHT. Simplify detail so rotation reads; no feet flailing. Same circular body size; no tail appendage.",
+    "raw_path": "$HOME/scratch/agent-tmp/talon-art-20261109/roll-attempt-1.png",
+    "method": "Built-in GPT Image, model version not exposed.",
+    "raw_sha256": "e98dbab612f6b38713cb8abafc6fe2efdc82f0fb427feceb9f05ebbbfb491902"
+  },
+  "spindash-1": {
+    "prompt": "Use case: style-transfer. Create an ORIGINAL 16-bit pixel playable sprite strip of TALON the peregrine falcon courier. Image1 native Tails strip is pose/choreography reference ONLY; Image2 is TALON identity reference, use normal slate blue grey form only. Hooked yellow beak (no fox muzzle/ears), amber goggles, swept feather crown, cream barred chest, brown courier satchel/strap, white gloves, red and white shoes. Integrated feather wings, NEVER fox tails. Independently draw each pose, never trace/recolour native. Transparent background, crisp big pixel clusters, no text, grid, labels or shadow. Exactly one horizontal row of equal-width cells. Maintain consistent head/body scale, readable at 40px tall. EXACTLY FOUR cells: first three native charged curled poses as TALON feather sphere flattened slightly in crouched charge, goggles/cream wing flashes rotate; fourth solid slate blur with bright SPECULAR HIGHLIGHT. No tails. Same body size.",
+    "raw_path": "$HOME/scratch/agent-tmp/talon-art-20261109/spindash-attempt-1.png",
+    "method": "Built-in GPT Image, model version not exposed.",
+    "raw_sha256": "9fba9283dd6c17bc10e88f80eac22d70e538294055d935721aa25fa663ad1922"
+  },
+  "poses-1": {
+    "prompt": "Use case: style-transfer. Create an ORIGINAL 16-bit pixel playable sprite strip of TALON the peregrine falcon courier. Image1 native Tails strip is pose/choreography reference ONLY; Image2 is TALON identity reference, use normal slate blue grey form only. Hooked yellow beak (no fox muzzle/ears), amber goggles, swept feather crown, cream barred chest, brown courier satchel/strap, white gloves, red and white shoes. Integrated feather wings, NEVER fox tails. Independently draw each pose, never trace/recolour native. Transparent background, crisp big pixel clusters, no text, grid, labels or shadow. Exactly one horizontal row of equal-width cells. Maintain consistent head/body scale, readable at 40px tall. EXACTLY SEVEN cells matching poses: 0 airborne horizontal spring stretched launch; 1 hurt thrown back feet forward wings up; 2 death facing viewer mouth open feet down wings up; 3 duck low facing right folded wings; 4 look up beak raised planted shoes; 5 brake skid heel forward arms counterbalance; 6 brake alternate. Each exact native pose transformed into falcon.",
+    "raw_path": "$HOME/scratch/agent-tmp/talon-art-20261109/poses-attempt-1.png",
+    "method": "Built-in GPT Image, model version not exposed.",
+    "raw_sha256": "137c7b05885aa91358d57982d6e2fc2f10fe8bc6d8e9d3e6965bad7f1af5146f"
+  },
+  "fly-1": {
+    "prompt": "Use case: style-transfer. Create an ORIGINAL 16-bit pixel playable sprite strip of TALON the peregrine falcon courier. Image1 native Tails strip is pose/choreography reference ONLY; Image2 is TALON identity reference, use normal slate blue grey form only. Hooked yellow beak (no fox muzzle/ears), amber goggles, swept feather crown, cream barred chest, brown courier satchel/strap, white gloves, red and white shoes. Integrated feather wings, NEVER fox tails. Independently draw each pose, never trace/recolour native. Transparent background, crisp big pixel clusters, no text, grid, labels or shadow. Exactly one horizontal row of equal-width cells. Maintain consistent head/body scale, readable at 40px tall. EXACTLY TWO cells: same native hovering flight body and dangling feet, but replace rotating fox tails with TALON's OWN WINGS: cell0 full upstroke wings raised above/back head, cell1 full downstroke wings extended down/out. Keep face feet satchel and body fixed. Wings originate shoulders. True bird flight.",
+    "raw_path": "$HOME/scratch/agent-tmp/talon-art-20261109/fly-attempt-1.png",
+    "method": "Built-in GPT Image, model version not exposed.",
+    "raw_sha256": "50fd88d2b22335ed0f839de5e5c6774f0c5c865d73d4e6abe0a71988ba23716b"
+  },
+  "fly_tired-1": {
+    "prompt": "Use case: style-transfer. Create an ORIGINAL 16-bit pixel playable sprite strip of TALON the peregrine falcon courier. Image1 native Tails strip is pose/choreography reference ONLY; Image2 is TALON identity reference, use normal slate blue grey form only. Hooked yellow beak (no fox muzzle/ears), amber goggles, swept feather crown, cream barred chest, brown courier satchel/strap, white gloves, red and white shoes. Integrated feather wings, NEVER fox tails. Independently draw each pose, never trace/recolour native. Transparent background, crisp big pixel clusters, no text, grid, labels or shadow. Exactly one horizontal row of equal-width cells. Maintain consistent head/body scale, readable at 40px tall. EXACTLY TWO cells: match native exhausted flight body, eyes drooping beak open, dangling feet, cell0 fatigued wings up, cell1 fatigued wings droop down. Same fixed head/body position and scale. Bird wing flaps only, no tails.",
+    "raw_path": "$HOME/scratch/agent-tmp/talon-art-20261109/fly_tired-attempt-1.png",
+    "method": "Built-in GPT Image, model version not exposed.",
+    "raw_sha256": "4b06a42c574cfa1bb8c5e4abb52d5bb0aabdf898a0e2b732922373013f577ee9"
+  },
+  "run-2": {
+    "prompt": "Use case style-transfer. Second independent production attempt, original 16-bit pixel sprites of TALON, peregrine courier, normal blue grey concept in image2. Image1 native Tails poses ONLY anatomy/choreography reference; REDRAW independently as original bird, never fox recolour/trace. Hooked yellow beak, amber goggles, cream barred chest, slate feather crest, satchel strap/pouch, red white shoes, white gloves. No fox ears/muzzle or twin tails; integrated shoulder wings. Transparent background, exactly one horizontal strip equally spaced cells, no text. Crisp simplified clusters for 40px native. EXACTLY FOUR native running contact phases. Keep wings FOLDED compact against back, no flapping wing/head movement. Four distinct leg phases: 0 lit near foot sweeps BACK LOW, dark far foot swings FRONT HIGH; 1 lit near foot sweeps BACK HIGH, dark far foot FRONT LOW CONTACT; 2 lit near foot FRONT HIGH, dark far foot BACK LOW; 3 lit near foot FRONT LOW CONTACT, dark far foot BACK HIGH. Near red leg in foreground lighter, far dark red leg behind torso. Opposite arm forward. Same head height on every frame. Include HIGH forward shoe phase in cells0 and2, grounded shoe phase1 and3.",
+    "raw_path": "$HOME/scratch/agent-tmp/talon-art-20261109/run-attempt-2.png",
+    "method": "Built-in GPT Image",
+    "raw_sha256": "30286a2c83bfee026beee143b4a9fd2b163a6b6a75038a3c1860093b0ff07090"
+  },
+  "wait-2": {
+    "prompt": "Use case style-transfer. Second independent production attempt, original 16-bit pixel sprites of TALON, peregrine courier, normal blue grey concept in image2. Image1 native Tails poses ONLY anatomy/choreography reference; REDRAW independently as original bird, never fox recolour/trace. Hooked yellow beak, amber goggles, cream barred chest, slate feather crest, satchel strap/pouch, red white shoes, white gloves. No fox ears/muzzle or twin tails; integrated shoulder wings. Transparent background, exactly one horizontal strip equally spaced cells, no text. Crisp simplified clusters for 40px native. EXACTLY SEVEN native idle poses: neutral right, half blink, eyes closed blink, head toward viewer, open beak yawn beginning, larger yawn eyes closed, ending yawn. Fixed planted shoes steady head height. Closed wings sit against body. No tail.",
+    "raw_path": "$HOME/scratch/agent-tmp/talon-art-20261109/wait-attempt-2.png",
+    "method": "Built-in GPT Image",
+    "raw_sha256": "2e7d6c80fe13c952fb54d2f981675874744d9e10f983285098d56c181ee8c17b"
+  },
+  "roll-2": {
+    "prompt": "Use case style-transfer. Second independent production attempt, original 16-bit pixel sprites of TALON, peregrine courier, normal blue grey concept in image2. Image1 native Tails poses ONLY anatomy/choreography reference; REDRAW independently as original bird, never fox recolour/trace. Hooked yellow beak, amber goggles, cream barred chest, slate feather crest, satchel strap/pouch, red white shoes, white gloves. No fox ears/muzzle or twin tails; integrated shoulder wings. Transparent background, exactly one horizontal strip equally spaced cells, no text. Crisp simplified clusters for 40px native. EXACTLY FOUR frames: three tight compact round feather-ball rotating clockwise at 0/120/240 degree poses with tiny yellow goggles and cream flashes, final solid slate blue blur ball with WHITE SPECULAR GLEAM top right and dark lower crescent. Same round silhouette every frame. Simplify to three broad feather arcs, no little bars or texture. No tails/shoes protruding.",
+    "raw_path": "$HOME/scratch/agent-tmp/talon-art-20261109/roll-attempt-2.png",
+    "method": "Built-in GPT Image",
+    "raw_sha256": "0c7010625997209c1131b6b7a83c3f2a601547e9bfc389a9bcb44eba16773e7d"
+  },
+  "spindash-2": {
+    "prompt": "Use case style-transfer. Second independent production attempt, original 16-bit pixel sprites of TALON, peregrine courier, normal blue grey concept in image2. Image1 native Tails poses ONLY anatomy/choreography reference; REDRAW independently as original bird, never fox recolour/trace. Hooked yellow beak, amber goggles, cream barred chest, slate feather crest, satchel strap/pouch, red white shoes, white gloves. No fox ears/muzzle or twin tails; integrated shoulder wings. Transparent background, exactly one horizontal strip equally spaced cells, no text. Crisp simplified clusters for 40px native. EXACTLY FOUR frames: three tight low crouched charged-spin feather sphere orientations corresponding to native, fourth solid blue grey blur with WHITE specular highlight. Cream curved streaks rotating, no detailed chest bars. Same compact sphere scale, no tails or wings sticking out.",
+    "raw_path": "$HOME/scratch/agent-tmp/talon-art-20261109/spindash-attempt-2.png",
+    "method": "Built-in GPT Image",
+    "raw_sha256": "983a2bad39ee8845ea6be51802cdcfcb91142e82ddd152f731b0e213d27b8936"
+  },
+  "poses-2": {
+    "prompt": "Use case style-transfer. Second independent production attempt, original 16-bit pixel sprites of TALON, peregrine courier, normal blue grey concept in image2. Image1 native Tails poses ONLY anatomy/choreography reference; REDRAW independently as original bird, never fox recolour/trace. Hooked yellow beak, amber goggles, cream barred chest, slate feather crest, satchel strap/pouch, red white shoes, white gloves. No fox ears/muzzle or twin tails; integrated shoulder wings. Transparent background, exactly one horizontal strip equally spaced cells, no text. Crisp simplified clusters for 40px native. EXACTLY SEVEN cells: 0 SPRING, airborne upright diagonal stretched feet below and back wings close pulled backward, beak up/right; 1 HURT thrown backward feet forward wings/gloves lifted; 2 DEATH facing viewer mouth open wings up feet down; 3 DUCK crouch low; 4 LOOK UP head tilted beak up; 5 SKID right shoe forward sole braking lean back; 6 SKID alternate boot/glove counterbalance. Keep same character face/scale; match native silhouette actions but original bird.",
+    "raw_path": "$HOME/scratch/agent-tmp/talon-art-20261109/poses-attempt-2.png",
+    "method": "Built-in GPT Image",
+    "raw_sha256": "ce1b4dfa5edd75f0f98054a590ccddbcd1a491ce4bbdf73fcbf2982c3debde9c"
+  },
+  "fly-2": {
+    "prompt": "Use case style-transfer. Second independent production attempt, original 16-bit pixel sprites of TALON, peregrine courier, normal blue grey concept in image2. Image1 native Tails poses ONLY anatomy/choreography reference; REDRAW independently as original bird, never fox recolour/trace. Hooked yellow beak, amber goggles, cream barred chest, slate feather crest, satchel strap/pouch, red white shoes, white gloves. No fox ears/muzzle or twin tails; integrated shoulder wings. Transparent background, exactly one horizontal strip equally spaced cells, no text. Crisp simplified clusters for 40px native. EXACTLY TWO CELLS, TALON flying in place right-facing. Body and head and dangling boots SAME location. Cell0 enormous bird wings sweep UP above head, cell1 wings sweep DOWN beside body. BOTH wings connected shoulders, satchel secure on hip, goggles amber, cream barred chest. Original falcon wing anatomy. Native reference hovering body only, replace tail rotor completely with feather wings.",
+    "raw_path": "$HOME/scratch/agent-tmp/talon-art-20261109/fly-attempt-2.png",
+    "method": "Built-in GPT Image",
+    "raw_sha256": "72064eaba3d79537be911418117071e63992c4ecb5a4e374abdb673a84a513f0"
+  },
+  "fly_tired-2": {
+    "prompt": "Use case style-transfer. Second independent production attempt, original 16-bit pixel sprites of TALON, peregrine courier, normal blue grey concept in image2. Image1 native Tails poses ONLY anatomy/choreography reference; REDRAW independently as original bird, never fox recolour/trace. Hooked yellow beak, amber goggles, cream barred chest, slate feather crest, satchel strap/pouch, red white shoes, white gloves. No fox ears/muzzle or twin tails; integrated shoulder wings. Transparent background, exactly one horizontal strip equally spaced cells, no text. Crisp simplified clusters for 40px native. EXACTLY TWO CELLS original falcon exhausted hover. Drooping eyes, open yellow beak, legs dangling. Cell0 bent broad wings struggling UP, cell1 wings DROOP DOWN below body. Fixed body and head location. Large readable flapping silhouette, no rotor/tails.",
+    "raw_path": "$HOME/scratch/agent-tmp/talon-art-20261109/fly_tired-attempt-2.png",
+    "method": "Built-in GPT Image",
+    "raw_sha256": "ebbd7d41ac72ad90860404180624ab0de5d3d346e71aa9e4f5a97513c1236e16"
+  },
+  "run-3": {
+    "prompt": "Original 16-bit game sprite strip: TALON peregrine falcon from concept image2, normal slate grey, amber goggles, cream barred chest, red white shoes, messenger bag, white gloves, folded shoulder wings, yellow hooked beak. Image1 native running pose rhythm reference. EXACTLY FOUR evenly spaced cells one row on transparent. Four-frame full sprint cycle, body/head held absolutely steady. Cell0 NEAR LIGHT LEG stretched BACK lower left and FAR DARK LEG knee high forward RIGHT under beak. Cell1 NEAR LIGHT LEG folded BACK UP left and FAR DARK LEG extended FRONT DOWN right heel strike. Cell2 NEAR LIGHT LEG raised FRONT HIGH RIGHT under beak and FAR DARK LEG back LOW left. Cell3 NEAR LIGHT LEG extended FRONT DOWN right heel strike and FAR DARK LEG folded BACK UP left. Critical visible DIFFERENCE between first two frames and last two: DARK foreground-forward shoe in cells0 and1, LIGHT foreground-forward shoe in cells2 and3. Opposite arm goes forward. No floating feather fan, no separate tails, no fox ears, no text. Keep same original bird features in every cell. Draw chunky pixel clusters, simple 40px native sprites.",
+    "raw_path": "$HOME/scratch/agent-tmp/talon-art-20261109/run-attempt-3.png",
+    "method": "Built-in GPT Image",
+    "raw_sha256": "5dffa9df68ed2605d1bd93d8498d78f6fafcffa33157d9b73cd6494b11cdff71"
+  },
+  "spring": {
+    "prompt": "Create TWO alternative interpretations of the SAME single spring-launch pose, two equal horizontal cells on transparent background. Image1 is the exact native 8x launch pose to follow: an upright long stretched character airborne leaning back slightly, beak/head lifted up-right, arms pulled in and up, feet extended down. Image2 is TALON peregrine falcon concept, normal slate blue gray form with amber goggles, cream barred chest, red-white shoes and brown courier satchel. Redraw the original falcon in this exact stretched upright pose in BOTH cells, subtly different wing gesture alternatives. Native target 22x47 pixels, tall narrow silhouette, chunky pixel art. Wings integrated shoulder feathers folded close along back. No separate appendages, fox features, text or shadow.",
+    "raw_path": "$HOME/scratch/agent-tmp/talon-art-20261109/spring-alternatives.png",
+    "method": "Built-in GPT Image: two alternatives in one request; first selected.",
+    "raw_sha256": "4926f0b116a30e2d3261f5e7704f20f0e17120fbb2e90cb3b21ee233d8a47049"
+  },
+  "round2": {
+    "prompts": {
+      "walk-1": "Use case: style-transfer. Exactly EIGHT equal cells, one horizontal strip, transparent. Image 1 Tails native walk 8x is POSE reference only, image 2 TALON is identity. Redraw as original falcon courier facing right: navy feathers, cream barred chest, gold goggles brow, yellow beak, strap/satchel, red/white sneakers, wing-arms ending white gloved hands. Crisp 16-bit pixels. NO fox tails. Exact native leg poses per cell. Correct reciprocal arm/leg gait is mandatory. Camera sees TALON's LEFT side: LEFT limbs NEAR light, RIGHT limbs FAR dark. Arms opposite legs, far arm behind torso and near arm in front. Per-cell choreography (screen right = forward): 0 passing: near left knee returning, near left hand low/back, far right hand beginning forward; 1 near LEFT foot lifting forward with FAR RIGHT hand forward, NEAR LEFT hand back at left; 2 near LEFT foot fully extended up/right, FAR RIGHT fist extended right, NEAR LEFT fist back/left; 3 near LEFT foot heel-contact forward/right, FAR RIGHT fist forward/right, NEAR LEFT fist back/left; 4 passing opposite: FAR RIGHT foot returning, NEAR LEFT hand coming forward; 5 FAR RIGHT foot lifting forward/right, NEAR LEFT fist clearly forward/right in front of chest, FAR RIGHT fist back/left behind torso; 6 FAR RIGHT foot extended up/right SHADED, NEAR LEFT fist forward/right LIT, far fist back; 7 FAR RIGHT foot heel-contact forward/right SHADED, NEAR LEFT fist forward/right LIT, near LEFT foot behind/left LIT. Do NOT keep one hand forward all eight cells. Hands and shoes alternate light/dark front every HALF cycle. Show both gloves clearly. Keep head size steady, native aspect and exact order; generous margins; no text, grid, scenery or extra limbs.",
+      "walk-2": "Use case: style-transfer. Exactly EIGHT equal cells, one horizontal strip, transparent. Image 1 Sonic native walk 8x is POSE reference only, image 2 TALON is identity. Redraw as original falcon courier facing right: navy feathers, cream barred chest, gold goggles brow, yellow beak, strap/satchel, red/white sneakers, wing-arms ending white gloved hands. Crisp 16-bit pixels. NO fox tails or Sonic spines; near left glove WHITE, far right glove GREY. Strong visible arm reversal copied directly from Sonic: cells 0-3 WHITE near glove behind at screen LEFT, GREY far glove ahead at screen RIGHT. Cells 4-7 WHITE near glove ahead at screen RIGHT, GREY far glove behind at screen LEFT. This reversal is essential. Exact native leg poses per cell. Correct reciprocal arm/leg gait is mandatory. Camera sees TALON's LEFT side: LEFT limbs NEAR light, RIGHT limbs FAR dark. Arms opposite legs, far arm behind torso and near arm in front. Per-cell choreography (screen right = forward): 0 passing: near left knee returning, near left hand low/back, far right hand beginning forward; 1 near LEFT foot lifting forward with FAR RIGHT hand forward, NEAR LEFT hand back at left; 2 near LEFT foot fully extended up/right, FAR RIGHT fist extended right, NEAR LEFT fist back/left; 3 near LEFT foot heel-contact forward/right, FAR RIGHT fist forward/right, NEAR LEFT fist back/left; 4 passing opposite: FAR RIGHT foot returning, NEAR LEFT hand coming forward; 5 FAR RIGHT foot lifting forward/right, NEAR LEFT fist clearly forward/right in front of chest, FAR RIGHT fist back/left behind torso; 6 FAR RIGHT foot extended up/right SHADED, NEAR LEFT fist forward/right LIT, far fist back; 7 FAR RIGHT foot heel-contact forward/right SHADED, NEAR LEFT fist forward/right LIT, near LEFT foot behind/left LIT. Do NOT keep one hand forward all eight cells. Hands and shoes alternate light/dark front every HALF cycle. Show both gloves clearly. Keep head size steady, native Sonic aspect and exact order; generous margins; no text, grid, scenery or extra limbs.",
+      "walk-3": "Use case: style-transfer. Exactly EIGHT equal cells, one horizontal strip, transparent. Image 1 Sonic native walk 8x is POSE reference only, image 2 TALON is identity. Redraw as original falcon courier facing right: navy feathers, cream barred chest, gold goggles brow, yellow beak, strap/satchel, red/white sneakers, wing-arms ending white gloved hands. Crisp 16-bit pixels. NO fox tails or Sonic spines; near left glove WHITE, far right glove GREY. Strong visible arm reversal copied directly from Sonic: cells 0-3 WHITE near glove behind at screen LEFT, GREY far glove ahead at screen RIGHT. Cells 4-7 WHITE near glove ahead at screen RIGHT, GREY far glove behind at screen LEFT. This reversal is essential. Exact native leg poses per cell. Correct reciprocal arm/leg gait is mandatory. Camera sees TALON's LEFT side: LEFT limbs NEAR light, RIGHT limbs FAR dark. Arms opposite legs, far arm behind torso and near arm in front. Per-cell choreography (screen right = forward): 0 passing: near left knee returning, near left hand low/back, far right hand beginning forward; 1 near LEFT foot lifting forward with FAR RIGHT hand forward, NEAR LEFT hand back at left; 2 near LEFT foot fully extended up/right, FAR RIGHT fist extended right, NEAR LEFT fist back/left; 3 near LEFT foot heel-contact forward/right, FAR RIGHT fist forward/right, NEAR LEFT fist back/left; 4 passing opposite: FAR RIGHT foot returning, NEAR LEFT hand coming forward; 5 FAR RIGHT foot lifting forward/right, NEAR LEFT fist clearly forward/right in front of chest, FAR RIGHT fist back/left behind torso; 6 FAR RIGHT foot extended up/right SHADED, NEAR LEFT fist forward/right LIT, far fist back; 7 FAR RIGHT foot heel-contact forward/right SHADED, NEAR LEFT fist forward/right LIT, near LEFT foot behind/left LIT. Do NOT keep one hand forward all eight cells. Hands and shoes alternate light/dark front every HALF cycle. Show both gloves clearly. Keep head size steady, native Sonic aspect and exact order; generous margins; no text, grid, scenery or extra limbs. THIRD WALK ATTEMPT: Very important palette/layer identity: phase 1/2/3 forward RIGHT-screen boot is NEAR = bright red and WHITE toe, forward hand is FAR = DARK GREY. Phase 5/6/7 forward RIGHT-screen boot is FAR = DARK MAROON with GREY toe, forward hand is NEAR = bright WHITE. In phases 5/6/7 rear LEFT-screen boot is bright RED with WHITE toe. Do not make both halves have bright front shoes. Preserve precise Sonic silhouette, knee lift and heel contact, no extra tails. Cells0/4 passing hands close to body rather than full extension. Same character and same head dimensions throughout.",
+      "run-1": "Use case: style-transfer. Create one horizontal sprite animation strip of exactly FOUR equal-width cells on transparent background. Image 1 is real palette S2 Sonic run at 8x, POSE/LEG reference only. Image 2 is TALON identity reference: original falcon courier, slate navy feathers, cream barred chest, gold goggles on brow, yellow beak, brown satchel strap, red white shoes. Redraw every Sonic pose as TALON facing RIGHT, crisp 16-bit pixel art, same body scale and engine center throughout. Preserve EXACT four Sonic shoe phases/order: 0 near shoe back/up far forward/down; 1 near forward/up far down/back; 2 near forward/down far back/up; 3 near down/back far forward/up. Include Sonic's circular red shoe speed loop, drawn originally, with distinct white shoe toes travelling round the whole loop. Crucial new design: BOTH wing arms swept BACK to left, never fists held in front, wings flutter propulsively backward: frame 0 feathers raised behind shoulder; 1 mid-downstroke; 2 low behind hips; 3 mid-upstroke. Small consistent amplitude, body steady, wings never obscure leg loop. Near wing light navy with cream tips, far wing dark shaded. Wings attach at shoulder. No fox tails, propeller, Sonic head/spines, extra limbs, labels, dividers, terrain or shadows. Each cell fully contains character with transparent margin; maintain native reference aspect. Generate four individually distinct phases, no repeated poses.",
+      "run-2": "Use case: style-transfer. Create one horizontal sprite animation strip of exactly FOUR equal-width cells on transparent background. Image 1 is real palette S2 Sonic run at 8x, POSE/LEG reference only. Image 2 is TALON identity reference: original falcon courier, slate navy feathers, cream barred chest, gold goggles on brow, yellow beak, brown satchel strap, red white shoes. Redraw every Sonic pose as TALON facing RIGHT, crisp 16-bit pixel art, same body scale and engine center throughout. Preserve EXACT four Sonic shoe phases/order: 0 near shoe back/up far forward/down; 1 near forward/up far down/back; 2 near forward/down far back/up; 3 near down/back far forward/up. Include Sonic's circular red shoe speed loop, drawn originally, with distinct white shoe toes travelling round the whole loop. Crucial new design: BOTH wing arms swept BACK to left, never fists held in front, wings flutter propulsively backward: frame 0 feathers raised behind shoulder; 1 mid-downstroke; 2 low behind hips; 3 mid-upstroke. Small consistent amplitude, body steady, wings never obscure leg loop. Near wing light navy with cream tips, far wing dark shaded. Wings attach at shoulder. No fox tails, propeller, Sonic head/spines, extra limbs, labels, dividers, terrain or shadows. Each cell fully contains character with transparent margin; maintain native reference aspect. Generate four individually distinct phases, no repeated poses. SECOND ATTEMPT: keep all heads identical and level. Keep the wing tips safely behind the head, not above it, so feather height does not rescale character. Strict four-phase wing cycle: 0 diagonally up-left, 1 horizontally left, 2 diagonally down-left, 3 horizontally left. Essential leg loop phase 0 shoe rear-left upper and front-right lower; 1 front-right UPPER and rear-left LOWER; 2 front-right LOWER and rear-left UPPER; 3 rear-left LOWER and front-right UPPER. Follow the reference exactly with bright white toe caps rotating, not identical shoes all frames."
+    },
+    "sources": {
+      "walk-1": {
+        "sha256": "e24d5c5d2b38c57e48c5a483e9a1836363fd276c3d048c3d166f826fd0e70d61",
+        "scratch": "$HOME/scratch/agent-tmp/talon-art-r2-20261109/walk-attempt-1.png"
+      },
+      "walk-2": {
+        "sha256": "11a08f26e34a4e8a1818fbbc4f2d8d180bc949c6d410e57f72033a7a9490521a",
+        "scratch": "$HOME/scratch/agent-tmp/talon-art-r2-20261109/walk-attempt-2.png"
+      },
+      "walk-3": {
+        "sha256": "70988345fd08fc9257de7c6c4e43ff50c12275ddeebaed1862ea7f3c92f307ba",
+        "scratch": "$HOME/scratch/agent-tmp/talon-art-r2-20261109/walk-attempt-3.png"
+      },
+      "run-1": {
+        "sha256": "c79d5fdf7a508c617eda5fa471a7893587c16f7bc5d4ee77819f178ceca6b9df",
+        "scratch": "$HOME/scratch/agent-tmp/talon-art-r2-20261109/run-attempt-1.png"
+      },
+      "run-2": {
+        "sha256": "08a8ba5a9cd21c726a428574819913ea09d361416bb2dd66573f29496ffb5cb6",
+        "scratch": "$HOME/scratch/agent-tmp/talon-art-r2-20261109/run-attempt-2.png"
+      }
+    }
+  },
+  "flight-round2-fly1": {
+    "prompt": "Use case: identity-preserve. Production pixel-art whole flight cycle, SIX equal cells in ONE horizontal strip, transparent background. Image1 is the approved TALON flight frame: EDIT its wings into six distinct phases, preserve exactly its head/goggles/beak/chest/satchel/legs/shoes position, scale and pose in every cell. Image2 native S3K Tails body+rotor rendered with real palette at 8x is flight posture reference only, never copy fox pixels. Image3 concept identifies TALON normal slate falcon only. Each cell SAME square box, generous margins, SAME scale (character body 24px high at native resolution, complete wing envelope about 48x48). Right-facing airborne upright falcon, dangling same feet, cream chest, yellow beak amber goggles, brown strap red-white shoes. Wing phases left to right: 0 wings fully HIGH in tall V, long separated cream tipped primaries; 1 wings 45 degrees above horizontal driving down fully extended; 2 wings horizontal broad fully spread power stroke; 3 wings LOW fully swept pointing diagonally down, tips near hips; 4 wings mid-UPSTROKE folded elbows and narrowed primaries rising halfway; 5 wings upper recovery bent slightly, reopening towards high V. Head, body, feet IDENTICAL and locked, ONLY WINGS MOVE. Crisp chunky pixel clusters with few flat colours matching original, no antialias, no motion trails, no floor, no text or grid. SIX equally spaced cells, no duplicated poses.",
+    "raw_path": "$HOME/scratch/agent-tmp/talon-flight-20261109/fly1.png",
+    "method": "Built-in GPT Image",
+    "raw_sha256": "68ab78bfb5c824852bc19b28fa13db4ea5a4733f46cf51e85eb7b97fee40afb4"
+  },
+  "flight-round2-fly2": {
+    "prompt": "Use case: identity-preserve. Production pixel-art whole flight cycle, SIX equal cells in ONE horizontal strip, transparent background. Image1 is the approved TALON flight frame: EDIT its wings into six distinct phases, preserve exactly its head/goggles/beak/chest/satchel/legs/shoes position, scale and pose in every cell. Image2 native S3K Tails body+rotor rendered with real palette at 8x is flight posture reference only, never copy fox pixels. Image3 concept identifies TALON normal slate falcon only. Each cell SAME square box, generous margins, SAME scale (character body 24px high at native resolution, complete wing envelope about 48x48). Right-facing airborne upright falcon, dangling same feet, cream chest, yellow beak amber goggles, brown strap red-white shoes. Wing phases left to right: 0 wings fully HIGH in tall V, long separated cream tipped primaries; 1 wings 45 degrees above horizontal driving down fully extended; 2 wings horizontal broad fully spread power stroke; 3 wings LOW fully swept pointing diagonally down, tips near hips; 4 wings mid-UPSTROKE folded elbows and narrowed primaries rising halfway; 5 wings upper recovery bent slightly, reopening towards high V. Head, body, feet IDENTICAL and locked, ONLY WINGS MOVE. Crisp chunky pixel clusters with few flat colours matching original, no antialias, no motion trails, no floor, no text or grid. SIX equally spaced cells, no duplicated poses. ATTEMPT 2: Pay special attention to identical body scale and absolutely equal six-cell spacing. The wings must rotate at the shoulders while the head, chest and two hanging shoes are motionless. Strongly different open DOWNSTROKE and tucked UPSTROKE silhouettes, no redraw of body between frames.",
+    "raw_path": "$HOME/scratch/agent-tmp/talon-flight-20261109/fly2.png",
+    "method": "Built-in GPT Image",
+    "raw_sha256": "9e29dc8f7291fcfa49faa7b382ef360265da71fd49d67985ad6fe30552918a6f"
+  },
+  "flight-round2-tired1": {
+    "prompt": "Use case: identity-preserve. Production 16-bit pixel sprite strip SIX equal square cells in ONE horizontal row on transparent. Image1 approved tired-flight TALON fixes identity and body size; Image2 native S3K Tails flight+twin-tail composite real palette enlarged 8x is choreography reference ONLY, never copy native pixels; Image3 TALON slate falcon concept. Original falcon: amber goggles, hooked yellow beak, cream chest, brown satchel, red white shoes. Exhausted laboured shallow wingbeat: head lowered looking down-right, shoulders slumped, feet dangling. SAME exact body/head/feet pose size position in ALL SIX cells, only wings move; native body height 24 pixels on full 48x48 envelope. Left to right wing phases: 0 drooping wings slightly raised to 20deg above horizontal bent elbows; 1 shallow downstroke nearly horizontal extended tips; 2 heavy wings below horizontal 35deg tips droop; 3 LOW wings sagging fully down at 60deg; 4 folded shallow recovery at 30deg below horizontal; 5 bent weary recovery barely horizontal with primaries curled inward. Unlike vigorous flight never raise wings overhead. Consistent flat chunky pixel clusters, simple cream feather tips on slate wings, identical steady head chest shoes, large transparent margins for wings. No text, shadows, grid or trails.",
+    "raw_path": "$HOME/scratch/agent-tmp/talon-flight-20261109/tired1.png",
+    "method": "Built-in GPT Image",
+    "raw_sha256": "a89914e08fb28f8a99f330704a48213fa48e45f8c393b4d7f86d54dc22ec1887"
+  },
+  "flight-round2-tired2": {
+    "prompt": "Use case: identity-preserve. Production 16-bit pixel sprite strip SIX equal square cells in ONE horizontal row on transparent. Image1 approved tired-flight TALON fixes identity and body size; Image2 native S3K Tails flight+twin-tail composite real palette enlarged 8x is choreography reference ONLY, never copy native pixels; Image3 TALON slate falcon concept. Original falcon: amber goggles, hooked yellow beak, cream chest, brown satchel, red white shoes. Exhausted laboured shallow wingbeat: head lowered looking down-right, shoulders slumped, feet dangling. SAME exact body/head/feet pose size position in ALL SIX cells, only wings move; native body height 24 pixels on full 48x48 envelope. Left to right wing phases: 0 drooping wings slightly raised to 20deg above horizontal bent elbows; 1 shallow downstroke nearly horizontal extended tips; 2 heavy wings below horizontal 35deg tips droop; 3 LOW wings sagging fully down at 60deg; 4 folded shallow recovery at 30deg below horizontal; 5 bent weary recovery barely horizontal with primaries curled inward. Unlike vigorous flight never raise wings overhead. Consistent flat chunky pixel clusters, simple cream feather tips on slate wings, identical steady head chest shoes, large transparent margins for wings. No text, shadows, grid or trails. ATTEMPT 2: Use genuine transparent alpha, no white background or shadows. Keep the head low close to shoulders, not tall extended neck. Keep wing cycle shallow and weary; six phases as specified. Body 24 native pixels high, fixed in all six square cells.",
+    "raw_path": "$HOME/scratch/agent-tmp/talon-flight-20261109/tired2.png",
+    "method": "Built-in GPT Image",
+    "raw_sha256": "e22218a9c234c846bba2e588328dc7e9a94b863b084fb77afd77a3d4d7f87881"
+  },
+  "consistency20261109": {
+    "tool": "built-in image_gen",
+    "references": {
+      "tired": [
+        "approved fly-strip.png",
+        "native fly_tired-native-8x.png choreography only"
+      ],
+      "spring": [
+        "approved wait-00.png",
+        "approved fly-strip.png (attempts 1/2)",
+        "native spring-native-8x.png choreography only"
+      ]
+    },
+    "generationBriefs": {
+      "tired-1": "Six equal horizontal transparent cells; same SMALL skull, golden goggles, hooked yellow beak, cream chest, navy peregrine feathers, swept crest, diagonal satchel, tiny red/white boots as approved FLY. Fixed head/body/feet. Shallow laboured wings 15/30/50/65/50/30 degrees below horizontal; exhaustion in eyelids, not identity. Dark outlines, Genesis pixel clusters.",
+      "tired-2": "Second attempt with same locked identity, 6 drooping phases 15/30/50/65/50/30, fixed registration, feather hands not gloves.",
+      "spring-1": "Two launch alternatives; preserve WAIT/FLY identity; skull 11px, torso 9px, about 34px tall; native launch pose; do not stretch body.",
+      "spring-2": "Two alternatives; compact WAIT proportions, skull width larger than torso height (11 vs 9); stubby legs, launch upwards, native choreography only.",
+      "spring-3": "Single sprite; native spring posture upright, looking up, wings tucked at chest, boots down; compact torso shorter than skull width; whole pose 32px."
+    },
+    "briefNote": "These are generation briefs, not a verbatim tool transcript. Full prompts remain in the task conversation.",
+    "sources": {
+      "tired-1": {
+        "scratch": "${ART_SCRATCH}/talon-consistency-20261109/tired-1.png",
+        "sha256": "dbc4cf9a242c08bcf92792e7a572827bc3fbf3411e41583f13d69c39215b17a9"
+      },
+      "tired-2": {
+        "scratch": "${ART_SCRATCH}/talon-consistency-20261109/tired-2.png",
+        "sha256": "626acbf2de594b07d2c60f8412da59a86c084a599659e68d91996b0e1339d97f"
+      },
+      "spring-1": {
+        "scratch": "${ART_SCRATCH}/talon-consistency-20261109/spring-1.png",
+        "sha256": "4d0290d2b5ec3f617bc76dbc628f94d7af94a30a21d2c3a4775315f0776b597f"
+      },
+      "spring-2": {
+        "scratch": "${ART_SCRATCH}/talon-consistency-20261109/spring-2.png",
+        "sha256": "8de072146e92e9c80af3286bbb1ed1a19ba3a0d3b32a655022eb815ae2052f30"
+      },
+      "spring-3": {
+        "scratch": "${ART_SCRATCH}/talon-consistency-20261109/spring-3.png",
+        "sha256": "5e5b9a33a417e282b15ce25c56ee09acf6668ce42862731a04b50567ee455c04"
+      }
+    },
+    "selectedExactPrompts": {
+      "tired-1": "Use case: identity-preserve. Asset: six equal-cell horizontal strip of TALON exhausted flight sprites on transparent background, no text. Image 1 is the APPROVED TALON identity and proportions; image 2 is native Tails tired pose choreography ONLY, never copy its orange fox identity. Generate exactly 6 evenly spaced falcon courier sprites facing right. SAME small narrow skull, angular yellow beak, gold aviator goggles, swept dark blue crest, cream throat, brown diagonal satchel strap and small brown satchel, navy feather body and tiny red/white dangling boots as image 1. Critically preserve image 1's small head relative to torso: NOT enlarged round tired head. Head/torso/feet stay fixed across frames. Wings droop in shallow laboured beats: 0 half spread downward 15 degrees, 1 spread downward 30, 2 down 50, 3 down 65, 4 down 50, 5 down 30. Exhaustion in eyelids, not a redesign. No raised high V. Crisp Genesis pixel sprite style with solid dark outline and flat limited palette clusters. Six full bodies, separate cells, no cropping, uniform scale. No text guides, shadows, accessories or backdrop. Preserve the approved FLY design exactly.",
+      "spring-2": "TALON original falcon courier pixel sprite spring action. Two different alternative poses horizontally separated on TRANSPARENT background, no border or text. Follow identity and PROPORTIONS of WAIT image 1 EXACTLY. Use FLY image2 as secondary identity; native Tails image3 supplies launched upward, legs down, arms tucked choreography ONLY. Squat Sonic character proportions: SKULL WIDTH LARGER THAN TORSO HEIGHT, head width 11 game pixels vs torso neck-to-waist height 9 game pixels. Short round chest, stubby legs with red white boots, not tall tubular human body. Navy peregrine crest and plumage, gold goggles, cream muzzle and chest, yellow hooked beak pointing upward, small diagonal brown satchel. Whole sprite about 32 pixels tall. Short body and big skull relative to body like WAIT. Same limited 15 colour pixel style. NO long neck or stretched torso, no trousers, no white backdrop/checkerboard, no text."
+    }
+  },
+  "families-20261109-01-push": {
+    "family": "PUSH",
+    "prompt": "Use case: identity-preserve. Production pixel sprite animation strip, four equal horizontal cells on transparency. Redraw image 1's FOUR native pushing phases as TALON, the dark indigo falcon courier in images 2 and 3. Image 1 is pose choreography only, replace fox completely. Images 2/3 lock identity: small falcon skull, gold aviator goggles atop head, golden beak, white cheek, indigo feather crest and integrated folded wings, brown courier vest, red-white boots. SAME head and torso anatomical scale in all four cells and same identity as approved WAIT. Lean into wall facing right, both feather hands forward pressing imaginary wall, boots alternate planted/braced push effort through four phases. No wall drawn. Do not copy Tails ears, tails, rotors or add mast. Crisp outlined pixel-art, isolated character only, no text. Keep fixed cell layout, full feet visible, no panel borders. Render at 8x native pixels, 11-native-pixel skull and 9-native-pixel torso. Distinguish each limb phase. Do not add appendages.",
+    "raw_path": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-1333fe10-6a2f-49b3-b408-1f6c5f16dbd2.png",
+    "method": "Built-in GPT Image, model version not exposed.",
+    "raw_sha256": "cfa75800425cb16aa0319b393fdcd69ab1976b81c08dabc2487fc147ea9d7256",
+    "candidate_rows": 1,
+    "status": "rejected: weak pushing arms",
+    "attempt": 1
+  },
+  "families-20261109-02-balance": {
+    "family": "BALANCE",
+    "prompt": "Production sprite animation strip. Image 1 is a row of native pose choreography; redraw EACH pose as TALON from the AFTER row of image 2. Output exactly 2 columns and THREE rows, each row a fresh alternative attempt of the whole same 2-phase cycle. Equal cells, isolated on transparency, no text/borders/props. ledge wobble facing right toward edge, leaning forward, arms flail. Lock falcon identity: small dark indigo skull with gold goggles ABOVE eyes, yellow beak, white cheeks, feather crest, brown courier vest, integrated folded wings serving as arms, red-white boots. No fox ears, no twin tails/rotor/mast, no hedgehog spikes. Same head/torso anatomical scale all cells: skull 11 game pixels wide, exposed neck-to-waist 9 pixels, outline one pixel, artwork enlarged 8x. Ground contact baseline fixed across each row; maintain full visible feet. Native pose positions, compact folded feathers. Three distinct high-quality alternatives; preserve limb phase differences. Crisp outlined 16-bit pixel art.",
+    "raw_path": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-3c93c88d-5ae1-4d1a-94bf-165efd892638.png",
+    "method": "Built-in GPT Image, model version not exposed.",
+    "raw_sha256": "8d9e3837329af813bd9d32a01f8e3dd88facc8b93533e762ed9e4a5f6412f5b7",
+    "candidate_rows": 3,
+    "status": "selected per frame",
+    "attempt": 1
+  },
+  "families-20261109-03-balance2": {
+    "family": "BALANCE2",
+    "prompt": "Production sprite animation strip. Image 1 is a row of native pose choreography; redraw EACH pose as TALON from the AFTER row of image 2. Output exactly 3 columns and THREE rows, each row a fresh alternative attempt of the whole same 3-phase cycle. Equal cells, isolated on transparency, no text/borders/props. near-edge entry leaning right further, three progressively forward arm-balance phases. Lock falcon identity: small dark indigo skull with gold goggles ABOVE eyes, yellow beak, white cheeks, feather crest, brown courier vest, integrated folded wings serving as arms, red-white boots. No fox ears, no twin tails/rotor/mast, no hedgehog spikes. Same head/torso anatomical scale all cells: skull 11 game pixels wide, exposed neck-to-waist 9 pixels, outline one pixel, artwork enlarged 8x. Ground contact baseline fixed across each row; maintain full visible feet. Native pose positions, compact folded feathers. Three distinct high-quality alternatives; preserve limb phase differences. Crisp outlined 16-bit pixel art.",
+    "raw_path": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-8fe0e03f-caa3-433f-b075-eda0a6a3e553.png",
+    "method": "Built-in GPT Image, model version not exposed.",
+    "raw_sha256": "223e32a675b377eabdb7855eb0b49bc178ab83eb5a310924e6281ad4d0e1e349",
+    "candidate_rows": 3,
+    "status": "selected per frame",
+    "attempt": 1
+  },
+  "families-20261109-04-balance3": {
+    "family": "BALANCE3",
+    "prompt": "Production sprite animation strip. Image 1 is a row of native pose choreography; redraw EACH pose as TALON from the AFTER row of image 2. Output exactly 2 columns and THREE rows, each row a fresh alternative attempt of the whole same 2-phase cycle. Equal cells, isolated on transparency, no text/borders/props. facing right with ledge behind to left, leaning backward, looking back over shoulder. Lock falcon identity: small dark indigo skull with gold goggles ABOVE eyes, yellow beak, white cheeks, feather crest, brown courier vest, integrated folded wings serving as arms, red-white boots. No fox ears, no twin tails/rotor/mast, no hedgehog spikes. Same head/torso anatomical scale all cells: skull 11 game pixels wide, exposed neck-to-waist 9 pixels, outline one pixel, artwork enlarged 8x. Ground contact baseline fixed across each row; maintain full visible feet. Native pose positions, compact folded feathers. Three distinct high-quality alternatives; preserve limb phase differences. Crisp outlined 16-bit pixel art.",
+    "raw_path": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-a0e307b5-8129-42e7-acd1-8697f35e5f45.png",
+    "method": "Built-in GPT Image, model version not exposed.",
+    "raw_sha256": "677bfa3f0e72ec8c1b0a3192d11e7954dd39594cb28742e3394eb29d0b049f58",
+    "candidate_rows": 3,
+    "status": "rejected: forward lean",
+    "attempt": 1
+  },
+  "families-20261109-05-balance4": {
+    "family": "BALANCE4",
+    "prompt": "Production sprite animation strip. Image 1 is a row of native pose choreography; redraw EACH pose as TALON from the AFTER row of image 2. Output exactly 5 columns and THREE rows, each row a fresh alternative attempt of the whole same 5-phase cycle. Equal cells, isolated on transparency, no text/borders/props. facing right away from edge behind to left, five backward near-edge recovery/arm waving phases. Lock falcon identity: small dark indigo skull with gold goggles ABOVE eyes, yellow beak, white cheeks, feather crest, brown courier vest, integrated folded wings serving as arms, red-white boots. No fox ears, no twin tails/rotor/mast, no hedgehog spikes. Same head/torso anatomical scale all cells: skull 11 game pixels wide, exposed neck-to-waist 9 pixels, outline one pixel, artwork enlarged 8x. Ground contact baseline fixed across each row; maintain full visible feet. Native pose positions, compact folded feathers. Three distinct high-quality alternatives; preserve limb phase differences. Crisp outlined 16-bit pixel art.",
+    "raw_path": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-02a2e4b8-6052-47c7-a38b-3e212d576d58.png",
+    "method": "Built-in GPT Image, model version not exposed.",
+    "raw_sha256": "bc2fc0fdb71db6bc010d50f4c6d0136541c741774f41e948bc2c3e4ea76a24bd",
+    "candidate_rows": 3,
+    "status": "rejected: forward lean",
+    "attempt": 1
+  },
+  "families-20261109-06-hang": {
+    "family": "HANG",
+    "prompt": "Use case identity-preserve. Sprite sheet exactly 2 columns THREE rows, three alternative attempts of same 2-phase HANG animation, equal isolated cells, no text. Image 1 is native pose reference at 8x; redraw body/limbs as TALON, REMOVE ALL FOX TAILS entirely, no feathers projecting from rump, no rotor/mast. Image 2 after row locks identity: small indigo falcon with gold aviator goggles above eyes, yellow beak, white cheek, brown courier vest, red-white boots, compact folded integrated feather wings instead of arms. Motion: horizontal hanging swing facing left, hands reaching left/up; folded wings; no bar. Preserve native phase joint positions and view direction. Match WAIT skull 11 native pixels and exposed torso 9 pixels, never scale by overall wingspan or bounding box. Head and torso scale constant in ALL attempts/phases. Crisp outlined 16-bit pixel art enlarged 8x, transparent background. Full body visible, don't draw props or bubbles.",
+    "raw_path": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-e0136bc7-c7d7-4717-93bb-62760cfa4ff5.png",
+    "method": "Built-in GPT Image, model version not exposed.",
+    "raw_sha256": "7080c2ac4b4d3b59e313a298326eadcbcc6c714cd2606e63f1de593bd07e33e4",
+    "candidate_rows": 3,
+    "status": "rejected: hand interpreted as boot",
+    "attempt": 1
+  },
+  "families-20261109-07-hang2": {
+    "family": "HANG2",
+    "prompt": "Use case identity-preserve. Sprite sheet exactly 2 columns THREE rows, three alternative attempts of same 2-phase HANG2 animation, equal isolated cells, no text. Image 1 is native pose reference at 8x; redraw body/limbs as TALON, REMOVE ALL FOX TAILS entirely, no feathers projecting from rump, no rotor/mast. Image 2 after row locks identity: small indigo falcon with gold aviator goggles above eyes, yellow beak, white cheek, brown courier vest, red-white boots, compact folded integrated feather wings instead of arms. Motion: vertical hanging with both hands above head, two hand/boot shifts; no bar. Preserve native phase joint positions and view direction. Match WAIT skull 11 native pixels and exposed torso 9 pixels, never scale by overall wingspan or bounding box. Head and torso scale constant in ALL attempts/phases. Crisp outlined 16-bit pixel art enlarged 8x, transparent background. Full body visible, don't draw props or bubbles.",
+    "raw_path": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-50a08c83-89de-447c-be84-772f18b66b34.png",
+    "method": "Built-in GPT Image, model version not exposed.",
+    "raw_sha256": "3891736975008405ee06f538a43b4732dc2612dec79a45d503269e17ea2c8e61",
+    "candidate_rows": 3,
+    "status": "selected per frame",
+    "attempt": 1
+  },
+  "families-20261109-08-bubble": {
+    "family": "BUBBLE",
+    "prompt": "Use case identity-preserve. Sprite sheet exactly 3 columns THREE rows, three alternative attempts of same 3-phase BUBBLE animation, equal isolated cells, no text. Image 1 is native pose reference at 8x; redraw body/limbs as TALON, REMOVE ALL FOX TAILS entirely, no feathers projecting from rump, no rotor/mast. Image 2 after row locks identity: small indigo falcon with gold aviator goggles above eyes, yellow beak, white cheek, brown courier vest, red-white boots, compact folded integrated feather wings instead of arms. Motion: air pickup with open beak, then two normal recovery poses. Preserve native phase joint positions and view direction. Match WAIT skull 11 native pixels and exposed torso 9 pixels, never scale by overall wingspan or bounding box. Head and torso scale constant in ALL attempts/phases. Crisp outlined 16-bit pixel art enlarged 8x, transparent background. Full body visible, don't draw props or bubbles.",
+    "raw_path": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-dad3482b-3c61-4b37-8d07-f6f88d6f9230.png",
+    "method": "Built-in GPT Image, model version not exposed.",
+    "raw_sha256": "aea5b9aa0258f72ab51330a5879ceee27151f02f9fc12672f3658d5fa501d557",
+    "candidate_rows": 3,
+    "status": "selected per frame",
+    "attempt": 1
+  },
+  "families-20261109-09-hurt_fall": {
+    "family": "HURT_FALL",
+    "prompt": "Use case identity-preserve. Sprite sheet exactly 2 columns THREE rows, three alternative attempts of same 2-phase HURT_FALL animation, equal isolated cells, no text. Image 1 is native pose reference at 8x; redraw body/limbs as TALON, REMOVE ALL FOX TAILS entirely, no feathers projecting from rump, no rotor/mast. Image 2 after row locks identity: small indigo falcon with gold aviator goggles above eyes, yellow beak, white cheek, brown courier vest, red-white boots, compact folded integrated feather wings instead of arms. Motion: seated recoil, boots thrown forward and hands raised. Preserve native phase joint positions and view direction. Match WAIT skull 11 native pixels and exposed torso 9 pixels, never scale by overall wingspan or bounding box. Head and torso scale constant in ALL attempts/phases. Crisp outlined 16-bit pixel art enlarged 8x, transparent background. Full body visible, don't draw props or bubbles.",
+    "raw_path": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-1437e090-e65c-4c79-b581-3613ba20afcf.png",
+    "method": "Built-in GPT Image, model version not exposed.",
+    "raw_sha256": "99cc2c75ee0fc204b1968f8d65fda3b9a7d2c3e68c6e88b10b07eb76e9e5e10b",
+    "candidate_rows": 3,
+    "status": "selected per frame",
+    "attempt": 1
+  },
+  "families-20261109-10-drown": {
+    "family": "DROWN",
+    "prompt": "Use case identity-preserve. Sprite sheet exactly 1 columns THREE rows, three alternative attempts of same 1-phase DROWN animation, equal isolated cells, no text. Image 1 is native pose reference at 8x; redraw body/limbs as TALON, REMOVE ALL FOX TAILS entirely, no feathers projecting from rump, no rotor/mast. Image 2 after row locks identity: small indigo falcon with gold aviator goggles above eyes, yellow beak, white cheek, brown courier vest, red-white boots, compact folded integrated feather wings instead of arms. Motion: front-facing drowned fall, eyes closed and beak open, limp arms and legs. Preserve native phase joint positions and view direction. Match WAIT skull 11 native pixels and exposed torso 9 pixels, never scale by overall wingspan or bounding box. Head and torso scale constant in ALL attempts/phases. Crisp outlined 16-bit pixel art enlarged 8x, transparent background. Full body visible, don't draw props or bubbles.",
+    "raw_path": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-94563843-e6e0-4fcc-bcb1-276629c3ed90.png",
+    "method": "Built-in GPT Image, model version not exposed.",
+    "raw_sha256": "970c19389e14ef28a32f5a8ce54d96b9860a7fe3d98dafd7ce4609b84fd5c104",
+    "candidate_rows": 3,
+    "status": "selected per frame",
+    "attempt": 1
+  },
+  "families-20261109-11-tails_fly_ascend": {
+    "family": "TAILS_FLY_ASCEND",
+    "prompt": "Identity-preserving original TALON sprite animation. Exactly SIX equal columns and THREE rows. Each row a fresh alternative attempt of same six-phase TAILS_FLY_ASCEND cycle. Native image 1 locks body pose, replace fox with dark indigo falcon TALON in images 2/3. rising upward with bent knees, six integrated wingbeat phases up/up-mid/level/down/down-mid/up. Real wings integrated at shoulders, smooth upstroke/downstroke with six differentiated feathers silhouettes. Compact body, 11-game-pixel skull and 9-pixel exposed torso matching approved WAIT. Identity locks: gold goggles on forehead, golden beak, white cheek, dark indigo feathers, brown courier vest, red-white boots visible. DO NOT COPY TAILS ROTOR, TAILS, MAST, or any appendage off head/rump. Gold goggles/eye row and torso registration stable in each cycle; wing tips never determine body scale. Carry poses leave air BELOW boots clear for passenger hands; do not draw passenger. Crisp outlined 16-bit sprite at 8x native pixels. Isolated transparent background, no words, props, borders.",
+    "raw_path": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-ed94187e-b0c5-4952-bd10-20cded10ed43.png",
+    "method": "Built-in GPT Image, model version not exposed.",
+    "raw_sha256": "4d08158f3c1a65b6f04ed87ad359436579a3c7d3d1c3359104a9051d0dbdb513",
+    "candidate_rows": 3,
+    "status": "selected per frame",
+    "attempt": 1
+  },
+  "families-20261109-12-tails_fly_carry": {
+    "family": "TAILS_FLY_CARRY",
+    "prompt": "Identity-preserving original TALON sprite animation. Exactly SIX equal columns and THREE rows. Each row a fresh alternative attempt of same six-phase TAILS_FLY_CARRY cycle. Native image 1 locks body pose, replace fox with dark indigo falcon TALON in images 2/3. horizontal hover carrying someone below, feet pointing down and unobstructed for the carried character hand-hold; six wingbeat phases. Real wings integrated at shoulders, smooth upstroke/downstroke with six differentiated feathers silhouettes. Compact body, 11-game-pixel skull and 9-pixel exposed torso matching approved WAIT. Identity locks: gold goggles on forehead, golden beak, white cheek, dark indigo feathers, brown courier vest, red-white boots visible. DO NOT COPY TAILS ROTOR, TAILS, MAST, or any appendage off head/rump. Gold goggles/eye row and torso registration stable in each cycle; wing tips never determine body scale. Carry poses leave air BELOW boots clear for passenger hands; do not draw passenger. Crisp outlined 16-bit sprite at 8x native pixels. Isolated transparent background, no words, props, borders.",
+    "raw_path": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-bda6fb26-96ab-49e9-aeb0-709c78e616e0.png",
+    "method": "Built-in GPT Image, model version not exposed.",
+    "raw_sha256": "851f2c249dcad59c2033b468a8dc1aac452cbd331a9a746cbea005ecff4e8b6a",
+    "candidate_rows": 3,
+    "status": "selected per frame",
+    "attempt": 1
+  },
+  "families-20261109-13-tails_fly_carry_ascend": {
+    "family": "TAILS_FLY_CARRY_ASCEND",
+    "prompt": "Identity-preserving original TALON sprite animation. Exactly SIX equal columns and THREE rows. Each row a fresh alternative attempt of same six-phase TAILS_FLY_CARRY_ASCEND cycle. Native image 1 locks body pose, replace fox with dark indigo falcon TALON in images 2/3. rising while carrying someone below, feet pointing down and unobstructed for native hand-hold; six wingbeat phases. Real wings integrated at shoulders, smooth upstroke/downstroke with six differentiated feathers silhouettes. Compact body, 11-game-pixel skull and 9-pixel exposed torso matching approved WAIT. Identity locks: gold goggles on forehead, golden beak, white cheek, dark indigo feathers, brown courier vest, red-white boots visible. DO NOT COPY TAILS ROTOR, TAILS, MAST, or any appendage off head/rump. Gold goggles/eye row and torso registration stable in each cycle; wing tips never determine body scale. Carry poses leave air BELOW boots clear for passenger hands; do not draw passenger. Crisp outlined 16-bit sprite at 8x native pixels. Isolated transparent background, no words, props, borders.",
+    "raw_path": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-5987c322-404f-407d-809d-4f2e775252bb.png",
+    "method": "Built-in GPT Image, model version not exposed.",
+    "raw_sha256": "a0036c8ea5dac1d6fe8753fcbe0fbc8360ceac2bb24982e897fdd6ba7e561297",
+    "candidate_rows": 3,
+    "status": "selected per frame",
+    "attempt": 1
+  },
+  "families-20261109-14-tails_swim": {
+    "family": "TAILS_SWIM",
+    "prompt": "Pixel art TALON sprite animation exactly 5 columns and THREE rows, each row a fresh alternative of same 5-phase cycle. Image 1 is native BODY choreography reference; exclude the fox tail at TOP LEFT completely. No tail, rotor, propeller or mast anywhere. Replace fox with original dark indigo falcon courier from images 2/3: gold goggles atop forehead, small yellow beak, white cheek, feather crest, brown vest, red-white boots. forward horizontal swim five wing paddling/kicking phases. Wings integrated at shoulders in every body frame, no detached limbs. All cells consistent head/torso landmarks: skull 11 game pixels wide, torso neck-to-waist 9 pixels, same identity as WAIT and FLY. No wingspan/bounding-box scaling. Fully visible character only, transparent background, no water/bubbles/passenger/props/text. Crisp black outline 16-bit sprite, 8x native pixel art. Preserve pose perspective and distinct wing/boot positions between phases, constant head/body scale.",
+    "raw_path": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-aa894fde-81a9-4ab7-9330-e9dbffcc4e82.png",
+    "method": "Built-in GPT Image, model version not exposed.",
+    "raw_sha256": "a5cd2e713a87ed426c85889aca7f2363674e8070452261833c1d53af03e3b9de",
+    "candidate_rows": 3,
+    "status": "selected per frame",
+    "attempt": 1
+  },
+  "families-20261109-15-tails_swim_ascend": {
+    "family": "TAILS_SWIM_ASCEND",
+    "prompt": "Pixel art TALON sprite animation exactly 5 columns and THREE rows, each row a fresh alternative of same 5-phase cycle. Image 1 is native BODY choreography reference; exclude the fox tail at TOP LEFT completely. No tail, rotor, propeller or mast anywhere. Replace fox with original dark indigo falcon courier from images 2/3: gold goggles atop forehead, small yellow beak, white cheek, feather crest, brown vest, red-white boots. upward pitched swimming stroke, five wing paddling/kicking phases. Wings integrated at shoulders in every body frame, no detached limbs. All cells consistent head/torso landmarks: skull 11 game pixels wide, torso neck-to-waist 9 pixels, same identity as WAIT and FLY. No wingspan/bounding-box scaling. Fully visible character only, transparent background, no water/bubbles/passenger/props/text. Crisp black outline 16-bit sprite, 8x native pixel art. Preserve pose perspective and distinct wing/boot positions between phases, constant head/body scale.",
+    "raw_path": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-b8831b88-cf4d-4daa-a422-64d888f3484f.png",
+    "method": "Built-in GPT Image, model version not exposed.",
+    "raw_sha256": "7fdfbed6cc14d7e4583efc83b60e15b844c09fee9994ec31aa52a4a831485621",
+    "candidate_rows": 3,
+    "status": "selected per frame",
+    "attempt": 1
+  },
+  "families-20261109-16-tails_swim_carry": {
+    "family": "TAILS_SWIM_CARRY",
+    "prompt": "Pixel art TALON sprite animation exactly 2 columns and THREE rows, each row a fresh alternative of same 2-phase cycle. Image 1 is native BODY choreography reference; exclude the fox tail at TOP LEFT completely. No tail, rotor, propeller or mast anywhere. Replace fox with original dark indigo falcon courier from images 2/3: gold goggles atop forehead, small yellow beak, white cheek, feather crest, brown vest, red-white boots. upright water hover carrying passenger BELOW; boots clear for hand-hold, two outward wing paddles. Wings integrated at shoulders in every body frame, no detached limbs. All cells consistent head/torso landmarks: skull 11 game pixels wide, torso neck-to-waist 9 pixels, same identity as WAIT and FLY. No wingspan/bounding-box scaling. Fully visible character only, transparent background, no water/bubbles/passenger/props/text. Crisp black outline 16-bit sprite, 8x native pixel art. Preserve pose perspective and distinct wing/boot positions between phases, constant head/body scale.",
+    "raw_path": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-7bbab6e2-11ac-4136-a889-a5eced3bcb88.png",
+    "method": "Built-in GPT Image, model version not exposed.",
+    "raw_sha256": "7df12f7e7bf189ef62413d4c65932bc32d5e20def3e610b7bcea716ded1e18d5",
+    "candidate_rows": 3,
+    "status": "selected per frame",
+    "attempt": 1
+  },
+  "families-20261109-17-tails_swim_tired": {
+    "family": "TAILS_SWIM_TIRED",
+    "prompt": "Pixel art TALON sprite animation exactly 3 columns and THREE rows, each row a fresh alternative of same 3-phase cycle. Image 1 is native BODY choreography reference; exclude the fox tail at TOP LEFT completely. No tail, rotor, propeller or mast anywhere. Replace fox with original dark indigo falcon courier from images 2/3: gold goggles atop forehead, small yellow beak, white cheek, feather crest, brown vest, red-white boots. three exhausted swim strokes, drooping eyes and heavy wing paddling. Wings integrated at shoulders in every body frame, no detached limbs. All cells consistent head/torso landmarks: skull 11 game pixels wide, torso neck-to-waist 9 pixels, same identity as WAIT and FLY. No wingspan/bounding-box scaling. Fully visible character only, transparent background, no water/bubbles/passenger/props/text. Crisp black outline 16-bit sprite, 8x native pixel art. Preserve pose perspective and distinct wing/boot positions between phases, constant head/body scale.",
+    "raw_path": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-d1691db4-a478-46b4-951c-268db539b2ed.png",
+    "method": "Built-in GPT Image, model version not exposed.",
+    "raw_sha256": "454813711a6a420f931ed850f1961f4d08b3fb3d0d931c698cf99f757b643f31",
+    "candidate_rows": 3,
+    "status": "selected per frame",
+    "attempt": 1
+  },
+  "families-20261109-18-float2": {
+    "family": "FLOAT2",
+    "prompt": "Production original TALON sprite sheet FLOAT2. Exactly 8 columns and THREE rows of equal transparent cells; each row is a fresh alternative attempt of same 8-phase cycle, not extra phases. Native image 1 pose choreography only. Redraw as falcon courier matching AFTER TALON in image 2: small indigo head, gold goggles ABOVE eyes, golden beak, white cheek, brown courier vest, red-white boots, integrated feather wings replacing arms. eight native directional tumble/suspended poses, follow view changes front/right/back/left exactly, compact folded wings. Skull width 11 native pixels, exposed torso 9 pixels; constant anatomical scale, never fit using bounding box. Exclude/remove fox tails and rotor entirely, no ears/mast/hedgehog spikes. Follow native phase joint positions and perspective, full body visible. 8x crisp outlined 16-bit pixel art on alpha, no text, no props or panels. All three rows same identity and scale, distinct attempts.",
+    "raw_path": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-e6dc705a-f145-495a-9e16-85c42a45d6b1.png",
+    "method": "Built-in GPT Image, model version not exposed.",
+    "raw_sha256": "810e75fa69f4efe4e82f6253751077e59ca6b078d618cbbe4f8152f801dd5298",
+    "candidate_rows": 3,
+    "status": "selected per frame",
+    "attempt": 1
+  },
+  "families-20261109-19-blink": {
+    "family": "BLINK",
+    "prompt": "Production original TALON sprite sheet BLINK. Exactly 3 columns and THREE rows of equal transparent cells; each row is a fresh alternative attempt of same 3-phase cycle, not extra phases. Native image 1 pose choreography only. Redraw as falcon courier matching AFTER TALON in image 2: small indigo head, gold goggles ABOVE eyes, golden beak, white cheek, brown courier vest, red-white boots, integrated feather wings replacing arms. three standing blink phases, eyes open/half-shut/closed, planted boots. Skull width 11 native pixels, exposed torso 9 pixels; constant anatomical scale, never fit using bounding box. Exclude/remove fox tails and rotor entirely, no ears/mast/hedgehog spikes. Follow native phase joint positions and perspective, full body visible. 8x crisp outlined 16-bit pixel art on alpha, no text, no props or panels. All three rows same identity and scale, distinct attempts.",
+    "raw_path": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-beb6fcbe-f986-4f49-987a-451cd766b6fe.png",
+    "method": "Built-in GPT Image, model version not exposed.",
+    "raw_sha256": "f27dc759ebe76d62e973e749e28e200d31cfd6907a58643f8f11972064e83a75",
+    "candidate_rows": 3,
+    "status": "selected per frame",
+    "attempt": 1
+  },
+  "families-20261109-20-get_up": {
+    "family": "GET_UP",
+    "prompt": "Production original TALON sprite sheet GET_UP. Exactly 2 columns and THREE rows of equal transparent cells; each row is a fresh alternative attempt of same 2-phase cycle, not extra phases. Native image 1 pose choreography only. Redraw as falcon courier matching AFTER TALON in image 2: small indigo head, gold goggles ABOVE eyes, golden beak, white cheek, brown courier vest, red-white boots, integrated feather wings replacing arms. two lying-idle recovery phases, crouching then upright. Skull width 11 native pixels, exposed torso 9 pixels; constant anatomical scale, never fit using bounding box. Exclude/remove fox tails and rotor entirely, no ears/mast/hedgehog spikes. Follow native phase joint positions and perspective, full body visible. 8x crisp outlined 16-bit pixel art on alpha, no text, no props or panels. All three rows same identity and scale, distinct attempts.",
+    "raw_path": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-eed82bbd-0d2a-4259-9dfb-42d5b54c3035.png",
+    "method": "Built-in GPT Image, model version not exposed.",
+    "raw_sha256": "27d12165d37827e1aeabff27254bcbe0181fe4cd7a122d7313c3489bee3c655c",
+    "candidate_rows": 3,
+    "status": "selected per frame",
+    "attempt": 1
+  },
+  "families-20261109-21-victory": {
+    "family": "VICTORY",
+    "prompt": "Production original TALON sprite sheet VICTORY. Exactly 4 columns and THREE rows of equal transparent cells; each row is a fresh alternative attempt of same 4-phase cycle, not extra phases. Native image 1 pose choreography only. Redraw as falcon courier matching AFTER TALON in image 2: small indigo head, gold goggles ABOVE eyes, golden beak, white cheek, brown courier vest, red-white boots, integrated feather wings replacing arms. four victory poses, one hand raised with two feather fingertips, then happy wave. Skull width 11 native pixels, exposed torso 9 pixels; constant anatomical scale, never fit using bounding box. Exclude/remove fox tails and rotor entirely, no ears/mast/hedgehog spikes. Follow native phase joint positions and perspective, full body visible. 8x crisp outlined 16-bit pixel art on alpha, no text, no props or panels. All three rows same identity and scale, distinct attempts.",
+    "raw_path": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-18976a5b-4615-41a3-8bb9-a70757087963.png",
+    "method": "Built-in GPT Image, model version not exposed.",
+    "raw_sha256": "058c64a6cb238c8b5b68c8a867355c7f433d4122c52bf88841c6e3a34d63c066",
+    "candidate_rows": 3,
+    "status": "selected per frame",
+    "attempt": 1
+  },
+  "families-20261109-22-tails_carried": {
+    "family": "TAILS_CARRIED",
+    "prompt": "Production original TALON sprite sheet TAILS_CARRIED. Exactly 3 columns and THREE rows of equal transparent cells; each row is a fresh alternative attempt of same 3-phase cycle, not extra phases. Native image 1 pose choreography only. Redraw as falcon courier matching AFTER TALON in image 2: small indigo head, gold goggles ABOVE eyes, golden beak, white cheek, brown courier vest, red-white boots, integrated feather wings replacing arms. three carried poses, BOTH hands raised ABOVE head to native handhold, legs suspended and then drawn forward. Skull width 11 native pixels, exposed torso 9 pixels; constant anatomical scale, never fit using bounding box. Exclude/remove fox tails and rotor entirely, no ears/mast/hedgehog spikes. Follow native phase joint positions and perspective, full body visible. 8x crisp outlined 16-bit pixel art on alpha, no text, no props or panels. All three rows same identity and scale, distinct attempts.",
+    "raw_path": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-7445efdf-4c1f-43fd-9b08-3f4f55a101f9.png",
+    "method": "Built-in GPT Image, model version not exposed.",
+    "raw_sha256": "7354cb05ddc2a27100756badeb30039d6d5ff1bb0b7a3553fcba916d3f787487",
+    "candidate_rows": 3,
+    "status": "selected per frame",
+    "attempt": 1
+  },
+  "families-20261109-23-super_transform": {
+    "family": "SUPER_TRANSFORM",
+    "prompt": "Production original TALON sprite sheet SUPER_TRANSFORM. Exactly 5 columns and THREE rows of equal transparent cells; each row is a fresh alternative attempt of same 5-phase cycle, not extra phases. Native image 1 pose choreography only. Redraw as falcon courier matching AFTER TALON in image 2: small indigo head, gold goggles ABOVE eyes, golden beak, white cheek, brown courier vest, red-white boots, integrated feather wings replacing arms. five power transformation phases: compact curl, uncurl, front-facing white flash silhouette, then two rising clenched fists. Keep TALON identity and original palette; no aura.. Skull width 11 native pixels, exposed torso 9 pixels; constant anatomical scale, never fit using bounding box. Exclude/remove fox tails and rotor entirely, no ears/mast/hedgehog spikes. Follow native phase joint positions and perspective, full body visible. 8x crisp outlined 16-bit pixel art on alpha, no text, no props or panels. All three rows same identity and scale, distinct attempts.",
+    "raw_path": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-59094ff4-11f4-476e-a664-2170cfa75563.png",
+    "method": "Built-in GPT Image, model version not exposed.",
+    "raw_sha256": "553c7474b7b64197a1606d996cb3318be93f2f04a3ba7d22bfd70fa63be8cfb4",
+    "candidate_rows": 3,
+    "status": "selected per frame",
+    "attempt": 1
+  },
+  "families-20261109-24-hang": {
+    "family": "HANG",
+    "prompt": "TALON horizontal hanging hand-over-hand two phase sprite. Exactly TWO columns THREE rows alternatives. Native Sonic reference shows TWO GLOVED HANDS stacked in front on LEFT gripping invisible vertical pole, NOT BOOTS. Falcon body horizontal trails right, red-white BOOTS at far RIGHT. Redraw Sonic as dark indigo falcon courier matching approved TALON in image2: gold goggles atop small skull, white cheek, yellow beak facing LEFT, brown courier vest, integrated folded wing arms reaching forward LEFT to both white feather HANDS. Two phases exchange hand positions. Draw NO POLE, no tails, no mast, no background. 11 native pixel skull,9 pixel neck-waist torso same proportions as WAIT. Crisp pixel art at8x, full body visible, three alternative attempts of same two phases.",
+    "raw_path": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-f188dbf4-910f-4d3f-863c-2ba49b04ddfb.png",
+    "method": "Built-in GPT Image, model version not exposed.",
+    "raw_sha256": "2bf138eab2bab496286895a8832c9ff0a281670af461a22b18c3c4e8aad5883d",
+    "candidate_rows": 3,
+    "status": "selected per frame",
+    "attempt": 2
+  },
+  "families-20261109-25-push": {
+    "family": "PUSH",
+    "prompt": "Exactly FOUR columns and THREE rows sprite sheet; each row alternative attempt of same four-phase wall PUSH cycle. Transform image1 native fox into TALON from AFTER row image2. Both WHITE FEATHER HANDS extend toward wall on RIGHT at chest height. Body LEANS INTO wall right, pushing hard, boots alternate braced/stretched left leg and bent recovery through four phases. No wall. Small dark indigo falcon, gold goggles above eyes, golden beak, white cheek,brown vest,red-white boots,integrated folded wings as arms,NO FOX EARS TAILS ROTOR OR MAST. Same anatomical scale across all cells skull11 native pixels torso9. Crisp outlined 16bit pixel art enlarged8x, transparency, no text. Full body visible,compact wings.",
+    "raw_path": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-699853e1-356e-4004-92a9-28b1ed5d24af.png",
+    "method": "Built-in GPT Image, model version not exposed.",
+    "raw_sha256": "e913137b3f37780d1dbf3345836ff4a7009c2fb9f436d6a81f01492c09c5b84e",
+    "candidate_rows": 3,
+    "status": "selected per frame",
+    "attempt": 2
+  },
+  "families-20261109-26-balance3": {
+    "family": "BALANCE3",
+    "prompt": "Corrected BALANCE3 sprite animation. Exactly 2 columns THREE rows of alternative attempts. TALON FACES RIGHT but is falling BACKWARD toward LEFT ledge. Both feet planted toward RIGHT; HIP and HEAD lean LEFT behind feet; beak still points RIGHT while looking back LEFT with eye. Do not lean right! 2 distinct backwards wobble phases waving wing hands in FRONT to right to counterbalance, stronger backward tilt near edge. Match native image1 joint pose. Redraw as indigo falcon TALON from image2 after row, gold forehead goggles, golden beak,white cheek,brown courier vest,red-white boots, integrated feather wings as arms. No tails/rotors/mast/fox ears. Skull11 game pixels,torso9,one fixed anatomical scale. Crisp outlined 16bit sprite8x on transparency,no words,props or floor.",
+    "raw_path": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-2d6efd07-3006-4be0-9b8d-bc05e3eb0d49.png",
+    "method": "Built-in GPT Image, model version not exposed.",
+    "raw_sha256": "3240ead72dbb250e44337f38c87271e785b5b494804dac59e08a5e448194da9e",
+    "candidate_rows": 3,
+    "status": "selected per frame",
+    "attempt": 2
+  },
+  "families-20261109-27-balance4": {
+    "family": "BALANCE4",
+    "prompt": "Corrected BALANCE4 sprite animation. Exactly 5 columns THREE rows of alternative attempts. TALON FACES RIGHT but is falling BACKWARD toward LEFT ledge. Both feet planted toward RIGHT; HIP and HEAD lean LEFT behind feet; beak still points RIGHT while looking back LEFT with eye. Do not lean right! 5 distinct backwards wobble phases waving wing hands in FRONT to right to counterbalance, stronger backward tilt near edge. Match native image1 joint pose. Redraw as indigo falcon TALON from image2 after row, gold forehead goggles, golden beak,white cheek,brown courier vest,red-white boots, integrated feather wings as arms. No tails/rotors/mast/fox ears. Skull11 game pixels,torso9,one fixed anatomical scale. Crisp outlined 16bit sprite8x on transparency,no words,props or floor.",
+    "raw_path": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-a09acb58-8161-4b3e-8782-16503dea3aab.png",
+    "method": "Built-in GPT Image, model version not exposed.",
+    "raw_sha256": "b3a776951284e0a5224e7a7b05016c254db741d6d1eb88896d41b0a2eb084682",
+    "candidate_rows": 3,
+    "status": "selected per frame",
+    "attempt": 2
+  }
+}

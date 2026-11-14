@@ -111,6 +111,17 @@ class TestGameplayCaptureToolArgs {
     }
 
     @Test
+    void noMusicKeepsSoundEffectsAndRequiresAnAudioCapture() {
+        String[] base = {"--zone", "ehz", "--act", "1", "--out-dir", "out", "--audio"};
+        assertFalse(GameplayCaptureTool.Arguments.parse(base).noMusic());
+        var flags = new java.util.ArrayList<>(java.util.List.of(base));
+        flags.add("--no-music");
+        assertTrue(GameplayCaptureTool.Arguments.parse(flags.toArray(String[]::new)).noMusic());
+        assertThrows(IllegalArgumentException.class, () -> GameplayCaptureTool.Arguments.parse(new String[] {
+                "--zone", "ehz", "--act", "1", "--out-dir", "out", "--no-music"}));
+    }
+
+    @Test
     void timerIsUnsetUntilDeclaredAndRejectsNegativeOrTitleFirstUse() {
         String[] base = {"--zone", "htz", "--act", "1", "--out-dir", "out"};
         assertNull(GameplayCaptureTool.Arguments.parse(base).timerFrames());

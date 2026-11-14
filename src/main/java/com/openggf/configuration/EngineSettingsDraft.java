@@ -66,6 +66,12 @@ public final class EngineSettingsDraft {
         return 3;
     }
 
+    /** Whether {@code key} is a 0-100 percent volume, shown as a slider stepping by 5. */
+    public static boolean isVolume(SonicConfiguration key) {
+        return key == SonicConfiguration.AUDIO_HUB_MUSIC_VOLUME || key == SonicConfiguration.AUDIO_MUSIC_VOLUME
+                || key == SonicConfiguration.AUDIO_SFX_VOLUME;
+    }
+
     public static Category category(SonicConfiguration key) {
         ConfigKeyMeta meta = ConfigCatalog.meta(key);
         if (!meta.persisted()) throw new IllegalArgumentException("Derived setting");
@@ -223,7 +229,7 @@ public final class EngineSettingsDraft {
             set(key, options.get(Math.floorMod(index + direction, options.size())));
             return;
         }
-        if (key == SonicConfiguration.AUDIO_HUB_MUSIC_VOLUME) {
+        if (isVolume(key)) {
             set(key, Integer.toString(Math.clamp(Integer.parseInt(text(key)) + direction * 5, 0, 100)));
             return;
         }
@@ -268,7 +274,7 @@ public final class EngineSettingsDraft {
         double n = number.doubleValue();
         if (!Double.isFinite(n)) throw new IllegalArgumentException("Use a finite number");
         switch (key) {
-            case AUDIO_HUB_MUSIC_VOLUME -> {
+            case AUDIO_HUB_MUSIC_VOLUME, AUDIO_MUSIC_VOLUME, AUDIO_SFX_VOLUME -> {
                 if (n < 0 || n > 100) throw new IllegalArgumentException("Volume: 0 to 100");
             }
             case CONTROLLER_DEADZONE -> {

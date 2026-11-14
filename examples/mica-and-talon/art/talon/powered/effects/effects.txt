@@ -1,0 +1,57 @@
+# TALON strike trails and Solar particles. Row syntax: art/mica/powered/effects/effects.txt.
+#   Pixels index TALON's own live palette line; in Solar form 2 bright amber, 3 warm gold, 4 white-gold,
+#   5 pale gold, 6 orange-gold, c white.
+
+# Normal TALON: slate body and haze with a warm courier-amber core (sheet 49496D/9292B6/FFB624).
+trail normal FFE8B0 9292B6 49496D B6B6DB 100
+front normal 242449 23 5 120 8
+front normal 6D6D92 19 4 190 7
+front normal B6B6DB 16 3 230 6
+front normal FFF0D0 14 3 240 4
+
+# Solar: solar orange-gold heat trail behind the divebomb.
+trail super FFF0B0 FFB624 DB4900 FFA030 120
+front super B62400 25 5 140 8
+front super FF6D00 21 5 210 7
+front super FFB624 18 4 240 6
+front super FFE070 15 4 255 5
+front super FFFFF0 13 3 255 3
+
+# Sun-ember mote: a hot spark cooling through orange to a speck (plays once over its life).
+particle mote 9
+frame 2 2
+..6..
+.656.
+65c56
+.656.
+..6..
+frame 1 1
+.6.
+646
+.6.
+frame 0 0
+6
+frame 0 0
+f
+
+# Flare: a burst ray cooling outward (plays once).
+particle flare 6
+frame 2 2
+..6..
+.656.
+65c56
+.656.
+..6..
+frame 1 1
+.6.
+6c6
+.6.
+frame 0 0
+f
+
+# Solar: motes drift back and up from the wings in flight, a spray on each flap, a flare ring
+# as the form arrives and a heat trail of motes behind the divebomb.
+emitter super TRANSFORM flare 14 1 RING 0 0 8 0x300 0 0x20 0 18
+emitter super FLYING mote 1 3 SCATTER -8 -4 6 -0x100 -0x60 0x30 -0x2 36
+emitter super FLAP mote 6 1 SCATTER -6 -2 6 -0x180 0x40 0x80 0x4 36
+emitter super STRIKING mote,flare 2 1 SCATTER -4 -4 8 -0x80 -0x40 0x60 -0x2 36

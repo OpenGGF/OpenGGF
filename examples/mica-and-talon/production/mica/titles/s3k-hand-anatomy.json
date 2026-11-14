@@ -1,0 +1,72 @@
+{
+  "wrist": [
+    27,
+    52
+  ],
+  "landmarks": {
+    "thumb": [
+      11,
+      34
+    ],
+    "index": [
+      19,
+      13
+    ],
+    "middle": [
+      30,
+      25
+    ],
+    "ring": [
+      37,
+      32
+    ],
+    "little": [
+      40,
+      39
+    ]
+  },
+  "relative_angles": {
+    "4": 0.0,
+    "0": -11.303910747262345,
+    "1": 6.561670627360814
+  },
+  "native_measurements": {
+    "4": {
+      "tip": [
+        16.4,
+        1.2
+      ],
+      "wrist": [
+        24,
+        46
+      ],
+      "absolute_angle": -9.628156128486706,
+      "relative_angle": 0.0
+    },
+    "0": {
+      "tip": [
+        8.071428571428571,
+        4.357142857142857
+      ],
+      "wrist": [
+        24,
+        46
+      ],
+      "absolute_angle": -20.93206687574905,
+      "relative_angle": -11.303910747262345
+    },
+    "1": {
+      "tip": [
+        21.6,
+        1.2
+      ],
+      "wrist": [
+        24,
+        46
+      ],
+      "absolute_angle": -3.066485501125892,
+      "relative_angle": 6.561670627360814
+    }
+  },
+  "note": "Thumb is viewer-left, three curled fingers viewer-right. Same five landmarks rotate with the single master about the corresponding MICA wrist. Native angles from warm/white fingertip centroid and anatomical wrist; only registration differs."
+}

@@ -93,6 +93,9 @@ hand-edit generated IDs or split intervals across shots.
   IDs (S2 Emerald Hill is `$82` = 130); `catalog` lists music names, titles and
   numbers plus each zone's `musicId`, and screenplay `ROM_MUSIC` accepts
   `"music":"EMERALD_HILL"` instead of `soundId`. There is no old engine-ID mode.
+- Film exports and previews render music and SFX at full level whatever volumes
+  the player saved under Settings → Audio. For an SFX-only gameplay plate under
+  a scored film, capture it with `GameplayCaptureTool --audio --no-music`.
   A cue on a shot's entry frame plays as authored in every game. Seeking is
   silent; judge sound from playback from frame 0.
 - Hold integer zoom when pixels must stay still; review fractional zoom and

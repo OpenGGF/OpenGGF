@@ -1,0 +1,6123 @@
+{
+  "reference": "wait-00",
+  "referenceLandmarks": [
+    1,
+    19,
+    10,
+    14,
+    19,
+    27
+  ],
+  "metricNames": [
+    "hood/skull width",
+    "eye to snout signed dy",
+    "torso height"
+  ],
+  "method": "Manually marked anatomical coordinates; x edges exclusive. Screen-axis distances. Genuine pitch, front/rear views, tucked bodies and rotated axes are separate comparisons. No colour-index measurements. Coordinate placement uncertainty approximately 1px. Native references are pose comparisons, not a claim Sonic anatomy equals pangolin anatomy.",
+  "limits": [
+    "Native Sonic landmark rectangles have not been individually certified.",
+    "Rotated/occluded landmarks remain null; no inferred widths.",
+    "Some rear/tumble hood drawings are broader, requiring a separate native-axis audit before certification.",
+    "No gameplay capture/contact certification."
+  ],
+  "frames": {
+    "wait-00": {
+      "before": {
+        "landmarks": [
+          1,
+          19,
+          10,
+          14,
+          19,
+          27
+        ],
+        "metrics": [
+          18,
+          4,
+          8
+        ]
+      },
+      "after": {
+        "landmarks": [
+          1,
+          19,
+          10,
+          14,
+          19,
+          27
+        ],
+        "metrics": [
+          18,
+          4,
+          8
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-art-round3-20261109/wait-native-00.png",
+      "exception": null
+    },
+    "wait-01": {
+      "before": {
+        "landmarks": [
+          1,
+          19,
+          10,
+          14,
+          19,
+          27
+        ],
+        "metrics": [
+          18,
+          4,
+          8
+        ]
+      },
+      "after": {
+        "landmarks": [
+          1,
+          19,
+          10,
+          14,
+          19,
+          27
+        ],
+        "metrics": [
+          18,
+          4,
+          8
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-art-round3-20261109/wait-native-01.png",
+      "exception": null
+    },
+    "wait-02": {
+      "before": {
+        "landmarks": [
+          2,
+          20,
+          10,
+          14,
+          18,
+          26
+        ],
+        "metrics": [
+          18,
+          4,
+          8
+        ]
+      },
+      "after": {
+        "landmarks": [
+          2,
+          20,
+          10,
+          14,
+          18,
+          26
+        ],
+        "metrics": [
+          18,
+          4,
+          8
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-art-round3-20261109/wait-native-02.png",
+      "exception": null
+    },
+    "wait-03": {
+      "before": {
+        "landmarks": [
+          2,
+          20,
+          10,
+          14,
+          19,
+          27
+        ],
+        "metrics": [
+          18,
+          4,
+          8
+        ]
+      },
+      "after": {
+        "landmarks": [
+          2,
+          20,
+          10,
+          14,
+          19,
+          27
+        ],
+        "metrics": [
+          18,
+          4,
+          8
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-art-round3-20261109/wait-native-03.png",
+      "exception": null
+    },
+    "wait-04": {
+      "before": {
+        "landmarks": [
+          2,
+          20,
+          10,
+          14,
+          19,
+          27
+        ],
+        "metrics": [
+          18,
+          4,
+          8
+        ]
+      },
+      "after": {
+        "landmarks": [
+          2,
+          20,
+          10,
+          14,
+          19,
+          27
+        ],
+        "metrics": [
+          18,
+          4,
+          8
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-art-round3-20261109/wait-native-04.png",
+      "exception": null
+    },
+    "wait-05": {
+      "before": {
+        "landmarks": [
+          2,
+          20,
+          10,
+          14,
+          19,
+          27
+        ],
+        "metrics": [
+          18,
+          4,
+          8
+        ]
+      },
+      "after": {
+        "landmarks": [
+          2,
+          20,
+          10,
+          14,
+          19,
+          27
+        ],
+        "metrics": [
+          18,
+          4,
+          8
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-art-round3-20261109/wait-native-05.png",
+      "exception": null
+    },
+    "wait-06": {
+      "before": {
+        "landmarks": [
+          9,
+          27,
+          10,
+          14,
+          18,
+          25
+        ],
+        "metrics": [
+          18,
+          4,
+          7
+        ]
+      },
+      "after": {
+        "landmarks": [
+          9,
+          27,
+          10,
+          14,
+          18,
+          25
+        ],
+        "metrics": [
+          18,
+          4,
+          7
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-art-round3-20261109/wait-native-06.png",
+      "exception": null
+    },
+    "wait-07": {
+      "before": {
+        "landmarks": [
+          1,
+          18,
+          8,
+          12,
+          14,
+          20
+        ],
+        "metrics": [
+          17,
+          4,
+          6
+        ]
+      },
+      "after": {
+        "landmarks": [
+          1,
+          18,
+          8,
+          12,
+          14,
+          20
+        ],
+        "metrics": [
+          17,
+          4,
+          6
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-art-round3-20261109/wait-native-07.png",
+      "exception": null
+    },
+    "wait-08": {
+      "before": {
+        "landmarks": [
+          1,
+          18,
+          9,
+          13,
+          15,
+          21
+        ],
+        "metrics": [
+          17,
+          4,
+          6
+        ]
+      },
+      "after": {
+        "landmarks": [
+          1,
+          18,
+          9,
+          13,
+          15,
+          21
+        ],
+        "metrics": [
+          17,
+          4,
+          6
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-art-round3-20261109/wait-native-08.png",
+      "exception": null
+    },
+    "walk-00": {
+      "before": {
+        "landmarks": [
+          7,
+          25,
+          9,
+          13,
+          17,
+          24
+        ],
+        "metrics": [
+          18,
+          4,
+          7
+        ]
+      },
+      "after": {
+        "landmarks": [
+          7,
+          25,
+          9,
+          13,
+          17,
+          24
+        ],
+        "metrics": [
+          18,
+          4,
+          7
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-art-round3-20261109/walk-native-00.png",
+      "exception": null
+    },
+    "walk-01": {
+      "before": {
+        "landmarks": [
+          8,
+          26,
+          10,
+          14,
+          18,
+          26
+        ],
+        "metrics": [
+          18,
+          4,
+          8
+        ]
+      },
+      "after": {
+        "landmarks": [
+          8,
+          26,
+          10,
+          14,
+          18,
+          26
+        ],
+        "metrics": [
+          18,
+          4,
+          8
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-art-round3-20261109/walk-native-01.png",
+      "exception": null
+    },
+    "walk-02": {
+      "before": {
+        "landmarks": [
+          13,
+          31,
+          10,
+          14,
+          18,
+          26
+        ],
+        "metrics": [
+          18,
+          4,
+          8
+        ]
+      },
+      "after": {
+        "landmarks": [
+          13,
+          31,
+          10,
+          14,
+          18,
+          26
+        ],
+        "metrics": [
+          18,
+          4,
+          8
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-art-round3-20261109/walk-native-02.png",
+      "exception": null
+    },
+    "walk-03": {
+      "before": {
+        "landmarks": [
+          9,
+          27,
+          10,
+          14,
+          18,
+          26
+        ],
+        "metrics": [
+          18,
+          4,
+          8
+        ]
+      },
+      "after": {
+        "landmarks": [
+          9,
+          27,
+          10,
+          14,
+          18,
+          26
+        ],
+        "metrics": [
+          18,
+          4,
+          8
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-art-round3-20261109/walk-native-03.png",
+      "exception": null
+    },
+    "walk-04": {
+      "before": {
+        "landmarks": [
+          7,
+          25,
+          9,
+          13,
+          17,
+          24
+        ],
+        "metrics": [
+          18,
+          4,
+          7
+        ]
+      },
+      "after": {
+        "landmarks": [
+          7,
+          25,
+          9,
+          13,
+          17,
+          24
+        ],
+        "metrics": [
+          18,
+          4,
+          7
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-art-round3-20261109/walk-native-04.png",
+      "exception": null
+    },
+    "walk-05": {
+      "before": {
+        "landmarks": [
+          8,
+          26,
+          10,
+          14,
+          18,
+          26
+        ],
+        "metrics": [
+          18,
+          4,
+          8
+        ]
+      },
+      "after": {
+        "landmarks": [
+          8,
+          26,
+          10,
+          14,
+          18,
+          26
+        ],
+        "metrics": [
+          18,
+          4,
+          8
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-art-round3-20261109/walk-native-05.png",
+      "exception": null
+    },
+    "walk-06": {
+      "before": {
+        "landmarks": [
+          12,
+          30,
+          10,
+          14,
+          18,
+          26
+        ],
+        "metrics": [
+          18,
+          4,
+          8
+        ]
+      },
+      "after": {
+        "landmarks": [
+          12,
+          30,
+          10,
+          14,
+          18,
+          26
+        ],
+        "metrics": [
+          18,
+          4,
+          8
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-art-round3-20261109/walk-native-06.png",
+      "exception": null
+    },
+    "walk-07": {
+      "before": {
+        "landmarks": [
+          9,
+          27,
+          10,
+          14,
+          18,
+          26
+        ],
+        "metrics": [
+          18,
+          4,
+          8
+        ]
+      },
+      "after": {
+        "landmarks": [
+          9,
+          27,
+          10,
+          14,
+          18,
+          26
+        ],
+        "metrics": [
+          18,
+          4,
+          8
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-art-round3-20261109/walk-native-07.png",
+      "exception": null
+    },
+    "run-00": {
+      "before": {
+        "landmarks": [
+          7,
+          25,
+          9,
+          13,
+          16,
+          23
+        ],
+        "metrics": [
+          18,
+          4,
+          7
+        ]
+      },
+      "after": {
+        "landmarks": [
+          7,
+          25,
+          9,
+          13,
+          16,
+          23
+        ],
+        "metrics": [
+          18,
+          4,
+          7
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-art-round3-20261109/run-native-00.png",
+      "exception": null
+    },
+    "run-01": {
+      "before": {
+        "landmarks": [
+          11,
+          29,
+          9,
+          13,
+          16,
+          23
+        ],
+        "metrics": [
+          18,
+          4,
+          7
+        ]
+      },
+      "after": {
+        "landmarks": [
+          11,
+          29,
+          9,
+          13,
+          16,
+          23
+        ],
+        "metrics": [
+          18,
+          4,
+          7
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-art-round3-20261109/run-native-01.png",
+      "exception": null
+    },
+    "run-02": {
+      "before": {
+        "landmarks": [
+          6,
+          24,
+          9,
+          13,
+          16,
+          23
+        ],
+        "metrics": [
+          18,
+          4,
+          7
+        ]
+      },
+      "after": {
+        "landmarks": [
+          6,
+          24,
+          9,
+          13,
+          16,
+          23
+        ],
+        "metrics": [
+          18,
+          4,
+          7
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-art-round3-20261109/run-native-02.png",
+      "exception": null
+    },
+    "run-03": {
+      "before": {
+        "landmarks": [
+          7,
+          25,
+          10,
+          14,
+          17,
+          24
+        ],
+        "metrics": [
+          18,
+          4,
+          7
+        ]
+      },
+      "after": {
+        "landmarks": [
+          7,
+          25,
+          10,
+          14,
+          17,
+          24
+        ],
+        "metrics": [
+          18,
+          4,
+          7
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-art-round3-20261109/run-native-03.png",
+      "exception": null
+    },
+    "spring-00": {
+      "before": {
+        "landmarks": [
+          1,
+          19,
+          10,
+          14,
+          19,
+          27
+        ],
+        "metrics": [
+          18,
+          4,
+          8
+        ]
+      },
+      "after": {
+        "landmarks": [
+          1,
+          19,
+          10,
+          14,
+          19,
+          27
+        ],
+        "metrics": [
+          18,
+          4,
+          8
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "/tmp/mica-np-core-20261108/native/spring-00.png",
+      "exception": null
+    },
+    "hurt-00": {
+      "before": {
+        "landmarks": [
+          6,
+          24,
+          10,
+          14,
+          18,
+          24
+        ],
+        "metrics": [
+          18,
+          4,
+          6
+        ]
+      },
+      "after": {
+        "landmarks": [
+          6,
+          24,
+          10,
+          14,
+          18,
+          24
+        ],
+        "metrics": [
+          18,
+          4,
+          6
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "/tmp/mica-np-core-20261108/native/hurt-00.png",
+      "exception": null
+    },
+    "push-00": {
+      "before": {
+        "landmarks": [
+          10,
+          23,
+          9,
+          14,
+          18,
+          24
+        ],
+        "metrics": [
+          13,
+          5,
+          6
+        ]
+      },
+      "after": {
+        "landmarks": [
+          11,
+          29,
+          11,
+          15,
+          19,
+          27
+        ],
+        "metrics": [
+          18,
+          4,
+          8
+        ]
+      },
+      "disposition": "re-reduced",
+      "nativeReference": "/tmp/mica-np-core-20261108/native/push-00.png",
+      "exception": null
+    },
+    "push-01": {
+      "before": {
+        "landmarks": [
+          7,
+          21,
+          9,
+          14,
+          18,
+          24
+        ],
+        "metrics": [
+          14,
+          5,
+          6
+        ]
+      },
+      "after": {
+        "landmarks": [
+          10,
+          28,
+          11,
+          15,
+          19,
+          27
+        ],
+        "metrics": [
+          18,
+          4,
+          8
+        ]
+      },
+      "disposition": "re-reduced",
+      "nativeReference": "/tmp/mica-np-core-20261108/native/push-01.png",
+      "exception": null
+    },
+    "duck-00": {
+      "before": {
+        "landmarks": [
+          4,
+          20,
+          10,
+          14,
+          17,
+          23
+        ],
+        "metrics": [
+          16,
+          4,
+          6
+        ]
+      },
+      "after": {
+        "landmarks": [
+          9,
+          27,
+          11,
+          15,
+          18,
+          23
+        ],
+        "metrics": [
+          18,
+          4,
+          5
+        ]
+      },
+      "disposition": "regenerated",
+      "nativeReference": "/tmp/mica-np-core-20261108/native/duck-00.png",
+      "exception": null
+    },
+    "duck-01": {
+      "before": {
+        "landmarks": [
+          1,
+          23,
+          14,
+          18,
+          20,
+          23
+        ],
+        "metrics": [
+          22,
+          4,
+          3
+        ]
+      },
+      "after": {
+        "landmarks": [
+          1,
+          19,
+          9,
+          13,
+          null,
+          null
+        ],
+        "metrics": [
+          18,
+          4,
+          null
+        ]
+      },
+      "disposition": "regenerated",
+      "nativeReference": "/tmp/mica-np-core-20261108/native/duck-01.png",
+      "exception": null
+    },
+    "look_up-00": {
+      "before": {
+        "landmarks": [
+          1,
+          21,
+          10,
+          10,
+          17,
+          27
+        ],
+        "metrics": [
+          20,
+          0,
+          10
+        ]
+      },
+      "after": {
+        "landmarks": [
+          3,
+          21,
+          10,
+          10,
+          17,
+          26
+        ],
+        "metrics": [
+          18,
+          0,
+          9
+        ]
+      },
+      "disposition": "re-reduced",
+      "nativeReference": "/tmp/mica-np-core-20261108/native/look_up-00.png",
+      "exception": null
+    },
+    "look_up-01": {
+      "before": {
+        "landmarks": [
+          1,
+          23,
+          10,
+          9,
+          18,
+          28
+        ],
+        "metrics": [
+          22,
+          -1,
+          10
+        ]
+      },
+      "after": {
+        "landmarks": [
+          1,
+          19,
+          8,
+          7,
+          14,
+          22
+        ],
+        "metrics": [
+          18,
+          -1,
+          8
+        ]
+      },
+      "disposition": "re-reduced",
+      "nativeReference": "/tmp/mica-np-core-20261108/native/look_up-01.png",
+      "exception": null
+    },
+    "skid-00": {
+      "before": {
+        "landmarks": [
+          11,
+          31,
+          11,
+          15,
+          19,
+          27
+        ],
+        "metrics": [
+          20,
+          4,
+          8
+        ]
+      },
+      "after": {
+        "landmarks": [
+          7,
+          25,
+          10,
+          14,
+          18,
+          25
+        ],
+        "metrics": [
+          18,
+          4,
+          7
+        ]
+      },
+      "disposition": "re-reduced",
+      "nativeReference": "/tmp/mica-np-core-20261108/native/skid-00.png",
+      "exception": null
+    },
+    "skid-01": {
+      "before": {
+        "landmarks": [
+          12,
+          32,
+          11,
+          15,
+          19,
+          27
+        ],
+        "metrics": [
+          20,
+          4,
+          8
+        ]
+      },
+      "after": {
+        "landmarks": [
+          9,
+          27,
+          10,
+          14,
+          18,
+          25
+        ],
+        "metrics": [
+          18,
+          4,
+          7
+        ]
+      },
+      "disposition": "re-reduced",
+      "nativeReference": "/tmp/mica-np-core-20261108/native/skid-01.png",
+      "exception": null
+    },
+    "skid-02": {
+      "before": {
+        "landmarks": [
+          10,
+          30,
+          11,
+          15,
+          19,
+          27
+        ],
+        "metrics": [
+          20,
+          4,
+          8
+        ]
+      },
+      "after": {
+        "landmarks": [
+          11,
+          29,
+          10,
+          14,
+          18,
+          25
+        ],
+        "metrics": [
+          18,
+          4,
+          7
+        ]
+      },
+      "disposition": "re-reduced",
+      "nativeReference": "/tmp/mica-np-core-20261108/native/skid-02.png",
+      "exception": null
+    },
+    "skid-03": {
+      "before": {
+        "landmarks": [
+          3,
+          20,
+          10,
+          14,
+          18,
+          26
+        ],
+        "metrics": [
+          17,
+          4,
+          8
+        ]
+      },
+      "after": {
+        "landmarks": [
+          2,
+          20,
+          11,
+          15,
+          19,
+          27
+        ],
+        "metrics": [
+          18,
+          4,
+          8
+        ]
+      },
+      "disposition": "re-reduced",
+      "nativeReference": "/tmp/mica-np-core-20261108/native/skid-03.png",
+      "exception": null
+    },
+    "balance-00": {
+      "before": {
+        "landmarks": [
+          11,
+          31,
+          10,
+          14,
+          18,
+          25
+        ],
+        "metrics": [
+          20,
+          4,
+          7
+        ]
+      },
+      "after": {
+        "landmarks": [
+          6,
+          24,
+          8,
+          12,
+          15,
+          22
+        ],
+        "metrics": [
+          18,
+          4,
+          7
+        ]
+      },
+      "disposition": "regenerated",
+      "nativeReference": "/tmp/mica-np-core-20261108/native/balance-00.png",
+      "exception": null
+    },
+    "balance-01": {
+      "before": {
+        "landmarks": [
+          12,
+          33,
+          10,
+          14,
+          18,
+          25
+        ],
+        "metrics": [
+          21,
+          4,
+          7
+        ]
+      },
+      "after": {
+        "landmarks": [
+          6,
+          24,
+          8,
+          12,
+          15,
+          22
+        ],
+        "metrics": [
+          18,
+          4,
+          7
+        ]
+      },
+      "disposition": "regenerated",
+      "nativeReference": "/tmp/mica-np-core-20261108/native/balance-01.png",
+      "exception": null
+    },
+    "balance-02": {
+      "before": {
+        "landmarks": [
+          10,
+          30,
+          10,
+          14,
+          18,
+          25
+        ],
+        "metrics": [
+          20,
+          4,
+          7
+        ]
+      },
+      "after": {
+        "landmarks": [
+          6,
+          24,
+          8,
+          12,
+          15,
+          22
+        ],
+        "metrics": [
+          18,
+          4,
+          7
+        ]
+      },
+      "disposition": "regenerated",
+      "nativeReference": "/tmp/mica-np-core-20261108/native/balance-02.png",
+      "exception": null
+    },
+    "balance-03": {
+      "before": {
+        "landmarks": [
+          11,
+          32,
+          10,
+          14,
+          18,
+          25
+        ],
+        "metrics": [
+          21,
+          4,
+          7
+        ]
+      },
+      "after": {
+        "landmarks": [
+          6,
+          24,
+          8,
+          12,
+          15,
+          22
+        ],
+        "metrics": [
+          18,
+          4,
+          7
+        ]
+      },
+      "disposition": "regenerated",
+      "nativeReference": "/tmp/mica-np-core-20261108/native/balance-03.png",
+      "exception": null
+    },
+    "death-00": {
+      "before": {
+        "landmarks": [
+          8,
+          26,
+          10,
+          15,
+          19,
+          27
+        ],
+        "metrics": [
+          18,
+          5,
+          8
+        ]
+      },
+      "after": {
+        "landmarks": [
+          8,
+          26,
+          10,
+          15,
+          19,
+          27
+        ],
+        "metrics": [
+          18,
+          5,
+          8
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "/tmp/mica-np-core-20261108/native/death-00.png",
+      "exception": null
+    },
+    "death-01": {
+      "before": {
+        "landmarks": [
+          7,
+          25,
+          10,
+          15,
+          19,
+          27
+        ],
+        "metrics": [
+          18,
+          5,
+          8
+        ]
+      },
+      "after": {
+        "landmarks": [
+          7,
+          25,
+          10,
+          15,
+          19,
+          27
+        ],
+        "metrics": [
+          18,
+          5,
+          8
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "/tmp/mica-np-core-20261108/native/death-01.png",
+      "exception": null
+    },
+    "drown-00": {
+      "before": {
+        "landmarks": [
+          7,
+          25,
+          8,
+          14,
+          18,
+          26
+        ],
+        "metrics": [
+          18,
+          6,
+          8
+        ]
+      },
+      "after": {
+        "landmarks": [
+          7,
+          25,
+          8,
+          14,
+          18,
+          26
+        ],
+        "metrics": [
+          18,
+          6,
+          8
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "/tmp/mica-np-core-20261108/native/drown-00.png",
+      "exception": null
+    },
+    "drown-01": {
+      "before": {
+        "landmarks": [
+          9,
+          27,
+          8,
+          14,
+          18,
+          26
+        ],
+        "metrics": [
+          18,
+          6,
+          8
+        ]
+      },
+      "after": {
+        "landmarks": [
+          9,
+          27,
+          8,
+          14,
+          18,
+          26
+        ],
+        "metrics": [
+          18,
+          6,
+          8
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "/tmp/mica-np-core-20261108/native/drown-01.png",
+      "exception": null
+    },
+    "drown-02": {
+      "before": {
+        "landmarks": [
+          4,
+          22,
+          9,
+          15,
+          19,
+          27
+        ],
+        "metrics": [
+          18,
+          6,
+          8
+        ]
+      },
+      "after": {
+        "landmarks": [
+          4,
+          22,
+          9,
+          15,
+          19,
+          27
+        ],
+        "metrics": [
+          18,
+          6,
+          8
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "/tmp/mica-np-core-20261108/native/drown-02.png",
+      "exception": null
+    },
+    "get_air-00": {
+      "before": {
+        "landmarks": [
+          9,
+          29,
+          8,
+          10,
+          16,
+          24
+        ],
+        "metrics": [
+          20,
+          2,
+          8
+        ]
+      },
+      "after": {
+        "landmarks": [
+          8,
+          26,
+          8,
+          10,
+          16,
+          23
+        ],
+        "metrics": [
+          18,
+          2,
+          7
+        ]
+      },
+      "disposition": "re-reduced",
+      "nativeReference": "/tmp/mica-np-core-20261108/native/get_air-00.png",
+      "exception": null
+    },
+    "get_air-01": {
+      "before": {
+        "landmarks": [
+          7,
+          27,
+          8,
+          10,
+          16,
+          24
+        ],
+        "metrics": [
+          20,
+          2,
+          8
+        ]
+      },
+      "after": {
+        "landmarks": [
+          7,
+          25,
+          8,
+          10,
+          16,
+          23
+        ],
+        "metrics": [
+          18,
+          2,
+          7
+        ]
+      },
+      "disposition": "re-reduced",
+      "nativeReference": "/tmp/mica-np-core-20261108/native/get_air-01.png",
+      "exception": null
+    },
+    "hang-00": {
+      "before": {
+        "landmarks": [
+          1,
+          23,
+          19,
+          23,
+          27,
+          35
+        ],
+        "metrics": [
+          22,
+          4,
+          8
+        ]
+      },
+      "after": {
+        "landmarks": [
+          1,
+          19,
+          16,
+          20,
+          23,
+          31
+        ],
+        "metrics": [
+          18,
+          4,
+          8
+        ]
+      },
+      "disposition": "re-reduced",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch2-20261109/s3k-90-native.png",
+      "exception": null
+    },
+    "hang-01": {
+      "before": {
+        "landmarks": [
+          1,
+          23,
+          18,
+          22,
+          26,
+          34
+        ],
+        "metrics": [
+          22,
+          4,
+          8
+        ]
+      },
+      "after": {
+        "landmarks": [
+          1,
+          19,
+          16,
+          20,
+          23,
+          30
+        ],
+        "metrics": [
+          18,
+          4,
+          7
+        ]
+      },
+      "disposition": "re-reduced",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch2-20261109/s3k-91-native.png",
+      "exception": null
+    },
+    "hang-02": {
+      "before": {
+        "landmarks": [
+          2,
+          24,
+          18,
+          22,
+          26,
+          34
+        ],
+        "metrics": [
+          22,
+          4,
+          8
+        ]
+      },
+      "after": {
+        "landmarks": [
+          1,
+          19,
+          16,
+          20,
+          23,
+          30
+        ],
+        "metrics": [
+          18,
+          4,
+          7
+        ]
+      },
+      "disposition": "re-reduced",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch2-20261109/s3k-92-native.png",
+      "exception": null
+    },
+    "stop-00": {
+      "before": {
+        "landmarks": [
+          11,
+          31,
+          11,
+          15,
+          19,
+          27
+        ],
+        "metrics": [
+          20,
+          4,
+          8
+        ]
+      },
+      "after": {
+        "landmarks": [
+          7,
+          25,
+          10,
+          14,
+          18,
+          25
+        ],
+        "metrics": [
+          18,
+          4,
+          7
+        ]
+      },
+      "disposition": "re-reduced alias",
+      "nativeReference": {
+        "id": "skid-00",
+        "size": [
+          38,
+          38
+        ],
+        "hotspot": [
+          18,
+          18
+        ],
+        "bbox_relative_to_hotspot": [
+          -18,
+          -18,
+          20,
+          20
+        ],
+        "game": "S2",
+        "mapping": 210,
+        "label": "Map_Sonic_1888"
+      },
+      "exception": null
+    },
+    "stop-01": {
+      "before": {
+        "landmarks": [
+          12,
+          32,
+          11,
+          15,
+          19,
+          27
+        ],
+        "metrics": [
+          20,
+          4,
+          8
+        ]
+      },
+      "after": {
+        "landmarks": [
+          9,
+          27,
+          10,
+          14,
+          18,
+          25
+        ],
+        "metrics": [
+          18,
+          4,
+          7
+        ]
+      },
+      "disposition": "re-reduced alias",
+      "nativeReference": {
+        "id": "skid-01",
+        "size": [
+          38,
+          38
+        ],
+        "hotspot": [
+          18,
+          18
+        ],
+        "bbox_relative_to_hotspot": [
+          -18,
+          -18,
+          20,
+          20
+        ],
+        "game": "S2",
+        "mapping": 211,
+        "label": "Map_Sonic_18AA"
+      },
+      "exception": null
+    },
+    "stop-02": {
+      "before": {
+        "landmarks": [
+          10,
+          30,
+          11,
+          15,
+          19,
+          27
+        ],
+        "metrics": [
+          20,
+          4,
+          8
+        ]
+      },
+      "after": {
+        "landmarks": [
+          11,
+          29,
+          10,
+          14,
+          18,
+          25
+        ],
+        "metrics": [
+          18,
+          4,
+          7
+        ]
+      },
+      "disposition": "re-reduced alias",
+      "nativeReference": {
+        "id": "skid-02",
+        "size": [
+          37,
+          39
+        ],
+        "hotspot": [
+          17,
+          19
+        ],
+        "bbox_relative_to_hotspot": [
+          -17,
+          -19,
+          20,
+          20
+        ],
+        "game": "S2",
+        "mapping": 212,
+        "label": "Map_Sonic_18CC"
+      },
+      "exception": null
+    },
+    "stop-03": {
+      "before": {
+        "landmarks": [
+          3,
+          20,
+          10,
+          14,
+          18,
+          26
+        ],
+        "metrics": [
+          17,
+          4,
+          8
+        ]
+      },
+      "after": {
+        "landmarks": [
+          2,
+          20,
+          11,
+          15,
+          19,
+          27
+        ],
+        "metrics": [
+          18,
+          4,
+          8
+        ]
+      },
+      "disposition": "re-reduced alias",
+      "nativeReference": {
+        "id": "skid-03",
+        "size": [
+          26,
+          37
+        ],
+        "hotspot": [
+          11,
+          17
+        ],
+        "bbox_relative_to_hotspot": [
+          -11,
+          -17,
+          15,
+          20
+        ],
+        "game": "S2",
+        "mapping": 213,
+        "label": "Map_Sonic_18EE"
+      },
+      "exception": null
+    },
+    "roll-00": {
+      "before": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "after": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-art-round3-20261109/roll-native-00.png",
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "roll-01": {
+      "before": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "after": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-art-round3-20261109/roll-native-01.png",
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "roll-02": {
+      "before": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "after": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-art-round3-20261109/roll-native-02.png",
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "roll-03": {
+      "before": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "after": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-art-round3-20261109/roll-native-03.png",
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "spindash-00": {
+      "before": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "after": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "/tmp/mica-np-core-20261108/native/spindash-00.png",
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "spindash-01": {
+      "before": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "after": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "/tmp/mica-np-core-20261108/native/spindash-01.png",
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "spindash-02": {
+      "before": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "after": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "/tmp/mica-np-core-20261108/native/spindash-02.png",
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "spindash-03": {
+      "before": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "after": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "/tmp/mica-np-core-20261108/native/spindash-03.png",
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "spindash-04": {
+      "before": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "after": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": {
+        "id": "spindash-04",
+        "size": [
+          29,
+          27
+        ],
+        "hotspot": [
+          11,
+          7
+        ],
+        "mapping": 71,
+        "label": "Map_Sonic_089A",
+        "game": "S2"
+      },
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "homing_dive-00": {
+      "before": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "after": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "/tmp/mica-np-core-20261108/native/homing_dive-00.png",
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "homing_dive-01": {
+      "before": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "after": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "/tmp/mica-np-core-20261108/native/homing_dive-01.png",
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "homing_dive-02": {
+      "before": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "after": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "/tmp/mica-np-core-20261108/native/homing_dive-02.png",
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "homing_dive-03": {
+      "before": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "after": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "/tmp/mica-np-core-20261108/native/homing_dive-03.png",
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "roll-blur": {
+      "before": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "after": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": {
+        "size": [
+          30,
+          30
+        ],
+        "hotspot": [
+          15,
+          15
+        ],
+        "mapping": 65,
+        "label": "Map_Sonic_085E"
+      },
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "spindash-blur": {
+      "before": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "after": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": {
+        "id": "spindash-blur",
+        "size": [
+          30,
+          27
+        ],
+        "hotspot": [
+          11,
+          7
+        ],
+        "mapping": 66,
+        "label": "Map_Sonic_0868",
+        "game": "S2"
+      },
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "native-pose-ca": {
+      "before": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "after": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": {
+        "game": "S3K",
+        "mapping": 202,
+        "label": "word_1479A4",
+        "size": [
+          32,
+          24
+        ],
+        "hotspot": [
+          17,
+          12
+        ]
+      },
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "native-pose-cb": {
+      "before": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "after": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": {
+        "game": "S3K",
+        "mapping": 203,
+        "label": "word_1479B2",
+        "size": [
+          38,
+          24
+        ],
+        "hotspot": [
+          21,
+          12
+        ]
+      },
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "native-pose-24": {
+      "before": {
+        "landmarks": [
+          8,
+          26,
+          9,
+          13,
+          17,
+          24
+        ],
+        "metrics": [
+          18,
+          4,
+          7
+        ]
+      },
+      "after": {
+        "landmarks": [
+          8,
+          26,
+          9,
+          13,
+          17,
+          24
+        ],
+        "metrics": [
+          18,
+          4,
+          7
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": {
+        "game": "S3K",
+        "mapping": 36,
+        "label": "word_146D06",
+        "size": [
+          32,
+          36
+        ],
+        "hotspot": [
+          16,
+          16
+        ]
+      },
+      "exception": null
+    },
+    "native-pose-55": {
+      "before": {
+        "landmarks": [
+          1,
+          19,
+          10,
+          14,
+          18,
+          26
+        ],
+        "metrics": [
+          18,
+          4,
+          8
+        ]
+      },
+      "after": {
+        "landmarks": [
+          1,
+          19,
+          10,
+          14,
+          18,
+          26
+        ],
+        "metrics": [
+          18,
+          4,
+          8
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": {
+        "game": "S3K",
+        "mapping": 85,
+        "label": "word_147092",
+        "size": [
+          27,
+          39
+        ],
+        "hotspot": [
+          15,
+          19
+        ]
+      },
+      "exception": null
+    },
+    "native-pose-56": {
+      "before": {
+        "landmarks": [
+          1,
+          19,
+          10,
+          14,
+          18,
+          26
+        ],
+        "metrics": [
+          18,
+          4,
+          8
+        ]
+      },
+      "after": {
+        "landmarks": [
+          1,
+          19,
+          10,
+          14,
+          18,
+          26
+        ],
+        "metrics": [
+          18,
+          4,
+          8
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": {
+        "game": "S3K",
+        "mapping": 86,
+        "label": "word_1470AC",
+        "size": [
+          27,
+          39
+        ],
+        "hotspot": [
+          14,
+          19
+        ]
+      },
+      "exception": null
+    },
+    "native-pose-57": {
+      "before": {
+        "landmarks": [
+          1,
+          19,
+          10,
+          14,
+          18,
+          26
+        ],
+        "metrics": [
+          18,
+          4,
+          8
+        ]
+      },
+      "after": {
+        "landmarks": [
+          1,
+          19,
+          10,
+          14,
+          18,
+          26
+        ],
+        "metrics": [
+          18,
+          4,
+          8
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": {
+        "game": "S3K",
+        "mapping": 87,
+        "label": "word_1470C0",
+        "size": [
+          27,
+          39
+        ],
+        "hotspot": [
+          16,
+          19
+        ]
+      },
+      "exception": null
+    },
+    "native-pose-59": {
+      "before": {
+        "landmarks": [
+          1,
+          19,
+          10,
+          14,
+          18,
+          26
+        ],
+        "metrics": [
+          18,
+          4,
+          8
+        ]
+      },
+      "after": {
+        "landmarks": [
+          1,
+          19,
+          10,
+          14,
+          18,
+          26
+        ],
+        "metrics": [
+          18,
+          4,
+          8
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": {
+        "game": "S3K",
+        "mapping": 89,
+        "label": "word_1470DC",
+        "size": [
+          27,
+          39
+        ],
+        "hotspot": [
+          12,
+          19
+        ]
+      },
+      "exception": null
+    },
+    "native-pose-5a": {
+      "before": {
+        "landmarks": [
+          1,
+          19,
+          null,
+          null,
+          18,
+          26
+        ],
+        "metrics": [
+          18,
+          null,
+          8
+        ]
+      },
+      "after": {
+        "landmarks": [
+          1,
+          19,
+          null,
+          null,
+          18,
+          26
+        ],
+        "metrics": [
+          18,
+          null,
+          8
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": {
+        "game": "S3K",
+        "mapping": 90,
+        "label": "word_1470F6",
+        "size": [
+          26,
+          40
+        ],
+        "hotspot": [
+          12,
+          20
+        ]
+      },
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "variant-s1-33": {
+      "before": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "after": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch2-20261109/s1-33-native.png",
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "variant-s1-43": {
+      "before": {
+        "landmarks": [
+          1,
+          19,
+          10,
+          14,
+          19,
+          27
+        ],
+        "metrics": [
+          18,
+          4,
+          8
+        ]
+      },
+      "after": {
+        "landmarks": [
+          1,
+          19,
+          10,
+          14,
+          19,
+          27
+        ],
+        "metrics": [
+          18,
+          4,
+          8
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch2-20261109/s1-43-native.png",
+      "exception": null
+    },
+    "variant-s1-44": {
+      "before": {
+        "landmarks": [
+          1,
+          19,
+          10,
+          14,
+          19,
+          27
+        ],
+        "metrics": [
+          18,
+          4,
+          8
+        ]
+      },
+      "after": {
+        "landmarks": [
+          1,
+          19,
+          10,
+          14,
+          19,
+          27
+        ],
+        "metrics": [
+          18,
+          4,
+          8
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch2-20261109/s1-44-native.png",
+      "exception": null
+    },
+    "variant-s1-4b": {
+      "before": {
+        "landmarks": [
+          3,
+          21,
+          10,
+          14,
+          19,
+          27
+        ],
+        "metrics": [
+          18,
+          4,
+          8
+        ]
+      },
+      "after": {
+        "landmarks": [
+          3,
+          21,
+          10,
+          14,
+          19,
+          27
+        ],
+        "metrics": [
+          18,
+          4,
+          8
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch2-20261109/s1-4b-native.png",
+      "exception": null
+    },
+    "variant-s1-49": {
+      "before": {
+        "landmarks": [
+          1,
+          19,
+          10,
+          14,
+          18,
+          25
+        ],
+        "metrics": [
+          18,
+          4,
+          7
+        ]
+      },
+      "after": {
+        "landmarks": [
+          1,
+          19,
+          10,
+          14,
+          18,
+          25
+        ],
+        "metrics": [
+          18,
+          4,
+          7
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch2-20261109/s1-49-native.png",
+      "exception": null
+    },
+    "variant-s1-4e": {
+      "before": {
+        "landmarks": [
+          6,
+          24,
+          10,
+          14,
+          18,
+          26
+        ],
+        "metrics": [
+          18,
+          4,
+          8
+        ]
+      },
+      "after": {
+        "landmarks": [
+          6,
+          24,
+          10,
+          14,
+          18,
+          26
+        ],
+        "metrics": [
+          18,
+          4,
+          8
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch2-20261109/s1-4e-native.png",
+      "exception": null
+    },
+    "variant-s2-6c": {
+      "before": {
+        "landmarks": [
+          1,
+          19,
+          17,
+          21,
+          24,
+          29
+        ],
+        "metrics": [
+          18,
+          4,
+          5
+        ]
+      },
+      "after": {
+        "landmarks": [
+          1,
+          19,
+          17,
+          21,
+          24,
+          29
+        ],
+        "metrics": [
+          18,
+          4,
+          5
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch2-20261109/s2-6c-native.png",
+      "exception": null
+    },
+    "variant-s3k-c5": {
+      "before": {
+        "landmarks": [
+          1,
+          19,
+          10,
+          14,
+          19,
+          27
+        ],
+        "metrics": [
+          18,
+          4,
+          8
+        ]
+      },
+      "after": {
+        "landmarks": [
+          1,
+          19,
+          10,
+          14,
+          19,
+          27
+        ],
+        "metrics": [
+          18,
+          4,
+          8
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch2-20261109/s3k-c5-native.png",
+      "exception": null
+    },
+    "variant-s3k-c6": {
+      "before": {
+        "landmarks": [
+          1,
+          19,
+          10,
+          14,
+          19,
+          27
+        ],
+        "metrics": [
+          18,
+          4,
+          8
+        ]
+      },
+      "after": {
+        "landmarks": [
+          1,
+          19,
+          10,
+          14,
+          19,
+          27
+        ],
+        "metrics": [
+          18,
+          4,
+          8
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch2-20261109/s3k-c6-native.png",
+      "exception": null
+    },
+    "variant-s3k-c7": {
+      "before": {
+        "landmarks": [
+          1,
+          19,
+          10,
+          14,
+          19,
+          27
+        ],
+        "metrics": [
+          18,
+          4,
+          8
+        ]
+      },
+      "after": {
+        "landmarks": [
+          1,
+          19,
+          10,
+          14,
+          19,
+          27
+        ],
+        "metrics": [
+          18,
+          4,
+          8
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch2-20261109/s3k-c7-native.png",
+      "exception": null
+    },
+    "variant-s3k-8f": {
+      "before": {
+        "landmarks": [
+          1,
+          21,
+          10,
+          14,
+          null,
+          null
+        ],
+        "metrics": [
+          20,
+          4,
+          null
+        ]
+      },
+      "after": {
+        "landmarks": [
+          1,
+          21,
+          10,
+          14,
+          null,
+          null
+        ],
+        "metrics": [
+          20,
+          4,
+          null
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch2-20261109/s3k-8f-native.png",
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "variant-s3k-a1": {
+      "before": {
+        "landmarks": [
+          3,
+          21,
+          10,
+          14,
+          18,
+          26
+        ],
+        "metrics": [
+          18,
+          4,
+          8
+        ]
+      },
+      "after": {
+        "landmarks": [
+          3,
+          21,
+          10,
+          14,
+          18,
+          26
+        ],
+        "metrics": [
+          18,
+          4,
+          8
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch2-20261109/s3k-a1-native.png",
+      "exception": null
+    },
+    "variant-s3k-a2": {
+      "before": {
+        "landmarks": [
+          1,
+          21,
+          11,
+          15,
+          20,
+          28
+        ],
+        "metrics": [
+          20,
+          4,
+          8
+        ]
+      },
+      "after": {
+        "landmarks": [
+          1,
+          19,
+          10,
+          14,
+          18,
+          25
+        ],
+        "metrics": [
+          18,
+          4,
+          7
+        ]
+      },
+      "disposition": "re-reduced",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch2-20261109/s3k-a2-native.png",
+      "exception": null
+    },
+    "variant-s3k-a3": {
+      "before": {
+        "landmarks": [
+          1,
+          21,
+          11,
+          15,
+          20,
+          28
+        ],
+        "metrics": [
+          20,
+          4,
+          8
+        ]
+      },
+      "after": {
+        "landmarks": [
+          1,
+          19,
+          10,
+          14,
+          18,
+          25
+        ],
+        "metrics": [
+          18,
+          4,
+          7
+        ]
+      },
+      "disposition": "re-reduced",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch2-20261109/s3k-a3-native.png",
+      "exception": null
+    },
+    "variant-s3k-c8": {
+      "before": {
+        "landmarks": [
+          14,
+          34,
+          9,
+          13,
+          null,
+          null
+        ],
+        "metrics": [
+          20,
+          4,
+          null
+        ]
+      },
+      "after": {
+        "landmarks": [
+          13,
+          31,
+          8,
+          12,
+          null,
+          null
+        ],
+        "metrics": [
+          18,
+          4,
+          null
+        ]
+      },
+      "disposition": "re-reduced",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch2-20261109/s3k-c8-native.png",
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "variant-s3k-c9": {
+      "before": {
+        "landmarks": [
+          6,
+          26,
+          9,
+          13,
+          null,
+          null
+        ],
+        "metrics": [
+          20,
+          4,
+          null
+        ]
+      },
+      "after": {
+        "landmarks": [
+          5,
+          23,
+          8,
+          12,
+          null,
+          null
+        ],
+        "metrics": [
+          18,
+          4,
+          null
+        ]
+      },
+      "disposition": "re-reduced",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch2-20261109/s3k-c9-native.png",
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "variant-s3k-ca": {
+      "before": {
+        "landmarks": [
+          1,
+          19,
+          11,
+          15,
+          null,
+          null
+        ],
+        "metrics": [
+          18,
+          4,
+          null
+        ]
+      },
+      "after": {
+        "landmarks": [
+          1,
+          19,
+          11,
+          15,
+          null,
+          null
+        ],
+        "metrics": [
+          18,
+          4,
+          null
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch2-20261109/s3k-ca-native.png",
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "variant-s3k-cb": {
+      "before": {
+        "landmarks": [
+          6,
+          24,
+          10,
+          14,
+          null,
+          null
+        ],
+        "metrics": [
+          18,
+          4,
+          null
+        ]
+      },
+      "after": {
+        "landmarks": [
+          6,
+          24,
+          10,
+          14,
+          null,
+          null
+        ],
+        "metrics": [
+          18,
+          4,
+          null
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch2-20261109/s3k-cb-native.png",
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "variant-s3k-cc": {
+      "before": {
+        "landmarks": [
+          4,
+          24,
+          10,
+          14,
+          null,
+          null
+        ],
+        "metrics": [
+          20,
+          4,
+          null
+        ]
+      },
+      "after": {
+        "landmarks": [
+          4,
+          22,
+          9,
+          13,
+          null,
+          null
+        ],
+        "metrics": [
+          18,
+          4,
+          null
+        ]
+      },
+      "disposition": "re-reduced",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch2-20261109/s3k-cc-native.png",
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "variant-s3k-cd": {
+      "before": {
+        "landmarks": [
+          3,
+          21,
+          null,
+          null,
+          null,
+          null
+        ],
+        "metrics": [
+          18,
+          null,
+          null
+        ]
+      },
+      "after": {
+        "landmarks": [
+          3,
+          21,
+          null,
+          null,
+          null,
+          null
+        ],
+        "metrics": [
+          18,
+          null,
+          null
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch2-20261109/s3k-cd-native.png",
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "variant-s3k-ce": {
+      "before": {
+        "landmarks": [
+          1,
+          19,
+          null,
+          null,
+          null,
+          null
+        ],
+        "metrics": [
+          18,
+          null,
+          null
+        ]
+      },
+      "after": {
+        "landmarks": [
+          1,
+          19,
+          null,
+          null,
+          null,
+          null
+        ],
+        "metrics": [
+          18,
+          null,
+          null
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch2-20261109/s3k-ce-native.png",
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "variant-s3k-cf": {
+      "before": {
+        "landmarks": [
+          11,
+          29,
+          null,
+          null,
+          null,
+          null
+        ],
+        "metrics": [
+          18,
+          null,
+          null
+        ]
+      },
+      "after": {
+        "landmarks": [
+          11,
+          29,
+          null,
+          null,
+          null,
+          null
+        ],
+        "metrics": [
+          18,
+          null,
+          null
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch2-20261109/s3k-cf-native.png",
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "variant-s3k-b0": {
+      "before": {
+        "landmarks": [
+          1,
+          19,
+          9,
+          13,
+          17,
+          24
+        ],
+        "metrics": [
+          18,
+          4,
+          7
+        ]
+      },
+      "after": {
+        "landmarks": [
+          1,
+          19,
+          9,
+          13,
+          17,
+          24
+        ],
+        "metrics": [
+          18,
+          4,
+          7
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch2-20261109/s3k-b0-native.png",
+      "exception": null
+    },
+    "variant-s3k-b2": {
+      "before": {
+        "landmarks": [
+          1,
+          19,
+          9,
+          13,
+          17,
+          24
+        ],
+        "metrics": [
+          18,
+          4,
+          7
+        ]
+      },
+      "after": {
+        "landmarks": [
+          1,
+          19,
+          9,
+          13,
+          17,
+          24
+        ],
+        "metrics": [
+          18,
+          4,
+          7
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch2-20261109/s3k-b2-native.png",
+      "exception": null
+    },
+    "variant-s3k-b1": {
+      "before": {
+        "landmarks": [
+          1,
+          19,
+          10,
+          14,
+          18,
+          26
+        ],
+        "metrics": [
+          18,
+          4,
+          8
+        ]
+      },
+      "after": {
+        "landmarks": [
+          1,
+          19,
+          10,
+          14,
+          18,
+          26
+        ],
+        "metrics": [
+          18,
+          4,
+          8
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch2-20261109/s3k-b1-native.png",
+      "exception": null
+    },
+    "variant-s3k-b3": {
+      "before": {
+        "landmarks": [
+          1,
+          19,
+          10,
+          14,
+          18,
+          26
+        ],
+        "metrics": [
+          18,
+          4,
+          8
+        ]
+      },
+      "after": {
+        "landmarks": [
+          1,
+          19,
+          10,
+          14,
+          18,
+          26
+        ],
+        "metrics": [
+          18,
+          4,
+          8
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch2-20261109/s3k-b3-native.png",
+      "exception": null
+    },
+    "variant-s3k-ac": {
+      "before": {
+        "landmarks": [
+          1,
+          19,
+          9,
+          10,
+          17,
+          24
+        ],
+        "metrics": [
+          18,
+          1,
+          7
+        ]
+      },
+      "after": {
+        "landmarks": [
+          1,
+          19,
+          9,
+          10,
+          17,
+          24
+        ],
+        "metrics": [
+          18,
+          1,
+          7
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch2-20261109/s3k-ac-native.png",
+      "exception": null
+    },
+    "variant-s3k-03": {
+      "before": {
+        "landmarks": [
+          1,
+          21,
+          10,
+          14,
+          18,
+          25
+        ],
+        "metrics": [
+          20,
+          4,
+          7
+        ]
+      },
+      "after": {
+        "landmarks": [
+          1,
+          19,
+          9,
+          13,
+          16,
+          22
+        ],
+        "metrics": [
+          18,
+          4,
+          6
+        ]
+      },
+      "disposition": "re-reduced",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch2-20261109/s3k-03-native.png",
+      "exception": null
+    },
+    "variant-s3k-04": {
+      "before": {
+        "landmarks": [
+          1,
+          21,
+          10,
+          14,
+          18,
+          25
+        ],
+        "metrics": [
+          20,
+          4,
+          7
+        ]
+      },
+      "after": {
+        "landmarks": [
+          1,
+          19,
+          9,
+          13,
+          16,
+          22
+        ],
+        "metrics": [
+          18,
+          4,
+          6
+        ]
+      },
+      "disposition": "re-reduced",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch2-20261109/s3k-04-native.png",
+      "exception": null
+    },
+    "variant-s3k-8c": {
+      "before": {
+        "landmarks": [
+          6,
+          24,
+          10,
+          14,
+          18,
+          25
+        ],
+        "metrics": [
+          18,
+          4,
+          7
+        ]
+      },
+      "after": {
+        "landmarks": [
+          6,
+          24,
+          10,
+          14,
+          18,
+          25
+        ],
+        "metrics": [
+          18,
+          4,
+          7
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch2-20261109/s3k-8c-native.png",
+      "exception": null
+    },
+    "variant-s3k-8d": {
+      "before": {
+        "landmarks": [
+          3,
+          21,
+          10,
+          14,
+          18,
+          25
+        ],
+        "metrics": [
+          18,
+          4,
+          7
+        ]
+      },
+      "after": {
+        "landmarks": [
+          3,
+          21,
+          10,
+          14,
+          18,
+          25
+        ],
+        "metrics": [
+          18,
+          4,
+          7
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch2-20261109/s3k-8d-native.png",
+      "exception": null
+    },
+    "variant-s3k-d0": {
+      "before": {
+        "landmarks": [
+          6,
+          24,
+          10,
+          14,
+          18,
+          25
+        ],
+        "metrics": [
+          18,
+          4,
+          7
+        ]
+      },
+      "after": {
+        "landmarks": [
+          6,
+          24,
+          10,
+          14,
+          18,
+          25
+        ],
+        "metrics": [
+          18,
+          4,
+          7
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch2-20261109/s3k-d0-native.png",
+      "exception": null
+    },
+    "variant-s3k-d1": {
+      "before": {
+        "landmarks": [
+          3,
+          21,
+          10,
+          14,
+          18,
+          25
+        ],
+        "metrics": [
+          18,
+          4,
+          7
+        ]
+      },
+      "after": {
+        "landmarks": [
+          3,
+          21,
+          10,
+          14,
+          18,
+          25
+        ],
+        "metrics": [
+          18,
+          4,
+          7
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch2-20261109/s3k-d1-native.png",
+      "exception": null
+    },
+    "variant-s2-0a": {
+      "before": {
+        "landmarks": [
+          1,
+          19,
+          10,
+          14,
+          18,
+          25
+        ],
+        "metrics": [
+          18,
+          4,
+          7
+        ]
+      },
+      "after": {
+        "landmarks": [
+          1,
+          19,
+          10,
+          14,
+          18,
+          25
+        ],
+        "metrics": [
+          18,
+          4,
+          7
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch2-20261109/s2-0a-native.png",
+      "exception": null
+    },
+    "variant-blank": {
+      "before": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "after": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": null,
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "variant-s1-33-rot52": {
+      "before": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "after": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": null,
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "variant-s1-33-rot53": {
+      "before": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "after": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": null,
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "variant-s1-33-rot54": {
+      "before": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "after": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": null,
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "variant-s1-4e-scale79": {
+      "before": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "after": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": null,
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "variant-s1-4e-scale80": {
+      "before": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "after": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": null,
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "variant-s1-4e-scale81": {
+      "before": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "after": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": null,
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "variant-s1-4e-scale82": {
+      "before": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "after": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": null,
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "homing_dive_forward-00": {
+      "before": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "after": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": null,
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "homing_dive_forward-01": {
+      "before": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "after": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": null,
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "homing_dive_forward-02": {
+      "before": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "after": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": null,
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "homing_dive_forward-03": {
+      "before": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "after": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": null,
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "homing_dive_forward_up-00": {
+      "before": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "after": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": null,
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "homing_dive_forward_up-01": {
+      "before": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "after": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": null,
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "homing_dive_forward_up-02": {
+      "before": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "after": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": null,
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "homing_dive_forward_up-03": {
+      "before": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "after": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": null,
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "homing_dive_up-00": {
+      "before": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "after": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": null,
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "homing_dive_up-01": {
+      "before": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "after": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": null,
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "homing_dive_up-02": {
+      "before": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "after": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": null,
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "homing_dive_up-03": {
+      "before": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "after": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": null,
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "homing_dive_down-00": {
+      "before": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "after": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": null,
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "homing_dive_down-01": {
+      "before": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "after": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": null,
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "homing_dive_down-02": {
+      "before": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "after": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": null,
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "homing_dive_down-03": {
+      "before": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "after": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": null,
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "object-pose-78": {
+      "before": {
+        "landmarks": [
+          6,
+          25,
+          18,
+          22,
+          27,
+          36
+        ],
+        "metrics": [
+          19,
+          4,
+          9
+        ]
+      },
+      "after": {
+        "landmarks": [
+          6,
+          25,
+          18,
+          22,
+          27,
+          36
+        ],
+        "metrics": [
+          19,
+          4,
+          9
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch3-20261109/native-78.png",
+      "exception": null
+    },
+    "object-pose-79": {
+      "before": {
+        "landmarks": [
+          15,
+          34,
+          18,
+          22,
+          23,
+          31
+        ],
+        "metrics": [
+          19,
+          4,
+          8
+        ]
+      },
+      "after": {
+        "landmarks": [
+          15,
+          34,
+          18,
+          22,
+          23,
+          31
+        ],
+        "metrics": [
+          19,
+          4,
+          8
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch3-20261109/native-79.png",
+      "exception": null
+    },
+    "object-pose-7a": {
+      "before": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "after": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch3-20261109/native-7a.png",
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "object-pose-7b": {
+      "before": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "after": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch3-20261109/native-7b.png",
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "object-pose-7c": {
+      "before": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "after": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch3-20261109/native-7c.png",
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "object-pose-7d": {
+      "before": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "after": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch3-20261109/native-7d.png",
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "object-pose-7e": {
+      "before": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "after": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch3-20261109/native-7e.png",
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "object-pose-7f": {
+      "before": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "after": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch3-20261109/native-7f.png",
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "object-pose-69": {
+      "before": {
+        "landmarks": [
+          4,
+          24,
+          11,
+          15,
+          22,
+          29
+        ],
+        "metrics": [
+          20,
+          4,
+          7
+        ]
+      },
+      "after": {
+        "landmarks": [
+          4,
+          22,
+          10,
+          14,
+          20,
+          27
+        ],
+        "metrics": [
+          18,
+          4,
+          7
+        ]
+      },
+      "disposition": "re-reduced",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch3-20261109/native-69.png",
+      "exception": null
+    },
+    "object-pose-6a": {
+      "before": {
+        "landmarks": [
+          3,
+          23,
+          11,
+          15,
+          22,
+          29
+        ],
+        "metrics": [
+          20,
+          4,
+          7
+        ]
+      },
+      "after": {
+        "landmarks": [
+          3,
+          21,
+          10,
+          14,
+          20,
+          27
+        ],
+        "metrics": [
+          18,
+          4,
+          7
+        ]
+      },
+      "disposition": "re-reduced",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch3-20261109/native-6a.png",
+      "exception": null
+    },
+    "object-pose-6b": {
+      "before": {
+        "landmarks": [
+          3,
+          23,
+          10,
+          14,
+          17,
+          23
+        ],
+        "metrics": [
+          20,
+          4,
+          6
+        ]
+      },
+      "after": {
+        "landmarks": [
+          3,
+          21,
+          9,
+          12,
+          15,
+          20
+        ],
+        "metrics": [
+          18,
+          3,
+          5
+        ]
+      },
+      "disposition": "re-reduced",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch3-20261109/native-6b.png",
+      "exception": null
+    },
+    "object-pose-6c": {
+      "before": {
+        "landmarks": [
+          1,
+          21,
+          null,
+          null,
+          11,
+          21
+        ],
+        "metrics": [
+          20,
+          null,
+          10
+        ]
+      },
+      "after": {
+        "landmarks": [
+          1,
+          21,
+          null,
+          null,
+          11,
+          21
+        ],
+        "metrics": [
+          20,
+          null,
+          10
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch3-20261109/native-6c.png",
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "object-pose-6d": {
+      "before": {
+        "landmarks": [
+          1,
+          21,
+          null,
+          null,
+          12,
+          22
+        ],
+        "metrics": [
+          20,
+          null,
+          10
+        ]
+      },
+      "after": {
+        "landmarks": [
+          1,
+          21,
+          null,
+          null,
+          12,
+          22
+        ],
+        "metrics": [
+          20,
+          null,
+          10
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch3-20261109/native-6d.png",
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "object-pose-6e": {
+      "before": {
+        "landmarks": [
+          1,
+          21,
+          null,
+          null,
+          8,
+          17
+        ],
+        "metrics": [
+          20,
+          null,
+          9
+        ]
+      },
+      "after": {
+        "landmarks": [
+          1,
+          21,
+          null,
+          null,
+          8,
+          17
+        ],
+        "metrics": [
+          20,
+          null,
+          9
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch3-20261109/native-6e.png",
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "object-pose-6f": {
+      "before": {
+        "landmarks": [
+          2,
+          22,
+          null,
+          null,
+          15,
+          25
+        ],
+        "metrics": [
+          20,
+          null,
+          10
+        ]
+      },
+      "after": {
+        "landmarks": [
+          2,
+          22,
+          null,
+          null,
+          15,
+          25
+        ],
+        "metrics": [
+          20,
+          null,
+          10
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch3-20261109/native-6f.png",
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "object-pose-70": {
+      "before": {
+        "landmarks": [
+          9,
+          28,
+          null,
+          null,
+          13,
+          23
+        ],
+        "metrics": [
+          19,
+          null,
+          10
+        ]
+      },
+      "after": {
+        "landmarks": [
+          9,
+          28,
+          null,
+          null,
+          13,
+          23
+        ],
+        "metrics": [
+          19,
+          null,
+          10
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch3-20261109/native-70.png",
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "object-pose-71": {
+      "before": {
+        "landmarks": [
+          13,
+          31,
+          null,
+          null,
+          15,
+          24
+        ],
+        "metrics": [
+          18,
+          null,
+          9
+        ]
+      },
+      "after": {
+        "landmarks": [
+          13,
+          31,
+          null,
+          null,
+          15,
+          24
+        ],
+        "metrics": [
+          18,
+          null,
+          9
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch3-20261109/native-71.png",
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "object-pose-72": {
+      "before": {
+        "landmarks": [
+          14,
+          33,
+          null,
+          null,
+          15,
+          25
+        ],
+        "metrics": [
+          19,
+          null,
+          10
+        ]
+      },
+      "after": {
+        "landmarks": [
+          14,
+          33,
+          null,
+          null,
+          15,
+          25
+        ],
+        "metrics": [
+          19,
+          null,
+          10
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch3-20261109/native-72.png",
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "object-pose-73": {
+      "before": {
+        "landmarks": [
+          17,
+          36,
+          null,
+          null,
+          11,
+          22
+        ],
+        "metrics": [
+          19,
+          null,
+          11
+        ]
+      },
+      "after": {
+        "landmarks": [
+          17,
+          36,
+          null,
+          null,
+          11,
+          22
+        ],
+        "metrics": [
+          19,
+          null,
+          11
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch3-20261109/native-73.png",
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "object-pose-74": {
+      "before": {
+        "landmarks": [
+          12,
+          31,
+          null,
+          null,
+          12,
+          24
+        ],
+        "metrics": [
+          19,
+          null,
+          12
+        ]
+      },
+      "after": {
+        "landmarks": [
+          12,
+          31,
+          null,
+          null,
+          12,
+          24
+        ],
+        "metrics": [
+          19,
+          null,
+          12
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch3-20261109/native-74.png",
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "object-pose-75": {
+      "before": {
+        "landmarks": [
+          3,
+          23,
+          null,
+          null,
+          16,
+          25
+        ],
+        "metrics": [
+          20,
+          null,
+          9
+        ]
+      },
+      "after": {
+        "landmarks": [
+          3,
+          23,
+          null,
+          null,
+          16,
+          25
+        ],
+        "metrics": [
+          20,
+          null,
+          9
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch3-20261109/native-75.png",
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "object-pose-76": {
+      "before": {
+        "landmarks": [
+          6,
+          26,
+          null,
+          null,
+          15,
+          25
+        ],
+        "metrics": [
+          20,
+          null,
+          10
+        ]
+      },
+      "after": {
+        "landmarks": [
+          6,
+          26,
+          null,
+          null,
+          15,
+          25
+        ],
+        "metrics": [
+          20,
+          null,
+          10
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch3-20261109/native-76.png",
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "object-pose-77": {
+      "before": {
+        "landmarks": [
+          0,
+          20,
+          null,
+          null,
+          9,
+          20
+        ],
+        "metrics": [
+          20,
+          null,
+          11
+        ]
+      },
+      "after": {
+        "landmarks": [
+          0,
+          20,
+          null,
+          null,
+          9,
+          20
+        ],
+        "metrics": [
+          20,
+          null,
+          11
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch3-20261109/native-77.png",
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "object-pose-58": {
+      "before": {
+        "landmarks": [
+          4,
+          20,
+          10,
+          14,
+          20,
+          29
+        ],
+        "metrics": [
+          16,
+          4,
+          9
+        ]
+      },
+      "after": {
+        "landmarks": [
+          4,
+          20,
+          10,
+          14,
+          20,
+          29
+        ],
+        "metrics": [
+          16,
+          4,
+          9
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch3-20261109/native-58.png",
+      "exception": null
+    },
+    "object-pose-5b": {
+      "before": {
+        "landmarks": [
+          3,
+          20,
+          null,
+          null,
+          20,
+          29
+        ],
+        "metrics": [
+          17,
+          null,
+          9
+        ]
+      },
+      "after": {
+        "landmarks": [
+          3,
+          20,
+          null,
+          null,
+          20,
+          29
+        ],
+        "metrics": [
+          17,
+          null,
+          9
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch3-20261109/native-5b.png",
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "object-pose-5c": {
+      "before": {
+        "landmarks": [
+          8,
+          25,
+          null,
+          null,
+          6,
+          15
+        ],
+        "metrics": [
+          17,
+          null,
+          9
+        ]
+      },
+      "after": {
+        "landmarks": [
+          8,
+          25,
+          null,
+          null,
+          6,
+          15
+        ],
+        "metrics": [
+          17,
+          null,
+          9
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch3-20261109/native-5c.png",
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "object-pose-5d": {
+      "before": {
+        "landmarks": [
+          6,
+          20,
+          null,
+          null,
+          6,
+          16
+        ],
+        "metrics": [
+          14,
+          null,
+          10
+        ]
+      },
+      "after": {
+        "landmarks": [
+          6,
+          20,
+          null,
+          null,
+          6,
+          16
+        ],
+        "metrics": [
+          14,
+          null,
+          10
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch3-20261109/native-5d.png",
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "object-pose-5e": {
+      "before": {
+        "landmarks": [
+          22,
+          38,
+          null,
+          null,
+          6,
+          17
+        ],
+        "metrics": [
+          16,
+          null,
+          11
+        ]
+      },
+      "after": {
+        "landmarks": [
+          22,
+          38,
+          null,
+          null,
+          6,
+          17
+        ],
+        "metrics": [
+          16,
+          null,
+          11
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch3-20261109/native-5e.png",
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "object-pose-5f": {
+      "before": {
+        "landmarks": [
+          25,
+          42,
+          null,
+          null,
+          6,
+          17
+        ],
+        "metrics": [
+          17,
+          null,
+          11
+        ]
+      },
+      "after": {
+        "landmarks": [
+          25,
+          42,
+          null,
+          null,
+          6,
+          17
+        ],
+        "metrics": [
+          17,
+          null,
+          11
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch3-20261109/native-5f.png",
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "object-pose-60": {
+      "before": {
+        "landmarks": [
+          13,
+          29,
+          null,
+          null,
+          6,
+          17
+        ],
+        "metrics": [
+          16,
+          null,
+          11
+        ]
+      },
+      "after": {
+        "landmarks": [
+          13,
+          29,
+          null,
+          null,
+          6,
+          17
+        ],
+        "metrics": [
+          16,
+          null,
+          11
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch3-20261109/native-60.png",
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "object-pose-61": {
+      "before": {
+        "landmarks": [
+          2,
+          18,
+          null,
+          null,
+          6,
+          17
+        ],
+        "metrics": [
+          16,
+          null,
+          11
+        ]
+      },
+      "after": {
+        "landmarks": [
+          2,
+          18,
+          null,
+          null,
+          6,
+          17
+        ],
+        "metrics": [
+          16,
+          null,
+          11
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch3-20261109/native-61.png",
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "object-pose-62": {
+      "before": {
+        "landmarks": [
+          5,
+          24,
+          10,
+          14,
+          15,
+          23
+        ],
+        "metrics": [
+          19,
+          4,
+          8
+        ]
+      },
+      "after": {
+        "landmarks": [
+          5,
+          24,
+          10,
+          14,
+          15,
+          23
+        ],
+        "metrics": [
+          19,
+          4,
+          8
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch3-20261109/native-62.png",
+      "exception": null
+    },
+    "object-pose-63": {
+      "before": {
+        "landmarks": [
+          3,
+          19,
+          16,
+          20,
+          29,
+          37
+        ],
+        "metrics": [
+          16,
+          4,
+          8
+        ]
+      },
+      "after": {
+        "landmarks": [
+          3,
+          19,
+          16,
+          20,
+          29,
+          37
+        ],
+        "metrics": [
+          16,
+          4,
+          8
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch3-20261109/native-63.png",
+      "exception": null
+    },
+    "object-pose-64": {
+      "before": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "after": {
+        "landmarks": null,
+        "metrics": [
+          null,
+          null,
+          null
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch3-20261109/native-64.png",
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "object-pose-65": {
+      "before": {
+        "landmarks": [
+          3,
+          19,
+          null,
+          null,
+          6,
+          17
+        ],
+        "metrics": [
+          16,
+          null,
+          11
+        ]
+      },
+      "after": {
+        "landmarks": [
+          3,
+          19,
+          null,
+          null,
+          6,
+          17
+        ],
+        "metrics": [
+          16,
+          null,
+          11
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch3-20261109/native-65.png",
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "object-pose-66": {
+      "before": {
+        "landmarks": [
+          3,
+          19,
+          null,
+          null,
+          9,
+          23
+        ],
+        "metrics": [
+          16,
+          null,
+          14
+        ]
+      },
+      "after": {
+        "landmarks": [
+          3,
+          19,
+          null,
+          null,
+          9,
+          23
+        ],
+        "metrics": [
+          16,
+          null,
+          14
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch3-20261109/native-66.png",
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "object-pose-67": {
+      "before": {
+        "landmarks": [
+          3,
+          20,
+          null,
+          null,
+          5,
+          15
+        ],
+        "metrics": [
+          17,
+          null,
+          10
+        ]
+      },
+      "after": {
+        "landmarks": [
+          3,
+          20,
+          null,
+          null,
+          5,
+          15
+        ],
+        "metrics": [
+          17,
+          null,
+          10
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch3-20261109/native-67.png",
+      "exception": "Landmarks hidden or rotated; do not infer from bounding box"
+    },
+    "object-pose-68": {
+      "before": {
+        "landmarks": [
+          2,
+          21,
+          12,
+          16,
+          20,
+          27
+        ],
+        "metrics": [
+          19,
+          4,
+          7
+        ]
+      },
+      "after": {
+        "landmarks": [
+          2,
+          21,
+          12,
+          16,
+          20,
+          27
+        ],
+        "metrics": [
+          19,
+          4,
+          7
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch3-20261109/native-68.png",
+      "exception": null
+    },
+    "object-pose-94": {
+      "before": {
+        "landmarks": [
+          6,
+          24,
+          21,
+          25,
+          29,
+          38
+        ],
+        "metrics": [
+          18,
+          4,
+          9
+        ]
+      },
+      "after": {
+        "landmarks": [
+          6,
+          24,
+          21,
+          25,
+          29,
+          38
+        ],
+        "metrics": [
+          18,
+          4,
+          9
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch3-20261109/native-94.png",
+      "exception": null
+    },
+    "object-pose-95": {
+      "before": {
+        "landmarks": [
+          2,
+          19,
+          19,
+          23,
+          29,
+          38
+        ],
+        "metrics": [
+          17,
+          4,
+          9
+        ]
+      },
+      "after": {
+        "landmarks": [
+          2,
+          19,
+          19,
+          23,
+          29,
+          38
+        ],
+        "metrics": [
+          17,
+          4,
+          9
+        ]
+      },
+      "disposition": "unchanged",
+      "nativeReference": "$HOME/scratch/agent-tmp/mica-batch3-20261109/native-95.png",
+      "exception": null
+    }
+  },
+  "families": {
+    "WAIT": {
+      "ids": [
+        "wait-00",
+        "wait-01",
+        "wait-02",
+        "wait-03",
+        "wait-04",
+        "wait-05",
+        "wait-06",
+        "wait-07",
+        "wait-08"
+      ],
+      "disposition": "unchanged"
+    },
+    "ROLL": {
+      "ids": [
+        "roll-00",
+        "roll-01",
+        "roll-02",
+        "roll-03",
+        "roll-blur"
+      ],
+      "disposition": "unchanged"
+    },
+    "WALK": {
+      "ids": [
+        "walk-00",
+        "walk-01",
+        "walk-02",
+        "walk-03",
+        "walk-04",
+        "walk-05",
+        "walk-06",
+        "walk-07"
+      ],
+      "disposition": "unchanged"
+    },
+    "RUN": {
+      "ids": [
+        "run-00",
+        "run-01",
+        "run-02",
+        "run-03"
+      ],
+      "disposition": "unchanged"
+    },
+    "SPRING": {
+      "ids": [
+        "spring-00"
+      ],
+      "disposition": "unchanged"
+    },
+    "HURT": {
+      "ids": [
+        "hurt-00"
+      ],
+      "disposition": "unchanged"
+    },
+    "HOMING_DIVE": {
+      "ids": [
+        "homing_dive-00",
+        "homing_dive-01",
+        "homing_dive-02",
+        "homing_dive-03"
+      ],
+      "disposition": "unchanged"
+    },
+    "SPINDASH": {
+      "ids": [
+        "spindash-00",
+        "spindash-01",
+        "spindash-02",
+        "spindash-03",
+        "spindash-04",
+        "spindash-blur"
+      ],
+      "disposition": "unchanged"
+    },
+    "WALK / up45": {
+      "ids": [
+        "walk-up45-00",
+        "walk-up45-01",
+        "walk-up45-02",
+        "walk-up45-03",
+        "walk-up45-04",
+        "walk-up45-05",
+        "walk-up45-06",
+        "walk-up45-07"
+      ],
+      "disposition": "unchanged"
+    },
+    "WALK / steep": {
+      "ids": [
+        "walk-steep-00",
+        "walk-steep-01",
+        "walk-steep-02",
+        "walk-steep-03",
+        "walk-steep-04",
+        "walk-steep-05",
+        "walk-steep-06",
+        "walk-steep-07"
+      ],
+      "disposition": "unchanged"
+    },
+    "WALK / inverted": {
+      "ids": [
+        "walk-inverted-00",
+        "walk-inverted-01",
+        "walk-inverted-02",
+        "walk-inverted-03",
+        "walk-inverted-04",
+        "walk-inverted-05",
+        "walk-inverted-06",
+        "walk-inverted-07"
+      ],
+      "disposition": "unchanged"
+    },
+    "RUN / up45": {
+      "ids": [
+        "run-up45-00",
+        "run-up45-01",
+        "run-up45-02",
+        "run-up45-03"
+      ],
+      "disposition": "unchanged"
+    },
+    "RUN / steep": {
+      "ids": [
+        "run-steep-00",
+        "run-steep-01",
+        "run-steep-02",
+        "run-steep-03"
+      ],
+      "disposition": "unchanged"
+    },
+    "RUN / inverted": {
+      "ids": [
+        "run-inverted-00",
+        "run-inverted-01",
+        "run-inverted-02",
+        "run-inverted-03"
+      ],
+      "disposition": "unchanged"
+    },
+    "DEATH": {
+      "ids": [
+        "death-00",
+        "death-01"
+      ],
+      "disposition": "unchanged"
+    },
+    "PUSH": {
+      "ids": [
+        "push-00",
+        "push-01"
+      ],
+      "disposition": "re-reduced (scale)"
+    },
+    "DUCK": {
+      "ids": [
+        "duck-00",
+        "duck-01"
+      ],
+      "disposition": "regenerated"
+    },
+    "LOOK_UP": {
+      "ids": [
+        "look_up-00",
+        "look_up-01"
+      ],
+      "disposition": "re-reduced (scale)"
+    },
+    "SKID": {
+      "ids": [
+        "skid-00",
+        "skid-01",
+        "skid-02",
+        "skid-03"
+      ],
+      "disposition": "re-reduced (scale)"
+    },
+    "BALANCE": {
+      "ids": [
+        "balance-00",
+        "balance-01",
+        "balance-02",
+        "balance-03"
+      ],
+      "disposition": "regenerated"
+    },
+    "DROWN": {
+      "ids": [
+        "drown-00",
+        "drown-01",
+        "drown-02"
+      ],
+      "disposition": "unchanged"
+    },
+    "GET_AIR": {
+      "ids": [
+        "get_air-00",
+        "get_air-01"
+      ],
+      "disposition": "re-reduced (scale)"
+    },
+    "HANG": {
+      "ids": [
+        "hang-00",
+        "hang-01",
+        "hang-02"
+      ],
+      "disposition": "re-reduced (scale)"
+    },
+    "STOP": {
+      "ids": [
+        "stop-00",
+        "stop-01",
+        "stop-02",
+        "stop-03"
+      ],
+      "disposition": "re-reduced (scale)"
+    },
+    "OBJECT / crane": {
+      "ids": [
+        "native-pose-ca"
+      ],
+      "disposition": "unchanged"
+    },
+    "OBJECT / hang": {
+      "ids": [
+        "native-pose-cb"
+      ],
+      "disposition": "unchanged"
+    },
+    "OBJECT / bar": {
+      "ids": [
+        "native-pose-24",
+        "object-pose-63",
+        "object-pose-64",
+        "object-pose-65",
+        "object-pose-66",
+        "object-pose-67",
+        "object-pose-68"
+      ],
+      "disposition": "unchanged"
+    },
+    "OBJECT / twist": {
+      "ids": [
+        "native-pose-55",
+        "native-pose-56",
+        "native-pose-57",
+        "native-pose-59",
+        "native-pose-5a",
+        "object-pose-58",
+        "object-pose-5b"
+      ],
+      "disposition": "unchanged"
+    },
+    "HOMING_DIVE_FORWARD": {
+      "ids": [
+        "homing_dive_forward-00",
+        "homing_dive_forward-01",
+        "homing_dive_forward-02",
+        "homing_dive_forward-03"
+      ],
+      "disposition": "unchanged"
+    },
+    "HOMING_DIVE_FORWARD_UP": {
+      "ids": [
+        "homing_dive_forward_up-00",
+        "homing_dive_forward_up-01",
+        "homing_dive_forward_up-02",
+        "homing_dive_forward_up-03"
+      ],
+      "disposition": "unchanged"
+    },
+    "HOMING_DIVE_UP": {
+      "ids": [
+        "homing_dive_up-00",
+        "homing_dive_up-01",
+        "homing_dive_up-02",
+        "homing_dive_up-03"
+      ],
+      "disposition": "unchanged"
+    },
+    "HOMING_DIVE_DOWN": {
+      "ids": [
+        "homing_dive_down-00",
+        "homing_dive_down-01",
+        "homing_dive_down-02",
+        "homing_dive_down-03"
+      ],
+      "disposition": "unchanged"
+    },
+    "OBJECT / family-warp1": {
+      "ids": [
+        "variant-s1-33"
+      ],
+      "disposition": "unchanged"
+    },
+    "OBJECT / family-leap1": {
+      "ids": [
+        "variant-s1-43",
+        "variant-s1-44"
+      ],
+      "disposition": "unchanged"
+    },
+    "OBJECT / family-burnt": {
+      "ids": [
+        "variant-s1-4b"
+      ],
+      "disposition": "unchanged"
+    },
+    "OBJECT / family-surf": {
+      "ids": [
+        "variant-s1-49"
+      ],
+      "disposition": "unchanged"
+    },
+    "OBJECT / family-shrink": {
+      "ids": [
+        "variant-s1-4e",
+        "variant-s1-4e-scale79",
+        "variant-s1-4e-scale80",
+        "variant-s1-4e-scale81",
+        "variant-s1-4e-scale82",
+        "variant-blank"
+      ],
+      "disposition": "unchanged"
+    },
+    "OBJECT / family-hang2": {
+      "ids": [
+        "variant-s2-6c"
+      ],
+      "disposition": "unchanged"
+    },
+    "OBJECT / family-blink": {
+      "ids": [
+        "variant-s3k-c5",
+        "variant-s3k-c6",
+        "variant-s3k-c7"
+      ],
+      "disposition": "unchanged"
+    },
+    "OBJECT / family-get-up": {
+      "ids": [
+        "variant-s3k-8f",
+        "variant-s2-0a"
+      ],
+      "disposition": "unchanged"
+    },
+    "OBJECT / family-balance2": {
+      "ids": [
+        "variant-s3k-a1",
+        "variant-s3k-a2",
+        "variant-s3k-a3"
+      ],
+      "disposition": "re-reduced (scale)"
+    },
+    "OBJECT / family-float2": {
+      "ids": [
+        "variant-s3k-c8",
+        "variant-s3k-c9",
+        "variant-s3k-ca",
+        "variant-s3k-cc",
+        "variant-s3k-cd",
+        "variant-s3k-ce",
+        "variant-s3k-cf"
+      ],
+      "disposition": "re-reduced (scale)"
+    },
+    "OBJECT / family-balance4": {
+      "ids": [
+        "variant-s3k-cb"
+      ],
+      "disposition": "unchanged"
+    },
+    "OBJECT / family-victory": {
+      "ids": [
+        "variant-s3k-b0",
+        "variant-s3k-b2",
+        "variant-s3k-b1",
+        "variant-s3k-b3"
+      ],
+      "disposition": "unchanged"
+    },
+    "OBJECT / family-bubble": {
+      "ids": [
+        "variant-s3k-ac",
+        "variant-s3k-03",
+        "variant-s3k-04"
+      ],
+      "disposition": "re-reduced (scale)"
+    },
+    "OBJECT / family-hurt-fall": {
+      "ids": [
+        "variant-s3k-8c",
+        "variant-s3k-8d"
+      ],
+      "disposition": "unchanged"
+    },
+    "OBJECT / family-balance3": {
+      "ids": [
+        "variant-s3k-d0",
+        "variant-s3k-d1"
+      ],
+      "disposition": "unchanged"
+    },
+    "OBJECT / family-warp2": {
+      "ids": [
+        "variant-s1-33-rot52"
+      ],
+      "disposition": "unchanged"
+    },
+    "OBJECT / family-warp3": {
+      "ids": [
+        "variant-s1-33-rot53"
+      ],
+      "disposition": "unchanged"
+    },
+    "OBJECT / family-warp4": {
+      "ids": [
+        "variant-s1-33-rot54"
+      ],
+      "disposition": "unchanged"
+    },
+    "OBJECT / pole": {
+      "ids": [
+        "object-pose-5c",
+        "object-pose-5d",
+        "object-pose-5e",
+        "object-pose-5f",
+        "object-pose-60",
+        "object-pose-61",
+        "object-pose-62"
+      ],
+      "disposition": "unchanged"
+    },
+    "OBJECT / tumble": {
+      "ids": [
+        "object-pose-69",
+        "object-pose-6a",
+        "object-pose-6b",
+        "object-pose-6c",
+        "object-pose-6d",
+        "object-pose-6e",
+        "object-pose-6f",
+        "object-pose-70",
+        "object-pose-71",
+        "object-pose-72",
+        "object-pose-73",
+        "object-pose-74",
+        "object-pose-75",
+        "object-pose-76",
+        "object-pose-77"
+      ],
+      "disposition": "re-reduced (scale)"
+    },
+    "OBJECT / swing": {
+      "ids": [
+        "object-pose-78",
+        "object-pose-79",
+        "object-pose-7a",
+        "object-pose-7b",
+        "object-pose-7c",
+        "object-pose-7d",
+        "object-pose-7e",
+        "object-pose-7f"
+      ],
+      "disposition": "unchanged"
+    },
+    "OBJECT / bar-end": {
+      "ids": [
+        "object-pose-94",
+        "object-pose-95"
+      ],
+      "disposition": "unchanged"
+    },
+    "FLOAT": {
+      "ids": [
+        "variant-s3k-c9",
+        "variant-s3k-c8"
+      ],
+      "disposition": "re-reduced (scale)"
+    },
+    "FLOAT2": {
+      "ids": [
+        "variant-s3k-c9",
+        "variant-s3k-ca",
+        "variant-s3k-cc",
+        "variant-s3k-ce",
+        "variant-s3k-cf"
+      ],
+      "disposition": "re-reduced (scale)"
+    },
+    "FLOAT3": {
+      "ids": [
+        "variant-s3k-c9",
+        "variant-s3k-ca",
+        "variant-s3k-cc",
+        "variant-s3k-ce",
+        "variant-s3k-cf"
+      ],
+      "disposition": "re-reduced (scale)"
+    },
+    "FLOAT4": {
+      "ids": [
+        "variant-s3k-c9"
+      ],
+      "disposition": "re-reduced (scale)"
+    },
+    "BALANCE2": {
+      "ids": [
+        "variant-s3k-c8",
+        "variant-s3k-c9",
+        "variant-s3k-ca",
+        "variant-s3k-cb"
+      ],
+      "disposition": "re-reduced (scale)"
+    },
+    "HANG2": {
+      "ids": [
+        "hang-01",
+        "variant-s2-6c"
+      ],
+      "disposition": "re-reduced (scale)"
+    },
+    "BUBBLE": {
+      "ids": [
+        "variant-s3k-ac",
+        "variant-s3k-03",
+        "variant-s3k-04"
+      ],
+      "disposition": "re-reduced (scale)"
+    },
+    "BALANCE4": {
+      "ids": [
+        "variant-s3k-cf",
+        "variant-s3k-c8",
+        "variant-s3k-c9",
+        "variant-s3k-ca",
+        "variant-s3k-cb"
+      ],
+      "disposition": "re-reduced (scale)"
+    },
+    "TAILS_CARRIED": {
+      "ids": [
+        "hang-00",
+        "hang-01",
+        "hang-02"
+      ],
+      "disposition": "re-reduced (scale)"
+    }
+  }
+}

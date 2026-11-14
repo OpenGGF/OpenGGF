@@ -52,8 +52,10 @@
  * this package as a library, and distributions meet the LGPL's conditions for
  * it, including section 6. Modifications relative to upstream are recorded
  * in each file header (LGPL-2.1 section 2(b)): translation into Java, the
- * per-instance chip type (upstream keeps a file-scope global), and the
- * {@code NukedOpn2State} copy helpers and value equality. The root
+ * per-instance chip type (upstream keeps a file-scope global), the
+ * {@code NukedOpn2State} copy helpers and value equality, the derived lookup
+ * tables, and {@code NukedOpn2.clocks}, which runs several cycles of
+ * {@code OPN2_Clock} in one loop beside the per-cycle port. The root
  * {@code NOTICE.md} carries the same notice for distributions.
  */
 package com.openggf.audio.synth.nuked;

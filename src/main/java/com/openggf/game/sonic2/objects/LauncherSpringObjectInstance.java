@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.sprites.playable.PlayableArchetype;
+
 import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.solid.SolidCall;
@@ -17,7 +19,6 @@ import com.openggf.physics.Direction;
 import com.openggf.physics.FrameCollisionPlan;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
-import com.openggf.sprites.playable.Tails;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -191,7 +192,7 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
     }
 
     private boolean isTails(AbstractPlayableSprite player) {
-        return player instanceof Tails;
+        return PlayableArchetype.isTails(player);
     }
 
     @Override

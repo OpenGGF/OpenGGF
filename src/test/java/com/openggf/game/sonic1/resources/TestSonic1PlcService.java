@@ -24,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -83,11 +84,11 @@ class TestSonic1PlcService {
     }
 
     @Test
-    void exposesWholeBufferBusyAndRejectsQueuedMutationWhileDecoderIsActive()
+    void newPlcAndClearPlcCancelPartiallyServicedDecoder()
             throws IOException {
         NemesisPlcServiceQueue queue = new NemesisPlcServiceQueue();
         Sonic1PlcService service = new Sonic1PlcService(rom, queue);
-        PlcDefinition first = firstNonEmptyPlc();
+        PlcDefinition first = firstPlcWhoseFirstEntryHasAtLeast(10);
         PlcDefinition replacement = nextNonEmptyPlc(first.plcId());
 
         service.append(first.plcId());
@@ -95,8 +96,22 @@ class TestSonic1PlcService {
         service.prepare();
         assertTrue(service.isBusy(), "a prepared decoder keeps the whole buffer busy");
 
-        assertThrows(IllegalStateException.class, service::clearQueued);
-        assertThrows(IllegalStateException.class, () -> service.replaceQueued(replacement.plcId()));
+        service.serviceLevelVBlank();
+        assertNotNull(service.capture().activeEntry(), "replacement interrupts a partial decode");
+        service.replaceQueued(replacement.plcId());
+        assertNull(service.capture().activeEntry());
+        assertEquals(replacement.entries().size(), service.capture().queuedEntries().size());
+        assertEquals(replacement.entries().getFirst().romAddr(),
+                service.capture().queuedEntries().getFirst().sourceAddress());
+        service.prepare();
+        service.serviceLevelVBlank();
+        service.clearQueued();
+        assertFalse(service.isBusy());
+        service.append(first.plcId());
+        service.prepare();
+        service.transact(Sonic1PlcService.clear(), Sonic1PlcService.replace(replacement.plcId()));
+        assertNull(service.capture().activeEntry());
+        assertEquals(replacement.entries().size(), service.capture().queuedEntries().size());
     }
 
     @Test

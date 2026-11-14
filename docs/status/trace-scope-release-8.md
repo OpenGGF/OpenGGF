@@ -12,3 +12,14 @@ branch promotion, and old measurements are not claimed as new passing results.
   the four full-run trace chains) are tracked by the
   [0.8 roadmap](../project/v0.8-roadmap.md). Branch integration alone does not
   prove campaign completion or hardware/audio parity.
+
+## Deferred competition recordings
+
+S2 2P versus and S3K Competition Mode native BK2 recordings and trace
+qualification are deferred to **0.9 or later**, by user direction on 2026-11-09.
+They are not 0.8 release gates. Coverage must eventually include both players’
+inputs/state, split-screen cameras, mode-specific objects, scoring and
+round/results transitions; single-player campaign traces do not certify these
+modes. This does not defer existing competition implementation or invalidate
+its bounded evidence. The [0.8 roadmap](../project/v0.8-roadmap.md) records the
+same scope decision; 0.9 is an earliest target, not a commitment.

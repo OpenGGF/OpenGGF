@@ -72,14 +72,14 @@ class TestSonic1GiantRingObjectInstance {
 
         verify(gameState).setBigRingCollected(true);
         verify(player).setHidden(true);
-        verify(player).setAnimationId(Sonic1AnimationIds.NULL.id());
+        verify(player).setAnimationId(Sonic1AnimationIds.NULL);
         verify(player).setForcedAnimationId(Sonic1AnimationIds.NULL.id());
         verify(player).clearPowerUps();
         verify(player, never()).applyObjectControlState(any(ObjectControlState.class));
 
         reset(player);
         flash.update(7, player);
-        verify(player).setAnimationId(Sonic1AnimationIds.NULL.id());
+        verify(player).setAnimationId(Sonic1AnimationIds.NULL);
         verify(player).setForcedAnimationId(Sonic1AnimationIds.NULL.id());
     }
 

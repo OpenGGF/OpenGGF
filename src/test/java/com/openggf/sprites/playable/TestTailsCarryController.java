@@ -238,6 +238,22 @@ class TestTailsCarryController {
     }
 
     @Test
+    void nativeSonicCarryRetainsRawMappingSequenceAndTwelveTickDelay() {
+        var sonic = prepareManualContact();
+        var carry = GameServices.sprites().getSidekicks().getFirst().getTailsCarryController();
+        assertTrue(carry.tryGrabMainCharacter());
+        int[] expected = {0x91, 0x91, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90,
+                0x92, 0x92, 0x92, 0x92, 0x92, 0x92, 0x91, 0x91, 0x91};
+        for (int frame : expected) {
+            for (int tick = 0; tick < 12; tick++) {
+                carry.updateAfterTailsCollision(0);
+                assertEquals(frame, sonic.getMappingFrame());
+                assertTrue(carry.isCarrying(sonic));
+            }
+        }
+    }
+
+    @Test
     void jumpReleaseUsesExactNeutralAndDirectionalNativeValues() {
         AbstractPlayableSprite sonic = prepareManualContact();
         AbstractPlayableSprite tails = GameServices.sprites().getSidekicks().get(0);

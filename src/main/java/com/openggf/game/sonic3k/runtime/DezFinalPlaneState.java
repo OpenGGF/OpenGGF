@@ -14,6 +14,8 @@ public final class DezFinalPlaneState {
     private int delayedRowCount = -1;
 
     public int revision() { return revision; }
+    /** Draw_TileColumn's rounded X: the moving band covers 21 blocks from here. */
+    public int drawnX() { return roundedX; }
     public int delayedPosition() { return delayedPosition; }
     public int delayedRowCount() { return delayedRowCount; }
     public boolean redrawing() { return delayedRowCount >= 0; }

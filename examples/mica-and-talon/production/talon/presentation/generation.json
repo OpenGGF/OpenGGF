@@ -1,0 +1,197 @@
+{
+  "tool": "built-in GPT Image",
+  "date": "2026-11-10",
+  "method": "Native poses rendered in their surface palette and enlarged 8x nearest-neighbour (font 16x), supplied with concept/talon.png and frames/wait-00.png. Two attempts per set; reduction fixes palette and native hotspots; no scripted character repaint.",
+  "scratch": "$HOME/scratch/agent-tmp/talon-presentation-20261110/",
+  "prompts": {
+    "iconprompt": "Use case: identity-preserve. Generate a production pixel-art life-counter HEAD PORTRAIT of TALON, the slate peregrine falcon courier in image 2, consistent with approved tiny full-body sprite image 3. Image 1 is native Tails 16x16 life icon enlarged exactly 8x; replace the fox with TALON in SAME native head proportions and occupied area. This is strictly a HEAD close-up, no torso. 16x16 pixel design enlarged with nearest-neighbor to a 1024 square. Pixel clusters must be readable at 16x16: amber aviator goggles pushed on forehead, swept slate crest, one large readable white eye with dark pupil, hooked yellow beak, cream cheek, dark falcon moustache. Face toward right. Fill the 16x16 square comparably to native Tails. No ears, rotor, fox tails, letters, border or shadows. Transparent background. Crisp deliberate 16x16 pixel clusters, flat slate 3-step ramp, cream white amber and black. Preserve native head scale, no tiny head.",
+    "signprompt": "Use case: identity-preserve. Transform native Tails signpost face in reference 1 into original TALON peregrine falcon courier in model sheet 2, consistent with approved wait sprite 3. Output a single HEAD AND SHOULDERS bust facing 3/4 right, pixel-art designed for native 40x28 pixels, enlarged nearest-neighbor. Large readable white eyes, hooked yellow beak, amber aviator goggles ON forehead, swept slate blue grey crest, cream cheek with dark falcon moustache, cream barred chest and brown satchel strap. No ears, fox tails, rotor, mast, quills, text, sign frame, pole or backing. Transparent background. Head occupies top 22 pixels, torso only bottom 6. Broad full head closeup. 1990s game art, ink outline, three flat slate shades, cream amber white yellow. Maintain native face proportions to fill sign.",
+    "halfpipeprompt": "Use case: identity-preserve. Create 18 original TALON pixel-art sprites as a 4-column by 5-row sheet, last two cells empty, matching EXACTLY the native Tails half-pipe choreography, cell positions, head/torso sizes, orientation and foot contact phases in reference 1 (native 64x64 cells enlarged 8x). All poses are seen from BEHIND. Replace fox with slate peregrine courier TALON in reference 2 and approved sprite reference 3: slate blue grey swept crest with amber goggles strap at back, short falcon tail fan, folded feather wing arms with white gloves, cream-tipped wings, brown satchel crossing back, red-white shoes. NO separate fox tails, rotor, mast, ears. Reference lacks separate native tail object; do not add it. Four upright running back phases in row1, 8 diagonal tilted run phases rows2-3, four horizontal tilted phases row4, two tucked balls row5. Strict per-cell same body landmarks and occupied area as reference; don't shrink. Native game sprite style 16bit flat limited palette. Transparent background. No labels or grid lines. Exactly same sheet aspect ratio and regular cells.",
+    "blueprompt": "Use case: identity-preserve. Draw original TALON 16bit pixel game sprites in a FOUR column THREE row atlas, each cell matching native Tails Blue Sphere reference 1 exactly in orientation, head/body scale, pose, occupied area and phase. Reference 2 is TALON model, reference 3 approved sprite identity. Cell 0 EMPTY as native. Cell1 stands BACK to camera, cells2-8 running BACK views matching foot contacts in reference, cells9-11 tucked feather balls from behind. TALON is a slate peregrine falcon courier: slate crest no ears, amber goggles strap behind head, folded integrated wings with pale tips and white glove hands, cream barred chest, brown courier satchel strap and bag, red-white high tops. No separate tails, no rotor, no mast, no fox ears, no quills. Do not add face to back views. Native-sized pixel clusters, not smooth illustration. Transparent background. Same evenly spaced cell grid as reference with no text, no lines, no cast shadow. Keep the large native head and compact body scale.",
+    "s1continueprompt": "Use case: identity-preserve. Transform each native character sprite in reference 1 into TALON falcon courier (model sheet 2, approved wait 3). Produce exact FOUR column FIVE row sheet of twenty frames matching reference cell order and poses. First three lying on stomach and tapping glove; next two miniature standing icons; remaining are get-up sequence then native walk/run shoe contacts. Keep native head and torso scale, body landmarks and foot baselines, not bounding box (ignore quills and tail extent). TALON: slate peregrine head crest no ears or quills, amber aviator goggles pushed up, yellow hooked beak, readable white eye with dark pupil, cream cheek and barred breast, dark moustache stripe, brown satchel, folded wing arms with white gloves, red white high tops. No fox tails, no rotor, no mast. Use flat limited-color chunky native game pixel art. Transparent background, no labels or grid. Preserve all contact phases exactly; tiny icons stay tiny relative to full actors. Same atlas proportions as reference.",
+    "s2continueprompt": "Use case: identity-preserve. Transform native Tails poses in reference1 into TALON original peregrine courier (model sheet2, approved wait sprite3). Exact FOUR column FOUR row atlas, same cell order, native head and torso proportions and foot contacts: row1 two nagging standing gesture poses then two MINIATURE icons. Rows2-3 eight walking phases; row4 four running phases. EXCLUDE all fox tails in native reference; TALON's wings are integrated wing-arms with pale feather tips and white gloves, never tails or rotor. Slate swept crest NO ears, amber aviator goggles forehead, hooked yellow beak and clear white eyes/pupil, cream barred chest and falcon moustache, brown satchel, red-white shoes. Pixel game art limited palette, same native body size based on head/torso, ignore native fox tails for bounding. Transparent background, no labels, same regular atlas positions. Preserve pose facing and contact reversal in all steps.",
+    "s3continueprompt": "Use case: identity-preserve. Transform native Tails continue sprites reference1 into original TALON falcon courier model2, approved sprite3. Exact FOUR columns THREE rows atlas, first NINE cells populated and last three empty, all native poses, head/torso proportions, glove gestures, foot contact phases retained. First2 standing front-left team-idle gesture; next2 tiny icons; cell4 side standing wait; cells5-8 side running four phases. EXCLUDE the fox tails attached to native poses. TALON has integrated wings as arms, no rotor or separate tails, no ears. Slate swept crest, amber goggles on forehead, hooked yellow beak, readable white eyes/pupil, cream barred breast, dark falcon moustache, brown satchel, white glove wing hands, red-white shoes. No quills. Native-sized pixel clusters, transparent background, exact regular cell grid, same pose size/positions as native using head and body size ignoring fox tails. No text or grid.",
+    "portraitprompt": "Use case: identity-preserve. Single native data-select full-body portrait of TALON original peregrine courier. Reference1 is native Tails portrait enlarged 8x on 64x64 cell. Match its EXACT native head/torso scale, relaxed standing pose and foot plane, facing left, one gloved wing hand open, other glove giving small thumbs-up. Reference2 model sheet and3 approved sprite own identity: slate swept crest, amber goggles forehead, yellow hooked beak, large readable white eye/pupil, cream cheek and barred breast, dark falcon moustache, brown satchel strap, integrated wings with cream tips, white gloves, red-white shoes. No ears, quills, fox tails or rotor. Short tail fan integrated behind body. Native 40px-height game pixel art, limited palette, transparent background no text. Body silhouette same native proportions ignoring native Tails tail. Fill portrait box, don't shrink.",
+    "glyphprompt": "Use case: text-localization. Native HUD pixel font reference shows SONIC at native 32x8 enlarged16x. Create the missing capital glyphs T, A, L in EXACT same yellow-on-black chunky 16bit HUD style. Output ONLY the three glyphs in a regular three-column atlas, each cell 6x8 native pixels, enlarged nearest-neighbor. T is flat five-pixel top stroke and central vertical stem. A is readable capital A with crossbar and black hole. L is vertical stem and bottom foot. One black pixel shadow down-right. Bright pure yellow lettering on black. No extra text, no labels, no decoration. Each glyph must fit 6x8 cell including black spacing/shadow, 18x8 atlas total. Native chunky letter height6 pixels. Exact clear geometry for reduction.",
+    "resultprompt": "Use case: identity-preserve. Replace native Tails Blue Sphere results pose reference1 with original TALON peregrine courier reference2/approvedsprite3, matching exact native 40x40 sprite proportions and pose: side view facing RIGHT, one white-gloved hand lifted in a victory fist at head height, other hand tucked near chest, feet spread with red-white shoes, head turned to camera with clear eyes and beak. Slate swept falcon crest and integrated feather wing-arms cream tips, amber aviator goggles forehead, hooked yellow beak, cream barred breast and cheek, dark moustache, brown satchel strap. EXCLUDE all native fox tails, ears, rotor. No mast. Native pixel-game sprite, crisp limited flat palette and ink outline, transparent background, single complete figure with native head/torso scale. No text or ground."
+  },
+  "selections": {
+    "icon": "exec-4ab8ee26",
+    "sign": "exec-bac75adc",
+    "halfpipe": "exec-df30e94d",
+    "bluesphere": "exec-7983aee0",
+    "continue-s1": "exec-b779940b",
+    "continue-s2": "exec-ad17319a",
+    "continue-s3k": "exec-b0f6b04b",
+    "portrait": "exec-e59d77ed",
+    "glyphs": "exec-7f9b0c5b",
+    "blue-result": "exec-c932e25e"
+  },
+  "review": "review.html",
+  "limits": "Blue Sphere result pose is supplied as reserve art: standalone Blue Sphere completion host is not implemented. Motion GIFs are native-phase previews; dynamic timing remains host-owned.",
+  "selection_files": {
+    "icon": {
+      "file": "exec-4ab8ee26-7cef-49e7-9bb8-da910f044b46.png",
+      "sha256": "e2e62cb38a77057aee0dc8a67e78e3950fcfb96904cda6db1d202ebb655c386e"
+    },
+    "sign": {
+      "file": "exec-bac75adc-1194-4c70-8d2b-c9a5ade08c22.png",
+      "sha256": "e13b5a352112cdd03c46e0950638671695674719b4e457e46730e65ae4319963"
+    },
+    "halfpipe": {
+      "file": "exec-df30e94d-da9b-419d-b808-6e3a4473440d.png",
+      "sha256": "5be0f3006bf6ee7855d74776ce4b8d159a71847a70e540e83b2e608e13ef170d"
+    },
+    "bluesphere": {
+      "file": "exec-7983aee0-9a1e-436e-9a50-9cf2370d7550.png",
+      "sha256": "6e044dbd5c7acb7bfb9968dc2a149265e63016f1d0009053e1354ff39d554fda"
+    },
+    "continue-s1": {
+      "file": "exec-b779940b-4f7f-4be7-94ed-98f6d68d39ca.png",
+      "sha256": "a1708690ebd2018925897e15c378179f5d3463b0ec109c875c1e9b79b7f5b15b"
+    },
+    "continue-s2": {
+      "file": "exec-ad17319a-f2e7-417e-9fa0-d95199a79ffe.png",
+      "sha256": "401e2ac542895f27a1187db85b25366d27620dc170fd0c3b871b2f8cbbdaa293"
+    },
+    "continue-s3k": {
+      "file": "exec-b0f6b04b-931f-47fa-82d9-b658b6f900d1.png",
+      "sha256": "7390d88649652330f56ae16e5dfffce56ef7770cd0eecfc609c8ec47625a275d"
+    },
+    "portrait": {
+      "file": "exec-e59d77ed-1a36-4f59-a71f-59f9fd7083a5.png",
+      "sha256": "83b085d1e3a34ae366c7fb0d6d3bf15f3eae5f621112258fae4c5c785317f218"
+    },
+    "glyphs": {
+      "file": "exec-7f9b0c5b-9c3f-4950-91af-74d2ebe1107d.png",
+      "sha256": "91025d154179bc0389f91fd6171d1a42e8ae19feb6d68c36e9c4762fb021d8a1"
+    },
+    "blue-result": {
+      "file": "exec-c932e25e-f28b-488f-b13d-bb5c26bcfb9e.png",
+      "sha256": "f35252048cdc0b0d7dc150599c9c3012aef7da2ddf23549d6ab17c28aadc69a3"
+    }
+  },
+  "native_references": {
+    "icon": "tails-hud-8x.png; native Tails life icon, own palette",
+    "sign": "sign-native-8x.png; native sign alternate face, excluding pole",
+    "halfpipe": "halfpipe-native-8x.png; Obj10 / tails DPLC, appendage object excluded",
+    "bluesphere": "bluesphere-native-8x.png; Map_SStageTails_ / PLC_SStageTails_, separate tail object excluded",
+    "continue-s1": "continue-s1-native-8x.png; native S1 Sonic-host choreography (no native Tails)",
+    "continue-s2": "continue-s2-native-8x.png; ObjDA / TailsAni_Walk / TailsAni_Run; native fox tails explicitly excluded",
+    "continue-s3k": "continue-s3k-native-8x.png; Map_ContinueSprites_ 5/6, Tails icon 2/3, Tails WAIT and run; native fox tails explicitly excluded",
+    "portrait": "portrait-native-8x.png; Map_SaveScreen_ 6 / Misc.kos, native fox tails excluded",
+    "glyphs": "s1-name-native-16x.png; Nem_Lives SONIC row at 16x",
+    "blue-result": "blue-result-pose-8x.png; Map_BSTailsPose_ / ArtNem_BSTailsPose, fox tail excluded"
+  },
+  "attempts": {
+    "iconprompt": 2,
+    "signprompt": 4,
+    "halfpipeprompt": 2,
+    "blueprompt": 2,
+    "s1continueprompt": 2,
+    "s2continueprompt": 2,
+    "s3continueprompt": 2,
+    "portraitprompt": 2,
+    "glyphprompt": 2,
+    "resultprompt": 2
+  },
+  "selection_reasons": {
+    "icon": "Attempt 2 preserves a readable eye rather than the first draft white stripe. Native opaque ink backing retained.",
+    "sign": "Corrected-reference attempt 1 preserves the selected bust with actual S2 palette reference. Corrected attempt 2 included an unwanted sign board and was rejected.",
+    "halfpipe": "Attempt 2 keeps diagonal lean and goggle strap through curl.",
+    "bluesphere": "Attempt 1 keeps satchel side consistent with half-pipe; native blank 0 omitted from runtime set.",
+    "continue-s1": "Attempt 1 retains the distinct glove-tapping phases.",
+    "continue-s2": "Attempt 2 keeps integrated wings compact.",
+    "continue-s3k": "Attempt 2 corrects native left-facing team poses.",
+    "portrait": "Attempt 2 canonical right orientation; native-area check rejected initial 0.934 reduction and corrected it.",
+    "glyphs": "Attempt 1 clean A counter; fixed 6x8 advance.",
+    "blue-result": "Attempt 2 corrects thumbs-up to raised closed fist and native low stance."
+  },
+  "attempt_prompts": {
+    "iconprompt": [
+      "Use case: identity-preserve. Generate a production pixel-art life-counter HEAD PORTRAIT of TALON, the slate peregrine falcon courier in image 2, consistent with approved tiny full-body sprite image 3. Image 1 is native Tails 16x16 life icon enlarged exactly 8x; replace the fox with TALON in SAME native head proportions and occupied area. This is strictly a HEAD close-up, no torso. 16x16 pixel design enlarged with nearest-neighbor to a 1024 square. Pixel clusters must be readable at 16x16: amber aviator goggles pushed on forehead, swept slate crest, one large readable white eye with dark pupil, hooked yellow beak, cream cheek, dark falcon moustache. Face toward right. Fill the 16x16 square comparably to native Tails. No ears, rotor, fox tails, letters, border or shadows. Transparent background. Crisp deliberate 16x16 pixel clusters, flat slate 3-step ramp, cream white amber and black. Preserve native head scale, no tiny head.",
+      "Use case: identity-preserve. Generate a production pixel-art life-counter HEAD PORTRAIT of TALON, the slate peregrine falcon courier in image 2, consistent with approved tiny full-body sprite image 3. Image 1 is native Tails 16x16 life icon enlarged exactly 8x; replace the fox with TALON in SAME native head proportions and occupied area. This is strictly a HEAD close-up, no torso. 16x16 pixel design enlarged with nearest-neighbor to a 1024 square. Pixel clusters must be readable at 16x16: amber aviator goggles pushed on forehead, swept slate crest, one large readable white eye with dark pupil, hooked yellow beak, cream cheek, dark falcon moustache. Face toward right. Fill the 16x16 square comparably to native Tails. No ears, rotor, fox tails, letters, border or shadows. Transparent background. Crisp deliberate 16x16 pixel clusters, flat slate 3-step ramp, cream white amber and black. Preserve native head scale, no tiny head. Attempt 2: keep the whole eye readable as an eye rather than a white stripe, and simplify the beak to a clear hooked triangle. Use exactly 16x16 designed pixel grid."
+    ],
+    "signprompt": [
+      "Use case: identity-preserve. Transform native Tails signpost face in reference 1 into original TALON peregrine falcon courier in model sheet 2, consistent with approved wait sprite 3. Output a single HEAD AND SHOULDERS bust facing 3/4 right, pixel-art designed for native 40x28 pixels, enlarged nearest-neighbor. Large readable white eyes, hooked yellow beak, amber aviator goggles ON forehead, swept slate blue grey crest, cream cheek with dark falcon moustache, cream barred chest and brown satchel strap. No ears, fox tails, rotor, mast, quills, text, sign frame, pole or backing. Transparent background. Head occupies top 22 pixels, torso only bottom 6. Broad full head closeup. 1990s game art, ink outline, three flat slate shades, cream amber white yellow. Maintain native face proportions to fill sign.",
+      "Use case: identity-preserve. Transform native Tails signpost face in reference 1 into original TALON peregrine falcon courier in model sheet 2, consistent with approved wait sprite 3. Output a single HEAD AND SHOULDERS bust facing 3/4 right, pixel-art designed for native 40x28 pixels, enlarged nearest-neighbor. Large readable white eyes, hooked yellow beak, amber aviator goggles ON forehead, swept slate blue grey crest, cream cheek with dark falcon moustache, cream barred chest and brown satchel strap. No ears, fox tails, rotor, mast, quills, text, sign frame, pole or backing. Transparent background. Head occupies top 22 pixels, torso only bottom 6. Broad full head closeup. 1990s game art, ink outline, three flat slate shades, cream amber white yellow. Maintain native face proportions to fill sign. Attempt 2: broader face filling sign panel; keep beak short and yellow, cheerful closed smile."
+    ],
+    "halfpipeprompt": [
+      "Use case: identity-preserve. Create 18 original TALON pixel-art sprites as a 4-column by 5-row sheet, last two cells empty, matching EXACTLY the native Tails half-pipe choreography, cell positions, head/torso sizes, orientation and foot contact phases in reference 1 (native 64x64 cells enlarged 8x). All poses are seen from BEHIND. Replace fox with slate peregrine courier TALON in reference 2 and approved sprite reference 3: slate blue grey swept crest with amber goggles strap at back, short falcon tail fan, folded feather wing arms with white gloves, cream-tipped wings, brown satchel crossing back, red-white shoes. NO separate fox tails, rotor, mast, ears. Reference lacks separate native tail object; do not add it. Four upright running back phases in row1, 8 diagonal tilted run phases rows2-3, four horizontal tilted phases row4, two tucked balls row5. Strict per-cell same body landmarks and occupied area as reference; don't shrink. Native game sprite style 16bit flat limited palette. Transparent background. No labels or grid lines. Exactly same sheet aspect ratio and regular cells.",
+      "Use case: identity-preserve. Create 18 original TALON pixel-art sprites as a 4-column by 5-row sheet, last two cells empty, matching EXACTLY the native Tails half-pipe choreography, cell positions, head/torso sizes, orientation and foot contact phases in reference 1 (native 64x64 cells enlarged 8x). All poses are seen from BEHIND. Replace fox with slate peregrine courier TALON in reference 2 and approved sprite reference 3: slate blue grey swept crest with amber goggles strap at back, short falcon tail fan, folded feather wing arms with white gloves, cream-tipped wings, brown satchel crossing back, red-white shoes. NO separate fox tails, rotor, mast, ears. Reference lacks separate native tail object; do not add it. Four upright running back phases in row1, 8 diagonal tilted run phases rows2-3, four horizontal tilted phases row4, two tucked balls row5. Strict per-cell same body landmarks and occupied area as reference; don't shrink. Native game sprite style 16bit flat limited palette. Transparent background. No labels or grid lines. Exactly same sheet aspect ratio and regular cells. Attempt 2. Keep diagonal poses at the exact same 45-degree lean throughout rows2 AND3; preserve opposite feet contacts. Keep all row centers aligned to a regular atlas grid."
+    ],
+    "blueprompt": [
+      "Use case: identity-preserve. Draw original TALON 16bit pixel game sprites in a FOUR column THREE row atlas, each cell matching native Tails Blue Sphere reference 1 exactly in orientation, head/body scale, pose, occupied area and phase. Reference 2 is TALON model, reference 3 approved sprite identity. Cell 0 EMPTY as native. Cell1 stands BACK to camera, cells2-8 running BACK views matching foot contacts in reference, cells9-11 tucked feather balls from behind. TALON is a slate peregrine falcon courier: slate crest no ears, amber goggles strap behind head, folded integrated wings with pale tips and white glove hands, cream barred chest, brown courier satchel strap and bag, red-white high tops. No separate tails, no rotor, no mast, no fox ears, no quills. Do not add face to back views. Native-sized pixel clusters, not smooth illustration. Transparent background. Same evenly spaced cell grid as reference with no text, no lines, no cast shadow. Keep the large native head and compact body scale.",
+      "Use case: identity-preserve. Draw original TALON 16bit pixel game sprites in a FOUR column THREE row atlas, each cell matching native Tails Blue Sphere reference 1 exactly in orientation, head/body scale, pose, occupied area and phase. Reference 2 is TALON model, reference 3 approved sprite identity. Cell 0 EMPTY as native. Cell1 stands BACK to camera, cells2-8 running BACK views matching foot contacts in reference, cells9-11 tucked feather balls from behind. TALON is a slate peregrine falcon courier: slate crest no ears, amber goggles strap behind head, folded integrated wings with pale tips and white glove hands, cream barred chest, brown courier satchel strap and bag, red-white high tops. No separate tails, no rotor, no mast, no fox ears, no quills. Do not add face to back views. Native-sized pixel clusters, not smooth illustration. Transparent background. Same evenly spaced cell grid as reference with no text, no lines, no cast shadow. Keep the large native head and compact body scale. Attempt 2. Curl frames9-11 must be THREE distinct round tucked feather balls, not standing silhouettes. Preserve native head/torso proportions and exact foot contact phases."
+    ],
+    "s1continueprompt": [
+      "Use case: identity-preserve. Transform each native character sprite in reference 1 into TALON falcon courier (model sheet 2, approved wait 3). Produce exact FOUR column FIVE row sheet of twenty frames matching reference cell order and poses. First three lying on stomach and tapping glove; next two miniature standing icons; remaining are get-up sequence then native walk/run shoe contacts. Keep native head and torso scale, body landmarks and foot baselines, not bounding box (ignore quills and tail extent). TALON: slate peregrine head crest no ears or quills, amber aviator goggles pushed up, yellow hooked beak, readable white eye with dark pupil, cream cheek and barred breast, dark moustache stripe, brown satchel, folded wing arms with white gloves, red white high tops. No fox tails, no rotor, no mast. Use flat limited-color chunky native game pixel art. Transparent background, no labels or grid. Preserve all contact phases exactly; tiny icons stay tiny relative to full actors. Same atlas proportions as reference.",
+      "Use case: identity-preserve. Transform each native character sprite in reference 1 into TALON falcon courier (model sheet 2, approved wait 3). Produce exact FOUR column FIVE row sheet of twenty frames matching reference cell order and poses. First three lying on stomach and tapping glove; next two miniature standing icons; remaining are get-up sequence then native walk/run shoe contacts. Keep native head and torso scale, body landmarks and foot baselines, not bounding box (ignore quills and tail extent). TALON: slate peregrine head crest no ears or quills, amber aviator goggles pushed up, yellow hooked beak, readable white eye with dark pupil, cream cheek and barred breast, dark moustache stripe, brown satchel, folded wing arms with white gloves, red white high tops. No fox tails, no rotor, no mast. Use flat limited-color chunky native game pixel art. Transparent background, no labels or grid. Preserve all contact phases exactly; tiny icons stay tiny relative to full actors. Same atlas proportions as reference. Attempt 2. Strictly regular grid and all boots remain inside each cell. Reverse visible arm and shoe in each complementary walk phase. Keep chest narrow like native."
+    ],
+    "s2continueprompt": [
+      "Use case: identity-preserve. Transform native Tails poses in reference1 into TALON original peregrine courier (model sheet2, approved wait sprite3). Exact FOUR column FOUR row atlas, same cell order, native head and torso proportions and foot contacts: row1 two nagging standing gesture poses then two MINIATURE icons. Rows2-3 eight walking phases; row4 four running phases. EXCLUDE all fox tails in native reference; TALON's wings are integrated wing-arms with pale feather tips and white gloves, never tails or rotor. Slate swept crest NO ears, amber aviator goggles forehead, hooked yellow beak and clear white eyes/pupil, cream barred chest and falcon moustache, brown satchel, red-white shoes. Pixel game art limited palette, same native body size based on head/torso, ignore native fox tails for bounding. Transparent background, no labels, same regular atlas positions. Preserve pose facing and contact reversal in all steps.",
+      "Use case: identity-preserve. Transform native Tails poses in reference1 into TALON original peregrine courier (model sheet2, approved wait sprite3). Exact FOUR column FOUR row atlas, same cell order, native head and torso proportions and foot contacts: row1 two nagging standing gesture poses then two MINIATURE icons. Rows2-3 eight walking phases; row4 four running phases. EXCLUDE all fox tails in native reference; TALON's wings are integrated wing-arms with pale feather tips and white gloves, never tails or rotor. Slate swept crest NO ears, amber aviator goggles forehead, hooked yellow beak and clear white eyes/pupil, cream barred chest and falcon moustache, brown satchel, red-white shoes. Pixel game art limited palette, same native body size based on head/torso, ignore native fox tails for bounding. Transparent background, no labels, same regular atlas positions. Preserve pose facing and contact reversal in all steps. Attempt2. Keep folded feather wing ARMS compact; no large fan that looks like fox tails. All head sizes track the native heads, avoid enlarged heads. Distinguish near/far boot and arm contacts."
+    ],
+    "s3continueprompt": [
+      "Use case: identity-preserve. Transform native Tails continue sprites reference1 into original TALON falcon courier model2, approved sprite3. Exact FOUR columns THREE rows atlas, first NINE cells populated and last three empty, all native poses, head/torso proportions, glove gestures, foot contact phases retained. First2 standing front-left team-idle gesture; next2 tiny icons; cell4 side standing wait; cells5-8 side running four phases. EXCLUDE the fox tails attached to native poses. TALON has integrated wings as arms, no rotor or separate tails, no ears. Slate swept crest, amber goggles on forehead, hooked yellow beak, readable white eyes/pupil, cream barred breast, dark falcon moustache, brown satchel, white glove wing hands, red-white shoes. No quills. Native-sized pixel clusters, transparent background, exact regular cell grid, same pose size/positions as native using head and body size ignoring fox tails. No text or grid.",
+      "Use case: identity-preserve. Transform native Tails continue sprites reference1 into original TALON falcon courier model2, approved sprite3. Exact FOUR columns THREE rows atlas, first NINE cells populated and last three empty, all native poses, head/torso proportions, glove gestures, foot contact phases retained. First2 standing front-left team-idle gesture; next2 tiny icons; cell4 side standing wait; cells5-8 side running four phases. EXCLUDE the fox tails attached to native poses. TALON has integrated wings as arms, no rotor or separate tails, no ears. Slate swept crest, amber goggles on forehead, hooked yellow beak, readable white eyes/pupil, cream barred breast, dark falcon moustache, brown satchel, white glove wing hands, red-white shoes. No quills. Native-sized pixel clusters, transparent background, exact regular cell grid, same pose size/positions as native using head and body size ignoring fox tails. No text or grid. Attempt2: first two gesture poses MUST FACE LEFT like native, beak points LEFT, glove points RIGHT. Remaining miniatures and running face right. All tail-looking native shapes are EXCLUDED; wings kept compact near shoulder and hand, no tall appendage behind head."
+    ],
+    "portraitprompt": [
+      "Use case: identity-preserve. Single native data-select full-body portrait of TALON original peregrine courier. Reference1 is native Tails portrait enlarged 8x on 64x64 cell. Match its EXACT native head/torso scale, relaxed standing pose and foot plane, facing left, one gloved wing hand open, other glove giving small thumbs-up. Reference2 model sheet and3 approved sprite own identity: slate swept crest, amber goggles forehead, yellow hooked beak, large readable white eye/pupil, cream cheek and barred breast, dark falcon moustache, brown satchel strap, integrated wings with cream tips, white gloves, red-white shoes. No ears, quills, fox tails or rotor. Short tail fan integrated behind body. Native 40px-height game pixel art, limited palette, transparent background no text. Body silhouette same native proportions ignoring native Tails tail. Fill portrait box, don't shrink.",
+      "Use case: identity-preserve. Single native data-select full-body portrait of TALON original peregrine courier. Reference1 is native Tails portrait enlarged 8x on 64x64 cell. Match its EXACT native head/torso scale, relaxed standing pose and foot plane, facing left, one gloved wing hand open, other glove giving small thumbs-up. Reference2 model sheet and3 approved sprite own identity: slate swept crest, amber goggles forehead, yellow hooked beak, large readable white eye/pupil, cream cheek and barred breast, dark falcon moustache, brown satchel strap, integrated wings with cream tips, white gloves, red-white shoes. No ears, quills, fox tails or rotor. Short tail fan integrated behind body. Native 40px-height game pixel art, limited palette, transparent background no text. Body silhouette same native proportions ignoring native Tails tail. Fill portrait box, don't shrink. Attempt2. Match compact native 40px body proportions and keep both feet fully visible. Face RIGHT for the mod portrait canonical orientation; the native team compositor owns placement."
+    ],
+    "glyphprompt": [
+      "Use case: text-localization. Native HUD pixel font reference shows SONIC at native 32x8 enlarged16x. Create the missing capital glyphs T, A, L in EXACT same yellow-on-black chunky 16bit HUD style. Output ONLY the three glyphs in a regular three-column atlas, each cell 6x8 native pixels, enlarged nearest-neighbor. T is flat five-pixel top stroke and central vertical stem. A is readable capital A with crossbar and black hole. L is vertical stem and bottom foot. One black pixel shadow down-right. Bright pure yellow lettering on black. No extra text, no labels, no decoration. Each glyph must fit 6x8 cell including black spacing/shadow, 18x8 atlas total. Native chunky letter height6 pixels. Exact clear geometry for reduction.",
+      "Use case: text-localization. Native HUD pixel font reference shows SONIC at native 32x8 enlarged16x. Create the missing capital glyphs T, A, L in EXACT same yellow-on-black chunky 16bit HUD style. Output ONLY the three glyphs in a regular three-column atlas, each cell 6x8 native pixels, enlarged nearest-neighbor. T is flat five-pixel top stroke and central vertical stem. A is readable capital A with crossbar and black hole. L is vertical stem and bottom foot. One black pixel shadow down-right. Bright pure yellow lettering on black. No extra text, no labels, no decoration. Each glyph must fit 6x8 cell including black spacing/shadow, 18x8 atlas total. Native chunky letter height6 pixels. Exact clear geometry for reduction. Attempt2. Native letters are six pixels high. A top is three pixels wide, sides one pixel thick, one-pixel crossbar. T stem one pixel wide. L stem and foot one pixel wide. Five visible pixels wide plus one black spacing column in each 6x8 cell."
+    ],
+    "resultprompt": [
+      "Use case: identity-preserve. Replace native Tails Blue Sphere results pose reference1 with original TALON peregrine courier reference2/approvedsprite3, matching exact native 40x40 sprite proportions and pose: side view facing RIGHT, one white-gloved hand lifted in a victory fist at head height, other hand tucked near chest, feet spread with red-white shoes, head turned to camera with clear eyes and beak. Slate swept falcon crest and integrated feather wing-arms cream tips, amber aviator goggles forehead, hooked yellow beak, cream barred breast and cheek, dark moustache, brown satchel strap. EXCLUDE all native fox tails, ears, rotor. No mast. Native pixel-game sprite, crisp limited flat palette and ink outline, transparent background, single complete figure with native head/torso scale. No text or ground.",
+      "Use case: identity-preserve. Replace native Tails Blue Sphere results pose reference1 with original TALON peregrine courier reference2/approvedsprite3, matching exact native 40x40 sprite proportions and pose: side view facing RIGHT, one white-gloved hand lifted in a victory fist at head height, other hand tucked near chest, feet spread with red-white shoes, head turned to camera with clear eyes and beak. Slate swept falcon crest and integrated feather wing-arms cream tips, amber aviator goggles forehead, hooked yellow beak, cream barred breast and cheek, dark moustache, brown satchel strap. EXCLUDE all native fox tails, ears, rotor. No mast. Native pixel-game sprite, crisp limited flat palette and ink outline, transparent background, single complete figure with native head/torso scale. No text or ground. Attempt2: raised hand is CLOSED FIST not thumbs up. Match native side-facing low, wide crouched stance and head size; avoid tall standing model-sheet pose."
+    ]
+  },
+  "aliases": {
+    "slot_machine": "s3k-slot-96/97/98 PNGs are byte-identical approved core roll-00/01/02 PNG aliases; native AniTails02 retains its three phases and two-tick timing. No new generation.",
+    "s1_maze": "Canonical ROLL, existing approved sheet.",
+    "data_select_icons": "Translation/padding aliases of generated S3K continue miniature; visible pixels unchanged, fitting native 16x24 menu cell."
+  },
+  "light_cleanup": {
+    "life_and_monitor": "After fixed-palette reduction, six eye pixels restore white sclera and a dark pupil lost to downsampling. Geometry, beak and goggles remain the generated drawing. Native life-counter ink backing retained.",
+    "patches_xy_palette_index": [
+      [
+        8,
+        9,
+        12
+      ],
+      [
+        9,
+        9,
+        12
+      ],
+      [
+        8,
+        10,
+        12
+      ],
+      [
+        9,
+        10,
+        1
+      ],
+      [
+        8,
+        11,
+        12
+      ],
+      [
+        9,
+        11,
+        12
+      ]
+    ]
+  },
+  "reference_correction": "The first sign reference used S3K combined palette indices on S2 art. Regenerated two attempts against corrected S2 player-line palette; original attempts remain in scratch for provenance.",
+  "corrected_sign_prompts": [
+    "Use case: identity-preserve. Transform native Tails signpost face in reference 1 into original TALON peregrine falcon courier in model sheet 2, consistent with approved wait sprite 3. Output a single HEAD AND SHOULDERS bust facing 3/4 right, pixel-art designed for native 40x28 pixels, enlarged nearest-neighbor. Large readable white eyes, hooked yellow beak, amber aviator goggles ON forehead, swept slate blue grey crest, cream cheek with dark falcon moustache, cream barred chest and brown satchel strap. No ears, fox tails, rotor, mast, quills, text, sign frame, pole or backing. Transparent background. Head occupies top 22 pixels, torso only bottom 6. Broad full head closeup. 1990s game art, ink outline, three flat slate shades, cream amber white yellow. Maintain native face proportions to fill sign. Corrected native-reference pass: image1 now uses actual S2 SonicAndTails palette, showing orange Tails on the blue sign. Image4 is the selected original TALON bust from the prior pass; preserve that same identity, eye readability, broad head/torso proportions and closed hooked beak, while following the actual native head/shoulders size. No sign backing in the output. Native 40x28 design, transparent background.",
+    "Use case: identity-preserve. Transform native Tails signpost face in reference 1 into original TALON peregrine falcon courier in model sheet 2, consistent with approved wait sprite 3. Output a single HEAD AND SHOULDERS bust facing 3/4 right, pixel-art designed for native 40x28 pixels, enlarged nearest-neighbor. Large readable white eyes, hooked yellow beak, amber aviator goggles ON forehead, swept slate blue grey crest, cream cheek with dark falcon moustache, cream barred chest and brown satchel strap. No ears, fox tails, rotor, mast, quills, text, sign frame, pole or backing. Transparent background. Head occupies top 22 pixels, torso only bottom 6. Broad full head closeup. 1990s game art, ink outline, three flat slate shades, cream amber white yellow. Maintain native face proportions to fill sign. Corrected native-reference pass: image1 now uses actual S2 SonicAndTails palette, showing orange Tails on the blue sign. Image4 is the selected original TALON bust from the prior pass; preserve that same identity, eye readability, broad head/torso proportions and closed hooked beak, while following the actual native head/shoulders size. No sign backing in the output. Native 40x28 design, transparent background. Second corrected attempt: keep a compact friendly eye and beak, a large readable white eye, and the goggles as bold amber clusters at native resolution. Keep the mouth closed."
+  ]
+}

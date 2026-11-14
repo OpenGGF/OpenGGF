@@ -1,0 +1,1308 @@
+[
+  {
+    "game": "S2",
+    "animation": 2,
+    "label": "SonAni_Roll",
+    "frames": [
+      {
+        "frame": 61,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 62,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 63,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 64,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 65,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      }
+    ]
+  },
+  {
+    "game": "S2",
+    "animation": 3,
+    "label": "SonAni_Roll2",
+    "frames": [
+      {
+        "frame": 61,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 62,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 63,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 64,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 65,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      }
+    ]
+  },
+  {
+    "game": "S2",
+    "animation": 7,
+    "label": "SonAni_LookUp",
+    "frames": [
+      {
+        "frame": 11,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 12,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      }
+    ]
+  },
+  {
+    "game": "S2",
+    "animation": 9,
+    "label": "SonAni_Spindash",
+    "frames": [
+      {
+        "frame": 66,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 67,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 68,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 69,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 70,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 71,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      }
+    ]
+  },
+  {
+    "game": "S2",
+    "animation": 10,
+    "label": "SonAni_Blink",
+    "frames": [
+      {
+        "frame": 2,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      }
+    ]
+  },
+  {
+    "game": "S2",
+    "animation": 11,
+    "label": "SonAni_GetUp",
+    "frames": [
+      {
+        "frame": 10,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      }
+    ]
+  },
+  {
+    "game": "S2",
+    "animation": 12,
+    "label": "SonAni_Balance2",
+    "frames": [
+      {
+        "frame": 200,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 201,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 202,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 203,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      }
+    ]
+  },
+  {
+    "game": "S2",
+    "animation": 13,
+    "label": "SonAni_Stop",
+    "frames": [
+      {
+        "frame": 210,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 211,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 212,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 213,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      }
+    ]
+  },
+  {
+    "game": "S2",
+    "animation": 14,
+    "label": "SonAni_Float",
+    "frames": [
+      {
+        "frame": 84,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 89,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      }
+    ]
+  },
+  {
+    "game": "S2",
+    "animation": 15,
+    "label": "SonAni_Float2",
+    "frames": [
+      {
+        "frame": 84,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 85,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 86,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 87,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 88,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      }
+    ]
+  },
+  {
+    "game": "S2",
+    "animation": 16,
+    "label": "SonAni_Spring",
+    "frames": [
+      {
+        "frame": 91,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      }
+    ]
+  },
+  {
+    "game": "S2",
+    "animation": 17,
+    "label": "SonAni_Hang",
+    "frames": [
+      {
+        "frame": 80,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 81,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      }
+    ]
+  },
+  {
+    "game": "S2",
+    "animation": 18,
+    "label": "SonAni_Dash2",
+    "frames": [
+      {
+        "frame": 67,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      }
+    ]
+  },
+  {
+    "game": "S2",
+    "animation": 19,
+    "label": "SonAni_Dash3",
+    "frames": [
+      {
+        "frame": 67,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 68,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      }
+    ]
+  },
+  {
+    "game": "S2",
+    "animation": 20,
+    "label": "SonAni_Hang2",
+    "frames": [
+      {
+        "frame": 107,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 108,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      }
+    ]
+  },
+  {
+    "game": "S2",
+    "animation": 21,
+    "label": "SonAni_Bubble",
+    "frames": [
+      {
+        "frame": 17,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 18,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 90,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      }
+    ]
+  },
+  {
+    "game": "S2",
+    "animation": 22,
+    "label": "SonAni_DeathBW",
+    "frames": [
+      {
+        "frame": 94,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      }
+    ]
+  },
+  {
+    "game": "S2",
+    "animation": 23,
+    "label": "SonAni_Drown",
+    "frames": [
+      {
+        "frame": 93,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      }
+    ]
+  },
+  {
+    "game": "S2",
+    "animation": 24,
+    "label": "SonAni_Death",
+    "frames": [
+      {
+        "frame": 92,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      }
+    ]
+  },
+  {
+    "game": "S2",
+    "animation": 25,
+    "label": "SonAni_Hurt",
+    "frames": [
+      {
+        "frame": 78,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      }
+    ]
+  },
+  {
+    "game": "S2",
+    "animation": 26,
+    "label": "SonAni_Hurt",
+    "frames": [
+      {
+        "frame": 78,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      }
+    ]
+  },
+  {
+    "game": "S2",
+    "animation": 27,
+    "label": "SonAni_Slide",
+    "frames": [
+      {
+        "frame": 78,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 79,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      }
+    ]
+  },
+  {
+    "game": "S2",
+    "animation": 28,
+    "label": "SonAni_Blank",
+    "frames": [
+      {
+        "frame": 0,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      }
+    ]
+  },
+  {
+    "game": "S2",
+    "animation": 29,
+    "label": "SonAni_Balance3",
+    "frames": [
+      {
+        "frame": 208,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 209,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      }
+    ]
+  },
+  {
+    "game": "S2",
+    "animation": 30,
+    "label": "SonAni_Balance4",
+    "frames": [
+      {
+        "frame": 200,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 201,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 202,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 203,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 207,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      }
+    ]
+  },
+  {
+    "game": "S2",
+    "animation": 31,
+    "label": "SupSonAni_Transform",
+    "frames": [
+      {
+        "frame": 109,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 110,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 111,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 112,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 113,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      }
+    ]
+  },
+  {
+    "game": "S2",
+    "animation": 32,
+    "label": "SonAni_Lying",
+    "frames": [
+      {
+        "frame": 8,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 9,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      }
+    ]
+  },
+  {
+    "game": "S2",
+    "animation": 33,
+    "label": "SonAni_LieDown",
+    "frames": [
+      {
+        "frame": 7,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      }
+    ]
+  },
+  {
+    "game": "S3K",
+    "animation": 2,
+    "label": "AniSonic02",
+    "frames": [
+      {
+        "frame": 150,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 151,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 152,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 153,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 154,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      }
+    ]
+  },
+  {
+    "game": "S3K",
+    "animation": 3,
+    "label": "AniSonic03",
+    "frames": [
+      {
+        "frame": 150,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 151,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 152,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 153,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 154,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      }
+    ]
+  },
+  {
+    "game": "S3K",
+    "animation": 7,
+    "label": "AniSonic07",
+    "frames": [
+      {
+        "frame": 195,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 196,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      }
+    ]
+  },
+  {
+    "game": "S3K",
+    "animation": 9,
+    "label": "AniSonic09",
+    "frames": [
+      {
+        "frame": 134,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 135,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 136,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 137,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 138,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 139,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      }
+    ]
+  },
+  {
+    "game": "S3K",
+    "animation": 10,
+    "label": "AniSonic0A",
+    "frames": [
+      {
+        "frame": 186,
+        "normal_geometry_identity": false,
+        "silhouette_hotspot_equal": false,
+        "evidence": "Rendered alpha coordinates compared relative to the native centre hotspot."
+      },
+      {
+        "frame": 197,
+        "normal_geometry_identity": false,
+        "silhouette_hotspot_equal": false,
+        "evidence": "Rendered alpha coordinates compared relative to the native centre hotspot."
+      },
+      {
+        "frame": 198,
+        "normal_geometry_identity": false,
+        "silhouette_hotspot_equal": false,
+        "evidence": "Rendered alpha coordinates compared relative to the native centre hotspot."
+      },
+      {
+        "frame": 199,
+        "normal_geometry_identity": false,
+        "silhouette_hotspot_equal": null,
+        "evidence": "Retained bank tile required; isolated reference omitted. Not verified as a normal pose alias."
+      }
+    ]
+  },
+  {
+    "game": "S3K",
+    "animation": 11,
+    "label": "AniSonic0B",
+    "frames": [
+      {
+        "frame": 143,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      }
+    ]
+  },
+  {
+    "game": "S3K",
+    "animation": 12,
+    "label": "AniSonic0C",
+    "frames": [
+      {
+        "frame": 161,
+        "normal_geometry_identity": false,
+        "silhouette_hotspot_equal": false,
+        "evidence": "Rendered alpha coordinates compared relative to the native centre hotspot."
+      },
+      {
+        "frame": 162,
+        "normal_geometry_identity": false,
+        "silhouette_hotspot_equal": false,
+        "evidence": "Rendered alpha coordinates compared relative to the native centre hotspot."
+      },
+      {
+        "frame": 163,
+        "normal_geometry_identity": false,
+        "silhouette_hotspot_equal": false,
+        "evidence": "Rendered alpha coordinates compared relative to the native centre hotspot."
+      }
+    ]
+  },
+  {
+    "game": "S3K",
+    "animation": 13,
+    "label": "AniSonic0D",
+    "frames": [
+      {
+        "frame": 157,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 158,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 159,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 160,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      }
+    ]
+  },
+  {
+    "game": "S3K",
+    "animation": 14,
+    "label": "AniSonic0E",
+    "frames": [
+      {
+        "frame": 200,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      }
+    ]
+  },
+  {
+    "game": "S3K",
+    "animation": 15,
+    "label": "AniSonic0F",
+    "frames": [
+      {
+        "frame": 200,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 201,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 202,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 203,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 204,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 205,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 206,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 207,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      }
+    ]
+  },
+  {
+    "game": "S3K",
+    "animation": 16,
+    "label": "AniSonic10",
+    "frames": [
+      {
+        "frame": 142,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      }
+    ]
+  },
+  {
+    "game": "S3K",
+    "animation": 17,
+    "label": "AniSonic11",
+    "frames": [
+      {
+        "frame": 170,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 171,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      }
+    ]
+  },
+  {
+    "game": "S3K",
+    "animation": 18,
+    "label": "AniSonic12",
+    "frames": [
+      {
+        "frame": 67,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      }
+    ]
+  },
+  {
+    "game": "S3K",
+    "animation": 19,
+    "label": "AniSonic13",
+    "frames": [
+      {
+        "frame": 176,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 177,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 178,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 179,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      }
+    ]
+  },
+  {
+    "game": "S3K",
+    "animation": 20,
+    "label": "AniSonic14",
+    "frames": [
+      {
+        "frame": 145,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      }
+    ]
+  },
+  {
+    "game": "S3K",
+    "animation": 21,
+    "label": "AniSonic15",
+    "frames": [
+      {
+        "frame": 3,
+        "normal_geometry_identity": false,
+        "silhouette_hotspot_equal": false,
+        "evidence": "Rendered alpha coordinates compared relative to the native centre hotspot."
+      },
+      {
+        "frame": 4,
+        "normal_geometry_identity": false,
+        "silhouette_hotspot_equal": false,
+        "evidence": "Rendered alpha coordinates compared relative to the native centre hotspot."
+      },
+      {
+        "frame": 172,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      }
+    ]
+  },
+  {
+    "game": "S3K",
+    "animation": 22,
+    "label": "AniSonic16",
+    "frames": [
+      {
+        "frame": 168,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      }
+    ]
+  },
+  {
+    "game": "S3K",
+    "animation": 23,
+    "label": "AniSonic17",
+    "frames": [
+      {
+        "frame": 169,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      }
+    ]
+  },
+  {
+    "game": "S3K",
+    "animation": 24,
+    "label": "AniSonic18",
+    "frames": [
+      {
+        "frame": 167,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      }
+    ]
+  },
+  {
+    "game": "S3K",
+    "animation": 25,
+    "label": "AniSonic19",
+    "frames": [
+      {
+        "frame": 215,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 216,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      }
+    ]
+  },
+  {
+    "game": "S3K",
+    "animation": 26,
+    "label": "AniSonic1A",
+    "frames": [
+      {
+        "frame": 141,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      }
+    ]
+  },
+  {
+    "game": "S3K",
+    "animation": 27,
+    "label": "AniSonic1B",
+    "frames": [
+      {
+        "frame": 140,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 141,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      }
+    ]
+  },
+  {
+    "game": "S3K",
+    "animation": 28,
+    "label": "AniSonic1C",
+    "frames": [
+      {
+        "frame": 0,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      }
+    ]
+  },
+  {
+    "game": "S3K",
+    "animation": 29,
+    "label": "AniSonic1D",
+    "frames": [
+      {
+        "frame": 208,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 209,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      }
+    ]
+  },
+  {
+    "game": "S3K",
+    "animation": 30,
+    "label": "AniSonic1E",
+    "frames": [
+      {
+        "frame": 200,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 201,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 202,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 203,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 207,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      }
+    ]
+  },
+  {
+    "game": "S3K",
+    "animation": 31,
+    "label": "AniSonic1F",
+    "frames": [
+      {
+        "frame": 210,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 211,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 212,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 213,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 214,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      }
+    ]
+  },
+  {
+    "game": "S3K",
+    "animation": 32,
+    "label": "AniSonic20",
+    "frames": [
+      {
+        "frame": 8,
+        "normal_geometry_identity": false,
+        "silhouette_hotspot_equal": false,
+        "evidence": "Rendered alpha coordinates compared relative to the native centre hotspot."
+      },
+      {
+        "frame": 9,
+        "normal_geometry_identity": false,
+        "silhouette_hotspot_equal": false,
+        "evidence": "Rendered alpha coordinates compared relative to the native centre hotspot."
+      }
+    ]
+  },
+  {
+    "game": "S3K",
+    "animation": 33,
+    "label": "AniSonic21",
+    "frames": [
+      {
+        "frame": 7,
+        "normal_geometry_identity": false,
+        "silhouette_hotspot_equal": false,
+        "evidence": "Rendered alpha coordinates compared relative to the native centre hotspot."
+      }
+    ]
+  },
+  {
+    "game": "S3K",
+    "animation": 34,
+    "label": "AniSonic22",
+    "frames": [
+      {
+        "frame": 144,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 145,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 146,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      }
+    ]
+  },
+  {
+    "game": "S3K",
+    "animation": 35,
+    "label": "AniSonic23",
+    "frames": [
+      {
+        "frame": 144,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 145,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      },
+      {
+        "frame": 146,
+        "normal_geometry_identity": true,
+        "silhouette_hotspot_equal": true,
+        "evidence": "Identical mapping and DPLC (S2 also shares source art bank); same hotspot and silhouette by identity."
+      }
+    ]
+  }
+]

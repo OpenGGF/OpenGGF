@@ -1,0 +1,58 @@
+{
+  "method": "Built-in GPT Image; native title 8x references + approved models + owner staging; take A selected (clearer glove and crest); take B retained in scratch",
+  "source_sha256": "7ceaba48fc92bd93d1b352171ecc9d84f15b21239ad48ecb4a73384a42c2f2d9",
+  "frames": [
+    {
+      "selector": 5,
+      "native_area": 3605,
+      "authored_area": 3126,
+      "atlas_cell": 0,
+      "size": [
+        60,
+        67
+      ]
+    },
+    {
+      "selector": 6,
+      "native_area": 4161,
+      "authored_area": 4760,
+      "atlas_cell": 1,
+      "size": [
+        74,
+        84
+      ]
+    },
+    {
+      "selector": 7,
+      "native_area": 3798,
+      "authored_area": 3509,
+      "atlas_cell": 2,
+      "size": [
+        64,
+        71
+      ]
+    },
+    {
+      "selector": 18,
+      "native_area": 3744,
+      "authored_area": 3720,
+      "atlas_cell": 3,
+      "size": [
+        67,
+        74
+      ]
+    },
+    {
+      "selector": 9,
+      "native_area": 724,
+      "authored_area": 486,
+      "atlas_cell": 4,
+      "size": [
+        28,
+        43
+      ]
+    }
+  ],
+  "sqrt_mean_area_ratio": 0.9864665566886035,
+  "size_scope": "Anatomical body/hand sets; TALON native separate-hand slot omitted because explicitly transparent, not a small replacement"
+}

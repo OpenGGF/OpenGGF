@@ -66,7 +66,8 @@ public final class ActiveGameplayTeamResolver {
                     throw new IllegalArgumentException(
                             "SONIC_ALONE mod main cannot be configured with sidekicks: " + mainCode);
                 }
-                return modArchetype;
+                return modArchetype == PlayerCharacter.SONIC_AND_TAILS && sidekicks.isEmpty()
+                        ? PlayerCharacter.SONIC_ALONE : modArchetype;
             }
         }
         // Sonic — check sidekick to distinguish SONIC_ALONE vs SONIC_AND_TAILS

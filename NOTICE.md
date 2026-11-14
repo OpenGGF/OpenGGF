@@ -41,6 +41,8 @@ port of Nuked OPN2, a cycle-accurate Yamaha YM3438 / YM2612 emulator.
   `LICENSES/LGPL-2.1.txt`
 - Modified 2026-08 by the OpenGGF contributors: translated from C to Java;
   chip type made per instance; state copy helpers and value equality added.
+  Modified 2026-11: `NukedOpn2.clocks`, which runs several cycles of
+  `OPN2_Clock` in one loop, added beside the per-cycle port.
   Each modified file records this in its header (LGPL-2.1 section 2(b)).
 
 The ported files are conveyed under LGPL-2.1-or-later and are not converted to
@@ -172,3 +174,10 @@ copyright, permission and bundled-data notices from the artifact POM’s
 Source: https://github.com/unicode-org/icu
 Licence source: https://raw.githubusercontent.com/unicode-org/icu/maint/maint-78/LICENSE
 SHA-256: `e55522d81edc687a341a4411e0776e54ca654e90147f354a90458aaced4116af`.
+
+## QR Code generator library
+
+The crash page draws its QR code of the issue form with Project Nayuki's QR Code
+generator library for Java (`io.nayuki:qrcodegen` 1.8.0), copyright (c) Project
+Nayuki, under the MIT License; the notice is in `LICENSES/MIT-qrcodegen.txt`.
+Source: https://www.nayuki.io/page/qr-code-generator-library

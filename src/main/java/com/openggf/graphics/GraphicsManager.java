@@ -1,5 +1,6 @@
 package com.openggf.graphics;
 
+import com.openggf.camera.CameraPresentationAccess;
 import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
@@ -103,6 +104,8 @@ public class GraphicsManager {
     SpriteSatEntry.PixelOperation currentSpritePixelOperation = SpriteSatEntry.PixelOperation.NORMAL;
     Shadow15Backdrop currentShadow15Backdrop;
     private NativeSpriteOwnership nativeSpriteOwnership;
+    /** Native SAT scratch stencil/backup images; created once per GL context, deleted by cleanup. */
+    private NativeSpriteScratch nativeSpriteScratch = new NativeSpriteScratch();
 	private final List<SpriteSatEntry> spriteSatEntries = new ArrayList<>();
 	// Reusable buffers/scratch for endSpriteSatCollectionAndReplay() — avoids per-frame
 	// ArrayList and PatternDesc allocations on the SAT replay hot path.
@@ -176,6 +179,8 @@ public class GraphicsManager {
 
 	private boolean headlessMode = false;
 	SpritePresentation.Builder spritePresentationBuilder;
+	// Reused per-frame preparation storage; null while a preparation holds it.
+	SpritePresentation.Scratch spritePresentationScratch = new SpritePresentation.Scratch();
 	SpritePresentation.Subject spritePresentationSubject = SpritePresentation.Subject.WORLD;
     SpriteMotionInternalAccess.Collection spriteMotionCollection;
     MotionPacket.Binding spriteMotionOwner;
@@ -340,6 +345,12 @@ public class GraphicsManager {
 	/** Internal post-SAT picture bridge: source row crop/flips stay native; only the final quad/colour changes. */
 	void renderPresentationPattern(int patternId, int paletteIndex, boolean hFlip, boolean vFlip, boolean priority,
 	                               int rowStart, int rowEnd, float[] quad, float hue, float opacity) {
+		renderPresentationPattern(patternId, paletteIndex, hFlip, vFlip, priority, rowStart, rowEnd, quad, hue, opacity, 0);
+	}
+
+	/** {@code tint} is 0xAARRGGBB; alpha 0 keeps the hue-rotated native colour. */
+	void renderPresentationPattern(int patternId, int paletteIndex, boolean hFlip, boolean vFlip, boolean priority,
+	                               int rowStart, int rowEnd, float[] quad, float hue, float opacity, int tint) {
 		if(quad.length!=8||!Float.isFinite(hue)||!Float.isFinite(opacity))throw new IllegalArgumentException("Invalid presentation geometry or colour");
 		for(float value:quad)if(!Float.isFinite(value))throw new IllegalArgumentException("Nonfinite picture vertex");
 		if(headlessMode) return;
@@ -349,7 +360,7 @@ public class GraphicsManager {
 		if(entry==null||palette==null||rowStart>=rowEnd) return;
 		flushPatternBatch();
 		var command=PatternRenderCommand.obtainRows(entry,palette,paletteIndex,hFlip,vFlip,priority,0,0,rowStart,rowEnd,this);
-		command.presentation(quad,hue,opacity);
+		command.presentation(quad,hue,opacity,tint);
         // The queue is the painter-order boundary, including captured commands.
         // Never merge across a primitive, normal instance batch, or state command.
         List<GLCommandable> target = commandCaptureTarget != null ? commandCaptureTarget : commands;
@@ -415,6 +426,8 @@ public class GraphicsManager {
 			return;
 		}
 		this.glInitialized = true;
+		// Names from any earlier context are meaningless on this one.
+		this.nativeSpriteScratch = new NativeSpriteScratch();
 		this.patternAtlas = new PatternAtlas(ATLAS_WIDTH, ATLAS_HEIGHT, profiler);
 		this.patternAtlas.init();
 		this.defaultShaderProgram = new ShaderProgram(BASIC_VERTEX_SHADER_PATH, pixelShaderPath); // Load default shader
@@ -577,8 +590,9 @@ public class GraphicsManager {
 		if (spritePresentationBuilder != null) return;
 		Camera cam = getCamera();
         var offset = sceneMotionOffset;
-        flushScene(cam.getXWithShake() + (offset == null ? 0 : offset.x()),
-                cam.getYWithShake() + (offset == null ? 0 : offset.y()), cam.getWidth(), cam.getHeight());
+        // The presentation origin: the camera window, widened by the NATIVE widescreen inset.
+        flushScene(CameraPresentationAccess.leftWithShake(cam) + (offset == null ? 0 : offset.x()),
+                cam.getYWithShake() + (offset == null ? 0 : offset.y()), CameraPresentationAccess.width(cam), cam.getHeight());
 	}
 
 	/** Discards queued draw commands after an aborted frame without executing them. */
@@ -652,7 +666,7 @@ public class GraphicsManager {
 	 */
 	public void flushScreenSpace() {
 		Camera cam = getCamera();
-		flushWithCamera((short) 0, (short) 0, cam.getWidth(), cam.getHeight());
+		flushWithCamera((short) 0, (short) 0, CameraPresentationAccess.width(cam), cam.getHeight());
 	}
 
 	/**
@@ -1484,6 +1498,7 @@ public class GraphicsManager {
 		discardCommands(commands, 0);
 		commands.clear();
 		if (headlessMode || !glInitialized) {
+			nativeSpriteScratch.forget();
 			// In headless mode, just clear the tracking maps
 			if (patternAtlas != null) {
 				patternAtlas.cleanupHeadless();
@@ -1531,6 +1546,7 @@ public class GraphicsManager {
 		if (tilePriorityFBO != null) {
 			tilePriorityFBO.cleanup();
 		}
+		nativeSpriteScratch.delete();
 		// Reset fade manager
 		if (fadeManager != null) {
             fadeManager.bindPaletteGraphics(null);
@@ -1737,6 +1753,7 @@ public class GraphicsManager {
 	}
 
     boolean nativeSpriteOwnershipActive() { return nativeSpriteOwnership != null; }
+    NativeSpriteScratch nativeSpriteScratch() { return nativeSpriteScratch; }
 
     SpritePriorityShaderProgram nativeShadowShader() {
         if (nativeShadowShaderProgram == null) throw new IllegalStateException("Native shadow shader unavailable");
@@ -1923,6 +1940,8 @@ public class GraphicsManager {
 		int rasterHeight = getConfiguredScreenHeightPx();
 		int rasterX = spritePresentationBuilder != null ? spritePresentationBuilder.cameraX : getCamera().getXWithShake();
 		int rasterY = spritePresentationBuilder != null ? spritePresentationBuilder.cameraY : getCamera().getYWithShake();
+		// NATIVE widescreen: the raster starts at the presentation left edge, not the camera.
+		rasterX -= CameraPresentationAccess.inset(getCamera());
 		if ((rasterWidth & 7) == 0) {
 			beginSpriteSatCollection(SpriteSatMaskPostProcessor.Raster.extended(rasterX, rasterY, rasterWidth, rasterHeight));
 		} else {
@@ -2004,26 +2023,21 @@ public class GraphicsManager {
         if ((spriteSatViewport.width() <= 320 ? biasedX & 0x1FF : biasedX) == 0) admittedX++;
 		// Admission precedes replay, which can run after the producer's wrap scope ends.
         // Normalize here just as renderPatternWithId does, before scanline rejection.
+        // Build the admitted piece and its envelope once: this runs for every submitted
+        // SAT piece each frame, so avoid the chain of intermediate with*() copies.
         SpritePiece admitted = new SpritePiece(admittedX, adjustVerticalWrapY(piece.y()), piece.widthTiles(), piece.heightTiles(),
 				piece.firstPatternIndex(), piece.rawTileWordLow11(), piece.paletteIndex(),
 				piece.hFlip(), piece.vFlip(), piece.piecePriority(), piece.globalHighPriority(),
 				piece.maskReplayRole(), piece.startColTile(), piece.colCountTiles(),
-				piece.startRowTile(), piece.rowCountTiles(), piece.debugSource());
-		if (presentationSource != null) {
-			admitted = admitted.withDebugSource(presentationSource);
-		}
-		SpriteSatEntry entry = new SpriteSatEntry(currentSpriteSatBucket, admitted)
-                .withTileOcclusionPaletteMask(getCurrentSpriteTileOcclusionPaletteMask())
-                .withPixelOperation(currentSpritePixelOperation);
+				piece.startRowTile(), piece.rowCountTiles(),
+				presentationSource != null ? presentationSource : piece.debugSource());
+		// The SAT replay runs after the ghost renderer has ended its effect; carry it.
+		SpriteSatEntry entry = new SpriteSatEntry(currentSpriteSatBucket, admitted,
+				SpriteSatEntry.UNCLIPPED_TOP, SpriteSatEntry.UNCLIPPED_BOTTOM, spritePresentationSubject, null,
+				getCurrentSpriteTileOcclusionPaletteMask(), currentSpritePixelOperation,
+				ghostRenderEffectActive ? new SpriteSatEntry.Ghost(ghostRenderAlpha, ghostRenderPreservesColour) : null,
+				spriteMotionOwner);
         if (entry.pixelOperation() == SpriteSatEntry.PixelOperation.SHADOW_15) validateShadowEntry(entry);
-		if (spritePresentationSubject != SpritePresentation.Subject.WORLD) {
-			entry = entry.withPresentationSubject(spritePresentationSubject);
-		}
-		if (spriteMotionOwner != null) entry = entry.withMotionOwner(spriteMotionOwner);
-		if (ghostRenderEffectActive) {
-			// The SAT replay runs after the ghost renderer has ended its effect; carry it.
-			entry = entry.withGhost(new SpriteSatEntry.Ghost(ghostRenderAlpha, ghostRenderPreservesColour));
-		}
 		(spriteSatFragments == null ? spriteSatEntries : spriteSatFragments).add(entry);
 	}
 
@@ -2109,25 +2123,33 @@ public class GraphicsManager {
 						SpriteSatEntry entry = processedEntries.get(i);
 						if (entry.priorityBucket() != bucket) continue;
 						if (entry.piece().debugSource() != null)
-							spritePresentationBuilder.layer = SpritePresentation.Layer.valueOf(entry.piece().debugSource());
+							spritePresentationBuilder.layer = SpritePresentation.layerNamed(entry.piece().debugSource());
 						setCurrentSpriteHighPriority(entry.piece().globalHighPriority());
                         setCurrentSpriteTileOcclusionPaletteMask(entry.tileOcclusionPaletteMask());
-						SpritePresentation.withSubject(this, entry.presentationSubject(),
-								() -> appendBatchedReplayCommands(entry, -1));
+						// SpritePresentation.withSubject without a per-entry capturing lambda.
+						SpritePresentation.Subject previousSubject = spritePresentationSubject;
+						spritePresentationSubject = java.util.Objects.requireNonNull(entry.presentationSubject(), "subject");
+						try { appendBatchedReplayCommands(entry, -1); }
+						finally { spritePresentationSubject = previousSubject; }
 					}
 				}
 				return;
 			}
 
-            var headReplay = processedEntries.stream().map(entry -> entry.presentationSubject().head())
-                    .filter(java.util.Objects::nonNull).findFirst();
-            if (headReplay.isPresent()) {
-                headReplay.get().replay().replay(this, processedEntries,
+            SpritePresentation.HeadTransform headReplay = null;
+            boolean anyGhost = false;
+            for (int i = 0, n = processedEntries.size(); i < n && headReplay == null; i++) {
+                SpriteSatEntry entry = processedEntries.get(i);
+                headReplay = entry.presentationSubject().head();
+                anyGhost |= entry.isGhost();
+            }
+            if (headReplay != null) {
+                headReplay.replay().replay(this, processedEntries,
                         entry -> appendBatchedReplayCommands(entry, -1));
                 return;
             }
 
-            if (processedEntries.stream().anyMatch(SpriteSatEntry::isGhost)) {
+            if (anyGhost) {
                 // Mask admission already expanded immutable art fragments. Flatten
                 // the actual bucket order before planning real/ghost coverage spans.
                 var frontToBack = new ArrayList<SpriteSatEntry>(processedEntries.size());
@@ -2249,8 +2271,28 @@ public class GraphicsManager {
 
 	private void appendBatchedReplayCommands(SpriteSatEntry entry, int paletteTextureId) {
         if (spriteMotionCollection == null) {
-            withSpritePixelOperation(entry.pixelOperation(),
-                    () -> withSatEntryGhost(entry, () -> appendBatchedReplayTiles(entry, paletteTextureId)));
+            // withSpritePixelOperation + withSatEntryGhost, without per-entry capturing lambdas.
+            var previousOperation = currentSpritePixelOperation;
+            currentSpritePixelOperation = java.util.Objects.requireNonNull(entry.pixelOperation(), "pixel operation");
+            try {
+                if (!entry.isGhost()) {
+                    appendBatchedReplayTiles(entry, paletteTextureId);
+                } else {
+                    boolean active = ghostRenderEffectActive;
+                    boolean colour = ghostRenderPreservesColour;
+                    float alpha = ghostRenderAlpha;
+                    beginGhostRenderEffect(entry.ghost().alpha(), entry.ghost().preserveColour());
+                    try {
+                        appendBatchedReplayTiles(entry, paletteTextureId);
+                    } finally {
+                        ghostRenderEffectActive = active;
+                        ghostRenderPreservesColour = colour;
+                        ghostRenderAlpha = alpha;
+                    }
+                }
+            } finally {
+                currentSpritePixelOperation = previousOperation;
+            }
         } else {
             withSpritePixelOperation(entry.pixelOperation(),
                     () -> withSatEntryGhost(entry, () -> SpriteMotionInternalAccess.withOwner(this, entry.motionOwner(),
@@ -2282,47 +2324,66 @@ public class GraphicsManager {
 		}
 	}
 
+	/** Reused per-tile sink: a capturing lambda here was allocated for every replayed SAT entry. */
+	private final class ReplayTileSink implements SpritePiece.TileConsumer {
+		private SpriteSatEntry entry;
+		private int paletteTextureId;
+		@Override public void render(int patternIndex, boolean pieceHFlip, boolean pieceVFlip, int paletteIndex,
+				int drawX, int drawY) {
+			appendBatchedReplayTile(entry, paletteTextureId, patternIndex, pieceHFlip, pieceVFlip, paletteIndex,
+					drawX, drawY);
+		}
+	}
+	private final ReplayTileSink replayTileSink = new ReplayTileSink();
+
 	private void appendBatchedReplayTiles(SpriteSatEntry entry, int paletteTextureId) {
-		entry.piece().forEachTile(
-				(patternIndex, pieceHFlip, pieceVFlip, paletteIndex, drawX, drawY) -> {
-					// CPU preparation uses this same tile decoder before any atlas lookup.
-					// A sprite-mask band can hide single scanlines of this tile.
-					int rowStart = entry.visibleTileRowStart(drawY);
-					int rowEnd = entry.visibleTileRowEnd(drawY);
-					if (rowStart >= rowEnd) {
-						return;
-					}
-					if (spritePresentationBuilder != null) {
-						prepareReplayDesc(entry, patternIndex, pieceHFlip, pieceVFlip, paletteIndex);
-						if (rowStart == 0 && rowEnd == 8) {
-							renderPatternWithId(patternIndex, reusableReplayDesc, drawX, drawY);
-						} else {
-							renderPatternRowsWithId(patternIndex, reusableReplayDesc, paletteIndex, pieceHFlip, pieceVFlip,
-									entry.piece().effectiveHighPriority(), drawX, drawY, rowStart, rowEnd);
-						}
-						return;
-					}
-					PatternAtlas.Entry atlasEntry = patternAtlas != null ? patternAtlas.getEntry(patternIndex) : null;
-					if (atlasEntry == null) {
-						return;
-					}
-                    if(entry.presentationSubject().paletteReplay()!=null
-                            || entry.pixelOperation() == SpriteSatEntry.PixelOperation.SHADOW_15) {
-                        prepareReplayDesc(entry,patternIndex,pieceHFlip,pieceVFlip,paletteIndex);
-                        flushSatReplayBatch();
-                        registerCommand(obtainReplayCommand(entry,atlasEntry,paletteTextureId,paletteIndex,
-                                pieceHFlip,pieceVFlip,drawX,drawY,rowStart,rowEnd));return;
-                    }
-					prepareReplayDesc(entry, patternIndex, pieceHFlip, pieceVFlip, paletteIndex);
-					if (addToSatReplayBatch(entry, atlasEntry, paletteIndex, pieceHFlip, pieceVFlip, drawX, drawY,
-							rowStart, rowEnd)) {
-						return;
-					}
-					// Unsupported state: flush first so draw order is preserved, then draw direct.
-					flushSatReplayBatch();
-					registerCommand(obtainReplayCommand(entry, atlasEntry, paletteTextureId, paletteIndex,
-							pieceHFlip, pieceVFlip, drawX, drawY, rowStart, rowEnd));
-				});
+		// A nested replay (none is expected) gets its own sink rather than clobbering the outer one.
+		ReplayTileSink sink = replayTileSink.entry == null ? replayTileSink : new ReplayTileSink();
+		sink.entry = entry;
+		sink.paletteTextureId = paletteTextureId;
+		try { entry.piece().forEachTile(sink); }
+		finally { sink.entry = null; }
+	}
+
+	private void appendBatchedReplayTile(SpriteSatEntry entry, int paletteTextureId, int patternIndex,
+			boolean pieceHFlip, boolean pieceVFlip, int paletteIndex, int drawX, int drawY) {
+		// CPU preparation uses this same tile decoder before any atlas lookup.
+		// A sprite-mask band can hide single scanlines of this tile.
+		int rowStart = entry.visibleTileRowStart(drawY);
+		int rowEnd = entry.visibleTileRowEnd(drawY);
+		if (rowStart >= rowEnd) {
+			return;
+		}
+		if (spritePresentationBuilder != null) {
+			prepareReplayDesc(entry, patternIndex, pieceHFlip, pieceVFlip, paletteIndex);
+			if (rowStart == 0 && rowEnd == 8) {
+				renderPatternWithId(patternIndex, reusableReplayDesc, drawX, drawY);
+			} else {
+				renderPatternRowsWithId(patternIndex, reusableReplayDesc, paletteIndex, pieceHFlip, pieceVFlip,
+						entry.piece().effectiveHighPriority(), drawX, drawY, rowStart, rowEnd);
+			}
+			return;
+		}
+		PatternAtlas.Entry atlasEntry = patternAtlas != null ? patternAtlas.getEntry(patternIndex) : null;
+		if (atlasEntry == null) {
+			return;
+		}
+        if(entry.presentationSubject().paletteReplay()!=null
+                || entry.pixelOperation() == SpriteSatEntry.PixelOperation.SHADOW_15) {
+            prepareReplayDesc(entry,patternIndex,pieceHFlip,pieceVFlip,paletteIndex);
+            flushSatReplayBatch();
+            registerCommand(obtainReplayCommand(entry,atlasEntry,paletteTextureId,paletteIndex,
+                    pieceHFlip,pieceVFlip,drawX,drawY,rowStart,rowEnd));return;
+        }
+		prepareReplayDesc(entry, patternIndex, pieceHFlip, pieceVFlip, paletteIndex);
+		if (addToSatReplayBatch(entry, atlasEntry, paletteIndex, pieceHFlip, pieceVFlip, drawX, drawY,
+				rowStart, rowEnd)) {
+			return;
+		}
+		// Unsupported state: flush first so draw order is preserved, then draw direct.
+		flushSatReplayBatch();
+		registerCommand(obtainReplayCommand(entry, atlasEntry, paletteTextureId, paletteIndex,
+				pieceHFlip, pieceVFlip, drawX, drawY, rowStart, rowEnd));
 	}
 
 	private boolean addToSatReplayBatch(SpriteSatEntry satEntry, PatternAtlas.Entry atlasEntry, int paletteIndex,

@@ -4,6 +4,36 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class TestArenaMaskState {
+    @Test void equalRowsMayShareStorageButNeverMutableState() {
+        float[] row = {0, 0.5f, 1, 0.25f};
+        var first = new ArenaMaskState(1, 3, 7, row);
+        var second = new ArenaMaskState(1, 3, 8, row.clone());
+        row[1] = 0.75f;
+        assertEquals(0.5f, first.opacityAt(1), "a state never aliases its caller's row");
+        assertEquals(0.5f, second.opacityAt(1));
+        float[] read = first.opacity();
+        read[0] = 1;
+        assertEquals(0, first.opacityAt(0), "reads return copies");
+        assertEquals(0, second.opacityAt(0), "a shared row cannot be written through either state");
+        assertNotSame(first.opacity(), first.opacity());
+        assertEquals(new ArenaMaskState(1, 3, 7, new float[]{0, 0.5f, 1, 0.25f}), first);
+        assertNotEquals(new ArenaMaskState(1, 3, 7, new float[]{-0f, 0.5f, 1, 0.25f}), first,
+                "rows are only shared when bitwise equal");
+        var threads = (com.sun.management.ThreadMXBean) java.lang.management.ManagementFactory.getThreadMXBean();
+        long thread = Thread.currentThread().threadId();
+        float[] wide = new float[800];
+        java.util.Arrays.fill(wide, 0, 240, 1);
+        new ArenaMaskState(0, 800, 0, wide);
+        long start = threads.getThreadAllocatedBytes(thread);
+        for (int i = 0; i < 100; i++) new ArenaMaskState(240, 560, i, wide);
+        long repeated = threads.getThreadAllocatedBytes(thread) - start;
+        start = threads.getThreadAllocatedBytes(thread);
+        for (int i = 0; i < 100; i++) { wide[400] = i; new ArenaMaskState(240, 560, i, wide); }
+        long changing = threads.getThreadAllocatedBytes(thread) - start;
+        // Changing rows still copy (800 floats each); repeated rows must not.
+        assertTrue(changing >= 100L * 800 * 4, "changing rows allocated " + changing);
+        assertTrue(repeated * 10 < changing, "repeated rows allocated " + repeated + " vs " + changing);
+    }
     @Test void boundaryHasNoSpatialFeatherOffset() {
         var state = new ArenaMaskState(240,560,1);
         assertEquals(1,state.targetOpacity(239));

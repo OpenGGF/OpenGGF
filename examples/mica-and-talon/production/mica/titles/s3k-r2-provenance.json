@@ -1,0 +1,84 @@
+{
+  "date": "2026-11-10",
+  "model": "built-in GPT Image",
+  "native_references": [
+    "s3k-plane-13-native8.png: real title palette enlarged nearest 8x",
+    "s3k-sprite-0-native8.png: native glove motion envelope"
+  ],
+  "identity": [
+    "concept/mica.png",
+    "art/mica/frames/wait-00.png"
+  ],
+  "attempts": {
+    "portrait": 2,
+    "finger0": 2,
+    "finger1": 2,
+    "half_wink": 2,
+    "closed_wink": 2
+  },
+  "selection": "Portrait A for compact glove and broad dome scales; patch row A for native-sized bends and readable eyelid. All generations fresh relative to their supplied original references, no iterative edit chain.",
+  "prompts": {
+    "portrait": "Two independent side-by-side MICA native-pose transformations. Match 1994 baked pre-rendered CGI, upper-left specular light, volumetric rounded overlapping jade scales, cream face/belly, large lashed eyes, cream-rim soft coral-pink ear. Same native head/torso landmarks, short gloved pointing finger. Rounded lower glove tucked behind belly. No white hairs, red ear, notch, noodle, ring, text, scenery. Magenta key background.",
+    "patches": "Two rows of independent attempts, four columns: short gloved index upper-left, upper-right, own tall eye half closed, own eye fully closed. Fixed fist/cuff; exact near-eye style derived from selected portrait; no Sonic eye geometry. Baked CGI volume, jade, cream, white glove; magenta gutters."
+  },
+  "source_hashes": {
+    "body-attempts.png": "1221095a173cd8ee407acd992a6700a4be4148e565fdba5e4053e3325c09f38d",
+    "body-source.png": "722b6d0a8e7ccac1e2e0b29bd7772243db2b5a12163dcae262b4276078892680",
+    "patch-attempts.png": "84edf7d5e110191d9e88271577911e80c7cdc5379aebd98c71200d747e5d46ff"
+  },
+  "recipe": "s3k_polish.py --body <selected half> --patches <fresh patches> --scratch <out>",
+  "geometry": {
+    "portrait": [
+      86,
+      4,
+      143,
+      138
+    ],
+    "hand_origin": [
+      160,
+      60
+    ],
+    "hand_envelope": [
+      39,
+      49
+    ],
+    "wink_origin": [
+      108,
+      40
+    ],
+    "wink_context": [
+      56,
+      48
+    ]
+  },
+  "root_causes": {
+    "ear": "Title-local s3k-palette.json itself assigned red14/15; private creator palette is not written by native banner cycling. Changed to coral-pink14/15; keep cream8..10.",
+    "ring": "Previous reduction clipped the generated silhouette wherever native emblem had unowned opaque pixels, causing perforation/noise at overlap. Full authored silhouette now composites continuously; native mask/clear arrays unchanged.",
+    "wink": "Previous independently generated eye was scaled into a generic ellipse at128,40, unrelated to the portrait open eye. New border is exact own plane crop; eye ownership derives from that plane contour.",
+    "hand": "Independent patches resized into different silhouettes drifted away from resting fist. Shared anatomical split, fixed wrist and bounded envelope.",
+    "lower_arm": "Fresh rounded generated glove replaces straight cut/lower backing."
+  },
+  "limits": [
+    "Approach plane1..12 drawings retained from round1 with corrected palette.",
+    "No ordinary capture of plane12; component fixture only.",
+    "Literal stock equality outside new MICA silhouette cannot hold where old Sonic was removed; preserved native pixels are gated separately with bounded native animation context exclusions."
+  ],
+  "size_checks": {
+    "plane_bank": 1.0482471618101814,
+    "finger_anatomy": 0.9800153608627171,
+    "plane_authored": 193385,
+    "plane_native": 175993,
+    "finger_authored": 2233,
+    "finger_native": 2325,
+    "wink_context_vs_own_plane": 1.0
+  },
+  "verification": {
+    "java": "59 passed, 0 skipped: TestMicaCharacterIntegration, TestCharacterArtCoverageAudit, TestNativeTitleMascotFallbackPixels, TestSonic3kTitleState; Java25, surfaceless EGL, Maven queue",
+    "python": "57 passed, 0 skipped after optional pinned disassemblies restored",
+    "captures": "900 stock+mod real presentation frames; 16 observed plane/finger/wink states inspected at3x; separate13-plane components",
+    "pixels": "0 preserved-native failures; 41,124 rendered ear-ramp pixel checks,0 failures; literal outside-MICA differences on665 frames due to removed native silhouette",
+    "coverage": "6 title rows authored -> authored,0 fallbacks moved; full MICA/S3K171 authored,121 native alias,24 alias,10 N/A unchanged",
+    "review": "$HOME/scratch/agent-tmp/title-r2-s3k/review.html",
+    "limits": "Preserved-native checker excludes native mascot clear mask and bounded animated-native-sprite context; not literal stock equality everywhere outside MICA. Approach1..12 art inherited; plane12 component only."
+  }
+}

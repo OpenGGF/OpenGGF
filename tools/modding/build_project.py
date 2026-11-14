@@ -56,18 +56,21 @@ def runtime_directory(project, roms):
     return play
 
 
-def copy_resources(project, classes):
+def copy_resources(project, classes, classpath=None):
     """Copy authored resources and run an optional trusted project resource generator.
 
-    The generator receives only the output resource root. Generated binary assets
-    stay in build output; checkout and artifact-only example builds share this path.
+    The generator receives only the output resource root, plus the engine/SDK
+    classpath in OPENGGF_CLI_CLASSPATH when known (to run ggfmod converters).
+    Generated binary assets stay in build output; checkout and artifact-only
+    example builds share this path.
     """
     project, classes = Path(project).resolve(), Path(classes).resolve()
     shutil.copytree(project / "src/main/resources", classes, dirs_exist_ok=True,
                     ignore=shutil.ignore_patterns("ggfmod.local.json"))
     generator = project / "generate_resources.py"
     if generator.is_file():
-        subprocess.run([sys.executable, str(generator), str(classes)], check=True, cwd=project)
+        env = dict(os.environ, OPENGGF_CLI_CLASSPATH=classpath) if classpath else None
+        subprocess.run([sys.executable, str(generator), str(classes)], check=True, cwd=project, env=env)
 
 
 def convert_starter_resources(project, classes, cli):
@@ -119,7 +122,7 @@ def build(project, engine, sdk, *, run=False, roms=None, testkit=None, test=Fals
         subprocess.run([java_tool("java"), "-cp", classpath,
                         "com.openggf.tools.modsdk.SupportedSourceCheckCli", str(classes),
                         str(project / "src/main/resources/META-INF/openggf-mod.yaml")], check=True)
-    copy_resources(project, classes)
+    copy_resources(project, classes, classpath)
     cli = [java_tool("java"), "--enable-native-access=ALL-UNNAMED", "-cp", classpath, "com.openggf.tools.modsdk.GgfModCli"]
     convert_starter_resources(project, classes, cli)
     jar = project / "target" / (project.name + "-mod.jar")

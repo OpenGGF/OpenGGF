@@ -25,6 +25,32 @@ public final class EndingSpriteRenderSupport {
 
     private EndingSpriteRenderSupport() { }
 
+    /**
+     * The character-owned sprites among the native ending mappings; everything else (vehicles,
+     * flames, propellers, the Master Emerald) has no surface and always draws natively.
+     * Full-size cockpit: Map_SonicPlane frame $C is Tails in the seat (loc_5EB72,
+     * sonic3k.asm:125171-125175), and Map_SonicPlaneEnding frame $B is Sonic in the seat for
+     * Tails's route (loc_5EB88, sonic3k.asm:125178-125182).
+     * Mid-size plane: byte_5ED0E (sonic3k.asm:125315-125320) selects the cockpit head $C/$D and
+     * the rider $E/$F by Player_mode. Frames $16/$17 are that plane's exhaust flame
+     * (loc_5EC4E, sonic3k.asm:125244-125262), not a character.
+     */
+    static com.openggf.game.EndingSpriteSet.Surface characterSurface(ObjectServices services, int mappingAddress, int frame) {
+        if (mappingAddress == S3kEndingResources.MAP_ENDING_PLANE)
+            return frame == 12 ? com.openggf.game.EndingSpriteSet.Surface.S3K_TORNADO_PILOT : null;
+        if (mappingAddress == S3kEndingResources.MAP_SONIC_TAILS_POSE && frame <= 4)
+            return S3kEndingCoordinator.state(services).progress() < 0
+                    ? com.openggf.game.EndingSpriteSet.Surface.S3K_NORMAL_POSE
+                    : com.openggf.game.EndingSpriteSet.Surface.S3K_POWERED_POSE;
+        if (mappingAddress != S3kEndingResources.MAP_ENDING_PLANE_EXTRA) return null;
+        return switch (frame) {
+            case 11 -> com.openggf.game.EndingSpriteSet.Surface.S3K_TORNADO_PILOT;
+            case 12, 13 -> com.openggf.game.EndingSpriteSet.Surface.S3K_MINI_TORNADO_PILOT;
+            case 14, 15 -> com.openggf.game.EndingSpriteSet.Surface.S3K_PASSENGER;
+            default -> null;
+        };
+    }
+
     public static void draw(ObjectServices services, String key, int mappingAddress,
                             int tileBase, int paletteBase, int frame, int worldX, int worldY,
                             boolean flipX, boolean highPriority, int priorityBucket) {
@@ -34,6 +60,9 @@ public final class EndingSpriteRenderSupport {
     public static void draw(ObjectServices services, String key, int mappingAddress,
                             int tileBase, int paletteBase, int frame, int worldX, int worldY,
                             boolean flipX, boolean flipY, boolean highPriority, int priorityBucket) {
+        var surface = characterSurface(services, mappingAddress, frame);
+        if (surface != null && EndingCharacterPresentation.draw(services, surface, frame, worldX, worldY,
+                flipX, flipY, highPriority, priorityBucket)) return;
         if (!(services.currentLevel() instanceof Sonic3kLevel level)) return;
         if (!(services.levelManager().getGameModule().getObjectArtProvider()
                 instanceof Sonic3kObjectArtProvider provider)) return;

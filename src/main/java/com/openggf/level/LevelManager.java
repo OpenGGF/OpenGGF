@@ -737,9 +737,12 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                 ? activeModZoneRuntimeContribution.runtimeProfile() : null;
         activeCustomZonePaletteBridge = null;
         Level loaded = gameModule != null ? gameModule.loadLevelOverride(levelIndex) : null;
+        PreparedLevelBuild prepared = loaded == null ? preparedLoads.takeReload(this, levelIndex) : null;
         discardPreparedLevelLoad();
         if (loaded == null) {
-            loaded = game.loadLevel(levelIndex);
+            loaded = prepared != null
+                    ? ((PreparableLevelLoader) game).installPreparedLevel(prepared)
+                    : game.loadLevel(levelIndex);
         }
         loaded = gameModule == null ? loaded : java.util.Objects.requireNonNull(gameModule.transformDecodedLevel(loaded), "Decoded level transform");
         if (activeModZoneRuntimeContribution != null) {
@@ -751,7 +754,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         return loaded;
     }
 
-    private final LevelLoadPreparer loadPreparer = new LevelLoadPreparer();
+    final LevelPreparedLoads preparedLoads = new LevelPreparedLoads();
 
     /**
      * Starts building the level for {@code zone}/{@code act} on the shared
@@ -769,50 +772,22 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * @return true when a build was started
      */
     public boolean prepareActTransitionLevelLoad(int zone, int act, String mutationKey) {
-        if (!(game instanceof PreparableLevelLoader loader)) {
-            return false;
-        }
-        if (zone < 0 || zone >= levels.size() || act < 0 || act >= levels.get(zone).size()) {
-            return false;
-        }
-        // Additive levels belong to the module override loader, not the stock ROM preparer.
-        if (gameModule != null && gameModule.getZoneRegistry().zoneKey(zone) instanceof ZoneKey.Mod) {
-            return false;
-        }
-        int levelIndex = levels.get(zone).get(act).levelIndex();
-        // Resolve gameplay configuration on the frame thread. The submitted task
-        // owns its ROM and immutable load inputs, never a live feature provider.
-        var task = loader.prepareLevelBuildTask(levelIndex, mutationKey);
-        loadPreparer.prepare(loader, levelIndex, mutationKey, task);
-        return true;
+        return preparedLoads.prepareActTransition(this, zone, act, mutationKey);
+    }
+
+    /** See {@link LevelPreparedLoads#prepareReload}: a death respawn's fade has started. */
+    boolean prepareCurrentLevelReload() {
+        return preparedLoads.prepareReload(this);
     }
 
     /** Drops any level build prepared for a transition that will no longer happen. */
     public void discardPreparedLevelLoad() {
-        loadPreparer.discard();
+        preparedLoads.preparer.discard();
     }
 
     /** Number of level installs served from a prepared build; test observability. */
     public int preparedLevelInstallCount() {
-        return loadPreparer.installedFromPreparedCount();
-    }
-
-    private PreparedLevelBuild takePreparedLevelLoad(int levelIndex, String mutationKey) {
-        return loadPreparer.take(game, levelIndex, mutationKey);
-    }
-
-    private void adoptPreparedTilemaps(PreparedLevelBuild prepared) {
-        if (prepared == null || tilemapManager == null) {
-            return;
-        }
-        // Wrapping policy belongs to the installed target and its live zone state.
-        // Build on the frame thread, after installation; ROM decoding remains async.
-        PrebuiltTilemaps tilemaps = LevelTilemapPrebuilder.build(
-                level, graphicsManager, gameState, zoneFeatureProvider, currentZone,
-                parallaxManager, verticalWrapEnabled);
-        if (tilemaps != null) {
-            tilemapManager.adoptPrebuiltTilemaps(tilemaps);
-        }
+        return preparedLoads.preparer.installedFromPreparedCount();
     }
 
     public Level loadLevelData(
@@ -850,7 +825,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                     throw new IllegalStateException(
                             game.getIdentifier() + " does not support deferred level resources");
                 }
-                prepared = takePreparedLevelLoad(levelIndex, mutationKey);
+                prepared = preparedLoads.takeActTransition(this, levelIndex, mutationKey);
                 loaded = prepared != null
                         ? ((PreparableLevelLoader) game).installPreparedLevel(prepared)
                         : game.loadLevel(levelIndex);
@@ -860,7 +835,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         writeCurrentLevel(loaded);
         installHudProfile();
         rebuildLevelDerivedState();
-        adoptPreparedTilemaps(prepared);
+        preparedLoads.adoptTilemaps(this, gameState, prepared);
         return loaded;
     }
 
@@ -915,7 +890,11 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                 level, blockPixelSize, overlayManager, graphicsManager,
                 cachedScreenWidth, cachedScreenHeight));
         cacheLevelDimensions();
+        LevelTilemapManager previous = tilemapManager;
         tilemapManager = new LevelTilemapManager(buildGeometry(), graphicsManager, gameState);
+        // A reload of the same geometry (death respawn, restart) keeps the drawn foreground
+        // and redraws only the cells the new layout changes.
+        tilemapManager.adoptForegroundImage(previous);
     }
 
     /** Re-reads the picture size after the aspect changes mid-level; see {@link LevelDisplayWidth}. */
@@ -1252,8 +1231,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * Phase C: Load object art and player sprite art into the pattern atlas.
      */
     public void initArt() {
-        initObjectArt();
-        initPlayableArt();
+        PatternAtlasBatchScope.run(graphicsManager, () -> { initObjectArt(); initPlayableArt(); });
     }
 
     void initPlayableArt() { playableArtInitializer.initializeForLoad(); }
@@ -1724,7 +1702,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * gameplay, such as MGZ2's boss-transition Tails rescue object.
      */
     public void refreshPlayableSpriteArt() {
-        playableArtInitializer.refresh();
+        PatternAtlasBatchScope.run(graphicsManager, playableArtInitializer::refresh);
     }
 
     /**
@@ -1773,7 +1751,9 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         }
     }
 
-    void initObjectArt() {
+    void initObjectArt() { PatternAtlasBatchScope.run(graphicsManager, this::installObjectArt); }
+
+    private void installObjectArt() {
         activeCustomZonePaletteBridge = null;
         PatternAtlas patternAtlas = graphicsManager.getPatternAtlas();
         if (patternAtlas != null) {
@@ -1804,6 +1784,8 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             refreshObjectArtPatterns();
 
             hudRenderManager = new HudRenderManager(graphicsManager, camera, gameState);
+            HudPaletteBridgeAccess.setCharacterLifeIcon(hudRenderManager,
+                    com.openggf.game.presentation.CharacterIconPalette.hasHudIcon());
             HudProfileAccess.install(hudRenderManager, activeHudProfile);
             HudProfileAccess.applyDisplaySettings(hudRenderManager, configService);
             hudRenderManager.setHudPalettes(provider.getHudTextPaletteLine(), provider.getHudFlashPaletteLine());
@@ -2243,9 +2225,21 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
 
     void ensureForegroundTilemapData() {
         if (tilemapManager != null) {
+            if (camera != null) {
+                tilemapManager.setForegroundStreamFocus(camera.getX(), cachedScreenWidth);
+            }
             tilemapManager.ensureForegroundTilemapData(this::getBlockAtPosition,
                     zoneFeatureProvider, currentZone, parallaxManager, verticalWrapEnabled);
+            // The render-side ensure draws one slice of a streamed foreground; gameplay
+            // readers of single tiles go to the tilemap manager and never advance it.
+            tilemapManager.advanceForegroundStream();
         }
+    }
+
+    /** A from-scratch foreground image of the current layout; the retained one is untouched (package tests). */
+    byte[] buildForegroundImageForComparison() {
+        return tilemapManager.buildForegroundImageForComparison(this::getBlockAtPosition,
+                zoneFeatureProvider, currentZone);
     }
 
     /**
@@ -3652,7 +3646,9 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             boolean showTitleCard, LevelLoadMode loadMode, boolean runtimeReload,
             boolean titleCardRequiredInHeadlessMode, boolean queueFreshLevelRuntimeArt,
             com.openggf.game.LevelLoadCause loadCause) {
-        discardPreparedLevelLoad();
+        // A reload prepared during the fade stays for this load's LoadLevelData step,
+        // which installs it only if a synchronous load would use the same inputs.
+        preparedLoads.preparer.discardUnless(LevelLoadPreparer.Purpose.RELOAD);
         // BEGIN HCZ1_DIRECT_FF_OUTER_LOAD_BEGIN: profile success does not certify this later tail.
         boolean plcOuterLoadCompleted = false;
         // END HCZ1_DIRECT_FF_OUTER_LOAD_BEGIN

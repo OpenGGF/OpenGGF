@@ -1501,6 +1501,15 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
             throw new IllegalStateException(
                     "Results-screen mapping table is empty");
         }
+        try {
+            var custom = com.openggf.game.sonic3k.Sonic3kCharacterPresentation.results(
+                    rom, combinedPatterns, mappingFrames,
+                    com.openggf.game.sonic3k.Sonic3kCharacterPresentation.active(), 0);
+            combinedPatterns = custom.patterns();
+            mappingFrames = custom.mappings();
+        } catch (java.io.IOException e) {
+            throw new IllegalStateException("Unable to compose results character name", e);
+        }
         spriteSheet = new ObjectSpriteSheet(combinedPatterns, mappingFrames, 0, 1);
         renderer = new PatternSpriteRenderer(spriteSheet);
         artLoaded = true;

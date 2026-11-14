@@ -343,6 +343,117 @@ class TestHomingAttackMutator {
         assertTrue(rock.isDestroyed(), "A homing strike breaks the rock like a grounded roll");
     }
 
+    /** A creator subclass, deliberately neither Sonic, Tails nor Knuckles. */
+    private static final class TestCharacter extends com.openggf.sprites.playable.AbstractPlayableSprite {
+        TestCharacter(String code, short x, short y) {
+            super(code, x, y, new com.openggf.sprites.playable.CharacterPhysicsSpec(
+                    GameServices.module().getPhysicsProvider().getProfile("sonic")));
+        }
+        @Override public com.openggf.game.CharacterKey characterKey() {
+            return com.openggf.game.CharacterKey.mod("homing-test", "courier");
+        }
+        @Override protected boolean onAbilityActivate(boolean up, boolean down, boolean left, boolean right) {
+            return down ? com.openggf.sprites.playable.HomingAttack.divebomb(this, com.openggf.sprites.playable.HomingAttack.Mode.HOMING)
+                    : com.openggf.sprites.playable.HomingAttack.start(this, com.openggf.sprites.playable.HomingAttack.Mode.HOMING);
+        }
+        @Override public com.openggf.sprites.playable.SecondaryAbility getSecondaryAbility() {
+            return com.openggf.sprites.playable.SecondaryAbility.FLY;
+        }
+        @Override public void draw() { }
+    }
+
+    private static TestCharacter character(HeadlessTestFixture fixture) {
+        var old = fixture.sprite();
+        var player = new TestCharacter(old.getCode(), old.getX(), old.getY());
+        player.setAnimationProfile(old.getAnimationProfile());
+        player.setAnimationSet(old.getAnimationSet());
+        GameServices.sprites().addSprite(player);
+        player.setCentreYPreserveSubpixel((short) (old.getCentreY() - 48));
+        player.setAir(true);
+        player.setJumping(true);
+        player.setRolling(true);
+        GameServices.camera().setFocusedSprite(player);
+        assertSame(player, GameServices.sprites().getMainPlayable());
+        return player;
+    }
+
+    @Test @RequiresRom(SonicGame.SONIC_2)
+    void characterFacadeKillsBadnikWithoutAnyMutatorAndRewindsStrike() {
+        var fixture = settledEhz1();
+        var player = character(fixture);
+        var world = SessionManager.getCurrentWorldSession();
+        var buzzer = GameServices.level().getObjectManager().createDynamicObject(() -> new BuzzerBadnikInstance(
+                new ObjectSpawn(player.getCentreX() + 96, player.getCentreY(), Sonic2ObjectIds.BUZZER, 0, 0, false, 0)));
+        fixture.stepIdleFrames(2);
+        assertFalse(runtime(world).reticleVisible());
+        assertTrue(com.openggf.sprites.playable.CharacterRuntimeHooks.activateAbility(player));
+        assertEquals(HomingAttackRuntime.Phase.HOMING, runtime(world).phase());
+        var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+        var before = registry.capture();
+        var expected = new java.util.ArrayList<String>();
+        for (int frame = 0; frame < 20; frame++) {
+            fixture.stepFrame(false, false, false, false, false);
+            expected.add(player.getCentreX() + ":" + player.getCentreY() + ":" + runtime(world).capture());
+        }
+        assertTrue(buzzer.isDestroyed(), "Character-owned homing runs native defeat");
+        registry.restore(before);
+        for (int frame = 0; frame < 20; frame++) {
+            fixture.stepFrame(false, false, false, false, false);
+            assertEquals(expected.get(frame), player.getCentreX() + ":" + player.getCentreY() + ":" + runtime(world).capture());
+        }
+    }
+
+    @Test @RequiresRom(SonicGame.SONIC_2)
+    void characterSelectsInstagibPerCallAndOneHitsBoss() {
+        var fixture = settledEhz1();
+        var player = character(fixture);
+        var boss = GameServices.level().getObjectManager().createDynamicObject(() -> new EightHitBoss(
+                new ObjectSpawn(player.getCentreX() + 80, player.getCentreY(), 0, 0, 0, false, 0)));
+        fixture.stepIdleFrames(2);
+        assertTrue(com.openggf.sprites.playable.HomingAttack.start(player, com.openggf.sprites.playable.HomingAttack.Mode.INSTAGIB));
+        assertTrue(player.getInvulnerable());
+        for (int frame = 0; frame < 30 && boss.struck == 0; frame++) fixture.stepIdleFrames(1);
+        assertEquals(1, boss.struck);
+        assertEquals(0, boss.hits);
+    }
+
+    @Test @RequiresRom(SonicGame.SONIC_3K)
+    void flightPreviewIsExplicitAndDivebombHitsItsTarget() {
+        var fixture = HeadlessTestFixture.builder().withZoneAndAct(0, 0).withSkippedZoneIntro().build();
+        fixture.stepIdleFrames(60);
+        var player = character(fixture);
+        player.setJumping(false); // Flight need not be a native jump.
+        player.getTailsFlightController().activate();
+        assertTrue(player.getTailsFlightController().isActive());
+        var boss = GameServices.level().getObjectManager().createDynamicObject(() -> new EightHitBoss(
+                new ObjectSpawn(player.getCentreX() + 80, player.getCentreY() + 32, 0, 0, 0, false, 0)));
+        fixture.stepIdleFrames(2);
+        var runtime = runtime(SessionManager.getCurrentWorldSession());
+        runtime.beforeMovement(player);
+        assertFalse(runtime.reticleVisible());
+        com.openggf.sprites.playable.HomingAttack.requestReticle(player, true);
+        assertTrue(runtime.reticleVisible());
+        com.openggf.sprites.playable.HomingAttack.requestReticle(player, false);
+        assertFalse(runtime.reticleVisible());
+        com.openggf.sprites.playable.HomingAttack.requestReticle(player, true);
+        assertTrue(com.openggf.sprites.playable.CharacterRuntimeHooks.activateAbility(player, false, true, false, false));
+        assertFalse(player.getTailsFlightController().isActive(), "The strike takes over from flight");
+        com.openggf.sprites.playable.HomingAttack.requestReticle(player, false);
+        assertFalse(runtime.reticleVisible(), "Even a locked character strike hides when not requested");
+        for (int frame = 0; frame < 30 && boss.struck == 0; frame++) fixture.stepIdleFrames(1);
+        assertEquals(1, boss.struck);
+        assertEquals(7, boss.hits);
+    }
+
+    @Test @RequiresRom(SonicGame.SONIC_2)
+    void flightWithoutTargetDivesSteeplyForwardDown() {
+        var player = character(settledEhz1());
+        player.setJumping(false);
+        assertTrue(com.openggf.sprites.playable.HomingAttack.divebomb(player, com.openggf.sprites.playable.HomingAttack.Mode.INSTAGIB));
+        assertTrue(player.getYSpeed() > Math.abs(player.getXSpeed()));
+        assertTrue(player.getRolling());
+    }
+
     @Test
     void hiddenPriorityThenFacingThenKindThenDistanceSelectTheTarget() {
         var boss = new HomingTarget(HomingTargetKind.BOSS, 0, 0, 0);

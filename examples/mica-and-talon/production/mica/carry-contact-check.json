@@ -1,0 +1,715 @@
+{
+  "metric": "Opaque-edge clearance in separate native grip windows, every carrier/carried combination; boot red-pixel centroids split at median X, near/far shading and occlusion affect centroids. These are original species, not identical limb silhouettes.",
+  "contactRows": [
+    {
+      "stage": "before",
+      "carrier": "normal/0",
+      "carried": "0",
+      "leftClearance": "0",
+      "rightClearance": "0"
+    },
+    {
+      "stage": "before",
+      "carrier": "normal/0",
+      "carried": "1",
+      "leftClearance": "0",
+      "rightClearance": "0"
+    },
+    {
+      "stage": "before",
+      "carrier": "normal/0",
+      "carried": "2",
+      "leftClearance": "0",
+      "rightClearance": "0"
+    },
+    {
+      "stage": "before",
+      "carrier": "normal/1",
+      "carried": "0",
+      "leftClearance": "0",
+      "rightClearance": "0"
+    },
+    {
+      "stage": "before",
+      "carrier": "normal/1",
+      "carried": "1",
+      "leftClearance": "0",
+      "rightClearance": "0"
+    },
+    {
+      "stage": "before",
+      "carrier": "normal/1",
+      "carried": "2",
+      "leftClearance": "0",
+      "rightClearance": "0"
+    },
+    {
+      "stage": "before",
+      "carrier": "normal/2",
+      "carried": "0",
+      "leftClearance": "0",
+      "rightClearance": "0"
+    },
+    {
+      "stage": "before",
+      "carrier": "normal/2",
+      "carried": "1",
+      "leftClearance": "0",
+      "rightClearance": "0"
+    },
+    {
+      "stage": "before",
+      "carrier": "normal/2",
+      "carried": "2",
+      "leftClearance": "0",
+      "rightClearance": "0"
+    },
+    {
+      "stage": "before",
+      "carrier": "normal/3",
+      "carried": "0",
+      "leftClearance": "0",
+      "rightClearance": "0"
+    },
+    {
+      "stage": "before",
+      "carrier": "normal/3",
+      "carried": "1",
+      "leftClearance": "0",
+      "rightClearance": "0"
+    },
+    {
+      "stage": "before",
+      "carrier": "normal/3",
+      "carried": "2",
+      "leftClearance": "0",
+      "rightClearance": "0"
+    },
+    {
+      "stage": "before",
+      "carrier": "normal/4",
+      "carried": "0",
+      "leftClearance": "1.0",
+      "rightClearance": "0"
+    },
+    {
+      "stage": "before",
+      "carrier": "normal/4",
+      "carried": "1",
+      "leftClearance": "0",
+      "rightClearance": "0"
+    },
+    {
+      "stage": "before",
+      "carrier": "normal/4",
+      "carried": "2",
+      "leftClearance": "1.24",
+      "rightClearance": "0"
+    },
+    {
+      "stage": "before",
+      "carrier": "normal/5",
+      "carried": "0",
+      "leftClearance": "0",
+      "rightClearance": "0"
+    },
+    {
+      "stage": "before",
+      "carrier": "normal/5",
+      "carried": "1",
+      "leftClearance": "0",
+      "rightClearance": "0"
+    },
+    {
+      "stage": "before",
+      "carrier": "normal/5",
+      "carried": "2",
+      "leftClearance": "0",
+      "rightClearance": "0"
+    },
+    {
+      "stage": "before",
+      "carrier": "-ascend/0",
+      "carried": "0",
+      "leftClearance": "0",
+      "rightClearance": "0"
+    },
+    {
+      "stage": "before",
+      "carrier": "-ascend/0",
+      "carried": "1",
+      "leftClearance": "0",
+      "rightClearance": "0"
+    },
+    {
+      "stage": "before",
+      "carrier": "-ascend/0",
+      "carried": "2",
+      "leftClearance": "0",
+      "rightClearance": "0"
+    },
+    {
+      "stage": "before",
+      "carrier": "-ascend/1",
+      "carried": "0",
+      "leftClearance": "0",
+      "rightClearance": "0"
+    },
+    {
+      "stage": "before",
+      "carrier": "-ascend/1",
+      "carried": "1",
+      "leftClearance": "0",
+      "rightClearance": "0"
+    },
+    {
+      "stage": "before",
+      "carrier": "-ascend/1",
+      "carried": "2",
+      "leftClearance": "0",
+      "rightClearance": "0.41"
+    },
+    {
+      "stage": "before",
+      "carrier": "-ascend/2",
+      "carried": "0",
+      "leftClearance": "0",
+      "rightClearance": "0"
+    },
+    {
+      "stage": "before",
+      "carrier": "-ascend/2",
+      "carried": "1",
+      "leftClearance": "0",
+      "rightClearance": "0"
+    },
+    {
+      "stage": "before",
+      "carrier": "-ascend/2",
+      "carried": "2",
+      "leftClearance": "0",
+      "rightClearance": "1.24"
+    },
+    {
+      "stage": "before",
+      "carrier": "-ascend/3",
+      "carried": "0",
+      "leftClearance": "0",
+      "rightClearance": "0"
+    },
+    {
+      "stage": "before",
+      "carrier": "-ascend/3",
+      "carried": "1",
+      "leftClearance": "0",
+      "rightClearance": "0"
+    },
+    {
+      "stage": "before",
+      "carrier": "-ascend/3",
+      "carried": "2",
+      "leftClearance": "0",
+      "rightClearance": "0"
+    },
+    {
+      "stage": "before",
+      "carrier": "-ascend/4",
+      "carried": "0",
+      "leftClearance": "0",
+      "rightClearance": "0"
+    },
+    {
+      "stage": "before",
+      "carrier": "-ascend/4",
+      "carried": "1",
+      "leftClearance": "0",
+      "rightClearance": "0"
+    },
+    {
+      "stage": "before",
+      "carrier": "-ascend/4",
+      "carried": "2",
+      "leftClearance": "0",
+      "rightClearance": "0.41"
+    },
+    {
+      "stage": "before",
+      "carrier": "-ascend/5",
+      "carried": "0",
+      "leftClearance": "0",
+      "rightClearance": "0"
+    },
+    {
+      "stage": "before",
+      "carrier": "-ascend/5",
+      "carried": "1",
+      "leftClearance": "0",
+      "rightClearance": "0"
+    },
+    {
+      "stage": "before",
+      "carrier": "-ascend/5",
+      "carried": "2",
+      "leftClearance": "0",
+      "rightClearance": "0"
+    },
+    {
+      "stage": "after",
+      "carrier": "normal/0",
+      "carried": "0",
+      "leftClearance": "0",
+      "rightClearance": "0"
+    },
+    {
+      "stage": "after",
+      "carrier": "normal/0",
+      "carried": "1",
+      "leftClearance": "0",
+      "rightClearance": "0"
+    },
+    {
+      "stage": "after",
+      "carrier": "normal/0",
+      "carried": "2",
+      "leftClearance": "0",
+      "rightClearance": "0"
+    },
+    {
+      "stage": "after",
+      "carrier": "normal/1",
+      "carried": "0",
+      "leftClearance": "0",
+      "rightClearance": "0"
+    },
+    {
+      "stage": "after",
+      "carrier": "normal/1",
+      "carried": "1",
+      "leftClearance": "0",
+      "rightClearance": "0"
+    },
+    {
+      "stage": "after",
+      "carrier": "normal/1",
+      "carried": "2",
+      "leftClearance": "0",
+      "rightClearance": "0"
+    },
+    {
+      "stage": "after",
+      "carrier": "normal/2",
+      "carried": "0",
+      "leftClearance": "0",
+      "rightClearance": "0"
+    },
+    {
+      "stage": "after",
+      "carrier": "normal/2",
+      "carried": "1",
+      "leftClearance": "0",
+      "rightClearance": "0"
+    },
+    {
+      "stage": "after",
+      "carrier": "normal/2",
+      "carried": "2",
+      "leftClearance": "0",
+      "rightClearance": "0"
+    },
+    {
+      "stage": "after",
+      "carrier": "normal/3",
+      "carried": "0",
+      "leftClearance": "0",
+      "rightClearance": "0"
+    },
+    {
+      "stage": "after",
+      "carrier": "normal/3",
+      "carried": "1",
+      "leftClearance": "0",
+      "rightClearance": "0"
+    },
+    {
+      "stage": "after",
+      "carrier": "normal/3",
+      "carried": "2",
+      "leftClearance": "0",
+      "rightClearance": "0"
+    },
+    {
+      "stage": "after",
+      "carrier": "normal/4",
+      "carried": "0",
+      "leftClearance": "0",
+      "rightClearance": "0"
+    },
+    {
+      "stage": "after",
+      "carrier": "normal/4",
+      "carried": "1",
+      "leftClearance": "0",
+      "rightClearance": "0"
+    },
+    {
+      "stage": "after",
+      "carrier": "normal/4",
+      "carried": "2",
+      "leftClearance": "0",
+      "rightClearance": "0"
+    },
+    {
+      "stage": "after",
+      "carrier": "normal/5",
+      "carried": "0",
+      "leftClearance": "0",
+      "rightClearance": "0"
+    },
+    {
+      "stage": "after",
+      "carrier": "normal/5",
+      "carried": "1",
+      "leftClearance": "0",
+      "rightClearance": "0"
+    },
+    {
+      "stage": "after",
+      "carrier": "normal/5",
+      "carried": "2",
+      "leftClearance": "0",
+      "rightClearance": "0"
+    },
+    {
+      "stage": "after",
+      "carrier": "-ascend/0",
+      "carried": "0",
+      "leftClearance": "0",
+      "rightClearance": "0"
+    },
+    {
+      "stage": "after",
+      "carrier": "-ascend/0",
+      "carried": "1",
+      "leftClearance": "0",
+      "rightClearance": "0"
+    },
+    {
+      "stage": "after",
+      "carrier": "-ascend/0",
+      "carried": "2",
+      "leftClearance": "0",
+      "rightClearance": "0"
+    },
+    {
+      "stage": "after",
+      "carrier": "-ascend/1",
+      "carried": "0",
+      "leftClearance": "0",
+      "rightClearance": "0"
+    },
+    {
+      "stage": "after",
+      "carrier": "-ascend/1",
+      "carried": "1",
+      "leftClearance": "0",
+      "rightClearance": "0"
+    },
+    {
+      "stage": "after",
+      "carrier": "-ascend/1",
+      "carried": "2",
+      "leftClearance": "0",
+      "rightClearance": "0"
+    },
+    {
+      "stage": "after",
+      "carrier": "-ascend/2",
+      "carried": "0",
+      "leftClearance": "0",
+      "rightClearance": "0"
+    },
+    {
+      "stage": "after",
+      "carrier": "-ascend/2",
+      "carried": "1",
+      "leftClearance": "0",
+      "rightClearance": "0"
+    },
+    {
+      "stage": "after",
+      "carrier": "-ascend/2",
+      "carried": "2",
+      "leftClearance": "0",
+      "rightClearance": "0"
+    },
+    {
+      "stage": "after",
+      "carrier": "-ascend/3",
+      "carried": "0",
+      "leftClearance": "0",
+      "rightClearance": "0"
+    },
+    {
+      "stage": "after",
+      "carrier": "-ascend/3",
+      "carried": "1",
+      "leftClearance": "0",
+      "rightClearance": "0"
+    },
+    {
+      "stage": "after",
+      "carrier": "-ascend/3",
+      "carried": "2",
+      "leftClearance": "0",
+      "rightClearance": "0"
+    },
+    {
+      "stage": "after",
+      "carrier": "-ascend/4",
+      "carried": "0",
+      "leftClearance": "0",
+      "rightClearance": "0"
+    },
+    {
+      "stage": "after",
+      "carrier": "-ascend/4",
+      "carried": "1",
+      "leftClearance": "0",
+      "rightClearance": "0"
+    },
+    {
+      "stage": "after",
+      "carrier": "-ascend/4",
+      "carried": "2",
+      "leftClearance": "0",
+      "rightClearance": "0"
+    },
+    {
+      "stage": "after",
+      "carrier": "-ascend/5",
+      "carried": "0",
+      "leftClearance": "0",
+      "rightClearance": "0"
+    },
+    {
+      "stage": "after",
+      "carrier": "-ascend/5",
+      "carried": "1",
+      "leftClearance": "0",
+      "rightClearance": "0"
+    },
+    {
+      "stage": "after",
+      "carrier": "-ascend/5",
+      "carried": "2",
+      "leftClearance": "0",
+      "rightClearance": "0"
+    }
+  ],
+  "bootRows": [
+    {
+      "phase": 0,
+      "stage": "before",
+      "nativeRedBootCentroids": [
+        [
+          3.04,
+          17.87
+        ],
+        [
+          11.03,
+          16.91
+        ]
+      ],
+      "redBootCentroids": [
+        [
+          0.57,
+          14.36
+        ],
+        [
+          3.83,
+          12.92
+        ]
+      ],
+      "deltaPixels": [
+        [
+          -2.47,
+          -3.51
+        ],
+        [
+          -7.2,
+          -3.99
+        ]
+      ]
+    },
+    {
+      "phase": 0,
+      "stage": "after",
+      "nativeRedBootCentroids": [
+        [
+          3.04,
+          17.87
+        ],
+        [
+          11.03,
+          16.91
+        ]
+      ],
+      "redBootCentroids": [
+        [
+          -3.33,
+          13.11
+        ],
+        [
+          3.68,
+          10.5
+        ]
+      ],
+      "deltaPixels": [
+        [
+          -6.37,
+          -4.76
+        ],
+        [
+          -7.35,
+          -6.41
+        ]
+      ]
+    },
+    {
+      "phase": 1,
+      "stage": "before",
+      "nativeRedBootCentroids": [
+        [
+          2.31,
+          12.0
+        ],
+        [
+          12.5,
+          8.58
+        ]
+      ],
+      "redBootCentroids": [
+        [
+          1.85,
+          8.08
+        ],
+        [
+          6.75,
+          7.58
+        ]
+      ],
+      "deltaPixels": [
+        [
+          -0.46,
+          -3.92
+        ],
+        [
+          -5.75,
+          -1.0
+        ]
+      ]
+    },
+    {
+      "phase": 1,
+      "stage": "after",
+      "nativeRedBootCentroids": [
+        [
+          2.31,
+          12.0
+        ],
+        [
+          12.5,
+          8.58
+        ]
+      ],
+      "redBootCentroids": [
+        [
+          -4.14,
+          7.82
+        ],
+        [
+          2.65,
+          3.15
+        ]
+      ],
+      "deltaPixels": [
+        [
+          -6.45,
+          -4.18
+        ],
+        [
+          -9.85,
+          -5.43
+        ]
+      ]
+    },
+    {
+      "phase": 2,
+      "stage": "before",
+      "nativeRedBootCentroids": [
+        [
+          6.29,
+          5.0
+        ],
+        [
+          15.45,
+          1.36
+        ]
+      ],
+      "redBootCentroids": [
+        [
+          1.08,
+          3.5
+        ],
+        [
+          6.91,
+          3.64
+        ]
+      ],
+      "deltaPixels": [
+        [
+          -5.21,
+          -1.5
+        ],
+        [
+          -8.54,
+          2.28
+        ]
+      ]
+    },
+    {
+      "phase": 2,
+      "stage": "after",
+      "nativeRedBootCentroids": [
+        [
+          6.29,
+          5.0
+        ],
+        [
+          15.45,
+          1.36
+        ]
+      ],
+      "redBootCentroids": [
+        [
+          -0.52,
+          6.62
+        ],
+        [
+          6.64,
+          5.07
+        ]
+      ],
+      "deltaPixels": [
+        [
+          -6.81,
+          1.62
+        ],
+        [
+          -8.81,
+          3.71
+        ]
+      ]
+    }
+  ]
+}

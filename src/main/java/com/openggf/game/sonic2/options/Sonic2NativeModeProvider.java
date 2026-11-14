@@ -59,6 +59,9 @@ public final class Sonic2NativeModeProvider implements NativeTitleModeProvider {
                 optionsState.launchTeam(), true);
     }
 
+    /** Graphics_Flags bit 7, shared by native menu wording and result name selection. */
+    public boolean overseasGraphics() { return overseas; }
+
     public Sonic2OptionsState optionsState() { return optionsState; }
 
     /** True when at least one 2P level-select zone is qualified; the title then offers 2 PLAYER. */

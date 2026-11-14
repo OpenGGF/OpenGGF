@@ -1,5 +1,8 @@
 # Design: Widescreen Support
 
+> A sync-friendly alternative, where gameplay stays at 320 pixels and only the picture widens,
+> is the [widescreen native draw mode](2026-11-13-widescreen-native-draw-mode.md).
+
 ## Problem
 
 OpenGGF renders at the Mega Drive native gameplay resolution of 320x224 pixels

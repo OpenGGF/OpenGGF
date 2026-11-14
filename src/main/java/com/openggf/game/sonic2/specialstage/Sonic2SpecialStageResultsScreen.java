@@ -152,6 +152,7 @@ public class Sonic2SpecialStageResultsScreen implements ResultsScreen {
     private int slideProgress = 0;
     private boolean complete = false;
     private Sonic2SpecialStageDataLoader presentationData;
+    private java.util.Map<Integer, Sonic2SpecialStageResultsMappings.ResultsPiece[]> characterNameFrames = java.util.Map.of();
     private SplitNameResultsMessages messagePresentation;
     private boolean presentationResolved;
 
@@ -395,6 +396,10 @@ public class Sonic2SpecialStageResultsScreen implements ResultsScreen {
             if (presentationData != null) {
                 presentationData.patchResultsPatterns(combinedPatterns, VRAM_BASE, titleCard2Patterns);
             }
+            var customNames = Sonic2SpecialStageResultsName.apply(rom, combinedPatterns,
+                    com.openggf.game.sonic2.Sonic2CharacterPresentation.resolve(services().gameModule(), services().configuration()));
+            combinedPatterns = customNames.patterns();
+            characterNameFrames = customNames.frames();
             artLoaded = true;
             LOGGER.fine("Art loaded successfully: total " + totalSize + " pattern slots");
 
@@ -568,9 +573,7 @@ public class Sonic2SpecialStageResultsScreen implements ResultsScreen {
         }
 
         // Lazy load art if not yet loaded
-        if (!artLoaded) {
-            loadArt();
-        }
+        if (!artLoaded) return;
 
         if (combinedPatterns == null) {
             LOGGER.warning("ensureArtCached: combinedPatterns is null after loadArt, artLoaded=" + artLoaded);
@@ -845,6 +848,10 @@ public class Sonic2SpecialStageResultsScreen implements ResultsScreen {
 
     @Override
     public void update(int frameCounter, Object context) {
+        // Logic-only owners can advance the tally without ROM presentation services.
+        // Prepare on update once a ROM is available; draw remains read-only.
+        var romManager = services().romManager();
+        if (!artLoaded && romManager != null && romManager.isRomAvailable()) loadArt();
         this.frameCounter = frameCounter;
         resolvePresentation();
         if (!plcReadinessPassed) {
@@ -1176,6 +1183,8 @@ public class Sonic2SpecialStageResultsScreen implements ResultsScreen {
                 presentationData == null ? Sonic2SpecialStageResultsMappings.getFrame(frameIndex)
                         : messagePresentation == null ? presentationData.getResultsFrame(frameIndex)
                         : presentationData.getResultsObjectFrame(frameIndex);
+
+        if (messagePresentation == null) pieces = characterNameFrames.getOrDefault(frameIndex, pieces);
 
         // Render pieces in reverse order (painter's algorithm - first piece on top)
         for (int i = pieces.length - 1; i >= 0; i--) {

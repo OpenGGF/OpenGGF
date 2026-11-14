@@ -1,5 +1,6 @@
 package com.openggf.level;
 
+import com.openggf.camera.CameraPresentationAccess;
 import com.openggf.game.internal.SpriteTablePublication;
 import com.openggf.game.resources.PlcLifecyclePhase;
 import com.openggf.game.rewind.RewindRegistry;
@@ -147,7 +148,7 @@ public final class LevelSpritePresentation {
     public static void prepare(LevelManager level, SpriteManager sprites) {
         if (level != null && level.camera != null) {
             level.spritePresentationRenderer().boundsMask.advance(LevelScrollPresentation.captureArenaMask(level),
-                    level.camera.getXWithShake(), level.camera.getWidth());
+                    CameraPresentationAccess.leftWithShake(level.camera), CameraPresentationAccess.width(level.camera));
         }
         if (enabled(level)) {
             level.spritePresentationRenderer().prepareSpritePresentation(sprites);

@@ -3,7 +3,8 @@
 // CNZ Slot Machine Display Shader
 // Renders 3 scrolling slot windows with face wrapping
 
-uniform sampler2D SlotFaceTexture;  // All 6 faces stacked vertically (32x192 indexed)
+uniform sampler2D SlotFaceTexture;
+uniform bool PortraitAtlas;  // All 6 faces stacked vertically (32x192 indexed)
 uniform sampler2D Palette;           // Combined palette texture
 uniform float TotalPaletteLines;
 
@@ -93,7 +94,7 @@ void main()
 
     // Calculate texture UV
     // U is simply the X position within the 32-pixel wide texture
-    float u = (slotLocalX + 0.5) / SLOT_WIDTH;
+    float u = slotLocalX / SLOT_WIDTH;
 
     // V calculation with scrolling and face wrapping
     // slotOffset is 0.0-1.0 representing scroll through one face height
@@ -115,10 +116,17 @@ void main()
     }
 
     // Convert to texture V coordinate (face index determines which 32-pixel band)
-    float textureV = (faceIndex * FACE_HEIGHT + scrolledV * FACE_HEIGHT + 0.5) / TEXTURE_HEIGHT;
+    float textureV = (faceIndex * FACE_HEIGHT + scrolledV * FACE_HEIGHT) / TEXTURE_HEIGHT;
 
     // Sample the indexed texture (single channel, 0-15 color index per pixel)
-    float colorIndex = texture(SlotFaceTexture, vec2(u, textureV)).r * 255.0;
+    vec4 sampleColor = texture(SlotFaceTexture, vec2(u, textureV));
+    if (PortraitAtlas && sampleColor.a > 0.5) {
+        float nativeRow = (PaletteLine + 0.5) / float(textureSize(Palette, 0).y);
+        vec3 white = texture(Palette, vec2((6.0 + 0.5) / 16.0, nativeRow)).rgb;
+        FragColor = vec4(sampleColor.rgb * white, 1.0);
+        return;
+    }
+    float colorIndex = sampleColor.r * 255.0;
 
     // Color index 0 is transparent
     if (colorIndex < 0.5) {

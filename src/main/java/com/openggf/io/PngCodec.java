@@ -78,6 +78,55 @@ public final class PngCodec {
         return unfilter(raw, header, palette, paletteAlpha);
     }
 
+    /** Palette indices are retained, including distinct slots with identical RGB values. */
+    public record IndexedImage(int width, int height, byte[] indices, int[] rgb) { }
+
+    public static IndexedImage decodeIndexed(byte[] encoded, int maxDimension) throws IOException {
+        Header header = readHeader(encoded);
+        if (header.colorType != 3) throw new IOException("Presentation PNG must be indexed");
+        if (header.width > maxDimension || header.height > maxDimension)
+            throw new IOException("Presentation PNG exceeds dimension budget");
+        byte[] palette = null;
+        var data = new ByteArrayOutputStream();
+        int cursor = SIGNATURE.length;
+        while (cursor + 8 <= encoded.length) {
+            int length = readInt(encoded, cursor);
+            if (length < 0 || cursor + 12L + length > encoded.length)
+                throw new IOException("PNG chunk overruns the file");
+            String type = new String(encoded, cursor + 4, 4, java.nio.charset.StandardCharsets.US_ASCII);
+            int body = cursor + 8;
+            if (type.equals("PLTE")) palette = java.util.Arrays.copyOfRange(encoded, body, body + length);
+            if (type.equals("IDAT")) data.write(encoded, body, length);
+            cursor = body + length + 4;
+            if (type.equals("IEND")) break;
+        }
+        if (palette == null || palette.length == 0 || palette.length % 3 != 0 || palette.length > 768)
+            throw new IOException("Invalid PNG palette");
+        byte[] raw = inflate(data.toByteArray(), header);
+        int stride = (header.width * header.bitDepth + 7) / 8;
+        byte[] previous = new byte[stride], current = new byte[stride];
+        byte[] pixels = new byte[header.width * header.height];
+        int at = 0;
+        for (int y = 0; y < header.height; y++) {
+            int filter = raw[at++] & 255;
+            System.arraycopy(raw, at, current, 0, stride);
+            at += stride;
+            applyFilter(filter, current, previous, 1);
+            for (int x = 0; x < header.width; x++) {
+                int bit = x * header.bitDepth;
+                int value = (current[bit / 8] >>> (8 - header.bitDepth - bit % 8)) & ((1 << header.bitDepth) - 1);
+                if (value > 15 || value * 3 >= palette.length)
+                    throw new IOException("Presentation PNG index outside palette budget");
+                pixels[y * header.width + x] = (byte) value;
+            }
+            byte[] swap = previous; previous = current; current = swap;
+        }
+        int[] rgb = new int[16];
+        for (int i = 0; i < Math.min(16, palette.length / 3); i++)
+            rgb[i] = (palette[i * 3] & 255) << 16 | (palette[i * 3 + 1] & 255) << 8 | palette[i * 3 + 2] & 255;
+        return new IndexedImage(header.width, header.height, pixels, rgb);
+    }
+
     public static void write(Path path, PixelImage image) throws IOException {
         Objects.requireNonNull(path, "path");
         Objects.requireNonNull(image, "image");
@@ -139,7 +188,7 @@ public final class PngCodec {
         if (width <= 0 || height <= 0) {
             throw new IOException("PNG has non-positive extents");
         }
-        if (bitDepth != 8) {
+        if (bitDepth != 8 && !(colorType == 3 && (bitDepth == 1 || bitDepth == 2 || bitDepth == 4))) {
             throw new IOException("Only 8-bit PNGs are supported, got bit depth " + bitDepth);
         }
         if (interlace != 0) {
@@ -157,7 +206,7 @@ public final class PngCodec {
     }
 
     private static byte[] inflate(byte[] compressed, Header header) throws IOException {
-        int stride = header.width * header.channels;
+        int stride = (header.width * header.channels * header.bitDepth + 7) / 8;
         int expected = Math.multiplyExact(header.height, stride + 1);
         byte[] raw = new byte[expected];
         Inflater inflater = new Inflater();
@@ -187,7 +236,7 @@ public final class PngCodec {
     private static PixelImage unfilter(byte[] raw, Header header, byte[] palette, byte[] paletteAlpha)
             throws IOException {
         int channels = header.channels;
-        int stride = header.width * channels;
+        int stride = (header.width * channels * header.bitDepth + 7) / 8;
         byte[] previous = new byte[stride];
         byte[] current = new byte[stride];
         int[] argb = new int[Math.multiplyExact(header.width, header.height)];
@@ -200,7 +249,11 @@ public final class PngCodec {
             applyFilter(filter, current, previous, channels);
             for (int x = 0; x < header.width; x++) {
                 argb[y * header.width + x] =
-                        toArgb(current, x * channels, header.colorType, palette, paletteAlpha);
+                        header.colorType == 3 && header.bitDepth < 8
+                        ? toArgb(new byte[]{(byte)((current[x * header.bitDepth / 8] >>>
+                            (8 - header.bitDepth - x * header.bitDepth % 8)) & ((1 << header.bitDepth) - 1))},
+                            0, 3, palette, paletteAlpha)
+                        : toArgb(current, x * channels, header.colorType, palette, paletteAlpha);
             }
             byte[] swap = previous;
             previous = current;

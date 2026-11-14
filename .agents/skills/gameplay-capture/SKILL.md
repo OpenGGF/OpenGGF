@@ -78,6 +78,8 @@ Use a task directory outside the repository for captures the user should keep.
 | `--x`, `--y` | level start | Teleport the leader (ROM `x_pos`/`y_pos`, hex `0x`/`$` ok) |
 | `--star-post` | off | Save a checkpoint at `--x/--y` and restart from it, instead of teleporting. Required wherever the act's `ScreenInit` runs a scripted intro that overrides `--x/--y` outright (S3K SSZ act 1) |
 | `--width <px>` | `320` | 320, 352, 400, 528 or 800; height is always 224 |
+| `--draw-mode edge\|native` | `edge` | Widescreen draw mode, pinned so the user's `display.widescreenDrawMode` never changes a capture. `native` keeps gameplay at 320 and draws frozen dormant objects in the extra width |
+| `--dormant-style` | `greyscale` | With `--draw-mode native`: `greyscale`, `normal` or `hidden` |
 | `--main`, `--sidekick` | `sonic`, `none` | Characters; `--sidekick tails` for a team |
 | `--donor off\|s1\|s2\|s3k` | `off` | Cross-game donation; ROM from configuration unless `--donor-rom` |
 | `--input <file>` | none | `Input Log.txt` or `.bk2`; neutral input after it ends |
@@ -94,7 +96,8 @@ Use a task directory outside the repository for captures the user should keep.
 | `--save-slots <file.json>` | none | Declared Data Select setup (`--title-screen` only): a JSON object mapping slot numbers to save payloads, written through the production `SaveManager` before boot. Refuses to run without an explicit `-Dopenggf.saveRoot`, so it never touches the user's saves |
 | `--extra-teams <combos>` | config | Session override of `DATA_SELECT_EXTRA_PLAYER_COMBOS` (`--title-screen` only), e.g. `sonic,knuckles;knuckles,tails` |
 | `--interactive-pacing` | off | Use production presentation/input pacing, including menus and gameplay observer callbacks; P1 controller input only, fps 60, no debug stage completion |
-| `--audio` | off | Write `audio.wav` from one final SMPS PCM packet per outer frame; every=1, capture-from=0, matching 60-Hz presentation. Video remains silent until muxed. Music and SFX are one mix; there is no SFX-only stem |
+| `--audio` | off | Write `audio.wav` from one final SMPS PCM packet per outer frame; every=1, capture-from=0, matching 60-Hz presentation. Video remains silent until muxed. Music and SFX are one mix at full volume, whatever the saved `audio.musicVolume`/`audio.sfxVolume` |
+| `--no-music` | off | With `--audio`: silence music and keep the sound effects, including those that borrow music channels (`audio.musicVolume` 0 for this run). `--native-pcm` stays the unscaled native-compatible stage |
 | `--title-card` | off | Keep and draw title-card presentations instead of omitting them. Additive mod zones skip their card by default (`mods.skipModZoneTitleCards`); custom zone-name cards are unsupported |
 | `--complete-special-stage` | off | Request the debug special-stage completion while a special stage runs (awards its emerald with 50 rings; no key binding is involved), so the capture continues into the results screen; results frames render as `Engine` draws them, including the S3K Super Emerald sanctuary backdrop. Special-stage frames do too: the level during the entry fade-to-white, then the stage's own provider draw |
 | `--frames <n>` | settle + log length | Total frames to step |

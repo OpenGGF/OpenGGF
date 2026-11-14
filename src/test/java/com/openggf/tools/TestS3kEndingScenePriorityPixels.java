@@ -31,14 +31,16 @@ class TestS3kEndingScenePriorityPixels {
             var level=GameServices.level().getCurrentLevel();int samples=0,matches=0;
             int inset=(width-320)/2;int expected=rgb(3,10);
             boolean[] producerFootprint=new boolean[width*224];
+            // The scroll words are native: a wider picture stands the native window, planes and
+            // sprites alike, one inset into the picture.
             for(int y=164;y<200;y++)for(int x=inset+120;x<inset+220;x++){
-                int fgX=x-(short)(scroll[y]>>>16),fgY=y+GameServices.parallax().getVscrollFactorFG();
+                int fgX=x-inset-(short)(scroll[y]>>>16),fgY=y+GameServices.parallax().getVscrollFactorFG();
                 int fg=zone.ending().scene().foreground().descriptor(fgX,fgY);
                 if((fg&0x8000)!=0){
                     int px=fgX&7,py=fgY&7;if((fg&0x800)!=0)px=7-px;if((fg&0x1000)!=0)py=7-py;
                     if((level.getPattern(fg&0x7FF).getPixel(px,py)&15)!=0)continue; // A-high legitimately wins.
                 }
-                int sourceX=x-(short)scroll[y],sourceY=y+bgY;
+                int sourceX=x-inset-(short)scroll[y],sourceY=y+bgY;
                 int descriptor=zone.ending().scene().background().descriptor(sourceX,sourceY);
                 if((descriptor&0x8000)==0)continue;
                 var pattern=level.getPattern(descriptor&0x7FF);
@@ -92,10 +94,10 @@ class TestS3kEndingScenePriorityPixels {
             int[] expected=new int[width*224];java.util.Arrays.fill(expected,-1);
             var level=GameServices.level().getCurrentLevel();int inset=(width-320)/2;
             for(int y=210;y<224;y++)for(int x=inset;x<inset+320;x++){
-                int fx=x-(short)(producerScroll[y]>>>16),fy=y+fgY;
+                int fx=x-inset-(short)(producerScroll[y]>>>16),fy=y+fgY;
                 int foreground=zone.ending().scene().foreground().descriptor(fx,fy);
                 if((foreground&0x8000)!=0&&patternNibble(level,foreground,fx,fy)!=0)continue;
-                int bx=x-(short)producerScroll[y],by=y+bgY;
+                int bx=x-inset-(short)producerScroll[y],by=y+bgY;
                 int background=zone.ending().scene().background().descriptor(bx,by);
                 if((background&0x8000)==0)continue;
                 int nibble=patternNibble(level,background,bx,by);if(nibble==0)continue;
@@ -171,7 +173,12 @@ class TestS3kEndingScenePriorityPixels {
                 var method=plane.getClass().getDeclaredMethod("subsprites");method.setAccessible(true);
                 var parts=(java.util.List<?>)method.invoke(plane);assertEquals(2,parts.size());
                 int[][] colors=new int[3][];
-                colors[0]=planeMappingPixels(width,mappings.get(1),plane.getX(),plane.getY(),header.artTile(),flip);
+                // A wider picture carries the aircraft and everything on it together towards the
+                // real edge it is leaving or entering by (EndingWideStage); all three pieces share it.
+                int carried=com.openggf.game.sonic3k.ending.EndingWideStage.groupShift(
+                        com.openggf.tests.TestEnvironment.objectServices(),plane);
+                if(width==320)assertEquals(0,carried,"the cartridge's width carries nothing");
+                colors[0]=planeMappingPixels(width,mappings.get(1),plane.getX()+carried,plane.getY(),header.artTile(),flip);
                 int index=0;
                 var counter=plane.getClass().getDeclaredField("noseCounter");counter.setAccessible(true);
                 var vInt=plane.getClass().getDeclaredField("nativeVInt");vInt.setAccessible(true);
@@ -185,7 +192,7 @@ class TestS3kEndingScenePriorityPixels {
                     assertEquals(plane.getY()+(byte)reader.readU8(offset+1),y,"sub_86458 signed Y offset");
                     assertEquals(index==0?reader.readU8(com.openggf.game.sonic3k.ending.S3kEndingResources.TORNADO_NOSE_FRAMES
                             +counter.getInt(plane)):6+(vInt.getInt(plane)&1),frame,"sub_60038 raw frame owner");
-                    colors[++index]=planeMappingPixels(width,mappings.get(frame),x,y,header.artTile(),flip);
+                    colors[++index]=planeMappingPixels(width,mappings.get(frame),x+carried,y,header.artTile(),flip);
                 }
                 // loc_1AEE4 emits the main mapping first; loc_1AF2A then emits sub2/sub3.
                 // Reconstruct only genuine different-color opaque overlaps from that producer,

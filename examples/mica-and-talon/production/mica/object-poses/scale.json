@@ -1,0 +1,722 @@
+[
+  {
+    "family": "swing",
+    "mapping": "78",
+    "head_width": 19,
+    "torso_height": 9,
+    "head_box": [
+      6,
+      8,
+      25,
+      28
+    ],
+    "torso_box": [
+      15,
+      27,
+      25,
+      36
+    ]
+  },
+  {
+    "family": "swing",
+    "mapping": "79",
+    "head_width": 19,
+    "torso_height": 8,
+    "head_box": [
+      15,
+      9,
+      34,
+      27
+    ],
+    "torso_box": [
+      28,
+      23,
+      37,
+      31
+    ]
+  },
+  {
+    "family": "swing",
+    "mapping": "7A",
+    "head_width": 20,
+    "torso_height": 10,
+    "head_box": [
+      8,
+      11,
+      28,
+      30
+    ],
+    "torso_box": [
+      27,
+      11,
+      36,
+      21
+    ]
+  },
+  {
+    "family": "swing",
+    "mapping": "7B",
+    "head_width": 18,
+    "torso_height": 9,
+    "head_box": [
+      9,
+      14,
+      27,
+      33
+    ],
+    "torso_box": [
+      23,
+      11,
+      31,
+      20
+    ]
+  },
+  {
+    "family": "swing",
+    "mapping": "7C",
+    "head_width": 19,
+    "torso_height": 9,
+    "head_box": [
+      11,
+      19,
+      30,
+      39
+    ],
+    "torso_box": [
+      11,
+      11,
+      21,
+      20
+    ]
+  },
+  {
+    "family": "swing",
+    "mapping": "7D",
+    "head_width": 19,
+    "torso_height": 8,
+    "head_box": [
+      14,
+      10,
+      33,
+      28
+    ],
+    "torso_box": [
+      11,
+      6,
+      20,
+      14
+    ]
+  },
+  {
+    "family": "swing",
+    "mapping": "7E",
+    "head_width": 20,
+    "torso_height": 10,
+    "head_box": [
+      19,
+      6,
+      39,
+      25
+    ],
+    "torso_box": [
+      11,
+      15,
+      20,
+      25
+    ]
+  },
+  {
+    "family": "swing",
+    "mapping": "7F",
+    "head_width": 18,
+    "torso_height": 9,
+    "head_box": [
+      10,
+      15,
+      28,
+      34
+    ],
+    "torso_box": [
+      6,
+      28,
+      14,
+      37
+    ]
+  },
+  {
+    "family": "tumble",
+    "mapping": "69",
+    "head_width": 20,
+    "torso_height": 7,
+    "head_box": [
+      4,
+      0,
+      24,
+      23
+    ],
+    "torso_box": [
+      13,
+      22,
+      21,
+      29
+    ]
+  },
+  {
+    "family": "tumble",
+    "mapping": "6A",
+    "head_width": 20,
+    "torso_height": 7,
+    "head_box": [
+      3,
+      0,
+      23,
+      23
+    ],
+    "torso_box": [
+      12,
+      22,
+      20,
+      29
+    ]
+  },
+  {
+    "family": "tumble",
+    "mapping": "6B",
+    "head_width": 20,
+    "torso_height": 6,
+    "head_box": [
+      3,
+      0,
+      23,
+      21
+    ],
+    "torso_box": [
+      14,
+      17,
+      21,
+      23
+    ]
+  },
+  {
+    "family": "tumble",
+    "mapping": "6C",
+    "head_width": 20,
+    "torso_height": 10,
+    "head_box": [
+      1,
+      7,
+      21,
+      28
+    ],
+    "torso_box": [
+      18,
+      11,
+      26,
+      21
+    ]
+  },
+  {
+    "family": "tumble",
+    "mapping": "6D",
+    "head_width": 20,
+    "torso_height": 10,
+    "head_box": [
+      1,
+      8,
+      21,
+      29
+    ],
+    "torso_box": [
+      18,
+      12,
+      27,
+      22
+    ]
+  },
+  {
+    "family": "tumble",
+    "mapping": "6E",
+    "head_width": 20,
+    "torso_height": 9,
+    "head_box": [
+      1,
+      2,
+      21,
+      24
+    ],
+    "torso_box": [
+      20,
+      8,
+      28,
+      17
+    ]
+  },
+  {
+    "family": "tumble",
+    "mapping": "6F",
+    "head_width": 20,
+    "torso_height": 10,
+    "head_box": [
+      2,
+      8,
+      22,
+      30
+    ],
+    "torso_box": [
+      19,
+      15,
+      27,
+      25
+    ]
+  },
+  {
+    "family": "tumble",
+    "mapping": "70",
+    "head_width": 19,
+    "torso_height": 10,
+    "head_box": [
+      9,
+      7,
+      28,
+      27
+    ],
+    "torso_box": [
+      12,
+      13,
+      21,
+      23
+    ]
+  },
+  {
+    "family": "tumble",
+    "mapping": "71",
+    "head_width": 18,
+    "torso_height": 9,
+    "head_box": [
+      13,
+      0,
+      31,
+      22
+    ],
+    "torso_box": [
+      10,
+      15,
+      22,
+      24
+    ]
+  },
+  {
+    "family": "tumble",
+    "mapping": "72",
+    "head_width": 19,
+    "torso_height": 10,
+    "head_box": [
+      14,
+      0,
+      33,
+      22
+    ],
+    "torso_box": [
+      11,
+      15,
+      23,
+      25
+    ]
+  },
+  {
+    "family": "tumble",
+    "mapping": "73",
+    "head_width": 19,
+    "torso_height": 11,
+    "head_box": [
+      17,
+      0,
+      36,
+      23
+    ],
+    "torso_box": [
+      10,
+      11,
+      22,
+      22
+    ]
+  },
+  {
+    "family": "tumble",
+    "mapping": "74",
+    "head_width": 19,
+    "torso_height": 12,
+    "head_box": [
+      12,
+      0,
+      31,
+      23
+    ],
+    "torso_box": [
+      7,
+      12,
+      18,
+      24
+    ]
+  },
+  {
+    "family": "tumble",
+    "mapping": "75",
+    "head_width": 20,
+    "torso_height": 9,
+    "head_box": [
+      3,
+      0,
+      23,
+      23
+    ],
+    "torso_box": [
+      4,
+      16,
+      15,
+      25
+    ]
+  },
+  {
+    "family": "tumble",
+    "mapping": "76",
+    "head_width": 20,
+    "torso_height": 10,
+    "head_box": [
+      6,
+      5,
+      26,
+      27
+    ],
+    "torso_box": [
+      10,
+      15,
+      21,
+      25
+    ]
+  },
+  {
+    "family": "tumble",
+    "mapping": "77",
+    "head_width": 20,
+    "torso_height": 11,
+    "head_box": [
+      0,
+      3,
+      20,
+      23
+    ],
+    "torso_box": [
+      12,
+      9,
+      23,
+      20
+    ]
+  },
+  {
+    "family": "twist",
+    "mapping": "58",
+    "head_width": 16,
+    "torso_height": 9,
+    "head_box": [
+      4,
+      0,
+      20,
+      21
+    ],
+    "torso_box": [
+      9,
+      20,
+      16,
+      29
+    ]
+  },
+  {
+    "family": "twist",
+    "mapping": "5B",
+    "head_width": 17,
+    "torso_height": 9,
+    "head_box": [
+      3,
+      0,
+      20,
+      21
+    ],
+    "torso_box": [
+      8,
+      20,
+      17,
+      29
+    ]
+  },
+  {
+    "family": "pole",
+    "mapping": "5C",
+    "head_width": 17,
+    "torso_height": 9,
+    "head_box": [
+      8,
+      2,
+      25,
+      19
+    ],
+    "torso_box": [
+      24,
+      6,
+      34,
+      15
+    ]
+  },
+  {
+    "family": "pole",
+    "mapping": "5D",
+    "head_width": 14,
+    "torso_height": 10,
+    "head_box": [
+      6,
+      2,
+      20,
+      19
+    ],
+    "torso_box": [
+      19,
+      6,
+      25,
+      16
+    ]
+  },
+  {
+    "family": "pole",
+    "mapping": "5E",
+    "head_width": 16,
+    "torso_height": 11,
+    "head_box": [
+      22,
+      2,
+      38,
+      19
+    ],
+    "torso_box": [
+      12,
+      6,
+      24,
+      17
+    ]
+  },
+  {
+    "family": "pole",
+    "mapping": "5F",
+    "head_width": 17,
+    "torso_height": 11,
+    "head_box": [
+      25,
+      2,
+      42,
+      19
+    ],
+    "torso_box": [
+      13,
+      6,
+      27,
+      17
+    ]
+  },
+  {
+    "family": "pole",
+    "mapping": "60",
+    "head_width": 16,
+    "torso_height": 11,
+    "head_box": [
+      13,
+      2,
+      29,
+      20
+    ],
+    "torso_box": [
+      6,
+      6,
+      17,
+      17
+    ]
+  },
+  {
+    "family": "pole",
+    "mapping": "61",
+    "head_width": 16,
+    "torso_height": 11,
+    "head_box": [
+      2,
+      2,
+      18,
+      20
+    ],
+    "torso_box": [
+      16,
+      6,
+      26,
+      17
+    ]
+  },
+  {
+    "family": "pole",
+    "mapping": "62",
+    "head_width": 19,
+    "torso_height": 8,
+    "head_box": [
+      5,
+      2,
+      24,
+      23
+    ],
+    "torso_box": [
+      19,
+      15,
+      29,
+      23
+    ]
+  },
+  {
+    "family": "bar",
+    "mapping": "63",
+    "head_width": 16,
+    "torso_height": 8,
+    "head_box": [
+      3,
+      8,
+      19,
+      29
+    ],
+    "torso_box": [
+      7,
+      29,
+      15,
+      37
+    ]
+  },
+  {
+    "family": "bar",
+    "mapping": "64",
+    "head_width": 17,
+    "torso_height": 6,
+    "head_box": [
+      2,
+      6,
+      19,
+      20
+    ],
+    "torso_box": [
+      5,
+      19,
+      15,
+      25
+    ]
+  },
+  {
+    "family": "bar",
+    "mapping": "65",
+    "head_width": 16,
+    "torso_height": 11,
+    "head_box": [
+      3,
+      14,
+      19,
+      34
+    ],
+    "torso_box": [
+      7,
+      6,
+      16,
+      17
+    ]
+  },
+  {
+    "family": "bar",
+    "mapping": "66",
+    "head_width": 16,
+    "torso_height": 14,
+    "head_box": [
+      3,
+      20,
+      19,
+      40
+    ],
+    "torso_box": [
+      7,
+      9,
+      16,
+      23
+    ]
+  },
+  {
+    "family": "bar",
+    "mapping": "67",
+    "head_width": 17,
+    "torso_height": 10,
+    "head_box": [
+      3,
+      9,
+      20,
+      26
+    ],
+    "torso_box": [
+      7,
+      5,
+      16,
+      15
+    ]
+  },
+  {
+    "family": "bar",
+    "mapping": "68",
+    "head_width": 19,
+    "torso_height": 7,
+    "head_box": [
+      2,
+      0,
+      21,
+      22
+    ],
+    "torso_box": [
+      8,
+      20,
+      16,
+      27
+    ]
+  },
+  {
+    "family": "bar",
+    "mapping": "94",
+    "head_width": 18,
+    "torso_height": 9,
+    "head_box": [
+      6,
+      8,
+      24,
+      30
+    ],
+    "torso_box": [
+      10,
+      29,
+      19,
+      38
+    ]
+  },
+  {
+    "family": "bar",
+    "mapping": "95",
+    "head_width": 17,
+    "torso_height": 9,
+    "head_box": [
+      2,
+      8,
+      19,
+      30
+    ],
+    "torso_box": [
+      6,
+      29,
+      15,
+      38
+    ]
+  }
+]

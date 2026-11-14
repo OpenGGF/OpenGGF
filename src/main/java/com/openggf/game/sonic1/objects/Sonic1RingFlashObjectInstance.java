@@ -122,7 +122,7 @@ public class Sonic1RingFlashObjectInstance extends AbstractObjectInstance implem
         // the flash owns this interval instead of allowing normal animation
         // selection to rewrite it between flash ticks.
         if (triggerFired && player != null) {
-            player.setAnimationId(Sonic1AnimationIds.NULL.id());
+            player.setAnimationId(Sonic1AnimationIds.NULL);
             player.setForcedAnimationId(Sonic1AnimationIds.NULL.id());
         }
 
@@ -164,7 +164,7 @@ public class Sonic1RingFlashObjectInstance extends AbstractObjectInstance implem
             // ROM: clr.b (v_shield).w - remove shield
             if (player != null) {
                 player.setHidden(true);
-                player.setAnimationId(Sonic1AnimationIds.NULL.id());
+                player.setAnimationId(Sonic1AnimationIds.NULL);
                 player.setForcedAnimationId(Sonic1AnimationIds.NULL.id());
                 player.clearPowerUps();
             }

@@ -40,6 +40,7 @@ class TestSonic2SpecialStageResultsTallyCadence {
                 return GameServices.module().getGameService(type);
             }
         }.withGameModule(GameServices.module())
+                .withRom(TestEnvironment.currentRom()).withRomManager(GameServices.rom())
                 .withGameState(new GameStateManager());
     }
 

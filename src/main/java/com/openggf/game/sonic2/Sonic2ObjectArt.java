@@ -43,6 +43,28 @@ public class Sonic2ObjectArt {
     private static final int TORNADO_TAILS_RIDER_OFFSET = Sonic2Constants.ART_TILE_TAILS - TORNADO_ART_TILE;
     private static final int TORNADO_RIDER_TILE_COUNT = 6;
 
+    /*
+     * Offset tables whose first word is not their own length. Each table's frame
+     * bodies sit after a neighbouring table (or after other frames), so a count
+     * taken from the first offset word reads the neighbour's entries and frame
+     * bodies as offsets and decodes thousands of meaningless pieces on every load.
+     * The counts below are the label extents in the disassembly; the frames
+     * engine objects select are the same either way.
+     */
+    /** Obj41_MapUnc_1901C (s2.asm:34486-34497); Obj41_MapUnc_19032 follows it. */
+    static final int SPRING_MAPPING_FRAME_COUNT = 11;
+    /** Obj24_MapUnc_1FBF6 (s2.asm:45502-45519); Obj24_MapUnc_1FC18 follows it. */
+    static final int SMALL_BUBBLES_MAPPING_FRAME_COUNT = 17;
+    /**
+     * ObjAA_MapUnc_39228 (s2.asm:77277-77287); its frame bodies follow those of
+     * ObjA7_ObjA8_ObjA9_Obj98_MapUnc_3921A.
+     */
+    static final int GRABBER_STRING_MAPPING_FRAME_COUNT = 9;
+    /** Obj8D_MapUnc_36CF0 (s2.asm:73735-73740); Obj90's two tables follow it. */
+    static final int GROUNDER_MAPPING_FRAME_COUNT = 5;
+    /** Obj90_MapUnc_36CFA (s2.asm:73744-73747); Obj90_MapUnc_36D00 follows it. */
+    static final int GROUNDER_ROCK_MAPPING_FRAME_COUNT = 3;
+
     /**
      * VRAM tile index of the 1-up monitor's life-counter icon piece (obj26 frame 2,
      * {@code Map_obj26_0034}, tile {@code $154}). In the ROM this is
@@ -183,12 +205,10 @@ public class Sonic2ObjectArt {
         SpriteAnimationSet springAnimations = loadAnimationSet(
                 address(reader, Sonic2Constants.ANI_OBJ41_ADDR),
                 Sonic2Constants.ANI_OBJ41_SCRIPT_COUNT);
-        List<SpriteMappingFrame> springMappings = loadMappingFrames(address(reader, Sonic2Constants.MAP_UNC_SPRING_ADDR));
 
         // Checkpoint/Starpost art
         ObjectSpriteSheet checkpointSheet = loadCheckpointSheet();
         ObjectSpriteSheet checkpointStarSheet = loadCheckpointStarSheet();
-        List<SpriteMappingFrame> checkpointMappings = loadMappingFrames(address(reader, Sonic2Constants.MAP_UNC_CHECKPOINT_ADDR));
         SpriteAnimationSet checkpointAnimations = loadAnimationSet(
                 address(reader, Sonic2Constants.ANI_OBJ79_ADDR),
                 Sonic2Constants.ANI_OBJ79_SCRIPT_COUNT);
@@ -390,17 +410,17 @@ public class Sonic2ObjectArt {
 
     public ObjectSpriteSheet loadSpringVerticalSheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_SPRING_VERTICAL_ADDR,
-                address(reader, Sonic2Constants.MAP_UNC_SPRING_ADDR), 0, 1);
+                address(reader, Sonic2Constants.MAP_UNC_SPRING_ADDR), 0, 1, SPRING_MAPPING_FRAME_COUNT);
     }
 
     public ObjectSpriteSheet loadSpringHorizontalSheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_SPRING_HORIZONTAL_ADDR,
-                address(reader, Sonic2Constants.MAP_UNC_SPRING_ADDR), 0, 1);
+                address(reader, Sonic2Constants.MAP_UNC_SPRING_ADDR), 0, 1, SPRING_MAPPING_FRAME_COUNT);
     }
 
     public ObjectSpriteSheet loadSpringDiagonalSheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_SPRING_DIAGONAL_ADDR,
-                address(reader, Sonic2Constants.MAP_UNC_SPRING_ADDR), 0, 1);
+                address(reader, Sonic2Constants.MAP_UNC_SPRING_ADDR), 0, 1, SPRING_MAPPING_FRAME_COUNT);
     }
 
     public ObjectSpriteSheet loadSpringVerticalRedSheet() {
@@ -648,7 +668,8 @@ public class Sonic2ObjectArt {
         }
         System.arraycopy(countdownPatterns, 0, patterns, countdownOffset, countdownPatterns.length);
 
-        List<SpriteMappingFrame> mappings = loadMappingFrames(address(reader, Sonic2Constants.MAP_UNC_SMALL_BUBBLES_ADDR));
+        List<SpriteMappingFrame> mappings = loadMappingFrames(
+                address(reader, Sonic2Constants.MAP_UNC_SMALL_BUBBLES_ADDR), SMALL_BUBBLES_MAPPING_FRAME_COUNT);
         // Obj0A frames 8-$D all map the same six-tile VRAM window. The ROM's
         // Obj0A_LoadCountdownArt replaces that window with one of six blocks
         // from ArtUnc_Countdown. Keep the blocks side-by-side in this immutable
@@ -1599,7 +1620,8 @@ public class Sonic2ObjectArt {
      */
     public ObjectSpriteSheet loadGrabberStringSheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_GRABBER_ADDR,
-                address(reader, Sonic2Constants.MAP_UNC_GRABBER_STRING_ADDR), 1, 1);
+                address(reader, Sonic2Constants.MAP_UNC_GRABBER_STRING_ADDR), 1, 1,
+                GRABBER_STRING_MAPPING_FRAME_COUNT);
     }
 
     /**
@@ -1639,7 +1661,8 @@ public class Sonic2ObjectArt {
      */
     public ObjectSpriteSheet loadGrounderSheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_GROUNDER_ADDR,
-                address(reader, Sonic2Constants.MAP_UNC_GROUNDER_ADDR), 1, 1);
+                address(reader, Sonic2Constants.MAP_UNC_GROUNDER_ADDR), 1, 1,
+                GROUNDER_MAPPING_FRAME_COUNT);
     }
 
     /**
@@ -1649,7 +1672,8 @@ public class Sonic2ObjectArt {
      */
     public ObjectSpriteSheet loadGrounderRockSheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_GROUNDER_ADDR,
-                address(reader, Sonic2Constants.MAP_UNC_GROUNDER_ROCK_ADDR), 2, 0);
+                address(reader, Sonic2Constants.MAP_UNC_GROUNDER_ROCK_ADDR), 2, 0,
+                GROUNDER_ROCK_MAPPING_FRAME_COUNT);
     }
 
     /**
@@ -2100,6 +2124,10 @@ public class Sonic2ObjectArt {
         return S2SpriteDataLoader.loadMappingFrames(reader, mappingAddr);
     }
 
+    private List<SpriteMappingFrame> loadMappingFrames(int mappingAddr, int frameCount) {
+        return S2SpriteDataLoader.loadMappingFrames(reader, mappingAddr, frameCount);
+    }
+
     private List<SpriteMappingFrame> loadMappingFramesWithTileOffset(int mappingAddr, int tileOffset) {
         return S2SpriteDataLoader.loadMappingFramesWithTileOffset(reader, mappingAddr, tileOffset);
     }
@@ -2140,11 +2168,19 @@ public class Sonic2ObjectArt {
      * @return sprite sheet, or null if art loading fails
      */
     private ObjectSpriteSheet buildArtSheetFromRom(int artAddr, int mappingAddr, int paletteIndex, int bankSize) {
+        return buildArtSheetFromRom(artAddr, mappingAddr, paletteIndex, bankSize, -1);
+    }
+
+    /** As above, reading exactly {@code mappingFrameCount} offsets when it is positive. */
+    private ObjectSpriteSheet buildArtSheetFromRom(int artAddr, int mappingAddr, int paletteIndex, int bankSize,
+            int mappingFrameCount) {
         Pattern[] patterns = safeLoadNemesisPatterns(artAddr, String.format("art@0x%X", artAddr));
         if (patterns.length == 0) {
             return null;
         }
-        List<SpriteMappingFrame> mappings = loadMappingFrames(mappingAddr);
+        List<SpriteMappingFrame> mappings = mappingFrameCount > 0
+                ? loadMappingFrames(mappingAddr, mappingFrameCount)
+                : loadMappingFrames(mappingAddr);
         return new ObjectSpriteSheet(patterns, mappings, paletteIndex, bankSize);
     }
 

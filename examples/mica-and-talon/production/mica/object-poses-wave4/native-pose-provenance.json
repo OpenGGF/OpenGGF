@@ -1,0 +1,1940 @@
+{
+  "method": "native-pose transformation",
+  "frames": [
+    {
+      "id": "object4-s3k-80",
+      "native": {
+        "mapping": 128,
+        "label": "word_1473A6",
+        "size": [
+          34,
+          46
+        ],
+        "hotspot": [
+          17,
+          24
+        ]
+      },
+      "group": "chain",
+      "attempt": 1,
+      "raw_sha256": "e4037994d4192337a52e9033037f223e43dfa5899a215169575493e7a25ba609",
+      "method": "built-in GPT Image native-pose transformation; native-aspect reduction, shared fixed palette and alpha/inside-ink cleanup; no painting",
+      "hotspot": [
+        16,
+        24
+      ],
+      "size": [
+        33,
+        46
+      ]
+    },
+    {
+      "id": "object4-s3k-81",
+      "native": {
+        "mapping": 129,
+        "label": "word_1473C0",
+        "size": [
+          28,
+          48
+        ],
+        "hotspot": [
+          18,
+          24
+        ]
+      },
+      "group": "chain",
+      "attempt": 1,
+      "raw_sha256": "e4037994d4192337a52e9033037f223e43dfa5899a215169575493e7a25ba609",
+      "method": "built-in GPT Image native-pose transformation; native-aspect reduction, shared fixed palette and alpha/inside-ink cleanup; no painting",
+      "hotspot": [
+        16,
+        24
+      ],
+      "size": [
+        25,
+        48
+      ]
+    },
+    {
+      "id": "object4-s3k-82",
+      "native": {
+        "mapping": 130,
+        "label": "word_1473DA",
+        "size": [
+          27,
+          48
+        ],
+        "hotspot": [
+          15,
+          24
+        ]
+      },
+      "group": "chain",
+      "attempt": 1,
+      "raw_sha256": "e4037994d4192337a52e9033037f223e43dfa5899a215169575493e7a25ba609",
+      "method": "built-in GPT Image native-pose transformation; native-aspect reduction, shared fixed palette and alpha/inside-ink cleanup; no painting",
+      "hotspot": [
+        14,
+        24
+      ],
+      "size": [
+        26,
+        48
+      ]
+    },
+    {
+      "id": "object4-s3k-83",
+      "native": {
+        "mapping": 131,
+        "label": "word_1473EE",
+        "size": [
+          34,
+          48
+        ],
+        "hotspot": [
+          16,
+          24
+        ]
+      },
+      "group": "chain",
+      "attempt": 1,
+      "raw_sha256": "e4037994d4192337a52e9033037f223e43dfa5899a215169575493e7a25ba609",
+      "method": "built-in GPT Image native-pose transformation; native-aspect reduction, shared fixed palette and alpha/inside-ink cleanup; no painting",
+      "hotspot": [
+        15,
+        24
+      ],
+      "size": [
+        33,
+        48
+      ]
+    },
+    {
+      "id": "object4-s3k-84",
+      "native": {
+        "mapping": 132,
+        "label": "word_147408",
+        "size": [
+          26,
+          48
+        ],
+        "hotspot": [
+          15,
+          24
+        ]
+      },
+      "group": "chain",
+      "attempt": 1,
+      "raw_sha256": "e4037994d4192337a52e9033037f223e43dfa5899a215169575493e7a25ba609",
+      "method": "built-in GPT Image native-pose transformation; native-aspect reduction, shared fixed palette and alpha/inside-ink cleanup; no painting",
+      "hotspot": [
+        13,
+        24
+      ],
+      "size": [
+        23,
+        48
+      ]
+    },
+    {
+      "id": "object4-s3k-85",
+      "native": {
+        "mapping": 133,
+        "label": "word_14741C",
+        "size": [
+          27,
+          48
+        ],
+        "hotspot": [
+          15,
+          24
+        ]
+      },
+      "group": "chain",
+      "attempt": 1,
+      "raw_sha256": "e4037994d4192337a52e9033037f223e43dfa5899a215169575493e7a25ba609",
+      "method": "built-in GPT Image native-pose transformation; native-aspect reduction, shared fixed palette and alpha/inside-ink cleanup; no painting",
+      "hotspot": [
+        14,
+        24
+      ],
+      "size": [
+        25,
+        48
+      ]
+    },
+    {
+      "id": "spindash-00",
+      "native": {
+        "mapping": 138,
+        "label": "word_147468",
+        "size": [
+          29,
+          27
+        ],
+        "hotspot": [
+          11,
+          7
+        ]
+      },
+      "method": "reuse approved pose",
+      "reason": "Same native spin-ball or overhead-grip pose; retain approved authored art."
+    },
+    {
+      "id": "spindash-01",
+      "native": {
+        "mapping": 139,
+        "label": "word_147476",
+        "size": [
+          29,
+          27
+        ],
+        "hotspot": [
+          11,
+          7
+        ]
+      },
+      "method": "reuse approved pose",
+      "reason": "Same native spin-ball or overhead-grip pose; retain approved authored art."
+    },
+    {
+      "id": "object4-s3k-8c",
+      "native": {
+        "mapping": 140,
+        "label": "word_147484",
+        "size": [
+          38,
+          32
+        ],
+        "hotspot": [
+          19,
+          16
+        ]
+      },
+      "group": "misc-b",
+      "attempt": 2,
+      "raw_sha256": "25855874e466fafb9d03bf3ef753a3f3626a8ff10ca54af68b372870c544941f",
+      "method": "built-in GPT Image native-pose transformation; native-aspect reduction, shared fixed palette and alpha/inside-ink cleanup; no painting",
+      "hotspot": [
+        16,
+        16
+      ],
+      "size": [
+        33,
+        32
+      ]
+    },
+    {
+      "id": "object4-s3k-8d",
+      "native": {
+        "mapping": 141,
+        "label": "word_147498",
+        "size": [
+          39,
+          31
+        ],
+        "hotspot": [
+          20,
+          16
+        ]
+      },
+      "group": "misc-b",
+      "attempt": 2,
+      "raw_sha256": "25855874e466fafb9d03bf3ef753a3f3626a8ff10ca54af68b372870c544941f",
+      "method": "built-in GPT Image native-pose transformation; native-aspect reduction, shared fixed palette and alpha/inside-ink cleanup; no painting",
+      "hotspot": [
+        17,
+        16
+      ],
+      "size": [
+        34,
+        31
+      ]
+    },
+    {
+      "id": "object4-s3k-93",
+      "native": {
+        "mapping": 147,
+        "label": "word_14751C",
+        "size": [
+          28,
+          31
+        ],
+        "hotspot": [
+          16,
+          24
+        ]
+      },
+      "group": "misc",
+      "attempt": 2,
+      "raw_sha256": "dba56bd7adceb478201ccb3366f8587cb5b946ac8523c5e6dd89e8b02dc97938",
+      "method": "built-in GPT Image native-pose transformation; native-aspect reduction, shared fixed palette and alpha/inside-ink cleanup; no painting",
+      "hotspot": [
+        17,
+        23
+      ],
+      "size": [
+        30,
+        30
+      ],
+      "correction": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json. Re-reduced 6% larger for independent area check."
+    },
+    {
+      "id": "object4-s3k-b4",
+      "native": {
+        "mapping": 180,
+        "label": "word_1477B0",
+        "size": [
+          23,
+          52
+        ],
+        "hotspot": [
+          10,
+          26
+        ]
+      },
+      "group": "misc",
+      "attempt": 2,
+      "raw_sha256": "dba56bd7adceb478201ccb3366f8587cb5b946ac8523c5e6dd89e8b02dc97938",
+      "method": "built-in GPT Image native-pose transformation; native-aspect reduction, shared fixed palette and alpha/inside-ink cleanup; no painting",
+      "hotspot": [
+        10,
+        23
+      ],
+      "size": [
+        23,
+        46
+      ]
+    },
+    {
+      "id": "object4-s3k-b5",
+      "native": {
+        "mapping": 181,
+        "label": "word_1477C4",
+        "size": [
+          23,
+          53
+        ],
+        "hotspot": [
+          10,
+          26
+        ]
+      },
+      "group": "misc-b",
+      "attempt": 2,
+      "raw_sha256": "25855874e466fafb9d03bf3ef753a3f3626a8ff10ca54af68b372870c544941f",
+      "method": "built-in GPT Image native-pose transformation; native-aspect reduction, shared fixed palette and alpha/inside-ink cleanup; no painting",
+      "hotspot": [
+        10,
+        23
+      ],
+      "size": [
+        22,
+        48
+      ],
+      "correction": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json. Uniform 50\u219248px height reduction for current indexed atlas cell."
+    },
+    {
+      "id": "object4-s3k-c0",
+      "native": {
+        "mapping": 192,
+        "label": "word_1478BE",
+        "size": [
+          32,
+          39
+        ],
+        "hotspot": [
+          18,
+          19
+        ]
+      },
+      "group": "misc",
+      "attempt": 2,
+      "raw_sha256": "dba56bd7adceb478201ccb3366f8587cb5b946ac8523c5e6dd89e8b02dc97938",
+      "method": "built-in GPT Image native-pose transformation; native-aspect reduction, shared fixed palette and alpha/inside-ink cleanup; no painting",
+      "hotspot": [
+        17,
+        19
+      ],
+      "size": [
+        30,
+        39
+      ]
+    },
+    {
+      "id": "object4-s3k-c4",
+      "native": {
+        "mapping": 196,
+        "label": "word_14791A",
+        "size": [
+          35,
+          38
+        ],
+        "hotspot": [
+          22,
+          18
+        ]
+      },
+      "group": "misc",
+      "attempt": 2,
+      "raw_sha256": "dba56bd7adceb478201ccb3366f8587cb5b946ac8523c5e6dd89e8b02dc97938",
+      "method": "built-in GPT Image native-pose transformation; native-aspect reduction, shared fixed palette and alpha/inside-ink cleanup; no painting",
+      "hotspot": [
+        18,
+        18
+      ],
+      "size": [
+        28,
+        38
+      ]
+    },
+    {
+      "id": "object4-s3k-df",
+      "native": {
+        "mapping": 223,
+        "label": "word_147A6E",
+        "size": [
+          30,
+          40
+        ],
+        "hotspot": [
+          16,
+          20
+        ]
+      },
+      "group": "wall",
+      "attempt": 2,
+      "raw_sha256": "902c16bc9e5e89291192aeea6a7d415c8e56adb7f1e113a7dae94cde34b16f88",
+      "method": "built-in GPT Image native-pose transformation; native-aspect reduction, shared fixed palette and alpha/inside-ink cleanup; no painting",
+      "hotspot": [
+        15,
+        20
+      ],
+      "size": [
+        29,
+        40
+      ]
+    },
+    {
+      "id": "object4-s3k-e0",
+      "native": {
+        "mapping": 224,
+        "label": "word_147A82",
+        "size": [
+          24,
+          31
+        ],
+        "hotspot": [
+          12,
+          16
+        ]
+      },
+      "group": "wall",
+      "attempt": 2,
+      "raw_sha256": "902c16bc9e5e89291192aeea6a7d415c8e56adb7f1e113a7dae94cde34b16f88",
+      "method": "built-in GPT Image native-pose transformation; native-aspect reduction, shared fixed palette and alpha/inside-ink cleanup; no painting",
+      "hotspot": [
+        12,
+        14
+      ],
+      "size": [
+        24,
+        27
+      ]
+    },
+    {
+      "id": "object4-s3k-e1",
+      "native": {
+        "mapping": 225,
+        "label": "word_147A8A",
+        "size": [
+          23,
+          40
+        ],
+        "hotspot": [
+          11,
+          20
+        ]
+      },
+      "group": "wall",
+      "attempt": 2,
+      "raw_sha256": "902c16bc9e5e89291192aeea6a7d415c8e56adb7f1e113a7dae94cde34b16f88",
+      "method": "built-in GPT Image native-pose transformation; native-aspect reduction, shared fixed palette and alpha/inside-ink cleanup; no painting",
+      "hotspot": [
+        11,
+        17
+      ],
+      "size": [
+        23,
+        34
+      ]
+    },
+    {
+      "id": "object4-s3k-e2",
+      "native": {
+        "mapping": 226,
+        "label": "word_147A98",
+        "size": [
+          30,
+          39
+        ],
+        "hotspot": [
+          16,
+          20
+        ]
+      },
+      "group": "wall",
+      "attempt": 2,
+      "raw_sha256": "902c16bc9e5e89291192aeea6a7d415c8e56adb7f1e113a7dae94cde34b16f88",
+      "method": "built-in GPT Image native-pose transformation; native-aspect reduction, shared fixed palette and alpha/inside-ink cleanup; no painting",
+      "hotspot": [
+        16,
+        19
+      ],
+      "size": [
+        30,
+        37
+      ]
+    },
+    {
+      "id": "object4-s3k-e3",
+      "native": {
+        "mapping": 227,
+        "label": "word_147AB2",
+        "size": [
+          33,
+          42
+        ],
+        "hotspot": [
+          20,
+          24
+        ]
+      },
+      "group": "wall",
+      "attempt": 2,
+      "raw_sha256": "902c16bc9e5e89291192aeea6a7d415c8e56adb7f1e113a7dae94cde34b16f88",
+      "method": "built-in GPT Image native-pose transformation; native-aspect reduction, shared fixed palette and alpha/inside-ink cleanup; no painting",
+      "hotspot": [
+        20,
+        23
+      ],
+      "size": [
+        33,
+        40
+      ]
+    },
+    {
+      "id": "object4-s3k-e4",
+      "native": {
+        "mapping": 228,
+        "label": "word_147ACC",
+        "size": [
+          26,
+          48
+        ],
+        "hotspot": [
+          16,
+          24
+        ]
+      },
+      "group": "parachute",
+      "attempt": 2,
+      "raw_sha256": "dbdf56bd0dc1345106614a47aed6d47f4f6587e40800bf999a93c6f21a57ba03",
+      "method": "built-in GPT Image native-pose transformation; native-aspect reduction, shared fixed palette and alpha/inside-ink cleanup; no painting",
+      "hotspot": [
+        14,
+        24
+      ],
+      "size": [
+        23,
+        48
+      ]
+    },
+    {
+      "id": "hang-00",
+      "native": {
+        "mapping": 229,
+        "label": "word_147AE6",
+        "size": [
+          32,
+          48
+        ],
+        "hotspot": [
+          16,
+          24
+        ]
+      },
+      "method": "reuse approved pose",
+      "reason": "Same native spin-ball or overhead-grip pose; retain approved authored art."
+    },
+    {
+      "id": "object4-s3k-e6",
+      "native": {
+        "mapping": 230,
+        "label": "word_147B00",
+        "size": [
+          27,
+          48
+        ],
+        "hotspot": [
+          16,
+          24
+        ]
+      },
+      "group": "parachute",
+      "attempt": 2,
+      "raw_sha256": "dbdf56bd0dc1345106614a47aed6d47f4f6587e40800bf999a93c6f21a57ba03",
+      "method": "built-in GPT Image native-pose transformation; native-aspect reduction, shared fixed palette and alpha/inside-ink cleanup; no painting",
+      "hotspot": [
+        15,
+        24
+      ],
+      "size": [
+        26,
+        48
+      ]
+    },
+    {
+      "id": "object4-s3k-e7",
+      "native": {
+        "mapping": 231,
+        "label": "word_147B14",
+        "size": [
+          24,
+          47
+        ],
+        "hotspot": [
+          12,
+          23
+        ]
+      },
+      "group": "parachute",
+      "attempt": 2,
+      "raw_sha256": "dbdf56bd0dc1345106614a47aed6d47f4f6587e40800bf999a93c6f21a57ba03",
+      "method": "built-in GPT Image native-pose transformation; native-aspect reduction, shared fixed palette and alpha/inside-ink cleanup; no painting",
+      "hotspot": [
+        12,
+        21
+      ],
+      "size": [
+        24,
+        44
+      ]
+    },
+    {
+      "id": "object4-s3k-e8",
+      "native": {
+        "mapping": 232,
+        "label": "word_147B22",
+        "size": [
+          29,
+          48
+        ],
+        "hotspot": [
+          13,
+          24
+        ]
+      },
+      "group": "parachute",
+      "attempt": 2,
+      "raw_sha256": "dbdf56bd0dc1345106614a47aed6d47f4f6587e40800bf999a93c6f21a57ba03",
+      "method": "built-in GPT Image native-pose transformation; native-aspect reduction, shared fixed palette and alpha/inside-ink cleanup; no painting",
+      "hotspot": [
+        11,
+        24
+      ],
+      "size": [
+        26,
+        48
+      ]
+    },
+    {
+      "id": "object4-s3k-e9",
+      "native": {
+        "mapping": 233,
+        "label": "word_147B3C",
+        "size": [
+          27,
+          48
+        ],
+        "hotspot": [
+          11,
+          24
+        ]
+      },
+      "group": "parachute",
+      "attempt": 2,
+      "raw_sha256": "dbdf56bd0dc1345106614a47aed6d47f4f6587e40800bf999a93c6f21a57ba03",
+      "method": "built-in GPT Image native-pose transformation; native-aspect reduction, shared fixed palette and alpha/inside-ink cleanup; no painting",
+      "hotspot": [
+        9,
+        24
+      ],
+      "size": [
+        24,
+        48
+      ]
+    },
+    {
+      "id": "object4-s3k-ea",
+      "native": {
+        "mapping": 234,
+        "label": "word_147B50",
+        "size": [
+          24,
+          47
+        ],
+        "hotspot": [
+          12,
+          23
+        ]
+      },
+      "group": "parachute",
+      "attempt": 2,
+      "raw_sha256": "dbdf56bd0dc1345106614a47aed6d47f4f6587e40800bf999a93c6f21a57ba03",
+      "method": "built-in GPT Image native-pose transformation; native-aspect reduction, shared fixed palette and alpha/inside-ink cleanup; no painting",
+      "hotspot": [
+        12,
+        21
+      ],
+      "size": [
+        24,
+        44
+      ]
+    },
+    {
+      "id": "object4-s3k-ef",
+      "native": {
+        "mapping": 239,
+        "label": "word_147BBA",
+        "size": [
+          30,
+          37
+        ],
+        "hotspot": [
+          16,
+          20
+        ]
+      },
+      "group": "cork-a",
+      "attempt": 2,
+      "raw_sha256": "0204898910475cd6814b11c8f7978617476175d0e8eea1f2b11fc127de0cb04f",
+      "method": "built-in GPT Image native-pose transformation; native-aspect reduction, shared fixed palette and alpha/inside-ink cleanup; no painting",
+      "hotspot": [
+        16,
+        19
+      ],
+      "size": [
+        31,
+        36
+      ]
+    },
+    {
+      "id": "object4-s3k-f0",
+      "native": {
+        "mapping": 240,
+        "label": "word_147BC8",
+        "size": [
+          27,
+          37
+        ],
+        "hotspot": [
+          15,
+          20
+        ]
+      },
+      "group": "cork-a",
+      "attempt": 2,
+      "raw_sha256": "0204898910475cd6814b11c8f7978617476175d0e8eea1f2b11fc127de0cb04f",
+      "method": "built-in GPT Image native-pose transformation; native-aspect reduction, shared fixed palette and alpha/inside-ink cleanup; no painting",
+      "hotspot": [
+        15,
+        19
+      ],
+      "size": [
+        28,
+        35
+      ]
+    },
+    {
+      "id": "object4-s3k-f1",
+      "native": {
+        "mapping": 241,
+        "label": "word_147BDC",
+        "size": [
+          22,
+          37
+        ],
+        "hotspot": [
+          12,
+          20
+        ]
+      },
+      "group": "cork-a",
+      "attempt": 2,
+      "raw_sha256": "0204898910475cd6814b11c8f7978617476175d0e8eea1f2b11fc127de0cb04f",
+      "method": "built-in GPT Image native-pose transformation; native-aspect reduction, shared fixed palette and alpha/inside-ink cleanup; no painting",
+      "hotspot": [
+        12,
+        17
+      ],
+      "size": [
+        23,
+        32
+      ]
+    },
+    {
+      "id": "object4-s3k-f2",
+      "native": {
+        "mapping": 242,
+        "label": "word_147BEA",
+        "size": [
+          19,
+          36
+        ],
+        "hotspot": [
+          10,
+          19
+        ]
+      },
+      "group": "cork-a",
+      "attempt": 2,
+      "raw_sha256": "0204898910475cd6814b11c8f7978617476175d0e8eea1f2b11fc127de0cb04f",
+      "method": "built-in GPT Image native-pose transformation; native-aspect reduction, shared fixed palette and alpha/inside-ink cleanup; no painting",
+      "hotspot": [
+        10,
+        17
+      ],
+      "size": [
+        20,
+        33
+      ]
+    },
+    {
+      "id": "object4-s3k-f3",
+      "native": {
+        "mapping": 243,
+        "label": "word_147BF8",
+        "size": [
+          22,
+          37
+        ],
+        "hotspot": [
+          11,
+          20
+        ]
+      },
+      "group": "cork-a",
+      "attempt": 2,
+      "raw_sha256": "0204898910475cd6814b11c8f7978617476175d0e8eea1f2b11fc127de0cb04f",
+      "method": "built-in GPT Image native-pose transformation; native-aspect reduction, shared fixed palette and alpha/inside-ink cleanup; no painting",
+      "hotspot": [
+        11,
+        16
+      ],
+      "size": [
+        23,
+        29
+      ]
+    },
+    {
+      "id": "object4-s3k-f4",
+      "native": {
+        "mapping": 244,
+        "label": "word_147C06",
+        "size": [
+          26,
+          37
+        ],
+        "hotspot": [
+          14,
+          20
+        ]
+      },
+      "group": "cork-a",
+      "attempt": 2,
+      "raw_sha256": "0204898910475cd6814b11c8f7978617476175d0e8eea1f2b11fc127de0cb04f",
+      "method": "built-in GPT Image native-pose transformation; native-aspect reduction, shared fixed palette and alpha/inside-ink cleanup; no painting",
+      "hotspot": [
+        14,
+        18
+      ],
+      "size": [
+        27,
+        34
+      ]
+    },
+    {
+      "id": "object4-s3k-f5",
+      "native": {
+        "mapping": 245,
+        "label": "word_147C20",
+        "size": [
+          32,
+          37
+        ],
+        "hotspot": [
+          16,
+          20
+        ]
+      },
+      "group": "cork-b",
+      "attempt": 2,
+      "raw_sha256": "fd2c54a47a2b7f4472f6010689c414d33e42e0b5830dbd00538dc875ed49dfd0",
+      "method": "built-in GPT Image native-pose transformation; native-aspect reduction, shared fixed palette and alpha/inside-ink cleanup; no painting",
+      "hotspot": [
+        15,
+        20
+      ],
+      "size": [
+        31,
+        37
+      ]
+    },
+    {
+      "id": "object4-s3k-f6",
+      "native": {
+        "mapping": 246,
+        "label": "word_147C34",
+        "size": [
+          26,
+          37
+        ],
+        "hotspot": [
+          15,
+          20
+        ]
+      },
+      "group": "cork-b",
+      "attempt": 2,
+      "raw_sha256": "fd2c54a47a2b7f4472f6010689c414d33e42e0b5830dbd00538dc875ed49dfd0",
+      "method": "built-in GPT Image native-pose transformation; native-aspect reduction, shared fixed palette and alpha/inside-ink cleanup; no painting",
+      "hotspot": [
+        15,
+        19
+      ],
+      "size": [
+        26,
+        36
+      ]
+    },
+    {
+      "id": "object4-s3k-f7",
+      "native": {
+        "mapping": 247,
+        "label": "word_147C42",
+        "size": [
+          24,
+          37
+        ],
+        "hotspot": [
+          12,
+          20
+        ]
+      },
+      "group": "cork-b",
+      "attempt": 2,
+      "raw_sha256": "fd2c54a47a2b7f4472f6010689c414d33e42e0b5830dbd00538dc875ed49dfd0",
+      "method": "built-in GPT Image native-pose transformation; native-aspect reduction, shared fixed palette and alpha/inside-ink cleanup; no painting",
+      "hotspot": [
+        11,
+        20
+      ],
+      "size": [
+        23,
+        37
+      ]
+    },
+    {
+      "id": "object4-s3k-f8",
+      "native": {
+        "mapping": 248,
+        "label": "word_147C50",
+        "size": [
+          21,
+          37
+        ],
+        "hotspot": [
+          10,
+          20
+        ]
+      },
+      "group": "cork-b",
+      "attempt": 2,
+      "raw_sha256": "fd2c54a47a2b7f4472f6010689c414d33e42e0b5830dbd00538dc875ed49dfd0",
+      "method": "built-in GPT Image native-pose transformation; native-aspect reduction, shared fixed palette and alpha/inside-ink cleanup; no painting",
+      "hotspot": [
+        10,
+        19
+      ],
+      "size": [
+        21,
+        36
+      ]
+    },
+    {
+      "id": "object4-s3k-f9",
+      "native": {
+        "mapping": 249,
+        "label": "word_147C64",
+        "size": [
+          23,
+          37
+        ],
+        "hotspot": [
+          12,
+          20
+        ]
+      },
+      "group": "cork-b",
+      "attempt": 2,
+      "raw_sha256": "fd2c54a47a2b7f4472f6010689c414d33e42e0b5830dbd00538dc875ed49dfd0",
+      "method": "built-in GPT Image native-pose transformation; native-aspect reduction, shared fixed palette and alpha/inside-ink cleanup; no painting",
+      "hotspot": [
+        12,
+        19
+      ],
+      "size": [
+        23,
+        36
+      ]
+    },
+    {
+      "id": "object4-s3k-fa",
+      "native": {
+        "mapping": 250,
+        "label": "word_147C72",
+        "size": [
+          29,
+          37
+        ],
+        "hotspot": [
+          15,
+          20
+        ]
+      },
+      "group": "cork-b",
+      "attempt": 2,
+      "raw_sha256": "fd2c54a47a2b7f4472f6010689c414d33e42e0b5830dbd00538dc875ed49dfd0",
+      "method": "built-in GPT Image native-pose transformation; native-aspect reduction, shared fixed palette and alpha/inside-ink cleanup; no painting",
+      "hotspot": [
+        15,
+        19
+      ],
+      "size": [
+        29,
+        36
+      ]
+    },
+    {
+      "id": "object4-s3k-31",
+      "native": {
+        "mapping": 49,
+        "label": "word_146DE0",
+        "size": [
+          28,
+          39
+        ],
+        "hotspot": [
+          14,
+          19
+        ]
+      },
+      "group": "gravity-a",
+      "attempt": 2,
+      "raw_sha256": "4398dcec6812089f48d77cdc8f788d210c3a06a9429eaf1baa5c26d493084f9c",
+      "method": "built-in GPT Image native-pose transformation; native-aspect reduction, shared fixed palette and alpha/inside-ink cleanup; no painting",
+      "hotspot": [
+        14,
+        18
+      ],
+      "size": [
+        28,
+        38
+      ]
+    },
+    {
+      "id": "object4-s3k-32",
+      "native": {
+        "mapping": 50,
+        "label": "word_146DF4",
+        "size": [
+          27,
+          35
+        ],
+        "hotspot": [
+          13,
+          17
+        ]
+      },
+      "group": "gravity-a",
+      "attempt": 2,
+      "raw_sha256": "4398dcec6812089f48d77cdc8f788d210c3a06a9429eaf1baa5c26d493084f9c",
+      "method": "built-in GPT Image native-pose transformation; native-aspect reduction, shared fixed palette and alpha/inside-ink cleanup; no painting",
+      "hotspot": [
+        13,
+        16
+      ],
+      "size": [
+        27,
+        33
+      ]
+    },
+    {
+      "id": "object4-s3k-33",
+      "native": {
+        "mapping": 51,
+        "label": "word_146E0E",
+        "size": [
+          26,
+          29
+        ],
+        "hotspot": [
+          14,
+          16
+        ]
+      },
+      "group": "gravity-a",
+      "attempt": 2,
+      "raw_sha256": "4398dcec6812089f48d77cdc8f788d210c3a06a9429eaf1baa5c26d493084f9c",
+      "method": "built-in GPT Image native-pose transformation; native-aspect reduction, shared fixed palette and alpha/inside-ink cleanup; no painting",
+      "hotspot": [
+        14,
+        16
+      ],
+      "size": [
+        26,
+        29
+      ]
+    },
+    {
+      "id": "object4-s3k-34",
+      "native": {
+        "mapping": 52,
+        "label": "word_146E28",
+        "size": [
+          28,
+          32
+        ],
+        "hotspot": [
+          15,
+          17
+        ]
+      },
+      "group": "gravity-a",
+      "attempt": 2,
+      "raw_sha256": "4398dcec6812089f48d77cdc8f788d210c3a06a9429eaf1baa5c26d493084f9c",
+      "method": "built-in GPT Image native-pose transformation; native-aspect reduction, shared fixed palette and alpha/inside-ink cleanup; no painting",
+      "hotspot": [
+        15,
+        17
+      ],
+      "size": [
+        28,
+        32
+      ]
+    },
+    {
+      "id": "object4-s3k-35",
+      "native": {
+        "mapping": 53,
+        "label": "word_146E42",
+        "size": [
+          26,
+          32
+        ],
+        "hotspot": [
+          12,
+          17
+        ]
+      },
+      "group": "gravity-a",
+      "attempt": 2,
+      "raw_sha256": "4398dcec6812089f48d77cdc8f788d210c3a06a9429eaf1baa5c26d493084f9c",
+      "method": "built-in GPT Image native-pose transformation; native-aspect reduction, shared fixed palette and alpha/inside-ink cleanup; no painting",
+      "hotspot": [
+        12,
+        16
+      ],
+      "size": [
+        26,
+        31
+      ]
+    },
+    {
+      "id": "object4-s3k-36",
+      "native": {
+        "mapping": 54,
+        "label": "word_146E5C",
+        "size": [
+          28,
+          40
+        ],
+        "hotspot": [
+          14,
+          22
+        ]
+      },
+      "group": "gravity-a",
+      "attempt": 2,
+      "raw_sha256": "4398dcec6812089f48d77cdc8f788d210c3a06a9429eaf1baa5c26d493084f9c",
+      "method": "built-in GPT Image native-pose transformation; native-aspect reduction, shared fixed palette and alpha/inside-ink cleanup; no painting",
+      "hotspot": [
+        14,
+        21
+      ],
+      "size": [
+        28,
+        38
+      ]
+    },
+    {
+      "id": "object4-s3k-37",
+      "native": {
+        "mapping": 55,
+        "label": "word_146E70",
+        "size": [
+          31,
+          39
+        ],
+        "hotspot": [
+          15,
+          20
+        ]
+      },
+      "group": "gravity-b",
+      "attempt": 2,
+      "raw_sha256": "a5838a0af81c7c3c9d0ccf658c97a40bd0ae0d091eba2da3e3adc322476ddda3",
+      "method": "built-in GPT Image native-pose transformation; native-aspect reduction, shared fixed palette and alpha/inside-ink cleanup; no painting",
+      "hotspot": [
+        15,
+        20
+      ],
+      "size": [
+        31,
+        39
+      ]
+    },
+    {
+      "id": "object4-s3k-38",
+      "native": {
+        "mapping": 56,
+        "label": "word_146E7E",
+        "size": [
+          22,
+          35
+        ],
+        "hotspot": [
+          12,
+          18
+        ]
+      },
+      "group": "gravity-b",
+      "attempt": 1,
+      "raw_sha256": "e11388e7629a6f8af12911d4eb9573de8f574fb1215b8a1e5d40c1c35cbf8305",
+      "method": "built-in GPT Image native-pose transformation; native-aspect reduction, shared fixed palette and alpha/inside-ink cleanup; no painting",
+      "hotspot": [
+        12,
+        18
+      ],
+      "size": [
+        22,
+        35
+      ]
+    },
+    {
+      "id": "object4-s3k-39",
+      "native": {
+        "mapping": 57,
+        "label": "word_146E8C",
+        "size": [
+          28,
+          32
+        ],
+        "hotspot": [
+          14,
+          18
+        ]
+      },
+      "group": "gravity-b",
+      "attempt": 2,
+      "raw_sha256": "a5838a0af81c7c3c9d0ccf658c97a40bd0ae0d091eba2da3e3adc322476ddda3",
+      "method": "built-in GPT Image native-pose transformation; native-aspect reduction, shared fixed palette and alpha/inside-ink cleanup; no painting",
+      "hotspot": [
+        14,
+        18
+      ],
+      "size": [
+        28,
+        32
+      ]
+    },
+    {
+      "id": "object4-s3k-3a",
+      "native": {
+        "mapping": 58,
+        "label": "word_146EA0",
+        "size": [
+          28,
+          32
+        ],
+        "hotspot": [
+          15,
+          16
+        ]
+      },
+      "group": "gravity-b",
+      "attempt": 2,
+      "raw_sha256": "a5838a0af81c7c3c9d0ccf658c97a40bd0ae0d091eba2da3e3adc322476ddda3",
+      "method": "built-in GPT Image native-pose transformation; native-aspect reduction, shared fixed palette and alpha/inside-ink cleanup; no painting",
+      "hotspot": [
+        15,
+        14
+      ],
+      "size": [
+        28,
+        28
+      ]
+    },
+    {
+      "id": "object4-s3k-3b",
+      "native": {
+        "mapping": 59,
+        "label": "word_146EBA",
+        "size": [
+          24,
+          37
+        ],
+        "hotspot": [
+          12,
+          17
+        ]
+      },
+      "group": "gravity-b",
+      "attempt": 2,
+      "raw_sha256": "a5838a0af81c7c3c9d0ccf658c97a40bd0ae0d091eba2da3e3adc322476ddda3",
+      "method": "built-in GPT Image native-pose transformation; native-aspect reduction, shared fixed palette and alpha/inside-ink cleanup; no painting",
+      "hotspot": [
+        12,
+        17
+      ],
+      "size": [
+        24,
+        37
+      ]
+    },
+    {
+      "id": "object4-s3k-3c",
+      "native": {
+        "mapping": 60,
+        "label": "word_146EC8",
+        "size": [
+          23,
+          39
+        ],
+        "hotspot": [
+          12,
+          19
+        ]
+      },
+      "group": "gravity-b",
+      "attempt": 2,
+      "raw_sha256": "a5838a0af81c7c3c9d0ccf658c97a40bd0ae0d091eba2da3e3adc322476ddda3",
+      "method": "built-in GPT Image native-pose transformation; native-aspect reduction, shared fixed palette and alpha/inside-ink cleanup; no painting",
+      "hotspot": [
+        12,
+        19
+      ],
+      "size": [
+        23,
+        39
+      ]
+    },
+    {
+      "id": "object4-s3k-49",
+      "native": {
+        "mapping": 73,
+        "label": "word_146FA2",
+        "size": [
+          38,
+          38
+        ],
+        "hotspot": [
+          20,
+          22
+        ]
+      },
+      "group": "cage-a",
+      "attempt": 1,
+      "raw_sha256": "0395fb025d8b160a8981e37e0fbe7def0f943ba1c79f8022fc5752741f791668",
+      "method": "built-in GPT Image native-pose transformation; native-aspect reduction, shared fixed palette and alpha/inside-ink cleanup; no painting",
+      "hotspot": [
+        19,
+        22
+      ],
+      "size": [
+        36,
+        38
+      ]
+    },
+    {
+      "id": "object4-s3k-4a",
+      "native": {
+        "mapping": 74,
+        "label": "word_146FBC",
+        "size": [
+          31,
+          42
+        ],
+        "hotspot": [
+          13,
+          22
+        ]
+      },
+      "group": "cage-a",
+      "attempt": 2,
+      "raw_sha256": "f04aa3f86e1f4f6314502f39ff9501eef3cbd326780eef4a384d16e97a69ba80",
+      "method": "built-in GPT Image native-pose transformation; native-aspect reduction, shared fixed palette and alpha/inside-ink cleanup; no painting",
+      "hotspot": [
+        13,
+        18
+      ],
+      "size": [
+        31,
+        35
+      ]
+    },
+    {
+      "id": "object4-s3k-4b",
+      "native": {
+        "mapping": 75,
+        "label": "word_146FD6",
+        "size": [
+          29,
+          32
+        ],
+        "hotspot": [
+          13,
+          21
+        ]
+      },
+      "group": "cage-a",
+      "attempt": 2,
+      "raw_sha256": "f04aa3f86e1f4f6314502f39ff9501eef3cbd326780eef4a384d16e97a69ba80",
+      "method": "built-in GPT Image native-pose transformation; native-aspect reduction, shared fixed palette and alpha/inside-ink cleanup; no painting",
+      "hotspot": [
+        13,
+        19
+      ],
+      "size": [
+        29,
+        28
+      ]
+    },
+    {
+      "id": "object4-s3k-4c",
+      "native": {
+        "mapping": 76,
+        "label": "word_146FEA",
+        "size": [
+          32,
+          32
+        ],
+        "hotspot": [
+          13,
+          15
+        ]
+      },
+      "group": "cage-a",
+      "attempt": 1,
+      "raw_sha256": "0395fb025d8b160a8981e37e0fbe7def0f943ba1c79f8022fc5752741f791668",
+      "method": "built-in GPT Image native-pose transformation; native-aspect reduction, shared fixed palette and alpha/inside-ink cleanup; no painting",
+      "hotspot": [
+        13,
+        14
+      ],
+      "size": [
+        32,
+        30
+      ]
+    },
+    {
+      "id": "object4-s3k-4d",
+      "native": {
+        "mapping": 77,
+        "label": "word_146FFE",
+        "size": [
+          31,
+          27
+        ],
+        "hotspot": [
+          12,
+          14
+        ]
+      },
+      "group": "cage-a",
+      "attempt": 1,
+      "raw_sha256": "0395fb025d8b160a8981e37e0fbe7def0f943ba1c79f8022fc5752741f791668",
+      "method": "built-in GPT Image native-pose transformation; native-aspect reduction, shared fixed palette and alpha/inside-ink cleanup; no painting",
+      "hotspot": [
+        11,
+        14
+      ],
+      "size": [
+        30,
+        27
+      ]
+    },
+    {
+      "id": "object4-s3k-4e",
+      "native": {
+        "mapping": 78,
+        "label": "word_147012",
+        "size": [
+          32,
+          32
+        ],
+        "hotspot": [
+          18,
+          14
+        ]
+      },
+      "group": "cage-a",
+      "attempt": 2,
+      "raw_sha256": "f04aa3f86e1f4f6314502f39ff9501eef3cbd326780eef4a384d16e97a69ba80",
+      "method": "built-in GPT Image native-pose transformation; native-aspect reduction, shared fixed palette and alpha/inside-ink cleanup; no painting",
+      "hotspot": [
+        18,
+        14
+      ],
+      "size": [
+        32,
+        32
+      ]
+    },
+    {
+      "id": "object4-s3k-4f",
+      "native": {
+        "mapping": 79,
+        "label": "word_14701A",
+        "size": [
+          38,
+          34
+        ],
+        "hotspot": [
+          20,
+          16
+        ]
+      },
+      "group": "cage-b",
+      "attempt": 2,
+      "raw_sha256": "3b5db5b0a76f194da697df16a7d233e547fec59348cb284f82c13e823afd71a2",
+      "method": "built-in GPT Image native-pose transformation; native-aspect reduction, shared fixed palette and alpha/inside-ink cleanup; no painting",
+      "hotspot": [
+        18,
+        16
+      ],
+      "size": [
+        35,
+        34
+      ]
+    },
+    {
+      "id": "object4-s3k-50",
+      "native": {
+        "mapping": 80,
+        "label": "word_147034",
+        "size": [
+          37,
+          38
+        ],
+        "hotspot": [
+          19,
+          20
+        ]
+      },
+      "group": "cage-b",
+      "attempt": 2,
+      "raw_sha256": "3b5db5b0a76f194da697df16a7d233e547fec59348cb284f82c13e823afd71a2",
+      "method": "built-in GPT Image native-pose transformation; native-aspect reduction, shared fixed palette and alpha/inside-ink cleanup; no painting",
+      "hotspot": [
+        18,
+        20
+      ],
+      "size": [
+        36,
+        38
+      ]
+    },
+    {
+      "id": "object4-s3k-51",
+      "native": {
+        "mapping": 81,
+        "label": "word_14704E",
+        "size": [
+          31,
+          30
+        ],
+        "hotspot": [
+          16,
+          18
+        ]
+      },
+      "group": "cage-b",
+      "attempt": 2,
+      "raw_sha256": "3b5db5b0a76f194da697df16a7d233e547fec59348cb284f82c13e823afd71a2",
+      "method": "built-in GPT Image native-pose transformation; native-aspect reduction, shared fixed palette and alpha/inside-ink cleanup; no painting",
+      "hotspot": [
+        14,
+        18
+      ],
+      "size": [
+        28,
+        30
+      ]
+    },
+    {
+      "id": "object4-s3k-52",
+      "native": {
+        "mapping": 82,
+        "label": "word_14705C",
+        "size": [
+          32,
+          30
+        ],
+        "hotspot": [
+          14,
+          17
+        ]
+      },
+      "group": "cage-b",
+      "attempt": 2,
+      "raw_sha256": "3b5db5b0a76f194da697df16a7d233e547fec59348cb284f82c13e823afd71a2",
+      "method": "built-in GPT Image native-pose transformation; native-aspect reduction, shared fixed palette and alpha/inside-ink cleanup; no painting",
+      "hotspot": [
+        13,
+        17
+      ],
+      "size": [
+        31,
+        30
+      ]
+    },
+    {
+      "id": "object4-s3k-53",
+      "native": {
+        "mapping": 83,
+        "label": "word_147070",
+        "size": [
+          38,
+          29
+        ],
+        "hotspot": [
+          22,
+          16
+        ]
+      },
+      "group": "cage-b",
+      "attempt": 2,
+      "raw_sha256": "3b5db5b0a76f194da697df16a7d233e547fec59348cb284f82c13e823afd71a2",
+      "method": "built-in GPT Image native-pose transformation; native-aspect reduction, shared fixed palette and alpha/inside-ink cleanup; no painting",
+      "hotspot": [
+        19,
+        16
+      ],
+      "size": [
+        33,
+        29
+      ]
+    },
+    {
+      "id": "object4-s3k-54",
+      "native": {
+        "mapping": 84,
+        "label": "word_147084",
+        "size": [
+          34,
+          29
+        ],
+        "hotspot": [
+          17,
+          16
+        ]
+      },
+      "group": "cage-b",
+      "attempt": 2,
+      "raw_sha256": "3b5db5b0a76f194da697df16a7d233e547fec59348cb284f82c13e823afd71a2",
+      "method": "built-in GPT Image native-pose transformation; native-aspect reduction, shared fixed palette and alpha/inside-ink cleanup; no painting",
+      "hotspot": [
+        15,
+        16
+      ],
+      "size": [
+        31,
+        29
+      ]
+    },
+    {
+      "id": "object4-s3k-43",
+      "native": {
+        "mapping": 67,
+        "label": "word_146F54",
+        "size": [
+          22,
+          38
+        ],
+        "hotspot": [
+          11,
+          19
+        ]
+      },
+      "group": "misc-b",
+      "attempt": 2,
+      "raw_sha256": "25855874e466fafb9d03bf3ef753a3f3626a8ff10ca54af68b372870c544941f",
+      "method": "built-in GPT Image native-pose transformation; native-aspect reduction, shared fixed palette and alpha/inside-ink cleanup; no painting",
+      "hotspot": [
+        10,
+        19
+      ],
+      "size": [
+        21,
+        38
+      ]
+    },
+    {
+      "id": "object4-s3k-d2",
+      "native": {
+        "mapping": 210,
+        "label": "word_148130",
+        "size": [
+          23,
+          30
+        ],
+        "hotspot": [
+          12,
+          15
+        ]
+      },
+      "group": "transform",
+      "attempt": 2,
+      "raw_sha256": "178304f1fb0d6a5503cfa4e48979697d9bf890d8385ad58f4a7fbd0d5efa8296",
+      "method": "built-in GPT Image native-pose transformation; native-aspect reduction, shared fixed palette and alpha/inside-ink cleanup; no painting",
+      "hotspot": [
+        10,
+        15
+      ],
+      "size": [
+        19,
+        31
+      ]
+    },
+    {
+      "id": "object4-s3k-d3",
+      "native": {
+        "mapping": 211,
+        "label": "word_148138",
+        "size": [
+          28,
+          44
+        ],
+        "hotspot": [
+          13,
+          20
+        ]
+      },
+      "group": "transform",
+      "attempt": 2,
+      "raw_sha256": "178304f1fb0d6a5503cfa4e48979697d9bf890d8385ad58f4a7fbd0d5efa8296",
+      "method": "built-in GPT Image native-pose transformation; native-aspect reduction, shared fixed palette and alpha/inside-ink cleanup; no painting",
+      "hotspot": [
+        13,
+        18
+      ],
+      "size": [
+        29,
+        40
+      ]
+    },
+    {
+      "id": "object4-s3k-d4",
+      "native": {
+        "mapping": 212,
+        "label": "word_14814C",
+        "size": [
+          28,
+          47
+        ],
+        "hotspot": [
+          16,
+          23
+        ]
+      },
+      "group": "transform",
+      "attempt": 2,
+      "raw_sha256": "178304f1fb0d6a5503cfa4e48979697d9bf890d8385ad58f4a7fbd0d5efa8296",
+      "method": "built-in GPT Image native-pose transformation; native-aspect reduction, shared fixed palette and alpha/inside-ink cleanup; no painting",
+      "hotspot": [
+        16,
+        20
+      ],
+      "size": [
+        29,
+        42
+      ]
+    },
+    {
+      "id": "object4-s3k-d5",
+      "native": {
+        "mapping": 213,
+        "label": "word_14815A",
+        "size": [
+          28,
+          47
+        ],
+        "hotspot": [
+          16,
+          23
+        ]
+      },
+      "group": "transform",
+      "attempt": 2,
+      "raw_sha256": "178304f1fb0d6a5503cfa4e48979697d9bf890d8385ad58f4a7fbd0d5efa8296",
+      "method": "built-in GPT Image native-pose transformation; native-aspect reduction, shared fixed palette and alpha/inside-ink cleanup; no painting",
+      "hotspot": [
+        16,
+        20
+      ],
+      "size": [
+        29,
+        42
+      ]
+    },
+    {
+      "id": "object4-s3k-d6",
+      "native": {
+        "mapping": 214,
+        "label": "word_14816E",
+        "size": [
+          28,
+          48
+        ],
+        "hotspot": [
+          16,
+          24
+        ]
+      },
+      "group": "transform",
+      "attempt": 2,
+      "raw_sha256": "178304f1fb0d6a5503cfa4e48979697d9bf890d8385ad58f4a7fbd0d5efa8296",
+      "method": "built-in GPT Image native-pose transformation; native-aspect reduction, shared fixed palette and alpha/inside-ink cleanup; no painting",
+      "hotspot": [
+        16,
+        20
+      ],
+      "size": [
+        29,
+        41
+      ]
+    }
+  ],
+  "selection": {
+    "gravity-a": [
+      2,
+      2,
+      2,
+      2,
+      2,
+      2
+    ],
+    "gravity-b": [
+      2,
+      1,
+      2,
+      2,
+      2,
+      2
+    ],
+    "cage-a": [
+      1,
+      2,
+      2,
+      1,
+      1,
+      2
+    ],
+    "cage-b": [
+      2,
+      2,
+      2,
+      2,
+      2,
+      2
+    ],
+    "chain": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "misc": [
+      2,
+      2,
+      2,
+      2,
+      2,
+      2
+    ],
+    "wall": [
+      2,
+      2,
+      2,
+      2,
+      2
+    ],
+    "parachute": [
+      2,
+      2,
+      2,
+      2,
+      2,
+      2
+    ],
+    "cork-a": [
+      2,
+      2,
+      2,
+      2,
+      2,
+      2
+    ],
+    "cork-b": [
+      2,
+      2,
+      2,
+      2,
+      2,
+      2
+    ],
+    "misc-b": [
+      2,
+      2,
+      2,
+      2
+    ],
+    "transform": [
+      2,
+      2,
+      2,
+      2,
+      2
+    ]
+  },
+  "rotationEvidence": "Native frames are perspective/yaw rotations with distinct silhouettes and contact phases. Exact RGBA/alpha tests found no planar quarter-turn or mirror duplicates in the outstanding set. Do not replace yaw rotations by planar rotations. See external rotation-audit.json.",
+  "scratch": "$HOME/scratch/agent-tmp/mica-object-poses-20261110/",
+  "review": "review.html",
+  "generationRequests": 24,
+  "selectionReason": "Selected native pose orientation, compact head proportions and clean grip/boot silhouettes at game resolution. Unselected alternatives remain external.",
+  "captureLimits": "Five positioned production-object comparisons, native Sonic vs MICA. MHZ2 parachute and FBZ chain. MHZ1 initial scripted carry failed Missing host player mappings and is excluded; not route certification."
+}

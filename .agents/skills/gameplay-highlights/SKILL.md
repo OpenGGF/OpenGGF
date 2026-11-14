@@ -124,7 +124,9 @@ need different padding. Labels can identify act/feature and setup when material;
 do not imply a positioned demonstration is a cold completion run.
 
 Choose an audio policy for the reel. Preserve genuine gameplay audio consistently
-or make gameplay evidence silent when its sources lack audio. Stageplay excerpts may
+or make gameplay evidence silent when its sources lack audio. Under one editorial
+bed, capture gameplay with `GameplayCaptureTool --audio --no-music` so each clip
+keeps its observed native SFX without bringing its own music. Stageplay excerpts may
 use authored ROM music/effects and creator-supplied voices, plus native SFX from
 the shared native world; distinguish authored cues from observed native events. Catalogue their
 sources and preserve the intended timing. Do not invent soundtrack licensing or let

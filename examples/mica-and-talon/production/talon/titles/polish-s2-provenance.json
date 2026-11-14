@@ -1,0 +1,69 @@
+{
+  "method": "Built-in GPT Image; native title 8x references + approved models + owner staging; take A selected (clearer glove and crest); take B retained in scratch",
+  "source_sha256": "7ceaba48fc92bd93d1b352171ecc9d84f15b21239ad48ecb4a73384a42c2f2d9",
+  "frames": [
+    {
+      "selector": 0,
+      "native_area": 2226,
+      "authored_area": 2834,
+      "atlas_cell": 5,
+      "size": [
+        58,
+        64
+      ]
+    },
+    {
+      "selector": 1,
+      "native_area": 2482,
+      "authored_area": 2224,
+      "atlas_cell": 5,
+      "size": [
+        51,
+        57
+      ]
+    },
+    {
+      "selector": 2,
+      "native_area": 2468,
+      "authored_area": 2519,
+      "atlas_cell": 6,
+      "size": [
+        54,
+        61
+      ]
+    },
+    {
+      "selector": 3,
+      "native_area": 2759,
+      "authored_area": 2379,
+      "atlas_cell": 7,
+      "size": [
+        53,
+        59
+      ]
+    },
+    {
+      "selector": 4,
+      "native_area": 2930,
+      "authored_area": 2869,
+      "atlas_cell": 7,
+      "size": [
+        58,
+        65
+      ]
+    },
+    {
+      "selector": 19,
+      "native_area": 192,
+      "authored_area": 0,
+      "atlas_cell": 8,
+      "size": [
+        24,
+        32
+      ],
+      "semantic": "Transparent: gesture is wholly in body-connected wings; no separate hand/glove permitted"
+    }
+  ],
+  "sqrt_mean_area_ratio": 0.9984441841997482,
+  "size_scope": "Anatomical body/hand sets; TALON native separate-hand slot omitted because explicitly transparent, not a small replacement"
+}

@@ -13,10 +13,12 @@ public final class WorldSessionPolicyAccess {
     }
 
     public static <T> T getService(WorldSession world, Class<T> type) {
+        if (world != null && type == com.openggf.game.mutators.HomingAttackRuntime.class) return type.cast(world.homing);
         return hasPolicies(world) ? world.policies.getService(type) : null;
     }
 
     public static void registerRewind(WorldSession world, RewindRegistry registry) {
+        if (world != null) registry.register(world.homing);
         if (hasPolicies(world)) registry.register(world.policies.rewindAdapter());
     }
 
@@ -28,10 +30,13 @@ public final class WorldSessionPolicyAccess {
         if(context!=null && hasPolicies(context.getWorldSession()))context.getWorldSession().policies.bindGameplay(context);
     }
     public static void bindRoster(WorldSession world, SpriteManager sprites) {
+        if (world != null) world.homing.bindRoster(sprites);
         if (hasPolicies(world)) world.policies.bindRoster(sprites);
     }
 
     public static void beforeAssembly(WorldSession world, LevelLoadCause cause) {
+        if (world != null && cause != LevelLoadCause.DECODE_ONLY && cause != LevelLoadCause.PREVIEW
+                && cause != LevelLoadCause.SEAMLESS_HANDOFF && cause != LevelLoadCause.CHECKPOINT_RESTORE) world.homing.reset();
         if (hasPolicies(world)) {
             if(cause!=LevelLoadCause.DECODE_ONLY && cause!=LevelLoadCause.PREVIEW)world.policyHistory.clear();
             world.policies.beforeAssembly(cause);
@@ -39,6 +44,7 @@ public final class WorldSessionPolicyAccess {
     }
 
     public static void failedAssembly(WorldSession world, LevelLoadCause cause) {
+        if (world != null && cause != LevelLoadCause.DECODE_ONLY && cause != LevelLoadCause.PREVIEW) world.homing.reset();
         if (hasPolicies(world)) world.policies.failedAssembly(cause);
     }
 
@@ -95,6 +101,7 @@ public final class WorldSessionPolicyAccess {
     public static void endHistoryReplay(WorldSession world) { if(hasPolicies(world))world.policyHistory.endReplay(); }
 
     static void retire(WorldSession world) {
+        if (world != null) world.homing.reset();
         if (hasPolicies(world)) world.policies.retire();
     }
 }

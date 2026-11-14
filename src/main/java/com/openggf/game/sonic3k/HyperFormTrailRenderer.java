@@ -28,6 +28,16 @@ public final class HyperFormTrailRenderer {
         if (sample == null) {
             return;
         }
+        drawSample(player, sample);
+    }
+
+    /** Profile-driven characters reuse their own renderer and rewind-captured follower history. */
+    public static void drawProfile(AbstractPlayableSprite player) {
+        if (player.getSpriteRenderer() != null)
+            drawSample(player, HyperFormTrailSample.sample(player, player.currentLevelManager().getFrameCounter()));
+    }
+
+    private static void drawSample(AbstractPlayableSprite player, HyperFormTrailSample sample) {
         RenderOutput output = output(sample);
         com.openggf.graphics.GraphicsManager graphics =
                 com.openggf.game.GameServices.graphics();

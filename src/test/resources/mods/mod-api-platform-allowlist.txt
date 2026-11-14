@@ -7,6 +7,7 @@ java.io.IOException
 java.io.InputStream
 java.lang.AutoCloseable
 java.lang.Boolean
+java.lang.Character
 java.lang.Class
 java.lang.Deprecated
 java.lang.Enum

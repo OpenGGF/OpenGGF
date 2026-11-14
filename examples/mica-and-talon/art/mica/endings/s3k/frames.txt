@@ -1,0 +1,42 @@
+# bank selector image hotspotX hotspotY; image paths are relative to this table.
+palette S3K_EYECATCH eyecatch_sonic-01.png
+S3K_EYECATCH 1 eyecatch_sonic-01.png 12 20
+S3K_EYECATCH 2 eyecatch_sonic-02.png 12 20
+S3K_EYECATCH 3 eyecatch_sonic-03.png 20 20
+S3K_EYECATCH 4 eyecatch_sonic-04.png 20 20
+palette S3K_NORMAL_POSE normal_pose-00.png
+S3K_NORMAL_POSE 0 normal_pose-00.png 0 0
+S3K_NORMAL_POSE 1 normal_pose-01.png 44 64
+# S3K_PASSENGER is the rider on the mid-size Tornado: native selector 14, 16x24, hotspot 8 12.
+palette S3K_PASSENGER arrival_rider-0e.png
+S3K_PASSENGER 14 arrival_rider-0e.png 8 12
+# tiny_passenger-16.png and -17.png are no longer bound. They were drawn for native selectors
+# 22 and 23, which are that plane's exhaust flame and stay native.
+palette S3K_PLAYER ride-ba.png
+S3K_PLAYER 186 ride-ba.png 16 20
+S3K_PLAYER 200 rescue_float-c8.png 29 12
+S3K_PLAYER 201 rescue_float-c9.png 20 12
+S3K_PLAYER 202 rescue_float-ca.png 17 12
+S3K_PLAYER 203 rescue_float-cb.png 21 12
+S3K_PLAYER 204 rescue_float-cc.png 18 12
+S3K_PLAYER 205 rescue_float-cd.png 22 12
+S3K_PLAYER 206 rescue_float-ce.png 17 12
+S3K_PLAYER 207 rescue_float-cf.png 17 12
+palette S3K_POWERED_PLAYER gilded-rescue_float-c8.png
+S3K_POWERED_PLAYER 200 gilded-rescue_float-c8.png 29 12
+S3K_POWERED_PLAYER 201 gilded-rescue_float-c9.png 20 12
+S3K_POWERED_PLAYER 202 gilded-rescue_float-ca.png 17 12
+S3K_POWERED_PLAYER 203 gilded-rescue_float-cb.png 21 12
+S3K_POWERED_PLAYER 204 gilded-rescue_float-cc.png 18 12
+S3K_POWERED_PLAYER 205 gilded-rescue_float-cd.png 22 12
+S3K_POWERED_PLAYER 206 gilded-rescue_float-ce.png 17 12
+S3K_POWERED_PLAYER 207 gilded-rescue_float-cf.png 17 12
+S3K_POWERED_PLAYER 210 transform-d2.png 12 16
+S3K_POWERED_PLAYER 211 transform-d3.png 13 24
+S3K_POWERED_PLAYER 212 transform-d4.png 16 24
+S3K_POWERED_PLAYER 213 transform-d5.png 16 24
+S3K_POWERED_PLAYER 214 transform-d6.png 16 24
+palette S3K_POWERED_POSE super_pose-00.png
+S3K_POWERED_POSE 0 super_pose-00.png 0 0
+S3K_POWERED_POSE 1 super_pose-01.png 44 64
+S3K_POWERED_POSE 2 super_pose-02.png 64 68

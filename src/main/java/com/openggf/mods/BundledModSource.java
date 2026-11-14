@@ -67,6 +67,7 @@ public final class BundledModSource implements AutoCloseable {
     private final Set<String> reservedIds;
     private final Set<Path> sourcePaths;
     private final List<PackedModAssetRoot> snapshots;
+    private final Set<String> disabledByDefault = new LinkedHashSet<>();
 
     private BundledModSource(List<ModCatalogEntry> entries, Map<String, String> trustedSha256ById,
                              Set<String> reservedIds, Set<Path> sourcePaths,
@@ -177,7 +178,10 @@ public final class BundledModSource implements AutoCloseable {
             snapshots.forEach(BundledModSource::closeQuietly);
             throw failure;
         }
-        return new BundledModSource(entries, trusted, reserved, paths, snapshots);
+        BundledModSource source = new BundledModSource(entries, trusted, reserved, paths, snapshots);
+        manifest.mods().stream().filter(entry -> !entry.enabledByDefault())
+                .forEach(entry -> source.disabledByDefault.add(entry.id()));
+        return source;
     }
 
     private record Resolved(ModCatalogEntry entry, PackedModAssetRoot snapshot) { }
@@ -337,7 +341,7 @@ public final class BundledModSource implements AutoCloseable {
 
     /**
      * Applies bundled defaults to persisted startup state: a verified bundled mod without a
-     * persisted entry is enabled and placed before user mods, so user overrides still win; an
+     * persisted entry uses its manifest enable default and is placed before user mods, so user overrides still win; an
      * existing entry keeps the player's enabled choice and order. Trust for the verified hash is
      * derived here on every boot and never persisted (see {@link PendingModStateEditor}).
      */
@@ -358,7 +362,7 @@ public final class BundledModSource implements AutoCloseable {
         List<ModState.Entry> result = new ArrayList<>(persisted.entries().size() + added.size());
         for (int index = 0; index < added.size(); index++) {
             String id = added.get(index);
-            result.add(new ModState.Entry(id, true, index, true, present.get(id)));
+            result.add(new ModState.Entry(id, !disabledByDefault.contains(id), index, true, present.get(id)));
         }
         for (ModState.Entry entry : persisted.entries()) {
             String sha = present.get(entry.id());

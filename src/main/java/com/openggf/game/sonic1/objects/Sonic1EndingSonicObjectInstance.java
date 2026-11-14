@@ -95,6 +95,8 @@ public class Sonic1EndingSonicObjectInstance extends AbstractObjectInstance
     // ========================================================================
 
     private PatternSpriteRenderer renderer;
+    private com.openggf.sprites.render.PlayerSpriteRenderer characterRenderer;
+    private boolean characterArtResolved;
     private int currentX;
     private int currentY;
     private int routine;
@@ -130,6 +132,14 @@ public class Sonic1EndingSonicObjectInstance extends AbstractObjectInstance
     }
 
     private void ensureRenderer() {
+        if (!characterArtResolved) {
+            characterArtResolved = true;
+            try {
+                characterRenderer = com.openggf.game.presentation.EndingCharacterPresentation.renderer(
+                        com.openggf.game.presentation.EndingCharacterPresentation.get(
+                                com.openggf.game.EndingSpriteSet.Surface.S1_ENDING));
+            } catch (java.io.IOException e) { throw new IllegalStateException("Cannot load ending art", e); }
+        }
         if (renderer == null) {
             ObjectRenderManager renderManager = services().renderManager();
             if (renderManager != null) {
@@ -429,7 +439,12 @@ public class Sonic1EndingSonicObjectInstance extends AbstractObjectInstance
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
-        if (isDestroyed() || renderer == null || !renderer.isReady()) {
+        if (isDestroyed()) return;
+        if (characterRenderer != null) {
+            characterRenderer.drawFrame(currentFrame, currentX, currentY, false, false);
+            return;
+        }
+        if (renderer == null || !renderer.isReady()) {
             return;
         }
         renderer.drawFrameIndex(currentFrame, currentX, currentY, false, false);

@@ -21,4 +21,9 @@ public interface NativeArenaCameraFraming {
      * the bounds mask must use this origin without changing those native words.
      */
     default java.util.OptionalInt presentationNativeHorizontalOrigin() { return java.util.OptionalInt.empty(); }
+
+    /** Whether the scene draws its own widescreen margins around the native window.
+     * The native-bounds mask would otherwise cover that presentation extension.
+     */
+    default boolean ownsWidescreenMargins() { return false; }
 }

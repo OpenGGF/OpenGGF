@@ -1,0 +1,27 @@
+{
+  "method": "GPT Image native-pose transformation; native title palette, 8x nearest reference; take A selected, take B rejected (identity/pose differences); fixed character palette reduction",
+  "source_sha256": "0d2416fde6253465af1b876fc37f345b2749e0d0268fec77d73c4af0ed9b1790",
+  "reference": "$HOME/scratch/agent-tmp/mt-titles-20261110/talon-s1-reference.png",
+  "native_areas": [
+    4065,
+    4258,
+    4212,
+    4392,
+    4375,
+    4820,
+    4831,
+    4615
+  ],
+  "authored_areas": [
+    4558,
+    4846,
+    4486,
+    4946,
+    4698,
+    5478,
+    5480,
+    5452
+  ],
+  "sqrt_mean_area_ratio": 1.059732012737849,
+  "scratch": "$HOME/scratch/agent-tmp/mt-titles-20261110"
+}

@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.sprites.playable.PlayableArchetype;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
@@ -7,7 +9,6 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.*;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
-import com.openggf.sprites.playable.Tails;
 import java.util.List;
 
 /** Obj_LevelIntro_PlayerFallIntoGround, loc_41FEE–loc_42248. */
@@ -65,7 +66,7 @@ public final class SozFallingIntroInstance extends AbstractObjectInstance
         switch (routine) {
             case 0 -> {
                 for (var player : players) move(player, false);
-                if ((main.getCentreY() & 0xFFFF) == (main instanceof Tails ? 0x694 : 0x690)) splash(players);
+                if ((main.getCentreY() & 0xFFFF) == (PlayableArchetype.isTails(main) ? 0x694 : 0x690)) splash(players);
                 if ((main.getCentreY() & 0xFFFF) >= 0x6C0) routine = 1;
             }
             case 1 -> {

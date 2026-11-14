@@ -8,6 +8,19 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class TestSonic3kSpecialStageRewindAdapter {
     @Test
+    void snapshotsOwnBothCharacterPalettesIndependently() {
+        var leader = new com.openggf.level.Palette();
+        var follower = new com.openggf.level.Palette();
+        leader.getColor(4).r = 36; follower.getColor(4).b = 109;
+        var snapshot = new Sonic3kSpecialStageSnapshot.PaletteSnapshot(
+                new com.openggf.level.Palette[4], null, false, leader, follower);
+        leader.getColor(4).r = 0; follower.getColor(4).b = 0;
+        assertEquals(36, snapshot.characterPalette().getColor(4).r);
+        assertEquals(109, snapshot.tailsPalette().getColor(4).b);
+        assertEquals(0, snapshot.characterPalette().getColor(4).b);
+        assertEquals(0, snapshot.tailsPalette().getColor(4).r);
+    }
+    @Test
     void adapterUsesGenericSpecialStageKeyAndKeepsMissingSnapshotDefault() {
         Sonic3kSpecialStageRewindAdapter adapter =
                 new Sonic3kSpecialStageRewindAdapter(new Sonic3kSpecialStageManager());

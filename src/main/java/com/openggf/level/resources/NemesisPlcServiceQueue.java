@@ -27,6 +27,19 @@ public final class NemesisPlcServiceQueue {
         queuedEntries.addAll(replacement);
     }
 
+    /** Cancels the prepared decoder as well as waiting work (S1 ClearPLC). */
+    public void clearIncludingActive() {
+        activeEntry = null;
+        queuedEntries.clear();
+    }
+
+    /** Atomically replaces all work, including an in-progress decoder (S1 NewPLC). */
+    public void replaceIncludingActive(PlcDefinition definition, List<Integer> patternCounts) {
+        var replacement = submission(definition, patternCounts);
+        clearIncludingActive();
+        queuedEntries.addAll(replacement);
+    }
+
     /** Adds all entries in a PLC definition at the tail of the logical FIFO. */
     public void append(PlcDefinition definition, List<Integer> patternCounts) {
         queuedEntries.addAll(submission(definition, patternCounts));

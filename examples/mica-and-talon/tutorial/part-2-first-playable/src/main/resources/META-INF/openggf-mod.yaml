@@ -1,0 +1,13 @@
+formatVersion: 1
+id: mica-and-talon-part2
+name: MICA tutorial part 2
+version: 0.1.0
+authors: [OpenGGF contributors]
+description: The original-character tutorial's first playable MICA checkpoint.
+engineApiRange: ">=0.7.0 <0.8.0"
+type: patch
+baseGame: any
+entrypoint: micaandtalon.MicaMod
+dependencies: []
+audioOverrides: {}
+artOverrides: {}

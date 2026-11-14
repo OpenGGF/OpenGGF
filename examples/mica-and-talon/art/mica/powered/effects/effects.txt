@@ -1,0 +1,113 @@
+# MICA strike trails and Gilded particles.
+#
+# trail <set> <ember-hot> <ember-mid> <ember-cool> <echo-tint|none> <density%> [echo-phase-slot]   (0xRRGGBB)
+#   echo-phase-slot: palette index whose live colour tints each after-image when it is spawned.
+# strike-palette <set> <16 Mega Drive colour words>: shown while a strike of that form is in flight.
+# front <set> <rgb> <radius> <size> <alpha> <arc>        heat front, outer haze first
+# particle <name> <frame-ticks>, then per frame: frame <hotspot-x> <hotspot-y> and its pixel rows.
+#   Pixels are hex indices on MICA's own live palette line ('.' is transparent), so Gilded
+#   glints follow her live cycle (Gilded gold, or Hyper's Prism Gilt phases): 3 orange-gold, 4 gold,
+#   5 yellow, 6 pale gold, c white. Slot 2 is the dark plate underside and is not used for light.
+# emitter <set> <TRIGGER> <particle[,particle]> <count> <interval> <RING|SCATTER>
+#   <offset-x> <offset-y> <radius> <speed-x> <speed-y> <jitter> <gravity> <life>
+#   offsets in pixels, +x in front of her; speeds, jitter and gravity in 1/256 px per tick.
+
+# Normal MICA: pale mint core, jade body, deep green haze (her sheet colours 6DDBB6/24B692/006D6D).
+trail normal B6FFDB 24B692 006D49 6DDBB6 100
+front normal 004930 23 5 120 8
+front normal 00926D 19 4 190 7
+front normal 6DDBB6 16 3 230 6
+front normal E8FFF4 14 3 240 4
+
+# Gilded (Super): white-gold core, gold, warm amber haze.
+trail super FFFFDB FFDB49 DB9224 FFD040 100
+front super B66D00 23 5 120 8
+front super FFB624 19 4 190 7
+front super FFDB6D 16 3 230 6
+front super FFFFE8 14 3 240 4
+
+# Hyper Prism Gilt (Instagib): white-hot, gold and jade embers inside a rose-gold haze. Each after-image
+# keeps the plate colour (slot 4) of her running cycle when it spawned, beneath the jade strike palette,
+# so the echoes band gold, white, jade and rose.
+# The strike itself holds her jade phase (the design's forced jade beat), matching the jade fringe.
+# Jade is the pale pastel mint of the Prism Gilt cycle (production/powered_palettes.py JADE): the
+# strike palette is that row, the cool ember its slot 4 (92DBB6) and the fringe its slot 3 (6DB692).
+trail hyper FFFFFF FFDB49 92DBB6 none 200 4
+strike-palette hyper 000 222 684 8A6 AC8 CEA CEC 8CE 6AC 68A 44E 22A EEE CCC 88E 024
+front hyper DB6D92 27 2 150 9
+front hyper 6DB692 23 4 170 8
+front hyper FFDB49 19 4 230 7
+front hyper FFF6B6 16 4 255 6
+front hyper FFFFFF 14 3 255 4
+
+# Four-point glint: small, medium, large, medium -- a twinkle. Gold arms, cream core.
+particle glint 3
+frame 2 2
+..4..
+..5..
+45654
+..5..
+..4..
+frame 3 3
+...3...
+...4...
+...5...
+3456543
+...5...
+...4...
+...3...
+frame 4 4
+....3....
+....4....
+.3..5..3.
+....6....
+3456c6543
+....6....
+.3..5..3.
+....4....
+....3....
+frame 3 3
+...3...
+...4...
+...5...
+3456543
+...5...
+...4...
+...3...
+
+# Tiny twinkle: a plus that winks to a point.
+particle twinkle 4
+frame 1 1
+.5.
+5c5
+.5.
+frame 0 0
+6
+
+# Strike flash: a white burst cooling to gold.
+particle flash 4
+frame 2 2
+..c..
+.c7c.
+c7c7c
+.c7c.
+..c..
+frame 1 1
+.7.
+7c7
+.7.
+frame 0 0
+5
+
+# Gilded: glints shed while running fast or rolling, streaming during strikes, a ring as the gold arrives.
+emitter super TRANSFORM glint 16 1 RING 0 0 6 0x380 0 0x20 0 30
+emitter super FAST glint,twinkle 1 4 SCATTER -8 -6 12 -0x80 0 0x50 0 24
+emitter super ROLLING glint,twinkle 1 4 SCATTER -4 0 9 -0x80 0 0x50 0 22
+emitter super STRIKING glint,twinkle 2 1 SCATTER -6 0 8 -0x100 0 0x60 0 18
+
+# Hyper: denser glints and a flash ring on every Instagib strike.
+emitter hyper TRANSFORM glint,twinkle 24 1 RING 0 0 6 0x400 0 0x20 0 32
+emitter hyper FAST glint,twinkle 1 2 SCATTER -8 -6 14 -0x80 0 0x60 0 24
+emitter hyper ROLLING glint,twinkle 1 2 SCATTER -4 0 10 -0x80 0 0x60 0 22
+emitter hyper STRIKING glint,twinkle 2 1 SCATTER -6 0 9 -0x140 0 0x80 0 16
+emitter hyper STRIKE_HIT flash 12 1 RING 0 0 4 0x500 0 0 0 12

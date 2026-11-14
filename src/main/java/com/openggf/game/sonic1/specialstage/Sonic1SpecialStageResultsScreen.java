@@ -220,6 +220,7 @@ public final class Sonic1SpecialStageResultsScreen implements ResultsScreen {
 
     @Override
     public void update(int frameCounter, Object context) {
+        if (!artLoaded) loadArt();
         this.frameCounter = Math.max(this.frameCounter, frameCounter);
         if (complete) {
             return;
@@ -485,7 +486,10 @@ public final class Sonic1SpecialStageResultsScreen implements ResultsScreen {
 
             // Create results sprite sheet and renderer
             List<SpriteMappingFrame> mappings = Sonic1ResultsMappingLoader.load(RomByteReader.fromRom(rom));
-            ObjectSpriteSheet sheet = new ObjectSpriteSheet(combinedPatterns, mappings, 0, 1);
+            ObjectSpriteSheet sheet = com.openggf.game.sonic1.Sonic1CharacterPresentation.results(
+                    rom, combinedPatterns, mappings,
+                    com.openggf.game.sonic1.Sonic1CharacterPresentation.active(), 12);
+            combinedPatterns = sheet.getPatterns();
             resultsRenderer = new PatternSpriteRenderer(sheet);
 
             // Load emerald art and create emerald renderer
@@ -544,9 +548,7 @@ public final class Sonic1SpecialStageResultsScreen implements ResultsScreen {
             return;
         }
 
-        if (!artLoaded) {
-            loadArt();
-        }
+        if (!artLoaded) return;
 
         if (combinedPatterns == null || resultsRenderer == null) {
             return;

@@ -1,0 +1,59 @@
+{
+  "date": "2026-11-10",
+  "base": "2447194fa1",
+  "prompt": "Create FOUR independent candidates in a2x2 sheet for ONE locked upright white glove drawing. Anatomy authority ref1: native Sonic S3K title glove enlarged8x. Style/proportion ref2: MICA approved CGI glove, whose finger count is wrong and MUST be corrected. Keep1994 baked pre-rendered3D volumetric lighting, upper-left bright white specular, soft grey and warm cream shadows, no thick black rim. Same compact white glove silhouette/scale as ref2; no extra-long index. Every candidate MUST have EXACTLY FIVE DIGITS: ONE thumb wrapped across the VIEWER-LEFT side of the palm pointing left/toward face; ONE index raised upright, leaning about10degrees toward viewer-left; EXACTLY THREE distinct curled fingers on the VIEWER-RIGHT side of the raised index: middle, ring, little, each with one clearly separated knuckle bulge, descending down/right. Count: thumb1 + index1 + three curled3 =5. Do NOT place curled fingers on both sides of the index. Do NOT add a second thumb, extra nub, fourth curled finger or mitten lump. Show wrist/cuff below palm, wrist pivot bottom-centre, back of glove tilted like native. No blue hood/context, arm, face, jade scales, jewellery, text, labels, checkerboard or ground shadow. Solid magenta #ff00ff with wide gutters around each of four isolated hands, identical upright pose and proportions in all four. These are alternatives for one master hand; other wag poses will be derived by deterministic rotation. Native15opaque-colour budget, restrained ordered dithering, not modern vector/flat cel. MAKE ALL THREE right-hand curled fingers individually readable at native40x48 size.",
+  "tool": "Built-in GPT Image, four fresh upright alternatives; no edit chain.",
+  "selection": "Top-right candidate B: one thumb viewer-left, index raised, exactly three individually modelled curled fingers viewer-right. Other candidates retained in scratch.",
+  "reduction": "41x49 glove registered at4,7 in unchanged56x60 source box, ordered2x2 dither into existing glove material palette8..13. MICA wrist27,52 corresponds to native wrist24,46 in its48x56 crop.",
+  "derivation": "s3k_hand_anatomy.py: single indexed master, Scale2x to8x, nearest rotation about wrist, majority reduction with centre tie-break. Rest4=0deg,0=-11.303910747deg,1=+6.561670627deg. Angles measured from native fingertip centroid to wrist. All five anatomical landmarks rotate by the same transform.",
+  "ownership": "e591b4407d complete cape backing retained byte for byte; no plane/ownership/palette/hotspot changes. Fixed source-backed landmarks certify derivation/topology; visual capture review certifies finger count.",
+  "references": [
+    "Obj_TitleSonicFinger (sonic3k.asm:6239-6258)",
+    "word_4F96 (General/Title/Map - S3 Sonic Anim.asm:7-11)",
+    "word_4FB0 (General/Title/Map - S3 Sonic Anim.asm:12-16)",
+    "word_4FE6 (General/Title/Map - S3 Sonic Anim.asm:23-23)",
+    "byte_4B36 (General/Title/Anim - S3 Sonic Finger.asm:3-4)"
+  ],
+  "review": "$HOME/scratch/agent-tmp/title-s3k-anatomy/review.html",
+  "raw": "$HOME/scratch/agent-tmp/title-s3k-anatomy/upright-attempts.png",
+  "limits": "Landmarks and source derivation are a structural regression contract, not an automatic anatomical image classifier. All three real wag selectors inspected with five-digit callouts at6x.",
+  "size_checks": [
+    {
+      "selector": 4,
+      "mica_pixels": 1111,
+      "native_pixels": 1195,
+      "sqrt_ratio": 0.9642132092907207
+    },
+    {
+      "selector": 0,
+      "mica_pixels": 1094,
+      "native_pixels": 1141,
+      "sqrt_ratio": 0.9791874504417127
+    },
+    {
+      "selector": 1,
+      "mica_pixels": 1101,
+      "native_pixels": 1184,
+      "sqrt_ratio": 0.9643125264397682
+    }
+  ],
+  "capture_checks": {
+    "presentations": 900,
+    "plane_hand_residue": 0,
+    "missing_sprite_ownership": 0,
+    "ownership_pixel_checks": 967608,
+    "unoccluded_render_pixel_checks": 900812,
+    "render_failures": [],
+    "render_failure_count": 0,
+    "outside_hand_failures": [],
+    "outside_hand_failure_count": 0,
+    "selectors_seen": {
+      "1": 400,
+      "4": 406,
+      "0": 508
+    },
+    "note": "Opaque identical backing owns old hand footprint in0/1/4. Transparent parts of moved poses never expose a second plane glove; native banner priority is preserved."
+  },
+  "tests": "63 Python tests pass;59 focused Java tests pass,0 skips. Inventory unchanged: six title rows remain authored; MICA/S3K171 authored,121 native alias,24 alias,10 N/A.",
+  "native_palette_measure": "Native hand area uses white/cool-white/grey/cream glove ramps, excluding blue hood and black aperture. Context is excluded from MICA master area."
+}

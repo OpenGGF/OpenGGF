@@ -31,7 +31,15 @@ final class LevelLoadPreparer {
     /** Test seam: when false, {@link #prepare} is a no-op and installs load synchronously. */
     private static volatile boolean enabled = true;
 
-    private record Pending(Object owner, int levelIndex, String mutationKey,
+    /** What a pending build is for: only a load of the same kind may take it. */
+    enum Purpose {
+        /** A seamless act transition into the level, after an optional layout mutation. */
+        ACT_TRANSITION,
+        /** A synchronous reload the game has committed to (death respawn). */
+        RELOAD
+    }
+
+    private record Pending(Object owner, Purpose purpose, int levelIndex, String mutationKey,
                            Future<PreparedLevelBuild> future) {
     }
 
@@ -45,12 +53,17 @@ final class LevelLoadPreparer {
     /** Starts (or restarts) preparation of {@code levelIndex}, discarding any other pending build. */
     synchronized void prepare(Object owner, int levelIndex, String mutationKey,
                               Callable<PreparedLevelBuild> task) {
+        prepare(owner, Purpose.ACT_TRANSITION, levelIndex, mutationKey, task);
+    }
+
+    synchronized void prepare(Object owner, Purpose purpose, int levelIndex, String mutationKey,
+                              Callable<PreparedLevelBuild> task) {
         discard();
         if (!enabled) {
             return;
         }
-        pending = new Pending(Objects.requireNonNull(owner), levelIndex, mutationKey,
-                EXECUTOR.submit(task));
+        pending = new Pending(Objects.requireNonNull(owner), Objects.requireNonNull(purpose),
+                levelIndex, mutationKey, EXECUTOR.submit(task));
     }
 
     /**
@@ -59,10 +72,19 @@ final class LevelLoadPreparer {
      * build failed; the caller then loads synchronously.
      */
     synchronized PreparedLevelBuild take(Object owner, int levelIndex, String mutationKey) {
+        return take(owner, Purpose.ACT_TRANSITION, levelIndex, mutationKey, build -> true);
+    }
+
+    /**
+     * As {@link #take(Object, int, String)} for a build of {@code purpose}; a finished build
+     * that {@code stillValid} rejects is discarded and {@code null} returned.
+     */
+    synchronized PreparedLevelBuild take(Object owner, Purpose purpose, int levelIndex, String mutationKey,
+                                         java.util.function.Predicate<PreparedLevelBuild> stillValid) {
         if (pending == null) {
             return null;
         }
-        if (pending.owner() != owner || pending.levelIndex() != levelIndex
+        if (pending.owner() != owner || pending.purpose() != purpose || pending.levelIndex() != levelIndex
                 || !Objects.equals(pending.mutationKey(), mutationKey)) {
             discard();
             return null;
@@ -71,6 +93,9 @@ final class LevelLoadPreparer {
         pending = null;
         try {
             PreparedLevelBuild prepared = taken.future().get();
+            if (!stillValid.test(prepared)) {
+                return null;
+            }
             installedFromPreparedCount++;
             return prepared;
         } catch (InterruptedException e) {
@@ -81,6 +106,13 @@ final class LevelLoadPreparer {
         } catch (ExecutionException e) {
             LOGGER.warning("Prepared level build failed; loading synchronously: " + e.getCause());
             return null;
+        }
+    }
+
+    /** Retires pending work of any other purpose than {@code kept}. */
+    synchronized void discardUnless(Purpose kept) {
+        if (pending != null && pending.purpose() != kept) {
+            discard();
         }
     }
 
@@ -114,5 +146,10 @@ final class LevelLoadPreparer {
     /** Number of installs served from a prepared build (test observability). */
     synchronized int installedFromPreparedCount() {
         return installedFromPreparedCount;
+    }
+
+    /** The purpose of the pending build, or {@code null} when none is pending (test observability). */
+    synchronized Purpose pendingPurpose() {
+        return pending == null ? null : pending.purpose();
     }
 }

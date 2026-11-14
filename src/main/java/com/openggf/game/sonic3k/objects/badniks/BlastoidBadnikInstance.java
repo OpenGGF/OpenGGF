@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects.badniks;
 
+import com.openggf.sprites.playable.PlayableArchetype;
+
 import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.mutators.PlayerFluidContextAccess;
 import com.openggf.game.PlayableEntity;
@@ -23,7 +25,6 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.Knuckles;
-import com.openggf.sprites.playable.Tails;
 
 import java.util.List;
 
@@ -315,7 +316,7 @@ public final class BlastoidBadnikInstance extends AbstractS3kBadnikInstance
             int ability = player.getDoubleJumpFlag();
             return ability == 1 || ability == 3;
         }
-        if (player instanceof Tails tails) {
+        if (player instanceof AbstractPlayableSprite tails && PlayableArchetype.isTails(player)) {
             if (player.getDoubleJumpFlag() == 0 || PlayerFluidContextAccess.movementUnderwater(tails)) {
                 return false;
             }

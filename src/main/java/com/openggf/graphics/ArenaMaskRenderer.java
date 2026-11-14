@@ -19,6 +19,9 @@ public final class ArenaMaskRenderer {
 
     private ShaderProgram shader;
     private int vao, opacityTexture;
+    // Reused upload staging: a direct buffer per frame was allocated and left for the cleaner.
+    private java.nio.FloatBuffer opacityUpload;
+    private final int[] viewport = new int[4];
     void draw(int width, int height, int left, int right, int noiseFrame) {
         draw(width, height, new ArenaMaskState(left, right, noiseFrame));
     }
@@ -39,12 +42,14 @@ public final class ArenaMaskRenderer {
                 vao = glGenVertexArrays();
                 opacityTexture = glGenTextures();
             }
-            int[] viewport = new int[4]; glGetIntegerv(GL_VIEWPORT, viewport);
+            glGetIntegerv(GL_VIEWPORT, viewport);
             shader.use(); int id = shader.getProgramId();
             glUniform4f(glGetUniformLocation(id, "Viewport"), viewport[0], viewport[1], viewport[2], viewport[3]);
             glUniform2f(glGetUniformLocation(id, "LogicalSize"), width, height);
             glUniform1ui(glGetUniformLocation(id, "NoiseFrame"), state.noiseFrame());
-            var opacity = org.lwjgl.BufferUtils.createFloatBuffer(width);
+            if (opacityUpload == null || opacityUpload.capacity() < width)
+                opacityUpload = org.lwjgl.BufferUtils.createFloatBuffer(width);
+            var opacity = opacityUpload.clear();
             for (int x = 0; x < width; x++) opacity.put(state.opacityAt(x));
             opacity.flip();
             glBindTexture(GL_TEXTURE_1D, opacityTexture);

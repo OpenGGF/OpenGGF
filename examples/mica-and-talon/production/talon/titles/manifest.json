@@ -1,0 +1,119 @@
+{
+  "hosts": {
+    "S1": {
+      "files": [
+        "../../../art/talon/titles/s1-0.png",
+        "../../../art/talon/titles/s1-1.png",
+        "../../../art/talon/titles/s1-2.png",
+        "../../../art/talon/titles/s1-3.png",
+        "../../../art/talon/titles/s1-4.png",
+        "../../../art/talon/titles/s1-5.png",
+        "../../../art/talon/titles/s1-6.png",
+        "../../../art/talon/titles/s1-7.png"
+      ],
+      "selectors": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ]
+    },
+    "S2": {
+      "files": [
+        "../../../art/talon/titles/s2-0.png",
+        "../../../art/talon/titles/s2-1.png",
+        "../../../art/talon/titles/s2-18.png",
+        "../../../art/talon/titles/s2-19.png",
+        "../../../art/talon/titles/s2-2.png",
+        "../../../art/talon/titles/s2-3.png",
+        "../../../art/talon/titles/s2-4.png",
+        "../../../art/talon/titles/s2-5.png",
+        "../../../art/talon/titles/s2-6.png",
+        "../../../art/talon/titles/s2-7.png",
+        "../../../art/talon/titles/s2-9.png"
+      ],
+      "selectors": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        9,
+        18,
+        19
+      ]
+    },
+    "S3K": {
+      "files": [
+        "../../../art/talon/titles/s3k-plane-1-left.png",
+        "../../../art/talon/titles/s3k-plane-1-right.png",
+        "../../../art/talon/titles/s3k-plane-1.mask",
+        "../../../art/talon/titles/s3k-plane-10-left.png",
+        "../../../art/talon/titles/s3k-plane-10-right.png",
+        "../../../art/talon/titles/s3k-plane-10.mask",
+        "../../../art/talon/titles/s3k-plane-11-left.png",
+        "../../../art/talon/titles/s3k-plane-11-right.png",
+        "../../../art/talon/titles/s3k-plane-11.mask",
+        "../../../art/talon/titles/s3k-plane-12-left.png",
+        "../../../art/talon/titles/s3k-plane-12-right.png",
+        "../../../art/talon/titles/s3k-plane-12.mask",
+        "../../../art/talon/titles/s3k-plane-13-left.png",
+        "../../../art/talon/titles/s3k-plane-13-right.png",
+        "../../../art/talon/titles/s3k-plane-13.clear",
+        "../../../art/talon/titles/s3k-plane-13.mask",
+        "../../../art/talon/titles/s3k-plane-2-left.png",
+        "../../../art/talon/titles/s3k-plane-2-right.png",
+        "../../../art/talon/titles/s3k-plane-2.mask",
+        "../../../art/talon/titles/s3k-plane-3-left.png",
+        "../../../art/talon/titles/s3k-plane-3-right.png",
+        "../../../art/talon/titles/s3k-plane-3.mask",
+        "../../../art/talon/titles/s3k-plane-4-left.png",
+        "../../../art/talon/titles/s3k-plane-4-right.png",
+        "../../../art/talon/titles/s3k-plane-4.mask",
+        "../../../art/talon/titles/s3k-plane-5-left.png",
+        "../../../art/talon/titles/s3k-plane-5-right.png",
+        "../../../art/talon/titles/s3k-plane-5.mask",
+        "../../../art/talon/titles/s3k-plane-6-left.png",
+        "../../../art/talon/titles/s3k-plane-6-right.png",
+        "../../../art/talon/titles/s3k-plane-6.mask",
+        "../../../art/talon/titles/s3k-plane-7-left.png",
+        "../../../art/talon/titles/s3k-plane-7-right.png",
+        "../../../art/talon/titles/s3k-plane-7.mask",
+        "../../../art/talon/titles/s3k-plane-8-left.png",
+        "../../../art/talon/titles/s3k-plane-8-right.png",
+        "../../../art/talon/titles/s3k-plane-8.mask",
+        "../../../art/talon/titles/s3k-plane-9-left.png",
+        "../../../art/talon/titles/s3k-plane-9-right.png",
+        "../../../art/talon/titles/s3k-plane-9.mask",
+        "../../../art/talon/titles/s3k-sprite-0.png",
+        "../../../art/talon/titles/s3k-sprite-1.png",
+        "../../../art/talon/titles/s3k-sprite-2.png",
+        "../../../art/talon/titles/s3k-sprite-3.png",
+        "../../../art/talon/titles/s3k-sprite-4.png"
+      ],
+      "selectors": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13
+      ]
+    }
+  },
+  "source": "TitlePresentation.java; official CharacterPresentation.titleMascots"
+}

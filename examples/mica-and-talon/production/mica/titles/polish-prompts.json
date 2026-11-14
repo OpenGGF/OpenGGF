@@ -1,0 +1,23 @@
+{
+  "tool": "built-in GPT Image",
+  "date": "2026-11-10",
+  "prompts": [
+    {
+      "id": "s2-polish",
+      "prompt": "Production 16-bit original mascot title sprite atlas. References: 1 native Sonic2 title poses enlarged8x; 2 MICA model;3 TALON model;4 owner promo staging. Redraw, do not recolour. Create exactly 6 columns x 3 rows equal square cells on solid magenta, no labels/text/rings/logos. LEFT THREE columns take A, RIGHT THREE columns alternative take B. Each take has NINE images read 3x3: row1 MICA waist-up smiling looking toward viewer slightly LEFT, arms down; MICA same with near gloved arm reaching forward/down; MICA same gloved hand bent toward chest. Row2 MICA final waist-up smiling face looking LEFT, NO raised hand (separate hand patch), other arm down; isolated MICA white-gloved THUMBS UP on jade forearm, fingers clearly outlined; TALON closed-eye waist-up entrance looking slightly RIGHT. Row3 TALON half-open eyes same body; TALON fully open smiling waist-up final looking RIGHT, NO raised hand (separate patch), folded wing connected to torso with cream feather tips, satchel strap; isolated TALON clenched white-gloved fist on slate forearm with wing feathers. Match native title's LARGE head/small torso proportions and clean silhouette. MICA jade overlapping ROUND scales NOT quills, cream snout pink ears brown eyes. TALON slate peregrine, amber goggles on brow, hooked yellow beak, cream barred chest, integrated wings, NO fox tail NO rotor NO mast. Owner staging means MICA will be LEFT and TALON RIGHT in game, facing slightly outward side-by-side. Same head size all frames, crisp dark outlines and 2 flat shade steps, each entire bust unclipped, generous magenta separation. Two independently drawn alternatives.",
+      "selection": "Take A; take B retained in scratch"
+    },
+    {
+      "id": "s1-polish-first",
+      "prompt": "Production 16-bit game title mascot MICA, jade pangolin, native-pose transformation. Reference1 native Sonic1 title waist-up finger-wag frames enlarged8x. Ref2 approved MICA model identity. Redraw into MICA while preserving native head/torso proportions and near-face wag pose. CRITICAL white glove on screen RIGHT of head must read as a COMPLETE glove, with dark outline, clear rounded knuckles, curled fingers and upright/bent INDEX finger, clearly joined to short jade forearm. Do NOT hide glove in scale plates. Same native size relative to head: glove about one quarter head width. MICA scales are rounded overlapping jade plates NOT spikes or quills, cream pointed snout, brown eyes pink ears, cheerful smile, waist-up only no legs. Exactly THREE columns TWO rows equal cells, solid magenta background generous spacing, no lettering logos emblem. Top row alternative A: identical bust base looking slightly left with (1) raised index straight up (2) index tilted inward (3) index curled/bent. Bottom row alternative B same three poses. Keep same head and torso placement and width across all cells. Clean chunky pixel illustration, dark outlines, limited flat shades. Native reference is pose/scale, not species.",
+      "selection": "Rejected: wrong facing"
+    },
+    {
+      "id": "s1-polish-corrective",
+      "prompt": "Native-pose transformation, production Sonic1 title original character MICA. Input1 native title sprites at8x; input2 approved MICA identity; input3 current MICA title sprite to correct. Make 3 columns x2rows equal cells solid magenta no text. Top row takeA and bottom row alternativeB. Each row THREE identical waist-up portraits except index wag: straight upright, tilted inward, curled downward. CRITICAL preserve input3 facing: snout points LEFT, scale hood behind head on RIGHT, raised glove at RIGHT of face with index pointing up. Do not face right. Glove is entirely visible outside the hood, clear dark outline around curled knuckles and upright index, white/grey with a jade forearm connecting below. Match native large head/short torso title proportions, exact pose and scale native ref. Jade overlapping rounded pangolin plates NOT hedgehog quills. Cream snout and belly, pink ear brown eyes, cheerful open smile. Big readable simple glove, no detached blobs. No legs/ring/emblem/shadow.",
+      "selection": "Corrective take A; B rejected for excess scale highlights"
+    }
+  ],
+  "scratch": "$HOME/scratch/agent-tmp/title-polish-lane",
+  "model_version": "Exact built-in GPT Image version not exposed"
+}

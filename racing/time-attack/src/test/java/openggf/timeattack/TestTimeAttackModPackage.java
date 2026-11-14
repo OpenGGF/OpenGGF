@@ -52,7 +52,10 @@ class TestTimeAttackModPackage {
     @Test
     void releaseBuildBundlesTheMod() throws Exception {
         String pom = Files.readString(Path.of("pom.xml"));
-        assertTrue(pom.contains("<openggf.bundled.mods>racing/time-attack</openggf.bundled.mods>"),
-                "Time Attack ships as the bundled first-party mod");
+        var document = javax.xml.parsers.DocumentBuilderFactory.newInstance()
+                .newDocumentBuilder().parse(new java.io.ByteArrayInputStream(pom.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+        String configured = document.getElementsByTagName("openggf.bundled.mods").item(0).getTextContent();
+        assertTrue(java.util.Arrays.asList(configured.split(",")).contains("racing/time-attack"),
+                "Time Attack remains a bundled first-party mod alongside other bundles");
     }
 }

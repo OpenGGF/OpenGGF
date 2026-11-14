@@ -15,8 +15,19 @@ class TestPlayableSheetV2 {
     private static final String GOLDEN = "474746500002000442415345000000350000003147474653000100000001" +
             "0000000000000000000000000000000000000000000000000000000000000000" +
             "000100000000004d4554410000000c0000000000000001000000004652414d00000012" +
-            "000100000000001000100001000000010000414e494d000000100001000469646c65" +
-            "0001000000010100";
+            "000100000000001000100001000000010000414e494d000000190001000457414954" +
+            "0001000000010100000000045741495400";
+
+    @Test void rejectsInvalidLoopBackCounts() throws Exception {
+        var base = minimal();
+        for (int count : new int[]{0, 2, 65536}) {
+            var animation = new PlayableSheetReader.Animation(base.animations().get("WAIT").steps(),
+                    false, com.openggf.sprites.animation.SpriteAnimationEndAction.LOOP_BACK,
+                    "WAIT", List.of(), count);
+            assertThrows(Exception.class, () -> PlayableSheetWriter.write(new PlayableSheetReader.PlayableSheet(
+                    base.baseSheetV1(), base.meta(), base.frames(), Map.of("WAIT", animation), Map.of())));
+        }
+    }
 
     @Test void canonicalGoldenBytesRoundTrip() throws Exception {
         PlayableSheetReader.PlayableSheet sheet = minimal();
@@ -56,7 +67,7 @@ class TestPlayableSheetV2 {
                 sections.get(0), sections.get(1), sections.get(2), new Section(0x5A5A5A5A, sections.get(3).payload())))));
 
         byte[] invalidUtf8 = valid.clone();
-        int idle = indexOf(invalidUtf8, "idle".getBytes()); invalidUtf8[idle] = (byte) 0xFF;
+        int idle = indexOf(invalidUtf8, "WAIT".getBytes()); invalidUtf8[idle] = (byte) 0xFF;
         assertThrows(java.io.IOException.class, () -> PlayableSheetReader.read(invalidUtf8));
         var tooSmall = com.openggf.io.ModInputLimits.loweringBuilder()
                 .maxAssetBytes(valid.length - 1L).build();
@@ -65,7 +76,7 @@ class TestPlayableSheetV2 {
 
     @Test void rejectsNonCanonicalAnimationAndAppendageKeys() throws Exception {
         byte[] invalidAnimation = PlayableSheetWriter.write(minimal()).clone();
-        invalidAnimation[indexOf(invalidAnimation, "idle".getBytes())] = 'I';
+        invalidAnimation[indexOf(invalidAnimation, "WAIT".getBytes())] = 'w';
         assertThrows(java.io.IOException.class,
                 () -> PlayableSheetReader.read(invalidAnimation));
 
@@ -96,7 +107,7 @@ class TestPlayableSheetV2 {
                         List.of(new PlayableSheetReader.DplcRun(65536, 1, 0))))));
 
         var badStep = new PlayableSheetReader.PlayableSheet(base.baseSheetV1(), base.meta(),
-                base.frames(), Map.of("idle", new PlayableSheetReader.Animation(
+                base.frames(), Map.of("WAIT", new PlayableSheetReader.Animation(
                 List.of(new PlayableSheetReader.AnimationStep(65536, 1, true)))), Map.of());
         assertThrows(IllegalArgumentException.class, () -> PlayableSheetWriter.write(badStep));
 
@@ -153,12 +164,12 @@ class TestPlayableSheetV2 {
     @Test void sharedKeyGrammarAcceptsDotsAndRejectsUnicodeAndMalformedNamespaces() throws Exception {
         var base = minimal();
         var dotted = new PlayableSheetReader.PlayableSheet(base.baseSheetV1(), base.meta(),
-                base.frames(), Map.of("idle.fast", base.animations().get("idle")),
+                base.frames(), Map.of("WAIT.fast", base.animations().get("WAIT")),
                 Map.of("owner:tail.v1", List.of(0)));
-        assertDoesNotThrow(() -> PlayableSheetWriter.write(dotted));
+        assertThrows(IllegalArgumentException.class, () -> PlayableSheetWriter.write(dotted));
         assertThrows(IllegalArgumentException.class, () -> PlayableSheetWriter.write(
                 new PlayableSheetReader.PlayableSheet(base.baseSheetV1(), base.meta(), base.frames(),
-                        Map.of("idé", base.animations().get("idle")), Map.of())));
+                        Map.of("idé", base.animations().get("WAIT")), Map.of())));
         for (String bad : List.of("owner::tail", "Owner:tail", "owner:", "owner:../tail", "tail")) {
             var invalid = new PlayableSheetReader.PlayableSheet(base.baseSheetV1(), base.meta(),
                     base.frames(), base.animations(), Map.of(bad, List.of(0)));
@@ -177,7 +188,7 @@ class TestPlayableSheetV2 {
                 new PlayableSheetReader.Meta(0, 1, 0),
                 List.of(new PlayableSheetReader.Frame(0, 0, 16, 16,
                         List.of(new PlayableSheetReader.DplcRun(0, 1, 0)))),
-                Map.of("idle", new PlayableSheetReader.Animation(
+                Map.of("WAIT", new PlayableSheetReader.Animation(
                         List.of(new PlayableSheetReader.AnimationStep(0, 1, true)))), Map.of());
     }
 

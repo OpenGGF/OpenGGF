@@ -376,6 +376,17 @@ public class Sonic2EndingCutsceneManager {
      * @param rom the ROM to load ending art from
      */
     public interface Presentation {
+        default boolean nativeSuperChoreography() { return false; }
+        default boolean drawPlayer(int frame, int x, int y) { return false; }
+        default boolean hasObjectFrame(int frame) { return false; }
+        default boolean drawObject(int frame, int x, int y) { return false; }
+        default boolean drawPilot(int frame, int x, int y) { return false; }
+        default void prepareFinalPlane(int[] map, Pattern[] art) { }
+        default int finalPlanePattern(int cell, int nativePattern) { return nativePattern; }
+        default void drawFinalPilot(int x, int y) { }
+        default boolean drawPhoto(int index, int x, int y) { return false; }
+        default void paletteStep(boolean toWhite) { }
+        default void update() { }
         void applyArt(Sonic2EndingArt art) throws IOException;
         com.openggf.sprites.art.SpriteArtSet playerArt() throws IOException;
         List<SpriteMappingFrame> objectFrames() throws IOException;
@@ -393,6 +404,10 @@ public class Sonic2EndingCutsceneManager {
     public void setPresentation(Presentation presentation) { this.presentation = presentation; }
 
     public void initialize(Rom rom) {
+        if (presentation == null) {
+            try { presentation = ModEndingPresentation.create(rom); }
+            catch (IOException e) { throw new IllegalStateException("Cannot load mod ending", e); }
+        }
         routine = presentation == null ? Sonic2EndingArt.determineEndingRoutine() : presentation.endingRoutine();
         palTiming = isPalTiming();
         endingArt = new Sonic2EndingArt();
@@ -432,6 +447,7 @@ public class Sonic2EndingCutsceneManager {
                 endingPlaneMapAddr,
                 Sonic2Constants.ART_TILE_ENDING_FINAL_TORNADO,
                 "EndingPlaneBackdrop");
+        if (presentation != null) presentation.prepareFinalPlane(endingPlaneMap, endingArt.getFinalTornadoPatterns());
 
         // Parse ROM sprite mappings for accurate cutscene rendering
         try {
@@ -543,6 +559,7 @@ public class Sonic2EndingCutsceneManager {
         stateFrameCounter++;
 
         // ROM: PaletteFadeFrom runs every frame in the ending main loop
+        if (presentation != null) presentation.update();
         if (paletteFadeActive) {
             runPaletteFadeStep();
         }
@@ -772,6 +789,8 @@ public class Sonic2EndingCutsceneManager {
      * Photos are 12x9 tile grids rendered at screen position (112, 64).
      */
     private void drawPhotoSequence(GraphicsManager gm) {
+        if (presentation != null && presentation.drawPhoto(photoIndex,
+                screenXForWidth(PHOTO_X, viewportWidth), PHOTO_Y)) return;
         if (photoIndex < 0 || photoIndex >= PHOTO_COUNT) {
             return;
         }
@@ -817,8 +836,8 @@ public class Sonic2EndingCutsceneManager {
             case SUPER_SONIC -> {
                 // loc_A30A selects Walk from Ending_Routine==2, not Super_Sonic_flag.
                 // The presentation's normal rotation/appearance route keeps Float2 for either outcome.
-                charAnimFrames = presentation == null ? SONIC_WALK_FRAMES : presentation.floatingFrames();
-                charAnimSpeed = presentation == null ? SONIC_WALK_SPEED : presentation.floatingFrameDuration();
+                charAnimFrames = presentation == null ? SONIC_WALK_FRAMES : presentation.nativeSuperChoreography() ? presentation.walkingFrames() : presentation.floatingFrames();
+                charAnimSpeed = (presentation == null || presentation.nativeSuperChoreography()) ? SONIC_WALK_SPEED : presentation.floatingFrameDuration();
             }
             case TAILS -> {
                 charAnimFrames = TAILS_FLOAT2_FRAMES;
@@ -1090,7 +1109,7 @@ public class Sonic2EndingCutsceneManager {
 
         // sub_A524 dispatches loc_A55C from Ending_Routine==2. The patched
         // normal route uses loc_A53A's fixed position even with Super_Sonic_flag set.
-        if (presentation == null && routine == Sonic2EndingArt.EndingRoutine.SUPER_SONIC) {
+        if ((presentation == null || presentation.nativeSuperChoreography()) && routine == Sonic2EndingArt.EndingRoutine.SUPER_SONIC) {
             if (charOnTornadoX < 0xC0) {
                 charOnTornadoX++;
             }
@@ -1111,7 +1130,7 @@ public class Sonic2EndingCutsceneManager {
             // ROM: mapping_frame set at transition (7=Sonic, 0=Super, $18=Tails)
             rotationDisplayFrame = switch (routine) {
                 case SONIC -> Sonic2CreditsData.TORNADO_FRAMES_SONIC[0];
-                case SUPER_SONIC -> presentation == null ? Sonic2CreditsData.TORNADO_FRAMES_SUPER[0] : Sonic2CreditsData.TORNADO_FRAMES_SONIC[0];
+                case SUPER_SONIC -> (presentation == null || presentation.nativeSuperChoreography()) ? Sonic2CreditsData.TORNADO_FRAMES_SUPER[0] : Sonic2CreditsData.TORNADO_FRAMES_SONIC[0];
                 case TAILS -> Sonic2CreditsData.TORNADO_FRAMES_TAILS[0];
             };
             tornadoSubState = TornadoSubState.ROTATION;
@@ -1146,7 +1165,7 @@ public class Sonic2EndingCutsceneManager {
             // Update display frame from frame table for current step (before increment)
             rotationDisplayFrame = switch (routine) {
                 case SONIC -> Sonic2CreditsData.TORNADO_FRAMES_SONIC[rotationStep];
-                case SUPER_SONIC -> presentation == null ? Sonic2CreditsData.TORNADO_FRAMES_SUPER[rotationStep] : Sonic2CreditsData.TORNADO_FRAMES_SONIC[rotationStep];
+                case SUPER_SONIC -> (presentation == null || presentation.nativeSuperChoreography()) ? Sonic2CreditsData.TORNADO_FRAMES_SUPER[rotationStep] : Sonic2CreditsData.TORNADO_FRAMES_SONIC[rotationStep];
                 case TAILS -> Sonic2CreditsData.TORNADO_FRAMES_TAILS[rotationStep];
             };
 
@@ -1557,6 +1576,7 @@ public class Sonic2EndingCutsceneManager {
         int originY = ENDING_PLANE_PLANE_Y - vscrollOffset;
         int maxWords = ENDING_PLANE_WIDTH_TILES * ENDING_PLANE_HEIGHT_TILES;
         int words = Math.min(maxWords, endingPlaneMap.length);
+        if (presentation != null) presentation.drawFinalPilot(screenXForWidth(originX, viewportWidth), originY);
 
         for (int i = 0; i < words; i++) {
             int word = endingPlaneMap[i];
@@ -1572,6 +1592,7 @@ public class Sonic2EndingCutsceneManager {
             }
 
             int patternId = Sonic2EndingArt.PATTERN_BASE_VRAM + reusableDesc.getPatternIndex();
+            if (presentation != null) patternId = presentation.finalPlanePattern(i, patternId);
             gm.renderPatternWithId(patternId, reusableDesc, drawX, drawY);
         }
     }
@@ -1720,6 +1741,7 @@ public class Sonic2EndingCutsceneManager {
      * or ArtTile_ArtUnc_Tails ($07A0). Player art is cached at PATTERN_BASE_VRAM + artTile.
      */
     private void drawPlayerFrame(GraphicsManager gm, int frameIndex, int x, int y) {
+        if (presentation != null && presentation.drawPlayer(frameIndex,screenXForWidth(x,viewportWidth),y)) return;
         if (playerMappingFrames == null || frameIndex < 0 || frameIndex >= playerMappingFrames.size()) {
             return;
         }
@@ -1827,10 +1849,15 @@ public class Sonic2EndingCutsceneManager {
         if (objCfFrames == null || frameIndex < 0 || frameIndex >= objCfFrames.size()) {
             return;
         }
+        boolean custom = presentation != null && presentation.hasObjectFrame(frameIndex);
         SpriteMappingFrame frame = objCfFrames.get(frameIndex);
         List<SpriteMappingPiece> pieces = frame.pieces();
         for (int i = pieces.size() - 1; i >= 0; i--) {
             SpriteMappingPiece piece = pieces.get(i);
+            // ObjCF 7..11 combines a line-1 rider with line-0 vehicle pieces.
+            // ArtNem_EndingMiniTornado begins at $493; keep its native pieces.
+            if (custom && ((frameIndex < 7 || frameIndex > 11) && frameIndex != 24 && frameIndex != 25
+                    || piece.tileIndex() < Sonic2Constants.ART_TILE_ENDING_MINI_TORNADO)) continue;
             boolean piecePriority = piece.priority();
             SpritePieceRenderer.renderPiece(
                     piece, screenXForWidth(originX, viewportWidth), originY,
@@ -1846,6 +1873,7 @@ public class Sonic2EndingCutsceneManager {
                         gm.renderPatternWithId(patternIdx, reusableDesc, drawX, drawY);
                     });
         }
+        if (custom) presentation.drawObject(frameIndex, screenXForWidth(originX,viewportWidth), originY);
     }
 
     /**
@@ -1857,9 +1885,12 @@ public class Sonic2EndingCutsceneManager {
         if (frames == null || frameIndex < 0 || frameIndex >= frames.size()) {
             return;
         }
+        boolean pilot = frames == tornadoFrames && frameIndex < 8 && pilotAnimSequence != null && presentation != null
+                && presentation.drawPilot(pilotAnimSequence[pilotAnimIndex], screenXForWidth(originX, viewportWidth), originY);
         SpriteMappingFrame frame = frames.get(frameIndex);
         List<SpriteMappingPiece> pieces = frame.pieces();
         for (int i = pieces.size() - 1; i >= 0; i--) {
+            if (pilot && i == 3) continue;
             SpriteMappingPiece piece = pieces.get(i);
             boolean piecePriority = piece.priority();
             SpritePieceRenderer.renderPiece(
@@ -1967,6 +1998,7 @@ public class Sonic2EndingCutsceneManager {
         }
         paletteFadeDelayTimer = paletteFadeDelay;
 
+        if (presentation != null) presentation.paletteStep(paletteFadeToWhite);
         boolean anyChanged = false;
 
         // ROM: ObjC9 only fades the palette line range specified by its start_offset/length.
@@ -2061,7 +2093,7 @@ public class Sonic2EndingCutsceneManager {
         //               $E (Tails) → Pal_AC9E 64B lines 0-1.
         try {
             com.openggf.data.Rom rom = com.openggf.game.GameServices.rom().getRom();
-            if (presentation != null) {
+            if (presentation != null && !presentation.nativeSuperChoreography()) {
                 Palette[] replacement = presentation.palettes();
                 targetPalettes[0] = replacement[0];
                 targetPalettes[1] = replacement[1];
@@ -2094,7 +2126,7 @@ public class Sonic2EndingCutsceneManager {
             paletteFadeDelayTimer = 4;
             LOGGER.fine("Target palette restored to character palette for " + routine);
         } catch (Exception e) {
-            LOGGER.warning("Failed to reload character palette: " + e.getMessage());
+            throw new IllegalStateException("Cannot prepare character presentation", e);
         }
     }
 

@@ -1,6 +1,7 @@
 package com.openggf.level.resources;
 
 import com.openggf.data.Rom;
+import com.openggf.data.RomByteReader;
 import com.openggf.data.RomChannel;
 import com.openggf.data.compression.KosinskiReader;
 import com.openggf.data.compression.NemesisReader;
@@ -313,30 +314,10 @@ public class ResourceLoader {
      * followed by standard Kosinski modules at 16-byte aligned boundaries.
      */
     private byte[] decompressKosinskiModuled(int romAddr) throws IOException {
-        // Read KosM 2-byte BE header to get total decompressed size
-        byte[] header = rom.readBytes(romAddr, 2);
-        if (header.length < 2) {
-            throw new IOException(String.format(
-                    "Insufficient ROM data for KosM header at 0x%X: got %d bytes", romAddr, header.length));
-        }
-        int fullSize = ((header[0] & 0xFF) << 8) | (header[1] & 0xFF);
-
-        // Compressed data is smaller than decompressed, so fullSize is a safe upper bound
-        // for input. Add extra for module alignment padding. Cap at 256KB to prevent issues,
-        // and also cap against remaining ROM space (data near end of ROM, e.g., Gumball bonus
-        // stage art at 0x3FEE2E in a 4MB ROM).
-        int remaining;
-        try {
-            remaining = (int) Math.min(rom.getSize() - romAddr, Integer.MAX_VALUE);
-        } catch (IOException e) {
-            remaining = 0x40000; // Fallback: use cap if size unavailable
-        }
-        int inputSize = Math.min(Math.min(Math.max(fullSize + 256, 0x10000), 0x40000), remaining);
-        byte[] romData = rom.readBytes(romAddr, inputSize);
-        if (romData.length < inputSize) {
-            throw new IOException("Short read for KosM data at 0x" + Integer.toHexString(romAddr));
-        }
-        return KosinskiReader.decompressModuled(romData, 0);
+        // Each module reads only its own bytes from the ROM, so no window of the ROM
+        // is copied first (archives near the ROM end, e.g. the Gumball bonus stage
+        // art at 0x3FEE2E in a 4MB ROM, need no special cap either).
+        return KosinskiReader.decompressModuled(RomByteReader.fromRom(rom), romAddr);
     }
 
     /**

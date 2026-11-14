@@ -75,6 +75,42 @@ class TraceCaptureToolArgsTest {
     }
 
     @Test
+    void musicIsRecordedAtFullLevelUnlessNoMusicSilencesIt() {
+        TraceCaptureTool.Args withMusic = TraceCaptureTool.Args.parse(new String[]{"--trace", "aiz1"});
+        assertFalse(withMusic.noMusic());
+        assertEquals(100, TraceCaptureTool.capturedMusicVolume(withMusic));
+
+        TraceCaptureTool.Args effectsOnly = TraceCaptureTool.Args.parse(
+                new String[]{"--trace", "aiz1", "--no-music"});
+        assertTrue(effectsOnly.noMusic());
+        assertEquals(0, TraceCaptureTool.capturedMusicVolume(effectsOnly));
+    }
+
+    @Test
+    void aFrameWindowKeepsTheOriginalsLagFramesUnlessAskedToSkipThem() {
+        TraceCaptureTool.Args kept = TraceCaptureTool.Args.parse(
+                new String[]{"--trace", "cpz2", "--clip", "frames:4300:4559"});
+        assertFalse(kept.skipLagFrames());
+
+        TraceCaptureTool.Args skipped = TraceCaptureTool.Args.parse(new String[]{
+                "--trace", "cpz2", "--clip", "frames:4300:4559", "--skip-lag-frames"});
+        assertTrue(skipped.skipLagFrames());
+        assertEquals("frames:4300:4559", skipped.clip());
+    }
+
+    @Test
+    void skippingLagFramesIsRefusedOutsideAFrameWindow() {
+        for (String[] argv : new String[][]{
+                {"--trace", "aiz1", "--skip-lag-frames"},
+                {"--trace", "aiz1", "--clip", "aiz-fire-transition", "--skip-lag-frames"}}) {
+            IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+                    () -> TraceCaptureTool.Args.parse(argv));
+            assertTrue(failure.getMessage().contains("--clip frames:START:END"),
+                    failure.getMessage());
+        }
+    }
+
+    @Test
     void acceptsNegativeIntegerValuesAsBefore() {
         TraceCaptureTool.Args args = TraceCaptureTool.Args.parse(
                 new String[]{"--trace", "aiz1", "--scale", "-3", "--fps", "-30", "--tail-frames", "-1"});

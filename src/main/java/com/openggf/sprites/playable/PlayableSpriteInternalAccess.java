@@ -4,6 +4,12 @@ import com.openggf.level.objects.ObjectInstance;
 
 /** Engine-only cross-package access to playable controller internals. */
 public final class PlayableSpriteInternalAccess {
+    /** Bind ordinary resources before temporary native presentation or rewind reconciliation. */
+    public static void bindNormalAnimationProfile(AbstractPlayableSprite player) {
+        var controller = player.getSuperStateController();
+        if (controller != null) controller.bindNormalAnimationProfile(player.getAnimationProfile());
+    }
+
     /** Structural semantic owner. Null means the ordinary inferred status remains authoritative. */
     public interface SecondaryInvincibility {
         Boolean read();
@@ -275,9 +281,16 @@ public final class PlayableSpriteInternalAccess {
         sprite.mutatorPolicySource = source;
     }
 
+    public static void movementTick(AbstractPlayableSprite sprite) {
+        sprite.dispatchMovementTick();
+    }
+
     public static com.openggf.game.mutators.HomingAttackRuntime homingAttack(AbstractPlayableSprite sprite) {
         PlayableMutatorPolicySource source = sprite.mutatorPolicySource;
-        return source == null ? null : source.homingAttack();
+        var level = sprite.currentLevelManagerIfAvailable();
+        return level == null ? (source == null ? null : source.homingAttack())
+                : com.openggf.game.session.WorldSessionPolicyAccess.getService(level.getWorldSession(),
+                        com.openggf.game.mutators.HomingAttackRuntime.class);
     }
 
     public static PlayableMutatorPolicy mutatorPolicy(AbstractPlayableSprite sprite) {

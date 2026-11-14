@@ -593,6 +593,8 @@ public class Sonic3kLRZEvents extends Sonic3kZoneEvents {
         if (level == null) {
             return;
         }
+        // The foreground redraw rewrites only the cells whose layout changed
+        // (LevelTilemapManager), not the whole level image (a 10-60 ms frame).
         LayoutMutationContext context = new LayoutMutationContext(
                 LevelMutationSurface.forLevel(level), manager::applyMutationEffects);
         zoneLayoutMutationPipeline().applyImmediately(

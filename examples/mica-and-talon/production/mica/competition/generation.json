@@ -1,0 +1,550 @@
+{
+  "method": "Built-in GPT Image native-pose transformation, two alternatives per grid; nearest fixed-palette reduction with inside ink",
+  "native_reference_palette": "arenaPalette line 0 (ROM $A8A3C); line 1 competition override is $6C0C, not the Sonic body palette",
+  "scratch": "$HOME/scratch/agent-tmp/talon-competition-20261110",
+  "attempts": [
+    {
+      "native_id": 1,
+      "batch": 0,
+      "cell": 0,
+      "variant": 1,
+      "source_sha256": "3460599e5a2501a50fb4d9962257df692de281940898f07b767a500b5e542ac4",
+      "uniform_reduction": 0.09857108455652132,
+      "source_crop": [
+        230,
+        217
+      ]
+    },
+    {
+      "native_id": 2,
+      "batch": 0,
+      "cell": 1,
+      "variant": 1,
+      "source_sha256": "3460599e5a2501a50fb4d9962257df692de281940898f07b767a500b5e542ac4",
+      "uniform_reduction": 0.09578309592839707,
+      "source_crop": [
+        170,
+        221
+      ]
+    },
+    {
+      "native_id": 3,
+      "batch": 0,
+      "cell": 2,
+      "variant": 1,
+      "source_sha256": "3460599e5a2501a50fb4d9962257df692de281940898f07b767a500b5e542ac4",
+      "uniform_reduction": 0.09832114074052112,
+      "source_crop": [
+        171,
+        223
+      ]
+    },
+    {
+      "native_id": 4,
+      "batch": 0,
+      "cell": 3,
+      "variant": 1,
+      "source_sha256": "3460599e5a2501a50fb4d9962257df692de281940898f07b767a500b5e542ac4",
+      "uniform_reduction": 0.0997267551296914,
+      "source_crop": [
+        203,
+        233
+      ]
+    },
+    {
+      "native_id": 5,
+      "batch": 0,
+      "cell": 4,
+      "variant": 1,
+      "source_sha256": "3460599e5a2501a50fb4d9962257df692de281940898f07b767a500b5e542ac4",
+      "uniform_reduction": 0.10020940400754766,
+      "source_crop": [
+        204,
+        200
+      ]
+    },
+    {
+      "native_id": 6,
+      "batch": 0,
+      "cell": 5,
+      "variant": 1,
+      "source_sha256": "3460599e5a2501a50fb4d9962257df692de281940898f07b767a500b5e542ac4",
+      "uniform_reduction": 0.10306453272419511,
+      "source_crop": [
+        213,
+        222
+      ]
+    },
+    {
+      "native_id": 7,
+      "batch": 0,
+      "cell": 6,
+      "variant": 1,
+      "source_sha256": "3460599e5a2501a50fb4d9962257df692de281940898f07b767a500b5e542ac4",
+      "uniform_reduction": 0.10767086013480759,
+      "source_crop": [
+        206,
+        200
+      ]
+    },
+    {
+      "native_id": 8,
+      "batch": 0,
+      "cell": 7,
+      "variant": 1,
+      "source_sha256": "3460599e5a2501a50fb4d9962257df692de281940898f07b767a500b5e542ac4",
+      "uniform_reduction": 0.10205433806713482,
+      "source_crop": [
+        207,
+        145
+      ]
+    },
+    {
+      "native_id": 9,
+      "batch": 1,
+      "cell": 0,
+      "variant": 0,
+      "source_sha256": "326141195579eb9d191ef2b39e2dd501c89a28dbf31242d03bda0c5ee009e9b7",
+      "uniform_reduction": 0.10524393669536489,
+      "source_crop": [
+        216,
+        166
+      ]
+    },
+    {
+      "native_id": 10,
+      "batch": 1,
+      "cell": 1,
+      "variant": 0,
+      "source_sha256": "326141195579eb9d191ef2b39e2dd501c89a28dbf31242d03bda0c5ee009e9b7",
+      "uniform_reduction": 0.11004273996720638,
+      "source_crop": [
+        199,
+        209
+      ]
+    },
+    {
+      "native_id": 11,
+      "batch": 1,
+      "cell": 2,
+      "variant": 0,
+      "source_sha256": "326141195579eb9d191ef2b39e2dd501c89a28dbf31242d03bda0c5ee009e9b7",
+      "uniform_reduction": 0.10589308275978881,
+      "source_crop": [
+        197,
+        195
+      ]
+    },
+    {
+      "native_id": 12,
+      "batch": 1,
+      "cell": 3,
+      "variant": 0,
+      "source_sha256": "326141195579eb9d191ef2b39e2dd501c89a28dbf31242d03bda0c5ee009e9b7",
+      "uniform_reduction": 0.11120494169557064,
+      "source_crop": [
+        196,
+        206
+      ]
+    },
+    {
+      "native_id": 13,
+      "batch": 1,
+      "cell": 4,
+      "variant": 0,
+      "source_sha256": "326141195579eb9d191ef2b39e2dd501c89a28dbf31242d03bda0c5ee009e9b7",
+      "uniform_reduction": 0.10097254258149368,
+      "source_crop": [
+        192,
+        210
+      ]
+    },
+    {
+      "native_id": 14,
+      "batch": 1,
+      "cell": 5,
+      "variant": 0,
+      "source_sha256": "326141195579eb9d191ef2b39e2dd501c89a28dbf31242d03bda0c5ee009e9b7",
+      "uniform_reduction": 0.0993525385848058,
+      "source_crop": [
+        184,
+        211
+      ]
+    },
+    {
+      "native_id": 15,
+      "batch": 1,
+      "cell": 6,
+      "variant": 0,
+      "source_sha256": "326141195579eb9d191ef2b39e2dd501c89a28dbf31242d03bda0c5ee009e9b7",
+      "uniform_reduction": 0.10321342060734089,
+      "source_crop": [
+        194,
+        212
+      ]
+    },
+    {
+      "native_id": 16,
+      "batch": 1,
+      "cell": 7,
+      "variant": 0,
+      "source_sha256": "326141195579eb9d191ef2b39e2dd501c89a28dbf31242d03bda0c5ee009e9b7",
+      "uniform_reduction": 0.10032446240859348,
+      "source_crop": [
+        183,
+        211
+      ]
+    },
+    {
+      "native_id": 17,
+      "batch": 2,
+      "cell": 0,
+      "variant": 0,
+      "source_sha256": "1ef64b23a73c0ad94825189e1a3ca67efae671ffdea80f23780dee4259354c16",
+      "uniform_reduction": 0.109785213749388,
+      "source_crop": [
+        186,
+        171
+      ]
+    },
+    {
+      "native_id": 18,
+      "batch": 2,
+      "cell": 1,
+      "variant": 0,
+      "source_sha256": "1ef64b23a73c0ad94825189e1a3ca67efae671ffdea80f23780dee4259354c16",
+      "uniform_reduction": 0.10890537103406489,
+      "source_crop": [
+        187,
+        168
+      ]
+    },
+    {
+      "native_id": 19,
+      "batch": 2,
+      "cell": 2,
+      "variant": 0,
+      "source_sha256": "1ef64b23a73c0ad94825189e1a3ca67efae671ffdea80f23780dee4259354c16",
+      "uniform_reduction": 0.1135137243163694,
+      "source_crop": [
+        207,
+        175
+      ]
+    },
+    {
+      "native_id": 20,
+      "batch": 2,
+      "cell": 3,
+      "variant": 0,
+      "source_sha256": "1ef64b23a73c0ad94825189e1a3ca67efae671ffdea80f23780dee4259354c16",
+      "uniform_reduction": 0.10901591387565238,
+      "source_crop": [
+        206,
+        175
+      ]
+    },
+    {
+      "native_id": 21,
+      "batch": 2,
+      "cell": 4,
+      "variant": 0,
+      "source_sha256": "1ef64b23a73c0ad94825189e1a3ca67efae671ffdea80f23780dee4259354c16",
+      "uniform_reduction": 0.09745715832160655,
+      "source_crop": [
+        179,
+        209
+      ]
+    },
+    {
+      "native_id": 22,
+      "batch": 2,
+      "cell": 5,
+      "variant": 0,
+      "source_sha256": "1ef64b23a73c0ad94825189e1a3ca67efae671ffdea80f23780dee4259354c16",
+      "uniform_reduction": 0.10110315122855791,
+      "source_crop": [
+        141,
+        141
+      ]
+    },
+    {
+      "native_id": 23,
+      "batch": 2,
+      "cell": 6,
+      "variant": 0,
+      "source_sha256": "1ef64b23a73c0ad94825189e1a3ca67efae671ffdea80f23780dee4259354c16",
+      "uniform_reduction": 0.09761188141244893,
+      "source_crop": [
+        146,
+        175
+      ]
+    },
+    {
+      "native_id": 24,
+      "batch": 2,
+      "cell": 7,
+      "variant": 0,
+      "source_sha256": "1ef64b23a73c0ad94825189e1a3ca67efae671ffdea80f23780dee4259354c16",
+      "uniform_reduction": 0.10441442029358773,
+      "source_crop": [
+        178,
+        196
+      ]
+    },
+    {
+      "native_id": 25,
+      "batch": 3,
+      "cell": 0,
+      "variant": 1,
+      "source_sha256": "0e4e9f51704419bac151369b8af7196db3063f918a244ac07664c101acf4aa22",
+      "uniform_reduction": 0.09985947854733855,
+      "source_crop": [
+        174,
+        180
+      ]
+    },
+    {
+      "native_id": 26,
+      "batch": 3,
+      "cell": 1,
+      "variant": 1,
+      "source_sha256": "0e4e9f51704419bac151369b8af7196db3063f918a244ac07664c101acf4aa22",
+      "uniform_reduction": 0.09275304095831195,
+      "source_crop": [
+        180,
+        191
+      ]
+    },
+    {
+      "native_id": 27,
+      "batch": 3,
+      "cell": 2,
+      "variant": 1,
+      "source_sha256": "0e4e9f51704419bac151369b8af7196db3063f918a244ac07664c101acf4aa22",
+      "uniform_reduction": 0.10103976884657698,
+      "source_crop": [
+        149,
+        208
+      ]
+    },
+    {
+      "native_id": 28,
+      "batch": 3,
+      "cell": 3,
+      "variant": 1,
+      "source_sha256": "0e4e9f51704419bac151369b8af7196db3063f918a244ac07664c101acf4aa22",
+      "uniform_reduction": 0.10091168279600576,
+      "source_crop": [
+        153,
+        205
+      ]
+    },
+    {
+      "native_id": 29,
+      "batch": 3,
+      "cell": 4,
+      "variant": 1,
+      "source_sha256": "0e4e9f51704419bac151369b8af7196db3063f918a244ac07664c101acf4aa22",
+      "uniform_reduction": 0.10273560014854656,
+      "source_crop": [
+        150,
+        198
+      ]
+    },
+    {
+      "native_id": 30,
+      "batch": 3,
+      "cell": 5,
+      "variant": 1,
+      "source_sha256": "0e4e9f51704419bac151369b8af7196db3063f918a244ac07664c101acf4aa22",
+      "uniform_reduction": 0.10128847895854746,
+      "source_crop": [
+        165,
+        199
+      ]
+    },
+    {
+      "native_id": 31,
+      "batch": 3,
+      "cell": 6,
+      "variant": 1,
+      "source_sha256": "0e4e9f51704419bac151369b8af7196db3063f918a244ac07664c101acf4aa22",
+      "uniform_reduction": 0.10945066942923916,
+      "source_crop": [
+        155,
+        199
+      ]
+    },
+    {
+      "native_id": 32,
+      "batch": 3,
+      "cell": 7,
+      "variant": 1,
+      "source_sha256": "0e4e9f51704419bac151369b8af7196db3063f918a244ac07664c101acf4aa22",
+      "uniform_reduction": 0.11257293026533638,
+      "source_crop": [
+        187,
+        212
+      ]
+    },
+    {
+      "native_id": 33,
+      "batch": 4,
+      "cell": 0,
+      "variant": 0,
+      "source_sha256": "97e5d20069e7eb4c9a4eb42b00de1919031e720caed4a3750978029cd174026e",
+      "uniform_reduction": 0.09719864035481092,
+      "source_crop": [
+        182,
+        201
+      ]
+    },
+    {
+      "native_id": 34,
+      "batch": 4,
+      "cell": 1,
+      "variant": 0,
+      "source_sha256": "97e5d20069e7eb4c9a4eb42b00de1919031e720caed4a3750978029cd174026e",
+      "uniform_reduction": 0.1065633460013427,
+      "source_crop": [
+        148,
+        203
+      ]
+    },
+    {
+      "native_id": 35,
+      "batch": 4,
+      "cell": 2,
+      "variant": 0,
+      "source_sha256": "97e5d20069e7eb4c9a4eb42b00de1919031e720caed4a3750978029cd174026e",
+      "uniform_reduction": 0.12079102364843616,
+      "source_crop": [
+        135,
+        138
+      ]
+    },
+    {
+      "native_id": 36,
+      "batch": 4,
+      "cell": 3,
+      "variant": 0,
+      "source_sha256": "97e5d20069e7eb4c9a4eb42b00de1919031e720caed4a3750978029cd174026e",
+      "uniform_reduction": 0.11371235561616215,
+      "source_crop": [
+        148,
+        145
+      ]
+    },
+    {
+      "native_id": 37,
+      "batch": 4,
+      "cell": 4,
+      "variant": 0,
+      "source_sha256": "97e5d20069e7eb4c9a4eb42b00de1919031e720caed4a3750978029cd174026e",
+      "uniform_reduction": 0.0935428058890146,
+      "source_crop": [
+        183,
+        209
+      ]
+    },
+    {
+      "native_id": 38,
+      "batch": 4,
+      "cell": 5,
+      "variant": 0,
+      "source_sha256": "97e5d20069e7eb4c9a4eb42b00de1919031e720caed4a3750978029cd174026e",
+      "uniform_reduction": 0.09706099598106821,
+      "source_crop": [
+        146,
+        197
+      ]
+    },
+    {
+      "native_id": 40,
+      "batch": 4,
+      "cell": 6,
+      "variant": 0,
+      "source_sha256": "97e5d20069e7eb4c9a4eb42b00de1919031e720caed4a3750978029cd174026e",
+      "uniform_reduction": 0.1149952223118304,
+      "source_crop": [
+        155,
+        161
+      ]
+    },
+    {
+      "native_id": 41,
+      "batch": 4,
+      "cell": 7,
+      "variant": 0,
+      "source_sha256": "97e5d20069e7eb4c9a4eb42b00de1919031e720caed4a3750978029cd174026e",
+      "uniform_reduction": 0.10316413658256342,
+      "source_crop": [
+        165,
+        163
+      ]
+    },
+    {
+      "native_id": 42,
+      "batch": 5,
+      "cell": 0,
+      "variant": 0,
+      "source_sha256": "4e1b9f224b024fef6f6d83488a88e7b0aa01517455b51334dfbded5b69e46f90",
+      "uniform_reduction": 0.09151578276928529,
+      "source_crop": [
+        190,
+        197
+      ]
+    },
+    {
+      "native_id": 43,
+      "batch": 5,
+      "cell": 1,
+      "variant": 0,
+      "source_sha256": "4e1b9f224b024fef6f6d83488a88e7b0aa01517455b51334dfbded5b69e46f90",
+      "uniform_reduction": 0.07877773517267021,
+      "source_crop": [
+        187,
+        183
+      ]
+    }
+  ],
+  "generations": {
+    "mica-0": {
+      "path": "$HOME/scratch/agent-tmp/talon-competition-20261110/raw/mica-0.png",
+      "columns": 8,
+      "prompt": "Precise pixel sprite transformation: input 1 is native miniature pose choreography, input 2 identity model sheet, input 3 approved character frame. Replace each native actor with MICA jade pangolin: overlapping jade scale plates NEVER quills, sand cream round face and pointed snout, pink ears, white gloves, coral boots tan soles, long scaled tail. Rolled frames a closed scale-armour ball. Retain EXACT pose and rotation for EACH frame, every limb contact/lift phase and native miniature squat large-head body proportions (NOT full-size height).  Crisp 16bit pixel sprites enlarged 8x on uniform #d0d0d0 background, no text or shadow. Exactly 4 columns x 2 rows per version. Provide two alternatives side by side (8 columns total x2 rows, 2048x768). Cell positions must match input. Preserve native pose's aspect ratio, proportion and direction, prioritize recognition at 20px tall."
+    },
+    "mica-1": {
+      "path": "$HOME/scratch/agent-tmp/talon-competition-20261110/raw/mica-1.png",
+      "columns": 8,
+      "prompt": "Precise pixel sprite transformation: input 1 is native miniature pose choreography, input 2 identity model sheet, input 3 approved character frame. Replace each native actor with MICA jade pangolin: overlapping jade scale plates NEVER quills, sand cream round face and pointed snout, pink ears, white gloves, coral boots tan soles, long scaled tail. Rolled frames a closed scale-armour ball. Retain EXACT pose and rotation for EACH frame, every limb contact/lift phase and native miniature squat large-head body proportions (NOT full-size height).  Crisp 16bit pixel sprites enlarged 8x on uniform #d0d0d0 background, no text or shadow. Exactly 4 columns x 2 rows per version. Provide two alternatives side by side (8 columns total x2 rows, 2048x768). Cell positions must match input. Preserve native pose's aspect ratio, proportion and direction, prioritize recognition at 20px tall."
+    },
+    "mica-2": {
+      "path": "$HOME/scratch/agent-tmp/talon-competition-20261110/raw/mica-2.png",
+      "columns": 8,
+      "prompt": "Precise pixel sprite transformation: input 1 is native miniature pose choreography, input 2 identity model sheet, input 3 approved character frame. Replace each native actor with MICA jade pangolin: overlapping jade scale plates NEVER quills, sand cream round face and pointed snout, pink ears, white gloves, coral boots tan soles, long scaled tail. Rolled frames a closed scale-armour ball. Retain EXACT pose and rotation for EACH frame, every limb contact/lift phase and native miniature squat large-head body proportions (NOT full-size height).  Crisp 16bit pixel sprites enlarged 8x on uniform #d0d0d0 background, no text or shadow. Exactly 4 columns x 2 rows per version. Provide two alternatives side by side (8 columns total x2 rows, 2048x768). Cell positions must match input. Preserve native pose's aspect ratio, proportion and direction, prioritize recognition at 20px tall."
+    },
+    "mica-3": {
+      "path": "$HOME/scratch/agent-tmp/talon-competition-20261110/raw/mica-3.png",
+      "columns": 8,
+      "prompt": "Precise pixel sprite transformation: input 1 is native miniature pose choreography, input 2 identity model sheet, input 3 approved character frame. Replace each native actor with MICA jade pangolin: overlapping jade scale plates NEVER quills, sand cream round face and pointed snout, pink ears, white gloves, coral boots tan soles, long scaled tail. Rolled frames a closed scale-armour ball. Retain EXACT pose and rotation for EACH frame, every limb contact/lift phase and native miniature squat large-head body proportions (NOT full-size height).  Crisp 16bit pixel sprites enlarged 8x on uniform #d0d0d0 background, no text or shadow. Exactly 4 columns x 2 rows per version. Provide two alternatives side by side (8 columns total x2 rows, 2048x768). Cell positions must match input. Preserve native pose's aspect ratio, proportion and direction, prioritize recognition at 20px tall."
+    },
+    "mica-4": {
+      "path": "$HOME/scratch/agent-tmp/talon-competition-20261110/raw/mica-4.png",
+      "columns": 8,
+      "prompt": "Precise pixel sprite transformation: input 1 is native miniature pose choreography, input 2 identity model sheet, input 3 approved character frame. Replace each native actor with MICA jade pangolin: overlapping jade scale plates NEVER quills, sand cream round face and pointed snout, pink ears, white gloves, coral boots tan soles, long scaled tail. Rolled frames a closed scale-armour ball. Retain EXACT pose and rotation for EACH frame, every limb contact/lift phase and native miniature squat large-head body proportions (NOT full-size height).  Crisp 16bit pixel sprites enlarged 8x on uniform #d0d0d0 background, no text or shadow. Exactly 4 columns x 2 rows per version. Provide two alternatives side by side (8 columns total x2 rows, 2048x768). Cell positions must match input. Preserve native pose's aspect ratio, proportion and direction, prioritize recognition at 20px tall."
+    },
+    "mica-5": {
+      "path": "$HOME/scratch/agent-tmp/talon-competition-20261110/raw/mica-5.png",
+      "columns": 8,
+      "prompt": "Precise pixel sprite transformation: input 1 is native miniature pose choreography, input 2 identity model sheet, input 3 approved character frame. Replace each native actor with MICA jade pangolin: overlapping jade scale plates NEVER quills, sand cream round face and pointed snout, pink ears, white gloves, coral boots tan soles, long scaled tail. Rolled frames a closed scale-armour ball. Retain EXACT pose and rotation for EACH frame, every limb contact/lift phase and native miniature squat large-head body proportions (NOT full-size height). Only cells containing actors need redrawing; leave empty cells blank. Crisp 16bit pixel sprites enlarged 8x on uniform #d0d0d0 background, no text or shadow. Exactly 4 columns x 2 rows per version. Provide two alternatives side by side (8 columns total x2 rows, 2048x768). Cell positions must match input. Preserve native pose's aspect ratio, proportion and direction, prioritize recognition at 20px tall."
+    }
+  },
+  "native_mapping_source": "docs/skdisasm/General/Sprites/Sonic/Map - Sonic 2P.asm",
+  "rom_sha1": "cfbf98c36c776677290a872547ac47c53d2761d6",
+  "reference_inputs": {
+    "model_sheet": "examples/mica-and-talon/concept/mica.png",
+    "approved_frame": "examples/mica-and-talon/art/mica/frames/wait-00.png",
+    "native_render_directory": "$HOME/scratch/agent-tmp/talon-competition-20261110/mica"
+  }
+}

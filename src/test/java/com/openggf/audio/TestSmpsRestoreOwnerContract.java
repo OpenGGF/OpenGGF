@@ -32,12 +32,14 @@ import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.util.HexFormat;
 import java.util.ArrayList;
@@ -397,13 +399,18 @@ class TestSmpsRestoreOwnerContract {
 
     @Test
     @RequiresRom(SonicGame.SONIC_2)
-    void unchangedRootFixedInputPcmWritesServicesAndLogicalState() throws Exception {
+    void unchangedRootFixedInputPcmWritesServicesAndLogicalState(@TempDir Path configDirectory) throws Exception {
         // Fixed, short in-memory oracle established before changing production.
         // These digests are engine-preservation evidence, not native parity.
         audio.resetState();
         audio.setBackend(new NullAudioBackend());
         EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
-        var config = SonicConfigurationService.createStandalone();
+        // The digests were recorded with the accurate FM core, so the core is
+        // named here. createStandalone() without a directory loads config.yaml
+        // from the working directory, which is the developer's own file: with
+        // audio.fmCore at its default (fast) there, every digest differs.
+        var config = SonicConfigurationService.createStandalone(configDirectory);
+        config.setConfigValue(SonicConfiguration.AUDIO_FM_CORE, "accurate");
         config.setConfigValue(SonicConfiguration.AUDIO_INTERNAL_RATE_OUTPUT, false);
         try (Rom rom = new Rom()) {
             assertTrue(rom.open(RomTestUtils.ensureSonic2RomAvailable().getAbsolutePath()));

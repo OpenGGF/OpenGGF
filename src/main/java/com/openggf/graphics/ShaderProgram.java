@@ -20,7 +20,7 @@ public class ShaderProgram {
     private int totalPaletteLinesLocation = -1;
     private int ghostModeLocation = -1;
     private int ghostAlphaLocation = -1;
-    private int presentationHueLocation=-1,presentationOpacityLocation=-1;
+    private int presentationHueLocation=-1,presentationOpacityLocation=-1,presentationTintLocation=-1;
     protected boolean uniformsCached = false;
 
     public int getProgramId() {
@@ -49,6 +49,7 @@ public class ShaderProgram {
         ghostAlphaLocation = glGetUniformLocation(programId, "GhostAlpha");
         presentationHueLocation=glGetUniformLocation(programId,"PresentationHue");
         presentationOpacityLocation=glGetUniformLocation(programId,"PresentationOpacity");
+        presentationTintLocation=glGetUniformLocation(programId,"PresentationTint");
         uniformsCached = true;
     }
 
@@ -97,8 +98,15 @@ public class ShaderProgram {
     }
 
     void setPresentationColor(float hue,float opacity) {
+        setPresentationColor(hue,opacity,0);
+    }
+
+    /** {@code tint} is 0xAARRGGBB: alpha is the blend weight toward the shaded RGB tint. */
+    void setPresentationColor(float hue,float opacity,int tint) {
         if(presentationHueLocation>=0) glUniform1f(presentationHueLocation,hue);
         if(presentationOpacityLocation>=0) glUniform1f(presentationOpacityLocation,opacity);
+        if(presentationTintLocation>=0) glUniform4f(presentationTintLocation,(tint>>16&255)/255f,
+                (tint>>8&255)/255f,(tint&255)/255f,(tint>>>24)/255f);
     }
 
     /**

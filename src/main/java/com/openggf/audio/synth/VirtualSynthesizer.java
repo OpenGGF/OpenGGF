@@ -41,6 +41,16 @@ public class VirtualSynthesizer implements SmpsLogicalWriteTarget {
     /** SN76489 stereo byte with every channel on both sides; the Mega Drive part has no stereo register. */
     private static final int PSG_PANNING_BOTH = 0xFF;
 
+    /*
+     * Presentation-only music/SFX balance. Each channel takes the gain of the
+     * track kind that last wrote to it; none of this is chip state, so
+     * snapshots and rewind neither capture nor restore it.
+     */
+    private final boolean[] fmSfxRole = new boolean[6];
+    private final boolean[] psgSfxRole = new boolean[4];
+    private int musicGain = FmChip.UNITY_GAIN;
+    private int sfxGain = FmChip.UNITY_GAIN;
+
     // Scratch buffers for render() to avoid per-call allocations.
     private int[] scratchLeft = new int[0];
     private int[] scratchRight = new int[0];
@@ -342,6 +352,34 @@ public class VirtualSynthesizer implements SmpsLogicalWriteTarget {
     @Override
     public void setInstrument(Object source, int channelId, byte[] voice) {
         ym.setInstrument(channelId, voice);
+    }
+
+    /** Sets the music and sound-effect gains, {@link FmChip#UNITY_GAIN} = 1.0. */
+    public void setMixGains(int musicGain, int sfxGain) {
+        this.musicGain = Math.clamp(musicGain, 0, FmChip.UNITY_GAIN);
+        this.sfxGain = Math.clamp(sfxGain, 0, FmChip.UNITY_GAIN);
+        for (int ch = 0; ch < fmSfxRole.length; ch++) {
+            ym.setOutputGain(ch, fmSfxRole[ch] ? this.sfxGain : this.musicGain);
+        }
+        for (int ch = 0; ch < psgSfxRole.length; ch++) {
+            psg.setOutputGain(ch, psgSfxRole[ch] ? this.sfxGain : this.musicGain);
+        }
+    }
+
+    /** Records whether a sound-effect track (rather than music) is now driving FM channel {@code ch}. */
+    public void markFmChannelRole(int ch, boolean sfx) {
+        if (ch >= 0 && ch < fmSfxRole.length && fmSfxRole[ch] != sfx) {
+            fmSfxRole[ch] = sfx;
+            ym.setOutputGain(ch, sfx ? sfxGain : musicGain);
+        }
+    }
+
+    /** Records whether a sound-effect track (rather than music) is now driving PSG channel {@code ch}. */
+    public void markPsgChannelRole(int ch, boolean sfx) {
+        if (ch >= 0 && ch < psgSfxRole.length && psgSfxRole[ch] != sfx) {
+            psgSfxRole[ch] = sfx;
+            psg.setOutputGain(ch, sfx ? sfxGain : musicGain);
+        }
     }
 
     @Override

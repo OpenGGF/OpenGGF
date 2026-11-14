@@ -422,6 +422,10 @@ public final class TraceCatalog {
         // metadata "act" is 1-indexed (Act 1 == 1). Engine's
         // LevelManager.loadZoneAndAct expects 0-indexed acts.
         int engineAct = Math.max(0, meta.act() - 1);
+        if (isS1Sbz3(meta.game(), romZoneId, meta.act())) {
+            engineZone = S1_PROGRESSION_SBZ;
+            engineAct = S1_SBZ3_ENGINE_ACT;
+        }
         return Optional.of(new TraceEntry(
                 dir,
                 meta.game(),
@@ -510,6 +514,22 @@ public final class TraceCatalog {
      * while the engine's {@code Sonic1ZoneRegistry} uses play order
      * (GHZ=0, MZ=1, SYZ=2, LZ=3, SLZ=4, SBZ=5, FZ=6).
      */
+    /** Engine progression index of S1 Scrap Brain Zone. */
+    static final int S1_PROGRESSION_SBZ = 5;
+    /** Engine act index the S1 registry gives SBZ3 (third SBZ act). */
+    static final int S1_SBZ3_ENGINE_ACT = 2;
+
+    /**
+     * Sonic 1 stores Scrap Brain Act 3 as Labyrinth act 4 ({@code id_LZ} act
+     * index 3, level index {@code $0103}), so its recorded metadata reads
+     * {@code zone_id 1, act 4}. The engine registry has no fourth LZ act and
+     * loads SBZ3 as Scrap Brain act index 2, as
+     * {@code TestS1Sbz3CompleteRunTraceReplay} does.
+     */
+    static boolean isS1Sbz3(String gameId, int romZoneId, int metadataAct) {
+        return "s1".equals(gameId) && romZoneId == 1 && metadataAct == 4;
+    }
+
     static int romZoneToProgressionIndex(String gameId, int romZoneId) {
         if ("s1".equals(gameId)) {
             return switch (romZoneId) {

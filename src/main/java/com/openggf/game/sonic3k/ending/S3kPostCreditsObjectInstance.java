@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.ending;
 
+import com.openggf.game.internal.EndingFormController;
+
 import com.openggf.game.GameOverExit;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
@@ -128,7 +130,7 @@ public final class S3kPostCreditsObjectInstance extends AbstractObjectInstance i
     private void initializeBanner() {
         // Obj_5EF68 (044fa46 sonic3k.asm:125563-125566): clr.b (Super_palette_status).w before the dispatch.
         if (services().playerQuery().mainPlayerOrNull() instanceof com.openggf.sprites.playable.AbstractPlayableSprite player
-                && player.getSuperStateController() instanceof com.openggf.game.sonic3k.Sonic3kSuperStateController powered)
+                && player.getSuperStateController() instanceof EndingFormController powered)
             powered.clearEndingPaletteStatus();
         try {
             var rom=services().romReader();
@@ -419,7 +421,9 @@ public final class S3kPostCreditsObjectInstance extends AbstractObjectInstance i
                     case 0 -> draw(S3kEndingArt.S3_GRAPHICS,childFrame,screenX+(tails||knux?-0x1C:0),screenY+(tails||knux?0x2C:0x40),false,0);
                     case 1 -> draw(S3kEndingArt.S3_GRAPHICS,tailsAnimation.mappingFrame,screenX+(tails?8:0x24),screenY+(tails?0x40:0x2C),false,0);
                     case 2 -> draw(S3kEndingArt.EYECATCH_KNUCKLES,knucklesAnimation.mappingFrame,screenX+(knux?0:tails?0x1C:-0x1C),screenY+(knux?0x40:0x2C),false,2);
-                    case 3 -> draw(S3kEndingArt.S3_GRAPHICS,tailAnimation.mappingFrame,screenX+(tails?8:0x24)-0x10,screenY+(tails?0x40:0x2C)+8,false,0);
+                    // loc_5F3EA is Tails's separate tail sprite; a custom body in the Tails seat is whole.
+                    case 3 -> { if(!EndingCharacterPresentation.supplies(seatSurface(tailsAnimation.mappingFrame),tailsAnimation.mappingFrame))
+                        draw(S3kEndingArt.S3_GRAPHICS,tailAnimation.mappingFrame,screenX+(tails?8:0x24)-0x10,screenY+(tails?0x40:0x2C)+8,false,0); }
                 }
             }
         } else if(phase==7&&!held) draw(Sonic3kObjectArtKeys.MECHA_SONIC,frame,screenX,screenY,false,-1);
@@ -437,6 +441,20 @@ public final class S3kPostCreditsObjectInstance extends AbstractObjectInstance i
             draw(S3kEndingArt.AND_KNUCKLES,2,screenX+(byte)rom.readU8(offset),screenY+(byte)rom.readU8(offset+1),false,-1);
         } catch(IOException failure) { throw new UncheckedIOException(failure); }
     }
+    /**
+     * The hero seat a Map_S3EndingGraphics frame belongs to, and whose art fills it. Sonic's
+     * figure is frames 1..4 (AniRaw_6025C / AniRaw_60260, sonic3k.asm:127343-127350) and Tails's
+     * body is frames $A/$B (AniRaw_6026B, sonic3k.asm:127351-127352). A Tails-role lead owns the
+     * Tails seat and any other lead the Sonic seat; the remaining seat is the partner's.
+     */
+    private com.openggf.game.EndingSpriteSet.Surface seatSurface(int mappingFrame) {
+        boolean sonicSeat = mappingFrame >= 1 && mappingFrame <= 4;
+        boolean tailsSeat = mappingFrame == 0xA || mappingFrame == 0xB;
+        if (!sonicSeat && !tailsSeat) return null;
+        boolean leadIsTails = character()==PlayerCharacter.TAILS_ALONE;
+        return leadIsTails == tailsSeat ? com.openggf.game.EndingSpriteSet.Surface.S3K_EYECATCH
+                : com.openggf.game.EndingSpriteSet.Surface.S3K_SOLO_EYECATCH;
+    }
     private void draw(String key,int mappingFrame,int x,int y,boolean flip,int palette) {
         var renderer=getRenderer(key); if(renderer==null||!renderer.isReady())return;
         var camera=services().camera();
@@ -445,6 +463,11 @@ public final class S3kPostCreditsObjectInstance extends AbstractObjectInstance i
                 key.equals(S3kEndingArt.AND_KNUCKLES)&&mappingFrame==1?6:
                 key.equals(S3kEndingArt.EGGMAN)||key.equals(S3kEndingArt.EGG_ROBO)||key.equals(Sonic3kObjectArtKeys.MECHA_SONIC)?4:3;
         services().graphicsManager().setCurrentSpriteSatBucket(bucket);
+        var seat = key.equals(S3kEndingArt.S3_GRAPHICS) ? seatSurface(mappingFrame) : null;
+        if (seat != null
+                && EndingCharacterPresentation.draw(services(), seat,
+                    mappingFrame, EndingScreenProjection.worldX(camera,x), EndingScreenProjection.worldY(camera,y),
+                    flip,false,false,bucket)) return;
         renderer.drawFrameIndex(mappingFrame,EndingScreenProjection.worldX(camera,x),EndingScreenProjection.worldY(camera,y),flip,false,palette);
     }
 }

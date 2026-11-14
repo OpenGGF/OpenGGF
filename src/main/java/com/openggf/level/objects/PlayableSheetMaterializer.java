@@ -29,26 +29,42 @@ public final class PlayableSheetMaterializer {
                         .toList()))
                 .toList();
         SpriteAnimationSet animations = new SpriteAnimationSet();
-        int id = 0;
-        for (var animation : sheet.animations().values()) {
-            animations.addScript(id++, materializeAnimation(animation));
+        var mappings = new ArrayList<>(base.frames().stream().map(BakedSheetReader.Frame::mapping).toList());
+        dplcs = new ArrayList<>(dplcs);
+        var strides = new java.util.EnumMap<com.openggf.game.CanonicalAnimation, Integer>(com.openggf.game.CanonicalAnimation.class);
+        for (var entry : sheet.animations().entrySet()) {
+            var canonical = com.openggf.game.CanonicalAnimation.valueOf(entry.getKey());
+            var animation = entry.getValue();
+            var script = materializeAnimation(animation);
+            if (animation.speedDriven()) {
+                int flag = switch (canonical) {
+                    case WALK, RUN -> 0xFF; case ROLL, ROLL2 -> 0xFE; case PUSH -> 0xFD;
+                    default -> throw new IOException("Unsupported speed-driven animation");
+                };
+                List<Integer> cycle = script.frames();
+                if (canonical == com.openggf.game.CanonicalAnimation.WALK || canonical == com.openggf.game.CanonicalAnimation.RUN) {
+                    // Native slope selector yields 0,2,4,6; pad each set to an even stride.
+                    int width = (cycle.size() + 1) & ~1;
+                    int first = mappings.size();
+                    for (int angle = 0; angle < 4; angle++) {
+                        var set = animation.slopes().isEmpty() ? cycle : animation.slopes().get(angle);
+                        for (int f = 0; f < width; f++) {
+                            int index = set.get(f % set.size());
+                            mappings.add(base.frames().get(index).mapping());
+                            dplcs.add(dplcs.get(index));
+                        }
+                    }
+                    strides.put(canonical, width / 2);
+                    cycle = java.util.stream.IntStream.range(0, cycle.size()).map(i -> first + i).boxed().toList();
+                }
+                script = new SpriteAnimationScript(flag, cycle, script.endAction(), script.endParam());
+            }
+            animations.addScript(canonical.ordinal(), script);
         }
-        SpriteAnimationProfile profile = new SpriteAnimationProfile() {
-            @Override public Integer resolveAnimationId(
-                    com.openggf.sprites.playable.AbstractPlayableSprite sprite,
-                    int frameCounter, int scriptCount) {
-                return scriptCount == 0 ? null : Math.max(0,
-                        Math.min(sprite.getAnimationId(), scriptCount - 1));
-            }
-            @Override public int resolveFrame(
-                    com.openggf.sprites.playable.AbstractPlayableSprite sprite,
-                    int frameCounter, int frameCount) {
-                return frameCount == 0 ? 0 : Math.floorMod(frameCounter, frameCount);
-            }
-        };
+        SpriteAnimationProfile profile = new PlayableSheetAnimationBinding.CanonicalProfile(strides, sheet.nativeFrames());
         int delay = base.frames().isEmpty() ? 0 : base.frames().getFirst().delay();
         SpriteArtSet art = new SpriteArtSet(base.patterns(),
-                base.frames().stream().map(BakedSheetReader.Frame::mapping).toList(), dplcs,
+                mappings, dplcs,
                 sheet.meta().paletteLine(), sheet.meta().basePatternIndex(), delay,
                 sheet.meta().bankSize(), profile, animations);
         return new MaterializedArt(art, materializePalette(base));
@@ -79,9 +95,18 @@ public final class PlayableSheetMaterializer {
             }
             for (int i = 0; i < repeats; i++) frames.add(step.frameIndex());
         }
-        boolean loop = animation.steps().getLast().loop();
+        // $FE subtracts from the position of the terminator: repeat the final N
+        // entries: SAnim_End_FE (s2.asm:38430-38437). Authored steps may
+        // expand to several runtime timer entries.
+        int param = 0;
+        if (animation.endAction() == SpriteAnimationEndAction.LOOP_BACK) {
+            for (int i = animation.steps().size() - animation.loopBackSteps(); i < animation.steps().size(); i++)
+                param += animation.steps().get(i).duration() / quantum;
+        } else if (animation.endAction() == SpriteAnimationEndAction.SWITCH) {
+            param = com.openggf.game.CanonicalAnimation.valueOf(animation.nextAnimation()).ordinal();
+        }
         return new SpriteAnimationScript(Math.max(0, quantum - 1), List.copyOf(frames),
-                loop ? SpriteAnimationEndAction.LOOP : SpriteAnimationEndAction.HOLD, 0);
+                animation.endAction(), param);
     }
 
     private static Palette materializePalette(BakedSheetReader.BakedSheet base) throws IOException {

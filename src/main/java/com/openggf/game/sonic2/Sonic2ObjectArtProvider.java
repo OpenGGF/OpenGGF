@@ -215,8 +215,13 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider, HudSatLayoutS
         sheetOrder.clear();
         rendererOrder.clear();
 
+        var characterPresentation = Sonic2CharacterPresentation.resolve(
+                GameServices.module(), GameServices.configuration());
+
         // === Manual art (not in PLCs or needs complex construction) ===
-        registerSheet(ObjectArtKeys.MONITOR, artData.monitorSheet());
+        registerSheet(ObjectArtKeys.MONITOR, com.openggf.game.presentation.CharacterIconPalette.monitor(
+                artData.monitorSheet(), characterPresentation,
+                com.openggf.game.CharacterPresentation.Host.S2, Sonic2ObjectArt.MONITOR_LIFE_ICON_TILE));
         registerSheet(Sonic2ObjectArtKeys.WATERFALL, artData.waterfallSheet());
         registerSheet(ObjectArtKeys.ANIMAL, Sonic2PlcArtSlots.detached(artData.animalSheet()));
         registerEagerSheets(zoneIndex);
@@ -296,7 +301,9 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider, HudSatLayoutS
         registerSheet(ObjectArtKeys.GAME_OVER, artLoader.loadGameOverSheet());
 
         // === Results screen (separate namespace) ===
-        resultsSheet = java.util.Objects.requireNonNull(resultsSheetOverlay.apply(artData.resultsSheet()));
+        resultsSheet = Sonic2ResultsName.apply(GameServices.rom().getRom(),
+                java.util.Objects.requireNonNull(resultsSheetOverlay.apply(artData.resultsSheet())),
+                characterPresentation);
         resultsRenderer = new PatternSpriteRenderer(resultsSheet);
         sheets.put(ObjectArtKeys.RESULTS, resultsSheet);
         renderers.put(ObjectArtKeys.RESULTS, resultsRenderer);
@@ -324,11 +331,12 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider, HudSatLayoutS
         if (!overrideLivesArtFromPatch()) {
             overrideLivesArtFromDonor();
         }
+        hudLivesPatterns = Sonic2CharacterPresentation.hud(GameServices.rom().getRom(), hudLivesPatterns, characterPresentation);
         rebuildHudStaticArt();
 
         // The 1-up monitor icon shares VRAM with the life counter, so it must show
         // the same main-character face the HUD does (Tails-alone / Knuckles lock-on).
-        overrideMonitorIconArtForMainCharacter();
+        overrideMonitorIconArtForMainCharacter(characterPresentation);
         applySheetPatches();
 
         // Obj28 and Obj58 consume native tile ranges, not private asset identities.
@@ -707,12 +715,14 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider, HudSatLayoutS
      * replace it for Tails-alone and Knuckles games. We mirror that here so the standard
      * monitor shows the lead character's face. (s2.asm:89193, 89271)
      */
-    private void overrideMonitorIconArtForMainCharacter() {
+    private void overrideMonitorIconArtForMainCharacter(
+            com.openggf.game.CharacterPresentation presentation) throws IOException {
         if (artData == null || artData.monitorSheet() == null) {
             return;
         }
         String mainChar = ActiveGameplayTeamResolver.resolveMainCharacterCode(GameServices.configuration());
-        Pattern[] lifeArt = resolveMonitorIconLifeArt(mainChar);
+        Pattern[] lifeArt = Sonic2CharacterPresentation.oneUp(presentation);
+        if (lifeArt == null) lifeArt = resolveMonitorIconLifeArt(mainChar);
         if (lifeArt == null || lifeArt.length == 0) {
             return; // Sonic (the default already loaded), or Knuckles without an active donor
         }

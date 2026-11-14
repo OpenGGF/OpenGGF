@@ -1,0 +1,53 @@
+{
+  "origin": "Lane A title round2, based on 7a5d73912b, 2026-11-10",
+  "method": "Fresh built-in GPT Image native-pose transformations; native title palette renders enlarged8x nearest, approved model sheets and core WAIT references. Per-frame two alternatives; no chained edits. Alpha threshold128, fixed15colour nearest palette, native canvas/hotspots. Detached entrance spark components discarded. No decoded native art packaged.",
+  "scratch": "$HOME/scratch/agent-tmp/title-r2-s1s2",
+  "prompts": {
+    "shared": "Match native 1991/1992 title cel sprite style, dark one-pixel outline,2shade steps,upper-left light,15colours. Use native only for pose/hotspots. MICA has jade overlapping rounded scale dome never quills, cream tapered pangolin snout, long lashes separate brown eyes, coral ears. Glove IN FRONT of scales.",
+    "s1": "Two alternatives per native selector0..7 with native head/torso/hand pose. Corrective selector4: head LEFT, index glove RIGHT; prior right-facing generation rejected. Gold alternatives rejected.",
+    "s2_talon": "4columns selectors5,6,7,18 x2independent attempts, folded compact connected wings, slate falcon crest, amber goggles, hooked yellow beak, cream barred chest, no separate glove or hand or rotor. Top row selected; lower row ragged chest rejected.",
+    "s2_mica": "5columns native Tails selectors0..4 x2alternatives. Original palm attempt rejected. Corrective fresh bust: HER RIGHT hand to screenLEFT, palm viewer, curled fingers horizontal arcs, thumb viewerRIGHT, cuff belowRIGHT. Two alternatives; left selected. First2 entrance poses retain native tilt; cell1 mirrored to native facing. HAND19 transparent because entire gesture integrated BODY2..4."
+  },
+  "frames": [
+    {
+      "game": "S2",
+      "character": "talon",
+      "selector": 5,
+      "native_area": 3605,
+      "authored_area": 3167,
+      "source_sha256": "d0b4199ac04c3838f5bb994192bb2de4306e97cc6a9f58ecaa224002d69dd196",
+      "selection": "top row; lower row rejected for ragged chest edge"
+    },
+    {
+      "game": "S2",
+      "character": "talon",
+      "selector": 6,
+      "native_area": 4161,
+      "authored_area": 4426,
+      "source_sha256": "d0b4199ac04c3838f5bb994192bb2de4306e97cc6a9f58ecaa224002d69dd196",
+      "selection": "top row; lower row rejected for ragged chest edge"
+    },
+    {
+      "game": "S2",
+      "character": "talon",
+      "selector": 7,
+      "native_area": 3798,
+      "authored_area": 3853,
+      "source_sha256": "d0b4199ac04c3838f5bb994192bb2de4306e97cc6a9f58ecaa224002d69dd196",
+      "selection": "top row; lower row rejected for ragged chest edge"
+    },
+    {
+      "game": "S2",
+      "character": "talon",
+      "selector": 18,
+      "native_area": 3744,
+      "authored_area": 3980,
+      "source_sha256": "d0b4199ac04c3838f5bb994192bb2de4306e97cc6a9f58ecaa224002d69dd196",
+      "selection": "top row; lower row rejected for ragged chest edge"
+    }
+  ],
+  "size_checks": {
+    "S2": 1.0038467949697802
+  },
+  "limits": "Visual acceptance is MICA lead / TALON sidekick pair and S1 MICA. Inherited alternate-role art unchanged except native S2 origins; native title object timing retained."
+}

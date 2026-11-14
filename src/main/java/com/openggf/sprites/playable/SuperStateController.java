@@ -221,6 +221,11 @@ public abstract class SuperStateController {
         ringDrainCounter = rewindState.ringDrainCounter();
     }
 
+    /** The ordinary art owner supplies this before a scene can borrow another profile. */
+    void bindNormalAnimationProfile(SpriteAnimationProfile profile) {
+        normalAnimProfile = profile instanceof ScriptedVelocityAnimationProfile ? profile : null;
+    }
+
     protected final void reconcileRewindPhysicsAndAnimationProfile(boolean activeSuper) {
         PlayableSpriteInternalAccess.installSuperPhysicsProfile(player, this, activeSuper ? getSuperProfile() : getNormalProfile());
         SpriteAnimationProfile current = player.getAnimationProfile();
@@ -330,7 +335,10 @@ public abstract class SuperStateController {
     }
 
     /** Character-roster eligibility gate shared by every transformation entry point. */
+    protected boolean isTransformationEnabled() { return true; }
+
     private boolean transformationSupported() {
+        if (!isTransformationEnabled()) return false;
         com.openggf.game.CharacterKey key = player.boundCharacterKey;
         if (key == null) return false;
         if (key.isBuiltin()) return true;

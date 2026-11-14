@@ -1,0 +1,226 @@
+[
+  {
+    "id": 0,
+    "file": "../../../art/talon/continue/s2-00.png",
+    "dimensions": [
+      28,
+      32
+    ],
+    "hotspot": [
+      14,
+      16
+    ],
+    "native_source_label": "nag/2",
+    "source": "$HOME/scratch/agent-tmp/talon-presentation-20261110/continue-s2.json"
+  },
+  {
+    "id": 1,
+    "file": "../../../art/talon/continue/s2-01.png",
+    "dimensions": [
+      28,
+      32
+    ],
+    "hotspot": [
+      14,
+      16
+    ],
+    "native_source_label": "nag/3",
+    "source": "$HOME/scratch/agent-tmp/talon-presentation-20261110/continue-s2.json"
+  },
+  {
+    "id": 2,
+    "file": "../../../art/talon/continue/s2-02.png",
+    "dimensions": [
+      18,
+      24
+    ],
+    "hotspot": [
+      1,
+      0
+    ],
+    "native_source_label": "icon/4",
+    "source": "$HOME/scratch/agent-tmp/talon-presentation-20261110/continue-s2.json"
+  },
+  {
+    "id": 3,
+    "file": "../../../art/talon/continue/s2-03.png",
+    "dimensions": [
+      18,
+      24
+    ],
+    "hotspot": [
+      1,
+      0
+    ],
+    "native_source_label": "icon/5",
+    "source": "$HOME/scratch/agent-tmp/talon-presentation-20261110/continue-s2.json"
+  },
+  {
+    "id": 4,
+    "file": "../../../art/talon/continue/s2-04.png",
+    "dimensions": [
+      32,
+      32
+    ],
+    "hotspot": [
+      22,
+      20
+    ],
+    "native_source_label": "player/14",
+    "source": "$HOME/scratch/agent-tmp/talon-presentation-20261110/continue-s2.json"
+  },
+  {
+    "id": 5,
+    "file": "../../../art/talon/continue/s2-05.png",
+    "dimensions": [
+      33,
+      32
+    ],
+    "hotspot": [
+      22,
+      16
+    ],
+    "native_source_label": "player/15",
+    "source": "$HOME/scratch/agent-tmp/talon-presentation-20261110/continue-s2.json"
+  },
+  {
+    "id": 6,
+    "file": "../../../art/talon/continue/s2-06.png",
+    "dimensions": [
+      33,
+      32
+    ],
+    "hotspot": [
+      22,
+      16
+    ],
+    "native_source_label": "player/16",
+    "source": "$HOME/scratch/agent-tmp/talon-presentation-20261110/continue-s2.json"
+  },
+  {
+    "id": 7,
+    "file": "../../../art/talon/continue/s2-07.png",
+    "dimensions": [
+      26,
+      32
+    ],
+    "hotspot": [
+      20,
+      16
+    ],
+    "native_source_label": "player/17",
+    "source": "$HOME/scratch/agent-tmp/talon-presentation-20261110/continue-s2.json"
+  },
+  {
+    "id": 8,
+    "file": "../../../art/talon/continue/s2-08.png",
+    "dimensions": [
+      30,
+      32
+    ],
+    "hotspot": [
+      21,
+      20
+    ],
+    "native_source_label": "player/18",
+    "source": "$HOME/scratch/agent-tmp/talon-presentation-20261110/continue-s2.json"
+  },
+  {
+    "id": 9,
+    "file": "../../../art/talon/continue/s2-09.png",
+    "dimensions": [
+      30,
+      32
+    ],
+    "hotspot": [
+      21,
+      16
+    ],
+    "native_source_label": "player/19",
+    "source": "$HOME/scratch/agent-tmp/talon-presentation-20261110/continue-s2.json"
+  },
+  {
+    "id": 10,
+    "file": "../../../art/talon/continue/s2-10.png",
+    "dimensions": [
+      35,
+      32
+    ],
+    "hotspot": [
+      23,
+      16
+    ],
+    "native_source_label": "player/20",
+    "source": "$HOME/scratch/agent-tmp/talon-presentation-20261110/continue-s2.json"
+  },
+  {
+    "id": 11,
+    "file": "../../../art/talon/continue/s2-11.png",
+    "dimensions": [
+      34,
+      32
+    ],
+    "hotspot": [
+      24,
+      16
+    ],
+    "native_source_label": "player/21",
+    "source": "$HOME/scratch/agent-tmp/talon-presentation-20261110/continue-s2.json"
+  },
+  {
+    "id": 12,
+    "file": "../../../art/talon/continue/s2-12.png",
+    "dimensions": [
+      27,
+      32
+    ],
+    "hotspot": [
+      16,
+      16
+    ],
+    "native_source_label": "player/46",
+    "source": "$HOME/scratch/agent-tmp/talon-presentation-20261110/continue-s2.json"
+  },
+  {
+    "id": 13,
+    "file": "../../../art/talon/continue/s2-13.png",
+    "dimensions": [
+      32,
+      32
+    ],
+    "hotspot": [
+      20,
+      16
+    ],
+    "native_source_label": "player/47",
+    "source": "$HOME/scratch/agent-tmp/talon-presentation-20261110/continue-s2.json"
+  },
+  {
+    "id": 14,
+    "file": "../../../art/talon/continue/s2-14.png",
+    "dimensions": [
+      31,
+      31
+    ],
+    "hotspot": [
+      19,
+      16
+    ],
+    "native_source_label": "player/48",
+    "source": "$HOME/scratch/agent-tmp/talon-presentation-20261110/continue-s2.json"
+  },
+  {
+    "id": 15,
+    "file": "../../../art/talon/continue/s2-15.png",
+    "dimensions": [
+      32,
+      32
+    ],
+    "hotspot": [
+      20,
+      16
+    ],
+    "native_source_label": "player/49",
+    "source": "$HOME/scratch/agent-tmp/talon-presentation-20261110/continue-s2.json"
+  }
+]

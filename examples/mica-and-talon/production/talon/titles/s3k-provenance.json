@@ -1,0 +1,57 @@
+{
+  "native_areas": [
+    104,
+    173,
+    239,
+    351,
+    825,
+    7210,
+    52124,
+    40910,
+    23873,
+    18713,
+    15335,
+    11444
+  ],
+  "authored_areas": [
+    112,
+    196,
+    294,
+    378,
+    731,
+    6272,
+    66960,
+    52470,
+    20767,
+    16677,
+    19861,
+    10569
+  ],
+  "sqrt_mean_area_ratio": 1.0677183773988803,
+  "method": "Built-in GPT Image native-pose transformation; separate 8x nearest native references, native box and hotspots, fixed character palette",
+  "selection": "Take A selected. Corrective native-pose generation supplies frames C/D and matched wink variants. Static hand is split into selector 4; generated finger selectors 0/1 replace it without duplicating a hand. Native object origins remain unchanged; authored hotspots follow anatomy.",
+  "finger_native_areas": [
+    1951,
+    1966
+  ],
+  "finger_authored_areas": [
+    1728,
+    1944
+  ],
+  "finger_sqrt_mean_area_ratio": 0.9682211171697659,
+  "sources": {
+    "talon-s1-attempts.png": "0d2416fde6253465af1b876fc37f345b2749e0d0268fec77d73c4af0ed9b1790",
+    "talon-s2-attempts.png": "b2c95d3f5b4eb3b3b7702e40864b1b831476a185e9092f42154f5c4b9474faa0",
+    "talon-s3k-attempts.png": "ccd0fdb8d37ba4802eec87668cf4bd137f4fc9dd2b989bcdd0ef696503934df2",
+    "talon-portrait-attempts.png": "12c13cd4024a41d5ac45d712fe51c6bc38d900e0bf1a609ee1933169a21cf179"
+  },
+  "wink_native_areas": [
+    1378,
+    1402
+  ],
+  "wink_authored_areas": [
+    1535,
+    1535
+  ],
+  "wink_sqrt_mean_area_ratio": 1.0508646662451784
+}

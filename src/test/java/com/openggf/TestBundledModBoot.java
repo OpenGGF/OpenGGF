@@ -64,7 +64,9 @@ class TestBundledModBoot {
         ModManagerScreen.RowView row = screen.rows().getFirst();
         assertTrue(row.enabled());
         assertEquals(List.of("BUNDLED"), row.badges(), "bundled code needs no trust prompt");
-        assertTrue(screen.detailLines().stream().anyMatch(line -> line.startsWith("Bundled with OpenGGF")));
+        assertTrue(screen.detailLines().contains("BUNDLED"));
+        assertFalse(screen.detailLines().stream().anyMatch(line -> line.contains("enabled by default")),
+                "bundled status alone must not claim an enable default");
     }
 
     @Test void explicitDisablePersistsWithoutTrustAcrossAnUpgradeAndCanBeReversed() throws Exception {

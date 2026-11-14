@@ -5,3 +5,6 @@ frames:
   - delay: 8
     pieces:
       - { sourceX: 0, sourceY: 0, widthPixels: 8, heightPixels: 8, xOffset: -4, yOffset: -4, hFlip: false, vFlip: false, paletteIndex: 0, priority: false }
+
+animations:
+  WAIT: { frames: [0], durations: [8], end: loop }

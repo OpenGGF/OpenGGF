@@ -1,0 +1,391 @@
+host,native_id,key,canonical_fallback,mapping_evidence
+s2,00,family-blank/0,NULL_ANIM,empty native sentinel
+s2,01,family-wait/0,WAIT,Map_Tails_0118 (docs/s2disasm/mappings/sprite/Tails.asm:145)
+s2,02,family-wait/1,WAIT,Map_Tails_012A (docs/s2disasm/mappings/sprite/Tails.asm:150)
+s2,03,family-wait/2,WAIT,Map_Tails_013C (docs/s2disasm/mappings/sprite/Tails.asm:155)
+s2,04,family-look-up/0,LOOK_UP,Map_Tails_014E (docs/s2disasm/mappings/sprite/Tails.asm:160)
+s2,05,family-wait/3,WAIT,Map_Tails_0160 (docs/s2disasm/mappings/sprite/Tails.asm:165)
+s2,06,family-wait/4,WAIT,Map_Tails_016A (docs/s2disasm/mappings/sprite/Tails.asm:169)
+s2,07,family-wait/5,WAIT,Map_Tails_0174 (docs/s2disasm/mappings/sprite/Tails.asm:173)
+s2,08,family-wait/6,WAIT,Map_Tails_0186 (docs/s2disasm/mappings/sprite/Tails.asm:178)
+s2,09,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,Map_Tails_0198
+s2,0A,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,Map_Tails_01A2
+s2,0B,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,Map_Tails_01AC
+s2,0C,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,Map_Tails_01B6
+s2,0D,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,Map_Tails_01C0
+s2,0E,family-walk/6,WALK,Map_Tails_01CA (docs/s2disasm/mappings/sprite/Tails.asm:203)
+s2,0F,family-walk/7,WALK,Map_Tails_01E4 (docs/s2disasm/mappings/sprite/Tails.asm:209)
+s2,10,family-walk/0,WALK,Map_Tails_01FE (docs/s2disasm/mappings/sprite/Tails.asm:215)
+s2,11,family-walk/1,WALK,Map_Tails_0218 (docs/s2disasm/mappings/sprite/Tails.asm:221)
+s2,12,family-walk/2,WALK,Map_Tails_0232 (docs/s2disasm/mappings/sprite/Tails.asm:227)
+s2,13,family-walk/3,WALK,Map_Tails_024C (docs/s2disasm/mappings/sprite/Tails.asm:233)
+s2,14,family-walk/4,WALK,Map_Tails_0266 (docs/s2disasm/mappings/sprite/Tails.asm:239)
+s2,15,family-walk/5,WALK,Map_Tails_0280 (docs/s2disasm/mappings/sprite/Tails.asm:245)
+s2,16,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,Map_Tails_029A
+s2,17,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,Map_Tails_02B4
+s2,18,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,Map_Tails_02CE
+s2,19,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,Map_Tails_02E8
+s2,1A,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,Map_Tails_0302
+s2,1B,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,Map_Tails_031C
+s2,1C,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,Map_Tails_0336
+s2,1D,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,Map_Tails_0350
+s2,1E,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,Map_Tails_036A
+s2,1F,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,Map_Tails_0384
+s2,20,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,Map_Tails_039E
+s2,21,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,Map_Tails_03B8
+s2,22,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,Map_Tails_03D2
+s2,23,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,Map_Tails_03EC
+s2,24,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,Map_Tails_0406
+s2,25,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,Map_Tails_0420
+s2,26,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,Map_Tails_043A
+s2,27,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,Map_Tails_044C
+s2,28,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,Map_Tails_0466
+s2,29,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,Map_Tails_0478
+s2,2A,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,Map_Tails_0492
+s2,2B,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,Map_Tails_04A4
+s2,2C,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,Map_Tails_04BE
+s2,2D,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,Map_Tails_04D0
+s2,2E,family-run/0,RUN,Map_Tails_04EA (docs/s2disasm/mappings/sprite/Tails.asm:391)
+s2,2F,family-run/1,RUN,Map_Tails_04FC (docs/s2disasm/mappings/sprite/Tails.asm:396)
+s2,30,family-run/2,RUN,Map_Tails_050E (docs/s2disasm/mappings/sprite/Tails.asm:401)
+s2,31,family-run/3,RUN,Map_Tails_0520 (docs/s2disasm/mappings/sprite/Tails.asm:406)
+s2,32,family-run/0,RUN,Map_Tails_0532 (docs/s2disasm/mappings/sprite/Tails.asm:411)
+s2,33,family-run/1,RUN,Map_Tails_0544 (docs/s2disasm/mappings/sprite/Tails.asm:416)
+s2,34,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,Map_Tails_0556
+s2,35,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,Map_Tails_0570
+s2,36,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,Map_Tails_058A
+s2,37,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,Map_Tails_05A4
+s2,38,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,Map_Tails_05BE
+s2,39,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,Map_Tails_05D8
+s2,3A,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,Map_Tails_05F2
+s2,3B,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,Map_Tails_060C
+s2,3C,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,Map_Tails_0626
+s2,3D,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,Map_Tails_060C
+s2,3E,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,Map_Tails_0640
+s2,3F,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,Map_Tails_065A
+s2,40,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,Map_Tails_0674
+s2,41,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,Map_Tails_068E
+s2,42,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,Map_Tails_06A8
+s2,43,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,Map_Tails_06C2
+s2,44,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,Map_Tails_06DC
+s2,45,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,Map_Tails_06F6
+s2,46,family-roll/3,ROLL,Map_Tails_0710 (docs/s2disasm/mappings/sprite/Tails.asm:523)
+s2,47,family-roll/2,ROLL,Map_Tails_071A (docs/s2disasm/mappings/sprite/Tails.asm:527)
+s2,48,family-roll/1,ROLL,Map_Tails_0724 (docs/s2disasm/mappings/sprite/Tails.asm:531)
+s2,49,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,Map_Tails_072E
+s2,4A,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,Map_Tails_0738
+s2,4B,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,Map_Tails_0742
+s2,4C,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,Map_Tails_074C
+s2,4D,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,Map_Tails_0756
+s2,4E,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,Map_Tails_0760
+s2,4F,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,Map_Tails_076A
+s2,50,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,Map_Tails_0774
+s2,51,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,Map_Tails_077E
+s2,52,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,Map_Tails_0788
+s2,53,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,Map_Tails_0792
+s2,54,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,Map_Tails_079C
+s2,55,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,Map_Tails_07A6
+s2,56,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,Map_Tails_07B0
+s2,57,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,Map_Tails_07BA
+s2,58,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,Map_Tails_07C4
+s2,59,family-spring/0,SPRING,Map_Tails_07CE (docs/s2disasm/mappings/sprite/Tails.asm:599)
+s2,5A,family-spring/1,SPRING,Map_Tails_07E0 (docs/s2disasm/mappings/sprite/Tails.asm:604)
+s2,5B,family-duck/0,DUCK,Map_Tails_07F2 (docs/s2disasm/mappings/sprite/Tails.asm:609)
+s2,5C,family-hurt/0,HURT,Map_Tails_07FC (docs/s2disasm/mappings/sprite/Tails.asm:613)
+s2,5D,family-burnt/0,BURNT,Map_Tails_0806 (docs/s2disasm/mappings/sprite/Tails.asm:617)
+s2,5E,flight/body-0,TAILS_FLY,Map_Tails_0810 (docs/s2disasm/mappings/sprite/Tails.asm:621)
+s2,5F,flight/body-1,TAILS_FLY,Map_Tails_0822 (docs/s2disasm/mappings/sprite/Tails.asm:626)
+s2,60,family-spindash/1,SPINDASH,Map_Tails_0834 (docs/s2disasm/mappings/sprite/Tails.asm:631)
+s2,61,family-spindash/2,SPINDASH,Map_Tails_083E (docs/s2disasm/mappings/sprite/Tails.asm:635)
+s2,62,family-spindash/3,SPINDASH,Map_Tails_0848 (docs/s2disasm/mappings/sprite/Tails.asm:639)
+s2,63,family-push/0,PUSH,Map_Tails_0852 (docs/s2disasm/mappings/sprite/Tails.asm:643)
+s2,64,family-push/1,PUSH,Map_Tails_0864 (docs/s2disasm/mappings/sprite/Tails.asm:648)
+s2,65,family-push/2,PUSH,Map_Tails_0876 (docs/s2disasm/mappings/sprite/Tails.asm:653)
+s2,66,family-push/3,PUSH,Map_Tails_0888 (docs/s2disasm/mappings/sprite/Tails.asm:658)
+s2,67,family-skid/0,SKID,Map_Tails_089A (docs/s2disasm/mappings/sprite/Tails.asm:663)
+s2,68,family-skid/1,SKID,Map_Tails_08AC (docs/s2disasm/mappings/sprite/Tails.asm:668)
+s2,69,family-balance/0,BALANCE,Map_Tails_08BE (docs/s2disasm/mappings/sprite/Tails.asm:673)
+s2,6A,family-balance/1,BALANCE,Map_Tails_08D0 (docs/s2disasm/mappings/sprite/Tails.asm:678)
+s2,6B,family-hurt-fall/0,SLIDE,Map_Tails_08E2 (docs/s2disasm/mappings/sprite/Tails.asm:683)
+s2,6C,family-hang/0,HANG,Map_Tails_08EC (docs/s2disasm/mappings/sprite/Tails.asm:687)
+s2,6D,family-hang/1,HANG,Map_Tails_08FE (docs/s2disasm/mappings/sprite/Tails.asm:692)
+s2,6E,family-float2/0,FLOAT,Map_Tails_0910 (docs/s2disasm/mappings/sprite/Tails.asm:697)
+s2,6F,family-float2/2,FLOAT2,Map_Tails_0922 (docs/s2disasm/mappings/sprite/Tails.asm:702)
+s2,70,family-float2/4,FLOAT2,Map_Tails_0934 (docs/s2disasm/mappings/sprite/Tails.asm:707)
+s2,71,family-float2/5,FLOAT2,Map_Tails_0946 (docs/s2disasm/mappings/sprite/Tails.asm:712)
+s2,72,family-float2/7,FLOAT2,Map_Tails_0958 (docs/s2disasm/mappings/sprite/Tails.asm:717)
+s2,73,family-float2/1,FLOAT,Map_Tails_096A (docs/s2disasm/mappings/sprite/Tails.asm:722)
+s2,74,family-bubble/0,BUBBLE,Map_Tails_097C (docs/s2disasm/mappings/sprite/Tails.asm:727)
+s2,75,gravity-loop/0,ROLL,Map_Tails_0986 (docs/s2disasm/mappings/sprite/Tails.asm:731)
+s2,76,gravity-loop/1,ROLL,Map_Tails_0990 (docs/s2disasm/mappings/sprite/Tails.asm:735)
+s2,77,gravity-loop/2,ROLL,Map_Tails_09A2 (docs/s2disasm/mappings/sprite/Tails.asm:740)
+s2,78,gravity-loop/3,ROLL,Map_Tails_09AC (docs/s2disasm/mappings/sprite/Tails.asm:744)
+s2,79,gravity-loop/4,ROLL,Map_Tails_09B6 (docs/s2disasm/mappings/sprite/Tails.asm:748)
+s2,7A,gravity-loop/5,ROLL,Map_Tails_09C0 (docs/s2disasm/mappings/sprite/Tails.asm:752)
+s2,7B,gravity-loop/6,ROLL,Map_Tails_09CA (docs/s2disasm/mappings/sprite/Tails.asm:756)
+s2,7C,gravity-loop/7,ROLL,Map_Tails_09D4 (docs/s2disasm/mappings/sprite/Tails.asm:760)
+s2,7D,gravity-loop/8,ROLL,Map_Tails_09DE (docs/s2disasm/mappings/sprite/Tails.asm:764)
+s2,7E,gravity-loop/9,ROLL,Map_Tails_09E8 (docs/s2disasm/mappings/sprite/Tails.asm:768)
+s2,7F,gravity-loop/10,ROLL,Map_Tails_09F2 (docs/s2disasm/mappings/sprite/Tails.asm:772)
+s2,80,gravity-loop/11,ROLL,Map_Tails_0A04 (docs/s2disasm/mappings/sprite/Tails.asm:777)
+s2,81,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,Map_Tails_0A16
+s2,82,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,Map_Tails_0A20
+s2,83,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,Map_Tails_0A2A
+s2,84,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,Map_Tails_0A34
+s2,85,family-hang2/0,HANG2,Map_Tails_0A3E (docs/s2disasm/mappings/sprite/Tails.asm:798)
+s2,86,family-hang2/1,HANG2,Map_Tails_0A50 (docs/s2disasm/mappings/sprite/Tails.asm:803)
+s2,87,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,Map_Tails_0A62
+s2,88,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,Map_Tails_0A6C
+s2,89,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,Map_Tails_0A76
+s2,8A,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,Map_Tails_0A80
+s3k,00,family-blank/0,BLANK,empty native sentinel
+s3k,01,object-walk/0,WALK,word_1490B0 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:255)
+s3k,02,object-walk/1,WALK,word_1490CA (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:260)
+s3k,03,object-walk/2,WALK,word_1490E4 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:265)
+s3k,04,object-walk/3,WALK,word_1490F8 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:269)
+s3k,05,object-walk/4,WALK,word_149112 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:274)
+s3k,06,object-walk/5,WALK,word_14912C (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:279)
+s3k,07,object-walk/6,WALK,word_149146 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:284)
+s3k,08,object-walk/7,WALK,word_14915A (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:288)
+s3k,09,object-walk-up45/0,WALK,word_149174 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:293)
+s3k,0A,object-walk-up45/1,WALK,word_14918E (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:298)
+s3k,0B,object-walk-up45/2,WALK,word_1491A2 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:302)
+s3k,0C,object-walk-up45/3,WALK,word_1491BC (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:307)
+s3k,0D,object-walk-up45/4,WALK,word_1491D0 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:311)
+s3k,0E,object-walk-up45/5,WALK,word_1491E4 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:315)
+s3k,0F,object-walk-up45/6,WALK,word_1491F8 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:319)
+s3k,10,object-walk-up45/7,WALK,word_14920C (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:323)
+s3k,11,object-walk-steep/0,WALK,word_149226 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:328)
+s3k,12,object-walk-steep/1,WALK,word_14923A (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:332)
+s3k,13,object-walk-steep/2,WALK,word_14924E (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:336)
+s3k,14,object-walk-steep/3,WALK,word_149262 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:340)
+s3k,15,object-walk-steep/4,WALK,word_149270 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:343)
+s3k,16,object-walk-steep/5,WALK,word_149284 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:347)
+s3k,17,object-walk-steep/6,WALK,word_149292 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:350)
+s3k,18,object-walk-steep/7,WALK,word_1492A6 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:354)
+s3k,19,object-walk-inverted/0,WALK,word_1492B4 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:357)
+s3k,1A,object-walk-inverted/1,WALK,word_1492C8 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:361)
+s3k,1B,object-walk-inverted/2,WALK,word_1492E2 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:366)
+s3k,1C,object-walk-inverted/3,WALK,word_1492FC (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:371)
+s3k,1D,object-walk-inverted/4,WALK,word_149310 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:375)
+s3k,1E,object-walk-inverted/5,WALK,word_149324 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:379)
+s3k,1F,object-walk-inverted/6,WALK,word_14933E (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:384)
+s3k,20,object-walk-inverted/7,WALK,word_149352 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:388)
+s3k,21,object-run/0,RUN,word_14936C (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:393)
+s3k,22,object-run/1,RUN,word_149386 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:398)
+s3k,23,object-run/2,RUN,word_1493A0 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:403)
+s3k,24,object-run/3,RUN,word_1493BA (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:408)
+s3k,25,object-run-up45/0,RUN,word_1493D4 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:413)
+s3k,26,object-run-up45/1,RUN,word_1493EE (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:418)
+s3k,27,object-run-up45/2,RUN,word_149408 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:423)
+s3k,28,object-run-up45/3,RUN,word_149422 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:428)
+s3k,29,object-run-steep/0,RUN,word_14943C (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:433)
+s3k,2A,object-run-steep/1,RUN,word_149456 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:438)
+s3k,2B,object-run-steep/2,RUN,word_149470 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:443)
+s3k,2C,object-run-steep/3,RUN,word_14948A (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:448)
+s3k,2D,object-run-inverted/0,RUN,word_1494A4 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:453)
+s3k,2E,object-run-inverted/1,RUN,word_1494BE (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:458)
+s3k,2F,object-run-inverted/2,RUN,word_1494D8 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:463)
+s3k,30,object-run-inverted/3,RUN,word_1494F2 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:468)
+s3k,31,gravity-loop/0,ROLL,word_14950C (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:473)
+s3k,32,gravity-loop/1,ROLL,word_149514 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:475)
+s3k,33,gravity-loop/2,ROLL,word_149522 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:478)
+s3k,34,gravity-loop/3,ROLL,word_14952A (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:480)
+s3k,35,gravity-loop/4,ROLL,word_149532 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:482)
+s3k,36,gravity-loop/5,ROLL,word_149540 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:485)
+s3k,37,gravity-loop/6,ROLL,word_14954E (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:488)
+s3k,38,gravity-loop/7,ROLL,word_14955C (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:491)
+s3k,39,gravity-loop/8,ROLL,word_14956A (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:494)
+s3k,3A,gravity-loop/9,ROLL,word_149578 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:497)
+s3k,3B,gravity-loop/10,ROLL,word_149586 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:500)
+s3k,3C,gravity-loop/11,ROLL,word_149594 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:503)
+s3k,3D,gravity-transition/0,ROLL,word_1495A2 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:506)
+s3k,3E,gravity-transition/1,ROLL,word_1495B0 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:509)
+s3k,3F,gravity-transition/2,ROLL,word_1495BE (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:512)
+s3k,40,gravity-transition/3,ROLL,word_1495C6 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:514)
+s3k,41,gravity-transition/4,ROLL,word_1495DA (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:518)
+s3k,42,gravity-transition/5,ROLL,word_1495E2 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:520)
+s3k,43,gravity-transition/6,ROLL,word_1495EA (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:522)
+s3k,44,gravity-transition/7,ROLL,word_1495FE (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:526)
+s3k,45,gravity-transition/8,ROLL,word_14960C (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:529)
+s3k,46,gravity-transition/9,ROLL,word_14961A (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:532)
+s3k,47,gravity-transition/10,ROLL,word_149628 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:535)
+s3k,48,gravity-transition/11,ROLL,word_14963C (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:539)
+s3k,49,cage-entry/0,RUN,word_14964A (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:542)
+s3k,4A,cage-entry/1,RUN,word_14965E (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:546)
+s3k,4B,cage-entry/2,RUN,word_14966C (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:549)
+s3k,4C,cage-entry/3,RUN,word_149680 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:553)
+s3k,4D,cage-entry/4,RUN,word_14968E (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:556)
+s3k,4E,cage-entry/5,RUN,word_1496A2 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:560)
+s3k,4F,cage-entry/6,RUN,word_1496BC (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:565)
+s3k,50,cage-entry/7,RUN,word_1496D6 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:570)
+s3k,51,cage-entry/8,RUN,word_1496F0 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:575)
+s3k,52,cage-entry/9,RUN,word_149704 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:579)
+s3k,53,cage-entry/10,RUN,word_149718 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:583)
+s3k,54,cage-entry/11,RUN,word_149726 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:586)
+s3k,55,twist/0,WAIT,word_149734 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:589)
+s3k,56,twist/1,WAIT,word_149748 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:593)
+s3k,57,twist/2,WAIT,word_149750 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:595)
+s3k,58,twist/3,WAIT,word_149764 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:599)
+s3k,59,twist/4,WAIT,word_14976C (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:601)
+s3k,5A,twist/5,WAIT,word_149774 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:603)
+s3k,5B,twist/6,WAIT,word_149788 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:607)
+s3k,5C,pole/0,HANG,word_149790 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:609)
+s3k,5D,pole/1,HANG,word_1497AA (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:614)
+s3k,5E,pole/2,HANG,word_1497B2 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:616)
+s3k,5F,pole/3,HANG,word_1497C6 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:620)
+s3k,60,pole/4,HANG,word_1497D4 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:623)
+s3k,61,pole/5,HANG,word_1497DC (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:625)
+s3k,62,pole/6,HANG,word_1497E4 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:627)
+s3k,63,bar/0,HANG,word_1497F8 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:631)
+s3k,64,bar/1,HANG,word_149812 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:636)
+s3k,65,bar/2,HANG,word_14981A (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:638)
+s3k,66,bar/3,HANG,word_149828 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:641)
+s3k,67,bar/4,HANG,word_149836 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:644)
+s3k,68,bar/5,HANG,word_14983E (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:646)
+s3k,69,tumble/0,ROLL,word_149846 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:648)
+s3k,6A,tumble/1,ROLL,word_14985A (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:652)
+s3k,6B,tumble/2,ROLL,word_14986E (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:656)
+s3k,6C,tumble/3,ROLL,word_14987C (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:659)
+s3k,6D,tumble/4,ROLL,word_14988A (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:662)
+s3k,6E,tumble/5,ROLL,word_149898 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:665)
+s3k,6F,tumble/6,ROLL,word_1498A6 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:668)
+s3k,70,tumble/7,ROLL,word_1498B4 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:671)
+s3k,71,tumble/8,ROLL,word_1498C2 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:674)
+s3k,72,tumble/9,ROLL,word_1498D0 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:677)
+s3k,73,tumble/10,ROLL,word_1498D8 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:679)
+s3k,74,tumble/11,ROLL,word_1498E6 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:682)
+s3k,75,tumble/12,ROLL,word_1498EE (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:684)
+s3k,76,tumble/13,ROLL,word_1498F6 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:686)
+s3k,77,tumble/14,ROLL,word_149904 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:689)
+s3k,78,swing/0,HANG,word_149912 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:692)
+s3k,79,swing/1,HANG,word_14992C (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:697)
+s3k,7A,swing/2,HANG,word_149946 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:702)
+s3k,7B,swing/3,HANG,word_149960 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:707)
+s3k,7C,swing/4,HANG,word_14997A (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:712)
+s3k,7D,swing/5,HANG,word_149994 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:717)
+s3k,7E,swing/6,HANG,word_1499AE (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:722)
+s3k,7F,swing/7,HANG,word_1499C8 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:727)
+s3k,80,chain/0,HANG,word_1499E2 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:732)
+s3k,81,chain/1,HANG,word_1499F0 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:735)
+s3k,82,chain/2,HANG,word_149A0A (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:740)
+s3k,83,chain/3,HANG,word_149A24 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:745)
+s3k,84,chain/4,HANG,word_149A38 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:749)
+s3k,85,chain/5,HANG,word_149A4C (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:753)
+s3k,86,family-spindash/1,SPINDASH,word_149A66 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:758)
+s3k,87,family-spindash/2,SPINDASH,word_149A74 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:761)
+s3k,88,family-spindash/3,SPINDASH,word_149A82 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:764)
+s3k,89,family-hurt-fall/0,HURT_FALL,word_149A90 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:767)
+s3k,8A,family-hurt/0,HURT,word_149A98 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:769)
+s3k,8B,family-spring/0,SPRING,word_149AA0 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:771)
+s3k,8C,family-spring/1,SPRING,word_149AAE (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:774)
+s3k,8D,carry/curl,ROLL,word_149ABC (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:777)
+s3k,8E,family-skid/0,SKID,word_149ACA (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:780)
+s3k,8F,family-skid/1,SKID,word_149ADE (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:784)
+s3k,90,hang/0,HANG,word_149AF2 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:788)
+s3k,91,family-hang2/0,HANG2,word_149B00 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:791)
+s3k,92,hang/2,HANG,word_149B0E (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:794)
+s3k,93,hang/3,HANG,word_149B1C (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:797)
+s3k,94,bar-end/0,HANG,word_149B24 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:799)
+s3k,95,bar-end/1,HANG,word_149B38 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:803)
+s3k,96,family-roll/1,ROLL,word_149B4C (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:807)
+s3k,97,family-roll/2,ROLL,word_149B54 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:809)
+s3k,98,family-roll/3,ROLL,word_149B5C (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:811)
+s3k,99,family-duck/0,DUCK,word_149B64 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:813)
+s3k,9A,family-balance/0,BALANCE,word_149B6C (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:815)
+s3k,9B,family-balance/1,BALANCE,word_149B80 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:819)
+s3k,9C,family-burnt/0,BURNT,word_149B94 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:823)
+s3k,9D,family-hang/0,HANG,word_149B9C (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:825)
+s3k,9E,family-hang/1,HANG,word_149BAA (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:828)
+s3k,9F,family-bubble/0,BUBBLE,word_149BBE (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:832)
+s3k,A0,flight/body-0,TAILS_FLY,word_149BD2 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:836)
+s3k,A1,family-tails-fly-carry-ascend/0,TAILS_FLY_CARRY_ASCEND,word_149BE0 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:839)
+s3k,A2,family-tails-fly-carry/0,TAILS_FLY_CARRY,word_149BEE (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:842)
+s3k,A3,flight/tired-body-0,TAILS_FLY_TIRED,word_149BFC (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:845)
+s3k,A4,family-balance/2,BALANCE2,word_149C0A (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:848)
+s3k,A5,family-blink/3,BLINK,word_149C18 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:851)
+s3k,A6,family-blink/4,BLINK,word_149C20 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:853)
+s3k,A7,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,word_149C3A
+s3k,A8,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,word_149C48
+s3k,A9,family-push/0,PUSH,word_149C5C (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:865)
+s3k,AA,family-push/1,PUSH,word_149C6A (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:868)
+s3k,AB,family-push/2,PUSH,word_149C72 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:870)
+s3k,AC,family-push/3,PUSH,word_149C7A (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:872)
+s3k,AD,family-wait/0,WAIT,word_149C82 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:874)
+s3k,AE,family-wait/1,WAIT,word_149C8A (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:876)
+s3k,AF,family-wait/2,WAIT,word_149C92 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:878)
+s3k,B0,family-look-up/0,LOOK_UP,word_149C9A (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:880)
+s3k,B1,family-wait/3,WAIT,word_149CA2 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:882)
+s3k,B2,family-wait/4,WAIT,word_149CAA (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:884)
+s3k,B3,family-wait/5,WAIT,word_149CB2 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:886)
+s3k,B4,family-wait/6,WAIT,word_149CBA (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:888)
+s3k,B5,family-float2/0,FLOAT,word_149CC2 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:890)
+s3k,B6,family-float2/1,FLOAT2,word_149CD6 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:894)
+s3k,B7,family-float2/2,FLOAT2,word_149CE4 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:897)
+s3k,B8,family-float2/3,FLOAT2,word_149CEC (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:899)
+s3k,B9,family-float2/4,FLOAT2,word_149CFA (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:902)
+s3k,BA,family-float2/5,FLOAT2,word_149D0E (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:906)
+s3k,BB,family-float2/6,FLOAT2,word_149D22 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:910)
+s3k,BC,family-float2/7,FLOAT2,word_149D30 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:913)
+s3k,BD,family-tails-swim/0,TAILS_SWIM,word_149D44 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:917)
+s3k,BE,family-tails-swim/1,TAILS_SWIM,word_149D58 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:921)
+s3k,BF,family-tails-swim/2,TAILS_SWIM,word_149D6C (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:925)
+s3k,C0,family-tails-swim/3,TAILS_SWIM,word_149D7A (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:928)
+s3k,C1,family-tails-swim/4,TAILS_SWIM,word_149D94 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:933)
+s3k,C2,family-tails-swim-tired/0,TAILS_SWIM_TIRED,word_149DA2 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:936)
+s3k,C3,family-run/0,RUN,word_149DB6 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:940)
+s3k,C4,family-run/1,RUN,word_149DD0 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:945)
+s3k,C5,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,word_149DEA
+s3k,C6,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,word_149E04
+s3k,C7,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,word_149E1E
+s3k,C8,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,word_149E38
+s3k,C9,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,word_149E52
+s3k,CA,crane/fall,HURT,word_149E6C (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:975)
+s3k,CB,family-hurt-fall/0,HURT_FALL,word_149E86 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:980)
+s3k,CC,family-hurt-fall/1,HURT_FALL,word_149E8E (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:982)
+s3k,CD,family-tails-swim-tired/1,TAILS_SWIM_TIRED,word_149E96 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:984)
+s3k,CE,family-tails-swim-tired/2,TAILS_SWIM_TIRED,word_149EAA (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:988)
+s3k,CF,family-tails-swim-carry/0,TAILS_SWIM_CARRY,word_149EBE (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:992)
+s3k,D0,family-tails-swim-carry/1,TAILS_SWIM_CARRY,word_149ECC (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:995)
+s3k,D1,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,word_149EDA
+s3k,D2,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,word_149EDA
+s3k,D3,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,word_149EDA
+s3k,D4,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,word_149EDA
+s3k,D5,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,word_149EDA
+s3k,D6,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,word_149EDA
+s3k,D7,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,word_149EDA
+s3k,D8,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,word_149EDA
+s3k,D9,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,word_149EDA
+s3k,DA,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,word_149EDA
+s3k,DB,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,word_149EDA
+s3k,DC,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,word_149EDA
+s3k,DD,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,word_149EDA
+s3k,DE,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,word_149EDA
+s3k,DF,wall-run/0,RUN,word_149EDA (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:998)
+s3k,E0,wall-run/1,RUN,word_149EEE (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:1002)
+s3k,E1,wall-run/2,RUN,word_149EFC (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:1005)
+s3k,E2,wall-run/3,RUN,word_149F10 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:1009)
+s3k,E3,wall-run/4,RUN,word_149F1E (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:1012)
+s3k,E4,parachute/0,HANG,word_149F38 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:1017)
+s3k,E5,parachute/1,HANG,word_149F52 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:1022)
+s3k,E6,parachute/2,HANG,word_149F66 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:1026)
+s3k,E7,parachute/3,HANG,word_149F74 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:1029)
+s3k,E8,parachute/4,HANG,word_149F88 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:1033)
+s3k,E9,parachute/5,HANG,word_149F96 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:1036)
+s3k,EA,parachute/6,HANG,word_149FAA (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:1040)
+s3k,EB,family-super-transform/0,SUPER_TRANSFORM,word_149FBE (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:1044)
+s3k,EC,family-super-transform/3,SUPER_TRANSFORM,word_149FC6 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:1046)
+s3k,ED,family-super-transform/2,SUPER_TRANSFORM,word_149FDA (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:1050)
+s3k,EE,N/A: canonical animation/arithmetic or separate appendage; no independent object raw alias declared,unknown direct bytes safely use WAIT,word_149FDA
+s3k,EF,corkscrew/0,ROLL,word_149FEE (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:1054)
+s3k,F0,corkscrew/1,ROLL,word_149FFC (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:1057)
+s3k,F1,corkscrew/2,ROLL,word_14A00A (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:1060)
+s3k,F2,corkscrew/3,ROLL,word_14A018 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:1063)
+s3k,F3,corkscrew/4,ROLL,word_14A020 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:1065)
+s3k,F4,corkscrew/5,ROLL,word_14A02E (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:1068)
+s3k,F5,corkscrew/6,ROLL,word_14A03C (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:1071)
+s3k,F6,corkscrew/7,ROLL,word_14A04A (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:1074)
+s3k,F7,corkscrew/8,ROLL,word_14A058 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:1077)
+s3k,F8,corkscrew/9,ROLL,word_14A066 (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:1080)
+s3k,F9,corkscrew/10,ROLL,word_14A06E (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:1082)
+s3k,FA,corkscrew/11,ROLL,word_14A07C (docs/skdisasm/General/Sprites/Tails/Map - Tails.asm:1085)

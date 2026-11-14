@@ -12,9 +12,6 @@
 1 com.openggf.game.sonic2.objects.bosses.Sonic2OOZBossInstance#childFrames # Lazy allocation backs temporal child sprite state; initialize at the owning native update boundary.
 1 com.openggf.game.sonic2.objects.bosses.Sonic2OOZBossInstance#childXs # Lazy allocation backs temporal child sprite state; initialize at the owning native update boundary.
 1 com.openggf.game.sonic2.objects.bosses.Sonic2OOZBossInstance#childYs # Lazy allocation backs temporal child sprite state; initialize at the owning native update boundary.
-1 com.openggf.game.sonic2.specialstage.Sonic2SpecialStageResultsScreen#messagePresentation # Lazy result-message creation also establishes a timeline consumed by update; move to results entry.
-1 com.openggf.game.sonic2.specialstage.Sonic2SpecialStageResultsScreen#presentationData # Lazy result-message creation also establishes a timeline consumed by update; move to results entry.
-1 com.openggf.game.sonic2.specialstage.Sonic2SpecialStageResultsScreen#presentationResolved # Lazy result-message creation also establishes a timeline consumed by update; move to results entry.
 1 com.openggf.game.sonic3k.objects.HczMinibossInstance#rockets # Lazy rocket allocation backs live rocket phases; requires creation and rewind graph coverage.
 2 com.openggf.game.sonic3k.objects.LrzCollapsingBridgeInstance#heightPixels # Lazy ROM parameter resolution writes collision dimensions and mapping phase; align init and solid queries.
 2 com.openggf.game.sonic3k.objects.LrzCollapsingBridgeInstance#mappingFrame # Lazy ROM parameter resolution writes collision dimensions and mapping phase; align init and solid queries.

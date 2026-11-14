@@ -1,0 +1,90 @@
+[
+  {
+    "id": 0,
+    "file": "../../../art/mica/titles/s2-0.png",
+    "hotspot": [
+      -24,
+      -16
+    ]
+  },
+  {
+    "id": 1,
+    "file": "../../../art/mica/titles/s2-1.png",
+    "hotspot": [
+      0,
+      -16
+    ]
+  },
+  {
+    "id": 2,
+    "file": "../../../art/mica/titles/s2-2.png",
+    "hotspot": [
+      -8,
+      -16
+    ]
+  },
+  {
+    "id": 3,
+    "file": "../../../art/mica/titles/s2-3.png",
+    "hotspot": [
+      0,
+      -16
+    ]
+  },
+  {
+    "id": 4,
+    "file": "../../../art/mica/titles/s2-4.png",
+    "hotspot": [
+      0,
+      -8
+    ]
+  },
+  {
+    "id": 5,
+    "file": "../../../art/mica/titles/s2-5.png",
+    "hotspot": [
+      0,
+      -8
+    ]
+  },
+  {
+    "id": 6,
+    "file": "../../../art/mica/titles/s2-6.png",
+    "hotspot": [
+      0,
+      -8
+    ]
+  },
+  {
+    "id": 7,
+    "file": "../../../art/mica/titles/s2-7.png",
+    "hotspot": [
+      -16,
+      -8
+    ]
+  },
+  {
+    "id": 18,
+    "file": "../../../art/mica/titles/s2-18.png",
+    "hotspot": [
+      -24,
+      -8
+    ]
+  },
+  {
+    "id": 9,
+    "file": "../../../art/mica/titles/s2-9.png",
+    "hotspot": [
+      -18,
+      0
+    ]
+  },
+  {
+    "id": 19,
+    "file": "../../../art/mica/titles/s2-19.png",
+    "hotspot": [
+      -8,
+      0
+    ]
+  }
+]

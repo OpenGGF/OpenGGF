@@ -1505,16 +1505,7 @@ public class Sonic3kObjectArt {
      */
     private void loadKosmArtInto(Rom rom, int romAddr, Pattern[] dest, int destIndex)
             throws IOException {
-        byte[] header = rom.readBytes(romAddr, 2);
-        int fullSize = ((header[0] & 0xFF) << 8) | (header[1] & 0xFF);
-        int inputSize = Math.min(Math.max(fullSize + 256, 0x10000), 0x40000);
-        long romSize = rom.getSize();
-        if (romAddr + inputSize > romSize) {
-            inputSize = (int) (romSize - romAddr);
-        }
-
-        byte[] romData = rom.readBytes(romAddr, inputSize);
-        byte[] decompressed = KosinskiReader.decompressModuled(romData, 0);
+        byte[] decompressed = KosinskiReader.decompressModuled(RomByteReader.fromRom(rom), romAddr);
 
         int tileCount = decompressed.length / Pattern.PATTERN_SIZE_IN_ROM;
         for (int i = 0; i < tileCount; i++) {
@@ -1532,19 +1523,10 @@ public class Sonic3kObjectArt {
 
 
     private Pattern[] loadKosinskiModuledPatterns(Rom rom, int romAddr) throws IOException {
-        byte[] header = rom.readBytes(romAddr, 2);
-        if (header.length < 2) {
+        if (romAddr + 2 > rom.getSize()) {
             return new Pattern[0];
         }
-        int fullSize = ((header[0] & 0xFF) << 8) | (header[1] & 0xFF);
-        int inputSize = Math.min(Math.max(fullSize + 256, 0x10000), 0x40000);
-        long romSize = rom.getSize();
-        if (romAddr + inputSize > romSize) {
-            inputSize = (int) (romSize - romAddr);
-        }
-        byte[] compressed = rom.readBytes(romAddr, inputSize);
-        byte[] data = KosinskiReader.decompressModuled(compressed, 0);
-        return bytesToPatterns(data);
+        return bytesToPatterns(KosinskiReader.decompressModuled(RomByteReader.fromRom(rom), romAddr));
     }
 
     private Pattern[] loadUncompressedPatterns(Rom rom, int romAddr, int size) throws IOException {

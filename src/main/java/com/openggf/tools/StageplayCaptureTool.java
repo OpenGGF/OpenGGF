@@ -85,6 +85,9 @@ public final class StageplayCaptureTool {
             var config = GameServices.configuration();
             for (var rom : arguments.suppliedRoms().entrySet()) config.setSessionOverride(romKey(rom.getKey()), rom.getValue().toAbsolutePath().toString());
             config.setSessionOverride(SonicConfiguration.AUDIO_ENABLED, true);
+            // Films record at full level whatever volumes the player saved.
+            config.setSessionOverride(SonicConfiguration.AUDIO_MUSIC_VOLUME, 100);
+            config.setSessionOverride(SonicConfiguration.AUDIO_SFX_VOLUME, 100);
             config.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "");
             config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
             config.setSessionOverride(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, false);

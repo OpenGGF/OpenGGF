@@ -122,6 +122,9 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider, HudSatLayoutS
         hudLivesPatterns = art.loadNemesisPatterns(Sonic1Constants.ART_NEM_LIFE_ICON_ADDR);
         rebuildHudStaticArt();
         overrideLivesArtFromDonor();
+        hudLivesPatterns = Sonic1CharacterPresentation.hud(rom, hudLivesPatterns,
+                Sonic1CharacterPresentation.active());
+        rebuildHudStaticArt();
 
         hudLivesNumbers = art.loadUncompressedPatterns(
                 Sonic1Constants.ART_UNC_LIVES_NUMBERS_ADDR,
@@ -505,10 +508,11 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider, HudSatLayoutS
      * Mappings from docs/s1disasm/_maps/Monitor.asm (Map_Monitor_internal).
      * Animations from docs/s1disasm/_anim/Monitor.asm (Ani_Monitor).
      */
-    private void loadMonitorArt(Sonic1ObjectArt art) {
+    private void loadMonitorArt(Sonic1ObjectArt art) throws IOException {
         ObjectSpriteSheet sheet = art.buildArtSheetFromRom(
                 Sonic1Constants.ART_NEM_MONITOR_ADDR, Sonic1Constants.MAP_MONITOR_ADDR, 0, 1);
-        registerSheet(ObjectArtKeys.MONITOR, sheet);
+        registerSheet(ObjectArtKeys.MONITOR,
+                Sonic1CharacterPresentation.monitor(sheet, Sonic1CharacterPresentation.active()));
         animations.put(ObjectArtKeys.ANIM_MONITOR, createMonitorAnimations());
     }
 
@@ -772,7 +776,7 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider, HudSatLayoutS
      * Mapping tile IDs are relative to ArtTile_Title_Card ($580).
      * Array index = tile_id + RESULTS_TILE_ADJUST (0x10).
      */
-    private void loadResultsScreenArt(Sonic1ObjectArt art) {
+    private void loadResultsScreenArt(Sonic1ObjectArt art) throws IOException {
         Pattern[] titleCardPatterns = art.loadNemesisPatterns(
                 Sonic1Constants.ART_NEM_TITLE_CARD_ADDR);
         if (titleCardPatterns.length == 0) {
@@ -813,7 +817,8 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider, HudSatLayoutS
         copyResultsScoreDigitTiles(compositePatterns, hudScoreDigitsStartIndex);
 
         List<SpriteMappingFrame> mappings = Sonic1ResultsMappingLoader.load(romReader);
-        ObjectSpriteSheet sheet = new ObjectSpriteSheet(compositePatterns, mappings, 0, 1);
+        ObjectSpriteSheet sheet = Sonic1CharacterPresentation.results(GameServices.rom().getRom(),
+                compositePatterns, mappings, Sonic1CharacterPresentation.active(), 0);
         registerSheet(ObjectArtKeys.RESULTS, sheet);
 
         LOGGER.info("Results screen art loaded: " + totalSize + " composite patterns, "

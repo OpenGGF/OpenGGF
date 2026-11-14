@@ -337,7 +337,8 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
 
         // Lives icon - Nemesis compressed, character-specific
         int livesIconAddr = resolveLifeIconAddr();
-        hudLivesPatterns = PatternDecompressor.nemesis(rom, livesIconAddr);
+        hudLivesPatterns = Sonic3kCharacterPresentation.hud(rom,
+                PatternDecompressor.nemesis(rom, livesIconAddr), Sonic3kCharacterPresentation.active());
         LOG.info("Loaded " + (hudLivesPatterns != null ? hudLivesPatterns.length : 0) + " HUD lives icon patterns");
 
         // Lives digits (0-9) - uncompressed
@@ -447,17 +448,20 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
 
         // Extend pattern array to cover life icon at offset 0x310
         // (1-Up monitor icon uses ArtTile_Player_Life_Icon = ArtTile_Monitors + $310)
+        Pattern[] monitorLifePatterns = Sonic3kCharacterPresentation.oneUp(
+                PatternDecompressor.nemesis(rom, resolveLifeIconAddr()),
+                Sonic3kCharacterPresentation.active());
         int lifeArtOffset = 0x310;
-        int requiredSize = lifeArtOffset + (hudLivesPatterns != null ? hudLivesPatterns.length : 0);
+        int requiredSize = lifeArtOffset + (monitorLifePatterns != null ? monitorLifePatterns.length : 0);
         requiredSize = Math.max(requiredSize, monitorBasePatterns.length);
 
         Pattern[] monitorPatterns = new Pattern[requiredSize];
         System.arraycopy(monitorBasePatterns, 0, monitorPatterns, 0, monitorBasePatterns.length);
 
         // Copy life icon patterns at offset 0x310
-        if (hudLivesPatterns != null && hudLivesPatterns.length > 0) {
-            System.arraycopy(hudLivesPatterns, 0, monitorPatterns, lifeArtOffset,
-                    Math.min(hudLivesPatterns.length, monitorPatterns.length - lifeArtOffset));
+        if (monitorLifePatterns != null && monitorLifePatterns.length > 0) {
+            System.arraycopy(monitorLifePatterns, 0, monitorPatterns, lifeArtOffset,
+                    Math.min(monitorLifePatterns.length, monitorPatterns.length - lifeArtOffset));
         }
 
         // Fill gaps with empty patterns to prevent NPEs
@@ -473,7 +477,9 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
 
         // Create and register sprite sheet
         ObjectSpriteSheet monitorSheet = new ObjectSpriteSheet(monitorPatterns, frames, 0, 1);
-        registerSheet(Sonic3kObjectArtKeys.MONITOR, monitorSheet);
+        registerSheet(Sonic3kObjectArtKeys.MONITOR, com.openggf.game.presentation.CharacterIconPalette.monitor(
+                monitorSheet, Sonic3kCharacterPresentation.active(),
+                com.openggf.game.CharacterPresentation.Host.S3K, lifeArtOffset));
 
         // Build and register animation set (Anim - Monitor.asm)
         SpriteAnimationSet monitorAnimations = buildMonitorAnimations();
@@ -2571,17 +2577,9 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
      * Decompresses KosinskiModuled art from the ROM into Pattern arrays.
      */
     private static Pattern[] decompressKosinskiModuled(Rom rom, int romAddr) throws IOException {
-        byte[] header = rom.readBytes(romAddr, 2);
-        if (header.length < 2) return new Pattern[0];
-        int fullSize = ((header[0] & 0xFF) << 8) | (header[1] & 0xFF);
-        int inputSize = Math.min(Math.max(fullSize + 256, 0x10000), 0x40000);
-        long romSize = rom.getSize();
-        if (romAddr + inputSize > romSize) {
-            inputSize = (int) (romSize - romAddr);
-        }
-        byte[] compressed = rom.readBytes(romAddr, inputSize);
-        byte[] data = KosinskiReader.decompressModuled(compressed, 0);
-        return PatternDecompressor.fromBytes(data);
+        if (romAddr + 2 > rom.getSize()) return new Pattern[0];
+        return PatternDecompressor.fromBytes(
+                KosinskiReader.decompressModuled(RomByteReader.fromRom(rom), romAddr));
     }
 
     /**

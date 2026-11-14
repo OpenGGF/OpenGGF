@@ -1,0 +1,13 @@
+palette S2_TORNADO_PILOT 2d.png
+S2_TORNADO_PILOT 45 2d.png 50 8
+S2_TORNADO_PILOT 46 2e.png 50 8
+S2_TORNADO_PILOT 47 2f.png 50 8
+S2_TORNADO_PILOT 48 30.png 50 8
+# Full-size S3K cockpit. Selector 12 is the Tails seat; selector 11 is the Sonic seat, which is
+# where MICA sits when a Tails-role lead (TALON) is the one being rescued.
+palette S3K_TORNADO_PILOT 2d.png
+S3K_TORNADO_PILOT 12 2d.png 12 8
+S3K_TORNADO_PILOT 11 2d.png 12 8
+# Mid-size Tornado cockpit head (island arrival), Sonic seat: native selector 13, 16x8, hotspot 8 4.
+palette S3K_MINI_TORNADO_PILOT arrival_pilot-0d.png
+S3K_MINI_TORNADO_PILOT 13 arrival_pilot-0d.png 8 4

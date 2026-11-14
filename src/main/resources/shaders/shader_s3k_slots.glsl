@@ -1,6 +1,7 @@
 #version 410 core
 
 uniform sampler2D SlotFaceTexture;
+uniform bool PortraitAtlas;
 uniform sampler2D Palette;
 uniform float TotalPaletteLines;
 
@@ -71,7 +72,7 @@ void main() {
     float slotLocalX = localX - float(slotIndex) * (SLOT_WIDTH + SLOT_SPACING);
     float slotLocalY = localY;
 
-    float u = (slotLocalX + 0.5) / FACE_WIDTH;
+    float u = slotLocalX / FACE_WIDTH;
     float scrolledY = slotLocalY + slotOffset * SLOT_HEIGHT;
     float faceIndex = float(slotFace);
     if (scrolledY >= FACE_HEIGHT) {
@@ -79,8 +80,15 @@ void main() {
         faceIndex = float(slotNextFace);
     }
 
-    float textureV = (faceIndex * FACE_HEIGHT + scrolledY + 0.5) / TEXTURE_HEIGHT;
-    float colorIndex = texture(SlotFaceTexture, vec2(u, textureV)).r * 255.0;
+    float textureV = (faceIndex * FACE_HEIGHT + scrolledY) / TEXTURE_HEIGHT;
+    vec4 sampleColor = texture(SlotFaceTexture, vec2(u, textureV));
+    if (PortraitAtlas && sampleColor.a > 0.5) {
+        float nativeRow = (PaletteLine + 0.5) / float(textureSize(Palette, 0).y);
+        vec3 white = texture(Palette, vec2((1.0 + 0.5) / 16.0, nativeRow)).rgb;
+        FragColor = vec4(sampleColor.rgb * white, 1.0);
+        return;
+    }
+    float colorIndex = sampleColor.r * 255.0;
     if (colorIndex < 0.5) {
         discard;
     }

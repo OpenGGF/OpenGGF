@@ -115,16 +115,20 @@ public final class S3kSlotMachineRenderer {
         textureData.position(textureData.capacity());
         textureData.flip();
 
+        ByteBuffer rgba = com.openggf.game.presentation.ReelCharacterPresentation.atlas(textureData,
+                NUM_FACES, com.openggf.game.presentation.ReelCharacterPresentation.active(
+                        com.openggf.game.CharacterPresentation.Host.S3K));
         int texId = glGenTextures();
         glBindTexture(GL_TEXTURE_2D, texId);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, TEXTURE_WIDTH, TEXTURE_HEIGHT,
-                0, GL_RED, GL_UNSIGNED_BYTE, textureData);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, TEXTURE_WIDTH, TEXTURE_HEIGHT,
+                0, GL_RGBA, GL_UNSIGNED_BYTE, rgba);
         glBindTexture(GL_TEXTURE_2D, 0);
         MemoryUtil.memFree(textureData);
+        MemoryUtil.memFree(rgba);
         return texId;
     }
 
@@ -154,7 +158,7 @@ public final class S3kSlotMachineRenderer {
                                int[] faces, int[] nextFaces, float[] offsets) {
         gpuPass.draw(textureId, paletteTextureId, screenX, screenY, SLOT_PALETTE_LINE,
                 faces[0], faces[1], faces[2], nextFaces[0], nextFaces[1], nextFaces[2],
-                offsets[0], offsets[1], offsets[2]);
+                offsets[0], offsets[1], offsets[2], true);
     }
 
 }

@@ -71,5 +71,8 @@ public enum GameMode {
     COMPETITION,
 
     /** Native competition act, arena, series or record results. */
-    COMPETITION_RESULTS
+    COMPETITION_RESULTS,
+
+    /** Native S&K Blue Spheres title, level-code menu and results. */
+    BLUE_SPHERES
 }

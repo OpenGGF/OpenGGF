@@ -77,7 +77,8 @@ public final class GameplayCaptureTool {
                 arguments.width(), arguments.mainCharacter(), arguments.sidekickCharacter(),
                 arguments.donor(), donorRom, arguments.startX(), arguments.startY(), arguments.emeralds(), arguments.titleCard(),
                 arguments.completeSpecialStage(), arguments.vIntRunCount(), arguments.cameraXSub(),
-                arguments.starPost(), arguments.rings(), arguments.reverseGravity(), arguments.endOfLevel());
+                arguments.starPost(), arguments.rings(), arguments.reverseGravity(), arguments.endOfLevel(),
+                arguments.drawMode(), arguments.dormantStyle());
         int zone = ZoneIds.resolve(arguments.game(), arguments.zone());
         int act = arguments.act();
 
@@ -96,6 +97,7 @@ public final class GameplayCaptureTool {
             if (arguments.titleScreen()) session.startAtTitle();
             if (arguments.rewindFrom() >= 0) session.enableLiveRewind();
             if (arguments.audio()) session.enableAudio();
+            if (arguments.noMusic()) session.silenceMusic();
             if (arguments.nativePcm()) {
                 // The stage taps the accurate (Nuked) chip's pins; this diagnostic capture selects that
                 // production core explicitly for its own session instead of failing inside level load.
@@ -278,7 +280,42 @@ public final class GameplayCaptureTool {
                             Integer vIntRunCount, Integer cameraXSub, boolean starPost, Integer rings, boolean reverseGravity,
                             Path mod, boolean titleScreen, boolean audio, boolean interactivePacing,
                             boolean nativePcm, boolean endOfLevel, int rewindFrom, int rewindFrames,
-                            Path saveSlots, String extraTeams, Integer timerFrames) {
+                            Path saveSlots, String extraTeams, Integer timerFrames, boolean noMusic,
+                            String drawMode, String dormantStyle) {
+
+        /** EDGE widescreen draw mode with greyscale dormant objects, the pinned capture defaults. */
+        public Arguments(String game, Path rom, String zone, int act, Integer startX, Integer startY, int width,
+                         String mainCharacter, String sidekickCharacter, String donor, Path donorRom, Path input,
+                         int settle, int inputStart, Integer frames, int captureFrom, int every, Set<Integer> stills,
+                         boolean stopOnDeath, int deathGrace, boolean video, int scale, int fps,
+                         Path outDir, String emeralds, boolean titleCard, boolean completeSpecialStage,
+                         Integer vIntRunCount, Integer cameraXSub, boolean starPost, Integer rings, boolean reverseGravity,
+                         Path mod, boolean titleScreen, boolean audio, boolean interactivePacing,
+                         boolean nativePcm, boolean endOfLevel, int rewindFrom, int rewindFrames,
+                         Path saveSlots, String extraTeams, Integer timerFrames, boolean noMusic) {
+            this(game, rom, zone, act, startX, startY, width, mainCharacter, sidekickCharacter, donor, donorRom, input,
+                    settle, inputStart, frames, captureFrom, every, stills, stopOnDeath, deathGrace, video, scale, fps,
+                    outDir, emeralds, titleCard, completeSpecialStage, vIntRunCount, cameraXSub, starPost, rings,
+                    reverseGravity, mod, titleScreen, audio, interactivePacing, nativePcm, endOfLevel, rewindFrom,
+                    rewindFrames, saveSlots, extraTeams, timerFrames, noMusic, "EDGE", "GREYSCALE");
+        }
+
+        /** With music in the audio capture. */
+        public Arguments(String game, Path rom, String zone, int act, Integer startX, Integer startY, int width,
+                         String mainCharacter, String sidekickCharacter, String donor, Path donorRom, Path input,
+                         int settle, int inputStart, Integer frames, int captureFrom, int every, Set<Integer> stills,
+                         boolean stopOnDeath, int deathGrace, boolean video, int scale, int fps,
+                         Path outDir, String emeralds, boolean titleCard, boolean completeSpecialStage,
+                         Integer vIntRunCount, Integer cameraXSub, boolean starPost, Integer rings, boolean reverseGravity,
+                         Path mod, boolean titleScreen, boolean audio, boolean interactivePacing,
+                         boolean nativePcm, boolean endOfLevel, int rewindFrom, int rewindFrames,
+                         Path saveSlots, String extraTeams, Integer timerFrames) {
+            this(game, rom, zone, act, startX, startY, width, mainCharacter, sidekickCharacter, donor, donorRom, input,
+                    settle, inputStart, frames, captureFrom, every, stills, stopOnDeath, deathGrace, video, scale, fps,
+                    outDir, emeralds, titleCard, completeSpecialStage, vIntRunCount, cameraXSub, starPost, rings,
+                    reverseGravity, mod, titleScreen, audio, interactivePacing, nativePcm, endOfLevel,
+                    rewindFrom, rewindFrames, saveSlots, extraTeams, timerFrames, false);
+        }
 
         /** Without a declared level timer. */
         public Arguments(String game, Path rom, String zone, int act, Integer startX, Integer startY, int width,
@@ -383,10 +420,11 @@ public final class GameplayCaptureTool {
             boolean titleCard = false;
             boolean completeSpecialStage = false;
             Path mod = null;
-            boolean titleScreen=false, audio=false, interactivePacing=false, nativePcm=false;
+            boolean titleScreen=false, audio=false, interactivePacing=false, nativePcm=false, noMusic=false;
             int rewindFrom = -1, rewindFrames = 0;
             Path saveSlots = null;
             String extraTeams = null;
+            String drawMode = "EDGE", dormantStyle = "GREYSCALE";
             for (int i = 0; i < argv.length; i++) {
                 String flag = argv[i];
                 switch (flag) {
@@ -396,12 +434,16 @@ public final class GameplayCaptureTool {
                     case "--title-screen" -> titleScreen=true;
                     case "--interactive-pacing" -> interactivePacing=true;
                     case "--audio" -> audio=true;
+                    case "--no-music" -> noMusic=true;
                     case "--native-pcm" -> nativePcm=true;
                     case "--zone" -> zone = value(argv, ++i, flag);
                     case "--act" -> act = number(value(argv, ++i, flag), flag);
                     case "--x" -> startX = number(value(argv, ++i, flag), flag);
                     case "--y" -> startY = number(value(argv, ++i, flag), flag);
                     case "--width" -> width = number(value(argv, ++i, flag), flag);
+                    case "--draw-mode" -> drawMode = choice(value(argv, ++i, flag), flag, "EDGE", "NATIVE");
+                    case "--dormant-style" -> dormantStyle =
+                            choice(value(argv, ++i, flag), flag, "GREYSCALE", "NORMAL", "HIDDEN");
                     case "--main" -> main = value(argv, ++i, flag);
                     case "--sidekick" -> {
                         String raw = value(argv, ++i, flag);
@@ -471,6 +513,7 @@ public final class GameplayCaptureTool {
                     || ZoneIds.resolve(game,zone)!=0 || act!=1))
                 throw new IllegalArgumentException("--title-screen starts before assembly: use first zone/act and no positioned setup");
             if (audio && (captureFrom!=0 || every!=1 || fps!=60)) throw new IllegalArgumentException("--audio requires capture-from 0, every 1, fps 60");
+            if (noMusic && !audio) throw new IllegalArgumentException("--no-music requires --audio");
             if (nativePcm && (!audio || input == null || !input.toString().toLowerCase(Locale.ROOT).endsWith(".bk2")))
                 throw new IllegalArgumentException("--native-pcm requires --audio and a .bk2 --input whose SyncSettings select the output");
             if (interactivePacing && (completeSpecialStage || fps != 60))
@@ -483,7 +526,14 @@ public final class GameplayCaptureTool {
                     settle, inputStart, frames, captureFrom, every, Set.copyOf(stills), stopOnDeath, deathGrace,
                     video, scale, fps, outDir, emeralds, titleCard, completeSpecialStage,
                     vIntRunCount, cameraXSub, starPost, rings, reverseGravity, mod, titleScreen, audio, interactivePacing,
-                    nativePcm, endOfLevel, rewindFrom, rewindFrames, saveSlots, extraTeams, timerFrames);
+                    nativePcm, endOfLevel, rewindFrom, rewindFrames, saveSlots, extraTeams, timerFrames, noMusic,
+                    drawMode, dormantStyle);
+        }
+
+        private static String choice(String raw, String flag, String... allowed) {
+            String value = raw.trim().toUpperCase(Locale.ROOT);
+            for (String candidate : allowed) if (candidate.equals(value)) return value;
+            throw new IllegalArgumentException(flag + " must be one of " + String.join(", ", allowed));
         }
 
         private static String value(String[] argv, int index, String flag) {

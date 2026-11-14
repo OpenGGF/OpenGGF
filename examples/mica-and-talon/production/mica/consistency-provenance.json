@@ -1,0 +1,535 @@
+{
+  "purpose": "Bounded original-generation consistency correction; not a full every-native-pose anatomical certification.",
+  "baseline": "c3789d8d05",
+  "identityAnchors": [
+    "wait-00",
+    "walk-01",
+    "run-00",
+    "roll-00"
+  ],
+  "reference": "wait-00: hood/skull18px, eye-to-snout dy4px, torso8px",
+  "generation": {
+    "tool": "built-in image_gen; exposed model version unavailable",
+    "prompts": {
+      "balance-1": "Create an ORIGINAL MICA pangolin game BALANCE cycle. Image 1 locked approved identity and proportions; image 2 exact four native Sonic poses to redraw, POSE ONLY. Exactly FOUR equal horizontal cells, transparent background. Same character as approved WAIT: rounded layered jade pangolin hood plates, cream narrow muzzle, large right-looking eye, small peach ear, white gloves, coral boots jade laces tan soles, tapered plated tail. Do not inherit Sonic quills or spike crest. Preserve each native forward-leaning balancing stance and different hands and raised foot. Compact head, short torso. Skull size consistent across every cell, matching image1 wait at game pixel scale. Chunky flat limited 16-bit pixel clusters uniform resolution, no gradients or text. Keep full silhouette with wide clear transparent margins between cells. All look RIGHT.",
+      "balance-2": "Alternative attempt. ORIGINAL MICA pangolin 4-frame BALANCE atlas, exactly FOUR equally spaced horizontal cells on genuinely transparent alpha background. Redraw image2's FOUR native Sonic POSES with image1 approved MICA identity: rounded overlapping jade scale hood (never pointed Sonic quills), small ear, tan muzzle, white gloves, coral boots tan soles and jade laces, long plated tail. Much simpler tiny sprite clusters matching image1; closed mouth, no red tongue, no noisy texture. Right-looking eyes. Same compact head scale all cells, short belly. Frame1 open glove back/up; frame2 back pointing; frame3 hand down; frame4 pointing again. All lean right with forward boot raised and rear boot planted. Full character including tail and boots. No backdrop, shadow, glow, text or ground.",
+      "duck-1": "Original MICA pangolin DUCK cycle. Image1 locked approved WAIT/WALK/RUN/ROLL identity, image2 native Sonic POSE ONLY. TWO equal horizontal cells transparent alpha background, generous margins, full character. First cell upright crouch face pointing right; second tightly curled crouch seen obliquely from rear, face still on RIGHT side as exact native pose. Rounded jade overlapping scale hood, NEVER hedgehog quills. Cream narrow muzzle, peach ear, white gloves coral hiking boots jade laces tan soles, tapered plated tail. Same skull size in both poses matches approved wait, body compresses by bending. Bold simple 16-bit pixels; no gradients no text no shadow no background.",
+      "duck-2": "Second design alternative: TWO original MICA pangolin crouch animation cells horizontal transparent alpha. Redraw exactly image2 native duck poses with image1 identity. Match approved WAIT skull width; same anatomical skull in both cells. First shallow crouch facing right, second deep tightly curled crouch, back/hood rotated toward camera, small muzzle on RIGHT. Hood made of close rounded overlapping pangolin scales, NOT long triangular swept quills. No big spikes, no fin-like scales. Tiny crisp 16-bit game pixels like approved identity, small tan muzzle, closed mouth no tongue, eye looking right, peach ear, jade hood and long tapering tail, cream belly, white gloves, coral lace-up boots. Full isolated sprites without ground, shadow, glow, labels, texture or gradients."
+    },
+    "balanceSelections": [
+      2,
+      1,
+      2,
+      2
+    ],
+    "duckSelections": [
+      2,
+      2
+    ],
+    "selectionReason": "Balance alternate2 has simpler closed muzzle; phase1 alternate1 has stronger near glove. Duck alternate1 tucked hood has long swept plates, rejected for alternate2 rounded overlapping scales."
+  },
+  "reductions": {
+    "push-00": {
+      "method": "re-reduced",
+      "source": "/tmp/mica-np-core-20261108/raw/push-00.png",
+      "sha256": "8df595cc46e27d8e876edd02d62d3bda2f86afd7b4f303b0655116273be97bbe",
+      "sourcePixelsPerGamePixel": 32.906666666666666,
+      "anchor": [
+        21,
+        18
+      ],
+      "size": [
+        34,
+        38
+      ]
+    },
+    "push-01": {
+      "method": "re-reduced",
+      "source": "/tmp/mica-np-core-20261108/raw/push-01.png",
+      "sha256": "6708c426d897e818dddc8f1ccadfa3101ce66a24d7d580c2eba6e41db9ccda69",
+      "sourcePixelsPerGamePixel": 32.91179012345679,
+      "anchor": [
+        21,
+        16
+      ],
+      "size": [
+        34,
+        36
+      ]
+    },
+    "look_up-00": {
+      "method": "re-reduced",
+      "source": "/tmp/mica-np-core-20261108/raw/look_up-00.png",
+      "sha256": "df3ae4c630577c8fa6b88e3181fc6f5042ff3bfa537adc7eb3265a230c8a23c9",
+      "sourcePixelsPerGamePixel": 36.95473251028807,
+      "anchor": [
+        14,
+        18
+      ],
+      "size": [
+        24,
+        38
+      ]
+    },
+    "look_up-01": {
+      "method": "re-reduced",
+      "source": "/tmp/mica-np-core-20261108/raw/look_up-01.png",
+      "sha256": "362e8b466ffbd044f4d7bf0884f29fe2af417e74736a3425a8511bb755901825",
+      "sourcePixelsPerGamePixel": 42.05761316872428,
+      "anchor": [
+        12,
+        13
+      ],
+      "size": [
+        21,
+        33
+      ]
+    },
+    "skid-00": {
+      "method": "re-reduced",
+      "source": "/tmp/mica-np-core-20261108/raw/skid-00.png",
+      "sha256": "3cd242f959cd89dd1c1d8f111a234e9464c1721e174b85abb15d0fadf4349b10",
+      "sourcePixelsPerGamePixel": 33.74269005847953,
+      "anchor": [
+        16,
+        13
+      ],
+      "size": [
+        34,
+        33
+      ]
+    },
+    "skid-01": {
+      "method": "re-reduced",
+      "source": "/tmp/mica-np-core-20261108/raw/skid-01.png",
+      "sha256": "7c9e185d4bd748aa01a685b5ec42004db32bebb3685a6cd48b98bd05e08a6426",
+      "sourcePixelsPerGamePixel": 33.30409356725146,
+      "anchor": [
+        16,
+        13
+      ],
+      "size": [
+        34,
+        33
+      ]
+    },
+    "skid-02": {
+      "method": "re-reduced",
+      "source": "/tmp/mica-np-core-20261108/raw/skid-02.png",
+      "sha256": "827cfd4a1e28052e932ee8ed4115a0d9f05d43f2e826e4b7e9caba95f6b00a63",
+      "sourcePixelsPerGamePixel": 31.44144144144144,
+      "anchor": [
+        15,
+        15
+      ],
+      "size": [
+        33,
+        35
+      ]
+    },
+    "skid-03": {
+      "method": "re-reduced",
+      "source": "/tmp/mica-np-core-20261108/raw/skid-03.png",
+      "sha256": "dc430089beb7d57e65e1827703fb65535c96c7f7769c88b47546a2853d537b11",
+      "sourcePixelsPerGamePixel": 35.719373219373225,
+      "anchor": [
+        12,
+        19
+      ],
+      "size": [
+        28,
+        39
+      ]
+    },
+    "get_air-00": {
+      "method": "re-reduced",
+      "source": "/tmp/mica-np-core-20261108/raw/get_air-00.png",
+      "sha256": "eff2ceecca4ce95d42a16f906c278799e8c95daaac3fe41c8e0ec56fd3715dc0",
+      "sourcePixelsPerGamePixel": 34.72222222222222,
+      "anchor": [
+        16,
+        17
+      ],
+      "size": [
+        32,
+        35
+      ]
+    },
+    "get_air-01": {
+      "method": "re-reduced",
+      "source": "/tmp/mica-np-core-20261108/raw/get_air-01.png",
+      "sha256": "f052047bdb8fbf917150d553b83e70d7646f88779d1c99b0d58ea257f9752869",
+      "sourcePixelsPerGamePixel": 37.00617283950617,
+      "anchor": [
+        16,
+        16
+      ],
+      "size": [
+        32,
+        33
+      ]
+    },
+    "hang-00": {
+      "method": "re-reduced",
+      "source": "$HOME/scratch/agent-tmp/mica-poses-20261108/hang-generated.png",
+      "sha256": "dd77eeb1c712001c2c8df36e8de8ea882e0f8d5ba5d079b2a4852fceeabdc7b2",
+      "sourcePixelsPerGamePixel": 14.751543209876543,
+      "anchor": [
+        10,
+        20
+      ],
+      "size": [
+        21,
+        40
+      ]
+    },
+    "hang-01": {
+      "method": "re-reduced",
+      "source": "$HOME/scratch/agent-tmp/mica-poses-20261108/hang-generated.png",
+      "sha256": "dd77eeb1c712001c2c8df36e8de8ea882e0f8d5ba5d079b2a4852fceeabdc7b2",
+      "sourcePixelsPerGamePixel": 16.168482207697895,
+      "anchor": [
+        11,
+        21
+      ],
+      "size": [
+        23,
+        36
+      ]
+    },
+    "hang-02": {
+      "method": "re-reduced",
+      "source": "$HOME/scratch/agent-tmp/mica-poses-20261108/hang-generated.png",
+      "sha256": "dd77eeb1c712001c2c8df36e8de8ea882e0f8d5ba5d079b2a4852fceeabdc7b2",
+      "sourcePixelsPerGamePixel": 17.158825492158826,
+      "anchor": [
+        11,
+        19
+      ],
+      "size": [
+        25,
+        30
+      ]
+    },
+    "variant-s3k-a2": {
+      "method": "re-reduced",
+      "source": "$HOME/scratch/agent-tmp/mica-batch2-20261109/poses05-attempt-2.png",
+      "sha256": "43059a1789a05572964317f42e68b4cad716536abe0453ab9c44c94d670d10c2",
+      "sourcePixelsPerGamePixel": 8.571428571428571,
+      "anchor": [
+        19,
+        18
+      ],
+      "size": [
+        30,
+        38
+      ]
+    },
+    "variant-s3k-a3": {
+      "method": "re-reduced",
+      "source": "$HOME/scratch/agent-tmp/mica-batch2-20261109/poses05-attempt-2.png",
+      "sha256": "43059a1789a05572964317f42e68b4cad716536abe0453ab9c44c94d670d10c2",
+      "sourcePixelsPerGamePixel": 8.61111111111111,
+      "anchor": [
+        19,
+        18
+      ],
+      "size": [
+        29,
+        38
+      ]
+    },
+    "variant-s3k-c8": {
+      "method": "re-reduced",
+      "source": "$HOME/scratch/agent-tmp/mica-batch2-20261109/poses05-attempt-2.png",
+      "sha256": "43059a1789a05572964317f42e68b4cad716536abe0453ab9c44c94d670d10c2",
+      "sourcePixelsPerGamePixel": 9.25925925925926,
+      "anchor": [
+        20,
+        11
+      ],
+      "size": [
+        35,
+        22
+      ]
+    },
+    "variant-s3k-c9": {
+      "method": "re-reduced",
+      "source": "$HOME/scratch/agent-tmp/mica-batch2-20261109/poses05-attempt-2.png",
+      "sha256": "43059a1789a05572964317f42e68b4cad716536abe0453ab9c44c94d670d10c2",
+      "sourcePixelsPerGamePixel": 9.25925925925926,
+      "anchor": [
+        14,
+        11
+      ],
+      "size": [
+        30,
+        22
+      ]
+    },
+    "variant-s3k-cc": {
+      "method": "re-reduced",
+      "source": "$HOME/scratch/agent-tmp/mica-batch2-20261109/poses06-attempt-2.png",
+      "sha256": "55e18521aafc21aa8a7c4b0fa7d8f68c788af8f1a969e5993b7aca203cbe63e0",
+      "sourcePixelsPerGamePixel": 9.12037037037037,
+      "anchor": [
+        14,
+        11
+      ],
+      "size": [
+        34,
+        22
+      ]
+    },
+    "variant-s3k-03": {
+      "method": "re-reduced",
+      "source": "$HOME/scratch/agent-tmp/mica-batch2-20261109/poses07-attempt-2.png",
+      "sha256": "51700ce8ab1e9c49ae0b0b209493faa239f3a970e25b76f1dc4ac047bf295bb4",
+      "sourcePixelsPerGamePixel": 8.859649122807017,
+      "anchor": [
+        12,
+        14
+      ],
+      "size": [
+        23,
+        34
+      ]
+    },
+    "variant-s3k-04": {
+      "method": "re-reduced",
+      "source": "$HOME/scratch/agent-tmp/mica-batch2-20261109/poses07-attempt-2.png",
+      "sha256": "51700ce8ab1e9c49ae0b0b209493faa239f3a970e25b76f1dc4ac047bf295bb4",
+      "sourcePixelsPerGamePixel": 8.80952380952381,
+      "anchor": [
+        12,
+        15
+      ],
+      "size": [
+        25,
+        34
+      ]
+    },
+    "object-pose-69": {
+      "method": "re-reduced",
+      "source": "$HOME/scratch/agent-tmp/mica-batch3-20261109/tumble-a-attempt-2.png",
+      "sha256": "cd13c4b2316cbab2b70a114b266afe28b18f7933ee15fb9b070b00e0bdf4a281",
+      "sourcePixelsPerGamePixel": 10.34920634920635,
+      "anchor": [
+        14,
+        14
+      ],
+      "size": [
+        26,
+        32
+      ]
+    },
+    "object-pose-6a": {
+      "method": "re-reduced",
+      "source": "$HOME/scratch/agent-tmp/mica-batch3-20261109/tumble-a-attempt-1.png",
+      "sha256": "d080b6c0ccbfdcff4bb0c92e7faf06fb1e2a6ab6970f6f5c784089bb279dc09b",
+      "sourcePixelsPerGamePixel": 10.761904761904761,
+      "anchor": [
+        14,
+        15
+      ],
+      "size": [
+        21,
+        32
+      ]
+    },
+    "object-pose-6b": {
+      "method": "re-reduced",
+      "source": "$HOME/scratch/agent-tmp/mica-batch3-20261109/tumble-a-attempt-2.png",
+      "sha256": "cd13c4b2316cbab2b70a114b266afe28b18f7933ee15fb9b070b00e0bdf4a281",
+      "sourcePixelsPerGamePixel": 10.793650793650793,
+      "anchor": [
+        15,
+        12
+      ],
+      "size": [
+        25,
+        23
+      ]
+    },
+    "balance-00": {
+      "method": "regenerated",
+      "source": "$HOME/scratch/agent-tmp/mica-consistency-20261109/balance-attempt-2.png",
+      "sha256": "be864cc530784b7cee160c59192242857fb32df0e7a2e46bf20aa7ddc7444e39",
+      "sourcePixelsPerGamePixel": 15.11111111111111,
+      "anchor": [
+        14,
+        10
+      ],
+      "size": [
+        24,
+        30
+      ]
+    },
+    "balance-01": {
+      "method": "regenerated",
+      "source": "$HOME/scratch/agent-tmp/mica-consistency-20261109/balance-attempt-1.png",
+      "sha256": "ad8d1d90f161571df01679e4a124ea866645f1df630bc4c772a43914b0d7b21d",
+      "sourcePixelsPerGamePixel": 16.11111111111111,
+      "anchor": [
+        14,
+        8
+      ],
+      "size": [
+        24,
+        28
+      ]
+    },
+    "balance-02": {
+      "method": "regenerated",
+      "source": "$HOME/scratch/agent-tmp/mica-consistency-20261109/balance-attempt-2.png",
+      "sha256": "be864cc530784b7cee160c59192242857fb32df0e7a2e46bf20aa7ddc7444e39",
+      "sourcePixelsPerGamePixel": 15.0,
+      "anchor": [
+        14,
+        11
+      ],
+      "size": [
+        25,
+        31
+      ]
+    },
+    "balance-03": {
+      "method": "regenerated",
+      "source": "$HOME/scratch/agent-tmp/mica-consistency-20261109/balance-attempt-2.png",
+      "sha256": "be864cc530784b7cee160c59192242857fb32df0e7a2e46bf20aa7ddc7444e39",
+      "sourcePixelsPerGamePixel": 15.555555555555555,
+      "anchor": [
+        14,
+        10
+      ],
+      "size": [
+        25,
+        30
+      ]
+    },
+    "duck-00": {
+      "method": "regenerated",
+      "source": "$HOME/scratch/agent-tmp/mica-consistency-20261109/duck-attempt-2.png",
+      "sha256": "689884cffce7ab513d2564028aea08b3fce87b24b94c3f17d6c6060017e82615",
+      "sourcePixelsPerGamePixel": 20.37037037037037,
+      "anchor": [
+        13,
+        11
+      ],
+      "size": [
+        31,
+        31
+      ]
+    },
+    "duck-01": {
+      "method": "regenerated",
+      "source": "$HOME/scratch/agent-tmp/mica-consistency-20261109/duck-attempt-2.png",
+      "sha256": "689884cffce7ab513d2564028aea08b3fce87b24b94c3f17d6c6060017e82615",
+      "sourcePixelsPerGamePixel": 30.0,
+      "anchor": [
+        8,
+        -2
+      ],
+      "size": [
+        20,
+        18
+      ]
+    },
+    "stop-00": {
+      "method": "re-reduced alias",
+      "source": "skid-00"
+    },
+    "stop-01": {
+      "method": "re-reduced alias",
+      "source": "skid-01"
+    },
+    "stop-02": {
+      "method": "re-reduced alias",
+      "source": "skid-02"
+    },
+    "stop-03": {
+      "method": "re-reduced alias",
+      "source": "skid-03"
+    }
+  },
+  "changed": {
+    "re-reduced": [
+      "push-00",
+      "push-01",
+      "look_up-00",
+      "look_up-01",
+      "skid-00",
+      "skid-01",
+      "skid-02",
+      "skid-03",
+      "get_air-00",
+      "get_air-01",
+      "hang-00",
+      "hang-01",
+      "hang-02",
+      "variant-s3k-a2",
+      "variant-s3k-a3",
+      "variant-s3k-c8",
+      "variant-s3k-c9",
+      "variant-s3k-cc",
+      "variant-s3k-03",
+      "variant-s3k-04",
+      "object-pose-69",
+      "object-pose-6a",
+      "object-pose-6b"
+    ],
+    "regenerated": [
+      "balance-00",
+      "balance-01",
+      "balance-02",
+      "balance-03",
+      "duck-00",
+      "duck-01"
+    ],
+    "re-reduced alias": [
+      "stop-00",
+      "stop-01",
+      "stop-02",
+      "stop-03"
+    ]
+  },
+  "slopes": "derive_slopes.py rebuilt; all 36 byte-identical, approved flats unchanged.",
+  "strayArtifacts": "Visual check found no reference hardware or detached bar/rotor pixels requiring authoritative row removal. No painted cleanup.",
+  "spreadsAllMeasuredViews": {
+    "before": {
+      "skull": [
+        13,
+        22
+      ],
+      "eyeToSnoutDy": [
+        -1,
+        6
+      ],
+      "torso": [
+        3,
+        14
+      ]
+    },
+    "after": {
+      "skull": [
+        14,
+        20
+      ],
+      "eyeToSnoutDy": [
+        -1,
+        6
+      ],
+      "torso": [
+        5,
+        14
+      ]
+    }
+  },
+  "limits": [
+    "Native Sonic landmark rectangles have not been individually certified.",
+    "Rotated/occluded landmarks remain null; no inferred widths.",
+    "Some rear/tumble hood drawings are broader, requiring a separate native-axis audit before certification.",
+    "No gameplay capture/contact certification."
+  ],
+  "review": "$HOME/scratch/agent-tmp/mica-consistency-20261109/review.html"
+}

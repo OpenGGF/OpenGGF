@@ -177,6 +177,10 @@ public enum SonicConfiguration {
 	 * Whether to enable Audio (Music/SFX)
 	 */
 	AUDIO_ENABLED,
+    /** Music volume from 0 to 100 percent; 0 silences music and keeps sound effects. */
+    AUDIO_MUSIC_VOLUME,
+    /** Sound-effect volume from 0 to 100 percent. */
+    AUDIO_SFX_VOLUME,
     AUDIO_HUB_MUSIC_ENABLED,
     AUDIO_HUB_MUSIC_VOLUME,
     /** Personal display filter for multiplayer player names and chat messages. */
@@ -719,6 +723,15 @@ public enum SonicConfiguration {
 	REWIND_BUDGET_SECONDS,
 	REWIND_REFILL_ON_LIFE_LOSS,
 	REWIND_BONUS_STAGES,
-	REWIND_SPECIAL_STAGES;
+	REWIND_SPECIAL_STAGES,
+
+	/**
+	 * Widescreen draw mode: EDGE runs objects and the camera at the full display
+	 * width; NATIVE keeps the simulation at the native 320 pixels and draws the
+	 * extra width as a presentation-only margin. Appended to preserve ordinals.
+	 */
+	WIDESCREEN_DRAW_MODE,
+	/** How NATIVE draw mode presents not-yet-loaded objects in the margins: GREYSCALE, NORMAL or HIDDEN. */
+	WIDESCREEN_DORMANT_STYLE;
 
 }

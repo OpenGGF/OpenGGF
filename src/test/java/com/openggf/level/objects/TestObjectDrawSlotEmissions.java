@@ -16,6 +16,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.*;
@@ -85,6 +86,9 @@ class TestObjectDrawSlotEmissions {
         observed.clear();
         ObjectDrawInternalAccess.drawBucket(manager, 2, graphics, List.of());
         assertEquals(List.of(30, 70, 40, 70), observed);
+        observed.clear();
+        ObjectDrawInternalAccess.bucketPass(manager, graphics).draw(2, List.of());
+        assertEquals(List.of(30, 70, 40, 70), observed, "an admitted pass draws exactly like the checked bridge");
         assertEquals(ledger, NativeSpriteSubmissionAccess.admissions(manager));
     }
 
@@ -174,6 +178,35 @@ class TestObjectDrawSlotEmissions {
         verify(owner, never()).setCurrentSpriteTileOcclusionPaletteMask(anyInt());
         verify(supplied, never()).disableVerticalWrapAdjust();
         verify(supplied, never()).enableVerticalWrapAdjust(anyInt(), anyInt());
+    }
+
+    @Test void ownerIndexAnswersLikeTheFullScanForEverySlot() {
+        var callbacks = new ObjectCallbackRouter(null);
+        var placedLive = new RegisteredSlotProbe(2); placedLive.setSlotIndex(40);
+        var placedDead = new RegisteredSlotProbe(2); placedDead.setSlotIndex(50); placedDead.setDestroyed(true);
+        var dynamicLive = new RegisteredSlotProbe(2); dynamicLive.setSlotIndex(50);
+        var duplicateA = new RegisteredSlotProbe(2); duplicateA.setSlotIndex(60);
+        var duplicateB = new RegisteredSlotProbe(2); duplicateB.setSlotIndex(60);
+        var unassigned = new RegisteredSlotProbe(2);
+        List<ObjectInstance> placed = new ArrayList<>(List.of(placedLive, placedDead, duplicateA));
+        // An object listed in both groups is one owner, exactly as in the scan.
+        List<ObjectInstance> dynamic = new ArrayList<>(List.of(dynamicLive, duplicateB, placedLive, unassigned));
+        var index = new ObjectNativeSstOverwrite.OwnerIndex();
+        index.rebuild(placed, dynamic, callbacks);
+        for (int slot : new int[]{-1, 0, 39, 40, 50, 51, 70, 5000}) {
+            assertSame(ObjectNativeSstOverwrite.currentOwner(placed, dynamic, callbacks, slot), index.owner(slot),
+                    "slot " + slot);
+        }
+        var scan = assertThrows(IllegalStateException.class,
+                () -> ObjectNativeSstOverwrite.currentOwner(placed, dynamic, callbacks, 60));
+        assertEquals(scan.getMessage(), assertThrows(IllegalStateException.class, () -> index.owner(60)).getMessage(),
+                "duplicate live owners still fail only when their slot is resolved");
+        duplicateB.setDestroyed(true);
+        assertSame(duplicateA, index.owner(60), "destruction is read at lookup time");
+        dynamicLive.setSlotIndex(41);
+        index.rebuild(placed, dynamic, callbacks);
+        assertSame(dynamicLive, index.owner(41), "a new pass reads current slot indices");
+        assertNull(index.owner(50));
     }
 
     private RegisteredSlotProbe register(int slot, int bucket) {

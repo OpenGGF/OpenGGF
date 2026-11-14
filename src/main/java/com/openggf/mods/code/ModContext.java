@@ -24,9 +24,9 @@ public final class ModContext {
     private final String owner;
     private final String baseGame;
     private static final java.util.Set<String> STOCK_GAMES = java.util.Set.of("s1", "s2", "s3k");
-    static final String ANY_GAME_RULE = "baseGame any needs a startup scene, title entry, per-game patch or typed mutator catalogue; "
+    static final String ANY_GAME_RULE = "baseGame any needs a startup scene, title entry, per-game patch, playable characters or typed mutator catalogue; "
             + "objects, object art, previews and service bundles require a scene, title entry or patch; "
-            + "zones, characters, ROM art intake, launch teams, input/HUD policies and decoded level patches "
+            + "zones, ROM art intake, launch teams, input/HUD policies and decoded level patches "
             + "need a single base game";
     private final boolean standalone;
     private final ModAssetRoot assets;
@@ -435,9 +435,9 @@ public final class ModContext {
             boolean codeRole = startupScene != null || titleEntry != null || !patches.isEmpty();
             boolean sharedRuntimeContent = !objects.isEmpty() || !art.isEmpty()
                     || !objectPreviewArtKeys.isEmpty() || !serviceBundles.isEmpty();
-            if ("any".equals(baseGame) && ((!codeRole && mutators.isEmpty())
+            if ("any".equals(baseGame) && ((!codeRole && mutators.isEmpty() && characters.isEmpty())
                     || (sharedRuntimeContent && !codeRole) || !zones.isEmpty()
-                    || !characters.isEmpty() || !romArt.isEmpty() || !launchTeams.isEmpty()
+                    || !romArt.isEmpty() || !launchTeams.isEmpty()
                     || !inputFilters.isEmpty() || !hudProfiles.isEmpty() || !decodedLevelPatches.isEmpty())) {
                 throw failure(ANY_GAME_RULE);
             }

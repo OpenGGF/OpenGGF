@@ -1,0 +1,361 @@
+{
+  "tool": "built-in image_gen.imagegen",
+  "date": "2026-11-10",
+  "references": [
+    "concept/talon.png",
+    "art/talon/frames/wait-00.png",
+    "external roots-N-native-8x.png; real-palette Tails body mappings; no separate tail object"
+  ],
+  "attempt1": "Use case: identity-preserve. Produce an original 16-bit pixel sprite sheet transforming each Tails pose in reference1 into TALON the slate peregrine courier in reference2 with compact approved pixel anatomy from reference3. Exact four columns three rows, 12 sprites, one per equal cell in same reading order as ref1. Match individual native body head hand shoe orientation very closely, including all inverted, foreshortened, back-facing and gripping poses. New species identity: slate-blue plumage, cream barred chest, yellow hooked beak, amber goggles atop head, brown courier satchel strap, integrated wing-hands with white gloves, red-white shoes. EXCLUDE separate fox tails, rotors, masts and fox ears in native reference. Transparent background, no shadows, no text. Sprite proportions about31px standing height; 11px skull9px torso, drawn enlarged8x; bold black pixel outline, flat15 colours. Pose and anatomical scale locked across cells. Attempt1.",
+  "attempt2": "Original pixel sprite sheet ATTEMPT2. Four columns three equal rows, twelve sprites. Transform reference1 Tails native poses into TALON from model2 approved sprite3. EXACT individual orientations crucial: back-facing native poses MUST show back of head NO face, upside-down poses MUST remain upside down, hands and feet must match native directions. Match all poses in reading order, maintaining same compact head11px torso9px proportions as approved31px tall sprite. Show slate blue feathers, hooked yellow beak, amber goggles, cream barred chest, satchel on brown strap, integrated wing-hands with white gloves, red-white shoes. No fox tails, rotors, mast, fox ears or separate appendages. Tiny16-bit sprite rendered8x enlarged; bold pixel ink,15 flat colours, NO shadows NO halo NO text, fully transparent empty background. Clear disconnected margins around every sprite.",
+  "group0Revision": "EXACT POSE SHEET: four columns three rows. First row cells1,2,3 show BACK OF HEAD, NO visible face or eyes, running back-facing diagonally upward just like native; cell4 sideways curling tumble. Second row all FULLY UPSIDE DOWN, boots at top head at bottom. Third row cell1 upside down,cell2 curling diagonal,cell3,4 BACK OF HEAD NO FACE.",
+  "hangRevision": "Five equal columns TWO rows: top row first attempt for each, bottom row alternate attempt of same five poses. CRITICAL ALL FIVE POSES HANG BY TWO WHITE GLOVED HANDS OVERHEAD: both hands ABOVE THE HEAD, palms gripping invisible horizontal bar. Never lower either hand. Columns1-3 profile facing right, head under overhead hands: column1 legs relaxed bent down, column2 legs extended forward/right, column3 knees curled upwards. Columns4-5 face FRONT hands very wide overhead, feet down. Locked approved compact11px skull9px torso31px standing anatomy,8x enlargement. Transparent background no halo shadow or text. Heavy ink silhouette, flat15colours.",
+  "variations": "Group8 has four sprites only in top row. Group0 attempt1 uses the same identity/pose brief; attempt2 adds the explicit orientation revision. Hang revision retained the same identity/exclusion constraints. Prompt templates are recorded here; exact tool calls are in the implementation conversation.",
+  "attempts": [
+    {
+      "group": 0,
+      "attempt": 1,
+      "mappings": [
+        49,
+        50,
+        51,
+        52,
+        53,
+        54,
+        55,
+        56,
+        57,
+        58,
+        59,
+        60
+      ],
+      "sha256": "938fd3277ea6ffcfbff48691467f5877d14523d1e789e1a6a80dd53c9881e3a4",
+      "file": "$HOME/scratch/agent-tmp/talon-object-poses-20261110/attempt1-0.png"
+    },
+    {
+      "group": 0,
+      "attempt": 2,
+      "mappings": [
+        49,
+        50,
+        51,
+        52,
+        53,
+        54,
+        55,
+        56,
+        57,
+        58,
+        59,
+        60
+      ],
+      "sha256": "e54b3789527dffa1f4da433d9082282300f732a9023c996f0213fb82a42ae21a",
+      "file": "$HOME/scratch/agent-tmp/talon-object-poses-20261110/attempt2-0.png"
+    },
+    {
+      "group": 1,
+      "attempt": 1,
+      "mappings": [
+        61,
+        62,
+        63,
+        64,
+        65,
+        66,
+        67,
+        68,
+        69,
+        70,
+        71,
+        72
+      ],
+      "sha256": "bd8c7addf0f389b53e73e93c4a0ff0fba466f1f307c45f640036ebbbc5f1bba6",
+      "file": "$HOME/scratch/agent-tmp/talon-object-poses-20261110/attempt1-1.png"
+    },
+    {
+      "group": 1,
+      "attempt": 2,
+      "mappings": [
+        61,
+        62,
+        63,
+        64,
+        65,
+        66,
+        67,
+        68,
+        69,
+        70,
+        71,
+        72
+      ],
+      "sha256": "c9b28a34a934e6ed910a8d5bc68073b40d41d5663470a6412abfbbad21fc3752",
+      "file": "$HOME/scratch/agent-tmp/talon-object-poses-20261110/attempt2-1.png"
+    },
+    {
+      "group": 2,
+      "attempt": 1,
+      "mappings": [
+        73,
+        74,
+        75,
+        76,
+        77,
+        78,
+        79,
+        80,
+        81,
+        82,
+        83,
+        84
+      ],
+      "sha256": "63b9b3da5f39cd83ef1e591086374e3e527d8075e5fbd2701b8224eaa7b7769c",
+      "file": "$HOME/scratch/agent-tmp/talon-object-poses-20261110/attempt1-2.png"
+    },
+    {
+      "group": 2,
+      "attempt": 2,
+      "mappings": [
+        73,
+        74,
+        75,
+        76,
+        77,
+        78,
+        79,
+        80,
+        81,
+        82,
+        83,
+        84
+      ],
+      "sha256": "3a151e8abd99cd5b47baad021144ea9a397c52e3aff49856ffc619f1add63f6b",
+      "file": "$HOME/scratch/agent-tmp/talon-object-poses-20261110/attempt2-2.png"
+    },
+    {
+      "group": 3,
+      "attempt": 1,
+      "mappings": [
+        85,
+        86,
+        87,
+        88,
+        89,
+        90,
+        91,
+        92,
+        93,
+        94,
+        95,
+        96
+      ],
+      "sha256": "875382127fa792671de94f2fd8a31e6b40aeadcd09ee832e203190cb34bc4372",
+      "file": "$HOME/scratch/agent-tmp/talon-object-poses-20261110/attempt1-3.png"
+    },
+    {
+      "group": 3,
+      "attempt": 2,
+      "mappings": [
+        85,
+        86,
+        87,
+        88,
+        89,
+        90,
+        91,
+        92,
+        93,
+        94,
+        95,
+        96
+      ],
+      "sha256": "679d9597ce097103ade04421d030366ae28b703c9c770d2b590efc821221b376",
+      "file": "$HOME/scratch/agent-tmp/talon-object-poses-20261110/attempt2-3.png"
+    },
+    {
+      "group": 4,
+      "attempt": 1,
+      "mappings": [
+        97,
+        98,
+        105,
+        106,
+        107,
+        108,
+        109,
+        110,
+        111,
+        112,
+        113,
+        114
+      ],
+      "sha256": "2d1a2955ddb1693c970ee1b980b185d999abedf179822e456d228b173bc69611",
+      "file": "$HOME/scratch/agent-tmp/talon-object-poses-20261110/attempt1-4.png"
+    },
+    {
+      "group": 4,
+      "attempt": 2,
+      "mappings": [
+        97,
+        98,
+        105,
+        106,
+        107,
+        108,
+        109,
+        110,
+        111,
+        112,
+        113,
+        114
+      ],
+      "sha256": "6bf4411b51755538560fc55a04a0409d15771a03a2faec60ab4b1e4073947e99",
+      "file": "$HOME/scratch/agent-tmp/talon-object-poses-20261110/attempt2-4.png"
+    },
+    {
+      "group": 5,
+      "attempt": 1,
+      "mappings": [
+        115,
+        116,
+        117,
+        118,
+        119,
+        120,
+        121,
+        126,
+        128,
+        129,
+        130,
+        131
+      ],
+      "sha256": "d9abeed24f4a8702cb86ada0ccce7fcc67f46493148a28f7d7a9958015a170e9",
+      "file": "$HOME/scratch/agent-tmp/talon-object-poses-20261110/attempt1-5.png"
+    },
+    {
+      "group": 5,
+      "attempt": 2,
+      "mappings": [
+        115,
+        116,
+        117,
+        118,
+        119,
+        120,
+        121,
+        126,
+        128,
+        129,
+        130,
+        131
+      ],
+      "sha256": "deb2bbe92bd32ab58c92b0e7bf23f3d5609afd8d4b420f2aa4540d1d06c06127",
+      "file": "$HOME/scratch/agent-tmp/talon-object-poses-20261110/attempt2-5.png"
+    },
+    {
+      "group": 6,
+      "attempt": 1,
+      "mappings": [
+        132,
+        133,
+        141,
+        144,
+        146,
+        147,
+        148,
+        149,
+        202,
+        223,
+        224,
+        225
+      ],
+      "sha256": "de5b1bebca1b0b54cb0231be244d30eed80542bbc0d59a89e23f98934fca2304",
+      "file": "$HOME/scratch/agent-tmp/talon-object-poses-20261110/attempt1-6.png"
+    },
+    {
+      "group": 6,
+      "attempt": 2,
+      "mappings": [
+        132,
+        133,
+        141,
+        144,
+        146,
+        147,
+        148,
+        149,
+        202,
+        223,
+        224,
+        225
+      ],
+      "sha256": "f41925428faea4011d01c8b30f697df01b5ea56366bba1c455ff1e3ee446ce24",
+      "file": "$HOME/scratch/agent-tmp/talon-object-poses-20261110/attempt2-6.png"
+    },
+    {
+      "group": 7,
+      "attempt": 1,
+      "mappings": [
+        226,
+        227,
+        228,
+        229,
+        230,
+        231,
+        232,
+        233,
+        234,
+        239,
+        240,
+        241
+      ],
+      "sha256": "f189e44a8050acdd11f5f627229e33c1c0d95277b35d95fa9f52904100fafe4c",
+      "file": "$HOME/scratch/agent-tmp/talon-object-poses-20261110/attempt1-7.png"
+    },
+    {
+      "group": 7,
+      "attempt": 2,
+      "mappings": [
+        226,
+        227,
+        228,
+        229,
+        230,
+        231,
+        232,
+        233,
+        234,
+        239,
+        240,
+        241
+      ],
+      "sha256": "68f58a743d223c33fdd175125726f2a955b0cb82fdfe9fa2d57840958a1a3f71",
+      "file": "$HOME/scratch/agent-tmp/talon-object-poses-20261110/attempt2-7.png"
+    },
+    {
+      "group": 8,
+      "attempt": 1,
+      "mappings": [
+        242,
+        246,
+        247,
+        248
+      ],
+      "sha256": "b1b8c33763f86d1abe38429f6c3e57f2e16fb6708647c8ed0d4a0c066d8175f5",
+      "file": "$HOME/scratch/agent-tmp/talon-object-poses-20261110/attempt1-8.png"
+    },
+    {
+      "group": 8,
+      "attempt": 2,
+      "mappings": [
+        242,
+        246,
+        247,
+        248
+      ],
+      "sha256": "9040efce70fd00b254b2ce41923d906c6b654074463325380755de6fe926bd40",
+      "file": "$HOME/scratch/agent-tmp/talon-object-poses-20261110/attempt2-8.png"
+    }
+  ],
+  "hangSha256": "e09f70af8daec896c1b0c51afdc5e910d476d653f49137f02099778c1710e8d7"
+}

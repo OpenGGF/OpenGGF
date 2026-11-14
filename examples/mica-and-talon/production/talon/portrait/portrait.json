@@ -1,0 +1,16 @@
+[
+  {
+    "id": 0,
+    "file": "../../../art/talon/portrait/talon-00.png",
+    "dimensions": [
+      31,
+      37
+    ],
+    "hotspot": [
+      19,
+      37
+    ],
+    "native_source_label": "word_CF6A",
+    "source": "$HOME/scratch/agent-tmp/talon-presentation-20261110/portrait.json"
+  }
+]

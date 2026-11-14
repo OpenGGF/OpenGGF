@@ -224,6 +224,21 @@ The [`examples/`](../../examples/) folder holds complete mods that use the API.
 | [Three Islands](../../examples/three-islands/README.md) | A turn-based RPG across all three games |
 | [Typing of the Hedgehog](../../examples/typing-of-the-hedgehog/README.md) | Type words to defeat badniks |
 
+## Blue Spheres
+
+New in 0.8. Open it from **Extras > Blue Spheres**. It is the game Sonic & Knuckles
+starts when Sonic 1 is locked on top. It appears when both the Sonic 3&K and the
+Sonic 1 ROMs are in your ROM folder; Sonic 1 is read only for its header.
+
+- **NO WAY!** Press any button to open the menu. The cartridge needs A, B and C
+  held together; OpenGGF accepts any button.
+- **Levels and codes.** Each cleared stage moves to the next level, and a perfect
+  stage (every ring collected) skips ten. Each level has a 12-digit code; pick
+  **CODE**, enter the digits and press Start to jump to that level.
+- **Sonic or Knuckles.** Press A, B or C on the menu to switch character.
+
+The single fixed stage other cartridges unlock is not offered.
+
 ## Time Attack and multiplayer
 
 New in 0.7. Experimental. Time Attack is a bundled mod. Open it from

@@ -44,6 +44,8 @@ class TestRingViewportWindow {
         try {
             TestEnvironment.configureGameModuleFixture(game);
             configuration.setSessionOverride(SonicConfiguration.SCREEN_WIDTH_PIXELS, width);
+            // A level load sizes the gameplay camera from the display; ring windows follow it.
+            com.openggf.game.GameServices.camera().refreshViewportDimensions(configuration);
             int cameraX = 0x101; // Deliberately not chunk-aligned.
             RingSpawn behind = new RingSpawn(cameraX - 9, 100);
             RingSpawn left = new RingSpawn(cameraX - 8, 100);

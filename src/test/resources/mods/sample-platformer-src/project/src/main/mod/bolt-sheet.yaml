@@ -13,3 +13,6 @@ frames:
   - delay: 30
     pieces:
       - { sourceX: 0, sourceY: 32, widthPixels: 24, heightPixels: 32, xOffset: -12, yOffset: -16, hFlip: false, vFlip: false, paletteIndex: 0, priority: false }
+
+animations:
+  WAIT: { frames: [0, 1], durations: [30, 30], end: loop }

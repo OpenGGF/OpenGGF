@@ -1,0 +1,23 @@
+# bank selector image hotspotX hotspotY; image paths are relative to this table.
+palette S2_ENDING normal-0a.png
+S2_ENDING 7 normal-07.png 32 32
+S2_ENDING 8 normal-08.png 24 25
+S2_ENDING 9 normal-09.png 20 19
+S2_ENDING 10 normal-0a.png 20 19
+S2_ENDING 11 normal-0b.png 20 15
+S2_ENDING 12 normal-0c.png 0 0
+S2_ENDING 13 normal-0d.png 0 0
+S2_ENDING 14 normal-0e.png 0 0
+palette S2_FLOAT float-54.png
+S2_FLOAT 84 float-54.png 20 12
+S2_FLOAT 85 float-55.png 24 12
+S2_FLOAT 86 float-56.png 28 12
+S2_FLOAT 87 float-57.png 28 12
+S2_FLOAT 88 float-58.png 12 12
+palette S2_SUPER super-12.png
+S2_SUPER 18 super-12.png 12 8
+S2_SUPER 19 super-13.png 8 8
+S2_SUPER 20 super-14.png 8 8
+S2_SUPER 21 super-15.png 8 8
+S2_SUPER 22 super-16.png 8 8
+S2_SUPER 23 super-17.png 0 0

@@ -281,6 +281,10 @@ public class Rom implements AutoCloseable {
             return (byte) memoryView.readU8((int) offset);
         }
         synchronized (this) {
+            if (byteReader != null) {
+                // Every write clears the cached snapshot, so it holds the current file bytes.
+                return (byte) byteReader.readU8((int) offset);
+            }
             buffer1.clear();
             fileChannel.position(offset);
             fileChannel.read(buffer1);
@@ -298,6 +302,11 @@ public class Rom implements AutoCloseable {
             return memoryView.slice((int) offset, count);
         }
         synchronized (this) {
+            if (byteReader != null) {
+                // Every write clears the cached snapshot, so it holds the current file bytes;
+                // copying from it skips the channel read and its intermediate buffer.
+                return byteReader.slice((int) offset, count);
+            }
             ByteBuffer buffer = ByteBuffer.allocate(count);
             fileChannel.position(offset);
             int bytesRead = fileChannel.read(buffer);

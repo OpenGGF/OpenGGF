@@ -13,6 +13,11 @@ public final class CharacterRuntimeHooks {
             throw new IllegalArgumentException("Character factory must construct its result in the current owner scope");
     }
 
+    /** Reads creator presentation through the same owner boundary as movement hooks. */
+    public static com.openggf.game.StrikeTrailStyle strikeTrailStyle(AbstractPlayableSprite sprite) {
+        return Objects.requireNonNull(sprite, "sprite").dispatchStrikeTrailStyle();
+    }
+
     public static boolean activateAbility(AbstractPlayableSprite sprite) {
         return activateAbility(sprite, false, false, false, false);
     }

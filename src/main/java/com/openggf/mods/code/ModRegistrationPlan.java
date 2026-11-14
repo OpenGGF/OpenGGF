@@ -128,7 +128,7 @@ public record ModRegistrationPlan(String ownerModId, String baseGameId,
         }
         // Shared title entries live in ModContext and do not require a startup scene here.
         if ("any".equals(baseGameId) && (!zones.isEmpty()
-                || !characters.isEmpty() || !romObjectArt.isEmpty()
+                || !romObjectArt.isEmpty()
                 || !launchTeams.isEmpty() || !inputFilters.isEmpty() || !hudProfiles.isEmpty()
                 || !decodedLevelPatches.isEmpty()
                 || explicitPatches.stream().anyMatch(patch -> !List.of("s1", "s2", "s3k").contains(patch.baseGameId())))) {

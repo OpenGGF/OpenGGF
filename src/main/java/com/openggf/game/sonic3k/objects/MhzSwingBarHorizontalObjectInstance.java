@@ -120,7 +120,11 @@ public final class MhzSwingBarHorizontalObjectInstance extends AbstractObjectIns
     public void appendRenderCommands(List<GLCommand> commands) {
         PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.MHZ_SWING_BAR_HORIZONTAL);
         if (renderer != null) {
-            renderer.drawFrameIndex(0, spawn.x(), spawn.y(), false, false);
+            // Obj_MHZSwingBarHorizontal only ORs bit 2 into render_flags (ori.b #4), so the flip bits the layout
+            // entry set stay and Draw_Sprite mirrors the bar by them. The bar's two ends differ: a
+            // flipped placement turns its cap to the open side.
+            renderer.drawFrameIndex(0, spawn.x(), spawn.y(),
+                    (spawn.renderFlags() & 1) != 0, (spawn.renderFlags() & 2) != 0);
         }
     }
 

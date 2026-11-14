@@ -6,6 +6,11 @@ package com.openggf.sprites.playable;
  */
 @com.openggf.game.ModApi
 public interface SidekickRespawnStrategy {
+    /** Engine-owned native Tails fly-in and CPU catch-up strategy. */
+    static SidekickRespawnStrategy tails(SidekickCpuController controller) {
+        return new TailsRespawnStrategy(controller);
+    }
+
     /**
      * Called each frame while in APPROACHING state.
      * @return true when respawn is complete and sidekick should transition to NORMAL

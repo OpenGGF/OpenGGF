@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.ending;
 
+import com.openggf.game.internal.EndingFormController;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.sonic3k.Sonic3kSuperStateController;
@@ -69,6 +71,8 @@ public final class EndingRescueDirectorObjectInstance extends AbstractObjectInst
     @Override public boolean flightChildHidden(){return (childFlags&2)!=0;}
     @Override public int flightFrame(){return mappingFrame;}
     @Override public boolean flightPowered(){return ending().progress()>=0;}
+    @Override public EndingFlightChildHost stageLeader(){return this;}
+    @Override public int stageScreenX(){return EndingWideStage.screenFromVdp(xFixed);}
     @Override public NativeSstState nativeSstState() {
         int control=(swingReverse?1:0)|(planeReleased?(sequence==REUNION?4:8):0)
                 |childFlags|(paletteHelperAdmitted?0x80:0);
@@ -100,7 +104,7 @@ public final class EndingRescueDirectorObjectInstance extends AbstractObjectInst
     }
     private void holdTailsCompanionPalette() {
         // Obj_5D86A's post-dispatch writer applies even without a powered form.
-        var p=mainPlayer();if(tails()&&p!=null&&p.getSuperStateController() instanceof Sonic3kSuperStateController powered)
+        var p=mainPlayer();if(tails()&&p!=null&&p.getSuperStateController() instanceof EndingFormController powered)
             powered.holdEndingTailsCompanionPaletteTimer();
     }
     private void rescue() {
@@ -117,7 +121,7 @@ public final class EndingRescueDirectorObjectInstance extends AbstractObjectInst
                     routine=8;ending().setFlag(0);timer=0x20;setX(plane.getX()+0x20);
                     setY(plane.getY()-(tails()?0x27:0x2B));baseY=getY();
                     var p=mainPlayer();if(p!=null){ObjectControlState.nativeBit7FullControl().applyTo(visualControlOwners.acquire(p));
-                        if(ending().progress()>0&&p.getSuperStateController() instanceof Sonic3kSuperStateController powered){
+                        if(ending().progress()>0&&p.getSuperStateController() instanceof EndingFormController powered){
                             // loc_5DB1C clears powered flags and restores normal mappings in this pass.
                             powered.beginEndingRescueRevert();powered.completeEndingRescueRevertMappings();
                         }
@@ -183,7 +187,7 @@ public final class EndingRescueDirectorObjectInstance extends AbstractObjectInst
             com.openggf.sprites.playable.PlayableSpriteInternalAccess.clearScriptedNativeStatus(p);
             p.setHighPriority(true);
             p.setAnimationId(0xF);p.setGSpeed((short)0x800);
-            if(p.getSuperStateController() instanceof Sonic3kSuperStateController powered){
+            if(p.getSuperStateController() instanceof EndingFormController powered){
                 powered.holdEndingRingDrain();
                 if(ending().progress()==0&&!tails()){
                     powered.initializeEndingSuperSonic();services().objectManager().createDynamicObject(EndingRescueRevertObjectInstance::new);
@@ -298,7 +302,7 @@ public final class EndingRescueDirectorObjectInstance extends AbstractObjectInst
                     // The powered owner, rather than a time estimate, releases native object_control.
                     if(ending().progress()>=0&&(!tails()||ending().progress()!=0)){
                         routine=10;hidePlayer=false;
-                        var p=mainPlayer();if(p!=null&&p.getSuperStateController() instanceof Sonic3kSuperStateController powered)
+                        var p=mainPlayer();if(p!=null&&p.getSuperStateController() instanceof EndingFormController powered)
                             powered.startEndingReunionTransformation();
                     }
                     else{routine=8;timer=5;if(tails())flipX=true;}}
@@ -329,7 +333,8 @@ public final class EndingRescueDirectorObjectInstance extends AbstractObjectInst
     }
     private void refreshPlayerProjection(){
         var p=mainPlayer();if(p==null)return;var camera=services().camera();
-        p.setRenderOffsets((short)EndingScreenProjection.xOffset(camera),
+        // The rider is drawn with the group it stands on (EndingWideStage).
+        p.setRenderOffsets((short)(EndingScreenProjection.xOffset(camera)+EndingWideStage.groupShift(services(),this)),
                 (short)EndingScreenProjection.yOffset(camera));
     }
     @Override public void refreshPostCameraRenderState(){
@@ -379,10 +384,12 @@ public final class EndingRescueDirectorObjectInstance extends AbstractObjectInst
         knucklesScripts.animateCheckResult(a,()->{});animationFrame=a.animFrame;
         animationCounter=a.animFrameTimer;mappingFrame=a.mappingFrame;
     }
-    private void draw(int map,int tile,int palette,int frame,int x,int y,boolean flip,boolean high,int bucket,String key){
+    private void draw(int map,int tile,int palette,int frame,int x,int y,boolean flip,boolean high,int bucket,String key,
+                      EndingFlightChildHost member){
         var camera=services().camera();
         EndingSpriteRenderSupport.draw(services(),key,map,tile,palette,frame,
-                EndingScreenProjection.worldX(camera,x),EndingScreenProjection.worldY(camera,y),flip,high,bucket);
+                EndingScreenProjection.worldX(camera,x)+EndingWideStage.groupShift(services(),member),
+                EndingScreenProjection.worldY(camera,y),flip,high,bucket);
     }
 
     /** Obj_Ending_RevertSuperSonic is independently allocated and runs after its owner. */
@@ -396,7 +403,7 @@ public final class EndingRescueDirectorObjectInstance extends AbstractObjectInst
         @Override public NativeSstState nativeSstState(){return NativeSstState.CLEARED;}
         @Override public void update(int vIntRunCount,PlayableEntity player){
             if(!(services().playerQuery().mainPlayerOrNull() instanceof AbstractPlayableSprite p)
-                    ||!(p.getSuperStateController() instanceof Sonic3kSuperStateController powered))return;
+                    ||!(p.getSuperStateController() instanceof EndingFormController powered))return;
             if(routine==0){routine=2;timer=119;}
             if(routine==2){if((timer=(short)(timer-1))<0){routine=4;powered.beginEndingRescueRevert();}}
             else{powered.completeEndingRescueRevertMappings();ObjectLifetimeOps.deleteNoRespawn(this);}
@@ -411,15 +418,16 @@ public final class EndingRescueDirectorObjectInstance extends AbstractObjectInst
                 var camera=services().camera();
                 services().graphicsManager().setCurrentSpriteSatBucket(3);
                 services().graphicsManager().setCurrentSpriteHighPriority(true);
-                renderer.drawFrameIndex(mappingFrame,EndingScreenProjection.worldX(camera,getX()),
+                renderer.drawFrameIndex(mappingFrame,EndingScreenProjection.worldX(camera,getX())
+                        +EndingWideStage.groupShift(services(),this),
                         EndingScreenProjection.worldY(camera,getY()),flipX,false,0);
             }
             return;
         }
         if(sequence==REUNION){if(routine==8||routine>=16)draw(S3kEndingResources.MAP_SONIC_TAILS_POSE,0x347,2,
-                mappingFrame,getX(),getY(),flipX,false,2,"ending-pose");return;}
+                mappingFrame,getX(),getY(),flipX,false,2,"ending-pose",this);return;}
         draw(S3kEndingResources.MAP_ENDING_PLANE_EXTRA,0x26E,smallPlane?1:0,mappingFrame,
-                getX(),getY(),flipX,!smallPlane,getPriorityBucket(),"ending-rescue-extra");
+                getX(),getY(),flipX,!smallPlane,getPriorityBucket(),"ending-rescue-extra",this);
 
     }
 
@@ -461,6 +469,16 @@ public final class EndingRescueDirectorObjectInstance extends AbstractObjectInst
         @Override public boolean flightChildHidden(){return false;}
         @Override public int flightFrame(){return role==TORNADO||role==REUNION_PLANE?1:role==CATCHER?7:2;}
         @Override public boolean flightPowered(){return ((EndingZoneRuntimeState)services().zoneRuntimeState()).ending().progress()>=0;}
+        /** A carried piece moves with its carrier; a free aircraft leads itself; a free emerald keeps its place. */
+        @Override public EndingFlightChildHost stageLeader(){
+            boolean plane=role==TORNADO||role==REUNION_PLANE;
+            if(plane?routine==2:role==CATCHER||routine==6){
+                var carrier=NativeSstSlotAccess.currentOwner(services().objectManager(),parentSlot);
+                return carrier instanceof EndingFlightChildHost host?host.stageLeader():null;
+            }
+            return plane?this:null;
+        }
+        @Override public int stageScreenX(){return EndingWideStage.screenFromVdp(xFixed);}
         private void scheduleDelete(boolean drawThisPass){
             deletePending=true;nativeStatus|=0x80;submittedForDraw=drawThisPass;
         }
@@ -550,8 +568,8 @@ public final class EndingRescueDirectorObjectInstance extends AbstractObjectInst
         @Override public void appendRenderCommands(List<GLCommand> commands){
             var o=owner();if(o==null||isDestroyed()||!submittedForDraw)return;
             if(role==MASTER||role==MASTER_AIZ)o.draw(S3kEndingResources.MAP_MASTER_EMERALD,0x52E,
-                    role==MASTER_AIZ?1:2,2,getX(),getY(),false,role==MASTER,getPriorityBucket(),"ending-master");
-            else if(role==CATCHER)o.draw(S3kEndingResources.MAP_ENDING_PLANE_EXTRA,0x26E,0,7,getX(),getY(),false,true,4,"ending-catcher");
+                    role==MASTER_AIZ?1:2,2,getX(),getY(),false,role==MASTER,getPriorityBucket(),"ending-master",this);
+            else if(role==CATCHER)o.draw(S3kEndingResources.MAP_ENDING_PLANE_EXTRA,0x26E,0,7,getX(),getY(),false,true,4,"ending-catcher",this);
             else{
                 var parts=subsprites();
                 boolean collecting=services().graphicsManager().isSpriteSatCollectionActive();
@@ -563,7 +581,7 @@ public final class EndingRescueDirectorObjectInstance extends AbstractObjectInst
                     int frame=1,x=getX(),y=getY();
                     if(nativeIndex!=0){var part=parts.get(nativeIndex-1);frame=part.frame();x=part.x();y=part.y();}
                     o.draw(S3kEndingResources.MAP_ENDING_PLANE,0x1E3,0,frame,x,y,
-                            flightFlipX(),isHighPriority(),getPriorityBucket(),"ending-tornado");
+                            flightFlipX(),isHighPriority(),getPriorityBucket(),"ending-tornado",this);
                 }
             }
         }

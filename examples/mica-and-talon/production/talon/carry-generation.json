@@ -1,0 +1,287 @@
+{
+  "method": "Built-in GPT Image; composited real-palette native reference at 8x, approved models and WAIT frames. Original generated art reduced uniformly; no hand-painted contours.",
+  "scratch": "$HOME/scratch/agent-tmp/mt-carry-20261110",
+  "attempts": [
+    {
+      "attempt": 1,
+      "selected": false,
+      "sha256": "a809f30476778e096eb4abd547014001b89a786e278aec313a8313eaf61e353e",
+      "verdict": "Continuous black sticker edges, backward lower-body alignment."
+    },
+    {
+      "attempt": 2,
+      "selected": false,
+      "sha256": "8cfdc12629723fa01f2ef50ae0dfc85800a41b71669e5ddb61f0575fb854f81e",
+      "verdict": "Continuous black contours, superseded by style-fidelity pass."
+    },
+    {
+      "attempt": 3,
+      "selected": false,
+      "sha256": "23b61b1232f3024118fff0306275972689f1e9a37206957cc7a81e0512131151",
+      "verdict": "Improved selective edges; compared with attempt5, denser fine feather detail."
+    },
+    {
+      "attempt": 4,
+      "selected": false,
+      "sha256": "4ec546236877954022f76adfbf683b9e8d7fd493254237c2b31c4273f1b1172d",
+      "verdict": "Rejected: wrong identities/pose; model kept Sonic and omitted TALON."
+    },
+    {
+      "attempt": 5,
+      "selected": true,
+      "sha256": "bafda2745dee47460a31d7ec597300eed066a0b1f5e54fc8bba2a77e149fdb93",
+      "verdict": "Selected: coarse native-like clusters and visible paired grip."
+    }
+  ],
+  "scale": 6.5,
+  "frames": [
+    {
+      "id": "family-tails-fly-carry-00",
+      "attempt": 5,
+      "cell": 0,
+      "hotspot": [
+        18,
+        29
+      ],
+      "area": 706,
+      "size": [
+        29,
+        37
+      ],
+      "native": "tails-a2",
+      "nativeArea": 552,
+      "opaqueColourCount": 10,
+      "boundaryColourCount": 10,
+      "boundaryCharcoalFraction": 0.0
+    },
+    {
+      "id": "family-tails-fly-carry-01",
+      "attempt": 5,
+      "cell": 1,
+      "hotspot": [
+        23,
+        26
+      ],
+      "area": 700,
+      "size": [
+        34,
+        34
+      ],
+      "native": "tails-a2",
+      "nativeArea": 552,
+      "opaqueColourCount": 10,
+      "boundaryColourCount": 9,
+      "boundaryCharcoalFraction": 0.0
+    },
+    {
+      "id": "family-tails-fly-carry-02",
+      "attempt": 5,
+      "cell": 2,
+      "hotspot": [
+        28,
+        22
+      ],
+      "area": 717,
+      "size": [
+        49,
+        30
+      ],
+      "native": "tails-a2",
+      "nativeArea": 552,
+      "opaqueColourCount": 10,
+      "boundaryColourCount": 7,
+      "boundaryCharcoalFraction": 0.0
+    },
+    {
+      "id": "family-tails-fly-carry-03",
+      "attempt": 5,
+      "cell": 3,
+      "hotspot": [
+        19,
+        22
+      ],
+      "area": 651,
+      "size": [
+        34,
+        30
+      ],
+      "native": "tails-a2",
+      "nativeArea": 552,
+      "opaqueColourCount": 10,
+      "boundaryColourCount": 8,
+      "boundaryCharcoalFraction": 0.0
+    },
+    {
+      "id": "family-tails-fly-carry-04",
+      "attempt": 5,
+      "cell": 4,
+      "hotspot": [
+        23,
+        22
+      ],
+      "area": 621,
+      "size": [
+        35,
+        30
+      ],
+      "native": "tails-a2",
+      "nativeArea": 552,
+      "opaqueColourCount": 10,
+      "boundaryColourCount": 8,
+      "boundaryCharcoalFraction": 0.0
+    },
+    {
+      "id": "family-tails-fly-carry-05",
+      "attempt": 5,
+      "cell": 5,
+      "hotspot": [
+        31,
+        22
+      ],
+      "area": 692,
+      "size": [
+        52,
+        30
+      ],
+      "native": "tails-a2",
+      "nativeArea": 552,
+      "opaqueColourCount": 10,
+      "boundaryColourCount": 6,
+      "boundaryCharcoalFraction": 0.0
+    },
+    {
+      "id": "family-tails-fly-carry-ascend-00",
+      "attempt": 5,
+      "cell": 0,
+      "hotspot": [
+        18,
+        29
+      ],
+      "area": 706,
+      "size": [
+        29,
+        37
+      ],
+      "native": "tails-a1",
+      "nativeArea": 544,
+      "opaqueColourCount": 10,
+      "boundaryColourCount": 10,
+      "boundaryCharcoalFraction": 0.0
+    },
+    {
+      "id": "family-tails-fly-carry-ascend-01",
+      "attempt": 5,
+      "cell": 1,
+      "hotspot": [
+        23,
+        26
+      ],
+      "area": 700,
+      "size": [
+        34,
+        34
+      ],
+      "native": "tails-a1",
+      "nativeArea": 544,
+      "opaqueColourCount": 10,
+      "boundaryColourCount": 9,
+      "boundaryCharcoalFraction": 0.0
+    },
+    {
+      "id": "family-tails-fly-carry-ascend-02",
+      "attempt": 5,
+      "cell": 2,
+      "hotspot": [
+        28,
+        22
+      ],
+      "area": 717,
+      "size": [
+        49,
+        30
+      ],
+      "native": "tails-a1",
+      "nativeArea": 544,
+      "opaqueColourCount": 10,
+      "boundaryColourCount": 7,
+      "boundaryCharcoalFraction": 0.0
+    },
+    {
+      "id": "family-tails-fly-carry-ascend-03",
+      "attempt": 5,
+      "cell": 3,
+      "hotspot": [
+        19,
+        22
+      ],
+      "area": 651,
+      "size": [
+        34,
+        30
+      ],
+      "native": "tails-a1",
+      "nativeArea": 544,
+      "opaqueColourCount": 10,
+      "boundaryColourCount": 8,
+      "boundaryCharcoalFraction": 0.0
+    },
+    {
+      "id": "family-tails-fly-carry-ascend-04",
+      "attempt": 5,
+      "cell": 4,
+      "hotspot": [
+        23,
+        22
+      ],
+      "area": 621,
+      "size": [
+        35,
+        30
+      ],
+      "native": "tails-a1",
+      "nativeArea": 544,
+      "opaqueColourCount": 10,
+      "boundaryColourCount": 8,
+      "boundaryCharcoalFraction": 0.0
+    },
+    {
+      "id": "family-tails-fly-carry-ascend-05",
+      "attempt": 5,
+      "cell": 5,
+      "hotspot": [
+        31,
+        22
+      ],
+      "area": 692,
+      "size": [
+        52,
+        30
+      ],
+      "native": "tails-a1",
+      "nativeArea": 544,
+      "opaqueColourCount": 10,
+      "boundaryColourCount": 6,
+      "boundaryCharcoalFraction": 0.0
+    }
+  ],
+  "limits": "S3K native +28 centre offset unchanged. Mod flight/carry in S1/S2 borrows the S3K capability; no native S1/S2 carry animation exists. Wings add opaque area relative to rotor-free native body.",
+  "style": {
+    "nativeOpaqueColours": {
+      "Sonic": 12,
+      "Tails": 10
+    },
+    "outline": "Selective one-pixel material shadow contours. Sonic dark-blue body edge #242492; Tails warm body edge #B66D49; glove edge #6D6D92; sparse charcoal #242424 in eyes/occlusions. Not continuous black ink. Diagonal clusters may be two pixels thick.",
+    "shadeSteps": "Body three tones (shadow/base/highlight); muzzle two tones; red shoes two; gloves three gray/white levels plus small extra near-white accents.",
+    "light": "Upper left; small stepped bright clusters on head, upper-left gloves and shoe toes; lower/right shaded.",
+    "dither": "No regular checkerboard dithering observed in these five poses.",
+    "highlight": "Small stepped pixel clusters, not gradients or broad smooth rim light.",
+    "reduction": "Nearest-neighbour at manually locked head/torso scale, MICA 6:1 / TALON 6.5:1; shoe/glove plane from source pair, translated to native centre offset. Palette-only reduction: MICA12 opaque slots, TALON10; no global outline repaint."
+  },
+  "nativeReferences": [
+    "S3K Sonic mappings $90/$91/$92, real SonicAndTails palette, 8x nearest",
+    "S3K Tails mappings $A2/$A1, same real palette; no separate rotor",
+    "First two attempts used $A0 as initial posture; final style attempts use the $A2 carrier pair."
+  ],
+  "contactMeasurements": "../mica/carry-contact-check.json",
+  "tonal_reshade": "2026-11-12: the selective material contours and shading measured here were superseded by tonal_reshade.py (ink silhouette, the sheet's index usage). Sizes, hotspots, areas and the contact measurements still hold; the boundary colour counts and charcoal fractions describe the 2026-11-10 pixels."
+}

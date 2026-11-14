@@ -1,0 +1,3458 @@
+{
+  "method": "native-pose transformation; no native runtime assets",
+  "scratch": "$HOME/scratch/agent-tmp/talon-object-poses-20261110",
+  "references": "Real S2 SonicAndTails / S3K SonicAndTails palette; normal Tails mapping/DPLC; extra bank at D1",
+  "attempts": 2,
+  "frames": [
+    {
+      "id": "object5-31",
+      "mapping": 49,
+      "attempt": 2,
+      "native": {
+        "label": "word_14950C",
+        "size": [
+          24,
+          32
+        ],
+        "hotspot": [
+          15,
+          16
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          13,
+          16
+        ],
+        "size": [
+          21,
+          32
+        ],
+        "ratio": 0.8934565697796562,
+        "nativeArea": 461,
+        "area": 368,
+        "group": 0,
+        "attempt": 2,
+        "scale": 0.14035087719298245
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "e54b3789527dffa1f4da433d9082282300f732a9023c996f0213fb82a42ae21a"
+    },
+    {
+      "id": "object5-32",
+      "mapping": 50,
+      "attempt": 2,
+      "native": {
+        "label": "word_149514",
+        "size": [
+          23,
+          34
+        ],
+        "hotspot": [
+          14,
+          14
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          14,
+          13
+        ],
+        "size": [
+          23,
+          33
+        ],
+        "ratio": 0.9749811461223841,
+        "nativeArea": 425,
+        "area": 404,
+        "group": 0,
+        "attempt": 2,
+        "scale": 0.14743589743589744
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "e54b3789527dffa1f4da433d9082282300f732a9023c996f0213fb82a42ae21a"
+    },
+    {
+      "id": "object5-33",
+      "mapping": 51,
+      "attempt": 2,
+      "native": {
+        "label": "word_149522",
+        "size": [
+          23,
+          28
+        ],
+        "hotspot": [
+          13,
+          15
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          12,
+          15
+        ],
+        "size": [
+          22,
+          28
+        ],
+        "ratio": 0.9264505527565933,
+        "nativeArea": 367,
+        "area": 315,
+        "group": 0,
+        "attempt": 2,
+        "scale": 0.1339712918660287
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "e54b3789527dffa1f4da433d9082282300f732a9023c996f0213fb82a42ae21a"
+    },
+    {
+      "id": "object5-34",
+      "mapping": 52,
+      "attempt": 2,
+      "native": {
+        "label": "word_14952A",
+        "size": [
+          21,
+          22
+        ],
+        "hotspot": [
+          13,
+          8
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          13,
+          7
+        ],
+        "size": [
+          21,
+          20
+        ],
+        "ratio": 0.938083151964686,
+        "nativeArea": 300,
+        "area": 264,
+        "group": 0,
+        "attempt": 2,
+        "scale": 0.12804878048780488
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "e54b3789527dffa1f4da433d9082282300f732a9023c996f0213fb82a42ae21a"
+    },
+    {
+      "id": "object5-35",
+      "mapping": 53,
+      "attempt": 2,
+      "native": {
+        "label": "word_149532",
+        "size": [
+          23,
+          26
+        ],
+        "hotspot": [
+          13,
+          13
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          13,
+          13
+        ],
+        "size": [
+          23,
+          26
+        ],
+        "ratio": 1.0226102421338605,
+        "nativeArea": 328,
+        "area": 343,
+        "group": 0,
+        "attempt": 2,
+        "scale": 0.1419753086419753
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "e54b3789527dffa1f4da433d9082282300f732a9023c996f0213fb82a42ae21a"
+    },
+    {
+      "id": "object5-36",
+      "mapping": 54,
+      "attempt": 2,
+      "native": {
+        "label": "word_149540",
+        "size": [
+          23,
+          30
+        ],
+        "hotspot": [
+          13,
+          15
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          13,
+          14
+        ],
+        "size": [
+          23,
+          29
+        ],
+        "ratio": 1.0193941783537999,
+        "nativeArea": 383,
+        "area": 398,
+        "group": 0,
+        "attempt": 2,
+        "scale": 0.14838709677419357
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "e54b3789527dffa1f4da433d9082282300f732a9023c996f0213fb82a42ae21a"
+    },
+    {
+      "id": "object5-37",
+      "mapping": 55,
+      "attempt": 2,
+      "native": {
+        "label": "word_14954E",
+        "size": [
+          21,
+          32
+        ],
+        "hotspot": [
+          11,
+          14
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          11,
+          13
+        ],
+        "size": [
+          21,
+          30
+        ],
+        "ratio": 1.0036607810038127,
+        "nativeArea": 409,
+        "area": 412,
+        "group": 0,
+        "attempt": 2,
+        "scale": 0.14583333333333334
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "e54b3789527dffa1f4da433d9082282300f732a9023c996f0213fb82a42ae21a"
+    },
+    {
+      "id": "object5-38",
+      "mapping": 56,
+      "attempt": 2,
+      "native": {
+        "label": "word_14955C",
+        "size": [
+          21,
+          32
+        ],
+        "hotspot": [
+          12,
+          16
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          12,
+          15
+        ],
+        "size": [
+          21,
+          30
+        ],
+        "ratio": 0.9905721800897844,
+        "nativeArea": 373,
+        "area": 366,
+        "group": 0,
+        "attempt": 2,
+        "scale": 0.14285714285714285
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "e54b3789527dffa1f4da433d9082282300f732a9023c996f0213fb82a42ae21a"
+    },
+    {
+      "id": "object5-39",
+      "mapping": 57,
+      "attempt": 2,
+      "native": {
+        "label": "word_14956A",
+        "size": [
+          19,
+          29
+        ],
+        "hotspot": [
+          12,
+          16
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          12,
+          14
+        ],
+        "size": [
+          19,
+          26
+        ],
+        "ratio": 0.8918499982829737,
+        "nativeArea": 391,
+        "area": 311,
+        "group": 0,
+        "attempt": 2,
+        "scale": 0.12258064516129033
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "e54b3789527dffa1f4da433d9082282300f732a9023c996f0213fb82a42ae21a"
+    },
+    {
+      "id": "object5-3a",
+      "mapping": 58,
+      "attempt": 2,
+      "native": {
+        "label": "word_149578",
+        "size": [
+          22,
+          21
+        ],
+        "hotspot": [
+          13,
+          11
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          12,
+          11
+        ],
+        "size": [
+          20,
+          21
+        ],
+        "ratio": 0.9930554715373019,
+        "nativeArea": 289,
+        "area": 285,
+        "group": 0,
+        "attempt": 2,
+        "scale": 0.1390728476821192
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "e54b3789527dffa1f4da433d9082282300f732a9023c996f0213fb82a42ae21a"
+    },
+    {
+      "id": "object5-3b",
+      "mapping": 59,
+      "attempt": 2,
+      "native": {
+        "label": "word_149586",
+        "size": [
+          21,
+          27
+        ],
+        "hotspot": [
+          13,
+          12
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          13,
+          11
+        ],
+        "size": [
+          21,
+          25
+        ],
+        "ratio": 0.9570349606549993,
+        "nativeArea": 333,
+        "area": 305,
+        "group": 0,
+        "attempt": 2,
+        "scale": 0.13125
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "e54b3789527dffa1f4da433d9082282300f732a9023c996f0213fb82a42ae21a"
+    },
+    {
+      "id": "object5-3c",
+      "mapping": 60,
+      "attempt": 2,
+      "native": {
+        "label": "word_149594",
+        "size": [
+          20,
+          32
+        ],
+        "hotspot": [
+          12,
+          15
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          12,
+          13
+        ],
+        "size": [
+          20,
+          28
+        ],
+        "ratio": 0.8902766944004502,
+        "nativeArea": 405,
+        "area": 321,
+        "group": 0,
+        "attempt": 2,
+        "scale": 0.12987012987012986
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "e54b3789527dffa1f4da433d9082282300f732a9023c996f0213fb82a42ae21a"
+    },
+    {
+      "id": "object5-3d",
+      "mapping": 61,
+      "attempt": 2,
+      "native": {
+        "label": "word_1495A2",
+        "size": [
+          23,
+          31
+        ],
+        "hotspot": [
+          13,
+          14
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          12,
+          14
+        ],
+        "size": [
+          22,
+          31
+        ],
+        "ratio": 1.0659543426001337,
+        "nativeArea": 433,
+        "area": 492,
+        "group": 1,
+        "attempt": 2,
+        "scale": 0.1741573033707865
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "c9b28a34a934e6ed910a8d5bc68073b40d41d5663470a6412abfbbad21fc3752"
+    },
+    {
+      "id": "object5-3e",
+      "mapping": 62,
+      "attempt": 2,
+      "native": {
+        "label": "word_1495B0",
+        "size": [
+          23,
+          26
+        ],
+        "hotspot": [
+          14,
+          13
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          14,
+          13
+        ],
+        "size": [
+          23,
+          26
+        ],
+        "ratio": 1.0433804000841584,
+        "nativeArea": 361,
+        "area": 393,
+        "group": 1,
+        "attempt": 2,
+        "scale": 0.1575757575757576
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "c9b28a34a934e6ed910a8d5bc68073b40d41d5663470a6412abfbbad21fc3752"
+    },
+    {
+      "id": "object5-3f",
+      "mapping": 63,
+      "attempt": 1,
+      "native": {
+        "label": "word_1495BE",
+        "size": [
+          24,
+          24
+        ],
+        "hotspot": [
+          13,
+          13
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          12,
+          13
+        ],
+        "size": [
+          22,
+          24
+        ],
+        "ratio": 1.0205555086941027,
+        "nativeArea": 313,
+        "area": 326,
+        "group": 1,
+        "attempt": 1,
+        "scale": 0.1437125748502994
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "bd8c7addf0f389b53e73e93c4a0ff0fba466f1f307c45f640036ebbbc5f1bba6"
+    },
+    {
+      "id": "object5-40",
+      "mapping": 64,
+      "attempt": 1,
+      "native": {
+        "label": "word_1495C6",
+        "size": [
+          23,
+          29
+        ],
+        "hotspot": [
+          13,
+          15
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          13,
+          14
+        ],
+        "size": [
+          23,
+          27
+        ],
+        "ratio": 1.0437363052324735,
+        "nativeArea": 358,
+        "area": 390,
+        "group": 1,
+        "attempt": 1,
+        "scale": 0.1402439024390244
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "bd8c7addf0f389b53e73e93c4a0ff0fba466f1f307c45f640036ebbbc5f1bba6"
+    },
+    {
+      "id": "object5-41",
+      "mapping": 65,
+      "attempt": 2,
+      "native": {
+        "label": "word_1495DA",
+        "size": [
+          24,
+          30
+        ],
+        "hotspot": [
+          15,
+          14
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          14,
+          14
+        ],
+        "size": [
+          23,
+          30
+        ],
+        "ratio": 0.9956140139482975,
+        "nativeArea": 457,
+        "area": 453,
+        "group": 1,
+        "attempt": 2,
+        "scale": 0.15789473684210528
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "c9b28a34a934e6ed910a8d5bc68073b40d41d5663470a6412abfbbad21fc3752"
+    },
+    {
+      "id": "object5-42",
+      "mapping": 66,
+      "attempt": 2,
+      "native": {
+        "label": "word_1495E2",
+        "size": [
+          24,
+          30
+        ],
+        "hotspot": [
+          16,
+          14
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          16,
+          13
+        ],
+        "size": [
+          24,
+          29
+        ],
+        "ratio": 0.9840500141658182,
+        "nativeArea": 474,
+        "area": 459,
+        "group": 1,
+        "attempt": 2,
+        "scale": 0.1509433962264151
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "c9b28a34a934e6ed910a8d5bc68073b40d41d5663470a6412abfbbad21fc3752"
+    },
+    {
+      "id": "object5-43",
+      "mapping": 67,
+      "attempt": 2,
+      "native": {
+        "label": "word_1495EA",
+        "size": [
+          20,
+          31
+        ],
+        "hotspot": [
+          12,
+          15
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          12,
+          13
+        ],
+        "size": [
+          20,
+          27
+        ],
+        "ratio": 0.9433851547073705,
+        "nativeArea": 409,
+        "area": 364,
+        "group": 1,
+        "attempt": 2,
+        "scale": 0.14184397163120568
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "c9b28a34a934e6ed910a8d5bc68073b40d41d5663470a6412abfbbad21fc3752"
+    },
+    {
+      "id": "object5-44",
+      "mapping": 68,
+      "attempt": 1,
+      "native": {
+        "label": "word_1495FE",
+        "size": [
+          21,
+          26
+        ],
+        "hotspot": [
+          13,
+          14
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          13,
+          14
+        ],
+        "size": [
+          21,
+          26
+        ],
+        "ratio": 1.0261932691741473,
+        "nativeArea": 358,
+        "area": 377,
+        "group": 1,
+        "attempt": 1,
+        "scale": 0.143646408839779
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "bd8c7addf0f389b53e73e93c4a0ff0fba466f1f307c45f640036ebbbc5f1bba6"
+    },
+    {
+      "id": "object5-45",
+      "mapping": 69,
+      "attempt": 2,
+      "native": {
+        "label": "word_14960C",
+        "size": [
+          23,
+          22
+        ],
+        "hotspot": [
+          15,
+          12
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          14,
+          12
+        ],
+        "size": [
+          22,
+          22
+        ],
+        "ratio": 1.0118347314702751,
+        "nativeArea": 252,
+        "area": 258,
+        "group": 1,
+        "attempt": 2,
+        "scale": 0.1476510067114094
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "c9b28a34a934e6ed910a8d5bc68073b40d41d5663470a6412abfbbad21fc3752"
+    },
+    {
+      "id": "object5-46",
+      "mapping": 70,
+      "attempt": 2,
+      "native": {
+        "label": "word_14961A",
+        "size": [
+          19,
+          21
+        ],
+        "hotspot": [
+          12,
+          11
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          12,
+          10
+        ],
+        "size": [
+          19,
+          20
+        ],
+        "ratio": 0.9275718896072748,
+        "nativeArea": 308,
+        "area": 265,
+        "group": 1,
+        "attempt": 2,
+        "scale": 0.13380281690140844
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "c9b28a34a934e6ed910a8d5bc68073b40d41d5663470a6412abfbbad21fc3752"
+    },
+    {
+      "id": "object5-47",
+      "mapping": 71,
+      "attempt": 2,
+      "native": {
+        "label": "word_149628",
+        "size": [
+          20,
+          29
+        ],
+        "hotspot": [
+          11,
+          16
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          10,
+          16
+        ],
+        "size": [
+          19,
+          29
+        ],
+        "ratio": 1.050681961522926,
+        "nativeArea": 356,
+        "area": 393,
+        "group": 1,
+        "attempt": 2,
+        "scale": 0.14948453608247422
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "c9b28a34a934e6ed910a8d5bc68073b40d41d5663470a6412abfbbad21fc3752"
+    },
+    {
+      "id": "object5-48",
+      "mapping": 72,
+      "attempt": 2,
+      "native": {
+        "label": "word_14963C",
+        "size": [
+          20,
+          32
+        ],
+        "hotspot": [
+          11,
+          17
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          11,
+          15
+        ],
+        "size": [
+          20,
+          28
+        ],
+        "ratio": 0.913929330608066,
+        "nativeArea": 431,
+        "area": 360,
+        "group": 1,
+        "attempt": 2,
+        "scale": 0.136986301369863
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "c9b28a34a934e6ed910a8d5bc68073b40d41d5663470a6412abfbbad21fc3752"
+    },
+    {
+      "id": "object5-49",
+      "mapping": 73,
+      "attempt": 2,
+      "native": {
+        "label": "word_14964A",
+        "size": [
+          35,
+          24
+        ],
+        "hotspot": [
+          19,
+          14
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          17,
+          14
+        ],
+        "size": [
+          31,
+          24
+        ],
+        "ratio": 0.9694116958983826,
+        "nativeArea": 415,
+        "area": 390,
+        "group": 2,
+        "attempt": 2,
+        "scale": 0.15
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "3a151e8abd99cd5b47baad021144ea9a397c52e3aff49856ffc619f1add63f6b"
+    },
+    {
+      "id": "object5-4a",
+      "mapping": 74,
+      "attempt": 2,
+      "native": {
+        "label": "word_14965E",
+        "size": [
+          32,
+          24
+        ],
+        "hotspot": [
+          16,
+          14
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          15,
+          14
+        ],
+        "size": [
+          31,
+          24
+        ],
+        "ratio": 1.0207275918451146,
+        "nativeArea": 382,
+        "area": 398,
+        "group": 2,
+        "attempt": 2,
+        "scale": 0.1518987341772152
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "3a151e8abd99cd5b47baad021144ea9a397c52e3aff49856ffc619f1add63f6b"
+    },
+    {
+      "id": "object5-4b",
+      "mapping": 75,
+      "attempt": 2,
+      "native": {
+        "label": "word_14966C",
+        "size": [
+          29,
+          21
+        ],
+        "hotspot": [
+          14,
+          11
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          14,
+          11
+        ],
+        "size": [
+          29,
+          21
+        ],
+        "ratio": 1.0372086334345356,
+        "nativeArea": 343,
+        "area": 369,
+        "group": 2,
+        "attempt": 2,
+        "scale": 0.15104166666666666
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "3a151e8abd99cd5b47baad021144ea9a397c52e3aff49856ffc619f1add63f6b"
+    },
+    {
+      "id": "object5-4c",
+      "mapping": 76,
+      "attempt": 2,
+      "native": {
+        "label": "word_149680",
+        "size": [
+          22,
+          28
+        ],
+        "hotspot": [
+          11,
+          15
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          11,
+          12
+        ],
+        "size": [
+          22,
+          22
+        ],
+        "ratio": 0.9151502608861564,
+        "nativeArea": 320,
+        "area": 268,
+        "group": 2,
+        "attempt": 2,
+        "scale": 0.1286549707602339
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "3a151e8abd99cd5b47baad021144ea9a397c52e3aff49856ffc619f1add63f6b"
+    },
+    {
+      "id": "object5-4d",
+      "mapping": 77,
+      "attempt": 2,
+      "native": {
+        "label": "word_14968E",
+        "size": [
+          24,
+          29
+        ],
+        "hotspot": [
+          12,
+          13
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          12,
+          13
+        ],
+        "size": [
+          24,
+          29
+        ],
+        "ratio": 1.0234712520114726,
+        "nativeArea": 379,
+        "area": 397,
+        "group": 2,
+        "attempt": 2,
+        "scale": 0.15584415584415584
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "3a151e8abd99cd5b47baad021144ea9a397c52e3aff49856ffc619f1add63f6b"
+    },
+    {
+      "id": "object5-4e",
+      "mapping": 78,
+      "attempt": 2,
+      "native": {
+        "label": "word_1496A2",
+        "size": [
+          26,
+          34
+        ],
+        "hotspot": [
+          16,
+          16
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          16,
+          13
+        ],
+        "size": [
+          26,
+          29
+        ],
+        "ratio": 0.9809051640695675,
+        "nativeArea": 423,
+        "area": 407,
+        "group": 2,
+        "attempt": 2,
+        "scale": 0.14942528735632182
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "3a151e8abd99cd5b47baad021144ea9a397c52e3aff49856ffc619f1add63f6b"
+    },
+    {
+      "id": "object5-4f",
+      "mapping": 79,
+      "attempt": 2,
+      "native": {
+        "label": "word_1496BC",
+        "size": [
+          28,
+          35
+        ],
+        "hotspot": [
+          16,
+          19
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          16,
+          18
+        ],
+        "size": [
+          28,
+          34
+        ],
+        "ratio": 1.034583236548683,
+        "nativeArea": 469,
+        "area": 502,
+        "group": 2,
+        "attempt": 2,
+        "scale": 0.16666666666666666
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "3a151e8abd99cd5b47baad021144ea9a397c52e3aff49856ffc619f1add63f6b"
+    },
+    {
+      "id": "object5-50",
+      "mapping": 80,
+      "attempt": 2,
+      "native": {
+        "label": "word_1496D6",
+        "size": [
+          25,
+          35
+        ],
+        "hotspot": [
+          13,
+          19
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          13,
+          18
+        ],
+        "size": [
+          25,
+          33
+        ],
+        "ratio": 0.9636241116594315,
+        "nativeArea": 420,
+        "area": 390,
+        "group": 2,
+        "attempt": 2,
+        "scale": 0.14792899408284024
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "3a151e8abd99cd5b47baad021144ea9a397c52e3aff49856ffc619f1add63f6b"
+    },
+    {
+      "id": "object5-51",
+      "mapping": 81,
+      "attempt": 2,
+      "native": {
+        "label": "word_1496F0",
+        "size": [
+          24,
+          32
+        ],
+        "hotspot": [
+          14,
+          17
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          14,
+          16
+        ],
+        "size": [
+          24,
+          31
+        ],
+        "ratio": 0.9754396341057536,
+        "nativeArea": 371,
+        "area": 353,
+        "group": 2,
+        "attempt": 2,
+        "scale": 0.13559322033898305
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "3a151e8abd99cd5b47baad021144ea9a397c52e3aff49856ffc619f1add63f6b"
+    },
+    {
+      "id": "object5-52",
+      "mapping": 82,
+      "attempt": 2,
+      "native": {
+        "label": "word_149704",
+        "size": [
+          27,
+          19
+        ],
+        "hotspot": [
+          15,
+          10
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          14,
+          10
+        ],
+        "size": [
+          25,
+          19
+        ],
+        "ratio": 0.9843059135695006,
+        "nativeArea": 289,
+        "area": 280,
+        "group": 2,
+        "attempt": 2,
+        "scale": 0.13380281690140844
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "3a151e8abd99cd5b47baad021144ea9a397c52e3aff49856ffc619f1add63f6b"
+    },
+    {
+      "id": "object5-53",
+      "mapping": 83,
+      "attempt": 2,
+      "native": {
+        "label": "word_149718",
+        "size": [
+          29,
+          24
+        ],
+        "hotspot": [
+          16,
+          12
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          16,
+          11
+        ],
+        "size": [
+          29,
+          22
+        ],
+        "ratio": 0.9754007635922622,
+        "nativeArea": 391,
+        "area": 372,
+        "group": 2,
+        "attempt": 2,
+        "scale": 0.15104166666666666
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "3a151e8abd99cd5b47baad021144ea9a397c52e3aff49856ffc619f1add63f6b"
+    },
+    {
+      "id": "object5-54",
+      "mapping": 84,
+      "attempt": 2,
+      "native": {
+        "label": "word_149726",
+        "size": [
+          32,
+          24
+        ],
+        "hotspot": [
+          18,
+          13
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          18,
+          12
+        ],
+        "size": [
+          32,
+          22
+        ],
+        "ratio": 0.9793792286287205,
+        "nativeArea": 392,
+        "area": 376,
+        "group": 2,
+        "attempt": 2,
+        "scale": 0.14746543778801843
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "3a151e8abd99cd5b47baad021144ea9a397c52e3aff49856ffc619f1add63f6b"
+    },
+    {
+      "id": "wait-00",
+      "mapping": 85,
+      "method": "explicit existing native posture alias",
+      "reason": "Same idle, hanging or curled pose; retain approved original pixels"
+    },
+    {
+      "id": "wait-01",
+      "mapping": 86,
+      "method": "explicit existing native posture alias",
+      "reason": "Same idle, hanging or curled pose; retain approved original pixels"
+    },
+    {
+      "id": "wait-00",
+      "mapping": 87,
+      "method": "explicit existing native posture alias",
+      "reason": "Same idle, hanging or curled pose; retain approved original pixels"
+    },
+    {
+      "id": "object5-58",
+      "mapping": 88,
+      "attempt": 2,
+      "native": {
+        "label": "word_149764",
+        "size": [
+          20,
+          31
+        ],
+        "hotspot": [
+          10,
+          15
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          9,
+          15
+        ],
+        "size": [
+          19,
+          31
+        ],
+        "ratio": 1.0269526907207664,
+        "nativeArea": 421,
+        "area": 444,
+        "group": 3,
+        "attempt": 2,
+        "scale": 0.15656565656565657
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "679d9597ce097103ade04421d030366ae28b703c9c770d2b590efc821221b376"
+    },
+    {
+      "id": "object5-59",
+      "mapping": 89,
+      "attempt": 2,
+      "native": {
+        "label": "word_14976C",
+        "size": [
+          22,
+          31
+        ],
+        "hotspot": [
+          11,
+          15
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          10,
+          15
+        ],
+        "size": [
+          21,
+          31
+        ],
+        "ratio": 0.9812189855859998,
+        "nativeArea": 430,
+        "area": 414,
+        "group": 3,
+        "attempt": 2,
+        "scale": 0.155
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "679d9597ce097103ade04421d030366ae28b703c9c770d2b590efc821221b376"
+    },
+    {
+      "id": "object5-5a",
+      "mapping": 90,
+      "attempt": 2,
+      "native": {
+        "label": "word_149774",
+        "size": [
+          18,
+          31
+        ],
+        "hotspot": [
+          9,
+          15
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          9,
+          13
+        ],
+        "size": [
+          18,
+          27
+        ],
+        "ratio": 0.8915558282417286,
+        "nativeArea": 390,
+        "area": 310,
+        "group": 3,
+        "attempt": 2,
+        "scale": 0.13333333333333333
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "679d9597ce097103ade04421d030366ae28b703c9c770d2b590efc821221b376"
+    },
+    {
+      "id": "object5-5b",
+      "mapping": 91,
+      "attempt": 2,
+      "native": {
+        "label": "word_149788",
+        "size": [
+          18,
+          31
+        ],
+        "hotspot": [
+          9,
+          15
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          9,
+          12
+        ],
+        "size": [
+          18,
+          26
+        ],
+        "ratio": 0.8556293687270065,
+        "nativeArea": 433,
+        "area": 317,
+        "group": 3,
+        "attempt": 2,
+        "scale": 0.12949640287769784
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "679d9597ce097103ade04421d030366ae28b703c9c770d2b590efc821221b376"
+    },
+    {
+      "id": "object5-5c",
+      "mapping": 92,
+      "attempt": 2,
+      "native": {
+        "label": "word_149790",
+        "size": [
+          42,
+          22
+        ],
+        "hotspot": [
+          16,
+          10
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          13,
+          10
+        ],
+        "size": [
+          36,
+          22
+        ],
+        "ratio": 0.9473536781987172,
+        "nativeArea": 595,
+        "area": 534,
+        "group": 3,
+        "attempt": 2,
+        "scale": 0.1506849315068493
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "679d9597ce097103ade04421d030366ae28b703c9c770d2b590efc821221b376"
+    },
+    {
+      "id": "object5-5d",
+      "mapping": 93,
+      "attempt": 2,
+      "native": {
+        "label": "word_1497AA",
+        "size": [
+          29,
+          21
+        ],
+        "hotspot": [
+          3,
+          11
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          1,
+          11
+        ],
+        "size": [
+          25,
+          21
+        ],
+        "ratio": 0.9150839528571676,
+        "nativeArea": 412,
+        "area": 345,
+        "group": 3,
+        "attempt": 2,
+        "scale": 0.14685314685314685
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "679d9597ce097103ade04421d030366ae28b703c9c770d2b590efc821221b376"
+    },
+    {
+      "id": "object5-5e",
+      "mapping": 94,
+      "attempt": 2,
+      "native": {
+        "label": "word_1497B2",
+        "size": [
+          34,
+          23
+        ],
+        "hotspot": [
+          17,
+          11
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          16,
+          11
+        ],
+        "size": [
+          32,
+          23
+        ],
+        "ratio": 0.989395246393724,
+        "nativeArea": 474,
+        "area": 464,
+        "group": 3,
+        "attempt": 2,
+        "scale": 0.152317880794702
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "679d9597ce097103ade04421d030366ae28b703c9c770d2b590efc821221b376"
+    },
+    {
+      "id": "object5-5f",
+      "mapping": 95,
+      "attempt": 2,
+      "native": {
+        "label": "word_1497C6",
+        "size": [
+          43,
+          23
+        ],
+        "hotspot": [
+          26,
+          11
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          22,
+          11
+        ],
+        "size": [
+          36,
+          23
+        ],
+        "ratio": 0.9314234637769075,
+        "nativeArea": 604,
+        "area": 524,
+        "group": 3,
+        "attempt": 2,
+        "scale": 0.1513157894736842
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "679d9597ce097103ade04421d030366ae28b703c9c770d2b590efc821221b376"
+    },
+    {
+      "id": "object5-60",
+      "mapping": 96,
+      "attempt": 1,
+      "native": {
+        "label": "word_1497D4",
+        "size": [
+          32,
+          23
+        ],
+        "hotspot": [
+          12,
+          11
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          11,
+          11
+        ],
+        "size": [
+          30,
+          23
+        ],
+        "ratio": 0.9917863085360631,
+        "nativeArea": 489,
+        "area": 481,
+        "group": 3,
+        "attempt": 1,
+        "scale": 0.14465408805031446
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "875382127fa792671de94f2fd8a31e6b40aeadcd09ee832e203190cb34bc4372"
+    },
+    {
+      "id": "object5-61",
+      "mapping": 97,
+      "attempt": 2,
+      "native": {
+        "label": "word_1497DC",
+        "size": [
+          30,
+          22
+        ],
+        "hotspot": [
+          24,
+          11
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          24,
+          10
+        ],
+        "size": [
+          30,
+          21
+        ],
+        "ratio": 0.9635356530268809,
+        "nativeArea": 419,
+        "area": 389,
+        "group": 4,
+        "attempt": 2,
+        "scale": 0.15873015873015872
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "6bf4411b51755538560fc55a04a0409d15771a03a2faec60ab4b1e4073947e99"
+    },
+    {
+      "id": "object5-62",
+      "mapping": 98,
+      "attempt": 1,
+      "native": {
+        "label": "word_1497E4",
+        "size": [
+          40,
+          24
+        ],
+        "hotspot": [
+          20,
+          12
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          18,
+          12
+        ],
+        "size": [
+          36,
+          24
+        ],
+        "ratio": 0.9805386799018823,
+        "nativeArea": 467,
+        "area": 449,
+        "group": 4,
+        "attempt": 1,
+        "scale": 0.14035087719298245
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "2d1a2955ddb1693c970ee1b980b185d999abedf179822e456d228b173bc69611"
+    },
+    {
+      "id": "object5-69",
+      "mapping": 105,
+      "attempt": 2,
+      "native": {
+        "label": "word_149846",
+        "size": [
+          34,
+          30
+        ],
+        "hotspot": [
+          17,
+          15
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          17,
+          15
+        ],
+        "size": [
+          34,
+          30
+        ],
+        "ratio": 1.0537806455402317,
+        "nativeArea": 507,
+        "area": 563,
+        "group": 4,
+        "attempt": 2,
+        "scale": 0.16574585635359115
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "6bf4411b51755538560fc55a04a0409d15771a03a2faec60ab4b1e4073947e99"
+    },
+    {
+      "id": "object5-6a",
+      "mapping": 106,
+      "attempt": 1,
+      "native": {
+        "label": "word_14985A",
+        "size": [
+          29,
+          29
+        ],
+        "hotspot": [
+          17,
+          15
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          17,
+          13
+        ],
+        "size": [
+          29,
+          26
+        ],
+        "ratio": 1.0045662337933736,
+        "nativeArea": 437,
+        "area": 441,
+        "group": 4,
+        "attempt": 1,
+        "scale": 0.14215686274509803
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "2d1a2955ddb1693c970ee1b980b185d999abedf179822e456d228b173bc69611"
+    },
+    {
+      "id": "object5-6b",
+      "mapping": 107,
+      "attempt": 1,
+      "native": {
+        "label": "word_14986E",
+        "size": [
+          22,
+          32
+        ],
+        "hotspot": [
+          13,
+          18
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          13,
+          16
+        ],
+        "size": [
+          22,
+          28
+        ],
+        "ratio": 0.9588093676132826,
+        "nativeArea": 409,
+        "area": 376,
+        "group": 4,
+        "attempt": 1,
+        "scale": 0.1325301204819277
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "2d1a2955ddb1693c970ee1b980b185d999abedf179822e456d228b173bc69611"
+    },
+    {
+      "id": "object5-6c",
+      "mapping": 108,
+      "attempt": 2,
+      "native": {
+        "label": "word_14987C",
+        "size": [
+          32,
+          21
+        ],
+        "hotspot": [
+          18,
+          12
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          17,
+          12
+        ],
+        "size": [
+          30,
+          21
+        ],
+        "ratio": 0.9562559426601545,
+        "nativeArea": 409,
+        "area": 374,
+        "group": 4,
+        "attempt": 2,
+        "scale": 0.14893617021276595
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "6bf4411b51755538560fc55a04a0409d15771a03a2faec60ab4b1e4073947e99"
+    },
+    {
+      "id": "object5-6d",
+      "mapping": 109,
+      "attempt": 2,
+      "native": {
+        "label": "word_14988A",
+        "size": [
+          32,
+          21
+        ],
+        "hotspot": [
+          17,
+          10
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          17,
+          9
+        ],
+        "size": [
+          32,
+          20
+        ],
+        "ratio": 1.0600263741900455,
+        "nativeArea": 372,
+        "area": 418,
+        "group": 4,
+        "attempt": 2,
+        "scale": 0.15763546798029557
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "6bf4411b51755538560fc55a04a0409d15771a03a2faec60ab4b1e4073947e99"
+    },
+    {
+      "id": "object5-6e",
+      "mapping": 110,
+      "attempt": 1,
+      "native": {
+        "label": "word_149898",
+        "size": [
+          29,
+          19
+        ],
+        "hotspot": [
+          13,
+          8
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          12,
+          8
+        ],
+        "size": [
+          27,
+          19
+        ],
+        "ratio": 0.9214688596664774,
+        "nativeArea": 391,
+        "area": 332,
+        "group": 4,
+        "attempt": 1,
+        "scale": 0.12666666666666668
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "2d1a2955ddb1693c970ee1b980b185d999abedf179822e456d228b173bc69611"
+    },
+    {
+      "id": "object5-6f",
+      "mapping": 111,
+      "attempt": 2,
+      "native": {
+        "label": "word_1498A6",
+        "size": [
+          21,
+          21
+        ],
+        "hotspot": [
+          10,
+          9
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          10,
+          9
+        ],
+        "size": [
+          21,
+          21
+        ],
+        "ratio": 1.0291906769288925,
+        "nativeArea": 287,
+        "area": 304,
+        "group": 4,
+        "attempt": 2,
+        "scale": 0.14093959731543626
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "6bf4411b51755538560fc55a04a0409d15771a03a2faec60ab4b1e4073947e99"
+    },
+    {
+      "id": "object5-70",
+      "mapping": 112,
+      "attempt": 2,
+      "native": {
+        "label": "word_1498B4",
+        "size": [
+          27,
+          21
+        ],
+        "hotspot": [
+          15,
+          9
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          14,
+          9
+        ],
+        "size": [
+          25,
+          21
+        ],
+        "ratio": 0.9664025734309352,
+        "nativeArea": 333,
+        "area": 311,
+        "group": 4,
+        "attempt": 2,
+        "scale": 0.12962962962962962
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "6bf4411b51755538560fc55a04a0409d15771a03a2faec60ab4b1e4073947e99"
+    },
+    {
+      "id": "object5-71",
+      "mapping": 113,
+      "attempt": 2,
+      "native": {
+        "label": "word_1498C2",
+        "size": [
+          32,
+          20
+        ],
+        "hotspot": [
+          17,
+          9
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          14,
+          9
+        ],
+        "size": [
+          27,
+          20
+        ],
+        "ratio": 0.8549059582965042,
+        "nativeArea": 405,
+        "area": 296,
+        "group": 4,
+        "attempt": 2,
+        "scale": 0.12738853503184713
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "6bf4411b51755538560fc55a04a0409d15771a03a2faec60ab4b1e4073947e99"
+    },
+    {
+      "id": "object5-72",
+      "mapping": 114,
+      "attempt": 2,
+      "native": {
+        "label": "word_1498D0",
+        "size": [
+          32,
+          24
+        ],
+        "hotspot": [
+          17,
+          10
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          15,
+          10
+        ],
+        "size": [
+          29,
+          24
+        ],
+        "ratio": 0.9291113298458173,
+        "nativeArea": 468,
+        "area": 404,
+        "group": 4,
+        "attempt": 2,
+        "scale": 0.13793103448275862
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "6bf4411b51755538560fc55a04a0409d15771a03a2faec60ab4b1e4073947e99"
+    },
+    {
+      "id": "object5-73",
+      "mapping": 115,
+      "attempt": 2,
+      "native": {
+        "label": "word_1498D8",
+        "size": [
+          34,
+          23
+        ],
+        "hotspot": [
+          17,
+          10
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          15,
+          10
+        ],
+        "size": [
+          30,
+          23
+        ],
+        "ratio": 0.9725648322560181,
+        "nativeArea": 425,
+        "area": 402,
+        "group": 5,
+        "attempt": 2,
+        "scale": 0.15862068965517243
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "deb2bbe92bd32ab58c92b0e7bf23f3d5609afd8d4b420f2aa4540d1d06c06127"
+    },
+    {
+      "id": "object5-74",
+      "mapping": 116,
+      "attempt": 2,
+      "native": {
+        "label": "word_1498E6",
+        "size": [
+          28,
+          23
+        ],
+        "hotspot": [
+          14,
+          11
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          12,
+          11
+        ],
+        "size": [
+          25,
+          23
+        ],
+        "ratio": 0.9876960454820448,
+        "nativeArea": 368,
+        "area": 359,
+        "group": 5,
+        "attempt": 2,
+        "scale": 0.1619718309859155
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "deb2bbe92bd32ab58c92b0e7bf23f3d5609afd8d4b420f2aa4540d1d06c06127"
+    },
+    {
+      "id": "object5-75",
+      "mapping": 117,
+      "attempt": 2,
+      "native": {
+        "label": "word_1498EE",
+        "size": [
+          22,
+          21
+        ],
+        "hotspot": [
+          12,
+          9
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          11,
+          9
+        ],
+        "size": [
+          21,
+          21
+        ],
+        "ratio": 0.941629792788369,
+        "nativeArea": 300,
+        "area": 266,
+        "group": 5,
+        "attempt": 2,
+        "scale": 0.14189189189189189
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "deb2bbe92bd32ab58c92b0e7bf23f3d5609afd8d4b420f2aa4540d1d06c06127"
+    },
+    {
+      "id": "object5-76",
+      "mapping": 118,
+      "attempt": 1,
+      "native": {
+        "label": "word_1498F6",
+        "size": [
+          26,
+          23
+        ],
+        "hotspot": [
+          14,
+          11
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          13,
+          11
+        ],
+        "size": [
+          25,
+          23
+        ],
+        "ratio": 1.0255104741165721,
+        "nativeArea": 329,
+        "area": 346,
+        "group": 5,
+        "attempt": 1,
+        "scale": 0.15753424657534248
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "d9abeed24f4a8702cb86ada0ccce7fcc67f46493148a28f7d7a9958015a170e9"
+    },
+    {
+      "id": "object5-77",
+      "mapping": 119,
+      "attempt": 1,
+      "native": {
+        "label": "word_149904",
+        "size": [
+          30,
+          23
+        ],
+        "hotspot": [
+          14,
+          12
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          14,
+          12
+        ],
+        "size": [
+          30,
+          23
+        ],
+        "ratio": 1.0346478065268945,
+        "nativeArea": 383,
+        "area": 410,
+        "group": 5,
+        "attempt": 1,
+        "scale": 0.14838709677419357
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "d9abeed24f4a8702cb86ada0ccce7fcc67f46493148a28f7d7a9958015a170e9"
+    },
+    {
+      "id": "object5-78",
+      "mapping": 120,
+      "attempt": 2,
+      "native": {
+        "label": "word_149912",
+        "size": [
+          31,
+          37
+        ],
+        "hotspot": [
+          14,
+          26
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          14,
+          25
+        ],
+        "size": [
+          31,
+          35
+        ],
+        "ratio": 0.9762941371975624,
+        "nativeArea": 619,
+        "area": 590,
+        "group": 5,
+        "attempt": 2,
+        "scale": 0.16939890710382513
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "deb2bbe92bd32ab58c92b0e7bf23f3d5609afd8d4b420f2aa4540d1d06c06127"
+    },
+    {
+      "id": "object5-79",
+      "mapping": 121,
+      "attempt": 2,
+      "native": {
+        "label": "word_14992C",
+        "size": [
+          38,
+          36
+        ],
+        "hotspot": [
+          26,
+          27
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          26,
+          27
+        ],
+        "size": [
+          38,
+          36
+        ],
+        "ratio": 1.0475896570016665,
+        "nativeArea": 626,
+        "area": 687,
+        "group": 5,
+        "attempt": 2,
+        "scale": 0.17391304347826086
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "deb2bbe92bd32ab58c92b0e7bf23f3d5609afd8d4b420f2aa4540d1d06c06127"
+    },
+    {
+      "id": "object5-7e",
+      "mapping": 126,
+      "attempt": 1,
+      "native": {
+        "label": "word_1499AE",
+        "size": [
+          37,
+          31
+        ],
+        "hotspot": [
+          8,
+          14
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          7,
+          14
+        ],
+        "size": [
+          35,
+          31
+        ],
+        "ratio": 1.0262679018909306,
+        "nativeArea": 620,
+        "area": 653,
+        "group": 5,
+        "attempt": 1,
+        "scale": 0.1631578947368421
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "d9abeed24f4a8702cb86ada0ccce7fcc67f46493148a28f7d7a9958015a170e9"
+    },
+    {
+      "id": "object5-80",
+      "mapping": 128,
+      "attempt": 2,
+      "native": {
+        "label": "word_1499E2",
+        "size": [
+          32,
+          39
+        ],
+        "hotspot": [
+          17,
+          24
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          17,
+          23
+        ],
+        "size": [
+          32,
+          38
+        ],
+        "ratio": 1.0187223741483993,
+        "nativeArea": 635,
+        "area": 659,
+        "group": 5,
+        "attempt": 2,
+        "scale": 0.1641025641025641
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "deb2bbe92bd32ab58c92b0e7bf23f3d5609afd8d4b420f2aa4540d1d06c06127"
+    },
+    {
+      "id": "object5-81",
+      "mapping": 129,
+      "attempt": 2,
+      "native": {
+        "label": "word_1499F0",
+        "size": [
+          34,
+          44
+        ],
+        "hotspot": [
+          26,
+          23
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          25,
+          23
+        ],
+        "size": [
+          32,
+          44
+        ],
+        "ratio": 1.0560337936221025,
+        "nativeArea": 651,
+        "area": 726,
+        "group": 5,
+        "attempt": 2,
+        "scale": 0.171875
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "deb2bbe92bd32ab58c92b0e7bf23f3d5609afd8d4b420f2aa4540d1d06c06127"
+    },
+    {
+      "id": "object4-s3k-82",
+      "mapping": 130,
+      "method": "explicit existing native posture alias",
+      "reason": "Same idle, hanging or curled pose; retain approved original pixels"
+    },
+    {
+      "id": "object5-83",
+      "mapping": 131,
+      "attempt": 2,
+      "native": {
+        "label": "word_149A24",
+        "size": [
+          36,
+          40
+        ],
+        "hotspot": [
+          20,
+          24
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          19,
+          24
+        ],
+        "size": [
+          34,
+          40
+        ],
+        "ratio": 1.061144380968148,
+        "nativeArea": 730,
+        "area": 822,
+        "group": 5,
+        "attempt": 2,
+        "scale": 0.17094017094017094
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "deb2bbe92bd32ab58c92b0e7bf23f3d5609afd8d4b420f2aa4540d1d06c06127"
+    },
+    {
+      "id": "object5-84",
+      "mapping": 132,
+      "attempt": 2,
+      "native": {
+        "label": "word_149A38",
+        "size": [
+          35,
+          43
+        ],
+        "hotspot": [
+          24,
+          23
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          22,
+          23
+        ],
+        "size": [
+          32,
+          43
+        ],
+        "ratio": 1.0120668016122478,
+        "nativeArea": 659,
+        "area": 675,
+        "group": 6,
+        "attempt": 2,
+        "scale": 0.17063492063492064
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "f41925428faea4011d01c8b30f697df01b5ea56366bba1c455ff1e3ee446ce24"
+    },
+    {
+      "id": "object5-85",
+      "mapping": 133,
+      "attempt": 2,
+      "native": {
+        "label": "word_149A4C",
+        "size": [
+          32,
+          43
+        ],
+        "hotspot": [
+          19,
+          23
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          19,
+          23
+        ],
+        "size": [
+          32,
+          43
+        ],
+        "ratio": 1.047294321967515,
+        "nativeArea": 630,
+        "area": 691,
+        "group": 6,
+        "attempt": 2,
+        "scale": 0.1711229946524064
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "f41925428faea4011d01c8b30f697df01b5ea56366bba1c455ff1e3ee446ce24"
+    },
+    {
+      "id": "object4-s3k-8d",
+      "mapping": 141,
+      "method": "explicit existing native posture alias",
+      "reason": "Same idle, hanging or curled pose; retain approved original pixels"
+    },
+    {
+      "id": "object5-90",
+      "mapping": 144,
+      "attempt": 3,
+      "native": {
+        "label": "word_149AF2",
+        "size": [
+          24,
+          37
+        ],
+        "hotspot": [
+          11,
+          23
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          11,
+          23
+        ],
+        "size": [
+          25,
+          43
+        ],
+        "method": "extra two-attempt overhead-grip native transform, selected row2",
+        "scale": 0.12626112759643915
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "e09f70af8daec896c1b0c51afdc5e910d476d653f49137f02099778c1710e8d7"
+    },
+    {
+      "id": "object5-92",
+      "mapping": 146,
+      "attempt": 3,
+      "native": {
+        "label": "word_149B0E",
+        "size": [
+          30,
+          28
+        ],
+        "hotspot": [
+          11,
+          23
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          9,
+          23
+        ],
+        "size": [
+          27,
+          32
+        ],
+        "method": "extra two-attempt overhead-grip native transform, selected row2",
+        "scale": 0.10733333333333334
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "e09f70af8daec896c1b0c51afdc5e910d476d653f49137f02099778c1710e8d7"
+    },
+    {
+      "id": "object5-93",
+      "mapping": 147,
+      "attempt": 3,
+      "native": {
+        "label": "word_149B1C",
+        "size": [
+          23,
+          24
+        ],
+        "hotspot": [
+          11,
+          23
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          8,
+          23
+        ],
+        "size": [
+          18,
+          28
+        ],
+        "method": "extra two-attempt overhead-grip native transform, selected row2",
+        "scale": 0.09324324324324323
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "e09f70af8daec896c1b0c51afdc5e910d476d653f49137f02099778c1710e8d7"
+    },
+    {
+      "id": "object5-94",
+      "mapping": 148,
+      "attempt": 3,
+      "native": {
+        "label": "word_149B24",
+        "size": [
+          29,
+          40
+        ],
+        "hotspot": [
+          15,
+          23
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          16,
+          23
+        ],
+        "size": [
+          32,
+          43
+        ],
+        "method": "extra two-attempt overhead-grip native transform, selected row2",
+        "scale": 0.1234980988593156
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "e09f70af8daec896c1b0c51afdc5e910d476d653f49137f02099778c1710e8d7"
+    },
+    {
+      "id": "object5-95",
+      "mapping": 149,
+      "attempt": 3,
+      "native": {
+        "label": "word_149B38",
+        "size": [
+          22,
+          41
+        ],
+        "hotspot": [
+          12,
+          24
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          13,
+          24
+        ],
+        "size": [
+          25,
+          34
+        ],
+        "method": "extra two-attempt overhead-grip native transform, selected row2",
+        "scale": 0.09777777777777778
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "e09f70af8daec896c1b0c51afdc5e910d476d653f49137f02099778c1710e8d7"
+    },
+    {
+      "id": "object5-ca",
+      "mapping": 202,
+      "attempt": 2,
+      "native": {
+        "label": "word_149E6C",
+        "size": [
+          39,
+          30
+        ],
+        "hotspot": [
+          20,
+          8
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          20,
+          6
+        ],
+        "size": [
+          39,
+          27
+        ],
+        "ratio": 1.0884003788199381,
+        "nativeArea": 520,
+        "area": 616,
+        "group": 6,
+        "attempt": 2,
+        "scale": 0.16249999999999998
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "f41925428faea4011d01c8b30f697df01b5ea56366bba1c455ff1e3ee446ce24"
+    },
+    {
+      "id": "object5-df",
+      "mapping": 223,
+      "attempt": 2,
+      "native": {
+        "label": "word_149EDA",
+        "size": [
+          28,
+          36
+        ],
+        "hotspot": [
+          16,
+          20
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          14,
+          20
+        ],
+        "size": [
+          25,
+          36
+        ],
+        "ratio": 1.0438654953650843,
+        "nativeArea": 435,
+        "area": 474,
+        "group": 6,
+        "attempt": 2,
+        "scale": 0.15584415584415584
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "f41925428faea4011d01c8b30f697df01b5ea56366bba1c455ff1e3ee446ce24"
+    },
+    {
+      "id": "object5-e0",
+      "mapping": 224,
+      "attempt": 2,
+      "native": {
+        "label": "word_149EEE",
+        "size": [
+          22,
+          32
+        ],
+        "hotspot": [
+          10,
+          17
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          10,
+          15
+        ],
+        "size": [
+          22,
+          28
+        ],
+        "ratio": 0.9622012274186911,
+        "nativeArea": 391,
+        "area": 362,
+        "group": 6,
+        "attempt": 2,
+        "scale": 0.1375
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "f41925428faea4011d01c8b30f697df01b5ea56366bba1c455ff1e3ee446ce24"
+    },
+    {
+      "id": "object5-e1",
+      "mapping": 225,
+      "attempt": 1,
+      "native": {
+        "label": "word_149EFC",
+        "size": [
+          23,
+          40
+        ],
+        "hotspot": [
+          10,
+          20
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          10,
+          17
+        ],
+        "size": [
+          23,
+          34
+        ],
+        "ratio": 0.928517323549373,
+        "nativeArea": 457,
+        "area": 394,
+        "group": 6,
+        "attempt": 1,
+        "scale": 0.13372093023255813
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "de5b1bebca1b0b54cb0231be244d30eed80542bbc0d59a89e23f98934fca2304"
+    },
+    {
+      "id": "object5-e2",
+      "mapping": 226,
+      "attempt": 1,
+      "native": {
+        "label": "word_149F10",
+        "size": [
+          22,
+          37
+        ],
+        "hotspot": [
+          10,
+          20
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          10,
+          19
+        ],
+        "size": [
+          22,
+          36
+        ],
+        "ratio": 0.9696156146403792,
+        "nativeArea": 518,
+        "area": 487,
+        "group": 7,
+        "attempt": 1,
+        "scale": 0.1506849315068493
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "f189e44a8050acdd11f5f627229e33c1c0d95277b35d95fa9f52904100fafe4c"
+    },
+    {
+      "id": "object5-e3",
+      "mapping": 227,
+      "attempt": 2,
+      "native": {
+        "label": "word_149F1E",
+        "size": [
+          29,
+          36
+        ],
+        "hotspot": [
+          14,
+          20
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          14,
+          19
+        ],
+        "size": [
+          29,
+          35
+        ],
+        "ratio": 1.0733126291998991,
+        "nativeArea": 500,
+        "area": 576,
+        "group": 7,
+        "attempt": 2,
+        "scale": 0.16292134831460672
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "68f58a743d223c33fdd175125726f2a955b0cb82fdfe9fa2d57840958a1a3f71"
+    },
+    {
+      "id": "object5-e4",
+      "mapping": 228,
+      "attempt": 2,
+      "native": {
+        "label": "word_149F38",
+        "size": [
+          28,
+          40
+        ],
+        "hotspot": [
+          14,
+          20
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          13,
+          20
+        ],
+        "size": [
+          27,
+          40
+        ],
+        "ratio": 1.071414482860317,
+        "nativeArea": 507,
+        "area": 582,
+        "group": 7,
+        "attempt": 2,
+        "scale": 0.1639344262295082
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "68f58a743d223c33fdd175125726f2a955b0cb82fdfe9fa2d57840958a1a3f71"
+    },
+    {
+      "id": "object5-e5",
+      "mapping": 229,
+      "attempt": 2,
+      "native": {
+        "label": "word_149F52",
+        "size": [
+          27,
+          39
+        ],
+        "hotspot": [
+          12,
+          20
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          12,
+          17
+        ],
+        "size": [
+          27,
+          34
+        ],
+        "ratio": 0.9266478335988364,
+        "nativeArea": 559,
+        "area": 480,
+        "group": 7,
+        "attempt": 2,
+        "scale": 0.15
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "68f58a743d223c33fdd175125726f2a955b0cb82fdfe9fa2d57840958a1a3f71"
+    },
+    {
+      "id": "object5-e6",
+      "mapping": 230,
+      "attempt": 2,
+      "native": {
+        "label": "word_149F66",
+        "size": [
+          21,
+          39
+        ],
+        "hotspot": [
+          9,
+          20
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          9,
+          18
+        ],
+        "size": [
+          21,
+          36
+        ],
+        "ratio": 1.0062565782419661,
+        "nativeArea": 478,
+        "area": 484,
+        "group": 7,
+        "attempt": 2,
+        "scale": 0.1510791366906475
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "68f58a743d223c33fdd175125726f2a955b0cb82fdfe9fa2d57840958a1a3f71"
+    },
+    {
+      "id": "object5-e7",
+      "mapping": 231,
+      "attempt": 2,
+      "native": {
+        "label": "word_149F74",
+        "size": [
+          23,
+          40
+        ],
+        "hotspot": [
+          11,
+          20
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          10,
+          20
+        ],
+        "size": [
+          22,
+          40
+        ],
+        "ratio": 1.109044393213859,
+        "nativeArea": 487,
+        "area": 599,
+        "group": 7,
+        "attempt": 2,
+        "scale": 0.16666666666666666
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "68f58a743d223c33fdd175125726f2a955b0cb82fdfe9fa2d57840958a1a3f71"
+    },
+    {
+      "id": "object5-e8",
+      "mapping": 232,
+      "attempt": 2,
+      "native": {
+        "label": "word_149F88",
+        "size": [
+          24,
+          39
+        ],
+        "hotspot": [
+          12,
+          20
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          12,
+          19
+        ],
+        "size": [
+          24,
+          37
+        ],
+        "ratio": 0.9963235169656067,
+        "nativeArea": 545,
+        "area": 541,
+        "group": 7,
+        "attempt": 2,
+        "scale": 0.14906832298136646
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "68f58a743d223c33fdd175125726f2a955b0cb82fdfe9fa2d57840958a1a3f71"
+    },
+    {
+      "id": "object5-e9",
+      "mapping": 233,
+      "attempt": 2,
+      "native": {
+        "label": "word_149F96",
+        "size": [
+          19,
+          39
+        ],
+        "hotspot": [
+          9,
+          20
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          9,
+          17
+        ],
+        "size": [
+          19,
+          34
+        ],
+        "ratio": 0.9419787384341389,
+        "nativeArea": 497,
+        "area": 441,
+        "group": 7,
+        "attempt": 2,
+        "scale": 0.1386861313868613
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "68f58a743d223c33fdd175125726f2a955b0cb82fdfe9fa2d57840958a1a3f71"
+    },
+    {
+      "id": "object5-ea",
+      "mapping": 234,
+      "attempt": 1,
+      "native": {
+        "label": "word_149FAA",
+        "size": [
+          23,
+          40
+        ],
+        "hotspot": [
+          10,
+          20
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          8,
+          20
+        ],
+        "size": [
+          20,
+          40
+        ],
+        "ratio": 1.0366562538301247,
+        "nativeArea": 509,
+        "area": 547,
+        "group": 7,
+        "attempt": 1,
+        "scale": 0.15748031496062992
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "f189e44a8050acdd11f5f627229e33c1c0d95277b35d95fa9f52904100fafe4c"
+    },
+    {
+      "id": "object5-ef",
+      "mapping": 239,
+      "attempt": 2,
+      "native": {
+        "label": "word_149FEE",
+        "size": [
+          30,
+          32
+        ],
+        "hotspot": [
+          14,
+          16
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          14,
+          15
+        ],
+        "size": [
+          30,
+          30
+        ],
+        "ratio": 1.0089956834182328,
+        "nativeArea": 498,
+        "area": 507,
+        "group": 7,
+        "attempt": 2,
+        "scale": 0.1485148514851485
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "68f58a743d223c33fdd175125726f2a955b0cb82fdfe9fa2d57840958a1a3f71"
+    },
+    {
+      "id": "object5-f0",
+      "mapping": 240,
+      "attempt": 2,
+      "native": {
+        "label": "word_149FFC",
+        "size": [
+          28,
+          30
+        ],
+        "hotspot": [
+          14,
+          15
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          13,
+          15
+        ],
+        "size": [
+          27,
+          30
+        ],
+        "ratio": 1.0220777158038703,
+        "nativeArea": 448,
+        "area": 468,
+        "group": 7,
+        "attempt": 2,
+        "scale": 0.14705882352941177
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "68f58a743d223c33fdd175125726f2a955b0cb82fdfe9fa2d57840958a1a3f71"
+    },
+    {
+      "id": "object5-f1",
+      "mapping": 241,
+      "attempt": 2,
+      "native": {
+        "label": "word_14A00A",
+        "size": [
+          27,
+          31
+        ],
+        "hotspot": [
+          15,
+          15
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          15,
+          15
+        ],
+        "size": [
+          27,
+          31
+        ],
+        "ratio": 1.0,
+        "nativeArea": 503,
+        "area": 503,
+        "group": 7,
+        "attempt": 2,
+        "scale": 0.14594594594594595
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "68f58a743d223c33fdd175125726f2a955b0cb82fdfe9fa2d57840958a1a3f71"
+    },
+    {
+      "id": "object5-f2",
+      "mapping": 242,
+      "attempt": 1,
+      "native": {
+        "label": "word_14A018",
+        "size": [
+          30,
+          31
+        ],
+        "hotspot": [
+          15,
+          15
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          15,
+          15
+        ],
+        "size": [
+          30,
+          31
+        ],
+        "ratio": 1.0236120212101216,
+        "nativeArea": 586,
+        "area": 614,
+        "group": 8,
+        "attempt": 1,
+        "scale": 0.13656387665198239
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "b1b8c33763f86d1abe38429f6c3e57f2e16fb6708647c8ed0d4a0c066d8175f5"
+    },
+    {
+      "id": "object5-f6",
+      "mapping": 246,
+      "attempt": 2,
+      "native": {
+        "label": "word_14A04A",
+        "size": [
+          26,
+          30
+        ],
+        "hotspot": [
+          12,
+          15
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          12,
+          15
+        ],
+        "size": [
+          26,
+          30
+        ],
+        "ratio": 1.0330121460852875,
+        "nativeArea": 447,
+        "area": 477,
+        "group": 8,
+        "attempt": 2,
+        "scale": 0.125
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "9040efce70fd00b254b2ce41923d906c6b654074463325380755de6fe926bd40"
+    },
+    {
+      "id": "object5-f7",
+      "mapping": 247,
+      "attempt": 2,
+      "native": {
+        "label": "word_14A058",
+        "size": [
+          24,
+          30
+        ],
+        "hotspot": [
+          11,
+          15
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          11,
+          15
+        ],
+        "size": [
+          24,
+          30
+        ],
+        "ratio": 0.9258200997725514,
+        "nativeArea": 504,
+        "area": 432,
+        "group": 8,
+        "attempt": 2,
+        "scale": 0.12295081967213116
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "9040efce70fd00b254b2ce41923d906c6b654074463325380755de6fe926bd40"
+    },
+    {
+      "id": "object5-f8",
+      "mapping": 248,
+      "attempt": 1,
+      "native": {
+        "label": "word_14A066",
+        "size": [
+          30,
+          31
+        ],
+        "hotspot": [
+          15,
+          15
+        ]
+      },
+      "reduction": {
+        "hotspot": [
+          15,
+          15
+        ],
+        "size": [
+          30,
+          31
+        ],
+        "ratio": 1.0183808197809932,
+        "nativeArea": 593,
+        "area": 615,
+        "group": 8,
+        "attempt": 1,
+        "scale": 0.13953488372093023
+      },
+      "method": "built-in GPT Image native-pose transform at 8x; fixed palette/alpha/inside-ink cleanup only",
+      "raw_sha256": "b1b8c33763f86d1abe38429f6c3e57f2e16fb6708647c8ed0d4a0c066d8175f5"
+    },
+    {
+      "id": "object5-63",
+      "mapping": 99,
+      "method": "indexed native-equivalent rotation/mirror",
+      "source": 92,
+      "angle": 270,
+      "flip": false
+    },
+    {
+      "id": "object5-64",
+      "mapping": 100,
+      "method": "indexed native-equivalent rotation/mirror",
+      "source": 93,
+      "angle": 270,
+      "flip": false
+    },
+    {
+      "id": "object5-65",
+      "mapping": 101,
+      "method": "indexed native-equivalent rotation/mirror",
+      "source": 94,
+      "angle": 270,
+      "flip": false
+    },
+    {
+      "id": "object5-66",
+      "mapping": 102,
+      "method": "indexed native-equivalent rotation/mirror",
+      "source": 95,
+      "angle": 270,
+      "flip": false
+    },
+    {
+      "id": "object5-67",
+      "mapping": 103,
+      "method": "indexed native-equivalent rotation/mirror",
+      "source": 96,
+      "angle": 270,
+      "flip": false
+    },
+    {
+      "id": "object5-68",
+      "mapping": 104,
+      "method": "indexed native-equivalent rotation/mirror",
+      "source": 97,
+      "angle": 270,
+      "flip": false
+    },
+    {
+      "id": "object5-7a",
+      "mapping": 122,
+      "method": "indexed native-equivalent rotation/mirror",
+      "source": 120,
+      "angle": 90,
+      "flip": false
+    },
+    {
+      "id": "object5-7b",
+      "mapping": 123,
+      "method": "indexed native-equivalent rotation/mirror",
+      "source": 121,
+      "angle": 90,
+      "flip": false
+    },
+    {
+      "id": "object5-7c",
+      "mapping": 124,
+      "method": "indexed native-equivalent rotation/mirror",
+      "source": 120,
+      "angle": 180,
+      "flip": false
+    },
+    {
+      "id": "object5-7d",
+      "mapping": 125,
+      "method": "indexed native-equivalent rotation/mirror",
+      "source": 121,
+      "angle": 180,
+      "flip": false
+    },
+    {
+      "id": "object5-7f",
+      "mapping": 127,
+      "method": "indexed native-equivalent rotation/mirror",
+      "source": 121,
+      "angle": 270,
+      "flip": false
+    },
+    {
+      "id": "object5-f3",
+      "mapping": 243,
+      "method": "indexed native-equivalent rotation/mirror",
+      "source": 241,
+      "angle": 0,
+      "flip": true
+    },
+    {
+      "id": "object5-f4",
+      "mapping": 244,
+      "method": "indexed native-equivalent rotation/mirror",
+      "source": 240,
+      "angle": 0,
+      "flip": true
+    },
+    {
+      "id": "object5-f5",
+      "mapping": 245,
+      "method": "indexed native-equivalent rotation/mirror",
+      "source": 239,
+      "angle": 0,
+      "flip": true
+    },
+    {
+      "id": "object5-f9",
+      "mapping": 249,
+      "method": "indexed native-equivalent rotation/mirror",
+      "source": 247,
+      "angle": 0,
+      "flip": true
+    },
+    {
+      "id": "object5-fa",
+      "mapping": 250,
+      "method": "indexed native-equivalent rotation/mirror",
+      "source": 246,
+      "angle": 0,
+      "flip": true
+    }
+  ],
+  "rotationEvidence": {
+    "99": {
+      "source": 92,
+      "angle": 270,
+      "flip": false
+    },
+    "100": {
+      "source": 93,
+      "angle": 270,
+      "flip": false
+    },
+    "101": {
+      "source": 94,
+      "angle": 270,
+      "flip": false
+    },
+    "102": {
+      "source": 95,
+      "angle": 270,
+      "flip": false
+    },
+    "103": {
+      "source": 96,
+      "angle": 270,
+      "flip": false
+    },
+    "104": {
+      "source": 97,
+      "angle": 270,
+      "flip": false
+    },
+    "122": {
+      "source": 120,
+      "angle": 90,
+      "flip": false
+    },
+    "123": {
+      "source": 121,
+      "angle": 90,
+      "flip": false
+    },
+    "124": {
+      "source": 120,
+      "angle": 180,
+      "flip": false
+    },
+    "125": {
+      "source": 121,
+      "angle": 180,
+      "flip": false
+    },
+    "127": {
+      "source": 121,
+      "angle": 270,
+      "flip": false
+    },
+    "243": {
+      "source": 241,
+      "angle": 0,
+      "flip": true
+    },
+    "244": {
+      "source": 240,
+      "angle": 0,
+      "flip": true
+    },
+    "245": {
+      "source": 239,
+      "angle": 0,
+      "flip": true
+    },
+    "249": {
+      "source": 247,
+      "angle": 0,
+      "flip": true
+    },
+    "250": {
+      "source": 246,
+      "angle": 0,
+      "flip": true
+    }
+  }
+}

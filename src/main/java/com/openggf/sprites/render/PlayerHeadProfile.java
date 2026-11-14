@@ -51,6 +51,7 @@ public final class PlayerHeadProfile {
     public static String fingerprint(com.openggf.level.render.SpriteSheet<?> art) {
         try {
             MessageDigest digest=MessageDigest.getInstance("SHA-256");
+            byte[] pixels=new byte[com.openggf.level.Pattern.PATTERN_SIZE_IN_MEM];
             put(digest,art.getFrameCount());
             for(int frame=0;frame<art.getFrameCount();frame++) {
                 var pieces=art.getFrame(frame).pieces(); put(digest,pieces.size());
@@ -61,7 +62,7 @@ public final class PlayerHeadProfile {
                         if(index<0||index>=art.getPatterns().length) return "";
                         var pattern=art.getPatterns()[index];
                         if(pattern==null) return "";
-                        for(int y=0;y<8;y++) for(int x=0;x<8;x++) digest.update((byte)(pattern.getPixel(x,y)&15));
+                        putPixels(digest,pattern,pixels);
                     }
                 }
             }
@@ -84,9 +85,9 @@ public final class PlayerHeadProfile {
     public static String fingerprint(SpriteArtSet art) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] pixels = new byte[com.openggf.level.Pattern.PATTERN_SIZE_IN_MEM];
             put(digest, art.artTiles().length);
-            for (var pattern : art.artTiles()) for (int y = 0; y < 8; y++) for (int x = 0; x < 8; x++)
-                digest.update((byte) (pattern.getPixel(x, y) & 15));
+            for (var pattern : art.artTiles()) putPixels(digest, pattern, pixels);
             put(digest, art.mappingFrames().size());
             for (var frame : art.mappingFrames()) {
                 put(digest, frame.pieces().size());
@@ -104,6 +105,16 @@ public final class PlayerHeadProfile {
             }
             return HexFormat.of().formatHex(digest.digest());
         } catch (NoSuchAlgorithmException impossible) { throw new AssertionError(impossible); }
+    }
+    /**
+     * Digests one tile's 64 row-major low-nibble pixels as a single update. The bytes match a
+     * per-pixel {@code getPixel(x, y) & 15} walk; one update per tile keeps a renderer's
+     * construction (repeated on every level load) from making thousands of per-byte calls.
+     */
+    private static void putPixels(MessageDigest digest, com.openggf.level.Pattern pattern, byte[] pixels) {
+        pattern.copyInto(pixels, 0);
+        for (int i = 0; i < pixels.length; i++) pixels[i] &= 15;
+        digest.update(pixels);
     }
     private static void put(MessageDigest digest, int value) {
         for (int shift = 24; shift >= 0; shift -= 8) digest.update((byte) (value >>> shift));

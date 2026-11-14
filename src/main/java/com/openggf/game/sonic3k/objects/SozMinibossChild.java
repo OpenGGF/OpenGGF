@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.sprites.playable.PlayableArchetype;
+
 import com.openggf.game.mutators.PlayerFluidContextAccess;
 import com.openggf.game.*;
 import com.openggf.game.sonic3k.*;
@@ -92,7 +94,7 @@ final class SozMinibossChild extends SozMinibossSprite implements RewindRecreata
     private boolean attacks(AbstractPlayableSprite player){
         if(player.isSuperSonic() || player.getInvincibleFrames()>0 || player.getAnimationId()==9 || player.getAnimationId()==2)return true;
         if(player instanceof Knuckles)return player.getDoubleJumpFlag()==1 || player.getDoubleJumpFlag()==3;
-        if(player instanceof Tails && player.getDoubleJumpFlag()!=0 && !PlayerFluidContextAccess.movementUnderwater(player)){
+        if(PlayableArchetype.isTails(player) && player.getDoubleJumpFlag()!=0 && !PlayerFluidContextAccess.movementUnderwater(player)){
             int angle=TrigLookupTable.calcAngle((short)(player.getCentreX()-x),(short)(player.getCentreY()-y));return ((angle-0x20)&255)<0x40;
         }
         return false;

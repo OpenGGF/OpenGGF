@@ -1,0 +1,70 @@
+{
+  "format": "openggf-mica-portrait-1",
+  "palette": "../../../art/mica/sheet/palette.yaml",
+  "palette_line": 1,
+  "native_source_label": "Map_SaveScreen / word_CF5C / ArtKos_SaveScreenMisc",
+  "mapping_source": "docs/skdisasm/General/Save Menu/Map - Save Screen General.asm",
+  "native_art": "General/Save Menu/Kosinski Art/Misc.kos",
+  "timing": "Static; selection animation belongs to save slot, not portrait",
+  "frames": [
+    {
+      "id": 5,
+      "file": "../../../art/mica/portrait/mica.png",
+      "native_source_label": "word_CF5C",
+      "dimensions": [
+        32,
+        40
+      ],
+      "hotspot": [
+        18,
+        40
+      ],
+      "pieces": [
+        [
+          -18,
+          -40,
+          4,
+          3,
+          108,
+          1,
+          0,
+          1,
+          1
+        ],
+        [
+          -10,
+          -16,
+          3,
+          2,
+          120,
+          1,
+          0,
+          1,
+          1
+        ]
+      ]
+    }
+  ],
+  "composition": {
+    "solo": {
+      "x": -12,
+      "y": 0,
+      "mirror": false
+    },
+    "with_tails": {
+      "main_x": -14,
+      "main_y": 0,
+      "tails_x": 3,
+      "tails_y": 0,
+      "tails_mirror": true,
+      "overlap": 10,
+      "draw_order": [
+        "MICA",
+        "Tails"
+      ]
+    }
+  },
+  "palette_binding": "Reserve a separate MICA palette line and rebind her pieces. Native Sonic/Tails share line 1 with other menu art. Do not overwrite stock Tails or quantize jade to blue.",
+  "engine_limit": "Composer currently maps unknown codes to stock Sonic frame 5. Engine lane must register this art and palette; previews simulate the measured layout, not runtime integration.",
+  "weak_points": "Compact boots and glove fingers simplify at 1x; team overlap hides part of right glove. No runtime background or selection certification."
+}

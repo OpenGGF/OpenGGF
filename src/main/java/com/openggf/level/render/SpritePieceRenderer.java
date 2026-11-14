@@ -251,7 +251,8 @@ public final class SpritePieceRenderer {
         if (defaultPaletteIndex < 0) {
             paletteIndex = piece.paletteIndex();
         } else {
-            int paletteBankBits = defaultPaletteIndex & ~0x3;
+            int paletteBankBits = (piece.paletteIndex() & ~0x3) != 0
+                    ? piece.paletteIndex() & ~0x3 : defaultPaletteIndex & ~0x3;
             int paletteLineLowBits = (piece.paletteIndex() + defaultPaletteIndex) & 0x3;
             paletteIndex = paletteBankBits | paletteLineLowBits;
         }

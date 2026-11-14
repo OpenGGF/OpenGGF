@@ -4,7 +4,202 @@ Unreleased. Development since the [0.7.20261105](CHANGELOG.0.7.md) release. Add 
 under the matching area heading; see the
 [documentation policy](docs/guide/contributing/documentation-policy.md#release-note-destination).
 
+
 ## Gameplay and presentation
+
+- **Widescreen that plays like the original:** a new setting,
+  `display.widescreenDrawMode`, chooses how a wide screen plays. `EDGE`, the default,
+  is the existing behaviour: objects wake up across the whole wide screen, so a 16:9
+  game plays a little differently from a 4:3 one. `NATIVE` keeps the game itself on
+  the original 320-pixel screen and draws the extra width as scenery, so every screen
+  size plays exactly the same game. That makes widescreen fair for time attack, races
+  and shared replays. Objects in the extra width that the original game has not woken
+  up yet are drawn frozen where they start, in greyscale by default
+  (`display.widescreenDormantStyle`: `GREYSCALE`, `NORMAL` or `HIDDEN`). They come to
+  life when the original screen reaches them and freeze again when it leaves them,
+  unless they were destroyed for good. Rings work the same way: uncollected rings
+  waiting in the extra width sit still, and rings you have collected stay gone. Title
+  cards and results screens time their exits from the game's own screen rather than the
+  picture, so a wider picture never delays the next act or the enemies' art. That also
+  lets recorded Sonic 3 & Knuckles runs be filmed wider than 320: Hydrocity and Marble
+  Garden used to stop with a full KosM queue. Tests run Sonic 1, Sonic 2 and Sonic 3 &
+  Knuckles at 32:9 and 4:3 with the same input and check that the game state matches on every
+  frame. The capture tool gained `--draw-mode` and `--dormant-style`; both are pinned so
+  a personal setting never changes a capture.
+
+- **Walking partners jump back in where there is no floor:** a CPU partner that
+  returns by walking in (a Sonic partner, or a walking mod character) used to wait
+  off screen for good wherever the level had no terrain floor to walk in on, such
+  as the Sonic 3 & Knuckles final boss arena, whose floor is made of objects. After
+  three failed walk-in attempts it now jumps in from below the screen with the
+  jump sound, arcs over the leader, and follows again as soon as it lands on
+  terrain or on a solid object. It takes no damage until it lands, and if it falls
+  out again it waits and retries. Where the walk-in already worked it is unchanged.
+  This is an engine extension; see "Multi-Sidekick Daisy Chain" in
+  [known discrepancies](docs/status/known-discrepancies.md#multi-sidekick-daisy-chain).
+
+- **Crash page:** an engine fault during play or on a menu no longer closes
+  OpenGGF. The game that failed is torn down to the game shelf and a crash page
+  opens over it, with a MICA gag for the kind of fault (holding the bomb, an
+  Atari ST homage; tangled in cassette tape after a rewind fault; teetering over
+  missing ground when a level fails to load), a row of bombs, the exact error
+  and where it was raised. The full report is saved to `crash-reports/`.
+  **Report on GitHub** opens a pre-filled issue form (new
+  `.github/ISSUE_TEMPLATE/crash.yml`) that the player reviews and submits
+  themselves, with the home folder written as `~` and the trace shortened to fit
+  the link; **Copy report**, **Details** and **Return to games** cover the rest.
+  Choosing the picture, or the details key, swaps it for a QR code of the issue
+  form with a title naming the error, for reporting from another device (Project
+  Nayuki's MIT-licensed `qrcodegen`, listed in `NOTICE.md`). The failed work is
+  never resumed, and a second fault, a failed teardown, tests and headless tools
+  still rethrow; `-Dopenggf.crash.rethrow=true` restores the old behaviour. The
+  pictures are reduced from generated drawings by
+  `tools/modding/crash_screen_art/reduce.py`.
+
+- **Lava Reef 1 frame hitches:** two stutters on the Lava Reef Act 1 route are
+  gone. When the rock crusher opens the floor, the engine rebuilt the whole
+  foreground layer (10-60 ms in a frame); it now redraws only the rewritten layout
+  cells and uploads only their rows, and a test checks the result against a full
+  rebuild. A sprite update of about 65-70 scattered tiles passed the old 64-tile
+  limit and uploaded their whole bounding rectangle, about 37 times the changed
+  bytes, and that one driver call took 1-100 ms. Changes of up to 256 tiles now
+  upload only those tiles, joining neighbours in a row (about 0.02 ms there). The tilemap shader also no longer looks up its uniform
+  locations on every draw. Pixels are unchanged.
+
+- **Layout-edit frame hitches in every zone:** any change to a level's layout,
+  block or chunk data made the engine rebuild and re-upload the whole foreground
+  layer: 7-57 ms and 2-4 MB in one frame. Marble Garden 2's collapse did this about
+  every seven frames; Sandopolis doors and passages, Flying Battery and Launch Base
+  area swaps, the Angel Island battleship, the Casino Night 2 boss walls, the Wing
+  Fortress rivet and the Hill Top 2 earthquake (which changes only the background)
+  all stuttered. The foreground now keeps a record of the layout it was drawn from,
+  redraws only the layout cells whose layout, block or chunk data differ (about
+  2 microseconds a cell) and uploads only those rows, as separate spans when the
+  cells are far apart. This covers every writer, tiles written straight into the
+  image, prebuilt act-transition images and rewind restores; tests check each
+  writer's result against a full rebuild. The Lava Reef crusher's single-cell path
+  is folded into it. Pixels are unchanged.
+
+- **Level load frame hitches:** every death respawn, act change and new game
+  built the whole level's foreground layer in the frame that finished the load
+  (9-16 ms, about 50 ms for Icecap 1), on top of the reload itself. A load now
+  draws only the columns around the camera; the rest of the layer is drawn a slice
+  per frame (about 1 ms) over the following frames, nearest the camera first, from
+  the layout recorded at the load, and every foreground draw first draws any column
+  it is about to show, so no visible pixel comes from an undrawn part, whatever the
+  camera jump, picture width or per-line scroll. A respawn in the same act keeps the
+  drawn layer and redraws only the cells the reloaded layout changes, and the Angel
+  Island intro and fire transition no longer build whole-level layers in advance.
+  Tests check every step against a whole-level build. In Sonic 3&K a death
+  respawn also decodes its act on a background thread during the fade to black;
+  the reload still happens on the same frame and uses that decode only if the
+  inputs a load at that moment would use are unchanged, else it decodes as
+  before. Death respawn frames went from 33-45 ms to 17-32 ms, act changes from
+  25-82 ms to 15-25 ms (Casino Night 2 to Icecap 1 from 73-133 ms to 26-52 ms),
+  and the frames that follow stay under 2 ms of foreground work. A new game
+  after GAME OVER is unchanged (40-75 ms). Pixels and gameplay are unchanged.
+
+- **Art upload stutters:** changing level art, animated tiles or a tilemap no
+  longer makes the frame wait for the graphics driver. Uploading straight from
+  memory made the engine wait until the driver had worked through everything
+  queued before it. On an integrated GPU that also draws the desktop, one small
+  update could take 100-700 ms: the Angel Island 1 intro, Hydrocity, Flying
+  Battery, and about 230 ms at the Marble Garden act change. The art now goes
+  through a pixel buffer that the GPU copies from, so the frame carries on. Over
+  twelve runs per side on the integrated GPU, uploads slower than 16.7 ms after
+  the level had loaded went from seven (worst 701 ms) to none (worst 8 ms); the
+  discrete GPU was already below 12 ms. Loading object, HUD, player, title-card,
+  special-stage and title-screen art, and Sonic 1 and 2 animated tiles, still sent
+  each 8x8 tile through the buffer on its own: about 7,500 uploads per Sandopolis
+  respawn, one of which waited 83 ms on the integrated GPU and up to 278 ms on the
+  discrete GPU at a special stage entry. That art is now written in one batch per
+  set-up step, so a respawn makes about five uploads for it, taking well under a
+  millisecond. Level tiles are still uploaded one at a time while a level loads. Each
+  art upload also stopped allocating a version record and a boxed tile number,
+  about 16% of Angel Island's per-frame allocation. Pixels are unchanged.
+
+- **Tails' flight in Sonic 1 and Sonic 2 with Sonic 3&K donating:** a flying
+  Tails was drawn as the ball he jumped in, and a Sonic he carried was not drawn
+  at all (Sonic 1) or was drawn from the wrong frames (Sonic 2). Tails and
+  Knuckles wear the donor's art with the donor's own animation table, but their
+  poses were looked up in the host game's table, which has no flight; only
+  Sonic's lookups went to the donor. They now go to the donor's table too. The
+  carried Sonic was switched to the host game's own art, which has no carried
+  frames; where the host has no flight of its own he now keeps the donor's art.
+  The carry with Sonic 3&K as the host is unchanged. In Sonic 1 he also had no
+  tails in any pose, flying or standing: they are animated by a pass that
+  follows the object loop, and Sonic 1's loop never ran it. It does now, which
+  changes nothing for Sonic 1 without a donor.
+
+- **Blue Spheres:** new under **Extras** when the Sonic 3&K and Sonic 1 ROMs
+  are both present. It is the game Sonic & Knuckles starts with Sonic 1 locked
+  on, rebuilt from the S&K ROM: the title and menu, endless generated stages,
+  12-digit level codes, Sonic or Knuckles, the results screen and the perfect
+  showcase. Stages run on the Sonic 3&K special stage. Sonic 1 is read only for
+  its header. One intentional difference: any button opens the menu from NO WAY!,
+  where the cartridge needs A, B and C together. The single fixed stage other
+  cartridges unlock is not offered. Blue Spheres is an extra of Sonic 3&K, not a
+  separate game.
+
+- **Knuckles climbs Green Hill's cliffs in Sonic 1:** with Sonic 3&K donating,
+  Knuckles could not grab a Green Hill cliff face unless terrain lay behind it,
+  and there he pulled up short of the top and fell back. The faces are edge-wall objects,
+  not terrain, and his grab and climb read terrain only. His probes now also see
+  those walls, and a wall leaves him alone while he glides, climbs and pulls up.
+  This is a rule of the engine's own, recorded in the known discrepancies; the
+  original games are unchanged because none of their levels has such a wall.
+
+- **Sonic 1 end-of-act PLC replacement:** NewPLC and ClearPLC cancel the active
+  decoder as well as waiting cues, matching the ROM. Positioned GHZ starts near
+  the signpost no longer fail when the signpost art replaces unfinished work.
+
+- **Final Death Egg boss floor and wide views:** in the giant robot fight that
+  ends Sonic 3 & Knuckles, the robot's lower body covered the girder floor. The
+  original draws the floor in front of the robot, as it does Sonic and Tails.
+  The floor is now in front at every width. Wide views also lost the planet
+  beside the robot: live play greyed out both margins, and wide trace captures
+  ended the planet with a black band on the right. The planet and floor now
+  reach the screen edges. In wide views the robot also vanished once the
+  emerald-beam chase carried the camera past the end of the level layout, and
+  black patches appeared at the bottom of the extended planet while the screen
+  shook. Both are fixed. This shipped in 0.7.
+
+- **Mushroom Hill swing bars and the HUD after a giant ring:** the horizontal and
+  vertical swing bars were always drawn unflipped, so a bar the level places
+  mirrored showed its plain end where its cap belongs. They now follow the
+  layout's flip bits, as the original's sprite code does. Separately, after
+  running past a Super Emerald giant ring the HUD's yellow stayed a pale cream
+  for the rest of the zone. The ring flashes three palette colours, two of which
+  the HUD draws with; the original puts them back on every frame the ring is off
+  screen, and the engine did so only when the ring was entered or paid out. It
+  now restores them off screen too, and the flashing script stands still there.
+
+- **Sonic 3 & Knuckles endings fill a wide screen:** on any screen wider than
+  4:3 the endings were a 320-pixel picture between two dark bars, and inside it
+  the sky, sea and island were drawn one bar's width to the left of the aircraft
+  and characters (at the widest setting the island sat behind the left bar while
+  its waterfalls hung in open sky). The endings now fill the screen with the
+  original picture in the middle: Sonic's and Tails's rescue, Angel Island rising
+  or being returned its emerald, the credits flight, and Knuckles' flight from Sky
+  Sanctuary with its credits. The sky, sea and cloud layers continue to both
+  edges, Angel Island slides in from the real edge of the screen, and the Tornado
+  and the clouds enter and leave at the real edges instead of appearing or
+  vanishing where the old 320-pixel edge was. Every scene keeps its original
+  timing at every width, and at 4:3 the picture is unchanged pixel for pixel.
+  Only the closing art on black (the Eggman or Mecha Sonic picture and the large
+  Sonic 3 & Knuckles logo) stays 4:3 between the bars: it is 320 pixels of art
+  with nothing beside it. What the wider picture adds is described under
+  [ending scenes in a wider picture](docs/S3K_KNOWN_DISCREPANCIES.md#ending-scenes-in-a-wider-picture).
+
+- **Separate music and sound-effect volumes:** Settings → Audio has Music
+  volume and Sound effects volume sliders (`audio.musicVolume`,
+  `audio.sfxVolume`, 0–100%, applied on save). Each sound-chip channel takes
+  the volume of whichever track last wrote to it, so a sound effect that
+  borrows a music channel keeps the sound-effect volume. Music at 0% gives
+  game audio with only sound effects, for example for recordings; the
+  headless gameplay and trace capture tools have `--no-music` for the same. The volumes
+  only scale the output: the sound driver, gameplay, rewind and traces are
+  unchanged, and at 100% the output is bit-identical to before.
 
 - **Sonic 1's Sonic on Sonic 3&K tumble objects:** Sonic 1 has no tumble frames,
   so a donated Sonic 1 Sonic riding a Flying Battery wire cage or another tumble
@@ -26,6 +221,11 @@ under the matching area heading; see the
 - **S3K support notice says beta:** starting Sonic 3 & Knuckles from the hub
   now shows the beta notice, matching the 0.7 release notes. 0.7 shipped with
   the alpha notice. Players who hid the alpha notice see the beta one once.
+
+- **Donated Sonic 2 Super Sonic has its transformation sound:** with Sonic 2's
+  Super Sonic donated into another game, such as Sonic 1, the transformation was
+  silent: the Super music started on the same frame and cut the sound off. The
+  song now starts first and the sound plays over it, as it does in Sonic 2.
 
 - **S2 Crawl:** paused proximity includes its zero countdown pass, Super Sonic
   selects ordinary enemy contact, and accepted enemy attacks retire through the
@@ -181,6 +381,226 @@ under the matching area heading; see the
 
 ## Modding and tools
 
+- **Debug labels on widescreen:** with a display aspect wider than 4:3, debug
+  text tied to a place in the level (sensor, object and plane labels, the
+  object-debug text) was drawn too far left: at 400 wide, at 0.8 of its distance
+  from the left edge, so the sensor labels sat on the player. Lines, boxes and
+  panels were right. The text renderer scaled positions back by a fixed 320
+  while the picture is drawn 400 wide; it now uses the configured width.
+
+- **Built-in sidekicks beside mod sidekicks:** a team that put Tails, Knuckles
+  or a second Sonic in a sidekick slot together with a mod character anywhere in
+  the team drew every character, the leader included, as a white box. The
+  built-in sidekick's art was asked for by its slot code (`tails_p2`), which
+  names no art, and the whole team's art was then dropped without a word. It is
+  asked for by character now, and a team whose art cannot be loaded says so in
+  the log.
+
+- **MICA, an original character framework example:** The complete MICA and TALON
+  mod now ships bundled with JVM and native distributions, disabled by default.
+  Enable it in the mod manager; saved enable/disable choices survive upgrades. TALON’s S3K lives label now
+  spells his full name using native glyph pixels with tighter blank padding; S1,
+  S2 and MICA retain their existing words and portraits. Creator S3K lives names
+  preserve the native × beside the counter, as S1/S2 already do. TALON now joins as her
+  default sidekick and is selectable solo. Powered banks now keep each movement
+  archetype's native clocks and expose host-independent authored flight and
+  transformation scripts. Powered forms follow the owner-picked concepts: Open
+  Cone Gilded MICA (lifted gold plates; Hyper flashes Prism Gilt gold, white-hot,
+  a pale pastel jade and rose-gold) and Corona Crest Solar TALON (flame crest, goggles down,
+  flame-tipped wings), with new wait, run, roll and transformation art. Powered
+  forms can hold a strike palette while a strike flies and tint each strike echo
+  with its spawn-time cycle phase (`PoweredEffects.strikePalette`,
+  `StrikeTrailStyle.echoPhaseSlot`). Normal TALON now stands 37 px, and every
+  Solar pose keeps one gloved wing-arm per side; new
+  profile-facing flight art matches his carry identity, and his flight and carry
+  frames, like MICA's carried frames, share the ink outline and shading of their
+  other poses; his normal sheet is despeckled, his flight, carry, victory and
+  other oversized poses are redrawn to the head scale of his idle, most of his poses now
+  share his idle's head and line weight instead of each drawing's own, MICA's flat poses
+  and her Sonic 1 title portrait are despeckled with their scale edges kept, and every slope and
+  homing-dive frame of both characters, powered forms included, is re-derived
+  with a cleaner rotation. TALON's idle is now his own: he preens a flight feather,
+  ruffles up and catches a loose feather instead of repeating Tails' blink and yawn.
+  His victory is a two-finger salute off his goggles, and both characters' signposts
+  carry one readable portrait in all three games (MICA's peace sign, TALON's salute).
+  MICA keeps her idle. S1 creator
+  forms play animated transformations. Joint native-pose carry redraws now
+  keep MICA’s raised gloves against TALON’s shoes throughout his wingbeat,
+  with native-style material contours and the complete S3K hanging sequence.
+  S3K title wag sprites now own the complete glove and backing context,
+  removing doubled thumbs and the cutout halo while retaining native timing.
+  TALON's S2/S3K native mapping namespaces now bind all declared poses through
+  archetype-owned NFRM aliases, including S2 object tumble, S3K gravity loops,
+  corkscrews, swing/grip/chain/carry and later object turns. The audit exposes
+  per-ID results; native Tails remains unchanged and unknown bytes use WAIT.
+  TALON ending assets now cover solo S2/Tails poses, sidekick search photos,
+  goggles-down ending/SCZ/WFZ cockpit crops, a shared S3K reunion pilot and solo S3K reunion poses. Native-cell, locally paletted reel
+  portraits now cover S2 CNZ and S3K Slots lead/sidekick symbols, TALON solo
+  and Gilded/Solar symbols through optional candidate character presentation;
+  slot rewards and other symbols remain native. MICA’s S3K title now
+  adds baked jade roll-in smears and heavy radial/turn ghosts through the large
+  close-ups while preserving the settling pose, ring and final portrait, and keeps a coral-pink ear, a wink owning her whole continuous eyelash group,
+  short gloved finger poses with one five-digit master rotated through native wag angles and a rounded lower glove, with an unperforated silhouette over the ring. Optional per-host title mascot banks
+  now supply native-selector body/hand frames and masked S3K plane art, with
+  independent role palettes and native fallback; MICA and TALON supply all three
+  hosts while title timing, branding and occlusion remain native. The S2 duo
+  keeps MICA centre-right in the Sonic slot with a separately animated palm-facing
+  thumbs-up and TALON left in the Tails slot with connected wings, no glove, and
+  a three-quarter face looking at the camera through the rise and settled smile; all S1
+  poses follow native geometry, and MICA's S3K bank uses baked3D shading. Native
+  opaque palette clearing prevents sky holes around animated patches. S3K Competition wheel, arena selection, results panels and record icons now
+  use original MICA/TALON portraits with independent palettes and native origins;
+  absent portraits retain native art; failed creator loads propagate through the
+  registered owner fault boundary. Intro renderer inputs are prepared during update,
+  and Tornado pilot art is re-derived after rewind recreation. S2 title bodies
+  now obey the native emblem masking rows through the rise without changing
+  approved settled poses. Explicit solo companion cockpit banks let MICA pilot
+  for solo TALON and TALON pilot for MICA; ending and SCZ/WFZ support both native
+  pilot mapping families, and Tails-role ending art binds its own animation families.
+  The separate final front-view cockpit now selects the companion too, using
+  bounded native clear masks and independent ending-surface pattern residency. Ending
+  fixes: in Sonic 2 a creator lead is drawn on the Tornado again under the level's sky
+  (its playable bank no longer overwrites the level tiles, and wait/walk frames come from
+  the bound sheet); in S3K every ending surface owns its pattern bank, so the rider is no
+  longer doubled and the cockpit no longer corrupts through the credits; a Tails-role lead
+  falls on Tails's float script and is flown by its partner from the Sonic seat; a solo
+  lead can supply its partner's Sonic 2 search photos (`S2_SOLO_PHOTOS`) and the partner's
+  seat on the final S3 graphics card (`S3K_SOLO_EYECATCH`); the mid-size Tornado's rider
+  and cockpit head are creator surfaces (`S3K_PASSENGER` selectors 14/15,
+  `S3K_MINI_TORNADO_PILOT`), and its exhaust flame is native again. TALON has his own Sonic 1
+  celebration, final-card figure and island-arrival sprites. Native Competition has no character-name
+  strings. S3K Competition renders MICA/TALON with
+  independent native-ID miniature banks and hotspots, per-frame native fallback
+  and private palettes; configured creator team members occupy their native
+  archetype wheel slots while the miniature simulation stays native. His Tails archetype uses native S3K
+  flight and explicitly declared S1/S2 flight; Solar doubles flap acceleration
+  without Flickies. His own 282-frame sheet and palette replace the placeholder;
+  generated Solar tables use white-gold plumage and flame wingtips. Shared family
+  art adds ledge, hanging, tumble, air pickup, recoil, recovery and flight/swim
+  variants; TALON's private flight scripts select the native pose branch and
+  preserve relocated mapping indices. Airborne
+  down previews targets; down+jump divebombs, while ordinary
+  jump retains flight/flaps. TALON owns HUD/1-up portraits, signs, continue and save portraits,
+  half-pipe and Blue Sphere body sprites independently as solo lead or follower. MICA’s
+  Blue Sphere rear-view bank follows native special-stage shading, colour budgets
+  and run/jump contact phases, with readable ears, face edges and scaled tail.
+  Blue Sphere creator bodies share native pixel ownership before spheres and
+  shadows, preserving their colours and stage fades; real stock/creator captures
+  verify native mapping selections and timing.
+  Dedicated final-orientation special-stage drawings keep both characters'
+  highlights and asymmetric features from jumping sides. The additive candidate
+  API selects explicit mirrored phases in Blue Sphere and H/V/HV phases in the
+  S2 half-pipe while preserving native selectors, clocks and draw ownership.
+  Missing Blue Sphere orientation drawings retain native flips. Character strike-style
+  callbacks use owner fault containment, and underwater-palette and super-form
+  suppliers retain their publishing owner's callback provenance.
+  Both special-stage banks now reuse locked generated head/torso layers across
+  upright phases, posed with native-measured hip-pivot lean, sway and bob,
+  screen-space lighting, reattached limbs and separately locked curl/glint phases.
+  Real 60 Hz captures verify body motion, colours, shadows and fades.
+  S1 supplements spell TALON; S3K uses the longest native-cell prefix TALO;
+  results retain his full name. The candidate API adds default sidekick
+  selection, flight declarations and the native Tails respawn factory.
+  Optional directional homing
+  previews airborne homing targets, locks the reticle during strikes, and draws
+  native ROM spindash/skid dust for canonical-sheet characters. A fault-bounded
+  `onMovementTick()` character hook supports per-tick preview requests. Directional
+  strike sheet poses follow current velocity with phase-preserving turns, normal
+  facing mirrors and generic/native fallbacks. The maintained
+  `examples/mica-and-talon` demo groups runtime art by surface, separates production
+  records, documents its class map, and builds generated sheets only under `target/`.
+  Native selector, filename, hotspot and palette-cycle tables live beside the art
+  and load through one example helper; formatted Java retains gameplay and native presentation decisions.
+  Its paired `micaandtalon` package keeps the same mod/character IDs. The demo plays in all three stock games with Sonic's
+  single-player physics, native S2/S3K spindash (disabled in S1), character-owned
+  homing (including an untargeted forward
+  dash), a four-frame HOMING_DIVE pose, and Hyper-only Instagib strikes. Creator
+  strike colours (`StrikeTrailStyle`) and per-form particles (`PoweredEffects`) give
+  MICA a jade trail, Gilded gold glints and trail, Hyper echoes and strike flashes,
+  and Solar TALON sun-ember motes and a heat trail, instead of hue-rotated blue. Its
+  rerunnable original sheet has 274 frames, 52 canonical animations, slope cycles,
+  a shared palette and a breathing/fidget idle. Canonical sheets preserve native
+  partial-loop WAIT tails and finite hold/next endings. Shared module animation
+  families bind MICA and TALON phase art at host ROM timing, using separate
+  Sonic/Tails archetype vocabularies. TALON families share the approved core
+  character scale, with distinct S3K yawning/stretch poses and transformation
+  flash phases. The profiles supply equivalent missing
+  cross-game Sonic donation scripts; 18 redundant drawings are removed without
+  generating art. Ordinary art bindings keep donated animation profiles stable
+  across native-scene rewind. Flight carry keeps creator leaders on their own
+  carried-family sheet while native Sonic retains the ROM carry frames. MICA and TALON skip
+  their idle intros after the first pass. Native object mapping bytes can
+  bind semantic sheet poses; MICA supplies three native-reference hang poses for
+  vines and grapples, reuses fourteen existing native mapping poses for turns, rolls, riding,
+  bar release and crane release. Forty additional native-pose aliases cover early
+  S3K vine swings, hollow-tree tumbles, twist front/back views, poles and bars;
+  33 generated drawings and seven verified quarter-turns retain the shared palette.
+  Sixty further generated object poses and three approved-art aliases close the
+  remaining 63 S3K direct mappings, including gravity loops, cage entry,
+  parachutes and corkscrews. Six rare/normal-transformation drawings and two TALON
+  legacy poses close the requested rare scripts; tail-only TALON dummy frames
+  bind blank. Complete authored tumble banks enable native rotation selection;
+  partial sheets retain canonical fallbacks. Other raw poses keep named canonical
+  fallbacks. The
+  AIZ intro retains MICA's own art and powered palette. The 36 rotated WALK/RUN poses
+  use native phase coordinates and pixel-edited contact edges; all 12 steep
+  WALK/RUN hood contours are completed without changing sole support. S3K transformation
+  art uses clustered gold scales and a clearer face, and the second dive shell
+  has rounded scale rows. Gilded Super/Hyper forms cycle
+  jade to gold and expose host settings for their gates. Optional per-form GGFP
+  banks now combine normal/powered tiles once, retain exact host script timing
+  and movement selection, and reconcile transformation/active rewind and art
+  refresh. MICA supplies 34 generated powered base poses with deterministic
+  slopes; explicit normal animation/phase aliases avoid duplicate normal PNGs,
+  and Hyper shares Super geometry. S1's
+  donor-free six-emerald form is explicitly mod-defined. MICA supplies HUD/name,
+  act and special-stage results (including S2's Super announcement, with tally
+  logic independent of ROM presentation availability), 1-up faces,
+  semantic sign faces/spins/backings, special/bonus-stage player art, continue
+  poses, data-select solo/team portraits and counters, thirteen ICZ snowboard
+  rider frames, and endings in all three games. S1 uses eight native-timed ending
+  poses; S2 retains native monochrome photos and supplies Float2 and normal/Super
+  poses; S3K supplies rescue Float2/ride, reunion, transformation, tiny passengers
+  and trio-eyecatch art.
+  S2 photo replacements belong to the active sidekick; the first panel always
+  remains native. Native art references now use the photo scene palette, S1
+  continue piece palette lines and S3K transformation palette phases.
+  HUD life icons and 1-up faces share her private character palette in all three
+  games; save-slot life icons retain their private frontend bank.
+  Private palettes preserve native stage colours, text, board/spray, companions
+  and vehicles; powered ending poses use her Gilded cycle. Acceptance covers
+  launch/save/rewind/disabled-owner fallback and session-owned S2 HUD/1-up art,
+  with three-game headless footage
+  of movement, springs, normal/powered strikes and a GHZ airborne chain. A
+  [nine-part tutorial](docs/modding/guides/original-character/README.md) builds an
+  original character from design to every surface, with a part 2 checkpoint mod.
+  TALON is included as a playable leader and follower; this is not a released mod or full-route certification.
+
+
+- **Character API on the 0.7 candidate:** canonical playable animation tables
+  share host speed timing, slope cycles, explicit end actions and fallbacks across
+  S1/S2/S3K. Owner-bound underwater palette suppliers complement zone-aware water
+  derivation. Optional `CharacterPresentation` provides immutable indexed images,
+  per-host names and supplementary glyphs, native-frame stage/screen/ending sets,
+  and bounded PNG loading. Font readers inventory all three small HUD fonts and
+  S3K per-zone title/results letters with pixel-level glyph coverage/composition.
+  GGFP presentation sections remain pending. `SuperFormProfile` supplies per-game
+  tiers, palettes, physics, animations and rewind state; scene-form operations
+  support authored controllers while preserving stock ending dispatch.
+  The world-session `HomingAttack` facade exposes per-call homing/Instagib,
+  target-only admission, requested reticles and flight divebomb with a steep
+  forward-down fallback. Mutator Lab retains its character selection and native
+  air-move fallback; characters need no mutator activation.
+
+- **Character routing and presentation:** explicitly loaded development
+  characters remain available in headless native Data Select. Custom team
+  archetypes use the solo Sonic route without a follower. Stock S2 Tails-alone
+  results now select Miles/Tails with the native graphics-region setting.
+  Data-select save life counters use the character HUD icon; miniature continue
+  counters reuse its continue pose. NO SAVE refreshes custom solo/team portraits
+  immediately, and the S2 half-pipe ring HUD composes names from its native
+  SONIC/MILES/TAILS alphabet with supplements for missing glyphs. Stock fallbacks
+  and native screen/stage/ending choreography remain intact.
 - **Simpler creator examples:** decoded native-level patches can add registered
   objects with engine-assigned placement identities while retaining native level
   services. Scene menus share the engine's menu theme and public drawing helpers;
@@ -208,6 +628,30 @@ under the matching area heading; see the
   finalizer cannot clear resources acquired by a recording started after close.
   S2 music requests now use native ROM mailbox bytes while retaining playback IDs, fixing CNZ 2P audio crashes and music priority/classification.
 
+- **Trace clips without the original's lag frames:** `TraceCaptureTool
+  --skip-lag-frames`, with `--clip frames:START:END`, leaves out the frames on
+  which the recorded game could not keep up. A frame window films every row the
+  original displayed, so on those rows the picture repeated and the footage
+  looked as if the engine stuttered. Lag is read from the recording's own
+  counters: the gameplay frame counter held over an elapsed V-blank for at most
+  four rows, so title cards, fades, loads and pauses stay. The window still
+  selects trace rows, the clip is shorter by the rows left out, and the tool
+  prints the output-frame to trace-row mapping and writes it to the capture
+  manifest. A row left out gets no audio either, so sound stays in sync. Off by
+  default; replay, comparison and gameplay are unchanged.
+
+- **Wide trace captures let the act-end run-off leave the picture:** at the end
+  of a Sonic 1 or Sonic 2 act the player runs right until the level's wall, which
+  the ROM places 40 pixels past the right edge of its 320-pixel screen. A trace
+  capture wider than 320 draws its extra width to the right of that screen, so
+  the player stopped in view and ran on the spot through the results (400 wide:
+  Green Hill 3 after the capsule, Emerald Hill 1 after the signpost). While the
+  player crosses those last 64 pixels at the camera's right limit, the capture
+  now draws from further left until the picture's right edge is the ROM
+  screen's, and the player leaves it as in the original. Only the capture's
+  picture moves: the replay camera, comparison, audio and 320-wide output are
+  unchanged.
+
 - **Seeded Data Select captures:** `GameplayCaptureTool --save-slots <file.json>`
   writes declared save slots through the production save manager into the
   capture's private save root before a title-first capture, and `--extra-teams`
@@ -218,6 +662,100 @@ under the matching area heading; see the
   instead of S3K's placeholders.
 
 ## Maintenance and release preparation
+
+- **All-level performance sweep:** `tools/performance/level_sweep.py` plays every
+  trace fixture and Sonic 3&K route movie through the frame-time probes, one at a
+  time. It reports frame time, allocation, garbage collection and hitches per
+  level and how far each replay got. It lists the slow frames that recur across
+  runs, and it matches profiler samples, including JDK 25 method traces, to those
+  frames. `compare` sets two sweeps side by side level by level, counting the
+  frames over 8.33 ms and 16.67 ms that recur across runs. `RouteFrameBudgetProbe` takes a route's launch settings (`--game`,
+  `--width`, `--title-card`, `--intros`, `--emeralds`, `--vint-run-count`,
+  `--setup-step`, `--input-start`). `TraceBenchmarkTool --frame-log` records when
+  each frame started, so a recording can be lined up with it. The trace catalogue
+  now opens the Sonic 1 Scrap Brain Act 3 trace, which the ROM stores as Labyrinth
+  act 4, as Scrap Brain Act 3; trace tools failed to start it before.
+  `RouteFrameBudgetProbe --audio` now presents one audio frame per step, as the
+  game loop does. Before, the sound driver never advanced in route runs: an
+  extra-life jingle never ended, so every later sound effect was refused, and
+  sound commands queued up and were applied in one burst at the next music
+  change. That burst is the 17-25 ms "first sound effect" frame the first sweep
+  reported in FBZ1, SOZ1, LRZ1, DEZ1 and DDZ; with audio presented those
+  frames take 1-2 ms.
+
+- **Quieter extra-life sound effects:** a sound effect requested while the
+  extra-life jingle plays is still dropped, as the ROM drivers drop it, but no
+  longer writes a warning to the log for each request. The admission observer
+  still records the refusal.
+
+- **Accurate FM performance:** fold the Nuked sine and exponential lookup arithmetic
+  into derived tables while preserving cycle-level output. A paired six-voice
+  core benchmark measured 3.9% less rendering time; this is not a gameplay FPS claim.
+  The accurate core also clocks quiet stretches of cycles in runs
+  (`NukedOpn2.clocks`), with identical PCM, status and snapshots: paired
+  benchmarks measured 43% less time in the six-voice core and 46% less for
+  S3K AIZ1 and HCZ1 music rendered end to end, once HotSpot has compiled the
+  run loop. A JVM pays about three times the old per-frame cost for its first
+  second of FM sound while that compile runs.
+
+- **Draw-path caller checks:** engine renderers now pass the engine-caller
+  stack check once per render host, not once per picture, frozen pattern, tile,
+  bucket or frame. Sonic 1's placed rings keep their admitted draw handle instead
+  of checking each ring every frame, and the sprite-table and HUD submissions
+  check once. Calls from mod-loaded classes, including method references, are
+  still refused. Physics reads the local-fluid flag without a stack walk. The
+  Lava Reef 1 allocation profile put about 30% of the game's per-frame
+  allocation in these walks; this is not a frame-rate claim.
+
+- **Steady per-frame allocation:** native sprite drawing keeps one scratch
+  stencil image per GL context instead of creating and deleting a renderbuffer
+  and framebuffer every frame. The widescreen bounds-mask fade shares identical
+  opacity rows between frames instead of copying seven rows a frame; each state
+  still has its own unchangeable copy. Sprite-table assembly looks up each
+  queued object slot once per pass instead of scanning every object per slot,
+  and skips that scan for empty slots that hold no attracted ring. The HUD time
+  text, the scroll arrays passed to the renderer, unchanged H-scroll uploads and
+  the per-tile sprite replay callback no longer allocate or upload every frame.
+  Which object owns a slot, and so the order in which objects run, is unchanged.
+  Across Sonic 1 Green Hill 1 and Spring Yard 1, Sonic 2 Emerald Hill 1 and
+  Sonic 3&K Angel Island trace replays, median allocation per frame fell from
+  108-148 KB to 70-111 KB (25-37% less), so young collections run less often.
+
+- **Sonic 3&K level load and respawn cost:** every Sonic 3&K level load, including
+  each death respawn, read the spring mapping tables using a frame count taken
+  from their first offset word. That word points past the neighbouring table,
+  so each load decoded about 646,000 meaningless sprite pieces that no spring
+  ever drew. The spring entries now read their own 11 frames; the frames that
+  are drawn are unchanged. Player sprite renderers also digest their art one
+  tile at a time instead of one pixel at a time, with the same result. In a
+  headless Lava Reef 1 measurement a respawn now allocates 8.8 MB instead of
+  65.6 MB and takes about 10-15 ms instead of 21-28 ms once warm; the first load
+  allocates about 103 MB instead of 160 MB.
+
+- **Load, act-transition and menu load cost:** five Sonic 2 sprite tables
+  (springs, breathing bubbles, the Grabber's string, Grounder and its rocks)
+  and the Sonic 3&K Gumball bonus springs took their frame count from a first
+  offset word that points past the table, so loading them decoded up to about
+  a million meaningless sprite pieces (about 40 MB for the Grabber string
+  alone). They now read the number of frames the disassembly lists; the frames
+  that are drawn are unchanged. Kosinski Moduled art now decompresses straight
+  from the ROM instead of from a copied 64 KB-256 KB window, and the title
+  card, title screen, continue screen, character font and Sonic 3&K data
+  select no longer copy everything from the art to the end of the ROM before
+  decompressing it. Pattern decoding reuses one tile buffer, and ROM reads use
+  the ROM's in-memory copy instead of a locked file read. In headless
+  measurements a Sonic 3&K seamless act transition allocates about 3.1-4.1 MB
+  instead of 3.9-5.1 MB (FBZ 6.8 MB instead of 7.6 MB), a respawn reload about
+  1.5-2.5 MB less, a Sonic 2 CPZ or ARZ respawn about 3 MB instead of
+  11-12 MB, the Sonic 3&K data select load 1 MB instead of 24 MB and a title
+  card's art 0.1 MB instead of 36 MB.
+
+- **Sprite presentation performance:** the native SAT post-pass evaluates each
+  scanline from primitive per-entry arrays and only over lines that sprites cover.
+  SAT ingress, mask clipping, sprite preparation, native tile drawing and the
+  widescreen bounds-mask fade no longer build intermediate entries, per-tile
+  lambdas, list copies or per-frame working arrays. Output is unchanged; this is
+  not yet a measured gameplay FPS claim.
 
 - **Engine quality and contributions:** the README and contributor entry point now
   acknowledge maintainability weaknesses and invite focused improvements to object
@@ -324,8 +862,6 @@ under the matching area heading; see the
   `--resume-from` and `--skip-rows`, so a shot's input can be derived from a
   level inside a complete-run movie, with one change and the recording's own
   rows after it.
-
-  frame ranges) beside each reel.
 
 - **Trace coverage and canonical fixtures:** independent strict replay covers all
   163 segments of the Knuckles super-emerald, Mega, Sonic+Tails and KiS2 chains,

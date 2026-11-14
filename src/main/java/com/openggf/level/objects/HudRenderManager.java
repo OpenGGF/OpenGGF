@@ -1,5 +1,6 @@
 package com.openggf.level.objects;
 
+import com.openggf.camera.CameraPresentationAccess;
 import com.openggf.camera.Camera;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.LevelState;
@@ -37,6 +38,8 @@ public class HudRenderManager {
             java.util.logging.Logger.getLogger(HudRenderManager.class.getName());
 
     private final GraphicsManager graphicsManager;
+    /** Admitted once for this render host instead of one engine-caller stack walk per frame. */
+    private com.openggf.graphics.SpriteSatInternalAccess.Engine satAccess;
     private final Camera camera;
     private final GameStateManager gameState;
     private final PatternDesc staticPieceDesc = new PatternDesc();
@@ -61,6 +64,9 @@ public class HudRenderManager {
     private PatternDesc livesNumberPatternDesc = iconPatternDesc;
     private int iconPaletteLine;
     private Palette livesPaletteOverride;
+    private boolean characterLifeIcon;
+
+    void setCharacterLifeIcon(boolean enabled) { characterLifeIcon = enabled; }
     private Palette lastAppliedLivesPaletteOverride;
     private Supplier<Palette> livesPaletteOverrideSupplier;
     private boolean routeLivesPaletteOverrideThroughOwnership;
@@ -257,7 +263,8 @@ public class HudRenderManager {
             }
             appendOptionalTimeGeometry(geometry, satOrigin, player);
             collectingSatFragments = true;
-            try { com.openggf.graphics.SpriteSatInternalAccess.submitGroups(graphicsManager, geometry, () -> draw(levelGamestate, player)); }
+            if (satAccess == null) satAccess = com.openggf.graphics.SpriteSatInternalAccess.engine(graphicsManager);
+            try { satAccess.submitGroups(geometry, () -> draw(levelGamestate, player)); }
             finally { collectingSatFragments = false; }
             return;
         }
@@ -598,6 +605,11 @@ public class HudRenderManager {
         }
         descIndex |= (paletteIndex & 0x3) << 13;
         staticPieceDesc.set(descIndex);
+        if (characterLifeIcon && staticHudArt != null && staticHudArt.livesFrame() != null) {
+            int first = staticHudPatternIndex + staticHudArt.livesFrame().pieces().getFirst().tileIndex();
+            if (patternId >= first && patternId < first + 4)
+                staticPieceDesc.setPaletteIndex(com.openggf.game.presentation.CharacterIconPalette.activeLine(paletteIndex));
+        }
         // renderPatternWithId consumes the desc immediately (batch copies
         // floats; PatternRenderCommand.init copies fields), so the reusable
         // desc can be passed without a copy.
@@ -756,7 +768,10 @@ public class HudRenderManager {
     }
 
     private int nativeOrigin() {
-        return nativeOriginX(Math.max(viewportWidth, graphicsManager.getProjectionWidth()));
+        int origin = nativeOriginX(Math.max(viewportWidth, graphicsManager.getProjectionWidth()));
+        // Camera-relative HUD pieces are drawn from the picture's left edge, which NATIVE
+        // widescreen draw mode places this inset left of the camera (0 otherwise).
+        return bonusStageHudLayout ? origin : origin - CameraPresentationAccess.inset(camera);
     }
 
     int nativeOriginX(int width) {

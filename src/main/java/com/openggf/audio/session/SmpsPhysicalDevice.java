@@ -271,6 +271,21 @@ public final class SmpsPhysicalDevice {
         synth.reportPhysicalTimelineBoundary(boundary);
     }
 
+    void setMixGains(int musicGain, int sfxGain) {
+        requireActive();
+        synth.setMixGains(musicGain, sfxGain);
+    }
+
+    void markFmChannelRole(int channel, boolean sfx) {
+        requireActive();
+        synth.markFmChannelRole(channel, sfx);
+    }
+
+    void markPsgChannelRole(int channel, boolean sfx) {
+        requireActive();
+        synth.markPsgChannelRole(channel, sfx);
+    }
+
     void setFmMute(int channel, boolean mute) {
         requireActive();
         synth.setFmMute(channel, mute);

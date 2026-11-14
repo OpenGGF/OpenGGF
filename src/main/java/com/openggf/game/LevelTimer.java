@@ -111,8 +111,19 @@ public class LevelTimer {
             seconds = 59;
             centis = 99;
         }
-        return hundredths ? String.format("%d:%02d.%02d", minutes, seconds, centis)
-                : String.format("%d:%02d", minutes, seconds);
+        // Read every frame by the HUD: build the ASCII digits directly instead of
+        // through a Formatter (which allocated a parser, builder and boxed values).
+        char[] text = new char[hundredths ? 7 : 4];
+        text[0] = (char) ('0' + minutes);
+        text[1] = ':';
+        text[2] = (char) ('0' + seconds / 10);
+        text[3] = (char) ('0' + seconds % 10);
+        if (hundredths) {
+            text[4] = '.';
+            text[5] = (char) ('0' + centis / 10);
+            text[6] = (char) ('0' + centis % 10);
+        }
+        return new String(text);
     }
 
     /**

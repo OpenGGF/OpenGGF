@@ -139,14 +139,26 @@ public class LaunchProfileStore {
 
     public LaunchProfile withNext(LaunchProfile profile, LaunchProfile.Row row,
             MasterTitleScreen.GameEntry entry) {
-        return Objects.requireNonNull(profile, "profile")
-                .withNext(row, entry, patchMainCharacters(entry));
+        return applyDefaultTeam(profile, Objects.requireNonNull(profile, "profile")
+                .withNext(row, entry, patchMainCharacters(entry)), row, entry);
     }
 
     public LaunchProfile withPrevious(LaunchProfile profile, LaunchProfile.Row row,
             MasterTitleScreen.GameEntry entry) {
-        return Objects.requireNonNull(profile, "profile")
-                .withPrevious(row, entry, patchMainCharacters(entry));
+        return applyDefaultTeam(profile, Objects.requireNonNull(profile, "profile")
+                .withPrevious(row, entry, patchMainCharacters(entry)), row, entry);
+    }
+
+    private LaunchProfile applyDefaultTeam(LaunchProfile before, LaunchProfile after,
+            LaunchProfile.Row row, MasterTitleScreen.GameEntry entry) {
+        if (row != LaunchProfile.Row.MAIN_CHARACTER || before.mainCharacter().equals(after.mainCharacter())) return after;
+        var definition = patchCharacterRegistries.getOrDefault(entry,
+                com.openggf.game.PlayableCharacterRegistry.empty())
+                .find(com.openggf.game.CharacterKey.parsePersisted(after.mainCharacter()));
+        var sidekick = definition.map(com.openggf.game.CharacterDefinition::defaultSidekick).orElse(null);
+        if (sidekick == null || !patchMainCharacters(entry).contains(sidekick.persisted())) return after;
+        return sanitize(new LaunchProfile(after.rewind(), after.crossGameSource(), after.debugTools(),
+                after.aspect(), after.mainCharacter(), sidekick.persisted()), entry);
     }
 
     public boolean isNonStandard(LaunchProfile profile, LaunchProfile.Row row,

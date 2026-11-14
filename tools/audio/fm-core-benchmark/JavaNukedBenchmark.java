@@ -66,7 +66,20 @@ public final class JavaNukedBenchmark {
         return hash;
     }
 
+    /**
+     * Whether a frame is 24 {@code clock} calls rather than one {@code clocks}
+     * run. The engine adapter uses runs; single clocks are the path the
+     * pinned-C cycle scripts certify. Both give the same sums.
+     */
+    private static boolean singleClocks;
+
     static long frame(NukedOpn2 chip, int[] pins) {
+        if (!singleClocks) {
+            pins[0] = 0;
+            pins[1] = 0;
+            chip.clocks(24, pins);
+            return ((long) pins[0] << Integer.SIZE) | (pins[1] & 0xffffffffL);
+        }
         int left = 0;
         int right = 0;
         for (int cycle = 0; cycle < 24; cycle++) {
@@ -100,9 +113,10 @@ public final class JavaNukedBenchmark {
     }
 
     public static void main(String[] args) {
-        if (args.length != 3) {
-            throw new IllegalArgumentException("usage: <frames> <warmups> <iterations>");
+        if (args.length != 3 && !(args.length == 4 && "--single-clocks".equals(args[3]))) {
+            throw new IllegalArgumentException("usage: <frames> <warmups> <iterations> [--single-clocks]");
         }
+        singleClocks = args.length == 4;
         int frames = Integer.parseInt(args[0]);
         int warmups = Integer.parseInt(args[1]);
         int iterations = Integer.parseInt(args[2]);
@@ -144,11 +158,11 @@ public final class JavaNukedBenchmark {
         }
 
         System.out.printf(Locale.ROOT,
-                "{\"implementation\":\"java-nuked\",\"frames\":%d,\"warmups\":%d," +
+                "{\"implementation\":\"java-nuked\",\"entry\":\"%s\",\"frames\":%d,\"warmups\":%d," +
                         "\"iterations\":%d,\"checksum\":%s," +
                         "\"snapshot_errors\":%d,\"negative_control_changes\":%d," +
                         "\"nanoseconds_per_frame\":%s}%n",
-                frames, warmups, iterations, Long.toUnsignedString(checksum),
+                singleClocks ? "clock" : "clocks", frames, warmups, iterations, Long.toUnsignedString(checksum),
                 snapshotErrors, negativeChanges, Arrays.toString(timings));
     }
 }

@@ -108,6 +108,8 @@ final class GameLoopContinueCoordinator {
         java.util.logging.Logger.getLogger(GameLoop.class.getName()).info("Starting fade-to-black for respawn");
         // Fade out current music (ROM: s2.asm:4757 - level entry with title card)
         fadeOutMusic.run();
+        // The reload is committed: decode the act during the fade instead of on its last frame.
+        com.openggf.level.LevelReloadPreparationAccess.prepareCurrentLevelReload(loop.levelManager);
         // Start fade-to-black, then respawn when complete
         GameLoopPlcLifecycle.startToBlack(loop.resolveGameplayModeContext(), loop.fadeManager, this::respawn);
     }
