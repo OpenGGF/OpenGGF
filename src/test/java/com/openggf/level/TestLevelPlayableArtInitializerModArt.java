@@ -204,7 +204,8 @@ class TestLevelPlayableArtInitializerModArt {
         org.junit.jupiter.api.Assertions.assertNull(capturedRenderer(nativeSide).getRenderContext(),
                 "a native-scripted follower still uses the host's base palette binding");
         org.junit.jupiter.api.Assertions.assertSame(nativeWater, shared.getUnderwaterPalette(0));
-        verify(hostArt).loadPlayerSpriteArt(prepared ? "sonic_p2" : "sonic");
+        // Both routes ask the host for the character; the slot code sonic_p2 names no art bank.
+        verify(hostArt).loadPlayerSpriteArt("sonic");
     }
 
     @ParameterizedTest(name = "prepared team: {0}")
@@ -522,6 +523,36 @@ class TestLevelPlayableArtInitializerModArt {
         RenderContext sideContext = rendererContext(capturedRenderer(sidekick));
         org.junit.jupiter.api.Assertions.assertNotSame(mainContext, sideContext);
         assertEquals(sharedPalette, sideContext.getPalette(1));
+    }
+
+    @Test
+    void builtinSidekicksBesideAModSidekickLoadArtByCharacterNameNotSlotCode() throws Exception {
+        CharacterKey modKey = CharacterKey.mod("owner", "side");
+        PlayableCharacterRegistry registry = PlayableCharacterRegistry.empty()
+                .register(modKey, definition(modKey, code -> art(8)));
+        // GameplayTeamBootstrap names a sidekick's sprite by its slot: tails_p2, knuckles_p3.
+        AbstractPlayableSprite tails = sprite(CharacterKey.TAILS, "tails_p2");
+        AbstractPlayableSprite knuckles = sprite(CharacterKey.KNUCKLES, "knuckles_p3");
+        AbstractPlayableSprite mod = sprite(modKey, modKey.persisted() + "_p4");
+        Fixture fixture = fixture(registry, CharacterKey.SONIC, List.of(tails, knuckles, mod));
+        com.openggf.game.Game game = mock(com.openggf.game.Game.class,
+                withSettings().extraInterfaces(com.openggf.sprites.art.PlayerSpriteArtProvider.class));
+        fixture.level().game = game;
+        var provider = (com.openggf.sprites.art.PlayerSpriteArtProvider) game;
+        // The ROM has art banks for characters, and none for slot codes.
+        when(provider.loadPlayerSpriteArt("sonic")).thenReturn(art(4));
+        when(provider.loadPlayerSpriteArt("tails")).thenReturn(art(4));
+        when(provider.loadPlayerSpriteArt("knuckles")).thenReturn(art(4));
+
+        fixture.initializer().initialize();
+
+        verify(provider, never()).loadPlayerSpriteArt("tails_p2");
+        verify(provider, never()).loadPlayerSpriteArt("knuckles_p3");
+        capturedRenderer(fixture.main());
+        assertEquals(LevelManager.SIDEKICK_PATTERN_BASE, rendererArt(capturedRenderer(tails)).basePatternIndex());
+        assertEquals(LevelManager.SIDEKICK_PATTERN_BASE + 4,
+                rendererArt(capturedRenderer(knuckles)).basePatternIndex());
+        assertEquals(LevelManager.SIDEKICK_PATTERN_BASE + 8, rendererArt(capturedRenderer(mod)).basePatternIndex());
     }
 
     @Test
