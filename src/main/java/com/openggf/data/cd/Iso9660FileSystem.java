@@ -45,7 +45,7 @@ public final class Iso9660FileSystem {
         }
     }
 
-    private final CueDiscImage disc;
+    private final DiscImage disc;
     private final int dataTrack;
     private final long volumeBlocks;
     private final String volumeIdentifier;
@@ -55,7 +55,7 @@ public final class Iso9660FileSystem {
     private final Map<String, Entry> latestVersions;
     private final List<Entry> files;
 
-    private Iso9660FileSystem(CueDiscImage disc, int dataTrack, long volumeBlocks, String volumeIdentifier,
+    private Iso9660FileSystem(DiscImage disc, int dataTrack, long volumeBlocks, String volumeIdentifier,
                              Entry root, Map<String, Entry> entries, Map<String, List<Entry>> directories) {
         this.disc = disc;
         this.dataTrack = dataTrack;
@@ -81,7 +81,7 @@ public final class Iso9660FileSystem {
     }
 
     /** Validates the complete bounded directory tree without reading file payloads. */
-    public static Iso9660FileSystem open(CueDiscImage disc, int dataTrack) throws IOException {
+    public static Iso9660FileSystem open(DiscImage disc, int dataTrack) throws IOException {
         Objects.requireNonNull(disc);
         DiscTrack track = disc.track(dataTrack);
         if (!track.mode().isMode1()) {
@@ -242,7 +242,7 @@ public final class Iso9660FileSystem {
     }
 
     private static final class DirectoryIndex {
-        private final CueDiscImage disc;
+        private final DiscImage disc;
         private final int track;
         private final long blocks;
         private final Map<String, Entry> entries = new LinkedHashMap<>();
@@ -250,7 +250,7 @@ public final class Iso9660FileSystem {
         private final TreeMap<Long, Long> directoryExtents = new TreeMap<>();
         private long directoryBytes;
 
-        DirectoryIndex(CueDiscImage disc, int track, long blocks) {
+        DirectoryIndex(DiscImage disc, int track, long blocks) {
             this.disc = disc;
             this.track = track;
             this.blocks = blocks;

@@ -180,6 +180,24 @@ their SPDX headers state.
   `CdPcmState`, `CdStampRenderRequest` and `CdStampRenderState` describe the
   same registers and cite MAME for their decode without translating its code.
 
+## MAME: CHD v5 hunk map and CD codec framing
+
+The CHD disc reader in `src/main/java/com/openggf/data/cd/chd/` follows MAME's CHD
+format code. `ChdHuffman` follows the map Huffman decoder of
+`src/lib/util/huffman.cpp`, and `ChdHunkDecoder` the v5 map decoding
+(`decompress_v5_map`) of `src/lib/util/chd.cpp` and the CD codec framing
+(`chd_cd_decompressor`, `chd_cd_flac_decompressor`) of `src/lib/util/chdcodec.cpp`.
+
+- Upstream: https://github.com/mamedev/mame
+- Copyright-holders: Aaron Giles
+- Licence: BSD-3-Clause; `LICENSES/MAME-BSD-3-Clause.txt`
+- Modified 2026-11 by the OpenGGF contributors: rewritten in Java with bounded,
+  untrusted-input checks. Both files carry the licence in their headers.
+
+The LZMA, FLAC, Zstandard and CD-ROM ECC decoders beside them are written from their
+specifications (the LZMA SDK's public-domain `lzma-specification.txt`, RFC 9639,
+RFC 8878 and ECMA-130) and translate no third-party code.
+
 ## Bundled fonts: Fusion Pixel, Noto and GNU Unifont
 
 Host interface text (`com.openggf.graphics.text.HostText`, drawn by `MenuPixelFont`) and
