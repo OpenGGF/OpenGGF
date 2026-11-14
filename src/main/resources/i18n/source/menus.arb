@@ -4424,6 +4424,18 @@
   "@crash.hint.return": {
     "description": "OpenGGF host UI: crash.hint.return. Translate the complete message; preserve named arguments."
   },
+  "crash.hint.qr": "QR CODE",
+  "@crash.hint.qr": {
+    "description": "OpenGGF host UI: crash.hint.qr. Translate the complete message; preserve named arguments."
+  },
+  "crash.hint.picture": "PICTURE",
+  "@crash.hint.picture": {
+    "description": "OpenGGF host UI: crash.hint.picture. Translate the complete message; preserve named arguments."
+  },
+  "crash.caption.qr": "Scan to open the report form on another device.",
+  "@crash.caption.qr": {
+    "description": "OpenGGF host UI: crash.caption.qr. Translate the complete message; preserve named arguments."
+  },
   "crash.status.opened": "Opened the report form in your browser",
   "@crash.status.opened": {
     "description": "OpenGGF host UI: crash.status.opened. Translate the complete message; preserve named arguments."

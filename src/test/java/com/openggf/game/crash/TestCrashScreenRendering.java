@@ -76,6 +76,37 @@ class TestCrashScreenRendering {
         }
     }
 
+    @Test
+    void theQrCodeDrawsEveryModuleWhereItBelongs() throws Exception {
+        try (var context = PresentationOffscreenTestContext.openConfigured(320, HEIGHT,
+                PresentationOffscreenTestContext.LegacyProfile.CORE_41);
+             var renderer = new CrashScreenRenderer()) {
+            CrashScreen screen = screen(FaultKind.REWIND);
+            screen.toggleQr();
+            glViewport(0, 0, 320, HEIGHT);
+            glClearColor(0, 0, 0, 1);
+            glClear(GL_COLOR_BUFFER_BIT);
+            renderer.render(screen, new Matrix4f().ortho(0, 320, 0, HEIGHT, -1, 1).get(new float[16]), 320);
+            RgbaImage capture = ScreenshotCapture.captureFramebuffer(320, HEIGHT);
+            assertEquals(GL_NO_ERROR, glGetError());
+            CrashQrCode code = screen.qrCode();
+            CrashScreen.Box art = screen.artBox();
+            int scale = code.scale(art.width());
+            int tile = (code.size() + 2 * CrashQrCode.QUIET) * scale;
+            int left = art.x() + (art.width() - tile) / 2 + CrashQrCode.QUIET * scale;
+            int top = art.y() + (art.height() - tile) / 2 + CrashQrCode.QUIET * scale;
+            for (int y = -CrashQrCode.QUIET; y < code.size() + CrashQrCode.QUIET; y++) {
+                for (int x = -CrashQrCode.QUIET; x < code.size() + CrashQrCode.QUIET; x++) {
+                    boolean dark = x >= 0 && y >= 0 && x < code.size() && y < code.size() && code.dark(x, y);
+                    int argb = capture.argb(left + x * scale + scale / 2, top + y * scale + scale / 2);
+                    int luma = ((argb >> 16) & 0xFF) + ((argb >> 8) & 0xFF) + (argb & 0xFF);
+                    assertEquals(dark, luma < 3 * 64, "module " + x + "," + y);
+                }
+            }
+            export("qr-320", capture);
+        }
+    }
+
     /** Distinct colours in a top-down region of a capture. */
     private static long distinctColours(RgbaImage image, int x, int y, int w, int h) {
         var colours = new java.util.HashSet<Integer>();

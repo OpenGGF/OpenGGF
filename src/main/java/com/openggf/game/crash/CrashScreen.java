@@ -21,7 +21,8 @@ import java.util.Optional;
  * games only closes the page over the master title.
  *
  * <p>Nothing here retries or resumes the failed work. The player can file the pre-filled issue
- * form, copy the report, read every fact, or leave.
+ * form, copy the report, read every fact, or leave. The picture turns into a QR code of the form
+ * (the details key, or choosing the picture) for reporting from another device.
  */
 public final class CrashScreen {
     /** The window-side effects; a test records them. */
@@ -44,11 +45,16 @@ public final class CrashScreen {
     private static final int LEFT = 8;
     private static final int GAP = 6;
     private static final int MAX_ERROR_LINES = 3;
+    private static final float[] QR_DARK = {0f, 0f, 0f};
 
     private final CrashReport report;
     private final Optional<Path> file;
     private final Host host;
     private int selected;
+    /** The picture is focused instead of a button; it sits left of the button grid. */
+    private boolean pictureFocused;
+    private boolean showingQr;
+    private CrashQrCode qr;
     private int ticks;
     private int width = 320;
     private String status;
@@ -68,6 +74,17 @@ public final class CrashScreen {
     String status() { return status; }
     Choice selected() { return Choice.values()[selected]; }
     boolean detailsOpen() { return details != null; }
+    boolean pictureFocused() { return pictureFocused; }
+    /** True while the picture box shows the QR code instead of MICA. */
+    public boolean showingQr() { return showingQr; }
+
+    /** The issue form's QR code, built on first use. */
+    CrashQrCode qrCode() {
+        if (qr == null) qr = CrashQrCode.of(report, ART_SIZE);
+        return qr;
+    }
+
+    void toggleQr() { showingQr = !showingQr; }
 
     /** Reads one frame of input; the caller closes the page after {@link Host#returnToGames()}. */
     public void update(InputHandler input) {
@@ -87,22 +104,57 @@ public final class CrashScreen {
             host.returnToGames();
             return;
         }
+        if (MenuInput.details(input)) {
+            MenuFeedback.emit(MenuFeedback.Cue.CONFIRM);
+            toggleQr();
+            return;
+        }
         int count = Choice.values().length;
         int previous = selected;
-        // A two-by-two grid: across swaps the column, up and down swap the row.
-        if (MenuInput.textLeft(input) || MenuInput.textRight(input)) selected ^= 1;
-        if (MenuInput.textUp(input) || MenuInput.textDown(input)) selected = (selected + 2) % count;
+        boolean previousPicture = pictureFocused;
+        // A two-by-two grid with the picture to its left: across steps through picture and the
+        // two columns, up and down swap the row.
+        if (MenuInput.textLeft(input)) across(-1);
+        if (MenuInput.textRight(input)) across(1);
+        if (!pictureFocused && (MenuInput.textUp(input) || MenuInput.textDown(input))) selected = (selected + 2) % count;
         boolean clicked = false;
+        boolean pictureClicked = false;
         for (Button button : buttons) {
             if (pointer.over(button.x(), button.y(), button.width(), buttonHeight()) && pointer.leftPressed()) {
                 selected = button.choice().ordinal();
+                pictureFocused = false;
                 clicked = true;
             }
         }
-        if (previous != selected) MenuFeedback.emit(MenuFeedback.Cue.NAVIGATE);
-        if (MenuInput.textAccept(input) || clicked) {
+        Box art = artBox();
+        if (pointer.over(art.x(), art.y(), art.width(), art.height()) && pointer.leftPressed()) {
+            pictureFocused = true;
+            pictureClicked = true;
+        }
+        if (previous != selected || previousPicture != pictureFocused) MenuFeedback.emit(MenuFeedback.Cue.NAVIGATE);
+        boolean accepted = MenuInput.textAccept(input);
+        if (pictureClicked || accepted && pictureFocused) {
+            MenuFeedback.emit(MenuFeedback.Cue.CONFIRM);
+            toggleQr();
+        } else if (accepted || clicked) {
             MenuFeedback.emit(MenuFeedback.Cue.CONFIRM);
             run(Choice.values()[selected]);
+        }
+    }
+
+    /** Moves focus one place across a row: picture, left button, right button, wrapping. */
+    void across(int direction) {
+        int row = selected / 2;
+        if (pictureFocused) {
+            pictureFocused = false;
+            selected = row * 2 + (direction > 0 ? 0 : 1);
+            return;
+        }
+        int column = selected % 2 + direction;
+        if (column < 0 || column > 1) {
+            pictureFocused = true;
+        } else {
+            selected = row * 2 + column;
         }
     }
 
@@ -180,12 +232,15 @@ public final class CrashScreen {
         drawFacts(font);
         for (Button button : buttons) {
             MenuChrome.button(font, button.x(), button.y(), button.width(), buttonHeight(),
-                    label(button.choice()), button.choice().ordinal() == selected, button.choice() == Choice.REPORT, ticks);
+                    label(button.choice()), !pictureFocused && button.choice().ordinal() == selected,
+                    button.choice() == Choice.REPORT, ticks);
         }
         List<MenuChrome.Hint> hints = List.of(
                 MenuChrome.upDown(input, ""),
                 MenuChrome.leftRight(input, UiMessages.text("menu.details.move")),
                 MenuChrome.hint(MenuChrome.confirmKey(input), UiMessages.text("menu.details.choose")),
+                MenuChrome.hint(MenuChrome.detailsKey(input),
+                        showingQr ? UiMessages.text("crash.hint.picture") : UiMessages.text("crash.hint.qr")),
                 MenuChrome.hint(MenuChrome.backKey(input), UiMessages.text("crash.hint.return")));
         MenuChrome.footer(font, this.width, status, hints, MenuChrome.controller(input), ticks);
     }
@@ -193,6 +248,8 @@ public final class CrashScreen {
     private void drawGagColumn(PixelFont font) {
         Box art = artBox();
         MenuChrome.panel(font, art.x() - 2, art.y() - 2, art.width() + 4, art.height() + 4);
+        if (pictureFocused) MenuChrome.focus(font, art.x(), art.y(), art.width(), art.height(), ticks);
+        if (showingQr) drawQr(font, art);
         int bombs = report.kind().bombs();
         int pitch = MenuChrome.ICON_SIZE + 3;
         int rowWidth = bombs * pitch - 3;
@@ -200,9 +257,27 @@ public final class CrashScreen {
         int bombY = art.y() + art.height() + 7;
         for (int i = 0; i < bombs; i++) MenuChrome.icon(font, MenuChrome.Icon.BOMB, bombX + i * pitch, bombY, MenuChrome.WHITE);
         int y = bombY + MenuChrome.ICON_SIZE + 6;
-        for (String line : MenuStyle.wrap(caption(report.kind()), art.width() + 4, MenuStyle.COMPACT)) {
+        String caption = showingQr ? UiMessages.text("crash.caption.qr") : caption(report.kind());
+        for (String line : MenuStyle.wrap(caption, art.width() + 4, MenuStyle.COMPACT)) {
             MenuChrome.compact(font, line, art.x() - 2, y + MenuChrome.compactMetrics().above(), MenuChrome.MUTED);
             y += pitch();
+        }
+    }
+
+    /** Dark modules on a white tile centred in the art box, whole pixels per module. */
+    private void drawQr(PixelFont font, Box art) {
+        CrashQrCode code = qrCode();
+        int scale = Math.max(1, code.scale(art.width()));
+        int tile = (code.size() + 2 * CrashQrCode.QUIET) * scale;
+        int tileX = art.x() + (art.width() - tile) / 2;
+        int tileY = art.y() + (art.height() - tile) / 2;
+        MenuChrome.fill(font, tileX, tileY, tile, tile, MenuChrome.WHITE);
+        int left = tileX + CrashQrCode.QUIET * scale;
+        int top = tileY + CrashQrCode.QUIET * scale;
+        for (int y = 0; y < code.size(); y++) {
+            for (int x = 0; x < code.size(); x++) {
+                if (code.dark(x, y)) MenuChrome.fill(font, left + x * scale, top + y * scale, scale, scale, QR_DARK);
+            }
         }
     }
 

@@ -21,7 +21,10 @@ under the matching area heading; see the
   the old behaviour. Each fault type has its own MICA gag: holding the bomb (an
   Atari ST homage), tangled in cassette tape after a rewind fault, and teetering
   over missing ground when a level fails to load. The pictures are reduced from
-  generated drawings by `tools/modding/crash_screen_art/reduce.py`.
+  generated drawings by `tools/modding/crash_screen_art/reduce.py`. Choosing the
+  picture, or the details key, swaps it for a QR code of the issue form with a
+  title naming the error, for reporting from another device (Project Nayuki's
+  MIT-licensed `qrcodegen`, listed in `NOTICE.md`).
 
 - **Lava Reef 1 frame hitches:** two stutters on the Lava Reef Act 1 route are
   gone. When the rock crusher opens the floor, the engine rebuilt the whole

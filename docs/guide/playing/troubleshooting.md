@@ -54,6 +54,11 @@ next to `mods` and `projects`.
   browser opens, the form's link is copied to your clipboard.
 - **Copy report** copies the full report.
 - **Details** shows every fact and the whole stack trace.
+- **The picture** turns into a QR code of the crash issue form when you choose
+  it (move left from the buttons, or click it) or press the details key (F1, or
+  the controller's details button). Scan it to report from your phone or
+  another computer. The code holds only the form and a title naming the error,
+  so add the saved report file when you can. Choose it again for MICA.
 - **Return to games** (or Escape / B) goes back to the game shelf. The game that
   failed is not resumed; start it again from the shelf.
 

@@ -100,4 +100,43 @@ class TestCrashScreen {
             assertTrue(button.y() + 12 <= com.openggf.game.MenuChrome.FOOTER_Y, button.toString());
         }
     }
+
+    @Test
+    void thePictureSitsLeftOfTheButtonsAndTurnsIntoTheFormsQrCode() {
+        var screen = screen(new Host(), Optional.empty());
+        screen.across(-1);
+        assertTrue(screen.pictureFocused());
+        screen.across(1);
+        assertFalse(screen.pictureFocused());
+        assertEquals(CrashScreen.Choice.REPORT, screen.selected());
+        screen.across(1);
+        assertEquals(CrashScreen.Choice.COPY, screen.selected());
+        screen.across(1);
+        assertTrue(screen.pictureFocused(), "across wraps from the right column to the picture");
+        screen.across(-1);
+        assertEquals(CrashScreen.Choice.COPY, screen.selected());
+
+        assertFalse(screen.showingQr());
+        screen.toggleQr();
+        assertTrue(screen.showingQr());
+        CrashQrCode code = screen.qrCode();
+        assertTrue(code.address().startsWith("https://" + CrashIssueLink.FORM + "?template=crash.yml&title="),
+                code.address());
+        assertTrue(code.address().contains("RewindController.seekTo"), code.address());
+        assertTrue(code.scale(CrashScreen.ART_SIZE) >= CrashQrCode.MIN_SCALE);
+        screen.toggleQr();
+        assertFalse(screen.showingQr());
+    }
+
+    @Test
+    void aTitleTooLongForTheBoxFallsBackToTheBareForm() {
+        var failure = new IllegalStateException("x");
+        String longName = "com.openggf.game.rewind." + "VeryLongClassName".repeat(12);
+        failure.setStackTrace(new StackTraceElement[] {new StackTraceElement(longName, "seekTo", "A.java", 1)});
+        var report = new CrashReport(FaultKind.classify(failure), failure, Instant.EPOCH,
+                List.of(new CrashReport.Field("Version", "test")), List.of(), "");
+        CrashQrCode code = CrashQrCode.of(report, CrashScreen.ART_SIZE);
+        assertEquals("https://" + CrashIssueLink.FORM + "?template=crash.yml", code.address());
+        assertTrue(code.scale(CrashScreen.ART_SIZE) >= CrashQrCode.MIN_SCALE);
+    }
 }

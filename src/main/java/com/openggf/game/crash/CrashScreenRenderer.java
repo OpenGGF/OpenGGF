@@ -37,7 +37,7 @@ public final class CrashScreenRenderer implements AutoCloseable {
         font.beginMegaBatch();
         screen.render(font, width);
         font.endMegaBatch();
-        if (!screen.detailsOpen()) drawArt(screen);
+        if (!screen.detailsOpen() && !screen.showingQr()) drawArt(screen);
     }
 
     private void drawArt(CrashScreen screen) {

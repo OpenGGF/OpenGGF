@@ -3,6 +3,7 @@ package com.openggf.game.crash;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -45,6 +46,25 @@ public final class CrashIssueLink {
     /** The whole address, for copying when no browser could be started. */
     public static String address(CrashReport report, String reportFileName) {
         return "https://" + FORM + "?" + query(report, reportFileName);
+    }
+
+    /**
+     * A short address for the page's QR code: the form, the template and a title naming the
+     * exception type and where it was thrown, then the build facts when they fit. A phone
+     * cannot read a long code off the screen, and the full trace is in the saved report.
+     * Ordered from fullest to barest; {@link CrashQrCode} uses the first that fits.
+     */
+    static List<String> shortAddresses(CrashReport report) {
+        String base = "https://" + FORM + "?template=" + component(TEMPLATE);
+        String title = "&title=" + component("[Crash] " + errorType(report) + " at " + report.where());
+        String version = "&version=" + component(CrashReport.lines(report.buildFacts()));
+        return List.of(base + title + version, base + title, base);
+    }
+
+    private static String errorType(CrashReport report) {
+        String line = firstLine(report.error());
+        int colon = line.indexOf(':');
+        return colon < 0 ? line : line.substring(0, colon);
     }
 
     static Map<String, String> fields(CrashReport report, String reportFileName, String trace) {
