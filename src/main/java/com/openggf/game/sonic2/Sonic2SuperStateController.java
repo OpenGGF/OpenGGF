@@ -226,15 +226,13 @@ public class Sonic2SuperStateController extends SuperStateController
         // Sonic_CheckGoSuper (s2.asm:37480-37487): timer zero and raw bit one are independent.
         player.setInvincibleFrames(0);
         PlayableSpriteInternalAccess.writeNativeSecondaryInvincibility(player, true);
+        if (CrossGameFeatureProvider.isActive()) {
+            startDonatedTransformationAudio();
+            return;
+        }
         // Play transformation SFX
         try {
-            if (CrossGameFeatureProvider.isActive()) {
-                GameServices.audio().playDonorSfx(
-                        GameServices.crossGameFeatures().getDonorGameId(),
-                        Sonic2AudioConstants.SFX_SUPER_TRANSFORM);
-            } else {
-                GameServices.audio().playSfx(Sonic2AudioConstants.SFX_SUPER_TRANSFORM);
-            }
+            GameServices.audio().playSfx(Sonic2AudioConstants.SFX_SUPER_TRANSFORM);
         } catch (Exception e) {
             LOGGER.fine("Could not play transformation SFX: " + e.getMessage());
         }
@@ -243,14 +241,41 @@ public class Sonic2SuperStateController extends SuperStateController
         // Native $96 and the engine playlist ID are different namespaces:
         // GameMusic.SUPER resolves the loader's legacy Super key, not raw $96.
         try {
-            if (CrossGameFeatureProvider.isActive()) {
-                GameServices.audio().playDonorMusic(
-                        GameServices.crossGameFeatures().getDonorGameId(), GameMusic.SUPER);
-            } else {
-                GameServices.audio().playMusic(GameMusic.SUPER);
-            }
+            GameServices.audio().playMusic(GameMusic.SUPER);
         } catch (Exception e) {
             LOGGER.fine("Could not play Super Sonic music: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Donated form of Sonic_CheckGoSuper's two requests, in the order the Sonic 2
+     * driver services them rather than the order the 68K writes them.
+     *
+     * <p>Natively PlaySound (s2.asm:1535-1539) writes $DF to SFX0 and PlayMusic
+     * (s2.asm:1520-1528) then fills Music0. sndDriverInput (s2.asm:1270-1332)
+     * hands the music to QueueToPlay and the sound to the Z80 queue; zCycleQueue
+     * (s2.sounddriver.asm:1496-1550) leaves that queue alone while QueueToPlay is
+     * occupied, so the song loads first and the sound is admitted on the
+     * following driver pass, after the music load. The sound therefore survives
+     * and plays over the song.
+     *
+     * <p>A donor has no mailbox on the host: both requests reach the presentation
+     * at once, in call order, and the donor's ordinary music load stops all SFX
+     * (GameAudioProfile.OrdinaryMusicSfxPolicy.STOP_ALL). Requesting the sound
+     * first, as the 68K does, silenced it on the same frame. The driver's
+     * one-pass delay of the sound is not reproduced.
+     */
+    private void startDonatedTransformationAudio() {
+        String donorGameId = GameServices.crossGameFeatures().getDonorGameId();
+        try {
+            GameServices.audio().playDonorMusic(donorGameId, GameMusic.SUPER);
+        } catch (Exception e) {
+            LOGGER.fine("Could not play Super Sonic music: " + e.getMessage());
+        }
+        try {
+            GameServices.audio().playDonorSfx(donorGameId, Sonic2AudioConstants.SFX_SUPER_TRANSFORM);
+        } catch (Exception e) {
+            LOGGER.fine("Could not play transformation SFX: " + e.getMessage());
         }
     }
 

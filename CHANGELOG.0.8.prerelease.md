@@ -176,6 +176,11 @@ under the matching area heading; see the
   now shows the beta notice, matching the 0.7 release notes. 0.7 shipped with
   the alpha notice. Players who hid the alpha notice see the beta one once.
 
+- **Donated Sonic 2 Super Sonic has its transformation sound:** with Sonic 2's
+  Super Sonic donated into another game, such as Sonic 1, the transformation was
+  silent: the Super music started on the same frame and cut the sound off. The
+  song now starts first and the sound plays over it, as it does in Sonic 2.
+
 - **S2 Crawl:** paused proximity includes its zero countdown pass, Super Sonic
   selects ordinary enemy contact, and accepted enemy attacks retire through the
   shared touch owner. The Sonic+Tails chain advances from CNZ2 to HTZ2; later
