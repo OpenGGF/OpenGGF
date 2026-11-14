@@ -107,8 +107,6 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
     private static final int TOUCH_RESPONSE_Y_MARGIN = 32;
     /** S1/S2 BuildSprites' assumed Y radius when the explicit-height flag is clear. */
     private static final int BUILD_SPRITES_ASSUMED_Y_RADIUS = 32;
-    private static final int COARSE_X_ALIGNMENT_MASK = 0xFF80;
-    private static final int COARSE_X_CAMERA_BIAS = 0x80;
     protected final ObjectSpawn spawn;
     protected final String name;
     private boolean destroyed;
@@ -1036,9 +1034,7 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
 
     /** ROM-style unsigned, 128-pixel-aligned X distance used by delete-touch routines. */
     protected static boolean isCoarseXOutOfRange(int objectX, int cameraX, int maximumDistance) {
-        int alignedObject = objectX & COARSE_X_ALIGNMENT_MASK;
-        int alignedCamera = (cameraX - COARSE_X_CAMERA_BIAS) & COARSE_X_ALIGNMENT_MASK;
-        return ((alignedObject - alignedCamera) & 0xFFFF) > maximumDistance;
+        return ObjectRangeOps.outOfRangeX(objectX, cameraX, maximumDistance);
     }
 
     /**
@@ -1054,7 +1050,7 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
 
     /** The {@code Sprite_OnScreen_Test2} range for this viewport: $280 at native width. */
     protected final int coarseXCullRange() {
-        return 0x80 + viewportWidth() + 0xC0;
+        return ObjectRangeOps.viewportOutOfRangeBound(viewportWidth());
     }
 
     /** Applies a coarse-X delete-touch check when an object has a camera service. */

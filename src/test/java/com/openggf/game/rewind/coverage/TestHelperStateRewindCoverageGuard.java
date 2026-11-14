@@ -10,12 +10,12 @@ import static org.junit.jupiter.api.Assertions.*;
  * (mirrors {@link TestRewindCoverageGuard}, restricted to the helper-state lane).
  *
  * <p>A helper-state gap is a {@code final} plain-helper field on a spawnable object
- * whose type has no {@link com.openggf.game.rewind.schema.RewindCodecs} codec yet
- * carries mutable frame-varying scalar state — so a backward rewind seek leaves it
- * stale. The baseline starts EMPTY (the sweep found no such gaps); any future
- * violation fails here. If a real gap appears, fix the helper's coverage (register a
- * codec, implement {@code RewindStateful}, or rename it into a name-matching
- * all-codec plain-state holder) — do not silently add the key to the baseline.
+ * carrying mutable scalar state absent from the actor's selected projection.
+ * General/manual owners instead use their codec and policy rules. The baseline starts EMPTY (the sweep found no such gaps); any future
+ * violation fails here. Fix actual captured membership or make an explicit,
+ * justified exclusion. Ordinary capture admits in-place holders and
+ * {@code RewindStateful} helpers; a registered codec alone does not admit a field.
+ * Do not silently add the key to the baseline.
  */
 class TestHelperStateRewindCoverageGuard {
     private static final Path BASELINE =
@@ -41,9 +41,9 @@ class TestHelperStateRewindCoverageGuard {
         assertTrue(regressions.isEmpty(),
                 "New uncaptured-helper-state gap keys introduced (not in baseline):\n  "
                         + String.join("\n  ", regressions)
-                        + "\nFix the helper's rewind coverage (register a codec, implement "
-                        + "RewindStateful, or make it a name-matching all-codec plain-state "
-                        + "holder). Do NOT silently baseline it — a real gap is a bug.");
+                        + "\nFix actual captured membership (in-place holder/RewindStateful for "
+                        + "ordinary actors), or justify an explicit exclusion. A codec alone "
+                        + "does not admit an ordinary field. Do NOT silently baseline it.");
 
         // Informational: surface gaps closed since baseline so the baseline can be tightened.
         Set<String> closed = new TreeSet<>(baseline);

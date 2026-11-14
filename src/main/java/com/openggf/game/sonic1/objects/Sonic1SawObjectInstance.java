@@ -10,6 +10,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectLifetimeOps;
+import com.openggf.level.objects.ObjectRangeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SpawnRewindRecreatable;
@@ -218,8 +219,7 @@ public class Sonic1SawObjectInstance extends AbstractObjectInstance
         // Drop only the engine's placement ownership at that skipped-delete
         // boundary, retaining this SST, its slot and rewind identity. In-range
         // hidden saws and Y-failure paths must keep their normal ownership.
-        int distance = ((origX & 0xFF80) - ((cameraLeft() - 0x80) & 0xFF80)) & 0xFFFF;
-        if (distance > 0x280) {
+        if (ObjectRangeOps.outOfRangeX(origX, cameraLeft())) {
             ObjectLifetimeOps.releaseSpawnForRespawn(services().objectManager(), this, spawn);
         }
     }

@@ -58,7 +58,7 @@ subclasses (`Sonic1ObjectRegistry`, `Sonic2ObjectRegistry`, `Sonic3kObjectRegist
 
 | Class | Purpose |
 |---|---|
-| `ObjectManager` | Unified manager with `Placement`, `SolidContacts`, `TouchResponses`, `PlaneSwitchers`; injects `ObjectServices` into all objects |
+| `ObjectManager` | Coordinates placement, solid collision, touch response and plane switching; injects `ObjectServices` into all objects |
 | `ObjectServices` | Per-object service interface (camera, audio, level, game state, …) |
 | `DefaultObjectServices` | Production implementation, backed by `GameplayModeContext` + `EngineContext` |
 | `AbstractObjectRegistry` | Shared base for the three per-game registries |
@@ -70,8 +70,8 @@ subclasses (`Sonic1ObjectRegistry`, `Sonic2ObjectRegistry`, `Sonic3kObjectRegist
 2. Create the instance class extending `AbstractObjectInstance` (or `AbstractBadnikInstance`
    for enemies).
 3. Register the factory in `Sonic2ObjectRegistry.registerDefaultFactories()`.
-4. Solid collision is handled automatically via `ObjectManager.SolidContacts`.
-5. Enemy touch response is handled via `ObjectManager.TouchResponses`.
+4. Solid collision is handled automatically by `ObjectSolidContactController`; its internal `SolidContactMemory` owns rides, object bits and frame history.
+5. Enemy touch response is handled by `ObjectTouchResponseController`.
 
 **Service access inside objects:**
 
@@ -113,7 +113,7 @@ hosts execution plus compatibility adapters. Raw setters and direct `setDestroye
 calls are legacy compatibility — do not grow guard baselines for new implementations
 without documenting the exact reason.
 
-**ENEMY touch responses poll every frame.** `ObjectManager.TouchResponses` callbacks for
+**ENEMY touch responses poll every frame.** `ObjectTouchResponseController` callbacks for
 ENEMY-category contacts fire continuously every frame while the overlap persists (matching
 the ROM `Touch_Loop`), not only on the first frame. SPECIAL/monitor contacts remain
 edge-triggered. New badnik / damaging-object code should not add consumed-once "already

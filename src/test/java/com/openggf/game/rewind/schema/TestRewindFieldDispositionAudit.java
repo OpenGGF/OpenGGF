@@ -26,6 +26,29 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestRewindFieldDispositionAudit {
     @Test
+    void directAuditRequiresAnOrdinaryCaptureOwner() {
+        assertTrue(!GenericRewindEligibility.usesDefaultSubclassCapture(ManualCaptureActor.class));
+        var gaps = new ArrayList<RewindFieldDispositionAudit.Gap>();
+        RewindFieldDispositionAudit.auditClass(ManualCaptureActor.class, gaps);
+        assertEquals(List.of(ManualCaptureActor.class.getName() + "#<not-ordinary>"),
+                gaps.stream().map(RewindFieldDispositionAudit.Gap::key).toList());
+    }
+
+    private static final class ManualCaptureActor extends AbstractObjectInstance {
+        private ManualCaptureActor() {
+            super(new ObjectSpawn(0, 0, 0, 0, 0, false, 0), "manual audit fixture");
+        }
+
+        @Override
+        public com.openggf.level.objects.PerObjectRewindSnapshot captureRewindState() {
+            return super.captureRewindState();
+        }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) { }
+    }
+
+    @Test
     void s1RingRecipeUsesDefaultCaptureWithoutAnExclusion() {
         Class<?> owner = com.openggf.game.sonic1.objects.Sonic1RingInstance.class;
         assertTrue(GenericRewindEligibility.usesDefaultObjectSubclassCapture(owner));

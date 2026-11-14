@@ -188,7 +188,7 @@ occurrence and removal-callback boundaries:
 
 ```bash
 python3 tools/testing/maven_queue.py -Dmse=off \
-  '-Dtest=TestDynamicSolidContactRetirement,TestSolidContactState,TestObjectSolidContactController,TestTasS3kOrtExhaustion,TestObjectRemovalCallbackOwnership' test
+  '-Dtest=TestDynamicSolidContactRetirement,TestSolidContactMemory,TestObjectSolidContactController,TestTasS3kOrtExhaustion,TestObjectRemovalCallbackOwnership' test
 ```
 
 `TestDynamicSolidContactRetirement` covers explicit/destroyed dynamic retirement
@@ -202,7 +202,7 @@ For retained-SST transfer, snapshot round trips or late player effects, use:
 
 ```bash
 python3 tools/testing/maven_queue.py -Dmse=off \
-  '-Dtest=TestSolidContactState,TestObjectSolidContactController,TestSolidObjectManager,TestObjectManagerRewindSnapshot,TestShieldRewindPendingRestore,TestObjectManagerDynamicChainRewindRestore' test
+  '-Dtest=TestSolidContactMemory,TestObjectSolidContactController,TestSolidObjectManager,TestObjectManagerRewindSnapshot,TestShieldRewindPendingRestore,TestObjectManagerDynamicChainRewindRestore' test
 ```
 
 The first three classes cover contact memory, real solid calls and retained-SST

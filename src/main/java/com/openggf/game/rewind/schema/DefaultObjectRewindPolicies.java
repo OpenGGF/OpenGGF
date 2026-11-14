@@ -1,9 +1,14 @@
 package com.openggf.game.rewind.schema;
 
 import com.openggf.game.rewind.FieldKey;
+import com.openggf.game.rewind.RewindCapturedReference;
+import com.openggf.game.rewind.RewindDeferred;
+import com.openggf.game.rewind.RewindTransient;
 import com.openggf.level.objects.ObjectInstance;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -599,8 +604,6 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.badniks.MegaChopperBadnikInstance", "capturedPlayer"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.badniks.MegaChopperBadnikInstance", "pendingMainPlayer"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.badniks.MegaChopperBadnikInstance", "pendingSidekickPlayer"), RewindFieldPolicy.CAPTURED),
-            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.badniks.MantisBadnikInstance", "child"), RewindFieldPolicy.CAPTURED),
-            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.badniks.MantisBadnikInstance$MantisChild", "parent"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.badniks.MushmeanieBadnikInstance", "shellChild"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.badniks.MushmeanieBadnikInstance$ShellChild", "parent"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance$LinkedBodyChild", "parent"), RewindFieldPolicy.CAPTURED),
@@ -980,6 +983,15 @@ final class DefaultObjectRewindPolicies {
         return EXACT_FIELD_POLICIES;
     }
 
+    /** Central dispositions and codec exceptions must not duplicate a local declaration. */
+    static Set<FieldKey> centralFieldPolicyKeysForAudit() {
+        Set<FieldKey> keys = new HashSet<>(EXACT_FIELD_POLICIES.keySet());
+        keys.addAll(IN_PLACE_ARRAYS);
+        keys.addAll(CONTEXT_COMPATIBLE_COLLECTORS);
+        keys.addAll(OPTIONAL_OBJECT_REFERENCES);
+        return Set.copyOf(keys);
+    }
+
     static boolean restoresArrayInPlace(Field field) {
         return IN_PLACE_ARRAYS.contains(FieldKey.of(field));
     }
@@ -993,6 +1005,21 @@ final class DefaultObjectRewindPolicies {
     }
 
     static RewindFieldPolicy policyFor(Field field) {
+        if (field.isAnnotationPresent(RewindCapturedReference.class)) {
+            int mods = field.getModifiers();
+            if (Modifier.isStatic(mods) || Modifier.isTransient(mods) || field.isSynthetic()
+                    || field.isAnnotationPresent(RewindTransient.class)) {
+                return RewindFieldPolicy.TRANSIENT;
+            }
+            if (field.isAnnotationPresent(RewindDeferred.class)) {
+                return RewindFieldPolicy.DEFERRED;
+            }
+            if (Modifier.isFinal(mods) || !ObjectInstance.class.isAssignableFrom(field.getType())) {
+                throw new IllegalArgumentException("@RewindCapturedReference requires a mutable ObjectInstance field: "
+                        + FieldKey.of(field));
+            }
+            return RewindFieldPolicy.CAPTURED;
+        }
         RewindFieldPolicy exactPolicy = EXACT_FIELD_POLICIES.get(FieldKey.of(field));
         if (exactPolicy != null) {
             return exactPolicy;
