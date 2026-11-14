@@ -47,9 +47,17 @@ class TestRingDrawEmission {
         assertEquals(List.of(40, 60), rings.attractedRenderEntries().stream().map(e -> e.slot()).toList());
         assertEquals(List.of(40), RingDrawInternalAccess.slottedAttracted(rings, 1).stream().map(e -> e.slot()).toList());
         assertEquals(List.of(60), RingDrawInternalAccess.slottedAttracted(rings, 2).stream().map(e -> e.slot()).toList());
-        var pass = RingDrawInternalAccess.attractedPass(rings);
-        assertEquals(List.of(40), pass.slotted(1).stream().map(e -> e.slot()).toList());
-        assertEquals(List.of(60), pass.slotted(2).stream().map(e -> e.slot()).toList());
+        assertTrue(rings.reservesNativeSlot(40) && rings.reservesNativeSlot(60));
+        assertFalse(rings.reservesNativeSlot(50), "an empty slot without a reserved ring needs no owner lookup");
+        var engine = RingDrawInternalAccess.engine(rings);
+        assertTrue(engine.boundTo(rings));
+        assertEquals(prepare(() -> RingDrawInternalAccess.drawPlacedObject(rings, placed, 0)).tiles(),
+                prepare(() -> engine.drawPlacedObject(placed, 0)).tiles(),
+                "an admitted handle draws a placed ring object exactly like the checked bridge");
+        assertEquals(prepare(() -> RingDrawInternalAccess.drawPlaced(rings, 0, 0, 0x7FF)).tiles(),
+                prepare(() -> engine.drawPlaced(0, 0, 0x7FF)).tiles());
+        assertEquals(List.of(40), engine.slottedAttracted(1).stream().map(e -> e.slot()).toList());
+        assertEquals(List.of(60), engine.slottedAttracted(2).stream().map(e -> e.slot()).toList());
         var attractedFrame = prepare(() -> RingDrawInternalAccess.drawAttracted(rings, 0));
         assertEquals(List.of(160f, 120f), attractedFrame.tiles().stream().map(SpritePresentation.Tile::x).toList(),
                 "prepared painter list reverses native reserved-slot emission");

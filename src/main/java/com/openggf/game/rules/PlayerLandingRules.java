@@ -28,7 +28,31 @@ public record PlayerLandingRules(
          * lands has the charge animation replaced by Walk on the landing frame while
          * the ROM holds it until release — visible for as long as the charge is held.
          */
-        boolean landingWalkWriteSkippedWhileSpindashing) {
+        boolean landingWalkWriteSkippedWhileSpindashing,
+        boolean ceilingSteepLandingKeepsRollState) {
+
+    /**
+     * Sonic CD lands on a steep ceiling through {@code Player_ResetOnSteepSlope},
+     * which clears push, in-air, roll-jump and the jump flag but leaves the roll
+     * status, radii, y position and animation alone (scddisasm
+     * src/Level/_Objects/Sonic/Main.asm:2229-2232, 2339-2345). Sonic 1/2/3&amp;K call their
+     * full floor reset there. Only Sonic CD sets it.
+     */
+    public boolean ceilingSteepLandingKeepsRollState() {
+        return ceilingSteepLandingKeepsRollState;
+    }
+
+    /** Keeps the full ceiling reset for callers of the six-argument API. */
+    public PlayerLandingRules(boolean pinballLandingPreservesRoll,
+                              boolean pinballLandingPreservesPinballMode,
+                              boolean landingRollClearUsesCurrentYRadiusDelta,
+                              boolean objectSolidHurtLandingRetainsRoutine,
+                              boolean hurtLandingClearsObjectControl,
+                              boolean landingWalkWriteSkippedWhileSpindashing) {
+        this(pinballLandingPreservesRoll, pinballLandingPreservesPinballMode,
+                landingRollClearUsesCurrentYRadiusDelta, objectSolidHurtLandingRetainsRoutine,
+                hurtLandingClearsObjectControl, landingWalkWriteSkippedWhileSpindashing, false);
+    }
 
     /** Compatibility constructor before the landing animation rule joined this group. */
     public PlayerLandingRules(boolean pinballLandingPreservesRoll,

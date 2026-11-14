@@ -99,6 +99,12 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	private static final int VERTICAL_WRAP_BG_MASK = 0x3FF; // AND mask for BG Y
 	// Tracks whether a wrap occurred this frame, and the delta applied
 	private boolean lastFrameWrapped = false;
+	/**
+	 * The vertical wrap triggers when the scroll reaches row 0 at or above the top boundary, adding
+	 * the range to the camera and the player, instead of at -$100 (set by the level through
+	 * {@link CameraMotionInternalAccess#setVerticalWrapAtTopBoundary}).
+	 */
+	boolean verticalWrapAtTopBoundary = false;
 	private short wrapDeltaY = 0;
 
 	private AbstractPlayableSprite focusedSprite;
@@ -149,6 +155,18 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	// 18105) and S3K (sonic3k.asm:38443-38446) cap BOTH directions, so this stays
 	// false for them. Set per-game from CameraRules.uncappedLeftwardHorizontalScroll.
 	private boolean uncappedLeftwardHorizontalScroll = false;
+
+	// ROM (Sonic CD): camXCenter - 160. LevelSizeLoad writes camXCenter = 160
+	// (scddisasm src/Level/Palmtree Panic/Scroll (Act 1 Present).asm:34) and
+	// ObjSonic_ExtCamera pans it by 2px per frame inside [96, 224]
+	// (src/Level/_Objects/Sonic/Main.asm:231-283). Zero for every game whose
+	// CameraRules.playerSpeedPansHorizontalFocus is false.
+	private short horizontalFocusOffset = 0;
+	private static final int EXTENDED_PAN_SPEED = 0x600;
+	private static final int EXTENDED_PAN_STEP = 2;
+	/** {@code 320/2}: camXCenter at rest (offset 0). */
+	private static final int EXTENDED_PAN_CENTRE = 160;
+	private static final int EXTENDED_PAN_LIMIT = 64;
 
 	// ROM: Fast_V_scroll_flag. Moving solids request this for the current frame
 	// when the player is standing on them, so grounded vertical follow uses the
@@ -367,7 +385,9 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		// When wrapping is active, coordinate masking replaces normal Y clamping.
 		lastFrameWrapped = false;
 		wrapDeltaY = 0;
-		if (verticalWrapEnabled && !beforeLevelSetup) {
+		if (verticalWrapEnabled && !beforeLevelSetup && verticalWrapAtTopBoundary) {
+			wrapAtTopBoundary(yBeforeVerticalScroll);
+		} else if (verticalWrapEnabled && !beforeLevelSetup) {
 			// Upward wrap: camera Y at or below -256 (0xFF00 signed)
 			// ROM: cmpi.w #-$100,d1 / bgt.s .noupwrap — wraps when d1 <= -$100
 			if (y <= -0x100) {
@@ -477,6 +497,32 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		return forcedScrollRequested ? forcedScrollY : focusedSprite.getCentreY();
 	}
 
+	/**
+	 * Sonic CD Tidal Tempest acts 2 and 3 {@code ScrollFgY} (r4/scroll_3c.asm:497-535; scroll_2a.asm:521-530):
+	 * scrolling up to a position at or above the top boundary that is also at or above row 0
+	 * ({@code cmp.w top_bound,d1; bgt; cmpi.w #0,d1; bgt}) adds $800 to the position, the player's Y and
+	 * the camera; scrolling down to the bottom boundary at or past $800 subtracts it and masks the
+	 * player's Y with $7FF, as Sonic 1's {@code ScrollVertical} does. Neither runs when the scroll did not move.
+	 */
+	private void wrapAtTopBoundary(short yBeforeVerticalScroll) {
+		short oldY = y;
+		if (y < yBeforeVerticalScroll && y <= minY && y <= 0) {
+			y = (short) (y + verticalWrapRange);
+			if (focusedSprite != null) {
+				focusedSprite.setCentreYPreserveSubpixel((short) (focusedSprite.getCentreY() + verticalWrapRange));
+			}
+		} else if ((y > yBeforeVerticalScroll || maxYChanging) && y >= maxY && y >= verticalWrapRange) {
+			y = (short) (y - verticalWrapRange);
+			if (focusedSprite != null) {
+				focusedSprite.setCentreYPreserveSubpixel((short) (focusedSprite.getCentreY() & verticalWrapMask));
+			}
+		} else {
+			return;
+		}
+		lastFrameWrapped = true;
+		wrapDeltaY = (short) (y - oldY);
+	}
+
 	private void wrapFocusedSpriteYPositionWord() {
 		if (focusedSprite == null) {
 			return;
@@ -560,8 +606,18 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		// and the second test only runs once the first proved the value non-negative,
 		// so the "horizontal wrap" the fix targets is unreachable at S1 level extents.
 		// No behavioural choice is being made here.
-		int deadzoneLeft = DeadzoneGeometry.leftEdge(width, deadzoneMode);
-		int deadzoneRight = DeadzoneGeometry.rightEdge(width);
+		// Sonic CD's MoveScreenHoriz has no sweet spot: it subtracts camXCenter and
+		// scrolls on any non-zero difference, returning with no scroll and no
+		// boundary clamp only when the difference is exactly zero (.AtDest), and it
+		// caps both directions at 16 (scddisasm src/Level/Palmtree Panic/
+		// Scroll (Act 1 Present).asm:565-608). Its first test is bcs on the
+		// unsigned difference; as for S1 above, every reachable value agrees with
+		// the signed compare below.
+		CameraRules rules = cameraRulesFor(focusedSprite);
+		boolean pointFocus = rules != null && rules.horizontalFocusWithoutDeadzone();
+		int deadzoneRight = DeadzoneGeometry.rightEdge(width) + horizontalFocusOffset;
+		int deadzoneLeft = pointFocus ? deadzoneRight
+				: DeadzoneGeometry.leftEdge(width, deadzoneMode) + horizontalFocusOffset;
 		if (focusedSpriteRealX < deadzoneLeft) {
 			short difference = (short) (focusedSpriteRealX - deadzoneLeft);
 			// ROM S1 leaves the leftward move uncapped (FixBugs=0); S2/S3K cap it.
@@ -574,7 +630,8 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 			if (applyBoundaryClamp) {
 				nextX = clampLeftBoundary(nextX);
 			}
-		} else if (focusedSpriteRealX >= deadzoneRight) {
+		} else if (pointFocus ? focusedSpriteRealX > deadzoneRight
+				: focusedSpriteRealX >= deadzoneRight) {
 			short difference = (short) (focusedSpriteRealX - deadzoneRight);
 			if (difference > cameraStepCap) {
 				nextX += cameraStepCap;
@@ -868,6 +925,14 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 				minX += Math.max(diff, -BOUNDARY_EASE_STEP);
 			}
 		}
+	}
+
+	/**
+	 * A level-event tail that moves the bottom boundary itself before this frame's scroll
+	 * marks it as shifting for that scroll's clamp ({@link CameraMotionInternalAccess}).
+	 */
+	void markBottomBoundaryShifting() {
+		maxYChanging = true;
 	}
 
 	/** Installs an optional observer used by lifecycle diagnostics and tests. */
@@ -1343,6 +1408,60 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	}
 
 	/**
+	 * Sonic CD's {@code ObjSonic_ExtCamera} (scddisasm
+	 * src/Level/_Objects/Sonic/Main.asm:231-283), run by the player's main routine
+	 * before its movement mode, so it reads the ground speed the previous frame
+	 * left. At {@code |ground speed| >= $600} the focus column moves 2px per frame
+	 * away from the direction of travel, to at most 64px either side of the screen
+	 * centre; below that it returns to the centre 2px per frame. No-op for games
+	 * whose rules do not pan the focus.
+	 *
+	 * <p>The ROM's first branch also resets the pan while the Palmtree Panic 3D
+	 * ramp flag is set left of x=$1B00 (Main.asm:240-244). The 3D ramp is not
+	 * hosted; when it is, that condition is the caller's {@code resetOnly}.
+	 */
+	public void updateHorizontalFocusPan(AbstractPlayableSprite player, boolean resetOnly) {
+		CameraRules rules = cameraRulesFor(player);
+		if (rules == null || !rules.playerSpeedPansHorizontalFocus()) {
+			return;
+		}
+		short groundSpeed = player.getGSpeed();
+		int speed = Math.abs((int) groundSpeed);
+		// The ROM steps the word camXCenter and caps only on the side it moves toward (unsigned
+		// bcs/bcc, src/Level/_Objects/Sonic/Main.asm:252-263, reset :265-275), so a centre an
+		// object wrote outside [96, 224] (sub_20C97C, objects/r7/boss.asm:1268-1286) stays there
+		// on the other side.
+		int centre = (horizontalFocusOffset + EXTENDED_PAN_CENTRE) & 0xFFFF;
+		if (!resetOnly && speed >= EXTENDED_PAN_SPEED) {
+			if (groundSpeed >= 0) {
+				centre = (centre - EXTENDED_PAN_STEP) & 0xFFFF;
+				if (centre < EXTENDED_PAN_CENTRE - EXTENDED_PAN_LIMIT) centre = EXTENDED_PAN_CENTRE - EXTENDED_PAN_LIMIT;
+			} else {
+				centre = (centre + EXTENDED_PAN_STEP) & 0xFFFF;
+				if (centre >= EXTENDED_PAN_CENTRE + EXTENDED_PAN_LIMIT) centre = EXTENDED_PAN_CENTRE + EXTENDED_PAN_LIMIT;
+			}
+		} else if (centre != EXTENDED_PAN_CENTRE) {
+			centre = (centre + (centre > EXTENDED_PAN_CENTRE ? -EXTENDED_PAN_STEP : EXTENDED_PAN_STEP)) & 0xFFFF;
+		}
+		horizontalFocusOffset = (short) (centre - EXTENDED_PAN_CENTRE);
+	}
+
+	/** Focus column offset from the screen centre (ROM camXCenter - 160). */
+	public short getHorizontalFocusOffset() {
+		return horizontalFocusOffset;
+	}
+
+	/** An object's write of the focus column ({@code move.w d0,camXCenter}): offset from the screen centre. */
+	void setHorizontalFocusOffset(short offset) {
+		horizontalFocusOffset = offset;
+	}
+
+	/** LevelSizeLoad: {@code move.w #320/2,camXCenter.w}. */
+	public void resetHorizontalFocusOffset() {
+		horizontalFocusOffset = 0;
+	}
+
+	/**
 	 * Resets Y position bias to the default value (96).
 	 * ROM: Called during Obj01_ResetScr equivalents - rolling, spindash release, jumping.
 	 * The bias gradually eases back to 96 at 2px/frame (4 toward, 2 back = net 2).
@@ -1529,6 +1648,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		levelStarted = true;
 		focusedSprite = null;
 		yPosBias = DEFAULT_Y_BIAS;
+		horizontalFocusOffset = 0;
 		fastScrollCap = DEFAULT_FAST_SCROLL_CAP;
 		fastVerticalScrollRequested = false;
 		forcedScrollRequested = false;
@@ -1537,6 +1657,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		verticalWrapEnabled = false;
 		verticalWrapRange = VERTICAL_WRAP_RANGE;
 		verticalWrapMask = VERTICAL_WRAP_RANGE - 1;
+		verticalWrapAtTopBoundary = false;
 		lastFrameWrapped = false;
 		wrapDeltaY = 0;
 	}
@@ -1610,7 +1731,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 				levelStarted,
 				verticalWrapEnabled, verticalWrapRange, verticalWrapMask,
 				lastFrameWrapped, wrapDeltaY, yPosBias, fastScrollCap,
-				customMaxXBoundaryEasingClaimed, viewportMaxX);
+				customMaxXBoundaryEasingClaimed, viewportMaxX, horizontalFocusOffset);
 	}
 
 	@Override
@@ -1662,6 +1783,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		yPosBias = snapshot.yPosBias();
 		fastScrollCap = snapshot.fastScrollCap();
 		customMaxXBoundaryEasingClaimed = snapshot.customMaxXBoundaryEasingClaimed();
+		horizontalFocusOffset = snapshot.horizontalFocusOffset();
 	}
 
 	/**

@@ -3352,6 +3352,10 @@ public class AudioManager implements MusicRestoreSink {
                     shadowRegistry, shadowCommands, mixer,
                     sink, smpsSession, shadowRequestService,
                     shadowResolver, commandTimeline, shadowParity);
+            if (shadowRequestService instanceof com.openggf.audio.presentation.GamePcmContributor contributor) {
+                contributor.bindOutputRate(sampleRate);
+                shadowProducer.addPcmOverlay(contributor::render);
+            }
             shadowSmpsSession = smpsSession;
             shadowFrameRate = frameRate;
             captureLeases.rebindLiveCaptureAudioHandle(sampleRate);
@@ -3384,6 +3388,10 @@ public class AudioManager implements MusicRestoreSink {
             int music = config == null ? 100 : config.getInt(SonicConfiguration.AUDIO_MUSIC_VOLUME);
             int sfx = config == null ? 100 : config.getInt(SonicConfiguration.AUDIO_SFX_VOLUME);
             shadowProducer.setMixGains(volumeGain(music), volumeGain(sfx));
+            // A game's own sample sources mix outside the producer's voices and SMPS chips.
+            if (shadowRequestService instanceof com.openggf.audio.presentation.GamePcmContributor contributor) {
+                contributor.setMixGains(volumeGain(music), volumeGain(sfx));
+            }
         }
 
         private void closeShadowPresentation() {
@@ -3662,7 +3670,7 @@ public class AudioManager implements MusicRestoreSink {
                 Rom sourceRom = previous.rom();
                 SmpsLoader candidateLoader = audioProfile != null
                         && sourceRom != null
-                        ? audioProfile.createSmpsLoader(sourceRom) : null;
+                        ? audioProfile.createSmpsLoader(sourceRom) : romlessLoader(audioProfile);
                 DacData candidateDac = loadDac(candidateLoader);
                 SmpsSequencerConfig candidateConfig = audioProfile != null
                         ? audioProfile.getSequencerConfig() : null;
@@ -3702,7 +3710,7 @@ public class AudioManager implements MusicRestoreSink {
                 }
                 long candidateGeneration = nextGeneration(previous.generation());
                 SmpsLoader candidateLoader = audioProfile != null && rom != null
-                        ? audioProfile.createSmpsLoader(rom) : null;
+                        ? audioProfile.createSmpsLoader(rom) : romlessLoader(audioProfile);
                 DacData candidateDac = loadDac(candidateLoader);
                 SmpsSequencerConfig candidateConfig = audioProfile != null
                         ? audioProfile.getSequencerConfig() : null;
@@ -3742,7 +3750,7 @@ public class AudioManager implements MusicRestoreSink {
                 long candidateGeneration = nextGeneration(previous.generation());
                 SmpsLoader candidateLoader = previous.profile() != null
                         && rom != null
-                        ? previous.profile().createSmpsLoader(rom) : null;
+                        ? previous.profile().createSmpsLoader(rom) : romlessLoader(previous.profile());
                 DacData candidateDac = loadDac(candidateLoader);
                 baseAudioSource = new BaseAudioSource(
                         rom, previous.profile(), candidateLoader, candidateDac,
@@ -3767,9 +3775,14 @@ public class AudioManager implements MusicRestoreSink {
          */
         private boolean reinstallsInstalledSource(GameAudioProfile profile, Rom rom) {
             BaseAudioSource installed = baseAudioSource;
-            return profile != null && rom != null
+            return profile != null && (rom != null || profile instanceof RomlessSmpsSource)
                     && profile == installed.profile() && rom == installed.rom()
                     && installed.loader() != null;
+        }
+
+        /** Without a ROM, a disc-hosted profile's own loader; otherwise none. */
+        private static SmpsLoader romlessLoader(GameAudioProfile profile) {
+            return profile instanceof RomlessSmpsSource romless ? romless.createRomlessSmpsLoader() : null;
         }
 
         private static DacData loadDac(SmpsLoader loader) {

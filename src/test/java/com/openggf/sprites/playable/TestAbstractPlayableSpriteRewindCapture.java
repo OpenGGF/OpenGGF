@@ -831,7 +831,7 @@ class TestAbstractPlayableSpriteRewindCapture {
                 true, false, true, true,
                 true, false, true, false, true, true, true, false,
                 true, true,
-                true, 3, Direction.LEFT, 0x22, 0x33, 41);
+                true, 3, Direction.LEFT, 0x22, 0x33, 41, 7, 0x81, true, false, true, 0x07_4818);
         PlayableSpriteAnimation.RewindState animation =
                 new PlayableSpriteAnimation.RewindState(0x12, 0x34);
         DrowningController.RewindState drowning = new DrowningController.RewindState(

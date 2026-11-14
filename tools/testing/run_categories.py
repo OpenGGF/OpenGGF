@@ -39,7 +39,10 @@ NS = {'m': 'http://maven.apache.org/POM/4.0.0'}
 SKIP_POLICY = Path(__file__).resolve().parent / 'release-skip-policy.json'
 # Test JVMs see -D properties only from these variables: the runner forwards no other.
 SKIP_INPUT_PROPERTIES = {'s2_bk2': 's2.request.bk2.path',
-                         's3k_observations': 's3k.request.observations'}
+                         's3k_observations': 's3k.request.observations',
+                         'soniccd_media': 'soniccd.media.root',
+                         'soniccd_native': 'soniccd.native.root',
+                         'soniccd_stamp_ledger': 'soniccd.stamp.ownerLedger'}
 JVM_OPTION_VARIABLES = ('JAVA_TOOL_OPTIONS', 'JDK_JAVA_OPTIONS', '_JAVA_OPTIONS', 'MAVEN_ARGS')
 # Generated local references (BizHawk capture, AudioReferenceGenerator WAVs) are never supplied.
 LOCAL_REFERENCE_INPUTS = {'s1_bizhawk_reference', 'audio_reference_files'}

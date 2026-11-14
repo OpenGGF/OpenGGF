@@ -80,6 +80,9 @@ public final class SolidContactState {
     }
     private record PieceStandingLatchKey(Object objectKey, int pieceIndex) {}
     private final Map<PlayableEntity, Ride> ridingStates = new IdentityHashMap<>(2);
+    // oPlayerPushObj, written by PushObject and StopObjPush (Object Solid.asm:524-607):
+    // the object the player last pushed against. Only ReevaluatingSolidRoutine writes it.
+    private final Map<PlayableEntity, ObjectInstance> pushTargets = new IdentityHashMap<>(2);
 
     /** Inserts or in-place-updates the player's riding state (allocation-free when present). */
     private void putRide(PlayableEntity player, ObjectInstance object, int pieceIndex) {
@@ -568,11 +571,20 @@ public final class SolidContactState {
                     state.pieceIndex));
         }
         entries.sort(Comparator.comparing(entry -> playerSnapshotKey(entry.player())));
+        List<ObjectManagerSnapshot.SolidContactRidingEntry> pushEntries = new ArrayList<>();
+        for (var entry : pushTargets.entrySet()) {
+            ObjectInstance object = entry.getValue();
+            if (entry.getKey() == null || object == null) continue;
+            pushEntries.add(new ObjectManagerSnapshot.SolidContactRidingEntry(entry.getKey(), object.getSpawn(),
+                    object instanceof AbstractObjectInstance aoi ? aoi.getSlotIndex() : -1, -1));
+        }
+        pushEntries.sort(Comparator.comparing(entry -> playerSnapshotKey(entry.player())));
         return new ObjectManagerSnapshot.SolidContactState(
                 frameCounter,
                 List.copyOf(entries),
                 captureLatchEntries(objectStandingBitSet),
-                captureLatchEntries(objectPushingBitSet));
+                captureLatchEntries(objectPushingBitSet),
+                List.copyOf(pushEntries));
     }
 
     public ObjectManagerSnapshot.SolidContactState captureRewindState(RewindCaptureContext context) {
@@ -590,7 +602,13 @@ public final class SolidContactState {
                             player.playerId());
                 }).toList(),
                 captureContactLatchPlayers(state.standingBits(), table),
-                captureContactLatchPlayers(state.pushingBits(), table));
+                captureContactLatchPlayers(state.pushingBits(), table),
+                state.pushTargets().stream().map(entry -> {
+                    var player = captureContactPlayer(entry.player(), table);
+                    return new ObjectManagerSnapshot.SolidContactRidingEntry(player.player(),
+                            entry.objectSpawn(), entry.objectSlotIndex(), entry.pieceIndex(),
+                            player.playerId());
+                }).toList());
     }
 
     private static ObjectManagerSnapshot.SolidContactPlayerBinding captureContactPlayer(
@@ -701,7 +719,10 @@ public final class SolidContactState {
                         resolveContactPlayer(entry.player(), entry.playerId(), context), entry.objectSpawn(),
                         entry.objectSlotIndex(), entry.pieceIndex())).toList(),
                 resolveContactLatchPlayers(state.standingBits(), context),
-                resolveContactLatchPlayers(state.pushingBits(), context));
+                resolveContactLatchPlayers(state.pushingBits(), context),
+                state.pushTargets().stream().map(entry -> new ObjectManagerSnapshot.SolidContactRidingEntry(
+                        resolveContactPlayer(entry.player(), entry.playerId(), context), entry.objectSpawn(),
+                        entry.objectSlotIndex(), entry.pieceIndex())).toList());
         restoreResolvedRewindState(resolved);
     }
 
@@ -718,6 +739,7 @@ public final class SolidContactState {
 
     private void restoreResolvedRewindState(ObjectManagerSnapshot.SolidContactState state) {
         ridingStates.clear();
+        pushTargets.clear();
         sameFrameMonitorBreakBounces.clear();
         objectStandingBitSet.clear();
         objectPushingBitSet.clear();
@@ -729,6 +751,10 @@ public final class SolidContactState {
         frameCounter = state.frameCounter();
         restoreLatchEntries(objectStandingBitSet, state.standingBits());
         restoreLatchEntries(objectPushingBitSet, state.pushingBits());
+        for (var entry : state.pushTargets()) {
+            ObjectInstance object = access.restoredOccupant(entry.objectSpawn(), entry.objectSlotIndex());
+            if (entry.player() != null && object != null) pushTargets.put(entry.player(), object);
+        }
 
         List<ObjectManagerSnapshot.SolidContactRidingEntry> entries = state.riding();
         if (entries == null || entries.isEmpty()) {
@@ -885,6 +911,43 @@ public final class SolidContactState {
         }
     }
 
+    // --- The re-evaluating solid family's ROM bits (ReevaluatingSolidRoutine, Object Solid.asm:15-607):
+    // object bit 3 and oPlayerStandObj are written without the S3K seating prologue's eviction.
+
+    /** {@code bset #3,oFlags(a0)}: this object's standing bit, leaving other objects' bits alone. */
+    public void setStandingBitWithoutEviction(PlayableEntity player, ObjectInstance instance) {
+        Object key = latchKeyFor(instance);
+        if (player != null && key != null) {
+            objectStandingBitSet.computeIfAbsent(player, p -> new HashSet<>()).add(key);
+        }
+    }
+
+    /** {@code move.w a0,oPlayerStandObj(a1)}: the stood-on object, leaving the previous one's bit alone. */
+    public void setStandObject(PlayableEntity player, ObjectInstance instance) {
+        Ride state = ridingStates.get(player);
+        if (state != null) state.set(instance, -1);
+        else ridingStates.put(player, new Ride(instance, -1));
+    }
+
+    /** {@code btst #5,oFlags(a0)}: this object's pushing bit for the player. */
+    public boolean hasObjectPushingBit(PlayableEntity player, ObjectInstance instance) {
+        Object key = latchKeyFor(instance);
+        Set<Object> set = player == null ? null : objectPushingBitSet.get(player);
+        return key != null && set != null && set.contains(key);
+    }
+
+    public ObjectInstance pushTarget(PlayableEntity player) {
+        return pushTargets.get(player);
+    }
+
+    public void setPushTarget(PlayableEntity player, ObjectInstance instance) {
+        pushTargets.put(player, instance);
+    }
+
+    public void clearPushTarget(PlayableEntity player) {
+        pushTargets.remove(player);
+    }
+
     public int frameCounter() {
         return frameCounter;
     }
@@ -904,6 +967,7 @@ public final class SolidContactState {
     public void reset() {
         frameCounter = 0;
         ridingStates.clear();
+        pushTargets.clear();
         sameFrameMonitorBreakBounces.clear();
         objectStandingBitSet.clear();
         objectPushingBitSet.clear();

@@ -46,6 +46,18 @@ public class MasterTitleLaunchCoordinator {
         resetOverrides();
     }
 
+    /**
+     * A hosted-media game has no launch profile: it starts with the stock team a profile defaults to
+     * (Sonic leading, no sidekick), whatever the all-games character settings say.
+     */
+    public void prepareHostedExit() {
+        configService.clearSessionOverrides();
+        configService.setSessionOverride(com.openggf.configuration.SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
+        configService.setSessionOverride(com.openggf.configuration.SonicConfiguration.SIDEKICK_CHARACTER_CODE, "");
+        pendingSessionOverrides = java.util.Map.of();
+        configService.resolveDisplayAspect();
+    }
+
     public void returnToMasterTitle() {
         resetOverrides();
         if (returnToMasterTitleHandler != null) {

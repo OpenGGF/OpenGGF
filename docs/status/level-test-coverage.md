@@ -1,5 +1,11 @@
 # Level test coverage backlog
 
+Sonic CD stages (2026-11-13): the [Sonic CD stage matrix](../architecture/validation/levels/scd-stages.md)
+records, for all 70 USA stage programs, which are certified by a native full-act
+route to their end, which by a 14-second fixture only, and the boss recordings.
+Act 1 Bad Future and act 2 Past and futures have fixture evidence only; widths,
+rewind spots and lifecycle obligations are largely unassessed.
+
 S2 Competition monitor outcomes (2026-11-09): eight cold-title EHZ1 fixtures
 exercise P1 breaking for all eight outcomes and hold the award for six seconds.
 The [bounded matrix](../architecture/plans/2026-11-07-s2-competition-parity.md#question-mark-monitor-outcomes-2026-11-09)

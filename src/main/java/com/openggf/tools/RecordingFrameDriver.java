@@ -640,8 +640,15 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
         if (com.openggf.game.mode.ControlledFrameRuntime.controller(SessionManager.getCurrentGameplayMode()) != null) {
             return;
         }
-        if (hasNewP1ActionPressForLogicalInput(bk2Movie, bk2Index, sprite.isControlLocked())) {
-            sprite.setForcedJumpPress(true);
+        // The press edge is taken against the last polled row, as the snapshot's is
+        // (lastPolledBk2Input): a lag row between two held rows did not read the pad, so a
+        // release on that row alone is never seen and the next row is no fresh press.
+        if (!sprite.isControlLocked() && bk2Index >= 0 && bk2Index < bk2Movie.getFrameCount()) {
+            Bk2FrameInput baseline = lastPolledBk2Input();
+            int previousAction = baseline != null ? baseline.p1ActionMask() : 0;
+            if ((bk2Movie.getFrame(bk2Index).p1ActionMask() & ~previousAction) != 0) {
+                sprite.setForcedJumpPress(true);
+            }
         }
     }
 

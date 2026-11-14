@@ -73,6 +73,16 @@ final class SpecialStageTransitionSupport {
             levelManager.markSanctuaryReentry(stageIndex, false);
         }
         levelManager.consumeSpecialStageReturnLevelReloadRequest();
+        // A game whose program flow named the next stage while the special stage ran (Sonic CD's
+        // RunLevel .SpecialStage returns into the next act, IPX.asm:586-602) returns there, once.
+        if (levelManager.consumeZoneActRequest()) {
+            try {
+                levelManager.loadZoneAndAct(levelManager.getRequestedZone(), levelManager.getRequestedAct());
+            } catch (IOException e) {
+                throw new RuntimeException("Failed to load the special stage's requested return", e);
+            }
+            return false;
+        }
         levelManager.loadCurrentLevel();
         return enteredFromSanctuary(rewardKind);
     }

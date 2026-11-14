@@ -1,7 +1,7 @@
 # Zone and act testing standard
 
-This is the required coverage standard for implemented levels in Sonic 1, Sonic 2
-and Sonic 3 & Knuckles. It governs new level work immediately; existing gaps are
+This is the required coverage standard for implemented levels in Sonic 1, Sonic 2,
+Sonic 3 & Knuckles and Sonic CD. It governs new level work immediately; existing gaps are
 tracked through the [coverage backlog](../../status/level-test-coverage.md) and
 [migration plan](../../architecture/plans/2026-09-13-level-test-standardisation.md).
 It defines obligations, not a claim that current levels satisfy them. Automated

@@ -78,7 +78,7 @@ class TestS3kCollisionLayoutTilemapRestore {
     }
 
     @Test
-    void wholeWorldRestoreRebuildsAfterProductionChunkMutation() {
+    void wholeWorldRestoreRedrawsAfterProductionChunkMutation() {
         var fixture = openLrz1();
         var owner = GameServices.level();
         var level = owner.getCurrentLevel();
@@ -104,7 +104,9 @@ class TestS3kCollisionLayoutTilemapRestore {
         assertTrue(tilemaps.isForegroundTilemapDirty());
         assertTrue(tilemaps.isBackgroundTilemapDirty());
         ensureTilemaps(owner);
-        assertNotSame(discardedForeground, tilemaps.getForegroundTilemapData());
+        // The foreground redraws the cells placing the restored chunk in place; the
+        // retained image must then equal the pre-mutation build exactly.
+        assertSame(discardedForeground, tilemaps.getForegroundTilemapData());
         assertNotSame(discardedBackground, tilemaps.getBackgroundTilemapData());
         assertArrayEquals(expectedForeground, tilemaps.getForegroundTilemapData());
         assertArrayEquals(expectedBackground, tilemaps.getBackgroundTilemapData());

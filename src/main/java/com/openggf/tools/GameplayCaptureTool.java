@@ -68,7 +68,17 @@ public final class GameplayCaptureTool {
         Path outDir = arguments.outDir();
         Path framesDir = outDir.resolve("frames");
         Files.createDirectories(framesDir);
-        Path romPath = arguments.rom() != null ? arguments.rom()
+        // A game hosted from other media (Sonic CD's disc) names its stages and opens its media
+        // through its module; every other game boots from its cartridge ROM as before.
+        com.openggf.game.GameModule hostedModule = HostedTraceCapture.hostedModule(arguments.game());
+        com.openggf.game.internal.HostedGameMedia hostedMedia = hostedModule == null ? null
+                : com.openggf.game.internal.HostedGameMedia.of(hostedModule);
+        if (hostedMedia != null && (arguments.rom() != null || arguments.nativePcm() || !"off".equals(arguments.donor())
+                || arguments.mod() != null)) {
+            throw new IllegalArgumentException(arguments.game() + " is hosted from its media: --rom, --native-pcm, "
+                    + "--donor and --mod do not apply");
+        }
+        Path romPath = hostedMedia != null ? null : arguments.rom() != null ? arguments.rom()
                 : TraceToolRomLocations.resolve(arguments.game(), GameServices.configuration(), Path.of(""));
         boolean donorActive = !"off".equals(arguments.donor());
         Path donorRom = !donorActive ? null : arguments.donorRom() != null ? arguments.donorRom()
@@ -78,14 +88,24 @@ public final class GameplayCaptureTool {
                 arguments.donor(), donorRom, arguments.startX(), arguments.startY(), arguments.emeralds(), arguments.titleCard(),
                 arguments.completeSpecialStage(), arguments.vIntRunCount(), arguments.cameraXSub(),
                 arguments.starPost(), arguments.rings(), arguments.reverseGravity(), arguments.endOfLevel());
-        int zone = ZoneIds.resolve(arguments.game(), arguments.zone());
-        int act = arguments.act();
+        com.openggf.game.internal.HostedGameMedia.Level hostedLevel = hostedMedia == null ? null
+                : hostedMedia.levelNamed(arguments.zone(), arguments.act() + 1);
+        int zone = hostedLevel != null ? hostedLevel.zone() : ZoneIds.resolve(arguments.game(), arguments.zone());
+        int act = hostedLevel != null ? hostedLevel.act() : arguments.act();
+        com.openggf.game.GameDataSource hostedSource = hostedMedia == null ? null : hostedMedia.openConfiguredMedia();
 
         List<Path> pngs = new ArrayList<>();
         int deathFrame = -1;
         int lastFrame = -1;
         String stopReason = "frame budget reached";
         NativePcmCapture nativePcm = null;
+        // --no-hud: the same frames without the game HUD (debug.traceRender.showGameHud, which the shared HUD and
+        // object-drawn HUDs obey), so an editor can lift the HUD as the pixels that differ from a pass with it.
+        if (arguments.noHud()) {
+            // In memory, as TraceCaptureTool sets its switches: the session clears session overrides when it opens.
+            GameServices.configuration().setConfigValue(
+                    com.openggf.configuration.SonicConfiguration.TRACE_SHOW_GAME_HUD, false);
+        }
         try (GameplayCaptureSession session = new GameplayCaptureSession(settings);
              BufferedWriter state = Files.newBufferedWriter(outDir.resolve("state.csv"), StandardCharsets.UTF_8)) {
             if (arguments.mod() != null) session.applyMod(arguments.mod());
@@ -108,7 +128,8 @@ public final class GameplayCaptureTool {
                 // written when the presentation session is installed, which can happen during boot.
                 nativePcm = new NativePcmCapture(outDir, GameServices.audio());
             }
-            session.boot(romPath, zone, act, settings);
+            if (hostedSource != null) session.boot(hostedSource, hostedModule, zone, act, settings);
+            else session.boot(romPath, zone, act, settings);
             if (arguments.timerFrames() != null) session.declareTimer(arguments.timerFrames());
             if (nativePcm != null) nativePcm.endBoot();
             var audio = GameServices.audio();
@@ -175,6 +196,13 @@ public final class GameplayCaptureTool {
                 Files.delete(raw);
             }
         } finally {
+            if (hostedSource instanceof AutoCloseable media) {
+                try {
+                    media.close();
+                } catch (Exception closing) {
+                    throw new IOException("closing " + arguments.game() + " media", closing);
+                }
+            }
             if (nativePcm != null) nativePcm.close();
             // The opt-in only applies to this capture's presentation sessions, even when boot fails.
             if (arguments.nativePcm()) com.openggf.audio.AudioNativePcmCaptureAccess.enable(GameServices.audio(), null);
@@ -279,7 +307,24 @@ public final class GameplayCaptureTool {
                             Integer vIntRunCount, Integer cameraXSub, boolean starPost, Integer rings, boolean reverseGravity,
                             Path mod, boolean titleScreen, boolean audio, boolean interactivePacing,
                             boolean nativePcm, boolean endOfLevel, int rewindFrom, int rewindFrames,
-                            Path saveSlots, String extraTeams, Integer timerFrames, boolean noMusic) {
+                            Path saveSlots, String extraTeams, Integer timerFrames, boolean noMusic, boolean noHud) {
+
+        /** Without a HUD choice: the game HUD is drawn. */
+        public Arguments(String game, Path rom, String zone, int act, Integer startX, Integer startY, int width,
+                         String mainCharacter, String sidekickCharacter, String donor, Path donorRom, Path input,
+                         int settle, int inputStart, Integer frames, int captureFrom, int every, Set<Integer> stills,
+                         boolean stopOnDeath, int deathGrace, boolean video, int scale, int fps,
+                         Path outDir, String emeralds, boolean titleCard, boolean completeSpecialStage,
+                         Integer vIntRunCount, Integer cameraXSub, boolean starPost, Integer rings, boolean reverseGravity,
+                         Path mod, boolean titleScreen, boolean audio, boolean interactivePacing,
+                         boolean nativePcm, boolean endOfLevel, int rewindFrom, int rewindFrames,
+                         Path saveSlots, String extraTeams, Integer timerFrames, boolean noMusic) {
+            this(game, rom, zone, act, startX, startY, width, mainCharacter, sidekickCharacter, donor, donorRom, input,
+                    settle, inputStart, frames, captureFrom, every, stills, stopOnDeath, deathGrace, video, scale, fps,
+                    outDir, emeralds, titleCard, completeSpecialStage, vIntRunCount, cameraXSub, starPost, rings,
+                    reverseGravity, mod, titleScreen, audio, interactivePacing, nativePcm, endOfLevel,
+                    rewindFrom, rewindFrames, saveSlots, extraTeams, timerFrames, noMusic, false);
+        }
 
         /** With music in the audio capture. */
         public Arguments(String game, Path rom, String zone, int act, Integer startX, Integer startY, int width,
@@ -399,6 +444,7 @@ public final class GameplayCaptureTool {
             Integer rings = null;
             Integer timerFrames = null;
             boolean titleCard = false;
+            boolean noHud = false;
             boolean completeSpecialStage = false;
             Path mod = null;
             boolean titleScreen=false, audio=false, interactivePacing=false, nativePcm=false, noMusic=false;
@@ -451,6 +497,7 @@ public final class GameplayCaptureTool {
                     case "--reverse-gravity" -> reverseGravity = true;
                     case "--end-of-level" -> endOfLevel = true;
                     case "--title-card" -> titleCard = true;
+                    case "--no-hud" -> noHud = true;
                     case "--star-post" -> starPost = true;
                     case "--vint-run-count" -> vIntRunCount = number(value(argv, ++i, flag), flag);
                     case "--camera-x-sub" -> cameraXSub = number(value(argv, ++i, flag), flag);
@@ -487,7 +534,7 @@ public final class GameplayCaptureTool {
             }
             if (titleScreen && (startX!=null || startY!=null || starPost || rings!=null || timerFrames!=null || emeralds!=null
                     || reverseGravity || endOfLevel || vIntRunCount!=null || cameraXSub!=null
-                    || ZoneIds.resolve(game,zone)!=0 || act!=1))
+                    || !isFirstLevel(game, zone, act)))
                 throw new IllegalArgumentException("--title-screen starts before assembly: use first zone/act and no positioned setup");
             if (audio && (captureFrom!=0 || every!=1 || fps!=60)) throw new IllegalArgumentException("--audio requires capture-from 0, every 1, fps 60");
             if (noMusic && !audio) throw new IllegalArgumentException("--no-music requires --audio");
@@ -503,7 +550,16 @@ public final class GameplayCaptureTool {
                     settle, inputStart, frames, captureFrom, every, Set.copyOf(stills), stopOnDeath, deathGrace,
                     video, scale, fps, outDir, emeralds, titleCard, completeSpecialStage,
                     vIntRunCount, cameraXSub, starPost, rings, reverseGravity, mod, titleScreen, audio, interactivePacing,
-                    nativePcm, endOfLevel, rewindFrom, rewindFrames, saveSlots, extraTeams, timerFrames, noMusic);
+                    nativePcm, endOfLevel, rewindFrom, rewindFrames, saveSlots, extraTeams, timerFrames, noMusic, noHud);
+        }
+
+        /** The game's first zone and act: a title-first capture names it, as the title starts there. */
+        static boolean isFirstLevel(String game, String zone, int oneBasedAct) {
+            var hosted = com.openggf.game.internal.HostedGameMedia.of(HostedTraceCapture.hostedModule(game));
+            if (hosted != null) {
+                return hosted.levelNamed(zone, oneBasedAct).equals(new com.openggf.game.internal.HostedGameMedia.Level(0, 0));
+            }
+            return ZoneIds.resolve(game, zone) == 0 && oneBasedAct == 1;
         }
 
         private static String value(String[] argv, int index, String flag) {

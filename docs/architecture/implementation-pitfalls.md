@@ -495,10 +495,11 @@ locating a live gameplay session. Keep lower-level consumers on the utility brid
 and inspect a module-lineage provider's actual defining loader before calling it.
 Each inspection walks and allocates stack frames, so a per-tile or per-bucket
 gate on the draw path is a measurable garbage source. Hot engine loops take
-a checked handle once per batch (`PresentationGraphicsAccess.batch`,
-`ObjectDrawInternalAccess.bucketPass`, `RingDrawInternalAccess.attractedPass`)
-and keep it in locals or engine-private fields; never cache a verdict keyed
-on a reported caller.
+a checked handle once per batch or render host (`PresentationGraphicsAccess.batch`,
+`ObjectDrawInternalAccess.bucketPass`, `RingDrawInternalAccess.engine`,
+`SpriteSatInternalAccess.engine`) and keep it in locals or engine-private
+fields bound to that host (rewind-transient on objects, such as Sonic 1's placed
+rings); never cache a verdict keyed on a reported caller.
 Origin: [October 7 mod framework readiness](plans/2026-10-07-mod-framework-product-readiness.md).
 
 **Returned concrete values can contain deferred creator callbacks.** An owned
@@ -2915,3 +2916,37 @@ An extra initialization return or unconditional next-frame deferral adds delay;
 do not offset that by fitting the caller's constant. Start the helper at its
 owning ROM trigger (MHZ1 uses the controller's player clamp, not its later generic
 actor). See the [music audit](audits/2026-11-02-music-transitions.md).
+
+### Sonic CD per-stage state belongs to its stage load
+
+A player goes from stage to stage in one process, so any Sonic CD state that
+survives a stage change is a gameplay bug. Native `LevelStart` clears the
+object RAM, camera RAM and the `flowerPosBuf` block (`levelVIntCounter`,
+`wwzBeamMode`) on every stage load (Level/Main.asm:177-216). Register new
+per-stage state at one of these reset points, never in a test:
+
+- `SonicCdLevelInitProfile` init steps (switch flags, Random, the camera's
+  `camYCenter` from the stage's CamBounds, time-travel level start);
+- `CdPlayerStage.resetForLevel` for player state outside the player object
+  (water, the movement manager's transient state and stage word);
+- the `StageLoadClearsStageRam` game service, through which the shared level
+  owner rebuilds the object window from the new start camera and starts the
+  object V-int clock at zero instead of carrying the previous stage's.
+
+State that native does carry (score, lives, the time-travel and good-future
+flags, time stones) stays with the campaign owners (`CdTimeTravel`,
+`CdSceneCoordinator`). `TestSonicCdStageChangeIsolation` replays two stage
+pairs in both orders and requires each stage to equal itself alone, row for
+row; `CdFixtureReplay.replaySequence` is the harness. Before these resets,
+46 of 182 ordered pairs of 14 stages differed (lane SESSION, 2026-11-13).
+
+### A new GL context must forget the old context's object names
+
+GL object names restart in each context. A `HeadlessGameBoot` closes its
+context without the graphics owner's cleanup, so a lazily created renderer,
+texture, program or VAO name kept in a static or long-lived field names
+nothing, or another object, in the next boot's context (a 1D scroll texture
+name bound as 2D, GL 0x502 at the native SAT stencil save). Register such
+owners in `GraphicsManager.forgetObjectsOfPreviousContext`, which `init` runs
+before creating the new context's objects. `TestSonicCdSecondBootPicture`
+requires a second boot to draw the first boot's frames pixel for pixel.

@@ -1199,7 +1199,8 @@ public class TestRingManager {
                 capability.tailsFlightEnabled(),
                 capability.jumpRepressClearsRollJumpBeforeAbility(),
                 enabled,
-                capability.superSpindashSpeedTable(), capability.glideAttacksEnabled());
+                capability.superSpindashSpeedTable(), capability.glideAttacksEnabled(),
+                capability.timedChargeMoves(), capability.rollEntryRaisesForwardSpeedToMinimum());
         return new GameRules(
                 base.playerMovement(),
                 playerCapability,

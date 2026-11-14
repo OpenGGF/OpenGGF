@@ -1,0 +1,93 @@
+{
+  "frames": 3180,
+  "inputs": [
+    {
+      "first": 600,
+      "last": 600,
+      "button": "Start"
+    },
+    {
+      "first": 900,
+      "last": 900,
+      "button": "Start"
+    },
+    {
+      "first": 1200,
+      "last": 1200,
+      "button": "Start"
+    },
+    {
+      "first": 1800,
+      "last": 1800,
+      "button": "Start"
+    },
+    {
+      "first": 1900,
+      "last": 1900,
+      "button": "A"
+    },
+    {
+      "first": 2100,
+      "last": 2100,
+      "button": "Start"
+    },
+    {
+      "first": 2400,
+      "last": 2400,
+      "button": "Start"
+    },
+    {
+      "first": 2600,
+      "last": 2630,
+      "button": "Right"
+    },
+    {
+      "first": 2640,
+      "last": 2675,
+      "button": "Left"
+    },
+    {
+      "first": 2680,
+      "last": 2720,
+      "button": "Right"
+    },
+    {
+      "first": 2700,
+      "last": 2710,
+      "button": "A"
+    },
+    {
+      "first": 2760,
+      "last": 2820,
+      "button": "Right"
+    },
+    {
+      "first": 2800,
+      "last": 2825,
+      "button": "Down"
+    },
+    {
+      "first": 3000,
+      "last": 3020,
+      "button": "Left"
+    },
+    {
+      "first": 3200,
+      "last": 3230,
+      "button": "Right"
+    },
+    {
+      "first": 3210,
+      "last": 3220,
+      "button": "A"
+    }
+  ],
+  "screenshots": [
+    2590,
+    2630,
+    2710,
+    2750,
+    2810,
+    3180
+  ]
+}

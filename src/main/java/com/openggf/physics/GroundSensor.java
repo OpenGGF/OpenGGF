@@ -288,14 +288,17 @@ public class GroundSensor extends Sensor {
                                            Direction direction, boolean mirrorEmptyDefault,
                                            byte layer, boolean loopLowPlane, SensorResult resultTarget) {
         return verticalScan.scan(lm, x, y, solidityBit, direction, mirrorEmptyDefault,
-                layer, loopLowPlane, resultTarget, collisionLayoutYMask(), UNBOUNDED_SCAN);
+                layer, loopLowPlane, resultTarget, collisionLayoutYMask(lm), UNBOUNDED_SCAN);
     }
 
     static int verticalTileLookupY(short y, Direction direction, int layoutYMask) {
         return NativePlayerTerrainScan.verticalTileLookupY(y, direction, layoutYMask);
     }
 
-    private int collisionLayoutYMask() {
+    private int collisionLayoutYMask(LevelManager lm) {
+        if (lm != null && lm.getCurrentLevel() instanceof com.openggf.game.internal.CollisionLayoutRowWindow window) {
+            return window.collisionLayoutYMask();
+        }
         var rules = sprite != null ? sprite.getGameRules() : null;
         var collisionRules = rules != null ? rules.collision() : null;
         return collisionRules != null ? collisionRules.defaultCollisionLayoutYMask() : 0x07FF;

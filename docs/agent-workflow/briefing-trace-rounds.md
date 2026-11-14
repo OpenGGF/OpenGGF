@@ -205,6 +205,16 @@ GPU waits, while all-thread process CPU can exceed elapsed time. Exclude digest,
 readback and output work from both timing boundaries. See the
 [native study](../architecture/research/2026-10-08-graalvm-native-mod-feasibility.md#linux-optimization-and-oracle-comparison-2026-10-27).
 
+Headless surfaceless EGL can pick an integrated GPU that also drives the desktop
+(2026-11-13 all-level sweep: Radeon 610M beside an RX 9070 XT). Synchronous
+`glTexSubImage2D` uploads then absorb that GPU's queue latency: the same AIZ1
+atlas upload took 66, 363 and 10 ms in three runs, and 11-12 ms with
+`DRI_PRIME=1` on the discrete GPU, where mean frame time also fell 35-45%. Before
+ranking a GPU-call stall, rerun it with `DRI_PRIME=1`, and count a spike only
+when it recurs at the same frame across runs. `mesa_glthread=false` is a second
+control: with glthread, any value-returning call (`glGen*`, `glGet*`) is a sync
+point, so its time may belong to earlier queued work.
+
 A JUnit case can hide a whole subprocess suite (2026-10-27, local validation).
 `TestBuildToolingGuard#releaseGateToolsShouldRejectCorruptAndChangedEvidence`
 reported one case and 256.922 seconds while launching every Python release-tool

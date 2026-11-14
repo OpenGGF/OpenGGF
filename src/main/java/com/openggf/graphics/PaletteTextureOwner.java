@@ -635,6 +635,20 @@ final class PaletteTextureOwner {
 	 * game cannot render a frame with another game's stale palette rows.
 	 */
 	void clearPaletteTextures() {
+		discardPaletteTextures(true);
+	}
+
+	/**
+	 * Forgets palette texture ids that belonged to a previous GL context without deleting them:
+	 * in the new context those ids name nothing (or an unrelated object). Without this a second
+	 * {@code GraphicsManager.init} in one JVM keeps a texture id that has no level-0 storage,
+	 * so the first palette upload raises GL_INVALID_OPERATION in glTexSubImage2D.
+	 */
+	void forgetPaletteTexturesOfPreviousContext() {
+		discardPaletteTextures(false);
+	}
+
+	private void discardPaletteTextures(boolean deleteGlTextures) {
 		invalidateScopedPaletteBanks();
         clearScopedUnderwaterBasis();scopedPaletteWorld=null;
 		paletteTextureMap.clear();
@@ -646,9 +660,20 @@ final class PaletteTextureOwner {
 		publishedPaletteFade.clear();
 		paletteFadePublicationPending = false;
 		displayedPaletteFadeHeld = false;
+		// The upload latch belongs to the outgoing session's V-int publication. Only
+		// SpriteTablePublication profiles publish (and so ever release it); a later
+		// session of an unlatched game (S1, S2, Sonic CD) would otherwise keep every
+		// level palette write pending for good and freeze its palette cycles. A new
+		// session starts unlatched, as in a fresh process; a latching game re-latches
+		// at its first publication.
+		paletteUploadLatched = false;
+		Arrays.fill(pendingPaletteUploads, false);
+		underwaterUploadPending = false;
+		pendingUnderwaterPalettes = null;
+		pendingUnderwaterLine0 = null;
 		lastCachedPaletteLines = new PaletteView[0];
         java.util.Arrays.fill(displayedPaletteArgb, null);
-		if (!graphics.paletteHeadlessMode() && graphics.paletteGlInitialized()) {
+		if (deleteGlTextures && !graphics.paletteHeadlessMode() && graphics.paletteGlInitialized()) {
 			if (combinedPaletteTextureId != null) {
 				glDeleteTextures(combinedPaletteTextureId);
 			}

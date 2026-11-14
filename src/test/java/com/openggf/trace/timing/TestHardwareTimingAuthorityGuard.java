@@ -642,6 +642,101 @@ class TestHardwareTimingAuthorityGuard {
                 "import com.openggf.game.internal.NativeLevelLoadPhaseAdmission;"));
     }
 
+    /**
+     * The lost-V-INT admission (contract 2026-11-13 extension): {@code vint_service_timing.jsonl} is named only by its
+     * loader, and its loader, schedule and port are reached only from the timing package and the replay's one
+     * coordinator. No comparison parser, gameplay owner or other test reads it; the port depends on nothing outside
+     * the timing package and the coordinator mutates no gameplay state.
+     */
+    @Test
+    void onlyTheTimingPortAndItsCoordinatorReadTheVIntServiceStream() throws IOException {
+        List<String> violations = new ArrayList<>();
+        for (SourceFile source : productionSources()) {
+            violations.addAll(scanVIntServiceAccess(source.relativePath(), source.content()));
+        }
+        for (SourceFile source : SOURCE_CATALOGUES.load(Path.of("src", "test", "java"))) {
+            if (!source.relativePath().startsWith("com/openggf/trace/timing/")) {
+                violations.addAll(scanAccess(source.relativePath(), stripCommentsAndStrings(source.content()),
+                        VINT_SERVICE_TYPES, " reaches the lost-V-INT stream outside its coordinator"));
+            }
+        }
+        violations.addAll(scanVIntServicePortDependencies(productionSource(
+                "com/openggf/trace/timing/VIntServiceTimingReplayPort.java").content()));
+        violations.addAll(scanVIntServiceCoordinator(productionSource(
+                "com/openggf/trace/replay/TraceVIntServiceCoordinator.java").content()));
+        assertNoViolations("the lost-V-INT stream is read only by the timing port and its coordinator", violations);
+
+        assertDetected(scanVIntServiceAccess("com/openggf/trace/TraceBinder.java",
+                "import com.openggf.trace.timing.VIntServiceTimingStreamLoader;"));
+        assertDetected(scanVIntServiceAccess("com/openggf/game/soniccd/CdLevelVIntCounter.java",
+                "class C { int[] rows(com.openggf.trace.timing.VIntServiceTimingSchedule s) { return null; } }"));
+        assertDetected(scanVIntServiceAccess("com/openggf/trace/TraceData.java",
+                "class T { Path p = dir.resolve(\"vint_service_\" + \"timing.jsonl\"); }"));
+        assertEquals(List.of(), scanVIntServiceAccess("com/openggf/trace/TraceData.java",
+                "// vint_service_timing.jsonl is read by the coordinator\nclass T { }"));
+        // The vint_service hardware boundary's wire name is not the stream.
+        assertEquals(List.of(), scanVIntServiceAccess("com/openggf/game/timing/HardwareServiceBoundary.java",
+                "enum B { VINT_SERVICE(\"vint_service\") }"));
+        assertDetected(scanVIntServiceAccess("com/openggf/trace/TraceData.java",
+                "class T { String f = \"vint_\" + \"service_timing.jsonl\"; }"));
+        assertDetected(scanVIntServicePortDependencies("import com.openggf.trace.TraceData;"));
+        assertDetected(scanVIntServicePortDependencies("import com.openggf.game.GameServices;"));
+        assertDetected(scanVIntServiceCoordinator("class C { void x() { GameServices.level(); } }"));
+        assertDetected(scanVIntServiceCoordinator("import com.openggf.level.LevelManager;"));
+        assertEquals(List.of(), scanVIntServiceCoordinator("import com.openggf.game.GameModule;\n"
+                + "import com.openggf.game.internal.UnservicedVBlankAdmission;\nimport com.openggf.trace.TraceData;"));
+    }
+
+    private static final Pattern VINT_SERVICE_TYPES = Pattern.compile(
+            "\\bVIntServiceTiming(?:StreamLoader|Schedule|ReplayPort)\\b");
+    private static final Pattern VINT_SERVICE_FILE_LITERAL = Pattern.compile(
+            "\"[^\"\\n]*(?:vint_service_|service_timing)[^\"\\n]*\"");
+    private static final Set<String> VINT_SERVICE_READERS = Set.of(
+            "com/openggf/trace/timing/VIntServiceTimingStreamLoader.java",
+            "com/openggf/trace/timing/VIntServiceTimingSchedule.java",
+            "com/openggf/trace/timing/VIntServiceTimingReplayPort.java",
+            "com/openggf/trace/replay/TraceVIntServiceCoordinator.java");
+
+    private static List<String> scanVIntServiceAccess(String relative, String source) {
+        List<String> violations = new ArrayList<>();
+        if (!relative.equals("com/openggf/trace/timing/VIntServiceTimingStreamLoader.java")
+                && VINT_SERVICE_FILE_LITERAL.matcher(stripCommentsPreservingStrings(source)).find()) {
+            violations.add(relative + " names the lost-V-INT stream outside its loader");
+        }
+        if (!VINT_SERVICE_READERS.contains(relative)) {
+            violations.addAll(scanAccess(relative, stripCommentsAndStrings(source), VINT_SERVICE_TYPES,
+                    " reaches the lost-V-INT stream outside the timing port and its coordinator"));
+        }
+        return violations;
+    }
+
+    private static List<String> scanVIntServicePortDependencies(String source) {
+        var imports = IMPORT_DECLARATION.matcher(stripCommentsAndStrings(source));
+        while (imports.find()) {
+            if (imports.group(1).startsWith("com.openggf.") && !imports.group(1).startsWith("com.openggf.trace.timing.")) {
+                return List.of("VIntServiceTimingReplayPort imports " + imports.group(1));
+            }
+        }
+        return List.of();
+    }
+
+    private static List<String> scanVIntServiceCoordinator(String source) {
+        String bounded = stripCommentsAndStrings(source);
+        if (ROOT_GAMEPLAY_MUTATION.matcher(bounded).find() || REFLECTIVE_GAMEPLAY_ACCESS.matcher(bounded).find()) {
+            return List.of("TraceVIntServiceCoordinator reaches gameplay state");
+        }
+        var imports = IMPORT_DECLARATION.matcher(bounded);
+        while (imports.find()) {
+            String imported = imports.group(1);
+            if (imported.startsWith("com.openggf.") && !imported.startsWith("com.openggf.trace.")
+                    && !imported.equals("com.openggf.game.GameModule")
+                    && !imported.equals("com.openggf.game.internal.UnservicedVBlankAdmission")) {
+                return List.of("TraceVIntServiceCoordinator imports " + imported);
+            }
+        }
+        return List.of();
+    }
+
     private static List<String> initializationDependencies(String source) {
         String bounded = stripCommentsAndStrings(source).replace(
                 "com.openggf.game.internal.NativeLevelLoadPhaseAdmission", "NativeLevelLoadPhaseAdmission");

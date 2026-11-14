@@ -174,6 +174,9 @@ public class MasterTitleScreen {
     private List<MasterTitleEntry> entries;
     private java.util.function.Supplier<List<MasterTitleEntry>> entrySource;
     private final Map<GameEntry, Boolean> stockAvailability = new EnumMap<>(GameEntry.class);
+    /** Hosted-media games: whether their media was found, and what to tell the player when not. */
+    private final Map<GameId, com.openggf.game.internal.HostedGameMedia.Availability> hostedAvailability =
+            new EnumMap<>(GameId.class);
     private Map<GameEntry, List<String>> enabledModsByGame = Map.of();
 
     // GL resources
@@ -1166,7 +1169,7 @@ public class MasterTitleScreen {
         } else if (!isEntryAvailable(entry)) {
             errorPageTitle = UiMessages.text("hub.ui.unable_to_start_caps");
             launchErrorTitle = null;
-            launchErrorDetail = null;
+            launchErrorDetail = entry instanceof MasterTitleEntry.Hosted hosted ? hostedAvailability(hosted).detail() : null;
             state = State.ERROR_DISPLAY;
             playErrorSound();
         } else if (entry instanceof MasterTitleEntry.Standalone) {
@@ -1228,6 +1231,12 @@ public class MasterTitleScreen {
         romCatalogue = RomImageCatalogue.forCurrentWorkingDirectory(configService);
         for (GameEntry game : GameEntry.values()) {
             stockAvailability.put(game, romCatalogue.isAvailable(logicalRomFor(game)));
+        }
+        // Hosted-media games: only the listed ones, through their own media service (header, no hashing).
+        for (MasterTitleEntry entry : entries) {
+            if (entry instanceof MasterTitleEntry.Hosted hosted) {
+                hostedAvailability.put(hosted.game(), GameModuleRegistry.hostedMedia(hosted.game()).probe(configService));
+            }
         }
     }
 
@@ -1510,6 +1519,7 @@ public class MasterTitleScreen {
         if (selectedEntry() instanceof MasterTitleEntry.Suspended)
             return List.of(TitleHubNavigation.Action.RESUME, TitleHubNavigation.Action.SETUP, TitleHubNavigation.Action.END);
         return selectedEntry() instanceof MasterTitleEntry.Standalone
+                || selectedEntry() instanceof MasterTitleEntry.Hosted
                 ? List.of(TitleHubNavigation.Action.START)
                 : List.of(TitleHubNavigation.Action.START, TitleHubNavigation.Action.SETUP,
                         TitleHubNavigation.Action.RECORDINGS);
@@ -1836,7 +1846,18 @@ public class MasterTitleScreen {
             MenuChrome.outline(font, bx, by, bw, 11, MenuChrome.GOLD, 1f, 1);
             MenuChrome.icon(font, MenuChrome.Icon.PAUSE, bx + 3, by + 2, MenuChrome.GOLD);
             MenuChrome.compact(font, badge, bx + 3 + MenuChrome.ICON_SIZE + 2, by + 2, MenuChrome.GOLD);
-        } else if (preview == null && entry instanceof MasterTitleEntry.Stock) {
+        } else if (!available && entry instanceof MasterTitleEntry.Hosted hosted) {
+            // The missing-ROM block's layout, for a disc: icon, title, game and hint.
+            int top = r.y() + (r.h() - MISSING_BLOCK_H) / 2;
+            String title = UiMessages.text("hub.ui.disc_missing_caps");
+            MenuChrome.icon(font, MenuChrome.Icon.WARNING, r.x() + (r.w() - MenuChrome.ICON_SIZE) / 2, top, MenuChrome.AMBER);
+            MenuChrome.compact(font, title, r.x() + (r.w() - MenuChrome.compactWidth(title)) / 2, top + 12, MenuChrome.AMBER);
+            String game = hosted.menuLabel();
+            MenuChrome.compact(font, game, r.x() + (r.w() - MenuChrome.compactWidth(game)) / 2, top + 22, MenuChrome.TEXT);
+            String hint = UiMessages.text("hub.ui.start_for_details");
+            MenuChrome.compact(font, hubPageCompact(hint, r.w() - 6),
+                    r.x() + Math.max(3, (r.w() - MenuChrome.compactWidth(hint)) / 2), top + 32, MenuChrome.DIM);
+        } else if (preview == null && (entry instanceof MasterTitleEntry.Stock || entry instanceof MasterTitleEntry.Hosted)) {
             String name = entry.menuLabel();
             MenuChrome.label(font, hubPageLabel(name, r.w() - 8), r.x() + Math.max(4, (r.w() - MenuChrome.labelWidth(name)) / 2),
                     r.y() + r.h() / 2 - 5, MenuChrome.WHITE);
@@ -1889,6 +1910,9 @@ public class MasterTitleScreen {
         }
         if (chips.isEmpty() && entry instanceof MasterTitleEntry.Stock stock && !isEntryAvailable(stock)) {
             String help = hubPageCompact(UiMessages.text("hub.choose_game_rom", java.util.Map.of("game", stock.game().menuLabel)), w - 16);
+            MenuChrome.compact(font, help, (w - MenuChrome.compactWidth(help)) / 2, CHIP_Y + 2, MenuChrome.AMBER);
+        } else if (chips.isEmpty() && entry instanceof MasterTitleEntry.Hosted hosted && !isEntryAvailable(hosted)) {
+            String help = hubPageCompact(UiMessages.text("hub.choose_game_disc", java.util.Map.of("game", hosted.menuLabel())), w - 16);
             MenuChrome.compact(font, help, (w - MenuChrome.compactWidth(help)) / 2, CHIP_Y + 2, MenuChrome.AMBER);
         } else if (chips.isEmpty() && entry instanceof MasterTitleEntry.Standalone standalone) {
             String help = hubPageCompact(standalone.continueAvailable() ? UiMessages.text("hub.ui.a_saved_game_is_ready_to_continue") : UiMessages.text("hub.ui.a_standalone_game_from_your_mods"), w - 16);
@@ -2342,9 +2366,14 @@ public class MasterTitleScreen {
     }
 
     public void showRomLoadError(String gameId) {
+        showRomLoadError(gameId, null);
+    }
+
+    /** As above; a non-null {@code detail} (a refused disc's reason) replaces the configured ROM path. */
+    public void showRomLoadError(String gameId, String detail) {
         errorPageTitle = UiMessages.text("hub.ui.unable_to_start_caps");
         launchErrorTitle = null;
-        launchErrorDetail = null;
+        launchErrorDetail = detail;
         selectErrorGame(gameId);
     }
 
@@ -2409,7 +2438,13 @@ public class MasterTitleScreen {
     private boolean isEntryAvailable(MasterTitleEntry entry) {
         return entry instanceof MasterTitleEntry.Standalone || entry instanceof MasterTitleEntry.Suspended
                 || entry instanceof MasterTitleEntry.Stock stock
-                && stockAvailability.getOrDefault(stock.game(), false);
+                && stockAvailability.getOrDefault(stock.game(), false)
+                || entry instanceof MasterTitleEntry.Hosted hosted && hostedAvailability(hosted).available();
+    }
+
+    private com.openggf.game.internal.HostedGameMedia.Availability hostedAvailability(MasterTitleEntry.Hosted hosted) {
+        return hostedAvailability.getOrDefault(hosted.game(),
+                new com.openggf.game.internal.HostedGameMedia.Availability(false, null));
     }
 
     private RomPreviewState selectedPreview() {
@@ -2530,6 +2565,10 @@ public class MasterTitleScreen {
 
     public void setRomAvailableForTest(GameEntry entry, boolean available) {
         stockAvailability.put(entry, available);
+    }
+
+    void setHostedAvailabilityForTest(GameId game, boolean available, String detail) {
+        hostedAvailability.put(game, new com.openggf.game.internal.HostedGameMedia.Availability(available, detail));
     }
 
     List<MasterTitleEntry> entriesForTest() { return entries; }

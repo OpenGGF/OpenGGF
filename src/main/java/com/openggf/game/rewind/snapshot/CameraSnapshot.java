@@ -38,4 +38,5 @@ public record CameraSnapshot(
         short yPosBias,
         short fastScrollCap,
         boolean customMaxXBoundaryEasingClaimed,
-        short viewportMaxX) {}
+        short viewportMaxX,
+        short horizontalFocusOffset) {}

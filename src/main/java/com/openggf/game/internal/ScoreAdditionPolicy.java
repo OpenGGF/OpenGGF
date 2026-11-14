@@ -8,4 +8,10 @@ public interface ScoreAdditionPolicy {
     ScoreAdditionPolicy RETAIL_CAPPED = () -> 9_999_990;
 
     int maximumScore();
+
+    /**
+     * The score just reached {@code score} (after the cap). A game whose {@code AddPoints} awards a life at a
+     * score threshold does it here; the default awards none.
+     */
+    default void scoreAdded(com.openggf.game.GameStateManager state, int score) { }
 }

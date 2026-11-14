@@ -584,6 +584,14 @@
   "@settings.key.sonic_3k_rom.help": {
     "description": "Settings help for stable configuration key SONIC_3K_ROM. Technical YAML documentation remains separate."
   },
+  "settings.key.sonic_cd_disc.label": "Sonic CD disc (.cue)",
+  "@settings.key.sonic_cd_disc.label": {
+    "description": "Settings label for stable configuration key SONIC_CD_DISC (roms.soniccd)."
+  },
+  "settings.key.sonic_cd_disc.help": "Path of the Sonic CD (USA) disc's .cue sheet; blank finds the disc in the ROM folder",
+  "@settings.key.sonic_cd_disc.help": {
+    "description": "Settings help for stable configuration key SONIC_CD_DISC. Technical YAML documentation remains separate."
+  },
   "settings.key.roms_directory.label": "ROM folder",
   "@settings.key.roms_directory.label": {
     "description": "Settings label for stable configuration key ROMS_DIRECTORY (roms.directory)."
@@ -1479,6 +1487,10 @@
   "settings.value.s3k": "Sonic 3 & Knuckles",
   "@settings.value.s3k": {
     "description": "OpenGGF host UI: settings.value.s3k. Translate the complete message; preserve named arguments."
+  },
+  "settings.value.scd": "Sonic CD",
+  "@settings.value.scd": {
+    "description": "OpenGGF host UI: settings.value.scd. Translate the complete message; preserve named arguments."
   },
   "settings.value.on": "On",
   "@settings.value.on": {

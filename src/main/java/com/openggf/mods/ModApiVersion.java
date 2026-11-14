@@ -203,6 +203,23 @@ public final class ModApiVersion {
      * Powered forms can hold a strike palette while a strike flies (PoweredEffects.strikePalette),
      * and strike trails can tint each after-image with its spawn-time cycle phase
      * (StrikeTrailStyle.echoPhaseSlot); both add compatibility constructors within candidate 0.7.0.
+     * GameId adds SCD for Sonic CD, a stock game hosted from a disc source with no
+     * cartridge ROM; its romGame() throws, as STANDALONE's does.
+     * Sonic CD player rules add camera focus-pan and no-sweet-spot components, a timed
+     * charge model and roll-entry speed floor on PlayerCapabilityRules (whose and
+     * PlayerAnimationRules' canonical constructors grow, so callers of the old shapes
+     * recompile), roll-jump steering, steep-ceiling roll retention and the falling
+     * Walk reset; camera and movement rewind records carry the new state.
+     * Sonic CD's player extras grow PlayerAnimationRules by balanceKeepsFacing and the
+     * movement rewind record by the pseudo-3D ramp bit, and PlayableSpriteMovement adds
+     * isOnPseudo3dRamp() and startRollFromStageChunk() for the CD stage routines.
+     * PlayerAirMovementRules grows by rollJumpKeepsRollRadii (Sonic CD's roll jump keeps
+     * the roll radii); the seven-argument constructor keeps the standing-radius jump.
+     * Wacky Workbench's own player grows the movement rewind record by a stage-control word
+     * and adds stageControlState()/setStageControlState(int) and cancelTimedCharge() for the
+     * CD stage routines.
+     * SonicConfiguration appends SONIC_CD_DISC (roms.soniccd), the Sonic CD disc's cue sheet beside the
+     * other games' ROM keys; existing ordinals are preserved and the candidate remains 0.7.0.
      */
     public static final SemanticVersion CURRENT = SemanticVersion.parse("0.7.0");
     public static final List<SemanticVersion> SUPPORTED_CONTRACTS = List.of(CURRENT);

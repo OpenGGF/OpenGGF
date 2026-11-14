@@ -594,6 +594,14 @@ final class GameLoopSpecialStageLifecycle {
         host.level().setLastStarPostHit();
 
         if (host.level().getCurrentLevel() == null) {
+            // A program flow that named the title while the stage ran goes there: Sonic CD's StageSelect
+            // (IPX.asm:710-728) runs SpecStage1Demo (IPX.asm:111-118) and returns to IPX's .GameLoop.
+            if (host.level().consumeGameOverExitRequest() == com.openggf.game.GameOverExit.TITLE_SCREEN) {
+                GameLoopGameOverExit.exitToTitleScreen(host.sprites(), host.level(), host.camera(),
+                        () -> host.changeMode(GameMode.TITLE_SCREEN), host.module().getTitleScreenProvider(),
+                        host.fade(), host.resolvedGameplayContext());
+                return;
+            }
             // No level was loaded (special stage launched from level select).
             // Load the starting level; loadCurrentLevel() will request its own title card.
             GameMode oldMode = host.changeMode(GameMode.LEVEL);

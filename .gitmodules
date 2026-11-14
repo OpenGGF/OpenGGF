@@ -11,3 +11,6 @@
 [submodule "tools/tracechaser"]
 	path = tools/tracechaser
 	url = https://github.com/OpenGGF/TraceChaser.git
+[submodule "docs/scddisasm"]
+	path = docs/scddisasm
+	url = https://github.com/OpenGGF/scddisasm.git

@@ -563,24 +563,27 @@ public final class TraceBenchmarkTool {
      * replay that has left the recorded route is measuring some other workload.
      */
     private static final class FrameExtras {
-        static final String HEADER = "wall_ms,alloc_kb,gc_count,gc_ms,zone,"
+        static final String HEADER = "epoch_us,wall_ms,alloc_kb,gc_count,gc_ms,zone,"
                 + "player_x,trace_x,player_y,trace_y,camera_x,camera_y";
         private final com.sun.management.ThreadMXBean threads =
                 (com.sun.management.ThreadMXBean) java.lang.management.ManagementFactory.getThreadMXBean();
         private final List<java.lang.management.GarbageCollectorMXBean> collectors =
                 java.lang.management.ManagementFactory.getGarbageCollectorMXBeans();
+        private final long[] epochMicros;
         private final double[] wallMs;
         private final long[] allocBytes;
         private final long[] gcCount;
         private final long[] gcMs;
         private final int[] zone;
         private final int[][] position;
+        private long epochMicrosAtStart;
         private long allocAtStart;
         private long gcCountAtStart;
         private long gcMsAtStart;
 
         FrameExtras(int frames) {
             threads.setThreadAllocatedMemoryEnabled(true);
+            epochMicros = new long[frames];
             wallMs = new double[frames];
             allocBytes = new long[frames];
             gcCount = new long[frames];
@@ -590,12 +593,17 @@ public final class TraceBenchmarkTool {
         }
 
         void beginFrame() {
+            // Wall-clock frame start, so a JFR recording's event timestamps can
+            // be matched to the frame that spiked.
+            java.time.Instant now = java.time.Instant.now();
+            epochMicrosAtStart = now.getEpochSecond() * 1_000_000L + now.getNano() / 1000;
             allocAtStart = threads.getCurrentThreadAllocatedBytes();
             gcCountAtStart = totalCollections();
             gcMsAtStart = totalCollectionMs();
         }
 
         void endFrame(int index, TraceFrame row, long wallNanos) {
+            epochMicros[index] = epochMicrosAtStart;
             wallMs[index] = wallNanos / 1e6;
             allocBytes[index] = threads.getCurrentThreadAllocatedBytes() - allocAtStart;
             gcCount[index] = totalCollections() - gcCountAtStart;
@@ -613,8 +621,8 @@ public final class TraceBenchmarkTool {
         }
 
         void appendRow(StringBuilder out, int i) {
-            out.append(String.format(Locale.ROOT, ",%.3f,%.1f,%d,%d,%d",
-                    wallMs[i], allocBytes[i] / 1024.0, gcCount[i], gcMs[i], zone[i]));
+            out.append(String.format(Locale.ROOT, ",%d,%.3f,%.1f,%d,%d,%d",
+                    epochMicros[i], wallMs[i], allocBytes[i] / 1024.0, gcCount[i], gcMs[i], zone[i]));
             for (int value : position[i]) {
                 out.append(',').append(value);
             }

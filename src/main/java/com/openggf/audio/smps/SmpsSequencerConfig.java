@@ -396,6 +396,8 @@ public final class SmpsSequencerConfig {
         private final int fadeOutSteps;
         private final int fadeInSteps;
         private final int fadeInDelay;
+        private final int serviceClockNumerator;
+        private final int serviceClockDenominator;
 
         private Settings(Builder b) {
             this.speedUpTempos = Collections.unmodifiableMap(new HashMap<>(b.speedUpTempos));
@@ -455,6 +457,8 @@ public final class SmpsSequencerConfig {
             this.fadeOutSteps = b.fadeOutSteps;
             this.fadeInSteps = b.fadeInSteps;
             this.fadeInDelay = b.fadeInDelay;
+            this.serviceClockNumerator = b.serviceClockNumerator;
+            this.serviceClockDenominator = b.serviceClockDenominator;
         }
     }
 
@@ -966,6 +970,21 @@ public final class SmpsSequencerConfig {
     }
 
     /** Fade-in inter-step delay in frames. S1/S2: 2, S3K: 2. */
+    /**
+     * Driver service rate as {@code numerator / denominator} hertz, or 0 in either when the
+     * driver is serviced once per video frame of the selected region. A driver clocked by a
+     * chip timer, such as Sonic CD's YM2612 Timer B loop, gives that timer's exact rate: a
+     * clock in hertz over the clocks per service.
+     */
+    public int getServiceClockNumerator() {
+        return settings.serviceClockNumerator;
+    }
+
+    /** See {@link #getServiceClockNumerator()}. */
+    public int getServiceClockDenominator() {
+        return settings.serviceClockDenominator;
+    }
+
     public int getFadeInDelay() {
         return settings.fadeInDelay;
     }
@@ -1046,6 +1065,8 @@ public final class SmpsSequencerConfig {
         private int fadeOutSteps = 0x28;
         private int fadeInSteps = 0x28;
         private int fadeInDelay = 2;
+        private int serviceClockNumerator;
+        private int serviceClockDenominator;
 
         public Builder speedUpTempos(Map<Integer, Integer> val) { speedUpTempos = val; return this; }
         public Builder tempoModBase(int val) { tempoModBase = val; return this; }
@@ -1104,6 +1125,14 @@ public final class SmpsSequencerConfig {
         public Builder fadeOutSteps(int val) { fadeOutSteps = val; return this; }
         public Builder fadeInSteps(int val) { fadeInSteps = val; return this; }
         public Builder fadeInDelay(int val) { fadeInDelay = val; return this; }
+        public Builder serviceClockNumerator(int val) {
+            if (val < 0) throw new IllegalArgumentException("service clock must be non-negative");
+            serviceClockNumerator = val; return this;
+        }
+        public Builder serviceClockDenominator(int val) {
+            if (val < 0) throw new IllegalArgumentException("clocks per service must be non-negative");
+            serviceClockDenominator = val; return this;
+        }
 
         public SmpsSequencerConfig build() {
             Objects.requireNonNull(speedUpTempos, "speedUpTempos");

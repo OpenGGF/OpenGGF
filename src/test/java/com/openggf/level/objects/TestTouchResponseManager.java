@@ -650,7 +650,8 @@ public class TestTouchResponseManager {
         var capability = new com.openggf.game.rules.PlayerCapabilityRules(
                 c.spindashEnabled(), c.spindashSpeedTable(), true, false,
                 c.tailsFlightEnabled(), c.jumpRepressClearsRollJumpBeforeAbility(),
-                c.lightningShieldEnabled(), c.superSpindashSpeedTable(), false);
+                c.lightningShieldEnabled(), c.superSpindashSpeedTable(), false,
+                c.timedChargeMoves(), c.rollEntryRaisesForwardSpeedToMinimum());
         var rules = com.openggf.game.rules.CrossGameRuleComposer.withPlayerRules(base,
                 base.playerMovement(), base.objectInteraction(), base.collision(), base.ring(), capability);
         Knuckles knuckles = mockKnucklesTouchPlayer(rules);

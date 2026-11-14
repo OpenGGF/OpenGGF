@@ -68,10 +68,32 @@ class TraceCaptureToolArgsTest {
     }
 
     @Test
+    void noHudFlagLeavesTheGameHudOutAndTheHudIsDrawnByDefault() {
+        assertTrue(TraceCaptureTool.Args.parse(new String[]{"--trace", "aiz1"}).showGameHud());
+        assertFalse(TraceCaptureTool.Args.parse(new String[]{"--trace", "aiz1"}).noMusic());
+        assertTrue(TraceCaptureTool.Args.parse(new String[]{"--trace", "aiz1", "--no-music"}).noMusic());
+        TraceCaptureTool.Args a = TraceCaptureTool.Args.parse(new String[]{"--trace", "aiz1", "--no-hud"});
+        assertFalse(a.showGameHud());
+        assertTrue(a.showGhosts());
+    }
+
+    @Test
     void nativeSpriteLimitsStayOnUnlessPromotionalFootageTurnsThemOff() {
         assertTrue(TraceCaptureTool.Args.parse(new String[]{"--trace", "aiz1"}).nativeSpriteLimits());
         assertFalse(TraceCaptureTool.Args.parse(
                 new String[]{"--trace", "aiz1", "--no-sprite-limits"}).nativeSpriteLimits());
+    }
+
+    @Test
+    void musicIsRecordedAtFullLevelUnlessNoMusicSilencesIt() {
+        TraceCaptureTool.Args withMusic = TraceCaptureTool.Args.parse(new String[]{"--trace", "aiz1"});
+        assertFalse(withMusic.noMusic());
+        assertEquals(100, TraceCaptureTool.capturedMusicVolume(withMusic));
+
+        TraceCaptureTool.Args effectsOnly = TraceCaptureTool.Args.parse(
+                new String[]{"--trace", "aiz1", "--no-music"});
+        assertTrue(effectsOnly.noMusic());
+        assertEquals(0, TraceCaptureTool.capturedMusicVolume(effectsOnly));
     }
 
     @Test

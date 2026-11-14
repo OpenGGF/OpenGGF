@@ -53,11 +53,17 @@ final class StrictTimingFields {
     }
 
     static HardwareWorkKind parseKind(Path path, int line, String wireName) throws IOException {
+        HardwareWorkKind kind;
         try {
-            return HardwareWorkKind.fromWireName(wireName);
+            kind = HardwareWorkKind.fromWireName(wireName);
         } catch (IllegalArgumentException e) {
             throw rejected(path, "line " + line + " has invalid kind");
         }
+        // Normal-play load kinds are never recorded (HardwareWorkKind.recordable).
+        if (!kind.recordable()) {
+            throw rejected(path, "line " + line + " has invalid kind");
+        }
+        return kind;
     }
 
     static String decodeUtf8(Path path, String fileName) throws IOException {
