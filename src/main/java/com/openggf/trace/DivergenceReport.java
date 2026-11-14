@@ -1,10 +1,12 @@
 package com.openggf.trace;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -14,9 +16,124 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 public class DivergenceReport {
+
+    /** The driver's prescribed gate completion, distinct from retained comparison-row count. */
+    public record ReplayGate(int plannedTraceRows, boolean comparisonGateReached,
+                             TraceVerificationScope verification) {
+        public ReplayGate {
+            if (plannedTraceRows <= 0) {
+                throw new IllegalArgumentException("Replay gate requires positive planned trace rows");
+            }
+            Objects.requireNonNull(verification);
+        }
+
+        /** Absent legacy metadata is unknown; a present gate must satisfy its wire contract. */
+        public static ReplayGate readOptionalFrom(JsonNode report) throws IOException {
+            JsonNode gate = report.get("replay_gate");
+            if (gate == null) {
+                return null;
+            }
+            if (!gate.isObject()) {
+                throw new IOException("replay_gate must be an object");
+            }
+            JsonNode schema = gate.path("schema");
+            if (!schema.isIntegralNumber() || !schema.canConvertToInt() || schema.intValue() != 1) {
+                throw new IOException("Unsupported replay_gate schema");
+            }
+            JsonNode plannedRows = gate.path("planned_trace_rows");
+            if (!plannedRows.isIntegralNumber() || !plannedRows.canConvertToInt()
+                    || plannedRows.intValue() <= 0) {
+                throw new IOException("replay_gate.planned_trace_rows must be a positive integer");
+            }
+            JsonNode completion = gate.path("comparison_gate_reached");
+            if (!completion.isBoolean()) {
+                throw new IOException("replay_gate.comparison_gate_reached must be a boolean");
+            }
+            JsonNode verification = gate.path("verification");
+            if (!verification.isTextual()) {
+                throw new IOException("replay_gate.verification must be a string");
+            }
+            // The report wire form is canonical; the system property's aliases
+            // and defaulting rules in TraceVerificationScope.parse do not apply.
+            TraceVerificationScope scope = switch (verification.textValue()) {
+                case "all" -> TraceVerificationScope.ALL;
+                case "physics" -> TraceVerificationScope.PHYSICS;
+                case "animation" -> TraceVerificationScope.ANIMATION;
+                default -> throw new IOException("Unsupported replay_gate verification: " + verification.textValue());
+            };
+            return new ReplayGate(plannedRows.intValue(), completion.booleanValue(), scope);
+        }
+
+        private void appendTo(ObjectNode report) {
+            ObjectNode gate = report.putObject("replay_gate");
+            gate.put("schema", 1);
+            gate.put("comparison_gate_reached", comparisonGateReached);
+            gate.put("planned_trace_rows", plannedTraceRows);
+            gate.put("verification", verification.name().toLowerCase(Locale.ROOT));
+        }
+    }
+
+    /**
+     * Diagnostic strings from an already computed entry evaluation, without
+     * gameplay values. Presence does not certify an import or full resolution.
+     */
+    public record CarriedEntryDiagnostics(String provenance, List<String> disagreements,
+                                          List<String> unresolved) {
+        public CarriedEntryDiagnostics {
+            disagreements = List.copyOf(disagreements);
+            unresolved = List.copyOf(unresolved);
+        }
+
+        /** Absence is not reported/unknown; present metadata must satisfy this codec. */
+        public static CarriedEntryDiagnostics readOptionalFrom(JsonNode report) throws IOException {
+            JsonNode entry = report.get("carried_entry_diagnostics");
+            if (entry == null) {
+                return null;
+            }
+            if (!entry.isObject()) {
+                throw new IOException("carried_entry_diagnostics must be an object");
+            }
+            JsonNode schema = entry.path("schema");
+            if (!schema.isIntegralNumber() || !schema.canConvertToInt() || schema.intValue() != 1) {
+                throw new IOException("Unsupported carried_entry_diagnostics schema");
+            }
+            JsonNode provenance = entry.get("provenance");
+            if (provenance == null || !provenance.isNull() && !provenance.isTextual()) {
+                throw new IOException("carried_entry_diagnostics.provenance must be a string or null");
+            }
+            return new CarriedEntryDiagnostics(provenance.isNull() ? null : provenance.textValue(),
+                    readStrings(entry, "disagreements"), readStrings(entry, "unresolved"));
+        }
+
+        private static List<String> readStrings(JsonNode entry, String field) throws IOException {
+            JsonNode values = entry.get(field);
+            if (values == null || !values.isArray()) {
+                throw new IOException("carried_entry_diagnostics." + field + " must be an array of strings");
+            }
+            List<String> strings = new ArrayList<>();
+            for (JsonNode value : values) {
+                if (!value.isTextual()) {
+                    throw new IOException("carried_entry_diagnostics." + field + " must contain only strings");
+                }
+                strings.add(value.textValue());
+            }
+            return List.copyOf(strings);
+        }
+
+        private void appendTo(ObjectNode report) {
+            ObjectNode entry = report.putObject("carried_entry_diagnostics");
+            entry.put("schema", 1);
+            entry.put("provenance", provenance);
+            ArrayNode disagreementNotes = entry.putArray("disagreements");
+            disagreements.forEach(disagreementNotes::add);
+            ArrayNode unresolvedNotes = entry.putArray("unresolved");
+            unresolved.forEach(unresolvedNotes::add);
+        }
+    }
 
     private final List<FrameComparison> allComparisons;
     private final List<DivergenceGroup> errors;
@@ -263,6 +380,42 @@ public class DivergenceReport {
     }
 
     public String toJson() {
+        return serialize(null, null).json();
+    }
+
+    /**
+     * Serializes the driver's gate observation without inferring completion from comparisons.
+     * Legacy serialization-error documents retain their gate; malformed error documents still fail.
+     */
+    public String toJson(ReplayGate replayGate) throws IOException {
+        return toJson(replayGate, null);
+    }
+
+    /** Serializes an optional, already computed diagnostic evaluation on this original report. */
+    public String toJson(ReplayGate replayGate, CarriedEntryDiagnostics diagnostics) throws IOException {
+        if (replayGate == null && diagnostics == null) {
+            return toJson();
+        }
+        Serialization result = serialize(replayGate, diagnostics);
+        if (!result.failed() || replayGate == null) {
+            return result.json();
+        }
+        // The writer historically parsed the legacy error document before
+        // attaching the gate. Preserve its malformed-document rejection,
+        // while avoiding that JSON round trip for ordinary reports.
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode error = (ObjectNode) mapper.readTree(result.json());
+        replayGate.appendTo(error);
+        return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(error);
+    }
+
+    private static String serializationErrorJson(Exception failure) {
+        return "{\"error\": \"Failed to serialise report: " + failure.getMessage() + "\"}";
+    }
+
+    private record Serialization(String json, boolean failed) { }
+
+    private Serialization serialize(ReplayGate replayGate, CarriedEntryDiagnostics diagnostics) {
         try {
             ObjectMapper mapper = new ObjectMapper();
             mapper.enable(SerializationFeature.INDENT_OUTPUT);
@@ -273,6 +426,7 @@ public class DivergenceReport {
             root.put("bootstrap_error_count", bootstrapErrorCount());
             root.put("bootstrap_warning_count", bootstrapWarningCount());
             root.put("total_frames", allComparisons.size());
+            appendRecordedFields(root);
             root.put("summary", toCompactSummary());
 
             ObjectNode verificationNode = root.putObject("verification_groups");
@@ -315,10 +469,26 @@ public class DivergenceReport {
                 warningsNode.add(groupToJson(mapper, g));
             }
 
-            return mapper.writeValueAsString(root);
-        } catch (Exception e) {
-            return "{\"error\": \"Failed to serialise report: " + e.getMessage() + "\"}";
+            if (replayGate != null) {
+                replayGate.appendTo(root);
+            }
+            if (diagnostics != null) {
+                diagnostics.appendTo(root);
+            }
+            return new Serialization(mapper.writeValueAsString(root), false);
+        } catch (Exception failure) {
+            return new Serialization(serializationErrorJson(failure), true);
         }
+    }
+
+    /** Retained per-frame results, independent of gate/scope and comparator admission. */
+    private void appendRecordedFields(ObjectNode root) {
+        ArrayNode fields = root.putArray("recorded_fields");
+        allComparisons.stream()
+                .flatMap(comparison -> comparison.fields().keySet().stream())
+                .distinct()
+                .sorted()
+                .forEach(fields::add);
     }
 
     public String getContextWindow(int centreFrame, int radius) {

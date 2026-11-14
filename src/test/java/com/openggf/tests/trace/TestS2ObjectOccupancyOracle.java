@@ -2046,7 +2046,7 @@ public class TestS2ObjectOccupancyOracle {
 
     /**
      * Drives the named S2 level-select trace through the engine (mirroring the
-     * S2 branch of {@code AbstractTraceReplayTest.replayMatchesTrace}) and
+     * general comparison loop in {@code AbstractTraceReplayTest.replayGeneralTrace}) and
      * returns the first non-null result from {@code probe}, or {@code null} when
      * the probe reported no divergence for any replayed frame.
      */

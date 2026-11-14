@@ -462,6 +462,19 @@ explicit KiS2 lock-on image for tier-two assets. This supports isolated
 worktrees without ROM links; a local `config.yaml` alone cannot survive the
 fixture's configuration reset.
 
+Other harnesses querying the runtime catalogue need their own binding. In
+particular, `SceneRomLibrary` discovers inactive games through
+`RomManager.catalogue()`, using reset configuration defaults and `user.dir`,
+rather than the verified test properties. Different working-directory images
+can therefore activate optional chapter checks that return early in another
+worktree without a JUnit skip. Bind the intended images with
+[`RomCatalogueFixture.bind(...)`](../../src/test/java/com/openggf/tests/RomCatalogueFixture.java)
+after the primary fixture boots, and compare effective catalogue availability
+when attributing failures. The
+[matched directory controls](../../docs/architecture/audits/2026-11-06-ai-code-climb.md#c4c9-qualification-and-catalogue-attribution)
+record this distinction. A fork-level `user.dir` diagnostic also changes
+Java-relative fixture lookups; verify those paths and compiled-class ownership.
+
 Build-only commands bypass the shared test scheduler automatically, including its
 resource reservations, priority and serial override:
 

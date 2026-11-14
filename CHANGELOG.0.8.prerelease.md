@@ -791,6 +791,18 @@ under the matching area heading; see the
   incomplete or unknown completion from a completed comparison. Retained raw-field
   diagnostics follow that storage and are exercised on successful test paths.
 
+- **Trace replay diagnosis:** standalone replay method entry retires verified
+  prior evidence for the same invocation and scope before loading the fixture.
+  Replay stopping, release assertions and publication share the verification
+  scope resolved before fixture assembly, and triage selects its first
+  divergence, bootstrap and evidence window from that saved scope while keeping
+  global counts. Triage reports missing auxiliary references and absent
+  comparison coverage without changing the published gate or mismatch totals.
+  Completion metadata has one report-owned value and a strict codec. Reports
+  keep carried-entry provenance and disagreements, and list retained per-frame
+  result fields, separate from completion. Replay guidance routes segment
+  diagnosis through the correct lane, movie and report owners.
+
 - **Fresh-level admission:** named phases expose title completion, initial
   boundary publication and player assembly while preserving their existing
   timing, pause and failure behavior. Creator-controlled native destinations

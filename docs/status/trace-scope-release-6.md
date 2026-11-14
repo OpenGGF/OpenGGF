@@ -1,5 +1,11 @@
 # Trace scope for release 6
 
+This is a historical scope and measurement record. Preserve the recorded numbers;
+use `pom.xml` for current executable profile membership and the
+[diagnosis guide](../guide/contributing/testing.md#diagnose-one-trace-replay) for
+an invocation. The tables below are not a current verdict or a profile-selection
+list; standalone segments and run chains have separate lanes.
+
 ## 2026-08-26 release-closure decision
 
 0.6 no longer requires every known-red in-scope trace to become green before
@@ -111,7 +117,7 @@ those zones.
 | `TestS3kSonicTailsAiz4SegmentTraceReplay` | 963 | 0, `tails_x` (0x7F00 respawn sentinel) |
 | `TestS3kSonicTailsHcz3SegmentTraceReplay` | 640 | 0, `rings` (inventory boundary) |
 | `TestS3kSonicTailsHcz4SegmentTraceReplay` | 447 | 0, `rings` (inventory boundary) |
-| `TestS3kHczCompleteRunTraceReplay` | 2 | 29095, `rings` — **deliberate**, see its javadoc |
+| `TestS3kHczZoneSliceTraceReplay` | 2 | 29095, `rings` — **deliberate**, see its javadoc |
 
 Green and protected: `TestS3kSonicTailsAizSegmentTraceReplay`,
 `TestS3kSonicTailsHczSegmentTraceReplay`.
@@ -164,7 +170,7 @@ it `trace-scope-r7` if its zone has been converted.
 Run them with:
 
 ```bash
-mvn -Ptrace-replay-r7 test        # out-of-scope traces only
+python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay-r7 test
 ```
 
 **Nothing is deleted, weakened or made advisory.** These classes still run, still assert
