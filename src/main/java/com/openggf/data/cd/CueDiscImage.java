@@ -30,7 +30,7 @@ import java.util.regex.Pattern;
  * @see <a href="https://ecma-international.org/wp-content/uploads/ECMA-130_2nd_edition_june_1996.pdf">ECMA-130</a>
  * @see <a href="https://libcdio.github.io/libcdio.html">GNU libcdio, Track pre-gaps</a>
  */
-public final class CueDiscImage implements AutoCloseable {
+public final class CueDiscImage implements DiscImage {
     public static final int MAX_READ_BYTES = 16 * 1024 * 1024;
     private static final int MAX_CUE_BYTES = 1024 * 1024;
     private static final Pattern FILE = Pattern.compile("FILE\\s+(?:\"([^\"]+)\"|(\\S+))\\s+BINARY");
@@ -301,6 +301,7 @@ public final class CueDiscImage implements AutoCloseable {
         return Math.addExact(Math.multiplyExact(minutes, 4500L), seconds * 75L + frames);
     }
 
+    @Override
     public List<DiscTrack> tracks() {
         return tracks;
     }
@@ -309,6 +310,21 @@ public final class CueDiscImage implements AutoCloseable {
     public synchronized Path cuePath() throws IOException {
         checkOpen();
         return cuePath;
+    }
+
+    @Override
+    public Path descriptorPath() throws IOException {
+        return cuePath();
+    }
+
+    @Override
+    public byte[] readDescriptorBytes() throws IOException {
+        return readCueBytes();
+    }
+
+    @Override
+    public void requireDescriptor(Path descriptor) throws IOException {
+        requireCue(descriptor);
     }
 
     /** Exact bounded bytes parsed at open, detached from this owner's copy. */
@@ -326,6 +342,7 @@ public final class CueDiscImage implements AutoCloseable {
     }
 
     /** Whole BINARY files in declaration order, including bytes outside a track's program area. */
+    @Override
     public synchronized List<SourceFile> sourceFiles() throws IOException {
         checkOpen();
         for (Source source : sources) {
@@ -335,16 +352,17 @@ public final class CueDiscImage implements AutoCloseable {
     }
 
     /** An immutable source binding whose bounded reads share this disc's lifecycle and retained channel. */
-    public final class SourceFile {
+    public final class SourceFile implements DiscImage.SourceFile {
         private final Source source;
 
         private SourceFile(Source source) {
             this.source = source;
         }
 
-        public Path path() { return source.path; }
-        public long bytes() { return source.stamp.size(); }
+        @Override public Path path() { return source.path; }
+        @Override public long bytes() { return source.stamp.size(); }
 
+        @Override
         public byte[] read(long offset, int length) throws IOException {
             synchronized (CueDiscImage.this) {
                 checkRange(offset, length, bytes());
@@ -357,6 +375,7 @@ public final class CueDiscImage implements AutoCloseable {
         }
     }
 
+    @Override
     public DiscTrack track(int number) {
         return tracks.get(trackIndex(number));
     }
@@ -370,6 +389,7 @@ public final class CueDiscImage implements AutoCloseable {
     }
 
     /** Reads INDEX01-relative program bytes, stripping raw MODE1 sync/header/ECC bytes. */
+    @Override
     public synchronized byte[] readMode1Bytes(int number, long byteOffset, int length) throws IOException {
         DiscTrack track = track(number);
         if (!track.mode().isMode1()) {
@@ -397,6 +417,7 @@ public final class CueDiscImage implements AutoCloseable {
     }
 
     /** Returns CDDA bytes unchanged, in stored order. Negative frames address the pregap. */
+    @Override
     public synchronized byte[] readAudioFrames(int number, long firstFrame, int frameCount) throws IOException {
         if (track(number).mode() != DiscTrack.Mode.AUDIO) {
             throw new IllegalArgumentException("Track is not AUDIO");
@@ -405,6 +426,7 @@ public final class CueDiscImage implements AutoCloseable {
     }
 
     /** Returns stored frames. Synthetic AUDIO pregaps are silence; raw data gaps are not invented. */
+    @Override
     public synchronized byte[] readRawFrames(int number, long firstFrame, int frameCount) throws IOException {
         DiscTrack track = track(number);
         if (frameCount < 0 || frameCount > MAX_READ_BYTES / track.mode().frameBytes()
@@ -446,7 +468,8 @@ public final class CueDiscImage implements AutoCloseable {
         }
     }
 
-    synchronized void checkTrack(int number) throws IOException {
+    @Override
+    public synchronized void checkTrack(int number) throws IOException {
         checkedSource(number);
     }
 

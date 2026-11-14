@@ -636,6 +636,20 @@
       "note": "Explicit retained-heap benchmark; -Dopenggf.trace.segmentDescriptorBenchmark=true."
     },
     {
+      "match": "com.openggf.game.soniccd.media.TestSonicCdChdMedia#everyUsaChdHasTheBinCueObservationAndMatchesTheUsaRecord",
+      "category": "opt-in-gate",
+      "evidence": "src/test/java/com/openggf/game/soniccd/media/TestSonicCdChdMedia.java:35",
+      "allowed_when_absent": null,
+      "note": "-Dsoniccd.chd.root (USA CHDs made by the user with chdman) with -Dsoniccd.media.root"
+    },
+    {
+      "match": "com.openggf.game.soniccd.media.TestSonicCdChdMedia#theLauncherFindsAndOpensAUsaChdNamedByTheKeyOrInTheRomFolder",
+      "category": "opt-in-gate",
+      "evidence": "src/test/java/com/openggf/game/soniccd/media/TestSonicCdChdMedia.java:54",
+      "allowed_when_absent": null,
+      "note": "-Dsoniccd.chd.root (USA CHDs made by the user with chdman) with -Dsoniccd.media.root"
+    },
+    {
       "match": "com.openggf.data.cd.TestSonicCdDiscMedia#readsRegionalDirectoriesDataAndAudioWithoutLoadingVideos(String)[1]",
       "category": "optional-fixture",
       "evidence": "src/test/java/com/openggf/data/cd/TestSonicCdDiscMedia.java:24",

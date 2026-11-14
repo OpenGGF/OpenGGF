@@ -8,8 +8,8 @@ matching area heading; see the
 ## Gameplay and presentation
 
 - **Sonic CD (development preview):** Sonic CD runs from the user's own USA
-  disc image (a cue sheet and its tracks, named by `roms.soniccd` or found in
-  the ROM folder) as
+  disc image (a cue sheet and its tracks, or a lossless CHD made from them with
+  MAME's chdman, named by `roms.soniccd` or found in the ROM folder) as
   a stock game module on the shared engine. Nothing from the disc is in the
   repository. All 70 stage programs load: seven zones; acts 1 and 2 in the
   Present, Past, Good Future and Bad Future; act 3 in both futures. Each zone
@@ -21,7 +21,12 @@ matching area heading; see the
   backup RAM (saved in `saves/soniccd`), the opening video, both endings, FM
   effects, CD audio and PCM sound are hosted. The master
   title lists it when the disc is configured or found (`roms.default: scd` boots
-  it directly) and verifies it against the USA release before starting. Not
+  it directly) and verifies it against the USA release before starting. A CHD
+  is verified by the same content fingerprint as a BIN/CUE set, so it is
+  accepted exactly when its decoded tracks equal the Redump set; the reader is
+  pure Java (CHD v5; `cdzl`, `cdlz`, `cdfl` and `cdzs` hunks or uncompressed;
+  hunk CRCs and the header SHA-1s checked) and refuses delta, older-version
+  and non-CD CHDs by name. Not
   included: Visual Mode, D.A. Garden, the pencil test, Thank You,
   Comin' Soon, attract demos, the backup RAM manager, and the Japanese and
   European releases. Disc audio, video songs and PCM sound follow the music

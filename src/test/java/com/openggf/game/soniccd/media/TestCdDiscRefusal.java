@@ -67,7 +67,7 @@ class TestCdDiscRefusal {
 
     @Test void theUsaDiscIsFoundAmongOtherReleasesAndAnotherReleaseFailsTheWholeDiscCheck() throws Exception {
         var found = CdDiscLocator.locate(romFolder(Path.of(mediaRoot)));
-        assertEquals(usa.toRealPath(), found.cue().orElseThrow().toRealPath(), "the USA sheet, by header, among three discs");
+        assertEquals(usa.toRealPath(), found.disc().orElseThrow().toRealPath(), "the USA sheet, by header, among three discs");
         try (var launch = new HostedMediaLaunch()) {
             var opened = launch.open(GameId.SCD, romFolder(Path.of(mediaRoot)), dir.resolve("saves"));
             assertEquals(GameId.SCD, opened.module().getGameId());
@@ -81,11 +81,11 @@ class TestCdDiscRefusal {
         // roms.soniccd set: that sheet, even with the ROM folder pointing elsewhere.
         var config = romFolder(dir);
         config.setConfigValue(SonicConfiguration.SONIC_CD_DISC, usa.toString());
-        assertEquals(usa.toRealPath(), CdDiscLocator.locate(config).cue().orElseThrow().toRealPath());
+        assertEquals(usa.toRealPath(), CdDiscLocator.locate(config).disc().orElseThrow().toRealPath());
         // Blank: the folder search under roms.directory.
         config = romFolder(Path.of(mediaRoot));
         config.setConfigValue(SonicConfiguration.SONIC_CD_DISC, "");
-        assertEquals(usa.toRealPath(), CdDiscLocator.locate(config).cue().orElseThrow().toRealPath());
+        assertEquals(usa.toRealPath(), CdDiscLocator.locate(config).disc().orElseThrow().toRealPath());
     }
 
     @Test void aKeyNamingAnotherReleaseIsRefusedWithTheSameMessageAndNotReplacedByTheSearch() {
@@ -104,6 +104,6 @@ class TestCdDiscRefusal {
         var config = romFolder(dir);
         config.setConfigValue(SonicConfiguration.SONIC_CD_DISC, europe.toString());
         System.setProperty(CdHostedMedia.MEDIA_ROOT_PROPERTY, mediaRoot);
-        assertEquals(usa.toRealPath(), CdDiscLocator.locate(config).cue().orElseThrow().toRealPath());
+        assertEquals(usa.toRealPath(), CdDiscLocator.locate(config).disc().orElseThrow().toRealPath());
     }
 }
