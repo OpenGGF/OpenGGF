@@ -202,6 +202,29 @@ public final class RewindRegistry {
         }
     }
 
+    private boolean presentationProbeRestore;
+
+    /**
+     * Restores a snapshot taken immediately before a presentation-only probe (the NATIVE
+     * widescreen dormant-object bake). Derived-state callbacks run as for any restore;
+     * host callbacks that treat a restore as a user rewind can consult
+     * {@link #isPresentationProbeRestore()} and skip their scheduling side effects.
+     */
+    void restoreAfterPresentationProbe(CompositeSnapshot cs) {
+        boolean previous = presentationProbeRestore;
+        presentationProbeRestore = true;
+        try {
+            restore(cs);
+        } finally {
+            presentationProbeRestore = previous;
+        }
+    }
+
+    /** True while {@link #restoreAfterPresentationProbe(CompositeSnapshot)} runs its restore. */
+    boolean isPresentationProbeRestore() {
+        return presentationProbeRestore;
+    }
+
     public void restore(CompositeSnapshot cs) {
         Objects.requireNonNull(cs, "cs");
         requireSnapshotBoundary();

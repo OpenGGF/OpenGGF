@@ -2835,6 +2835,8 @@ FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openg
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration UP
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration VERSION
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration WIDESCREEN_DEADZONE_MODE
+FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration WIDESCREEN_DORMANT_STYLE
+FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration WIDESCREEN_DRAW_MODE
 FIELD com.openggf.control.ButtonPrompts$Button public,static,final com.openggf.control.ButtonPrompts$Button A
 FIELD com.openggf.control.ButtonPrompts$Button public,static,final com.openggf.control.ButtonPrompts$Button B
 FIELD com.openggf.control.ButtonPrompts$Button public,static,final com.openggf.control.ButtonPrompts$Button C

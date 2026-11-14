@@ -1,5 +1,6 @@
 package com.openggf;
 
+import com.openggf.game.rewind.RewindPresentationProbeAccess;
 import com.openggf.architecture.CompositionRoot;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.EngineServices;
@@ -3073,6 +3074,8 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			if (schedulingRegistry != null) schedulingRegistry.deregisterPostRestoreCallback("live-scheduling");
 			schedulingRegistry = registry;
 			if (registry != null) registry.registerPostRestoreCallback("live-scheduling", () -> {
+				// A presentation probe rolls back its own work; it is not a user rewind.
+				if (RewindPresentationProbeAccess.isProbeRestore(registry)) return;
 				// Reverse selection is itself the scheduled service. Its internal restores
 				// must not restart the reverse-service clock on every selected picture.
 				if (!audioManager.isReverseAudioOutputActive()) restoreEpoch++;

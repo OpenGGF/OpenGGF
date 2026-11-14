@@ -77,6 +77,10 @@ public final class GameplayCaptureSession implements AutoCloseable {
         SonicConfigurationService config = GameServices.configuration();
         config.clearSessionOverrides();
         config.setSessionOverride(SonicConfiguration.DISPLAY_ASPECT, aspect.name());
+        config.setSessionOverride(SonicConfiguration.WIDESCREEN_DRAW_MODE,
+                settings.drawMode() == null ? "EDGE" : settings.drawMode());
+        config.setSessionOverride(SonicConfiguration.WIDESCREEN_DORMANT_STYLE,
+                settings.dormantStyle() == null ? "GREYSCALE" : settings.dormantStyle());
         config.setSessionOverride(SonicConfiguration.DISPLAY_WINDOW_AUTOSIZE, false);
         config.setSessionOverride(SonicConfiguration.SCREEN_WIDTH, settings.width());
         config.setSessionOverride(SonicConfiguration.SCREEN_HEIGHT, HEIGHT);
@@ -829,7 +833,18 @@ public final class GameplayCaptureSession implements AutoCloseable {
                            Path donorRom, Integer startX, Integer startY, String emeraldStates,
                            boolean showTitleCard, boolean completeSpecialStage, Integer vIntRunCount,
                            Integer cameraXSub, boolean starPost, Integer rings, boolean reverseGravity,
-                           boolean endOfLevel) {
+                           boolean endOfLevel, String drawMode, String dormantStyle) {
+        /** Pinned EDGE widescreen draw mode: a user's own preference never changes a capture. */
+        public Settings(int width, String mainCharacter, String sidekickCharacter, String donor,
+                        Path donorRom, Integer startX, Integer startY, String emeraldStates,
+                        boolean showTitleCard, boolean completeSpecialStage, Integer vIntRunCount,
+                        Integer cameraXSub, boolean starPost, Integer rings, boolean reverseGravity,
+                        boolean endOfLevel) {
+            this(width, mainCharacter, sidekickCharacter, donor, donorRom, startX, startY, emeraldStates,
+                    showTitleCard, completeSpecialStage, vIntRunCount, cameraXSub, starPost, rings, reverseGravity,
+                    endOfLevel, "EDGE", "GREYSCALE");
+        }
+
         public Settings(int width, String mainCharacter, String sidekickCharacter, String donor,
                         Path donorRom, Integer startX, Integer startY, String emeraldStates,
                         boolean showTitleCard, boolean completeSpecialStage, Integer vIntRunCount,

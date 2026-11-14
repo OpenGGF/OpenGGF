@@ -589,47 +589,52 @@ public class TitleScreenDataLoader {
             graphicsManager.cachePaletteTexture(emblemPalette, 3);
         }
 
-        // Cache background patterns
+        // Cache background patterns: one atlas flush for the screen's art.
         int cachedCount = 0;
-        for (int i = 0; i < titlePatterns.length; i++) {
-            if (titlePatterns[i] != null) {
-                graphicsManager.cachePatternTexture(titlePatterns[i], PATTERN_BASE + i);
-                cachedCount++;
-            }
-        }
-
-        // Cache the standard font at its title-screen VRAM slot so the Plane A
-        // copyright words (ArtTile_ArtNem_FontStuff_TtlScr + chr) resolve.
-        if (fontPatterns != null) {
-            for (int i = 0; i < fontPatterns.length; i++) {
-                if (fontPatterns[i] != null) {
-                    graphicsManager.cachePatternTexture(fontPatterns[i],
-                            PATTERN_BASE + Sonic2Constants.ART_TILE_FONT_STUFF_TITLE_SCREEN + i);
-                }
-            }
-        }
-
-        // Cache sprite patterns
         int spriteCachedCount = 0;
-        if (spritePatterns != null) {
-            for (int i = 0; i < spritePatterns.length; i++) {
-                if (spritePatterns[i] != null) {
-                    graphicsManager.cachePatternTexture(spritePatterns[i], SPRITE_PATTERN_BASE + i);
-                    spriteCachedCount++;
+        graphicsManager.beginPatternAtlasBatch();
+        try {
+            for (int i = 0; i < titlePatterns.length; i++) {
+                if (titlePatterns[i] != null) {
+                    graphicsManager.cachePatternTexture(titlePatterns[i], PATTERN_BASE + i);
+                    cachedCount++;
                 }
             }
-        }
 
-        if (menuPlayerPatterns != null) {
-            for (int i = 0; i < menuPlayerPatterns.length; i++) {
-                graphicsManager.cachePatternTexture(menuPlayerPatterns[i], PATTERN_BASE + 0x402 + i);
+            // Cache the standard font at its title-screen VRAM slot so the Plane A
+            // copyright words (ArtTile_ArtNem_FontStuff_TtlScr + chr) resolve.
+            if (fontPatterns != null) {
+                for (int i = 0; i < fontPatterns.length; i++) {
+                    if (fontPatterns[i] != null) {
+                        graphicsManager.cachePatternTexture(fontPatterns[i],
+                                PATTERN_BASE + Sonic2Constants.ART_TILE_FONT_STUFF_TITLE_SCREEN + i);
+                    }
+                }
             }
-        }
-        // MenuJunk already resides in the title sprite sheet. Obj0F instead uses native tiles.
-        if (spritePatterns != null) {
-            for (int i = 0; i < 10 && 0x2A2 + i < spritePatterns.length; i++) {
-                graphicsManager.cachePatternTexture(spritePatterns[0x2A2 + i], PATTERN_BASE + 0x3F2 + i);
+
+            // Cache sprite patterns
+            if (spritePatterns != null) {
+                for (int i = 0; i < spritePatterns.length; i++) {
+                    if (spritePatterns[i] != null) {
+                        graphicsManager.cachePatternTexture(spritePatterns[i], SPRITE_PATTERN_BASE + i);
+                        spriteCachedCount++;
+                    }
+                }
             }
+
+            if (menuPlayerPatterns != null) {
+                for (int i = 0; i < menuPlayerPatterns.length; i++) {
+                    graphicsManager.cachePatternTexture(menuPlayerPatterns[i], PATTERN_BASE + 0x402 + i);
+                }
+            }
+            // MenuJunk already resides in the title sprite sheet. Obj0F instead uses native tiles.
+            if (spritePatterns != null) {
+                for (int i = 0; i < 10 && 0x2A2 + i < spritePatterns.length; i++) {
+                    graphicsManager.cachePatternTexture(spritePatterns[0x2A2 + i], PATTERN_BASE + 0x3F2 + i);
+                }
+            }
+        } finally {
+            graphicsManager.endPatternAtlasBatch();
         }
 
         LOGGER.info("Cached " + cachedCount + " background + " + spriteCachedCount + " sprite patterns to GPU");

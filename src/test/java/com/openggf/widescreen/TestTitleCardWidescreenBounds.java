@@ -55,56 +55,65 @@ class TestTitleCardWidescreenBounds {
     }
 
     @Test
-    void s3kManagerRetiresAnElementAgainstTheLiveViewport() throws Exception {
+    void s3kManagerRetiresAnElementAgainstTheGameplayScreen() throws Exception {
         GraphicsManager graphics = GameServices.graphics();
         int previousWidth = graphics.getProjectionWidth();
         try {
             graphics.setProjectionWidth(320);
-            Sonic3kTitleCardManager nativeManager = stagedExitManager(500);
+            Sonic3kTitleCardManager nativeManager = stagedExitManager(500, 320);
             nativeManager.update();
             assertTrue(elementOutside(nativeManager, 1),
                     "the element is outside the native viewport after its first exit step");
 
+            // EDGE widescreen: the gameplay camera itself is wide.
             graphics.setProjectionWidth(528);
-            Sonic3kTitleCardManager wideManager = stagedExitManager(500);
+            Sonic3kTitleCardManager wideManager = stagedExitManager(500, 528);
             wideManager.update();
             assertFalse(elementOutside(wideManager, 1),
-                    "the same element remains visible inside the live wide viewport");
+                    "the same element remains on a wide gameplay screen");
             wideManager.update();
             assertTrue(elementOutside(wideManager, 1),
-                    "the element retires only after its rendered wide bound clears");
+                    "the element retires only after its bound clears the wide gameplay screen");
+
+            // NATIVE draw mode / recorded-run capture: only the picture is wide.
+            Sonic3kTitleCardManager widePicture = stagedExitManager(500, 320);
+            widePicture.update();
+            assertTrue(elementOutside(widePicture, 1),
+                    "a wider picture alone never delays retirement");
         } finally {
             graphics.setProjectionWidth(previousWidth);
         }
     }
 
     @Test
-    void s3kTeardownCompletesLaterAtTheLiveWideViewport() {
+    void s3kTeardownFollowsTheGameplayScreenNotThePicture() {
         GraphicsManager graphics = GameServices.graphics();
         int previousWidth = graphics.getProjectionWidth();
         try {
-            graphics.setProjectionWidth(320);
-            Sonic3kTitleCardTeardownModel nativeModel = new Sonic3kTitleCardTeardownModel();
-            while (!nativeModel.isComplete()) {
-                nativeModel.tick();
-            }
-
+            assertEquals(35, completedTicks(() -> 320));
+            assertEquals(36, completedTicks(() -> 352));
+            assertEquals(37, completedTicks(() -> 400));
+            assertEquals(39, completedTicks(() -> 528),
+                    "a wide gameplay screen (EDGE) waits for its right edge before LoadEnemyArt");
+            // Without a gameplay runtime the default reads the native screen, whatever the picture.
             graphics.setProjectionWidth(528);
-            Sonic3kTitleCardTeardownModel wideModel = new Sonic3kTitleCardTeardownModel();
-            while (!wideModel.isComplete()) {
-                wideModel.tick();
-            }
-
-            assertEquals(35, nativeModel.ticksElapsed());
-            assertEquals(39, wideModel.ticksElapsed(),
-                    "wide teardown must wait for the live right edge before owner release");
+            Sonic3kTitleCardTeardownModel picture = new Sonic3kTitleCardTeardownModel();
+            while (!picture.isComplete()) picture.tick();
+            assertEquals(35, picture.ticksElapsed(), "a wider picture alone never delays LoadEnemyArt");
         } finally {
             graphics.setProjectionWidth(previousWidth);
         }
     }
 
-    private static Sonic3kTitleCardManager stagedExitManager(int elementX) throws Exception {
+    private static int completedTicks(java.util.function.IntSupplier screenWidth) {
+        Sonic3kTitleCardTeardownModel model = new Sonic3kTitleCardTeardownModel(screenWidth);
+        while (!model.isComplete()) model.tick();
+        return model.ticksElapsed();
+    }
+
+    private static Sonic3kTitleCardManager stagedExitManager(int elementX, int gameplayWidth) throws Exception {
         Sonic3kTitleCardManager manager = new Sonic3kTitleCardManager();
+        setField(manager, "gameplayScreenWidth", (java.util.function.IntSupplier) () -> gameplayWidth);
         setField(manager, "state", Sonic3kTitleCardState.EXIT);
         setField(manager, "phaseCounter", 100);
         setField(manager, "actNumberVisible", true);

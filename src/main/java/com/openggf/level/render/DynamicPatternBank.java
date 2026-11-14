@@ -40,8 +40,13 @@ public class DynamicPatternBank {
             return;
         }
         this.graphicsManager = graphicsManager;
-        for (int i = 0; i < patterns.length; i++) {
-            graphicsManager.cachePatternTexture(patterns[i], basePatternIndex + i);
+        graphicsManager.beginPatternAtlasBatch();
+        try {
+            for (int i = 0; i < patterns.length; i++) {
+                graphicsManager.cachePatternTexture(patterns[i], basePatternIndex + i);
+            }
+        } finally {
+            graphicsManager.endPatternAtlasBatch();
         }
         cached = true;
     }

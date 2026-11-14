@@ -75,6 +75,10 @@ public class Sonic3kTitleCardManager
      * Returns the configured viewport width in game pixels.
      * At native 320 equals SCREEN_WIDTH exactly (xOffset == 0 — byte-identical).
      */
+    /** Gameplay screen width for element retirement; a wider picture never changes it. */
+    private java.util.function.IntSupplier gameplayScreenWidth =
+            com.openggf.camera.CameraPresentationAccess::simulationScreenWidth;
+
     private int viewportWidth() {
         try {
             int w = GameServices.graphics().getProjectionWidth();
@@ -1678,9 +1682,10 @@ public class Sonic3kTitleCardManager
             return elemY[idx] + BANNER_RENDER_HEIGHT < 0;
         }
         int renderWidth = bonusMode ? 0x80 : ELEMENT_RENDER_WIDTH[idx];
-        // Elements are authored in native 320-space and rendered at xOffset().
-        // Retire them only after the rendered bound clears the live viewport.
-        return elemX[idx] + xOffset() - renderWidth >= viewportWidth();
+        // Elements are authored in native 320-space. Retirement is gameplay timing, so it
+        // uses the gameplay screen width (centred the same way), never a wider picture.
+        int screen = Math.max(SCREEN_WIDTH, gameplayScreenWidth.getAsInt());
+        return elemX[idx] + (screen - SCREEN_WIDTH) / 2 - renderWidth >= screen;
     }
 
     /** Slides an element toward its target or outward until its render bounds leave the screen. */
@@ -1891,10 +1896,15 @@ public class Sonic3kTitleCardManager
         GraphicsManager gm = GameServices.graphics();
         if (gm == null) return;
 
-        for (int i = 0; i < combinedPatterns.length; i++) {
-            if (combinedPatterns[i] != null) {
-                gm.cachePatternTexture(combinedPatterns[i], PATTERN_BASE + i);
+        gm.beginPatternAtlasBatch();
+        try {
+            for (int i = 0; i < combinedPatterns.length; i++) {
+                if (combinedPatterns[i] != null) {
+                    gm.cachePatternTexture(combinedPatterns[i], PATTERN_BASE + i);
+                }
             }
+        } finally {
+            gm.endPatternAtlasBatch();
         }
         artCached = true;
     }

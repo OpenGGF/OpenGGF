@@ -104,6 +104,10 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	private AbstractPlayableSprite focusedSprite;
 
 	private short width;
+	// Display width the renderer draws. Equals width except in NATIVE widescreen
+	// draw mode, where width is the native 320 simulation window and the display
+	// adds a presentation-only inset on each side.
+	private short presentationWidth;
 	private short height;
 	private DeadzoneMode deadzoneMode = DeadzoneMode.PROPORTIONAL;
 
@@ -169,7 +173,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	}
 
 	public Camera(SonicConfigurationService configService) {
-		width = configService.getShort(SonicConfiguration.SCREEN_WIDTH_PIXELS);
+		applyViewportWidths(configService);
 		height = configService.getShort(SonicConfiguration.SCREEN_HEIGHT_PIXELS);
 		deadzoneMode = DeadzoneMode.parse(
 				configService.getString(SonicConfiguration.WIDESCREEN_DEADZONE_MODE));
@@ -177,7 +181,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 
     /** Applies a module-selected viewport before loading its destination course. */
     public void refreshViewportDimensions(SonicConfigurationService config) {
-        width = config.getShort(SonicConfiguration.SCREEN_WIDTH_PIXELS);
+        applyViewportWidths(config);
         height = config.getShort(SonicConfiguration.SCREEN_HEIGHT_PIXELS);
         deadzoneMode = DeadzoneMode.parse(config.getString(SonicConfiguration.WIDESCREEN_DEADZONE_MODE));
     }
@@ -1094,8 +1098,76 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		return (short) (renderCopyY + shakeOffsetY);
 	}
 
+	/** Simulation viewport width: the window gameplay, placement and on-screen tests use. */
 	public short getWidth() {
 		return width;
+	}
+
+	/** NATIVE widescreen draw mode: the picture is wider than the simulation window. */
+	boolean hasPresentationMargin() {
+		return presentationWidth > width;
+	}
+
+	/** Display width the renderer draws; at least {@link #getWidth()}. */
+	short getPresentationWidth() {
+		return presentationWidth;
+	}
+
+	/**
+	 * Presentation-only pixels drawn left of the simulation window (0 unless NATIVE
+	 * widescreen). The picture is centred on the native window, then slid so it stays
+	 * inside the world the ROM camera bounds can show, {@code [minX, maxX + width)}; a
+	 * range narrower than the picture (a locked arena) centres on that range instead.
+	 * The native window always stays inside the picture.
+	 */
+	int getPresentationInset() {
+		int extra = presentationWidth - width;
+		if (extra <= 0) return 0;
+		int left = x - extra / 2;
+		if (minX <= maxX) {
+			int lowest = minX, highest = maxX + width - presentationWidth;
+			left = lowest <= highest ? Math.clamp(left, lowest, highest)
+					: NativeViewportFraming.centeredNativeLeft(minX, maxX) - extra / 2;
+		}
+		return x - Math.clamp(left, x - extra, x);
+	}
+
+	/** Left edge of the drawn picture, including shake. */
+	short getPresentationXWithShake() {
+		return (short) (getXWithShake() - getPresentationInset());
+	}
+
+	/**
+	 * A detached copy whose simulation window is the drawn picture: its X is the
+	 * presentation left edge and its width the display width. Renderers draw through
+	 * it; it is never used for gameplay and has no presentation inset of its own.
+	 */
+	Camera presentationProjection() {
+		Camera projection = new Camera(presentationWidth, height);
+		projection.width = presentationWidth;
+		projection.presentationWidth = presentationWidth;
+		projection.height = height;
+		projection.deadzoneMode = deadzoneMode;
+		projection.restoreValues(capture());
+		projection.focusedSprite = focusedSprite;
+		int inset = getPresentationInset();
+		projection.x = (short) (x - inset);
+		projection.renderCopyX = (short) (renderCopyX - inset);
+		return projection;
+	}
+
+	private void applyViewportWidths(SonicConfigurationService config) {
+		presentationWidth = config.getShort(SonicConfiguration.SCREEN_WIDTH_PIXELS);
+		width = (short) com.openggf.configuration.SimulationViewport.width(presentationWidth,
+				com.openggf.configuration.WidescreenDrawMode.parse(
+						config.getString(SonicConfiguration.WIDESCREEN_DRAW_MODE)));
+		if (presentationWidth < width) presentationWidth = width;
+	}
+
+	private Camera(short width, short height) {
+		this.width = width;
+		this.presentationWidth = width;
+		this.height = height;
 	}
 
 	public short getHeight() {

@@ -7,24 +7,43 @@ under the matching area heading; see the
 
 ## Gameplay and presentation
 
+- **Widescreen that plays like the original:** a new setting,
+  `display.widescreenDrawMode`, chooses how a wide screen plays. `EDGE`, the default,
+  is the existing behaviour: objects wake up across the whole wide screen, so a 16:9
+  game plays a little differently from a 4:3 one. `NATIVE` keeps the game itself on
+  the original 320-pixel screen and draws the extra width as scenery, so every screen
+  size plays exactly the same game. That makes widescreen fair for time attack, races
+  and shared replays. Objects in the extra width that the original game has not woken
+  up yet are drawn frozen where they start, in greyscale by default
+  (`display.widescreenDormantStyle`: `GREYSCALE`, `NORMAL` or `HIDDEN`). They come to
+  life when the original screen reaches them and freeze again when it leaves them,
+  unless they were destroyed for good. Rings work the same way: uncollected rings
+  waiting in the extra width sit still, and rings you have collected stay gone. Title
+  cards and results screens time their exits from the game's own screen rather than the
+  picture, so a wider picture never delays the next act or the enemies' art. That also
+  lets recorded Sonic 3 & Knuckles runs be filmed wider than 320: Hydrocity and Marble
+  Garden used to stop with a full KosM queue. Tests run Sonic 1, Sonic 2 and Sonic 3 &
+  Knuckles at 32:9 and 4:3 with the same input and check that the game state matches on every
+  frame. The capture tool gained `--draw-mode` and `--dormant-style`; both are pinned so
+  a personal setting never changes a capture.
+
 - **Crash page:** an engine fault during play or on a menu no longer closes
   OpenGGF. The game that failed is torn down to the game shelf and a crash page
-  opens over it, with a MICA gag for the kind of fault (tangled in rewind tape,
-  teetering where a level failed to load, or holding a bomb), the Atari ST style
-  row of bombs, the exact error and where it was raised. The full report is saved
-  to `crash-reports/`. **Report on GitHub** opens a pre-filled issue form (new
+  opens over it, with a MICA gag for the kind of fault (holding the bomb, an
+  Atari ST homage; tangled in cassette tape after a rewind fault; teetering over
+  missing ground when a level fails to load), a row of bombs, the exact error
+  and where it was raised. The full report is saved to `crash-reports/`.
+  **Report on GitHub** opens a pre-filled issue form (new
   `.github/ISSUE_TEMPLATE/crash.yml`) that the player reviews and submits
   themselves, with the home folder written as `~` and the trace shortened to fit
   the link; **Copy report**, **Details** and **Return to games** cover the rest.
-  The failed work is never resumed, and a second fault, a failed teardown,
-  tests and headless tools still rethrow; `-Dopenggf.crash.rethrow=true` restores
-  the old behaviour. Each fault type has its own MICA gag: holding the bomb (an
-  Atari ST homage), tangled in cassette tape after a rewind fault, and teetering
-  over missing ground when a level fails to load. The pictures are reduced from
-  generated drawings by `tools/modding/crash_screen_art/reduce.py`. Choosing the
-  picture, or the details key, swaps it for a QR code of the issue form with a
-  title naming the error, for reporting from another device (Project Nayuki's
-  MIT-licensed `qrcodegen`, listed in `NOTICE.md`).
+  Choosing the picture, or the details key, swaps it for a QR code of the issue
+  form with a title naming the error, for reporting from another device (Project
+  Nayuki's MIT-licensed `qrcodegen`, listed in `NOTICE.md`). The failed work is
+  never resumed, and a second fault, a failed teardown, tests and headless tools
+  still rethrow; `-Dopenggf.crash.rethrow=true` restores the old behaviour. The
+  pictures are reduced from generated drawings by
+  `tools/modding/crash_screen_art/reduce.py`.
 
 - **Lava Reef 1 frame hitches:** two stutters on the Lava Reef Act 1 route are
   gone. When the rock crusher opens the floor, the engine rebuilt the whole
@@ -78,7 +97,13 @@ under the matching area heading; see the
   through a pixel buffer that the GPU copies from, so the frame carries on. Over
   twelve runs per side on the integrated GPU, uploads slower than 16.7 ms after
   the level had loaded went from seven (worst 701 ms) to none (worst 8 ms); the
-  discrete GPU was already below 12 ms. Waits while a level loads remain. Each
+  discrete GPU was already below 12 ms. Loading object, HUD, player, title-card,
+  special-stage and title-screen art, and Sonic 1 and 2 animated tiles, still sent
+  each 8x8 tile through the buffer on its own: about 7,500 uploads per Sandopolis
+  respawn, one of which waited 83 ms on the integrated GPU and up to 278 ms on the
+  discrete GPU at a special stage entry. That art is now written in one batch per
+  set-up step, so a respawn makes about five uploads for it, taking well under a
+  millisecond. Level tiles are still uploaded one at a time while a level loads. Each
   art upload also stopped allocating a version record and a boxed tile number,
   about 16% of Angel Island's per-frame allocation. Pixels are unchanged.
 
