@@ -64,6 +64,11 @@ import java.util.List;
  * <p>{@code --verify} runs the same bootstrap + drive headlessly with NO GL
  * capture and prints the player rings + camera_x at requested trace frames, so
  * trace-faithfulness can be confirmed before a full capture.
+ *
+ * <p>The capture records music and sound effects at full level whatever volumes
+ * the player saved. {@code --no-music} silences the music and keeps the sound
+ * effects: a sound-effects stem of the recorded run, for a film that lays its
+ * own music over the footage. The picture is the same either way.
  */
 public final class TraceCaptureTool {
 
@@ -83,12 +88,20 @@ public final class TraceCaptureTool {
      */
     public record Args(String trace, Path outDir, int width, int scale, int fps, String codec,
                        boolean showGhosts, int[] verifyFrames,
-                       String clip, int tailFrames, boolean nativeSpriteLimits) {
+                       String clip, int tailFrames, boolean nativeSpriteLimits, boolean noMusic) {
 
         /** Without a sprite-limit choice: native dropout stays on for ROM image comparison. */
         public Args(String trace, Path outDir, int width, int scale, int fps, String codec,
                     boolean showGhosts, int[] verifyFrames, String clip, int tailFrames) {
             this(trace, outDir, width, scale, fps, codec, showGhosts, verifyFrames, clip, tailFrames, true);
+        }
+
+        /** Without a music choice: the capture records music and sound effects together. */
+        public Args(String trace, Path outDir, int width, int scale, int fps, String codec,
+                    boolean showGhosts, int[] verifyFrames, String clip, int tailFrames,
+                    boolean nativeSpriteLimits) {
+            this(trace, outDir, width, scale, fps, codec, showGhosts, verifyFrames, clip, tailFrames,
+                    nativeSpriteLimits, false);
         }
 
         public static Args parse(String[] argv) {
@@ -109,6 +122,7 @@ public final class TraceCaptureTool {
             String clip = null;
             int tailFrames = 150;
             boolean nativeSpriteLimits = true;
+            boolean noMusic = false;
 
             for (int i = 0; i < argv.length; i++) {
                 String arg = argv[i];
@@ -123,6 +137,7 @@ public final class TraceCaptureTool {
                     case "--no-ghosts" -> showGhosts = false;
                     case "--ghosts" -> showGhosts = true;
                     case "--no-sprite-limits" -> nativeSpriteLimits = false;
+                    case "--no-music" -> noMusic = true;
                     case "--verify" -> verifyFrames = parseFrameList(CliArguments.requireValue(argv, ++i, arg));
                     case "--clip" -> clip = CliArguments.requireValue(argv, ++i, arg);
                     case "--tail-frames" -> tailFrames = CliArguments.parseInt(CliArguments.requireValue(argv, ++i, arg));
@@ -134,7 +149,7 @@ public final class TraceCaptureTool {
             }
             TraceCaptureDimensions.validateLogicalWidth(width);
             return new Args(trace, Path.of(outDir), width, scale, fps, codec, showGhosts,
-                    verifyFrames, clip, tailFrames, nativeSpriteLimits);
+                    verifyFrames, clip, tailFrames, nativeSpriteLimits, noMusic);
         }
 
         private static int[] parseFrameList(String spec) {
@@ -163,7 +178,17 @@ public final class TraceCaptureTool {
                 + " trace=" + entry.dir()
                 + " clip=" + (args.clip() == null ? "none" : args.clip())
                 + " comparison=native_320x224"
+                + (args.noMusic() ? " audio=sfx-only" : "")
                 + (verifyOnly ? " (no video output)" : "");
+    }
+
+    /**
+     * The music volume a capture runs at: full, or silent for {@code --no-music}. Never the
+     * player's saved volume, and the sound-effect volume stays full either way, so
+     * {@code --no-music} leaves the run's sound effects alone on the audio track.
+     */
+    static int capturedMusicVolume(Args args) {
+        return args.noMusic() ? 0 : 100;
     }
 
     private static void printCaptureSetup(TraceEntry entry, Args args,
@@ -257,7 +282,8 @@ public final class TraceCaptureTool {
         GameServices.configuration().setConfigValue(
                 SonicConfiguration.TRACE_SHOW_DESYNC_GHOSTS, args.showGhosts());
         // Evidence records at full level whatever volumes the player saved.
-        GameServices.configuration().setSessionOverride(SonicConfiguration.AUDIO_MUSIC_VOLUME, 100);
+        GameServices.configuration().setSessionOverride(
+                SonicConfiguration.AUDIO_MUSIC_VOLUME, capturedMusicVolume(args));
         GameServices.configuration().setSessionOverride(SonicConfiguration.AUDIO_SFX_VOLUME, 100);
 
         // --- resolve trace -------------------------------------------------

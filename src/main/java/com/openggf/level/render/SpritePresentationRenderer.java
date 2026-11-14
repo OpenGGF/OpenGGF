@@ -10,6 +10,26 @@ import java.util.function.Predicate;
 /** Level-owned conversion between runtime ROM patterns and immutable graphics presentation values. */
 public final class SpritePresentationRenderer {
     private static final SpritePresentation.HeadSatReplay HEAD_SAT_REPLAY = SpritePresentationRenderer::replayHeadSat;
+    /** Admitted for the most recent render host instead of one engine-caller stack walk per frame or tile. */
+    private static com.openggf.graphics.SpriteSatInternalAccess.Engine satAccess;
+
+    private static com.openggf.graphics.PresentationGraphicsAccess.Batch presentationAccess;
+
+    private static com.openggf.graphics.PresentationGraphicsAccess.Batch presentationAccess(GraphicsManager graphics) {
+        var access = presentationAccess;
+        if (access == null || !access.boundTo(graphics)) {
+            presentationAccess = access = com.openggf.graphics.PresentationGraphicsAccess.batch(graphics);
+        }
+        return access;
+    }
+
+    private static com.openggf.graphics.SpriteSatInternalAccess.Engine satAccess(GraphicsManager graphics) {
+        var access = satAccess;
+        if (access == null || !access.boundTo(graphics)) {
+            satAccess = access = com.openggf.graphics.SpriteSatInternalAccess.engine(graphics);
+        }
+        return access;
+    }
     private SpritePresentationRenderer() { }
 
     /** Immutable adapter carried by native head producers across the graphics-owned SAT boundary. */
@@ -147,7 +167,7 @@ public final class SpritePresentationRenderer {
             // copying it into a second Frame (and copying each native layer span again).
             var nativeTiles = frame.tiles().reversed();
             var versions = frame.patternVersions();
-            com.openggf.graphics.SpriteSatInternalAccess.replayNativeLayers(graphics, nativeTiles, Tile::ghost,
+            satAccess(graphics).replayNativeLayers(nativeTiles, Tile::ghost,
                     tiles -> drawPicture(graphics, tiles, java.util.List.of(), versions,
                             cameraX, cameraY, visible, runtime, 1));
             if (!frame.primitives().isEmpty()) {
@@ -220,8 +240,8 @@ public final class SpritePresentationRenderer {
         boolean ghostColour = graphics.isGhostRenderColourPreserved();
         float alpha = graphics.getGhostRenderAlpha();
         PatternDesc desc = new PatternDesc();
-        // One engine-caller check per picture, not one stack walk per frozen pattern or tile.
-        var presentation = com.openggf.graphics.PresentationGraphicsAccess.batch(graphics);
+        // One engine-caller check per render host, not one stack walk per picture, frozen pattern or tile.
+        var presentation = presentationAccess(graphics);
         graphics.beginPatternAtlasBatch();
         try {
             for (var entry : patternVersions.entrySet())
@@ -311,8 +331,7 @@ public final class SpritePresentationRenderer {
                 var previousSubject = SpritePresentation.enterSubject(graphics, tile.subject());
                 try {
                 if (shadow) {
-                    com.openggf.graphics.SpriteSatInternalAccess.renderShadowTile(graphics, tile, cameraX, cameraY,
-                            quad, opacity);
+                    satAccess(graphics).renderShadowTile(tile, cameraX, cameraY, quad, opacity);
                 } else if(pictureGeometry) {
                     presentation.render(tile.patternId(), tile.palette(),
                             tile.hFlip(), tile.vFlip(), tile.priority(), tile.rowStart(), tile.rowEnd(),

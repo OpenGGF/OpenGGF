@@ -305,4 +305,38 @@ class TestPlayerHeadPresentation {
                 art.frameDelay(),art.bankSize(),art.animationProfile(),art.animationSet());
         assertEquals(profile.id(),PlayerHeadProfile.resolve(clone).id(),"duplicate bank/palette uses same actual anatomy");
     }
+
+    /** The batched tile digest must hash the same bytes as the former per-pixel walk. */
+    @Test void fingerprintsHashEachTilesLowNibblePixelsInRowMajorOrder() throws Exception {
+        var tiles=new Pattern[3];
+        for(int t=0;t<tiles.length;t++) {
+            tiles[t]=new Pattern();
+            for(int y=0;y<8;y++) for(int x=0;x<8;x++) tiles[t].setPixel(x,y,(byte)(t*0x35+y*0x13+x*0x51));
+        }
+        var piece=new SpriteMappingPiece(-4,-8,2,1,1,true,false,2,true);
+        var frames=List.of(new SpriteMappingFrame(List.of(piece)));
+        var dplc=List.of(new SpriteDplcFrame(List.of(new com.openggf.level.render.TileLoadRequest(0,3))));
+        var art=new SpriteArtSet(tiles,frames,dplc,0,0,1,3,null,null);
+
+        var expectedArt=java.security.MessageDigest.getInstance("SHA-256");
+        putInt(expectedArt,tiles.length);
+        for(var tile:tiles) putWalkedPixels(expectedArt,tile);
+        putInt(expectedArt,1);putInt(expectedArt,1);
+        for(int v:new int[]{-4,-8,2,1,1,1,0,2,1}) putInt(expectedArt,v);
+        putInt(expectedArt,1);putInt(expectedArt,1);putInt(expectedArt,0);putInt(expectedArt,3);putInt(expectedArt,-1);
+        assertEquals(java.util.HexFormat.of().formatHex(expectedArt.digest()),PlayerHeadProfile.fingerprint(art));
+
+        var sheet=new com.openggf.level.objects.ObjectSpriteSheet(tiles,frames,0,1);
+        var expectedSheet=java.security.MessageDigest.getInstance("SHA-256");
+        putInt(expectedSheet,1);putInt(expectedSheet,1);
+        for(int v:new int[]{-4,-8,2,1,1,0}) putInt(expectedSheet,v);
+        putWalkedPixels(expectedSheet,tiles[1]);putWalkedPixels(expectedSheet,tiles[2]);
+        assertEquals(java.util.HexFormat.of().formatHex(expectedSheet.digest()),PlayerHeadProfile.fingerprint(sheet));
+    }
+    private static void putWalkedPixels(java.security.MessageDigest digest,Pattern tile) {
+        for(int y=0;y<8;y++) for(int x=0;x<8;x++) digest.update((byte)(tile.getPixel(x,y)&15));
+    }
+    private static void putInt(java.security.MessageDigest digest,int value) {
+        for(int shift=24;shift>=0;shift-=8) digest.update((byte)(value>>>shift));
+    }
 }

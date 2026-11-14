@@ -29,11 +29,23 @@ import static org.lwjgl.opengl.GL11.glFinish;
  * thread allocated, garbage collections that completed and the player's zone,
  * act and position, so a spike can be placed on the route.
  *
- * <p>Inputs: {@code --route <bk2>} (required), {@code --zone}/{@code --act}
- * (boot level, default LRZ1), {@code --main}/{@code --sidekick},
- * {@code --frames N} (default whole movie), {@code --rewind}, {@code --audio},
+ * <p>Inputs: {@code --route <bk2>} (required), {@code --game s1|s2|s3k}
+ * (default s3k), {@code --zone}/{@code --act} (boot level, default LRZ1),
+ * {@code --main}/{@code --sidekick} (an empty sidekick is solo),
+ * {@code --width} (default 320), {@code --title-card}, {@code --intros}
+ * (S3K intros on), {@code --emeralds <states>} and
+ * {@code --vint-run-count N} (the authored launch state of a route),
+ * {@code --setup-step} (one neutral step before the movie, as captures that
+ * consume the one-shot setup pass do) and {@code --input-start N} (first movie
+ * row to drive),
+ * {@code --frames N} (default whole movie), {@code --rewind}, {@code --audio}
+ * (presents one outer audio frame per step, as {@code GameLoop} and
+ * {@link TraceBenchmarkTool} do; without it the SMPS driver never advances,
+ * so an extra-life jingle never restores and queued commands drain in bursts),
  * {@code --paced} (sleep to 60 Hz so background preparers get real wall time)
- * and {@code --frame-log <csv>}. Origin: 2026-11-12 LRZ frame-budget study.
+ * and {@code --frame-log <csv>}. Origin: 2026-11-12 LRZ frame-budget study;
+ * launch-state flags added by the 2026-11-13 all-level performance sweep
+ * ({@code tools/performance/level_sweep.py}).
  */
 public final class RouteFrameBudgetProbe {
     private RouteFrameBudgetProbe() {
@@ -50,6 +62,14 @@ public final class RouteFrameBudgetProbe {
         boolean rewind = false;
         boolean audio = false;
         boolean paced = false;
+        String game = "s3k";
+        int width = 320;
+        boolean titleCard = false;
+        boolean intros = false;
+        String emeralds = null;
+        Integer vIntRunCount = null;
+        boolean setupStep = false;
+        int inputStart = 0;
         for (int i = 0; i < argv.length; i++) {
             switch (argv[i]) {
                 case "--route" -> route = Path.of(argv[++i]);
@@ -62,6 +82,14 @@ public final class RouteFrameBudgetProbe {
                 case "--rewind" -> rewind = true;
                 case "--audio" -> audio = true;
                 case "--paced" -> paced = true;
+                case "--game" -> game = argv[++i];
+                case "--width" -> width = Integer.parseInt(argv[++i]);
+                case "--title-card" -> titleCard = true;
+                case "--intros" -> intros = true;
+                case "--emeralds" -> emeralds = argv[++i];
+                case "--vint-run-count" -> vIntRunCount = Integer.parseInt(argv[++i]);
+                case "--setup-step" -> setupStep = true;
+                case "--input-start" -> inputStart = Integer.parseInt(argv[++i]);
                 default -> throw new IllegalArgumentException("Unknown argument: " + argv[i]);
             }
         }
@@ -69,8 +97,10 @@ public final class RouteFrameBudgetProbe {
             throw new IllegalArgumentException("--route <bk2> and --frame-log <csv> are required");
         }
         Bk2Movie movie = new Bk2MovieLoader().loadMovieOrInputLog(route);
-        int count = frames < 0 ? movie.getFrameCount() : Math.min(frames, movie.getFrameCount());
-        var settings = new GameplayCaptureSession.Settings(320, main, sidekick, "off", null, null, null);
+        int available = Math.max(0, movie.getFrameCount() - inputStart);
+        int count = frames < 0 ? available : Math.min(frames, available);
+        var settings = new GameplayCaptureSession.Settings(width, main, sidekick, "off", null, null, null,
+                emeralds, titleCard, false, vIntRunCount, null, false, null, false);
 
         var threads = (com.sun.management.ThreadMXBean) ManagementFactory.getThreadMXBean();
         threads.setThreadAllocatedMemoryEnabled(true);
@@ -86,7 +116,10 @@ public final class RouteFrameBudgetProbe {
         int[][] where = new int[count][6];
 
         try (var session = new GameplayCaptureSession(settings)) {
-            Path rom = TraceToolRomLocations.resolve("s3k", GameServices.configuration(), Path.of(""));
+            Path rom = TraceToolRomLocations.resolve(game, GameServices.configuration(), Path.of(""));
+            if (intros) {
+                GameServices.configuration().setSessionOverride(SonicConfiguration.S3K_SKIP_INTROS, false);
+            }
             if (rewind) {
                 session.enableLiveRewind();
             }
@@ -96,6 +129,12 @@ public final class RouteFrameBudgetProbe {
             session.boot(rom, zone, act, settings);
             if (rewind) {
                 GameServices.configuration().setSessionOverride(SonicConfiguration.LIVE_REWIND_ENABLED, true);
+            }
+            if (setupStep) {
+                session.step(null);
+                if (audio) {
+                    HeadlessGameBoot.presentHeadlessOuterAudioFrame();
+                }
             }
             PerformanceProfiler profiler = GameServices.profiler();
             profiler.reset();
@@ -111,10 +150,15 @@ public final class RouteFrameBudgetProbe {
                 long gcStart = collections(collectors, false);
                 long gcMsStart = collections(collectors, true);
                 profiler.beginFrame();
-                session.step(movie.getFrame(frame));
+                session.step(movie.getFrame(inputStart + frame));
                 long stepped = System.nanoTime();
                 session.renderFrame();
                 long rendered = System.nanoTime();
+                if (audio) {
+                    profiler.beginSection("audio");
+                    HeadlessGameBoot.presentHeadlessOuterAudioFrame();
+                    profiler.endSection("audio");
+                }
                 stepMs[frame] = (stepped - start) / 1e6;
                 renderMs[frame] = (rendered - stepped) / 1e6;
                 profiler.beginSection("render.gpu_wait");

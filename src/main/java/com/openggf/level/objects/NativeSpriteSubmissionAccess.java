@@ -31,6 +31,11 @@ public final class NativeSpriteSubmissionAccess {
     public interface ExternalSlotDispatch {
         void beginPass();
         void dispatch(int slot, PlayableEntity player, int vIntRunCount, int cameraX);
+        /**
+         * Side-effect-free precheck: false means {@link #dispatch} would do nothing for this slot,
+         * so the engine may skip its physical-owner lookup for an empty execution slot.
+         */
+        default boolean mayDispatch(int slot) { return true; }
     }
 
     private NativeSpriteSubmissionAccess() { }
