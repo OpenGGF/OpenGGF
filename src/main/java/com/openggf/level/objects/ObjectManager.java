@@ -790,6 +790,9 @@ public class ObjectManager {
                         activeSidekicks,
                         inlineSolidResolution,
                         solidPostMovement);
+                // Sonic 1 has no object RAM past its dynamic table, but a donor's Tails brings his
+                // tails with him, and they are animated by the pass that follows the object walk.
+                runAfterExecBeforePlacement(afterExecBeforePlacement);
             } else if (execThenLoad) {
                 if (population.slots.twoAxisCursorPlacement()) {
                     // S3K Load_Sprites runs before Process_Sprites and performs

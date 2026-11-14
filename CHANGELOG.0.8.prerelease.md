@@ -44,6 +44,19 @@ under the matching area heading; see the
   art upload also stopped allocating a version record and a boxed tile number,
   about 16% of Angel Island's per-frame allocation. Pixels are unchanged.
 
+- **Tails' flight in Sonic 1 and Sonic 2 with Sonic 3&K donating:** a flying
+  Tails was drawn as the ball he jumped in, and a Sonic he carried was not drawn
+  at all (Sonic 1) or was drawn from the wrong frames (Sonic 2). Tails and
+  Knuckles wear the donor's art with the donor's own animation table, but their
+  poses were looked up in the host game's table, which has no flight; only
+  Sonic's lookups went to the donor. They now go to the donor's table too. The
+  carried Sonic was switched to the host game's own art, which has no carried
+  frames; where the host has no flight of its own he now keeps the donor's art.
+  The carry with Sonic 3&K as the host is unchanged. In Sonic 1 he also had no
+  tails in any pose, flying or standing: they are animated by a pass that
+  follows the object loop, and Sonic 1's loop never ran it. It does now, which
+  changes nothing for Sonic 1 without a donor.
+
 - **Blue Spheres:** new under **Extras** when the Sonic 3&K and Sonic 1 ROMs
   are both present. It is the game Sonic & Knuckles starts with Sonic 1 locked
   on, rebuilt from the S&K ROM: the title and menu, endless generated stages,
