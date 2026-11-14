@@ -42,14 +42,24 @@ PROPS = [(73, 73, 109), (146, 146, 182), (255, 219, 36), (255, 146, 0), (146, 73
          (219, 219, 255)]
 PALETTE = MICA + PROPS
 TRANSPARENT = -1
+# Background showing through closed shapes (inside the tape loops) that the edge flood
+# cannot reach: one source pixel inside each region. Gloves, eyes and the cassette's
+# whites are enclosed too, so the holes are named, not guessed.
+HOLES = {
+    'rewind': ((302, 511), (1013, 458), (945, 809), (203, 806)),
+}
 
 
-def key_background(image: Image.Image) -> Image.Image:
-    """Clear the near-white region connected to the edges; enclosed whites (gloves) stay."""
+def key_background(image: Image.Image, holes=()) -> Image.Image:
+    """Clear the near-white region connected to the edges and to each named hole; other
+    enclosed whites (gloves, eyes) stay."""
     image = image.convert('RGBA')
     px, (w, h) = image.load(), image.size
+    for hole in holes:
+        if min(px[hole][:3]) < 255 - WHITE_TOLERANCE:
+            raise ValueError(f'hole seed {hole} is not background')
     todo = deque([(x, y) for x in range(w) for y in (0, h - 1)]
-                 + [(x, y) for y in range(h) for x in (0, w - 1)])
+                 + [(x, y) for y in range(h) for x in (0, w - 1)] + list(holes))
     seen = set()
     while todo:
         x, y = todo.popleft()
@@ -79,8 +89,8 @@ def palette_indices(image: Image.Image) -> list[int]:
     return out
 
 
-def reduce(source: Path) -> Image.Image:
-    drawing = key_background(Image.open(source))
+def reduce(source: Path, holes=()) -> Image.Image:
+    drawing = key_background(Image.open(source), holes)
     sw, sh = drawing.size
     indices = palette_indices(drawing)
     factor = max(sw, sh) / BOX
@@ -129,7 +139,7 @@ def main() -> int:
     stale = []
     for gag in GAGS:
         target = OUT / f'mica-{gag}.png'
-        picture = reduce(SOURCES / f'{gag}.png')
+        picture = reduce(SOURCES / f'{gag}.png', HOLES.get(gag, ()))
         if args.check:
             shipped = Image.open(target).convert('RGBA')
             if shipped.size != picture.size or shipped.tobytes() != picture.tobytes():
