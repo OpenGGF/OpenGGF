@@ -38,6 +38,24 @@ under the matching area heading; see the
   This is an engine extension; see "Multi-Sidekick Daisy Chain" in
   [known discrepancies](docs/status/known-discrepancies.md#multi-sidekick-daisy-chain).
 
+- **Crash page:** an engine fault during play or on a menu no longer closes
+  OpenGGF. The game that failed is torn down to the game shelf and a crash page
+  opens over it, with a MICA gag for the kind of fault (holding the bomb, an
+  Atari ST homage; tangled in cassette tape after a rewind fault; teetering over
+  missing ground when a level fails to load), a row of bombs, the exact error
+  and where it was raised. The full report is saved to `crash-reports/`.
+  **Report on GitHub** opens a pre-filled issue form (new
+  `.github/ISSUE_TEMPLATE/crash.yml`) that the player reviews and submits
+  themselves, with the home folder written as `~` and the trace shortened to fit
+  the link; **Copy report**, **Details** and **Return to games** cover the rest.
+  Choosing the picture, or the details key, swaps it for a QR code of the issue
+  form with a title naming the error, for reporting from another device (Project
+  Nayuki's MIT-licensed `qrcodegen`, listed in `NOTICE.md`). The failed work is
+  never resumed, and a second fault, a failed teardown, tests and headless tools
+  still rethrow; `-Dopenggf.crash.rethrow=true` restores the old behaviour. The
+  pictures are reduced from generated drawings by
+  `tools/modding/crash_screen_art/reduce.py`.
+
 - **Lava Reef 1 frame hitches:** two stutters on the Lava Reef Act 1 route are
   gone. When the rock crusher opens the floor, the engine rebuilt the whole
   foreground layer (10-60 ms in a frame); it now redraws only the rewritten layout

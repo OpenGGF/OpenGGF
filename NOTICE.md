@@ -174,3 +174,10 @@ copyright, permission and bundled-data notices from the artifact POM’s
 Source: https://github.com/unicode-org/icu
 Licence source: https://raw.githubusercontent.com/unicode-org/icu/maint/maint-78/LICENSE
 SHA-256: `e55522d81edc687a341a4411e0776e54ca654e90147f354a90458aaced4116af`.
+
+## QR Code generator library
+
+The crash page draws its QR code of the issue form with Project Nayuki's QR Code
+generator library for Java (`io.nayuki:qrcodegen` 1.8.0), copyright (c) Project
+Nayuki, under the MIT License; the notice is in `LICENSES/MIT-qrcodegen.txt`.
+Source: https://www.nayuki.io/page/qr-code-generator-library

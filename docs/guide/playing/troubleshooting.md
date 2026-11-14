@@ -5,6 +5,7 @@ Find your symptom, then follow its section.
 | Symptom | Check first |
 |---|---|
 | Black screen, crash or no window at startup | [ROM identity, Java and OpenGL](#black-screen-or-crash-on-startup) |
+| The crash page with MICA appears | [Crash page and reports](#the-crash-page-appears) |
 | No sound | [`audio.enabled` and the audio device](#no-sound) |
 | Game runs too fast or too slow | [Region and display pacing](#game-runs-too-fast-or-too-slow) |
 | Garbled graphics or wrong colours | [Driver, window size and ROM identity](#garbled-graphics-or-wrong-colors) |
@@ -37,6 +38,34 @@ check the runtime used for a JAR. On macOS, launch it with
 Support depends on the GPU and operating-system driver, including remote or
 virtual display drivers. Check that your driver provides that context. On Linux, ensure you have the correct Mesa or
 proprietary driver installed.
+
+## The crash page appears
+
+When the engine hits a fault during play or on a menu (a rewind that cannot
+rebuild a moment, a level that fails to load, or any other engine error), it
+stops that game and shows the crash page instead of closing. MICA's gag and the
+row of bombs show what kind of fault it was. The page gives the exact error and
+where it was raised, and saves the full report in the `crash-reports` folder
+next to `mods` and `projects`.
+
+- **Report on GitHub** opens a pre-filled crash issue form in your browser.
+  Nothing is sent until you submit it; check the fields first, then drag the
+  saved report file into the form. Your home folder is written as `~`. If no
+  browser opens, the form's link is copied to your clipboard.
+- **Copy report** copies the full report.
+- **Details** shows every fact and the whole stack trace.
+- **The picture** turns into a QR code of the crash issue form when you choose
+  it (move left from the buttons, or click it) or press the details key (F1, or
+  the controller's details button). Scan it to report from your phone or
+  another computer. The code holds only the form and a title naming the error,
+  so add the saved report file when you can. Choose it again for MICA.
+- **Return to games** (or Escape / B) goes back to the game shelf. The game that
+  failed is not resumed; start it again from the shelf.
+
+A second fault while the page is open, or one while the engine is tearing the
+game down, still closes OpenGGF; the log keeps the full trace. Developers who
+want faults to end the process as before can run with
+`-Dopenggf.crash.rethrow=true`.
 
 ## No sound
 
