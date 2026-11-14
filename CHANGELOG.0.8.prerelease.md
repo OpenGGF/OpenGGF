@@ -7,6 +7,20 @@ under the matching area heading; see the
 
 ## Gameplay and presentation
 
+- **Crash page:** an engine fault during play or on a menu no longer closes
+  OpenGGF. The game that failed is torn down to the game shelf and a crash page
+  opens over it, with a MICA gag for the kind of fault (tangled in rewind tape,
+  teetering where a level failed to load, or holding a bomb), the Atari ST style
+  row of bombs, the exact error and where it was raised. The full report is saved
+  to `crash-reports/`. **Report on GitHub** opens a pre-filled issue form (new
+  `.github/ISSUE_TEMPLATE/crash.yml`) that the player reviews and submits
+  themselves, with the home folder written as `~` and the trace shortened to fit
+  the link; **Copy report**, **Details** and **Return to games** cover the rest.
+  The failed work is never resumed, and a second fault, a failed teardown,
+  tests and headless tools still rethrow; `-Dopenggf.crash.rethrow=true` restores
+  the old behaviour. The MICA pictures are storyboard re-posings of her approved
+  sprites (`tools/modding/crash_screen_storyboard.py`).
+
 - **Lava Reef 1 frame hitches:** two stutters on the Lava Reef Act 1 route are
   gone. When the rock crusher opens the floor, the engine rebuilt the whole
   foreground layer (10-60 ms in a frame); it now redraws only the rewritten layout

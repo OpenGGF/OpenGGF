@@ -1384,6 +1384,17 @@ like any other mod's.
 
 ---
 
+## Crash page
+
+An engine fault in the game window opens the crash page instead of closing
+OpenGGF, and saves its report under `crash-reports/` in the working directory
+(see [Troubleshooting](docs/guide/playing/troubleshooting.md#the-crash-page-appears)).
+The JVM property `-Dopenggf.crash.rethrow=true` lets engine faults end the
+process as before, for debugging with an attached IDE. It defaults to false and is
+separate from `config.yaml`. Tests and headless tools always rethrow.
+
+---
+
 ## Runtime queue diagnostics
 
 The JVM property `-Dopenggf.debug.kosm=true` adds S3K KosM submission messages

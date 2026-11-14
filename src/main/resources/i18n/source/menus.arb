@@ -4347,5 +4347,113 @@
   "editor.route_tape.anchor_help": "ENGINE and BIZHAWK anchors must identify the same first gameplay boundary. Replay verifies the engine anchor; export verifies the native witness hash. Provisional export blockers cannot be cleared here.",
   "editor.route_tape.missing_anchors": "Add observed native anchors before export",
   "editor.route_tape.changed_anchors": "Replay to verify changed native anchors",
-  "editor.route_tape.fact_help": "Fact keys come from the S2 observer. Scan at the cursor to inspect present values; missing keys never satisfy a fact predicate."
+  "editor.route_tape.fact_help": "Fact keys come from the S2 observer. Scan at the cursor to inspect present values; missing keys never satisfy a fact predicate.",
+  "crash.title": "Crash",
+  "@crash.title": {
+    "description": "OpenGGF host UI: crash.title. Translate the complete message; preserve named arguments."
+  },
+  "crash.headline.rewind": "Rewind couldn't rebuild that moment",
+  "@crash.headline.rewind": {
+    "description": "OpenGGF host UI: crash.headline.rewind. Translate the complete message; preserve named arguments."
+  },
+  "crash.headline.level_load": "The level couldn't finish loading",
+  "@crash.headline.level_load": {
+    "description": "OpenGGF host UI: crash.headline.level_load. Translate the complete message; preserve named arguments."
+  },
+  "crash.headline.engine": "The engine hit a fault it couldn't recover from",
+  "@crash.headline.engine": {
+    "description": "OpenGGF host UI: crash.headline.engine. Translate the complete message; preserve named arguments."
+  },
+  "crash.caption.rewind": "MICA got tangled in the tape.",
+  "@crash.caption.rewind": {
+    "description": "OpenGGF host UI: crash.caption.rewind. Translate the complete message; preserve named arguments."
+  },
+  "crash.caption.level_load": "MICA found a hole where the level should be.",
+  "@crash.caption.level_load": {
+    "description": "OpenGGF host UI: crash.caption.level_load. Translate the complete message; preserve named arguments."
+  },
+  "crash.caption.engine": "MICA is left holding the bomb.",
+  "@crash.caption.engine": {
+    "description": "OpenGGF host UI: crash.caption.engine. Translate the complete message; preserve named arguments."
+  },
+  "crash.meaning": "Play stopped so nothing else breaks. A report was saved.",
+  "@crash.meaning": {
+    "description": "OpenGGF host UI: crash.meaning. Translate the complete message; preserve named arguments."
+  },
+  "crash.meaning_unsaved": "Play stopped so nothing else breaks. The report couldn't be saved, so copy it now.",
+  "@crash.meaning_unsaved": {
+    "description": "OpenGGF host UI: crash.meaning_unsaved. Translate the complete message; preserve named arguments."
+  },
+  "crash.field.error": "Error",
+  "@crash.field.error": {
+    "description": "OpenGGF host UI: crash.field.error. Translate the complete message; preserve named arguments."
+  },
+  "crash.field.cause": "Cause",
+  "@crash.field.cause": {
+    "description": "OpenGGF host UI: crash.field.cause. Translate the complete message; preserve named arguments."
+  },
+  "crash.field.where": "Where",
+  "@crash.field.where": {
+    "description": "OpenGGF host UI: crash.field.where. Translate the complete message; preserve named arguments."
+  },
+  "crash.field.report": "Report",
+  "@crash.field.report": {
+    "description": "OpenGGF host UI: crash.field.report. Translate the complete message; preserve named arguments."
+  },
+  "crash.field.report_unsaved": "Not saved; see the log",
+  "@crash.field.report_unsaved": {
+    "description": "OpenGGF host UI: crash.field.report_unsaved. Translate the complete message; preserve named arguments."
+  },
+  "crash.action.report": "Report on GitHub",
+  "@crash.action.report": {
+    "description": "OpenGGF host UI: crash.action.report. Translate the complete message; preserve named arguments."
+  },
+  "crash.action.copy": "Copy report",
+  "@crash.action.copy": {
+    "description": "OpenGGF host UI: crash.action.copy. Translate the complete message; preserve named arguments."
+  },
+  "crash.action.details": "Details",
+  "@crash.action.details": {
+    "description": "OpenGGF host UI: crash.action.details. Translate the complete message; preserve named arguments."
+  },
+  "crash.action.return": "Return to games",
+  "@crash.action.return": {
+    "description": "OpenGGF host UI: crash.action.return. Translate the complete message; preserve named arguments."
+  },
+  "crash.hint.return": "RETURN",
+  "@crash.hint.return": {
+    "description": "OpenGGF host UI: crash.hint.return. Translate the complete message; preserve named arguments."
+  },
+  "crash.status.opened": "Opened the report form in your browser",
+  "@crash.status.opened": {
+    "description": "OpenGGF host UI: crash.status.opened. Translate the complete message; preserve named arguments."
+  },
+  "crash.status.link_copied": "No browser opened. The form's link is on your clipboard",
+  "@crash.status.link_copied": {
+    "description": "OpenGGF host UI: crash.status.link_copied. Translate the complete message; preserve named arguments."
+  },
+  "crash.status.unavailable": "No browser or clipboard. Attach the saved report instead",
+  "@crash.status.unavailable": {
+    "description": "OpenGGF host UI: crash.status.unavailable. Translate the complete message; preserve named arguments."
+  },
+  "crash.status.copied": "Report copied",
+  "@crash.status.copied": {
+    "description": "OpenGGF host UI: crash.status.copied. Translate the complete message; preserve named arguments."
+  },
+  "crash.status.copy_failed": "The clipboard is unavailable",
+  "@crash.status.copy_failed": {
+    "description": "OpenGGF host UI: crash.status.copy_failed. Translate the complete message; preserve named arguments."
+  },
+  "crash.details.title": "Crash report",
+  "@crash.details.title": {
+    "description": "OpenGGF host UI: crash.details.title. Translate the complete message; preserve named arguments."
+  },
+  "crash.details.session": "Session",
+  "@crash.details.session": {
+    "description": "OpenGGF host UI: crash.details.session. Translate the complete message; preserve named arguments."
+  },
+  "crash.details.build": "Version and system",
+  "@crash.details.build": {
+    "description": "OpenGGF host UI: crash.details.build. Translate the complete message; preserve named arguments."
+  }
 }

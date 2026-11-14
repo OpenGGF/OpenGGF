@@ -1,0 +1,49 @@
+name: Crash report
+description: OpenGGF stopped and showed the crash screen. The game fills most of this in for you.
+title: "[Crash] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting this. If you came here from the crash screen, the fields below are
+        already filled in. Please check them for anything you would rather not share.
+
+        The full report was saved in your `crash-reports` folder. Drag that file into the
+        **Report file** box below; it has the complete stack trace.
+  - type: textarea
+    id: steps
+    attributes:
+      label: What were you doing?
+      description: The game, zone and what happened just before the crash (rewinding, dying, entering a special stage...).
+    validations:
+      required: false
+  - type: textarea
+    id: error
+    attributes:
+      label: Error
+      description: Filled in by the crash screen. The stack trace may be shortened to fit in a link.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: session
+    attributes:
+      label: Session
+      description: Game, zone, act, mode and active mods when the crash happened.
+      render: text
+  - type: textarea
+    id: version
+    attributes:
+      label: Version and system
+      render: text
+  - type: input
+    id: report-file
+    attributes:
+      label: Report file name
+      description: The name of the saved report in your `crash-reports` folder.
+  - type: textarea
+    id: attachment
+    attributes:
+      label: Report file
+      description: Drag the saved crash report (`crash-reports/crash-....txt`) here.
