@@ -46,6 +46,13 @@ directory.
 Domain subfolders may group related artifacts within a category, but a topic
 must not replace classification by purpose.
 
+## Cleanup blueprints
+
+[S3K zone event publication](designs/2026-11-14-s3k-zone-event-publication-blueprint.md)
+moves each S3K zone's scroll, collision and screen-shake state to one producer,
+one rewind payload and a projection-only scroll handler, following HCZ. It is a
+proposed programme with per-zone waves, not delivered work.
+
 ## Mod and challenge blueprints
 
 [Mutators, Multigame and hardened S3&K](designs/2026-10-07-mod-challenges-blueprint.md)
