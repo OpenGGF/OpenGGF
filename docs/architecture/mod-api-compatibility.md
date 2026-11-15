@@ -45,7 +45,8 @@ preserved. The mutable `0.7` signature pin includes the new constant; descriptor
 `0.7.0` and the empty published-baseline set are unchanged.
 
 `SonicConfiguration.SONIC_CD_DISC` adds the saved key `roms.soniccd`: the path of the
-Sonic CD (USA) disc image's `.cue` sheet, listed beside the other games' ROM keys. It
+Sonic CD (USA) disc image's `.cue` sheet (or, later on the same candidate with no surface
+change, a lossless `.chd`), listed beside the other games' ROM keys. It
 is appended to preserve existing enum ordinals. The mutable `0.7` signature pin
 (regenerated with `ModApiSignatureSurface --snapshot`) and the `ModApiVersion`
 candidate description include it; descriptor candidate `0.7.0` and the empty

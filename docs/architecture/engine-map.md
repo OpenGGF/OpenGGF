@@ -355,8 +355,9 @@ implement the required providers, register the detector in
 
 `game/soniccd` is one ordinary `GameModule` (`GameId.SCD`, code `scd`) with no
 cartridge ROM and no `RomDetector`: `createGame(GameDataSource)` takes a
-`CdDiscDataSource` over the user's USA disc image (`data/cd`: `CueDiscImage`,
-`DiscTrack`, `Iso9660FileSystem`). The master title lists it from `roms.soniccd`
+`CdDiscDataSource` over the user's USA disc image (`data/cd`: the `DiscImage`
+interface with `CueDiscImage` and the CHD v5 reader `ChdDiscImage`, whose pure-Java
+codecs live in `data/cd/chd`; `DiscTrack`, `Iso9660FileSystem`). The master title lists it from `roms.soniccd`
 (`game.launch.HostedMediaLaunch`); tests, trace replay and the capture tools open
 the disc through `HostedGameMedia`.
 Each of the 70 stage programs carries its own copy of the level engine;

@@ -1,6 +1,6 @@
 package com.openggf.game.soniccd.media;
 
-import com.openggf.data.cd.CueDiscImage;
+import com.openggf.data.cd.DiscImage;
 import com.openggf.data.cd.DiscTrack;
 
 import java.io.DataOutputStream;
@@ -25,6 +25,10 @@ import java.util.Optional;
  * File names, file grouping, file-relative indexes, CATALOG and CUE text are excluded.
  * Raw/cooked MODE1 and stored/synthetic gaps remain distinct. No physical-TOC equivalence is claimed.
  * An optional original container is caller-supplied provenance, not proof that it produced these files.
+ * The definition is container-independent: a CHD whose tracks decode to the same stored frames, gaps and
+ * layout as a BIN/CUE set yields the same normalized digest. {@code cue} records the parsed layout bytes
+ * (the CUE text, or a CHD's track metadata) and {@code binaryFiles} the stored files (BINs, or the CHD);
+ * neither enters the normalized digest.
  */
 public record CdObservedMediaIdentity(String definition, String normalizedSha256, FileHash cue,
                                        List<FileHash> binaryFiles, Optional<FileHash> originalContainer,
@@ -42,20 +46,20 @@ public record CdObservedMediaIdentity(String definition, String normalizedSha256
         tracks = List.copyOf(tracks);
     }
 
-    public static CdObservedMediaIdentity capture(CueDiscImage disc, Path cue,
+    public static CdObservedMediaIdentity capture(DiscImage disc, Path descriptor,
                                                   Optional<Path> originalContainer) throws IOException {
-        disc.requireCue(cue);
+        disc.requireDescriptor(descriptor);
         return capture(disc, originalContainer);
     }
 
-    /** Observes only the CUE bytes and BINARY handles already bound to this disc owner. */
-    public static CdObservedMediaIdentity capture(CueDiscImage disc,
+    /** Observes only the layout bytes and stored-file handles already bound to this disc owner. */
+    public static CdObservedMediaIdentity capture(DiscImage disc,
                                                   Optional<Path> originalContainer) throws IOException {
         checkAll(disc);
-        byte[] cueBytes = disc.readCueBytes();
-        FileHash cueHash = new FileHash(disc.cuePath().toString(), cueBytes.length, hex(sha256().digest(cueBytes)));
+        byte[] cueBytes = disc.readDescriptorBytes();
+        FileHash cueHash = new FileHash(disc.descriptorPath().toString(), cueBytes.length, hex(sha256().digest(cueBytes)));
         List<FileHash> sources = new ArrayList<>();
-        for (CueDiscImage.SourceFile source : disc.sourceFiles()) {
+        for (DiscImage.SourceFile source : disc.sourceFiles()) {
             MessageDigest digest = sha256();
             long offset = 0;
             while (offset < source.bytes()) {
@@ -98,7 +102,7 @@ public record CdObservedMediaIdentity(String definition, String normalizedSha256
                 sources, container, tracks);
     }
 
-    private static void checkAll(CueDiscImage disc) throws IOException {
+    private static void checkAll(DiscImage disc) throws IOException {
         for (DiscTrack track : disc.tracks()) {
             disc.readRawFrames(track.number(), 0, 0);
         }

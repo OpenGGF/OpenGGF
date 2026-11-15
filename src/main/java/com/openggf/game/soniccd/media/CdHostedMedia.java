@@ -16,14 +16,15 @@ import com.openggf.configuration.SonicConfigurationService;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Locale;
 import java.util.stream.Stream;
 
 /**
  * Sonic CD's media: the user's USA disc and stage names. The launcher lists and boots the game through
  * this ({@link #probe}, {@link #openConfiguredMedia}); the capture tools open it the same way. The disc is
- * found by {@link CdDiscLocator}: {@code -Dsoniccd.media.root=<dir holding USA/*.cue>} for tests and tools,
- * then the {@code roms.soniccd} key (the sheet's path), then the ROM folder ({@code roms.directory}) and its
+ * found by {@link CdDiscLocator}: {@code -Dsoniccd.media.root=<dir holding USA/*.cue or USA/*.chd>} for tests
+ * and tools, then the {@code roms.soniccd} key (the sheet's or CHD's path), then the ROM folder ({@code roms.directory}) and its
  * sub-folders.
  *
  * <p>A trace names its stage by {@code stage_file} (the recorder writes the stage program, e.g.
@@ -53,16 +54,17 @@ public final class CdHostedMedia implements HostedGameMedia {
     public GameDataSource openConfiguredMedia(SonicConfigurationService config) throws IOException {
         CdDiscLocator.Result found = CdDiscLocator.locate(config);
         if (!found.found()) throw new IOException(found.detail());
-        return openVerified(found.cue().orElseThrow());
+        return openVerified(found.disc().orElseThrow());
     }
 
-    static CdDiscDataSource openVerified(Path cue) throws IOException {
-        CdDiscDataSource source = CdDiscDataSource.open(cue);
+    /** Accepts a CUE sheet or a CHD only when its decoded content equals the USA release's record. */
+    static CdDiscDataSource openVerified(Path disc) throws IOException {
+        CdDiscDataSource source = CdDiscDataSource.open(disc);
         try {
             var identity = source.assets().identity();
             var release = CdRetailReleases.find(identity);
             if (release.isEmpty() || release.get() != CdRetailReleases.USA) {
-                throw new IOException(cue.getFileName() + " is not an unmodified Sonic CD (USA) disc: "
+                throw new IOException(disc.getFileName() + " is not an unmodified Sonic CD (USA) disc: "
                         + (release.map(r -> "it matches the " + r.variant() + " release").orElse(
                         "its tracks differ from the USA release (a damaged, replaced or re-encoded track)"))
                         + ". OpenGGF plays the USA release (Redump 29188).");
@@ -78,16 +80,22 @@ public final class CdHostedMedia implements HostedGameMedia {
         }
     }
 
-    /** The first {@code .cue} under {@code <root>/USA}, the layout the tests and tools name with the property. */
-    static Path propertyCue(String root) throws IOException {
+    /**
+     * The first {@code .cue} under {@code <root>/USA}, else the first {@code .chd} there: the layout the tests
+     * and tools name with the property.
+     */
+    static Path propertyDisc(String root) throws IOException {
         Path usa = Path.of(root, "USA");
         if (!Files.isDirectory(usa)) {
             throw new IOException("No USA directory under " + MEDIA_ROOT_PROPERTY + "=" + root);
         }
-        try (Stream<Path> cues = Files.list(usa)) {
-            return cues.filter(p -> p.toString().toLowerCase(Locale.ROOT).endsWith(".cue")).sorted().findFirst()
-                    .orElseThrow(() -> new IOException("No USA .cue under " + usa));
+        List<Path> images;
+        try (Stream<Path> listed = Files.list(usa)) {
+            images = listed.filter(CdDiscLocator::isDiscImageName).sorted().toList();
         }
+        return images.stream().filter(p -> p.toString().toLowerCase(Locale.ROOT).endsWith(".cue")).findFirst()
+                .or(() -> images.stream().findFirst())
+                .orElseThrow(() -> new IOException("No USA .cue or .chd under " + usa));
     }
 
     /**

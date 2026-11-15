@@ -26,9 +26,9 @@ public final class CdDiscDataSource implements GameDataSource, java.io.Closeable
         this.identity = "disc:scd:sha256:" + assets.identity().normalizedSha256();
     }
 
-    /** Opens the CUE sheet of a user-supplied disc. */
-    public static CdDiscDataSource open(Path cue) throws IOException {
-        return new CdDiscDataSource(CdProgramAssets.open(Objects.requireNonNull(cue, "cue")));
+    /** Opens a user-supplied disc image: its CUE sheet, or a CHD. */
+    public static CdDiscDataSource open(Path disc) throws IOException {
+        return new CdDiscDataSource(CdProgramAssets.open(Objects.requireNonNull(disc, "disc")));
     }
 
     public CdProgramAssets assets() {

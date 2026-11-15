@@ -176,10 +176,11 @@ dump.
 ### Disc setup
 
 Point the engine at the disc image (the `.cue` sheet with all 35 track files
-beside it) in either of two ways:
+beside it, or a lossless `.chd` made from that set with MAME's `chdman createcd`)
+in either of two ways:
 
-- set `roms.soniccd` in `config.yaml` (or the **Sonic CD disc (.cue)** row of
-  master-title **Settings**) to the `.cue` file's path; or
+- set `roms.soniccd` in `config.yaml` (or the **Sonic CD disc (.cue/.chd)** row of
+  master-title **Settings**) to the `.cue` or `.chd` file's path; or
 - leave it blank and put the disc in a folder of its own inside your ROM folder
   (the folder holding `config.yaml`, or the one `roms.directory` names). The
   engine looks there and up to two sub-folders down, and recognises the disc by
@@ -190,14 +191,19 @@ off, `roms.default: scd` starts it directly. A `roms.soniccd` path that is not
 the USA disc is refused, not replaced by the folder search.
 
 When you start it, the engine checks every track against the USA release
-(Redump 29188) before the title appears. Another release, a missing track or a
+(Redump 29188) before the title appears. A CHD passes exactly when its decoded
+tracks equal the Redump set, so a CHD made from the Redump BIN/CUE is accepted
+and one made from another dump is refused like that dump. OpenGGF reads CHD
+version 5 with the `cdzl`, `cdlz`, `cdfl` and `cdzs` codecs (any of chdman's
+CD defaults) or uncompressed; a delta CHD that needs a parent, an older CHD
+version, and a non-CD CHD are refused with a message saying which. Another release, a missing track or a
 damaged or re-encoded track is refused with a message that says which, as a
 wrong cartridge ROM is. If no disc is found, the card reads DISC MISSING and
 Start shows where the engine looked.
 
 For tests and the capture tools, the JVM property
 `-Dsoniccd.media.root=<parent>` names a folder whose `USA` sub-folder holds
-the `.cue`; when set, it is used instead of `roms.soniccd` and the ROM folder. See
+the `.cue` (or, with no `.cue` there, a `.chd`); when set, it is used instead of `roms.soniccd` and the ROM folder. See
 [configuration](../../../CONFIGURATION.md#sonic-cd-disc-and-native-captures).
 For example, `GameplayCaptureTool --game scd --zone R11A` films Palmtree Panic
 act 1 Present; `--zone ppz --act N` counts a zone's stages 1 to 10 (act 1

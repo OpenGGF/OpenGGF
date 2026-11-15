@@ -1,6 +1,6 @@
 package com.openggf.game.soniccd.media;
 
-import com.openggf.data.cd.CueDiscImage;
+import com.openggf.data.cd.DiscImage;
 import com.openggf.data.cd.DiscTrack;
 import com.openggf.data.cd.Iso9660FileSystem;
 import com.openggf.game.soniccd.CdCommand;
@@ -26,12 +26,12 @@ public final class CdProgramAssets implements AutoCloseable {
     public enum Use { LOAD_COMPONENT, CONDITIONAL_PCM, PROGRAM_STREAM }
     public record Component(CdNativeFile file, Use use, Iso9660FileSystem.Entry entry) { }
 
-    private final CueDiscImage disc;
+    private final DiscImage disc;
     private final Iso9660FileSystem files;
     private final CdDiscHeader header;
     private final CdObservedMediaIdentity identity;
 
-    private CdProgramAssets(CueDiscImage disc, Iso9660FileSystem files, CdDiscHeader header,
+    private CdProgramAssets(DiscImage disc, Iso9660FileSystem files, CdDiscHeader header,
                             CdObservedMediaIdentity identity) {
         this.disc = disc;
         this.files = files;
@@ -39,16 +39,17 @@ public final class CdProgramAssets implements AutoCloseable {
         this.identity = identity;
     }
 
-    public static CdProgramAssets open(Path cue) throws IOException {
-        return open(cue, Optional.empty(), Optional.empty());
+    /** Opens a disc image: a CUE sheet with its BINARY files, or a CHD. */
+    public static CdProgramAssets open(Path disc) throws IOException {
+        return open(disc, Optional.empty(), Optional.empty());
     }
 
     /** A requested variant is an assertion about source headers, never an execution environment. */
-    public static CdProgramAssets open(Path cue, Optional<CdReleaseVariant> requestedVariant,
+    public static CdProgramAssets open(Path image, Optional<CdReleaseVariant> requestedVariant,
                                        Optional<Path> originalContainer) throws IOException {
         Objects.requireNonNull(requestedVariant);
         Objects.requireNonNull(originalContainer);
-        CueDiscImage disc = CueDiscImage.open(cue);
+        DiscImage disc = DiscImage.open(image);
         try {
             List<DiscTrack> data = disc.tracks().stream().filter(track -> track.mode().isMode1()).toList();
             if (data.size() != 1) {

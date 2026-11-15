@@ -726,8 +726,8 @@ public enum SonicConfiguration {
 	REWIND_SPECIAL_STAGES,
 
 	/**
-	 * Path of the Sonic CD (USA) disc image's {@code .cue} sheet, whose track files sit beside it
-	 * (YAML {@code roms.soniccd}, listed with the other games' ROM keys). Blank means the disc is
+	 * Path of the Sonic CD (USA) disc image: its {@code .cue} sheet, whose track files sit beside it, or a
+	 * lossless chdman {@code .chd} (YAML {@code roms.soniccd}, listed with the other games' ROM keys). Blank means the disc is
 	 * found by its header in {@code roms.directory}. Appended to preserve existing enum ordinals.
 	 */
 	SONIC_CD_DISC;

@@ -202,7 +202,7 @@ public final class ConfigCatalog {
         put(SONIC_2_ROM, of("roms", "sonic2", STRING, "Filename of the Sonic 2 ROM"));
         put(SONIC_3K_ROM, of("roms", "sonic3k", STRING, "Filename of the Sonic 3&K ROM"));
         put(SONIC_CD_DISC, of("roms", "soniccd", STRING,
-                "Path of the Sonic CD (USA) disc's .cue sheet; blank finds the disc in roms.directory"));
+                "Path of the Sonic CD (USA) disc's .cue sheet or lossless .chd; blank finds the disc in roms.directory"));
         put(ROMS_DIRECTORY, of("roms", "directory", STRING,
                 "Directory scanned for ROM images (*.gen, *.bin, *.md); images are identified by size and header"));
         put(ROMS_PREFER_COMPOSITE, of("roms", "preferComposite", BOOL,
