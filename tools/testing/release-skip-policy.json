@@ -2967,6 +2967,321 @@
       "note": "user's Sonic CD disc"
     },
     {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageFloorNative#aCameraOnePixelOffIsRejected(Case)[1]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/CdSpecialNative.java:34",
+      "allowed_when_absent": "soniccd_native",
+      "note": "BizHawk native special-stage run (soniccd.special.native.root, else <native root>/rehost-special); reached once the disc is supplied"
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageFloorNative#aCameraOnePixelOffIsRejected(Case)[2]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/CdSpecialNative.java:34",
+      "allowed_when_absent": "soniccd_native",
+      "note": "BizHawk native special-stage run (soniccd.special.native.root, else <native root>/rehost-special); reached once the disc is supplied"
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageFloorNative#aCameraOnePixelOffIsRejected(Case)[3]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/CdSpecialNative.java:34",
+      "allowed_when_absent": "soniccd_native",
+      "note": "BizHawk native special-stage run (soniccd.special.native.root, else <native root>/rehost-special); reached once the disc is supplied"
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageFloorNative#aCameraOnePixelOffIsRejected(Case)[4]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/CdSpecialNative.java:34",
+      "allowed_when_absent": "soniccd_native",
+      "note": "BizHawk native special-stage run (soniccd.special.native.root, else <native root>/rehost-special); reached once the disc is supplied"
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageFloorNative#floorRenderedFromTheNativeTraceEqualsTheNativeImage(Case)[1]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/CdSpecialNative.java:34",
+      "allowed_when_absent": "soniccd_native",
+      "note": "BizHawk native special-stage run (soniccd.special.native.root, else <native root>/rehost-special); reached once the disc is supplied"
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageFloorNative#floorRenderedFromTheNativeTraceEqualsTheNativeImage(Case)[2]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/CdSpecialNative.java:34",
+      "allowed_when_absent": "soniccd_native",
+      "note": "BizHawk native special-stage run (soniccd.special.native.root, else <native root>/rehost-special); reached once the disc is supplied"
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageFloorNative#floorRenderedFromTheNativeTraceEqualsTheNativeImage(Case)[3]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/CdSpecialNative.java:34",
+      "allowed_when_absent": "soniccd_native",
+      "note": "BizHawk native special-stage run (soniccd.special.native.root, else <native root>/rehost-special); reached once the disc is supplied"
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageFloorNative#floorRenderedFromTheNativeTraceEqualsTheNativeImage(Case)[4]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/CdSpecialNative.java:34",
+      "allowed_when_absent": "soniccd_native",
+      "note": "BizHawk native special-stage run (soniccd.special.native.root, else <native root>/rehost-special); reached once the disc is supplied"
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageFloorNative#stampArtFromTheDiscEqualsNativeWordRam(Case)[1]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/CdSpecialNative.java:34",
+      "allowed_when_absent": "soniccd_native",
+      "note": "BizHawk native special-stage run (soniccd.special.native.root, else <native root>/rehost-special); reached once the disc is supplied"
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageFloorNative#stampArtFromTheDiscEqualsNativeWordRam(Case)[2]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/CdSpecialNative.java:34",
+      "allowed_when_absent": "soniccd_native",
+      "note": "BizHawk native special-stage run (soniccd.special.native.root, else <native root>/rehost-special); reached once the disc is supplied"
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageFloorNative#stampArtFromTheDiscEqualsNativeWordRam(Case)[3]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/CdSpecialNative.java:34",
+      "allowed_when_absent": "soniccd_native",
+      "note": "BizHawk native special-stage run (soniccd.special.native.root, else <native root>/rehost-special); reached once the disc is supplied"
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageFloorNative#stampArtFromTheDiscEqualsNativeWordRam(Case)[4]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/CdSpecialNative.java:34",
+      "allowed_when_absent": "soniccd_native",
+      "note": "BizHawk native special-stage run (soniccd.special.native.root, else <native root>/rehost-special); reached once the disc is supplied"
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageFloorNative#stampMapAnimatesAsNativeOnEverySettledFrame(Case)[1]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/CdSpecialNative.java:34",
+      "allowed_when_absent": "soniccd_native",
+      "note": "BizHawk native special-stage run (soniccd.special.native.root, else <native root>/rehost-special); reached once the disc is supplied"
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageFloorNative#stampMapAnimatesAsNativeOnEverySettledFrame(Case)[2]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/CdSpecialNative.java:34",
+      "allowed_when_absent": "soniccd_native",
+      "note": "BizHawk native special-stage run (soniccd.special.native.root, else <native root>/rehost-special); reached once the disc is supplied"
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageFloorNative#stampMapAnimatesAsNativeOnEverySettledFrame(Case)[3]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/CdSpecialNative.java:34",
+      "allowed_when_absent": "soniccd_native",
+      "note": "BizHawk native special-stage run (soniccd.special.native.root, else <native root>/rehost-special); reached once the disc is supplied"
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageFloorNative#stampMapAnimatesAsNativeOnEverySettledFrame(Case)[4]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/CdSpecialNative.java:34",
+      "allowed_when_absent": "soniccd_native",
+      "note": "BizHawk native special-stage run (soniccd.special.native.root, else <native root>/rehost-special); reached once the disc is supplied"
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageFloorNative#traceFromThePreviousUpdatesCameraEqualsTheNativeTrace(Case)[1]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/CdSpecialNative.java:34",
+      "allowed_when_absent": "soniccd_native",
+      "note": "BizHawk native special-stage run (soniccd.special.native.root, else <native root>/rehost-special); reached once the disc is supplied"
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageFloorNative#traceFromThePreviousUpdatesCameraEqualsTheNativeTrace(Case)[2]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/CdSpecialNative.java:34",
+      "allowed_when_absent": "soniccd_native",
+      "note": "BizHawk native special-stage run (soniccd.special.native.root, else <native root>/rehost-special); reached once the disc is supplied"
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageFloorNative#traceFromThePreviousUpdatesCameraEqualsTheNativeTrace(Case)[3]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/CdSpecialNative.java:34",
+      "allowed_when_absent": "soniccd_native",
+      "note": "BizHawk native special-stage run (soniccd.special.native.root, else <native root>/rehost-special); reached once the disc is supplied"
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageFloorNative#traceFromThePreviousUpdatesCameraEqualsTheNativeTrace(Case)[4]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/CdSpecialNative.java:34",
+      "allowed_when_absent": "soniccd_native",
+      "note": "BizHawk native special-stage run (soniccd.special.native.root, else <native root>/rehost-special); reached once the disc is supplied"
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageGameplayNative#hudValuesChangeInTheSamePassAsNative(Case)[1]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/CdSpecialNative.java:34",
+      "allowed_when_absent": "soniccd_native",
+      "note": "BizHawk native special-stage run (soniccd.special.native.root, else <native root>/rehost-special); reached once the disc is supplied"
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageGameplayNative#hudValuesChangeInTheSamePassAsNative(Case)[2]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/CdSpecialNative.java:34",
+      "allowed_when_absent": "soniccd_native",
+      "note": "BizHawk native special-stage run (soniccd.special.native.root, else <native root>/rehost-special); reached once the disc is supplied"
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageGameplayNative#hudValuesChangeInTheSamePassAsNative(Case)[3]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/CdSpecialNative.java:34",
+      "allowed_when_absent": "soniccd_native",
+      "note": "BizHawk native special-stage run (soniccd.special.native.root, else <native root>/rehost-special); reached once the disc is supplied"
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageGameplayNative#hudValuesChangeInTheSamePassAsNative(Case)[4]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/CdSpecialNative.java:34",
+      "allowed_when_absent": "soniccd_native",
+      "note": "BizHawk native special-stage run (soniccd.special.native.root, else <native root>/rehost-special); reached once the disc is supplied"
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageGameplayNative#inputOneUpdateLateIsRejected(Case)[1]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/CdSpecialNative.java:34",
+      "allowed_when_absent": "soniccd_native",
+      "note": "BizHawk native special-stage run (soniccd.special.native.root, else <native root>/rehost-special); reached once the disc is supplied"
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageGameplayNative#inputOneUpdateLateIsRejected(Case)[2]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/CdSpecialNative.java:34",
+      "allowed_when_absent": "soniccd_native",
+      "note": "BizHawk native special-stage run (soniccd.special.native.root, else <native root>/rehost-special); reached once the disc is supplied"
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageGameplayNative#inputOneUpdateLateIsRejected(Case)[3]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/CdSpecialNative.java:34",
+      "allowed_when_absent": "soniccd_native",
+      "note": "BizHawk native special-stage run (soniccd.special.native.root, else <native root>/rehost-special); reached once the disc is supplied"
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageGameplayNative#inputOneUpdateLateIsRejected(Case)[4]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/CdSpecialNative.java:34",
+      "allowed_when_absent": "soniccd_native",
+      "note": "BizHawk native special-stage run (soniccd.special.native.root, else <native root>/rehost-special); reached once the disc is supplied"
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageGameplayNative#sonicUfosAndTimerEqualNativeOnEveryUpdateOfTheDemo(Case)[1]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/CdSpecialNative.java:34",
+      "allowed_when_absent": "soniccd_native",
+      "note": "BizHawk native special-stage run (soniccd.special.native.root, else <native root>/rehost-special); reached once the disc is supplied"
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageGameplayNative#sonicUfosAndTimerEqualNativeOnEveryUpdateOfTheDemo(Case)[2]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/CdSpecialNative.java:34",
+      "allowed_when_absent": "soniccd_native",
+      "note": "BizHawk native special-stage run (soniccd.special.native.root, else <native root>/rehost-special); reached once the disc is supplied"
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageGameplayNative#sonicUfosAndTimerEqualNativeOnEveryUpdateOfTheDemo(Case)[3]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/CdSpecialNative.java:34",
+      "allowed_when_absent": "soniccd_native",
+      "note": "BizHawk native special-stage run (soniccd.special.native.root, else <native root>/rehost-special); reached once the disc is supplied"
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageGameplayNative#sonicUfosAndTimerEqualNativeOnEveryUpdateOfTheDemo(Case)[4]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/CdSpecialNative.java:34",
+      "allowed_when_absent": "soniccd_native",
+      "note": "BizHawk native special-stage run (soniccd.special.native.root, else <native root>/rehost-special); reached once the disc is supplied"
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStagePictureNative#fadeFromWhiteStepsEqualNative",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/CdSpecialNative.java:34",
+      "allowed_when_absent": "soniccd_native",
+      "note": "BizHawk native special-stage run (soniccd.special.native.root, else <native root>/rehost-special); reached once the disc is supplied"
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStagePictureNative#paletteBothPlanesTilesAndScrollEqualNative(Case)[1]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/CdSpecialNative.java:34",
+      "allowed_when_absent": "soniccd_native",
+      "note": "BizHawk native special-stage run (soniccd.special.native.root, else <native root>/rehost-special); reached once the disc is supplied"
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStagePictureNative#paletteBothPlanesTilesAndScrollEqualNative(Case)[2]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/CdSpecialNative.java:34",
+      "allowed_when_absent": "soniccd_native",
+      "note": "BizHawk native special-stage run (soniccd.special.native.root, else <native root>/rehost-special); reached once the disc is supplied"
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStagePictureNative#paletteBothPlanesTilesAndScrollEqualNative(Case)[3]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/CdSpecialNative.java:34",
+      "allowed_when_absent": "soniccd_native",
+      "note": "BizHawk native special-stage run (soniccd.special.native.root, else <native root>/rehost-special); reached once the disc is supplied"
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStagePictureNative#paletteBothPlanesTilesAndScrollEqualNative(Case)[4]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/CdSpecialNative.java:34",
+      "allowed_when_absent": "soniccd_native",
+      "note": "BizHawk native special-stage run (soniccd.special.native.root, else <native root>/rehost-special); reached once the disc is supplied"
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageScreenshotNative#everyScreenshotOfTheLoopEqualsNative(Case)[1]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/CdSpecialNative.java:34",
+      "allowed_when_absent": "soniccd_native",
+      "note": "BizHawk native special-stage run (soniccd.special.native.root, else <native root>/rehost-special); reached once the disc is supplied"
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageScreenshotNative#everyScreenshotOfTheLoopEqualsNative(Case)[2]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/CdSpecialNative.java:34",
+      "allowed_when_absent": "soniccd_native",
+      "note": "BizHawk native special-stage run (soniccd.special.native.root, else <native root>/rehost-special); reached once the disc is supplied"
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageScreenshotNative#everyScreenshotOfTheLoopEqualsNative(Case)[3]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/CdSpecialNative.java:34",
+      "allowed_when_absent": "soniccd_native",
+      "note": "BizHawk native special-stage run (soniccd.special.native.root, else <native root>/rehost-special); reached once the disc is supplied"
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageScreenshotNative#everyScreenshotOfTheLoopEqualsNative(Case)[4]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/CdSpecialNative.java:34",
+      "allowed_when_absent": "soniccd_native",
+      "note": "BizHawk native special-stage run (soniccd.special.native.root, else <native root>/rehost-special); reached once the disc is supplied"
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageSessionNative#updatesRunOnNativeFramesAndTheScreenShowsTheNativeFloor(Case)[1]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/CdSpecialNative.java:34",
+      "allowed_when_absent": "soniccd_native",
+      "note": "BizHawk native special-stage run (soniccd.special.native.root, else <native root>/rehost-special); reached once the disc is supplied"
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageSessionNative#updatesRunOnNativeFramesAndTheScreenShowsTheNativeFloor(Case)[2]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/CdSpecialNative.java:34",
+      "allowed_when_absent": "soniccd_native",
+      "note": "BizHawk native special-stage run (soniccd.special.native.root, else <native root>/rehost-special); reached once the disc is supplied"
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageSessionNative#updatesRunOnNativeFramesAndTheScreenShowsTheNativeFloor(Case)[3]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/CdSpecialNative.java:34",
+      "allowed_when_absent": "soniccd_native",
+      "note": "BizHawk native special-stage run (soniccd.special.native.root, else <native root>/rehost-special); reached once the disc is supplied"
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageSessionNative#updatesRunOnNativeFramesAndTheScreenShowsTheNativeFloor(Case)[4]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/CdSpecialNative.java:34",
+      "allowed_when_absent": "soniccd_native",
+      "note": "BizHawk native special-stage run (soniccd.special.native.root, else <native root>/rehost-special); reached once the disc is supplied"
+    },
+    {
       "match": "com.openggf.game.soniccd.audio.TestCdFmPlaySound#actualRetainedUsaBankAdmitsAnchorsAndPlansAfterTheDiscOwnerCloses",
       "category": "optional-fixture",
       "evidence": "src/test/java/com/openggf/game/soniccd/audio/TestCdFmPlaySound.java:333",
