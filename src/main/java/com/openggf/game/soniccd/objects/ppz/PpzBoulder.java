@@ -5,7 +5,8 @@ import com.openggf.level.objects.CameraRelativeDraw;
 import com.openggf.level.objects.ObjectSpawn;
 
 /** Palmtree Panic's common boulder routine with the current section's loaded art. */
-@CameraRelativeDraw(CameraRelativeDraw.Use.CULL_ONLY)
+// Inherited draw calls boulderArtKey virtually; camera X selects art, not screen coordinates.
+@CameraRelativeDraw(CameraRelativeDraw.Use.ART_SELECTION)
 public final class PpzBoulder extends CdBoulder {
     public PpzBoulder(ObjectSpawn spawn) {
         super(spawn);

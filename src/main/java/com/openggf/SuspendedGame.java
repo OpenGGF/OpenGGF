@@ -3,6 +3,8 @@ package com.openggf;
 import com.openggf.audio.rewind.AudioLogicalSnapshot;
 import com.openggf.camera.Camera;
 import com.openggf.game.GameMode;
+import com.openggf.game.GameId;
+import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.MasterTitleEntry;
 import com.openggf.game.MasterTitleScreen;
 import com.openggf.game.launch.SuspendedSettings;
@@ -101,9 +103,11 @@ final class SuspendedGame {
     }
 
     static MasterTitleEntry.Suspended card(String gameCode, GameMode mode, String location) {
-        return new MasterTitleEntry.Suspended(
-                new MasterTitleEntry.Stock(MasterTitleScreen.GameEntry.fromGameId(gameCode)), location,
-                mode == GameMode.LEVEL);
+        GameId game = GameId.fromCode(gameCode);
+        MasterTitleEntry entry = GameModuleRegistry.mediaKind(game) == GameModuleRegistry.MediaKind.HOSTED_MEDIA
+                ? MasterTitleEntry.Hosted.of(game)
+                : new MasterTitleEntry.Stock(MasterTitleScreen.GameEntry.fromGameId(gameCode));
+        return new MasterTitleEntry.Suspended(entry, location, mode == GameMode.LEVEL);
     }
 
     /**

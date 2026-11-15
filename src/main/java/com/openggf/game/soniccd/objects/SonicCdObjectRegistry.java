@@ -27,6 +27,7 @@ public final class SonicCdObjectRegistry extends AbstractObjectRegistry {
     /** Each zone's boss fragment, consulted first on that zone's act 3 stages (objects/boss). */
     private final Map<CdZone, Map<Integer, ObjectFactory>> bosses = new EnumMap<>(CdZone.class);
     private final Map<Integer, String> names = new HashMap<>();
+    private final Map<ObjectFactory, String> factoryNames = new java.util.IdentityHashMap<>();
     /** Common routines placed by the stage's ObjectIndex (catalogue ID column -> factory). */
     private final Map<String, ObjectFactory> stageMapped = new java.util.LinkedHashMap<>();
     /** Shared routines (several zones, not all) placed by the stage's ObjectIndex (shared catalogue ID column). */
@@ -97,6 +98,7 @@ public final class SonicCdObjectRegistry extends AbstractObjectRegistry {
         return new CdObjectRegistration.Registrar() {
             @Override public void object(int objectId, String name, ObjectFactory factory) {
                 target.put(objectId, factory);
+                factoryNames.put(factory, name);
                 names.putIfAbsent(objectId, name);
             }
 
@@ -114,6 +116,7 @@ public final class SonicCdObjectRegistry extends AbstractObjectRegistry {
 
             @Override public void stageObject(String idColumn, String name, ObjectFactory factory) {
                 mapped.put(idColumn, factory);
+                factoryNames.put(factory, name);
             }
         };
     }
@@ -168,6 +171,10 @@ public final class SonicCdObjectRegistry extends AbstractObjectRegistry {
     @Override
     public String getPrimaryName(int objectId) {
         ensureLoaded();
+        if (currentLevel() instanceof CdLevel level) {
+            ObjectFactory factory = stageFactory(level.payload(), objectId);
+            if (factory != null && factoryNames.containsKey(factory)) return factoryNames.get(factory);
+        }
         return names.getOrDefault(objectId, String.format("CD object $%02X", objectId));
     }
 }

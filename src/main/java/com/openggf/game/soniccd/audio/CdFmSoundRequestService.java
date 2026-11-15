@@ -32,6 +32,18 @@ import java.util.function.IntUnaryOperator;
  * {@link CdSubCpuAudio}, whose output this service contributes to the presentation mix.
  */
 public final class CdFmSoundRequestService implements AudioRequestService, GamePcmContributor {
+    /*
+     * OpenGGF presentation normalization: FastYm2612Chip scales channel output
+     * by 3/4, then VirtualSynthesizer applies 1/2 mix headroom. CD-DA/PCM join
+     * after that shared mix, so apply the same 3/8 scale to their contribution.
+     * Native players/devices retain their ROM/disassembly-owned arithmetic;
+     * this engine gain is independent of the player's music/SFX controls.
+     * Relative calibration corroboration and its external-source provenance
+     * are preserved in docs/architecture/validation/2026-11-15-sonic-cd-playtest-fixes.md.
+     * This is a presentation convention, not analog hardware calibration.
+     */
+    private static final int CD_PRESENTATION_NUMERATOR = 3;
+    private static final int CD_PRESENTATION_DENOMINATOR = 8;
     private static final int IDLE = 0x80;
     /** {@code FMC_STOP} (FM/_Sound IDs.inc:93-94); every ID from it up reaches StopSound. */
     private static final int STOP = 0xE0;
@@ -51,6 +63,7 @@ public final class CdFmSoundRequestService implements AudioRequestService, GameP
     private final CdFmDriverState driver;
     private Snapshot state = Snapshot.POWER_ON;
     private boolean forwardOpen;
+    private short[] contribution = new short[0];
 
     /**
      * @param priorities native priority byte by sound ID ({@link CdFmSoundAssets#nativePriorityByte})
@@ -113,7 +126,14 @@ public final class CdFmSoundRequestService implements AudioRequestService, GameP
 
     @Override
     public void render(short[] target, int stereoFrames) {
-        subCpu.render(target, stereoFrames);
+        int samples = stereoFrames * 2;
+        if (contribution.length < samples) contribution = new short[samples];
+        java.util.Arrays.fill(contribution, 0, samples, (short) 0);
+        subCpu.render(contribution, stereoFrames);
+        for (int i = 0; i < samples; i++) {
+            int scaled = contribution[i] * CD_PRESENTATION_NUMERATOR / CD_PRESENTATION_DENOMINATOR;
+            target[i] = (short) Math.clamp(target[i] + scaled, -32768, 32767);
+        }
     }
 
     /**

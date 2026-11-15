@@ -12,7 +12,8 @@ import static org.junit.jupiter.api.Assertions.*;
 class TestCameraRelativeDrawGuard {
     private static final String ANNOTATION = Type.getDescriptor(CameraRelativeDraw.class);
     private record Call(String owner, String name, String descriptor) { }
-    private record Body(List<Call> calls) { }
+    private record Invocation(Call target, int opcode) { }
+    private record Body(int access, List<Invocation> calls) { }
     private static final class Definition {
         String name, parent;
         boolean annotated;
@@ -36,6 +37,27 @@ class TestCameraRelativeDrawGuard {
         var valid = classes.get(Type.getInternalName(Declared.class));
         assertEquals(List.of(), discrepancies(Map.of(valid.name, valid)));
         assertFalse(CameraRelativeDraw.class.isAnnotationPresent(java.lang.annotation.Inherited.class));
+    }
+    @Test void inheritedDrawDispatchesToTheConcreteHelperOverride() throws Exception {
+        var classes = read(TestSessionOutputPaths.compiledTestClasses());
+        assertEquals(List.of(), fixtureDiscrepancies(classes, VirtualDeclared.class, VirtualBase.class));
+        assertEquals(List.of(Type.getInternalName(VirtualMissing.class).replace('/', '.')
+                        + " requires @CameraRelativeDraw"),
+                fixtureDiscrepancies(classes, VirtualMissing.class, VirtualBase.class));
+    }
+    @Test void superStaticAndPrivateCallsDoNotDispatchToUnusedCameraHelpers() throws Exception {
+        var classes = read(TestSessionOutputPaths.compiledTestClasses());
+        assertEquals(List.of(), fixtureDiscrepancies(classes, SpecialDraw.class, VirtualBase.class));
+        assertEquals(List.of(), fixtureDiscrepancies(classes, StaticDraw.class, StaticBase.class));
+        assertEquals(List.of(), fixtureDiscrepancies(classes, PrivateDraw.class, PrivateBase.class));
+    }
+    private static List<String> fixtureDiscrepancies(Map<String, Definition> classes, Class<?>... fixtures) {
+        var chosen = new HashMap<String, Definition>();
+        for (var fixture : fixtures) {
+            var definition = classes.get(Type.getInternalName(fixture));
+            chosen.put(definition.name, definition);
+        }
+        return discrepancies(chosen);
     }
     private static List<String> discrepancies(Map<String, Definition> definitions) {
         var differences = new ArrayList<String>();
@@ -65,13 +87,32 @@ class TestCameraRelativeDrawGuard {
         if (body == null && owner.parent != null)
             return readsCamera(new Call(owner.parent, call.name, call.descriptor), root, definitions, visited);
         if (body == null) return false;
-        for (var next : body.calls) {
+        for (var invocation : body.calls) {
+            var next = invocation.target;
+            // Only virtual calls dispatch to the concrete draw producer. In particular,
+            // invokespecial (super/private) and invokestatic retain their symbolic owner.
+            if ((invocation.opcode == Opcodes.INVOKEVIRTUAL || invocation.opcode == Opcodes.INVOKEINTERFACE)
+                    && inHierarchy(next.owner, root, definitions)) {
+                var declared = resolve(next, definitions);
+                var declaredBody = declared == null ? null : definitions.get(declared.owner).methods.get(declared);
+                if (declaredBody != null && (declaredBody.access & (Opcodes.ACC_PRIVATE | Opcodes.ACC_STATIC)) == 0) {
+                    var dispatched = resolve(new Call(root, next.name, next.descriptor), definitions);
+                    if (dispatched != null) next = dispatched;
+                }
+            }
             if (next.owner.equals("com/openggf/camera/Camera")) {
                 if (readsCamera(next, root, definitions, visited)) return true;
             } else if (inHierarchy(next.owner, root, definitions)
                     && readsCamera(next, root, definitions, visited)) return true;
         }
         return false;
+    }
+    private static Call resolve(Call call, Map<String, Definition> definitions) {
+        for (var owner = definitions.get(call.owner); owner != null; owner = definitions.get(owner.parent)) {
+            var candidate = new Call(owner.name, call.name, call.descriptor);
+            if (owner.methods.containsKey(candidate)) return candidate;
+        }
+        return null;
     }
     private static boolean inHierarchy(String owner, String root, Map<String, Definition> definitions) {
         for (String current = root; current != null;) {
@@ -95,15 +136,23 @@ class TestCameraRelativeDrawGuard {
                         return null;
                     }
                     @Override public MethodVisitor visitMethod(int access, String name, String descriptor, String signature, String[] exceptions) {
-                        var body = new Body(new ArrayList<>());
+                        var body = new Body(access, new ArrayList<>());
                         definition.methods.put(new Call(definition.name, name, descriptor), body);
                         return new MethodVisitor(Opcodes.ASM9) {
                             @Override public void visitMethodInsn(int opcode, String owner, String name, String descriptor, boolean isInterface) {
-                                body.calls.add(new Call(owner, name, descriptor));
+                                body.calls.add(new Invocation(new Call(owner, name, descriptor), opcode));
                             }
                             @Override public void visitInvokeDynamicInsn(String name, String descriptor, Handle bootstrap, Object... arguments) {
-                                for (var argument : arguments) if (argument instanceof Handle handle)
-                                    body.calls.add(new Call(handle.getOwner(), handle.getName(), handle.getDesc()));
+                                for (var argument : arguments) if (argument instanceof Handle handle) {
+                                    int opcode = switch (handle.getTag()) {
+                                        case Opcodes.H_INVOKEVIRTUAL -> Opcodes.INVOKEVIRTUAL;
+                                        case Opcodes.H_INVOKEINTERFACE -> Opcodes.INVOKEINTERFACE;
+                                        case Opcodes.H_INVOKESTATIC -> Opcodes.INVOKESTATIC;
+                                        default -> Opcodes.INVOKESPECIAL;
+                                    };
+                                    body.calls.add(new Invocation(
+                                            new Call(handle.getOwner(), handle.getName(), handle.getDesc()), opcode));
+                                }
                             }
                         };
                     }
@@ -133,4 +182,39 @@ class TestCameraRelativeDrawGuard {
     private static class Inherited extends Declared {
         @Override public void appendRenderCommands(List<?> commands) { super.appendRenderCommands(commands); }
     }
+    private static class VirtualBase {
+        public void appendRenderCommands(List<?> commands) { helper(); }
+        protected int helper() { return 0; }
+    }
+    @CameraRelativeDraw(CameraRelativeDraw.Use.ART_SELECTION)
+    private static class VirtualDeclared extends VirtualBase {
+        com.openggf.camera.Camera camera;
+        @Override protected int helper() { return camera.getX(); }
+    }
+    private static class VirtualMissing extends VirtualBase {
+        com.openggf.camera.Camera camera;
+        @Override protected int helper() { return camera.getY(); }
+    }
+    private static class SpecialDraw extends VirtualBase {
+        com.openggf.camera.Camera camera;
+        @Override public void appendRenderCommands(List<?> commands) { super.helper(); }
+        @Override protected int helper() { return camera.getX(); }
+    }
+    private static class StaticBase {
+        public void appendRenderCommands(List<?> commands) { helper(); }
+        protected static int helper() { return 0; }
+    }
+    private static class StaticDraw extends StaticBase {
+        static com.openggf.camera.Camera camera;
+        protected static int helper() { return camera.getX(); }
+    }
+    private static class PrivateBase {
+        public void appendRenderCommands(List<?> commands) { helper(); }
+        private int helper() { return 0; }
+    }
+    private static class PrivateDraw extends PrivateBase {
+        com.openggf.camera.Camera camera;
+        protected int helper() { return camera.getX(); }
+    }
+
 }

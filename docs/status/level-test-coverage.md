@@ -4,7 +4,13 @@ Sonic CD stages (2026-11-13): the [Sonic CD stage matrix](../architecture/valida
 records, for all 70 USA stage programs, which are certified by a native full-act
 route to their end, which by a 14-second fixture only, and the boss recordings.
 Act 1 Bad Future and act 2 Past and futures have fixture evidence only; widths,
-rewind spots and lifecycle obligations are largely unassessed.
+rewind spots and lifecycle obligations are largely unassessed. The
+[2026-11-15 playtest follow-up](../architecture/validation/2026-11-15-sonic-cd-playtest-fixes.md)
+records focused object, PPZ background, suspension, audio and rendered results
+evidence, completed composed checks and matched-baseline attribution. Broad
+smoke remains FAILED with input/skip gaps; end-to-end rewind and user acceptance
+remain pending. These
+checks do not advance the historical route totals.
 
 S2 Competition monitor outcomes (2026-11-09): eight cold-title EHZ1 fixtures
 exercise P1 breaking for all eight outcomes and hold the award for six seconds.

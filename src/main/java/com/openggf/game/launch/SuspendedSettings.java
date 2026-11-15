@@ -4,6 +4,7 @@ import com.openggf.configuration.ConfigCatalog;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.MasterTitleScreen;
+import com.openggf.game.MasterTitleEntry;
 
 import java.util.Collections;
 import java.util.EnumMap;
@@ -75,8 +76,16 @@ public final class SuspendedSettings {
      * {@link LiveSettings}).
      */
     public void resume(SonicConfigurationService config, MasterTitleScreen.GameEntry game, boolean inLevel) {
+        resume(config, new MasterTitleEntry.Stock(game), inLevel);
+    }
+
+    /** Hosted games follow saved preferences; only cartridge entries have a Game Setup profile. */
+    public void resume(SonicConfigurationService config, MasterTitleEntry game, boolean inLevel) {
         Objects.requireNonNull(config, "config");
         Objects.requireNonNull(game, "game");
+        if (!(game instanceof MasterTitleEntry.Stock) && !(game instanceof MasterTitleEntry.Hosted)) {
+            throw new IllegalArgumentException("Only cartridge or hosted games can resume settings");
+        }
         Map<SonicConfiguration, Object> fresh = freshLaunchValues(config, game, inLevel);
         config.clearSessionOverrides();
         overrides.forEach((key, value) -> {
@@ -98,10 +107,12 @@ public final class SuspendedSettings {
 
     /** The live settings as MasterTitleLaunchCoordinator.prepareExit would leave them for this game. */
     private static Map<SonicConfiguration, Object> freshLaunchValues(SonicConfigurationService config,
-                                                                     MasterTitleScreen.GameEntry game, boolean inLevel) {
+                                                                     MasterTitleEntry game, boolean inLevel) {
         config.clearSessionOverrides();
-        LaunchProfileStore store = new LaunchProfileStore(config);
-        new LaunchProfileApplier(config).apply(store.load(game), game, store);
+        if (game instanceof MasterTitleEntry.Stock stock) {
+            LaunchProfileStore store = new LaunchProfileStore(config);
+            new LaunchProfileApplier(config).apply(store.load(stock.game()), stock.game(), store);
+        }
         Map<SonicConfiguration, Object> fresh = new EnumMap<>(SonicConfiguration.class);
         for (SonicConfiguration key : SonicConfiguration.values()) {
             Object value = config.getConfigValue(key);

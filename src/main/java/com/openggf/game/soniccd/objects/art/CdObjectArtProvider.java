@@ -218,16 +218,22 @@ public final class CdObjectArtProvider implements ObjectArtProvider, com.openggf
     }
 
     /**
-     * ObjMonitorItem_Init points oMap at frame {@code oAnim}'s first piece and keeps
-     * {@code oMapFrame = oAnim} (Monitor and Time Post/Main.asm:451-459), so item frame k is
-     * the body at that piece address plus its own k-th signed word.
+     * ObjMonitorItem_Init selects the first piece after the frame count and sets sprite flag bit 5.
+     * DrawObjects .StaticMap draws exactly that piece, without consulting oMapFrame
+     * (Level/Object Functions.asm:328-345; Level/_Objects/Monitor and Time Post/Main.asm:446-459).
      */
     private ObjectSpriteSheet monitorItemSheet(RomByteReader reader) {
         int table = entry.monitorMappings();
         List<SpriteMappingFrame> frames = new ArrayList<>();
         for (int k = 0; k < 8; k++) {
-            int pieces = table + (short) reader.readU16BE(table + k * 2) + 1;
-            frames.add(CommonSpriteDataLoader.loadVer1MappingFramesWithSignedOffsets(reader, pieces, k + 1).get(k));
+            int piece = table + (short) reader.readU16BE(table + k * 2) + 1;
+            int size = reader.readU8(piece + 1);
+            int tile = reader.readU16BE(piece + 2);
+            frames.add(new SpriteMappingFrame(List.of(new SpriteMappingPiece(
+                    (byte) reader.readU8(piece + 4), (byte) reader.readU8(piece),
+                    ((size >> 2) & 3) + 1, (size & 3) + 1, tile & 0x7FF,
+                    (tile & 0x800) != 0, (tile & 0x1000) != 0, (tile >> 13) & 3,
+                    (tile & 0x8000) != 0))));
         }
         return new ObjectSpriteSheet(vram.window(MONITOR_ITEM_TILE & 0x7FF, span(frames)), frames,
                 tilePalette(MONITOR_ITEM_TILE), 1);

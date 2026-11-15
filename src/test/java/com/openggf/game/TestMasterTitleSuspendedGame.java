@@ -41,6 +41,37 @@ class TestMasterTitleSuspendedGame {
         return screen;
     }
 
+    @Test void hostedPausedCardResumesWithoutMediaProbeOrCartridgeSetup() {
+        var screen = screenWithSuspendedGame();
+        var hosted = MasterTitleEntry.Hosted.of(GameId.SCD);
+        screen.replaceEntries(List.of(hosted));
+        screen.setSuspendedGame(new MasterTitleEntry.Suspended(hosted, "Palmtree Panic, Act 3", true), 0, 0, null);
+        assertEquals("scd", screen.getSelectedGameId());
+        assertEquals(List.of(TitleHubNavigation.Action.RESUME, TitleHubNavigation.Action.END),
+                screen.hubActionsForTest());
+        press(screen, GLFW_KEY_ENTER);
+        assertTrue(screen.consumeResumeRequest());
+        assertFalse(screen.isGameSelected());
+        assertEquals(0, ended.get());
+    }
+
+    @Test void endingHostedPausedCardSelectsItsHostedGame() {
+        var screen = screenWithSuspendedGame();
+        var hosted = MasterTitleEntry.Hosted.of(GameId.SCD);
+        screen.replaceEntries(List.of(hosted));
+        screen.setSuspendedGame(new MasterTitleEntry.Suspended(hosted, "Palmtree Panic, Act 3", true), 0, 0, null);
+        press(screen, GLFW_KEY_DOWN);
+        press(screen, GLFW_KEY_RIGHT); // Resume, End
+        press(screen, GLFW_KEY_ENTER);
+        assertTrue(screen.isEndPromptOpenForTest());
+        press(screen, GLFW_KEY_DOWN);
+        press(screen, GLFW_KEY_ENTER);
+        assertEquals(1, ended.get());
+        assertFalse(screen.hasSuspendedGame());
+        assertEquals(hosted, screen.entriesForTest().get(indexOfSelected(screen)));
+        assertFalse(screen.isGameSelected());
+    }
+
     @Test void zoomStartsAtTheGameFrameAndBlocksInputUntilItReachesTheCard() {
         for (int width : new int[] {320, 426}) {
             var screen = screenWithSuspendedGame();
