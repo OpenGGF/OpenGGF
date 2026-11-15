@@ -4107,7 +4107,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 }
                 // Cross-game donation: override only typed rules with donated capabilities.
                 if (runtimeServices == null && CrossGameFeatureProvider.isActive()) {
-                        this.gameRules = currentCrossGameFeatures().getHybridPolicies().rules();
+                        var hybridPolicies = currentCrossGameFeatures().getHybridPolicies();
+                        this.gameRules = hybridPolicies != null ? hybridPolicies.rules() : null;
                 }
                 ensurePersistentInstaShieldObject();
                 bubbleAnimId = module != null ? module.resolveAnimationId(CanonicalAnimation.BUBBLE) : -1;
