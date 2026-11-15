@@ -29,6 +29,9 @@ public interface HostedGameMedia {
     /** The game's short name, for its card. */
     String menuLabel();
 
+    /** The one-based act shown to players; runtime indices may also encode a time period. */
+    default int displayAct(int zone, int act) { return act + 1; }
+
     /** A cheap look at the configured media (no whole-media hashing), for listing the game. */
     Availability probe(SonicConfigurationService config);
 

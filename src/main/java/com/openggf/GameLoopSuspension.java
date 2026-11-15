@@ -8,7 +8,10 @@ import com.openggf.game.session.WorldSession;
 import com.openggf.graphics.RgbaImage;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameModuleRouting;
+import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.MasterTitleScreen;
+import com.openggf.game.MasterTitleEntry;
+import com.openggf.game.internal.HostedGameMedia;
 import com.openggf.game.recording.UserRecordingPlaybackState;
 
 import java.util.Objects;
@@ -37,7 +40,7 @@ final class GameLoopSuspension {
         int thumbnailHeight();
         SuspendedSettings suspendSettings();
         SuspendedGame.CameraPosition captureCameraPosition();
-        void resumeSettings(SuspendedSettings settings, MasterTitleScreen.GameEntry entry, boolean inLevel);
+        void resumeSettings(SuspendedSettings settings, MasterTitleEntry entry, boolean inLevel);
         void restoreCamera(SuspendedGame.CameraPosition position);
         void restoreAudio(AudioLogicalSnapshot snapshot);
     }
@@ -184,8 +187,15 @@ final class GameLoopSuspension {
         } catch (RuntimeException failure) {
             LOGGER.warning("Suspending without part of its state: " + failure.getMessage());
         }
+        HostedGameMedia media = GameModuleRegistry.mediaKind(game)
+                == GameModuleRegistry.MediaKind.HOSTED_MEDIA
+                ? HostedGameMedia.of(world.getGameModule()) : null;
+        int displayAct = world.getApparentAct() + 1;
+        if (media != null && (mode == GameMode.LEVEL || mode == GameMode.TITLE_CARD)) {
+            displayAct = media.displayAct(world.getCurrentZone(), world.getCurrentAct());
+        }
         pendingSuspend = new SuspendedGame.Pending(audio,
-                SuspendedGame.card(game.code(), mode, SuspendedGame.location(mode, zone, world.getApparentAct() + 1)));
+                SuspendedGame.card(game.code(), mode, SuspendedGame.location(mode, zone, displayAct)));
         pendingSuspendThumbnail = null;
         suspendThumbnailRequested = true;
         operation.capture().fadeMusic();
@@ -232,7 +242,7 @@ final class GameLoopSuspension {
             operation.hub().currentScreen().cleanup();
             operation.hub().publishScreen(null);
         }
-        operation.capture().resumeSettings(game.settings(), game.card().game().game(), game.mode() == GameMode.LEVEL);
+        operation.capture().resumeSettings(game.settings(), game.card().game(), game.mode() == GameMode.LEVEL);
         operation.hub().refreshCachedConfig();
         unpark(game.mode());
         operation.hub().applyDisplayDimensions();

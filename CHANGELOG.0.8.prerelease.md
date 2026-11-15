@@ -15,6 +15,12 @@ under the matching area heading; see the
   Present, Past, Good Future and Bad Future; act 3 in both futures. Each zone
   has its own presentation, objects and boss. Palmtree Panic's solid boulders
   use the current section's graphics, replacing the title-card tiles after loading.
+  Flowers finish growing, diagonal springs and monitor rewards use their proper
+  graphics, and object names follow the current stage's object table. Palmtree
+  Panic backgrounds sample each row's own camera section, retaining static-row
+  repetition without wrapping the moving scenery. Results show the changing
+  score and bonus digits. Holding Escape returns Sonic CD to the game shelf
+  with a resumable card, the correct act label and settings restored on resume.
   Sonic plays on Sonic 1's physics
   with Sonic CD's own rules (spin dash and super peel-out, the extended camera,
   the 3D ramps, per-zone player routines and the idle timer that ends in
@@ -32,7 +38,8 @@ under the matching area heading; see the
   included: Visual Mode, D.A. Garden, the pencil test, Thank You,
   Comin' Soon, attract demos, the backup RAM manager, and the Japanese and
   European releases. Disc audio, video songs and PCM sound follow the music
-  and effects volumes. The time-warp stars are drawn and Robotnik's projector
+  and effects volumes; CD audio and PCM also share the FM presentation scale
+  for their relative level. The time-warp stars are drawn and Robotnik's projector
   can be destroyed in the Past (its hologram animals are not drawn).
   Accuracy is measured against native recordings made on an emulator running
   the USA disc: 26 of 28 full-act routes (start to signpost) equal native on

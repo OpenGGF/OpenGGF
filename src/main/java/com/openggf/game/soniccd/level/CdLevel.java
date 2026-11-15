@@ -46,7 +46,8 @@ public final class CdLevel extends AbstractLevel implements com.openggf.game.int
         com.openggf.game.internal.CollisionLayoutRowWindow,
         com.openggf.game.internal.CollisionLayoutColumnWindow,
         com.openggf.game.internal.CollisionChunkOriginReadsBlank,
-        com.openggf.game.internal.VerticalScrollWrapAtTop {
+        com.openggf.game.internal.VerticalScrollWrapAtTop,
+        com.openggf.game.internal.BackgroundRowLayout {
     private static final int SONIC_PALETTE_ID = 3;   // LevelStart: moveq #3,d0; bsr LoadPalette (scddisasm/src/Level/Main.asm:240-243)
     private static final int CHUNK_BYTES = 0x200;     // GetBlockData: subq.b #1; ror.w #7 (Block Draw.asm:217-219)
     private static final int CHUNK_GRID = 16;
@@ -88,6 +89,7 @@ public final class CdLevel extends AbstractLevel implements com.openggf.game.int
     private int fgMapWidth;
     private int fgMapHeight;
     private int bgMapWidth;
+    private com.openggf.game.soniccd.zones.ppz.PpzBackgroundRows ppzBackgroundRows;
 
     CdLevel(CdStagePayload payload, CdStageImage image, CdStageCatalogue.Entry entry, int zoneIndex,
             boolean publishGraphics) throws IOException {
@@ -102,6 +104,9 @@ public final class CdLevel extends AbstractLevel implements com.openggf.game.int
         loadBlockMappings(image, image.offsetOf(image.u32(index + 4)), entry.levelCollision());
         loadChunks(image, image.offsetOf(image.u32(index + 8)));
         loadLayouts(image, entry.levelLayouts());
+        if (payload.stage().zone() == com.openggf.game.soniccd.CdZone.PALMTREE_PANIC) {
+            ppzBackgroundRows = com.openggf.game.soniccd.zones.ppz.PpzBackgroundRows.read(image);
+        }
 
         // CamBounds: unused word, left, right, top, bottom, Y centre (LevelSizeLoad,
         // Scroll (Act 1 Present).asm:19-33).
@@ -172,6 +177,11 @@ public final class CdLevel extends AbstractLevel implements com.openggf.game.int
     @Override
     public int collisionLayoutYMask() {
         return payload.stage().zone() == com.openggf.game.soniccd.CdZone.TIDAL_TEMPEST ? 0x07FF : 0x0FFF;
+    }
+
+    @Override
+    public int backgroundLayoutX(int sourceX, int sourceY) {
+        return ppzBackgroundRows == null ? sourceX : ppzBackgroundRows.layoutX(sourceX, sourceY);
     }
 
     /**

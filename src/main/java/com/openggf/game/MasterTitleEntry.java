@@ -53,13 +53,16 @@ public sealed interface MasterTitleEntry
     }
 
     /**
-     * A stock game left with a held Escape and kept in memory. Its card sits first on the shelf
+     * A cartridge or hosted game left with a held Escape and kept in memory. Its card sits first on the shelf
      * and resumes the game; it is never launched, so it has no {@link Launch}. {@code inLevel}
      * says it was paused in a level, where a new aspect can take effect on resume.
      */
-    record Suspended(Stock game, String location, boolean inLevel) implements MasterTitleEntry {
+    record Suspended(MasterTitleEntry game, String location, boolean inLevel) implements MasterTitleEntry {
         public Suspended {
             Objects.requireNonNull(game, "game");
+            if (!(game instanceof Stock) && !(game instanceof Hosted)) {
+                throw new IllegalArgumentException("Only cartridge or hosted games can be suspended");
+            }
             location = location == null ? "" : location;
         }
         @Override public String displayName() { return game.displayName(); }

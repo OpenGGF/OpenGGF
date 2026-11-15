@@ -24,6 +24,20 @@ records the original failures and loading correction. This bounded art check
 does not advance the route matrix; section-transition screenshots, broader
 viewport coverage and inherited rewind/lifecycle gaps remain unassessed.
 
+## Playtest follow-up (2026-11-15)
+
+The [bounded validation record](../2026-11-15-sonic-cd-playtest-fixes.md)
+covers flower progression, diagonal springs, monitor item mappings, stage-local
+object names, PPZ row sampling, results digits, audio balance and hosted-game
+suspension. OBJECT/PRESENT gain focused object/art evidence; CAMERA/PRESENT
+gain disc-backed row sampling and ten-variant PPZ scroll checks; LIFE gains
+suspension/settings checks. Rendered results digits and same-live-instance restore passed. Composed
+validation and matched-baseline attribution are complete; the broad smoke
+verdict remains FAILED with input/skip gaps. End-to-end rewind and the user's
+manual checklist remain pending. These working-tree
+checks do not requalify the historical stage cells or close inherited width,
+whole-route, native-picture or lifecycle gaps.
+
 ## Stage keys
 
 A stage is its program name `R<zone><act><period>`: zone 1 Palmtree Panic,
