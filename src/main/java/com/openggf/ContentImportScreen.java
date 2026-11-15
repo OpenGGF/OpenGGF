@@ -407,6 +407,7 @@ public final class ContentImportScreen implements AutoCloseable {
             case S1 -> UiMessages.text("editor.editor_project_workspace.sonic_1_1t0f5st");
             case S2 -> UiMessages.text("editor.editor_project_workspace.sonic_2_1t0f5su");
             case S3K -> UiMessages.text("launch.value.sonic_3_k");
+            case SCD -> "Sonic CD";
             case STANDALONE -> UiMessages.text("import.ui.standalone");
         };
     }

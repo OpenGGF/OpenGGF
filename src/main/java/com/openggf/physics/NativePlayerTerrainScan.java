@@ -14,6 +14,8 @@ final class NativePlayerTerrainScan {
     private static final byte FLAGGED_ANGLE = 3;
     private int layoutYMask;
     private Runnable charge;
+    /** This scan is downward on a host whose floor routine reads a negative height as a flat full block. */
+    private boolean negativeFloorIsFlatFull;
     private SupportKind kind;
     SupportKind kind() { return kind; }
 
@@ -37,6 +39,9 @@ final class NativePlayerTerrainScan {
                                            byte layer, boolean loopLowPlane, SensorResult resultTarget, int layoutYMask, Runnable charge) {
         this.layoutYMask = layoutYMask;
         this.charge = charge;
+        negativeFloorIsFlatFull = direction == Direction.DOWN && lm != null
+                && com.openggf.game.internal.FloorProbeNegativeHeight.forHost(lm.getGameModule())
+                == com.openggf.game.internal.FloorProbeNegativeHeight.FULL_HEIGHT_FLAT;
         kind = SupportKind.EMPTY_DEFAULT;
         // Check current tile (ROM: FindFloor - first pass)
         SensorResult result = scanTileVertical(lm, x, y, x, y, solidityBit, direction, false,
@@ -116,6 +121,15 @@ final class NativePlayerTerrainScan {
                 return createResultWithDistance(resultTarget, tile, desc, distance, direction);
             }
             return null;
+        }
+
+        if (metric < 0 && negativeFloorIsFlatFull) {
+            // Sonic CD FindLevelFloor / FindLevelFloor2 .CheckNegFloor: a downward probe
+            // (cmpa.w #$10,a3) forces height $10 and angle 0 and takes .FoundFloor, in either
+            // pass and with no regress (scddisasm src/Level/Collision Floor.asm:754-759, 843-848).
+            kind = SupportKind.GEOMETRIC_SURFACE;
+            byte distance = calculateVerticalDistance(FULL_TILE, origY, checkY, direction);
+            return resultTarget.set((byte) 0, distance, tile.getIndex(), direction);
         }
 
         // Handle negative metrics (ROM: FindFloor loc_1E85E / FindFloor2 loc_1E900)
@@ -292,7 +306,9 @@ final class NativePlayerTerrainScan {
         }
 
         byte metric = tile.getHeightAt((byte) index);
-        if (metric != 0 && metric != FULL_TILE) {
+        // A full column keeps its sign: +16 and -16 take the same FindFloor branches, except on
+        // a .CheckNegFloor host, where a downward probe reads -16 as a flat full block.
+        if (metric != 0 && (metric != FULL_TILE || negativeFloorIsFlatFull)) {
             // ROM: eor.w d6,d4 / btst #$C,d4 / neg.w d0
             // V-flip (for floor scan) or non-V-flip (for ceiling scan) negates
             // the height, producing a negative metric processed through the

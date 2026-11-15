@@ -139,6 +139,8 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	private boolean configuredHeadlessSession;
 	private com.openggf.audio.AudioBackend configuredHeadlessBackend;
 	private final RomManager romManager;
+	/** The media of a game hosted from other than a cartridge ROM (Sonic CD's disc), held while it runs. */
+	private final com.openggf.game.launch.HostedMediaLaunch hostedMediaLaunch = new com.openggf.game.launch.HostedMediaLaunch();
 	private final RomDetectionService romDetectionService;
 	private final CrossGameFeatureProvider crossGameFeatureProvider;
 	private final DebugOverlayManager debugOverlayManager;
@@ -966,6 +968,8 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		failure = appendConfiguredHeadlessCleanupFailure(
 				failure, SessionManager::clear);
 		failure = appendConfiguredHeadlessCleanupFailure(
+				failure, hostedMediaLaunch::close);
+		failure = appendConfiguredHeadlessCleanupFailure(
 				failure, audioManager::clearDonorAudio);
 		failure = appendConfiguredHeadlessCleanupFailure(
 				failure, crossGameFeatureProvider::resetState);
@@ -1295,7 +1299,19 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	public void initializeGame() {
 		GameModule rootModule;
 		GameDataSource dataSource;
-		try {
+		var hostedGame = com.openggf.game.launch.HostedMediaLaunch.hostedGame(
+				configService.getString(SonicConfiguration.DEFAULT_ROM));
+		if (hostedGame.isPresent()) {
+			try {
+				var opened = hostedMediaLaunch.open(hostedGame.get(), configService,
+						com.openggf.game.save.SavePaths.root());
+				rootModule = opened.module();
+				dataSource = opened.source();
+			} catch (IOException e) {
+				showStartupRomError(e.getMessage(), e.getMessage());
+				return;
+			}
+		} else try {
 			Rom rom = romManager.getRom();
 			var detectedModule = romDetectionService.detectAndCreateModule(rom);
 			if (detectedModule.isEmpty()) {
@@ -1581,6 +1597,11 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	}
 
 	private void showStartupRomError(String message) {
+		showStartupRomError(message, null);
+	}
+
+	/** {@code detail}, when given, replaces the configured ROM path on the error page. */
+	private void showStartupRomError(String message, String detail) {
 		LOGGER.warning(message);
 		gameplayMode = null;
 		gameLoop.setGameplayMode(null);
@@ -1591,7 +1612,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		if (graphicsManager.isGlInitialized()) {
 			masterTitleScreen.initialize();
 		}
-		masterTitleScreen.showRomLoadError(configService.getString(SonicConfiguration.DEFAULT_ROM));
+		masterTitleScreen.showRomLoadError(configService.getString(SonicConfiguration.DEFAULT_ROM), detail);
 		gameLoop.setGameMode(GameMode.MASTER_TITLE_SCREEN);
 	}
 
@@ -1770,6 +1791,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		}
 		SessionManager.clear();
 		romManager.close();
+		hostedMediaLaunch.close();
 		GameModuleRegistry.reset();
 		ModSubsystem.current().returnToTitle();
 		audioManager.resetState();
@@ -2365,6 +2387,9 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		List<com.openggf.game.MasterTitleEntry> entries = new ArrayList<>();
 		for (MasterTitleScreen.GameEntry game : MasterTitleScreen.GameEntry.values()) {
 			entries.add(new com.openggf.game.MasterTitleEntry.Stock(game));
+		}
+		for (GameId hosted : GameModuleRegistry.hostedMediaGames()) {
+			entries.add(com.openggf.game.MasterTitleEntry.Hosted.of(hosted));
 		}
 		SaveManager saves = new SaveManager(com.openggf.game.save.SavePaths.root());
 		for (com.openggf.mods.ModDescriptor descriptor

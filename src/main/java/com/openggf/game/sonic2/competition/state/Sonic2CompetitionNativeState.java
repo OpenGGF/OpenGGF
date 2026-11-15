@@ -170,7 +170,8 @@ public final class Sonic2CompetitionNativeState implements Sonic2NativeCompetiti
                 primary || own.maxYChanging(), incoming.horizScrollDelayFrames(), own.frozen(),
                 own.deferHorizontalBoundaryClampOnce(), own.levelStarted(), own.verticalWrapEnabled(),
                 own.verticalWrapRange(), own.verticalWrapMask(), own.lastFrameWrapped(), own.wrapDeltaY(),
-                incoming.yPosBias(), own.fastScrollCap(), own.customMaxXBoundaryEasingClaimed(), own.viewportMaxX()), player);
+                incoming.yPosBias(), own.fastScrollCap(), own.customMaxXBoundaryEasingClaimed(), own.viewportMaxX(),
+                own.horizontalFocusOffset()), player);
     }
 
     @Override public void freezeObjects(GameplayModeContext context, int ticks) {

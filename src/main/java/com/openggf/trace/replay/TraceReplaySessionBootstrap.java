@@ -520,7 +520,18 @@ public final class TraceReplaySessionBootstrap {
         if (level == null || level.getObjectManager() == null) {
             return;
         }
-        level.getObjectManager().initVblaCounter(trace.initialVblankCounter() - 1);
+        level.getObjectManager().initVblaCounter(vblankCounterBeforeRowZero(trace));
+    }
+
+    /**
+     * The hardware-relative initial base of the cross-game timing contract (section 4): the object-visible
+     * V-INT counter immediately before the V-blank that produced replay row zero, from row zero's recorded
+     * {@code vblank_counter}. A host whose level load services that V-blank itself (Sonic CD's first main-loop
+     * iteration) installs this value before the load instead of after it; the arithmetic and its source stay here.
+     */
+    public static int vblankCounterBeforeRowZero(TraceData trace) {
+        Objects.requireNonNull(trace, "trace");
+        return trace.initialVblankCounter() - 1;
     }
 
 

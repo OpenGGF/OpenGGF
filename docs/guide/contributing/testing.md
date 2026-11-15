@@ -428,6 +428,14 @@ export SONIC_2_ROM_PATH="/absolute/s2.gen"
 export SONIC_3K_ROM_PATH="/absolute/s3k.gen"
 ```
 
+Sonic CD is not discovered: name the disc yourself with
+`-Dsoniccd.media.root=<directory holding USA/<disc>.cue>`. Native Sonic CD
+recordings are user-local and never committed; tests read them from
+`-Dsoniccd.native.root` (default `<media root>/../native`) and skip without
+them. A category run sees these only through `MAVEN_ARGS` or a JVM option
+variable, and declares the input present only when the property is set. See
+[configuration](../../../CONFIGURATION.md#sonic-cd-disc-and-native-captures).
+
 ## HeadlessTestFixture
 
 The `HeadlessTestFixture` provides a builder-pattern API for setting up a test level

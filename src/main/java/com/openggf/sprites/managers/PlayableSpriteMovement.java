@@ -6,6 +6,7 @@ import com.openggf.level.objects.ObjectManagerInternalAccess;
 import com.openggf.game.mutators.PlayerFluidContextAccess;
 import com.openggf.game.CanonicalAnimation;
 import com.openggf.game.GameModule;
+import com.openggf.game.internal.PlayerStageRoutines;
 import com.openggf.game.GameOverFlowProvider;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.LevelState;
@@ -133,6 +134,41 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	private boolean jumpPrevious;
 	private boolean jumpReleasedSinceJump;
 	private boolean testKeyPressed;
+
+	// Sonic CD timed charge model (PlayerCapabilityRules.timedChargeMoves): the
+	// oPlayerCharge byte and the lookMode byte (scddisasm src/Level/_Objects/Sonic/
+	// Main.asm:69-86, 946-1121) and the Up/Down press edges its double tap reads.
+	// Both bytes stay zero in every game without the rule.
+	private int chargeTimer;
+	private int lookMode;
+	private boolean upPrevious, downPrevious;
+	private boolean inputUpPress, inputDownPress;
+	// This frame's standing tail only: whether it wrote the duck animation (.CheckSpindash
+	// and .Duck, Main.asm:1085, 1113), and whether .BalanceGround's ObjGetFloorDist left
+	// d5 = $D for .Settle (Main.asm:903-904, 1140-1163; Collision Check.asm:157-169).
+	// Cleared at each frame's entry, never carried across frames.
+	private boolean timedChargeDuckWritten;
+	private boolean timedChargeSettleUsesFloorProbeD5;
+	private static final short TIMED_CHARGE_FLOOR_PROBE_D5 = 0x0D;
+	private static final int TIMED_SPINDASH_FULL = 45;
+	private static final int TIMED_PEELOUT_FULL = 30;
+	private static final int TIMED_SPINDASH_STEP = 75;
+	private static final int TIMED_PEELOUT_STEP = 100;
+	private static final short TIMED_SPINDASH_START_SPEED = 0x16;
+	private static final int LOOK_TIMER_MASK = 0x0F;
+	private static final int LOOK_UP_SHIFT_FLAG = 0x80;
+	private static final int LOOK_DOWN_SHIFT_FLAG = 0x40;
+
+	// Pseudo-3D ramp state from the game's PlayerStageRoutines: Sonic CD's
+	// oPlayerCtrl bit 1, set and cleared by ObjSonic_Handle3DRamp at the start of
+	// every movement mode (scddisasm src/Level/_Objects/Sonic/Main.asm:782-827).
+	// It stays false in every game whose provider has no stage routines.
+	private boolean pseudo3dRamp;
+
+	// Stage-owned player control state from the game's PlayerStageRoutines (for Sonic
+	// CD, Wacky Workbench's pole and hanging-bar bits, rotation angle and hang timer).
+	// The routines own its encoding; it is zero in every game without them.
+	private int stageControlState;
 
 	// Current frame input state
 	private boolean inputUp, inputDown, inputLeft, inputRight;
@@ -262,6 +298,14 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		latchedNextTilt = 0;
 		latchedTilt = 0;
 		deathElapsedFrames = 0;
+		chargeTimer = 0;
+		lookMode = 0;
+		upPrevious = false;
+		downPrevious = false;
+		inputUpPress = false;
+		inputDownPress = false;
+		pseudo3dRamp = false;
+		stageControlState = 0;
 	}
 
 	/** Executed movement updates the player has spent dead in the current death. */
@@ -290,7 +334,13 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				preMoveBalanceDirection,
 				latchedNextTilt,
 				latchedTilt,
-				deathElapsedFrames);
+				deathElapsedFrames,
+				chargeTimer,
+				lookMode,
+				upPrevious,
+				downPrevious,
+				pseudo3dRamp,
+				stageControlState);
 	}
 
 	public void restoreRewindState(RewindState state) {
@@ -318,6 +368,12 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		latchedNextTilt = state.latchedNextTilt();
 		latchedTilt = state.latchedTilt();
 		deathElapsedFrames = state.deathElapsedFrames();
+		chargeTimer = state.chargeTimer();
+		lookMode = state.lookMode();
+		upPrevious = state.upPrevious();
+		downPrevious = state.downPrevious();
+		pseudo3dRamp = state.pseudo3dRamp();
+		stageControlState = state.stageControlState();
 	}
 
 	@com.openggf.game.ModApi
@@ -341,8 +397,46 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			Direction preMoveBalanceDirection,
 			int latchedNextTilt,
 			int latchedTilt,
-			int deathElapsedFrames
+			int deathElapsedFrames,
+			int chargeTimer,
+			int lookMode,
+			boolean upPrevious,
+			boolean downPrevious,
+			boolean pseudo3dRamp,
+			int stageControlState
 	) {}
+
+	/**
+	 * Whether the player is on a pseudo-3D ramp: Sonic CD's {@code oPlayerCtrl} bit 1
+	 * (scddisasm src/Level/_Objects/Sonic/Main.asm:804-808), which the Palmtree Panic
+	 * scroll routine and ObjSonic_Animate read. Always false without stage routines.
+	 */
+	public boolean isOnPseudo3dRamp() {
+		return pseudo3dRamp;
+	}
+
+	/**
+	 * The stage routines' own per-player control state, captured for rewind and cleared
+	 * with the transient state; its encoding belongs to the game's
+	 * {@link PlayerStageRoutines}. Zero in every game without them.
+	 */
+	public int stageControlState() {
+		return stageControlState;
+	}
+
+	public void setStageControlState(int state) {
+		stageControlState = state;
+	}
+
+	/** Sonic CD oPlayerCharge; zero unless the timed charge model is armed. */
+	public int timedChargeTimer() {
+		return chargeTimer;
+	}
+
+	/** {@code clr.b oPlayerCharge}, for stage routines that stop a charge outside the movement modes. */
+	public void cancelTimedCharge() {
+		chargeTimer = 0;
+	}
 
 	public void clearJumpHeightLatch() {
 		jumpPressed = false;
@@ -390,6 +484,28 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		return sprite.currentLevelManager();
 	}
 
+	/** The game's stage routines, supplied by its physics provider; null for most games. */
+	private PlayerStageRoutines stageRoutinesOrNull() {
+		GameModule module = sprite.currentGameModule();
+		com.openggf.game.PhysicsProvider provider = module != null ? module.getPhysicsProvider() : null;
+		return provider instanceof PlayerStageRoutines routines ? routines : null;
+	}
+
+	/**
+	 * The stage routines every normal movement mode opens with: Sonic CD's
+	 * ObjSonic_Handle3DRamp, then the ObjSonic_TimeWarp slot (Main.asm:694-695,
+	 * 722-724, 743-744, 763-764). Without routines the ramp bit stays clear.
+	 */
+	private void openStageMovementMode() {
+		PlayerStageRoutines routines = stageRoutinesOrNull();
+		if (routines == null) {
+			pseudo3dRamp = false;
+			return;
+		}
+		pseudo3dRamp = routines.updatePseudo3dRamp(sprite, pseudo3dRamp);
+		routines.afterPseudo3dRampCheck(sprite);
+	}
+
 	private com.openggf.game.mutators.HomingAttackRuntime homingAttack() {
 		return com.openggf.sprites.playable.PlayableSpriteInternalAccess.homingAttack(sprite);
 	}
@@ -425,6 +541,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	@Override
 	public void handleMovement(boolean up, boolean down, boolean left, boolean right, boolean jump, boolean testKey,
 			boolean speedUp, boolean slowDown) {
+		PlayerStageRoutines startRoutines = stageRoutinesOrNull();
+		if (startRoutines != null) startRoutines.beforePlayerRoutine(sprite);
         // S3K loc_125C6 / loc_15828 dispatch before all normal-control work.
         // Extra engine roster members without a native fixed slot retain a
         // fallback lifetime owner; native slots are timed only by their sidecar.
@@ -492,11 +610,32 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// branch selection.
 		sprite.capturePrePhysicsSnapshot();
 
+		// Sonic CD ObjSonic_Main opens with bsr.s ObjSonic_ExtCamera, ahead of the
+		// debug, control-lock and object-control tests (scddisasm
+		// src/Level/_Objects/Sonic/Main.asm:285-286); the hurt and death routines
+		// never reach it. No-op unless CameraRules.playerSpeedPansHorizontalFocus.
+		Camera focusCamera = camera();
+		if (focusCamera != null && focusCamera.getFocusedSprite() == sprite
+				&& !sprite.isDebugMode() && !sprite.isHurt() && !sprite.getDead()) {
+			// ObjSonic_ExtCamera's first branch returns the pan to the centre while the
+			// previous frame's 3D-ramp bit is set and the stage routines say this ramp
+			// recentres it (Main.asm:239-244).
+			PlayerStageRoutines routines = stageRoutinesOrNull();
+			// A stage whose copy of the routine is a bare rts leaves the focus where it is.
+			if (routines == null || routines.runsSpeedPannedFocus(sprite)) {
+				focusCamera.updateHorizontalFocusPan(sprite,
+						pseudo3dRamp && routines != null && routines.pseudo3dRampCentresFocus(sprite));
+			}
+		}
+
 		if (sprite.isDebugMode()) {
 			handleDebugMovement(up, down, left, right, speedUp, slowDown);
 			applyScreenYWrapValueAfterControl();
 			return;
 		}
+		timedChargeDuckWritten = false;
+		timedChargeSettleUsesFloorProbeD5 = false;
+		advanceTimedCharge();
 
 		// A drowned player keeps moving under object_control: S3K's routine $C
 		// dispatch and S1/S2's countdown object move it regardless of the lock.
@@ -540,6 +679,10 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			if (sprite.isCpuControlled()) {
 				sprite.setForcedJumpPress(false);
 			}
+			// Sonic CD ObjSonic_Main's controlled branch still runs the time warp, or in
+			// Metallic Madness clears it (scddisasm src/Level/_Objects/Sonic/Main.asm:300-309).
+			PlayerStageRoutines controlRoutines = stageRoutinesOrNull();
+			if (controlRoutines != null) controlRoutines.whileObjectControlled(sprite);
 			applyScreenYWrapValueAfterControl();
 			return;
 		}
@@ -605,6 +748,10 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				right = false;
 			}
 		}
+		// The pad's own Up/Down, for the press edges: the joypad read computes them every
+		// frame, whatever the player routine (see storeInputState).
+		boolean padUp = up;
+		boolean padDown = down;
 		// Block up/down when hurt
 		if (sprite.isHurt()) {
 			up = down = false;
@@ -636,8 +783,16 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				applyScreenYWrapValueAfterControl();
 				return;
 			}
+			boolean restartAtEntry = sprite.isInDeathRestartRoutine();
+			if (restartAtEntry) {
+				// The restart routine only counts down: no animation (S1 Sonic_ResetLevel, S2 Obj01_Gone,
+				// Sonic CD ObjSonic_Restart, routine 8, scddisasm src/Level/_Objects/Sonic/Main.asm:101-106, 2453-2458). The
+				// death routine's frame that enters it still animates.
+				sprite.getAnimationManager().suppressNextUpdate();
+			}
 			short oldYSpeed = applyDeathMovement();
-			moveSpriteTestGravity(sprite.getXSpeed(), oldYSpeed);
+			// A death that kept its X speed moves by it until the restart routine, which does not move.
+			moveSpriteTestGravity(restartAtEntry && deathKeepsXSpeed() ? 0 : sprite.getXSpeed(), oldYSpeed);
 			sprite.updateSensors(originalX, originalY);
 			applyScreenYWrapValueAfterControl();
 			return;
@@ -655,7 +810,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		if (homingAttack != null) {
 			homingAttack.beforeMovement(sprite);
 		}
-		storeInputState(up, down, left, right, jump);
+		storeInputState(up, down, left, right, jump, padUp, padDown);
 
 		// ROM-accurate: Track whether effective movement input is active for animation.
 		// This is the input state AFTER control lock/move lock filtering, used to determine
@@ -693,6 +848,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		}
 
 		// Mode dispatch (ROM: Obj01_MdNormal_Checks)
+		boolean hurtAtDispatch = sprite.isHurt();
 		if (sprite.isHurt() && !sprite.getAir()) {
 			// Obj01_Hurt_Normal performs ObjectMove before Sonic_HurtStop
 			// clears routine 4 and zeroes velocities, even when an object
@@ -715,6 +871,14 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			modeRoll();
 		} else {
 			modeNormal();
+		}
+		// Sonic CD ObjSonic_Main: jsr ObjSonic_SpecialCol straight after the mode
+		// routine, only on the normal-control path (Main.asm:319-324); the hurt
+		// routine never reaches it, also on the frame its landing returns to routine 2
+		// (PlayerHurt, src/objects/player.asm:2206-2238, calls PlayerCheckBlock once).
+		if (!hurtAtDispatch && !sprite.isHurt()) {
+			PlayerStageRoutines routines = stageRoutinesOrNull();
+			if (routines != null) routines.afterMovementMode(sprite);
 		}
 
 		// ROM facing changes happen inside the movement branches themselves:
@@ -810,6 +974,21 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	/** Obj01_MdNormal: Ground walking state */
 	private void modeNormal() {
 		if (doWaitBlinkInterruptCheck()) return;
+		// Sonic CD ObjSonic_MdGround opens with ObjSonic_ChkBoredom and the give-up test
+		// (Main.asm:675-692): a giving-up player stands, then only bounds and falls.
+		PlayerStageRoutines groundRoutines = stageRoutinesOrNull();
+		PlayerStageRoutines.GroundMode groundMode = groundRoutines == null
+				? PlayerStageRoutines.GroundMode.NORMAL : groundRoutines.stageGroundMode(sprite);
+		if (groundMode != PlayerStageRoutines.GroundMode.NORMAL) {
+			// No ground move runs, so nothing rewrites the animation byte the stage routine set.
+			sprite.getAnimationManager().suppressGroundMovementAnimationForFrame();
+			if (groundMode == PlayerStageRoutines.GroundMode.FALLING) {
+				doLevelBoundary();      // ObjSonic_LevelBound
+				doObjectMoveAndFall();  // ObjMoveGrv
+			}
+			return;
+		}
+		openStageMovementMode(); // ObjSonic_MdGround .NotGivingUp (Main.asm:694-695)
 		short originalX = sprite.getX();
 		short originalY = sprite.getY();
 		// Sonic_Move/Tails_Move test move_lock before the ground-input and
@@ -861,7 +1040,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			sprite.getAnimationManager().publishGroundPoseAnimation(romVisibleLevelFrameCounter());
 		}
 		doLevelBoundary();
-		moveSpriteTestGravity(sprite.getXSpeed(), sprite.getYSpeed());
+		moveSpriteTestGravity(standingObjectMoveXSpeed(), sprite.getYSpeed());
 		collisionSystem().applyDeferredGroundWallVelocityResponse(sprite);
 		doAnglePosWithSensorUpdate(originalX, originalY);
 		applyMissedDetachSlopeResist();
@@ -879,6 +1058,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 	/** Obj01_MdRoll: Rolling on ground state */
 	private void modeRoll() {
+		openStageMovementMode(); // ObjSonic_MdRoll (Main.asm:742-744)
 		short originalX = sprite.getX();
 		short originalY = sprite.getY();
 
@@ -893,7 +1073,11 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		doRollRepel();
 		doRollSpeed();
 		doLevelBoundary();
-		moveSpriteTestGravity(sprite.getXSpeed(), sprite.getYSpeed());
+		// ObjSonic_MdRoll: tst.b oPlayerCharge / bne .IsCharging skips ObjMove
+		// (Main.asm:749-751).
+		if (chargeTimer == 0) {
+			moveSpriteTestGravity(standingObjectMoveXSpeed(), sprite.getYSpeed());
+		}
 		collisionSystem().applyDeferredGroundWallVelocityResponse(sprite);
 		doAnglePosWithSensorUpdate(originalX, originalY);
 		doSlopeRepel();
@@ -931,6 +1115,22 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			// Tails_Min_X_pos+$10 when the falling corpse re-enters from the left.
 			doObjectMoveAndFall();
 			return;
+		}
+		applyFallingAirWalkReset();
+		// ObjSonic_MdAir/MdJump (Main.asm:722-724, 762-764). Hurt is its own routine.
+		if (!sprite.isHurt()) {
+			// A stage's own air state (Wacky Workbench's pole and hanging bar, Level/Wacky
+			// Workbench/Objects/Sonic/Main.asm:995-999, 1045-1056) replaces the mode's
+			// movement; only Player_LevelColInAir follows (Main.asm:1016-1017, 1072-1073).
+			PlayerStageRoutines routines = stageRoutinesOrNull();
+			if (routines != null && routines.runsStageAirState(sprite)) {
+				sprite.updateSensors(originalX, originalY);
+				if (!sprite.isObjectControlSuppressesMovement() && !sprite.isSuppressAirCollision()) {
+					doLevelCollision(sprite.isForceFloorCheck());
+				}
+				return;
+			}
+			openStageMovementMode();
 		}
 
 		// Knuckles glide states 1-2 use custom physics
@@ -1112,12 +1312,20 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 		applyUnderwaterAirGravityReduction();
 
+		// Sonic CD ObjSonic_Hurt (scddisasm src/Level/_Objects/Sonic/Main.asm:2351-2361) calls
+		// the zone's special collision after the gravity, before its landing check.
+		if (sprite.isHurt()) {
+			PlayerStageRoutines hurtRoutines = stageRoutinesOrNull();
+			if (hurtRoutines != null) hurtRoutines.afterHurtGravity(sprite);
+		}
+
 		// ROM: Sonic_JumpAngle runs in Obj01_MdAir / MdJump but NOT in
 		// Obj01_Hurt (S1: 01 Sonic.asm:1410, S2: s2.asm:38164).
 		// The hurt routine uses a separate code path that skips angle
 		// return-to-zero, so the ground angle is preserved through recoil.
 		if (!sprite.isHurt()) {
-			sprite.returnAngleToZero();
+			// Sonic CD ObjSonic_JumpAngle returns at once on a 3D ramp (Main.asm:2013-2015).
+			if (!pseudo3dRamp) sprite.returnAngleToZero();
 			advanceAirborneFlipAngle();
 		}
 		sprite.updateSensors(originalX, originalY);
@@ -1399,7 +1607,13 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	/** Sonic_Jump: Handle jump initiation (s2.asm:36996) */
 	private boolean doJump() {
 		if (motionMutators != null && motionMutators.blocksFreshJump(sprite)) return false;
+		if (timedChargeBlocksJump()) return false;
 		int hexAngle = sprite.getAngle() & 0xFF;
+		// A stage object that launches the jump itself (Sonic CD's PlayerCheckFlipper,
+		// scddisasm src/objects/player.asm:1715-1718) replaces the headroom test and the
+		// standard velocity below; the rest of the jump is unchanged.
+		PlayerStageRoutines launchRoutines = stageRoutinesOrNull();
+		boolean objectLaunch = launchRoutines != null && launchRoutines.jumpLaunchedByStandingObject(sprite);
 
 		// Sonic_Jump mirrors the angle it hands to CalcRoomOverHead when
 		// Reverse_gravity_flag is set (sonic3k.asm:23325-23335; Tails_Jump :28564-28574,
@@ -1411,7 +1625,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		boolean invertedJump = jumpState != null && jumpState.isReverseGravityActive();
 		int headroomAngle = invertedJump ? ReverseGravity.mirrorAngle(hexAngle) : hexAngle;
 
-		if (!collisionSystem().hasEnoughHeadroom(sprite, headroomAngle)) {
+		if (!objectLaunch && !collisionSystem().hasEnoughHeadroom(sprite, headroomAngle)) {
 			return false;
 		}
 
@@ -1432,8 +1646,10 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		int jumpImpulse = motionMutators == null ? sprite.getJump() : motionMutators.jumpImpulse(sprite, sprite.getJump());
 		int xJumpChange = (TrigLookupTable.cosHex(adjustedAngle) * jumpImpulse) >> 8;
 		int yJumpChange = (TrigLookupTable.sinHex(adjustedAngle) * jumpImpulse) >> 8;
-		sprite.setXSpeed((short) (sprite.getXSpeed() + xJumpChange));
-		sprite.setYSpeed((short) (sprite.getYSpeed() + yJumpChange));
+		if (!objectLaunch) {
+			sprite.setXSpeed((short) (sprite.getXSpeed() + xJumpChange));
+			sprite.setYSpeed((short) (sprite.getYSpeed() + yJumpChange));
+		}
 
 		sprite.setAir(true);
 		sprite.setPushing(false);
@@ -1457,7 +1673,15 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			sprite.setCentreYPreserveSubpixel((short) (preRollCentreY
 					+ ReverseGravity.mirrorYDelta(invertedJump, jumpRadiusDelta)));
 		} else {
+			short keptXRadius = sprite.getXRadius();
+			short keptYRadius = sprite.getYRadius();
 			sprite.setRollingJump(true);
+			PlayerMovementRules jumpRules = playerMovementRulesOrNull();
+			if (jumpRules != null && jumpRules.air().rollJumpKeepsRollRadii()) {
+				// Sonic CD ObjSonic_CheckJump branches to .RollJump before the radius writes
+				// (scddisasm src/Level/_Objects/Sonic/Main.asm:1837-1838, 1847-1849, 1858-1860).
+				sprite.applyCustomRadii(keptXRadius, keptYRadius);
+			}
 		}
 
 		return true;
@@ -1487,6 +1711,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		if (sprite.isJumping()) {
 			short ySpeedCap = PlayerFluidContextAccess.movementUnderwater(sprite) ? (short) 0x200 : (short) 0x400;
 			if (sprite.getYSpeed() < -ySpeedCap && !inputJump) {
+				// ObjSonic_JumpHeight also clears oPlayerCharge here (Main.asm:1887).
+				chargeTimer = 0;
 				sprite.setYSpeed((short) -ySpeedCap);
 			}
 			// Track jump release for shield ability detection
@@ -2932,6 +3158,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 	/** Sonic_SlopeResist: Apply slope factor when walking (s2.asm:37709) */
 	private void doSlopeResist() {
+		// ObjSonic_SlopeResist: tst.b oPlayerCharge / bne (Main.asm:1902-1903).
+		if (chargeTimer != 0) return;
 		applySlopeResistForAngle(sprite.getAngle() & 0xFF, false);
 	}
 
@@ -3043,10 +3271,16 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			// the later animation pass cannot synthesize a state the ROM skipped.
 			sprite.getAnimationManager().suppressGroundMovementAnimationForFrame();
 			// Camera easing during move lock
-			if (camera != null) camera.easeYBiasToDefault();
+			if (timedChargeMovesEnabled()) {
+				timedChargeResetScreen(camera);
+			} else if (camera != null) {
+				camera.easeYBiasToDefault();
+			}
 		} else {
-			// Left input (only when move_lock is not active)
-			if (inputLeft) {
+			// Left input (only when move_lock is not active). Under the timed charge
+			// model ObjSonic_MoveGndLeft/Right return at once while oPlayerCharge is
+			// armed (Main.asm:1236-1237, 1292-1293).
+			if (inputLeft && chargeTimer == 0) {
 				if (gSpeed > 0) {
 					gSpeed -= runDecel;
 					if (gSpeed < 0) gSpeed = (short) -128;
@@ -3067,6 +3301,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 					}
 				} else {
 					sprite.setSkidding(false);
+					if (inputRight && sprite.getDirection() != Direction.LEFT) bothHeldFacingFlip();
 					sprite.setDirection(Direction.LEFT);
 					gSpeed = accelerateLeft(gSpeed, runAccel, max);
 					directionalHelperPublishedAnimation = true;
@@ -3074,7 +3309,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			}
 
 			// Right input (only when move_lock is not active)
-			if (inputRight) {
+			if (inputRight && chargeTimer == 0) {
 				if (gSpeed < 0) {
 					gSpeed += runDecel;
 					// ROM: add.w d4,d0 / bcc.s ... / move.w #$80,d0
@@ -3092,6 +3327,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 					}
 				} else {
 					sprite.setSkidding(false);
+					if (inputLeft && sprite.getDirection() != Direction.RIGHT) bothHeldFacingFlip();
 					sprite.setDirection(Direction.RIGHT);
 					gSpeed = accelerateRight(gSpeed, runAccel, max);
 					directionalHelperPublishedAnimation = true;
@@ -3102,7 +3338,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				sprite.setSkidding(false);
 			}
 			if ((inputLeft || inputRight) && !directionalHelperPublishedAnimation
-					&& gSpeed != 0) {
+					&& gSpeed != 0 && chargeTimer == 0) {
 				// The opposite-direction deceleration tail returns without writing
 				// anim, including the frame it carries inertia across zero.
 				sprite.getAnimationManager().suppressGroundMovementAnimationForFrame();
@@ -3125,6 +3361,18 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			// the current-frame balance predicate HERE, with no lasting side effects:
 			// the actual balance state + facing are restored and recomputed at their
 			// normal time by updateCrouchState(), so other traces are unaffected.
+			if (timedChargeMovesEnabled()) {
+				sprite.setGSpeed(gSpeed);
+				boolean peelOutReturned = doTimedChargeStandingTail(camera);
+				gSpeed = sprite.getGSpeed();
+				if (peelOutReturned) {
+					// .Peelout ends in rts: no Settle, CalcXYVels or CheckWallCol
+					// (Main.asm:1013), so x/y velocity keeps its previous value.
+					preFrictionGroundSpeed = gSpeed;
+					sprite.getAnimationManager().captureGroundMovementAnimSpeed(gSpeed);
+					return;
+				}
+			} else {
 			boolean lookGateActive = isOnFlatGround() && gSpeed == 0;
 			boolean balancingNow = lookGateActive && computeCurrentFrameBalancing();
 			if (lookGateActive
@@ -3192,6 +3440,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 					camera.easeYBiasToDefault();
 				}
 			}
+			}
 		}
 
 		// Snapshot inertia at the ROM `tst.w inertia` point — i.e. before the
@@ -3207,7 +3456,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// Friction
 		// Obj01_UpdateSpeedOnGround (s2.asm:36772-36776): the literal Super override was selected before traction.
 		if (!inputRawLeft && !inputRawRight) {
-			gSpeed = applyFriction(gSpeed, friction);
+			gSpeed = applyFriction(gSpeed, timedChargeSettleUsesFloorProbeD5 ? TIMED_CHARGE_FLOOR_PROBE_D5 : friction);
 		}
 
 		if (motionMutators != null) {
@@ -3245,8 +3494,35 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		boolean requestedRoll = motionMutators != null && motionMutators.requestsRoll(sprite);
 		if (!requestedRoll && (inputLeft || inputRight || inputRawLeft || inputRawRight)) return;
 		if (!requestedRoll && !inputDown) return;
-		if (sprite.getAir() || sprite.getRolling()) return;
+		if (sprite.getAir()) return;
+		if (sprite.getRolling()) {
+			// ObjSonic_StartRoll's already-rolling branch still runs .SetRollAnim's
+			// speed floor (Main.asm:1745-1747, 1765-1774).
+			if (rollEntryRaisesForwardSpeed()) applyRollEntrySpeedFloor();
+			return;
+		}
+		enterRoll();
+	}
 
+	/**
+	 * Sonic CD's {@code ObjSonic_StartRoll} as the stage routines reach it from a roll
+	 * tunnel chunk ({@code jmp ObjSonic_StartRoll}, scddisasm src/Level/_Objects/Sonic/
+	 * Main.asm:2594-2603). Already rolling, only {@code .SetRollAnim}'s Roll write and
+	 * speed floor run; otherwise the full roll entry (Main.asm:1744-1777). The ROM
+	 * calls it without an air test, so neither does this.
+	 */
+	public void startRollFromStageChunk() {
+		if (!sprite.getRolling()) {
+			enterRoll();
+			return;
+		}
+		int roll = sprite.resolveAnimationId(CanonicalAnimation.ROLL);
+		if (roll >= 0) sprite.setAnimationId(roll);
+		if (rollEntryRaisesForwardSpeed()) applyRollEntrySpeedFloor();
+	}
+
+	/** The roll-entry body shared by the down-roll check and the timed spin dash start. */
+	private void enterRoll() {
 		short preRollCentreX = sprite.getCentreX();
 		short preRollCentreY = sprite.getCentreY();
 		sprite.setRolling(true);
@@ -3271,13 +3547,263 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		applyRollRadiusShift(preRollCentreY, true);
 		com.openggf.sprites.playable.PlayerAbilityAudio.play(sprite, GameSound.ROLLING, audioManager);
 
-		if (sprite.getGSpeed() == 0) {
+		if (rollEntryRaisesForwardSpeed()) {
+			applyRollEntrySpeedFloor();
+		} else if (sprite.getGSpeed() == 0) {
 			sprite.setGSpeed((short) 0x200);
+		}
+	}
+
+	private boolean rollEntryRaisesForwardSpeed() {
+		PlayerCapabilityRules rules = playerCapabilityRulesOrNull();
+		if (rules == null || !rules.rollEntryRaisesForwardSpeedToMinimum()) return false;
+		PlayerStageRoutines routines = stageRoutinesOrNull();
+		return routines == null || routines.rollEntrySpeedFloor(sprite);
+	}
+
+	/**
+	 * ObjSonic_StartRoll .SetRollAnim: tst.w / bmi.s .End / cmpi.w #$200 / bcc.s .End /
+	 * move.w #$200 (Main.asm:1767-1774). A leftward speed is left alone.
+	 */
+	private void applyRollEntrySpeedFloor() {
+		short gSpeed = sprite.getGSpeed();
+		if (gSpeed >= 0 && gSpeed < 0x200) {
+			sprite.setGSpeed((short) 0x200);
+		}
+	}
+
+	/**
+	 * Sonic CD ObjSonic_MdAir (scddisasm src/Level/_Objects/Sonic/Main.asm:713-721):
+	 * in the un-rolled air mode, a player that is not rising and not in the bubble
+	 * animation returns to Walk. The ROM's wind-tunnel test has no engine owner yet;
+	 * the wind tunnel object that sets windTunnelFlag must gate this when it lands.
+	 */
+	private void applyFallingAirWalkReset() {
+		PlayerAnimationRules rules = playerAnimationRulesOrNull();
+		if (rules == null || !rules.fallingAirStateRestoresWalk()
+				|| sprite.getRolling() || sprite.isHurt() || sprite.getDead()
+				|| sprite.getYSpeed() < 0) {
+			return;
+		}
+		if (sprite.getAnimationId() == sprite.resolveAnimationId(CanonicalAnimation.GET_AIR)) {
+			return;
+		}
+		PlayerStageRoutines routines = stageRoutinesOrNull();
+		if (routines != null && routines.holdsFallingAirAnimation(sprite)) {
+			return;
+		}
+		int walk = sprite.resolveAnimationId(CanonicalAnimation.WALK);
+		if (walk >= 0) {
+			sprite.setAnimationId(walk);
+		}
+	}
+
+	// ========================================
+	// TIMED CHARGE MODEL (Sonic CD)
+	// ========================================
+
+	private boolean timedChargeMovesEnabled() {
+		PlayerCapabilityRules rules = playerCapabilityRulesOrNull();
+		return rules != null && rules.timedChargeMoves();
+	}
+
+	/**
+	 * ObjSonic entry: once armed, oPlayerCharge advances every frame in every routine
+	 * and caps at 45 while rolling (spin dash) or 30 otherwise (peel-out)
+	 * (scddisasm src/Level/_Objects/Sonic/Main.asm:69-86).
+	 */
+	private void advanceTimedCharge() {
+		if (chargeTimer == 0) return;
+		int cap = sprite.getRolling() ? TIMED_SPINDASH_FULL : TIMED_PEELOUT_FULL;
+		chargeTimer = Math.min(chargeTimer + 1, cap);
+	}
+
+	/**
+	 * ObjSonic_CheckJump: no jump while charging, and none while Up or Down is held at
+	 * rest, leaving that A/B/C press to the charge start (Main.asm:1779-1791).
+	 */
+	private boolean timedChargeBlocksJump() {
+		if (chargeTimer != 0) return true;
+		return timedChargeMovesEnabled() && (inputUp || inputDown) && sprite.getGSpeed() == 0;
+	}
+
+	/**
+	 * Charge speed step shared by .Peelout and .Spindash: add {@code step} toward the
+	 * facing and cap at twice top speed, or 1.5x with speed shoes (Main.asm:984-1014,
+	 * 1366-1395). Byte/word arithmetic as assembled: asl.w doubles the word.
+	 */
+	private short timedChargeStep(short gSpeed, int step) {
+		int top = sprite.getMax();
+		short max = (short) (top << 1);
+		if (sprite.hasSpeedShoes()) {
+			max = (short) (max - (((short) top) >> 1));
+		}
+		boolean left = sprite.getDirection() == Direction.LEFT;
+		short increment = (short) (left ? -step : step);
+		if (left) max = (short) -max;
+		short charged = (short) (gSpeed + increment);
+		if (left ? charged < max : charged > max) {
+			charged = max;
+		}
+		return charged;
+	}
+
+	/**
+	 * ObjSonic_MoveGround's standing tail under the timed charge model, from the
+	 * firm-ground test to .Settle (Main.asm:860-1120). Returns true only at .Peelout's
+	 * rts, which skips Settle, CalcXYVels and CheckWallCol.
+	 */
+	private boolean doTimedChargeStandingTail(Camera camera) {
+		short gSpeed = sprite.getGSpeed();
+		if (!isOnFlatGround() || (gSpeed != 0 && chargeTimer == 0)) {
+			sprite.setLookingUp(false);
+			timedChargeResetScreen(camera);
+			return false;
+		}
+		if (gSpeed == 0) {
+			sprite.setPushing(false); // .Stand
+		}
+		// .CheckBalance off an object calls ObjGetFloorDist (.BalanceGround), whose
+		// moveq #$D,d5 is still in d5 when this tail reaches .Settle.
+		timedChargeSettleUsesFloorProbeD5 = !sprite.isOnObject();
+		PlayerStageRoutines standing = sprite.isOnObject() ? stageRoutinesOrNull() : null;
+		if (standing != null && standing.standingObjectHoldsWalk(sprite)) {
+			// .CheckBalance: the object stood on writes Walk and branches to .ResetScreen,
+			// past the balance and the look/charge checks (Main.asm:884-888).
+			int walk = sprite.resolveAnimationId(CanonicalAnimation.WALK);
+			if (walk >= 0) sprite.setAnimationId(walk);
+			sprite.getAnimationManager().suppressGroundMovementAnimationForFrame();
+			sprite.setLookingUp(false);
+			timedChargeResetScreen(camera);
+			return false;
+		}
+		// .BalanceGround: ObjGetFloorDist at the centre >= $C plays FM_CHARGESTOP and
+		// clears the charge and the ground speed before the tilt bytes choose a pose; with
+		// neither tilt byte 3 it goes on to .CheckCharge. The object-edge path does neither
+		// (Main.asm:902-911, 913-923; src/objects/player.asm:855-863). WWZ's has neither.
+		PlayerStageRoutines routines = stageRoutinesOrNull();
+		if (!sprite.isOnObject() && (routines == null || routines.balanceCancelsTimedCharge(sprite))
+				&& terrainCentreOverLedge()) {
+			com.openggf.sprites.playable.PlayerAbilityAudio.play(sprite, GameSound.CHARGE_STOP, audioManager);
+			chargeTimer = 0;
+			sprite.setGSpeed((short) 0);
+		}
+		// This tail has already applied the native gate (no ground speed, or a charge held):
+		// a held Left/Right reaches .CheckBalance here, unlike Sonic 1's Sonic_Move, where
+		// MoveLeft/MoveRight leave inertia that skips it (Main.asm:860-866).
+		if (computeCurrentFrameBalancing(false)) {
+			sprite.setLookingUp(false);
+			timedChargeResetScreen(camera);
+			return false;
+		}
+
+		// .CheckCharge: advance the double-tap timer, which expires when the nibble
+		// carries into bit 4 (andi.b #$CF).
+		if ((lookMode & LOOK_TIMER_MASK) != 0) {
+			lookMode = (lookMode + 1) & 0xCF;
+		}
+		if ((lookMode & LOOK_UP_SHIFT_FLAG) != 0) {
+			// .LookUp
+			if (inputUp) {
+				sprite.setLookingUp(true);
+				if (camera != null) camera.incrementLookUpBias();
+				return false;
+			}
+			return timedChargeCheckForSpindash(camera);
+		}
+		if ((lookMode & LOOK_DOWN_SHIFT_FLAG) != 0 || inputDown) {
+			return timedChargeCheckForSpindash(camera);
+		}
+		lookMode &= LOOK_TIMER_MASK;
+		if (inputUpPress) {
+			// A second Up press inside the window shifts the view; the first arms it.
+			lookMode = lookMode != 0 ? lookMode | LOOK_UP_SHIFT_FLAG : 1;
+			sprite.setLookingUp(false);
+			return false;
+		}
+		// .CheckUpHeld
+		if (inputUp) {
+			sprite.setLookingUp(true);
+			if (chargeTimer != 0) {
+				// .Peelout: move.b #0,oAnim(a0) replaces the look-up write.
+				sprite.setLookingUp(false);
+				int walk = sprite.resolveAnimationId(CanonicalAnimation.WALK);
+				if (walk >= 0) sprite.setAnimationId(walk);
+				sprite.setGSpeed(timedChargeStep(sprite.getGSpeed(), TIMED_PEELOUT_STEP));
+				return true;
+			}
+			if (inputJumpPress) {
+				// .CheckStartCharge
+				chargeTimer = 1;
+				com.openggf.sprites.playable.PlayerAbilityAudio.play(sprite, GameSound.SPINDASH_CHARGE, audioManager);
+			}
+			return false;
+		}
+		sprite.setLookingUp(false);
+		// .CheckUnleashPeelout
+		if (chargeTimer == TIMED_PEELOUT_FULL) {
+			chargeTimer = 0;
+			com.openggf.sprites.playable.PlayerAbilityAudio.play(sprite, GameSound.SPINDASH_RELEASE, audioManager);
+			timedChargeResetScreen(camera);
+			return false;
+		}
+		com.openggf.sprites.playable.PlayerAbilityAudio.play(sprite, GameSound.CHARGE_STOP, audioManager); // FM_CHARGESTOP (Main.asm:1033)
+		chargeTimer = 0;
+		sprite.setGSpeed((short) 0);
+		return timedChargeCheckForSpindash(camera);
+	}
+
+	/** .CheckForSpindash / .CheckSpindash / .Duck (Main.asm:1066-1121). */
+	private boolean timedChargeCheckForSpindash(Camera camera) {
+		sprite.setLookingUp(false);
+		if ((lookMode & LOOK_DOWN_SHIFT_FLAG) != 0) {
+			// .Duck
+			if (!inputDown) {
+				timedChargeResetScreen(camera);
+				return false;
+			}
+			timedChargeDuckWritten = true;
+			if (camera != null) camera.decrementLookDownBias();
+			return false;
+		}
+		lookMode &= LOOK_TIMER_MASK;
+		if (inputDownPress) {
+			lookMode = lookMode != 0 ? lookMode | LOOK_DOWN_SHIFT_FLAG : 1;
+			return false;
+		}
+		if (!inputDown) {
+			timedChargeResetScreen(camera);
+			return false;
+		}
+		timedChargeDuckWritten = true;
+		if (chargeTimer == 0 && inputJumpPress) {
+			// Arm the spin dash: $16 toward the facing, then ObjSonic_StartRoll.
+			chargeTimer = 1;
+			sprite.setGSpeed(sprite.getDirection() == Direction.LEFT
+					? (short) -TIMED_SPINDASH_START_SPEED : TIMED_SPINDASH_START_SPEED);
+			com.openggf.sprites.playable.PlayerAbilityAudio.play(sprite, GameSound.SPINDASH_CHARGE, audioManager);
+			enterRoll();
+		}
+		return false;
+	}
+
+	/**
+	 * .ResetScreen: at the centred view an expired double-tap timer clears the look
+	 * flags; otherwise the view eases back toward $60 (Main.asm:1122-1136).
+	 */
+	private void timedChargeResetScreen(Camera camera) {
+		if (camera == null) return;
+		if (camera.getYPosBias() == Camera.getDefaultYBias()) {
+			if ((lookMode & LOOK_TIMER_MASK) == 0) lookMode = 0;
+		} else {
+			camera.easeYBiasToDefault();
 		}
 	}
 
 	/** Sonic_RollRepel: Apply rolling slope factor 80/20 (s2.asm:37742) */
 	private void doRollRepel() {
+		// ObjSonic_SlopeResistRoll: tst.b oPlayerCharge / bne (Main.asm:1936-1937).
+		if (chargeTimer != 0) return;
 		int hexAngle = sprite.getAngle() & 0xFF;
 		short gSpeed = sprite.getGSpeed();
 
@@ -3421,6 +3947,56 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			}
 		}
 
+		if (chargeTimer != 0) {
+			// ObjSonic_MoveRoll .Spindash (Main.asm:1366-1427).
+			PlayerStageRoutines routines = stageRoutinesOrNull();
+			gSpeed = timedChargeStep(gSpeed, routines == null ? TIMED_SPINDASH_STEP
+					: routines.timedSpindashStep(sprite, TIMED_SPINDASH_STEP));
+			if (inputDown) {
+				// Still holding Down: rts before Settle, CalcXYVels and CheckWallCol.
+				sprite.setGSpeed(gSpeed);
+				return;
+			}
+			if (chargeTimer != TIMED_SPINDASH_FULL) {
+				// .ChargeNotFull: stop charging, zero every velocity, .StopRolling.
+				chargeTimer = 0;
+				com.openggf.sprites.playable.PlayerAbilityAudio.play(sprite, GameSound.CHARGE_STOP, audioManager); // FM_CHARGESTOP (Main.asm:1413)
+				sprite.setGSpeed((short) 0);
+				sprite.setXSpeed((short) 0);
+				sprite.setYSpeed((short) 0);
+				short stopCentreX = sprite.getCentreX();
+				short stopCentreY = sprite.getCentreY();
+				boolean rollRadiiApplied = sprite.getYRadius() != sprite.getStandYRadius();
+				sprite.setRolling(false);
+				sprite.setCentreXPreserveSubpixel(stopCentreX);
+				if (rollRadiiApplied) {
+					applyRollRadiusShift(stopCentreY, false);
+				} else {
+					sprite.setCentreYPreserveSubpixel(stopCentreY);
+				}
+				applyRollStopAnimationChange();
+				convertRollVelocity((short) 0);
+				return;
+			}
+			// Full charge: release toward the facing with MoveRollRight/Left, then Settle.
+			chargeTimer = 0;
+			com.openggf.sprites.playable.PlayerAbilityAudio.play(sprite, GameSound.SPINDASH_RELEASE, audioManager);
+			com.openggf.game.mutators.PlayableAudioEvents.spindashReleased(sprite);
+			if (sprite.getDirection() == Direction.LEFT) {
+				if (gSpeed > 0) {
+					gSpeed -= rollDecel;
+					if (gSpeed < 0) gSpeed = (short) -128;
+				} else {
+					publishDirectionalRollAnimation();
+				}
+			} else if (gSpeed < 0) {
+				gSpeed += rollDecel;
+				if (gSpeed >= 0) gSpeed = (short) 128;
+			} else {
+				publishDirectionalRollAnimation();
+			}
+		}
+
 		// Natural deceleration
 		if (gSpeed != 0) {
 			// Sonic_RollSpeed (sonic3k.asm:22959-22966) and Tails_RollSpeed
@@ -3455,6 +4031,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 					sprite.markObjectPreservedRollBoostFollowup();
 				}
 			} else {
+				if (timedChargeMovesEnabled()) com.openggf.sprites.playable.PlayerAbilityAudio.play(sprite, GameSound.CHARGE_STOP, audioManager); // CD .CheckStopRoll (Sonic/Main.asm:1463-1467)
 				// ROM roll-stop writes y_radius/x_radius and y_pos only; x_pos is
 				// unchanged (sonic3k.asm:23013-23021). On wall modes the engine
 				// represents the radius change by widening the top-left sprite box,
@@ -3538,6 +4115,12 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	}
 
 	private void doChgJumpDir(boolean nativeGlideCameraBias) {
+		// Sonic CD ObjSonic_MoveAir returns before steering, the camera reset and air
+		// drag while the stage locks the first 3D-ramp launch (Main.asm:1566-1576).
+		PlayerStageRoutines stageRoutines = stageRoutinesOrNull();
+		if (!nativeGlideCameraBias && stageRoutines != null && stageRoutines.freezesAirMovement(sprite)) {
+			return;
+		}
 		short xSpeed = sprite.getXSpeed();
 		short ySpeed = sprite.getYSpeed();
 		short runAccel = sprite.getRunAccel();
@@ -3548,7 +4131,12 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// S3K (sonic3k.asm:23123-23156): preserves speeds already above max (undo+check).
 		PlayerMovementRules movementRules = playerMovementRulesOrNull();
 		boolean preserveSuperspeed = movementRules != null && movementRules.air().airSuperspeedPreserved();
-		if (!sprite.getRollingJump()) {
+		// Sonic CD's ObjSonic_MoveAir has no roll-jump test (scddisasm
+		// src/Level/_Objects/Sonic/Main.asm:1559-1603).
+		boolean rollJumpKeepsAirControl = movementRules != null && movementRules.air().rollJumpKeepsAirControl();
+		// On a 3D ramp .Check3DRamp skips straight to .SetXVel: no steering and no
+		// facing write, but the camera reset and drag still run (Main.asm:1578-1580).
+		if ((!sprite.getRollingJump() || rollJumpKeepsAirControl) && !pseudo3dRamp) {
 			if (inputLeft) {
 				sprite.setDirection(Direction.LEFT);
 				short accel = (short) (2 * runAccel);
@@ -3620,6 +4208,13 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	 * and slide, Tails' flight and the bouncing ring; plain {@code MoveSprite} /
 	 * {@code MoveSprite2} callers (every other object) never invert.
 	 */
+	/** The ground and roll modes' X speed for their position update, with the standing object's bias. */
+	private short standingObjectMoveXSpeed() {
+		PlayerStageRoutines routines = sprite.isOnObject() ? stageRoutinesOrNull() : null;
+		int bias = routines != null ? routines.standingObjectMoveXBias(sprite) : 0;
+		return (short) (sprite.getXSpeed() + bias);
+	}
+
 	private void moveSpriteTestGravity(short xSpeed, short ySpeed) {
 		sprite.move(xSpeed,
 				ReverseGravity.integrationYSpeed(isReverseGravityActive(), ySpeed));
@@ -3629,6 +4224,19 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	private boolean isReverseGravityActive() {
 		GameStateManager gameState = sprite.currentGameStateOrNull();
 		return gameState != null && gameState.isReverseGravityActive();
+	}
+
+	/**
+	 * {@code PlayerAirMovementRules.fallSpeedCap}: Sonic CD's ObjMoveGrv writes a
+	 * non-negative y speed of {@code $1000} or more back as {@code $1000} after the
+	 * gravity step (scddisasm src/Level/Object Functions.asm:68-73). No other game caps.
+	 */
+	private void applyFallSpeedCap() {
+		PlayerMovementRules rules = playerMovementRulesOrNull();
+		int cap = rules != null && rules.air() != null ? rules.air().fallSpeedCap() : 0;
+		if (cap > 0 && sprite.getYSpeed() >= cap) {
+			sprite.setYSpeed((short) cap);
+		}
 	}
 
 	/** ObjectMoveAndFall: Apply velocity and gravity (s2.asm:30167-30175)
@@ -3668,7 +4276,12 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			return;
 		}
 		short oldYSpeed = sprite.getYSpeed();  // Save old y_vel before gravity
-		applyGravity();                         // Gated on isObjectControlled()
+		// Sonic CD ObjMoveGrv: no gravity on a 3D ramp while rising faster than $800
+		// (bcs on the unsigned compare, scddisasm src/Level/Object Functions.asm:56-61).
+		if (!(pseudo3dRamp && oldYSpeed < -0x800)) {
+			applyGravity();                     // Gated on isObjectControlled()
+		}
+		applyFallSpeedCap();
 		short xMoveSpeed = (suppressedAxes & 0x1) != 0 ? 0 : sprite.getXSpeed();
 		short yMoveSpeed = (suppressedAxes & 0x2) != 0 ? 0 : oldYSpeed;
 		moveSpriteTestGravity(xMoveSpeed, yMoveSpeed);  // Move using OLD y_vel
@@ -3819,7 +4432,12 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			// S2 player slots run before later object/boundary-release writes reach Sonic_LevelBound.
 			maxX = camera.getMaxXBeforeBoundaryEasing();
 		}
-		int rightBoundary = RightBoundary.compute(maxX, LEVEL_DESIGN_WIDTH, SONIC_WIDTH, RIGHT_EXTRA, strict) & 0xFFFF;
+		// PlayerLevelBoundaryRules.rightEdgeInset/Extension: S1-S3K +$128 (+$40),
+		// Sonic CD +304 (+56) (scddisasm src/Level/_Objects/Sonic/Main.asm:1686-1690).
+		var boundaryRules = movementRules != null ? movementRules.levelBoundary() : null;
+		int rightInset = boundaryRules != null ? boundaryRules.rightEdgeInset() : SONIC_WIDTH;
+		int rightExtension = boundaryRules != null ? boundaryRules.rightEdgeExtension() : RIGHT_EXTRA;
+		int rightBoundary = RightBoundary.compute(maxX, LEVEL_DESIGN_WIDTH, rightInset, rightExtension, strict) & 0xFFFF;
 
 		// ROM comparison: left is always bhi.s (<). S1/S2 right uses bls.s
 		// (>=), while S3K uses blo.s (>), gated by PlayerMovementRules.
@@ -4345,6 +4963,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				|| (sprite.getPinballMode() && preservePinballRoll) || preserveObjectLandingRoll);
 		boolean clearsRolling = sprite.getRolling() && !skipLandingRollClear;
 		if (clearsRolling) {
+			if (timedChargeMovesEnabled()) com.openggf.sprites.playable.PlayerAbilityAudio.play(sprite, GameSound.CHARGE_STOP, audioManager); // CD Player_ResetOnFloor .LandSound (Sonic/Main.asm:2322-2325)
 			if (movementRules != null && movementRules.landing().landingRollClearUsesCurrentYRadiusDelta()) {
 				int oldCentreY = sprite.getCentreY();
 				int oldYRadius = sprite.getYRadius();
@@ -4709,8 +5328,21 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	}
 
 	private void storeInputState(boolean up, boolean down, boolean left, boolean right, boolean jump) {
+		storeInputState(up, down, left, right, jump, up, down);
+	}
+
+	private void storeInputState(boolean up, boolean down, boolean left, boolean right, boolean jump,
+			boolean padUp, boolean padDown) {
 		inputUp = up;
 		inputDown = down;
+		// playerCtrlTap Up/Down bits for the timed charge model's double tap. The tap is the
+		// pad's edge (p1CtrlData, copied to playerCtrl by ObjSonic_Main, Main.asm:296-298), so it
+		// follows the pad while the hurt routine runs instead: an Up held through a hurt bounce
+		// is no fresh press on landing.
+		inputUpPress = up && !upPrevious;
+		inputDownPress = down && !downPrevious;
+		upPrevious = padUp;
+		downPrevious = padDown;
 		inputLeft = left;
 		inputRight = right;
 		inputJump = sprite.isHurt() ? false : jump;
@@ -4848,6 +5480,19 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			reduction = 0x20;
 		}
 		sprite.setYSpeed((short) (sprite.getYSpeed() - reduction));
+	}
+
+	/**
+	 * With Left and Right both held the move runs MoveLeft, then MoveRight, each of which flips the facing on its
+	 * own accelerate branch, clears push and writes prev_anim 1 (S1 Sonic_Move/Sonic_MoveLeft, _incObj/01 Sonic.asm:
+	 * 634-659, 704-723; Sonic CD ObjSonic_MoveGround, scddisasm src/Level/_Objects/Sonic/Main.asm:847-855, 1243-1247).
+	 * {@link #updatePushingOnDirectionChange} covers one held direction before the move; here each turn of the pair
+	 * is taken where it happens. Sonic CD R83C-fight rows 3780 and 3783 restart the walk script so.
+	 */
+	private void bothHeldFacingFlip() {
+		sprite.setPushing(false);
+		forceGroundFacingFlipAnimationRestart();
+		facingFlipForcesPushClearAfterGroundWall = true;
 	}
 
 	private void forceGroundFacingFlipAnimationRestart() {
@@ -5019,8 +5664,11 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 		// Update balance state (checks for ledge edges)
 		// ROM: Balance check happens before crouch/lookup in Obj01_LookUpDown
-		if (!moveLockActiveAtDispatch && standingStill
-				&& ((!inputLeft && !inputRight) || directionalBrakeReachedZero)) {
+		// The timed-charge tail decides on Sonic CD's own gate, also with a held direction
+		// or a held charge (Main.asm:860-866); reuse that decision.
+		boolean timedChargeBalanceDecided = timedChargeMovesEnabled() && preMoveBalanceEvaluated;
+		if (!moveLockActiveAtDispatch && (timedChargeBalanceDecided || (standingStill
+				&& ((!inputLeft && !inputRight) || directionalBrakeReachedZero)))) {
 			if (preMoveBalanceEvaluated) {
 				// doGroundMove evaluated the ROM balance branch before SpeedToPos
 				// and AnglePos. Reuse that result even when it was "not balancing":
@@ -5045,11 +5693,19 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// sonic3k.asm:27837-27890; Sonic_Move equivalent).
 		boolean crouching = !moveLockActiveAtDispatch && inputDown && !sprite.getLookingUp()
 				&& ((!inputLeft && !inputRight) || directionalBrakeReachedZero)
-				&& standingStill && !sprite.isBalancing();
+				&& standingStill && !sprite.isBalancing()
+				// The timed charge tail writes the duck only on .CheckSpindash and .Duck; a
+				// Down tap that arms or completes the double tap writes none (.CheckDownPress,
+				// Main.asm:1066-1079).
+				&& (!timedChargeMovesEnabled() || timedChargeDuckWritten);
 		sprite.setCrouching(crouching);
 	}
 
     private void applyUpwardVelocityCap() {
+        PlayerStageRoutines routines = stageRoutinesOrNull();
+        if (routines != null && !routines.capsUpwardVelocity(sprite)) {
+            return;
+        }
         if (sprite.getAir() && !jumpPressed && !sprite.getPinballMode()) {
             if (sprite.getYSpeed() < UPWARD_VELOCITY_CAP) {
                 sprite.setYSpeed((short) UPWARD_VELOCITY_CAP);
@@ -5080,9 +5736,17 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// reading object_control, and Kill_Character does not clear it: an object that kills a
 		// controlled player (DDZ loc_8179E sets $81 before the fall) still sees the death arc.
 		sprite.setYSpeed((short) (sprite.getYSpeed() + sprite.getGravity()));
+		applyFallSpeedCap(); // Sonic CD ObjSonic_Dead moves through ObjMoveGrv (Main.asm:2397-2400)
 		sprite.setGSpeed((short) 0);
-		sprite.setXSpeed((short) 0);
+		if (!deathKeepsXSpeed()) {
+			sprite.setXSpeed((short) 0);
+		}
 		return oldYSpeed;
+	}
+
+	private boolean deathKeepsXSpeed() {
+		PlayerStageRoutines routines = stageRoutinesOrNull();
+		return routines != null && routines.deathKeepsXSpeed(sprite);
 	}
 
 	private boolean hasFallenPastDeathRestartRow() {
@@ -5508,7 +6172,16 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	 * (_incObj/01 Sonic.asm:390-431, 634-697).
 	 */
 	private boolean computeCurrentFrameBalancing() {
-		if ((inputLeft || inputRight) && !directionalBrakeReachedZero) {
+		return computeCurrentFrameBalancing(true);
+	}
+
+	/**
+	 * @param directionalInputSkips Sonic 1's gate: held Left/Right leaves inertia that skips
+	 *        the test unless a brake reached zero. The timed-charge tail passes false: it has
+	 *        applied Sonic CD's own gate, which a held charge also opens (Main.asm:860-866).
+	 */
+	private boolean computeCurrentFrameBalancing(boolean directionalInputSkips) {
+		if (directionalInputSkips && (inputLeft || inputRight) && !directionalBrakeReachedZero) {
 			return false;
 		}
 		Direction savedDirection = sprite.getDirection();
@@ -5746,8 +6419,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			} else {
 				// S1: single state, force facing toward edge (bset #0 → face left)
 				// ROM s1.asm:370-371: bset #0,obStatus(a0)
-				sprite.setBalanceState(1);
-				sprite.setDirection(Direction.LEFT);
+				applySingleStateEdgeBalance(Direction.LEFT);
 			}
 		} else if (horizontalPositionWithinObject >= rightEdgeThreshold) {
 			// On right edge of object
@@ -5770,10 +6442,26 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			} else {
 				// S1: single state, force facing toward edge (bclr #0 → face right)
 				// ROM s1.asm:361-362: bclr #0,obStatus(a0)
-				sprite.setBalanceState(1);
-				sprite.setDirection(Direction.RIGHT);
+				applySingleStateEdgeBalance(Direction.RIGHT);
 			}
 		}
+	}
+
+	/**
+	 * The single-state balance at an edge on {@code edgeSide}. Sonic 1 turns the player
+	 * toward the edge. With {@code PlayerAnimationRules.balanceKeepsFacing} (Sonic CD
+	 * .BalanceRight/.BalanceLeft, scddisasm src/Level/_Objects/Sonic/Main.asm:916-935)
+	 * the facing is kept: facing the edge selects balance state 1 (anim 6), facing away
+	 * state 3, which the CD profile maps to SonAni_Balance2 ($32).
+	 */
+	private void applySingleStateEdgeBalance(Direction edgeSide) {
+		PlayerAnimationRules rules = playerAnimationRulesOrNull();
+		if (rules != null && rules.balanceKeepsFacing()) {
+			sprite.setBalanceState(sprite.getDirection() == edgeSide ? 1 : 3);
+			return;
+		}
+		sprite.setBalanceState(1);
+		sprite.setDirection(edgeSide);
 	}
 
 	private void restartBalanceOnFacingFlip(boolean facingTowardEdge) {
@@ -5880,12 +6568,10 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			// supported position (S1 01 Sonic.asm:434-455).
 			if (latchedNextTilt == 3) {
 				// angleright == 3 → right edge → face right
-				sprite.setBalanceState(1);
-				sprite.setDirection(Direction.RIGHT);
+				applySingleStateEdgeBalance(Direction.RIGHT);
 			} else if (latchedTilt == 3) {
 				// angleleft == 3 → left edge → face left
-				sprite.setBalanceState(1);
-				sprite.setDirection(Direction.LEFT);
+				applySingleStateEdgeBalance(Direction.LEFT);
 			}
 			// Neither latched angle is the empty-tile sentinel: retain Wait.
 			return;
@@ -5932,6 +6618,27 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			int precariousDist = (precariousResult == null) ? 99 : precariousResult.distance();
 			boolean precarious = precariousDist >= EDGE_THRESHOLD;
 			setBalanceForEdge(true, facingRight, precarious ? 0 : 6);
+		}
+	}
+
+	/**
+	 * {@code ObjGetFloorDist} / {@code CheckBlockDown} at the player's centre reports at
+	 * least {@code $C} ({@code cmpi.w #$C,d1}, Main.asm:902-904; src/objects/player.asm:855-857):
+	 * the floor below the centre ends. Probes the floor itself, as {@link #checkTerrainEdgeBalance()}.
+	 */
+	private boolean terrainCentreOverLedge() {
+		Sensor[] groundSensors = sprite.getGroundSensors();
+		if (groundSensors == null || groundSensors.length < 2) {
+			return false;
+		}
+		boolean active = groundSensors[0].isActive();
+		groundSensors[0].setActive(true);
+		try {
+			short centerOffset = (short) -groundSensors[0].getX();
+			SensorResult centerResult = groundSensors[0].scan(centerOffset, (short) 0);
+			return (centerResult == null ? 99 : centerResult.distance()) >= 12;
+		} finally {
+			groundSensors[0].setActive(active);
 		}
 	}
 
