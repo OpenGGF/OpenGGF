@@ -153,9 +153,8 @@ class TestSonic3kLevelEventRewindSnapshot {
 
         hcz.setBgRoutine(8);
         hcz.setAct2BgRoutine(4);
-        hcz.setWallOffsetFixed(0x800);
-        hcz.setWallOffsetPixels(16);
-        hcz.setWallMoving(true);
+        // One native accumulator owns the signed high word and its fraction.
+        hcz.setWallOffsetFixed(0xFFF00800);
         hcz.setWallChaseBgOverlayActiveRaw(true);
         hcz.setShakeTimer(12);
         hcz.setCutsceneActive(true);
@@ -186,8 +185,8 @@ class TestSonic3kLevelEventRewindSnapshot {
 
         assertEquals(8,     hcz2.getBgRoutine());
         assertEquals(4,     hcz2.getAct2BgRoutine());
-        assertEquals(0x800, hcz2.getWallOffsetFixed());
-        assertEquals(16,    hcz2.getWallOffsetPixels());
+        assertEquals(0xFFF00800, hcz2.getWallOffsetFixed());
+        assertEquals(-16,   hcz2.getWallOffsetPixels());
         assertTrue(hcz2.isWallMoving());
         assertTrue(hcz2.isWallChaseBgOverlayActive());
         assertEquals(12,    hcz2.getShakeTimer());
@@ -418,7 +417,8 @@ class TestSonic3kLevelEventRewindSnapshot {
         var hcz = hczSource.getHczEventsForTest();
         assertNotNull(hcz);
         hcz.setBgRoutine(8);
-        hcz.setWallMoving(true);
+        hcz.setAct2BgRoutine(4);
+        hcz.setWallOffsetFixed(0xFFEEABCD);
         hcz.setShakeTimer(12);
         LevelEventSnapshot hczSnapshot = hczSource.capture();
 
@@ -430,7 +430,7 @@ class TestSonic3kLevelEventRewindSnapshot {
         var hczTarget = target.getHczEventsForTest();
         assertNotNull(hczTarget);
         hczTarget.setBgRoutine(0);
-        hczTarget.setWallMoving(false);
+        hczTarget.setWallOffsetFixed(0);
         hczTarget.setShakeTimer(0);
 
         byte[] malformedExtra = insertMalformedAizPayload(hczSnapshot.extra());
@@ -463,7 +463,8 @@ class TestSonic3kLevelEventRewindSnapshot {
         var hcz = hczSource.getHczEventsForTest();
         assertNotNull(hcz);
         hcz.setBgRoutine(8);
-        hcz.setWallMoving(true);
+        hcz.setAct2BgRoutine(4);
+        hcz.setWallOffsetFixed(0xFFEEABCD);
         hcz.setShakeTimer(12);
         LevelEventSnapshot hczSnapshot = hczSource.capture();
 
@@ -479,7 +480,7 @@ class TestSonic3kLevelEventRewindSnapshot {
         var hczTarget = target.getHczEventsForTest();
         assertNotNull(hczTarget);
         hczTarget.setBgRoutine(0);
-        hczTarget.setWallMoving(false);
+        hczTarget.setWallOffsetFixed(0);
         hczTarget.setShakeTimer(0);
 
         Sonic3kAIZEvents payloadSource = new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
@@ -504,7 +505,8 @@ class TestSonic3kLevelEventRewindSnapshot {
         var hcz = hczSource.getHczEventsForTest();
         assertNotNull(hcz);
         hcz.setBgRoutine(8);
-        hcz.setWallMoving(true);
+        hcz.setAct2BgRoutine(4);
+        hcz.setWallOffsetFixed(0xFFEEABCD);
         hcz.setShakeTimer(12);
         LevelEventSnapshot hczSnapshot = hczSource.capture();
 
@@ -520,7 +522,7 @@ class TestSonic3kLevelEventRewindSnapshot {
         var hczTarget = target.getHczEventsForTest();
         assertNotNull(hczTarget);
         hczTarget.setBgRoutine(0);
-        hczTarget.setWallMoving(false);
+        hczTarget.setWallOffsetFixed(0);
         hczTarget.setShakeTimer(0);
 
         Sonic3kAIZEvents payloadSource = new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
@@ -539,7 +541,10 @@ class TestSonic3kLevelEventRewindSnapshot {
     }
 
     @Test
-    void corruptSameLengthHczSchemaPayloadRollsBackAndDoesNotAbortLaterZoneRestore() throws Exception {
+    void corruptSameLengthHczPayloadRejectsTheCompleteManagerSnapshot() throws Exception {
+        // Retain the historical JUnit identity. HCZ now validates one canonical
+        // composed payload before ALL manager restoration; an invalid same-size
+        // native stage rejects the complete snapshot instead of skipping a field.
         Sonic3kLevelEventManager cnzSource = new Sonic3kLevelEventManager();
         cnzSource.initLevel(Sonic3kZoneIds.ZONE_CNZ, 0);
         var cnz = cnzSource.getCnzEventsForTest();
@@ -551,43 +556,36 @@ class TestSonic3kLevelEventRewindSnapshot {
 
         Sonic3kLevelEventManager target = new Sonic3kLevelEventManager();
         target.initLevel(Sonic3kZoneIds.ZONE_HCZ, 1);
-        HczProbeEvents hczTarget = new HczProbeEvents();
-        hczTarget.init(1);
-        hczTarget.setWallMoving(true);
+        var hczTarget = target.getHczEventsForTest();
+        hczTarget.setAct2BgRoutine(4);
+        hczTarget.setWallOffsetFixed(0xFFEEABCD);
         hczTarget.setShakeTimer(99);
-        hczTarget.setProbeMode(HczProbeMode.ONE);
-        set(target, "hczEvents", hczTarget);
-
         Sonic3kLevelEventManager cnzTargetOwner = new Sonic3kLevelEventManager();
         cnzTargetOwner.initLevel(Sonic3kZoneIds.ZONE_CNZ, 0);
         set(target, "cnzEvents", cnzTargetOwner.getCnzEventsForTest());
         var cnzTarget = target.getCnzEventsForTest();
         assertNotNull(cnzTarget);
-        cnzTarget.setBossScrollState(0, 0);
-        cnzTarget.setCameraClampsActive(false);
-        cnzTarget.setWaterTargetYRaw(0);
+        LevelEventSnapshot before = target.capture();
 
-        HczProbeEvents payloadSource = new HczProbeEvents();
+        var payloadSource = new Sonic3kHCZEvents(() -> 0);
         payloadSource.init(1);
-        payloadSource.setWallMoving(false);
+        payloadSource.setAct2BgRoutine(5); // not one of native 0/4/8/C/10
         payloadSource.setShakeTimer(12);
-        payloadSource.setProbeMode(HczProbeMode.ZERO);
-        byte[] corruptPayload = corruptHczProbeModeOrdinal(
-                ZoneEventSchemaSidecar.capture(payloadSource), Integer.MAX_VALUE);
+        byte[] corruptPayload = payloadSource.captureHczState();
+        payloadSource.setAct2BgRoutine(4);
+        assertEquals(payloadSource.captureHczState().length, corruptPayload.length);
+        assertFalse(Sonic3kHCZEvents.hasValidHczState(corruptPayload));
         LevelEventSnapshot malformedSnapshot = snapshotWithHczPayload(cnzSnapshot, corruptPayload);
 
-        assertDoesNotThrow(() -> target.restore(malformedSnapshot),
-                "schema-corrupt HCZ sidecar should not abort later zone sidecars");
-        assertTrue(hczTarget.isWallMoving(),
-                "schema-corrupt HCZ sidecar must roll back partial HCZ field writes");
-        assertEquals(99, hczTarget.getShakeTimer(),
-                "schema-corrupt HCZ sidecar must roll back partial HCZ field writes");
-        assertEquals(HczProbeMode.ONE, hczTarget.getProbeMode(),
-                "schema-corrupt HCZ sidecar must preserve existing enum state");
-        assertEquals(120, cnzTarget.getBossScrollOffsetY());
-        assertEquals(-4, cnzTarget.getBossScrollVelocityY());
-        assertTrue(cnzTarget.isCameraClampsActive());
-        assertEquals(0x700, cnzTarget.getWaterTargetY());
+        assertDoesNotThrow(() -> target.restore(malformedSnapshot));
+        assertSnapshotUnchanged(before, target.capture(), "invalid canonical HCZ stage");
+        assertTrue(hczTarget.isWallMoving());
+        assertEquals(0xFFEEABCD, hczTarget.getWallOffsetFixed());
+        assertEquals(99, hczTarget.getShakeTimer());
+        assertEquals(0, cnzTarget.getBossScrollOffsetY());
+        assertEquals(0, cnzTarget.getBossScrollVelocityY());
+        assertFalse(cnzTarget.isCameraClampsActive());
+        assertEquals(0, cnzTarget.getWaterTargetY());
     }
 
     @Test
@@ -605,7 +603,8 @@ class TestSonic3kLevelEventRewindSnapshot {
         target.initLevel(Sonic3kZoneIds.ZONE_HCZ, 1);
         var hczTarget = target.getHczEventsForTest();
         assertNotNull(hczTarget);
-        hczTarget.setWallMoving(true);
+        hczTarget.setAct2BgRoutine(4);
+        hczTarget.setWallOffsetFixed(0xFFEEABCD);
         hczTarget.setShakeTimer(99);
 
         Sonic3kLevelEventManager cnzTargetOwner = new Sonic3kLevelEventManager();
@@ -648,9 +647,10 @@ class TestSonic3kLevelEventRewindSnapshot {
 
         Sonic3kHCZEvents hczPayloadSource = new Sonic3kHCZEvents(() -> 0);
         hczPayloadSource.init(1);
-        hczPayloadSource.setWallMoving(true);
+        hczPayloadSource.setAct2BgRoutine(4);
+        hczPayloadSource.setWallOffsetFixed(0xFFEEABCD);
         LevelEventSnapshot malformedSnapshot = snapshotWithCorruptHczLength(
-                snapshotWithHczPayload(cnzSnapshot, ZoneEventSchemaSidecar.capture(hczPayloadSource)),
+                snapshotWithHczPayload(cnzSnapshot, hczPayloadSource.captureHczState()),
                 -1);
 
         Sonic3kLevelEventManager target = new Sonic3kLevelEventManager();
@@ -684,9 +684,10 @@ class TestSonic3kLevelEventRewindSnapshot {
 
         Sonic3kHCZEvents hczPayloadSource = new Sonic3kHCZEvents(() -> 0);
         hczPayloadSource.init(1);
-        hczPayloadSource.setWallMoving(true);
+        hczPayloadSource.setAct2BgRoutine(4);
+        hczPayloadSource.setWallOffsetFixed(0xFFEEABCD);
         LevelEventSnapshot malformedSnapshot = snapshotWithCorruptHczLength(
-                snapshotWithHczPayload(cnzSnapshot, ZoneEventSchemaSidecar.capture(hczPayloadSource)),
+                snapshotWithHczPayload(cnzSnapshot, hczPayloadSource.captureHczState()),
                 0);
 
         Sonic3kLevelEventManager target = new Sonic3kLevelEventManager();
@@ -1817,39 +1818,6 @@ class TestSonic3kLevelEventRewindSnapshot {
         return corrupt;
     }
 
-    private static byte[] corruptHczProbeModeOrdinal(byte[] payload, int invalidOrdinal) {
-        HczProbeEvents zero = new HczProbeEvents();
-        zero.init(1);
-        zero.setProbeMode(HczProbeMode.ZERO);
-        byte[] zeroPayload = ZoneEventSchemaSidecar.capture(zero);
-
-        HczProbeEvents one = new HczProbeEvents();
-        one.init(1);
-        one.setProbeMode(HczProbeMode.ONE);
-        byte[] onePayload = ZoneEventSchemaSidecar.capture(one);
-
-        assertEquals(zeroPayload.length, payload.length);
-        int changedByte = -1;
-        for (int i = 0; i < zeroPayload.length; i++) {
-            if (zeroPayload[i] != onePayload[i]) {
-                assertEquals(-1, changedByte,
-                        "probeMode ordinal should be the only byte changed by this probe");
-                changedByte = i;
-            }
-        }
-        assertTrue(changedByte >= 0, "probeMode ordinal offset must be discoverable");
-
-        byte[] corrupt = payload.clone();
-        int ordinalOffset = changedByte;
-        assertTrue(ordinalOffset + Integer.BYTES <= corrupt.length,
-                "probeMode ordinal offset must be valid");
-        corrupt[ordinalOffset] = (byte) invalidOrdinal;
-        corrupt[ordinalOffset + 1] = (byte) (invalidOrdinal >>> 8);
-        corrupt[ordinalOffset + 2] = (byte) (invalidOrdinal >>> 16);
-        corrupt[ordinalOffset + 3] = (byte) (invalidOrdinal >>> 24);
-        return corrupt;
-    }
-
     private static byte[] corruptCnzBossBackgroundModeOrdinal(byte[] payload, int invalidOrdinal) {
         Sonic3kCNZEvents zero = new Sonic3kCNZEvents();
         zero.init(0);
@@ -1973,25 +1941,19 @@ class TestSonic3kLevelEventRewindSnapshot {
         bytes[offset + 3] = (byte) (value >>> 24);
     }
 
-    private enum HczProbeMode {
-        ZERO,
-        ONE
-    }
-
-    private static final class HczProbeEvents extends Sonic3kHCZEvents {
-        private HczProbeMode probeMode = HczProbeMode.ZERO;
-
-        private HczProbeEvents() {
-            super(() -> 0);
-        }
-
-        private HczProbeMode getProbeMode() {
-            return probeMode;
-        }
-
-        private void setProbeMode(HczProbeMode probeMode) {
-            this.probeMode = probeMode;
-        }
+    private static void assertSnapshotUnchanged(LevelEventSnapshot expected,
+                                                LevelEventSnapshot actual, String label) {
+        assertAll(label,
+                () -> assertEquals(expected.currentZone(), actual.currentZone()),
+                () -> assertEquals(expected.currentAct(), actual.currentAct()),
+                () -> assertEquals(expected.eventRoutineFg(), actual.eventRoutineFg()),
+                () -> assertEquals(expected.eventRoutineBg(), actual.eventRoutineBg()),
+                () -> assertEquals(expected.frameCounter(), actual.frameCounter()),
+                () -> assertEquals(expected.timerFrames(), actual.timerFrames()),
+                () -> assertEquals(expected.bossActive(), actual.bossActive()),
+                () -> assertArrayEquals(expected.eventDataFg(), actual.eventDataFg()),
+                () -> assertArrayEquals(expected.eventDataBg(), actual.eventDataBg()),
+                () -> assertArrayEquals(expected.extra(), actual.extra()));
     }
 
     private static void set(Object target, String name, Object value) throws Exception {

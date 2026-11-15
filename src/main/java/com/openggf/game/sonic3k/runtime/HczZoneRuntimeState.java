@@ -24,6 +24,28 @@ public final class HczZoneRuntimeState implements S3kZoneRuntimeState, com.openg
     @Override public boolean isActTransitionFlagActive() { return events.isEventsFg5(); }
     public boolean isBackedBy(Sonic3kHCZEvents candidate) { return events == candidate; }
 
+    /** Act 2 consumes the retained ScreenEvents generation, including inactivity. */
+    @Override
+    public com.openggf.physics.BackgroundPlaneCollisionProvider.State backgroundPlaneCollisionStateOrNull() {
+        return actIndex == 1 ? events.backgroundCollisionState() : null;
+    }
+
+    public Sonic3kHCZEvents.ScreenPublication screenPublication() {
+        return events.screenPublication();
+    }
+
+    public int backgroundRoutine() {
+        return events.getAct2BgRoutine();
+    }
+
+    public int wallOffsetPixels() {
+        return events.getWallOffsetPixels();
+    }
+
+    public void startContinuousScreenShake() {
+        events.startContinuousScreenShake();
+    }
+
     /** HCZ1's {@code Events_bg+$16}: the HCZ2 art is queued and act 1's tile animation stops. */
     public boolean act1TransitionArtQueued() {
         return actIndex == 0 && events.isAct1TransitionArtQueued();

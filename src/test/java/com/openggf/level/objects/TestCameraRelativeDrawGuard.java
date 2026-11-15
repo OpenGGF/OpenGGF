@@ -12,7 +12,8 @@ import static org.junit.jupiter.api.Assertions.*;
 class TestCameraRelativeDrawGuard {
     private static final String ANNOTATION = Type.getDescriptor(CameraRelativeDraw.class);
     private record Call(String owner, String name, String descriptor) { }
-    private record Body(List<Call> calls) { }
+    /** {@code virtual} holds the invokevirtual calls, which dispatch on the producer's own class. */
+    private record Body(List<Call> calls, Set<Call> virtual) { }
     private static final class Definition {
         String name, parent;
         boolean annotated;
@@ -35,6 +36,10 @@ class TestCameraRelativeDrawGuard {
         }
         var valid = classes.get(Type.getInternalName(Declared.class));
         assertEquals(List.of(), discrepancies(Map.of(valid.name, valid)));
+        // A subclass hook reached through the parent's appendRenderCommands is the subclass's read.
+        var hook = classes.get(Type.getInternalName(OverriddenHook.class));
+        var template = classes.get(hook.parent);
+        assertEquals(List.of(), discrepancies(Map.of(hook.name, hook, template.name, template)));
         assertFalse(CameraRelativeDraw.class.isAnnotationPresent(java.lang.annotation.Inherited.class));
     }
     private static List<String> discrepancies(Map<String, Definition> definitions) {
@@ -68,8 +73,11 @@ class TestCameraRelativeDrawGuard {
         for (var next : body.calls) {
             if (next.owner.equals("com/openggf/camera/Camera")) {
                 if (readsCamera(next, root, definitions, visited)) return true;
-            } else if (inHierarchy(next.owner, root, definitions)
-                    && readsCamera(next, root, definitions, visited)) return true;
+            } else if (inHierarchy(next.owner, root, definitions)) {
+                // invokevirtual on the producer's hierarchy runs the producer's override, if any.
+                var target = body.virtual.contains(next) ? new Call(root, next.name, next.descriptor) : next;
+                if (readsCamera(target, root, definitions, visited)) return true;
+            }
         }
         return false;
     }
@@ -95,11 +103,13 @@ class TestCameraRelativeDrawGuard {
                         return null;
                     }
                     @Override public MethodVisitor visitMethod(int access, String name, String descriptor, String signature, String[] exceptions) {
-                        var body = new Body(new ArrayList<>());
+                        var body = new Body(new ArrayList<>(), new HashSet<>());
                         definition.methods.put(new Call(definition.name, name, descriptor), body);
                         return new MethodVisitor(Opcodes.ASM9) {
                             @Override public void visitMethodInsn(int opcode, String owner, String name, String descriptor, boolean isInterface) {
-                                body.calls.add(new Call(owner, name, descriptor));
+                                var call = new Call(owner, name, descriptor);
+                                body.calls.add(call);
+                                if (opcode == Opcodes.INVOKEVIRTUAL) body.virtual.add(call);
                             }
                             @Override public void visitInvokeDynamicInsn(String name, String descriptor, Handle bootstrap, Object... arguments) {
                                 for (var argument : arguments) if (argument instanceof Handle handle)
@@ -129,6 +139,15 @@ class TestCameraRelativeDrawGuard {
     private static class Declared {
         com.openggf.camera.Camera camera;
         public void appendRenderCommands(List<?> commands) { camera.getX(); }
+    }
+    private static class HookTemplate {
+        public void appendRenderCommands(List<?> commands) { hook(); }
+        protected void hook() { }
+    }
+    @CameraRelativeDraw(CameraRelativeDraw.Use.CULL_ONLY)
+    private static class OverriddenHook extends HookTemplate {
+        com.openggf.camera.Camera camera;
+        @Override protected void hook() { camera.getX(); }
     }
     private static class Inherited extends Declared {
         @Override public void appendRenderCommands(List<?> commands) { super.appendRenderCommands(commands); }

@@ -2,6 +2,7 @@ package com.openggf.game.soniccd.objects.shared;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.soniccd.objects.common.CdAnimator;
+import com.openggf.level.objects.CameraRelativeDraw;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TouchResponseListener;
 import com.openggf.level.objects.TouchResponseProfile;
@@ -17,6 +18,7 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
  * rolls up (routines 8 to $10): collision type $ED, a bumper that throws the player away ($F900 times the cosine and sine of the angle
  * from the player) and goes into a fast roll of its own, then unrolls and walks on. Collision type $2C (walking) is an enemy.
  */
+@CameraRelativeDraw(CameraRelativeDraw.Use.CULL_ONLY)
 public final class ObjDango extends SharedBadnik implements TouchResponseListener {
     /** Routine0: {@code move.b #$E,obj.width / width_2; move.b #9,obj.height; move.b #$2C,obj.collide_type} (:33-41). */
     private static final int WIDTH = 0xE, HEIGHT = 9, WALK_COLLISION = 0x2C, BUMP_COLLISION = 0xED;

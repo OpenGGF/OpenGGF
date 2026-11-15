@@ -3,19 +3,27 @@ package com.openggf.game.sonic3k.scroll;
 import static com.openggf.level.scroll.M68KMath.asrWord;
 import static com.openggf.level.scroll.M68KMath.negWord;
 
+import com.openggf.game.internal.ExplicitForegroundVerticalScroll;
+import com.openggf.game.sonic3k.events.Sonic3kHCZEvents.ScreenPublication;
 import com.openggf.level.scroll.AbstractZoneScrollHandler;
+import com.openggf.level.scroll.ScrollOutputRebuilder;
 import com.openggf.level.scroll.compose.DeformationPlan;
 import com.openggf.level.scroll.compose.ScrollEffectComposer;
 import com.openggf.level.scroll.compose.ScrollValueTable;
 import com.openggf.level.scroll.compose.WaterlineBlendComposer;
 
+import java.util.function.Supplier;
+
 /**
  * Hydrocity Zone (HCZ) scroll handler for Sonic 3K.
  *
- * <p>Ports HCZ1_Deform and HCZ2_Deform from the S3K disassembly.
+ * <p>HCZ1 deformation is local. HCZ2 consumes the event owner's completed
+ * camera words and applies its horizontal deformation table; it owns no event
+ * phase, wall accumulator or shake setup.
  */
 public class SwScrlHcz extends AbstractZoneScrollHandler
-        implements com.openggf.level.scroll.ScrollProjectionSource {
+        implements com.openggf.level.scroll.ScrollProjectionSource, ScrollOutputRebuilder,
+        ExplicitForegroundVerticalScroll {
 
     static final int[] HCZ1_DEFORM_HEIGHTS = {
             0x40, 8, 8, 5, 5, 6, 0xF0, 6, 5, 5, 8, 8, 0x30, 0x80C0, 0x7FFF
@@ -44,9 +52,6 @@ public class SwScrlHcz extends AbstractZoneScrollHandler
     };
     private static final int HCZ2_HSCROLL_SIZE = 24;
 
-    private static final int WALL_CHASE_BG_Y_OFFSET = 0x500;
-    private static final int WALL_CHASE_BG_X_OFFSET = 0x200;
-
     private static final DeformationPlan.ScrollValueTransform NEGATE_WORD = value -> negWord(value);
     private static final WaterlineBlendComposer WATERLINE_BLEND = new WaterlineBlendComposer(
             HCZ1_WATERLINE_START,
@@ -64,19 +69,27 @@ public class SwScrlHcz extends AbstractZoneScrollHandler
     private final ScrollValueTable hcz1HScroll = ScrollValueTable.ofLength(HCZ1_HSCROLL_SIZE);
     private final ScrollValueTable hcz2HScroll = ScrollValueTable.ofLength(HCZ2_HSCROLL_SIZE);
     private final byte[] waterlineData;
+    private final Supplier<ScreenPublication> publication;
 
-    private Hcz2BgPhase hcz2Phase = Hcz2BgPhase.NORMAL;
-    private int screenShakeOffset;
-    private int wallChaseOffsetX;
+    // Derived picture output only. The event owner captures the publication;
+    // rebuilding or freezing this cache never advances that owner.
+    private ScreenPublication composedPublication;
     private int lastBgCameraX = Integer.MIN_VALUE;
     private short vscrollFactorFG;
+    private int shakeOffsetY;
+    private boolean explicitForeground;
 
     public SwScrlHcz(byte[] waterlineData) {
-        this(waterlineData, 224);
+        this(waterlineData, null);
     }
 
-    private SwScrlHcz(byte[] waterlineData, int height) {
+    public SwScrlHcz(byte[] waterlineData, Supplier<ScreenPublication> publication) {
+        this(waterlineData, publication, 224);
+    }
+
+    private SwScrlHcz(byte[] waterlineData, Supplier<ScreenPublication> publication, int height) {
         this.waterlineData = waterlineData;
+        this.publication = publication;
         composer = new ScrollEffectComposer(height);
     }
 
@@ -84,61 +97,26 @@ public class SwScrlHcz extends AbstractZoneScrollHandler
         this(null);
     }
 
-    private record RewindState(Hcz2BgPhase phase, int screenShakeOffset, int wallChaseOffsetX) { }
-
     @Override
     public Object captureRewindState() {
-        return new RewindState(hcz2Phase, screenShakeOffset, wallChaseOffsetX);
+        return null;
     }
 
-    @Override
-    public void restoreRewindState(Object state) {
-        if (state instanceof RewindState saved) {
-            // Native HCZ2_WallMove / ShakeScreen_Setup publish these retained
-            // inputs before deformation (sonic3k.asm:106180,104234). The
-            // post-restore parallax rebuild must not consume a future event's
-            // publication; it does not dispatch the ordinary event owner.
-            hcz2Phase = saved.phase();
-            screenShakeOffset = saved.screenShakeOffset();
-            wallChaseOffsetX = saved.wallChaseOffsetX();
-        }
-    }
-
-    public void setHcz2BgPhase(Hcz2BgPhase phase) {
-        this.hcz2Phase = phase;
-    }
-
+    /** Diagnostic view of the producer's current publication; never initializes it. */
     public Hcz2BgPhase getHcz2BgPhase() {
-        return hcz2Phase;
-    }
-
-    public void setScreenShakeOffset(int offset) {
-        this.screenShakeOffset = offset;
-    }
-
-    public void setWallChaseOffsetX(int offset) {
-        this.wallChaseOffsetX = offset;
-    }
-
-    /**
-     * Prime the collision-facing BG camera state before physics runs.
-     *
-     * <p>ROM: HCZ2_WallMove writes Camera_X/Y_pos_BG_copy before the dual-path
-     * BG collision routines read Camera_X/Y_diff. The engine's normal scroll
-     * update runs later in the frame, so HCZ2 needs this pre-physics cache.
-     */
-    public void primeBgCollisionState(int cameraX, int cameraY) {
-        if (hcz2Phase == Hcz2BgPhase.WALL_CHASE) {
-            lastBgCameraX = cameraX - WALL_CHASE_BG_X_OFFSET + wallChaseOffsetX;
-            vscrollFactorBG = (short) (cameraY - WALL_CHASE_BG_Y_OFFSET);
-            return;
-        }
-        lastBgCameraX = Integer.MIN_VALUE;
+        ScreenPublication current = publication != null ? publication.get() : null;
+        return current != null && current.valid() && current.wallPlane()
+                ? Hcz2BgPhase.WALL_CHASE : Hcz2BgPhase.NORMAL;
     }
 
     @Override
     public short getVscrollFactorFG() {
         return vscrollFactorFG;
+    }
+
+    @Override
+    public boolean foregroundVerticalScrollExplicit() {
+        return explicitForeground;
     }
 
     @Override
@@ -148,7 +126,7 @@ public class SwScrlHcz extends AbstractZoneScrollHandler
 
     @Override
     public int getShakeOffsetY() {
-        return screenShakeOffset;
+        return shakeOffsetY;
     }
 
     @Override
@@ -156,23 +134,49 @@ public class SwScrlHcz extends AbstractZoneScrollHandler
                        int cameraX,
                        int cameraY,
                        int frameCounter, int actId) {
-        composeCamera(horizScrollBuf, cameraX, cameraY, actId);
+        ScreenPublication current = actId != 0 && publication != null ? publication.get() : null;
+        composeCamera(horizScrollBuf, cameraX, cameraY, actId, current, publication != null);
+    }
+
+    @Override
+    public void rebuildOutput(int[] horizScrollBuf, int cameraX, int cameraY, int frameCounter, int actId) {
+        update(horizScrollBuf, cameraX, cameraY, frameCounter, actId);
     }
 
     private void composeCamera(int[] horizScrollBuf, int cameraX, int cameraY,
-                       int actId) {
+                               int actId, ScreenPublication current, boolean hasPublicationOwner) {
         resetScrollTracking();
         composer.reset();
         composer.setVscrollFactorFG((short) 0);
+        explicitForeground = false;
+        shakeOffsetY = 0;
+        composedPublication = actId == 0 ? null : current;
 
         if (actId == 0) {
             lastBgCameraX = Integer.MIN_VALUE;
             updateHcz1(cameraX, cameraY);
-        } else {
-            updateHcz2(cameraX, cameraY);
-            if (screenShakeOffset != 0) {
-                composer.setVscrollFactorFG((short) (cameraY + screenShakeOffset));
+        } else if (current != null && current.valid()) {
+            explicitForeground = true;
+            shakeOffsetY = current.shakeOffset();
+            composer.setVscrollFactorFG((short) current.foregroundY());
+            if (current.completingActOneDeformation()) {
+                lastBgCameraX = Integer.MIN_VALUE;
+                updateHcz1(current.foregroundX(), current.foregroundY());
+            } else {
+                updateHcz2(current);
             }
+        } else if (!hasPublicationOwner) {
+            // Standalone deformation math has no gameplay owner or shake. A
+            // production handler always has a supplier, even before its first
+            // completed publication, and never enters this convenience path.
+            updateHcz2Normal(cameraX, asrWord(cameraY, 2));
+        } else {
+            // No producer publication yet: no camera-derived phase or setup.
+            // The level-load owner decides when canonical words become available.
+            explicitForeground = true;
+            lastBgCameraX = Integer.MIN_VALUE;
+            composer.setVscrollFactorBG((short) 0);
+            composer.fillPackedScrollWords(0, composer.visibleLineCount(), (short) 0, (short) 0);
         }
 
         composer.copyPackedScrollWordsTo(horizScrollBuf);
@@ -251,28 +255,30 @@ public class SwScrlHcz extends AbstractZoneScrollHandler
         hcz1HScroll.set(HCZ1_HSCROLL_SIZE - 1, hcz1HScroll.get(6));
     }
 
-    private void updateHcz2(int cameraX, int cameraY) {
-        short fgScroll = negWord(cameraX);
-
-        if (hcz2Phase == Hcz2BgPhase.WALL_CHASE) {
-            int bgCameraX = cameraX - WALL_CHASE_BG_X_OFFSET + wallChaseOffsetX;
-            lastBgCameraX = bgCameraX;
-            composer.setVscrollFactorBG((short) (cameraY - WALL_CHASE_BG_Y_OFFSET));
-            short bgScroll = negWord(bgCameraX);
+    private void updateHcz2(ScreenPublication current) {
+        if (current.wallPlane()) {
+            // Also covers the stage-8 held picture: BG copies need not follow
+            // this dispatch's foreground camera (sonic3k.asm:106136-106148).
+            lastBgCameraX = current.backgroundX();
+            composer.setVscrollFactorBG((short) current.backgroundY());
+            short fgScroll = negWord(current.foregroundX());
+            short bgScroll = negWord(current.backgroundX());
             composer.fillPackedScrollWords(0, composer.visibleLineCount(), fgScroll, bgScroll);
             return;
         }
+        updateHcz2Normal(current.foregroundX(), current.backgroundY());
+    }
 
+    private void updateHcz2Normal(int foregroundX, int backgroundY) {
         hcz2HScroll.clear();
         lastBgCameraX = Integer.MIN_VALUE;
-        short shakeY = (short) screenShakeOffset;
-        composer.setVscrollFactorBG((short) (asrWord(cameraY - shakeY, 2) + shakeY));
+        composer.setVscrollFactorBG((short) backgroundY);
 
-        buildHcz2HScroll(cameraX);
+        buildHcz2HScroll(foregroundX);
         DeformationPlan.applyFlaggedTableBands(
                 composer,
                 composer.getVscrollFactorBG(),
-                fgScroll,
+                negWord(foregroundX),
                 hcz2HScroll,
                 HCZ2_DEFORM_HEIGHTS,
                 0,
@@ -306,17 +312,24 @@ public class SwScrlHcz extends AbstractZoneScrollHandler
     public com.openggf.level.scroll.ScrollProjectionPhase captureProjection(
             com.openggf.level.scroll.ScrollProjectionContext context) {
         byte[] blend = waterlineData == null ? null : waterlineData.clone();
-        Hcz2BgPhase phase = hcz2Phase;
-        int shake = screenShakeOffset, wallX = wallChaseOffsetX;
+        ScreenPublication frozen = composedPublication;
+        boolean hasPublicationOwner = publication != null;
+        // ScreenEvents copied these words before a held director could move the
+        // camera. Translate the immutable publication, excluding its shake from
+        // the view origin, rather than using newer camera metadata.
+        int originX = frozen != null && frozen.valid() ? frozen.foregroundX() : context.cameraX();
+        int originY = frozen != null && frozen.valid()
+                ? (short) (frozen.foregroundY() - frozen.shakeOffset()) : context.cameraY();
         return view -> {
-            SwScrlHcz scratch = new SwScrlHcz(blend, view.height());
-            scratch.hcz2Phase = phase;
-            scratch.screenShakeOffset = shake;
-            scratch.wallChaseOffsetX = wallX;
+            SwScrlHcz scratch = new SwScrlHcz(blend, null, view.height());
             int[] words = new int[view.height()];
-            scratch.composeCamera(words, view.cameraX(), view.cameraY(), context.act());
+            ScreenPublication projected = projectPublication(frozen,
+                    view.cameraX() - originX, view.cameraY() - originY);
+            scratch.composeCamera(words, view.cameraX(), view.cameraY(), context.act(),
+                    projected, hasPublicationOwner);
             short foregroundY =
-                    scratch.vscrollFactorFG == 0 ? (short) view.cameraY() : scratch.vscrollFactorFG;
+                    !scratch.explicitForeground && scratch.vscrollFactorFG == 0
+                            ? (short) view.cameraY() : scratch.vscrollFactorFG;
             return new com.openggf.level.scroll.ScrollProjection(
                     words,
                     null,
@@ -327,8 +340,34 @@ public class SwScrlHcz extends AbstractZoneScrollHandler
                     scratch.lastBgCameraX,
                     context.nativeOutput().backgroundPeriod(),
                     context.nativeOutput().shakeX(),
-                    shake,
+                    scratch.shakeOffsetY,
                     context.nativeOutput().tilemapMode());
         };
+    }
+
+    private static ScreenPublication projectPublication(ScreenPublication frozen, int deltaX, int deltaY) {
+        if (frozen == null || !frozen.valid()) {
+            return frozen;
+        }
+        int foregroundX = (short) (frozen.foregroundX() + deltaX);
+        int foregroundY = (short) (frozen.foregroundY() + deltaY);
+        int backgroundX = frozen.backgroundX();
+        int backgroundY;
+        if (frozen.completingActOneDeformation()) {
+            backgroundX = foregroundX;
+            backgroundY = (short) (((short) (foregroundY - EQUILIBRIUM_Y) >> 2) + BG_Y_OFFSET);
+        } else if (frozen.wallPlane()) {
+            backgroundX = (short) (backgroundX + deltaX);
+            backgroundY = (short) (frozen.backgroundY() + deltaY);
+        } else {
+            // Presentation-only translation of the frozen normal deformation.
+            // Subtracting the two word-ratio terms preserves native output at
+            // delta 0, including its rounding (sonic3k.asm:106230-106236).
+            int oldRatio = asrWord(frozen.foregroundY() - frozen.shakeOffset(), 2);
+            int newRatio = asrWord(foregroundY - frozen.shakeOffset(), 2);
+            backgroundY = (short) (frozen.backgroundY() + newRatio - oldRatio);
+        }
+        return new ScreenPublication(true, frozen.wallPlane(), foregroundX, foregroundY,
+                backgroundX, backgroundY, frozen.shakeOffset(), frozen.completingActOneDeformation());
     }
 }
