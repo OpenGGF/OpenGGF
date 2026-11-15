@@ -135,6 +135,7 @@ class TestModCharacterConstructionIdentity {
         GameModule replacement = mock(GameModule.class);
         when(replacement.getIdentifier()).thenReturn("replacement-host");
         when(replacement.getPhysicsProvider()).thenReturn(fixture.provider());
+        when(replacement.getPolicies()).thenReturn(new com.openggf.game.rules.GamePolicies(com.openggf.game.rules.GameRules.SONIC_2));
         GameModuleRegistry.setCurrent(replacement);
 
         published[0].resolveAnimationId(CanonicalAnimation.WAIT);
@@ -319,6 +320,7 @@ class TestModCharacterConstructionIdentity {
         when(base.getIdentifier()).thenReturn("identity-host");
         when(base.getPlayableCharacterRegistry()).thenReturn(PlayableCharacterRegistry.empty());
         when(base.getPhysicsProvider()).thenReturn(provider);
+        when(base.getPolicies()).thenReturn(new com.openggf.game.rules.GamePolicies(com.openggf.game.rules.GameRules.SONIC_2));
         when(base.supportsSidekick()).thenReturn(true);
         CharacterDefinition contributed = new CharacterDefinition(EXPECTED, "Runner",
                 (code, x, y) -> spriteFactory.get(), SonicRespawnStrategy::new,
@@ -363,7 +365,6 @@ class TestModCharacterConstructionIdentity {
         }
 
         @Override public PhysicsModifiers getModifiers() { return PhysicsModifiers.STANDARD; }
-        @Override public GameRules getRules() { return GameRules.SONIC_2; }
     }
 
     private abstract static class TestSprite extends AbstractPlayableSprite {

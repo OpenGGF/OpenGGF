@@ -729,7 +729,8 @@ public class ObjectManager {
         // The same rule selects the playable sprite's render-flag Y test
         // (Camera.isVisibleForRenderFlag).
         GameModule module = objectServices != null ? objectServices.gameModule() : null;
-        GameRules rules = module != null ? module.getRules() : null;
+        var modulePolicies = module != null ? module.getPolicies() : null;
+        GameRules rules = modulePolicies != null ? modulePolicies.rules() : null;
         return rules != null && rules.camera().useScreenYWrapValueForVisibility();
     }
 

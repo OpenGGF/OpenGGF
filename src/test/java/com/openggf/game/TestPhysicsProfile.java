@@ -309,24 +309,24 @@ public class TestPhysicsProfile {
     }
 
     @Test
-    public void testSonic1Provider_GameRules() {
-        var provider = new Sonic1PhysicsProvider();
-        assertSame(GameRules.SONIC_1, provider.getRules(), "S1 game rules");
-        assertFalse(provider.getRules().playerCapability().spindashEnabled(), "S1 no spindash");
+    public void testSonic1Module_GameRules() {
+        var rules = new com.openggf.game.sonic1.Sonic1GameModule().getPolicies().rules();
+        assertSame(GameRules.SONIC_1, rules, "S1 game rules");
+        assertFalse(rules.playerCapability().spindashEnabled(), "S1 no spindash");
     }
 
     @Test
-    public void testSonic2Provider_GameRules() {
-        var provider = new Sonic2PhysicsProvider();
-        assertSame(GameRules.SONIC_2, provider.getRules(), "S2 game rules");
-        assertTrue(provider.getRules().playerCapability().spindashEnabled(), "S2 has spindash");
+    public void testSonic2Module_GameRules() {
+        var rules = new com.openggf.game.sonic2.Sonic2GameModule().getPolicies().rules();
+        assertSame(GameRules.SONIC_2, rules, "S2 game rules");
+        assertTrue(rules.playerCapability().spindashEnabled(), "S2 has spindash");
     }
 
     @Test
-    public void testSonic3kProvider_GameRules() {
-        var provider = new Sonic3kPhysicsProvider();
-        assertSame(GameRules.SONIC_3K, provider.getRules(), "S3K game rules");
-        assertTrue(provider.getRules().playerCapability().spindashEnabled(), "S3K has spindash");
+    public void testSonic3kModule_GameRules() {
+        var rules = new com.openggf.game.sonic3k.Sonic3kGameModule().getPolicies().rules();
+        assertSame(GameRules.SONIC_3K, rules, "S3K game rules");
+        assertTrue(rules.playerCapability().spindashEnabled(), "S3K has spindash");
     }
 }
 

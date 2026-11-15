@@ -521,6 +521,7 @@ CF-ANNOTATION TYPE com.openggf.game.rules.AirCollisionRules visible @com.openggf
 CF-ANNOTATION TYPE com.openggf.game.rules.CameraRules visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.rules.CollisionRules visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.rules.DrowningBubbleRules visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.rules.GamePolicies visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.rules.GameRules visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.rules.ObjectInteractionRules visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.rules.PaletteWhiteFadeModel visible @com.openggf.game.ModApi
@@ -1763,6 +1764,7 @@ CONSTRUCTOR com.openggf.game.rules.CollisionRules public  <init>(com.openggf.gam
 CONSTRUCTOR com.openggf.game.rules.CollisionRules public  <init>(com.openggf.game.CollisionModel,boolean,boolean,boolean,boolean,com.openggf.game.rules.AirCollisionRules,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,int,boolean)
 CONSTRUCTOR com.openggf.game.rules.DrowningBubbleRules public  <init>(int,int,boolean,int)
 CONSTRUCTOR com.openggf.game.rules.DrowningBubbleRules public  <init>(int,int,boolean,int,boolean)
+CONSTRUCTOR com.openggf.game.rules.GamePolicies public  <init>(com.openggf.game.rules.GameRules)
 CONSTRUCTOR com.openggf.game.rules.GameRules public  <init>(com.openggf.game.rules.PlayerMovementRules,com.openggf.game.rules.PlayerCapabilityRules,com.openggf.game.rules.CollisionRules,com.openggf.game.rules.PlayerAnimationRules,com.openggf.game.rules.CameraRules,com.openggf.game.rules.RingRules,com.openggf.game.rules.ObjectInteractionRules,com.openggf.game.rules.SidekickCpuRules,com.openggf.game.rules.PowerUpRules,com.openggf.game.rules.DrowningBubbleRules)
 CONSTRUCTOR com.openggf.game.rules.GameRules public  <init>(com.openggf.game.rules.PlayerMovementRules,com.openggf.game.rules.PlayerCapabilityRules,com.openggf.game.rules.CollisionRules,com.openggf.game.rules.PlayerAnimationRules,com.openggf.game.rules.CameraRules,com.openggf.game.rules.RingRules,com.openggf.game.rules.ObjectInteractionRules,com.openggf.game.rules.SidekickCpuRules,com.openggf.game.rules.PowerUpRules,com.openggf.game.rules.DrowningBubbleRules,com.openggf.game.rules.DynamicArtDmaServiceModel)
 CONSTRUCTOR com.openggf.game.rules.GameRules public  <init>(com.openggf.game.rules.PlayerMovementRules,com.openggf.game.rules.PlayerCapabilityRules,com.openggf.game.rules.CollisionRules,com.openggf.game.rules.PlayerAnimationRules,com.openggf.game.rules.CameraRules,com.openggf.game.rules.RingRules,com.openggf.game.rules.ObjectInteractionRules,com.openggf.game.rules.SidekickCpuRules,com.openggf.game.rules.PowerUpRules,com.openggf.game.rules.DrowningBubbleRules,com.openggf.game.rules.DynamicArtDmaServiceModel,com.openggf.game.rules.PaletteWhiteFadeModel)
@@ -6096,6 +6098,7 @@ METHOD com.openggf.game.AbstractStandaloneGameModule public  com.openggf.game.Re
 METHOD com.openggf.game.AbstractStandaloneGameModule public  com.openggf.game.ScrollHandlerProvider getScrollHandlerProvider()
 METHOD com.openggf.game.AbstractStandaloneGameModule public  com.openggf.game.ZoneFeatureProvider getZoneFeatureProvider()
 METHOD com.openggf.game.AbstractStandaloneGameModule public  com.openggf.game.ZoneRegistry getZoneRegistry()
+METHOD com.openggf.game.AbstractStandaloneGameModule public  com.openggf.game.rules.GamePolicies getPolicies()
 METHOD com.openggf.game.AbstractStandaloneGameModule public  com.openggf.game.save.SaveSnapshotProvider getSaveSnapshotProvider()
 METHOD com.openggf.game.AbstractStandaloneGameModule public  com.openggf.level.objects.ObjectPlacementEncoding getObjectPlacementEncoding()
 METHOD com.openggf.game.AbstractStandaloneGameModule public  com.openggf.level.objects.ObjectRegistry createObjectRegistry()
@@ -6357,7 +6360,7 @@ METHOD com.openggf.game.CrossGameDonorProvider public,abstract  com.openggf.game
 METHOD com.openggf.game.CrossGameDonorProvider public,abstract  com.openggf.sprites.art.PlayerSpriteArtProvider createPlayerArtProvider(com.openggf.data.RomByteReader)
 METHOD com.openggf.game.CrossGameFeatureProvider public  boolean hasSeparateTailsTailArt()
 METHOD com.openggf.game.CrossGameFeatureProvider public  boolean supportsSidekick()
-METHOD com.openggf.game.CrossGameFeatureProvider public  com.openggf.game.rules.GameRules getHybridRules()
+METHOD com.openggf.game.CrossGameFeatureProvider public  com.openggf.game.rules.GamePolicies getHybridPolicies()
 METHOD com.openggf.game.CrossGameFeatureProvider public  com.openggf.graphics.RenderContext getDonorRenderContext()
 METHOD com.openggf.game.CrossGameFeatureProvider public  com.openggf.level.Palette loadCharacterPalette()
 METHOD com.openggf.game.CrossGameFeatureProvider public  com.openggf.level.Palette loadCharacterPalette(java.lang.String)
@@ -6584,7 +6587,6 @@ METHOD com.openggf.game.GameModule public  com.openggf.game.palette.CustomZonePa
 METHOD com.openggf.game.GameModule public  com.openggf.game.preview.TitlePreviewProvider getTitlePreviewProvider()
 METHOD com.openggf.game.GameModule public  com.openggf.game.profiles.trace.TracePlaybackProfile getTracePlaybackProfile()
 METHOD com.openggf.game.GameModule public  com.openggf.game.rewind.ScriptedRewind scriptedRewind()
-METHOD com.openggf.game.GameModule public  com.openggf.game.rules.GameRules getRules()
 METHOD com.openggf.game.GameModule public  com.openggf.game.save.SaveSnapshotProvider getSaveSnapshotProvider()
 METHOD com.openggf.game.GameModule public  com.openggf.game.timing.LoadTimeProfile createLoadTimeProfile(com.openggf.game.timing.LoadTimeSimulationMode,com.openggf.game.timing.LoadTimeProfile,java.util.function.Consumer<java.lang.String>)
 METHOD com.openggf.game.GameModule public  com.openggf.game.timing.LoadTimeProfile createLoadTimeProfile(com.openggf.game.timing.LoadTimeSimulationMode,java.util.function.Consumer<java.lang.String>)
@@ -6634,6 +6636,7 @@ METHOD com.openggf.game.GameModule public,abstract  com.openggf.game.RespawnStat
 METHOD com.openggf.game.GameModule public,abstract  com.openggf.game.ScrollHandlerProvider getScrollHandlerProvider()
 METHOD com.openggf.game.GameModule public,abstract  com.openggf.game.ZoneFeatureProvider getZoneFeatureProvider()
 METHOD com.openggf.game.GameModule public,abstract  com.openggf.game.ZoneRegistry getZoneRegistry()
+METHOD com.openggf.game.GameModule public,abstract  com.openggf.game.rules.GamePolicies getPolicies()
 METHOD com.openggf.game.GameModule public,abstract  com.openggf.level.objects.ObjectPlacementEncoding getObjectPlacementEncoding()
 METHOD com.openggf.game.GameModule public,abstract  com.openggf.level.objects.ObjectRegistry createObjectRegistry()
 METHOD com.openggf.game.GameModule public,abstract  com.openggf.level.objects.PlaneSwitcherConfig getPlaneSwitcherConfig()
@@ -7070,8 +7073,7 @@ METHOD com.openggf.game.PhysicsProvider public  com.openggf.game.PhysicsProfile 
 METHOD com.openggf.game.PhysicsProvider public  com.openggf.game.PhysicsProvider transform(java.util.function.Predicate<java.lang.String>,java.util.function.Function<com.openggf.game.PhysicsProfile,com.openggf.game.PhysicsProfile>)
 METHOD com.openggf.game.PhysicsProvider public,abstract  com.openggf.game.PhysicsModifiers getModifiers()
 METHOD com.openggf.game.PhysicsProvider public,abstract  com.openggf.game.PhysicsProfile getProfile(java.lang.String)
-METHOD com.openggf.game.PhysicsProvider public,abstract  com.openggf.game.rules.GameRules getRules()
-METHOD com.openggf.game.PhysicsProvider public,static  com.openggf.game.PhysicsProvider fixed(com.openggf.game.PhysicsProfile,com.openggf.game.PhysicsModifiers,com.openggf.game.rules.GameRules)
+METHOD com.openggf.game.PhysicsProvider public,static  com.openggf.game.PhysicsProvider fixed(com.openggf.game.PhysicsProfile,com.openggf.game.PhysicsModifiers)
 METHOD com.openggf.game.PlayableCharacterRegistry public  com.openggf.game.PlayableCharacterRegistry register(com.openggf.game.CharacterKey,com.openggf.game.CharacterDefinition)
 METHOD com.openggf.game.PlayableCharacterRegistry public  com.openggf.game.PlayableCharacterRegistry$Resolution resolve(com.openggf.game.CharacterKey,java.util.Set<java.lang.String>,com.openggf.game.CharacterKey)
 METHOD com.openggf.game.PlayableCharacterRegistry public  java.util.Map<com.openggf.game.CharacterKey,com.openggf.game.CharacterDefinition> definitions()
@@ -7394,6 +7396,7 @@ METHOD com.openggf.game.StandaloneGameSpec public  com.openggf.game.Game createG
 METHOD com.openggf.game.StandaloneGameSpec public  com.openggf.game.LevelInitProfile levelInitProfile()
 METHOD com.openggf.game.StandaloneGameSpec public  com.openggf.game.PhysicsProvider physics()
 METHOD com.openggf.game.StandaloneGameSpec public  com.openggf.game.ZoneRegistry zoneRegistry()
+METHOD com.openggf.game.StandaloneGameSpec public  com.openggf.game.rules.GamePolicies policies()
 METHOD com.openggf.game.StandaloneGameSpec public  com.openggf.game.save.SaveSnapshotProvider saveSnapshotProvider()
 METHOD com.openggf.game.StandaloneGameSpec public  com.openggf.level.objects.ObjectPlacementEncoding placementEncoding()
 METHOD com.openggf.game.StandaloneGameSpec public  com.openggf.level.objects.ObjectRegistry createObjectRegistry()
@@ -7415,6 +7418,7 @@ METHOD com.openggf.game.StandaloneGameSpec$Builder public  com.openggf.game.Stan
 METHOD com.openggf.game.StandaloneGameSpec$Builder public  com.openggf.game.StandaloneGameSpec$Builder objects(java.util.function.Supplier<com.openggf.level.objects.ObjectRegistry>)
 METHOD com.openggf.game.StandaloneGameSpec$Builder public  com.openggf.game.StandaloneGameSpec$Builder physics(com.openggf.game.PhysicsProvider)
 METHOD com.openggf.game.StandaloneGameSpec$Builder public  com.openggf.game.StandaloneGameSpec$Builder placementEncoding(com.openggf.level.objects.ObjectPlacementEncoding)
+METHOD com.openggf.game.StandaloneGameSpec$Builder public  com.openggf.game.StandaloneGameSpec$Builder policies(com.openggf.game.rules.GamePolicies)
 METHOD com.openggf.game.StandaloneGameSpec$Builder public  com.openggf.game.StandaloneGameSpec$Builder saveSnapshotProvider(com.openggf.game.save.SaveSnapshotProvider)
 METHOD com.openggf.game.StandaloneGameSpec$Builder public  com.openggf.game.StandaloneGameSpec$Builder supportsSidekick(boolean)
 METHOD com.openggf.game.StandaloneGameSpec$Builder public,transient varargs  com.openggf.game.StandaloneGameSpec$Builder touchResponses(byte[])
@@ -8152,7 +8156,7 @@ METHOD com.openggf.game.patch.DelegatingGameModule public  com.openggf.game.pale
 METHOD com.openggf.game.patch.DelegatingGameModule public  com.openggf.game.preview.TitlePreviewProvider getTitlePreviewProvider()
 METHOD com.openggf.game.patch.DelegatingGameModule public  com.openggf.game.profiles.trace.TracePlaybackProfile getTracePlaybackProfile()
 METHOD com.openggf.game.patch.DelegatingGameModule public  com.openggf.game.rewind.ScriptedRewind scriptedRewind()
-METHOD com.openggf.game.patch.DelegatingGameModule public  com.openggf.game.rules.GameRules getRules()
+METHOD com.openggf.game.patch.DelegatingGameModule public  com.openggf.game.rules.GamePolicies getPolicies()
 METHOD com.openggf.game.patch.DelegatingGameModule public  com.openggf.game.save.SaveSnapshotProvider getSaveSnapshotProvider()
 METHOD com.openggf.game.patch.DelegatingGameModule public  com.openggf.game.timing.LoadTimeProfile createLoadTimeProfile(com.openggf.game.timing.LoadTimeSimulationMode,com.openggf.game.timing.LoadTimeProfile,java.util.function.Consumer<java.lang.String>)
 METHOD com.openggf.game.patch.DelegatingGameModule public  com.openggf.game.timing.LoadTimeProfile createLoadTimeProfile(com.openggf.game.timing.LoadTimeSimulationMode,java.util.function.Consumer<java.lang.String>)
@@ -8908,6 +8912,10 @@ METHOD com.openggf.game.rules.DrowningBubbleRules public  int mouthBubbleTimerBi
 METHOD com.openggf.game.rules.DrowningBubbleRules public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.game.rules.DrowningBubbleRules public,final  int hashCode()
 METHOD com.openggf.game.rules.DrowningBubbleRules public,final  java.lang.String toString()
+METHOD com.openggf.game.rules.GamePolicies public  com.openggf.game.rules.GameRules rules()
+METHOD com.openggf.game.rules.GamePolicies public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.game.rules.GamePolicies public,final  int hashCode()
+METHOD com.openggf.game.rules.GamePolicies public,final  java.lang.String toString()
 METHOD com.openggf.game.rules.GameRules public  com.openggf.game.rules.CameraRules camera()
 METHOD com.openggf.game.rules.GameRules public  com.openggf.game.rules.CollisionRules collision()
 METHOD com.openggf.game.rules.GameRules public  com.openggf.game.rules.DrowningBubbleRules drowningBubble()
@@ -19235,6 +19243,7 @@ RECORD-COMPONENT com.openggf.game.rules.DrowningBubbleRules drownInstallsDedicat
 RECORD-COMPONENT com.openggf.game.rules.DrowningBubbleRules initialDrowningCountdownFrameTimer int
 RECORD-COMPONENT com.openggf.game.rules.DrowningBubbleRules mouthBubbleRiseVelocity int
 RECORD-COMPONENT com.openggf.game.rules.DrowningBubbleRules mouthBubbleTimerBias int
+RECORD-COMPONENT com.openggf.game.rules.GamePolicies rules com.openggf.game.rules.GameRules
 RECORD-COMPONENT com.openggf.game.rules.GameRules camera com.openggf.game.rules.CameraRules
 RECORD-COMPONENT com.openggf.game.rules.GameRules collision com.openggf.game.rules.CollisionRules
 RECORD-COMPONENT com.openggf.game.rules.GameRules drowningBubble com.openggf.game.rules.DrowningBubbleRules
@@ -22601,6 +22610,7 @@ TYPE record public,final com.openggf.game.rules.AirCollisionRules SUPER java.lan
 TYPE record public,final com.openggf.game.rules.CameraRules SUPER java.lang.Record
 TYPE record public,final com.openggf.game.rules.CollisionRules SUPER java.lang.Record
 TYPE record public,final com.openggf.game.rules.DrowningBubbleRules SUPER java.lang.Record
+TYPE record public,final com.openggf.game.rules.GamePolicies SUPER java.lang.Record
 TYPE record public,final com.openggf.game.rules.GameRules SUPER java.lang.Record
 TYPE record public,final com.openggf.game.rules.ObjectInteractionRules SUPER java.lang.Record
 TYPE record public,final com.openggf.game.rules.PlayerAirMovementRules SUPER java.lang.Record
@@ -23628,6 +23638,7 @@ TYPE-ANNOTATION com.openggf.game.rules.AirCollisionRules @com.openggf.game.ModAp
 TYPE-ANNOTATION com.openggf.game.rules.CameraRules @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.rules.CollisionRules @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.rules.DrowningBubbleRules @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.rules.GamePolicies @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.rules.GameRules @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.rules.ObjectInteractionRules @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.rules.PaletteWhiteFadeModel @com.openggf.game.ModApi

@@ -221,6 +221,11 @@ public final class ModApiVersion {
      * CD stage routines.
      * SonicConfiguration appends SONIC_CD_DISC (roms.soniccd), the Sonic CD disc's cue sheet beside the
      * other games' ROM keys; existing ordinals are preserved and the candidate remains 0.7.0.
+     * GameModule.getPolicies() owns the immutable GamePolicies record (GameRules rules);
+     * GameModule/DelegatingGameModule/PhysicsProvider getRules() are removed,
+     * PhysicsProvider.fixed drops its rules argument, StandaloneGameSpec gains policies(), and
+     * CrossGameFeatureProvider exposes getHybridPolicies(). Compiled mods rebuild; the
+     * candidate remains 0.7.0.
      */
     public static final SemanticVersion CURRENT = SemanticVersion.parse("0.7.0");
     public static final List<SemanticVersion> SUPPORTED_CONTRACTS = List.of(CURRENT);

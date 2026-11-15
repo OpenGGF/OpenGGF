@@ -248,6 +248,11 @@ class TestRomDetectionService {
         }
 
         @Override
+        public com.openggf.game.rules.GamePolicies getPolicies() {
+            return null;
+        }
+
+        @Override
         public GameId getGameId() {
             return GameId.S1;
         }

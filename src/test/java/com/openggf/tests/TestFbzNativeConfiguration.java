@@ -79,7 +79,7 @@ class TestFbzNativeConfiguration {
                         sidekick.getCpuController().getState());
             }
 
-            assertSame(GameRules.SONIC_3K, GameServices.module().getRules());
+            assertSame(GameRules.SONIC_3K, GameServices.module().getPolicies().rules());
             assertSame(GameRules.SONIC_3K, fixture.sprite().getGameRules());
             assertEquals(GameServices.module().getPhysicsProvider().getProfile(team.main()),
                     fixture.sprite().getPhysicsProfile());

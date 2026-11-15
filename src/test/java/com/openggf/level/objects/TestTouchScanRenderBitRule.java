@@ -42,7 +42,7 @@ class TestTouchScanRenderBitRule {
         var table=new Sonic2GameModule().createTouchResponseTable(bytes);
         assertEquals(12,table.getWidthRadius(9));assertEquals(16,table.getHeightRadius(9));
         var host=mock(GameModule.class);
-        when(host.getRules()).thenReturn(gated?GameRules.SONIC_1:GameRules.SONIC_2);
+        when(host.getPolicies()).thenReturn(new com.openggf.game.rules.GamePolicies(gated?GameRules.SONIC_1:GameRules.SONIC_2));
         var services=new TestObjectServices().withGameModule(host);
         var enemy=spy(new MasherBadnikInstance(new ObjectSpawn(1000,100,0x5C,0,0,false,100)));
         enemy.setServices(services);enemy.snapshotPreUpdatePosition();

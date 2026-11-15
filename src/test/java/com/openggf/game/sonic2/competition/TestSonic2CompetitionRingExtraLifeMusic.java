@@ -67,7 +67,7 @@ class TestSonic2CompetitionRingExtraLifeMusic {
                     when(roster.player(slot)).thenReturn(players[slot]);
                     when(roster.slotOf(players[slot])).thenReturn(slot);
                     when(roster.levelState(slot)).thenReturn(states[slot]);
-                    when(players[slot].getGameRules()).thenReturn(new Sonic2GameModule().getRules());
+                    when(players[slot].getGameRules()).thenReturn(new Sonic2GameModule().getPolicies().rules());
                 }
                 var policies = mock(WorldSessionPolicyState.class);
                 when(policies.getService(NativeCompetitionRoster.class)).thenReturn(roster);

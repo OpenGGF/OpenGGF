@@ -86,7 +86,7 @@ public record LevelFrameContext(GameModule gameModule,
         GameModule module = context.getWorldSession().getGameModule();
         return new LevelFrameContext(
                 module,
-                module.getRules(),
+                module.getPolicies().rules(),
                 module.getLevelEventProvider(),
                 context.getActiveBonusStageProvider(),
                 context.getSpriteManager(),

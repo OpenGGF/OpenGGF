@@ -127,8 +127,8 @@ class TestFbzEntryReloadResetMatrix {
         assertEquals(!donor.equals("off"),CrossGameFeatureProvider.isActive());
         if (!donor.equals("off")) {
             assertEquals(donor,CrossGameFeatureProvider.getInstance().getDonorGameId());
-            assertNotSame(GameServices.module().getRules(),player.getGameRules());
-        } else assertSame(GameServices.module().getRules(),player.getGameRules());
+            assertNotSame(GameServices.module().getPolicies().rules(),player.getGameRules());
+        } else assertSame(GameServices.module().getPolicies().rules(),player.getGameRules());
         assertEquals(!donor.equals("s1"),player.getGameRules().playerCapability().spindashEnabled());
         var events=((Sonic3kLevelEventManager)GameServices.module().getLevelEventProvider()).getFbzEvents();
         var runtime=assertInstanceOf(FbzZoneRuntimeState.class,GameServices.zoneRuntimeRegistry().current());

@@ -313,7 +313,7 @@ public final class StageplayResources implements AutoCloseable {
                 for (var command : track.commands()) {
                     var source = document.set();
                     for (var change : document.sceneChanges()) if (change.frame() <= command.frame()) source = change.set();
-                    var capabilities = library.module(actor.gameId()).getRules().playerCapability();
+                    var capabilities = library.module(actor.gameId()).getPolicies().rules().playerCapability();
                     if ((command.kind() == StageplayDocument.PuppetCommandKind.FLY_TO || command.kind() == StageplayDocument.PuppetCommandKind.HOVER)
                             && !capabilities.tailsFlightEnabled()) throw new IllegalArgumentException("Donor module does not support native flight: " + actor.id());
                     if (command.kind() == StageplayDocument.PuppetCommandKind.GLIDE_TO && !capabilities.glideAttacksEnabled())

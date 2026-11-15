@@ -282,10 +282,10 @@ public final class StageplayTool {
             var capabilities = report.putArray("intents");
             for (String intent : List.of("MOVE_TO", "STOP", "JUMP", "WAIT", "RELEASE", "CROUCH", "LOOK_UP", "ROLL")) capabilities.add(intent);
             var definition = module.getPlayableCharacterRegistry().find(com.openggf.game.CharacterKey.parsePersisted(character)).orElseThrow();
-            if (definition.secondaryAbility() == com.openggf.sprites.playable.SecondaryAbility.FLY && module.getRules().playerCapability().tailsFlightEnabled()) {
+            if (definition.secondaryAbility() == com.openggf.sprites.playable.SecondaryAbility.FLY && module.getPolicies().rules().playerCapability().tailsFlightEnabled()) {
                 capabilities.add("FLY_TO"); capabilities.add("HOVER");
             }
-            if (definition.secondaryAbility() == com.openggf.sprites.playable.SecondaryAbility.GLIDE && module.getRules().playerCapability().glideAttacksEnabled()) capabilities.add("GLIDE_TO");
+            if (definition.secondaryAbility() == com.openggf.sprites.playable.SecondaryAbility.GLIDE && module.getPolicies().rules().playerCapability().glideAttacksEnabled()) capabilities.add("GLIDE_TO");
             var animations = report.putArray("animations");
             // Stock animation bytecode indexes are bytes; absent scripts return an empty array.
             for (int animation = 0; animation < 256; animation++) {

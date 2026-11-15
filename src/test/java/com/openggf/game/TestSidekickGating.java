@@ -114,6 +114,8 @@ class TestSidekickGating {
             public ZoneArtProvider getZoneArtProvider() { return null; }
             public ObjectArtProvider getObjectArtProvider() { return null; }
             public com.openggf.game.PhysicsProvider getPhysicsProvider() { return null; }
+            @Override
+            public com.openggf.game.rules.GamePolicies getPolicies() { return null; }
             public GameId getGameId() { return null; }
         };
         assertFalse(anonymousModule.supportsSidekick(),

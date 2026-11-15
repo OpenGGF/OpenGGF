@@ -2889,7 +2889,9 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         void restoreLevelMusicAfterInvincibility() {
                 // Music belongs to the host mode, not the player's donated physics profile.
                 GameModule module = currentGameModule();
-                GameRules rules = module != null ? module.getRules() : getGameRules();
+                var modulePolicies = module != null ? module.getPolicies() : null;
+                GameRules rules = module != null
+                        ? (modulePolicies != null ? modulePolicies.rules() : null) : getGameRules();
                 if (rules != null && rules.powerUp() != null
                         && !rules.powerUp().restoreLevelMusicAfterInvincibility()) {
                         return;
@@ -4070,7 +4072,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                                 applyProfileToFields(profile);
                         }
                         this.physicsModifiers = provider.getModifiers();
-                        this.gameRules = provider.getRules();
+                        var modulePolicies = module.getPolicies();
+                        this.gameRules = modulePolicies != null ? modulePolicies.rules() : null;
 
                         // S1 (UNIFIED collision) uses d5=$D for ALL terrain probes.
                         // After Sonic1Level.convertS1BlockData() maps S1→S2 chunk format,
@@ -4104,7 +4107,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 }
                 // Cross-game donation: override only typed rules with donated capabilities.
                 if (runtimeServices == null && CrossGameFeatureProvider.isActive()) {
-                        this.gameRules = currentCrossGameFeatures().getHybridRules();
+                        this.gameRules = currentCrossGameFeatures().getHybridPolicies().rules();
                 }
                 ensurePersistentInstaShieldObject();
                 bubbleAnimId = module != null ? module.resolveAnimationId(CanonicalAnimation.BUBBLE) : -1;

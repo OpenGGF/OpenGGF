@@ -42,7 +42,7 @@ class TestGameLoopBonusStageSession {
         TestEnvironment.resetPerTest();
         SessionManager.clear();
         module = mock(GameModule.class);
-        when(module.getRules()).thenReturn(GameRules.SONIC_2);
+        when(module.getPolicies()).thenReturn(new com.openggf.game.rules.GamePolicies(GameRules.SONIC_2));
         when(module.rngFlavour()).thenReturn(GameRng.Flavour.S1_S2);
         when(module.createRuntimeArtCoordinator(any())).thenReturn(RuntimeArtCoordinator.NONE);
         SessionManager.openGameplaySession(module);
@@ -346,7 +346,7 @@ class TestGameLoopBonusStageSession {
         var reboundLevel = mock(LevelManager.class);
         var reboundObjects = mock(com.openggf.level.objects.ObjectManager.class);
         when(reboundLevel.getObjectManager()).thenReturn(reboundObjects);
-        var context = new LevelFrameContext(module, module.getRules(), null, null,
+        var context = new LevelFrameContext(module, module.getPolicies().rules(), null, null,
                 null, null, null, null, null, timing,
                 boundary -> write(loop, "levelManager", reboundLevel), RuntimeArtCoordinator.NONE);
         write(loop, "playbackDebugManager", playback); write(loop, "liveRewindManager", rewind); write(loop, "activePlcLifecycleFrame", frame);

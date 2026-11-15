@@ -517,6 +517,14 @@ public class Sonic3kGameModule implements GameModule, com.openggf.game.internal.
         return physicsProvider;
     }
 
+    private static final com.openggf.game.rules.GamePolicies POLICIES =
+            new com.openggf.game.rules.GamePolicies(com.openggf.game.rules.GameRules.SONIC_3K);
+
+    @Override
+    public com.openggf.game.rules.GamePolicies getPolicies() {
+        return POLICIES;
+    }
+
     @Override
     public WaterDataProvider getWaterDataProvider() {
         return new Sonic3kWaterDataProvider();

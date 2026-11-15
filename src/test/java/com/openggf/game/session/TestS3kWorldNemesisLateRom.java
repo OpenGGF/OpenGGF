@@ -106,7 +106,7 @@ class TestS3kWorldNemesisLateRom {
     void nativeWorldQueueWithNullResolvedRulesKeepsTheNeutralDmaPolicy() throws Exception {
         var root = new Sonic3kGameModule();
         var wrapper = new com.openggf.game.patch.DelegatingGameModule(root, "fixture:null-rules") {
-            @Override public com.openggf.game.rules.GameRules getRules() { return null; }
+            @Override public com.openggf.game.rules.GamePolicies getPolicies() { return null; }
             @Override public <T> T getGameService(Class<T> type) {
                 if (type == com.openggf.game.resources.PlayerArtTransferPlan.class)
                     return new com.openggf.game.sonic2.Sonic2GameModule().getGameService(type);
@@ -122,7 +122,7 @@ class TestS3kWorldNemesisLateRom {
                     StockGameDataSources.pinned(TestEnvironment.currentRom(), root), null);
             target = new GameplayModeContext(world);
             try {
-                assertNull(resolved.getRules());
+                assertNull(resolved.getPolicies());
                 assertNotNull(WorldPlcLifecycleAccess.owned(world));
                 var dynamicArt = target.dynamicArtLifecycle();
                 dynamicArt.beginRun();

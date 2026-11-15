@@ -257,7 +257,7 @@ class TestEditorHostExports {
         TestEnvironment.resetAll();
         GameModule module=game==GameId.S1?new Sonic1GameModule():new Sonic2GameModule();
         var player=new TestablePlayableSprite("sonic",(short)0,(short)0);
-        player.setGameRulesForTest(module.getRules()); player.setAirForTest(false);
+        player.setGameRulesForTest(module.getPolicies().rules()); player.setAirForTest(false);
         com.openggf.sprites.NativePositionOps.writeXPosResetSubpixel(player,goalX);
         com.openggf.sprites.NativePositionOps.writeYPosResetSubpixel(player,64);
         var camera=new com.openggf.camera.Camera(); camera.setMaxX((short)cameraMaxX);
