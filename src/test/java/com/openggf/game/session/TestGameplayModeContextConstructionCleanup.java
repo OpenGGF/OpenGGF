@@ -126,9 +126,9 @@ class TestGameplayModeContextConstructionCleanup {
         }
 
         @Override
-        public GameRules getRules() {
+        public com.openggf.game.rules.GamePolicies getPolicies() {
             if (acquisitions != 0) failAt(FailureStage.RULES);
-            return super.getRules();
+            return super.getPolicies();
         }
 
         private void failAt(FailureStage stage) {

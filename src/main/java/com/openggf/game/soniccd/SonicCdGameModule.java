@@ -331,6 +331,11 @@ public final class SonicCdGameModule implements GameModule {
     @Override public boolean hasTrailInvincibilityStars() { return true; }
     @Override public PhysicsProvider getPhysicsProvider() { return physicsProvider; }
 
+    private static final com.openggf.game.rules.GamePolicies POLICIES =
+            new com.openggf.game.rules.GamePolicies(com.openggf.game.soniccd.player.SonicCdRules.RULES);
+
+    @Override public com.openggf.game.rules.GamePolicies getPolicies() { return POLICIES; }
+
     private com.openggf.game.soniccd.special.CdSpecialStageProvider specialStage;
 
     /** The special stage program pair (SPMM__/SPSS__), read from the loaded disc. */

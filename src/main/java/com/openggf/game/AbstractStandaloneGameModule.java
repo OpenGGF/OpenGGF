@@ -60,6 +60,7 @@ public abstract class AbstractStandaloneGameModule implements GameModule {
     @Override public GameAudioProfile getAudioProfile() { return specification().audio(); }
     @Override public ZoneRegistry getZoneRegistry() { return specification().zoneRegistry(); }
     @Override public PhysicsProvider getPhysicsProvider() { return specification().physics(); }
+    @Override public com.openggf.game.rules.GamePolicies getPolicies() { return specification().policies(); }
 
     @Override public int getPlaneSwitcherObjectId() { return 0; }
     @Override public PlaneSwitcherConfig getPlaneSwitcherConfig() {

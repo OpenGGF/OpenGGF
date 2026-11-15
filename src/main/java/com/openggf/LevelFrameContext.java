@@ -84,9 +84,10 @@ public record LevelFrameContext(GameModule gameModule,
     public static LevelFrameContext from(GameplayModeContext context) {
         Objects.requireNonNull(context, "context");
         GameModule module = context.getWorldSession().getGameModule();
+        var modulePolicies = module.getPolicies();
         return new LevelFrameContext(
                 module,
-                module.getRules(),
+                modulePolicies != null ? modulePolicies.rules() : null,
                 module.getLevelEventProvider(),
                 context.getActiveBonusStageProvider(),
                 context.getSpriteManager(),

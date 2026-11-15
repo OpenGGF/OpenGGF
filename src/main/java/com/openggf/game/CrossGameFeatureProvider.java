@@ -15,8 +15,8 @@ import com.openggf.data.RomByteReader;
 import com.openggf.data.RomManager;
 import com.openggf.sprites.art.SpindashDustArtProvider;
 import com.openggf.game.session.ActiveGameplayTeamResolver;
-import com.openggf.game.rules.CrossGameRuleComposer;
-import com.openggf.game.rules.GameRules;
+import com.openggf.game.rules.CrossGamePolicyComposer;
+import com.openggf.game.rules.GamePolicies;
 import com.openggf.graphics.RenderContext;
 import com.openggf.level.Palette;
 import com.openggf.sprites.animation.ScriptedVelocityAnimationProfile;
@@ -63,7 +63,7 @@ public class CrossGameFeatureProvider implements PlayerSpriteArtProvider, Spinda
     private SpindashDustArtProvider donorDustArtProvider;
     private SmpsLoader donorSmpsLoader;
     private DacData donorDacData;
-    private GameRules hybridRules;
+    private GamePolicies hybridPolicies;
     private RenderContext donorRenderContext;
     private PlayerSpriteRenderer instaShieldRenderer;
     private final com.openggf.sprites.render.ShieldPatternBanks instaShieldBanks =
@@ -187,7 +187,8 @@ public class CrossGameFeatureProvider implements PlayerSpriteArtProvider, Spinda
         this.donorPlayerArtProvider = donorProvider.createPlayerArtProvider(donorReader);
         this.donorDustArtProvider = donorProvider.createSpindashDustArtProvider(donorReader);
 
-        hybridRules = buildHybridRules(donorModule.getRules());
+        hybridPolicies = CrossGamePolicyComposer.donatePlayerCapabilities(
+                GameServices.module().getPolicies(), donorModule.getPolicies(), donorCapabilities);
 
         // Create donor render context for palette isolation
         donorRenderContext = RenderContext.getOrCreateDonor(donorGameId);
@@ -318,11 +319,11 @@ public class CrossGameFeatureProvider implements PlayerSpriteArtProvider, Spinda
     }
 
     /**
-     * Returns typed hybrid game rules: host runtime behavior with explicitly
-     * donated player capabilities.
+     * Returns hybrid policies: the host's policies with only the explicitly
+     * donated player capabilities taken from the donor.
      */
-    public GameRules getHybridRules() {
-        return hybridRules;
+    public GamePolicies getHybridPolicies() {
+        return hybridPolicies;
     }
 
     /**
@@ -528,7 +529,7 @@ public class CrossGameFeatureProvider implements PlayerSpriteArtProvider, Spinda
         donorDustArtProvider = null;
         donorSmpsLoader = null;
         donorDacData = null;
-        hybridRules = null;
+        hybridPolicies = null;
         donorRenderContext = null;
         instaShieldRenderer = null;
         instaShieldBanks.clear();
@@ -579,12 +580,6 @@ public class CrossGameFeatureProvider implements PlayerSpriteArtProvider, Spinda
 
     public SpriteArtSet getInstaShieldArtSet() {
         return instaShieldArtSet;
-    }
-
-    private GameRules buildHybridRules(GameRules donorRules) {
-        GameRules baseRules = GameServices.module().getRules();
-
-        return CrossGameRuleComposer.compose(baseRules, donorRules, donorCapabilities);
     }
 
     private GameModule resolveDonorModule(Rom donorRom, GameId expectedGameId) {

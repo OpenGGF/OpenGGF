@@ -4,7 +4,6 @@ import com.openggf.game.PhysicsModifiers;
 import com.openggf.game.PhysicsProfile;
 import com.openggf.game.PhysicsProvider;
 import com.openggf.game.internal.PlayerStageRoutines;
-import com.openggf.game.rules.GameRules;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.Objects;
@@ -39,10 +38,6 @@ public final class SonicCdPhysicsProvider implements PhysicsProvider, PlayerStag
         return PhysicsModifiers.STANDARD;
     }
 
-    @Override
-    public GameRules getRules() {
-        return SonicCdRules.RULES;
-    }
 
     @Override
     public boolean updatePseudo3dRamp(AbstractPlayableSprite player, boolean wasOnRamp) {

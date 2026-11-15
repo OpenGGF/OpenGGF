@@ -48,7 +48,7 @@ public final class PlayableCharacterRegistry {
     public Set<CharacterDefinition.MovementAbility> movementAbilities(CharacterKey key, GameModule donor) {
         var declared = find(key).map(CharacterDefinition::movementAbilities).orElse(Set.of());
         return declared.stream().filter(ability -> switch (ability) {
-            case SPINDASH -> donor.getRules().playerCapability().spindashEnabled();
+            case SPINDASH -> donor.getPolicies().rules().playerCapability().spindashEnabled();
             case CROSS_GAME_FLIGHT, SUPER_FLIGHT_LIFT -> true;
         }).collect(java.util.stream.Collectors.toUnmodifiableSet());
     }

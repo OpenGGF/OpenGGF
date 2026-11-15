@@ -434,6 +434,21 @@ under the matching area heading; see the
 
 ## Modding and tools
 
+- **Game rules belong to the module:** `GameModule.getPolicies()` now returns an
+  immutable `GamePolicies` record holding the game's `GameRules`, so camera, ring,
+  object, sidekick, power-up and drowning rules are no longer supplied by the
+  physics provider. `PhysicsProvider.getRules()` and `GameModule.getRules()` are
+  gone, `PhysicsProvider.fixed(profile, modifiers)` takes no rules, and a
+  standalone game sets them with `StandaloneGameSpec.Builder.policies(...)`
+  (Sonic 2's rules when omitted). A patch that ships a different rule overrides
+  `getPolicies()` instead of wrapping physics. Cross-game donation goes through
+  one composer that takes whole policies and the donor's declared capabilities,
+  so only the listed player abilities can come from the donor. Gameplay is
+  unchanged. Compiled mods need rebuilding against the 0.7.0 candidate; see the
+  [migration note](docs/architecture/mod-api-compatibility.md#game-policy-ownership-candidate-migration).
+  The [design record](docs/architecture/designs/2026-11-15-game-policies.md) plans
+  the audio-rules half as a follow-up.
+
 - **Debug labels on widescreen:** with a display aspect wider than 4:3, debug
   text tied to a place in the level (sensor, object and plane labels, the
   object-debug text) was drawn too far left: at 400 wide, at 0.8 of its distance

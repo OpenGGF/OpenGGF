@@ -45,7 +45,7 @@ class TestGameLoopEndingSession {
         EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
         TestEnvironment.resetPerTest();
         module = mock(GameModule.class);
-        when(module.getRules()).thenReturn(GameRules.SONIC_2);
+        when(module.getPolicies()).thenReturn(new com.openggf.game.rules.GamePolicies(GameRules.SONIC_2));
         when(module.createRuntimeArtCoordinator(any())).thenReturn(RuntimeArtCoordinator.NONE);
         when(module.rngFlavour()).thenReturn(GameRng.Flavour.S1_S2);
         SessionManager.clear();
@@ -95,7 +95,7 @@ class TestGameLoopEndingSession {
         verify(first).saveReasonOnEndingStart();
         verify(first, never()).initialize();
         var secondModule = mock(GameModule.class);
-        when(secondModule.getRules()).thenReturn(GameRules.SONIC_2);
+        when(secondModule.getPolicies()).thenReturn(new com.openggf.game.rules.GamePolicies(GameRules.SONIC_2));
         when(secondModule.rngFlavour()).thenReturn(GameRng.Flavour.S1_S2);
         when(secondModule.createRuntimeArtCoordinator(any())).thenReturn(RuntimeArtCoordinator.NONE);
         when(secondModule.getEndingProvider()).thenReturn(provider);

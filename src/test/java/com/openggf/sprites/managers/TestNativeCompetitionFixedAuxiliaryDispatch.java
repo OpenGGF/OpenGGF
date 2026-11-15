@@ -274,7 +274,7 @@ class TestNativeCompetitionFixedAuxiliaryDispatch {
             return null;
         }).when(f.level).updateObjectPositionsPostPhysicsWithoutTouches(any(), eq(false));
         var module = mock(GameModule.class);
-        when(module.getRules()).thenReturn(GameRules.SONIC_2);
+        when(module.getPolicies()).thenReturn(new com.openggf.game.rules.GamePolicies(GameRules.SONIC_2));
         var gameplay = SessionManager.getCurrentGameplayMode();
         var context = new LevelFrameContext(module, GameRules.SONIC_2, null, null,
                 f.sprites, gameplay.getGameStateManager(), gameplay.getTimerManager(),

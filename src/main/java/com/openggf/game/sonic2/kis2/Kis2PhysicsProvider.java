@@ -3,7 +3,6 @@ package com.openggf.game.sonic2.kis2;
 import com.openggf.game.PhysicsModifiers;
 import com.openggf.game.PhysicsProfile;
 import com.openggf.game.PhysicsProvider;
-import com.openggf.game.rules.GameRules;
 
 /**
  * Physics for the Knuckles in Sonic 2 lock-on patch
@@ -35,10 +34,5 @@ public final class Kis2PhysicsProvider implements PhysicsProvider {
     @Override
     public PhysicsModifiers getModifiers() {
         return PhysicsModifiers.KNUCKLES;
-    }
-
-    @Override
-    public GameRules getRules() {
-        return Kis2Rules.RULES;
     }
 }

@@ -1,26 +1,23 @@
 package com.openggf.game;
 
-import com.openggf.game.rules.GameRules;
-
 /**
  * Per-game physics provider interface.
- * Returns character-specific physics profiles, modifier rules, and typed per-game rules.
+ * Returns character-specific physics profiles and water/speed-shoes modifiers.
  *
- * <p>Implementations are game-specific (S1, S2, S3K) and accessed via
- * {@link GameModule#getPhysicsProvider()}.
+ * <p>Implementations are game-specific and accessed via
+ * {@link GameModule#getPhysicsProvider()}. Game-wide behavioural rules are not
+ * physics: they belong to {@link GameModule#getPolicies()}.
  */
 @com.openggf.game.ModApi
 public interface PhysicsProvider {
 
-    /** Constant tuning with explicit game-wide modifiers and rules. */
-    static PhysicsProvider fixed(PhysicsProfile profile, PhysicsModifiers modifiers, GameRules rules) {
+    /** Constant tuning with explicit game-wide modifiers. */
+    static PhysicsProvider fixed(PhysicsProfile profile, PhysicsModifiers modifiers) {
         java.util.Objects.requireNonNull(profile, "profile");
         java.util.Objects.requireNonNull(modifiers, "modifiers");
-        java.util.Objects.requireNonNull(rules, "rules");
         return new PhysicsProvider() {
             @Override public PhysicsProfile getProfile(String character) { return profile; }
             @Override public PhysicsModifiers getModifiers() { return modifiers; }
-            @Override public GameRules getRules() { return rules; }
         };
     }
 
@@ -55,7 +52,6 @@ public interface PhysicsProvider {
      */
     PhysicsModifiers getModifiers();
 
-    GameRules getRules();
     /** Applies an immutable edit only to matching characters, including their optional init profile. */
     default PhysicsProvider transform(java.util.function.Predicate<String> characters,
                                       java.util.function.Function<PhysicsProfile, PhysicsProfile> edit) {
@@ -70,7 +66,6 @@ public interface PhysicsProvider {
             @Override public PhysicsProfile getProfile(String character) { return map(character, source.getProfile(character)); }
             @Override public PhysicsProfile getInitProfile(String character) { return map(character, source.getInitProfile(character)); }
             @Override public PhysicsModifiers getModifiers() { return source.getModifiers(); }
-            @Override public GameRules getRules() { return source.getRules(); }
         };
     }
 

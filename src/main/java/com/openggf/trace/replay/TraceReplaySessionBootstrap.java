@@ -1149,7 +1149,7 @@ public final class TraceReplaySessionBootstrap {
     }
 
     private static int liveRingFloorCheckPhase() {
-        return GameServices.module().getRules().ring().ringFloorCheckCounterPhase();
+        return GameServices.module().getPolicies().rules().ring().ringFloorCheckCounterPhase();
     }
 
     public static int s3kCompleteRunFrameCounterSeedForReplayStart(

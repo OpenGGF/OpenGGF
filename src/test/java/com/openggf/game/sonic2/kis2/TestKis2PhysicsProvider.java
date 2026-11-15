@@ -58,8 +58,7 @@ class TestKis2PhysicsProvider {
 
     @Test
     void rulesRetainSonic2DefaultsOutsideShippedLockOnChanges() {
-        GameRules rules = provider.getRules();
-        assertSame(Kis2Rules.RULES, rules);
+        GameRules rules = Kis2Rules.RULES;
         assertNotSame(GameRules.SONIC_2, rules);
         // KiS2 Sonic_ResetOnFloor_Part2: y_pos += y_radius - 19 (S3K form).
         assertTrue(rules.playerMovement().landing().landingRollClearUsesCurrentYRadiusDelta());

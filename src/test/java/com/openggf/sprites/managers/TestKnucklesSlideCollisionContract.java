@@ -333,6 +333,6 @@ class TestKnucklesSlideCollisionContract {
     private static final class Kis2SlideModule extends DelegatingGameModule {
         Kis2SlideModule() { super(new Sonic2GameModule(), "test:kis2-slide-contract"); }
         @Override public PhysicsProvider getPhysicsProvider() { return new Kis2PhysicsProvider(); }
-        @Override public GameRules getRules() { return Kis2Rules.RULES; }
+        @Override public com.openggf.game.rules.GamePolicies getPolicies() { return new com.openggf.game.rules.GamePolicies(Kis2Rules.RULES); }
     }
 }

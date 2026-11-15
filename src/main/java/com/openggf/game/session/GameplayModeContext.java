@@ -271,7 +271,8 @@ public final class GameplayModeContext implements ModeContext {
             acquiredDynamicArt = dynamicArtLifecycle;
             var worldPlc = WorldPlcLifecycleAccess.owned(worldSession);
             if (worldPlc != null) {
-                var rules = worldSession.getGameModule().getRules();
+                var modulePolicies = worldSession.getGameModule().getPolicies();
+                var rules = modulePolicies != null ? modulePolicies.rules() : null;
                 this.plcFrameLifecycle = new PlcFrameLifecycleCoordinator(worldPlc, dynamicArtLifecycle,
                         rules != null ? rules.dynamicArtDmaService()
                                 : com.openggf.game.rules.DynamicArtDmaServiceModel.EVERY_CLAIM);

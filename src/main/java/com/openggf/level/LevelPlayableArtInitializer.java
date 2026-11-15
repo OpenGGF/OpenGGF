@@ -995,13 +995,13 @@ final class LevelPlayableArtInitializer {
         DynamicArtLifecycleService lifecycle =
                 GameServices.dynamicArtLifecycleOrNull();
         if (module == null || lifecycle == null || owner == null
-                || module.getRules() == null) {
+                || module.getPolicies() == null) {
             return null;
         }
         String normalizedOwner = owner.toLowerCase(java.util.Locale.ROOT);
         var plan = module.getGameService(com.openggf.game.resources.PlayerArtTransferPlan.class);
         boolean supportedOwner = plan != null && plan.bank(normalizedOwner) != null;
-        if (!supportedOwner || !module.getRules().dynamicArtDmaService()
+        if (!supportedOwner || !module.getPolicies().rules().dynamicArtDmaService()
                 .supportsPlayerDynamicArtAudit()) {
             return null;
         }
@@ -1079,7 +1079,8 @@ final class LevelPlayableArtInitializer {
     }
 
     private static PowerUpRules powerUpRulesFor(GameModule module) {
-        GameRules rules = module != null ? module.getRules() : null;
+        var modulePolicies = module != null ? module.getPolicies() : null;
+        GameRules rules = modulePolicies != null ? modulePolicies.rules() : null;
         return rules != null ? rules.powerUp() : null;
     }
 }

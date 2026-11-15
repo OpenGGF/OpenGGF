@@ -76,7 +76,8 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
 
     private static DynamicArtDmaServiceModel resolveDynamicArtDmaService(
             GameModule module) {
-        GameRules rules = Objects.requireNonNull(module, "module").getRules();
+        var modulePolicies = Objects.requireNonNull(module, "module").getPolicies();
+        GameRules rules = modulePolicies != null ? modulePolicies.rules() : null;
         return rules != null
                 ? rules.dynamicArtDmaService()
                 : DynamicArtDmaServiceModel.EVERY_CLAIM;

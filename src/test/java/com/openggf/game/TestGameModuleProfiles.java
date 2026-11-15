@@ -128,6 +128,8 @@ public class TestGameModuleProfiles {
             @Override
             public com.openggf.game.PhysicsProvider getPhysicsProvider() { return null; }
             @Override
+            public com.openggf.game.rules.GamePolicies getPolicies() { return null; }
+            @Override
             public GameId getGameId() { return null; }
         };
         LevelInitProfile profile = anon.getLevelInitProfile();

@@ -203,7 +203,7 @@ class TestCrossGameFeatureProviderRefactor {
         setField(provider, "donorGameId", GameId.S3K);
         setField(provider, "donorCapabilities", new StubDonorCapabilities());
 
-        GameRules hybrid = invokeBuildHybridRules(provider);
+        GameRules hybrid = composeHybridRules(new StubDonorCapabilities());
         GameRules base = GameRules.SONIC_2;
 
         assertHybridPreservesBaseExceptDonatedCapabilities(base, hybrid);
@@ -350,10 +350,12 @@ class TestCrossGameFeatureProviderRefactor {
         field.set(target, value);
     }
 
-    private static GameRules invokeBuildHybridRules(CrossGameFeatureProvider provider) throws Exception {
-        Method method = CrossGameFeatureProvider.class.getDeclaredMethod("buildHybridRules", GameRules.class);
-        method.setAccessible(true);
-        return (GameRules) method.invoke(provider, GameRules.SONIC_3K);
+    /** The provider's donation: the active host's policies with an S3K donor's declared capabilities. */
+    private static GameRules composeHybridRules(DonorCapabilities capabilities) {
+        return com.openggf.game.rules.CrossGamePolicyComposer.donatePlayerCapabilities(
+                GameServices.module().getPolicies(),
+                new com.openggf.game.rules.GamePolicies(GameRules.SONIC_3K),
+                capabilities).rules();
     }
 
     private static void assertHybridPreservesBaseExceptDonatedCapabilities(

@@ -214,7 +214,7 @@ class TestPlayableMutatorGravity {
         var modified = airborne();
         var rules = AbstractPlayableSprite.class.getDeclaredField("gameRules");
         rules.setAccessible(true);
-        rules.set(stock, module.getRules()); rules.set(modified, module.getRules());
+        rules.set(stock, module.getPolicies().rules()); rules.set(modified, module.getPolicies().rules());
         bind(modified, percent);
         move(stock); move(modified);
         assertEquals(-0x101 + acceleration, modified.getYSpeed());

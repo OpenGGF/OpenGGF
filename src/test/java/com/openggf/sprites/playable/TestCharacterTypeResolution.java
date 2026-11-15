@@ -78,6 +78,7 @@ class TestCharacterTypeResolution {
         GameModule module = mock(GameModule.class);
         when(module.getIdentifier()).thenReturn("identity-test");
         when(module.getPhysicsProvider()).thenReturn(provider);
+        when(module.getPolicies()).thenReturn(new com.openggf.game.rules.GamePolicies(com.openggf.game.rules.GameRules.SONIC_2));
         GameModuleRegistry.setCurrent(module);
     }
 
@@ -97,7 +98,6 @@ class TestCharacterTypeResolution {
         }
 
         @Override public PhysicsModifiers getModifiers() { return PhysicsModifiers.STANDARD; }
-        @Override public GameRules getRules() { return GameRules.SONIC_2; }
     }
 
     private static class BaseSprite extends AbstractPlayableSprite {

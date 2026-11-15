@@ -43,7 +43,7 @@ class TestGameLoopTitleCardOwnership {
         EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
         TestEnvironment.resetPerTest(); SessionManager.clear();
         module = mock(GameModule.class);
-        when(module.getRules()).thenReturn(GameRules.SONIC_2);
+        when(module.getPolicies()).thenReturn(new com.openggf.game.rules.GamePolicies(GameRules.SONIC_2));
         when(module.rngFlavour()).thenReturn(GameRng.Flavour.S1_S2);
         when(module.createRuntimeArtCoordinator(any())).thenReturn(RuntimeArtCoordinator.NONE);
         SessionManager.openGameplaySession(module); context = TestEnvironment.activeGameplayMode();

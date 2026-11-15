@@ -65,7 +65,6 @@ public final class InfiniteSonicMod implements GgfMod {
             return slower(stock.getInitProfile(character));
         }
         @Override public PhysicsModifiers getModifiers() { return stock.getModifiers(); }
-        @Override public com.openggf.game.rules.GameRules getRules() { return stock.getRules(); }
         private static PhysicsProfile slower(PhysicsProfile p) {
             if (p == null) return null;
             return p.withMax(Math.min(p.max(), CourseController.COURSE_MAX_SPEED));

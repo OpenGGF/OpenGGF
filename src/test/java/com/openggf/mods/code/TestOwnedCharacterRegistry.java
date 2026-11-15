@@ -251,6 +251,7 @@ class TestOwnedCharacterRegistry {
         GameModule delegate=mock(GameModule.class);
         when(delegate.getPlayableCharacterRegistry()).thenReturn(raw);
         when(delegate.getPhysicsProvider()).thenReturn(new com.openggf.game.sonic2.Sonic2GameModule().getPhysicsProvider());
+        when(delegate.getPolicies()).thenReturn(new com.openggf.game.rules.GamePolicies(com.openggf.game.rules.GameRules.SONIC_2));
         var owned=OwnerAwareStandaloneModule.wrap(OWNER,delegate,fixture.boundary(),Map.of());
         var second=OwnerAwareStandaloneModule.wrap(OWNER,delegate,fixture().boundary(),Map.of());
         assertSame(owned.getPlayableCharacterRegistry(),owned.getPlayableCharacterRegistry());

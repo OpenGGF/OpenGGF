@@ -387,7 +387,7 @@ class TestKnucklesWallClimbVerticalContract {
     private static final class Kis2ComponentModule extends DelegatingGameModule {
         Kis2ComponentModule() { super(new Sonic2GameModule(), "test:kis2-climb-vertical"); }
         @Override public PhysicsProvider getPhysicsProvider() { return new Kis2PhysicsProvider(); }
-        @Override public GameRules getRules() { return Kis2Rules.RULES; }
+        @Override public com.openggf.game.rules.GamePolicies getPolicies() { return new com.openggf.game.rules.GamePolicies(Kis2Rules.RULES); }
     }
 
     private record Point(int x, int y) { }

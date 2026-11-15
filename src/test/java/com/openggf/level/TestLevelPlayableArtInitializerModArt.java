@@ -593,7 +593,7 @@ class TestLevelPlayableArtInitializerModArt {
         Fixture fixture = fixture(PlayableCharacterRegistry.empty(), CharacterKey.SONIC, List.of(tails));
         GameModule module = mock(GameModule.class);
         var rules = mock(com.openggf.game.rules.GameRules.class);
-        when(module.getRules()).thenReturn(rules);
+        when(module.getPolicies()).thenReturn(new com.openggf.game.rules.GamePolicies(rules));
         when(module.getGameId()).thenReturn(GameId.S2);
         when(module.getGameService(com.openggf.game.resources.PlayerArtTransferPlan.class))
                 .thenReturn(new com.openggf.game.sonic2.Sonic2GameModule()

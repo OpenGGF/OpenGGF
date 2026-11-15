@@ -360,14 +360,16 @@ public class AnimalObjectInstance extends AbstractObjectInstance
     private boolean usesScreenYWrapRenderBounds() {
         ObjectServices ctx = tryServices();
         GameModule module = ctx != null ? ctx.gameModule() : null;
-        GameRules rules = module != null ? module.getRules() : null;
+        var modulePolicies = module != null ? module.getPolicies() : null;
+        GameRules rules = modulePolicies != null ? modulePolicies.rules() : null;
         return rules != null && rules.camera().useScreenYWrapValueForVisibility();
     }
 
     private ObjectInteractionRules animalObjectInteractionRules() {
         ObjectServices ctx = tryServices();
         GameModule module = ctx != null ? ctx.gameModule() : null;
-        GameRules rules = module != null ? module.getRules() : null;
+        var modulePolicies = module != null ? module.getPolicies() : null;
+        GameRules rules = modulePolicies != null ? modulePolicies.rules() : null;
         return rules != null ? rules.objectInteraction() : null;
     }
 

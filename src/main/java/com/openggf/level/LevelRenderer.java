@@ -1822,9 +1822,9 @@ public final class LevelRenderer {
             boolean waterShimmerEnabled = false;
             GameModule currentModule = lm.activeGameModule();
             if (currentModule != null
-                    && currentModule.getRules() != null
-                    && currentModule.getRules().camera() != null) {
-                waterShimmerEnabled = currentModule.getRules().camera().waterShimmerEnabled();
+                    && currentModule.getPolicies() != null
+                    && currentModule.getPolicies().rules().camera() != null) {
+                waterShimmerEnabled = currentModule.getPolicies().rules().camera().waterShimmerEnabled();
                 if (waterShimmerEnabled) {
                     shimmerStyle = 1;
                 }

@@ -110,9 +110,12 @@ final class Kis2GameModule extends DelegatingGameModule implements com.openggf.g
         return objectArtProvider;
     }
 
+    private static final com.openggf.game.rules.GamePolicies POLICIES =
+            new com.openggf.game.rules.GamePolicies(Kis2Rules.RULES);
+
     @Override
-    public com.openggf.game.rules.GameRules getRules() {
-        return Kis2Rules.RULES;
+    public com.openggf.game.rules.GamePolicies getPolicies() {
+        return POLICIES;
     }
 
     @Override
