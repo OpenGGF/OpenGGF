@@ -134,7 +134,7 @@ public class DebugRenderer {
                 }
                 // Reinitialize if scale changed significantly (e.g., window resize)
                 glyphBatch.updateScale(null, scale);
-                glyphBatch.updateViewport(viewportWidth, viewportHeight);
+                glyphBatch.updateViewport(viewportWidth, viewportHeight, baseWidth);
 
                 glyphBatch.begin();
 

@@ -225,7 +225,7 @@ class TestS3kAizPrefixClosureContract {
             TraceExecutionPhase phase,
             ObjectManager objects) {
         // Same per-row announcement AbstractTraceReplayTest makes before it
-        // drives a row (AbstractTraceReplayTest.java:774). Without it the
+        // drives a row (AbstractTraceReplayTest.replayS3kTrace). Without it the
         // installed timing replay port never latches a raw frame, so every
         // recorded completion edge these prefixes drive over stays unconsumed
         // and the run's close verification throws -- in whichever test class

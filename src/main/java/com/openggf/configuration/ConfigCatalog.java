@@ -82,6 +82,13 @@ public final class ConfigCatalog {
         put(WIDESCREEN_DEADZONE_MODE, ofEnum("display", "deadzoneMode",
                 "Camera horizontal deadzone behaviour on wide screens",
                 Set.of("CENTER_SCALED", "PROPORTIONAL")));
+        put(WIDESCREEN_DRAW_MODE, ofEnum("display", "widescreenDrawMode",
+                "Wide screens: EDGE runs objects to the screen edge; NATIVE keeps gameplay at the native "
+                + "320 pixels and draws the extra width with frozen not-yet-loaded objects",
+                Set.of("EDGE", "NATIVE")));
+        put(WIDESCREEN_DORMANT_STYLE, ofEnum("display", "widescreenDormantStyle",
+                "How NATIVE draw mode shows not-yet-loaded objects in the extra width",
+                Set.of("GREYSCALE", "NORMAL", "HIDDEN")));
         put(DISPLAY_HUD_ANCHOR, ofEnum("display", "hudAnchor",
                 "Horizontal anchor for the score/time/rings/lives HUD on widescreen profiles; "
                 + "DEFAULT keeps its centered native-frame position, LEFT_EDGE aligns it to the screen left edge; "

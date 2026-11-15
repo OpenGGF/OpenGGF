@@ -48,9 +48,12 @@ class TestS3kResultsElementObjectInstance {
 
     @Test
     void wideViewportRetirementUsesTheCenteredLiveRightEdge() throws Exception {
+        // EDGE widescreen: the gameplay camera itself is 400 wide.
         GraphicsManager graphics = mock(GraphicsManager.class);
         when(graphics.getProjectionWidth()).thenReturn(400);
-        TestObjectServices services = new TestObjectServices().withGraphicsManager(graphics);
+        var camera = mock(com.openggf.camera.Camera.class);
+        when(camera.getWidth()).thenReturn((short) 400);
+        TestObjectServices services = new TestObjectServices().withGraphicsManager(graphics).withCamera(camera);
         S3kResultsScreenObjectInstance parent = ObjectConstructionContext.withRewindActiveRestore(
                 () -> ObjectConstructionContext.construct(services,
                         () -> new S3kResultsScreenObjectInstance(PlayerCharacter.SONIC_ALONE, 1)));
@@ -68,6 +71,33 @@ class TestS3kResultsElementObjectInstance {
         assertFalse(child.isDestroyed(), "the crossing dispatch uses the prior render bit");
         child.update(1, null);
         assertTrue(child.isDestroyed(), "the next dispatch retires past the live 400px edge");
+    }
+
+    @Test
+    void aWiderPictureAloneRetiresAtTheNativeEdge() throws Exception {
+        // NATIVE draw mode / recorded-run capture: a 400 picture over a 320 gameplay camera.
+        GraphicsManager graphics = mock(GraphicsManager.class);
+        when(graphics.getProjectionWidth()).thenReturn(400);
+        var camera = mock(com.openggf.camera.Camera.class);
+        when(camera.getWidth()).thenReturn((short) 320);
+        TestObjectServices services = new TestObjectServices().withGraphicsManager(graphics).withCamera(camera);
+        S3kResultsScreenObjectInstance parent = ObjectConstructionContext.withRewindActiveRestore(
+                () -> ObjectConstructionContext.construct(services,
+                        () -> new S3kResultsScreenObjectInstance(PlayerCharacter.SONIC_ALONE, 1)));
+        parent.setServices(services);
+        S3kResultsElementObjectInstance child = new S3kResultsElementObjectInstance(
+                parent, 2, PlayerCharacter.SONIC_ALONE); // width=$70, exits right
+        child.setServices(services);
+
+        setField(parent, "state", 4);
+        setField(parent, "exitQueueCounter", 3);
+        setField(child, "currentX", 420); // 452 after one step: past 320, still inside a centred 400 picture
+        setField(child, "renderedOnScreen", true);
+
+        child.update(0, null);
+        assertFalse(child.isDestroyed(), "the crossing dispatch uses the prior render bit");
+        child.update(1, null);
+        assertTrue(child.isDestroyed(), "the next dispatch retires past the native 320 edge");
     }
 
     @Test

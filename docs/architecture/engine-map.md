@@ -342,7 +342,7 @@ current module; `RomDetectionService` auto-detects the ROM type.
 | `RomOffsetProvider` | Type-safe ROM address access |
 
 `Sonic1GameModule`, `Sonic2GameModule`, and `Sonic3kGameModule` are all merged and
-functional; `SonicCdGameModule` is in development on `next` (see
+functional; `SonicCdGameModule` is in development on `develop` (see
 [Sonic CD](#sonic-cd-module-and-shared-seams)). See `GameModule.java` for the
 authoritative provider list.
 

@@ -1,15 +1,10 @@
-package com.openggf.level.objects.contact;
+package com.openggf.level.objects;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.identity.PlayerRefId;
 import com.openggf.game.rewind.identity.RewindIdentityTable;
 import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.graphics.GLCommand;
-import com.openggf.level.objects.AbstractObjectInstance;
-import com.openggf.level.objects.MultiPieceSolidProvider;
-import com.openggf.level.objects.ObjectInstance;
-import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.sprites.playable.Sonic;
 import org.junit.jupiter.api.Test;
 
@@ -29,11 +24,11 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** Exercises production contact memory without collision geometry, game boot or a substitute state model. */
-class TestSolidContactState {
+class TestSolidContactMemory {
     @Test
     void nextFrameExpiresHistoryButKeepsLiveObjectBitsAndTheSameRideHolder() {
         Harness harness = new Harness();
-        SolidContactState state = harness.state;
+        SolidContactMemory state = harness.state;
         Solid object = new Solid(spawn(), false, true);
         Sonic player = player("sonic");
         state.ride(player, object, 0);
@@ -60,7 +55,7 @@ class TestSolidContactState {
     @Test
     void objectRetirementExpiresBothPlayersLiveBitsWithoutChangingTheirRideOrPhysicalState() {
         Harness harness = new Harness();
-        SolidContactState state = harness.state;
+        SolidContactMemory state = harness.state;
         Solid original = new Solid(spawn(), false, true);
         Sonic sonic = player("sonic");
         Sonic tails = player("tails");
@@ -92,7 +87,7 @@ class TestSolidContactState {
     @Test
     void permanentInstanceRetirementExpiresPieceHistoryWithoutDroppingTheRide() {
         Harness harness = new Harness();
-        SolidContactState state = harness.state;
+        SolidContactMemory state = harness.state;
         Solid owner = new Solid(spawn(), true, true);
         Sonic player = player("sonic");
         state.ride(player, owner, 0);
@@ -327,11 +322,11 @@ class TestSolidContactState {
         return player;
     }
 
-    private static final class Harness implements SolidContactState.Access {
+    private static final class Harness implements SolidContactMemory.Access {
         private final Set<ObjectInstance> occurrences = Collections.newSetFromMap(new IdentityHashMap<>());
         private final Map<Integer, ObjectInstance> occupants = new java.util.HashMap<>();
         private final List<String> events = new ArrayList<>();
-        private final SolidContactState state = new SolidContactState(this);
+        private final SolidContactMemory state = new SolidContactMemory(this);
         private int incarnation;
         private int reservations;
 

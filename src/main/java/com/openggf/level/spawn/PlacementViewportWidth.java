@@ -22,4 +22,18 @@ public final class PlacementViewportWidth {
             return NATIVE;
         }
     }
+
+    /**
+     * Simulation width for placement windows: the gameplay camera's width when a gameplay
+     * runtime exists (as the object window already uses), else {@link #current()} with
+     * NATIVE widescreen draw mode keeping the ROM's 320-pixel windows on a wider display.
+     */
+    public static int simulation() {
+        if (GameServices.hasRuntime()) return GameServices.camera().getWidth();
+        int display = current();
+        if (display <= NATIVE) return display;
+        return com.openggf.configuration.SimulationViewport.width(display,
+                com.openggf.configuration.WidescreenDrawMode.parse(
+                        GameServices.configuration().getString(SonicConfiguration.WIDESCREEN_DRAW_MODE)));
+    }
 }

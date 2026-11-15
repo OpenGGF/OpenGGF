@@ -243,8 +243,14 @@ public class PatternSpriteRenderer {
             return;
         }
         Pattern[] patterns = spriteSheet.getPatterns();
-        for (int i = 0; i < patterns.length; i++) {
-            graphicsManager.cachePatternTexture(patterns[i], basePatternIndex + i);
+        // One staged upload per sheet; the batch ends before any draw can sample it.
+        graphicsManager.beginPatternAtlasBatch();
+        try {
+            for (int i = 0; i < patterns.length; i++) {
+                graphicsManager.cachePatternTexture(patterns[i], basePatternIndex + i);
+            }
+        } finally {
+            graphicsManager.endPatternAtlasBatch();
         }
     }
 

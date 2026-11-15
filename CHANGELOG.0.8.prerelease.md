@@ -7,6 +7,106 @@ under the matching area heading; see the
 
 ## Gameplay and presentation
 
+- **Sonic CD (development preview):** Sonic CD runs from the user's own USA
+  disc image (a cue sheet and its tracks, or a lossless CHD made from them with
+  MAME's chdman, named by `roms.soniccd` or found in the ROM folder) as
+  a stock game module on the shared engine. Nothing from the disc is in the
+  repository. All 70 stage programs load: seven zones; acts 1 and 2 in the
+  Present, Past, Good Future and Bad Future; act 3 in both futures. Each zone
+  has its own presentation, objects and boss. Sonic plays on Sonic 1's physics
+  with Sonic CD's own rules (spin dash and super peel-out, the extended camera,
+  the 3D ramps, per-zone player routines and the idle timer that ends in
+  Sonic giving up). Time travel, special stages
+  (without their results graphics), the title, stage select, Time Attack and
+  backup RAM (saved in `saves/soniccd`), the opening video, both endings, FM
+  effects, CD audio and PCM sound are hosted. The master
+  title lists it when the disc is configured or found (`roms.default: scd` boots
+  it directly) and verifies it against the USA release before starting. A CHD
+  is verified by the same content fingerprint as a BIN/CUE set, so it is
+  accepted exactly when its decoded tracks equal the Redump set; the reader is
+  pure Java (CHD v5; `cdzl`, `cdlz`, `cdfl` and `cdzs` hunks or uncompressed;
+  hunk CRCs and the header SHA-1s checked) and refuses delta, older-version
+  and non-CD CHDs by name. Not
+  included: Visual Mode, D.A. Garden, the pencil test, Thank You,
+  Comin' Soon, attract demos, the backup RAM manager, and the Japanese and
+  European releases. Disc audio, video songs and PCM sound follow the music
+  and effects volumes. The time-warp stars are drawn and Robotnik's projector
+  can be destroyed in the Past (its hologram animals are not drawn).
+  Accuracy is measured against native recordings made on an emulator running
+  the USA disc: 26 of 28 full-act routes (start to signpost) equal native on
+  every compared field to their end (146,390 of 149,633 rows), and 68 of 70
+  fourteen-second stage fixtures do (56,879 of 57,049 rows). Open: R42A (water)
+  and R82A, R11C and R51B (objects). Rings are compared too: the counter and
+  every placed ring's position equal native on every compared row of the 28
+  routes and two runs through Palmtree Panic loops, except lost rings after a hit
+  in two Metallic Madness routes. Stage loads clear the state native
+  clears, so playing stages in any order matches playing each alone. In normal
+  play the object clock a stage starts from and the video player's disc wait
+  follow measured emulator timings under `gameplay.loadTimeSimulation`
+  (`FAST` and `PROFILED`; `NONE` starts the clock at 0); trace replay admits
+  the V-INTs the console dropped, under two timing-contract extensions the
+  owner approved on 2026-11-13. The capture tools can film Sonic CD
+  (`--no-hud` leaves the HUD out; a trace clip may run past the recording's
+  last row into the game's own flow, such as a time warp). Third-party code is credited in `NOTICE.md`:
+  the backup-RAM format code follows superctr/buram (MIT), and the PCM chip and
+  stamp graphics are translated from MAME (BSD-3-Clause); earlier code derived
+  from Genesis Plus GX (non-commercial licence) was replaced, and Genesis Plus
+  GX is used only as BizHawk's reference core. Most shared-engine changes are selected by
+  Sonic CD alone (listed in the engine map); a few apply to every game and
+  were checked against the other games' trace replays: wall-probe angle
+  writes, the left headroom probe, the replay driver's lag-row pad rule and
+  the speed-shoes timer skipping the turn on which a hurt state ends. See
+  [game status](docs/guide/playing/game-status.md#sonic-cd-development-preview).
+
+- **Widescreen that plays like the original:** a new setting,
+  `display.widescreenDrawMode`, chooses how a wide screen plays. `EDGE`, the default,
+  is the existing behaviour: objects wake up across the whole wide screen, so a 16:9
+  game plays a little differently from a 4:3 one. `NATIVE` keeps the game itself on
+  the original 320-pixel screen and draws the extra width as scenery, so every screen
+  size plays exactly the same game. That makes widescreen fair for time attack, races
+  and shared replays. Objects in the extra width that the original game has not woken
+  up yet are drawn frozen where they start, in greyscale by default
+  (`display.widescreenDormantStyle`: `GREYSCALE`, `NORMAL` or `HIDDEN`). They come to
+  life when the original screen reaches them and freeze again when it leaves them,
+  unless they were destroyed for good. Rings work the same way: uncollected rings
+  waiting in the extra width sit still, and rings you have collected stay gone. Title
+  cards and results screens time their exits from the game's own screen rather than the
+  picture, so a wider picture never delays the next act or the enemies' art. That also
+  lets recorded Sonic 3 & Knuckles runs be filmed wider than 320: Hydrocity and Marble
+  Garden used to stop with a full KosM queue. Tests run Sonic 1, Sonic 2 and Sonic 3 &
+  Knuckles at 32:9 and 4:3 with the same input and check that the game state matches on every
+  frame. The capture tool gained `--draw-mode` and `--dormant-style`; both are pinned so
+  a personal setting never changes a capture.
+
+- **Walking partners jump back in where there is no floor:** a CPU partner that
+  returns by walking in (a Sonic partner, or a walking mod character) used to wait
+  off screen for good wherever the level had no terrain floor to walk in on, such
+  as the Sonic 3 & Knuckles final boss arena, whose floor is made of objects. After
+  three failed walk-in attempts it now jumps in from below the screen with the
+  jump sound, arcs over the leader, and follows again as soon as it lands on
+  terrain or on a solid object. It takes no damage until it lands, and if it falls
+  out again it waits and retries. Where the walk-in already worked it is unchanged.
+  This is an engine extension; see "Multi-Sidekick Daisy Chain" in
+  [known discrepancies](docs/status/known-discrepancies.md#multi-sidekick-daisy-chain).
+
+- **Crash page:** an engine fault during play or on a menu no longer closes
+  OpenGGF. The game that failed is torn down to the game shelf and a crash page
+  opens over it, with a MICA gag for the kind of fault (holding the bomb, an
+  Atari ST homage; tangled in cassette tape after a rewind fault; teetering over
+  missing ground when a level fails to load), a row of bombs, the exact error
+  and where it was raised. The full report is saved to `crash-reports/`.
+  **Report on GitHub** opens a pre-filled issue form (new
+  `.github/ISSUE_TEMPLATE/crash.yml`) that the player reviews and submits
+  themselves, with the home folder written as `~` and the trace shortened to fit
+  the link; **Copy report**, **Details** and **Return to games** cover the rest.
+  Choosing the picture, or the details key, swaps it for a QR code of the issue
+  form with a title naming the error, for reporting from another device (Project
+  Nayuki's MIT-licensed `qrcodegen`, listed in `NOTICE.md`). The failed work is
+  never resumed, and a second fault, a failed teardown, tests and headless tools
+  still rethrow; `-Dopenggf.crash.rethrow=true` restores the old behaviour. The
+  pictures are reduced from generated drawings by
+  `tools/modding/crash_screen_art/reduce.py`.
+
 - **Lava Reef 1 frame hitches:** two stutters on the Lava Reef Act 1 route are
   gone. When the rock crusher opens the floor, the engine rebuilt the whole
   foreground layer (10-60 ms in a frame); it now redraws only the rewritten layout
@@ -31,6 +131,25 @@ under the matching area heading; see the
   writer's result against a full rebuild. The Lava Reef crusher's single-cell path
   is folded into it. Pixels are unchanged.
 
+- **Level load frame hitches:** every death respawn, act change and new game
+  built the whole level's foreground layer in the frame that finished the load
+  (9-16 ms, about 50 ms for Icecap 1), on top of the reload itself. A load now
+  draws only the columns around the camera; the rest of the layer is drawn a slice
+  per frame (about 1 ms) over the following frames, nearest the camera first, from
+  the layout recorded at the load, and every foreground draw first draws any column
+  it is about to show, so no visible pixel comes from an undrawn part, whatever the
+  camera jump, picture width or per-line scroll. A respawn in the same act keeps the
+  drawn layer and redraws only the cells the reloaded layout changes, and the Angel
+  Island intro and fire transition no longer build whole-level layers in advance.
+  Tests check every step against a whole-level build. In Sonic 3&K a death
+  respawn also decodes its act on a background thread during the fade to black;
+  the reload still happens on the same frame and uses that decode only if the
+  inputs a load at that moment would use are unchanged, else it decodes as
+  before. Death respawn frames went from 33-45 ms to 17-32 ms, act changes from
+  25-82 ms to 15-25 ms (Casino Night 2 to Icecap 1 from 73-133 ms to 26-52 ms),
+  and the frames that follow stay under 2 ms of foreground work. A new game
+  after GAME OVER is unchanged (40-75 ms). Pixels and gameplay are unchanged.
+
 - **Art upload stutters:** changing level art, animated tiles or a tilemap no
   longer makes the frame wait for the graphics driver. Uploading straight from
   memory made the engine wait until the driver had worked through everything
@@ -40,9 +159,28 @@ under the matching area heading; see the
   through a pixel buffer that the GPU copies from, so the frame carries on. Over
   twelve runs per side on the integrated GPU, uploads slower than 16.7 ms after
   the level had loaded went from seven (worst 701 ms) to none (worst 8 ms); the
-  discrete GPU was already below 12 ms. Waits while a level loads remain. Each
+  discrete GPU was already below 12 ms. Loading object, HUD, player, title-card,
+  special-stage and title-screen art, and Sonic 1 and 2 animated tiles, still sent
+  each 8x8 tile through the buffer on its own: about 7,500 uploads per Sandopolis
+  respawn, one of which waited 83 ms on the integrated GPU and up to 278 ms on the
+  discrete GPU at a special stage entry. That art is now written in one batch per
+  set-up step, so a respawn makes about five uploads for it, taking well under a
+  millisecond. Level tiles are still uploaded one at a time while a level loads. Each
   art upload also stopped allocating a version record and a boxed tile number,
   about 16% of Angel Island's per-frame allocation. Pixels are unchanged.
+
+- **Tails' flight in Sonic 1 and Sonic 2 with Sonic 3&K donating:** a flying
+  Tails was drawn as the ball he jumped in, and a Sonic he carried was not drawn
+  at all (Sonic 1) or was drawn from the wrong frames (Sonic 2). Tails and
+  Knuckles wear the donor's art with the donor's own animation table, but their
+  poses were looked up in the host game's table, which has no flight; only
+  Sonic's lookups went to the donor. They now go to the donor's table too. The
+  carried Sonic was switched to the host game's own art, which has no carried
+  frames; where the host has no flight of its own he now keeps the donor's art.
+  The carry with Sonic 3&K as the host is unchanged. In Sonic 1 he also had no
+  tails in any pose, flying or standing: they are animated by a pass that
+  follows the object loop, and Sonic 1's loop never ran it. It does now, which
+  changes nothing for Sonic 1 without a donor.
 
 - **Blue Spheres:** new under **Extras** when the Sonic 3&K and Sonic 1 ROMs
   are both present. It is the game Sonic & Knuckles starts with Sonic 1 locked
@@ -53,6 +191,14 @@ under the matching area heading; see the
   where the cartridge needs A, B and C together. The single fixed stage other
   cartridges unlock is not offered. Blue Spheres is an extra of Sonic 3&K, not a
   separate game.
+
+- **Knuckles climbs Green Hill's cliffs in Sonic 1:** with Sonic 3&K donating,
+  Knuckles could not grab a Green Hill cliff face unless terrain lay behind it,
+  and there he pulled up short of the top and fell back. The faces are edge-wall objects,
+  not terrain, and his grab and climb read terrain only. His probes now also see
+  those walls, and a wall leaves him alone while he glides, climbs and pulls up.
+  This is a rule of the engine's own, recorded in the known discrepancies; the
+  original games are unchanged because none of their levels has such a wall.
 
 - **Sonic 1 end-of-act PLC replacement:** NewPLC and ClearPLC cancel the active
   decoder as well as waiting cues, matching the ROM. Positioned GHZ starts near
@@ -68,6 +214,33 @@ under the matching area heading; see the
   emerald-beam chase carried the camera past the end of the level layout, and
   black patches appeared at the bottom of the extended planet while the screen
   shook. Both are fixed. This shipped in 0.7.
+
+- **Mushroom Hill swing bars and the HUD after a giant ring:** the horizontal and
+  vertical swing bars were always drawn unflipped, so a bar the level places
+  mirrored showed its plain end where its cap belongs. They now follow the
+  layout's flip bits, as the original's sprite code does. Separately, after
+  running past a Super Emerald giant ring the HUD's yellow stayed a pale cream
+  for the rest of the zone. The ring flashes three palette colours, two of which
+  the HUD draws with; the original puts them back on every frame the ring is off
+  screen, and the engine did so only when the ring was entered or paid out. It
+  now restores them off screen too, and the flashing script stands still there.
+
+- **Sonic 3 & Knuckles endings fill a wide screen:** on any screen wider than
+  4:3 the endings were a 320-pixel picture between two dark bars, and inside it
+  the sky, sea and island were drawn one bar's width to the left of the aircraft
+  and characters (at the widest setting the island sat behind the left bar while
+  its waterfalls hung in open sky). The endings now fill the screen with the
+  original picture in the middle: Sonic's and Tails's rescue, Angel Island rising
+  or being returned its emerald, the credits flight, and Knuckles' flight from Sky
+  Sanctuary with its credits. The sky, sea and cloud layers continue to both
+  edges, Angel Island slides in from the real edge of the screen, and the Tornado
+  and the clouds enter and leave at the real edges instead of appearing or
+  vanishing where the old 320-pixel edge was. Every scene keeps its original
+  timing at every width, and at 4:3 the picture is unchanged pixel for pixel.
+  Only the closing art on black (the Eggman or Mecha Sonic picture and the large
+  Sonic 3 & Knuckles logo) stays 4:3 between the bars: it is 320 pixels of art
+  with nothing beside it. What the wider picture adds is described under
+  [ending scenes in a wider picture](docs/S3K_KNOWN_DISCREPANCIES.md#ending-scenes-in-a-wider-picture).
 
 - **Separate music and sound-effect volumes:** Settings → Audio has Music
   volume and Sound effects volume sliders (`audio.musicVolume`,
@@ -99,6 +272,11 @@ under the matching area heading; see the
 - **S3K support notice says beta:** starting Sonic 3 & Knuckles from the hub
   now shows the beta notice, matching the 0.7 release notes. 0.7 shipped with
   the alpha notice. Players who hid the alpha notice see the beta one once.
+
+- **Donated Sonic 2 Super Sonic has its transformation sound:** with Sonic 2's
+  Super Sonic donated into another game, such as Sonic 1, the transformation was
+  silent: the Super music started on the same frame and cut the sound off. The
+  song now starts first and the sound plays over it, as it does in Sonic 2.
 
 - **S2 Crawl:** paused proximity includes its zero countdown pass, Super Sonic
   selects ordinary enemy contact, and accepted enemy attacks retire through the
@@ -215,7 +393,9 @@ under the matching area heading; see the
     twice, with full-size Sonic, Tails and Knuckles (and ghosts) posed and angled
     from the original animations. They still pass behind foreground scenery, and
     TIME, laps and the countdown keep their screen size. The item icon sits under
-    TIME and is hidden when monitors are off.
+    TIME and is hidden when monitors are off. A wider display shows more of the
+    arena to each side at the same scale, with the scenery where the racers
+    stand on it.
   - A player who jumps or falls off a platform, spring or blade stops counting
     as standing on it, as in the original. Before, the flag stayed set, sometimes for
     the rest of the race, so slopes stopped turning the player and the pose kept
@@ -253,6 +433,28 @@ under the matching area heading; see the
     tally to end the run, so a finisher used to stay on the finish screen.
 
 ## Modding and tools
+
+- **Debug labels on widescreen:** with a display aspect wider than 4:3, debug
+  text tied to a place in the level (sensor, object and plane labels, the
+  object-debug text) was drawn too far left: at 400 wide, at 0.8 of its distance
+  from the left edge, so the sensor labels sat on the player. Lines, boxes and
+  panels were right. The text renderer scaled positions back by a fixed 320
+  while the picture is drawn 400 wide; it now uses the configured width.
+
+- **Built-in sidekicks beside mod sidekicks:** a team that put Tails, Knuckles
+  or a second Sonic in a sidekick slot together with a mod character anywhere in
+  the team drew every character, the leader included, as a white box. The
+  built-in sidekick's art was asked for by its slot code (`tails_p2`), which
+  names no art, and the whole team's art was then dropped without a word. It is
+  asked for by character now, and a team whose art cannot be loaded says so in
+  the log.
+
+- **Dust of mod sidekicks:** a mod character in a sidekick slot drew its spin
+  dash dust, skid dust and water splash near black, as MICA's and TALON's did,
+  while the same character leading the team drew them white. The dust is the
+  host game's own Sonic dust, drawn in that game's palette, but a sidekick's
+  dust was given the mod character's palette, whose matching colour is a dark
+  grey. A mod sidekick's dust now keeps the host palette, as a leader's does.
 
 - **MICA, an original character framework example:** The complete MICA and TALON
   mod now ships bundled with JVM and native distributions, disabled by default.
@@ -486,6 +688,30 @@ under the matching area heading; see the
   finalizer cannot clear resources acquired by a recording started after close.
   S2 music requests now use native ROM mailbox bytes while retaining playback IDs, fixing CNZ 2P audio crashes and music priority/classification.
 
+- **Trace clips without the original's lag frames:** `TraceCaptureTool
+  --skip-lag-frames`, with `--clip frames:START:END`, leaves out the frames on
+  which the recorded game could not keep up. A frame window films every row the
+  original displayed, so on those rows the picture repeated and the footage
+  looked as if the engine stuttered. Lag is read from the recording's own
+  counters: the gameplay frame counter held over an elapsed V-blank for at most
+  four rows, so title cards, fades, loads and pauses stay. The window still
+  selects trace rows, the clip is shorter by the rows left out, and the tool
+  prints the output-frame to trace-row mapping and writes it to the capture
+  manifest. A row left out gets no audio either, so sound stays in sync. Off by
+  default; replay, comparison and gameplay are unchanged.
+
+- **Wide trace captures let the act-end run-off leave the picture:** at the end
+  of a Sonic 1 or Sonic 2 act the player runs right until the level's wall, which
+  the ROM places 40 pixels past the right edge of its 320-pixel screen. A trace
+  capture wider than 320 draws its extra width to the right of that screen, so
+  the player stopped in view and ran on the spot through the results (400 wide:
+  Green Hill 3 after the capsule, Emerald Hill 1 after the signpost). While the
+  player crosses those last 64 pixels at the camera's right limit, the capture
+  now draws from further left until the picture's right edge is the ROM
+  screen's, and the player leaves it as in the original. Only the capture's
+  picture moves: the replay camera, comparison, audio and 320-wide output are
+  unchanged.
+
 - **Seeded Data Select captures:** `GameplayCaptureTool --save-slots <file.json>`
   writes declared save slots through the production save manager into the
   capture's private save root before a title-first capture, and `--extra-teams`
@@ -597,18 +823,31 @@ under the matching area heading; see the
 
 - **Contributor readability:** live objects, slots and stable identities share
   population storage; actor reconstruction and contact memory have separate owners
-  behind the existing runtime entry points. Retiring multipart solids expires
+  behind the existing runtime entry points. Mutable contact memory is package-private
+  beside its collision controller, distinct from the immutable saved contact state.
+  Retiring multipart solids expires
   owned contact bits and frame history without releasing player state. Contact
   restore discards uncaptured future observations. Sole spawn-keyed dynamic solids
   now expire contact bits without clearing surviving shared owners. Constructor-child
   rewind adoption uses captured parent families, preserving interleaved structural
-  links; independent children can recreate when a parent defers to player refresh,
-  and CNZ defeat candidates retain their ship family. Generic recreation installs
+  links. Routine-spawned Clamer springs, Orbinaut satellites and Shellcracker claws
+  share exact captured-parent lookup in the admitted population; legacy and unknown
+  families retain their existing proximity lookup. Detached claws preserve their
+  independent falling state after parent retirement. Restoring captured placed
+  actors publishes their saved membership before child reconstruction, retaining
+  authored families even when fresh scene admission is closed. Independent children can
+  recreate when a parent defers to player refresh, and CNZ defeat candidates retain
+  their ship family. Generic recreation installs
   construction services centrally; supported exact-spawn recipes rebuild once,
   avoiding discarded constructor graphs while preserving custom hooks and the
   fallback for declarations without that constructor. Destroyed
   object paths share unload and retirement phases within their existing schedules.
   Ordinary family/reference/coverage guidance points to the actual owners.
+  Compact and scalar subclass fields share hierarchy ownership; diagnostic tools
+  check actual capture membership and distinguish structural handles from dropped
+  state. Mantis declares its captured parent/child references on their fields;
+  the exact-policy guard rejects duplicate central ownership, and scalar fallback
+  still reports links it omits.
   Production badnik and contact witnesses, shared coarse-X arithmetic with
   explicit native/wider bounds, and
   a typed rewind HUD frame make contribution paths easier to follow. HCZ owns
@@ -617,6 +856,18 @@ under the matching area heading; see the
   compressed fixture auxiliaries, preserves pre-trace evidence and distinguishes
   incomplete or unknown completion from a completed comparison. Retained raw-field
   diagnostics follow that storage and are exercised on successful test paths.
+
+- **Trace replay diagnosis:** standalone replay method entry retires verified
+  prior evidence for the same invocation and scope before loading the fixture.
+  Replay stopping, release assertions and publication share the verification
+  scope resolved before fixture assembly, and triage selects its first
+  divergence, bootstrap and evidence window from that saved scope while keeping
+  global counts. Triage reports missing auxiliary references and absent
+  comparison coverage without changing the published gate or mismatch totals.
+  Completion metadata has one report-owned value and a strict codec. Reports
+  keep carried-entry provenance and disagreements, and list retained per-frame
+  result fields, separate from completion. Replay guidance routes segment
+  diagnosis through the correct lane, movie and report owners.
 
 - **Fresh-level admission:** named phases expose title completion, initial
   boundary publication and player assembly while preserving their existing

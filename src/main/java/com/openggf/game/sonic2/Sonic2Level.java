@@ -816,16 +816,26 @@ public class Sonic2Level extends AbstractLevel {
         patterns = new Pattern[patternCount];
         GraphicsManager graphicsMan = cacheImmediately || extendHtzDynamicArt
                 ? GameServices.graphics() : null;
-        for (int i = 0; i < loadedCount; i++) {
-            patterns[i] = new Pattern();
-            patterns[i].fromSegaFormat(Arrays.copyOfRange(data,
-                    i * Pattern.PATTERN_SIZE_IN_ROM, (i + 1) * Pattern.PATTERN_SIZE_IN_ROM));
-            if (graphicsMan != null && cacheImmediately && graphicsMan.isGlInitialized()) {
-                graphicsMan.cachePatternTexture(patterns[i], i);
-            }
+        // One atlas batch for the level's tiles: each page uploads once, not once per tile.
+        if (graphicsMan != null) {
+            graphicsMan.beginPatternAtlasBatch();
         }
-        if (extendHtzDynamicArt && patternCount > loadedCount) {
-            fillHtzDynamicArtPatterns(graphicsMan, loadedCount);
+        try {
+            for (int i = 0; i < loadedCount; i++) {
+                patterns[i] = new Pattern();
+                patterns[i].fromSegaFormat(Arrays.copyOfRange(data,
+                        i * Pattern.PATTERN_SIZE_IN_ROM, (i + 1) * Pattern.PATTERN_SIZE_IN_ROM));
+                if (graphicsMan != null && cacheImmediately && graphicsMan.isGlInitialized()) {
+                    graphicsMan.cachePatternTexture(patterns[i], i);
+                }
+            }
+            if (extendHtzDynamicArt && patternCount > loadedCount) {
+                fillHtzDynamicArtPatterns(graphicsMan, loadedCount);
+            }
+        } finally {
+            if (graphicsMan != null) {
+                graphicsMan.endPatternAtlasBatch();
+            }
         }
     }
 
@@ -834,8 +844,13 @@ public class Sonic2Level extends AbstractLevel {
         if (!graphics.isGlInitialized()) {
             return;
         }
-        for (int i = 0; i < patternCount; i++) {
-            graphics.cachePatternTexture(patterns[i], i);
+        graphics.beginPatternAtlasBatch();
+        try {
+            for (int i = 0; i < patternCount; i++) {
+                graphics.cachePatternTexture(patterns[i], i);
+            }
+        } finally {
+            graphics.endPatternAtlasBatch();
         }
         for (int i = 0; i < palettes.length; i++) {
             graphics.cachePaletteTexture(palettes[i], i);

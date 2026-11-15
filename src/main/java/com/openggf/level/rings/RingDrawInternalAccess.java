@@ -20,6 +20,10 @@ public final class RingDrawInternalAccess {
     public static void drawPlaced(RingManager manager, int frameCounter, int cameraY, int screenYWrapMask) {
         engineCaller(); manager.drawPlaced(frameCounter, cameraY, screenYWrapMask);
     }
+    /** NATIVE widescreen dormant poses: ring objects drawn inside {@code body} hold their first spin frame. */
+    public static void withFrozenSpin(RingManager manager, Runnable body) {
+        engineCaller(); manager.withFrozenSpin(body);
+    }
     public static void drawAttracted(RingManager manager, int frameCounter) {
         engineCaller(); manager.drawAttracted(frameCounter);
     }

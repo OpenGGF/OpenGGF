@@ -208,7 +208,10 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Bac
      * the fight, so the shared bounds mask would otherwise grey out that extension.
      */
     @Override public boolean ownsWidescreenMargins() {
-        return GameServices.hasRuntime() && getFeatureZoneId() == Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA
+        if (!GameServices.hasRuntime()) return false;
+        // The ending scenes fill a wider picture themselves until their closing art on black.
+        if (com.openggf.game.sonic3k.ending.EndingWidePlanes.fillsPicture(GameServices.zoneRuntimeState())) return true;
+        return getFeatureZoneId() == Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA
                 && GameServices.level().getFeatureActId() == 0
                 && GameServices.zoneRuntimeState() instanceof
                 com.openggf.game.sonic3k.runtime.DezFinalBossZoneRuntimeState;
@@ -252,7 +255,8 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Bac
         boolean screenScene = state instanceof com.openggf.game.sonic3k.runtime.EndingZoneRuntimeState
                 || (state instanceof com.openggf.game.sonic3k.runtime.SszZoneRuntimeState ssz
                 && ssz.actIndex() == 1 && ssz.foregroundRoutine() >= 0x10);
-        if (!screenScene) return java.util.OptionalInt.empty();
+        if (!screenScene || com.openggf.game.sonic3k.ending.EndingWidePlanes.fillsPicture(state))
+            return java.util.OptionalInt.empty();
         var camera = GameServices.camera();
         return java.util.OptionalInt.of(
                 com.openggf.game.sonic3k.ending.EndingScreenProjection.nativeHorizontalOrigin(camera));
@@ -535,13 +539,13 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Bac
         var ending = com.openggf.game.sonic3k.ending.S3kEndingCoordinator
                 .current(GameServices.zoneRuntimeRegistry()).orElse(null);
         if (ending != null && (ending.credits().active() || (ending.postCreditsStarted() && ending.flag(3)))) {
-            int origin=GameServices.camera().getX()+com.openggf.camera.NativeViewportFraming.inset(GameServices.camera().getWidth());
+            int origin=GameServices.camera().getX()+com.openggf.game.sonic3k.ending.EndingWideStage.margin(GameServices.camera());
             return Long.MIN_VALUE|((long)ending.credits().clearedRows()<<32)
                     |(ending.flag(3)?1L<<31:0)|(origin&0xFFFFL);
         }
         if (GameServices.zoneRuntimeState() instanceof com.openggf.game.sonic3k.runtime.EndingZoneRuntimeState endingZone
                 && endingZone.ending().scene().foreground().revision() != 0)
-            return endingZone.ending().scene().foreground().revision();
+            return com.openggf.game.sonic3k.ending.EndingWidePlanes.foregroundRevision(endingZone, GameServices.camera());
         if (GameServices.hasRuntime() && GameServices.zoneRuntimeState() instanceof
                 com.openggf.game.sonic3k.runtime.SszZoneRuntimeState ssz && ssz.actIndex() == 1)
             return ssz.endingPlane().revision();
@@ -589,7 +593,7 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Bac
         if (ending != null && (ending.credits().active() || (ending.postCreditsStarted() && ending.flag(3)))) {
             if(ending.flag(3))return 0;
             var camera=GameServices.camera();
-            int relativeX=sourceX-camera.getX()-com.openggf.camera.NativeViewportFraming.inset(camera.getWidth());
+            int relativeX=sourceX-camera.getX()-com.openggf.game.sonic3k.ending.EndingWideStage.margin(camera);
             if(relativeX<0||relativeX>=320)return 0;
             // loc_5B276 writes real $347-based descriptors to Plane A. The
             // normal foreground and tile-priority passes must own them, so
@@ -597,7 +601,8 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Bac
             return ending.credits().tile(relativeX>>3,sourceY>>3);
         }
         if (GameServices.zoneRuntimeState() instanceof com.openggf.game.sonic3k.runtime.EndingZoneRuntimeState endingZone)
-            return endingZone.ending().scene().foreground().descriptor(sourceX, sourceY);
+            return com.openggf.game.sonic3k.ending.EndingWidePlanes.foreground(endingZone,
+                    GameServices.camera(), GameServices.level()::getForegroundTileDescriptorAtWorld, sourceX, sourceY);
         if (GameServices.zoneRuntimeState() instanceof
                 com.openggf.game.sonic3k.runtime.SszZoneRuntimeState ssz && ssz.actIndex() == 1)
             return ssz.endingPlane().descriptor(sourceX, sourceY);
@@ -650,21 +655,24 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Bac
                 descriptors = (x, y) -> grid.at(x >= 0x780 ? 0x740 + Math.floorMod(x - 0x780, 0x40) : x, y);
             } else if (runtime instanceof com.openggf.game.sonic3k.runtime.SszZoneRuntimeState ssz
                     && ssz.actIndex() == 1 && ssz.endingBackgroundPlane().revision() != 0) {
-                int width = Math.max(512, level.getCurrentLevel().getLayerWidthBlocks(1)
-                        * level.getCurrentLevel().getBlockPixelSize());
+                // backgroundDescriptorAt already stands the plane beside the sprites; the last
+                // island column it holds is the native edge plus the margin.
+                int margin = com.openggf.game.sonic3k.ending.EndingWideStage.margin(GameServices.camera());
+                int edge = ((ssz.backgroundCameraX() + 319) & ~7) + margin;
+                int width = Math.max(Math.max(512, level.getCurrentLevel().getLayerWidthBlocks(1)
+                        * level.getCurrentLevel().getBlockPixelSize()), edge + 8);
                 var grid = captureDescriptorGrid(width, 256, this::backgroundDescriptorAt);
                 boolean[] foregroundRows = new boolean[32];
                 for (int row = 0; row < 32; row++) foregroundRows[row] = ssz.endingBackgroundPlane().foregroundRow(row * 8);
-                int edge = (ssz.backgroundCameraX() + 319) & ~7;
-                boolean wide = GameServices.camera().getWidth() > 320;
                 descriptors = (x, y) -> grid.at(foregroundRows[Math.floorMod(Math.floorDiv(y, 8), 32)]
-                        ? x & 0x1ff : wide ? Math.min(x, edge) : x, y);
+                        ? x & 0x1ff : margin > 0 ? Math.min(x, edge) : x, y);
             } else if (runtime instanceof com.openggf.game.sonic3k.runtime.SszZoneRuntimeState ssz
-                    && ssz.actIndex() == 1 && ssz.endingPlane().revision() != 0
-                    && GameServices.camera().getWidth() > 320) {
+                    && sszIslandPlaneProjected(ssz)) {
                 var grid = captureBackgroundGrid(level);
-                int edge = (ssz.backgroundCameraX() + 319) & ~7;
-                descriptors = (x, y) -> grid.at(Math.min(x, edge), y);
+                int margin = com.openggf.game.sonic3k.ending.EndingWideStage.margin(GameServices.camera());
+                int backgroundX = ssz.backgroundCameraX();
+                descriptors = (x, y) -> grid.at(
+                        com.openggf.game.sonic3k.ending.EndingWidePlanes.islandColumn(margin, backgroundX, x), y);
             } else {
                 // These native retained Plane-B owners expose one complete 64x32 physical image.
                 var grid = captureDescriptorGrid(512, 256, this::backgroundDescriptorAt);
@@ -707,16 +715,15 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Bac
         if (ending != null && ending.postCreditsStarted() && ending.flag(3)) return Long.MIN_VALUE;
         if (GameServices.zoneRuntimeState() instanceof com.openggf.game.sonic3k.runtime.EndingZoneRuntimeState endingZone
                 && endingZone.ending().scene().background().revision() != 0)
-            return endingZone.ending().scene().background().revision();
+            return com.openggf.game.sonic3k.ending.EndingWidePlanes.backgroundRevision(
+                    endingZone.ending().scene().background(), GameServices.camera());
         if (GameServices.zoneRuntimeState() instanceof com.openggf.game.sonic3k.runtime.SszZoneRuntimeState ssz
                 && ssz.actIndex() == 1 && ssz.endingBackgroundPlane().revision() != 0) {
             return ((long) ssz.endingBackgroundPlane().revision() << 32) | (1L << 31)
                     | GameServices.camera().getWidth();
         }
         if (GameServices.hasRuntime() && GameServices.zoneRuntimeState() instanceof
-                com.openggf.game.sonic3k.runtime.SszZoneRuntimeState ssz
-                && ssz.actIndex() == 1 && ssz.endingPlane().revision() != 0
-                && GameServices.camera().getWidth() > 320) {
+                com.openggf.game.sonic3k.runtime.SszZoneRuntimeState ssz && sszIslandPlaneProjected(ssz)) {
             return ((long) ssz.endingPlane().revision() << 32)
                     | ((long) (ssz.backgroundCameraX() & 0xFFFF) << 16)
                     | GameServices.camera().getWidth();
@@ -759,7 +766,8 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Bac
                 .current(GameServices.zoneRuntimeRegistry()).orElse(null);
         if (ending != null && ending.postCreditsStarted() && ending.flag(3)) return 0;
         if (GameServices.zoneRuntimeState() instanceof com.openggf.game.sonic3k.runtime.EndingZoneRuntimeState endingZone)
-            return endingZone.ending().scene().background().descriptor(sourceX, sourceY);
+            return com.openggf.game.sonic3k.ending.EndingWidePlanes.background(
+                    endingZone.ending().scene().background(), GameServices.camera(), sourceX, sourceY);
         if (GameServices.zoneRuntimeState() instanceof com.openggf.game.sonic3k.runtime.SszZoneRuntimeState ssz
                 && ssz.actIndex() == 1 && ssz.endingBackgroundPlane().revision() != 0) {
             // Background routine 4: each 16-line slot of the 256-line ring shows either
@@ -767,14 +775,14 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Bac
             // Draw_TileRow (d1=0, d6=$20) last wrote there, across the 64-cell plane.
             var plane = ssz.endingBackgroundPlane();
             int y = plane.sourceY(sourceY);
+            // The Level_layout_main rows repeat every 512 pixels; they move with the island rows.
             return plane.foregroundRow(sourceY)
-                    ? GameServices.level().getForegroundTileDescriptorAtWorld(sourceX & 0x1FF, y)
+                    ? GameServices.level().getForegroundTileDescriptorAtWorld((sourceX
+                            - com.openggf.game.sonic3k.ending.EndingWideStage.margin(GameServices.camera())) & 0x1FF, y)
                     : sszIslandBackgroundDescriptor(ssz, sourceX, y);
         }
         if (GameServices.hasRuntime() && GameServices.zoneRuntimeState() instanceof
-                com.openggf.game.sonic3k.runtime.SszZoneRuntimeState ssz
-                && ssz.actIndex() == 1 && ssz.endingPlane().revision() != 0
-                && GameServices.camera().getWidth() > 320) {
+                com.openggf.game.sonic3k.runtime.SszZoneRuntimeState ssz && sszIslandPlaneProjected(ssz)) {
             return sszIslandBackgroundDescriptor(ssz, sourceX, sourceY);
         }
         if (GameServices.hasRuntime() && GameServices.zoneRuntimeState() instanceof
@@ -830,10 +838,21 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Bac
      */
     private static int sszIslandBackgroundDescriptor(com.openggf.game.sonic3k.runtime.SszZoneRuntimeState ssz,
                                                      int sourceX, int sourceY) {
-        if (GameServices.camera().getWidth() <= 320)
-            return GameServices.level().getBackgroundTileDescriptorAtWorld(sourceX, sourceY);
-        int edgeTileX = (ssz.backgroundCameraX() + 319) & ~7;
-        return GameServices.level().getBackgroundTileDescriptorAtWorld(Math.min(sourceX, edgeTileX), sourceY);
+        return GameServices.level().getBackgroundTileDescriptorAtWorld(
+                com.openggf.game.sonic3k.ending.EndingWidePlanes.islandColumn(
+                        com.openggf.game.sonic3k.ending.EndingWideStage.margin(GameServices.camera()),
+                        ssz.backgroundCameraX(), sourceX), sourceY);
+    }
+
+    /**
+     * Whether Sky Sanctuary act 2's island Plane B is handed to the tile pass through
+     * {@link com.openggf.game.sonic3k.ending.EndingWidePlanes#islandColumn}: in a wider picture,
+     * from the island plane's first redraw as before, and now from the start of Knuckles'
+     * ending, under the white screen of Mecha Sonic's final defeat.
+     */
+    private static boolean sszIslandPlaneProjected(com.openggf.game.sonic3k.runtime.SszZoneRuntimeState ssz) {
+        return ssz.actIndex() == 1 && GameServices.camera().getWidth() > 320
+                && (ssz.endingPlane().revision() != 0 || ssz.act2EndingActive());
     }
 
     private boolean extendedDezInterior() {

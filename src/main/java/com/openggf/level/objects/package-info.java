@@ -19,8 +19,9 @@
  *       reconstruction. Start there for adoption, deferred children and restore
  *       ordering; implement an object's creation hook in
  *       {@link com.openggf.level.objects.RewindRecreatable}.</li>
- *   <li>{@link com.openggf.level.objects.contact.SolidContactState} owns rides,
- *       object-side standing/pushing bits, frame markers and their saved form.
+ *   <li>{@link com.openggf.level.objects.SolidContactMemory} is the package-private owner of rides,
+ *       object-side standing/pushing bits and frame markers. The immutable saved
+ *       form is {@link com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.SolidContactState}.
  *       {@link com.openggf.level.objects.ObjectSolidContactController} owns solid
  *       geometry and the gameplay decisions that read or change that state.</li>
  *   <li>{@link com.openggf.level.objects.ObjectRangeOps} owns the unsigned

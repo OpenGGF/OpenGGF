@@ -452,11 +452,23 @@ public class Sonic2SpecialStageManager implements com.openggf.game.internal.Nati
             loadData();
             setupPalettes();
             setupRenderer();
-            setupPatterns();
+            // One atlas flush per art set-up step instead of one upload per tile.
+            GraphicsManager art = graphicsManager();
+            art.beginPatternAtlasBatch();
+            try {
+                setupPatterns();
+            } finally {
+                art.endPatternAtlasBatch();
+            }
             setupTrackAnimator();
             setupPlayers();
             setupIntro();
-            setupObjectSystem();
+            art.beginPatternAtlasBatch();
+            try {
+                setupObjectSystem();
+            } finally {
+                art.endPatternAtlasBatch();
+            }
 
             initialized = true;
 

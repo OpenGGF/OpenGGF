@@ -30,10 +30,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.BooleanSupplier;
 import java.util.function.IntSupplier;
 
 public final class RewindPolicyRegistry {
+    // Renderer references are replaceable caches; the other built-in handles
+    // require a final identity for ordinary-actor structural disposition.
+    private static final Set<Class<?>> RENDERER_HANDLE_TYPES = Set.of(
+            PatternSpriteRenderer.class, PlayerSpriteRenderer.class);
     private static final Map<Class<?>, RewindFieldPolicy> DEFAULT_DECLARED_TYPE_POLICIES = Map.ofEntries(
             Map.entry(GameModule.class, RewindFieldPolicy.TRANSIENT),
             Map.entry(AbstractLevelEventManager.class, RewindFieldPolicy.TRANSIENT),
@@ -43,8 +48,6 @@ public final class RewindPolicyRegistry {
             Map.entry(ObjectServices.class, RewindFieldPolicy.TRANSIENT),
             Map.entry(Pattern.class, RewindFieldPolicy.TRANSIENT),
             Map.entry(PatternDesc.class, RewindFieldPolicy.TRANSIENT),
-            Map.entry(PatternSpriteRenderer.class, RewindFieldPolicy.TRANSIENT),
-            Map.entry(PlayerSpriteRenderer.class, RewindFieldPolicy.TRANSIENT),
             Map.entry(InstaShieldHandle.class, RewindFieldPolicy.TRANSIENT),
             Map.entry(PowerUpObject.class, RewindFieldPolicy.TRANSIENT),
             Map.entry(PowerUpSpawner.class, RewindFieldPolicy.TRANSIENT),
@@ -101,7 +104,7 @@ public final class RewindPolicyRegistry {
                 return Optional.of(componentTypePolicy);
             }
             RewindFieldPolicy defaultComponentTypePolicy =
-                    DEFAULT_DECLARED_TYPE_POLICIES.get(declaredType.getComponentType());
+                    defaultDeclaredTypePolicy(declaredType.getComponentType());
             if (defaultComponentTypePolicy != null) {
                 return Optional.of(defaultComponentTypePolicy);
             }
@@ -121,23 +124,11 @@ public final class RewindPolicyRegistry {
             }
         }
 
-        RewindFieldPolicy defaultDeclaredTypePolicy = DEFAULT_DECLARED_TYPE_POLICIES.get(declaredType);
-        if (defaultDeclaredTypePolicy != null) {
-            return Optional.of(defaultDeclaredTypePolicy);
+        RewindFieldPolicy defaultPolicy = defaultDeclaredTypePolicy(declaredType);
+        if (defaultPolicy != null) {
+            return Optional.of(defaultPolicy);
         }
-        if (declaredType.isInterface() && declaredType.getSimpleName().endsWith("RendererRef")) {
-            return Optional.of(RewindFieldPolicy.TRANSIENT);
-        }
-        if (declaredType == BooleanSupplier.class || declaredType == IntSupplier.class) {
-            return Optional.of(RewindFieldPolicy.TRANSIENT);
-        }
-        if (declaredType.getPackageName().contains(".events")
-                && declaredType.getSimpleName().endsWith("Events")) {
-            return Optional.of(RewindFieldPolicy.TRANSIENT);
-        }
-        if (declaredType.getSimpleName().endsWith("Handler")
-                && declaredType.getEnclosingClass() != null
-                && hasNoStateFields(declaredType)) {
+        if (isStructuralCallbackType(declaredType)) {
             return Optional.of(RewindFieldPolicy.TRANSIENT);
         }
 
@@ -150,6 +141,35 @@ public final class RewindPolicyRegistry {
         }
 
         return Optional.empty();
+    }
+
+    /**
+     * Built-in engine handles and stateless callbacks whose identities are
+     * reconstructed, rather than gameplay values to capture. Replaceable renderer
+     * caches retain their existing structural role; other handles require a final
+     * identity. General policy registrations cannot extend this rule. A replaceable
+     * tile descriptor still needs captured state or an explicit exclusion.
+     */
+    public static boolean isBuiltInStructuralHandle(Field field) {
+        Class<?> type = field.getType();
+        return RENDERER_HANDLE_TYPES.contains(type)
+                || (Modifier.isFinal(field.getModifiers())
+                        && (defaultDeclaredTypePolicy(type) == RewindFieldPolicy.TRANSIENT
+                                || isStructuralCallbackType(type)));
+    }
+
+    private static RewindFieldPolicy defaultDeclaredTypePolicy(Class<?> type) {
+        return RENDERER_HANDLE_TYPES.contains(type)
+                ? RewindFieldPolicy.TRANSIENT : DEFAULT_DECLARED_TYPE_POLICIES.get(type);
+    }
+
+    private static boolean isStructuralCallbackType(Class<?> type) {
+        return (type.isInterface() && type.getSimpleName().endsWith("RendererRef"))
+                || type == BooleanSupplier.class || type == IntSupplier.class
+                || (type.getPackageName().contains(".events")
+                        && type.getSimpleName().endsWith("Events"))
+                || (type.getSimpleName().endsWith("Handler")
+                        && type.getEnclosingClass() != null && hasNoStateFields(type));
     }
 
     private static boolean isKnownStructuralField(Field field) {
@@ -182,7 +202,7 @@ public final class RewindPolicyRegistry {
         if (args.length != 1 || !(args[0] instanceof Class<?> elementType)) {
             return false;
         }
-        return DEFAULT_DECLARED_TYPE_POLICIES.containsKey(elementType)
+        return defaultDeclaredTypePolicy(elementType) != null
                 || (elementType.isRecord() && RewindCodecs.supports(elementType));
     }
 

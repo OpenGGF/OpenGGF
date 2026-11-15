@@ -176,14 +176,22 @@ public final class S3kResultsElementObjectInstance extends AbstractObjectInstanc
         renderedOnScreen = isWithinRenderWindow();
     }
 
+    /** Render_Sprites bounds that retire the element: the gameplay camera's screen. */
     private boolean isWithinRenderWindow() {
-        int viewportWidth = NATIVE_SCREEN_WIDTH;
-        try {
-            int liveWidth = services().graphicsManager().getProjectionWidth();
-            viewportWidth = Math.max(NATIVE_SCREEN_WIDTH, liveWidth);
-        } catch (Exception ignored) {
-            // Native bounds remain the safe fallback outside a live session.
-        }
+        // Leaving this window hands the act over, so it uses the gameplay camera's width,
+        // never a wider picture (NATIVE widescreen draw mode, recorded-run capture).
+        var camera = services().camera();
+        return isWithinRenderWindow(camera == null ? NATIVE_SCREEN_WIDTH : camera.getWidth());
+    }
+
+    /** Draw admission: the same bounds against the drawn picture's width. */
+    private boolean isWithinDrawnWindow() {
+        var graphics = services().graphicsManager();
+        return isWithinRenderWindow(graphics == null ? NATIVE_SCREEN_WIDTH : graphics.getProjectionWidth());
+    }
+
+    private boolean isWithinRenderWindow(int screenWidth) {
+        int viewportWidth = Math.max(NATIVE_SCREEN_WIDTH, screenWidth);
         int xOffset = (viewportWidth - NATIVE_SCREEN_WIDTH) / 2;
         int renderedX = currentX + xOffset;
         return renderedX + widthPixels >= 0
@@ -208,7 +216,7 @@ public final class S3kResultsElementObjectInstance extends AbstractObjectInstanc
     public void appendRenderCommands(List<GLCommand> commands) {
         // Render_Sprites / loc_1AE58 (sonic3k.asm:36481-36518):
         // flag $40 entries are culled before any main/child mapping expansion.
-        if (parentResults != null && !completionReported && isWithinRenderWindow()) {
+        if (parentResults != null && !completionReported && isWithinDrawnWindow()) {
             parentResults.appendElementRender(this, commands);
         }
     }

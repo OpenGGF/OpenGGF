@@ -494,8 +494,8 @@ public class BackgroundRenderer {
         // BGTextureWidth = renderWidth (wrap period), FBOAllocationWidth = fboAllocWidth (UV mapping)
         parallaxShader.setScreenDimensions(realWidth, realHeight);
         com.openggf.graphics.ParallaxShaderInternalAccess.setLogicalHeight(parallaxShader, hScrollBuffer.lineCount());
-        parallaxShader.setActiveDisplayWidth((float) GameServices.configuration()
-                .getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS));
+        parallaxShader.setActiveDisplayWidth(pinnedDisplayWidth > 0 ? pinnedDisplayWidth
+                : (float) GameServices.configuration().getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS));
         parallaxShader.setBGTextureDimensions(renderWidth, renderHeight);
         parallaxShader.setFBOAllocationWidth(fboAllocWidth);
 
@@ -529,6 +529,16 @@ public class BackgroundRenderer {
             vScrollColumnBuffer.unbind(3);
         }
         glActiveTexture(GL_TEXTURE0);
+    }
+
+    private int pinnedDisplayWidth;
+
+    /**
+     * A positive width composes for a picture of that many logical columns instead of the
+     * configured display; zero returns to the display. For passes that own a fixed-width target.
+     */
+    void pinDisplayWidth(int width) {
+        pinnedDisplayWidth = Math.max(0, width);
     }
 
     void setColumns(com.openggf.game.internal.BackgroundColumnRemap.Columns columns) {

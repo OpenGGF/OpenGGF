@@ -7,7 +7,10 @@ import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.rewind.schema.RewindCodecs;
 import com.openggf.game.rewind.schema.RewindFieldPolicy;
 import com.openggf.game.rewind.schema.RewindPolicyRegistry;
+import com.openggf.game.rewind.schema.RewindSchemaRegistry;
+import com.openggf.game.rewind.schema.RewindSchemaRegistry.DefaultObjectFieldSelection;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.AbstractBadnikInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -184,26 +187,9 @@ public final class RewindCoverageAnalyzer {
     }
 
     /**
-     * Reflects all declared fields on the concrete class and its superclasses
-     * (up to, but not including, {@link AbstractObjectInstance}) and returns
-     * the names of fields that are uncaptured-final-scalar gaps.
-     *
-     * <p>A field is a gap when:
-     * <ul>
-     *   <li>It is {@code final}, non-static, non-transient, and non-synthetic.</li>
-     *   <li>It is NOT annotated {@code @RewindTransient} or {@code @RewindDeferred}.</li>
-     *   <li>Its declared type is a primitive or enum — types that
-     *       {@code GenericFieldCapturer} would otherwise capture as scalars.</li>
-     *   <li>{@link RewindPolicyRegistry#policyForAudit} does not mark it
-     *       {@code TRANSIENT} or {@code DEFERRED} (i.e., it is not excluded
-     *       by any registered policy rule).</li>
-     *   <li>{@link GenericFieldCapturer#isCapturedByDefaultObjectScalarPolicy}
-     *       returns {@code false} — confirming the capturer does not pick it up.</li>
-     * </ul>
-     *
-     * <p>If the class cannot be loaded (e.g., the source was compiled but the
-     * class is absent from the test classpath), the method returns an empty list
-     * rather than failing, so CI does not die on partial classpaths.
+     * Final primitive/enum gaps, checked against the concrete ordinary selection.
+     * Manual/nonactor callers retain the general declared-policy diagnostic.
+     * An absent class returns no findings on partial classpaths.
      */
     private static List<String> findUncapturedFinalScalarFields(String fqn) {
         Class<?> cls;
@@ -214,15 +200,12 @@ public final class RewindCoverageAnalyzer {
             return List.of();
         }
 
+        DefaultObjectFieldSelection selection =
+                RewindSchemaRegistry.defaultObjectFieldSelectionForAudit(cls).orElse(null);
         List<String> gaps = new ArrayList<>();
-        // Walk from the concrete class up to (but not including) AbstractObjectInstance.
-        for (Class<?> c = cls;
-                c != null && c != AbstractObjectInstance.class && c != Object.class;
-                c = c.getSuperclass()) {
-            for (Field field : c.getDeclaredFields()) {
-                if (isUncapturedFinalScalar(field)) {
-                    gaps.add(field.getName());
-                }
+        for (Field field : fieldsForAudit(cls)) {
+            if (isUncapturedFinalScalar(field, selection)) {
+                gaps.add(field.getName());
             }
         }
         gaps.sort(String::compareTo);
@@ -235,10 +218,17 @@ public final class RewindCoverageAnalyzer {
      * if the field were non-final, but currently skips solely because it is
      * {@code final}.
      *
-     * <p>This is an audit-only predicate; it has no effect on runtime rewind
-     * behaviour.
+     * <p>This predicate does not change captured values. Class analysis may
+     * initialize cached runtime schemas while selecting the ordinary projection.
      */
     private static boolean isUncapturedFinalScalar(Field field) {
+        return isUncapturedFinalScalar(field, null);
+    }
+
+    private static boolean isUncapturedFinalScalar(Field field, DefaultObjectFieldSelection selection) {
+        if (field.getDeclaringClass() == AbstractBadnikInstance.class) {
+            selection = null; // The badnik base owns its separate hand-written state.
+        }
         int mods = field.getModifiers();
 
         // Must be final (that is the root cause of the gap).
@@ -261,6 +251,9 @@ public final class RewindCoverageAnalyzer {
         if (!type.isPrimitive() && !type.isEnum()) {
             return false;
         }
+        if (selection != null) {
+            return !selection.captures(field) && !RewindSchemaRegistry.isExplicitDefaultObjectExclusion(field);
+        }
         // A registered policy that marks the field TRANSIENT or DEFERRED means
         // the system has already decided to exclude it; not a gap.
         Optional<RewindFieldPolicy> policy = RewindPolicyRegistry.policyForAudit(field);
@@ -279,24 +272,9 @@ public final class RewindCoverageAnalyzer {
     }
 
     /**
-     * Reflects all declared fields on the concrete class and its superclasses
-     * (up to, but not including, {@link AbstractObjectInstance}) and returns
-     * the names of fields that are un-id'd object-reference gaps.
-     *
-     * <p>A field is a gap when:
-     * <ul>
-     *   <li>It is non-static and non-synthetic.</li>
-     *   <li>It is NOT annotated {@code @RewindTransient} or {@code @RewindDeferred}.</li>
-     *   <li>Its declared type is assignable to {@link ObjectInstance} or
-     *       {@link AbstractPlayableSprite} — live object graph references that
-     *       cannot be reconstructed from scalar data alone.</li>
-     *   <li>{@link RewindPolicyRegistry#policyForAudit} does not mark it
-     *       {@code TRANSIENT} or {@code DEFERRED} (excluded from rewind) or
-     *       {@code CAPTURED} (restored through object-ref id capture).</li>
-     *   <li>No object-ref id capture exists for it.</li>
-     * </ul>
-     *
-     * <p>If the class cannot be loaded the method returns an empty list.
+     * Reference gaps in the concrete owner's selected projection. An inherited
+     * reference can be captured by one sibling and dropped by another's scalar
+     * fallback. General policies describe only manual/nonactor diagnostics.
      */
     private static List<String> findUnIdObjectRefFields(String fqn) {
         Class<?> cls;
@@ -306,14 +284,12 @@ public final class RewindCoverageAnalyzer {
             return List.of();
         }
 
+        DefaultObjectFieldSelection selection =
+                RewindSchemaRegistry.defaultObjectFieldSelectionForAudit(cls).orElse(null);
         List<String> gaps = new ArrayList<>();
-        for (Class<?> c = cls;
-                c != null && c != AbstractObjectInstance.class && c != Object.class;
-                c = c.getSuperclass()) {
-            for (Field field : c.getDeclaredFields()) {
-                if (isUnIdObjectRef(field)) {
-                    gaps.add(field.getName());
-                }
+        for (Field field : fieldsForAudit(cls)) {
+            if (isUnIdObjectRef(field, selection)) {
+                gaps.add(field.getName());
             }
         }
         gaps.sort(String::compareTo);
@@ -325,9 +301,17 @@ public final class RewindCoverageAnalyzer {
      * its type is an {@link ObjectInstance} or {@link AbstractPlayableSprite} subtype,
      * it is not excluded by annotation or policy, and it has no captured object-ref id.
      *
-     * <p>This is an audit-only predicate; it has no effect on runtime rewind behaviour.
+     * <p>This predicate does not change captured values. Class analysis may
+     * initialize cached runtime schemas while selecting the ordinary projection.
      */
     private static boolean isUnIdObjectRef(Field field) {
+        return isUnIdObjectRef(field, null);
+    }
+
+    private static boolean isUnIdObjectRef(Field field, DefaultObjectFieldSelection selection) {
+        if (field.getDeclaringClass() == AbstractBadnikInstance.class) {
+            selection = null; // The badnik base owns its separate hand-written state.
+        }
         int mods = field.getModifiers();
 
         // Statics and synthetics are never part of rewind state.
@@ -347,6 +331,9 @@ public final class RewindCoverageAnalyzer {
         if (!isObjectRef) {
             return false;
         }
+        if (selection != null) {
+            return !selection.captures(field) && !RewindSchemaRegistry.isExplicitDefaultObjectExclusion(field);
+        }
         // A registered policy that marks the field TRANSIENT or DEFERRED means
         // the system has already decided to exclude it. CAPTURED means the
         // object-reference codec restores it by ObjectRefId. None are gaps.
@@ -365,24 +352,9 @@ public final class RewindCoverageAnalyzer {
     }
 
     /**
-     * Reflects all declared fields on the concrete class and its superclasses
-     * (up to, but not including, {@link AbstractObjectInstance}) and returns
-     * the names of fields that are uncaptured-helper-state gaps.
-     *
-     * <p>This catches the fragility motivating the guard: a {@code final} helper
-     * field whose type carries mutable state but is <em>not</em> captured by any
-     * {@link RewindCodecs} codec — e.g. a future {@code FooGate}/{@code FooTracker}
-     * that neither matches the ad-hoc plain-state-holder name suffix list nor
-     * implements {@code RewindStateful}, or a plain-state holder that a future
-     * non-codec field silently knocked off the in-place path. On a backward seek
-     * such a helper's mutable fields are left stale.
-     *
-     * <p>Cardinal rule (per design): the gap test uses the <em>same</em> public
-     * predicate the compact capturer uses — {@link RewindCodecs#codecFor(Class)} —
-     * so the guard and the capturer can never disagree about what is captured.
-     *
-     * <p>If the class cannot be loaded the method returns an empty list, so CI does
-     * not die on partial classpaths.
+     * Mutable final helper gaps. Ordinary actors use actual selected membership
+     * and explicit ordinary exclusions; codec availability or a general policy
+     * alone cannot certify that an ordinary actor captures a helper.
      */
     private static List<String> findUncapturedHelperStateFields(String fqn) {
         Class<?> cls;
@@ -392,14 +364,12 @@ public final class RewindCoverageAnalyzer {
             return List.of();
         }
 
+        DefaultObjectFieldSelection selection =
+                RewindSchemaRegistry.defaultObjectFieldSelectionForAudit(cls).orElse(null);
         List<String> gaps = new ArrayList<>();
-        for (Class<?> c = cls;
-                c != null && c != AbstractObjectInstance.class && c != Object.class;
-                c = c.getSuperclass()) {
-            for (Field field : c.getDeclaredFields()) {
-                if (isUncapturedHelperState(field)) {
-                    gaps.add(field.getName());
-                }
+        for (Field field : fieldsForAudit(cls)) {
+            if (isUncapturedHelperState(field, selection)) {
+                gaps.add(field.getName());
             }
         }
         gaps.sort(String::compareTo);
@@ -426,13 +396,13 @@ public final class RewindCoverageAnalyzer {
      *       {@code TRANSIENT}, {@code DEFERRED}, or {@code CAPTURED} — a registered
      *       policy has already decided how to handle the field. This is the same gate
      *       the two sibling lanes apply, and it is required by the guard's cardinal
-     *       rule: the compact capturer honors {@code policyForAudit} (e.g.
-     *       {@code PatternSpriteRenderer}/{@code PatternDesc} render helpers are
-     *       declared-type {@code TRANSIENT}), so the guard must too or it would flag
-     *       fields the capturer deliberately drops.</li>
+     *       rule for the general/manual lane. Ordinary actors instead consult their
+     *       concrete selected projection and explicit ordinary exclusions.</li>
      *   <li>{@link RewindCodecs#codecFor(Class)} returns empty for that type — i.e.
-     *       the type is neither a registered codec type, a {@code RewindStateful},
-     *       nor a name-matching all-codec plain-state holder.</li>
+     *       the general/manual type is neither a registered codec type, a
+     *       {@code RewindStateful}, nor a name-matching all-codec plain-state holder.
+     *       For ordinary actors, actual selected membership takes precedence:
+     *       registering a codec alone does not admit a field to that projection.</li>
      *   <li>The helper declares at least one <em>mutable</em> (non-final, non-static,
      *       non-transient) primitive-or-enum field of its own — i.e. it actually
      *       carries frame-varying state that a stale rewind would corrupt. Helpers
@@ -441,9 +411,17 @@ public final class RewindCoverageAnalyzer {
      *       recursion covers deeper nesting for captured holders).</li>
      * </ul>
      *
-     * <p>This is an audit-only predicate; it has no effect on runtime rewind behaviour.
+     * <p>This predicate does not change captured values. Class analysis may
+     * initialize cached runtime schemas while selecting the ordinary projection.
      */
     private static boolean isUncapturedHelperState(Field field) {
+        return isUncapturedHelperState(field, null);
+    }
+
+    private static boolean isUncapturedHelperState(Field field, DefaultObjectFieldSelection selection) {
+        if (field.getDeclaringClass() == AbstractBadnikInstance.class) {
+            selection = null; // The badnik base owns its separate hand-written state.
+        }
         int mods = field.getModifiers();
 
         // Final is the shape that motivates the guard: a helper constructed once and
@@ -462,6 +440,11 @@ public final class RewindCoverageAnalyzer {
         if (!isPlainHelperType(type)) {
             return false;
         }
+        if (selection != null) {
+            return !selection.captures(field) && !RewindSchemaRegistry.isExplicitDefaultObjectExclusion(field)
+                    && !RewindPolicyRegistry.isBuiltInStructuralHandle(field)
+                    && declaresMutableScalarState(type);
+        }
         // A registered policy already decides the field's fate. TRANSIENT/DEFERRED mean
         // excluded-or-deferred (not a gap); CAPTURED means captured by another mechanism.
         // Mirrors the sibling lanes and keeps the guard in step with the capturer, which
@@ -476,7 +459,7 @@ public final class RewindCoverageAnalyzer {
                 return false;
             }
         }
-        // CAPTURED iff the compact capturer's own predicate has a codec for the type.
+        // Preserve codec-based helper inference for the general/manual lane.
         if (RewindCodecs.codecFor(type).isPresent()) {
             return false;
         }
@@ -485,6 +468,17 @@ public final class RewindCoverageAnalyzer {
             return false;
         }
         return true;
+    }
+
+    private static List<Field> fieldsForAudit(Class<?> type) {
+        // Coverage also inspects the badnik base, which owns manual capture.
+        List<Field> fields = new ArrayList<>();
+        for (Class<?> cls = type;
+                cls != null && cls != AbstractObjectInstance.class && cls != Object.class;
+                cls = cls.getSuperclass()) {
+            fields.addAll(List.of(cls.getDeclaredFields()));
+        }
+        return fields;
     }
 
     /**

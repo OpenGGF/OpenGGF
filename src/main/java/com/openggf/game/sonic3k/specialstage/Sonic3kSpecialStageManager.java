@@ -349,7 +349,14 @@ public class Sonic3kSpecialStageManager implements com.openggf.game.internal.Nat
 
         // Load ROM data and cache art patterns
         if (Sonic3kSpecialStageRomOffsets.areOffsetsVerified()) {
-            loadRomData();
+            // One atlas flush for the stage's art instead of one upload per tile.
+            GraphicsManager art = GameServices.graphics();
+            art.beginPatternAtlasBatch();
+            try {
+                loadRomData();
+            } finally {
+                art.endPatternAtlasBatch();
+            }
         } else {
             LOGGER.warning("S3K SS ROM offsets not verified — using placeholder rendering");
             player.initialize(ANGLE_NORTH, 0x1000, 0x1000, false);

@@ -1,5 +1,6 @@
 package com.openggf;
 
+import com.openggf.game.rewind.RewindPresentationProbeAccess;
 import com.openggf.architecture.CompositionRoot;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.EngineServices;
@@ -174,6 +175,9 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	private final EditorProjectMenuRenderer editorProjectMenuRenderer = new EditorProjectMenuRenderer();
 	private final ContentImportScreen contentImportScreen;
 	private final ContentImportScreenRenderer contentImportRenderer = new ContentImportScreenRenderer();
+	private final EngineCrashBoundary crashBoundary = new EngineCrashBoundary(this::crashSessionFacts,
+			this::copyToClipboard, com.openggf.util.ExternalBrowser.SYSTEM,
+			com.openggf.game.crash.CrashReportFile.DEFAULT_DIRECTORY);
 	private final ContentImportWindowBridge contentImportWindow;
 	private boolean contentImportShutdown;
 	private boolean quitAfterContentInstall;
@@ -603,6 +607,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	}
 
 	private boolean updateEditorProjectMenus(InputHandler input) {
+		if (crashBoundary.update(input)) return true;
 		if (contentImportScreen.isOpen()) return contentImportScreen.update(input);
 		if (stageplay.menu().isOpen()) {
 			if (editorChromeActive && chromeOwnsStageplayMenu()) editorChrome.update(input);
@@ -2994,7 +2999,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 						FrameRateResolver.automaticPresentation(configService));
 			}
 			public boolean tick(boolean interpolationActive) {
-				return runFrameWithModAbort(() -> {
+				return runFrameWithFaultBoundary(() -> {
 					suspension.betweenFrames(suspensionEffects);
 					// Resource installation is a window-thread obligation even without a picture.
 					graphicsManager.runPendingRenderThreadTasks();
@@ -3007,15 +3012,15 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 					}
 					graphicsManager.runPendingRenderThreadTasks();
 					observeLiveMotion(interpolationActive);
-				}, Engine.this::discardAbortedLiveFrame, gameLoop::returnToMasterTitle);
+				}, Engine.this::discardAbortedLiveFrame, gameLoop::returnToMasterTitle, Engine.this::captureEngineFault);
 			}
 			public boolean draw(LivePictureRequest picture) {
 				liveSceneSubmissionsBefore = gameLoop.modSceneHost.renderedSubmissions();
-				return runFrameWithModAbort(() -> {
+				return runFrameWithFaultBoundary(() -> {
 					render.accept(picture);
 					liveStepPicturePending = false;
 				},
-						Engine.this::discardAbortedLiveFrame, gameLoop::returnToMasterTitle);
+						Engine.this::discardAbortedLiveFrame, gameLoop::returnToMasterTitle, Engine.this::captureEngineFault);
 			}
 			public void swap() {
 				sceneFocusPresentation.swapPrepared(swap, liveSceneSubmissionsBefore, gameLoop.modSceneHost.renderedSubmissions());
@@ -3052,6 +3057,31 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 				+ LevelMotionAccess.diagnostics(instance.levelManager) + "\n";
 	}
 
+	/** Engine faults reach the crash page only in a window; tests and tools keep rethrowing. */
+	private Runnable captureEngineFault(RuntimeException failure) {
+		return window == 0 ? null : crashBoundary.capture(failure);
+	}
+
+	private Map<String, java.util.function.Supplier<String>> crashSessionFacts() {
+		var facts = new java.util.LinkedHashMap<String, java.util.function.Supplier<String>>();
+		facts.put("Mode", () -> String.valueOf(getCurrentGameMode()));
+		facts.put("Game", () -> GameServices.module().getGameId().code());
+		facts.put("Zone index", () -> String.valueOf(levelManager.getCurrentZone()));
+		facts.put("Act index", () -> String.valueOf(levelManager.getCurrentAct()));
+		facts.put("Mods", () -> {
+			ModSubsystem mods = ModSubsystem.current();
+			return mods == null ? "none" : mods.enabledModSummary();
+		});
+		return facts;
+	}
+
+	private boolean copyToClipboard(String text) {
+		if (window == 0) return false;
+		glfwGetError(null);
+		glfwSetClipboardString(window, text);
+		return glfwGetError(null) == GLFW_NO_ERROR;
+	}
+
 	private void discardAbortedLiveFrame() {
 		graphicsManager.discardQueuedCommands();
 		liveFrame = null;
@@ -3069,6 +3099,8 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			if (schedulingRegistry != null) schedulingRegistry.deregisterPostRestoreCallback("live-scheduling");
 			schedulingRegistry = registry;
 			if (registry != null) registry.registerPostRestoreCallback("live-scheduling", () -> {
+				// A presentation probe rolls back its own work; it is not a user rewind.
+				if (RewindPresentationProbeAccess.isProbeRestore(registry)) return;
 				// Reverse selection is itself the scheduled service. Its internal restores
 				// must not restart the reverse-service clock on every selected picture.
 				if (!audioManager.isReverseAudioOutputActive()) restoreEpoch++;
@@ -3126,8 +3158,8 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	 * Called each frame to render the game.
 	 */
 	private boolean display() {
-		return runFrameWithModAbort(this::displayFrame,
-				graphicsManager::discardQueuedCommands, gameLoop::returnToMasterTitle);
+		return runFrameWithFaultBoundary(this::displayFrame,
+				graphicsManager::discardQueuedCommands, gameLoop::returnToMasterTitle, this::captureEngineFault);
 	}
 
 	private void displayFrame() {
@@ -3467,6 +3499,49 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 				throw aborted;
 			}
 			return false;
+		}
+	}
+
+	/**
+	 * Runs one frame inside the mod-abort boundary. An engine fault that escapes it and that
+	 * {@code engineFault} accepts ends the session instead of the process: the report is captured
+	 * while the session still exists, the frame is discarded, the session is torn down to the
+	 * master title, and the returned action opens the crash page. A declined fault (null), a failed
+	 * teardown, a mod abort whose cleanup failed, or any {@link Error} still propagates.
+	 */
+	static boolean runFrameWithFaultBoundary(Runnable frame, Runnable discardFailedFrame,
+			Runnable returnToTitle, java.util.function.Function<RuntimeException, Runnable> engineFault) {
+		Objects.requireNonNull(engineFault, "engineFault");
+		try {
+			return runFrameWithModAbort(frame, discardFailedFrame, returnToTitle);
+		} catch (RuntimeException failure) {
+			if (ModFaultBoundary.callbackAbortFromLoadFailure(failure) != null) throw failure;
+			Runnable openCrashPage = reportEngineFault(failure, engineFault);
+			if (openCrashPage == null) throw failure;
+			tearDownAfterEngineFault(failure, discardFailedFrame, returnToTitle);
+			openCrashPage.run();
+			return false;
+		}
+	}
+
+	private static Runnable reportEngineFault(RuntimeException failure,
+			java.util.function.Function<RuntimeException, Runnable> engineFault) {
+		try {
+			return engineFault.apply(failure);
+		} catch (RuntimeException reportFailure) {
+			failure.addSuppressed(reportFailure);
+			throw failure;
+		}
+	}
+
+	private static void tearDownAfterEngineFault(RuntimeException failure, Runnable discardFailedFrame,
+			Runnable returnToTitle) {
+		try {
+			discardFailedFrame.run();
+			returnToTitle.run();
+		} catch (RuntimeException teardownFailure) {
+			failure.addSuppressed(teardownFailure);
+			throw failure;
 		}
 	}
 
@@ -4249,6 +4324,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 
 	private void drawMasterTitle() {
 		resetCameraForScreenSpaceIfPresent();
+		if (crashBoundary.render(getProjectionMatrixBuffer(), (int) realWidth)) return;
 		if (stageplay.menu().isOpen() || routeTapes.menu().isOpen()) {
 			editorProjectMenuRenderer.render(stageplay.menu().isOpen() ? stageplay.menu() : routeTapes.menu(), getProjectionMatrixBuffer(), (int) realWidth);
 			return;
@@ -4655,6 +4731,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		cleanupStep("text input window", () -> { if (textInputWindow != null) textInputWindow.close(); });
 		cleanupStep("content import", contentImportScreen::close);
 		cleanupStep("content import renderer", contentImportRenderer::close);
+		cleanupStep("crash screen renderer", crashBoundary::close);
 		cleanupStep("display shader picker", displayShaderPickerRenderer::close);
 		cleanupStep("trace HUD renderer", traceHudTextRenderer::cleanup);
 		cleanupStep("VHS rewind effect", () -> {

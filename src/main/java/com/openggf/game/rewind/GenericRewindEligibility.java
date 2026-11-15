@@ -42,16 +42,21 @@ public final class GenericRewindEligibility {
                 GenericRewindEligibility::computeUsesDefaultBadnikSubclassCapture);
     }
 
+    /** The ordinary subclass-field route, including badniks' separately captured base. */
+    public static boolean usesDefaultSubclassCapture(Class<?> type) {
+        Objects.requireNonNull(type, "type");
+        return AbstractBadnikInstance.class.isAssignableFrom(type)
+                ? usesDefaultBadnikSubclassCapture(type)
+                : usesDefaultObjectSubclassCapture(type);
+    }
+
     /**
      * Returns whether {@code type} follows the default compact subclass-field
      * capture path used by its object base class.
      */
     public static boolean usesCompactDefaultSubclassCapture(Class<?> type) {
         Objects.requireNonNull(type, "type");
-        boolean defaultEligible = AbstractBadnikInstance.class.isAssignableFrom(type)
-                ? usesDefaultBadnikSubclassCapture(type)
-                : usesDefaultObjectSubclassCapture(type);
-        return defaultEligible
+        return usesDefaultSubclassCapture(type)
                 && CompactFieldCapturer.supportsDefaultObjectSubclassScalars(type);
     }
 
