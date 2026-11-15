@@ -233,7 +233,7 @@ class TestCanonicalPlayableSheet {
 
     private TestablePlayableSprite sprite(SpriteArtSet art, GameModule module, int speed) {
         var sprite = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
-        sprite.setGameRulesForTest(module.getRules());
+        sprite.setGameRulesForTest(module.getPolicies().rules());
         sprite.setAnimationProfile(art.animationProfile());
         sprite.setAnimationSet(art.animationSet());
         sprite.setAnimationFrameCount(art.mappingFrames().size());

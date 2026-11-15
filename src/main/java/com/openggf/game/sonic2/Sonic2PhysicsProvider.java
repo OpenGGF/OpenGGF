@@ -3,7 +3,6 @@ package com.openggf.game.sonic2;
 import com.openggf.game.PhysicsModifiers;
 import com.openggf.game.PhysicsProfile;
 import com.openggf.game.PhysicsProvider;
-import com.openggf.game.rules.GameRules;
 
 /**
  * Physics provider for Sonic 2.
@@ -107,10 +106,5 @@ public class Sonic2PhysicsProvider implements PhysicsProvider,
     @Override
     public PhysicsModifiers getModifiers() {
         return PhysicsModifiers.STANDARD;
-    }
-
-    @Override
-    public GameRules getRules() {
-        return GameRules.SONIC_2;
     }
 }

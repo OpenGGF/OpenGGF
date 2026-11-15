@@ -422,8 +422,8 @@ public class TestFbzAct2TraversalPreboss {
             assertEquals(!donor.equals("off"), CrossGameFeatureProvider.isActive());
             assertEquals(!donor.equals("s1"), fixture.sprite().getGameRules().playerCapability().spindashEnabled());
             assertTrue(GameServices.sprites().getSidekicks().isEmpty());
-            if (donor.equals("off")) assertSame(GameServices.module().getRules(), fixture.sprite().getGameRules());
-            else assertNotSame(GameServices.module().getRules(), fixture.sprite().getGameRules());
+            if (donor.equals("off")) assertSame(GameServices.module().getPolicies().rules(), fixture.sprite().getGameRules());
+            else assertNotSame(GameServices.module().getPolicies().rules(), fixture.sprite().getGameRules());
             ObjectSpawn checkpoint = GameServices.level().getCurrentLevel().getObjects().stream()
                     .filter(spawn -> spawn.objectId() == GameServices.module().getCheckpointObjectId())
                     .filter(spawn -> (spawn.subtype() & 0x7F) == 6).findFirst().orElseThrow();

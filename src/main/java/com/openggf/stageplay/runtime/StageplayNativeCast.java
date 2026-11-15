@@ -129,7 +129,7 @@ final class StageplayNativeCast {
         var objects = world.getLevelManager().getObjectManager();
         var factory = module.getInstaShieldFactory();
         StageplayDonorEffects effects;
-        if (module.getRules().playerCapability().instaShieldEnabled()
+        if (module.getPolicies().rules().playerCapability().instaShieldEnabled()
                 && sprite.getSecondaryAbility() == com.openggf.sprites.playable.SecondaryAbility.INSTA_SHIELD) {
             if (factory == null) throw new IllegalArgumentException("Native performer has no ability effect factory: " + actor.id());
             var shieldArt = donor.loadInstaShieldArt(reader);

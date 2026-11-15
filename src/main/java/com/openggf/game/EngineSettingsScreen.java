@@ -724,7 +724,7 @@ public final class EngineSettingsScreen {
 
     static MenuTextEditor.Mode fieldMode(SonicConfiguration key) {
         return switch (key) {
-            case SONIC_1_ROM, SONIC_2_ROM, SONIC_3K_ROM, ROMS_DIRECTORY, PLAYBACK_MOVIE_PATH,
+            case SONIC_1_ROM, SONIC_2_ROM, SONIC_3K_ROM, SONIC_CD_DISC, ROMS_DIRECTORY, PLAYBACK_MOVIE_PATH,
                     TRACE_CATALOG_DIR, CAPTURE_OUTPUT_DIR -> MenuTextEditor.Mode.PATH;
             default -> switch (ConfigCatalog.meta(key).type()) {
                 case INT -> MenuTextEditor.Mode.INTEGER;
@@ -743,7 +743,7 @@ public final class EngineSettingsScreen {
                     DEBUG_MODE_KEY, LIVE_REWIND_KEY, FRAME_STEP_KEY -> UiMessages.text("settings.screen.takes_effect_immediately_after_saving");
             case DISPLAY_COLOR_EXPANSION -> UiMessages.text("settings.screen.takes_effect_immediately_after_saving_including_cached_palette_colours");
             // MasterTitleScreen refreshes ROM previews on consumeApplied; load resolves saved ROM paths.
-            case SONIC_1_ROM, SONIC_2_ROM, SONIC_3K_ROM, ROMS_DIRECTORY, ROMS_PREFER_COMPOSITE ->
+            case SONIC_1_ROM, SONIC_2_ROM, SONIC_3K_ROM, SONIC_CD_DISC, ROMS_DIRECTORY, ROMS_PREFER_COMPOSITE ->
                     UiMessages.text("settings.screen.after_saving_the_rom_catalogue_rescans_and_previews_refresh_used_for_the_next_game_lo");
             case TRACE_CATALOG_DIR -> UiMessages.text("settings.screen.after_saving_used_when_the_playback_browser_next_opens");
             // LiveCaptureRecorderFactory reads these when creating a recording.

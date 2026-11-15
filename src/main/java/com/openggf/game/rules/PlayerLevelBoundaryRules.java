@@ -53,6 +53,17 @@ package com.openggf.game.rules;
  *        adding a rule for it would be untestable plumbing. When the mask is
  *        lifted, both sites move together and the word choice becomes a real
  *        per-game rule again.
+ * @param rightEdgeInset
+ *        the right clamp sits this far inside {@code Camera_Max_X_pos + 320}
+ *        while the screen is locked: 24 ({@code +$128}) for S1, S2 and S3K
+ *        (docs/s1disasm/_incObj/01 Sonic.asm:1070-1071), 16 ({@code addi.w
+ *        #320-16}) for Sonic CD's {@code ObjSonic_LevelBound} (scddisasm
+ *        src/Level/_Objects/Sonic/Main.asm:1686-1687).
+ * @param rightEdgeExtension
+ *        what the unlocked clamp adds to that: S1/S2 {@code +$40}
+ *        (docs/s1disasm/_incObj/01 Sonic.asm:1072-1074; S3K never adds it),
+ *        Sonic CD {@code addi.w #56} (Main.asm:1688-1690), so both reach
+ *        {@code +$168} with the screen unlocked.
  */
 public record PlayerLevelBoundaryRules(
         boolean rightStrict,
@@ -61,5 +72,16 @@ public record PlayerLevelBoundaryRules(
         boolean usesPreEasedMaxXDuringBossLock,
         boolean deathFallBottomReferenceIsCameraBottomBoundary,
         boolean deathFallRestartHandoffCancelsGravity,
-        boolean hurtStopBottomKillUnsigned) {
+        boolean hurtStopBottomKillUnsigned,
+        int rightEdgeInset,
+        int rightEdgeExtension) {
+
+    /** S1/S2/S3K right-edge geometry: {@code +$128}, plus {@code $40} when unlocked. */
+    public PlayerLevelBoundaryRules(boolean rightStrict, boolean usesCentreY, boolean lockUsesScreenLockFlag,
+            boolean usesPreEasedMaxXDuringBossLock, boolean deathFallBottomReferenceIsCameraBottomBoundary,
+            boolean deathFallRestartHandoffCancelsGravity, boolean hurtStopBottomKillUnsigned) {
+        this(rightStrict, usesCentreY, lockUsesScreenLockFlag, usesPreEasedMaxXDuringBossLock,
+                deathFallBottomReferenceIsCameraBottomBoundary, deathFallRestartHandoffCancelsGravity,
+                hurtStopBottomKillUnsigned, 24, 0x40);
+    }
 }

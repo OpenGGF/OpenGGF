@@ -2889,7 +2889,9 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         void restoreLevelMusicAfterInvincibility() {
                 // Music belongs to the host mode, not the player's donated physics profile.
                 GameModule module = currentGameModule();
-                GameRules rules = module != null ? module.getRules() : getGameRules();
+                var modulePolicies = module != null ? module.getPolicies() : null;
+                GameRules rules = module != null
+                        ? (modulePolicies != null ? modulePolicies.rules() : null) : getGameRules();
                 if (rules != null && rules.powerUp() != null
                         && !rules.powerUp().restoreLevelMusicAfterInvincibility()) {
                         return;
@@ -2950,6 +2952,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 if (isDamageBlocked(ignoreIFrames)) {
                         return false;
                 }
+                PlayerStageHooks.beforeHurt(this);
 
                 // Fire shield blocks fire damage (s3.asm shield_reaction bit 4)
                 PlayerCapabilityRules capabilityRules = playerCapabilityRulesOrNull();
@@ -4069,7 +4072,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                                 applyProfileToFields(profile);
                         }
                         this.physicsModifiers = provider.getModifiers();
-                        this.gameRules = provider.getRules();
+                        var modulePolicies = module.getPolicies();
+                        this.gameRules = modulePolicies != null ? modulePolicies.rules() : null;
 
                         // S1 (UNIFIED collision) uses d5=$D for ALL terrain probes.
                         // After Sonic1Level.convertS1BlockData() maps S1→S2 chunk format,
@@ -4103,7 +4107,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 }
                 // Cross-game donation: override only typed rules with donated capabilities.
                 if (runtimeServices == null && CrossGameFeatureProvider.isActive()) {
-                        this.gameRules = currentCrossGameFeatures().getHybridRules();
+                        var hybridPolicies = currentCrossGameFeatures().getHybridPolicies();
+                        this.gameRules = hybridPolicies != null ? hybridPolicies.rules() : null;
                 }
                 ensurePersistentInstaShieldObject();
                 bubbleAnimId = module != null ? module.resolveAnimationId(CanonicalAnimation.BUBBLE) : -1;
@@ -5175,6 +5180,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * @param waterLevelY Water surface Y position in world coordinates (pixels)
          */
         public void updateWaterState(int waterLevelY) {
+                if (PlayerStageHooks.skipsWaterCheck(this)) return;
                 wasInWater = inWater;
 
                 // ROM compares y_pos (center Y) with Water_Level_1:
@@ -5193,6 +5199,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 }
 
                 inWater = playerCenterY > waterLevelY;
+                // Sonic CD: a falling player above the level stays underwater (PlayerStageHooks).
+                if (wasInWater && !inWater) inWater = PlayerStageHooks.keepsUnderwaterWhileFalling(this, ySpeed);
 
                 // Detect transitions
                 if (!wasInWater && inWater) {
@@ -5210,7 +5218,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                                         && shield && shieldType == ShieldType.BUBBLE
                                         || PlayerFluidContextAccess.breathProtected(this)) {
                                 controller.getDrowning().replenishAir();
-                        } else if (fixedLevelObjectOwnsDrowningBubbleCadence()) {
+                        } else if (PlayerStageHooks.fixedObjectOwnsDrowningCadence(this)) {
                                 // S3K installs Breathing_bubbles/Breathing_bubbles_P2
                                 // in fixed object RAM. Their Obj_AirCountdown cadence
                                 // owns Random_Number/AllocateObject timing; keep the
@@ -5266,15 +5274,6 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 inWater = nowInWater;
         }
 
-        boolean fixedLevelObjectOwnsDrowningBubbleCadence() {
-                try {
-                        return currentGameModule().getLevelEventProvider()
-                                        .ownsFixedDrowningBubbleCadence(this);
-                } catch (IllegalStateException ex) {
-                        return false;
-                }
-        }
-
         /**
          * Called when player enters water.
          * Applies instantaneous velocity changes per original game logic.
@@ -5285,6 +5284,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 currentWaterSystem().incrementWaterEnteredCounter();
                 // S3K: water entry resets Character_Speeds init values to canonical
                 // (sonic3k.asm:22261-22263 sets absolute values, not relative to init)
+                PlayerStageHooks.onEntry(this);
                 clearInitOverride();
                 resetSpeedConstantsToCanonical();
                 waterPhysicsActive = true;
@@ -5315,7 +5315,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 // ROM (s2.asm:36050-36110): Skip splash if y_vel is 0 after quartering
                 //   tst.w   y_vel(a0)
                 //   beq.s   loc_F6DE         ; Skip splash if y_vel is now 0
-                if (ySpeed != 0) {
+                if (ySpeed != 0 && !PlayerStageHooks.spawnsSplash(this)) {
                         // Play splash sound
                         currentAudioManager().playSfx(GameSound.SPLASH);
 
@@ -5381,11 +5381,10 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         ySpeed = -0x1000;
                 }
 
-                // Play splash sound
-                currentAudioManager().playSfx(GameSound.SPLASH);
-
-                // Spawn splash object at water surface
-                spawnSplash();
+                if (!PlayerStageHooks.spawnsSplash(this)) {
+                        currentAudioManager().playSfx(GameSound.SPLASH);
+                        spawnSplash();
+                }
 
                 // Notify drowning manager of water exit (stops drowning music, resets state)
                 if (controller.getDrowning() != null) {
@@ -5397,7 +5396,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 if (controller.getDrowning() == null) {
                         return;
                 }
-                if (fixedLevelObjectOwnsDrowningBubbleCadence()) {
+                if (PlayerStageHooks.fixedObjectOwnsDrowningCadence(this)) {
                         controller.getDrowning().replenishAir();
                 } else if (enteringWater) {
                         controller.getDrowning().reset();

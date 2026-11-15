@@ -2398,7 +2398,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 		// collision, Animate_Tails and Draw_Sprite only; allowing another touch
 		// pass lets an already-hurt sidekick trigger SPECIAL objects such as the
 		// MGZ Spiker spring while the ROM cannot.
-		if (!hurtAtTickStart && !playable.getDead()) {
+		if (!hurtAtTickStart && !playable.getDead() && stageObjectCollisionEnabled(playable)) {
 			levelManager.applyTouchResponses(playable);
 		}
 		levelManager.applyPlaneSwitchers(playable);
@@ -2420,6 +2420,18 @@ public class SpriteManager implements PlayableSstDispatcher {
 	 * timer pass keeps those two together and puts the queue write ahead of the
 	 * same frame's driver service, where the ROM's is.
 	 */
+	/**
+	 * The game's {@code PlayerStageRoutines} gate on the touch pass (Sonic CD's
+	 * {@code oPlayerCtrl} and per-zone tests before {@code Player_ObjCollide},
+	 * scddisasm src/Level/_Objects/Sonic/Main.asm:342-348); open for every other game.
+	 */
+	private static boolean stageObjectCollisionEnabled(AbstractPlayableSprite playable) {
+		var module = playable.currentGameModule();
+		var provider = module != null ? module.getPhysicsProvider() : null;
+		return !(provider instanceof com.openggf.game.internal.PlayerStageRoutines routines)
+				|| routines.objectCollisionEnabled(playable);
+	}
+
 	private static void tickDisplayPhaseTimers(AbstractPlayableSprite playable) {
 		TimerManager timers = com.openggf.sprites.playable.PlayableRuntimeContext.timersOrNull(playable);
 		if (timers != null) {

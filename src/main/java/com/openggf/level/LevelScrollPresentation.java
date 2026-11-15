@@ -130,7 +130,7 @@ final class LevelScrollPresentation {
     static ArenaMaskState captureArenaMask(LevelManager level) {
         var camera = level.camera;
         int currentMaxX = camera.getMaxX();
-        var rules = level.gameModule == null ? null : level.gameModule.getRules().playerMovement();
+        var rules = level.gameModule == null ? null : level.gameModule.getPolicies().rules().playerMovement();
         if (rules != null && !rules.levelBoundaryRightStrict()) {
             var state = level.boundaryGameState();
             boolean locked = rules.levelBoundaryLockUsesScreenLockFlag()
@@ -155,7 +155,7 @@ final class LevelScrollPresentation {
     static BackgroundBuildParameters.ArenaBounds captureArenaBounds(LevelManager level, boolean foregroundWraps) {
         var camera = level.camera;
         int currentMaxX = camera.getMaxX();
-        var rules = level.gameModule == null ? null : level.gameModule.getRules().playerMovement();
+        var rules = level.gameModule == null ? null : level.gameModule.getPolicies().rules().playerMovement();
         if (rules != null && !rules.levelBoundaryRightStrict()) {
             var state = level.boundaryGameState();
             boolean locked = rules.levelBoundaryLockUsesScreenLockFlag()

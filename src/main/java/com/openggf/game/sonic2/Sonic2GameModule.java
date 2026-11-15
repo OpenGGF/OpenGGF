@@ -522,6 +522,14 @@ public class Sonic2GameModule implements GameModule, com.openggf.game.internal.S
         return physicsProvider;
     }
 
+    private static final com.openggf.game.rules.GamePolicies POLICIES =
+            new com.openggf.game.rules.GamePolicies(com.openggf.game.rules.GameRules.SONIC_2);
+
+    @Override
+    public com.openggf.game.rules.GamePolicies getPolicies() {
+        return POLICIES;
+    }
+
     @Override
     public LevelInitProfile getLevelInitProfile() {
         return levelInitProfile;

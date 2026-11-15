@@ -43,7 +43,7 @@ class TestMutatorReturnRingDomain {
         var module = mock(GameModule.class);
         var rules = mock(GameRules.class);
         var ringRules = mock(RingRules.class);
-        when(module.getRules()).thenReturn(rules);
+        when(module.getPolicies()).thenReturn(new com.openggf.game.rules.GamePolicies(rules));
         when(rules.ring()).thenReturn(ringRules);
         when(ringRules.checkpointRestoresSavedRings()).thenReturn(true);
         try (var globals = mockStatic(GameServices.class)) {

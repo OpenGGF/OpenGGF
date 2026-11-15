@@ -75,19 +75,26 @@ class TestPalettePublicationDispatch {
                 .containsKey("palette_2"), "the later publication still uploads the pending normal row");
     }
 
-    @Test void disposalRetainsPendingAliasesLatchPreferencesAndUploadPortUntilTheirNextPublication() {
+    /**
+     * Disposal is the game-entry boundary: the outgoing session's upload latch and pending water
+     * belong to its V-int publication and are dropped (only latching games publish, so an unlatched
+     * game entered next would otherwise never upload a level palette write). Display preferences
+     * and the injected upload port survive.
+     */
+    @Test void disposalDropsTheOutgoingLatchAndPendingWaterButKeepsPreferencesAndUploadPort() {
         Palette[] water = rows();
         graphics.setDisplayColorExpansion(DisplayColorExpansion.LIMITED);
         graphics.cacheUnderwaterPaletteTexture(water, null);
         graphics.paletteTextures().setPaletteUploadLatched(true);
         graphics.cacheUnderwaterPaletteTexture(water, null);
         graphics.clearPaletteTextures();
-        assertTrue(graphics.paletteTextures().isPaletteUploadLatched());
+        assertFalse(graphics.paletteTextures().isPaletteUploadLatched(), "the next session starts unlatched");
         assertNull(graphics.getUnderwaterPaletteTextureId());
         assertNull(graphics.paletteTextures().cachedPaletteLine(0));
-        graphics.replay = () -> assertFalse(graphics.paletteTextures().isPaletteUploadLatched());
         graphics.paletteTextures().flushPendingPaletteUploads();
-        assertEquals(2, uploads.count, "pending water and the injected port survive texture disposal");
+        assertEquals(1, uploads.count, "the outgoing session's pending water is discarded, not replayed");
+        graphics.cacheUnderwaterPaletteTexture(water, null);
+        assertEquals(2, uploads.count, "the injected port survives texture disposal and uploads at once");
         assertEquals(0, uploads.bytes[4] & 255); // RAW_RGB keeps black at zero even with LIMITED expansion
         assertEquals(DisplayColorExpansion.LIMITED, graphics.actualExpansion());
         assertEquals(1, graphics.clearCalls);

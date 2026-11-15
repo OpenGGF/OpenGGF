@@ -29,6 +29,7 @@ public final class StandaloneGameSpec {
     private final boolean sidekicks;
     private final Supplier<ObjectRegistry> objects;
     private final PhysicsProvider physics;
+    private final com.openggf.game.rules.GamePolicies policies;
     private final GameAudioProfile audio;
     private final ObjectPlacementEncoding placements;
     private final LevelInitProfile init;
@@ -39,7 +40,7 @@ public final class StandaloneGameSpec {
         owner=b.owner; zones=List.copyOf(b.zones); sidekicks=b.sidekicks;
         var factories=Collections.unmodifiableMap(new LinkedHashMap<>(b.objectFactories));
         objects=b.objects == null ? ()->new DeclaredObjects(owner,factories) : b.objects;
-        physics=b.physics; audio=b.audio; placements=b.placements; init=b.init;
+        physics=b.physics; policies=b.policies; audio=b.audio; placements=b.placements; init=b.init;
         saves=b.saves == null ? defaultSaves() : b.saves; touchResponses=b.touchResponses.clone();
         if (zones.isEmpty()) throw new IllegalArgumentException("Standalone game needs at least one zone");
         Set<Integer> indices=new HashSet<>();
@@ -52,6 +53,8 @@ public final class StandaloneGameSpec {
     public String owner() { return owner; }
     public boolean supportsSidekick() { return sidekicks; }
     public PhysicsProvider physics() { return physics; }
+    /** Game-wide behavioural policies; defaults to Sonic 2's rules. */
+    public com.openggf.game.rules.GamePolicies policies() { return policies; }
     public GameAudioProfile audio() { return audio; }
     public LevelInitProfile levelInitProfile() { return init; }
     public SaveSnapshotProvider saveSnapshotProvider() { return saves; }
@@ -100,7 +103,9 @@ public final class StandaloneGameSpec {
         private Supplier<ObjectRegistry> objects;
         private final Map<String,ObjectFactory> objectFactories=new LinkedHashMap<>();
         private PhysicsProvider physics=PhysicsProvider.fixed(PhysicsProfile.SONIC_2_SONIC,
-                PhysicsModifiers.STANDARD, com.openggf.game.rules.GameRules.SONIC_2);
+                PhysicsModifiers.STANDARD);
+        private com.openggf.game.rules.GamePolicies policies=
+                new com.openggf.game.rules.GamePolicies(com.openggf.game.rules.GameRules.SONIC_2);
         private GameAudioProfile audio=GameAudioProfile.silentNative();
         private ObjectPlacementEncoding placements=(x,y,id,subtype,flags,tracked,index) -> new ObjectSpawn(x,y,id,subtype,flags,tracked,y,index);
         private LevelInitProfile init=new CoreInit();
@@ -130,6 +135,7 @@ public final class StandaloneGameSpec {
             objectFactories.put(owned,factory); return this;
         }
         public Builder physics(PhysicsProvider provider) { physics=Objects.requireNonNull(provider); return this; }
+        public Builder policies(com.openggf.game.rules.GamePolicies gamePolicies) { policies=Objects.requireNonNull(gamePolicies); return this; }
         public Builder audio(GameAudioProfile profile) { audio=Objects.requireNonNull(profile); return this; }
         public Builder placementEncoding(ObjectPlacementEncoding encoding) { placements=Objects.requireNonNull(encoding); return this; }
         public Builder levelInitProfile(LevelInitProfile profile) { init=Objects.requireNonNull(profile); return this; }

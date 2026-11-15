@@ -103,10 +103,10 @@ class TestFbzCompatibilityMatrix {
             assertSynchronousMagneticTransitionCompatibility(
                     "donor=" + donor, 320, donor, transition -> {
                         if (donor.equals("off")) {
-                            assertSame(GameServices.module().getRules(),
+                            assertSame(GameServices.module().getPolicies().rules(),
                                     transition.sprite().getGameRules());
                         } else {
-                            assertNotSame(GameServices.module().getRules(),
+                            assertNotSame(GameServices.module().getPolicies().rules(),
                                     transition.sprite().getGameRules());
                         }
                     });
@@ -153,7 +153,7 @@ class TestFbzCompatibilityMatrix {
                         }
                         if (donorOff) {
                             assertEquals(320, start.camera().getWidth() & 0xFFFF);
-                            assertSame(GameServices.module().getRules(), start.sprite().getGameRules());
+                            assertSame(GameServices.module().getPolicies().rules(), start.sprite().getGameRules());
                         }
                     });
             assertMandatoryRouteCompatibility(completion, team.label());
@@ -240,9 +240,9 @@ class TestFbzCompatibilityMatrix {
             RouteCompletionEvidence completion = TestFbzAct2TraversalPreboss
                     .runNativeStartFixedInputsReachSafeLateFrontierWithAllRouteMilestones(start -> {
                         if (donor.equals("off")) {
-                            assertSame(GameServices.module().getRules(), start.sprite().getGameRules());
+                            assertSame(GameServices.module().getPolicies().rules(), start.sprite().getGameRules());
                         } else {
-                            assertNotSame(GameServices.module().getRules(), start.sprite().getGameRules(),
+                            assertNotSame(GameServices.module().getPolicies().rules(), start.sprite().getGameRules(),
                                     "the fresh route must create P1 with composed donor rules");
                         }
                     }, donor);

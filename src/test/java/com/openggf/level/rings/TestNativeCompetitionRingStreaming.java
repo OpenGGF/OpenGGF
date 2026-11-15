@@ -40,7 +40,7 @@ class TestNativeCompetitionRingStreaming {
         final AudioManager audio = mock(AudioManager.class);
         final RingManager manager;
         Fixture(List<RingSpawn> spawns) {
-            var rules = new Sonic2GameModule().getRules();
+            var rules = new Sonic2GameModule().getPolicies().rules();
             for (int slot = 0; slot < 2; slot++) {
                 final int s = slot;
                 when(roster.camera(slot)).thenReturn(cameras[slot]);

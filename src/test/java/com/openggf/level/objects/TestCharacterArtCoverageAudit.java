@@ -134,7 +134,7 @@ class TestCharacterArtCoverageAudit {
             }
             for(int speed : List.of(0x300,0x900)) {
                 var sprite=new TestablePlayableSprite("sonic",(short)0,(short)0);
-                sprite.setGameRulesForTest(module.getRules()); sprite.setAnimationProfile(view.animationProfile());
+                sprite.setGameRulesForTest(module.getPolicies().rules()); sprite.setAnimationProfile(view.animationProfile());
                 sprite.setAnimationSet(view.animationSet()); sprite.setAnimationFrameCount(view.mappingFrames().size());
                 sprite.setSuperSonic(true); sprite.setAir(false); sprite.setMovementInputActive(true);
                 sprite.setDirection(com.openggf.physics.Direction.RIGHT); sprite.setGSpeed((short)speed); sprite.setAnimationId(0);
@@ -196,7 +196,7 @@ class TestCharacterArtCoverageAudit {
             var displayed=new TreeSet<Integer>();
             if(script!=null) for(int speed:new int[]{0x100,0x900}) for(int angle:new int[]{0,0x20,0x40,0x60}) {
                 var sprite=new TestablePlayableSprite(nativeCharacter,(short)0,(short)0);
-                sprite.setGameRulesForTest(module.getRules()); sprite.setAnimationProfile(bound.animationProfile());
+                sprite.setGameRulesForTest(module.getPolicies().rules()); sprite.setAnimationProfile(bound.animationProfile());
                 sprite.setAnimationSet(bound.animationSet()); sprite.setAnimationFrameCount(bound.mappingFrames().size());
                 sprite.setGSpeed((short)speed); sprite.setAngle((byte)angle); sprite.setAnimationId(id);
                 for(int clock=0;clock<512;clock++) { sprite.getAnimationManager().update(clock); displayed.add(sprite.getMappingFrame()); }

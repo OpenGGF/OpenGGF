@@ -321,6 +321,6 @@ class TestKnucklesGlidePreludeContract {
     private static final class Kis2PreludeModule extends DelegatingGameModule {
         Kis2PreludeModule() { super(new Sonic2GameModule(), "test:kis2-glide-prelude-contract"); }
         @Override public PhysicsProvider getPhysicsProvider() { return new Kis2PhysicsProvider(); }
-        @Override public GameRules getRules() { return Kis2Rules.RULES; }
+        @Override public com.openggf.game.rules.GamePolicies getPolicies() { return new com.openggf.game.rules.GamePolicies(Kis2Rules.RULES); }
     }
 }

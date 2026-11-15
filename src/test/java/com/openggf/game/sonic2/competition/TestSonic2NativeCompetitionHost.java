@@ -1089,7 +1089,7 @@ class TestSonic2NativeCompetitionHost {
     private static String badnikTouchState(Driver driver, AbstractBadnikInstance badnik) {
         var player = driver.session.player(0);
         var objects = driver.host.context().getObjectManager();
-        var rules = driver.host.context().getWorldSession().getGameModule().getRules().objectInteraction();
+        var rules = driver.host.context().getWorldSession().getGameModule().getPolicies().rules().objectInteraction();
         var nearby = objects.getActiveObjects().stream()
                 .filter(object -> object instanceof com.openggf.level.objects.TouchResponseProvider
                         && Math.abs(object.getCollisionX() - player.getCentreX()) < 0x40

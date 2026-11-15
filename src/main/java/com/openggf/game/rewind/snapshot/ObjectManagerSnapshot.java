@@ -397,12 +397,20 @@ public record ObjectManagerSnapshot(
             int frameCounter,
             List<SolidContactRidingEntry> riding,
             List<SolidContactLatchEntry> standingBits,
-            List<SolidContactLatchEntry> pushingBits
+            List<SolidContactLatchEntry> pushingBits,
+            List<SolidContactRidingEntry> pushTargets
     ) {
         public SolidContactState {
             riding = riding == null ? List.of() : List.copyOf(riding);
             standingBits = standingBits == null ? List.of() : List.copyOf(standingBits);
             pushingBits = pushingBits == null ? List.of() : List.copyOf(pushingBits);
+            pushTargets = pushTargets == null ? List.of() : List.copyOf(pushTargets);
+        }
+
+        /** State without push targets (only the re-evaluating solid family writes them). */
+        public SolidContactState(int frameCounter, List<SolidContactRidingEntry> riding,
+                List<SolidContactLatchEntry> standingBits, List<SolidContactLatchEntry> pushingBits) {
+            this(frameCounter, riding, standingBits, pushingBits, List.of());
         }
 
         public static SolidContactState empty() {

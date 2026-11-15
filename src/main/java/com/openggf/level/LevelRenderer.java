@@ -1074,8 +1074,13 @@ public final class LevelRenderer {
         nativeCompetitionScroll = new LevelScrollPresentation(registers, view.horizontalScroll(),
                 null, null, null, null);
         lm.camera = projection;
-        int previousHeight = lm.cachedScreenHeight;
+        // The tile passes span the display's cached size. A native view is always 320 columns:
+        // at a wider logical width they would squeeze that many columns into its 320.
+        int previousWidth = lm.cachedScreenWidth, previousHeight = lm.cachedScreenHeight;
+        lm.cachedScreenWidth = NativeCompetitionRenderer.WIDTH;
         lm.cachedScreenHeight = view.horizontalScroll().length;
+        var background = lm.graphicsManager.getBackgroundRenderer();
+        if (background != null) com.openggf.level.render.BackgroundRendererWidth.pin(background, NativeCompetitionRenderer.WIDTH);
         nativeViewPlanes = view.planes();
         lm.tilemapManager.setRetainedPlaneOverride(view.planes());
         try { draw.run(); }
@@ -1083,6 +1088,8 @@ public final class LevelRenderer {
             lm.camera = camera;
             nativeCompetitionScroll = null;
             nativeViewPlanes = null;
+            lm.cachedScreenWidth = previousWidth;
+            if (background != null) com.openggf.level.render.BackgroundRendererWidth.pin(background, 0);
             lm.cachedScreenHeight = previousHeight;
             lm.tilemapManager.setRetainedPlaneOverride(null);
             currentScrollPresentation = previousScroll;
@@ -1815,9 +1822,9 @@ public final class LevelRenderer {
             boolean waterShimmerEnabled = false;
             GameModule currentModule = lm.activeGameModule();
             if (currentModule != null
-                    && currentModule.getRules() != null
-                    && currentModule.getRules().camera() != null) {
-                waterShimmerEnabled = currentModule.getRules().camera().waterShimmerEnabled();
+                    && currentModule.getPolicies() != null
+                    && currentModule.getPolicies().rules().camera() != null) {
+                waterShimmerEnabled = currentModule.getPolicies().rules().camera().waterShimmerEnabled();
                 if (waterShimmerEnabled) {
                     shimmerStyle = 1;
                 }

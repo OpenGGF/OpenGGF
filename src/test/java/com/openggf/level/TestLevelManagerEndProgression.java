@@ -90,7 +90,7 @@ class TestLevelManagerEndProgression {
     @Test
     void advanceToNextLevelUsesConfiguredSuccessorRedirect() throws Exception {
         GameModule module = mock(GameModule.class);
-        when(module.getRules()).thenReturn(GameRules.SONIC_2);
+        when(module.getPolicies()).thenReturn(new com.openggf.game.rules.GamePolicies(GameRules.SONIC_2));
         when(module.rngFlavour()).thenReturn(GameRng.Flavour.S1_S2);
         var gameplay = SessionManager.openGameplaySession(module);
         try {

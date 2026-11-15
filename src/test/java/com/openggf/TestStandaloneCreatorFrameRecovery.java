@@ -100,7 +100,7 @@ class TestStandaloneCreatorFrameRecovery {
             @Override public Game createGame(GameDataSource source) { return game; }
             @Override public ZoneRegistry getZoneRegistry() { return zones; }
             @Override public ObjectArtProvider getObjectArtProvider() { return art; }
-            @Override public GameRules getRules() { return GameRules.SONIC_2; }
+            @Override public com.openggf.game.rules.GamePolicies getPolicies() { return new com.openggf.game.rules.GamePolicies(GameRules.SONIC_2); }
             @Override public GameAudioProfile getAudioProfile() { return GameAudioProfile.silentNative(); }
         };
     }

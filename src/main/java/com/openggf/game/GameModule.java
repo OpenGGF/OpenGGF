@@ -506,20 +506,25 @@ public interface GameModule {
 
     /**
      * Returns the physics provider for this game.
-     * Provides per-character physics profiles, modifier rules (water/speed shoes),
-     * and typed game rules (spindash availability, collision model, and runtime gates).
+     * Provides per-character physics profiles and modifier rules (water/speed shoes).
      *
      * @return the physics provider
      */
     PhysicsProvider getPhysicsProvider();
 
-    default com.openggf.game.rules.GameRules getRules() {
-        PhysicsProvider provider = getPhysicsProvider();
-        if (provider == null) {
-            throw new IllegalStateException("No PhysicsProvider for " + getIdentifier());
-        }
-        return provider.getRules();
-    }
+    /**
+     * Returns this game's immutable game-wide behavioural policies.
+     *
+     * <p>The module is the only owner: providers and runtime components never
+     * supply policies. Implementations return a stable value with no session
+     * state. Consumers read the narrow group they need, for example
+     * {@code getPolicies().rules().ring()}. Patches built on
+     * {@link com.openggf.game.patch.DelegatingGameModule} forward the base value
+     * unless they ship a different rule.
+     *
+     * @return the module's policies, never {@code null}
+     */
+    com.openggf.game.rules.GamePolicies getPolicies();
 
     /**
      * Returns measured movie-replay timing facts for this game. Games opt in

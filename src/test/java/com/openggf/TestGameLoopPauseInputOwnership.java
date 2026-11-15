@@ -39,7 +39,7 @@ class TestGameLoopPauseInputOwnership {
         EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
         TestEnvironment.resetPerTest();
         module = mock(GameModule.class);
-        when(module.getRules()).thenReturn(GameRules.SONIC_3K);
+        when(module.getPolicies()).thenReturn(new com.openggf.game.rules.GamePolicies(GameRules.SONIC_3K));
         when(module.rngFlavour()).thenReturn(GameRng.Flavour.S3K);
         when(module.createRuntimeArtCoordinator(any())).thenReturn(RuntimeArtCoordinator.NONE);
         SessionManager.openGameplaySession(module);

@@ -101,7 +101,7 @@ class TestFbzAct1ColdRoute {
             assertEquals(!donor.equals("off"), com.openggf.game.CrossGameFeatureProvider.isActive());
             if (!donor.equals("off")) {
                 assertEquals(donor, com.openggf.game.CrossGameFeatureProvider.getInstance().getDonorGameId());
-                assertNotSame(GameServices.module().getRules(), fixture.sprite().getGameRules());
+                assertNotSame(GameServices.module().getPolicies().rules(), fixture.sprite().getGameRules());
             }
             var player = fixture.sprite();
             assertEquals(mainCharacter, player.getCode().toLowerCase(java.util.Locale.ROOT));

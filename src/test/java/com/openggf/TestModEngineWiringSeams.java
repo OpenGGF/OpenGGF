@@ -70,7 +70,7 @@ class TestModEngineWiringSeams {
     void traceCaptureToolDisablesExternalContentBeforeEitherVerifyOrCaptureBoot()
             throws IOException {
         assertBefore("tools/TraceCaptureTool.java", DISABLE,
-                "TraceEntry entry = resolveTrace(args.trace())");
+                "entry = resolveTrace(args.trace())");
     }
 
     @Test

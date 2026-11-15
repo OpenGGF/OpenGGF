@@ -107,7 +107,10 @@ public class SpeedShoesTimer extends AbstractTimer implements DisplayPhaseTimer 
         // Sonic_Display (routine 2); hurt routine 4 draws directly and does not
         // visit the shoes check. Keep the timer frozen until normal control
         // resumes, matching the same routine gate as the native display timer.
-        if (sprite != null && sprite.isHurt()) {
+        // The powerup check runs in the turn of the routine that began the frame (Sonic CD PlayerMainUpdateObjects/
+        // PlayerUpdatePowerups, objects/r6/player.asm:590-621, :649-710): the frame in which hurt ends is still the hurt
+        // routine's turn and skips it, though the sprite is no longer hurt when the display step runs.
+        if (sprite != null && (sprite.isHurt() || sprite.getHurtAtFrameStart())) {
             return;
         }
         // ROM decrements only on aligned level frames (every `decimation`-th

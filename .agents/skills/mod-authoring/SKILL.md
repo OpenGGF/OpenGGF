@@ -20,7 +20,7 @@ then its minimal source links. Do not load every example or handbook chapter.
 | User intent | Read first | Key decision |
 |---|---|---|
 | Enemy in an existing stock act | [Badnik](../../../docs/modding/task-recipes.md#badnik-in-a-stock-act) | Bind an existing slot through owned registration; true additions need explicit expert level assembly |
-| Tune one character | [Movement](../../../docs/modding/task-recipes.md#one-characters-movement) | Scoped `PhysicsProvider.transform`, preserving modifiers, rules and optional init profile |
+| Tune one character | [Movement](../../../docs/modding/task-recipes.md#one-characters-movement) | Scoped `PhysicsProvider.transform`, preserving modifiers and optional init profile; game-wide rules stay on `GameModule.getPolicies()` |
 | Pause world simulation for a creator menu | [Gameplay hold](../../../docs/modding/task-recipes.md#hold-gameplay-for-a-menu) | One captured `GameplayFrameController`; HOLD versus native or controlled input |
 | Keep an earned upgrade after restart | [Persistence](../../../docs/modding/task-recipes.md#persistent-upgrade) | Owned `ModSaveSlot` plus separate reversible effects and durable settlement |
 | Reuse native AI with supported parameters | [Native recipe](../../../docs/modding/task-recipes.md#parameterized-native-enemy) | Existing facade/finite recipe; verify donor art and linked-child lifecycle |

@@ -1,6 +1,5 @@
 package com.openggf.game;
 
-import com.openggf.game.rules.GameRules;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -20,19 +19,17 @@ class TestPhysicsProfileEditing {
         assertEquals(32, p.runHeight());
         assertEquals(24, p.rollHeight());
     }
-    @Test void scopedTransformPreservesRulesAndOptionalInitSemantics() {
+    @Test void scopedTransformPreservesModifiersAndOptionalInitSemantics() {
         PhysicsProvider stock = new PhysicsProvider() {
             public PhysicsProfile getProfile(String c) { return PhysicsProfile.SONIC_2_SONIC; }
             public PhysicsProfile getInitProfile(String c) { return c.equals("tails") ? null : PhysicsProfile.SONIC_3K_SONIC_INIT; }
             public PhysicsModifiers getModifiers() { return PhysicsModifiers.STANDARD; }
-            public GameRules getRules() { return GameRules.SONIC_2; }
         };
         var edited = stock.transform("sonic"::equals, p -> p.withMax(0x480));
         assertEquals(0x480, edited.getProfile("sonic").max());
         assertEquals(0x480, edited.getInitProfile("sonic").max());
         assertSame(stock.getProfile("tails"), edited.getProfile("tails"));
         assertNull(edited.getInitProfile("tails"));
-        assertSame(stock.getRules(), edited.getRules());
         assertSame(stock.getModifiers(), edited.getModifiers());
     }
 }

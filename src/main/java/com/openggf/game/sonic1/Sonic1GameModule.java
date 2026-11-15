@@ -515,6 +515,14 @@ public class Sonic1GameModule implements com.openggf.game.internal.RetailRomAwar
         return physicsProvider;
     }
 
+    private static final com.openggf.game.rules.GamePolicies POLICIES =
+            new com.openggf.game.rules.GamePolicies(com.openggf.game.rules.GameRules.SONIC_1);
+
+    @Override
+    public com.openggf.game.rules.GamePolicies getPolicies() {
+        return POLICIES;
+    }
+
     @Override
     public int getRemappedFeatureZone(int logicalZone, int act, int levelZoneIndex) {
         // S1 SBZ act 3 is loaded from LZ zone data; remap to SBZ for feature lookups

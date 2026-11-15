@@ -3,8 +3,15 @@ package com.openggf.game.rules;
 import com.openggf.game.DonorCapabilities;
 
 /**
- * Composes typed cross-game rules by keeping runtime behavior owned by the host
- * game while importing only explicitly donated player capabilities.
+ * Rule-level composition helpers.
+ *
+ * <p>{@link #withPlayerRules} and {@link #withPlayerAndCameraRules} define a stock
+ * game's rules from a base game's constants (KiS2 over Sonic 2, Sonic CD over
+ * Sonic 1); they are not cross-game donation, and a guard limits their callers to
+ * the stock rule factories. Donation goes through
+ * {@link CrossGamePolicyComposer#donatePlayerCapabilities}; {@link #compose} is its
+ * rule-level implementation with the same capability-only contract, and a guard
+ * limits its production caller to that composer.
  */
 public final class CrossGameRuleComposer {
 
@@ -48,6 +55,35 @@ public final class CrossGameRuleComposer {
                 base.paletteWhiteFade());
     }
 
+    /**
+     * Copies {@code base} with its player movement, capability, animation and camera
+     * policies replaced and every other group kept. A game whose routines are another
+     * game's with routine-level differences (Sonic CD over Sonic 1) uses this instead
+     * of positional construction outside the owned rule factories.
+     */
+    public static GameRules withPlayerAndCameraRules(GameRules base, PlayerMovementRules playerMovement,
+            PlayerCapabilityRules playerCapability, PlayerAnimationRules playerAnimation, CameraRules camera) {
+        if (base == null) {
+            throw new IllegalArgumentException("Base GameRules are required");
+        }
+        if (playerMovement == null || playerCapability == null || playerAnimation == null || camera == null) {
+            throw new IllegalArgumentException("Replacement rules are required");
+        }
+        return new GameRules(
+                playerMovement,
+                playerCapability,
+                base.collision(),
+                playerAnimation,
+                camera,
+                base.ring(),
+                base.objectInteraction(),
+                base.sidekickCpu(),
+                base.powerUp(),
+                base.drowningBubble(),
+                base.dynamicArtDmaService(),
+                base.paletteWhiteFade());
+    }
+
     public static GameRules compose(GameRules host, GameRules donor, DonorCapabilities donorCapabilities) {
         if (host == null) {
             throw new IllegalArgumentException("Host GameRules are required");
@@ -75,7 +111,10 @@ public final class CrossGameRuleComposer {
                 hostCapability.superSpindashSpeedTable(),
                 hostCapability.glideAttacksEnabled()
                         || (donorCapability.glideAttacksEnabled()
-                        && donorCapabilities.getPlayableCharacters().contains(com.openggf.game.PlayerCharacter.KNUCKLES)));
+                        && donorCapabilities.getPlayableCharacters().contains(com.openggf.game.PlayerCharacter.KNUCKLES)),
+                // The host's standing tail and roll entry own these; no donor lists them.
+                hostCapability.timedChargeMoves(),
+                hostCapability.rollEntryRaisesForwardSpeedToMinimum());
 
         return new GameRules(
                 host.playerMovement(),

@@ -189,8 +189,8 @@ final class NativePlayerArtBindings {
         private static DynamicArtDecisionOwner dynamicArtOwner(String owner, PlayerSpriteRenderer renderer) {
             var module = GameServices.module();
             var lifecycle = GameServices.dynamicArtLifecycleOrNull();
-            if (module == null || lifecycle == null || module.getRules() == null
-                    || !module.getRules().dynamicArtDmaService().supportsPlayerDynamicArtAudit()) return null;
+            if (module == null || lifecycle == null || module.getPolicies() == null
+                    || !module.getPolicies().rules().dynamicArtDmaService().supportsPlayerDynamicArtAudit()) return null;
             var plan = module.getGameService(PlayerArtTransferPlan.class);
             if (plan == null || plan.bank(owner) == null) return null;
             return new DynamicArtDecisionOwner(lifecycle, owner, renderer);

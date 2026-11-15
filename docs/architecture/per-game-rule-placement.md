@@ -1,8 +1,24 @@
 # Per-Game Rule Placement
 
-Use this guide when adding or moving a Sonic 1, Sonic 2, or Sonic 3&K behavior divergence. The goal is to choose the smallest accurate owner instead of adding another broad rule bag.
+Use this guide when adding or moving a Sonic 1, Sonic 2, Sonic 3&K or Sonic CD behavior divergence. The goal is to choose the smallest accurate owner instead of adding another broad rule bag.
 
-This guide describes the ownership model for per-game rule gates. Game-wide shared runtime gates should use the narrowest typed `GameRules` record. Provider, profile, registry, zone, and object-local ownership rules apply when they are the smaller accurate owner. Do not add broad feature-set bags as a parallel rule source.
+This guide describes the ownership model for per-game rule gates. Game-wide shared runtime gates should use the narrowest typed `GameRules` record.
+
+## Who owns the rules
+
+`GameModule.getPolicies()` is the only owner of game-wide behavioural rules. It returns
+the immutable `GamePolicies` record, whose `rules()` component is the module's
+`GameRules`. Physics providers supply tuning profiles and water/speed-shoes modifiers
+only; audio profiles, art providers and other runtime components never supply policy.
+Policies hold no factories, callbacks or session state. Consumers read the narrow
+group they use (`module.getPolicies().rules().ring()`) and never store or pass the
+`GamePolicies` aggregate; only composition code names that type. A patch that ships a
+different rule overrides `getPolicies()` on its `DelegatingGameModule`. Cross-game
+donation uses only `CrossGamePolicyComposer.donatePlayerCapabilities`, which imports
+the `DonorCapabilities`-listed player abilities and keeps every other group the host's.
+`TestGamePolicyArchitectureGuard` enforces these boundaries. The
+[game policies design](designs/2026-11-15-game-policies.md) records the shape, the
+caller migration and the planned audio-rules component. Provider, profile, registry, zone, and object-local ownership rules apply when they are the smaller accurate owner. Do not add broad feature-set bags as a parallel rule source.
 
 ## Decision Tree
 
@@ -28,7 +44,9 @@ This guide describes the ownership model for per-game rule gates. Game-wide shar
      S1/S2 retain the overlay model and S3K uses CRAM steps. Donor character rules do not replace it.
      The owning ROM loops, cross-game values and publication/rewind checks are recorded in the
      [ending lifecycle decision](designs/2026-10-13-s3k-ending-lifecycle.md#native-white-palette-fade-owner-decision--2026-10-17-root).
-6. If no existing owner fits, stop and add an architecture note before adding a new rule group.
+6. If no existing owner fits, stop and add an architecture note before adding a new rule group. A new
+   `GamePolicies` category (beside `rules`) needs the same note and a guard update; never add a
+   module-level record of switches or a `*Features`/`*FeatureSet` bag.
 
 ## Admission Checklist
 
@@ -38,14 +56,44 @@ Every new per-game divergence must document:
 - Scope: game-wide, character-wide, object-family, zone-local, or data/provider-owned.
 - Owner: exact rule record, provider, profile, or registry.
 - Boundary rationale: why this owner is the smallest accurate owner, and why narrower object/zone/provider owners do or do not apply.
-- Cross-game value table: Sonic 1, Sonic 2, and Sonic 3&K values.
+- Cross-game value table: Sonic 1, Sonic 2, Sonic 3&K and, where it reads the rule, Sonic CD values.
 - Verification: focused unit test, trace replay, or explicit reason trace coverage is not applicable.
+
+## Sonic CD placement
+
+Sonic CD's level engine is Sonic 1's with additions, so its owners start from
+Sonic 1's and record only routine-level differences:
+
+- **Game-wide:** `game/soniccd/player/SonicCdRules` builds `GameRules` from
+  `GameRules.SONIC_1`, changing a component only where the CD routine differs
+  (each change cites the CD routine). New components it needs go in the
+  narrowest existing record with a value for every game.
+- **Per stage or zone:** every stage program carries its own engine copy;
+  `tools/soniccd/variant_census.py` lists the real differences, and each
+  becomes a `CdZoneFragment` entry (scroll, palette, tiles, water, events,
+  player hooks) or catalogue data, never a stage or zone name test in shared
+  code.
+- **Player call sites:** `PlayerStageRoutines` on the physics provider, one
+  method per native call site in the player routine.
+- **Level data shape:** interfaces in `game.internal` that the loaded `CdLevel`
+  implements (collision windows, loop chunks, vertical wrap).
+- **Engine-wide execution order or object model:** `game.internal` services
+  returned from `SonicCdGameModule.getGameService` (spawner order, stored
+  layout order, the re-evaluating solid routine, the object-drawn HUD).
+- **Objects:** one class per object, registered by its owner's fragment
+  (`common`, `shared`, a zone, or an act 3 boss), resolved by stage.
+
+The [engine map](engine-map.md#sonic-cd-module-and-shared-seams) lists every
+shared seam and what selects it.
 
 ## Review Rules
 
 - Prefer provider/profile ownership when a divergence is not shared runtime behavior.
 - Prefer a new narrow rule group over growing an unrelated rule record.
-- Do not add raw game-name branches in shared runtime code.
+- Do not add raw game-name branches in shared runtime code: neither `GameId` comparisons (the
+  architectural source guard) nor game-code strings such as `"s3k"` or stock-module `instanceof`
+  in `level`, `sprites`, `physics`, `camera`, `timer`, `graphics`, `game.rules` or `audio`
+  (`TestGamePolicyArchitectureGuard`).
 - `game.internal.StandingInputPolicy`, supplied by the host module service, owns the standing Move tail's controller
   precedence: S1/S2/KiS2 are Up-first, S3K is Down-first, and donor composition
   retains the host value. It is independent of the later low-speed Roll Duck

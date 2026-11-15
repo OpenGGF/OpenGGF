@@ -343,8 +343,8 @@ public class DelegatingGameModule implements GameModule {
     }
 
     @Override
-    public com.openggf.game.rules.GameRules getRules() {
-        return base.getRules();
+    public com.openggf.game.rules.GamePolicies getPolicies() {
+        return base.getPolicies();
     }
 
     @Override

@@ -60,13 +60,17 @@ public MyStandaloneModule(String owner, Level loadedLevel) {
             .zone("FIRST ZONE", new StandaloneGameSpec.Act(0x400, loadedLevel, 64, 160,
                     MusicReference.namespaced(owner, "zone-theme")))
             .physics(PhysicsProvider.fixed(PhysicsProfile.builder().build(),
-                    PhysicsModifiers.STANDARD, GameRules.SONIC_2))
+                    PhysicsModifiers.STANDARD))
+            .policies(new GamePolicies(GameRules.SONIC_2))
             .object(owner + ":walker", (spawn, registry) -> new MyWalker(spawn)).build());
 }
 ```
 
 The typed spec supplies the identifier/game code, no-ROM game loader, zone/act
 registry, initialization, common progression saves and `GameAudioProfile.silentNative()`.
+`GameModule.getPolicies()` owns the game-wide behavioural rules; the spec returns
+`.policies(...)`, which defaults to `new GamePolicies(GameRules.SONIC_2)`. Physics
+providers carry only profiles and modifiers.
 Audio profiles can inherit the optional `createSmpsLoader(Rom)` default when they
 use only authored audio. Native and expert profiles retain their loader overrides.
 Add ordered acts through `.zone(name, acts...)` and
@@ -97,9 +101,9 @@ identity/fault boundaries and the default no-op runtime-art callback are preserv
 See the [migration steps](getting-started.md#game-contract-import-migration).
 
 An expert module can use the no-argument base constructor and implement `getIdentifier()`, `createGame(GameDataSource)`, its
-registry, physics, touch responses and initialization directly. `ModGame` remains
-the expert base for a custom loader. Use literal `GameRules` and `PhysicsProfile`
-values appropriate to your game; do not pretend to be a stock `GameId` to inherit
+registry, physics, policies (`getPolicies()`), touch responses and initialization
+directly. `ModGame` remains the expert base for a custom loader. Use literal
+`GameRules` and `PhysicsProfile` values appropriate to your game; do not pretend to be a stock `GameId` to inherit
 ROM behavior.
 
 `GameDataSource` is the durable session capability. For standalone sessions,

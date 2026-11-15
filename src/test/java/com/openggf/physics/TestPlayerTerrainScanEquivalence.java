@@ -49,7 +49,7 @@ class TestPlayerTerrainScanEquivalence {
                     services, new Camera(services.configuration()), new SpriteManager(services.configuration()),
                     new CollisionSystem(new TerrainCollisionManager()), new WaterSystem(), new GameStateManager());
             var sprite = mock(AbstractPlayableSprite.class);
-            when(sprite.getGameRules()).thenReturn(module.getRules());
+            when(sprite.getGameRules()).thenReturn(module.getPolicies().rules());
             var sensor = new GroundSensor(sprite, Direction.DOWN, (byte) 0, (byte) 0, true);
             var scan = GroundSensor.class.getDeclaredMethod("scanVerticalLayer", LevelManager.class,
                     short.class, short.class, int.class, Direction.class, boolean.class,
@@ -75,7 +75,7 @@ class TestPlayerTerrainScanEquivalence {
                     services, new Camera(services.configuration()), new SpriteManager(services.configuration()),
                     new CollisionSystem(new TerrainCollisionManager()), new WaterSystem(), new GameStateManager());
             var sprite = mock(AbstractPlayableSprite.class);
-            when(sprite.getGameRules()).thenReturn(module.getRules());
+            when(sprite.getGameRules()).thenReturn(module.getPolicies().rules());
             var sensor = new GroundSensor(sprite, Direction.DOWN, (byte) 0, (byte) 0, true);
             var scan = GroundSensor.class.getDeclaredMethod("scanVerticalLayer", LevelManager.class,
                     short.class, short.class, int.class, Direction.class, boolean.class,

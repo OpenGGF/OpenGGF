@@ -52,6 +52,14 @@ selection, layout and activation remain internal host owners. Existing enum ordi
 preserved. The mutable `0.7` signature pin includes the new constant; descriptor candidate
 `0.7.0` and the empty published-baseline set are unchanged.
 
+`SonicConfiguration.SONIC_CD_DISC` adds the saved key `roms.soniccd`: the path of the
+Sonic CD (USA) disc image's `.cue` sheet (or, later on the same candidate with no surface
+change, a lossless `.chd`), listed beside the other games' ROM keys. It
+is appended to preserve existing enum ordinals. The mutable `0.7` signature pin
+(regenerated with `ModApiSignatureSurface --snapshot`) and the `ModApiVersion`
+candidate description include it; descriptor candidate `0.7.0` and the empty
+published-baseline set are unchanged.
+
 Stageplay uses the engine's unpublished 0.7.0 candidate. Canonical documents
 (version seven) and screenplays (version six) accept only their current shape;
 there is no published Stageplay format to migrate. Every set uses the same native
@@ -636,6 +644,34 @@ Construction and donation stay with game modules. Supplied-ROM scene decoding,
 configured donor selection, registered mod suppliers, palette refresh/order,
 Tails banks, aliases and restoration retain their existing implementations.
 No factory, registry, callback, facade or model replacement is introduced.
+
+## Game policy ownership candidate migration
+
+The reviewed unpublished 0.7 candidate moves game-wide behavioural rules from the
+physics provider to the module ([design](designs/2026-11-15-game-policies.md),
+0.8 roadmap Milestone 1). `GameModule.getPolicies()` is a new abstract method
+returning the immutable `com.openggf.game.rules.GamePolicies` record, whose only
+component in this slice is `GameRules rules`. `GameModule.getRules()`,
+`DelegatingGameModule.getRules()` and the abstract `PhysicsProvider.getRules()` are
+removed, `PhysicsProvider.fixed` drops its `GameRules` parameter, and
+`StandaloneGameSpec` gains `policies()` and `Builder.policies(GamePolicies)`
+(default `new GamePolicies(GameRules.SONIC_2)`, the previous `fixed(...)` default).
+`CrossGameFeatureProvider.getHybridRules()` becomes `getHybridPolicies()`.
+`GameRules` and its narrow records are unchanged.
+
+Creators move rule edits from physics wrappers to `getPolicies()`; patches built on
+`DelegatingGameModule` inherit the base value. Rebuild compiled mods: the removed
+methods and changed `fixed` descriptor are binary-incompatible, and an unchanged
+`>=0.7.0 <0.8.0` manifest cannot distinguish the old contract. The maintained
+standalone samples, the `infinite-sonic` and `sonic-survivors` examples and the
+creator guides change in the same commit.
+
+This is an intentional incompatible candidate-pin rewrite: 5 rows removed and 16
+added (the new record's type, annotation, constructor, component and accessors, and
+the replacement module/spec/provider methods). `ModApiVersion.CURRENT` remains
+`0.7.0`; the release descriptor stays byte-identical with candidate status and no
+published baseline. The donation composer `CrossGamePolicyComposer` is
+engine-owned and outside the creator surface.
 
 ## 0.7 reset inventory
 

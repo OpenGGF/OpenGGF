@@ -94,7 +94,16 @@ class Superproject:
     def pinned(self, path, rev='HEAD'):
         p = run(['git', 'ls-tree', rev, path], cwd=self.root, check=False)
         parts = p.stdout.split()
-        return parts[2] if len(parts) >= 3 and parts[1] == 'commit' else None
+        if len(parts) >= 3 and parts[1] == 'commit':
+            return parts[2]
+        # A submodule added by the commit being made (or a merge in progress)
+        # has no HEAD gitlink yet; its pin is the staged one.
+        if rev == 'HEAD':
+            p = run(['git', 'ls-files', '-s', '--', path], cwd=self.root, check=False)
+            parts = p.stdout.split()
+            if len(parts) >= 2 and parts[0] == '160000':
+                return parts[1]
+        return None
 
     def tracked(self, scan):
         p = run(['git', 'ls-files', '-z', '--', *scan], cwd=self.root)
