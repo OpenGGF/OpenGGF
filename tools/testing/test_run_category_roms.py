@@ -127,6 +127,86 @@ class RomDiscoveryTests(Fixture):
         self.assertIn('sonic2.rom.path', report['missing'])
 
 
+def chd(path, raw_sha1, *, tag=b'MComprHD', length=0x7C, version=5, body=b''):
+    """A CHD v5 header naming raw_sha1 at offset 0x40, then an arbitrary body."""
+    header = bytearray(0x7C)
+    header[0:8] = tag
+    header[8:16] = length.to_bytes(4, 'big') + version.to_bytes(4, 'big')
+    header[0x40:0x54] = bytes.fromhex(raw_sha1)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(bytes(header) + body)
+
+
+class DiscDiscoveryTests(Fixture):
+    KEY = 'ab' * 20
+
+    def discs(self):
+        return patch.dict(self.roms.DISC_PROPERTIES, {self.KEY: 'soniccd.disc.path'}, clear=True)
+
+    def test_the_real_usa_key_is_the_documented_header_sha1(self):
+        self.assertEqual({'8bcf26f53545dcd560ac9fd8db91766b977f1efd': 'soniccd.disc.path'},
+                         self.roms.DISC_PROPERTIES)
+        self.assertIn('soniccd.disc.path', self.roms.injected_properties())
+
+    def test_a_chd_is_identified_by_its_v5_header_without_reading_the_body(self):
+        chd(self.main / 'Sonic CD (USA).chd', self.KEY, body=b'compressed hunks' * 4096)
+        reads = []
+        original = Path.open
+
+        def recording(path, *args, **kwargs):
+            stream = original(path, *args, **kwargs)
+            if path.suffix == '.chd':
+                read = stream.read
+                stream.read = lambda size=-1: reads.append(size) or read(size)
+            return stream
+        with self.discs(), patch.object(Path, 'open', recording):
+            self.assertEqual([f"-Dsoniccd.disc.path={(self.main / 'Sonic CD (USA).chd').resolve()}"],
+                             self.roms.rom_args(self.linked))
+        self.assertEqual([0x7C], reads, 'only the 124-byte header is read')
+
+    def test_other_tags_versions_keys_and_short_files_are_not_the_disc(self):
+        cases = {'v4.chd': dict(version=4), 'length.chd': dict(length=0x78),
+                 'tag.chd': dict(tag=b'NotAChd!'), 'key.chd': dict()}
+        for name, shape in cases.items():
+            chd(self.linked / name, ('cd' * 20) if name == 'key.chd' else self.KEY, **shape)
+        (self.linked / 'short.chd').write_bytes(b'MComprHD')
+        chd(self.linked / 'image.gen', self.KEY)  # the right header under a cartridge suffix
+        with self.discs():
+            self.assertEqual([], self.roms.rom_args(self.linked))
+        self.assertIsNone(self.roms.chd_raw_sha1(self.linked / 'short.chd'))
+        self.assertEqual(self.KEY, self.roms.chd_raw_sha1(self.linked / 'image.gen'))
+
+    def test_the_callers_root_wins_and_linked_copies_resolve_once(self):
+        chd(self.main / 'main.chd', self.KEY)
+        chd(self.other / 'local.chd', self.KEY)
+        (self.linked / 'link.chd').symlink_to(self.main / 'main.chd')
+        with self.discs():
+            self.assertEqual([f"-Dsoniccd.disc.path={(self.other / 'local.chd').resolve()}"],
+                             self.roms.rom_args(self.other))
+            self.assertEqual([f"-Dsoniccd.disc.path={(self.main / 'main.chd').resolve()}"],
+                             self.roms.rom_args(self.linked))
+
+    def test_a_caller_disc_or_media_root_suppresses_injection_and_is_reported(self):
+        chd(self.main / 'disc.chd', self.KEY)
+        with self.discs():
+            discovered = self.roms.rom_args(self.linked)
+            for args, environment, caller in (
+                    (['-Dsoniccd.media.root=/media'], {}, {'soniccd.media.root'}),
+                    (['-Dsoniccd.disc.path='], {}, {'soniccd.disc.path'}),
+                    ([], {'MAVEN_OPTS': '-Dsoniccd.media.root=/m'}, {'soniccd.media.root'})):
+                with self.subTest(args=args, environment=environment):
+                    chosen = self.roms.caller_rom_properties(args, self.linked, environment)
+                    self.assertEqual(caller, chosen)
+                    self.assertEqual([], self.roms.without_caller(discovered, chosen))
+                    report = self.roms.rom_properties(self.roms.without_caller(discovered, chosen), chosen)
+                    self.assertEqual(sorted(caller), report['caller'])
+                    self.assertNotIn('soniccd.disc.path', report['missing'])
+            report = self.roms.rom_properties(discovered, set())
+            self.assertEqual(['soniccd.disc.path'], report['found'])
+            self.assertIn('found=soniccd.disc.path', self.roms.describe(report))
+            self.assertIn('soniccd.disc.path', self.roms.rom_properties([], set())['missing'])
+
+
 class LaunchTests(Fixture):
     """Assert the argv each route actually launches."""
 

@@ -679,12 +679,12 @@ def main(argv=None):
     if not building and runs_surefire_lifecycle(requested):
         # Admission, lean qualification and estimates above use the caller's
         # command; ROM paths can neither widen nor narrow them.
-        from rom_inputs import (ROM_PROPERTIES, caller_rom_properties, describe, rom_args,
+        from rom_inputs import (caller_rom_properties, describe, injected_properties, rom_args,
                                 rom_properties, without_caller)
         caller = caller_rom_properties(requested, Path.cwd())
-        # A command naming any ROM property chose its ROM set (the route gate's
-        # strict inputs, an empty value proving a skip); keep it hermetic.
-        named = any(key in token for key in ROM_PROPERTIES.values() for token in requested)
+        # A command naming any ROM or disc property chose its ROM set (the route
+        # gate's strict inputs, an empty value proving a skip); keep it hermetic.
+        named = any(key in token for key in injected_properties() for token in requested)
         roms = [] if named else without_caller(rom_args(Path.cwd()), caller)
         print(describe(rom_properties(roms, caller)) + '; tests for missing ROMs skip.', flush=True)
         args = [*args, *roms]

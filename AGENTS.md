@@ -74,16 +74,19 @@ New zones and acts follow the [zone and act testing standard](docs/guide/contrib
 
 ## ROM and reference setup
 
-Queued test commands and category runs find verified root `.gen` files (then a linked worktree's main checkout) by SHA-1 and pass absolute paths; pass a property only to pin another dump. Check the wrapper's found/missing line: a missing or wrong path silently skips `@RequiresRom` tests. Never rename, copy, delete or link ROMs. Verify identity when it matters:
+Queued test commands and category runs find verified root `.gen` files and the Sonic CD `.chd` (then a linked worktree's main checkout) by identity and pass absolute paths; pass a property only to pin another dump. Check the wrapper's found/missing line: a missing or wrong path silently skips `@RequiresRom` tests. Never rename, copy, delete or link ROMs. Verify identity when it matters:
 
 | ROM | Test property | CRC32 | SHA-1 |
 |---|---|---|---|
 | S1 World REV01 | `-Dsonic1.rom.path=` | `AFE05EEE` | `69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B` |
 | S2 World REV01 | `-Dsonic2.rom.path=` | `7B905383` | `8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9` |
 | S3&K locked-on | `-Ds3k.rom.path=` | `63522553` | `CFBF98C36C776677290A872547AC47C53D2761D6` |
+| Sonic CD (USA) CHD v5 | `-Dsoniccd.disc.path=` | `C49A6447` | `2204960425E0F338D038CFC1AC98DE6CB003EEDE` |
+
+The wrapper keys the CHD on its header raw-data SHA-1 `8BCF26F53545DCD560AC9FD8DB91766B977F1EFD` (offset 0x40), not the file hash; opening the disc verifies it whole against the USA release. A caller's `-Dsoniccd.media.root=<dir holding USA/, Europe/, Japan/>` wins and is still needed by the regional and CUE-layout tests.
 
 The disassemblies in `docs/s1disasm`, `docs/s2disasm`, `docs/skdisasm` and `docs/scddisasm` (Sonic CD) are optional development references; builds, tests, and runtime do not require them (`git submodule update --init`).
-Sonic CD runs from the user's USA disc image, named by `-Dsoniccd.media.root=<dir holding USA/*.cue>` (not discovered); its native recordings are user-local and never committed, and tests skip without either.
+Sonic CD's native recordings are user-local and never committed (`-Dsoniccd.native.root`, default `<media root>/../native`); tests skip without them or the disc.
 Cite a label beside its lines, e.g. `loc_390FA (s2.asm:77149-77163)`. `python3 tools/disasm/disasm_citations.py check` verifies citations against the pins, and the pre-commit hook rejects new stale ones. A commit that moves a pin also runs `disasm_citations.py remap <name> <old> <new> --write`.
 Trace production lives in the optional pinned `tools/tracechaser/` submodule (`git submodule update --init --recursive tools/tracechaser`); follow its guide and BizHawk 2.11 requirement.
 

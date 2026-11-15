@@ -8,7 +8,7 @@ import com.openggf.game.internal.HostedGameMedia;
 import com.openggf.game.launch.HostedMediaLaunch;
 import com.openggf.game.launch.LaunchProfileStore;
 import com.openggf.game.launch.MasterTitleLaunchCoordinator;
-import com.openggf.game.soniccd.media.CdHostedMedia;
+import com.openggf.game.soniccd.CdTestMedia;
 import com.openggf.i18n.UiMessages;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -30,20 +30,19 @@ import static org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT;
 /**
  * The launcher's seam for a stock game that is not a cartridge ROM: the registry's media kind, the hosted
  * shelf entry, the disc search and its messages, the shelf's Start, and the stock team a hosted launch uses.
- * No disc is needed: the media property is cleared so only the configured ROM folder is searched.
+ * No disc is needed: the disc properties are cleared so only the configured ROM folder is searched.
  */
 @Isolated
 class TestHostedMediaLaunch {
     @TempDir Path folder;
-    private String mediaRoot;
+    private CdTestMedia.Restore discProperties;
 
     @BeforeEach void clearMediaProperty() {
-        mediaRoot = System.getProperty(CdHostedMedia.MEDIA_ROOT_PROPERTY);
-        System.clearProperty(CdHostedMedia.MEDIA_ROOT_PROPERTY);
+        discProperties = CdTestMedia.withoutDiscProperties();
     }
 
     @AfterEach void restore() {
-        if (mediaRoot != null) System.setProperty(CdHostedMedia.MEDIA_ROOT_PROPERTY, mediaRoot);
+        discProperties.close();
         UiMessages.selectLanguage("en");
     }
 

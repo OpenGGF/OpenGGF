@@ -41,7 +41,7 @@ An explicitly loaded mod gets fresh registrations for that exact launch team;
 the capture keeps its physical input handler and follows the new player.
 Headless Return to hub remains unsupported.
 
-Sonic CD: `--game scd` with `-Dsoniccd.media.root=<dir holding USA/<disc>.cue>`
+Sonic CD: `--game scd` with `-Dsoniccd.disc.path=<the USA .cue or .chd>` or `-Dsoniccd.media.root=<dir holding USA/<disc>.cue>`
 on the JVM; `--zone R11B` names a stage program, or `--zone ppz --act N` with
 N 1-10 in the zone's stage order. `TraceCaptureTool` films a Sonic CD trace
 directory given by path (outside the trace catalogue), and

@@ -14,12 +14,7 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class TestCdR4WaterMedia {
     @Test void allTenActualUsaProgramsContainOriginalWaterHeightOperands() throws Exception {
-        String root=System.getProperty("soniccd.media.root");org.junit.jupiter.api.Assumptions.assumeTrue(root!=null&&!root.isBlank(),"Set soniccd.media.root for actual R4 media checks");
-        Path cue;
-        try(var paths=Files.list(Path.of(root).resolve("USA"))){
-            var cues=paths.filter(p->p.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".cue")).toList();
-            assertEquals(1,cues.size());cue=cues.getFirst();
-        }
+        Path cue=com.openggf.game.soniccd.CdTestMedia.usaCue();
         byte[] expected=HexFormat.of().parseHex("0300028001d00fff05b0053005100fff0490049004900fff");
         var programs=List.of(CdNativeFile.R41A,CdNativeFile.R41B,CdNativeFile.R41C,CdNativeFile.R41D,
                 CdNativeFile.R42A,CdNativeFile.R42B,CdNativeFile.R42C,CdNativeFile.R42D,CdNativeFile.R43C,CdNativeFile.R43D);

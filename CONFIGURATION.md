@@ -286,7 +286,8 @@ playability is tracked by the KiS2 patch design, not by this table.
 
 A player's Sonic CD disc is resolved in this order, first match wins:
 
-1. the `soniccd.media.root` system property below (tests and tools);
+1. the `soniccd.media.root` system property below (tests and tools), else the
+   `soniccd.disc.path` system property;
 2. `roms.soniccd` (`SONIC_CD_DISC`), the path of the disc's `.cue` sheet or `.chd`;
 3. when that key is blank, the ROM folder (`roms.directory`, default the working
    directory) and up to two sub-folders below it: the `.cue` sheet or `.chd` whose data track
@@ -304,20 +305,22 @@ native recordings the tests compare with, by JVM system properties
 | Property | Read by | Meaning |
 |----------|---------|---------|
 | `soniccd.media.root` | Sonic CD tests; `GameplayCaptureTool --game scd`, `TraceCaptureTool` for a Sonic CD trace directory, `SonicCdEndingCaptureTool`; the launcher | Directory holding `USA/<disc>.cue` (the first `.cue` there, with its track files). When set, it wins over `roms.soniccd` and the ROM-folder search. Unset: the launcher and tools search the ROM folder; the tests skip. |
-| `soniccd.native.root` | Sonic CD tests | Root of the user-local BizHawk recordings (traces, movies, screenshots, RAM probes). Default `<soniccd.media.root>/../native`. Absent files skip the test. |
+| `soniccd.disc.path` | Sonic CD tests; the same tools and the launcher | The USA disc's `.cue` sheet or `.chd` itself. Used when `soniccd.media.root` is unset; like it, wins over `roms.soniccd` and the ROM-folder search, and a disc that is not the USA one is refused. The queued test wrappers set it from a USA CHD in the worktree, `--rom-directory` or the main checkout, identified by the CHD v5 header's raw-data SHA-1. Tests that need the regional folders or a CUE sheet still need `soniccd.media.root`. |
+| `soniccd.native.root` | Sonic CD tests | Root of the user-local BizHawk recordings (traces, movies, screenshots, RAM probes). Default `<soniccd.media.root>/../native` when a media root is set, else none (the tests skip). Absent files skip the test. |
 | `soniccd.fixtures.root` | `TestSonicCdFixtureFrontier`, `TestObj3Probe` | Fixture set to replay. Default `<native root>/rehost-fixtures` (14-second stage fixtures); `<native root>/rehost-long` holds the full-act routes. |
 | `soniccd.fixture.payloads` | `TestSonicCdFixtureFrontier` | Comma-separated stage programs (`R11A,R31B`); default all 70. |
 | `soniccd.frontier.out` | `TestSonicCdFixtureFrontier` | Also write the per-stage frontier table (Markdown) to this file. |
 | `soniccd.frontier.continue` | `TestSonicCdFixtureFrontier` | `true` reports a second-divergence view after each stage's first divergence. |
 | `soniccd.trace.frontier`, `soniccd.trace.dumpFrom`, `soniccd.trace.dumpTo` | `TestSonicCdR11aTraceReplay` | Expected first-error row, and a row range to print. |
-| `soniccd.special.native.root` | special stage native tests | Special stage recordings. Default `<soniccd.media.root>/../native/rehost-special`. |
+| `soniccd.special.native.root` | special stage native tests | Special stage recordings. Default `<native root>/rehost-special`. |
 | `soniccd.pcm.fixtures`, `soniccd.pcm.musicFixtures` | `TestCdPcmNativeContinuations`, `TestCdPcmNativeMusic` | Native PCM chip captures. Unset: skipped. |
 | `soniccd.stamp.fixtures`, `soniccd.stamp.ownerLedger` | `TestCdStampNativeContinuations`, `TestCdStampOwnerLedgerSourceModel` | Native stamp renderer captures and owner ledger. Unset: skipped. |
 | `obj3.probe`, `obj3.warp`, `obj3.census`, `obj3.idle` and their modifiers (`obj3.dump`, `obj3.slots`, `obj3.poke`, `obj3.warp.from`, `obj3.census.ids`, `obj6.floor`, `obj6.water`) | `TestObj3Probe` | Explicit diagnostics that print engine state beside a fixture's rows; each method skips unless its property is set. |
 | `boss1.diagRow`, `qqzboss.diagRow`, `ttzboss.arenaX`, `ttzboss.chaseRewindRow`, `ttzboss.timelineFrames` | boss native, rewind and timeline tests | Diagnostic rows and timeline overrides for one boss check. |
 
 In a category run, test JVMs see these properties only through `MAVEN_ARGS`
-or a JVM option variable. The runner declares the disc, the native root and the
+or a JVM option variable; the runner itself adds only a discovered
+`soniccd.disc.path`. The runner declares the media root, the native root and the
 stamp ledger present when `soniccd.media.root`, `soniccd.native.root` or
 `soniccd.stamp.ownerLedger` is set, and classifies skips with
 `tools/testing/release-skip-policy.json`.

@@ -3,17 +3,13 @@ package com.openggf.game.soniccd.audio;
 import com.openggf.game.soniccd.CdNativeFile;
 import com.openggf.game.soniccd.CdReleaseVariant;
 import com.openggf.game.soniccd.media.CdProgramAssets;
-import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
 import java.nio.ReadOnlyBufferException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.util.HexFormat;
-import java.util.Locale;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -121,14 +117,8 @@ class TestCdFmSoundAssets {
         try (var programs = open(CdReleaseVariant.USA)) { return CdFmSoundAssets.fromPrograms(programs); }
     }
     private static CdProgramAssets open(CdReleaseVariant variant) throws Exception {
-        String root = System.getProperty("soniccd.media.root");
-        Assumptions.assumeTrue(root != null && !root.isBlank(), "Set soniccd.media.root for actual FM source checks");
-        String directory = switch (variant) { case USA -> "USA"; case JAPAN -> "Japan"; case EUROPE -> "Europe"; };
-        try (var files = Files.list(Path.of(root).resolve(directory))) {
-            var cues = files.filter(p -> p.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".cue")).toList();
-            assertEquals(1, cues.size());
-            return CdProgramAssets.open(cues.getFirst(), Optional.of(variant), Optional.empty());
-        }
+        return CdProgramAssets.open(com.openggf.game.soniccd.CdTestMedia.disc(variant), Optional.of(variant),
+                Optional.empty());
     }
     private static String hash(byte[] bytes) throws Exception {
         return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes));

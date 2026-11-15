@@ -9,7 +9,7 @@
     "audio_reference_files": "AudioReferenceGenerator output for AudioRegressionTest (optional measurement input)",
     "s3k_gumball_roundtrip": "Recorded three-segment S3K AIZ gumball round-trip fixture at src/test/resources/traces/s3k/runs/s3k-aiz-gumball-roundtrip; explicitly declare absent only after checking the directory is absent.",
     "s3k_pachinko_roundtrip": "Recorded three-segment S3K AIZ pachinko round-trip fixture at src/test/resources/traces/s3k/runs/s3k-aiz-pachinko-roundtrip; explicitly declare absent only after checking the directory is absent.",
-    "soniccd_media": "-Dsoniccd.media.root directory holding the user's Sonic CD disc images (optional user media)",
+    "soniccd_media": "-Dsoniccd.media.root directory holding the user's Sonic CD disc images (optional user media; declared present only for an explicit media root). The queued wrappers also pass a discovered USA CHD as -Dsoniccd.disc.path, which enables the single-disc tests; regional and CUE-layout tests still need the media root",
     "soniccd_native": "-Dsoniccd.native.root BizHawk Sonic CD reference captures and traces (optional measurement input; tests also look beside the media root)",
     "soniccd_stamp_ledger": "-Dsoniccd.stamp.ownerLedger native Sonic CD stamp owner ledger (optional measurement input)"
   },

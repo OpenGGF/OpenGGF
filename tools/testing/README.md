@@ -273,7 +273,10 @@ Run that additional lane for FBZ traversal changes and exhaustive ROM validation
 The category runner's ordinary/guard result does not include this lane.
 
 The runner and the focused queue share `rom_inputs.py`, which identifies existing `.gen`
-files by the documented SHA-1 identities and passes absolute ROM paths. It searches the
+files by the documented SHA-1 identities and passes absolute ROM paths. It also passes a
+Sonic CD (USA) CHD as `soniccd.disc.path`, identified by its CHD v5 header's raw-data SHA-1
+(only the 124-byte header is read; the engine verifies the whole disc when a test opens it).
+A caller's `soniccd.media.root` covers the disc and suppresses that injection. It searches the
 worktree root first, then an explicit `--rom-directory /absolute/original/ROM/directory`,
 then the repository's main checkout when the root is a linked worktree. No other worktree
 is searched. The first original found for a property wins, including the documented KiS2

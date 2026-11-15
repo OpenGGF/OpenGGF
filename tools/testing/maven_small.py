@@ -148,7 +148,7 @@ _SELECTOR = re.compile(_CLASS + r'(?:#[A-Za-z_][A-Za-z_0-9]*(?:\+[A-Za-z_][A-Za-
 _SWITCHES = {'-B', '--batch-mode', '-q', '--quiet', '-e', '--errors', '-ntp',
              '--no-transfer-progress', '-o', '--offline', '-U', '--update-snapshots'}
 _PROPERTIES = {'mse', 'sonic1.rom.path', 'sonic2.rom.path', 's3k.rom.path', 'kis2.rom.path',
-               'openggf.headless.gl', 'openggf.surefire.reports', 'openggf.test.tmpdir'}
+               'soniccd.disc.path', 'openggf.headless.gl', 'openggf.surefire.reports', 'openggf.test.tmpdir'}
 
 
 def _source_inventory(root):

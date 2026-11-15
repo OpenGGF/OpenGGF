@@ -4,16 +4,13 @@ import com.openggf.game.soniccd.CdReleaseVariant;
 import com.openggf.game.soniccd.level.CdAssetBytes;
 import com.openggf.game.soniccd.media.CdProgramAssets;
 import com.openggf.game.soniccd.media.CdTimeWarpPrograms;
-import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 
 import java.nio.ReadOnlyBufferException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
 import java.util.OptionalInt;
 
@@ -330,11 +327,7 @@ class TestCdWarpScene {
 
     private static synchronized CdWarpAssets assets() throws Exception {
         if (cachedAssets != null) return cachedAssets;
-        String media = System.getProperty("soniccd.media.root"); Assumptions.assumeTrue(media != null && !media.isBlank(), "Actual original USA media configured");
-        Path cue;
-        try (var files = Files.list(Path.of(media).resolve("USA"))) {
-            var cues = files.filter(p -> p.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".cue")).toList(); assertEquals(1, cues.size()); cue = cues.getFirst();
-        }
+        Path cue = com.openggf.game.soniccd.CdTestMedia.usaCue();
         try (var programs = CdProgramAssets.open(cue, Optional.of(CdReleaseVariant.USA), Optional.empty())) {
             cachedAssets = CdWarpAssets.fromPrograms(CdTimeWarpPrograms.fromPrograms(programs));
         }
