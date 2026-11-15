@@ -419,11 +419,12 @@ in the re-host plan's Status table.
 | `PhysicsModifiers` | Water / speed shoes multiplier rules (shared `STANDARD` across all games) |
 | `CollisionModel` | Enum: `UNIFIED` (S1) vs `DUAL_PATH` (S2/S3K) |
 | `PhysicsProvider` | Interface tying the above together, per game module |
+| `GamePolicies` | Immutable game-wide policies from `GameModule.getPolicies()`; `rules()` is the typed `GameRules` (not physics) |
 
 **Resolution flow:** `AbstractPlayableSprite`'s constructor calls `defineSpeeds()` (S2
 fallback values) → `resolvePhysicsProfile()` queries
 `GameModuleRegistry.getCurrent().getPhysicsProvider()` → profile values overwrite
-fallbacks, modifiers and typed `GameRules` are cached → getters apply modifiers dynamically
+fallbacks, modifiers and the module's `getPolicies().rules()` are cached → getters apply modifiers dynamically
 (water / speed shoes).
 
 **Collision model.** S1 (`UNIFIED`): single collision index, solidity bits hardcoded per
