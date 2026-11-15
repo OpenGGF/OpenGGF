@@ -91,6 +91,14 @@ public class LostRingObjectInstance extends AbstractObjectInstance
     private boolean hasRetainedArtPriority;
     private boolean directSharedSpillFrame;
     private boolean nativeDisplaySubmissions;
+    /**
+     * Rings this owner will spill on its first turn, under
+     * {@link com.openggf.game.internal.LostRingSpillAtOwnerTurn}; 0 once it has (or for an ordinary ring). Until then
+     * the slot holds only the owner's ID and position: no collision, no drawing, no movement.
+     */
+    private int pendingSpillRings;
+    private int pendingSpillX;
+    private int pendingSpillY;
 
     /**
      * Shared spin owner; the displayed frame = owner.frame() + phaseOffset. This is
@@ -130,9 +138,20 @@ public class LostRingObjectInstance extends AbstractObjectInstance
      */
     public static LostRingObjectInstance forTest(int xPixel, int yPixel, int xVel, int yVel,
                                                  int phaseOffset, int lifetime) {
+        return build(DEFAULT_OBJECT_ID, xPixel, yPixel, xVel, yVel, phaseOffset, lifetime);
+    }
+
+    /**
+     * The lost ring's object ID where the game names none through
+     * {@link com.openggf.game.internal.LostRingObjectId}: Sonic 1's and Sonic 2's {@code $37}.
+     */
+    public static final int DEFAULT_OBJECT_ID = 0x37;
+
+    private static LostRingObjectInstance build(int objectId, int xPixel, int yPixel, int xVel, int yVel,
+                                                int phaseOffset, int lifetime) {
         LostRingObjectInstance ring =
                 new LostRingObjectInstance(new ObjectSpawn(xPixel & 0xFFFF, yPixel & 0xFFFF,
-                        0x37, 0, 0, false, 0));
+                        objectId & 0xFF, 0, 0, false, 0));
         ring.xSubpixel = xPixel << 8;
         ring.ySubpixel = yPixel << 8;
         ring.xVel = xVel;
@@ -145,6 +164,40 @@ public class LostRingObjectInstance extends AbstractObjectInstance
     }
 
     /**
+     * The owner a hurt leaves in a slot the object loop has passed, under
+     * {@link com.openggf.game.internal.LostRingSpillAtOwnerTurn}: {@code HurtPlayer} writes only its ID and position
+     * (Palmtree Panic/Player Object Collision.asm:234-238); {@code ObjLostRing_Init} spills {@code rings} rings from
+     * there on its next turn.
+     */
+    static LostRingObjectInstance pendingSpillOwner(int objectId, int xPixel, int yPixel, int rings) {
+        LostRingObjectInstance owner = build(objectId, xPixel, yPixel, 0, 0, 0, 0);
+        owner.pendingSpillRings = rings;
+        owner.pendingSpillX = xPixel;
+        owner.pendingSpillY = yPixel;
+        return owner;
+    }
+
+    /** True while this owner waits for its turn to spill (see {@link #pendingSpillOwner}). */
+    public boolean isPendingSpillOwner() {
+        return pendingSpillRings > 0;
+    }
+
+    /** The pending owner turns into the spill's first ring (.DoInit with a1 = a0, Ring/Main.asm:333-395). */
+    void beginSpill(int xPixel, int yPixel, int xVel, int yVel, int phaseOffset, int lifetime,
+                    SpillAnimationState spillAnimation) {
+        this.pendingSpillRings = 0;
+        this.xSubpixel = xPixel << 8;
+        this.ySubpixel = yPixel << 8;
+        this.xVel = xVel;
+        this.yVel = yVel;
+        this.phaseOffset = phaseOffset;
+        this.lifetime = lifetime;
+        this.collected = false;
+        this.romRenderFlagForFloorProbe = true;
+        this.spillAnimation = spillAnimation;
+    }
+
+    /**
      * Production spawn factory: build a spilled ring at the given pixel position with the
      * ROM bounce velocity / phase / lifetime, sharing the {@code spillAnimation} owner.
      * Mirrors the {@link LostRing#reset} fixed-point contract (xSubpixel = x &lt;&lt; 8).
@@ -152,7 +205,14 @@ public class LostRingObjectInstance extends AbstractObjectInstance
     public static LostRingObjectInstance spawn(int xPixel, int yPixel, int xVel, int yVel,
                                                int phaseOffset, int lifetime,
                                                SpillAnimationState spillAnimation) {
-        LostRingObjectInstance ring = forTest(xPixel, yPixel, xVel, yVel, phaseOffset, lifetime);
+        return spawn(DEFAULT_OBJECT_ID, xPixel, yPixel, xVel, yVel, phaseOffset, lifetime, spillAnimation);
+    }
+
+    /** {@link #spawn(int, int, int, int, int, int, SpillAnimationState)} under the game's lost-ring object ID. */
+    public static LostRingObjectInstance spawn(int objectId, int xPixel, int yPixel, int xVel, int yVel,
+                                               int phaseOffset, int lifetime,
+                                               SpillAnimationState spillAnimation) {
+        LostRingObjectInstance ring = build(objectId, xPixel, yPixel, xVel, yVel, phaseOffset, lifetime);
         ring.spillAnimation = spillAnimation;
         return ring;
     }
@@ -386,6 +446,15 @@ public class LostRingObjectInstance extends AbstractObjectInstance
     public void update(int vIntRunCount, PlayableEntity player) {
         if (isDestroyed()) {
             return;
+        }
+        if (pendingSpillRings > 0) {
+            // ObjLostRing_Init on the owner's turn, then straight into ObjLostRing_Main (Ring/Main.asm:332-410).
+            ObjectServices services = servicesOrNull();
+            RingManager rings = services != null ? services.ringManager() : null;
+            if (rings == null || !(player instanceof AbstractPlayableSprite playable)) return;
+            RingManagerInternalAccess.spillFromPendingOwner(rings, this, playable, pendingSpillRings,
+                    resolveExecutedFrameCounter(vIntRunCount), pendingSpillX, pendingSpillY);
+            if (pendingSpillRings > 0) return;
         }
         if (independentLifetime && !collected && --lifetime < 0) {
             setDestroyed(true);
@@ -754,7 +823,7 @@ public class LostRingObjectInstance extends AbstractObjectInstance
 
     /** Type marker consumed by the Stage-2 unified touch branch (NOT the $47 byte shape). */
     public boolean isLostRingCollectible() {
-        return true;
+        return pendingSpillRings == 0;
     }
 
     /** ROM size index $07 → collision_flags low bits. */
@@ -766,7 +835,7 @@ public class LostRingObjectInstance extends AbstractObjectInstance
     public int getCollisionFlags() {
         // ROM Obj37: collision_flags = $47 while collectible; cleared on collection
         // (mirrors Sonic1RingInstance.java:167).
-        return collectionRoutineStarted || pickupDelayTicks>0 || !com.openggf.game.mutators.LevelMutatorPolicyAccess.ringsAllowed(servicesOrNull())
+        return collectionRoutineStarted || pickupDelayTicks>0 || pendingSpillRings > 0 || !com.openggf.game.mutators.LevelMutatorPolicyAccess.ringsAllowed(servicesOrNull())
                 ? 0 : LOST_RING_COLLISION_FLAGS;
     }
 
@@ -866,7 +935,7 @@ public class LostRingObjectInstance extends AbstractObjectInstance
         // BuildSprites/Render_Sprites rejects this SST before mapping expansion.
         // Keep the existing game-specific Obj37 vertical extent, independent of
         // the prior render bit used by the floor probe.
-        if (isDestroyed() || !isWithinRenderSpriteBounds(
+        if (isDestroyed() || pendingSpillRings > 0 || !isWithinRenderSpriteBounds(
                 RING_RENDER_HALF_WIDTH, resolveLostRingRenderVerticalMargin())) {
             return;
         }

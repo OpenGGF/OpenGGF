@@ -276,7 +276,12 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
         // ROM Sonic_Move/loc_11350 only applies the (angle + $40) sign skip
         // when the angle is not on an exact cardinal quadrant. Exact ceiling
         // angle $80 must still run CalcRoomInFront (sonic3k.asm:22743-22751).
-        if (((angle & 0x3F) != 0 && (((angle + 0x40) & 0x80) != 0)) || gSpeed == 0) {
+        // A host whose gate is the sign alone never checks on a ceiling.
+        boolean cardinalChecks = com.openggf.game.internal.GroundWallCheckAngleGate.forHost(
+                levelManager.getGameModule())
+                == com.openggf.game.internal.GroundWallCheckAngleGate.SIGN_EXCEPT_CARDINAL;
+        boolean ceilingSkip = ((angle + 0x40) & 0x80) != 0 && (!cardinalChecks || (angle & 0x3F) != 0);
+        if (ceilingSkip || gSpeed == 0) {
             return;
         }
 
@@ -490,10 +495,48 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
         return mode == 0x40 ? facingLeft : !facingLeft;
     }
 
+    /**
+     * The projected wall distance {@code CalcRoomInFront} returns for a probe angle the
+     * caller chooses, without the ground-speed rotation or any response: the player's
+     * 16.16 position plus its velocity times 256 is probed in the angle's quadrant,
+     * 8px lower on a flat wall quadrant (Sonic 1 {@code Sonic_WalkSpeed}; Sonic CD
+     * {@code PlayerCheckBlockFront}, scddisasm src/common/object_block_collide.asm:3-46).
+     * Negative is the overlap; {@link Integer#MAX_VALUE} when there is no level.
+     *
+     * <p>Like the routine it models, the probe leaves the shared angle registers behind:
+     * {@code move.b d0,collide_angle_1} and {@code collide_angle_2} store the probe angle
+     * ({@code PlayerCheckBlockFront}, scddisasm src/common/object_block_collide.asm:16-17), then
+     * the wall search writes the angle of the block it finds into {@code collide_angle_1}
+     * ({@code lea collide_angle_1,a4}: {@code PlayerCheckBlockRight2}, :211-219;
+     * {@code PlayerCheckBlockLeft2}, :371-380). The player's tail copies the pair to its tilt
+     * bytes (src/objects/player.asm:318-319), which the next frame's ledge-balance test reads.
+     */
+    int projectedWallDistance(AbstractPlayableSprite sprite, int probeAngle) {
+        if (sprite == null) {
+            return Integer.MAX_VALUE;
+        }
+        var levelManager = sprite.currentLevelManager();
+        if (levelManager == null || levelManager.getCurrentLevel() == null) {
+            return Integer.MAX_VALUE;
+        }
+        int xPos32 = (sprite.getX() << 16) | (sprite.getXSubpixelRaw());
+        int yPos32 = (sprite.getY() << 16) | (sprite.getYSubpixelRaw());
+        short predictedDx = (short) (((xPos32 + ((int) sprite.getXSpeed() << 8)) >> 16) - sprite.getX());
+        short predictedDy = (short) (((yPos32 + ((int) sprite.getYSpeed() << 8)) >> 16) - sprite.getY());
+        SensorResult result = scanCalcRoomInFront(sprite, describeRotatedRoomInFrontProbe(probeAngle & 0xFF),
+                predictedDx, predictedDy);
+        primaryAngleOutput = probeAngle & 0xFF;
+        secondaryAngleOutput = probeAngle & 0xFF;
+        applyPrimaryAngleWrites(result);
+        return result == null ? Integer.MAX_VALUE : result.distance();
+    }
+
     static CalcRoomInFrontProbe describeCalcRoomInFrontProbe(int angle, short gSpeed) {
         int rotation = (gSpeed < 0) ? 0x40 : 0xC0;
-        int rotatedAngle = (angle + rotation) & 0xFF;
+        return describeRotatedRoomInFrontProbe((angle + rotation) & 0xFF);
+    }
 
+    private static CalcRoomInFrontProbe describeRotatedRoomInFrontProbe(int rotatedAngle) {
         // ROM probe direction: Sonic_WalkSpeed (S1) and CalcRoomInFront (S2) both use
         // the asymmetric quadrant rounding from AnglePos for dispatching the sensor probe.
         // This differs from the simple (angle+0x20)&0xC0 used for velocity adjustment
@@ -756,14 +799,17 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
                     new CalcRoomOverHeadProbe(Direction.DOWN, xRadius, yRadius, 0, 0, sprite.getTopSolidBit()),
                     new CalcRoomOverHeadProbe(Direction.DOWN, -xRadius, yRadius, 0, 0, sprite.getTopSolidBit())
             };
-            case 0x40 -> {
-                int probeX = sprite.getCentreX() - yRadius;
-                int xorDelta = (probeX ^ 0x0F) - probeX;
-                yield new CalcRoomOverHeadProbe[] {
-                        new CalcRoomOverHeadProbe(Direction.LEFT, -yRadius, -xRadius, xorDelta, 0, sprite.getLrbSolidBit()),
-                        new CalcRoomOverHeadProbe(Direction.LEFT, -yRadius, xRadius, xorDelta, 0, sprite.getLrbSolidBit())
-                };
-            }
+            // The left probes apply eori.w #$F,d3 to the X before FindWall (S1 Sonic_FindWallLeft,
+            // _incObj/Sonic Collision.asm:496, 516; S2 CheckLeftCeilingDist, s2.asm:44478; Sonic CD
+            // PlayerCheckBlockLeftWide, scddisasm src/common/object_block_collide.asm:338, 354), as the
+            // wall-in-front probe does. The LEFT wall scan already models that flip for the raw X
+            // (GroundSensor.evaluateWallTile; CalcRoomInFront passes the raw X too), so the probe passes
+            // x_pos - y_radius unflipped: flipping it here as well measured from the mirrored column of
+            // the 16px block (Sonic CD R71A row 3035: 12px where the ROM reads 3, a jump the ROM refuses).
+            case 0x40 -> new CalcRoomOverHeadProbe[] {
+                    new CalcRoomOverHeadProbe(Direction.LEFT, -yRadius, -xRadius, 0, 0, sprite.getLrbSolidBit()),
+                    new CalcRoomOverHeadProbe(Direction.LEFT, -yRadius, xRadius, 0, 0, sprite.getLrbSolidBit())
+            };
             case 0x80 -> {
                 // ROM S1 Sonic_FindCeiling (sub FindNearestTile & FindFloor & FindWall.asm:
                 // 361-403) probes x_pos +/- obWidth at the top edge (obY-obHeight) and applies
@@ -1202,7 +1248,10 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
         PlayerMovementRules rules = playerMovementRulesOrNull(sprite);
         boolean preservePinballRoll = rules != null && rules.landing().pinballLandingPreservesRoll();
         boolean preservePinballMode = rules != null && rules.landing().pinballLandingPreservesPinballMode();
-        if (sprite.getRolling() && (!sprite.getPinballMode() || !preservePinballRoll)) {
+        // Sonic CD Player_ResetOnSteepSlope leaves roll, radii, y and anim untouched
+        // (scddisasm src/Level/_Objects/Sonic/Main.asm:2339-2345).
+        boolean keepRollState = rules != null && rules.landing().ceilingSteepLandingKeepsRollState();
+        if (!keepRollState && sprite.getRolling() && (!sprite.getPinballMode() || !preservePinballRoll)) {
             if (rules != null && rules.landing().landingRollClearUsesCurrentYRadiusDelta()) {
                 int oldYRadius = sprite.getYRadius();
                 int centreX = sprite.getCentreX();
@@ -1255,7 +1304,7 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
         if (!(sprite.getRolling() && sprite.getPinballMode() && preservePinballMode)) {
             sprite.setPinballMode(false);
         }
-        if (!sprite.getPinballMode()) {
+        if (!keepRollState && !sprite.getPinballMode()) {
             publishWalkOnAcceptedLanding(sprite, animationRules);
         }
         sprite.setAir(false);

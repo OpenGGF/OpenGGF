@@ -129,6 +129,9 @@ final class LevelLayoutLookup {
         if (owner.level == null || owner.level.getMap() == null) {
             return null;
         }
+        if (layer == 0 && owner.level instanceof com.openggf.game.internal.CollisionLayoutColumnWindow columns) {
+            return windowedChunkDesc(columns.collisionLayoutColumn(x), x, y, false, null);
+        }
 
         int levelWidth = owner.getCachedLayerWidthPx(layer);
         int levelHeight = owner.getCachedLayerHeightPx(layer);
@@ -174,13 +177,18 @@ final class LevelLayoutLookup {
     }
 
     ChunkDesc getChunkDescAt(byte layer, int x, int y, boolean loopLowPlane) {
-        if (!loopLowPlane || layer != 0) {
+        com.openggf.game.internal.PlayerLoopChunks stageRule =
+                owner.level instanceof com.openggf.game.internal.PlayerLoopChunks rule ? rule : null;
+        if (layer != 0 || !loopLowPlane && stageRule == null) {
             return getChunkDescAt(layer, x, y);
         }
 
         // Loop low plane: resolve collision block via Level.resolveCollisionBlockIndex
         if (owner.level == null || owner.level.getMap() == null) {
             return null;
+        }
+        if (owner.level instanceof com.openggf.game.internal.CollisionLayoutColumnWindow columns) {
+            return windowedChunkDesc(columns.collisionLayoutColumn(x), x, y, loopLowPlane, stageRule);
         }
 
         int levelWidth = owner.getCachedLayerWidthPx((byte) 0);
@@ -199,7 +207,9 @@ final class LevelLayoutLookup {
         int mapY = owner.blockGrid.blockIndex(wrappedY);
 
         int rawBlockIndex = map.getValue(0, mapX, mapY) & 0xFF;
-        int resolvedIndex = owner.level.resolveCollisionBlockIndex(rawBlockIndex, mapX, mapY);
+        int resolvedIndex = stageRule != null
+                ? stageRule.playerCollisionBlockIndex(rawBlockIndex, mapX, mapY, loopLowPlane)
+                : owner.level.resolveCollisionBlockIndex(rawBlockIndex, mapX, mapY);
 
         if (resolvedIndex >= owner.level.getBlockCount()) {
             return null;
@@ -213,6 +223,51 @@ final class LevelLayoutLookup {
         return block.getChunkDesc(
                 owner.blockGrid.blockLocal(wrappedX) / LevelConstants.CHUNK_WIDTH,
                 owner.blockGrid.blockLocal(wrappedY) / LevelConstants.CHUNK_HEIGHT);
+    }
+
+    /**
+     * A foreground collision probe on a level with a {@link
+     * com.openggf.game.internal.CollisionLayoutColumnWindow}: the column the level resolved
+     * (a foreground column, a background-half column or a cleared cell) and the masked row.
+     * The loop-chunk rules apply to foreground cells only, as in the wrapping lookups.
+     */
+    private ChunkDesc windowedChunkDesc(int column, int x, int y, boolean loopLowPlane,
+                                        com.openggf.game.internal.PlayerLoopChunks playerRule) {
+        if (column < 0) {
+            return null;
+        }
+        int levelHeight = owner.getCachedLayerHeightPx((byte) 0);
+        if (levelHeight <= 0) {
+            return null;
+        }
+        int wrappedY = layoutLookupY(y, levelHeight);
+        if (wrappedY < 0) {
+            return null;
+        }
+        boolean background = (column & com.openggf.game.internal.CollisionLayoutColumnWindow.BACKGROUND_HALF) != 0;
+        int mapX = column & ~com.openggf.game.internal.CollisionLayoutColumnWindow.BACKGROUND_HALF;
+        int mapY = owner.blockGrid.blockIndex(wrappedY);
+        int rawBlockIndex = owner.level.getMap().getValue(background ? 1 : 0, mapX, mapY) & 0xFF;
+        int blockIndex = background ? rawBlockIndex
+                : playerRule != null ? playerRule.playerCollisionBlockIndex(rawBlockIndex, mapX, mapY, loopLowPlane)
+                : loopLowPlane ? owner.level.resolveCollisionBlockIndex(rawBlockIndex, mapX, mapY)
+                : rawBlockIndex;
+        if (blockIndex >= owner.level.getBlockCount()) {
+            return null;
+        }
+        Block block = owner.level.getBlock(blockIndex);
+        if (block == null) {
+            return null;
+        }
+        int localX = owner.blockGrid.blockLocal(x & 0x7FFF);
+        int cellX = localX / LevelConstants.CHUNK_WIDTH;
+        int cellY = owner.blockGrid.blockLocal(wrappedY) / LevelConstants.CHUNK_HEIGHT;
+        if (cellX == 0 && cellY == 0
+                && blockIndex == com.openggf.game.internal.CollisionChunkOriginReadsBlank.ALIASED_CHUNK
+                && owner.level instanceof com.openggf.game.internal.CollisionChunkOriginReadsBlank) {
+            return ChunkDesc.EMPTY;
+        }
+        return block.getChunkDesc(cellX, cellY);
     }
 
     int getTileDescriptorAtWorld(byte layer, int worldX, int worldY) {

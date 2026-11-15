@@ -23,6 +23,12 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
     // Some character-specific $FF Walk handlers select the push script from
     // Status_Push without replacing the public raw animation byte.
     private boolean pushUsesWalkSpecialHandler;
+    // A script flag below $FD ($80-$FC) shows the mapping at the current
+    // anim_frame without advancing it and zeroes the timer: Sonic CD's
+    // PlayerAnimateStaticFrame (scddisasm src/objects/player.asm:2732-2737,
+    // objects/r6/player.asm:3047-3052), which its hang-bar and rotating-pole
+    // scripts ($FC) reach after the push test. Off: the plain-script path.
+    private boolean staticFrameScriptFlags;
     // Reload-timer shift for the $FF Walk handler's push sub-branch:
     // ROM Animate_Sonic/loc_12A72 uses lsr.w #6 (sonic3k.asm:25233), while
     // Animate_Knuckles/loc_17ECC uses lsr.w #8 (sonic3k.asm:33256). Defaults
@@ -73,6 +79,12 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
     private int walkSlopeFrameStride;
     private int runSlopeFrameStride;
     private int highSpeedSlopeFrameStride;
+    // Pseudo-3D ramp tiers (Sonic CD ObjSonic_Animate, scddisasm src/Level/_Objects/
+    // Sonic/Main.asm:2737-2771, 2819-2830): on a ramp the $FF handler always draws
+    // the ramp run script at eight angle steps, and the $FE handler draws the fast roll
+    // or, climbing, the ramp roll script. -1 leaves both handlers unchanged.
+    private int pseudo3dRampRunAnimId = -1;
+    private int pseudo3dRampRollAnimId = -1;
     private boolean doubleWalkRunAnimationSpeedWhenSliding;
     /** {@link #setTumbleFrameBase} value for a character whose mappings have no tumble frames. */
     public static final int NO_TUMBLE_FRAMES = -1;
@@ -103,6 +115,24 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
     public ScriptedVelocityAnimationProfile setPushAnimId(int pushAnimId) { this.pushAnimId = pushAnimId; return this; }
     public ScriptedVelocityAnimationProfile setPushAnimId(AnimationId id) { return setPushAnimId(id.id()); }
     public ScriptedVelocityAnimationProfile setPushUsesWalkSpecialHandler(boolean value) { this.pushUsesWalkSpecialHandler = value; return this; }
+    /**
+     * A shrunk form with its own scripts (Sonic CD's {@code miniSonic}): while {@code active} holds for the
+     * player, every animation ID reads the script {@code scriptMap} gives ({@code PlayerAnimateMapAnimation},
+     * scddisasm src/objects/player.asm:2791-2860), the walk/run handler is {@code PlayerAnimateShrunkDynamic}
+     * (:2740-2789: facing-only flips, no slope frames, a steep slope curls the player into its roll with the
+     * standing radii), and the roll and push handlers use the form's scripts (:2663-2665, :2717-2721).
+     */
+    public record MiniForm(java.util.function.Predicate<com.openggf.sprites.playable.AbstractPlayableSprite> active,
+                           java.util.function.IntUnaryOperator scriptMap, int walkAnimId, int runAnimId,
+                           int rollAnimId, int pushAnimId) { }
+
+    private MiniForm miniForm;
+
+    public ScriptedVelocityAnimationProfile setMiniForm(MiniForm form) { this.miniForm = form; return this; }
+    public MiniForm getMiniForm() { return miniForm; }
+
+    public ScriptedVelocityAnimationProfile setStaticFrameScriptFlags(boolean value) { this.staticFrameScriptFlags = value; return this; }
+    public boolean isStaticFrameScriptFlags() { return staticFrameScriptFlags; }
     public ScriptedVelocityAnimationProfile setPushDelayShift(int shift) { this.pushDelayShift = shift; return this; }
     public int getPushDelayShift() { return pushDelayShift; }
     public ScriptedVelocityAnimationProfile setDuckReleasePublishesWalk(boolean value) { this.duckReleasePublishesWalk = value; return this; }
@@ -200,6 +230,8 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
     public ScriptedVelocityAnimationProfile setWalkSlopeFrameStride(int value) { this.walkSlopeFrameStride = value; return this; }
     public ScriptedVelocityAnimationProfile setRunSlopeFrameStride(int value) { this.runSlopeFrameStride = value; return this; }
     public ScriptedVelocityAnimationProfile setHighSpeedSlopeFrameStride(int value) { this.highSpeedSlopeFrameStride = value; return this; }
+    public ScriptedVelocityAnimationProfile setPseudo3dRampRunAnimId(int value) { this.pseudo3dRampRunAnimId = value; return this; }
+    public ScriptedVelocityAnimationProfile setPseudo3dRampRollAnimId(int value) { this.pseudo3dRampRollAnimId = value; return this; }
     public ScriptedVelocityAnimationProfile setDoubleWalkRunAnimationSpeedWhenSliding(boolean value) { this.doubleWalkRunAnimationSpeedWhenSliding = value; return this; }
     public ScriptedVelocityAnimationProfile setTumbleFrameBase(int tumbleFrameBase) { this.tumbleFrameBase = tumbleFrameBase; return this; }
     public ScriptedVelocityAnimationProfile setTumbleTypeFrameBases(int... values) {
@@ -439,6 +471,15 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
             // frames; it does not keep externally-set animations like Float2 active
             // once Sonic is actively rolling/jumping.
             if (sprite.getFlipAngle() != 0) {
+                return null;
+            }
+            if (!sprite.getRolling() && airModeOwnsWalkRestore(sprite)) {
+                // The un-rolled air mode owns this byte: it writes Walk when the
+                // player falls and keeps the bubble pose (Sonic CD ObjSonic_MdAir,
+                // scddisasm src/Level/_Objects/Sonic/Main.asm:713-721), applied by
+                // the movement owner before this runs. A jumping player whose roll
+                // bits an object cleared (Tidal Tempest's boss bubble, loc_2074B6,
+                // r4/player_object_collide.asm:363-371) keeps that object's byte.
                 return null;
             }
             return sprite.getRolling() ? rollAnimId : airAnimId;
@@ -746,6 +787,14 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
         return highSpeedSlopeFrameStride;
     }
 
+    public int getPseudo3dRampRunAnimId() {
+        return pseudo3dRampRunAnimId;
+    }
+
+    public int getPseudo3dRampRollAnimId() {
+        return pseudo3dRampRollAnimId;
+    }
+
     public boolean isDoubleWalkRunAnimationSpeedWhenSliding() {
         return doubleWalkRunAnimationSpeedWhenSliding;
     }
@@ -804,9 +853,18 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
         copy.walkSlopeFrameStride = this.walkSlopeFrameStride;
         copy.runSlopeFrameStride = this.runSlopeFrameStride;
         copy.highSpeedSlopeFrameStride = this.highSpeedSlopeFrameStride;
+        copy.pseudo3dRampRunAnimId = this.pseudo3dRampRunAnimId;
+        copy.pseudo3dRampRollAnimId = this.pseudo3dRampRollAnimId;
         copy.doubleWalkRunAnimationSpeedWhenSliding = this.doubleWalkRunAnimationSpeedWhenSliding;
         copy.tumbleFrameBase = this.tumbleFrameBase;
         copy.tumbleTypeFrameBases = this.tumbleTypeFrameBases.clone();
         return copy;
+    }
+
+    /** The game's un-rolled air mode writes Walk itself ({@code PlayerAnimationRules.fallingAirStateRestoresWalk}). */
+    private static boolean airModeOwnsWalkRestore(AbstractPlayableSprite sprite) {
+        var rules = sprite.getGameRules();
+        return rules != null && rules.playerAnimation() != null
+                && rules.playerAnimation().fallingAirStateRestoresWalk();
     }
 }

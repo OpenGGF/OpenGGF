@@ -41,5 +41,6 @@ public enum GameSound {
     TAILS_FLY_TIRED,
     GRAB,       // SFX $4B - Knuckles wall grab (SndID_Grab)
     THUMP,      // Powered wall impact
-    GLIDE_LAND  // SFX $4C - Knuckles glide land/slide (SndID_GlideLand)
+    GLIDE_LAND, // SFX $4C - Knuckles glide land/slide (SndID_GlideLand)
+    CHARGE_STOP // Sonic CD FM_CHARGESTOP $AB: a timed charge is cancelled or the player balances
 }

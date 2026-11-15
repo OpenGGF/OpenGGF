@@ -54,6 +54,28 @@ class TestPaletteUploadLatch {
         assertTrue(uploaded(2), "the publication uploads the pending line");
     }
 
+    /**
+     * The latch belongs to the session that published it. Only {@code SpriteTablePublication}
+     * profiles ever publish or release it, so a following session of an unlatched game (Sonic CD
+     * after S3K in one process, or a game switch through the master title screen) would otherwise
+     * keep every level palette write pending for good. The session boundary starts unlatched.
+     */
+    @Test
+    void sessionBoundaryDropsTheOutgoingSessionsLatch() throws Exception {
+        PaletteUploadPresentation.publishAndLatch(graphics);
+        PaletteUploadPresentation.cacheLevelPalette(graphics, new Palette(), 2);
+        assertFalse(uploaded(2));
+        graphics.clearPaletteTextures();
+        assertFalse(graphics.paletteTextures().isPaletteUploadLatched(), "a new session starts unlatched");
+        PaletteUploadPresentation.cacheLevelPalette(graphics, new Palette(), 4);
+        assertTrue(uploaded(4), "the next session's level palette writes upload at once");
+        assertFalse(uploaded(2), "the outgoing session's pending line is discarded, not replayed");
+
+        PaletteUploadPresentation.publishAndLatch(graphics);
+        graphics.resetState();
+        assertFalse(graphics.paletteTextures().isPaletteUploadLatched(), "resetState is a session boundary too");
+    }
+
     @Test
     void releaseUploadsPendingLinesAndRestoresImmediateUploads() throws Exception {
         PaletteUploadPresentation.publishAndLatch(graphics);

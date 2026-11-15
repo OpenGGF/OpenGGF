@@ -31,6 +31,108 @@ public final class CommonSpriteDataLoader {
     private CommonSpriteDataLoader() {}
 
     /**
+     * Loads {@code SonicMappingsVer=1} sprite mappings (Sonic 1 and Sonic CD), auto-detecting frame count from the first offset.
+     * The first word at mappingAddr is the offset to frame 0's data; frameCount = firstOffset / 2.
+     *
+     * @param reader ROM byte reader
+     * @param mappingAddr ROM address of mapping table
+     * @return list of mapping frames
+     */
+    public static List<SpriteMappingFrame> loadVer1MappingFrames(RomByteReader reader, int mappingAddr) {
+        int firstOffset = reader.readU16BE(mappingAddr);
+        int frameCount = firstOffset / 2;
+        if (frameCount <= 0 || frameCount > 512) {
+            throw new IllegalArgumentException(String.format(
+                    "S1 mapping table at 0x%X has implausible frame count %d (first word=0x%04X) - wrong address?",
+                    mappingAddr, frameCount, firstOffset));
+        }
+        return loadVer1MappingFrames(reader, mappingAddr, frameCount);
+    }
+
+    /**
+     * Loads {@code SonicMappingsVer=1} sprite mappings (Sonic 1 and Sonic CD) whose offset table may reference shared
+     * frames before the table with signed word offsets.
+     */
+    public static List<SpriteMappingFrame> loadVer1MappingFramesWithSignedOffsets(
+            RomByteReader reader, int mappingAddr) {
+        int firstOffset = reader.readU16BE(mappingAddr);
+        int frameCount = firstOffset / 2;
+        if (frameCount <= 0 || frameCount > 512) {
+            throw new IllegalArgumentException(String.format(
+                    "S1 mapping table at 0x%X has implausible frame count %d (first word=0x%04X) - wrong address?",
+                    mappingAddr, frameCount, firstOffset));
+        }
+        return loadVer1MappingFramesWithSignedOffsets(reader, mappingAddr, frameCount);
+    }
+
+    /**
+     * Loads {@code SonicMappingsVer=1} sprite mappings (Sonic 1 and Sonic CD) with signed word offsets.
+     */
+    public static List<SpriteMappingFrame> loadVer1MappingFramesWithSignedOffsets(
+            RomByteReader reader, int mappingAddr, int frameCount) {
+        List<SpriteMappingFrame> frames = new ArrayList<>(frameCount);
+        for (int i = 0; i < frameCount; i++) {
+            int frameOffset = (short) reader.readU16BE(mappingAddr + i * 2);
+            int frameAddr = mappingAddr + frameOffset;
+            frames.add(loadVer1MappingFrameAt(reader, frameAddr));
+        }
+        return frames;
+    }
+
+    /**
+     * Loads {@code SonicMappingsVer=1} sprite mappings (Sonic 1 and Sonic CD) with an explicit frame count.
+     *
+     * <p>S1 format (SonicMappingsVer=1):
+     * <ul>
+     *   <li>Offset table: {@code frameCount} x word (offset from table start to frame data)</li>
+     *   <li>Per frame: byte (piece count) + pieces x 5 bytes</li>
+     *   <li>Piece format: y:signed_byte, size:byte, tileHi:byte, tileLo:byte, x:signed_byte</li>
+     * </ul>
+     *
+     * @param reader ROM byte reader
+     * @param mappingAddr ROM address of mapping table
+     * @param frameCount number of frames to read
+     * @return list of mapping frames
+     */
+    public static List<SpriteMappingFrame> loadVer1MappingFrames(RomByteReader reader, int mappingAddr, int frameCount) {
+        List<SpriteMappingFrame> frames = new ArrayList<>(frameCount);
+        for (int i = 0; i < frameCount; i++) {
+            int frameOffset = reader.readU16BE(mappingAddr + i * 2);
+            int frameAddr = mappingAddr + frameOffset;
+            frames.add(loadVer1MappingFrameAt(reader, frameAddr));
+        }
+        return frames;
+    }
+
+    private static SpriteMappingFrame loadVer1MappingFrameAt(RomByteReader reader, int frameAddr) {
+        int pieceCount = reader.readU8(frameAddr);
+        frameAddr += 1;
+
+        List<SpriteMappingPiece> pieces = new ArrayList<>(pieceCount);
+        for (int p = 0; p < pieceCount; p++) {
+            int yOffset = (byte) reader.readU8(frameAddr);
+            int size = reader.readU8(frameAddr + 1);
+            int tileHi = reader.readU8(frameAddr + 2);
+            int tileLo = reader.readU8(frameAddr + 3);
+            int xOffset = (byte) reader.readU8(frameAddr + 4);
+            frameAddr += 5;
+
+            int widthTiles = ((size >> 2) & 0x3) + 1;
+            int heightTiles = (size & 0x3) + 1;
+
+            int tileWord = (tileHi << 8) | tileLo;
+            pieces.add(new SpriteMappingPiece(
+                    xOffset, yOffset, widthTiles, heightTiles,
+                    tileWord & 0x7FF,
+                    (tileWord & 0x800) != 0,
+                    (tileWord & 0x1000) != 0,
+                    (tileWord >> 13) & 0x3,
+                    (tileWord & 0x8000) != 0));
+        }
+        return new SpriteMappingFrame(pieces);
+    }
+
+    /**
      * Loads uncompressed art tiles from ROM.
      *
      * <p>This is a thin wrapper around {@link PatternDecompressor#uncompressed}

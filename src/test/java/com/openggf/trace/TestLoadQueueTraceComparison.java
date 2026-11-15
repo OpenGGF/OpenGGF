@@ -383,13 +383,24 @@ class TestLoadQueueTraceComparison {
                         HardwareWorkKind.KOS_MODULE_QUEUE, 0L,
                         HardwareWorkKind.NEMESIS_PLC_QUEUE, 0L),
                 List.of(job),
-                Map.of(HardwareWorkKind.KOS_DECOMPRESSION_QUEUE,
-                        HardwareReadinessAdmissionPolicy.RECORDED,
-                        HardwareWorkKind.KOS_MODULE_QUEUE,
-                        HardwareReadinessAdmissionPolicy.RECORDED,
-                        HardwareWorkKind.NEMESIS_PLC_QUEUE,
-                        HardwareReadinessAdmissionPolicy.RECORDED),
+                recordedCartridgeQueuePolicies(),
                 true, true, HardwareServiceBoundary.PRE_MAIN_LOOP);
+    }
+
+    /**
+     * The three cartridge queues admitted from the recording; every other kind (the disc game's load kinds, which a
+     * trace can neither record nor admit) stays live. The snapshot requires a policy for every kind.
+     */
+    private static Map<HardwareWorkKind, HardwareReadinessAdmissionPolicy> recordedCartridgeQueuePolicies() {
+        Map<HardwareWorkKind, HardwareReadinessAdmissionPolicy> policies =
+                new java.util.EnumMap<>(HardwareWorkKind.class);
+        for (HardwareWorkKind kind : HardwareWorkKind.values()) {
+            policies.put(kind, HardwareReadinessAdmissionPolicy.LIVE);
+        }
+        policies.put(HardwareWorkKind.KOS_DECOMPRESSION_QUEUE, HardwareReadinessAdmissionPolicy.RECORDED);
+        policies.put(HardwareWorkKind.KOS_MODULE_QUEUE, HardwareReadinessAdmissionPolicy.RECORDED);
+        policies.put(HardwareWorkKind.NEMESIS_PLC_QUEUE, HardwareReadinessAdmissionPolicy.RECORDED);
+        return policies;
     }
 
     private static TraceMetadata s3kQueueMetadata(Path temp, int frameCount)

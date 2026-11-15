@@ -620,7 +620,7 @@ public final class HardwareTimingService
         public void configureAdmissionPolicies(
                 Map<HardwareWorkKind, HardwareReadinessAdmissionPolicy> policies) {
             requireRecordedAdmission();
-            if (hasSubmitted && !admissionPolicies.equals(policies)) {
+            if (hasSubmitted && !admissionPolicies.equals(validateAdmissionPolicies(policies))) {
                 throw new IllegalStateException(
                         "recorded hardware admission policy must be configured before the first submission");
             }
@@ -828,6 +828,15 @@ public final class HardwareTimingService
                 new EnumMap<>(HardwareWorkKind.class);
         for (HardwareWorkKind kind : HardwareWorkKind.values()) {
             HardwareReadinessAdmissionPolicy policy = policies.get(kind);
+            if (!kind.recordable()) {
+                // Normal-play load kinds have no recorded stream: they stay live under any policy.
+                if (policy == HardwareReadinessAdmissionPolicy.RECORDED) {
+                    throw new IllegalArgumentException(
+                            "normal-play hardware work cannot use recorded admission: " + kind);
+                }
+                checked.put(kind, HardwareReadinessAdmissionPolicy.LIVE);
+                continue;
+            }
             if (policy == null) {
                 throw new IllegalArgumentException(
                         "recorded admission policy is missing kind " + kind);
@@ -857,7 +866,9 @@ public final class HardwareTimingService
         EnumMap<HardwareWorkKind, HardwareReadinessAdmissionPolicy> policies =
                 new EnumMap<>(HardwareWorkKind.class);
         for (HardwareWorkKind kind : HardwareWorkKind.values()) {
-            policies.put(kind, HardwareReadinessAdmissionPolicy.RECORDED);
+            policies.put(kind, kind.recordable()
+                    ? HardwareReadinessAdmissionPolicy.RECORDED
+                    : HardwareReadinessAdmissionPolicy.LIVE);
         }
         return Map.copyOf(policies);
     }

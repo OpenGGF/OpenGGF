@@ -10,14 +10,14 @@ import java.util.function.Supplier;
 /**
  * Keeps trace frame driving and rewind-reference validation in one ordered operation.
  */
-final class TraceReplayFrameClosureDriver {
+public final class TraceReplayFrameClosureDriver {
     record CurrentLevelContext(ObjectManager objectManager, int zone, int act) {
     }
 
     private TraceReplayFrameClosureDriver() {
     }
 
-    static int driveGeneral(
+    public static int driveGeneral(
             TraceExecutionPhase phase,
             IntSupplier step,
             IntSupplier skip,

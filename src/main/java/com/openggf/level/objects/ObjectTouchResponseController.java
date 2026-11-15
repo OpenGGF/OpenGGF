@@ -681,6 +681,13 @@ final class ObjectTouchResponseController {
             // every-frame loop in S1 (`docs/s1disasm/_incObj/sub ReactToItem.asm`)
             // and S3K (`docs/skdisasm/sonic3k.asm` `Collision_response_list`
             // dispatcher).
+            //
+            // Sonic CD Metallic Madness: a $40-type object on the other layer ends the pass with no
+            // response (r8/player_object_collide.asm:104-116); every other game's routines admit it.
+            if (category == TouchCategory.SPECIAL && !stageAdmitsSpecialTouch(player, instance)) {
+                buildingSet.remove(instance);
+                break;
+            }
             boolean shouldTrigger = category == TouchCategory.BOSS
                     || category == TouchCategory.HURT
                     || category == TouchCategory.ENEMY
@@ -1226,6 +1233,7 @@ final class ObjectTouchResponseController {
         } else {
             if (player.isSuperSonic()
                     || player.getInvincibleFrames() > 0
+                    || stageTouchesAsInvincible(player)
                     || isSpinAttackAnimation(player)
                     || (instaShieldActive && player == currentPlayer)) {
                 return true;
@@ -1246,6 +1254,27 @@ final class ObjectTouchResponseController {
         }
 
         return false;
+    }
+
+    /**
+     * The game's {@link com.openggf.game.internal.PlayerStageRoutines} touch state that counts as invincibility
+     * (Sonic CD's {@code timeWarp}); false for a provider without stage routines.
+     */
+    private static boolean stageTouchesAsInvincible(PlayableEntity player) {
+        if (!(player instanceof AbstractPlayableSprite sprite)) return false;
+        var module = sprite.currentGameModule();
+        var provider = module != null ? module.getPhysicsProvider() : null;
+        return provider instanceof com.openggf.game.internal.PlayerStageRoutines routines
+                && routines.touchesAsInvincible(sprite);
+    }
+
+    /** The game's {@link com.openggf.game.internal.PlayerStageRoutines} gate on a special touch; true without one. */
+    private static boolean stageAdmitsSpecialTouch(PlayableEntity player, ObjectInstance instance) {
+        if (!(player instanceof AbstractPlayableSprite sprite)) return true;
+        var module = sprite.currentGameModule();
+        var provider = module != null ? module.getPhysicsProvider() : null;
+        return !(provider instanceof com.openggf.game.internal.PlayerStageRoutines routines)
+                || routines.admitsSpecialTouch(sprite, instance);
     }
 
     private boolean isSpinAttackAnimation(PlayableEntity player) {
@@ -1377,7 +1406,7 @@ final class ObjectTouchResponseController {
 
     private void applyHurt(PlayableEntity player, ObjectInstance instance, TouchResponseResult result,
             TouchResponseProfile profile) {
-        if (player.getInvulnerable()) {
+        if (player.getInvulnerable() || stageTouchesAsInvincible(player)) {
             return;
         }
 

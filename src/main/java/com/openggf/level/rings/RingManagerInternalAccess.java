@@ -6,6 +6,20 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 public final class RingManagerInternalAccess {
     private RingManagerInternalAccess() { }
 
+    /**
+     * Collects a placed ring whose object runs later in the same object pass as the collecting touch, so
+     * its first sparkle execution is the touch's own frame (not the next, as for Sonic 1's ring).
+     */
+    public static boolean collectPlacedRingBeforeItsPass(RingManager manager, RingSpawn ring,
+                                                         AbstractPlayableSprite player, int frameCounter) {
+        return manager.collectPlacedRing(ring, player, frameCounter, frameCounter);
+    }
+
+    /** The object ID a spilled ring carries in this game (see {@link com.openggf.game.internal.LostRingObjectId}). */
+    public static int lostRingObjectId(RingManager manager) {
+        return manager.lostRingObjectId();
+    }
+
     /** Observe the existing ring/sparkle draw without primary-camera culling or advancing clocks. */
     public static void appendLostRingNativeDisplayArt(LostRingObjectInstance ring) {
         Class<?> caller = com.openggf.util.EngineCallerAccess.callerOutside(RingManagerInternalAccess.class);
@@ -46,6 +60,12 @@ public final class RingManagerInternalAccess {
     /** Rebind a copied placement value to the restore-time collection owner. */
     public static RingSpawn resolveSpawnForRewind(RingManager rings, RingSpawn value, int index) {
         return rings.resolveSpawnForRewind(value, index);
+    }
+
+    /** The spill of an owner left by an earlier hurt, on the owner's own turn (see {@link LostRingObjectInstance#pendingSpillOwner}). */
+    static void spillFromPendingOwner(RingManager rings, LostRingObjectInstance owner, AbstractPlayableSprite player,
+                                      int ringCount, int frameCounter, int x, int y) {
+        rings.spillFromPendingOwner(owner, player, ringCount, frameCounter, x, y);
     }
 
     /** Immediate spill that may exceed Obj37_Init's native 32-ring ceiling. */

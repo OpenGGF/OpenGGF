@@ -91,10 +91,21 @@ class TestS1S2PlcComparisonOnlyGuard {
         var admittedKinds = Arrays.stream(HardwareWorkKind.values())
                 .map(Enum::name)
                 .collect(java.util.stream.Collectors.toUnmodifiableSet());
+        // The two Sonic CD kinds are the owner-approved normal-play load kinds (contract section
+        // "2026-11-13 extension: Sonic CD normal-play load kinds"); they are never recordable.
         if (!admittedKinds.equals(Set.of(
-                "KOS_MODULE_QUEUE", "KOS_DECOMPRESSION_QUEUE", "NEMESIS_PLC_QUEUE"))) {
+                "KOS_MODULE_QUEUE", "KOS_DECOMPRESSION_QUEUE", "NEMESIS_PLC_QUEUE",
+                "SCD_STAGE_LOAD", "CD_READ_READY"))) {
             fail("hardware timing may admit only declared cross-game art work, but was "
                     + admittedKinds);
+        }
+        var recordable = Arrays.stream(HardwareWorkKind.values())
+                .filter(HardwareWorkKind::recordable)
+                .map(Enum::name)
+                .collect(java.util.stream.Collectors.toUnmodifiableSet());
+        if (!recordable.equals(Set.of(
+                "KOS_MODULE_QUEUE", "KOS_DECOMPRESSION_QUEUE", "NEMESIS_PLC_QUEUE"))) {
+            fail("only the three recorded kinds may appear in a trace stream, but was " + recordable);
         }
     }
 

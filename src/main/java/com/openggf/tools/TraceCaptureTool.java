@@ -93,13 +93,53 @@ public final class TraceCaptureTool {
      */
     public record Args(String trace, Path outDir, int width, int scale, int fps, String codec,
                        boolean showGhosts, int[] verifyFrames,
-                       String clip, int tailFrames, boolean nativeSpriteLimits, boolean noMusic,
-                       boolean skipLagFrames) {
+                       String clip, int tailFrames, boolean nativeSpriteLimits, Path movie, boolean showGameHud,
+                       boolean noMusic, boolean skipLagFrames) {
+
+        /** Without a lag-frame choice: the original's lag frames are filmed. */
+        public Args(String trace, Path outDir, int width, int scale, int fps, String codec,
+                    boolean showGhosts, int[] verifyFrames, String clip, int tailFrames,
+                    boolean nativeSpriteLimits, Path movie, boolean showGameHud, boolean noMusic) {
+            this(trace, outDir, width, scale, fps, codec, showGhosts, verifyFrames, clip, tailFrames,
+                    nativeSpriteLimits, movie, showGameHud, noMusic, false);
+        }
+
+        /** Without a movie or HUD choice: a catalogue trace with the HUD drawn. */
+        public Args(String trace, Path outDir, int width, int scale, int fps, String codec,
+                    boolean showGhosts, int[] verifyFrames, String clip, int tailFrames,
+                    boolean nativeSpriteLimits, boolean noMusic, boolean skipLagFrames) {
+            this(trace, outDir, width, scale, fps, codec, showGhosts, verifyFrames, clip, tailFrames,
+                    nativeSpriteLimits, null, true, noMusic, skipLagFrames);
+        }
+
+        /** Without a music choice: music and sound effects both at full level. */
+        public Args(String trace, Path outDir, int width, int scale, int fps, String codec,
+                    boolean showGhosts, int[] verifyFrames, String clip, int tailFrames,
+                    boolean nativeSpriteLimits, Path movie, boolean showGameHud) {
+            this(trace, outDir, width, scale, fps, codec, showGhosts, verifyFrames, clip, tailFrames,
+                    nativeSpriteLimits, movie, showGameHud, false);
+        }
+
+        /** Without a movie or HUD choice: a catalogue trace with the HUD drawn. */
+        public Args(String trace, Path outDir, int width, int scale, int fps, String codec,
+                    boolean showGhosts, int[] verifyFrames, String clip, int tailFrames,
+                    boolean nativeSpriteLimits, boolean noMusic) {
+            this(trace, outDir, width, scale, fps, codec, showGhosts, verifyFrames, clip, tailFrames,
+                    nativeSpriteLimits, null, true, noMusic);
+        }
 
         /** Without a sprite-limit choice: native dropout stays on for ROM image comparison. */
         public Args(String trace, Path outDir, int width, int scale, int fps, String codec,
                     boolean showGhosts, int[] verifyFrames, String clip, int tailFrames) {
-            this(trace, outDir, width, scale, fps, codec, showGhosts, verifyFrames, clip, tailFrames, true);
+            this(trace, outDir, width, scale, fps, codec, showGhosts, verifyFrames, clip, tailFrames, true, null, true);
+        }
+
+        /** Without a HUD choice: the game HUD is drawn. */
+        public Args(String trace, Path outDir, int width, int scale, int fps, String codec,
+                    boolean showGhosts, int[] verifyFrames, String clip, int tailFrames,
+                    boolean nativeSpriteLimits, Path movie) {
+            this(trace, outDir, width, scale, fps, codec, showGhosts, verifyFrames, clip, tailFrames,
+                    nativeSpriteLimits, movie, true);
         }
 
         /** Without a music choice: the capture records music and sound effects together. */
@@ -108,14 +148,6 @@ public final class TraceCaptureTool {
                     boolean nativeSpriteLimits) {
             this(trace, outDir, width, scale, fps, codec, showGhosts, verifyFrames, clip, tailFrames,
                     nativeSpriteLimits, false);
-        }
-
-        /** Without a lag-frame choice: a frame window keeps the original's lag frames. */
-        public Args(String trace, Path outDir, int width, int scale, int fps, String codec,
-                    boolean showGhosts, int[] verifyFrames, String clip, int tailFrames,
-                    boolean nativeSpriteLimits, boolean noMusic) {
-            this(trace, outDir, width, scale, fps, codec, showGhosts, verifyFrames, clip, tailFrames,
-                    nativeSpriteLimits, noMusic, false);
         }
 
         public static Args parse(String[] argv) {
@@ -136,6 +168,8 @@ public final class TraceCaptureTool {
             String clip = null;
             int tailFrames = 150;
             boolean nativeSpriteLimits = true;
+            Path movie = null;
+            boolean showGameHud = config.getBoolean(SonicConfiguration.TRACE_SHOW_GAME_HUD);
             boolean noMusic = false;
             boolean skipLagFrames = false;
 
@@ -152,11 +186,13 @@ public final class TraceCaptureTool {
                     case "--no-ghosts" -> showGhosts = false;
                     case "--ghosts" -> showGhosts = true;
                     case "--no-sprite-limits" -> nativeSpriteLimits = false;
+                    case "--no-hud" -> showGameHud = false;
                     case "--no-music" -> noMusic = true;
                     case "--verify" -> verifyFrames = parseFrameList(CliArguments.requireValue(argv, ++i, arg));
                     case "--clip" -> clip = CliArguments.requireValue(argv, ++i, arg);
                     case "--skip-lag-frames" -> skipLagFrames = true;
                     case "--tail-frames" -> tailFrames = CliArguments.parseInt(CliArguments.requireValue(argv, ++i, arg));
+                    case "--movie" -> movie = Path.of(CliArguments.requireValue(argv, ++i, arg));
                     default -> throw new IllegalArgumentException("Unknown argument: " + arg);
                 }
             }
@@ -170,7 +206,8 @@ public final class TraceCaptureTool {
             }
             TraceCaptureDimensions.validateLogicalWidth(width);
             return new Args(trace, Path.of(outDir), width, scale, fps, codec, showGhosts,
-                    verifyFrames, clip, tailFrames, nativeSpriteLimits, noMusic, skipLagFrames);
+                    verifyFrames, clip, tailFrames, nativeSpriteLimits, movie, showGameHud, noMusic,
+                    skipLagFrames);
         }
 
         private static int[] parseFrameList(String spec) {
@@ -316,9 +353,24 @@ public final class TraceCaptureTool {
         GameServices.configuration().setSessionOverride(
                 SonicConfiguration.AUDIO_MUSIC_VOLUME, capturedMusicVolume(args));
         GameServices.configuration().setSessionOverride(SonicConfiguration.AUDIO_SFX_VOLUME, 100);
+        // --no-hud: the same frames without the game HUD (the shared HUD and object-drawn HUDs obey this
+        // switch), so an editor can lift the HUD as the pixels that differ from a pass with it.
+        GameServices.configuration().setConfigValue(
+                SonicConfiguration.TRACE_SHOW_GAME_HUD, args.showGameHud());
 
         // --- resolve trace -------------------------------------------------
-        TraceEntry entry = resolveTrace(args.trace());
+        TraceEntry entry;
+        try {
+            entry = resolveTrace(args.trace());
+        } catch (IllegalArgumentException notInCatalog) {
+            // A trace directory of a game hosted from other media (a disc) is
+            // not in the cartridge catalog; its module's media service runs it.
+            HostedTraceCapture hosted = HostedTraceCapture.resolve(args.trace(), args.movie());
+            if (hosted == null) {
+                throw notInCatalog;
+            }
+            return hosted.run(args, dimensions);
+        }
         printCaptureSetup(entry, args, dimensions, args.verifyFrames() != null);
         System.out.println("Capturing trace: " + entry.dir()
                 + " (" + entry.gameId() + " zone=" + entry.zone() + " act=" + entry.act() + ")");
@@ -467,13 +519,13 @@ public final class TraceCaptureTool {
                 : TraceCaptureLagFrames.KEEP;
         long captured = 0;
         boolean captureSucceeded = false;
-        try {
+        try (TraceCaptureStateWriter state = new TraceCaptureStateWriter(args.outDir())) {
             captured = args.clip() != null
                     ? driveClip(trace, frameDriver, replayStart, grabber, audioFrames,
-                            recorder, args.clip(), args.tailFrames(), dimensions, fixture,
+                            recorder, args.clip(), args.tailFrames(), dimensions, fixture, state,
                             lagFrames)
                     : driveAndCapture(trace, meta, frameDriver, replayStart,
-                            loop, grabber, audioFrames, recorder, dimensions);
+                            loop, grabber, audioFrames, recorder, dimensions, state);
             requireCapturedFrames(captured);
             if (args.clip() == null) {
                 fixture.closeHardwareTimingReplayRun();
@@ -706,7 +758,8 @@ public final class TraceCaptureTool {
                                  GlReadPixelsGrabber grabber,
                                  HeadlessOuterAudioFrames audioFrames,
                                  CaptureRecorder recorder,
-                                 TraceCaptureDimensions dimensions) throws Exception {
+                                 TraceCaptureDimensions dimensions,
+                                 TraceCaptureStateWriter state) throws Exception {
         short[] pcmBuffer = new short[16384];
         long frameIndex = 0;
 
@@ -731,6 +784,7 @@ public final class TraceCaptureTool {
                 TraceReplayDrive.renderFrame(dimensions.logicalWidth());
                 byte[] rgba = grabber.grab();
                 int sampleCount = audioFrames.drainCaptured(pcmBuffer);
+                state.row(frameIndex, driveTraceIndex);
                 recorder.submit(new CapturedFrame(rgba, dimensions.physicalWidth(),
                         dimensions.physicalHeight(),
                         pcmBuffer, sampleCount, frameIndex++));
@@ -760,6 +814,7 @@ public final class TraceCaptureTool {
                            CaptureRecorder recorder, String clipName, int tailFrames,
                            TraceCaptureDimensions dimensions,
                            TraceReplayDrive.DriverFixture fixture,
+                           TraceCaptureStateWriter state,
                            TraceCaptureLagFrames lagFrames)
             throws Exception {
         int[] frameWindow = parseFrameWindow(clipName);
@@ -850,6 +905,7 @@ public final class TraceCaptureTool {
                     TraceReplayDrive.renderFrame(dimensions.logicalWidth());
                     byte[] rgba = grabber.grab();
                     int sampleCount = audioFrames.drainCaptured(pcmBuffer);
+                    state.row(frameIndex, driveTraceIndex);
                     recorder.submit(new CapturedFrame(rgba, dimensions.physicalWidth(),
                             dimensions.physicalHeight(),
                             pcmBuffer, sampleCount, frameIndex++));

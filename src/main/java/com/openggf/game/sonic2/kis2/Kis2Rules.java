@@ -107,7 +107,8 @@ public final class Kis2Rules {
                 capability.spindashEnabled(), capability.spindashSpeedTable(),
                 capability.elementalShieldsEnabled(), capability.instaShieldEnabled(),
                 capability.tailsFlightEnabled(), capability.jumpRepressClearsRollJumpBeforeAbility(),
-                capability.lightningShieldEnabled(), capability.superSpindashSpeedTable(), true);
+                capability.lightningShieldEnabled(), capability.superSpindashSpeedTable(), true,
+                capability.timedChargeMoves(), capability.rollEntryRaisesForwardSpeedToMinimum());
         return CrossGameRuleComposer.withPlayerRules(base, kis2Movement, kis2Interaction,
                 collision, checkpointRings, kis2Capability);
     }

@@ -11,6 +11,8 @@ public enum GameId {
     S1("s1"),
     S2("s2"),
     S3K("s3k"),
+    /** Sonic CD, hosted from a user-supplied disc rather than a cartridge ROM. */
+    SCD("scd"),
     STANDALONE("standalone");
 
     private final String code;
@@ -28,6 +30,8 @@ public enum GameId {
             case S1 -> RomGame.S1;
             case S2 -> RomGame.S2;
             case S3K -> RomGame.S3K;
+            case SCD -> throw new IllegalStateException(
+                    "Sonic CD is hosted from a disc, not a cartridge ROM");
             case STANDALONE -> throw new IllegalStateException(
                     "Standalone games do not have a stock ROM mapping");
         };
