@@ -561,7 +561,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         private PhysicsProfile physicsProfile;
         private GameModule runtimeBoundStateModule;
         private PhysicsModifiers physicsModifiers;
-        private GameRules gameRules;
+        GameRules gameRules; // package access: NativePlayableRoutine reads the bound rules
 
         /**
          * Canonical "reset" profile — the base used for water/shoes modifier math.

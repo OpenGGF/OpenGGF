@@ -1,6 +1,11 @@
 # Sonic CD playtest fixes — 2026-11-15
 
-## Final delivery summary
+Current reconciliation: James authorized the parent to merge PR #332 into
+`develop`. The implementation child merged develop into the existing feature
+branch; see the reconciliation record below. Earlier no-merge authorization
+statements describe historical handoffs and are superseded by this instruction.
+
+## Final delivery summary (original draft handoff)
 
 All eight reported fixes, including held Escape, are implemented for manual
 playtesting on `feature/ai-sonic-cd-playtest-fixes`. Delivery is a draft PR to
@@ -684,3 +689,88 @@ not change the original FAILED verdict.
 The first delivery commit attempt was rejected by the resource-policy hook for
 machine-local home paths in this artifact. Normalized only those prefixes to the
 placeholders above; no source or validation results changed. Hooks stay enabled.
+
+
+## Develop reconciliation for parent merge — 2026-11-15
+
+Owner: implementation child. Parent alone performs the authorized final merge.
+Feature input `12ac3c6c1595424921e98a2aa395f94663b2bdb4`; fetched develop
+`e07b66cc650babe4f22b5b97a05f975910ca6166`. Merged develop into the current
+feature branch, without switching branches, worktrees or delegation.
+
+Two conflicts resolved:
+- `ObjDango.java`: retain `ART_SELECTION`; `sheetKey()` reads camera X to select
+  section art, rather than only culling. No gameplay logic changed.
+- `TestCameraRelativeDrawGuard.java`: retain invocation opcode/access-aware
+  dispatch from the feature, including method handles, private/static/super
+  controls, and retain develop's `HookTemplate`/`OverriddenHook` fixture.
+  Both branches' intended override detection remains covered.
+
+All other incoming HCZ publication, shared presentation, source-provenance and
+reference changes were preserved as merged. No submodule pin or media changes.
+Only the combined guard and this record differ from the feature input beyond
+incoming develop changes; Dango retains its feature annotation. Local `USA/`
+and `crash-reports/` remain untracked and unstaged.
+
+Focused verification used Java 25, queue ownership and surfaceless EGL. Selection
+was bounded to conflict behavior, CD pictures, suspension/presentation overlap
+and the four required S3K checks. No broad smoke rerun: the historical **VERDICT
+FAILED** and baseline/environment attribution above remain authoritative.
+
+Exact successful command (same normalized paths as the earlier record):
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY \
+  JAVA_HOME=${HOME}/.jdks/corretto-25.0.4.1 \
+  PATH="${HOME}/.local/opt/powershell/v7.7.0/bin:${HOME}/.jdks/corretto-25.0.4.1/bin:/usr/share/idea/plugins/maven-plugin/lib/maven3/bin:$PATH" \
+  MAVEN_OPTS=-XX:TieredStopAtLevel=1 LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/maven_queue.py -Dmse=off \
+  -Dsoniccd.media.root=${REPO_ROOT} \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  '-Ds3k.rom.path=${HOME}/Downloads/Telegram Desktop/OpenGGF-experimental-windows-x64-with-mods/s3k.gen' \
+  -Dopenggf.surefire.reports=target/soniccd-develop-reconciliation/reports \
+  -Dtest=TestCameraRelativeDrawGuard,TestDrawPathFieldWriteGuard,TestArchitecturalSourceGuard,TestSonicCdCommonObjects2,TestSonicCdObjectFixPictures,TestSonicCdResultsPictures,TestEngineSuspensionRendering,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils \
+  test -B > target/soniccd-develop-reconciliation/retry.log 2>&1
+```
+
+Initial attempt: identical command without `MAVEN_OPTS`, output `focused.log`;
+exit 250 before test execution. Corretto 25.0.4.1 C2 compiler SIGSEGV in
+`IfNode::same_condition` while compiling javac `Types$DescriptorCache`.
+Original failure evidence remains in that log and local ignored
+`hs_err_pid182518.log` / `replay_pid182518.log`. No source correction was
+warranted. Retry disables C2 for the Maven compiler JVM only, leaving test JVM
+settings unchanged.
+
+Retry exit 0, **176 tests passed, zero failures/errors/skips**, finished
+20:55:39Z, Maven execution 4m59s, queue wait 0s. Initial crash elapsed 7.59s,
+queue wait 0s; user wait 0s; investigation/launcher overhead unmeasured.
+No category `VERDICT` applies to this focused invocation. Fresh XML:
+
+| Class | Tests | Failures/errors/skips |
+| --- | ---: | --- |
+| `com.openggf.TestEngineSuspensionRendering` | 1 | 0/0/0 |
+| `com.openggf.game.sonic3k.TestSonic3kBootstrapResolver` | 6 | 0/0/0 |
+| `com.openggf.game.sonic3k.TestSonic3kDecodingUtils` | 3 | 0/0/0 |
+| `com.openggf.game.sonic3k.TestSonic3kLevelLoading` | 36 | 0/0/0 |
+| `com.openggf.game.soniccd.TestSonicCdCommonObjects2` | 17 | 0/0/0 |
+| `com.openggf.game.soniccd.TestSonicCdObjectFixPictures` | 1 | 0/0/0 |
+| `com.openggf.game.soniccd.TestSonicCdResultsPictures` | 1 | 0/0/0 |
+| `com.openggf.level.objects.TestCameraRelativeDrawGuard` | 4 | 0/0/0 |
+| `com.openggf.level.objects.TestDrawPathFieldWriteGuard` | 3 | 0/0/0 |
+| `com.openggf.tests.TestArchitecturalSourceGuard` | 89 | 0/0/0 |
+| `com.openggf.tests.TestS3kAiz1SkipHeadless` | 8 | 0/0/0 |
+| `com.openggf.tests.TestSonic3kLevelLoading` | 7 | 0/0/0 |
+
+The 11 selected simple names execute 12 classes because `TestSonic3kLevelLoading`
+exists in two packages. Explicit S3K input was found; discovery reported missing
+S1/S2, REV00 and KiS2 properties, but no selected test skipped. CD disc-backed
+pictures and suspension rendering executed under EGL; native reference fixtures
+and manual acceptance were not rerun.
+
+Tested source: merged working tree with the two parent SHAs above, before the
+merge commit existed. Sorted tracked `src` path/NUL/content/NUL SHA-256:
+`5b3fa6f7867294349d6dbf0a9caa56029bc896e823281b4fa53d893370f10fed`. Final subsequent edits affect this record only.
+The merge commit containing this section records the exact reconciled source.
+Installed hooks remain enabled. No live validation jobs or material reconciliation
+blockers remain. Next action: push the feature branch, mark PR #332 ready and
+hand back to the parent for current CI/review assessment and authorized merge.

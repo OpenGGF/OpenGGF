@@ -1,6 +1,7 @@
 package com.openggf.game.rewind;
 
 import com.openggf.game.GameServices;
+import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.game.rewind.snapshot.CameraSnapshot;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
@@ -20,17 +21,20 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * R55 independent joint HCZ2 producer/publication/relink rewind contract.
- * Native044 sonic3k.asm: HCZ2_BackgroundInit106041 selects the wall arena;
- * HCZ2_WallMove106175/loc_5102E starts at P1 X=$680; ShakeScreen_Setup104229
- * selects the continuous table by LF & $3F; Obj_HCZ2Wall106272 reads Events_bg
- * on every update and derives x=-offset+$5BE, y=$700.
+ * HCZ2 completed-publication and object-slot rewind contract, original-E 2026-11-10.
+ * HCZ2_BackgroundInit selects the wall arena (sonic3k.asm:106046-106071);
+ * HCZ2_WallMove starts at P1 X=$680 (106180-106223), and ShakeScreen_Setup
+ * selects the continuous table by LF & $3F (104234-104256). Obj_HCZ2Wall
+ * reads the preceding accumulator in its own slot (106277-106290), before
+ * the next ScreenEvents dispatch, and derives x=-offset+$5BE,y=$700.
  *
  * Only the public component start is declared. All producer state comes from
- * ordinary frames. Expected restore/link/forward equality failures are final
+ * ordinary frames. Expected slot-consumption/restore/forward failures are final
  * oracles, not setup gates; unexpected frame/capture/reflection errors stop.
- * This joint component cannot identify an actual R52 caller or isolate two
- * causal faults. No movie/aux data, phase/timer/LF/shake/link setter is used.
+ * The first warm step completes the production fresh-assembly inlet. Every
+ * following ordinary frame checks the preceding completed accumulator explicitly.
+ * No movie/aux data, phase/timer/LF/shake/link setter is used. These moving and
+ * naturally stationary windows do not certify held/refresh or whole-route states.
  */
 @RequiresRom(SonicGame.SONIC_3K)
 class TestS3kHczMovingWallShakeRewind {
@@ -45,10 +49,10 @@ class TestS3kHczMovingWallShakeRewind {
     void movingWallRestoresSavedCameraAndReplaysBothCompleteWorldBranches() {
         var fixture = fixtureAt(WALL_TRIGGER_X);
         var owners = owners();
-        ordinaryFrame(fixture); // BG init falls through to the first genuine wall movement
+        ordinaryFrame(fixture); // Complete the production fresh inlet and first screen publication.
         var a = observe(fixture, owners);
         assertOriginalGeneration(fixture, a, true);
-        assertOriginalBinding(a);
+        List<Executable> oracles = new ArrayList<>();
         var registry = fixture.gameplayMode().getRewindRegistry();
         var worldA = registry.capture();
         assertEquals(a.camera(), worldA.get("camera"), "same completed A publication");
@@ -59,12 +63,11 @@ class TestS3kHczMovingWallShakeRewind {
         // offset/X within the source's finite period. Never choose an LF phase,
         // a coincident offset, a stopped wall or a fabricated handler value.
         for (int frame = 1; frame <= CONTINUOUS_PERIOD; frame++) {
-            ordinaryFrame(fixture);
-            var candidate = observe(fixture, owners);
+            var candidate = advanceAndObserve(fixture, owners, oracles, "original moving frame " + frame);
             assertOriginalGeneration(fixture, candidate, true);
             if (candidate.camera().shakeOffsetY() != a.camera().shakeOffsetY()
-                    && candidate.walls().getFirst().offset() != a.walls().getFirst().offset()
-                    && candidate.walls().getFirst().x() != a.walls().getFirst().x()) {
+                    && candidate.walls().getFirst().pose().offset() != a.walls().getFirst().pose().offset()
+                    && candidate.walls().getFirst().pose().x() != a.walls().getFirst().pose().x()) {
                 b = candidate;
                 forwardFrames = frame;
                 break;
@@ -72,11 +75,11 @@ class TestS3kHczMovingWallShakeRewind {
         }
         assertNotNull(b, "prerequisite: natural shake and managed integer wall change within LF mask period");
         assertNotEquals(a.camera().shakeOffsetY(), b.camera().shakeOffsetY());
-        assertNotEquals(a.walls().getFirst().offset(), b.walls().getFirst().offset());
-        assertNotEquals(a.walls().getFirst().x(), b.walls().getFirst().x());
+        assertNotEquals(a.walls().getFirst().pose().offset(), b.walls().getFirst().pose().offset());
+        assertNotEquals(a.walls().getFirst().pose().x(), b.walls().getFirst().pose().x());
         var worldB = registry.capture();
         assertEquals(b.camera(), worldB.get("camera"), "same completed B publication");
-        replayTwiceThenAssert(fixture, owners, a, worldA, b, worldB, forwardFrames);
+        replayTwiceThenAssert(fixture, owners, a, worldA, b, worldB, forwardFrames, oracles);
     }
 
     @Test
@@ -88,26 +91,25 @@ class TestS3kHczMovingWallShakeRewind {
         ordinaryFrame(fixture);
         var a = observe(fixture, owners);
         assertOriginalGeneration(fixture, a, false);
-        assertOriginalBinding(a);
+        List<Executable> oracles = new ArrayList<>();
         var registry = fixture.gameplayMode().getRewindRegistry();
         var worldA = registry.capture();
         assertEquals(a.camera(), worldA.get("camera"));
-        ordinaryFrame(fixture);
-        var b = observe(fixture, owners);
+        var b = advanceAndObserve(fixture, owners, oracles, "original stationary frame");
         assertOriginalGeneration(fixture, b, false);
         assertEquals(0, a.camera().shakeOffsetY());
         assertEquals(0, b.camera().shakeOffsetY());
         assertEquals(a.walls(), b.walls(), "naturally inactive movement, not a disabled event");
         var worldB = registry.capture();
         assertEquals(b.camera(), worldB.get("camera"));
-        replayTwiceThenAssert(fixture, owners, a, worldA, b, worldB, 1);
+        replayTwiceThenAssert(fixture, owners, a, worldA, b, worldB, 1, oracles);
     }
 
     private static void replayTwiceThenAssert(HeadlessTestFixture fixture, Owners owners,
                                              Observation a, CompositeSnapshot worldA,
-                                             Observation b, CompositeSnapshot worldB, int frames) {
+                                             Observation b, CompositeSnapshot worldB, int frames,
+                                             List<Executable> oracles) {
         var registry = fixture.gameplayMode().getRewindRegistry();
-        List<Executable> oracles = new ArrayList<>();
         for (int replay = 1; replay <= 2; replay++) {
             String label = "restore/forward branch " + replay;
             registry.restore(worldA); // includes the production derived-state reconciliation
@@ -119,10 +121,12 @@ class TestS3kHczMovingWallShakeRewind {
                     () -> label + " immediate full registry: " + immediateDiff));
             addWallOracles(oracles, label + " immediate", immediate, a);
 
-            // No equality/expected linkage assertion preempts either branch.
+            // No expected restore/slot equality assertion preempts either branch.
             // The same number of the same ordinary zero-input frames is replayed
-            // from the actual restored A, even if its publication/link is wrong.
-            for (int frame = 0; frame < frames; frame++) ordinaryFrame(fixture);
+            // from the actual restored A, even if its publication or pose is wrong.
+            for (int frame = 0; frame < frames; frame++) {
+                advanceAndObserve(fixture, owners, oracles, label + " ordinary frame " + frame);
+            }
             var forward = observe(fixture, owners);
             var forwardWorld = registry.capture();
             var forwardDiff = differences(worldB, forwardWorld);
@@ -133,19 +137,39 @@ class TestS3kHczMovingWallShakeRewind {
         }
         // Both honest branches finished before ANY expected contract assertion.
         // No key is removed; each key uses the existing complete equality rule.
-        assertAll("joint saved Camera / live wall linkage / full-world replay", oracles);
+        assertAll("saved Camera / preceding wall publication / identity / full-world replay", oracles);
+    }
+
+    private static Observation advanceAndObserve(HeadlessTestFixture fixture, Owners owners,
+                                                 List<Executable> oracles, String label) {
+        int precedingAccumulator = owners.events().getWallOffsetFixed();
+        ordinaryFrame(fixture);
+        var completed = observe(fixture, owners);
+        int precedingHighWord = precedingAccumulator >> 16;
+        var expected = new WallPose(precedingHighWord,
+                (short) (WALL_X_BASE - precedingHighWord), WALL_Y);
+        var actual = completed.walls().stream().map(ManagedWall::pose).toList();
+        oracles.add(() -> assertEquals(List.of(expected), actual,
+                label + " wall slot consumes preceding completed Events_bg, not this frame's next publication"));
+        return completed;
     }
 
     private static void addWallOracles(List<Executable> oracles, String label,
                                       Observation actual, Observation expected) {
-        oracles.add(() -> assertTrue(actual.linked(), label + " event reference is the registered managed wall"));
-        oracles.add(() -> assertEquals(expected.walls(), actual.walls(), label + " managed wall pose/offset"));
-        oracles.add(() -> assertEquals(expected.cachedWallPose(), actual.cachedWallPose(),
-                label + " event-held wall pose/offset"));
-        var nativePose = new WallPose(actual.eventOffsetPixels(),
-                WALL_X_BASE - actual.eventOffsetPixels(), WALL_Y);
-        oracles.add(() -> assertEquals(List.of(nativePose), actual.walls(),
-                label + " managed wall reads the restored/current Events_bg offset"));
+        oracles.add(() -> assertEquals(expected.walls(), actual.walls(),
+                label + " registered wall identity and captured latched pose"));
+        oracles.add(() -> assertEquals(1, actual.walls().size(), label + " one managed wall"));
+        oracles.add(() -> assertTrue(actual.walls().stream().allMatch(wall -> wall.identity() != null),
+                label + " every managed wall has a real registered identity"));
+        oracles.add(() -> assertEquals(expected.publication(), actual.publication(),
+                label + " canonical completed screen publication"));
+        oracles.add(() -> assertEquals(expected.shakeFlag(), actual.shakeFlag(), label + " shared shake flag"));
+        oracles.add(() -> assertEquals(actual.publication().shakeOffset(), actual.handlerShake(),
+                label + " scroll consumes the captured applied shake"));
+        oracles.add(() -> assertEquals(actual.publication().backgroundX(), actual.handlerBgX(),
+                label + " scroll consumes the captured BG X"));
+        oracles.add(() -> assertEquals((short) actual.publication().backgroundY(), actual.handlerBgY(),
+                label + " scroll consumes the captured BG Y"));
     }
 
     private static List<String> differences(CompositeSnapshot expected, CompositeSnapshot actual) {
@@ -200,54 +224,47 @@ class TestS3kHczMovingWallShakeRewind {
     private static Observation observe(HeadlessTestFixture fixture, Owners owners) {
         // ObjectInstanceQueries.activeObjectsOfType only collects references and
         // sorts on stored slots. No isDestroyed/spawn/provider callback is read.
-        var managed = GameServices.level().getObjectManager().activeObjectsOfType(HCZ2WallObjectInstance.class);
-        var cached = cachedWall(owners.events());
-        boolean linked = managed.size() == 1 && cached == managed.getFirst();
+        var objects = GameServices.level().getObjectManager();
+        var managed = objects.activeObjectsOfType(HCZ2WallObjectInstance.class);
+        var identities = objects.captureIdentityContext().requireIdentityTable();
         return new Observation(fixture.camera().capture(),
-                owners.events().getWallOffsetPixels(), owners.events().getWallOffsetFixed(),
-                owners.events().getAct2BgRoutine(), owners.events().isWallMoving(),
-                owners.events().isWallStopped(), owners.events().getShakeTimer(),
+                owners.events().getWallOffsetFixed(), owners.events().getAct2BgRoutine(),
+                owners.events().getScreenShakeFlag(), owners.events().screenPublication(),
                 owners.events().isEventsFg5(), owners.events().isCutsceneActive(),
                 owners.handler().getHcz2BgPhase(), owners.handler().getShakeOffsetY(),
-                managed.stream().map(TestS3kHczMovingWallShakeRewind::wallPose).toList(),
-                cached == null ? null : wallPose(cached), linked);
+                owners.handler().getBgCameraX(), owners.handler().getVscrollFactorBG(),
+                managed.stream().map(wall -> new ManagedWall(identities.idFor(wall), wallPose(wall))).toList());
     }
 
     private static void assertOriginalGeneration(HeadlessTestFixture fixture, Observation point, boolean moving) {
         assertEquals(4, point.bgRoutine(), "prerequisite: genuine wall-move event dispatch");
+        assertTrue(point.publication().valid(), "prerequisite: completed native screen publication");
+        assertTrue(point.publication().wallPlane());
         assertEquals(SwScrlHcz.Hcz2BgPhase.WALL_CHASE, point.phase());
-        assertEquals(moving, point.moving());
-        assertFalse(point.stopped());
-        assertEquals(0, point.shakeTimer());
+        assertTrue((point.eventOffsetFixed() >> 16) > -0x600, "prerequisite: wall has not reached its stop");
         assertFalse(point.eventsFg5());
         assertFalse(point.cutscene());
-        assertEquals(List.of(new WallPose(point.eventOffsetPixels(),
-                WALL_X_BASE - point.eventOffsetPixels(), WALL_Y)), point.walls());
+        assertOriginalManagedWall(point);
+        assertEquals(point.publication().shakeOffset(), point.handlerShake());
         assertEquals(point.handlerShake(), point.camera().shakeOffsetY(), "actual completed shake publication");
+        assertEquals(point.publication().backgroundX(), point.handlerBgX());
+        assertEquals((short) point.publication().backgroundY(), point.handlerBgY());
         if (moving) {
-            assertTrue(point.eventOffsetFixed() < 0 && point.eventOffsetPixels() < 0);
+            assertTrue(point.eventOffsetFixed() < 0);
+            assertTrue(point.shakeFlag() < 0, "native constant shake remains enabled");
         } else {
             assertTrue(fixture.sprite().getCentreX() < WALL_TRIGGER_X);
             assertEquals(0, point.eventOffsetFixed());
-            assertEquals(0, point.eventOffsetPixels());
+            assertEquals(0, point.shakeFlag());
         }
     }
 
-    private static void assertOriginalBinding(Observation a) {
-        // This prerequisite is checked only before original A. Every restored
-        // linkage and pose observation reaches the final contract assertAll.
-        assertTrue(a.linked(), "prerequisite: original event holds the actual managed wall");
-        assertEquals(a.walls().getFirst(), a.cachedWallPose());
-    }
-
-    private static HCZ2WallObjectInstance cachedWall(Sonic3kHCZEvents events) {
-        try {
-            var field = Sonic3kHCZEvents.class.getDeclaredField("wallObject");
-            field.setAccessible(true); // reflection accessibility only, no gameplay-field write
-            return (HCZ2WallObjectInstance) field.get(events);
-        } catch (ReflectiveOperationException failure) {
-            throw new AssertionError("prerequisite: existing event wall-reference projection", failure);
-        }
+    private static void assertOriginalManagedWall(Observation point) {
+        assertEquals(1, point.walls().size(), "prerequisite: original unique managed wall");
+        var wall = point.walls().getFirst();
+        assertNotNull(wall.identity(), "prerequisite: managed wall is registered under its own identity");
+        assertEquals((short) (WALL_X_BASE - wall.pose().offset()), wall.pose().x());
+        assertEquals(WALL_Y, wall.pose().y());
     }
 
     private static WallPose wallPose(HCZ2WallObjectInstance wall) {
@@ -263,8 +280,9 @@ class TestS3kHczMovingWallShakeRewind {
 
     private record Owners(Sonic3kHCZEvents events, SwScrlHcz handler) { }
     private record WallPose(int offset, int x, int y) { }
-    private record Observation(CameraSnapshot camera, int eventOffsetPixels, int eventOffsetFixed,
-                               int bgRoutine, boolean moving, boolean stopped, int shakeTimer,
+    private record ManagedWall(ObjectRefId identity, WallPose pose) { }
+    private record Observation(CameraSnapshot camera, int eventOffsetFixed,
+                               int bgRoutine, int shakeFlag, Sonic3kHCZEvents.ScreenPublication publication,
                                boolean eventsFg5, boolean cutscene, SwScrlHcz.Hcz2BgPhase phase,
-                               int handlerShake, List<WallPose> walls, WallPose cachedWallPose, boolean linked) { }
+                               int handlerShake, int handlerBgX, short handlerBgY, List<ManagedWall> walls) { }
 }

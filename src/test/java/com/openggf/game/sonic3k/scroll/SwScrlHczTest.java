@@ -1,6 +1,11 @@
 package com.openggf.game.sonic3k.scroll;
 
 import com.openggf.data.Rom;
+import com.openggf.game.sonic3k.events.Sonic3kHCZEvents.ScreenPublication;
+import com.openggf.level.scroll.BgTilemapUpdateMode;
+import com.openggf.level.scroll.ScrollProjection;
+import com.openggf.level.scroll.ScrollProjectionContext;
+import com.openggf.level.scroll.ScrollView;
 import com.openggf.level.scroll.compose.ScrollValueTable;
 import com.openggf.level.scroll.compose.WaterlineBlendComposer;
 import com.openggf.level.scroll.ZoneScrollHandler;
@@ -8,15 +13,19 @@ import org.junit.jupiter.api.Test;
 
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static com.openggf.level.scroll.M68KMath.VISIBLE_LINES;
 import static com.openggf.level.scroll.M68KMath.negWord;
 import static com.openggf.level.scroll.M68KMath.packScrollWords;
 import static com.openggf.level.scroll.M68KMath.unpackBG;
 import static com.openggf.level.scroll.M68KMath.unpackFG;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -387,51 +396,58 @@ public class SwScrlHczTest {
         }
     }
 
-    // ==== HCZ2 Screen Shake Tests ====
+    // ==== HCZ2 completed-publication tests ====
 
     @Test
     public void hcz2BgYIncludesShakeCompensation() {
-        SwScrlHcz handler = new SwScrlHcz();
+        var publication = new AtomicReference<>(new ScreenPublication(
+                true, false, 0x100, 0x400, 0, 0x100, 0));
+        SwScrlHcz handler = new SwScrlHcz(null, publication::get);
         int[] buf = new int[VISIBLE_LINES];
 
-        // Without shake: bgY = cameraY / 4
-        handler.setScreenShakeOffset(0);
         handler.update(buf, 0x100, 0x400, 0, 1);
         short noShake = handler.getVscrollFactorBG();
-        assertEquals((short) (0x400 >> 2), noShake, "No shake: BG Y = cameraY/4");
+        assertEquals((short) 0x100, noShake, "Unshaken completed BG word");
 
-        // With shake of 8: bgY = (0x400 - 8) / 4 + 8 = 0xFE + 8 = 0x106
-        handler.setScreenShakeOffset(8);
+        // HCZ2_ScreenEvent already added 8 to FG Y. The producer's native
+        // (FGcopyY - shake)/4 + shake is therefore $108, not $106.
+        publication.set(new ScreenPublication(true, false, 0x100, 0x408, 0, 0x108, 8));
         handler.update(buf, 0x100, 0x400, 0, 1);
         short withShake = handler.getVscrollFactorBG();
-        short expected = (short) ((((short) (0x400 - 8)) >> 2) + 8);
-        assertEquals(expected, withShake, "With shake: BG Y = (camY - shake)/4 + shake");
+        assertEquals((short) 0x108, withShake, "Consume the producer's compensated BG word");
         assertNotEquals(noShake, withShake, "Shake changes BG Y");
     }
 
     @Test
     public void hcz2ShakeOffsetAffectsFgVScroll() {
-        SwScrlHcz handler = new SwScrlHcz();
+        var publication = new AtomicReference<>(new ScreenPublication(
+                true, false, 0x100, 0x400, 0, 0x100, 0));
+        SwScrlHcz handler = new SwScrlHcz(null, publication::get);
         int[] buf = new int[VISIBLE_LINES];
 
-        handler.setScreenShakeOffset(0);
         handler.update(buf, 0x100, 0x400, 0, 1);
-        assertEquals((short) 0, handler.getVscrollFactorFG(), "No shake: FG VScroll = 0");
+        assertEquals((short) 0x400, handler.getVscrollFactorFG(), "Unshaken copied FG word");
+        assertEquals(0, handler.getShakeOffsetY());
 
-        handler.setScreenShakeOffset(4);
+        publication.set(new ScreenPublication(true, false, 0x100, 0x404, 0, 0x104, 4));
         handler.update(buf, 0x100, 0x400, 0, 1);
-        assertEquals((short) (0x400 + 4), handler.getVscrollFactorFG(), "With shake: FG VScroll = camY + shake");
+        assertEquals((short) 0x404, handler.getVscrollFactorFG(), "FG word already includes shake");
+        assertEquals(4, handler.getShakeOffsetY(), "Sprite presentation applies this offset once");
     }
 
     @Test
     public void hcz2ShakeDoesNotAffectHcz1() {
-        SwScrlHcz handler = new SwScrlHcz();
+        AtomicInteger reads = new AtomicInteger();
+        SwScrlHcz handler = new SwScrlHcz(null, () -> {
+            reads.incrementAndGet();
+            return new ScreenPublication(true, false, 0x100, 0x40A, 0, 0x10A, 10);
+        });
         int[] buf = new int[VISIBLE_LINES];
 
-        // Set shake and run HCZ1 (actId=0) â€” shake should not affect Act 1
-        handler.setScreenShakeOffset(10);
         handler.update(buf, 0x100, EQUILIBRIUM_Y, 0, 0);
-        assertEquals((short) 0, handler.getVscrollFactorFG(), "HCZ1 ignores shake: FG VScroll = 0");
+        assertEquals((short) 0, handler.getVscrollFactorFG(), "HCZ1 retains its plain FG path");
+        assertEquals(0, handler.getShakeOffsetY(), "HCZ2 shake cannot leak into act 1");
+        assertEquals(0, reads.get(), "Act 1 does not consult the act-2 publication");
     }
 
     // ==== HCZ2 Wall-Chase Mode Tests ====
@@ -444,21 +460,19 @@ public class SwScrlHczTest {
 
     @Test
     public void hcz2WallChaseProducesUniformScroll() {
-        SwScrlHcz handler = new SwScrlHcz();
-        int[] buf = new int[VISIBLE_LINES];
         int cameraX = 0x800;
         int cameraY = 0x600;
+        var publication = new ScreenPublication(true, true,
+                cameraX, cameraY, cameraX - 0x200 + 0x40, cameraY - 0x500, 0);
+        SwScrlHcz handler = new SwScrlHcz(null, () -> publication);
+        int[] buf = new int[VISIBLE_LINES];
 
-        handler.setHcz2BgPhase(SwScrlHcz.Hcz2BgPhase.WALL_CHASE);
-        handler.setWallChaseOffsetX(0x40);
-        handler.update(buf, cameraX, cameraY, 0, 1);
+        // Live arguments differ deliberately: the completed copies are the input.
+        handler.update(buf, 0x1234, 0x345, 0, 1);
+        assertEquals((short) (cameraY - 0x500), handler.getVscrollFactorBG(), "Published wall BG Y");
+        assertEquals(SwScrlHcz.Hcz2BgPhase.WALL_CHASE, handler.getHcz2BgPhase());
 
-        // BG Y = camY - $500 (sonic3k.asm HCZ2_WallMove line ~106052)
-        assertEquals((short) (cameraY - 0x500), handler.getVscrollFactorBG(), "Wall chase BG Y");
-
-        // All 224 lines should have identical scroll values (PlainDeformation)
         short expectedFg = negWord(cameraX);
-        // BG X = -(camX - $200 + wallOffset) (sonic3k.asm line ~106058)
         short expectedBg = negWord(cameraX - 0x200 + 0x40);
         for (int i = 0; i < VISIBLE_LINES; i++) {
             assertEquals(expectedFg, unpackFG(buf[i]), "Uniform FG at line " + i);
@@ -468,13 +482,13 @@ public class SwScrlHczTest {
 
     @Test
     public void hcz2NormalModeHasParallaxBandsWallChaseDoesNot() {
-        SwScrlHcz handler = new SwScrlHcz();
-        int[] buf = new int[VISIBLE_LINES];
         int cameraX = 0x800;
         int cameraY = 0x200;
+        var publication = new AtomicReference<>(new ScreenPublication(
+                true, false, cameraX, cameraY, 0, 0x80, 0));
+        SwScrlHcz handler = new SwScrlHcz(null, publication::get);
+        int[] buf = new int[VISIBLE_LINES];
 
-        // Normal mode: multiple parallax bands
-        handler.setHcz2BgPhase(SwScrlHcz.Hcz2BgPhase.NORMAL);
         handler.update(buf, cameraX, cameraY, 0, 1);
         int normalDistinct = uniqueBgValues(buf);
         assertTrue(normalDistinct > 3, "Normal mode has multiple BG speeds, got " + normalDistinct);
@@ -489,48 +503,208 @@ public class SwScrlHczTest {
         assertTrue(differsFromFinalLine,
                 "HCZ2 normal priority replay cannot substitute the final scanline for every band");
 
-        // Wall-chase mode: single uniform BG value
-        handler.setHcz2BgPhase(SwScrlHcz.Hcz2BgPhase.WALL_CHASE);
+        publication.set(new ScreenPublication(true, true, cameraX, cameraY, 0x600, 0x100, 0));
         handler.update(buf, cameraX, cameraY, 0, 1);
-        int chaseDistinct = uniqueBgValues(buf);
-        assertEquals(1, chaseDistinct, "Wall chase is uniform");
+        assertEquals(1, uniqueBgValues(buf), "Wall chase is uniform");
     }
 
     @Test
     public void hcz2WallChaseOffsetMovesBackground() {
-        SwScrlHcz handler = new SwScrlHcz();
-        int[] buf1 = new int[VISIBLE_LINES];
-        int[] buf2 = new int[VISIBLE_LINES];
         int cameraX = 0x800;
         int cameraY = 0x600;
+        var publication = new AtomicReference<>(new ScreenPublication(
+                true, true, cameraX, cameraY, cameraX - 0x200, cameraY - 0x500, 0));
+        SwScrlHcz handler = new SwScrlHcz(null, publication::get);
+        int[] buf1 = new int[VISIBLE_LINES];
+        int[] buf2 = new int[VISIBLE_LINES];
 
-        handler.setHcz2BgPhase(SwScrlHcz.Hcz2BgPhase.WALL_CHASE);
-
-        // Wall offset 0
-        handler.setWallChaseOffsetX(0);
         handler.update(buf1, cameraX, cameraY, 0, 1);
         short bg1 = unpackBG(buf1[0]);
-
-        // Wall offset -0x200 (wall has advanced)
-        handler.setWallChaseOffsetX(-0x200);
+        publication.set(new ScreenPublication(
+                true, true, cameraX, cameraY, cameraX - 0x200 - 0x200, cameraY - 0x500, 0));
         handler.update(buf2, cameraX, cameraY, 0, 1);
         short bg2 = unpackBG(buf2[0]);
 
-        assertNotEquals(bg1, bg2, "Different wall offsets produce different BG scroll");
+        assertNotEquals(bg1, bg2, "Different published wall offsets produce different BG scroll");
     }
 
     @Test
     public void hcz2WallChaseExposesBgCameraForCollisionParity() {
-        SwScrlHcz handler = new SwScrlHcz();
+        int expectedX = 0x840 - 0x200 - 0x120;
+        int expectedY = 0x690 - 0x500;
+        var publication = new ScreenPublication(true, true,
+                0x840, 0x690, expectedX, expectedY, 0);
+        SwScrlHcz handler = new SwScrlHcz(null, () -> publication);
+        handler.update(new int[VISIBLE_LINES], 0x1234, 0x345, 0, 1);
 
-        handler.setHcz2BgPhase(SwScrlHcz.Hcz2BgPhase.WALL_CHASE);
-        handler.setWallChaseOffsetX(-0x120);
-        handler.primeBgCollisionState(0x840, 0x690);
+        assertEquals(expectedX, handler.getBgCameraX(), "Presentation reads the copied BG X word");
+        assertEquals((short) expectedY, handler.getVscrollFactorBG(),
+                "Presentation reads the copied BG Y word; collision has its own retained adapter");
+    }
 
-        assertEquals(0x840 - 0x200 - 0x120, handler.getBgCameraX(),
-                "HCZ2 wall-chase BG collisions must use Camera_X_pos_BG_copy");
-        assertEquals((short) (0x690 - 0x500), handler.getVscrollFactorBG(),
-                "HCZ2 wall-chase BG collisions must use Camera_Y_pos_BG_copy");
+    @Test
+    public void hcz2HeldWallPublicationDoesNotFollowLiveCamera() {
+        var publication = new AtomicReference<>(new ScreenPublication(
+                true, true, 0x800, 0x603, 0x500, 0x103, 3));
+        SwScrlHcz handler = new SwScrlHcz(null, publication::get);
+        int[] buf = new int[VISIBLE_LINES];
+        handler.update(buf, 0x800, 0x600, 0, 1);
+
+        // A held row dispatch updates FG copies while keeping the preceding BG.
+        publication.set(new ScreenPublication(true, true, 0x840, 0x683, 0x500, 0x103, 3));
+        handler.update(buf, 0xB00, 0x900, 1, 1);
+        assertEquals((short) 0x683, handler.getVscrollFactorFG());
+        assertEquals((short) 0x103, handler.getVscrollFactorBG());
+        assertEquals(0x500, handler.getBgCameraX());
+        for (int packed : buf) {
+            assertEquals(negWord(0x840), unpackFG(packed));
+            assertEquals(negWord(0x500), unpackBG(packed));
+        }
+    }
+
+    @Test
+    public void hcz2RebuildReadsRestoredPublicationWithoutCapturingAnotherOwner() {
+        var publication = new AtomicReference<>(new ScreenPublication(
+                true, true, 0x800, 0x603, 0x500, 0x103, 3));
+        AtomicInteger reads = new AtomicInteger();
+        SwScrlHcz handler = new SwScrlHcz(null, () -> {
+            reads.incrementAndGet();
+            return publication.get();
+        });
+        int[] original = new int[VISIBLE_LINES];
+        handler.update(original, 0x800, 0x600, 0, 1);
+        var saved = publication.get();
+        assertNull(handler.captureRewindState(), "The event payload is the only publication capture owner");
+
+        publication.set(new ScreenPublication(true, false, 0xA00, 0x800, 0, 0x200, 0));
+        handler.update(new int[VISIBLE_LINES], 0xA00, 0x800, 1, 1);
+        publication.set(saved);
+        int[] restored = new int[VISIBLE_LINES];
+        handler.rebuildOutput(restored, 0x1234, 0x345, 2, 1);
+        assertArrayEquals(original, restored, "Rebuild consumes restored copies, not the live camera");
+        assertEquals(3, reads.get(), "One supplier read per output pass, including rebuild");
+        assertEquals((short) 0x603, handler.getVscrollFactorFG());
+        assertEquals((short) 0x103, handler.getVscrollFactorBG());
+        assertEquals(3, handler.getShakeOffsetY());
+    }
+
+    @Test
+    public void hcz2FrozenProjectionUsesOnlyTheCapturedPublication() {
+        var publication = new AtomicReference<>(new ScreenPublication(
+                true, true, 0x800, 0x603, 0x550, 0x103, 3));
+        AtomicInteger reads = new AtomicInteger();
+        SwScrlHcz handler = new SwScrlHcz(null, () -> {
+            reads.incrementAndGet();
+            return publication.get();
+        });
+        int[] buf = new int[VISIBLE_LINES];
+        handler.update(buf, 0x800, 0x600, 11, 1);
+        ScrollProjection nativeOutput = output(handler, buf);
+        var phase = handler.captureProjection(new ScrollProjectionContext(
+                0x800, 0x600, 11, 1, 320, VISIBLE_LINES, nativeOutput));
+
+        publication.set(new ScreenPublication(true, false, 0xB00, 0x900, 0, 0x240, 0));
+        assertEquals(nativeOutput, phase.sample(new ScrollView(0x800, 0x600, 320, VISIBLE_LINES)),
+                "Native view reproduces the frozen complete output");
+        ScrollProjection translated = phase.sample(new ScrollView(0x820, 0x610, 320, VISIBLE_LINES));
+        assertEquals((short) 0x613, translated.foregroundY());
+        assertEquals((short) 0x113, translated.backgroundY());
+        assertEquals(0x570, translated.backgroundX());
+        assertEquals(3, translated.shakeY());
+        for (int packed : translated.horizontal()) {
+            assertEquals(negWord(0x820), unpackFG(packed));
+            assertEquals(negWord(0x570), unpackBG(packed));
+        }
+        assertEquals(1, reads.get(), "Frozen sampling never consults the live owner");
+        assertEquals((short) 0x103, handler.getVscrollFactorBG(), "Scratch projection does not mutate native output");
+        assertEquals(0x550, handler.getBgCameraX());
+    }
+
+    @Test
+    public void hcz2MissingOrInvalidPublicationDoesNotInitializeAnOwner() {
+        var publication = new AtomicReference<ScreenPublication>();
+        AtomicInteger reads = new AtomicInteger();
+        SwScrlHcz handler = new SwScrlHcz(null, () -> {
+            reads.incrementAndGet();
+            return publication.get();
+        });
+        int[] buf = new int[VISIBLE_LINES];
+        handler.update(buf, 0x800, 0x600, 0, 1);
+        assertArrayEquals(new int[VISIBLE_LINES], buf);
+        assertEquals((short) 0, handler.getVscrollFactorFG());
+        assertEquals((short) 0, handler.getVscrollFactorBG());
+        assertTrue(handler.foregroundVerticalScrollExplicit(), "Neutral zero must not select live-camera fallback");
+
+        publication.set(new ScreenPublication(false, true, 0x800, 0x603, 0x550, 0x103, 3));
+        handler.rebuildOutput(buf, 0xA00, 0x800, 1, 1);
+        assertArrayEquals(new int[VISIBLE_LINES], buf, "Invalid data cannot establish a wall phase");
+        assertEquals((short) 0, handler.getVscrollFactorFG());
+        assertEquals((short) 0, handler.getVscrollFactorBG());
+        assertEquals(0, handler.getShakeOffsetY());
+        assertEquals(Integer.MIN_VALUE, handler.getBgCameraX());
+        assertEquals(2, reads.get(), "Output only reads availability; it cannot initialize the producer");
+        assertNull(handler.captureRewindState());
+    }
+
+    @Test
+    public void hcz2ProjectionUsesThePublishedOriginAfterTheHeldViewCameraMoves() {
+        var published = new ScreenPublication(true, true, 0x800, 0x603, 0x550, 0x103, 3);
+        var handler = new SwScrlHcz(null, () -> published);
+        int[] words = new int[VISIBLE_LINES];
+        handler.update(words, 0x800, 0x600, 11, 1);
+        var original = output(handler, words);
+        // A held-world director moves its view without another ScreenEvents.
+        // Current camera metadata is therefore not the frozen publication's origin.
+        var phase = handler.captureProjection(new ScrollProjectionContext(
+                0x850, 0x640, 11, 1, 320, VISIBLE_LINES, original));
+        var translated = phase.sample(new ScrollView(0x820, 0x610, 320, VISIBLE_LINES));
+        assertEquals((short) 0x613, translated.foregroundY());
+        assertEquals((short) 0x113, translated.backgroundY());
+        assertEquals(0x570, translated.backgroundX());
+        for (int packed : translated.horizontal()) {
+            assertEquals(negWord(0x820), unpackFG(packed));
+            assertEquals(negWord(0x570), unpackBG(packed));
+        }
+        assertEquals(original, output(handler, words), "private sampling never changes native output");
+    }
+
+    @Test
+    public void hcz2PublishedZeroForegroundWordRemainsExplicit() {
+        var publication = new ScreenPublication(true, false, 0x100, 0, 0, 3, 4);
+        SwScrlHcz handler = new SwScrlHcz(null, () -> publication);
+        int[] buf = new int[VISIBLE_LINES];
+        handler.update(buf, 0x100, 0x400, 0, 1);
+        assertEquals((short) 0, handler.getVscrollFactorFG());
+        assertTrue(handler.foregroundVerticalScrollExplicit());
+        var phase = handler.captureProjection(new ScrollProjectionContext(
+                0x100, 0x400, 0, 1, 320, VISIBLE_LINES, output(handler, buf)));
+        assertEquals(output(handler, buf),
+                phase.sample(new ScrollView(0x100, -4, 320, VISIBLE_LINES)),
+                "the published unshaken origin preserves the complete native output, including literal zero");
+        assertEquals((short) 0x404,
+                phase.sample(new ScrollView(0x100, 0x400, 320, VISIBLE_LINES)).foregroundY(),
+                "a new held view moves from published origin -4, then retains shake 4");
+        assertEquals((short) 0, handler.getVscrollFactorFG(), "sampling cannot overwrite native literal zero");
+        assertTrue(handler.foregroundVerticalScrollExplicit());
+    }
+
+    @Test
+    public void hcz2NormalProjectionKeepsWordShiftRounding() {
+        var publication = new ScreenPublication(true, false, 0x100, 7, 0, 1, 0);
+        SwScrlHcz handler = new SwScrlHcz(null, () -> publication);
+        int[] buf = new int[VISIBLE_LINES];
+        handler.update(buf, 0x100, 7, 0, 1);
+        ScrollProjection nativeOutput = output(handler, buf);
+        var phase = handler.captureProjection(new ScrollProjectionContext(
+                0x100, 7, 0, 1, 320, VISIBLE_LINES, nativeOutput));
+        assertEquals(nativeOutput, phase.sample(new ScrollView(0x100, 7, 320, VISIBLE_LINES)));
+        assertEquals((short) 2,
+                phase.sample(new ScrollView(0x100, 8, 320, VISIBLE_LINES)).backgroundY(),
+                "The ratio crosses a word-shift boundary after one view pixel");
+        assertEquals((short) -0x2000,
+                phase.sample(new ScrollView(0x100, 0x8000, 320, VISIBLE_LINES)).backgroundY(),
+                "View translation retains signed word arithmetic");
+        assertEquals(Integer.MIN_VALUE, handler.getBgCameraX(), "Normal plane keeps its anchor-zero convention");
     }
 
     // ==== Provider routing test ====
@@ -573,6 +747,12 @@ public class SwScrlHczTest {
     }
 
     // ==== Helper methods ====
+
+    private static ScrollProjection output(SwScrlHcz handler, int[] words) {
+        return new ScrollProjection(words, null, null, null,
+                handler.getVscrollFactorFG(), handler.getVscrollFactorBG(), handler.getBgCameraX(),
+                512, 0, handler.getShakeOffsetY(), BgTilemapUpdateMode.STATIC_WINDOW);
+    }
 
     private int uniqueBgValues(int[] hScroll) {
         Set<Short> values = new HashSet<>();

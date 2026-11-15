@@ -36,6 +36,10 @@ class TestCameraRelativeDrawGuard {
         }
         var valid = classes.get(Type.getInternalName(Declared.class));
         assertEquals(List.of(), discrepancies(Map.of(valid.name, valid)));
+        // A subclass hook reached through the parent's appendRenderCommands is the subclass's read.
+        var hook = classes.get(Type.getInternalName(OverriddenHook.class));
+        var template = classes.get(hook.parent);
+        assertEquals(List.of(), discrepancies(Map.of(hook.name, hook, template.name, template)));
         assertFalse(CameraRelativeDraw.class.isAnnotationPresent(java.lang.annotation.Inherited.class));
     }
     @Test void inheritedDrawDispatchesToTheConcreteHelperOverride() throws Exception {
@@ -178,6 +182,15 @@ class TestCameraRelativeDrawGuard {
     private static class Declared {
         com.openggf.camera.Camera camera;
         public void appendRenderCommands(List<?> commands) { camera.getX(); }
+    }
+    private static class HookTemplate {
+        public void appendRenderCommands(List<?> commands) { hook(); }
+        protected void hook() { }
+    }
+    @CameraRelativeDraw(CameraRelativeDraw.Use.CULL_ONLY)
+    private static class OverriddenHook extends HookTemplate {
+        com.openggf.camera.Camera camera;
+        @Override protected void hook() { camera.getX(); }
     }
     private static class Inherited extends Declared {
         @Override public void appendRenderCommands(List<?> commands) { super.appendRenderCommands(commands); }
