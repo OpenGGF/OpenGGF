@@ -22,6 +22,16 @@ class TestCdObjectRegistryStageScope {
     }
 
     @Test
+    void palmtreeBouldersKeepTheirSolidRoutineAndHaveAName() {
+        for (CdStagePayload payload : CdStagePayload.values()) {
+            if (!payload.name().startsWith("R1")) continue;
+            assertInstanceOf(com.openggf.game.soniccd.objects.ppz.PpzBoulder.class,
+                    created(registry.stageFactory(payload, 0x1B), 0x1B), payload.name());
+        }
+        assertEquals("Boulder", registry.getPrimaryName(0x1B));
+    }
+
+    @Test
     void theMetallicMadnessLaserIsScopedToTheStagesThatIndexIt() {
         for (CdStagePayload laserStage : new CdStagePayload[]{CdStagePayload.R82A, CdStagePayload.R82D}) {
             assertInstanceOf(MmzLaser.class, created(registry.zoneFactory(laserStage, 0x1D), 0x1D), laserStage.name());

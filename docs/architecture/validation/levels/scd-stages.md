@@ -13,6 +13,17 @@ are the only places these numbers live; update both together when a frontier
 moves. The native recordings are user-local (BizHawk 2.11, USA disc) and never
 committed; every test below skips without them.
 
+## Palmtree Panic boulder obligation (2026-11-15)
+
+`TestPpzBoulderArt` checks the first section's 19 boulder tiles against the
+independently decoded asset hash for all ten R1 payloads. It needs only the
+USA disc, not native recordings. `TestCdObjectRegistryStageScope` checks the
+zone's boulder factory and name; common-object and PPZ solid tests cover the
+retained solid routine. The [development ledger](../../../changelog/v0.8-prerelease-detailed.md#2026-11-15-palmtree-panic-boulder-art)
+records the original failures and loading correction. This bounded art check
+does not advance the route matrix; section-transition screenshots, broader
+viewport coverage and inherited rewind/lifecycle gaps remain unassessed.
+
 ## Stage keys
 
 A stage is its program name `R<zone><act><period>`: zone 1 Palmtree Panic,

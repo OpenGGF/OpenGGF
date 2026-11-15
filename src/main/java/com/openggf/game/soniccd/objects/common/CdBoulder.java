@@ -15,7 +15,7 @@ import java.util.List;
  * subtype. Each frame it calls SolidObject while the retained on-screen bit is set, then draws
  * and runs CheckObjDespawn. The init routine falls through into the main routine.
  */
-public final class CdBoulder extends CdObject implements ReevaluatingSolidObject, ObjectVisualFacing.NonDirectional {
+public class CdBoulder extends CdObject implements ReevaluatingSolidObject, ObjectVisualFacing.NonDirectional {
     private boolean resolvedTile;
 
     public CdBoulder(ObjectSpawn spawn) {
@@ -45,6 +45,10 @@ public final class CdBoulder extends CdObject implements ReevaluatingSolidObject
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
         if (!resolvedTile || tileWord < 0) return;
-        drawFrame(CommonObjectArt.boulderKey(tileWord), 0, hFlip(), vFlip());
+        String key = boulderArtKey();
+        if (key != null) drawFrame(key, 0, hFlip(), vFlip());
     }
+
+    /** The zone may supply art from its later section cues without changing the solid routine. */
+    protected String boulderArtKey() { return CommonObjectArt.boulderKey(tileWord); }
 }
