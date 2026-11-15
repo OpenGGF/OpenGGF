@@ -39,6 +39,37 @@ class TraceCaptureManifestTest {
     }
 
     @Test
+    void aLagSkippingClipRecordsTheTraceRowOfEveryOutputFrame() throws Exception {
+        Path output = directory.resolve("capture.mkv");
+        TraceMetadata metadata = metadata();
+        TraceEntry entry = entry(directory, metadata);
+        TraceCaptureDimensions dimensions = TraceCaptureDimensions.resolve(400, 1);
+        TraceCaptureLagFrames lagFrames = TraceCaptureLagFrames.skipLagFrames();
+        lagFrames.filmed(4438);
+        lagFrames.skipped(4439);
+        lagFrames.filmed(4440);
+
+        JsonNode clip = new ObjectMapper().readTree(TraceCaptureManifest.write(
+                output, entry, metadata, dimensions, "frames:4438:4440", 0, lagFrames)
+                .toFile()).path("clip");
+        assertTrue(clip.path("skip_lag_frames").asBoolean());
+        assertEquals("[4439]", clip.path("skipped_lag_rows").toString());
+        assertEquals("[4438,4440]", clip.path("frame_rows").toString());
+
+        JsonNode kept = new ObjectMapper().readTree(TraceCaptureManifest.write(
+                output, entry, metadata, dimensions, "frames:4438:4440", 0)
+                .toFile()).path("clip");
+        assertEquals(List.of("name", "tail_frames"), fieldNames(kept),
+                "a clip that keeps its lag frames writes the manifest it always wrote");
+    }
+
+    private static List<String> fieldNames(JsonNode node) {
+        List<String> names = new java.util.ArrayList<>();
+        node.fieldNames().forEachRemaining(names::add);
+        return names;
+    }
+
+    @Test
     void failedPublicationPreservesPreviousManifestAndCleansTemporaryFile() throws Exception {
         Path output = directory.resolve("capture.mkv");
         Files.write(output, new byte[]{1});

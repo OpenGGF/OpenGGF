@@ -86,7 +86,8 @@ public final class TailsCarryController {
         NativePositionOps.writeYPosPreserveSubpixel(main, carrier.getCentreY() + yOffset);
         publishCarriedOrientation(main);
         var sprites = carrier.currentSpriteManagerOrNull();
-        if (main.characterKey().isBuiltin() && sprites != null && main.currentLevelManagerIfAvailable() != null && main.getSpriteRenderer() != null)
+        if (main.characterKey().isBuiltin() && sprites != null && main.currentLevelManagerIfAvailable() != null
+                && main.getSpriteRenderer() != null && hostOwnsCarriedFrames(main))
             com.openggf.sprites.managers.SpriteManagerInternalAccess.borrowNativePlayerArt(sprites, main);
         int carriedAnimationId = main.resolveAnimationId(CanonicalAnimation.TAILS_CARRIED);
         // Tails_Carry_Sonic writes the carried id to both anim and prev_anim,
@@ -162,6 +163,17 @@ public final class TailsCarryController {
             return;
         }
         followAndCollide(main);
+    }
+
+    /**
+     * AniRaw_Tails_Carry indexes the mappings of the game that owns the carry. A host without Tails'
+     * flight receives the routine with its donor, and the carried player already wears that donor's
+     * mappings: the host's own art has no such frames to lend.
+     */
+    private static boolean hostOwnsCarriedFrames(AbstractPlayableSprite main) {
+        var module = main.currentGameModule();
+        var host = module == null ? null : module.getDonorCapabilities();
+        return host == null || host.hasTailsFlight();
     }
 
     private void publishCarriedOrientation(AbstractPlayableSprite main) {

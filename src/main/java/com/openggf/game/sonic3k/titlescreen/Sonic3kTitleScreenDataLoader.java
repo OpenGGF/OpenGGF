@@ -386,18 +386,30 @@ public class Sonic3kTitleScreenDataLoader {
         }
 
         // Cache sprite patterns at SPRITE_PATTERN_BASE
-        int spriteCachedCount = 0;
-        if (spritePatterns != null) {
-            for (int i = 0; i < spritePatterns.length; i++) {
-                if (spritePatterns[i] != null) {
-                    gm.cachePatternTexture(spritePatterns[i], SPRITE_PATTERN_BASE + i);
-                    spriteCachedCount++;
-                }
-            }
-        }
+        int spriteCachedCount = cachePatterns(gm, spritePatterns, SPRITE_PATTERN_BASE);
 
         LOGGER.info("Cached " + spriteCachedCount + " sprite patterns to GPU");
         artCached = true;
+    }
+
+    /** Caches the non-null patterns at {@code base + i} with one atlas flush; returns how many. */
+    private static int cachePatterns(GraphicsManager gm, Pattern[] patterns, int base) {
+        if (patterns == null) {
+            return 0;
+        }
+        int cached = 0;
+        gm.beginPatternAtlasBatch();
+        try {
+            for (int i = 0; i < patterns.length; i++) {
+                if (patterns[i] != null) {
+                    gm.cachePatternTexture(patterns[i], base + i);
+                    cached++;
+                }
+            }
+        } finally {
+            gm.endPatternAtlasBatch();
+        }
+        return cached;
     }
 
     /**
@@ -421,14 +433,7 @@ public class Sonic3kTitleScreenDataLoader {
         int arrayIdx = index - 1;
 
         // Cache patterns for this frame
-        Pattern[] patterns = animPatterns[arrayIdx];
-        if (patterns != null) {
-            for (int i = 0; i < patterns.length; i++) {
-                if (patterns[i] != null) {
-                    gm.cachePatternTexture(patterns[i], ANIM_PATTERN_BASE + i);
-                }
-            }
-        }
+        cachePatterns(gm, animPatterns[arrayIdx], ANIM_PATTERN_BASE);
 
         // Cache palette for this frame
         byte[] palData = animPaletteData[arrayIdx];
@@ -471,14 +476,7 @@ public class Sonic3kTitleScreenDataLoader {
 
         // Cache frame D patterns (final scene background)
         int frameDIdx = FRAME_COUNT - 1; // index 12 = frame D
-        Pattern[] patterns = animPatterns[frameDIdx];
-        if (patterns != null) {
-            for (int i = 0; i < patterns.length; i++) {
-                if (patterns[i] != null) {
-                    gm.cachePatternTexture(patterns[i], ANIM_PATTERN_BASE + i);
-                }
-            }
-        }
+        cachePatterns(gm, animPatterns[frameDIdx], ANIM_PATTERN_BASE);
 
         // Cache full 4-line palette from frame D
         byte[] palData = animPaletteData[frameDIdx];

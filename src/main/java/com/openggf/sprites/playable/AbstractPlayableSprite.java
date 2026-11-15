@@ -1758,11 +1758,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
         public final int resolveAnimationId(CanonicalAnimation animation) {
                 refreshRuntimeBoundStateIfNeeded();
-                var donation = currentCrossGameFeatures();
-                int family = donation != null && donation.isActive() && CharacterKey.SONIC.equals(characterKey())
-                        ? donation.resolveDonatedAnimation(animation) : -1;
-                if (family >= 0 && getAnimationSet() != null && getAnimationSet().getScript(family) != null) return family;
-                return PlayableSpriteRuntimeServices.resolveAnimationId(currentGameModule(), animation);
+                return PlayableSpriteRuntimeServices.resolveAnimationId(this, animation);
         }
 
         public final LevelState currentLevelState() { return PlayableSpriteRuntimeServices.levelState(this); }

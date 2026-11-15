@@ -3,8 +3,12 @@ package com.openggf.tools;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.openggf.trace.DivergenceReport.ReplayGate;
+import com.openggf.trace.DivergenceReport.CarriedEntryDiagnostics;
 import com.openggf.trace.TraceFiles;
 import com.openggf.trace.TraceMetadata;
+import com.openggf.trace.TraceVerificationScope;
+import com.openggf.trace.VerificationGroup;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -58,7 +62,10 @@ public final class TraceTriageTool {
     // Parsed model
     // ------------------------------------------------------------------
 
-    /** A single divergence group lifted from the report's {@code errors}/{@code warnings} arrays. */
+    /**
+     * A published error/warning group. Its verification group may be unknown
+     * in legacy evidence; only ALL or absent-gate diagnosis accepts that case.
+     */
     public record Divergence(
             String field,
             String severity,
@@ -67,7 +74,8 @@ public final class TraceTriageTool {
             int frameSpan,
             String expectedAtStart,
             String actualAtStart,
-            boolean cascading) {
+            boolean cascading,
+            VerificationGroup verificationGroup) {
     }
 
     /** A bootstrap (frame-0) divergence lifted from the report's {@code bootstrap} array. */
@@ -79,12 +87,23 @@ public final class TraceTriageTool {
             String context) {
     }
 
-    /** The replay driver's declared completion; comparison counts use a different row domain. */
-    public record ReplayGate(boolean comparisonGateReached, int plannedTraceRows,
-                             String verification) {
+    /** The gate's diagnostic view; the parsed report keeps its global evidence. */
+    private record DiagnosticSelection(
+            TraceVerificationScope scope, Bootstrap bootstrapError, Divergence divergence) {
+        boolean hasEvidence() {
+            return bootstrapError != null || divergence != null;
+        }
+
+        boolean hasHardError() {
+            return bootstrapError != null || divergence != null && "ERROR".equals(divergence.severity());
+        }
     }
 
-    /** Immutable view of a parsed trace report. */
+    /**
+     * Immutable global evidence before diagnostic scope selection. A null
+     * recorded-fields list means unpublished/unknown; an empty list means no
+     * per-frame result keys were retained. It never inventories comparator execution.
+     */
     public record TraceReport(
             int errorCount,
             int warningCount,
@@ -93,31 +112,77 @@ public final class TraceTriageTool {
             List<Bootstrap> bootstrap,
             List<Divergence> errors,
             List<Divergence> warnings,
-            ReplayGate replayGate) {
+            ReplayGate replayGate,
+            CarriedEntryDiagnostics carriedEntryDiagnostics,
+            List<String> missingAdvertisedAuxSchemas,
+            List<String> recordedFields) {
 
-        /**
-         * The earliest per-frame hard error, otherwise the earliest per-frame
-         * warning. Bootstrap errors are surfaced separately before this frontier.
-         */
-        public Divergence firstDivergence() {
-            Divergence best = null;
-            for (Divergence d : errors) {
-                if (best == null || d.startFrame() < best.startFrame()) {
-                    best = d;
+        public TraceReport {
+            bootstrap = List.copyOf(bootstrap);
+            errors = List.copyOf(errors);
+            warnings = List.copyOf(warnings);
+            missingAdvertisedAuxSchemas = List.copyOf(missingAdvertisedAuxSchemas);
+            recordedFields = validatedRecordedFields(recordedFields, totalFrames, errors, warnings);
+            if (replayGate != null && replayGate.verification() != TraceVerificationScope.ALL) {
+                requireClassifiedGroups(errors);
+                requireClassifiedGroups(warnings);
+            }
+        }
+
+        /** Null means unpublished/unknown; a present empty census means no retained field results. */
+        private static List<String> validatedRecordedFields(
+                List<String> fields, int totalFrames, List<Divergence> errors, List<Divergence> warnings) {
+            if (fields == null) {
+                return null;
+            }
+            List<String> snapshot = new ArrayList<>(fields);
+            Set<String> names = new LinkedHashSet<>();
+            for (String field : snapshot) {
+                if (field == null || field.isBlank() || !names.add(field)) {
+                    throw new IllegalArgumentException("recorded_fields requires unique nonblank field names");
                 }
             }
+            if (totalFrames == 0 && !names.isEmpty()) {
+                throw new IllegalArgumentException("recorded_fields cannot name fields without retained comparison rows");
+            }
+            for (List<Divergence> groups : List.of(errors, warnings)) {
+                for (Divergence group : groups) {
+                    if (!names.contains(group.field())) {
+                        throw new IllegalArgumentException("recorded_fields omits published field '" + group.field() + "'");
+                    }
+                }
+            }
+            return List.copyOf(snapshot);
+        }
+
+        /**
+         * The global earliest per-frame hard error, otherwise the earliest
+         * warning. Raw evidence readers do not inherit the CLI's selected scope.
+         */
+        public Divergence firstDivergence() {
+            return firstDivergence(TraceVerificationScope.ALL);
+        }
+
+        private Divergence firstDivergence(TraceVerificationScope scope) {
+            Divergence best = earliest(errors, scope);
             if (best != null) {
                 return best;
             }
-            for (Divergence d : warnings) {
-                if (best == null || d.startFrame() < best.startFrame()) {
+            return earliest(warnings, scope);
+        }
+
+        private static Divergence earliest(List<Divergence> groups, TraceVerificationScope scope) {
+            Divergence best = null;
+            for (Divergence d : groups) {
+                if (scope.includes(d.verificationGroup())
+                        && (best == null || d.startFrame() < best.startFrame())) {
                     best = d;
                 }
             }
             return best;
         }
 
-        /** The first bootstrap ERROR, if present (frame-0 prelude failure). */
+        /** The global first bootstrap ERROR, if present (frame-0 prelude failure). */
         public Bootstrap firstBootstrapError() {
             for (Bootstrap b : bootstrap) {
                 if ("ERROR".equalsIgnoreCase(b.severity())) {
@@ -125,6 +190,14 @@ public final class TraceTriageTool {
                 }
             }
             return null;
+        }
+
+        private DiagnosticSelection diagnosticSelection() {
+            TraceVerificationScope scope = replayGate == null
+                    ? TraceVerificationScope.ALL : replayGate.verification();
+            // Bootstrap discrepancies describe the physics/prelude boundary.
+            Bootstrap boot = scope.includes(VerificationGroup.PHYSICS) ? firstBootstrapError() : null;
+            return new DiagnosticSelection(scope, boot, firstDivergence(scope));
         }
     }
 
@@ -174,8 +247,46 @@ public final class TraceTriageTool {
             throw new IOException("Divergence counts disagree with the published error/warning groups");
         }
 
-        return new TraceReport(errorCount, warningCount, totalFrames, summary,
-                List.copyOf(bootstrap), errors, warnings, parseReplayGate(root));
+        // Optional reference diagnostics are best effort; primary fields and
+        // a present replay gate retain their strict wire validation.
+        List<String> missingAuxSchemas = new ArrayList<>();
+        JsonNode missingAuxNode = root.get("missing_advertised_aux_schemas");
+        if (missingAuxNode != null && missingAuxNode.isArray()) {
+            for (JsonNode schema : missingAuxNode) {
+                if (schema.isTextual() && !schema.textValue().isBlank()) {
+                    missingAuxSchemas.add(schema.textValue());
+                }
+            }
+        }
+
+        ReplayGate gate = ReplayGate.readOptionalFrom(root);
+        try {
+            return new TraceReport(errorCount, warningCount, totalFrames, summary,
+                    bootstrap, errors, warnings, gate,
+                    CarriedEntryDiagnostics.readOptionalFrom(root), missingAuxSchemas, readRecordedFields(root));
+        } catch (IllegalArgumentException failure) {
+            // Wire readers retain their checked failure contract; direct model
+            // callers receive the same invariant from the value constructor.
+            throw new IOException(failure.getMessage(), failure);
+        }
+    }
+
+    private static List<String> readRecordedFields(JsonNode report) throws IOException {
+        JsonNode fields = report.get("recorded_fields");
+        if (fields == null) {
+            return null;
+        }
+        if (!fields.isArray()) {
+            throw new IOException("recorded_fields must be an array");
+        }
+        List<String> names = new ArrayList<>();
+        for (JsonNode field : fields) {
+            if (!field.isTextual()) {
+                throw new IOException("recorded_fields requires textual field names");
+            }
+            names.add(field.textValue());
+        }
+        return names;
     }
 
     private static List<Divergence> parseGroups(JsonNode array, String severity) throws IOException {
@@ -194,29 +305,32 @@ public final class TraceTriageTool {
                     requiredText(n, "field"), severity, startFrame, endFrame, frameSpan,
                     requiredText(n, "expected_at_start"),
                     requiredText(n, "actual_at_start"),
-                    requiredBoolean(n, "cascading")));
+                    requiredBoolean(n, "cascading"), reportedVerificationGroup(n)));
         }
         return List.copyOf(out);
     }
 
-    private static ReplayGate parseReplayGate(JsonNode root) throws IOException {
-        if (!root.has("replay_gate")) {
+    private static VerificationGroup reportedVerificationGroup(JsonNode group) {
+        JsonNode value = group.get("verification_group");
+        if (value == null || !value.isTextual()) {
             return null;
         }
-        JsonNode gate = root.get("replay_gate");
-        if (requiredCount(gate, "schema") != 1) {
-            throw new IOException("Unsupported replay_gate schema");
+        return switch (value.textValue()) {
+            case "physics" -> VerificationGroup.PHYSICS;
+            case "animation" -> VerificationGroup.ANIMATION;
+            default -> null;
+        };
+    }
+
+    private static void requireClassifiedGroups(List<Divergence> groups) {
+        for (Divergence group : groups) {
+            if (group.verificationGroup() == null) {
+                // ALL/absent-gate reports historically accepted unclassified groups.
+                // A narrow diagnosis cannot safely call that evidence out of scope.
+                throw new IllegalArgumentException("Narrow replay verification requires canonical verification_group "
+                        + "'physics' or 'animation' for field '" + group.field() + "'");
+            }
         }
-        int plannedRows = requiredCount(gate, "planned_trace_rows");
-        if (plannedRows == 0) {
-            throw new IOException("replay_gate.planned_trace_rows must be positive");
-        }
-        String verification = requiredText(gate, "verification");
-        if (!Set.of("all", "physics", "animation").contains(verification)) {
-            throw new IOException("Unsupported replay_gate verification: " + verification);
-        }
-        return new ReplayGate(requiredBoolean(gate, "comparison_gate_reached"),
-                plannedRows, verification);
     }
 
     private static JsonNode requiredArray(JsonNode parent, String field) throws IOException {
@@ -326,6 +440,13 @@ public final class TraceTriageTool {
             return Subsystem.SIDEKICK;
         }
 
+        // These unqualified recorder fields belong to the playable character,
+        // unlike object_slot[n].routine or a Tails-prefixed routine.
+        if (f.equals("routine") || f.equals("player_routine")
+                || f.equals("x_sub") || f.equals("y_sub")) {
+            return Subsystem.PLAYER_PHYSICS;
+        }
+
         // Object slot / routine / subtype fields.
         if (f.startsWith("object_slot") || f.contains("object_slot")
                 || f.contains("routine") || f.contains("subtype")) {
@@ -385,75 +506,71 @@ public final class TraceTriageTool {
     }
 
     /**
-     * Suggests disassembly search terms for a divergent field. Pure string
-     * logic. Returned terms are intended for {@code RomOffsetFinder} / disasm
-     * label search, not exact addresses.
+     * Suggests search terms in the reported game's pinned disassembly. Terms
+     * include label families, not addresses or a claim that a routine caused
+     * the divergence. Unknown games retain only the recorded field name.
      */
-    public static List<String> suggestDisasmSearchTerms(String field, Subsystem subsystem) {
-        Set<String> terms = new LinkedHashSet<>();
-        switch (subsystem) {
-            case PLAYER_PHYSICS -> {
-                terms.add("Sonic_Move");
-                terms.add("Obj01");
-                terms.add("Player_Subroutines");
-                terms.add("ChkRoll");
-            }
-            case PLAYABLE_ANIMATION -> {
-                terms.add("Animate_Sonic");
-                terms.add("AnimateSprite");
-                terms.add("mapping_frame");
-                terms.add("anim_frame");
-            }
-            case SIDEKICK -> {
-                terms.add("Obj02");
-                terms.add("Tails_");
-                terms.add("Obj_Tails");
-                terms.add("CtrlData_");
-            }
-            case OBJECT_SOLID -> {
-                terms.add("SolidObject");
-                terms.add("PlatformObject");
-                terms.add("MvSonicOnPtfm");
-            }
-            case TOUCH_RESPONSE -> {
-                terms.add("Touch_Response");
-                terms.add("Touch_Loop");
-                terms.add("HurtSonic");
-            }
-            case EVENT -> {
-                terms.add("Dynamic_Resize");
-                terms.add("LevEvents_");
-                terms.add("Deform");
-            }
-            case PALETTE -> {
-                terms.add("PalCycle");
-                terms.add("Pal_");
-                terms.add("AnPal");
-            }
-            case LAYOUT_MUTATION -> {
-                terms.add("AniArt");
-                terms.add("Dynamic_");
-                terms.add("LoadZoneTiles");
-            }
-            case ART_PLC -> {
-                terms.add("PLC_");
-                terms.add("ArtNem_");
-                terms.add("ArtKos_");
-                terms.add("DPLC_");
-            }
-            case TEST_BOOTSTRAP -> {
-                terms.add("Level_Init");
-                terms.add("RandomNumber");
-                terms.add("Oscillating_Data");
-            }
-            default -> {
-                // fall through to field-name token below
-            }
-        }
+    public static List<String> suggestDisasmSearchTerms(
+            String game, String field, Subsystem subsystem) {
+        String gameKey = game == null ? "" : game.toLowerCase(Locale.ROOT);
+        List<String> nativeTerms = switch (gameKey) {
+            case "s1" -> sonic1SearchTerms(subsystem);
+            case "s2" -> sonic2SearchTerms(subsystem);
+            case "s3k" -> sonic3kSearchTerms(subsystem);
+            default -> List.of();
+        };
+        Set<String> terms = new LinkedHashSet<>(nativeTerms);
         if (field != null && !field.isBlank()) {
             terms.add(field);
         }
         return new ArrayList<>(terms);
+    }
+
+    private static List<String> sonic1SearchTerms(Subsystem subsystem) {
+        return switch (subsystem) {
+            case PLAYER_PHYSICS -> List.of("Sonic_Move", "Sonic_Control", "Sonic_ChkRoll");
+            case PLAYABLE_ANIMATION -> List.of("Sonic_Animate", "AnimateSprite");
+            case OBJECT_SOLID -> List.of("SolidObject", "PlatformObject", "MvSonicOnPtfm");
+            case TOUCH_RESPONSE -> List.of("ReactToItem", "React_Enemy", "HurtSonic");
+            case EVENT -> List.of("DynamicLevelEvents", "DeformLayers");
+            case PALETTE -> List.of("PaletteCycle", "PalCycle_Sega");
+            case LAYOUT_MUTATION -> List.of("v_lvllayout");
+            case ART_PLC -> List.of("AddPLC", "RunPLC", "NewPLC");
+            case TEST_BOOTSTRAP -> List.of("RandomNumber", "OscillateNumInit", "OscillateNumDo");
+            case SIDEKICK, UNKNOWN -> List.of();
+        };
+    }
+
+    private static List<String> sonic2SearchTerms(Subsystem subsystem) {
+        return switch (subsystem) {
+            case PLAYER_PHYSICS -> List.of("Sonic_Move", "Obj01");
+            case PLAYABLE_ANIMATION -> List.of("Sonic_Animate", "Tails_Animate", "AnimateSprite");
+            case SIDEKICK -> List.of("Obj02", "TailsCPU_Normal", "TailsCPU_Control");
+            case OBJECT_SOLID -> List.of("SolidObject", "PlatformObject", "MvSonicOnPtfm");
+            case TOUCH_RESPONSE -> List.of("TouchResponse", "Touch_Loop", "HurtCharacter");
+            case EVENT -> List.of("RunDynamicLevelEvents", "DeformBgLayer", "LevEvents_");
+            case PALETTE -> List.of("PalCycle", "PalCycle_Load");
+            case LAYOUT_MUTATION -> List.of("Level_Layout");
+            case ART_PLC -> List.of("LoadPLC");
+            case TEST_BOOTSTRAP -> List.of("RandomNumber", "OscillateNumInit", "OscillateNumDo");
+            case UNKNOWN -> List.of();
+        };
+    }
+
+    private static List<String> sonic3kSearchTerms(Subsystem subsystem) {
+        return switch (subsystem) {
+            case PLAYER_PHYSICS -> List.of("Sonic_Move", "Sonic_Control");
+            case PLAYABLE_ANIMATION -> List.of("Animate_Sonic", "Animate_Tails", "Animate_Sprite");
+            case SIDEKICK -> List.of("Tails_Control", "Obj_Tails");
+            case OBJECT_SOLID -> List.of("SolidObjectFull", "SolidObjectTop", "MvSonicOnPtfm");
+            case TOUCH_RESPONSE -> List.of("TouchResponse", "Touch_Loop", "HurtCharacter");
+            case EVENT -> List.of("ScreenEvents", "Do_ResizeEvents", "DeformBgLayer");
+            case PALETTE -> List.of("Animate_Palette", "AnPal_");
+            case LAYOUT_MUTATION -> List.of("Level_layout_header", "Level_layout_main");
+            case ART_PLC -> List.of("Load_PLC", "Queue_Kos_Module", "Process_Kos_Queue");
+            case TEST_BOOTSTRAP -> List.of("Random_Number", "OscillateNumInit", "OscillateNumDo");
+            case UNKNOWN -> List.of();
+        };
     }
 
     /**
@@ -496,11 +613,11 @@ public final class TraceTriageTool {
      * Decides whether {@code docs/status/trace-frontier-log.md} likely needs an
      * update. The frontier log must be updated when a trace frontier moves,
      * passes, regresses, or is used to select the next target. If the report
-     * shows any errors, the frontier is currently failing and the log should
-     * record (or already record) the current first-error frame/field.
+     * shows errors within the published gate's scope, the selected frontier is
+     * failing. Global totals remain available independently of this diagnosis.
      */
     public static boolean frontierLogLikelyNeedsUpdate(TraceReport report) {
-        return report.errorCount() > 0 || report.firstBootstrapError() != null;
+        return report.diagnosticSelection().hasHardError();
     }
 
     // ------------------------------------------------------------------
@@ -524,6 +641,7 @@ public final class TraceTriageTool {
                                      TraceReport report,
                                      String contextExcerpt,
                                      String auxExcerpt) {
+        DiagnosticSelection selected = report.diagnosticSelection();
         StringBuilder sb = new StringBuilder();
         sb.append("=== Trace Triage Brief ===\n");
         sb.append("Game/Zone: ").append(blankToDash(game)).append(" / ")
@@ -533,18 +651,50 @@ public final class TraceTriageTool {
                 .append(report.totalFrames()).append(" frames compared\n");
         ReplayGate gate = report.replayGate();
         if (gate == null) {
-            sb.append("Replay completion: UNKNOWN (legacy report has no replay_gate).\n");
+            sb.append("Replay completion: UNKNOWN (no replay_gate published).\n");
         } else {
             sb.append("Replay completion: ")
                     .append(gate.comparisonGateReached() ? "COMPLETE" : "INCOMPLETE")
                     .append(" (").append(gate.plannedTraceRows()).append(" planned trace rows; ")
-                    .append(gate.verification()).append(" verification).\n");
+                    .append(gate.verification().name().toLowerCase(Locale.ROOT)).append(" verification).\n");
+        }
+        if (selected.scope() != TraceVerificationScope.ALL) {
+            sb.append("Diagnosis scope: ").append(selected.scope().name().toLowerCase(Locale.ROOT))
+                    .append("; totals and report summary cover all verification groups.\n");
+        }
+        if (report.totalFrames() == 0) {
+            sb.append("Comparison coverage: absent (0 frames compared); gameplay comparison coverage is not established.\n");
+        }
+        List<String> recordedFields = report.recordedFields();
+        if (recordedFields == null) {
+            sb.append("Recorded comparison fields: not reported (unknown).\n");
+        } else if (recordedFields.isEmpty()) {
+            sb.append("Recorded comparison fields: none retained.\n");
+        } else {
+            sb.append("Recorded comparison fields (all verification groups): ")
+                    .append(String.join(", ", recordedFields)).append("\n");
+        }
+        sb.append("Per-frame results only; listed fields may be exempt MATCHes; bootstrap is excluded. Not a census of executed comparators or full reference coverage.\n");
+        if (!report.missingAdvertisedAuxSchemas().isEmpty()) {
+            sb.append("Reference/coverage limits: missing advertised aux schemas: ")
+                    .append(String.join(", ", report.missingAdvertisedAuxSchemas())).append(".\n");
+            sb.append("Aux reference evidence is limited; replay gate and mismatch totals remain as published.\n");
+        }
+        CarriedEntryDiagnostics entry = report.carriedEntryDiagnostics();
+        if (entry == null) {
+            sb.append("Carried entry diagnostics: not reported (unknown).\n");
+        } else {
+            sb.append("Carried entry diagnostic evaluation:\n");
+            sb.append("Provenance: ").append(entry.provenance() == null ? "unknown" : entry.provenance()).append("\n");
+            appendEntryNotes(sb, "Disagreements", entry.disagreements());
+            appendEntryNotes(sb, "Unresolved", entry.unresolved());
+            sb.append("This evaluation does not establish imported gameplay state, complete provenance or run-chain parity.\n");
         }
         sb.append("Saved report only; check this invocation's Surefire result and process completion.\n");
         sb.append("Report summary: ").append(blankToDash(report.summary())).append("\n");
         sb.append("\n");
 
-        Bootstrap bootErr = report.firstBootstrapError();
+        Bootstrap bootErr = selected.bootstrapError();
         if (bootErr != null) {
             Subsystem bootSub = classifySubsystem(bootErr.field(), true);
             sb.append("BOOTSTRAP (frame 0) ERROR present:\n");
@@ -559,14 +709,23 @@ public final class TraceTriageTool {
             sb.append("\n");
         }
 
-        Divergence first = report.firstDivergence();
+        Divergence first = selected.divergence();
         if (first == null) {
-            sb.append("PER-FRAME DIVERGENCE: none in ")
-                    .append(report.totalFrames()).append(" compared frames.\n");
+            sb.append("PER-FRAME DIVERGENCE: none ");
+            if (selected.scope() != TraceVerificationScope.ALL) {
+                sb.append("for ").append(selected.scope().name().toLowerCase(Locale.ROOT))
+                        .append(" verification ");
+            }
+            sb.append("in ").append(report.totalFrames()).append(" compared frames.\n");
             sb.append("\n");
         } else {
             Subsystem sub = classifySubsystem(first.field(), false);
-            sb.append("FIRST DIVERGENCE\n");
+            sb.append("FIRST DIVERGENCE");
+            if (selected.scope() != TraceVerificationScope.ALL) {
+                sb.append(" (").append(selected.scope().name().toLowerCase(Locale.ROOT))
+                        .append(" verification)");
+            }
+            sb.append('\n');
             sb.append("  frame    : ").append(first.startFrame())
                     .append(" (span ").append(first.frameSpan())
                     .append(", ends ").append(first.endFrame()).append(")\n");
@@ -579,7 +738,7 @@ public final class TraceTriageTool {
             sb.append("\n");
 
             sb.append("Suggested disassembly search terms (RomOffsetFinder / disasm label search):\n");
-            for (String t : suggestDisasmSearchTerms(first.field(), sub)) {
+            for (String t : suggestDisasmSearchTerms(game, first.field(), sub)) {
                 sb.append("  - ").append(t).append("\n");
             }
             sb.append("\n");
@@ -609,6 +768,18 @@ public final class TraceTriageTool {
                 .append("  (file: docs/status/trace-frontier-log.md)\n");
 
         return sb.toString();
+    }
+
+    private static void appendEntryNotes(StringBuilder brief, String label, List<String> notes) {
+        brief.append(label).append(":");
+        if (notes.isEmpty()) {
+            brief.append(" none reported\n");
+        } else {
+            brief.append("\n");
+            for (String note : notes) {
+                brief.append("  - ").append(note).append("\n");
+            }
+        }
     }
 
     private static String comparisonOnlyReminder() {
@@ -879,8 +1050,9 @@ public final class TraceTriageTool {
             String json = Files.readString(reportFile, StandardCharsets.UTF_8);
             TraceReport report = parseReport(json);
 
-            Divergence first = report.firstDivergence();
-            boolean bootstrapError = report.firstBootstrapError() != null;
+            DiagnosticSelection selected = report.diagnosticSelection();
+            Divergence first = selected.divergence();
+            boolean bootstrapError = selected.bootstrapError() != null;
             int focusFrame = bootstrapError || first == null
                     ? 0 : first.startFrame();
             // Aux snapshots use -1 for the pre-trace state; context begins at 0.
@@ -889,7 +1061,10 @@ public final class TraceTriageTool {
             String contextExcerpt = "";
             Path contextFile = contextPath == null
                     ? contextPathForReport(reportFile) : Path.of(contextPath);
-            if (contextPath != null || Files.exists(contextFile)) {
+            // Preserve legacy ALL context reads; a narrow view with no selected
+            // evidence must not show an unrelated (possibly stale) context window.
+            if ((selected.scope() == TraceVerificationScope.ALL || selected.hasEvidence())
+                    && (contextPath != null || Files.exists(contextFile))) {
                 String contextText = Files.readString(contextFile, StandardCharsets.UTF_8);
                 contextExcerpt = extractContextNearFrame(contextText, focusFrame, 2, 12);
             }
@@ -897,7 +1072,7 @@ public final class TraceTriageTool {
             String auxExcerpt = "";
             Path auxFile = auxPath != null ? Path.of(auxPath)
                     : fixture == null ? null : TraceFiles.resolve(fixture, "aux_state.jsonl");
-            if (auxFile != null && (first != null || report.firstBootstrapError() != null)) {
+            if (auxFile != null && selected.hasEvidence()) {
                 auxExcerpt = readAuxNearFrame(auxFile, auxFocusFrame, 3, 12);
             }
 

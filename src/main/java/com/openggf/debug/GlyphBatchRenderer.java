@@ -21,6 +21,8 @@ public class GlyphBatchRenderer {
     private boolean batchActive;
     private int viewportWidth = BASE_WIDTH;
     private int viewportHeight = BASE_HEIGHT;
+    /** Width of the game screen the text is projected into: 320, or more on a widescreen aspect. */
+    private int logicalWidth = BASE_WIDTH;
     private float currentScale = 1.0f;
 
     public GlyphBatchRenderer() {
@@ -47,6 +49,19 @@ public class GlyphBatchRenderer {
         }
         if (height > 0) {
             viewportHeight = height;
+        }
+    }
+
+    /**
+     * As {@link #updateViewport(int, int)}, for a caller whose positions were scaled up from a game
+     * screen of {@code logicalWidth} pixels. Text is drawn in that screen's projection, so positions
+     * must be scaled back by the same width; assuming 320 pulls every label on a wider screen
+     * towards the left edge.
+     */
+    public void updateViewport(int width, int height, int logicalWidth) {
+        updateViewport(width, height);
+        if (logicalWidth > 0) {
+            this.logicalWidth = logicalWidth;
         }
     }
 
@@ -98,7 +113,7 @@ public class GlyphBatchRenderer {
         if (text == null || text.isEmpty()) {
             return 0;
         }
-        return Math.round(textRenderer.measureWidth(text, glyphScale(fontSize)) * viewportWidth / (float) BASE_WIDTH);
+        return Math.round(textRenderer.measureWidth(text, glyphScale(fontSize)) * viewportWidth / (float) logicalWidth);
     }
 
     public int measureTextWidth(String text) {
@@ -140,7 +155,7 @@ public class GlyphBatchRenderer {
     }
 
     private int scaleX(int x) {
-        return Math.round(x * BASE_WIDTH / (float) viewportWidth);
+        return Math.round(x * logicalWidth / (float) viewportWidth);
     }
 
     private int scaleY(int y) {

@@ -327,7 +327,9 @@ public final class MenuChrome {
         /** A speech bubble: a community chat link. */
         CHAT("3E", "41", "55", "41", "3E", "20", "40"),
         /** A beetle: a bug-report link. */
-        BUG("22", "1C", "5D", "3E", "5D", "1C", "22");
+        BUG("22", "1C", "5D", "3E", "5D", "1C", "22"),
+        /** A lit bomb: the crash screen's row of Atari ST style exception bombs. */
+        BOMB("02", "04", "1C", "2E", "3E", "3E", "1C");
 
         private final int[] rows;
 

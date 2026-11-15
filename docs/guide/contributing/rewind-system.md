@@ -315,8 +315,8 @@ python3 tools/testing/maven_queue.py -Dmse=off -DskipTests test-compile exec:jav
 The command exits non-zero while unsupported fields remain, so redirect its
 output when generating a migration worklist.
 
-To list concrete object classes currently covered by default subclass scalar
-capture:
+To list legacy scalar-rollout candidates for default object subclasses (the
+full inventory above also covers ordinary badniks):
 
 ```bash
 python3 tools/testing/maven_queue.py -Dmse=off -DskipTests test-compile exec:java \
@@ -395,6 +395,29 @@ context. Use `SpawnRewindRecreatable` for an exact `ObjectSpawn` constructor;
 `SpawnConstructionContextRewindRecreatable` is the compatible old name, not a
 second recipe. Parent-linked hooks still supply their actual construction logic.
 
+Captured placed and dynamic actors restore the saved population; they do not
+request fresh scene admission. Factory and creator-provenance checks still run.
+Stageplay restores the target's authored names and graph after the population
+exists, so future claims cannot decide which captured actors return.
+[TestCapturedPlacedPopulationRestore](../../../src/test/java/com/openggf/level/objects/TestCapturedPlacedPopulationRestore.java)
+checks real routine and constructor families, recapture and confirmed warm reuse.
+
+For a routine-spawned child, first check `ctx.hasKnownConstructionFamily()`.
+When true, `ctx.capturedParent(ExpectedParent.class)` resolves only that captured
+identity in the admitted population. A reconstruction-table identity alone does
+not establish live membership. Do not
+replace a null result with a nearby object or filter a parent's destroyed flag
+before its captured fields restore. Only legacy or explicitly
+unknown families retain the concrete hook's compatibility lookup. This rule
+concerns the captured owner, not a sibling relink.
+
+The child owns the absence policy. A parent-required Clamer spring or Orbinaut
+satellite returns `null` when its captured parent is unavailable or the wrong
+type; existing retries/drop handle that result. A Shellcracker claw can instead
+construct with a null parent: phase 2 restores its independent FALLING state, and
+an active claw treats absence as ordinary parent loss. Never inspect compact
+reference fields in the recreate hook to decide its future state.
+
 Owned `spawnChild`, `spawnFreeChild`, `spawnChildAfterSlot` and direct child wrappers
 record the actual parent without running external child notifications during
 restore/probes. `DynamicObjectEntry.constructionFamily` captures its stable id
@@ -407,11 +430,11 @@ without a known parent are eligible. Old 4–9 argument entry constructors retai
 legacy FIFO behavior and stay explicitly legacy on recapture. They cannot provide
 the family guarantee of current owned-helper captures.
 
-Adoption preserves constructor-established links in both directions. It does not
-repair every link: `schema.RewindPolicyRegistry` and `DefaultObjectRewindPolicies`
-are the authoritative reference-disposition owners. Read final/structural rules,
-global field-name rules and per-class overrides before assuming a parent/child
-field becomes an identity reference. Captured reference fields resolve in phase 2;
+Adoption preserves constructor-established links in both directions. For mutable
+identity links, start with the [field-local capture rule](#ordinary-field-capture)
+and check the concrete class's selected projection. Unmarked fields retain the
+compatibility rules in `DefaultObjectRewindPolicies`; general/manual schemas
+consult `schema.RewindPolicyRegistry`. Captured reference fields resolve in phase 2;
 excluded structural/final links need construction or an explicit class contract.
 Children without constructor candidates need their own recreate path. After
 family retries stop making progress, independent recreation may proceed even when
@@ -419,20 +442,81 @@ a captured parent failed or defers to later player refresh; adoption remains blo
 for that missing parent. Family metadata distinguishes parents, not construction
 from routine births. A same-class/subtype routine child can still consume a
 constructor candidate within its own family according to capture order; an explicit
-class contract is needed when those roles must be distinguished. The coverage analyzer recognizes explicit hooks; its new-gap guard fails
-against the committed baseline. Do not add a marker or expand that baseline to
-make an unsupported child appear covered.
+class contract is needed when those roles must be distinguished.
+
+A child can retire while its ordinary dynamic parent survives. Clear captured
+owner links during ordinary `onUnload`/removal: a captured link to an already
+unregistered retired child fails strict identity capture. Also implement
+`onDroppedAsUnmatchedRewindReconstructionChild()` when reconstruction creates a
+child that was absent from the snapshot. That notification must detach the
+candidate from any owner-held active inventory and retire it as its lifetime
+requires. The default callback does nothing. An uncaptured inventory is not
+cleared by phase-2 field restore, so restoring a separate captured link to `null`
+does not prevent an untracked live child from remaining in the owner's update list.
+
+[TestConstructorChildFamilyRewind](../../../src/test/java/com/openggf/level/objects/TestConstructorChildFamilyRewind.java)
+checks the ordinary surviving-parent/retired-child contract, including the
+uncaptured inventory after the captured link restores to null.
+[TestEHZBossWheelOrphanAfterSiblingDestroy](../../../src/test/java/com/openggf/game/rewind/TestEHZBossWheelOrphanAfterSiblingDestroy.java)
+checks the real boss inventory after one wheel retires before capture.
+[TestS3kBadnikChildGraphRewind](../../../src/test/java/com/openggf/game/rewind/TestS3kBadnikChildGraphRewind.java)
+checks ordinary TurboSpiker removal detaching its captured shell link and the
+trail retiring when its launched shell unloads.
+
+Runtime adoption does not itself give a new production child a coverage route.
+The current analyzer and round-trip harness require a recognized recreate path:
+`RewindRecreatable` or an exact registered dynamic codec. The hook-less children
+in the constructor-family unit fixture demonstrate adoption, not production
+coverage. The committed `src/test/resources/rewind/coverage-baseline.txt` is empty;
+a placeholder hook or exemption does not establish graph coverage.
+
+Give each concrete production class one honest round-trip disposition:
+
+- Add its binary name to `src/test/resources/rewind/isolated-round-trip-classes.txt`
+  when the real isolated round-trip can execute and prove it.
+- For a graph-dependent class, name its focused graph test in
+  `RewindRoundTripHarness.GRAPH_COVERED_ISOLATED_PROBE_CLASSES`, and actually run
+  that test. `probeClass` returns `GraphCovered` for the row without executing the
+  named graph test; the row alone is not proof. The recreate-path gate still
+  precedes that graph lookup.
+
+`TestRemainingRewindTailInventory` compares discovered class identities with those
+two declarations; `TestRewindHarnessCoverageRatchet` checks each declared outcome.
+These are ordinary-suite checks, not aggregate totals to adjust. A graph outcome
+still requires the separately executed named test. The four related guards are
+[TestRewindCoverageGuard](../../../src/test/java/com/openggf/game/rewind/coverage/TestRewindCoverageGuard.java)
+for recreate/state gaps,
+[TestParentDependentGraphCoverageGuard](../../../src/test/java/com/openggf/game/rewind/TestParentDependentGraphCoverageGuard.java)
+for the unexpected parent-dependent tail and named evidence,
+[TestRewindFieldDispositionGuard](../../../src/test/java/com/openggf/game/rewind/schema/TestRewindFieldDispositionGuard.java)
+for actual field capture/exclusion, and
+[TestCapturedPolicyCompactReachabilityGuard](../../../src/test/java/com/openggf/game/rewind/schema/TestCapturedPolicyCompactReachabilityGuard.java)
+for explicit identity collections that would be lost to scalar fallback. Select
+the affected checks; a passing guard or a declaration is not a substitute for the
+retirement/graph witness.
 
 Run the ordinary family witnesses and neighbors through the queue:
 
 ```bash
-python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestConstructorChildFamilyRewind,TestObjectManagerDynamicChainRewindRestore,TestTwoPhaseRestoreOrdering,TestObjectManagerRewindSnapshot,TestModOwnedDynamicObjectRewind' test -B
+python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestConstructorChildFamilyRewind,TestObjectManagerDynamicChainRewindRestore,TestTwoPhaseRestoreOrdering,TestObjectManagerRewindSnapshot,TestModOwnedDynamicObjectRewind,TestS3kClamerGraphRewind,TestS1BadnikChildGraphRewind' test -B
+```
+
+For exact parent lookup, scene admission and detached claws, also select:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestRewindRecreateContext,TestCapturedPlacedPopulationRestore,TestCourseRestoreCreatorOwnerScope,TestS2BadnikChildGraphRewind,TestShellcrackerClawInstance' test -B
+```
+
+For retirement changes, also select the real boss and TurboSpiker neighbors:
+
+```bash
+python3 tools/testing/maven_queue.py --normal -Dmse=off '-Dtest=TestEHZBossWheelOrphanAfterSiblingDestroy,TestS3kBadnikChildGraphRewind#turboSpikerCaptureIgnoresShellAfterDynamicChildRemoval+turboSpikerTrailRetiresWhenLaunchedShellUnloads' test -B
 ```
 
 `TestObjectRewindExactAdoption` covers the separate FBZ exact-SST adoption surface;
 it does not establish ordinary constructor-family adoption. Recreate probes must
-remain side-effect-free; unmatched constructed children receive their existing
-owner cleanup hook before being discarded.
+remain side-effect-free; unmatched constructed children receive the drop
+notification above before being discarded.
 
 ## Technical Architecture
 
@@ -469,30 +553,67 @@ Automatic field capture currently has two side-by-side implementations:
 | `RewindScanSupport` | Source scanner shared by tests and tools for runtime-owner field audits. |
 | `GenericRewindEligibility` | Central eligibility helper for audit classes and default object subclass capture decisions. |
 | `com.openggf.game.rewind.identity` | Stable value ids and a per-capture `RewindIdentityTable` for player, object, and spawn references. |
-| `com.openggf.game.rewind.schema` | Compact schema foundation: cached per-class field plans, little-endian scalar buffers, value/reference codecs, policy registry, context-aware capture, and `CompactFieldCapturer`. Default non-badnik object subclass scalar state uses this path when every default field has codec support; unsupported shapes fall back to the legacy generic snapshot. |
+| `com.openggf.game.rewind.schema` | Compact schema foundation: cached per-class field plans, little-endian scalar buffers, value/reference codecs, policy registry, context-aware capture, and `CompactFieldCapturer`. Ordinary object and badnik subclass fields use the compact projection when it is nonempty and fully supported; otherwise the whole subclass projection falls back to legacy scalar capture. The badnik base owns its separate hand-written state. |
 
 Compact capture supports primitives/wrappers, `String`, enums, primitive/enum
 arrays, `BitSet`, simple immutable records, value-only `List` / `Set` / `Map`
 fields, selected helper state (`SubpixelMotion.State`, `ObjectAnimationState`,
 `PlatformBobHelper`, `AnimationTimer`), and player/object references when a
 `RewindCaptureContext` with a populated `RewindIdentityTable` is supplied.
-Final fields are structural by default unless their codec explicitly restores
-in place. Final collections/maps whose element, key, or value type is a
-player/object identity reference are also treated as structural for default
-object subclass capture; the owning object manager restores those links by
-stable identity rather than by compact scalar sidecar state. `RewindPolicyRegistry`
-centralizes repeated decisions for runtime and rendering service types so shared
-base classes do not need redundant `@RewindTransient` annotations.
+These are codec capabilities, not admission guarantees for ordinary actor fields.
+Final values need an in-place restore contract; object/player links and their
+collections additionally need the owning field policy and identity context.
+Check the concrete selection before relying on a codec or structural default.
 
-For concrete `AbstractObjectInstance` subclasses, default subclass scalar capture
-is enabled centrally by
-`GenericRewindEligibility.usesDefaultObjectSubclassCapture(...)` when the class
-does not declare a concrete `captureRewindState` or `restoreRewindState`
-override. `GenericFieldCapturer.defaultObjectSubclassCapturedFieldsForAudit(...)`
-backs the rollout audit exposed by
-`RewindFieldInventoryTool --object-rollout-candidates`. Fields annotated
-`@RewindDeferred` are excluded from generic capture until a stable identity/value
-codec or manual snapshot path exists.
+`RewindSchemaRegistry` owns ordinary subclass hierarchy traversal and compact
+schema planning. `GenericFieldCapturer` owns the legacy scalar cache, value
+admission and cloning. The registry's scalar derivation returns independent
+reflection metadata; it does not expose the runtime cache. `GenericRewindEligibility.usesDefaultSubclassCapture(...)` selects the
+ordinary object or badnik route; concrete capture/restore overrides own their bespoke
+state.
+
+<a id="ordinary-field-capture"></a>
+
+For a field change, start with
+`RewindSchemaRegistry.defaultObjectFieldSelectionForAudit(...)`: it reports the
+concrete class's selected projection and captured field keys. Registering a codec
+alone does not admit a field to ordinary capture. General/manual schemas consult
+`RewindPolicyRegistry`; ordinary fields use `DefaultObjectRewindPolicies` and their
+actual projection. The shared built-in catalogue identifies replaceable renderer
+caches and final engine handles as structural, without claiming they are captured.
+A replaceable tile descriptor needs captured state or an explicit exclusion.
+
+For an ordinary actor's mutable `ObjectInstance` link that must retain its exact
+managed identity, declare `@RewindCapturedReference(reason = "...")` on the field.
+Mantis declares both its `child` and the child's `parent` this way, replacing their
+two central string-keyed exceptions. `DefaultObjectRewindPolicies` interprets the
+declaration before its legacy catalogue and field-name defaults; those defaults
+remain compatibility rules for unmarked fields. The declaration uses the existing
+strict object-reference codec and does not supply a constructor or parent lookup.
+
+Static, Java-transient, synthetic, `@RewindTransient` and `@RewindDeferred` fields
+remain excluded before invalid-marker validation. Other marked final references
+and non-`ObjectInstance` fields are invalid when the default policy is resolved.
+The exact-policy guard rejects a field with both a local declaration and a central
+disposition or exceptional codec contract; remove the stale central rule during migration.
+General/manual schemas retain their existing higher-priority registry policies.
+The marker is engine-internal and is not a creator Mod API annotation.
+
+The declaration requests capture in the compact projection. It does not add a
+reference to legacy scalar fallback: an unsupported field elsewhere in a concrete
+subclass can still make that class omit the link. Check the concrete selection
+API above, and keep the coverage, inventory and disposition checks reporting that
+omission. Constructor-established links and recreation remain separate contracts.
+
+The inventory and coverage checks use this selection. Coverage also inspects the
+badnik base under its separate manual rules. Queries can initialize cached runtime
+schemas and allocate schema IDs; planning errors fail the inventory. The selection
+API exposes captured membership as immutable keys, not runtime reflection handles.
+The older `GenericFieldCapturer` scalar-audit API retains its cached-handle contract;
+use the selection API for current ordinary capture decisions. Annotation
+density still counts actor annotations, but does not recommend removing them:
+current membership cannot prove the selection after an annotation edit.
+`@RewindDeferred` excludes state until its identity/value capture is implemented.
 
 `PerObjectRewindSnapshot.compactGenericState` stores the compact sidecar for
 default object subclass fields. Restore prefers that blob when present and uses
@@ -529,8 +650,9 @@ store stable identities such as object slots, spawn records, player role, or exp
 value records.
 
 Prefer extending the central capture stack before editing many leaf object classes:
-add a codec, policy-registry rule, or shared base-class snapshot when the same field
-shape repeats. Add per-object annotations or rewind overrides only for genuinely
+extend the owning field-admission rule, codec, or shared base-class snapshot when
+the same field shape repeats. Confirm actual selected membership afterward;
+a general policy or codec registration alone does not establish ordinary capture. Add per-object annotations or rewind overrides only for genuinely
 bespoke state, identity links, or child lifecycle that cannot be represented by the
 generic scalar path.
 

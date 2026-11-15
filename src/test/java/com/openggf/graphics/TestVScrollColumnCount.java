@@ -85,10 +85,11 @@ class TestVScrollColumnCount {
     void backgroundRendererSuppliesLogicalDisplayWidthToParallaxShader() throws IOException {
         String renderer = Files.readString(Path.of("src/main/java/com/openggf/level/render/BackgroundRenderer.java"));
 
-        assertTrue(renderer.contains("setActiveDisplayWidth((float) GameServices.configuration()"),
-                "BackgroundRenderer must pass the logical configured screen width to the parallax shader");
-        assertTrue(renderer.contains("SonicConfiguration.SCREEN_WIDTH_PIXELS"),
-                "The active display width should come from the logical screen-width configuration");
+        assertTrue(renderer.contains("setActiveDisplayWidth(pinnedDisplayWidth > 0 ? pinnedDisplayWidth"),
+                "BackgroundRenderer must pass the logical width to the parallax shader, or a fixed-width pass's pin");
+        assertTrue(renderer.contains(
+                        ": (float) GameServices.configuration().getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS));"),
+                "Without a pin, the active display width should come from the logical screen-width configuration");
     }
 
     @Test

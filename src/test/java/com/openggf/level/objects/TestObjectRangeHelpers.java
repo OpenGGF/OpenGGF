@@ -9,6 +9,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * TDD tests for the shared width-driven helpers added to
@@ -65,6 +66,23 @@ class TestObjectRangeHelpers {
         int checkViewportHeight() { return viewportHeight(); }
         boolean checkIsInRangeAt(int objectX) { return isInRangeAt(objectX); }
         boolean checkIsInRange()              { return isInRange(); }
+    }
+
+    private static final class CountingViewportObject extends AbstractObjectInstance {
+        private int widthReads;
+
+        CountingViewportObject() {
+            super(new ObjectSpawn(0, 0, 0, 0, 0, false, 0), "CountingViewport");
+        }
+
+        @Override
+        protected int viewportWidth() {
+            widthReads++;
+            return widthReads == 1 ? 528 : 320;
+        }
+
+        @Override
+        public void appendRenderCommands(List<com.openggf.graphics.GLCommand> commands) {}
     }
 
     @BeforeEach
@@ -255,5 +273,47 @@ class TestObjectRangeHelpers {
         assertTrue(ObjectRangeOps.outOfRangeX(0x8300, cameraX, wideBound));
         assertTrue(ObjectRangeOps.outOfRangeX(0x7F00, cameraX, wideBound),
                 "the chunk left of the camera base must still wrap to an unsigned rejection");
+    }
+
+    @Test
+    void coarseAdapterPreservesCallerBoundsAcrossEveryWordChunkAndExtremeInts() {
+        int[] bounds = {Integer.MIN_VALUE, -1, 0, 127, 128, 639, 640, 641, 848, 65534, 65535,
+                Integer.MAX_VALUE};
+        // Every pair of 16-bit chunks, using division/modulo rather than the
+        // production bit masks. Nonstandard bounds must not become native 640.
+        for (int objectX = 0; objectX < 65536; objectX += 128) {
+            for (int cameraX = 0; cameraX < 65536; cameraX += 128) {
+                assertUnsignedChunkOracle(objectX, cameraX, bounds);
+            }
+        }
+        int[] extremes = {Integer.MIN_VALUE, Integer.MIN_VALUE + 127, -65537, -129, -1,
+                0, 127, 128, 65535, 65536, Integer.MAX_VALUE - 127, Integer.MAX_VALUE};
+        for (int objectX : extremes) {
+            for (int cameraX : extremes) {
+                assertUnsignedChunkOracle(objectX, cameraX, bounds);
+            }
+        }
+    }
+
+    private static void assertUnsignedChunkOracle(int objectX, int cameraX, int[] bounds) {
+        long objectChunk = Math.floorMod((long) objectX, 65536L) / 128;
+        long cameraChunk = Math.floorMod((long) cameraX - 128, 65536L) / 128;
+        long unsignedDistance = Math.floorMod(objectChunk - cameraChunk, 512L) * 128;
+        for (int bound : bounds) {
+            boolean expected = unsignedDistance > bound;
+            if (ObjectRangeOps.outOfRangeX(objectX, cameraX, bound) != expected
+                    || AbstractObjectInstance.isCoarseXOutOfRange(objectX, cameraX, bound) != expected) {
+                fail("unsigned chunk comparison: object=" + objectX + ", camera=" + cameraX
+                        + ", bound=" + bound + ", distance=" + unsignedDistance);
+            }
+        }
+    }
+
+    @Test
+    void coarseCullRangeReadsTheViewportOnce() {
+        CountingViewportObject object = new CountingViewportObject();
+
+        assertEquals(848, object.coarseXCullRange());
+        assertEquals(1, object.widthReads, "a later width read would observe a different viewport");
     }
 }

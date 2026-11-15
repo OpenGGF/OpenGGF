@@ -14,7 +14,7 @@ This documentation review did not rerun those gameplay checks.
 | [Sonic 1](#sonic-the-hedgehog-s1) | Broadly playable from start to finish | [Known gaps](#known-gaps) |
 | [Sonic 2](#sonic-the-hedgehog-2-s2) | Broadly playable from start to finish, with remaining parity gaps | [Known gaps](#known-gaps-1) |
 | [Sonic 3 & Knuckles](#sonic-3--knuckles-s3k) | Broad playable campaign implementation, with remaining route and parity gaps | [Remaining limits](#remaining-limits) and [S3K known bugs](../../status/s3k-known-bugs.md) |
-| [Sonic CD](#sonic-cd-development-preview) | Development preview on `next`, from your own USA disc image | [Known gaps](#known-gaps-2) |
+| [Sonic CD](#sonic-cd-development-preview) | Development preview on `develop` (0.8), from your own USA disc image | [Known gaps](#known-gaps-2) |
 
 ---
 

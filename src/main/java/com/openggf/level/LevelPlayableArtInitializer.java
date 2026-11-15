@@ -194,6 +194,8 @@ final class LevelPlayableArtInitializer {
                 sidekickWaterPalettes.add(loadNativeDonorWater(sidekick, name));
             }
             if (!validArt(mainArt) || sidekickArts.stream().anyMatch(art -> !validArt(art))) {
+                LOGGER.warning("No playable sprite art published: the art of "
+                        + (validArt(mainArt) ? "a sidekick" : "the main character") + " is missing or unusable.");
                 return;
             }
             int cursor = 0;
@@ -713,7 +715,8 @@ final class LevelPlayableArtInitializer {
             return art;
         }
         var provider = artProviderFor(playable, fallback);
-        return provider == null ? null : provider.loadPlayerSpriteArt(playable.getCode());
+        // A sidekick's sprite code is its runtime slot ID (tails_p2), which names no art bank.
+        return provider == null ? null : provider.loadPlayerSpriteArt(playable.characterKey().persisted());
     }
 
     private Palette loadCharacterPalette(AbstractPlayableSprite playable, String code,
@@ -754,7 +757,12 @@ final class LevelPlayableArtInitializer {
     }
 
     private static void propagateSidekickPaletteContext(AbstractPlayableSprite sidekick, RenderContext ctx) {
-        if (sidekick.getSpindashDustController() != null
+        // A mod character's context holds its own sheet palette, but its dust is the
+        // host's Sonic dust (loadSpindashDustArt), drawn in host palette indices: on
+        // the mod palette its white came out near black. It keeps the context it was
+        // given (host or donor), as a mod main character's dust does.
+        if (sidekick.characterKey().isBuiltin()
+                && sidekick.getSpindashDustController() != null
                 && sidekick.getSpindashDustController().getRenderer() != null) {
             sidekick.getSpindashDustController().getRenderer().setRenderContext(ctx);
         }

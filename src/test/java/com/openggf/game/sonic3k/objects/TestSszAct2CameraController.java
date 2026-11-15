@@ -359,11 +359,13 @@ class TestSszAct2CameraController {
             var level = GameServices.level();
             var owner = (com.openggf.game.internal.BackgroundDescriptorOverride) level.getZoneFeatureProvider();
             assertNotEquals(0L, owner.backgroundDescriptorRevision(), "routine 4 draws a retained Plane B");
+            // A wider picture stands the plane beside the sprites, one margin into the tile pass.
+            int margin = com.openggf.game.sonic3k.ending.EndingWideStage.margin(width);
             // loc_58BBC re-rounds with the lifted copy, so the 256-line ring still shows the island.
             for (int y = islandY + 0x100; y < islandY + 0x100 + 224; y += 8)
                 for (int x = 0x60; x < 0x198; x += 8)
                     assertEquals(level.getBackgroundTileDescriptorAtWorld(x, y - 0x100),
-                            owner.backgroundDescriptorAt(x, y), "island cell " + x + "," + y);
+                            owner.backgroundDescriptorAt(x + margin, y), "island cell " + x + "," + y);
 
             var registry = TestEnvironment.activeGameplayMode().getRewindRegistry();
             com.openggf.game.rewind.CompositeSnapshot saved = null;
@@ -379,8 +381,8 @@ class TestSszAct2CameraController {
             for (int y = 0x80; y < 0x80 + 224; y += 8)
                 for (int x = 0; x < 0x200; x += 8) {
                     int expected = level.getForegroundTileDescriptorAtWorld(x, y);
-                    assertEquals(expected, owner.backgroundDescriptorAt(x, y), "plane cell " + x + "," + y);
-                    assertEquals(expected, owner.backgroundDescriptorAt(x + 0x200, y), "64-cell VDP wrap");
+                    assertEquals(expected, owner.backgroundDescriptorAt(x + margin, y), "plane cell " + x + "," + y);
+                    assertEquals(expected, owner.backgroundDescriptorAt(x + margin + 0x200, y), "64-cell VDP wrap");
                 }
 
             // ApplyDeformation: a4=SSZ2_BGDeformArray, a5=HScroll_table+$004, Camera_Y_pos_BG_copy bands.

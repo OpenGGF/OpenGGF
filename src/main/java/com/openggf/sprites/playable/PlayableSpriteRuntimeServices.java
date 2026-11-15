@@ -73,6 +73,27 @@ final class PlayableSpriteRuntimeServices {
         static int resolveAnimationId(GameModule module, CanonicalAnimation animation) {
                 return module != null ? module.resolveAnimationId(animation) : -1;
         }
+        /** A named pose in the numbering of the art this player wears: a donor's while one dresses him. */
+        static int resolveAnimationId(AbstractPlayableSprite sprite, CanonicalAnimation animation) {
+                var donation = sprite.currentCrossGameFeatures();
+                if (donation != null && donation.isActive()) {
+                        boolean sonic = com.openggf.game.CharacterKey.SONIC.equals(sprite.characterKey());
+                        int donated = sonic ? donation.resolveDonatedAnimation(animation)
+                                        : hostScriptOwnsArt(sprite) ? -1 : com.openggf.game.CrossGameFeatureInternalAccess
+                                                .resolveDonorAnimation(donation, sprite.characterKey(), animation);
+                        var scripts = sprite.getAnimationSet();
+                        // Sonic's rebuilt host scripts exist only once bound. The donor's own numbering for
+                        // Tails and Knuckles also holds before binding, when a CPU controller caches its poses.
+                        if (donated >= 0 && (scripts != null ? scripts.getScript(donated) != null : !sonic)) return donated;
+                }
+                return resolveAnimationId(sprite.currentGameModule(), animation);
+        }
+        /** A host script's temporary actor wears the host ROM's art even while a donor dresses the team. */
+        private static boolean hostScriptOwnsArt(AbstractPlayableSprite sprite) {
+                var sprites = sprite.currentSpriteManagerOrNull();
+                return sprites != null
+                                && com.openggf.sprites.managers.SpriteManagerInternalAccess.usesNativeScriptedArt(sprites, sprite);
+        }
         static TimerManager timers(AbstractPlayableSprite sprite) { return sprite.runtimeServices != null ? sprite.runtimeServices.timers : GameServices.timers(); }
         static GameStateManager gameState(AbstractPlayableSprite sprite) {
                 NativeCompetitionRoster roster = competitionRoster(sprite);

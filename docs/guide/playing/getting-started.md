@@ -59,7 +59,7 @@ defaults or blank to let the engine find your images, or set one to a file that 
 exist. See the [image identity table](../../../CONFIGURATION.md#image-identity)
 for all recognised layouts.
 
-Sonic CD is a disc, not a ROM. On the `next` development line, set `roms.soniccd` to
+Sonic CD is a disc, not a ROM. On the `develop` and `next` development lines, set `roms.soniccd` to
 your USA disc image's `.cue` sheet (its 35 track files beside it) or a lossless `.chd` of it, or leave it blank
 and put the disc in a folder inside the ROM folder; Sonic CD then appears on the
 master title shelf. See

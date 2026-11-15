@@ -561,7 +561,9 @@
           after cursor N"; a segment red names the zone) and cheap to iterate on,
           but not evidence of parity.
 
-            mvn -Ptrace-segments test
+            python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-segments \
+              -Dsurefire.forkCount=1 \
+              '-Dtest=TestS3kSonicTailsHczSegmentTraceReplay' test
 
           The run chains are the gate: they play through and earn every piece of
           run state, so their greens are parity claims.
@@ -1920,6 +1922,12 @@ To bypass deliberately (not for test runs): -Dopenggf.jdk.check.skip=true
             <groupId>com.fasterxml.jackson.dataformat</groupId>
             <artifactId>jackson-dataformat-yaml</artifactId>
             <version>2.22.4</version>
+        </dependency>
+        <!-- The crash page's QR code of the issue form (MIT; NOTICE.md). -->
+        <dependency>
+            <groupId>io.nayuki</groupId>
+            <artifactId>qrcodegen</artifactId>
+            <version>1.8.0</version>
         </dependency>
         <dependency>
             <groupId>org.ow2.asm</groupId>

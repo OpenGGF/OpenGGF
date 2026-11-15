@@ -127,6 +127,15 @@ public final class ModSubsystem implements AutoCloseable {
 
     public static ModSubsystem current() { return PROCESS.get(); }
 
+    /** Enabled mods as {@code id version}, comma separated, for crash reports; {@code none} when empty. */
+    public synchronized String enabledModSummary() {
+        if (processCatalog == null || processCatalog.effective().orderedEnabled().isEmpty()) return "none";
+        return processCatalog.effective().orderedEnabled().stream()
+                .map(com.openggf.mods.ModDescriptor::manifest)
+                .map(manifest -> manifest.id() + " " + manifest.version())
+                .collect(java.util.stream.Collectors.joining(", "));
+    }
+
     /**
      * Runs engine work (a course restore) with no creator callback owner in scope, for engine
      * packages that may not depend on the mod runtime directly. Engine callers only.

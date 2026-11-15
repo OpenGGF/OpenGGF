@@ -59,8 +59,14 @@ class Sonic1PatternAnimator implements AnimatedPatternManager,
     @Override
     public void update() {
         GraphicsManager graphicsManager = GameServices.graphics();
-        for (AnimHandler handler : handlers) {
-            handler.tick(level, graphicsManager);
+        // One atlas flush for every handler's tiles this frame (update draws nothing).
+        graphicsManager.beginPatternAtlasBatch();
+        try {
+            for (AnimHandler handler : handlers) {
+                handler.tick(level, graphicsManager);
+            }
+        } finally {
+            graphicsManager.endPatternAtlasBatch();
         }
     }
 
@@ -319,8 +325,13 @@ class Sonic1PatternAnimator implements AnimatedPatternManager,
 
     private void primeAll() {
         GraphicsManager graphicsManager = GameServices.graphics();
-        for (AnimHandler handler : handlers) {
-            handler.prime(level, graphicsManager);
+        graphicsManager.beginPatternAtlasBatch();
+        try {
+            for (AnimHandler handler : handlers) {
+                handler.prime(level, graphicsManager);
+            }
+        } finally {
+            graphicsManager.endPatternAtlasBatch();
         }
     }
 

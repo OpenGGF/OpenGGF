@@ -2,6 +2,7 @@ package com.openggf.game.sonic3k.objects.badniks;
 
 import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.RewindCapturedReference;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -69,6 +70,7 @@ public final class MantisBadnikInstance extends AbstractS3kBadnikInstance
     private boolean initialized;
     private int animIndex = -1;
     private int animTimer;
+    @RewindCapturedReference(reason = "the visual child keeps its exact managed identity across reconstruction")
     private MantisChild child;
     private boolean waitPlaceholderRenderFlag;
     private boolean waitingForOnscreen = true;
@@ -327,6 +329,7 @@ public final class MantisBadnikInstance extends AbstractS3kBadnikInstance
     }
 
     private static final class MantisChild extends AbstractObjectInstance implements RewindRecreatable {
+        @RewindCapturedReference(reason = "the visual child follows its captured Mantis, not a nearby replacement")
         private MantisBadnikInstance parent;
         private int currentX;
         private int currentY;

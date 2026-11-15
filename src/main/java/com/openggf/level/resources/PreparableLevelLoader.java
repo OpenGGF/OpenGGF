@@ -46,4 +46,24 @@ public interface PreparableLevelLoader {
      * exactly as a synchronous {@code loadLevel(levelIndex)} would have.
      */
     Level installPreparedLevel(PreparedLevelBuild build) throws IOException;
+
+    /**
+     * Captures, on the frame thread, the inputs a synchronous {@code loadLevel(levelIndex)}
+     * would use if it ran now, and returns the ROM-only task that builds that level from
+     * them, or {@code null} when this load cannot be built ahead (it would read live level
+     * state beyond those inputs). Used once the game has committed to reloading a level
+     * (a death respawn's fade to black), so the decode runs during the fade.
+     */
+    default Callable<PreparedLevelBuild> prepareReloadBuildTask(int levelIndex) {
+        return null;
+    }
+
+    /**
+     * True when a synchronous {@code loadLevel} of {@code build}'s level, started now,
+     * would use exactly the inputs {@code build} was prepared from, so installing it yields
+     * the same level. A reload build whose inputs changed (or any other build) is discarded.
+     */
+    default boolean reloadInputsStillMatch(PreparedLevelBuild build) {
+        return false;
+    }
 }

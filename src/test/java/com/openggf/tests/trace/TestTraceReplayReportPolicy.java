@@ -208,7 +208,7 @@ class TestTraceReplayReportPolicy {
         }
 
         void assertClean(DivergenceReport report) {
-            assertReportHasNoReleaseBlockingDivergences(report);
+            assertReportHasNoReleaseBlockingDivergences(report, verificationScope());
         }
 
         @Override
@@ -245,7 +245,7 @@ class TestTraceReplayReportPolicy {
         }
 
         void assertClean(DivergenceReport report) {
-            assertReportHasNoReleaseBlockingDivergences(report);
+            assertReportHasNoReleaseBlockingDivergences(report, verificationScope());
         }
 
         @Override

@@ -284,15 +284,21 @@ public class S3kDataSelectRenderer {
             return;
         }
 
-        graphics.cachePatternTexture(new Pattern(), DATA_SELECT_PATTERN_BASE);
-        cachePatterns(graphics, assets.getMenuBackgroundPatterns(),
-                DATA_SELECT_PATTERN_BASE + Sonic3kConstants.ARTTILE_S3_MENU_BG);
-        cachePatterns(graphics, assets.getMiscPatterns(),
-                DATA_SELECT_PATTERN_BASE + Sonic3kConstants.ARTTILE_SAVE_MISC);
-        cachePatterns(graphics, assets.getExtraPatterns(),
-                DATA_SELECT_PATTERN_BASE + Sonic3kConstants.ARTTILE_SAVE_EXTRA);
-        cachePatterns(graphics, assets.getTextPatterns(),
-                DATA_SELECT_PATTERN_BASE + Sonic3kConstants.ARTTILE_SAVE_TEXT);
+        // One atlas flush for the screen's art; the draw that needs it follows the batch.
+        graphics.beginPatternAtlasBatch();
+        try {
+            graphics.cachePatternTexture(new Pattern(), DATA_SELECT_PATTERN_BASE);
+            cachePatterns(graphics, assets.getMenuBackgroundPatterns(),
+                    DATA_SELECT_PATTERN_BASE + Sonic3kConstants.ARTTILE_S3_MENU_BG);
+            cachePatterns(graphics, assets.getMiscPatterns(),
+                    DATA_SELECT_PATTERN_BASE + Sonic3kConstants.ARTTILE_SAVE_MISC);
+            cachePatterns(graphics, assets.getExtraPatterns(),
+                    DATA_SELECT_PATTERN_BASE + Sonic3kConstants.ARTTILE_SAVE_EXTRA);
+            cachePatterns(graphics, assets.getTextPatterns(),
+                    DATA_SELECT_PATTERN_BASE + Sonic3kConstants.ARTTILE_SAVE_TEXT);
+        } finally {
+            graphics.endPatternAtlasBatch();
+        }
 
         cachePalette(graphics, assets.getMenuBackgroundPaletteBytes(), 0);
         cacheCharacterAndEmeraldPalettes(graphics,

@@ -336,32 +336,42 @@ public class Sonic1Level extends AbstractLevel implements com.openggf.level.obje
         patternCount = maxTileIndex;
         patterns = new Pattern[patternCount];
 
-        for (int i = 0; i < usedCues.size(); i++) {
-            PlcEntry cue = usedCues.get(i);
-            byte[] data = decompressedData.get(i);
-            int tileCount = data.length / Pattern.PATTERN_SIZE_IN_ROM;
+        // One atlas batch for the level's tiles: each page uploads once, not once per tile.
+        if (graphicsMan != null) {
+            graphicsMan.beginPatternAtlasBatch();
+        }
+        try {
+            for (int i = 0; i < usedCues.size(); i++) {
+                PlcEntry cue = usedCues.get(i);
+                byte[] data = decompressedData.get(i);
+                int tileCount = data.length / Pattern.PATTERN_SIZE_IN_ROM;
 
-            for (int t = 0; t < tileCount; t++) {
-                int patIdx = cue.tileIndex() + t;
-                if (patIdx >= patternCount) break;
-                patterns[patIdx] = new Pattern();
-                byte[] subArray = Arrays.copyOfRange(data, t * Pattern.PATTERN_SIZE_IN_ROM,
-                        (t + 1) * Pattern.PATTERN_SIZE_IN_ROM);
-                patterns[patIdx].fromSegaFormat(subArray);
+                for (int t = 0; t < tileCount; t++) {
+                    int patIdx = cue.tileIndex() + t;
+                    if (patIdx >= patternCount) break;
+                    patterns[patIdx] = new Pattern();
+                    byte[] subArray = Arrays.copyOfRange(data, t * Pattern.PATTERN_SIZE_IN_ROM,
+                            (t + 1) * Pattern.PATTERN_SIZE_IN_ROM);
+                    patterns[patIdx].fromSegaFormat(subArray);
 
-                if (graphicsMan != null && graphicsMan.isGlInitialized()) {
-                    graphicsMan.cachePatternTexture(patterns[patIdx], patIdx);
+                    if (graphicsMan != null && graphicsMan.isGlInitialized()) {
+                        graphicsMan.cachePatternTexture(patterns[patIdx], patIdx);
+                    }
                 }
             }
-        }
 
-        // Fill any gaps with empty patterns
-        for (int i = 0; i < patternCount; i++) {
-            if (patterns[i] == null) {
-                patterns[i] = new Pattern();
-                if (graphicsMan != null && graphicsMan.isGlInitialized()) {
-                    graphicsMan.cachePatternTexture(patterns[i], i);
+            // Fill any gaps with empty patterns
+            for (int i = 0; i < patternCount; i++) {
+                if (patterns[i] == null) {
+                    patterns[i] = new Pattern();
+                    if (graphicsMan != null && graphicsMan.isGlInitialized()) {
+                        graphicsMan.cachePatternTexture(patterns[i], i);
+                    }
                 }
+            }
+        } finally {
+            if (graphicsMan != null) {
+                graphicsMan.endPatternAtlasBatch();
             }
         }
 

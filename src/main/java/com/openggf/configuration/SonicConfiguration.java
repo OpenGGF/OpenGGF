@@ -726,6 +726,14 @@ public enum SonicConfiguration {
 	REWIND_SPECIAL_STAGES,
 
 	/**
+	 * Widescreen draw mode: EDGE runs objects and the camera at the full display
+	 * width; NATIVE keeps the simulation at the native 320 pixels and draws the
+	 * extra width as a presentation-only margin. Appended to preserve ordinals.
+	 */
+	WIDESCREEN_DRAW_MODE,
+	/** How NATIVE draw mode presents not-yet-loaded objects in the margins: GREYSCALE, NORMAL or HIDDEN. */
+	WIDESCREEN_DORMANT_STYLE,
+	/**
 	 * Path of the Sonic CD (USA) disc image: its {@code .cue} sheet, whose track files sit beside it, or a
 	 * lossless chdman {@code .chd} (YAML {@code roms.soniccd}, listed with the other games' ROM keys). Blank means the disc is
 	 * found by its header in {@code roms.directory}. Appended to preserve existing enum ordinals.

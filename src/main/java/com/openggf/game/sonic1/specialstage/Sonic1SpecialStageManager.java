@@ -287,9 +287,14 @@ public final class Sonic1SpecialStageManager implements com.openggf.game.interna
         // Load palette
         loadPalette();
 
-        // Load and cache art patterns
-        loadArt();
-        loadSonicSprite();
+        // Load and cache art patterns: one atlas flush instead of one upload per tile.
+        graphicsManager.beginPatternAtlasBatch();
+        try {
+            loadArt();
+            loadSonicSprite();
+        } finally {
+            graphicsManager.endPatternAtlasBatch();
+        }
 
         // Initialize background renderer
         initBgRenderer();

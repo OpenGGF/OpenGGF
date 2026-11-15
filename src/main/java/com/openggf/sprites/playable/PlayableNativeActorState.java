@@ -174,7 +174,18 @@ final class PlayableNativeActorState {
                         }
                 }
             }
+    /** Engine extension: a sidekick jumping in after a respawn takes no damage until it lands. */
+    private static boolean respawnEntryDamageImmune(AbstractPlayableSprite sprite) {
+        if (!sprite.isCpuControlled()) {
+            return false;
+        }
+        SidekickCpuController cpu = sprite.getCpuController();
+        return cpu != null && cpu.isRespawnEntryDamageImmune();
+    }
     static boolean getInvulnerable(AbstractPlayableSprite sprite){
+                if (respawnEntryDamageImmune(sprite)) {
+                        return true;
+                }
                 Boolean raw = sprite.nativeSecondaryInvincibility();
                 if (raw != null) {
                         // Touch_ChkHurt2 (s2.asm:29494-29501) reads status, timer and routine independently.
@@ -186,6 +197,9 @@ final class PlayableNativeActorState {
                 return sprite.dead || sprite.debugMode || sprite.superSonic || sprite.invulnerableFrames > 0 || sprite.invincibleFrames > 0 || sprite.hurt || com.openggf.game.mutators.HomingAttackRuntime.invulnerable(sprite.mutatorPolicySource, sprite);
             }
     static boolean isDamageBlocked(AbstractPlayableSprite sprite, boolean ignoreIFrames) {
+                if (respawnEntryDamageImmune(sprite)) {
+                        return true;
+                }
                 Boolean raw = sprite.nativeSecondaryInvincibility();
                 if (raw != null) {
                         // Touch_ChkHurt (s2.asm:85579-85595); HurtCharacter has no global Super test.

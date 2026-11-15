@@ -171,20 +171,26 @@ public class AniPlcScriptState {
     public void applyFrame(Level level, GraphicsManager graphicsManager, int tileId) {
         int maxPatterns = level.getPatternCount();
         boolean canUpdateTextures = graphicsManager.isGlInitialized();
-        for (int i = 0; i < tilesPerFrame; i++) {
-            int srcIndex = tileId + i;
-            int destIndex = destTileIndex + i;
-            if (srcIndex < 0 || srcIndex >= artPatterns.length) {
-                continue;
+        // One staged atlas session for the frame's tiles instead of one per tile.
+        graphicsManager.beginPatternAtlasBatch();
+        try {
+            for (int i = 0; i < tilesPerFrame; i++) {
+                int srcIndex = tileId + i;
+                int destIndex = destTileIndex + i;
+                if (srcIndex < 0 || srcIndex >= artPatterns.length) {
+                    continue;
+                }
+                if (destIndex < 0 || destIndex >= maxPatterns) {
+                    continue;
+                }
+                Pattern dest = level.getPattern(destIndex);
+                dest.copyFrom(artPatterns[srcIndex]);
+                if (canUpdateTextures) {
+                    graphicsManager.updatePatternTexture(dest, destIndex);
+                }
             }
-            if (destIndex < 0 || destIndex >= maxPatterns) {
-                continue;
-            }
-            Pattern dest = level.getPattern(destIndex);
-            dest.copyFrom(artPatterns[srcIndex]);
-            if (canUpdateTextures) {
-                graphicsManager.updatePatternTexture(dest, destIndex);
-            }
+        } finally {
+            graphicsManager.endPatternAtlasBatch();
         }
     }
 }
