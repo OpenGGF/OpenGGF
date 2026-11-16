@@ -57,6 +57,13 @@ in `MHZ1_BackgroundEvent` (sonic3k.asm:112320-112354), specifically lines 112352
 making its following loop delta zero.
 No timing correction is claimed here; the handoff witness isolates retention with no extra movement.
 
+## Lead smoke follow-up — 2026-11-16
+
+1. **FIXED test path:** viewport projection no longer produces helper positions. The test now advances the real camera/background event owner before each ramp, retaining all exact fractional words, seven native helper positions and five aspects, plus read-only projection equality. ROM ownership: `loc_555D2` (sonic3k.asm:113293-113307). Production Java is unchanged.
+2. **FIXED inventory:** deleted exactly two retired restoreMhzSidecar catch rows; no allowances added. Explicit class result lines: BroadCatch 4, ZoneEventRuntimeAccess 12, ObjectPhysicsStandardization 35, AudioPresentationArchitecture 45; all zero failures/errors/skips, no new handler.
+
+Trace control reuses the 21 raw dfd01e7af6 reports previously verified equal to e676eb5086; runtime source, trace fixtures, inputs and environment are unchanged. Fresh candidate comparison: all 21 reports identical in grouped errors, coverage and replay gates (9,397 grouped errors each).
+
 ## Exact Maven commands and results
 
 Output redirections to `target/mhz-*.log` omitted. Baseline commands ran in detached,
@@ -72,6 +79,8 @@ python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless
 python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Dtest=TestSonic3kMHZEvents test
 python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Dtest=TestS3kMhzScreenPublication#ordinaryShakeMovesTheRenderCameraAndSpriteDrawExactlyOnce test
 python3 tools/testing/maven_queue.py --lean -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestSonic3kMHZEvents#act2BackgroundEventRoutine8FallthroughRunsShakeSetupInTheSameDispatch+realActHandoffCarriesLoopHistoryAndRebuildsTheScrollOutput,TestSonic3kMhzRuntimeStateRegistration#bossAreaDeformCancelsShakeBeforeRatioAndRestoresItAfterward,TestMhzBossObjects#mhzEndBossDefeatDashThresholdStartsFadeShakeAndTimerStop' test
+python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestS3kMhzEndBossViewport,TestBroadCatchSwallowingGuard' test
+python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestS3kMhzEndBossViewport,TestBroadCatchSwallowingGuard,TestZoneEventRuntimeAccessGuard,TestObjectPhysicsStandardizationGuard,TestAudioPresentationArchitectureGuard,TestS3kMhzScreenPublication,TestMhzComposedRewindState,TestSonic3kMHZEvents,SwScrlMhzTest,TestSonic3kMhzRuntimeStateRegistration,TestMhzRewindFidelitySweep,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestZoneEventRewindSchemaGuard,TestSonic3kLevelEventRewindSnapshot,TestS3kMhzAuthoredRoute,TestS3kMhzAct2AuthoredRoute,TestMhzCheckpointRoutes,TestMhzBossObjects,TestS3kMhzPatternAnimation,*Mhz*TraceReplay' test
 ```
 
 | Run | Tests / failures | Queue seconds | Maven seconds | Qualification |
@@ -87,6 +96,8 @@ python3 tools/testing/maven_queue.py --lean -Dmse=off -Dopenggf.headless.gl=surf
 | Review fresh baseline routes + traces | 25 / 25 | 805 | 149 | Fresh comparison control |
 | Review first full focused + traces | 413 / 26 | 707 | 185 | 25 baseline failures + misplaced new boss assertion |
 | Review corrected full focused + traces | 413 / 25 | 131 | 122 | All 25 failures match fresh baseline; 388 pass |
+| Lead-smoke reproduction | 19 / 6 | 164 | 37.117 | Five viewport failures + two retired rows in one guard failure; 0 errors/skips |
+| Lead-smoke full focused + named guards + traces | 524 / 25 | 337 | 135 | All named classes executed without -Pguards; 499 pass, only 25 inherited failures; 0 errors/skips |
 
 The omission controls disabled only same-dispatch setup, handoff carry, BG scroll-word output,
 and the boss zone request. These qualify new coverage of already-correct behavior; they are
