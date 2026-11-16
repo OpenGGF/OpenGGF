@@ -402,3 +402,57 @@ Remaining baseline failure identities (grouped by class):
 - `TestS3kMhzTeamAuthoredRoute`: `nativePairCompletesActOneAndReplaysItsLiveInteractions`.
 - `TestS3kMhzWideAuthoredRoute`: `wideSonicCompletesActOneAndReplaysItsLiveInteractions`.
 - `TestThreeIslandsScene`: `tailsJoinsInTheFieldAndTheTravellingShopReturnsToTheSameSpot`; `aSonic1ZonePlaysItsOwnRomSongWithoutPlaceholderSwitches`; `startupIsPlayableAndArrivalDialogueAndRestStayInTheField`; `greenHillMysteriesUseRealInteractionsAndPersistThroughContinue`; `physicalTrailsConnectFieldsAndBattleUsesTheEncounterField`; `allStoryLandmarksHavePlayableInteriorsWithIndependentGatesSavesAndRewards`; `travellerDialogueWaitsForTheDiscoveryOrRescueItDescribes`; `explorationUsesTwoAxesAndStoryDiscoveriesPersistAcrossContinue`.
+
+## Review follow-up after PR 345 (2026-11-16)
+
+Host `prepareService` installs motion capture intent before native advancement;
+`observeService` retains the post-service observation contract. Parallax no longer
+reads `LevelRenderer.motionPackets.active`. Capture intent survives picture-history
+invalidation; disabled/unsupported handlers do not construct a motion projection.
+A phase must retain immutable inputs before the following service is known: it
+cannot safely be captured retroactively only when the next camera Y changes.
+Eligible handlers still incur this bounded snapshot cost; no allocation benchmark
+or claim that the cost is eliminated is made. Descriptor/column ownership capture
+remains director-only. The off path retains no motion phase after scroll dispatch.
+
+Aligned background line and column arrays are now retained with horizontal rows;
+incompatible projected array topology snaps the background. Scalar background Y
+still supplies vertical displacement independently. `TestLevelMotionPair` checks
+explicit deltas and midpoint values for all three arrays and rejects a frozen
+negative control. Additional cases check the last row of both 224- and 448-row
+rasters. The AIZ probe checks the known band-11 midpoint (0 to -2 gives -1),
+actual moving pictures, and the first resumed dispatch's captured phase. Its
+rejection diagnostic no longer reports misleading unaligned deltas.
+
+Review claims were checked rather than adopted wholesale:
+
+- HCZ and LBZ currently publish null background vertical line/column arrays, so
+  they do not themselves reproduce the discarded-array defect. They remain
+  valuable mode/band coverage targets.
+- Camera cuts mark continuity and do not themselves clear the active flag. The
+  ordering dependency on enabling/resuming interpolation was real and is removed
+  by the pre-service host intent.
+- Phase sampling occurs in `LevelMotionPair.between` during service observation,
+  not drawing. The cited "Missing LBZ launch frame" is a restore decoder check;
+  valid launch phase capture checks its immutable dispatch separately. No
+  recoverable sampler exception was demonstrated. Programming errors continue to
+  propagate through the existing engine fault boundary; no broad exception
+  swallowing fallback is added (see implementation pitfalls).
+- Motion sampling requests the captured horizontal raster length, not viewport
+  metadata height. Tall rasters are explicitly checked; this is not a general
+  tall-viewport visual certification.
+- Current-generation shake remains discrete by the original presentation
+  contract, keeping foreground, masks, sprites and background composition aligned.
+  Smoothing shake independently would be a separate behaviour change.
+
+HCZ and CD temporal validation is delegated only after this candidate's focused
+checks. No additional zone parity is claimed by the shared pair tests.
+
+Initial focused verification of this review follow-up: 187 tests pass, no skips,
+using Java 25 and queued Maven with `-Dmse=off`, display variables unset and
+`-Dopenggf.headless.gl=surfaceless-egl`. Selection: `TestLevelMotion*`,
+`TestSonic1StomperDoorRewindOwnership`, `TestNativeCompetitionParticipantDispatch`,
+`TestSonic3kScrollProjection`, `TestS3kAdditionalScrollProjection`, and the four
+required S3K keep-green classes. The new aligned-array regression failed on the
+merged base before implementation. HCZ/CD validation and rendering/common smoke
+plus guards are subsequent bounded checks, not claimed by this initial result.

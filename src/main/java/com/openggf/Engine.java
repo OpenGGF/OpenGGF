@@ -3005,6 +3005,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 					graphicsManager.runPendingRenderThreadTasks();
 					long started = System.nanoTime();
 					measuringRegionWork = true;
+					prepareLiveMotion(interpolationActive);
 					try { liveFrame = advanceFrame(); }
 					finally {
 						measuringRegionWork = false;
@@ -3166,6 +3167,11 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		suspension.betweenFrames(suspensionEffects);
 		liveFrame = advanceFrame();
 		renderScheduledFrame(new LivePictureRequest.CaptureLatest());
+	}
+
+	/** Install live capture intent before native service dispatch. */
+	private void prepareLiveMotion(boolean interpolationActive) {
+		LevelMotionAccess.prepareService(levelManager, interpolationActive);
 	}
 
 	/** The live window's only interpolation-history writer; offline drivers never retain history. */

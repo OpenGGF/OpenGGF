@@ -48,7 +48,7 @@ class TestLevelMotionCallerGuard {
                 return new MethodVisitor(Opcodes.ASM9) {
                     private void call(String target, String method) {
                         if (target.equals("com/openggf/level/LevelMotionAccess")
-                                && (method.equals("present") || method.equals("observeService")) && !owner.equals("com/openggf/Engine"))
+                                && (method.equals("present") || method.equals("observeService") || method.equals("prepareService")) && !owner.equals("com/openggf/Engine") && !owner.equals("com/openggf/level/LevelMotionAccess"))
                             violations.add(owner + "#" + name + " -> " + method);
                     }
                     @Override public void visitMethodInsn(int opcode, String target, String method, String desc, boolean isInterface) { call(target, method); }
