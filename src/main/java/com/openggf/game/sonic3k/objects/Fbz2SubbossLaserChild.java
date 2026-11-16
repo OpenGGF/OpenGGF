@@ -184,7 +184,7 @@ final class Fbz2SubbossLaserChild extends AbstractFbz2SubbossChild
         if (--waitWord >= 0) return;
         if (root == null || root.cyclesRemaining() > 0)
             if (tryServices() != null)
-                S3kFbzEventWriteSupport.setScreenShakeState(services(), false, 0, 0);
+                S3kFbzEventWriteSupport.setScreenShakeActive(services(), false);
         phaseOrdinal = Phase.DELETE_PENDING.ordinal();
     }
 

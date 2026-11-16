@@ -427,9 +427,7 @@ public final class Lbz2RobotnikShipInstance extends AbstractObjectInstance
         carryingPlayer = false;
         carriedPlayer = null;
         // ROM loc_8D47C: clr.w (Screen_shake_flag).w on release.
-        if (services().gameState() != null) {
-            services().gameState().setScreenShakeActive(false);
-        }
+        runtimeState().ifPresent(state -> state.writeScreenShakeFlag(0));
         player.releaseFromObjectControl(vIntRunCount);
         player.setObjectMappingFrameControl(false);
         player.setAir(true);
@@ -505,9 +503,7 @@ public final class Lbz2RobotnikShipInstance extends AbstractObjectInstance
             state.requestLaunchStart();
             state.setLaunchActive(true);
         });
-        if (services().gameState() != null) {
-            services().gameState().setScreenShakeActive(true);
-        }
+        runtimeState().ifPresent(state -> state.writeScreenShakeFlag(0xFF00 | (state.screenShakeFlag() & 0xFF)));
     }
 
     private void registerLaunchAnchor() {
@@ -525,7 +521,7 @@ public final class Lbz2RobotnikShipInstance extends AbstractObjectInstance
      */
     private void applyLaunchRiderDelta() {
         int delta = runtimeState()
-                .map(LbzZoneRuntimeState::consumeLaunchRiderDelta)
+                .map(LbzZoneRuntimeState::getLaunchRiderDelta)
                 .orElse(0);
         if (delta != 0) {
             y = (y + delta) & 0xFFFF;

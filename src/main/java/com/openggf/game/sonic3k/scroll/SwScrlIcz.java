@@ -48,15 +48,6 @@ public class SwScrlIcz extends AbstractZoneScrollHandler implements com.openggf.
     private final ScrollValueTable icz2OutTable = ScrollValueTable.ofLength(52);
     private final ScrollValueTable icz2InTable = ScrollValueTable.ofLength(9);
 
-    private int lastActId = -1;
-    private int introPreviousCameraY;
-    private int introBgCameraYSource;
-    // ICZ1 intro auto-scroll longword (ROM +$800/frame). Derived from the frame
-    // counter (not the update-call count) so it rewinds correctly. Anchored at
-    // the first intro frame after resetActState; offset 0 = read-then-increment.
-    private int introAutoBaseFrame;
-    private boolean introAutoBaseFrameSet;
-    private boolean act2Indoor;
     private int lastBgCameraX = Integer.MIN_VALUE;
     // Foreground plane-A vertical scroll, published to the renderer with the
     // screen-shake offset folded in so the level tiles shake with the sprites
@@ -66,7 +57,7 @@ public class SwScrlIcz extends AbstractZoneScrollHandler implements com.openggf.
 
     @Override
     public void init(int actId, int cameraX, int cameraY) {
-        resetActState(actId, cameraX, cameraY);
+        // No gameplay initialization in the projector.
     }
 
     @Override
@@ -75,12 +66,8 @@ public class SwScrlIcz extends AbstractZoneScrollHandler implements com.openggf.
                        int cameraY,
                        int frameCounter,
                        int actId) {
-        if (actId != lastActId || frameCounter == 0) {
-            resetActState(actId, cameraX, cameraY);
-        }
-
         composer.reset();
-        short fgScroll = negWord(cameraX);
+        short fgScroll = negWord(cameraX + getShakeOffsetX());
         // Fold the shake into the foreground vscroll on every path; the offset is
         // 0 outside the snowboard crash, so this equals the default camera Y and
         // is a no-op there.
@@ -92,11 +79,9 @@ public class SwScrlIcz extends AbstractZoneScrollHandler implements com.openggf.
             } else {
                 updateAct1Intro(cameraX, cameraY, fgScroll, frameCounter);
             }
-        } else if (isAct2Indoor(cameraX, cameraY)) {
-            act2Indoor = true;
+        } else if (indoor(cameraX, cameraY)) {
             updateAct2Indoor(cameraX, cameraY, fgScroll);
         } else {
-            act2Indoor = false;
             updateAct2Outdoor(cameraX, frameCounter, fgScroll);
         }
 
@@ -109,6 +94,12 @@ public class SwScrlIcz extends AbstractZoneScrollHandler implements com.openggf.
     @Override
     public int getBgCameraX() {
         return lastBgCameraX;
+    }
+
+    @Override
+    public int getShakeOffsetX() {
+        var state = state();
+        return state != null ? state.screenShakeOffsetX() : 0;
     }
 
     @Override
@@ -138,31 +129,28 @@ public class SwScrlIcz extends AbstractZoneScrollHandler implements com.openggf.
                 .orElse(0);
     }
 
-    private void resetActState(int actId, int cameraX, int cameraY) {
-        lastActId = actId;
-        introPreviousCameraY = (short) cameraY;
-        introBgCameraYSource = (short) cameraY;
-        int x = ((short) cameraX) & 0xFFFF;
-        if (actId == 0 && x >= 0x3580 && x < ICZ1_INDOOR_X_THRESHOLD) {
-            introBgCameraYSource = (short) (introBgCameraYSource + 0x2800);
-        }
-        introAutoBaseFrameSet = false;
-        act2Indoor = shouldAct2StartIndoors(cameraX, cameraY);
-        lastBgCameraX = Integer.MIN_VALUE;
+    private IczZoneRuntimeState state() {
+        return GameServices.hasRuntime() ? GameServices.zoneRuntimeRegistry()
+                .currentAs(IczZoneRuntimeState.class).orElse(null) : null;
+    }
+
+    private boolean indoor(int x, int y) {
+        var state = state();
+        return state != null ? state.isIndoorPaletteCyclingActive()
+                : (x & 0xFFFF) < 0x3600 && ((y & 0xFFFF) >= 0x720
+                || (x & 0xFFFF) < 0x1000 && (y & 0xFFFF) >= 0x580);
     }
 
     private void updateAct1Intro(int cameraX, int cameraY, short fgScroll, int frameCounter) {
-        adjustIntroBgDuringLoop(cameraY);
+        var state = state();
+        int sourceY = state != null ? state.introBgCameraYSource() : (short) cameraY;
         // ROM ShakeScreen_Setup folds Screen_shake_offset into Camera_Y_pos_copy
         // before ICZ1_Deform samples it, so the background shakes with the
         // foreground and sprites during the snowboard crash.
-        int bgY = asrWord(introBgCameraYSource, 7) + resolveShakeOffsetY();
+        int bgY = asrWord(sourceY, 7) + resolveShakeOffsetY();
         composer.setVscrollFactorBG((short) bgY);
-        if (!introAutoBaseFrameSet) {
-            introAutoBaseFrame = frameCounter;
-            introAutoBaseFrameSet = true;
-        }
-        buildIcz1IntroTable(icz1IntroTable, cameraX, (frameCounter - introAutoBaseFrame) * 0x800);
+        buildIcz1IntroTable(icz1IntroTable, cameraX, state != null ? state.introAutoPhase() : frameCounter * 0x800);
+        for (int i = 0; i < 14; i++) icz1IntroTable.set(i, (short) (icz1IntroTable.get(i) + getShakeOffsetX()));
         DeformationPlan.applyTableBands(
                 composer,
                 bgY,
@@ -209,29 +197,6 @@ public class SwScrlIcz extends AbstractZoneScrollHandler implements com.openggf.
                 0,
                 NEGATE_WORD);
         lastBgCameraX = bgX;
-    }
-
-    /**
-     * ROM: Adjust_BGDuringLoop with d2=$400, d3=$800, source Camera_Y_pos_copy.
-     */
-    private void adjustIntroBgDuringLoop(int cameraY) {
-        int current = (short) cameraY;
-        int delta = (short) (current - introPreviousCameraY);
-        introPreviousCameraY = current;
-
-        if (delta < 0) {
-            int magnitude = (short) -delta;
-            if ((magnitude & 0xFFFF) >= 0x400) {
-                magnitude = (short) (magnitude - 0x800);
-            }
-            introBgCameraYSource = (short) (introBgCameraYSource - magnitude);
-            return;
-        }
-
-        if ((delta & 0xFFFF) >= 0x400) {
-            delta = (short) (delta - 0x800);
-        }
-        introBgCameraYSource = (short) (introBgCameraYSource + delta);
     }
 
     /**
@@ -344,42 +309,19 @@ public class SwScrlIcz extends AbstractZoneScrollHandler implements com.openggf.
         return (short) bgX;
     }
 
-    private boolean shouldAct2StartIndoors(int cameraX, int cameraY) {
-        int x = ((short) cameraX) & 0xFFFF;
-        int y = ((short) cameraY) & 0xFFFF;
-        if (x >= 0x3600) {
-            return false;
-        }
-        if (y >= 0x720) {
-            return true;
-        }
-        return x >= 0x1000 && y >= 0x580;
-    }
-
-    private boolean isAct2Indoor(int cameraX, int cameraY) {
-        int x = ((short) cameraX) & 0xFFFF;
-        int y = ((short) cameraY) & 0xFFFF;
-        if (!act2Indoor) {
-            return x >= 0x1000 && x < 0x3600 && y >= 0x720;
-        }
-        if (x >= 0x1900 && x < 0x1B80) {
-            return true;
-        }
-        return !(x < 0x1000 || x >= 0x3600 || y < 0x720);
-    }
-
     @Override
     public com.openggf.level.scroll.ScrollProjectionPhase captureProjection(
             com.openggf.level.scroll.ScrollProjectionContext context) {
         int act = context.act();
-        boolean indoor = act == 0 ? (context.cameraX() & 0xFFFF) >= ICZ1_INDOOR_X_THRESHOLD : act2Indoor;
-        int sourceY = introBgCameraYSource;
-        int autoPhase = (context.frameCounter() - introAutoBaseFrame) * 0x800;
+        boolean indoor = act == 0 ? (context.cameraX() & 0xFFFF) >= ICZ1_INDOOR_X_THRESHOLD : indoor(context.cameraX(), context.cameraY());
+        var state = state();
+        int sourceY = state != null ? state.introBgCameraYSource() : (short) context.cameraY();
+        int autoPhase = state != null ? state.introAutoPhase() : context.frameCounter() * 0x800;
         int shake = context.nativeOutput().shakeY();
         return view -> {
             var output = new ScrollEffectComposer(view.height());
             output.setVscrollFactorFG((short) (context.nativeOutput().foregroundY() + view.cameraY() - context.cameraY()));
-            short foreground = negWord(view.cameraX());
+            short foreground = negWord(view.cameraX() + context.nativeOutput().shakeX());
             int backgroundX;
             if (act == 0 && indoor) {
                 int bgY = asrWord(view.cameraY(), 1);
@@ -398,6 +340,8 @@ public class SwScrlIcz extends AbstractZoneScrollHandler implements com.openggf.
                 int bgY = asrWord((short) (sourceY + delta), 7) + shake;
                 var table = ScrollValueTable.ofLength(14);
                 buildIcz1IntroTable(table, view.cameraX(), autoPhase);
+                for (int i = 0; i < 14; i++) table.set(i,
+                        (short) (table.get(i) + context.nativeOutput().shakeX()));
                 output.setVscrollFactorBG((short) bgY);
                 DeformationPlan.applyTableBands(output, bgY, foreground, table, ICZ1_INTRO_BG_DEFORM, 0, NEGATE_WORD);
                 backgroundX = ICZ1_INTRO_BG_PLANE_X;

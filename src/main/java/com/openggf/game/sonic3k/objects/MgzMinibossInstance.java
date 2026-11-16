@@ -114,12 +114,6 @@ public final class MgzMinibossInstance extends AbstractBossInstance implements S
     private static final int[] FLASH_DARK = {0x0CAA, 0x0866, 0x0644};
     private static final int[] FLASH_BRIGHT = {0x0EEE, 0x0EEE, 0x0EEE};
 
-    private static final int[] SCREEN_SHAKE_CONTINUOUS = {
-            1, 2, 1, 3, 1, 2, 2, 1, 2, 3, 1, 2, 1, 2, 0, 0,
-            2, 0, 3, 2, 2, 3, 2, 2, 1, 3, 0, 0, 1, 0, 1, 3,
-            1, 2, 1, 3, 1, 2, 2, 1, 2, 3, 1, 2, 1, 2, 0, 0,
-            2, 0, 3, 2, 2, 3, 2, 2, 1, 3, 0, 0, 1, 0, 1, 3
-    };
 
     private int anchorX;
     private int anchorY;
@@ -273,7 +267,7 @@ public final class MgzMinibossInstance extends AbstractBossInstance implements S
         // of phase with the ROM.
         int vIntLowByte = vIntRunCount & 0xFF;
         state.y += ((vIntLowByte & 1) == 0) ? -2 : 1;
-        applyContinuousShake(vIntLowByte);
+        requestContinuousShake();
         if ((vIntLowByte & 7) == 0) {
             services().playSfx(Sonic3kSfx.RUMBLE_2.id);
             spawnCeilingDebris();
@@ -317,7 +311,7 @@ public final class MgzMinibossInstance extends AbstractBossInstance implements S
         // with the step signs mirrored (+2 / -1).
         int vIntLowByte = vIntRunCount & 0xFF;
         state.y += ((vIntLowByte & 1) == 0) ? 2 : -1;
-        applyContinuousShake(vIntLowByte);
+        requestContinuousShake();
         if ((vIntLowByte & 7) == 0) {
             services().playSfx(Sonic3kSfx.RUMBLE_2.id);
             spawnCeilingDebris();
@@ -629,17 +623,17 @@ public final class MgzMinibossInstance extends AbstractBossInstance implements S
                 segaWords);
     }
 
-    private void applyContinuousShake(int frameCounter) {
+    private void requestContinuousShake() {
         MgzZoneRuntimeState mgz = resolveMgzRuntimeState();
         if (mgz != null) {
-            mgz.requestScreenShakeOffset(SCREEN_SHAKE_CONTINUOUS[frameCounter & 0x3F]);
+            mgz.requestContinuousScreenShake();
         }
     }
 
     private void clearScreenShake() {
         MgzZoneRuntimeState mgz = resolveMgzRuntimeState();
         if (mgz != null) {
-            mgz.clearScreenShakeOffset();
+            mgz.clearScreenShakeFlag();
         }
         setScreenShakeActive(false);
     }

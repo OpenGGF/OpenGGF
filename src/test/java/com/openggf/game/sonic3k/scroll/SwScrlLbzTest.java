@@ -39,7 +39,7 @@ class SwScrlLbzTest {
 
     @Test
     void act1UsesRomBackgroundScrollBands() {
-        SwScrlLbz handler = new SwScrlLbz();
+        LbzBackgroundEvents handler = new LbzBackgroundEvents();
         int[] buffer = new int[VISIBLE_LINES];
 
         handler.update(buffer, 0x2000, 0x0400, 0, 0);
@@ -56,7 +56,7 @@ class SwScrlLbzTest {
 
     @Test
     void act1ScreenShakeOffsetsForegroundAndBackgroundVScroll() {
-        SwScrlLbz handler = new SwScrlLbz();
+        LbzBackgroundEvents handler = new LbzBackgroundEvents();
         int[] buffer = new int[VISIBLE_LINES];
 
         handler.setScreenShakeOffset(3);
@@ -71,22 +71,40 @@ class SwScrlLbzTest {
     }
 
     @Test
+    void cloudAccumulatorAdvancesPerNativeDispatchAtAHeldLevelCounter() {
+        var handler = new LbzBackgroundEvents();
+        int[] words = new int[224];
+        for (int dispatch = 0; dispatch < 3; dispatch++) handler.update(words, 0, 0x5F0, 0, 1);
+        assertEquals(1, handler.getLbz2HScrollWordForTest(0), "13 * ($E00 * 2) >> 16");
+        byte[] saved = handler.capturePublication();
+        handler.update(words, 0, 0x5F0, 0, 1);
+        assertEquals(2, handler.getLbz2HScrollWordForTest(0));
+        handler.restorePublication(saved);
+        handler.copyPublishedWords(words);
+        assertEquals(1, handler.getLbz2HScrollWordForTest(0));
+        handler.update(words, 0, 0x5F0, 0, 1);
+        assertEquals(2, handler.getLbz2HScrollWordForTest(0));
+    }
+
+    @Test
     void continuousShakeSamplesPriorPublishedLevelCounter() {
         TestEnvironment.activeGameplayMode();
         LbzZoneRuntimeState state = new LbzZoneRuntimeState(0, PlayerCharacter.SONIC_AND_TAILS);
         state.setLbz1KnucklesBombShakeActive(true);
+        state.setupScreenShake(36, false);
+        state.publishScreenShakeForeground();
         GameServices.zoneRuntimeRegistry().install(state);
-        SwScrlLbz handler = new SwScrlLbz();
+        LbzBackgroundEvents handler = new LbzBackgroundEvents();
 
         handler.update(new int[VISIBLE_LINES], 0x3B60, 0x0148, 37, 0);
 
         assertEquals(1, handler.getShakeOffsetY(),
-                "ShakeScreen_Setup reads ScreenShakeArray2[(Level_frame_counter-1)&$3F].");
+                "Projection reads the preceding event publication, independent of render clock.");
     }
 
     @Test
     void act2UsesRomWaterlineBackgroundCameraAndParallaxBands() {
-        SwScrlLbz handler = new SwScrlLbz();
+        LbzBackgroundEvents handler = new LbzBackgroundEvents();
         int[] buffer = new int[VISIBLE_LINES];
 
         handler.update(buffer, 0x2010, 0x05F0, 0, 1);
@@ -104,7 +122,7 @@ class SwScrlLbzTest {
         TestEnvironment.activeGameplayMode();
         LbzZoneRuntimeState state = new LbzZoneRuntimeState(1, PlayerCharacter.SONIC_ALONE);
         GameServices.zoneRuntimeRegistry().install(state);
-        SwScrlLbz handler = new SwScrlLbz();
+        LbzBackgroundEvents handler = new LbzBackgroundEvents();
         int[] buffer = new int[VISIBLE_LINES];
 
         handler.update(buffer, 0x2010, 0x05F0, 0, 1);
@@ -120,7 +138,7 @@ class SwScrlLbzTest {
 
     @Test
     void act2WaterlineLookupIsAnchoredAtRomSurfaceTableIndex() {
-        SwScrlLbz handler = new SwScrlLbz(zeroWaterlineLookup());
+        LbzBackgroundEvents handler = new LbzBackgroundEvents(zeroWaterlineLookup());
         int[] buffer = new int[VISIBLE_LINES];
 
         handler.update(buffer, 0x2000, 0x05B0, 0, 1);
@@ -138,37 +156,39 @@ class SwScrlLbzTest {
     void act2WaterlinePhaseSubtractsScreenShakeBeforeEquilibriumMath() {
         TestEnvironment.activeGameplayMode();
         LbzZoneRuntimeState state = new LbzZoneRuntimeState(1, PlayerCharacter.SONIC_ALONE);
-        state.requestScreenShakeOffset(8);
+        state.startTimedScreenShake(9);
+        state.setupScreenShake(0, false);
+        state.publishScreenShakeForeground();
         GameServices.zoneRuntimeRegistry().install(state);
-        SwScrlLbz handler = new SwScrlLbz();
+        LbzBackgroundEvents handler = new LbzBackgroundEvents();
         int[] buffer = new int[VISIBLE_LINES];
 
         handler.update(buffer, 0x2010, 0x05F0, 0, 1);
 
-        assertEquals(4, state.lbz2WaterlinePhase(),
+        assertEquals(0, state.lbz2WaterlinePhase(),
                 "ROM LBZ2_Deform subtracts Screen_shake_offset before writing Events_bg+$10.");
-        assertEquals((short) 0x02C4, handler.getVscrollFactorBG(),
-                "BG vscroll should use the shaken-relative value and then add Screen_shake_offset back.");
-        assertEquals((short) 0x05F8, handler.getVscrollFactorFG(),
+        assertEquals((short) 0x02C3, handler.getVscrollFactorBG(),
+                "The foreground copy already includes shake; subtract it before parallax and add it back afterward.");
+        assertEquals((short) 0x05F3, handler.getVscrollFactorFG(),
                 "LBZ2_ScreenEvent adds Screen_shake_offset to Camera_Y_pos_copy, so Plane A must shake too.");
     }
 
     @Test
     void act2ScreenShakeMovesDeformationBandLookupWithBackgroundVScroll() {
-        SwScrlLbz baselineHandler = new SwScrlLbz();
+        LbzBackgroundEvents baselineHandler = new LbzBackgroundEvents();
         int[] baseline = new int[VISIBLE_LINES];
         baselineHandler.update(baseline, 0x2010, 0x05F0, 0, 1);
 
-        SwScrlLbz shakenHandler = new SwScrlLbz();
+        LbzBackgroundEvents shakenHandler = new LbzBackgroundEvents();
         shakenHandler.setScreenShakeOffset(8);
         int[] shaken = new int[VISIBLE_LINES];
         shakenHandler.update(shaken, 0x2010, 0x05F0, 0, 1);
 
         assertNotEquals(unpackBG(baseline[92]), unpackBG(baseline[96]),
                 "The fixture must straddle an LBZ2_BGDeformArray band boundary.");
-        assertEquals(unpackBG(baseline[96]), unpackBG(shaken[92]),
+        assertEquals(unpackBG(baseline[96]), unpackBG(shaken[88]),
                 "ROM LBZ2_Deform writes shaken Camera_Y_pos_BG_copy before ApplyDeformation, "
-                        + "so a +8 screen shake moves the visible band boundary up by four BG pixels.");
+                        + "so a +8 screen shake moves the visible band boundary up by eight BG pixels.");
     }
 
     @Test
@@ -176,17 +196,19 @@ class SwScrlLbzTest {
         TestEnvironment.activeGameplayMode();
         LbzZoneRuntimeState state = new LbzZoneRuntimeState(1, PlayerCharacter.SONIC_ALONE);
         state.setLaunchActive(true);
-        state.requestScreenShakeOffset(8);
+        state.startTimedScreenShake(9);
+        state.setupScreenShake(0, false);
+        state.publishScreenShakeForeground();
         GameServices.zoneRuntimeRegistry().install(state);
-        SwScrlLbz handler = new SwScrlLbz();
+        LbzBackgroundEvents handler = new LbzBackgroundEvents();
         int[] buffer = new int[VISIBLE_LINES];
 
         handler.update(buffer, 0x4380, 0x05F0, 0, 1);
 
-        assertEquals((short) 0x02C4, handler.getVscrollFactorBG(),
+        assertEquals((short) 0x02C3, handler.getVscrollFactorBG(),
                 "LBZ2_DeathEggDeform already adds Screen_shake_offset when writing Camera_Y_pos_BG_copy; "
                         + "the generic shake pass must not add it a second time.");
-        assertEquals((short) 0x05F8, handler.getVscrollFactorFG(),
+        assertEquals((short) 0x05F3, handler.getVscrollFactorFG(),
                 "Death Egg launch foreground/window-plane terrain still uses shaken Camera_Y_pos_copy.");
     }
 
@@ -201,11 +223,11 @@ class SwScrlLbzTest {
     @Test
     void act2DeathEggDeformOnlyActivatesDuringLaunchMode() {
         TestEnvironment.activeGameplayMode();
-        SwScrlLbz normalHandler = new SwScrlLbz();
+        LbzBackgroundEvents normalHandler = new LbzBackgroundEvents();
         int[] normal = new int[VISIBLE_LINES];
         normalHandler.update(normal, 0x4380, 0x0668, 8, 1);
 
-        SwScrlLbz repeatHandler = new SwScrlLbz();
+        LbzBackgroundEvents repeatHandler = new LbzBackgroundEvents();
         int[] repeat = new int[VISIBLE_LINES];
         repeatHandler.update(repeat, 0x4380, 0x0668, 8, 1);
 
@@ -220,7 +242,7 @@ class SwScrlLbzTest {
         state.setBgAccum(0x0001_8000);
         GameServices.zoneRuntimeRegistry().install(state);
 
-        SwScrlLbz launchHandler = new SwScrlLbz();
+        LbzBackgroundEvents launchHandler = new LbzBackgroundEvents();
         int[] launch = new int[VISIBLE_LINES];
         launchHandler.update(launch, 0x4380, 0x0668, 8, 1);
 
@@ -239,7 +261,7 @@ class SwScrlLbzTest {
         state.setBgAccum(0x0004_0000);
         GameServices.zoneRuntimeRegistry().install(state);
 
-        SwScrlLbz handler = new SwScrlLbz();
+        LbzBackgroundEvents handler = new LbzBackgroundEvents();
         int[] buffer = new int[VISIBLE_LINES];
         handler.update(buffer, 0x4380, 0x0668, 8, 1);
 
@@ -264,7 +286,7 @@ class SwScrlLbzTest {
         state.setBgLaunchSpeed(-1);
         GameServices.zoneRuntimeRegistry().install(state);
 
-        SwScrlLbz handler = new SwScrlLbz();
+        LbzBackgroundEvents handler = new LbzBackgroundEvents();
         int[] buffer = new int[VISIBLE_LINES];
         handler.update(buffer, 0x4380, 0x0668, 12, 1);
 
@@ -291,7 +313,7 @@ class SwScrlLbzTest {
         state.setLaunchActive(true);
         state.setFgAccum(0x0300_0000);
         GameServices.zoneRuntimeRegistry().install(state);
-        SwScrlLbz handler = new SwScrlLbz();
+        LbzBackgroundEvents handler = new LbzBackgroundEvents();
         int[] buffer = new int[VISIBLE_LINES];
         handler.update(buffer, 0x4390, 0x668, 1, 1);
         // d0=$668-$5F0-$300=-648; ASR/SUB gives floor(-648*27/64)=-274.
@@ -301,8 +323,8 @@ class SwScrlLbzTest {
         state.setFgAccum(0);
         handler.update(buffer, 0x4390, 0x1CB, 2, 1);
         assertEquals(0x100, handler.getVscrollFactorBG(), "the latch writes Events_fg_3 for the next dispatch");
-        handler.update(buffer, 0x4390, 0x1CB, 2, 1);
-        assertEquals(0x100, handler.getVscrollFactorBG(), "rebuilding the same frame must not consume the latch");
+        handler.copyPublishedWords(buffer);
+        assertEquals(0x100, handler.getVscrollFactorBG(), "reading the publication must not dispatch the latch");
         handler.update(buffer, 0x4390, 0x1CB, 3, 1);
         assertEquals(0, handler.getVscrollFactorBG());
     }
@@ -319,7 +341,7 @@ class SwScrlLbzTest {
             waveData[word * 2] = (byte) ((1000 + word) >> 8);
             waveData[word * 2 + 1] = (byte) (1000 + word);
         }
-        SwScrlLbz handler = new SwScrlLbz(null, waveData);
+        LbzBackgroundEvents handler = new LbzBackgroundEvents(null, waveData);
         int[] buffer = new int[VISIBLE_LINES];
         handler.update(buffer, 0x4390, 0x668, 0, 1);
         assertEquals(1095, handler.getLbz2HScrollWordForTest(117),
@@ -327,17 +349,20 @@ class SwScrlLbzTest {
         handler.update(buffer, 0x4390, 0x668, 2, 1);
         assertEquals(2190, handler.getLbz2HScrollWordForTest(117),
                 "the unfilled underwater tail retains its prior value; wave phase has not advanced at tick 2");
-        state.requestScreenShakeOffset(8);
         handler.update(buffer, 0x4390, 0x668, 4, 1);
         assertEquals(3286, handler.getLbz2HScrollWordForTest(117), "byte-offset phase advances at tick 4");
 
-        Object snapshot = handler.captureRewindState();
+        byte[] snapshot = handler.capturePublication();
         int[] expected = buffer.clone();
         short expectedBgY = handler.getVscrollFactorBG();
         handler.update(buffer, 0x4390, 0x668, 100, 1);
-        handler.restoreRewindState(snapshot);
+        handler.restorePublication(snapshot);
+        handler.copyPublishedWords(buffer);
+        assertArrayEquals(expected, buffer, "rebuild reads the completed publication without dispatching events");
         handler.update(buffer, 0x4390, 0x668, 4, 1);
-        assertArrayEquals(expected, buffer, "rewind rebuild retains the consumed one-shot shake and scroll words");
+        assertEquals(4382, handler.getLbz2HScrollWordForTest(117),
+                "an admitted native background dispatch advances additive words even at the same level counter");
+        handler.restorePublication(snapshot);
         state.setFinalFallActive(true);
         handler.update(buffer, 0x4390, 0x666, 101, 1);
         assertArrayEquals(expected, buffer, "LBZ2BGE_Falling retains the last deformation and cloud phase");
@@ -355,7 +380,7 @@ class SwScrlLbzTest {
                                                         int screenShakeOffset,
                                                         int frameCounter,
                                                         byte[] waterlineData) {
-        SwScrlLbz handler = new SwScrlLbz(waterlineData);
+        LbzBackgroundEvents handler = new LbzBackgroundEvents(waterlineData);
         handler.setScreenShakeOffset(screenShakeOffset);
         int[] buffer = new int[VISIBLE_LINES];
 
@@ -376,7 +401,8 @@ class SwScrlLbzTest {
                                                         int frameCounter,
                                                         byte[] waterlineData) {
         short[] hScroll = new short[241];
-        int relativeY = (short) (cameraY - screenShakeOffset - 0x5F0);
+        int foregroundCopyY = (short) (cameraY + screenShakeOffset);
+        int relativeY = (short) (foregroundCopyY - screenShakeOffset - 0x5F0);
         int d0Y = fixedFromWord(relativeY) >> 1;
         int d2 = d0Y >> 3;
         d0Y -= d2;

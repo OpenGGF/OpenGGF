@@ -111,12 +111,6 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
     private static final int ACT_TRANSITION_WORLD_OFFSET_X = -0x2E00;
     private static final int FIRST_ROM_WORLD_OFFSET_SLOT = 4;
     private static final int LAST_ROM_WORLD_OFFSET_SLOT_EXCLUSIVE = 94;
-    /** Native ScreenShakeArray2; the 32-byte pattern is repeated over the 64-frame mask. */
-    private static final int[] SCREEN_SHAKE_ARRAY_2 = {
-            1,2,1,3,1,2,2,1,2,3,1,2,1,2,0,0,
-            2,0,3,2,2,3,2,2,1,3,0,0,1,0,1,3
-    };
-
     private int act;
     private int foregroundLayoutRegion;
     private boolean foregroundOutdoor;
@@ -162,10 +156,20 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
     private CollisionMode collisionMode = CollisionMode.FOREGROUND_ONLY;
     private int collisionCameraDiffX;
     private int collisionCameraDiffY;
-    private boolean screenShakeActive;
-    private int screenShakeOffset;
-    /** Screen_shake_last_offset: the offset consumed by ScreenEvent this frame. */
-    private int screenShakeLastOffset;
+    private final com.openggf.game.sonic3k.runtime.S3kScreenShake screenShake =
+            new com.openggf.game.sonic3k.runtime.S3kScreenShake();
+    public record ScrollPublication(int mode, int cameraX, int cameraY, int drift,
+                                    int bob, int offsetX, int offsetY, int shake, int foregroundY) { }
+    private ScrollPublication scrollPublication = new ScrollPublication(0, 0, 0, 0, 0, 0, 0, 0, 0);
+    public ScrollPublication scrollPublication() { return scrollPublication; }
+    public void restoreScrollPublication(ScrollPublication value) {
+        if (value.mode() < 0 || value.mode() > 2) throw new IllegalArgumentException("FBZ publication mode");
+        for (int word : new int[] {value.cameraX(), value.cameraY(), value.shake(), value.foregroundY()})
+            if (word != (short) word) throw new IllegalArgumentException("FBZ publication word");
+        scrollPublication = value;
+    }
+    private final int[] cloudCoordinates = new int[20];
+    /** Diagnostic Level_frame_counter sample, never an object-written shake phase. */
     private int screenShakePhase;
     /** Camera_Y_pos_copy captured before boss-load normalization mutates the camera words. */
     private int bossForegroundVScroll;
@@ -256,9 +260,9 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
         collisionMode = CollisionMode.FOREGROUND_ONLY;
         collisionCameraDiffX = 0;
         collisionCameraDiffY = 0;
-        screenShakeActive = false;
-        screenShakeOffset = 0;
-        screenShakeLastOffset = 0;
+        screenShake.clear();
+        scrollPublication = new ScrollPublication(0, 0, 0, 0, 0, 0, 0, 0, 0);
+        java.util.Arrays.fill(cloudCoordinates, 0);
         screenShakePhase = 0;
         bossForegroundVScroll = 0;
         eventsFg5 = false;
@@ -278,6 +282,7 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
             retainedPlaneOwned = true;
             seedAct1BackgroundPlane(backgroundOutdoor ? 0x200 : 0);
             submitAct1PaletteOwnership();
+            publishDeformation(levelManager().getFrameCounter(), camera().getXCopy(), camera().getYCopy());
         }
         spawnOutdoorMotionController();
     }
@@ -288,11 +293,13 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
         AbstractPlayableSprite player = spriteManager().getMainPlayable();
         if (player == null) return;
         if (act == 0) {
-            initializeAct1Runtime();
+            boolean normalDyingReturn = player.getDead() && !eventsFg5
+                    && backgroundRedrawDirection == RedrawDirection.NONE;
             updateAct1Frame(player.getCentreX(), player.getCentreY(), player.getDead(), frameCounter);
+            if (!normalDyingReturn && ownsActiveRuntime())
+                publishDeformation(levelManager().getFrameCounter(), camera().getXCopy(), camera().getYCopy());
             return;
         }
-        initializeAct2Runtime();
         // S1 donation compatibility: two independently authored FBZ2 loop
         // approaches require spindash releases that S1 rules intentionally
         // remove. Each helper is narrowly gated to P1, its exact approach,
@@ -307,7 +314,7 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
                 });
         // FBZ2_ScreenEvent adds Screen_shake_offset to Camera_Y_pos_copy,
         // leaving the live Camera_Y_pos word untouched.
-        bossForegroundVScroll = (short) (camera().getYCopy() + screenShakeOffset);
+        bossForegroundVScroll = (short) (camera().getYCopy() + screenShake.offset());
         camera().setYCopy((short) bossForegroundVScroll);
         applyRuntimeCopies(updateAct2ScreenEvent(player.getCentreX(), player.getCentreY(),
                 player.getDead(), camera().getX()));
@@ -315,20 +322,17 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
                 && act2ForegroundStage == 0
                 && (bossBackgroundStage == 0 || bossBackgroundStage == 4);
         updateAct2BackgroundEvent(player.getCentreX(), player.getCentreY(), player.getDead());
+        if (!dyingNormalReturn && bossBackgroundStage != 16) {
+            publishDeformation(levelManager().getFrameCounter(), camera().getXCopy(), camera().getYCopy());
+        }
         // ShakeScreen_Setup runs at the tail of the background event.  Consumers
         // therefore see the offset ScreenEvent just used, never the next sample.
         if (!dyingNormalReturn) {
-            screenShakeLastOffset = screenShakeOffset;
-            if (player.getDead()) {
-                screenShakeOffset = 0;
-            } else if (screenShakeActive) {
-                // loc_4F3FA samples Level_frame_counter, not this event
-                // manager's independently advanced dispatch count.
+            boolean deadOrRestarting = com.openggf.sprites.playable.NativePlayableRoutine
+                    .isAtOrBeyondDeathForNativeRead(player);
+            if (!deadOrRestarting && screenShake.flag() < 0)
                 screenShakePhase = levelManager().getFrameCounter() & 0x3F;
-                screenShakeOffset = SCREEN_SHAKE_ARRAY_2[screenShakePhase & 0x1F];
-            } else {
-                screenShakeOffset = 0;
-            }
+            screenShake.setup(levelManager().getFrameCounter(), deadOrRestarting);
         }
         publishBossCollisionIntent();
     }
@@ -342,6 +346,7 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
         if (!act1ScreenInitialized) initializeAct2Screen(cameraX, effects);
         if (!act1BackgroundInitialized) {
             initializeAct2Background(cameraX, effects);
+            publishDeformation(levelManager().getFrameCounter(), camera().getXCopy(), camera().getYCopy());
         }
         spawnOutdoorMotionController();
     }
@@ -389,7 +394,7 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
             planeAssignmentMode = PlaneAssignmentMode.REVERSED;
             // FBZ2_BackgroundInit copies the top BG line pointer after selecting stage $10.
             effects.copyTopBackgroundLines();
-            screenShakeActive = true;
+            setScreenShakeActive(true);
             return;
         }
         // loc_53002: FBZ_Deform, Reset_TileOffsetPositionEff,
@@ -469,6 +474,7 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
         requireAct2("background event");
         Objects.requireNonNull(effects, "effects");
         if (bossBackgroundStage == 16) {
+            if (ownsActiveRuntime()) publishDeformation(levelManager().getFrameCounter(), camera().getXCopy(), camera().getYCopy());
             applyPendingBossLoadNormalization();
             return;
         }
@@ -490,6 +496,7 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
         if (bossBackgroundStage == 4 && act2ForegroundStage != 0) {
             bossBackgroundStage = 16;
             planeAssignmentMode = PlaneAssignmentMode.REVERSED;
+            if (ownsActiveRuntime()) publishDeformation(levelManager().getFrameCounter(), camera().getXCopy(), camera().getYCopy());
             return;
         }
         if (dying) return;
@@ -678,6 +685,8 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
             eventsFg5 = false;
             if (hasRuntime()) {
                 applyAct1ToAct2Reload();
+                // Target runtime installation already ran BackgroundInit/deformation.
+                // The module provider may be a mod wrapper around the stock manager.
                 levelManager().recomputeParallaxOnlyForCurrentFrame();
             }
 
@@ -1429,6 +1438,54 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
         return hScrollAccumulatorLastRead;
     }
 
+    /**
+     * Gameplay publication at FBZ_Deform's outdoor loc_52A70 (sonic3k.asm:108942-108960)
+     * or FBZ2_CloudDeform (sonic3k.asm:109747-109807), before ShakeScreen_Setup
+     * and before FBZ2BGE_BossEvent's load-position normalization.
+     */
+    public void publishDeformation(int levelFrameCounter, int cameraX, int shakenCameraY) {
+        int mode = act == 1 && bossBackgroundStage == 16 ? 2 : backgroundOutdoor ? 1 : 0;
+        if (mode == 2) {
+            int drift = sampleBossHScrollAccumulator(levelFrameCounter);
+            int fixed = ((short) (cameraX - 0x2600 - bossBackgroundOffsetX) << 16) >> 4;
+            int step = fixed >> 2;
+            int[] words = new int[10];
+            for (int index : new int[] {2, 7, 4, 8, 1, 6, 3, 9, 5, 0}) {
+                fixed += drift;
+                words[index] = (short) (fixed >> 16);
+                fixed += step;
+            }
+            int bgY = (short) (shakenCameraY - 0x300 + bossBackgroundOffsetY);
+            for (int slot = 0; slot < 10; slot++) {
+                var point = com.openggf.game.sonic3k.scroll.SwScrlFbz.computeBossCloudPosition(
+                        9 - slot, slot, words[slot], bgY, screenShake.offset(), outdoorBobOffset);
+                cloudCoordinates[slot * 2] = point.x();
+                cloudCoordinates[slot * 2 + 1] = point.y();
+            }
+        } else if (backgroundOutdoor) {
+            sampleOutdoorHScrollAccumulator(levelFrameCounter);
+        }
+        scrollPublication = new ScrollPublication(mode, (short) cameraX,
+                (short) (shakenCameraY - (mode == 2 ? screenShake.offset() : 0)),
+                mode == 2 ? hScrollAccumulatorLastRead >> 3 : hScrollAccumulatorLastRead,
+                outdoorBobOffset, bossBackgroundOffsetX, bossBackgroundOffsetY,
+                act == 1 ? screenShake.offset() : 0, (short) shakenCameraY);
+    }
+
+    public int[] captureCloudCoordinates() { return cloudCoordinates.clone(); }
+    public void restoreCloudCoordinates(int[] coordinates) {
+        if (coordinates.length != 20) throw new IllegalArgumentException("FBZ cloud coordinate count");
+        for (int value : coordinates) if (value < 0 || value > 0xFFFF)
+            throw new IllegalArgumentException("FBZ cloud coordinate word");
+        System.arraycopy(coordinates, 0, cloudCoordinates, 0, 20);
+    }
+    public com.openggf.game.sonic3k.scroll.SwScrlFbz.CloudPosition cloudPositionAtAddressSlot(int slot) {
+        Objects.checkIndex(slot, 10);
+        return new com.openggf.game.sonic3k.scroll.SwScrlFbz.CloudPosition(
+                cloudCoordinates[slot * 2], cloudCoordinates[slot * 2 + 1],
+                com.openggf.game.sonic3k.scroll.SwScrlFbz.cloudMappingFrameForSelector(9 - slot), 9 - slot, slot);
+    }
+
     public void restoreHScrollAccumulatorState(int value, boolean sampled, int lastFrame, int lastRead) {
         hScrollAccumulator = value;
         hScrollAccumulatorSampled = sampled;
@@ -1596,24 +1653,36 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
         collisionCameraDiffX = diffX;
         collisionCameraDiffY = diffY;
     }
-    public boolean isScreenShakeActive() { return screenShakeActive; }
-    public int getScreenShakeOffset() { return screenShakeOffset; }
-    public int getScreenShakeLastOffset() { return screenShakeLastOffset; }
+    public boolean isScreenShakeActive() { return screenShake.flag() != 0; }
+    public int getScreenShakeOffset() { return screenShake.offset(); }
+    public int getScreenShakeLastOffset() { return screenShake.lastOffset(); }
     public int getScreenShakePhase() { return screenShakePhase; }
     public int getBossForegroundVScroll() { return bossForegroundVScroll; }
     public void setScreenShakeState(boolean active, int offset, int phase) {
         requireAct2("screen shake");
         if (phase < 0) throw new IllegalArgumentException("screen shake phase: " + phase);
-        screenShakeActive = active; screenShakeOffset = offset; screenShakePhase = phase;
+        restoreScreenShakePipelineState(active, offset, screenShake.lastOffset(), phase, bossForegroundVScroll);
     }
     public void setScreenShakeActive(boolean active) {
         requireAct2("screen shake active");
-        screenShakeActive = active;
+        screenShake.writeFlag(active ? 0xFF00 : 0);
     }
     public void restoreScreenShakePipelineState(boolean active, int offset, int lastOffset,
                                                 int phase, int foregroundVScroll) {
-        setScreenShakeState(active, offset, phase);
-        screenShakeLastOffset = lastOffset;
+        restoreScreenShakePipelineState(active ? (short) 0xFF00 : 0, offset, lastOffset, phase, foregroundVScroll);
+    }
+    public void captureScreenShakeTo(java.nio.ByteBuffer out) {
+        screenShake.captureTo(out);
+    }
+    public void restoreScreenShakePipelineState(int flag, int offset, int lastOffset,
+                                                int phase, int foregroundVScroll) {
+        requireAct2("screen shake restore");
+        if (flag != (short) flag || phase < 0 || phase > 0x3F || offset != (short) offset || lastOffset != (short) lastOffset)
+            throw new IllegalArgumentException("invalid FBZ shake words");
+        var words = java.nio.ByteBuffer.allocate(12);
+        words.putInt(flag).putInt(offset).putInt(lastOffset).flip();
+        screenShake.restoreFrom(words);
+        screenShakePhase = phase;
         bossForegroundVScroll = foregroundVScroll;
     }
     public boolean isEventsFg5() { return eventsFg5; }
