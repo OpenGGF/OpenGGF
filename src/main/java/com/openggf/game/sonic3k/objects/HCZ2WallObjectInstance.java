@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
@@ -17,7 +18,7 @@ import java.util.List;
 /**
  * HCZ2 Moving Wall — invisible solid collision object for the Act 2 wall-chase sequence.
  *
- * <p>ROM: Obj_HCZ2Wall (sonic3k.asm line ~106226).
+ * <p>ROM: Obj_HCZ2Wall (sonic3k.asm:106277-106291).
  * This is a pure collision rectangle with no art — status bit 7 is set (invisible).
  *
  * <p>Collision rectangle: half-width $4B (75px), height $100 (256px).
@@ -27,8 +28,9 @@ import java.util.List;
  * <p>Y position is fixed at $700 (1792). X position is calculated from the wall offset:
  * {@code x = -wallOffset + $5BE} (negated offset + 1470).
  *
- * <p>The object deletes itself when deactivated by the event handler
- * (Events_routine_bg != 4, i.e. wall-chase state ended).
+ * <p>Its own object slot reads the preceding completed background event. It
+ * latches that event's wall offset and deletes itself when the background
+ * routine is no longer 4; screen events never push a pose or a delete command.
  */
 public class HCZ2WallObjectInstance extends AbstractObjectInstance
         implements SolidObjectProvider, SolidObjectListener, ZeroArgRewindRecreatable, RomObjectCodePointerProvider {
@@ -66,7 +68,6 @@ public class HCZ2WallObjectInstance extends AbstractObjectInstance
             new ObjectSpawn(X_BASE_OFFSET, FIXED_Y, 0xFF, 0, 0, false, 0);
 
     private int wallOffsetSupplierValue;
-    private boolean active = true;
 
     /**
      * Create the wall object.
@@ -76,27 +77,10 @@ public class HCZ2WallObjectInstance extends AbstractObjectInstance
         super(DUMMY_SPAWN, "HCZ2Wall");
     }
 
-    /**
-     * Update the wall position based on the current wall offset.
-     * Called each frame by the event handler while the wall chase is active.
-     *
-     * @param wallOffset current wall movement offset (negative = wall advancing left)
-     */
-    public void updateWallPosition(int wallOffset) {
-        this.wallOffsetSupplierValue = wallOffset;
-    }
-
-    /**
-     * Mark the wall as inactive (will be destroyed on next update).
-     */
-    public void deactivate() {
-        this.active = false;
-    }
-
     @Override
     public int getX() {
         // ROM: move.w (Events_bg).w,d0 / neg.w d0 / addi.w #$5BE,d0 / move.w d0,x_pos(a0)
-        return -wallOffsetSupplierValue + X_BASE_OFFSET;
+        return (short) (-wallOffsetSupplierValue + X_BASE_OFFSET);
     }
 
     @Override
@@ -106,11 +90,15 @@ public class HCZ2WallObjectInstance extends AbstractObjectInstance
 
     @Override
     public void update(int vIntRunCount, PlayableEntity player) {
-        // ROM: Obj_HCZ2Wall checks Events_routine_bg == 4; if not, deletes itself.
-        // The event handler calls deactivate() when the wall chase ends.
-        if (!active) {
+        // Obj_HCZ2Wall reads Events_routine_bg and the accumulator in its own
+        // slot, before the next screen-event publication: Obj_HCZ2Wall (sonic3k.asm:106277-106288).
+        var registry = services().zoneRuntimeRegistry();
+        var hcz = registry != null ? S3kRuntimeStates.currentHcz(registry).orElse(null) : null;
+        if (hcz == null || hcz.backgroundRoutine() != 4) {
             setDestroyed(true);
+            return;
         }
+        wallOffsetSupplierValue = hcz.wallOffsetPixels();
         // SolidObjectFull2 collision is handled by the engine's SolidContacts system
         // automatically via the SolidObjectProvider interface.
     }

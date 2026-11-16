@@ -169,7 +169,89 @@ class TestSonicCdCommonObjects2 {
         runner.stepIdleFrames(1);
         assertEquals(y + 2, flower.getY(), "ObjFlower_Seed .Fall (Flower/Main.asm:88-89)");
         runner.stepIdleFrames(60);
-        assertEquals(1, flower.anim(), ".TouchDown: seed planted animation (Flower/Main.asm:82-86)");
+        // The planted script ends with $FC, then the growing script does too.
+        runner.stepIdleFrames(40);
+        assertEquals(3, flower.anim(), "AnimateObject advances planted -> growing -> fully grown");
+        runner.stepIdleFrames(40);
+        assertEquals(3, flower.anim(), "the grown flower loops");
+    }
+
+    @Test
+    void monitorItemsDrawOneStaticPieceAndYellowDiagonalSpringSelectsItsTiles() throws Exception {
+        boot(CdStagePayload.R11A);
+        var provider = (CdObjectArtProvider) GameServices.level().getObjectRenderManager().getArtProvider();
+        var sheet = provider.getSheet(CdObjectArtProvider.MONITOR_ITEM);
+        int table = provider.entry().monitorMappings();
+        for (int item = 0; item < 8; item++) {
+            var frame = sheet.getFrame(item);
+            assertEquals(1, frame.pieces().size(), "sprite flag bit 5 draws a single piece");
+            int piece = table + (short) provider.image().u16(table + item * 2) + 1;
+            assertEquals(provider.image().u16(piece + 2) & 0x7FF, frame.pieces().getFirst().tileIndex());
+            assertEquals((byte) provider.image().u8(piece + 4), frame.pieces().getFirst().xOffset());
+        }
+        var spring = add(new com.openggf.game.soniccd.objects.common.CdSpring(at(0x40, -0x20, 0x0A, 0x0A)));
+        runner.stepIdleFrames(1);
+        var tileField = com.openggf.game.soniccd.objects.common.CdObject.class.getDeclaredField("tileWord");
+        tileField.setAccessible(true);
+        int tile = tileField.getInt(spring);
+        assertEquals(provider.objectTileId(CdObjectArtProvider.TILE_ID_DIAGONAL_SPRING, 0) | 0x2000, tile);
+        assertNotNull(provider.getSheet(CdObjectArtProvider.diagonalSpringKey(tile & ~0x2000)));
+    }
+
+    @Test
+    void palmtreeRobotGeneratorUsesTheLastSectionsArtAndStageName() throws Exception {
+        boot(CdStagePayload.R11A);
+        var provider = (CdObjectArtProvider) GameServices.level().getObjectRenderManager().getArtProvider();
+        int tile = com.openggf.game.soniccd.objects.common.CommonObjectArt.robotGeneratorTile(provider.image(),
+                CdStagePayload.R11A, provider.entry().offset("robotGeneratorBaseTiles"));
+        String key = com.openggf.game.soniccd.objects.ppz.PpzObjectArt.key(provider,
+                com.openggf.game.soniccd.objects.ppz.PpzObjectArt.PPZ_GENERATOR, tile, 0x2000);
+        assertNotNull(key);
+        var expected = provider.vram().copy();
+        // SectionInitPLCs entry 4 = PLC 7; PLC_Cam5_Full includes Art_RobotGenWithered.
+        expected.loadPlc(provider.image(), com.openggf.game.soniccd.level.CdStageCatalogue.entry(
+                CdStagePayload.R11A).plcLists(), 7);
+        byte[] wanted = new byte[64], actual = new byte[64];
+        var patterns = provider.getSheet(key).getPatterns();
+        boolean nonblank = false;
+        for (int i = 0; i < patterns.length; i++) {
+            expected.tile((tile & 0x7FF) + i).copyInto(wanted, 0);
+            patterns[i].copyInto(actual, 0);
+            org.junit.jupiter.api.Assertions.assertArrayEquals(wanted, actual);
+            for (byte pixel : actual) nonblank |= pixel != 0;
+        }
+        assertTrue(nonblank);
+        assertEquals("Robot generator", new com.openggf.game.soniccd.objects.SonicCdObjectRegistry().getPrimaryName(0x2D));
+    }
+
+    @Test
+    void resultsUploadDecimalBonusesAndScoreIntoTheirOwnSheets() throws Exception {
+        boot(CdStagePayload.R11A);
+        var results = add(new com.openggf.game.soniccd.objects.common.CdResults(1, 50000, 1200));
+        // Hold the native wait condition without moving the camera.
+        sonic.setX((short) (GameServices.camera().getX() + 400));
+        for (int i = 0; i < 100; i++) results.update(i, sonic);
+        for (var object : live(0x3A)) {
+            for (int i = 0; i < 12; i++) object.update(i, sonic);
+            object.appendRenderCommands(new java.util.ArrayList<>());
+        }
+        var provider = (CdObjectArtProvider) GameServices.level().getObjectRenderManager().getArtProvider();
+        var tiles = provider.getSheet(com.openggf.game.soniccd.objects.common.CommonObjectArt.RESULTS_BAD).getPatterns();
+        // Last score digit remains zero; the least significant bonus digit is also always zero.
+        byte[] expected = new byte[128];
+        var bytes = provider.image().slice(provider.entry().hudNumbersArt(), 64);
+        var pattern = new com.openggf.level.Pattern();
+        pattern.fromSegaFormat(java.util.Arrays.copyOfRange(bytes, 0, 32));
+        pattern.copyInto(expected, 0);
+        pattern.fromSegaFormat(java.util.Arrays.copyOfRange(bytes, 32, 64));
+        pattern.copyInto(expected, 64);
+        for (int cell : new int[]{0xB060 / 32 - 0x3C4 + 12, 0x8780 / 32 - 0x3C4 + 8,
+                0x88C0 / 32 - 0x3C4 + 8}) {
+            byte[] actual = new byte[128];
+            tiles[cell].copyInto(actual, 0);
+            tiles[cell + 1].copyInto(actual, 64);
+            org.junit.jupiter.api.Assertions.assertArrayEquals(expected, actual);
+        }
     }
 
     @Test

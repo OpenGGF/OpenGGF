@@ -54,11 +54,8 @@ class TestQqzBossActEndFlow {
 
     /** The native R53C-fight movie's gameplay inputs (user-local; the test skips without them). */
     private static String gameplay() throws java.io.IOException {
-        String media = System.getProperty("soniccd.media.root", ".");
-        java.nio.file.Path file = java.nio.file.Path.of(media, "..", "native", "rehost-boss-qqz", "R53C-fight",
-                "gameplay.json").normalize();
-        org.junit.jupiter.api.Assumptions.assumeTrue(java.nio.file.Files.isRegularFile(file), "absent: " + file);
-        return java.nio.file.Files.readString(file);
+        return java.nio.file.Files.readString(
+                com.openggf.game.soniccd.CdTestMedia.nativeFile("rehost-boss-qqz/R53C-fight/gameplay.json"));
     }
 
     /** Per frame after the release: {directions, actions} from {@code [[first, last, "Button"], ...]}. */

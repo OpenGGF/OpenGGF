@@ -48,6 +48,8 @@ public final class IczZoneRuntimeState implements S3kZoneRuntimeState {
     }
 
     /** Current ICZ timed screen-shake vertical offset (ROM {@code Screen_shake_flag}). */
+    public int screenShakeOffsetX() { return events.getScreenShakeOffsetX(); }
+
     public int screenShakeOffsetY() {
         return events.getScreenShakeOffsetY();
     }
@@ -56,13 +58,16 @@ public final class IczZoneRuntimeState implements S3kZoneRuntimeState {
         return events.isAct2TransitionRequested();
     }
 
+    public int introBgCameraYSource() { return events.introBgCameraYSource(); }
+    public int introAutoPhase() { return events.introAutoPhase(); }
+
     public int iczBgCameraX(int cameraX, int cameraY) {
         if (actIndex == 0) {
             int x = cameraX & 0xFFFF;
             return x < 0x3940 ? 0x1880 : asrWordValue(cameraX, 1) - 0x1D80;
         }
 
-        if (!isIczAct2Indoor(cameraX, cameraY)) {
+        if (!isIndoorPaletteCyclingActive()) {
             return 0;
         }
         int d0 = ((short) cameraX) << 16;
@@ -83,7 +88,7 @@ public final class IczZoneRuntimeState implements S3kZoneRuntimeState {
             return asrWordValue(iczBgCameraX(cameraX, cameraY), 1);
         }
 
-        if (!isIczAct2Indoor(cameraX, cameraY)) {
+        if (!isIndoorPaletteCyclingActive()) {
             return 0;
         }
         int d0 = ((short) cameraX) << 16;
@@ -98,15 +103,6 @@ public final class IczZoneRuntimeState implements S3kZoneRuntimeState {
     public int iczAct1BgCameraY(int cameraX, int cameraY) {
         int x = cameraX & 0xFFFF;
         return x < 0x3940 ? asrWordValue(cameraY, 7) : asrWordValue(cameraY, 1);
-    }
-
-    private static boolean isIczAct2Indoor(int cameraX, int cameraY) {
-        int x = cameraX & 0xFFFF;
-        int y = cameraY & 0xFFFF;
-        if (x >= 0x1900 && x < 0x1B80) {
-            return true;
-        }
-        return x >= 0x1000 && x < 0x3600 && y >= 0x720;
     }
 
     private static int asrWordValue(int value, int shift) {

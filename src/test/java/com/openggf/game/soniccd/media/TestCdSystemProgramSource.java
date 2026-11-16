@@ -3,7 +3,6 @@ package com.openggf.game.soniccd.media;
 import com.openggf.game.soniccd.CdNativeFile;
 import com.openggf.game.soniccd.CdReleaseVariant;
 import com.openggf.game.soniccd.release.CdRetailReleases;
-import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -12,13 +11,11 @@ import java.io.IOException;
 import java.lang.reflect.Modifier;
 import java.nio.ReadOnlyBufferException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.util.Arrays;
 import java.util.HexFormat;
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -228,15 +225,8 @@ class TestCdSystemProgramSource {
         }
     }
     private static Path cue(String region) throws Exception {
-        String root = System.getProperty("soniccd.media.root");
-        Assumptions.assumeTrue(root != null && !root.isBlank(), "Optional original media source absent");
-        var directory = Path.of(root).resolve(region);
-        assertTrue(Files.isDirectory(directory), "Configured original source directory missing: " + region);
-        try (var files = Files.list(directory)) {
-            var cues = files.filter(p -> p.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".cue")).toList();
-            assertEquals(1, cues.size(), "Configured source requires exactly one original CUE");
-            return cues.getFirst();
-        }
+        return "USA".equals(region) ? com.openggf.game.soniccd.CdTestMedia.usaCue()
+                : com.openggf.game.soniccd.CdTestMedia.regionCue(region);
     }
     private static String sha(byte[] bytes) throws Exception {
         return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes));

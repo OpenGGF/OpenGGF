@@ -89,6 +89,38 @@ class TestGameLoopSuspensionOwnership {
                 SuspendedSettings.suspend(fixture.config), null);
     }
 
+    @Test void hostedAdmissionParksAndResumesThroughTheEngineSettingsBinding() {
+        var fixture = engine();
+        var published = world();
+        when(published.getGameModule().getGameId()).thenReturn(GameId.SCD);
+        when(published.getCurrentZone()).thenReturn(0);
+        when(published.getCurrentAct()).thenReturn(9);
+        when(published.getApparentAct()).thenReturn(9);
+        when(published.getGameModule().getZoneRegistry().getZoneName(0)).thenReturn("PALMTREE PANIC");
+        when(published.getGameModule().getGameService(com.openggf.game.internal.HostedGameMedia.class))
+                .thenReturn(new com.openggf.game.soniccd.media.CdHostedMedia());
+        try (var sessions = mockStatic(SessionManager.class)) {
+            sessions.when(SessionManager::getCurrentWorldSession).thenReturn(published);
+            assertTrue(prepare(fixture.engine));
+        }
+        SuspendedGame.Pending pending = get(visit(fixture.engine), "pendingSuspend");
+        assertInstanceOf(MasterTitleEntry.Hosted.class, pending.card().game());
+        assertEquals("Palmtree Panic, Act 3", pending.card().location());
+        fixture.config.setSessionOverride(SonicConfiguration.AUDIO_ENABLED, true);
+        try (var screens = mockConstruction(MasterTitleScreen.class)) {
+            suspendToMasterTitle(fixture.engine);
+            assertTrue(visit(fixture.engine).parked());
+            assertEquals(GameMode.MASTER_TITLE_SCREEN, fixture.engine.getCurrentGameMode());
+            fixture.config.setConfigValue(SonicConfiguration.DEBUG_VIEW_ENABLED, true);
+            resumeSuspendedGame(fixture.engine);
+        }
+        assertFalse(visit(fixture.engine).parked());
+        assertEquals(GameMode.LEVEL, fixture.engine.getCurrentGameMode());
+        assertTrue(fixture.config.getBoolean(SonicConfiguration.DEBUG_VIEW_ENABLED));
+        assertTrue(fixture.config.getBoolean(SonicConfiguration.AUDIO_ENABLED));
+        assertNull(get(visit(fixture.engine), "suspendedGame"));
+    }
+
     @Test void coldConstructionAndHostBindingReadNoCollaborators() {
         var loop = mock(GameLoop.class);
         var owner = new GameLoopSuspension(loop);
@@ -392,7 +424,7 @@ class TestGameLoopSuspensionOwnership {
         SuspendedGame saved = get(visit(fixture.engine), "suspendedGame");
         assertSame(thumbnail, saved.thumbnail(), "argument is read after park's live callback");
         assertSame(parkingOwner, fixture.engine.getGameLoop().suspension.parkedOwner());
-        assertEquals(MasterTitleScreen.GameEntry.SONIC_2, saved.card().game().game(),
+        assertEquals(MasterTitleScreen.GameEntry.SONIC_2, ((MasterTitleEntry.Stock) saved.card().game()).game(),
                 "admission uses the published world, not the loop's distinct parking world");
         assertEquals(GameMode.BONUS_STAGE, saved.mode());
         assertTrue(saved.card().inLevel(), "card retains admission, independently of parking mode");
@@ -424,7 +456,7 @@ class TestGameLoopSuspensionOwnership {
             if (boundary.equals("cleanup")) throw failure;
             return null;
         }).when(screen).cleanup();
-        if (boundary.equals("settings")) doThrow(failure).when(settings).resume(fixture.config, MasterTitleScreen.GameEntry.SONIC_2, false);
+        if (boundary.equals("settings")) doThrow(failure).when(settings).resume(fixture.config, new MasterTitleEntry.Stock(MasterTitleScreen.GameEntry.SONIC_2), false);
         if (boundary.equals("unpark")) fixture.engine.getGameLoop().gameModeChangeListener = (old, next) -> { throw failure; };
         if (boundary.equals("dimensions")) doThrow(failure).when(fixture.graphics).setProjectionWidth(anyInt());
         if (boundary.equals("camera")) doThrow(failure).when(camera).setX((short) 1);
@@ -435,7 +467,7 @@ class TestGameLoopSuspensionOwnership {
         else assertSame(failure, assertThrows(IllegalStateException.class, () -> resumeSuspendedGame(fixture.engine)));
         assertNull(get(visit(fixture.engine), "suspendedGame"));
         assertSame(boundary.equals("cleanup") ? screen : null, get(fixture.engine, "masterTitleScreen"));
-        if (!boundary.equals("cleanup")) verify(settings).resume(fixture.config, MasterTitleScreen.GameEntry.SONIC_2, false);
+        if (!boundary.equals("cleanup")) verify(settings).resume(fixture.config, new MasterTitleEntry.Stock(MasterTitleScreen.GameEntry.SONIC_2), false);
         else verifyNoInteractions(settings);
         if (List.of("cleanup", "settings", "unpark", "dimensions", "camera").contains(boundary))
             verify(fixture.audio, never()).restoreLogicalSnapshot(any());
@@ -628,7 +660,7 @@ class TestGameLoopSuspensionOwnership {
             assertNull(get(fixture.engine, "masterTitleScreen"), "the assignment follows old cleanup, even after rebinding");
             fixture.config.setSessionOverride(SonicConfiguration.DEBUG_VIEW_ENABLED, true);
             return null;
-        }).when(settings).resume(fixture.config, MasterTitleScreen.GameEntry.SONIC_2, true);
+        }).when(settings).resume(fixture.config, new MasterTitleEntry.Stock(MasterTitleScreen.GameEntry.SONIC_2), true);
         fixture.engine.getGameLoop().gameModeChangeListener = (old, next) -> {
             assertTrue(SuspensionTestAccess.<Boolean>get(fixture.engine, "debugViewEnabled"), "cached configuration precedes unpark notification");
             set(fixture.engine, "camera", currentCamera);
@@ -636,7 +668,7 @@ class TestGameLoopSuspensionOwnership {
         when(oldScreen.consumeResumeRequest()).thenReturn(true);
         clearInvocations(otherEngine.audio, otherEngine.graphics);
         fixture.engine.getGameLoop().suspension.routeResume(oldScreen);
-        verify(settings).resume(fixture.config, MasterTitleScreen.GameEntry.SONIC_2, true);
+        verify(settings).resume(fixture.config, new MasterTitleEntry.Stock(MasterTitleScreen.GameEntry.SONIC_2), true);
         var order = inOrder(currentCamera);
         order.verify(currentCamera).setX((short) 11); order.verify(currentCamera).setY((short) 22);
         order.verify(currentCamera).setXCopy((short) 33); order.verify(currentCamera).setYCopy((short) 44);

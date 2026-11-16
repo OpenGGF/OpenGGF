@@ -4,7 +4,7 @@ import java.nio.ByteBuffer;
 
 /** Native SOZ screen-event RAM; one captured owner shared with arena objects and scroll. */
 public final class SozEventState {
-    static final int SNAPSHOT_BYTES = 24 * Integer.BYTES + SozBossWallState.SNAPSHOT_BYTES + SozPostBossPlaneState.SNAPSHOT_BYTES + 2 * Long.BYTES;
+    static final int SNAPSHOT_BYTES = 22 * Integer.BYTES + S3kScreenShake.captureBytes() + SozBossWallState.SNAPSHOT_BYTES + SozPostBossPlaneState.SNAPSHOT_BYTES + 2 * Long.BYTES;
     private long blockJobOrdinal = -1;
     private long artJobOrdinal = -1;
     private final SozPostBossPlaneState postBossPlane = new SozPostBossPlaneState();
@@ -17,8 +17,7 @@ public final class SozEventState {
     private int redrawRemaining;
     private int savedBackgroundX;
     private int savedBackgroundY;
-    private int screenShakeFlag;
-    private int screenShakeOffset;
+    private final S3kScreenShake screenShake = new S3kScreenShake();
     private int doorSignal;
     private int backgroundRowReplacement;
     private int fadePasses;
@@ -57,10 +56,11 @@ public final class SozEventState {
     public void savedBackgroundX(int value) { savedBackgroundX = value; }
     public int savedBackgroundY() { return savedBackgroundY; }
     public void savedBackgroundY(int value) { savedBackgroundY = value; }
-    public int screenShakeFlag() { return screenShakeFlag; }
-    public void screenShakeFlag(int value) { screenShakeFlag = (short) value; }
-    public int screenShakeOffset() { return screenShakeOffset; }
-    public void screenShakeOffset(int value) { screenShakeOffset = value; }
+    public int screenShakeFlag() { return screenShake.flag(); }
+    public void screenShakeFlag(int value) { screenShake.writeFlag(value); }
+    public int screenShakeOffset() { return screenShake.offset(); }
+    /** ShakeScreen_Setup (sonic3k.asm:104234-104256), at the existing background-event tail. */
+    public void advanceScreenShake(int levelFrameCounter, boolean dead) { screenShake.setup(levelFrameCounter, dead); }
     public int doorSignal() { return doorSignal; }
     public void doorSignal(int value) { doorSignal = (short) value; }
     public int backgroundRowReplacement() { return backgroundRowReplacement; }
@@ -96,8 +96,9 @@ public final class SozEventState {
     void capture(ByteBuffer buffer) {
         buffer.putInt(initialized ? 1 : 0).putInt(foregroundRoutine).putInt(backgroundRoutine)
                 .putInt(specialRoutine).putInt(sandPosition).putInt(redrawRemaining)
-                .putInt(savedBackgroundX).putInt(savedBackgroundY).putInt(screenShakeFlag)
-                .putInt(screenShakeOffset).putInt(doorSignal).putInt(backgroundRowReplacement)
+                .putInt(savedBackgroundX).putInt(savedBackgroundY);
+        screenShake.captureTo(buffer);
+        buffer.putInt(doorSignal).putInt(backgroundRowReplacement)
                 .putInt(fadePasses).putInt(fadeDelay).putInt(bossWallTimer).putInt(bossWallRoutine)
                 .putInt(bossWallHitY).putInt(bossX).putInt(bossY).putInt(bossArtPhase)
                 .putInt(backgroundCollision ? 1 : 0).putInt(seamlessEntry ? 1 : 0);
@@ -116,8 +117,7 @@ public final class SozEventState {
         redrawRemaining = buffer.getInt();
         savedBackgroundX = buffer.getInt();
         savedBackgroundY = buffer.getInt();
-        screenShakeFlag = buffer.getInt();
-        screenShakeOffset = buffer.getInt();
+        screenShake.restoreFrom(buffer);
         doorSignal = buffer.getInt();
         backgroundRowReplacement = buffer.getInt();
         fadePasses = buffer.getInt();

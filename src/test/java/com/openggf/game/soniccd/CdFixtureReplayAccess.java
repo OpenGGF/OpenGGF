@@ -23,7 +23,7 @@ public final class CdFixtureReplayAccess {
         return CdFixtureReplay.compare(CdFixtureReplay.binder(), expected, sonic);
     }
 
-    /** The USA disc's sheet; skips the test when {@code soniccd.media.root} is not set. */
+    /** The USA disc's sheet or CHD ({@link CdTestMedia#usaCue}); skips the test when no disc is configured. */
     public static Path usaCue() throws IOException { return CdTestMedia.usaCue(); }
 
     /** A native fixture file; skips the test when it is absent. */

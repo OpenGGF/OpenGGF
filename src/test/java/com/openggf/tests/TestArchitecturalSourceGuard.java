@@ -52,7 +52,7 @@ class TestArchitecturalSourceGuard {
                 WorldSession publishedWorld(); boolean editorPlaytestActive(); AudioLogicalSnapshot captureAudioIfEnabled();
                 void fadeMusic(); RgbaImage captureViewportThumbnail(); int thumbnailWidth(); int thumbnailHeight();
                 SuspendedSettings suspendSettings(); SuspendedGame.CameraPosition captureCameraPosition();
-                void resumeSettings(SuspendedSettings settings, MasterTitleScreen.GameEntry entry, boolean inLevel);
+                void resumeSettings(SuspendedSettings settings, MasterTitleEntry entry, boolean inLevel);
                 void restoreCamera(SuspendedGame.CameraPosition position); void restoreAudio(AudioLogicalSnapshot snapshot);
                 """,
             "HubEffects", """

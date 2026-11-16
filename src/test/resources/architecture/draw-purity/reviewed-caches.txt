@@ -36,3 +36,6 @@
 1 com.openggf.level.objects.InvincibilityStarsObjectInstance#sonic1TrailMode # Immutable module capability memo selecting the star renderer.
 1 com.openggf.level.objects.SkidDustObjectInstance#dplcPreloaded # ROM DPLC preload readiness memo.
 2 com.openggf.level.objects.SkidDustObjectInstance#renderer # Renderer memo over ROM-derived art.
+1 com.openggf.game.soniccd.objects.common.CdResults#drawnRings # Derived digit-upload memo only; RewindTransient and invalidated on restore; never advances ring bonus.
+1 com.openggf.game.soniccd.objects.common.CdResults#drawnScore # Derived digit-upload memo only; RewindTransient and invalidated on restore; never advances score.
+1 com.openggf.game.soniccd.objects.common.CdResults#drawnTime # Derived digit-upload memo only; RewindTransient and invalidated on restore; never advances time bonus.

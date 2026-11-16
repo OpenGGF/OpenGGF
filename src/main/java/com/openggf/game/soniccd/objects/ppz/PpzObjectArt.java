@@ -42,7 +42,7 @@ public final class PpzObjectArt {
             PPZ_TAGA_TAGA1 = "tagataga1", PPZ_TAGA_TAGA2 = "tagataga2",
             PPZ_COLLAPSE1 = "collapse1", PPZ_COLLAPSE2 = "collapse2", PPZ_COLLAPSE3 = "collapse3",
             PPZ_COLLAPSE4 = "collapse4", PPZ_WALL = "wall", PPZ_PLATFORM = "platform", PPZ_DISC = "disc", PPZ_SPRINGBOARD = "springboard",
-            PPZ_HOLE = "hole", PPZ_SWING = "swing", PPZ_BOULDER = "boulder";
+            PPZ_HOLE = "hole", PPZ_SWING = "swing", PPZ_BOULDER = "boulder", PPZ_GENERATOR = "generator";
     /** SetObjectTileID IDs of the spinning disc and the springboard (Spinning Disc/Main.asm:42-43, Springboard/Main.asm:122-123). */
     public static final int TILE_ID_SPINNING_DISC = 6, TILE_ID_SPRINGBOARD = 7;
     /** moveq #$11,d0; jsr SetObjectTileID (Swing/Main.asm:88-89). */
@@ -122,6 +122,14 @@ public final class PpzObjectArt {
         // tiles with Art_Boulder. Use section VRAM, just like the other section-owned objects.
         for (int tile : art.objectTileIds(com.openggf.game.soniccd.objects.common.CommonObjectArt.TILE_ID_BOULDER)) {
             ppz(art, reader, PPZ_BOULDER, art.entry().offset("boulderMappings"), tile);
+        }
+        // Robot generator art is section-owned too (PLC_Cam5_Full,
+        // Level/Palmtree Panic/Data (Act 1 Present).asm:155-160).
+        int generatorTiles = art.entry().offset("robotGeneratorBaseTiles");
+        if (generatorTiles >= 0) {
+            ppz(art, reader, PPZ_GENERATOR, art.entry().offset("robotGeneratorMappings"),
+                    com.openggf.game.soniccd.objects.common.CommonObjectArt.robotGeneratorTile(
+                            stage, loaded, generatorTiles));
         }
         ppz(art, reader, PPZ_PLANT, entry.plantMappings(), PLANT_TILE);
         ppz(art, reader, PPZ_RAMP, entry.rampMappings(), RAMP_TILE);

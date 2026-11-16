@@ -317,6 +317,10 @@ public class WaterSystem implements RewindSnapshottable<WaterSystemSnapshot> {
                         () -> new ScreenShakeTimerSlotObjectInstance(duration));
             }
         }
+        if (handler instanceof com.openggf.game.internal.WaterShakeTimerLifecycle lifecycle
+                && shakeTimerBeforeHandler <= 0 && state.shakeTimer > 0) {
+            lifecycle.onShakeTimerStarted();
+        }
         // Handle_Onscreen_Water_Height clears Water_full_screen_flag before
         // recomputing it from the current water/camera relation every pass.
         state.setFullScreen(state.isEnabled() && state.getCurrentLevel() <= cameraY);
@@ -326,6 +330,10 @@ public class WaterSystem implements RewindSnapshottable<WaterSystemSnapshot> {
         // Tick screen shake countdown (ROM: Obj_6E6E 180-frame timer)
         if (state.shakeTimer > 0) {
             state.shakeTimer--;
+            if (state.shakeTimer == 0
+                    && handler instanceof com.openggf.game.internal.WaterShakeTimerLifecycle lifecycle) {
+                lifecycle.onShakeTimerExpired();
+            }
         }
     }
 
@@ -771,7 +779,7 @@ public class WaterSystem implements RewindSnapshottable<WaterSystemSnapshot> {
     /**
      * Returns the current screen shake countdown for the given zone/act.
      * ROM: Obj_6E6E 180-frame timer that clears Screen_shake_flag.
-     * Used by the screen event handler to determine constant-mode shake.
+     * This is the timer object's lifetime, separate from the zone's shake flag.
      *
      * @return shake frames remaining, or 0 if inactive
      */

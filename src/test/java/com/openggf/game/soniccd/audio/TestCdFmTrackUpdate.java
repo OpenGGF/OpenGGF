@@ -360,16 +360,10 @@ class TestCdFmTrackUpdate {
 
     /** Optional actual capability, independently annotated and gated; no worker opened media. UNRUN. */
     @Test void retainedUsaCompositionFirstNoteRestRepeatStopAndUnsupportedBoundaries() throws Exception {
-        String root=System.getProperty("soniccd.media.root");
-        org.junit.jupiter.api.Assumptions.assumeTrue(root!=null&&!root.isBlank(),"Opt in with soniccd.media.root");
         CdFmSoundAssets assets;
-        try (var files=java.nio.file.Files.list(java.nio.file.Path.of(root).resolve("USA"))) {
-            var cues=files.filter(p->p.getFileName().toString().toLowerCase(java.util.Locale.ROOT).endsWith(".cue")).toList();
-            assertEquals(1,cues.size());
-            try (var programs=com.openggf.game.soniccd.media.CdProgramAssets.open(cues.getFirst(),
-                    java.util.Optional.of(com.openggf.game.soniccd.CdReleaseVariant.USA),java.util.Optional.empty())) {
-                assets=CdFmSoundAssets.fromPrograms(programs);
-            }
+        try (var programs=com.openggf.game.soniccd.media.CdProgramAssets.open(com.openggf.game.soniccd.CdTestMedia.usaCue(),
+                java.util.Optional.of(com.openggf.game.soniccd.CdReleaseVariant.USA),java.util.Optional.empty())) {
+            assets=CdFmSoundAssets.fromPrograms(programs);
         }
         NativeView source=NativeView.fromAssets(assets); TrackView view=TrackView.fromNative(source);
         assertTrue(view.authenticated()); assertNotEquals(view,TrackView.declaredFormat(new Fixture().source(),new Fixture().layout));

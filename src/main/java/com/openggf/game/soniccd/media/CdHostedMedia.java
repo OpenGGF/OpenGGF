@@ -18,14 +18,15 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.stream.Stream;
 
 /**
  * Sonic CD's media: the user's USA disc and stage names. The launcher lists and boots the game through
  * this ({@link #probe}, {@link #openConfiguredMedia}); the capture tools open it the same way. The disc is
- * found by {@link CdDiscLocator}: {@code -Dsoniccd.media.root=<dir holding USA/*.cue or USA/*.chd>} for tests
- * and tools, then the {@code roms.soniccd} key (the sheet's or CHD's path), then the ROM folder ({@code roms.directory}) and its
- * sub-folders.
+ * found by {@link CdDiscLocator}: for tests and tools {@code -Dsoniccd.media.root=<dir holding USA/*.cue or
+ * USA/*.chd>}, else {@code -Dsoniccd.disc.path=<the .cue or .chd>}; then the {@code roms.soniccd} key (the sheet's
+ * or CHD's path), then the ROM folder ({@code roms.directory}) and its sub-folders.
  *
  * <p>A trace names its stage by {@code stage_file} (the recorder writes the stage program, e.g.
  * {@code R11B}), which carries act and period; the CLI accepts that name, or a zone's initials
@@ -33,8 +34,18 @@ import java.util.stream.Stream;
  * (1-4 act 1 Present, Past, Good Future, Bad Future; 5-8 act 2; 9-10 act 3 Good and Bad Future).
  */
 public final class CdHostedMedia implements HostedGameMedia {
-    /** The property the Sonic CD disc tests read. */
+    @Override
+    public int displayAct(int zone, int act) {
+        return com.openggf.game.soniccd.SonicCdZoneRegistry.payload(zone, act).stage().actNumber();
+    }
+
+    /** The tests' and tools' regional layout: a directory holding {@code USA/<disc>.cue} (or {@code .chd}). */
     public static final String MEDIA_ROOT_PROPERTY = "soniccd.media.root";
+    /**
+     * The tests' and tools' single disc, as {@code sonic1.rom.path} names a cartridge: the USA disc's {@code .cue}
+     * sheet or {@code .chd}. The queued test wrapper sets it from the ROM folder; {@link #MEDIA_ROOT_PROPERTY} wins.
+     */
+    public static final String DISC_PATH_PROPERTY = "soniccd.disc.path";
 
     @Override public String displayName() { return "Sonic CD"; }
     @Override public String menuLabel() { return "Sonic CD"; }
@@ -78,6 +89,24 @@ public final class CdHostedMedia implements HostedGameMedia {
             }
             throw refused;
         }
+    }
+
+    /**
+     * The disc the test and tool properties name, unprobed: {@link #MEDIA_ROOT_PROPERTY}'s USA image when it is set,
+     * else {@link #DISC_PATH_PROPERTY}'s file (resolved against the working directory), else empty. A media root
+     * without a USA image, or a disc path that is not a file, is an {@link IOException}, not an absent disc.
+     */
+    public static Optional<Path> propertyDisc() throws IOException {
+        String root = System.getProperty(MEDIA_ROOT_PROPERTY);
+        if (root != null && !root.isBlank()) return Optional.of(propertyDisc(root));
+        String disc = System.getProperty(DISC_PATH_PROPERTY);
+        if (disc == null || disc.isBlank()) return Optional.empty();
+        Path path = CdDiscLocator.workingDirectory().resolve(disc.trim()).normalize();
+        if (!Files.isRegularFile(path)) {
+            throw new IOException(DISC_PATH_PROPERTY + " names " + path + ", which is not a file. Name the Sonic CD "
+                    + "(USA) disc's .cue sheet or .chd.");
+        }
+        return Optional.of(path);
     }
 
     /**

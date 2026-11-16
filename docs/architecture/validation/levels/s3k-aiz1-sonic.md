@@ -1,5 +1,16 @@
 # S3K AIZ act 1 — Sonic route matrix
 
+## Background interpolation maintenance (2026-11-16)
+
+`TestLevelMotionPixels.aizBackgroundContinuityProbe` checks 180 positioned 320px
+published scroll pairs from camera ($1300,$0380): X advances four pixels per
+pair, followed by vertical descents and ascents of two pixels per pair. The
+baseline rejected 105 pairs because screen-row comparisons crossed deformation
+bands. This is presentation continuity coverage only; it certifies no cold
+route, other act, donor/team, viewport breadth or native pixel parity. Those
+obligations and whole-pixel slow-pan stepping remain inherited gaps. See the
+[interpolation follow-up](../../designs/2026-10-31-presentation-interpolation-design.md#aiz-background-continuity-follow-up-2026-11-16).
+
 ## Scatter collector retirement (2026-11-04)
 
 The intro emeralds retain the exact managed Knuckles collector while it is
@@ -1183,3 +1194,10 @@ records corrected native request IDs and/or level-restore selection affecting
 this route. Restoration selects the apparent playlist and P1 invincibility at
 the native boundary. These local checks do not requalify this matrix’s inherited
 route, viewport/donor/team, lifecycle or audible-comparison gaps.
+
+## Screen-event publication maintenance — 2026-11-16
+
+The [AIZ publication audit](../../audits/2026-11-16-s3k-aiz-event-publication.md)
+records the AIZ1 ownership/rewind checks, matched route comparisons and AIZ2
+forest-loop picture preservation. Existing character, donor, team, viewport and
+native pixel obligations remain open; this local change does not certify an act.

@@ -15,6 +15,15 @@ class TestLevelMotionEligibility {
         public List<InitStep> perTestResetSteps() { return List.of(); }
         public List<StaticFixup> postTeardownFixups() { return List.of(); }
     }
+    @Test void hostIntentIsInstalledWithoutRendererAttachmentAndClearedWhenDisabled() {
+        var level = mock(LevelManager.class);
+        level.parallaxManager = mock(ParallaxManager.class);
+        LevelMotionAccess.prepareService(level, true);
+        verify(level.parallaxManager).motionCaptureEnabled(true);
+        LevelMotionAccess.prepareService(level, false);
+        verify(level.parallaxManager).motionCaptureEnabled(false);
+        assertDoesNotThrow(() -> LevelMotionAccess.prepareService(null, true));
+    }
     @Test void relocationBeforeRendererAttachmentHasNoMotionHistoryToCut() {
         var level = mock(LevelManager.class);
         assertDoesNotThrow(() -> LevelMotionAccess.cut(level, MotionCut.CAMERA));

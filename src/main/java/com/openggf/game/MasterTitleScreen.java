@@ -1065,8 +1065,8 @@ public class MasterTitleScreen {
 
     /** The stock game a card sets up: its own, or the one a paused card holds. */
     private static MasterTitleEntry.Stock stockOf(MasterTitleEntry entry) {
-        return entry instanceof MasterTitleEntry.Suspended paused ? paused.game()
-                : entry instanceof MasterTitleEntry.Stock stock ? stock : null;
+        if (entry instanceof MasterTitleEntry.Suspended paused) entry = paused.game();
+        return entry instanceof MasterTitleEntry.Stock stock ? stock : null;
     }
 
     /** Settings say which saved changes reach the paused game on resume. */
@@ -1516,8 +1516,10 @@ public class MasterTitleScreen {
     }
 
     private List<TitleHubNavigation.Action> hubActions() {
-        if (selectedEntry() instanceof MasterTitleEntry.Suspended)
-            return List.of(TitleHubNavigation.Action.RESUME, TitleHubNavigation.Action.SETUP, TitleHubNavigation.Action.END);
+        if (selectedEntry() instanceof MasterTitleEntry.Suspended paused)
+            return paused.game() instanceof MasterTitleEntry.Stock
+                    ? List.of(TitleHubNavigation.Action.RESUME, TitleHubNavigation.Action.SETUP, TitleHubNavigation.Action.END)
+                    : List.of(TitleHubNavigation.Action.RESUME, TitleHubNavigation.Action.END);
         return selectedEntry() instanceof MasterTitleEntry.Standalone
                 || selectedEntry() instanceof MasterTitleEntry.Hosted
                 ? List.of(TitleHubNavigation.Action.START)
@@ -2719,7 +2721,7 @@ public class MasterTitleScreen {
     /** Removes the suspended card once its game has ended, selecting the same stock game. */
     void clearSuspendedGame() {
         if (suspended == null) return;
-        MasterTitleEntry.Stock game = suspended.game();
+        MasterTitleEntry game = suspended.game();
         boolean wasSelected = selectedEntry() instanceof MasterTitleEntry.Suspended;
         suspended = null;
         releaseSuspendFrame();

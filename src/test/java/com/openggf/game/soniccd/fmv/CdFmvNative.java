@@ -1,7 +1,7 @@
 package com.openggf.game.soniccd.fmv;
 
+import com.openggf.game.soniccd.CdTestMedia;
 import com.openggf.game.soniccd.program.CdProgramScreenRenderer;
-import org.junit.jupiter.api.Assumptions;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -10,33 +10,18 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Stream;
 
 /**
- * Native references for the video and ending programs: {@code -Dsoniccd.media.root=<dir with USA/*.cue>}, native
- * runs under {@code <media.root>/../native/rehost-programs} (or {@code -Dsoniccd.native.root}), recorded with
+ * Native references for the video and ending programs: the USA disc and native runs under
+ * {@code <native root>/rehost-programs}, both resolved by {@link CdTestMedia}, recorded with
  * {@code tools/soniccd/fmv_native_probe.sh}. Also a software picture of a program frame for pixel checks.
  */
 final class CdFmvNative {
     private CdFmvNative() { }
 
-    static Path usaCue() throws IOException {
-        String root = System.getProperty("soniccd.media.root");
-        Assumptions.assumeTrue(root != null && !root.isBlank(), "Set soniccd.media.root for Sonic CD disc checks");
-        try (Stream<Path> cues = Files.list(Path.of(root, "USA"))) {
-            return cues.filter(p -> p.toString().endsWith(".cue")).findFirst()
-                    .orElseThrow(() -> new IOException("No USA CUE under " + root));
-        }
-    }
+    static Path usaCue() throws IOException { return CdTestMedia.usaCue(); }
 
-    static Path file(String relative) {
-        String configured = System.getProperty("soniccd.native.root");
-        Path root = configured != null && !configured.isBlank() ? Path.of(configured)
-                : Path.of(System.getProperty("soniccd.media.root", "."), "..", "native");
-        Path file = root.resolve("rehost-programs").resolve(relative).normalize();
-        Assumptions.assumeTrue(Files.isRegularFile(file), "Native fixture absent: " + file);
-        return file;
-    }
+    static Path file(String relative) { return CdTestMedia.nativeFile("rehost-programs/" + relative); }
 
     static byte[] bytes(String relative) throws IOException { return Files.readAllBytes(file(relative)); }
 

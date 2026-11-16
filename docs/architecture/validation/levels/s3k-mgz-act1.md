@@ -743,3 +743,19 @@ Tails MGZ segments remain strict regression gates. The independent row 17383
 carried-emerald inventory issue remains policy A; no bootstrap input is added.
 These bounded contracts leave the matrix's wider route/configuration and native
 presentation obligations open.
+
+## Event publication follow-up (2026-11-15)
+
+The [MGZ audit](../../audits/2026-11-15-s3k-mgz-event-publication.md) records
+shake/cloud/collision ownership and the exact bounded verification.
+`TestS3kMgzScreenPublication` exercises real MGZ1/MGZ2 loads, repeated projection,
+registered restore/forward publication and the MGZ2 trigger-frame payload. `TestMgzComposedRewindState` covers
+standalone payload framing and rejection. These do not certify complete acts,
+Knuckles BG movement, wider viewport/donor/team combinations or native pixels;
+this matrix's inherited obligations remain open.
+
+Review corrections add exact collapse arm/BG ordering, late-load no-SST effects,
+and whole-manager malformed-payload rejection. The causal follow-up corrects
+end-boss waits and transition-object admission/first dispatch. All eleven replay
+JSON reports are exactly baseline-identical; 1792 focused/rewind/guard checks pass. The audit
+retains the inherited eight failing replay classes and wider coverage limits.

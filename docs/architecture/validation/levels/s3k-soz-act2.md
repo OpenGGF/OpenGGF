@@ -1006,3 +1006,11 @@ loses this wrap and leaves the pulley blank. Both acts share this art builder.
 The existing `TestSozSwingAndWireProduction` covers placed wires in both acts,
 including extension, ratcheting and graph recreation/forward replay. This local
 art regression does not close inherited viewport, donor or native pixel coverage.
+
+## Screen-event shake maintenance (2026-11-15)
+
+The [five-zone audit](../../audits/2026-11-15-s3k-low-zone-event-publication.md)
+records the bounded CNZ death-output witness and SOZ ROM-table/publication plus
+runtime restore/forward checks. These use the default fixture viewport/character;
+whole-route, donor/team breadth, native pixels and full-world lifecycle coverage
+remain inherited obligations. The shake owner change does not certify this act.

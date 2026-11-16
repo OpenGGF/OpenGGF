@@ -53,7 +53,7 @@ import java.util.function.Supplier;
  * stop the routine through {@link com.openggf.game.soniccd.zones.CdLevelScrollGate}. The native water level comes
  * from {@code UpdateWater} in V-blank; the handler reads the shared water system's level.
  */
-public final class TtzScrollHandler extends AbstractZoneScrollHandler implements ScrollOutputRebuilder {
+public final class TtzScrollHandler extends AbstractZoneScrollHandler implements ScrollOutputRebuilder, com.openggf.level.scroll.ScrollProjectionSource {
     /** The water level the line table splits at, or a value past the screen when the stage has none. */
     public interface WaterLine {
         int worldY();
@@ -93,6 +93,8 @@ public final class TtzScrollHandler extends AbstractZoneScrollHandler implements
     private boolean initialised;
     private final short[] lines = new short[NATIVE_LINES];
     private short foreground;
+    private int publishedWater = NO_WATER;
+    private int publishedDeform;
 
     public TtzScrollHandler(CdStagePayload payload) {
         this(payload, defaultWaterLine(payload), TtzScrollHandler::liveStage);
@@ -261,6 +263,8 @@ public final class TtzScrollHandler extends AbstractZoneScrollHandler implements
         buildDeform(cameraX);
         byte[] table = wobbleTable();
         int waterY = water.worldY();
+        publishedWater = waterY;
+        publishedDeform = waterDeform;
         int bgYWord = word(bgY) & 0xFFFF;
         int block = (bgYWord & blockMask) >>> 3;                    // lea (a2,d0.w),a2 after lsr.w #2
         int rowInBlock = bgYWord & 7;                               // move.w d0,d2 ; andi.w #7,d2
@@ -309,22 +313,73 @@ public final class TtzScrollHandler extends AbstractZoneScrollHandler implements
         return wobble;
     }
 
+
+    /** Camera composition uses the native layer rates documented above, retaining the dispatched
+     * fraction/carry and deformation clock. The private scratch never enters UpdateScroll. */
+    @Override
+    public com.openggf.level.scroll.ScrollProjectionPhase captureProjection(
+            com.openggf.level.scroll.ScrollProjectionContext context) {
+        // Capture the shared native scrollLock/dead gate, never read it while sampling.
+        if (!com.openggf.game.soniccd.zones.CdLevelScrollGate.runs())
+            return com.openggf.level.scroll.ScrollProjectionPhases.held(context);
+
+        final Object state = captureRewindState();
+        int frozenWater = publishedWater;
+        int frozenDeform = publishedDeform;
+        final byte[] table = java.util.Objects.requireNonNull(wobbleTable(),
+                "Tidal Tempest projection needs the loaded stage wobble table").clone();
+        return view -> {
+            var nativeOutput = context.nativeOutput();
+            var scratch = new TtzScrollHandler(payload, () -> frozenWater, () -> null);
+            scratch.restoreRewindState(state);
+            scratch.wobble = table;
+            int[] words = new int[ScrollEffectComposer.VISIBLE_LINES];
+            int dx = view.cameraX() - context.cameraX();
+            int dy = view.cameraY() - context.cameraY();
+            if (layered) {
+                scratch.bg3X += dx << 12;
+                scratch.bg2X += dx * 6144;
+                scratch.bgX += dx * 3072;
+                int y = view.cameraY() & 0xffff;
+                int by = y < 0x200 ? ((view.cameraX() & 0xffff) >= 0x280 ? 0x200 : y)
+                        : (((((y - 0x200) << 16) >>> 2) * 3 + 0x2000000) >>> 16);
+                scratch.bgY = (by << 16) | (scratch.bgY & 0xffff);
+            } else {
+                scratch.bgX += dx * 3072;
+                scratch.bgY += dy << 15;
+            }
+            scratch.waterDeform = frozenDeform;
+            scratch.buildLines(view.cameraX(), view.cameraY());
+            scratch.emit(words, view.cameraX());
+            int[] raster = new int[view.height()];
+            // Presentation-only extra raster holds the last native line; no extra native work.
+            for (int i = 0; i < raster.length; i++) raster[i] = words[Math.min(i, words.length - 1)];
+            return new com.openggf.level.scroll.ScrollProjection(raster,
+                    nativeOutput.backgroundLines(), nativeOutput.backgroundColumns(), nativeOutput.foregroundColumns(),
+                    (short) (nativeOutput.foregroundY() + view.cameraY() - context.cameraY()),
+                    scratch.getVscrollFactorBG(), nativeOutput.backgroundX(), nativeOutput.backgroundPeriod(),
+                    nativeOutput.shakeX(), nativeOutput.shakeY(), nativeOutput.tilemapMode(), nativeOutput.spritePositions());
+        };
+    }
+
     // ---------------------------------------------------------------------------------------------
     // Rewind
     // ---------------------------------------------------------------------------------------------
 
     private record State(int bgX, int bg2X, int bg3X, int bgY, int waterDeform, int parallaxCarry, int lastCameraX,
-                         int lastCameraY, int lastFrame, boolean initialised) { }
+                         int lastCameraY, int lastFrame, boolean initialised, int publishedWater, int publishedDeform) { }
 
     @Override
     public Object captureRewindState() {
         return new State(bgX, bg2X, bg3X, bgY, waterDeform, parallaxCarry, lastCameraX, lastCameraY, lastFrame,
-                initialised);
+                initialised, publishedWater, publishedDeform);
     }
 
     @Override
     public void restoreRewindState(Object state) {
         if (!(state instanceof State s)) return;
+        publishedWater = s.publishedWater();
+        publishedDeform = s.publishedDeform();
         bgX = s.bgX();
         bg2X = s.bg2X();
         bg3X = s.bg3X();

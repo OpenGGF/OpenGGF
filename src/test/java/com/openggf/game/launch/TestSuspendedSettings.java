@@ -18,6 +18,35 @@ class TestSuspendedSettings {
     @TempDir Path directory;
 
     @Test
+    void hostedResumeTakesLivePreferencesAndPinsLaunchStateWithoutACartridgeProfile() throws Exception {
+        var config = SonicConfigurationService.createStandalone(directory);
+        config.setSessionOverride(SonicConfiguration.DISPLAY_ASPECT, "NATIVE_4_3");
+        config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
+        config.setSessionOverride(SonicConfiguration.AUDIO_ENABLED, true);
+        var paused = SuspendedSettings.suspend(config);
+        save(config, SonicConfiguration.DISPLAY_ASPECT, "WIDE_16_9");
+        save(config, SonicConfiguration.DEBUG_VIEW_ENABLED, "true");
+        save(config, SonicConfiguration.AUDIO_ENABLED, "false");
+        paused.resume(config, com.openggf.game.MasterTitleEntry.Hosted.of(com.openggf.game.GameId.SCD), true);
+        assertEquals(400, config.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS));
+        assertTrue(config.getBoolean(SonicConfiguration.DEBUG_VIEW_ENABLED));
+        assertTrue(config.getBoolean(SonicConfiguration.AUDIO_ENABLED), "backend stays as launched");
+        assertEquals("sonic", config.getString(SonicConfiguration.MAIN_CHARACTER_CODE));
+        config.clearSessionOverrides();
+        assertFalse(config.getBoolean(SonicConfiguration.AUDIO_ENABLED), "next launch uses the saved value");
+    }
+
+    @Test
+    void hostedScreensKeepTheirEntryAspectUntilTheNextLevel() throws Exception {
+        var config = SonicConfigurationService.createStandalone(directory);
+        config.setSessionOverride(SonicConfiguration.DISPLAY_ASPECT, "WIDE_16_9");
+        config.resolveDisplayAspect();
+        var paused = SuspendedSettings.suspend(config);
+        paused.resume(config, com.openggf.game.MasterTitleEntry.Hosted.of(com.openggf.game.GameId.SCD), false);
+        assertEquals(400, config.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS));
+    }
+
+    @Test
     void hubRunsOnSavedPreferencesWhileTheGameIsSuspended() {
         SonicConfigurationService config = SonicConfigurationService.createStandalone(directory);
         config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, "knuckles");

@@ -187,9 +187,12 @@ jobs:
       - name: Assert default test skip classification
         shell: bash
         run: |
+          # Declare every policy input. The release runner has no Sonic CD disc or native
+          # recordings; the S3K round-trip fixtures count as present only if checked in.
+          fixture() { if [ -d "src/test/resources/traces/s3k/runs/$1" ]; then echo true; else echo false; fi; }
           python3 tools/testing/classify_surefire_skips.py --reports target/surefire-reports \
             --policy tools/testing/release-skip-policy.json \
-            --capabilities gl=true,s2_bk2=false,s3k_observations=false,s1_bizhawk_reference=false,audio_reference_files=false \
+            --capabilities gl=true,s2_bk2=false,s3k_observations=false,s1_bizhawk_reference=false,audio_reference_files=false,s3k_gumball_roundtrip=$(fixture s3k-aiz-gumball-roundtrip),s3k_pachinko_roundtrip=$(fixture s3k-aiz-pachinko-roundtrip),soniccd_media=false,soniccd_disc=false,soniccd_native=false,soniccd_stamp_ledger=false \
             --check-evidence --root . --json target/release-evidence/default-skips.json
           cp -R target/surefire-reports target/release-evidence/default-reports
 

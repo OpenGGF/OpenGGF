@@ -418,3 +418,11 @@ parents. Validation for this increment is recorded in the existing
 [code-climb audit](../../audits/2026-11-06-ai-code-climb.md#sol-implementation--opus-review-continuation--2026-11-07).
 This restore-wiring correction adds no route, viewport, donor or team certification;
 the inherited matrix gaps above remain open.
+
+## Screen-event shake maintenance (2026-11-15)
+
+The [five-zone audit](../../audits/2026-11-15-s3k-low-zone-event-publication.md)
+records the bounded CNZ death-output witness and SOZ ROM-table/publication plus
+runtime restore/forward checks. These use the default fixture viewport/character;
+whole-route, donor/team breadth, native pixels and full-world lifecycle coverage
+remain inherited obligations. The shake owner change does not certify this act.

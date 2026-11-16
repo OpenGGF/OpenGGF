@@ -8,6 +8,24 @@ deliberate bug-fixes of ROM data), see
 
 For general (cross-game) bugs, see [known-bugs.md](known-bugs.md).
 
+## FBZ inherited reload and sparse-cloud publication gaps — 2026-11-16
+
+Recorded during the [FBZ publication review](../architecture/audits/2026-11-15-s3k-fbz-event-publication.md),
+not introduced or repaired by PR #338:
+
+- `FBZ1BGE_Normal` (sonic3k.asm:108840-108876) reloads terrain and continues
+  `FBZ_Deform` without resetting Events_bg+$04 or HScroll+$1FC. The engine
+  replaces the FBZ event owner, forces the background indoor and starts the
+  accumulator at zero. `Load_Level` (sonic3k.asm:38787-38801) only copies the
+  layout/header region. Qualification must preserve the native background mode
+  and longword across the real seamless reload, with route and rewind evidence.
+- `loc_53202` (sonic3k.asm:109787-109805) skips an empty cloud address before
+  consuming `(a1)+`. Both Java cloud publication and scroll projection currently
+  index HScroll by address slot, so a sparse allocation table selects different
+  words for clouds after a hole. Qualification needs a real allocation-hole
+  witness and projection/rewind agreement; complete-allocation routes do not
+  certify this case. Preserve shipped `FixBugs = 0` semantics when repairing it.
+
 ## Ordinary Knuckles boss-glide exit is held — 2026-11-08
 
 `Touch_Enemy .bossnotdefeated` (sonic3k.asm:20961-20977) ends active character 2

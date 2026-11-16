@@ -6,16 +6,12 @@ import com.openggf.game.soniccd.level.CdAssetBytes;
 import com.openggf.game.soniccd.media.CdMmdImage;
 import com.openggf.game.soniccd.media.CdProgramAssets;
 import com.openggf.game.soniccd.media.CdTimeWarpPrograms;
-import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.util.Arrays;
 import java.util.HexFormat;
-import java.util.Locale;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -101,12 +97,7 @@ class TestCdWarpAssets {
     }
 
     private static CdProgramAssets openUsa() throws Exception {
-        String configured = System.getProperty("soniccd.media.root");
-        Assumptions.assumeTrue(configured != null && !configured.isBlank(), "Explicit original CD media prerequisite");
-        try (var files = Files.list(Path.of(configured).resolve("USA"))) {
-            var cues = files.filter(path -> path.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".cue")).toList();
-            assertEquals(1, cues.size()); return CdProgramAssets.open(cues.getFirst(), Optional.of(CdReleaseVariant.USA), Optional.empty());
-        }
+        return CdProgramAssets.open(com.openggf.game.soniccd.CdTestMedia.usaCue(), Optional.of(CdReleaseVariant.USA), Optional.empty());
     }
     private static int word(byte[] bytes) { return ((bytes[0] & 255) << 8) | (bytes[1] & 255); }
     private static String sha(byte[] bytes) throws Exception { return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes)); }

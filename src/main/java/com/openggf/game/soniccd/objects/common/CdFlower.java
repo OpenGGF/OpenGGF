@@ -16,7 +16,7 @@ import java.util.List;
  * (animation 1, oYRadius $30). Tile $A6D7, priority 1; {@code oSubtype2} non-zero clears the
  * tile priority. A badnik's explosion becomes a flower with subtype 1 (Explosion/Main.asm:98-106).
  *
- * <p>Routines 6 (growing, tile $26D7, animation 2) and 8 (grown) are entered by other objects.
+ * <p>The animation scripts advance to routine 6 (growing, tile $26D7, animation 2), then 8 (grown).
  * The planted seed's {@code flowerCount}/{@code flowerPosBuf} write (Flower/Main.asm:72-80) is
  * time-travel state and is not hosted; the shared respawn "remembered" bit stands for bit 6.
  */
@@ -107,7 +107,12 @@ public final class CdFlower extends CdObject implements ObjectVisualFacing.NonDi
 
     private void animate() {
         if (animator == null) return;
-        animator.step();
+        int advance = animator.step();
+        // AnimateObject's $FC advances oRoutine: planted -> growing -> done
+        // (ObjFlower, Level/_Objects/Flower/Main.asm:22-26).
+        if (advance == 2) {
+            routine = routine == Routine.ANIMATE ? Routine.GROWING : Routine.DONE;
+        }
         mapFrame = animator.mapFrame();
     }
 

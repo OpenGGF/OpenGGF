@@ -1,10 +1,76 @@
 # Level test coverage backlog
 
+Temporal scroll matching (2026-11-16): [HCZ1](../architecture/validation/levels/s3k-hcz1-sonic.md#temporal-scroll-matching-2026-11-16)
+and [HCZ2](../architecture/validation/levels/s3k-hcz2.md#temporal-scroll-matching-2026-11-16)
+record 12 typed-publication motion checks, retaining event lifecycle, history,
+rewind/load and rendered-pixel gaps. [CD stages](../architecture/validation/levels/scd-stages.md#motion-eligibility-maintenance-2026-11-16)
+record CD interpolation enablement: all seven provider phases, positive profile
+eligibility, PPZ frozen-scroll semantics and disc-backed Act 1 Present midpoint
+pixels/state isolation in every zone. Other periods' pixels, wrap/swap/history
+boundaries and native route certification remain inherited obligations.
+
+AIZ1 background interpolation maintenance (2026-11-16): the
+[AIZ1 matrix](../architecture/validation/levels/s3k-aiz1-sonic.md#background-interpolation-maintenance-2026-11-16)
+records a positioned 180-pair pan regression for deformation-band continuity.
+Cold routes, other acts/viewports/teams and native pixel parity remain inherited
+obligations; whole-pixel slow-pan stepping is unchanged.
+
+CNZ/SOZ screen-event maintenance (2026-11-15): the
+[bounded audit](../architecture/audits/2026-11-15-s3k-low-zone-event-publication.md)
+records CNZ2 death shake and SOZ shared shake/table/restore checks. The linked
+act matrices retain broader viewport, donor/team and lifecycle gaps.
+
+HCZ retained screen publication (2026-11-10): the
+[HCZ2 matrix](../architecture/validation/levels/s3k-hcz2.md) records one event/capture
+owner, fresh versus seamless initialization, previous-publication consumption,
+signed redraw/shake continuation and the geyser's first-dispatch flag. Real P1/Tails
+reads and complete registered-world held/refresh suffix replays have focused
+witnesses. These positioned 320px Sonic/Tails checks do not establish cold-route,
+run-chain, native pixel/audio, other viewport/donor/team or unobserved native
+branch coverage. The retained native window discriminates X timing, not Y timing.
+
+
+Parent-linked rewind maintenance (2026-11-10): the Clamer and S1 badnik graph
+witnesses named in the [rewind guide](../guide/contributing/rewind-system.md#ordinary-dynamic-objects-and-constructor-children)
+check routine-spawned children against two nearby same-class parents, including
+fresh reconstruction after Orbinaut satellite movement and metadata boundary/legacy
+controls; the Clamer parents remain stationary.
+These injected-service graph checks establish neither a native route trigger nor
+act, viewport, donor/team or whole-route rewind coverage; those obligations remain
+inherited. The Shellcracker graph checks add real owned spawning with a closer
+decoy, explicitly verified warm reuse and forced fresh rebuilding, plus an independently
+falling family after public parent retirement. The active null-parent unit checks
+ordinary parent loss without claiming the native transition row's motion/timer.
+Existing motion/gravity/timer order is untouched; the separately identified native
+timing discrepancy remains uncorrected and no MTZ act or viewport breadth is certified.
+These three hooks share an exact captured-ID lookup in the admitted population;
+other proximity relinks remain unassessed. Saved-state and context record layouts
+are unchanged. Scene-policy restore now retains the captured placed parent and
+all eight exact-parent claws even when fresh admission is closed. A separate
+placed constructor-family witness reproduced adoption of a child whose alive
+parent was missing from live membership; restored population publication repairs
+the parent itself. These checks cover forced rebuilding, repeated restore and
+recapture, target versus future claims, and explicitly confirmed warm reuse of a
+side-effect-free placement. Fresh unclaimed placement admission stays closed.
+The existing retired-body graph witness retains independent falling-piece and
+expiry coverage; a captured parent is no longer incorrectly treated as absent.
+These injected-service checks certify no scene or native route parity.
+A Shellcracker body unloaded off-screen
+without destruction may also leave extending claws whose behavior changes after
+rewind; the destroyed-parent witness does not establish that inherited case.
+The Clamer constructor probe still requires a live Clamer before its hook can run.
+
 Sonic CD stages (2026-11-13): the [Sonic CD stage matrix](../architecture/validation/levels/scd-stages.md)
 records, for all 70 USA stage programs, which are certified by a native full-act
 route to their end, which by a 14-second fixture only, and the boss recordings.
 Act 1 Bad Future and act 2 Past and futures have fixture evidence only; widths,
-rewind spots and lifecycle obligations are largely unassessed.
+rewind spots and lifecycle obligations are largely unassessed. The
+[2026-11-15 playtest follow-up](../architecture/validation/2026-11-15-sonic-cd-playtest-fixes.md)
+records focused object, PPZ background, suspension, audio and rendered results
+evidence, completed composed checks and matched-baseline attribution. Broad
+smoke remains FAILED with input/skip gaps; end-to-end rewind and user acceptance
+remain pending. These
+checks do not advance the historical route totals.
 
 S2 Competition monitor outcomes (2026-11-09): eight cold-title EHZ1 fixtures
 exercise P1 breaking for all eight outcomes and hold the award for six seconds.
@@ -2790,3 +2856,37 @@ MICA authored S3K ending presentation (2026-11-08): the
 [ending matrix](../architecture/validation/levels/s3k-ending.md#authored-sonic-route-ending-presentation-2026-11-08)
 records passing declared-entry normal/Super/Hyper mapping and capture checks.
 Doomsday route entry, mod rewind and broader team/viewport certification remain open.
+
+AIZ screen-event ownership (2026-11-16): the [bounded publication audit](../architecture/audits/2026-11-16-s3k-aiz-event-publication.md)
+records the real-load shake witness, composed rewind contract, selected route
+comparisons and forest-loop evidence. Existing act/character, donor, team and
+viewport obligations remain inherited; this local cleanup is not zone certification.
+
+FBZ event/scroll publication and its inherited route limits are tracked in the
+[2026-11-15 FBZ audit](../architecture/audits/2026-11-15-s3k-fbz-event-publication.md).
+
+MHZ publication ownership (2026-11-15): the
+[bounded audit](../architecture/audits/2026-11-15-s3k-mhz-event-publication.md)
+tracks renderer rebuild isolation and composed event/shake restoration. Both MHZ
+act matrices retain their existing route/configuration and visual coverage gaps.
+
+LBZ publication ownership (2026-11-16): the [bounded event audit](../architecture/audits/2026-11-16-s3k-lbz-event-publication.md)
+tracks shake flag consumers, same-frame renderer rebuilds and composed rewind.
+The existing LBZ1/LBZ2 act matrices retain all inherited route/viewport/donor/roster gaps.
+
+ICZ publication ownership (2026-11-15): the
+[bounded publication audit](../architecture/audits/2026-11-15-s3k-icz-event-publication.md)
+records real-load ICZ2 indoor-hysteresis renderer rebuild, start/retained gate
+boundaries, ICZ1 indoor restart and native shake-clock witnesses, snow-fall
+publication ranges, and the column's one-shot landing request. These component checks do not certify complete routes,
+refresh-row timing, native pixels, or broader donor/team/viewport products; the
+existing ICZ act matrices and their inherited gaps remain applicable.
+
+MGZ event publication (2026-11-15): the [bounded audit](../architecture/audits/2026-11-15-s3k-mgz-event-publication.md)
+records real-load projection/rewind witnesses, trigger-frame capture, whole-manager
+rejection and native end-boss/transition dispatch witnesses. The two review
+trace regressions are resolved: all eleven reports exactly match baseline;
+1792 focused/rewind/guard cases pass. Eight inherited replay failures remain.
+The [MGZ1](../architecture/validation/levels/s3k-mgz-act1.md) and
+[MGZ2](../architecture/validation/levels/s3k-mgz-act2.md) matrices retain their
+wider route, donor, team and viewport obligations.

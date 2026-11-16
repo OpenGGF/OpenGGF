@@ -12,7 +12,7 @@ import com.openggf.level.resources.DeferredLevelResourceManifest;
 import java.util.BitSet;
 
 /** Retained background VRAM from MHZ1_BackgroundEvent's Load_Level call. */
-record MhzActTransitionHandoff(Level previous, Sonic3kMHZEvents access, Object inheritedScroll)
+record MhzActTransitionHandoff(Level previous, Sonic3kMHZEvents access, Sonic3kMHZEvents.LoopCarry inheritedScroll)
         implements SeamlessTransitionResourceHandoff {
     @Override
     public DeferredLevelResourceManifest deferredResources() {
@@ -23,12 +23,9 @@ record MhzActTransitionHandoff(Level previous, Sonic3kMHZEvents access, Object i
     public void transferAfterTargetInit() {
         var manager = access.levelManager();
         var target = manager.getCurrentLevel();
-        // Establish the destination handler before restoring the native
-        // Events_fg_1 carry; otherwise its first lazy init erases the carry.
-        // Recompute deformation only: no Animate_Tiles or gameplay tick.
-        manager.recomputeParallaxOnlyForCurrentFrame();
-        access.module().getScrollHandlerProvider().getHandler(Sonic3kZoneIds.ZONE_MHZ)
-                .restoreRewindState(inheritedScroll);
+        var events = ((com.openggf.game.sonic3k.Sonic3kLevelEventManager)
+                access.module().getLevelEventProvider()).getMhzEvents();
+        events.restoreLoopCarry(inheritedScroll);
         manager.recomputeParallaxOnlyForCurrentFrame();
         // AnimateTiles_MHZ writes $80 words at tile $1B8 and $200 at $1D5.
         // MHZ1_BackgroundEvent calls Load_Level/LoadSolids without replacing

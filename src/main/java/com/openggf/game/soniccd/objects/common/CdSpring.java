@@ -90,7 +90,7 @@ public final class CdSpring extends CdObject implements ReevaluatingSolidObject,
     }
 
     private void run(int vIntRunCount, PlayableEntity player) {
-        if (kind == Kind.DIAGONAL && tileWord == CdObjectArtProvider.SPRING_TILE) {
+        if (kind == Kind.DIAGONAL && (tileWord & ~0x2000) == CdObjectArtProvider.SPRING_TILE) {
             CdObjectArtProvider provider = artProvider();
             int tile = provider == null ? -1 : provider.objectTileId(CdObjectArtProvider.TILE_ID_DIAGONAL_SPRING,
                     subtype2());

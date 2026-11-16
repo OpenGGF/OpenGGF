@@ -49,6 +49,8 @@ public final class AizZoneRuntimeState implements S3kZoneRuntimeState {
     public int getLevelRepeatOffset() { return levelRepeatOffset(); }
     public int getBattleshipBgYOffset() { return events.getBattleshipBgYOffset(); }
     public int getBattleshipSmoothScrollX() { return events.getBattleshipSmoothScrollX(); }
+    public int getWaveOriginFrame() { return events.getWaveOriginFrame(); }
+    public void requestScreenShake(int flag) { events.triggerScreenShake(flag); }
     public int getScreenShakeOffsetY() { return events.getScreenShakeOffsetY(); }
 
     public boolean isButtonBeforeBridgeDispatch() {

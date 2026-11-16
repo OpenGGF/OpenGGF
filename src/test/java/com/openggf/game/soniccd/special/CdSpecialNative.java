@@ -1,6 +1,7 @@
 package com.openggf.game.soniccd.special;
 
 import com.openggf.game.soniccd.CdDiscDataSource;
+import com.openggf.game.soniccd.CdTestMedia;
 import org.junit.jupiter.api.Assumptions;
 
 import java.io.IOException;
@@ -13,9 +14,9 @@ import java.util.Map;
 import java.util.stream.Stream;
 
 /**
- * Optional user inputs for the special-stage checks: the disc ({@code -Dsoniccd.media.root})
+ * Optional user inputs for the special-stage checks: the disc ({@link CdTestMedia#usaCue})
  * and the native references recorded by {@code ~/Downloads/Sonic-CD/native/rehost-special}
- * ({@code -Dsoniccd.special.native.root}, defaulting to {@code <media.root>/../native/rehost-special}).
+ * ({@code -Dsoniccd.special.native.root}, defaulting to {@code <native root>/rehost-special}).
  * Each run directory holds the probe's {@code frames.csv} (one row per frame, read from the
  * special stage's own PRG RAM) and Word RAM / PRG RAM dumps at stated frames.
  */
@@ -23,21 +24,14 @@ final class CdSpecialNative {
     private CdSpecialNative() { }
 
     static CdDiscDataSource disc() throws IOException {
-        String root = System.getProperty("soniccd.media.root");
-        Assumptions.assumeTrue(root != null && !root.isBlank(), "Set soniccd.media.root for Sonic CD disc checks");
-        Path cue;
-        try (Stream<Path> cues = Files.list(Path.of(root, "USA"))) {
-            cue = cues.filter(p -> p.toString().endsWith(".cue")).findFirst()
-                    .orElseThrow(() -> new IOException("No USA CUE under " + root));
-        }
-        return CdDiscDataSource.open(cue);
+        return CdDiscDataSource.open(CdTestMedia.usaCue());
     }
 
     static Path run(String name) {
         String configured = System.getProperty("soniccd.special.native.root");
-        Path root = configured != null && !configured.isBlank() ? Path.of(configured)
-                : Path.of(System.getProperty("soniccd.media.root", "."), "..", "native", "rehost-special");
-        Path dir = root.resolve(name).normalize();
+        Path dir = configured != null && !configured.isBlank() ? Path.of(configured).resolve(name).normalize()
+                : CdTestMedia.nativePath("rehost-special/" + name).orElse(null);
+        Assumptions.assumeTrue(dir != null, "Set soniccd.special.native.root (or soniccd.native.root) for " + name);
         Assumptions.assumeTrue(Files.isRegularFile(dir.resolve("frames.csv")), "Native special-stage run absent: " + dir);
         return dir;
     }

@@ -14,7 +14,6 @@ import com.openggf.game.sonic3k.runtime.SozZoneRuntimeState;
 public final class Sonic3kSOZEvents extends Sonic3kZoneEvents {
     private final SozAct1Events act1=new SozAct1Events(this);
     private int[] wallDelayTable;
-    private byte[] shakeTable;
     private byte[] slideBlocks;
     private byte[] slideModes;
 
@@ -24,7 +23,6 @@ public final class Sonic3kSOZEvents extends Sonic3kZoneEvents {
             byte[] bytes = rom().readBytes(0x56AD2, 34);
             wallDelayTable = new int[17];
             for (int i = 0; i < 17; i++) wallDelayTable[i] = ((bytes[i * 2] & 255) << 8) | (bytes[i * 2 + 1] & 255);
-            shakeTable = rom().readBytes(0x4F424, 84);
             slideBlocks = rom().readBytes(0x74AC, 17);
             slideModes = rom().readBytes(0x74BD, 34);
         } catch (java.io.IOException failure) {
@@ -286,16 +284,9 @@ public final class Sonic3kSOZEvents extends Sonic3kZoneEvents {
     }
 
     void updateShake(SozEventState events, int levelFrameCounter) {
-        int flag = events.screenShakeFlag();
-        int offset = 0;
-        if (!spriteManager().getMainPlayable().getDead() && flag != 0) {
-            if (flag < 0) offset = shakeTable[20 + (levelFrameCounter & 63)] & 255;
-            else {
-                events.screenShakeFlag(--flag);
-                offset = shakeTable[flag];
-            }
-        }
-        events.screenShakeOffset(offset);
+        // ShakeScreen_Setup gates on Player_1+routine >= 6, which a drowning sink reaches before death.
+        events.advanceScreenShake(levelFrameCounter,
+                com.openggf.sprites.playable.NativePlayableRoutine.isAtOrBeyondDeathForNativeRead(spriteManager().getMainPlayable()));
     }
 
     void queueCustomResources(SozEventState events, int blocksAddress, int artAddress) {

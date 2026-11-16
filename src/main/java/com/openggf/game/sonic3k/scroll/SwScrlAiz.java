@@ -39,7 +39,6 @@ public class SwScrlAiz extends AbstractZoneScrollHandler
     void setDetachedWaveOriginFrame(int frame) {
         if (!detachedPresentation) throw new IllegalStateException("Only detached presentation has an external wave owner");
         waveBaseFrame = frame;
-        waveBaseFrameSet = true;
     }
 
 
@@ -140,22 +139,8 @@ public class SwScrlAiz extends AbstractZoneScrollHandler
     private final ScrollValueTable deformValues = ScrollValueTable.ofLength(FLAT_VALUE_COUNT);
     private final short[] aiz2SpeedValues = new short[AIZ2_SPEED_LEVELS];
 
-    /**
-     * Persistent wave accumulator (ROM: HScroll_table+$03C, advances $2000/frame).
-     * Derived from the frame counter (not the update-call count) so it rewinds
-     * correctly — a call-count accumulator drifts, snapping back only at keyframe
-     * boundaries. The AIZ1 deform path runs continuously once the main level is
-     * active, so anchoring at its first frame reproduces the ROM value exactly.
-     */
+    // An explicit scene projection input only; campaign history belongs to AIZ events.
     private int waveBaseFrame;
-    private boolean waveBaseFrameSet;
-
-    @Override
-    public void init(int actId, int cameraX, int cameraY) {
-        // Re-arm the wave anchor on zone/act (re)entry so a reused handler
-        // re-derives the canopy wave from the new start frame.
-        waveBaseFrameSet = false;
-    }
 
     @Override
     public void update(int[] horizScrollBuf,
@@ -279,15 +264,9 @@ public class SwScrlAiz extends AbstractZoneScrollHandler
         deformValues.clear();
 
         // --- Bands 0-5: tree canopy with wave (HScroll_table+$008...$012) ---
-        // Wave accumulator persists across frames (ROM: HScroll_table+$03C += $2000),
-        // derived from the frame counter for rewind-safety. Anchored (offset 0,
-        // read-then-increment) on the first AIZ1 deform frame; computed as long to
-        // preserve the ROM's unbounded 32-bit accumulation.
-        if (!waveBaseFrameSet) {
-            waveBaseFrame = frameCounter;
-            waveBaseFrameSet = true;
-        }
-        long d3 = (long) (frameCounter - waveBaseFrame) * 0x2000;
+        AizZoneRuntimeState state = resolveAizState();
+        int origin = detachedPresentation ? waveBaseFrame : state == null ? 0 : state.getWaveOriginFrame();
+        long d3 = (long) (frameCounter - origin) * 0x2000;
 
         // ROM: d0 starts at base/2, each iteration adds d3 (wave) before write,
         //      then adds base (d2) after write.
@@ -586,7 +565,7 @@ public class SwScrlAiz extends AbstractZoneScrollHandler
         }
         return new AizPhase(
                 context,
-                waveBaseFrameSet ? waveBaseFrame : context.frameCounter(),
+                detachedPresentation ? waveBaseFrame : state == null ? 0 : state.getWaveOriginFrame(),
                 intro,
                 introOffset,
                 fire,
@@ -618,7 +597,7 @@ public class SwScrlAiz extends AbstractZoneScrollHandler
                 com.openggf.level.scroll.ScrollView view) {
             SwScrlAiz scratch = new SwScrlAiz(view.height());
             scratch.waveBaseFrame = waveOrigin;
-            scratch.waveBaseFrameSet = true;
+            scratch.detachedPresentation = true;
             return scratch.composeProjection(this, view);
         }
     }

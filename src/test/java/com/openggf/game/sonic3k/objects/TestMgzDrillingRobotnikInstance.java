@@ -1115,19 +1115,52 @@ class TestMgzDrillingRobotnikInstance {
     }
 
     @Test
+    void endBossAirRiseUsesNativeWait() throws Exception {
+        var boss = createEndBoss(new RecordingServices(camera));
+        boss.getState().routine = staticInt("ROUTINE_END_AIR_WAIT");
+        setPrivateInt(boss, "waitTimer", 0);
+        boss.update(0, null);
+        assertEquals(0x1F, getPrivateInt(boss, "waitTimer"),
+                "loc_6C57C writes $1F; later child slots do not add two waits to the parent");
+    }
+
+    @Test
+    void endBossSetupDispatchDoesNotSpendItsFreshWait() throws Exception {
+        var boss = createEndBoss(new RecordingServices(camera));
+        boss.update(0, null);
+        assertEquals(120, getPrivateInt(boss, "waitTimer"),
+                "loc_6C354 installs $78; the first Obj_Wait is the following dispatch");
+    }
+
+    @Test
+    void endBossInitialWaitCallsBackOnlyAfterSignedUnderflow() throws Exception {
+        var boss = createEndBoss(new RecordingServices(camera));
+        boss.update(0, null); // setup dispatch
+        setPrivateInt(boss, "waitTimer", 1);
+        boss.update(1, null);
+        assertEquals(staticInt("ROUTINE_INIT"), boss.getState().routine,
+                "Obj_Wait retains the initial wait at zero");
+        assertEquals(0, getPrivateInt(boss, "waitTimer"));
+        boss.update(2, null);
+        assertEquals(staticInt("ROUTINE_END_DESCEND"), boss.getState().routine);
+        assertEquals(0xBF, getPrivateInt(boss, "waitTimer"));
+    }
+
+    @Test
     void endBossDescendsVisiblyWhileTimedWaitRuns() throws Exception {
         RecordingServices services = new RecordingServices(camera);
         MgzEndBossInstance boss = createEndBoss(services);
+        boss.update(0, null); // loc_6C354 setup
         setPrivateInt(boss, "waitTimer", 1);
-
-        boss.update(0, null);
+        boss.update(1, null); // Obj_Wait retains zero
+        boss.update(2, null); // signed underflow installs descent
         assertEquals(staticInt("ROUTINE_END_DESCEND"), boss.getState().routine);
         assertFalse(boss.isHidden(),
                 "Obj_MGZEndBoss must draw during the timed descent after End Boss music starts");
 
         int startY = boss.getY();
-        boss.update(1, null);
-        boss.update(2, null);
+        boss.update(3, null);
+        boss.update(4, null);
 
         assertFalse(boss.isHidden());
         assertTrue(boss.getY() > startY,

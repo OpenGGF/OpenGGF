@@ -1,6 +1,5 @@
 package com.openggf.data.cd;
 
-import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
@@ -8,10 +7,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
-import java.util.Locale;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -20,15 +17,8 @@ class TestSonicCdDiscMedia {
     @ParameterizedTest(name = "{0} user-supplied disc")
     @ValueSource(strings = {"USA", "Europe", "Japan"})
     void readsRegionalDirectoriesDataAndAudioWithoutLoadingVideos(String region) throws IOException {
-        String configured = System.getProperty("soniccd.media.root");
-        Assumptions.assumeTrue(configured != null && !configured.isBlank(), "Set soniccd.media.root for real-disc checks");
-        Path regionDirectory = Path.of(configured).resolve(region);
-        Path cue;
-        try (var paths = Files.list(regionDirectory)) {
-            var cues = paths.filter(path -> path.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".cue")).toList();
-            assertEquals(1, cues.size(), "Expected one explicit regional CUE");
-            cue = cues.getFirst();
-        }
+        // The sheet layout itself is under test, so this needs the regional CUE folders, not the single disc.
+        Path cue = com.openggf.game.soniccd.CdTestMedia.regionCue(region);
         long expectedFrames = switch (region) {
             case "USA" -> 59261;
             case "Europe" -> 55098;

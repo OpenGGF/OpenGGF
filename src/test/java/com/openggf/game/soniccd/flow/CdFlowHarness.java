@@ -9,15 +9,14 @@ import com.openggf.game.GameMode;
 import com.openggf.game.GameServices;
 import com.openggf.game.soniccd.CdDiscDataSource;
 import com.openggf.game.soniccd.CdStagePayload;
+import com.openggf.game.soniccd.CdTestMedia;
 import com.openggf.game.soniccd.SonicCdGameModule;
 import com.openggf.game.soniccd.level.CdLevel;
 import com.openggf.game.soniccd.program.CdSceneCoordinator;
 import com.openggf.game.soniccd.timetravel.CdTimeTravel;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tools.HeadlessGameBoot;
-import org.junit.jupiter.api.Assumptions;
 
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -46,12 +45,7 @@ final class CdFlowHarness implements AutoCloseable {
                int x, int y, boolean dead, boolean ctrlLocked, boolean fading, boolean timerPaused) { }
 
     CdFlowHarness(java.util.function.Consumer<SonicCdGameModule> beforeBoot) throws Exception {
-        String root = System.getProperty("soniccd.media.root");
-        Assumptions.assumeTrue(root != null && !root.isBlank(), "Set soniccd.media.root for Sonic CD disc checks");
-        Path cue;
-        try (var s = Files.list(Path.of(root, "USA"))) {
-            cue = s.filter(p -> p.toString().endsWith(".cue")).findFirst().orElseThrow();
-        }
+        Path cue = CdTestMedia.usaCue();
         GameServices.configuration().setSessionOverride(SonicConfiguration.AUDIO_ENABLED, false);
         GameServices.configuration().setSessionOverride(SonicConfiguration.LEVEL_SELECT_ON_STARTUP, false);
         disc = CdDiscDataSource.open(cue);

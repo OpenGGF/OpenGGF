@@ -1,5 +1,25 @@
 # Sonic CD stages: route matrix (USA)
 
+## Motion eligibility maintenance (2026-11-16)
+
+Sonic CD ordinary levels now opt into the shared live interpolation pipeline.
+All seven provider handlers supply immutable projection phases. Native camera
+arithmetic selects bands on private scratch composition while cloud, water,
+light and swap clocks remain frozen; native scroll-lock/dead gates capture a
+held background. `TestCdMotionContinuity` checks positive provider/profile
+eligibility and a capability-negative control, plus PPZ native pan/rebuild rules.
+
+`TestCdLiveMotionPixels` boots the user-supplied USA disc for every zone's Act 1
+Present stage. It checks actual midpoint pixels, complete background motion
+pairing and amounts, repeated drawings, exact pictures after blending, native
+scroll state/player/frame isolation and frozen scroll-lock capture after release.
+Per-zone phase tests cover the stage/program variants, immutable dependencies,
+water/ramp/band arithmetic and 448-row sampling. The combined initial check runs
+54 tests without skips. No new native-reference, cold-route or time-travel frontier
+is certified. Rendered pixels for other periods/acts, exhaustive wraps, swap edges
+and complete rewind/load/time-travel histories remain obligations. These checks
+supersede the earlier test that pinned CD's profile exclusion.
+
 Game `scd`, all seven zones, Sonic only. A partial matrix under the
 [zone and act testing standard](../../../guide/contributing/level-test-standard.md):
 it records which stages a native recording certifies and how far. It is not a
@@ -23,6 +43,20 @@ retained solid routine. The [development ledger](../../../changelog/v0.8-prerele
 records the original failures and loading correction. This bounded art check
 does not advance the route matrix; section-transition screenshots, broader
 viewport coverage and inherited rewind/lifecycle gaps remain unassessed.
+
+## Playtest follow-up (2026-11-15)
+
+The [bounded validation record](../2026-11-15-sonic-cd-playtest-fixes.md)
+covers flower progression, diagonal springs, monitor item mappings, stage-local
+object names, PPZ row sampling, results digits, audio balance and hosted-game
+suspension. OBJECT/PRESENT gain focused object/art evidence; CAMERA/PRESENT
+gain disc-backed row sampling and ten-variant PPZ scroll checks; LIFE gains
+suspension/settings checks. Rendered results digits and same-live-instance restore passed. Composed
+validation and matched-baseline attribution are complete; the broad smoke
+verdict remains FAILED with input/skip gaps. End-to-end rewind and the user's
+manual checklist remain pending. These working-tree
+checks do not requalify the historical stage cells or close inherited width,
+whole-route, native-picture or lifecycle gaps.
 
 ## Stage keys
 

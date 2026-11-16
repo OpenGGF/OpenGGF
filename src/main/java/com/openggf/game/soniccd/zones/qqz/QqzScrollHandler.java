@@ -52,7 +52,7 @@ import java.util.function.IntSupplier;
  * (scroll_1a:212-214) or the player is dead the routine does not run
  * ({@link com.openggf.game.soniccd.zones.CdLevelScrollGate}).
  */
-public final class QqzScrollHandler extends AbstractZoneScrollHandler implements ScrollOutputRebuilder {
+public final class QqzScrollHandler extends AbstractZoneScrollHandler implements ScrollOutputRebuilder, com.openggf.level.scroll.ScrollProjectionSource {
     /** The seven scroll programs; see the class comment. */
     enum Program {
         A_ACT1, A_ACT2, B, C, D, C_ACT3, D_ACT3;
@@ -127,7 +127,7 @@ public final class QqzScrollHandler extends AbstractZoneScrollHandler implements
             Step.ramp(Cam.BG2, Cam.FG, 7, 0xC, 9, false, 1, 4, 4, 6, 8, 14)};
 
     private static final int DEFORM_WORDS = 0x200 / 2;       // deformBuffer rs.b $200 (_Definitions.inc:121)
-    private static final int LINE_CAP = 512;                 // hscroll is $400 bytes of longs; spare room
+    private static final int LINE_CAP = 4096;                 // hscroll is $400 bytes of longs; spare room
     private static final int FIRST_THRESHOLD = 0xE00;        // background_swap_1a:59-60
     private static final int SECOND_THRESHOLD = 0x2300;
 
@@ -326,7 +326,13 @@ public final class QqzScrollHandler extends AbstractZoneScrollHandler implements
         }
         fgX = newX;
         fgY = newY;
-        int d4 = xMove;                                       // move.w scroll_x_move,d4 ; ext.l d4
+        projectBackgroundX(xMove);
+        projectBackgroundY(fgY);
+        checkBackgroundSwap();
+    }
+
+    /** UpdateScroll (r5/scroll_1a.asm:234-252): layer rates, with no state dispatch. */
+    private void projectBackgroundX(int d4) {
         switch (program) {
             case A_ACT1, A_ACT2 -> {
                 bg3X += d4 << 6;                              // scroll_1a:234-238
@@ -349,7 +355,9 @@ public final class QqzScrollHandler extends AbstractZoneScrollHandler implements
                 bgX += d4 << 7;                               // :245-249
             }
         }
-        int y = fgY;
+    }
+
+    private void projectBackgroundY(int y) {
         int d0;
         switch (program) {
             case A_ACT1, A_ACT2 -> {                          // scroll_1a:253-267, scroll_2a:265-279
@@ -375,7 +383,6 @@ public final class QqzScrollHandler extends AbstractZoneScrollHandler implements
             default -> throw new IllegalStateException();
         }
         bgY = ((d0 & 0xFFFF) << 16) | (bgY & 0xFFFF);        // ScrollBgY (scroll_1a:872-884) writes the upper word
-        checkBackgroundSwap();
     }
 
     /** CheckBackgroundSwap (background_swap_1a:3-54); no source for act 3 (scddisasm/src/r5/object_index_3.asm:74-76). */
@@ -528,16 +535,20 @@ public final class QqzScrollHandler extends AbstractZoneScrollHandler implements
 
     /** scroll_1d:301-353 (also scroll_3d:273-324): the table runs out at word 39, a gradient fills the rest. */
     private void expandWithGradientTail(int index, int skip) {
+        expandWithGradientTail(index, skip, 29);
+    }
+
+    private void expandWithGradientTail(int index, int skip, int blocks) {
         boolean odd = (bgChange & 1) != 0;
-        int d5 = 0x1D;
+        int d5 = blocks;
         boolean expandTable = true;
-        int d1 = 0x1C;
+        int d1 = blocks - 1;
         if (!odd) {
             d1 = 0x27 - index;                                // sub.w d3,d1 ; bcs.s loc_202C50
             if (d1 < 0) {
                 expandTable = false;
-            } else if (d1 >= 0x1C) {
-                d1 = 0x1C;
+            } else if (d1 >= blocks - 1) {
+                d1 = blocks - 1;
             }
         }
         if (expandTable) {
@@ -555,6 +566,42 @@ public final class QqzScrollHandler extends AbstractZoneScrollHandler implements
     }
 
     // ---------------------------------------------------------------------------------------------
+    @Override
+    public com.openggf.level.scroll.ScrollProjectionPhase captureProjection(
+            com.openggf.level.scroll.ScrollProjectionContext context) {
+        // Capture the shared native scrollLock/dead gate, never read it while sampling.
+        if (!com.openggf.game.soniccd.zones.CdLevelScrollGate.runs())
+            return com.openggf.level.scroll.ScrollProjectionPhases.held(context);
+
+        State frozen = (State) captureRewindState();
+        Program frozenProgram = program;
+        return view -> {
+            QqzScrollHandler scratch = new QqzScrollHandler(frozenProgram, () -> 0);
+            scratch.restoreRewindState(frozen);
+            int dx = (short) (view.cameraX() - context.cameraX());
+            // UpdateScroll's layer rates, without its clock, crossing flags or swap owner.
+            int move = dx << 8;
+            scratch.projectBackgroundX(move);
+            scratch.fgX = (frozen.fgX() + dx) & 0xFFFF;
+            if (view.cameraY() != context.cameraY())
+                scratch.projectBackgroundY((frozen.fgY() + view.cameraY() - context.cameraY()) & 0xFFFF);
+            scratch.publish(new int[224]);
+            scratch.linePos = 0;
+            int y = scratch.bgY >>> 16;
+            int blocks = Math.max(29, (view.height() + (y & 7) + 7) / 8);
+            if (frozenProgram == Program.D || frozenProgram == Program.D_ACT3)
+                scratch.expandWithGradientTail((y & frozenProgram.tableMask()) >>> 3, y & 7, blocks);
+            else scratch.expand((y & frozenProgram.tableMask()) >>> 3, y & 7, blocks);
+            int[] words = new int[view.height()];
+            for (int i = 0; i < words.length; i++)
+                words[i] = ((-scratch.fgX & 0xFFFF) << 16) | (scratch.lines[i] & 0xFFFF);
+            var nativeOutput = context.nativeOutput();
+            return new com.openggf.level.scroll.ScrollProjection(words, null, null, null,
+                    (short) view.cameraY(), word(scratch.bgY), nativeOutput.backgroundX(),
+                    nativeOutput.backgroundPeriod(), nativeOutput.shakeX(), nativeOutput.shakeY(), nativeOutput.tilemapMode());
+        };
+    }
+
     // Rewind
     // ---------------------------------------------------------------------------------------------
 

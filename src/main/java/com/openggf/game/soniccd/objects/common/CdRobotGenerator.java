@@ -3,6 +3,7 @@ package com.openggf.game.soniccd.objects.common;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.soniccd.objects.art.CdObjectArtProvider;
 import com.openggf.graphics.GLCommand;
+import com.openggf.level.objects.CameraRelativeDraw;
 import com.openggf.level.objects.ObjectManagerInternalAccess;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectVisualFacing;
@@ -28,6 +29,8 @@ import java.util.List;
  * <p>The draw is unconditional; CheckObjDespawn runs only in routines 0 and 2 (Main.asm:30-33).
  * The schedule ObjRobotGenerator_ExplosionLocs (scddisasm/src/Level/_Objects/Robot Generator/Main.asm:206-229) is read from the stage file.
  */
+// Camera X selects section-owned art; drawFrame retains world-space projection.
+@CameraRelativeDraw(CameraRelativeDraw.Use.ART_SELECTION)
 public final class CdRobotGenerator extends CdObject implements ReevaluatingSolidObject, TouchResponseProvider,
         TouchResponseListener, ObjectVisualFacing.NonDirectional {
     /** move.b #$FA,oColType(a0) (Robot Generator/Main.asm:84). */
@@ -181,6 +184,11 @@ public final class CdRobotGenerator extends CdObject implements ReevaluatingSoli
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
-        if (routine != 0) drawFrame(CommonObjectArt.ROBOT_GENERATOR, mapFrame, hFlip(), vFlip());
+        if (routine == 0) return;
+        var camera = services().camera();
+        String sectionKey = com.openggf.game.soniccd.objects.ppz.PpzObjectArt.key(artProvider(),
+                com.openggf.game.soniccd.objects.ppz.PpzObjectArt.PPZ_GENERATOR, tileWord,
+                camera == null ? 0 : camera.getX());
+        drawFrame(sectionKey == null ? CommonObjectArt.ROBOT_GENERATOR : sectionKey, mapFrame, hFlip(), vFlip());
     }
 }
