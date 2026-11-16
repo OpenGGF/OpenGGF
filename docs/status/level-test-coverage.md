@@ -1,5 +1,11 @@
 # Level test coverage backlog
 
+AIZ1 background interpolation maintenance (2026-11-16): the
+[AIZ1 matrix](../architecture/validation/levels/s3k-aiz1-sonic.md#background-interpolation-maintenance-2026-11-16)
+records a positioned 180-pair pan regression for deformation-band continuity.
+Cold routes, other acts/viewports/teams and native pixel parity remain inherited
+obligations; whole-pixel slow-pan stepping is unchanged.
+
 CNZ/SOZ screen-event maintenance (2026-11-15): the
 [bounded audit](../architecture/audits/2026-11-15-s3k-low-zone-event-publication.md)
 records CNZ2 death shake and SOZ shared shake/table/restore checks. The linked
