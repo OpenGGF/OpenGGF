@@ -200,7 +200,7 @@ public final class CdHud extends CdObject implements FixedRuntimeObjectInstance,
         var camera = services().camera();
         if (renderer == null || camera == null) return;
         int palette = CdObjectArtProvider.tilePalette(tileWord);
-        renderer.drawFrameIndex(kind.frame, camera.getX() + SCREEN_X, camera.getY() + kind.screenY, false, false, palette);
+        renderer.drawFrameIndex(kind.frame, camera.getX() + CdScreenPosition.hudOrigin(services()) + SCREEN_X, camera.getY() + kind.screenY, false, false, palette);
     }
 
     @Override public int getPriorityBucket() { return RenderPriority.bucket(priority); }

@@ -150,9 +150,7 @@ abstract class MmzBossPiece extends CdBossPart {
     @Override
     public boolean isCustomOutOfRange(int cameraX) {
         if (!checksDespawn() || renderFlagOnScreen()) return false;
-        int chunk = x & 0xFF80;
-        int cameraChunk = (cameraX - 0x80) & 0xFF80;
-        return ((chunk - cameraChunk) & 0xFFFF) > 0x80 + (320 + 0x40) + 0x80;
+        return outsideDespawnRange(x, cameraX, false);
     }
 
     @Override

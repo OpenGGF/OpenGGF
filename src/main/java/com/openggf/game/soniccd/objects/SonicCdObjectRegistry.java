@@ -169,6 +169,11 @@ public final class SonicCdObjectRegistry extends AbstractObjectRegistry {
     }
 
     @Override
+    public com.openggf.level.objects.ObjectWindowingStrategy objectWindowingStrategy() {
+        return CdObjectWindowing.INSTANCE;
+    }
+
+    @Override
     public String getPrimaryName(int objectId) {
         ensureLoaded();
         if (currentLevel() instanceof CdLevel level) {

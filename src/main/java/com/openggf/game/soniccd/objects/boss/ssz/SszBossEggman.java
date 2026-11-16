@@ -186,7 +186,7 @@ public final class SszBossEggman extends SszBossPiece {
         Camera camera = services().camera();
         int px = px(player);
         if (px < 0xBE0) {                                       // blt.w loc_20C580
-            int left = (short) (px - 0xA0);
+            int left = (short) (px - (camera == null ? 160 : camera.getWidth() / 2));
             if (camera == null || left < camera.getMinX() || left > 0xB40) return;
             camera.setMinX((short) left);                       // left_bound and target_left_bound
             return;
@@ -383,7 +383,7 @@ public final class SszBossEggman extends SszBossPiece {
                     // offset from the screen centre (320/2).
                     int centre = (d0 + 0xA0) & 0xFFFE;
                     com.openggf.camera.CameraMotionInternalAccess.setHorizontalFocusOffset(camera,
-                            (short) (centre - 160));
+                            (short) (centre - camera.getWidth() / 2));
                 }
             }
         }
