@@ -14,6 +14,7 @@ public class SwScrlLbz extends AbstractZoneScrollHandler implements ScrollProjec
     private final byte[] deathEggWaveData;
     private final boolean detached;
     private LbzBackgroundEvents picture;
+    private boolean beforeScreenInit = true;
     public SwScrlLbz() { this(null, null); }
     public SwScrlLbz(byte[] waterlineData) { this(waterlineData, null); }
     public SwScrlLbz(byte[] waterlineData, byte[] deathEggWaveData) { this(waterlineData, deathEggWaveData, false); }
@@ -30,15 +31,18 @@ public class SwScrlLbz extends AbstractZoneScrollHandler implements ScrollProjec
                 && GameServices.module().getLevelEventProvider() instanceof Sonic3kLevelEventManager m ? m : null;
         var events = manager == null ? null : manager.getLbzEvents();
         if (events != null && events.backgroundPublication() != null) {
+            beforeScreenInit = false;
             picture = events.backgroundPublication();
             picture.copyPublishedWords(words);
         } else if (events != null) {
             // Before fresh ScreenInit there is no completed native picture.
             // Loading/rebuild must not manufacture or advance a detached owner.
             java.util.Arrays.fill(words, ((-x) & 0xFFFF) << 16);
+            beforeScreenInit = true;
             picture = null; minScrollOffset = maxScrollOffset = 0; vscrollFactorBG = 0;
             return;
         } else {
+            beforeScreenInit = false;
             // Explicit detached pictures own no gameplay continuation.
             if (picture == null) picture = LbzBackgroundEvents.detachedPresentation(waterlineData, deathEggWaveData);
             picture.update(words, x, y, frame, act);
@@ -52,5 +56,19 @@ public class SwScrlLbz extends AbstractZoneScrollHandler implements ScrollProjec
     @Override public short getVscrollFactorFG() { return picture == null ? 0 : picture.getVscrollFactorFG(); }
     @Override public int getShakeOffsetY() { return picture == null ? 0 : picture.getShakeOffsetY(); }
     short getLbz2HScrollWordForTest(int i) { return picture.getLbz2HScrollWordForTest(i); }
-    @Override public ScrollProjectionPhase captureProjection(ScrollProjectionContext context) { return picture.captureProjection(context); }
+    @Override public ScrollProjectionPhase captureProjection(ScrollProjectionContext context) {
+        if (!beforeScreenInit) return picture.captureProjection(context);
+        // loc_6310 (sonic3k.asm:7788-7798): initial DeformBgLayer precedes
+        // LevelSetup/ScreenInit. Freeze the already-published empty BG phase;
+        // sampling must not initialize, tick, or retain a detached event owner.
+        var output = context.nativeOutput();
+        return view -> {
+            int[] words = new int[view.height()];
+            java.util.Arrays.fill(words, ((-view.cameraX()) & 0xFFFF) << 16);
+            return new com.openggf.level.scroll.ScrollProjection(words, null, null, null,
+                    (short) (output.foregroundY() + view.cameraY() - context.cameraY()),
+                    output.backgroundY(), output.backgroundX(), output.backgroundPeriod(),
+                    output.shakeX(), output.shakeY(), output.tilemapMode());
+        };
+    }
 }

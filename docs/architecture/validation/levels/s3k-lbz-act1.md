@@ -130,3 +130,5 @@ The [LBZ publication audit](../../audits/2026-11-16-s3k-lbz-event-publication.md
 records event-owned shake and background continuation, the real-load renderer
 rebuild witness, and focused rewind/consumer verification. This local obligation
 does not certify additional viewport, donor, roster or full-route coverage.
+The smoke correction also witnesses the directed initial-process-sprites scroll
+load before ScreenInit, native/tall immutable sampling, and restore-failure propagation.

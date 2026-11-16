@@ -182,6 +182,59 @@ class TestS3kLbzScreenPublication {
         }
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(ints = {0, 1})
+    void directedLoadPreparesInitialScrollBeforeLbzScreenInit(int act) throws Exception {
+        com.openggf.tests.SharedLevel.load(SonicGame.SONIC_3K, Sonic3kZoneIds.ZONE_LBZ, act);
+        var nativeModule = GameServices.module();
+        com.openggf.game.session.SessionManager.clear();
+        com.openggf.game.GameModuleRegistry.setCurrent(new com.openggf.game.patch.DelegatingGameModule(nativeModule, "lbz-load-witness") {
+            @Override public <T> T getGameService(Class<T> type) {
+                if (type == com.openggf.level.scroll.DirectedScrollPresentation.class)
+                    return type.cast(com.openggf.level.scroll.DirectedScrollPresentation.ENABLED);
+                return super.getGameService(type);
+            }
+        });
+        TestEnvironment.activeGameplayMode();
+        var fixture = assertDoesNotThrow(() -> HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_LBZ, act).build());
+        var manager = (Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider();
+        byte[] before = manager.getLbzEvents().captureLbzState();
+        assertDoesNotThrow(() -> GameServices.level().recomputeParallaxOnlyForCurrentFrame());
+        assertArrayEquals(before, manager.getLbzEvents().captureLbzState(), "initial-scroll reconstruction must not dispatch ScreenInit or BG events");
+        var handler = (com.openggf.game.sonic3k.scroll.SwScrlLbz) GameServices.parallax().getHandler(Sonic3kZoneIds.ZONE_LBZ);
+        int x = fixture.camera().getX(), y = fixture.camera().getY();
+        int[] words = new int[224];
+        handler.update(words, x, y, GameServices.level().getFrameCounter(), act);
+        short foregroundY = handler.getVscrollFactorFG() == 0 ? (short) y : handler.getVscrollFactorFG();
+        var output = new com.openggf.level.scroll.ScrollProjection(words, null, null, null, foregroundY,
+                handler.getVscrollFactorBG(), handler.getBgCameraX(), handler.getBgPeriodWidth(),
+                handler.getShakeOffsetX(), handler.getShakeOffsetY(), handler.getBgTilemapUpdateMode());
+        var phase = handler.captureProjection(new com.openggf.level.scroll.ScrollProjectionContext(x, y,
+                GameServices.level().getFrameCounter(), act, 320, 224, output));
+        assertEquals(output, phase.sample(new com.openggf.level.scroll.ScrollView(x, y, 320, 224)));
+        assertEquals(384, phase.sample(new com.openggf.level.scroll.ScrollView(x + 31, y + 17, 577, 384)).horizontal().length);
+        assertArrayEquals(before, manager.getLbzEvents().captureLbzState(), "sampling the load phase cannot advance native state");
+        fixture.stepIdleFrames(1);
+    }
+
+    @Test void validatedRestorePropagatesUnexpectedOwnerFailures() throws Exception {
+        HeadlessTestFixture.builder().withZoneAndAct(Sonic3kZoneIds.ZONE_LBZ, 1).withSkippedZoneIntro().build();
+        var manager = (Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider();
+        var snapshot = manager.capture();
+        var owner = org.mockito.Mockito.spy(manager.getLbzEvents());
+        var marker = new IllegalStateException("unexpected LBZ owner failure");
+        var calls = new java.util.concurrent.atomic.AtomicInteger();
+        org.mockito.Mockito.doAnswer(invocation -> {
+            if (calls.getAndIncrement() == 0) throw marker;
+            return invocation.callRealMethod();
+        }).when(owner).restoreLbzState(org.mockito.ArgumentMatchers.any(byte[].class));
+        var field = Sonic3kLevelEventManager.class.getDeclaredField("lbzEvents");
+        field.setAccessible(true); field.set(manager, owner);
+        assertSame(marker, assertThrows(IllegalStateException.class, () -> manager.restore(snapshot)),
+                "a validated payload does not authorize swallowing unexpected runtime failures");
+    }
+
     @Test void rendererRebuildDoesNotConsumeTimedShake() {
         var fixture = HeadlessTestFixture.builder().withZoneAndAct(Sonic3kZoneIds.ZONE_LBZ, 1)
                 .withSkippedZoneIntro().build();

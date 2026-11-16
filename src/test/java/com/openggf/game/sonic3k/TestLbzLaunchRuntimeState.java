@@ -64,11 +64,11 @@ class TestLbzLaunchRuntimeState {
 
     @Test void malformedConstructorIdentityIsRejectedWithoutMutation() {
         var state = new LbzZoneRuntimeState(1, PlayerCharacter.KNUCKLES);
-        byte[] before = state.captureRuntimePublication();
+        byte[] before = state.captureNumericPublication();
         byte[] bad = before.clone();
         ByteBuffer.wrap(bad).putInt(4, Integer.MAX_VALUE);
         assertThrows(IllegalArgumentException.class, () -> state.restoreRuntimePublication(bad));
-        assertArrayEquals(before, state.captureRuntimePublication());
+        assertArrayEquals(before, state.captureNumericPublication());
     }
 
     @Test void malformedNativeRuntimeWordIsRejectedBeforeMutation() {

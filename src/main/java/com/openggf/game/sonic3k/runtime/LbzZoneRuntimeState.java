@@ -479,7 +479,7 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
 
     @Override public byte[] captureBytes() { return managed ? new byte[0] : events.captureLbzState(); }
     /** Constructor identity is structural to the scalar codec, so frame it explicitly. */
-    public byte[] captureRuntimePublication() {
+    public byte[] captureNumericPublication() {
         byte[] scalars = com.openggf.game.rewind.schema.ZoneEventSchemaSidecar.capture(this);
         return ByteBuffer.allocate(12 + scalars.length).putInt(actIndex)
                 .putInt(playerCharacter.ordinal()).putInt(scalars.length).put(scalars).array();
@@ -496,7 +496,7 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
         byte[] scalars = new byte[length]; in.get(scalars);
         if (!com.openggf.game.rewind.schema.ZoneEventSchemaSidecar.hasValidVariableLengthPayload(LbzZoneRuntimeState.class, scalars)) return false;
         com.openggf.game.rewind.schema.ZoneEventSchemaSidecar.restore(probe, scalars);
-        return java.util.Arrays.equals(bytes, probe.captureRuntimePublication())
+        return java.util.Arrays.equals(bytes, probe.captureNumericPublication())
                 && probe.activeInteriorLayoutMod >= 0 && probe.activeInteriorLayoutMod <= 4
                 && (probe.rollingDrumP1Angle & ~255) == 0 && (probe.rollingDrumP2Angle & ~255) == 0
                 && probe.launchYDelta == (short) probe.launchYDelta

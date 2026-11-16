@@ -3136,18 +3136,9 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     }
 
     private void restoreLbzSidecar(byte[] bytes) {
-        byte[] before = lbzEvents.captureLbzState();
-        try {
-            lbzEvents.restoreLbzState(bytes);
-            lbzEvents.discardHardwareWorkFacadesAfterRewind();
-        } catch (RuntimeException e) {
-            try {
-                lbzEvents.restoreLbzState(before);
-                lbzEvents.discardHardwareWorkFacadesAfterRewind();
-            } catch (RuntimeException rollbackFailure) {
-                e.addSuppressed(rollbackFailure);
-            }
-            LOG.warning("Skipping malformed LBZ zone-event rewind sidecar: " + e.getMessage());
-        }
+        // Complete structural and bound-identity preflight already ran before
+        // super.restore. Unexpected owner/service failures must abort restore.
+        lbzEvents.restoreLbzState(bytes);
+        lbzEvents.discardHardwareWorkFacadesAfterRewind();
     }
 }

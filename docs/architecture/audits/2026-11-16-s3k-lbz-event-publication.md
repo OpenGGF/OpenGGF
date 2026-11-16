@@ -8,42 +8,19 @@ This revision records the lead's independent review and its correction witnesses
 
 ## Native owners and design
 
-- `LevelSetup` (sonic3k.asm:102231-102240) clears the flag and both shake offsets.
-  The shared Java boolean survives level reset and is not this native state.
-- `LBZ2BGE_DeathEgg` (sonic3k.asm:111531-111546) reads the whole flag word.
-  `loc_62942` (sonic3k.asm:129688-129696) and `loc_62A0A`
-  (sonic3k.asm:129756-129763) read its high byte. Ship `loc_8D450`
-  (sonic3k.asm:193052-193058) sets that byte; `loc_8D47C`
-  (sonic3k.asm:193069-193080) clears the word. Objects now write only this zone flag.
-- `Sonic3kLBZEvents` owns `S3kScreenShake`, foreground copies, the numeric
-  runtime publication and `LbzBackgroundEvents`. The managed registry adapter
-  captures identity with no duplicate byte payload; constructor identity is
-  explicitly framed because generic scalar codecs omit final fields.
-- `LBZ1_ScreenEvent` (sonic3k.asm:110931-110934) and `LBZ2_ScreenEvent`
-  (sonic3k.asm:111353-111356) use the preceding shake offset before BG setup.
-  `ShakeScreen_Setup` (sonic3k.asm:104234-104255) reads the native primary player
-  and level clock; positive flags above $14 continue into the second table.
-- `LBZ2_DeathEggMoveScreen` (sonic3k.asm:112111-112187) owns FG/BG speeds,
-  accumulators, water target and direct ship movement. Foreground copies precede
-  these live-camera writes. Ship movement is a non-consuming per-dispatch effect;
-  a skipped movement routine publishes zero. Native routine >= 6 gates movement.
-- `LBZ2_Deform` (sonic3k.asm:111632-111711) owns waterline/art/camera outputs;
-  `LBZ2_DeathEggDeform` (sonic3k.asm:111898-111950) retains HScroll words and
-  Death Egg latches. Subtracting shake from the already-shaken copy recovers its
-  base, rather than subtracting again from live Y. The cloud longword advances
-  per deformation dispatch (sonic3k.asm:111803-111804,112045-112046).
-- `SwScrlLbz` reads completed output. Explicit detached pictures are presentation
-  only; an uninitialized live owner renders flat without creating or ticking one.
-  The composed payload captures words, latches, clock/source coordinates and all
-  three shake words. Rebuilds consume nothing. Same-build only; no migration.
-- Existing layout/collision/terrain and window owners remain scoped to LBZ.
-  No new background collision difference or fixed-bug alternative is introduced.
-  Existing act matrices retain full-route/viewport/donor/roster certification gaps.
-
-Rejected designs: retaining renderer ownership with a bigger snapshot preserves
-call-count effects; moving shake alone leaves cloud/table state outside the owner;
-object-computed offsets duplicate native clock and death-gate decisions.
-The original real-load witness observed shake -5 becoming 0 on a same-frame rebuild.
+`Sonic3kLBZEvents` owns shake, foreground copies, numeric runtime publication and
+`LbzBackgroundEvents`. One validated same-build payload includes retained tables,
+latches, sampled clock/source geometry and constructor identity. No migration.
+`SwScrlLbz` projects it; objects write only the zone flag. The shared shake API,
+game-wide boolean semantics and other zone owners remain unchanged.
+`LevelSetup` (sonic3k.asm:102231-102240) clears the three native shake words;
+`ShakeScreen_Setup` (sonic3k.asm:104234-104255) advances them after the FG read.
+The original audit maps word versus high-byte flag readers and every native owner.
+Native movement writes the live camera after the foreground copy; cloud scrolling
+advances $E00 per deformation dispatch. The shipped arithmetic is retained.
+Rejected: renderer ownership plus a bigger snapshot; shake-only extraction leaving
+cloud/table state elsewhere; object-computed offsets duplicating native setup.
+The initial real-load red witness observed shake -5 becoming 0 on renderer rebuild.
 
 ## Independent review dispositions
 
@@ -86,42 +63,69 @@ No substantive review finding was rejected. The sweep also found two disallowed
 LBZ service-facade reads (one from the initial delivery); existing event helpers
 replace them, with the runtime-access guard as the failing witness.
 
+## Lead smoke correction — a9202b5388
+
+All three new findings hold; none was rejected.
+
+1. **Fixed:** initial `DeformBgLayer` precedes LevelSetup/ScreenInit at
+   `loc_6310` (sonic3k.asm:7788-7798). The live pre-ScreenInit flat output now
+   has an explicit immutable projection phase; it does not create/tick a BG owner.
+   Both actual directed-load paths (acts 1/2) and native/tall sampling are witnessed.
+   The load follows SharedLevel → directed module → HeadlessTestFixture, as the
+   Typing Hedgehog host does. Native publication bytes stay unchanged by sampling.
+2. **Fixed:** the audio guard bans identifiers from the superseded split-runtime
+   and recording-lease-switch system. Unified audio presentation owns cadence,
+   PCM, history and leases. LBZ has no such audio role: its unrelated numeric
+   snapshot encoder is now named `captureNumericPublication`; no guard exemption.
+3. **Fixed:** complete LBZ structural/bound-identity validation already precedes
+   manager mutation. The obsolete catch/rollback/logger would swallow unexpected
+   valid-payload failures. It is removed; unexpected owner/service errors propagate.
+   Exactly two retired LBZ inventory rows were deleted; no new allowances added.
+   A fault-injected owner witness proves the original exception reaches the caller.
+
 ## Verification ledger and limits
 
-All Maven commands use `python3 tools/testing/maven_queue.py -Dmse=off` (`Q`).
-Except the access guard, commands also use `-Dopenggf.headless.gl=surfaceless-egl`.
-Selectors below are single quoted `-Dtest=...` arguments, followed by `test`.
-ROM discovery reported all configured properties found, `missing=none`.
-Logs are disposable worktree-local `target/lbz-review-*.log`; none are committed.
+The [previous correction ledger](https://github.com/OpenGGF/OpenGGF/blob/a9202b53880f01b81b028876d29bdaae3111b176/docs/architecture/audits/2026-11-16-s3k-lbz-event-publication.md)
+records all earlier red runs and the 720-test/trace qualification at that head.
+Current commands use `python3 tools/testing/maven_queue.py -Dmse=off
+-Dopenggf.headless.gl=surfaceless-egl` (`Q`), never `-Pguards`.
+All selectors are single quoted `-Dtest=...` arguments, followed by `test`.
+ROM discovery reports all configured properties found, `missing=none`.
+Worktree-local logs are `target/lbz-smoke-*.log`; no generated reports are committed.
 
-- `Q -Dtest=TestS3kLbzScreenPublication,TestS3kLbz1MinibossAndTransitionHeadless,TestS3kLbz1KnucklesSequenceHeadless test`
-  (`red`): 53 tests, 5 failures, 2 fixture errors, 0 skips. Null setter/startup
-  setup was corrected before attributing the implementation defects.
-- `Q -Dtest=TestS3kLbzScreenPublication,TestS3kLbz1MinibossAndTransitionHeadless test`
-  (`red2`): 23 tests, 7 failures, 0 errors/skips; all core review defects witnessed.
-- First selection again (`focused`): 53 tests, 1 next-frame fixture failure,
-  0 errors/skips. Completing startup fixes that witness; core cases passed.
-- `Q L,G test` (`local`): 706 tests, 1 fixture-clock failure, 0 errors/skips.
-  The detach component test now explicitly sets the native level clock it declares.
-- `Q -Dtest=TestS3kLbzScreenPublication,TestS3kAdditionalScrollProjection test`
-  (`context-red`): 28 tests, 2 failures, 0 errors/skips: foreign bound identity
-  still mutated manager state, and transferred projection used new BG coordinates.
-- `Q L,G test` (`qualified`): 708 tests, 0 failures/errors/skips.
-- `Q -Dtest=TestZoneEventRuntimeAccessGuard test` (`access-red`): 12 tests,
-  1 failure, 0 errors/skips, identifying exactly the two LBZ service calls.
-- Final `Q L,G,TestZoneEventRuntimeAccessGuard test` (`final-local`): 720 tests,
-  0 failures/errors/skips. Final `Q T test` (`final-traces`): 5 inherited assertion
-  failures, 0 errors/skips; all five full JSON reports remain identical to base.
-- Base and candidate `Q T test` (`traces-baseline`, `traces`): each 5 assertion
-  failures, 0 errors/skips. Every key in all five full report JSON files matches.
+- `Q -Dtypinghog.sections=s3k:6:1 -Dtest=P,TestTypingHedgehogSections#sonic3kSections,A,B,Z,O test`
+  (`red`): 111 tests, 5 failures, 1 typing-load error, 0 skips. Both directed-load
+  witnesses reproduce the NPE; the owner-failure witness exposes swallowing;
+  audio/broad-catch guards reproduce the lead's exact new violations.
+- The same selection (`focused`): 111 tests, 0 failures/errors/skips.
+- `Q -Dtest=L,G,A,B,O,TestTypingHedgehogSections test` (`qualified`):
+  **834 tests, 0 failures/errors/skips**, including all 27 typing sections.
+- `Q -Dtest=*Lbz*TraceReplay test` (`traces`): 5 inherited assertion failures,
+  0 errors/skips. Every key in all five full JSON reports remains identical to
+  the qualified common-base reports. Baseline reused: same e676eb5086 source,
+  unchanged trace classes/fixtures/ROMs, Java 25, selection and execution properties;
+  prior baseline equality was preserved before replay overwrote the current files.
+- Strict citations retain the same three baseline manager stales below; all new
+  citations resolve. `git diff --check` passes. No categories/full-suite sweep.
 
-`L = *Lbz*,*LBZ*,!**/trace/**`.
+Aliases: `P = TestS3kLbzScreenPublication`, `A = TestAudioPresentationArchitectureGuard`,
+`B = TestBroadCatchSwallowingGuard`, `Z = TestZoneEventRuntimeAccessGuard`,
+`O = TestObjectPhysicsStandardizationGuard`, `L = *Lbz*,*LBZ*,!**/trace/**`.
 `G = TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,
 TestSonic3kDecodingUtils,TestZoneEventRewindSchemaGuard,TestSonic3kLevelEventRewindSnapshot,
-TestS3kZoneRuntimeStateAdapters,TestS3kAdditionalScrollProjection`.
-`T = *Lbz*TraceReplay`. Baseline is a detached cow checkout of the common base.
+TestS3kZoneRuntimeStateAdapters,TestS3kAdditionalScrollProjection,Z`.
 
-| Trace suffix | Frames | Baseline errors | First error |
+Actual qualified log lines confirm each requested class executed by name:
+
+| Class | Tests | Failures/errors/skips |
+| --- | ---: | --- |
+| TestAudioPresentationArchitectureGuard | 45 | 0/0/0 |
+| TestBroadCatchSwallowingGuard | 4 | 0/0/0 |
+| TestZoneEventRuntimeAccessGuard | 12 | 0/0/0 |
+| TestObjectPhysicsStandardizationGuard | 35 | 0/0/0 |
+| TestTypingHedgehogSections | 27 | 0/0/0 |
+
+| Trace suffix | Frames | Baseline/candidate errors | First error |
 | --- | ---: | ---: | --- |
 | KnucklesLbz2BigArm | 6309 | 263 | 76, rings |
 | LbzZoneSlice | 46075 | 2091 | 30582, tails_y |
@@ -129,10 +133,9 @@ TestS3kZoneRuntimeStateAdapters,TestS3kAdditionalScrollProjection`.
 | SonicTailsLbzSegment | 32581 | 4940 | 1171, x |
 | TailsFullChainLbzSegment | 42161 | 3281 | 0, y |
 
-Strict citations retain three baseline manager stales (`ShakeScreen_Setup`,
-`Change_Act2Sizes`, `Process_Sprites`); new LBZ citations have none. An unrelated
-scddisasm checkout warning is inherited. No category/full-suite/smoke sweep ran;
-the lead owns smoke/review. There is no pixel or new full-route certification.
-Queue wait and Maven execution are logged separately; user wait is zero.
-Uninstrumented investigation/edit time is unknown. Final local queue wait was at
-least 120s, Maven execution 1m47s; trace wait at least 271s, execution 1m17s.
+Inherited manager citations: `ShakeScreen_Setup`, `Change_Act2Sizes`,
+`Process_Sprites`; an unrelated scddisasm checkout warning also remains.
+The lead owns combined smoke/review. No new pixel/full-route certification.
+Final local queue wait was under 30s reporting resolution, Maven execution 1m10s;
+trace queue wait at least 90s, execution 1m15s. User wait is zero; uninstrumented
+investigation/edit time is unknown. All Maven jobs completed before delivery.

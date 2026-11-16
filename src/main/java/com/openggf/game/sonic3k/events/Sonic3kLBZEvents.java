@@ -1937,7 +1937,7 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
     public byte[] captureLbzState() {
         byte[] scalars = com.openggf.game.rewind.schema.ZoneEventSchemaSidecar.capture(this);
         byte[] background = backgroundPublication == null ? new byte[0] : backgroundPublication.capturePublication();
-        byte[] runtime = runtimePublication == null ? new byte[0] : runtimePublication.captureRuntimePublication();
+        byte[] runtime = runtimePublication == null ? new byte[0] : runtimePublication.captureNumericPublication();
         var b = java.nio.ByteBuffer.allocate(32 + scalars.length + background.length + runtime.length);
         b.putInt(0x4C425A31).putInt(1).putInt(scalars.length).put(scalars);
         screenShake.captureTo(b);

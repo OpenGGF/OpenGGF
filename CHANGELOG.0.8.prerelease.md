@@ -883,7 +883,9 @@ under the matching area heading; see the
   rather than a boolean retained by another zone. Its in-play act transition retains
   the background publication and cloud longword; shake/waves use the level clock,
   final fall retains shake words, and invalid rewind payloads are rejected before
-  manager state changes. The seamless reload retains HCZ1 deformation,
+  manager state changes. Early directed-load scroll has an immutable pre-ScreenInit
+  phase; unexpected validated-restore failures propagate to their caller.
+  The seamless reload retains HCZ1 deformation,
   and the geyser begins shaking on its native first dispatch. Scene
   presentation spells out capture, restoration and failure cleanup in operation
   order, and pixel-oracle failures retain the rendering mode and captured frame.
