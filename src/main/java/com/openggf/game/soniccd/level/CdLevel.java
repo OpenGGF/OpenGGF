@@ -74,6 +74,7 @@ public final class CdLevel extends AbstractLevel implements com.openggf.game.int
     private final com.openggf.game.internal.NativeProjectSource projectSource;
 
     @Override public com.openggf.game.internal.NativeProjectSource nativeProjectSource() { return projectSource; }
+    @Override public int[] nativeProjectStart() { return new int[]{startX, startY}; }
     // --- common2 ---
     private com.openggf.game.soniccd.objects.common.CdLevelFlags flags;
 

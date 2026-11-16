@@ -228,6 +228,11 @@ public final class SonicCdGameModule implements GameModule {
     public <T> T getGameService(Class<T> type) {
         if (type == com.openggf.game.internal.NativeProjectHost.class) return type.cast(
                 new com.openggf.game.internal.NativeProjectHost() {
+                    @Override public String stageLabel(int zone, int act) {
+                        var stage = SonicCdZoneRegistry.payload(zone, act).stage();
+                        return com.openggf.i18n.UiMessages.text("editor.project.native_stage", java.util.Map.of(
+                                "act", stage.actNumber(), "period", stage.period().name().toLowerCase(java.util.Locale.ROOT).replace('_', ' ')));
+                    }
                     @Override public Target target(com.openggf.game.internal.NativeProjectSource source) throws java.io.IOException {
                         if (game == null) throw new java.io.IOException("Open the project disc before native playtesting");
                         var payload = new com.openggf.game.soniccd.level.CdStageLoader(game.disc()).validate(source);

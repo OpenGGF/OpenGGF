@@ -57,6 +57,9 @@ public final class EditorProjectDocument {
                     && !nativeSource.equals(nativeLevel.nativeProjectSource()))
                 throw new IllegalArgumentException("Cannot replace a native project with a different source stage");
             value.validateAgainst(source, nativeSource.blockGridSide());
+            if (value.startX() >= (long) source.getMap().getWidth() * source.getBlockPixelSize()
+                    || value.startY() >= (long) source.getMap().getHeight() * source.getBlockPixelSize())
+                throw new IllegalArgumentException("Native project start must lie inside terrain dimensions");
         }
     }
 
@@ -65,6 +68,7 @@ public final class EditorProjectDocument {
     }
 
     public static EditorProjectDocument cloneLevel(EditorProjectMetadata metadata, Level source) {
+        if (source instanceof com.openggf.game.internal.NativeProjectLevel) return create(metadata, source);
         return create(metadata, EditorProjectLevel.withSpareSlots(EditorProjectLevel.copyOf(source)));
     }
 

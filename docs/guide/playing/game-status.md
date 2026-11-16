@@ -255,8 +255,8 @@ Future). `SonicCdEndingCaptureTool --ending good|bad` films an ending.
   on a CD host is refused until stage-owned animation families have a composition
   adapter. Editor persistence now has a bounded disc/stage source-reference foundation;
   native edit replay now retains the loaded game owners, source layout semantics
-  and object secondary bytes. Creator-facing native project creation, playtest and
-  import integration remain unfinished. Stageplay remains a separate lane. See the
+  and object secondary bytes. Creator-facing project creation selects a zone, act
+  and time period; source-backed playtests reload the native owners. Stageplay remains a separate lane. See the
   [CD mod contracts](../../modding/ggfmod.md#sonic-cd-runtime-mods).
 - The master title has no Setup page for Sonic CD: it always starts with
   Sonic alone, under the all-games display and rewind settings.

@@ -488,8 +488,9 @@ under the matching area heading; see the
   unchanged. Internal edit replay reloads the native stage through its game owner
   and applies authored terrain, tiles, objects and rings, retaining loop semantics
   and existing object secondary bytes after moves. Source-backed playtests now
-  use fresh native stage owners and authored spawn coordinates; creator-facing
-  creation and import integration remain pending.
+  use fresh native stage owners and authored spawn coordinates. The creator menu
+  offers CD zones with act/period labels and creates a source-backed stage copy.
+  Native player starts retain terrain coordinates independently of camera limits.
 
 - **Sonic CD mod host:** admit `scd` patch manifests and `any` registrations;
   route hosted runs through the disc launcher, expose file-addressed scene and

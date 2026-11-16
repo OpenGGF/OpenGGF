@@ -37,7 +37,7 @@ public record EditorProjectMetadata(GameId gameId, String name, int sourceZone, 
             throw new IllegalArgumentException("Project name/source identity exceeds its bounded format");
         }
         EditorProjectLevel.validateBounds(minX, maxX, minY, maxY);
-        if (startX < minX || startX > maxX || startY < minY || startY > maxY) {
+        if (startX < 0 || startX > 0xFFFE || startY < 0 || startY > 0x7FFF) {
             throw new IllegalArgumentException("Project start must lie inside level bounds");
         }
         if (gameId == GameId.S3K && objectZoneSet == null) {
@@ -81,6 +81,8 @@ public record EditorProjectMetadata(GameId gameId, String name, int sourceZone, 
 
     public void validateAgainst(Level level) {
         Objects.requireNonNull(level, "level");
+        if (startX < minX || startX > maxX || startY < minY || startY > maxY)
+            throw new IllegalArgumentException("Project start must lie inside level bounds");
         validateAgainst(level, gameId == GameId.S1 ? 16 : 8);
     }
 

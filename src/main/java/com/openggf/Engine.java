@@ -2056,10 +2056,17 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			editorProjectDataSource = currentWorld.getDataSource();
 		} else {
 			// Read and identify the selected ROM before retiring an open project's runtime.
-			Rom candidateRom = romManager.getSecondaryRom(game.code());
-			var detected = romDetectionService.detectAndCreateModule(candidateRom);
-			if (detected.isEmpty() || detected.orElseThrow().getGameId() != game)
-				throw new IOException("Configure a supported " + game.code() + " ROM before creating this project");
+            var hosted = com.openggf.game.launch.HostedMediaLaunch.hostedGame(game.code());
+            if (hosted.isPresent()) {
+                try (var verification = new com.openggf.game.launch.HostedMediaLaunch()) {
+                    verification.open(game, configService, com.openggf.game.save.SavePaths.root());
+                }
+            } else {
+                Rom candidateRom = romManager.getSecondaryRom(game.code());
+                var detected = romDetectionService.detectAndCreateModule(candidateRom);
+                if (detected.isEmpty() || detected.orElseThrow().getGameId() != game)
+                    throw new IOException("Configure a supported " + game.code() + " ROM before creating this project");
+            }
 			if (masterTitleScreen != null) { masterTitleScreen.cleanup(); masterTitleScreen = null; }
 			refreshLaunchSessionCachedConfig();
 			configService.setConfigValue(SonicConfiguration.DEFAULT_ROM, game.code());

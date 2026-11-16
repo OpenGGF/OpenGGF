@@ -577,13 +577,13 @@ permission to redistribute them.
 
 ### Sonic CD native projects
 
-Native CD stage projects and CD level imports are not available yet. A native
-stage needs its disc program, PLC state and complete object placement data;
-copying it into the portable authored-level format would lose that context.
-The internal native replay path can reload a saved source-backed document and
-apply terrain, tile, object and ring edits without replacing its native level.
-Existing object placement IDs retain their second subtype and time mask after
-a move; new IDs default to second subtype zero and the selected period only.
-Replay currently requires the original layout dimensions. This internal path is
-connected to the Playtest action for source-backed documents; project creation
-UI and content import integration remain pending.
+Choose **Sonic CD**, a zone, then an act and time period to create a project
+from that native stage. The verified USA disc is required. Projects retain a
+bounded source reference, the original layout dimensions and authored edits.
+Player starts use terrain coordinates; native camera limits remain camera origins.
+Save/reopen and cloning preserve the source. Playtest reloads the native stage
+through the game owner before applying terrain, tile, object and ring edits.
+Existing placement IDs retain their second subtype and time mask after moves;
+new IDs default to second subtype zero and the selected period only.
+Resized native layouts are refused by replay. Flat directory export is refused;
+retain the source-backed `.ogfproject` rather than substituting a portable level.

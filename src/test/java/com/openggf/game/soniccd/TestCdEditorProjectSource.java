@@ -12,6 +12,47 @@ import static org.junit.jupiter.api.Assertions.*;
 class TestCdEditorProjectSource {
     @TempDir Path directory;
 
+    @Test void creatorSelectsCdZoneActAndPeriod() throws Exception {
+        try (var disc = CdDiscDataSource.open(CdTestMedia.usaCue())) {
+            var module = new SonicCdGameModule();
+            var game = (SonicCdGame) module.createGame(disc);
+            var shown = new java.util.concurrent.atomic.AtomicReference<EditorProjectDocument>();
+            var host = new EditorProjectWorkspace.Host() {
+                public com.openggf.game.GameModule selectGame(GameId id) { assertEquals(GameId.SCD, id); return module; }
+                public com.openggf.game.GameModule currentModule() { return module; }
+                public com.openggf.level.Level loadLibrary(int z, int a) throws java.io.IOException {
+                    return game.loadLevel(module.getZoneRegistry().getLevelDataForZone(z).get(a).levelIndex());
+                }
+                public String sourceFingerprint() { return disc.identity(); }
+                public com.openggf.game.session.EditorCursorState cursor() { return new com.openggf.game.session.EditorCursorState(0,0); }
+                public void finishPendingEdits() { }
+                public void showDocument(EditorProjectDocument d) { shown.set(d); }
+                public void playtest(EditorProjectDocument d, boolean cursor) { }
+                public void closeDocument() { }
+                public void menuClosed(EditorProjectDocument d) { }
+                public void execute(com.openggf.editor.EditorCommand c) { c.apply(); }
+                public void status(String text) { }
+            };
+            var workspace = new EditorProjectWorkspace(host);
+            workspace.menu().onShow(menu -> {});
+            workspace.openMenu(); workspace.menu().runAction(0);
+            var games = workspace.menu().actionView().rows();
+            int cd = java.util.stream.IntStream.range(0, games.size()).filter(i -> games.get(i).label().contains("CD")).findFirst().orElseThrow();
+            workspace.menu().runAction(cd); workspace.menu().runAction(0);
+            assertNull(workspace.menu().error());
+            assertTrue(workspace.menu().actionView().rows().get(1).label().toLowerCase().contains("past"));
+            workspace.menu().runAction(1);
+            workspace.menu().setValue("name", "Past project"); workspace.menu().submit();
+            assertNull(workspace.menu().error());
+            var document = shown.get(); assertNotNull(document);
+            assertEquals("R11B", document.nativeSource().stage());
+            assertEquals("PAST", document.nativeSource().period());
+            assertEquals(1, document.metadata().sourceAct());
+            assertEquals(game.currentLevel().startX(), document.metadata().startX());
+            assertEquals(game.currentLevel().startY(), document.metadata().startY());
+        }
+    }
+
     @Test void sourceProjectPlaytestUsesNativeRuntime() throws Exception {
         try (var disc = CdDiscDataSource.open(CdTestMedia.usaCue())) {
             var module = new SonicCdGameModule();

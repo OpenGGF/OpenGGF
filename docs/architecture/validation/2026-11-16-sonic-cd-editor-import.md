@@ -237,3 +237,21 @@ Final result: **54 passed, zero failures/errors/skips**, verified media found,
 An interrupted attempt stopped at test compilation; it supplies no test result.
 No category run started. Next: creator game/stage selection, import round trip,
 render and the requested final smoke; PR remains draft.
+
+## Step 3: creator stage selection
+
+Starting head `0412bf9d2a`. The UI regression failed first because CD was absent
+from game choices (`target/cd-creator-red.log`, one error, zero skips). The creator
+menu now chooses CD, zone, and labelled act/period, then copies the native stage
+with its source reference and original dimensions. Hosted-media selection verifies
+the disc before retiring the current editor. Native starts use terrain coordinates;
+portable documents still validate their starts against authored camera bounds.
+Clone preserves the native capability. An intermediate label assertion exposed a
+missing numeric ARB placeholder declaration; the declaration was added.
+
+Final focused selection is the same eleven-class editor/import/API/architecture/
+GLFW selection recorded above: **164 passed, zero failures/errors/skips**, verified
+disc found, `target/cd-creator-focused2.log`. Maven execution 1:04; admission wait
+approximately five minutes, user wait zero. `git diff --check` passes. No category
+run started. Next: import/source round-trip and documented flat export refusal,
+then edited playtest pictures and the final smoke. PR stays draft.
