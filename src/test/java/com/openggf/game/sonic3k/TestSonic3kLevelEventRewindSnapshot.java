@@ -1057,7 +1057,7 @@ class TestSonic3kLevelEventRewindSnapshot {
     }
 
     @Test
-    void corruptSameLengthMhzSchemaPayloadRollsBackAndDoesNotAbortLaterZoneRestore() throws Exception {
+    void corruptSameLengthMhzPayloadRejectsWholeManagerBeforeMutation() throws Exception {
         Sonic3kLevelEventManager iczSource = new Sonic3kLevelEventManager();
         iczSource.initLevel(Sonic3kZoneIds.ZONE_ICZ, 0);
         Sonic3kICZEvents icz = (Sonic3kICZEvents) get(iczSource, "iczEvents");
@@ -1088,7 +1088,7 @@ class TestSonic3kLevelEventRewindSnapshot {
         payloadSource.setSpecialEventsRoutine(1);
         set(payloadSource, "seasonPaletteMode", Sonic3kMHZEvents.SeasonPaletteMode.AUTUMN);
         byte[] corruptPayload = corruptMhzSeasonPaletteModeOrdinal(
-                ZoneEventSchemaSidecar.capture(payloadSource), 99);
+                payloadSource.captureMhzState(), 99);
         LevelEventSnapshot malformedSnapshot = snapshotWithMhzPayload(iczSnapshot, corruptPayload);
 
         assertDoesNotThrow(() -> target.restore(malformedSnapshot),
@@ -1099,12 +1099,12 @@ class TestSonic3kLevelEventRewindSnapshot {
                 "schema-corrupt MHZ sidecar must roll back partial MHZ field writes");
         assertEquals(Sonic3kMHZEvents.SeasonPaletteMode.GOLD, get(mhzTarget, "seasonPaletteMode"),
                 "schema-corrupt MHZ sidecar must roll back partial MHZ field writes");
-        assertTrue(iczTarget.isEventsFg5());
-        assertEquals(8, iczTarget.getIcz1BackgroundRoutine());
+        assertFalse(iczTarget.isEventsFg5());
+        assertEquals(0, iczTarget.getIcz1BackgroundRoutine());
     }
 
     @Test
-    void nullMhzSpikeArrayPayloadRollsBackAndDoesNotAbortLaterZoneRestore() throws Exception {
+    void nullMhzSpikeArrayPayloadRejectsWholeManagerBeforeMutation() throws Exception {
         Sonic3kLevelEventManager iczSource = new Sonic3kLevelEventManager();
         iczSource.initLevel(Sonic3kZoneIds.ZONE_ICZ, 0);
         Sonic3kICZEvents icz = (Sonic3kICZEvents) get(iczSource, "iczEvents");
@@ -1133,7 +1133,7 @@ class TestSonic3kLevelEventRewindSnapshot {
         payloadSource.setBossFlag(false);
         payloadSource.setSpecialEventsRoutine(1);
         byte[] corruptPayload = corruptMhzSpikeTiersLength(
-                ZoneEventSchemaSidecar.capture(payloadSource), -1);
+                payloadSource.captureMhzState(), -1);
         LevelEventSnapshot malformedSnapshot = snapshotWithMhzPayload(iczSnapshot, corruptPayload);
 
         assertDoesNotThrow(() -> target.restore(malformedSnapshot),
@@ -1150,8 +1150,8 @@ class TestSonic3kLevelEventRewindSnapshot {
                 "schema-null MHZ spike array must restore the previous non-null active array");
         assertArrayEquals(new int[0], (int[]) get(mhzTarget, "endBossArenaSpikeY"),
                 "schema-null MHZ spike array must restore the previous non-null Y array");
-        assertTrue(iczTarget.isEventsFg5());
-        assertEquals(8, iczTarget.getIcz1BackgroundRoutine());
+        assertFalse(iczTarget.isEventsFg5());
+        assertEquals(0, iczTarget.getIcz1BackgroundRoutine());
     }
 
     @Test
@@ -1208,7 +1208,7 @@ class TestSonic3kLevelEventRewindSnapshot {
         mhzPayloadSource.init(1);
         mhzPayloadSource.setBossFlag(true);
         LevelEventSnapshot malformedSnapshot = snapshotWithCorruptMhzLength(
-                snapshotWithMhzPayload(iczSnapshot, ZoneEventSchemaSidecar.capture(mhzPayloadSource)),
+                snapshotWithMhzPayload(iczSnapshot, mhzPayloadSource.captureMhzState()),
                 Integer.MAX_VALUE);
 
         Sonic3kLevelEventManager target = new Sonic3kLevelEventManager();
@@ -1244,7 +1244,7 @@ class TestSonic3kLevelEventRewindSnapshot {
         mhzPayloadSource.init(1);
         mhzPayloadSource.setBossFlag(true);
         LevelEventSnapshot malformedSnapshot = snapshotWithCorruptMhzLength(
-                snapshotWithMhzPayload(iczSnapshot, ZoneEventSchemaSidecar.capture(mhzPayloadSource)),
+                snapshotWithMhzPayload(iczSnapshot, mhzPayloadSource.captureMhzState()),
                 0);
 
         Sonic3kLevelEventManager target = new Sonic3kLevelEventManager();
@@ -1894,16 +1894,16 @@ class TestSonic3kLevelEventRewindSnapshot {
         Sonic3kMHZEvents zero = new Sonic3kMHZEvents();
         zero.init(1);
         set(zero, "seasonPaletteMode", Sonic3kMHZEvents.SeasonPaletteMode.GREEN);
-        byte[] zeroPayload = ZoneEventSchemaSidecar.capture(zero);
+        byte[] zeroPayload = zero.captureMhzState();
 
         Sonic3kMHZEvents one = new Sonic3kMHZEvents();
         one.init(1);
         set(one, "seasonPaletteMode", Sonic3kMHZEvents.SeasonPaletteMode.AUTUMN);
-        byte[] onePayload = ZoneEventSchemaSidecar.capture(one);
+        byte[] onePayload = one.captureMhzState();
 
         assertEquals(zeroPayload.length, payload.length);
         int changedByte = -1;
-        for (int i = 0; i < zeroPayload.length; i++) {
+        for (int i = 12; i < zeroPayload.length; i++) {
             if (zeroPayload[i] != onePayload[i]) {
                 assertEquals(-1, changedByte,
                         "seasonPaletteMode ordinal should be the only byte changed by this probe");
@@ -1920,16 +1920,16 @@ class TestSonic3kLevelEventRewindSnapshot {
     private static byte[] corruptMhzSpikeTiersLength(byte[] payload, int invalidLength) throws Exception {
         Sonic3kMHZEvents zero = new Sonic3kMHZEvents();
         zero.init(1);
-        byte[] zeroPayload = ZoneEventSchemaSidecar.capture(zero);
+        byte[] zeroPayload = zero.captureMhzState();
 
         Sonic3kMHZEvents one = new Sonic3kMHZEvents();
         one.init(1);
         set(one, "endBossArenaSpikeTiers", new int[] { 0 });
-        byte[] onePayload = ZoneEventSchemaSidecar.capture(one);
+        byte[] onePayload = one.captureMhzState();
 
         assertEquals(zeroPayload.length, payload.length);
         int changedByte = -1;
-        for (int i = 0; i < Math.min(zeroPayload.length, onePayload.length); i++) {
+        for (int i = 12; i < Math.min(zeroPayload.length, onePayload.length); i++) {
             if (zeroPayload[i] != onePayload[i]) {
                 changedByte = i;
                 break;

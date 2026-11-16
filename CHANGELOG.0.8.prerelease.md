@@ -7,6 +7,12 @@ under the matching area heading; see the
 
 ## Gameplay and presentation
 
+- **Mushroom Hill screen events:** the end boss now starts the original timed
+  horizontal shake at its final escape threshold, applied once to foreground,
+  sprites and render bounds through the native camera copy. Background loop, animation
+  bands and pillar collision positions belong to screen events and restore
+  together with shake; rebuilding scroll output no longer changes gameplay.
+
 - **Sonic CD (development preview):** Sonic CD runs from the user's own USA
   disc image (a cue sheet and its tracks, or a lossless CHD made from them with
   MAME's chdman, named by `roms.soniccd` or found in the ROM folder) as
