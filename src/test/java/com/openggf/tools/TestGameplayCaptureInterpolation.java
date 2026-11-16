@@ -17,6 +17,7 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
@@ -89,6 +90,27 @@ class TestGameplayCaptureInterpolation {
             checked++;
         }
         assertTrue(checked > 0, "the run must reach a camera step of " + PICTURES + " pixels or more");
+    }
+
+    @Test
+    void aSessionWithoutTheOptInRefusesPhasedPicturesAndStaysExact() throws Exception {
+        Path rom = RomTestUtils.ensureSonic3kRomAvailable().toPath();
+        GameplayCaptureSession.Settings settings = new GameplayCaptureSession.Settings(
+                320, "sonic", "", "off", null, null, null);
+        try (GameplayCaptureSession session = new GameplayCaptureSession(settings)) {
+            try {
+                session.boot(rom, 0, 0, settings);
+            } catch (IllegalStateException | UnsatisfiedLinkError glUnavailable) {
+                assumeTrue(false, "offscreen GL unavailable: " + glUnavailable.getMessage());
+                return;
+            }
+            for (int i = 0; i < 3; i++) session.step(null);
+            assertThrows(IllegalStateException.class,
+                    () -> session.render(com.openggf.level.PictureSelection.between(0.5)));
+            var first = session.render();
+            var second = session.render();
+            assertArrayEquals(first.pixels(), second.pixels(), "the default picture is exact and repeatable");
+        }
     }
 
     private static GameplayCaptureTool.Report capture(Path rom, Path input, Path outDir, boolean interpolation)

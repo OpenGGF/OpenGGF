@@ -9,7 +9,15 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 class TestLevelMotionCallerGuard {
-    @Test void onlyEngineMayRequestLiveObservationOrPresentationInProduction() throws Exception {
+    /**
+     * Engine is the live caller. {@code GameplayCaptureSession} is the one offline exception: its
+     * {@code --interpolation} capture films display interpolation on request (off by default, with the
+     * phase taken from the picture index). Every other tool and offline consumer stays exact.
+     */
+    private static final java.util.Set<String> ALLOWED_CALLERS =
+            java.util.Set.of("com/openggf/Engine", "com/openggf/tools/GameplayCaptureSession");
+
+    @Test void onlyEngineAndTheOptInCaptureSessionMayRequestObservationOrPresentationInProduction() throws Exception {
         var violations = new ArrayList<String>();
         try (var files = Files.walk(TestSessionOutputPaths.compiledClasses())) {
             var classes = files.filter(path -> path.toString().endsWith(".class")).toList();
@@ -18,14 +26,17 @@ class TestLevelMotionCallerGuard {
         }
         assertEquals(List.of(), violations, "Tools and offline consumers must remain exact");
     }
-    @Test void rejectsOtherProductionCallersAndMethodReferencesButAllowsZeroCallersAndEngine() {
-        for (String caller : List.of("com/openggf/tools/Capture", "com/openggf/Engine$Owner")) {
+    @Test void rejectsOtherProductionCallersAndMethodReferencesButAllowsZeroCallersEngineAndTheCaptureSession() {
+        for (String caller : List.of("com/openggf/tools/Capture", "com/openggf/Engine$Owner",
+                "com/openggf/tools/GameplayCaptureTool", "com/openggf/tools/GameplayCaptureSession$Settings",
+                "com/openggf/tools/TraceCaptureSession")) {
             var violations = new ArrayList<String>();
             scan(fixture(caller, true), violations);
             assertEquals(2, violations.size());
         }
         var allowed = new ArrayList<String>();
         scan(fixture("com/openggf/Engine", true), allowed);
+        scan(fixture("com/openggf/tools/GameplayCaptureSession", true), allowed);
         scan(fixture("com/openggf/tools/Capture", false), allowed);
         assertEquals(List.of(), allowed);
     }
@@ -48,7 +59,7 @@ class TestLevelMotionCallerGuard {
                 return new MethodVisitor(Opcodes.ASM9) {
                     private void call(String target, String method) {
                         if (target.equals("com/openggf/level/LevelMotionAccess")
-                                && (method.equals("present") || method.equals("observeService")) && !owner.equals("com/openggf/Engine"))
+                                && (method.equals("present") || method.equals("observeService")) && !ALLOWED_CALLERS.contains(owner))
                             violations.add(owner + "#" + name + " -> " + method);
                     }
                     @Override public void visitMethodInsn(int opcode, String target, String method, String desc, boolean isInterface) { call(target, method); }
