@@ -155,8 +155,9 @@ public final class StageplayLiveWorld implements AutoCloseable {
             var anchor = actor.keys().stream().filter(k -> k.frame() == first).findFirst().orElseThrow();
             performers.add(new Performer(actor, track, anchor));
         }
-        var rom = Objects.requireNonNull(library.sourceRom(set.gameId()), "Supply the live world's ROM");
-        if (!set.romSha1().isEmpty() && !set.romSha1().equalsIgnoreCase(library.rom(set.gameId()).romSha1()))
+        var dataSource = library.source(set.gameId());
+        var rom = dataSource.rom().orElse(null);
+        if (!set.romSha1().isEmpty() && !set.romSha1().equalsIgnoreCase(library.stageArt(set.gameId(), set.zone(), set.act()).romSha1()))
             throw new IllegalArgumentException("Live world ROM identity mismatch");
         closeOwned();
         this.document = null; source = null; start = -1; cursor = -1; last = null;
@@ -212,10 +213,10 @@ public final class StageplayLiveWorld implements AutoCloseable {
         com.openggf.graphics.RenderContext.reset();
         services.graphics().clearPaletteTextures();
         try {
-            services.roms().setRom(rom);
+            if (rom != null) services.roms().setRom(rom);
             GameModule module = GameModuleRegistry.createStockModule(GameId.fromCode(set.gameId()));
             module = new StageplayWorldModule(module, authoredTerrain, suppressedPlacements);
-            owned = SessionManager.openGameplaySession(module, module, StockGameDataSources.pinned(rom, module), null);
+            owned = SessionManager.openGameplaySession(module, module, dataSource, null);
             GameplaySessionFactory.attachManagers(owned, services);
             services.graphics().bindRuntimeManagedReferences(owned.getCamera(), owned.getFadeManager());
             var team = GameplayTeamBootstrap.registerActiveTeam(module, owned.getSpriteManager(), config);

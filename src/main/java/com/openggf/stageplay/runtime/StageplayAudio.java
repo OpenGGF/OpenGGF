@@ -75,6 +75,13 @@ public final class StageplayAudio implements AutoCloseable {
                     }
                 }
                 case ROM_MUSIC, ROM_SFX -> {
+                    var profile = roms.module(cue.gameId()).getAudioProfile();
+                    if (cue.kind() == StageplayDocument.AudioKind.ROM_MUSIC && profile instanceof com.openggf.audio.ExternalMusicCommands) {
+                        RomSoundCatalog.music(cue.gameId(), cue.soundId());
+                        if (audio.getAudioProfile() == null || !profile.presentationGameId().equals(audio.getAudioProfile().presentationGameId()))
+                            throw new IOException("File-addressed scene music requires its native audio host");
+                        continue;
+                    }
                     SmpsLoader loader = loader(cue.gameId());
                     var data = cue.kind() == StageplayDocument.AudioKind.ROM_MUSIC
                             ? loader.loadMusic(RomSoundCatalog.music(cue.gameId(), cue.soundId()).engineId())
@@ -100,10 +107,9 @@ public final class StageplayAudio implements AutoCloseable {
 
     private SmpsLoader loader(String game) throws IOException {
         if (loaders.containsKey(game)) return loaders.get(game);
-        var rom = roms.sourceRom(game);
-        if (rom == null) throw new IOException("Supply the " + game + " ROM for this sound cue");
-        var profile = BuiltInRomDetectors.forGame(GameId.fromCode(game)).createModule().getAudioProfile();
-        SmpsLoader loader = profile.createSmpsLoader(rom);
+        var profile = roms.module(game).getAudioProfile();
+        SmpsLoader loader = profile instanceof com.openggf.audio.RomlessSmpsSource media
+                ? media.createRomlessSmpsLoader() : profile.createSmpsLoader(roms.sourceRom(game));
         profiles.put(game, profile); loaders.put(game, loader);
         return loader;
     }
@@ -144,7 +150,7 @@ public final class StageplayAudio implements AutoCloseable {
             case ROM_MUSIC, ROM_SFX -> {
                 var currentProfile = audio.getAudioProfile();
                 String currentGame = currentProfile == null ? roms.activeGame() : currentProfile.presentationGameId();
-                boolean base = cue.gameId().equals(currentGame);
+                boolean base = roms.module(cue.gameId()).getAudioProfile().presentationGameId().equals(currentGame);
                 if (!base && (!scopes.containsKey(cue.gameId()) || !scopes.get(cue.gameId()).active())) {
                     scopes.put(cue.gameId(),roms.acquireAudioSource(audio,cue.gameId()));
                 }

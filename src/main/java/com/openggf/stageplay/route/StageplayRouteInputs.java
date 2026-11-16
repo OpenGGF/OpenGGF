@@ -39,25 +39,11 @@ public final class StageplayRouteInputs {
     public static Snapshot capture(
             StageplayDocument document, StageplayRouteRequest request, Path root, RomManager roms)
             throws IOException {
-        var selected = new LinkedHashMap<String, RomImageCatalogue.Resolution>();
-        for (String game : StageplayRomTransport.requiredGames(document)) {
-            RomIdentity identity =
-                    switch (game) {
-                        case "s1" -> RomIdentity.S1;
-                        case "s2" -> RomIdentity.S2;
-                        default -> RomIdentity.S3K;
-                    };
-            selected.put(
-                    game,
-                    roms.resolveLogicalRom(identity)
-                            .orElseThrow(
-                                    () ->
-                                            new IOException(
-                                                    "Route helper needs the configured logical "
-                                                            + game
-                                                            + " ROM")));
-        }
-        return capture(document, request, root, selected);
+        Path normalized = root.toAbsolutePath().normalize();
+        String romDescriptor = StageplayRomTransport.configured(StageplayRomTransport.requiredGames(document), roms);
+        String assetDescriptor = StageplayRouteAssets.capture(document, normalized);
+        return new Snapshot(document, request, normalized, romDescriptor, assetDescriptor,
+                fingerprint(document, request, normalized, romDescriptor, assetDescriptor));
     }
 
     public static Snapshot capture(

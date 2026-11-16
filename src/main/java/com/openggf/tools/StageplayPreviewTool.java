@@ -30,7 +30,7 @@ public final class StageplayPreviewTool {
             paths.put(args[i],Path.of(args[i+1]));
         }
         try (var input = new StageplayProcessInput(new InputStreamReader(System.in, StandardCharsets.UTF_8))) {
-            var readers = descriptor ? StageplayRomTransport.open(input.readLine(StageplayRomTransport.MAX_DESCRIPTOR_CHARS)) : null;
+            var sourceDescriptor = descriptor ? input.readLine(StageplayRomTransport.MAX_DESCRIPTOR_CHARS) : null;
             String encoded = input.readLine(StageplayStore.MAX_BYTES * 2);
             if (encoded == null || encoded.length() > StageplayStore.MAX_BYTES * 2) throw new IllegalArgumentException("Missing/big preview document");
             var document = StageplayStore.decode(Base64.getDecoder().decode(encoded));
@@ -44,11 +44,11 @@ public final class StageplayPreviewTool {
             config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
             config.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "");
             config.setSessionOverride(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, false);
-            try (var library = descriptor ? SceneRomLibrary.openReaders(readers,document.set().gameId()) : SceneRomLibrary.open(paths);
+            try (var library = descriptor ? StageplayRomTransport.openLibrary(sourceDescriptor,document.set().gameId()) : SceneRomLibrary.open(paths);
                  var boot = new HeadlessGameBoot(document.width(),document.height(),document.width(),document.height(),320,224)) {
                 boot.setBootToTitle(true);
-                boot.boot(com.openggf.data.RomByteReader.fromRom(Objects.requireNonNull(library.sourceRom(document.set().gameId()),
-                        "Supply the opening set ROM")), "Stageplay preview " + document.set().gameId(),0,0);
+                boot.boot(library.source(document.set().gameId()), library.module(document.set().gameId()),
+                        document.set().zone(), document.set().act());
                 try (var resources = new StageplayResources(library,false);
                      var pixels = new GlReadPixelsGrabber(document.width(), document.height())) {
                     assets.apply(resources);

@@ -249,7 +249,7 @@ public final class StageplayRouteTool {
             throw new IOException("Route planning requires an isolated logic worker; the active world must not be replaced");
         String actual=StageplayRouteInputs.fingerprint(snapshot.document(),snapshot.request(),snapshot.root(),snapshot.romDescriptor(),snapshot.assetDescriptor());
         if(!actual.equals(snapshot.fingerprint())) throw new IOException("Route snapshot fingerprint does not match its contents");
-        try (var library = SceneRomLibrary.openReaders(StageplayRomTransport.open(snapshot.romDescriptor()),snapshot.document().set().gameId());
+        try (var library = StageplayRomTransport.openLibrary(snapshot.romDescriptor(),snapshot.document().set().gameId());
              var resources = new StageplayResources(library,false)) {
             resources.setAssetReader(StageplayRouteAssets.decode(snapshot.assetDescriptor(),snapshot.document()));
             var result = StageplayRoutePlanner.plan(resources,library,snapshot.document(),snapshot.request(),snapshot.fingerprint(),Thread.currentThread()::isInterrupted);

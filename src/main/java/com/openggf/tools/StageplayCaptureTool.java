@@ -35,7 +35,7 @@ public final class StageplayCaptureTool {
             Objects.requireNonNull(scene); Objects.requireNonNull(output); Objects.requireNonNull(ffmpeg);
             suppliedRoms = Map.copyOf(suppliedRoms);
             if (scale < 1 || scale > 8) throw new IllegalArgumentException("Scale must be 1..8");
-            if (game != null && !List.of("s1", "s2", "s3k").contains(game)) throw new IllegalArgumentException("Unknown game");
+            if (game != null && !List.of("s1", "s2", "s3k", "scd").contains(game)) throw new IllegalArgumentException("Unknown game");
             if (!output.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".mkv"))
                 throw new IllegalArgumentException("Lossless Stageplay exports use .mkv");
             if (scene.toAbsolutePath().normalize().equals(output.toAbsolutePath().normalize()))
@@ -60,7 +60,7 @@ public final class StageplayCaptureTool {
                     case "--game" -> game = value;
                     case "--scale" -> scale = Integer.parseInt(value);
                     case "--ffmpeg" -> ffmpeg = value;
-                    case "--s1-rom", "--s2-rom", "--s3k-rom" -> supplied.put(key.substring(2, key.length() - 4), Path.of(value));
+                    case "--s1-rom", "--s2-rom", "--s3k-rom", "--scd-rom" -> supplied.put(key.substring(2, key.length() - 4), Path.of(value));
                     default -> throw new IllegalArgumentException("Unknown argument " + key);
                 }
             }
@@ -92,25 +92,21 @@ public final class StageplayCaptureTool {
             config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
             config.setSessionOverride(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, false);
             String game = arguments.game() == null ? document.set().gameId() : arguments.game();
-            Map<String,com.openggf.data.RomByteReader> transported = null;
-            if (arguments.romDescriptor() != null) {
-                transported = StageplayRomTransport.openFile(arguments.romDescriptor());
-            }
-            // Gameplay boot only supplies independent ROM/audio services; this tool never steps its level.
-            try (var boot = new HeadlessGameBoot(document.width(), document.height(), document.width(), document.height(), 320, 224)) {
+            var paths = new LinkedHashMap<String, Path>(arguments.suppliedRoms());
+            if (arguments.rom() != null) paths.put(game, arguments.rom());
+            try (var library = arguments.romDescriptor() != null
+                    ? StageplayRomTransport.openLibraryFile(arguments.romDescriptor(), game)
+                    : !paths.isEmpty() ? SceneRomLibrary.open(paths)
+                    : StageplayRomTransport.openLibrary(StageplayRomTransport.configured(
+                            StageplayRomTransport.requiredGames(document), GameServices.rom()), game);
+                 var boot = new HeadlessGameBoot(document.width(), document.height(), document.width(), document.height(), 320, 224)) {
                 boot.setBootToTitle(true);
-                if (transported != null) boot.boot(Objects.requireNonNull(transported.get(game),"Supply the boot ROM"),
-                        "Stageplay export " + game, 0, 0);
-                else if (arguments.rom() == null) boot.boot(identity(game), 0, 0);
-                else boot.boot(arguments.rom(), 0, 0);
+                boot.boot(library.source(game), library.module(game), document.set().zone(), document.set().act());
                 var audio = GameServices.audio();
                 if (audio.presentationFrameRate() != StageplayDocument.FRAMES_PER_SECOND)
                     throw new IOException("Stageplay exports require 60 Hz audio; this ROM is using " + audio.presentationFrameRate());
                 audio.stopMusic(); audio.stopAllSfx();
-                try (var library = transported == null
-                        ? new SceneRomLibrary(GameServices.module(), GameServices.rom().getRom(), GameServices.rom())
-                        : SceneRomLibrary.openReaders(transported,game);
-                     var resources = new StageplayResources(library, false);
+                try (var resources = new StageplayResources(library, false);
                      var cues = new StageplayAudio(audio, library, arguments.scene().toAbsolutePath().getParent());
                      var surface = new SceneSurface();
                      var grabber = new GlReadPixelsGrabber(document.width(), document.height())) {
@@ -202,5 +198,5 @@ public final class StageplayCaptureTool {
     }
 
     private static RomIdentity identity(String game) { return switch (game) { case "s1" -> RomIdentity.S1; case "s2" -> RomIdentity.S2; default -> RomIdentity.S3K; }; }
-    private static SonicConfiguration romKey(String game) { return switch (game) { case "s1" -> SonicConfiguration.SONIC_1_ROM; case "s2" -> SonicConfiguration.SONIC_2_ROM; default -> SonicConfiguration.SONIC_3K_ROM; }; }
+    private static SonicConfiguration romKey(String game) { return switch (game) { case "s1" -> SonicConfiguration.SONIC_1_ROM; case "s2" -> SonicConfiguration.SONIC_2_ROM; case "scd" -> SonicConfiguration.SONIC_CD_DISC; default -> SonicConfiguration.SONIC_3K_ROM; }; }
 }

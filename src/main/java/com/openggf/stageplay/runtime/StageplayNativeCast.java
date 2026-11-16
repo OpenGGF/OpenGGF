@@ -93,20 +93,27 @@ final class StageplayNativeCast {
     private Prepared create(Actor actor, int ordinal) throws IOException {
         GameModule module = library.module(actor.gameId());
         var donor = module.getCrossGameDonorProvider();
-        if (donor == null) throw new IllegalArgumentException("Native donor has no ROM resource provider: " + actor.gameId());
-        var reader = RomByteReader.fromRom(library.sourceRom(actor.gameId()));
+        var media = module.getGameService(com.openggf.game.internal.MediaSceneArt.class);
+        if (donor == null && media == null) throw new IllegalArgumentException("Native performer has no art provider: " + actor.gameId());
+        if (media != null && module.getGameId() != world.getWorldSession().getGameModule().getGameId())
+            throw new IllegalArgumentException("File-addressed performers require their native host");
+        var stage = media == null ? null : media.stage(library.source(actor.gameId()),
+                world.getLevelManager().getCurrentZone(), world.getLevelManager().getCurrentAct());
+        var reader = donor == null ? null : RomByteReader.fromRom(library.sourceRom(actor.gameId()));
         var key = actor.keys().getFirst();
         // Codes are runtime-local; portable actor IDs remain in the Stageplay document.
         String code = ordinal == 0 ? actor.character() : actor.character() + "_p" + (ordinal + 1);
         var sprite = PlayableRuntimeContext.constructShared(module, world, actor.character(), code,
                 (int) Math.round(key.x()), (int) Math.round(key.y()));
         audio.validate(actor.gameId(),sprite);
-        var art = library.characterArt(actor.gameId(), actor.character());
-        var palette = donor.loadCharacterPalette(reader, actor.character());
+        var art = stage == null ? library.characterArt(actor.gameId(), actor.character())
+                : stage.players().get().loadPlayerSpriteArt(actor.character());
+        var palette = stage == null ? donor.loadCharacterPalette(reader, actor.character())
+                : stage.players().get().loadCharacterPalette(actor.character());
         if (palette == null) throw new IllegalArgumentException("Missing native donor palette: " + actor.id());
         var context = RenderContext.createSidekickContext(module.getGameId());
         context.setPalette(art.paletteIndex(), palette);
-        var underwater = donor.loadUnderwaterCharacterPalette(reader, actor.character());
+        var underwater = donor == null ? null : donor.loadUnderwaterCharacterPalette(reader, actor.character());
         if (underwater != null) context.setUnderwaterPalette(art.paletteIndex(), underwater);
         var renderer = renderer(art, context);
         sprite.setSpriteRenderer(renderer);
@@ -114,13 +121,13 @@ final class StageplayNativeCast {
         sprite.setAnimationSet(art.animationSet());
         sprite.setAnimationFrameCount(art.mappingFrames().size());
         sprite.getAnimationManager().setDynamicArtDecisionOwner(null);
-        if (sprite instanceof Tails) {
+        if (sprite instanceof Tails && donor != null) {
             boolean separate = donor.hasSeparateTailsTailArt();
             var tails = separate ? donor.loadTailsTailArt(reader) : art;
             if (tails == null || tails.isEmpty()) throw new IllegalArgumentException("Missing native tail art: " + actor.id());
             sprite.setTailsTailsController(new TailsTailsController(sprite, renderer(tails, context), separate));
         }
-        var dustProvider = donor.createSpindashDustArtProvider(reader);
+        var dustProvider = donor == null ? null : donor.createSpindashDustArtProvider(reader);
         if (dustProvider != null) {
             var dust = dustProvider.loadSpindashDustArt(actor.character());
             if (dust != null && !dust.isEmpty())

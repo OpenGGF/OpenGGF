@@ -68,6 +68,13 @@ public final class CdHostedMedia implements HostedGameMedia {
         return openVerified(found.disc().orElseThrow());
     }
 
+    @Override public Path configuredPath(SonicConfigurationService config) throws IOException {
+        var found = CdDiscLocator.locate(config);
+        return found.disc().orElseThrow(() -> new IOException(found.detail())).toAbsolutePath().normalize();
+    }
+
+    @Override public GameDataSource openMedia(Path path) throws IOException { return openVerified(path); }
+
     /** Accepts a CUE sheet or a CHD only when its decoded content equals the USA release's record. */
     static CdDiscDataSource openVerified(Path disc) throws IOException {
         CdDiscDataSource source = CdDiscDataSource.open(disc);

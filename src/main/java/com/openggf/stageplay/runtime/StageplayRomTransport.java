@@ -80,6 +80,60 @@ public final class StageplayRomTransport {
         return encoded;
     }
 
+    /** Captures configured media by verified content identity, alongside exact cartridge windows. */
+    public static String configured(java.util.Collection<String> required, com.openggf.data.RomManager roms) throws IOException {
+        var cartridges = new LinkedHashMap<String, RomImageCatalogue.Resolution>();
+        var media = JSON.createObjectNode();
+        for (String game : required) {
+            var id = com.openggf.game.GameId.fromCode(game);
+            if (com.openggf.game.GameModuleRegistry.mediaKind(id) == com.openggf.game.GameModuleRegistry.MediaKind.HOSTED_MEDIA) {
+                var host = com.openggf.game.GameModuleRegistry.hostedMedia(id);
+                Path path = host.configuredPath(com.openggf.game.GameServices.configuration());
+                var source = host.openMedia(path);
+                try { media.putObject(game).put("path", path.toString()).put("identity", source.identity()); }
+                finally { if (source instanceof java.io.Closeable closeable) closeable.close(); }
+            } else cartridges.put(game, roms.resolveLogicalRom(identity(game))
+                    .orElseThrow(() -> invalid("Supply the configured " + game + " ROM")));
+        }
+        if (media.isEmpty()) return encode(cartridges);
+        var root = JSON.createObjectNode().put("version", 2);
+        root.set("cartridges", cartridges.isEmpty() ? JSON.getNodeFactory().nullNode() : JSON.readTree(encode(cartridges)));
+        root.set("media", media);
+        String encoded = JSON.writeValueAsString(root);
+        if (encoded.length() > MAX_DESCRIPTOR_CHARS) throw invalid("Descriptor exceeds limit");
+        return encoded;
+    }
+
+    /** Reopens only declared inputs; media content must still match the captured identity. */
+    public static com.openggf.mods.scene.host.SceneRomLibrary openLibrary(String encoded, String active) throws IOException {
+        if (encoded == null || encoded.length() > MAX_DESCRIPTOR_CHARS) throw invalid("Missing/big descriptor");
+        var root = JSON.readTree(encoded);
+        if (root.path("version").asInt() == 1)
+            return com.openggf.mods.scene.host.SceneRomLibrary.openReaders(open(encoded), active);
+        fields(root, Set.of("version", "cartridges", "media"));
+        if (!root.path("version").isInt() || root.path("version").intValue() != 2) throw invalid("Unknown version");
+        var media = root.path("media");
+        if (!media.isObject() || media.isEmpty() || media.size() > 4) throw invalid("Invalid media");
+        var paths = new LinkedHashMap<String, Path>();
+        var entries = media.fields();
+        while (entries.hasNext()) {
+            var entry = entries.next();
+            fields(entry.getValue(), Set.of("path", "identity"));
+            Path path = Path.of(text(entry.getValue().get("path")));
+            if (!path.isAbsolute() || path.toString().length() > 4096) throw invalid("Invalid media path");
+            paths.put(entry.getKey(), path);
+        }
+        var readers = root.path("cartridges").isNull() ? Map.<String, RomByteReader>of()
+                : open(JSON.writeValueAsString(root.get("cartridges")));
+        var library = com.openggf.mods.scene.host.SceneRomLibrary.openSources(readers, paths, active);
+        try {
+            for (String game : paths.keySet())
+                if (!library.source(game).identity().equals(text(media.path(game).get("identity"))))
+                    throw invalid("Media identity changed: " + game);
+            return library;
+        } catch (IOException | RuntimeException failure) { library.close(); throw failure; }
+    }
+
     /** Opens only the supplied views, without consulting configuration or rescanning directories. */
     public static Map<String, RomByteReader> open(String encoded) throws IOException {
         if (encoded == null || encoded.length() > MAX_DESCRIPTOR_CHARS) throw invalid("Missing/big descriptor");
@@ -132,6 +186,15 @@ public final class StageplayRomTransport {
             readers.put(entry.getKey(), RomByteReader.concat(views.toArray(RomByteReader[]::new)));
         }
         return Map.copyOf(readers);
+    }
+
+    public static com.openggf.mods.scene.host.SceneRomLibrary openLibraryFile(Path descriptor, String active) throws IOException {
+        if (!Files.isRegularFile(descriptor)) throw invalid("Descriptor must be a regular file");
+        try (var input = Files.newInputStream(descriptor)) {
+            byte[] bytes = input.readNBytes(MAX_DESCRIPTOR_CHARS * 4 + 1);
+            if (bytes.length > MAX_DESCRIPTOR_CHARS * 4) throw invalid("Descriptor exceeds limit");
+            return openLibrary(StandardCharsets.UTF_8.newDecoder().decode(ByteBuffer.wrap(bytes)).toString(), active);
+        }
     }
 
     /** Reads a local metadata descriptor with a stream cap, including when the file grows after opening. */

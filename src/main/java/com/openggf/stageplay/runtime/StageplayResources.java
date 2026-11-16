@@ -256,7 +256,7 @@ public final class StageplayResources implements AutoCloseable {
     /** Resolves any shot's set with the same identity and bounded-path checks as the opening set. */
     public SceneLevelKit set(StageplayDocument.SetSource sourceKey) {
         requireOpen();
-        SceneRomArt art = rom(sourceKey.gameId());
+        SceneRomArt art = library == null ? rom(sourceKey.gameId()) : library.stageArt(sourceKey.gameId(), sourceKey.zone(), sourceKey.act());
         if (!sourceKey.romSha1().isEmpty() && !sourceKey.romSha1().equalsIgnoreCase(art.romSha1()))
             throw new IllegalArgumentException("Scene set requires a different exact ROM identity");
         return sets.computeIfAbsent(sourceKey, source -> {
@@ -341,7 +341,7 @@ public final class StageplayResources implements AutoCloseable {
             set(source);
             return;
         }
-        var art = rom(source.gameId());
+        var art = library == null ? rom(source.gameId()) : library.stageArt(source.gameId(), source.zone(), source.act());
         if (!source.romSha1().isEmpty() && !source.romSha1().equalsIgnoreCase(art.romSha1()))
             throw new IllegalArgumentException("Scene set requires a different exact ROM identity");
         // Native load validates its own act. Detached level-kit support is not a

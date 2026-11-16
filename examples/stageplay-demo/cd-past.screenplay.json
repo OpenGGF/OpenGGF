@@ -1,0 +1,77 @@
+{
+  "version": 7,
+  "name": "A moment in the Past",
+  "width": 320,
+  "height": 224,
+  "cast": [
+    {
+      "id": "sonic",
+      "name": "Sonic",
+      "gameId": "scd",
+      "character": "sonic",
+      "snapToFloor": false,
+      "puppet": true
+    }
+  ],
+  "shots": [
+    {
+      "id": "past",
+      "durationFrames": 120,
+      "set": {
+        "gameId": "scd",
+        "zone": 0,
+        "act": 1
+      },
+      "camera": [
+        {
+          "frame": 0,
+          "x": 640,
+          "y": 400,
+          "interpolation": "HOLD"
+        }
+      ],
+      "actors": {
+        "sonic": [
+          {
+            "frame": 0,
+            "x": 800,
+            "y": 549,
+            "facing": "LEFT"
+          }
+        ]
+      },
+      "actions": {
+        "sonic": [
+          {
+            "frame": 0,
+            "kind": "STOP"
+          },
+          {
+            "frame": 24,
+            "kind": "FACE_LEFT"
+          },
+          {
+            "frame": 72,
+            "kind": "FACE_RIGHT"
+          }
+        ]
+      },
+      "captions": [
+        {
+          "startFrame": 0,
+          "endFrame": 120,
+          "text": "PALMTREE PANIC / PAST",
+          "x": 12,
+          "y": 12
+        }
+      ],
+      "audio": [
+        {
+          "frame": 0,
+          "kind": "MUSIC_STOP",
+          "gameId": "scd"
+        }
+      ]
+    }
+  ]
+}
