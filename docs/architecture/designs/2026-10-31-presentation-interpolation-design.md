@@ -331,3 +331,74 @@ tests proving services are identical with interpolation on or off.
 
 3. **Integration** (lead): Engine wiring of `observeService` and `present`, exact-consumer guard,
    docs and changelog, cost measurement, change-based smoke.
+
+## AIZ background continuity follow-up (2026-11-16)
+
+The initial same-screen-row background comparison rejected 105 of 180 published
+pairs in a positioned AIZ1 pan: 60 horizontal steps followed by 60 descending and
+60 ascending steps (X +4, Y +/-2). A row crossing into another deformation band
+looked like a horizontal jump exceeding the 16-pixel presentation tolerance.
+
+When camera Y changes and a previous immutable projection phase is available,
+compose that previous phase at its original camera X and the current camera Y.
+Compare its horizontal words against the current raster. This compares the same
+band selection while retaining each phase's native horizontal motion and clock.
+It runs during pair construction, never per draw, and does not advance native
+handlers or change gameplay. Native scroll dispatch retains the immutable phase
+while live interpolation is active, without enabling directed-scene descriptor or
+column capture; with interpolation off the existing no-capture path remains. Period, topology, residency and motion bounds still
+reject unsafe pairs; phases without projection support retain the old fallback.
+The current raster's discrete band selection remains authoritative. Integer
+rounding and the documented band-edge/slow-pan limitations remain in scope as
+limitations, not solved by this correction.
+
+`TestLevelMotionPixels.aizBackgroundContinuityProbe` is a ROM-backed positioned
+320px scroll-publication check, not a cold gameplay route or native-pixel parity
+certificate. Existing pixel tests retain repeated-draw, exact-frame, lag and
+restore coverage for S1 GHZ1, S2 EHZ1 and S3K AIZ1.
+
+### Verification and inherited failures
+
+Base: `89820f78e8baca0a2301ae4e13841186a9a2cb97` (`origin/develop` at task start).
+The AIZ probe changes from 105/180 rejected pairs on that base to 0/180.
+
+Commands used Java 25, `-Dmse=off`, the Maven queue and surfaceless EGL:
+
+- `LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base 89820f78e8 --workers 2 --headless-gl surfaceless-egl --run`:
+  4,963 candidates, 100 ordinary batches, 40,364 ordinary tests; 36 failures,
+  4 errors, 562 skips (559 allowed, three display-dependent unclassified skips).
+  Guards: 860 tests, no failures/errors/skips. Final **VERDICT FAILED**.
+  Ordinary execution: 1,988.51 seconds; guards: 193.78 seconds. Queue waits
+  were separate and intermittent; this is bounded smoke, not full-suite validation.
+- A detached worktree at the base reran the same failing methods from all 20
+  affected classes: 38 original failure/error identities reproduced. The two
+  additional errors were null-renderer fixtures and were corrected with an
+  inactive-motion null guard.
+- Final queued focused run with `DISPLAY` and `WAYLAND_DISPLAY` unset selected
+  those affected methods, `TestLevelMotion*`, the four required S3K keep-green
+  classes and `TestTestReelExtension`: 187 tests, 29 failures, two errors, no skips.
+  All 31 remaining identities and assertions match the baseline (ignoring only
+  object addresses and set print order); there are no new/worsened failures.
+  The seven display-precondition failures passed under the corrected environment;
+  all six reel cases executed, resolving the three earlier unclassified skips.
+  All seven motion pixel cases, both null-renderer regressions and required S3K
+  keep-green classes pass. No broad green verdict or whole-route parity is claimed.
+
+Remaining baseline failure identities (grouped by class):
+
+- `TestAizCollectorPublicRewind`: `publicIntroBeforeInitRoundTripsWithoutACollector(boolean)[1]`; `publicIntroBeforeInitRoundTripsWithoutACollector(boolean)[2]`.
+- `TestDezIncomingFinalRouteCapture`: `incomingFinalFightRestoresAndReplaysEveryPhase(int)[1]`; `incomingFinalFightRestoresAndReplaysEveryPhase(int)[2]`.
+- `TestIcz2ColdCubeBridgeRoute`: `coldSonicShattersThePlacedCubePressesButton2AndCrossesTheFallingBridgeWithWorldReplay`.
+- `TestLrzSszCheckpointRoutes`: `ordinarySszOpeningPhysicallySavesTheFirstAuthoredPost`.
+- `TestPrivateLobbyScreenRendering`: `actualLobbyAndFullTextPixelsSupportMultipleReadablePages`.
+- `TestS3kCnz1MinibossCompletionEdge`: `placedMinibossOrdinaryHitsDriveDefeatResultsAndReleasedCnz2(Row)[2]`; `placedMinibossOrdinaryHitsDriveDefeatResultsAndReleasedCnz2(Row)[4]`; `recordedOrdinaryInputReplaysAndRewindsEveryEdgeBoundaryTwice(Row)[2]`; `recordedOrdinaryInputReplaysAndRewindsEveryEdgeBoundaryTwice(Row)[4]`; `truncatedAfterApproachNeverCompletesTheEdge`.
+- `TestS3kCompleteRunReferenceProducer`: `fixedProducerRejectsEveryMismatchedTypedRequestBeforePublication`.
+- `TestS3kFreshLevelRngState`: `actualFreshBoundaryClearsRngAndTheRegisteredWorldRestoresIt(int, int)[2]`.
+- `TestS3kIcz1PhysicalLowerPlatformReplay`: `nativeSonicContactsAndRidesTheLowerPieceWithTwoFreshWorldReplays`.
+- `TestS3kMhzAct2AuthoredRoute`: `incomingRoutesCompleteActTwoWithLiveRewindBoundaries(String, int)[1]`; `incomingRoutesCompleteActTwoWithLiveRewindBoundaries(String, int)[2]`; `incomingRoutesCompleteActTwoWithLiveRewindBoundaries(String, int)[3]`.
+- `TestS3kMhzAct2EntryHeadless`: `coldEntryPressesLiftsAndReleasesNativeTeamWithReplay(WidescreenAspect, String, String)[12]`.
+- `TestS3kMhzAuthoredRoute`: `freshSonicCompletesActOneAndReplaysItsLiveInteractions`.
+- `TestS3kMhzTailsAuthoredRoute`: `freshTailsCompletesActOneAndReplaysItsLiveInteractions`.
+- `TestS3kMhzTeamAuthoredRoute`: `nativePairCompletesActOneAndReplaysItsLiveInteractions`.
+- `TestS3kMhzWideAuthoredRoute`: `wideSonicCompletesActOneAndReplaysItsLiveInteractions`.
+- `TestThreeIslandsScene`: `tailsJoinsInTheFieldAndTheTravellingShopReturnsToTheSameSpot`; `aSonic1ZonePlaysItsOwnRomSongWithoutPlaceholderSwitches`; `startupIsPlayableAndArrivalDialogueAndRestStayInTheField`; `greenHillMysteriesUseRealInteractionsAndPersistThroughContinue`; `physicalTrailsConnectFieldsAndBattleUsesTheEncounterField`; `allStoryLandmarksHavePlayableInteriorsWithIndependentGatesSavesAndRewards`; `travellerDialogueWaitsForTheDiscoveryOrRescueItDescribes`; `explorationUsesTwoAxesAndStoryDiscoveriesPersistAcrossContinue`.

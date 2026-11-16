@@ -36,6 +36,40 @@ class TestLevelMotionPixels {
     void aiz1BlendsOnlyPublishedPresentationAndHoldsLag() throws Exception {
         check(RomTestUtils.ensureSonic3kRomAvailable().toPath(), true);
     }
+    @Test @RequiresRom(SonicGame.SONIC_3K)
+    void aizBackgroundContinuityProbe() throws Exception {
+        var settings = settings();
+        try (var session = new GameplayCaptureSession(settings)) {
+            session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 0, 0, settings);
+            for (int frame = 0; frame < 3; frame++) session.step(null);
+            var level = GameServices.level();
+            var camera = GameServices.camera();
+            camera.setX((short) 0x1300); camera.setY((short) 0x380);
+            level.parallaxManager.update(0, 0, camera, level.frameCounter);
+            prime(level);
+            var previous = level.spritePresentationRenderer().motionHistory.offer(PictureSelection.between(.5)).scroll();
+            int snaps = 0;
+            for (int frame = 0; frame < 180; frame++) {
+                if (frame >= 60) camera.setY((short) (camera.getY() + (frame < 120 ? 2 : -2)));
+                move(level, session, 4);
+                publishObservation(level);
+                var current = level.spritePresentationRenderer().motionHistory.offer(PictureSelection.LATEST).scroll();
+                if (current.backgroundMotionSince(previous, 16, 320) == null) {
+                    snaps++;
+                    int largest = 0, row = -1;
+                    for (int i = 0; i < current.horizontal().length; i++) {
+                        int delta = Math.abs((short) (previous.horizontal()[i] - current.horizontal()[i]));
+                        if (delta > largest) { largest = delta; row = i; }
+                    }
+                    System.out.println("AIZ BG snap frame=" + frame + " camera=" + camera.getX() + "," + camera.getY()
+                            + " largestWordStep=" + largest + " row=" + row);
+                }
+                previous = current;
+            }
+            System.out.println("AIZ BG snaps=" + snaps + "/180");
+            assertEquals(0, snaps, "Ordinary pans should retain background interpolation");
+        }
+    }
     private static GameplayCaptureSession.Settings settings() {
         return new GameplayCaptureSession.Settings(320, "sonic", "", "off", null, 0x400, 128,
                 null, false, false, null, null, true, null, false);

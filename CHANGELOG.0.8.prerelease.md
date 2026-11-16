@@ -7,6 +7,12 @@ under the matching area heading; see the
 
 ## Gameplay and presentation
 
+- **Frame interpolation background continuity:** vertical camera movement no longer
+  mistakes parallax band crossings for horizontal teleports. The previous frozen
+  scroll phase is composed at the current vertical view before comparing horizontal
+  offsets; AIZ1 positioned pan coverage exercises the regression. Whole-native-pixel
+  stepping remains unchanged.
+
 - **Angel Island screen events:** AIZ owns the canopy-wave origin and captures
   its publication with the shared ROM shake words. Shake setup respects stored
   death/restart routines and the contiguous timed table; water and bomb producers

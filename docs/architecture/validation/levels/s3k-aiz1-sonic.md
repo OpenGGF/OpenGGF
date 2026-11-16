@@ -1,5 +1,16 @@
 # S3K AIZ act 1 — Sonic route matrix
 
+## Background interpolation maintenance (2026-11-16)
+
+`TestLevelMotionPixels.aizBackgroundContinuityProbe` checks 180 positioned 320px
+published scroll pairs from camera ($1300,$0380): X advances four pixels per
+pair, followed by vertical descents and ascents of two pixels per pair. The
+baseline rejected 105 pairs because screen-row comparisons crossed deformation
+bands. This is presentation continuity coverage only; it certifies no cold
+route, other act, donor/team, viewport breadth or native pixel parity. Those
+obligations and whole-pixel slow-pan stepping remain inherited gaps. See the
+[interpolation follow-up](../../designs/2026-10-31-presentation-interpolation-design.md#aiz-background-continuity-follow-up-2026-11-16).
+
 ## Scatter collector retirement (2026-11-04)
 
 The intro emeralds retain the exact managed Knuckles collector while it is
