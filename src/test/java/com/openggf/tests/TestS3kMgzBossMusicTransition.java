@@ -79,6 +79,20 @@ class TestS3kMgzBossMusicTransition {
     }
 
     @Test
+    void endBossDrawsThroughoutItsInitialWaitIncludingZero() {
+        var boss = new MgzEndBossInstance(new ObjectSpawn(
+                0x3D20, 0x0668, Sonic3kObjectIds.MGZ_END_BOSS, 0, 0, false, 0));
+        boss.setServices(new RecordingServices());
+        // Obj_MGZEndBoss (sonic3k.asm:142785-142792) always reaches
+        // Draw_And_Touch_Sprite (sonic3k.asm:178132-178134), even in Obj_Wait.
+        for (int dispatch = 0; dispatch <= 120; dispatch++) {
+            boss.update(dispatch, null);
+            assertFalse(boss.isHidden(), "native body draws during wait dispatch " + dispatch);
+            assertEquals(0x0668, boss.getY(), "waiting does not execute MoveSprite2");
+        }
+    }
+
+    @Test
     void endBossFadesZoneMusicBeforeDelayedBossMusic() {
         RecordingServices services = new RecordingServices();
         MgzEndBossInstance boss = new MgzEndBossInstance(
@@ -92,12 +106,19 @@ class TestS3kMgzBossMusicTransition {
         assertTrue(services.playedMusic.isEmpty(),
                 "End-boss music should wait for the ROM 2-second Obj_Wait delay");
 
-        for (int frame = 1; frame < 120; frame++) {
+        for (int frame = 1; frame <= 120; frame++) {
             boss.update(frame, null);
         }
 
+        // loc_6C354 (sonic3k.asm:142813-142845) installs $78 on setup;
+        // Obj_Wait (sonic3k.asm:178040-178049) retains zero before underflow.
+        assertTrue(services.playedMusic.isEmpty(), "zero timer still waits");
+        assertEquals(0x0668, boss.getY());
+        boss.update(121, null);
+        // loc_6C3EC (sonic3k.asm:142850-142859) starts music but does not move.
+        assertEquals(0x0668, boss.getY());
         assertEquals(List.of(Sonic3kMusic.BOSS.id), services.playedMusic,
-                "End-boss music should start after the ROM 120-frame wait");
+                "Music starts on the signed-underflow callback, after setup and the zero pass");
     }
 
     @Test
@@ -128,6 +149,9 @@ class TestS3kMgzBossMusicTransition {
             boss.update(frame, null);
         }
 
+        // Parent drawing is independent of the music callback: Obj_MGZEndBoss
+        // (sonic3k.asm:142785-142792) draws even during the initial wait.
+        assertTrue(services.playedMusic.isEmpty());
         List<MgzEndBossRenderChild> renderChildren = boss.getChildComponents().stream()
                 .filter(MgzEndBossRenderChild.class::isInstance)
                 .map(MgzEndBossRenderChild.class::cast)

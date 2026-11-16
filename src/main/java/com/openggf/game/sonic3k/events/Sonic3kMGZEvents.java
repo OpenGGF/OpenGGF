@@ -1,5 +1,10 @@
 package com.openggf.game.sonic3k.events;
 
+import com.openggf.game.sonic3k.runtime.S3kScreenShake;
+import com.openggf.physics.BackgroundPlaneCollisionProvider;
+import com.openggf.game.rewind.schema.ZoneEventSchemaSidecar;
+import java.nio.ByteBuffer;
+
 import com.openggf.sprites.playable.PlayableArchetype;
 import com.openggf.sprites.playable.Tails;
 
@@ -25,8 +30,6 @@ import com.openggf.game.sonic3k.objects.MgzEndBossInstance;
 import com.openggf.game.sonic3k.objects.MgzEndBossKnuxInstance;
 import com.openggf.game.sonic3k.objects.MgzDrillingRobotnikInstance;
 import com.openggf.game.sonic3k.objects.Mgz2LevelCollapseSolidInstance;
-import com.openggf.game.sonic3k.runtime.MgzZoneRuntimeState;
-import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.game.sonic3k.resources.S3kKosDecompressionQueue;
 import com.openggf.game.sonic3k.resources.S3kKosModuleQueue;
 import com.openggf.game.sonic3k.resources.S3kKosRamDestinations;
@@ -316,13 +319,10 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
     private int chunkEventDelay;
     private int screenEventRoutine;
     private boolean collapseRequested;
-    /** Events_fg_4 is consumed by the screen-event pass after the boss SST publishes it. */
-    private boolean collapseRequestObserved;
     private boolean collapseInitialized;
     private boolean collapseFinished;
     private int collapseMutationCount;
     private int collapseFrameCounter;
-    private int collapseStartupShakeTimer;
     private final int[] collapseScrollVelocity = new int[COLLAPSE_COLUMN_COUNT];
     private final int[] collapseScrollFixedPosition = new int[COLLAPSE_COLUMN_COUNT];
     private final int[] collapseScrollPosition = new int[COLLAPSE_COLUMN_COUNT];
@@ -333,8 +333,10 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
     private int bossBgScrollVelocity;
     /** ROM: Events_bg+$0C — BG camera copy advanced during the air boss. */
     private int bossBgScrollOffset;
-    /** The later boss SST allocates this transition SST; setup executes on its next object pass. */
+    /** The allocated transition SST still owes its setup dispatch. */
     private boolean bossTransitionInitializationPending;
+    /** The native allocation owns dispatch; the direct-drive bridge must not tick it too. */
+    private boolean bossTransitionSlotScheduled;
     private boolean bossTransitionActive;
     private boolean bossTransitionDeathPlaneDisabled;
     private int bossTransitionTimer;
@@ -343,7 +345,104 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
     private int bossTransitionCameraX;
     private int bossTransitionCameraY;
 
-    /** ROM: Events_bg+$00 — MGZ2 BG-rise state (0 / 8 / 0xC). */
+    @RewindTransient(reason = "composed MGZ payload captures the three ROM shake words")
+    private final S3kScreenShake screenShake =
+            new S3kScreenShake();
+    private int appliedScreenShakeOffset;
+    private int cloudAccumulator;
+    private int publishedCloudPhase;
+    private boolean cloudsFrozen;
+    private boolean publicationValid;
+    private int publishedCameraX;
+    private int publishedCameraY;
+    private int publishedRiseRoutine;
+    private int publishedRiseOffset;
+    private int publishedBossOffset = Integer.MIN_VALUE;
+    private int collisionDiffX;
+    private int collisionDiffY;
+    private boolean collisionActive;
+
+    public record ScreenPublication(int riseRoutine, int riseOffset, int bossOffset,
+                                    int shakeOffset, int cloudPhase, boolean valid, int cameraX, int cameraY) {
+        public ScreenPublication(int rise, int offset, int boss, int shake, int cloud) {
+            this(rise, offset, boss, shake, cloud, false, 0, 0);
+        }
+    }
+
+    public ScreenPublication screenPublication() {
+        return new ScreenPublication(publishedRiseRoutine, publishedRiseOffset,
+                publishedBossOffset, appliedScreenShakeOffset, publishedCloudPhase,
+                publicationValid, publishedCameraX, publishedCameraY);
+    }
+
+    public BackgroundPlaneCollisionProvider.State backgroundCollisionState() {
+        return collisionActive
+                ? new BackgroundPlaneCollisionProvider.State(true, collisionDiffX, collisionDiffY)
+                : BackgroundPlaneCollisionProvider.State.INACTIVE;
+    }
+
+    /** ROM ST changes the high byte of the big-endian word; retain its low byte. */
+    public void requestContinuousScreenShake() {
+        screenShake.writeFlag(0xFF00 | (screenShake.flag() & 0xFF));
+    }
+
+    public void writeScreenShakeFlag(int flag) { screenShake.writeFlag(flag); }
+    public void clearScreenShakeFlag() { writeScreenShakeFlag(0); }
+
+    /** MGZ1BGE_Normal / MGZ2BGE_Normal publish before ShakeScreen_Setup. */
+    /** Fresh BackgroundInit belongs to the load before the initial player slots. */
+    public void initializeBackgroundAtLoad(int act) {
+        if (publicationValid) return;
+        var primary = camera().getFocusedSprite();
+        if (act == 1 && primary != null) {
+            primeBgRiseFromLoadPosition(primary.getCentreX(), primary.getCentreY());
+            // MGZ2_BackgroundInit (sonic3k.asm:107022-107078) prepares geometry,
+            // but does not execute MGZ2_BGEventTrigger's collision-flag writes.
+            gameState().setBackgroundCollisionFlag(false);
+        }
+        publishScreenState(act, 0, camera().getX(), camera().getY(), false);
+    }
+
+    private void publishScreenState(int act, int levelFrameCounter, int cameraX, int cameraY,
+                                    boolean prepareShake) {
+        publishedRiseRoutine = bgRiseRoutine;
+        publishedRiseOffset = bgRiseOffset;
+        publishedBossOffset = screenEventRoutine == SCREEN_EVENT_MOVE_BG ? bossBgScrollOffset : Integer.MIN_VALUE;
+        if (bgRiseRoutine == BG_RISE_AFTER_MOVE) {
+            cloudsFrozen = true;
+            cloudAccumulator = 0;
+        }
+        // MGZ1_Deform (Lockon S3/Screen Events.asm:989-1024) reads then increments +$01C.
+        // MGZ2_BGDeform (Lockon S3/Screen Events.asm:1090-1181) increments then reads +$038.
+        if (act == 0) {
+            publishedCloudPhase = cloudAccumulator;
+            cloudAccumulator += 0x500;
+        } else {
+            if (!cloudsFrozen) cloudAccumulator += 0x800;
+            publishedCloudPhase = cloudAccumulator;
+        }
+        var cam = camera();
+        int x = (short) cameraX;
+        int y = (short) cameraY;
+        publishedCameraX = x;
+        publishedCameraY = y;
+        int bgX = bgRiseRoutine == BG_RISE_SONIC ? (short) (x - 0x3200) : 0;
+        int bgY = bgRiseRoutine == BG_RISE_SONIC
+                ? (short) (y - 0x8F0 + bgRiseOffset + appliedScreenShakeOffset)
+                : (short) ((((short) (y - (bgRiseRoutine == BG_RISE_AFTER_MOVE ? 0x500 : 0))) * 3 >> 4)
+                        + appliedScreenShakeOffset);
+        collisionActive = act == 1 && gameState().isBackgroundCollisionFlag();
+        collisionDiffX = (short) (x - bgX);
+        collisionDiffY = (short) (y + appliedScreenShakeOffset - bgY);
+        publicationValid = true;
+        var primary = cam.getFocusedSprite();
+        if (prepareShake) {
+            screenShake.setup(levelFrameCounter,
+                    primary == null || NativePlayableRoutine.isAtOrBeyondDeathForNativeRead(primary));
+        }
+    }
+
+    /** ROM Events_bg+$00. */
     private int bgRiseRoutine;
     /** ROM: Events_bg+$02 — current BG Y offset, clamped to BG_RISE_TARGET_SONIC. */
     private int bgRiseOffset;
@@ -351,10 +450,9 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
     private int bgRiseSubpixelAccum;
     /** ROM: Obj_MGZ2BGMoveSonic control-flow latch — motion only starts once player passes both thresholds. */
     private boolean bgRiseMotionStarted;
+    private boolean bgRiseObjectFinished;
     /** ROM: Obj_MGZ2BGMoveSonic $39(a0) — accel latch; once true, +1 pixel/frame. */
     private boolean bgRiseAccelLatched;
-    /** ROM: Screen_shake_flag timed countdown ($E frames) armed when target reached. */
-    private int bgRiseFinalShakeTimer;
     /** ROM: Events_routine_bg=8 / Draw_delayed_rowcount refresh after entering state 8. */
     private int bgRiseRefreshFramesRemaining;
     /** One-shot MGZ2_BackgroundInit parity path for late checkpoint/death loads. */
@@ -405,17 +503,16 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
         appearance2Complete = false;
         appearance3Complete = false;
         screenShakeActive = false;
+        clearScreenShakeFlag();
         chunkEventRoutine = CHUNK_EVENT_CHECK;
         chunkReplaceIndex = 0;
         chunkEventDelay = 0;
         screenEventRoutine = SCREEN_EVENT_NORMAL;
         collapseRequested = false;
-        collapseRequestObserved = false;
         collapseInitialized = false;
         collapseFinished = false;
         collapseMutationCount = 0;
         collapseFrameCounter = 0;
-        collapseStartupShakeTimer = 0;
         bossBgScrollVelocity = 0;
         bossBgScrollOffset = 0;
         for (int i = 0; i < COLLAPSE_COLUMN_COUNT; i++) {
@@ -425,6 +522,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
         }
         Arrays.fill(collapseSolids, null);
         bossTransitionInitializationPending = false;
+        bossTransitionSlotScheduled = false;
         bossTransitionActive = false;
         bossTransitionDeathPlaneDisabled = false;
         bossTransitionTimer = 0;
@@ -432,12 +530,23 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
         bossTransitionY = 0;
         bossTransitionCameraX = 0;
         bossTransitionCameraY = 0;
+        screenShake.clear();
+        appliedScreenShakeOffset = 0;
+        cloudAccumulator = 0;
+        publishedCloudPhase = 0;
+        cloudsFrozen = false;
+        publicationValid = false;
+        publishedRiseRoutine = 0;
+        publishedRiseOffset = 0;
+        publishedBossOffset = Integer.MIN_VALUE;
+        collisionActive = false;
+        collisionDiffX = collisionDiffY = 0;
         bgRiseRoutine = BG_RISE_NORMAL;
         bgRiseOffset = 0;
         bgRiseSubpixelAccum = 0;
         bgRiseMotionStarted = false;
+        bgRiseObjectFinished = false;
         bgRiseAccelLatched = false;
-        bgRiseFinalShakeTimer = 0;
         bgRiseRefreshFramesRemaining = 0;
         bgRiseLoadStateInitialised = false;
         bossArenaRoutine = 0;
@@ -466,20 +575,12 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
         update(act, frameCounter, false);
     }
 
-    /*
-     * FixBugs audit (docs/skdisasm/sonic3k.asm:38, assembled as 0 in the shipped
-     * ROM). MGZ1_Resize (sonic3k.asm:39376-39382) is an EMPTY label that falls
-     * straight through into MGZ2_Resize; the `rts` that would make Act 1 a no-op
-     * exists only under FixBugs=1 ("Bug: MGZ1 uses a dynamic resize routine meant
-     * for MGZ2. This causes the act 2 boss to spawn in out-of-bounds act 1").
-     * This dispatcher gates updateAct2BossArena() to act == 1, i.e. it implements
-     * the FIXED branch. Matching the shipped ROM would mean running the MGZ2
-     * boss-arena resize state machine in Act 1 too, which can lock the Act 1
-     * camera and allocate Obj_MGZEndBoss out of bounds. Left as-is deliberately:
-     * adopting it changes Act 1 camera bounds and object allocation on the active
-     * release route and needs its own measured change.
-     */
     private void update(int act, int frameCounter, boolean includeBossTransitionObject) {
+        appliedScreenShakeOffset = screenShake.offset();
+        int precedingBgRoutine = bgRoutine;
+        if (act == 1 && screenShakeActive && screenEventRoutine == SCREEN_EVENT_NORMAL) {
+            requestContinuousScreenShake();
+        }
         if (act == 0) {
             updateAct1Bg();
             // ROM: MGZ1_Resize (sonic3k.asm:39374-39383).
@@ -507,21 +608,34 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
             updateAct2BossBgScroll();
             updateAct2Collapse(frameCounter);
             if (includeBossTransitionObject) {
-                updateBossTransition();
+                updateBossTransitionObjectBeforeDynamicObjects(act);
             }
             updateAct2BossArena();
-            applyScreenShake(frameCounter);
         }
+        updateBackgroundEvents(act);
+        // MGZ1BGE_Transition (sonic3k.asm:106358-106403) draws without setup;
+        // the normal dispatch which first arms that transition still runs setup.
+        publishScreenState(act, frameCounter, camera().getXCopy(), camera().getYCopy(),
+                act != 0 || precedingBgRoutine != BG_STAGE_DO_TRANSITION);
+
     }
 
     /**
-     * Executes the native {@code Obj_MGZ2_BossTransition} SST pass after the
-     * player slots but before later dynamic objects such as the collapse solids.
+     * Direct-drive bridge for focused callers without native object execution.
+     * Production uses the allocated transition object's ordinary SST slot.
      */
     public void updateBossTransitionObjectBeforeDynamicObjects(int act) {
-        if (act == 1) {
+        if (act == 1 && !bossTransitionSlotScheduled) {
             updateBossTransition();
         }
+    }
+
+    /** Called only by the admitted Obj_MGZ2_BossTransition slot. */
+    public boolean updateBossTransitionNativeObject() {
+        updateBossTransition();
+        boolean live = bossTransitionInitializationPending || bossTransitionActive;
+        if (!live) bossTransitionSlotScheduled = false;
+        return live;
     }
 
     /**
@@ -957,6 +1071,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
         camera.setMaxYTarget((short) DEFAULT_CAMERA_MAX_Y);
         camera.setMinX((short) DEFAULT_CAMERA_MIN_X);
         camera.setMaxX((short) DEFAULT_CAMERA_MAX_X);
+        // loc_51656 (sonic3k.asm:106795-106803) leaves Screen_shake_flag untouched.
         quakeEventRoutine = QUAKE_CHECK;
         screenShakeActive = false;
         setGenericBossFlag(false);
@@ -1001,6 +1116,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
         postFleeUnlockDone = false;
         gradualUnlockAccumulator = 0;
         screenShakeActive = true;
+        requestContinuousScreenShake();
         setGenericBossFlag(true);
         LOG.info("MGZ2 drilling Robotnik appearance " + (appearanceIndex + 1)
                 + " spawned at (0x" + Integer.toHexString(spawnX)
@@ -1077,7 +1193,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
         }
     }
 
-    /** ROM: Events_fg_0 / Screen_shake_flag active while Robotnik is on-screen. */
+    /** ROM Events_fg_0: the foreground event reasserts continuous shake while Robotnik is on-screen. */
     private boolean screenShakeActive;
 
     /** ROM: MGZ2_ScreenEvent calls Do_ShakeSound before its routine dispatch. */
@@ -1102,33 +1218,8 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
         }
     }
 
-    private void applyScreenShake(int frameCounter) {
-        MgzZoneRuntimeState state = currentMgzRuntimeState();
-        if (state == null) {
-            return;
-        }
-        // ROM MGZ2_ScreenEvent raises Screen_shake_flag (st, sonic3k.asm:106441)
-        // and ShakeScreen_Setup samples ScreenShakeArray2 from
-        // Level_frame_counter at the background event's tail
-        // (sonic3k.asm:104246-104255, :106354). Keep both in that single owner.
-        if (isVisualShakeActive()) {
-            state.requestContinuousScreenShake();
-        }
-    }
-
     private boolean isVisualShakeActive() {
-        return screenShakeActive || bgRiseFinalShakeTimer > 0;
-    }
-
-    private MgzZoneRuntimeState currentMgzRuntimeState() {
-        try {
-            if (!GameServices.hasRuntime()) {
-                return null;
-            }
-            return S3kRuntimeStates.currentMgz(GameServices.zoneRuntimeRegistry()).orElse(null);
-        } catch (Exception e) {
-            return null;
-        }
+        return screenShakeActive || screenShake.flag() != 0;
     }
 
     public int getQuakeEventRoutine() {
@@ -1163,15 +1254,11 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
         return bgRiseOffset;
     }
 
-    /**
-     * ROM: MGZ2_BGEventTrigger (sonic3k.asm:107163-107268) + Obj_MGZ2BGMoveSonic
-     * (sonic3k.asm:107287-107369). The engine's shared frame step calls this
-     * bridge before player physics so the state published by the preceding ROM
-     * object/background-event cadence is visible to the corresponding terrain
-     * probes. The delayed-refresh counter below preserves the interval where
-     * MGZ2_BackgroundEvent deliberately skips MGZ2_BGEventTrigger.
-     */
-    public void updatePrePhysics(int act) {
+    /** Legacy zone-feature callback: readers retain the preceding ScreenEvents publication. */
+    public void updatePrePhysics(int act) { }
+
+    /** MGZ2BGE_Normal (sonic3k.asm:107100-107122), after object and camera slots. */
+    public void updateBackgroundEvents(int act) {
         if (act != 1) {
             return;
         }
@@ -1180,9 +1267,6 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
             return;
         }
         primeBgRiseFromLoadPosition(player.getCentreX(), player.getCentreY());
-        if (bgRiseFinalShakeTimer > 0) {
-            bgRiseFinalShakeTimer--;
-        }
         // ROM MGZ2_LevelCollapse sets _unkEEA2 to $FFFF when its special
         // per-column VScroll mode starts (sonic3k.asm:106601). From then on,
         // MGZ2_BGEventTrigger tests that word and returns immediately
@@ -1210,21 +1294,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
                 }
             }
         }
-        MgzZoneRuntimeState runtimeState = currentMgzRuntimeState();
-        if (runtimeState == null) {
-            if (bgRiseRoutine == BG_RISE_SONIC) {
-                LOG.fine("MGZ BG-rise: state SONIC armed with no runtime scroll bridge; "
-                        + "headless BG formula sync skipped");
-            }
-            return;
-        }
-        // ROM: Events_bg is mutated in the object phase and read by MGZ2_BGDeform
-        // during the deform pass; that pass runs as part of the per-frame render.
-        // Headless paths skip parallax draw, so ask the runtime state to sync the
-        // registered scroll handler's cached BG-rise fields now so collision
-        // probes and tests that inspect the handler between event tick and render
-        // see the post-transition state.
-        runtimeState.syncBgRiseToScrollHandler();
+
     }
 
     /**
@@ -1245,6 +1315,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
             bgRiseOffset = BG_RISE_TARGET_SONIC;
             bgRiseSubpixelAccum = 0;
             bgRiseMotionStarted = false;
+            bgRiseObjectFinished = true;
             bgRiseAccelLatched = false;
             gameState().setBackgroundCollisionFlag(false);
             LOG.info(String.format(
@@ -1258,6 +1329,9 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
             bgRiseOffset = playerX >= BG_RISE_LATE_LOAD_FINISHED_X_MIN ? BG_RISE_TARGET_SONIC : 0;
             bgRiseSubpixelAccum = 0;
             bgRiseMotionStarted = false;
+            // loc_5187E / loc_518C0 (sonic3k.asm:107040-107065):
+            // a finished late load does not allocate Obj_MGZ2BGMoveSonic.
+            bgRiseObjectFinished = bgRiseOffset >= BG_RISE_TARGET_SONIC;
             bgRiseAccelLatched = false;
             gameState().setBackgroundCollisionFlag(true);
             LOG.info(String.format(
@@ -1282,6 +1356,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
             bgRiseOffset = 0;
             bgRiseSubpixelAccum = 0;
             bgRiseMotionStarted = false;
+            bgRiseObjectFinished = false;
             bgRiseAccelLatched = false;
             bgRiseRefreshFramesRemaining = BG_RISE_REFRESH_FOLLOWUP_FRAMES;
             // MGZ2_BGEventTrigger state 0 clears the flag before changing
@@ -1340,14 +1415,12 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
             return;
         }
         updateBgRiseSonicObject(player, player.getCentreX(), player.getCentreY());
-        MgzZoneRuntimeState runtimeState = currentMgzRuntimeState();
-        if (runtimeState != null) {
-            runtimeState.syncBgRiseToScrollHandler();
-        }
+
     }
 
     /** ROM: independently allocated Obj_MGZ2BGMoveSonic SST body. */
     private void updateBgRiseSonicObject(AbstractPlayableSprite player, int playerX, int playerY) {
+        if (bgRiseObjectFinished) return; // no live SST: no motion-start camera write either
         // Obj_MGZ2BGMoveSonic body runs while state remains 8, decoupled from
         // the trigger's transition check. Motion start requires crossing both
         // BG_RISE_MOTION_X_MIN and BG_RISE_MOTION_Y_MIN (ROM: loc_51AF2).
@@ -1384,7 +1457,15 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
      * (ROM: {@code sub.w d1,(Player_1+y_pos).w}).
      */
     private void advanceBgRise(AbstractPlayableSprite player, int playerX) {
+        if (bgRiseObjectFinished) return;
+        // loc_51B1C (sonic3k.asm:107323-107333) tests the preceding offset;
+        // crossing the target in loc_51B84 does not arm shake until the next SST pass.
         if (bgRiseOffset >= BG_RISE_TARGET_SONIC) {
+            bgRiseObjectFinished = true;
+            var audioManager = audio();
+            if (audioManager != null) audioManager.playSfx(Sonic3kSfx.CRASH.id);
+            screenShakeActive = false;
+            screenShake.writeFlag(BG_RISE_FINAL_SHAKE_FRAMES);
             return;
         }
         boolean accelWasLatched = bgRiseAccelLatched;
@@ -1401,15 +1482,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
             bgRiseSubpixelAccum += BG_RISE_SUBPIXEL_VELOCITY;
             newOffset = bgRiseSubpixelAccum >>> 16;
         }
-        if (newOffset >= BG_RISE_TARGET_SONIC) {
-            newOffset = BG_RISE_TARGET_SONIC;
-            var audioManager = audio();
-            if (audioManager != null) {
-                audioManager.playSfx(Sonic3kSfx.CRASH.id);
-            }
-            bgRiseFinalShakeTimer = BG_RISE_FINAL_SHAKE_FRAMES;
-            screenShakeActive = false;
-        }
+        if (newOffset >= BG_RISE_TARGET_SONIC) newOffset = BG_RISE_TARGET_SONIC;
         int delta = newOffset - bgRiseOffset;
         if (delta <= 0) {
             return;
@@ -1445,8 +1518,19 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
      */
     public void triggerBossCollapseHandoff() {
         requestLevelCollapse();
-        bossTransitionInitializationPending = true;
         bossTransitionDeathPlaneDisabled = true;
+        var objects = levelManager().getObjectManager();
+        if (objects == null) {
+            bossTransitionInitializationPending = true; // direct event harness
+            return;
+        }
+        // loc_6C4BE (sonic3k.asm:142919-142931) uses AllocateObject.
+        // ObjectManager owns admission and whether the free slot is still ahead
+        // in this pass; do not run the newborn early or defer a higher slot.
+        var worker = objects.createDynamicObject(
+                com.openggf.game.sonic3k.objects.MgzBossTransitionObjectInstance::new);
+        bossTransitionSlotScheduled = worker != null;
+        bossTransitionInitializationPending = worker != null;
     }
 
     private void initializeBossTransition() {
@@ -1530,7 +1614,8 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
     private void updateBossTransition() {
         if (bossTransitionInitializationPending) {
             initializeBossTransition();
-            return;
+            // loc_16328 (sonic3k.asm:30259-30266) falls through to the
+            // first $30 countdown and clamp on this very same SST dispatch.
         }
         if (!bossTransitionActive) {
             return;
@@ -1937,6 +2022,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
             return;
         }
         screenShakeActive = false;
+        clearScreenShakeFlag();
         quakeEventRoutine = QUAKE_CHECK;
         camera().setMinX((short) DEFAULT_CAMERA_MIN_X);
         chunkEventRoutine = CHUNK_EVENT_RESET;
@@ -2090,38 +2176,41 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
 
     private void updateAct2Collapse(int frameCounter) {
         if (collapseRequested && screenEventRoutine == SCREEN_EVENT_NORMAL) {
-            // Obj_MGZEndBoss publishes Events_fg_4 from its SST. MGZ2SE_Normal
-            // consumes that write on the following screen-event dispatch; it
-            // then loads Screen_shake_flag=$14 after ShakeScreen_Setup has
-            // already run, so the new positive countdown is not decremented
-            // on its arm frame (sonic3k.asm:106458-106473,142909-142931).
-            if (!collapseRequestObserved) {
-                collapseRequestObserved = true;
-                return;
-            }
+            // Process_Sprites precedes ScreenEvents in LevelLoop
+            // (sonic3k.asm:7920-7930), so this FG pass already sees the SST's
+            // loc_6C4BE (sonic3k.asm:142919-142931) request from this loop.
+            // loc_512FA (sonic3k.asm:106465-106469) arms $14 in the FG pass.
+            // ScreenEvents (sonic3k.asm:102279-102301) dispatches BG afterward;
+            // MGZ2BGE_Normal (sonic3k.asm:107100-107122) decrements it on this same frame.
             screenEventRoutine = SCREEN_EVENT_COLLAPSE;
-            screenShakeActive = true;
-            collapseStartupShakeTimer = COLLAPSE_STARTUP_SHAKE_FRAMES;
+            screenShakeActive = false;
+            screenShake.writeFlag(COLLAPSE_STARTUP_SHAKE_FRAMES);
             return;
         }
         if (screenEventRoutine != SCREEN_EVENT_COLLAPSE || collapseFinished) {
             return;
         }
-        if (collapseStartupShakeTimer > 0) {
-            collapseStartupShakeTimer--;
+        var primary = camera().getFocusedSprite();
+        if (primary == null || NativePlayableRoutine.isAtOrBeyondDeathForNativeRead(primary)) return;
+        if (screenShake.flag() > 0) {
             // Keep the zero written by the timed-shake owner invisible to the
             // collapse dispatch until its next ScreenEvents observation. This
             // preserves the separate ShakeScreen_Setup / MGZ2SE_Collapse phase
             // instead of falling through in the same Java call.
             return;
         }
-        if (!collapseInitialized) {
+        // MGZ2_LevelCollapse branches on the signed ROM flag, not an engine
+        // initialization latch (sonic3k.asm:106500-106507).
+        if (screenShake.flag() == 0) {
             snapshotForegroundTilemapBeforeCollapseClear();
             clearForegroundRegionWithoutRedraw(COLLAPSE_REGION_X, COLLAPSE_OPENING_Y,
                     COLLAPSE_REGION_WIDTH, COLLAPSE_REGION_HEIGHT);
             collapseMutationCount++;
             createCollapseSolids();
             collapseInitialized = true;
+            // loc_513FA (sonic3k.asm:106557-106562) switches the expired timed
+            // flag to continuous mode for the scrolling interval.
+            requestContinuousScreenShake();
             // ROM falls through from initialization into the scrolling path
             // in this same screen-event dispatch.
             playCollapseRumble(frameCounter);
@@ -2153,9 +2242,9 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
         collapseFinished = true;
         collapseRequested = false;
         screenShakeActive = false;
+        clearScreenShakeFlag();
         bossBgScrollVelocity = 0;
         bossBgScrollOffset = camera().getX() & 0xFFFF;
-        publishBossBgScrollOffset();
         screenEventRoutine = SCREEN_EVENT_MOVE_BG;
     }
 
@@ -2168,14 +2257,6 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
                     bossBgScrollVelocity + BOSS_BG_SCROLL_ACCEL);
         }
         bossBgScrollOffset = (bossBgScrollOffset + (bossBgScrollVelocity >>> 16)) & 0xFFFF;
-        publishBossBgScrollOffset();
-    }
-
-    private void publishBossBgScrollOffset() {
-        MgzZoneRuntimeState state = currentMgzRuntimeState();
-        if (state != null) {
-            state.publishBossBgScrollOffset(bossBgScrollOffset);
-        }
     }
 
     private void createCollapseSolids() {
@@ -2561,8 +2642,8 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
     public void    setCollapseMutationCount(int v)       { collapseMutationCount = v; }
     public int     getCollapseFrameCounter()             { return collapseFrameCounter; }
     public void    setCollapseFrameCounter(int v)        { collapseFrameCounter = v; }
-    public int     getCollapseStartupShakeTimer()        { return collapseStartupShakeTimer; }
-    public void    setCollapseStartupShakeTimer(int v)   { collapseStartupShakeTimer = v; }
+    public int     getCollapseStartupShakeTimer()        { return Math.max(0, screenShake.flag()); }
+    public void    setCollapseStartupShakeTimer(int v)   { screenShake.writeFlag(v); }
     public int[]   getCollapseScrollVelocityCopy()       { return java.util.Arrays.copyOf(collapseScrollVelocity, COLLAPSE_COLUMN_COUNT); }
     public void    setCollapseScrollVelocity(int[] src)  { System.arraycopy(src, 0, collapseScrollVelocity, 0, COLLAPSE_COLUMN_COUNT); }
     public int[]   getCollapseScrollFixedPositionCopy()  { return java.util.Arrays.copyOf(collapseScrollFixedPosition, COLLAPSE_COLUMN_COUNT); }
@@ -2594,8 +2675,8 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
     public void    setBgRiseMotionStarted(boolean v)     { bgRiseMotionStarted = v; }
     public boolean isBgRiseAccelLatched()                { return bgRiseAccelLatched; }
     public void    setBgRiseAccelLatched(boolean v)      { bgRiseAccelLatched = v; }
-    public int     getBgRiseFinalShakeTimerRaw()         { return bgRiseFinalShakeTimer; }
-    public void    setBgRiseFinalShakeTimer(int v)       { bgRiseFinalShakeTimer = v; }
+    public int     getBgRiseFinalShakeTimerRaw()         { return Math.max(0, screenShake.flag()); }
+    public void    setBgRiseFinalShakeTimer(int v)       { screenShake.writeFlag(v); }
     public int     getBgRiseRefreshFramesRemaining()     { return bgRiseRefreshFramesRemaining; }
     public void    setBgRiseRefreshFramesRemaining(int v){ bgRiseRefreshFramesRemaining = v; }
     public boolean isBgRiseLoadStateInitialised()        { return bgRiseLoadStateInitialised; }
@@ -2615,4 +2696,81 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
     public void    setGradualUnlockDirection(int v)      { gradualUnlockDirection = v; }
     public int     getGradualUnlockAccumulator()         { return gradualUnlockAccumulator; }
     public void    setGradualUnlockAccumulator(int v)    { gradualUnlockAccumulator = v; }
+    public byte[] captureMgzState() {
+        byte[] scalars = ZoneEventSchemaSidecar.capture(this);
+        var out = ByteBuffer.allocate(12 + scalars.length + 12);
+        out.putInt(0x4D475A31).putInt(1).putInt(scalars.length).put(scalars);
+        screenShake.captureTo(out);
+        return out.array();
+    }
+
+    public static boolean hasValidMgzState(byte[] bytes) {
+        if (bytes == null || bytes.length < 24) return false;
+        var in = ByteBuffer.wrap(bytes);
+        if (in.getInt() != 0x4D475A31 || in.getInt() != 1) return false;
+        int length = in.getInt();
+        var probe = new Sonic3kMGZEvents();
+        byte[] shape = ZoneEventSchemaSidecar.capture(probe);
+        if (length != shape.length
+                || length != in.remaining() - 12) return false;
+        byte[] scalars = new byte[length];
+        in.get(scalars);
+        if (!hasValidScalarShape(scalars, shape)) return false;
+        ZoneEventSchemaSidecar.restore(probe, scalars);
+        if (!Arrays.equals(scalars, ZoneEventSchemaSidecar.capture(probe))) return false;
+        for (int routine : new int[] {probe.bgRiseRoutine, probe.publishedRiseRoutine}) {
+            if (routine != 0 && routine != 4 && routine != 8 && routine != 12) return false;
+        }
+        if (probe.publishedBossOffset != Integer.MIN_VALUE
+                && (probe.publishedBossOffset < 0 || probe.publishedBossOffset > 0xFFFF)) return false;
+        if (probe.bgRiseRefreshFramesRemaining < 0 || probe.bgRiseRefreshFramesRemaining > BG_RISE_REFRESH_FOLLOWUP_FRAMES
+                || probe.bgRiseOffset < 0 || probe.bgRiseOffset > 0x220
+                || probe.publishedRiseOffset < 0 || probe.publishedRiseOffset > 0x220) return false;
+        for (int value : new int[] {probe.appliedScreenShakeOffset, probe.collisionDiffX, probe.collisionDiffY, probe.publishedCameraX, probe.publishedCameraY,
+                in.getInt(), in.getInt(), in.getInt()}) {
+            if (value != (short) value) return false;
+        }
+        return true;
+    }
+
+    /** Preflight the fixed same-build schema before decoding; malformed bytes are data,
+     * while schema/programming failures propagate instead of masquerading as corruption. */
+    private static boolean hasValidScalarShape(byte[] scalars, byte[] shape) {
+        var expected = ByteBuffer.wrap(shape).order(java.nio.ByteOrder.LITTLE_ENDIAN);
+        var input = ByteBuffer.wrap(scalars).order(java.nio.ByteOrder.LITTLE_ENDIAN);
+        for (var plan : com.openggf.game.rewind.schema.RewindSchemaRegistry
+                .schemaFor(Sonic3kMGZEvents.class).capturedFields()) {
+            Class<?> type = plan.field().getType();
+            int width;
+            if (type == int[].class && java.lang.reflect.Modifier.isFinal(plan.field().getModifiers())) {
+                int count = expected.getInt();
+                if (input.getInt() != count) return false;
+                width = count * Integer.BYTES;
+            } else if (type.isPrimitive()) {
+                width = switch (com.openggf.game.rewind.schema.RewindScalarTag.forType(type)) {
+                    case BOOLEAN, BYTE -> 1;
+                    case CHAR, SHORT -> 2;
+                    case INT, FLOAT -> 4;
+                    case LONG, DOUBLE -> 8;
+                };
+            } else {
+                throw new IllegalStateException("MGZ scalar preflight needs a codec for " + plan.field());
+            }
+            expected.position(expected.position() + width);
+            input.position(input.position() + width);
+        }
+        return !input.hasRemaining();
+    }
+
+    public void restoreMgzState(byte[] bytes) {
+        if (!hasValidMgzState(bytes)) throw new IllegalArgumentException("Invalid MGZ publication payload");
+        var in = ByteBuffer.wrap(bytes);
+        in.position(8);
+        byte[] scalars = new byte[in.getInt()];
+        in.get(scalars);
+        ZoneEventSchemaSidecar.restore(this, scalars);
+        screenShake.restoreFrom(in);
+        discardHardwareWorkFacadesAfterRewind();
+    }
+
 }

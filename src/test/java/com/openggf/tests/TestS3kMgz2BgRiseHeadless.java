@@ -644,76 +644,39 @@ class TestS3kMgz2BgRiseHeadless {
     // BG-rise terrain collision that doesn't involve swapping the per-frame
     // BG scroll formula. Removing the test until a working approach exists.
 
-    /**
-     * End-to-end verification that matches the game: load MGZ2, teleport
-     * player, run frame-step via the same LevelFrameStep.execute the game
-     * uses, and then check that the registered SwScrlMgz instance's internal
-     * state has been updated to SONIC — i.e. the events->scrollHandler push
-     * succeeded. This bypasses the scroll-handler update() and just inspects
-     * the field via a getter we add for the test, catching any broken plumbing
-     * between Sonic3kMGZEvents.resolveMgzScrollHandler() and the actual
-     * SwScrlMgz instance registered with ParallaxManager.
-     */
+    /** Real loaded event publication feeds the registered renderer without renderer writes. */
     @Test
-    void eventsStateTransitionPropagatesToRegisteredSwScrlMgz() throws Exception {
+    void completedBackgroundEventFeedsRegisteredProjection() {
         teleport(0x3500, 0x0850);
-        // Step one frame through the full LevelFrameStep pipeline (same path
-        // the game uses: updateZoneFeaturesPrePhysics -> Sonic3kMGZEvents
-        // -> setBgRiseState on SwScrlMgz).
         fixture.stepIdleFrames(1);
-
-        // Events should have transitioned to SONIC
-        assertEquals(8, mgzEvents().getBgRiseRoutine(),
-                "events class should report state SONIC after teleport into trigger");
-
-        // Now inspect the REGISTERED SwScrlMgz (same path the renderer uses)
-        var pm = GameServices.parallax();
-        var handler = pm.getHandler(com.openggf.game.sonic3k.constants.Sonic3kZoneIds.ZONE_MGZ);
-        assertNotNull(handler, "Parallax manager must resolve MGZ scroll handler");
-        assertTrue(handler instanceof com.openggf.game.sonic3k.scroll.SwScrlMgz,
-                "MGZ handler should be SwScrlMgz instance");
-
-        // Reflect the bgRiseRoutine field
-        var field = handler.getClass().getDeclaredField("bgRiseRoutine");
-        field.setAccessible(true);
-        int scrollHandlerState = (int) field.get(handler);
-
-        assertEquals(8, scrollHandlerState,
-                "SwScrlMgz.bgRiseRoutine must be 8 if setBgRiseState was called");
+        var events = mgzEvents();
+        assertEquals(8, events.getBgRiseRoutine());
+        var publication = events.screenPublication();
+        assertEquals(8, publication.riseRoutine());
+        byte[] before = events.captureMgzState();
+        var handler = GameServices.parallax().getHandler(Sonic3kZoneIds.ZONE_MGZ);
+        handler.update(new int[224], publication.cameraX(), publication.cameraY(), 1, 1);
+        assertEquals((short) (publication.cameraX() - 0x3200), handler.getBgCameraX());
+        assertEquals((short) (publication.cameraY() - 0x8F0 + publication.riseOffset()
+                + publication.shakeOffset()), handler.getVscrollFactorBG());
+        org.junit.jupiter.api.Assertions.assertArrayEquals(before, events.captureMgzState());
     }
 
-    /**
-     * Verify SwScrlMgz produces DIFFERENT VScroll/HScroll output in state 8
-     * vs state 0. If they're identical for the teleport coordinates, the
-     * state-8 formula switch isn't actually taking effect in our pipeline.
-     */
+    /** Declared projection component: normal and rise formulas at identical camera coordinates. */
     @Test
     void swScrlMgz_stateEightProducesDifferentScrollFromStateZero() {
-        var pm = GameServices.parallax();
-        var handler = (com.openggf.game.sonic3k.scroll.SwScrlMgz)
-                pm.getHandler(com.openggf.game.sonic3k.constants.Sonic3kZoneIds.ZONE_MGZ);
-        assertNotNull(handler, "MGZ scroll handler must be resolved");
-
-        int cameraX = 0x3460;
-        int cameraY = 0x07C0;
-        int[] hbuf = new int[256];
-
-        // Frame 1: state 0 (never set anything)
-        handler.setBgRiseState(0, 0);
-        handler.update(hbuf, cameraX, cameraY, 1, 1);
-        int state0_bgY = handler.getVscrollFactorBG();
-        int state0_bgCamX = handler.getBgCameraX();
-
-        // Frame 2: state 8 with offset 0 (rise just armed)
-        handler.setBgRiseState(8, 0);
-        handler.update(hbuf, cameraX, cameraY, 2, 1);
-        int state8_bgY = handler.getVscrollFactorBG();
-        int state8_bgCamX = handler.getBgCameraX();
-
-        assertNotEquals(state0_bgY, state8_bgY,
-                "state 8 MUST produce different bgY from state 0 for the formula switch to be reaching the renderer; "
-                        + "state0 bgY=" + state0_bgY + " bgCamX=" + state0_bgCamX
-                        + " state8 bgY=" + state8_bgY + " bgCamX=" + state8_bgCamX);
+        var rise = new java.util.concurrent.atomic.AtomicInteger();
+        var handler = new com.openggf.game.sonic3k.scroll.SwScrlMgz(() ->
+                new Sonic3kMGZEvents.ScreenPublication(rise.get(), 0, Integer.MIN_VALUE, 0, 0));
+        byte[] before = mgzEvents().captureMgzState();
+        int[] hbuf = new int[224];
+        handler.update(hbuf, 0x3460, 0x07C0, 1, 1);
+        int normalBgY = handler.getVscrollFactorBG();
+        rise.set(8);
+        handler.update(hbuf, 0x3460, 0x07C0, 2, 1);
+        assertNotEquals(normalBgY, handler.getVscrollFactorBG());
+        assertEquals(0x260, handler.getBgCameraX());
+        org.junit.jupiter.api.Assertions.assertArrayEquals(before, mgzEvents().captureMgzState());
     }
 
     private void ensureBackgroundTilemapData() throws Exception {
