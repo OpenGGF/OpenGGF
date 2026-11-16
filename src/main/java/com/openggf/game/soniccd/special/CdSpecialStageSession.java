@@ -199,4 +199,50 @@ public final class CdSpecialStageSession {
         if (!ended) throw new IllegalStateException("The special stage has not ended");
         return CdSpecialStageResult.of(stage);
     }
+
+    State capture() { return new State(
+            buffers[0], buffers[1], collectedSprites, java.util.List.copyOf(pendingSounds), demoCursor, latchedHold,
+            latchedTap, previousHold, frame, phase, fadeFrames, shownBuffer, pass, fillBuffer, demoActive, ended,
+            endAfterPass, collected, collectedArt, stage.capture(), screen.capture()); }
+    void restore(State s) {
+        System.arraycopy(s.buffer0(), 0, buffers[0], 0, buffers[0].length);
+        System.arraycopy(s.buffer1(), 0, buffers[1], 0, buffers[1].length);
+        collectedSprites = s.collectedSprites();
+        pendingSounds.clear();
+        pendingSounds.addAll(s.pendingSounds());
+        demoCursor = s.demoCursor();
+        latchedHold = s.latchedHold();
+        latchedTap = s.latchedTap();
+        previousHold = s.previousHold();
+        frame = s.frame();
+        phase = s.phase();
+        fadeFrames = s.fadeFrames();
+        shownBuffer = s.shownBuffer();
+        pass = s.pass();
+        fillBuffer = s.fillBuffer();
+        demoActive = s.demoActive();
+        ended = s.ended();
+        endAfterPass = s.endAfterPass();
+        System.arraycopy(s.collected(), 0, collected, 0, collected.length);
+        System.arraycopy(s.collectedArt(), 0, collectedArt, 0, collectedArt.length);
+        stage.restore(s.stage());
+        screen.restore(s.screen());
+    }
+    record State(
+            byte[] buffer0, byte[] buffer1, java.util.List<CdSpecialSprites.Entry> collectedSprites,
+            java.util.List<CdSpecialSound> pendingSounds, int demoCursor, int latchedHold, int latchedTap,
+            int previousHold, int frame, int phase, int fadeFrames, int shownBuffer, int pass, int fillBuffer,
+            boolean demoActive, boolean ended, boolean endAfterPass, byte[] collected, byte[] collectedArt,
+            CdSpecialStage.State stage, CdSpecialStageScreen.State screen) {
+        State {
+            buffer0 = buffer0.clone(); buffer1 = buffer1.clone();
+            collectedSprites = java.util.List.copyOf(collectedSprites); pendingSounds = java.util.List.copyOf(pendingSounds);
+            collected = collected.clone();
+            collectedArt = collectedArt.clone();
+        }
+        @Override public byte[] buffer0() { return buffer0.clone(); }
+        @Override public byte[] buffer1() { return buffer1.clone(); }
+        @Override public byte[] collected() { return collected.clone(); }
+        @Override public byte[] collectedArt() { return collectedArt.clone(); }
+    }
 }

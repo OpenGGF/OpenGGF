@@ -94,6 +94,10 @@ class TestPpzBackgroundRowSampling {
     }
 
     private static int verifyPicture(CdStagePayload payload, int cameraY) throws Exception {
+        return verifyPicture(payload, cameraY, 320);
+    }
+
+    static int verifyPicture(CdStagePayload payload, int cameraY, int width) throws Exception {
         var manager = com.openggf.game.GameServices.level();
         var level = (com.openggf.game.soniccd.level.CdLevel) manager.getCurrentLevel();
         var graphics = com.openggf.game.GameServices.graphics();
@@ -104,7 +108,7 @@ class TestPpzBackgroundRowSampling {
         manager.drawWithSpritePriority(com.openggf.game.GameServices.sprites(), false);
         graphics.flush();
         org.lwjgl.opengl.GL11.glFinish();
-        var image = com.openggf.graphics.ScreenshotCapture.captureFramebuffer(320, 224);
+        var image = com.openggf.graphics.ScreenshotCapture.captureFramebuffer(width, 224);
         var parallax = com.openggf.game.GameServices.parallax();
         int[] scroll = parallax.getHScroll();
         int bgY = parallax.getVscrollFactorBG();
@@ -114,7 +118,7 @@ class TestPpzBackgroundRowSampling {
         com.openggf.level.render.PlaneRasterizer.TileSource tiles = (layer, index, x) -> level.getPattern(index);
         int checked = 0;
         for (int y = 0; y < 224; y++) {
-            for (int x : new int[] {20, 100, 220, 300}) {
+            for (int x : new int[] {20, 100, 220, 300, width - 20, width - 1}) {
                 int fg = com.openggf.level.render.PlaneRasterizer.rasterize(level, tiles, 0,
                         x - (short) (scroll[y] >>> 16), Math.floorMod(y + fgY, 2048), 1, 1, 0)[0];
                 if (fg != 0) continue;
@@ -132,7 +136,7 @@ class TestPpzBackgroundRowSampling {
         assertEquals(org.lwjgl.opengl.GL11.GL_NO_ERROR, org.lwjgl.opengl.GL11.glGetError());
         var out = java.nio.file.Path.of("target/ppz-camera-thresholds");
         java.nio.file.Files.createDirectories(out);
-        com.openggf.graphics.ScreenshotCapture.savePNG(image, out.resolve(payload + "-y" + cameraY + ".png"));
+        com.openggf.graphics.ScreenshotCapture.savePNG(image, out.resolve(payload + "-w" + width + "-y" + cameraY + ".png"));
         return checked;
     }
 }

@@ -514,4 +514,64 @@ public final class CdSpecialStageScreen {
         return new CdProgramScreenRenderer.Frame(tiles, dirty, planeA, planeB, cram,
                 line -> a[line], line -> b[line], List.copyOf(sprites), WIDTH, display);
     }
+
+    State capture() { return new State(
+            java.util.Arrays.copyOfRange(tiles, 32, 32 + 2 * 384 * 32), java.util.Arrays.copyOfRange(tiles, 0xBC00,
+            0xBF00), List.copyOf(spriteTable), cramPending, display, scrollDisable, ss1Shift, ss5ShiftOrWave,
+            bgScrollMode, scrollFlags, timeStonePalDelay, planeA, palette, fadeTarget, cram, scrollA, scrollB,
+            bgHScroll, bgHScrollFrac, scrollOffset, cycle); }
+    void restore(State s) {
+        System.arraycopy(s.floorTiles(), 0, tiles, 32, 2 * 384 * 32);
+        copySprites(s.spriteTable(), s.sonicTiles());
+        dirty.set(0, tiles.length / 32);
+        cramPending = s.cramPending();
+        display = s.display();
+        scrollDisable = s.scrollDisable();
+        ss1Shift = s.ss1Shift();
+        ss5ShiftOrWave = s.ss5ShiftOrWave();
+        bgScrollMode = s.bgScrollMode();
+        scrollFlags = s.scrollFlags();
+        timeStonePalDelay = s.timeStonePalDelay();
+        System.arraycopy(s.planeA(), 0, planeA, 0, planeA.length);
+        System.arraycopy(s.palette(), 0, palette, 0, palette.length);
+        System.arraycopy(s.fadeTarget(), 0, fadeTarget, 0, fadeTarget.length);
+        System.arraycopy(s.cram(), 0, cram, 0, cram.length);
+        System.arraycopy(s.scrollA(), 0, scrollA, 0, scrollA.length);
+        System.arraycopy(s.scrollB(), 0, scrollB, 0, scrollB.length);
+        System.arraycopy(s.bgHScroll(), 0, bgHScroll, 0, bgHScroll.length);
+        System.arraycopy(s.bgHScrollFrac(), 0, bgHScrollFrac, 0, bgHScrollFrac.length);
+        System.arraycopy(s.scrollOffset(), 0, scrollOffset, 0, scrollOffset.length);
+        System.arraycopy(s.cycle(), 0, cycle, 0, cycle.length);
+    }
+    record State(
+            byte[] floorTiles, byte[] sonicTiles, List<CdSpecialSprites.Entry> spriteTable, boolean cramPending,
+            boolean display, boolean scrollDisable, int ss1Shift, int ss5ShiftOrWave, int bgScrollMode,
+            int scrollFlags, int timeStonePalDelay, int[] planeA, int[] palette, int[] fadeTarget, int[] cram,
+            int[] scrollA, int[] scrollB, int[] bgHScroll, int[] bgHScrollFrac, int[] scrollOffset, int[] cycle) {
+        State {
+            floorTiles = floorTiles.clone(); sonicTiles = sonicTiles.clone(); spriteTable = List.copyOf(spriteTable);
+            planeA = planeA.clone();
+            palette = palette.clone();
+            fadeTarget = fadeTarget.clone();
+            cram = cram.clone();
+            scrollA = scrollA.clone();
+            scrollB = scrollB.clone();
+            bgHScroll = bgHScroll.clone();
+            bgHScrollFrac = bgHScrollFrac.clone();
+            scrollOffset = scrollOffset.clone();
+            cycle = cycle.clone();
+        }
+        @Override public byte[] floorTiles() { return floorTiles.clone(); }
+        @Override public byte[] sonicTiles() { return sonicTiles.clone(); }
+        @Override public int[] planeA() { return planeA.clone(); }
+        @Override public int[] palette() { return palette.clone(); }
+        @Override public int[] fadeTarget() { return fadeTarget.clone(); }
+        @Override public int[] cram() { return cram.clone(); }
+        @Override public int[] scrollA() { return scrollA.clone(); }
+        @Override public int[] scrollB() { return scrollB.clone(); }
+        @Override public int[] bgHScroll() { return bgHScroll.clone(); }
+        @Override public int[] bgHScrollFrac() { return bgHScrollFrac.clone(); }
+        @Override public int[] scrollOffset() { return scrollOffset.clone(); }
+        @Override public int[] cycle() { return cycle.clone(); }
+    }
 }

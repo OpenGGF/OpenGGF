@@ -203,7 +203,7 @@ public final class CdResults extends CdObject implements ObjectVisualFacing.NonD
         PatternSpriteRenderer renderer = art(key);
         var camera = services().camera();
         if (renderer == null || camera == null) return;
-        renderer.drawFrameIndex(frame, camera.getX() + x - 128, camera.getY() + screenY - 128, false, false,
+        renderer.drawFrameIndex(frame, camera.getX() + CdScreenPosition.centredOrigin(services()) + x - 128, camera.getY() + screenY - 128, false, false,
                 CdObjectArtProvider.tilePalette(tileWord));
     }
 

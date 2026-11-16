@@ -51,7 +51,11 @@ under the matching area heading; see the
   graphics, and object names follow the current stage's object table. Palmtree
   Panic backgrounds sample each row's own camera section, retaining static-row
   repetition without wrapping the moving scenery. Results show the changing
-  score and bonus digits. Holding Escape returns Sonic CD to the game shelf
+  score and bonus digits. Wider views extend CD object draw/touch and lifetime
+  windows, centre boss locks, title cards, results and game-over text, and fill the time tunnel
+  through its white fade. CD HUD pieces, including the time-period and warp icons,
+  follow the centred or left-edge HUD setting in both widescreen draw modes. Native 320-wide math, level walls and pillarboxed
+  programs/special stages retain their native dimensions. Holding Escape returns Sonic CD to the game shelf
   with a resumable card, the correct act label and settings restored on resume.
   Sonic plays on Sonic 1's physics
   with Sonic CD's own rules (spin dash and super peel-out, the extended camera,
@@ -59,7 +63,8 @@ under the matching area heading; see the
   Sonic giving up). Time travel, special stages
   (without their results graphics), the title, stage select, Time Attack and
   backup RAM (saved in `saves/soniccd`), the opening video, both endings, FM
-  effects, CD audio and PCM sound are hosted. The master
+  effects, CD audio and PCM sound are hosted. Held-key live rewind works inside
+  special stages, including the three-frame floor pipeline, UFOs and effects. The master
   title lists it when the disc is configured or found (`roms.default: scd` boots
   it directly) and verifies it against the USA release before starting. A CHD
   is verified by the same content fingerprint as a BIN/CUE set, so it is
