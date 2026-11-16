@@ -114,7 +114,7 @@ A slot is exactly what a latest picture drawn now would show:
 | Game | Frame | Scroll | Cost |
 |---|---|---|---|
 | S3K (`SpriteTablePublication`) | `published()` by reference | `publishedScroll()` | References only. Lag outputs rotate `B→B`, so the picture holds. |
-| S1/S2 | one `captureSceneSpriteTable` per service | `LevelScrollPresentation.capture` | One producer pass per service, **only while interpolation is active**. Adopted pictures replay it and skip the per-draw recapture. |
+| S1/S2/CD | one `captureSceneSpriteTable` per service | `LevelScrollPresentation.capture` | One producer pass per service, **only while interpolation is active**. Adopted pictures replay it and skip the per-draw recapture. |
 
 **Identity lives in a sidecar, not in native frames.** `Frame`, `Tile`, `Subject` and
 `Tables.State` stay unchanged, so rewind payloads and equality are untouched, and the feature-off
@@ -492,3 +492,45 @@ After integrating both workers' commits, the lead reran
 23 passed, no failures/errors/skips. Execution took 35.834 seconds, separate from
 queue wait. The 187 earlier focused tests and 860 guards also pass. No whole-route
 or full-suite result is inferred from these checks.
+
+## Sonic CD interpolation enablement (2026-11-16)
+
+The initial CD audit found an existing exclusion; the requested delivery now
+removes it. `SonicCdLevelInitProfile` opts into `LevelMotionPresentation` only with
+projection support implemented for PPZ, CCZ, QQZ, WWZ, SSZ, MMZ and TTZ. Each phase
+captures native scroll state and required disc-backed tables/external facts, then
+composes camera-selected bands on private scratch without UpdateScroll, cloud or
+water advancement, live dependency reads during sampling, swap callbacks or
+mutation of gameplay owners. QQZ/WWZ reuse factored native camera arithmetic;
+TTZ retains the published water/deformation phase in rewind state. Native
+224-row output is retained for extended presentation sampling, without a second
+native dispatch. Native assets continue to come from the user's disc pipeline.
+
+Capture freezes the common native scroll-lock/dead gate: a held phase preserves
+background registers and words even if sampling occurs after release. A real
+PPZ test first failed with background Y 1818 projected to 1834 during a frozen
+hold; all seven handlers now use the shared held phase for that native gate.
+These are semantic guards, not frame/fixture keys. Ordinary period/load changes
+retain existing history invalidation and scroll period/topology/step guards.
+Exhaustive swap/wrap and time-travel/load lifecycle certification remains open.
+
+`TestCdLiveMotionPixels` deliberately starts from each native Act 1 Present view
+rather than placing a camera in empty scenery. A first probe at arbitrary camera
+($0300,$0100) could not distinguish a followed player from a stationary background;
+the real-view pixel witness and exact-pan control remove that false witness.
+The test checks positive live eligibility, zero-motion exact pixels, midpoint
+scroll amounts and actual pictures, repeated render-only draws, exact output
+after blending, deep equality of native scroll state, unchanged player/frame and
+held-gate capture independent of later gate release. A profile-disabled negative
+run failed both eligibility checks before enabling the marker. `TestCdMotionContinuity`
+now asserts provider support/positive eligibility and a non-capable negative
+profile, replacing the former exclusion pin.
+
+Initial combined verification: 54 tests pass without skips, including eight live
+eligibility/pixel cases (one capability check plus seven disc-backed zones), 11
+provider/PPZ-semantic cases and all seven handlers' phase cases. Commands use
+queued Maven, Java 25, `-Dmse=off`, display variables unset and surfaceless EGL.
+The disc-backed method has a specific optional-disc skip rule and is required
+when the USA disc is supplied. Composition coverage is broader than the seven
+Act 1 Present pixel views; neither certifies native pixel parity or new routes.
+Whole-pixel stepping and discrete shake remain the shared presentation contract.

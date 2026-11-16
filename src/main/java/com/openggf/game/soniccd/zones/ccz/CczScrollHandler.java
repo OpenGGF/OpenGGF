@@ -450,6 +450,10 @@ public final class CczScrollHandler extends AbstractZoneScrollHandler implements
      */
     @Override
     public ScrollProjectionPhase captureProjection(ScrollProjectionContext context) {
+        // Capture the shared native scrollLock/dead gate, never read it while sampling.
+        if (!com.openggf.game.soniccd.zones.CdLevelScrollGate.runs())
+            return com.openggf.level.scroll.ScrollProjectionPhases.held(context);
+
         Object state = captureRewindState();
         byte[] frozenWobble = wobble().clone();
         CdStagePayload frozenPayload = payload;

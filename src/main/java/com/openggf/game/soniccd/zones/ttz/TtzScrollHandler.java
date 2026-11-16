@@ -319,6 +319,10 @@ public final class TtzScrollHandler extends AbstractZoneScrollHandler implements
     @Override
     public com.openggf.level.scroll.ScrollProjectionPhase captureProjection(
             com.openggf.level.scroll.ScrollProjectionContext context) {
+        // Capture the shared native scrollLock/dead gate, never read it while sampling.
+        if (!com.openggf.game.soniccd.zones.CdLevelScrollGate.runs())
+            return com.openggf.level.scroll.ScrollProjectionPhases.held(context);
+
         final Object state = captureRewindState();
         int frozenWater = publishedWater;
         int frozenDeform = publishedDeform;

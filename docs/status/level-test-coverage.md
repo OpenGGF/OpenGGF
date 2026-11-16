@@ -4,8 +4,10 @@ Temporal scroll matching (2026-11-16): [HCZ1](../architecture/validation/levels/
 and [HCZ2](../architecture/validation/levels/s3k-hcz2.md#temporal-scroll-matching-2026-11-16)
 record 12 typed-publication motion checks, retaining event lifecycle, history,
 rewind/load and rendered-pixel gaps. [CD stages](../architecture/validation/levels/scd-stages.md#motion-eligibility-maintenance-2026-11-16)
-record 11 profile-gate/PPZ frozen-scroll checks; CD is currently excluded from live
-interpolation, and no new stage/route certification is claimed.
+record CD interpolation enablement: all seven provider phases, positive profile
+eligibility, PPZ frozen-scroll semantics and disc-backed Act 1 Present midpoint
+pixels/state isolation in every zone. Other periods' pixels, wrap/swap/history
+boundaries and native route certification remain inherited obligations.
 
 AIZ1 background interpolation maintenance (2026-11-16): the
 [AIZ1 matrix](../architecture/validation/levels/s3k-aiz1-sonic.md#background-interpolation-maintenance-2026-11-16)

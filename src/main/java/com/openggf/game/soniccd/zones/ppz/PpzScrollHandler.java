@@ -636,6 +636,10 @@ public final class PpzScrollHandler extends AbstractZoneScrollHandler implements
      */
     @Override
     public ScrollProjectionPhase captureProjection(ScrollProjectionContext context) {
+        // Capture the shared native scrollLock/dead gate, never read it while sampling.
+        if (!com.openggf.game.soniccd.zones.CdLevelScrollGate.runs())
+            return com.openggf.level.scroll.ScrollProjectionPhases.held(context);
+
         Object state = captureRewindState();
         boolean rampY = act == 1 && period == CdPeriod.PRESENT && player.centreX() >= PRESENT_FIRST_RAMP_X;
         CdPeriod frozenPeriod = period;

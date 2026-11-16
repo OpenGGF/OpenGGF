@@ -9,29 +9,20 @@ import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.scroll.*;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
-import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-/** Ordinary CD must not acquire interpolation through a shared renderer/profile change.
- * RebuildOutput reconciles frozen scroll RAM; it is not a camera projection API. */
+/** CD ordinary scenes use the shared live motion path; frozen rebuild remains a distinct native operation. */
 class TestCdMotionContinuity {
-    private static final class Audited implements LevelInitProfile, LevelMotionPresentation {
-        public List<InitStep> levelLoadSteps(LevelLoadContext context) { return List.of(); }
-        public List<InitStep> levelTeardownSteps() { return List.of(); }
-        public List<InitStep> perTestResetSteps() { return List.of(); }
-        public List<StaticFixup> postTeardownFixups() { return List.of(); }
-    }
-
     @ParameterizedTest @EnumSource(CdZone.class)
-    void ordinaryProviderHandlersRemainBehindTheActualProfileGate(CdZone zone) {
+    void ordinaryProviderHandlersSupplyPhasesAndTheProfileOptsIn(CdZone zone) {
         var module = new SonicCdGameModule();
         var provider = new CdScrollHandlerProvider();
         provider.initForZone(zone.ordinal(), 0, 256, 128);
         var handler = provider.getHandler(zone.ordinal());
         assertInstanceOf(ScrollOutputRebuilder.class, handler);
-        assertFalse(handler instanceof ScrollProjectionSource);
-        assertFalse(module.getLevelInitProfile() instanceof LevelMotionPresentation);
+        assertInstanceOf(ScrollProjectionSource.class, handler);
+        assertInstanceOf(LevelMotionPresentation.class, module.getLevelInitProfile());
 
         var level = mock(LevelManager.class);
         level.level = mock(Level.class);
@@ -45,10 +36,10 @@ class TestCdMotionContinuity {
         when(level.gameModule.getBonusStageProvider()).thenReturn(bonus);
         when(level.gameModule.getSpecialStageProvider()).thenReturn(mock(SpecialStageProvider.class));
         var renderer = new LevelRenderer(level);
-        assertFalse(renderer.supportsMotion(), zone.name());
-        // Negative control: the same ordinary scene would be eligible with an audited profile.
-        when(level.gameModule.getLevelInitProfile()).thenReturn(new Audited());
-        assertTrue(renderer.supportsMotion());
+        assertTrue(renderer.supportsMotion(), zone.name());
+        // A profile without the explicit capability must still be rejected.
+        when(level.gameModule.getLevelInitProfile()).thenReturn(mock(LevelInitProfile.class));
+        assertFalse(renderer.supportsMotion());
     }
 
     @ParameterizedTest @EnumSource(CdPeriod.class)

@@ -11,7 +11,8 @@ import java.util.List;
  * Sonic 1's {@code Level:} sequence: load data, collision, player, then camera. No sidekick.
  * The title card is object $3C (Main.asm:271-275) and arrives with the object lanes.
  */
-final class SonicCdLevelInitProfile extends AbstractLevelInitProfile {
+final class SonicCdLevelInitProfile extends AbstractLevelInitProfile
+        implements com.openggf.game.internal.LevelMotionPresentation {
     private final CdLevelEventProvider events;
     private final com.openggf.game.soniccd.timetravel.CdTimeTravel timeTravel;
     private final com.openggf.game.soniccd.objects.shared.SharedSwitchFlags switchFlags;
