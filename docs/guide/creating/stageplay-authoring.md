@@ -606,5 +606,7 @@ Earlier experimental CD tapes with container-byte hashes must be recreated.
 Scene route CLI `--scd-rom` uses the same media descriptor and freshness check
 as editor workers. Coverage `--game all` includes all 70 CD stage contexts;
 registry rows and supplied sample observations do not certify behavior or pixels.
+For CD observations, `romSha1` records the same verified source digest as native
+route identity, rather than the CUE sheet or container hash.
 This remains a bounded authoring preview; see the
 [validation record](../../architecture/validation/2026-11-16-sonic-cd-stageplay-editor.md).

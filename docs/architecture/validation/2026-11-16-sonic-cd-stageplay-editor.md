@@ -4,7 +4,9 @@ Branch `feature/ai-scd-stageplay-editor`, parent
 `origin/feature/ai-scd-mod-api` at `dc6b3c2b9edd621a0feecfe6d411628d51756f92`.
 Owner: OpenAI Codex GPT-6.1-sol; no delegated workers.
 
-This is an unfinished implementation checkpoint, not authoring certification.
+This record preserves staged implementation checkpoints; the final continuation
+states current readiness and bounded validation. Earlier remaining-work lists
+are historical, not full authoring certification.
 No merge or destination-branch push is authorized or performed.
 
 ## Implemented source path
@@ -426,3 +428,138 @@ build while it runs; compare every failure identity/assertion/skip with the
 parent's recorded baseline set and run unmatched failures on the base. There
 is still no branch smoke VERDICT at this checkpoint. PR remains draft until
 completion and attribution. No worker was delegated.
+
+### Smoke interruption and restart
+
+Item 4 is committed/pushed as `c493186ba94ad48db556d644c660a29804ae27ad`.
+The first command stopped in preflight without tests because default `lua` is
+5.5.1. Setting `LUA_BIN=/usr/bin/lua5.4` repaired that prerequisite, matching the
+parent's environment. The foreground run `20261116T200113Z-c225f462` then
+completed preparation (39.52 seconds) and 6/100 ordinary batches before the
+harness turn interruption terminated its runner. Its partial results contain
+no failures/errors; guards and the remaining batches did not run. No final
+VERDICT exists for that interrupted run, and it is not validation completion.
+The runner has no resume facility. Restart the same exact command on unchanged
+source with display variables unset and `LUA_BIN=/usr/bin/lua5.4`; retain the
+40-minute per-invocation execution bound. No other owner's job was cancelled.
+
+Restart `20261116T202135Z-c671eff8` stopped with **VERDICT INCOMPLETE**:
+18/101 ordinary batches, guards not run, 8,715 tests, zero failures, one error,
+16 allowed skips, zero unexplained skips, missing ROM properties none. The
+stop reason was `[Errno 28] No space left on device` on `/mnt/LinuxData`
+(930 GiB volume, observed 64 KiB free). The disk error truncated `results.json`
+to zero bytes; the earlier one-error identity cannot be recovered from that
+file or the rolling log, which retains only the latest completed batch.
+Attribution is therefore incomplete; no claim substitutes the parent's baseline
+set for missing evidence. Completed execution was 284.04 seconds and completed
+queue admission wait 1,513 seconds; preparation and unknown scheduler overhead
+are separate. The prior interrupted run had 3,060 tests, zero failures/errors,
+three skips in its six completed batches (102.05 summed execution seconds).
+
+The shared volume subsequently recovered approximately 867 MiB without deleting
+anything outside this task. Retain the failed run's surviving logs/commands and
+restart unchanged source after that storage prerequisite repair. Final readiness
+still requires a complete ledger and exact failure attribution. No source was
+edited or built while either category runner was active. No workers delegated.
+
+## Completed bounded smoke and regression attribution
+
+The storage-repaired run `20261116T205339Z-edd373fd` completed on source commit
+`c493186ba94ad48db556d644c660a29804ae27ad`; only this validation document differed
+from that commit. Working-tree fingerprint:
+`dee62617f9b5697e09f9dab6e5e7c59be35b461ae512934129d1dde74cd4d781`.
+It used the requested base, two workers and surfaceless EGL, with both display
+variables unset, `LUA_BIN=/usr/bin/lua5.4`, and diagnostic retention enabled.
+
+**VERDICT FAILED**: 4,982/4,982 candidate classes, 101/101 ordinary batches,
+1/1 guard batches, **41,310 tests, 32 failures, 7 errors, 561 skips (all allowed,
+zero unexplained)**; missing ROM properties none. This raw verdict remains
+failed; no broad rerun or full-suite pass is claimed. The runner's current batch
+packing used 101 rather than the earlier dry checkpoint's 100 batches.
+Preparation: 38.44 seconds. Summed ordinary execution: 2,003.97 seconds; guards:
+176.60 seconds. Completed queue admission wait: 4,226 seconds. User wait was zero;
+other investigation, scheduler and process overhead are not reconstructed.
+
+All 39 failed/error identities were inspected, with none omitted by the ledger.
+**29 failures and 2 errors** match the identities and assertions/errors in the
+[exact parent baseline table](2026-11-16-sonic-cd-mod-api.md#exact-baseline-failure-identities),
+excluding its seven display-environment failures. That record reproduces the set
+on the base and develop. No change to gameplay, rewind, widescreen or a baseline
+assertion was made to hide these failures.
+
+The remaining **3 failures and 5 errors** are branch regressions, each compared
+with `dc6b3c2b9edd621a0feecfe6d411628d51756f92` in the existing base worktree:
+
+| New smoke identity | Cause and repair |
+| --- | --- |
+| `TestStageplayLivePlayback#realSceneHoldsTheWorldRendersAndSoundsThenRestoresEntryOnCompletionAndCancel` | Preview sent a cartridge source to the disc-only boot overload. Select the reader or hosted-source overload from `source.rom()`. |
+| `TestStageplayRegistration#registeredDialogueCanPrepareAndDrawAfterItsOwnedFilesAndAssetRootClose` | Same preview failure wrapped by the creator fault boundary; no creator boundary was weakened. |
+| `TestStageplayLivePreviewRom#isolatedEditorWorkerReturnsNativePixelsAndStateWithoutReplacingItsParentWorld(boolean)[1]` | Same preview boot mismatch. |
+| `TestStageplayLivePreviewRom#isolatedEditorWorkerReturnsNativePixelsAndStateWithoutReplacingItsParentWorld(boolean)[2]` | Same preview boot mismatch. |
+| `TestStageplayLivePreviewRom#pausedDraftClampsItsBaseAndShakeEvenWhenItsFinalCameraMatchesTheCachedPicture` | Same preview boot mismatch. |
+| `TestStageplayScriptRoundTrip#everyShippedCanonicalAndScreenplaySurvivesTwoStableRounds` | The added CD example made ten canonical/screenplay pairs rather than nine. Expect ten and execute every round trip. |
+| `TestArchUnitRules#stageplay_boundaries_have_explicit_owners` | Move game/configuration lookup and verification to SceneRomLibrary. Transport may call only that exact source host; negative controls reject ModRuntime, SceneRomArt and value-type host access, while game/configuration remain forbidden. |
+| `TestBroadCatchSwallowingGuard#mainSourcesHaveOnlyInventoriedLegacyHandlers` | Changed CLI bodies invalidated broad-catch fingerprints. Narrow both handlers to IOException/IllegalArgumentException and remove their legacy rows; no new allowance. |
+
+Matched base commands used the ordinary queued wrapper, display variables unset,
+surfaceless EGL and task-owned Java temporary storage. Results: live playback
+**1 test**, registration plus live preview **8 tests**, example round trips
+**45 tests**, architecture plus catch guard **32 tests**, all zero failures,
+errors or skips. The architecture method filter executed the complete 28-test
+base class as well as the four catch-guard tests.
+
+The first post-smoke focused repair selection passed **117 tests, zero
+failures/errors/skips**, including every formerly failing ordinary test, CD
+movement/ground, Poser, CDDA/PCM music, routes, UI, transport and signature pins:
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestStageplayLivePlayback,TestStageplayRegistration,TestStageplayLivePreviewRom,TestStageplayScriptRoundTrip,TestStageplayCaptureTool,TestStageplayExportJob,TestCdRouteTape,TestStageplayRomTransport,TestCdStageplayWorld,TestCdStageplayPoser,TestCdStageplayMusic,TestStageplayMenuPresentation,TestRouteTapeWorkspace,TestStageplayObjectCoverageTool,TestStageplayRouteTool,TestModApiSignatureSurface' test
+```
+
+A first 41-test guard/export selection passed both real two-frame cartridge/disc
+exports, the catch and route guards, but still failed the undeclared transport
+host edge. Extraction to SceneRomLibrary alone did not declare that dependency.
+The final correction admits only that exact target (not a package/slice-wide
+exemption). Final focused guard/export/signature outcome follows below.
+
+### Final verification and readiness
+
+Final command (with task-owned TMPDIR and Java temporary directory):
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestStageplayCaptureMediaBoot,TestArchUnitRules,TestBroadCatchSwallowingGuard,TestRouteSurfaceGuard,TestModApiSignatureSurface' test
+```
+
+**53 tests, zero failures/errors/skips**, `BUILD SUCCESS`, verified media
+`missing=none`. This includes the complete 34-test branch architecture class,
+real two-frame cartridge and CD exports, the catch/route guards and signature
+pins. Queue wait: 261 seconds; Maven execution: 62 seconds. The 117-test repair
+selection's queue wait was 422 seconds; Maven execution was 120 seconds. User
+wait was zero. The final source change after the 117-test selection was solely
+the exact host-edge declaration and its negative controls in the architecture
+test, recompiled and executed by this 53-test selection.
+
+All five requested bounded authoring outcomes are complete. All eight new
+smoke regressions are repaired and green under focused verification; the raw
+smoke remains **VERDICT FAILED** with the inherited 29 failures and 2 errors
+separately attributed above. No second complete smoke was run after repairs.
+The interrupted and disk-exhausted attempts are not counted as completed runs.
+This is not full-suite, continuous-route, native parity or universal object
+behavior certification. No refusal is inferred for unrelated untested surfaces.
+
+Whitespace and local link checks passed. The repository citation scan exited
+zero with existing catalogue debt; no new citation or disassembly pin changed.
+Inspected category diagnostics are acknowledged after preserving their verdict,
+identity attribution and timing here. Task-owned runtime scratch is disposable
+and cleaned after all owned jobs finish; no source, ROM, media, unrelated worker,
+worktree or build tree is removed. Retain this branch/worktree for PR #351.
+The PR is to be marked ready for review, not merged. The delivery commit
+contains the repairs and this record; no destination branch is pushed.
+
+Verified final source/test diff digest relative to `c493186ba9`:
+`1ef41dcd5cde767730c2569bbdb4cf55d47f967543f1a83b4c74e1fd96089dc1`
+(`git diff --binary HEAD -- src/main src/test | sha256sum` with new test staged).
+Subsequent changes are this validation prose only. Both task-owned Java/runtime
+scratch directories have been removed after confirming no process references;
+baseline source is unchanged. Temporary two-frame films were test-owned and are
+not retained or committed.

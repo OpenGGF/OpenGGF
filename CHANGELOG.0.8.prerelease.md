@@ -493,7 +493,8 @@ under the matching area heading; see the
   include CD, with native solo roster defaults. Route discovery and CLI snapshots
   use verified disc sources, binding all tracks rather than CUE/container bytes.
   Object coverage inventories all 70 zone/act/period contexts without implying
-  behavior or pixel certification. Validation scope is recorded in the
+  behavior or pixel certification. Cartridge preview and exports retain their
+  reader boot path alongside disc hosting. Validation scope is recorded in the
   Sonic CD Stageplay validation record.
 
 - **Sonic CD mod host:** admit `scd` patch manifests and `any` registrations;

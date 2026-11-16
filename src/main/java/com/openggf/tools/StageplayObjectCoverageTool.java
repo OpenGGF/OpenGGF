@@ -267,7 +267,7 @@ public final class StageplayObjectCoverageTool {
             output.println(JSON.writeValueAsString(Map.of("ok", true, "report", destination.toAbsolutePath().toString(),
                     "evidence", report.evidence(), "contexts", report.sourceContexts(), "rows", report.objectIdContextRows())));
             return 0;
-        } catch (Exception failure) {
+        } catch (IOException | IllegalArgumentException failure) {
             try { output.println(JSON.writeValueAsString(Map.of("ok", false, "error",
                     failure.getMessage() == null ? failure.getClass().getSimpleName() : failure.getMessage()))); }
             catch (IOException impossible) { throw new IllegalStateException(impossible); }

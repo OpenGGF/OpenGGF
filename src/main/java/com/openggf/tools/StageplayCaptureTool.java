@@ -101,7 +101,11 @@ public final class StageplayCaptureTool {
                             StageplayRomTransport.requiredGames(document), GameServices.rom()), game);
                  var boot = new HeadlessGameBoot(document.width(), document.height(), document.width(), document.height(), 320, 224)) {
                 boot.setBootToTitle(true);
-                boot.boot(library.source(game), library.module(game), document.set().zone(), document.set().act());
+                var source = library.source(game);
+                if (source.rom().isPresent())
+                    boot.boot(com.openggf.data.RomByteReader.fromRom(source.rom().orElseThrow()),
+                            "Stageplay StageplayCaptureTool " + game, document.set().zone(), document.set().act());
+                else boot.boot(source, library.module(game), document.set().zone(), document.set().act());
                 var audio = GameServices.audio();
                 if (audio.presentationFrameRate() != StageplayDocument.FRAMES_PER_SECOND)
                     throw new IOException("Stageplay exports require 60 Hz audio; this ROM is using " + audio.presentationFrameRate());

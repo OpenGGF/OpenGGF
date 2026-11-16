@@ -12,6 +12,7 @@ import com.openggf.data.RomFingerprint;
 import com.openggf.data.RomIdentity;
 import com.openggf.data.RomImageCatalogue;
 import com.openggf.stageplay.StageplayDocument;
+import com.openggf.mods.scene.host.SceneRomLibrary;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -85,13 +86,10 @@ public final class StageplayRomTransport {
         var cartridges = new LinkedHashMap<String, RomImageCatalogue.Resolution>();
         var media = JSON.createObjectNode();
         for (String game : required) {
-            var id = com.openggf.game.GameId.fromCode(game);
-            if (com.openggf.game.GameModuleRegistry.mediaKind(id) == com.openggf.game.GameModuleRegistry.MediaKind.HOSTED_MEDIA) {
-                var host = com.openggf.game.GameModuleRegistry.hostedMedia(id);
-                Path path = host.configuredPath(com.openggf.game.GameServices.configuration());
-                var source = host.openMedia(path);
-                try { media.putObject(game).put("path", path.toString()).put("identity", source.identity()); }
-                finally { if (source instanceof java.io.Closeable closeable) closeable.close(); }
+            var path = SceneRomLibrary.configuredMediaPath(game);
+            if (path.isPresent()) {
+                media.putObject(game).put("path", path.orElseThrow().toString())
+                        .put("identity", SceneRomLibrary.verifiedMediaIdentity(game, path.orElseThrow()).orElseThrow());
             } else cartridges.put(game, roms.resolveLogicalRom(identity(game))
                     .orElseThrow(() -> invalid("Supply the configured " + game + " ROM")));
         }
@@ -111,11 +109,9 @@ public final class StageplayRomTransport {
         for (var entry : paths.entrySet()) {
             String game = entry.getKey();
             Path path = entry.getValue().toAbsolutePath().normalize();
-            var id = com.openggf.game.GameId.fromCode(game);
-            if (com.openggf.game.GameModuleRegistry.mediaKind(id) == com.openggf.game.GameModuleRegistry.MediaKind.HOSTED_MEDIA) {
-                var source = com.openggf.game.GameModuleRegistry.hostedMedia(id).openMedia(path);
-                try { media.putObject(game).put("path", path.toString()).put("identity", source.identity()); }
-                finally { if (source instanceof java.io.Closeable closeable) closeable.close(); }
+            var mediaIdentity = SceneRomLibrary.verifiedMediaIdentity(game, path);
+            if (mediaIdentity.isPresent()) {
+                media.putObject(game).put("path", path.toString()).put("identity", mediaIdentity.orElseThrow());
             } else {
                 if (!Files.isRegularFile(path) || Files.size(path) > MAX_IMAGE_BYTES) throw invalid("Missing or oversized route ROM: " + path);
                 var image = PhysicalImage.probe(path);
@@ -157,7 +153,7 @@ public final class StageplayRomTransport {
         var library = com.openggf.mods.scene.host.SceneRomLibrary.openSources(readers, paths, active);
         try {
             for (String game : paths.keySet())
-                if (!library.source(game).identity().equals(text(media.path(game).get("identity"))))
+                if (!library.sourceIdentity(game).equals(text(media.path(game).get("identity"))))
                     throw invalid("Media identity changed: " + game);
             return library;
         } catch (IOException | RuntimeException failure) { library.close(); throw failure; }

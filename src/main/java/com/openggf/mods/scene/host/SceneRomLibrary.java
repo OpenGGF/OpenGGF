@@ -35,6 +35,25 @@ public final class SceneRomLibrary implements AutoCloseable {
     private final Map<String, com.openggf.game.GameDataSource> sources = new LinkedHashMap<>();
     private final List<java.io.Closeable> ownedMedia = new ArrayList<>();
 
+    /** The host owns media discovery; transport code consumes only bounded path/identity values. */
+    public static java.util.Optional<java.nio.file.Path> configuredMediaPath(String game) throws IOException {
+        var id = GameId.fromCode(game);
+        if (!GameModuleRegistry.hostedMediaGames().contains(id)) return java.util.Optional.empty();
+        return java.util.Optional.of(GameModuleRegistry.hostedMedia(id)
+                .configuredPath(com.openggf.game.GameServices.configuration()));
+    }
+
+    /** Reopens and verifies the complete hosted source; cartridges keep their exact reader windows. */
+    public static java.util.Optional<String> verifiedMediaIdentity(String game, java.nio.file.Path path) throws IOException {
+        var id = GameId.fromCode(game);
+        if (!GameModuleRegistry.hostedMediaGames().contains(id)) return java.util.Optional.empty();
+        var source = GameModuleRegistry.hostedMedia(id).openMedia(path);
+        try { return java.util.Optional.of(source.identity()); }
+        finally { if (source instanceof java.io.Closeable closeable) closeable.close(); }
+    }
+
+    public String sourceIdentity(String game) { return source(game).identity(); }
+
     public SceneRomLibrary(GameModule activeModule, com.openggf.game.GameDataSource source, RomManager roms) {
         this(activeModule, source.rom().orElse(null), roms);
         sources.put(activeGame, source);

@@ -47,8 +47,11 @@ public final class StageplayPreviewTool {
             try (var library = descriptor ? StageplayRomTransport.openLibrary(sourceDescriptor,document.set().gameId()) : SceneRomLibrary.open(paths);
                  var boot = new HeadlessGameBoot(document.width(),document.height(),document.width(),document.height(),320,224)) {
                 boot.setBootToTitle(true);
-                boot.boot(library.source(document.set().gameId()), library.module(document.set().gameId()),
-                        document.set().zone(), document.set().act());
+                var source = library.source(document.set().gameId());
+                if (source.rom().isPresent())
+                    boot.boot(com.openggf.data.RomByteReader.fromRom(source.rom().orElseThrow()),
+                            "Stageplay StageplayPreviewTool " + document.set().gameId(), document.set().zone(), document.set().act());
+                else boot.boot(source, library.module(document.set().gameId()), document.set().zone(), document.set().act());
                 try (var resources = new StageplayResources(library,false);
                      var pixels = new GlReadPixelsGrabber(document.width(), document.height())) {
                     assets.apply(resources);

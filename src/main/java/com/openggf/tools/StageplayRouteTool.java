@@ -99,7 +99,7 @@ public final class StageplayRouteTool {
             report.put("result",json.readTree(StageplayRouteProtocol.encodeResult(result)));
             output.println(json.writeValueAsString(report));
             return result.success()?0:2;
-        } catch (Exception failure) {
+        } catch (IOException | IllegalArgumentException failure) {
             if(Arrays.equals(args,new String[]{"--worker"})) System.err.println("Route worker: "+Objects.toString(failure.getMessage(),failure.getClass().getSimpleName()));
             try { output.println(new ObjectMapper().writeValueAsString(Map.of("ok",false,"error",Objects.toString(failure.getMessage(),failure.getClass().getSimpleName())))); }
             catch(IOException impossible) { throw new UncheckedIOException(impossible); }
