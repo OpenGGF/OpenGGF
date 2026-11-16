@@ -2,7 +2,6 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
-import com.openggf.game.sonic3k.scroll.FbzCloudPositionSource;
 import com.openggf.game.sonic3k.scroll.SwScrlFbz;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -47,9 +46,9 @@ public final class FbzCloudInstance extends AbstractObjectInstance implements Sp
     private record Position(int x, int y) { }
 
     private Position currentWorldPosition() {
-        var handler = services().parallaxManager().getHandler(services().featureZoneId());
-        if (!(handler instanceof FbzCloudPositionSource source)) return new Position(worldX, worldY);
-        SwScrlFbz.CloudPosition screen = source.cloudPositionAtAddressSlot(addressSlot);
+        var runtime = com.openggf.game.sonic3k.runtime.S3kRuntimeStates.currentFbz(services().zoneRuntimeRegistry()).orElse(null);
+        if (runtime == null) return new Position(worldX, worldY);
+        SwScrlFbz.CloudPosition screen = runtime.cloudPositionAtAddressSlot(addressSlot);
         // CloudDeform writes VDP screen coordinates ($80 bias on both axes).
         return new Position((services().camera().getX() + screen.x() - 0x80) & 0xFFFF,
                 (services().camera().getY() + screen.y() - 0x80) & 0xFFFF);

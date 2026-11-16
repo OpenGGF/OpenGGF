@@ -54,7 +54,7 @@ class TestFbzMainCharacterCompletion {
                         assertSame(start.sprite(), GameServices.sprites().getMainPlayable());
                         assertTrue(GameServices.sprites().getSidekicks().isEmpty());
                         assertFalse(CrossGameFeatureProvider.isActive());
-                        assertSame(GameServices.module().getRules(), start.sprite().getGameRules());
+                        assertSame(GameServices.module().getPolicies().rules(), start.sprite().getGameRules());
                         assertEquals(Sonic3kZoneIds.ZONE_FBZ, GameServices.level().getCurrentZone());
                         assertEquals(1, GameServices.level().getCurrentAct());
                         int[] nativeStart = GameServices.module().getZoneRegistry()

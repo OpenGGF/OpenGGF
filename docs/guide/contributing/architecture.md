@@ -184,6 +184,7 @@ Here is a simplified view of what `GameModule` provides:
 | `ObjectRegistry` | Maps object IDs to factory functions that create instances |
 | `ScrollHandlerProvider` | Per-zone parallax background scroll logic |
 | `PhysicsProvider` | Per-character physics profiles (speeds, gravity, acceleration) |
+| `GamePolicies` (`getPolicies()`) | Immutable game-wide rules for shared systems (collision, camera, rings, objects, sidekick CPU, power-ups, drowning) |
 | `LevelEventProvider` | Per-zone dynamic camera boundaries, triggers, cutscenes |
 | `WaterDataProvider` | Per-zone water heights, underwater palettes, dynamic handlers |
 | `ObjectArtProvider` | Sprite art sets, PLCs, mappings |

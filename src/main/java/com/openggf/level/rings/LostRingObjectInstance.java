@@ -763,7 +763,8 @@ public class LostRingObjectInstance extends AbstractObjectInstance
             return null;
         }
         try {
-            GameRules rules = module.getRules();
+            var modulePolicies = module.getPolicies();
+            GameRules rules = modulePolicies != null ? modulePolicies.rules() : null;
             if (rules != null) {
                 return rules.ring();
             }

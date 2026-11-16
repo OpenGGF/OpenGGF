@@ -63,7 +63,7 @@ registration pass alone proves neither placement nor a playable encounter.
 **Edit the existing provider, not every character or the game loop.** A registered
 [GamePatch](../../src/main/java/com/openggf/game/patch/GamePatch.java) can return a [DelegatingGameModule](../../src/main/java/com/openggf/game/patch/DelegatingGameModule.java) overriding `getPhysicsProvider()`
 with `base.getPhysicsProvider().transform("sonic"::equals, p -> p.withMax(0x0C00))`.
-[PhysicsProvider](../../src/main/java/com/openggf/game/PhysicsProvider.java).transform preserves source modifiers/rules, edits matching normal
+[PhysicsProvider](../../src/main/java/com/openggf/game/PhysicsProvider.java).transform preserves source modifiers, edits matching normal
 and optional initialization profiles, and leaves other characters untouched.
 [PhysicsProfile](../../src/main/java/com/openggf/game/PhysicsProfile.java).toBuilder() supports wider immutable edits; speeds use fixed-point
 units. Keep launch scope in the patch's `activatesFor` and preserve composition by

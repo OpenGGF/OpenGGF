@@ -79,7 +79,7 @@ public final class GameplaySessionFactory {
         }
         FadeManager fadeManager = new FadeManager();
         var whiteFade = sessionModule == null ? PaletteWhiteFadeModel.SCREEN_OVERLAY
-                : sessionModule.getRules().paletteWhiteFade();
+                : sessionModule.getPolicies().rules().paletteWhiteFade();
         FadeManagerInternalAccess.bindWhiteFadePresentation(fadeManager,
                 whiteFade == PaletteWhiteFadeModel.ROM_PALETTE, whiteFade.fromWhiteVintsPerStep());
         GameRng rng = new GameRng(sessionModule != null

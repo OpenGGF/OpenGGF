@@ -7,13 +7,40 @@ under the matching area heading; see the
 
 ## Gameplay and presentation
 
+- **Angel Island screen events:** AIZ owns the canopy-wave origin and captures
+  its publication with the shared ROM shake words. Shake setup respects stored
+  death/restart routines and the contiguous timed table; water and bomb producers
+  write the same flag without the water timer masking later bomb writes. Water
+  timer edges publish through a game-neutral handler lifecycle; real-intro and
+  independent last-offset rewind witnesses cover the publication boundaries.
+
+- **Mushroom Hill screen events:** the end boss now starts the original timed
+  horizontal shake at its final escape threshold, applied once to foreground,
+  sprites and render bounds through the native camera copy. Background loop, animation
+  bands and pillar collision positions belong to screen events and restore
+  together with shake; rebuilding scroll output no longer changes gameplay.
+
+- **Flying Battery event publication:** gameplay owns cloud drift, positions and
+  shake setup; extra draws and renderer rebuilds preserve the completed event
+  state, including after rewind. Subbosses request shake through its flag alone.
+  Seamless reload supports mod-wrapped event providers; projected indoor views
+  retain camera-copy shake, and rewind preserves timed as well as constant shake.
+
 - **Sonic CD (development preview):** Sonic CD runs from the user's own USA
   disc image (a cue sheet and its tracks, or a lossless CHD made from them with
   MAME's chdman, named by `roms.soniccd` or found in the ROM folder) as
   a stock game module on the shared engine. Nothing from the disc is in the
   repository. All 70 stage programs load: seven zones; acts 1 and 2 in the
   Present, Past, Good Future and Bad Future; act 3 in both futures. Each zone
-  has its own presentation, objects and boss. Sonic plays on Sonic 1's physics
+  has its own presentation, objects and boss. Palmtree Panic's solid boulders
+  use the current section's graphics, replacing the title-card tiles after loading.
+  Flowers finish growing, diagonal springs and monitor rewards use their proper
+  graphics, and object names follow the current stage's object table. Palmtree
+  Panic backgrounds sample each row's own camera section, retaining static-row
+  repetition without wrapping the moving scenery. Results show the changing
+  score and bonus digits. Holding Escape returns Sonic CD to the game shelf
+  with a resumable card, the correct act label and settings restored on resume.
+  Sonic plays on Sonic 1's physics
   with Sonic CD's own rules (spin dash and super peel-out, the extended camera,
   the 3D ramps, per-zone player routines and the idle timer that ends in
   Sonic giving up). Time travel, special stages
@@ -30,7 +57,8 @@ under the matching area heading; see the
   included: Visual Mode, D.A. Garden, the pencil test, Thank You,
   Comin' Soon, attract demos, the backup RAM manager, and the Japanese and
   European releases. Disc audio, video songs and PCM sound follow the music
-  and effects volumes. The time-warp stars are drawn and Robotnik's projector
+  and effects volumes; CD audio and PCM also share the FM presentation scale
+  for their relative level. The time-warp stars are drawn and Robotnik's projector
   can be destroyed in the Past (its hologram animals are not drawn).
   Accuracy is measured against native recordings made on an emulator running
   the USA disc: 26 of 28 full-act routes (start to signpost) equal native on
@@ -438,6 +466,21 @@ under the matching area heading; see the
 
 ## Modding and tools
 
+- **Game rules belong to the module:** `GameModule.getPolicies()` now returns an
+  immutable `GamePolicies` record holding the game's `GameRules`, so camera, ring,
+  object, sidekick, power-up and drowning rules are no longer supplied by the
+  physics provider. `PhysicsProvider.getRules()` and `GameModule.getRules()` are
+  gone, `PhysicsProvider.fixed(profile, modifiers)` takes no rules, and a
+  standalone game sets them with `StandaloneGameSpec.Builder.policies(...)`
+  (Sonic 2's rules when omitted). A patch that ships a different rule overrides
+  `getPolicies()` instead of wrapping physics. Cross-game donation goes through
+  one composer that takes whole policies and the donor's declared capabilities,
+  so only the listed player abilities can come from the donor. Gameplay is
+  unchanged. Compiled mods need rebuilding against the 0.7.0 candidate; see the
+  [migration note](docs/architecture/mod-api-compatibility.md#game-policy-ownership-candidate-migration).
+  The [design record](docs/architecture/designs/2026-11-15-game-policies.md) plans
+  the audio-rules half as a follow-up.
+
 - **Debug labels on widescreen:** with a display aspect wider than 4:3, debug
   text tied to a place in the level (sensor, object and plane labels, the
   object-debug text) was drawn too far left: at 400 wide, at 0.8 of its distance
@@ -727,6 +770,15 @@ under the matching area heading; see the
 
 ## Maintenance and release preparation
 
+- ICZ background loop history and indoor selection now belong to the event owner,
+  so rebuilding scroll output retains the same background. Rewind captures that
+  continuation together with the shared ROM shake words; ICZ objects request
+  shake through the zone bridge instead of toggling the unrelated shared flag.
+  Indoor restarts select the normal background routine before resize events,
+  shake and rumble use the native level clock, and rewind rejects unreachable
+  shake, snow-fall and intro-phase values. Unexpected failures during validated
+  ICZ rewind restoration propagate instead of being logged and swallowed.
+
 - **All-level performance sweep:** `tools/performance/level_sweep.py` plays every
   trace fixture and Sonic 3&K route movie through the frame-time probes, one at a
   time. It reports frame time, allocation, garbage collection and hitches per
@@ -855,7 +907,31 @@ under the matching area heading; see the
   Production badnik and contact witnesses, shared coarse-X arithmetic with
   explicit native/wider bounds, and
   a typed rewind HUD frame make contribution paths easier to follow. HCZ owns
-  its next screen-shake value without using the renderer as scratch state.
+  its completed screen/collision publication and all three shake words in one
+  validated rewind payload; objects consume the preceding publication and
+  rendering only projects it. Launch Base uses the same event-owned shake words;
+  its cloud and Death Egg deformation continuation rewinds with the publication,
+  renderer rebuilds retain timed shake, and ship/cameo reads use LBZ’s native flag
+  rather than a boolean retained by another zone. Its in-play act transition retains
+  the background publication and cloud longword; shake/waves use the level clock,
+  final fall retains shake words, and invalid rewind payloads are rejected before
+  manager state changes. Early directed-load scroll has an immutable pre-ScreenInit
+  phase; unexpected validated-restore failures propagate to their caller.
+  The seamless reload retains HCZ1 deformation,
+  and the geyser begins shaking on its native first dispatch. CNZ suppresses
+  screen shake after player death without consuming its countdown; SOZ uses
+  the shared native shake owner as a refactor with no gameplay behaviour change,
+  preserving its contiguous-table reads and rewind continuation. MGZ likewise
+  owns shake, cloud phase and collision publication; drawing or rebuilding its
+  scroll output cannot advance gameplay, and rewind restores the composed state,
+  including the first MGZ2 rising-floor publication. Finished late loads do not
+  replay the rise object's crash or camera lock. Collapse arms its countdown
+  before the same frame's background shake setup. The end boss keeps its native
+  setup/underflow waits and draws throughout the Sonic encounter’s initial wait;
+  its allocated rescue controller runs in slot order
+  with the first countdown tick on setup. Scene
+  presentation spells out capture, restoration and failure cleanup in operation
+  order, and pixel-oracle failures retain the rendering mode and captured frame.
   Failed trace replays print their exact test/report/triage route; triage reads
   compressed fixture auxiliaries, preserves pre-trace evidence and distinguishes
   incomplete or unknown completion from a completed comparison. Retained raw-field

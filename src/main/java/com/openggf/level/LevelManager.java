@@ -239,7 +239,8 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
 
     /** Collision model metadata only; frame scheduling may still use inline checkpoints. */
     private boolean isUnifiedCollisionModel() {
-        GameRules rules = activeGameModule().getRules();
+        var modulePolicies = activeGameModule().getPolicies();
+        GameRules rules = modulePolicies != null ? modulePolicies.rules() : null;
         return rules != null
                 && rules.collision() != null
                 && rules.collision().collisionModel() == com.openggf.game.CollisionModel.UNIFIED;
@@ -1031,7 +1032,8 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         // to the same object. The ROM doesn't have this issue because ObjPosLoad
         // never unloads objects — they persist until their own code deletes them.
         // S1 counter-based respawn tracking.
-        GameRules gameRules = gameModule.getRules();
+        var modulePolicies = gameModule.getPolicies();
+        GameRules gameRules = modulePolicies != null ? modulePolicies.rules() : null;
         if (gameRules != null
                 && gameRules.collision() != null
                 && gameRules.collision().collisionModel() == com.openggf.game.CollisionModel.UNIFIED) {
@@ -1340,11 +1342,11 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     public boolean advanceWaterLevelBeforePlayerPhysics() {
         GameModule activeModule = activeGameModule();
         if (activeModule == null
-                || activeModule.getRules() == null
-                || activeModule.getRules().collision() == null) {
+                || activeModule.getPolicies() == null
+                || activeModule.getPolicies().rules().collision() == null) {
             return false;
         }
-        return activeModule.getRules().collision().advanceWaterLevelBeforePlayerPhysics();
+        return activeModule.getPolicies().rules().collision().advanceWaterLevelBeforePlayerPhysics();
     }
 
     /**
@@ -1382,9 +1384,9 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     private boolean touchResponseUsesPreviousCollisionResponseList() {
         GameModule activeModule = activeGameModule();
         return activeModule != null
-                && activeModule.getRules() != null
-                && activeModule.getRules().objectInteraction() != null
-                && activeModule.getRules().objectInteraction().touchResponseUsesPreviousCollisionResponseList();
+                && activeModule.getPolicies() != null
+                && activeModule.getPolicies().rules().objectInteraction() != null
+                && activeModule.getPolicies().rules().objectInteraction().touchResponseUsesPreviousCollisionResponseList();
     }
 
     /**
@@ -3021,7 +3023,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         // The semantic rule keeps the KiS2 saved bank through a death reload;
         // stock games retain their zero-ring start.
         boolean restoreCheckpointRings = ctx.hasCheckpoint()
-                && activeGameModule().getRules().ring().checkpointRestoresSavedRings();
+                && activeGameModule().getPolicies().rules().ring().checkpointRestoresSavedRings();
         playable.setRingCount(restoreCheckpointRings ? ctx.getCheckpointRings() : 0);
         if (levelGamestate != null) {
             levelGamestate.setRingExtraLifeFlags(
@@ -3188,7 +3190,8 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             return null;
         }
         try {
-            GameRules rules = module.getRules();
+            var modulePolicies = module.getPolicies();
+            GameRules rules = modulePolicies != null ? modulePolicies.rules() : null;
             if (rules != null) {
                 return rules;
             }
@@ -4124,7 +4127,8 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                 buildObjectServices());
         objectManager.setRewindClassResolver(rewindClassResolver);
         objectManager.inheritRingFloorCheckCounterPhase(ringFloorCheckCounterPhase);
-        GameRules gameRules = gameModule.getRules();
+        var modulePolicies = gameModule.getPolicies();
+        GameRules gameRules = modulePolicies != null ? modulePolicies.rules() : null;
         if (gameRules != null
                 && gameRules.collision() != null
                 && gameRules.collision().collisionModel() == com.openggf.game.CollisionModel.UNIFIED) {

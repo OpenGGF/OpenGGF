@@ -3,7 +3,6 @@ package com.openggf.game.sonic3k;
 import com.openggf.game.PhysicsModifiers;
 import com.openggf.game.PhysicsProfile;
 import com.openggf.game.PhysicsProvider;
-import com.openggf.game.rules.GameRules;
 
 /**
  * Physics provider for Sonic 3 &amp; Knuckles.
@@ -38,10 +37,5 @@ public class Sonic3kPhysicsProvider implements PhysicsProvider {
             return PhysicsModifiers.KNUCKLES;
         }
         return PhysicsModifiers.STANDARD;
-    }
-
-    @Override
-    public GameRules getRules() {
-        return GameRules.SONIC_3K;
     }
 }

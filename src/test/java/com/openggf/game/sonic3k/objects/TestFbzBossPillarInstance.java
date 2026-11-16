@@ -256,7 +256,6 @@ class TestFbzBossPillarInstance {
         @Override public void setBossBackgroundOffsets(int x, int y) { }
         @Override public void setPlaneAssignmentMode(Sonic3kFBZEvents.PlaneAssignmentMode plane) { }
         @Override public void setCollisionMode(Sonic3kFBZEvents.CollisionMode collision, int x, int y) { }
-        @Override public void setScreenShakeState(boolean active, int offset, int phase) { }
     }
 
     private record DrawCall(int frame, int x, int y, boolean hFlip, boolean vFlip) { }

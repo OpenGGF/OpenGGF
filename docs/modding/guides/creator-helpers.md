@@ -279,8 +279,9 @@ it no longer needs a parallel copy of every forwarding method.
 `withMax(speed)` edits only maximum speed, and the builder groups movement,
 slopes, rolling, shape and balance settings. Profile speeds use the engine's
 fixed-point units. `PhysicsProvider.transform(predicate, edit)` scopes an edit
-to selected characters and preserves the source's modifiers, semantic rules and
-optional initialization profile:
+to selected characters and preserves the source's modifiers and optional
+initialization profile. Game-wide rules are not physics; they stay with the
+module's `getPolicies()`:
 
 ```java
 PhysicsProvider physics = base.getPhysicsProvider().transform(

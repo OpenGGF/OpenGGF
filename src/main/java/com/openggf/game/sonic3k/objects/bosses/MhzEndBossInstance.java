@@ -524,8 +524,9 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
         spawnChild(() -> MhzEndBossExplosionController.stationary(state.x, state.y));
         var services = tryServices();
         var gameState = services == null ? null : services.gameState();
-        if (gameState != null) {
-            gameState.setScreenShakeActive(true);
+        // loc_76164 (sonic3k.asm:157133-157144): write the ROM timed word.
+        if (services != null && services.zoneRuntimeState() instanceof MhzZoneRuntimeState mhz) {
+            mhz.requestScreenShake(0x14);
         }
         // loc_76164 calls BossDefeated_StopTimer only after x_pos >= $44D0.
         // Its fall-through first stops the HUD clock, then writes $2E=$3F,

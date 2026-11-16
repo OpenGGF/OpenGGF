@@ -98,7 +98,7 @@ public final class SurvivorsMod implements GgfMod {
         // still holds the corpse, as it does with a game-over provider installed.
         private final GameOverFlowProvider arenaGameOver = (services, timeOver) -> services.fadeOutMusic();
 
-        private final com.openggf.game.rules.GameRules arenaRules;
+        private final com.openggf.game.rules.GamePolicies arenaPolicies;
 
         public Module(GameModule base) {
             super(base, ID + ":arenas");
@@ -107,7 +107,7 @@ public final class SurvivorsMod implements GgfMod {
                 liveInput = input;
                 return active && (!run.active || run.paused || run.pendingLevels > 0);
             };
-            var rules = base.getRules();
+            var rules = base.getPolicies().rules();
             var power = rules.powerUp();
             var quietExpiry = new com.openggf.game.rules.PowerUpRules(
                     power.shieldObjectFixedSlotIndex(), power.invincibilityStarsFixedSlotIndex(),
@@ -115,13 +115,14 @@ public final class SurvivorsMod implements GgfMod {
                     power.speedShoesTimerDecimation(), power.fixedSkidDustAllocatesAfterDynamicObjectPass(),
                     power.waterSplashUsesFixedDustObject(), power.primaryFixedDustSlotIndex(),
                     power.secondaryFixedDustSlotIndex(), false);
-            arenaRules = new com.openggf.game.rules.GameRules(rules.playerMovement(), rules.playerCapability(),
+            arenaPolicies = new com.openggf.game.rules.GamePolicies(new com.openggf.game.rules.GameRules(
+                    rules.playerMovement(), rules.playerCapability(),
                     rules.collision(), rules.playerAnimation(), rules.camera(), rules.ring(),
                     rules.objectInteraction(), rules.sidekickCpu(), quietExpiry, rules.drowningBubble(),
-                    rules.dynamicArtDmaService());
+                    rules.dynamicArtDmaService()));
         }
 
-        @Override public com.openggf.game.rules.GameRules getRules() { return arenaRules; }
+        @Override public com.openggf.game.rules.GamePolicies getPolicies() { return arenaPolicies; }
         @Override public com.openggf.game.mode.GameplayFrameController gameplayFrameController() {
             return active ? base().getGameService(com.openggf.game.mode.GameplayFrameController.class) : null;
         }

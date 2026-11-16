@@ -1961,9 +1961,9 @@ class TestLbzFinalBoss2Instance {
     }
 
     private static void publishAppliedShake(LbzZoneRuntimeState state, int offset) {
-        state.startTimedScreenShake(1);
-        state.prepareTimedScreenShakeBackground(true, offset);
-        state.applyTimedScreenShakeForeground();
+        state.startTimedScreenShake(offset == 0 ? 0 : 19); // ScreenShakeArray[18] == +5
+        state.setupScreenShake(0, false);
+        state.publishScreenShakeForeground();
     }
 
     private static void assertPaletteWords(Palette palette, int[] indices, int[] words) {

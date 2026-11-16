@@ -525,9 +525,9 @@ final class ObjectTouchResponseController {
 
         var host = objectManager.services().gameModule();
         // Preserve existing fixture/default and list-driven behavior when no host is bound.
-        boolean requiresObjectRenderBit = host == null || host.getRules() == null
-                || host.getRules().objectInteraction() == null
-                || host.getRules().objectInteraction().touchScanRequiresObjectRenderBit();
+        boolean requiresObjectRenderBit = host == null || host.getPolicies() == null
+                || host.getPolicies().rules().objectInteraction() == null
+                || host.getPolicies().rules().objectInteraction().touchScanRequiresObjectRenderBit();
         var policies = com.openggf.game.mutators.NativeObjectPolicyAccess.port(objectManager.services());
         for (ObjectInstance instance : touchObjects) {
             if (ObjectDirectionAccess.suspended(objectManager, instance)) continue;

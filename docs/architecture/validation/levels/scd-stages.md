@@ -13,6 +13,31 @@ are the only places these numbers live; update both together when a frontier
 moves. The native recordings are user-local (BizHawk 2.11, USA disc) and never
 committed; every test below skips without them.
 
+## Palmtree Panic boulder obligation (2026-11-15)
+
+`TestPpzBoulderArt` checks the first section's 19 boulder tiles against the
+independently decoded asset hash for all ten R1 payloads. It needs only the
+USA disc, not native recordings. `TestCdObjectRegistryStageScope` checks the
+zone's boulder factory and name; common-object and PPZ solid tests cover the
+retained solid routine. The [development ledger](../../../changelog/v0.8-prerelease-detailed.md#2026-11-15-palmtree-panic-boulder-art)
+records the original failures and loading correction. This bounded art check
+does not advance the route matrix; section-transition screenshots, broader
+viewport coverage and inherited rewind/lifecycle gaps remain unassessed.
+
+## Playtest follow-up (2026-11-15)
+
+The [bounded validation record](../2026-11-15-sonic-cd-playtest-fixes.md)
+covers flower progression, diagonal springs, monitor item mappings, stage-local
+object names, PPZ row sampling, results digits, audio balance and hosted-game
+suspension. OBJECT/PRESENT gain focused object/art evidence; CAMERA/PRESENT
+gain disc-backed row sampling and ten-variant PPZ scroll checks; LIFE gains
+suspension/settings checks. Rendered results digits and same-live-instance restore passed. Composed
+validation and matched-baseline attribution are complete; the broad smoke
+verdict remains FAILED with input/skip gaps. End-to-end rewind and the user's
+manual checklist remain pending. These working-tree
+checks do not requalify the historical stage cells or close inherited width,
+whole-route, native-picture or lifecycle gaps.
+
 ## Stage keys
 
 A stage is its program name `R<zone><act><period>`: zone 1 Palmtree Panic,

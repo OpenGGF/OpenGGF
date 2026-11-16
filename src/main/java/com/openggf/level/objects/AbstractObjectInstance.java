@@ -1000,7 +1000,8 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
         if (module == null) {
             return true;
         }
-        GameRules rules = module.getRules();
+        var modulePolicies = module.getPolicies();
+        GameRules rules = modulePolicies != null ? modulePolicies.rules() : null;
         if (rules == null || rules.objectInteraction() == null) {
             return true;
         }

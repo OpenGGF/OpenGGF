@@ -102,6 +102,16 @@ class TestSonic3kMgz2EndBossEvents {
     }
 
     @Test
+    void transitionSetupFallsThroughToItsFirstWaitTick() {
+        var events = new Sonic3kMGZEvents();
+        events.init(1);
+        triggerBossCollapseHandoff(events);
+        events.updateBossTransitionObjectBeforeDynamicObjects(1);
+        assertEquals(0x167, events.getBossTransitionTimer(),
+                "loc_16328 installs $168 then falls into loc_16334's decrement");
+    }
+
+    @Test
     void mgz2BossApproach_locksCameraYAndArenaMaxX() {
         Sonic3kMGZEvents events = new Sonic3kMGZEvents();
         events.init(1);
@@ -328,6 +338,7 @@ class TestSonic3kMgz2EndBossEvents {
         Camera camera = GameServices.camera();
         camera.setX((short) 0x3C80);
         camera.setY((short) 0x0600);
+        camera.getFocusedSprite().setRenderFlagOnScreen(true); // loc_16384 must return after setup
         Tails tails = new Tails("tails", (short) 0x3C9C, (short) 0x0711);
         tails.setCpuControlled(true);
         SidekickCpuController controller = new SidekickCpuController(tails, camera.getFocusedSprite());
@@ -892,14 +903,14 @@ class TestSonic3kMgz2EndBossEvents {
         AbstractPlayableSprite tails = GameServices.sprites().getSidekicks().getFirst();
         tails.setCentreY((short) 0x0780);
 
-        for (int frame = 0; frame < 0x167; frame++) {
+        for (int frame = 0; frame < 0x166; frame++) {
             events.update(1, frame);
         }
 
         assertEquals(SidekickCpuController.State.MGZ_RESCUE_WAIT, tails.getCpuController().getState(),
-                "the lower transition SST cannot consume its countdown on the allocating boss pass");
+                "the setup dispatch already spent the first of $168 native countdown ticks");
 
-        events.update(1, 0x167);
+        events.update(1, 0x166);
 
         assertEquals(SidekickCpuController.State.CARRY_INIT, tails.getCpuController().getState(),
                 "Obj_MGZ2_BossTransition switches Tails from CPU routine $12 to $14 after the $168-frame wait");

@@ -112,10 +112,6 @@ public final class PpzScrollHandler extends AbstractZoneScrollHandler implements
     private final short[] deform = new short[DEFORM_WORDS];
     private final short[] sink = new short[LINE_SINK];
     private int sinkPos;
-    private final boolean[] sinkStatic = new boolean[LINE_SINK];
-    private final boolean[] wordStatic = new boolean[DEFORM_WORDS];
-    private boolean emitStatic;
-    private boolean bgWindowed;
     private int lastCameraX;
     private int lastCameraY;
     private int lastFrame = Integer.MIN_VALUE;
@@ -305,7 +301,6 @@ public final class PpzScrollHandler extends AbstractZoneScrollHandler implements
         publishedCameraX = cameraX;
         foreground = (short) -cameraX;                        // Present:284-286
         sinkPos = 0;
-        emitStatic = false;
         java.util.Arrays.fill(deform, (short) 0);
         if (act23 != null) {
             act23Lines();
@@ -327,8 +322,6 @@ public final class PpzScrollHandler extends AbstractZoneScrollHandler implements
         composer.setVscrollFactorBG(vscrollFactorBG);
         minScrollOffset = composer.getMinScrollOffset();
         maxScrollOffset = composer.getMaxScrollOffset();
-        bgWindowed = false;
-        if (act23 != null || period != CdPeriod.PRESENT) chooseBackgroundWindow(320);   // act 1 Present keeps its 512 window
     }
 
     private static short word(int fixed) {
@@ -402,7 +395,7 @@ public final class PpzScrollHandler extends AbstractZoneScrollHandler implements
                         state = found;
                     } else {
                         d4 = (d4 + 8) & 0xFFFF;
-                        emitBlock(deformWord(a2++), 8);
+                    emitBlock(deformWord(a2++), 8);
                         d1--;
                         if (d1 == -1) return;
                     }
@@ -465,7 +458,6 @@ public final class PpzScrollHandler extends AbstractZoneScrollHandler implements
 
     private void emitLine(short word) {
         if (sinkPos < LINE_SINK) {
-            sinkStatic[sinkPos] = emitStatic;
             sink[sinkPos++] = word;
         }
     }
@@ -473,7 +465,6 @@ public final class PpzScrollHandler extends AbstractZoneScrollHandler implements
     /** Past:253-334. */
     private void pastLines() {
         deformCursor = 0;
-        markCloudWords(8);
         for (int i = 0; i < 4; i++) deformFill(2, cloudWord(speeds[i], bg3X));   // Past:257-291
         deformFill(10, (short) -word(bg3X));                                      // Past:293-299
         deformFill(24, (short) -word(bg2X));                                      // Past:301-307
@@ -483,7 +474,6 @@ public final class PpzScrollHandler extends AbstractZoneScrollHandler implements
     /** Good Future:253-399. */
     private void goodFutureLines() {
         deformCursor = 0;
-        markCloudWords(12);
         deformFill(4, cloudWord(speeds[0], bg3X));            // Good Future:257-264
         deformFill(4, cloudWord(speeds[1], bg3X));            // Good Future:266-273
         deformFill(2, cloudWord(speeds[2], bg3X));            // Good Future:275-282
@@ -511,7 +501,6 @@ public final class PpzScrollHandler extends AbstractZoneScrollHandler implements
     /** Bad Future:253-333. */
     private void badFutureLines() {
         deformCursor = 0;
-        markCloudWords(14);
         deformFill(4, cloudWord(speeds[0], bg3X));            // Bad Future:257-264
         deformFill(6, cloudWord(speeds[1], bg3X));            // Bad Future:266-273
         deformFill(4, cloudWord(speeds[2], bg3X));            // Bad Future:275-282
@@ -530,23 +519,10 @@ public final class PpzScrollHandler extends AbstractZoneScrollHandler implements
     /** ScrollBlocks (Good Future:364-380): a partial first block of 8-r lines, then d1 whole blocks. */
     private void scrollBlocks(int firstWord, int skippedLines, int d1) {
         int a2 = firstWord;
-        emitStatic = isCloudWord(a2);
         emitBlock(deformWord(a2++), 8 - skippedLines);
         for (int i = 0; i < d1; i++) {
-            emitStatic = isCloudWord(a2);
             emitBlock(deformWord(a2++), 8);
         }
-        emitStatic = false;
-    }
-
-    /** The first {@code count} words of the table are the cloud groups (the BGSTATIC rows with non-repeating art). */
-    private void markCloudWords(int count) {
-        java.util.Arrays.fill(wordStatic, false);
-        for (int i = 0; i < count; i++) wordStatic[i] = true;
-    }
-
-    private boolean isCloudWord(int index) {
-        return index >= 0 && index < DEFORM_WORDS && wordStatic[index];
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -617,9 +593,7 @@ public final class PpzScrollHandler extends AbstractZoneScrollHandler implements
     /** Act 2 Past:358-526 and FillHScroll:547-561 (Act 2 Present:259-346, FillHScroll:355-369). */
     private void act23Lines() {
         deformCursor = 0;
-        java.util.Arrays.fill(wordStatic, false);
         for (int i = 0; i < act23.cloudWords().length; i++) {   // ScrollCloudsOuter:392-404, words -(speed.w + bg3X.w)
-            for (int n = 0; n < act23.cloudWords()[i]; n++) wordStatic[deformCursor + n] = true;
             deformFill(act23.cloudWords()[i], cloudWord(speeds[i], bg3X));
         }
         for (Run run : act23.runs()) deformFill(run.words(), layerWord(run.layer()));
@@ -640,38 +614,10 @@ public final class PpzScrollHandler extends AbstractZoneScrollHandler implements
         int diff = (short) ((lastCameraX & 0xFFFF) - word(bg2X));       // Act 2 Present:325-327
         int inc = waterIncrement(diff, 0x100);                           // :328-332 divs.w #$100
         int acc = word(bg2X) << 16;                                      // :333-334
-        emitStatic = false;
         for (int n = d5 * 8; n > 0; n--) {                               // :335-346
             emitLine((short) -word(acc));
             acc += inc;
         }
-    }
-
-    /**
-     * Whether the shared renderer's Plane B window must follow the layers. Native keeps one 512-pixel plane
-     * whose BGSTATIC rows were drawn from layout columns 0-511 only (DrawLevelBG1 .StaticRow,
-     * Scroll (Act 2 Past).asm:974-982: GetBlockVDPCmdAbsX at X 0, DrawBlockRowAbsX 512 pixels) and so wrap at
-     * 512, while each dynamic section streams the columns its own camera reaches. The renderer has one window
-     * for all lines: a 512 window at the layout origin shows static rows exactly and dynamic rows only while
-     * they read below 512; a window that follows the layers shows dynamic rows exactly and static rows only
-     * where the layout beyond 512 looks like the layout below it. The cloud rows are the static rows whose art
-     * does not repeat (measured: with the window following the layers they differ from native once their scroll
-     * passes 512, while the lower static water matches), so the window follows the layers when some line needs
-     * it and no visible cloud line would wrap (measured on the ten fixtures: the opposite rule, or always
-     * following, breaks cloud rows that pass today; never following breaks the band rows at far camera X). The
-     * proper fix is a window per band in the shared renderer.
-     */
-    private void chooseBackgroundWindow(int viewportWidth) {
-        int needWindow = 0;
-        int cloudWraps = 0;
-        for (int line = 0; line < Math.min(sinkPos, ScrollEffectComposer.VISIBLE_LINES); line++) {
-            int source = -sink[line];
-            boolean fits = source >= 0 && source + viewportWidth <= 512;
-            if (fits) continue;
-            if (sinkStatic[line]) cloudWraps++;
-            else needWindow++;
-        }
-        bgWindowed = needWindow > 0 && cloudWraps == 0;
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -702,28 +648,23 @@ public final class PpzScrollHandler extends AbstractZoneScrollHandler implements
         initialised = s.initialised();
     }
 
-    /**
-     * The leftmost background column any visible line reads, so the shared renderer builds its Plane B window
-     * around the layers instead of the layout's first 512 pixels. Native streams each background band into
-     * the plane by that band's own camera (DrawLevelBG1's per-section camera, Scroll (Act 2 Past).asm:940-1043),
-     * so a band whose camera is far from the others still shows the layout columns it scrolled to; a
-     * fixed window shows them wrapped at 512 once the layers have drifted apart.
-     */
+    /** The tilemap holds row-specific layout samples from origin zero. */
     @Override
     public int getBgCameraX() {
-        return bgWindowed && maxScrollOffset != Integer.MIN_VALUE ? publishedCameraX - maxScrollOffset : Integer.MIN_VALUE;
+        return Integer.MIN_VALUE;
     }
 
-    /** The window must span every band's scroll plus the screen: same rule as the Sonic 1 SBZ handler. */
+    /**
+     * Cover the rightmost source pixel, including the water gradient. Static rows
+     * repeat at 512 independently in PpzBackgroundRows; changing this cache's width
+     * must never change their period or replace moving rows with wrapped columns.
+     */
     @Override
     public int getBgPeriodWidth() {
-        // The configured width, or the native 320 where isolated scroll tests have no session.
         int viewportWidth = Math.max(320, com.openggf.level.spawn.PlacementViewportWidth.current());
-        int left = getBgCameraX();
-        int spread = bgWindowed && maxScrollOffset != Integer.MIN_VALUE ? maxScrollOffset - minScrollOffset : 0;
-        int coverage = spread + viewportWidth + (left == Integer.MIN_VALUE ? 0 : Math.floorMod(left, 16));
+        int right = minScrollOffset == Integer.MAX_VALUE ? 0 : publishedCameraX - minScrollOffset;
         int width = 512;
-        while (width < coverage) width <<= 1;
+        while (width < right + viewportWidth) width <<= 1;
         return width;
     }
 

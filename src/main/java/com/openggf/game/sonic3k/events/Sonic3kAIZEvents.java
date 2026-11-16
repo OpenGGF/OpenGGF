@@ -9,6 +9,10 @@ import com.openggf.game.PlayerCharacter;
 import com.openggf.game.RespawnState;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.RewindTransient;
+import com.openggf.game.rewind.schema.ZoneEventSchemaSidecar;
+import com.openggf.game.sonic3k.runtime.S3kScreenShake;
+import com.openggf.sprites.playable.NativePlayableRoutine;
+import java.nio.ByteBuffer;
 import com.openggf.game.save.SaveReason;
 import com.openggf.game.save.SessionSaveRequests;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
@@ -311,7 +315,12 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
      * decrements each frame and applies Y offset from ScreenShakeArray.
      * Set to $10 (16) on bomb impact.
      */
-    private int screenShakeTimer;
+    @RewindTransient(reason = "composed with scalar publication by captureAizState")
+    private final S3kScreenShake screenShake = new S3kScreenShake();
+    // AIZ1_Deform (s3.asm:70365-70378) reads then advances HScroll_table+$03C.
+    // Keep the established frame-derived phase, but let the event pass choose its origin.
+    private int waveOriginFrame;
+    private boolean waveOriginSet;
     /**
      * ROM: Level_repeat_offset — set to $200 during a wrap frame, 0 otherwise.
      * Active objects subtract this from their X each frame to stay in sync.
@@ -340,8 +349,6 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
      * Set to -1 when not active.
      */
     private int battleshipPostScrollCameraX;
-    /** Current vertical shake offset produced by {@link #screenShakeTimer}. */
-    private int screenShakeOffsetY;
     /** Offset consumed by the current ScreenEvents pass before the next value is prepared. */
     private int screenShakeAppliedOffsetY;
     /** True after the act switch request has been sent to LevelManager. */
@@ -647,8 +654,9 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         battleshipBgYOffset = 0;
         battleshipSmoothScrollX = 0;
         battleshipPostScrollCameraX = -1;
-        screenShakeTimer = 0;
-        screenShakeOffsetY = 0;
+        screenShake.clear();
+        waveOriginFrame = 0;
+        waveOriginSet = !shouldSpawnIntro(act);
         screenShakeAppliedOffsetY = 0;
         act2TransitionRequested = false;
         fireTransitionMutationRequested = false;
@@ -735,6 +743,11 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         advanceFireMusicRestore();
         if (act == 0) {
             updateAct1(frameCounter);
+            if (!waveOriginSet && !isFireTransitionScrollActive()
+                    && (camera().isLevelStarted() || AizPlaneIntroInstance.isMainLevelPhaseActive())) {
+                waveOriginFrame = levelManager().getFrameCounter();
+                waveOriginSet = true;
+            }
         } else {
             updateAct2Continuation(frameCounter);
         }
@@ -858,8 +871,8 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         // use the predicted end-of-frame X for this threshold just like the
         // later AIZ1 resize and terrain-swap thresholds below.
         if (!paletteSwapped && frameEndCameraX >= PALETTE_SWAP_X) {
-            // loc_1C4A6: LoadPalette_Immediate PalID_AIZ, then for Player_mode 3 the
-            // word_4FAE4 colours at Normal_palette_line_4+$10 (sonic3k.asm:38968-38975).
+            // loc_1C4A6 (sonic3k.asm:38933-38941): load AIZ's palette, then
+            // apply the Knuckles-only line-four colours for Player_mode 3.
             // Both are zone-event writes, so they override this frame's AnPal colours as
             // the ROM's resize does after Animate_Palette.
             loadPaletteFromPalPointers(PAL_AIZ_INDEX);
@@ -1700,9 +1713,10 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
      * <p>Every routine in that chain — {@code AIZ1BGE_FireTransition},
      * {@code AIZ1BGE_FireRefresh}, {@code AIZ1BGE_Finish},
      * {@code AIZ2BGE_FireRedraw} and {@code AIZ2BGE_WaitFire} — is reached only
-     * through {@code ScreenEvents}, which the level main loop calls after
-     * {@code Wait_VSync} (sonic3k.asm:7921-7931 and :102279-102300, dispatching
-     * via :104603-104604 and :105064-105065). A lag row is a main-loop pass that
+     * through the screen-event dispatch. {@code LevelLoop}
+     * (sonic3k.asm:7916-7931) waits for VBlank before that dispatch;
+     * {@code ScreenEvents} (sonic3k.asm:102279-102300) selects the zone handlers
+     * (sonic3k.asm:104603-104604,105064-105065). A lag row is a main-loop pass that
      * never completed, so {@code Level_frame_counter} does not advance and none
      * of those routines run — neither their {@code AIZ1_FireRise} calls nor
      * their {@code Draw_PlaneVertBottomUp} drains, both of which are main-loop
@@ -2475,8 +2489,8 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         int maxY = Math.max(cam.getMaxY(), cam.getMaxYTarget());
         for (AbstractPlayableSprite sidekick : spriteManager().getSidekicks()) {
             if (sidekick.getCpuController() != null) {
-                // ROM Tails_Check_Screen_Boundaries reads Camera_min/max directly
-                // during Process_Sprites (sonic3k.asm:28447-28492). The engine's
+                // Tails_Check_Screen_Boundaries (sonic3k.asm:28447-28492)
+                // reads Camera_min/max directly during the object pass. The engine's
                 // sidekick CPU carries a mirrored bound override, so refresh it
                 // when AIZ2_DoShipLoop rewrites camera bounds before physics
                 // (sonic3k.asm:105246-105299).
@@ -2579,79 +2593,25 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         return battleshipBgYOffset;
     }
 
-    // ROM: ScreenShakeArray — signed byte offsets indexed by countdown value (15→0).
-    // Amplitude increases then decreases: ±1, ±1, ±2, ±2, ±3, ±3, ±4, ±4, ±5, ±5
-    // Used for timed/positive Screen_shake_flag (bomb impacts).
-    private static final int[] SCREEN_SHAKE_ARRAY = {
-            1, -1, 1, -1, 2, -2, 2, -2, 3, -3, 3, -3, 4, -4, 4, -4, 5, -5, 5, -5
-    };
-
-    // ROM: ScreenShakeArray2 — 64-byte pseudo-random offsets (0–3 pixels) indexed
-    // by (Level_frame_counter & $3F). Used for constant/negative Screen_shake_flag
-    // (e.g. AIZ2 water-level trigger shake, set to -1 by DynamicWaterHeight_AIZ2).
-    private static final int[] SCREEN_SHAKE_ARRAY_CONSTANT = {
-            1, 2, 1, 3, 1, 2, 2, 1, 2, 3, 1, 2, 1, 2, 0, 0,
-            2, 0, 3, 2, 2, 3, 2, 2, 1, 3, 0, 0, 1, 0, 1, 3,
-            1, 2, 1, 3, 1, 2, 2, 1, 2, 3, 1, 2, 1, 2, 0, 0,
-            2, 0, 3, 2, 2, 3, 2, 2, 1, 3, 0, 0, 1, 0, 1, 3
-    };
-
-    /**
-     * ROM: move.w #$10,(Screen_shake_flag).w — trigger timed screen shake.
-     * Called by bomb impact. Countdown applies Y offsets from ScreenShakeArray.
-     */
+    /** Object producers write only the ROM flag (including negative continuous mode). */
     public void triggerScreenShake(int frames) {
-        screenShakeTimer = frames;
+        screenShake.writeFlag(frames);
     }
 
     public int getScreenShakeOffsetY() {
         return screenShakeAppliedOffsetY;
     }
 
-    /**
-     * Ticks the screen shake. Called each frame from {@link #updateAct2Continuation(int)}.
-     * <p>
-     * ROM: ShakeScreen_Setup (sonic3k.asm:104234) supports two modes:
-     * <ul>
-     *   <li>Positive Screen_shake_flag → timed countdown with ScreenShakeArray (bomb impacts)</li>
-     *   <li>Negative Screen_shake_flag (-1) → constant shake with ScreenShakeArray2,
-     *       cleared externally by Obj_6E6E after 180 frames (water-level trigger)</li>
-     * </ul>
-     * The water system's shake timer drives the constant mode; the local
-     * {@link #screenShakeTimer} drives the timed mode.
-     *
-     */
     private void tickScreenShake() {
-        // AIZ2_ScreenEvent consumes Screen_shake_offset before the background
-        // event calls ShakeScreen_Setup to prepare the value for the next frame
-        // (sonic3k.asm:104916-104921,105178-105211). Preserve both registers:
-        // the scroll handler applies the old value while this method computes
-        // the new one.
-        screenShakeAppliedOffsetY = screenShakeOffsetY;
-        // Constant-mode shake: driven by WaterSystem's shake timer (ROM: Screen_shake_flag = -1).
-        // DynamicWaterHeight_AIZ2 sets it to 180; WaterSystem decrements it each frame.
-        // ROM: ShakeScreen_Setup loc_4F3FA — uses ScreenShakeArray2[(Level_frame_counter & $3F)]
-        WaterSystem ws = waterSystem();
-        if (ws != null && ws.getShakeTimer(0, 1) > 0) { // AIZ act 2
-            // LevelManager stores the previous completed frame until its later
-            // level-update phase. At ScreenEvents the ROM counter has already
-            // advanced, so +1 recovers the value ShakeScreen_Setup reads.
-            int romFrameCounter = levelManager().getFrameCounter();
-            screenShakeOffsetY = SCREEN_SHAKE_ARRAY_CONSTANT[romFrameCounter & 0x3F];
-            return;
-        }
-
-        // Timed-mode shake: local countdown with ScreenShakeArray (bomb impacts).
-        if (screenShakeTimer <= 0) {
-            screenShakeOffsetY = 0;
-            return;
-        }
-        screenShakeTimer--;
-        screenShakeOffsetY = 0;
-        if (screenShakeTimer < SCREEN_SHAKE_ARRAY.length) {
-            screenShakeOffsetY = SCREEN_SHAKE_ARRAY[screenShakeTimer];
-        }
+        // AIZ2_ScreenEvent (sonic3k.asm:104923-104927) consumes the prior
+        // offset; loc_50260 (sonic3k.asm:105208-105216) prepares the next one.
+        screenShakeAppliedOffsetY = screenShake.offset();
+        var primary = spriteManager().getMainPlayable();
+        screenShake.setup(levelManager().getFrameCounter(),
+                primary == null || NativePlayableRoutine.isAtOrBeyondDeathForNativeRead(primary));
     }
+
+    public int getWaveOriginFrame() { return waveOriginFrame; }
 
     /**
      * Returns the smooth (never-wrapping) scroll X for parallax during the bombing sequence.
@@ -3162,9 +3122,8 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
      * and {@code jsr (LoadEnemyArt).l} once the fire-plane redraw has drained
      * ({@code docs/skdisasm/sonic3k.asm:105130-105137}). That call site is an
      * ordinary synchronous mid-level {@code LoadEnemyArt}: it runs inside the
-     * background-event dispatch, which {@code LevelLoop} reaches
-     * ({@code DeformBgLayer}/{@code ScreenEvents}, sonic3k.asm:7928-7930) ahead
-     * of the same iteration's {@code Process_Kos_Module_Queue} (7908). The
+     * background-event dispatch, which {@code LevelLoop}
+     * (sonic3k.asm:7916-7940) reaches before its loop-tail decompression step. The
      * {@code Queue_Kos_Module} calls in {@code LoadEnemyArt}
      * ({@code sonic3k.asm:64321-64353}) therefore happen during this frame's
      * event pass, exactly like {@code HCZGeyser_ReloadEnemyArtAndDelete}
@@ -3267,7 +3226,8 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
             // starpost respawn from a saved AIZ2 starpost) AND the trace's
             // reload-resume path.  ROM does NOT mark all of these as
             // post-miniboss — only the ones that set Apparent_zone_and_act = $0001
-            // (sonic3k.asm:10258 LevelSelect_StartZone, :61800 Load_Starpost_Settings).
+            // LevelSelect_StartZone (sonic3k.asm:10255-10262) and
+            // Load_Starpost_Settings (sonic3k.asm:61800-61820) own those entries.
             // The miniboss-skip gate now reads LevelManager.getApparentAct(),
             // which mirrors ROM's Apparent_zone_and_act, so we no longer
             // need a heuristic boolean here.  postFireHazeActive stays true
@@ -3415,8 +3375,8 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
     public void    setBattleshipTerrainLoaded(boolean v)    { battleshipTerrainLoaded = v; }
     public int     getBattleshipWrapX()                     { return battleshipWrapX; }
     public void    setBattleshipWrapX(int v)                { battleshipWrapX = v; }
-    public int     getScreenShakeTimer()                    { return screenShakeTimer; }
-    public void    setScreenShakeTimer(int v)               { screenShakeTimer = v; }
+    public int     getScreenShakeTimer()                    { return screenShake.flag(); }
+    public void    setScreenShakeTimer(int v)               { screenShake.writeFlag(v); }
     public int     getLevelRepeatOffsetRaw()                { return levelRepeatOffset; }
     public void    setLevelRepeatOffsetRaw(int v)           { levelRepeatOffset = v; }
     public int     getBattleshipBgYOffsetRaw()              { return battleshipBgYOffset; }
@@ -3425,8 +3385,12 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
     public void    setBattleshipSmoothScrollXRaw(int v)     { battleshipSmoothScrollX = v; }
     public int     getBattleshipPostScrollCameraX()         { return battleshipPostScrollCameraX; }
     public void    setBattleshipPostScrollCameraX(int v)    { battleshipPostScrollCameraX = v; }
-    public int     getScreenShakeOffsetYRaw()               { return screenShakeOffsetY; }
-    public void    setScreenShakeOffsetYRaw(int v)          { screenShakeOffsetY = v; }
+    public int     getScreenShakeOffsetYRaw()               { return screenShake.offset(); }
+    public void setScreenShakeOffsetYRaw(int value) {
+        ByteBuffer words = ByteBuffer.allocate(S3kScreenShake.captureBytes());
+        words.putInt(screenShake.flag()).putInt(value).putInt(screenShake.lastOffset()).flip();
+        screenShake.restoreFrom(words);
+    }
     public int     getScreenShakeAppliedOffsetYRaw()        { return screenShakeAppliedOffsetY; }
     public void    setScreenShakeAppliedOffsetYRaw(int v)   { screenShakeAppliedOffsetY = v; }
     public boolean isAct2TransitionRequestedRaw()           { return act2TransitionRequested; }
@@ -3457,4 +3421,45 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
     }
     public int     getFireOverlayTileCount()                { return fireOverlayTileCount; }
     public void    setFireOverlayTileCount(int v)           { fireOverlayTileCount = v; }
+    public byte[] captureAizState() {
+        byte[] scalars = ZoneEventSchemaSidecar.capture(this);
+        ByteBuffer out = ByteBuffer.allocate(24 + scalars.length);
+        out.putInt(0x41495A31).putInt(1).putInt(scalars.length).put(scalars);
+        screenShake.captureTo(out);
+        return out.array();
+    }
+
+    public static boolean hasValidAizState(byte[] bytes) {
+        if (bytes == null || bytes.length < 24) return false;
+        ByteBuffer in = ByteBuffer.wrap(bytes);
+        if (in.getInt() != 0x41495A31 || in.getInt() != 1) return false;
+        int length = in.getInt();
+        var probe = new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
+        if (length != ZoneEventSchemaSidecar.capture(probe).length || length != in.remaining() - 12) return false;
+        byte[] scalars = new byte[length];
+        in.get(scalars);
+        if (!ZoneEventSchemaSidecar.hasValidVariableLengthPayload(Sonic3kAIZEvents.class, scalars)) return false;
+        try {
+            ZoneEventSchemaSidecar.restore(probe, scalars);
+            if (!java.util.Arrays.equals(scalars, ZoneEventSchemaSidecar.capture(probe))) return false;
+        } catch (IllegalArgumentException | IndexOutOfBoundsException invalid) {
+            return false;
+        }
+        if (probe.screenShakeAppliedOffsetY != (short) probe.screenShakeAppliedOffsetY) return false;
+        for (int i = 0; i < 3; i++) {
+            int word = in.getInt();
+            if (word != (short) word) return false;
+        }
+        return true;
+    }
+
+    public void restoreAizState(byte[] bytes) {
+        if (!hasValidAizState(bytes)) throw new IllegalArgumentException("Invalid AIZ publication");
+        ByteBuffer in = ByteBuffer.wrap(bytes);
+        in.position(8);
+        byte[] scalars = new byte[in.getInt()];
+        in.get(scalars);
+        ZoneEventSchemaSidecar.restore(this, scalars);
+        screenShake.restoreFrom(in);
+    }
 }

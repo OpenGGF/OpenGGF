@@ -795,3 +795,11 @@ records corrected native request IDs and/or level-restore selection affecting
 this route. Restoration selects the apparent playlist and P1 invincibility at
 the native boundary. These local checks do not requalify this matrix’s inherited
 route, viewport/donor/team, lifecycle or audible-comparison gaps.
+
+## Screen-event shake maintenance (2026-11-15)
+
+The [five-zone audit](../../audits/2026-11-15-s3k-low-zone-event-publication.md)
+records the bounded CNZ death-output witness and SOZ ROM-table/publication plus
+runtime restore/forward checks. These use the default fixture viewport/character;
+whole-route, donor/team breadth, native pixels and full-world lifecycle coverage
+remain inherited obligations. The shake owner change does not certify this act.

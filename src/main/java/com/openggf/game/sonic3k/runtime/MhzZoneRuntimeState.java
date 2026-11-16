@@ -5,7 +5,6 @@ import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.events.Sonic3kMHZEvents;
 
 import java.nio.ByteBuffer;
-import java.util.Arrays;
 import java.util.Objects;
 
 /**
@@ -26,17 +25,12 @@ public final class MhzZoneRuntimeState implements S3kZoneRuntimeState {
     private final int actIndex;
     private final PlayerCharacter playerCharacter;
     private final Sonic3kMHZEvents events;
-    private int publishedBgCameraX;
-    private int middleBgCameraX;
-    private int nearBgCameraX;
     // _unkFAA9 in MHZ1: survives button/door unloading, but loc_60DE clears
     // this work RAM on a full level reload (including checkpoint respawn).
     private boolean cutsceneDoorLowered;
     private int pollenParticleCount;
     private int pollenLeafPatternCounter;
     private int mushroomCapPositionCounter = INITIAL_MUSHROOM_CAP_POSITION_COUNTER;
-    private int endBossArenaTallSupportX;
-    private final int[] endBossArenaSpikeX = new int[6];
 
     public MhzZoneRuntimeState(int actIndex, PlayerCharacter playerCharacter) {
         this(actIndex, playerCharacter, null);
@@ -45,7 +39,7 @@ public final class MhzZoneRuntimeState implements S3kZoneRuntimeState {
     public MhzZoneRuntimeState(int actIndex, PlayerCharacter playerCharacter, Sonic3kMHZEvents events) {
         this.actIndex = actIndex;
         this.playerCharacter = Objects.requireNonNull(playerCharacter, "playerCharacter");
-        this.events = events;
+        this.events = events == null ? new Sonic3kMHZEvents() : events;
     }
 
     @Override public int zoneIndex() { return Sonic3kZoneIds.ZONE_MHZ; }
@@ -184,56 +178,23 @@ public final class MhzZoneRuntimeState implements S3kZoneRuntimeState {
         return events == null ? 0 : events.getShipPropellerY();
     }
 
-    public void publishEndBossArenaHelperXPositions(int tallSupportX, int[] spikeX) {
-        endBossArenaTallSupportX = tallSupportX & 0xFFFF;
-        Arrays.fill(endBossArenaSpikeX, 0);
-        if (spikeX != null) {
-            int count = Math.min(spikeX.length, endBossArenaSpikeX.length);
-            for (int i = 0; i < count; i++) {
-                endBossArenaSpikeX[i] = spikeX[i] & 0xFFFF;
-            }
-        }
-    }
-
-    public int endBossArenaTallSupportX() {
-        return endBossArenaTallSupportX;
-    }
-
-    public int endBossArenaSpikeX(int spikeIndex) {
-        return spikeIndex >= 0 && spikeIndex < endBossArenaSpikeX.length
-                ? endBossArenaSpikeX[spikeIndex]
-                : 0;
-    }
+    public void requestScreenShake(int frames) { if (events != null) events.requestScreenShake(frames); }
+    public int appliedScreenShakeOffset() { return events.appliedScreenShakeOffset(); }
+    public void publishDeformOutputs(int bg, int middle, int near) { events.publishDeformOutputs(bg, middle, near); }
+    public void publishEndBossArenaHelperXPositions(int support, int[] spikes) { events.publishEndBossArenaHelperXPositions(support, spikes); }
+    public int loopAdjustedCameraX() { return events == null ? 0 : events.loopAdjustedCameraX(); }
+    public int endBossArenaTallSupportX() { return events == null ? 0 : events.endBossArenaTallSupportX(); }
+    public int endBossArenaSpikeX(int index) { return events == null || index < 0 || index >= 6 ? 0 : events.endBossArenaSpikeX(index); }
 
     public boolean isBackedBy(Sonic3kMHZEvents candidate) {
         return events == candidate;
     }
 
-    public void publishDeformOutputs(int bgCameraX, int middleBgCameraX, int nearBgCameraX) {
-        this.publishedBgCameraX = bgCameraX & 0xFFFF;
-        this.middleBgCameraX = middleBgCameraX & 0xFFFF;
-        this.nearBgCameraX = nearBgCameraX & 0xFFFF;
-    }
-
-    public int publishedBgCameraX() {
-        return publishedBgCameraX;
-    }
-
-    public int middleBgCameraX() {
-        return middleBgCameraX;
-    }
-
-    public int nearBgCameraX() {
-        return nearBgCameraX;
-    }
-
-    public int backgroundLayer1Phase() {
-        return (nearBgCameraX - publishedBgCameraX) & 0x1F;
-    }
-
-    public int backgroundLayer2Phase() {
-        return (middleBgCameraX - publishedBgCameraX) & 0x3F;
-    }
+    public int publishedBgCameraX() { return events == null ? 0 : events.publishedBgCameraX(); }
+    public int middleBgCameraX() { return events == null ? 0 : events.middleBgCameraX(); }
+    public int nearBgCameraX() { return events == null ? 0 : events.nearBgCameraX(); }
+    public int backgroundLayer1Phase() { return (nearBgCameraX() - publishedBgCameraX()) & 0x1F; }
+    public int backgroundLayer2Phase() { return (middleBgCameraX() - publishedBgCameraX()) & 0x3F; }
 
     public boolean tryReservePollenParticle() {
         if (pollenParticleCount >= 0x10) {
@@ -291,45 +252,17 @@ public final class MhzZoneRuntimeState implements S3kZoneRuntimeState {
 
     @Override
     public byte[] captureBytes() {
-        ByteBuffer buffer = ByteBuffer.allocate(Integer.BYTES * 14);
-        buffer.putInt(publishedBgCameraX);
-        buffer.putInt(middleBgCameraX);
-        buffer.putInt(nearBgCameraX);
-        buffer.putInt(pollenParticleCount);
-        buffer.putInt(pollenLeafPatternCounter);
-        buffer.putInt(mushroomCapPositionCounter);
-        buffer.putInt(endBossArenaTallSupportX);
-        for (int spikeX : endBossArenaSpikeX) {
-            buffer.putInt(spikeX);
-        }
-        buffer.putInt(cutsceneDoorLowered ? 1 : 0);
-        return buffer.array();
+        return ByteBuffer.allocate(20).putInt(pollenParticleCount).putInt(pollenLeafPatternCounter)
+                .putInt(mushroomCapPositionCounter).putInt(cutsceneDoorLowered ? 1 : 0).putInt(1).array();
     }
-
     @Override
     public void restoreBytes(byte[] bytes) {
-        if (bytes == null || bytes.length < Integer.BYTES * 3) {
-            return;
-        }
-        ByteBuffer buffer = ByteBuffer.wrap(bytes);
-        publishedBgCameraX = buffer.getInt();
-        middleBgCameraX = buffer.getInt();
-        nearBgCameraX = buffer.getInt();
-        if (bytes.length >= Integer.BYTES * 5) {
-            pollenParticleCount = buffer.getInt();
-            pollenLeafPatternCounter = buffer.getInt();
-        }
-        if (bytes.length >= Integer.BYTES * 6) {
-            mushroomCapPositionCounter = buffer.getInt();
-        }
-        if (bytes.length >= Integer.BYTES * 7) {
-            endBossArenaTallSupportX = buffer.getInt();
-        }
-        if (bytes.length >= Integer.BYTES * 13) {
-            for (int i = 0; i < endBossArenaSpikeX.length; i++) {
-                endBossArenaSpikeX[i] = buffer.getInt();
-            }
-        }
-        cutsceneDoorLowered = bytes.length >= Integer.BYTES * 14 && buffer.getInt() != 0;
+        if (bytes == null || bytes.length != 20) throw new IllegalArgumentException("Invalid MHZ runtime payload");
+        ByteBuffer in = ByteBuffer.wrap(bytes);
+        int count = in.getInt(), leaf = in.getInt(), cap = in.getInt(), door = in.getInt(), version = in.getInt();
+        if (count < 0 || leaf < 0 || leaf > 255 || cap < 0 || cap > 255
+                || door < 0 || door > 1 || version != 1) throw new IllegalArgumentException("Invalid MHZ runtime values");
+        pollenParticleCount = count; pollenLeafPatternCounter = leaf;
+        mushroomCapPositionCounter = cap; cutsceneDoorLowered = door == 1;
     }
 }

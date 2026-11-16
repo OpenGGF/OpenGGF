@@ -15,6 +15,8 @@ public final class PpzObjects implements CdObjectRegistration {
                 (spawn, r) -> new com.openggf.game.soniccd.objects.projector.CdProjector(spawn));
         // --- ppzobja ---
         registrar.object(0x04, "Waterfall", (spawn, r) -> new ObjWaterfall(spawn));
+        // ObjBoulder is $1B in every PPZ index; acts 1/2 load its art through section PLCs.
+        registrar.object(0x1B, "Boulder", (spawn, r) -> new PpzBoulder(spawn));
         // $22 is Tamabboh with its missiles as subtype 1 (Tamabboh/Main.asm:8-9).
         registrar.badnik(0x22, "Tamabboh", (spawn, r) -> spawn.subtype() == 1
                 ? new ObjTamabbohMissile(spawn) : new ObjTamabboh(spawn));

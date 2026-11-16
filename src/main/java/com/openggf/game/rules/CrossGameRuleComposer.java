@@ -3,8 +3,15 @@ package com.openggf.game.rules;
 import com.openggf.game.DonorCapabilities;
 
 /**
- * Composes typed cross-game rules by keeping runtime behavior owned by the host
- * game while importing only explicitly donated player capabilities.
+ * Rule-level composition helpers.
+ *
+ * <p>{@link #withPlayerRules} and {@link #withPlayerAndCameraRules} define a stock
+ * game's rules from a base game's constants (KiS2 over Sonic 2, Sonic CD over
+ * Sonic 1); they are not cross-game donation, and a guard limits their callers to
+ * the stock rule factories. Donation goes through
+ * {@link CrossGamePolicyComposer#donatePlayerCapabilities}; {@link #compose} is its
+ * rule-level implementation with the same capability-only contract, and a guard
+ * limits its production caller to that composer.
  */
 public final class CrossGameRuleComposer {
 

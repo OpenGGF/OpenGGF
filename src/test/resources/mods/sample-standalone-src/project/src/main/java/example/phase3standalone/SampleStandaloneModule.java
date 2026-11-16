@@ -1,6 +1,7 @@
 package example.phase3standalone;
 
 import com.openggf.game.*;
+import com.openggf.game.rules.GamePolicies;
 import com.openggf.game.rules.GameRules;
 import com.openggf.level.Level;
 import com.openggf.level.objects.*;
@@ -13,7 +14,8 @@ public final class SampleStandaloneModule extends AbstractStandaloneGameModule {
                         MusicReference.namespaced(owner, "zone-theme")))
                 .supportsSidekick(true)
                 .physics(PhysicsProvider.fixed(SampleCharacter.physicsSpec().profile(),
-                        PhysicsModifiers.STANDARD, GameRules.SONIC_2))
+                        PhysicsModifiers.STANDARD))
+                .policies(new GamePolicies(GameRules.SONIC_2))
                 .touchResponses((byte) 0, (byte) 0, (byte) 8, (byte) 8)
                 .object(owner + ":walker", (spawn, registry) -> new SampleBadnik(spawn)).build());
     }

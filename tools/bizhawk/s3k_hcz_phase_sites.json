@@ -1,0 +1,136 @@
+{
+  "schema": 1,
+  "original_ROM_sha1": "cfbf98c36c776677290a872547ac47c53d2761d6",
+  "original_ROM_sha256": "fba0677fde9f76df93f3e98d6310d8af68b9847bde16e253d73cd4dd8134ed23",
+  "expected_bytes_provenance": "Frozen before registration from canonical original-ROM bytes, cross-checked against pinned owning source instructions, absolute loc labels and existing checked probe addresses. No assembler/disassembler/simulator or runtime code patch was created.",
+  "references": {
+    "sonic3k.asm": {
+      "pin": "8b2cf3c4178f2382f844da67798de4befc50c5e0",
+      "sha256": "385450f967756cfe7b25f24899a622045ca626454d5444432c007c27d80f6316"
+    },
+    "sonic3k.constants.asm": {
+      "pin": "8b2cf3c4178f2382f844da67798de4befc50c5e0",
+      "sha256": "5256c0c7ecee8b5372c04e2c2c7615aed5748da3e83ecee8b6d94640d5b2fdbc"
+    }
+  },
+  "sites": [
+    {
+      "name": "process_sprites_entry",
+      "pc": 109274,
+      "expected": "4a38f623662c41f8b000",
+      "label": "Process_Sprites",
+      "lines": [
+        36005,
+        36008
+      ],
+      "purpose": "Observe previous published camera/diff/wall/shake state before native sprite/player execution.",
+      "address_provenance": "Existing checked hcz_allocation_epoch_probe.lua process entry0x1AADA; owning source tst.b Teleport_active_flag, branch, lea Object_RAM.",
+      "pc_hex": "0x01AADA",
+      "expected_opcode_sha256": "01ae21ce529f7719d6d89d9e8812c6727d980d07649079677645c35d414cb065"
+    },
+    {
+      "name": "hcz2_screen_entry",
+      "pc": 331408,
+      "expected": "3038eeced178ee844efadef6",
+      "label": "HCZ2_ScreenEvent",
+      "lines": [
+        106040,
+        106043
+      ],
+      "purpose": "Observe old shake and unmodified FG copy before HCZ foreground applies it.",
+      "address_provenance": "HCZ2 LevelEventArray pointer selection; source following locret_50E86 RTS plus the two4-byte ScreenInit calls. ROM verifies full three-instruction body.",
+      "pc_hex": "0x050E90",
+      "expected_opcode_sha256": "6667f01b722c9dc2bb4cc138a07337f24ee2e320c1a49c4e0637f2d3483e3212"
+    },
+    {
+      "name": "hcz2_background_entry",
+      "pc": 331506,
+      "expected": "3038eec24efb00026000001260000020",
+      "label": "HCZ2_BackgroundEvent / HCZ2_BackgroundEvent_Index",
+      "lines": [
+        106074,
+        106082
+      ],
+      "purpose": "Observe FG copy after screen event, before BG routine selection.",
+      "address_provenance": "Source-adjacent20-byte five-BRA dispatch immediately precedes HCZ2BGE_WallMoveInit; loc_50F1C anchor and complete dispatch bytes identify the selected body.",
+      "pc_hex": "0x050EF2",
+      "expected_opcode_sha256": "d1c3bf0ee7dc7b227a1845b2fbe4720f83da4ddb0df5641ba385890ff406c991"
+    },
+    {
+      "name": "hcz2_wall_move_entry",
+      "pc": 331760,
+      "expected": "0c380006b005645a203c0000e0000c780a88b0106506203c00014000",
+      "label": "HCZ2_WallMove",
+      "lines": [
+        106180,
+        106186
+      ],
+      "purpose": "Observe accumulator/camera/flag before wall update; distinguish initialization and ordinary callers by stack.",
+      "address_provenance": "loc_5100C absolute source label minus the six source instructions/branches totaling0x1C bytes; full prefix and branch target loc_51052 verified.",
+      "pc_hex": "0x050FF0",
+      "expected_opcode_sha256": "71afa95f942000a16dcad97c31409e41b07732c16acb517f10bf0f0d7623706c"
+    },
+    {
+      "name": "shake_setup_entry",
+      "pc": 324564,
+      "expected": "31f8eeceeed072000c380006b00564223038eecc",
+      "label": "ShakeScreen_Setup",
+      "lines": [
+        104234,
+        104239
+      ],
+      "purpose": "Observe old applied shake and new wall/BG state before setup selects the next offset.",
+      "address_provenance": "loc_4F3CA tail is LEA4+DBF4+RTS2, ending0x4F3D4; prefix implements the named old-offset copy and native dead gate.",
+      "pc_hex": "0x04F3D4",
+      "expected_opcode_sha256": "0695c1eebbab4eff116ab2d7981e9b9c8eddd4e476d82a1d4a449b2abd510fcc"
+    },
+    {
+      "name": "bg_diff_published",
+      "pc": 324510,
+      "expected": "4e75",
+      "guard_pc": 324486,
+      "guard_expected": "3038ee809078ee8c31c0ee3e3038ee849078ee9031c0ee404e75",
+      "label": "Get_BGActualEffectiveDiff RTS",
+      "lines": [
+        104186,
+        104193
+      ],
+      "purpose": "Observe both newly written camera diffs after shake setup and before return.",
+      "address_provenance": "loc_4F382 ADD.W/RTS ends at0x4F386; six4-byte named MOVE/SUB/MOVE instructions then RTS at+0x18. Full function bytes pin both destinations EE3E/EE40.",
+      "pc_hex": "0x04F39E",
+      "expected_opcode_sha256": "1ceeabf0c6a5a30bad12cdac0e3ab015a7188a42e6aebb556aad00bb9cd693ad"
+    },
+    {
+      "name": "find_floor_bg_diff_read",
+      "pc": 62014,
+      "expected": "9678ee3e9478ee404bf90000efb66116",
+      "guard_pc": 61994,
+      "guard_expected": "4bf90000eff04a38f664672e612c195400013f019678ee3e9478ee40",
+      "label": "FindFloor: first BG Camera_X_diff subtraction",
+      "lines": [
+        19223,
+        19233
+      ],
+      "purpose": "Actual BG floor coordinate translation; A0/stack distinguish P1, Tails or another actor.",
+      "address_provenance": "FindFloor follows the ChunkAddrArray table; locret_F262 anchor and complete source instruction sizes place entryF22A and first subtraction+0x14. Native bytes additionally pin the BG flag gate and FG scan/push prefix.",
+      "pc_hex": "0x00F23E",
+      "expected_opcode_sha256": "7b27cf4e4d62738397d46248098eed379286cef798eab8bc75b04e30b12b9604"
+    },
+    {
+      "name": "find_wall_bg_y_diff_read",
+      "pc": 62632,
+      "expected": "9478ee404bf90000efb66128",
+      "label": "loc_F4A8 / FindWall",
+      "lines": [
+        19524,
+        19530
+      ],
+      "purpose": "Actual BG wall Y translation after either X path; raw D2/D3/A0/stack retain caller and actor.",
+      "address_provenance": "Explicit absolute label loc_F4A8; preceding loc_F4A4 X subtraction and BG tile LEA verified.",
+      "pc_hex": "0x00F4A8",
+      "expected_opcode_sha256": "739bcea26a13734902b22bf424d5dd5dc83b2c36cb542e50c6a689545e18e1d3"
+    }
+  ],
+  "sampling": "Only register for original inflight completed-frame targets37055..39471; no coordinate/character/phase-based callback filtering. Read all hits, retaining raw registered trigger PC and separately observed CPU PC.",
+  "capability_limit": "IGpgxHost Action wrapper discards the underlying callbackAddress parameter. registered_trigger_pc is exact checked registration address, not falsely labelled as a captured backend callbackAddress. Observed PC comes independently from ReadCpuRegister."
+}

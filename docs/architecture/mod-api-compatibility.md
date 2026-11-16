@@ -645,6 +645,34 @@ configured donor selection, registered mod suppliers, palette refresh/order,
 Tails banks, aliases and restoration retain their existing implementations.
 No factory, registry, callback, facade or model replacement is introduced.
 
+## Game policy ownership candidate migration
+
+The reviewed unpublished 0.7 candidate moves game-wide behavioural rules from the
+physics provider to the module ([design](designs/2026-11-15-game-policies.md),
+0.8 roadmap Milestone 1). `GameModule.getPolicies()` is a new abstract method
+returning the immutable `com.openggf.game.rules.GamePolicies` record, whose only
+component in this slice is `GameRules rules`. `GameModule.getRules()`,
+`DelegatingGameModule.getRules()` and the abstract `PhysicsProvider.getRules()` are
+removed, `PhysicsProvider.fixed` drops its `GameRules` parameter, and
+`StandaloneGameSpec` gains `policies()` and `Builder.policies(GamePolicies)`
+(default `new GamePolicies(GameRules.SONIC_2)`, the previous `fixed(...)` default).
+`CrossGameFeatureProvider.getHybridRules()` becomes `getHybridPolicies()`.
+`GameRules` and its narrow records are unchanged.
+
+Creators move rule edits from physics wrappers to `getPolicies()`; patches built on
+`DelegatingGameModule` inherit the base value. Rebuild compiled mods: the removed
+methods and changed `fixed` descriptor are binary-incompatible, and an unchanged
+`>=0.7.0 <0.8.0` manifest cannot distinguish the old contract. The maintained
+standalone samples, the `infinite-sonic` and `sonic-survivors` examples and the
+creator guides change in the same commit.
+
+This is an intentional incompatible candidate-pin rewrite: 5 rows removed and 16
+added (the new record's type, annotation, constructor, component and accessors, and
+the replacement module/spec/provider methods). `ModApiVersion.CURRENT` remains
+`0.7.0`; the release descriptor stays byte-identical with candidate status and no
+published baseline. The donation composer `CrossGamePolicyComposer` is
+engine-owned and outside the creator surface.
+
 ## 0.7 reset inventory
 
 The reset removed provisional compatibility shims before establishing the first

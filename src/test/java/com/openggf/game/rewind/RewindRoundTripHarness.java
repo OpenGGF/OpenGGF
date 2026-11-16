@@ -670,6 +670,9 @@ public final class RewindRoundTripHarness {
                     "com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss1Instance$TurretSegmentChild",
                     "com.openggf.game.sonic3k.objects.TestLbzFinalBoss1Instance"),
             Map.entry(
+                    "com.openggf.game.sonic3k.objects.MgzBossTransitionObjectInstance",
+                    "com.openggf.game.sonic3k.events.TestSonic3kMgz2CollapseEvents"),
+            Map.entry(
                     "com.openggf.game.sonic3k.objects.Mgz2LevelCollapseSolidInstance",
                     "com.openggf.game.sonic3k.events.TestSonic3kMgz2CollapseEvents"),
             Map.entry(

@@ -6,7 +6,7 @@ description: Use when locating Sonic CD disassembly routines, labels, per-stage 
 # Sonic CD disassembly lookup
 
 `docs/scddisasm` is an optional research submodule (`git submodule update --init
-docs/scddisasm`) pinned at `1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff`. Paths
+docs/scddisasm`) pinned at `ca8903228f9af567df9fca4520906ea118f60ab9`. Paths
 below are relative to `docs/scddisasm/src`. Runtime bytes come only from the
 user's USA disc image (`-Dsoniccd.disc.path` or `-Dsoniccd.media.root`); never read the disassembly at
 runtime and never transcribe its tables.

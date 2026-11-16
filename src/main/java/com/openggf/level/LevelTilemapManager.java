@@ -1285,6 +1285,9 @@ public class LevelTilemapManager {
                               int targetTileX, int targetTileY, int queryX, int queryY,
                               BgBuildParams params, BlockLookup blockLookup,
                               Level level, int blockPixelSize) {
+        if (layerIndex == 1 && level instanceof com.openggf.game.internal.BackgroundRowLayout rows) {
+            queryX = rows.backgroundLayoutX(queryX, queryY);
+        }
         Block block = params.bgLinearRowOverflow()
                 ? lookupBackgroundBlockWithLinearRowOverflow(level, queryX, queryY, blockPixelSize)
                 : blockLookup.lookup(layerIndex, queryX, queryY);

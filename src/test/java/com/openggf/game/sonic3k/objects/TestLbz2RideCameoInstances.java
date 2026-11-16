@@ -192,7 +192,7 @@ class TestLbz2RideCameoInstances {
                 "ship thump/rumble phase must request the launch via LbzZoneRuntimeState");
         assertFalse(ship.didSetLegacyEventsFg5ForTest(),
                 "Task E must not write the legacy LBZ1 reload flag directly");
-        assertTrue(fixture.gameState.isScreenShakeActive(),
+        assertTrue((fixture.runtime.screenShakeFlag() != 0),
                 "loc_8D450 sets Screen_shake_flag with Events_fg_5");
 
         // The cameo reads Screen_shake_flag on the frames after the ship sets it.
@@ -319,7 +319,7 @@ class TestLbz2RideCameoInstances {
 
         // ROM: the taunt script (byte_666D2) plays out before the idle state
         // that watches Screen_shake_flag.
-        fixture.gameState.setScreenShakeActive(true);
+        fixture.runtime.writeScreenShakeFlag(0xFF00);
         int frame = 1;
         for (; frame < 200 && !cameo.isScreenShakeObservedForTest(); frame++) {
             cameo.update(frame, playerAt(0x3D00, 0x0608, "sonic"));
@@ -344,7 +344,7 @@ class TestLbz2RideCameoInstances {
     @Test
     void swingSubtypeZeroCopiesXToParentAndSignalsFlingAfterSixCrossings() {
         Fixture fixture = new Fixture(PlayerCharacter.SONIC_ALONE);
-        fixture.gameState.setScreenShakeActive(true);
+        fixture.runtime.writeScreenShakeFlag(0xFF00);
         CutsceneKnucklesLbz2Instance cameo = fixture.knuckles(0x3E28, 0x0608);
         CutsceneKnucklesLbz2Instance.SwingChild child = cameo.swingChildrenForTest().get(0);
 

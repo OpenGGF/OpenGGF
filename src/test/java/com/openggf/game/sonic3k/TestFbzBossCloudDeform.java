@@ -33,6 +33,9 @@ class TestFbzBossCloudDeform {
         assertEquals(2, events.getScreenShakeLastOffset(), "ScreenEvent consumes the earlier sample");
         assertEquals(0x302, camera.getYCopy());
         assertEquals(0x300, camera.getY(), "shake changes the render copy, not the live camera word");
+        var projection = new SwScrlFbz();
+        projection.update(new int[224], camera.getX(), camera.getY(), 0, 1);
+        assertEquals(0x302, projection.getVscrollFactorFG(), "ordinary foreground uses the shaken publication");
         var runtime = com.openggf.game.GameServices.zoneRuntimeRegistry().current();
         byte[] snapshot = runtime.captureBytes();
         events.setScreenShakeState(false, 7, 3);
@@ -66,6 +69,7 @@ class TestFbzBossCloudDeform {
         FbzZoneRuntimeState state = new FbzZoneRuntimeState(1, PlayerCharacter.SONIC_AND_TAILS, events);
         SwScrlFbz handler = new SwScrlFbz(() -> state);
         handler.init(1, 0, 0);
+        events.restoreScrollPublication(new Sonic3kFBZEvents.ScrollPublication(2, 0x2800, 0x400, 0, 3, 0x20, 0x10, 4, 0x404));
         int[] scroll = new int[224];
 
         handler.update(scroll, 0x2800, 0x0400, 0, 1);
@@ -86,6 +90,7 @@ class TestFbzBossCloudDeform {
         FbzZoneRuntimeState state = new FbzZoneRuntimeState(1, PlayerCharacter.SONIC_AND_TAILS, events);
         SwScrlFbz handler = new SwScrlFbz(() -> state);
         handler.init(1, 0, 0);
+        events.restoreScrollPublication(new Sonic3kFBZEvents.ScrollPublication(2, 0x2800, 0x400, 0, 3, 0x20, 0x10, 4, 0x404));
         int[] scroll = new int[224];
 
         handler.update(scroll, 0x2800, 0x0400, 0, 1);

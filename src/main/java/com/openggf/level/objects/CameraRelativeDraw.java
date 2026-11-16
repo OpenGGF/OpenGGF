@@ -10,5 +10,10 @@ import java.lang.annotation.Target;
 @Target(ElementType.TYPE)
 public @interface CameraRelativeDraw {
     Use value();
-    enum Use { CULL_ONLY, SCREEN_POSITION }
+    enum Use {
+        CULL_ONLY,
+        SCREEN_POSITION,
+        /** Camera selects section-owned art; the object retains world-space projection. */
+        ART_SELECTION
+    }
 }

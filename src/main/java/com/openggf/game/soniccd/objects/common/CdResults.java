@@ -36,10 +36,19 @@ public final class CdResults extends CdObject implements ObjectVisualFacing.NonD
     private static final int RESULTS_PLC = 0x10;
 
     /** {@code timeBonus.w} and {@code ringBonus.w}, shared by every line. */
-    static final class Bonuses {
+    static final class Bonuses implements com.openggf.game.rewind.RewindStateful<Bonuses.State> {
         int time;
         int ring;
         boolean nextLevel;
+
+        record State(int time, int ring, boolean nextLevel) { }
+
+        @Override public State captureRewindStateValue() { return new State(time, ring, nextLevel); }
+        @Override public void restoreRewindStateValue(State state) {
+            time = state.time();
+            ring = state.ring();
+            nextLevel = state.nextLevel();
+        }
     }
 
     private final Bonuses bonuses;
@@ -49,6 +58,16 @@ public final class CdResults extends CdObject implements ObjectVisualFacing.NonD
     private int destX;
     private int frame;
     private int plcDrain;
+    // Derived sheet/upload state belongs to the provider, not to the gameplay snapshot.
+    @com.openggf.game.rewind.RewindTransient(reason = "Provider sheet/upload cache; invalidated after restore")
+    private int drawnScore = -1, drawnTime = -1, drawnRings = -1;
+
+    @Override
+    protected void afterGenericRewindStateRestored(com.openggf.game.rewind.schema.RewindCaptureContext context) {
+        super.afterGenericRewindStateRestored(context);
+        // The shared sheets and GPU upload can still contain a later tally's digits.
+        drawnScore = drawnTime = drawnRings = -1;
+    }
 
     /**
      * StartResults: LevelEndSpawn $3A with oResultsTimer = delay (Level End/Main.asm:838-842). Public for the
@@ -180,11 +199,56 @@ public final class CdResults extends CdObject implements ObjectVisualFacing.NonD
         boolean ssz3 = tileWord == CommonObjectArt.RESULTS_TILE_SSZ3;
         String key = flags().goodFuture ? (ssz3 ? CommonObjectArt.RESULTS_GOOD_SSZ3 : CommonObjectArt.RESULTS_GOOD)
                 : (ssz3 ? CommonObjectArt.RESULTS_BAD_SSZ3 : CommonObjectArt.RESULTS_BAD);
+        if (frame == 1) updateDigitArt(ssz3);
         PatternSpriteRenderer renderer = art(key);
         var camera = services().camera();
         if (renderer == null || camera == null) return;
         renderer.drawFrameIndex(frame, camera.getX() + x - 128, camera.getY() + screenY - 128, false, false,
                 CdObjectArtProvider.tilePalette(tileWord));
+    }
+
+    /**
+     * UpdateHUD writes bonus digits into the results tiles, and its score tiles remain visible there.
+     * Our sheets own copies, so update both mapping variants explicitly.
+     * UpdateHUD (Level/_Objects/HUD and Points/Main.asm:313-336);
+     * HUD_DrawBonus (Level/_Objects/HUD and Points/Main.asm:444-490).
+     */
+    private void updateDigitArt(boolean ssz3) {
+        var provider = artProvider();
+        if (provider == null) return;
+        int score = services().gameState() == null ? 0 : services().gameState().getScore();
+        if (score == drawnScore && bonuses.time == drawnTime && bonuses.ring == drawnRings) return;
+        int base = tileWord & 0x7FF;
+        for (String key : ssz3 ? new String[]{CommonObjectArt.RESULTS_BAD_SSZ3, CommonObjectArt.RESULTS_GOOD_SSZ3}
+                : new String[]{CommonObjectArt.RESULTS_BAD, CommonObjectArt.RESULTS_GOOD}) {
+            var sheet = provider.getSheet(key);
+            if (sheet == null) continue;
+            writeDigits(provider, sheet.getPatterns(), 0xB060 / 32 - base, score, 7);
+            writeDigits(provider, sheet.getPatterns(), (ssz3 ? 0x6D40 : 0x8780) / 32 - base, bonuses.time, 5);
+            writeDigits(provider, sheet.getPatterns(), (ssz3 ? 0x6E80 : 0x88C0) / 32 - base, bonuses.ring, 5);
+            var renderer = art(key);
+            if (renderer != null) renderer.updatePatternRange(services().graphicsManager(), 0, sheet.getPatterns().length);
+        }
+        drawnScore = score;
+        drawnTime = bonuses.time;
+        drawnRings = bonuses.ring;
+    }
+
+    static void writeDigits(CdObjectArtProvider provider, com.openggf.level.Pattern[] tiles, int cell,
+                            int value, int digits) {
+        int divisor = 1;
+        for (int i = 1; i < digits; i++) divisor *= 10;
+        boolean leading = true;
+        for (int i = 0; i < digits; i++, cell += 2, divisor /= 10) {
+            int digit = value / divisor % 10;
+            if (digit != 0 || i == digits - 1) leading = false;
+            byte[] bytes = leading ? new byte[64]
+                    : provider.image().slice(provider.entry().hudNumbersArt() + digit * 64, 64);
+            if (cell >= 0 && cell + 1 < tiles.length) {
+                tiles[cell].fromSegaFormat(java.util.Arrays.copyOfRange(bytes, 0, 32));
+                tiles[cell + 1].fromSegaFormat(java.util.Arrays.copyOfRange(bytes, 32, 64));
+            }
+        }
     }
 
     @Override public int getPriorityBucket() { return RenderPriority.bucket(0); }

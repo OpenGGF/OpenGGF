@@ -34,7 +34,7 @@ class TestKis2RetailRevisionIsolation {
             assertNull(lockOn.getGameService(RingCollectionPolicy.class));
             assertNull(lockOn.getGameService(ScoreAdditionPolicy.class));
             assertEquals(RetailRomRevision.S2_REV00, lockOn.getGameService(RetailRomRevision.class));
-            assertSame(Kis2Rules.RULES, lockOn.getRules());
+            assertSame(Kis2Rules.RULES, lockOn.getPolicies().rules());
             assertTrue(stock.getGameService(Sonic2RevisionProfile.class).isRev00());
         }
     }

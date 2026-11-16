@@ -108,7 +108,6 @@ class TestGameRulesConstants {
     }
 
     private static void assertModuleRules(GameModule module, GameRules expected) {
-        assertSame(expected, module.getPhysicsProvider().getRules());
-        assertSame(expected, module.getRules());
+        assertSame(expected, module.getPolicies().rules());
     }
 }

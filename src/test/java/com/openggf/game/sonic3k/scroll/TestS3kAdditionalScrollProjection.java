@@ -28,7 +28,7 @@ class TestS3kAdditionalScrollProjection {
     @ParameterizedTest(name = "{0} act {1} x {2} y {3}")
     @MethodSource("contexts")
     void allHeldNativeModesMatchAndSamplingCannotAdvanceNativeState(String name, int act, int x, int y) {
-        Fixture live = fixture(name, act), control = fixture(name, act);
+        Fixture live = fixture(name, act, x, y), control = fixture(name, act, x, y);
         for (int frame = 7; frame < 11; frame++) {
             live.tick(x, y, frame, act);
             control.tick(x, y, frame, act);
@@ -70,10 +70,10 @@ class TestS3kAdditionalScrollProjection {
             control.tick(x, y, frame, 1);
         }
         var state = (LbzZoneRuntimeState) live.state;
-        state.requestScreenShakeOffset(5);
-        ((LbzZoneRuntimeState) control.state).requestScreenShakeOffset(5);
-        Object rewind = live.handler.captureRewindState();
-        short[] retained = lbzWords((SwScrlLbz) live.handler);
+        state.startTimedScreenShake(20);
+        ((LbzZoneRuntimeState) control.state).startTimedScreenShake(20);
+        byte[] rewind = ((LbzBackgroundEvents) live.handler).capturePublication();
+        short[] retained = lbzWords((LbzBackgroundEvents) live.handler);
         byte[] stateBefore = state.captureBytes();
         var nativeOutput = output(live.handler, live.words, y);
         var phase = ((ScrollProjectionSource) live.handler).captureProjection(
@@ -81,17 +81,17 @@ class TestS3kAdditionalScrollProjection {
         assertEquals(nativeOutput, phase.sample(new ScrollView(x, y, 320, 224)));
         phase.sample(new ScrollView(x + 79, y - 143, 577, 733));
         phase.sample(new ScrollView(x - 31, y + 251, 777, 255));
-        assertArrayEquals(retained, lbzWords((SwScrlLbz) live.handler));
+        assertArrayEquals(retained, lbzWords((LbzBackgroundEvents) live.handler));
         assertArrayEquals(stateBefore, state.captureBytes());
         live.tick(x, y, 11, 1);
         control.tick(x, y, 11, 1);
         assertEquals(output(control.handler, control.words, y), output(live.handler, live.words, y));
         assertArrayEquals(control.state.captureBytes(), state.captureBytes());
-        live.handler.restoreRewindState(rewind);
+        ((LbzBackgroundEvents) live.handler).restorePublication(rewind);
         state.restoreBytes(stateBefore);
-        // Rewind rebuild takes the already-dispatched branch, retaining the same additive words.
-        live.tick(x, y, 10, 1);
-        assertArrayEquals(retained, lbzWords((SwScrlLbz) live.handler));
+        // Rebuild reads the restored publication; only an admitted event dispatch advances words.
+        ((LbzBackgroundEvents) live.handler).copyPublishedWords(live.words);
+        assertArrayEquals(retained, lbzWords((LbzBackgroundEvents) live.handler));
         var restoredOutput = output(live.handler, live.words, y);
         var restoredPhase = ((ScrollProjectionSource) live.handler).captureProjection(
                 new ScrollProjectionContext(x, y, 10, 1, 320, 224, restoredOutput));
@@ -118,7 +118,43 @@ class TestS3kAdditionalScrollProjection {
         assertEquals(expected, phase.sample(view));
     }
 
-    private static short[] lbzWords(SwScrlLbz handler) {
+    @org.junit.jupiter.api.Test
+    void lbzTransitionProjectionRetainsTheSourceBackgroundCoordinates() {
+        var f = fixture("lbz", 0);
+        f.tick(0x3DA0, 0x100, 7, 0);
+        var bg = (LbzBackgroundEvents) f.handler;
+        bg.beginSeamlessAct2(0x3A0);
+        bg.copyPublishedWords(f.words);
+        var nativeOutput = output(bg, f.words, 0x100);
+        var phase = bg.captureProjection(new ScrollProjectionContext(0x3A0, 0x100, 7, 1, 320, 224, nativeOutput));
+        assertEquals(nativeOutput, phase.sample(new ScrollView(0x3A0, 0x100, 320, 224)));
+    }
+
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
+    void fbzRumbleProjectionRetainsPublishedCameraCopy(boolean outdoor) {
+        var events = new Sonic3kFBZEvents();
+        events.init(1);
+        events.setBackgroundOutdoor(outdoor);
+        events.setOutdoorBobOffset(5);
+        events.setScreenShakeState(true, 3, 3);
+        events.publishDeformation(4, 0x1000, 0x403);
+        var runtime = new FbzZoneRuntimeState(1, PlayerCharacter.SONIC_ALONE, events);
+        var handler = new SwScrlFbz(() -> runtime);
+        int[] words = new int[224];
+        handler.update(words, 0x1000, 0x400, 4, 1);
+        var nativeOutput = output(handler, words, 0x400);
+        byte[] before = runtime.captureBytes();
+        var phase = handler.captureProjection(new ScrollProjectionContext(0x1000, 0x400, 4, 1, 320, 224, nativeOutput));
+        assertEquals(nativeOutput, phase.sample(new ScrollView(0x1000, 0x400, 320, 224)).withSpritePositions(Map.of()));
+        int shiftedY = 0x443;
+        int half = (short) shiftedY >> 1;
+        assertEquals(outdoor ? 0x1B : half - (half >> 5),
+                phase.sample(new ScrollView(0x1000, 0x440, 320, 224)).backgroundY());
+        assertArrayEquals(before, runtime.captureBytes());
+    }
+
+    private static short[] lbzWords(LbzBackgroundEvents handler) {
         short[] words = new short[0xEC / 2];
         for (int i = 0; i < words.length; i++) words[i] = handler.getLbz2HScrollWordForTest(i);
         return words;
@@ -132,7 +168,9 @@ class TestS3kAdditionalScrollProjection {
                 handler.getBgPeriodWidth(), handler.getShakeOffsetX(), handler.getShakeOffsetY(), handler.getBgTilemapUpdateMode());
     }
 
-    private static Fixture fixture(String name, int act) {
+    private static Fixture fixture(String name, int act) { return fixture(name, act, 0x2800, 0x400); }
+
+    private static Fixture fixture(String name, int act, int x, int y) {
         S3kZoneRuntimeState state = null;
         ZoneScrollHandler handler;
         if (name.startsWith("icz")) {
@@ -146,6 +184,7 @@ class TestS3kAdditionalScrollProjection {
             events.setOutdoorBobOffset(7);
             if (name.equals("fbz-outdoor")) events.setBackgroundOutdoor(true);
             if (name.equals("fbz-boss")) events.setBossBackgroundState(0x10, 29, 13);
+            events.publishDeformation(0, x, y);
             var fbz = new FbzZoneRuntimeState(act, PlayerCharacter.SONIC_ALONE, events);
             state = fbz;
             handler = new SwScrlFbz(() -> fbz);
@@ -162,7 +201,7 @@ class TestS3kAdditionalScrollProjection {
                 short wave = (short) ((i * 7) % 13 - 6);
                 waves[i * 2] = (byte) (wave >> 8); waves[i * 2 + 1] = (byte) wave;
             }
-            handler = new SwScrlLbz(waterline, waves);
+            handler = new LbzBackgroundEvents(waterline, waves);
         } else if (name.startsWith("hpz")) {
             boolean far = name.equals("hpz-far");
             handler = new SwScrlHpz() {

@@ -356,7 +356,6 @@ class TestFbzCampaignBossRecipe {
         @Override public void setBossBackgroundOffsets(int x, int y) { }
         @Override public void setPlaneAssignmentMode(Sonic3kFBZEvents.PlaneAssignmentMode mode) { }
         @Override public void setCollisionMode(Sonic3kFBZEvents.CollisionMode mode, int x, int y) { }
-        @Override public void setScreenShakeState(boolean active, int offset, int phase) { shake = active; }
         @Override public void setScreenShakeActive(boolean active) { shake = active; log.add("shake:" + active); }
         @Override public boolean isScreenShakeActive() { return shake; }
     }

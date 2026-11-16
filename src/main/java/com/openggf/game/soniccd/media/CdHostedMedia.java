@@ -34,6 +34,11 @@ import java.util.stream.Stream;
  * (1-4 act 1 Present, Past, Good Future, Bad Future; 5-8 act 2; 9-10 act 3 Good and Bad Future).
  */
 public final class CdHostedMedia implements HostedGameMedia {
+    @Override
+    public int displayAct(int zone, int act) {
+        return com.openggf.game.soniccd.SonicCdZoneRegistry.payload(zone, act).stage().actNumber();
+    }
+
     /** The tests' and tools' regional layout: a directory holding {@code USA/<disc>.cue} (or {@code .chd}). */
     public static final String MEDIA_ROOT_PROPERTY = "soniccd.media.root";
     /**

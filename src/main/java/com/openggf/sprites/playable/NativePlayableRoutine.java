@@ -23,4 +23,27 @@ public enum NativePlayableRoutine {
         if (player.isHurt()) return HURT;
         return CONTROL;
     }
+
+    /**
+     * Reads the unsigned {@code Player_1+routine >= 6} gate used by
+     * {@code HCZ2_WallMove} and {@code ShakeScreen_Setup}
+     * (sonic3k.asm:106180-106182,104234-104238). Unlike {@link #resolve}, this
+     * reads stored primary state: a debug dispatcher bypass supplies no byte,
+     * and creator-overridable getters cannot replace the engine-owned state.
+     * The caller supplies the already resolved primary player.
+     */
+    public static boolean isAtOrBeyondDeathForNativeRead(AbstractPlayableSprite player) {
+        // Same package: read stored fields, not creator-overridable getters.
+        Integer override = player.objectRoutineOverride;
+        if (override != null) {
+            return (override & 0xFF) >= 6;
+        }
+        if (player.dead) {
+            return true;
+        }
+        var rules = player.gameRules;
+        return player.drowningDeath && player.drownPreDeathTimer > 0
+                && rules != null && rules.drowningBubble() != null
+                && rules.drowningBubble().drownInstallsDedicatedPlayerRoutine();
+    }
 }

@@ -311,13 +311,16 @@ public PlatformerModule(String owner, Level level) {
                     MusicReference.namespaced(owner, "zone-theme")))
             .supportsSidekick(false)
             .physics(PhysicsProvider.fixed(BoltCharacter.physicsSpec().profile(),
-                    PhysicsModifiers.STANDARD, GameRules.SONIC_2))
+                    PhysicsModifiers.STANDARD))
+            .policies(new GamePolicies(GameRules.SONIC_2))
             .touchResponses((byte) 0, (byte) 0, (byte) 8, (byte) 8)
             .object(owner + ":zapbug", (spawn, registry) -> new ZapBug(spawn))
             .object(owner + ":springpad", (spawn, registry) -> new SpringPad(spawn)).build());
 }
 ```
 
+Physics supplies only tuning profiles and water/speed-shoes modifiers; the game-wide
+rules belong to the module through `.policies(...)` (Sonic 2's rules when omitted).
 The spec supplies the zone registry, no-ROM game loader, level initialization,
 silent native audio profile and common slot-save provider. Streamed music still
 comes from the mod's audio manifest. A module can override a provider or supply

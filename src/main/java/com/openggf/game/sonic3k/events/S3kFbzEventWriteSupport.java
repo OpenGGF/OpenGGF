@@ -71,11 +71,6 @@ public final class S3kFbzEventWriteSupport {
         if (bridge != null) bridge.setCollisionMode(collision, cameraDiffX, cameraDiffY);
     }
 
-    public static void setScreenShakeState(ObjectServices services, boolean active, int offset, int phase) {
-        FbzObjectEventBridge bridge = bridgeOrNull(services);
-        if (bridge != null) bridge.setScreenShakeState(active, offset, phase);
-    }
-
     public static boolean isScreenShakeActive(ObjectServices services) {
         FbzObjectEventBridge bridge = bridgeOrNull(services);
         return bridge != null && bridge.isScreenShakeActive();

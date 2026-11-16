@@ -324,7 +324,7 @@ class TestKis2HeadlessBoot {
             player.setRingCount(0);
             manager.getLevelGamestate().setRingExtraLifeFlags(0);
             manager.respawnPlayer();
-            assertEquals(character.equals("knuckles"), module.getRules().ring().checkpointRestoresSavedRings(),
+            assertEquals(character.equals("knuckles"), module.getPolicies().rules().ring().checkpointRestoresSavedRings(),
                     "reload keeps host checkpoint rule");
             assertEquals(120, ((com.openggf.game.CheckpointState) manager.getCheckpointState()).getSavedRings(),
                     "reload carries the bank before restoring the player");

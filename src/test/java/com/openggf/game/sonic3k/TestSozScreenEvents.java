@@ -12,6 +12,38 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @RequiresRom(SonicGame.SONIC_3K)
 class TestSozScreenEvents {
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(ints = {0, 8, 0x14, 0x1E, -1})
+    void shakePublicationMatchesContiguousRomTablesAndReplaysAfterRestore(int flag) throws Exception {
+        var fixture = HeadlessTestFixture.builder().withSkippedZoneIntro().withZoneAndAct(8, 0).build();
+        var state = S3kRuntimeStates.currentSoz(GameServices.zoneRuntimeRegistry()).orElseThrow();
+        var events = new Sonic3kSOZEvents();
+        NativePositionOps.writeXPosResetSubpixel(fixture.sprite(), 0x2000);
+        byte[] table = GameServices.rom().getRom().readBytes(0x4F424, 84);
+        state.events().backgroundRoutine(4);
+        state.events().redrawRemaining(1000);
+        state.events().screenShakeFlag(flag);
+        int expectedFlag = flag;
+        int precedingOffset = 0;
+        for (int clock = 0; clock < 70; clock++) {
+            fixture.camera().setYCopy((short) 0x400);
+            byte[] before = state.captureBytes();
+            events.update(0, clock);
+            assertEquals(0x400 + precedingOffset, fixture.camera().getYCopy(), "preceding publication");
+            int expectedOffset = 0;
+            if (expectedFlag < 0) expectedOffset = table[20 + (clock & 63)] & 255;
+            else if (expectedFlag > 0) expectedOffset = table[--expectedFlag];
+            assertEquals(expectedFlag, state.events().screenShakeFlag());
+            assertEquals(expectedOffset, state.events().screenShakeOffset(), "native table byte");
+            byte[] after = state.captureBytes();
+            state.restoreBytes(before);
+            fixture.camera().setYCopy((short) 0x400);
+            events.update(0, clock);
+            assertArrayEquals(after, state.captureBytes(), "shake continuation survives restore");
+            precedingOffset = expectedOffset;
+        }
+    }
+
     @Test void pyramidRumbleUsesThePublishedCameraCopyForTerrainAndSprites() throws Exception {
         var fixture=HeadlessTestFixture.builder().withSkippedZoneIntro().withZoneAndAct(8,0).build();
         var state=S3kRuntimeStates.currentSoz(GameServices.zoneRuntimeRegistry()).orElseThrow();

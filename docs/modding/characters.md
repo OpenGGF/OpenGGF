@@ -159,11 +159,12 @@ by default; pass an explicit sensor spec for different side-probe reach. Grouped
 specs on each instance or construct them through a factory; creator classes cannot
 keep engine objects in static fields.
 
-The module still supplies game-wide modifiers and `GameRules`. A patch can also
+The module still supplies game-wide modifiers (through its physics provider) and
+`GameRules` (through `getPolicies()`). A patch can also
 expose the authored tuning through its provider for other module consumers. The
 maintained `SampleCharacterPhysicsPatch` uses a scoped transformation of the
 inherited provider, reusing `SampleCharacter.physicsSpec().profile()` and preserving
-other characters, rules and modifiers. The instance constructor uses that same
+other characters and modifiers. The instance constructor uses that same
 factory. Legacy expert subclasses can retain `defineSpeeds()` and
 `createSensorLines()`; new characters need no duplicated construction defaults.
 

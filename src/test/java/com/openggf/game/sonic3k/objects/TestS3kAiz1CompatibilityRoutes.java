@@ -88,7 +88,7 @@ class TestS3kAiz1CompatibilityRoutes {
             }
             assertEquals(!donor.equals("off"), CrossGameFeatureProvider.isActive());
             if (!donor.equals("off")) {
-                assertNotSame(GameServices.module().getRules(), setup.fixture().sprite().getGameRules());
+                assertNotSame(GameServices.module().getPolicies().rules(), setup.fixture().sprite().getGameRules());
             }
             check.run(setup);
         } finally {
