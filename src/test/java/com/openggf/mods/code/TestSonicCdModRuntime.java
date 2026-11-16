@@ -52,7 +52,8 @@ class TestSonicCdModRuntime {
         try (var disc = CdDiscDataSource.open(CdTestMedia.usaCue())) {
             var module = new SonicCdGameModule();
             var provider = module.getGameService(com.openggf.game.internal.MediaSceneArt.class);
-            var art = provider.program(disc, CdStagePayload.R11A.file().isoName());
+            var art = com.openggf.mods.scene.host.SceneRomArtFactory.forMedia(
+                    provider.program(disc, CdStagePayload.R11A.file().isoName()));
             assertEquals("scd", art.gameId());
             assertArrayEquals(Arrays.copyOf(disc.readFile(CdStagePayload.R11A.file()), 32), art.read(0, 32));
             assertThrows(IllegalArgumentException.class, () -> provider.program(disc, "../art.bin"));
@@ -107,6 +108,57 @@ class TestSonicCdModRuntime {
                 module.getGameplayPolicyProvider().launchTeam(destination).orElseThrow().main());
         assertTrue(module.getGameplayPolicyProvider().inputFilter(destination).isPresent());
         assertTrue(module.getGameplayPolicyProvider().hudProfile(destination).isPresent());
+    }
+
+    @Test void packagedExampleLoadsThroughTheProductionTrustedRuntime(
+            @org.junit.jupiter.api.io.TempDir java.nio.file.Path directory) throws Exception {
+        var jar = directory.resolve("cd-marker.jar");
+        byte[] manifestBytes;
+        try (var input = getClass().getResourceAsStream("/mods/cd-marker/openggf-mod.yaml")) {
+            manifestBytes = java.util.Objects.requireNonNull(input).readAllBytes();
+        }
+        try (var output = new java.util.jar.JarOutputStream(java.nio.file.Files.newOutputStream(jar))) {
+            output.putNextEntry(new java.util.jar.JarEntry("META-INF/openggf-mod.yaml"));
+            output.write(manifestBytes); output.closeEntry();
+            for (String resource : List.of("example/soniccd/CdMarkerExampleMod.class",
+                    "example/soniccd/CdMarkerExampleMod$Marker.class")) {
+                output.putNextEntry(new java.util.jar.JarEntry(resource));
+                try (var input = getClass().getClassLoader().getResourceAsStream(resource)) {
+                    java.util.Objects.requireNonNull(input).transferTo(output);
+                }
+                output.closeEntry();
+            }
+        }
+        var manifest = new ModManifestParser(com.openggf.io.ModInputLimits.production()).parse(manifestBytes);
+        String hash = java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256")
+                .digest(java.nio.file.Files.readAllBytes(jar)));
+        var descriptor = new ModDescriptor(jar, manifest, hash, true, List.of());
+        // The test runner also compiles the fixture. A real engine parent has no creator classes.
+        var engineOnlyParent = new ClassLoader(getClass().getClassLoader()) {
+            @Override protected Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException {
+                if (name.startsWith("example.soniccd.")) throw new ClassNotFoundException(name);
+                return super.loadClass(name, resolve);
+            }
+        };
+        var factory = new ModClassLoaderFactory(engineOnlyParent);
+        try (var disc = CdDiscDataSource.open(CdTestMedia.usaCue());
+             var runtime = factory.create(new EffectiveModCatalog(List.of(descriptor)), Set.of("cd-example"));
+             var boot = new com.openggf.tools.HeadlessGameBoot(320, 224)) {
+            runtime.installFaultBoundary(new ModFaultBoundary(Map.of(), new ModRuntimeFindingStore(),
+                    ignored -> new ModStateSaveResult.Saved(), ignored -> {}));
+            var registered = runtime.newRegistrationPlan().registrations();
+            assertTrue(runtime.registrationFailures().isEmpty(), runtime.registrationFailures().toString());
+            assertEquals(1, registered.size());
+            var module = registered.getFirst().patch().apply(new SonicCdGameModule(), null);
+            var loop = boot.boot(disc, module, 0, 0);
+            for (int i = 0; i < 4; i++) loop.step();
+            assertInstanceOf(CdLevel.class, GameServices.level().getCurrentLevel());
+            var marker = GameServices.level().getObjectManager().getActiveObjects().stream()
+                    .filter(o -> o.getClass().getName().equals("example.soniccd.CdMarkerExampleMod$Marker"))
+                    .findFirst().orElseThrow();
+            assertNotSame(getClass().getClassLoader(), marker.getClass().getClassLoader(),
+                    "the factory must come from the immutable mod snapshot, not the test classpath");
+        }
     }
 
     private static final class Greeting extends AbstractObjectInstance {

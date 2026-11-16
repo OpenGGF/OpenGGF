@@ -69,7 +69,7 @@ its strict key=value parser and removed; candidate version/topology are unchange
 ## Verification record
 
 All Maven execution uses `tools/testing/maven_queue.py -Dmse=off`; GL boots select
-`-Dopenggf.headless.gl=surfaceless-egl`. The wrapper found `soniccd.disc.path` and
+`-Dopenggf.headless.gl=surfaceless-egl`, with `DISPLAY` and `WAYLAND_DISPLAY` unset. The wrapper found `soniccd.disc.path` and
 reported no missing media. Seven Past-music direct native comparisons and thirteen
 SSZ boss native comparisons require optional local recordings; their skips do not
 mean disc-backed runtime coverage was skipped.
@@ -80,7 +80,7 @@ scene-run admission, all CD payload loading, native common goal objects, CD audi
 live path/FM queue/session isolation, stock art catalogs, Mod API pin/surface/
 release/runtime policies, and named broad-catch/per-game/game-policy guards.
 The API/guard repair selection passed 48 tests with no failures or skips.
-The final focused selection passed **41 tests, zero failures/errors/skips**:
+The initial focused selection passed **41 tests, zero failures/errors/skips**:
 
 ```sh
 python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl "-Dtest=TestSonicCdModRuntime,TestCdModMusic,TestCdModZones,TestStockArtOverrideCatalog,TestSonicCdCommonObjects2,TestModApiSignatureSurface" test
@@ -88,7 +88,7 @@ python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless
 
 The separate CD output-separation selection passed all five `TestCdAudioMixGains`
 tests, including replacement suppression preserving FM/PCM effects. The smoke
-outcome will be recorded after completion. The smoke selection is 4,976 classes with two workers, bounded to smoke
+selection is 4,976 classes with two workers, bounded to smoke
 plus guards, excluding exhaustive/trace/native profiles. Its command timeout is
 40 minutes of execution per invocation; queue wait is separate. New/worse
 failures block delivery and are compared with the same test identity on the base.
@@ -117,10 +117,115 @@ focused selection passed **35 tests, zero failures/errors/skips**:
 python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl "-Dtest=TestCdModMusic,TestCdAudioMixGains,TestCdAudioLivePath,TestSonicCdModRuntime,TestModApiSignatureSurface" test
 ```
 
+## Completed smoke and baseline attribution
+
+Command (task-owned `TMPDIR` and Java temporary directory):
+
+```sh
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base 3a868d33d9cb59137d55b50eb4492c5b137e2792 --workers 2 --headless-gl surfaceless-egl --run
+```
+
+The complete bounded smoke ran on `a5958ae56832` before the final repairs below.
+Its raw result remains **VERDICT FAILED**: 4,976/4,976 candidate classes,
+100/100 ordinary batches, 1/1 guard batches; 41,310 tests, 52 failures, 2 errors,
+562 skips (559 allowed, 3 unexplained), missing ROM properties: none.
+It is not a full-suite pass or a passing smoke claim.
+
+- Fourteen failures were stale three-game expansion/label assertions. They now
+  expect four games, while cartridge-only example patches remain scoped to their
+  actual games; no CD registration is invented for the Stageplay follow-up.
+- Two architecture failures exposed a new game-to-mods dependency cycle. The
+  game-owned `MediaSceneArt.View` now carries bounded source facts and exact disc
+  program identity. Only the mod presentation host constructs `SceneRomArt`.
+  Neither architecture guard nor its frozen baseline was relaxed.
+- The remaining 38 failure/error identities reproduce on the exact base:
+  109 baseline tests, 36 failures, 2 errors, zero skips. Comparison matched test
+  identity, failure/error kind, exception type and assertion, normalizing only
+  runtime object hashes and unordered expected mark-set display order.
+- Seven of those 38 failures came from the inherited `DISPLAY=:0` environment.
+  All seven pass with both display variables unset. The three unexplained reel
+  skips also execute and pass under that environment. No skip policy was changed.
+- The remaining **29 failures and 2 errors are baseline failures** listed below.
+  No new or worsened failure remains in the inspected ledger after focused repair.
+
+The final repair selection passed **216 tests, zero failures/errors/skips**:
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl "-Dtest=TestAnyGameSceneRegistration,TestExampleMutatorsPackage,TestModRegistrationRuntime,TestMutatorRegistration,TestTypingHedgehogPackage,TestModManagerScreen,TestSonicCdModRuntime,TestCdModMusic,TestArchUnitRules,TestModApiSignatureSurface,TestBroadCatchSwallowingGuard,TestRomSoundCatalog,TestSonic2NativeCompetitionHost,TestCompetitiveHalfpipeEgl,TestTestReelExtension" test
+```
+
+After adding the packaged example proof, `TestSonicCdModRuntime` passes **7 tests,
+zero failures/errors/skips**. The example manifest passes production `GgfModCli
+validate` with **zero findings**. The test loads the immutable JAR through
+`ModClassLoaderFactory`, applies its patch, boots CD and observes its owned object
+in the native `CdLevel`. Its parent loader excludes creator fixture classes to
+prove the object comes from packaged bytes rather than the test classpath.
+
+Baseline comparison used five queued selections on the unmodified base:
+
+```sh
+python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl "-Dtest=TestSonic2NativeCompetitionHost,TestCompetitiveHalfpipeEgl,TestAizCollectorPublicRewind,TestThreeIslandsScene,TestPrivateLobbyScreenRendering" test
+python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl "-Dtest=TestLrzSszCheckpointRoutes,TestS3kCnz1MinibossCompletionEdge" test
+python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl "-Dtest=TestS3kFreshLevelRngState,TestS3kIcz1PhysicalLowerPlatformReplay,TestS3kMhzAct2AuthoredRoute,TestS3kMhzAct2EntryHeadless,TestS3kMhzAuthoredRoute,TestS3kMhzTailsAuthoredRoute,TestS3kMhzTeamAuthoredRoute,TestS3kMhzWideAuthoredRoute" test
+python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl "-Dtest=TestDezIncomingFinalRouteCapture,TestIcz2ColdCubeBridgeRoute" test
+python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl "-Dtest=TestS3kCompleteRunReferenceProducer#fixedProducerRejectsEveryMismatchedTypedRequestBeforePublication" test
+```
+
+Full-smoke preparation took 42.11 seconds, summed batch execution 2,120.7 seconds,
+and reported completed queue wait 2,598 seconds. User wait was zero; other wall-time
+and baseline/focused overhead are not measured by that smoke ledger.
+
+### Exact baseline failure identities
+
+The following assertions matched the smoke. Assertion excerpts omit long route
+state dumps; no assertion was relaxed. The first seven environment cases are
+subsequently green in the focused repair run.
+
+| Test identity | Baseline assertion/error |
+| --- | --- |
+| `TestSonic2NativeCompetitionHost#freshNativeObjectRamClearBelongsOnlyToTheActualHostInitializer` | expected: &lt;null&gt; but was: &lt;:0&gt; |
+| `TestSonic2NativeCompetitionHost#menuStartDoesNotBecomeANewPressAtEverySynchronousTitleWait` | expected: &lt;null&gt; but was: &lt;:0&gt; |
+| `TestSonic2NativeCompetitionHost#sixRealActsKeepIndependentHumansCanonicalTimersRewindAndTheActLedger` | launch this EGL test with DISPLAY unset ==&gt; expected: &lt;null&gt; but was: &lt;:0&gt; |
+| `TestCompetitiveHalfpipeEgl#nativeShadowOperatorsSelectTheSameRomPlanesAtDacIntensityBeforeProfilesAndFade` | expected: &lt;null&gt; but was: &lt;:0&gt; |
+| `TestCompetitiveHalfpipeEgl#failedNativeWinnerAllocationRecolorsAlreadyQueuedSonicAndRestoresTheSameFramebuffer` | expected: &lt;null&gt; but was: &lt;:0&gt; |
+| `TestCompetitiveHalfpipeEgl#realHalfpipeBootsAndReplaysBothHumansThroughTheDefaultNativeShadowPath` | expected: &lt;null&gt; but was: &lt;:0&gt; |
+| `TestCompetitiveHalfpipeEgl#nativeObj5BSpillsRenderBothOwnerBirthPosesAndReplayRecreatedSlotsThroughRisingAndFalling` | expected: &lt;null&gt; but was: &lt;:0&gt; |
+| `TestAizCollectorPublicRewind#publicIntroBeforeInitRoundTripsWithoutACollector(boolean)[1]` | AizPlaneIntroInstance: services not available — object must be created through ObjectManager |
+| `TestAizCollectorPublicRewind#publicIntroBeforeInitRoundTripsWithoutACollector(boolean)[2]` | AizPlaneIntroInstance: services not available — object must be created through ObjectManager |
+| `TestThreeIslandsScene#tailsJoinsInTheFieldAndTheTravellingShopReturnsToTheSameSpot` | expected: &lt;true&gt; but was: &lt;false&gt; |
+| `TestThreeIslandsScene#aSonic1ZonePlaysItsOwnRomSongWithoutPlaceholderSwitches` | expected: &lt;DUNGEON&gt; but was: &lt;STORY&gt; |
+| `TestThreeIslandsScene#startupIsPlayableAndArrivalDialogueAndRestStayInTheField` | expected: &lt;FIELD&gt; but was: &lt;STORY&gt; |
+| `TestThreeIslandsScene#greenHillMysteriesUseRealInteractionsAndPersistThroughContinue` | expected: &lt;FIELD&gt; but was: &lt;STORY&gt; |
+| `TestThreeIslandsScene#physicalTrailsConnectFieldsAndBattleUsesTheEncounterField` | cannot walk straight into Star Light ==&gt; expected: &lt;threeislands.screen.FieldScreen@&lt;instance&gt;&gt; but was: &lt;threeislands.screen.StoryScreen@&lt;instance&gt;&gt; |
+| `TestThreeIslandsScene#allStoryLandmarksHavePlayableInteriorsWithIndependentGatesSavesAndRewards` | ghz enters through its actual doorway ==&gt; expected: &lt;DUNGEON&gt; but was: &lt;MENU_ROOT&gt; |
+| `TestThreeIslandsScene#travellerDialogueWaitsForTheDiscoveryOrRescueItDescribes` | expected: &lt;STORY&gt; but was: &lt;MENU_ROOT&gt; |
+| `TestThreeIslandsScene#explorationUsesTwoAxesAndStoryDiscoveriesPersistAcrossContinue` | a discovery opens dialogue ==&gt; expected: &lt;STORY&gt; but was: &lt;FIELD&gt; |
+| `TestPrivateLobbyScreenRendering#actualLobbyAndFullTextPixelsSupportMultipleReadablePages` | Right reaches new full-text pixels ==&gt; expected: &lt;false&gt; but was: &lt;true&gt; |
+| `TestLrzSszCheckpointRoutes#ordinarySszOpeningPhysicallySavesTheFirstAuthoredPost` | ordinary opening remains alive at input 6499 ==&gt; expected: &lt;false&gt; but was: &lt;true&gt; |
+| `TestS3kCnz1MinibossCompletionEdge#placedMinibossOrdinaryHitsDriveDefeatResultsAndReleasedCnz2(Row)[2]` | sonic+solo@&lt;instance&gt;: fixed input did not complete the edge: spawn=190 gate=288 release=408 hits=[1150, 1593, 2046] kill=-1 sign=-1 results=-1 load=-1 apparent=-1 title=-1 last=p=3375,032C v=12,0 g=12 a=false r=false h=… |
+| `TestS3kCnz1MinibossCompletionEdge#placedMinibossOrdinaryHitsDriveDefeatResultsAndReleasedCnz2(Row)[4]` | sonic+solo@&lt;instance&gt; frame 1564: P1 died p=328B,02EC v=0,-1792 g=0 a=true r=false h=false ring=0 c=31E0,028C s=32A1,02B5 b=3277,029C/A/3/false t=3334,02AE {CnzMinibossCoilInstance=1, CnzMinibossInstance=1, CnzMinibossSc… |
+| `TestS3kCnz1MinibossCompletionEdge#recordedOrdinaryInputReplaysAndRewindsEveryEdgeBoundaryTwice(Row)[2]` | sonic+solo@&lt;instance&gt;: fixed input did not complete the edge: spawn=190 gate=288 release=408 hits=[1150, 1593, 2046] kill=-1 sign=-1 results=-1 load=-1 apparent=-1 title=-1 last=p=3375,032C v=12,0 g=12 a=false r=false h=… |
+| `TestS3kCnz1MinibossCompletionEdge#recordedOrdinaryInputReplaysAndRewindsEveryEdgeBoundaryTwice(Row)[4]` | sonic+solo@&lt;instance&gt; frame 1564: P1 died p=328B,02EC v=0,-1792 g=0 a=true r=false h=false ring=0 c=31E0,028C s=32A1,02B5 b=3277,029C/A/3/false t=3334,02AE {CnzMinibossCoilInstance=1, CnzMinibossInstance=1, CnzMinibossSc… |
+| `TestS3kCnz1MinibossCompletionEdge#truncatedAfterApproachNeverCompletesTheEdge` | sonic+solo@&lt;instance&gt;: fixed input did not complete the edge: spawn=190 gate=288 release=408 hits=[1150, 1593, 2046] kill=-1 sign=-1 results=-1 load=-1 apparent=-1 title=-1 last=p=3375,032C v=12,0 g=12 a=false r=false h=… |
+| `TestS3kFreshLevelRngState#actualFreshBoundaryClearsRngAndTheRegisteredWorldRestoresIt(int, int)[2]` | native D01 skips the ordinary title owner ==&gt; expected: &lt;false&gt; but was: &lt;true&gt; |
+| `TestS3kIcz1PhysicalLowerPlatformReplay#nativeSonicContactsAndRidesTheLowerPieceWithTwoFreshWorldReplays` | actual final neutral crosses the sampled turn ==&gt; expected: &lt;true&gt; but was: &lt;false&gt; |
+| `TestS3kMhzAct2AuthoredRoute#incomingRoutesCompleteActTwoWithLiveRewindBoundaries(String, int)[1]` | expected: &lt;[defeat, ship-carry, capsule-results, weather-fade, chase-hit, fbz-loaded, ship, admission, last-hit]&gt; but was: &lt;[]&gt; |
+| `TestS3kMhzAct2AuthoredRoute#incomingRoutesCompleteActTwoWithLiveRewindBoundaries(String, int)[2]` | cold route death at 36000 ==&gt; expected: &lt;false&gt; but was: &lt;true&gt; |
+| `TestS3kMhzAct2AuthoredRoute#incomingRoutesCompleteActTwoWithLiveRewindBoundaries(String, int)[3]` | cold route death at 26152 ==&gt; expected: &lt;false&gt; but was: &lt;true&gt; |
+| `TestS3kMhzAct2EntryHeadless#coldEntryPressesLiftsAndReleasesNativeTeamWithReplay(WidescreenAspect, String, String)[12]` | level event must preserve the cutscene-owned minimum ==&gt; expected: &lt;872&gt; but was: &lt;896&gt; |
+| `TestS3kMhzAuthoredRoute#freshSonicCompletesActOneAndReplaysItsLiveInteractions` | expected: &lt;[pulley, defeat, act-two-released, sticky-vine, last-hit-approach, first-hit]&gt; but was: &lt;[pulley]&gt; |
+| `TestS3kMhzTailsAuthoredRoute#freshTailsCompletesActOneAndReplaysItsLiveInteractions` | expected: &lt;[first-hit, defeat, lower-approach, last-hit-approach, early-traversal, upper-flight, act-two-released]&gt; but was: &lt;[lower-approach, upper-flight, early-traversal]&gt; |
+| `TestS3kMhzTeamAuthoredRoute#nativePairCompletesActOneAndReplaysItsLiveInteractions` | cold route death at 26152 ==&gt; expected: &lt;false&gt; but was: &lt;true&gt; |
+| `TestS3kMhzWideAuthoredRoute#wideSonicCompletesActOneAndReplaysItsLiveInteractions` | expected: &lt;[boss-hp-2, lower-loop, upper-loop, boss-hp-1, incoming-results, before-pulley, act-two-released, arena-approach, early-traversal, spike-passage, pulley-release, pulley-pull, sticky-vine, defeat, boss-hp-5, bo… |
+| `TestDezIncomingFinalRouteCapture#incomingFinalFightRestoresAndReplaysEveryPhase(int)[1]` | death at 14633 ==&gt; expected: &lt;false&gt; but was: &lt;true&gt; |
+| `TestDezIncomingFinalRouteCapture#incomingFinalFightRestoresAndReplaysEveryPhase(int)[2]` | death at 14638 ==&gt; expected: &lt;false&gt; but was: &lt;true&gt; |
+| `TestIcz2ColdCubeBridgeRoute#coldSonicShattersThePlacedCubePressesButton2AndCrossesTheFallingBridgeWithWorldReplay` | expected: &lt;6&gt; but was: &lt;5&gt; |
+| `TestS3kCompleteRunReferenceProducer#fixedProducerRejectsEveryMismatchedTypedRequestBeforePublication` | Unexpected exception type thrown, expected: &lt;java.nio.file.FileAlreadyExistsException&gt; but was: &lt;java.lang.IllegalArgumentException&gt; |
+
 ## Follow-up seams
 
 Carry the source capability, its ownership and exact program identity through
-Stageplay/editor/import preparation. `MediaSceneArt` provides detached disc views;
+Stageplay/editor/import preparation. `MediaSceneArt.View` provides game-owned detached disc facts;
 `SceneArt.program` is the creator-facing file view. Offline library construction
 still uses cartridge readers and needs a source-aware extension. Preserve CD's
 zone/act/period projection rather than inventing cartridge addresses or treating

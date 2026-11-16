@@ -112,7 +112,7 @@ final class ModSceneLauncher {
             var source = com.openggf.game.session.SessionManager.getCurrentWorldSession().getDataSource();
             var media = module.getGameService(com.openggf.game.internal.MediaSceneArt.class);
             return media == null ? SceneRomArtFactory.forModule(module, GameServices.rom().getRom())
-                    : media.defaultArt(source);
+                    : SceneRomArtFactory.forMedia(media.defaultArt(source));
         } catch (IOException e) {
             throw new IllegalStateException("Cannot prepare stock media art for mod scene", e);
         }

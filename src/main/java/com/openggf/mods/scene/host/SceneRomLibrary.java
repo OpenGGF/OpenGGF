@@ -39,7 +39,7 @@ public final class SceneRomLibrary implements AutoCloseable {
         activeSource = source;
         mediaArt = activeModule.getGameService(com.openggf.game.internal.MediaSceneArt.class);
         if (mediaArt != null) {
-            art.put(activeGame, mediaArt.defaultArt(source));
+            art.put(activeGame, SceneRomArtFactory.forMedia(mediaArt.defaultArt(source)));
             modules.put(activeGame, activeModule);
         }
     }
@@ -48,7 +48,7 @@ public final class SceneRomLibrary implements AutoCloseable {
         requireOpen();
         if (!activeGame.equals(game) || mediaArt == null)
             throw new IllegalArgumentException("No file-addressed scene art for " + game);
-        return mediaArt.program(activeSource, path);
+        return SceneRomArtFactory.forMedia(mediaArt.program(activeSource, path));
     }
 
     public SceneRomLibrary(GameModule activeModule, Rom activeRom, RomManager roms) {

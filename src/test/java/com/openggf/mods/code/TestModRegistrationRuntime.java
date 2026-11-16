@@ -39,11 +39,11 @@ class TestModRegistrationRuntime {
             runtime.installFaultBoundary(new ModFaultBoundary(Map.of(), new ModRuntimeFindingStore(),
                     owners -> new ModStateSaveResult.Saved(), owners -> { }));
             var registrations = runtime.newRegistrationPlan().registrations();
-            assertEquals(List.of("shared-scene:content-s1", "shared-scene:content-s2", "shared-scene:content-s3k"),
+            assertEquals(List.of("shared-scene:content-s1", "shared-scene:content-s2", "shared-scene:content-s3k", "shared-scene:content-scd"),
                     registrations.stream().map(RegisteredPatch::namespacedId).toList());
-            assertEquals(List.of("s1", "s2", "s3k"),
+            assertEquals(List.of("s1", "s2", "s3k", "scd"),
                     registrations.stream().map(registration -> registration.patch().baseGameId()).toList());
-            assertEquals(List.of(0L, 1L, 2L), registrations.stream().map(RegisteredPatch::registrationIndex).toList());
+            assertEquals(List.of(0L, 1L, 2L, 3L), registrations.stream().map(RegisteredPatch::registrationIndex).toList());
             assertTrue(runtime.registrationFailures().isEmpty());
         }
     }

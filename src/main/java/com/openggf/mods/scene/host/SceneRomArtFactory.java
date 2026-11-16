@@ -15,6 +15,12 @@ public final class SceneRomArtFactory {
     private SceneRomArtFactory() {
     }
 
+    /** Adapts game-owned bounded media facts at the mod presentation boundary. */
+    public static SceneRomArt forMedia(com.openggf.game.internal.MediaSceneArt.View view) {
+        return create(Rom.fromReader(view.reader(), "scene media " + view.identity()), view.game(),
+                view.players(), view.tails(), view.zones());
+    }
+
     /** ROM art without zone pictures. */
     public static SceneRomArt create(Rom rom, GameId game, Supplier<PlayerSpriteArtProvider> players,
             Supplier<com.openggf.sprites.art.SpriteArtSet> tailsTails) {

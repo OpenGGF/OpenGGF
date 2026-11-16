@@ -161,7 +161,7 @@ public final class ModContext {
     /**
      * Stages a game patch. A single-game mod's patches must name its {@code baseGame}; a
      * {@code baseGame: any} mod may register one or more patches per stock game ({@code s1},
-     * {@code s2}, {@code s3k}), and each applies only when its game launches and the player's
+     * {@code s2}, {@code s3k}, {@code scd}), and each applies only when its game launches and the player's
      * ROM for it is present. Objects, object art and service bundles of an {@code any} mod are
      * available in every game.
      */

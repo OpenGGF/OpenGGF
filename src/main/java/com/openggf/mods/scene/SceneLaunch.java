@@ -4,7 +4,7 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * A stock game session: the game ({@code s1}, {@code s2} or {@code s3k}) and its playable team
+ * A stock game session: the game ({@code s1}, {@code s2}, {@code s3k} or {@code scd}) and its playable team
  * as character codes ({@code sonic}, {@code tails}, {@code knuckles}, ...). Read the running
  * session with {@link SceneContext#currentLaunch()}; ask for another with
  * {@link SceneContext#relaunch(SceneLaunch)}.
