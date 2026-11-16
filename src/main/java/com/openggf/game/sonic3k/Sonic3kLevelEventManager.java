@@ -1830,7 +1830,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         if (fbzEvents != null) fbzEvents.setCollisionMode(collision, cameraDiffX, cameraDiffY);
     }
 
-    @Override
+    /** Explicit fixture restoration; objects can only write the shake flag. */
     public void setScreenShakeState(boolean active, int offset, int phase) {
         if (fbzEvents != null) fbzEvents.setScreenShakeState(active, offset, phase);
     }

@@ -28,7 +28,7 @@ class TestS3kAdditionalScrollProjection {
     @ParameterizedTest(name = "{0} act {1} x {2} y {3}")
     @MethodSource("contexts")
     void allHeldNativeModesMatchAndSamplingCannotAdvanceNativeState(String name, int act, int x, int y) {
-        Fixture live = fixture(name, act), control = fixture(name, act);
+        Fixture live = fixture(name, act, x, y), control = fixture(name, act, x, y);
         for (int frame = 7; frame < 11; frame++) {
             live.tick(x, y, frame, act);
             control.tick(x, y, frame, act);
@@ -132,7 +132,9 @@ class TestS3kAdditionalScrollProjection {
                 handler.getBgPeriodWidth(), handler.getShakeOffsetX(), handler.getShakeOffsetY(), handler.getBgTilemapUpdateMode());
     }
 
-    private static Fixture fixture(String name, int act) {
+    private static Fixture fixture(String name, int act) { return fixture(name, act, 0x2800, 0x400); }
+
+    private static Fixture fixture(String name, int act, int x, int y) {
         S3kZoneRuntimeState state = null;
         ZoneScrollHandler handler;
         if (name.startsWith("icz")) {
@@ -146,6 +148,7 @@ class TestS3kAdditionalScrollProjection {
             events.setOutdoorBobOffset(7);
             if (name.equals("fbz-outdoor")) events.setBackgroundOutdoor(true);
             if (name.equals("fbz-boss")) events.setBossBackgroundState(0x10, 29, 13);
+            events.publishDeformation(0, x, y);
             var fbz = new FbzZoneRuntimeState(act, PlayerCharacter.SONIC_ALONE, events);
             state = fbz;
             handler = new SwScrlFbz(() -> fbz);

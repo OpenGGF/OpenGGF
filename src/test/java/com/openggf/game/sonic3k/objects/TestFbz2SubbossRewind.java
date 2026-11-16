@@ -364,7 +364,7 @@ class TestFbz2SubbossRewind {
         @Override public void setBossLoadPositionAdjustmentPending(boolean v){} @Override public void setBossBackgroundOffsets(int x,int y){}
         @Override public void setPlaneAssignmentMode(Sonic3kFBZEvents.PlaneAssignmentMode p){}
         @Override public void setCollisionMode(Sonic3kFBZEvents.CollisionMode c,int x,int y){}
-        @Override public void setScreenShakeState(boolean active,int offset,int phase){shakeActive=active;}
+        @Override public void setScreenShakeActive(boolean active){shakeActive=active;}
         @Override public boolean isScreenShakeActive(){return shakeActive;}
     }
     @Test void adverseRoleOrderRelinksOnlyExistingPrefixMembers() {

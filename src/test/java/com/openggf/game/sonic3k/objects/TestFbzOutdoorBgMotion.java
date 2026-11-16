@@ -51,6 +51,7 @@ class TestFbzOutdoorBgMotion {
 
         SwScrlFbz deform = new SwScrlFbz(() -> state);
         deform.init(0, 0, 0);
+        events.publishDeformation(1, 0, 0);
         deform.update(new int[224], 0, 0, 1, 0);
         assertEquals(-1, state.outdoorBobOffset());
         assertEquals(0x15, deform.getVscrollFactorBG() & 0xFFFF);

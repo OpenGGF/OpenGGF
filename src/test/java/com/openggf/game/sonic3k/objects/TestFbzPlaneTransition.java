@@ -449,7 +449,6 @@ class TestFbzPlaneTransition {
         }
         @Override public void setPlaneAssignmentMode(Sonic3kFBZEvents.PlaneAssignmentMode plane) { }
         @Override public void setCollisionMode(Sonic3kFBZEvents.CollisionMode collision, int x, int y) { }
-        @Override public void setScreenShakeState(boolean active, int offset, int phase) { shakeActive = active; }
         @Override public void setScreenShakeActive(boolean active) { shakeActive = active; }
         @Override public boolean isScreenShakeActive() { return shakeActive; }
     }

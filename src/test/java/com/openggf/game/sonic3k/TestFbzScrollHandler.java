@@ -16,6 +16,7 @@ class TestFbzScrollHandler {
         Fixture f = fixture(0);
         int[] scroll = new int[224];
 
+        f.events.publishDeformation(0, 0x1000, 0x200);
         f.handler.update(scroll, 0x1000, 0x0200, 0, 0);
 
         assertEquals(0x00F8, f.handler.getVscrollFactorBG() & 0xFFFF);
@@ -32,10 +33,13 @@ class TestFbzScrollHandler {
         int[] first = new int[224];
         int[] later = new int[224];
 
+        f.events.publishDeformation(0, 0x1000, 0x200);
         f.handler.update(first, 0x1000, 0x0200, 0, 0);
         for (int frame = 1; frame < 256; frame++) {
+            f.events.publishDeformation(frame, 0x1000, 0x200);
             f.handler.update(new int[224], 0x1000, 0x0200, frame, 0);
         }
+        f.events.publishDeformation(256, 0x1000, 0x200);
         f.handler.update(later, 0x1000, 0x0200, 256, 0);
 
         assertEquals(0x001B, f.handler.getVscrollFactorBG() & 0xFFFF);
@@ -49,10 +53,12 @@ class TestFbzScrollHandler {
         int[] scroll = new int[224];
 
         f.events.setBackgroundOutdoor(true);
+        f.events.publishDeformation(10, 0x1000, 0x0200);
         f.handler.update(scroll, 0x1000, 0x0200, 10, 1);
         assertEquals(0x00000E00, f.state.hScrollAccumulator());
 
         f.events.setBackgroundOutdoor(false);
+        f.events.publishDeformation(11, 0x1000, 0x0200);
         f.handler.update(scroll, 0x1000, 0x0200, 11, 1);
         assertEquals(0x00000E00, f.state.hScrollAccumulator(), "indoor deform must freeze HScroll+$1FC");
 
@@ -65,11 +71,13 @@ class TestFbzScrollHandler {
         }
 
         f.events.setBossBackgroundState(0x10, 0, 0);
+        f.events.publishDeformation(24, 0x2800, 0x0400);
         f.handler.update(scroll, 0x2800, 0x0400, 24, 1);
         assertEquals(0x00008E00, f.state.hScrollAccumulator(), "boss mode resumes the same accumulator with +$8000");
 
         f.events.setBossBackgroundState(0, 0, 0);
         f.events.setBackgroundOutdoor(true);
+        f.events.publishDeformation(25, 0x1000, 0x0200);
         f.handler.update(scroll, 0x1000, 0x0200, 25, 1);
         assertEquals(0x00009C00, f.state.hScrollAccumulator(), "outdoor mode resumes the boss-advanced phase with +$E00");
     }
