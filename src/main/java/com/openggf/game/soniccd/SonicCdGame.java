@@ -53,6 +53,14 @@ public final class SonicCdGame extends Game implements PlayerSpriteArtProvider, 
         return current;
     }
 
+    /** Reload through the gameplay owner before applying detached authored state. */
+    public CdLevel loadProject(com.openggf.game.internal.NativeProjectSource source, Level authored) throws IOException {
+        CdStagePayload payload = loader.validate(source);
+        CdLevel level = (CdLevel) loadLevel(payload.ordinal());
+        level.applyProject(authored);
+        return level;
+    }
+
     /** The stage zone's fragment owns its palette cycle; zones without one return null. */
     @Override
     public AnimatedPaletteManager loadAnimatedPaletteManager(Level level, int zoneIndex) {

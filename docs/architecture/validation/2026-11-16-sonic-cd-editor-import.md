@@ -171,3 +171,50 @@ against `dc6b3c2b9edd621a0feecfe6d411628d51756f92`, with two workers and surface
 EGL, foreground through VERDICT. The prior run's VERDICT remains **INCOMPLETE**;
 no new smoke-to-baseline attribution exists. The retained baseline ledger remains
 29 failures + 2 errors. No live task test job remains after this focused run.
+
+## Native authored-state replay continuation
+
+Starting source and origin: `3ce259edf004ba15fd0c0080a121aaf668c3425f`, clean.
+No category run was live; no new category run was started on this unfinished tree.
+
+`SonicCdGame.loadProject` validates the bounded reference, reloads through
+`loadLevel`, then applies a detached authored snapshot onto the resulting actual
+`CdLevel`. The game's `currentLevel` and `currentImage` remain the native owners.
+Terrain, patterns, palettes, collision libraries, objects and rings are detached
+from the document. Source loop flags, layout windows, stage payload and flags stay
+on the native level. Existing placement IDs retain second subtype and time mask
+after moves; new IDs explicitly use second subtype zero and the active period's
+bit. Unexposed placements for other periods remain retained. Replay refuses
+changed layout dimensions/grid and IDs colliding with unexposed placements.
+The ordinary flat-copy/export/runtime guards remain in place until the native
+playtest integration is connected; this commit does not enable the creator UI.
+
+Failing-first evidence: `target/cd-replay-red.log` ran two disc-backed tests with
+zero skips and failed with `NoSuchMethodException` for the new materializer. An
+intermediate run reached replay but the test incorrectly indexed the filtered
+placement list by native ID (expected time mask 64, observed 32). The assertion
+now looks up the stable placement ID. The final test also saves/reopens all edits
+before replay and checks native owner identity, layout/pixel edits, object add,
+move/delete, added rings, retained ring backing, secondary bytes and loop flags.
+
+Final focused command (starting SHA above plus this changeset):
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_TOOL_OPTIONS=-Djava.io.tmpdir=$AGENT_RUNTIME/task-07hk1OLI python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestCdEditorProjectSource,TestEditorProjects,TestEditorProjectValidation,TestEditorProjectWorkspace,TestEditorProjectLifecycle,TestContentImportService,TestRawGlfwTestSetupGuard,TestModApiPinPolicy,TestModApiSignatureSurface,TestModApiReleasePolicy,TestArchUnitRules' test
+```
+
+Result: **162 tests, zero failures/errors/skips**, disc found, `missing=none`;
+`target/cd-replay-focused.log`. Maven execution 60 seconds; admission was queued
+separately (exact wait not captured), user wait zero. `git diff --check` passed.
+No public Mod API signature changed. Editor/modding guide, CD status and develop
+changelog describe this internal milestone and its remaining integration.
+
+Exact next step: add a failing-first disc-backed source-project runtime test,
+expose native materialization through a semantic host capability, and connect
+`EditorProjectRuntimeModule` while retaining native zone/act/period initialization
+and authored spawn semantics. Then implement source-aware workspace/UI creation,
+ContentImportService round trips/export policy, edited playtest render and the
+single requested foreground change-based smoke. Items 2–6 are pending. Do not
+mark PR #352 ready yet. No new render paths exist. Historical smoke VERDICT is
+still **INCOMPLETE**; the retained exact-base ledger is 29 failures + 2 errors,
+not a result for this tree. No merge or destination push is authorized.

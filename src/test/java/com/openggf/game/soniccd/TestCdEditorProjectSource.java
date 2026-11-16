@@ -12,6 +12,53 @@ import static org.junit.jupiter.api.Assertions.*;
 class TestCdEditorProjectSource {
     @TempDir Path directory;
 
+    @Test void authoredEditsReplayOnFreshNativeOwners() throws Exception {
+        try (var disc = CdDiscDataSource.open(CdTestMedia.usaCue())) {
+            var source = new CdStageLoader(disc).load(CdStagePayload.R11A, 0, false);
+            var metadata = new EditorProjectMetadata(GameId.SCD, "Replay", 0, 0, disc.identity(),
+                    source.getMinX(), source.getMinY(), source.getMinX(), source.getMaxX(),
+                    source.getMinY(), source.getMaxY(), new FullLevelExporter.ExportMusic.Stock(1), null);
+            var document = EditorProjectDocument.create(metadata, source);
+            var edited = document.level();
+            var original = edited.getObjects().stream().filter(o -> o.objectId() != 0x10).findFirst().orElseThrow();
+            var moved = original.withPosition(original.x() + 32, original.y());
+            edited.moveObjectSpawn(original, moved);
+            var deleted = edited.getObjects().stream().filter(o -> o.objectId() != 0x10 && !o.equals(moved)).findFirst().orElseThrow();
+            edited.removeObjectSpawn(deleted);
+            var added = new com.openggf.level.objects.ObjectSpawn(1024, 512, original.objectId(), 3, 0, true, 512, 10000);
+            edited.addObjectSpawn(added);
+            edited.getMap().setValue(0, 4, 1, (byte) 0);
+            int pixel = (source.getPattern(1).getPixel(0, 0) + 1) & 15;
+            edited.getPattern(1).setPixel(0, 0, (byte) pixel);
+            var ring = new com.openggf.level.rings.RingSpawn(1100, 500, 10000);
+            edited.addRingSpawn(ring);
+            var store = new EditorProjectStore();
+            var file = directory.resolve("edited.ogfproject");
+            store.save(file, document);
+            var reopened = store.open(file);
+            var game = new SonicCdGame(disc);
+            var replay = game.loadProject(reopened.nativeSource(), reopened.level());
+            assertSame(replay, game.currentLevel());
+            assertNotNull(game.currentImage());
+            assertNotSame(source, replay);
+            assertEquals(source.payload(), replay.payload());
+            assertEquals(0, replay.getMap().getValue(0, 4, 1));
+            assertEquals(pixel, replay.getPattern(1).getPixel(0, 0));
+            assertTrue(replay.getObjects().contains(moved));
+            assertTrue(replay.getObjects().contains(added));
+            assertFalse(replay.getObjects().contains(deleted));
+            assertTrue(replay.getRings().contains(ring));
+            assertEquals(source.subtype2(original), replay.subtype2(moved));
+            assertEquals(source.placements().get(original.layoutIndex()).timeZones(),
+                    replay.placements().stream().filter(p -> p.layoutIndex() == moved.layoutIndex()).findFirst().orElseThrow().timeZones());
+            assertEquals(0, replay.subtype2(added));
+            assertEquals(0x40, replay.placements().stream().filter(p -> p.layoutIndex() == added.layoutIndex()).findFirst().orElseThrow().timeZones());
+            assertEquals(source.ringObjectPlacementMapping(), replay.ringObjectPlacementMapping());
+            assertEquals(source.hasLoopFlag(4, 1), replay.hasLoopFlag(4, 1));
+            assertNotEquals(pixel, source.getPattern(1).getPixel(0, 0));
+        }
+    }
+
     @Test void nativeProjectCreateSaveReopenRetainsSourceWithoutWeakeningFlatGuard() throws Exception {
         try (var disc = CdDiscDataSource.open(CdTestMedia.usaCue())) {
             var nativeLevel = new CdStageLoader(disc).load(CdStagePayload.R11A, 0, false);

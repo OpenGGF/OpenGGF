@@ -485,7 +485,10 @@ under the matching area heading; see the
   closes its media after decoding; menu audio retains its own media until closed.
   Native editor persistence now retains a bounded disc/stage reference and validates
   it before native materialization. The flat-project collision guard remains
-  unchanged. Native edit replay, playtest and creator-facing integration are pending.
+  unchanged. Internal edit replay reloads the native stage through its game owner
+  and applies authored terrain, tiles, objects and rings, retaining loop semantics
+  and existing object secondary bytes after moves. Playtest and creator-facing
+  integration are pending.
 
 - **Sonic CD mod host:** admit `scd` patch manifests and `any` registrations;
   route hosted runs through the disc launcher, expose file-addressed scene and

@@ -580,4 +580,9 @@ permission to redistribute them.
 Native CD stage projects and CD level imports are not available yet. A native
 stage needs its disc program, PLC state and complete object placement data;
 copying it into the portable authored-level format would lose that context.
-The CD master-title preview and isolated hub music do not change editor support.
+The internal native replay path can reload a saved source-backed document and
+apply terrain, tile, object and ring edits without replacing its native level.
+Existing object placement IDs retain their second subtype and time mask after
+a move; new IDs default to second subtype zero and the selected period only.
+Replay currently requires the original layout dimensions. This internal path is
+not yet connected to project creation or the Playtest action.
