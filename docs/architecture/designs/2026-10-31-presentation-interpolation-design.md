@@ -456,3 +456,39 @@ using Java 25 and queued Maven with `-Dmse=off`, display variables unset and
 required S3K keep-green classes. The new aligned-array regression failed on the
 merged base before implementation. HCZ/CD validation and rendering/common smoke
 plus guards are subsequent bounded checks, not claimed by this initial result.
+
+### HCZ/CD validation results
+
+Sol medium workers added `TestHczMotionContinuity` (12 ROM-backed cases) and
+`TestCdMotionContinuity` (11 logic cases), each passing without skips in its
+isolated checkout. HCZ checks exact amounts, negative controls, both-act bands,
+held publications, wall-plane shake, completion and an expected mode snap; it
+uses typed publications and does not establish event lifecycle/history/rewind
+integration or rendered pixels. HCZ1/2 route matrices retain those gaps.
+
+CD validation corrects the earlier static audit: all seven ordinary CD handlers
+are excluded by the module's motion-profile gate. Their lack of projection
+phases is therefore a future-enablement gap, not a reproduced user-visible bug.
+The four PPZ periods have exact native vertical-pan and frozen-raster restoration
+checks. Six other handlers' runtime amounts, disc/native-reference output and
+transitions remain outside these tests. No new zone production fix was needed.
+
+The lead rendering/common smoke command was:
+`env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --category rendering --guards --workers 2 --headless-gl surfaceless-egl --run`.
+At candidate `c21c0128e9`, it selected 757/4963 classes and completed 16 ordinary
+batches: 5,418 tests, one failure, no errors, seven policy-allowed skips, no
+unexplained skips. All 860 guard tests passed without skips. Final **VERDICT
+FAILED**: 6,278 total tests, one failure, seven allowed skips. This is bounded
+rendering/common smoke, not a whole-repository or full-suite pass. Ordinary
+execution was 250.74 seconds and guards 195.15 seconds; queue waits are separate.
+The failure is `TestPrivateLobbyScreenRendering.actualLobbyAndFullTextPixelsSupportMultipleReadablePages`
+("Right reaches new full-text pixels", expected false, actual true); it reproduces on the exact base `144f3fa28a` with the same test identity and
+assertion (one test, one failure, no skips). There are no new/worsened failures
+in the bounded selection. The original failed verdict is retained, not relabelled
+green.
+
+After integrating both workers' commits, the lead reran
+`env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Dtest=TestCdMotionContinuity,TestHczMotionContinuity test`:
+23 passed, no failures/errors/skips. Execution took 35.834 seconds, separate from
+queue wait. The 187 earlier focused tests and 860 guards also pass. No whole-route
+or full-suite result is inferred from these checks.

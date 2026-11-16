@@ -1,5 +1,16 @@
 # Sonic CD stages: route matrix (USA)
 
+## Motion eligibility maintenance (2026-11-16)
+
+`TestCdMotionContinuity` adds 11 bounded checks: all seven provider handlers remain
+excluded by CD's actual `LevelMotionPresentation` profile gate, with an eligible
+profile negative control; PPZ's four periods have exact native vertical-pan and
+224-word frozen rebuild/restore assertions. Missing `ScrollProjectionSource`
+support is a future interpolation-enablement gap, not a reproduced currently
+visible Frame Interp defect. These are logic checks without disc/native-reference
+or rendered-pixel certification. Six handlers' runtime scroll amounts and mode
+transitions remain untested here; existing stage and route obligations remain.
+
 Game `scd`, all seven zones, Sonic only. A partial matrix under the
 [zone and act testing standard](../../../guide/contributing/level-test-standard.md):
 it records which stages a native recording certifies and how far. It is not a
