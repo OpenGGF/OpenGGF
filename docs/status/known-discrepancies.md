@@ -1323,6 +1323,23 @@ same `$80 + viewportWidth + $C0` window (`$280` at native width). A bare
 them at 640 and 800 pixels. Objects with a ROM-specific range (the FBZ piston's
 travel-derived `$200 + travel`) keep their own constant.
 
+Sonic CD applies the same extension through `CdObjectWindowing`: native
+`SpawnObjects` edges remain coarse camera + `$280` / -`$80`, with the
+capped forward lead at wider widths. `CheckObjDespawn2` and its object-specific
+copies extend their native `$280` compare by the simulation-width delta.
+`DrawObject` retains its signed-word box and previous-pass camera semantics,
+but its right edge follows simulation width; the retained bit also gates
+native touch and solid checks. Objects without a native range check still
+remain live. Boss-start centring uses half that width; world-space boss
+coordinates and player level walls do not move. Screen-space game-over text
+is centred without changing its native animation or restart clock. The warp
+picture repeats its native 512-pixel plane across the display and centres its
+sprites, including palette fades. FMV/title/ending and the 256-pixel special
+stage keep their native pillarbox. This is an engine extension, not a native
+wide-screen parity claim. PPZ static background rows independently wrap at
+512 while moving rows retain their layout coordinates (disc-backed camera
+section table); widening the cache does not change their period.
+
 **Load-ahead window is capped (intentionally narrower than the despawn window).** The viewport-aware despawn/visibility helpers above scale by the *full* viewport width. The *spawn load-ahead* window (`AbstractPlacementManager.loadAheadFor`), however, grows only by the minimum pre-load lead — `max(320 + extraAhead, viewportWidth + 128)` — NOT by `viewportWidth + extraAhead`. The object slot pool is a fixed ROM-sized table (`ObjectSlotLayout`: S1=96, S2=112, S3K=89); a window that grew by the full extra width overran the pool in dense areas, so `allocateSlot()` returned −1 and spawns were silently dropped (objects intermittently failing to load when scrolling right at widescreen, in all games). Capping the load-ahead keeps the live-object count close to native (≈+2% at ULTRA_21_9 vs +27% before) so the pool no longer overruns, while viewport-aware lifetime and visibility callers retain their wider windows. This narrower load window is deliberate — do not widen it to match the despawn window. Native (320) is byte-identical (load-ahead = `0x280`).
 
 Stage rings in Sonic 2 and Sonic 3 & Knuckles use their separate raw-camera

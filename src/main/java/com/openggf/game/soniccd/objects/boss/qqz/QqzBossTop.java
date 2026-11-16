@@ -98,7 +98,7 @@ public final class QqzBossTop extends QqzBossPiece {
         }
         camera.setMaxX((short) 0xCC0);                             // right_bound, target_right_bound
         int px = (short) player.getCentreX();
-        int left = (short) (px - 0xA0);
+        int left = (short) (px - camera.getWidth() / 2);
         if (left < camera.getMinX()) return;                       // cmp.w left_bound,d0; blt.s
         if (px >= 0xD60) {
             clear(LATCH);
