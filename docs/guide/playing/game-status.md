@@ -255,6 +255,11 @@ Future). `SonicCdEndingCaptureTool --ending good|bad` films an ending.
   [CD mod contracts](../../modding/ggfmod.md#sonic-cd-runtime-mods).
 - Sonic CD Game Setup saves Borrow from and character choices. Without donation
   it defaults to Sonic alone. CD itself cannot donate player art.
+  Each donor's supported roster can also be paired as leader/follower, including
+  duplicates (14 pairs tested). S1 Tails/Knuckles and S2 Knuckles are refused for
+  either role with the missing donor character named. S3K elemental shields are
+  exercised on the disc host. Donated life icons use their own object-art tiles,
+  preserving transparent foreground cells and the native HUD.
 - Special stage results graphics, pause and exit fade are not drawn.
 - Robotnik's projector in the Past can be destroyed, but the animals in its
   hologram are not drawn.

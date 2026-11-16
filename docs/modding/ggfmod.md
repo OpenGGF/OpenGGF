@@ -159,6 +159,15 @@ resources are not exposed. CD hosts cartridge-donated S1 Sonic, S2 Sonic/Tails,
 and S3K Sonic/Tails/Knuckles through the same donor provider as cartridge hosts.
 The host supplies stage-owned animation scripts; all donated drawings and name
 lettering come from the donor ROM. Unsupported donor characters fail explicitly.
+The same donor roster applies to leaders and followers, including duplicate
+characters; all 14 roster pairs have disc-backed boot/CPU/art tests in
+`TestCdDonorTeams`. S1 Tails/Knuckles and S2 Knuckles refuse at admission with an
+explicit donor/character reason. Host-native followers elsewhere retain host art
+when the donor lacks that character. `TestCdDonorHosting` also exercises all three
+S3K elemental shield grants while retaining the CD movement policy. Donated life
+icons participate in the object provider's governed allocation; they never use
+CD's transparent foreground pattern zero.
+
 CD is unavailable as a donor: it has no cartridge-backed donor provider.
 Ordinary CD objects, scenes and content do not require a cartridge.
 

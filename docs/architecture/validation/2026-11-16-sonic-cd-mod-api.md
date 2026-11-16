@@ -378,3 +378,43 @@ host-supplied followers keep their host provider, auxiliary art and palette.
 CD lacks those native characters, so the three unavailable donor follower cases
 still refuse with explicit donor/character reasons and leave donation inactive.
 No game-name condition was added to shared runtime code.
+
+Fresh film root: `${TASK_CAPTURE_ROOT}` (the concrete user-local path is in the delivery).
+The production capture uses scanline limits, no-device audio and surfaceless EGL;
+input is round-trip-validated by `InputLogAuthorTool`. `tails-running/capture.mp4`
+and `sonic-control/capture.mp4` each contain 111 frames (960x672, 60 fps, 1.85s).
+At frame 420 both cameras are `(580,1796)`, players are x=676/y=1865 and alive;
+the upper 48 rows match pixel-for-pixel. Inspected both frame 420 pictures and
+`tails-recovery/frames/00900.png`, confirming sky/mountains, foreground and SCORE.
+The recovery film has 1,321 frames (22.016667s). Ordinary P2 Left input separates
+Tails; the native CPU leaves him at its dormant sentinel near 820, returns him
+above Sonic at x=1442/y=1857 near 900, descends through y=1957 at 1000 and lands
+by 1200. No teleport, death injection or trace input was used. Main film input:
+`240 -;160 R;1 R+B;60 R`; recovery appends `360 - / L;900 -`.
+All three films have `state.csv` and PNG frames beside them. Matched-camera test
+stills are preserved as `matched-camera-tails.png` and `matched-camera-sonic.png`.
+
+The first final focused attempt ran no tests: Maven could not write compiler
+status because `/mnt/LinuxData` was full (83 MiB free). Removed only the finished
+baseline run's generated `target/classes`, `target/test-classes` and
+`target/maven-status`; its exact reports/logs remain. The baseline tree and source
+were untouched. The rerun starts with about 822 MiB available. This is a repaired
+prerequisite, not an attributed test failure or a passing-check claim.
+
+Final focused selection on runtime source `ba61e2d362f576662deb2586d59624fc3a30da4e`:
+**204 tests, zero failures/errors, 26 optional native-input skips** (178 executed).
+`TestSonicCdActEndNative` skips 25 cases and `TestSonicCdR11aTraceReplay` skips one
+for absent local recordings. They are not parity passes. Missing ROM/disc
+properties: none. Facing/construction guards, donor/composer/animation/profile
+checks, all requested Mod API pin/surface/runtime/release checks, and the four
+required S3K bootstrap/loading classes execute successfully. Command:
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestSonicCdActEndNative,TestSonicCdR11aTraceReplay,TestCdDonorHosting,TestCdDonorTeams,TestDonatedTailsFlightArt,TestCrossGameFeatureProviderRefactor,TestCrossGameRuleComposer,TestCrossGamePolicyComposer,TestAnimationFamilies,TestCdLaunchProfile,TestHostedMediaLaunch,TestMasterTitleHubMessages,TestNativeObjectFacingGuard,TestConstructionContextGuard,TestModApiSignatureSurface,TestModApiPinPolicy,TestModApiRuntimePolicy,TestModApiReleasePolicy,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestCdLiveMotionPixels#donatedTailsPreservesR11aBackgroundAndScorePixels' test
+```
+
+The finished-tree smoke plan selects **4,979 classes plus guards**, 100 ordinary
+batches and two workers; 40 minutes execution limit excludes queue wait. Stop on
+incomplete infrastructure and diagnose; never restart blindly. Compare failures
+by identity/assertion to `dc6b3c2b9e`. No source edit or build occurs in the task
+tree during this run. Final VERDICT and attribution remain pending.
