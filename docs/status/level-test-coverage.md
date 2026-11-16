@@ -2836,3 +2836,8 @@ MICA authored S3K ending presentation (2026-11-08): the
 [ending matrix](../architecture/validation/levels/s3k-ending.md#authored-sonic-route-ending-presentation-2026-11-08)
 records passing declared-entry normal/Super/Hyper mapping and capture checks.
 Doomsday route entry, mod rewind and broader team/viewport certification remain open.
+
+AIZ screen-event ownership (2026-11-16): the [bounded publication audit](../architecture/audits/2026-11-16-s3k-aiz-event-publication.md)
+records the real-load shake witness, composed rewind contract, selected route
+comparisons and forest-loop evidence. Existing act/character, donor, team and
+viewport obligations remain inherited; this local cleanup is not zone certification.

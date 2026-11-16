@@ -7,6 +7,11 @@ under the matching area heading; see the
 
 ## Gameplay and presentation
 
+- **Angel Island screen events:** AIZ owns the canopy-wave origin and captures
+  its publication with the shared ROM shake words. Shake setup respects stored
+  death/restart routines and the contiguous timed table; water and bomb producers
+  write the same flag without the water timer masking later bomb writes.
+
 - **Sonic CD (development preview):** Sonic CD runs from the user's own USA
   disc image (a cue sheet and its tracks, or a lossless CHD made from them with
   MAME's chdman, named by `roms.soniccd` or found in the ROM folder) as

@@ -2632,7 +2632,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         //   28 bytes  fixed Breathing_bubbles/Breathing_bubbles_P2 sidecars
         //   4 bytes   fixed-air countdown owning zone
         //   4 bytes   fixed-air countdown owning act
-        byte[] aizBytes = aizEvents != null ? ZoneEventSchemaSidecar.capture(aizEvents) : null;
+        byte[] aizBytes = aizEvents != null ? aizEvents.captureAizState() : null;
         byte[] hczBytes = hczEvents != null ? hczEvents.captureHczState() : null;
         byte[] cnzBytes = cnzEvents != null ? ZoneEventSchemaSidecar.capture(cnzEvents) : null;
         byte[] mgzBytes = mgzEvents != null ? ZoneEventSchemaSidecar.capture(mgzEvents) : null;
@@ -2897,7 +2897,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     @Override
     public void restore(com.openggf.game.rewind.snapshot.LevelEventSnapshot snapshot) {
         byte[] extra = snapshot.extra();
-        if (hczEvents != null && extra != null && extra.length >= 5 && !hasValidExtraFraming(extra)) {
+        if ((hczEvents != null || aizEvents != null) && extra != null && extra.length >= 5 && !hasValidExtraFraming(extra)) {
             LOG.warning("Skipping malformed S3K level-event snapshot before base-state restoration");
             return;
         }
@@ -2913,8 +2913,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         }
         java.nio.ByteBuffer buf = java.nio.ByteBuffer.wrap(extra);
         buf.position(EXTRA_MANAGER_BYTES);
-        if (!skipLengthPrefixedSidecar(buf,
-                () -> expectedSidecarBytes(aizEvents, Sonic3kLevelEventManager::newAizFramingProbe))) {
+        if (!skipAizSidecar(buf)) {
             return false;
         }
         if (!skipHczSidecar(buf)) {
@@ -2970,8 +2969,13 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         return ZoneEventSchemaSidecar.capture(handler != null ? handler : fallback.get()).length;
     }
 
-    private static Object newAizFramingProbe() {
-        return new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
+    private static boolean skipAizSidecar(java.nio.ByteBuffer buf) {
+        if (buf.remaining() < 1 || buf.get() == 0) return true;
+        if (buf.remaining() < 4) return false;
+        int length = buf.getInt();
+        if (length < 0 || length > buf.remaining()) return false;
+        byte[] payload = new byte[length]; buf.get(payload);
+        return Sonic3kAIZEvents.hasValidAizState(payload);
     }
 
     private static boolean skipHczSidecar(java.nio.ByteBuffer buf) {
@@ -3034,13 +3038,13 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     }
 
     private void restoreAizSidecar(byte[] bytes) {
-        byte[] before = ZoneEventSchemaSidecar.capture(aizEvents);
+        byte[] before = aizEvents.captureAizState();
         try {
-            ZoneEventSchemaSidecar.restore(aizEvents, bytes);
+            aizEvents.restoreAizState(bytes);
             aizEvents.discardHardwareWorkFacadesAfterRewind();
         } catch (RuntimeException e) {
             try {
-                ZoneEventSchemaSidecar.restore(aizEvents, before);
+                aizEvents.restoreAizState(before);
                 aizEvents.discardHardwareWorkFacadesAfterRewind();
             } catch (RuntimeException rollbackFailure) {
                 e.addSuppressed(rollbackFailure);
