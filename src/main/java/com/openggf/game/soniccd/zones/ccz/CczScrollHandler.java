@@ -5,6 +5,10 @@ import com.openggf.game.soniccd.CdStagePayload;
 import com.openggf.game.soniccd.level.CdStageImage;
 import com.openggf.level.scroll.AbstractZoneScrollHandler;
 import com.openggf.level.scroll.ScrollOutputRebuilder;
+import com.openggf.level.scroll.ScrollProjectionSource;
+import com.openggf.level.scroll.ScrollProjectionPhase;
+import com.openggf.level.scroll.ScrollProjectionContext;
+import com.openggf.level.scroll.ScrollProjection;
 import com.openggf.level.scroll.compose.ScrollEffectComposer;
 
 import java.util.ArrayList;
@@ -55,7 +59,7 @@ import java.util.function.Supplier;
  * the layers stand still from the frame of death. Both gates are {@link
  * com.openggf.game.soniccd.zones.CdLevelScrollGate}.
  */
-public final class CczScrollHandler extends AbstractZoneScrollHandler implements ScrollOutputRebuilder {
+public final class CczScrollHandler extends AbstractZoneScrollHandler implements ScrollOutputRebuilder, ScrollProjectionSource {
     private static final int LINE_SINK = 512;              // hscroll holds 256 long entries; spare room
     private static final int ROW_WORDS = 0x200 / 2;
     private static final int WOBBLE_SIZE = 256;            // d5 and $FF (r3) or (d5 and $7F)*2 (R31A)
@@ -437,6 +441,45 @@ public final class CczScrollHandler extends AbstractZoneScrollHandler implements
     // ---------------------------------------------------------------------------------------------
     // Rewind
     // ---------------------------------------------------------------------------------------------
+
+    /**
+     * Freeze native clocks and compose camera displacement on an isolated RAM scratch.
+     * Camera arithmetic: CollisionChaos_Act1Present_ScrollProcess
+     * (Level/Collision Chaos/Scroll (Act 1 Present).asm:272-304).
+     * Native phase (including FixBugs=0 fractional carry) remains unchanged.
+     */
+    @Override
+    public ScrollProjectionPhase captureProjection(ScrollProjectionContext context) {
+        // Capture the shared native scrollLock/dead gate, never read it while sampling.
+        if (!com.openggf.game.soniccd.zones.CdLevelScrollGate.runs())
+            return com.openggf.level.scroll.ScrollProjectionPhases.held(context);
+
+        Object state = captureRewindState();
+        byte[] frozenWobble = wobble().clone();
+        CdStagePayload frozenPayload = payload;
+        return view -> {
+            CczScrollHandler scratch = new CczScrollHandler(frozenPayload, null);
+            scratch.wobble = frozenWobble;
+            scratch.restoreRewindState(state);
+            int dx = view.cameraX() - context.cameraX();
+            // ScrollProcess's camera multipliers; never run advance (water/deform clocks).
+            scratch.bgX += dx * 256 * 12;
+            scratch.bg2X += dx * 256 * 24;
+            scratch.bg3X += dx * 256 * 16;
+            scratch.bgY += (backgroundY(view.cameraY()) - backgroundY(context.cameraY())) << 16;
+            int[] nativeLines = new int[ScrollEffectComposer.VISIBLE_LINES];
+            scratch.publish(nativeLines, view.cameraX(), view.cameraY());
+            // Native routines publish 224 lines. Outside that raster hold its final row;
+            // presentation enlargement must not invent a second native dispatch.
+            int[] horizontal = new int[view.height()];
+            for (int i = 0; i < horizontal.length; i++) horizontal[i] = nativeLines[Math.min(i, nativeLines.length - 1)];
+            var nativeOutput = context.nativeOutput();
+            return new ScrollProjection(horizontal, null, null, null,
+                    (short) (nativeOutput.foregroundY() + view.cameraY() - context.cameraY()),
+                    scratch.getVscrollFactorBG(), nativeOutput.backgroundX(), nativeOutput.backgroundPeriod(),
+                    nativeOutput.shakeX(), nativeOutput.shakeY(), nativeOutput.tilemapMode());
+        };
+    }
 
     private record State(int bgX, int bg2X, int bg3X, int bgY, List<Integer> deform, int waterPhase,
                          int lastCameraX, int lastXDiff, int lastFrame, boolean initialised) { }

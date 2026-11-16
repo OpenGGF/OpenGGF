@@ -57,7 +57,7 @@ import java.util.List;
  * not run while {@code scroll_lock} is set (:158-160) or the player is dead
  * ({@link com.openggf.game.soniccd.zones.CdLevelScrollGate}). {@code StageEvents} (:166-171, region-ordered with the foreground scroll) is the level-events lane.
  */
-public final class MmzScrollHandler extends AbstractZoneScrollHandler implements ScrollOutputRebuilder {
+public final class MmzScrollHandler extends AbstractZoneScrollHandler implements ScrollOutputRebuilder, com.openggf.level.scroll.ScrollProjectionSource {
     /** Which camera value a fill or gradient reads. */
     enum Layer { FG, BG, BG2, BG3 }
 
@@ -370,6 +370,42 @@ public final class MmzScrollHandler extends AbstractZoneScrollHandler implements
 
     private void emitBlock(short word, int lines) {
         for (int i = 0; i < lines && sinkPos < LINE_SINK; i++) sink[sinkPos++] = word;
+    }
+
+
+    /** Camera composition uses the native layer rates documented above, retaining the dispatched
+     * fraction/carry and deformation clock. The private scratch never enters UpdateScroll. */
+    @Override
+    public com.openggf.level.scroll.ScrollProjectionPhase captureProjection(
+            com.openggf.level.scroll.ScrollProjectionContext context) {
+        // Capture the shared native scrollLock/dead gate, never read it while sampling.
+        if (!com.openggf.game.soniccd.zones.CdLevelScrollGate.runs())
+            return com.openggf.level.scroll.ScrollProjectionPhases.held(context);
+
+        final Object state = captureRewindState();
+        final int[][] table = java.util.Arrays.stream(tables()).map(int[]::clone).toArray(int[][]::new);
+        return view -> {
+            var nativeOutput = context.nativeOutput();
+            var scratch = new MmzScrollHandler(payload, table);
+            scratch.restoreRewindState(state);
+
+            int[] words = new int[ScrollEffectComposer.VISIBLE_LINES];
+            int dx = view.cameraX() - context.cameraX();
+            Rates rates = layout.rates();
+            scratch.bg3X += (dx << 8) * rates.bg3();
+            scratch.bg2X += (dx << 8) * rates.bg2();
+            scratch.bgX += (dx << 8) * rates.bg();
+            scratch.bgY = (((view.cameraY() & 0xffff) >>> rates.bgYShift()) << 16) | (scratch.bgY & 0xffff);
+            scratch.publish(words, view.cameraX());
+            int[] raster = new int[view.height()];
+            // Presentation-only extra raster holds the last native line; no extra native work.
+            for (int i = 0; i < raster.length; i++) raster[i] = words[Math.min(i, words.length - 1)];
+            return new com.openggf.level.scroll.ScrollProjection(raster,
+                    nativeOutput.backgroundLines(), nativeOutput.backgroundColumns(), nativeOutput.foregroundColumns(),
+                    (short) (nativeOutput.foregroundY() + view.cameraY() - context.cameraY()),
+                    scratch.getVscrollFactorBG(), nativeOutput.backgroundX(), nativeOutput.backgroundPeriod(),
+                    nativeOutput.shakeX(), nativeOutput.shakeY(), nativeOutput.tilemapMode(), nativeOutput.spritePositions());
+        };
     }
 
     // ---------------------------------------------------------------------------------------------

@@ -129,6 +129,52 @@ class TestLevelMotionPair {
         assertEquals(21, projected.registers().cameraXWithShake(), "Current shake remains +3");
         assertArrayEquals(new short[]{4, 6}, now.backgroundLines(), "A picture cannot mutate its source");
     }
+    @Test void verticalAlignmentUsesAllBackgroundArraysAndExactMotionAmounts() throws Exception {
+        var old = scroll(0, 0, 100, 512, new short[]{100, 102}, new short[]{104, 106});
+        var base = scroll(4, 2, 100, 512, new short[]{4, 6}, new short[]{8, 10});
+        var now = new LevelScrollPresentation(base.registers(), new int[]{-6 & 0xffff, -8 & 0xffff},
+                base.backgroundLines(), base.backgroundColumns(), null, null);
+        var sampler = mock(com.openggf.level.scroll.ScrollProjectionPhase.class);
+        when(sampler.sample(any())).thenReturn(new com.openggf.level.scroll.ScrollProjection(
+                new int[]{-4 & 0xffff, -6 & 0xffff}, new short[]{2, 4}, new short[]{6, 8}, null,
+                (short) 2, (short) 100, 100, 512, 0, 0,
+                com.openggf.level.scroll.BgTilemapUpdateMode.STATIC_WINDOW));
+        var field = LevelScrollPresentation.class.getDeclaredField("phase"); field.setAccessible(true);
+        field.set(old, sampler);
+        var motion = now.backgroundMotionSince(old, 16, 320);
+        assertNotNull(motion, "Different source rows must not manufacture a teleport");
+        assertArrayEquals(new short[]{2, 2}, motion.words());
+        assertArrayEquals(new short[]{-2, -2}, motion.lines());
+        assertArrayEquals(new short[]{-2, -2}, motion.columns());
+        var half = now.forMotion(-2, -1, 320, motion, .5);
+        assertEquals(-5, (short) half.horizontal()[0]);
+        assertArrayEquals(new short[]{3, 5}, half.backgroundLines());
+        assertArrayEquals(new short[]{7, 9}, half.backgroundColumns());
+        assertNotEquals((short) now.horizontal()[0], (short) half.horizontal()[0],
+                "A frozen-background negative control must fail the motion witness");
+        verify(sampler).sample(new com.openggf.level.scroll.ScrollView(0, 2, 320, 2));
+        assertArrayEquals(new short[]{100, 102}, old.backgroundLines());
+    }
+    @ParameterizedTest @CsvSource({"224", "448"})
+    void motionAlignmentUsesTheCompleteCapturedRaster(int height) throws Exception {
+        var base = scroll(0, 0, 0, 512, null, null);
+        int[] oldWords = new int[height], nowWords = new int[height], alignedWords = new int[height];
+        java.util.Arrays.fill(oldWords, -100 & 0xffff);
+        java.util.Arrays.fill(nowWords, -4 & 0xffff);
+        java.util.Arrays.fill(alignedWords, -2 & 0xffff);
+        var old = new LevelScrollPresentation(base.registers(), oldWords, null, null, null, null);
+        var now = new LevelScrollPresentation(scroll(0, 2, 0, 512, null, null).registers(), nowWords, null, null, null, null);
+        var field = LevelScrollPresentation.class.getDeclaredField("phase"); field.setAccessible(true);
+        field.set(old, (com.openggf.level.scroll.ScrollProjectionPhase) view -> {
+            assertEquals(height, view.height());
+            return new com.openggf.level.scroll.ScrollProjection(alignedWords, null, null, null,
+                    (short) 2, (short) 0, 0, 512, 0, 0, com.openggf.level.scroll.BgTilemapUpdateMode.STATIC_WINDOW);
+        });
+        var motion = now.backgroundMotionSince(old, 16, 320);
+        assertNotNull(motion);
+        assertEquals(2, motion.words()[height - 1]);
+        assertEquals(-3, (short) now.forMotion(0, -1, 320, motion, .5).horizontal()[height - 1]);
+    }
     @Test void zeroDeltasRetainEveryDiscreteFieldIncludingTheCurrentMaskFadeSample() {
         var picture = picture(20, 40, 100, 120, 16, MotionPacket.Anchoring.FOLLOW);
         var pair = LevelMotionPair.between(picture.sample(), picture.sample());

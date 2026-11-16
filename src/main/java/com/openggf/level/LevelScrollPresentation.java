@@ -232,18 +232,23 @@ final class LevelScrollPresentation {
         // mistakes that discrete selection for a horizontal teleport and snaps all BG.
         // Frozen phases compose only: no gameplay handler or live owner is advanced.
         int[] priorHorizontal = previous.horizontal;
+        short[] priorLines = previous.backgroundLines, priorColumns = previous.backgroundColumns;
         if (previous.phase != null && registers.cameraY() != previous.registers.cameraY()) {
             var aligned = previous.phase.sample(new com.openggf.level.scroll.ScrollView(
                     previous.registers.cameraX(), registers.cameraY(), width, horizontal.length));
             if (aligned.horizontal().length != horizontal.length
                     || aligned.backgroundPeriod() != registers.backgroundPeriod()
-                    || aligned.tilemapMode() != tilemapMode) return null;
+                    || aligned.tilemapMode() != tilemapMode
+                    || !sameSize(aligned.backgroundLines(), backgroundLines)
+                    || !sameSize(aligned.backgroundColumns(), backgroundColumns)) return null;
             priorHorizontal = aligned.horizontal();
+            priorLines = aligned.backgroundLines();
+            priorColumns = aligned.backgroundColumns();
         }
         short[] words = new short[horizontal.length];
         for (int i = 0; i < words.length; i++) words[i] = (short) (priorHorizontal[i] - horizontal[i]);
-        short[] lines = differences(previous.backgroundLines, backgroundLines);
-        short[] columns = differences(previous.backgroundColumns, backgroundColumns);
+        short[] lines = differences(priorLines, backgroundLines);
+        short[] columns = differences(priorColumns, backgroundColumns);
         short y = (short) (previous.registers.backgroundY() - registers.backgroundY());
         short overrideY = registers.overrideBackgroundY()
                 ? (short) (previous.registers.overriddenBackgroundY() - registers.overriddenBackgroundY()) : 0;

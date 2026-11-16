@@ -95,6 +95,14 @@ public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
     private int contributedZone = -1;
     private ZoneScrollHandler contributedHandler;
 
+    // Host capture intent is installed before advancing a service. It survives
+    // picture-history cuts and does not depend on renderer attachment/publication.
+    private boolean motionCaptureEnabled;
+
+    void motionCaptureEnabled(boolean enabled) {
+        motionCaptureEnabled = enabled;
+    }
+
     private com.openggf.level.scroll.ScrollProjectionPhase projectionPhase;
     private BackgroundBuildParameters backgroundBuild;
     private com.openggf.game.internal.BackgroundColumnProjection backgroundColumns;
@@ -458,9 +466,8 @@ public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
         boolean directed = level != null && level.gameModule != null
                 && level.gameModule.getGameService(
                         com.openggf.level.scroll.DirectedScrollPresentation.class) != null;
-        boolean motion = level != null && level.spritePresentationRenderer() != null
-                && level.spritePresentationRenderer().motionPackets.active;
-        if (!directed && !motion) {
+        if (!directed && (!motionCaptureEnabled
+                || !(handler instanceof com.openggf.level.scroll.ScrollProjectionSource))) {
             projectionPhase = null;
             backgroundBuild = null;
             backgroundColumns = null;
