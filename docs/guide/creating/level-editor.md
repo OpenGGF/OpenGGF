@@ -585,5 +585,9 @@ Save/reopen and cloning preserve the source. Playtest reloads the native stage
 through the game owner before applying terrain, tile, object and ring edits.
 Existing placement IDs retain their second subtype and time mask after moves;
 new IDs default to second subtype zero and the selected period only.
-Resized native layouts are refused by replay. Flat directory export is refused;
-retain the source-backed `.ogfproject` rather than substituting a portable level.
+Resized native layouts are refused by replay. Importing a saved `.ogfproject`
+through the content importer and saving it again preserves its native reference.
+Reopening or playtesting requires the matching verified USA disc. Flat directory
+export and a ZIP made from that flat format are explicitly unsupported: they lack
+native program/PLC/placement context. Retain the source-backed `.ogfproject` rather
+than substituting a portable level.

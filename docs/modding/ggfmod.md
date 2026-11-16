@@ -191,6 +191,15 @@ object/track dependencies still require a separately authored package.
 
 The Sonic CD master-title card decodes its native title from the verified USA disc.
 Optional hub music opens a separate disc/audio source; suspending a game does
-not transfer its audio owner to the menu. Native editor project/import round
-trips still need a stage-preserving persistence path; portable flat levels do
-not carry the native program/PLC/object state.
+not transfer its audio owner to the menu. Native CD editor projects save a bounded
+verified-disc/stage reference plus authored edits in `.ogfproject`. Importing that
+file through the content importer and saving it again preserves the reference;
+reopening/playtesting still requires the matching USA disc. No media path or disc
+payload is bundled. Zone, act and period selection creates a native stage copy.
+
+Flat level-directory export of a source-backed CD project is explicitly refused,
+so it cannot be repackaged as a flat level ZIP either. Those formats lack native
+program/PLC/placement context. Use the `.ogfproject` round trip for these projects;
+this is distinct from supported separately authored flat CD zones with owned
+object keys. Native replay refuses resized layouts. Existing placement IDs retain
+secondary subtype/time-mask data; newly added IDs select only the active period.

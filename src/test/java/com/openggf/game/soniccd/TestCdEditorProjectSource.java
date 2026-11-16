@@ -12,6 +12,36 @@ import static org.junit.jupiter.api.Assertions.*;
 class TestCdEditorProjectSource {
     @TempDir Path directory;
 
+    @Test void contentImportRoundTripRetainsNativeSourceAndRejectsFlatExport() throws Exception {
+        try (var disc = CdDiscDataSource.open(CdTestMedia.usaCue())) {
+            var game = new SonicCdGame(disc);
+            var source = (com.openggf.game.soniccd.level.CdLevel) game.loadLevel(CdStagePayload.R11B.ordinal());
+            var start = source.nativeProjectStart();
+            var metadata = new EditorProjectMetadata(GameId.SCD, "Imported past", 0, 1, disc.identity(),
+                    start[0], start[1], source.getMinX(), source.getMaxX(), source.getMinY(), source.getMaxY(),
+                    new FullLevelExporter.ExportMusic.Stock(1), null);
+            var document = EditorProjectDocument.create(metadata, source);
+            document.level().getMap().setValue(0, 8, 1, (byte) 0);
+            var store = new EditorProjectStore();
+            var exported = directory.resolve("source.ogfproject"); store.save(exported, document);
+            var importer = new com.openggf.ContentImportService(directory.resolve("mods"));
+            try (var imported = importer.inspect(exported)) {
+                assertEquals(com.openggf.ContentImportService.Kind.PROJECT, imported.kind());
+                assertEquals(document.nativeSource(), imported.project().nativeSource());
+                assertEquals(metadata, imported.project().metadata());
+                assertEquals(0, imported.project().level().getMap().getValue(0, 8, 1));
+                var second = directory.resolve("roundtrip.ogfproject"); store.save(second, imported.project());
+                var reopened = store.open(second);
+                assertEquals(source.nativeProjectSource(), reopened.nativeSource());
+                assertEquals(CdStagePayload.R11B, game.loadProject(reopened.nativeSource(), reopened.level()).payload());
+                var failure = assertThrows(IllegalArgumentException.class, () -> EditorProjectRuntimeModule.request(
+                        reopened, directory.resolve("flat"), start[0], start[1]));
+                assertTrue(failure.getMessage().contains(".ogfproject"));
+                assertFalse(java.nio.file.Files.exists(directory.resolve("flat")));
+            }
+        }
+    }
+
     @Test void creatorSelectsCdZoneActAndPeriod() throws Exception {
         try (var disc = CdDiscDataSource.open(CdTestMedia.usaCue())) {
             var module = new SonicCdGameModule();

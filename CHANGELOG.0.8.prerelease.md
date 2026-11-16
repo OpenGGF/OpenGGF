@@ -491,6 +491,8 @@ under the matching area heading; see the
   use fresh native stage owners and authored spawn coordinates. The creator menu
   offers CD zones with act/period labels and creates a source-backed stage copy.
   Native player starts retain terrain coordinates independently of camera limits.
+  Content-import/save round trips retain the reference; flat directory/ZIP export
+  is explicitly refused because it cannot retain native stage context.
 
 - **Sonic CD mod host:** admit `scd` patch manifests and `any` registrations;
   route hosted runs through the disc launcher, expose file-addressed scene and

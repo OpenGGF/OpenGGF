@@ -255,3 +255,21 @@ disc found, `target/cd-creator-focused2.log`. Maven execution 1:04; admission wa
 approximately five minutes, user wait zero. `git diff --check` passes. No category
 run started. Next: import/source round-trip and documented flat export refusal,
 then edited playtest pictures and the final smoke. PR stays draft.
+
+## Step 4: content import and export policy
+
+Starting head `6f4c7316ca`. Added the round-trip test before making any format
+change. Existing `ContentImportService.inspect` delegates `.ogfproject` to the
+store and already preserves the complete checksummed source reference. The new
+Past-stage regression exercises save/import/save/reopen/native replay, metadata,
+terrain edits and source identity. No new serialization implementation was needed.
+It also checks that flat export fails before creating a destination. The editor
+and modding guides explicitly refuse flat directory/ZIP export of native projects:
+those formats do not carry stage program/PLC/placement context. The source-backed
+project format remains the supported round trip; no disc payload is shipped.
+
+Focused command used the established environment/queue/EGL options and
+`-Dtest=TestCdEditorProjectSource,TestContentImportService,TestEditorProjectValidation`:
+**49 passed, zero failures/errors/skips**, verified media found;
+`target/cd-import-focused.log`, Maven 44 seconds, admission wait separately queued.
+No category job started. Next: render edited native playtest, then final smoke.
