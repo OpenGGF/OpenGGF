@@ -34,7 +34,7 @@ import java.util.function.Supplier;
  *       tracks through {@link CdCddaPlayer}, mixed into the shared producer.</li>
  * </ul>
  */
-public final class SonicCdAudioProfile extends AbstractAudioProfile implements RomlessSmpsSource {
+public final class SonicCdAudioProfile extends AbstractAudioProfile implements RomlessSmpsSource, com.openggf.audio.ExternalMusicCommands {
     public static final String PRESENTATION_GAME_ID = "soniccd";
     /** {@code SCMD_INVINCMUS} (_Include/System.inc:253); command values come from subcpu-audio-commands.tsv. */
     public static final int INVINCIBILITY_COMMAND = 0x6D;
@@ -77,6 +77,49 @@ public final class SonicCdAudioProfile extends AbstractAudioProfile implements R
         super(SOUND_MAP, MUSIC_MAP);
         this.disc = Objects.requireNonNull(disc, "disc");
         this.subCpu = new CdSubCpuAudio(this::trackSource, this::readDiscFile);
+    }
+
+    private boolean externalMusic;
+
+    private static final class SoundInventory {
+        static final com.openggf.game.audio.RomSoundCatalog.Catalog CATALOG = buildNativeSounds();
+    }
+    public static com.openggf.game.audio.RomSoundCatalog.Catalog nativeSounds() { return SoundInventory.CATALOG; }
+    private static com.openggf.game.audio.RomSoundCatalog.Catalog buildNativeSounds() {
+        var music = new java.util.ArrayList<com.openggf.game.audio.RomSoundCatalog.Entry>();
+        for (int id = 0; id < 256; id++) {
+            var command = CdSubCpuAudio.command(id);
+            if (command != null && (command.action() == CdSubCpuAudio.Action.CDDA_REPEAT
+                    || command.action() == CdSubCpuAudio.Action.CDDA_ONCE
+                    || command.name().contains("MUS"))) {
+                music.add(new com.openggf.game.audio.RomSoundCatalog.Entry(command.name(), command.name(), id, id));
+            }
+        }
+        var sfx = new java.util.ArrayList<com.openggf.game.audio.RomSoundCatalog.Entry>();
+        for (int id = CdFmSmpsLoader.FIRST_SFX; id <= CdFmSmpsLoader.LAST_SFX; id++)
+            sfx.add(new com.openggf.game.audio.RomSoundCatalog.Entry("FM_%02X".formatted(id), "FM %02X".formatted(id), id, id));
+        return new com.openggf.game.audio.RomSoundCatalog.Catalog(music, sfx);
+    }
+
+    @Override public boolean routeMusicRequest(int id, com.openggf.audio.StreamedMusicPort streamed) {
+        var command = CdSubCpuAudio.command(id);
+        if (command == null) return false;
+        if (nativeSounds().music().stream().anyMatch(e -> e.soundId() == id)) {
+            externalMusic = streamed.hasStockOverride(id);
+            subCpu.suppressMusic(externalMusic);
+            if (!externalMusic) streamed.stop();
+            return externalMusic;
+        }
+        if (externalMusic) {
+            switch (command.action()) {
+                case CDDA_STOP -> { streamed.stop(); externalMusic = false; subCpu.suppressMusic(false); }
+                case CDDA_FADE -> streamed.fadeOut(96, 1);
+                case CDDA_PAUSE -> streamed.pause(com.openggf.audio.StreamedMusicPort.PAUSE_APP);
+                case CDDA_UNPAUSE -> streamed.resume(com.openggf.audio.StreamedMusicPort.PAUSE_APP);
+                default -> { }
+            }
+        }
+        return false;
     }
 
     public static Map<GameSound, Integer> soundMap() {

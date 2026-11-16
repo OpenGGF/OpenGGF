@@ -1274,7 +1274,8 @@ public final class ModManagerScreen {
             case "s1" -> "S1";
             case "s2" -> "S2";
             case "s3k" -> "S3K";
-            case "any" -> "S1/S2/S3K";
+            case "scd" -> "CD";
+            case "any" -> "S1/S2/S3K/CD";
             default -> throw new IllegalStateException("Unexpected base game: " + manifest.baseGame());
         };
     }

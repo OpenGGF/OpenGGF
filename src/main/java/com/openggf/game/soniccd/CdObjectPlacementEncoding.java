@@ -9,6 +9,22 @@ import com.openggf.level.objects.ObjectSpawn;
  * and second subtype stay on {@link com.openggf.game.soniccd.level.CdLevel.CdPlacement}.
  */
 final class CdObjectPlacementEncoding implements ObjectPlacementEncoding {
+    @Override public java.util.List<ObjectSpawn> mergeAdditions(java.util.List<ObjectSpawn> source,
+            java.util.List<ObjectSpawn> additions) {
+        // The native spawner stops at the first future X. Preserve native order, inserting owned
+        // additions before that boundary; layoutIndex still identifies the original entry.
+        var pending = new java.util.ArrayList<>(additions);
+        pending.sort(java.util.Comparator.comparingInt(ObjectSpawn::x));
+        var merged = new java.util.ArrayList<ObjectSpawn>();
+        int next = 0;
+        for (var nativeSpawn : source) {
+            while (next < pending.size() && pending.get(next).x() <= nativeSpawn.x()) merged.add(pending.get(next++));
+            merged.add(nativeSpawn);
+        }
+        merged.addAll(pending.subList(next, pending.size()));
+        return java.util.List.copyOf(merged);
+    }
+
     @Override
     public ObjectSpawn create(int x, int y, int objectId, int subtype, int renderFlags,
                               boolean respawnTracked, int placementId) {

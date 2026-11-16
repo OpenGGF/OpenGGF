@@ -129,6 +129,44 @@ For complete Mod API 0.7 examples, see [Content mods](content-mods.md),
 [Playable characters](characters.md), and [Standalone games](standalone-games.md).
 
 
+## Sonic CD runtime mods
+
+`baseGame: scd` selects the supplied USA disc. `any` content and explicit `scd`
+patches also participate in CD sessions through the same owned `ModContext`
+transaction and callback fault boundaries. The engine remains on the unpublished
+candidate API `0.7.0`; rebuild the engine, SDK and testkit together.
+
+Data reskins may target the common CD provider keys (`cd.monitor`, `cd.ring`,
+`cd.monitor.item`, `cd.spring.up`, `cd.spring.side`, `cd.explosion`, `cd.points`,
+`cd.hud`, `cd.titlecard`). Stage-specific native sheets remain expert overrides.
+CD authored zones have no stock campaign insertion anchors, like S1/S3K.
+
+CD stage indices use the zone registry: seven zones, with act indices 0–3 for
+act 1 Present/Past/Good Future/Bad Future, 4–7 for act 2, and 8–9 for act 3.
+Scenes can launch these stages and hosted gameplay runs with Sonic alone.
+
+`SceneArt.program("scd", "R11A__.MMD;1")` reads that ISO file through the disc
+pipeline. Its addresses are **file offsets**, not main-CPU addresses. The default
+CD scene art view is PP1 Present. `registerProgramObjectArt(key, nativeFile,
+request)` stages owned object sheets from named disc files with direct byte-count
+mappings; DPLC requests are rejected. Cartridge `registerRomObjectArt` retains
+its named S1/S2 source semantics even on a CD host. No disc bytes are bundled.
+
+Authored CD zones currently admit flat 16x16-block terrain and owned object keys.
+Native CD objects/rings require a stage's program, PLC and per-stage state; use a
+native decoded-level patch for those. Authored stock deformation and water
+resources are not exposed. Cross-game feature donation on a CD host is explicitly
+refused: the existing donor compositor reads host animation families through a
+cartridge capability, while CD's native families are stage-program-owned.
+CD is also unavailable as a donor. This is a runtime limitation, not a missing-ROM
+fallback; ordinary CD objects, scenes and content do not require a cartridge.
+
+Stageplay, route tapes, editor projects and content import remain separate work.
+They should carry `GameDataSource` and explicit program identity through their
+asset preparation and lifetime owners, use `MediaSceneArt` for detached disc
+views, and preserve zone/act/period identity. Do not call cartridge detectors for
+CD, or infer a cartridge ROM from `GameDataSource.rom()` being empty.
+
 ## Data-only editor campaigns
 
 The editor's **Export playable campaign** emits a normal mod JAR with optional

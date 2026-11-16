@@ -6,7 +6,7 @@ import java.util.stream.Stream;
 
 /** ROM-free stock-provider identifiers for creator discovery and typo diagnostics.
  * Availability and animation/frame contracts still depend on the selected game/zone.
- * The source inventory is checked against the three owning ObjectArtKeys classes.
+ * The source inventory is checked against the owning cartridge and CD art-provider keys.
  */
 public final class StockArtOverrideCatalog {
     private StockArtOverrideCatalog() { }
@@ -748,12 +748,15 @@ public final class StockArtOverrideCatalog {
             "tension_bridge_hcz",
             "tension_bridge_icz",
             "tension_bridge_lrz");
+    private static final List<String> CD_KEYS = List.of(
+            "cd.ring", "cd.monitor", "cd.monitor.item", "cd.spring.up", "cd.spring.side",
+            "cd.explosion", "cd.points", "cd.hud", "cd.titlecard").stream().sorted().toList();
     private static List<String> merge(List<String> first, List<String> second) {
         return Stream.concat(first.stream(), second.stream()).distinct().sorted().toList();
     }
     private static final List<String> S2_KEYS = merge(COMMON, SONIC2);
     private static final List<String> S3K_KEYS = merge(COMMON, SONIC3K);
-    private static final List<String> KEYS = merge(S2_KEYS, S3K_KEYS);
+    private static final List<String> KEYS = merge(merge(S2_KEYS, S3K_KEYS), CD_KEYS);
     private static final Set<String> KNOWN = Set.copyOf(KEYS);
     private static final Set<String> S1_KNOWN = Set.copyOf(COMMON);
     private static final Set<String> S2_KNOWN = Set.copyOf(S2_KEYS);
@@ -765,6 +768,7 @@ public final class StockArtOverrideCatalog {
             case "s1" -> COMMON;
             case "s2" -> S2_KEYS;
             case "s3k" -> S3K_KEYS;
+            case "scd" -> CD_KEYS;
             default -> KEYS;
         };
     }
@@ -775,6 +779,7 @@ public final class StockArtOverrideCatalog {
             case "s1" -> S1_KNOWN.contains(key);
             case "s2" -> S2_KNOWN.contains(key);
             case "s3k" -> S3K_KNOWN.contains(key);
+            case "scd" -> CD_KEYS.contains(key);
             default -> KNOWN.contains(key);
         };
     }

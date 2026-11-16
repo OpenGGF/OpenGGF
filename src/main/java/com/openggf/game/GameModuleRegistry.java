@@ -131,7 +131,7 @@ public final class GameModuleRegistry {
             case S1 -> com.openggf.game.sonic1.audio.Sonic1AudioProfile.nativeSounds();
             case S2 -> com.openggf.game.sonic2.audio.Sonic2AudioProfile.nativeSounds();
             case S3K -> com.openggf.game.sonic3k.audio.Sonic3kAudioProfile.nativeSounds();
-            case SCD -> throw new IllegalArgumentException("Sonic CD has no cartridge ROM sound catalog");
+            case SCD -> com.openggf.game.soniccd.audio.SonicCdAudioProfile.nativeSounds();
             case STANDALONE -> throw new IllegalArgumentException("Standalone has no ROM sound catalog");
         };
     }

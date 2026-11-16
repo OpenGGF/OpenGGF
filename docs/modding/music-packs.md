@@ -69,7 +69,7 @@ artOverrides: {}
   comparators. Ranges must not be empty or contradictory. The current Mod API is
   `0.7.0`; maintained manifests use `>=0.7.0 <0.8.0`.
 - The schema accepts `type: patch` or `standalone`. A music pack uses `patch` and
-  requires `baseGame: s1`, `s2`, or `s3k`; a standalone manifest omits `baseGame`,
+  requires `baseGame: s1`, `s2`, `s3k`, or `scd`; a standalone manifest omits `baseGame`,
   requires a trusted entrypoint, and follows the separate
   [standalone-game contract](standalone-games.md).
 - Each dependency is `{id, versionRange}`. Dependency ids must be unique.
@@ -186,3 +186,14 @@ rules.
 is a self-contained source sample for future gallery CI. Its audio is generated
 from an original mathematical waveform, so it carries no game or third-party
 assets.
+
+### Sonic CD
+
+Use `baseGame: scd` and native sub-CPU **music command IDs**, not audio-track
+numbers. For example, decimal 15 (`SCMD_R1AMUS`) selects PP Present and decimal
+128 (`SCMD_PASTMUS`) selects the loaded stage's Past song. CDDA and PCM song
+commands accept streamed replacements; FM and PCM effects remain on the disc
+pipeline. Unreplaced music returns to the native route. Stop, fade and CDDA
+pause/resume commands control an active replacement. FM effect IDs, PCM voices
+and system commands are not music override targets. The sound catalog lists
+music commands separately from FM effects, whose IDs may overlap.

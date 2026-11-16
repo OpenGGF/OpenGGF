@@ -86,6 +86,7 @@ import static java.security.MessageDigest.getInstance;
 
 public class Sonic2GameModule implements GameModule, com.openggf.game.internal.SpriteTableBuildProfile,
         com.openggf.game.internal.RetailRomAware {
+    @Override public java.util.List<String> getStockRunCharacters() { return java.util.List.of("sonic", "tails"); }
     @Override
     public PlacedRings placedRingEmission() {
         return PlacedRings.BEFORE_OBJECT_BUCKETS;

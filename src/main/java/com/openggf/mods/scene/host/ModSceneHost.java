@@ -473,6 +473,12 @@ public final class ModSceneHost {
                 }
 
                 @Override
+                public SceneRomArt program(String gameId, String assetPath) {
+                    return services != null && services.romLibrary() != null
+                            ? services.romLibrary().program(gameId, assetPath) : SceneArt.super.program(gameId, assetPath);
+                }
+
+                @Override
                 public SceneRomArt rom(String gameId) {
                     return services != null && services.romLibrary() != null
                             ? services.romLibrary().rom(gameId) : SceneArt.super.rom(gameId);

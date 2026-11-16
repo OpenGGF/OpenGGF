@@ -53,6 +53,35 @@ public final class ModBackedGamePatch implements GamePatch {
             }
             public Map<String, ObjectSpriteSheet> materialize(String owner, Map<String, RomArtRequest> requests,
                     PatchContext context) {
+                if (requests.values().stream().anyMatch(r -> r.programPath() != null)) {
+                    if (context == null) throw new ModRegistrationException(owner, "MOD_ROM_ART_INVALID", "Program art requires PatchContext", null, null);
+                    var stock = com.openggf.game.GameModuleRegistry.createStockModule(GameId.fromCode(baseGameId));
+                    var media = com.openggf.game.internal.HostedGameMedia.of(stock);
+                    if (media == null) throw new ModRegistrationException(owner, "MOD_ROM_ART_INVALID", "Host has no file-addressed stock media", null, null);
+                    Map<String, ObjectSpriteSheet> result = new java.util.LinkedHashMap<>();
+                    try {
+                        var opened = media.openConfiguredMedia(context.configService());
+                        try (java.io.Closeable lease = opened instanceof java.io.Closeable closeable ? closeable : () -> {}) {
+                            for (var entry : requests.entrySet()) {
+                                if (entry.getValue().programPath() == null) continue;
+                                try (var input = opened.openAsset(entry.getValue().programPath())) {
+                                    int limit = Math.toIntExact(ModInputLimits.production().maxAssetBytes());
+                                    byte[] bytes = input.readNBytes(Math.addExact(limit, 1));
+                                    if (bytes.length > limit) throw new IOException("Program art file exceeds production asset limit");
+                                    try (var view = com.openggf.data.Rom.fromReader(new com.openggf.data.RomByteReader(bytes), entry.getValue().programPath())) {
+                                        result.putAll(RomArtMaterializer.materialize(owner, Map.of(entry.getKey(), entry.getValue()), view, ModInputLimits.production()));
+                                    }
+                                }
+                            }
+                        }
+                    } catch (IOException e) {
+                        throw new ModRegistrationException(owner, "MOD_ROM_ART_INVALID", "Program art unavailable", null, e);
+                    }
+                    Map<String, RomArtRequest> cartridge = new java.util.LinkedHashMap<>();
+                    requests.forEach((key, request) -> { if (request.programPath() == null) cartridge.put(key, request); });
+                    if (!cartridge.isEmpty()) result.putAll(materialize(owner, cartridge, context));
+                    return result;
+                }
                 if (context == null) {
                     if (requests.values().stream().anyMatch(r -> !usesHostS2Rom(r.source(), baseGameId)))
                         throw new ModRegistrationException(owner, "MOD_ROM_ART_INVALID", "Named art requires PatchContext", null, null);
@@ -155,7 +184,7 @@ public final class ModBackedGamePatch implements GamePatch {
         return plan.baseGameId().equals(request.gameId());
     }
     @Override public Set<LogicalRom> romPrerequisites() {
-        return plan.romObjectArt().values().stream().map(RomArtRequest::source)
+        return plan.romObjectArt().values().stream().filter(request -> request.programPath() == null).map(RomArtRequest::source)
                 .filter(source -> !usesHostS2Rom(source, plan.baseGameId()))
                 .collect(java.util.stream.Collectors.toUnmodifiableSet());
     }

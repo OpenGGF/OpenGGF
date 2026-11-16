@@ -70,6 +70,9 @@ public final class CdSubCpuAudio {
     private int pcmQueue;
     private int outputRate;
     /** Presentation gains, {@link AudioPresentationMixer#UNITY_GAIN} = 1; config, never rewind state. */
+    private boolean suppressMusic;
+    public void suppressMusic(boolean value) { suppressMusic = value; }
+
     private int musicGain = AudioPresentationMixer.UNITY_GAIN;
     private int sfxGain = AudioPresentationMixer.UNITY_GAIN;
     /** Test-only: take the gained paths at unity too, to show they reduce to the ungained ones. */
@@ -158,7 +161,7 @@ public final class CdSubCpuAudio {
     /** Mixes CD audio into one presentation packet on the output clock. */
     public void render(short[] target, int stereoFrames) {
         if (cdda != null) {
-            if (unity(musicGain)) {
+            if (unity(suppressMusic ? 0 : musicGain)) {
                 cdda.render(target, stereoFrames);
             } else {
                 cdda.render(silence(stereoFrames), stereoFrames);
@@ -166,7 +169,7 @@ public final class CdSubCpuAudio {
             }
         }
         if (program != null) {
-            if (unity(musicGain)) {
+            if (unity(suppressMusic ? 0 : musicGain)) {
                 program.render(target, stereoFrames);
             } else {
                 program.render(silence(stereoFrames), stereoFrames);
@@ -210,7 +213,7 @@ public final class CdSubCpuAudio {
 
     private void addAtMusicGain(short[] target, int stereoFrames) {
         for (int i = 0; i < stereoFrames * 2; i++) {
-            target[i] = (short) Math.clamp(target[i] + ((scratch[i] * musicGain) >> 8), -32768, 32767);
+            target[i] = (short) Math.clamp(target[i] + ((scratch[i] * (suppressMusic ? 0 : musicGain)) >> 8), -32768, 32767);
         }
     }
 
@@ -301,7 +304,7 @@ public final class CdSubCpuAudio {
      */
     private void renderPcm(short[] target, int stereoFrames) {
         long period = (long) CdPcmDriver.CHIP_RATE_DENOMINATOR * outputRate;
-        boolean split = !unity(musicGain) || !unity(sfxGain);
+        boolean split = !unity(suppressMusic ? 0 : musicGain) || !unity(sfxGain);
         int sfxChannels = split ? pcm.sfxChannelMask() : 0;
         for (int i = 0; i < stereoFrames; i++) {
             pcmPhase += CdPcmDriver.CHIP_RATE_NUMERATOR;
@@ -332,8 +335,8 @@ public final class CdSubCpuAudio {
     private int splitSample(int sfxChannels) {
         chip.stepSplit(sfxChannels);
         int sfxLeft = chip.selectedLeft(), sfxRight = chip.selectedRight();
-        int left = ((chip.sumLeft() - sfxLeft) * musicGain + sfxLeft * sfxGain) >> 8;
-        int right = ((chip.sumRight() - sfxRight) * musicGain + sfxRight * sfxGain) >> 8;
+        int left = ((chip.sumLeft() - sfxLeft) * (suppressMusic ? 0 : musicGain) + sfxLeft * sfxGain) >> 8;
+        int right = ((chip.sumRight() - sfxRight) * (suppressMusic ? 0 : musicGain) + sfxRight * sfxGain) >> 8;
         return (Math.clamp(left, -32768, 32767) << 16) | (Math.clamp(right, -32768, 32767) & 0xFFFF);
     }
 

@@ -199,11 +199,16 @@ public abstract class CdObject extends AbstractObjectInstance {
         return ((chunk - cameraChunk) & 0xFFFF) > DESPAWN_RANGE;
     }
 
+    /** Engine observation only; unlike the ROM end flag this never changes player physics. */
+    protected final void signalActCompletion() {
+        var game = services().gameState();
+        if (game != null) game.setActCompletionSignalActive(true);
+    }
+
     /** The stage's object art owner, or {@code null} before art is loaded. */
     protected CdObjectArtProvider artProvider() {
-        var renderManager = services().renderManager();
-        return renderManager != null && renderManager.getArtProvider() instanceof CdObjectArtProvider provider
-                && provider.image() != null ? provider : null;
+        var provider = services().gameModule().getGameService(CdObjectArtProvider.class);
+        return provider != null && provider.image() != null ? provider : null;
     }
 
     /** An animator over one of the stage's script tables, or {@code null} before art is loaded. */

@@ -131,6 +131,7 @@ public final class CdCapsule extends CdBossPart {
         if (!(player instanceof AbstractPlayableSprite sonic) || !hit(sonic)) return;
         var state = services().levelGamestate();
         if (state != null) state.pauseTimer();                  // clr.b updateHUDTime
+        signalActCompletion();
         mapFrame = 2;
         timer = 120;
         routine = 4;

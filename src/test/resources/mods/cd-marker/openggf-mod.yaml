@@ -1,0 +1,9 @@
+formatVersion: 1
+id: cd-example
+name: CD Marker Example
+version: 1.0.0
+authors: [OpenGGF]
+engineApiRange: '>=0.7.0 <0.8.0'
+type: patch
+baseGame: scd
+entrypoint: example.soniccd.CdMarkerExampleMod

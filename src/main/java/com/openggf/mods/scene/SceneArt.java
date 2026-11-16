@@ -26,6 +26,13 @@ public interface SceneArt {
      */
     SceneRomArt rom();
 
+    /** A bounded file view from the active stock medium (for CD, an ISO program name).
+     * Addresses in the returned view are file-relative; no bytes come from mod assets. */
+    default SceneRomArt program(String gameId, String assetPath) {
+        throw new IllegalArgumentException("No file-addressed scene art for " + gameId);
+    }
+
+
     /**
      * Stock games whose ROM art is available for this scene, in {@code s1}, {@code s2},
      * {@code s3k} order. The host resolves supplied images through its ROM catalogue;
@@ -41,7 +48,7 @@ public interface SceneArt {
      * {@code null} when that game is unavailable. Unknown game codes are rejected.
      */
     default SceneRomArt rom(String gameId) {
-        if (gameId == null || !java.util.List.of("s1", "s2", "s3k").contains(gameId)) {
+        if (gameId == null || !java.util.List.of("s1", "s2", "s3k", "scd").contains(gameId)) {
             throw new IllegalArgumentException("Unknown stock game: " + gameId);
         }
         SceneRomArt running = rom();

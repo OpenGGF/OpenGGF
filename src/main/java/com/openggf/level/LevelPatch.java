@@ -171,7 +171,7 @@ public final class LevelPatch {
             if (admittedOwner==null) throw new IllegalStateException("Added objects require ModContext decoded patch admission");
             // Reserve against the original inventory, including placements removed by this patch.
             int highest=Math.max(-1,placements.stream().mapToInt(ObjectSpawn::layoutIndex).max().orElse(-1));
-            List<ObjectSpawn> appended=new ArrayList<>(result);
+            List<ObjectSpawn> appended=new ArrayList<>();
             for (Addition addition:additions) {
                 highest=Math.incrementExact(highest);
                 String key=admittedOwner+":"+addition.key();
@@ -179,7 +179,7 @@ public final class LevelPatch {
                 appended.add(encoding.createKeyed(addition.x(),addition.y(),key,addition.subtype(),
                         addition.renderFlags(),addition.respawnTracked(),highest));
             }
-            result=List.copyOf(appended);
+            result=encoding.mergeAdditions(result, appended);
         }
         validateIdentities(result);
         return result;
