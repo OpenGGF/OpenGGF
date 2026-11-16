@@ -5,6 +5,16 @@ Branch `feature/ai-scd-editor-import`, stacked on `feature/ai-scd-mod-api`
 `dc6b3c2b9edd621a0feecfe6d411628d51756f92` (PR #350). No merge authority.
 The parallel Stageplay/route-tape checkout is read-only context.
 
+## Completion status
+
+Steps 2–5 are implemented and verified below. Finished-tree smoke on
+`04ba02e06cb59990b4e0b95a6bea3001f8ec702a` completed every selected batch and guards:
+**VERDICT FAILED**, solely the exact base's 29 failures and two errors; no new or
+worsened failure. All 561 skips are allowed; guards pass 860 tests without skips.
+The source-backed creator, playtest and import paths are complete within the
+explicit native-dimension/source contract. Flat directory/ZIP substitution remains
+refused. The historical incomplete checkpoints below are retained as history.
+
 ## Contracts and current scope
 
 Hosted media supplies detached menu title pixels and an owned menu audio source.
@@ -303,3 +313,55 @@ Files in task scratch: `cd-editor-control.png`, `cd-editor-edited.png`, their
 These are local evidence, not bundled disc assets or route certification.
 No category job started yet. Next: the single finished-tree smoke against the
 exact base, failure attribution, final documentation/PR ready state.
+
+## Step 6: finished-tree smoke and delivery
+
+Tested head `04ba02e06cb59990b4e0b95a6bea3001f8ec702a`; exact comparison base
+`dc6b3c2b9edd621a0feecfe6d411628d51756f92`. One finished-tree category run:
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4 JAVA_TOOL_OPTIONS=-Djava.io.tmpdir=$AGENT_RUNTIME/task-07hk1OLI python3 tools/testing/run_categories.py --base dc6b3c2b9edd621a0feecfe6d411628d51756f92 --workers 2 --headless-gl surfaceless-egl --run
+```
+
+Run `20261116T210016Z-56edce30` completed in the foreground. No edits or builds
+were made in its worktree while active; no other lane's job was cancelled.
+
+```text
+VERDICT FAILED: head=04ba02e06cb5 source=0ce869ca14d8 change-based 4980/4980 candidate classes; ordinary 100/100 batches; guards 1/1 batches; tests=41321 failures=29 errors=2 skipped=561 (allowed=561 unexplained=0); missing ROM properties=none
+```
+
+Ordinary: 40,461 tests, 29 failures, two errors, 561 allowed skips. Guards:
+860 tests passed, zero failures/errors/skips. This is complete bounded smoke,
+not a full-suite pass. Disc-backed tests executed: `soniccd_disc=true`.
+Optional audio/native reference files, regional media, BK2/observation fixtures,
+and explicit opt-in prerequisites account for allowed skips; no required,
+undeclared-input, unidentified or unexplained skip exists.
+
+Attribution compared all 31 test identities, failure/error kind, exception type
+and assertion against the retained exact-base ledger (also previously reproduced
+on develop `3a868d33d9`). Identity sets are equal, with no new or missing case.
+JVM object identity suffixes are normalized in one Three Islands assertion.
+Three MHZ route assertions compare `Set.of` checkpoint sets: expected-set display
+order varies by JVM, but expected/actual members and missing checkpoints match;
+verified the owning assertions before treating those as matches. No route,
+physics, rewind or fixture behavior was changed to improve these results.
+
+Failure groups: Three Islands (8), private lobby pixels (1), SSZ opening (1),
+CNZ1 miniboss completion edge (5), fresh-level RNG/title owner (1), ICZ1 lower
+platform (1), MHZ act-two routes (3), MHZ cold-entry matrix (1), MHZ act-one
+Sonic/Tails/team/wide routes (4), DEZ final-fight capture (2), ICZ2 cube bridge (1),
+complete-run reference producer (1). Errors: AIZ collector public rewind (2).
+No unmatched failure required a further baseline run or branch fix.
+
+Timing: preparation 44.98 seconds; ordinary execution 1,980.29 seconds; guards
+176.08 seconds; completed admission waits total 5,177 rounded seconds. User wait
+zero; other orchestration wall time is unmeasured. Wait and execution are not
+combined as test cost. Final results, failure details and skip classifications
+were inspected; compact attribution is retained locally as
+`final-smoke-attribution.json`, then runner diagnostics were acknowledged.
+
+Delivery preserves the task branch/worktree for the stacked PR. Final commit
+changes this validation record only; tested production/test sources remain at
+`04ba02e06c`. No merge, destination push or unrelated file cleanup. Edited PNGs,
+state sidecars and the source-backed project remain in the requested task scratch.
+PR #352 is to be marked ready for review after this record is committed/pushed.
