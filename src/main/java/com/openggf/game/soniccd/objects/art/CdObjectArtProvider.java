@@ -78,6 +78,7 @@ public final class CdObjectArtProvider implements ObjectArtProvider, com.openggf
     private final Map<String, ObjectSpriteSheet> sheets = new LinkedHashMap<>();
     private final Map<String, PatternSpriteRenderer> renderers = new HashMap<>();
     private final Map<String, SpriteAnimationSet> animations = new HashMap<>();
+    private com.openggf.sprites.art.SpriteArtSet donorLifeArt;
     private com.openggf.sprites.render.PlayerSpriteRenderer donorLife;
     public com.openggf.sprites.render.PlayerSpriteRenderer donorLifeRenderer() { return donorLife; }
     private CdStagePayload loaded;
@@ -97,6 +98,7 @@ public final class CdObjectArtProvider implements ObjectArtProvider, com.openggf
         if (level == null || stage == null) throw new IllegalStateException("Sonic CD object art needs a loaded stage");
         if (level.payload() == loaded && stage == image) return;
         donorLife = null;
+        donorLifeArt = null;
         sheets.clear();
         renderers.clear();
         animations.clear();
@@ -110,11 +112,10 @@ public final class CdObjectArtProvider implements ObjectArtProvider, com.openggf
             Pattern[] icon = com.openggf.game.CrossGameFeatureInternalAccess.loadLifeArt(
                     com.openggf.game.GameServices.crossGameFeatures(), character);
             var frame = new SpriteMappingFrame(List.of(new SpriteMappingPiece(0, 0, 2, 2, 0, false, false, 0, false)));
-            donorLife = new com.openggf.sprites.render.PlayerSpriteRenderer(new com.openggf.sprites.art.SpriteArtSet(
+            donorLifeArt = new com.openggf.sprites.art.SpriteArtSet(
                     java.util.Arrays.copyOf(icon, 4), List.of(frame),
                     List.of(new com.openggf.level.render.SpriteDplcFrame(List.of(
-                            new com.openggf.level.render.TileLoadRequest(0, 4)))), 0, 0, 1, 4, null, null));
-            donorLife.setRenderContext(com.openggf.game.GameServices.crossGameFeatures().getDonorRenderContext());
+                            new com.openggf.level.render.TileLoadRequest(0, 4)))), 0, 0, 1, 4, null, null);
         }
         RomByteReader reader = stage.reader();
 
@@ -136,7 +137,7 @@ public final class CdObjectArtProvider implements ObjectArtProvider, com.openggf
         animations.put(EXPLOSION, animationSet(reader, entry.explosionAnimations()));
         register(POINTS, sheet(reader, entry.pointsMappings(), POINTS_TILE));
         ObjectSpriteSheet hud = sheet(reader, entry.hudMappings(), HUD_TILE);
-        if (donorLife != null) {
+        if (donorLifeArt != null) {
             var frames = new ArrayList<SpriteMappingFrame>();
             for (int i = 0; i < hud.getFrameCount(); i++) frames.add(i == 1
                     ? new SpriteMappingFrame(hud.getFrame(i).pieces().subList(1, hud.getFrame(i).pieces().size()))
@@ -318,7 +319,8 @@ public final class CdObjectArtProvider implements ObjectArtProvider, com.openggf
 
     @Override
     public int getRegularPatternCount() {
-        return sheets.values().stream().mapToInt(sheet -> sheet.getPatterns().length).sum();
+        return sheets.values().stream().mapToInt(sheet -> sheet.getPatterns().length).sum()
+                + (donorLifeArt == null ? 0 : donorLifeArt.bankSize());
     }
 
     @Override
@@ -327,6 +329,18 @@ public final class CdObjectArtProvider implements ObjectArtProvider, com.openggf
         for (var e : sheets.entrySet()) {
             renderers.get(e.getKey()).ensurePatternsCached(graphicsManager, next);
             next += e.getValue().getPatterns().length;
+        }
+        if (donorLifeArt != null) {
+            // The icon belongs to this provider's regular object allocation. Cartridge
+            // tile addresses (especially zero, the host's blank tile) are not ours.
+            var art = donorLifeArt;
+            donorLife = new com.openggf.sprites.render.PlayerSpriteRenderer(
+                    new com.openggf.sprites.art.SpriteArtSet(art.artTiles(), art.mappingFrames(),
+                            art.dplcFrames(), art.paletteIndex(), next, art.frameDelay(), art.bankSize(),
+                            art.animationProfile(), art.animationSet()), graphicsManager);
+            donorLife.setRenderContext(com.openggf.game.GameServices.crossGameFeatures().getDonorRenderContext());
+            donorLife.ensureCached(graphicsManager);
+            next += art.bankSize();
         }
         return next;
     }

@@ -311,3 +311,62 @@ zone/act/period projection rather than inventing cartridge addresses or treating
 an empty `GameDataSource.rom()` as standalone content. Native terrain/Stageplay
 kits and route fingerprints require their own source-aware owners and verification.
 Donor host-family composition now uses the runtime source service described above.
+
+## Donor follow-up repair checkpoint
+
+Draft PR #353 preserves `054abc4df584472b50591e46a9a45725c028d85b` against
+`feature/ai-scd-mod-api`. Implementation owner remains OpenAI Codex GPT-6.1-sol;
+no delegates. Exact-class baseline attribution on `dc6b3c2b9e` ran
+`TestDonatedTailsFlightArt,TestHostedMediaLaunch,TestMasterTitleHubMessages,TestAizCollectorPublicRewind,TestS3kAiz1EntryMatrix,TestS3kHcz1EntryMatrix`
+through the queue, with display variables unset and surfaceless EGL. The baseline
+has two errors, both `publicIntroBeforeInitRoundTripsWithoutACollector(boolean)`
+variants: `AizPlaneIntroInstance: services not available — object must be created
+through ObjectManager`. All other selected baseline cases pass without skips.
+The interrupted donor smoke's other seven failures and two errors are regressions.
+
+The R11A pixel witness boots plain Sonic and S3K Tails separately, steps 270
+neutral frames, asserts camera x=0, and compares the upper 90 rows, including
+SCORE and the empty foreground over sky/mountains. It first fails at pixel (0,0),
+blue `-16777034` versus black `-16777216`. Inspection confirms that empty
+foreground cells obscure the background; this is not a broken background layout.
+`CdObjectArtProvider` constructed its donated life-icon `PlayerSpriteRenderer`
+with base pattern 0; `CdHud.draw` invokes its frame, and
+`PlayerSpriteRenderer.prepareFrame` caches/uploads its four DPLC tiles at 0–3.
+These indices belong to the host, including its transparent foreground tile.
+Speculative relocation of body/tail banks did not change that pixel; those edits
+were removed. A dust-relocation experiment was stopped once the concrete life-icon
+writer was found; it is not claimed as a completed check or a repair.
+
+Live jobs at this checkpoint: branch exact-class attribution and explicit cached
+blank-pattern red test. Next: allocate the icon in owned object space, verify,
+commit/push each green repair, then final focused checks, one final smoke and films.
+Queue wait is reported by the wrapper; user wait is zero. Other wall time is not
+measured. This checkpoint is not a completion or parity claim.
+
+The explicit cached-pattern negative control also failed: after donated HUD draw,
+pattern zero's packed words were `1229782942255939583, 1269974486289586961,
+-7381088551871636719, 1844700211534475537` instead of four zero words. The repair
+includes the icon's four tiles in `getRegularPatternCount` and constructs/caches
+its renderer immediately after the provider's other object sheets. Thus normal
+object-range preflight covers it; no fixed spare address or background repair is
+introduced. A first repaired render keeps the blank tile transparent and removes
+the mesh, but revealed different camera Y from character focus. The final witness
+freezes both cameras at `(0,1806)` before the same 270 ticks. Its result is pending.
+
+The final same-camera pixel witness passes: **1 test, zero failures/errors/skips**.
+Both pictures use camera `(0,1806)` and 270 ordinary ticks. The upper **64 rows**
+(20,480 pixels) are identical, including sky/mountains, palm foliage and SCORE.
+Rows starting at 73 contain the intentionally different playable character and
+are outside the background comparison. In both runs the cached empty foreground
+pattern is all zero after the real HUD draw. The nine donor boot/ability cases
+also passed after the icon allocation change. No native gameplay state or stage
+pattern is rewritten by this repair.
+
+Fly-in repair `e5ef881b8d`: `TestDonatedTailsFlightArt` plus
+`TestCrossGameFeatureProviderRefactor`, **18 passed, zero skips**. Menu repair
+`7e07420619`: `TestHostedMediaLaunch`, `TestMasterTitleHubMessages`, and
+`TestMasterTitleSuspendedGame`, **36 passed, zero skips**. The original branch
+failures were observed before these changes. Expanded `TestCdDonorTeams`:
+**17 passed, zero skips**, covering all 14 donor roster pairs and three rejected
+followers. Native-host admission's initial repair exposed art-provider selection
+still using the donor; the next selection checks host art retention as well.

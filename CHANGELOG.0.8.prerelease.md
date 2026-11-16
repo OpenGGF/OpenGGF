@@ -485,7 +485,9 @@ under the matching area heading; see the
   object art, and accept CDDA/PCM music-command replacements. Module capabilities
   select native run characters. CD can host cartridge-donated S1 Sonic, S2
   Sonic/Tails and S3K Sonic/Tails/Knuckles, with donor-owned art, abilities,
-  life icons and results names. Game Setup saves CD donor/team choices.
+  life icons and results names. Donated life icons use owned object-pattern banks
+  so empty foreground cells and HUD text retain the disc stage's tiles.
+  Game Setup saves CD donor/team choices.
   Stage-backed host animation scripts no longer require a cartridge host.
   CD authored terrain supports owned objects; native objects retain their stage
   program context. Audio-state restoration also restores the native/streamed
