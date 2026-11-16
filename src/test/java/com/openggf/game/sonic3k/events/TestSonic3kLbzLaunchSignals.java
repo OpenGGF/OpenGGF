@@ -84,13 +84,14 @@ class TestSonic3kLbzLaunchSignals {
     @Test
     void act2LaunchStartInitializesCameraWaterShakeAndMotionState() {
         Sonic3kLBZEvents events = new Sonic3kLBZEvents();
-        LbzZoneRuntimeState state = installAct2State();
+        LbzZoneRuntimeState state = installAct2State(events);
         Camera camera = GameServices.camera();
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x4480, (short) 0x0700);
         camera.setFocusedSprite(player);
         camera.setX((short) 0x4300);
         camera.setY((short) 0x0660);
 
+        state.writeScreenShakeFlag(0xFF00); // loc_8D450: ship writes flag before its launch signal
         events.requestLaunchStart();
         events.update(1, 1);
 
@@ -242,7 +243,7 @@ class TestSonic3kLbzLaunchSignals {
     @Test
     void launchMotionPublishesYDeltaAndWaterTargetAfterPrelaunchDelay() {
         Sonic3kLBZEvents events = new Sonic3kLBZEvents();
-        LbzZoneRuntimeState state = installAct2State();
+        LbzZoneRuntimeState state = installAct2State(events);
         Camera camera = GameServices.camera();
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x4430, (short) 0x0700);
         camera.setFocusedSprite(player);
@@ -274,7 +275,7 @@ class TestSonic3kLbzLaunchSignals {
     @Test
     void padCollapseAndFinalFallSignalsDriveLaunchPhases() {
         Sonic3kLBZEvents events = new Sonic3kLBZEvents();
-        LbzZoneRuntimeState state = installAct2State();
+        LbzZoneRuntimeState state = installAct2State(events);
         Camera camera = GameServices.camera();
         camera.setFocusedSprite(new TestablePlayableSprite("sonic", (short) 0x4430, (short) 0x0700));
         camera.setX((short) 0x4390);
@@ -309,7 +310,7 @@ class TestSonic3kLbzLaunchSignals {
     @Test
     void finalFallSignalWaitsForPlatformDetachToFinish() {
         Sonic3kLBZEvents events = new Sonic3kLBZEvents();
-        LbzZoneRuntimeState state = installAct2State();
+        LbzZoneRuntimeState state = installAct2State(events);
         Camera camera = GameServices.camera();
         camera.setFocusedSprite(new TestablePlayableSprite("sonic", (short) 0x4430, (short) 0x0700));
         camera.setX((short) 0x4390);
@@ -337,7 +338,7 @@ class TestSonic3kLbzLaunchSignals {
     @Test
     void finalDetachDispatchWithFallSignalSkipsLaunchAccelerationAndMotion() {
         Sonic3kLBZEvents events = new Sonic3kLBZEvents();
-        LbzZoneRuntimeState state = installAct2State();
+        LbzZoneRuntimeState state = installAct2State(events);
         Camera camera = GameServices.camera();
         camera.setFocusedSprite(new TestablePlayableSprite("sonic", (short) 0x4430, (short) 0x0700));
         camera.setX((short) 0x4390);
@@ -363,7 +364,7 @@ class TestSonic3kLbzLaunchSignals {
     @Test
     void finalFallSignalWaitsForDetachMilestoneNotJustInactivePad() {
         Sonic3kLBZEvents events = new Sonic3kLBZEvents();
-        LbzZoneRuntimeState state = installAct2State();
+        LbzZoneRuntimeState state = installAct2State(events);
         Camera camera = GameServices.camera();
         camera.setFocusedSprite(new TestablePlayableSprite("sonic", (short) 0x4430, (short) 0x0700));
         camera.setX((short) 0x4390);
@@ -529,15 +530,32 @@ class TestSonic3kLbzLaunchSignals {
     }
 
     @Test
+    void nativeDeathRoutinePausesMovementAndPublishesNoRepeatedShipAdd() {
+        var events = new Sonic3kLBZEvents();
+        var state = installAct2State(events);
+        var player = new TestablePlayableSprite("sonic", (short) 0x4400, (short) 0x700);
+        player.setObjectRoutineOverride(6);
+        assertFalse(player.getDead(), "native routine gate is broader than the Java dead flag");
+        GameServices.camera().setFocusedSprite(player);
+        state.setLaunchActive(true);
+        state.setLaunchRiderDelta(3);
+        state.setFgLaunchSpeed(0x1E00);
+        state.setFgAccum(0x12340000);
+        events.update(1, 1);
+        assertEquals(0x12340000, state.getFgAccum());
+        assertEquals(0, state.getLaunchRiderDelta(), "no direct ship add occurred in this BG dispatch");
+    }
+
+    @Test
     void deathEggRumbleClearsWhenScreenShakeStops() {
         Sonic3kLBZEvents events = new Sonic3kLBZEvents();
-        LbzZoneRuntimeState state = installAct2State();
+        LbzZoneRuntimeState state = installAct2State(events);
         state.setLaunchActive(true);
         state.setDeathEggRumble(true);
         state.setPreLaunchDelay(0);
         state.setFgLaunchSpeed(0);
         state.setBgLaunchSpeed(0);
-        GameServices.gameState().setScreenShakeActive(false);
+        state.writeScreenShakeFlag(0);
 
         events.update(1, 1);
 
@@ -548,7 +566,7 @@ class TestSonic3kLbzLaunchSignals {
     @Test
     void deathEggTerrainSwapThresholdQueuesOneShotWithoutEventsFg5() throws Exception {
         Sonic3kLBZEvents events = new Sonic3kLBZEvents();
-        LbzZoneRuntimeState state = installAct2State();
+        LbzZoneRuntimeState state = installAct2State(events);
         events.setEventsFg5(true);
         Camera camera = GameServices.camera();
         camera.setX((short) 0x3BC0);
@@ -618,8 +636,8 @@ class TestSonic3kLbzLaunchSignals {
                 "Death Egg 2 art must land at tile $05A0 for launch pillars/explosion terrain");
     }
 
-    private static LbzZoneRuntimeState installAct2State() {
-        LbzZoneRuntimeState state = new LbzZoneRuntimeState(1, PlayerCharacter.SONIC_ALONE);
+    private static LbzZoneRuntimeState installAct2State(Sonic3kLBZEvents events) {
+        LbzZoneRuntimeState state = new LbzZoneRuntimeState(1, PlayerCharacter.SONIC_ALONE, events);
         GameServices.zoneRuntimeRegistry().install(state);
         return state;
     }

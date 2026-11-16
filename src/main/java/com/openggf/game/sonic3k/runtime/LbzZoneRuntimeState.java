@@ -8,45 +8,15 @@ import java.util.Objects;
 import java.util.OptionalInt;
 
 public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
-    private static final int LEGACY_CAPTURE_BYTES = 12;
-    private static final int LAUNCH_EXTENSION_VERSION_1 = 1;
-    private static final int LAUNCH_EXTENSION_VERSION_2 = 2;
-    private static final int LAUNCH_EXTENSION_VERSION_3 = 3;
-    private static final int LAUNCH_EXTENSION_VERSION_4 = 4;
-    private static final int LAUNCH_EXTENSION_VERSION_5 = 5;
-    private static final int LAUNCH_EXTENSION_VERSION_6 = 6;
-    private static final int LAUNCH_EXTENSION_VERSION = 7;
-    private static final int LAUNCH_EXTENSION_BYTES_V1 = 34;
-    private static final int LAUNCH_EXTENSION_BYTES_V2 = 41;
-    private static final int LAUNCH_EXTENSION_BYTES_V3 = 49;
-    private static final int LAUNCH_EXTENSION_BYTES_V4 = 53;
-    private static final int LAUNCH_EXTENSION_BYTES_V5 = 65;
-    private static final int LAUNCH_EXTENSION_BYTES_V6 = 69;
-    private static final int LAUNCH_EXTENSION_BYTES = 81;
-    private static final int LAUNCH_FLAG_ACTIVE = 1;
-    private static final int LAUNCH_FLAG_DEATH_EGG_RUMBLE = 1 << 1;
-    private static final int LAUNCH_FLAG_START_REQUESTED = 1 << 2;
-    private static final int LAUNCH_FLAG_PAD_COLLAPSE_REQUESTED = 1 << 3;
-    private static final int LAUNCH_FLAG_FINAL_FALL_REQUESTED = 1 << 4;
-    private static final int LAUNCH_FLAG_RIDER_ANCHOR_REGISTERED = 1 << 5;
-    private static final int LAUNCH_FLAG_LBZ2_RIDE_ANIMATED_TILE_GATE_ACTIVE = 1 << 6;
-    private static final int LAUNCH_FLAG_PAD_COLLAPSE_ACTIVE = 1 << 7;
-    private static final int LAUNCH_FLAG_FINAL_FALL_ACTIVE = 1 << 8;
-    private static final int LAUNCH_FLAG_DEATH_EGG_TERRAIN_SWAP_QUEUED = 1 << 9;
-    private static final int LAUNCH_FLAG_DEATH_EGG_TERRAIN_SWAP_APPLIED = 1 << 10;
-    private static final int LAUNCH_FLAG_WATER_DISABLED = 1 << 11;
-    private static final int LAUNCH_FLAG_FINALE_CUTSCENE_ANCHOR_REGISTERED = 1 << 12;
-    private static final int LAUNCH_FLAG_FALLING_ACCEL_ACTIVE = 1 << 13;
-    private static final int LAUNCH_FLAG_LBZ1_KNUX_CONTROL_LOCKED = 1 << 14;
-    private static final int LAUNCH_FLAG_LBZ1_KNUX_BOMB_SHAKE_ACTIVE = 1 << 15;
-    private static final int LAUNCH_FLAG_LBZ1_KNUX_BOUNDARY_PUBLISH_PENDING = 1 << 16;
-    private static final int LAUNCH_FLAG_CENTER_NATIVE_FINAL_ARENA_CAMERA = 1 << 17;
-
     /** Widescreen projection selected by the native placed Knuckles final-arena owner. */
     private boolean centerNativeFinalArenaCamera;
     public boolean centerNativeArenaCamera() { return centerNativeFinalArenaCamera; }
     public void setCenterNativeArenaCamera(boolean value) { centerNativeFinalArenaCamera = value; }
 
+    @com.openggf.game.rewind.RewindTransient(reason = "event owner reference; publication captured by events")
+    private final com.openggf.game.sonic3k.events.Sonic3kLBZEvents events;
+    @com.openggf.game.rewind.RewindTransient(reason = "registry adapter; event owner captures the whole publication")
+    private final boolean managed;
     private final int actIndex;
     private final PlayerCharacter playerCharacter;
     private boolean alarmAnimationActive;
@@ -57,10 +27,6 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
     private boolean lbz2EntryCorridorApplied;
     private int rollingDrumP1Angle;
     private int rollingDrumP2Angle;
-    private int pendingScreenShakeOffset;
-    private int timedShakeCountdown;
-    private int timedShakePreparedOffset;
-    private int timedShakeAppliedOffset;
     private boolean launchActive;
     private boolean deathEggRumble;
     private int fgLaunchSpeed;
@@ -83,7 +49,6 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
     private boolean deathEggTerrainSwapApplied;
     private boolean waterDisabled;
     private boolean lbz1KnucklesCutsceneControlLocked;
-    private boolean lbz1KnucklesBombShakeActive;
     private boolean lbz1KnucklesBoundaryPublishPending;
     private int launchRiderAnchorId;
     private int launchRiderDelta;
@@ -96,8 +61,20 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
     private int publishedBgCameraX;
 
     public LbzZoneRuntimeState(int actIndex, PlayerCharacter playerCharacter) {
+        this(actIndex, playerCharacter, new com.openggf.game.sonic3k.events.Sonic3kLBZEvents(), false);
+    }
+
+    public LbzZoneRuntimeState(int actIndex, PlayerCharacter playerCharacter,
+            com.openggf.game.sonic3k.events.Sonic3kLBZEvents events) {
+        this(actIndex, playerCharacter, events, true);
+    }
+    private LbzZoneRuntimeState(int actIndex, PlayerCharacter playerCharacter,
+            com.openggf.game.sonic3k.events.Sonic3kLBZEvents events, boolean managed) {
+        this.managed = managed;
+        this.events = Objects.requireNonNull(events);
         this.actIndex = actIndex;
         this.playerCharacter = Objects.requireNonNull(playerCharacter, "playerCharacter");
+        events.bindRuntimePublication(this);
     }
 
     @Override public int zoneIndex() { return Sonic3kZoneIds.ZONE_LBZ; }
@@ -178,63 +155,16 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
         }
     }
 
-    public void requestScreenShakeOffset(int offset) {
-        if (Math.abs(offset) > Math.abs(pendingScreenShakeOffset)) {
-            pendingScreenShakeOffset = offset;
-        }
-    }
-
-    public int consumeScreenShakeOffset() {
-        int offset = pendingScreenShakeOffset;
-        pendingScreenShakeOffset = 0;
-        return offset;
-    }
-
-    /** Semantic write for positive {@code Screen_shake_flag} durations. */
-    public void startTimedScreenShake(int frames) {
-        timedShakeCountdown = Math.max(0, frames);
-    }
-
-    /** LBZ foreground: apply the offset prepared by the preceding BG phase. */
-    public void applyTimedScreenShakeForeground() {
-        timedShakeAppliedOffset = timedShakePreparedOffset;
-        if (timedShakeCountdown != 0
-                || timedShakePreparedOffset != 0
-                || timedShakeAppliedOffset != 0) {
-            pendingScreenShakeOffset = timedShakeAppliedOffset;
-        }
-    }
-
-    /** LBZ background {@code ShakeScreen_Setup}: publish the next-frame offset. */
-    public void prepareTimedScreenShakeBackground(boolean playerEligible, int romOffset) {
-        if (timedShakeCountdown <= 0) {
-            timedShakePreparedOffset = 0;
-            return;
-        }
-        if (!playerEligible) {
-            timedShakePreparedOffset = 0;
-            return;
-        }
-        timedShakeCountdown--;
-        timedShakePreparedOffset = romOffset;
-    }
-
-    public int getTimedShakeCountdown() {
-        return timedShakeCountdown;
-    }
-
-    public int getTimedShakePreparedOffset() {
-        return timedShakePreparedOffset;
-    }
-
-    public int getTimedShakeAppliedOffset() {
-        return timedShakeAppliedOffset;
-    }
-
-    /** Semantic {@code Camera_Y_pos_copy} consumed by selected object routines. */
-    public int getCameraYCopy(int baseCameraY) {
-        return (baseCameraY + timedShakeAppliedOffset) & 0xFFFF;
-    }
+    public void setupScreenShake(int frame, boolean dead) { events.setupScreenShake(frame, dead); }
+    public void publishScreenShakeForeground() { events.publishScreenShakeForeground(); }
+    public void writeScreenShakeFlag(int value) { events.writeScreenShakeFlag(value); }
+    public int screenShakeFlag() { return events.screenShakeFlag(); }
+    public int screenShakeOffset() { return events.appliedScreenShakeOffset(); }
+    public void startTimedScreenShake(int frames) { writeScreenShakeFlag(frames); }
+    public int getTimedShakeCountdown() { return Math.max(0, screenShakeFlag()); }
+    public int getTimedShakePreparedOffset() { return events.screenShakeOffset(); }
+    public int getTimedShakeAppliedOffset() { return screenShakeOffset(); }
+    public int getCameraYCopy(int baseCameraY) { return events.foregroundCameraYCopy(baseCameraY); }
 
     public boolean isLaunchActive() {
         return launchActive;
@@ -301,11 +231,9 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
         this.launchRiderDelta = launchRiderDelta;
     }
 
-    public int consumeLaunchRiderDelta() {
-        int delta = launchRiderDelta;
-        launchRiderDelta = 0;
-        return delta;
-    }
+    /** Read the preceding event publication; object observation never clears it. */
+    public int getLaunchRiderDelta() { return launchRiderDelta; }
+    public boolean isBackedBy(com.openggf.game.sonic3k.events.Sonic3kLBZEvents owner) { return events == owner; }
 
     /** ROM: LBZ2_EndFallingAccel runs every frame once Events_fg_5 (2nd use) fires. */
     public boolean isLaunchFallingAccelActive() {
@@ -410,11 +338,11 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
      * collapse.
      */
     public boolean isLbz1KnucklesBombShakeActive() {
-        return lbz1KnucklesBombShakeActive;
+        return (screenShakeFlag() & 0xFF00) != 0;
     }
 
     public void setLbz1KnucklesBombShakeActive(boolean active) {
-        this.lbz1KnucklesBombShakeActive = active;
+        writeScreenShakeFlag(active ? 0xFF00 | (screenShakeFlag() & 0xFF) : 0);
     }
 
     public int getDeathEggDeformWrapLatch() {
@@ -549,295 +477,47 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
         finaleCutsceneAnchorId = 0;
     }
 
-    @Override
-    public byte[] captureBytes() {
-        ByteBuffer buffer = ByteBuffer.allocate(LEGACY_CAPTURE_BYTES + LAUNCH_EXTENSION_BYTES);
-        buffer.put((byte) (alarmAnimationActive ? 1 : 0));
-        buffer.put((byte) activeInteriorLayoutMod);
-        buffer.put((byte) (interiorLayoutMod3Disabled ? 1 : 0));
-        buffer.put((byte) rollingDrumP1Angle);
-        buffer.put((byte) rollingDrumP2Angle);
-        buffer.putInt(pendingScreenShakeOffset);
-        buffer.put((byte) (robotnikIntroActive ? 1 : 0));
-        buffer.put((byte) (lbz2LayoutAdjustApplied ? 1 : 0));
-        buffer.put((byte) (lbz2EntryCorridorApplied ? 1 : 0));
-        buffer.put((byte) LAUNCH_EXTENSION_VERSION);
-        buffer.putInt(launchFlags());
-        buffer.putInt(fgLaunchSpeed);
-        buffer.putInt(bgLaunchSpeed);
-        buffer.putInt(fgAccum);
-        buffer.putInt(bgAccum);
-        buffer.putInt(launchYDelta);
-        buffer.putInt(preLaunchDelay);
-        buffer.putInt(detachScroll);
-        buffer.putInt(detachWindowCopyTimer);
-        buffer.putInt(waterTargetY);
-        buffer.putInt(launchRiderAnchorId);
-        buffer.putInt(deathEggDeformWrapLatch);
-        buffer.putInt(finaleCutsceneAnchorId);
-        buffer.putInt(launchRiderDelta);
-        buffer.putInt(lbz2WaterlinePhase);
-        buffer.putInt(lbz2ScrollArtPhaseSource);
-        buffer.putInt(publishedBgCameraX);
-        buffer.putInt(timedShakeCountdown);
-        buffer.putInt(timedShakePreparedOffset);
-        buffer.putInt(timedShakeAppliedOffset);
-        return buffer.array();
+    @Override public byte[] captureBytes() { return managed ? new byte[0] : events.captureLbzState(); }
+    /** Constructor identity is structural to the scalar codec, so frame it explicitly. */
+    public byte[] captureRuntimePublication() {
+        byte[] scalars = com.openggf.game.rewind.schema.ZoneEventSchemaSidecar.capture(this);
+        return ByteBuffer.allocate(12 + scalars.length).putInt(actIndex)
+                .putInt(playerCharacter.ordinal()).putInt(scalars.length).put(scalars).array();
     }
-
-    @Override
-    public void restoreBytes(byte[] bytes) {
-        if (bytes == null || bytes.length == 0) {
-            return;
-        }
-        alarmAnimationActive = bytes[0] != 0;
-        if (bytes.length == 3) {
-            rollingDrumP1Angle = bytes[1] & 0xFF;
-            rollingDrumP2Angle = bytes[2] & 0xFF;
-            clearLaunchState();
-            return;
-        }
-        if (bytes.length >= 2) {
-            setActiveInteriorLayoutMod(bytes[1] & 0xFF);
-        }
-        if (bytes.length >= 3) {
-            interiorLayoutMod3Disabled = bytes[2] != 0;
-        }
-        if (bytes.length >= 4) {
-            rollingDrumP1Angle = bytes[3] & 0xFF;
-        }
-        if (bytes.length >= 5) {
-            rollingDrumP2Angle = bytes[4] & 0xFF;
-        }
-        if (bytes.length >= 9) {
-            pendingScreenShakeOffset = ByteBuffer.wrap(bytes).getInt(5);
-        }
-        if (bytes.length >= 10) {
-            robotnikIntroActive = bytes[9] != 0;
-        }
-        if (bytes.length >= 12) {
-            lbz2LayoutAdjustApplied = bytes[10] != 0;
-            lbz2EntryCorridorApplied = bytes[11] != 0;
-        }
-        if (bytes.length < LEGACY_CAPTURE_BYTES + LAUNCH_EXTENSION_BYTES_V1) {
-            clearLaunchState();
-            return;
-        }
-        ByteBuffer buffer = ByteBuffer.wrap(bytes);
-        buffer.position(LEGACY_CAPTURE_BYTES);
-        int version = buffer.get() & 0xFF;
-        if (version == LAUNCH_EXTENSION_VERSION_1) {
-            restoreLaunchFlags(buffer.get() & 0xFF);
-            restoreLaunchInts(buffer, false, false, false);
-            clearTimedShakeState();
-            return;
-        }
-        if (version == LAUNCH_EXTENSION_VERSION_2) {
-            restoreLaunchFlags(buffer.getInt());
-            restoreLaunchInts(buffer, true, false, false);
-            clearTimedShakeState();
-            return;
-        }
-        if (version == LAUNCH_EXTENSION_VERSION_3
-                && bytes.length >= LEGACY_CAPTURE_BYTES + LAUNCH_EXTENSION_BYTES_V3) {
-            restoreLaunchFlags(buffer.getInt());
-            restoreLaunchInts(buffer, true, true, false);
-            launchRiderDelta = 0;
-            clearTimedShakeState();
-            return;
-        }
-        if (version == LAUNCH_EXTENSION_VERSION_4
-                && bytes.length >= LEGACY_CAPTURE_BYTES + LAUNCH_EXTENSION_BYTES_V4) {
-            restoreLaunchFlags(buffer.getInt());
-            restoreLaunchInts(buffer, true, true, false);
-            launchRiderDelta = buffer.getInt();
-            lbz2WaterlinePhase = 0;
-            lbz2ScrollArtPhaseSource = 0;
-            publishedBgCameraX = 0;
-            clearTimedShakeState();
-            return;
-        }
-        if (version == LAUNCH_EXTENSION_VERSION_5
-                && bytes.length >= LEGACY_CAPTURE_BYTES + LAUNCH_EXTENSION_BYTES_V5) {
-            restoreLaunchFlags(buffer.getInt());
-            restoreLaunchInts(buffer, true, true, false);
-            launchRiderDelta = buffer.getInt();
-            lbz2WaterlinePhase = buffer.getInt();
-            lbz2ScrollArtPhaseSource = buffer.getInt();
-            publishedBgCameraX = buffer.getInt();
-            clearTimedShakeState();
-            return;
-        }
-        if (version == LAUNCH_EXTENSION_VERSION_6
-                && bytes.length >= LEGACY_CAPTURE_BYTES + LAUNCH_EXTENSION_BYTES_V6) {
-            restoreLaunchFlags(buffer.getInt());
-            restoreLaunchInts(buffer, true, true, true);
-            launchRiderDelta = buffer.getInt();
-            lbz2WaterlinePhase = buffer.getInt();
-            lbz2ScrollArtPhaseSource = buffer.getInt();
-            publishedBgCameraX = buffer.getInt();
-            clearTimedShakeState();
-            return;
-        }
-        if (version != LAUNCH_EXTENSION_VERSION || bytes.length < LEGACY_CAPTURE_BYTES + LAUNCH_EXTENSION_BYTES) {
-            clearLaunchState();
-            return;
-        }
-        int flags = buffer.getInt();
-        restoreLaunchFlags(flags);
-        restoreLaunchInts(buffer, true, true, true);
-        launchRiderDelta = buffer.getInt();
-        lbz2WaterlinePhase = buffer.getInt();
-        lbz2ScrollArtPhaseSource = buffer.getInt();
-        publishedBgCameraX = buffer.getInt();
-        timedShakeCountdown = buffer.getInt();
-        timedShakePreparedOffset = buffer.getInt();
-        timedShakeAppliedOffset = buffer.getInt();
+    public static int capturedAct(byte[] bytes) { return ByteBuffer.wrap(bytes).getInt(); }
+    public static PlayerCharacter capturedPlayer(byte[] bytes) { return PlayerCharacter.values()[ByteBuffer.wrap(bytes).getInt(4)]; }
+    public static boolean hasValidRuntimePublication(byte[] bytes) {
+        if (bytes == null || bytes.length < 12) return false;
+        var in = ByteBuffer.wrap(bytes);
+        int act = in.getInt(), player = in.getInt(), length = in.getInt();
+        if (act < 0 || act > 1 || player < 0 || player >= PlayerCharacter.values().length || length != in.remaining()) return false;
+        var probe = new LbzZoneRuntimeState(act, PlayerCharacter.values()[player]);
+        if (length != com.openggf.game.rewind.schema.ZoneEventSchemaSidecar.capture(probe).length) return false;
+        byte[] scalars = new byte[length]; in.get(scalars);
+        if (!com.openggf.game.rewind.schema.ZoneEventSchemaSidecar.hasValidVariableLengthPayload(LbzZoneRuntimeState.class, scalars)) return false;
+        com.openggf.game.rewind.schema.ZoneEventSchemaSidecar.restore(probe, scalars);
+        return java.util.Arrays.equals(bytes, probe.captureRuntimePublication())
+                && probe.activeInteriorLayoutMod >= 0 && probe.activeInteriorLayoutMod <= 4
+                && (probe.rollingDrumP1Angle & ~255) == 0 && (probe.rollingDrumP2Angle & ~255) == 0
+                && probe.launchYDelta == (short) probe.launchYDelta
+                && probe.launchRiderDelta == (short) probe.launchRiderDelta
+                && unsignedWords(probe.fgLaunchSpeed, probe.preLaunchDelay, probe.detachScroll,
+                        probe.detachWindowCopyTimer, probe.waterTargetY, probe.deathEggDeformWrapLatch,
+                        probe.lbz2WaterlinePhase, probe.lbz2ScrollArtPhaseSource, probe.publishedBgCameraX);
     }
-
-    private void restoreLaunchFlags(int flags) {
-        launchActive = (flags & LAUNCH_FLAG_ACTIVE) != 0;
-        deathEggRumble = (flags & LAUNCH_FLAG_DEATH_EGG_RUMBLE) != 0;
-        launchStartRequested = (flags & LAUNCH_FLAG_START_REQUESTED) != 0;
-        padCollapseStartRequested = (flags & LAUNCH_FLAG_PAD_COLLAPSE_REQUESTED) != 0;
-        finalFallRequested = (flags & LAUNCH_FLAG_FINAL_FALL_REQUESTED) != 0;
-        launchRiderAnchorRegistered = (flags & LAUNCH_FLAG_RIDER_ANCHOR_REGISTERED) != 0;
-        lbz2RideAnimatedTileGateActive =
-                (flags & LAUNCH_FLAG_LBZ2_RIDE_ANIMATED_TILE_GATE_ACTIVE) != 0;
-        padCollapseActive = (flags & LAUNCH_FLAG_PAD_COLLAPSE_ACTIVE) != 0;
-        finalFallActive = (flags & LAUNCH_FLAG_FINAL_FALL_ACTIVE) != 0;
-        deathEggTerrainSwapQueued = (flags & LAUNCH_FLAG_DEATH_EGG_TERRAIN_SWAP_QUEUED) != 0;
-        deathEggTerrainSwapApplied = (flags & LAUNCH_FLAG_DEATH_EGG_TERRAIN_SWAP_APPLIED) != 0;
-        waterDisabled = (flags & LAUNCH_FLAG_WATER_DISABLED) != 0;
-        finaleCutsceneAnchorRegistered =
-                (flags & LAUNCH_FLAG_FINALE_CUTSCENE_ANCHOR_REGISTERED) != 0;
-        launchFallingAccelActive = (flags & LAUNCH_FLAG_FALLING_ACCEL_ACTIVE) != 0;
-        lbz1KnucklesCutsceneControlLocked =
-                (flags & LAUNCH_FLAG_LBZ1_KNUX_CONTROL_LOCKED) != 0;
-        lbz1KnucklesBombShakeActive =
-                (flags & LAUNCH_FLAG_LBZ1_KNUX_BOMB_SHAKE_ACTIVE) != 0;
-        lbz1KnucklesBoundaryPublishPending =
-                (flags & LAUNCH_FLAG_LBZ1_KNUX_BOUNDARY_PUBLISH_PENDING) != 0;
-        centerNativeFinalArenaCamera =
-                (flags & LAUNCH_FLAG_CENTER_NATIVE_FINAL_ARENA_CAMERA) != 0;
+    private static boolean unsignedWords(int... values) {
+        for (int value : values) if ((value & ~0xFFFF) != 0) return false;
+        return true;
     }
-
-    private void restoreLaunchInts(ByteBuffer buffer,
-                                   boolean hasWaterTarget,
-                                   boolean hasDeathEggDeformState,
-                                   boolean hasDetachWindowCopyTimer) {
-        fgLaunchSpeed = buffer.getInt();
-        bgLaunchSpeed = buffer.getInt();
-        fgAccum = buffer.getInt();
-        bgAccum = buffer.getInt();
-        launchYDelta = buffer.getInt();
-        preLaunchDelay = buffer.getInt();
-        detachScroll = buffer.getInt();
-        detachWindowCopyTimer = hasDetachWindowCopyTimer ? buffer.getInt() : 0;
-        waterTargetY = hasWaterTarget ? buffer.getInt() : 0;
-        launchRiderAnchorId = buffer.getInt();
-        deathEggDeformWrapLatch = hasDeathEggDeformState ? buffer.getInt() : 0;
-        finaleCutsceneAnchorId = hasDeathEggDeformState ? buffer.getInt() : 0;
+    public void restoreRuntimePublication(byte[] bytes) {
+        if (!hasValidRuntimePublication(bytes) || capturedAct(bytes) != actIndex || capturedPlayer(bytes) != playerCharacter)
+            throw new IllegalArgumentException("Invalid LBZ runtime publication or identity");
+        com.openggf.game.rewind.schema.ZoneEventSchemaSidecar.restore(this, java.util.Arrays.copyOfRange(bytes, 12, bytes.length));
     }
-
-    private void clearLaunchState() {
-        centerNativeFinalArenaCamera = false;
-        launchActive = false;
-        deathEggRumble = false;
-        fgLaunchSpeed = 0;
-        bgLaunchSpeed = 0;
-        fgAccum = 0;
-        bgAccum = 0;
-        launchYDelta = 0;
-        preLaunchDelay = 0;
-        detachScroll = 0;
-        detachWindowCopyTimer = 0;
-        waterTargetY = 0;
-        launchStartRequested = false;
-        padCollapseStartRequested = false;
-        finalFallRequested = false;
-        lbz2RideAnimatedTileGateActive = false;
-        padCollapseActive = false;
-        finalFallActive = false;
-        deathEggTerrainSwapQueued = false;
-        deathEggTerrainSwapApplied = false;
-        waterDisabled = false;
-        lbz1KnucklesCutsceneControlLocked = false;
-        lbz1KnucklesBombShakeActive = false;
-        lbz1KnucklesBoundaryPublishPending = false;
-        deathEggDeformWrapLatch = 0;
-        launchRiderDelta = 0;
-        launchFallingAccelActive = false;
-        lbz2WaterlinePhase = 0;
-        lbz2ScrollArtPhaseSource = 0;
-        publishedBgCameraX = 0;
-        clearTimedShakeState();
-        clearLaunchRiderAnchor();
-        clearFinaleCutsceneAnchor();
-    }
-
-    private void clearTimedShakeState() {
-        timedShakeCountdown = 0;
-        timedShakePreparedOffset = 0;
-        timedShakeAppliedOffset = 0;
-    }
-
-    private int launchFlags() {
-        int flags = 0;
-        if (launchActive) {
-            flags |= LAUNCH_FLAG_ACTIVE;
-        }
-        if (deathEggRumble) {
-            flags |= LAUNCH_FLAG_DEATH_EGG_RUMBLE;
-        }
-        if (launchStartRequested) {
-            flags |= LAUNCH_FLAG_START_REQUESTED;
-        }
-        if (padCollapseStartRequested) {
-            flags |= LAUNCH_FLAG_PAD_COLLAPSE_REQUESTED;
-        }
-        if (finalFallRequested) {
-            flags |= LAUNCH_FLAG_FINAL_FALL_REQUESTED;
-        }
-        if (launchRiderAnchorRegistered) {
-            flags |= LAUNCH_FLAG_RIDER_ANCHOR_REGISTERED;
-        }
-        if (lbz2RideAnimatedTileGateActive) {
-            flags |= LAUNCH_FLAG_LBZ2_RIDE_ANIMATED_TILE_GATE_ACTIVE;
-        }
-        if (padCollapseActive) {
-            flags |= LAUNCH_FLAG_PAD_COLLAPSE_ACTIVE;
-        }
-        if (finalFallActive) {
-            flags |= LAUNCH_FLAG_FINAL_FALL_ACTIVE;
-        }
-        if (deathEggTerrainSwapQueued) {
-            flags |= LAUNCH_FLAG_DEATH_EGG_TERRAIN_SWAP_QUEUED;
-        }
-        if (deathEggTerrainSwapApplied) {
-            flags |= LAUNCH_FLAG_DEATH_EGG_TERRAIN_SWAP_APPLIED;
-        }
-        if (waterDisabled) {
-            flags |= LAUNCH_FLAG_WATER_DISABLED;
-        }
-        if (finaleCutsceneAnchorRegistered) {
-            flags |= LAUNCH_FLAG_FINALE_CUTSCENE_ANCHOR_REGISTERED;
-        }
-        if (launchFallingAccelActive) {
-            flags |= LAUNCH_FLAG_FALLING_ACCEL_ACTIVE;
-        }
-        if (lbz1KnucklesCutsceneControlLocked) {
-            flags |= LAUNCH_FLAG_LBZ1_KNUX_CONTROL_LOCKED;
-        }
-        if (lbz1KnucklesBombShakeActive) {
-            flags |= LAUNCH_FLAG_LBZ1_KNUX_BOMB_SHAKE_ACTIVE;
-        }
-        if (lbz1KnucklesBoundaryPublishPending) {
-            flags |= LAUNCH_FLAG_LBZ1_KNUX_BOUNDARY_PUBLISH_PENDING;
-        }
-        if (centerNativeFinalArenaCamera) {
-            flags |= LAUNCH_FLAG_CENTER_NATIVE_FINAL_ARENA_CAMERA;
-        }
-        return flags;
+    @Override public void restoreBytes(byte[] bytes) {
+        if (managed && bytes != null && bytes.length == 0) return;
+        if (!com.openggf.game.sonic3k.events.Sonic3kLBZEvents.hasRuntimeIdentity(bytes, actIndex, playerCharacter))
+            throw new IllegalArgumentException("Invalid LBZ publication identity");
+        events.restoreLbzState(bytes);
     }
 }

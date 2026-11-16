@@ -2836,3 +2836,7 @@ MICA authored S3K ending presentation (2026-11-08): the
 [ending matrix](../architecture/validation/levels/s3k-ending.md#authored-sonic-route-ending-presentation-2026-11-08)
 records passing declared-entry normal/Super/Hyper mapping and capture checks.
 Doomsday route entry, mod rewind and broader team/viewport certification remain open.
+
+LBZ publication ownership (2026-11-16): the [bounded event audit](../architecture/audits/2026-11-16-s3k-lbz-event-publication.md)
+tracks shake flag consumers, same-frame renderer rebuilds and composed rewind.
+The existing LBZ1/LBZ2 act matrices retain all inherited route/viewport/donor/roster gaps.

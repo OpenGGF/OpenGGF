@@ -1079,8 +1079,10 @@ class TestS3kLbz1KnucklesSequenceHeadless {
 
         manager.getLbzEvents().update(0, 1);
         GameServices.parallax().update(Sonic3kZoneIds.ZONE_LBZ, 0, GameServices.camera(), 1, 0);
-        assertNotEquals(0, GameServices.parallax().getShakeOffsetY(),
-                "LBZ1_EventVScroll keeps Screen_shake_flag=-1 active while the foreground strips fall.");
+        assertTrue(manager.getLbzEvents().screenShakeFlag() < 0,
+                "LBZ1_EventVScroll keeps the native flag active; FG still reads the preceding offset.");
+        assertEquals(0, GameServices.parallax().getShakeOffsetY(),
+                "the request frame's foreground precedes its first ShakeScreen_Setup");
 
         short[] override = manager.getLbzEvents()
                 .buildEndingCollapseForegroundVScrollOverride(GameServices.camera().getX());

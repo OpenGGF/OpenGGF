@@ -273,3 +273,10 @@ Final fixture-only verification passes all28 boss cases, zero skips/errors.
 Together with the combined graph/loading run,102 functional controls pass on
 the unchanged production patch; the standalone replay reaches its gate and
 remains a normal divergence assertion. This does not certify full-act parity.
+
+## Event publication ownership — 2026-11-16
+
+The [LBZ publication audit](../../audits/2026-11-16-s3k-lbz-event-publication.md)
+records event-owned shake and background continuation, the real-load renderer
+rebuild witness, and focused rewind/consumer verification. This local obligation
+does not certify additional viewport, donor, roster or full-route coverage.

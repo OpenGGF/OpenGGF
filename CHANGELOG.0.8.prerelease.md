@@ -877,7 +877,10 @@ under the matching area heading; see the
   a typed rewind HUD frame make contribution paths easier to follow. HCZ owns
   its completed screen/collision publication and all three shake words in one
   validated rewind payload; objects consume the preceding publication and
-  rendering only projects it. The seamless reload retains HCZ1 deformation,
+  rendering only projects it. Launch Base uses the same event-owned shake words;
+  its cloud and Death Egg deformation continuation rewinds with the publication,
+  renderer rebuilds retain timed shake, and ship/cameo reads use LBZ’s native flag
+  rather than a boolean retained by another zone. The seamless reload retains HCZ1 deformation,
   and the geyser begins shaking on its native first dispatch. Scene
   presentation spells out capture, restoration and failure cleanup in operation
   order, and pixel-oracle failures retain the rendering mode and captured frame.

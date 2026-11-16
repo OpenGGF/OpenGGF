@@ -16,9 +16,9 @@ class TestLbzLaunchRuntimeState {
         LbzZoneRuntimeState source = new LbzZoneRuntimeState(
                 1, PlayerCharacter.KNUCKLES);
         source.startTimedScreenShake(20);
-        source.applyTimedScreenShakeForeground();
-        source.prepareTimedScreenShakeBackground(true, -5);
-        source.applyTimedScreenShakeForeground();
+        source.publishScreenShakeForeground();
+        source.setupScreenShake(0, false);
+        source.publishScreenShakeForeground();
 
         LbzZoneRuntimeState restored = new LbzZoneRuntimeState(
                 1, PlayerCharacter.KNUCKLES);
@@ -39,51 +39,45 @@ class TestLbzLaunchRuntimeState {
                 "LBZ1BGE_DoTransition returns to LevelLoop's OscillateNumDo tail");
     }
 
-    @Test
-    void legacyThreeByteRestoreStillRestoresRollingDrumAngles() {
-        LbzZoneRuntimeState state = new LbzZoneRuntimeState(0, PlayerCharacter.SONIC_ALONE);
-        state.setActiveInteriorLayoutMod(4);
-        state.setRollingDrumAngle(0, 0);
-        state.setRollingDrumAngle(1, 0);
-        dirtyLaunchState(state);
-
-        state.restoreBytes(new byte[]{1, (byte) 0x83, (byte) 0xFE});
-
-        assertTrue(state.isAlarmAnimationActive());
-        assertEquals(4, state.getActiveInteriorLayoutMod(),
-                "3-byte snapshots must keep the historical drum-only field layout");
-        assertEquals(0x83, state.getRollingDrumAngle(0));
-        assertEquals(0xFE, state.getRollingDrumAngle(1));
-        assertLaunchStateCleared(state);
+    @Test void rejectsLegacyAndTruncatedStateWithoutMutation() {
+        var state = new LbzZoneRuntimeState(1, PlayerCharacter.KNUCKLES);
+        state.setLaunchActive(true);
+        byte[] before = state.captureBytes();
+        for (byte[] bytes : new byte[][] {new byte[0], new byte[3], new byte[12], java.util.Arrays.copyOf(before, before.length - 1)}) {
+            assertThrows(IllegalArgumentException.class, () -> state.restoreBytes(bytes));
+            assertArrayEquals(before, state.captureBytes());
+        }
     }
 
-    @Test
-    void legacyTwelveByteRestoreStillRestoresExistingFields() {
-        ByteBuffer bytes = ByteBuffer.allocate(12);
-        bytes.put((byte) 1);
-        bytes.put((byte) 2);
-        bytes.put((byte) 1);
-        bytes.put((byte) 0x44);
-        bytes.put((byte) 0x55);
-        bytes.putInt(-7);
-        bytes.put((byte) 1);
-        bytes.put((byte) 1);
-        bytes.put((byte) 1);
+    @Test void freshEventOwnerRestoresConstructorIdentityAndNumericPublication() {
+        var source = new com.openggf.game.sonic3k.events.Sonic3kLBZEvents();
+        var state = new LbzZoneRuntimeState(1, PlayerCharacter.KNUCKLES, source);
+        state.setFgAccum(0x12345678);
+        state.writeScreenShakeFlag(20);
+        byte[] before = source.captureLbzState();
+        var target = new com.openggf.game.sonic3k.events.Sonic3kLBZEvents();
+        target.restoreLbzState(before);
+        assertArrayEquals(before, target.captureLbzState());
+        assertEquals(0x12345678, target.runtimePublication(1, PlayerCharacter.KNUCKLES).getFgAccum());
+        assertArrayEquals(before, target.captureLbzState(), "rebinding preserves the restored numeric owner");
+    }
 
-        LbzZoneRuntimeState state = new LbzZoneRuntimeState(1, PlayerCharacter.KNUCKLES);
-        dirtyLaunchState(state);
-        state.restoreBytes(bytes.array());
+    @Test void malformedConstructorIdentityIsRejectedWithoutMutation() {
+        var state = new LbzZoneRuntimeState(1, PlayerCharacter.KNUCKLES);
+        byte[] before = state.captureRuntimePublication();
+        byte[] bad = before.clone();
+        ByteBuffer.wrap(bad).putInt(4, Integer.MAX_VALUE);
+        assertThrows(IllegalArgumentException.class, () -> state.restoreRuntimePublication(bad));
+        assertArrayEquals(before, state.captureRuntimePublication());
+    }
 
-        assertTrue(state.isAlarmAnimationActive());
-        assertEquals(2, state.getActiveInteriorLayoutMod());
-        assertTrue(state.isInteriorLayoutMod3Disabled());
-        assertEquals(0x44, state.getRollingDrumAngle(0));
-        assertEquals(0x55, state.getRollingDrumAngle(1));
-        assertEquals(-7, state.consumeScreenShakeOffset());
-        assertTrue(state.isRobotnikIntroActive());
-        assertTrue(state.isLbz2LayoutAdjustApplied());
-        assertTrue(state.isLbz2EntryCorridorApplied());
-        assertLaunchStateCleared(state);
+    @Test void malformedNativeRuntimeWordIsRejectedBeforeMutation() {
+        var good = new LbzZoneRuntimeState(1, PlayerCharacter.KNUCKLES);
+        byte[] before = good.captureBytes();
+        var bad = new LbzZoneRuntimeState(1, PlayerCharacter.KNUCKLES);
+        bad.setFgLaunchSpeed(0x10000);
+        assertThrows(IllegalArgumentException.class, () -> good.restoreBytes(bad.captureBytes()));
+        assertArrayEquals(before, good.captureBytes());
     }
 
     @Test

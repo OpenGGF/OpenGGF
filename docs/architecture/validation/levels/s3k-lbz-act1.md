@@ -123,3 +123,10 @@ The seven shared cases passed in the focused run; this does not qualify cold
 reachability, live rewind-floor recording, other configurations or complete routes.
 Those inherited obligations remain open. See the
 [shared ownership design](../../designs/2026-11-03-seamless-request-retargeting.md).
+
+## Event publication ownership — 2026-11-16
+
+The [LBZ publication audit](../../audits/2026-11-16-s3k-lbz-event-publication.md)
+records event-owned shake and background continuation, the real-load renderer
+rebuild witness, and focused rewind/consumer verification. This local obligation
+does not certify additional viewport, donor, roster or full-route coverage.
