@@ -534,3 +534,33 @@ The disc-backed method has a specific optional-disc skip rule and is required
 when the USA disc is supplied. Composition coverage is broader than the seven
 Act 1 Present pixel views; neither certifies native pixel parity or new routes.
 Whole-pixel stepping and discrete shake remain the shared presentation contract.
+
+### CD delivery verification
+
+At Java implementation `26c0c02a02` (same Java as the final policy/docs follow-up),
+the queued regression selection passed 215 tests without skips: all new frozen
+phase/live-picture/eligibility cases, existing PPZ/CCZ/QQZ/WWZ/MMZ/SSZ scroll-stage
+checks and all-payload loading, shared motion/HCZ tests and the required S3K
+keep-green classes. The exact selector was
+`Test*FrozenProjection*,Test*ImmutableScrollPhase,TestCd*Motion*,TestLevelMotion*,TestHczMotionContinuity,TestPpzPeriodsScroll,TestCczStagesScroll,TestQqzPeriodsScroll,TestQqzScrollPrograms,TestWwzStagesScroll,TestMmzStagesScroll,TestSszStagesScroll,TestSszScrollHandler,TestCdStageLoaderAllPayloads,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`.
+It ran through `maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl`
+with display variables unset and `LUA_BIN=/usr/bin/lua5.4` (90 seconds Maven execution,
+separate from admission wait).
+
+The subsequent rendering/common category run selected 757/4973 classes and
+completed all 16 ordinary batches: 5,418 tests, one failure, no errors and seven
+allowed skips; 860 guards passed without skips. Final **VERDICT FAILED**:
+6,278 tests, one failure and seven allowed skips, no unexplained skips. The sole
+failure remains `TestPrivateLobbyScreenRendering.actualLobbyAndFullTextPixelsSupportMultipleReadablePages`,
+with the same expected-false/actual-true assertion previously reproduced on the
+exact PR base. No new/worsened failure was observed in this bounded selection.
+Ordinary execution: 241.37 seconds; guards: 166.57 seconds. This does not replace
+full-suite, native pixel or route/warp certification.
+
+The final policy follow-up declares all 40 new optional-disc identities explicitly
+(33 composition cases and seven live pixel cases), with source evidence checked.
+A generated classifier contract accepts all 40 only when the disc is absent and
+rejects all 40 as required skips when it is supplied; no unknown/undeclared/stale
+cases occur. The classifier's 21 Python unit cases pass with one existing optional
+preserved-report-fixture skip. The rule-count pin is updated to 1042. No Java
+source changes followed the successful regression and guard runs.
