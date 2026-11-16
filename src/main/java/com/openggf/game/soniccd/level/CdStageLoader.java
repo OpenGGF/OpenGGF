@@ -30,6 +30,21 @@ public final class CdStageLoader {
     /** Decodes an already-read stage image. */
     public CdLevel load(CdStagePayload payload, CdStageImage image, int zoneIndex, boolean publishGraphics)
             throws IOException {
-        return new CdLevel(payload, image, CdStageCatalogue.entry(payload), zoneIndex, publishGraphics);
+        return new CdLevel(payload, image, CdStageCatalogue.entry(payload), zoneIndex, publishGraphics, disc.identity());
+    }
+    /** Reject foreign media and inconsistent payload coordinates before reading a stage. */
+    public CdLevel load(com.openggf.game.internal.NativeProjectSource source, int zoneIndex,
+                        boolean publishGraphics) throws IOException {
+        if (!disc.identity().equals(source.mediaIdentity()))
+            throw new IOException("Native project disc identity does not match the opened disc");
+        final CdStagePayload payload;
+        try { payload = CdStagePayload.valueOf(source.stage()); }
+        catch (IllegalArgumentException error) { throw new IOException("Unknown native project stage", error); }
+        var stage = payload.stage();
+        if (source.zone() != stage.zone().nativeRound() || source.act() != stage.actNumber()
+                || !source.period().equals(stage.period().name()) || !source.program().equals(payload.file().isoName())
+                || source.blockGridSide() != 16)
+            throw new IOException("Native project stage coordinates/program disagree with the selected payload");
+        return load(payload, zoneIndex, publishGraphics);
     }
 }

@@ -136,6 +136,16 @@ canonical placement encoding, palette ownership, and selected game-host checks;
 a successful project save alone does not establish that it can be exported.
 
 
+A native-source `.ogfproject` also retains a bounded `nativeSource` in its
+checksummed payload: media identity, stage, zone, act, period, program and block
+grid side. It contains no filesystem path or executable provider name. Missing
+`nativeSource` in older flat projects means the original flat contract; it does
+not authorize native collision remaps. Source-backed runtime materialization must
+validate the reference against opened media and reload native stage data before
+applying edits. Directory/ZIP level exports have no such contract and cannot
+represent these projects. Native edit replay and playtest integration remain
+under development.
+
 ## Editor palette authoring
 
 The level editor edits creator-owned palette cells using exact Genesis 9-bit

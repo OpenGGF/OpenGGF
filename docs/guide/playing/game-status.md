@@ -253,7 +253,9 @@ Future). `SonicCdEndingCaptureTool --ending good|bad` films an ending.
   pipeline. Authored zones are limited to flat terrain with owned objects;
   native CD objects/rings need their stage context. Cross-game feature donation
   on a CD host is refused until stage-owned animation families have a composition
-  adapter. Stageplay/editor/import support remains a separate lane. See the
+  adapter. Editor persistence now has a bounded disc/stage source-reference foundation;
+  creator-facing native project creation, edit replay, playtest and import
+  integration remain unfinished. Stageplay remains a separate lane. See the
   [CD mod contracts](../../modding/ggfmod.md#sonic-cd-runtime-mods).
 - The master title has no Setup page for Sonic CD: it always starts with
   Sonic alone, under the all-games display and rewind settings.

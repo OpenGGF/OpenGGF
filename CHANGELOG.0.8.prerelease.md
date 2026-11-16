@@ -483,6 +483,9 @@ under the matching area heading; see the
 - **Sonic CD menu media:** show the native disc title on its master-title card
   and play its title theme in an isolated optional hub audio session. The preview
   closes its media after decoding; menu audio retains its own media until closed.
+  Native editor persistence now retains a bounded disc/stage reference and validates
+  it before native materialization. The flat-project collision guard remains
+  unchanged. Native edit replay, playtest and creator-facing integration are pending.
 
 - **Sonic CD mod host:** admit `scd` patch manifests and `any` registrations;
   route hosted runs through the disc launcher, expose file-addressed scene and

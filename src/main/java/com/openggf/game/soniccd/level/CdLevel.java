@@ -47,7 +47,8 @@ public final class CdLevel extends AbstractLevel implements com.openggf.game.int
         com.openggf.game.internal.CollisionLayoutColumnWindow,
         com.openggf.game.internal.CollisionChunkOriginReadsBlank,
         com.openggf.game.internal.VerticalScrollWrapAtTop,
-        com.openggf.game.internal.BackgroundRowLayout {
+        com.openggf.game.internal.BackgroundRowLayout,
+        com.openggf.game.internal.NativeProjectLevel {
     private static final int SONIC_PALETTE_ID = 3;   // LevelStart: moveq #3,d0; bsr LoadPalette (scddisasm/src/Level/Main.asm:240-243)
     private static final int CHUNK_BYTES = 0x200;     // GetBlockData: subq.b #1; ror.w #7 (Block Draw.asm:217-219)
     private static final int CHUNK_GRID = 16;
@@ -70,6 +71,9 @@ public final class CdLevel extends AbstractLevel implements com.openggf.game.int
     }
 
     private final CdStagePayload payload;
+    private final com.openggf.game.internal.NativeProjectSource projectSource;
+
+    @Override public com.openggf.game.internal.NativeProjectSource nativeProjectSource() { return projectSource; }
     // --- common2 ---
     private com.openggf.game.soniccd.objects.common.CdLevelFlags flags;
 
@@ -92,9 +96,12 @@ public final class CdLevel extends AbstractLevel implements com.openggf.game.int
     private com.openggf.game.soniccd.zones.ppz.PpzBackgroundRows ppzBackgroundRows;
 
     CdLevel(CdStagePayload payload, CdStageImage image, CdStageCatalogue.Entry entry, int zoneIndex,
-            boolean publishGraphics) throws IOException {
+            boolean publishGraphics, String mediaIdentity) throws IOException {
         super(zoneIndex);
         this.payload = payload;
+        this.projectSource = new com.openggf.game.internal.NativeProjectSource(mediaIdentity, payload.name(),
+                payload.stage().zone().nativeRound(), payload.stage().actNumber(), payload.stage().period().name(),
+                payload.file().isoName(), CHUNK_GRID);
         int index = entry.levelDataIndex();
         GraphicsManager graphics = publishGraphics ? GameServices.graphics() : null;
 

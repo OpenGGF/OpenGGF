@@ -33,6 +33,8 @@ public final class EditorProjectRuntimeModule extends DelegatingGameModule {
     public static EditorProjectRuntimeModule prepare(GameModule base, EditorProjectDocument document,
                                                      int spawnX, int spawnY) throws IOException {
         Objects.requireNonNull(base); Objects.requireNonNull(document);
+        if (document.nativeSource() != null)
+            throw new IOException("Native-source project playtests require native materialization; flat playtests are forbidden");
         var metadata = document.metadata();
         if (base.getGameId() != metadata.gameId())
             throw new IOException("Project game does not match the active host");
@@ -61,6 +63,8 @@ public final class EditorProjectRuntimeModule extends DelegatingGameModule {
 
     public static FullLevelExporter.ExportRequest request(EditorProjectDocument document, Path output,
                                                            int startX, int startY) {
+        if (document.nativeSource() != null)
+            throw new IllegalArgumentException("Native-source projects cannot use flat level-directory export; retain the .ogfproject source contract");
         var m = document.metadata();
         return new FullLevelExporter.ExportRequest(output, m.name(), DATA_ZONE_INDEX, LEVEL_INDEX,
                 startX, startY, m.music(), m.gameId(), m.objectZoneSet(), m.settings());

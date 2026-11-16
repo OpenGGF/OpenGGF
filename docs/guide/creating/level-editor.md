@@ -76,6 +76,14 @@ Sonic 1 loop flags, fail with an explanation; use **New blank level** with that 
 library instead. An incompatible stock object can also prevent playtesting or
 export until it is removed or replaced.
 
+Sonic CD native-project persistence is under development. Its source-backed
+`.ogfproject` representation retains the disc identity and exact stage payload
+(zone, act, period and program). The CD loader checks this reference against the
+opened disc before materializing it. Native project selection, authored-edit
+replay and playtesting are not yet connected to this workflow. The stored editor
+view is not a flat playable level; flat playtest and directory-export paths reject
+source-backed documents.
+
 ### Open and import
 
 **Open project** reopens a complete `.ogfproject`. **Import exported level** reads a canonical level
