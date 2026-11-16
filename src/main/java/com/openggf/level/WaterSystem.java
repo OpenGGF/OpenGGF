@@ -317,11 +317,9 @@ public class WaterSystem implements RewindSnapshottable<WaterSystemSnapshot> {
                         () -> new ScreenShakeTimerSlotObjectInstance(duration));
             }
         }
-        // DynamicWaterHeight_AIZ2 (sonic3k.asm:8680-8714) writes the global
-        // flag once; later bomb writes must not be masked by this timer.
-        if (handler instanceof com.openggf.game.sonic3k.Aiz2DynamicWaterHandler
+        if (handler instanceof com.openggf.game.internal.WaterShakeTimerLifecycle lifecycle
                 && shakeTimerBeforeHandler <= 0 && state.shakeTimer > 0) {
-            requestAizShakeFlag(-1);
+            lifecycle.onShakeTimerStarted();
         }
         // Handle_Onscreen_Water_Height clears Water_full_screen_flag before
         // recomputing it from the current water/camera relation every pass.
@@ -333,16 +331,9 @@ public class WaterSystem implements RewindSnapshottable<WaterSystemSnapshot> {
         if (state.shakeTimer > 0) {
             state.shakeTimer--;
             if (state.shakeTimer == 0
-                    && handler instanceof com.openggf.game.sonic3k.Aiz2DynamicWaterHandler) {
-                requestAizShakeFlag(0);
+                    && handler instanceof com.openggf.game.internal.WaterShakeTimerLifecycle lifecycle) {
+                lifecycle.onShakeTimerExpired();
             }
-        }
-    }
-
-    private static void requestAizShakeFlag(int flag) {
-        if (GameServices.zoneRuntimeRegistryOrNull() != null) {
-            com.openggf.game.sonic3k.runtime.S3kRuntimeStates.currentAiz(GameServices.zoneRuntimeRegistry())
-                    .ifPresent(state -> state.requestScreenShake(flag));
         }
     }
 

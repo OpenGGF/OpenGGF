@@ -457,7 +457,7 @@ class TestSonic3kLevelEventRewindSnapshot {
     }
 
     @Test
-    void corruptSameLengthAizSchemaPayloadRollsBackAndDoesNotAbortLaterZoneRestore() throws Exception {
+    void corruptSameLengthAizSchemaPayloadRejectsBeforeAnyStateRestoration() throws Exception {
         Sonic3kLevelEventManager hczSource = new Sonic3kLevelEventManager();
         hczSource.initLevel(Sonic3kZoneIds.ZONE_HCZ, 1);
         var hcz = hczSource.getHczEventsForTest();
@@ -492,14 +492,14 @@ class TestSonic3kLevelEventRewindSnapshot {
         assertDoesNotThrow(() -> target.restore(malformedSnapshot),
                 "malformed composed AIZ payload rejects the complete manager snapshot");
         assertTrue(aizTarget.isIntroSpawned(),
-                "schema-corrupt AIZ sidecar must roll back partial AIZ field writes");
+                "schema-corrupt AIZ payload must be rejected before writing AIZ state");
         assertEquals(0, hczTarget.getBgRoutine());
         assertFalse(hczTarget.isWallMoving());
         assertEquals(0, hczTarget.getShakeTimer());
     }
 
     @Test
-    void negativeEnumOrdinalAizSchemaPayloadRollsBackAndDoesNotAbortLaterZoneRestore() throws Exception {
+    void negativeEnumOrdinalAizSchemaPayloadRejectsBeforeAnyStateRestoration() throws Exception {
         Sonic3kLevelEventManager hczSource = new Sonic3kLevelEventManager();
         hczSource.initLevel(Sonic3kZoneIds.ZONE_HCZ, 1);
         var hcz = hczSource.getHczEventsForTest();
@@ -534,7 +534,7 @@ class TestSonic3kLevelEventRewindSnapshot {
         assertDoesNotThrow(() -> target.restore(malformedSnapshot),
                 "null enum rejects the complete manager snapshot");
         assertTrue(aizTarget.isIntroSpawned(),
-                "null-enum AIZ sidecar must roll back partial AIZ field writes");
+                "null-enum AIZ payload must be rejected before writing AIZ state");
         assertEquals(0, hczTarget.getBgRoutine());
         assertFalse(hczTarget.isWallMoving());
         assertEquals(0, hczTarget.getShakeTimer());

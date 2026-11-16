@@ -11,6 +11,33 @@ import static org.junit.jupiter.api.Assertions.*;
 @RequiresRom(SonicGame.SONIC_3K)
 class TestAizScreenPublication {
     @Test
+    void timerStartAfterScreenEventsAllowsExactly179ContinuousSetups() throws Exception {
+        var fixture = HeadlessTestFixture.builder().withZoneAndAct(0, 1).withSkippedZoneIntro().build();
+        try {
+            var events = ((Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider()).getAizEvents();
+            var setup = events.getClass().getDeclaredMethod("tickScreenShake");
+            setup.setAccessible(true);
+            setup.invoke(events);
+            assertEquals(0, events.getScreenShakeOffsetYRaw(), "ScreenEvents precedes the water trigger");
+            var water = GameServices.water();
+            water.updateDynamic(0, 1, 0x2850, 0x400);
+            assertEquals(-1, events.getScreenShakeTimer());
+            int setups = 0;
+            while (events.getScreenShakeTimer() < 0 && setups < 181) {
+                setup.invoke(events);
+                setups++;
+                water.updateDynamic(0, 1, 0x2850, 0x400);
+            }
+            assertEquals(179, setups, "preserve Obj_6E6E's established expiry boundary");
+            assertEquals(0, events.getScreenShakeTimer());
+            setup.invoke(events);
+            assertEquals(0, events.getScreenShakeOffsetYRaw(), "the following setup observes the clear flag");
+        } finally {
+            com.openggf.game.session.SessionManager.clear();
+        }
+    }
+
+    @Test
     void waterTimerWritesTheFlagOnlyAtItsStartAndExpiry() throws Exception {
         var fixture = HeadlessTestFixture.builder().withZoneAndAct(0, 1).withSkippedZoneIntro().build();
         try {

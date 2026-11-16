@@ -3038,19 +3038,12 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     }
 
     private void restoreAizSidecar(byte[] bytes) {
-        byte[] before = aizEvents.captureAizState();
-        try {
-            aizEvents.restoreAizState(bytes);
-            aizEvents.discardHardwareWorkFacadesAfterRewind();
-        } catch (RuntimeException e) {
-            try {
-                aizEvents.restoreAizState(before);
-                aizEvents.discardHardwareWorkFacadesAfterRewind();
-            } catch (RuntimeException rollbackFailure) {
-                e.addSuppressed(rollbackFailure);
-            }
-            LOG.warning("Skipping malformed AIZ zone-event rewind sidecar: " + e.getMessage());
-        }
+        // restore() validates the whole composed payload on an isolated AIZ owner
+        // before touching manager state. Apply uses the same field codecs, with no
+        // runtime/service lookup; facade discard only clears derived references.
+        // A target-dependent decode failure has no production path to roll back.
+        aizEvents.restoreAizState(bytes);
+        aizEvents.discardHardwareWorkFacadesAfterRewind();
     }
 
     private void restoreHczSidecar(byte[] bytes) {
