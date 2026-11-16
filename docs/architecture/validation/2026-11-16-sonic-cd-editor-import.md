@@ -365,3 +365,63 @@ changes this validation record only; tested production/test sources remain at
 `04ba02e06c`. No merge, destination push or unrelated file cleanup. Edited PNGs,
 state sidecars and the source-backed project remain in the requested task scratch.
 PR #352 is to be marked ready for review after this record is committed/pushed.
+
+## SCORE gap investigation: transparent cells expose the world
+
+Starting head/origin `6be140e61f741d72725cb767b191ac77d3b8bfe2`.
+The reported garbage between SCORE and its zero in the relocated control is
+foreground/background terrain visible through transparent digit cells, not a
+pattern ownership collision. No runtime fix was justified by the evidence.
+
+`TestCdEditorPlaytestRendering.uneditedHudMatchesProductionAtTheSameFrame`
+boots an unmodified R11A source project at its native start, then an undecorated
+production CD session, stepping each exactly 180 times. Its initial execution
+passed before any production change: one test, no skips. Consequently this
+investigation has **no failing-first defect reproduction**; manufacturing one
+would misrepresent the result. The original control is also not fully unedited:
+it relocates the start and clears six foreground layout cells before capture.
+The edited case paints one of those cells, changing the terrain behind SCORE.
+
+The owning writes are `CdHud.updateDigits` / `writeCells` / `writeDigit`:
+`SCORE_DIGITS = $B060 / 32 - $568 = $1B`. Initial score zero clears six two-tile
+cells, native tiles `$583..$58E`, before the final zero. Each changed HUD update
+uploads its owned sheet through `PatternSpriteRenderer.updatePatternRange`.
+The control's blank cells map to virtual IDs `$210AE..$210B9`. Reading each
+physical atlas slot with `glGetTexImage` found **zero nonzero CPU pixels and
+zero CPU/GPU mismatches in all twelve tiles**, in control, edited, native editor
+and production sessions. This excludes both a missing blank upload and a later
+corrupting upload at those slots. It does not generalize to other art owners.
+
+Rendering the same frame again with `TRACE_SHOW_GAME_HUD=false`, without a
+simulation step, leaves **all 768 pixels** at `x=56..103, y=8..23` unchanged.
+The apparent stray marks remain in the world-only control. Native-start editor
+and production main HUD regions match **all 3,840 pixels** at
+`x=16..111, y=8..47`; the final test also compares the lives region. These checks
+run for real surfaceless EGL rendering, not a logic-only headless fixture.
+
+The regression now checks native editor/production HUD pixels, CPU and GPU blank
+score cells, and world-only score-gap equality in both relocated captures. It
+re-renders control/edited PNGs and writes native editor/production comparisons,
+world-only witnesses and `.patterns.txt` readbacks to the existing requested
+scratch directory. All are local evidence; no disc-derived pixels are committed.
+Only the CD rendering test and this validation record changed. Shared runtime
+was untouched, so the conditional new smoke run is not needed; the historical
+finished-tree smoke verdict and attribution above remain unchanged.
+
+Final focused verification on the starting SHA plus this test/documentation delta:
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_TOOL_OPTIONS=-Djava.io.tmpdir=$AGENT_RUNTIME/task-07hk1OLI python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Dopenggf.test.output=$AGENT_RUNTIME/task-07hk1OLI '-Dtest=TestCdEditorPlaytestRendering,TestCdEditorProjectSource,TestEditorProjects,TestEditorProjectValidation,TestEditorProjectWorkspace,TestEditorProjectLifecycle,TestContentImportService,TestRawGlfwTestSetupGuard,TestModApiPinPolicy,TestModApiSignatureSurface,TestModApiReleasePolicy,TestArchUnitRules,TestCdHostedMenuRendering,TestSonicCdModRuntime,TestCdModZones,TestCdModMusic' test
+```
+
+**181 passed, zero failures/errors/skips**, verified media found, `missing=none`.
+Foreground run, queue wait zero; Maven execution 1:11; user wait zero; other
+orchestration time unmeasured. Log `target/cd-hud-focused.log`. The two rendering
+tests execute, with native editor/production main HUD and lives comparison.
+Manual independent PNG comparison also finds zero score-gap differences against
+HUD-hidden witnesses in all four captures. Control and edited images were
+visually inspected again; their existing 8,226-pixel terrain difference remains.
+`git diff --check` passed. The global citation audit reports historical stale/
+unavailable references; this change adds no disassembly citation or pin change.
+No category job was started and no runtime or shared renderer was edited.
+The branch/worktree and requested scratch evidence remain for PR review.
