@@ -121,7 +121,8 @@ public final class DezFinalScreenEvents {
         // Native KosM work belongs to the global queue, including after the root retires.
         state.art().service(services);
         var player = services.playerQuery().mainPlayerOrNull();
-        state.screenShake().setup(levelFrameCounter, player != null && player.getDead());
+        state.screenShake().setup(levelFrameCounter, player instanceof com.openggf.sprites.playable.AbstractPlayableSprite p
+                && com.openggf.sprites.playable.NativePlayableRoutine.isAtOrBeyondDeathForNativeRead(p));
     }
 
     /** The Plane B source cell DEZ3_ScreenInit/Draw_BGNoVert read for arena column x, row y. */

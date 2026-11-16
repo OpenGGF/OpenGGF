@@ -284,7 +284,9 @@ public final class Sonic3kSOZEvents extends Sonic3kZoneEvents {
     }
 
     void updateShake(SozEventState events, int levelFrameCounter) {
-        events.advanceScreenShake(levelFrameCounter, spriteManager().getMainPlayable().getDead());
+        // ShakeScreen_Setup gates on Player_1+routine >= 6, which a drowning sink reaches before death.
+        events.advanceScreenShake(levelFrameCounter,
+                com.openggf.sprites.playable.NativePlayableRoutine.isAtOrBeyondDeathForNativeRead(spriteManager().getMainPlayable()));
     }
 
     void queueCustomResources(SozEventState events, int blocksAddress, int artAddress) {

@@ -9,9 +9,8 @@ Base: `e676eb5086b7069c5e8ffdd0dbd33990d5c2bf5f` (`develop`). Scope: CNZ, LRZ, S
 output without decrement at primary routine >=6, decrements positive flags, and indexes continuous shake with `Level_frame_counter & $3F`. `ScreenShakeArray` (sonic3k.asm:104277-104279) immediately precedes `ScreenShakeArray2` (sonic3k.asm:104280-104285): positive counts above $14
 read into the continuous table. No FixBugs branch is changed. Follow-up retained for the lead: HPZ has water and, like LRZ and the DEZ final
 arena, passes `getDead()` through to `S3kScreenShake.setup`. A drowning player with native routine >=6 but `getDead() == false` may therefore still get shake;
-this was source-inspected, not exercised here. The lead will address that gate
-and the shared owner's wrong Javadoc table citation separately: the correct
-reference is `ScreenShakeArray2` (sonic3k.asm:104280-104285).
+this was source-inspected, not exercised here. The lead addressed that gate
+and the shared owner's Javadoc table citation in the follow-up below.
 
 ## CNZ — (c), demonstrated death-output defect; retain scalar ownership
 
@@ -147,3 +146,24 @@ local link-target (573), whitespace and commit-policy checks pass. The unrelated
 Sonic CD checkout/pin warning is retained; no reference checkout was changed.
 Job waits (initial/red/green/traces/base-focus/base-traces): 379/389/774/834/565/980s; these overlap.
 Maven execution in that order: 01:47 min / 38.544 s / 01:43 min / 03:09 min / 01:53 min / 03:09 min. User wait: 0; other time unmeasured.
+
+## Follow-up: player-routine shake gate (2026-11-16)
+
+Base: `61630491a0` (`develop`). Six `ShakeScreen_Setup` call sites passed
+`getDead()` as the `Player_1+routine >= 6` gate: HPZ and LRZ in
+`Sonic3kLevelEventManager`, SSZ1 launch and SSZ2 in `Sonic3kSSZEvents`, SOZ's
+`updateShake` and `DezFinalScreenEvents`. A drowning sink installs routine 6
+before the engine dead flag, so those zones kept counting down and publishing
+shake. All six now read `NativePlayableRoutine.isAtOrBeyondDeathForNativeRead`,
+as AIZ, LBZ, MGZ and MHZ already did. `S3kScreenShake` now cites
+`ScreenShakeArray2` (sonic3k.asm:104280-104285).
+
+Red witness `TestS3kShakeSetupPlayerRoutineGate` loads each zone, proves its
+real call site consumes a timed $14 countdown, then repeats with Player 1 at
+routine 6 and the dead flag clear. Before the fix all six cases kept counting
+(expected $14, was $13); after it all pass. The same 33-class selection (zone
+event tests, the eight architecture guards, the four required S3K tests and
+the HPZ/HPZ2/LRZ/SSZ/SSZ1-cold/SOZ/DEZ trace replays) ran on this branch and on
+`develop`: the five pre-existing trace failures are identical in identity,
+totals and first divergence; nothing else fails. No route or drowning capture
+was run.
