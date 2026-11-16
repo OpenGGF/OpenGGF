@@ -745,6 +745,8 @@ public class Sonic2GameModule implements GameModule, com.openggf.game.internal.S
 
         @Override
         public int resolveNativeId(CanonicalAnimation canonical) {
+            // CPU recovery asks for the generic flying pose before art is bound.
+            if (tails && canonical == CanonicalAnimation.FLY) canonical = CanonicalAnimation.TAILS_FLY;
             int familyId = com.openggf.game.AnimationFamilies.resolve(getAnimationFamilies(), canonical);
             if (familyId >= 0) return familyId;
             return tails ? -1 : Sonic2AnimationIds.fromCanonical(canonical);
