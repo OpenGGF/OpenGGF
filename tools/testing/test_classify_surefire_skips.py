@@ -2,6 +2,7 @@
 
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -172,6 +173,14 @@ class CheckedInPolicyTests(unittest.TestCase):
         gl = [r for r in pol["rules"] if r["category"] == "gl-context"]
         self.assertGreaterEqual(len(gl), 19)
         self.assertTrue(all(r["allowed_when_absent"] == "gl" for r in gl))
+
+    def test_release_workflow_declares_every_policy_input(self):
+        # An undeclared input turns each of its skips into an unexplained one and fails the release.
+        workflow = (ROOT / ".github/workflows/release.yml").read_text()
+        line = next(l for l in workflow.splitlines() if "--capabilities " in l)
+        declared = set(re.findall(r"(?:^|,)([a-z0-9_]+)=", line.split("--capabilities ", 1)[1]))
+        missing = sorted(set(csk.load_policy(POLICY)["inputs"]) - declared)
+        self.assertEqual(missing, [], "release.yml --capabilities must declare every policy input")
 
     def test_policy_evidence_sources_all_exist(self):
         pol = csk.load_policy(POLICY)

@@ -129,13 +129,15 @@ public class Sonic3kSSZEvents extends Sonic3kZoneEvents {
             if (state.backgroundRoutine() != 0)
                 state.endingBackgroundPlane().drawTileRow(state.backgroundCameraY());
             state.advanceScreenShake(frameCounter,
-                    services.playerQuery().mainPlayerOrNull() instanceof AbstractPlayableSprite p && p.getDead());
+                    services.playerQuery().mainPlayerOrNull() instanceof AbstractPlayableSprite p
+                            && com.openggf.sprites.playable.NativePlayableRoutine.isAtOrBeyondDeathForNativeRead(p));
             camera().setYCopy((short) (camera().getYCopy() + state.appliedScreenShakeOffset()));
         }
         if (act == 0) {
             var services = levelManager().getObjectManager().getObjectServices();
             state.launch().advanceShake(frameCounter,
-                    services.playerQuery().mainPlayerOrNull() instanceof AbstractPlayableSprite p && p.getDead());
+                    services.playerQuery().mainPlayerOrNull() instanceof AbstractPlayableSprite p
+                            && com.openggf.sprites.playable.NativePlayableRoutine.isAtOrBeyondDeathForNativeRead(p));
             camera().setYCopy((short) (camera().getYCopy() + state.launch().appliedShake()));
             if (state.foregroundRoutine() == 0) {
                 if (gameState().isEndOfLevelFlag()) SszLaunchWorld.begin(services, state);

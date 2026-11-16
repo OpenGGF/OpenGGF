@@ -920,7 +920,9 @@ under the matching area heading; see the
   phase; unexpected validated-restore failures propagate to their caller.
   The seamless reload retains HCZ1 deformation,
   and the geyser begins shaking on its native first dispatch. CNZ suppresses
-  screen shake after player death without consuming its countdown; SOZ uses
+  screen shake after player death without consuming its countdown, and HPZ,
+  LRZ, SSZ, SOZ and the DEZ final arena likewise stop it from the moment a
+  drowning or restarting player reaches the native death routine; SOZ uses
   the shared native shake owner as a refactor with no gameplay behaviour change,
   preserving its contiguous-table reads and rewind continuation. MGZ likewise
   owns shake, cloud phase and collision publication; drawing or rebuilding its
