@@ -64,6 +64,7 @@ public final class SwScrlFbz extends AbstractZoneScrollHandler implements FbzClo
     private boolean explicitForegroundScroll;
     // Resolved native presentation inputs; samplers never invoke the runtime's accumulators.
     private int presentationMode, presentationDrift, presentationBob;
+    private int presentationCameraY;
     private int presentationOffsetX, presentationOffsetY, presentationShake, presentationForegroundY;
 
     public SwScrlFbz() {
@@ -95,6 +96,7 @@ public final class SwScrlFbz extends AbstractZoneScrollHandler implements FbzClo
             cameraX = state.scrollPublication().cameraX();
             cameraY = state.scrollPublication().cameraY();
         }
+        presentationCameraY = cameraY;
         // FBZ2BGE_BossEvent is Events_routine_bg=$10. Stages 4/8/12 are
         // ordinary traversal/redraw states and must never select CloudDeform.
         if (state != null && state.scrollPublication().mode() == 2) {
@@ -311,6 +313,7 @@ public final class SwScrlFbz extends AbstractZoneScrollHandler implements FbzClo
     public com.openggf.level.scroll.ScrollProjectionPhase captureProjection(
             com.openggf.level.scroll.ScrollProjectionContext context) {
         int mode = presentationMode, drift = presentationDrift, bob = presentationBob;
+        int cameraCopyDeltaY = (short) (presentationCameraY - context.cameraY());
         int offsetX = presentationOffsetX, offsetY = presentationOffsetY;
         int shake = presentationShake, foregroundY = presentationForegroundY;
         int[] nativeCloudX = new int[cloudPositionSlots.length], nativeCloudY = new int[cloudPositionSlots.length];
@@ -321,10 +324,10 @@ public final class SwScrlFbz extends AbstractZoneScrollHandler implements FbzClo
         return view -> {
             var output = new ScrollEffectComposer(view.height());
             var table = ScrollValueTable.ofLength(256);
-            if (mode == 2) composeCloudBoss(output, table, view.cameraX(), view.cameraY(), offsetX,
+            if (mode == 2) composeCloudBoss(output, table, view.cameraX(), (short) (view.cameraY() + cameraCopyDeltaY), offsetX,
                     offsetY, shake, foregroundY, drift);
             else if (mode == 1) composeOutdoor(output, table, view.cameraX(), bob, drift);
-            else composeIndoor(output, table, view.cameraX(), view.cameraY());
+            else composeIndoor(output, table, view.cameraX(), (short) (view.cameraY() + cameraCopyDeltaY));
             output.setVscrollFactorFG((short) (context.nativeOutput().foregroundY() + view.cameraY() - context.cameraY()));
             var positions = new java.util.LinkedHashMap<com.openggf.level.scroll.ScrollSpriteKey,
                     com.openggf.level.scroll.ScrollSpritePosition>();

@@ -685,10 +685,8 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
             eventsFg5 = false;
             if (hasRuntime()) {
                 applyAct1ToAct2Reload();
-                var manager = (com.openggf.game.sonic3k.Sonic3kLevelEventManager)
-                        com.openggf.game.GameServices.module().getLevelEventProvider();
-                manager.getFbzEvents().publishDeformation(levelManager().getFrameCounter(),
-                        camera().getXCopy(), camera().getYCopy());
+                // Target runtime installation already ran BackgroundInit/deformation.
+                // The module provider may be a mod wrapper around the stock manager.
                 levelManager().recomputeParallaxOnlyForCurrentFrame();
             }
 
@@ -1671,11 +1669,18 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
     }
     public void restoreScreenShakePipelineState(boolean active, int offset, int lastOffset,
                                                 int phase, int foregroundVScroll) {
+        restoreScreenShakePipelineState(active ? (short) 0xFF00 : 0, offset, lastOffset, phase, foregroundVScroll);
+    }
+    public void captureScreenShakeTo(java.nio.ByteBuffer out) {
+        screenShake.captureTo(out);
+    }
+    public void restoreScreenShakePipelineState(int flag, int offset, int lastOffset,
+                                                int phase, int foregroundVScroll) {
         requireAct2("screen shake restore");
-        if (phase < 0 || phase > 0x3F || offset != (short) offset || lastOffset != (short) lastOffset)
+        if (flag != (short) flag || phase < 0 || phase > 0x3F || offset != (short) offset || lastOffset != (short) lastOffset)
             throw new IllegalArgumentException("invalid FBZ shake words");
         var words = java.nio.ByteBuffer.allocate(12);
-        words.putInt(active ? (short) 0xFF00 : 0).putInt(offset).putInt(lastOffset).flip();
+        words.putInt(flag).putInt(offset).putInt(lastOffset).flip();
         screenShake.restoreFrom(words);
         screenShakePhase = phase;
         bossForegroundVScroll = foregroundVScroll;

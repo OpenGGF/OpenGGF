@@ -10,6 +10,8 @@ under the matching area heading; see the
 - **Flying Battery event publication:** gameplay owns cloud drift, positions and
   shake setup; extra draws and renderer rebuilds preserve the completed event
   state, including after rewind. Subbosses request shake through its flag alone.
+  Seamless reload supports mod-wrapped event providers; projected indoor views
+  retain camera-copy shake, and rewind preserves timed as well as constant shake.
 
 - **Sonic CD (development preview):** Sonic CD runs from the user's own USA
   disc image (a cue sheet and its tracks, or a lossless CHD made from them with

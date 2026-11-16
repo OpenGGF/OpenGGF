@@ -118,6 +118,30 @@ class TestS3kAdditionalScrollProjection {
         assertEquals(expected, phase.sample(view));
     }
 
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
+    void fbzRumbleProjectionRetainsPublishedCameraCopy(boolean outdoor) {
+        var events = new Sonic3kFBZEvents();
+        events.init(1);
+        events.setBackgroundOutdoor(outdoor);
+        events.setOutdoorBobOffset(5);
+        events.setScreenShakeState(true, 3, 3);
+        events.publishDeformation(4, 0x1000, 0x403);
+        var runtime = new FbzZoneRuntimeState(1, PlayerCharacter.SONIC_ALONE, events);
+        var handler = new SwScrlFbz(() -> runtime);
+        int[] words = new int[224];
+        handler.update(words, 0x1000, 0x400, 4, 1);
+        var nativeOutput = output(handler, words, 0x400);
+        byte[] before = runtime.captureBytes();
+        var phase = handler.captureProjection(new ScrollProjectionContext(0x1000, 0x400, 4, 1, 320, 224, nativeOutput));
+        assertEquals(nativeOutput, phase.sample(new ScrollView(0x1000, 0x400, 320, 224)).withSpritePositions(Map.of()));
+        int shiftedY = 0x443;
+        int half = (short) shiftedY >> 1;
+        assertEquals(outdoor ? 0x1B : half - (half >> 5),
+                phase.sample(new ScrollView(0x1000, 0x440, 320, 224)).backgroundY());
+        assertArrayEquals(before, runtime.captureBytes());
+    }
+
     private static short[] lbzWords(SwScrlLbz handler) {
         short[] words = new short[0xEC / 2];
         for (int i = 0; i < words.length; i++) words[i] = handler.getLbz2HScrollWordForTest(i);

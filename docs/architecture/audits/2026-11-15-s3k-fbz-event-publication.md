@@ -52,40 +52,28 @@ and ROM read-before-increment order are preserved.
 
 ## Designs considered
 
-1. Keep renderer sampling with a frame-number guard: rejected because an extra
-   draw with another clock still changes gameplay, as the red witness proves.
-2. Reconstruct clouds from current live fields on restore: rejected because
-   boss-load normalization follows CloudDeform and may have changed its inputs.
-3. Chosen: event-owned immutable scroll inputs and concrete cloud output in the
-   existing validated payload; renderer caches are disposable projections.
+1. Renderer sampling with a frame guard: rejected; another draw clock changes gameplay (red witness).
+2. Reconstruct clouds from live fields: rejected; post-CloudDeform normalization changes its inputs.
+3. Chosen: event-owned scroll inputs and cloud output in one payload; renderer caches are disposable.
 
 ## Checks and limits
 
-Final source: 406 tests, 8 inherited trace failures, 0 errors, 0 skips.
+First delivery source: 406 tests, 8 inherited trace failures, 0 errors, 0 skips.
 315 focused/guard/lifecycle cases and 82 route/checkpoint cases pass; the
 complete-run replay passes. All 91 paired baseline cases have identical
 failure messages/errors/skips; no missing cases or changed results. Lead owns broad smoke;
 this lane does not run categories or the full suite. Native pixel capture and
 new donor/wide route certification are outside this bounded publication change.
 
-Strict citation checking of every touched file found three inherited stale
-references in the shared event manager (lines 667, 2294, 2297); `git show` of
-base confirms all three are unchanged. They concern HPZ/CNZ, outside this lane.
-The separate FBZ-owner/audit check passes (7 verified, 1 unverifiable shorthand).
-The tool also warns about an unrelated local Sonic CD disassembly checkout.
+Original strict checks: three inherited manager citations (667/2294/2297),
+confirmed unchanged at base; FBZ owners/audit pass (7 verified, 1 shorthand).
+An unrelated Sonic CD checkout warning also remains.
 
-Validation ran across midnight into 2026-11-16. Initial failures were retained:
-- Red witness: 1 test, 1 expected failure, no errors/skips.
-- Initial focused selection: 250 tests, 1 diagnostic-phase failure, no errors/skips;
-  fixed by retaining the diagnostic sample when death skips the table read.
-- Extended focused attempt: compilation failed (missing explicit-FG interface
-  method), 0 tests executed; method added.
-- First combined selection: 406 tests, 14 failures, no errors/skips. Six new
-  failures (two continuous-shake clock cases and four checkpoint replay cases)
-  exposed an unsigned $FF00 restore. Casting to signed word fixes restoration
-  of continuous mode; all six assertions remain unchanged and now pass.
-- Final combined selection: 406 tests, 8 inherited failures, no errors/skips.
-- Baseline route/trace selection: 91 tests, 8 failures, no errors/skips.
+Original runs (2026-11-15/16), no test errors/skips: red 1/1 failure;
+focused 250/1 failure (diagnostic phase retained on death); extended attempt
+compiled no tests (missing explicit-FG method, corrected); combined 406/14
+failures (six unsigned-$FF00 restore failures corrected without weakening tests);
+final 406/8 inherited failures; baseline route/trace 91/8 inherited failures.
 
 Exact commands (all test invocations use the queue; `F` and `L` expand below):
 
@@ -100,10 +88,8 @@ python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless
 python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl "-Dtest=$F,$L,$R" test # twice: unsigned restore, then corrected
 ```
 
-All runs reported every discovered ROM property found and none missing. The
-first red-log redirect failed because target did not exist; no Maven launched
-on that attempt. Creating target resolved it. No category/full-suite run or
-exhaustive-audit opt-in was used. No release-wide certification is claimed.
+All ROMs found, none missing. Initial log redirect failed before Maven; fixed.
+No categories/full-suite/exhaustive-audit opt-in or release-wide certification.
 
 Inherited trace results, identical on baseline and final candidate:
 
@@ -120,11 +106,46 @@ Inherited trace results, identical on baseline and final candidate:
 
 Timing, seconds (queue / Maven execution): red 270/86; initial focused 350/92;
 baseline 433/175; compile failure 1161/51; first combined 590/199;
-final combined 287/204. User wait: 0. Research/edit/command overhead was not
-instrumented and remains unknown, separate from these measured intervals.
+final combined 287/204. User wait: 0. Research/edit/command overhead: unknown, separately uninstrumented.
 
-`git diff --check` passes. Strict citation command was
-`python3 tools/disasm/disasm_citations.py check --strict <all staged files>`;
-the shared-manager failures above remain inherited. Rechecking FBZ owners and
-this audit alone passed. Broad smoke, independent review, and new native-pixel,
-sparse-allocation, donor/wide route certification remain outside this lane.
+`git diff --check` passes; strict checks retain only inherited issues above.
+Broad smoke/review and native-pixel, sparse-allocation, donor/wide qualification
+remain with the lead or later work, outside this lane.
+
+## Independent review revision — 2026-11-16
+
+Reviewed head: `454fa3fbe5707f6fea80395c633b1b727a2a18da`.
+
+1. FIXED: production `ModZoneEventProvider` witness throws ClassCastException.
+   The redundant cast/publication is removed: synchronous reload installs and
+   initializes the target events after camera offsets, already publishing there.
+2. FIXED indoor projection: red BG Y 496 vs native 497 with retained shake 3.
+   Projection retains the published camera-copy delta before deformation.
+   Outdoor-specific suspicion rejected: native Y is $16+bob, independent of
+   camera Y; the added outdoor case passes unchanged. Translated views also tested.
+3. FIXED latent timed restore: red flag -256 vs expected countdown 13.
+   Version 17 captures all three shared-owner words with captureTo/restoreFrom;
+   malformed flag/offset/last-offset words are rejected atomically, no migration.
+4. Strengthened: cloud actually changes across the two ordinary frames before
+   restore; real events retain offset 3 after flag-clear, consume it in foreground
+   Y, then publish next offset zero. Both assertions pass before implementation.
+
+Record-only inherited reload mode/accumulator and sparse cloud-table gaps are
+linked from [the bug catalogue](../../status/s3k-known-bugs.md#fbz-inherited-reload-and-sparse-cloud-publication-gaps--2026-11-16).
+Red: 23 tests, 3 failures, no errors/skips. Exact revision commands follow;
+`F`, `L`, `R` are defined above, all ROMs found, none missing.
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Dtest=TestFbzWrappedEventTransition,TestFbzEventPublication,TestS3kAdditionalScrollProjection test
+F="${F/TestFbzEventPublication,/TestFbzEventPublication,TestFbzWrappedEventTransition,}"
+python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl "-Dtest=$F,$L,$R" test
+python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl "-Dtest=$R" test # fresh detached e676eb5086 baseline
+```
+
+Review validation: 411 tests, 8 inherited trace failures, 0 errors/skips;
+320 focused/guard/lifecycle/wrapper and 82 route/checkpoint cases pass, as does
+complete-run replay. All 91 paired results match the fresh 91/8 baseline.
+Queue/execution seconds: red 570/38; baseline 615/176; candidate 655/207.
+User wait 0; research/edit overhead unknown. Strict revision source citations pass. The bug
+catalogue has 35 stale and one missing-file citation, identically reproduced on
+baseline; no new stale/missing citations. These unrelated references are untouched.
