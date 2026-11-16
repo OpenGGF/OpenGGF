@@ -2,7 +2,7 @@
 
 Baseline: `e676eb5086b7069c5e8ffdd0dbd33990d5c2bf5f` (`develop`).
 Reviewed heads: `0e1e816c92`, then `5ca768471b1ac199e25ec29f17efae9bf66303f4`.
-Outcome: **PASS — 383 focused tests; all eleven replay JSON reports exactly baseline-identical.**
+Outcome: **PASS — 1792 focused/rewind/guard tests; all eleven replay JSON reports exactly baseline-identical.**
 Scope: MGZ; shared S3kScreenShake API unchanged. No categories/full-suite, merge or PR watch.
 [Original implementation history](https://github.com/OpenGGF/OpenGGF/blob/0e1e816c92a4b711cf670f4ddb03739135b9ebf5/docs/architecture/audits/2026-11-15-s3k-mgz-event-publication.md) and [first review history](https://github.com/OpenGGF/OpenGGF/blob/5ca768471b1ac199e25ec29f17efae9bf66303f4/docs/architecture/audits/2026-11-15-s3k-mgz-event-publication.md) retain all earlier commands/results.
 
@@ -123,3 +123,25 @@ MGZ-owned strict checking passes (73 ok, 16 unverifiable), including three repai
 Whole touched-file checking reports 163 stale, 2 out-of-range and 9 unresolved-file citations, all on unchanged historical/shared lines (zero added-line errors); these include the three previously reported non-MGZ manager citations. The unrelated Sonic CD checkout warning remains. No pins moved. Whitespace passes; raw logs stay in target/.
 Smoke, independent re-review, wider viewport/donor/team, Knuckles BG movement and native pixel/audio certification remain with the lead.
 This follow-up: queue 569 s; Maven execution 940.815 s; user wait 0; other time unmeasured. All jobs completed. Disposable scratch is removed at handoff.
+
+## Lead smoke follow-up (2026-11-16, parent d0fecbca29)
+
+1. Worker coverage is GRAPH, naming TestSonic3kMgz2CollapseEvents: its real ObjectManager/event snapshot recreates one worker, restores the timer and resumes one tick. This is required external-owner coverage, not an exemption or an empty isolated probe.
+2. Worker retirement uses ObjectLifetimeOps.deleteNoRespawn; no lifecycle allowance added.
+3. Removed both retired currentMgzRuntimeState access permissions; synthetic guard fixtures now exercise the four remaining permissions and still reject caller substitution/multiplicity/removal.
+4. Removed the new validator catch and both MGZ restore catches, plus three retired inventory rows. Fixed-schema preflight checks final-array length words against a fresh schema capture before decode; canonical scalar checks remain. Unexpected schema/runtime failures propagate. An exhaustive scalar-word overwrite witness rejects invalid input before owner mutation, without throwing from validation. No new catch allowance was added.
+5. Music remains tied to loc_6C3EC (sonic3k.asm:142850-142859), after setup plus 120 non-underflow Obj_Wait dispatches, including zero. Tests assert silence through zero and no movement on callback, rather than merely increasing a loop bound. Visibility is independent: Obj_MGZEndBoss (sonic3k.asm:142785-142792) always draws/touches after its routine. The Sonic $A1 hidden-wait gate is removed, including the zero-pass anomaly; Knuckles' distinct continuation gate is preserved. A new red witness failed on setup dispatch 0 and now proves the waiting pose through zero.
+
+S = `TestEveryObjectRewindRoundTrip,TestRemainingRewindTailInventory,TestRewindHarnessCoverageRatchet,TestZoneEventRuntimeAccessGuard,TestObjectPhysicsStandardizationGuard,TestBroadCatchSwallowingGuard,TestS3kMgzBossMusicTransition`; F = S followed by B above. All commands use Q G and `-Dtest=<selector> test`, without -Pguards; output paths below are under target/.
+
+| Selector | Additional properties | tests/failures/errors/skips; log |
+| --- | --- | --- |
+| S, red at d0fecbca29 | openggf.surefire.reports=target/mgz-smoke-red/surefire | 1407/9/0/0; mgz-smoke-red.log |
+| TestS3kMgzBossMusicTransition#endBossDrawsThroughoutItsInitialWaitIncludingZero | none; G omitted | 1/1/0/0; mgz-visibility-red.log |
+| S,TestSonic3kMgz2CollapseEvents,TestMgzComposedRewindState | openggf.surefire.reports=target/mgz-smoke-fix/surefire | 1431/4/0/0; mgz-smoke-fix.log; retired synthetic accesses remained in guard fixtures |
+| F | openggf.surefire.reports=target/mgz-smoke-final/surefire | 1792/3/0/0; mgz-smoke-final.log; one fixture signature assertion and two Knuckles visibility regressions, corrected |
+| F | openggf.surefire.reports=target/mgz-smoke-final2/surefire | 1792/0/0/0; mgz-smoke-final2.log |
+| T | trace.print.summary=true; report properties as above with mgz-smoke-traces | 12/8/0/0; mgz-smoke-traces.log; all eleven full JSON objects exactly equal e676 baseline |
+
+Final log explicitly executes TestZoneEventRuntimeAccessGuard (12), TestObjectPhysicsStandardizationGuard (35), TestBroadCatchSwallowingGuard (4), TestEveryObjectRewindRoundTrip (1347), both inventory/ratchet classes (1 each), and the music class (8): all zero failures/errors/skips. ROM discovery missing=none throughout. The inherited replay/coverage/citation limits above remain; no new replay mismatch. All local jobs completed.
+Lead-smoke follow-up time: queue 331 s; Maven execution 486.279 s; user wait 0; other time unmeasured. MGZ-owned strict citations: 81 ok, 17 unverifiable; no stale entries.

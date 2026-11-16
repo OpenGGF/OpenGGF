@@ -2841,7 +2841,7 @@ MGZ event publication (2026-11-15): the [bounded audit](../architecture/audits/2
 records real-load projection/rewind witnesses, trigger-frame capture, whole-manager
 rejection and native end-boss/transition dispatch witnesses. The two review
 trace regressions are resolved: all eleven reports exactly match baseline;
-383 focused cases pass. Eight inherited replay failures remain.
+1792 focused/rewind/guard cases pass. Eight inherited replay failures remain.
 The [MGZ1](../architecture/validation/levels/s3k-mgz-act1.md) and
 [MGZ2](../architecture/validation/levels/s3k-mgz-act2.md) matrices retain their
 wider route, donor, team and viewport obligations.

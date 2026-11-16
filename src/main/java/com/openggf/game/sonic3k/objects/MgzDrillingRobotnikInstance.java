@@ -1579,7 +1579,11 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
     }
 
     private boolean isInitialHiddenWait() {
-        return state.routine == ROUTINE_INIT && waitTimer > 0;
+        // Obj_MGZEndBoss (sonic3k.asm:142785-142792) draws/touches after
+        // every routine, including setup and Obj_Wait. The mini-event and
+        // Knuckles boss use different native setup/continuation entries.
+        return spawn.objectId() != Sonic3kObjectIds.MGZ_END_BOSS
+                && state.routine == ROUTINE_INIT && waitTimer > 0;
     }
 
     @Override

@@ -29,7 +29,7 @@ public final class MgzBossTransitionObjectInstance extends AbstractObjectInstanc
         if (!(services().levelEventProvider() instanceof Sonic3kLevelEventManager manager)
                 || manager.getMgzEvents() == null
                 || !manager.getMgzEvents().updateBossTransitionNativeObject()) {
-            setDestroyed(true);
+            com.openggf.level.objects.ObjectLifetimeOps.deleteNoRespawn(this);
         }
     }
 

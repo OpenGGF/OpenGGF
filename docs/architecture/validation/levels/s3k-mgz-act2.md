@@ -219,5 +219,5 @@ this matrix's inherited obligations remain open.
 Review corrections add exact collapse arm/BG ordering, late-load no-SST effects,
 and whole-manager malformed-payload rejection. The causal follow-up corrects
 end-boss waits and transition-object admission/first dispatch. All eleven replay
-JSON reports are exactly baseline-identical; 383 focused checks pass. The audit
+JSON reports are exactly baseline-identical; 1792 focused/rewind/guard checks pass. The audit
 retains the inherited eight failing replay classes and wider coverage limits.

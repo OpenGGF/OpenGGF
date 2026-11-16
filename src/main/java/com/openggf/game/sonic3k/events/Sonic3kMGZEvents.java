@@ -2706,31 +2706,60 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
 
     public static boolean hasValidMgzState(byte[] bytes) {
         if (bytes == null || bytes.length < 24) return false;
-        try {
-            var in = ByteBuffer.wrap(bytes);
-            if (in.getInt() != 0x4D475A31 || in.getInt() != 1) return false;
-            int length = in.getInt();
-            var probe = new Sonic3kMGZEvents();
-            if (length != ZoneEventSchemaSidecar.capture(probe).length
-                    || length != in.remaining() - 12) return false;
-            byte[] scalars = new byte[length];
-            in.get(scalars);
-            ZoneEventSchemaSidecar.restore(probe, scalars);
-            if (!Arrays.equals(scalars, ZoneEventSchemaSidecar.capture(probe))) return false;
-            for (int routine : new int[] {probe.bgRiseRoutine, probe.publishedRiseRoutine}) {
-                if (routine != 0 && routine != 4 && routine != 8 && routine != 12) return false;
+        var in = ByteBuffer.wrap(bytes);
+        if (in.getInt() != 0x4D475A31 || in.getInt() != 1) return false;
+        int length = in.getInt();
+        var probe = new Sonic3kMGZEvents();
+        byte[] shape = ZoneEventSchemaSidecar.capture(probe);
+        if (length != shape.length
+                || length != in.remaining() - 12) return false;
+        byte[] scalars = new byte[length];
+        in.get(scalars);
+        if (!hasValidScalarShape(scalars, shape)) return false;
+        ZoneEventSchemaSidecar.restore(probe, scalars);
+        if (!Arrays.equals(scalars, ZoneEventSchemaSidecar.capture(probe))) return false;
+        for (int routine : new int[] {probe.bgRiseRoutine, probe.publishedRiseRoutine}) {
+            if (routine != 0 && routine != 4 && routine != 8 && routine != 12) return false;
+        }
+        if (probe.publishedBossOffset != Integer.MIN_VALUE
+                && (probe.publishedBossOffset < 0 || probe.publishedBossOffset > 0xFFFF)) return false;
+        if (probe.bgRiseRefreshFramesRemaining < 0 || probe.bgRiseRefreshFramesRemaining > BG_RISE_REFRESH_FOLLOWUP_FRAMES
+                || probe.bgRiseOffset < 0 || probe.bgRiseOffset > 0x220
+                || probe.publishedRiseOffset < 0 || probe.publishedRiseOffset > 0x220) return false;
+        for (int value : new int[] {probe.appliedScreenShakeOffset, probe.collisionDiffX, probe.collisionDiffY, probe.publishedCameraX, probe.publishedCameraY,
+                in.getInt(), in.getInt(), in.getInt()}) {
+            if (value != (short) value) return false;
+        }
+        return true;
+    }
+
+    /** Preflight the fixed same-build schema before decoding; malformed bytes are data,
+     * while schema/programming failures propagate instead of masquerading as corruption. */
+    private static boolean hasValidScalarShape(byte[] scalars, byte[] shape) {
+        var expected = ByteBuffer.wrap(shape).order(java.nio.ByteOrder.LITTLE_ENDIAN);
+        var input = ByteBuffer.wrap(scalars).order(java.nio.ByteOrder.LITTLE_ENDIAN);
+        for (var plan : com.openggf.game.rewind.schema.RewindSchemaRegistry
+                .schemaFor(Sonic3kMGZEvents.class).capturedFields()) {
+            Class<?> type = plan.field().getType();
+            int width;
+            if (type == int[].class && java.lang.reflect.Modifier.isFinal(plan.field().getModifiers())) {
+                int count = expected.getInt();
+                if (input.getInt() != count) return false;
+                width = count * Integer.BYTES;
+            } else if (type.isPrimitive()) {
+                width = switch (com.openggf.game.rewind.schema.RewindScalarTag.forType(type)) {
+                    case BOOLEAN, BYTE -> 1;
+                    case CHAR, SHORT -> 2;
+                    case INT, FLOAT -> 4;
+                    case LONG, DOUBLE -> 8;
+                };
+            } else {
+                throw new IllegalStateException("MGZ scalar preflight needs a codec for " + plan.field());
             }
-            if (probe.publishedBossOffset != Integer.MIN_VALUE
-                    && (probe.publishedBossOffset < 0 || probe.publishedBossOffset > 0xFFFF)) return false;
-            if (probe.bgRiseRefreshFramesRemaining < 0 || probe.bgRiseRefreshFramesRemaining > BG_RISE_REFRESH_FOLLOWUP_FRAMES
-                    || probe.bgRiseOffset < 0 || probe.bgRiseOffset > 0x220
-                    || probe.publishedRiseOffset < 0 || probe.publishedRiseOffset > 0x220) return false;
-            for (int value : new int[] {probe.appliedScreenShakeOffset, probe.collisionDiffX, probe.collisionDiffY, probe.publishedCameraX, probe.publishedCameraY,
-                    in.getInt(), in.getInt(), in.getInt()}) {
-                if (value != (short) value) return false;
-            }
-            return true;
-        } catch (RuntimeException malformed) { return false; }
+            expected.position(expected.position() + width);
+            input.position(input.position() + width);
+        }
+        return !input.hasRemaining();
     }
 
     public void restoreMgzState(byte[] bytes) {

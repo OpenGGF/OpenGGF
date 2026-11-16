@@ -3086,19 +3086,9 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     }
 
     private void restoreMgzSidecar(byte[] bytes) {
-        byte[] before = mgzEvents.captureMgzState();
-        try {
-            mgzEvents.restoreMgzState(bytes);
-            mgzEvents.discardHardwareWorkFacadesAfterRewind();
-        } catch (RuntimeException e) {
-            try {
-                mgzEvents.restoreMgzState(before);
-                mgzEvents.discardHardwareWorkFacadesAfterRewind();
-            } catch (RuntimeException rollbackFailure) {
-                e.addSuppressed(rollbackFailure);
-            }
-            LOG.warning("Skipping malformed MGZ zone-event rewind sidecar: " + e.getMessage());
-        }
+        // MGZ's complete payload has already passed the pre-restore validation.
+        // Unexpected schema/runtime failures must reach the caller, not be swallowed.
+        mgzEvents.restoreMgzState(bytes);
     }
 
     private void restoreMhzSidecar(byte[] bytes) {

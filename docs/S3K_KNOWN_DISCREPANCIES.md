@@ -2290,3 +2290,10 @@ compensating delays while retaining the ROM's FG-before-BG shake setup. All elev
 MGZ replay reports exactly match the e676 baseline; eight inherited replay failures
 remain. Missing rumble-onset writes, the skipped opening scroll step and its pending
 carrier projections, and Do_ShakeSound gating remain explicitly outside this repair.
+
+MGZ lead-smoke follow-up (2026-11-16): Sonic's end-boss body draws during the
+initial wait independently of its music callback. The Knuckles continuation gate
+remains separate. The transition worker has composed graph rewind coverage;
+validation rejects malformed scalar layout before decode and propagates unexpected
+restore failures. Removed runtime/catch debt is retired from guard inventories.
+See the [MGZ audit](architecture/audits/2026-11-15-s3k-mgz-event-publication.md).

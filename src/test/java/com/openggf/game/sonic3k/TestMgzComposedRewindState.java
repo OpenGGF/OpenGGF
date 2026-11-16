@@ -61,6 +61,21 @@ class TestMgzComposedRewindState {
         }
     }
 
+    @Test void overwrittenScalarWordsAreValidatedWithoutThrowingOrMutatingTheOwner() {
+        var events = new Sonic3kMGZEvents();
+        events.init(1);
+        byte[] saved = events.captureMgzState();
+        // Includes every final-array length prefix and noncanonical boolean byte,
+        // without depending on schema field offsets or duplicating the decoder.
+        for (int offset = 12; offset <= saved.length - 16; offset++) {
+            byte[] bad = saved.clone();
+            ByteBuffer.wrap(bad).putInt(offset, Integer.MAX_VALUE);
+            boolean valid = assertDoesNotThrow(() -> Sonic3kMGZEvents.hasValidMgzState(bad));
+            if (!valid) assertThrows(IllegalArgumentException.class, () -> events.restoreMgzState(bad));
+            assertArrayEquals(saved, events.captureMgzState());
+        }
+    }
+
     @Test void malformedFramingAndWordsAreRejectedBeforeMutation() {
         var events = new Sonic3kMGZEvents();
         events.init(1);
