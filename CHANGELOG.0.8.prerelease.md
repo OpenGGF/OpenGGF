@@ -751,6 +751,9 @@ under the matching area heading; see the
   so rebuilding scroll output retains the same background. Rewind captures that
   continuation together with the shared ROM shake words; ICZ objects request
   shake through the zone bridge instead of toggling the unrelated shared flag.
+  Indoor restarts select the normal background routine before resize events,
+  shake and rumble use the native level clock, and rewind rejects unreachable
+  shake, snow-fall and intro-phase values.
 
 - **All-level performance sweep:** `tools/performance/level_sweep.py` plays every
   trace fixture and Sonic 3&K route movie through the frame-time probes, one at a

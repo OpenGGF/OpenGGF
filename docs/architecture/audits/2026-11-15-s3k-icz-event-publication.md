@@ -1,7 +1,6 @@
 # ICZ event publication — 2026-11-15
 
 Base: `e676eb5086b7069c5e8ffdd0dbd33990d5c2bf5f`. Scope: ICZ only.
-
 ## Owners and ROM evidence
 
 - Events currently own shake flag/sample/applied sample and snow-fall state;
@@ -26,8 +25,7 @@ Base: `e676eb5086b7069c5e8ffdd0dbd33990d5c2bf5f`. Scope: ICZ only.
 
 ## Shake-active flag inventory (baseline Java)
 
-These are two unrelated booleans, neither the ROM S3K shake word. Names below
-are exact classes/methods; setters through bridges are listed with their callers.
+These are two unrelated booleans, neither the ROM S3K shake word; exact bridge callers follow.
 
 | Flag | S3K writers | S3K readers | Reset / ROM equivalent |
 | --- | --- | --- | --- |
@@ -87,10 +85,8 @@ The optional local SCD reference differs from its pin; ICZ evidence uses the
 verified skdisasm pin. `git diff --check` passes.
 
 Final focused selection: **189 tests, 0 failures, 0 errors, 0 skips**.
-Queue wait: red 68s, initial focused 301s, final focused 633s;
-Maven execution: 106s, 108s, 108s respectively. User wait: 0s.
-Other investigation/tool time is not measured (unknown), not counted as execution.
-No full suite/category smoke or native pixel qualification ran in this lane;
+Initial delivery queue waits: 68s/301s/633s; Maven execution106s/108s/108s; user wait0s.
+Other investigation/tool time is unmeasured (unknown). No full suite/category smoke or native pixel qualification ran in this lane;
 the lead owns the delivery smoke and independent review. The renderer retains
 only derived output buffers, not loop/phase/indoor gameplay history.
 
@@ -123,3 +119,32 @@ other investigation/tool time unknown. No Maven job remains queued/running.
 Baseline remains in `.worktrees/icz-publication-baseline`, clean at the base SHA,
 with its own ignored reports/build output for the lead's comparison. Task branch
 and worktree remain for draft review; no destination merge/push is authorized.
+
+## Independent-review follow-up — 2026-11-16
+
+Reviewed head `2585d5abd8`; all findings confirmed, none rejected.
+1. FIXED: loc_53704 (sonic3k.asm:110194-110201) selects BG $10 at indoor
+   BackgroundInit, before resize can set Events_fg_5. Real-load restart witness.
+2. FIXED: production ICZ now resolves Level_frame_counter through the zone
+   service accessor. Manager count resets independently; reload-only rows advance
+   the native clock without ordinary manager update. Native LF17/count1 witness.
+3. FIXED: samples -5..5; snow offset/subpixel consistency and [-$12E,0] bounds;
+   velocity 0..$92400 in $2400 steps (current clamp first occurs at step65).
+   Intro longs stay $800-aligned with read/increment pairing across 32-bit wrap.
+   Tests cover invalid neighbors, valid edges, wrap, and actual falling/settling.
+4. FIXED coverage: retained indoor left of $1000 below $720; initial $580/$720
+   and X edges; column fall timer emits one $10 write (already correct).
+   Malformed-manager test locates the exact framed component, not sibling offsets.
+R1 RECORDED: ICZ1_BigSnowFall (sonic3k.asm:110430-110450) branches around landing
+   on the crossing call. Java's two ifs clamp/start settle one call early.
+R2 RECORDED: act0 X<$3940 advances loop history/auto phase regardless of routine;
+   ROM ICZ1_IntroDeform (sonic3k.asm:110379-110409) runs only selected BG paths.
+R3 RECORDED: fresh-dispatcher load publishes intro once before first update;
+   positioned loads bypassing it publish only in first update (one vs two steps).
+Red command used the same wrapper/GL flags with TestIczScreenPublication and
+TestIczComposedRewindState: 17 tests, 5 expected failures, 0 errors/skips;
+queue670s, execution38.473s. Focused selection above rerun: 204 tests, 0 failures,
+0 errors/skips; queue744s, execution102s. Five-class trace rerun: 5 matching
+failures, 0 errors/skips; all five report JSON objects equal baseline; queue715s,
+execution67s. Baseline reused: clean matching source/inputs/selection/Java25.0.5.0.3.
+No jobs remain. Follow-up queue2129s/execution207.473s; user wait0; other time unknown.

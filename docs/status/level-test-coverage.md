@@ -2839,7 +2839,8 @@ Doomsday route entry, mod rewind and broader team/viewport certification remain 
 
 ICZ publication ownership (2026-11-15): the
 [bounded publication audit](../architecture/audits/2026-11-15-s3k-icz-event-publication.md)
-records real-load ICZ2 indoor-hysteresis renderer rebuild and ICZ1 timed-shake
-continuation witnesses. These component checks do not certify complete routes,
+records real-load ICZ2 indoor-hysteresis renderer rebuild, start/retained gate
+boundaries, ICZ1 indoor restart and native shake-clock witnesses, snow-fall
+publication ranges, and the column's one-shot landing request. These component checks do not certify complete routes,
 refresh-row timing, native pixels, or broader donor/team/viewport products; the
 existing ICZ act matrices and their inherited gaps remain applicable.

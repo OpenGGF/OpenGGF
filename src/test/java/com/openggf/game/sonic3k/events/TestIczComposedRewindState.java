@@ -34,7 +34,7 @@ class TestIczComposedRewindState {
             manager.getIczEvents().triggerScreenShake(30);
             var before = manager.capture();
             byte[] extra = before.extra();
-            int start = 31 + 6 + 4; // manager, five absent zones, ICZ presence/length
+            int start = componentStart(extra, manager.getIczEvents().captureIczState());
             assertEquals(0x49435A31, ByteBuffer.wrap(extra).getInt(start));
             ByteBuffer.wrap(extra).putInt(start + 4, 99);
             var bad = new com.openggf.game.rewind.snapshot.LevelEventSnapshot(
@@ -48,6 +48,89 @@ class TestIczComposedRewindState {
         } finally {
             com.openggf.game.session.SessionManager.clear();
         }
+    }
+
+    @Test void rejectsUnreachableShakeSamples() throws Exception {
+        for (String field : new String[] {"screenShakeAppliedOffsetX", "screenShakeAppliedOffsetY"}) {
+            assertInvalidField(field, -6);
+            assertInvalidField(field, 6);
+        }
+        for (int at : new int[] {8, 4}) {
+            byte[] valid = new Sonic3kICZEvents().captureIczState();
+            assertFalse(Sonic3kICZEvents.hasValidIczState(corrupt(valid, valid.length - at, -6)));
+            assertFalse(Sonic3kICZEvents.hasValidIczState(corrupt(valid, valid.length - at, 6)));
+        }
+    }
+
+    @Test void rejectsUnreachableSnowValues() throws Exception {
+        assertInvalidField("bigSnowOffset", 1);
+        assertInvalidField("bigSnowOffset", -303);
+        assertInvalidField("bigSnowOffsetSubpixels", 1);
+        assertInvalidField("bigSnowOffsetSubpixels", (-302 << 16) - 1);
+        assertInvalidField("bigSnowVelocity", -0x2400);
+        assertInvalidField("bigSnowVelocity", 66 * 0x2400);
+        assertInvalidField("bigSnowVelocity", 1);
+    }
+
+    @Test void rejectsUnreachablePhaseValues() throws Exception {
+        assertInvalidField("introAutoAccumulator", 1);
+        assertInvalidField("introAutoPhase", 1);
+        assertInvalidField("introAutoAccumulator", 0x1000);
+        assertInvalidField("introAutoPhase", 0x800);
+    }
+
+    @Test void acceptsReachableSnowTrajectoryAndWrappedPhaseEdges() throws Exception {
+        int sub = 0;
+        var source = new Sonic3kICZEvents();
+        for (int step = 0; step <= 65; step++) {
+            if (step > 0) sub = Math.max(-302 << 16, sub - step * 0x2400);
+            put(source, "bigSnowVelocity", step * 0x2400);
+            put(source, "bigSnowOffsetSubpixels", sub);
+            put(source, "bigSnowOffset", sub >> 16);
+            assertTrue(Sonic3kICZEvents.hasValidIczState(source.captureIczState()), "snow step " + step);
+        }
+        for (int phase : new int[] {0, 0x7FFFF800, 0x80000000, 0xFFFFF800}) {
+            put(source, "introAutoPhase", phase);
+            put(source, "introAutoAccumulator", phase + 0x800);
+            assertTrue(Sonic3kICZEvents.hasValidIczState(source.captureIczState()), "wrapped phase");
+        }
+        for (int offset : new int[] {-5, 0, 5}) {
+            put(source, "screenShakeAppliedOffsetX", offset);
+            put(source, "screenShakeAppliedOffsetY", offset);
+            byte[] payload = source.captureIczState();
+            ByteBuffer.wrap(payload).putInt(payload.length - 8, offset).putInt(payload.length - 4, offset);
+            assertTrue(Sonic3kICZEvents.hasValidIczState(payload), "shake edge " + offset);
+        }
+    }
+
+    private static void assertInvalidField(String name, int value) throws Exception {
+        var target = new Sonic3kICZEvents();
+        byte[] before = target.captureIczState();
+        var source = new Sonic3kICZEvents();
+        put(source, name, value);
+        byte[] bad = source.captureIczState();
+        assertFalse(Sonic3kICZEvents.hasValidIczState(bad), name + "=" + value);
+        assertThrows(IllegalArgumentException.class, () -> target.restoreIczState(bad));
+        assertArrayEquals(before, target.captureIczState());
+    }
+
+    private static void put(Object owner, String name, int value) throws Exception {
+        var field = owner.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        field.setInt(owner, value);
+    }
+
+    private static int componentStart(byte[] extra, byte[] component) {
+        int found = -1;
+        for (int at = 4; at <= extra.length - component.length; at++) {
+            if (ByteBuffer.wrap(extra).getInt(at - 4) == component.length
+                    && Arrays.equals(component, Arrays.copyOfRange(extra, at, at + component.length))) {
+                assertEquals(-1, found, "component framing must be unique");
+                found = at;
+            }
+        }
+        assertTrue(found >= 0, "find framed ICZ component independently of sibling sidecars");
+        return found;
     }
 
     private static byte[] corrupt(byte[] source, int at, int value) {

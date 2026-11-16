@@ -244,8 +244,19 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
         camera().setYCopy((short) 0x05FB);
     }
 
+    /** Production reads the native level clock through the zone's service accessor.
+     * ShakeScreen_Setup (sonic3k.asm:104234-104256) and ICZ1_BigSnowFall
+     * (sonic3k.asm:110430-110446) both read Level_frame_counter.
+     */
+    public void updateFromLevelClock(int act) {
+        update(act, levelManager().getFrameCounter());
+    }
+
     @Override
     public void update(int act, int frameCounter) {
+        // BackgroundInit must precede resize/screen events, including positioned
+        // entries that have no fresh fixed-SST dispatcher.
+        initializeScrollHistory(act);
         rebindHardwareWorkIfNeeded();
         if (act == 1) {
             publishTransferredIcz2Resources();
@@ -1202,14 +1213,28 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
         if (!scrollInitialized) publishScroll(act);
     }
 
-    private void publishScroll(int act) {
+    private void initializeScrollHistory(int act) {
+        if (scrollInitialized) return;
         int x = camera().getX() & 0xFFFF;
         int y = (short) camera().getY();
-        if (!scrollInitialized) {
-            scrollInitialized = true;
-            introPreviousCameraY = y;
-            introBgCameraYSource = (short) (y + (act == 0 && x >= 0x3580 && x < 0x3940 ? 0x2800 : 0));
+        scrollInitialized = true;
+        introPreviousCameraY = y;
+        introBgCameraYSource = (short) (y + (act == 0 && x >= 0x3580 && x < 0x3940 ? 0x2800 : 0));
+        if (act == 0 && x >= 0x3940) {
+            // loc_53704 (sonic3k.asm:110194-110201): indoor restarts enter
+            // normal BG directly; Events_fg_5 must not spawn the intro pile.
+            backgroundRoutine = ICZ1_BG_NORMAL;
+            if (!indoorPaletteCyclingActive) {
+                indoorPaletteCyclingActive = true;
+                applyIcz1IndoorPalette();
+            }
         }
+    }
+
+    private void publishScroll(int act) {
+        initializeScrollHistory(act);
+        int x = camera().getX() & 0xFFFF;
+        int y = (short) camera().getY();
         if (act != 0 || x >= 0x3940) return;
         int delta = (short) (y - introPreviousCameraY);
         introPreviousCameraY = y;
@@ -1251,13 +1276,33 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
         if (probe.activeAct < 0 || probe.activeAct > 1
                 || probe.backgroundRoutine < 0 || probe.backgroundRoutine > 20
                 || (probe.backgroundRoutine & 3) != 0) return false;
-        for (int value : new int[] {probe.introPreviousCameraY, probe.introBgCameraYSource,
-                probe.screenShakeAppliedOffsetY, probe.screenShakeAppliedOffsetX}) if (value != (short) value) return false;
-        for (int i = 0; i < 3; i++) {
-            int word = in.getInt();
-            if (word != (short) word) return false;
+        for (int value : new int[] {probe.introPreviousCameraY, probe.introBgCameraYSource}) {
+            if (value != (short) value) return false;
         }
+        // These are samples, not arbitrary words: the shared tables span -5..5.
+        if (!validShakeSample(probe.screenShakeAppliedOffsetX)
+                || !validShakeSample(probe.screenShakeAppliedOffsetY)) return false;
+        int flag = in.getInt();
+        if (flag != (short) flag || !validShakeSample(in.getInt()) || !validShakeSample(in.getInt())) return false;
+        // Current falling branch starts at zero, adds $2400 per call and clamps
+        // when the signed high word reaches -$12E: step 65, velocity $92400.
+        // Preserve that reachable trajectory; the next-call ROM landing gap is
+        // recorded separately, not silently changed by snapshot validation.
+        if (probe.bigSnowOffset < ICZ1_BIG_SNOW_FINAL_OFFSET || probe.bigSnowOffset > 0
+                || probe.bigSnowOffsetSubpixels < (ICZ1_BIG_SNOW_FINAL_OFFSET << 16)
+                || probe.bigSnowOffsetSubpixels > 0
+                || probe.bigSnowOffset != (probe.bigSnowOffsetSubpixels >> 16)
+                || probe.bigSnowVelocity < 0 || probe.bigSnowVelocity > 65 * ICZ1_BIG_SNOW_ACCELERATION
+                || probe.bigSnowVelocity % ICZ1_BIG_SNOW_ACCELERATION != 0) return false;
+        // HScroll_table's longword advances by $800, with native 32-bit wrap.
+        if ((probe.introAutoAccumulator & 0x7FF) != 0 || (probe.introAutoPhase & 0x7FF) != 0
+                || !(probe.introAutoAccumulator == 0 && probe.introAutoPhase == 0)
+                && probe.introAutoAccumulator != probe.introAutoPhase + 0x800) return false;
         return true;
+    }
+
+    private static boolean validShakeSample(int value) {
+        return value >= -5 && value <= 5;
     }
 
     public void restoreIczState(byte[] bytes) {

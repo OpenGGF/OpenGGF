@@ -699,7 +699,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             fbzEvents.update(currentAct, frameCounter);
         }
         if (iczEvents != null && currentZone == Sonic3kZoneIds.ZONE_ICZ) {
-            iczEvents.update(currentAct, frameCounter);
+            iczEvents.updateFromLevelClock(currentAct);
         }
         if (lbzEvents != null && currentZone == Sonic3kZoneIds.ZONE_LBZ) {
             lbzEvents.update(currentAct, frameCounter);

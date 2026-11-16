@@ -1453,7 +1453,9 @@ class TestSonic3kLevelEventRewindSnapshot {
         iczPayloadSource.setEventsFg5(true);
         iczPayloadSource.setIndoorPaletteCyclingActive(false);
         set(iczPayloadSource, "backgroundRoutine", 8);
-        set(iczPayloadSource, "bigSnowOffset", 0x1234);
+        set(iczPayloadSource, "bigSnowOffset", -1);
+        set(iczPayloadSource, "bigSnowOffsetSubpixels", -0x2400);
+        set(iczPayloadSource, "bigSnowVelocity", 0x2400);
         set(iczPayloadSource, "act2TransitionChunkOrdinal", 3L);
         set(iczPayloadSource, "act2TransitionBlockOrdinal", 4L);
         set(iczPayloadSource, "act2TransitionArtOrdinal", 2L);
@@ -1488,7 +1490,7 @@ class TestSonic3kLevelEventRewindSnapshot {
                 "length-prefixed ICZ schema sidecar must restore ICZ booleans");
         assertEquals(8, iczTarget.getIcz1BackgroundRoutine(),
                 "length-prefixed ICZ schema sidecar must restore ICZ ints");
-        assertEquals(0x1234, iczTarget.getIcz1BigSnowOffset(),
+        assertEquals(-1, iczTarget.getIcz1BigSnowOffset(),
                 "length-prefixed ICZ schema sidecar must restore ICZ snow state");
         assertEquals(3L, get(iczTarget, "act2TransitionChunkOrdinal"),
                 "ICZ chunk-job identity must remain aligned in the manager sidecar");
