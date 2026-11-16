@@ -116,11 +116,11 @@ class TestHostedMediaLaunch {
 
     private static MasterTitleScreen shelf(SonicConfigurationService config) {
         List<MasterTitleEntry> entries = new ArrayList<>();
-        for (var game : MasterTitleScreen.GameEntry.values()) entries.add(new MasterTitleEntry.Stock(game));
+        for (var game : MasterTitleScreen.GameEntry.values()) if (game.cartridge()) entries.add(new MasterTitleEntry.Stock(game));
         entries.add(MasterTitleEntry.Hosted.of(GameId.SCD));
         var screen = new MasterTitleScreen(config, new LaunchProfileStore(config), entries);
         screen.setStateForTest(MasterTitleScreen.State.ACTIVE);
-        for (var game : MasterTitleScreen.GameEntry.values()) screen.setRomAvailableForTest(game, true);
+        for (var game : MasterTitleScreen.GameEntry.values()) if (game.cartridge()) screen.setRomAvailableForTest(game, true);
         while (!"scd".equals(screen.getSelectedGameId())) press(screen, GLFW_KEY_RIGHT);
         return screen;
     }

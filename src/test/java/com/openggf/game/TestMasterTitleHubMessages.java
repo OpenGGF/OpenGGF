@@ -224,7 +224,7 @@ class TestMasterTitleHubMessages {
         config.setConfigValue(SonicConfiguration.TEST_MODE_ENABLED, false);
         config.setConfigValue(SonicConfiguration.CONTROLLER_ENABLED, true);
         var entries = new ArrayList<MasterTitleEntry>();
-        for (var game : MasterTitleScreen.GameEntry.values()) entries.add(new MasterTitleEntry.Stock(game));
+        for (var game : MasterTitleScreen.GameEntry.values()) if (game.cartridge()) entries.add(new MasterTitleEntry.Stock(game));
         var screen = new MasterTitleScreen(config, new LaunchProfileStore(config), entries, cue -> {});
         screen.setStateForTest(MasterTitleScreen.State.ACTIVE);
         installFont(screen);
@@ -333,11 +333,11 @@ class TestMasterTitleHubMessages {
         config.setConfigValue(SonicConfiguration.SONIC_2_ROM, "missing-s2.gen");
         config.setConfigValue(SonicConfiguration.SONIC_3K_ROM, "missing-s3k.gen");
         var entries = new ArrayList<MasterTitleEntry>();
-        for (var game : MasterTitleScreen.GameEntry.values()) entries.add(new MasterTitleEntry.Stock(game));
+        for (var game : MasterTitleScreen.GameEntry.values()) if (game.cartridge()) entries.add(new MasterTitleEntry.Stock(game));
         if (standalone) entries.add(new MasterTitleEntry.Standalone("sample", "Sample game", false));
         var screen = new MasterTitleScreen(config, new LaunchProfileStore(config), entries, cue -> {});
         screen.setStateForTest(MasterTitleScreen.State.ACTIVE);
-        for (var game : MasterTitleScreen.GameEntry.values()) screen.setRomAvailableForTest(game, false);
+        for (var game : MasterTitleScreen.GameEntry.values()) if (game.cartridge()) screen.setRomAvailableForTest(game, false);
         installFont(screen);
         return screen;
     }
