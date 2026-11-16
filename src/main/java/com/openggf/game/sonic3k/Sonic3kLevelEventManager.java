@@ -72,6 +72,7 @@ import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.NativePlayableRoutine;
 import com.openggf.sprites.playable.ObjectControlState;
 import com.openggf.sprites.playable.SidekickCarryTrigger;
 import com.openggf.sprites.playable.SidekickCpuController;
@@ -668,7 +669,8 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
                 // the applied word is the one the previous setup produced and the
                 // scroll handler consumes it without re-running the setup.
                 hpzState.advanceScreenShake(frameCounter,
-                        mainPlayer != null && mainPlayer.getDead());
+                        mainPlayer instanceof AbstractPlayableSprite hpzPlayer
+                                && NativePlayableRoutine.isAtOrBeyondDeathForNativeRead(hpzPlayer));
                 applyHpzsScreenEvent(camera(), hpzState.appliedScreenShakeOffset());
             }
         }
@@ -676,7 +678,8 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             // LRZ1_ScreenEvent / LRZ2_ScreenEvent add Screen_shake_offset to Camera_Y_pos_copy
             // and every LRZ background event tail-calls ShakeScreen_Setup for the next frame.
             lrzEvents.advanceScreenShakeAndApplyToCameraCopy(frameCounter,
-                    mainPlayer != null && mainPlayer.getDead());
+                    mainPlayer instanceof AbstractPlayableSprite lrzPlayer
+                            && NativePlayableRoutine.isAtOrBeyondDeathForNativeRead(lrzPlayer));
         }
 
         // ROM: ScreenEvents dispatches to both FG and BG handlers each frame.

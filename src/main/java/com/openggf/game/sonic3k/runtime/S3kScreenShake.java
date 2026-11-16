@@ -21,7 +21,7 @@ import java.nio.ByteBuffer;
 public final class S3kScreenShake {
     /**
      * {@code ScreenShakeArray} (sonic3k.asm:104277-104279) followed by
-     * {@code ScreenShakeArray2} (104234-104238). The timed branch reads
+     * {@code ScreenShakeArray2} (sonic3k.asm:104280-104285). The timed branch reads
      * {@code ScreenShakeArray(pc,d0.w)} with the decremented flag and no bound,
      * so a countdown above $14 (e.g. {@code #$1E}, sonic3k.asm:6893) walks into
      * the second table; keeping both contiguous reproduces that.
