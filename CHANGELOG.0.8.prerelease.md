@@ -747,6 +747,11 @@ under the matching area heading; see the
 
 ## Maintenance and release preparation
 
+- ICZ background loop history and indoor selection now belong to the event owner,
+  so rebuilding scroll output retains the same background. Rewind captures that
+  continuation together with the shared ROM shake words; ICZ objects request
+  shake through the zone bridge instead of toggling the unrelated shared flag.
+
 - **All-level performance sweep:** `tools/performance/level_sweep.py` plays every
   trace fixture and Sonic 3&K route movie through the frame-time probes, one at a
   time. It reports frame time, allocation, garbage collection and hitches per

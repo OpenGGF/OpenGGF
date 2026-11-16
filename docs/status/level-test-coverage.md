@@ -2836,3 +2836,10 @@ MICA authored S3K ending presentation (2026-11-08): the
 [ending matrix](../architecture/validation/levels/s3k-ending.md#authored-sonic-route-ending-presentation-2026-11-08)
 records passing declared-entry normal/Super/Hyper mapping and capture checks.
 Doomsday route entry, mod rewind and broader team/viewport certification remain open.
+
+ICZ publication ownership (2026-11-15): the
+[bounded publication audit](../architecture/audits/2026-11-15-s3k-icz-event-publication.md)
+records real-load ICZ2 indoor-hysteresis renderer rebuild and ICZ1 timed-shake
+continuation witnesses. These component checks do not certify complete routes,
+refresh-row timing, native pixels, or broader donor/team/viewport products; the
+existing ICZ act matrices and their inherited gaps remain applicable.

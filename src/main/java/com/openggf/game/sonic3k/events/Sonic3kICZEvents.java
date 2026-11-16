@@ -7,6 +7,10 @@ import com.openggf.game.mutation.LayoutMutationContext;
 import com.openggf.game.mutation.LevelMutationSurface;
 import com.openggf.game.mutation.MutationEffects;
 import com.openggf.game.rewind.RewindTransient;
+import com.openggf.game.rewind.schema.ZoneEventSchemaSidecar;
+import com.openggf.game.sonic3k.runtime.S3kScreenShake;
+import com.openggf.sprites.playable.NativePlayableRoutine;
+import java.nio.ByteBuffer;
 import com.openggf.game.save.SaveReason;
 import com.openggf.game.save.SessionSaveRequests;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
@@ -121,28 +125,6 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
             0x0A40, 0x0820, 0x0620, 0x0200, 0x0600
     };
 
-    /**
-     * ROM: {@code ScreenShakeArray} (sonic3k.asm:104308) — signed byte Y offsets
-     * indexed by the positive {@code Screen_shake_flag} countdown. Amplitude
-     * tapers from ±5 down to ±1 as the timer runs out. Shared with AIZ/CNZ.
-     */
-    private static final int[] SCREEN_SHAKE_ARRAY = {
-            1, -1, 1, -1, 2, -2, 2, -2, 3, -3, 3, -3, 4, -4, 4, -4, 5, -5, 5, -5
-    };
-
-    /**
-     * ROM: {@code ScreenShakeArray2} (sonic3k.asm:104311) — 64-byte pseudo-random
-     * offsets (0–3px) indexed by {@code Level_frame_counter & $3F}. Drives the
-     * constant/negative {@code Screen_shake_flag} mode, used while the ICZ1 big
-     * snow pile is dropping (ICZ1_BigSnowFall sets the flag with {@code st}).
-     */
-    private static final int[] SCREEN_SHAKE_ARRAY_CONSTANT = {
-            1, 2, 1, 3, 1, 2, 2, 1, 2, 3, 1, 2, 1, 2, 0, 0,
-            2, 0, 3, 2, 2, 3, 2, 2, 1, 3, 0, 0, 1, 0, 1, 3,
-            1, 2, 1, 3, 1, 2, 2, 1, 2, 3, 1, 2, 1, 2, 0, 0,
-            2, 0, 3, 2, 2, 3, 2, 2, 1, 3, 0, 0, 1, 0, 1, 3
-    };
-
     /** ROM: the ICZ1_BigSnowFall settle shake set once the pile lands. */
     private static final int SNOW_PILE_LAND_SHAKE_FRAMES = 4;
 
@@ -188,9 +170,16 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
     // ROM Screen_shake_flag: 0 = off, positive = timed countdown (ScreenShakeArray),
     // negative = constant jitter (ScreenShakeArray2). The snowboard crash writes
     // #$14 (sonic3k.asm:76937); the snow pile drop writes it via ICZ1_BigSnowFall.
-    private int screenShakeFlag;
-    private int screenShakeOffsetY;
+    @RewindTransient(reason = "captured with the scalar publication by captureIczState")
+    private final S3kScreenShake screenShake =
+            new S3kScreenShake();
+    private boolean scrollInitialized;
+    private int introPreviousCameraY;
+    private int introBgCameraYSource;
+    private int introAutoAccumulator;
+    private int introAutoPhase;
     private int screenShakeAppliedOffsetY;
+    private int screenShakeAppliedOffsetX;
 
     @Override
     public void init(int act) {
@@ -226,9 +215,12 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
         act2MaxXAccumulator = 0;
         act2MinYAccumulator = 0;
         act2MaxYAccumulator = 0;
-        screenShakeFlag = 0;
-        screenShakeOffsetY = 0;
+        screenShake.clear();
+        scrollInitialized = false;
+        introAutoAccumulator = 0;
+        introAutoPhase = 0;
         screenShakeAppliedOffsetY = 0;
+        screenShakeAppliedOffsetX = 0;
         indoorPaletteCyclingActive = initialIndoorPaletteCycleState(act);
         applyInitialBackgroundPalette(act);
     }
@@ -258,11 +250,10 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
         if (act == 1) {
             publishTransferredIcz2Resources();
         }
-        // ROM LevelLoop runs ShakeScreen_Setup after the sprites; the scroll
-        // handler consumes the previously published sample this frame while the
-        // countdown produces the next one (matching the AIZ/CNZ shake ordering).
-        screenShakeAppliedOffsetY = screenShakeOffsetY;
-        tickScreenShake(frameCounter);
+        // ICZ1SE_Init adds the preceding sample to X; WaitQuake adds it to Y.
+        // ICZ2 has no shake consumer (sonic3k.asm:110141-110157).
+        screenShakeAppliedOffsetX = act == 0 && backgroundRoutine == ICZ1_BG_INTRO ? screenShake.offset() : 0;
+        screenShakeAppliedOffsetY = act == 0 && backgroundRoutine == ICZ1_BG_SNOW_FALL ? screenShake.offset() : 0;
         if (act == 0) {
             updateAct1Resize();
             updateAct1ScreenEvent();
@@ -271,6 +262,14 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
             updateAct2Resize();
         }
         updateIndoorPaletteCycleGate(act);
+        publishScroll(act);
+        // ICZ1BGE_Intro/SnowFall tail-call setup after their deformation.
+        // Refresh/normal and ICZ2 have no setup call (shipped ROM).
+        if (act == 0 && backgroundRoutine <= ICZ1_BG_SNOW_FALL) {
+            var primary = spriteManager().getMainPlayable();
+            screenShake.setup(frameCounter, primary == null
+                    || NativePlayableRoutine.isAtOrBeyondDeathForNativeRead(primary));
+        }
     }
 
     /**
@@ -278,7 +277,7 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
      * shake. The snowboard-crash release (sonic3k.asm:76937) writes {@code #$14}.
      */
     public void triggerScreenShake(int frames) {
-        screenShakeFlag = frames;
+        screenShake.writeFlag(frames);
     }
 
     /**
@@ -288,29 +287,10 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
      * {@code ParallaxManager} -> {@code Camera} propagation shakes the foreground
      * tiles and sprites together.
      */
+    public int getScreenShakeOffsetX() { return screenShakeAppliedOffsetX; }
+
     public int getScreenShakeOffsetY() {
         return screenShakeAppliedOffsetY;
-    }
-
-    /**
-     * ROM {@code ShakeScreen_Setup} (sonic3k.asm:104265): a zero flag produces no
-     * offset, a negative flag is a constant jitter driven by {@code ScreenShakeArray2}
-     * indexed by the frame counter, and a positive flag is a timed countdown that
-     * tapers through {@code ScreenShakeArray}.
-     */
-    private void tickScreenShake(int frameCounter) {
-        if (screenShakeFlag == 0) {
-            screenShakeOffsetY = 0;
-            return;
-        }
-        if (screenShakeFlag < 0) {
-            screenShakeOffsetY = SCREEN_SHAKE_ARRAY_CONSTANT[frameCounter & 0x3F];
-            return;
-        }
-        screenShakeFlag--;
-        screenShakeOffsetY = screenShakeFlag < SCREEN_SHAKE_ARRAY.length
-                ? SCREEN_SHAKE_ARRAY[screenShakeFlag]
-                : 0;
     }
 
     public boolean isEventsFg5() {
@@ -638,7 +618,6 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
         if (eventsFg5) {
             eventsFg5 = false;
             backgroundRoutine = ICZ1_BG_REFRESH;
-            gameState().setScreenShakeActive(false);
             return;
         }
         if (playerCharacter() != PlayerCharacter.KNUCKLES) {
@@ -1022,7 +1001,7 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
      * unrelated S2 {@code Screen_Shaking_Flag} and is never written here.
      */
     private void updateAct1ScreenEvent() {
-        if (backgroundRoutine != ICZ1_BG_INTRO || screenShakeFlag == 0) {
+        if (backgroundRoutine != ICZ1_BG_INTRO || screenShake.flag() == 0) {
             return;
         }
         lockFocusedPlayerForIntroQuake();
@@ -1057,10 +1036,9 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
 
     private void updateBigSnowFall(int frameCounter) {
         if (bigSnowOffset > ICZ1_BIG_SNOW_FINAL_OFFSET) {
-            gameState().setScreenShakeActive(true);
             // ROM ICZ1_BigSnowFall: st (Screen_shake_flag) — constant jitter
             // while the pile is still dropping onto Sonic.
-            screenShakeFlag = -1;
+            screenShake.writeFlag(0xFF00 | (screenShake.flag() & 0xFF));
             bigSnowVelocity += ICZ1_BIG_SNOW_ACCELERATION;
             bigSnowOffsetSubpixels -= bigSnowVelocity;
             bigSnowOffset = bigSnowOffsetSubpixels >> 16;
@@ -1070,12 +1048,11 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
         }
 
         if (bigSnowOffset <= ICZ1_BIG_SNOW_FINAL_OFFSET) {
-            gameState().setScreenShakeActive(true);
             // ROM: once landed, convert the still-constant shake into a short
             // timed settle (tst/bpl skip; move.w #4). A positive flag already set
             // by the wall-crash release is left to finish its own countdown.
-            if (screenShakeFlag < 0) {
-                screenShakeFlag = SNOW_PILE_LAND_SHAKE_FRAMES;
+            if (screenShake.flag() < 0) {
+                screenShake.writeFlag(SNOW_PILE_LAND_SHAKE_FRAMES);
             }
             bigSnowOffset = ICZ1_BIG_SNOW_FINAL_OFFSET;
             bigSnowOffsetSubpixels = ICZ1_BIG_SNOW_FINAL_OFFSET << 16;
@@ -1204,7 +1181,7 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
         if (y >= ICZ2_START_INDOOR_Y_HIGH) {
             return true;
         }
-        return x >= ICZ2_START_INDOOR_X_LOW && y >= ICZ2_START_INDOOR_Y_LOW;
+        return x < ICZ2_START_INDOOR_X_LOW && y >= ICZ2_START_INDOOR_Y_LOW;
     }
 
     private boolean isAct2IndoorPaletteCycleActive(int x, int y) {
@@ -1214,6 +1191,83 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
         if (x >= ICZ2_INDOOR_HYSTERESIS_X_MIN && x < ICZ2_INDOOR_HYSTERESIS_X_MAX) {
             return true;
         }
-        return !(x < ICZ2_INDOOR_X_MIN || x >= ICZ2_INDOOR_X_MAX || y < ICZ2_INDOOR_Y);
+        return x < ICZ2_INDOOR_X_MIN || x >= ICZ2_INDOOR_X_MAX || y >= ICZ2_INDOOR_Y;
     }
+    /** ICZ1_BackgroundInit (sonic3k.asm:110163-110201) and
+     * ICZ1_IntroDeform (sonic3k.asm:110379-110409).
+     * Events_fg_0/1 and the HScroll_table auto-scroll longword belong to the
+     * background event, never to renderer call count or renderer lifetime.
+     */
+    public void initializeScrollAtLoad(int act) {
+        if (!scrollInitialized) publishScroll(act);
+    }
+
+    private void publishScroll(int act) {
+        int x = camera().getX() & 0xFFFF;
+        int y = (short) camera().getY();
+        if (!scrollInitialized) {
+            scrollInitialized = true;
+            introPreviousCameraY = y;
+            introBgCameraYSource = (short) (y + (act == 0 && x >= 0x3580 && x < 0x3940 ? 0x2800 : 0));
+        }
+        if (act != 0 || x >= 0x3940) return;
+        int delta = (short) (y - introPreviousCameraY);
+        introPreviousCameraY = y;
+        if (delta < 0) {
+            int magnitude = (short) -delta;
+            if ((magnitude & 0xFFFF) >= 0x400) magnitude = (short) (magnitude - 0x800);
+            delta = -magnitude;
+        } else if ((delta & 0xFFFF) >= 0x400) delta = (short) (delta - 0x800);
+        introBgCameraYSource = (short) (introBgCameraYSource + delta);
+        introAutoPhase = introAutoAccumulator;
+        introAutoAccumulator += 0x800;
+    }
+
+    public int introBgCameraYSource() { return introBgCameraYSource; }
+    public int introAutoPhase() { return introAutoPhase; }
+
+    /** Same-build composed payload: scalar publication plus all three shake words. */
+    public byte[] captureIczState() {
+        byte[] scalars = ZoneEventSchemaSidecar.capture(this);
+        var out = ByteBuffer.allocate(12 + scalars.length + 12);
+        out.putInt(0x49435A31).putInt(1).putInt(scalars.length).put(scalars);
+        screenShake.captureTo(out);
+        return out.array();
+    }
+
+    public static boolean hasValidIczState(byte[] bytes) {
+        if (bytes == null || bytes.length < 24) return false;
+        var in = ByteBuffer.wrap(bytes);
+        if (in.getInt() != 0x49435A31 || in.getInt() != 1) return false;
+        int length = in.getInt();
+        var probe = new Sonic3kICZEvents();
+        if (length != ZoneEventSchemaSidecar.capture(probe).length
+                || length != in.remaining() - 12) return false;
+        byte[] scalars = new byte[length];
+        in.get(scalars);
+        ZoneEventSchemaSidecar.restore(probe, scalars);
+        if (!java.util.Arrays.equals(scalars,
+                ZoneEventSchemaSidecar.capture(probe))) return false;
+        if (probe.activeAct < 0 || probe.activeAct > 1
+                || probe.backgroundRoutine < 0 || probe.backgroundRoutine > 20
+                || (probe.backgroundRoutine & 3) != 0) return false;
+        for (int value : new int[] {probe.introPreviousCameraY, probe.introBgCameraYSource,
+                probe.screenShakeAppliedOffsetY, probe.screenShakeAppliedOffsetX}) if (value != (short) value) return false;
+        for (int i = 0; i < 3; i++) {
+            int word = in.getInt();
+            if (word != (short) word) return false;
+        }
+        return true;
+    }
+
+    public void restoreIczState(byte[] bytes) {
+        if (!hasValidIczState(bytes)) throw new IllegalArgumentException("Invalid ICZ publication payload");
+        var in = ByteBuffer.wrap(bytes);
+        in.position(8);
+        byte[] scalars = new byte[in.getInt()];
+        in.get(scalars);
+        ZoneEventSchemaSidecar.restore(this, scalars);
+        screenShake.restoreFrom(in);
+    }
+
 }

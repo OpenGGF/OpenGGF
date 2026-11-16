@@ -63,8 +63,6 @@ public class IczSegmentColumnObjectInstance extends AbstractObjectInstance
     private int y;
     private int segmentCount;
     private boolean spawnedSegments;
-    private int screenShakeFrames;
-    private boolean ownsScreenShakeFlag;
 
     public IczSegmentColumnObjectInstance(ObjectSpawn spawn) {
         super(spawn, "ICZSegmentColumn");
@@ -79,7 +77,6 @@ public class IczSegmentColumnObjectInstance extends AbstractObjectInstance
             spawnSegments();
             spawnedSegments = true;
         }
-        updateTimedShake();
     }
 
     private void spawnSegments() {
@@ -503,22 +500,8 @@ public class IczSegmentColumnObjectInstance extends AbstractObjectInstance
         }
     }
 
+    /** loc_8AC54 (sonic3k.asm:188894-188900): one flag write, no object countdown. */
     private void triggerScreenShake(int frames) {
-        screenShakeFrames = Math.max(screenShakeFrames, frames);
-    }
-
-    private void updateTimedShake() {
-        var services = tryServices();
-        if (services == null || services.gameState() == null) {
-            return;
-        }
-        if (screenShakeFrames > 0) {
-            services.gameState().setScreenShakeActive(true);
-            screenShakeFrames--;
-            ownsScreenShakeFlag = true;
-        } else if (ownsScreenShakeFlag) {
-            services.gameState().setScreenShakeActive(false);
-            ownsScreenShakeFlag = false;
-        }
+        com.openggf.game.sonic3k.events.S3kIczEventWriteSupport.triggerScreenShake(services(), frames);
     }
 }

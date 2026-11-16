@@ -1448,7 +1448,7 @@ class TestSonic3kLevelEventRewindSnapshot {
     }
 
     @Test
-    void lengthPrefixedIczSchemaPayloadRestoresIczAndFixedAirSidecars() throws Exception {
+    void lengthPrefixedIczComposedPayloadRestoresIczAndFixedAirSidecars() throws Exception {
         Sonic3kICZEvents iczPayloadSource = new Sonic3kICZEvents();
         iczPayloadSource.setEventsFg5(true);
         iczPayloadSource.setIndoorPaletteCyclingActive(false);
@@ -1468,7 +1468,7 @@ class TestSonic3kLevelEventRewindSnapshot {
         LevelEventSnapshot sourceSnapshot = source.capture();
         LevelEventSnapshot schemaIczSnapshot = snapshotWithIczPayload(
                 sourceSnapshot,
-                ZoneEventSchemaSidecar.capture(iczPayloadSource));
+                iczPayloadSource.captureIczState());
 
         Sonic3kLevelEventManager target = new Sonic3kLevelEventManager();
         Sonic3kLevelEventManager iczTargetOwner = new Sonic3kLevelEventManager();
@@ -1519,7 +1519,7 @@ class TestSonic3kLevelEventRewindSnapshot {
         setFixedControllerState(sourceP1, true, 0x0A, 0x81, 0x1234, 0x02, 0x01, 0xFF, 0x8040, 0x0032, 0x0016);
         LevelEventSnapshot sourceSnapshot = snapshotWithIczPayload(
                 source.capture(),
-                ZoneEventSchemaSidecar.capture(iczPayloadSource));
+                iczPayloadSource.captureIczState());
         LevelEventSnapshot malformedSnapshot = snapshotWithCorruptIczLength(
                 sourceSnapshot,
                 sourceSnapshot.extra().length);
