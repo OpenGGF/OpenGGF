@@ -2309,7 +2309,11 @@ class TestMhzBossObjects {
         ObjectManager objectManager = mocks.mock(ObjectManager.class);
         GameStateManager gameState = mocks.mock(GameStateManager.class);
         LevelState levelState = mocks.mock(LevelState.class);
+        var shakeOwner = new Sonic3kMHZEvents();
+        var zone = new MhzZoneRuntimeState(1, PlayerCharacter.SONIC_AND_TAILS, shakeOwner);
         ObjectServices services = new StubObjectServices() {
+            @Override public ZoneRuntimeState zoneRuntimeState() { return zone; }
+
             @Override
             public ObjectManager objectManager() {
                 return objectManager;
@@ -2349,12 +2353,16 @@ class TestMhzBossObjects {
             return null;
         }).when(gameState).addScore(1000);
 
-        endBoss.update(0, null);
+        assertEquals(0, shakeOwner.getScreenShakeFlag(), "no timed shake before the defeat threshold");
+        endBoss.update(0, null); // the active position starts at spawn+$C0, then MoveSprite2 adds four
+        assertEquals(0x44D0, endBoss.getState().x, "first update crosses the native threshold");
+        assertEquals(0x14, shakeOwner.getScreenShakeFlag(), "boss request reaches the zone-owned ROM word");
         assertEquals(0x3F, endBoss.getCustomFlag(0x2E), "BossDefeated installs its own native wait");
         for (int wait = 1; wait <= 0x3F; wait++) endBoss.update(wait, null);
         assertEquals(0, endBoss.getCustomFlag(0x2E));
         verify(objectManager, org.mockito.Mockito.never()).addDynamicObject(any(SongFadeTransitionInstance.class));
         endBoss.update(0x40, null);
+        assertEquals(0x14, shakeOwner.getScreenShakeFlag(), "object alone does not advance zone setup");
 
         assertEquals(0x44D0, endBoss.getX(),
                 "loc_76164 checks the threshold after Swing_UpAndDown/MoveSprite2 moves x_pos to $44D0");

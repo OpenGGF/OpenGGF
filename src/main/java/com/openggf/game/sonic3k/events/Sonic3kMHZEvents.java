@@ -1668,7 +1668,7 @@ public class Sonic3kMHZEvents extends Sonic3kZoneEvents {
         Arrays.fill(endBossArenaSpikeX, 0);
         if (spikes != null) for (int i = 0; i < Math.min(6, spikes.length); i++) endBossArenaSpikeX[i] = spikes[i] & 0xFFFF;
     }
-    /** Object flag writes only; loc_76164 (sonic3k.asm:157132-157144). */
+    /** Object flag writes only; loc_76164 (sonic3k.asm:157133-157144). */
     public void requestScreenShake(int frames) { screenShake.writeFlag(frames); }
     public int getScreenShakeFlag() { return screenShake.flag(); }
     public int appliedScreenShakeOffset() { return appliedScreenShakeOffset; }
@@ -1702,7 +1702,7 @@ public class Sonic3kMHZEvents extends Sonic3kZoneEvents {
         middleBgCameraX = deform.band1CameraX() & 0xFFFF;
         nearBgCameraX = deform.band2CameraX() & 0xFFFF;
         publishedBgCameraY = deform.bgCameraY();
-        // loc_555D2 (sonic3k.asm:113291-113307) writes helper positions after
+        // loc_555D2 (sonic3k.asm:113293-113307) writes helper positions after
         // building the native ramp, before the following Process_Sprites.
         if (!isShipHIntActive() && isEndBossArenaForegroundRefreshActive()) {
             int nativeX = com.openggf.camera.NativeViewportFraming.nativeLeft(

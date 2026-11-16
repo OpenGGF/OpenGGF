@@ -100,13 +100,30 @@ class TestSonic3kMhzRuntimeStateRegistration {
     }
 
     @Test
-    void bossAreaDeformCancelsShakeBeforeRatioAndRestoresItAfterward() {
+    void bossAreaDeformCancelsShakeBeforeRatioAndRestoresItAfterward() throws Exception {
         var output = Sonic3kMHZEvents.computeMhzDeform(0x400, 0x400, 4, true);
         assertEquals(0x182, output.bgCameraX() & 0xFFFF);
         assertEquals(0x13E, output.band1CameraX() & 0xFFFF);
         assertEquals(0xFF, output.band2CameraX() & 0xFFFF);
         var normal = Sonic3kMHZEvents.computeMhzDeform(0x400, 0x400, 4, false);
         assertEquals(0x180, normal.bgCameraX() & 0xFFFF);
+        var manager = (Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider();
+        manager.initLevel(Sonic3kZoneIds.ZONE_MHZ, 1);
+        var events = manager.getMhzEvents();
+        GameServices.camera().setX((short) 0x400);
+        GameServices.camera().setY((short) 0x400);
+        events.initializeBackgroundAtLoad();
+        events.setAct2BackgroundRoutineForTest(0x18);
+        events.setScreenShakeOffsetForTest(4);
+        events.update(1, 1);
+        int[] hScroll = new int[224];
+        var handler = new SwScrlMhz();
+        handler.update(hScroll, 0x400, 0x400, 1, 1);
+        assertEquals(packScrollWords(negWord(0x404), negWord(0x184)), hScroll[0],
+                "handler projects the applied shake in foreground and boss-area background words");
+        assertEquals(hScroll[0], hScroll[223]);
+        assertEquals(0x184, handler.getBgCameraX() & 0xFFFF);
+
     }
 
     @Test

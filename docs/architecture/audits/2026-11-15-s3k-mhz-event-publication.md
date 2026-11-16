@@ -1,76 +1,67 @@
-# MHZ event publication — 2026-11-15
+# MHZ event publication — 2026-11-15 (review corrections 2026-11-16)
 
-Base: `e676eb5086b7069c5e8ffdd0dbd33990d5c2bf5f` (`develop`).
+Base: `e676eb5086b7069c5e8ffdd0dbd33990d5c2bf5f`; reviewed head: `3607748c9d`.
 
-## ROM and owners
+## ROM ownership and change
 
-- A full search of `Screen_shake_flag` in the pinned locked-on disassembly
-  finds one MHZ-specific object writer: `loc_76164`
-  (sonic3k.asm:157133-157144), the end-boss escape threshold, writes `$14`.
-  MHZ's miniboss, ordinary objects, screen events and seamless act transition
-  have no flag writes. `LevelSetup` (sonic3k.asm:102239-102240) clears the words.
-  Other matches belong to other zones, intros/endings or shared setup/shake code.
-- The survey was correct about a missing connection: the boss wrote the
-  game-wide boolean, while MHZ setup read a private word with no production
-  writer. The boolean has no MHZ shake consumer; the shared flag remains intact.
-- `MHZ2_ScreenEvent` (sonic3k.asm:112488-112492) applies the preceding shake
-  offset to the foreground X copy. Background calculation precedes the next
-  `ShakeScreen_Setup` (sonic3k.asm:104234-104255).
-- `MHZ1_BackgroundInit` (sonic3k.asm:112310-112317) initializes `Events_fg_0/1`.
-  `Adjust_BGDuringLoop` (sonic3k.asm:104157-104179) advances those physical and
-  logical camera words in background events, not in a renderer.
-  `MHZ1_BackgroundEvent` (sonic3k.asm:112320-112365) retains the logical word
-  across Load_Level and rebases the physical sample by `$4200`.
-- `MHZ_Deform` (sonic3k.asm:112368-112398) publishes BG camera X/Y and two
-  animation bands without shake cancellation. `sub_554B8`
-  (sonic3k.asm:113164-113202) cancels shake before the X ratio and restores it
-  only to the primary BG word. The old renderer applied that to ordinary MHZ too.
-  Early MHZ2 background/redraw branches return through `PlainDeformation`;
-  only the boss-area tail reaches `loc_554B4` (sonic3k.asm:113145-113158).
-  The former routine-8 test incorrectly expected setup on the early wait path;
-  it now witnesses that the shake words remain unchanged on that ROM return.
-- `loc_555D2` (sonic3k.asm:113291-113307) publishes pillar helper X positions
-  from the native scroll ramp. Objects consume these on the next object pass.
-  This gameplay write in `SwScrlMhz` was an additional finding beyond the survey.
+- Full flag-write search: MHZ's only specific writer is `loc_76164` (sonic3k.asm:157133-157144),
+  writing `$14` at the end-boss escape threshold. The miniboss, ordinary objects,
+  events and seamless transition do not write it. `LevelSetup` (sonic3k.asm:102239-102240) clears it.
+- The survey's disconnected writer was real: the boss wrote a game-wide boolean
+  with no MHZ consumer; it now requests the zone's ROM flag. The shared boolean remains.
+- `MHZ2_ScreenEvent` (sonic3k.asm:112488-112492) adds the preceding offset to the camera copy.
+  `ShakeScreen_Setup` (sonic3k.asm:104234-104255) prepares the next offset after deformation.
+- `MHZ1_BackgroundInit` (sonic3k.asm:112310-112317) initializes the loop words;
+  `Adjust_BGDuringLoop` (sonic3k.asm:104157-104179) advances them in background events.
+  `MHZ1_BackgroundEvent` (sonic3k.asm:112320-112365) retains logical history across Load_Level.
+- `MHZ_Deform` (sonic3k.asm:112368-112398) publishes BG/animation bands without shake cancellation;
+  `sub_554B8` (sonic3k.asm:113164-113202) cancels shake before the ratio and restores only BG X.
+  The old renderer applied that cancellation to ordinary MHZ too.
+- `loc_555D2` (sonic3k.asm:113293-113307) publishes pillar helper X for the next object pass.
+  This renderer-owned gameplay write was an additional survey finding.
 
-## Witness and implementation
+Events now own loop history, deformation/animation words, collision helper X and
+`S3kScreenShake`; runtime reads that owner and scroll only projects. A framed,
+validated same-build payload restores scalar publication plus all three shake words
+atomically. No old-format migration, trace gameplay hydration or shared shake API change.
+The ramp's DIVU remainder and shipped loop arithmetic are retained; no fixed-bug branch selected.
+The original real-load rebuild witness failed on four runtime bytes at base and passes here.
 
-`TestS3kMhzScreenPublication.renderingAnotherCameraCannotChangeTheRetainedWorld`
-loads actual MHZ2, captures the registered world, renders a different camera and
-compares every non-parallax owner. On the base it failed on four bytes of
-`zone-runtime.stateBytes` (1 failure, 0 errors, 0 skips), proving the renderer
-changed the retained animation publication. No trace state supplies gameplay.
+## Designs rejected
 
-The event owner now holds the loop words, deformation outputs, helper positions
-and composed `S3kScreenShake`. The runtime adapter reads that owner; the renderer
-only projects. The act handoff carries the event loop words, not a renderer
-snapshot. A framed same-build payload captures the scalar publication and all
-three shake words. Validation uses an isolated probe before mutation and rejects
-legacy scalar-only data, invalid framing, encodings and publication word ranges.
-The boss writes only the timed flag through the zone adapter.
+1. Renderer-owned accumulator plus a better snapshot: rebuilds still replace gameplay state.
+2. Runtime publication plus a separate event-phase sidecar: splits one dispatch/rewind boundary.
+3. Chosen: event-owned composition, runtime read adapter, projection only, following HCZ.
 
-No changed algorithm selects a fixed-bug branch: loop arithmetic and the ramp's
-DIVU remainder retain shipped behavior. Native render/collision coordinates are
-kept distinct from viewport inset projection.
+## Independent review disposition
 
-## Designs considered
+1. **FIXED:** double application confirmed in real ordinary frames. Natural red witness
+   `ordinaryShakeMovesTheRenderCameraAndSpriteDrawExactlyOnce` observed camera and render bounds
+   15398 instead of 15403, and actual playable draw tile x=150 instead of 145.
+   Removed the handler's separate shake channel; native copied-camera application remains.
+2. **FIXED coverage:** restored grounded Y=$400 routine 8->$10 same-dispatch setup beside
+   airborne Y=$450 negative case. The previous audit was wrong to call the original assertion
+   incorrect: its grounded player enters loc_5528A, not the early airborne wait return.
+3. **FIXED coverage:** real `LoopCarry`/`transferAfterTargetInit` test retains nontrivial $200
+   loop history, checks hScroll and rebuild immutability; removed reflection-only act rebase.
+   The pre-review DMA test already drove a real handoff; this adds stronger loop/output
+   assertions. Deform checks actual handler hScroll; boss threshold checks
+   its injected real zone flag owner. Each detects a deliberate omission (four red mutations).
+4. **FIXED:** exact label-start assertions first failed, then passed after correcting both
+   production comments and this audit to loc_76164=157133 and loc_555D2=113293.
 
-1. Keep a renderer accumulator with a better rewind hook: rejected because a
-   rebuild can still replace gameplay publication and the act handoff still
-   needs presentation state to continue gameplay.
-2. Put publication and shake in the runtime adapter, leaving event phases in a
-   separate sidecar: rejected because it splits a single background dispatch
-   and its rewind boundary across independent payloads.
-3. Chosen: event-owned publication, runtime read adapter, stateless projection;
-   use the established HCZ composition without changing `S3kScreenShake`.
+**RECORDED, unchanged:** the carry adds one frame of movement when the camera advanced since
+its previous sample. Base `SwScrlMhz.captureForActTransition` carries `loopActualCameraX+offset`;
+the new LoopCarry retained that behavior. ROM writes the current rebased copy into Events_fg_0
+in `MHZ1_BackgroundEvent` (sonic3k.asm:112320-112354), specifically lines 112352-112354,
+making its following loop delta zero.
+No timing correction is claimed here; the handoff witness isolates retention with no extra movement.
 
-## Verification
+## Exact Maven commands and results
 
-All test commands used verified ROM properties (`missing=none`); every completed
-selection had zero errors and zero skips. Runtime source is unchanged between
-the candidate comparison and the final test-only correction below.
-
-Exact Maven invocations (output redirection to `target/mhz-*.log` omitted):
+Output redirections to `target/mhz-*.log` omitted. Baseline commands ran in detached,
+clean cowtrees at the base SHA, with independent target trees. All runs found verified ROMs
+(`missing=none`); all completed test selections had zero errors/skips. No OOM occurred.
 
 ```bash
 python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestS3kMhzScreenPublication test
@@ -79,29 +70,37 @@ python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless
 python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestS3kMhzScreenPublication,TestMhzComposedRewindState,TestSonic3kMHZEvents,SwScrlMhzTest,TestSonic3kMhzRuntimeStateRegistration,TestMhzRewindFidelitySweep,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestZoneEventRewindSchemaGuard,TestSonic3kLevelEventRewindSnapshot,TestS3kMhzAuthoredRoute,TestS3kMhzAct2AuthoredRoute,TestMhzCheckpointRoutes,TestMhzBossObjects,TestS3kMhzPatternAnimation,*Mhz*TraceReplay' test
 python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestS3kMhzAuthoredRoute,TestS3kMhzAct2AuthoredRoute,*Mhz*TraceReplay' test
 python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Dtest=TestSonic3kMHZEvents test
+python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Dtest=TestS3kMhzScreenPublication#ordinaryShakeMovesTheRenderCameraAndSpriteDrawExactlyOnce test
+python3 tools/testing/maven_queue.py --lean -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestSonic3kMHZEvents#act2BackgroundEventRoutine8FallthroughRunsShakeSetupInTheSameDispatch+realActHandoffCarriesLoopHistoryAndRebuildsTheScrollOutput,TestSonic3kMhzRuntimeStateRegistration#bossAreaDeformCancelsShakeBeforeRatioAndRestoresItAfterward,TestMhzBossObjects#mhzEndBossDefeatDashThresholdStartsFadeShakeAndTimerStop' test
 ```
 
-1. Red base witness: 1 test, 1 expected failure; wait 336s, Maven 95s.
-2. Compile-only attempt: failed on my annotation import and shake getter return
-   type; corrected before execution. No tests ran; Maven 56.671s.
-3. Initial focused run: 388 tests, 9 failures; wait 520s, Maven 143s. Five
-   publication/schema expectations or defects were corrected; four route
-   failures required baseline attribution.
-4. Candidate focused + traces: 410 tests, 26 failures; wait 846s, Maven 177s.
-   Of these, 21 trace and four route failures match baseline. The remaining
-   event witness used grounded Y=$400 (which enters the custom-layout branch).
-   Its test-only correction declares airborne Y=$450 and asserts routine 8 is
-   retained before checking that setup is bypassed.
-5. Baseline at the pinned SHA, separate clean detached cowtree: 25 tests,
-   25 failures; wait 983s, Maven 159s. All failure identities match the candidate;
-   MHZ1's expected-set display ordering alone differs. Actual set is `{pulley}`.
-6. Corrected event-only rerun: 64 tests, 0 failures/errors/skips; wait 492s, Maven 37.571s.
+| Run | Tests / failures | Queue seconds | Maven seconds | Qualification |
+| --- | --- | ---: | ---: | --- |
+| Original base rebuild red | 1 / 1 | 336 | 95 | Expected runtime publication mutation |
+| Initial compile-only | none | 0 | 56.671 | Failed import/getter type; corrected |
+| Original focused | 388 / 9 | 520 | 143 | Five corrected issues + four baseline routes |
+| Original candidate focused + traces | 410 / 26 | 846 | 177 | 25 baseline failures + corrected test setup |
+| Original baseline routes + traces | 25 / 25 | 983 | 159 | Same identities/assertions as candidate |
+| Original corrected event rerun | 64 / 0 | 492 | 37.571 | All event tests passed |
+| Review natural red | 1 / 1 | 597 | 37.611 | Actual camera/bounds/sprite double shake |
+| Review four omission controls | 4 / 4 | 643 | 104 compile + 3.557 test | Expected failures; all mutations restored |
+| Review fresh baseline routes + traces | 25 / 25 | 805 | 149 | Fresh comparison control |
+| Review first full focused + traces | 413 / 26 | 707 | 185 | 25 baseline failures + misplaced new boss assertion |
+| Review corrected full focused + traces | 413 / 25 | 131 | 122 | All 25 failures match fresh baseline; 388 pass |
 
-Trace comparison: all 21 JSON reports have identical error/warning counts,
-bootstrap errors, frame/field coverage, verification groups, complete grouped
-errors/warnings and replay gates. Both totals are **9,397 grouped errors**, not
-raw per-row mismatches. No new/worse mismatch or frontier was observed; these
-are failing replays, not parity certification. Per-class baseline = candidate:
+The omission controls disabled only same-dispatch setup, handoff carry, BG scroll-word output,
+and the boss zone request. These qualify new coverage of already-correct behavior; they are
+not natural failures of the reviewed head. The production defect has its separate natural red.
+The first full run found my new pre-threshold assertion was too late: spawn+$C0 plus the
+first four-pixel move already reaches $44D0. It now checks zero before the first update,
+then $14 immediately after it. No production behavior changed for this test correction.
+
+## Trace and inherited failures
+
+Original comparison: 21 reports identical in counts, frame/field coverage, verification groups,
+complete grouped errors/warnings and replay gates: 9,397 grouped errors on each side (not raw
+row/field mismatch counts). Review final comparison: all 23 baseline test-class assertions and all 21 trace reports
+match; zero new/worse mismatches. Per-class base = original and corrected candidates:
 
 | Replay class | Grouped errors | First frame / field |
 | --- | ---: | --- |
@@ -127,21 +126,14 @@ are failing replays, not parity certification. Per-class baseline = candidate:
 | TestS3kTailsFullChainMhz5SegmentTraceReplay | 304 | 218 / y_speed |
 | TestS3kTailsFullChainMhzSegmentTraceReplay | 10 | 1389 / routine |
 
-All four inherited route issues: MHZ1 observes only `pulley`, missing its other
-five required checkpoints; MHZ2 route parameter 1 observes no required markers;
-parameters 2 and 3 die at input 36000 and 26152 respectively. Assertions and
-identities match baseline (set ordering normalized for the MHZ1 diagnostic).
+All four inherited route issues: MHZ1 reaches only `pulley` (five other required markers absent);
+MHZ2 parameter 1 reaches no required markers; parameters 2/3 die at input 36000/26152.
+Original assertions/identities match baseline; MHZ1 expected-set display order alone differs.
 
-Queue and Maven times above are separate; waits overlap across the two trees.
-User wait was zero; unmeasured research/editing/host overhead is unknown. Logs
-and comparison JSON stay disposable under `target/`. No category/full/smoke
-run was made: the lead owns smoke and independent review. No new trace frontier
-was chosen or moved, so the frontier log is unchanged. Route/configuration and
-visual parity beyond the selected checks remain inherited coverage gaps.
-
-`git diff --cached --check` passes. `disasm_citations.py check --strict` on
-all 19 staged paths finds three pre-existing stale citations in the manager's
-HPZ/CNZ branches (120901, 180510-180515, 180666-180723); all three texts are
-present at the base SHA. They are outside the permitted MHZ edits. The same
-strict check on the five MHZ production files plus this audit passes (17 ok,
-2 near, 8 unverifiable). An unrelated scddisasm checkout/pin warning remains.
+Whole-PR strict citations previously found three unchanged manager HPZ/CNZ stale references
+(120901, 180510-180515, 180666-180723), outside MHZ scope. MHZ-only strict check passed;
+review touched-file strict check passes (56 ok, 9 near, 7 unverifiable; no stale). Unrelated scddisasm checkout/pin warning remains.
+Queue and Maven times are separate and overlap between trees. User wait zero; research/editing
+and unmeasured host overhead unknown. Logs are disposable target outputs. Lead owns smoke and
+independent review; no category/full-suite run or visual pixel certification is claimed. Existing
+route/team/donor/viewport gaps remain; no trace frontier was chosen/moved, so frontier log unchanged.

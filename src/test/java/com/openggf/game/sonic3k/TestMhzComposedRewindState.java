@@ -46,7 +46,7 @@ class TestMhzComposedRewindState {
             assertArrayEquals(saved, target.captureMhzState());
         }
     }
-    @Test void loopHistoryRestoresAcrossCameraWrapAndActRebase() throws Exception {
+    @Test void loopHistoryRestoresAcrossCameraWrap() throws Exception {
         var events = new Sonic3kMHZEvents();
         var adjust = Sonic3kMHZEvents.class.getDeclaredMethod("adjustBgDuringLoop", int.class);
         adjust.setAccessible(true);
@@ -56,10 +56,6 @@ class TestMhzComposedRewindState {
         assertEquals(0x42C0, adjust.invoke(events, 0x40C0));
         events.restoreMhzState(saved);
         assertEquals(0x42C0, adjust.invoke(events, 0x40C0));
-        // MHZ1_BackgroundEvent rebases only Events_fg_0; retained history is
-        // in the same scalar payload as the deformation words and shake.
-        var actual = Sonic3kMHZEvents.class.getDeclaredField("loopActualCameraX");
-        actual.setAccessible(true); actual.setInt(events, 0x40C0 - 0x4200 & 0xFFFF);
-        assertEquals(0x42D0, adjust.invoke(events, 0x40D0 - 0x4200 & 0xFFFF));
+
     }
 }

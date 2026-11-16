@@ -46,6 +46,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static com.openggf.level.scroll.M68KMath.negWord;
 import static com.openggf.level.scroll.M68KMath.unpackBG;
@@ -911,6 +912,63 @@ class TestSonic3kMHZEvents {
                 "loc_55250 should prime Draw_delayed_rowcount=$0F for the redraw path");
         assertFalse(events.isEndBossArenaBackgroundActive(),
                 "loc_55250 should not fall through to loc_55312/end-boss arena setup in the same frame");
+    }
+
+    @Test
+    void act2BackgroundEventRoutine8FallthroughRunsShakeSetupInTheSameDispatch() {
+        var fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_MHZ, 1)
+                .startPosition((short) 0x3700, (short) 0x0400)
+                .startPositionIsCentre().build();
+        var events = getMhzEvents();
+        fixture.sprite().setCentreY((short) 0x400);
+        fixture.sprite().setAir(false);
+        GameServices.camera().setX((short) 0x3E00);
+        events.setAct2BackgroundRoutineForTest(8);
+        events.requestScreenShake(-1);
+        events.setScreenShakeOffsetForTest(2);
+        events.update(1, 3);
+        assertEquals(0x10, events.getAct2BackgroundRoutine(), "loc_5528A falls into loc_55312 below $3F00");
+        assertEquals(2, events.getScreenShakeLastOffset(), "loc_554B4 saves the preceding offset");
+        assertEquals(3, events.getScreenShakeOffset(), "same dispatch samples Level_frame_counter=3");
+    }
+
+    @Test
+    void realActHandoffCarriesLoopHistoryAndRebuildsTheScrollOutput() {
+        var fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_MHZ, 0)
+                .startPosition((short) 0x43C0, (short) 0x07AC)
+                .startPositionIsCentre().build();
+        fixture.stepIdleFrames(1);
+        var level = GameServices.level();
+        var outgoing = getMhzEvents();
+        int logical = outgoing.loopAdjustedCameraX();
+        // Reverse $200 image change: Adjust_BGDuringLoop retains Events_fg_1.
+        // Declare a component camera displacement, never import trace state.
+        fixture.camera().setX((short) (fixture.camera().getX() + 0x200));
+        outgoing.update(0, level.getFrameCounter());
+        assertEquals(logical, outgoing.loopAdjustedCameraX());
+        int background = outgoing.publishedBgCameraX();
+        ((Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider()).signalActTransition();
+        outgoing.update(0, level.getFrameCounter() + 1);
+        var request = level.consumeSeamlessTransitionRequest();
+        assertNotNull(request);
+        assertNotNull(request.resourceHandoffId(), "production request carries MhzActTransitionHandoff");
+        level.applySeamlessTransition(request); // claims the real LoopCarry and executes transferAfterTargetInit
+        assertEquals(1, level.getCurrentAct());
+        var incoming = getMhzEvents();
+        assertNotSame(outgoing, incoming);
+        assertEquals(logical, incoming.loopAdjustedCameraX());
+        assertEquals(background, incoming.publishedBgCameraX());
+        var handler = GameServices.parallax().getHandler(Sonic3kZoneIds.ZONE_MHZ);
+        int[] output = new int[224];
+        handler.update(output, fixture.camera().getX(), fixture.camera().getY(), level.getFrameCounter(), 1);
+        assertEquals(com.openggf.level.scroll.M68KMath.packScrollWords(
+                negWord(fixture.camera().getX()), negWord(background)), output[0]);
+        byte[] saved = incoming.captureMhzState();
+        level.recomputeParallaxOnlyForCurrentFrame();
+        level.recomputeParallaxOnlyForCurrentFrame();
+        assertArrayEquals(saved, incoming.captureMhzState(), "rebuild cannot consume the carried history");
     }
 
     @Test

@@ -756,5 +756,8 @@ The [MHZ publication audit](../../audits/2026-11-15-s3k-mhz-event-publication.md
 records the event-owned loop, deformation/animation bands, pillar helper positions
 and shake payload. `TestS3kMhzScreenPublication` exercises a real MHZ2 rebuild
 and boss shake component; `TestMhzComposedRewindState` rejects malformed captures.
+Review coverage (2026-11-16) also checks one shake in the ordinary render camera,
+render bounds and actual sprite draw, positive/negative routine-8 dispatches,
+real loop-carry/hScroll restoration, and the boss's injected zone flag owner.
 This adds bounded publication/rewind obligations, not additional route, donor,
 team or visual certification. Existing matrix gaps above remain open.

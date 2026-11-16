@@ -68,10 +68,9 @@ public class SwScrlMhz extends AbstractZoneScrollHandler
         maxScrollOffset = composer.getMaxScrollOffset();
     }
 
-    @Override public int getShakeOffsetX() {
-        var state = currentRuntimeState();
-        return (short) (state == null ? 0 : state.appliedScreenShakeOffset());
-    }
+    // MHZ2_ScreenEvent already adds the offset to the camera copy. Keep the
+    // separate presentation-shake channel at its default zero: sprites,
+    // uniform foreground and Render_Sprites bounds all consume that copy.
     @Override
     public int getBgCameraX() {
         return bgCameraX;

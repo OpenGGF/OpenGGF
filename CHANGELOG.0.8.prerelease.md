@@ -8,7 +8,8 @@ under the matching area heading; see the
 ## Gameplay and presentation
 
 - **Mushroom Hill screen events:** the end boss now starts the original timed
-  horizontal shake at its final escape threshold. Background loop, animation
+  horizontal shake at its final escape threshold, applied once to foreground,
+  sprites and render bounds through the native camera copy. Background loop, animation
   bands and pillar collision positions belong to screen events and restore
   together with shake; rebuilding scroll output no longer changes gameplay.
 

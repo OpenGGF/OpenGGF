@@ -524,7 +524,7 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
         spawnChild(() -> MhzEndBossExplosionController.stationary(state.x, state.y));
         var services = tryServices();
         var gameState = services == null ? null : services.gameState();
-        // loc_76164 (sonic3k.asm:157132-157144): write the ROM timed word.
+        // loc_76164 (sonic3k.asm:157133-157144): write the ROM timed word.
         if (services != null && services.zoneRuntimeState() instanceof MhzZoneRuntimeState mhz) {
             mhz.requestScreenShake(0x14);
         }

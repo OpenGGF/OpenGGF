@@ -65,4 +65,34 @@ class TestS3kMhzScreenPublication {
         for (var key : forward.entries().keySet())
             assertTrue(RewindSnapshotDiff.keyEquals(key, forward.get(key), replay.get(key)), key);
     }
+    @Test void ordinaryShakeMovesTheRenderCameraAndSpriteDrawExactlyOnce() throws Exception {
+        var fixture = HeadlessTestFixture.builder().withZoneAndAct(Sonic3kZoneIds.ZONE_MHZ, 1)
+                .withSkippedZoneIntro().startPosition((short) 15568, (short) 704)
+                .startPositionIsCentre().build();
+        var events = ((com.openggf.game.sonic3k.Sonic3kLevelEventManager)
+                GameServices.module().getLevelEventProvider()).getMhzEvents();
+        events.setAct2BackgroundRoutineForTest(0x18);
+        events.requestScreenShake(20);
+        fixture.stepIdleFrames(2); // ordinary camera -> events -> parallax -> render bounds
+        assertEquals(-5, events.appliedScreenShakeOffset(), "second dispatch consumes the preceding setup");
+        var camera = fixture.camera();
+        int expectedCamera = (short) (camera.getX() - 5);
+        var graphics = GameServices.graphics();
+        var world = com.openggf.level.render.SpritePresentationRenderer.prepare(
+                graphics, 0, 0, fixture.sprite()::draw);
+        var drawn = com.openggf.level.render.SpritePresentationRenderer.prepare(
+                graphics, camera.getXWithShake(), camera.getYWithShake(), fixture.sprite()::draw);
+        assertFalse(drawn.tiles().isEmpty(), "actual loaded playable mapping emits sprite tiles");
+        assertEquals(world.tiles().size(), drawn.tiles().size());
+        var cameraLeft = com.openggf.level.objects.AbstractObjectInstance.class.getDeclaredMethod("cameraLeft");
+        cameraLeft.setAccessible(true);
+        assertAll(
+                () -> assertEquals(expectedCamera, camera.getXWithShake(), "render camera consumes one ROM offset"),
+                () -> assertEquals(expectedCamera, cameraLeft.invoke(null), "Render_Sprites visibility bounds"),
+                () -> {
+                    for (int i = 0; i < drawn.tiles().size(); i++)
+                        assertEquals(world.tiles().get(i).x() - expectedCamera, drawn.tiles().get(i).x(),
+                                "actual sprite draw tile " + i + " uses the singly shaken origin");
+                });
+    }
 }
