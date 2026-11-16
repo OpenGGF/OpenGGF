@@ -455,8 +455,9 @@ public final class GameplayCaptureSession implements AutoCloseable {
         if (pressComplete) {
             loop.debugCompleteSpecialStageWithEmerald();
         }
+        // Engine's live tick installs capture intent before the service and observes it after.
+        if (interpolation) LevelMotionAccess.prepareService(GameServices.level(), true);
         loop.step();
-        // Engine's live tick observes the motion service once per admitted service, after it.
         if (interpolation) LevelMotionAccess.observeService(GameServices.level(), GameServices.spritesOrNull(), true);
         // Native menu launches replace the entire runtime. Capture state must
         // follow the same current participant the renderer and GameLoop use.
