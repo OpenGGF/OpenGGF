@@ -9,6 +9,7 @@ import com.openggf.game.save.SaveManager;
 import com.openggf.game.save.SavePaths;
 import com.openggf.graphics.RgbaImage;
 import com.openggf.graphics.ScreenshotCapture;
+import com.openggf.level.PictureSelection;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -108,7 +109,11 @@ public final class GameplayCaptureTool {
                     com.openggf.configuration.SonicConfiguration.TRACE_SHOW_GAME_HUD, false);
         }
         try (GameplayCaptureSession session = new GameplayCaptureSession(settings);
-             BufferedWriter state = Files.newBufferedWriter(outDir.resolve("state.csv"), StandardCharsets.UTF_8)) {
+             BufferedWriter state = Files.newBufferedWriter(outDir.resolve("state.csv"), StandardCharsets.UTF_8);
+             // One row per written picture; state.csv keeps its one-row-per-logic-frame schema.
+             BufferedWriter pictures = arguments.picturesPerFrame() == 1 ? null
+                     : Files.newBufferedWriter(outDir.resolve("pictures.csv"), StandardCharsets.UTF_8)) {
+            if (pictures != null) pictures.write("picture,frame,phase,alpha,outcome,file\n");
             if (arguments.mod() != null) session.applyMod(arguments.mod());
             if (arguments.extraTeams() != null)
                 GameServices.configuration().setSessionOverride(
@@ -116,6 +121,7 @@ public final class GameplayCaptureTool {
             if (arguments.saveSlots() != null) seedSaveSlots(arguments.saveSlots(), arguments.game());
             if (arguments.titleScreen()) session.startAtTitle();
             if (arguments.rewindFrom() >= 0) session.enableLiveRewind();
+            if (arguments.interpolation()) session.enableInterpolation();
             if (arguments.audio()) session.enableAudio();
             if (arguments.noMusic()) session.silenceMusic();
             if (arguments.nativePcm()) {
@@ -169,10 +175,13 @@ public final class GameplayCaptureTool {
                             && ((frame - arguments.captureFrom()) % arguments.every() == 0
                             || arguments.stills().contains(frame));
                     if (wanted) {
-                        RgbaImage image = session.render();
-                        Path png = framesDir.resolve(String.format(Locale.ROOT, "%05d.png", frame));
-                        ScreenshotCapture.savePNG(image, png);
-                        pngs.add(png);
+                        RgbaImage image = arguments.picturesPerFrame() == 1 ? session.render()
+                                : writePhasedPictures(session, arguments, frame, framesDir, pngs, pictures);
+                        if (arguments.picturesPerFrame() == 1) {
+                            Path png = framesDir.resolve(String.format(Locale.ROOT, "%05d.png", frame));
+                            ScreenshotCapture.savePNG(image, png);
+                            pngs.add(png);
+                        }
                         if (arguments.stills().contains(frame)) {
                             ScreenshotCapture.savePNG(image, outDir.resolve(String.format(Locale.ROOT, "still-%05d.png", frame)));
                         }
@@ -225,9 +234,59 @@ public final class GameplayCaptureTool {
                 outDir.resolve("state.csv"));
     }
 
+    /** Largest {@code --pictures-per-frame}: 16 pictures per 60 Hz logic frame is a 960 fps recording. */
+    static final int MAX_PICTURES_PER_FRAME = 16;
+
+    /**
+     * The capture's synthetic picture clock: picture {@code phase} of {@code picturesPerFrame} is drawn
+     * {@code phase / picturesPerFrame} of a logic frame after the newest service, the phase
+     * {@code LiveFrameRuntime} measures on host time for a window picture. No wall clock is read, so a
+     * capture repeats exactly. As in live play the view trails the newest logic frame: phase 0 shows the
+     * previous frame's positions and the last phase stops one picture short of the newest.
+     */
+    static PictureSelection picturePhase(int phase, int picturesPerFrame) {
+        if (phase < 0 || phase >= picturesPerFrame) throw new IllegalArgumentException("phase outside the logic frame");
+        return PictureSelection.between((double) phase / picturesPerFrame);
+    }
+
+    /**
+     * Writes {@code --pictures-per-frame} pictures of the newest logic frame as
+     * {@code frames/<frame>-<phase>.png} and returns the last. With {@code --interpolation} each is the
+     * production picture at its {@link #picturePhase}; without it the exact picture is drawn once and
+     * repeated, so an interpolated and an exact capture share a picture rate.
+     */
+    private static RgbaImage writePhasedPictures(GameplayCaptureSession session, Arguments arguments, int frame,
+                                                 Path framesDir, List<Path> pngs, BufferedWriter pictures) throws IOException {
+        int count = arguments.picturesPerFrame();
+        RgbaImage image = null;
+        Path exact = null;
+        for (int phase = 0; phase < count; phase++) {
+            Path png = framesDir.resolve(String.format(Locale.ROOT, "%05d-%02d.png", frame, phase));
+            String alpha = "", outcome = "EXACT";
+            if (arguments.interpolation()) {
+                PictureSelection selection = picturePhase(phase, count);
+                image = session.render(selection);
+                ScreenshotCapture.savePNG(image, png);
+                alpha = Double.toString(((PictureSelection.Between) selection).alpha());
+                outcome = session.lastMotionOutcome();
+            } else if (exact == null) {
+                image = session.render();
+                ScreenshotCapture.savePNG(image, png);
+                exact = png;
+            } else {
+                Files.copy(exact, png, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            }
+            pictures.write(pngs.size() + "," + frame + "," + phase + "," + alpha + "," + outcome + ","
+                    + framesDir.getFileName() + "/" + png.getFileName() + "\n");
+            pngs.add(png);
+        }
+        return image;
+    }
+
     private static Path encodeVideo(Path ffmpeg, List<Path> pngs, Path out, Arguments arguments) throws IOException {
         int scale = Math.max(1, arguments.scale());
-        String fps = Math.max(1, arguments.fps()) + "/" + Math.max(1, arguments.every());
+        // Phased pictures divide the logic frame evenly, so the video keeps real time at fps * N.
+        String fps = Math.max(1, arguments.fps()) * arguments.picturesPerFrame() + "/" + Math.max(1, arguments.every());
         // Enumerate this invocation's frames. A directory glob also picks up
         // PNGs left by an earlier, longer capture into the same output root.
         Path sequence = Files.createTempFile(out.toAbsolutePath().getParent(), ".capture-video-", ".ffconcat");
@@ -309,7 +368,25 @@ public final class GameplayCaptureTool {
                             Path mod, boolean titleScreen, boolean audio, boolean interactivePacing,
                             boolean nativePcm, boolean endOfLevel, int rewindFrom, int rewindFrames,
                             Path saveSlots, String extraTeams, Integer timerFrames, boolean noMusic, boolean noHud,
-                            String drawMode, String dormantStyle) {
+                            String drawMode, String dormantStyle, int picturesPerFrame, boolean interpolation) {
+
+        /** One exact picture per logic frame: no phased pictures and no display interpolation. */
+        public Arguments(String game, Path rom, String zone, int act, Integer startX, Integer startY, int width,
+                         String mainCharacter, String sidekickCharacter, String donor, Path donorRom, Path input,
+                         int settle, int inputStart, Integer frames, int captureFrom, int every, Set<Integer> stills,
+                         boolean stopOnDeath, int deathGrace, boolean video, int scale, int fps,
+                         Path outDir, String emeralds, boolean titleCard, boolean completeSpecialStage,
+                         Integer vIntRunCount, Integer cameraXSub, boolean starPost, Integer rings, boolean reverseGravity,
+                         Path mod, boolean titleScreen, boolean audio, boolean interactivePacing,
+                         boolean nativePcm, boolean endOfLevel, int rewindFrom, int rewindFrames,
+                         Path saveSlots, String extraTeams, Integer timerFrames, boolean noMusic, boolean noHud,
+                         String drawMode, String dormantStyle) {
+            this(game, rom, zone, act, startX, startY, width, mainCharacter, sidekickCharacter, donor, donorRom, input,
+                    settle, inputStart, frames, captureFrom, every, stills, stopOnDeath, deathGrace, video, scale, fps,
+                    outDir, emeralds, titleCard, completeSpecialStage, vIntRunCount, cameraXSub, starPost, rings,
+                    reverseGravity, mod, titleScreen, audio, interactivePacing, nativePcm, endOfLevel, rewindFrom,
+                    rewindFrames, saveSlots, extraTeams, timerFrames, noMusic, noHud, drawMode, dormantStyle, 1, false);
+        }
 
         /** EDGE widescreen draw mode with greyscale dormant objects, the pinned capture defaults, and a HUD choice. */
         public Arguments(String game, Path rom, String zone, int act, Integer startX, Integer startY, int width,
@@ -489,6 +566,8 @@ public final class GameplayCaptureTool {
             Path saveSlots = null;
             String extraTeams = null;
             String drawMode = "EDGE", dormantStyle = "GREYSCALE";
+            int picturesPerFrame = 1;
+            boolean interpolation = false;
             for (int i = 0; i < argv.length; i++) {
                 String flag = argv[i];
                 switch (flag) {
@@ -533,6 +612,8 @@ public final class GameplayCaptureTool {
                     case "--no-video" -> video = false;
                     case "--scale" -> scale = number(value(argv, ++i, flag), flag);
                     case "--fps" -> fps = number(value(argv, ++i, flag), flag);
+                    case "--pictures-per-frame" -> picturesPerFrame = number(value(argv, ++i, flag), flag);
+                    case "--interpolation" -> interpolation = true;
                     case "--out-dir" -> outDir = Path.of(value(argv, ++i, flag));
                     case "--emeralds" -> emeralds = value(argv, ++i, flag);
                     case "--reverse-gravity" -> reverseGravity = true;
@@ -587,12 +668,22 @@ public final class GameplayCaptureTool {
                 throw new IllegalArgumentException("--rewind holds the key between direct gameplay steps; it does not combine with --interactive-pacing");
             if ((saveSlots != null || extraTeams != null) && !titleScreen)
                 throw new IllegalArgumentException("--save-slots and --extra-teams set up Data Select: use --title-screen");
+            if (picturesPerFrame < 1 || picturesPerFrame > MAX_PICTURES_PER_FRAME)
+                throw new IllegalArgumentException("--pictures-per-frame takes 1 to " + MAX_PICTURES_PER_FRAME);
+            if (interpolation && picturesPerFrame < 2)
+                throw new IllegalArgumentException("--interpolation draws pictures between logic frames: "
+                        + "use --pictures-per-frame 2 or more");
+            if (picturesPerFrame > 1 && interactivePacing)
+                throw new IllegalArgumentException("--pictures-per-frame phases one canonical logic frame per input row; "
+                        + "it does not combine with --interactive-pacing");
+            if (interpolation && rewindFrom >= 0)
+                throw new IllegalArgumentException("--interpolation does not combine with --rewind");
             return new Arguments(game, rom, zone, act - 1, startX, startY, width, main, sidekick, donor, donorRom, input,
                     settle, inputStart, frames, captureFrom, every, Set.copyOf(stills), stopOnDeath, deathGrace,
                     video, scale, fps, outDir, emeralds, titleCard, completeSpecialStage,
                     vIntRunCount, cameraXSub, starPost, rings, reverseGravity, mod, titleScreen, audio, interactivePacing,
                     nativePcm, endOfLevel, rewindFrom, rewindFrames, saveSlots, extraTeams, timerFrames, noMusic, noHud,
-                    drawMode, dormantStyle);
+                    drawMode, dormantStyle, picturesPerFrame, interpolation);
         }
 
         private static String choice(String raw, String flag, String... allowed) {

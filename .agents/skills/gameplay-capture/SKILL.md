@@ -111,7 +111,32 @@ Use a task directory outside the repository for captures the user should keep.
 | `--stills a,b` | none | Extra `still-<frame>.png` copies at those frames |
 | `--stop-on-death`, `--death-grace` | `true`, `60` | Stop after the leader dies plus grace frames |
 | `--no-video`, `--scale`, `--fps` | video on, `3`, `60` | MP4 encoding (nearest-neighbour upscale) |
+| `--pictures-per-frame <n>` | `1` | Write n pictures (1-16) of every captured logic frame as `frames/<frame>-<phase>.png`, list them in `pictures.csv`, and encode the video at fps × n (4 gives 240 fps). Alone, the exact picture is repeated n times. Not with `--interactive-pacing` |
+| `--interpolation` | off | With `--pictures-per-frame` 2 or more: draw picture k through the production `display.interpolation` path at phase k/n of the logic frame. Render-only; `state.csv` is identical to the exact capture. Not with `--rewind` |
 | `--out-dir <dir>` | required | Output root |
+
+## Film display interpolation
+
+`display.interpolation` only changes pictures drawn between logic frames, so a
+60 fps capture cannot show it. Capture the same input twice at the same picture rate
+and compare:
+
+```bash
+... --pictures-per-frame 4 --out-dir <task>/off
+... --pictures-per-frame 4 --interpolation --out-dir <task>/on
+```
+
+Picture k of a frame is drawn at phase k/n after the newest logic frame: the phase the
+live window measures on host time, here taken from the picture index so the capture
+is repeatable. As in live play the blended view trails the exact one by up to one
+logic frame (phase 0 shows the previous frame's positions with the newest art).
+Read `pictures.csv` before trusting a comparison: `outcome` is what the renderer
+did with each phase. `BLENDED` is an interpolated picture; `SNAPPED` (a cut, or a
+camera jump beyond the native scroll cap), `PRIMING` (first frame), `UNSUPPORTED_SCENE`
+(special stages, Stageplay, mod-contributed zones) and `EXACT` are exact pictures.
+Blending is whole-pixel, so motion slower than n pixels per logic frame repeats some
+pictures; pick motion of at least n pixels per frame. Play the result back slowed n
+times (each picture for one 60 fps frame) to show the difference on a 60 Hz video.
 
 ## Read the result
 
