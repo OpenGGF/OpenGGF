@@ -156,7 +156,7 @@ class TestS3kZoneRuntimeStateAdapters {
     }
 
     @Test
-    void mgzAdapterOwnsScrollRuntimePublications() {
+    void mgzAdapterDelegatesToEventOwnedState() {
         Sonic3kMGZEvents events = new Sonic3kMGZEvents();
         events.init(1);
         events.setEventsFg5(true);
@@ -174,15 +174,17 @@ class TestS3kZoneRuntimeStateAdapters {
         assertEquals(0x120, state.bgRiseOffset());
 
         assertFalse(state.hasBossBgScrollOffset());
+        events.setScreenEventRoutine(8);
         state.publishBossBgScrollOffset(0x13D80);
         assertTrue(state.hasBossBgScrollOffset());
         assertEquals(0x3D80, state.bossBgScrollOffset());
 
-        state.requestScreenShakeOffset(2);
-        state.requestScreenShakeOffset(6);
-        state.requestScreenShakeOffset(3);
-        assertEquals(6, state.consumeScreenShakeOffset());
-        assertEquals(0, state.consumeScreenShakeOffset());
+        byte[] before = events.captureMgzState();
+        state.requestContinuousScreenShake();
+        byte[] requested = events.captureMgzState();
+        assertFalse(java.util.Arrays.equals(before, requested));
+        state.clearScreenShakeFlag();
+        assertArrayEquals(before, events.captureMgzState());
     }
 
     @Test

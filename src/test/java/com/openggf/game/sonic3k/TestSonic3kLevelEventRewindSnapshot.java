@@ -888,7 +888,7 @@ class TestSonic3kLevelEventRewindSnapshot {
     }
 
     @Test
-    void corruptSameLengthMgzSchemaPayloadRollsBackAndDoesNotAbortLaterZoneRestore() throws Exception {
+    void corruptMgzPublicationRejectsBeforeAnyManagerOrLaterZoneMutation() throws Exception {
         Sonic3kLevelEventManager mhzSource = new Sonic3kLevelEventManager();
         mhzSource.initLevel(Sonic3kZoneIds.ZONE_MHZ, 0);
         var mhz = mhzSource.getMhzEventsForTest();
@@ -896,7 +896,13 @@ class TestSonic3kLevelEventRewindSnapshot {
         mhz.setBossFlag(true);
         mhz.setActTransitionFlag(true);
         mhz.setSpecialEventsRoutine(8);
-        LevelEventSnapshot mhzSnapshot = mhzSource.capture();
+        var original = mhzSource.capture();
+        short[] fg = original.eventDataFg();
+        byte[] bg = original.eventDataBg();
+        java.util.Arrays.fill(fg, (short) 0x55AA);
+        java.util.Arrays.fill(bg, (byte) 0x5A);
+        LevelEventSnapshot mhzSnapshot = new LevelEventSnapshot(original.currentZone(), original.currentAct(),
+                12, 16, 12345, 77, true, fg, bg, original.extra());
 
         Sonic3kLevelEventManager target = new Sonic3kLevelEventManager();
         target.initLevel(Sonic3kZoneIds.ZONE_MGZ, 1);
@@ -919,22 +925,24 @@ class TestSonic3kLevelEventRewindSnapshot {
         payloadSource.init(1);
         payloadSource.setCollapseRequested(false);
         payloadSource.setCollapseFrameCounter(11);
-        payloadSource.setBgRiseRoutine(2);
+        payloadSource.setBgRiseRoutine(8);
         byte[] corruptPayload = corruptMgzCollapseScrollVelocityLength(
-                ZoneEventSchemaSidecar.capture(payloadSource), 9);
+                payloadSource.captureMgzState(), 9);
         LevelEventSnapshot malformedSnapshot = snapshotWithMgzPayload(mhzSnapshot, corruptPayload);
 
+        var before = target.capture();
         assertDoesNotThrow(() -> target.restore(malformedSnapshot),
-                "schema-corrupt MGZ sidecar should not abort later zone sidecars");
+                "invalid composed MGZ publication must be rejected atomically");
+        assertSnapshotUnchanged(before, target.capture(), "malformed MGZ rejects base and all extra atomically");
         assertTrue(mgzTarget.isCollapseRequested(),
                 "schema-corrupt MGZ sidecar must roll back partial MGZ field writes");
         assertEquals(77, mgzTarget.getCollapseFrameCounter(),
                 "schema-corrupt MGZ sidecar must roll back partial MGZ field writes");
         assertEquals(8, mgzTarget.getBgRiseRoutine(),
                 "schema-corrupt MGZ sidecar must roll back partial MGZ field writes");
-        assertTrue(mhzTarget.isBossFlag());
-        assertTrue(mhzTarget.isActTransitionFlagActive());
-        assertEquals(8, mhzTarget.getSpecialEventsRoutine());
+        assertFalse(mhzTarget.isBossFlag());
+        assertFalse(mhzTarget.isActTransitionFlagActive());
+        assertEquals(0, mhzTarget.getSpecialEventsRoutine());
     }
 
     @Test
@@ -991,7 +999,7 @@ class TestSonic3kLevelEventRewindSnapshot {
         mgzPayloadSource.init(1);
         mgzPayloadSource.setCollapseRequested(true);
         LevelEventSnapshot malformedSnapshot = snapshotWithCorruptMgzLength(
-                snapshotWithMgzPayload(mhzSnapshot, ZoneEventSchemaSidecar.capture(mgzPayloadSource)),
+                snapshotWithMgzPayload(mhzSnapshot, mgzPayloadSource.captureMgzState()),
                 Integer.MAX_VALUE);
 
         Sonic3kLevelEventManager target = new Sonic3kLevelEventManager();
@@ -1027,7 +1035,7 @@ class TestSonic3kLevelEventRewindSnapshot {
         mgzPayloadSource.init(1);
         mgzPayloadSource.setCollapseRequested(true);
         LevelEventSnapshot malformedSnapshot = snapshotWithCorruptMgzLength(
-                snapshotWithMgzPayload(mhzSnapshot, ZoneEventSchemaSidecar.capture(mgzPayloadSource)),
+                snapshotWithMgzPayload(mhzSnapshot, mgzPayloadSource.captureMgzState()),
                 0);
 
         Sonic3kLevelEventManager target = new Sonic3kLevelEventManager();
@@ -1856,14 +1864,14 @@ class TestSonic3kLevelEventRewindSnapshot {
     private static byte[] corruptMgzCollapseScrollVelocityLength(byte[] payload, int invalidLength) {
         Sonic3kMGZEvents zero = new Sonic3kMGZEvents();
         zero.init(1);
-        byte[] zeroPayload = ZoneEventSchemaSidecar.capture(zero);
+        byte[] zeroPayload = zero.captureMgzState();
 
         Sonic3kMGZEvents one = new Sonic3kMGZEvents();
         one.init(1);
         int[] velocity = new int[10];
         velocity[0] = 1;
         one.setCollapseScrollVelocity(velocity);
-        byte[] onePayload = ZoneEventSchemaSidecar.capture(one);
+        byte[] onePayload = one.captureMgzState();
 
         assertEquals(zeroPayload.length, payload.length);
         int changedByte = -1;
