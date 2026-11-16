@@ -7028,7 +7028,49 @@
       "note": "BizHawk native reference (and the user's Sonic CD disc)"
     },
     {
-      "match": "com.openggf.level.TestCdLiveMotionPixels#ordinaryCdLevelsBlendWithoutChangingNativeStateOrExactPixels*",
+      "match": "com.openggf.level.TestCdLiveMotionPixels#ordinaryCdLevelsBlendWithoutChangingNativeStateOrExactPixels(CdZone)[1]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/level/TestCdLiveMotionPixels.java:28",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Requires the user-supplied USA disc through CdTestMedia.usaCue; required when the disc is supplied."
+    },
+    {
+      "match": "com.openggf.level.TestCdLiveMotionPixels#ordinaryCdLevelsBlendWithoutChangingNativeStateOrExactPixels(CdZone)[2]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/level/TestCdLiveMotionPixels.java:28",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Requires the user-supplied USA disc through CdTestMedia.usaCue; required when the disc is supplied."
+    },
+    {
+      "match": "com.openggf.level.TestCdLiveMotionPixels#ordinaryCdLevelsBlendWithoutChangingNativeStateOrExactPixels(CdZone)[3]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/level/TestCdLiveMotionPixels.java:28",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Requires the user-supplied USA disc through CdTestMedia.usaCue; required when the disc is supplied."
+    },
+    {
+      "match": "com.openggf.level.TestCdLiveMotionPixels#ordinaryCdLevelsBlendWithoutChangingNativeStateOrExactPixels(CdZone)[4]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/level/TestCdLiveMotionPixels.java:28",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Requires the user-supplied USA disc through CdTestMedia.usaCue; required when the disc is supplied."
+    },
+    {
+      "match": "com.openggf.level.TestCdLiveMotionPixels#ordinaryCdLevelsBlendWithoutChangingNativeStateOrExactPixels(CdZone)[5]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/level/TestCdLiveMotionPixels.java:28",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Requires the user-supplied USA disc through CdTestMedia.usaCue; required when the disc is supplied."
+    },
+    {
+      "match": "com.openggf.level.TestCdLiveMotionPixels#ordinaryCdLevelsBlendWithoutChangingNativeStateOrExactPixels(CdZone)[6]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/level/TestCdLiveMotionPixels.java:28",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Requires the user-supplied USA disc through CdTestMedia.usaCue; required when the disc is supplied."
+    },
+    {
+      "match": "com.openggf.level.TestCdLiveMotionPixels#ordinaryCdLevelsBlendWithoutChangingNativeStateOrExactPixels(CdZone)[7]",
       "category": "optional-fixture",
       "evidence": "src/test/java/com/openggf/level/TestCdLiveMotionPixels.java:28",
       "allowed_when_absent": "soniccd_disc",
