@@ -79,7 +79,8 @@ under the matching area heading; see the
   pass a USA CHD found in the project folder as `-Dsoniccd.disc.path`
   (identified by its CHD header; the disc is verified whole when opened), so the
   single-disc Sonic CD tests run without a hand-set media root; the regional
-  and CUE-layout checks still take `-Dsoniccd.media.root`. Third-party code is credited in `NOTICE.md`:
+  and CUE-layout checks still take `-Dsoniccd.media.root`. A single-disc test
+  that still skips while the disc is supplied now fails the category run. Third-party code is credited in `NOTICE.md`:
   the backup-RAM format code follows superctr/buram (MIT), and the PCM chip and
   stamp graphics are translated from MAME (BSD-3-Clause); earlier code derived
   from Genesis Plus GX (non-commercial licence) was replaced, and Genesis Plus

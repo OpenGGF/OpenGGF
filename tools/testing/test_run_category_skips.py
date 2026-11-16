@@ -161,6 +161,20 @@ class SkipVerdictTests(unittest.TestCase):
         self.assertEqual('gl', lane['unexplained_skips'][0]['input'])
         self.assertIn('gl=true', self.verdict())
 
+    def test_discovered_or_named_sonic_cd_disc_makes_a_disc_skip_required(self):
+        policy = csk.load_policy(runner.SKIP_POLICY)
+        self.assertFalse(runner.skip_capabilities(policy, HEADLESS)['soniccd_disc'])
+        discovered = ['-Dsoniccd.disc.path=/roms/Sonic CD (USA).chd']
+        found = runner.skip_capabilities(policy, HEADLESS, discovered)
+        self.assertTrue(found['soniccd_disc'])
+        # A discovered CHD is not a regional media root.
+        self.assertFalse(found['soniccd_media'])
+        named = dict(HEADLESS, MAVEN_ARGS='-Dsoniccd.media.root=/media/scd')
+        self.assertTrue(runner.skip_capabilities(policy, named)['soniccd_disc'])
+        self.assertTrue(runner.skip_capabilities(policy, named)['soniccd_media'])
+        blank = runner.skip_capabilities(policy, HEADLESS, ['-Dsoniccd.disc.path='])
+        self.assertFalse(blank['soniccd_disc'])
+
     def test_property_input_supplied_through_jvm_options_is_required(self):
         policy = csk.load_policy(runner.SKIP_POLICY)
         self.assertFalse(runner.skip_capabilities(policy, HEADLESS)['s2_bk2'])
