@@ -43,7 +43,7 @@ reason. CD cannot donate: the provider rejects non-cartridge donors before openi
 secondary media. No missing-ROM fallback is used. CD Game Setup saves a separate
 `launch.cd` profile and applies its team at the hosted exit boundary.
 
-Follow-up verification is in progress; the original verification below belongs to
+Follow-up verification and final attribution are recorded below; the original verification belongs to
 PR #350, not to the donor-hosting branch. Initial six combination tests all failed
 at the inherited host refusal, then all six boot/movement tests passed. Native
 act-end (25) and strict R11A replay (1) comparisons were selected but skipped for
@@ -418,3 +418,66 @@ batches and two workers; 40 minutes execution limit excludes queue wait. Stop on
 incomplete infrastructure and diagnose; never restart blindly. Compare failures
 by identity/assertion to `dc6b3c2b9e`. No source edit or build occurs in the task
 tree during this run. Final VERDICT and attribution remain pending.
+
+## Completed donor smoke and final attribution
+
+The one complete change-based smoke on `09241036095017ab0732f15ca53c6522e4c353e9`
+finished all **4,979/4,979 classes**, **100/100 ordinary batches** and **1/1 guard
+batches**. Its recorded result is **VERDICT FAILED: 41,341 tests, 48 failures,
+3 errors, 561 skips; all 561 allowed, zero unexplained; no missing ROM properties**.
+Ordinary execution was 2,009.42s; guards 179.65s; preparation 39.96s. Queue wait
+was approximately 4463 seconds from rounded acquisition log values.
+User wait was zero; other task wall time was not measured. This is bounded smoke,
+not a full-suite pass. The historical batch-57/58 fork abort did not recur.
+
+Baseline attribution is rerunning all 19 failing ordinary classes with matching
+`-Psmoke,test-concurrent` and the one failing guard class with `-Pguards` on clean
+`dc6b3c2b9edd621a0feecfe6d411628d51756f92`. The complete raw verdict above remains
+unchanged by subsequent focused checks.
+
+Eighteen extra failures cluster in `TestDonorTailsTailBanks` and
+`TestLevelPlayableArtInitializerModArt`: their mock providers supply built-in
+sheets but omit the new roster ownership declaration, so production correctly
+chooses the native provider. Their fixtures now explicitly declare donor-owned
+sheets; existing bank, native-binding and water-palette assertions are retained.
+The guard failure is `TestUiCatalogUsageGuard`: the six new CD preferences lacked
+twelve label/help source contracts. English source messages now cover them;
+other locales use the existing fallback policy. Offline catalog checking passes.
+These changes affect test doubles and English catalog entries; gameplay Java
+sources and the inspected films are unchanged. Focused verification and exact
+baseline comparison results follow when complete.
+
+Final baseline result: **153 ordinary tests, 29 failures, 3 errors, zero skips**;
+**2 guard tests passed, zero skips**. All **32** ordinary baseline failures/errors
+match the full-smoke ledger by test identity, kind, exception type and assertion.
+Only runtime object identity hashes and unordered MHZ route mark-set display order
+were normalized. There are **zero differing baseline assertions**. The third error
+beyond the previously known pair is
+`TestPpzFrozenProjectionPhase#everyVariantProjectsWithoutAdvancingNativeRam`:
+`GameServices.camera() requires an active gameplay mode`. It reproduces on the
+exact baseline and is not changed here; no widescreen/scroll implementation was
+edited. Baseline selectors (display variables unset, task-local Java temp root):
+
+```sh
+python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Psmoke,test-concurrent '-Dtest=TestAizCollectorPublicRewind,TestPpzFrozenProjectionPhase,TestDonorTailsTailBanks,TestLevelPlayableArtInitializerModArt,TestThreeIslandsScene,TestPrivateLobbyScreenRendering,TestLrzSszCheckpointRoutes,TestS3kCnz1MinibossCompletionEdge,TestS3kFreshLevelRngState,TestS3kIcz1PhysicalLowerPlatformReplay,TestS3kMhzAct2AuthoredRoute,TestS3kMhzAct2EntryHeadless,TestS3kMhzAuthoredRoute,TestS3kMhzTailsAuthoredRoute,TestS3kMhzTeamAuthoredRoute,TestS3kMhzWideAuthoredRoute,TestDezIncomingFinalRouteCapture,TestIcz2ColdCubeBridgeRoute,TestS3kCompleteRunReferenceProducer' -Dopenggf.surefire.reports=target/donor-final-baseline-ordinary-reports test
+python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Pguards -Dtest=TestUiCatalogUsageGuard -Dopenggf.surefire.reports=target/donor-final-baseline-guards-reports test
+```
+
+The **19 branch-only failed assertions** are repaired: 18 mock-roster fixture
+failures in `0c7290e6ca` and the catalog guard in `e02697bda1`. The post-smoke
+focused selection validates those source contents with **91 tests, zero
+failures/errors/skips**, including the real CD donor matrix and native-follower
+AIZ/HCZ entry matrices, not just mock fixtures:
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestDonorTailsTailBanks,TestLevelPlayableArtInitializerModArt,TestUiCatalogUsageGuard,TestBundledUiCatalogs,TestMessageCatalogs,TestUiLocaleState,TestCdDonorHosting,TestCdDonorTeams,TestS3kAiz1EntryMatrix,TestS3kHcz1EntryMatrix' test
+python3 tools/i18n/catalogs.py check
+```
+
+No new or worsened failure remains in the inspected ledger after those focused
+repairs. The full smoke's raw **VERDICT FAILED** remains unchanged; it was not
+rerun after the bounded test-double/catalog fixes, honoring the one-full-run
+request. Gameplay Java and the inspected recordings are unchanged after that
+full run. Native act-end/R11A comparisons remain 26 optional-input skips, not
+parity passes. The PR is prepared for review, not merge; its task branch/worktree
+are retained. Final exact head and remote check/review state are in the delivery.
