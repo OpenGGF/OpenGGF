@@ -235,6 +235,24 @@ public final class StageplayLiveWorld implements AutoCloseable {
             owned.getLevelManager().skipPendingInitialTitleCardPresentation();
             // Each authored shot is a fresh world, independent of the host's prior seek order.
             owned.getLevelManager().getObjectManager().initVblaCounter(0);
+            // Some native entries hold the controller in fixed objects, outside a
+            // title-screen provider. Let their actual production lifetime finish before
+            // directing or CLEAR_OBJECTS can retire the owner of that lock.
+            var entry = module.getGameService(com.openggf.game.internal.SceneEntryPreparation.class);
+            for (int preparation = 0; entry != null && entry.pending(owned); preparation++) {
+                check.run();
+                if (preparation >= 600) throw new IllegalStateException("Native scene entry did not become ready");
+                var neutral = Map.of(owned.getSpriteManager().getMainPlayable().getCode(), PlayerInputState.neutral());
+                EngineTiming.vIntRunCounter().serviceRepresentedVBlank();
+                owned.getSpriteManager().withScriptedInputs(neutral, handler ->
+                    owned.plcFrameLifecycle().runLogicalIteration(owned.getFadeManager()::update, token -> {
+                        var context = LevelFrameContext.from(owned);
+                        LevelFrameStep.updateTimers(context);
+                        return LevelFrameStep.execute(context, token, PlcLifecyclePhase.ORDINARY_LEVEL,
+                            owned.getLevelManager(), owned.getCamera(), () -> owned.getSpriteManager().update(handler),
+                            LevelFrameStep.DIRECT_WRAPPER);
+                    }));
+            }
             // Retire the one native assembly scan before authoring initial positions. It is not a story tick.
             LevelFrameStep.admit(LevelFrameContext.from(owned), owned.getLevelManager(), false);
                 if (performers.isEmpty()) {

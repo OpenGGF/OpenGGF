@@ -161,6 +161,12 @@ campaign behavior. See [ROM discovery](../../../CONFIGURATION.md#rom-files).
 
 ## Sonic CD (development preview)
 
+Stageplay's development preview can open supplied CD media, select a native
+stage including its period, and prepare a native Sonic scene or cold-level
+route tape. This is not full editor or authoring certification; see the
+[bounded validation record](../../architecture/validation/2026-11-16-sonic-cd-stageplay-editor.md).
+
+
 **Status: on the `next` development line. It is on the master title shelf when
 your USA disc image is in the ROM folder; it also runs in tests, trace replay
 and the capture tools.**

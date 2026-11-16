@@ -574,3 +574,21 @@ and `.spawned` from the actual Obj2E owner, plus `competition.levelFrame` and
 `.monitors`, `.rings` and `.lives` facts can assert the award before the hold.
 The eight `routes/s2/competition/ehz-qmark-*` fixtures share a cold-title approach;
 P1 breaks the first EHZ monitor, while P2 remains near the start.
+
+### Sonic CD native scenes (development preview)
+
+Supply `--scd-rom` with your verified USA disc path. The scene game ID is `scd`;
+zone and act are registry indices, with the act index including the period
+(for example zone 0, act 1 selects R11B, Palmtree Panic 1 Past). Native terrain,
+player art and object preparation read that selected disc program. Workers
+reopen the verified media identity; disc files are not cartridge ROMs.
+
+The native entry title card finishes before Stageplay places its cast. Puppet
+movement and logical `FACE_LEFT` / `FACE_RIGHT` use native controller input.
+Player-ground queries accept `scd` / `sonic`; their terrain proposals still need
+landing verification. The CD example starts at centre x=800, away from entry.
+
+This is a bounded authoring preview. CD object Puppet/Pose foreground-occlusion
+proof, selected-program Poser/accessory lookup, CDDA/PCM scene-music proof,
+editor game choices and complete route-media discovery/coverage remain pending
+in the [validation record](../../architecture/validation/2026-11-16-sonic-cd-stageplay-editor.md).

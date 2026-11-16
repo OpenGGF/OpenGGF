@@ -480,6 +480,13 @@ under the matching area heading; see the
 
 ## Modding and tools
 
+- **Sonic CD Stageplay preview:** open verified disc media for native scenes and
+  cold-level route tapes; preserve zone/act/period program identity through
+  detached art and worker transport. Finish native title-card preparation before
+  placing directed players, and admit native Sonic terrain-ground queries.
+  Remaining editor, object-pixel and soundtrack obligations are tracked in the
+  Sonic CD Stageplay validation record.
+
 - **Sonic CD mod host:** admit `scd` patch manifests and `any` registrations;
   route hosted runs through the disc launcher, expose file-addressed scene and
   object art, and accept CDDA/PCM music-command replacements. Module capabilities

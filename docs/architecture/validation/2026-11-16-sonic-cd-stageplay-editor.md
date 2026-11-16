@@ -1,4 +1,4 @@
-# Sonic CD authoring follow-up — implementation checkpoint
+# Sonic CD authoring follow-up — bounded validation and continuation
 
 Branch `feature/ai-scd-stageplay-editor`, parent
 `origin/feature/ai-scd-mod-api` at `dc6b3c2b9edd621a0feecfe6d411628d51756f92`.
@@ -117,3 +117,130 @@ surface's failing-first disc test before implementation. Run the final focused
 selection and requested smoke on the completed tree, attribute failures on the
 parent, then perform documentation, trailer verification, commit/push and PR
 against `feature/ai-scd-mod-api`. No delivery-complete claim is made.
+
+## Continuation on 2026-11-16 (supersedes the handoff state above)
+
+The inherited 53-test command was rerun: 53 tests, zero failures/errors/skips.
+The checkpoint was committed as `76e92bdaa416f91463901ee04acae90be26daedd`
+and pushed to `feature/ai-scd-stageplay-editor`. The resource-policy hook first
+rejected the inherited absolute user-home path in this document; it was replaced
+with `$AGENT_RUNTIME`. Hooks were installed and never bypassed.
+
+### Native player and ground correction
+
+Failing-first disc tests in `TestCdStageplayWorld` established:
+
+- A rightward native movement request stayed at centre x=800. The diagnostic
+  showed `locked=true`, `held=0`, `air=false`, `speed=0` at scene frame 80.
+- `StageplayGround.Player("scd","sonic",0)` failed profile validation.
+
+CD's fixed native title-card owner sets `ctrlLocked` at entry. Scene frame 0's
+`CLEAR_OBJECTS` could delete that owner before it released the lock. The
+`SceneEntryPreparation` capability now lets Stageplay run neutral native
+iterations until that owner retires, before replacing/placing the cast or
+clearing objects. It is bounded at 600 preparation iterations and fails rather
+than inventing controller/clock/player state. Shared code does not branch on
+CD. The native title-card lifetime determines readiness; no fitted wait is used.
+CD's `CdFixedObjects.install` and `CdTitleCard.update` own lock acquisition and
+release. Disc bytes still enter through the media source.
+
+Ground profile capture admits a module's declared native run characters as well
+as existing donor characters. It does not enable CD donor hosting. The R11B
+centre-x=800 terrain-ground query executes against the disc and finds a native
+player placement. Existing cartridge ground/landing tests are included in the
+final focused selection.
+
+A first facing assertion asked for Left while inertia still pointed Right;
+native input correctly braked before turning. The fixture now uses STOP and a
+settling interval before its explicit facing assertion. There is no velocity
+write or facing/flip workaround in runtime code.
+
+### Directional render
+
+The updated four-second example starts at centre x=800 in R11B, away from native
+entry x=80. It faces Right at 24, moves toward x=880 at 32, stops at 80, faces
+Left at 144 and moves toward x=760 at 152. Native simulation observed x=800 at
+0, x=874.18359375 at 80, and x=767.7265625 at 230; the direction changes are
+native body presentation. Authored `flipX` fields were not introduced.
+
+Current compiled `target/classes` plus the existing dependency classpath ran
+`com.openggf.tools.StageplayTool` in a standalone JVM, with both display
+variables unset, `-Dopenggf.headless.gl=surfaceless-egl` and the task scratch
+as `java.io.tmpdir`. Commands were `compile --script ... --out ...`,
+`simulate --scene ... --out ... --scd-rom ...` and
+`render --scene ... --out ... --scd-rom ...`; each exited zero.
+No desktop audio backend was opened.
+
+Artifacts under `$AGENT_RUNTIME/task-outDTytw/`: `cd-walk.stageplay`,
+`cd-walk.jsonl`, `cd-walk.mkv`, `walk-01.png` (25), `walk-02.png` (64),
+`walk-03.png` (145), `walk-04.png` (200), and `walk-*.log`.
+All four stills were inspected: native CD terrain and body, Right at 25/64,
+Left at 145/200, and changed native positions. FFprobe: FFV1 320x224 60/1,
+stereo FLAC 48000 Hz. Full-file FFmpeg `-v error -xerror ... -f null -`
+decoding passed. This is directional scene evidence, not a Puppet/Pose object
+occlusion certificate or a full-speed film review. Music is explicitly stopped;
+the presence of an audio track does not prove CDDA/PCM scene music.
+
+### Remaining delivery obligations
+
+No capability refusal is claimed for unfinished work. This remains a partial
+implementation, with these in-scope obligations still open:
+
+1. CD object Puppet/Pose pixel equality and real foreground occlusion, including
+   the non-occluding negative control.
+2. Selected-program Poser/accessory lookup through validation and rendering;
+   do not silently use default R11A art for another period.
+3. Scene CDDA and PCM music synthesis proof.
+4. Stageplay/route-tape game choices, CD native-route media discovery and source
+   fingerprints, and CD contexts in StageplayObjectCoverageTool's all inventory.
+5. Required change-based smoke and exact baseline failure attribution. Dry plan:
+   4,979 classes, smoke plus guards, two workers. Prior parent evidence is in
+   `2026-11-16-sonic-cd-mod-api.md`; its 29 failures and 2 errors are not this
+   branch's smoke verdict. No smoke VERDICT has been produced for this branch.
+
+The requested broad command remains:
+
+```sh
+python3 tools/testing/run_categories.py --base dc6b3c2b9edd621a0feecfe6d411628d51756f92 --workers 2 --headless-gl surfaceless-egl --run
+```
+
+Expected cost: the parent recorded about 2,121 summed execution seconds and
+2,598 completed queue-wait seconds. Retain the existing 40-minute execution
+bound per Maven invocation and report queue wait separately. Do not edit or
+build during that run. New/worsened failure identities block delivery.
+
+The parallel lane continues to own editor projects, content import, master-title
+preview and hub/menu audio. Rewind, widescreen and donor hosting are untouched.
+Keep this branch/worktree and the draft PR for continuation; do not merge.
+
+### Final bounded verification of this continuation
+
+Foreground command: the inherited 12-class focused command above, adding
+`TestStageplayGroundRom` (and the two new methods in TestCdStageplayWorld).
+The first expanded invocation ended with signal 143 after several passing
+classes, without a Maven summary; it is not counted as a pass. Its replacement
+executed **59 tests, zero failures/errors/skips**, with `BUILD SUCCESS`.
+All verified ROM/disc properties were found (`missing=none`). Queue wait for
+that replacement was 108 seconds; Maven execution was 60 seconds. User wait
+was zero. Other elapsed task time includes investigation, rendering and unknown
+scheduler overhead and is not inferred from those figures.
+
+Exact focused selection:
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestCdSceneLibrary,TestCdStageplayWorld,TestCdRouteTape,TestAuthoredStageplayServices,TestStageplayRomTransport,TestStageplayRouteInputs,TestStageplayExportJob,TestStageplayCaptureTool,TestStageplayFacingGuard,TestNativeObjectFacingGuard,TestRawGlfwTestSetupGuard,TestModApiSignatureSurface,TestStageplayGroundRom' test
+```
+
+Source/test diff digest relative to checkpoint `76e92bdaa4` at verification:
+`e9afb3839f53abc43d58ea822aad1a72c50f79a04b26a3eb6e4f3bf5d57aaf25`
+(`git diff --binary -- src/main src/test | sha256sum`; the newly added internal
+SceneEntryPreparation source also participated in compilation). Subsequent
+changes are documentation and the regenerated canonical example only.
+`git diff --check` and new documentation-link checks passed. The non-strict
+repository citation scan exited zero while reporting existing catalogue debt;
+it is not a clean-citation claim. No disassembly pin was moved.
+
+All owned foreground Maven/render processes have completed. The scratch `.keep`
+is removed after preserving the reviewed render paths here; scratch artifacts
+remain subject to the ordinary runtime retention policy. The final branch
+commit records this validation and retains the uncompleted obligations above.

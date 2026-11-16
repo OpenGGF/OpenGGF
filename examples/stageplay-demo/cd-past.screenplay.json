@@ -1,6 +1,6 @@
 {
   "version": 7,
-  "name": "A moment in the Past",
+  "name": "A walk in the Past",
   "width": 320,
   "height": 224,
   "cast": [
@@ -16,7 +16,7 @@
   "shots": [
     {
       "id": "past",
-      "durationFrames": 120,
+      "durationFrames": 240,
       "set": {
         "gameId": "scd",
         "zone": 0,
@@ -48,18 +48,36 @@
           },
           {
             "frame": 24,
+            "kind": "FACE_RIGHT"
+          },
+          {
+            "frame": 32,
+            "kind": "MOVE_TO",
+            "x": 880,
+            "y": 549,
+            "urgency": 1
+          },
+          {
+            "frame": 80,
+            "kind": "STOP"
+          },
+          {
+            "frame": 144,
             "kind": "FACE_LEFT"
           },
           {
-            "frame": 72,
-            "kind": "FACE_RIGHT"
+            "frame": 152,
+            "kind": "MOVE_TO",
+            "x": 760,
+            "y": 549,
+            "urgency": 1
           }
         ]
       },
       "captions": [
         {
           "startFrame": 0,
-          "endFrame": 120,
+          "endFrame": 240,
           "text": "PALMTREE PANIC / PAST",
           "x": 12,
           "y": 12
