@@ -194,8 +194,8 @@ Optional hub music opens a separate disc/audio source; suspending a game does
 not transfer its audio owner to the menu. Native CD editor projects save a bounded
 verified-disc/stage reference plus authored edits in `.ogfproject`. Importing that
 file through the content importer and saving it again preserves the reference;
-reopening/playtesting still requires the matching USA disc. No media path or disc
-payload is bundled. Zone, act and period selection creates a native stage copy.
+reopening/playtesting still requires the matching USA disc. The reference contains no media path or payload. Saved authoring snapshots can
+contain ROM-derived pixels; their original redistribution rights still apply. Zone, act and period selection creates a native stage copy.
 
 Flat level-directory export of a source-backed CD project is explicitly refused,
 so it cannot be repackaged as a flat level ZIP either. Those formats lack native
