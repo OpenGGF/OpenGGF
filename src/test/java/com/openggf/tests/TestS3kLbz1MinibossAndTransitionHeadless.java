@@ -419,6 +419,8 @@ class TestS3kLbz1MinibossAndTransitionHeadless {
     @Test
     void eventsFg5ReloadsLbz2WithRomWorldOffsetAndAdjustedLayout() {
         HeadlessTestFixture fixture = lbzFixture();
+        for (int startup = 0; startup < 512 && (lbzEvents().backgroundPublication() == null || GameServices.level().getFrameCounter() < 7); startup++) fixture.stepIdleFrames(1);
+        assertNotNull(lbzEvents().backgroundPublication(), "admitted fresh LBZ1 startup must prepare its background");
         AbstractPlayableSprite player = fixture.sprite();
         Sonic3kLevelEventManager manager =
                 (Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider();
@@ -431,6 +433,12 @@ class TestS3kLbz1MinibossAndTransitionHeadless {
         camera.setMaxX((short) 0x3EA0);
         GameServices.gameState().setEndOfLevelActive(true);
 
+        // Retained HScroll longword: DoTransition clears selected Events words, not $1E2.
+        byte[] retainedBackground = lbzEvents().backgroundPublication().capturePublication();
+        java.nio.ByteBuffer.wrap(retainedBackground).putInt(0, 0x12340000);
+        lbzEvents().backgroundPublication().restorePublication(retainedBackground);
+        int retainedLevelClock = GameServices.level().getFrameCounter();
+        assertTrue(retainedLevelClock >= 7);
         lbzEvents().setEventsFg5(true);
         manager.update();
 
@@ -446,6 +454,13 @@ class TestS3kLbz1MinibossAndTransitionHeadless {
 
         assertEquals(1, GameServices.level().getCurrentAct(),
                 "LBZ1BGE_DoTransition writes Current_zone_and_act=$0601 before Load_Level.");
+        assertEquals(retainedLevelClock, GameServices.level().getFrameCounter(), "Load_Level preserves the native level clock");
+        assertNotNull(lbzEvents().backgroundPublication(), "seamless LBZ2 must have an event-owned background");
+        assertEquals(0x12340000, java.nio.ByteBuffer.wrap(lbzEvents().backgroundPublication().capturePublication()).getInt(),
+                "the transition retains HScroll_table+$1E2 without a deformation dispatch");
+        manager.update();
+        assertEquals(0x12340E00, java.nio.ByteBuffer.wrap(lbzEvents().backgroundPublication().capturePublication()).getInt(),
+                "first LBZ2 BG dispatch reads then advances the retained cloud longword");
         assertTrue(GameServices.gameState().isEndOfLevelActive(),
                 "LBZ Load_Level must retain Level_end_flag for the carried results/end-sign owners.");
         assertFalse(GameServices.gameState().isEndOfLevelFlag(),

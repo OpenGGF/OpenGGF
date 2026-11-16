@@ -516,7 +516,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         } else if (zone == Sonic3kZoneIds.ZONE_SOZ) {
             registry.install(new SozZoneRuntimeState(act, playerCharacter));
         } else if (zone == Sonic3kZoneIds.ZONE_LBZ) {
-            registry.install(new LbzZoneRuntimeState(act, playerCharacter));
+            registry.install(lbzEvents.runtimePublication(act, playerCharacter));
         } else if (zone == Sonic3kZoneIds.ZONE_SSZ) {
             registry.install(new com.openggf.game.sonic3k.runtime.SszZoneRuntimeState(act, playerCharacter));
         } else if (zone == Sonic3kZoneIds.ZONE_INTRO_ENDING && act == 1) {
@@ -701,7 +701,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             iczEvents.updateFromLevelClock(currentAct);
         }
         if (lbzEvents != null && currentZone == Sonic3kZoneIds.ZONE_LBZ) {
-            lbzEvents.update(currentAct, frameCounter);
+            lbzEvents.update(currentAct, levelManager().getFrameCounter());
         }
         if (mgzEvents != null && currentZone == Sonic3kZoneIds.ZONE_MGZ) {
             mgzEvents.updateAfterDynamicObjects(currentAct, GameServices.level().getFrameCounter());
@@ -777,6 +777,11 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     void prepareFreshScreenObjects() {
         prepareInitialScreenObjects();
         initializeFreshHczBackground();
+        if (lbzEvents != null && currentZone == Sonic3kZoneIds.ZONE_LBZ
+                && GameServices.parallax().getHandler(currentZone) instanceof com.openggf.game.sonic3k.scroll.SwScrlLbz scroll) {
+            lbzEvents.initializeBackground(scroll.createBackgroundPublication(), GameServices.camera().getX(),
+                    GameServices.camera().getY(), GameServices.level().getFrameCounter(), currentAct);
+        }
         if (mgzEvents != null && currentZone == Sonic3kZoneIds.ZONE_MGZ) {
             mgzEvents.initializeBackgroundAtLoad(currentAct);
         }
@@ -1911,7 +1916,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
                     state instanceof IczZoneRuntimeState iczState && iczState.isBackedBy(iczEvents);
             case Sonic3kZoneIds.ZONE_MHZ ->
                     state instanceof MhzZoneRuntimeState mhzState && mhzState.isBackedBy(mhzEvents);
-            case Sonic3kZoneIds.ZONE_LBZ -> state instanceof LbzZoneRuntimeState;
+            case Sonic3kZoneIds.ZONE_LBZ -> state instanceof LbzZoneRuntimeState lbzState && lbzState.isBackedBy(lbzEvents);
             case Sonic3kZoneIds.ZONE_SOZ -> state instanceof SozZoneRuntimeState;
             // Reinstalling would zero the Sky Sanctuary event bytes and re-run the screen init.
             case Sonic3kZoneIds.ZONE_SSZ ->
@@ -2641,7 +2646,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         byte[] mgzBytes = mgzEvents != null ? mgzEvents.captureMgzState() : null;
         byte[] mhzBytes = mhzEvents != null ? ZoneEventSchemaSidecar.capture(mhzEvents) : null;
         byte[] iczBytes = iczEvents != null ? iczEvents.captureIczState() : null;
-        byte[] lbzBytes = lbzEvents != null ? ZoneEventSchemaSidecar.capture(lbzEvents) : null;
+        byte[] lbzBytes = lbzEvents != null ? lbzEvents.captureLbzState() : null;
         int size = EXTRA_MANAGER_BYTES;
         size += aizBytes != null ? 1 + Integer.BYTES + aizBytes.length : 1;
         size += hczBytes != null ? 1 + Integer.BYTES + hczBytes.length : 1;
@@ -2900,7 +2905,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     @Override
     public void restore(com.openggf.game.rewind.snapshot.LevelEventSnapshot snapshot) {
         byte[] extra = snapshot.extra();
-        if ((hczEvents != null || iczEvents != null || mgzEvents != null) && extra != null && extra.length >= 5 && !hasValidExtraFraming(extra)) {
+        if ((hczEvents != null || lbzEvents != null || iczEvents != null || mgzEvents != null) && extra != null && extra.length >= 5 && !hasValidExtraFraming(extra)) {
             LOG.warning("Skipping malformed S3K level-event snapshot before base-state restoration");
             return;
         }
@@ -2936,8 +2941,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         if (!skipIczSidecar(buf)) {
             return false;
         }
-        if (!skipLengthPrefixedSidecar(buf,
-                () -> expectedSidecarBytes(lbzEvents, Sonic3kLevelEventManager::newLbzFramingProbe))) {
+        if (!skipLbzSidecar(buf)) {
             return false;
         }
         return buf.remaining() == 0
@@ -3018,8 +3022,13 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         return Sonic3kICZEvents.hasValidIczState(payload);
     }
 
-    private static Object newLbzFramingProbe() {
-        return new Sonic3kLBZEvents();
+    private boolean skipLbzSidecar(java.nio.ByteBuffer buf) {
+        if (buf.remaining() < 1 || buf.get() == 0) return true;
+        if (buf.remaining() < 4) return false;
+        int length = buf.getInt();
+        if (length < 0 || length > buf.remaining()) return false;
+        byte[] bytes = new byte[length]; buf.get(bytes);
+        return lbzEvents == null ? Sonic3kLBZEvents.hasValidLbzState(bytes) : lbzEvents.hasCompatibleLbzState(bytes);
     }
 
     private static boolean skipVariableLengthSchemaSidecar(
@@ -3120,18 +3129,9 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     }
 
     private void restoreLbzSidecar(byte[] bytes) {
-        byte[] before = ZoneEventSchemaSidecar.capture(lbzEvents);
-        try {
-            ZoneEventSchemaSidecar.restore(lbzEvents, bytes);
-            lbzEvents.discardHardwareWorkFacadesAfterRewind();
-        } catch (RuntimeException e) {
-            try {
-                ZoneEventSchemaSidecar.restore(lbzEvents, before);
-                lbzEvents.discardHardwareWorkFacadesAfterRewind();
-            } catch (RuntimeException rollbackFailure) {
-                e.addSuppressed(rollbackFailure);
-            }
-            LOG.warning("Skipping malformed LBZ zone-event rewind sidecar: " + e.getMessage());
-        }
+        // Complete structural and bound-identity preflight already ran before
+        // super.restore. Unexpected owner/service failures must abort restore.
+        lbzEvents.restoreLbzState(bytes);
+        lbzEvents.discardHardwareWorkFacadesAfterRewind();
     }
 }

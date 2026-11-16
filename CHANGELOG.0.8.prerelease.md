@@ -886,7 +886,15 @@ under the matching area heading; see the
   a typed rewind HUD frame make contribution paths easier to follow. HCZ owns
   its completed screen/collision publication and all three shake words in one
   validated rewind payload; objects consume the preceding publication and
-  rendering only projects it. The seamless reload retains HCZ1 deformation,
+  rendering only projects it. Launch Base uses the same event-owned shake words;
+  its cloud and Death Egg deformation continuation rewinds with the publication,
+  renderer rebuilds retain timed shake, and ship/cameo reads use LBZ’s native flag
+  rather than a boolean retained by another zone. Its in-play act transition retains
+  the background publication and cloud longword; shake/waves use the level clock,
+  final fall retains shake words, and invalid rewind payloads are rejected before
+  manager state changes. Early directed-load scroll has an immutable pre-ScreenInit
+  phase; unexpected validated-restore failures propagate to their caller.
+  The seamless reload retains HCZ1 deformation,
   and the geyser begins shaking on its native first dispatch. MGZ likewise
   owns shake, cloud phase and collision publication; drawing or rebuilding its
   scroll output cannot advance gameplay, and rewind restores the composed state,

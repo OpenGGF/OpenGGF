@@ -2837,6 +2837,10 @@ MICA authored S3K ending presentation (2026-11-08): the
 records passing declared-entry normal/Super/Hyper mapping and capture checks.
 Doomsday route entry, mod rewind and broader team/viewport certification remain open.
 
+LBZ publication ownership (2026-11-16): the [bounded event audit](../architecture/audits/2026-11-16-s3k-lbz-event-publication.md)
+tracks shake flag consumers, same-frame renderer rebuilds and composed rewind.
+The existing LBZ1/LBZ2 act matrices retain all inherited route/viewport/donor/roster gaps.
+
 ICZ publication ownership (2026-11-15): the
 [bounded publication audit](../architecture/audits/2026-11-15-s3k-icz-event-publication.md)
 records real-load ICZ2 indoor-hysteresis renderer rebuild, start/retained gate
