@@ -301,3 +301,81 @@ jobs remain at this checkpoint.
 Final item 2 totals: **25 tests, zero failures/errors/skips**; queue wait
 10 seconds, Maven execution 1 minute 44 seconds. Subsequent source change was
 indentation only. Public signature pins are unchanged and their checks pass.
+
+## Scene-music continuation (2026-11-16)
+
+Item 2 was committed and pushed as `70ad8174f6ba4f9651b6d05781ecae394c1ea163`.
+Item 3 adds `TestCdStageplayMusic`, using verified disc media, the native CD audio
+profile, NullAudioBackend (no device), StageplayAudio preparation/dispatch and
+the production live-capture lease. Scene command 15 selects actual CDDA track 3;
+`SCMD_PASTMUS` synthesizes through R11B's loaded PCM bank. Each command must emit
+sounding production packets in the latter second of a two-second capture. Before
+cue dispatch the same producer must emit silence. No native track bytes or
+samples are committed.
+
+The existing runtime dispatch already supported both sources: the initial disc
+test passed without a production change (one test, no skips, queue 87 seconds,
+Maven execution 1 minute 31 seconds). This is not a claim of a missing runtime
+feature seen failing. An explicit sensitivity run omitted only cue dispatch:
+`TestCdStageplayMusic` then failed `Scene command 15 must synthesize sounding media`
+(one failure, zero errors/skips; queue 139 seconds, execution 39.569 seconds).
+Dispatch was restored before final validation, and a permanent no-cue silence
+assertion added. No renderer or audio device was opened; no render files produced.
+
+Final command:
+`env -u DISPLAY -u WAYLAND_DISPLAY python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestCdStageplayMusic,TestStageplayAudioLifecycle,TestCdAudioLivePath' test`.
+Final outcome and timing follow below after foreground completion.
+
+### Exact remaining scope and next step
+
+Items 4 and 5 are not implemented or certified by this continuation. No smoke
+VERDICT or baseline failure attribution exists for this branch, and the parent's
+29 failures + 2 errors are not substituted for it. PR #351 must remain draft.
+No capability refusal is inferred from this unfinished work.
+
+Next: add failing-first disc tests for item 4 before implementation:
+
+- `editor/stageplay/StageplayMenuPresentation` game choices still omit `scd`;
+  route-tape `RouteTapeWorkspace.newForm` does too. Native CD roster must avoid
+  the form's default Tails sidekick; CD is not a donor host.
+- `Engine.routeTapeRoms` and `EngineRouteHosts.fromSystemProperties` still discover
+  cartridges only. Use the module's HostedGameMedia configured locator for discs.
+- `route.RomIdentity.standard` knows cartridges only; `ofFile` hashes container
+  bytes. A CUE sheet hash alone cannot bind its tracks. Define a source-aware
+  verified content fingerprint through the media capability, with shared code
+  game-agnostic and no creator-reported identity authority. CHD and CUE should
+  bind their verified underlying content, not just a pathname or sheet text.
+- `StageplayRouteTool`'s scene planner still uses PhysicalImage/64-MiB cartridge
+  resolution; complete its media snapshot/freshness path and negative controls.
+  `StageplayRouteInputs.capture(..., RomManager)` already uses the media-capable
+  worker descriptor, but that is not whole route UI/CLI certification.
+- `StageplayObjectCoverageTool`'s `all` list and SampleObservation admission omit
+  CD. Inventory all native zone/act/period contexts; registration-only rows must
+  not imply pixel or behavior certification.
+
+After item 4 is green, commit/push it separately. Then run the exact requested
+change-based smoke against `dc6b3c2b9edd621a0feecfe6d411628d51756f92`, two workers,
+surfaceless EGL and the 40-minute per-invocation execution bound. The inherited
+plan was 4,979 classes; re-plan for the finished source selection and state its
+count/cost/stopping rule. Do not edit/build during that run. Attribute failures
+by identity/assertion/skips on the base, record the VERDICT, and mark ready only
+if all five items are complete. Do not merge. Keep this worktree/branch while
+PR #351 needs them. Parallel editor/import/master-title work remains out of scope.
+
+Final item 3 outcome: **34 tests, zero failures/errors/skips**, `BUILD SUCCESS`;
+verified media `missing=none`, queue wait 44 seconds, Maven execution 49.908
+seconds. An intermediate 33-test run had one failure in the new no-cue silence
+control: reusing the producer after CDDA left audible prior-source output before
+the next command. The final fixture creates independently owned profile/capture
+lifetimes for CDDA and PCM, retaining the silence assertion in both tests. The
+production runtime is unchanged by item 3. No claim is made that null-backend
+`stopMusic` alone resets external-source history.
+
+Items 1–3 are green and committed/pushed as separate checkpoints. Items 4–5
+remain open exactly as listed above. This is a partial delivery, not PR readiness.
+No owned Maven/render/encoder jobs remain; user wait was zero. Queue wait and
+execution are reported above; investigation and scheduler overhead are not
+reconstructed. `git diff --check` and local links in the three changed guide/status
+files were checked. Retain branch/worktree for continuation; no scratch captures
+were generated in this continuation. The existing earlier render paths remain
+historical evidence only, not new item 3 audio files.

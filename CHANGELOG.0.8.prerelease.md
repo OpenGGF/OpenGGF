@@ -488,7 +488,8 @@ under the matching area heading; see the
   occlusion, with a disc-backed canopy negative control. Poser body/animation
   and accessory lookup follows each shot’s selected program rather than default
   stage art.
-  Remaining editor and soundtrack obligations are tracked in the
+  Scene music cues reach CDDA and the selected Past-stage PCM driver through
+  the no-device production audio path. Remaining editor obligations are tracked in the
   Sonic CD Stageplay validation record.
 
 - **Sonic CD mod host:** admit `scd` patch manifests and `any` registrations;

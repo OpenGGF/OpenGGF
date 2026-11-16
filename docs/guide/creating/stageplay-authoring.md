@@ -592,6 +592,9 @@ CD object Puppet/Pose pictures retain native tile priority and foreground
 occlusion; disc-backed R11B canopy pixels include a foreground-bypass negative
 control. Poser body, animation and accessory lookup uses the current shot
 program, including after a period change; unavailable accessory art stays absent.
-This is a bounded authoring preview. CDDA/PCM scene-music proof,
-editor game choices and complete route-media discovery/coverage remain pending
+Scene `ROM_MUSIC` cues use CD native command IDs: `SCMD_R1AMUS` (15)
+selects CDDA track 3, and `SCMD_PASTMUS` uses the selected Past stage PCM bank.
+Both reach no-device production synthesis in the disc-backed scene test.
+This is a bounded authoring preview. Editor game choices and complete
+route-media discovery/coverage remain pending
 in the [validation record](../../architecture/validation/2026-11-16-sonic-cd-stageplay-editor.md).

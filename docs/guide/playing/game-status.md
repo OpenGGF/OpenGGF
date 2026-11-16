@@ -165,7 +165,8 @@ Stageplay's development preview can open supplied CD media, select a native
 stage including its period, and prepare a native Sonic scene or cold-level
 route tape. Native/frozen/baked object pictures preserve foreground occlusion
 in a disc-backed Palmtree Panic Past canopy regression. Poser body and accessory
-lookups use the selected stage program. This is not full editor
+lookups use the selected stage program. Disc-backed scene cues exercise CDDA
+and the Past-stage PCM driver through offline production audio. This is not full editor
 or authoring certification; see the
 [bounded validation record](../../architecture/validation/2026-11-16-sonic-cd-stageplay-editor.md).
 
