@@ -1456,12 +1456,14 @@ class TestSonic3kLevelEventRewindSnapshot {
     }
 
     @Test
-    void lengthPrefixedIczSchemaPayloadRestoresIczAndFixedAirSidecars() throws Exception {
+    void lengthPrefixedIczComposedPayloadRestoresIczAndFixedAirSidecars() throws Exception {
         Sonic3kICZEvents iczPayloadSource = new Sonic3kICZEvents();
         iczPayloadSource.setEventsFg5(true);
         iczPayloadSource.setIndoorPaletteCyclingActive(false);
         set(iczPayloadSource, "backgroundRoutine", 8);
-        set(iczPayloadSource, "bigSnowOffset", 0x1234);
+        set(iczPayloadSource, "bigSnowOffset", -1);
+        set(iczPayloadSource, "bigSnowOffsetSubpixels", -0x2400);
+        set(iczPayloadSource, "bigSnowVelocity", 0x2400);
         set(iczPayloadSource, "act2TransitionChunkOrdinal", 3L);
         set(iczPayloadSource, "act2TransitionBlockOrdinal", 4L);
         set(iczPayloadSource, "act2TransitionArtOrdinal", 2L);
@@ -1476,7 +1478,7 @@ class TestSonic3kLevelEventRewindSnapshot {
         LevelEventSnapshot sourceSnapshot = source.capture();
         LevelEventSnapshot schemaIczSnapshot = snapshotWithIczPayload(
                 sourceSnapshot,
-                ZoneEventSchemaSidecar.capture(iczPayloadSource));
+                iczPayloadSource.captureIczState());
 
         Sonic3kLevelEventManager target = new Sonic3kLevelEventManager();
         Sonic3kLevelEventManager iczTargetOwner = new Sonic3kLevelEventManager();
@@ -1496,7 +1498,7 @@ class TestSonic3kLevelEventRewindSnapshot {
                 "length-prefixed ICZ schema sidecar must restore ICZ booleans");
         assertEquals(8, iczTarget.getIcz1BackgroundRoutine(),
                 "length-prefixed ICZ schema sidecar must restore ICZ ints");
-        assertEquals(0x1234, iczTarget.getIcz1BigSnowOffset(),
+        assertEquals(-1, iczTarget.getIcz1BigSnowOffset(),
                 "length-prefixed ICZ schema sidecar must restore ICZ snow state");
         assertEquals(3L, get(iczTarget, "act2TransitionChunkOrdinal"),
                 "ICZ chunk-job identity must remain aligned in the manager sidecar");
@@ -1527,7 +1529,7 @@ class TestSonic3kLevelEventRewindSnapshot {
         setFixedControllerState(sourceP1, true, 0x0A, 0x81, 0x1234, 0x02, 0x01, 0xFF, 0x8040, 0x0032, 0x0016);
         LevelEventSnapshot sourceSnapshot = snapshotWithIczPayload(
                 source.capture(),
-                ZoneEventSchemaSidecar.capture(iczPayloadSource));
+                iczPayloadSource.captureIczState());
         LevelEventSnapshot malformedSnapshot = snapshotWithCorruptIczLength(
                 sourceSnapshot,
                 sourceSnapshot.extra().length);

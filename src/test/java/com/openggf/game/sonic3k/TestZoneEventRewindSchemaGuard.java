@@ -84,6 +84,7 @@ public class TestZoneEventRewindSchemaGuard {
             "transitionArtHandle");
     private static final Set<String> MHZ_ALLOWED_TRANSIENT_FIELDS = Set.of();
     private static final Set<String> ICZ_ALLOWED_TRANSIENT_FIELDS = Set.of(
+            "screenShake", // captured by the composed ICZ payload, not omitted
             "snowboardIntro",
             "act2TransitionDirectQueue",
             "act2TransitionChunkHandle",
