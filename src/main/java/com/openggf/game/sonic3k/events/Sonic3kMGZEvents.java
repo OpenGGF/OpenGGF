@@ -319,8 +319,6 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
     private int chunkEventDelay;
     private int screenEventRoutine;
     private boolean collapseRequested;
-    /** Events_fg_4 is consumed by the screen-event pass after the boss SST publishes it. */
-    private boolean collapseRequestObserved;
     private boolean collapseInitialized;
     private boolean collapseFinished;
     private int collapseMutationCount;
@@ -335,8 +333,10 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
     private int bossBgScrollVelocity;
     /** ROM: Events_bg+$0C — BG camera copy advanced during the air boss. */
     private int bossBgScrollOffset;
-    /** The later boss SST allocates this transition SST; setup executes on its next object pass. */
+    /** The allocated transition SST still owes its setup dispatch. */
     private boolean bossTransitionInitializationPending;
+    /** The native allocation owns dispatch; the direct-drive bridge must not tick it too. */
+    private boolean bossTransitionSlotScheduled;
     private boolean bossTransitionActive;
     private boolean bossTransitionDeathPlaneDisabled;
     private int bossTransitionTimer;
@@ -509,7 +509,6 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
         chunkEventDelay = 0;
         screenEventRoutine = SCREEN_EVENT_NORMAL;
         collapseRequested = false;
-        collapseRequestObserved = false;
         collapseInitialized = false;
         collapseFinished = false;
         collapseMutationCount = 0;
@@ -523,6 +522,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
         }
         Arrays.fill(collapseSolids, null);
         bossTransitionInitializationPending = false;
+        bossTransitionSlotScheduled = false;
         bossTransitionActive = false;
         bossTransitionDeathPlaneDisabled = false;
         bossTransitionTimer = 0;
@@ -608,7 +608,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
             updateAct2BossBgScroll();
             updateAct2Collapse(frameCounter);
             if (includeBossTransitionObject) {
-                updateBossTransition();
+                updateBossTransitionObjectBeforeDynamicObjects(act);
             }
             updateAct2BossArena();
         }
@@ -621,13 +621,21 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
     }
 
     /**
-     * Executes the native {@code Obj_MGZ2_BossTransition} SST pass after the
-     * player slots but before later dynamic objects such as the collapse solids.
+     * Direct-drive bridge for focused callers without native object execution.
+     * Production uses the allocated transition object's ordinary SST slot.
      */
     public void updateBossTransitionObjectBeforeDynamicObjects(int act) {
-        if (act == 1) {
+        if (act == 1 && !bossTransitionSlotScheduled) {
             updateBossTransition();
         }
+    }
+
+    /** Called only by the admitted Obj_MGZ2_BossTransition slot. */
+    public boolean updateBossTransitionNativeObject() {
+        updateBossTransition();
+        boolean live = bossTransitionInitializationPending || bossTransitionActive;
+        if (!live) bossTransitionSlotScheduled = false;
+        return live;
     }
 
     /**
@@ -1510,8 +1518,19 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
      */
     public void triggerBossCollapseHandoff() {
         requestLevelCollapse();
-        bossTransitionInitializationPending = true;
         bossTransitionDeathPlaneDisabled = true;
+        var objects = levelManager().getObjectManager();
+        if (objects == null) {
+            bossTransitionInitializationPending = true; // direct event harness
+            return;
+        }
+        // loc_6C4BE (sonic3k.asm:142919-142931) uses AllocateObject.
+        // ObjectManager owns admission and whether the free slot is still ahead
+        // in this pass; do not run the newborn early or defer a higher slot.
+        var worker = objects.createDynamicObject(
+                com.openggf.game.sonic3k.objects.MgzBossTransitionObjectInstance::new);
+        bossTransitionSlotScheduled = worker != null;
+        bossTransitionInitializationPending = worker != null;
     }
 
     private void initializeBossTransition() {
@@ -1595,7 +1614,8 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
     private void updateBossTransition() {
         if (bossTransitionInitializationPending) {
             initializeBossTransition();
-            return;
+            // loc_16328 (sonic3k.asm:30259-30266) falls through to the
+            // first $30 countdown and clamp on this very same SST dispatch.
         }
         if (!bossTransitionActive) {
             return;
@@ -2156,14 +2176,12 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
 
     private void updateAct2Collapse(int frameCounter) {
         if (collapseRequested && screenEventRoutine == SCREEN_EVENT_NORMAL) {
-            // The inherited request-observation delay is recorded separately in the audit.
+            // Process_Sprites precedes ScreenEvents in LevelLoop
+            // (sonic3k.asm:7920-7930), so this FG pass already sees the SST's
+            // loc_6C4BE (sonic3k.asm:142919-142931) request from this loop.
             // loc_512FA (sonic3k.asm:106465-106469) arms $14 in the FG pass.
             // ScreenEvents (sonic3k.asm:102279-102301) dispatches BG afterward;
             // MGZ2BGE_Normal (sonic3k.asm:107100-107122) decrements it on this same frame.
-            if (!collapseRequestObserved) {
-                collapseRequestObserved = true;
-                return;
-            }
             screenEventRoutine = SCREEN_EVENT_COLLAPSE;
             screenShakeActive = false;
             screenShake.writeFlag(COLLAPSE_STARTUP_SHAKE_FRAMES);

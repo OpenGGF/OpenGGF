@@ -2839,7 +2839,9 @@ Doomsday route entry, mod rewind and broader team/viewport certification remain 
 
 MGZ event publication (2026-11-15): the [bounded audit](../architecture/audits/2026-11-15-s3k-mgz-event-publication.md)
 records real-load projection/rewind witnesses, trigger-frame capture, whole-manager
-rejection and the two review-revision trace blockers.
+rejection and native end-boss/transition dispatch witnesses. The two review
+trace regressions are resolved: all eleven reports exactly match baseline;
+383 focused cases pass. Eight inherited replay failures remain.
 The [MGZ1](../architecture/validation/levels/s3k-mgz-act1.md) and
 [MGZ2](../architecture/validation/levels/s3k-mgz-act2.md) matrices retain their
 wider route, donor, team and viewport obligations.

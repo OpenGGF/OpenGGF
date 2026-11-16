@@ -883,7 +883,9 @@ under the matching area heading; see the
   scroll output cannot advance gameplay, and rewind restores the composed state,
   including the first MGZ2 rising-floor publication. Finished late loads do not
   replay the rise object's crash or camera lock. Collapse arms its countdown
-  before the same frame's background shake setup. Scene
+  before the same frame's background shake setup. The end boss keeps its native
+  setup/underflow waits, and its allocated rescue controller runs in slot order
+  with the first countdown tick on setup. Scene
   presentation spells out capture, restoration and failure cleanup in operation
   order, and pixel-oracle failures retain the rendering mode and captured frame.
   Failed trace replays print their exact test/report/triage route; triage reads

@@ -2282,3 +2282,11 @@ gesture that keyboard players rarely discover, and it gates nothing but the menu
 
 `TestS3kBlueSpheresRom.titleOpensTheMenuOnAbcAndAcceptsItsOwnCode` holds a button
 (no menu), then presses B alone and checks the menu opens with `sfx_Starpost`.
+
+MGZ event-publication timing (2026-11-16): the [bounded audit](architecture/audits/2026-11-15-s3k-mgz-event-publication.md)
+records corrected end-boss setup/signed waits, same-loop collapse flag consumption,
+allocated rescue-controller dispatch and its setup fallthrough. These remove
+compensating delays while retaining the ROM's FG-before-BG shake setup. All eleven
+MGZ replay reports exactly match the e676 baseline; eight inherited replay failures
+remain. Missing rumble-onset writes, the skipped opening scroll step and its pending
+carrier projections, and Do_ShakeSound gating remain explicitly outside this repair.

@@ -335,8 +335,8 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
     private int xSubpixel;
     private int ySubpixel;
     private int waitTimer;
-    /** The placement-created instance still owes Obj_MGZ2DrillingRobotnik's init entry. */
-    private boolean miniInitialExecutionPending;
+    /** The admitted instance still owes its native setup dispatch before Obj_Wait. */
+    private boolean initialExecutionPending;
     private boolean flipX;
     private boolean artQueued;
     @RewindTransient(reason = "queue facade is rebound from the captured MGZ KosM ordinals")
@@ -434,7 +434,7 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
         xSubpixel = 0;
         ySubpixel = 0;
         waitTimer = INIT_WAIT_FRAMES;
-        miniInitialExecutionPending = !endBossMode;
+        initialExecutionPending = true;
         artQueued = false;
         bossArtQueue = null;
         bossArtHandle = null;
@@ -524,13 +524,16 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
     protected void updateBossLogic(int vIntRunCount, PlayableEntity playerEntity) {
         prepareSharedBossPresentation();
 
-        if (!endBossMode && miniInitialExecutionPending) {
-            // The ROM placement slot first executes Obj_MGZ2DrillingRobotnik,
-            // which installs Obj_Wait and its callback but does not decrement
-            // the freshly written $2E timer on that same pass.
-            miniInitialExecutionPending = false;
-            updateCustomFlash();
-            return;
+        if (initialExecutionPending) {
+            initialExecutionPending = false;
+            // Both native setup entries install their wait without spending it:
+            // Obj_MGZ2DrillingRobotnik (sonic3k.asm:142454-142471) and
+            // loc_6C354 (sonic3k.asm:142813-142845). A restored/later routine
+            // already passed that entry and must dispatch normally.
+            if (state.routine == ROUTINE_INIT) {
+                updateCustomFlash();
+                return;
+            }
         }
 
         // ROM: Obj_MGZ2DrillingRobotnik init queues art + PLC #$6D + palette and
@@ -547,17 +550,18 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
                 updateCustomFlash();
                 return;
             }
-            if (waitTimer > 0) {
-                waitTimer--;
-                if (waitTimer == 0) {
-                    playBossMusicOnce();
-                    state.routine = ROUTINE_END_DESCEND;
-                    yVel = 0x80;
-                    waitTimer = 0xBF;
-                }
-                updateCustomFlash();
-                return;
+            // Obj_Wait (sonic3k.asm:178040-178049) calls loc_6C3EC
+            // only on signed underflow, retaining the zero-valued dispatch.
+            // The callback (sonic3k.asm:142850-142859) installs descent; it
+            // does not execute MoveSprite2 on this same dispatch.
+            if (--waitTimer < 0) {
+                playBossMusicOnce();
+                state.routine = ROUTINE_END_DESCEND;
+                yVel = 0x80;
+                waitTimer = 0xBF;
             }
+            updateCustomFlash();
+            return;
         }
 
         if (!endBossMode && state.routine == ROUTINE_MINI_SETUP) {
@@ -715,11 +719,9 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
             case ROUTINE_END_AIR_WAIT -> {
                 if (--waitTimer < 0) {
                     yVel = -0x400;
-                    // The engine's composite boss owns the drill children inline,
-                    // while the ROM reaches loc_6C598 after their two later SST
-                    // slots have completed the recovery handoff. Preserve those
-                    // two object-pass phases before publishing the air approach.
-                    waitTimer = 0x21;
+                    // loc_6C57C (sonic3k.asm:142985-142990) installs $1F
+                    // in this parent. Child-slot order cannot extend its wait.
+                    waitTimer = 0x1F;
                     state.routine = ROUTINE_END_AIR_RISE;
                 }
             }
@@ -1369,7 +1371,7 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
 
     /**
      * ROM: {@code lea Pal_MGZEndBoss(pc),a1 / jmp PalLoad_Line1} at the end of
-     * loc_6BFCA (sonic3k.asm:142465-142466). S&K-side ROM offset 0x06D97C.
+     * Obj_MGZ2DrillingRobotnik (sonic3k.asm:142454-142471). S&K-side ROM offset 0x06D97C.
      */
     private void loadBossPalette() {
         if (palettesLoaded) {
@@ -1469,7 +1471,7 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
         if (services().gameState() != null) {
             services().gameState().addScore(1000);
         }
-        // ROM loc_6D60A: jmp (BossDefeated_StopTimer).l (sonic3k.asm:144529).
+        // BossDefeated_StopTimer (sonic3k.asm:180905-180907) stops the level clock.
         stopLevelTimerOnBossDefeat();
     }
 
@@ -1666,7 +1668,8 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
         if (shipRenderer == null) return;
         int podX = state.x + renderOffsetX(POD_OFFSET_X);
         int podY = state.y + POD_OFFSET_Y;
-        // Obj_MGZEndBoss allocates the pod with Child1_MakeRoboShip3 (sonic3k.asm:142836-142837);
+        // Obj_MGZEndBoss allocates the pod through this native child table:
+        // Child1_MakeRoboShip3 (sonic3k.asm:136761-136764);
         // Obj_RobotnikShipInit then creates the head (Child1_MakeRoboHead, 136415-136416)
         // and Obj_RobotnikShipReady the flame (Child1_MakeRoboShipFlame, 136465-136466),
         // each via CreateChild1_Normal / AllocateObjectAfterCurrent (176924-176929).

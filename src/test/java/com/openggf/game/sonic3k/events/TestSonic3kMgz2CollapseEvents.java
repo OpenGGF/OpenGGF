@@ -44,8 +44,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class TestSonic3kMgz2CollapseEvents {
 
-    // One inherited observation dispatch, then arm and twenty later native dispatches.
-    private static final int COLLAPSE_STARTUP_EVENT_CALLS = 0x16;
+    // The request is consumed in this loop; opening follows twenty dispatches later.
+    private static final int COLLAPSE_STARTUP_EVENT_CALLS = 0x15;
 
     @BeforeEach
     void setUp() {
@@ -62,15 +62,57 @@ class TestSonic3kMgz2CollapseEvents {
     }
 
     @Test
+    void bossRequestIsConsumedByTheFollowingForegroundPassInTheSameLoop() {
+        var events = new Sonic3kMGZEvents();
+        events.init(1);
+        events.triggerBossCollapseHandoff(); // later SST writes Events_fg_4
+        events.updateAfterDynamicObjects(1, 0); // ScreenEvents follows Process_Sprites
+        assertEquals(4, events.getScreenEventRoutine());
+        assertEquals(0x13, events.getCollapseStartupShakeTimer());
+    }
+
+    @Test
+    void transitionUsesItsAllocatedSlotAndRestoresWithoutADuplicateTick() throws Exception {
+        var objects = installObjectManager();
+        var events = activeMgzEvents();
+        objects.createDynamicObject(() -> new com.openggf.level.objects.AbstractObjectInstance(
+                new ObjectSpawn(0, 0, 0xFF, 0, 0, false, 0), "impact publisher") {
+            @Override public void update(int clock, com.openggf.game.PlayableEntity player) {
+                events.triggerBossCollapseHandoff();
+                setDestroyed(true);
+            }
+            @Override public void appendRenderCommands(java.util.List<com.openggf.graphics.GLCommand> commands) { }
+        });
+        objects.update(0, GameServices.camera().getFocusedSprite(), java.util.List.of(), 0, false);
+        assertEquals(0x167, events.getBossTransitionTimer(), "new higher slot executes in the allocating pass");
+        var worker = objects.getActiveObjects().stream().filter(
+                com.openggf.game.sonic3k.objects.MgzBossTransitionObjectInstance.class::isInstance).findFirst().orElseThrow();
+        var manager = (Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider();
+        var registry = new RewindRegistry();
+        registry.register(manager);
+        registry.register(objects.rewindSnapshottable());
+        var saved = registry.capture();
+        objects.removeDynamicObject(worker);
+        events.setBossTransitionTimer(1);
+        registry.restore(saved);
+        assertEquals(1, objects.getActiveObjects().stream().filter(
+                com.openggf.game.sonic3k.objects.MgzBossTransitionObjectInstance.class::isInstance).count());
+        assertEquals(0x167, events.getBossTransitionTimer());
+        events.updateBossTransitionObjectBeforeDynamicObjects(1);
+        assertEquals(0x167, events.getBossTransitionTimer(), "legacy bridge cannot spend the native slot's tick");
+        objects.update(0, GameServices.camera().getFocusedSprite(), java.util.List.of(), 1, false);
+        assertEquals(0x166, events.getBossTransitionTimer(), "restored worker executes exactly once");
+    }
+
+    @Test
     void collapseTrigger_runsTimedShakeBeforeOpeningClear() {
         Sonic3kMGZEvents events = new Sonic3kMGZEvents();
         events.init(1);
         events.requestLevelCollapse();
 
         events.update(1, 0);
-        assertFalse(events.isCollapseActive(),
-                "The boss SST's Events_fg_4 write becomes visible on the following screen-event dispatch");
-        events.update(1, 1);
+        assertTrue(events.isCollapseActive(),
+                "The FG event follows the boss SST in this same native loop");
 
         SyntheticMgzCollapseLevel level = (SyntheticMgzCollapseLevel) GameServices.level().getCurrentLevel();
         assertTrue(events.isCollapseActive());
@@ -85,14 +127,15 @@ class TestSonic3kMgz2CollapseEvents {
         var events = new Sonic3kMGZEvents();
         events.init(1);
         events.requestLevelCollapse();
-        events.update(1, 0); // inherited request-observation bridge, outside this correction
-        events.update(1, 1); // arm
+        events.update(1, 0); // same-loop arm
         byte[] arm = events.captureMgzState();
         var words = java.nio.ByteBuffer.wrap(arm);
         int flag = words.getInt(arm.length - 12);
         int preparedOffset = words.getInt(arm.length - 8);
         int foregroundOffset = events.screenPublication().shakeOffset();
-        for (int frame = 2; frame <= 21; frame++) events.update(1, frame);
+        for (int frame = 1; frame < 20; frame++) events.update(1, frame);
+        assertFalse(events.isCollapseInitialized(), "no opening before arm+20");
+        events.update(1, 20);
         org.junit.jupiter.api.Assertions.assertAll(
                 () -> assertEquals(0x13, flag, "FG arms $14; the same BG pass decrements it"),
                 () -> assertEquals(-5, preparedOffset, "ScreenShakeArray[$13]"),

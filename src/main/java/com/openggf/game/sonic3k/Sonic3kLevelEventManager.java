@@ -453,7 +453,6 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         }
         if (mgzEvents != null) {
             mgzEvents.updateBgRiseObjectAfterPlayerPhysics(currentAct);
-            mgzEvents.updateBossTransitionObjectBeforeDynamicObjects(currentAct);
         }
     }
 
