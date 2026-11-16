@@ -485,7 +485,9 @@ under the matching area heading; see the
   detached art and worker transport. Finish native title-card preparation before
   placing directed players, and admit native Sonic terrain-ground queries.
   Native/frozen/baked CD object pictures retain tile priority and foreground
-  occlusion, with a disc-backed canopy negative control.
+  occlusion, with a disc-backed canopy negative control. Poser body/animation
+  and accessory lookup follows each shot’s selected program rather than default
+  stage art.
   Remaining editor and soundtrack obligations are tracked in the
   Sonic CD Stageplay validation record.
 

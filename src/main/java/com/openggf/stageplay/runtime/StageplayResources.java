@@ -27,6 +27,7 @@ public final class StageplayResources implements AutoCloseable {
     private final List<String> available;
     private final Runnable release;
     private final SceneRomLibrary library;
+    private final Map<StageplayDocument.SetSource, SceneRomArt> stageArt = new HashMap<>();
     private StageplayLiveWorld liveWorld;
     private StageplayOfflinePreview livePreview;
     private com.openggf.mods.scene.host.SceneSurface nativePosers;
@@ -72,6 +73,15 @@ public final class StageplayResources implements AutoCloseable {
         return art;
     }
     public SceneSpriteSet character(String game, String character) { return rom(game).character(character); }
+
+    /** Native cast reads the shot's full stage identity; foreign cast retains donor art. */
+    SceneRomArt actorArt(StageplayDocument.SetSource source, String game) {
+        requireOpen();
+        if (library == null || !source.gameId().equals(game)) return rom(game);
+        return stageArt.computeIfAbsent(source,
+                key -> library.stageArt(game, key.zone(), key.act()));
+    }
+
 
     /** Installs a project already decoded through the caller's bounded asset root. */
     public void registerSet(StageplayDocument.SetSource source, SceneLevelKit kit) {
@@ -294,13 +304,19 @@ public final class StageplayResources implements AutoCloseable {
         for (var camera : document.camera())
             StageplayWorldPresentation.validate(document.width(), document.height(), camera.zoom());
         for (var actor : document.actors()) {
-            var art = character(actor.gameId(), actor.character());
-            for (var key : actor.keys()) {
-                if (key.pose() >= art.frameCount()) throw new IllegalArgumentException("Missing mapping frame for " + actor.name());
-                if (key.pose() < 0 && art.animationFrames(key.animation()).length == 0)
-                    throw new IllegalArgumentException("Missing animation " + key.animation() + " for " + actor.name());
-                rom(actor.gameId()).characterAccessoryPose(actor.character(), key.animation(), key.pose(),
-                        0, (key.facing() == Facing.LEFT), 0, 0);
+            var sources = new java.util.LinkedHashSet<StageplayDocument.SetSource>();
+            sources.add(document.set());
+            for (var change : document.sceneChanges()) sources.add(change.set());
+            for (var source : sources) {
+                var nativeArt = actorArt(source, actor.gameId());
+                var art = nativeArt.character(actor.character());
+                for (var key : actor.keys()) {
+                    if (key.pose() >= art.frameCount()) throw new IllegalArgumentException("Missing mapping frame for " + actor.name());
+                    if (key.pose() < 0 && art.animationFrames(key.animation()).length == 0)
+                        throw new IllegalArgumentException("Missing animation " + key.animation() + " for " + actor.name());
+                    nativeArt.characterAccessoryPose(actor.character(), key.animation(), key.pose(),
+                            0, (key.facing() == Facing.LEFT), 0, 0);
+                }
             }
         }
         if (!document.puppets().isEmpty()) {
@@ -456,5 +472,5 @@ public final class StageplayResources implements AutoCloseable {
         };
     }
     private void requireOpen() { if (closed) throw new IllegalStateException("Stageplay resources are closed"); }
-    @Override public void close() { if (!closed) { closed = true; if (nativePosers != null) nativePosers.close(); if (liveWorld != null) liveWorld.close(); if (livePreview != null) livePreview.close(); sets.clear(); terrains.clear(); entryTerrains.clear(); clearDialogue(); release.run(); } }
+    @Override public void close() { if (!closed) { closed = true; if (nativePosers != null) nativePosers.close(); if (liveWorld != null) liveWorld.close(); if (livePreview != null) livePreview.close(); sets.clear(); stageArt.clear(); terrains.clear(); entryTerrains.clear(); clearDialogue(); release.run(); } }
 }

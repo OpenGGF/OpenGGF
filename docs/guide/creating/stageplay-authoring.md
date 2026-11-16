@@ -590,7 +590,8 @@ landing verification. The CD example starts at centre x=800, away from entry.
 
 CD object Puppet/Pose pictures retain native tile priority and foreground
 occlusion; disc-backed R11B canopy pixels include a foreground-bypass negative
-control. This is a bounded authoring preview. Selected-program Poser/accessory
-lookup, CDDA/PCM scene-music proof,
+control. Poser body, animation and accessory lookup uses the current shot
+program, including after a period change; unavailable accessory art stays absent.
+This is a bounded authoring preview. CDDA/PCM scene-music proof,
 editor game choices and complete route-media discovery/coverage remain pending
 in the [validation record](../../architecture/validation/2026-11-16-sonic-cd-stageplay-editor.md).

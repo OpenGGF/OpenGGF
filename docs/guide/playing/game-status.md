@@ -164,7 +164,8 @@ campaign behavior. See [ROM discovery](../../../CONFIGURATION.md#rom-files).
 Stageplay's development preview can open supplied CD media, select a native
 stage including its period, and prepare a native Sonic scene or cold-level
 route tape. Native/frozen/baked object pictures preserve foreground occlusion
-in a disc-backed Palmtree Panic Past canopy regression. This is not full editor
+in a disc-backed Palmtree Panic Past canopy regression. Poser body and accessory
+lookups use the selected stage program. This is not full editor
 or authoring certification; see the
 [bounded validation record](../../architecture/validation/2026-11-16-sonic-cd-stageplay-editor.md).
 

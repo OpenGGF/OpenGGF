@@ -271,3 +271,33 @@ Next: item 2, selected-program Poser/accessory lookup. Investigation found
 terrain resolves the selected program. Add a failing disc rendering/preflight test
 before changing those lookups. Items 3–5 remain as specified above. No live owned
 jobs remain at this checkpoint; PR stays draft. No workers were delegated.
+
+## Selected-program Poser continuation (2026-11-16)
+
+Item 2 follows item 1 commit `ef5fe6c8f6`. Failing-first disc test
+`TestCdStageplayPoser` recorded body drawing but observed three default-art calls
+and no R11B `stageArt` lookup. Shared StageplayResources now caches art by complete
+shot SetSource. Poser body frames, animation sampling and accessory lookup use
+that art; preflight checks each shot's stage. Foreign actors retain donor lookup.
+There are no game-name branches in this resolution. The resource owner clears
+its cache on close.
+
+The disc test checks R11B identity, records actual body draw operations, verifies
+selected-stage resolution and rejects default-art calls during preflight/drawing.
+CD Sonic has no separate accessory sheet: the selected program returns null,
+asserted explicitly; no accessory is fabricated. Existing cartridge renderer
+fixtures and native CD movement/ground checks remain included.
+
+Command (display variables unset):
+`env -u DISPLAY -u WAYLAND_DISPLAY python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestCdStageplayPoser,TestStageplayRenderer,TestCdSceneLibrary,TestCdStageplayWorld,TestModApiSignatureSurface' test`.
+The foreground run completed successfully, verified media `missing=none`; see
+its test totals below. No file render was generated. Item 1 queue wait was
+23 seconds; its execution was 43.222 seconds. User wait was zero; other overhead
+is not inferred. Next: item 3 CDDA and PCM scene cues through offline production
+capture, then item 4 UI/media/fingerprints/coverage, then item 5 smoke and exact
+baseline attribution. No smoke VERDICT exists yet. PR remains draft; no owned
+jobs remain at this checkpoint.
+
+Final item 2 totals: **25 tests, zero failures/errors/skips**; queue wait
+10 seconds, Maven execution 1 minute 44 seconds. Subsequent source change was
+indentation only. Public signature pins are unchanged and their checks pass.
