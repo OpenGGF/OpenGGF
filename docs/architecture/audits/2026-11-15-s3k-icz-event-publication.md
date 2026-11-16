@@ -60,22 +60,12 @@ The first witness run (`target/icz-red.log`) selected `TestIczScreenPublication`
 with `-Dmse=off -Dopenggf.headless.gl=surfaceless-egl`: 1 test, 1 expected
 scroll-word failure, 0 errors/skips. All ROM properties found. Initial attempt
 to redirect that log failed because target did not exist; no Maven started.
-The first candidate selection (`target/icz-focused.log`) ran 142 tests,
-2 failures, 0 errors/skips: the old-format ICZ payload fixture and transient
-inventory needed updating for the composed owner. Both real-load witnesses
-passed. Subsequent validation is recorded below when complete.
+First candidate (`target/icz-focused.log`): 142 tests, 2 failures, 0 errors/skips; payload fixture/inventory updated for composed ownership; both real-load witnesses passed.
 
-All Maven commands use `python3 tools/testing/maven_queue.py -Dmse=off
+Gameplay Maven commands use `python3 tools/testing/maven_queue.py -Dmse=off
 -Dopenggf.headless.gl=surfaceless-egl '-Dtest=<selection>' test`.
-Initial focused selection: `SwScrlIczTest,TestSonic3kIczRewindRoundTrip,
-TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,
-TestSonic3kDecodingUtils,TestZoneEventRewindSchemaGuard,
-TestSonic3kLevelEventRewindSnapshot,TestIczSegmentColumnObjectInstance,
-TestIczScreenPublication`.
-Final selection adds `TestIczComposedRewindState,TestS3kIczPaletteCycling,
-TestS3kIczPatternAnimation,TestS3kIczSegmentColumnGraphRewind,
-TestS3kAdditionalScrollProjection,TestSonic3kIczResourcePublicationFailures,
-TestSonic3kIczSlideTerrain`.
+Initial focused selection: `SwScrlIczTest,TestSonic3kIczRewindRoundTrip,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestZoneEventRewindSchemaGuard,TestSonic3kLevelEventRewindSnapshot,TestIczSegmentColumnObjectInstance,TestIczScreenPublication`.
+Final selection adds `TestIczComposedRewindState,TestS3kIczPaletteCycling,TestS3kIczPatternAnimation,TestS3kIczSegmentColumnGraphRewind,TestS3kAdditionalScrollProjection,TestSonic3kIczResourcePublicationFailures,TestSonic3kIczSlideTerrain`.
 
 Strict citation check on ICZ owned files and this audit: no stale citations.
 Checking every touched file additionally finds three inherited stale references
@@ -148,3 +138,13 @@ queue670s, execution38.473s. Focused selection above rerun: 204 tests, 0 failure
 failures, 0 errors/skips; all five report JSON objects equal baseline; queue715s,
 execution67s. Baseline reused: clean matching source/inputs/selection/Java25.0.5.0.3.
 No jobs remain. Follow-up queue2129s/execution207.473s; user wait0; other time unknown.
+
+## Lead smoke guard correction — 2026-11-16
+
+At `344308aeff`, the rewritten ICZ rollback catches changed two guard fingerprints.
+Removed both catches and their two retired inventory rows; added no allowances.
+Whole-component validation precedes mutation; unexpected restore/cleanup failures
+now propagate. Red `-Dtest=TestIczComposedRewindState` (same wrapper, no GL flag): 8 tests, 2 failures,
+0 errors/skips; queue39s/execution34.292s; old code swallowed both injected failures.
+Guard command: `python3 tools/testing/maven_queue.py -Dmse=off "-Dtest=TestBroadCatchSwallowingGuard,TestZoneEventRuntimeAccessGuard,TestObjectPhysicsStandardizationGuard,TestAudioPresentationArchitectureGuard" test` (no profile).
+Guards: 96 passed, 0 failures/errors/skips; all four class summary lines confirmed; queue8s/execution108s. Focused selection above: 206 passed, 0 failures/errors/skips; queue250s/execution37.973s. No jobs remain; user wait0, other time unknown.

@@ -753,7 +753,8 @@ under the matching area heading; see the
   shake through the zone bridge instead of toggling the unrelated shared flag.
   Indoor restarts select the normal background routine before resize events,
   shake and rumble use the native level clock, and rewind rejects unreachable
-  shake, snow-fall and intro-phase values.
+  shake, snow-fall and intro-phase values. Unexpected failures during validated
+  ICZ rewind restoration propagate instead of being logged and swallowed.
 
 - **All-level performance sweep:** `tools/performance/level_sweep.py` plays every
   trace fixture and Sonic 3&K route movie through the frame-time probes, one at a

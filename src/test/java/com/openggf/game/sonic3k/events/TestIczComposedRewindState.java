@@ -103,6 +103,33 @@ class TestIczComposedRewindState {
         }
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
+    void unexpectedValidatedRestoreFailureReachesCaller(boolean failureInFacadeCleanup) throws Exception {
+        com.openggf.tests.TestEnvironment.resetAll();
+        try {
+            var manager = new com.openggf.game.sonic3k.Sonic3kLevelEventManager();
+            manager.initLevel(com.openggf.game.sonic3k.constants.Sonic3kZoneIds.ZONE_ICZ, 0);
+            var saved = manager.capture();
+            var events = org.mockito.Mockito.spy(manager.getIczEvents());
+            var failure = new IllegalStateException("validated ICZ restore failure");
+            if (failureInFacadeCleanup) {
+                org.mockito.Mockito.doThrow(failure).doCallRealMethod().when(events)
+                        .discardHardwareWorkFacadesAfterRewind();
+            } else {
+                org.mockito.Mockito.doThrow(failure).doCallRealMethod().when(events)
+                        .restoreIczState(org.mockito.ArgumentMatchers.any(byte[].class));
+            }
+            var field = manager.getClass().getDeclaredField("iczEvents");
+            field.setAccessible(true);
+            field.set(manager, events);
+            assertSame(failure, assertThrows(IllegalStateException.class, () -> manager.restore(saved)),
+                    "a validated restore must not become a logged malformed-input fallback");
+        } finally {
+            com.openggf.game.session.SessionManager.clear();
+        }
+    }
+
     private static void assertInvalidField(String name, int value) throws Exception {
         var target = new Sonic3kICZEvents();
         byte[] before = target.captureIczState();

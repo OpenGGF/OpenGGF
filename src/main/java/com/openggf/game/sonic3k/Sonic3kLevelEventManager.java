@@ -3117,19 +3117,11 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     }
 
     private void restoreIczSidecar(byte[] bytes) {
-        byte[] before = iczEvents.captureIczState();
-        try {
-            iczEvents.restoreIczState(bytes);
-            iczEvents.discardHardwareWorkFacadesAfterRewind();
-        } catch (RuntimeException e) {
-            try {
-                iczEvents.restoreIczState(before);
-                iczEvents.discardHardwareWorkFacadesAfterRewind();
-            } catch (RuntimeException rollbackFailure) {
-                e.addSuppressed(rollbackFailure);
-            }
-            LOG.warning("Skipping malformed ICZ zone-event rewind sidecar: " + e.getMessage());
-        }
+        // hasValidExtraFraming validates the complete ICZ component before any
+        // manager state changes. Unexpected restore/cleanup failures belong to
+        // the caller; they must not become a logged malformed-input fallback.
+        iczEvents.restoreIczState(bytes);
+        iczEvents.discardHardwareWorkFacadesAfterRewind();
     }
 
     private void restoreLbzSidecar(byte[] bytes) {
