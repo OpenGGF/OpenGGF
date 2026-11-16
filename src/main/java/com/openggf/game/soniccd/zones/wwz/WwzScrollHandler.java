@@ -42,7 +42,7 @@ import java.util.Arrays;
  * {@code d3} that the curve inherits from earlier code ({@code scroll_x_move << 5}, scroll_1b.asm:234-239) is the
  * initial fraction of the running offset; it is modelled because it moves segment boundaries by a pixel.
  */
-public final class WwzScrollHandler extends AbstractZoneScrollHandler implements ScrollOutputRebuilder {
+public final class WwzScrollHandler extends AbstractZoneScrollHandler implements ScrollOutputRebuilder, com.openggf.level.scroll.ScrollProjectionSource {
     /** Which deformation layout a stage uses. */
     enum Family { LIGHTS, LINEAR }
 
@@ -191,14 +191,19 @@ public final class WwzScrollHandler extends AbstractZoneScrollHandler implements
         int diff = (short) ((cameraX - lastCameraX) << 8);
         lastCameraX = cameraX;
         scrollXMove = diff;
-        bg3X += diff << 6;                                    // ext.l ; asl.l #6 ; ScrollBg3X (scroll_1c.asm:223-227)
-        bg2X += diff << 7;                                    // asl.l #7 ; ScrollBg2X (:228-232)
-        bgX += diff * 48;                                     // (d4<<4) + 2*(d4<<4) ; ScrollBgX (:233-241)
+        projectBackgroundX(diff);
         // ScrollBgY: move.w d0,scroll_bg_y writes the long's high word only (Scroll Flag Set.asm:102-104).
         bgY = (((cameraY & 0xFFFF) >>> 2) << 16) | (bgY & 0xFFFF);   // lsr.w #2,d0 (:242-244)
     }
 
     // ---------------------------------------------------------------------------------------------
+    /** UpdateScroll (r6/scroll_1c.asm:223-241), without clocks or event owners. */
+    private void projectBackgroundX(int diff) {
+        bg3X += diff << 6;                                    // UpdateScroll (r6/scroll_1c.asm:223-227): quarter-rate layer
+        bg2X += diff << 7;                                    // UpdateScroll (r6/scroll_1c.asm:228-232): half-rate layer
+        bgX += diff * 48;                                     // UpdateScroll (r6/scroll_1c.asm:233-241): three-sixteenths layer
+    }
+
     // Output: deformation words, then the per-line expansion
     // ---------------------------------------------------------------------------------------------
 
@@ -306,6 +311,36 @@ public final class WwzScrollHandler extends AbstractZoneScrollHandler implements
     }
 
     // ---------------------------------------------------------------------------------------------
+    @Override
+    public com.openggf.level.scroll.ScrollProjectionPhase captureProjection(
+            com.openggf.level.scroll.ScrollProjectionContext context) {
+        State frozen = (State) captureRewindState();
+        CdStagePayload frozenPayload = payload;
+        int[] frozenSine = layout.family() == Family.LIGHTS ? sine().clone() : null;
+        return view -> {
+            WwzScrollHandler scratch = new WwzScrollHandler(frozenPayload, frozenSine);
+            scratch.restoreRewindState(frozen);
+            int dx = (short) (view.cameraX() - context.cameraX());
+            // UpdateScroll layer rates; keep the native scrollXMove fraction for the linear curve.
+            int move = dx << 8;
+            scratch.projectBackgroundX(move);
+            if (view.cameraY() != context.cameraY())
+                scratch.bgY = ((((view.cameraY() & 0xFFFF) >>> 2) << 16) | (frozen.bgY() & 0xFFFF));
+            scratch.buildDeformation(view.cameraX());
+            int y = scratch.bgY >>> 16;
+            int[] words = new int[view.height()];
+            // R6ScrollWriteScrollLinePattern's first partial block and subsequent 8-line bands;
+            // presentation rasters extend the same table walk beyond the native 224 lines.
+            for (int i = 0; i < words.length; i++)
+                words[i] = ((-view.cameraX() & 0xFFFF) << 16)
+                        | (scratch.deformWord(((y & 0x3F8) >>> 3) + ((i + (y & 7)) >>> 3)) & 0xFFFF);
+            var nativeOutput = context.nativeOutput();
+            return new com.openggf.level.scroll.ScrollProjection(words, null, null, null,
+                    (short) view.cameraY(), word(scratch.bgY), nativeOutput.backgroundX(),
+                    nativeOutput.backgroundPeriod(), nativeOutput.shakeX(), nativeOutput.shakeY(), nativeOutput.tilemapMode());
+        };
+    }
+
     // Rewind
     // ---------------------------------------------------------------------------------------------
 
