@@ -879,8 +879,9 @@ under the matching area heading; see the
   validated rewind payload; objects consume the preceding publication and
   rendering only projects it. The seamless reload retains HCZ1 deformation,
   and the geyser begins shaking on its native first dispatch. CNZ suppresses
-  screen shake after player death without consuming its countdown; SOZ shares
-  the native shake owner, including timed counts above $14 and rewind state. Scene
+  screen shake after player death without consuming its countdown; SOZ uses
+  the shared native shake owner as a refactor with no gameplay behaviour change,
+  preserving its contiguous-table reads and rewind continuation. Scene
   presentation spells out capture, restoration and failure cleanup in operation
   order, and pixel-oracle failures retain the rendering mode and captured frame.
   Failed trace replays print their exact test/report/triage route; triage reads

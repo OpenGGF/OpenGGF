@@ -1,17 +1,17 @@
 # S3K low-severity screen-event survey — 2026-11-15
 
-Base: `e676eb5086b7069c5e8ffdd0dbd33990d5c2bf5f` (`develop`). Scope: CNZ, LRZ, SOZ, SSZ and DEZ; shared `S3kScreenShake` is unchanged.
-Source inspection is distinguished below from executed verification. This is not route certification or a claim that all five zones satisfy every HCZ rule.
+Base: `e676eb5086b7069c5e8ffdd0dbd33990d5c2bf5f` (`develop`). Scope: CNZ, LRZ, SOZ, SSZ and DEZ; shared `S3kScreenShake` is unchanged. Source inspection is distinguished below from executed verification. This is not route certification or a claim that all five zones satisfy every HCZ rule.
 
 ## Common frame and shake contract
 
-`LevelLoop` (sonic3k.asm:7918-7934) executes `SpecialEvents`, objects, `DeformBgLayer` (camera), then `ScreenEvents`. `ScreenEvents`
-(sonic3k.asm:102279-102302) copies camera words, dispatches foreground before background, and publishes vertical scroll. Engine equivalents are
-`LevelFrameStep`'s pre-physics/object/camera/post-camera phases and `Sonic3kLevelEventManager.onUpdate`, followed by the native parallax dispatch.
-Objects therefore see the previous screen-event generation. `ShakeScreen_Setup` (sonic3k.asm:104234-104256) saves the old offset, suppresses
-output without decrement at primary routine >=6, decrements positive flags, and indexes continuous shake with `Level_frame_counter & $3F`.
-`ScreenShakeArray` (sonic3k.asm:104277-104279) immediately precedes `ScreenShakeArray2` (sonic3k.asm:104280-104285): positive counts above $14
-read into the continuous table. No FixBugs branch is changed.
+`LevelLoop` (sonic3k.asm:7918-7934) executes `SpecialEvents`, objects, `DeformBgLayer` (camera), then `ScreenEvents`. `ScreenEvents` (sonic3k.asm:102279-102302) copies camera words, dispatches foreground before background, and publishes vertical scroll. Engine equivalents are
+`LevelFrameStep`'s pre-physics/object/camera/post-camera phases and `Sonic3kLevelEventManager.onUpdate`, followed by the native parallax dispatch. Objects therefore see the previous screen-event generation. `ShakeScreen_Setup` (sonic3k.asm:104234-104256) saves the old offset, suppresses
+output without decrement at primary routine >=6, decrements positive flags, and indexes continuous shake with `Level_frame_counter & $3F`. `ScreenShakeArray` (sonic3k.asm:104277-104279) immediately precedes `ScreenShakeArray2` (sonic3k.asm:104280-104285): positive counts above $14
+read into the continuous table. No FixBugs branch is changed. Follow-up retained for the lead: HPZ has water and, like LRZ and the DEZ final
+arena, passes `getDead()` through to `S3kScreenShake.setup`. A drowning player with native routine >=6 but `getDead() == false` may therefore still get shake;
+this was source-inspected, not exercised here. The lead will address that gate
+and the shared owner's wrong Javadoc table citation separately: the correct
+reference is `ScreenShakeArray2` (sonic3k.asm:104280-104285).
 
 ## CNZ — (c), demonstrated death-output defect; retain scalar ownership
 
