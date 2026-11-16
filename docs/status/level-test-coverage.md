@@ -1,5 +1,10 @@
 # Level test coverage backlog
 
+CNZ/SOZ screen-event maintenance (2026-11-15): the
+[bounded audit](../architecture/audits/2026-11-15-s3k-low-zone-event-publication.md)
+records CNZ2 death shake and SOZ shared shake/table/restore checks. The linked
+act matrices retain broader viewport, donor/team and lifecycle gaps.
+
 HCZ retained screen publication (2026-11-10): the
 [HCZ2 matrix](../architecture/validation/levels/s3k-hcz2.md) records one event/capture
 owner, fresh versus seamless initialization, previous-publication consumption,

@@ -878,7 +878,9 @@ under the matching area heading; see the
   its completed screen/collision publication and all three shake words in one
   validated rewind payload; objects consume the preceding publication and
   rendering only projects it. The seamless reload retains HCZ1 deformation,
-  and the geyser begins shaking on its native first dispatch. Scene
+  and the geyser begins shaking on its native first dispatch. CNZ suppresses
+  screen shake after player death without consuming its countdown; SOZ shares
+  the native shake owner, including timed counts above $14 and rewind state. Scene
   presentation spells out capture, restoration and failure cleanup in operation
   order, and pixel-oracle failures retain the rendering mode and captured frame.
   Failed trace replays print their exact test/report/triage route; triage reads

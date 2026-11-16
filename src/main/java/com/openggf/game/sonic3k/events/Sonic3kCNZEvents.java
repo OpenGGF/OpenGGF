@@ -100,7 +100,7 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
      */
     private static final int MINIBOSS_EARLY_TUNNEL_X_THRESHOLD = 0x3000;
     /*
-     * ROM writes #2*60 into the original Obj_Wait object (sonic3k.asm:144903-144905).
+     * ROM loc_6D9A8 writes #2*60 into the wait object (sonic3k.asm:144900-144910).
      * This event handler arms and ticks the engine-side mirror in the same update,
      * so the stored value is one larger to leave the first visible release frame
      * aligned with Obj_CNZMinibossGo installing Obj_CNZMinibossStart.
@@ -1121,6 +1121,14 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
     }
 
     private void tickScreenShake() {
+        // ShakeScreen_Setup (sonic3k.asm:104234-104256): routine >= 6
+        // suppresses output without consuming the timed flag (shipped FixBugs = 0).
+        var player = spriteManager().getMainPlayable();
+        if (player != null && com.openggf.sprites.playable.NativePlayableRoutine
+                .isAtOrBeyondDeathForNativeRead(player)) {
+            screenShakeOffsetY = 0;
+            return;
+        }
         if (screenShakeTimer <= 0) {
             screenShakeOffsetY = 0;
             return;
