@@ -2580,5 +2580,53 @@
   "settings.value.60": "60 s",
   "@settings.value.60": {
     "description": "Rewind setting enum display value."
+  },
+  "settings.key.launch_cd_rewind.label": "Sonic CD: Rewind",
+  "@settings.key.launch_cd_rewind.label": {
+    "description": "Settings label for stable configuration key LAUNCH_CD_REWIND."
+  },
+  "settings.key.launch_cd_rewind.help": "Use the global rewind setting, or turn rewind on or off for Sonic CD.",
+  "@settings.key.launch_cd_rewind.help": {
+    "description": "Settings help for stable configuration key LAUNCH_CD_REWIND."
+  },
+  "settings.key.launch_cd_cross_game_source.label": "Sonic CD: Borrow from",
+  "@settings.key.launch_cd_cross_game_source.label": {
+    "description": "Settings label for stable configuration key LAUNCH_CD_CROSS_GAME_SOURCE."
+  },
+  "settings.key.launch_cd_cross_game_source.help": "Choose the cartridge game supplying characters and abilities for Sonic CD.",
+  "@settings.key.launch_cd_cross_game_source.help": {
+    "description": "Settings help for stable configuration key LAUNCH_CD_CROSS_GAME_SOURCE."
+  },
+  "settings.key.launch_cd_debug_tools.label": "Sonic CD: Debug tools",
+  "@settings.key.launch_cd_debug_tools.label": {
+    "description": "Settings label for stable configuration key LAUNCH_CD_DEBUG_TOOLS."
+  },
+  "settings.key.launch_cd_debug_tools.help": "Use the global debug setting, or turn debug tools on or off for Sonic CD.",
+  "@settings.key.launch_cd_debug_tools.help": {
+    "description": "Settings help for stable configuration key LAUNCH_CD_DEBUG_TOOLS."
+  },
+  "settings.key.launch_cd_aspect.label": "Sonic CD: Screen shape",
+  "@settings.key.launch_cd_aspect.label": {
+    "description": "Settings label for stable configuration key LAUNCH_CD_ASPECT."
+  },
+  "settings.key.launch_cd_aspect.help": "Use the global screen shape, or choose a screen shape for Sonic CD.",
+  "@settings.key.launch_cd_aspect.help": {
+    "description": "Settings help for stable configuration key LAUNCH_CD_ASPECT."
+  },
+  "settings.key.launch_cd_main_character.label": "Sonic CD: Main character",
+  "@settings.key.launch_cd_main_character.label": {
+    "description": "Settings label for stable configuration key LAUNCH_CD_MAIN_CHARACTER."
+  },
+  "settings.key.launch_cd_main_character.help": "Choose the main character from the selected donor game.",
+  "@settings.key.launch_cd_main_character.help": {
+    "description": "Settings help for stable configuration key LAUNCH_CD_MAIN_CHARACTER."
+  },
+  "settings.key.launch_cd_sidekick.label": "Sonic CD: Sidekick",
+  "@settings.key.launch_cd_sidekick.label": {
+    "description": "Settings label for stable configuration key LAUNCH_CD_SIDEKICK."
+  },
+  "settings.key.launch_cd_sidekick.help": "Choose a sidekick from the selected donor game, or play alone.",
+  "@settings.key.launch_cd_sidekick.help": {
+    "description": "Settings help for stable configuration key LAUNCH_CD_SIDEKICK."
   }
 }
