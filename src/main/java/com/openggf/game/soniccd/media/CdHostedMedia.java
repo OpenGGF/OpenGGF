@@ -68,6 +68,29 @@ public final class CdHostedMedia implements HostedGameMedia {
         return openVerified(found.disc().orElseThrow());
     }
 
+    @Override
+    public Optional<com.openggf.game.internal.HostedMenuMusic> menuMusic(SonicConfigurationService config)
+            throws IOException {
+        var disc = (CdDiscDataSource) openConfiguredMedia(config);
+        var profile = new com.openggf.game.soniccd.audio.SonicCdAudioProfile(() -> disc);
+        return Optional.of(new com.openggf.game.internal.HostedMenuMusic() {
+            @Override public com.openggf.audio.GameAudioProfile profile() { return profile; }
+            @Override public int musicId() {
+                return com.openggf.game.soniccd.audio.CdSubCpuAudio.commandId("SCMD_TITLEMUS");
+            }
+            @Override public boolean complete() { return profile.subCpuAudio().state().cdda().track() == 0; }
+            @Override public void close() throws IOException { disc.close(); }
+        });
+    }
+
+    @Override
+    public Optional<com.openggf.game.preview.TitlePreviewProvider.Sequence> titlePreview(
+            SonicConfigurationService config) throws IOException {
+        try (var source = (CdDiscDataSource) openConfiguredMedia(config)) {
+            return Optional.of(com.openggf.game.soniccd.title.CdTitlePreview.load(source));
+        }
+    }
+
     /** Accepts a CUE sheet or a CHD only when its decoded content equals the USA release's record. */
     static CdDiscDataSource openVerified(Path disc) throws IOException {
         CdDiscDataSource source = CdDiscDataSource.open(disc);

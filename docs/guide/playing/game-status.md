@@ -161,7 +161,7 @@ campaign behavior. See [ROM discovery](../../../CONFIGURATION.md#rom-files).
 
 ## Sonic CD (development preview)
 
-**Status: on the `next` development line. It is on the master title shelf when
+**Status: on the `develop` (0.8) development line. It is on the master title shelf when
 your USA disc image is in the ROM folder; it also runs in tests, trace replay
 and the capture tools.**
 
@@ -186,7 +186,9 @@ in either of two ways:
   engine looks there and up to two sub-folders down, and recognises the disc by
   its data track's header, not by file names.
 
-Sonic CD then appears on the master title shelf; with the master title turned
+Sonic CD then appears on the master title shelf with its disc-backed native title
+preview and optional hub theme. Menu playback owns its own disc/audio session,
+so it does not replace suspended gameplay audio. With the master title turned
 off, `roms.default: scd` starts it directly. A `roms.soniccd` path that is not
 the USA disc is refused, not replaced by the folder search.
 

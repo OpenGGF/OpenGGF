@@ -26,6 +26,21 @@ class TestHubMusicRomThemes {
     void sonic3kTitleThemeLoadsAndPresentsWithoutADevice() throws Exception {
         present("s3k", SonicConfiguration.SONIC_3K_ROM, RomTestUtils.ensureSonic3kRomAvailable());
     }
+    @Test void hostedDiscTitlePresentsWithoutChangingWorldAudio() throws Exception {
+        com.openggf.game.soniccd.CdTestMedia.usaCue();
+        var config = SonicConfigurationService.createStandalone();
+        var bootstrap = GameModuleRegistry.getBootstrapDefault();
+        var world = com.openggf.game.session.SessionManager.getCurrentWorldSession();
+        try (var session = HubMusicController.openRomSession("scd", config, true)) {
+            session.volume(20, false);
+            for (int i = 0; i < 90; i++) session.frame();
+            org.junit.jupiter.api.Assertions.assertFalse(session.complete());
+            session.volume(10, true);
+            session.frame();
+        }
+        assertSame(bootstrap, GameModuleRegistry.getBootstrapDefault());
+        assertSame(world, com.openggf.game.session.SessionManager.getCurrentWorldSession());
+    }
     private void present(String gameId, SonicConfiguration key, File image) throws Exception {
         assertNotNull(image, "Required ROM path must resolve");
         var bootstrap = GameModuleRegistry.getBootstrapDefault();

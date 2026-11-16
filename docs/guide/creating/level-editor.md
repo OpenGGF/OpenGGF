@@ -566,3 +566,10 @@ To package the exported directory into a mod, continue with the
 [`ggfmod` conversion/validation](../../modding/ggfmod.md). Exported ROM-derived
 assets remain subject to their original rights; exporting them does not grant
 permission to redistribute them.
+
+### Sonic CD native projects
+
+Native CD stage projects and CD level imports are not available yet. A native
+stage needs its disc program, PLC state and complete object placement data;
+copying it into the portable authored-level format would lose that context.
+The CD master-title preview and isolated hub music do not change editor support.

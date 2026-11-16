@@ -188,3 +188,9 @@ assets and registers the existing multi-act contribution in the owner's transact
 no code trust or generated Java is needed. Completion ends at credits. Built-in
 host gizmos and bounded Stageplay dependencies are included; external creator
 object/track dependencies still require a separately authored package.
+
+The Sonic CD master-title card decodes its native title from the verified USA disc.
+Optional hub music opens a separate disc/audio source; suspending a game does
+not transfer its audio owner to the menu. Native editor project/import round
+trips still need a stage-preserving persistence path; portable flat levels do
+not carry the native program/PLC/object state.
