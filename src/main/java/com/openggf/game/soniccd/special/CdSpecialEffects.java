@@ -20,6 +20,26 @@ final class CdSpecialEffects {
         int yFrac;
         int xFrac;
         CdSpecialSprites.Sprite sprite;
+
+        State capture() { return new State(
+                sprite == null ? null : sprite.capture(), present, delete, routine, timer, type, xVel, yVel, yFrac,
+                xFrac); }
+        void restore(State s) {
+            sprite = CdSpecialSprites.Sprite.restored(sprite, s.sprite());
+            present = s.present();
+            delete = s.delete();
+            routine = s.routine();
+            timer = s.timer();
+            type = s.type();
+            xVel = s.xVel();
+            yVel = s.yVel();
+            yFrac = s.yFrac();
+            xFrac = s.xFrac();
+        }
+        record State(
+                CdSpecialSprites.Sprite.State sprite, boolean present, boolean delete, int routine, int timer, int type,
+                int xVel, int yVel, int yFrac, int xFrac) {
+        }
     }
 
     private final CdSpecialStage stage;
@@ -201,5 +221,21 @@ final class CdSpecialEffects {
         s.sprite.y--;
         sprites.draw(s.sprite);
         finish(s);
+    }
+
+    State capture() { return new State(lostRingDirection, item.capture(),
+            java.util.Arrays.stream(rings).map(Slot::capture).toList(),
+            java.util.Arrays.stream(explosions).map(Slot::capture).toList(),
+            java.util.Arrays.stream(dust).map(Slot::capture).toList()); }
+    void restore(State s) {
+        lostRingDirection = s.lostRingDirection();
+        item.restore(s.item());
+        for (int i = 0; i < rings.length; i++) rings[i].restore(s.rings().get(i));
+        for (int i = 0; i < explosions.length; i++) explosions[i].restore(s.explosions().get(i));
+        for (int i = 0; i < dust.length; i++) dust[i].restore(s.dust().get(i));
+    }
+    record State(int lostRingDirection, Slot.State item, java.util.List<Slot.State> rings,
+                 java.util.List<Slot.State> explosions, java.util.List<Slot.State> dust) {
+        State { rings = java.util.List.copyOf(rings); explosions = java.util.List.copyOf(explosions); dust = java.util.List.copyOf(dust); }
     }
 }

@@ -7,7 +7,12 @@ import java.util.Objects;
 /** The live window's explicit opt-in bridge. Offline consumers keep using the native renderer. */
 public final class LevelMotionAccess {
     private LevelMotionAccess() { }
+    /** Install capture intent before native scroll dispatch, including the first resumed service. */
+    public static void prepareService(LevelManager level, boolean active) {
+        if (level != null && level.parallaxManager != null) level.parallaxManager.motionCaptureEnabled(active);
+    }
     public static void observeService(LevelManager level, SpriteManager sprites, boolean active) {
+        prepareService(level, active);
         if (level != null) level.spritePresentationRenderer().observeMotionService(sprites, active);
     }
     /** The callback includes the scene flush. Every installed projection ends with this picture. */

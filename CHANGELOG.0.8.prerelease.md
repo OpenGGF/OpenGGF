@@ -7,6 +7,19 @@ under the matching area heading; see the
 
 ## Gameplay and presentation
 
+- **Frame interpolation background continuity:** vertical camera movement no longer
+  mistakes parallax band crossings for horizontal teleports. The previous frozen
+  scroll phase is composed at the current vertical view before comparing horizontal
+  offsets, including aligned vertical line/column arrays. Host capture intent is
+  installed before scroll dispatch and independent of renderer history. AIZ1
+  positioned coverage checks actual midpoint motion and restart capture; pair
+  tests cover 224/448-row rasters. Sonic CD ordinary levels now opt into frame
+  interpolation: all seven zone scrollers freeze native phase and camera-selected
+  bands without advancing cloud/water clocks, preserving native scroll-lock/dead
+  holds. Disc-backed checks cover actual blended pixels and exact-picture/state
+  isolation in all seven Act 1 Present stages. Whole-native-pixel stepping remains
+  unchanged.
+
 - **Angel Island screen events:** AIZ owns the canopy-wave origin and captures
   its publication with the shared ROM shake words. Shake setup respects stored
   death/restart routines and the contiguous timed table; water and bomb producers
@@ -46,7 +59,8 @@ under the matching area heading; see the
   Sonic giving up). Time travel, special stages
   (without their results graphics), the title, stage select, Time Attack and
   backup RAM (saved in `saves/soniccd`), the opening video, both endings, FM
-  effects, CD audio and PCM sound are hosted. The master
+  effects, CD audio and PCM sound are hosted. Held-key live rewind works inside
+  special stages, including the three-frame floor pipeline, UFOs and effects. The master
   title lists it when the disc is configured or found (`roms.default: scd` boots
   it directly) and verifies it against the USA release before starting. A CHD
   is verified by the same content fingerprint as a BIN/CUE set, so it is

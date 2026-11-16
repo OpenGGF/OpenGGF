@@ -82,11 +82,13 @@ final class LevelScrollPresentation {
     static LevelScrollPresentation capture(LevelManager level, AdvancedRenderFrameState mode) {
         var camera = level.camera;
         var scroll = level.parallaxManager;
+        var sampled = level.spritePresentationRenderer().boundsMask.sample();
+        var arenaMask = sampled != null ? sampled : captureArenaMask(level);
         return new LevelScrollPresentation(new Registers(camera.getX(), camera.getY(), camera.getXWithShake(),
                 scroll.getVscrollFactorFG(), scroll.getVscrollFactorBG(), scroll.getBgCameraX(),
                 scroll.getBgPeriodWidth(), mode.enableForegroundHeatHaze(), mode.enablePerLineForegroundScroll(),
                 mode.reversePlaneAssignment(), mode.hasForegroundVScrollOverride(), mode.foregroundVScrollOverride(),
-                mode.hasBackgroundVScrollOverride(), mode.backgroundVScrollOverride(), level.spritePresentationRenderer().boundsMask.sample()),
+                mode.hasBackgroundVScrollOverride(), mode.backgroundVScrollOverride(), arenaMask),
                 scroll.getHScrollForShader(), scroll.getVScrollPerLineBGForShader(),
                 scroll.getVScrollPerColumnBGForShader(), scroll.getVScrollPerColumnFGForShader(),
                 mode.foregroundPerColumnVScrollOverride(),
@@ -227,10 +229,28 @@ final class LevelScrollPresentation {
                 || !sameSize(backgroundColumns, previous.backgroundColumns)
                 || (registers.backgroundX() == Integer.MIN_VALUE) != (previous.registers.backgroundX() == Integer.MIN_VALUE)
                 || !sameBackgroundResidency(previous)) return null;
+        // Compare the same deformation bands, not the same screen rows. A vertical
+        // camera move changes the raster's band selector; comparing native rows
+        // mistakes that discrete selection for a horizontal teleport and snaps all BG.
+        // Frozen phases compose only: no gameplay handler or live owner is advanced.
+        int[] priorHorizontal = previous.horizontal;
+        short[] priorLines = previous.backgroundLines, priorColumns = previous.backgroundColumns;
+        if (previous.phase != null && registers.cameraY() != previous.registers.cameraY()) {
+            var aligned = previous.phase.sample(new com.openggf.level.scroll.ScrollView(
+                    previous.registers.cameraX(), registers.cameraY(), width, horizontal.length));
+            if (aligned.horizontal().length != horizontal.length
+                    || aligned.backgroundPeriod() != registers.backgroundPeriod()
+                    || aligned.tilemapMode() != tilemapMode
+                    || !sameSize(aligned.backgroundLines(), backgroundLines)
+                    || !sameSize(aligned.backgroundColumns(), backgroundColumns)) return null;
+            priorHorizontal = aligned.horizontal();
+            priorLines = aligned.backgroundLines();
+            priorColumns = aligned.backgroundColumns();
+        }
         short[] words = new short[horizontal.length];
-        for (int i = 0; i < words.length; i++) words[i] = (short) (previous.horizontal[i] - horizontal[i]);
-        short[] lines = differences(previous.backgroundLines, backgroundLines);
-        short[] columns = differences(previous.backgroundColumns, backgroundColumns);
+        for (int i = 0; i < words.length; i++) words[i] = (short) (priorHorizontal[i] - horizontal[i]);
+        short[] lines = differences(priorLines, backgroundLines);
+        short[] columns = differences(priorColumns, backgroundColumns);
         short y = (short) (previous.registers.backgroundY() - registers.backgroundY());
         short overrideY = registers.overrideBackgroundY()
                 ? (short) (previous.registers.overriddenBackgroundY() - registers.overriddenBackgroundY()) : 0;

@@ -10,12 +10,14 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class TestLevelMotionCallerGuard {
     /**
-     * Engine is the live caller. {@code GameplayCaptureSession} is the one offline exception: its
-     * {@code --interpolation} capture films display interpolation on request (off by default, with the
-     * phase taken from the picture index). Every other tool and offline consumer stays exact.
+     * Engine is the live caller ({@code LevelMotionAccess} delegates to itself). {@code GameplayCaptureSession}
+     * is the one offline exception: its {@code --interpolation} capture films display interpolation on
+     * request (off by default, with the phase taken from the picture index). Every other tool and offline
+     * consumer stays exact.
      */
     private static final java.util.Set<String> ALLOWED_CALLERS =
-            java.util.Set.of("com/openggf/Engine", "com/openggf/tools/GameplayCaptureSession");
+            java.util.Set.of("com/openggf/Engine", "com/openggf/level/LevelMotionAccess",
+                    "com/openggf/tools/GameplayCaptureSession");
 
     @Test void onlyEngineAndTheOptInCaptureSessionMayRequestObservationOrPresentationInProduction() throws Exception {
         var violations = new ArrayList<String>();
@@ -59,7 +61,7 @@ class TestLevelMotionCallerGuard {
                 return new MethodVisitor(Opcodes.ASM9) {
                     private void call(String target, String method) {
                         if (target.equals("com/openggf/level/LevelMotionAccess")
-                                && (method.equals("present") || method.equals("observeService")) && !ALLOWED_CALLERS.contains(owner))
+                                && (method.equals("present") || method.equals("observeService") || method.equals("prepareService")) && !ALLOWED_CALLERS.contains(owner))
                             violations.add(owner + "#" + name + " -> " + method);
                     }
                     @Override public void visitMethodInsn(int opcode, String target, String method, String desc, boolean isInterface) { call(target, method); }

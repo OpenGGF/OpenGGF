@@ -55,7 +55,7 @@
       "category": "scenario-assumption",
       "evidence": "src/test/java/com/openggf/tests/TestCPZObjectBugs.java:134",
       "allowed_when_absent": null,
-      "note": "documented prior scenario limitation (tube capture/release assumption at :134); carried unchanged from the release allowlist — gameplay and assertions are not altered by this gate"
+      "note": "documented prior scenario limitation (tube capture/release assumption at :134); carried unchanged from the release allowlist \u2014 gameplay and assertions are not altered by this gate"
     },
     {
       "match": "com.openggf.tools.audio.parity.TestS1OpenGgfAudioCapture#capturesTheCompleteReferenceControlledInterval",
@@ -7026,6 +7026,440 @@
       "evidence": "src/test/java/com/openggf/game/soniccd/TestCdRingNativeParity.java:161",
       "allowed_when_absent": "soniccd_native",
       "note": "BizHawk native reference (and the user's Sonic CD disc)"
+    },
+    {
+      "match": "com.openggf.level.TestCdLiveMotionPixels#ordinaryCdLevelsBlendWithoutChangingNativeStateOrExactPixels(CdZone)[1]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/level/TestCdLiveMotionPixels.java:28",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Requires the user-supplied USA disc through CdTestMedia.usaCue; required when the disc is supplied."
+    },
+    {
+      "match": "com.openggf.level.TestCdLiveMotionPixels#ordinaryCdLevelsBlendWithoutChangingNativeStateOrExactPixels(CdZone)[2]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/level/TestCdLiveMotionPixels.java:28",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Requires the user-supplied USA disc through CdTestMedia.usaCue; required when the disc is supplied."
+    },
+    {
+      "match": "com.openggf.level.TestCdLiveMotionPixels#ordinaryCdLevelsBlendWithoutChangingNativeStateOrExactPixels(CdZone)[3]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/level/TestCdLiveMotionPixels.java:28",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Requires the user-supplied USA disc through CdTestMedia.usaCue; required when the disc is supplied."
+    },
+    {
+      "match": "com.openggf.level.TestCdLiveMotionPixels#ordinaryCdLevelsBlendWithoutChangingNativeStateOrExactPixels(CdZone)[4]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/level/TestCdLiveMotionPixels.java:28",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Requires the user-supplied USA disc through CdTestMedia.usaCue; required when the disc is supplied."
+    },
+    {
+      "match": "com.openggf.level.TestCdLiveMotionPixels#ordinaryCdLevelsBlendWithoutChangingNativeStateOrExactPixels(CdZone)[5]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/level/TestCdLiveMotionPixels.java:28",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Requires the user-supplied USA disc through CdTestMedia.usaCue; required when the disc is supplied."
+    },
+    {
+      "match": "com.openggf.level.TestCdLiveMotionPixels#ordinaryCdLevelsBlendWithoutChangingNativeStateOrExactPixels(CdZone)[6]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/level/TestCdLiveMotionPixels.java:28",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Requires the user-supplied USA disc through CdTestMedia.usaCue; required when the disc is supplied."
+    },
+    {
+      "match": "com.openggf.level.TestCdLiveMotionPixels#ordinaryCdLevelsBlendWithoutChangingNativeStateOrExactPixels(CdZone)[7]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/level/TestCdLiveMotionPixels.java:28",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Requires the user-supplied USA disc through CdTestMedia.usaCue; required when the disc is supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.zones.ppz.TestPpzFrozenProjectionPhase#everyVariantProjectsWithoutAdvancingNativeRam",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/zones/ppz/TestPpzFrozenProjectionPhase.java:9",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Frozen projection check loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.zones.ccz.TestCczFrozenProjectionPhase#everyVariantProjectsWithoutAdvancingNativeRam",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/zones/ccz/TestCczFrozenProjectionPhase.java:9",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Frozen projection check loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.zones.wwz.TestWwzFrozenProjection#nativePublicationAndVerticalBandsRemainFrozen",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/zones/wwz/TestWwzFrozenProjection.java:15",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Frozen projection check loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.zones.ssz.TestSszImmutableScrollPhase#discBackedPhaseReprojectsBandsAndRetainsDispatch(CdStagePayload)[1]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/zones/ssz/TestSszImmutableScrollPhase.java:13",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Frozen projection check loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.zones.ssz.TestSszImmutableScrollPhase#discBackedPhaseReprojectsBandsAndRetainsDispatch(CdStagePayload)[2]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/zones/ssz/TestSszImmutableScrollPhase.java:13",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Frozen projection check loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.zones.ssz.TestSszImmutableScrollPhase#discBackedPhaseReprojectsBandsAndRetainsDispatch(CdStagePayload)[3]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/zones/ssz/TestSszImmutableScrollPhase.java:13",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Frozen projection check loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.zones.ssz.TestSszImmutableScrollPhase#discBackedPhaseReprojectsBandsAndRetainsDispatch(CdStagePayload)[4]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/zones/ssz/TestSszImmutableScrollPhase.java:13",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Frozen projection check loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.zones.ssz.TestSszImmutableScrollPhase#discBackedPhaseReprojectsBandsAndRetainsDispatch(CdStagePayload)[5]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/zones/ssz/TestSszImmutableScrollPhase.java:13",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Frozen projection check loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.zones.ssz.TestSszImmutableScrollPhase#discBackedPhaseReprojectsBandsAndRetainsDispatch(CdStagePayload)[6]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/zones/ssz/TestSszImmutableScrollPhase.java:13",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Frozen projection check loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.zones.ssz.TestSszImmutableScrollPhase#discBackedPhaseReprojectsBandsAndRetainsDispatch(CdStagePayload)[7]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/zones/ssz/TestSszImmutableScrollPhase.java:13",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Frozen projection check loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.zones.ssz.TestSszImmutableScrollPhase#discBackedPhaseReprojectsBandsAndRetainsDispatch(CdStagePayload)[8]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/zones/ssz/TestSszImmutableScrollPhase.java:13",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Frozen projection check loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.zones.ssz.TestSszImmutableScrollPhase#discBackedPhaseReprojectsBandsAndRetainsDispatch(CdStagePayload)[9]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/zones/ssz/TestSszImmutableScrollPhase.java:13",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Frozen projection check loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.zones.ssz.TestSszImmutableScrollPhase#discBackedPhaseReprojectsBandsAndRetainsDispatch(CdStagePayload)[10]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/zones/ssz/TestSszImmutableScrollPhase.java:13",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Frozen projection check loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.zones.mmz.TestMmzImmutableScrollPhase#discBackedPhaseReprojectsBandsAndRetainsDispatch(CdStagePayload)[1]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/zones/mmz/TestMmzImmutableScrollPhase.java:13",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Frozen projection check loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.zones.mmz.TestMmzImmutableScrollPhase#discBackedPhaseReprojectsBandsAndRetainsDispatch(CdStagePayload)[2]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/zones/mmz/TestMmzImmutableScrollPhase.java:13",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Frozen projection check loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.zones.mmz.TestMmzImmutableScrollPhase#discBackedPhaseReprojectsBandsAndRetainsDispatch(CdStagePayload)[3]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/zones/mmz/TestMmzImmutableScrollPhase.java:13",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Frozen projection check loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.zones.mmz.TestMmzImmutableScrollPhase#discBackedPhaseReprojectsBandsAndRetainsDispatch(CdStagePayload)[4]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/zones/mmz/TestMmzImmutableScrollPhase.java:13",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Frozen projection check loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.zones.mmz.TestMmzImmutableScrollPhase#discBackedPhaseReprojectsBandsAndRetainsDispatch(CdStagePayload)[5]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/zones/mmz/TestMmzImmutableScrollPhase.java:13",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Frozen projection check loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.zones.mmz.TestMmzImmutableScrollPhase#discBackedPhaseReprojectsBandsAndRetainsDispatch(CdStagePayload)[6]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/zones/mmz/TestMmzImmutableScrollPhase.java:13",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Frozen projection check loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.zones.mmz.TestMmzImmutableScrollPhase#discBackedPhaseReprojectsBandsAndRetainsDispatch(CdStagePayload)[7]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/zones/mmz/TestMmzImmutableScrollPhase.java:13",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Frozen projection check loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.zones.mmz.TestMmzImmutableScrollPhase#discBackedPhaseReprojectsBandsAndRetainsDispatch(CdStagePayload)[8]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/zones/mmz/TestMmzImmutableScrollPhase.java:13",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Frozen projection check loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.zones.mmz.TestMmzImmutableScrollPhase#discBackedPhaseReprojectsBandsAndRetainsDispatch(CdStagePayload)[9]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/zones/mmz/TestMmzImmutableScrollPhase.java:13",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Frozen projection check loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.zones.mmz.TestMmzImmutableScrollPhase#discBackedPhaseReprojectsBandsAndRetainsDispatch(CdStagePayload)[10]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/zones/mmz/TestMmzImmutableScrollPhase.java:13",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Frozen projection check loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.zones.ttz.TestTtzImmutableScrollPhase#discBackedPhaseReprojectsBandsAndRetainsDispatch(CdStagePayload)[1]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/zones/ttz/TestTtzImmutableScrollPhase.java:13",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Frozen projection check loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.zones.ttz.TestTtzImmutableScrollPhase#discBackedPhaseReprojectsBandsAndRetainsDispatch(CdStagePayload)[2]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/zones/ttz/TestTtzImmutableScrollPhase.java:13",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Frozen projection check loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.zones.ttz.TestTtzImmutableScrollPhase#discBackedPhaseReprojectsBandsAndRetainsDispatch(CdStagePayload)[3]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/zones/ttz/TestTtzImmutableScrollPhase.java:13",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Frozen projection check loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.zones.ttz.TestTtzImmutableScrollPhase#discBackedPhaseReprojectsBandsAndRetainsDispatch(CdStagePayload)[4]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/zones/ttz/TestTtzImmutableScrollPhase.java:13",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Frozen projection check loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.zones.ttz.TestTtzImmutableScrollPhase#discBackedPhaseReprojectsBandsAndRetainsDispatch(CdStagePayload)[5]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/zones/ttz/TestTtzImmutableScrollPhase.java:13",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Frozen projection check loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.zones.ttz.TestTtzImmutableScrollPhase#discBackedPhaseReprojectsBandsAndRetainsDispatch(CdStagePayload)[6]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/zones/ttz/TestTtzImmutableScrollPhase.java:13",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Frozen projection check loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.zones.ttz.TestTtzImmutableScrollPhase#discBackedPhaseReprojectsBandsAndRetainsDispatch(CdStagePayload)[7]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/zones/ttz/TestTtzImmutableScrollPhase.java:13",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Frozen projection check loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.zones.ttz.TestTtzImmutableScrollPhase#discBackedPhaseReprojectsBandsAndRetainsDispatch(CdStagePayload)[8]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/zones/ttz/TestTtzImmutableScrollPhase.java:13",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Frozen projection check loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.zones.ttz.TestTtzImmutableScrollPhase#discBackedPhaseReprojectsBandsAndRetainsDispatch(CdStagePayload)[9]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/zones/ttz/TestTtzImmutableScrollPhase.java:13",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Frozen projection check loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.zones.ttz.TestTtzImmutableScrollPhase#discBackedPhaseReprojectsBandsAndRetainsDispatch(CdStagePayload)[10]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/zones/ttz/TestTtzImmutableScrollPhase.java:13",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Frozen projection check loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageRewind#replayEveryFrameIncludingFadePacingJumpAndEffects(int, boolean)[1]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/TestCdSpecialStageRewind.java:65",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageRewind#replayEveryFrameIncludingFadePacingJumpAndEffects(int, boolean)[2]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/TestCdSpecialStageRewind.java:65",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageRewind#replayEveryFrameIncludingFadePacingJumpAndEffects(int, boolean)[3]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/TestCdSpecialStageRewind.java:65",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageRewind#replayEveryFrameIncludingFadePacingJumpAndEffects(int, boolean)[4]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/TestCdSpecialStageRewind.java:65",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageRewind#realLiveRewindContextRestoresCdProvider",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/TestCdSpecialStageRewind.java:174",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageRewind#hazardRingLossAndItsLiveEffectsReplay",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/TestCdSpecialStageRewind.java:118",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageRewind#immutableArraysAndInPlaceRestore",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/TestCdSpecialStageRewind.java:27",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageRewindAudio#everyDiscFmProgramPassesAdmission",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/TestCdSpecialStageRewindAudio.java:108",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageRewindAudio#normallyBootedStageRewindsThroughOuterPresentation(int)[1]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/TestCdSpecialStageRewindAudio.java:138",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageRewindAudio#normallyBootedStageRewindsThroughOuterPresentation(int)[2]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/TestCdSpecialStageRewindAudio.java:138",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageRewindAudio#normallyBootedStageRewindsThroughOuterPresentation(int)[3]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/TestCdSpecialStageRewindAudio.java:138",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageRewindAudio#normallyBootedStageRewindsThroughOuterPresentation(int)[4]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/TestCdSpecialStageRewindAudio.java:138",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageRewindAudio#normallyBootedStageRewindsThroughOuterPresentation(int)[5]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/TestCdSpecialStageRewindAudio.java:138",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageRewindAudio#normallyBootedStageRewindsThroughOuterPresentation(int)[6]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/TestCdSpecialStageRewindAudio.java:138",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageRewindAudio#normallyBootedStageRewindsThroughOuterPresentation(int)[7]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/TestCdSpecialStageRewindAudio.java:138",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageRewindAudio#effectImmediatelyBeforeRewindPassesRealSessionAdmission(CdSpecialSound)[1]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/TestCdSpecialStageRewindAudio.java:75",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageRewindAudio#effectImmediatelyBeforeRewindPassesRealSessionAdmission(CdSpecialSound)[2]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/TestCdSpecialStageRewindAudio.java:75",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageRewindAudio#effectImmediatelyBeforeRewindPassesRealSessionAdmission(CdSpecialSound)[3]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/TestCdSpecialStageRewindAudio.java:75",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageRewindAudio#effectImmediatelyBeforeRewindPassesRealSessionAdmission(CdSpecialSound)[4]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/TestCdSpecialStageRewindAudio.java:75",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageRewindAudio#effectImmediatelyBeforeRewindPassesRealSessionAdmission(CdSpecialSound)[5]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/TestCdSpecialStageRewindAudio.java:75",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageRewindAudio#roughFloorDustReachesForwardSessionWithoutRewind",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/TestCdSpecialStageRewindAudio.java:34",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.level.TestCdInitialMotionArenaMask#initialCdMotionCapturesAndDrawsBoundsBeforeTheFirstSpritePreparation",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/level/TestCdInitialMotionArenaMask.java:17",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
     }
   ]
 }

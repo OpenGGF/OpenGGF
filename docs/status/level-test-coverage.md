@@ -1,5 +1,20 @@
 # Level test coverage backlog
 
+Temporal scroll matching (2026-11-16): [HCZ1](../architecture/validation/levels/s3k-hcz1-sonic.md#temporal-scroll-matching-2026-11-16)
+and [HCZ2](../architecture/validation/levels/s3k-hcz2.md#temporal-scroll-matching-2026-11-16)
+record 12 typed-publication motion checks, retaining event lifecycle, history,
+rewind/load and rendered-pixel gaps. [CD stages](../architecture/validation/levels/scd-stages.md#motion-eligibility-maintenance-2026-11-16)
+record CD interpolation enablement: all seven provider phases, positive profile
+eligibility, PPZ frozen-scroll semantics and disc-backed Act 1 Present midpoint
+pixels/state isolation in every zone. Other periods' pixels, wrap/swap/history
+boundaries and native route certification remain inherited obligations.
+
+AIZ1 background interpolation maintenance (2026-11-16): the
+[AIZ1 matrix](../architecture/validation/levels/s3k-aiz1-sonic.md#background-interpolation-maintenance-2026-11-16)
+records a positioned 180-pair pan regression for deformation-band continuity.
+Cold routes, other acts/viewports/teams and native pixel parity remain inherited
+obligations; whole-pixel slow-pan stepping is unchanged.
+
 CNZ/SOZ screen-event maintenance (2026-11-15): the
 [bounded audit](../architecture/audits/2026-11-15-s3k-low-zone-event-publication.md)
 records CNZ2 death shake and SOZ shared shake/table/restore checks. The linked

@@ -119,7 +119,7 @@ A slot is exactly what a latest picture drawn now would show:
 | Game | Frame | Scroll | Cost |
 |---|---|---|---|
 | S3K (`SpriteTablePublication`) | `published()` by reference | `publishedScroll()` | References only. Lag outputs rotate `B→B`, so the picture holds. |
-| S1/S2 | one `captureSceneSpriteTable` per service | `LevelScrollPresentation.capture` | One producer pass per service, **only while interpolation is active**. Adopted pictures replay it and skip the per-draw recapture. |
+| S1/S2/CD | one `captureSceneSpriteTable` per service | `LevelScrollPresentation.capture` | One producer pass per service, **only while interpolation is active**. Adopted pictures replay it and skip the per-draw recapture. |
 
 **Identity lives in a sidecar, not in native frames.** `Frame`, `Tile`, `Subject` and
 `Tables.State` stay unchanged, so rewind payloads and equality are untouched, and the feature-off
@@ -336,3 +336,236 @@ tests proving services are identical with interpolation on or off.
 
 3. **Integration** (lead): Engine wiring of `observeService` and `present`, exact-consumer guard,
    docs and changelog, cost measurement, change-based smoke.
+
+## AIZ background continuity follow-up (2026-11-16)
+
+The initial same-screen-row background comparison rejected 105 of 180 published
+pairs in a positioned AIZ1 pan: 60 horizontal steps followed by 60 descending and
+60 ascending steps (X +4, Y +/-2). A row crossing into another deformation band
+looked like a horizontal jump exceeding the 16-pixel presentation tolerance.
+
+When camera Y changes and a previous immutable projection phase is available,
+compose that previous phase at its original camera X and the current camera Y.
+Compare its horizontal words against the current raster. This compares the same
+band selection while retaining each phase's native horizontal motion and clock.
+It runs during pair construction, never per draw, and does not advance native
+handlers or change gameplay. Native scroll dispatch retains the immutable phase
+while live interpolation is active, without enabling directed-scene descriptor or
+column capture; with interpolation off the existing no-capture path remains. Period, topology, residency and motion bounds still
+reject unsafe pairs; phases without projection support retain the old fallback.
+The current raster's discrete band selection remains authoritative. Integer
+rounding and the documented band-edge/slow-pan limitations remain in scope as
+limitations, not solved by this correction.
+
+`TestLevelMotionPixels.aizBackgroundContinuityProbe` is a ROM-backed positioned
+320px scroll-publication check, not a cold gameplay route or native-pixel parity
+certificate. Existing pixel tests retain repeated-draw, exact-frame, lag and
+restore coverage for S1 GHZ1, S2 EHZ1 and S3K AIZ1.
+
+### Verification and inherited failures
+
+Base: `89820f78e8baca0a2301ae4e13841186a9a2cb97` (`origin/develop` at task start).
+The AIZ probe changes from 105/180 rejected pairs on that base to 0/180.
+
+Commands used Java 25, `-Dmse=off`, the Maven queue and surfaceless EGL:
+
+- `LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base 89820f78e8 --workers 2 --headless-gl surfaceless-egl --run`:
+  4,963 candidates, 100 ordinary batches, 40,364 ordinary tests; 36 failures,
+  4 errors, 562 skips (559 allowed, three display-dependent unclassified skips).
+  Guards: 860 tests, no failures/errors/skips. Final **VERDICT FAILED**.
+  Ordinary execution: 1,988.51 seconds; guards: 193.78 seconds. Queue waits
+  were separate and intermittent; this is bounded smoke, not full-suite validation.
+- A detached worktree at the base reran the same failing methods from all 20
+  affected classes: 38 original failure/error identities reproduced. The two
+  additional errors were null-renderer fixtures and were corrected with an
+  inactive-motion null guard.
+- Final queued focused run with `DISPLAY` and `WAYLAND_DISPLAY` unset selected
+  those affected methods, `TestLevelMotion*`, the four required S3K keep-green
+  classes and `TestTestReelExtension`: 187 tests, 29 failures, two errors, no skips.
+  All 31 remaining identities and assertions match the baseline (ignoring only
+  object addresses and set print order); there are no new/worsened failures.
+  The seven display-precondition failures passed under the corrected environment;
+  all six reel cases executed, resolving the three earlier unclassified skips.
+  All seven motion pixel cases, both null-renderer regressions and required S3K
+  keep-green classes pass. No broad green verdict or whole-route parity is claimed.
+
+Remaining baseline failure identities (grouped by class):
+
+- `TestAizCollectorPublicRewind`: `publicIntroBeforeInitRoundTripsWithoutACollector(boolean)[1]`; `publicIntroBeforeInitRoundTripsWithoutACollector(boolean)[2]`.
+- `TestDezIncomingFinalRouteCapture`: `incomingFinalFightRestoresAndReplaysEveryPhase(int)[1]`; `incomingFinalFightRestoresAndReplaysEveryPhase(int)[2]`.
+- `TestIcz2ColdCubeBridgeRoute`: `coldSonicShattersThePlacedCubePressesButton2AndCrossesTheFallingBridgeWithWorldReplay`.
+- `TestLrzSszCheckpointRoutes`: `ordinarySszOpeningPhysicallySavesTheFirstAuthoredPost`.
+- `TestPrivateLobbyScreenRendering`: `actualLobbyAndFullTextPixelsSupportMultipleReadablePages`.
+- `TestS3kCnz1MinibossCompletionEdge`: `placedMinibossOrdinaryHitsDriveDefeatResultsAndReleasedCnz2(Row)[2]`; `placedMinibossOrdinaryHitsDriveDefeatResultsAndReleasedCnz2(Row)[4]`; `recordedOrdinaryInputReplaysAndRewindsEveryEdgeBoundaryTwice(Row)[2]`; `recordedOrdinaryInputReplaysAndRewindsEveryEdgeBoundaryTwice(Row)[4]`; `truncatedAfterApproachNeverCompletesTheEdge`.
+- `TestS3kCompleteRunReferenceProducer`: `fixedProducerRejectsEveryMismatchedTypedRequestBeforePublication`.
+- `TestS3kFreshLevelRngState`: `actualFreshBoundaryClearsRngAndTheRegisteredWorldRestoresIt(int, int)[2]`.
+- `TestS3kIcz1PhysicalLowerPlatformReplay`: `nativeSonicContactsAndRidesTheLowerPieceWithTwoFreshWorldReplays`.
+- `TestS3kMhzAct2AuthoredRoute`: `incomingRoutesCompleteActTwoWithLiveRewindBoundaries(String, int)[1]`; `incomingRoutesCompleteActTwoWithLiveRewindBoundaries(String, int)[2]`; `incomingRoutesCompleteActTwoWithLiveRewindBoundaries(String, int)[3]`.
+- `TestS3kMhzAct2EntryHeadless`: `coldEntryPressesLiftsAndReleasesNativeTeamWithReplay(WidescreenAspect, String, String)[12]`.
+- `TestS3kMhzAuthoredRoute`: `freshSonicCompletesActOneAndReplaysItsLiveInteractions`.
+- `TestS3kMhzTailsAuthoredRoute`: `freshTailsCompletesActOneAndReplaysItsLiveInteractions`.
+- `TestS3kMhzTeamAuthoredRoute`: `nativePairCompletesActOneAndReplaysItsLiveInteractions`.
+- `TestS3kMhzWideAuthoredRoute`: `wideSonicCompletesActOneAndReplaysItsLiveInteractions`.
+- `TestThreeIslandsScene`: `tailsJoinsInTheFieldAndTheTravellingShopReturnsToTheSameSpot`; `aSonic1ZonePlaysItsOwnRomSongWithoutPlaceholderSwitches`; `startupIsPlayableAndArrivalDialogueAndRestStayInTheField`; `greenHillMysteriesUseRealInteractionsAndPersistThroughContinue`; `physicalTrailsConnectFieldsAndBattleUsesTheEncounterField`; `allStoryLandmarksHavePlayableInteriorsWithIndependentGatesSavesAndRewards`; `travellerDialogueWaitsForTheDiscoveryOrRescueItDescribes`; `explorationUsesTwoAxesAndStoryDiscoveriesPersistAcrossContinue`.
+
+## Review follow-up after PR 345 (2026-11-16)
+
+Host `prepareService` installs motion capture intent before native advancement;
+`observeService` retains the post-service observation contract. Parallax no longer
+reads `LevelRenderer.motionPackets.active`. Capture intent survives picture-history
+invalidation; disabled/unsupported handlers do not construct a motion projection.
+A phase must retain immutable inputs before the following service is known: it
+cannot safely be captured retroactively only when the next camera Y changes.
+Eligible handlers still incur this bounded snapshot cost; no allocation benchmark
+or claim that the cost is eliminated is made. Descriptor/column ownership capture
+remains director-only. The off path retains no motion phase after scroll dispatch.
+
+Aligned background line and column arrays are now retained with horizontal rows;
+incompatible projected array topology snaps the background. Scalar background Y
+still supplies vertical displacement independently. `TestLevelMotionPair` checks
+explicit deltas and midpoint values for all three arrays and rejects a frozen
+negative control. Additional cases check the last row of both 224- and 448-row
+rasters. The AIZ probe checks the known band-11 midpoint (0 to -2 gives -1),
+actual moving pictures, and the first resumed dispatch's captured phase. Its
+rejection diagnostic no longer reports misleading unaligned deltas.
+
+Review claims were checked rather than adopted wholesale:
+
+- HCZ and LBZ currently publish null background vertical line/column arrays, so
+  they do not themselves reproduce the discarded-array defect. They remain
+  valuable mode/band coverage targets.
+- Camera cuts mark continuity and do not themselves clear the active flag. The
+  ordering dependency on enabling/resuming interpolation was real and is removed
+  by the pre-service host intent.
+- Phase sampling occurs in `LevelMotionPair.between` during service observation,
+  not drawing. The cited "Missing LBZ launch frame" is a restore decoder check;
+  valid launch phase capture checks its immutable dispatch separately. No
+  recoverable sampler exception was demonstrated. Programming errors continue to
+  propagate through the existing engine fault boundary; no broad exception
+  swallowing fallback is added (see implementation pitfalls).
+- Motion sampling requests the captured horizontal raster length, not viewport
+  metadata height. Tall rasters are explicitly checked; this is not a general
+  tall-viewport visual certification.
+- Current-generation shake remains discrete by the original presentation
+  contract, keeping foreground, masks, sprites and background composition aligned.
+  Smoothing shake independently would be a separate behaviour change.
+
+HCZ and CD temporal validation is delegated only after this candidate's focused
+checks. No additional zone parity is claimed by the shared pair tests.
+
+Initial focused verification of this review follow-up: 187 tests pass, no skips,
+using Java 25 and queued Maven with `-Dmse=off`, display variables unset and
+`-Dopenggf.headless.gl=surfaceless-egl`. Selection: `TestLevelMotion*`,
+`TestSonic1StomperDoorRewindOwnership`, `TestNativeCompetitionParticipantDispatch`,
+`TestSonic3kScrollProjection`, `TestS3kAdditionalScrollProjection`, and the four
+required S3K keep-green classes. The new aligned-array regression failed on the
+merged base before implementation. HCZ/CD validation and rendering/common smoke
+plus guards are subsequent bounded checks, not claimed by this initial result.
+
+### HCZ/CD validation results
+
+Sol medium workers added `TestHczMotionContinuity` (12 ROM-backed cases) and
+`TestCdMotionContinuity` (11 logic cases), each passing without skips in its
+isolated checkout. HCZ checks exact amounts, negative controls, both-act bands,
+held publications, wall-plane shake, completion and an expected mode snap; it
+uses typed publications and does not establish event lifecycle/history/rewind
+integration or rendered pixels. HCZ1/2 route matrices retain those gaps.
+
+CD validation corrects the earlier static audit: all seven ordinary CD handlers
+are excluded by the module's motion-profile gate. Their lack of projection
+phases is therefore a future-enablement gap, not a reproduced user-visible bug.
+The four PPZ periods have exact native vertical-pan and frozen-raster restoration
+checks. Six other handlers' runtime amounts, disc/native-reference output and
+transitions remain outside these tests. No new zone production fix was needed.
+
+The lead rendering/common smoke command was:
+`env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --category rendering --guards --workers 2 --headless-gl surfaceless-egl --run`.
+At candidate `c21c0128e9`, it selected 757/4963 classes and completed 16 ordinary
+batches: 5,418 tests, one failure, no errors, seven policy-allowed skips, no
+unexplained skips. All 860 guard tests passed without skips. Final **VERDICT
+FAILED**: 6,278 total tests, one failure, seven allowed skips. This is bounded
+rendering/common smoke, not a whole-repository or full-suite pass. Ordinary
+execution was 250.74 seconds and guards 195.15 seconds; queue waits are separate.
+The failure is `TestPrivateLobbyScreenRendering.actualLobbyAndFullTextPixelsSupportMultipleReadablePages`
+("Right reaches new full-text pixels", expected false, actual true); it reproduces on the exact base `144f3fa28a` with the same test identity and
+assertion (one test, one failure, no skips). There are no new/worsened failures
+in the bounded selection. The original failed verdict is retained, not relabelled
+green.
+
+After integrating both workers' commits, the lead reran
+`env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Dtest=TestCdMotionContinuity,TestHczMotionContinuity test`:
+23 passed, no failures/errors/skips. Execution took 35.834 seconds, separate from
+queue wait. The 187 earlier focused tests and 860 guards also pass. No whole-route
+or full-suite result is inferred from these checks.
+
+## Sonic CD interpolation enablement (2026-11-16)
+
+The initial CD audit found an existing exclusion; the requested delivery now
+removes it. `SonicCdLevelInitProfile` opts into `LevelMotionPresentation` only with
+projection support implemented for PPZ, CCZ, QQZ, WWZ, SSZ, MMZ and TTZ. Each phase
+captures native scroll state and required disc-backed tables/external facts, then
+composes camera-selected bands on private scratch without UpdateScroll, cloud or
+water advancement, live dependency reads during sampling, swap callbacks or
+mutation of gameplay owners. QQZ/WWZ reuse factored native camera arithmetic;
+TTZ retains the published water/deformation phase in rewind state. Native
+224-row output is retained for extended presentation sampling, without a second
+native dispatch. Native assets continue to come from the user's disc pipeline.
+
+Capture freezes the common native scroll-lock/dead gate: a held phase preserves
+background registers and words even if sampling occurs after release. A real
+PPZ test first failed with background Y 1818 projected to 1834 during a frozen
+hold; all seven handlers now use the shared held phase for that native gate.
+These are semantic guards, not frame/fixture keys. Ordinary period/load changes
+retain existing history invalidation and scroll period/topology/step guards.
+Exhaustive swap/wrap and time-travel/load lifecycle certification remains open.
+
+`TestCdLiveMotionPixels` deliberately starts from each native Act 1 Present view
+rather than placing a camera in empty scenery. A first probe at arbitrary camera
+($0300,$0100) could not distinguish a followed player from a stationary background;
+the real-view pixel witness and exact-pan control remove that false witness.
+The test checks positive live eligibility, zero-motion exact pixels, midpoint
+scroll amounts and actual pictures, repeated render-only draws, exact output
+after blending, deep equality of native scroll state, unchanged player/frame and
+held-gate capture independent of later gate release. A profile-disabled negative
+run failed both eligibility checks before enabling the marker. `TestCdMotionContinuity`
+now asserts provider support/positive eligibility and a non-capable negative
+profile, replacing the former exclusion pin.
+
+Initial combined verification: 54 tests pass without skips, including eight live
+eligibility/pixel cases (one capability check plus seven disc-backed zones), 11
+provider/PPZ-semantic cases and all seven handlers' phase cases. Commands use
+queued Maven, Java 25, `-Dmse=off`, display variables unset and surfaceless EGL.
+The disc-backed method has a specific optional-disc skip rule and is required
+when the USA disc is supplied. Composition coverage is broader than the seven
+Act 1 Present pixel views; neither certifies native pixel parity or new routes.
+Whole-pixel stepping and discrete shake remain the shared presentation contract.
+
+### CD delivery verification
+
+At Java implementation `26c0c02a02` (same Java as the final policy/docs follow-up),
+the queued regression selection passed 215 tests without skips: all new frozen
+phase/live-picture/eligibility cases, existing PPZ/CCZ/QQZ/WWZ/MMZ/SSZ scroll-stage
+checks and all-payload loading, shared motion/HCZ tests and the required S3K
+keep-green classes. The exact selector was
+`Test*FrozenProjection*,Test*ImmutableScrollPhase,TestCd*Motion*,TestLevelMotion*,TestHczMotionContinuity,TestPpzPeriodsScroll,TestCczStagesScroll,TestQqzPeriodsScroll,TestQqzScrollPrograms,TestWwzStagesScroll,TestMmzStagesScroll,TestSszStagesScroll,TestSszScrollHandler,TestCdStageLoaderAllPayloads,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`.
+It ran through `maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl`
+with display variables unset and `LUA_BIN=/usr/bin/lua5.4` (90 seconds Maven execution,
+separate from admission wait).
+
+The subsequent rendering/common category run selected 757/4973 classes and
+completed all 16 ordinary batches: 5,418 tests, one failure, no errors and seven
+allowed skips; 860 guards passed without skips. Final **VERDICT FAILED**:
+6,278 tests, one failure and seven allowed skips, no unexplained skips. The sole
+failure remains `TestPrivateLobbyScreenRendering.actualLobbyAndFullTextPixelsSupportMultipleReadablePages`,
+with the same expected-false/actual-true assertion previously reproduced on the
+exact PR base. No new/worsened failure was observed in this bounded selection.
+Ordinary execution: 241.37 seconds; guards: 166.57 seconds. This does not replace
+full-suite, native pixel or route/warp certification.
+
+The final policy follow-up declares all 40 new optional-disc identities explicitly
+(33 composition cases and seven live pixel cases), with source evidence checked.
+A generated classifier contract accepts all 40 only when the disc is absent and
+rejects all 40 as required skips when it is supplied; no unknown/undeclared/stale
+cases occur. The classifier's 21 Python unit cases pass with one existing optional
+preserved-report-fixture skip. The rule-count pin is updated to 1042. No Java
+source changes followed the successful regression and guard runs.

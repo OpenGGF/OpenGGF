@@ -1,5 +1,17 @@
 # S3K HCZ act 1 — Sonic route coverage
 
+## Temporal scroll matching (2026-11-16)
+
+`TestHczMotionContinuity` adds 12 bounded ROM-backed checks across both acts:
+vertical band crossings, exact horizontal/scalar vertical amounts, frozen and
+held publications, wall-plane discrete shake, completion deformation and an
+expected wall-to-normal snap. Negative controls reject unaligned rows and frozen
+backgrounds. HCZ's background vertical line/column arrays are null; no such array
+bug is claimed. Tests supply typed publications to production handlers/phases;
+they do not certify event-driven publication lifecycle, held/resumed history,
+rewind/load transitions or rendered pixels. Existing route, viewport and team
+gaps remain. See the [review follow-up](../../designs/2026-10-31-presentation-interpolation-design.md#review-follow-up-after-pr-345-2026-11-16).
+
 Routine selection update (2026-10-27): the reviewed full configuration products
 and long cold-campaign qualifications in the [local budget record](../../research/2026-10-27-local-validation-cost.md#thirty-minute-local-command-target)
 now require explicit `exhaustive-audit`. Short real contact, lifecycle and

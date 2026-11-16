@@ -6,6 +6,10 @@ import com.openggf.game.soniccd.CdPeriod;
 import com.openggf.game.soniccd.CdStagePayload;
 import com.openggf.level.scroll.AbstractZoneScrollHandler;
 import com.openggf.level.scroll.ScrollOutputRebuilder;
+import com.openggf.level.scroll.ScrollProjectionSource;
+import com.openggf.level.scroll.ScrollProjectionPhase;
+import com.openggf.level.scroll.ScrollProjectionContext;
+import com.openggf.level.scroll.ScrollProjection;
 import com.openggf.level.scroll.compose.ScrollEffectComposer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -51,7 +55,7 @@ import java.util.List;
  * seen here. The native routine does not run while {@code scrollLock} is set (Present:178-180) or the player
  * is dead ({@link com.openggf.game.soniccd.zones.CdLevelScrollGate}).
  */
-public final class PpzScrollHandler extends AbstractZoneScrollHandler implements ScrollOutputRebuilder {
+public final class PpzScrollHandler extends AbstractZoneScrollHandler implements ScrollOutputRebuilder, ScrollProjectionSource {
     /** Source of the player facts the PRESENT routine reads. */
     public interface PlayerView {
         /** {@code objPlayerSlot+oX}: the ROM centre X (Present:136,241). */
@@ -623,6 +627,61 @@ public final class PpzScrollHandler extends AbstractZoneScrollHandler implements
     // ---------------------------------------------------------------------------------------------
     // Rewind
     // ---------------------------------------------------------------------------------------------
+
+    /**
+     * Freeze native clocks and compose camera displacement on an isolated RAM scratch.
+     * Camera arithmetic: LevelScroll
+     * (Level/Palmtree Panic/Scroll (Act 1 Present).asm:203-255).
+     * Native phase (including FixBugs=0 fractional carry) remains unchanged.
+     */
+    @Override
+    public ScrollProjectionPhase captureProjection(ScrollProjectionContext context) {
+        // Capture the shared native scrollLock/dead gate, never read it while sampling.
+        if (!com.openggf.game.soniccd.zones.CdLevelScrollGate.runs())
+            return com.openggf.level.scroll.ScrollProjectionPhases.held(context);
+
+        Object state = captureRewindState();
+        boolean rampY = act == 1 && period == CdPeriod.PRESENT && player.centreX() >= PRESENT_FIRST_RAMP_X;
+        CdPeriod frozenPeriod = period;
+        int frozenAct = act;
+        return view -> {
+            PpzScrollHandler scratch = new PpzScrollHandler(frozenPeriod, frozenAct, null);
+            scratch.restoreRewindState(state);
+            int dx = view.cameraX() - context.cameraX();
+            int dy = view.cameraY() - context.cameraY();
+            // The native layer multipliers are in advanceAct23/advancePast/advanceFuture.
+            // Ramp X displacement is phase, not camera motion: it is already in the saved layers.
+            int m3 = scratch.act23 != null ? scratch.act23.bg3Mul() : 32;
+            int m2 = scratch.act23 != null ? scratch.act23.bg2Mul() : frozenPeriod == CdPeriod.GOOD_FUTURE || frozenPeriod == CdPeriod.BAD_FUTURE ? 64 : 48;
+            int m1 = scratch.act23 != null ? scratch.act23.bgMul() : frozenPeriod == CdPeriod.GOOD_FUTURE || frozenPeriod == CdPeriod.BAD_FUTURE ? 48 : 128;
+            scratch.bgX += dx * 256 * m1;
+            scratch.bg2X += dx * 256 * m2;
+            scratch.bg3X += dx * 256 * m3;
+            if (frozenAct == 1 && frozenPeriod == CdPeriod.PRESENT) {
+                int oldY = rampY ? rampAdjustedY(context.cameraY() & 0xFFFF) : context.cameraY() & 0xFFFF;
+                int newY = rampY ? rampAdjustedY(view.cameraY() & 0xFFFF) : view.cameraY() & 0xFFFF;
+                scratch.bgY += (newY - oldY) << 16;
+            } else {
+                scratch.bgY += dy * 256 * (scratch.act23 != null ? scratch.act23.bgYMul() : 32);
+            }
+            scratch.lastCameraX = view.cameraX();
+            int[] nativeLines = new int[ScrollEffectComposer.VISIBLE_LINES];
+            scratch.publish(nativeLines, view.cameraX());
+            // Native routines publish 224 lines. Outside that raster hold its final row;
+            // presentation enlargement must not invent a second native dispatch.
+            int[] horizontal = new int[view.height()];
+            for (int i = 0; i < horizontal.length; i++) horizontal[i] = nativeLines[Math.min(i, nativeLines.length - 1)];
+            var nativeOutput = context.nativeOutput();
+            // Match getBgPeriodWidth without consulting the live placement viewport owner.
+            int requiredPeriod = nativeOutput.backgroundPeriod();
+            int right = view.cameraX() - scratch.minScrollOffset;
+            while (requiredPeriod < right + view.width()) requiredPeriod <<= 1;
+            return new ScrollProjection(horizontal, null, null, null,
+                    (short) (nativeOutput.foregroundY() + view.cameraY() - context.cameraY()),
+                    scratch.getVscrollFactorBG(), nativeOutput.backgroundX(), requiredPeriod,
+                    nativeOutput.shakeX(), nativeOutput.shakeY(), nativeOutput.tilemapMode());
+        };
+    }
 
     private record State(int bgX, int bg2X, int bg3X, int bgY, List<Integer> speeds, int lastCameraX,
                          int lastCameraY, int lastFrame, boolean initialised) { }

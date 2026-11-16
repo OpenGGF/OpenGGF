@@ -1,4 +1,6 @@
-# OpenGGF
+<h1 align="center">
+  <img src="docs/assets/brand/openggf-logo-animated.svg" alt="OpenGGF" width="640">
+</h1>
 
 OpenGGF is a free, open-source game engine that plays the classic Sega Mega Drive /
 Genesis games *Sonic the Hedgehog*, *Sonic the Hedgehog 2* and *Sonic 3 & Knuckles*.

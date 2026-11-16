@@ -31,6 +31,25 @@ final class CdSpecialSprites {
 
         void set(int id) { anim.set(scripts, id); }
         void change(int id) { anim.change(scripts, id); }
+
+        State capture() { return new State(tile, scripts, anim.capture(), flags, x, y, spriteFlag); }
+        void restore(State s) {
+            tile = s.tile();
+            scripts = s.scripts();
+            anim.restore(s.anim());
+            flags = s.flags();
+            x = s.x();
+            y = s.y();
+            spriteFlag = s.spriteFlag();
+        }
+        static Sprite restored(Sprite live, State s) {
+            if (s == null) return null;
+            if (live == null) live = new Sprite(s.tile(), s.scripts());
+            live.restore(s);
+            return live;
+        }
+        record State(int tile, CdSpecialAnimationScripts scripts,
+                     CdSpecialAnimationScripts.State.Snapshot anim, int flags, int x, int y, int spriteFlag) { }
     }
 
     /** {@code subSprites} entries: y, size, link, tile, x (words; size and link bytes). */
@@ -160,5 +179,14 @@ final class CdSpecialSprites {
         int delta = (short) (a - b);
         if (delta < 0) delta = -delta;
         return ((long) entry * (delta & 0xFFFF)) >>> 8;
+    }
+
+    State capture() { return new State(entries); }
+    void restore(State s) {
+        begin();
+        entries.addAll(s.entries());
+    }
+    record State(List<Entry> entries) {
+        State { entries = List.copyOf(entries); }
     }
 }

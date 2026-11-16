@@ -36,6 +36,57 @@ class TestLevelMotionPixels {
     void aiz1BlendsOnlyPublishedPresentationAndHoldsLag() throws Exception {
         check(RomTestUtils.ensureSonic3kRomAvailable().toPath(), true);
     }
+    @Test @RequiresRom(SonicGame.SONIC_3K)
+    void aizBackgroundContinuityProbe() throws Exception {
+        var settings = settings();
+        try (var session = new GameplayCaptureSession(settings)) {
+            session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 0, 0, settings);
+            for (int frame = 0; frame < 3; frame++) session.step(null);
+            var level = GameServices.level();
+            var camera = GameServices.camera();
+            camera.setX((short) 0x1300); camera.setY((short) 0x380);
+            level.parallaxManager.update(0, 0, camera, level.frameCounter);
+            prime(level);
+            var previous = level.spritePresentationRenderer().motionHistory.offer(PictureSelection.between(.5)).scroll();
+            // Restart with intent installed before scroll dispatch, as the live host does.
+            LevelMotionAccess.observeService(level, GameServices.sprites(), false);
+            LevelMotionAccess.prepareService(level, true);
+            level.parallaxManager.update(0, 0, camera, level.frameCounter);
+            var firstScroll = LevelScrollPresentation.capture(level, com.openggf.game.render.AdvancedRenderFrameState.disabled());
+            var phaseField = LevelScrollPresentation.class.getDeclaredField("phase"); phaseField.setAccessible(true);
+            assertNotNull(phaseField.get(firstScroll), "The first resumed dispatch must retain its phase");
+            publishObservation(level); publishObservation(level);
+            previous = level.spritePresentationRenderer().motionHistory.offer(PictureSelection.LATEST).scroll();
+            int snaps = 0, movingPictures = 0;
+            for (int frame = 0; frame < 180; frame++) {
+                if (frame >= 60) camera.setY((short) (camera.getY() + (frame < 120 ? 2 : -2)));
+                move(level, session, 4);
+                publishObservation(level);
+                var current = level.spritePresentationRenderer().motionHistory.offer(PictureSelection.LATEST).scroll();
+                var motion = current.backgroundMotionSince(previous, 16, 320);
+                if (motion == null) {
+                    snaps++;
+                    System.out.println("AIZ BG motion plan rejected frame=" + frame
+                            + " camera=" + camera.getX() + "," + camera.getY());
+                } else {
+                    var half = current.forMotion(0, 0, 320, motion, .5);
+                    if (!Arrays.equals(current.horizontal(), half.horizontal())) movingPictures++;
+                    if (frame == 0) {
+                        // AIZ1 band 11 is floor((cameraX-$1300)*20/32), negated.
+                        // The first four-pixel pan moves this band 0 -> -2, midpoint -1.
+                        assertEquals(-2, (short) current.horizontal()[0]);
+                        assertEquals(-1, (short) half.horizontal()[0]);
+                        assertNotEquals((short) current.horizontal()[0], (short) half.horizontal()[0],
+                                "A frozen background must fail this amount witness");
+                    }
+                }
+                previous = current;
+            }
+            System.out.println("AIZ BG snaps=" + snaps + "/180");
+            assertEquals(0, snaps, "Ordinary pans should retain background interpolation");
+            assertTrue(movingPictures > 0, "Acceptance alone cannot certify a moving background");
+        }
+    }
     private static GameplayCaptureSession.Settings settings() {
         return new GameplayCaptureSession.Settings(320, "sonic", "", "off", null, 0x400, 128,
                 null, false, false, null, null, true, null, false);

@@ -95,6 +95,14 @@ public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
     private int contributedZone = -1;
     private ZoneScrollHandler contributedHandler;
 
+    // Host capture intent is installed before advancing a service. It survives
+    // picture-history cuts and does not depend on renderer attachment/publication.
+    private boolean motionCaptureEnabled;
+
+    void motionCaptureEnabled(boolean enabled) {
+        motionCaptureEnabled = enabled;
+    }
+
     private com.openggf.level.scroll.ScrollProjectionPhase projectionPhase;
     private BackgroundBuildParameters backgroundBuild;
     private com.openggf.game.internal.BackgroundColumnProjection backgroundColumns;
@@ -455,20 +463,20 @@ public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
 
     private void freezeProjection(ZoneScrollHandler handler, Camera camera, int frame, int act) {
         var level = GameServices.levelOrNull();
-        if (level == null
-                || level.gameModule == null
-                || level.gameModule.getGameService(
-                                com.openggf.level.scroll.DirectedScrollPresentation.class)
-                        == null) {
-            // Ordinary gameplay uses the native
-            // registers directly. Never allocate or query directed descriptor owners.
+        boolean directed = level != null && level.gameModule != null
+                && level.gameModule.getGameService(
+                        com.openggf.level.scroll.DirectedScrollPresentation.class) != null;
+        if (!directed && (!motionCaptureEnabled
+                || !(handler instanceof com.openggf.level.scroll.ScrollProjectionSource))) {
             projectionPhase = null;
             backgroundBuild = null;
             backgroundColumns = null;
             return;
         }
-        backgroundBuild = BackgroundBuildParameters.capture(level);
-        backgroundColumns = level.zoneFeatureProvider
+        // Live interpolation needs a frozen scroll phase to match deformation bands
+        // during vertical pans. Descriptor and column capture remain director-only.
+        backgroundBuild = directed ? BackgroundBuildParameters.capture(level) : null;
+        backgroundColumns = directed && level.zoneFeatureProvider
                 instanceof com.openggf.game.internal.BackgroundColumnProjectionSource source
                 ? source.captureBackgroundColumns() : null;
         var output =
