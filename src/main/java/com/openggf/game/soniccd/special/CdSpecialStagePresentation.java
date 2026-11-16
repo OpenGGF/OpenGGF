@@ -86,4 +86,10 @@ public final class CdSpecialStagePresentation {
             }
         }
     }
+
+    void invalidate() {
+        Arrays.fill(uploaded, (byte) -1);
+        palettesUploaded = false;
+        patternsCached = false;
+    }
 }

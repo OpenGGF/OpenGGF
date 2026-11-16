@@ -68,5 +68,15 @@ final class CdSpecialAnimationScripts {
             frame = (frame + 1) & 0xFF;
             if (Integer.compareUnsigned(current.count(), frame) <= 0) frame = 0;
         }
+
+        Snapshot capture() { return new Snapshot(anim, frame, time, script); }
+        void restore(Snapshot s) {
+            anim = s.anim();
+            frame = s.frame();
+            time = s.time();
+            script = s.script();
+        }
+        record Snapshot(int anim, int frame, int time, Script script) {
+        }
     }
 }
