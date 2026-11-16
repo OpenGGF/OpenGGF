@@ -97,6 +97,26 @@ Full-tree citation checking reports inherited stale/unavailable references and
 local disassembly checkouts different from the pinned references. It is not a
 clean whole-tree citation claim; staged-citation validation applies at commit.
 
+## Restore correction before final smoke
+
+The first smoke attempt was deliberately stopped for a newly identified audio
+selection restore defect: `VERDICT INCOMPLETE`, 8/100 ordinary batches, 3,889
+tests, zero failures/errors, three allowed skips, guards not run. The owned runner
+stopped Maven and cleaned temporary output; inspected diagnostics were acknowledged.
+A new regression test then failed because restoring the CD audio state from
+before an override still routed a later pause to that replacement.
+
+The correction keeps suppression in the existing CD sub-CPU audio `State`, with
+compatibility constructors, and removes the duplicate flag from the audio
+profile. This is confined to the existing CD audio owner; no general rewind or
+widescreen implementation changes. Native-versus-streamed selection is restored,
+while configured mix gains remain presentation configuration. The correction's
+focused selection passed **35 tests, zero failures/errors/skips**:
+
+```sh
+python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl "-Dtest=TestCdModMusic,TestCdAudioMixGains,TestCdAudioLivePath,TestSonicCdModRuntime,TestModApiSignatureSurface" test
+```
+
 ## Follow-up seams
 
 Carry the source capability, its ownership and exact program identity through

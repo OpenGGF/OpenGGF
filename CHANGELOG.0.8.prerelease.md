@@ -485,7 +485,8 @@ under the matching area heading; see the
   object art, and accept CDDA/PCM music-command replacements. Module capabilities
   select native run characters and explicitly refuse unsupported donor hosts.
   CD authored terrain supports owned objects; native objects retain their stage
-  program context. This extends unpublished API candidate 0.7.0.
+  program context. Audio-state restoration also restores the native/streamed
+  music selection. This extends unpublished API candidate 0.7.0.
 
 
 - **Game rules belong to the module:** `GameModule.getPolicies()` now returns an

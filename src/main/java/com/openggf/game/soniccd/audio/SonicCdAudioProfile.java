@@ -79,7 +79,6 @@ public final class SonicCdAudioProfile extends AbstractAudioProfile implements R
         this.subCpu = new CdSubCpuAudio(this::trackSource, this::readDiscFile);
     }
 
-    private boolean externalMusic;
 
     private static final class SoundInventory {
         static final com.openggf.game.audio.RomSoundCatalog.Catalog CATALOG = buildNativeSounds();
@@ -105,14 +104,14 @@ public final class SonicCdAudioProfile extends AbstractAudioProfile implements R
         var command = CdSubCpuAudio.command(id);
         if (command == null) return false;
         if (nativeSounds().music().stream().anyMatch(e -> e.soundId() == id)) {
-            externalMusic = streamed.hasStockOverride(id);
-            subCpu.suppressMusic(externalMusic);
-            if (!externalMusic) streamed.stop();
-            return externalMusic;
+            boolean replacement = streamed.hasStockOverride(id);
+            subCpu.suppressMusic(replacement);
+            if (!replacement) streamed.stop();
+            return replacement;
         }
-        if (externalMusic) {
+        if (subCpu.musicSuppressed()) {
             switch (command.action()) {
-                case CDDA_STOP -> { streamed.stop(); externalMusic = false; subCpu.suppressMusic(false); }
+                case CDDA_STOP -> { streamed.stop(); subCpu.suppressMusic(false); }
                 case CDDA_FADE -> streamed.fadeOut(96, 1);
                 case CDDA_PAUSE -> streamed.pause(com.openggf.audio.StreamedMusicPort.PAUSE_APP);
                 case CDDA_UNPAUSE -> streamed.resume(com.openggf.audio.StreamedMusicPort.PAUSE_APP);

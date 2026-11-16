@@ -43,8 +43,9 @@ public final class CdSubCpuAudio {
     public record Command(int id, String name, Action action, int argument) { }
 
     /** Rewind state of the whole owner; {@code pcm} is null before a stage loads a bank. */
-    public record State(CdCddaPlayer.State cdda, int pcmQueue, PcmState pcm) {
-        public State(CdCddaPlayer.State cdda, int pcmQueue) { this(cdda, pcmQueue, null); }
+    public record State(CdCddaPlayer.State cdda, int pcmQueue, PcmState pcm, boolean musicSuppressed) {
+        public State(CdCddaPlayer.State cdda, int pcmQueue, PcmState pcm) { this(cdda, pcmQueue, pcm, false); }
+        public State(CdCddaPlayer.State cdda, int pcmQueue) { this(cdda, pcmQueue, null, false); }
     }
 
     /** The loaded bank, its driver, the chip and the two clocks' phases. */
@@ -69,10 +70,12 @@ public final class CdSubCpuAudio {
     private CdCddaPlayer.State pendingRestore = CdCddaPlayer.State.IDLE;
     private int pcmQueue;
     private int outputRate;
-    /** Presentation gains, {@link AudioPresentationMixer#UNITY_GAIN} = 1; config, never rewind state. */
+    /** Native-versus-streamed selection follows this audio owner's captured state. */
     private boolean suppressMusic;
     public void suppressMusic(boolean value) { suppressMusic = value; }
+    boolean musicSuppressed() { return suppressMusic; }
 
+    /** Presentation gains, {@link AudioPresentationMixer#UNITY_GAIN} = 1; config, never rewind state. */
     private int musicGain = AudioPresentationMixer.UNITY_GAIN;
     private int sfxGain = AudioPresentationMixer.UNITY_GAIN;
     /** Test-only: take the gained paths at unity too, to show they reduce to the ungained ones. */
@@ -343,12 +346,13 @@ public final class CdSubCpuAudio {
     public State state() {
         PcmState pcmState = pcm == null ? null : new PcmState(loadedBank, pcm.capture(), chip.captureState(),
                 pcmPhase, pcmTickCounter, pcmPrevious, pcmCurrent);
-        return new State(cdda == null ? pendingRestore : cdda.state(), pcmQueue, pcmState);
+        return new State(cdda == null ? pendingRestore : cdda.state(), pcmQueue, pcmState, suppressMusic);
     }
 
     public void restore(State state) {
         Objects.requireNonNull(state, "state");
         pcmQueue = state.pcmQueue();
+        suppressMusic = state.musicSuppressed();
         restorePcm(state.pcm());
         if (cdda == null && state.cdda().track() == 0) {
             pendingRestore = state.cdda();

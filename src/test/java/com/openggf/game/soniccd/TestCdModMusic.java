@@ -26,6 +26,21 @@ class TestCdModMusic {
         assertThrows(IllegalArgumentException.class, () -> RomSoundCatalog.music("scd", 0x7A));
     }
 
+    @Test void restoringBeforeAnOverrideRemovesItsSuppressionAndControlRoute() {
+        var calls = new ArrayList<String>();
+        var streamed = (StreamedMusicPort) Proxy.newProxyInstance(getClass().getClassLoader(),
+                new Class<?>[]{StreamedMusicPort.class}, (proxy, method, args) -> {
+                    calls.add(method.getName());
+                    return method.getName().equals("hasStockOverride") ? (int) args[0] == 0x0F : null;
+                });
+        var profile = new SonicCdAudioProfile(() -> null);
+        var before = profile.subCpuAudio().state();
+        assertTrue(profile.routeMusicRequest(0x0F, streamed));
+        profile.subCpuAudio().restore(before);
+        profile.routeMusicRequest(0xD5, streamed);
+        assertFalse(calls.contains("pause"), "restored native music must not control the later replacement");
+    }
+
     @Test void overrideRoutingPreservesNativeFallbackAndForwardsDiscControlCommands() {
         var calls = new ArrayList<String>();
         var streamed = (StreamedMusicPort) Proxy.newProxyInstance(getClass().getClassLoader(),
