@@ -128,8 +128,8 @@ public final class TunnelbotBadnikInstance extends AbstractObjectInstance
     // Level_trigger_array+8 index
     private static final int LEVEL_TRIGGER_INDEX = 8;
 
-    // Obj_WaitOffscreen installs Map_Offscreen with width/height $20 while it
-    // waits for Render_Sprites to set render_flags bit 7 (sonic3k.asm:180357-180389).
+    // Obj_WaitOffscreen (sonic3k.asm:180362-180378) installs Map_Offscreen
+    // with width/height $20, waiting for visibility in render_flags bit 7.
     private static final int WAIT_OFFSCREEN_MARGIN = 0x20;
 
     // ── Hit flash (sub_88A62) ───────────────────────────────────────────
@@ -256,7 +256,7 @@ public final class TunnelbotBadnikInstance extends AbstractObjectInstance
      * After Obj_WaitOffscreen activates the object, Sprite_CheckDeleteTouch at the
      * end handles deletion when the object is too far from the camera. The engine's
      * ObjectManager only checks X distance for the spawn window; we add the Y bounds
-     * check from Sprite_CheckDeleteTouchXY (sonic3k.asm:179073-179077) to prevent
+     * check from Sprite_CheckDeleteTouchXY (sonic3k.asm:179123-179135) to prevent
      * Tunnelbots on a different vertical path from triggering while far off-screen:
      * <pre>
      *     move.w  y_pos(a0),d0
@@ -287,7 +287,7 @@ public final class TunnelbotBadnikInstance extends AbstractObjectInstance
             return;
         }
 
-        // Y bounds check matching Sprite_CheckDeleteTouchXY (sonic3k.asm:179073).
+        // Y bounds check matching Sprite_CheckDeleteTouchXY (sonic3k.asm:179123-179135).
         // Prevents Tunnelbots at a vertically distant path from running their logic.
         // Range: Camera_Y - $80 to Camera_Y + $180 (512px window).
         if (!isWithinVerticalBounds()) {
@@ -311,7 +311,7 @@ public final class TunnelbotBadnikInstance extends AbstractObjectInstance
     }
 
     /**
-     * Sprite_CheckDeleteTouchXY Y bounds (sonic3k.asm:179073-179077).
+     * Sprite_CheckDeleteTouchXY (sonic3k.asm:179123-179135) Y bounds.
      * <pre>
      *     (y_pos - Camera_Y + $80) unsigned <= $200
      * </pre>
@@ -529,7 +529,7 @@ public final class TunnelbotBadnikInstance extends AbstractObjectInstance
         }
 
         // Apply screen shake offset (alternating pattern)
-        applyShakeOffset();
+        requestContinuousShake();
 
         // Obj_Wait: subq.w #1,$2E(a0); bmi.s — branches when timer goes negative
         shakeTimer--;
@@ -614,7 +614,7 @@ public final class TunnelbotBadnikInstance extends AbstractObjectInstance
      * object clock ({@code V_int_run_count}) de-phased the shake by the
      * accumulated lag count, which is not the clock the ROM routine reads.
      */
-    private void applyShakeOffset() {
+    private void requestContinuousShake() {
         MgzZoneRuntimeState mgzHandler = resolveMgzRuntimeState();
         if (mgzHandler == null) return;
         mgzHandler.requestContinuousScreenShake();
@@ -624,7 +624,7 @@ public final class TunnelbotBadnikInstance extends AbstractObjectInstance
         if (!active) {
             MgzZoneRuntimeState handler = resolveMgzRuntimeState();
             if (handler != null) {
-                handler.clearScreenShakeOffset();
+                handler.clearScreenShakeFlag();
             }
         }
     }

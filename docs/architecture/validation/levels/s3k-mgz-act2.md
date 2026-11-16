@@ -205,3 +205,13 @@ records corrected native request IDs and/or level-restore selection affecting
 this route. Restoration selects the apparent playlist and P1 invincibility at
 the native boundary. These local checks do not requalify this matrix’s inherited
 route, viewport/donor/team, lifecycle or audible-comparison gaps.
+
+## Event publication follow-up (2026-11-15)
+
+The [MGZ audit](../../audits/2026-11-15-s3k-mgz-event-publication.md) records
+shake/cloud/collision ownership and the exact bounded verification.
+`TestS3kMgzScreenPublication` exercises a real MGZ1 load, repeated projection
+and registered restore/forward publication. `TestMgzComposedRewindState` covers
+standalone payload framing and rejection. These do not certify complete acts,
+Knuckles BG movement, wider viewport/donor/team combinations or native pixels;
+this matrix's inherited obligations remain open.

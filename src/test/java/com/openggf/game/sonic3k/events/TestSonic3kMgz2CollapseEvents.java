@@ -50,6 +50,9 @@ class TestSonic3kMgz2CollapseEvents {
     void setUp() {
         TestEnvironment.configureGameModuleFixture(SonicGame.SONIC_3K);
         GameServices.level().setLevel(new SyntheticMgzCollapseLevel());
+        // ShakeScreen_Setup reads P1's native routine; the fixture needs a live P1.
+        GameServices.camera().setFocusedSprite(new com.openggf.tests.TestablePlayableSprite(
+                "sonic", (short) 0x1000, (short) 0x500));
     }
 
     @AfterEach
@@ -77,6 +80,19 @@ class TestSonic3kMgz2CollapseEvents {
     }
 
     @Test
+    void negativeFlagSelectsScrollingWithoutReinitializingTheOpening() {
+        var events = new Sonic3kMGZEvents();
+        events.init(1);
+        events.setScreenEventRoutine(4);
+        events.writeScreenShakeFlag(-1);
+        events.update(1, 0);
+        assertEquals(0, events.getCollapseMutationCount(), "negative flag branches past opening setup");
+        assertEquals(0, events.getCollapseSolidCountForTest());
+        assertFalse(events.isCollapseInitialized());
+        assertEquals(1, events.getCollapseFrameCounter());
+    }
+
+    @Test
     void collapseStartupShakeClearsOpeningAndCreatesCollapseSolids() {
         Sonic3kMGZEvents events = new Sonic3kMGZEvents();
         events.init(1);
@@ -89,6 +105,7 @@ class TestSonic3kMgz2CollapseEvents {
         SyntheticMgzCollapseLevel level = (SyntheticMgzCollapseLevel) GameServices.level().getCurrentLevel();
         assertTrue(events.isCollapseActive());
         assertEquals(1, events.getCollapseMutationCount());
+        assertTrue(events.isScreenShakeActive(), "loc_513FA starts continuous shake after the timed countdown");
         assertEquals(20, events.getCollapseSolidCountForTest());
         assertCleared(level.getMap(), 121, 14, 3, 3);
     }
@@ -327,6 +344,7 @@ class TestSonic3kMgz2CollapseEvents {
         events.init(1);
         events.setScreenEventRoutine(4);
         events.setCollapseInitialized(true);
+        events.writeScreenShakeFlag(-1); // scrolling phase uses the negative ROM flag
         events.setCollapseFrameCounter(0x20);
 
         int[] velocity = new int[10];
@@ -356,6 +374,7 @@ class TestSonic3kMgz2CollapseEvents {
         events.init(1);
         events.setScreenEventRoutine(4);
         events.setCollapseInitialized(true);
+        events.writeScreenShakeFlag(-1); // scrolling phase uses the negative ROM flag
         events.setCollapseFrameCounter(0x20);
 
         int[] velocity = new int[10];

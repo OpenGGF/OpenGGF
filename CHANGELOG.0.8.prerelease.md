@@ -878,7 +878,9 @@ under the matching area heading; see the
   its completed screen/collision publication and all three shake words in one
   validated rewind payload; objects consume the preceding publication and
   rendering only projects it. The seamless reload retains HCZ1 deformation,
-  and the geyser begins shaking on its native first dispatch. Scene
+  and the geyser begins shaking on its native first dispatch. MGZ likewise
+  owns shake, cloud phase and collision publication; drawing or rebuilding its
+  scroll output cannot advance gameplay, and rewind restores the composed state. Scene
   presentation spells out capture, restoration and failure cleanup in operation
   order, and pixel-oracle failures retain the rendering mode and captured frame.
   Failed trace replays print their exact test/report/triage route; triage reads

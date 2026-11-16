@@ -86,7 +86,6 @@ class TestSonic3kMgz2BgRiseEvents {
      * and the remaining MGZ screen events running later in the frame.
      */
     private static void tick(Sonic3kMGZEvents events, int frame) {
-        events.updatePrePhysics(1);
         events.updateBgRiseObjectAfterPlayerPhysics(1);
         events.update(1, frame);
     }
@@ -203,7 +202,7 @@ class TestSonic3kMgz2BgRiseEvents {
         events.setBgRiseLoadStateInitialised(true);
         events.setBgRiseRoutine(BG_RISE_SONIC);
 
-        events.updatePrePhysics(1);
+        events.updateBackgroundEvents(1);
         assertFalse(events.isBgRiseMotionStarted(),
                 "the background-event bridge sees the prior player position");
 
@@ -225,7 +224,7 @@ class TestSonic3kMgz2BgRiseEvents {
         events.setBgRiseRoutine(BG_RISE_AFTER_MOVE);
         events.setCollapseInitialized(true);
 
-        events.updatePrePhysics(1);
+        events.updateBackgroundEvents(1);
 
         assertEquals(BG_RISE_AFTER_MOVE, events.getBgRiseRoutine(),
                 "MGZ2_LevelCollapse's _unkEEA2 VScroll mode makes MGZ2_BGEventTrigger return before state-C re-entry");
