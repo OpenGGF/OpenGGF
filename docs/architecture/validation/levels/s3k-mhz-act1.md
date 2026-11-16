@@ -749,3 +749,12 @@ explicit original ROM properties, one alphabetical fork and queued Maven are
 used throughout. No shared executable source changed, so no S1-chain rerun or
 shared-code smoke is claimed. Broad profiles, native capture/publication,
 frontier-log updates and integration remain lead-owned.
+
+### Screen publication ownership — 2026-11-15
+
+The [MHZ publication audit](../../audits/2026-11-15-s3k-mhz-event-publication.md)
+records the event-owned loop, deformation/animation bands, pillar helper positions
+and shake payload. `TestS3kMhzScreenPublication` exercises a real MHZ2 rebuild
+and boss shake component; `TestMhzComposedRewindState` rejects malformed captures.
+This adds bounded publication/rewind obligations, not additional route, donor,
+team or visual certification. Existing matrix gaps above remain open.

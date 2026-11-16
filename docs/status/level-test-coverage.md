@@ -2836,3 +2836,8 @@ MICA authored S3K ending presentation (2026-11-08): the
 [ending matrix](../architecture/validation/levels/s3k-ending.md#authored-sonic-route-ending-presentation-2026-11-08)
 records passing declared-entry normal/Super/Hyper mapping and capture checks.
 Doomsday route entry, mod rewind and broader team/viewport certification remain open.
+
+MHZ publication ownership (2026-11-15): the
+[bounded audit](../architecture/audits/2026-11-15-s3k-mhz-event-publication.md)
+tracks renderer rebuild isolation and composed event/shake restoration. Both MHZ
+act matrices retain their existing route/configuration and visual coverage gaps.

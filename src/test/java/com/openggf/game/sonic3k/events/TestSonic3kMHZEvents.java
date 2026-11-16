@@ -914,25 +914,27 @@ class TestSonic3kMHZEvents {
     }
 
     @Test
-    void act2BackgroundEventRoutine8RunsShakeSetupWhileWaitingBelowArenaThreshold() {
-        HeadlessTestFixture.builder()
+    void act2BackgroundEventRoutine8ReturnsWithoutShakeSetupWhileWaitingBelowArenaThreshold() {
+        var fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_MHZ, 1)
-                .startPosition((short) 0x3700, (short) 0x0400)
+                .startPosition((short) 0x3700, (short) 0x0450)
                 .startPositionIsCentre()
                 .build();
 
         Sonic3kMHZEvents events = getMhzEvents();
         events.setAct2BackgroundRoutineForTest(0x08);
+        fixture.sprite().setCentreY((short) 0x0450);
+        fixture.sprite().setAir(true);
         events.setScreenShakeFlagForTest(-1);
         events.setScreenShakeOffsetForTest(2);
         GameServices.camera().setX((short) 0x3E00);
 
         events.update(1, 3);
 
-        assertEquals(2, events.getScreenShakeLastOffset(),
-                "loc_55486 should preserve Screen_shake_offset into Screen_shake_last_offset before ticking shake");
-        assertEquals(3, events.getScreenShakeOffset(),
-                "negative Screen_shake_flag should use ScreenShakeArray2[Level_frame_counter & $3F]");
+        assertEquals(8, events.getAct2BackgroundRoutine(), "native airborne wait branch remains selected");
+        assertEquals(0, events.getScreenShakeLastOffset(),
+                "loc_552E0 returns through loc_552E4/PlainDeformation, bypassing loc_554B4");
+        assertEquals(2, events.getScreenShakeOffset(), "no setup on the early redraw/wait branch");
     }
 
     @Test
@@ -1914,6 +1916,8 @@ class TestSonic3kMHZEvents {
                 .orElseThrow();
         int[] hScroll = new int[M68KMath.VISIBLE_LINES];
 
+        camera.setX((short) 0x4080);
+        events.update(1, 8);
         new SwScrlMhz().update(hScroll, 0x4080, 0x0500, 1, 1);
         tallSupport.update(1, fixture.sprite());
 

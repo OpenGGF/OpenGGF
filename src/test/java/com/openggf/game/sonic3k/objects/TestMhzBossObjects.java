@@ -2361,7 +2361,6 @@ class TestMhzBossObjects {
         verify(objectManager).addDynamicObject(any(SongFadeTransitionInstance.class));
         verify(objectManager, org.mockito.Mockito.times(7)).addDynamicObjectAfterCurrent(any(ObjectInstance.class));
         var nativeOrder = org.mockito.Mockito.inOrder(gameState, levelState);
-        nativeOrder.verify(gameState).setScreenShakeActive(true);
         nativeOrder.verify(levelState).pauseTimer();
         nativeOrder.verify(gameState).addScore(1000);
         verifyNoMoreInteractions(objectManager, gameState, levelState);

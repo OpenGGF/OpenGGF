@@ -80,13 +80,16 @@ class TestSonic3kMhzRuntimeStateRegistration {
     }
 
     @Test
-    void mhzScrollPublishesDeformOutputsForAnimatedTiles() throws Exception {
+    void mhzEventsPublishDeformOutputsForAnimatedTiles() throws Exception {
         Sonic3kLevelEventManager manager =
                 (Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider();
         manager.initLevel(Sonic3kZoneIds.ZONE_MHZ, 0);
         ZoneRuntimeState current = GameServices.zoneRuntimeRegistry().current();
         SwScrlMhz handler = new SwScrlMhz();
 
+        GameServices.camera().setX((short) 0x400);
+        GameServices.camera().setY((short) 0x400);
+        manager.getMhzEvents().restoreLoopCarry(new Sonic3kMHZEvents.LoopCarry(0x400, 0x400));
         handler.update(new int[224], 0x0400, 0x0400, 0, 0);
 
         MhzZoneRuntimeState mhzState = assertInstanceOf(MhzZoneRuntimeState.class, current);
@@ -97,41 +100,25 @@ class TestSonic3kMhzRuntimeStateRegistration {
     }
 
     @Test
-    void mhzScrollAppliesScreenShakeOffsetToBackgroundCameraCopy() throws Exception {
-        Sonic3kLevelEventManager manager =
-                (Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider();
-        manager.initLevel(Sonic3kZoneIds.ZONE_MHZ, 0);
-        Sonic3kMHZEvents events = manager.getMhzEvents();
-        events.setScreenShakeOffsetForTest(4);
-        ZoneRuntimeState current = GameServices.zoneRuntimeRegistry().current();
-        SwScrlMhz handler = new SwScrlMhz();
-        int[] hScroll = new int[224];
-
-        handler.update(hScroll, 0x0400, 0x0400, 0, 0);
-
-        MhzZoneRuntimeState mhzState = assertInstanceOf(MhzZoneRuntimeState.class, current);
-        assertEquals(packScrollWords(negWord(0x0400), negWord(0x0182)), hScroll[0],
-                "sub_554B8 subtracts Screen_shake_offset before MHZ_Deform X math, then adds it back to Camera_X_pos_BG_copy");
-        assertEquals(0x0182, mhzState.publishedBgCameraX());
-        assertEquals(0x013E, mhzState.middleBgCameraX());
-        assertEquals(0x00FF, mhzState.nearBgCameraX());
+    void bossAreaDeformCancelsShakeBeforeRatioAndRestoresItAfterward() {
+        var output = Sonic3kMHZEvents.computeMhzDeform(0x400, 0x400, 4, true);
+        assertEquals(0x182, output.bgCameraX() & 0xFFFF);
+        assertEquals(0x13E, output.band1CameraX() & 0xFFFF);
+        assertEquals(0xFF, output.band2CameraX() & 0xFFFF);
+        var normal = Sonic3kMHZEvents.computeMhzDeform(0x400, 0x400, 4, false);
+        assertEquals(0x180, normal.bgCameraX() & 0xFFFF);
     }
 
     @Test
     void rewindSnapshotRestoresMushroomCapPositionCounter() {
         MhzZoneRuntimeState state = new MhzZoneRuntimeState(0, PlayerCharacter.SONIC_AND_TAILS);
-        state.publishDeformOutputs(0x1234, 0x2345, 0x3456);
         state.publishMushroomCapPositionCounter(0x56);
 
         byte[] snapshot = state.captureBytes();
-        state.publishDeformOutputs(0, 0, 0);
         state.publishMushroomCapPositionCounter(0);
 
         state.restoreBytes(snapshot);
 
-        assertEquals(0x1234, state.publishedBgCameraX());
-        assertEquals(0x2345, state.middleBgCameraX());
-        assertEquals(0x3456, state.nearBgCameraX());
         assertEquals(0x56, state.mushroomCapPositionCounter(),
                 "The MHZ Anim_Counters+$F mirror must rewind with the runtime state so mushroom caps keep ROM phase");
     }

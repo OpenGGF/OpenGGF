@@ -5,7 +5,12 @@ import com.openggf.game.mutation.LevelMutationSurface;
 import com.openggf.game.mutation.LayoutMutationContext;
 import com.openggf.game.mutation.MutationEffects;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
-import com.openggf.game.sonic3k.scroll.SwScrlMhz;
+import com.openggf.game.rewind.RewindTransient;
+import com.openggf.game.rewind.schema.ZoneEventSchemaSidecar;
+import com.openggf.game.sonic3k.runtime.S3kScreenShake;
+import com.openggf.sprites.playable.NativePlayableRoutine;
+import java.nio.ByteBuffer;
+import static com.openggf.level.scroll.M68KMath.negWord;
 import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
@@ -144,16 +149,6 @@ public class Sonic3kMHZEvents extends Sonic3kZoneEvents {
             0x01, 0x02, 0x00, 0x03, 0x01, 0x04, 0x02, 0x00,
             0x04, 0x01, 0x03, 0x04, 0x02, 0x00, 0x04, 0x02
     };
-    private static final byte[] SCREEN_SHAKE_ARRAY_TIMED = {
-            1, -1, 1, -1, 2, -2, 2, -2, 3, -3, 3, -3, 4, -4, 4, -4,
-            5, -5, 5, -5
-    };
-    private static final byte[] SCREEN_SHAKE_ARRAY_CONTINUOUS = {
-            1, 2, 1, 3, 1, 2, 2, 1, 2, 3, 1, 2, 1, 2, 0, 0,
-            2, 0, 3, 2, 2, 3, 2, 2, 1, 3, 0, 0, 1, 0, 1, 3,
-            1, 2, 1, 3, 1, 2, 2, 1, 2, 3, 1, 2, 1, 2, 0, 0,
-            2, 0, 3, 2, 2, 3, 2, 2, 1, 3, 0, 0, 1, 0, 1, 3
-    };
     private static final int SEASON_PALETTE_START_LINE = 2;
     private static final int PALETTE_LINE_SIZE = 32;
     private static final int[][] ACT2_SEASON_TRIGGERS = {
@@ -179,9 +174,18 @@ public class Sonic3kMHZEvents extends Sonic3kZoneEvents {
     private boolean shipScrollLockSet;
     private boolean shipControllerSignalFlag;
     private int endBossWalkoffPrepEventFlag;
-    private int screenShakeFlag;
-    private int screenShakeOffset;
-    private int screenShakeLastOffset;
+    @RewindTransient(reason = "captured with the scalar publication by captureMhzState")
+    private final S3kScreenShake screenShake = new S3kScreenShake();
+    private boolean loopScrollInitialized;
+    private int loopActualCameraX;
+    private int loopAdjustedCameraX;
+    private int publishedBgCameraX;
+    private int middleBgCameraX;
+    private int nearBgCameraX;
+    private int publishedBgCameraY;
+    private int appliedScreenShakeOffset;
+    private int endBossArenaTallSupportX;
+    private int[] endBossArenaSpikeX = new int[6];
     private int shipHScrollCameraCopy;
     private int shipPrimaryHScroll;
     private int shipPlayerCarryBgY;
@@ -229,9 +233,13 @@ public class Sonic3kMHZEvents extends Sonic3kZoneEvents {
         shipScrollLockSet = false;
         shipControllerSignalFlag = false;
         endBossWalkoffPrepEventFlag = 0;
-        screenShakeFlag = 0;
-        screenShakeOffset = 0;
-        screenShakeLastOffset = 0;
+        screenShake.clear();
+        loopScrollInitialized = false;
+        loopActualCameraX = loopAdjustedCameraX = 0;
+        publishedBgCameraX = middleBgCameraX = nearBgCameraX = publishedBgCameraY = 0;
+        appliedScreenShakeOffset = 0;
+        endBossArenaTallSupportX = 0;
+        endBossArenaSpikeX = new int[6];
         shipHScrollCameraCopy = 0;
         shipPrimaryHScroll = 0;
         shipPlayerCarryBgY = 0;
@@ -270,7 +278,11 @@ public class Sonic3kMHZEvents extends Sonic3kZoneEvents {
         if (act == 0) {
             updateAct1ScreenEvent();
             updateAct1BackgroundEvent();
+            publishBackground();
         } else if (act == 1) {
+            appliedScreenShakeOffset = screenShake.offset();
+            // MHZ2_ScreenEvent (sonic3k.asm:112488-112492) consumes last setup.
+            camera().setXCopy((short) (camera().getXCopy() + appliedScreenShakeOffset));
             updateAct2ScreenEvent();
             updateAct2BackgroundEvent(frameCounter);
         }
@@ -398,10 +410,9 @@ public class Sonic3kMHZEvents extends Sonic3kZoneEvents {
                 camera.getMinX(), ACT1_TO_ACT2_TRANSITION_OFFSET_X);
         int postTransitionMaxX = offsetCameraBoundWord(
                 camera.getMaxX(), ACT1_TO_ACT2_TRANSITION_OFFSET_X);
-        var scroll = (SwScrlMhz) module().getScrollHandlerProvider().getHandler(Sonic3kZoneIds.ZONE_MHZ);
         var handoff = seamlessTransitionResourceHandoffs().register(
                 new MhzActTransitionHandoff(levelManager().getCurrentLevel(), this,
-                        scroll.captureForActTransition(ACT1_TO_ACT2_TRANSITION_OFFSET_X)));
+                        new LoopCarry((loopActualCameraX + ACT1_TO_ACT2_TRANSITION_OFFSET_X) & 0xFFFF, loopAdjustedCameraX)));
         levelManager().requestSeamlessTransition(
                 SeamlessLevelTransitionRequest.builder(
                                 SeamlessLevelTransitionRequest.TransitionType.RELOAD_TARGET_LEVEL)
@@ -507,7 +518,12 @@ public class Sonic3kMHZEvents extends Sonic3kZoneEvents {
         } else if (act2BackgroundRoutine == ACT2_BG_END_BOSS_FINAL_DRAW_ROUTINE) {
             updateAct2EndBossArenaFinalDrawEvent();
         }
-        updateScreenShakeSetup(frameCounter);
+        publishBackground();
+        // Only loc_55486 reaches loc_554B4. The early MHZ_Deform/redraw
+        // branches return through PlainDeformation without running setup.
+        if (act2BackgroundRoutine >= ACT2_BG_END_BOSS_ARENA_ROUTINE) {
+            updateScreenShakeSetup(frameCounter);
+        }
     }
 
     private void updateAct2InitialBackgroundEvent() {
@@ -529,21 +545,10 @@ public class Sonic3kMHZEvents extends Sonic3kZoneEvents {
         }
     }
 
-    private void updateScreenShakeSetup(int frameCounter) {
-        screenShakeLastOffset = screenShakeOffset;
-        if (screenShakeFlag == 0) {
-            screenShakeOffset = 0;
-            return;
-        }
-        if (screenShakeFlag < 0) {
-            screenShakeOffset = SCREEN_SHAKE_ARRAY_CONTINUOUS[frameCounter & 0x3F];
-            return;
-        }
-
-        screenShakeFlag--;
-        screenShakeOffset = screenShakeFlag < SCREEN_SHAKE_ARRAY_TIMED.length
-                ? SCREEN_SHAKE_ARRAY_TIMED[screenShakeFlag]
-                : 0;
+    private void updateScreenShakeSetup(int levelFrameCounter) {
+        var player = focusedPlayer();
+        screenShake.setup(levelFrameCounter, player == null
+                || NativePlayableRoutine.isAtOrBeyondDeathForNativeRead(player));
     }
 
     private void updateAct2EndBossCustomLayoutEvent() {
@@ -1277,7 +1282,7 @@ public class Sonic3kMHZEvents extends Sonic3kZoneEvents {
     }
 
     private int act2ScreenCameraXCopy() {
-        return ((camera().getX() & 0xFFFF) + screenShakeOffset) & 0xFFFF;
+        return ((camera().getX() & 0xFFFF) + screenShake.offset()) & 0xFFFF;
     }
 
     private void carryObjectControlledPlayerWithShipScroll(int previousShipPrimaryHScroll, int previousShipEffectiveBgY) {
@@ -1453,19 +1458,21 @@ public class Sonic3kMHZEvents extends Sonic3kZoneEvents {
     }
 
     public int getScreenShakeOffset() {
-        return screenShakeOffset;
+        return screenShake.offset();
     }
 
     public int getScreenShakeLastOffset() {
-        return screenShakeLastOffset;
+        return screenShake.lastOffset();
     }
 
     public void setScreenShakeFlagForTest(int screenShakeFlag) {
-        this.screenShakeFlag = screenShakeFlag;
+        requestScreenShake(screenShakeFlag);
     }
 
     public void setScreenShakeOffsetForTest(int screenShakeOffset) {
-        this.screenShakeOffset = screenShakeOffset;
+        ByteBuffer words = ByteBuffer.allocate(S3kScreenShake.captureBytes());
+        words.putInt(screenShake.flag()).putInt(screenShakeOffset).putInt(screenShake.lastOffset()).flip();
+        screenShake.restoreFrom(words);
     }
 
     public int getShipHScrollCameraCopy() {
@@ -1583,6 +1590,16 @@ public class Sonic3kMHZEvents extends Sonic3kZoneEvents {
     }
 
     public void validateRewindSidecarState() {
+        for (int word : new int[] {loopActualCameraX, loopAdjustedCameraX, publishedBgCameraX,
+                middleBgCameraX, nearBgCameraX, endBossArenaTallSupportX}) {
+            if (word < 0 || word > 0xFFFF) throw new IllegalArgumentException("Invalid MHZ unsigned word");
+        }
+        if (publishedBgCameraY != (short) publishedBgCameraY
+                || appliedScreenShakeOffset != (short) appliedScreenShakeOffset
+                || endBossArenaSpikeX == null || endBossArenaSpikeX.length != 6)
+            throw new IllegalArgumentException("Invalid MHZ publication words");
+        for (int word : endBossArenaSpikeX)
+            if (word < 0 || word > 0xFFFF) throw new IllegalArgumentException("Invalid MHZ helper word");
         if (endBossArenaSpikeTiers == null) {
             throw new IllegalArgumentException("MHZ rewind sidecar restored null endBossArenaSpikeTiers");
         }
@@ -1641,5 +1658,187 @@ public class Sonic3kMHZEvents extends Sonic3kZoneEvents {
 
     public int getLevelRepeatOffset() {
         return levelRepeatOffset;
+    }
+
+    public void publishDeformOutputs(int bg, int middle, int near) {
+        publishedBgCameraX = bg & 0xFFFF; middleBgCameraX = middle & 0xFFFF; nearBgCameraX = near & 0xFFFF;
+    }
+    public void publishEndBossArenaHelperXPositions(int support, int[] spikes) {
+        endBossArenaTallSupportX = support & 0xFFFF;
+        Arrays.fill(endBossArenaSpikeX, 0);
+        if (spikes != null) for (int i = 0; i < Math.min(6, spikes.length); i++) endBossArenaSpikeX[i] = spikes[i] & 0xFFFF;
+    }
+    /** Object flag writes only; loc_76164 (sonic3k.asm:157132-157144). */
+    public void requestScreenShake(int frames) { screenShake.writeFlag(frames); }
+    public int getScreenShakeFlag() { return screenShake.flag(); }
+    public int appliedScreenShakeOffset() { return appliedScreenShakeOffset; }
+    public int loopAdjustedCameraX() { return loopAdjustedCameraX; }
+    public int publishedBgCameraX() { return publishedBgCameraX; }
+    public int middleBgCameraX() { return middleBgCameraX; }
+    public int nearBgCameraX() { return nearBgCameraX; }
+    public int endBossArenaTallSupportX() { return endBossArenaTallSupportX; }
+    public int endBossArenaSpikeX(int index) { return endBossArenaSpikeX[index]; }
+    public record LoopCarry(int actualX, int adjustedX) { }
+    public void restoreLoopCarry(LoopCarry carry) {
+        loopScrollInitialized = true;
+        loopActualCameraX = carry.actualX();
+        loopAdjustedCameraX = carry.adjustedX();
+        publishBackground();
+    }
+    /** MHZ1_BackgroundInit (sonic3k.asm:112310-112317). No ordinary event dispatch. */
+    public void initializeBackgroundAtLoad() {
+        if (loopScrollInitialized) return;
+        loopScrollInitialized = true;
+        loopActualCameraX = loopAdjustedCameraX = camera().getXCopy() & 0xFFFF;
+        publishBackground();
+    }
+    /** MHZ2_BackgroundEvent (sonic3k.asm:112897-112904), then sub_5550C. */
+    private void publishBackground() {
+        int x = camera().getXCopy() & 0xFFFF;
+        int adjusted = adjustBgDuringLoop(x);
+        var deform = computeMhzDeform(adjusted, camera().getYCopy(), appliedScreenShakeOffset,
+                isBossAreaBackgroundDeformActive());
+        publishedBgCameraX = deform.bgCameraX() & 0xFFFF;
+        middleBgCameraX = deform.band1CameraX() & 0xFFFF;
+        nearBgCameraX = deform.band2CameraX() & 0xFFFF;
+        publishedBgCameraY = deform.bgCameraY();
+        // loc_555D2 (sonic3k.asm:113291-113307) writes helper positions after
+        // building the native ramp, before the following Process_Sprites.
+        if (!isShipHIntActive() && isEndBossArenaForegroundRefreshActive()) {
+            int nativeX = com.openggf.camera.NativeViewportFraming.nativeLeft(
+                    camera().getX(), camera().getWidth()) & 0xFFFF;
+            if ((short) (nativeX - 0x4180) >= -0x140) {
+                int start = (negWord(nativeX + appliedScreenShakeOffset - 0x80) & 0xFFFF) << 16;
+                int step = computeEndBossPillarRampStep(nativeX);
+                endBossArenaTallSupportX = helperX(start, step, 47, nativeX);
+                int[] lines = {40, 40, 30, 30, 17, 17};
+                for (int i = 0; i < lines.length; i++)
+                    endBossArenaSpikeX[i] = helperX(start, step, lines[i], nativeX);
+            }
+        }
+    }
+    private static int helperX(int start, int step, int line, int cameraX) {
+        return ((((short) ((start + step * line) >> 16) - 0x48) & 0x1FF) + cameraX) & 0xFFFF;
+    }
+    public record DeformOutputs(short bgCameraY, short bgCameraX, short band1CameraX, short band2CameraX) { }
+    private int adjustBgDuringLoop(int cameraX) {
+        int currentCameraX = cameraX & 0xFFFF;
+        if (!loopScrollInitialized) {
+            loopActualCameraX = currentCameraX;
+            loopAdjustedCameraX = currentCameraX;
+            loopScrollInitialized = true;
+            return loopAdjustedCameraX;
+        }
+
+        int delta = (short) (currentCameraX - loopActualCameraX);
+        loopActualCameraX = currentCameraX;
+        if (delta < 0) {
+            int magnitude = -delta;
+            if (magnitude >= 0x0100) {
+                magnitude -= 0x0200;
+            }
+            loopAdjustedCameraX = (loopAdjustedCameraX - magnitude) & 0xFFFF;
+        } else {
+            int magnitude = delta;
+            if (magnitude >= 0x0100) {
+                magnitude -= 0x0200;
+            }
+            loopAdjustedCameraX = (loopAdjustedCameraX + magnitude) & 0xFFFF;
+        }
+        return loopAdjustedCameraX;
+    }
+
+    public static DeformOutputs computeMhzDeform(int cameraX, int cameraY, int screenShakeOffset,
+                                                   boolean bossAreaDeformActive) {
+        short bgY = bossAreaDeformActive
+                ? computeBgY(cameraY, 0x280, 0x180)
+                : computeBgY(cameraY, 0, 0x76);
+        int adjustedCameraX = cameraX - (bossAreaDeformActive ? screenShakeOffset : 0);
+        int d0 = ((short) adjustedCameraX) << 16;
+        d0 >>= 1;
+        int d1 = d0;
+        d1 >>= 2;
+        d0 -= d1;
+        d1 >>= 1;
+
+        short bgX = (short) (highWord(d0) + (bossAreaDeformActive ? screenShakeOffset : 0));
+        d0 -= d1;
+        short band1 = highWord(d0);
+        d0 -= d1;
+        short band2 = highWord(d0);
+        return new DeformOutputs(bgY, bgX, band1, band2);
+    }
+
+    private static short computeBgY(int cameraY, int yOffset, int baseY) {
+        int d0 = ((short) (cameraY - yOffset)) << 16;
+        d0 >>= 3;
+        int d1 = d0;
+        d1 >>= 2;
+        d0 += d1;
+        return (short) (highWord(d0) + baseY);
+    }
+
+    private static short highWord(int value) {
+        return (short) (value >> 16);
+    }
+
+    public static int computeEndBossPillarRampStep(int cameraX) {
+        int distance = (short) (cameraX - 0x4180);
+        int scaled = distance * 0x5600;
+        scaled += scaled;
+        int scaledSwapped = swapWords(scaled);
+        int deltaWord = (short) (distance - (short) scaledSwapped);
+        deltaWord = (short) (deltaWord - 0x18);
+        int magnitude = deltaWord << 16;
+        boolean negative = magnitude < 0;
+        if (negative) {
+            magnitude = -magnitude;
+        }
+        // loc_55586: DIVU leaves the remainder in D2's high word.
+        // MOVE.W replaces only its low word before the second DIVU;
+        // discarding that remainder loses the fractional ramp entirely.
+        int highDividend = (magnitude >>> 16) & 0xFFFF;
+        int highQuotient = highDividend / 0x30;
+        int lowDividend = ((highDividend % 0x30) << 16) | (magnitude & 0xFFFF);
+        int lowQuotient = lowDividend / 0x30;
+        int step = (highQuotient << 16) | lowQuotient;
+        return negative ? -step : step;
+    }
+
+    private static int swapWords(int value) {
+        return (value << 16) | ((value >>> 16) & 0xFFFF);
+    }
+
+
+    public byte[] captureMhzState() {
+        byte[] scalars = ZoneEventSchemaSidecar.capture(this);
+        ByteBuffer out = ByteBuffer.allocate(12 + scalars.length + S3kScreenShake.captureBytes());
+        out.putInt(0x4D485A31).putInt(1).putInt(scalars.length).put(scalars);
+        screenShake.captureTo(out);
+        return out.array();
+    }
+    public static boolean hasValidMhzState(byte[] bytes) {
+        if (bytes == null || bytes.length < 24) return false;
+        ByteBuffer in = ByteBuffer.wrap(bytes);
+        if (in.getInt() != 0x4D485A31 || in.getInt() != 1) return false;
+        int length = in.getInt();
+        if (length < 0 || length != in.remaining() - 12) return false;
+        byte[] scalars = new byte[length]; in.get(scalars);
+        if (!ZoneEventSchemaSidecar.hasValidVariableLengthPayload(Sonic3kMHZEvents.class, scalars)) return false;
+        var probe = new Sonic3kMHZEvents();
+        try {
+            ZoneEventSchemaSidecar.restoreVariableLength(probe, scalars);
+            probe.validateRewindSidecarState();
+            if (!Arrays.equals(scalars, ZoneEventSchemaSidecar.capture(probe))) return false;
+        } catch (IllegalArgumentException | IndexOutOfBoundsException invalid) { return false; }
+        for (int i = 0; i < 3; i++) { int word = in.getInt(); if (word != (short) word) return false; }
+        return true;
+    }
+    public void restoreMhzState(byte[] bytes) {
+        if (!hasValidMhzState(bytes)) throw new IllegalArgumentException("Invalid MHZ publication");
+        ByteBuffer in = ByteBuffer.wrap(bytes); in.position(8);
+        byte[] scalars = new byte[in.getInt()]; in.get(scalars);
+        ZoneEventSchemaSidecar.restoreVariableLength(this, scalars);
+        screenShake.restoreFrom(in);
     }
 }
