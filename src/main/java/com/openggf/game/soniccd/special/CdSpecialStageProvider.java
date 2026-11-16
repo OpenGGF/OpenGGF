@@ -7,6 +7,7 @@ import com.openggf.game.SpecialStageDebugProvider;
 import com.openggf.game.SpecialStageProvider;
 import com.openggf.game.SpecialStageViewport;
 import com.openggf.game.soniccd.CdDiscDataSource;
+import com.openggf.game.soniccd.program.CdProgramScreenRenderer;
 
 import java.io.IOException;
 import java.util.Objects;
@@ -22,7 +23,8 @@ public final class CdSpecialStageProvider implements SpecialStageProvider {
     private final Supplier<CdDiscDataSource> disc;
     private CdSpecialStageAssets assets;
     private CdSpecialStageSession session;
-    private CdSpecialStagePresentation presentation;
+    /** Draws the program's picture ({@link CdSpecialStageScreen}): planes, HUD, sprites and fades. */
+    private final CdProgramScreenRenderer renderer = new CdProgramScreenRenderer();
     private CdSpecialStageEntry pending;
     private int timeStones;
     private int held;
@@ -60,7 +62,7 @@ public final class CdSpecialStageProvider implements SpecialStageProvider {
                 : CdSpecialStageEntry.normal(stageIndex, timeStones);
         pending = null;
         session = new CdSpecialStageSession(assets, entry);
-        presentation = new CdSpecialStagePresentation(assets, entry.stageId());
+        renderer.reset();
         held = 0;
         reported = false;
     }
@@ -93,13 +95,18 @@ public final class CdSpecialStageProvider implements SpecialStageProvider {
 
     @Override
     public void draw() {
-        if (session == null || presentation == null) return;
-        presentation.draw(GameServices.graphics(), session, viewport.innerH32OriginX());
+        if (session != null) renderer.draw(session.screen().frame());
+    }
+
+    /** The backdrop is CRAM entry $20 ({@code StageVDPRegs} register 7, scddisasm/src/Special Stage/Main.asm:3503). */
+    @Override
+    public void setClearColor() {
+        if (session != null) renderer.setClearColor(session.screen().frame(), 0x20);
     }
 
     @Override public void handleInput(int heldButtons, int pressedButtons) { held = heldButtons & 0xFF; }
     @Override public boolean isFinished() { return session != null && session.ended(); }
-    @Override public void reset() { session = null; presentation = null; }
+    @Override public void reset() { session = null; }
     @Override public boolean isInitialized() { return session != null; }
     @Override public boolean hasSpecialStages() { return true; }
     @Override public SpecialStageAccessType getAccessType() { return SpecialStageAccessType.GIANT_RING; }

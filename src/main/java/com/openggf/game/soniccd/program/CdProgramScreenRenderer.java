@@ -47,13 +47,16 @@ public final class CdProgramScreenRenderer {
     /** Forget uploaded tiles (a new program reuses the atlas range). */
     public void reset() { cached.clear(); }
 
-    public void setClearColor(Frame frame) {
+    public void setClearColor(Frame frame) { setClearColor(frame, 0); }
+
+    /** Clears to CRAM entry {@code backdrop} (the program's VDP register 7), or black while the display is off. */
+    public void setClearColor(Frame frame, int backdrop) {
         GraphicsManager gm = GameServices.graphics();
         if (gm.isHeadlessMode()) return;
         Palette line = new Palette();
-        line.fromSegaFormat(lineBytes(frame.palette(), 0));
+        line.fromSegaFormat(lineBytes(frame.palette(), (backdrop >> 4) & 3));
         Palette.Color black = new Palette.Color();
-        PaletteDisplayColor.glClear(frame.display() ? line.colors[0] : black, gm);
+        PaletteDisplayColor.glClear(frame.display() ? line.colors[backdrop & 0xF] : black, gm);
     }
 
     public void draw(Frame frame) {
