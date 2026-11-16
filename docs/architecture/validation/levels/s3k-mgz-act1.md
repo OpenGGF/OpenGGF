@@ -748,8 +748,12 @@ presentation obligations open.
 
 The [MGZ audit](../../audits/2026-11-15-s3k-mgz-event-publication.md) records
 shake/cloud/collision ownership and the exact bounded verification.
-`TestS3kMgzScreenPublication` exercises a real MGZ1 load, repeated projection
-and registered restore/forward publication. `TestMgzComposedRewindState` covers
+`TestS3kMgzScreenPublication` exercises real MGZ1/MGZ2 loads, repeated projection,
+registered restore/forward publication and the MGZ2 trigger-frame payload. `TestMgzComposedRewindState` covers
 standalone payload framing and rejection. These do not certify complete acts,
 Knuckles BG movement, wider viewport/donor/team combinations or native pixels;
 this matrix's inherited obligations remain open.
+
+Review corrections add exact collapse arm/BG ordering, late-load no-SST effects,
+and whole-manager malformed-payload rejection. Focused checks pass; two new
+collapse-handoff trace failures block readiness (see the audit).

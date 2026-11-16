@@ -577,7 +577,6 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
 
     private void update(int act, int frameCounter, boolean includeBossTransitionObject) {
         appliedScreenShakeOffset = screenShake.offset();
-        int precedingScreenRoutine = screenEventRoutine;
         int precedingBgRoutine = bgRoutine;
         if (act == 1 && screenShakeActive && screenEventRoutine == SCREEN_EVENT_NORMAL) {
             requestContinuousScreenShake();
@@ -618,11 +617,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
         // the normal dispatch which first arms that transition still runs setup.
         publishScreenState(act, frameCounter, camera().getXCopy(), camera().getYCopy(),
                 act != 0 || precedingBgRoutine != BG_STAGE_DO_TRANSITION);
-        // MGZ2SE_Normal calls its BG event before arming the timed flag
-        // (sonic3k.asm:106458-106469); setup must not decrement on this dispatch.
-        if (precedingScreenRoutine == SCREEN_EVENT_NORMAL && screenEventRoutine == SCREEN_EVENT_COLLAPSE) {
-            screenShake.writeFlag(COLLAPSE_STARTUP_SHAKE_FRAMES);
-        }
+
     }
 
     /**
@@ -1068,9 +1063,9 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
         camera.setMaxYTarget((short) DEFAULT_CAMERA_MAX_Y);
         camera.setMinX((short) DEFAULT_CAMERA_MIN_X);
         camera.setMaxX((short) DEFAULT_CAMERA_MAX_X);
+        // loc_51656 (sonic3k.asm:106795-106803) leaves Screen_shake_flag untouched.
         quakeEventRoutine = QUAKE_CHECK;
         screenShakeActive = false;
-        clearScreenShakeFlag();
         setGenericBossFlag(false);
         activeRobotnik = null;
         postFleeUnlockDone = false;
@@ -1312,7 +1307,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
             bgRiseOffset = BG_RISE_TARGET_SONIC;
             bgRiseSubpixelAccum = 0;
             bgRiseMotionStarted = false;
-        bgRiseObjectFinished = false;
+            bgRiseObjectFinished = true;
             bgRiseAccelLatched = false;
             gameState().setBackgroundCollisionFlag(false);
             LOG.info(String.format(
@@ -1326,7 +1321,9 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
             bgRiseOffset = playerX >= BG_RISE_LATE_LOAD_FINISHED_X_MIN ? BG_RISE_TARGET_SONIC : 0;
             bgRiseSubpixelAccum = 0;
             bgRiseMotionStarted = false;
-        bgRiseObjectFinished = false;
+            // loc_5187E / loc_518C0 (sonic3k.asm:107040-107065):
+            // a finished late load does not allocate Obj_MGZ2BGMoveSonic.
+            bgRiseObjectFinished = bgRiseOffset >= BG_RISE_TARGET_SONIC;
             bgRiseAccelLatched = false;
             gameState().setBackgroundCollisionFlag(true);
             LOG.info(String.format(
@@ -1351,7 +1348,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
             bgRiseOffset = 0;
             bgRiseSubpixelAccum = 0;
             bgRiseMotionStarted = false;
-        bgRiseObjectFinished = false;
+            bgRiseObjectFinished = false;
             bgRiseAccelLatched = false;
             bgRiseRefreshFramesRemaining = BG_RISE_REFRESH_FOLLOWUP_FRAMES;
             // MGZ2_BGEventTrigger state 0 clears the flag before changing
@@ -1415,6 +1412,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
 
     /** ROM: independently allocated Obj_MGZ2BGMoveSonic SST body. */
     private void updateBgRiseSonicObject(AbstractPlayableSprite player, int playerX, int playerY) {
+        if (bgRiseObjectFinished) return; // no live SST: no motion-start camera write either
         // Obj_MGZ2BGMoveSonic body runs while state remains 8, decoupled from
         // the trigger's transition check. Motion start requires crossing both
         // BG_RISE_MOTION_X_MIN and BG_RISE_MOTION_Y_MIN (ROM: loc_51AF2).
@@ -2158,17 +2156,17 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
 
     private void updateAct2Collapse(int frameCounter) {
         if (collapseRequested && screenEventRoutine == SCREEN_EVENT_NORMAL) {
-            // Obj_MGZEndBoss publishes Events_fg_4 from its SST. MGZ2SE_Normal
-            // consumes that write on the following screen-event dispatch; it
-            // then loads Screen_shake_flag=$14 after ShakeScreen_Setup has
-            // already run, so the new positive countdown is not decremented
-            // on its arm frame (sonic3k.asm:106458-106473,142909-142931).
+            // The inherited request-observation delay is recorded separately in the audit.
+            // loc_512FA (sonic3k.asm:106465-106469) arms $14 in the FG pass.
+            // ScreenEvents (sonic3k.asm:102279-102301) dispatches BG afterward;
+            // MGZ2BGE_Normal (sonic3k.asm:107100-107122) decrements it on this same frame.
             if (!collapseRequestObserved) {
                 collapseRequestObserved = true;
                 return;
             }
             screenEventRoutine = SCREEN_EVENT_COLLAPSE;
             screenShakeActive = false;
+            screenShake.writeFlag(COLLAPSE_STARTUP_SHAKE_FRAMES);
             return;
         }
         if (screenEventRoutine != SCREEN_EVENT_COLLAPSE || collapseFinished) {
@@ -2706,7 +2704,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
             }
             if (probe.publishedBossOffset != Integer.MIN_VALUE
                     && (probe.publishedBossOffset < 0 || probe.publishedBossOffset > 0xFFFF)) return false;
-            if (probe.bgRiseRefreshFramesRemaining < 0 || probe.bgRiseRefreshFramesRemaining > 7
+            if (probe.bgRiseRefreshFramesRemaining < 0 || probe.bgRiseRefreshFramesRemaining > BG_RISE_REFRESH_FOLLOWUP_FRAMES
                     || probe.bgRiseOffset < 0 || probe.bgRiseOffset > 0x220
                     || probe.publishedRiseOffset < 0 || probe.publishedRiseOffset > 0x220) return false;
             for (int value : new int[] {probe.appliedScreenShakeOffset, probe.collisionDiffX, probe.collisionDiffY, probe.publishedCameraX, probe.publishedCameraY,

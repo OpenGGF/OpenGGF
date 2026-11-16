@@ -896,7 +896,13 @@ class TestSonic3kLevelEventRewindSnapshot {
         mhz.setBossFlag(true);
         mhz.setActTransitionFlag(true);
         mhz.setSpecialEventsRoutine(8);
-        LevelEventSnapshot mhzSnapshot = mhzSource.capture();
+        var original = mhzSource.capture();
+        short[] fg = original.eventDataFg();
+        byte[] bg = original.eventDataBg();
+        java.util.Arrays.fill(fg, (short) 0x55AA);
+        java.util.Arrays.fill(bg, (byte) 0x5A);
+        LevelEventSnapshot mhzSnapshot = new LevelEventSnapshot(original.currentZone(), original.currentAct(),
+                12, 16, 12345, 77, true, fg, bg, original.extra());
 
         Sonic3kLevelEventManager target = new Sonic3kLevelEventManager();
         target.initLevel(Sonic3kZoneIds.ZONE_MGZ, 1);
@@ -924,8 +930,10 @@ class TestSonic3kLevelEventRewindSnapshot {
                 payloadSource.captureMgzState(), 9);
         LevelEventSnapshot malformedSnapshot = snapshotWithMgzPayload(mhzSnapshot, corruptPayload);
 
+        var before = target.capture();
         assertDoesNotThrow(() -> target.restore(malformedSnapshot),
                 "invalid composed MGZ publication must be rejected atomically");
+        assertSnapshotUnchanged(before, target.capture(), "malformed MGZ rejects base and all extra atomically");
         assertTrue(mgzTarget.isCollapseRequested(),
                 "schema-corrupt MGZ sidecar must roll back partial MGZ field writes");
         assertEquals(77, mgzTarget.getCollapseFrameCounter(),

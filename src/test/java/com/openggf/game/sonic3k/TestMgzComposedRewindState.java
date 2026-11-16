@@ -45,6 +45,22 @@ class TestMgzComposedRewindState {
         return ByteBuffer.wrap(bytes).getInt(bytes.length - 12);
     }
 
+    @Test void everyReachableRefreshCountdownRoundTrips() {
+        var events = new Sonic3kMGZEvents();
+        events.init(1);
+        for (int countdown = 0; countdown <= 8; countdown++) {
+            events.setBgRiseRefreshFramesRemaining(countdown);
+            byte[] saved = events.captureMgzState();
+            assertTrue(Sonic3kMGZEvents.hasValidMgzState(saved), "countdown " + countdown);
+            events.restoreMgzState(saved);
+            assertArrayEquals(saved, events.captureMgzState());
+        }
+        for (int countdown : new int[] {-1, 9}) {
+            events.setBgRiseRefreshFramesRemaining(countdown);
+            assertFalse(Sonic3kMGZEvents.hasValidMgzState(events.captureMgzState()));
+        }
+    }
+
     @Test void malformedFramingAndWordsAreRejectedBeforeMutation() {
         var events = new Sonic3kMGZEvents();
         events.init(1);

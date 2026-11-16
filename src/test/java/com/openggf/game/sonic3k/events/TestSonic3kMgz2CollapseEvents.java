@@ -44,7 +44,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class TestSonic3kMgz2CollapseEvents {
 
-    private static final int COLLAPSE_STARTUP_EVENT_CALLS = 0x17;
+    // One inherited observation dispatch, then arm and twenty later native dispatches.
+    private static final int COLLAPSE_STARTUP_EVENT_CALLS = 0x16;
 
     @BeforeEach
     void setUp() {
@@ -77,6 +78,26 @@ class TestSonic3kMgz2CollapseEvents {
         assertEquals(4, events.getScreenEventRoutine());
         assertEquals(0, events.getCollapseSolidCountForTest());
         assertFilled(level.getMap(), 121, 14, 3, 3, 1);
+    }
+
+    @Test
+    void armFramePreparesFirstTimedSampleAndOpeningRunsAtArmPlusTwenty() {
+        var events = new Sonic3kMGZEvents();
+        events.init(1);
+        events.requestLevelCollapse();
+        events.update(1, 0); // inherited request-observation bridge, outside this correction
+        events.update(1, 1); // arm
+        byte[] arm = events.captureMgzState();
+        var words = java.nio.ByteBuffer.wrap(arm);
+        int flag = words.getInt(arm.length - 12);
+        int preparedOffset = words.getInt(arm.length - 8);
+        int foregroundOffset = events.screenPublication().shakeOffset();
+        for (int frame = 2; frame <= 21; frame++) events.update(1, frame);
+        org.junit.jupiter.api.Assertions.assertAll(
+                () -> assertEquals(0x13, flag, "FG arms $14; the same BG pass decrements it"),
+                () -> assertEquals(-5, preparedOffset, "ScreenShakeArray[$13]"),
+                () -> assertEquals(0, foregroundOffset, "FG retains the preceding sample on the arm frame"),
+                () -> assertTrue(events.isCollapseInitialized(), "opening at arm+20"));
     }
 
     @Test

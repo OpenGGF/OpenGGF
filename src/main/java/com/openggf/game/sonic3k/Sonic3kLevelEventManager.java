@@ -2900,7 +2900,8 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     @Override
     public void restore(com.openggf.game.rewind.snapshot.LevelEventSnapshot snapshot) {
         byte[] extra = snapshot.extra();
-        if (hczEvents != null && extra != null && extra.length >= 5 && !hasValidExtraFraming(extra)) {
+        if ((hczEvents != null || mgzEvents != null)
+                && extra != null && extra.length >= 5 && !hasValidExtraFraming(extra)) {
             LOG.warning("Skipping malformed S3K level-event snapshot before base-state restoration");
             return;
         }

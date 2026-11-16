@@ -48,4 +48,29 @@ class TestS3kMgzScreenPublication {
         }
     }
 
+    @Test void triggerFramePayloadValidatesAndRestoresExactly() {
+        var fixture = HeadlessTestFixture.builder().withZoneAndAct(Sonic3kZoneIds.ZONE_MGZ, 1)
+                .withSkippedZoneIntro().startPosition((short) 0x3400, (short) 0x850)
+                .startPositionIsCentre().build();
+        var manager = (com.openggf.game.sonic3k.Sonic3kLevelEventManager)
+                GameServices.module().getLevelEventProvider();
+        var events = manager.getMgzEvents();
+        fixture.stepFrame(false, false, false, false, false); // finish normal positioned entry before crossing the trigger
+        assertTrue(events.isBgRiseLoadStateInitialised());
+        assertEquals(0, events.getBgRiseRoutine());
+        fixture.sprite().setCentreX((short) 0x3500);
+        fixture.sprite().setCentreY((short) 0x850);
+        fixture.stepFrame(false, false, false, false, false);
+        assertEquals(8, events.getBgRiseRoutine());
+        assertEquals(8, events.getBgRiseRefreshFramesRemaining());
+        var snapshot = manager.capture();
+        byte[] payload = events.captureMgzState();
+        events.setBgRiseRefreshFramesRemaining(0);
+        events.setBgRiseOffset(4);
+        manager.restore(snapshot);
+        assertAll(
+                () -> assertTrue(com.openggf.game.sonic3k.events.Sonic3kMGZEvents.hasValidMgzState(payload)),
+                () -> assertArrayEquals(payload, events.captureMgzState(), "trigger-frame publication round trip"));
+    }
+
 }

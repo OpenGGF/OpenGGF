@@ -167,12 +167,14 @@ class TestSonic3kMgz2QuakeEvents {
         events.update(1, 0);
         assertEquals(4, events.getQuakeEventRoutine());
 
+        events.writeScreenShakeFlag(-1);
         movePlayer(player, 0x770, 0x590);
         events.update(1, 1);
 
         assertEquals(0, events.getQuakeEventRoutine(),
                 "retreat (player X < $780) reverts state to QuakeEventCheck");
         assertFalse(events.isAppearance1Complete());
+        assertTrue(events.isScreenShakeActive(), "loc_51656 leaves the global shake word untouched");
     }
 
     @Test

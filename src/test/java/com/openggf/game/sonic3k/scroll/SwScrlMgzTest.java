@@ -127,4 +127,62 @@ public class SwScrlMgzTest {
         }
         assertNotEquals(outputs[0][32], outputs[1][32]);
     }
+    @Test void stateEightKeepsCloudBandsAndLockedTerrainWithVdpPeriod() {
+        var p = new com.openggf.game.sonic3k.events.Sonic3kMGZEvents.ScreenPublication(
+                8, 0x200, Integer.MIN_VALUE, 0, 0x800);
+        var handler = new SwScrlMgz(() -> p);
+        int[] output = new int[224];
+        handler.update(output, 0x3500, 0x850, 1, 1);
+        Set<Short> bands = new HashSet<>();
+        for (int word : output) bands.add((short) word);
+        assertTrue(bands.size() > 1);
+        assertTrue(bands.contains((short) -0x300));
+        assertNotEquals((short) -0x300, (short) output[0]);
+        assertEquals(512, handler.getBgPeriodWidth());
+    }
+
+    @Test void publicationShakeOffsetsBothPlanes() {
+        var plain = new SwScrlMgz(() -> new com.openggf.game.sonic3k.events.Sonic3kMGZEvents.ScreenPublication(
+                8, 0x200, Integer.MIN_VALUE, 0, 0));
+        var shaken = new SwScrlMgz(() -> new com.openggf.game.sonic3k.events.Sonic3kMGZEvents.ScreenPublication(
+                8, 0x200, Integer.MIN_VALUE, 3, 0));
+        plain.update(new int[224], 0x3500, 0x850, 1, 1);
+        shaken.update(new int[224], 0x3500, 0x850, 1, 1);
+        assertEquals(3, shaken.getVscrollFactorFG() - plain.getVscrollFactorFG());
+        assertEquals(3, shaken.getVscrollFactorBG() - plain.getVscrollFactorBG());
+        assertEquals(3, shaken.getShakeOffsetY());
+    }
+
+    @Test void completedPublicationKeepsCloudFreezeAcrossCToEight() {
+        var player = new com.openggf.tests.TestablePlayableSprite("sonic", (short) 0x3500, (short) 0x850);
+        player.setCentreX((short) 0x3500);
+        player.setCentreY((short) 0x850);
+        GameServices.camera().setFocusedSprite(player);
+        var events = new com.openggf.game.sonic3k.events.Sonic3kMGZEvents();
+        events.init(1);
+        events.setBgRiseLoadStateInitialised(true);
+        events.setBgRiseRoutine(8);
+        events.setBgRiseOffset(0x1D0);
+        events.updateAfterDynamicObjects(1, 1);
+        assertTrue(events.screenPublication().cloudPhase() > 0);
+        player.setCentreX((short) 0x3900);
+        player.setCentreY((short) 0x7F0);
+        events.updateAfterDynamicObjects(1, 2);
+        assertEquals(12, events.screenPublication().riseRoutine());
+        assertEquals(0, events.screenPublication().cloudPhase());
+        player.setCentreX((short) 0x3A40);
+        player.setCentreY((short) 0x800);
+        events.updateAfterDynamicObjects(1, 3);
+        assertEquals(8, events.screenPublication().riseRoutine());
+        assertEquals(0, events.screenPublication().cloudPhase());
+        events.updateAfterDynamicObjects(1, 4);
+        assertEquals(0, events.screenPublication().cloudPhase());
+    }
+
+    @Test void providerRoutesMgzToDedicatedProjection() throws Exception {
+        var provider = new Sonic3kScrollHandlerProvider();
+        provider.load(new Rom());
+        assertTrue(provider.getHandler(Sonic3kZoneConstants.ZONE_MGZ) instanceof SwScrlMgz);
+    }
+
 }
