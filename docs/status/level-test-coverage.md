@@ -2837,6 +2837,9 @@ MICA authored S3K ending presentation (2026-11-08): the
 records passing declared-entry normal/Super/Hyper mapping and capture checks.
 Doomsday route entry, mod rewind and broader team/viewport certification remain open.
 
+FBZ event/scroll publication and its inherited route limits are tracked in the
+[2026-11-15 FBZ audit](../architecture/audits/2026-11-15-s3k-fbz-event-publication.md).
+
 MHZ publication ownership (2026-11-15): the
 [bounded audit](../architecture/audits/2026-11-15-s3k-mhz-event-publication.md)
 tracks renderer rebuild isolation and composed event/shake restoration. Both MHZ

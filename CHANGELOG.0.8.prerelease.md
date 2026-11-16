@@ -7,6 +7,12 @@ under the matching area heading; see the
 
 ## Gameplay and presentation
 
+- **Flying Battery event publication:** gameplay owns cloud drift, positions and
+  shake setup; extra draws and renderer rebuilds preserve the completed event
+  state, including after rewind. Subbosses request shake through its flag alone.
+  Seamless reload supports mod-wrapped event providers; projected indoor views
+  retain camera-copy shake, and rewind preserves timed as well as constant shake.
+
 - **Mushroom Hill screen events:** the end boss now starts the original timed
   horizontal shake at its final escape threshold, applied once to foreground,
   sprites and render bounds through the native camera copy. Background loop, animation

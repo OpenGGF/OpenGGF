@@ -29,7 +29,7 @@ final class Fbz2SubbossRumbleController extends AbstractObjectInstance implement
         boolean active;
         if (!initialized) {
             initialized = true;
-            S3kFbzEventWriteSupport.setScreenShakeState(services(), true, 0, vIntRunCount & 0x3F);
+            S3kFbzEventWriteSupport.setScreenShakeActive(services(), true);
             active = true;
         } else {
             active = S3kFbzEventWriteSupport.isScreenShakeActive(services());
