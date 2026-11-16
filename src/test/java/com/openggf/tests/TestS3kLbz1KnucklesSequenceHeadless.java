@@ -1068,6 +1068,10 @@ class TestS3kLbz1KnucklesSequenceHeadless {
     @Test
     void endingCollapseVScrollUsesRomWorldColumnsAndDeltas() {
         HeadlessTestFixture fixture = lbzFixture();
+        for (int startup = 0; startup < 512 && (((Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider()).getLbzEvents().backgroundPublication() == null
+                || com.openggf.sprites.playable.NativePlayableRoutine.isAtOrBeyondDeathForNativeRead(fixture.sprite())); startup++) fixture.stepIdleFrames(1);
+        assertNotNull(((Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider()).getLbzEvents().backgroundPublication());
+        assertFalse(com.openggf.sprites.playable.NativePlayableRoutine.isAtOrBeyondDeathForNativeRead(fixture.sprite()));
         removeLbz1GroundLaunchIntro();
         applyTitleCardHandoff();
         GameServices.camera().setX((short) (0x3B60 - 12));
@@ -1083,6 +1087,11 @@ class TestS3kLbz1KnucklesSequenceHeadless {
                 "LBZ1_EventVScroll keeps the native flag active; FG still reads the preceding offset.");
         assertEquals(0, GameServices.parallax().getShakeOffsetY(),
                 "the request frame's foreground precedes its first ShakeScreen_Setup");
+        byte[] firstPublication = manager.getLbzEvents().captureLbzState();
+        manager.getLbzEvents().update(0, 2);
+        GameServices.parallax().update(Sonic3kZoneIds.ZONE_LBZ, 0, GameServices.camera(), 2, 0);
+        assertNotEquals(0, GameServices.parallax().getShakeOffsetY(), "the following frame applies the bomb shake");
+        manager.getLbzEvents().restoreLbzState(firstPublication);
 
         short[] override = manager.getLbzEvents()
                 .buildEndingCollapseForegroundVScrollOverride(GameServices.camera().getX());

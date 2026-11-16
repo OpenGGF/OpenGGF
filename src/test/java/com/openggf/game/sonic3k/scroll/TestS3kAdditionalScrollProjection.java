@@ -118,6 +118,18 @@ class TestS3kAdditionalScrollProjection {
         assertEquals(expected, phase.sample(view));
     }
 
+    @org.junit.jupiter.api.Test
+    void lbzTransitionProjectionRetainsTheSourceBackgroundCoordinates() {
+        var f = fixture("lbz", 0);
+        f.tick(0x3DA0, 0x100, 7, 0);
+        var bg = (LbzBackgroundEvents) f.handler;
+        bg.beginSeamlessAct2(0x3A0);
+        bg.copyPublishedWords(f.words);
+        var nativeOutput = output(bg, f.words, 0x100);
+        var phase = bg.captureProjection(new ScrollProjectionContext(0x3A0, 0x100, 7, 1, 320, 224, nativeOutput));
+        assertEquals(nativeOutput, phase.sample(new ScrollView(0x3A0, 0x100, 320, 224)));
+    }
+
     private static short[] lbzWords(LbzBackgroundEvents handler) {
         short[] words = new short[0xEC / 2];
         for (int i = 0; i < words.length; i++) words[i] = handler.getLbz2HScrollWordForTest(i);

@@ -286,6 +286,7 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
         if (!hasRuntime()) {
             return;
         }
+        int levelFrameCounter = levelManager().getFrameCounter();
         appliedScreenShakeOffset = screenShake.offset();
         // LBZ2_ScreenEvent (sonic3k.asm:111353-111356) applies the preceding
         // offset to the copy. LBZ2_DeathEggMoveScreen writes the live camera,
@@ -298,14 +299,14 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
             if (act != 0) {
                 updateAct2EntryLayout();
                 updateAct2DeathEggTerrainSwap();
-                updateAct2Launch(frameCounter);
+                updateAct2Launch(levelFrameCounter);
                 return;
             }
             applyRestartFromBossAreaInitIfNeeded();
             if (handleSeamlessReloadStage()) {
                 return;
             }
-            updateEndingCollapse(frameCounter);
+            updateEndingCollapse(levelFrameCounter);
 
             LbzZoneRuntimeState state = S3kRuntimeStates.currentLbz(zoneRuntimeRegistry()).orElse(null);
             AbstractPlayableSprite player = camera().getFocusedSprite();
@@ -339,9 +340,16 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
                 }
             }
         } finally {
-            if (backgroundPublication != null) backgroundPublication.publish(foregroundCopyX,
-                    (short) (foregroundCopyY - appliedScreenShakeOffset), frameCounter, act);
-            if (!transitionDispatch) prepareScreenShake(frameCounter);
+            // The old owner returns after synchronous Load_Level replaced it.
+            if (levelManager().getFeatureActId() == act) {
+                if (backgroundPublication != null) {
+                    if (transitionDispatch) backgroundPublication.holdTransitionForeground(foregroundCopyX, foregroundCopyY);
+                    else backgroundPublication.publish(foregroundCopyX,
+                            (short) (foregroundCopyY - appliedScreenShakeOffset), levelFrameCounter, act);
+                }
+                boolean falling = act == 1 && runtimePublication != null && runtimePublication.isFinalFallActive();
+                if (!transitionDispatch && !falling) prepareScreenShake(levelFrameCounter);
+            }
         }
     }
 
@@ -427,9 +435,9 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
 
     /** ShakeScreen_Setup (sonic3k.asm:104234-104255), after this frame's FG read. */
     private void prepareScreenShake(int frameCounter) {
-        var player = camera().getFocusedSprite();
-        screenShake.setup(frameCounter, player == null
-                || NativePlayableRoutine.isAtOrBeyondDeathForNativeRead(player));
+        var player = spriteManager().getMainPlayable();
+        screenShake.setup(frameCounter, player != null
+                && NativePlayableRoutine.isAtOrBeyondDeathForNativeRead(player));
     }
 
     public void setupScreenShake(int frame, boolean dead) { screenShake.setup(frame, dead); }
@@ -916,6 +924,8 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
         // ROM: Adjust_LBZ2Layout runs immediately after Load_Level; the entry
         // corridor mod stays gated on Player_1 x >= $60A (LBZ2SE_FromTransition).
         applyLbz2TransitionLayout();
+        var target = eventManager().getLbzEvents();
+        target.inheritSeamlessBackground(this);
         LbzZoneRuntimeState state = S3kRuntimeStates.currentLbz(zoneRuntimeRegistry()).orElse(null);
         if (state != null) {
             state.setLbz2LayoutAdjustApplied(true);
@@ -1333,6 +1343,10 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
         // ROM LBZ2BGE_Falling: Scroll_lock + camera.y -= 2; the launch
         // motion/deform no longer runs once Events_fg_5 (3rd use) is set.
         Camera camera = camera();
+        // LBZ2BGE_Falling (sonic3k.asm:111600-111608) overwrites the FG copy
+        // and returns without ShakeScreen_Setup. Retain the native shake words.
+        foregroundCopyY = camera.getY();
+        appliedScreenShakeOffset = 0;
         camera.setFrozen(true);
         camera.captureRenderCopy();
         camera.setYAfterRenderCopy((short) ((camera.getY() & 0xFFFF) + LBZ2_FINAL_FALL_CAMERA_DY));
@@ -1902,6 +1916,22 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
         backgroundPublication.init(act, x, y);
         backgroundPublication.publish(x, y, frame, act);
     }
+    /** LBZ1BGE_DoTransition (sonic3k.asm:111285-111332): retain HScroll,
+     * including +$1E2, while clearing only the named Death Egg event words.
+     * The next LBZ2BGE_FromTransition dispatch performs the first act-2 deform.
+     */
+    private void inheritSeamlessBackground(Sonic3kLBZEvents previous) {
+        if (previous.backgroundPublication == null) throw new IllegalStateException("LBZ transition has no source background");
+        backgroundPublication = previous.backgroundPublication;
+        foregroundCopyX = (short) (previous.foregroundCopyX - 0x3A00);
+        foregroundCopyY = previous.foregroundCopyY;
+        foregroundPublicationValid = previous.foregroundPublicationValid;
+        appliedScreenShakeOffset = previous.appliedScreenShakeOffset;
+        var shake = java.nio.ByteBuffer.allocate(S3kScreenShake.captureBytes());
+        previous.screenShake.captureTo(shake); shake.flip(); screenShake.restoreFrom(shake);
+        backgroundPublication.beginSeamlessAct2(foregroundCopyX);
+    }
+
     public com.openggf.game.sonic3k.scroll.LbzBackgroundEvents backgroundPublication() { return backgroundPublication; }
 
     public byte[] captureLbzState() {
@@ -1957,8 +1987,13 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
         return LbzZoneRuntimeState.capturedAct(runtime) == act && LbzZoneRuntimeState.capturedPlayer(runtime) == player;
     }
 
+    public boolean hasCompatibleLbzState(byte[] bytes) {
+        return hasValidLbzState(bytes) && (runtimePublication == null
+                || hasRuntimeIdentity(bytes, runtimePublication.actIndex(), runtimePublication.playerCharacter()));
+    }
+
     public void restoreLbzState(byte[] bytes) {
-        if (!hasValidLbzState(bytes)) throw new IllegalArgumentException("Invalid LBZ publication payload");
+        if (!hasCompatibleLbzState(bytes)) throw new IllegalArgumentException("Invalid LBZ publication payload or bound identity");
         var b = java.nio.ByteBuffer.wrap(bytes); b.position(8);
         byte[] scalars = new byte[b.getInt()]; b.get(scalars);
         com.openggf.game.rewind.schema.ZoneEventSchemaSidecar.restore(this, scalars);
@@ -1969,7 +2004,7 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
             byte[] background = new byte[length]; b.get(background);
             if (backgroundPublication == null) {
                 backgroundPublication = hasRuntime()
-                        && com.openggf.game.GameServices.parallax().getHandler(Sonic3kZoneIds.ZONE_LBZ) instanceof com.openggf.game.sonic3k.scroll.SwScrlLbz scroll
+                        && parallaxOrNull() != null && parallaxOrNull().getHandler(Sonic3kZoneIds.ZONE_LBZ) instanceof com.openggf.game.sonic3k.scroll.SwScrlLbz scroll
                         ? scroll.createBackgroundPublication() : new com.openggf.game.sonic3k.scroll.LbzBackgroundEvents();
             }
             backgroundPublication.restorePublication(background);

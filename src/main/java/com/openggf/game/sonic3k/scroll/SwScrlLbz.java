@@ -32,8 +32,14 @@ public class SwScrlLbz extends AbstractZoneScrollHandler implements ScrollProjec
         if (events != null && events.backgroundPublication() != null) {
             picture = events.backgroundPublication();
             picture.copyPublishedWords(words);
+        } else if (events != null) {
+            // Before fresh ScreenInit there is no completed native picture.
+            // Loading/rebuild must not manufacture or advance a detached owner.
+            java.util.Arrays.fill(words, ((-x) & 0xFFFF) << 16);
+            picture = null; minScrollOffset = maxScrollOffset = 0; vscrollFactorBG = 0;
+            return;
         } else {
-            // Detached pictures own no gameplay continuation.
+            // Explicit detached pictures own no gameplay continuation.
             if (picture == null) picture = LbzBackgroundEvents.detachedPresentation(waterlineData, deathEggWaveData);
             picture.update(words, x, y, frame, act);
         }

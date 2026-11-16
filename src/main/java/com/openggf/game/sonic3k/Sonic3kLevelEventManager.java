@@ -702,7 +702,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             iczEvents.update(currentAct, frameCounter);
         }
         if (lbzEvents != null && currentZone == Sonic3kZoneIds.ZONE_LBZ) {
-            lbzEvents.update(currentAct, frameCounter);
+            lbzEvents.update(currentAct, levelManager().getFrameCounter());
         }
         if (mgzEvents != null && currentZone == Sonic3kZoneIds.ZONE_MGZ) {
             mgzEvents.updateAfterDynamicObjects(currentAct, frameCounter);
@@ -2902,7 +2902,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     @Override
     public void restore(com.openggf.game.rewind.snapshot.LevelEventSnapshot snapshot) {
         byte[] extra = snapshot.extra();
-        if (hczEvents != null && extra != null && extra.length >= 5 && !hasValidExtraFraming(extra)) {
+        if ((hczEvents != null || lbzEvents != null) && extra != null && extra.length >= 5 && !hasValidExtraFraming(extra)) {
             LOG.warning("Skipping malformed S3K level-event snapshot before base-state restoration");
             return;
         }
@@ -3011,13 +3011,13 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         return new Sonic3kICZEvents();
     }
 
-    private static boolean skipLbzSidecar(java.nio.ByteBuffer buf) {
+    private boolean skipLbzSidecar(java.nio.ByteBuffer buf) {
         if (buf.remaining() < 1 || buf.get() == 0) return true;
         if (buf.remaining() < 4) return false;
         int length = buf.getInt();
         if (length < 0 || length > buf.remaining()) return false;
         byte[] bytes = new byte[length]; buf.get(bytes);
-        return Sonic3kLBZEvents.hasValidLbzState(bytes);
+        return lbzEvents == null ? Sonic3kLBZEvents.hasValidLbzState(bytes) : lbzEvents.hasCompatibleLbzState(bytes);
     }
 
     private static boolean skipVariableLengthSchemaSidecar(

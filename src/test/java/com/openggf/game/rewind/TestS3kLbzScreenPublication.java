@@ -66,8 +66,120 @@ class TestS3kLbzScreenPublication {
         assertSame(original, GameServices.zoneRuntimeRegistry().current());
         assertArrayEquals(before, manager.getLbzEvents().captureLbzState());
         original.setLaunchRiderDelta(3);
-        assertEquals(3, original.getLaunchRiderDelta());
-        assertEquals(3, original.getLaunchRiderDelta(), "readers cannot consume the event publication");
+        fixture.sprite().setObjectRoutineOverride(6);
+        original.setLaunchActive(true);
+        manager.update();
+        assertEquals(0, original.getLaunchRiderDelta(), "a skipped BG movement dispatch must publish no repeated ship add");
+    }
+
+    @Test void shakeUsesTheLevelClockRatherThanEventUpdateOrdinal() {
+        var f = HeadlessTestFixture.builder().withZoneAndAct(Sonic3kZoneIds.ZONE_LBZ, 1).withSkippedZoneIntro().build();
+        f.stepIdleFrames(7);
+        var e = ((Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider()).getLbzEvents();
+        e.writeScreenShakeFlag(0xFF00);
+        var oracle = new com.openggf.game.sonic3k.runtime.S3kScreenShake();
+        oracle.writeFlag(0xFF00);
+        oracle.setup(GameServices.level().getFrameCounter(), false);
+        e.update(1, 123);
+        assertEquals(oracle.offset(), e.screenShakeOffset());
+    }
+
+    @Test void waterWavesUseTheLevelClockRatherThanEventUpdateOrdinal() {
+        var f = HeadlessTestFixture.builder().withZoneAndAct(Sonic3kZoneIds.ZONE_LBZ, 1).withSkippedZoneIntro().build();
+        f.stepIdleFrames(7);
+        var e = ((Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider()).getLbzEvents();
+        var scroll = (com.openggf.game.sonic3k.scroll.SwScrlLbz) GameServices.parallax().getHandler(Sonic3kZoneIds.ZONE_LBZ);
+        var oracle = scroll.createBackgroundPublication();
+        oracle.restorePublication(e.backgroundPublication().capturePublication());
+        f.camera().setY((short) 0x5F0);
+        f.camera().copyLivePositionToScreenEventWords();
+        e.update(1, 123);
+        oracle.publish(f.camera().getXCopy(), f.camera().getYCopy(), GameServices.level().getFrameCounter(), 1);
+        assertArrayEquals(oracle.capturePublication(), e.backgroundPublication().capturePublication());
+    }
+
+    @Test void nullCameraFocusDoesNotReplaceTheNativePrimarySlot() throws Exception {
+        var f = HeadlessTestFixture.builder().withZoneAndAct(Sonic3kZoneIds.ZONE_LBZ, 1).withSkippedZoneIntro().build();
+        var e = ((Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider()).getLbzEvents();
+        assertSame(f.sprite(), GameServices.sprites().getMainPlayable());
+        e.writeScreenShakeFlag(20);
+        var focus = com.openggf.camera.Camera.class.getDeclaredField("focusedSprite");
+        focus.setAccessible(true); focus.set(f.camera(), null);
+        e.update(1, 123);
+        assertEquals(19, e.screenShakeFlag());
+    }
+
+    @Test void finalFallRetainsShakeWordsAndReplacesTheShakenForegroundCopy() {
+        var f = HeadlessTestFixture.builder().withZoneAndAct(Sonic3kZoneIds.ZONE_LBZ, 1).withSkippedZoneIntro().build();
+        var e = ((Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider()).getLbzEvents();
+        var state = com.openggf.game.sonic3k.runtime.S3kRuntimeStates.currentLbz(GameServices.zoneRuntimeRegistry()).orElseThrow();
+        e.writeScreenShakeFlag(20); e.setupScreenShake(0, false);
+        state.setLaunchActive(true); state.setFinalFallActive(true);
+        int y = f.camera().getY() & 0xFFFF;
+        e.update(1, 123);
+        assertEquals(19, e.screenShakeFlag(), "Falling returns before setup");
+        assertEquals(-5, e.screenShakeOffset(), "the native shake word is retained");
+        assertEquals(y, e.foregroundCameraYCopy(0), "Falling overwrites the earlier shaken copy");
+        assertEquals((y - 2) & 0xFFFF, f.camera().getY() & 0xFFFF);
+    }
+
+    @Test void corruptLbzPayloadCannotMutateManagerBaseFields() {
+        var f = HeadlessTestFixture.builder().withZoneAndAct(Sonic3kZoneIds.ZONE_LBZ, 1).withSkippedZoneIntro().build();
+        var m = (Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider();
+        var before = m.capture();
+        byte[] extra = before.extra();
+        int magic = -1;
+        for (int i = 0; i <= extra.length - 8; i++) if (java.nio.ByteBuffer.wrap(extra).getInt(i) == 0x4C425A31) { magic = i; break; }
+        assertTrue(magic >= 0);
+        java.nio.ByteBuffer.wrap(extra).putInt(magic + 4, 99);
+        var incoming = new com.openggf.game.rewind.snapshot.LevelEventSnapshot(0, 0, 77, 88, 999, 55, true,
+                new short[] {7}, new byte[] {8}, extra);
+        assertDoesNotThrow(() -> m.restore(incoming));
+        var after = m.capture();
+        assertEquals(before.currentZone(), after.currentZone()); assertEquals(before.currentAct(), after.currentAct());
+        assertEquals(before.eventRoutineFg(), after.eventRoutineFg()); assertEquals(before.eventRoutineBg(), after.eventRoutineBg());
+        assertEquals(before.frameCounter(), after.frameCounter()); assertEquals(before.timerFrames(), after.timerFrames());
+        assertEquals(before.bossActive(), after.bossActive());
+        assertArrayEquals(before.eventDataFg(), after.eventDataFg()); assertArrayEquals(before.eventDataBg(), after.eventDataBg());
+        assertArrayEquals(before.extra(), after.extra());
+    }
+
+    @Test void differentBoundIdentityCannotMutateManagerBaseFields() {
+        var f = HeadlessTestFixture.builder().withZoneAndAct(Sonic3kZoneIds.ZONE_LBZ, 1).withSkippedZoneIntro().build();
+        var m = (Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider();
+        var before = m.capture();
+        byte[] extra = before.extra();
+        int magic = -1;
+        for (int i = 0; i <= extra.length - 8; i++) if (java.nio.ByteBuffer.wrap(extra).getInt(i) == 0x4C425A31) { magic = i; break; }
+        assertTrue(magic >= 4);
+        var current = com.openggf.game.sonic3k.runtime.S3kRuntimeStates.currentLbz(GameServices.zoneRuntimeRegistry()).orElseThrow();
+        var other = current.playerCharacter() == com.openggf.game.PlayerCharacter.KNUCKLES
+                ? com.openggf.game.PlayerCharacter.SONIC_ALONE : com.openggf.game.PlayerCharacter.KNUCKLES;
+        byte[] foreign = new com.openggf.game.sonic3k.runtime.LbzZoneRuntimeState(1, other).captureBytes();
+        int oldLength = java.nio.ByteBuffer.wrap(extra).getInt(magic - 4);
+        var changed = java.nio.ByteBuffer.allocate(extra.length - oldLength + foreign.length);
+        changed.put(extra, 0, magic - 4).putInt(foreign.length).put(foreign)
+                .put(extra, magic + oldLength, extra.length - magic - oldLength);
+        m.restore(new com.openggf.game.rewind.snapshot.LevelEventSnapshot(0, 0, 77, 88, 999, 55, true,
+                new short[] {7}, new byte[] {8}, changed.array()));
+        var after = m.capture();
+        assertEquals(before.currentZone(), after.currentZone()); assertEquals(before.currentAct(), after.currentAct());
+        assertEquals(before.frameCounter(), after.frameCounter()); assertEquals(before.timerFrames(), after.timerFrames());
+        assertArrayEquals(before.extra(), after.extra());
+        assertSame(current, GameServices.zoneRuntimeRegistry().current());
+    }
+
+    @Test void boundRuntimeIdentityMismatchIsRejectedAtomically() {
+        var e = new com.openggf.game.sonic3k.events.Sonic3kLBZEvents();
+        var bound = new com.openggf.game.sonic3k.runtime.LbzZoneRuntimeState(1, com.openggf.game.PlayerCharacter.KNUCKLES, e);
+        byte[] before = e.captureLbzState();
+        for (var foreign : new com.openggf.game.sonic3k.runtime.LbzZoneRuntimeState[] {
+                new com.openggf.game.sonic3k.runtime.LbzZoneRuntimeState(0, com.openggf.game.PlayerCharacter.KNUCKLES),
+                new com.openggf.game.sonic3k.runtime.LbzZoneRuntimeState(1, com.openggf.game.PlayerCharacter.SONIC_ALONE)}) {
+            assertThrows(IllegalArgumentException.class, () -> e.restoreLbzState(foreign.captureBytes()));
+            assertArrayEquals(before, e.captureLbzState());
+            assertSame(bound, e.runtimePublication(1, com.openggf.game.PlayerCharacter.KNUCKLES));
+        }
     }
 
     @Test void rendererRebuildDoesNotConsumeTimedShake() {

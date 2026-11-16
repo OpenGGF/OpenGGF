@@ -124,6 +124,10 @@ public class LbzBackgroundEvents extends AbstractZoneScrollHandler implements co
 
     // Native HScroll_table+$1E2: read then add $E00 at every deformation
     // dispatch, independently of Level_frame_counter (sonic3k.asm:111803-111804,112045-112046).
+    private int publicationAct;
+    private int publicationSourceX;
+    private int publicationSourceY;
+    private int publicationLevelFrame;
     private int cloudAccumulator;
     private int cloudPublishedPhase;
     private int lastBgCameraX = Integer.MIN_VALUE;
@@ -198,6 +202,10 @@ public class LbzBackgroundEvents extends AbstractZoneScrollHandler implements co
                        int cameraY,
                        int frameCounter,
                        int actId) {
+        publicationAct = actId;
+        publicationSourceX = (short) cameraX;
+        publicationSourceY = (short) cameraY;
+        publicationLevelFrame = frameCounter;
         resetScrollTracking();
         composer.reset();
         LbzZoneRuntimeState runtimeState = currentRuntimeState();
@@ -758,6 +766,8 @@ public class LbzBackgroundEvents extends AbstractZoneScrollHandler implements co
         byte[] waterline = waterlineData == null ? null : waterlineData.clone();
         byte[] waves = deathEggWaveData == null ? null : deathEggWaveData.clone();
         int cloudPhase = cloudPublishedPhase;
+        int pictureAct = publicationAct;
+        int sourceX = publicationSourceX, sourceY = publicationSourceY, nativeFrame = publicationLevelFrame;
         int shake = screenShakeOffset;
         return view -> {
             var scratch = new LbzBackgroundEvents(waterline, waves, view.height());
@@ -765,11 +775,13 @@ public class LbzBackgroundEvents extends AbstractZoneScrollHandler implements co
             scratch.cloudAccumulator = cloudPhase;
             scratch.cloudPublishedPhase = cloudPhase;
             scratch.screenShakeOffset = shake;
-            if (context.act() == 0) {
-                scratch.updateAct1(view.cameraX(), view.cameraY(), negWord(view.cameraX()));
+            if (pictureAct == 0) {
+                scratch.updateAct1(sourceX + view.cameraX() - context.cameraX(),
+                        sourceY + view.cameraY() - context.cameraY(), negWord(view.cameraX()));
                 if (shake != 0) scratch.composer.setVscrollFactorBG((short) (scratch.composer.getVscrollFactorBG() + shake));
             } else if (!launch) {
-                scratch.updateAct2(view.cameraX(), view.cameraY(), context.frameCounter(), negWord(view.cameraX()), null);
+                scratch.updateAct2(sourceX + view.cameraX() - context.cameraX(),
+                        sourceY + view.cameraY() - context.cameraY(), nativeFrame, negWord(view.cameraX()), null);
             } else {
                 short[] previous = dispatch.table();
                 for (int i = 0; i < previous.length; i++) scratch.lbz2HScroll.set(i, previous[i]);
@@ -796,6 +808,25 @@ public class LbzBackgroundEvents extends AbstractZoneScrollHandler implements co
 
     private final int[] publishedWords = new int[224];
     public void publish(int x, int y, int frame, int act) { update(publishedWords, x, y, frame, act); }
+    /** loc_5432E retains LBZ1 deformation and the cloud longword across Load_Level. */
+    public void beginSeamlessAct2(int foregroundX) {
+        deathEggYOffset = 0; deathEggBgY = 0;
+        lastDeathEggFrame = null; lastLaunchProjectionInput = null; presentationLaunch = false;
+        holdTransitionForeground(foregroundX, vscrollFactorFG);
+    }
+
+    /** loc_5432E (sonic3k.asm:111330-111334): ApplyDeformation without another LBZ1_Deform. */
+    public void holdTransitionForeground(int foregroundX, int foregroundY) {
+        vscrollFactorFG = (short) foregroundY;
+        resetScrollTracking();
+        int fg = negWord(foregroundX) & 0xFFFF;
+        for (int i = 0; i < publishedWords.length; i++) {
+            publishedWords[i] = (fg << 16) | (publishedWords[i] & 0xFFFF);
+            trackOffsetFromPacked(publishedWords[i]);
+        }
+        currentBgPeriodWidth = computeBgPeriodWidth(publishedWords);
+    }
+
     public void copyPublishedWords(int[] destination) {
         System.arraycopy(publishedWords, 0, destination, 0, Math.min(destination.length, publishedWords.length));
     }
@@ -803,7 +834,8 @@ public class LbzBackgroundEvents extends AbstractZoneScrollHandler implements co
     /** Same-build native continuation; includes retained HScroll words and the completed picture. */
     public byte[] capturePublication() {
         var b = java.nio.ByteBuffer.allocate(4096);
-        b.putInt(cloudAccumulator).putInt(cloudPublishedPhase).putInt(deathEggYOffset);
+        b.putInt(cloudAccumulator).putInt(cloudPublishedPhase).putInt(deathEggYOffset).putInt(publicationAct)
+                .putInt(publicationSourceX).putInt(publicationSourceY).putInt(publicationLevelFrame);
         putFrame(b, lastDeathEggFrame);
         b.putShort(deathEggBgY);
         for (short word : lbz2HScroll.toArray()) b.putShort(word);
@@ -836,7 +868,8 @@ public class LbzBackgroundEvents extends AbstractZoneScrollHandler implements co
         // Decode into a private probe before touching the live continuation.
         var p = new LbzBackgroundEvents(waterlineData, deathEggWaveData);
         var b = java.nio.ByteBuffer.wrap(bytes);
-        p.cloudAccumulator = b.getInt(); p.cloudPublishedPhase = b.getInt(); p.deathEggYOffset = b.getInt();
+        p.cloudAccumulator = b.getInt(); p.cloudPublishedPhase = b.getInt(); p.deathEggYOffset = b.getInt(); p.publicationAct = b.getInt();
+        p.publicationSourceX = b.getInt(); p.publicationSourceY = b.getInt(); p.publicationLevelFrame = b.getInt();
         p.lastDeathEggFrame = readFrame(b); p.deathEggBgY = b.getShort();
         for (int i = 0; i < p.lbz2HScroll.size(); i++) p.lbz2HScroll.set(i, b.getShort());
         if (readBoolean(b)) {
@@ -852,12 +885,16 @@ public class LbzBackgroundEvents extends AbstractZoneScrollHandler implements co
         p.vscrollFactorFG = b.getShort(); p.vscrollFactorBG = b.getShort();
         p.minScrollOffset = b.getInt(); p.maxScrollOffset = b.getInt();
         for (int i = 0; i < p.publishedWords.length; i++) p.publishedWords[i] = b.getInt();
-        if (b.hasRemaining() || (p.deathEggYOffset != 0 && p.deathEggYOffset != 0x100)
+        if (b.hasRemaining() || p.publicationSourceX != (short) p.publicationSourceX
+                || p.publicationSourceY != (short) p.publicationSourceY || p.publicationAct < 0 || p.publicationAct > 1 || (p.deathEggYOffset != 0 && p.deathEggYOffset != 0x100)
                 || p.screenShakeOffset != (short) p.screenShakeOffset
                 || p.currentBgPeriodWidth < 512 || p.currentBgPeriodWidth > 8192
                 || (p.presentationLaunch && p.lastLaunchProjectionInput == null))
             throw new IllegalArgumentException("Invalid LBZ background publication");
         restoreRewindState(p.captureRewindState());
+        publicationAct = p.publicationAct;
+        publicationSourceX = p.publicationSourceX; publicationSourceY = p.publicationSourceY;
+        publicationLevelFrame = p.publicationLevelFrame;
         lastBgCameraX = p.lastBgCameraX; lastLbz2ScrollArtPhaseSource = p.lastLbz2ScrollArtPhaseSource;
         screenShakeOffset = p.screenShakeOffset; currentBgPeriodWidth = p.currentBgPeriodWidth;
         vscrollFactorFG = p.vscrollFactorFG; vscrollFactorBG = p.vscrollFactorBG;

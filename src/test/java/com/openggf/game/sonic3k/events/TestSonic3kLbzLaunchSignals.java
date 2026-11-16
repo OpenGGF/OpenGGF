@@ -93,7 +93,7 @@ class TestSonic3kLbzLaunchSignals {
 
         state.writeScreenShakeFlag(0xFF00); // loc_8D450: ship writes flag before its launch signal
         events.requestLaunchStart();
-        events.update(1, 1);
+        updateAtLevelFrame(events, 1, 1);
 
         assertTrue(state.isLaunchActive());
         assertTrue(state.isDeathEggRumble());
@@ -131,7 +131,7 @@ class TestSonic3kLbzLaunchSignals {
         camera.setY((short) 0x0660);
 
         events.requestLaunchStart();
-        events.update(1, 1);
+        updateAtLevelFrame(events, 1, 1);
 
         for (int col = 0; col < width; col++) {
             assertEquals(map.getValue(1, col, 2), map.getValue(1, col, 0),
@@ -251,9 +251,9 @@ class TestSonic3kLbzLaunchSignals {
         camera.setY((short) 0x0668);
 
         events.requestLaunchStart();
-        events.update(1, 1);
+        updateAtLevelFrame(events, 1, 1);
         state.setPreLaunchDelay(0);
-        events.update(1, 2);
+        updateAtLevelFrame(events, 1, 2);
 
         assertEquals(0x1E00, state.getFgAccum());
         assertEquals(0x6200, state.getBgAccum());
@@ -262,7 +262,7 @@ class TestSonic3kLbzLaunchSignals {
 
         boolean sawRiderDelta = false;
         for (int frame = 3; frame < 16; frame++) {
-            events.update(1, frame);
+            updateAtLevelFrame(events, 1, frame);
             sawRiderDelta |= state.getLaunchYDelta() > 0;
         }
 
@@ -281,11 +281,11 @@ class TestSonic3kLbzLaunchSignals {
         camera.setX((short) 0x4390);
         camera.setY((short) 0x0668);
         events.requestLaunchStart();
-        events.update(1, 1);
+        updateAtLevelFrame(events, 1, 1);
         state.setPreLaunchDelay(0);
 
         events.requestPadCollapseStart();
-        events.update(1, 2);
+        updateAtLevelFrame(events, 1, 2);
 
         assertTrue(state.isPadCollapseActive());
         assertTrue(state.getFgLaunchSpeed() < 0x1E00,
@@ -298,7 +298,7 @@ class TestSonic3kLbzLaunchSignals {
         state.setPadCollapseActive(false);
         state.setWaterDisabled(true);
         state.setDetachWindowCopyTimer(0);
-        events.update(1, 3);
+        updateAtLevelFrame(events, 1, 3);
 
         assertTrue(state.isFinalFallActive());
         assertTrue(state.isLaunchActive(),
@@ -325,7 +325,7 @@ class TestSonic3kLbzLaunchSignals {
         state.setWaterTargetY(0x0668);
 
         events.requestFinalFall();
-        events.update(1, 3);
+        updateAtLevelFrame(events, 1, 3);
 
         assertFalse(state.isFinalFallActive(),
                 "LBZ2BGE_PlatformDetach ignores the third Events_fg_5 use until the detach state has advanced");
@@ -352,7 +352,7 @@ class TestSonic3kLbzLaunchSignals {
         state.setBgAccum(0x123400);
         events.requestFinalFall();
 
-        events.update(1, 4);
+        updateAtLevelFrame(events, 1, 4);
 
         assertTrue(state.isFinalFallActive());
         assertEquals(0x0666, Short.toUnsignedInt(camera.getY()));
@@ -376,7 +376,7 @@ class TestSonic3kLbzLaunchSignals {
         state.setDetachWindowCopyTimer(0);
 
         events.requestFinalFall();
-        events.update(1, 3);
+        updateAtLevelFrame(events, 1, 3);
 
         assertFalse(state.isFinalFallActive(),
                 "LBZ2BGE_Falling must not start merely because the local pad-collapse latch is inactive");
@@ -419,7 +419,7 @@ class TestSonic3kLbzLaunchSignals {
 
         events.requestPadCollapseStart();
         for (int frame = 4; frame <= 8; frame += 4) {
-            events.update(1, frame);
+            updateAtLevelFrame(events, 1, frame);
         }
 
         assertTrue(state.isPadCollapseActive());
@@ -432,7 +432,7 @@ class TestSonic3kLbzLaunchSignals {
 
         int frame = 9;
         while (state.getBgLaunchSpeed() >= 0) {
-            events.update(1, frame++);
+            updateAtLevelFrame(events, 1, frame++);
         }
 
         assertTrue(state.isWaterDisabled(),
@@ -447,7 +447,7 @@ class TestSonic3kLbzLaunchSignals {
                 "SpecialVInt_LBZ2WindowCopy fills the window nametable before the window is enabled");
 
         for (int copyFrame = 0; copyFrame < 0x1C; copyFrame++) {
-            events.update(1, frame++);
+            updateAtLevelFrame(events, 1, frame++);
             assertEquals(0, state.getDetachScroll(),
                     "SpecialVInt_LBZ2WindowCopy must finish before Events_bg+$16 starts detaching the pad");
             assertTrue(state.isPadCollapseActive(),
@@ -457,7 +457,7 @@ class TestSonic3kLbzLaunchSignals {
         }
         assertFalse(events.isLbz2CopiedWindowActiveForTest(),
                 "28 row-copy VBlanks leave ScrollAClear pending");
-        events.update(1, frame++);
+        updateAtLevelFrame(events, 1, frame++);
         assertTrue(events.isLbz2CopiedWindowActiveForTest(),
                 "SpecialVInt_LBZ2ScrollAClear enables the copied window immediately before detach scroll begins");
         assertEquals(0,
@@ -501,7 +501,7 @@ class TestSonic3kLbzLaunchSignals {
 
         int detachTickChecks = 0;
         while (state.isPadCollapseActive()) {
-            events.update(1, frame++);
+            updateAtLevelFrame(events, 1, frame++);
             if (((frame - 1) & 3) == 0) {
                 detachTickChecks++;
             }
@@ -520,9 +520,9 @@ class TestSonic3kLbzLaunchSignals {
                 "SpecialVInt_LBZ2WindowCopy keeps copied platform pixels available for rendering even though "
                         + "the collision/layout cells have been cleared");
         assertTrue(events.isLbz2CopiedWindowActiveForTest());
-        events.update(1, frame++);
+        updateAtLevelFrame(events, 1, frame++);
         assertTrue(events.isLbz2CopiedWindowActiveForTest(), "ScrollAClear2 leaves window enabled");
-        events.update(1, frame);
+        updateAtLevelFrame(events, 1, frame);
         assertFalse(events.isLbz2CopiedWindowActiveForTest(), "WindowClear restores Plane A then disables window");
         assertEquals(visiblePadDescriptor,
                 GameServices.level().getForegroundTileDescriptorFromTilemapAtWorld(padWorldX, padWorldY),
@@ -541,7 +541,7 @@ class TestSonic3kLbzLaunchSignals {
         state.setLaunchRiderDelta(3);
         state.setFgLaunchSpeed(0x1E00);
         state.setFgAccum(0x12340000);
-        events.update(1, 1);
+        updateAtLevelFrame(events, 1, 1);
         assertEquals(0x12340000, state.getFgAccum());
         assertEquals(0, state.getLaunchRiderDelta(), "no direct ship add occurred in this BG dispatch");
     }
@@ -557,7 +557,7 @@ class TestSonic3kLbzLaunchSignals {
         state.setBgLaunchSpeed(0);
         state.writeScreenShakeFlag(0);
 
-        events.update(1, 1);
+        updateAtLevelFrame(events, 1, 1);
 
         assertFalse(state.isDeathEggRumble(),
                 "Death Egg rumble latch should clear as soon as the screen-shake flag is off");
@@ -572,8 +572,8 @@ class TestSonic3kLbzLaunchSignals {
         camera.setX((short) 0x3BC0);
         camera.setY((short) 0x0500);
 
-        events.update(1, 1);
-        events.update(1, 2);
+        updateAtLevelFrame(events, 1, 1);
+        updateAtLevelFrame(events, 1, 2);
 
         assertTrue(state.isDeathEggTerrainSwapQueued());
         assertFalse(state.isDeathEggTerrainSwapApplied(),
@@ -603,11 +603,11 @@ class TestSonic3kLbzLaunchSignals {
 
         fixture.camera().setX((short) 0x3BC0);
         fixture.camera().setY((short) 0x0500);
-        events.update(1, 1);
+        updateAtLevelFrame(events, 1, 1);
         for (int frame = 2; frame < 10_000 && !state.isDeathEggTerrainSwapApplied(); frame++) {
             HardwareBoundaryPump.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
             HardwareBoundaryPump.service(HardwareServiceBoundary.POST_OBJECTS);
-            events.update(1, frame);
+            updateAtLevelFrame(events, 1, frame);
         }
         byte[] expectedDeathEgg2Pattern = expectedPattern(expectedDeathEgg2, 0);
         for (int frame = 10_000;
@@ -617,7 +617,7 @@ class TestSonic3kLbzLaunchSignals {
                 frame++) {
             HardwareBoundaryPump.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
             HardwareBoundaryPump.service(HardwareServiceBoundary.POST_OBJECTS);
-            events.update(1, frame);
+            updateAtLevelFrame(events, 1, frame);
         }
 
         assertTrue(state.isDeathEggTerrainSwapQueued());
@@ -720,4 +720,13 @@ class TestSonic3kLbzLaunchSignals {
     private static int readWord(byte[] data, int offset) {
         return ((data[offset] & 0xFF) << 8) | (data[offset + 1] & 0xFF);
     }
+    /** Component dispatches declare the native clock, rather than advancing only an event ordinal. */
+    private static void updateAtLevelFrame(Sonic3kLBZEvents events, int act, int levelFrame) {
+        try {
+            var field = com.openggf.level.LevelManager.class.getDeclaredField("frameCounter");
+            field.setAccessible(true); field.setInt(GameServices.level(), levelFrame);
+        } catch (ReflectiveOperationException e) { throw new AssertionError(e); }
+        events.update(act, levelFrame);
+    }
+
 }

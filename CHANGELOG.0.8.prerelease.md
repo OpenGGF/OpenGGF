@@ -880,7 +880,10 @@ under the matching area heading; see the
   rendering only projects it. Launch Base uses the same event-owned shake words;
   its cloud and Death Egg deformation continuation rewinds with the publication,
   renderer rebuilds retain timed shake, and ship/cameo reads use LBZ’s native flag
-  rather than a boolean retained by another zone. The seamless reload retains HCZ1 deformation,
+  rather than a boolean retained by another zone. Its in-play act transition retains
+  the background publication and cloud longword; shake/waves use the level clock,
+  final fall retains shake words, and invalid rewind payloads are rejected before
+  manager state changes. The seamless reload retains HCZ1 deformation,
   and the geyser begins shaking on its native first dispatch. Scene
   presentation spells out capture, restoration and failure cleanup in operation
   order, and pixel-oracle failures retain the rendering mode and captured frame.
