@@ -122,7 +122,7 @@ public final class CdGameOver extends CdObject implements ObjectVisualFacing.Non
         PatternSpriteRenderer renderer = art(timeOverText ? CommonObjectArt.TIME_OVER : CommonObjectArt.GAME_OVER);
         var camera = services().camera();
         if (renderer == null || camera == null) return;
-        renderer.drawFrameIndex(frame, camera.getX() + x - 128 + (camera.getWidth() - 320) / 2, camera.getY() + screenY - 128, false, false,
+        renderer.drawFrameIndex(frame, camera.getX() + CdScreenPosition.centredOrigin(services()) + x - 128, camera.getY() + screenY - 128, false, false,
                 CdObjectArtProvider.tilePalette(tileWord));
     }
 

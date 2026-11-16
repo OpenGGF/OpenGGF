@@ -264,7 +264,11 @@ Future). `SonicCdEndingCaptureTool --ending good|bad` films an ending.
 - Wider stage views extend object visibility, touch eligibility, load/unload
   windows and boss arena centring. Static Palmtree Panic background bands
   retain their 512-pixel repeat beside moving bands; the time tunnel fills
-  the selected width. These are engine extensions without a native wide
+  the selected width. Title cards, results and game-over text centre in the native
+  frame, independently of the HUD preference, as in the cartridge games. All HUD
+  pieces (including period and time-warp icons) follow the centred or left-edge
+  HUD setting in EDGE and NATIVE modes; time posts remain world-positioned.
+  At 320 these presentation offsets are zero. These are engine extensions without a native wide
   reference. Fixed-width programs and the special stage stay pillarboxed;
   level walls and scripted world coordinates retain their native positions.
 - Accuracy is measured against native recordings; how far each stage is

@@ -1331,8 +1331,11 @@ copies extend their native `$280` compare by the simulation-width delta.
 but its right edge follows simulation width; the retained bit also gates
 native touch and solid checks. Objects without a native range check still
 remain live. Boss-start centring uses half that width; world-space boss
-coordinates and player level walls do not move. Screen-space game-over text
-is centred without changing its native animation or restart clock. The warp
+coordinates and player level walls do not move. Screen-space title cards,
+results and game-over text centre in the native frame without changing their
+native animation or restart clocks. HUD objects, including period and time-warp
+icons, use the shared HUD anchor (centred or screen-left), with the NATIVE
+picture inset accounted for; world-space time posts do not move. The warp
 picture repeats its native 512-pixel plane across the display and centres its
 sprites, including palette fades. FMV/title/ending and the 256-pixel special
 stage keep their native pillarbox. This is an engine extension, not a native
