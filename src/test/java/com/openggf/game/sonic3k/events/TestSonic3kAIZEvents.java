@@ -281,6 +281,22 @@ public class TestSonic3kAIZEvents {
     }
 
     @Test
+    public void shakeSetupHonoursStoredRestartRoutineAndContiguousTimedTable() throws Exception {
+        var events = new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
+        Method tick = Sonic3kAIZEvents.class.getDeclaredMethod("tickScreenShake");
+        tick.setAccessible(true);
+        events.triggerScreenShake(0x1E);
+        tick.invoke(events);
+        assertEquals(3, events.getScreenShakeOffsetYRaw(),
+                "countdown $1D reads ScreenShakeArray2, contiguous with the timed table");
+        fixture.sprite().setObjectRoutineOverride(8);
+        assertFalse(fixture.sprite().getDead(), "stored restart routine, not dead boolean");
+        tick.invoke(events);
+        assertEquals(0, events.getScreenShakeOffsetYRaw(), "routine >= 6 suppresses next shake");
+        assertEquals(0x1D, events.getScreenShakeTimer(), "death gate holds the flag");
+    }
+
+    @Test
     public void shakeSetupPublishesPriorOffsetBeforePreparingNextFrame() throws Exception {
         var events = new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
         events.setScreenShakeOffsetYRaw(3);

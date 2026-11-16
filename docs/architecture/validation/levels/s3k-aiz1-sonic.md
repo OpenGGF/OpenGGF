@@ -1183,3 +1183,10 @@ records corrected native request IDs and/or level-restore selection affecting
 this route. Restoration selects the apparent playlist and P1 invincibility at
 the native boundary. These local checks do not requalify this matrix’s inherited
 route, viewport/donor/team, lifecycle or audible-comparison gaps.
+
+## Screen-event publication maintenance — 2026-11-16
+
+The [AIZ publication audit](../../audits/2026-11-16-s3k-aiz-event-publication.md)
+records the AIZ1 ownership/rewind checks, matched route comparisons and AIZ2
+forest-loop picture preservation. Existing character, donor, team, viewport and
+native pixel obligations remain open; this local change does not certify an act.

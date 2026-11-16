@@ -1604,3 +1604,17 @@ The seven shared cases passed in the focused run; this does not qualify cold
 reachability, live rewind-floor recording, other configurations or complete routes.
 Those inherited obligations remain open. See the
 [shared ownership design](../../designs/2026-11-03-seamless-request-retargeting.md).
+
+### Screen publication ownership — 2026-11-15
+
+The [MHZ publication audit](../../audits/2026-11-15-s3k-mhz-event-publication.md)
+records the event-owned loop, deformation/animation bands, pillar helper positions
+and shake payload. `TestS3kMhzScreenPublication` exercises a real MHZ2 rebuild
+and boss shake component; `TestMhzComposedRewindState` rejects malformed captures.
+The viewport ramp test advances the background-event owner before projection and
+retains exact native helper positions and fractional ramp words across all five aspects.
+Review coverage (2026-11-16) also checks one shake in the ordinary render camera,
+render bounds and actual sprite draw, positive/negative routine-8 dispatches,
+real loop-carry/hScroll restoration, and the boss's injected zone flag owner.
+This adds bounded publication/rewind obligations, not additional route, donor,
+team or visual certification. Existing matrix gaps above remain open.

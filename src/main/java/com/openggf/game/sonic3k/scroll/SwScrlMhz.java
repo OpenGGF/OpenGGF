@@ -5,6 +5,9 @@ import static com.openggf.level.scroll.M68KMath.negWord;
 
 import com.openggf.camera.NativeViewportFraming;
 import com.openggf.game.GameServices;
+import static com.openggf.game.sonic3k.events.Sonic3kMHZEvents.computeMhzDeform;
+import static com.openggf.game.sonic3k.events.Sonic3kMHZEvents.computeEndBossPillarRampStep;
+import com.openggf.game.sonic3k.events.Sonic3kMHZEvents.DeformOutputs;
 import com.openggf.game.sonic3k.runtime.MhzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.level.scroll.AbstractZoneScrollHandler;
@@ -33,17 +36,6 @@ public class SwScrlMhz extends AbstractZoneScrollHandler
     private int bgCameraX = Integer.MIN_VALUE;
     private int band1CameraX;
     private int band2CameraX;
-    private boolean loopScrollInitialized;
-    private int loopActualCameraX;
-    private int loopAdjustedCameraX;
-
-    @Override
-    public void init(int actId, int cameraX, int cameraY) {
-        loopActualCameraX = cameraX & 0xFFFF;
-        loopAdjustedCameraX = loopActualCameraX;
-        loopScrollInitialized = true;
-    }
-
     @Override
     public void update(int[] horizScrollBuf,
                        int cameraX,
@@ -53,15 +45,14 @@ public class SwScrlMhz extends AbstractZoneScrollHandler
         resetScrollTracking();
         composer.reset();
 
-        short fgScroll = negWord(cameraX);
         MhzZoneRuntimeState state = currentRuntimeState();
-        DeformOutputs outputs = computeMhzDeform(adjustBgDuringLoop(cameraX), cameraY,
-                state == null ? 0 : state.screenShakeOffset(),
+        short fgScroll = negWord(cameraX + (state == null ? 0 : state.appliedScreenShakeOffset()));
+        DeformOutputs outputs = computeMhzDeform(state == null ? cameraX : state.loopAdjustedCameraX(), cameraY,
+                state == null ? 0 : state.appliedScreenShakeOffset(),
                 state != null && state.isBossAreaBackgroundDeformActive());
         bgCameraX = outputs.bgCameraX();
         band1CameraX = outputs.band1CameraX();
         band2CameraX = outputs.band2CameraX();
-        publishDeformOutputs(state);
 
         composer.setVscrollFactorBG(outputs.bgCameraY());
         composer.fillPackedScrollWords(0, VISIBLE_LINES, fgScroll, negWord(bgCameraX));
@@ -77,35 +68,9 @@ public class SwScrlMhz extends AbstractZoneScrollHandler
         maxScrollOffset = composer.getMaxScrollOffset();
     }
 
-    private record LoopScrollState(boolean initialized, int actualX, int adjustedX) { }
-
-    @Override
-    public Object captureRewindState() {
-        return new LoopScrollState(loopScrollInitialized, loopActualCameraX, loopAdjustedCameraX);
-    }
-
-    /**
-     * MHZ1_BackgroundEvent rebases Camera_X_pos_copy and Events_fg_0 by $4200,
-     * but retains Events_fg_1, the loop-adjusted background accumulator. The
-     * engine replaces the act's scroll initialization, so carry the accumulator
-     * and rebase only its last physical-camera sample.
-     */
-    public Object captureForActTransition(int cameraOffsetX) {
-        return new LoopScrollState(loopScrollInitialized,
-                (loopActualCameraX + cameraOffsetX) & 0xFFFF, loopAdjustedCameraX);
-    }
-
-    @Override
-    public void restoreRewindState(Object snapshot) {
-        if (snapshot instanceof LoopScrollState saved) {
-            // A rewind camera jump is not the ROM's $200 arena repeat. Restore
-            // the logical accumulator before the parallax rebuild observes it.
-            loopScrollInitialized = saved.initialized();
-            loopActualCameraX = saved.actualX();
-            loopAdjustedCameraX = saved.adjustedX();
-        }
-    }
-
+    // MHZ2_ScreenEvent already adds the offset to the camera copy. Keep the
+    // separate presentation-shake channel at its default zero: sprites,
+    // uniform foreground and Render_Sprites bounds all consume that copy.
     @Override
     public int getBgCameraX() {
         return bgCameraX;
@@ -117,73 +82,6 @@ public class SwScrlMhz extends AbstractZoneScrollHandler
 
     int getNearBgCameraX() {
         return band2CameraX;
-    }
-
-    private int adjustBgDuringLoop(int cameraX) {
-        int currentCameraX = cameraX & 0xFFFF;
-        if (!loopScrollInitialized) {
-            loopActualCameraX = currentCameraX;
-            loopAdjustedCameraX = currentCameraX;
-            loopScrollInitialized = true;
-            return loopAdjustedCameraX;
-        }
-
-        int delta = (short) (currentCameraX - loopActualCameraX);
-        loopActualCameraX = currentCameraX;
-        if (delta < 0) {
-            int magnitude = -delta;
-            if (magnitude >= 0x0100) {
-                magnitude -= 0x0200;
-            }
-            loopAdjustedCameraX = (loopAdjustedCameraX - magnitude) & 0xFFFF;
-        } else {
-            int magnitude = delta;
-            if (magnitude >= 0x0100) {
-                magnitude -= 0x0200;
-            }
-            loopAdjustedCameraX = (loopAdjustedCameraX + magnitude) & 0xFFFF;
-        }
-        return loopAdjustedCameraX;
-    }
-
-    private static DeformOutputs computeMhzDeform(int cameraX, int cameraY, int screenShakeOffset,
-                                                   boolean bossAreaDeformActive) {
-        short bgY = bossAreaDeformActive
-                ? computeBgY(cameraY, 0x280, 0x180)
-                : computeBgY(cameraY, 0, 0x76);
-        int adjustedCameraX = cameraX - screenShakeOffset;
-        int d0 = ((short) adjustedCameraX) << 16;
-        d0 >>= 1;
-        int d1 = d0;
-        d1 >>= 2;
-        d0 -= d1;
-        d1 >>= 1;
-
-        short bgX = (short) (highWord(d0) + screenShakeOffset);
-        d0 -= d1;
-        short band1 = highWord(d0);
-        d0 -= d1;
-        short band2 = highWord(d0);
-        return new DeformOutputs(bgY, bgX, band1, band2);
-    }
-
-    private static short computeBgY(int cameraY, int yOffset, int baseY) {
-        int d0 = ((short) (cameraY - yOffset)) << 16;
-        d0 >>= 3;
-        int d1 = d0;
-        d1 >>= 2;
-        d0 += d1;
-        return (short) (highWord(d0) + baseY);
-    }
-
-    private static short highWord(int value) {
-        return (short) (value >> 16);
-    }
-
-    private void publishDeformOutputs(MhzZoneRuntimeState state) {
-        if (state != null) {
-            state.publishDeformOutputs(bgCameraX, band1CameraX, band2CameraX);
-        }
     }
 
     private void applyShipHIntOverride(MhzZoneRuntimeState state) {
@@ -228,7 +126,7 @@ public class SwScrlMhz extends AbstractZoneScrollHandler
             }
             return;
         }
-        int rampAccumulator = (negWord(nativeCameraX - 0x80) & 0xFFFF) << 16;
+        int rampAccumulator = (negWord(nativeCameraX + state.appliedScreenShakeOffset() - 0x80) & 0xFFFF) << 16;
         int rampStep = computeEndBossPillarRampStep(nativeCameraX);
         for (int line = 0; line < lineCount; line++) {
             short fgScroll = (short) (composer.packedScrollWordAt(line) >> 16);
@@ -236,51 +134,6 @@ public class SwScrlMhz extends AbstractZoneScrollHandler
             composer.writePackedScrollWord(line, fgScroll, rampScroll);
             rampAccumulator += rampStep;
         }
-        publishEndBossArenaHelperXPositions(state, nativeCameraX, inset);
-    }
-
-    private void publishEndBossArenaHelperXPositions(MhzZoneRuntimeState state, int cameraX, int inset) {
-        int[] spikeX = new int[6];
-        spikeX[0] = computeEndBossArenaHelperX(cameraX, 40, inset);
-        spikeX[1] = spikeX[0];
-        spikeX[2] = computeEndBossArenaHelperX(cameraX, 30, inset);
-        spikeX[3] = spikeX[2];
-        spikeX[4] = computeEndBossArenaHelperX(cameraX, 17, inset);
-        spikeX[5] = spikeX[4];
-        state.publishEndBossArenaHelperXPositions(computeEndBossArenaHelperX(cameraX, 47, inset), spikeX);
-    }
-
-    private int computeEndBossArenaHelperX(int cameraX, int hScrollLine, int inset) {
-        // loc_555D2 reads native scroll words, before display projection.
-        short bgScroll = (short) (composer.packedScrollWordAt(hScrollLine) - inset);
-        return (((bgScroll - 0x48) & 0x1FF) + cameraX) & 0xFFFF;
-    }
-
-    private static int computeEndBossPillarRampStep(int cameraX) {
-        int distance = (short) (cameraX - 0x4180);
-        int scaled = distance * 0x5600;
-        scaled += scaled;
-        int scaledSwapped = swapWords(scaled);
-        int deltaWord = (short) (distance - (short) scaledSwapped);
-        deltaWord = (short) (deltaWord - 0x18);
-        int magnitude = deltaWord << 16;
-        boolean negative = magnitude < 0;
-        if (negative) {
-            magnitude = -magnitude;
-        }
-        // loc_55586: DIVU leaves the remainder in D2's high word.
-        // MOVE.W replaces only its low word before the second DIVU;
-        // discarding that remainder loses the fractional ramp entirely.
-        int highDividend = (magnitude >>> 16) & 0xFFFF;
-        int highQuotient = highDividend / 0x30;
-        int lowDividend = ((highDividend % 0x30) << 16) | (magnitude & 0xFFFF);
-        int lowQuotient = lowDividend / 0x30;
-        int step = (highQuotient << 16) | lowQuotient;
-        return negative ? -step : step;
-    }
-
-    private static int swapWords(int value) {
-        return (value << 16) | ((value >>> 16) & 0xFFFF);
     }
 
     private MhzZoneRuntimeState currentRuntimeState() {
@@ -290,15 +143,12 @@ public class SwScrlMhz extends AbstractZoneScrollHandler
         return S3kRuntimeStates.currentMhz(GameServices.zoneRuntimeRegistry()).orElse(null);
     }
 
-    private record DeformOutputs(short bgCameraY, short bgCameraX, short band1CameraX, short band2CameraX) {
-    }
-
     @Override
     public com.openggf.level.scroll.ScrollProjectionPhase captureProjection(
             com.openggf.level.scroll.ScrollProjectionContext context) {
         MhzZoneRuntimeState state = currentRuntimeState();
-        int adjustedX = loopScrollInitialized ? loopAdjustedCameraX : context.cameraX() & 0xffff;
-        int shake = state == null ? 0 : state.screenShakeOffset();
+        int adjustedX = state == null ? context.cameraX() & 0xffff : state.loopAdjustedCameraX();
+        int shake = state == null ? 0 : state.appliedScreenShakeOffset();
         boolean bossArea = state != null && state.isBossAreaBackgroundDeformActive();
         boolean ship = state != null && state.isShipSequenceActive();
         int shipScroll = state == null ? 0 : state.shipPrimaryHScroll();

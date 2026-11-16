@@ -44,7 +44,9 @@ class TestFbzBossCloudIdentity {
 
     @Test
     void renderRefreshesOnlyDrawCoordinatesAfterParallaxRunsLaterThanObjectUpdate() {
-        SwScrlFbz handler = mock(SwScrlFbz.class);
+        var events = new com.openggf.game.sonic3k.events.Sonic3kFBZEvents();
+        events.init(1);
+        var registry = new com.openggf.game.zone.ZoneRuntimeRegistry();
         ParallaxManager parallax = mock(ParallaxManager.class);
         Camera camera = mock(Camera.class);
         AtomicReference<SwScrlFbz.CloudPosition> current = new AtomicReference<>(
@@ -54,12 +56,16 @@ class TestFbzBossCloudIdentity {
         when(renderer.isReady()).thenReturn(true);
         when(renders.getRenderer(com.openggf.game.sonic3k.Sonic3kObjectArtKeys.FBZ_CLOUD))
                 .thenReturn(renderer);
-        when(parallax.getHandler(0)).thenReturn(handler);
-        when(handler.cloudPositionAtAddressSlot(0)).thenAnswer(ignored -> current.get());
+        registry.install(new com.openggf.game.sonic3k.runtime.FbzZoneRuntimeState(
+                1, com.openggf.game.PlayerCharacter.SONIC_ALONE, events));
+        int[] coordinates = new int[20];
+        coordinates[0] = 0x90; coordinates[1] = 0xA0;
+        events.restoreCloudCoordinates(coordinates);
         when(camera.getX()).thenReturn((short) 0x1000);
         when(camera.getY()).thenReturn((short) 0x200);
         FbzCloudInstance cloud = new FbzCloudInstance(9);
         cloud.setServices(new StubObjectServices() {
+            @Override public com.openggf.game.zone.ZoneRuntimeRegistry zoneRuntimeRegistry() { return registry; }
             @Override public ParallaxManager parallaxManager() { return parallax; }
             @Override public Camera camera() { return camera; }
             @Override public com.openggf.level.objects.ObjectRenderManager renderManager() { return renders; }
@@ -67,7 +73,8 @@ class TestFbzBossCloudIdentity {
 
         cloud.update(0, null);
         assertEquals(0x1010, cloud.getX());
-        current.set(new SwScrlFbz.CloudPosition(0xC4, 0xD5, 1, 9, 0));
+        coordinates[0] = 0xC4; coordinates[1] = 0xD5;
+        events.restoreCloudCoordinates(coordinates);
 
         ObjectSpawn nativeSpawn = cloud.getSpawn();
         cloud.appendRenderCommands(new ArrayList<>());
@@ -78,7 +85,7 @@ class TestFbzBossCloudIdentity {
         assertEquals(0x1010, cloud.getX());
         assertEquals(0x220, cloud.getY());
         assertSame(nativeSpawn, cloud.getSpawn());
-        verify(handler, times(5)).cloudPositionAtAddressSlot(0);
+
         verify(renderer, times(4)).drawFrameIndex(0, 0x1044, 0x255, false, false);
     }
 }

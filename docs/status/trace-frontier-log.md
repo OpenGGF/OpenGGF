@@ -124886,3 +124886,20 @@ zero; exact lease hold and off-job time are unknown. The final certification
 commit adds only this prose. Remote push and accounted worktree cleanup are
 recorded in the lead's delivery receipt; no unrestricted parity or full-suite
 pass is claimed.
+
+## 2026-11-16 — MGZ publication review: remove cancelling encounter delays
+
+`feature/ai-s3k-mgz-event-publication`, review parent `5ca768471b`, baseline `e676eb5086`:
+reverting only the arm change restored both green traces, but ROM FG/BG order confirms
+that correction. Two early end-boss setup/wait ticks had been masked by request/countdown
+delays; rescue initialization and a fitted parent rise wait supplied later compensations.
+Native waits and an allocated transition worker restore the whole causal chain.
+`python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl
+-Dtrace.print.summary=true -Dopenggf.surefire.reports=target/mgz-final-traces/surefire
+-Dopenggf.trace.reports=target/mgz-final-traces/trace-reports
+'-Dtest=*Mgz*TraceReplay,TestS3kMgzF498AirRollPhysics' test`: 12 tests / 8 inherited
+failures / 0 errors / 0 skips. Short MGZ tails_y@32557 (1121 groups) → zero; zone slice
+tails_y@35447 (1584 groups) → zero. All eleven full JSON objects, including compared
+rows and gates, equal baseline exactly. 383 focused cases pass. See the
+[MGZ audit](../architecture/audits/2026-11-15-s3k-mgz-event-publication.md) for red controls,
+intermediate frontiers, exact commands and inherited gaps. No trace input or tolerance changes.

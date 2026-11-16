@@ -7,6 +7,25 @@ under the matching area heading; see the
 
 ## Gameplay and presentation
 
+- **Angel Island screen events:** AIZ owns the canopy-wave origin and captures
+  its publication with the shared ROM shake words. Shake setup respects stored
+  death/restart routines and the contiguous timed table; water and bomb producers
+  write the same flag without the water timer masking later bomb writes. Water
+  timer edges publish through a game-neutral handler lifecycle; real-intro and
+  independent last-offset rewind witnesses cover the publication boundaries.
+
+- **Mushroom Hill screen events:** the end boss now starts the original timed
+  horizontal shake at its final escape threshold, applied once to foreground,
+  sprites and render bounds through the native camera copy. Background loop, animation
+  bands and pillar collision positions belong to screen events and restore
+  together with shake; rebuilding scroll output no longer changes gameplay.
+
+- **Flying Battery event publication:** gameplay owns cloud drift, positions and
+  shake setup; extra draws and renderer rebuilds preserve the completed event
+  state, including after rewind. Subbosses request shake through its flag alone.
+  Seamless reload supports mod-wrapped event providers; projected indoor views
+  retain camera-copy shake, and rewind preserves timed as well as constant shake.
+
 - **Sonic CD (development preview):** Sonic CD runs from the user's own USA
   disc image (a cue sheet and its tracks, or a lossless CHD made from them with
   MAME's chdman, named by `roms.soniccd` or found in the ROM folder) as
@@ -747,6 +766,15 @@ under the matching area heading; see the
 
 ## Maintenance and release preparation
 
+- ICZ background loop history and indoor selection now belong to the event owner,
+  so rebuilding scroll output retains the same background. Rewind captures that
+  continuation together with the shared ROM shake words; ICZ objects request
+  shake through the zone bridge instead of toggling the unrelated shared flag.
+  Indoor restarts select the normal background routine before resize events,
+  shake and rumble use the native level clock, and rewind rejects unreachable
+  shake, snow-fall and intro-phase values. Unexpected failures during validated
+  ICZ rewind restoration propagate instead of being logged and swallowed.
+
 - **All-level performance sweep:** `tools/performance/level_sweep.py` plays every
   trace fixture and Sonic 3&K route movie through the frame-time probes, one at a
   time. It reports frame time, allocation, garbage collection and hitches per
@@ -877,11 +905,27 @@ under the matching area heading; see the
   a typed rewind HUD frame make contribution paths easier to follow. HCZ owns
   its completed screen/collision publication and all three shake words in one
   validated rewind payload; objects consume the preceding publication and
-  rendering only projects it. The seamless reload retains HCZ1 deformation,
+  rendering only projects it. Launch Base uses the same event-owned shake words;
+  its cloud and Death Egg deformation continuation rewinds with the publication,
+  renderer rebuilds retain timed shake, and ship/cameo reads use LBZ’s native flag
+  rather than a boolean retained by another zone. Its in-play act transition retains
+  the background publication and cloud longword; shake/waves use the level clock,
+  final fall retains shake words, and invalid rewind payloads are rejected before
+  manager state changes. Early directed-load scroll has an immutable pre-ScreenInit
+  phase; unexpected validated-restore failures propagate to their caller.
+  The seamless reload retains HCZ1 deformation,
   and the geyser begins shaking on its native first dispatch. CNZ suppresses
   screen shake after player death without consuming its countdown; SOZ uses
   the shared native shake owner as a refactor with no gameplay behaviour change,
-  preserving its contiguous-table reads and rewind continuation. Scene
+  preserving its contiguous-table reads and rewind continuation. MGZ likewise
+  owns shake, cloud phase and collision publication; drawing or rebuilding its
+  scroll output cannot advance gameplay, and rewind restores the composed state,
+  including the first MGZ2 rising-floor publication. Finished late loads do not
+  replay the rise object's crash or camera lock. Collapse arms its countdown
+  before the same frame's background shake setup. The end boss keeps its native
+  setup/underflow waits and draws throughout the Sonic encounter’s initial wait;
+  its allocated rescue controller runs in slot order
+  with the first countdown tick on setup. Scene
   presentation spells out capture, restoration and failure cleanup in operation
   order, and pixel-oracle failures retain the rendering mode and captured frame.
   Failed trace replays print their exact test/report/triage route; triage reads

@@ -436,7 +436,11 @@ public final class CutsceneKnucklesLbz2Instance extends AbstractObjectInstance i
     }
 
     private boolean isScreenShaking() {
-        return services().gameState() != null && services().gameState().isScreenShakeActive();
+        // loc_62942 (sonic3k.asm:129688-129696) and
+        // loc_62A0A (sonic3k.asm:129756-129763):
+        // tst.b reads the high byte of the big-endian shake word.
+        return services().zoneRuntimeRegistry().currentAs(LbzZoneRuntimeState.class)
+                .map(state -> (state.screenShakeFlag() & 0xFF00) != 0).orElse(false);
     }
 
     private int launchYDelta() {

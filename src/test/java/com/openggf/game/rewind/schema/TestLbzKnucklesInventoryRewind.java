@@ -67,7 +67,7 @@ class TestLbzKnucklesInventoryRewind {
                 .map(child -> child.getSpawn().subtype()).toList());
         assertEquals(4, cameo.swingChildrenForTest().size());
         cameo.triggerFromShip();
-        f.state.setScreenShakeActive(true);
+        f.runtime.writeScreenShakeFlag(0xFF00);
         f.runtime.setLaunchYDelta(1);
         f.step(steps);
         if (steps == -1) {
@@ -229,7 +229,7 @@ class TestLbzKnucklesInventoryRewind {
         var snapshot = explicitNoTable ? child.captureRewindState(RewindCaptureContext.none())
                 : child.captureRewindState();
         int capturedX = child.getCentreX();
-        f.state.setScreenShakeActive(true);
+        f.runtime.writeScreenShakeFlag(0xFF00);
         child.update(0, null);
         child.update(1, null);
         child.update(2, null);

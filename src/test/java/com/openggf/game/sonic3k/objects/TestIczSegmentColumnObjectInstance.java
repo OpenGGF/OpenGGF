@@ -175,4 +175,31 @@ public class TestIczSegmentColumnObjectInstance {
         assertEquals(0x0578, first.getY());
         assertEquals(0x0C, first.getMappingFrameForTesting());
     }
+    @Test
+    void oneLandingWritesSixteenOnceAndNormalUpdatesDoNotRewriteIt() throws Exception {
+        var bridge = mock(com.openggf.game.sonic3k.Sonic3kLevelEventManager.class);
+        var services = new StubObjectServices() {
+            @Override public com.openggf.game.LevelEventProvider levelEventProvider() { return bridge; }
+            @Override public com.openggf.game.solid.ObjectSolidExecutionContext solidExecution() {
+                return com.openggf.game.solid.ObjectSolidExecutionContext.inert();
+            }
+        }.withIsolatedObjectManager();
+        var root = new IczSegmentColumnObjectInstance(
+                new ObjectSpawn(0x1200, 0x580, Sonic3kObjectIds.ICZ_SEGMENT_COLUMN, 0, 0, false, 0));
+        root.setServices(services);
+        root.update(0, null);
+        var segments = services.objectManager().getActiveObjects().stream()
+                .filter(IczSegmentColumnObjectInstance.Segment.class::isInstance)
+                .map(IczSegmentColumnObjectInstance.Segment.class::cast).toList();
+        assertEquals(3, segments.size());
+        var falling = segments.get(1);
+        var start = falling.getClass().getDeclaredMethod("startCascadeWait");
+        start.setAccessible(true);
+        start.invoke(falling); // component inlet: upper segment's predecessor broke
+        for (int tick = 0; tick < 128; tick++) falling.update(tick, null);
+        verify(bridge, times(1)).triggerScreenShake(0x10);
+        for (int tick = 128; tick < 160; tick++) root.update(tick, null);
+        org.mockito.Mockito.verifyNoMoreInteractions(bridge);
+    }
+
 }

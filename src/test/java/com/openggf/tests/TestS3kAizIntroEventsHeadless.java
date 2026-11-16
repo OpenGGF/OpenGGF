@@ -427,6 +427,30 @@ public class TestS3kAizIntroEventsHeadless {
     }
 
     @Test
+    void realIntroPinsWaveOriginToTheFirstNormalDeformationFrame() {
+        var events = ((Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider()).getAizEvents();
+        assertFalse(fixture.camera().isLevelStarted());
+        assertFalse(AizPlaneIntroInstance.isMainLevelPhaseActive());
+        int firstNormalFrame = -1;
+        for (int frame = 0; frame < MAX_FRAMES; frame++) {
+            assertEquals(0, events.getWaveOriginFrame(), "intro projection cannot anchor the normal canopy");
+            int previousLevelFrame = GameServices.level().getFrameCounter();
+            fixture.stepFrame(false, false, false, fixture.camera().isLevelStarted(), false);
+            if (fixture.camera().isLevelStarted() || AizPlaneIntroInstance.isMainLevelPhaseActive()) {
+                firstNormalFrame = previousLevelFrame + 1;
+                break;
+            }
+        }
+        assertTrue(firstNormalFrame > 0, "real intro must reach the first normal deformation dispatch");
+        assertEquals(firstNormalFrame, events.getWaveOriginFrame(), "origin is that dispatch's Level_frame_counter");
+        byte[] publication = events.captureAizState();
+        for (int frame = 0; frame < 12; frame++) fixture.stepFrame(false, false, false, true, false);
+        assertEquals(firstNormalFrame, events.getWaveOriginFrame(), "later dispatches cannot re-anchor the wave");
+        events.restoreAizState(publication);
+        assertEquals(firstNormalFrame, events.getWaveOriginFrame(), "rewind preserves the intro-selected origin");
+    }
+
+    @Test
     void introMainLevelHandoffPulsesEventsFg5BeforeNormalPhase() {
         Sonic3kLevelEventManager levelEvents =
                 (Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider();
