@@ -28,9 +28,10 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 /** Pixel/clock characterization from d7732f78e, before the title-preview ownership migration. */
 class TestTitlePreviewPixels {
     @ParameterizedTest
-    @EnumSource(MasterTitleScreen.GameEntry.class)
+    @EnumSource(value = MasterTitleScreen.GameEntry.class, names = "SONIC_CD", mode = EnumSource.Mode.EXCLUDE)
     void preservesEveryAnimatedPixelAndFrameToken(MasterTitleScreen.GameEntry game) throws Exception {
         File file = switch (game) {
+            case SONIC_CD -> throw new IllegalArgumentException("Disc titles have no cartridge preview");
             case SONIC_1 -> RomTestUtils.ensureSonic1RomAvailable();
             case SONIC_2 -> RomTestUtils.ensureSonic2RomAvailable();
             case SONIC_3K -> RomTestUtils.ensureSonic3kRomAvailable();
@@ -38,6 +39,7 @@ class TestTitlePreviewPixels {
         assumeTrue(file != null && file.isFile(), "Required ROM is unavailable: " + game);
         String romHash = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-1").digest(Files.readAllBytes(file.toPath())));
         String expectedRom = switch (game) {
+            case SONIC_CD -> throw new IllegalArgumentException("Disc titles have no cartridge preview");
             case SONIC_1 -> "69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b";
             case SONIC_2 -> "8bca5dcef1af3e00098666fd892dc1c2a76333f9";
             case SONIC_3K -> "cfbf98c36c776677290a872547ac47c53d2761d6";
@@ -45,6 +47,7 @@ class TestTitlePreviewPixels {
         assumeTrue(expectedRom.equals(romHash), "Characterization requires the verified stock revision: " + game);
         var sequence = MasterTitleRomPreview.loadSequenceFor(game, file.toPath()).orElseThrow();
         String expected = switch (game) {
+            case SONIC_CD -> throw new IllegalArgumentException("Disc titles have no cartridge preview");
             case SONIC_1 -> "10fb88697df4c8aaa7c063c9e37689770fe3161901fdac55523fc68254900f74";
             case SONIC_2 -> "9387b37c7b9971712138b98b6c431af91d5901957264f92107fa7b35dd90dad6";
             case SONIC_3K -> "d718792c2bb3e7061d595d66985f0df5c6bc292bf18a0914dbf8e4468e755d6d";
@@ -66,9 +69,10 @@ class TestTitlePreviewPixels {
     }
 
     @ParameterizedTest
-    @EnumSource(MasterTitleScreen.GameEntry.class)
+    @EnumSource(value = MasterTitleScreen.GameEntry.class, names = "SONIC_CD", mode = EnumSource.Mode.EXCLUDE)
     void stockCardIgnoresPublishedSessionAndReadsDetachedLogicalViews(MasterTitleScreen.GameEntry game) throws Exception {
         File file = switch (game) {
+            case SONIC_CD -> throw new IllegalArgumentException("Disc titles have no cartridge preview");
             case SONIC_1 -> RomTestUtils.ensureSonic1RomAvailable();
             case SONIC_2 -> RomTestUtils.ensureSonic2RomAvailable();
             case SONIC_3K -> RomTestUtils.ensureSonic3kRomAvailable();

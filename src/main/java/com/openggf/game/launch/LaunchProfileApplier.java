@@ -16,7 +16,7 @@ public class LaunchProfileApplier {
     public void apply(LaunchProfile profile, MasterTitleScreen.GameEntry entry) {
         Objects.requireNonNull(profile, "profile");
         LaunchProfile sanitized = profile.sanitizedFor(Objects.requireNonNull(entry, "entry"));
-        applySanitized(sanitized);
+        applySanitized(sanitized, entry);
     }
 
     public void apply(LaunchProfile profile, MasterTitleScreen.GameEntry entry,
@@ -25,10 +25,10 @@ public class LaunchProfileApplier {
         LaunchProfile sanitized = profileStore.sanitize(
                 Objects.requireNonNull(profile, "profile"),
                 Objects.requireNonNull(entry, "entry"));
-        applySanitized(sanitized);
+        applySanitized(sanitized, entry);
     }
 
-    private void applySanitized(LaunchProfile sanitized) {
+    private void applySanitized(LaunchProfile sanitized, MasterTitleScreen.GameEntry entry) {
         // Default follows the all-games value: prepareExit cleared earlier session overrides.
         if (!sanitized.rewind().isDefault()) {
             configService.setSessionOverride(SonicConfiguration.LIVE_REWIND_ENABLED,
@@ -49,7 +49,7 @@ public class LaunchProfileApplier {
             configService.setSessionOverride(SonicConfiguration.DEBUG_VIEW_ENABLED,
                     sanitized.debugTools() == LaunchToggle.ON);
         }
-        if (!sanitized.usesS3kDataSelectCharacters()) {
+        if (!entry.cartridge() || !sanitized.usesS3kDataSelectCharacters()) {
             configService.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, sanitized.mainCharacter());
             configService.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE,
                     "none".equals(sanitized.sidekick()) ? "" : sanitized.sidekick());

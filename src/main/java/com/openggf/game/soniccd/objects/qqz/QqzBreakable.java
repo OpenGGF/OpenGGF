@@ -38,7 +38,7 @@ abstract class QqzBreakable extends QqzObject implements ReevaluatingSolidObject
     @Override
     public void onTouchResponse(PlayableEntity player, TouchResponseResult result, int frameCounter) {
         // loc_20726E: cmpi.b #2,obj.anim_id(a0); bne; addq.b #1,obj.collide_status(a1).
-        if (colType != 0 && player.getAnimationId() == CdSonicAnimation.ROLL.id()) hit = true;
+        if (colType != 0 && player.getAnimationId() == com.openggf.game.soniccd.player.CdAnimationIds.resolve(player, com.openggf.game.CanonicalAnimation.ROLL)) hit = true;
     }
 
     /** {@code tst.b obj.collide_status(a0)}. */

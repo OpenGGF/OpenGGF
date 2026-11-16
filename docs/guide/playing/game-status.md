@@ -249,12 +249,12 @@ Future). `SonicCdEndingCaptureTool --ending good|bad` films an ending.
   title, and an attract demo is skipped.
 - CD patch mods, `any` registrations, scenes and Sonic gameplay runs use the disc
   pipeline. Authored zones are limited to flat terrain with owned objects;
-  native CD objects/rings need their stage context. Cross-game feature donation
-  on a CD host is refused until stage-owned animation families have a composition
-  adapter. Stageplay/editor/import support remains a separate lane. See the
+  native CD objects/rings need their stage context. Cartridge donation supports
+  S1 Sonic, S2 Sonic/Tails and S3K Sonic/Tails/Knuckles; route coverage remains
+  bounded to the donor-host validation record. Stageplay/editor/import support remains a separate lane. See the
   [CD mod contracts](../../modding/ggfmod.md#sonic-cd-runtime-mods).
-- The master title has no Setup page for Sonic CD: it always starts with
-  Sonic alone, under the all-games display and rewind settings.
+- Sonic CD Game Setup saves Borrow from and character choices. Without donation
+  it defaults to Sonic alone. CD itself cannot donate player art.
 - Special stage results graphics, pause and exit fade are not drawn.
 - Robotnik's projector in the Past can be destroyed, but the animals in its
   hologram are not drawn.

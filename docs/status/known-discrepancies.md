@@ -249,6 +249,15 @@ the disc, so they are not modelled:
   live play. Under the comparison rule above, the fight's slots and the
   palette-cycle timers equal native through both fades.
 
+**Cartridge-donated characters.** A cartridge sheet has no CD mini/3D/give-up
+art. Donation retains donor movement drawings, with CD's stage physics and
+semantic object animation writes. CD's give-up depends on specific native map
+frames to start its fall; it is disabled for donated sheets rather than treating
+unrelated donor frames as those triggers. Plain CD Sonic retains the native
+sequence. Donor life icons keep a separate donor palette bank, and the results
+name uses donor ROM lettering fitted to CD's native 72-pixel cell. This is
+creator-selected cross-game behavior, not a correction to shipped CD physics.
+
 **Shipped bugs.** Sonic CD code models `FixBugs = 0` as the other games do. No
 intentional correction of a Sonic CD bug is recorded.
 

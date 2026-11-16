@@ -41,13 +41,27 @@ class TestMasterTitleSuspendedGame {
         return screen;
     }
 
-    @Test void hostedPausedCardResumesWithoutMediaProbeOrCartridgeSetup() {
+    @Test void hostedDiscCardOpensItsOwnSetup() {
+        var config = SonicConfigurationService.createStandalone(directory);
+        var screen = new MasterTitleScreen(config);
+        screen.replaceEntries(List.of(MasterTitleEntry.Hosted.of(GameId.SCD)));
+        screen.setHostedAvailabilityForTest(GameId.SCD, true, "");
+        screen.setStateForTest(MasterTitleScreen.State.ACTIVE);
+        assertEquals(List.of(TitleHubNavigation.Action.START, TitleHubNavigation.Action.SETUP),
+                screen.hubActionsForTest());
+        press(screen, GLFW_KEY_TAB);
+        assertTrue(screen.isLaunchConfigPanelOpenForTest());
+        assertEquals("sonic", screen.currentLaunchProfileForTest().mainCharacter());
+        assertEquals("none", screen.currentLaunchProfileForTest().sidekick());
+    }
+
+    @Test void hostedPausedCardResumesAndOffersItsOwnSetup() {
         var screen = screenWithSuspendedGame();
         var hosted = MasterTitleEntry.Hosted.of(GameId.SCD);
         screen.replaceEntries(List.of(hosted));
         screen.setSuspendedGame(new MasterTitleEntry.Suspended(hosted, "Palmtree Panic, Act 3", true), 0, 0, null);
         assertEquals("scd", screen.getSelectedGameId());
-        assertEquals(List.of(TitleHubNavigation.Action.RESUME, TitleHubNavigation.Action.END),
+        assertEquals(List.of(TitleHubNavigation.Action.RESUME, TitleHubNavigation.Action.SETUP, TitleHubNavigation.Action.END),
                 screen.hubActionsForTest());
         press(screen, GLFW_KEY_ENTER);
         assertTrue(screen.consumeResumeRequest());
@@ -61,7 +75,8 @@ class TestMasterTitleSuspendedGame {
         screen.replaceEntries(List.of(hosted));
         screen.setSuspendedGame(new MasterTitleEntry.Suspended(hosted, "Palmtree Panic, Act 3", true), 0, 0, null);
         press(screen, GLFW_KEY_DOWN);
-        press(screen, GLFW_KEY_RIGHT); // Resume, End
+        press(screen, GLFW_KEY_RIGHT); // Resume, Setup
+        press(screen, GLFW_KEY_RIGHT); // End
         press(screen, GLFW_KEY_ENTER);
         assertTrue(screen.isEndPromptOpenForTest());
         press(screen, GLFW_KEY_DOWN);

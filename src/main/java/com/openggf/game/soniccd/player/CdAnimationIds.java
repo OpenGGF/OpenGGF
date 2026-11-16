@@ -22,6 +22,11 @@ public final class CdAnimationIds {
 
     private CdAnimationIds() { }
 
+    public static int resolve(com.openggf.game.PlayableEntity player, CanonicalAnimation canonical) {
+        return player instanceof com.openggf.sprites.playable.AbstractPlayableSprite sprite
+                ? sprite.resolveAnimationId(canonical) : resolve(canonical);
+    }
+
     public static int resolve(CanonicalAnimation canonical) {
         int id = CdSonicAnimation.fromCanonical(canonical);
         if (id >= 0) return id;

@@ -269,9 +269,22 @@ public final class ConfigCatalog {
         put(CROSS_GAME_FEATURES_ENABLED, of("crossGame", "enabled", BOOL,
                 "Enable cross-game feature donation (e.g. S2 sprites in S1)"));
         put(CROSS_GAME_SOURCE, ofEnum("crossGame", "source",
-                "Donor game for cross-game features", Set.of("s2", "s3k")));
+                "Donor game for cross-game features", Set.of("s1", "s2", "s3k")));
 
         // launch (per-game master-title profile defaults)
+        put(LAUNCH_CD_REWIND, ofEnum("launch.cd", "rewind",
+                "Sonic CD live rewind: global follows rewind.liveEnabled, or on/off", LAUNCH_TOGGLE_VALUES));
+        put(LAUNCH_CD_CROSS_GAME_SOURCE, ofEnum("launch.cd", "crossGameSource",
+                "Default Sonic CD launch profile: cross-game donor", LAUNCH_CROSS_GAME_VALUES));
+        put(LAUNCH_CD_DEBUG_TOOLS, ofEnum("launch.cd", "debugTools",
+                "Sonic CD debug tools: global follows debug.flags.debugView, or on/off", LAUNCH_TOGGLE_VALUES));
+        put(LAUNCH_CD_ASPECT, ofEnum("launch.cd", "aspect",
+                "Default Sonic CD launch profile: display aspect override", LAUNCH_ASPECT_VALUES));
+        put(LAUNCH_CD_MAIN_CHARACTER, ofEnum("launch.cd", "mainCharacter",
+                "Default Sonic CD launch profile: main character", LAUNCH_MAIN_CHARACTER_VALUES));
+        put(LAUNCH_CD_SIDEKICK, ofEnum("launch.cd", "sidekick",
+                "Default Sonic CD launch profile: sidekick character", LAUNCH_SIDEKICK_VALUES));
+
         put(LAUNCH_S1_REWIND, ofEnum("launch.s1", "rewind",
                 "Sonic 1 live rewind: global follows rewind.liveEnabled, or on/off", LAUNCH_TOGGLE_VALUES));
         put(LAUNCH_S1_CROSS_GAME_SOURCE, ofEnum("launch.s1", "crossGameSource",

@@ -156,6 +156,13 @@ crossGame:
 # ── Launch Profiles ──
 # Per-game launch defaults edited from the master title screen.
 launch:
+  cd:
+    rewind: "global"   # Sonic CD live rewind: global follows rewind.liveEnabled, or on/off
+    crossGameSource: "off"   # Default Sonic CD launch profile: cross-game donor
+    debugTools: "global"   # Sonic CD debug tools: global follows debug.flags.debugView, or on/off
+    aspect: "global"   # Default Sonic CD launch profile: display aspect override
+    mainCharacter: "sonic"   # Default Sonic CD launch profile: main character
+    sidekick: "none"   # Default Sonic CD launch profile: sidekick character
   s1:
     rewind: "global"   # Sonic 1 live rewind: global follows rewind.liveEnabled, or on/off
     crossGameSource: "off"   # Default Sonic 1 launch profile: cross-game donor

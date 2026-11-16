@@ -136,7 +136,7 @@ public final class ObjSpringBoard extends CdObject implements ObjectVisualFacing
                 player.applyCustomRadii(7, 0xE);
                 com.openggf.sprites.NativePositionOps.addYPosPreserveSubpixel(player, 5);
                 player.setRollingFlagPreserveRadii(true);       // bset #2,oFlags(a1)
-                player.setAnimationId(2);                       // move.b #2,oAnim(a1)
+                player.setAnimationId(com.openggf.game.soniccd.player.CdSonicAnimation.ROLL);                       // move.b #2,oAnim(a1)
             }
         }
         timer = (timer - 1) & 0xFF;                             // .Animate: subq.b #1,d0

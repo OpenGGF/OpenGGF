@@ -163,7 +163,7 @@ public final class ObjSpinningDisc extends CdObject implements ReevaluatingSolid
             player.applyCustomRadii(7, 0xE);
             NativePositionOps.addYPosPreserveSubpixel(player, 5);
             player.setRollingFlagPreserveRadii(true);            // bset #2,oFlags(a1)
-            player.setAnimationId(2);                            // move.b #2,oAnim(a1)
+            player.setAnimationId(com.openggf.game.soniccd.player.CdSonicAnimation.ROLL);                            // move.b #2,oAnim(a1)
         }
     }
 

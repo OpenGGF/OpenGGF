@@ -10,6 +10,16 @@ public final class CdSolidRules implements ReevaluatingSolidRules {
 
     private CdSolidRules() { }
 
+    @Override public int drowningAnimation(com.openggf.sprites.playable.AbstractPlayableSprite player) {
+        return player.resolveAnimationId(com.openggf.game.CanonicalAnimation.DROWN);
+    }
+    @Override public int giveUpAnimation(com.openggf.sprites.playable.AbstractPlayableSprite player) {
+        return com.openggf.game.CrossGameFeatureProvider.isActive() ? -1 : giveUpAnimation();
+    }
+    @Override public int walkAnimation(com.openggf.sprites.playable.AbstractPlayableSprite player) {
+        return player.resolveAnimationId(com.openggf.game.CanonicalAnimation.WALK);
+    }
+
     /** SolidObject: addi.w #9+1,d1 (Object Solid.asm:202-204). */
     @Override public int widthAllowance() { return 9 + 1; }
     /** SolidObject: addq.w #2,d3 (Object Solid.asm:229-234). */

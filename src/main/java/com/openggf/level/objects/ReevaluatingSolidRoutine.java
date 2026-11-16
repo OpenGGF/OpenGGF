@@ -77,7 +77,7 @@ final class ReevaluatingSolidRoutine {
         ReevaluatingSolidObject.Entry entry = obj.solidEntry();
         // Object Solid.asm:189-200: drowning, invisible (oPlayerCtrl bit 6), routine >= 6,
         // off screen, debug. tst.b oID(a1) is always true for the hosted player.
-        if (p.getAnimationId() == rules.drowningAnimation() || p.isHidden() || p.getDead()
+        if (p.getAnimationId() == rules.drowningAnimation(p) || p.isHidden() || p.getDead()
                 || !obj.solidRenderedOnScreen() || p.isDebugMode()) {
             return getOff(instance, p, rules);
         }
@@ -86,7 +86,7 @@ final class ReevaluatingSolidRoutine {
         int d0 = (short) (p.getCentreX() - instance.getX() + d1);
         if (d0 < 0 || d0 >= 2 * d1) return getOff(instance, p, rules);
 
-        if (p.getAnimationId() == rules.giveUpAnimation()) {
+        if (p.getAnimationId() == rules.giveUpAnimation(p)) {
             // Object Solid.asm:215-219: giving up keeps only a stood-on object solid.
             if (!latches.standingLatch(p, instance)) return getOff(instance, p, rules);
         } else if (entry == ReevaluatingSolidObject.Entry.TOP && p.getYSpeed() < 0) {
@@ -157,7 +157,7 @@ final class ReevaluatingSolidRoutine {
         int d1 = (byte) obj.solidYRadius() + (byte) p.getYRadius();   // :335-339
         if (d2 >= 0) {
             // .PlayerAbove (:344-349).
-            if (p.getAnimationId() != rules.giveUpAnimation() && p.getYSpeed() < 0) {
+            if (p.getAnimationId() != rules.giveUpAnimation(p) && p.getYSpeed() < 0) {
                 return getOff(instance, p, rules);
             }
             // .MoveOnObject (:351-391): re-seat, then carry by the object's velocity.
@@ -220,11 +220,11 @@ final class ReevaluatingSolidRoutine {
         p.setAir(true);
         p.setOnObject(false);
         latches.clearStandingLatch(p, instance);
-        if (!p.isHidden() && p.getAnimationId() != rules.drowningAnimation() && p.isObjectControlled()) {
+        if (!p.isHidden() && p.getAnimationId() != rules.drowningAnimation(p) && p.isObjectControlled()) {
             p.setObjectControlled(false);                      // bclr #0,oPlayerCtrl (:42-46)
         }
         latches.clearStandObject(p);
-        if (p.getAnimationId() == rules.giveUpAnimation()) p.setAir(false);   // :50-52
+        if (p.getAnimationId() == rules.giveUpAnimation(p)) p.setAir(false);   // :50-52
     }
 
     /** {@code StandOnObject} (Object Solid.asm:65-146). */
@@ -237,7 +237,7 @@ final class ReevaluatingSolidRoutine {
         p.setJumping(false);                                   // clr.b oPlayerJump
         if (!latches.standingLatch(p, instance)) {
             latches.setStandingLatch(p, instance);
-            if (p.getAnimationId() == rules.giveUpAnimation()) {
+            if (p.getAnimationId() == rules.giveUpAnimation(p)) {
                 latches.clearStandingLatch(p, instance);       // :78-81
                 getOffObject(instance, p, rules);
                 return;
@@ -251,7 +251,7 @@ final class ReevaluatingSolidRoutine {
                 // width swap in setRolling would move the centre X by half the height difference.
                 NativePositionOps.addXPosPreserveSubpixel(p, centreX - p.getCentreX());
                 NativePositionOps.writeYPosPreserveSubpixel(p, centreY - rules.rollLandingRise(p));
-                p.setAnimationId(rules.walkAnimation());
+                p.setAnimationId(rules.walkAnimation(p));
             }
         }
         // .StandOn (:103-118).

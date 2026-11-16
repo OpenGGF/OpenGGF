@@ -72,7 +72,8 @@ public class MasterTitleScreen {
         SONIC_2("Sonic The Hedgehog 2", "Sonic 2", "s2", SonicConfiguration.SONIC_2_ROM,
                 "s2.gen"),
         SONIC_3K("Sonic 3 & Knuckles", "Sonic 3K", "s3k", SonicConfiguration.SONIC_3K_ROM,
-                "s3k.gen");
+                "s3k.gen"),
+        SONIC_CD("Sonic CD", "Sonic CD", "scd", SonicConfiguration.SONIC_CD_DISC, "");
 
         public final String displayName;
         public final String menuLabel;
@@ -90,6 +91,10 @@ public class MasterTitleScreen {
             this.gameId = gameId;
             this.romConfigKey = romConfigKey;
             this.expectedRomFilename = expectedRomFilename;
+        }
+
+        public boolean cartridge() {
+            return GameModuleRegistry.mediaKind(GameId.fromCode(gameId)) == GameModuleRegistry.MediaKind.CARTRIDGE_ROM;
         }
 
         public static GameEntry fromGameId(String gameId) {
@@ -290,7 +295,7 @@ public class MasterTitleScreen {
     }
 
     private static List<MasterTitleEntry> defaultEntries() {
-        return java.util.Arrays.stream(GameEntry.values())
+        return java.util.Arrays.stream(GameEntry.values()).filter(GameEntry::cartridge)
                 .map(game -> (MasterTitleEntry) new MasterTitleEntry.Stock(game)).toList();
     }
 
@@ -1066,7 +1071,9 @@ public class MasterTitleScreen {
     /** The stock game a card sets up: its own, or the one a paused card holds. */
     private static MasterTitleEntry.Stock stockOf(MasterTitleEntry entry) {
         if (entry instanceof MasterTitleEntry.Suspended paused) entry = paused.game();
-        return entry instanceof MasterTitleEntry.Stock stock ? stock : null;
+        return entry instanceof MasterTitleEntry.Stock stock ? stock
+                : entry instanceof MasterTitleEntry.Hosted hosted
+                        ? new MasterTitleEntry.Stock(GameEntry.fromGameId(hosted.gameId())) : null;
     }
 
     /** Settings say which saved changes reach the paused game on resume. */
@@ -1145,7 +1152,7 @@ public class MasterTitleScreen {
     /** Opens Game Setup for the selected stock game, optionally focused on one row. */
     private boolean openLaunchOptions(com.openggf.game.launch.LaunchProfile.Row focusRow) {
         MasterTitleEntry.Stock stock = stockOf(selectedEntry());
-        if (stock == null || !isEntryAvailable(stock) && !(selectedEntry() instanceof MasterTitleEntry.Suspended)) return false;
+        if (stock == null || !isEntryAvailable(selectedEntry()) && !(selectedEntry() instanceof MasterTitleEntry.Suspended)) return false;
         launchConfigPanel = new LaunchConfigPanel(stock.game(), launchProfileStore.load(stock.game()),
                 launchProfileStore, configService, font, renderer);
         launchConfigPanel.setEnabledMods(enabledModsByGame.getOrDefault(stock.game(), List.of()));
@@ -1230,6 +1237,7 @@ public class MasterTitleScreen {
     private void refreshStockAvailability() {
         romCatalogue = RomImageCatalogue.forCurrentWorkingDirectory(configService);
         for (GameEntry game : GameEntry.values()) {
+            if (!game.cartridge()) continue;
             stockAvailability.put(game, romCatalogue.isAvailable(logicalRomFor(game)));
         }
         // Hosted-media games: only the listed ones, through their own media service (header, no hashing).
@@ -1247,6 +1255,7 @@ public class MasterTitleScreen {
     private void refreshRomPreviews() {
         refreshStockAvailability();
         for (GameEntry game : GameEntry.values()) {
+            if (!game.cartridge()) continue;
             Optional<RomImageCatalogue.Resolution> resolution = romCatalogue.resolve(logicalRomFor(game));
             boolean listed = entries.stream().anyMatch(entry -> entry instanceof MasterTitleEntry.Stock stock && stock.game() == game);
             String source = resolution.isPresent() && listed ? resolution.get().changeToken() : null;
@@ -1517,12 +1526,13 @@ public class MasterTitleScreen {
 
     private List<TitleHubNavigation.Action> hubActions() {
         if (selectedEntry() instanceof MasterTitleEntry.Suspended paused)
-            return paused.game() instanceof MasterTitleEntry.Stock
+            return stockOf(paused.game()) != null
                     ? List.of(TitleHubNavigation.Action.RESUME, TitleHubNavigation.Action.SETUP, TitleHubNavigation.Action.END)
                     : List.of(TitleHubNavigation.Action.RESUME, TitleHubNavigation.Action.END);
         return selectedEntry() instanceof MasterTitleEntry.Standalone
-                || selectedEntry() instanceof MasterTitleEntry.Hosted
                 ? List.of(TitleHubNavigation.Action.START)
+                : selectedEntry() instanceof MasterTitleEntry.Hosted
+                        ? List.of(TitleHubNavigation.Action.START, TitleHubNavigation.Action.SETUP)
                 : List.of(TitleHubNavigation.Action.START, TitleHubNavigation.Action.SETUP,
                         TitleHubNavigation.Action.RECORDINGS);
     }

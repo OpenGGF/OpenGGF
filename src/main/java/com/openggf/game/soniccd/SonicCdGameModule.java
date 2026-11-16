@@ -42,8 +42,8 @@ import java.util.List;
  * Stages come from the user's disc through {@link CdDiscDataSource}.
  */
 public final class SonicCdGameModule implements GameModule {
-    // Native CD object animation families are stage-program-owned; no donor composition adapter exists.
-    @Override public boolean supportsCrossGameHost() { return false; }
+    // Donated sheets and scripts are loaded from the donor cartridge, independently of the disc.
+    @Override public boolean supportsCrossGameHost() { return true; }
     @Override public java.util.List<String> getStockRunCharacters() { return java.util.List.of("sonic"); }
 
     /**
@@ -226,6 +226,18 @@ public final class SonicCdGameModule implements GameModule {
 
     @Override
     public <T> T getGameService(Class<T> type) {
+        if (type == com.openggf.game.internal.HostAnimationSource.class) return type.cast(
+                new com.openggf.game.internal.HostAnimationSource() {
+                    public java.util.Map<Integer, com.openggf.game.AnimationFamilies.Binding> families() {
+                        // Ani_Sonic's first $1F entries retain S1's semantic order. Extended
+                        // CD-only drawings have no cartridge counterpart and retain donor poses.
+                        return com.openggf.game.AnimationFamilies.load("/animation-families/s1.json");
+                    }
+                    public com.openggf.sprites.art.SpriteArtSet load(String character) throws java.io.IOException {
+                        if (game == null) throw new java.io.IOException("Host stage media is not prepared");
+                        return game.loadPlayerSpriteArt(character);
+                    }
+                });
         if (type == com.openggf.game.internal.MediaSceneArt.class) return type.cast(new CdMediaSceneArt());
         if (type == com.openggf.game.soniccd.objects.art.CdObjectArtProvider.class) return type.cast(objectArt);
         // ObjHUD draws the HUD as level objects (HUD and Points/Main.asm:67-140).

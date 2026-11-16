@@ -758,7 +758,11 @@ public class Sonic2GameModule implements GameModule, com.openggf.game.internal.S
         }
     }
 
-    private static final class Sonic2CrossGameDonorProvider implements CrossGameDonorProvider {
+    private static final class Sonic2CrossGameDonorProvider implements CrossGameDonorProvider, com.openggf.game.internal.DonorLifeArt {
+        @Override public java.util.Map<Character, com.openggf.game.CharacterPresentation.Image> nameFont(com.openggf.data.Rom rom)
+                throws java.io.IOException { return Sonic2CharacterFont.title(rom); }
+        @Override public int lifeArtAddress(String character) { return "tails".equals(character) ? com.openggf.game.sonic2.constants.Sonic2Constants.ART_NEM_TAILS_LIFE_ADDR : com.openggf.game.sonic2.constants.Sonic2Constants.ART_NEM_SONIC_LIFE_ADDR; }
+
         @Override
         public DonorCapabilities getDonorCapabilities() {
             return Sonic2DonorCapabilities.INSTANCE;

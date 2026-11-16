@@ -232,7 +232,7 @@ public final class SszAmyRose extends SszBossPiece implements TouchResponseListe
         flags.ctrlLocked = true;                                // bset #0,control_locked
         flags.playerCtrlHold = 0;                               // move.w #0,player_joy_hold
         if (player == null) return;
-        player.setAnimationId(5);                               // move.b #5,obj.anim_id(a1)
+        player.setAnimationId(com.openggf.game.soniccd.player.CdSonicAnimation.IDLE);                               // move.b #5,obj.anim_id(a1)
         facePlayer(player);
         boolean playerLeft = player.getDirection() == com.openggf.physics.Direction.LEFT;
         setXWord(px(player) + (playerLeft ? 0xC : -0xC));

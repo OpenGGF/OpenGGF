@@ -198,6 +198,9 @@ public final class CdHud extends CdObject implements FixedRuntimeObjectInstance,
         PatternSpriteRenderer renderer = art(CdObjectArtProvider.HUD);
         var camera = services().camera();
         if (renderer == null || camera == null) return;
+        var donorLife = artProvider().donorLifeRenderer();
+        if (kind == Kind.LIVES && donorLife != null)
+            donorLife.drawFrame(0, camera.getX() + SCREEN_X, camera.getY() + kind.screenY, false, false);
         int palette = CdObjectArtProvider.tilePalette(tileWord);
         renderer.drawFrameIndex(kind.frame, camera.getX() + SCREEN_X, camera.getY() + kind.screenY, false, false, palette);
     }

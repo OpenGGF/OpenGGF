@@ -70,12 +70,12 @@ public final class MasterTitleExitCoordinator {
         finishExit(standalone.owner());
     }
 
-    /** A hosted-media stock game: the stock exit without a launch profile ({@link MasterTitleLaunchCoordinator#prepareHostedExit}). */
+    /** A hosted-media stock game: the stock exit with its own launch profile ({@link MasterTitleLaunchCoordinator#prepareHostedExit}). */
     public void exitHosted(MasterTitleEntry.Launch launch) {
         if (!(Objects.requireNonNull(launch, "launch").entry() instanceof MasterTitleEntry.Hosted hosted)) {
             throw new IllegalArgumentException("Hosted exit requires a hosted entry");
         }
-        launchCoordinator().prepareHostedExit();
+        launchCoordinator().prepareHostedExit(hosted.gameId());
         if (stockExitHandler != null) stockExitHandler.accept(hosted.gameId());
         finishExit(hosted.gameId());
     }

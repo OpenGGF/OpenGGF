@@ -297,7 +297,7 @@ public final class CdPlayerWater implements RewindSnapshottable<CdPlayerWater.Sn
     public void checkCurrents(AbstractPlayableSprite player, List<CdWaterCurrent> currents,
                               java.util.function.IntUnaryOperator switchFlag) {
         if (player == null || currents.isEmpty()) return;
-        if (player.getAnimationId() == CdAnimationIds.GIVE_UP
+        if (CdBoredom.givingUp(player)
                 || player.isObjectControlled() || player.isDebugMode()) {
             return;                                          // anim $2B; var_2c bit 0; debug_mode
         }
@@ -321,7 +321,7 @@ public final class CdPlayerWater implements RewindSnapshottable<CdPlayerWater.Sn
             }
             player.setXSpeed((short) xSpeed);
             player.setYSpeed((short) ySpeed);
-            player.setAnimationId(CURRENT_ANIMATION);
+            player.setAnimationId(CdSonicAnimation.FLOAT);
             player.setAir(true);                             // bset #1,obj.flags(a1)
             int held = player.getLogicalInputState();        // player_joy_hold; word writes keep the subpixels
             if ((held & AbstractPlayableSprite.INPUT_UP) != 0) {
@@ -339,7 +339,7 @@ public final class CdPlayerWater implements RewindSnapshottable<CdPlayerWater.Sn
             return;
         }
         if (currentActive) {                                 // no record: back to the walk pose
-            player.setAnimationId(0);
+            player.setAnimationId(CdSonicAnimation.WALK);
             currentActive = false;
         }
     }

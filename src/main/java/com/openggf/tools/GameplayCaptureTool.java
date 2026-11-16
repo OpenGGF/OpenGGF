@@ -73,10 +73,10 @@ public final class GameplayCaptureTool {
         com.openggf.game.GameModule hostedModule = HostedTraceCapture.hostedModule(arguments.game());
         com.openggf.game.internal.HostedGameMedia hostedMedia = hostedModule == null ? null
                 : com.openggf.game.internal.HostedGameMedia.of(hostedModule);
-        if (hostedMedia != null && (arguments.rom() != null || arguments.nativePcm() || !"off".equals(arguments.donor())
+        if (hostedMedia != null && (arguments.rom() != null || arguments.nativePcm()
                 || arguments.mod() != null)) {
             throw new IllegalArgumentException(arguments.game() + " is hosted from its media: --rom, --native-pcm, "
-                    + "--donor and --mod do not apply");
+                    + "--mod do not apply");
         }
         Path romPath = hostedMedia != null ? null : arguments.rom() != null ? arguments.rom()
                 : TraceToolRomLocations.resolve(arguments.game(), GameServices.configuration(), Path.of(""));

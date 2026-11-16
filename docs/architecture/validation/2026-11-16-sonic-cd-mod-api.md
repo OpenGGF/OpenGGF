@@ -28,12 +28,26 @@ Stageplay, route tapes, editor projects and content import are separate lanes.
 
 ## Explicit limits
 
-The donor compositor in `CrossGameFeatureProvider.loadPlayerSpriteArt` obtains
-native host animation families with `RomByteReader.fromRom(romManager().getRom())`.
-CD's families and scripts are in the selected stage program. Until that compositor
-has a stage-backed host-family adapter, the CD module refuses cross-game hosting
-through `supportsCrossGameHost`; initialization clears previous donor state and
-reports an `IOException`. CD is not a donor either. No missing-ROM fallback is used.
+The stacked `feature/ai-scd-donor-hosting` follow-up replaces the cartridge-only
+host animation read with an engine-owned `HostAnimationSource` service. CD loads
+native scripts from its prepared stage program, while drawings, palettes, life
+icons and name lettering remain owned by the cartridge donor. Its first $1F
+animation entries retain the S1 semantic order. Native extended drawings (mini,
+3D and give-up) have no cartridge drawings: donor movement poses remain in use;
+the frame-triggered CD give-up is disabled for donated sheets rather than reading
+unrelated donor frame numbers. Plain CD Sonic follows its unchanged native path.
+
+The supported matrix is S1 Sonic; S2 Sonic/Tails; S3K Sonic/Tails/Knuckles.
+S1 Tails/Knuckles and S2 Knuckles are rejected with an explicit missing-character
+reason. CD cannot donate: the provider rejects non-cartridge donors before opening
+secondary media. No missing-ROM fallback is used. CD Game Setup saves a separate
+`launch.cd` profile and applies its team at the hosted exit boundary.
+
+Follow-up verification is in progress; the original verification below belongs to
+PR #350, not to the donor-hosting branch. Initial six combination tests all failed
+at the inherited host refusal, then all six boot/movement tests passed. Native
+act-end (25) and strict R11A replay (1) comparisons were selected but skipped for
+absent optional local native recordings. Named facing/construction guards passed.
 
 Flat authored CD zones admit owned objects and one collision path with 16x16-block
 terrain. Native objects/rings require their stage's program/PLC/state context and
@@ -222,6 +236,71 @@ subsequently green in the focused repair run.
 | `TestIcz2ColdCubeBridgeRoute#coldSonicShattersThePlacedCubePressesButton2AndCrossesTheFallingBridgeWithWorldReplay` | expected: &lt;6&gt; but was: &lt;5&gt; |
 | `TestS3kCompleteRunReferenceProducer#fixedProducerRejectsEveryMismatchedTypedRequestBeforePublication` | Unexpected exception type thrown, expected: &lt;java.nio.file.FileAlreadyExistsException&gt; but was: &lt;java.lang.IllegalArgumentException&gt; |
 
+
+## Donor-host follow-up verification (stacked on PR #350)
+
+Base: `dc6b3c2b9edd621a0feecfe6d411628d51756f92`; branch
+`feature/ai-scd-donor-hosting`. Owner: OpenAI Codex GPT-6.1-sol; no delegates.
+Rewind, widescreen and Stageplay/editor implementation files are unchanged.
+
+All Maven tests used the queue wrapper with `-Dmse=off` and
+`-Dopenggf.headless.gl=surfaceless-egl`, DISPLAY/WAYLAND_DISPLAY unset, and a
+unique task temporary directory. The wrapper found all cartridge/disc properties;
+missing media: none. The initial six supported cases failed at the inherited
+host refusal. Three boot-level unsupported-character cases then failed because
+the legacy art initializer swallowed IOException and continued. Admission now
+fails before level loading, clears prior donor state and supplies the character
+and donor in the reason. The disc-donor negative control also failed before its
+check was moved ahead of the same-game no-op.
+
+The final focused selections cover six supported combinations, three invalid
+character launches, all three S3K elemental shield grants, character physics,
+semantic object animations, CD profile persistence/launch, actual hosted-card
+Setup, decorated CD mod hosting, existing cartridge donation/family contracts,
+API surface and named facing/construction guards. Across the final selections:
+**137 passed, zero remaining failures/errors, one optional native solid-trace
+skip**. The repaired CD mod/menu selection independently passed **23 tests,
+zero failures/errors/skips**. The plain-Sonic act-end and strict R11A replay
+classes were selected unchanged: 25 and 1 comparisons skipped for absent optional
+native recordings. These are not parity passes.
+
+Representative final selection (with task TMPDIR/java.io.tmpdir):
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl "-Dtest=TestCdDonorHosting,TestCdLaunchProfile,TestLaunchProfile,TestLaunchProfileStore,TestLaunchConfigPanel,TestMasterTitleSecondaryActions,TestMasterTitleExitCoordinator,TestMasterTitleSuspendedGame,TestModApiSignatureSurface,TestNativeObjectFacingGuard,TestConstructionContextGuard,TestAnimationFamilies,TestCrossGameFeatureProviderRefactor,TestSonicCdModRuntime,TestSonicCdSolidObjectTrace,TestGameplayCaptureToolArgs" test
+env -u DISPLAY -u WAYLAND_DISPLAY python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl "-Dtest=TestSonicCdModRuntime,TestMasterTitleSuspendedGame" test
+```
+
+The first command exposed one stale mod-runtime assertion that still expected
+host refusal; the second verifies its replacement plus the added actual Setup
+navigation. The cartridge flight-contract fixture now declares Tails in its
+roster, matching the art it supplies. Cartridge preview fixtures explicitly
+exclude disc titles rather than constructing cartridge readers for them.
+The mutable candidate signature pin adds exactly the six CD profile preferences;
+ModApiVersion describes the extension. The strict release descriptor remains
+candidate 0.7.0, develop 0.8, with no published baseline or version promotion.
+
+`GameplayCaptureTool` recorded S3K Tails on R11A, with ordinary input
+`240 -; 160 R; 1 R+B; 60 R`, 461 total steps and capture beginning at 350.
+The capture-specific hosted-media donor refusal was removed; source media still
+opens through its module and donor art through its cartridge. Viewed frames 350
+and 430 show running/jumping Tails and the donor life icon. CSV positions are
+x=306 at 350, x=726 at 430 and x=904 at 460; all are alive. The final film contains
+111 frames at 60 fps (960x672 nearest-neighbour presentation). `TASK_CAPTURE_ROOT`
+is the user-local task capture directory, whose concrete paths are in the delivery:
+
+
+- `${TASK_CAPTURE_ROOT}/tails-r11a-running/capture.mp4`
+- `${TASK_CAPTURE_ROOT}/tails-r11a-running/state.csv`
+- `${TASK_CAPTURE_ROOT}/tails-r11a-running/frames/00350.png`
+- `${TASK_CAPTURE_ROOT}/tails-r11a-running/frames/00430.png`
+
+Smoke plan: 4,978 classes plus guards, two workers, 40-minute per-invocation
+execution limit excluding queue wait. Smoke result and exact baseline attribution
+remain pending at this implementation checkpoint. Queue wait and execution are
+reported separately by the wrapper/runner; user wait is zero, and other wall-time
+is not measured. No passing smoke/full-suite claim is made here.
+
 ## Follow-up seams
 
 Carry the source capability, its ownership and exact program identity through
@@ -230,5 +309,5 @@ Stageplay/editor/import preparation. `MediaSceneArt.View` provides game-owned de
 still uses cartridge readers and needs a source-aware extension. Preserve CD's
 zone/act/period projection rather than inventing cartridge addresses or treating
 an empty `GameDataSource.rom()` as standalone content. Native terrain/Stageplay
-kits, donor host-family composition and route fingerprints require their own
-source-aware owners and verification.
+kits and route fingerprints require their own source-aware owners and verification.
+Donor host-family composition now uses the runtime source service described above.

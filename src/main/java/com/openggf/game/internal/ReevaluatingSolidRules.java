@@ -16,12 +16,15 @@ public interface ReevaluatingSolidRules {
 
     /** Player animation that releases the player from every solid (drowning). */
     int drowningAnimation();
+    default int drowningAnimation(com.openggf.sprites.playable.AbstractPlayableSprite player) { return drowningAnimation(); }
 
     /** Player animation that keeps a stood-on object solid and is never landed out of (giving up). */
     int giveUpAnimation();
+    default int giveUpAnimation(com.openggf.sprites.playable.AbstractPlayableSprite player) { return giveUpAnimation(); }
 
     /** Animation written when a rolling player first stands on an object (walking). */
     int walkAnimation();
+    default int walkAnimation(com.openggf.sprites.playable.AbstractPlayableSprite player) { return walkAnimation(); }
 
     /** Post-hit invulnerability written when a hurt player lands on an object. */
     int hurtLandingInvulnerability();

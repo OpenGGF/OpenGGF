@@ -166,3 +166,14 @@ measurement output, not committed.
 Breadth: Sonic CD has one character and no teams; it is not a donor, and
 donation into it is not assessed. Widths 400, 528 and 800 draw full pictures in
 the capture tools but have no native reference; the other presets are unchecked.
+
+## Cartridge donor hosting (2026-11-16)
+
+`TestCdDonorHosting` boots R11A on the USA disc with six cartridge combinations:
+S1 Sonic, S2 Sonic/Tails and S3K Sonic/Tails/Knuckles. It checks the bound character,
+semantic spring animation, host movement ownership, ordinary rightward movement
+past entry and S3K shield grants. Unsupported donor characters and disc donation
+have explicit refusal checks. This is bounded host/character coverage; it does
+not certify full donated routes, mini/3D drawings, special stages, bosses,
+time travel, other periods, teams or viewport combinations. The native matrix
+above still describes plain Sonic only. See the [runtime validation record](../2026-11-16-sonic-cd-mod-api.md).

@@ -878,7 +878,11 @@ public class Sonic3kGameModule implements GameModule, com.openggf.game.internal.
         }
     }
 
-    private static final class Sonic3kCrossGameDonorProvider implements CrossGameDonorProvider {
+    private static final class Sonic3kCrossGameDonorProvider implements CrossGameDonorProvider, com.openggf.game.internal.DonorLifeArt {
+        @Override public java.util.Map<Character, com.openggf.game.CharacterPresentation.Image> nameFont(com.openggf.data.Rom rom)
+                throws java.io.IOException { return Sonic3kCharacterFont.title(rom); }
+        @Override public int lifeArtAddress(String character) { return "tails".equals(character) ? com.openggf.game.sonic3k.constants.Sonic3kConstants.ART_NEM_TAILS_LIFE_ICON_ADDR : "knuckles".equals(character) ? com.openggf.game.sonic3k.constants.Sonic3kConstants.ART_NEM_KNUCKLES_LIFE_ICON_ADDR : com.openggf.game.sonic3k.constants.Sonic3kConstants.ART_NEM_SONIC_LIFE_ICON_ADDR; }
+
         @Override
         public java.util.function.BiFunction<AbstractPlayableSprite, com.openggf.game.ShieldType,
                 com.openggf.level.objects.ShieldObjectInstance> getShieldFactory() {

@@ -1979,10 +1979,9 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
         public void setAnimationId(AnimationId animationId) {
                 var donation = currentCrossGameFeatures();
-                int family = donation != null && donation.isActive() && CharacterKey.SONIC.equals(characterKey())
-                        && animationId.toCanonical() != null ? donation.resolveDonatedAnimation(animationId.toCanonical()) : -1;
-                setAnimationId(family >= 0 && getAnimationSet() != null && getAnimationSet().getScript(family) != null
-                        ? family : animationId.id());
+                int resolved = donation != null && donation.isActive() && animationId.toCanonical() != null
+                        ? resolveAnimationId(animationId.toCanonical()) : -1;
+                setAnimationId(resolved >= 0 ? resolved : animationId.id());
         }
 
         public int getForcedAnimationId() {

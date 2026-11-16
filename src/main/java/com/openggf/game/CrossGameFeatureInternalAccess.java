@@ -4,6 +4,14 @@ package com.openggf.game;
 public final class CrossGameFeatureInternalAccess {
     private CrossGameFeatureInternalAccess() { }
 
+    public static java.util.Map<Character, CharacterPresentation.Image> nameFont(CrossGameFeatureProvider donation)
+            throws java.io.IOException { return donation.donorNameFont(); }
+
+    public static com.openggf.level.Pattern[] loadLifeArt(CrossGameFeatureProvider donation, String character)
+            throws java.io.IOException {
+        return donation.loadLifeArt(character);
+    }
+
     /**
      * The donor's own number for a pose of a built-in character it supplies.
      *

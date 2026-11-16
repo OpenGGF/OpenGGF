@@ -277,7 +277,7 @@ public final class ObjSpringLauncher extends SszObject implements ObjectVisualFa
         player.setObjectControlled(true);
         player.setObjectControlAllowsCpu(true);              // TouchResponse and animation still run (player.asm:290-330)
         player.setRolling(true);
-        player.setAnimationId(2);
+        player.setAnimationId(com.openggf.game.soniccd.player.CdSonicAnimation.ROLL);
     }
 
     /** sub_20C002 (:697-711): the player's X and Y become the object's plus the heading's offset. */

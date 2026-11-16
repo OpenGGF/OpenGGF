@@ -89,7 +89,7 @@ public final class CczPocket extends CczObject implements ObjectVisualFacing.Non
         sprite.setObjectControlled(true);                                  // bset #0,oPlayerCtrl(a6)
         sprite.setObjectControlAllowsCpu(true);                            // bit 0 only: oPlayerCtrl's sign stays clear
         sprite.setRolling(true);                                           // bset #2,oFlags(a6)
-        sprite.setAnimationId(2);                                          // move.b #2,oAnim(a6)
+        sprite.setAnimationId(com.openggf.game.soniccd.player.CdSonicAnimation.ROLL);                                          // move.b #2,oAnim(a6)
         sprite.setXSpeed((short) 0);
         sprite.setYSpeed((short) -0x800);
         NativePositionOps.writeXPosPreserveSubpixel(sprite, x);

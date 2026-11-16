@@ -129,14 +129,14 @@ public final class CommonObjectArt {
             art.register(BIG_RING_FLASH, art.sheet(reader, art.entry().offset("bigRingFlashMappings"), BIG_RING_FLASH_TILE, end));
         }
         if (art.entry().offset("resultsBadMappings") >= 0) {
-            art.register(RESULTS_BAD, art.sheet(reader, art.entry().offset("resultsBadMappings"), RESULTS_TILE, end));
-            art.register(RESULTS_GOOD, art.sheet(reader, art.entry().offset("resultsGoodMappings"), RESULTS_TILE, end));
+            art.register(RESULTS_BAD, com.openggf.game.soniccd.objects.art.CdDonorNames.results(art.sheet(reader, art.entry().offset("resultsBadMappings"), RESULTS_TILE, end)));
+            art.register(RESULTS_GOOD, com.openggf.game.soniccd.objects.art.CdDonorNames.results(art.sheet(reader, art.entry().offset("resultsGoodMappings"), RESULTS_TILE, end)));
         }
         if (art.entry().offset("resultsBadSsz3Mappings") >= 0) {
-            art.register(RESULTS_BAD_SSZ3, art.sheet(reader, art.entry().offset("resultsBadSsz3Mappings"),
-                    RESULTS_TILE_SSZ3, end));
-            art.register(RESULTS_GOOD_SSZ3, art.sheet(reader, art.entry().offset("resultsGoodSsz3Mappings"),
-                    RESULTS_TILE_SSZ3, end));
+            art.register(RESULTS_BAD_SSZ3, com.openggf.game.soniccd.objects.art.CdDonorNames.results(art.sheet(reader, art.entry().offset("resultsBadSsz3Mappings"),
+                    RESULTS_TILE_SSZ3, end)));
+            art.register(RESULTS_GOOD_SSZ3, com.openggf.game.soniccd.objects.art.CdDonorNames.results(art.sheet(reader, art.entry().offset("resultsGoodSsz3Mappings"),
+                    RESULTS_TILE_SSZ3, end)));
         }
         art.register(GAME_OVER, artIndexSheet(art, reader, art.entry().offset("gameOverMappings"), 3, GAME_OVER_TILE));
         art.register(TIME_OVER, artIndexSheet(art, reader, art.entry().offset("timeOverMappings"), 4, GAME_OVER_TILE));

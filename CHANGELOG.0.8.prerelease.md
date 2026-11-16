@@ -483,7 +483,10 @@ under the matching area heading; see the
 - **Sonic CD mod host:** admit `scd` patch manifests and `any` registrations;
   route hosted runs through the disc launcher, expose file-addressed scene and
   object art, and accept CDDA/PCM music-command replacements. Module capabilities
-  select native run characters and explicitly refuse unsupported donor hosts.
+  select native run characters. CD can host cartridge-donated S1 Sonic, S2
+  Sonic/Tails and S3K Sonic/Tails/Knuckles, with donor-owned art, abilities,
+  life icons and results names. Game Setup saves CD donor/team choices.
+  Stage-backed host animation scripts no longer require a cartridge host.
   CD authored terrain supports owned objects; native objects retain their stage
   program context. Audio-state restoration also restores the native/streamed
   music selection. This extends unpublished API candidate 0.7.0.
