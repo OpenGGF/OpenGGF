@@ -588,7 +588,9 @@ movement and logical `FACE_LEFT` / `FACE_RIGHT` use native controller input.
 Player-ground queries accept `scd` / `sonic`; their terrain proposals still need
 landing verification. The CD example starts at centre x=800, away from entry.
 
-This is a bounded authoring preview. CD object Puppet/Pose foreground-occlusion
-proof, selected-program Poser/accessory lookup, CDDA/PCM scene-music proof,
+CD object Puppet/Pose pictures retain native tile priority and foreground
+occlusion; disc-backed R11B canopy pixels include a foreground-bypass negative
+control. This is a bounded authoring preview. Selected-program Poser/accessory
+lookup, CDDA/PCM scene-music proof,
 editor game choices and complete route-media discovery/coverage remain pending
 in the [validation record](../../architecture/validation/2026-11-16-sonic-cd-stageplay-editor.md).

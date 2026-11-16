@@ -244,3 +244,30 @@ All owned foreground Maven/render processes have completed. The scratch `.keep`
 is removed after preserving the reviewed render paths here; scratch artifacts
 remain subject to the ordinary runtime retention policy. The final branch
 commit records this validation and retains the uncompleted obligations above.
+
+## Object-priority continuation (2026-11-16)
+
+Item 1 is complete on the source tree based on `ea410eccbf`. Added
+`TestCdStageplayObjectPriorityRendering`: R11B disc-native Anton pictures equal
+frozen and baked Puppet/Pose pictures at four fixed native canopy witnesses
+(x=5376,5456,5520,5616; y=112). At each witness, removing foreground occlusion
+exposes over 100 changed pixels. Visible native body pixels reject blank/tiles-only
+comparisons. The test uses the existing cinematic renderer and no-device boot;
+no shared runtime change was needed.
+
+Failing first: the original x=688..880/y=520..616 test area produced zero hidden
+pixels, so its negative control failed. Anton was confirmed low priority. A bounded
+disc-layout probe found the priority-marked canopy; fixed witnesses replaced the
+probe. This was an oracle-location correction, not a runtime workaround.
+
+Foreground verification (display variables unset, verified media `missing=none`):
+`env -u DISPLAY -u WAYLAND_DISPLAY python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestCdStageplayObjectPriorityRendering,TestStageplayObjectPriorityRendering,TestRawGlfwTestSetupGuard' test`
+passed **7 tests, zero failures/errors/skips**, Maven execution 43.222 seconds.
+No render files were generated; assertions compare in-memory framebuffer pixels.
+No smoke was launched and there is no smoke VERDICT for this branch.
+
+Next: item 2, selected-program Poser/accessory lookup. Investigation found
+`StageplayRenderer` and actor preflight still use default character art while set
+terrain resolves the selected program. Add a failing disc rendering/preflight test
+before changing those lookups. Items 3–5 remain as specified above. No live owned
+jobs remain at this checkpoint; PR stays draft. No workers were delegated.

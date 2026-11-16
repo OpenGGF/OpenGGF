@@ -484,7 +484,9 @@ under the matching area heading; see the
   cold-level route tapes; preserve zone/act/period program identity through
   detached art and worker transport. Finish native title-card preparation before
   placing directed players, and admit native Sonic terrain-ground queries.
-  Remaining editor, object-pixel and soundtrack obligations are tracked in the
+  Native/frozen/baked CD object pictures retain tile priority and foreground
+  occlusion, with a disc-backed canopy negative control.
+  Remaining editor and soundtrack obligations are tracked in the
   Sonic CD Stageplay validation record.
 
 - **Sonic CD mod host:** admit `scd` patch manifests and `any` registrations;
