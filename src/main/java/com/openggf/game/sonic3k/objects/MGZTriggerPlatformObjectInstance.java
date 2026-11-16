@@ -136,8 +136,14 @@ public class MGZTriggerPlatformObjectInstance extends AbstractObjectInstance
                 || (activated && hasDashTriggerVisibleThisPass());
         if (!completed && activationVisibleThisPass) {
             advanceActiveMotion();
+            // loc_3461E (sonic3k.asm:71011-71020) and
+            // loc_346A2 (sonic3k.asm:71053-71059):
+            // the completion slot explicitly clears the global word.
             if (!completed) {
-                applyScreenShake(vIntRunCount);
+                requestScreenShake();
+            } else {
+                MgzZoneRuntimeState state = resolveMgzRuntimeState();
+                if (state != null) state.clearScreenShakeFlag();
             }
         }
 
@@ -190,7 +196,7 @@ public class MGZTriggerPlatformObjectInstance extends AbstractObjectInstance
         ObjectLifetimeOps.markSpawnRemembered(objectManager, spawn);
     }
 
-    private void applyScreenShake(int vIntRunCount) {
+    private void requestScreenShake() {
         MgzZoneRuntimeState mgzState = resolveMgzRuntimeState();
         if (mgzState == null) {
             return;
@@ -202,7 +208,7 @@ public class MGZTriggerPlatformObjectInstance extends AbstractObjectInstance
         // frame's sample into Camera_Y_pos_copy (sonic3k.asm:106303-106306,
         // :106354). Both the clock and the one-frame publication now live in
         // that owner, so no object-clock offset is needed here.
-        mgzState.requestContinuousScreenShake();
+        mgzState.writeScreenShakeFlag(-1);
     }
 
     private MgzZoneRuntimeState resolveMgzRuntimeState() {

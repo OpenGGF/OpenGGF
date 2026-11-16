@@ -156,7 +156,7 @@ class TestS3kZoneRuntimeStateAdapters {
     }
 
     @Test
-    void mgzAdapterOwnsScrollRuntimePublications() {
+    void mgzAdapterDelegatesToEventOwnedState() {
         Sonic3kMGZEvents events = new Sonic3kMGZEvents();
         events.init(1);
         events.setEventsFg5(true);
@@ -174,15 +174,17 @@ class TestS3kZoneRuntimeStateAdapters {
         assertEquals(0x120, state.bgRiseOffset());
 
         assertFalse(state.hasBossBgScrollOffset());
+        events.setScreenEventRoutine(8);
         state.publishBossBgScrollOffset(0x13D80);
         assertTrue(state.hasBossBgScrollOffset());
         assertEquals(0x3D80, state.bossBgScrollOffset());
 
-        state.requestScreenShakeOffset(2);
-        state.requestScreenShakeOffset(6);
-        state.requestScreenShakeOffset(3);
-        assertEquals(6, state.consumeScreenShakeOffset());
-        assertEquals(0, state.consumeScreenShakeOffset());
+        byte[] before = events.captureMgzState();
+        state.requestContinuousScreenShake();
+        byte[] requested = events.captureMgzState();
+        assertFalse(java.util.Arrays.equals(before, requested));
+        state.clearScreenShakeFlag();
+        assertArrayEquals(before, events.captureMgzState());
     }
 
     @Test
@@ -243,9 +245,9 @@ class TestS3kZoneRuntimeStateAdapters {
         state.setInteriorLayoutMod3Disabled(true);
         state.setRollingDrumAngle(0, 0x123);
         state.setRollingDrumAngle(1, -1);
-        state.requestScreenShakeOffset(2);
-        state.requestScreenShakeOffset(6);
-        state.requestScreenShakeOffset(3);
+        state.startTimedScreenShake(20);
+        state.setupScreenShake(0, false);
+        state.publishScreenShakeForeground();
         state.requestLbz1KnucklesBoundaryPublish();
 
         ZoneRuntimeRegistry registry = new ZoneRuntimeRegistry();
@@ -261,8 +263,8 @@ class TestS3kZoneRuntimeStateAdapters {
         assertTrue(state.isInteriorLayoutMod3Disabled());
         assertEquals(0x23, state.getRollingDrumAngle(0));
         assertEquals(0xFF, state.getRollingDrumAngle(1));
-        assertEquals(6, state.consumeScreenShakeOffset());
-        assertEquals(0, state.consumeScreenShakeOffset());
+        assertEquals(-5, state.screenShakeOffset());
+        assertEquals(-5, state.screenShakeOffset(), "publication is not consumed");
         assertTrue(state.isLbz1KnucklesBoundaryPublishPending());
 
         LbzZoneRuntimeState restored = new LbzZoneRuntimeState(0, PlayerCharacter.SONIC_ALONE);

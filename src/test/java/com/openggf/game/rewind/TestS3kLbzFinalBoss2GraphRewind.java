@@ -812,31 +812,31 @@ class TestS3kLbzFinalBoss2GraphRewind {
 
         LbzZoneRuntimeState shake = currentLbzState();
         shake.startTimedScreenShake(1);
-        shake.prepareTimedScreenShakeBackground(true, 1);
+        shake.setupScreenShake(0, false);
         shake.startTimedScreenShake(20);
-        shake.applyTimedScreenShakeForeground();
+        shake.publishScreenShakeForeground();
         assertEquals(new ShakeOracle(20, 1, 1), shakeOracle(shake));
         CompositeSnapshot foregroundBoundary = registry.capture();
 
-        shake.prepareTimedScreenShakeBackground(true, -5);
+        shake.setupScreenShake(0, false);
         ShakeOracle prepared = new ShakeOracle(19, -5, 1);
         assertEquals(prepared, shakeOracle(shake));
         registry.restore(foregroundBoundary);
         shake = currentLbzState();
         assertEquals(new ShakeOracle(20, 1, 1), shakeOracle(shake));
-        shake.prepareTimedScreenShakeBackground(true, -5);
+        shake.setupScreenShake(0, false);
         assertEquals(prepared, shakeOracle(shake));
-        shake.applyTimedScreenShakeForeground();
+        shake.publishScreenShakeForeground();
         assertEquals(new ShakeOracle(19, -5, -5), shakeOracle(shake));
 
         CompositeSnapshot deadPauseBoundary = registry.capture();
         fixture.sprite().setObjectRoutineOverride(6);
-        shake.prepareTimedScreenShakeBackground(false, 0);
+        shake.setupScreenShake(0, true);
         assertEquals(new ShakeOracle(19, 0, -5), shakeOracle(shake));
         registry.restore(deadPauseBoundary);
         shake = currentLbzState();
         fixture.sprite().setObjectRoutineOverride(6);
-        shake.prepareTimedScreenShakeBackground(false, 0);
+        shake.setupScreenShake(0, true);
         assertEquals(new ShakeOracle(19, 0, -5), shakeOracle(shake),
                 "routine >= 6 pauses the countdown and publishes zero");
         fixture.sprite().setObjectRoutineOverride(2);

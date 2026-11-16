@@ -73,6 +73,7 @@ public class TestZoneEventRewindSchemaGuard {
             "transitionBlockHandle");
     private static final Set<String> CNZ_ALLOWED_TRANSIENT_FIELDS = Set.of();
     private static final Set<String> MGZ_ALLOWED_TRANSIENT_FIELDS = Set.of(
+            "screenShake", // explicitly captured in the composed payload
             "activeRobotnik",
             "cachedMgzQuakeChunkData",
             "collapseSolids",
@@ -83,6 +84,7 @@ public class TestZoneEventRewindSchemaGuard {
             "transitionArtHandle");
     private static final Set<String> MHZ_ALLOWED_TRANSIENT_FIELDS = Set.of("screenShake");
     private static final Set<String> ICZ_ALLOWED_TRANSIENT_FIELDS = Set.of(
+            "screenShake", // captured by the composed ICZ payload, not omitted
             "snowboardIntro",
             "act2TransitionDirectQueue",
             "act2TransitionChunkHandle",
@@ -218,7 +220,7 @@ public class TestZoneEventRewindSchemaGuard {
     /**
      * FIELD names (not getter names) the legacy writeMgzState byte layout serialized.
      */
-    private static final Set<String> MGZ_LEGACY_FIELDS = Set.of(
+    private static final Set<String> MGZ_PUBLICATION_FIELDS = Set.of(
             "eventsFg5",
             "transitionRequested",
             "collapseRequested",
@@ -243,7 +245,6 @@ public class TestZoneEventRewindSchemaGuard {
             "screenEventRoutine",
             "collapseMutationCount",
             "collapseFrameCounter",
-            "collapseStartupShakeTimer",
             "bossBgScrollVelocity",
             "bossBgScrollOffset",
             "bossTransitionTimer",
@@ -254,13 +255,16 @@ public class TestZoneEventRewindSchemaGuard {
             "bgRiseRoutine",
             "bgRiseOffset",
             "bgRiseSubpixelAccum",
-            "bgRiseFinalShakeTimer",
             "bossArenaRoutine",
             "gradualUnlockDirection",
             "gradualUnlockAccumulator",
             "collapseScrollVelocity",
             "collapseScrollFixedPosition",
-            "collapseScrollPosition"
+            "collapseScrollPosition",
+            "appliedScreenShakeOffset", "cloudAccumulator", "publishedCloudPhase", "cloudsFrozen",
+            "publicationValid", "publishedCameraX", "publishedCameraY", "publishedRiseRoutine",
+            "publishedRiseOffset", "publishedBossOffset", "collisionDiffX", "collisionDiffY",
+            "collisionActive", "bgRiseObjectFinished"
     );
 
     /**
@@ -400,16 +404,16 @@ public class TestZoneEventRewindSchemaGuard {
     }
 
     @Test
-    public void mgzSchemaCoversAllLegacySidecarFields() {
+    public void mgzSchemaCoversAllPublicationScalars() {
         RewindClassSchema schema = RewindSchemaRegistry.schemaFor(Sonic3kMGZEvents.class);
         Set<String> captured = schema.capturedFields().stream()
                 .map(plan -> plan.field().getName())
                 .collect(Collectors.toSet());
-        Set<String> missing = MGZ_LEGACY_FIELDS.stream()
+        Set<String> missing = MGZ_PUBLICATION_FIELDS.stream()
                 .filter(name -> !captured.contains(name))
                 .collect(Collectors.toSet());
         assertTrue(missing.isEmpty(),
-                "schema capture lost legacy MGZ sidecar fields: " + missing);
+                "schema capture lost MGZ publication scalars: " + missing);
     }
 
     @Test
