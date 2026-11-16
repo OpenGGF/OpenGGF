@@ -487,7 +487,8 @@ under the matching area heading; see the
   Sonic/Tails and S3K Sonic/Tails/Knuckles, with donor-owned art, abilities,
   life icons and results names. Donated life icons use owned object-pattern banks
   so empty foreground cells and HUD text retain the disc stage's tiles.
-  Game Setup saves CD donor/team choices.
+  CPU Tails fly-ins use the donor's flight poses; host-native followers retain
+  host art when the donor lacks their sheet. Game Setup saves CD donor/team choices.
   Stage-backed host animation scripts no longer require a cartridge host.
   CD authored terrain supports owned objects; native objects retain their stage
   program context. Audio-state restoration also restores the native/streamed

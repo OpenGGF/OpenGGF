@@ -261,6 +261,8 @@ final class LevelPlayableArtInitializer {
 
     private boolean usesDonation(AbstractPlayableSprite playable) {
         return CrossGameFeatureProvider.isActive()
+                && (!playable.characterKey().isBuiltin() || com.openggf.game.CrossGameFeatureInternalAccess
+                        .suppliesCharacter(crossGameFeatures, playable.characterKey()))
                 && !SpriteManagerInternalAccess.usesNativeScriptedArt(spriteManager, playable);
     }
 
@@ -284,7 +286,8 @@ final class LevelPlayableArtInitializer {
 
     private PlayerSpriteArtProvider artProviderFor(AbstractPlayableSprite playable,
                                                   PlayerSpriteArtProvider configuredProvider) {
-        if (SpriteManagerInternalAccess.usesNativeScriptedArt(spriteManager, playable)) {
+        if (SpriteManagerInternalAccess.usesNativeScriptedArt(spriteManager, playable)
+                || (configuredProvider == crossGameFeatures && !usesDonation(playable))) {
             return levelManager.game instanceof PlayerSpriteArtProvider provider ? provider : null;
         }
         return configuredProvider;

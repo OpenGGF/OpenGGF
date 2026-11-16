@@ -370,3 +370,11 @@ failures were observed before these changes. Expanded `TestCdDonorTeams`:
 **17 passed, zero skips**, covering all 14 donor roster pairs and three rejected
 followers. Native-host admission's initial repair exposed art-provider selection
 still using the donor; the next selection checks host art retention as well.
+
+Native-follower admission and provider selection now pass the exact two entry
+matrices plus `TestCdDonorHosting` and `TestCdDonorTeams`: **40 tests, zero
+failures/errors/skips**. The donor roster decides art ownership per participant;
+host-supplied followers keep their host provider, auxiliary art and palette.
+CD lacks those native characters, so the three unavailable donor follower cases
+still refuse with explicit donor/character reasons and leave donation inactive.
+No game-name condition was added to shared runtime code.

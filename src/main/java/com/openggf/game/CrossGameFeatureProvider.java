@@ -199,8 +199,14 @@ public class CrossGameFeatureProvider implements PlayerSpriteArtProvider, Spinda
         }
         try {
             requireDonorCharacter(ActiveGameplayTeamResolver.resolveMainCharacterCode(configService()));
-            for (String companion : ActiveGameplayTeamResolver.resolveSidekicks(configService()))
-                requireDonorCharacter(companion);
+            for (String companion : ActiveGameplayTeamResolver.resolveSidekicks(configService())) {
+                // Native scripted followers retain host-owned art. Admission here precedes
+                // their registration, so do not reject a character the host supplies.
+                var host = GameServices.module().getDonorCapabilities();
+                var character = builtinArchetype(companion);
+                if (host == null || character == null || !host.getPlayableCharacters().contains(character))
+                    requireDonorCharacter(companion);
+            }
         } catch (IllegalArgumentException rejection) {
             close();
             throw rejection;
@@ -578,6 +584,21 @@ public class CrossGameFeatureProvider implements PlayerSpriteArtProvider, Spinda
             return com.openggf.util.PatternDecompressor.fromBytes(
                     com.openggf.data.compression.NemesisReader.decompress(channel));
         }
+    }
+
+    private static PlayerCharacter builtinArchetype(String characterCode) {
+        return switch (characterCode == null ? "" : characterCode.trim().toLowerCase(java.util.Locale.ROOT)) {
+            case "sonic" -> PlayerCharacter.SONIC_ALONE;
+            case "tails" -> PlayerCharacter.TAILS_ALONE;
+            case "knuckles" -> PlayerCharacter.KNUCKLES;
+            default -> null;
+        };
+    }
+
+    boolean suppliesCharacter(CharacterKey character) {
+        var archetype = character == null ? null : builtinArchetype(character.persisted());
+        return donorCapabilities != null && archetype != null
+                && donorCapabilities.getPlayableCharacters().contains(archetype);
     }
 
     private void requireDonorCharacter(String characterCode) {

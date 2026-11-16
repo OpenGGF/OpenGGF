@@ -12,6 +12,11 @@ public final class CrossGameFeatureInternalAccess {
         return donation.loadLifeArt(character);
     }
 
+    /** Whether the donor owns this built-in sheet; otherwise native followers retain host art. */
+    public static boolean suppliesCharacter(CrossGameFeatureProvider donation, CharacterKey character) {
+        return donation.suppliesCharacter(character);
+    }
+
     /**
      * The donor's own number for a pose of a built-in character it supplies.
      *
