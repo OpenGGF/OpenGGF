@@ -86,7 +86,6 @@ class TestSonic3kMgz2BgRiseEvents {
      * and the remaining MGZ screen events running later in the frame.
      */
     private static void tick(Sonic3kMGZEvents events, int frame) {
-        events.updatePrePhysics(1);
         events.updateBgRiseObjectAfterPlayerPhysics(1);
         events.update(1, frame);
     }
@@ -203,7 +202,7 @@ class TestSonic3kMgz2BgRiseEvents {
         events.setBgRiseLoadStateInitialised(true);
         events.setBgRiseRoutine(BG_RISE_SONIC);
 
-        events.updatePrePhysics(1);
+        events.updateBackgroundEvents(1);
         assertFalse(events.isBgRiseMotionStarted(),
                 "the background-event bridge sees the prior player position");
 
@@ -225,7 +224,7 @@ class TestSonic3kMgz2BgRiseEvents {
         events.setBgRiseRoutine(BG_RISE_AFTER_MOVE);
         events.setCollapseInitialized(true);
 
-        events.updatePrePhysics(1);
+        events.updateBackgroundEvents(1);
 
         assertEquals(BG_RISE_AFTER_MOVE, events.getBgRiseRoutine(),
                 "MGZ2_LevelCollapse's _unkEEA2 VScroll mode makes MGZ2_BGEventTrigger return before state-C re-entry");
@@ -510,6 +509,32 @@ class TestSonic3kMgz2BgRiseEvents {
             throw new AssertionError("Unable to duplicate SpriteManager sidekick list entry", e);
         }
     }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
+    void finishedLateLoadsAllocateNoRiseObjectOrCrashOnReentry(boolean afterMove) {
+        int[] position = afterMove ? new int[] {0x3CC0, 0x700} : new int[] {0x3800, 0xA81};
+        var player = placePlayer(position[0], position[1]);
+        player.setCentreX((short) position[0]);
+        player.setCentreY((short) position[1]);
+        var audio = mock(AudioManager.class);
+        var events = new TestableMgzEvents(audio);
+        events.init(1);
+        events.initializeBackgroundAtLoad(1);
+        assertEquals(0x1D0, events.getBgRiseOffset());
+        if (events.getBgRiseRoutine() == 12) {
+            player.setCentreY((short) 0xA81);
+            events.updateBackgroundEvents(1); // C -> 8 does not allocate an object
+        }
+        GameServices.camera().setMinX((short) 0x123);
+        clearInvocations(audio);
+        events.updateBgRiseObjectAfterPlayerPhysics(1);
+        org.junit.jupiter.api.Assertions.assertAll(
+                () -> verify(audio, never()).playSfx(Sonic3kSfx.CRASH.id),
+                () -> assertEquals(0, events.getBgRiseFinalShakeTimerRaw()),
+                () -> assertEquals(0x123, GameServices.camera().getMinX(), "no object means no camera lock"));
+    }
+
 
     private static final class TestableMgzEvents extends Sonic3kMGZEvents {
         private final AudioManager audio;

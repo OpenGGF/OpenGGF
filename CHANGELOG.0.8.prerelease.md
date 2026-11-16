@@ -747,6 +747,15 @@ under the matching area heading; see the
 
 ## Maintenance and release preparation
 
+- ICZ background loop history and indoor selection now belong to the event owner,
+  so rebuilding scroll output retains the same background. Rewind captures that
+  continuation together with the shared ROM shake words; ICZ objects request
+  shake through the zone bridge instead of toggling the unrelated shared flag.
+  Indoor restarts select the normal background routine before resize events,
+  shake and rumble use the native level clock, and rewind rejects unreachable
+  shake, snow-fall and intro-phase values. Unexpected failures during validated
+  ICZ rewind restoration propagate instead of being logged and swallowed.
+
 - **All-level performance sweep:** `tools/performance/level_sweep.py` plays every
   trace fixture and Sonic 3&K route movie through the frame-time probes, one at a
   time. It reports frame time, allocation, garbage collection and hitches per
@@ -886,7 +895,15 @@ under the matching area heading; see the
   manager state changes. Early directed-load scroll has an immutable pre-ScreenInit
   phase; unexpected validated-restore failures propagate to their caller.
   The seamless reload retains HCZ1 deformation,
-  and the geyser begins shaking on its native first dispatch. Scene
+  and the geyser begins shaking on its native first dispatch. MGZ likewise
+  owns shake, cloud phase and collision publication; drawing or rebuilding its
+  scroll output cannot advance gameplay, and rewind restores the composed state,
+  including the first MGZ2 rising-floor publication. Finished late loads do not
+  replay the rise object's crash or camera lock. Collapse arms its countdown
+  before the same frame's background shake setup. The end boss keeps its native
+  setup/underflow waits and draws throughout the Sonic encounter’s initial wait;
+  its allocated rescue controller runs in slot order
+  with the first countdown tick on setup. Scene
   presentation spells out capture, restoration and failure cleanup in operation
   order, and pixel-oracle failures retain the rendering mode and captured frame.
   Failed trace replays print their exact test/report/triage route; triage reads

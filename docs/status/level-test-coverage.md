@@ -2840,3 +2840,20 @@ Doomsday route entry, mod rewind and broader team/viewport certification remain 
 LBZ publication ownership (2026-11-16): the [bounded event audit](../architecture/audits/2026-11-16-s3k-lbz-event-publication.md)
 tracks shake flag consumers, same-frame renderer rebuilds and composed rewind.
 The existing LBZ1/LBZ2 act matrices retain all inherited route/viewport/donor/roster gaps.
+
+ICZ publication ownership (2026-11-15): the
+[bounded publication audit](../architecture/audits/2026-11-15-s3k-icz-event-publication.md)
+records real-load ICZ2 indoor-hysteresis renderer rebuild, start/retained gate
+boundaries, ICZ1 indoor restart and native shake-clock witnesses, snow-fall
+publication ranges, and the column's one-shot landing request. These component checks do not certify complete routes,
+refresh-row timing, native pixels, or broader donor/team/viewport products; the
+existing ICZ act matrices and their inherited gaps remain applicable.
+
+MGZ event publication (2026-11-15): the [bounded audit](../architecture/audits/2026-11-15-s3k-mgz-event-publication.md)
+records real-load projection/rewind witnesses, trigger-frame capture, whole-manager
+rejection and native end-boss/transition dispatch witnesses. The two review
+trace regressions are resolved: all eleven reports exactly match baseline;
+1792 focused/rewind/guard cases pass. Eight inherited replay failures remain.
+The [MGZ1](../architecture/validation/levels/s3k-mgz-act1.md) and
+[MGZ2](../architecture/validation/levels/s3k-mgz-act2.md) matrices retain their
+wider route, donor, team and viewport obligations.
