@@ -82,11 +82,13 @@ final class LevelScrollPresentation {
     static LevelScrollPresentation capture(LevelManager level, AdvancedRenderFrameState mode) {
         var camera = level.camera;
         var scroll = level.parallaxManager;
+        var sampled = level.spritePresentationRenderer().boundsMask.sample();
+        var arenaMask = sampled != null ? sampled : captureArenaMask(level);
         return new LevelScrollPresentation(new Registers(camera.getX(), camera.getY(), camera.getXWithShake(),
                 scroll.getVscrollFactorFG(), scroll.getVscrollFactorBG(), scroll.getBgCameraX(),
                 scroll.getBgPeriodWidth(), mode.enableForegroundHeatHaze(), mode.enablePerLineForegroundScroll(),
                 mode.reversePlaneAssignment(), mode.hasForegroundVScrollOverride(), mode.foregroundVScrollOverride(),
-                mode.hasBackgroundVScrollOverride(), mode.backgroundVScrollOverride(), level.spritePresentationRenderer().boundsMask.sample()),
+                mode.hasBackgroundVScrollOverride(), mode.backgroundVScrollOverride(), arenaMask),
                 scroll.getHScrollForShader(), scroll.getVScrollPerLineBGForShader(),
                 scroll.getVScrollPerColumnBGForShader(), scroll.getVScrollPerColumnFGForShader(),
                 mode.foregroundPerColumnVScrollOverride(),

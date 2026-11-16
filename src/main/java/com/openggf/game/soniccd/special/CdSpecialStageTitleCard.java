@@ -81,4 +81,26 @@ final class CdSpecialStageTitleCard {
             textRoutine = 2;
         }
     }
+
+    State capture() { return new State(
+            barSprite == null ? null : barSprite.capture(), textSprite == null ? null : textSprite.capture(),
+            barRoutine, barY, barTimer, textRoutine, textX, textTimer, barVisible, barAlive, textAlive); }
+    void restore(State s) {
+        barSprite = CdSpecialSprites.Sprite.restored(barSprite, s.barSprite());
+        textSprite = CdSpecialSprites.Sprite.restored(textSprite, s.textSprite());
+        barRoutine = s.barRoutine();
+        barY = s.barY();
+        barTimer = s.barTimer();
+        textRoutine = s.textRoutine();
+        textX = s.textX();
+        textTimer = s.textTimer();
+        barVisible = s.barVisible();
+        barAlive = s.barAlive();
+        textAlive = s.textAlive();
+    }
+    record State(
+            CdSpecialSprites.Sprite.State barSprite, CdSpecialSprites.Sprite.State textSprite, int barRoutine,
+            int barY, int barTimer, int textRoutine, int textX, int textTimer, boolean barVisible, boolean barAlive,
+            boolean textAlive) {
+    }
 }

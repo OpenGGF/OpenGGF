@@ -495,4 +495,44 @@ public final class CdSpecialStageSonic {
     public int flags() { return flags; }
     public int spriteY() { return spriteY; }
     public int anim() { return anim; }
+
+    State capture() { return new State(
+            routine, flags, x, y, z, spriteX, spriteY, spriteYVel, xVel, yVel, speed, bumpTime, topSpeed, pitch,
+            yaw, tilt, timer, shoes, anim, stampCenter, stampTopLeft, stampTopRight, stampBottomRight,
+            stampBottomLeft, stampOrientation, ufoCollision, animation.capture()); }
+    void restore(State s) {
+        routine = s.routine();
+        flags = s.flags();
+        x = s.x();
+        y = s.y();
+        z = s.z();
+        spriteX = s.spriteX();
+        spriteY = s.spriteY();
+        spriteYVel = s.spriteYVel();
+        xVel = s.xVel();
+        yVel = s.yVel();
+        speed = s.speed();
+        bumpTime = s.bumpTime();
+        topSpeed = s.topSpeed();
+        pitch = s.pitch();
+        yaw = s.yaw();
+        tilt = s.tilt();
+        timer = s.timer();
+        shoes = s.shoes();
+        anim = s.anim();
+        stampCenter = s.stampCenter();
+        stampTopLeft = s.stampTopLeft();
+        stampTopRight = s.stampTopRight();
+        stampBottomRight = s.stampBottomRight();
+        stampBottomLeft = s.stampBottomLeft();
+        stampOrientation = s.stampOrientation();
+        ufoCollision = s.ufoCollision();
+        animation.restore(s.animation());
+    }
+    record State(
+            int routine, int flags, int x, int y, int z, int spriteX, int spriteY, int spriteYVel, int xVel,
+            int yVel, int speed, int bumpTime, int topSpeed, int pitch, int yaw, int tilt, int timer, int shoes,
+            int anim, int stampCenter, int stampTopLeft, int stampTopRight, int stampBottomRight,
+            int stampBottomLeft, int stampOrientation, int ufoCollision, CdSpecialAnimation.State animation) {
+    }
 }

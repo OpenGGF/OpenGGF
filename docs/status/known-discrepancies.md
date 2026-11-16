@@ -10,6 +10,17 @@ This document tracks **intentional deviations** from the original Sonic 1 / 2 / 
 
 Each entry describes what the ROM does, what we do, and why — focusing on *why* the divergence is acceptable.
 
+## Sonic CD dust SFX malformed track count (2026-11-16)
+
+The retail FM dust effect declares two tracks but has only one header before
+`SonicCD_D6_FM6` (scddisasm/src/Sound Drivers/FM/SFX/D6.asm:1-9). With FixBugs=0,
+`PlaySFX` reads the bytecode as another header, overwriting FM1 with a track
+pointer of 80E0h (FM/_Driver.asm:803-860). The fixed data would declare one track.
+OpenGGF bounds CD FM headers at the first track's bytecode, preserving the authored
+FM6 dust effect without executing native memory corruption. Shared SMPS admission
+still rejects invalid channels and pointers. This prevents a real-session admission
+exception when dust is requested, including at a live rewind presentation boundary.
+
 ## Hosted Competition checkpoint reload and monitor OFF (2026-11-07)
 
 `FAST_FROM_CHECKPOINT` omits the death reload's fades and initial title-card
