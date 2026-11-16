@@ -38,6 +38,7 @@ public class TestZoneEventRewindSchemaGuard {
             Sonic3kMHZEvents.class,
             Sonic3kICZEvents.class);
     private static final Set<String> AIZ_ALLOWED_TRANSIENT_FIELDS = Set.of(
+            "screenShake",
             "bootstrap",
             // Test timing seam only. The production constructors resolve ObjectManager's
             // rewind-captured VBlank counter; this supplier is structural and cannot contribute
@@ -121,12 +122,10 @@ public class TestZoneEventRewindSchemaGuard {
             "appliedTreeRevealChunkCopiesMask",
             "aiz2ResizeRoutine",
             "battleshipWrapX",
-            "screenShakeTimer",
             "levelRepeatOffset",
             "battleshipBgYOffset",
             "battleshipSmoothScrollX",
             "battleshipPostScrollCameraX",
-            "screenShakeOffsetY",
             "fireBgCopyFixed",
             "fireRiseSpeed",
             "fireWavePhase",

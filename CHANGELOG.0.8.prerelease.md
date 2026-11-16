@@ -7,6 +7,13 @@ under the matching area heading; see the
 
 ## Gameplay and presentation
 
+- **Angel Island screen events:** AIZ owns the canopy-wave origin and captures
+  its publication with the shared ROM shake words. Shake setup respects stored
+  death/restart routines and the contiguous timed table; water and bomb producers
+  write the same flag without the water timer masking later bomb writes. Water
+  timer edges publish through a game-neutral handler lifecycle; real-intro and
+  independent last-offset rewind witnesses cover the publication boundaries.
+
 - **Flying Battery event publication:** gameplay owns cloud drift, positions and
   shake setup; extra draws and renderer rebuilds preserve the completed event
   state, including after rewind. Subbosses request shake through its flag alone.

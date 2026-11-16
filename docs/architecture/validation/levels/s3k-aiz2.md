@@ -1655,3 +1655,10 @@ AIZ's remaining additions are queue diagnostics on already-red rows after remova
 of the wrong ship archive exposes the missing head submission. Conditional fields
 and later producer/native-route coverage remain unknown as recorded in the final
 [LRZ/current-source audit](../../audits/2026-11-07-lrz-enemy-art-submission.md#final-art-only-source-qualification--2026-11-08).
+
+## Screen-event publication maintenance — 2026-11-16
+
+The [AIZ publication audit](../../audits/2026-11-16-s3k-aiz-event-publication.md)
+records the AIZ2 ownership/rewind checks, matched route comparisons and AIZ2
+forest-loop picture preservation. Existing character, donor, team, viewport and
+native pixel obligations remain open; this local change does not certify an act.

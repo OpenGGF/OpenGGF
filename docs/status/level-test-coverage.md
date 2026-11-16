@@ -2837,6 +2837,11 @@ MICA authored S3K ending presentation (2026-11-08): the
 records passing declared-entry normal/Super/Hyper mapping and capture checks.
 Doomsday route entry, mod rewind and broader team/viewport certification remain open.
 
+AIZ screen-event ownership (2026-11-16): the [bounded publication audit](../architecture/audits/2026-11-16-s3k-aiz-event-publication.md)
+records the real-load shake witness, composed rewind contract, selected route
+comparisons and forest-loop evidence. Existing act/character, donor, team and
+viewport obligations remain inherited; this local cleanup is not zone certification.
+
 FBZ event/scroll publication and its inherited route limits are tracked in the
 [2026-11-15 FBZ audit](../architecture/audits/2026-11-15-s3k-fbz-event-publication.md).
 

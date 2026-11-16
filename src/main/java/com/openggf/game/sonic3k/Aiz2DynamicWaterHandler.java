@@ -1,6 +1,8 @@
 package com.openggf.game.sonic3k;
 
-import com.openggf.game.DynamicWaterHandler;
+import com.openggf.game.GameServices;
+import com.openggf.game.internal.WaterShakeTimerLifecycle;
+import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.level.WaterSystem;
 
 /**
@@ -17,7 +19,7 @@ import com.openggf.level.WaterSystem;
  * </ul>
  * The rise inherits the current speed (2 after the drop).
  */
-public class Aiz2DynamicWaterHandler implements DynamicWaterHandler {
+public class Aiz2DynamicWaterHandler implements WaterShakeTimerLifecycle {
 
     /** Water level the ROM raises TO after the trigger (NOT the starting height).
      *  Starting height is 0x0528 from StartingWaterHeights.bin. */
@@ -99,6 +101,26 @@ public class Aiz2DynamicWaterHandler implements DynamicWaterHandler {
     @Override
     public boolean shakeTimerOccupiesObjectSlot() {
         return true;
+    }
+
+    @Override
+    public void onShakeTimerStarted() {
+        // DynamicWaterHeight_AIZ2 (sonic3k.asm:8680-8714) runs after ScreenEvents.
+        // Write once so a subsequent bomb can replace this same ROM flag.
+        requestShakeFlag(-1);
+    }
+
+    @Override
+    public void onShakeTimerExpired() {
+        // Obj_6E6E (sonic3k.asm:8731-8739) clears the flag, not an offset.
+        requestShakeFlag(0);
+    }
+
+    private static void requestShakeFlag(int flag) {
+        if (GameServices.zoneRuntimeRegistryOrNull() != null) {
+            S3kRuntimeStates.currentAiz(GameServices.zoneRuntimeRegistry())
+                    .ifPresent(state -> state.requestScreenShake(flag));
+        }
     }
 
     /**

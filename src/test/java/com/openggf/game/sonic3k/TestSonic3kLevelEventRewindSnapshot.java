@@ -457,7 +457,7 @@ class TestSonic3kLevelEventRewindSnapshot {
     }
 
     @Test
-    void corruptSameLengthAizSchemaPayloadRollsBackAndDoesNotAbortLaterZoneRestore() throws Exception {
+    void corruptSameLengthAizSchemaPayloadRejectsBeforeAnyStateRestoration() throws Exception {
         Sonic3kLevelEventManager hczSource = new Sonic3kLevelEventManager();
         hczSource.initLevel(Sonic3kZoneIds.ZONE_HCZ, 1);
         var hcz = hczSource.getHczEventsForTest();
@@ -486,20 +486,20 @@ class TestSonic3kLevelEventRewindSnapshot {
         Sonic3kAIZEvents payloadSource = new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
         payloadSource.setIntroSpawned(false);
         byte[] corruptPayload = corruptFireSequencePhaseOrdinal(
-                ZoneEventSchemaSidecar.capture(payloadSource), Integer.MAX_VALUE);
+                payloadSource.captureAizState(), Integer.MAX_VALUE);
         LevelEventSnapshot malformedSnapshot = snapshotWithAizPayload(hczSnapshot, corruptPayload);
 
         assertDoesNotThrow(() -> target.restore(malformedSnapshot),
-                "same-length schema-corrupt AIZ sidecar should not abort later zone sidecars");
+                "malformed composed AIZ payload rejects the complete manager snapshot");
         assertTrue(aizTarget.isIntroSpawned(),
-                "schema-corrupt AIZ sidecar must roll back partial AIZ field writes");
-        assertEquals(8, hczTarget.getBgRoutine());
-        assertTrue(hczTarget.isWallMoving());
-        assertEquals(12, hczTarget.getShakeTimer());
+                "schema-corrupt AIZ payload must be rejected before writing AIZ state");
+        assertEquals(0, hczTarget.getBgRoutine());
+        assertFalse(hczTarget.isWallMoving());
+        assertEquals(0, hczTarget.getShakeTimer());
     }
 
     @Test
-    void negativeEnumOrdinalAizSchemaPayloadRollsBackAndDoesNotAbortLaterZoneRestore() throws Exception {
+    void negativeEnumOrdinalAizSchemaPayloadRejectsBeforeAnyStateRestoration() throws Exception {
         Sonic3kLevelEventManager hczSource = new Sonic3kLevelEventManager();
         hczSource.initLevel(Sonic3kZoneIds.ZONE_HCZ, 1);
         var hcz = hczSource.getHczEventsForTest();
@@ -528,16 +528,16 @@ class TestSonic3kLevelEventRewindSnapshot {
         Sonic3kAIZEvents payloadSource = new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
         payloadSource.setIntroSpawned(false);
         byte[] corruptPayload = corruptFireSequencePhaseOrdinal(
-                ZoneEventSchemaSidecar.capture(payloadSource), -1);
+                payloadSource.captureAizState(), -1);
         LevelEventSnapshot malformedSnapshot = snapshotWithAizPayload(hczSnapshot, corruptPayload);
 
         assertDoesNotThrow(() -> target.restore(malformedSnapshot),
-                "null-enum AIZ sidecar should not abort later zone sidecars");
+                "null enum rejects the complete manager snapshot");
         assertTrue(aizTarget.isIntroSpawned(),
-                "null-enum AIZ sidecar must roll back partial AIZ field writes");
-        assertEquals(8, hczTarget.getBgRoutine());
-        assertTrue(hczTarget.isWallMoving());
-        assertEquals(12, hczTarget.getShakeTimer());
+                "null-enum AIZ payload must be rejected before writing AIZ state");
+        assertEquals(0, hczTarget.getBgRoutine());
+        assertFalse(hczTarget.isWallMoving());
+        assertEquals(0, hczTarget.getShakeTimer());
     }
 
     @Test
@@ -1800,11 +1800,11 @@ class TestSonic3kLevelEventRewindSnapshot {
     private static byte[] corruptFireSequencePhaseOrdinal(byte[] payload, int invalidOrdinal) {
         Sonic3kAIZEvents zero = new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
         zero.setFireSequencePhaseOrdinal(0);
-        byte[] zeroPayload = ZoneEventSchemaSidecar.capture(zero);
+        byte[] zeroPayload = zero.captureAizState();
 
         Sonic3kAIZEvents one = new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
         one.setFireSequencePhaseOrdinal(1);
-        byte[] onePayload = ZoneEventSchemaSidecar.capture(one);
+        byte[] onePayload = one.captureAizState();
 
         assertEquals(zeroPayload.length, payload.length);
         int changedByte = -1;
