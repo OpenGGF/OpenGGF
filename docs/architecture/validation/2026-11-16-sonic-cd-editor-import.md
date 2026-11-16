@@ -273,3 +273,33 @@ Focused command used the established environment/queue/EGL options and
 **49 passed, zero failures/errors/skips**, verified media found;
 `target/cd-import-focused.log`, Maven 44 seconds, admission wait separately queued.
 No category job started. Next: render edited native playtest, then final smoke.
+
+## Step 5: edited native editor playtest rendering
+
+Starting head `8b9e21a646`. Added `TestCdEditorPlaytestRendering`: create an authored
+R11A document, save/reopen, launch via `EditorProjectRuntimeModule` and
+`HeadlessGameBoot`, run 180 production ticks through native startup, then draw
+with the real gameplay renderer. No raw GLFW setup, desktop or audio device.
+The visual test explicitly disables synthesis and asserts the null backend.
+An initial test expected null audio while boot correctly installed no-device
+synthesis; its setup was corrected. Another attempt failed before execution
+because the checkout filesystem filled. Preserved baseline Surefire evidence in
+task scratch and removed only that inactive task baseline's generated build
+outputs. The first frames showed startup title/scroll state with zero changed
+pixels; advancing the production loop established ordinary gameplay instead of
+bypassing startup or weakening the difference assertion.
+
+Final command uses established queue/EGL/environment options plus
+`-Dopenggf.test.output=$AGENT_RUNTIME/task-07hk1OLI`
+and `-Dtest=TestCdEditorPlaytestRendering,TestRawGlfwTestSetupGuard`:
+**6 passed, zero failures/errors/skips**, verified media found;
+`target/cd-editor-render4.log`, Maven 44 seconds. Admission separately queued.
+Inspected both 320x224 PNGs: Sonic and native PPZ terrain/water are visible;
+the authored foreground block appears on the left only in the edited shot.
+**8,226 changed pixels**, same camera `(2208,668)` in both. Authored launch
+`(2368,512)` versus native start `(64,1899)`; 180 gameplay ticks precede capture.
+Files in task scratch: `cd-editor-control.png`, `cd-editor-edited.png`, their
+`.state.txt` sidecars, `cd-editor-render.txt`, and `edited-playtest.ogfproject`.
+These are local evidence, not bundled disc assets or route certification.
+No category job started yet. Next: the single finished-tree smoke against the
+exact base, failure attribution, final documentation/PR ready state.
