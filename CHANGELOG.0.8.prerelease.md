@@ -14,17 +14,17 @@ under the matching area heading; see the
   timer edges publish through a game-neutral handler lifecycle; real-intro and
   independent last-offset rewind witnesses cover the publication boundaries.
 
-- **Flying Battery event publication:** gameplay owns cloud drift, positions and
-  shake setup; extra draws and renderer rebuilds preserve the completed event
-  state, including after rewind. Subbosses request shake through its flag alone.
-  Seamless reload supports mod-wrapped event providers; projected indoor views
-  retain camera-copy shake, and rewind preserves timed as well as constant shake.
-
 - **Mushroom Hill screen events:** the end boss now starts the original timed
   horizontal shake at its final escape threshold, applied once to foreground,
   sprites and render bounds through the native camera copy. Background loop, animation
   bands and pillar collision positions belong to screen events and restore
   together with shake; rebuilding scroll output no longer changes gameplay.
+
+- **Flying Battery event publication:** gameplay owns cloud drift, positions and
+  shake setup; extra draws and renderer rebuilds preserve the completed event
+  state, including after rewind. Subbosses request shake through its flag alone.
+  Seamless reload supports mod-wrapped event providers; projected indoor views
+  retain camera-copy shake, and rewind preserves timed as well as constant shake.
 
 - **Sonic CD (development preview):** Sonic CD runs from the user's own USA
   disc image (a cue sheet and its tracks, or a lossless CHD made from them with
@@ -914,7 +914,10 @@ under the matching area heading; see the
   manager state changes. Early directed-load scroll has an immutable pre-ScreenInit
   phase; unexpected validated-restore failures propagate to their caller.
   The seamless reload retains HCZ1 deformation,
-  and the geyser begins shaking on its native first dispatch. MGZ likewise
+  and the geyser begins shaking on its native first dispatch. CNZ suppresses
+  screen shake after player death without consuming its countdown; SOZ uses
+  the shared native shake owner as a refactor with no gameplay behaviour change,
+  preserving its contiguous-table reads and rewind continuation. MGZ likewise
   owns shake, cloud phase and collision publication; drawing or rebuilding its
   scroll output cannot advance gameplay, and rewind restores the composed state,
   including the first MGZ2 rising-floor publication. Finished late loads do not

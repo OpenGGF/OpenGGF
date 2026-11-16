@@ -80,8 +80,23 @@ through `ZoneEventSchemaSidecar`, some zones through `ZoneRuntimeState
 | ICZ | Shake lives in the events class with its own tables. ICZ and `IczSegmentColumnObjectInstance` also set the shared shake-active flag. `SwScrlIcz` advances the background-loop accumulator and indoor state without rewind capture. | Medium |
 | MHZ | The events class owns flag, offset and last offset, but the only writer of its flag found is a test setter; `MhzEndBossInstance` writes the shared flag instead. Check this against the ROM first: it may be a missing shake, not just tidiness. `SwScrlMhz` advances a loop accumulator that is captured. | Medium |
 | AIZ | Shake is owned by the events class with duplicated tables. Continuous mode depends on a `WaterSystem` timer that WaterSystem itself decrements. `SwScrlAiz` anchors its wave frame on first call and has no rewind capture. | Medium |
-| CNZ | Shake is owned and ticked by the events class; `SwScrlCnz` only reads it. A boss writes scroll offset/velocity through the manager, and act-2 size accumulators live in the manager. | Low–Medium |
-| LRZ, SOZ, SSZ, DEZ | Already close to the target: shake in runtime state (`S3kScreenShake` or `SozEventState`), scroll handlers project only. SSZ's screen-init fallback also runs from pre-physics. | Low |
+| CNZ | Shake is owned and ticked by the events class, with a separate applied copy. `SwScrlCnz` reads shake but also publishes deformation words to runtime state. A boss writes scroll offset/velocity through the manager, and act-2 size accumulators live in the manager. | Low–Medium |
+| LRZ, SOZ, SSZ, DEZ | Shake is in runtime state (`S3kScreenShake` or `SozEventState`), but scroll publication is not uniformly read-only: LRZ writes deformation words and SSZ advances background events. SSZ has load-time screen init and an update fallback, with no pre-physics init fallback. | Low |
+
+**Low-zone follow-up candidates (verified 2026-11-16):** the
+[low-zone audit](../audits/2026-11-15-s3k-low-zone-event-publication.md)
+records these retained contracts; no code change for them belongs in PR #334.
+
+- `SwScrlSsz.update` runs SSZ1 background setup/events and
+  `SszLaunchBackground.update`; its once-per-frame guard is only the captured
+  `backgroundScrollFrame`, not a separate event-publication owner.
+- `SwScrlCnz` (through `CnzZoneRuntimeState.publishDeformOutputs`) and
+  `SwScrlLrz` write runtime state during the normal scroll pass; CNZ also
+  retains an applied shake copy.
+- `SozZoneRuntimeState.restoreBytes` silently zero-fills missing trailing
+  sections of a short payload instead of rejecting the whole payload.
+- SSZ has no pre-physics init fallback; initial-object preparation owns screen
+  init, and the update path retains a fallback.
 
 Shared signals: eight zones carry their own copies of the ROM shake tables
 instead of using `S3kScreenShake`. Writers of the game-wide shake-active
