@@ -330,16 +330,10 @@ class TestCdFmPlaySound {
     }
 
     @Test void actualRetainedUsaBankAdmitsAnchorsAndPlansAfterTheDiscOwnerCloses() throws Exception {
-        String root=System.getProperty("soniccd.media.root");
-        org.junit.jupiter.api.Assumptions.assumeTrue(root!=null&&!root.isBlank(),"Set soniccd.media.root for actual retained USA FM checks");
         CdFmSoundAssets retained;
-        try(var files=java.nio.file.Files.list(java.nio.file.Path.of(root).resolve("USA"))) {
-            var cues=files.filter(p->p.getFileName().toString().toLowerCase(java.util.Locale.ROOT).endsWith(".cue")).toList();
-            assertEquals(1,cues.size(),"Actual USA directory must identify exactly one CUE");
-            try(var programs=com.openggf.game.soniccd.media.CdProgramAssets.open(cues.getFirst(),
-                    java.util.Optional.of(com.openggf.game.soniccd.CdReleaseVariant.USA),java.util.Optional.empty())) {
-                retained=CdFmSoundAssets.fromPrograms(programs);
-            }
+        try(var programs=com.openggf.game.soniccd.media.CdProgramAssets.open(com.openggf.game.soniccd.CdTestMedia.usaCue(),
+                java.util.Optional.of(com.openggf.game.soniccd.CdReleaseVariant.USA),java.util.Optional.empty())) {
+            retained=CdFmSoundAssets.fromPrograms(programs);
         }
         assertRetainedUsaAsset(retained); // Detached actual owner, never a declared/fabricated authenticated image.
     }

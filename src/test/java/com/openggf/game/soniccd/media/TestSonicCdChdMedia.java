@@ -4,6 +4,7 @@ import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.data.cd.ChdDiscImage;
 import com.openggf.data.cd.CueDiscImage;
+import com.openggf.game.soniccd.CdTestMedia;
 import com.openggf.game.soniccd.release.CdRetailReleases;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
@@ -53,9 +54,7 @@ class TestSonicCdChdMedia {
 
     @Test void theLauncherFindsAndOpensAUsaChdNamedByTheKeyOrInTheRomFolder() throws Exception {
         Path chd = usaChds().getFirst();
-        String mediaRoot = System.getProperty(CdHostedMedia.MEDIA_ROOT_PROPERTY);
-        System.clearProperty(CdHostedMedia.MEDIA_ROOT_PROPERTY);
-        try {
+        try (var cleared = CdTestMedia.withoutDiscProperties()) {
             var config = SonicConfigurationService.createStandalone(dir);
             config.setConfigValue(SonicConfiguration.ROMS_DIRECTORY, dir.toString());
             config.setConfigValue(SonicConfiguration.SONIC_CD_DISC, chd.toString());
@@ -70,8 +69,6 @@ class TestSonicCdChdMedia {
                 assertEquals(262144, source.assets().files().stream()
                         .filter(entry -> entry.path().equals("/R11A__.MMD;1")).findFirst().orElseThrow().size());
             }
-        } finally {
-            if (mediaRoot != null) System.setProperty(CdHostedMedia.MEDIA_ROOT_PROPERTY, mediaRoot);
         }
     }
 
@@ -95,27 +92,53 @@ class TestSonicCdChdMedia {
         Files.write(folder.resolve("Sonic CD (USA).chd"), java.util.Arrays.copyOf(chd, 200));
         var config = SonicConfigurationService.createStandalone(dir);
         config.setConfigValue(SonicConfiguration.ROMS_DIRECTORY, dir.resolve("roms").toString());
-        String mediaRoot = System.getProperty(CdHostedMedia.MEDIA_ROOT_PROPERTY);
-        System.clearProperty(CdHostedMedia.MEDIA_ROOT_PROPERTY);
-        try {
+        try (var cleared = CdTestMedia.withoutDiscProperties()) {
             var found = CdDiscLocator.locate(config);
             assertFalse(found.found());
             assertTrue(found.detail().startsWith("Sonic CD (USA).chd: the disc image could not be read"), found.detail());
-        } finally {
-            if (mediaRoot != null) System.setProperty(CdHostedMedia.MEDIA_ROOT_PROPERTY, mediaRoot);
         }
         assertTrue(CdDiscLocator.placementHint().contains(".chd"));
     }
 
-    private static Path usaCue() throws IOException {
-        String root = System.getProperty(CdHostedMedia.MEDIA_ROOT_PROPERTY);
-        String chds = System.getProperty(CHD_ROOT_PROPERTY);
-        Assumptions.assumeTrue(root != null && !root.isBlank() && chds != null && !chds.isBlank(),
-                "Set soniccd.chd.root and soniccd.media.root for the real CHD checks");
-        try (Stream<Path> cues = Files.list(Path.of(root, "USA"))) {
-            return cues.filter(p -> p.toString().toLowerCase(Locale.ROOT).endsWith(".cue")).findFirst()
-                    .orElseThrow(() -> new IOException("No USA CUE under " + root));
+    @Test void theDiscPathNamesTheDiscAndTheMediaRootWinsOverIt() throws IOException {
+        Path usa = Files.createDirectories(dir.resolve("media/USA"));
+        Path sheet = Files.write(usa.resolve("a.cue"), new byte[1]);
+        Path chd = Files.write(dir.resolve("Sonic CD (USA).chd"), new byte[1]);
+        try (var cleared = CdTestMedia.withoutDiscProperties()) {
+            assertEquals(Optional.empty(), CdHostedMedia.propertyDisc());
+            System.setProperty(CdHostedMedia.DISC_PATH_PROPERTY, chd.toString());
+            assertEquals(Optional.of(chd), CdHostedMedia.propertyDisc());
+            System.setProperty(CdHostedMedia.MEDIA_ROOT_PROPERTY, dir.resolve("media").toString());
+            assertEquals(Optional.of(sheet), CdHostedMedia.propertyDisc(), "the caller's media root wins");
+            System.clearProperty(CdHostedMedia.MEDIA_ROOT_PROPERTY);
+            System.setProperty(CdHostedMedia.DISC_PATH_PROPERTY, dir.resolve("missing.chd").toString());
+            IOException missing = assertThrows(IOException.class, CdHostedMedia::propertyDisc);
+            assertTrue(missing.getMessage().startsWith(CdHostedMedia.DISC_PATH_PROPERTY + " names "), missing.getMessage());
+            var found = CdDiscLocator.locate(null);
+            assertFalse(found.found());
+            assertEquals(missing.getMessage(), found.detail());
         }
+    }
+
+    @Test void aDiscPathNamingADamagedChdIsRefusedNotReplacedByTheFolderSearch() throws IOException {
+        byte[] chd = Files.readAllBytes(Path.of("src/test/resources/cd/chd/mixed-cdzl.chd"));
+        Path damaged = Files.write(dir.resolve("Sonic CD (USA).chd"), java.util.Arrays.copyOf(chd, 200));
+        var config = SonicConfigurationService.createStandalone(dir);
+        config.setConfigValue(SonicConfiguration.ROMS_DIRECTORY, dir.toString());
+        try (var cleared = CdTestMedia.withoutDiscProperties()) {
+            System.setProperty(CdHostedMedia.DISC_PATH_PROPERTY, damaged.toString());
+            var found = CdDiscLocator.locate(config);
+            assertFalse(found.found());
+            assertTrue(found.detail().startsWith("Sonic CD (USA).chd: the disc image could not be read"), found.detail());
+        }
+    }
+
+    /** The bin/cue form the CHDs are compared with: needs the media root's sheet and a CHD folder. */
+    private static Path usaCue() throws IOException {
+        String chds = System.getProperty(CHD_ROOT_PROPERTY);
+        Assumptions.assumeTrue(chds != null && !chds.isBlank(),
+                "Set soniccd.chd.root and soniccd.media.root for the real CHD checks");
+        return CdTestMedia.regionCue("USA");
     }
 
     private static List<Path> usaChds() throws IOException {

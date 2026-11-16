@@ -1,6 +1,7 @@
 package com.openggf.tools;
 
 import com.openggf.game.internal.HostedGameMedia;
+import com.openggf.game.soniccd.CdTestMedia;
 import com.openggf.game.soniccd.media.CdHostedMedia;
 import com.openggf.trace.TraceData;
 import com.openggf.trace.TraceFrame;
@@ -55,12 +56,10 @@ class TestSonicCdCaptureTools {
         else System.setProperty("openggf.headless.gl", callerGl);
     }
 
-    private static Path nativeFile(String relative) {
-        String media = System.getProperty(CdHostedMedia.MEDIA_ROOT_PROPERTY);
-        Assumptions.assumeTrue(media != null && !media.isBlank(), "Set soniccd.media.root for Sonic CD disc checks");
-        String configured = System.getProperty("soniccd.native.root");
-        Path root = configured != null && !configured.isBlank() ? Path.of(configured) : Path.of(media, "..", "native");
-        Path file = root.resolve(relative).normalize();
+    private static Path nativeFile(String relative) throws java.io.IOException {
+        CdTestMedia.usaCue();
+        Path file = CdTestMedia.nativePath(relative).orElse(null);
+        Assumptions.assumeTrue(file != null, "Set soniccd.native.root (or soniccd.media.root) for " + relative);
         Assumptions.assumeTrue(Files.exists(file), "Native fixture absent: " + file);
         return file;
     }

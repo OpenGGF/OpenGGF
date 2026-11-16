@@ -4,7 +4,7 @@ import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameId;
 import com.openggf.game.launch.HostedMediaLaunch;
-import com.openggf.game.soniccd.CdFixtureReplayAccess;
+import com.openggf.game.soniccd.CdTestMedia;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -14,7 +14,6 @@ import org.junit.jupiter.api.parallel.Isolated;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -28,23 +27,20 @@ import static org.junit.jupiter.api.Assertions.*;
 class TestCdDiscRefusal {
     @TempDir Path dir;
     private String mediaRoot;
+    private CdTestMedia.Restore discProperties;
     private Path usa;
     private Path europe;
 
     @BeforeEach void discs() throws IOException {
-        usa = CdFixtureReplayAccess.usaCue();
-        mediaRoot = System.getProperty(CdHostedMedia.MEDIA_ROOT_PROPERTY);
-        Path folder = Path.of(mediaRoot, "Europe");
-        org.junit.jupiter.api.Assumptions.assumeTrue(Files.isDirectory(folder), "no European disc beside the USA one");
-        try (Stream<Path> cues = Files.list(folder)) {
-            europe = cues.filter(p -> p.toString().toLowerCase().endsWith(".cue")).findFirst().orElse(null);
-        }
-        org.junit.jupiter.api.Assumptions.assumeTrue(europe != null, "no European .cue");
-        System.clearProperty(CdHostedMedia.MEDIA_ROOT_PROPERTY);
+        // The folder searches below need the media root's regional layout, not only the single USA disc.
+        mediaRoot = CdTestMedia.mediaRoot().toString();
+        usa = CdTestMedia.usaCue();
+        europe = CdTestMedia.regionCue("Europe");
+        discProperties = CdTestMedia.withoutDiscProperties();
     }
 
     @AfterEach void restore() {
-        if (mediaRoot != null) System.setProperty(CdHostedMedia.MEDIA_ROOT_PROPERTY, mediaRoot);
+        if (discProperties != null) discProperties.close();
     }
 
     private SonicConfigurationService romFolder(Path folder) {

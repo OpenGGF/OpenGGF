@@ -3,7 +3,6 @@ package com.openggf.game.soniccd.media;
 import com.openggf.game.soniccd.CdNativeFile;
 import com.openggf.game.soniccd.CdReleaseVariant;
 import com.openggf.game.soniccd.release.CdRetailReleases;
-import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -11,13 +10,11 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.nio.ReadOnlyBufferException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.util.Arrays;
 import java.util.HexFormat;
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -114,15 +111,8 @@ class TestCdR3PcmSource {
     }
 
     private static Path cue(String region) throws Exception {
-        var root = System.getProperty("soniccd.media.root");
-        Assumptions.assumeTrue(root != null && !root.isBlank(), "Explicit original media source opt-in");
-        var directory = Path.of(root).resolve(region);
-        Assumptions.assumeTrue(Files.isDirectory(directory), "Explicit configured regional media absent: " + region);
-        try (var paths = Files.list(directory)) {
-            var cues = paths.filter(p -> p.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".cue")).toList();
-            assertEquals(1, cues.size());
-            return cues.getFirst();
-        }
+        return "USA".equals(region) ? com.openggf.game.soniccd.CdTestMedia.usaCue()
+                : com.openggf.game.soniccd.CdTestMedia.regionCue(region);
     }
 
     private static String sha(byte[] b) throws Exception {

@@ -75,7 +75,12 @@ under the matching area heading; see the
   the V-INTs the console dropped, under two timing-contract extensions the
   owner approved on 2026-11-13. The capture tools can film Sonic CD
   (`--no-hud` leaves the HUD out; a trace clip may run past the recording's
-  last row into the game's own flow, such as a time warp). Third-party code is credited in `NOTICE.md`:
+  last row into the game's own flow, such as a time warp). Queued test runs
+  pass a USA CHD found in the project folder as `-Dsoniccd.disc.path`
+  (identified by its CHD header; the disc is verified whole when opened), so the
+  single-disc Sonic CD tests run without a hand-set media root; the regional
+  and CUE-layout checks still take `-Dsoniccd.media.root`. A single-disc test
+  that still skips while the disc is supplied now fails the category run. Third-party code is credited in `NOTICE.md`:
   the backup-RAM format code follows superctr/buram (MIT), and the PCM chip and
   stamp graphics are translated from MAME (BSD-3-Clause); earlier code derived
   from Genesis Plus GX (non-commercial licence) was replaced, and Genesis Plus

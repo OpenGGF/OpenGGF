@@ -1,6 +1,6 @@
 package com.openggf.game.soniccd.flow;
 
-import org.junit.jupiter.api.Assumptions;
+import com.openggf.game.soniccd.CdTestMedia;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -22,11 +22,7 @@ final class CdNativeRun {
     private CdNativeRun(String name) { this.name = name; }
 
     static CdNativeRun load(String name) throws IOException {
-        String configured = System.getProperty("soniccd.native.root");
-        Path root = configured != null && !configured.isBlank() ? Path.of(configured)
-                : Path.of(System.getProperty("soniccd.media.root", "."), "..", "native");
-        Path csv = root.resolve("rehost-flow").resolve(name).resolve("frames.csv").normalize();
-        Assumptions.assumeTrue(Files.isRegularFile(csv), "Native fixture absent: " + csv);
+        Path csv = CdTestMedia.nativeFile("rehost-flow/" + name + "/frames.csv");
         CdNativeRun run = new CdNativeRun(name);
         List<String> lines = Files.readAllLines(csv);
         String[] header = lines.get(0).split(",", -1);

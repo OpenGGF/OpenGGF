@@ -4,18 +4,15 @@ import com.openggf.game.soniccd.CdNativeFile;
 import com.openggf.game.soniccd.CdReleaseVariant;
 import com.openggf.game.soniccd.level.CdAssetBytes;
 import com.openggf.game.soniccd.release.CdRetailReleases;
-import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.nio.ReadOnlyBufferException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.util.HexFormat;
-import java.util.Locale;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -33,14 +30,7 @@ class TestCdTimeWarpPcmSource {
     private static byte[] originalPcm;
 
     @BeforeAll static void detachOnlyFromTheActualAuthenticatedUsaOwner() throws Exception {
-        String root = System.getProperty("soniccd.media.root");
-        Assumptions.assumeTrue(root != null && !root.isBlank(), "Set soniccd.media.root for original PCM source checks");
-        Path cue;
-        try (var files = Files.list(Path.of(root).resolve("USA"))) {
-            var cues = files.filter(path -> path.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".cue")).toList();
-            assertEquals(1, cues.size());
-            cue = cues.getFirst();
-        }
+        Path cue = com.openggf.game.soniccd.CdTestMedia.usaCue();
         var owner = CdProgramAssets.open(cue, Optional.of(CdReleaseVariant.USA), Optional.empty());
         originalOwner = owner;
         try (owner) {

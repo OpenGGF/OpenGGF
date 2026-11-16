@@ -23,7 +23,8 @@ import java.util.stream.Stream;
  * data track, never the file name.
  *
  * <p>Where it looks, first match wins: the {@value CdHostedMedia#MEDIA_ROOT_PROPERTY} system property (tests
- * and tools: {@code <root>/USA/<disc>.cue} or {@code .chd}); the {@code roms.soniccd} key ({@code SONIC_CD_DISC}:
+ * and tools: {@code <root>/USA/<disc>.cue} or {@code .chd}); the {@value CdHostedMedia#DISC_PATH_PROPERTY} system
+ * property (tests and tools: the sheet or CHD itself); the {@code roms.soniccd} key ({@code SONIC_CD_DISC}:
  * the sheet's or CHD's path, relative to the working directory); when that is blank, the ROM folder
  * ({@code roms.directory}, default the working directory) and its sub-folders two levels down, CUE sheets before
  * CHDs. A named image that
@@ -45,13 +46,15 @@ public final class CdDiscLocator {
 
     /** Locates the USA disc under the configured places; never throws for a missing or foreign disc. */
     public static Result locate(SonicConfigurationService config) {
-        String property = System.getProperty(CdHostedMedia.MEDIA_ROOT_PROPERTY);
-        if (property != null && !property.isBlank()) {
-            try {
-                return identify(List.of(CdHostedMedia.propertyDisc(property)), "-D" + CdHostedMedia.MEDIA_ROOT_PROPERTY);
-            } catch (IOException missing) {
-                return new Result(Optional.empty(), missing.getMessage());
-            }
+        String root = System.getProperty(CdHostedMedia.MEDIA_ROOT_PROPERTY);
+        String where = "-D" + (root != null && !root.isBlank() ? CdHostedMedia.MEDIA_ROOT_PROPERTY
+                : CdHostedMedia.DISC_PATH_PROPERTY);
+        try {
+            Optional<Path> named = CdHostedMedia.propertyDisc();
+            // A named disc that is not the USA one is refused, never replaced by roms.soniccd or the folder search.
+            if (named.isPresent()) return identify(List.of(named.get()), where);
+        } catch (IOException missing) {
+            return new Result(Optional.empty(), missing.getMessage());
         }
         String configured = config == null ? null : config.getString(SonicConfiguration.SONIC_CD_DISC);
         if (configured != null && !configured.isBlank()) {
@@ -80,7 +83,7 @@ public final class CdDiscLocator {
     }
 
     /** The working directory as RomLocationResolver reads it: user.dir when it is set. */
-    private static Path workingDirectory() {
+    static Path workingDirectory() {
         String userDirectory = System.getProperty("user.dir");
         return (userDirectory == null || userDirectory.isBlank() ? Path.of("") : Path.of(userDirectory))
                 .toAbsolutePath().normalize();

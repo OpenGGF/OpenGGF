@@ -203,7 +203,11 @@ Start shows where the engine looked.
 
 For tests and the capture tools, the JVM property
 `-Dsoniccd.media.root=<parent>` names a folder whose `USA` sub-folder holds
-the `.cue` (or, with no `.cue` there, a `.chd`); when set, it is used instead of `roms.soniccd` and the ROM folder. See
+the `.cue` (or, with no `.cue` there, a `.chd`); otherwise
+`-Dsoniccd.disc.path=<file>` names the `.cue` or `.chd` itself. Either one, when
+set, is used instead of `roms.soniccd` and the ROM folder, and the media root wins
+over the disc path. The queued test wrapper sets `-Dsoniccd.disc.path` from a USA
+CHD in the project folder. See
 [configuration](../../../CONFIGURATION.md#sonic-cd-disc-and-native-captures).
 For example, `GameplayCaptureTool --game scd --zone R11A` films Palmtree Panic
 act 1 Present; `--zone ppz --act N` counts a zone's stages 1 to 10 (act 1

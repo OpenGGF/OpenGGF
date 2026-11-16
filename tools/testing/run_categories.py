@@ -43,6 +43,8 @@ SKIP_INPUT_PROPERTIES = {'s2_bk2': 's2.request.bk2.path',
                          'soniccd_media': 'soniccd.media.root',
                          'soniccd_native': 'soniccd.native.root',
                          'soniccd_stamp_ledger': 'soniccd.stamp.ownerLedger'}
+# The USA disc reaches single-disc tests as either property; the wrapper discovers the root CHD.
+DISC_INPUT_PROPERTIES = ('soniccd.disc.path', 'soniccd.media.root')
 JVM_OPTION_VARIABLES = ('JAVA_TOOL_OPTIONS', 'JDK_JAVA_OPTIONS', '_JAVA_OPTIONS', 'MAVEN_ARGS')
 # Generated local references (BizHawk capture, AudioReferenceGenerator WAVs) are never supplied.
 LOCAL_REFERENCE_INPUTS = {'s1_bizhawk_reference', 'audio_reference_files'}
@@ -269,12 +271,14 @@ def make_plan(root, data, base, requested, guards=False, workers=1):
             'scope': 'bounded smoke suite and guards; full-suite is public-release-only; trace/native profiles are separate'}
 
 
-def skip_capabilities(skip_policy, environment):
+def skip_capabilities(skip_policy, environment, roms=()):
     """Declare only inputs this launch demonstrably supplies or never supplies.
 
     gl mirrors the release gate's display check. Property inputs reach test JVMs
-    only through JVM/Maven option variables. Generated local references are never
-    supplied. Unknown or unparseable inputs stay undeclared, so their skips fail closed.
+    only through JVM/Maven option variables; soniccd_disc is also supplied by a
+    discovered disc in ``roms`` (the launch's injected -D arguments). Generated
+    local references are never supplied. Unknown or unparseable inputs stay
+    undeclared, so their skips fail closed.
     """
     try:
         tokens = [token for key in JVM_OPTION_VARIABLES
@@ -288,6 +292,10 @@ def skip_capabilities(skip_policy, environment):
         elif name in SKIP_INPUT_PROPERTIES and tokens is not None:
             prefix = f'-D{SKIP_INPUT_PROPERTIES[name]}='
             capabilities[name] = any(token.startswith(prefix) and token != prefix for token in tokens)
+        elif name == 'soniccd_disc' and tokens is not None:
+            prefixes = tuple(f'-D{key}=' for key in DISC_INPUT_PROPERTIES)
+            capabilities[name] = any(token.startswith(prefixes) and token not in prefixes
+                                     for token in [*tokens, *roms])
         elif name in LOCAL_REFERENCE_INPUTS:
             capabilities[name] = False
     return capabilities
@@ -495,7 +503,6 @@ def run_plan(root, plan, max_minutes=DEFAULT_MINUTES, keep_diagnostics=False, qu
         raise ValueError('No tests selected')
     if skip_policy is None:
         skip_policy = load_policy(SKIP_POLICY)
-    capabilities = skip_capabilities(skip_policy, os.environ)
     target = root / 'target'
     target.mkdir(exist_ok=True)
     run = None
@@ -521,6 +528,7 @@ def run_plan(root, plan, max_minutes=DEFAULT_MINUTES, keep_diagnostics=False, qu
         # The runner forwards launch variables; a ROM property set there stays the caller's.
         caller = caller_rom_properties((), root)
         roms = without_caller(rom_args(root, rom_directory), caller)
+        capabilities = skip_capabilities(skip_policy, os.environ, roms)
         plan['working_tree_fingerprint'] = initial_state
         plan['max_minutes'] = max_minutes
         plan['ordinary_batch_classes'] = ORDINARY_BATCH_CLASSES
@@ -792,8 +800,9 @@ def main(argv=None):
             if args.preflight and not args.run:
                 preflight(ROOT, plan)
                 caller = caller_rom_properties((), ROOT)
-                roms = rom_properties(without_caller(rom_args(ROOT, args.rom_directory), caller), caller)
-                inputs = skip_capabilities(skip_policy, os.environ)
+                discovered = without_caller(rom_args(ROOT, args.rom_directory), caller)
+                roms = rom_properties(discovered, caller)
+                inputs = skip_capabilities(skip_policy, os.environ, discovered)
                 print(f"Skip policy: {len(skip_policy['rules'])} exact rules; skip inputs "
                       + (','.join(f'{k}={str(v).lower()}' for k, v in sorted(inputs.items())) or '-')
                       + f'; {describe(roms)}')

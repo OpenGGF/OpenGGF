@@ -189,13 +189,7 @@ class TestPpzObjectsBPictures {
     }
 
     /** Like {@code CdTestMedia.nativeFile} but {@code null} instead of skipping when the file is absent. */
-    private static Path optionalNativeFile(String relative) {
-        String configured = System.getProperty("soniccd.native.root");
-        Path root = configured != null && !configured.isBlank() ? Path.of(configured)
-                : Path.of(System.getProperty("soniccd.media.root", "."), "..", "native");
-        Path file = root.resolve(relative).normalize();
-        return Files.isRegularFile(file) ? file : null;
-    }
+    private static Path optionalNativeFile(String relative) { return CdTestMedia.optionalNativeFile(relative); }
 
     /** Returns the level frame of the last shot compared (0 when none). */
     private static int playStage(String payload, List<Shot> shots, Map<Integer, int[]> rows,

@@ -150,6 +150,8 @@ Find routines and the stage's dialect with `scddisasm-guide`.
   `python3 tools/testing/maven_queue.py --normal -Dmse=off
   "-Dsoniccd.media.root=$HOME/Downloads/Sonic-CD/media" -Dtest=... test -B`;
   GL tests add `-Dopenggf.headless.gl=surfaceless-egl` with `DISPLAY` unset.
+  Without the media root the queue passes a USA CHD from the project folder as
+  `-Dsoniccd.disc.path`, which covers the disc but not the captures.
   Native captures default to `<media root>/../native` (`-Dsoniccd.native.root`);
   without the disc or captures the tests skip, classified in
   `tools/testing/release-skip-policy.json`.

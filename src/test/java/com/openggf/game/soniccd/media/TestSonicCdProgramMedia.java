@@ -5,14 +5,12 @@ import com.openggf.data.cd.Iso9660FileSystem;
 import com.openggf.game.soniccd.CdNativeFile;
 import com.openggf.game.soniccd.CdProgramCatalogue;
 import com.openggf.game.soniccd.CdReleaseVariant;
-import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
@@ -27,15 +25,8 @@ class TestSonicCdProgramMedia {
     @ParameterizedTest(name = "{0} user program assets")
     @ValueSource(strings = {"USA", "Japan", "Europe"})
     void allStageHeadersNativeFilesAndCatalogueComponentsMatchDirectUserBytes(String region) throws IOException {
-        String configured = System.getProperty("soniccd.media.root");
-        Assumptions.assumeTrue(configured != null && !configured.isBlank(), "Set soniccd.media.root for real-media checks");
-        Path directory = Path.of(configured).resolve(region);
-        Path cue;
-        try (var entries = Files.list(directory)) {
-            var cues = entries.filter(path -> path.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".cue")).toList();
-            assertEquals(1, cues.size());
-            cue = cues.getFirst();
-        }
+        // Reads the CUE sheet itself (CueDiscImage), so every region comes from the media root's folders.
+        Path cue = com.openggf.game.soniccd.CdTestMedia.regionCue(region);
         CdReleaseVariant variant = CdReleaseVariant.valueOf(region.toUpperCase(Locale.ROOT));
         try (var assets = CdProgramAssets.open(cue, Optional.of(variant), Optional.empty());
              var disc = CueDiscImage.open(cue)) {
@@ -51,7 +42,7 @@ class TestSonicCdProgramMedia {
             assertEquals(34, assets.identity().tracks().stream().filter(track -> track.mode().name().equals("AUDIO")).count());
             Iso9660FileSystem direct = Iso9660FileSystem.open(disc, 1);
             CdProgramCatalogue catalogue = assets.catalogue().orElseThrow();
-            try (FileChannel raw = FileChannel.open(directory.resolve(disc.track(1).sourceFile()), StandardOpenOption.READ)) {
+            try (FileChannel raw = FileChannel.open(cue.getParent().resolve(disc.track(1).sourceFile()), StandardOpenOption.READ)) {
                 for (CdNativeFile file : catalogue.files()) {
                     var entry = assets.entry(file);
                     assertEquals(direct.entry(file.isoName()), entry);

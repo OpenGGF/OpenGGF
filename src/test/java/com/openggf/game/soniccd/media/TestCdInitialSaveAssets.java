@@ -11,7 +11,6 @@ import java.nio.file.*;
 import java.security.MessageDigest;
 import java.util.*;
 import static org.junit.jupiter.api.Assertions.*;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.mockito.Mockito.*;
 
 /** Authored before production. Actual original USA source plus labelled constructed-invalid controls; Java UNRUN. */
@@ -172,11 +171,9 @@ MAIN 177c 30 ff367c 696e976d86b7c24dc5f731046a0090efce405f9696234ebc4752ea7d2c01
     private static Fixture cached;
     private static String cachedRoot;
     private static synchronized Fixture actual() throws Exception {
-        String root=System.getProperty("soniccd.media.root");assumeTrue(root!=null&&!root.isBlank(),"Optional configured original USA CD media absent");
-        if(cached!=null&&root.equals(cachedRoot))return cached;Path usa=Path.of(root).resolve("USA");assertTrue(Files.isDirectory(usa),"Configured original USA media directory must exist");
-        List<Path> cues;try(var files=Files.list(usa)){cues=files.filter(p->p.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".cue")).toList();}
-        assertEquals(1,cues.size(),"Configured original USA media requires exactly one CUE; bad configuration must fail");
-        try(var programs=CdProgramAssets.open(cues.getFirst(),Optional.of(CdReleaseVariant.USA),Optional.empty())) {
+        String root=CdTestMedia.usaCue().toString();
+        if(cached!=null&&root.equals(cachedRoot))return cached;
+        try(var programs=CdProgramAssets.open(Path.of(root),Optional.of(CdReleaseVariant.USA),Optional.empty())) {
             cached=new Fixture(CdInitialSaveAssets.fromPrograms(programs),programs.header(),programs.identity(),programs.catalogue().orElseThrow(),
                     programs.mmd(CdNativeFile.BURAMINIT),programs.read(CdNativeFile.BURAMSUB,0,2592),programs.entry(CdNativeFile.BURAMINIT),programs.entry(CdNativeFile.BURAMSUB));
         }

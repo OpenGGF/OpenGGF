@@ -428,12 +428,19 @@ export SONIC_2_ROM_PATH="/absolute/s2.gen"
 export SONIC_3K_ROM_PATH="/absolute/s3k.gen"
 ```
 
-Sonic CD is not discovered: name the disc yourself with
-`-Dsoniccd.media.root=<directory holding USA/<disc>.cue>`. Native Sonic CD
-recordings are user-local and never committed; tests read them from
-`-Dsoniccd.native.root` (default `<media root>/../native`) and skip without
-them. A category run sees these only through `MAVEN_ARGS` or a JVM option
-variable, and declares the input present only when the property is set. See
+The wrappers also discover the Sonic CD (USA) disc as a CHD v5 file (`*.chd`)
+in the same places and pass it as `-Dsoniccd.disc.path=<the .chd>`. The CHD is
+recognised by its header's raw-data SHA-1 rather than by hashing the whole file;
+the engine verifies the whole disc against the USA release when a test opens
+it. Name a `.cue` sheet or another CHD yourself with `-Dsoniccd.disc.path=`.
+`-Dsoniccd.media.root=<directory holding USA/<disc>.cue>` (with `Europe/` and
+`Japan/` beside it) wins over the disc path; the regional and CUE-layout checks
+need it and skip without it. Native Sonic CD recordings are user-local and never
+committed; tests read them from `-Dsoniccd.native.root` (default
+`<media root>/../native` when a media root is set) and skip without them. A
+category run sees the media and native roots only through `MAVEN_ARGS` or a JVM
+option variable, and declares those inputs present only when the property is
+set. See
 [configuration](../../../CONFIGURATION.md#sonic-cd-disc-and-native-captures).
 
 ## HeadlessTestFixture
