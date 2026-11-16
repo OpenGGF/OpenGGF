@@ -226,6 +226,19 @@ public final class SonicCdGameModule implements GameModule {
 
     @Override
     public <T> T getGameService(Class<T> type) {
+        if (type == com.openggf.game.internal.NativeProjectHost.class) return type.cast(
+                new com.openggf.game.internal.NativeProjectHost() {
+                    @Override public Target target(com.openggf.game.internal.NativeProjectSource source) throws java.io.IOException {
+                        if (game == null) throw new java.io.IOException("Open the project disc before native playtesting");
+                        var payload = new com.openggf.game.soniccd.level.CdStageLoader(game.disc()).validate(source);
+                        return new Target(SonicCdZoneRegistry.zoneIndex(payload), SonicCdZoneRegistry.actIndex(payload), payload.ordinal());
+                    }
+                    @Override public com.openggf.level.Level load(com.openggf.game.internal.NativeProjectSource source,
+                            com.openggf.level.Level authored, int x, int y) throws java.io.IOException {
+                        target(source);
+                        return game.loadProject(source, authored, x, y);
+                    }
+                });
         if (type == com.openggf.game.internal.MediaSceneArt.class) return type.cast(new CdMediaSceneArt());
         if (type == com.openggf.game.soniccd.objects.art.CdObjectArtProvider.class) return type.cast(objectArt);
         // ObjHUD draws the HUD as level objects (HUD and Points/Main.asm:67-140).

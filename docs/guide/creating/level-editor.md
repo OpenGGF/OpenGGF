@@ -585,4 +585,5 @@ apply terrain, tile, object and ring edits without replacing its native level.
 Existing object placement IDs retain their second subtype and time mask after
 a move; new IDs default to second subtype zero and the selected period only.
 Replay currently requires the original layout dimensions. This internal path is
-not yet connected to project creation or the Playtest action.
+connected to the Playtest action for source-backed documents; project creation
+UI and content import integration remain pending.

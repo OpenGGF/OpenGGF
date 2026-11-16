@@ -218,3 +218,22 @@ single requested foreground change-based smoke. Items 2–6 are pending. Do not
 mark PR #352 ready yet. No new render paths exist. Historical smoke VERDICT is
 still **INCOMPLETE**; the retained exact-base ledger is 29 failures + 2 errors,
 not a result for this tree. No merge or destination push is authorized.
+
+## Step 2: native project playtest
+
+Starting head `76bfdd4dcf`; origin matched after fetch. The disc-backed runtime
+regression failed first with the temporary native-materialization rejection
+(`target/cd-playtest-red.log`, one error, zero skips). The semantic
+`NativeProjectHost` now validates/resolves the source into engine coordinates,
+then reloads through the actual game owner and applies detached edits. Native
+round/act numbers are distinct from runtime registry indices; an intermediate
+failure caught that mismatch. Authored spawn is retained by the native dynamic
+start provider, and the Engine launch uses the resolved zone/act/period.
+Flat export and hosts without native materialization still reject substitution.
+
+Focused command: `env -u DISPLAY -u WAYLAND_DISPLAY JAVA_TOOL_OPTIONS=-Djava.io.tmpdir=$AGENT_RUNTIME/task-07hk1OLI python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestCdEditorProjectSource,TestEditorProjectLifecycle,TestArchUnitRules' test`.
+Final result: **54 passed, zero failures/errors/skips**, verified media found,
+`target/cd-playtest-green2.log`; Maven execution 1:55, queue wait separate.
+An interrupted attempt stopped at test compilation; it supplies no test result.
+No category run started. Next: creator game/stage selection, import round trip,
+render and the requested final smoke; PR remains draft.

@@ -27,14 +27,27 @@ public final class EditorProjectRuntimeModule extends DelegatingGameModule {
     public static final int LEVEL_INDEX = 0x400;
     public static final int DATA_ZONE_INDEX = 0x40;
     private final ModZoneLevelData data;
+    private EditorProjectMetadata nativeMetadata;
+    private com.openggf.game.internal.NativeProjectSource nativeSource;
+    private Level nativeSnapshot;
+    private int nativeStartX, nativeStartY;
+    private com.openggf.game.internal.NativeProjectHost.Target nativeTarget;
+    public int launchZone() { return nativeSource == null ? 0 : nativeTarget.zone(); }
+    public int launchAct() { return nativeSource == null ? 0 : nativeTarget.act(); }
     private final ZoneRegistry zones;
     private final com.openggf.mods.code.AuthoredStageplayServices.Prepared scenes;
 
     public static EditorProjectRuntimeModule prepare(GameModule base, EditorProjectDocument document,
                                                      int spawnX, int spawnY) throws IOException {
         Objects.requireNonNull(base); Objects.requireNonNull(document);
-        if (document.nativeSource() != null)
-            throw new IOException("Native-source project playtests require native materialization; flat playtests are forbidden");
+        if (document.nativeSource() != null) {
+            if (base.getGameId() != document.metadata().gameId()) throw new IOException("Project game does not match the active host");
+            if (base.getGameService(com.openggf.game.internal.NativeProjectHost.class) == null)
+                throw new IOException("This host cannot materialize native-source projects; flat substitution is forbidden");
+            EditorProjectSpawnValidator.validateNative(document.level(), spawnX, spawnY);
+            com.openggf.game.modzone.ModLevelSettingsValidation.validate(base, document.metadata().settings());
+            return new EditorProjectRuntimeModule(base, document, spawnX, spawnY);
+        }
         var metadata = document.metadata();
         if (base.getGameId() != metadata.gameId())
             throw new IOException("Project game does not match the active host");
@@ -68,6 +81,16 @@ public final class EditorProjectRuntimeModule extends DelegatingGameModule {
         var m = document.metadata();
         return new FullLevelExporter.ExportRequest(output, m.name(), DATA_ZONE_INDEX, LEVEL_INDEX,
                 startX, startY, m.music(), m.gameId(), m.objectZoneSet(), m.settings());
+    }
+
+    private EditorProjectRuntimeModule(GameModule base, EditorProjectDocument document, int x, int y) throws IOException {
+        super(base, "editor-native-project");
+        data = null; scenes = null;
+        nativeMetadata = document.metadata(); nativeSource = document.nativeSource();
+        nativeSnapshot = MutableLevel.snapshot(document.snapshot());
+        nativeStartX = x; nativeStartY = y;
+        nativeTarget = base.getGameService(com.openggf.game.internal.NativeProjectHost.class).target(nativeSource);
+        zones = base.getZoneRegistry();
     }
 
     private EditorProjectRuntimeModule(GameModule base, EditorProjectMetadata metadata,
@@ -113,7 +136,7 @@ public final class EditorProjectRuntimeModule extends DelegatingGameModule {
 
     /** Session-local required team; no configuration or durable save is rewritten. */
     public com.openggf.game.save.SaveSessionContext launchContext() {
-        var team = data.settings().team();
+        var team = data == null ? nativeMetadata.settings().team() : data.settings().team();
         return team == null ? null : com.openggf.game.save.SaveSessionContext.noSave(getGameId().code(),
                 new com.openggf.game.save.SelectedTeam(team.main().persisted(),
                         team.sidekicks().stream().map(com.openggf.game.CharacterKey::persisted).toList()), 0, 0);
@@ -136,7 +159,7 @@ public final class EditorProjectRuntimeModule extends DelegatingGameModule {
         var inherited = super.getGameplayPolicyProvider();
         return new com.openggf.game.GameplayPolicyProvider() {
             @Override public java.util.Optional<com.openggf.game.GameplayLaunchTeam> launchTeam(ZoneKey destination) {
-                return KEY.equals(destination) && data.settings().team() != null
+                return data != null && KEY.equals(destination) && data.settings().team() != null
                         ? java.util.Optional.of(data.settings().team()) : inherited.launchTeam(destination);
             }
             @Override public java.util.Optional<com.openggf.game.GameplayInputFilter> inputFilter(ZoneKey destination) {
@@ -149,14 +172,20 @@ public final class EditorProjectRuntimeModule extends DelegatingGameModule {
     }
     // This act owns a flat authored layout. Its logical zone zero is not the
     // base game's campaign zone zero and must not initialize stock cutscenes.
-    @Override public com.openggf.game.LevelEventProvider getLevelEventProvider() { return null; }
+    @Override public com.openggf.game.LevelEventProvider getLevelEventProvider() { return nativeSource == null ? null : super.getLevelEventProvider(); }
     @Override public MusicReference getLevelMusicReference(int zone, int act) { return zones.getMusicReference(zone, act); }
     @Override public Level loadLevelOverride(int index) throws IOException {
+        if (nativeSource != null) {
+            int expected = nativeTarget.levelIndex();
+            if (index != expected) throw new IOException("A native project playtest owns only its source stage");
+            return base().getGameService(com.openggf.game.internal.NativeProjectHost.class)
+                    .load(nativeSource, nativeSnapshot, nativeStartX, nativeStartY);
+        }
         if (index != LEVEL_INDEX) throw new IOException("An editor playtest cannot load a stock campaign level");
         return base().getModZoneAdapter().load(OWNER, data);
     }
-    @Override public int getRemappedFeatureZone(int zone, int act, int levelZone) { return DATA_ZONE_INDEX; }
-    @Override public int getRemappedFeatureAct(int zone, int act, int levelZone) { return 0; }
-    @Override public int getRomAct(int zone, int act, int levelZone) { return 0; }
+    @Override public int getRemappedFeatureZone(int zone, int act, int levelZone) { return nativeSource == null ? DATA_ZONE_INDEX : super.getRemappedFeatureZone(zone, act, levelZone); }
+    @Override public int getRemappedFeatureAct(int zone, int act, int levelZone) { return nativeSource == null ? 0 : super.getRemappedFeatureAct(zone, act, levelZone); }
+    @Override public int getRomAct(int zone, int act, int levelZone) { return nativeSource == null ? 0 : super.getRomAct(zone, act, levelZone); }
     private record ProjectAct(int levelIndex, int startX, int startY) implements LevelDescriptor { }
 }

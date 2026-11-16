@@ -2153,7 +2153,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		var gameplay = SessionManager.openGameplaySession(editorProjectRootModule, module, editorProjectDataSource, module.launchContext());
 		initializeGameplayRuntime(gameplay, false);
 		levelManager.setEditorSaveManager(null);
-		loadEditorHostedPlaytest(gameplay, 0, 0, true, reason -> {
+		loadEditorHostedPlaytest(gameplay, module.launchZone(), module.launchAct(), true, reason -> {
 				try { showEditorProject(document); levelEditorController.setStatus("Playtest finished: " + reason); }
 				catch (IOException | RuntimeException failure) { reportEditorProjectFailure(failure); }
 			});

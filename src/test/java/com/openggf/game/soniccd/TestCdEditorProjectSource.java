@@ -12,6 +12,30 @@ import static org.junit.jupiter.api.Assertions.*;
 class TestCdEditorProjectSource {
     @TempDir Path directory;
 
+    @Test void sourceProjectPlaytestUsesNativeRuntime() throws Exception {
+        try (var disc = CdDiscDataSource.open(CdTestMedia.usaCue())) {
+            var module = new SonicCdGameModule();
+            var game = (SonicCdGame) module.createGame(disc);
+            var source = (com.openggf.game.soniccd.level.CdLevel) game.loadLevel(CdStagePayload.R11A.ordinal());
+            var metadata = new EditorProjectMetadata(GameId.SCD, "Playtest", 0, 0, disc.identity(),
+                    128, 512, 0, source.getMaxX(), 0, source.getMaxY(),
+                    new FullLevelExporter.ExportMusic.Stock(1), null);
+            var document = EditorProjectDocument.create(metadata, source);
+            // Empty this column to establish a safe authored spawn, away from level start.
+            document.level().getMap().setValue(0, 0, 1, (byte) 0);
+            document.level().getMap().setValue(0, 0, 2, (byte) 0);
+            var runtime = EditorProjectRuntimeModule.prepare(module, document, 128, 512);
+            var loaded = runtime.loadLevelOverride(CdStagePayload.R11A.ordinal());
+            assertInstanceOf(com.openggf.game.soniccd.level.CdLevel.class, loaded);
+            assertSame(loaded, game.currentLevel());
+            assertNotNull(game.currentImage());
+            assertArrayEquals(new int[]{128, 512}, game.getStartPosition(0, 0));
+            assertNotSame(loaded, runtime.loadLevelOverride(CdStagePayload.R11A.ordinal()));
+            assertThrows(java.io.IOException.class, () -> runtime.loadLevelOverride(CdStagePayload.R12A.ordinal()));
+            assertThrows(IllegalArgumentException.class, () -> EditorProjectRuntimeModule.request(document, directory, 128, 512));
+        }
+    }
+
     @Test void authoredEditsReplayOnFreshNativeOwners() throws Exception {
         try (var disc = CdDiscDataSource.open(CdTestMedia.usaCue())) {
             var source = new CdStageLoader(disc).load(CdStagePayload.R11A, 0, false);

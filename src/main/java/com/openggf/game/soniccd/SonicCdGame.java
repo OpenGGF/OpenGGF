@@ -28,6 +28,7 @@ public final class SonicCdGame extends Game implements PlayerSpriteArtProvider, 
     private final CdDiscDataSource disc;
     private final CdStageLoader loader;
     private CdLevel current;
+    private int[] projectStart;
     private CdStageImage currentImage;
 
     public SonicCdGame(CdDiscDataSource disc) {
@@ -47,6 +48,7 @@ public final class SonicCdGame extends Game implements PlayerSpriteArtProvider, 
 
     @Override
     public Level loadLevel(int levelIdx) throws IOException {
+        projectStart = null;
         CdStagePayload payload = CdStagePayload.values()[levelIdx];
         currentImage = loader.readStage(payload);
         current = loader.load(payload, currentImage, SonicCdZoneRegistry.zoneIndex(payload), true);
@@ -58,6 +60,13 @@ public final class SonicCdGame extends Game implements PlayerSpriteArtProvider, 
         CdStagePayload payload = loader.validate(source);
         CdLevel level = (CdLevel) loadLevel(payload.ordinal());
         level.applyProject(authored);
+        return level;
+    }
+
+    public CdLevel loadProject(com.openggf.game.internal.NativeProjectSource source, Level authored,
+            int x, int y) throws IOException {
+        CdLevel level = loadProject(source, authored);
+        projectStart = new int[]{x, y};
         return level;
     }
 
@@ -91,7 +100,8 @@ public final class SonicCdGame extends Game implements PlayerSpriteArtProvider, 
     @Override
     public int[] getStartPosition(int zoneIndex, int actIndex) {
         CdStagePayload payload = SonicCdZoneRegistry.payload(zoneIndex, actIndex);
-        return current != null && current.payload() == payload ? new int[] {current.startX(), current.startY()} : null;
+        return current != null && current.payload() == payload
+                ? (projectStart == null ? new int[]{current.startX(), current.startY()} : projectStart.clone()) : null;
     }
 
     @Override
