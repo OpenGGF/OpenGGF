@@ -50,7 +50,7 @@ import java.util.function.IntUnaryOperator;
  * {@code StageEvents}, which runs
  * first (:146-151), is the events lane's.
  */
-public final class SszScrollHandler extends AbstractZoneScrollHandler implements ScrollOutputRebuilder {
+public final class SszScrollHandler extends AbstractZoneScrollHandler implements ScrollOutputRebuilder, com.openggf.level.scroll.ScrollProjectionSource {
     /** The values a curve reads: the camera, or one of the three background layer cameras. */
     enum Source { FG, BG, BG2, BG3 }
 
@@ -443,6 +443,42 @@ public final class SszScrollHandler extends AbstractZoneScrollHandler implements
 
     private void emitBlock(short word, int lines) {
         for (int i = 0; i < lines && sinkPos < LINE_SINK; i++) sink[sinkPos++] = word;
+    }
+
+
+    /** Camera composition uses the native layer rates documented above, retaining the dispatched
+     * fraction/carry and deformation clock. The private scratch never enters UpdateScroll. */
+    @Override
+    public com.openggf.level.scroll.ScrollProjectionPhase captureProjection(
+            com.openggf.level.scroll.ScrollProjectionContext context) {
+        final Object state = captureRewindState();
+        final int[] table = layout.wobble() ? sine().clone() : null;
+        return view -> {
+            var nativeOutput = context.nativeOutput();
+            var scratch = new SszScrollHandler(payload, table);
+            scratch.restoreRewindState(state);
+
+            int[] words = new int[ScrollEffectComposer.VISIBLE_LINES];
+            int dx = view.cameraX() - context.cameraX();
+            scratch.bg3X += layout.deltaBg3().applyAsInt(dx << 8);
+            scratch.bg2X += layout.deltaBg2().applyAsInt(dx << 8);
+            scratch.bgX += layout.deltaBg().applyAsInt(dx << 8);
+            int y = view.cameraY() & 0xffff;
+            if (layout.backgroundY().scaled()) {
+                y >>>= 2;
+                y = (y + (y >>> layout.backgroundY().shift())) & 0xffff;
+            }
+            scratch.bgY = (y << 16) | (scratch.bgY & 0xffff);
+            scratch.publish(words, view.cameraX());
+            int[] raster = new int[view.height()];
+            // Presentation-only extra raster holds the last native line; no extra native work.
+            for (int i = 0; i < raster.length; i++) raster[i] = words[Math.min(i, words.length - 1)];
+            return new com.openggf.level.scroll.ScrollProjection(raster,
+                    nativeOutput.backgroundLines(), nativeOutput.backgroundColumns(), nativeOutput.foregroundColumns(),
+                    (short) (nativeOutput.foregroundY() + view.cameraY() - context.cameraY()),
+                    scratch.getVscrollFactorBG(), nativeOutput.backgroundX(), nativeOutput.backgroundPeriod(),
+                    nativeOutput.shakeX(), nativeOutput.shakeY(), nativeOutput.tilemapMode(), nativeOutput.spritePositions());
+        };
     }
 
     // ---------------------------------------------------------------------------------------------
