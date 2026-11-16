@@ -33,8 +33,6 @@ class TestZoneEventRuntimeAccessGuard {
     private static final Map<Access, Integer> MGZ_ACCESSES = Map.of(
             mgz("updateBackgroundCollisionObjectRelease(int)", "levelOrNull"), 1,
             mgz("updateBackgroundCollisionObjectRelease(int)", "sprites"), 1,
-            mgz("currentMgzRuntimeState()", "hasRuntime"), 1,
-            mgz("currentMgzRuntimeState()", "zoneRuntimeRegistry"), 1,
             mgz("liftBgRisePassengers(AbstractPlayableSprite,int)", "sprites"), 1,
             mgz("resolveBossTransitionPlayerCharacter()", "configuration"), 1);
 
@@ -71,18 +69,18 @@ class TestZoneEventRuntimeAccessGuard {
     @Test
     void rejectsNewOperationInsideMgz(@TempDir Path root) throws IOException {
         fixture(root);
-        replaceMgz(root, "GameServices.hasRuntime();", "GameServices.hasRuntime(); GameServices.camera();");
+        replaceMgz(root, "GameServices.levelOrNull();", "GameServices.levelOrNull(); GameServices.camera();");
         assertTrue(violations(root).stream().anyMatch(line -> line.contains("GameServices.camera() observed=1 approved=0")));
     }
 
     @Test
     void rejectsSameCountCallerSubstitution(@TempDir Path root) throws IOException {
         fixture(root);
-        replaceMgz(root, "currentMgzRuntimeState()", "replacementCaller()");
+        replaceMgz(root, "updateBackgroundCollisionObjectRelease(int act)", "replacementCaller(int act)");
         List<String> differences = violations(root);
         assertEquals(4, differences.size());
-        assertTrue(differences.stream().anyMatch(line -> line.contains("replacementCaller()") && line.contains("approved=0")));
-        assertTrue(differences.stream().anyMatch(line -> line.contains("currentMgzRuntimeState()") && line.contains("observed=0")));
+        assertTrue(differences.stream().anyMatch(line -> line.contains("replacementCaller(int)") && line.contains("approved=0")));
+        assertTrue(differences.stream().anyMatch(line -> line.contains("updateBackgroundCollisionObjectRelease(int)") && line.contains("observed=0")));
     }
 
     @Test
@@ -101,10 +99,10 @@ class TestZoneEventRuntimeAccessGuard {
     @Test
     void rejectsStalePermissionAfterCallOrFileRemoval(@TempDir Path root) throws IOException {
         fixture(root);
-        replaceMgz(root, "GameServices.hasRuntime();", "");
+        replaceMgz(root, "GameServices.levelOrNull();", "");
         assertEquals(1, violations(root).size());
         Files.delete(root.resolve(MGZ));
-        assertEquals(6, violations(root).size());
+        assertEquals(4, violations(root).size());
     }
 
     @Test
@@ -150,7 +148,6 @@ class TestZoneEventRuntimeAccessGuard {
         write(root, MGZ, """
                 class Sonic3kMGZEvents {
                     void updateBackgroundCollisionObjectRelease(int act) { GameServices.levelOrNull(); GameServices.sprites(); }
-                    void currentMgzRuntimeState() { GameServices.hasRuntime(); GameServices.zoneRuntimeRegistry(); }
                     void liftBgRisePassengers(AbstractPlayableSprite player, int delta) { GameServices.sprites(); }
                     void resolveBossTransitionPlayerCharacter() { GameServices.configuration(); }
                 }

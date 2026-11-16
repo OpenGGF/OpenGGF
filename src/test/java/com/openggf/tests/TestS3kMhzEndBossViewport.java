@@ -97,9 +97,7 @@ class TestS3kMhzEndBossViewport {
         var handler = new com.openggf.game.sonic3k.scroll.SwScrlMhz();
         int[] scroll = new int[224];
         int inset = NativeViewportFraming.inset(aspect.pixelWidth());
-        int visibleX = NativeViewportFraming.visibleLeft(0x4180, aspect.pixelWidth());
-        handler.init(1, visibleX, 0x280);
-        handler.update(scroll, visibleX, 0x280, 1, 1);
+        publishAndProject(fixture, events, handler, scroll, 0x4180, 1);
         // loc_55586: $00180000 / $30 = $00008000, then negate.
         assertEquals((short) (-0x4100 + inset), (short) scroll[0]);
         assertEquals((short) (-0x4118 + inset), (short) scroll[47]);
@@ -111,7 +109,7 @@ class TestS3kMhzEndBossViewport {
 
         // Native movie frame 299985 independently samples camera $417F:
         // all five words and the seven helper positions agree with the ROM.
-        handler.update(scroll, NativeViewportFraming.visibleLeft(0x417F, aspect.pixelWidth()), 0x280, 2, 1);
+        publishAndProject(fixture, events, handler, scroll, 0x417F, 2);
         assertEquals((short) (-16663 + inset), (short) scroll[47]);
         assertEquals(0x4220, state.endBossArenaTallSupportX());
         for (int i = 0; i < expectedSpikes.length; i++) {
@@ -119,7 +117,7 @@ class TestS3kMhzEndBossViewport {
         }
 
         // The signed loc_55552 gate clears the ramp without moving helpers.
-        handler.update(scroll, NativeViewportFraming.visibleLeft(0x403F, aspect.pixelWidth()), 0x280, 3, 1);
+        publishAndProject(fixture, events, handler, scroll, 0x403F, 3);
         for (int line = 0; line < 48; line++) {
             assertEquals((short) inset, (short) scroll[line], "cleared line " + line);
         }
@@ -127,8 +125,22 @@ class TestS3kMhzEndBossViewport {
         for (int i = 0; i < expectedSpikes.length; i++) {
             assertEquals(expectedSpikes[i], state.endBossArenaSpikeX(i));
         }
-        handler.update(scroll, NativeViewportFraming.visibleLeft(0x4040, aspect.pixelWidth()), 0x280, 4, 1);
+        publishAndProject(fixture, events, handler, scroll, 0x4040, 4);
         assertEquals((short) (-0x3FC0 + inset), (short) scroll[0], "first admitted ramp");
+    }
+
+    /**
+     * loc_555D2 (sonic3k.asm:113293-113307) publishes all seven helper X words
+     * in background events, before the next object pass. Projection is read-only.
+     */
+    private static void publishAndProject(HeadlessTestFixture fixture, Sonic3kMHZEvents events,
+            com.openggf.game.sonic3k.scroll.SwScrlMhz handler, int[] scroll, int nativeX, int frame) {
+        fixture.camera().setX((short) NativeViewportFraming.visibleLeft(nativeX, fixture.camera().getWidth()));
+        events.update(1, frame);
+        byte[] publication = events.captureMhzState();
+        handler.update(scroll, fixture.camera().getX(), 0x280, frame, 1);
+        assertArrayEquals(publication, events.captureMhzState(),
+                "drawing cannot publish or alter native collision helper positions");
     }
 
     private static HeadlessTestFixture boot(WidescreenAspect aspect) {
