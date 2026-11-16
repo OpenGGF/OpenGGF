@@ -104,6 +104,35 @@ public final class StageplayRomTransport {
         return encoded;
     }
 
+    /** Explicit CLI inputs use the same verified source descriptors as configured workers. */
+    public static String supplied(Map<String, Path> paths) throws IOException {
+        var cartridges = new LinkedHashMap<String, RomImageCatalogue.Resolution>();
+        var media = JSON.createObjectNode();
+        for (var entry : paths.entrySet()) {
+            String game = entry.getKey();
+            Path path = entry.getValue().toAbsolutePath().normalize();
+            var id = com.openggf.game.GameId.fromCode(game);
+            if (com.openggf.game.GameModuleRegistry.mediaKind(id) == com.openggf.game.GameModuleRegistry.MediaKind.HOSTED_MEDIA) {
+                var source = com.openggf.game.GameModuleRegistry.hostedMedia(id).openMedia(path);
+                try { media.putObject(game).put("path", path.toString()).put("identity", source.identity()); }
+                finally { if (source instanceof java.io.Closeable closeable) closeable.close(); }
+            } else {
+                if (!Files.isRegularFile(path) || Files.size(path) > MAX_IMAGE_BYTES) throw invalid("Missing or oversized route ROM: " + path);
+                var image = PhysicalImage.probe(path);
+                var identity = identity(game);
+                cartridges.put(game, new RomImageCatalogue.Resolution(identity,
+                        List.of(new RomImageCatalogue.Part(identity, image, 0, Math.toIntExact(image.size()))), RomImageCatalogue.Source.EXPLICIT_KEY));
+            }
+        }
+        if (media.isEmpty()) return encode(cartridges);
+        var root = JSON.createObjectNode().put("version", 2);
+        root.set("cartridges", cartridges.isEmpty() ? JSON.getNodeFactory().nullNode() : JSON.readTree(encode(cartridges)));
+        root.set("media", media);
+        String encoded = JSON.writeValueAsString(root);
+        if (encoded.length() > MAX_DESCRIPTOR_CHARS) throw invalid("Descriptor exceeds limit");
+        return encoded;
+    }
+
     /** Reopens only declared inputs; media content must still match the captured identity. */
     public static com.openggf.mods.scene.host.SceneRomLibrary openLibrary(String encoded, String active) throws IOException {
         if (encoded == null || encoded.length() > MAX_DESCRIPTOR_CHARS) throw invalid("Missing/big descriptor");

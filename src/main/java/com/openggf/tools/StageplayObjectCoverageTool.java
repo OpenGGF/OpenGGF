@@ -59,7 +59,7 @@ public final class StageplayObjectCoverageTool {
                                     String sceneSha256, int frame, String sourceRevision, String romSha1,
                                     List<String> evidencePaths, SampleResult result, List<String> limitations) {
         public SampleObservation {
-            if (!List.of("s1", "s2", "s3k").contains(gameId)) throw new IllegalArgumentException("Sample gameId must be s1, s2 or s3k");
+            if (!List.of("s1", "s2", "s3k", "scd").contains(gameId)) throw new IllegalArgumentException("Sample gameId must be s1, s2, s3k or scd");
             if (zone < 0 || act < 0 || frame < 0) throw new IllegalArgumentException("Sample zone, act and frame must be non-negative");
             if (objectId < 0 || objectId > 255 || subtype < 0 || subtype > 255)
                 throw new IllegalArgumentException("Sample objectId and subtype must be bytes");
@@ -257,7 +257,7 @@ public final class StageplayObjectCoverageTool {
             }
             if (!flags.containsKey("out")) throw new IOException("Supply --out PATH");
             String selected = flags.getOrDefault("game", "all");
-            var games = selected.equals("all") ? List.of(GameId.S1, GameId.S2, GameId.S3K) : List.of(GameId.fromCode(selected));
+            var games = selected.equals("all") ? List.of(GameId.S1, GameId.S2, GameId.S3K, GameId.SCD) : List.of(GameId.fromCode(selected));
             String format = flags.getOrDefault("format", "json");
             if (!format.equals("json") && !format.equals("markdown")) throw new IOException("Format must be json or markdown");
             var observations = flags.containsKey("observations") ? readObservations(Path.of(flags.get("observations"))) : List.<SampleObservation>of();

@@ -489,7 +489,11 @@ under the matching area heading; see the
   and accessory lookup follows each shot’s selected program rather than default
   stage art.
   Scene music cues reach CDDA and the selected Past-stage PCM driver through
-  the no-device production audio path. Remaining editor obligations are tracked in the
+  the no-device production audio path. Stageplay and route-tape game choices
+  include CD, with native solo roster defaults. Route discovery and CLI snapshots
+  use verified disc sources, binding all tracks rather than CUE/container bytes.
+  Object coverage inventories all 70 zone/act/period contexts without implying
+  behavior or pixel certification. Validation scope is recorded in the
   Sonic CD Stageplay validation record.
 
 - **Sonic CD mod host:** admit `scd` patch manifests and `any` registrations;

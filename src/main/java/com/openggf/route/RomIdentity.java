@@ -22,8 +22,15 @@ public record RomIdentity(String game, long crc32, String sha1) {
         if (crc32 < 0 || crc32 > 0xFFFFFFFFL) throw new IllegalArgumentException("not a CRC32: " + crc32);
     }
 
-    /** The supported dumps listed in AGENTS.md. */
+    /** The supported cartridge dumps, or the configured verified hosted source. */
     public static RomIdentity standard(String game) {
+        var id = com.openggf.game.GameId.fromCode(game);
+        var host = com.openggf.game.GameModuleRegistry.hostedMediaGames().contains(id)
+                ? com.openggf.game.GameModuleRegistry.hostedMedia(id) : null;
+        if (host != null) {
+            try { return ofFile(game, host.configuredPath(com.openggf.game.GameServices.configuration())); }
+            catch (IOException failure) { throw new java.io.UncheckedIOException(failure); }
+        }
         return switch (game) {
             case "s1" -> new RomIdentity("s1", 0xAFE05EEEL, "69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B");
             case "s2" -> new RomIdentity("s2", 0x7B905383L, "8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9");
@@ -32,8 +39,16 @@ public record RomIdentity(String game, long crc32, String sha1) {
         };
     }
 
-    /** Hashes a ROM file; the result's game is the caller's claim, checked by {@link #matches}. */
+    /** Hashes cartridge bytes or the hosted pipeline's verified complete-content identity. */
     public static RomIdentity ofFile(String game, Path rom) throws IOException {
+        var id = com.openggf.game.GameId.fromCode(game);
+        var host = com.openggf.game.GameModuleRegistry.hostedMediaGames().contains(id)
+                ? com.openggf.game.GameModuleRegistry.hostedMedia(id) : null;
+        if (host != null) {
+            var source = host.openMedia(rom);
+            try { return ofContentIdentity(game, source.identity()); }
+            finally { if (source instanceof java.io.Closeable closeable) closeable.close(); }
+        }
         var crc = new CRC32();
         MessageDigest sha1;
         try {
@@ -50,6 +65,14 @@ public record RomIdentity(String game, long crc32, String sha1) {
             }
         }
         return new RomIdentity(game, crc.getValue(), HexFormat.of().formatHex(sha1.digest()));
+    }
+
+    /** Hosted sources bind verified normalized content, including all disc tracks, not container bytes. */
+    private static RomIdentity ofContentIdentity(String game, String identity) {
+        byte[] bytes = ("route-source/v1\0" + identity).getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        var crc = new CRC32(); crc.update(bytes);
+        try { return new RomIdentity(game, crc.getValue(), HexFormat.of().formatHex(MessageDigest.getInstance("SHA-1").digest(bytes))); }
+        catch (java.security.NoSuchAlgorithmException impossible) { throw new IllegalStateException(impossible); }
     }
 
     public boolean matches(RomIdentity other) {

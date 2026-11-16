@@ -379,3 +379,50 @@ reconstructed. `git diff --check` and local links in the three changed guide/sta
 files were checked. Retain branch/worktree for continuation; no scratch captures
 were generated in this continuation. The existing earlier render paths remain
 historical evidence only, not new item 3 audio files.
+
+## UI, route media and coverage continuation (2026-11-16)
+
+Item 4 implements CD game choices in Stageplay and route-tape forms, using
+module sidekick capability for native roster defaults. The existing CD registry
+keeps zone/act/period identity: ten stage indices per round, seventy contexts.
+Coverage `all` now includes CD and accepts scoped CD sample observations without
+promoting registry rows to behavior/pixel evidence.
+
+Native route discovery uses HostedGameMedia's configured locator in both the
+engine and isolated host factory. Route identity hashes the domain-separated
+`route-source/v1` plus verified source identity, whose normalized disc digest
+binds every track and layout. Cartridge byte hashes remain unchanged. This
+intentionally replaces the earlier experimental container-byte CD fingerprint;
+those tapes require recreation. Host resolution re-verifies fresh content rather
+than memoizing a path's prior identity. Scene route CLI accepts `--scd-rom` and
+captures/rechecks explicit disc media using the same worker descriptor boundary,
+without a cartridge-size limit on discs. No ROM/media is copied or linked.
+
+Failing-first focused run on `abea351c28` plus new tests: 16 tests, two failures,
+two errors, zero skips. Stageplay game choices and coverage `all` lacked CD;
+route-form construction rejected its initial `scd` choice; standard CD route
+identity was unsupported. All media properties were found (`missing=none`).
+The first implementation selection passed 44 tests, zero failures/errors/skips.
+Expanded final selection passed 52 tests, zero failures/errors/skips:
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestCdRouteTape,TestStageplayMenuPresentation,TestRouteTapeWorkspace,TestStageplayObjectCoverageTool,TestStageplayRouteInputs,TestStageplayRomTransport,TestStageplayRouteTool,TestEngineRouteHost,TestModApiSignatureSurface' test
+```
+
+Controls assert that the native route hash derives from the verified source,
+fresh scene captures agree, forged descriptor identities and invalid disc inputs
+are refused, and CD sample admission leaves all registration groups unchanged.
+The inherited CD replay fixture was then corrected to use public RouteReplay
+with one frozen neutral row instead of directly driving the host SPI; its
+selected R11B payload and offered-row assertions are preserved. That test-only
+correction passed its focused `TestCdRouteTape` rerun: four tests, zero
+failures/errors/skips, verified media `missing=none`.
+
+Final smoke dry plan: 4,982 classes, smoke plus guards, two workers, surfaceless
+EGL, 40-minute execution bound per Maven invocation excluding queue wait.
+Expected cost uses the parent's approximately 2,121 summed execution seconds
+and 2,598 queue-wait seconds. The required command is unchanged. Do not edit or
+build while it runs; compare every failure identity/assertion/skip with the
+parent's recorded baseline set and run unmatched failures on the base. There
+is still no branch smoke VERDICT at this checkpoint. PR remains draft until
+completion and attribution. No worker was delegated.

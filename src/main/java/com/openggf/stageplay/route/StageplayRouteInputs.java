@@ -93,6 +93,16 @@ public final class StageplayRouteInputs {
                 fingerprint(document, request, normalized, romDescriptor, assetDescriptor));
     }
 
+    /** Freshly verifies explicit cartridge or hosted-media inputs on each capture. */
+    public static Snapshot captureSources(StageplayDocument document, StageplayRouteRequest request,
+                                          Path root, java.util.Map<String, Path> paths) throws IOException {
+        Path normalized = root.toAbsolutePath().normalize();
+        String romDescriptor = StageplayRomTransport.supplied(paths);
+        String assetDescriptor = StageplayRouteAssets.capture(document, normalized);
+        return new Snapshot(document, request, normalized, romDescriptor, assetDescriptor,
+                fingerprint(document, request, normalized, romDescriptor, assetDescriptor));
+    }
+
     public static String fingerprint(
             StageplayDocument document,
             StageplayRouteRequest request,

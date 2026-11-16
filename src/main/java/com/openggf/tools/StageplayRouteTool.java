@@ -1,9 +1,6 @@
 package com.openggf.tools;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.openggf.data.PhysicalImage;
-import com.openggf.data.RomIdentity;
-import com.openggf.data.RomImageCatalogue;
 import com.openggf.mods.scene.host.SceneRomLibrary;
 import com.openggf.stageplay.StageplayStore;
 import com.openggf.stageplay.route.*;
@@ -66,21 +63,16 @@ public final class StageplayRouteTool {
                 output.println(new ObjectMapper().writeValueAsString(Map.of("ok",false,"error",unsupported.status()+": "+unsupported.message(),"result",new ObjectMapper().readTree(StageplayRouteProtocol.encodeResult(unsupported)))));
                 return 2;
             }
-            var resolutions = new LinkedHashMap<String,RomImageCatalogue.Resolution>();
-            for (String game : StageplayRomTransport.requiredGames(document)) {
-                var image = PhysicalImage.probe(Path.of(required(flags,game+"-rom")));
-                RomIdentity identity = switch(game) { case "s1" -> RomIdentity.S1; case "s2" -> RomIdentity.S2; default -> RomIdentity.S3K; };
-                if (image.size()>64L*1024*1024) throw new IOException("Route ROM exceeds 64 MiB");
-                resolutions.put(game,new RomImageCatalogue.Resolution(identity,List.of(new RomImageCatalogue.Part(identity,image,0,Math.toIntExact(image.size()))),
-                        RomImageCatalogue.Source.EXPLICIT_KEY));
-            }
-            var snapshot = StageplayRouteInputs.capture(document,request,scene.getParent(),resolutions);
+            var sources = new LinkedHashMap<String,Path>();
+            for (String game : StageplayRomTransport.requiredGames(document))
+                sources.put(game, Path.of(required(flags, game + "-rom")));
+            var snapshot = StageplayRouteInputs.captureSources(document,request,scene.getParent(),sources);
             var result = plan(snapshot);
             StageplayRouteProtocol.validatePatch(document,request,snapshot.fingerprint(),result);
             if (result.success()) {
                 // Native cold verification is valid for exactly these disk inputs, including project contents.
                 StageplayRouteInputs.Snapshot fresh;
-                try { fresh=StageplayRouteInputs.capture(document,request,scene.getParent(),resolutions); }
+                try { fresh=StageplayRouteInputs.captureSources(document,request,scene.getParent(),sources); }
                 catch(IOException failure) {
                     result=StageplayRouteResult.failure(StageplayRouteResult.Status.STALE_INPUT,failure.getMessage(),snapshot.fingerprint(),request,result.expandedNodes(),result.simulatedTicks());
                     output.println(new ObjectMapper().writeValueAsString(Map.of("ok",false,"error",result.status()+": "+result.message(),"result",new ObjectMapper().readTree(StageplayRouteProtocol.encodeResult(result)))));
@@ -258,7 +250,7 @@ public final class StageplayRouteTool {
         }
     }
     private static Map<String,String> flags(String[] args) throws IOException {
-        Set<String> allowed = Set.of("start","travel","ending","facing","scene","actor","frame","x","y","out","s1-rom","s2-rom","s3k-rom","frames","nodes","ticks","millis","urgency","speed","half-width","height","foot-offset","collision-path");
+        Set<String> allowed = Set.of("start","travel","ending","facing","scene","actor","frame","x","y","out","s1-rom","s2-rom","s3k-rom","scd-rom","frames","nodes","ticks","millis","urgency","speed","half-width","height","foot-offset","collision-path");
         var result = new LinkedHashMap<String,String>();
         for(int i=0;i<args.length;i+=2) {
             if(i+1==args.length || !args[i].startsWith("--") || !allowed.contains(args[i].substring(2))

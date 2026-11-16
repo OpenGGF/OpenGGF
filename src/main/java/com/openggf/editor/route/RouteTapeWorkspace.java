@@ -927,17 +927,21 @@ public final class RouteTapeWorkspace {
         status = UiMessages.text("editor.route_tape.status_created", Map.of("path", absolute.getFileName().toString()));
     }
 
+    private static String nativeSidekick(String game) {
+        return com.openggf.game.GameModuleRegistry.createStockModule(com.openggf.game.GameId.fromCode(game)).supportsSidekick() ? "tails" : "";
+    }
+
     private void newForm() {
         String game = host.currentLevel().map(LevelId::game).orElse("s3k");
         int zone = host.currentLevel().map(LevelId::zone).orElse(0), act = host.currentLevel().map(LevelId::act).orElse(0);
         var fields = new ArrayList<>(List.of(
                 new EditorProjectMenu.Field("path", UiMessages.text("editor.route_tape.field_manifest"),
                         host.initialDirectory().resolve("new-route" + RouteFiles.MANIFEST_SUFFIX).toString(), MenuTextEditor.Mode.PATH),
-                new EditorProjectMenu.Field("game", UiMessages.text("editor.route_tape.field_game"), game, List.of("s1", "s2", "s3k")),
+                new EditorProjectMenu.Field("game", UiMessages.text("editor.route_tape.field_game"), game, List.of("s1", "s2", "s3k", "scd")),
                 new EditorProjectMenu.Field("zone", UiMessages.text("editor.route_tape.field_zone"), String.valueOf(zone), MenuTextEditor.Mode.TEXT, 3),
                 new EditorProjectMenu.Field("act", UiMessages.text("editor.route_tape.field_act"), String.valueOf(act + 1), MenuTextEditor.Mode.TEXT, 2),
                 new EditorProjectMenu.Field("main", UiMessages.text("editor.route_tape.field_main"), "sonic", MenuTextEditor.Mode.TEXT, 24),
-                new EditorProjectMenu.Field("sidekick", UiMessages.text("editor.route_tape.field_sidekick"), "tails", MenuTextEditor.Mode.TEXT, 24),
+                new EditorProjectMenu.Field("sidekick", UiMessages.text("editor.route_tape.field_sidekick"), nativeSidekick(game), MenuTextEditor.Mode.TEXT, 24),
                 new EditorProjectMenu.Field("width", UiMessages.text("editor.route_tape.field_width"), "320", MenuTextEditor.Mode.TEXT, 4),
                 new EditorProjectMenu.Field("vint", UiMessages.text("editor.route_tape.field_vint"), "0", MenuTextEditor.Mode.TEXT, 6),
                 new EditorProjectMenu.Field("rows", UiMessages.text("editor.route_tape.field_count"), "60", MenuTextEditor.Mode.TEXT, 7)));
@@ -961,6 +965,7 @@ public final class RouteTapeWorkspace {
                             Integer.parseInt(values.get("width").strip()), Integer.parseInt(values.get("vint").strip()));
                     create(Path.of(values.get("path")), launch, Integer.parseInt(values.get("rows").strip()));
                 });
+        menu.onValueChanged((key, value) -> { if (key.equals("game")) menu.setValue("sidekick", nativeSidekick(value)); });
         menu.setSection(UiMessages.text("editor.route_tape.level_settings"), "game", "zone", "act", "main", "sidekick", "width", "vint", "rows");
         menu.setHelp(UiMessages.text("editor.route_tape.setup_hint"), UiMessages.text("editor.route_tape.subtitle_new"));
     }

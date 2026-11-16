@@ -595,6 +595,16 @@ program, including after a period change; unavailable accessory art stays absent
 Scene `ROM_MUSIC` cues use CD native command IDs: `SCMD_R1AMUS` (15)
 selects CDDA track 3, and `SCMD_PASTMUS` uses the selected Past stage PCM bank.
 Both reach no-device production synthesis in the disc-backed scene test.
-This is a bounded authoring preview. Editor game choices and complete
-route-media discovery/coverage remain pending
-in the [validation record](../../architecture/validation/2026-11-16-sonic-cd-stageplay-editor.md).
+Stageplay and route-tape game pickers include Sonic CD. The route-tape form
+uses a one-based stage number: 1–4 are act 1 Present/Past/Good/Bad Future,
+5–8 are act 2 in that order, and 9–10 are act 3 Good/Bad Future. Stageplay
+set indices remain zero-based. CD defaults to native Sonic alone.
+Native route discovery uses the configured disc locator. Route manifests bind
+a domain-separated digest of the pipeline’s verified normalized whole-disc
+identity, including audio tracks; a CUE sheet hash alone is insufficient.
+Earlier experimental CD tapes with container-byte hashes must be recreated.
+Scene route CLI `--scd-rom` uses the same media descriptor and freshness check
+as editor workers. Coverage `--game all` includes all 70 CD stage contexts;
+registry rows and supplied sample observations do not certify behavior or pixels.
+This remains a bounded authoring preview; see the
+[validation record](../../architecture/validation/2026-11-16-sonic-cd-stageplay-editor.md).
