@@ -164,7 +164,10 @@ class TestLevelPlayableArtInitializerModArt {
     }
 
     private static void initializeDonated(Fixture fixture, CrossGameFeatureProvider donor) {
-        try (var active = mockStatic(CrossGameFeatureProvider.class)) {
+        try (var active = mockStatic(CrossGameFeatureProvider.class);
+             var roster = mockStatic(CrossGameFeatureInternalAccess.class)) {
+            // This fixture supplies built-in donor sheets; declare their ownership as production does.
+            roster.when(() -> CrossGameFeatureInternalAccess.suppliesCharacter(any(), any())).thenReturn(true);
             active.when(CrossGameFeatureProvider::isActive).thenReturn(true);
             new LevelPlayableArtInitializer(fixture.level(), fixture.sprites(), mock(GraphicsManager.class),
                     fixture.config(), donor).initialize();
@@ -242,7 +245,10 @@ class TestLevelPlayableArtInitializerModArt {
             shared.setUnderwaterPalette(0, isKnuckles ? knuxWater : sonicWater);
             return art(8);
         });
-        try (var active = mockStatic(CrossGameFeatureProvider.class)) {
+        try (var active = mockStatic(CrossGameFeatureProvider.class);
+             var roster = mockStatic(CrossGameFeatureInternalAccess.class)) {
+            // This fixture supplies built-in donor sheets; declare their ownership as production does.
+            roster.when(() -> CrossGameFeatureInternalAccess.suppliesCharacter(any(), any())).thenReturn(true);
             active.when(CrossGameFeatureProvider::isActive).thenReturn(true);
             new LevelPlayableArtInitializer(fixture.level(), fixture.sprites(), graphics,
                     fixture.config(), donor).initialize();

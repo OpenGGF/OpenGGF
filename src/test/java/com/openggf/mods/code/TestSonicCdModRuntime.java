@@ -31,8 +31,8 @@ class TestSonicCdModRuntime {
             for (int i = 0; i < 4; i++) loop.step();
             assertTrue(updates[0] > 0);
             assertTrue(faults.isOwnerAvailable("cd-example"));
-            assertThrows(java.io.IOException.class,
-                    () -> GameServices.crossGameFeatures().initialize("s3k"));
+            assertDoesNotThrow(() -> GameServices.crossGameFeatures().initialize("s3k"));
+            assertNotNull(GameServices.crossGameFeatures().loadPlayerSpriteArt("sonic"));
         }
     }
 
@@ -85,9 +85,9 @@ class TestSonicCdModRuntime {
         }
     }
 
-    @Test void unsupportedDonorHostIsExplicit() {
-        assertFalse(new SonicCdGameModule().supportsCrossGameHost());
-        assertFalse(new com.openggf.game.patch.DelegatingGameModule(new SonicCdGameModule(), "example") {}
+    @Test void discDonorHostIsSupported() {
+        assertTrue(new SonicCdGameModule().supportsCrossGameHost());
+        assertTrue(new com.openggf.game.patch.DelegatingGameModule(new SonicCdGameModule(), "example") {}
                 .supportsCrossGameHost());
     }
 

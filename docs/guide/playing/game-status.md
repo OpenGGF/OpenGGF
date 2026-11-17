@@ -260,15 +260,20 @@ Future). `SonicCdEndingCaptureTool --ending good|bad` films an ending.
   title, and an attract demo is skipped.
 - CD patch mods, `any` registrations, scenes and Sonic gameplay runs use the disc
   pipeline. Authored zones are limited to flat terrain with owned objects;
-  native CD objects/rings need their stage context. Cross-game feature donation
-  on a CD host is refused until stage-owned animation families have a composition
-  adapter. Editor persistence now has a bounded disc/stage source-reference foundation;
-  native edit replay now retains the loaded game owners, source layout semantics
-  and object secondary bytes. Creator-facing project creation selects a zone, act
-  and time period; source-backed playtests reload the native owners. Stageplay remains a separate lane. See the
+  native CD objects/rings need their stage context. Cartridge donation supports
+  S1 Sonic, S2 Sonic/Tails and S3K Sonic/Tails/Knuckles; route coverage remains
+  bounded to the donor-host validation record. Editor projects keep a bounded
+  disc/stage source reference: native edit replay retains the loaded game owners,
+  source layout semantics and object secondary bytes, project creation selects a
+  zone, act and time period, and source-backed playtests reload the native owners. See the
   [CD mod contracts](../../modding/ggfmod.md#sonic-cd-runtime-mods).
-- The master title has no Setup page for Sonic CD: it always starts with
-  Sonic alone, under the all-games display and rewind settings.
+- Sonic CD Game Setup saves Borrow from and character choices. Without donation
+  it defaults to Sonic alone. CD itself cannot donate player art.
+  Each donor's supported roster can also be paired as leader/follower, including
+  duplicates (14 pairs tested). S1 Tails/Knuckles and S2 Knuckles are refused for
+  either role with the missing donor character named. S3K elemental shields are
+  exercised on the disc host. Donated life icons use their own object-art tiles,
+  preserving transparent foreground cells and the native HUD.
 - Special stage results graphics, pause and exit fade are not drawn.
 - Robotnik's projector in the Past can be destroyed, but the animals in its
   hologram are not drawn.

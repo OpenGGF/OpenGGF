@@ -204,7 +204,7 @@ public final class CdProjector extends CdObject implements ReevaluatingSolidObje
     @Override
     public void onTouchResponse(PlayableEntity player, TouchResponseResult result, int frameCounter) {
         // Player_TouchSpecial .CheckIfRoll: cmpi.b #2,oAnim(a0); addq.b #1,oColStatus(a1).
-        if (collisionFlags != 0 && player.getAnimationId() == CdSonicAnimation.ROLL.id()) touched = true;
+        if (collisionFlags != 0 && player.getAnimationId() == com.openggf.game.soniccd.player.CdAnimationIds.resolve(player, com.openggf.game.CanonicalAnimation.ROLL)) touched = true;
     }
 
     @Override public int getCollisionFlags() { return collisionFlags; }

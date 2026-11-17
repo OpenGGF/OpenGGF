@@ -226,6 +226,10 @@ public class LaunchProfileStore {
                     SonicConfiguration.LAUNCH_S2_ASPECT,
                     SonicConfiguration.LAUNCH_S2_MAIN_CHARACTER,
                     SonicConfiguration.LAUNCH_S2_SIDEKICK);
+            case SONIC_CD -> new Keys(
+                    SonicConfiguration.LAUNCH_CD_REWIND, SonicConfiguration.LAUNCH_CD_CROSS_GAME_SOURCE,
+                    SonicConfiguration.LAUNCH_CD_DEBUG_TOOLS, SonicConfiguration.LAUNCH_CD_ASPECT,
+                    SonicConfiguration.LAUNCH_CD_MAIN_CHARACTER, SonicConfiguration.LAUNCH_CD_SIDEKICK);
             case SONIC_3K -> new Keys(
                     SonicConfiguration.LAUNCH_S3K_REWIND,
                     SonicConfiguration.LAUNCH_S3K_CROSS_GAME_SOURCE,

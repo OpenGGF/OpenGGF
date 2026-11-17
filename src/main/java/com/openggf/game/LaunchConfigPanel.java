@@ -683,7 +683,7 @@ public final class LaunchConfigPanel {
     private List<Item> items() {
         List<Item> items = new ArrayList<>();
         items.add(Item.BORROW);
-        if (profile.usesS3kDataSelectCharacters()) {
+        if (entry.cartridge() && profile.usesS3kDataSelectCharacters()) {
             items.add(Item.TEAM);
         } else {
             items.add(Item.CHARACTER);

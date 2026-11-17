@@ -133,7 +133,7 @@ public final class CdMonitor extends CdObject
             return;
         }
         // .GoingDown: cmpi.b #2,oAnim(a0) (roll); neg.w oYVel(a0); addq.b #2,oRoutine(a1) (Monitor and Time Post/Main.asm:116-120).
-        if (player.getAnimationId() != CdSonicAnimation.ROLL.id()) return;
+        if (player.getAnimationId() != player.resolveAnimationId(com.openggf.game.CanonicalAnimation.ROLL)) return;
         player.setYSpeed((short) -player.getYSpeed());
         routine = 4;
         pendingBreak = true;

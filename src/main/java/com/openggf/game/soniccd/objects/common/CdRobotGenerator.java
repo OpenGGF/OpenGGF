@@ -163,7 +163,7 @@ public final class CdRobotGenerator extends CdObject implements ReevaluatingSoli
     @Override
     public void onTouchResponse(PlayableEntity player, TouchResponseResult result, int frameCounter) {
         // .CheckIfRoll: cmpi.b #2,oAnim(a0); addq.b #1,oColStatus(a1).
-        if (collisionFlags != 0 && player.getAnimationId() == com.openggf.game.soniccd.player.CdSonicAnimation.ROLL.id()) {
+        if (collisionFlags != 0 && player.getAnimationId() == com.openggf.game.soniccd.player.CdAnimationIds.resolve(player, com.openggf.game.CanonicalAnimation.ROLL)) {
             touched = true;
         }
     }

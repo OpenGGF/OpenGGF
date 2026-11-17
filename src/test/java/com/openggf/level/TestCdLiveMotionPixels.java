@@ -20,6 +20,50 @@ import static org.lwjgl.opengl.GL11.*;
 /** Disc-backed live-picture rendering contract; not a native route/parity certificate. */
 @Isolated
 class TestCdLiveMotionPixels {
+    @Test
+    void donatedTailsPreservesR11aBackgroundAndScorePixels() throws Exception {
+        var plain = r11aPicture(false);
+        var donated = r11aPicture(true);
+        // Sky/mountains above the player and the unchanged SCORE label.
+        for (int y = 0; y < 64; y++) for (int x = 0; x < 320; x++)
+            assertEquals(plain.argb(x, y), donated.argb(x, y), "R11A pixel " + x + "," + y);
+    }
+
+    private static RgbaImage r11aPicture(boolean donated) throws Exception {
+        var config = GameServices.configuration();
+        config.setSessionOverride(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, donated);
+        config.setSessionOverride(SonicConfiguration.CROSS_GAME_SOURCE, "s3k");
+        config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, donated ? "tails" : "sonic");
+        config.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "");
+        config.setSessionOverride(SonicConfiguration.AUDIO_ENABLED, false);
+        try (var disc = CdDiscDataSource.open(CdTestMedia.usaCue());
+             var boot = new HeadlessGameBoot(320, 224)) {
+            var loop = boot.boot(disc, new SonicCdGameModule(), 0, 0);
+            // Character radii can pan the native focus by a pixel. Compare the same view.
+            var camera = GameServices.camera();
+            camera.setFrozen(true);
+            camera.setX((short) 0);
+            camera.setY((short) 1806);
+            camera.captureRenderCopy();
+            for (int i = 0; i < 270; i++) loop.step();
+            assertEquals(1806, camera.getY(), "same camera Y");
+            assertEquals(0, GameServices.camera().getX(), "same camera X");
+            var image = draw();
+            // Empty foreground cells reference pattern zero. Its cached bytes must stay transparent,
+            // including after the donated life icon has rendered its DPLC frame.
+            var sample = GraphicsManager.class.getDeclaredMethod("scenePatternSample", int.class);
+            sample.setAccessible(true);
+            assertEquals(new SpritePresentation.PatternVersion(0, 0, 0, 0),
+                    sample.invoke(GameServices.graphics(), 0), "empty foreground tile remains transparent");
+            var out = java.nio.file.Path.of("target/cd-donor-pixels");
+            java.nio.file.Files.createDirectories(out);
+            ScreenshotCapture.savePNG(image, out.resolve(donated ? "tails.png" : "sonic.png"));
+            return image;
+        } finally {
+            config.setSessionOverride(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, false);
+            config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
+        }
+    }
     @Test void cdOrdinaryProfileOptsIntoLiveMotion() {
         assertInstanceOf(com.openggf.game.internal.LevelMotionPresentation.class,
                 new SonicCdGameModule().getLevelInitProfile());

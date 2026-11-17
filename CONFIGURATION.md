@@ -345,7 +345,7 @@ stamp ledger present when `soniccd.media.root`, `soniccd.native.root` or
 | Key | YAML path | Type | Default | Description |
 |-----|-----------|------|---------|-------------|
 | `CROSS_GAME_FEATURES_ENABLED` | `crossGame.enabled` | bool | `false` | Enable cross-game feature donation. When `false`, each game uses only its own native frontend and gameplay assets. |
-| `CROSS_GAME_SOURCE` | `crossGame.source` | string | `"s2"` | Donor game for cross-game features. Currently supports `"s2"` and `"s3k"`. |
+| `CROSS_GAME_SOURCE` | `crossGame.source` | string | `"s2"` | Donor game for cross-game features. Supports `"s1"`, `"s2"` and `"s3k"`; CD can host these cartridge donors. |
 | `CROSS_GAME_S1_DATA_SELECT_IMAGE_GEN_OVERRIDE` | `debug.crossGame.s1DataSelectImageGenOverride` | bool | `false` | Force regeneration of the runtime Sonic 1 donated Data Select screenshot cache on the next eligible boot. |
 | `CROSS_GAME_S2_DATA_SELECT_IMAGE_GEN_OVERRIDE` | `debug.crossGame.s2DataSelectImageGenOverride` | bool | `false` | Force regeneration of the runtime Sonic 2 donated Data Select screenshot cache on the next eligible boot. |
 
@@ -360,7 +360,7 @@ stamp ledger present when `soniccd.media.root`, `soniccd.native.root` or
 ## Launch Profiles
 
 The master title stores per-game launch defaults under `launch.s1`, `launch.s2`,
-and `launch.s3k`, edited from **Game Setup** on the hub.
+`launch.s3k` and `launch.cd`, edited from **Game Setup** on the hub.
 
 ### The hub
 
@@ -570,6 +570,12 @@ Stock defaults:
 
 | Key | YAML path | Type | Default | Description |
 |-----|-----------|------|---------|-------------|
+| `LAUNCH_CD_REWIND` | `launch.cd.rewind` | enum | `"global"` | CD live rewind follows the global preference unless on/off is selected. |
+| `LAUNCH_CD_CROSS_GAME_SOURCE` | `launch.cd.crossGameSource` | enum | `"off"` | Cartridge donor: off, s1, s2 or s3k. |
+| `LAUNCH_CD_DEBUG_TOOLS` | `launch.cd.debugTools` | enum | `"global"` | CD debug tools follow the global preference unless on/off is selected. |
+| `LAUNCH_CD_ASPECT` | `launch.cd.aspect` | enum | `"global"` | CD display aspect follows the global preference by default. |
+| `LAUNCH_CD_MAIN_CHARACTER` | `launch.cd.mainCharacter` | enum | `"sonic"` | Character supplied by the selected donor; native CD supports Sonic. |
+| `LAUNCH_CD_SIDEKICK` | `launch.cd.sidekick` | enum | `"none"` | Sidekick supplied by the donor; none disables spawning. |
 | `LAUNCH_S1_REWIND` | `launch.s1.rewind` | enum | `"global"` | Live rewind for manual Sonic 1 launches: `"global"` follows `rewind.liveEnabled`; `"on"`/`"off"` override it. |
 | `LAUNCH_S1_CROSS_GAME_SOURCE` | `launch.s1.crossGameSource` | enum | `"off"` | Cross-game donor for manual Sonic 1 launches: `"off"`, `"s2"`, or `"s3k"`. |
 | `LAUNCH_S1_DEBUG_TOOLS` | `launch.s1.debugTools` | enum | `"global"` | Debug tools for manual Sonic 1 launches: `"global"` follows `debug.flags.debugView`; `"on"`/`"off"` override it. |

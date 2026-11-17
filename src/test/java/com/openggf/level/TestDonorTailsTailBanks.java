@@ -72,7 +72,10 @@ class TestDonorTailsTailBanks {
         String mainCode = main.getCode();
         when(level.resolveMainCharacterCode()).thenReturn(mainCode);
         when(config.getString(SonicConfiguration.MAIN_CHARACTER_CODE)).thenReturn(mainCode);
-        try (var active = mockStatic(CrossGameFeatureProvider.class)) {
+        try (var active = mockStatic(CrossGameFeatureProvider.class);
+             var roster = mockStatic(CrossGameFeatureInternalAccess.class)) {
+            // This fixture supplies built-in donor sheets; declare their ownership as production does.
+            roster.when(() -> CrossGameFeatureInternalAccess.suppliesCharacter(any(), any())).thenReturn(true);
             active.when(CrossGameFeatureProvider::isActive).thenReturn(true);
             new LevelPlayableArtInitializer(level, sprites, graphics, config, donor).initialize();
         }
@@ -133,7 +136,10 @@ class TestDonorTailsTailBanks {
         var method = LevelPlayableArtInitializer.class.getDeclaredMethod("initTailsTailsLegacy",
                 AbstractPlayableSprite.class, SpriteArtSet.class);
         method.setAccessible(true);
-        try (var active = mockStatic(CrossGameFeatureProvider.class)) {
+        try (var active = mockStatic(CrossGameFeatureProvider.class);
+             var roster = mockStatic(CrossGameFeatureInternalAccess.class)) {
+            // This fixture supplies built-in donor sheets; declare their ownership as production does.
+            roster.when(() -> CrossGameFeatureInternalAccess.suppliesCharacter(any(), any())).thenReturn(true);
             active.when(CrossGameFeatureProvider::isActive).thenReturn(false);
             method.invoke(initializer, tails, art);
         }

@@ -439,3 +439,8 @@ debug:
 ```
 
 This skips sequences like the AIZ biplane intro and boots straight into gameplay.
+
+Sonic CD's Game Setup profile is saved under `launch.cd`: `crossGameSource`
+(`off`, `s1`, `s2`, `s3k`), `mainCharacter`, `sidekick`, `aspect`, `rewind`
+and `debugTools`. Defaults are donation off, Sonic alone, and global display,
+rewind and debug preferences. A donor cartridge is required when donation is on.

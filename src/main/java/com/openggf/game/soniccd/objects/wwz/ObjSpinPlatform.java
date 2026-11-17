@@ -176,7 +176,7 @@ public final class ObjSpinPlatform extends WwzObject implements ReevaluatingSoli
         player.setRolling(true);                                      // $E/7 radii, bset #2, anim 2
         NativePositionOps.writeXPosPreserveSubpixel(player, centreX);
         NativePositionOps.writeYPosPreserveSubpixel(player, centreY + 5);   // addq.w #5,oY(a1)
-        player.setAnimationId(2);
+        player.setAnimationId(com.openggf.game.soniccd.player.CdSonicAnimation.ROLL);
     }
 
     /** Clears the control this object still holds (the player-only half of its own release). */

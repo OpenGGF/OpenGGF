@@ -190,7 +190,7 @@ final class MmzBossAmy extends MmzBossPiece {
         if (controlStep == 4) {
             if (routine < 6) return;
             controlStep = 6;
-            player.setAnimationId(5);
+            player.setAnimationId(com.openggf.game.soniccd.player.CdSonicAnimation.IDLE);
             return;
         }
         if (player.getAnimationFrameIndex() < 0x10) player.setAnimationFrameIndex(0x10);

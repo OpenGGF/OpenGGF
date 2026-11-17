@@ -141,7 +141,8 @@ public final class Obj3DRamp extends CdObject implements ObjectVisualFacing.NonD
         sprite.setCentreX((short) x);
         sprite.setXSpeed((short) 0);
         sprite.setGSpeed((short) 0);
-        sprite.setAnimationId(0x37);
+        sprite.setAnimationId(com.openggf.game.CrossGameFeatureProvider.isActive()
+                ? sprite.resolveAnimationId(com.openggf.game.CanonicalAnimation.ROLL) : 0x37);
         sprite.setJumping(true);
         sprite.setStickToConvex(false);
         yRadius = 0xE;                                  // the marker's own fields, as assembled

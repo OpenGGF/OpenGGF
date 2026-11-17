@@ -62,7 +62,7 @@ class TestMasterTitleExitCoordinator {
     }
 
     @Test
-    void hostedExitBootsThroughTheStockHandlerWithoutALaunchProfile() {
+    void hostedExitBootsThroughTheStockHandlerWithItsLaunchProfile() {
         MasterTitleLaunchCoordinator launchCoordinator = mock(MasterTitleLaunchCoordinator.class);
         AtomicBoolean atMasterTitle = new AtomicBoolean(true);
         AtomicBoolean runtimeReady = new AtomicBoolean(false);
@@ -80,7 +80,7 @@ class TestMasterTitleExitCoordinator {
 
         assertSame("scd", handled.get());
         assertFalse(atMasterTitle.get());
-        verify(launchCoordinator).prepareHostedExit();
+        verify(launchCoordinator).prepareHostedExit("scd");
         verify(launchCoordinator, org.mockito.Mockito.never()).prepareExit("scd", false);
         verify(launchCoordinator).stagePendingLaunchCallback();
     }

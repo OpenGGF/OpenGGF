@@ -104,8 +104,11 @@ public class CrossGameFeatureProvider implements PlayerSpriteArtProvider, Spinda
         PlayerCharacter archetype = CharacterKey.TAILS.equals(character) ? PlayerCharacter.TAILS_ALONE
                 : CharacterKey.KNUCKLES.equals(character) ? PlayerCharacter.KNUCKLES
                 : PlayerCharacter.SONIC_ALONE;
-        return donorCapabilities.getPlayableCharacters().contains(archetype)
-                ? resolveDonorNativeAnimation(animation) : -1;
+        if (!donorCapabilities.getPlayableCharacters().contains(archetype)) return -1;
+        var vocabulary = donorCapabilities.forPlayableCharacter(archetype);
+        int id = vocabulary.resolveNativeId(animation);
+        var fallback = vocabulary.getAnimationFallbacks().get(animation);
+        return id >= 0 || fallback == null ? id : vocabulary.resolveNativeId(fallback);
     }
 
     private int resolveDonorNativeAnimation(CanonicalAnimation animation) {
@@ -161,6 +164,11 @@ public class CrossGameFeatureProvider implements PlayerSpriteArtProvider, Spinda
         familyAnimationIds.clear();
         this.donorGameId = GameId.fromCode(donorGameCode);
 
+        if (GameModuleRegistry.mediaKind(donorGameId) != GameModuleRegistry.MediaKind.CARTRIDGE_ROM) {
+            close();
+            throw new IOException("Donor must provide cartridge-backed player art: " + donorGameCode);
+        }
+
         // Same-game guard: disable donation when donor == host
         GameId hostId = resolveHostGameId();
         if (donorGameId == hostId) {
@@ -188,6 +196,20 @@ public class CrossGameFeatureProvider implements PlayerSpriteArtProvider, Spinda
             LOGGER.warning("No donor capabilities for: " + donorGameId.code());
             active = false;
             return;
+        }
+        try {
+            requireDonorCharacter(ActiveGameplayTeamResolver.resolveMainCharacterCode(configService()));
+            for (String companion : ActiveGameplayTeamResolver.resolveSidekicks(configService())) {
+                // Native scripted followers retain host-owned art. Admission here precedes
+                // their registration, so do not reject a character the host supplies.
+                var host = GameServices.module().getDonorCapabilities();
+                var character = builtinArchetype(companion);
+                if (host == null || character == null || !host.getPlayableCharacters().contains(character))
+                    requireDonorCharacter(companion);
+            }
+        } catch (IllegalArgumentException rejection) {
+            close();
+            throw rejection;
         }
         this.donorPlayerArtProvider = donorProvider.createPlayerArtProvider(donorReader);
         this.donorDustArtProvider = donorProvider.createSpindashDustArtProvider(donorReader);
@@ -231,6 +253,7 @@ public class CrossGameFeatureProvider implements PlayerSpriteArtProvider, Spinda
         if (donorPlayerArtProvider == null) {
             return null;
         }
+        requireDonorCharacter(characterCode);
         SpriteArtSet donorArt = donorPlayerArtProvider.loadPlayerSpriteArt(characterCode);
         if (donorArt == null) {
             return donorArt;
@@ -250,13 +273,16 @@ public class CrossGameFeatureProvider implements PlayerSpriteArtProvider, Spinda
             var scripts = donorArt.animationSet();
             if (active && "sonic".equalsIgnoreCase(characterCode)) {
                 var host = GameServices.module().getDonorCapabilities();
-                if (host != null) {
-                    var nativeHost = host.getPlayerArtProvider(RomByteReader.fromRom(romManager().getRom()))
-                            .loadPlayerSpriteArt(characterCode);
+                var source = GameServices.module().getGameService(com.openggf.game.internal.HostAnimationSource.class);
+                if (host != null || source != null) {
+                    var nativeHost = source != null ? source.load(characterCode)
+                            : host.getPlayerArtProvider(RomByteReader.fromRom(romManager().getRom()))
+                                    .loadPlayerSpriteArt(characterCode);
                     if (nativeHost != null) {
                         var donated = new com.openggf.sprites.animation.SpriteAnimationSet();
                         scripts.getAllScripts().forEach(donated::addScript);
-                        AnimationFamilies.donate(host, nativeHost.animationSet(), donorCapabilities, scripts)
+                        AnimationFamilies.donate(source != null ? source.families() : host.getAnimationFamilies(),
+                                nativeHost.animationSet(), donorCapabilities, scripts)
                                 .forEach((animation, script) -> {
                                     int id = FAMILY_ANIMATION_BASE + animation.ordinal();
                                     familyAnimationIds.put(animation, id);
@@ -541,6 +567,48 @@ public class CrossGameFeatureProvider implements PlayerSpriteArtProvider, Spinda
         instaShieldArtSet = null;
         donorCapabilities = null;
         active = false;
+    }
+
+    java.util.Map<Character, CharacterPresentation.Image> donorNameFont() throws IOException {
+        if (!(donorProvider instanceof com.openggf.game.internal.DonorLifeArt art))
+            throw new IOException("Donor does not supply name lettering");
+        return art.nameFont(romManager().getSecondaryRom(donorGameId.code()));
+    }
+
+    com.openggf.level.Pattern[] loadLifeArt(String character) throws IOException {
+        if (!(donorProvider instanceof com.openggf.game.internal.DonorLifeArt art))
+            throw new IOException("Donor does not supply a life icon");
+        int address = art.lifeArtAddress(character);
+        try (var channel = java.nio.channels.Channels.newChannel(new java.io.ByteArrayInputStream(
+                donorReader.slice(address, donorReader.size() - address)))) {
+            return com.openggf.util.PatternDecompressor.fromBytes(
+                    com.openggf.data.compression.NemesisReader.decompress(channel));
+        }
+    }
+
+    private static PlayerCharacter builtinArchetype(String characterCode) {
+        return switch (characterCode == null ? "" : characterCode.trim().toLowerCase(java.util.Locale.ROOT)) {
+            case "sonic" -> PlayerCharacter.SONIC_ALONE;
+            case "tails" -> PlayerCharacter.TAILS_ALONE;
+            case "knuckles" -> PlayerCharacter.KNUCKLES;
+            default -> null;
+        };
+    }
+
+    boolean suppliesCharacter(CharacterKey character) {
+        var archetype = character == null ? null : builtinArchetype(character.persisted());
+        return donorCapabilities != null && archetype != null
+                && donorCapabilities.getPlayableCharacters().contains(archetype);
+    }
+
+    private void requireDonorCharacter(String characterCode) {
+        String normalized = characterCode == null ? "" : characterCode.trim().toLowerCase(java.util.Locale.ROOT);
+        if (java.util.Set.of("sonic", "tails", "knuckles").contains(normalized)) {
+            PlayerCharacter character = "tails".equals(normalized) ? PlayerCharacter.TAILS_ALONE
+                    : "knuckles".equals(normalized) ? PlayerCharacter.KNUCKLES : PlayerCharacter.SONIC_ALONE;
+            if (!donorCapabilities.getPlayableCharacters().contains(character))
+                throw new IllegalArgumentException("Donor " + donorGameId.code() + " does not supply " + characterCode);
+        }
     }
 
     private GameId resolveHostGameId() {

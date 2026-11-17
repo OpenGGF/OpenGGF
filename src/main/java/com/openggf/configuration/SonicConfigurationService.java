@@ -904,6 +904,12 @@ public class SonicConfigurationService {
 		putDefault(SonicConfiguration.CROSS_GAME_S2_DATA_SELECT_IMAGE_GEN_OVERRIDE, false);
 		putDefaultKey(SonicConfiguration.CROSS_GAME_S1_DATA_SELECT_IMAGE_COORD_LOG_KEY, GLFW_KEY_APOSTROPHE);
 		putDefault(SonicConfiguration.CROSS_GAME_SOURCE, "s2");
+		putDefault(SonicConfiguration.LAUNCH_CD_REWIND, "global");
+		putDefault(SonicConfiguration.LAUNCH_CD_CROSS_GAME_SOURCE, "off");
+		putDefault(SonicConfiguration.LAUNCH_CD_DEBUG_TOOLS, "global");
+		putDefault(SonicConfiguration.LAUNCH_CD_ASPECT, "global");
+		putDefault(SonicConfiguration.LAUNCH_CD_MAIN_CHARACTER, "sonic");
+		putDefault(SonicConfiguration.LAUNCH_CD_SIDEKICK, "none");
 		putDefault(SonicConfiguration.LAUNCH_S1_REWIND, "global");
 		putDefault(SonicConfiguration.LAUNCH_S1_CROSS_GAME_SOURCE, "off");
 		putDefault(SonicConfiguration.LAUNCH_S1_DEBUG_TOOLS, "global");

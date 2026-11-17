@@ -2394,6 +2394,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		com.openggf.game.save.SessionSaveRequests.flushPendingSaves();
 		List<com.openggf.game.MasterTitleEntry> entries = new ArrayList<>();
 		for (MasterTitleScreen.GameEntry game : MasterTitleScreen.GameEntry.values()) {
+			if (!game.cartridge()) continue;
 			entries.add(new com.openggf.game.MasterTitleEntry.Stock(game));
 		}
 		for (GameId hosted : GameModuleRegistry.hostedMediaGames()) {

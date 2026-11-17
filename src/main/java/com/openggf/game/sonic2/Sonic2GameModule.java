@@ -745,6 +745,8 @@ public class Sonic2GameModule implements GameModule, com.openggf.game.internal.S
 
         @Override
         public int resolveNativeId(CanonicalAnimation canonical) {
+            // CPU recovery asks for the generic flying pose before art is bound.
+            if (tails && canonical == CanonicalAnimation.FLY) canonical = CanonicalAnimation.TAILS_FLY;
             int familyId = com.openggf.game.AnimationFamilies.resolve(getAnimationFamilies(), canonical);
             if (familyId >= 0) return familyId;
             return tails ? -1 : Sonic2AnimationIds.fromCanonical(canonical);
@@ -758,7 +760,11 @@ public class Sonic2GameModule implements GameModule, com.openggf.game.internal.S
         }
     }
 
-    private static final class Sonic2CrossGameDonorProvider implements CrossGameDonorProvider {
+    private static final class Sonic2CrossGameDonorProvider implements CrossGameDonorProvider, com.openggf.game.internal.DonorLifeArt {
+        @Override public java.util.Map<Character, com.openggf.game.CharacterPresentation.Image> nameFont(com.openggf.data.Rom rom)
+                throws java.io.IOException { return Sonic2CharacterFont.title(rom); }
+        @Override public int lifeArtAddress(String character) { return "tails".equals(character) ? com.openggf.game.sonic2.constants.Sonic2Constants.ART_NEM_TAILS_LIFE_ADDR : com.openggf.game.sonic2.constants.Sonic2Constants.ART_NEM_SONIC_LIFE_ADDR; }
+
         @Override
         public DonorCapabilities getDonorCapabilities() {
             return Sonic2DonorCapabilities.INSTANCE;

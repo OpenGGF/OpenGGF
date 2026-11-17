@@ -646,6 +646,8 @@ public enum SonicConfiguration {
 	CROSS_GAME_SOURCE,
 
 	/** Per-game launch profile for Sonic 1: launch.s1.rewind. */
+	LAUNCH_CD_REWIND, LAUNCH_CD_CROSS_GAME_SOURCE, LAUNCH_CD_DEBUG_TOOLS, LAUNCH_CD_ASPECT,
+	LAUNCH_CD_MAIN_CHARACTER, LAUNCH_CD_SIDEKICK,
 	LAUNCH_S1_REWIND,
 	/** Per-game launch profile for Sonic 1: launch.s1.crossGameSource. */
 	LAUNCH_S1_CROSS_GAME_SOURCE,

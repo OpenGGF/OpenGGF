@@ -228,7 +228,7 @@ public final class MasterTitleCaptureTool {
                 MasterTitleScreen screen;
                 if (scene.name().contains("standalone")) {
                     var entries = new java.util.ArrayList<MasterTitleEntry>();
-                    for (var game : MasterTitleScreen.GameEntry.values()) entries.add(new MasterTitleEntry.Stock(game));
+                    for (var game : MasterTitleScreen.GameEntry.values()) if (game.cartridge()) entries.add(new MasterTitleEntry.Stock(game));
                     entries.add(new MasterTitleEntry.Standalone("sample", "Sample game", false));
                     screen = new MasterTitleScreen(config, new com.openggf.game.launch.LaunchProfileStore(config), entries);
                 } else screen = new MasterTitleScreen(config);

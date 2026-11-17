@@ -405,7 +405,7 @@ class TestCrossGameFeatureProviderRefactor {
             this.missingAnimation = missingAnimation;
         }
 
-        @Override public java.util.Set<PlayerCharacter> getPlayableCharacters() { return java.util.Set.of(PlayerCharacter.SONIC_ALONE, PlayerCharacter.KNUCKLES); }
+        @Override public java.util.Set<PlayerCharacter> getPlayableCharacters() { return java.util.Set.of(PlayerCharacter.SONIC_ALONE, PlayerCharacter.TAILS_ALONE, PlayerCharacter.KNUCKLES); }
         @Override public boolean hasSpindash() { return false; }
         @Override public boolean hasSuperTransform() { return false; }
         @Override public boolean hasHyperTransform() { return false; }

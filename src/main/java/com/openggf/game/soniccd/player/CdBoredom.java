@@ -60,7 +60,7 @@ public final class CdBoredom {
 
     /** {@code cmpi.b #$2B,oAnim(a0)}: the player is giving up. */
     public static boolean givingUp(AbstractPlayableSprite player) {
-        return player != null && (player.getAnimationId() & 0xFF) == CdAnimationIds.GIVE_UP;
+        return !com.openggf.game.CrossGameFeatureProvider.isActive() && player != null && (player.getAnimationId() & 0xFF) == CdAnimationIds.GIVE_UP;
     }
 
     /**
@@ -68,6 +68,12 @@ public final class CdBoredom {
      * give-up test.
      */
     PlayerStageRoutines.GroundMode groundMode(AbstractPlayableSprite player, boolean mini) {
+        // Cartridge sheets have no CD give-up sequence or its frame-triggered jump.
+        // Keep normal movement rather than interpreting unrelated donor frames as that sequence.
+        if (com.openggf.game.CrossGameFeatureProvider.isActive()) {
+            timer = 0;
+            return PlayerStageRoutines.GroundMode.NORMAL;
+        }
         checkBoredom(player);
         if (!givingUp(player)) return PlayerStageRoutines.GroundMode.NORMAL;
         int frame = player.getMappingFrame() & 0xFF;

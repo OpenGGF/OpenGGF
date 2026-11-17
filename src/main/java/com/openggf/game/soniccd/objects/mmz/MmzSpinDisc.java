@@ -63,7 +63,7 @@ public final class MmzSpinDisc extends MmzObject implements ObjectVisualFacing.N
         if (!holding) {
             // loc_20A7B8 (:83-95): first contact.
             holding = true;
-            if (!player.getRolling()) player.setAnimationId(0);    // clr.b oAnim(a1) unless rolling
+            if (!player.getRolling()) player.setAnimationId(com.openggf.game.soniccd.player.CdSonicAnimation.WALK);    // clr.b oAnim(a1) unless rolling
             player.setPushing(false);                              // bclr #5,oFlags(a1)
             // move.b #1,oPrevAnim(a1) (:93): the player's next animation pass restarts its script
             // (index 0, timer 0) unless the animation is 1.

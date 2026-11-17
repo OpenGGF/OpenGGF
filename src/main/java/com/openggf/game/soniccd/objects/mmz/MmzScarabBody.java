@@ -156,7 +156,7 @@ public final class MmzScarabBody extends MmzBadnik implements TouchResponseListe
         sprite.setObjectControlled(true);                            // the object-control bit (objects/player.asm:290)
         sprite.setObjectControlAllowsCpu(true);                      // bit 0 only: oPlayerCtrl's sign stays clear
         sprite.setRolling(true);                                     // bset #2,oFlags(a1); oYRadius $E, oXRadius 7
-        sprite.setAnimationId(2);
+        sprite.setAnimationId(com.openggf.game.soniccd.player.CdSonicAnimation.ROLL);
         NativePositionOps.writeYPosPreserveSubpixel(sprite, y - 3);
         NativePositionOps.writeXPosPreserveSubpixel(sprite, x + (dir != 0 ? 0x18 : -0x18));
         phase += 2;

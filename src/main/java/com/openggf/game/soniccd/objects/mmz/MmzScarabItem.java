@@ -148,7 +148,7 @@ final class MmzScarabItem extends MmzObject
             if (phase == 0) phase += 4;                              // tst.b oRoutine2(a1); addq.b #4
             return;
         }
-        if (player.getAnimationId() != CdSonicAnimation.ROLL.id()) return;   // cmpi.b #2,oAnim(a0); bne
+        if (player.getAnimationId() != player.resolveAnimationId(com.openggf.game.CanonicalAnimation.ROLL)) return;   // cmpi.b #2,oAnim(a0); bne
         player.setYSpeed((short) -player.getYSpeed());
         routine = 4;                                                 // addq.b #2,oRoutine(a1) (Routine2 -> Routine4)
     }

@@ -196,7 +196,7 @@ class TestMasterTitleRomPreview {
     }
 
     @ParameterizedTest
-    @EnumSource(MasterTitleScreen.GameEntry.class)
+    @EnumSource(value = MasterTitleScreen.GameEntry.class, names = "SONIC_CD", mode = EnumSource.Mode.EXCLUDE)
     void loadFor_decodesRealRomPreviewWhenSuppliedRomExists(MasterTitleScreen.GameEntry entry) {
             Path path = providedRomPath(entry);
             assumeTrue(path.toFile().isFile(), "ROM not present: " + path);
@@ -244,6 +244,7 @@ class TestMasterTitleRomPreview {
     }
     private static Path providedRomPath(MasterTitleScreen.GameEntry entry) {
         var rom = switch (entry) {
+            case SONIC_CD -> throw new IllegalArgumentException("Disc titles have no cartridge preview");
             case SONIC_1 -> com.openggf.tests.RomTestUtils.ensureSonic1RomAvailable();
             case SONIC_2 -> com.openggf.tests.RomTestUtils.ensureSonic2RomAvailable();
             case SONIC_3K -> com.openggf.tests.RomTestUtils.ensureSonic3kRomAvailable();

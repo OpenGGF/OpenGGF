@@ -180,7 +180,8 @@ public final class MmzLaser extends MmzObject implements ObjectVisualFacing.NonD
         sprite.setYSpeed((short) -0x400);
         sprite.setXSpeed((short) (sprite.getCentreX() < x ? -0x200 : 0x200));
         sprite.setGSpeed((short) 0);
-        sprite.setAnimationId(0x38);
+        sprite.setAnimationId(com.openggf.game.CrossGameFeatureProvider.isActive()
+                ? sprite.resolveAnimationId(com.openggf.game.CanonicalAnimation.HURT) : 0x38);
         if (signals == null) return;
         signals.flipShrunk();
         if (signals.shrunk()) sprite.applyCustomRadii(5, 0xA); else sprite.applyCustomRadii(9, 0x13);

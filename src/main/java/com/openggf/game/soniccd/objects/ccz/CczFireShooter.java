@@ -157,7 +157,7 @@ public final class CczFireShooter extends CczObject implements ObjectVisualFacin
                 sprite.setYSpeed((short) -0x700);
                 sprite.setAir(true);
                 sprite.setOnObject(false);
-                sprite.setAnimationId(0x10);
+                sprite.setAnimationId(com.openggf.game.soniccd.player.CdSonicAnimation.SPRING);
                 clearStoodOn();
             }
         }

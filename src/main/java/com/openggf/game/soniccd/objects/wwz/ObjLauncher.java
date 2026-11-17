@@ -135,7 +135,7 @@ public final class ObjLauncher extends WwzObject implements ReevaluatingSolidObj
         player.setObjectControlled(false);                   // bclr #0,oPlayerCtrl(a1)
         holdsPlayer = false;
         player.setXSpeed((short) xVel);
-        player.setAnimationId(0);                            // move.b #0,oAnim(a1)
+        player.setAnimationId(com.openggf.game.soniccd.player.CdSonicAnimation.WALK);                            // move.b #0,oAnim(a1)
         player.setAir(true);                                 // bset #1,oFlags(a1)
         player.setOnObject(false);                           // bclr #3,oFlags(a1)
     }

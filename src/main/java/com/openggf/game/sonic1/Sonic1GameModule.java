@@ -747,7 +747,11 @@ public class Sonic1GameModule implements com.openggf.game.internal.RetailRomAwar
         }
     }
 
-    private static final class Sonic1CrossGameDonorProvider implements CrossGameDonorProvider {
+    private static final class Sonic1CrossGameDonorProvider implements CrossGameDonorProvider, com.openggf.game.internal.DonorLifeArt {
+        @Override public java.util.Map<Character, com.openggf.game.CharacterPresentation.Image> nameFont(com.openggf.data.Rom rom)
+                throws java.io.IOException { return Sonic1CharacterFont.title(rom); }
+        @Override public int lifeArtAddress(String character) { return com.openggf.game.sonic1.constants.Sonic1Constants.ART_NEM_LIFE_ICON_ADDR; }
+
         @Override
         public DonorCapabilities getDonorCapabilities() {
             return Sonic1DonorCapabilities.INSTANCE;

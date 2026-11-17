@@ -59,7 +59,7 @@ public record LaunchProfile(
 
     public static LaunchProfile stockFor(MasterTitleScreen.GameEntry entry) {
         Objects.requireNonNull(entry, "entry");
-        String stockSidekick = entry == MasterTitleScreen.GameEntry.SONIC_1 ? NONE : TAILS;
+        String stockSidekick = entry == MasterTitleScreen.GameEntry.SONIC_2 || entry == MasterTitleScreen.GameEntry.SONIC_3K ? TAILS : NONE;
         return new LaunchProfile(LaunchToggle.DEFAULT, OFF, LaunchToggle.DEFAULT, GLOBAL, SONIC, stockSidekick);
     }
 
@@ -163,7 +163,7 @@ public record LaunchProfile(
         List<String> patchCharacters = List.copyOf(
                 Objects.requireNonNull(patchBackedMainCharacters, "patchBackedMainCharacters"));
         return switch (entry) {
-            case SONIC_1 -> pair(SONIC, NONE);
+            case SONIC_1, SONIC_CD -> pair(SONIC, NONE);
             case SONIC_2 -> pair(SONIC, NONE) || pair(SONIC, TAILS) || pair(TAILS, NONE)
                     || (patchCharacters.contains(KNUCKLES) && pair(KNUCKLES, NONE));
             case SONIC_3K -> pair(SONIC, NONE) || pair(SONIC, TAILS)
@@ -234,7 +234,7 @@ public record LaunchProfile(
         List<String> values = new ArrayList<>();
         values.add(OFF);
         for (MasterTitleScreen.GameEntry candidate : MasterTitleScreen.GameEntry.values()) {
-            if (candidate != entry) {
+            if (candidate != entry && candidate.cartridge()) {
                 values.add(candidate.gameId);
             }
         }

@@ -47,8 +47,14 @@ public final class AnimationFamilies {
     public static Map<CanonicalAnimation, com.openggf.sprites.animation.SpriteAnimationScript> donate(
             DonorCapabilities host, com.openggf.sprites.animation.SpriteAnimationSet hostScripts,
             DonorCapabilities donor, com.openggf.sprites.animation.SpriteAnimationSet donorScripts) {
+        return donate(host.getAnimationFamilies(), hostScripts, donor, donorScripts);
+    }
+
+    public static Map<CanonicalAnimation, com.openggf.sprites.animation.SpriteAnimationScript> donate(
+            Map<Integer, Binding> hostFamilies, com.openggf.sprites.animation.SpriteAnimationSet hostScripts,
+            DonorCapabilities donor, com.openggf.sprites.animation.SpriteAnimationSet donorScripts) {
         var result = new java.util.EnumMap<CanonicalAnimation, com.openggf.sprites.animation.SpriteAnimationScript>(CanonicalAnimation.class);
-        for (var entry : host.getAnimationFamilies().entrySet()) {
+        for (var entry : hostFamilies.entrySet()) {
             var requested = entry.getValue();
             if (requested.animation() == null || java.util.Set.of(CanonicalAnimation.WALK, CanonicalAnimation.RUN,
                     CanonicalAnimation.ROLL, CanonicalAnimation.PUSH,
@@ -61,7 +67,8 @@ public final class AnimationFamilies {
             var donorScript = donorScripts.getScript(donorId);
             if (supplied == null || donorScript == null || original == null) continue;
             var frames = new java.util.ArrayList<Integer>();
-            for (int phase : requested.phases()) {
+            for (int index = 0; index < original.frames().size(); index++) {
+                int phase = requested.phases().get(Math.min(index, requested.phases().size() - 1));
                 int step = supplied.phases().indexOf(phase);
                 // An unavailable drawing phase may reuse this family's first pose;
                 // it must not discard the host's clock or finite terminator.
@@ -71,7 +78,7 @@ public final class AnimationFamilies {
             if (frames.isEmpty()) continue;
             int parameter = original.endParam();
             if (original.endAction() == com.openggf.sprites.animation.SpriteAnimationEndAction.SWITCH) {
-                var next = host.getAnimationFamilies().get(parameter);
+                var next = hostFamilies.get(parameter);
                 if (next == null || next.animation() == null) continue;
                 parameter = donor.resolveNativeId(next.animation());
                 if (parameter < 0) continue;

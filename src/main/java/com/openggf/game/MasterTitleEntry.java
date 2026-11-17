@@ -22,7 +22,8 @@ public sealed interface MasterTitleEntry
     /**
      * A stock game hosted from media other than a cartridge ROM ({@link GameModuleRegistry.MediaKind#HOSTED_MEDIA}):
      * its module finds and opens the media ({@link com.openggf.game.internal.HostedGameMedia}). It has no
-     * launch profile or ROM locator; its media service supplies preview/music and Start boots the stock team.
+     * cartridge preview or ROM locator; its media service supplies preview/music and its Setup profile
+     * supplies the launch team and donor.
      */
     record Hosted(GameId game, String displayName, String menuLabel) implements MasterTitleEntry {
         public Hosted {

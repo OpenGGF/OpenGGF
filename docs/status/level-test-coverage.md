@@ -60,6 +60,10 @@ without destruction may also leave extending claws whose behavior changes after
 rewind; the destroyed-parent witness does not establish that inherited case.
 The Clamer constructor probe still requires a live Clamer before its hook can run.
 
+Sonic CD donor hosting (2026-11-16): the existing [stage matrix](../architecture/validation/levels/scd-stages.md#cartridge-donor-hosting-2026-11-16)
+records six cartridge-character R11A movement combinations and inherited full-route,
+period, team and viewport gaps. This does not advance plain-Sonic native frontiers.
+
 Sonic CD stages (2026-11-13): the [Sonic CD stage matrix](../architecture/validation/levels/scd-stages.md)
 records, for all 70 USA stage programs, which are certified by a native full-act
 route to their end, which by a 14-second fixture only, and the boss recordings.

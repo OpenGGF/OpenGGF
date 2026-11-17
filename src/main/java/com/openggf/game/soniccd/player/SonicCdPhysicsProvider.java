@@ -18,6 +18,8 @@ import java.util.Objects;
  */
 public final class SonicCdPhysicsProvider implements PhysicsProvider, PlayerStageRoutines {
     private final CdPlayerStage stage;
+    // Binding scratch, as in the cartridge provider: modifiers are copied into each player.
+    private boolean bindingKnuckles;
 
     public SonicCdPhysicsProvider(CdPlayerStage stage) {
         this.stage = Objects.requireNonNull(stage, "stage");
@@ -30,12 +32,17 @@ public final class SonicCdPhysicsProvider implements PhysicsProvider, PlayerStag
 
     @Override
     public PhysicsProfile getProfile(String characterType) {
-        return PhysicsProfile.SONIC_2_SONIC;
+        bindingKnuckles = "knuckles".equalsIgnoreCase(characterType);
+        return switch (characterType.toLowerCase(java.util.Locale.ROOT)) {
+            case "tails" -> PhysicsProfile.SONIC_2_TAILS;
+            case "knuckles" -> PhysicsProfile.SONIC_3K_KNUCKLES;
+            default -> PhysicsProfile.SONIC_2_SONIC;
+        };
     }
 
     @Override
     public PhysicsModifiers getModifiers() {
-        return PhysicsModifiers.STANDARD;
+        return bindingKnuckles ? PhysicsModifiers.KNUCKLES : PhysicsModifiers.STANDARD;
     }
 
 

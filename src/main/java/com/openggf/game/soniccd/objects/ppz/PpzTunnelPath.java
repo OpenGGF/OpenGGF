@@ -87,7 +87,7 @@ public final class PpzTunnelPath extends CdObject implements ObjectVisualFacing.
         sprite.setObjectControlled(true);                                       // oPlayerCtrl = %10000001
         holding = true;
         if (subtype2() != 0) sprite.setHidden(true);                            // ori.b #$40
-        sprite.setAnimationId(2);
+        sprite.setAnimationId(com.openggf.game.soniccd.player.CdSonicAnimation.ROLL);
         setPlayerGroundSpeed(sprite);
         sprite.setXSpeed((short) 0);
         sprite.setYSpeed((short) 0);
