@@ -302,7 +302,7 @@ public final class PpzBossEggman extends PpzBossPiece implements TouchResponseLi
         camera.setMaxX((short) 0xAC0);
         int px = (short) player.getCentreX();
         if (px < 0xA6A) return;
-        int left = (short) (px - 0xA0);
+        int left = (short) (px - camera.getWidth() / 2);
         if (left < camera.getMinX()) return;
         if (px >= 0xB60) {
             routine = 0xC;

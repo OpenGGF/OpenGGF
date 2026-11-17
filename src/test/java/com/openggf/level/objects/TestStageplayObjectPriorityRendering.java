@@ -70,7 +70,7 @@ class TestStageplayObjectPriorityRendering {
         }
     }
 
-    private static VisualTemplate withoutOcclusion(VisualTemplate source) {
+    static VisualTemplate withoutOcclusion(VisualTemplate source) {
         var parts = source.parts().stream().map(part -> new VisualPart(part.partId(), part.bucket(), true,
                 part.slotOrder(), part.defaultPose(), part.facing(), part.facingPivotX(), part.poses().stream().map(pose -> new VisualPose(pose.pose(),
                         pose.tiles().stream().map(t -> new VisualTile(t.pattern(), t.palette(), t.flipX(), t.flipY(),
@@ -79,17 +79,17 @@ class TestStageplayObjectPriorityRendering {
         return new VisualTemplate(source.anchorX(), source.anchorY(), source.facing(), parts, source.patterns(), source.palettes(), source.limitations());
     }
 
-    private static int differences(RgbaImage a, RgbaImage b) {
+    static int differences(RgbaImage a, RgbaImage b) {
         int changed = 0;
         for (int i = 0; i < a.pixels().length; i++) if (a.pixels()[i] != b.pixels()[i]) changed++;
         return changed;
     }
 
-    private static void assertPicture(RgbaImage expected, RgbaImage actual, String context) {
+    static void assertPicture(RgbaImage expected, RgbaImage actual, String context) {
         assertEquals(0, differences(expected, actual), "Native/directed pixels: " + context);
     }
 
-    private static RgbaImage draw(StageplayWorldPresentation presentation, GlReadPixelsGrabber grabber) {
+    static RgbaImage draw(StageplayWorldPresentation presentation, GlReadPixelsGrabber grabber) {
         var level = GameServices.level();
         var graphics = GameServices.graphics();
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);

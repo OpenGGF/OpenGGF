@@ -72,7 +72,7 @@ public final class CdTimeIcon extends CdObject implements FixedRuntimeObjectInst
         PatternSpriteRenderer renderer = art(CdObjectArtProvider.MONITOR);
         var camera = services().camera();
         if (renderer == null || camera == null) return;
-        renderer.drawFrameIndex(mapFrame, camera.getX() + SCREEN_X, camera.getY() + SCREEN_Y, false, false,
+        renderer.drawFrameIndex(mapFrame, camera.getX() + CdScreenPosition.hudOrigin(services()) + SCREEN_X, camera.getY() + SCREEN_Y, false, false,
                 CdObjectArtProvider.tilePalette(tileWord));
     }
 

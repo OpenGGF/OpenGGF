@@ -85,6 +85,8 @@ class TestCinematicScrollPublication {
                     37, new com.openggf.game.sonic3k.scroll.SwScrlS3kDefault());
             level.parallaxManager.update(37, 0, camera, 8);
             verify(source, times(1)).captureBackgroundColumns();
+            level.spritePresentationRenderer().boundsMask.advance(LevelScrollPresentation.captureArenaMask(level),
+                    camera.getXWithShake(), camera.getWidth());
             clearInvocations(provider);
             changed.set(true);
             var nativeScroll =
@@ -402,6 +404,8 @@ class TestCinematicScrollPublication {
             doReturn(7).when(handler).getShakeOffsetX();
             level.parallaxManager.installContributedHandler(37, handler);
             level.parallaxManager.update(37, 0, camera, 8);
+            level.spritePresentationRenderer().boundsMask.advance(LevelScrollPresentation.captureArenaMask(level),
+                    camera.getXWithShake(), camera.getWidth());
             var nativeScroll = LevelScrollPresentation.capture(level, AdvancedRenderFrameState.disabled());
             var frozen = nativeScroll.backgroundBuildParameters();
             var renderer = spy(level.spritePresentationRenderer());

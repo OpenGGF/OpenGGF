@@ -9,6 +9,10 @@ import java.io.UncheckedIOException;
 
 /** Detached file views: the default is PP1 Present, with explicit ISO names for every other program. */
 final class CdMediaSceneArt implements MediaSceneArt {
+    @Override public View stage(GameDataSource source, int zone, int act) {
+        return program(source, SonicCdZoneRegistry.payload(zone, act).file().isoName());
+    }
+
     @Override public View defaultArt(GameDataSource source) {
         return program(source, CdStagePayload.R11A.file().isoName());
     }
@@ -32,7 +36,11 @@ final class CdMediaSceneArt implements MediaSceneArt {
                             try { return new com.openggf.game.soniccd.level.CdStageLoader(disc).load(stage, 0, false).getPalette(0); }
                             catch (IOException e) { throw new UncheckedIOException(e); }
                         }
-                    }, null, null);
+                    }, null, stage == null ? null : new com.openggf.level.render.DetachedLevelPictures(
+                            SonicCdZoneRegistry.zoneIndex(stage), SonicCdZoneRegistry.actIndex(stage),
+                            () -> new com.openggf.game.soniccd.level.CdStageLoader(disc).load(stage, SonicCdZoneRegistry.zoneIndex(stage), false),
+                            512, 256, (zone, act) -> () -> new com.openggf.game.soniccd.level.CdStageLoader(disc)
+                                    .load(SonicCdZoneRegistry.payload(zone, act), zone, false)));
         } catch (IOException e) {
             throw new UncheckedIOException("Cannot read disc art " + path, e);
         }

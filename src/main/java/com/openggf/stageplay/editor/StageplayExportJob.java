@@ -54,13 +54,7 @@ final class StageplayExportJob implements AutoCloseable {
             command.add("--out"); command.add(destination.toString());
             command.add("--staging-dir"); command.add(staging.toString());
             command.add("--game"); command.add(document.set().gameId());
-            var resolutions = new java.util.LinkedHashMap<String,com.openggf.data.RomImageCatalogue.Resolution>();
-            for (var game : StageplayRomTransport.requiredGames(document)) {
-                var identity = switch(game) { case "s1" -> RomIdentity.S1; case "s2" -> RomIdentity.S2; default -> RomIdentity.S3K; };
-                resolutions.put(game,roms.resolveLogicalRom(identity)
-                        .orElseThrow(() -> new IOException("Film export needs the configured logical " + game + " ROM")));
-            }
-            String descriptor = StageplayRomTransport.encode(resolutions);
+            String descriptor = StageplayRomTransport.configured(StageplayRomTransport.requiredGames(document), roms);
             romDescriptor = Files.createTempFile(source.toAbsolutePath().getParent(),".stageplay-roms-",".json");
             Files.writeString(romDescriptor,descriptor,StandardCharsets.UTF_8);
             command.add("--rom-descriptor"); command.add(romDescriptor.toString());

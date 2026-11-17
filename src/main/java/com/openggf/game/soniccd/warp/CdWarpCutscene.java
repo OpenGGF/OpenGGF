@@ -81,7 +81,11 @@ public final class CdWarpCutscene {
     }
 
     /** The picture of the last pulse. */
-    public CdProgramScreenRenderer.Frame screen() {
+    public CdProgramScreenRenderer.Frame screen() { return screen(320); }
+
+    /** Wide tunnel extension: repeat the native 512-pixel plane, keeping Sonic centred. */
+    public CdProgramScreenRenderer.Frame screen(int width) {
+        width = Math.max(320, width);
         int[] palette = new int[64];
         state.displayedPalette().ifPresent(bytes -> {
             for (int i = 0; i < 64; i++) palette[i] = bytes.unsignedByte(2 * i) << 8 | bytes.unsignedByte(2 * i + 1);
@@ -94,10 +98,10 @@ public final class CdWarpCutscene {
             int size = sat.unsignedByte(at + 2);
             int tile = sat.unsignedByte(at + 4) << 8 | sat.unsignedByte(at + 5);
             int x = (sat.unsignedByte(at + 6) << 8 | sat.unsignedByte(at + 7)) & 0x1FF;
-            sprites.add(new CdProgramScreenRenderer.Sprite(x - 128, y - 128, size, tile));
+            sprites.add(new CdProgramScreenRenderer.Sprite(x - 128 + (width - 320) / 2, y - 128, size, tile));
         }
         return new CdProgramScreenRenderer.Frame(tiles, dirty, planeA, planeB, palette, line -> 0, line -> 0,
-                sprites, 320, state.displayEnabled(), 0, state.displayedVscrollBgWord());
+                sprites, width, state.displayEnabled(), 0, state.displayedVscrollBgWord());
     }
 
     /** The decoded art, for tests. */

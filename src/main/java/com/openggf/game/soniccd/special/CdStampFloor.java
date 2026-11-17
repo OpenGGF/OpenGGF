@@ -151,4 +151,18 @@ public final class CdStampFloor {
 
     static int stampSpaceOffset(int stampNumber) { return stampNumber * STAMP_BYTES; }
     static int stampSpaceBytes() { return STAMP_SPACE_BYTES; }
+
+    State capture() { return new State(hazardAnimDelay, hazardAnimFrame, fanAnimFrame, map); }
+    void restore(State s) {
+        hazardAnimDelay = s.hazardAnimDelay();
+        hazardAnimFrame = s.hazardAnimFrame();
+        fanAnimFrame = s.fanAnimFrame();
+        System.arraycopy(s.map(), 0, map, 0, map.length);
+    }
+    record State(int hazardAnimDelay, int hazardAnimFrame, int fanAnimFrame, short[] map) {
+        State {
+            map = map.clone();
+        }
+        @Override public short[] map() { return map.clone(); }
+    }
 }

@@ -57,7 +57,15 @@ public final class CdFmSfxData extends AbstractSmpsData implements SmpsSfxData {
         tempo = 0;
         int count = data[base + 3] & 0xFF;
         int pos = base + 4;
-        for (int i = 0; i < count; i++, pos += 6) {
+        // The retail D6 header declares two tracks but supplies only one before
+        // SonicCD_D6_FM6 (FM/SFX/D6.asm:1-9). FixBugs=0 reads bytecode as a
+        // second header and corrupts FM1 with pointer 80E0h. Keep authored tracks
+        // inside their header region; do not model that native memory corruption.
+        // The fixed native branch would change the declared count to one.
+        int trackDataStart = data.length;
+        for (int i = 0; i < count && pos + 6 <= trackDataStart; i++, pos += 6) {
+            int pointer = read16(pos + 2);
+            if (pointer >= pos + 6 && pointer < trackDataStart) trackDataStart = pointer;
             tracks.add(new TrackEntry(data[pos] & 0xFF, data[pos + 1] & 0xFF, read16(pos + 2),
                     data[pos + 4], data[pos + 5]));
         }

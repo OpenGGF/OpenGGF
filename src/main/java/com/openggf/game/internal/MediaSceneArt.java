@@ -13,6 +13,8 @@ public interface MediaSceneArt {
     /** The presentation host adapts this bounded view; game code never constructs a mod scene type. */
     record View(GameId game, String identity, RomByteReader reader, Supplier<PlayerSpriteArtProvider> players,
                 Supplier<SpriteArtSet> tails, ZonePictureSource zones) { }
+    /** Art and terrain for the registry's complete stage identity (including period). */
+    View stage(GameDataSource source, int zone, int act);
     View defaultArt(GameDataSource source);
     View program(GameDataSource source, String path);
 }

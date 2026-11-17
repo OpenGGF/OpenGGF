@@ -20,4 +20,11 @@ final class CdSpecialAnimation {
     }
 
     int frame() { return sprite.anim.frame; }
+
+    State capture() { return new State(sprite == null ? null : sprite.capture()); }
+    void restore(State s) {
+        sprite = CdSpecialSprites.Sprite.restored(sprite, s.sprite());
+    }
+    record State(CdSpecialSprites.Sprite.State sprite) {
+    }
 }

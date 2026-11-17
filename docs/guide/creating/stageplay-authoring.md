@@ -574,3 +574,39 @@ and `.spawned` from the actual Obj2E owner, plus `competition.levelFrame` and
 `.monitors`, `.rings` and `.lives` facts can assert the award before the hold.
 The eight `routes/s2/competition/ehz-qmark-*` fixtures share a cold-title approach;
 P1 breaks the first EHZ monitor, while P2 remains near the start.
+
+### Sonic CD native scenes (development preview)
+
+Supply `--scd-rom` with your verified USA disc path. The scene game ID is `scd`;
+zone and act are registry indices, with the act index including the period
+(for example zone 0, act 1 selects R11B, Palmtree Panic 1 Past). Native terrain,
+player art and object preparation read that selected disc program. Workers
+reopen the verified media identity; disc files are not cartridge ROMs.
+
+The native entry title card finishes before Stageplay places its cast. Puppet
+movement and logical `FACE_LEFT` / `FACE_RIGHT` use native controller input.
+Player-ground queries accept `scd` / `sonic`; their terrain proposals still need
+landing verification. The CD example starts at centre x=800, away from entry.
+
+CD object Puppet/Pose pictures retain native tile priority and foreground
+occlusion; disc-backed R11B canopy pixels include a foreground-bypass negative
+control. Poser body, animation and accessory lookup uses the current shot
+program, including after a period change; unavailable accessory art stays absent.
+Scene `ROM_MUSIC` cues use CD native command IDs: `SCMD_R1AMUS` (15)
+selects CDDA track 3, and `SCMD_PASTMUS` uses the selected Past stage PCM bank.
+Both reach no-device production synthesis in the disc-backed scene test.
+Stageplay and route-tape game pickers include Sonic CD. The route-tape form
+uses a one-based stage number: 1–4 are act 1 Present/Past/Good/Bad Future,
+5–8 are act 2 in that order, and 9–10 are act 3 Good/Bad Future. Stageplay
+set indices remain zero-based. CD defaults to native Sonic alone.
+Native route discovery uses the configured disc locator. Route manifests bind
+a domain-separated digest of the pipeline’s verified normalized whole-disc
+identity, including audio tracks; a CUE sheet hash alone is insufficient.
+Earlier experimental CD tapes with container-byte hashes must be recreated.
+Scene route CLI `--scd-rom` uses the same media descriptor and freshness check
+as editor workers. Coverage `--game all` includes all 70 CD stage contexts;
+registry rows and supplied sample observations do not certify behavior or pixels.
+For CD observations, `romSha1` records the same verified source digest as native
+route identity, rather than the CUE sheet or container hash.
+This remains a bounded authoring preview; see the
+[validation record](../../architecture/validation/2026-11-16-sonic-cd-stageplay-editor.md).

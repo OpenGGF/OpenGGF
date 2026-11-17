@@ -6,10 +6,12 @@ import com.openggf.game.SpecialStageAccessType;
 import com.openggf.game.SpecialStageDebugProvider;
 import com.openggf.game.SpecialStageProvider;
 import com.openggf.game.SpecialStageViewport;
+import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.soniccd.CdDiscDataSource;
 
 import java.io.IOException;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.function.Supplier;
 
 /**
@@ -147,4 +149,29 @@ public final class CdSpecialStageProvider implements SpecialStageProvider {
         return new CdSpecialStageResults(result, game == null ? 0 : game.getScore() / 10, nextLife,
                 game == null ? 3 : game.getLives());
     }
+
+    @Override public boolean supportsRewind() { return true; }
+    @Override public Optional<RewindSnapshottable<?>> rewindAdapter() {
+        return Optional.of(new CdSpecialStageRewindAdapter(this));
+    }
+
+    State capture() {
+        return new State(session, session == null ? null : session.capture(), pending, timeStones,
+                held, reported, ended);
+    }
+
+    void restore(State s) {
+        if (session != s.owner()) throw new IllegalStateException("Sonic CD special-stage session changed during rewind");
+        if (session != null) session.restore(s.session());
+        pending = s.pending();
+        timeStones = s.timeStones();
+        held = s.held();
+        reported = s.reported();
+        ended = s.ended();
+        if (presentation != null) presentation.invalidate();
+    }
+
+    record State(CdSpecialStageSession owner, CdSpecialStageSession.State session,
+                 CdSpecialStageEntry pending, int timeStones, int held,
+                 boolean reported, CdSpecialStageResult ended) { }
 }

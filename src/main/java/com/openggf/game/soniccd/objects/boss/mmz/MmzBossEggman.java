@@ -306,7 +306,7 @@ final class MmzBossEggman extends MmzBossPiece implements TouchResponseAttackabl
         if (camera == null || player == null) return;
         camera.setMaxX((short) 0xE60);                            // right_bound, target_right_bound
         int px = (short) player.getCentreX();
-        int left = (short) (px - 0xA0);
+        int left = (short) (px - camera.getWidth() / 2);
         if (left < camera.getMinX()) return;
         if (px >= 0xF00) {
             var signals = signals();

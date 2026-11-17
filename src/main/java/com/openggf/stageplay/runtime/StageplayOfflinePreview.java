@@ -138,14 +138,8 @@ final class StageplayOfflinePreview implements AutoCloseable {
         command.add("-cp"); command.add(System.getProperty("java.class.path"));
         command.add("com.openggf.tools.StageplayPreviewTool");
         command.add("--rom-descriptor");
-        var resolutions=new LinkedHashMap<String,com.openggf.data.RomImageCatalogue.Resolution>();
         var requiredGames = new LinkedHashSet<>(StageplayRomTransport.requiredGames(value)); requiredGames.addAll(extraGames);
-        for(String game:requiredGames) {
-            var identity=switch(game) { case "s1"->RomIdentity.S1; case "s2"->RomIdentity.S2; default->RomIdentity.S3K; };
-            resolutions.put(game,EngineServices.current().roms().resolveLogicalRom(identity)
-                    .orElseThrow(()->new IOException("LIVE preview needs the configured logical "+game+" ROM")));
-        }
-        String descriptor=StageplayRomTransport.encode(resolutions);
+        String descriptor=StageplayRomTransport.configured(requiredGames, EngineServices.current().roms());
         String assetDescriptor=assets.encode(value);
         var builder=new ProcessBuilder(command); builder.environment().remove("DISPLAY"); builder.environment().remove("WAYLAND_DISPLAY");
         process=builder.start();

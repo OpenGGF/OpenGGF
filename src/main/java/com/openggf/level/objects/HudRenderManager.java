@@ -1,6 +1,5 @@
 package com.openggf.level.objects;
 
-import com.openggf.camera.CameraPresentationAccess;
 import com.openggf.camera.Camera;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.LevelState;
@@ -768,19 +767,13 @@ public class HudRenderManager {
     }
 
     private int nativeOrigin() {
-        int origin = nativeOriginX(Math.max(viewportWidth, graphicsManager.getProjectionWidth()));
-        // Camera-relative HUD pieces are drawn from the picture's left edge, which NATIVE
-        // widescreen draw mode places this inset left of the camera (0 otherwise).
-        return bonusStageHudLayout ? origin : origin - CameraPresentationAccess.inset(camera);
+        if (bonusStageHudLayout) return 0;
+        return HudProfileAccess.cameraRelativeOriginX(
+                Math.max(viewportWidth, graphicsManager.getProjectionWidth()), screenLeftAnchorEnabled, camera);
     }
 
     int nativeOriginX(int width) {
-        if (bonusStageHudLayout) return 0;
-        int liveWidth = Math.max(320, width);
-        if (screenLeftAnchorEnabled && liveWidth > 320) {
-            return 0;
-        }
-        return (liveWidth - 320) / 2;
+        return bonusStageHudLayout ? 0 : HudProfileAccess.nativeOriginX(width, screenLeftAnchorEnabled);
     }
 
     private void renderSafe(int patternId, PatternDesc desc, int x, int y) {

@@ -874,6 +874,12 @@ class TestArchUnitRules {
                 typeOrNested(origin, entry.getKey()) && entry.getValue().contains(targetSlice));
     }
 
+    /** Source descriptors may reopen only through the existing scene source owner. */
+    private static boolean stageplaySourceTransportHost(String origin, String target) {
+        return typeOrNested(origin, "com.openggf.stageplay.runtime.StageplayRomTransport")
+                && target.equals("com.openggf.mods.scene.host.SceneRomLibrary");
+    }
+
     @ArchTest
     static void stageplay_boundaries_have_explicit_owners(JavaClasses classes) {
         assertTrue(authoredStageplayServiceOwner().test(classes.get("com.openggf.mods.code.AuthoredStageplayServices")));
@@ -918,6 +924,16 @@ class TestArchUnitRules {
         assertTrue(approvedStageplayRuntimeDependency("com.openggf.stageplay.runtime.StageplaySpeechSynth", "audio"));
         assertTrue(!approvedStageplayRuntimeDependency("com.openggf.stageplay.StageplaySpeech", "audio"));
         assertTrue(!approvedStageplayRuntimeDependency("com.openggf.stageplay.runtime.StageplaySpeechSynth", "editor"));
+        assertTrue(stageplaySourceTransportHost("com.openggf.stageplay.runtime.StageplayRomTransport",
+                "com.openggf.mods.scene.host.SceneRomLibrary"));
+        assertTrue(!stageplaySourceTransportHost("com.openggf.stageplay.runtime.StageplayRomTransport",
+                "com.openggf.mods.code.ModRuntime"));
+        assertTrue(!stageplaySourceTransportHost("com.openggf.stageplay.runtime.StageplayRomTransport",
+                "com.openggf.mods.scene.SceneRomArt"));
+        assertTrue(!stageplaySourceTransportHost("com.openggf.stageplay.StageplayDocument",
+                "com.openggf.mods.scene.host.SceneRomLibrary"));
+        assertTrue(!approvedStageplayRuntimeDependency("com.openggf.stageplay.runtime.StageplayRomTransport", "game"));
+        assertTrue(!approvedStageplayRuntimeDependency("com.openggf.stageplay.runtime.StageplayRomTransport", "configuration"));
         Set<String> violations = new TreeSet<>();
         for (JavaClass origin : classes) {
             String originSlice = topLevelSlice(origin);
@@ -938,7 +954,8 @@ class TestArchUnitRules {
                     if (stageplayCoreType(origin.getName())) {
                         if (!stageplayCoreType(target.getName())) violations.add(dependency.getDescription());
                     } else if (!"stageplay".equals(targetSlice)
-                            && !approvedStageplayRuntimeDependency(origin.getName(), targetSlice)) {
+                            && !approvedStageplayRuntimeDependency(origin.getName(), targetSlice)
+                            && !stageplaySourceTransportHost(origin.getName(), target.getName())) {
                         violations.add(dependency.getDescription());
                     }
                 } else if (originSlice != null && "stageplay".equals(targetSlice)

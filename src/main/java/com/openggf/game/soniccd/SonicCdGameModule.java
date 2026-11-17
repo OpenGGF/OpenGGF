@@ -244,6 +244,10 @@ public final class SonicCdGameModule implements GameModule {
                         return game.loadProject(source, authored, x, y);
                     }
                 });
+        if (type == com.openggf.game.internal.SceneEntryPreparation.class)
+            return type.cast((com.openggf.game.internal.SceneEntryPreparation) world ->
+                world.getLevelManager().getObjectManager().getActiveObjects().stream().anyMatch(object ->
+                    object instanceof com.openggf.game.soniccd.objects.common.CdTitleCard && !object.isDestroyed()));
         if (type == com.openggf.game.internal.MediaSceneArt.class) return type.cast(new CdMediaSceneArt());
         if (type == com.openggf.game.soniccd.objects.art.CdObjectArtProvider.class) return type.cast(objectArt);
         // ObjHUD draws the HUD as level objects (HUD and Points/Main.asm:67-140).

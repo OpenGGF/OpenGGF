@@ -21,7 +21,6 @@ import java.util.List;
  */
 public final class MmzScarab extends MmzObject implements ObjectVisualFacing.NonDirectional {
     /** CheckObjDespawn2: cmpi.w #$80+(320+$40)+$80,d0; bls (Level/Object Spawner.asm:385-399). */
-    private static final int DESPAWN_RANGE = 0x80 + (320 + 0x40) + 0x80;
 
     private int routine;                         // oRoutine
     private MmzScarabBody body;                  // oVar2E
@@ -163,9 +162,7 @@ public final class MmzScarab extends MmzObject implements ObjectVisualFacing.Non
     @Override
     public boolean isCustomOutOfRange(int cameraX) {
         if (!despawnsByCheckObjDespawn()) return false;
-        int chunk = x & 0xFF80;
-        int cameraChunk = (cameraX - 0x80) & 0xFF80;
-        return ((chunk - cameraChunk) & 0xFFFF) > DESPAWN_RANGE;
+        return outsideDespawnRange(x, cameraX, false);
     }
 
     public int routine() { return routine; }

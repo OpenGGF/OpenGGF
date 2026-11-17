@@ -56,6 +56,8 @@ final class EngineRouteWorld implements RouteWorld, EngineRouteHosts.EngineView 
         this.session = session;
     }
 
+    private java.io.Closeable ownedMedia;
+
     static EngineRouteWorld boot(LaunchContract launch, Path rom, Path donorRom, UnaryOperator<GameModule> decorator) {
         if (!(launch.inlet() instanceof Inlet.ColdLevel cold)) {
             throw new RouteHostException(RouteHostException.Reason.UNSUPPORTED_LAUNCH,
@@ -70,7 +72,13 @@ final class EngineRouteWorld implements RouteWorld, EngineRouteHosts.EngineView 
         var world = new EngineRouteWorld(launch, session);
         try {
             if (decorator != null) session.decorateModule(decorator);
-            session.boot(rom, cold.level().zone(), cold.level().act(), settings);
+            var game = com.openggf.game.GameId.fromCode(launch.rom().game());
+            if (com.openggf.game.GameModuleRegistry.mediaKind(game) == com.openggf.game.GameModuleRegistry.MediaKind.HOSTED_MEDIA) {
+                var module = com.openggf.game.GameModuleRegistry.createStockModule(game);
+                var source = com.openggf.game.internal.HostedGameMedia.of(module).openMedia(rom);
+                if (source instanceof java.io.Closeable closeable) world.ownedMedia = closeable;
+                session.boot(source, module, cold.level().zone(), cold.level().act(), settings);
+            } else session.boot(rom, cold.level().zone(), cold.level().act(), settings);
             world.adoptBoundary();
             world.requireRecordedInputOwnership();
             return world;
@@ -182,7 +190,11 @@ final class EngineRouteWorld implements RouteWorld, EngineRouteHosts.EngineView 
     public void close() {
         if (closed) return;
         closed = true;
-        session.close();
+        try { session.close(); }
+        finally {
+            if (ownedMedia != null) try { ownedMedia.close(); }
+            catch (IOException failure) { throw new UncheckedIOException(failure); }
+        }
     }
 
     /** Level object, game mode or gameplay context identity changes start a new epoch. */

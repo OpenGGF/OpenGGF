@@ -77,6 +77,18 @@ class TestRouteTapeWorkspace {
         workspace.tick(new InputHandler());
     }
 
+    @Test void cdFormOffersDiscStagesAndNativeSoloRoster() throws Exception {
+        com.openggf.game.soniccd.CdTestMedia.usaCue();
+        var host = new Host(); host.level = Optional.of(new LevelId("scd", 0, 1));
+        var workspace = new RouteTapeWorkspace(host);
+        workspace.invoke(RouteTapeWorkspace.Action.NEW);
+        assertTrue(workspace.menu().formFields().stream().filter(f -> f.key().equals("game")).findFirst().orElseThrow().choices().contains("scd"));
+        assertEquals("", workspace.menu().values().get("sidekick"));
+        workspace.menu().setValue("path", dir.resolve("cd.route.json").toString());
+        workspace.menu().submit();
+        assertNull(workspace.menu().error(), workspace.menu().error());
+    }
+
     @Test
     void openEditUndoAndDirtyFollowTheWorkingRowsOnly() throws IOException {
         Path manifest = RouteTapeFixtures.write(dir, "ehz", "30 R\n5 R+A\n");

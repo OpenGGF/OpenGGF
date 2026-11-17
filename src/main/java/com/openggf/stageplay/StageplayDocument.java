@@ -425,7 +425,7 @@ public record StageplayDocument(int version, String name, int durationFrames, in
             name = label(name, "actor name");
             gameId = game(gameId);
             require(character != null && switch (gameId) {
-                case "s1" -> character.equals("sonic");
+                case "s1", "scd" -> character.equals("sonic");
                 case "s2" -> character.equals("sonic") || character.equals("tails");
                 case "s3k" -> character.equals("sonic") || character.equals("tails") || character.equals("knuckles");
                 default -> false;
@@ -883,7 +883,7 @@ public record StageplayDocument(int version, String name, int durationFrames, in
     public enum AudioKind { ROM_MUSIC, ROM_SFX, VOICE, MUSIC_STOP }
 
     private static String game(String value) {
-        require("s1".equals(value) || "s2".equals(value) || "s3k".equals(value), "Unknown gameId: " + value);
+        require("s1".equals(value) || "s2".equals(value) || "s3k".equals(value) || "scd".equals(value), "Unknown gameId: " + value);
         return value;
     }
 

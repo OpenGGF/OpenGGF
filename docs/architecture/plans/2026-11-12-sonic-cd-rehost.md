@@ -414,9 +414,13 @@ unverified lists. The order is not a priority order.
 - Lag frames and CD audio start latency are unmodelled (see
   [known discrepancies](../../status/known-discrepancies.md#sonic-cd-hardware-timings-not-modelled)).
 - Music during pause, real-boot title pixels, a damaged (not missing) disc
-  track, a RAM cartridge, picture columns beyond 320 (in the time tunnel at
-  400 wide the columns outside its 320 turn red as it fades to white), `--no-music` on a Sonic
-  CD capture, a production act change through the game loop against native.
+  track, a RAM cartridge, `--no-music` on a Sonic CD capture, a production
+  act change through the game loop against native.
+- Wide stage views are engine extensions without a native reference. Object
+  draw/touch/unload windows follow simulation width; static PPZ bands retain
+  their own 512-pixel repeat beside moving bands. The warp tunnel fills the
+  display through its white fade; fixed programs and special stages remain
+  pillarboxed. Native level geometry and world-space scripts stay unchanged.
 
 **Licence and history**
 - Genesis Plus GX-derived commits remain in this branch's history (listed in
