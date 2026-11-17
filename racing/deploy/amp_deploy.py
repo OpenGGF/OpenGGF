@@ -85,22 +85,60 @@ def wait_for(amp, session, done, deadline, label):
     raise AmpError(f"{label}: timed out in state {STATE_NAMES.get(seen, seen)}")
 
 
-def wait_for_update(amp, session, deadline):
-    """UpdateApplication returns at once; the update task runs until it disappears."""
+def update_tasks(updates):
+    return [task for task in updates.get("Tasks") or [] if task.get("Origin") == "Core.UpdateApplication"
+            or task.get("Name") == "Running Update Tasks" or task.get("Origin") == "Core.GetUpdates"]
+
+
+def task_ids(amp, session):
+    """Update tasks already listed; AMP keeps failed ones until dismissed, so they are not ours."""
+    return {task.get("Id") for task in update_tasks(amp.call("Core/GetUpdates", session=session))}
+
+
+def wait_for_update(amp, session, deadline, stale_ids, grace_s=30):
+    """UpdateApplication returns at once; wait for the update tasks it starts to end.
+
+    AMP lists an ended task until it is dismissed, so finished tasks carry an EndTime and
+    report success in Status. Tasks listed before the update began are ignored: a failed
+    download left in the list would otherwise hold this wait until it timed out.
+    """
+    started = time.monotonic()
+    seen = False
     while time.monotonic() < deadline:
         updates = amp.call("Core/GetUpdates", session=session)
         for line in updates.get("ConsoleEntries") or []:
             if line.get("Contents"):
                 print(f"  | {line['Contents']}", flush=True)
-        tasks = [task for task in updates.get("Tasks") or [] if task.get("Origin") == "Core.UpdateApplication"
-                 or task.get("Name") == "Running Update Tasks"]
-        failed = [task for task in tasks if task.get("State") == 5]
+        tasks = [task for task in update_tasks(updates) if task.get("Id") not in stale_ids]
+        seen = seen or bool(tasks)
+        failed = [task for task in tasks if task.get("State") == 5
+                  or (task.get("EndTime") and task.get("Status") is False)]
         if failed:
-            raise AmpError(f"update failed: {failed[0].get('Reason') or failed[0].get('StateMessage')}")
-        if not tasks and state(amp, session) == STOPPED:
+            task = failed[0]
+            raise AmpError(f"update failed at {task.get('Speed') or task.get('Name')}: "
+                           f"{task.get('Reason') or task.get('StateMessage')}")
+        running = [task for task in tasks if not task.get("EndTime")]
+        if not running and (seen or time.monotonic() - started > grace_s) \
+                and state(amp, session) == STOPPED:
             return
         time.sleep(2)
     raise AmpError("update timed out")
+
+
+def update(amp, session, deadline, attempts=3):
+    """Run the update stages, retrying a failure such as a transient download error."""
+    for attempt in range(1, attempts + 1):
+        stale_ids = task_ids(amp, session)
+        print("updating" + (f" (attempt {attempt})" if attempt > 1 else ""), flush=True)
+        amp.call("Core/UpdateApplication", session=session)
+        try:
+            wait_for_update(amp, session, deadline, stale_ids)
+            return
+        except AmpError as error:
+            if attempt == attempts or "timed out" in str(error):
+                raise
+            print(f"  {error}; retrying", flush=True)
+            time.sleep(10)
 
 
 def check_endpoint(url, timeout=15):
@@ -135,9 +173,7 @@ def deploy(amp, username, password, instance_id, endpoint, timeout_s):
         if state(api, session) != STOPPED:
             api.call("Core/Stop", session=session)
             wait_for(api, session, lambda s: s == STOPPED, deadline, "stop")
-        print("updating", flush=True)
-        api.call("Core/UpdateApplication", session=session)
-        wait_for_update(api, session, deadline)
+        update(api, session, deadline)
         print("starting", flush=True)
         api.call("Core/Start", session=session)
         try:
