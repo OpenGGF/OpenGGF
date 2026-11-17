@@ -38,7 +38,6 @@ public final class EngineRouteHosts implements RouteWorldFactory {
     static final String HOST_REVISION = "engine-host/1";
 
     private final Map<String, Path> roms;
-    private final Map<Path, RomIdentity> verified = new HashMap<>();
     private final UnaryOperator<GameModule> moduleDecorator;
 
     private EngineRouteHosts(Map<String, Path> roms, UnaryOperator<GameModule> moduleDecorator) {
@@ -46,7 +45,7 @@ public final class EngineRouteHosts implements RouteWorldFactory {
         this.moduleDecorator = moduleDecorator;
     }
 
-    /** Hosts resolving ROMs by game id ({@code s1}, {@code s2}, {@code s3k}). */
+    /** Hosts resolving ROMs by game id ({@code s1}, {@code s2}, {@code s3k}, {@code scd}). */
     public static EngineRouteHosts withRoms(Map<String, Path> roms) {
         return new EngineRouteHosts(roms, null);
     }
@@ -57,7 +56,19 @@ public final class EngineRouteHosts implements RouteWorldFactory {
         put(roms, "s1", System.getProperty("sonic1.rom.path"));
         put(roms, "s2", System.getProperty("sonic2.rom.path"));
         put(roms, "s3k", System.getProperty("s3k.rom.path"));
+        addConfiguredMedia(roms);
         return withRoms(roms);
+    }
+
+    /** Hosted locators own property/configuration precedence; unavailable media remains unavailable. */
+    public static void addConfiguredMedia(Map<String, Path> paths) {
+        for (var id : com.openggf.game.GameModuleRegistry.hostedMediaGames()) {
+            var host = com.openggf.game.GameModuleRegistry.hostedMedia(id);
+            if (host != null && host.probe(com.openggf.game.GameServices.configuration()).available()) {
+                try { paths.put(id.code(), host.configuredPath(com.openggf.game.GameServices.configuration())); }
+                catch (IOException failure) { throw new UncheckedIOException(failure); }
+            }
+        }
     }
 
     private static void put(Map<String, Path> roms, String game, String path) {
@@ -118,12 +129,7 @@ public final class EngineRouteHosts implements RouteWorldFactory {
     }
 
     private synchronized RomIdentity verify(String game, Path path) {
-        return verified.computeIfAbsent(path, p -> {
-            try {
-                return RomIdentity.ofFile(game, p);
-            } catch (IOException failure) {
-                throw new UncheckedIOException(failure);
-            }
-        });
+        try { return RomIdentity.ofFile(game, path); }
+        catch (IOException failure) { throw new UncheckedIOException(failure); }
     }
 }

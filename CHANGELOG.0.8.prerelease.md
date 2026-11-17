@@ -485,6 +485,23 @@ under the matching area heading; see the
 
 ## Modding and tools
 
+- **Sonic CD Stageplay preview:** open verified disc media for native scenes and
+  cold-level route tapes; preserve zone/act/period program identity through
+  detached art and worker transport. Finish native title-card preparation before
+  placing directed players, and admit native Sonic terrain-ground queries.
+  Native/frozen/baked CD object pictures retain tile priority and foreground
+  occlusion, with a disc-backed canopy negative control. Poser body/animation
+  and accessory lookup follows each shot’s selected program rather than default
+  stage art.
+  Scene music cues reach CDDA and the selected Past-stage PCM driver through
+  the no-device production audio path. Stageplay and route-tape game choices
+  include CD, with native solo roster defaults. Route discovery and CLI snapshots
+  use verified disc sources, binding all tracks rather than CUE/container bytes.
+  Object coverage inventories all 70 zone/act/period contexts without implying
+  behavior or pixel certification. Cartridge preview and exports retain their
+  reader boot path alongside disc hosting. Validation scope is recorded in the
+  Sonic CD Stageplay validation record.
+
 - **Sonic CD mod host:** admit `scd` patch manifests and `any` registrations;
   route hosted runs through the disc launcher, expose file-addressed scene and
   object art, and accept CDDA/PCM music-command replacements. Module capabilities

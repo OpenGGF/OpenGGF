@@ -603,6 +603,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		for (var identity : java.util.List.of(com.openggf.data.RomIdentity.S1, com.openggf.data.RomIdentity.S2, com.openggf.data.RomIdentity.S3K))
 			romManager.resolveLogicalRom(identity).flatMap(com.openggf.data.RomImageCatalogue.Resolution::wholeImagePath)
 					.ifPresent(path -> roms.put(identity == com.openggf.data.RomIdentity.S1 ? "s1" : identity == com.openggf.data.RomIdentity.S2 ? "s2" : "s3k", path));
+		com.openggf.tools.EngineRouteHosts.addConfiguredMedia(roms);
 		return roms;
 	}
 

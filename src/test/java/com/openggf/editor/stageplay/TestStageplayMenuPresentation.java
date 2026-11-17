@@ -38,6 +38,13 @@ class TestStageplayMenuPresentation {
         return workspace;
     }
 
+    @Test void cdDiscStageIsOfferedByTheGamePicker() throws Exception {
+        com.openggf.game.soniccd.CdTestMedia.usaCue();
+        var menu = workspace().menu();
+        menu.showForm(PresentationKind.DEFAULT, "Set", List.of(new EditorProjectMenu.Field("game", "Game", "s2", List.of())), "Apply", values -> { });
+        assertTrue(menu.formFields().getFirst().choices().contains("scd"));
+    }
+
     @Test
     void frenchAndArabicTitlesRetainPositionPickerIntentWithoutChangingTheDocument() {
         for (String title : List.of("Position du personnage", "موضع الشخصية")) {

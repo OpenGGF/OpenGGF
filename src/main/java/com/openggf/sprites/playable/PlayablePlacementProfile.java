@@ -22,7 +22,8 @@ public record PlayablePlacementProfile(Offset leftFoot, Offset rightFoot, Offset
         // The shared registry contains all stock bodies; native donor availability is narrower.
         // A constructible S1 Tails body, for example, is not an S1-supported performer.
         var capabilities = donor.getDonorCapabilities();
-        if (!key.isBuiltin() || capabilities == null || !capabilities.getPlayableCharacters().contains(definition.behavesLike()))
+        if (!key.isBuiltin() || !donor.getStockRunCharacters().contains(character)
+                && (capabilities == null || !capabilities.getPlayableCharacters().contains(definition.behavesLike())))
             throw new IllegalArgumentException("Native donor does not provide character " + character);
         var services = EngineServices.current();
         var audio = AudioManager.createSilent();
