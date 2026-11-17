@@ -198,11 +198,14 @@ public final class CdHud extends CdObject implements FixedRuntimeObjectInstance,
         PatternSpriteRenderer renderer = art(CdObjectArtProvider.HUD);
         var camera = services().camera();
         if (renderer == null || camera == null) return;
-        var donorLife = artProvider().donorLifeRenderer();
-        if (kind == Kind.LIVES && donorLife != null)
-            donorLife.drawFrame(0, camera.getX() + SCREEN_X, camera.getY() + kind.screenY, false, false);
+        // The donor's life icon is part of the lives piece, so it follows the same HUD anchor.
+        int x = camera.getX() + CdScreenPosition.hudOrigin(services()) + SCREEN_X;
+        if (kind == Kind.LIVES) {
+            var donorLife = artProvider().donorLifeRenderer();
+            if (donorLife != null) donorLife.drawFrame(0, x, camera.getY() + kind.screenY, false, false);
+        }
         int palette = CdObjectArtProvider.tilePalette(tileWord);
-        renderer.drawFrameIndex(kind.frame, camera.getX() + CdScreenPosition.hudOrigin(services()) + SCREEN_X, camera.getY() + kind.screenY, false, false, palette);
+        renderer.drawFrameIndex(kind.frame, x, camera.getY() + kind.screenY, false, false, palette);
     }
 
     @Override public int getPriorityBucket() { return RenderPriority.bucket(priority); }

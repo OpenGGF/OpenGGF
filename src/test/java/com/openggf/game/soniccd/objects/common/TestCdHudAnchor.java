@@ -52,6 +52,13 @@ class TestCdHudAnchor {
         when(services.camera()).thenReturn(camera);
         when(services.graphicsManager()).thenReturn(graphics);
         when(services.renderManager()).thenReturn(renders);
+        var donorLife = mock(com.openggf.sprites.render.PlayerSpriteRenderer.class);
+        var art = mock(com.openggf.game.soniccd.objects.art.CdObjectArtProvider.class);
+        when(art.image()).thenReturn(mock(com.openggf.game.soniccd.level.CdStageImage.class));
+        when(art.donorLifeRenderer()).thenReturn(donorLife);
+        var module = mock(com.openggf.game.GameModule.class);
+        when(module.getGameService(com.openggf.game.soniccd.objects.art.CdObjectArtProvider.class)).thenReturn(art);
+        when(services.gameModule()).thenReturn(module);
         for (var kind : CdHud.Kind.values()) {
             clearInvocations(renderer);
             var piece = ObjectConstructionContext.construct(services, () -> new CdHud(kind));
@@ -60,6 +67,10 @@ class TestCdHudAnchor {
             verify(renderer).drawFrameIndex(kind.frame, camera.getX() + origin + 16,
                     camera.getY() + kind.screenY, false, false, 0);
         }
+        // A donated character's life icon belongs to the lives piece and follows the same anchor.
+        verify(donorLife).drawFrame(0, camera.getX() + origin + 16,
+                camera.getY() + CdHud.Kind.LIVES.screenY, false, false);
+        verifyNoMoreInteractions(donorLife);
         clearInvocations(renderer);
         var icon = ObjectConstructionContext.construct(services, CdTimeIcon::new);
         icon.setServices(services);
