@@ -21,6 +21,8 @@ import com.openggf.control.RecordedInputOwnership;
 import com.openggf.graphics.pipeline.UiRenderPipeline;
 import com.openggf.graphics.shaderlib.RewindVhsEffectPass;
 import com.openggf.level.LevelManager;
+import com.openggf.level.LevelMotionAccess;
+import com.openggf.level.PictureSelection;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -162,6 +164,16 @@ public final class GameplayCaptureSession implements AutoCloseable {
 
     private boolean showTitleCard;
     private boolean completeSpecialStage;
+    private boolean interpolation;
+
+    /**
+     * Retains the production display-interpolation history ({@code display.interpolation}) after
+     * each direct gameplay step, as the live window's service does, so {@link #render(PictureSelection)}
+     * can draw pictures between the two newest logic frames. Off by default: captures stay exact.
+     */
+    public void enableInterpolation() {
+        interpolation = true;
+    }
 
     /** Boots with a packaged patch mod applied, as if it were enabled in the launcher. */
     public void applyMod(Path modJar) throws IOException {
@@ -443,7 +455,10 @@ public final class GameplayCaptureSession implements AutoCloseable {
         if (pressComplete) {
             loop.debugCompleteSpecialStageWithEmerald();
         }
+        // Engine's live tick installs capture intent before the service and observes it after.
+        if (interpolation) LevelMotionAccess.prepareService(GameServices.level(), true);
         loop.step();
+        if (interpolation) LevelMotionAccess.observeService(GameServices.level(), GameServices.spritesOrNull(), true);
         // Native menu launches replace the entire runtime. Capture state must
         // follow the same current participant the renderer and GameLoop use.
         var currentSprites = GameServices.spritesOrNull();
@@ -478,6 +493,24 @@ public final class GameplayCaptureSession implements AutoCloseable {
     /** Renders the current frame through the gameplay renderer and reads it back. */
     public RgbaImage render() {
         return render(true);
+    }
+
+    /**
+     * Renders one picture of the newest logic frame at {@code selection} through the live window's
+     * interpolation owner ({@link LevelMotionAccess#present}, as {@code Engine} draws a window
+     * picture). The phase is the caller's: nothing here reads a clock. Needs
+     * {@link #enableInterpolation()}; scenes the production path does not blend draw exact.
+     */
+    public RgbaImage render(PictureSelection selection) {
+        requireBooted();
+        if (!interpolation) throw new IllegalStateException("enableInterpolation() before the first step");
+        LevelMotionAccess.present(GameServices.level(), selection, () -> drawFrame(true));
+        return ScreenshotCapture.captureFramebuffer(width, presentationHeight());
+    }
+
+    /** What the production path did with the last phased picture (BLENDED, SNAPPED, PRIMING, ...); diagnostics only. */
+    public String lastMotionOutcome() {
+        return LevelMotionAccess.panelOutcome(GameServices.level()).substring("lvl ".length());
     }
 
     /** Renders with or without the sprite pass; the tiles-only image is a baseline for pixel checks. */

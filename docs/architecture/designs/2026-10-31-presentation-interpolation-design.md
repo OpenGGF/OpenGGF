@@ -66,9 +66,14 @@ dispatcher stamps its tiles with its `ObjectRefId` and ROM centre position. If i
 tiles from the camera, `TestCameraRelativeDrawGuard` fails until it carries
 `@CameraRelativeDraw(SCREEN_POSITION)` (or `CULL_ONLY` when the camera read only culls).
 
-**Offline tools and tests** change nothing and never blend: they never call
-`LevelMotionAccess.present`, and a guard pins Engine as its only production caller. A pixel test that
-wants a blend calls `present` explicitly with `PictureSelection.between(a)`.
+**Offline tools and tests** change nothing and stay exact by default: they never call
+`LevelMotionAccess.present`, and a guard pins its production callers. Engine is the only live caller.
+The one offline exception (0.8) is `GameplayCaptureSession`, and only for an explicit
+`GameplayCaptureTool --pictures-per-frame N --interpolation` capture, which exists to film this feature:
+it observes after each step and presents picture k at `PictureSelection.between(k/N)`, a phase taken
+from the picture index, never a clock. Without that flag the session calls neither method. Every other
+tool stays rejected by `TestLevelMotionCallerGuard`. A pixel test that wants a blend calls `present`
+explicitly with `PictureSelection.between(a)`.
 
 ## Shape
 

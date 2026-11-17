@@ -160,6 +160,51 @@ class TestGameplayCaptureToolArgs {
     }
 
     @Test
+    void phasedPicturesAreOptInAndInterpolationNeedsMoreThanOnePicture() {
+        String[] base = {"--zone", "cnz", "--act", "1", "--out-dir", "out"};
+        var bare = GameplayCaptureTool.Arguments.parse(base);
+        assertEquals(1, bare.picturesPerFrame());
+        assertFalse(bare.interpolation());
+        var repeated = GameplayCaptureTool.Arguments.parse(with(base, "--pictures-per-frame", "4"));
+        assertEquals(4, repeated.picturesPerFrame());
+        assertFalse(repeated.interpolation(), "more pictures alone repeat the exact picture");
+        var blended = GameplayCaptureTool.Arguments.parse(with(base, "--pictures-per-frame", "4", "--interpolation"));
+        assertEquals(4, blended.picturesPerFrame());
+        assertTrue(blended.interpolation());
+        for (String[] bad : new String[][] {
+                {"--interpolation"}, {"--pictures-per-frame", "1", "--interpolation"},
+                {"--pictures-per-frame", "0"}, {"--pictures-per-frame", "17"},
+                {"--pictures-per-frame", "2", "--interactive-pacing"},
+                {"--pictures-per-frame", "2", "--interpolation", "--rewind", "10:5"}}) {
+            assertThrows(IllegalArgumentException.class,
+                    () -> GameplayCaptureTool.Arguments.parse(with(base, bad)), String.join(" ", bad));
+        }
+        assertEquals(2, GameplayCaptureTool.Arguments.parse(
+                with(base, "--pictures-per-frame", "2", "--rewind", "10:5")).picturesPerFrame(),
+                "repeated exact pictures keep the rewind capture");
+    }
+
+    @Test
+    void picturePhasesDivideTheLogicFrameEvenlyAndNeverReachTheNextOne() {
+        for (int count = 2; count <= GameplayCaptureTool.MAX_PICTURES_PER_FRAME; count++) {
+            for (int phase = 0; phase < count; phase++) {
+                var selection = GameplayCaptureTool.picturePhase(phase, count);
+                var between = org.junit.jupiter.api.Assertions.assertInstanceOf(
+                        com.openggf.level.PictureSelection.Between.class, selection);
+                assertEquals((double) phase / count, between.alpha());
+            }
+        }
+        assertThrows(IllegalArgumentException.class, () -> GameplayCaptureTool.picturePhase(4, 4));
+        assertThrows(IllegalArgumentException.class, () -> GameplayCaptureTool.picturePhase(-1, 4));
+    }
+
+    private static String[] with(String[] base, String... extra) {
+        var flags = new java.util.ArrayList<>(java.util.List.of(base));
+        flags.addAll(java.util.List.of(extra));
+        return flags.toArray(String[]::new);
+    }
+
+    @Test
     void noHudIsOffByDefaultAndAcceptsNoValue() {
         assertFalse(GameplayCaptureTool.Arguments.parse(new String[] {
                 "--zone", "ghz", "--act", "1", "--out-dir", "out"}).noHud());

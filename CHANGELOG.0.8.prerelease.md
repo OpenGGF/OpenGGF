@@ -832,6 +832,17 @@ under the matching area heading; see the
   Sonic 1 or Sonic 2 capture with S3K donating shows the generated zone previews
   instead of S3K's placeholders.
 
+- **Interpolated gameplay captures:** `GameplayCaptureTool --pictures-per-frame N`
+  writes N evenly spaced pictures of every logic frame (N 4 is a 240 fps video), and
+  `--interpolation` draws each through the live window's `display.interpolation`
+  path at phase k/N of the frame. The phase comes from the picture's index, never
+  a wall clock, so a capture repeats exactly; gameplay, `state.csv` and audio are
+  unchanged. Without `--interpolation` the exact picture is repeated N times, so
+  an interpolated and an exact capture of one input share a picture rate for
+  side-by-side comparison. `pictures.csv` names each picture's frame, phase and
+  the renderer's outcome (`BLENDED`, `SNAPPED`, ...). One picture per frame and
+  no interpolation remain the defaults.
+
 ## Maintenance and release preparation
 
 - ICZ background loop history and indoor selection now belong to the event owner,
