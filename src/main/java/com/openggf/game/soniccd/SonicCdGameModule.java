@@ -42,6 +42,10 @@ import java.util.List;
  * Stages come from the user's disc through {@link CdDiscDataSource}.
  */
 public final class SonicCdGameModule implements GameModule {
+    // Native CD object animation families are stage-program-owned; no donor composition adapter exists.
+    @Override public boolean supportsCrossGameHost() { return false; }
+    @Override public java.util.List<String> getStockRunCharacters() { return java.util.List.of("sonic"); }
+
     /**
      * Trace playback facts for {@code scd} fixtures. Every multi-segment alignment is
      * off: no CD fixture yet crosses a level, results or special-stage boundary, so no
@@ -143,6 +147,8 @@ public final class SonicCdGameModule implements GameModule {
         return world != null && world.getDataSource() instanceof CdDiscDataSource source ? source : null;
     }
 
+    @Override public com.openggf.game.modzone.ModZoneAdapter getModZoneAdapter() { return new CdModZoneAdapter(); }
+
     @Override public String getIdentifier() { return "SonicCD"; }
     @Override public com.openggf.game.TitleScreenProvider getTitleScreenProvider() { return titleScreen; }
     @Override public com.openggf.game.LevelSelectProvider getLevelSelectProvider() { return stageSelect; }
@@ -220,6 +226,12 @@ public final class SonicCdGameModule implements GameModule {
 
     @Override
     public <T> T getGameService(Class<T> type) {
+        if (type == com.openggf.game.internal.SceneEntryPreparation.class)
+            return type.cast((com.openggf.game.internal.SceneEntryPreparation) world ->
+                world.getLevelManager().getObjectManager().getActiveObjects().stream().anyMatch(object ->
+                    object instanceof com.openggf.game.soniccd.objects.common.CdTitleCard && !object.isDestroyed()));
+        if (type == com.openggf.game.internal.MediaSceneArt.class) return type.cast(new CdMediaSceneArt());
+        if (type == com.openggf.game.soniccd.objects.art.CdObjectArtProvider.class) return type.cast(objectArt);
         // ObjHUD draws the HUD as level objects (HUD and Points/Main.asm:67-140).
         if (type == com.openggf.game.internal.ObjectDrawnHud.class) return type.cast(objectArt);
         // Lane CAPTURE: the capture tools open the disc and name stages through this.

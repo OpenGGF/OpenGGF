@@ -131,7 +131,7 @@ public record ModRegistrationPlan(String ownerModId, String baseGameId,
                 || !romObjectArt.isEmpty()
                 || !launchTeams.isEmpty() || !inputFilters.isEmpty() || !hudProfiles.isEmpty()
                 || !decodedLevelPatches.isEmpty()
-                || explicitPatches.stream().anyMatch(patch -> !List.of("s1", "s2", "s3k").contains(patch.baseGameId())))) {
+                || explicitPatches.stream().anyMatch(patch -> !List.of("s1", "s2", "s3k", "scd").contains(patch.baseGameId())))) {
             throw new IllegalArgumentException(ModContext.ANY_GAME_RULE);
         }
     }
@@ -139,7 +139,7 @@ public record ModRegistrationPlan(String ownerModId, String baseGameId,
     /** Expands a validated shared scene/catalogue without leaking another game's decorators. */
     List<ModRegistrationPlan> stockScenePlans() {
         if (!"any".equals(baseGameId)) return List.of(this);
-        return List.of("s1", "s2", "s3k").stream().map(game -> new ModRegistrationPlan(
+        return List.of("s1", "s2", "s3k", "scd").stream().map(game -> new ModRegistrationPlan(
                 ownerModId, game, objectFactories, objectArt, preparedObjectArt,
                 explicitPatches.stream().filter(patch -> game.equals(patch.baseGameId())).toList(),
                 zones, preparedZones, objectPreviewArtKeys, characters, null, romObjectArt,

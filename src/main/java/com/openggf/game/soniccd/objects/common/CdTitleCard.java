@@ -124,8 +124,7 @@ public final class CdTitleCard extends CdObject implements FixedRuntimeObjectIns
         slideInTarget = 0xF0;
         animTime = 0x5A;
         priority = 4;
-        var provider = services().renderManager() != null
-                && services().renderManager().getArtProvider() instanceof CdObjectArtProvider p ? p : null;
+        var provider = artProvider();
         var objects = services().objectManager();
         if (provider == null || provider.image() == null || objects == null) return;
         var image = provider.image();
@@ -156,7 +155,7 @@ public final class CdTitleCard extends CdObject implements FixedRuntimeObjectIns
         var camera = services().camera();
         if (renderer == null || camera == null) return;
         // oSprFlags bits 2-3 clear: screen coordinates, 128 = left/top edge (DrawObjects).
-        renderer.drawFrameIndex(frame, camera.getX() + x - 128, camera.getY() + screenY - 128, false, false,
+        renderer.drawFrameIndex(frame, camera.getX() + CdScreenPosition.centredOrigin(services()) + x - 128, camera.getY() + screenY - 128, false, false,
                 CdObjectArtProvider.tilePalette(tileWord));
     }
 

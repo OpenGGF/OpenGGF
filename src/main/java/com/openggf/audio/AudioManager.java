@@ -1447,6 +1447,11 @@ public class AudioManager implements MusicRestoreSink {
                 : AudioRequestObserver.RequestClass.MUSIC, musicId);
         BaseAudioSource source = sourcePublication.base();
         GameAudioProfile profile = source.profile();
+        if (profile instanceof ExternalMusicCommands external
+                && external.routeMusicRequest(musicId, streamedMusicPort)) {
+            admitMusicWithoutRequestService(source, musicId);
+            return;
+        }
         if (profile != null) {
             presentationBinding.ensureShadowPresentation();
             if (presentationBinding.shadowRequestService != null) {

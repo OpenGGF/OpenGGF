@@ -69,4 +69,15 @@ final class CdSpecialSplash {
         routine = 2;
         return false;
     }
+
+    State capture() { return new State(sprite.capture(), present, deleting, routine, timer); }
+    void restore(State s) {
+        sprite.restore(s.sprite());
+        present = s.present();
+        deleting = s.deleting();
+        routine = s.routine();
+        timer = s.timer();
+    }
+    record State(CdSpecialSprites.Sprite.State sprite, boolean present, boolean deleting, int routine, int timer) {
+    }
 }

@@ -151,7 +151,7 @@ public final class TtzBossEggman extends TtzBossPart implements TouchResponseAtt
         Camera camera = services().camera();
         if (camera == null || player == null) return;
         camera.setMaxX((short) ARENA_X);                                // right_bound, target_right_bound
-        int left = (short) (player.getCentreX() - 0xA0);
+        int left = (short) (player.getCentreX() - camera.getWidth() / 2);
         if (left < camera.getMinX()) return;                            // cmp.w left_bound,d0; blt.s
         if ((short) player.getCentreX() >= 0xA50) {
             subCpu(SCMD_BOSSMUS);

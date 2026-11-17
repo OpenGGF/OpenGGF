@@ -51,7 +51,11 @@ under the matching area heading; see the
   graphics, and object names follow the current stage's object table. Palmtree
   Panic backgrounds sample each row's own camera section, retaining static-row
   repetition without wrapping the moving scenery. Results show the changing
-  score and bonus digits. Holding Escape returns Sonic CD to the game shelf
+  score and bonus digits. Wider views extend CD object draw/touch and lifetime
+  windows, centre boss locks, title cards, results and game-over text, and fill the time tunnel
+  through its white fade. CD HUD pieces, including the time-period and warp icons,
+  follow the centred or left-edge HUD setting in both widescreen draw modes. Native 320-wide math, level walls and pillarboxed
+  programs/special stages retain their native dimensions. Holding Escape returns Sonic CD to the game shelf
   with a resumable card, the correct act label and settings restored on resume.
   Sonic plays on Sonic 1's physics
   with Sonic CD's own rules (spin dash and super peel-out, the extended camera,
@@ -59,7 +63,8 @@ under the matching area heading; see the
   Sonic giving up). Time travel, special stages
   and their results (the bonuses reach the score), the title, stage select, Time Attack and
   backup RAM (saved in `saves/soniccd`), the opening video, both endings, FM
-  effects, CD audio and PCM sound are hosted. The master
+  effects, CD audio and PCM sound are hosted. Held-key live rewind works inside
+  special stages, including the three-frame floor pipeline, UFOs and effects. The master
   title lists it when the disc is configured or found (`roms.default: scd` boots
   it directly) and verifies it against the USA release before starting. A CHD
   is verified by the same content fingerprint as a BIN/CUE set, so it is
@@ -479,6 +484,32 @@ under the matching area heading; see the
     tally to end the run, so a finisher used to stay on the finish screen.
 
 ## Modding and tools
+
+- **Sonic CD Stageplay preview:** open verified disc media for native scenes and
+  cold-level route tapes; preserve zone/act/period program identity through
+  detached art and worker transport. Finish native title-card preparation before
+  placing directed players, and admit native Sonic terrain-ground queries.
+  Native/frozen/baked CD object pictures retain tile priority and foreground
+  occlusion, with a disc-backed canopy negative control. Poser body/animation
+  and accessory lookup follows each shot’s selected program rather than default
+  stage art.
+  Scene music cues reach CDDA and the selected Past-stage PCM driver through
+  the no-device production audio path. Stageplay and route-tape game choices
+  include CD, with native solo roster defaults. Route discovery and CLI snapshots
+  use verified disc sources, binding all tracks rather than CUE/container bytes.
+  Object coverage inventories all 70 zone/act/period contexts without implying
+  behavior or pixel certification. Cartridge preview and exports retain their
+  reader boot path alongside disc hosting. Validation scope is recorded in the
+  Sonic CD Stageplay validation record.
+
+- **Sonic CD mod host:** admit `scd` patch manifests and `any` registrations;
+  route hosted runs through the disc launcher, expose file-addressed scene and
+  object art, and accept CDDA/PCM music-command replacements. Module capabilities
+  select native run characters and explicitly refuse unsupported donor hosts.
+  CD authored terrain supports owned objects; native objects retain their stage
+  program context. Audio-state restoration also restores the native/streamed
+  music selection. This extends unpublished API candidate 0.7.0.
+
 
 - **Game rules belong to the module:** `GameModule.getPolicies()` now returns an
   immutable `GamePolicies` record holding the game's `GameRules`, so camera, ring,

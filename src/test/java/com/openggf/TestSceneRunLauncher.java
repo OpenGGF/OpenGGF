@@ -63,6 +63,12 @@ class TestSceneRunLauncher {
         assertThrows(IllegalStateException.class, () -> launcher.launch(spec("s2", "sonic"), new RunHost() { }));
     }
 
+    @Test void cdRunsUseNativeSonicAdmission() {
+        var cd = new SceneRunLauncher(loop, host -> host, List.of("scd"), started::add, returned::add);
+        assertThrows(IllegalArgumentException.class, () -> cd.launch(spec("scd", "tails"), new RunHost() {}));
+        assertTrue(cd.launch(spec("scd", "sonic"), new RunHost() {}).isActive());
+    }
+
     @Test
     void fingerprintsAreOfferedOnlyForAvailableGames() {
         SceneRunLauncher withFingerprints = new SceneRunLauncher(loop, host -> host, List.of("s2"),

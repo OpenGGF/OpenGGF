@@ -247,7 +247,7 @@ class TestModManagerScreen {
     void modListIdentifiesEachPatchGameAndStandaloneMods() {
         List<ModDescriptor> mods = new ArrayList<>();
         String[] games = {"s1", "s2", "s3k", "any", null};
-        String[] labels = {"[S1] ", "[S2] ", "[S3K] ", "[S1/S2/S3K] ", "[Standalone] "};
+        String[] labels = {"[S1] ", "[S2] ", "[S3K] ", "[S1/S2/S3K/CD] ", "[Standalone] "};
         for (int index = 0; index < games.length; index++) {
             String id = "pack-game" + index;
             ModManifest manifest = new ModManifest(1, id, "Game " + index,

@@ -1366,3 +1366,13 @@ characters substitute their archetype wheel slot without supplying miniature
 physics. This additive change updates the mutable 0.7 signatures and runtime
 description under the release descriptor's unchanged unpublished candidate
 0.7.0 policy. No published baseline changes.
+
+## Sonic CD media capabilities
+
+The mutable `0.7` pin adds file-addressed scene art, program object-art intake,
+placement-addition ordering and native run/host capabilities. Descriptor and
+`ModApiVersion.CURRENT` remain candidate `0.7.0`; no baseline is published and
+branch topology is unchanged. Shared orchestration consumes module/media
+capabilities. A missing cartridge capability never means standalone assets can
+supply stock CD bytes. See [CD mod contracts](../modding/ggfmod.md#sonic-cd-runtime-mods)
+for supported formats and explicit refusals.

@@ -82,6 +82,8 @@ import static java.security.MessageDigest.getInstance;
  * GameModule implementation for Sonic the Hedgehog 1 (Mega Drive/Genesis).
  */
 public class Sonic1GameModule implements com.openggf.game.internal.RetailRomAware, GameModule, com.openggf.game.internal.SpriteTableBuildProfile {
+    @Override public java.util.List<String> getStockRunCharacters() { return java.util.List.of("sonic"); }
+
     @Override
     public PlacedRings placedRingEmission() {
         return PlacedRings.OBJECT_SLOTS;

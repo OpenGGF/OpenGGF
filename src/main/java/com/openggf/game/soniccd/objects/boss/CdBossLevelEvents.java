@@ -44,7 +44,7 @@ public final class CdBossLevelEvents {
         int distance = (short) (bottom - camera.getMaxY());
         if (distance < 0) distance = -distance;                           // bpl.s .CheckNearBound; neg.w d1
         if (distance < 4) camera.setMaxYCurrent((short) bottom);          // cmpi.w #4,d1; bge.s .NoYLock
-        int left = (short) (playerX - 320 / 2);                           // subi.w #320/2,d0
+        int left = (short) (playerX - camera.getWidth() / 2);                           // subi.w #320/2,d0
         if (left < camera.getMinX()) return true;                         // cmp.w leftBound,d0; blt.s .BoundsSet
         if (left > camera.getMaxX()) left = camera.getMaxX();             // cmp.w rightBound,d0; ble.s .NoBoundSet
         camera.setMinX((short) left);                                     // leftBound and destLeftBound

@@ -155,8 +155,9 @@ public final class StageplayLiveWorld implements AutoCloseable {
             var anchor = actor.keys().stream().filter(k -> k.frame() == first).findFirst().orElseThrow();
             performers.add(new Performer(actor, track, anchor));
         }
-        var rom = Objects.requireNonNull(library.sourceRom(set.gameId()), "Supply the live world's ROM");
-        if (!set.romSha1().isEmpty() && !set.romSha1().equalsIgnoreCase(library.rom(set.gameId()).romSha1()))
+        var dataSource = library.source(set.gameId());
+        var rom = dataSource.rom().orElse(null);
+        if (!set.romSha1().isEmpty() && !set.romSha1().equalsIgnoreCase(library.stageArt(set.gameId(), set.zone(), set.act()).romSha1()))
             throw new IllegalArgumentException("Live world ROM identity mismatch");
         closeOwned();
         this.document = null; source = null; start = -1; cursor = -1; last = null;
@@ -212,10 +213,10 @@ public final class StageplayLiveWorld implements AutoCloseable {
         com.openggf.graphics.RenderContext.reset();
         services.graphics().clearPaletteTextures();
         try {
-            services.roms().setRom(rom);
+            if (rom != null) services.roms().setRom(rom);
             GameModule module = GameModuleRegistry.createStockModule(GameId.fromCode(set.gameId()));
             module = new StageplayWorldModule(module, authoredTerrain, suppressedPlacements);
-            owned = SessionManager.openGameplaySession(module, module, StockGameDataSources.pinned(rom, module), null);
+            owned = SessionManager.openGameplaySession(module, module, dataSource, null);
             GameplaySessionFactory.attachManagers(owned, services);
             services.graphics().bindRuntimeManagedReferences(owned.getCamera(), owned.getFadeManager());
             var team = GameplayTeamBootstrap.registerActiveTeam(module, owned.getSpriteManager(), config);
@@ -234,6 +235,24 @@ public final class StageplayLiveWorld implements AutoCloseable {
             owned.getLevelManager().skipPendingInitialTitleCardPresentation();
             // Each authored shot is a fresh world, independent of the host's prior seek order.
             owned.getLevelManager().getObjectManager().initVblaCounter(0);
+            // Some native entries hold the controller in fixed objects, outside a
+            // title-screen provider. Let their actual production lifetime finish before
+            // directing or CLEAR_OBJECTS can retire the owner of that lock.
+            var entry = module.getGameService(com.openggf.game.internal.SceneEntryPreparation.class);
+            for (int preparation = 0; entry != null && entry.pending(owned); preparation++) {
+                check.run();
+                if (preparation >= 600) throw new IllegalStateException("Native scene entry did not become ready");
+                var neutral = Map.of(owned.getSpriteManager().getMainPlayable().getCode(), PlayerInputState.neutral());
+                EngineTiming.vIntRunCounter().serviceRepresentedVBlank();
+                owned.getSpriteManager().withScriptedInputs(neutral, handler ->
+                    owned.plcFrameLifecycle().runLogicalIteration(owned.getFadeManager()::update, token -> {
+                        var context = LevelFrameContext.from(owned);
+                        LevelFrameStep.updateTimers(context);
+                        return LevelFrameStep.execute(context, token, PlcLifecyclePhase.ORDINARY_LEVEL,
+                            owned.getLevelManager(), owned.getCamera(), () -> owned.getSpriteManager().update(handler),
+                            LevelFrameStep.DIRECT_WRAPPER);
+                    }));
+            }
             // Retire the one native assembly scan before authoring initial positions. It is not a story tick.
             LevelFrameStep.admit(LevelFrameContext.from(owned), owned.getLevelManager(), false);
                 if (performers.isEmpty()) {

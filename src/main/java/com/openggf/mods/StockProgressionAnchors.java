@@ -20,7 +20,8 @@ public final class StockProgressionAnchors {
     private static final Map<String, Set<String>> BY_GAME = Map.of(
             "s1", Set.of(),
             "s2", Set.of("ehz2", "cpz2", "arz2", "cnz2", "htz2", "mcz2", "ooz2", "mtz3"),
-            "s3k", Set.of());
+            "s3k", Set.of(),
+            "scd", Set.of());
 
     private StockProgressionAnchors() {
     }

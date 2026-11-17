@@ -26,9 +26,6 @@ import com.openggf.game.soniccd.objects.art.CdObjectArtProvider;
  * </ul>
  */
 public abstract class CdObject extends AbstractObjectInstance {
-    /** CheckObjDespawn2: cmpi.w #$80+(320+$40)+$80,d0; bls (Object Spawner.asm:398-399). */
-    private static final int DESPAWN_RANGE = 0x80 + (320 + 0x40) + 0x80;
-
     protected int x;
     protected int y;
     protected int priority;
@@ -161,7 +158,7 @@ public abstract class CdObject extends AbstractObjectInstance {
     /** {@code DrawObject}'s on-screen test (Object Functions.asm:136-191) at camera ({@code cameraX}, {@code cameraY}). */
     private boolean drawObjectOnScreen(int cameraX, int cameraY) {
         int dx = (short) (x - cameraX);
-        if ((short) (dx + width) < 0 || (short) (dx - width) >= 320) return false;
+        if ((short) (dx + width) < 0 || (short) (dx - width) >= com.openggf.game.soniccd.objects.CdObjectWindowing.simulationWidth()) return false;
         int objectY = y & 0xFFFF;
         if (cameraY < 0x100) {
             if (objectY >= 0x800) objectY -= 0x800;                    // wrap to the top of the screen
@@ -192,18 +189,22 @@ public abstract class CdObject extends AbstractObjectInstance {
     }
 
     /** CheckObjDespawn2 (Object Spawner.asm:388-399): on screen keeps; else chunk distance > range. */
-    static boolean outsideDespawnRange(int objX, int cameraX, boolean onScreen) {
+    protected static boolean outsideDespawnRange(int objX, int cameraX, boolean onScreen) {
         if (onScreen) return false;
-        int chunk = objX & 0xFF80;
-        int cameraChunk = (cameraX - 0x80) & 0xFF80;
-        return ((chunk - cameraChunk) & 0xFFFF) > DESPAWN_RANGE;
+        return com.openggf.game.soniccd.objects.CdObjectWindowing.outside(objX, cameraX,
+                com.openggf.game.soniccd.objects.CdObjectWindowing.simulationWidth());
+    }
+
+    /** Engine observation only; unlike the ROM end flag this never changes player physics. */
+    protected final void signalActCompletion() {
+        var game = services().gameState();
+        if (game != null) game.setActCompletionSignalActive(true);
     }
 
     /** The stage's object art owner, or {@code null} before art is loaded. */
     protected CdObjectArtProvider artProvider() {
-        var renderManager = services().renderManager();
-        return renderManager != null && renderManager.getArtProvider() instanceof CdObjectArtProvider provider
-                && provider.image() != null ? provider : null;
+        var provider = services().gameModule().getGameService(CdObjectArtProvider.class);
+        return provider != null && provider.image() != null ? provider : null;
     }
 
     /** An animator over one of the stage's script tables, or {@code null} before art is loaded. */

@@ -72,9 +72,9 @@ public final class RomSoundCatalog {
     }
 
     private static Catalog catalog(String game) {
-        if (game == null || !List.of("s1", "s2", "s3k").contains(game)) {
+        if (game == null || !List.of("s1", "s2", "s3k", "scd").contains(game)) {
             throw new IllegalArgumentException("Unknown ROM sound game: " + game
-                    + " (expected s1, s2 or s3k)");
+                    + " (expected s1, s2, s3k or scd)");
         }
         return GameModuleRegistry.stockRomSoundCatalog(GameId.fromCode(game));
     }

@@ -1245,17 +1245,13 @@ public class SmpsSequencer implements CoordFlagContext {
         }
         List<? extends SmpsSfxData.SmpsSfxTrack> entries =
                 sfxData.getTrackEntries();
-        if (entries.size() != tracks.size()) {
-            throw new IllegalArgumentException(
-                    "SFX contains an invalid channel or pointer");
-        }
         int z80Start = smpsData.getZ80StartAddress();
         for (int index = 0; index < entries.size(); index++) {
             SmpsSfxData.SmpsSfxTrack entry = entries.get(index);
             int pointer = relocate(entry.pointer(), z80Start);
             if (pointer < 0 || pointer >= programView.dataLength()) {
                 throw new IllegalArgumentException(
-                        "SFX track pointer is outside the program");
+                        sfxAdmissionError("SFX track pointer is outside the program", index, entry, pointer));
             }
             int channel = entry.channelMask();
             boolean valid = channel == 0x16 || channel == 0x10
@@ -1263,9 +1259,24 @@ public class SmpsSequencer implements CoordFlagContext {
                     || mapPsgChannel(channel) >= 0;
             if (!valid) {
                 throw new IllegalArgumentException(
-                        "SFX track has an invalid channel mask");
+                        sfxAdmissionError("SFX track has an invalid channel mask", index, entry, pointer));
             }
         }
+        if (entries.size() != tracks.size()) {
+            int index = Math.min(tracks.size(), entries.size() - 1);
+            SmpsSfxData.SmpsSfxTrack entry = index >= 0 ? entries.get(index) : null;
+            throw new IllegalArgumentException(sfxAdmissionError(
+                    "SFX contains an invalid channel or pointer", index, entry,
+                    entry == null ? -1 : relocate(entry.pointer(), z80Start)));
+        }
+    }
+
+    private String sfxAdmissionError(String reason, int index,
+            SmpsSfxData.SmpsSfxTrack entry, int pointer) {
+        return "%s: sfxId=0x%02X entry=%d channel=0x%02X rawPointer=0x%04X relocatedPointer=%d programLength=%d"
+                .formatted(reason, smpsData.getId(), index,
+                        entry == null ? -1 : entry.channelMask(),
+                        entry == null ? -1 : entry.pointer(), pointer, programView.dataLength());
     }
 
     /** Adds a track to this sequencer's track list. */

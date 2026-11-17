@@ -20,17 +20,17 @@ class TestAnyGameSceneRegistration {
     };
 
     @Test
-    void sharedSceneExpandsToThreeOrdinaryDistinctDecorators() {
+    void sharedSceneExpandsToFourOrdinaryDistinctDecorators() {
         ModContext context = new ModContext("arcade", "any", ModAssetRoot.forTests("arcade"));
         context.registerStartupScene(SCENE);
         ModRegistrationPlan plan = context.freeze();
         List<ModRegistrationPlan> expanded = plan.stockScenePlans();
-        assertEquals(List.of("s1", "s2", "s3k"),
+        assertEquals(List.of("s1", "s2", "s3k", "scd"),
                 expanded.stream().map(ModRegistrationPlan::baseGameId).toList());
         ModFaultBoundary boundary = org.mockito.Mockito.mock(ModFaultBoundary.class);
         var patches = expanded.stream().map(stock -> new ModBackedGamePatch(stock, boundary,
                 (owner, finding) -> { }, "content-" + stock.baseGameId())).toList();
-        assertEquals(List.of("arcade:content-s1", "arcade:content-s2", "arcade:content-s3k"),
+        assertEquals(List.of("arcade:content-s1", "arcade:content-s2", "arcade:content-s3k", "arcade:content-scd"),
                 patches.stream().map(ModBackedGamePatch::id).toList());
         assertTrue(expanded.stream().allMatch(stock -> stock.startupScene() == SCENE));
     }
@@ -64,10 +64,10 @@ class TestAnyGameSceneRegistration {
         context.registerObject("target", (spawn, registry) -> null);
         context.registerServiceBundle("run", () -> com.openggf.game.GameServiceBundle.builder().build());
         List<ModRegistrationPlan> expanded = context.freeze().stockScenePlans();
-        assertEquals(List.of("s1", "s2", "s3k"),
+        assertEquals(List.of("s1", "s2", "s3k", "scd"),
                 expanded.stream().map(ModRegistrationPlan::baseGameId).toList());
-        assertEquals("patch".equals(role) ? List.of(List.of("s1"), List.of(), List.of("s3k"))
-                : List.of(List.of(), List.of(), List.of()), expanded.stream()
+        assertEquals("patch".equals(role) ? List.of(List.of("s1"), List.of(), List.of("s3k"), List.of())
+                : List.of(List.of(), List.of(), List.of(), List.of()), expanded.stream()
                 .map(stock -> stock.explicitPatches().stream().map(GamePatch::baseGameId).toList()).toList());
         assertTrue(expanded.stream().allMatch(stock -> stock.objectFactories().keySet().stream().anyMatch(key -> key.endsWith("target"))
                 && stock.serviceBundles().containsKey("run")));
@@ -79,7 +79,8 @@ class TestAnyGameSceneRegistration {
     void perGamePatchesAloneNeedNoStartupScene() {
         ModContext context = new ModContext("typing", "any", ModAssetRoot.forTests("typing"));
         context.registerGamePatch(patch("s2"));
-        assertEquals(List.of(0, 1, 0), context.freeze().stockScenePlans().stream()
+        context.registerGamePatch(patch("scd"));
+        assertEquals(List.of(0, 1, 0, 1), context.freeze().stockScenePlans().stream()
                 .map(stock -> stock.explicitPatches().size()).toList());
     }
 

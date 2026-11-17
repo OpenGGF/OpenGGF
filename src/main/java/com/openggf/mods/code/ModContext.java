@@ -23,7 +23,7 @@ import java.util.Objects;
 public final class ModContext {
     private final String owner;
     private final String baseGame;
-    private static final java.util.Set<String> STOCK_GAMES = java.util.Set.of("s1", "s2", "s3k");
+    private static final java.util.Set<String> STOCK_GAMES = java.util.Set.of("s1", "s2", "s3k", "scd");
     static final String ANY_GAME_RULE = "baseGame any needs a startup scene, title entry, per-game patch, playable characters or typed mutator catalogue; "
             + "objects, object art, previews and service bundles require a scene, title entry or patch; "
             + "zones, ROM art intake, launch teams, input/HUD policies and decoded level patches "
@@ -161,7 +161,7 @@ public final class ModContext {
     /**
      * Stages a game patch. A single-game mod's patches must name its {@code baseGame}; a
      * {@code baseGame: any} mod may register one or more patches per stock game ({@code s1},
-     * {@code s2}, {@code s3k}), and each applies only when its game launches and the player's
+     * {@code s2}, {@code s3k}, {@code scd}), and each applies only when its game launches and the player's
      * ROM for it is present. Objects, object art and service bundles of an {@code any} mod are
      * available in every game.
      */
@@ -250,6 +250,23 @@ public final class ModContext {
             if (art.containsKey(owned) || romArt.putIfAbsent(owned, sourced) != null) {
                 throw failure("Duplicate object art key: " + owned);
             }
+        });
+    }
+
+    /** Stages byte-count S1-format object mappings from a named file on the host's stock medium.
+     * Addresses are file-relative. Native ISO names are checked by the media owner at launch. */
+    public void registerProgramObjectArt(String key, String nativeFile, RomArtRequest request) {
+        mutate(() -> {
+            if (standalone || "any".equals(baseGame)) throw failure("Program art requires one stock host");
+            Objects.requireNonNull(nativeFile, "nativeFile");
+            Objects.requireNonNull(request, "request");
+            var staged = new RomArtRequest(request.artAddress(), request.compression(), request.uncompressedByteSize(),
+                    request.mappingAddress(), 0, request.paletteLine(), request.bankSize(),
+                    com.openggf.game.patch.LogicalRom.S1, nativeFile);
+            if (request.hasDplc()) throw failure("Program object art uses direct mappings; DPLC is not supported");
+            String owned = ModKeySyntax.requireOwnedKey(owner, key);
+            if (art.containsKey(owned) || romArt.putIfAbsent(owned, staged) != null)
+                throw failure("Duplicate object art key: " + owned);
         });
     }
 

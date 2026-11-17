@@ -15,6 +15,7 @@ public final class CdSpecialStageUfos {
         final boolean timeUfo;
         int routine;
         int item;
+        // Decoded ROM path: never mutated; keyframes retain this asset by identity.
         short[] path;
         int pathIndex;
         int x;
@@ -44,6 +45,42 @@ public final class CdSpecialStageUfos {
         public int routine() { return routine; }
         public boolean alive() { return alive; }
         public int item() { return item; }
+
+        State capture() { return new State(
+                sprite == null ? null : sprite.capture(), shadow == null ? null : shadow.capture(), path, routine, item,
+                pathIndex, x, y, z, xVel, yVel, pathTime, timer, explodeDirection, drawDelay, ufoAnim, shadowAnim,
+                alive, shadowAlive, shadowDelete, shadowStarted, deleteAfterRun, cleared); }
+        void restore(State s) {
+            sprite = CdSpecialSprites.Sprite.restored(sprite, s.sprite());
+            shadow = CdSpecialSprites.Sprite.restored(shadow, s.shadow());
+            path = s.path();
+            routine = s.routine();
+            item = s.item();
+            pathIndex = s.pathIndex();
+            x = s.x();
+            y = s.y();
+            z = s.z();
+            xVel = s.xVel();
+            yVel = s.yVel();
+            pathTime = s.pathTime();
+            timer = s.timer();
+            explodeDirection = s.explodeDirection();
+            drawDelay = s.drawDelay();
+            ufoAnim = s.ufoAnim();
+            shadowAnim = s.shadowAnim();
+            alive = s.alive();
+            shadowAlive = s.shadowAlive();
+            shadowDelete = s.shadowDelete();
+            shadowStarted = s.shadowStarted();
+            deleteAfterRun = s.deleteAfterRun();
+            cleared = s.cleared();
+        }
+        record State(
+                CdSpecialSprites.Sprite.State sprite, CdSpecialSprites.Sprite.State shadow, short[] path, int routine,
+                int item, int pathIndex, int x, int y, int z, int xVel, int yVel, int pathTime, int timer,
+                int explodeDirection, int drawDelay, int ufoAnim, int shadowAnim, boolean alive, boolean shadowAlive,
+                boolean shadowDelete, boolean shadowStarted, boolean deleteAfterRun, boolean cleared) {
+        }
     }
 
     private final CdSpecialStage stage;
@@ -286,4 +323,16 @@ public final class CdSpecialStageUfos {
 
     public List<Ufo> ufos() { return List.copyOf(ufos); }
     public Ufo timeUfo() { return timeUfo; }
+
+    State capture() { return new State(
+            ufos.stream().map(Ufo::capture).toList(), timeUfo == null ? null : timeUfo.capture()); }
+    void restore(State s) {
+        for (int i = 0; i < ufos.size(); i++) ufos.get(i).restore(s.ufos().get(i));
+        if (s.timeUfo() == null) timeUfo = null;
+        else {
+            if (timeUfo == null) timeUfo = new Ufo(true);
+            timeUfo.restore(s.timeUfo());
+        }
+    }
+    record State(List<Ufo.State> ufos, Ufo.State timeUfo) { State { ufos = List.copyOf(ufos); } }
 }

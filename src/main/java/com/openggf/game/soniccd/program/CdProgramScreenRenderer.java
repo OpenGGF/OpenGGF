@@ -117,13 +117,13 @@ public final class CdProgramScreenRenderer {
                 // Screen line l shows plane line (l + vscroll) mod 256.
                 int row = (screenRow + (v >> 3)) & 31;
                 int screenY = screenRow * 8 - (v & 7);
-                for (int column = 0; column < 64; column++) {
+                // Iterate visible columns, sampling the native 512-pixel plane. This also
+                // fills a wide tunnel beyond its first plane period; fixed programs keep width 320/256.
+                int firstX = (value & 7) - ((value & 7) == 0 ? 0 : 8);
+                for (int screenX = firstX; screenX < frame.width(); screenX += 8) {
+                    int column = ((screenX - value) & 0x1FF) >> 3;
                     int word = map[row * 64 + column];
                     if ((word & 0x7FF) == 0 || ((word & 0x8000) != 0) != high) continue;
-                    // A positive scroll moves the plane right: screen x = plane x + scroll, modulo 512.
-                    int screenX = (column * 8 + value) & 0x1FF;
-                    if (screenX > 0x1F8) screenX -= 0x200;
-                    if (screenX >= frame.width()) continue;
                     desc.set(word);
                     gm.renderPatternWithId(BASE + (word & 0x7FF), desc, offset + screenX, screenY);
                 }

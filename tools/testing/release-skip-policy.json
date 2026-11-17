@@ -7313,6 +7313,160 @@
       "evidence": "src/test/java/com/openggf/game/soniccd/zones/ttz/TestTtzImmutableScrollPhase.java:13",
       "allowed_when_absent": "soniccd_disc",
       "note": "Frozen projection check loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageRewind#replayEveryFrameIncludingFadePacingJumpAndEffects(int, boolean)[1]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/TestCdSpecialStageRewind.java:65",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageRewind#replayEveryFrameIncludingFadePacingJumpAndEffects(int, boolean)[2]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/TestCdSpecialStageRewind.java:65",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageRewind#replayEveryFrameIncludingFadePacingJumpAndEffects(int, boolean)[3]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/TestCdSpecialStageRewind.java:65",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageRewind#replayEveryFrameIncludingFadePacingJumpAndEffects(int, boolean)[4]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/TestCdSpecialStageRewind.java:65",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageRewind#realLiveRewindContextRestoresCdProvider",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/TestCdSpecialStageRewind.java:174",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageRewind#hazardRingLossAndItsLiveEffectsReplay",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/TestCdSpecialStageRewind.java:118",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageRewind#immutableArraysAndInPlaceRestore",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/TestCdSpecialStageRewind.java:27",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageRewindAudio#everyDiscFmProgramPassesAdmission",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/TestCdSpecialStageRewindAudio.java:108",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageRewindAudio#normallyBootedStageRewindsThroughOuterPresentation(int)[1]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/TestCdSpecialStageRewindAudio.java:138",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageRewindAudio#normallyBootedStageRewindsThroughOuterPresentation(int)[2]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/TestCdSpecialStageRewindAudio.java:138",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageRewindAudio#normallyBootedStageRewindsThroughOuterPresentation(int)[3]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/TestCdSpecialStageRewindAudio.java:138",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageRewindAudio#normallyBootedStageRewindsThroughOuterPresentation(int)[4]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/TestCdSpecialStageRewindAudio.java:138",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageRewindAudio#normallyBootedStageRewindsThroughOuterPresentation(int)[5]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/TestCdSpecialStageRewindAudio.java:138",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageRewindAudio#normallyBootedStageRewindsThroughOuterPresentation(int)[6]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/TestCdSpecialStageRewindAudio.java:138",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageRewindAudio#normallyBootedStageRewindsThroughOuterPresentation(int)[7]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/TestCdSpecialStageRewindAudio.java:138",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageRewindAudio#effectImmediatelyBeforeRewindPassesRealSessionAdmission(CdSpecialSound)[1]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/TestCdSpecialStageRewindAudio.java:75",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageRewindAudio#effectImmediatelyBeforeRewindPassesRealSessionAdmission(CdSpecialSound)[2]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/TestCdSpecialStageRewindAudio.java:75",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageRewindAudio#effectImmediatelyBeforeRewindPassesRealSessionAdmission(CdSpecialSound)[3]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/TestCdSpecialStageRewindAudio.java:75",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageRewindAudio#effectImmediatelyBeforeRewindPassesRealSessionAdmission(CdSpecialSound)[4]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/TestCdSpecialStageRewindAudio.java:75",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageRewindAudio#effectImmediatelyBeforeRewindPassesRealSessionAdmission(CdSpecialSound)[5]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/TestCdSpecialStageRewindAudio.java:75",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageRewindAudio#roughFloorDustReachesForwardSessionWithoutRewind",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/TestCdSpecialStageRewindAudio.java:34",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.level.TestCdInitialMotionArenaMask#initialCdMotionCapturesAndDrawsBoundsBeforeTheFirstSpritePreparation",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/level/TestCdInitialMotionArenaMask.java:17",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
     }
   ]
 }

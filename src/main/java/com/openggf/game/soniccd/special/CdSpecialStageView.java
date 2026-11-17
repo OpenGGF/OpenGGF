@@ -56,4 +56,21 @@ public final class CdSpecialStageView {
         this.yawSin = (short) yawSin;
         this.yawCos = (short) yawCos;
     }
+
+    State capture() { return new State(cameraX, cameraY, cameraZ, pitch, yaw, pitchSin, pitchCos, yawSin, yawCos); }
+    void restore(State s) {
+        cameraX = s.cameraX();
+        cameraY = s.cameraY();
+        cameraZ = s.cameraZ();
+        pitch = s.pitch();
+        yaw = s.yaw();
+        pitchSin = s.pitchSin();
+        pitchCos = s.pitchCos();
+        yawSin = s.yawSin();
+        yawCos = s.yawCos();
+    }
+    record State(
+            int cameraX, int cameraY, int cameraZ, int pitch, int yaw, int pitchSin, int pitchCos, int yawSin,
+            int yawCos) {
+    }
 }

@@ -361,6 +361,7 @@ class TestSonicCdCommonObjects2 {
         assertEquals(1, live(0x3A).size(), "results spawned with FindObjSlot");
         assertFalse(post.isDestroyed());
         assertFalse(sign.isDestroyed());
+        assertTrue(GameServices.gameState().isActCompletionSignalActive(), "hosted runs observe the native goal crossing");
     }
 
     @Test

@@ -65,6 +65,9 @@ public class DelegatingGameModule implements GameModule {
         return base.createGame(rom);
     }
 
+    @Override public boolean supportsCrossGameHost() { return base.supportsCrossGameHost(); }
+    @Override public java.util.List<String> getStockRunCharacters() { return base.getStockRunCharacters(); }
+
     @Override public Game createGame(GameDataSource source) { return base.createGame(source); }
 
     @Override public void onNewGameFromTitle(GameStateManager gameState) {

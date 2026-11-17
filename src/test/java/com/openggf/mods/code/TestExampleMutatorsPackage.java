@@ -67,8 +67,13 @@ class TestExampleMutatorsPackage {
                     "example-mutators:no-bonus-stages","example-mutators:violent-explosions",
                     "example-mutators:homing-attack"),plan.mutators().keySet());
             assertEquals(3,plan.explicitPatches().size());assertTrue(plan.objectFactories().isEmpty());
-            assertEquals(List.of("s1","s2","s3k"),plan.stockScenePlans().stream().map(ModRegistrationPlan::baseGameId).toList());
+            assertEquals(List.of("s1","s2","s3k","scd"),plan.stockScenePlans().stream().map(ModRegistrationPlan::baseGameId).toList());
             for(var game:plan.stockScenePlans()) {
+                assertEquals(plan.mutators(),game.mutators());
+                if ("scd".equals(game.baseGameId())) {
+                    assertTrue(game.explicitPatches().isEmpty(), "cartridge-only Lab patches must not leak into CD");
+                    continue;
+                }
                 assertEquals(1,game.explicitPatches().size());
                 assertEquals(game.baseGameId(),game.explicitPatches().getFirst().baseGameId());
                 assertEquals(plan.mutators(),game.mutators());

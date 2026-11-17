@@ -43,6 +43,16 @@ public interface HostedGameMedia {
      */
     GameDataSource openConfiguredMedia(SonicConfigurationService config) throws IOException;
 
+    /** Exact configured input path for isolated authoring workers. */
+    default Path configuredPath(SonicConfigurationService config) throws IOException {
+        throw new IOException(displayName() + " has no authoring source locator");
+    }
+
+    /** Opens and verifies an explicitly supplied offline source. The caller owns it. */
+    default GameDataSource openMedia(Path path) throws IOException {
+        throw new IOException(displayName() + " does not support explicit offline media");
+    }
+
     /** {@link #openConfiguredMedia(SonicConfigurationService)} with the process configuration. */
     default GameDataSource openConfiguredMedia() throws IOException {
         return openConfiguredMedia(com.openggf.game.GameServices.configuration());

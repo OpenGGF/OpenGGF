@@ -113,11 +113,7 @@ final class SceneRunLauncher implements SceneGameplay {
     }
 
     static List<String> stockCharacters(String gameId) {
-        return switch (gameId) {
-            case "s1" -> List.of("sonic");
-            case "s2" -> List.of("sonic", "tails");
-            case "s3k" -> List.of("sonic", "tails", "knuckles");
-            default -> List.of();
-        };
+        return com.openggf.game.GameModuleRegistry.createStockModule(
+                com.openggf.game.GameId.fromCode(gameId)).getStockRunCharacters();
     }
 }

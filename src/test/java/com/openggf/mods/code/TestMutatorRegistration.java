@@ -66,7 +66,7 @@ class TestMutatorRegistration {
         var shared = context("owner", "any");
         shared.registerMutator(definition("gravity"));
         var expanded = shared.freeze().stockScenePlans();
-        assertEquals(List.of("s1", "s2", "s3k"), expanded.stream().map(ModRegistrationPlan::baseGameId).toList());
+        assertEquals(List.of("s1", "s2", "s3k", "scd"), expanded.stream().map(ModRegistrationPlan::baseGameId).toList());
         assertTrue(expanded.stream().allMatch(plan -> plan.mutators().get("owner:gravity").ownerModId().equals("owner")));
         ModContext standalone = new ModContext("owner", null, ModAssetRoot.forTests("owner"), null, true);
         assertThrows(ModRegistrationException.class, () -> standalone.registerMutator(definition("gravity")));
@@ -79,6 +79,7 @@ class TestMutatorRegistration {
         shared.registerGamePatch(patch("s3k"));
         shared.registerGamePatch(patch("s1"));
         shared.registerGamePatch(patch("s2"));
+        shared.registerGamePatch(patch("scd"));
         var factories = new AtomicInteger();
         shared.registerObject("object", (spawn, registry) -> { factories.incrementAndGet(); return null; });
         shared.registerObjectArt("sheet", new BakedSheetRef("art/sheet.bin"));
@@ -88,7 +89,7 @@ class TestMutatorRegistration {
             return GameServiceBundle.builder().build();
         });
         var plans = shared.freeze().stockScenePlans();
-        assertEquals(List.of("s1", "s2", "s3k"), plans.stream().map(ModRegistrationPlan::baseGameId).toList());
+        assertEquals(List.of("s1", "s2", "s3k", "scd"), plans.stream().map(ModRegistrationPlan::baseGameId).toList());
         assertEquals(0, factories.get(), "Registration and expansion must defer creator factories");
         for (var plan : plans) {
             assertNull(plan.startupScene());

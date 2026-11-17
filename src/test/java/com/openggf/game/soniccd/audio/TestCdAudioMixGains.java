@@ -122,6 +122,17 @@ class TestCdAudioMixGains {
         assertArrayEquals(new short[unity.length], renderProgram(0, false), "music at 0");
     }
 
+    @Test void streamedReplacementSuppressionKeepsFmAndPcmEffectsAudible() {
+        for (Stage stage : Stage.values()) {
+            suppressNativeMusic = false;
+            short[] effects = render(stage, 0, 100, true, true, false);
+            suppressNativeMusic = true;
+            assertArrayEquals(effects, render(stage, 100, 100, true, true, false), stage + " replacement suppression");
+            assertTrue(energy(effects) > 0);
+        }
+    }
+
+    private boolean suppressNativeMusic;
     private enum Stage { PRESENT, PAST }
 
     private boolean sharedChannelSeen;
@@ -143,6 +154,7 @@ class TestCdAudioMixGains {
         subCpu.gainedPathAtUnity(gainedPathAtUnity);
         subCpu.loadStage(stage == Stage.PRESENT ? CdStagePayload.R11A : CdStagePayload.R71B);
         if (withMusic) audio.playMusic(stage == Stage.PRESENT ? PRESENT_MUSIC : PAST_MUSIC);
+        subCpu.suppressMusic(suppressNativeMusic);
         short[] lead = present(LEAD);
         leadSamples = lead.length;
         if (withEffects) {

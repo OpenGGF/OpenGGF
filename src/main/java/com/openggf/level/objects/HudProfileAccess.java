@@ -37,6 +37,18 @@ public final class HudProfileAccess {
         return hud == null ? Math.max(0, (width - 320) / 2) : hud.nativeOriginX(width);
     }
 
+    /** Native 320-frame origin measured from the picture's left edge. */
+    public static int nativeOriginX(int width, boolean screenLeftAnchor) {
+        return screenLeftAnchor ? 0 : (Math.max(320, width) - 320) / 2;
+    }
+
+    /** Camera-relative origin, including NATIVE draw mode's picture margin. */
+    public static int cameraRelativeOriginX(int width, boolean screenLeftAnchor,
+                                            com.openggf.camera.Camera camera) {
+        return nativeOriginX(width, screenLeftAnchor)
+                - com.openggf.camera.CameraPresentationAccess.inset(camera);
+    }
+
     public static void setScreenLeftAnchorEnabled(HudRenderManager hud, boolean enabled) {
         Objects.requireNonNull(hud, "hud").setScreenLeftAnchorEnabled(enabled);
     }

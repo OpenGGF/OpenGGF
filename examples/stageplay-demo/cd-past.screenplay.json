@@ -1,0 +1,95 @@
+{
+  "version": 7,
+  "name": "A walk in the Past",
+  "width": 320,
+  "height": 224,
+  "cast": [
+    {
+      "id": "sonic",
+      "name": "Sonic",
+      "gameId": "scd",
+      "character": "sonic",
+      "snapToFloor": false,
+      "puppet": true
+    }
+  ],
+  "shots": [
+    {
+      "id": "past",
+      "durationFrames": 240,
+      "set": {
+        "gameId": "scd",
+        "zone": 0,
+        "act": 1
+      },
+      "camera": [
+        {
+          "frame": 0,
+          "x": 640,
+          "y": 400,
+          "interpolation": "HOLD"
+        }
+      ],
+      "actors": {
+        "sonic": [
+          {
+            "frame": 0,
+            "x": 800,
+            "y": 549,
+            "facing": "LEFT"
+          }
+        ]
+      },
+      "actions": {
+        "sonic": [
+          {
+            "frame": 0,
+            "kind": "STOP"
+          },
+          {
+            "frame": 24,
+            "kind": "FACE_RIGHT"
+          },
+          {
+            "frame": 32,
+            "kind": "MOVE_TO",
+            "x": 880,
+            "y": 549,
+            "urgency": 1
+          },
+          {
+            "frame": 80,
+            "kind": "STOP"
+          },
+          {
+            "frame": 144,
+            "kind": "FACE_LEFT"
+          },
+          {
+            "frame": 152,
+            "kind": "MOVE_TO",
+            "x": 760,
+            "y": 549,
+            "urgency": 1
+          }
+        ]
+      },
+      "captions": [
+        {
+          "startFrame": 0,
+          "endFrame": 240,
+          "text": "PALMTREE PANIC / PAST",
+          "x": 12,
+          "y": 12
+        }
+      ],
+      "audio": [
+        {
+          "frame": 0,
+          "kind": "MUSIC_STOP",
+          "gameId": "scd"
+        }
+      ]
+    }
+  ]
+}

@@ -603,6 +603,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		for (var identity : java.util.List.of(com.openggf.data.RomIdentity.S1, com.openggf.data.RomIdentity.S2, com.openggf.data.RomIdentity.S3K))
 			romManager.resolveLogicalRom(identity).flatMap(com.openggf.data.RomImageCatalogue.Resolution::wholeImagePath)
 					.ifPresent(path -> roms.put(identity == com.openggf.data.RomIdentity.S1 ? "s1" : identity == com.openggf.data.RomIdentity.S2 ? "s2" : "s3k", path));
+		com.openggf.tools.EngineRouteHosts.addConfiguredMedia(roms);
 		return roms;
 	}
 
@@ -2584,8 +2585,19 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 
 		GameModule rootModule;
 		GameDataSource dataSource;
-		try {
-			Rom rom = romManager.getRom();
+        var hosted = com.openggf.game.launch.HostedMediaLaunch.hostedGame(spec.gameId());
+        if (hosted.isPresent()) {
+            try {
+                var opened = hostedMediaLaunch.open(hosted.get(), configService,
+                        com.openggf.game.save.SavePaths.root());
+                rootModule = opened.module();
+                dataSource = opened.source();
+            } catch (IOException e) {
+                romError.accept("Failed to load media for run launch: " + e.getMessage());
+                return false;
+            }
+        } else try {
+            Rom rom = romManager.getRom();
 			var detectedModule = romDetectionService.detectAndCreateModule(rom);
 			if (detectedModule.isEmpty()) {
 				romError.accept("ROM not recognized or corrupt for run: " + spec.gameId());

@@ -68,6 +68,7 @@ public final class CdSignpost extends CdObject implements ObjectVisualFacing.Non
         if (camera != null) camera.setMinX(camera.getX());
         var state = services().levelGamestate();
         if (state != null) state.pauseTimer();              // clr.b updateHUDTime
+        signalActCompletion();
         timer = SPIN_FRAMES;
         mapFrame = 0;
         routine = 4;

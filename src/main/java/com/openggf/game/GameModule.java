@@ -90,6 +90,12 @@ public interface GameModule {
         return StockPlayableCharacters.registry();
     }
 
+    /** Whether this host can compose donor art, animation families and policies. */
+    default boolean supportsCrossGameHost() { return true; }
+
+    /** Native characters admitted by controlled stock gameplay runs; donors are validated separately. */
+    default java.util.List<String> getStockRunCharacters() { return java.util.List.of(); }
+
     /** Returns the host-game capability for additive mod zones. */
     default ModZoneAdapter getModZoneAdapter() {
         return EMPTY_MOD_ZONE_ADAPTER;

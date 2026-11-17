@@ -230,9 +230,16 @@ public final class ModSubsystem implements AutoCloseable {
         String preferred = com.openggf.game.GameServices.configuration().getString(
                 com.openggf.configuration.SonicConfiguration.DEFAULT_ROM);
         java.util.LinkedHashSet<String> games = new java.util.LinkedHashSet<>();
-        if (preferred != null && java.util.List.of("s1", "s2", "s3k").contains(preferred)) games.add(preferred);
-        games.addAll(java.util.List.of("s1", "s2", "s3k"));
+        if (preferred != null && java.util.List.of("s1", "s2", "s3k", "scd").contains(preferred)) games.add(preferred);
+        games.addAll(java.util.List.of("s1", "s2", "s3k", "scd"));
         for (String game : games) {
+            var hosted = com.openggf.game.launch.HostedMediaLaunch.hostedGame(game);
+            if (hosted.isPresent()) {
+                var module = com.openggf.game.GameModuleRegistry.createStockModule(hosted.get());
+                var media = com.openggf.game.internal.HostedGameMedia.of(module);
+                if (media.probe(com.openggf.game.GameServices.configuration()).available()) return game;
+                continue;
+            }
             com.openggf.data.RomIdentity rom = switch (game) {
                 case "s1" -> com.openggf.data.RomIdentity.S1;
                 case "s2" -> com.openggf.data.RomIdentity.S2;
@@ -452,7 +459,7 @@ public final class ModSubsystem implements AutoCloseable {
         Objects.requireNonNull(registry, "registry");
         Objects.requireNonNull(sfxRegistry, "sfxRegistry");
         return (outputRate, gameCode) -> {
-            boolean stock = "s1".equals(gameCode) || "s2".equals(gameCode) || "s3k".equals(gameCode);
+            boolean stock = "s1".equals(gameCode) || "s2".equals(gameCode) || "s3k".equals(gameCode) || "scd".equals(gameCode);
             boolean selectedTrack = stock ? !registry.tracks().isEmpty() : registry.tracks().stream()
                     .anyMatch(track -> track.key().modId().equals(gameCode));
             boolean selectedSfx = stock ? !sfxRegistry.sfx().isEmpty() : sfxRegistry.sfx().stream()

@@ -88,11 +88,13 @@ public final class SonicCdGame extends Game implements PlayerSpriteArtProvider, 
 
     @Override
     public SpriteArtSet loadPlayerSpriteArt(String characterCode) throws IOException {
-        if (characterCode == null || !"sonic".equals(characterCode.trim().toLowerCase(Locale.ROOT))
-                || currentImage == null) {
+        if (characterCode == null || !"sonic".equals(characterCode.trim().toLowerCase(Locale.ROOT))) {
             return null;
         }
-        return CdPlayerArt.load(currentImage, CdStageCatalogue.entry(current.payload()));
+        // Authored terrain has no native stage load; read Sonic's art from the supplied disc.
+        return currentImage == null
+                ? CdPlayerArt.load(loader.readStage(CdStagePayload.R11A), CdStageCatalogue.entry(CdStagePayload.R11A))
+                : CdPlayerArt.load(currentImage, CdStageCatalogue.entry(current.payload()));
     }
 
     @Override public int getMusicId(int levelIdx) {
