@@ -19,6 +19,7 @@ public final class CdScorePolicy implements ScoreAdditionPolicy {
 
     private final IntConsumer subCpuCommand;
     private int nextLifeScore = LIFE_STEP;
+    private boolean specialStageResults;
 
     public CdScorePolicy(IntConsumer subCpuCommand) {
         this.subCpuCommand = subCpuCommand;
@@ -28,10 +29,28 @@ public final class CdScorePolicy implements ScoreAdditionPolicy {
 
     @Override
     public void scoreAdded(GameStateManager state, int score) {
+        if (specialStageResults) {
+            while (score >= nextLifeScore) {                 // .Check1UP loops (Special Stage/Main.asm:437-446)
+                nextLifeScore += LIFE_STEP;
+                state.addLife();
+            }
+            return;
+        }
         if (score < nextLifeScore) return;                   // cmp.l nextLifeScore,d0; bcs.s .End
         nextLifeScore += LIFE_STEP;
         state.addLife();
         subCpuCommand.accept(com.openggf.game.soniccd.audio.CdSoundRequests.YES_VOICE);
+    }
+
+    /**
+     * Points the special stage results added ({@code AddScore}, scddisasm/src/Special Stage/Main.asm:433-455):
+     * every threshold crossed adds a life, with no voice. The 249-life cap is not modelled; the engine's
+     * lives counter has no cap.
+     */
+    public void awardSpecialStageResults(GameStateManager state, int points) {
+        specialStageResults = true;
+        state.addScore(points);
+        specialStageResults = false;
     }
 
     /** {@code LevelStart}'s first load. */

@@ -1,0 +1,95 @@
+package com.openggf.game.soniccd.special;
+
+import com.openggf.game.soniccd.CdDiscDataSource;
+import org.junit.jupiter.api.Test;
+
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+/**
+ * The special stage results ({@code Results}, scddisasm/src/Special Stage/Main.asm:281-402): the fade from
+ * white before the tally, the tally itself, Start, the points handed to the campaign and the picture.
+ */
+class TestCdSpecialStageResults {
+    /** 10 rings and 5 seconds left: a 200-point ring bonus and a 100-point time bonus. */
+    private static CdSpecialStageResult result(int timeStones) {
+        return new CdSpecialStageResult(0, true, 0, timeStones, 1, 10, 5, false, true);
+    }
+
+    @Test
+    void theTallyWaitsForTheFadeFromWhite() {
+        var results = new CdSpecialStageResults(result(1), 0, 5000, 3);
+        for (int f = 0; f < CdSpecialStageResults.FADE_IN_FRAMES; f++) {
+            results.frame(true); // Start is not read until Results_MainLoop
+            assertEquals(0, results.score(), "fade frame " + f);
+            assertFalse(results.isComplete());
+        }
+        results.frame(false);
+        assertEquals(20, results.score(), "the first main-loop pass moves 20 points");
+        assertEquals(List.of(CdSpecialSound.TALLY), results.sounds());
+    }
+
+    @Test
+    void theRingBonusTalliesBeforeTheTimeBonusThenKaChing() {
+        var results = new CdSpecialStageResults(result(1), 0, 5000, 3);
+        for (int f = 0; f < CdSpecialStageResults.FADE_IN_FRAMES; f++) results.frame(false);
+        for (int f = 0; f < 10; f++) results.frame(false);
+        assertEquals(0, results.ringBonus());
+        assertEquals(100, results.timeBonus());
+        for (int f = 0; f < 5; f++) results.frame(false);
+        assertEquals(300, results.score());
+        assertEquals(List.of(CdSpecialSound.TALLY, CdSpecialSound.KACHING), results.sounds());
+    }
+
+    @Test
+    void startEndsTheScreenAndTheCampaignReceivesEveryPoint() {
+        AtomicInteger awarded = new AtomicInteger(-1);
+        var results = new CdSpecialStageResults(result(1), 4990, 5000, 3, null, awarded::set);
+        for (int f = 0; f < CdSpecialStageResults.FADE_IN_FRAMES + 3; f++) results.frame(false);
+        assertEquals(-1, awarded.get(), "nothing is awarded before the screen ends");
+        results.frame(true);
+        assertTrue(results.isComplete());
+        assertEquals(300, awarded.get(), ".Done adds what is left (Main.asm:393-396)");
+        assertEquals(4, results.lives(), "5000 crossed once");
+        assertEquals(CdSpecialSound.WARP, results.sounds().getLast());
+    }
+
+    @Test
+    void theScreenEndsAfterEightSeconds() {
+        var results = new CdSpecialStageResults(result(1), 0, 5000, 3);
+        int frames = 0;
+        while (!results.isComplete() && frames < 10_000) {
+            results.frame(false);
+            frames++;
+        }
+        assertEquals(CdSpecialStageResults.FADE_IN_FRAMES + 8 * 60, frames);
+    }
+
+    @Test
+    void thePictureFadesInAndDrawsTheTallyFromTheDisc() throws Exception {
+        try (CdDiscDataSource disc = CdSpecialNative.disc()) {
+            var assets = CdSpecialStageAssets.load(disc);
+            var results = new CdSpecialStageResults(result(0b0000011), 0, 5000, 3, assets, points -> { });
+            var picture = results.picture();
+            assertEquals(0x0EEE, picture.colour(5), "PrepFadeFromWhite: all white before the first frame");
+            for (int f = 0; f < CdSpecialStageResults.FADE_IN_FRAMES; f++) results.frame(false);
+            short[] pal = CdSpecialStageAssets.words(assets.raw("Pal_Results"));
+            for (int i = 0; i < 64; i++) assertEquals(pal[i] & 0xFFFF, picture.colour(i), "colour " + i + " after the fade");
+            for (int f = 0; f < 15; f++) results.frame(false);
+            assertEquals(300, results.score());
+            // Score at $C730 (row 14, column 24): 300 units draw as 3000, four leading blanks.
+            for (int c = 0; c < 4; c++) assertEquals(0, picture.planeA(14, 24 + c), "blank " + c);
+            assertEquals(picture.digitUpper(3) & 0xFFFF, picture.planeA(14, 28));
+            for (int c = 29; c < 32; c++) assertEquals(picture.digitUpper(0) & 0xFFFF, picture.planeA(14, c));
+            // Both bonuses are zero: seven blanks then one zero (.DrawZero).
+            assertEquals(0, picture.planeA(17, 30));
+            assertEquals(picture.digitUpper(0) & 0xFFFF, picture.planeA(17, 31));
+            assertNotEquals(null, results.resultsBackdropColor());
+        }
+    }
+}

@@ -201,7 +201,7 @@ final class GameLoopSpecialStageLifecycle {
             // Update results screen
             resultsFrameCounter++;
             if (resultsScreen != null) {
-                resultsScreen.update(resultsFrameCounter, null);
+                resultsScreen.update(resultsFrameCounter, host.input());
                 if (resultsScreen.isComplete()) {
                     exitResultsScreen();
                 }

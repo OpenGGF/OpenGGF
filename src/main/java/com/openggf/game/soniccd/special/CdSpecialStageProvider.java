@@ -150,8 +150,11 @@ public final class CdSpecialStageProvider implements SpecialStageProvider {
         if (result != null && !result.showsResults()) return com.openggf.game.NoOpResultsScreen.INSTANCE;
         var game = GameServices.gameStateOrNull();
         var policy = GameServices.module().getGameService(com.openggf.game.internal.ScoreAdditionPolicy.class);
-        int nextLife = policy instanceof com.openggf.game.soniccd.program.CdScorePolicy cd ? cd.nextLifeScore() / 10 : 5000;
+        var cd = policy instanceof com.openggf.game.soniccd.program.CdScorePolicy p ? p : null;
+        int nextLife = cd != null ? cd.nextLifeScore() / 10 : 5000;
         return new CdSpecialStageResults(result, game == null ? 0 : game.getScore() / 10, nextLife,
-                game == null ? 3 : game.getLives());
+                game == null ? 3 : game.getLives(), assets, points -> {
+                    if (game != null && cd != null) cd.awardSpecialStageResults(game, points * 10);
+                });
     }
 }
