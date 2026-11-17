@@ -61,7 +61,7 @@ under the matching area heading; see the
   with Sonic CD's own rules (spin dash and super peel-out, the extended camera,
   the 3D ramps, per-zone player routines and the idle timer that ends in
   Sonic giving up). Time travel, special stages
-  (without their results graphics), the title, stage select, Time Attack and
+  and their results (the bonuses reach the score), the title, stage select, Time Attack and
   backup RAM (saved in `saves/soniccd`), the opening video, both endings, FM
   effects, CD audio and PCM sound are hosted. Held-key live rewind works inside
   special stages, including the three-frame floor pipeline, UFOs and effects. The master

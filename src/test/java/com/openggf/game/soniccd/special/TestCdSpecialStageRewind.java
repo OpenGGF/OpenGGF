@@ -209,8 +209,8 @@ class TestCdSpecialStageRewind {
     private static void hashLive(MessageDigest digest, Object value, Map<Object, Integer> seen) throws Exception {
         if (value == null) { hash(digest, null); return; }
         Class<?> type = value.getClass();
-        // Presentation and its descendants are render caches, invalidated on restore.
-        if (value instanceof CdSpecialStagePresentation) return;
+        // The renderer's tile cache is a render cache, reset on restore.
+        if (value instanceof com.openggf.game.soniccd.program.CdProgramScreenRenderer) return;
         // Immutable asset bundles and script tables must retain their loaded identities.
         if (value instanceof CdSpecialStageAssets || value instanceof CdSpecialAnimationScripts) {
             hashIdentity(digest, value);

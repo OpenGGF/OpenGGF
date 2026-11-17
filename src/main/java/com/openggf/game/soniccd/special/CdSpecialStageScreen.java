@@ -147,15 +147,20 @@ public final class CdSpecialStageScreen {
      * blue, each channel capped from $E down to the target in eight steps.
      */
     void fadeFromWhiteStep(int step) {
+        fadeFromWhiteStep(palette, fadeTarget, step);
+        cramPending = true;
+    }
+
+    /** One {@code FadeFromWhite} step over a 64-colour {@code palette} towards {@code target}. */
+    static void fadeFromWhiteStep(int[] palette, int[] target, int step) {
         int channel = step / 8;
         int intensity = 0xE - 2 * (step % 8);
         int shift = 1 + channel * 4;
         for (int i = 0; i < 64; i++) {
-            int target = (fadeTarget[i] >> (shift - 1)) & 0xE;
-            int value = Math.max(target, intensity);
+            int goal = (target[i] >> (shift - 1)) & 0xE;
+            int value = Math.max(goal, intensity);
             palette[i] = (palette[i] & ~(0xE << (shift - 1))) | (value << (shift - 1));
         }
-        cramPending = true;
     }
 
     /** The V-blank's palette upload ({@code ipxVSync} bit 1, Main.asm:897-899). */

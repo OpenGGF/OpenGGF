@@ -1,12 +1,21 @@
 package com.openggf.game.soniccd.special;
 
+import com.openggf.control.InputHandler;
+import com.openggf.game.LevelBackdropResultsScreen;
 import com.openggf.game.ResultsScreen;
+import com.openggf.game.soniccd.program.CdProgramScreenRenderer;
 import com.openggf.graphics.GLCommand;
+import com.openggf.level.Palette;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
+import java.util.function.IntConsumer;
 
 /**
- * The special stage results tally ({@code Results}, scddisasm/src/Special Stage/Main.asm:281-402). The ring bonus is 20 per
+ * The special stage results ({@code Results}, scddisasm/src/Special Stage/Main.asm:281-402). The ring bonus is 20 per
  * ring and the time bonus 20 per second left; each frame moves 20 points from the ring bonus,
  * then once it is empty from the time bonus, into the score, with an extra life at each
  * 5000-point threshold ({@code AddScore}, scddisasm/src/Special Stage/Main.asm:433-455). The screen lasts 8 seconds
@@ -14,38 +23,75 @@ import java.util.List;
  * "SPECIAL STAGE" when time ran out, "GOT THEM ALL!!" with all seven stones and "TIME STONES"
  * otherwise ({@code DrawResultsBase}, scddisasm/src/Special Stage/Main.asm:495-503).
  *
- * <p>Presentation (results art, the Time Stone row, digits and the extra-life icons) is not
- * drawn yet; {@link #appendRenderCommands} adds nothing.
+ * <p>Before the tally the picture fades in from white: one V-blank after {@code PrepFadeFromWhite},
+ * then {@code FadeFromWhite}'s 24 steps (Main.asm:349-353). {@code VInt_Results} runs on every one of
+ * those V-blanks, so the numbers and icons are drawn from the first frame. The engine owns the
+ * closing {@code FadeToWhite} (Main.asm:400).
+ *
+ * <p>Scores are in units of ten, as the program keeps them. When the screen ends, the points it
+ * added go to the campaign once through {@code award}, which applies {@code AddScore}'s thresholds.
  */
-public final class CdSpecialStageResults implements ResultsScreen {
+public final class CdSpecialStageResults implements ResultsScreen, LevelBackdropResultsScreen {
     public enum Header { SPECIAL_STAGE, TIME_STONES, GOT_THEM_ALL }
+
+    /** {@code PrepFadeFromWhite}'s V-blank and {@code FadeFromWhite}'s 24 (Main.asm:349-353, 2493-2525). */
+    static final int FADE_IN_FRAMES = 1 + 24;
 
     private int ringBonus;
     private int timeBonus;
     private int score;
+    private final int startScore;
     private int nextLifeScore;
     private int lives;
     private int extraLives;
     private int timer = 8 * 60;
+    private int fadeIn = FADE_IN_FRAMES;
     private boolean tallied;
     private boolean complete;
     private final Header header;
-    private CdSpecialSound lastSound;
+    private final List<CdSpecialSound> sounds = new ArrayList<>(2);
+    private final CdSpecialStageResultsPicture picture;
+    private final CdProgramScreenRenderer renderer = new CdProgramScreenRenderer();
+    private final IntConsumer award;
 
+    /** The tally alone, without a picture or campaign (for the tally's own checks). */
     public CdSpecialStageResults(CdSpecialStageResult result, int score, int nextLifeScore, int lives) {
+        this(result, score, nextLifeScore, lives, null, points -> { });
+    }
+
+    /**
+     * @param assets the stage program's data, for the picture
+     * @param award  receives the points the screen added (units of ten), once, when it ends
+     */
+    public CdSpecialStageResults(CdSpecialStageResult result, int score, int nextLifeScore, int lives,
+                                 CdSpecialStageAssets assets, IntConsumer award) {
         this.ringBonus = result.ringBonus();
         this.timeBonus = result.timeBonus();
         this.score = score;
+        this.startScore = score;
         this.nextLifeScore = nextLifeScore;
         this.lives = lives;
+        this.award = Objects.requireNonNull(award, "award");
         this.header = timeBonus == 0 ? Header.SPECIAL_STAGE
                 : result.timeStones() == 0x7F ? Header.GOT_THEM_ALL : Header.TIME_STONES;
+        try {
+            this.picture = assets == null ? null
+                    : new CdSpecialStageResultsPicture(assets, result.stageId(), header, result.timeStones());
+        } catch (IOException e) {
+            throw new UncheckedIOException("Sonic CD special stage results art", e);
+        }
     }
 
-    /** One {@code Results_MainLoop} pass (scddisasm/src/Special Stage/Main.asm:360-391); {@code startTapped} ends it early. */
+    /** One frame: a fade-in step, or one {@code Results_MainLoop} pass (scddisasm/src/Special Stage/Main.asm:360-391). */
     public void frame(boolean startTapped) {
         if (complete) return;
-        lastSound = null;
+        sounds.clear();
+        if (fadeIn > 0) {
+            int step = FADE_IN_FRAMES - fadeIn--;
+            if (picture != null && step > 0) picture.fadeFromWhiteStep(step - 1);
+            vint();
+            return;
+        }
         if (ringBonus != 0) {
             tally();
             ringBonus -= 20;
@@ -53,20 +99,32 @@ public final class CdSpecialStageResults implements ResultsScreen {
             timeBonus -= 20;
             tally();
         }
-        if (timer != 0) timer--; // VInt_Finish (scddisasm/src/Special Stage/Main.asm:987-989)
+        vint();
+        if (timer != 0) timer--; // VInt_Finish (scddisasm/src/Special Stage/Main.asm:984-989)
         if (!tallied && ringBonus + timeBonus == 0) {
             tallied = true;
-            lastSound = CdSpecialSound.KACHING;
+            sounds.add(CdSpecialSound.KACHING);
         }
         if (startTapped || timer == 0) {
-            addScore(ringBonus + timeBonus); // .Done (Main.asm:393-396)
-            lastSound = CdSpecialSound.WARP;
+            addScore(ringBonus + timeBonus); // .Done (Main.asm:393-396); the bonuses keep their values
+            sounds.add(CdSpecialSound.WARP);
+            vint(); // FadeToWhite's first V-blank shows the final score
             complete = true;
+            award.accept(score - startScore);
+        }
+    }
+
+    private void vint() {
+        if (picture == null) return;
+        try {
+            picture.vint(score, timeBonus, ringBonus, extraLives);
+        } catch (IOException e) {
+            throw new UncheckedIOException("Sonic CD special stage results art", e);
         }
     }
 
     private void tally() {
-        lastSound = CdSpecialSound.TALLY; // USA plays the tally sound (Main.asm:420-423)
+        sounds.add(CdSpecialSound.TALLY); // USA plays the tally sound (Main.asm:420-423)
         addScore(20);
     }
 
@@ -81,15 +139,42 @@ public final class CdSpecialStageResults implements ResultsScreen {
         score = total >= 1_000_000 ? 999_999 : total;
     }
 
-    @Override public void update(int frameCounter, Object context) { frame(false); }
-    @Override public boolean isComplete() { return complete; }
-    @Override public void appendRenderCommands(List<GLCommand> commands) { }
+    /**
+     * The engine passes its {@link InputHandler} as the context; Start is the program's {@code ctrlTap}
+     * bit 7, read by {@code VInt_Results} (Main.asm:968) and tested after it (Main.asm:388-389).
+     */
+    @Override
+    public void update(int frameCounter, Object context) {
+        boolean start = context instanceof InputHandler input && input.logical().player1().startPressed();
+        frame(start);
+        for (CdSpecialSound sound : sounds) com.openggf.game.GameServices.audio().playSfx(sound.fmId());
+    }
 
+    @Override public boolean isComplete() { return complete; }
+
+    @Override
+    public void appendRenderCommands(List<GLCommand> commands) {
+        if (picture != null) renderer.draw(picture.frame());
+    }
+
+    @Override public boolean drawsLevelBackdrop() { return false; }
+
+    /** Backdrop colour 0 ({@code ResultsVDPRegs} register 7, Main.asm:3525). */
+    @Override
+    public Palette.Color resultsBackdropColor() {
+        if (picture == null) return null;
+        Palette.Color colour = new Palette.Color();
+        colour.fromSegaFormat(picture.colour(0));
+        return colour;
+    }
+
+    CdSpecialStageResultsPicture picture() { return picture; }
     public int score() { return score; }
     public int lives() { return lives; }
     public int extraLives() { return extraLives; }
     public int ringBonus() { return ringBonus; }
     public int timeBonus() { return timeBonus; }
     public Header header() { return header; }
-    public CdSpecialSound sound() { return lastSound; }
+    /** The sounds the last frame requested, in order. */
+    public List<CdSpecialSound> sounds() { return List.copyOf(sounds); }
 }

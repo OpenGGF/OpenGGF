@@ -8,6 +8,7 @@ import com.openggf.game.SpecialStageProvider;
 import com.openggf.game.SpecialStageViewport;
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.soniccd.CdDiscDataSource;
+import com.openggf.game.soniccd.program.CdProgramScreenRenderer;
 
 import java.io.IOException;
 import java.util.Objects;
@@ -24,7 +25,8 @@ public final class CdSpecialStageProvider implements SpecialStageProvider {
     private final Supplier<CdDiscDataSource> disc;
     private CdSpecialStageAssets assets;
     private CdSpecialStageSession session;
-    private CdSpecialStagePresentation presentation;
+    /** Draws the program's picture ({@link CdSpecialStageScreen}): planes, HUD, sprites and fades. */
+    private final CdProgramScreenRenderer renderer = new CdProgramScreenRenderer();
     private CdSpecialStageEntry pending;
     private int timeStones;
     private int held;
@@ -62,7 +64,7 @@ public final class CdSpecialStageProvider implements SpecialStageProvider {
                 : CdSpecialStageEntry.normal(stageIndex, timeStones);
         pending = null;
         session = new CdSpecialStageSession(assets, entry);
-        presentation = new CdSpecialStagePresentation(assets, entry.stageId());
+        renderer.reset();
         held = 0;
         reported = false;
     }
@@ -95,13 +97,18 @@ public final class CdSpecialStageProvider implements SpecialStageProvider {
 
     @Override
     public void draw() {
-        if (session == null || presentation == null) return;
-        presentation.draw(GameServices.graphics(), session, viewport.innerH32OriginX());
+        if (session != null) renderer.draw(session.screen().frame());
+    }
+
+    /** The backdrop is CRAM entry $20 ({@code StageVDPRegs} register 7, scddisasm/src/Special Stage/Main.asm:3503). */
+    @Override
+    public void setClearColor() {
+        if (session != null) renderer.setClearColor(session.screen().frame(), 0x20);
     }
 
     @Override public void handleInput(int heldButtons, int pressedButtons) { held = heldButtons & 0xFF; }
     @Override public boolean isFinished() { return session != null && session.ended(); }
-    @Override public void reset() { session = null; presentation = null; }
+    @Override public void reset() { session = null; }
     @Override public boolean isInitialized() { return session != null; }
     @Override public boolean hasSpecialStages() { return true; }
     @Override public SpecialStageAccessType getAccessType() { return SpecialStageAccessType.GIANT_RING; }
@@ -145,9 +152,12 @@ public final class CdSpecialStageProvider implements SpecialStageProvider {
         if (result != null && !result.showsResults()) return com.openggf.game.NoOpResultsScreen.INSTANCE;
         var game = GameServices.gameStateOrNull();
         var policy = GameServices.module().getGameService(com.openggf.game.internal.ScoreAdditionPolicy.class);
-        int nextLife = policy instanceof com.openggf.game.soniccd.program.CdScorePolicy cd ? cd.nextLifeScore() / 10 : 5000;
+        var cd = policy instanceof com.openggf.game.soniccd.program.CdScorePolicy p ? p : null;
+        int nextLife = cd != null ? cd.nextLifeScore() / 10 : 5000;
         return new CdSpecialStageResults(result, game == null ? 0 : game.getScore() / 10, nextLife,
-                game == null ? 3 : game.getLives());
+                game == null ? 3 : game.getLives(), assets, points -> {
+                    if (game != null && cd != null) cd.awardSpecialStageResults(game, points * 10);
+                });
     }
 
     @Override public boolean supportsRewind() { return true; }
@@ -168,7 +178,7 @@ public final class CdSpecialStageProvider implements SpecialStageProvider {
         held = s.held();
         reported = s.reported();
         ended = s.ended();
-        if (presentation != null) presentation.invalidate();
+        renderer.reset(); // the restored screen re-uploads every tile
     }
 
     record State(CdSpecialStageSession owner, CdSpecialStageSession.State session,

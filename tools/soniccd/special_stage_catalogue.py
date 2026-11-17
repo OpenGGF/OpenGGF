@@ -233,6 +233,14 @@ def main():
                          f"{parent} {label} (Main.asm:{local_line(main_text, parent, label)})"))
     for label in ("SS5BGScrollSpeeds", "SS6BGWave", "TimeStonePalettes", "NumTilesUpper", "NumTilesLower"):
         add_dc(label, MAIN, MAIN_ASM, main_text, label)
+    # Results screen digits (DrawResultsNum) and extra-life icon frames (DrawExtraPlayers .IconMaps).
+    for name, parent, label in (("ResultsNumTilesUpper", "DrawResultsNum", ".NumTilesUpper"),
+                                ("ResultsNumTilesLower", "DrawResultsNum", ".NumTilesLower"),
+                                ("ExtraPlayerIconMaps", "DrawExtraPlayers", ".IconMaps")):
+        needle = dc_local(main_text, parent, label)
+        offset = locate(files[MAIN], needle, parent + label, MAIN)
+        rows.append((name, MAIN.split(";")[0], offset, len(needle),
+                     f"{parent} {label} (Main.asm:{local_line(main_text, parent, label)})"))
     # ObjUFO_Draw .Frames (scddisasm/src/Special Stage/Objects/UFO/Main.asm:412-423): animation by distance / 16.
     frames = dc_local(source.text("Special Stage/Objects/UFO/Main.asm"), "ObjUFO_Draw", ".Frames")
     rows.append(("UFODistanceFrames", SUB.split(";")[0], locate(files[SUB], frames, "UFO .Frames", SUB), len(frames),
