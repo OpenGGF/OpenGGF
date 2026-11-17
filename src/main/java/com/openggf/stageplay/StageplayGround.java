@@ -26,7 +26,7 @@ public final class StageplayGround {
     public sealed interface Performer permits Player, Visual {}
     public record Player(String game, String character, int path) implements Performer {
         public Player {
-            if (!Set.of("s1", "s2", "s3k").contains(game) || character == null || character.isBlank()
+            if (!Set.of("s1", "s2", "s3k", "scd").contains(game) || character == null || character.isBlank()
                     || path < 0 || path > 1) throw new IllegalArgumentException("Invalid native player profile");
         }
     }

@@ -71,6 +71,13 @@ public final class EditorProjectLevel extends AbstractLevel implements RingObjec
         return LevelObjectArt.initialize(new EditorProjectLevel(EditorProjectState.capture(source), source.getRingSpriteSheet()), source);
     }
 
+    /** Explicit authoring view; the caller retains the native source for runtime materialization. */
+    static EditorProjectLevel nativeView(Level source) {
+        if (!(source instanceof com.openggf.game.internal.NativeProjectLevel))
+            throw new IllegalArgumentException("Native authoring requires an explicit source capability");
+        return LevelObjectArt.initialize(new EditorProjectLevel(EditorProjectState.captureNativeView(source), source.getRingSpriteSheet()), source);
+    }
+
     /** A blank layout keeps the asset library and discards stock placements/native layout features. */
     public static EditorProjectLevel blank(Level library, int width, int height) {
         Objects.requireNonNull(library, "library");

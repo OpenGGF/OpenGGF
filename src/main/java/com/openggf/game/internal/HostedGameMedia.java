@@ -43,9 +43,30 @@ public interface HostedGameMedia {
      */
     GameDataSource openConfiguredMedia(SonicConfigurationService config) throws IOException;
 
+    /** Exact configured input path for isolated authoring workers. */
+    default Path configuredPath(SonicConfigurationService config) throws IOException {
+        throw new IOException(displayName() + " has no authoring source locator");
+    }
+
+    /** Opens and verifies an explicitly supplied offline source. The caller owns it. */
+    default GameDataSource openMedia(Path path) throws IOException {
+        throw new IOException(displayName() + " does not support explicit offline media");
+    }
+
     /** {@link #openConfiguredMedia(SonicConfigurationService)} with the process configuration. */
     default GameDataSource openConfiguredMedia() throws IOException {
         return openConfiguredMedia(com.openggf.game.GameServices.configuration());
+    }
+
+    /** Optional native menu theme and its owned media lifetime. */
+    default java.util.Optional<HostedMenuMusic> menuMusic(SonicConfigurationService config) throws IOException {
+        return java.util.Optional.empty();
+    }
+
+    /** Detached title pixels; all media reads finish before returning. */
+    default java.util.Optional<com.openggf.game.preview.TitlePreviewProvider.Sequence> titlePreview(
+            SonicConfigurationService config) throws IOException {
+        return java.util.Optional.empty();
     }
 
     /** The level a recorded trace's directory starts in, read from its {@code metadata.json}. */

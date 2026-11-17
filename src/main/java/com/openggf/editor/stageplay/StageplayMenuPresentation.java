@@ -50,7 +50,7 @@ final class StageplayMenuPresentation {
             menu.configureField(f.key(),labels.getOrDefault(f.key(),f.label()));
             List<String> choices=List.of();
             if(f.value().equals("true")||f.value().equals("false"))choices=List.of("false","true");
-            else if(f.key().equals("game"))choices=List.of("s1","s2","s3k");
+            else if(f.key().equals("game"))choices=List.of("s1","s2","s3k","scd");
             else if(f.key().equals("interpolation"))choices=context.choices().get("Interpolation");
             else if(f.key().equals("transition"))choices=context.choices().get("Transition");
             else if(f.key().equals("condition"))choices=context.choices().get("WaitCondition");
@@ -60,7 +60,7 @@ final class StageplayMenuPresentation {
             if(!choices.isEmpty()&&choices.contains(f.value()))menu.configureField(f.key(),labels.getOrDefault(f.key(),f.label()),choices,Map.of());
         }
         for(String key:List.of("frame","start","end","hold","timeout","duration","frames","length"))if(keys.contains(key))menu.setUnit(key,UiMessages.text("editor.stageplay_menu_presentation.frames_1e328x2"));
-        if(keys.contains("game"))menu.setValueLabels("game",Map.of("s1",UiMessages.text("editor.stageplay_menu_presentation.sonic_1_1t0f5st"),"s2",UiMessages.text("editor.stageplay_menu_presentation.sonic_2_1t0f5su"),"s3k",UiMessages.text("editor.stageplay_menu_presentation.sonic_3_k_do22q8")));
+        if(keys.contains("game"))menu.setValueLabels("game",Map.of("s1",UiMessages.text("editor.stageplay_menu_presentation.sonic_1_1t0f5st"),"s2",UiMessages.text("editor.stageplay_menu_presentation.sonic_2_1t0f5su"),"scd",com.openggf.game.GameModuleRegistry.hostedMedia(com.openggf.game.GameId.SCD).menuLabel(),"s3k",UiMessages.text("editor.stageplay_menu_presentation.sonic_3_k_do22q8")));
         if(keys.contains("character"))menu.setValueLabels("character",Map.of("sonic",UiMessages.text("editor.stageplay_menu_presentation.sonic_1bo4y4"),"tails",UiMessages.text("editor.stageplay_menu_presentation.tails_1byw3n"),"knuckles",UiMessages.text("editor.stageplay_menu_presentation.knuckles_1wl5wgw")));
         if(keys.contains("actor")) {
             var options=new LinkedHashMap<String,String>();

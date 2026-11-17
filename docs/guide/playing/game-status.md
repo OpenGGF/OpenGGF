@@ -161,7 +161,16 @@ campaign behavior. See [ROM discovery](../../../CONFIGURATION.md#rom-files).
 
 ## Sonic CD (development preview)
 
-**Status: on the `next` development line. It is on the master title shelf when
+Stageplay's development preview can open supplied CD media, select a native
+stage including its period, and prepare a native Sonic scene or cold-level
+route tape. Native/frozen/baked object pictures preserve foreground occlusion
+in a disc-backed Palmtree Panic Past canopy regression. Poser body and accessory
+lookups use the selected stage program. Disc-backed scene cues exercise CDDA
+and the Past-stage PCM driver through offline production audio. This is not authoring
+certification; see the
+[bounded validation record](../../architecture/validation/2026-11-16-sonic-cd-stageplay-editor.md).
+
+**Status: on the `develop` (0.8) development line. It is on the master title shelf when
 your USA disc image is in the ROM folder; it also runs in tests, trace replay
 and the capture tools.**
 
@@ -186,7 +195,9 @@ in either of two ways:
   engine looks there and up to two sub-folders down, and recognises the disc by
   its data track's header, not by file names.
 
-Sonic CD then appears on the master title shelf; with the master title turned
+Sonic CD then appears on the master title shelf with its disc-backed native title
+preview and optional hub theme. Menu playback owns its own disc/audio session,
+so it does not replace suspended gameplay audio. With the master title turned
 off, `roms.default: scd` starts it directly. A `roms.soniccd` path that is not
 the USA disc is refused, not replaced by the folder search.
 
@@ -251,7 +262,10 @@ Future). `SonicCdEndingCaptureTool --ending good|bad` films an ending.
   pipeline. Authored zones are limited to flat terrain with owned objects;
   native CD objects/rings need their stage context. Cartridge donation supports
   S1 Sonic, S2 Sonic/Tails and S3K Sonic/Tails/Knuckles; route coverage remains
-  bounded to the donor-host validation record. Stageplay/editor/import support remains a separate lane. See the
+  bounded to the donor-host validation record. Editor projects keep a bounded
+  disc/stage source reference: native edit replay retains the loaded game owners,
+  source layout semantics and object secondary bytes, project creation selects a
+  zone, act and time period, and source-backed playtests reload the native owners. See the
   [CD mod contracts](../../modding/ggfmod.md#sonic-cd-runtime-mods).
 - Sonic CD Game Setup saves Borrow from and character choices. Without donation
   it defaults to Sonic alone. CD itself cannot donate player art.
@@ -272,8 +286,16 @@ Future). `SonicCdEndingCaptureTool --ending good|bad` films an ending.
   [known discrepancies](../../status/known-discrepancies.md#sonic-cd-hardware-timings-not-modelled).
 - Whether the music keeps playing while paused has not been checked against a
   console.
-- Wider views draw full pictures, but no native reference exists to check
-  them.
+- Wider stage views extend object visibility, touch eligibility, load/unload
+  windows and boss arena centring. Static Palmtree Panic background bands
+  retain their 512-pixel repeat beside moving bands; the time tunnel fills
+  the selected width. Title cards, results and game-over text centre in the native
+  frame, independently of the HUD preference, as in the cartridge games. All HUD
+  pieces (including period and time-warp icons) follow the centred or left-edge
+  HUD setting in EDGE and NATIVE modes; time posts remain world-positioned.
+  At 320 these presentation offsets are zero. These are engine extensions without a native wide
+  reference. Fixed-width programs and the special stage stay pillarboxed;
+  level walls and scripted world coordinates retain their native positions.
 - Accuracy is measured against native recordings; how far each stage is
   certified is in the [Sonic CD stage matrix](../../architecture/validation/levels/scd-stages.md).
 

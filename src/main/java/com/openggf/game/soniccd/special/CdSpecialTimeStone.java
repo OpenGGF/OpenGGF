@@ -77,4 +77,26 @@ final class CdSpecialTimeStone {
         timer = (timer - 1) & 0xFFFF;
         if (timer == 0) routine = 2;
     }
+
+    State capture() { return new State(
+            sprite == null ? null : sprite.capture(), sparkle1 == null ? null : sparkle1.capture(),
+            sparkle2 == null ? null : sparkle2.capture(), present, sparkles, sparklesDelete, routine, timer,
+            spriteY, sparkleRoutine); }
+    void restore(State s) {
+        sprite = CdSpecialSprites.Sprite.restored(sprite, s.sprite());
+        sparkle1 = CdSpecialSprites.Sprite.restored(sparkle1, s.sparkle1());
+        sparkle2 = CdSpecialSprites.Sprite.restored(sparkle2, s.sparkle2());
+        present = s.present();
+        sparkles = s.sparkles();
+        sparklesDelete = s.sparklesDelete();
+        routine = s.routine();
+        timer = s.timer();
+        spriteY = s.spriteY();
+        sparkleRoutine = s.sparkleRoutine();
+    }
+    record State(
+            CdSpecialSprites.Sprite.State sprite, CdSpecialSprites.Sprite.State sparkle1,
+            CdSpecialSprites.Sprite.State sparkle2, boolean present, boolean sparkles, boolean sparklesDelete,
+            int routine, int timer, int spriteY, int sparkleRoutine) {
+    }
 }

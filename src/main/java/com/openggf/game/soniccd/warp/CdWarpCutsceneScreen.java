@@ -49,9 +49,9 @@ public final class CdWarpCutsceneScreen implements NativeMenuScreen {
         }
     }
 
-    @Override public void draw() { if (program != null) renderer.draw(program.screen()); }
+    @Override public void draw() { if (program != null) renderer.draw(program.screen(Math.max(320, com.openggf.game.GameServices.graphics().getProjectionWidth()))); }
 
-    @Override public void setClearColor() { if (program != null) renderer.setClearColor(program.screen()); }
+    @Override public void setClearColor() { if (program != null) renderer.setClearColor(program.screen(Math.max(320, com.openggf.game.GameServices.graphics().getProjectionWidth()))); }
 
     @Override
     public void reset() {

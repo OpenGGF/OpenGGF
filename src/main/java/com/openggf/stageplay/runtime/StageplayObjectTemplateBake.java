@@ -47,10 +47,8 @@ final class StageplayObjectTemplateBake {
         config.setSessionOverride(SonicConfiguration.LIVE_REWIND_ENABLED, false);
         config.setSessionOverride(SonicConfiguration.SCREEN_WIDTH_PIXELS, 320);
         config.setSessionOverride(SonicConfiguration.SCREEN_HEIGHT_PIXELS, 224);
-        var rom =
-                Objects.requireNonNull(
-                        library.sourceRom(actor.gameId()),
-                        "Supply object source ROM " + actor.gameId());
+        var dataSource = library.source(actor.gameId());
+        var rom = dataSource.rom().orElse(null);
         GameModule module =
                 new StageplayWorldModule(
                         GameModuleRegistry.createStockModule(GameId.fromCode(actor.gameId())),
@@ -62,12 +60,12 @@ final class StageplayObjectTemplateBake {
                         .beginRewindReplay(0, 0, com.openggf.audio.rewind.AudioReplayReason.SEEK)) {
             GameplayModeContext temporary = null;
             try {
-                services.roms().setRom(rom);
+                if (rom != null) services.roms().setRom(rom);
                 RenderContext.reset();
                 services.graphics().clearPaletteTextures();
                 temporary =
                         SessionManager.openGameplaySession(
-                                module, module, StockGameDataSources.pinned(rom, module), null);
+                                module, module, dataSource, null);
                 GameplaySessionFactory.attachManagers(temporary, services);
                 services.graphics()
                         .bindRuntimeManagedReferences(

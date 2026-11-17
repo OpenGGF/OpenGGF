@@ -69,4 +69,15 @@ public final class CdStampTrace {
     private static int edge(int point, int camZ, int z) {
         return divs(muls(point >> 8, camZ), z);
     }
+
+    State capture() { return new State(words); }
+    void restore(State s) {
+        System.arraycopy(s.words(), 0, words, 0, words.length);
+    }
+    record State(int[] words) {
+        State {
+            words = words.clone();
+        }
+        @Override public int[] words() { return words.clone(); }
+    }
 }

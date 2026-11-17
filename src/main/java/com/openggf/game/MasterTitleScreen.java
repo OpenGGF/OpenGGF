@@ -231,6 +231,7 @@ public class MasterTitleScreen {
     private MenuLoadTask<?> catalogLoad;
     private java.util.function.Consumer<Object> catalogLoaded;
     private String catalogLoadingTitle;
+    private final Map<GameId, RomPreviewState> hostedPreviews = new EnumMap<>(GameId.class);
     private final Map<GameEntry, String> previewSources = new EnumMap<>(GameEntry.class);
     /** User-supplied images as last scanned; rebuilt on initialise and after Settings apply. */
     private RomImageCatalogue romCatalogue;
@@ -1254,6 +1255,7 @@ public class MasterTitleScreen {
 
     private void refreshRomPreviews() {
         refreshStockAvailability();
+        loadHostedPreviews();
         for (GameEntry game : GameEntry.values()) {
             if (!game.cartridge()) continue;
             Optional<RomImageCatalogue.Resolution> resolution = romCatalogue.resolve(logicalRomFor(game));
@@ -1801,7 +1803,7 @@ public class MasterTitleScreen {
         box(r.x() + 2, r.y() + 2, r.w(), r.h(), 0f, 0.01f, 0.06f, 0.55f);
         box(r.x(), r.y(), r.w(), r.h(), 0.02f, 0.06f, 0.2f, 0.78f);
         font.endMegaBatch();
-        RomPreviewState preview = entry instanceof MasterTitleEntry.Stock stock ? romPreviews.get(stock.game()) : null;
+        RomPreviewState preview = previewFor(entry);
         if (preview != null && preview.textureId != 0 && preview.sequence != null && available) {
             if (selected) updateSelectedRomPreviewTexture();
             // Keep the original ROM texture: the final viewport samples its texels directly.
@@ -2299,7 +2301,29 @@ public class MasterTitleScreen {
     }
 
 
+    private void loadHostedPreviews() {
+        hostedPreviews.values().forEach(preview -> PngTextureLoader.deleteTexture(preview.textureId));
+        hostedPreviews.clear();
+        if (renderer == null) return;
+        for (MasterTitleEntry entry : entries) {
+            if (!(entry instanceof MasterTitleEntry.Hosted hosted) || !isEntryAvailable(entry)) continue;
+            try {
+                var decoded = GameModuleRegistry.hostedMedia(hosted.game()).titlePreview(configService);
+                if (decoded.isEmpty()) continue;
+                var preview = new RomPreviewState();
+                preview.sequence = decoded.get();
+                Image image = preview.sequence.imageAt(0);
+                preview.textureId = MasterTitleRomPreview.uploadTexture(image);
+                preview.width = image.width(); preview.height = image.height();
+                hostedPreviews.put(hosted.game(), preview);
+            } catch (IOException failure) {
+                LOGGER.warning("Cannot load hosted title preview: " + failure.getMessage());
+            }
+        }
+    }
+
     private void loadRomPreviews() {
+        loadHostedPreviews();
         if (romCatalogue == null) refreshStockAvailability();
         for (MasterTitleEntry entry : entries) {
             if (!(entry instanceof MasterTitleEntry.Stock stock) || !isEntryAvailable(entry)) continue;
@@ -2459,9 +2483,14 @@ public class MasterTitleScreen {
                 new com.openggf.game.internal.HostedGameMedia.Availability(false, null));
     }
 
+    private RomPreviewState previewFor(MasterTitleEntry entry) {
+        if (entry instanceof MasterTitleEntry.Stock stock) return romPreviews.get(stock.game());
+        if (entry instanceof MasterTitleEntry.Hosted hosted) return hostedPreviews.get(hosted.game());
+        return null;
+    }
+
     private RomPreviewState selectedPreview() {
-        if (!(selectedEntry() instanceof MasterTitleEntry.Stock stock)) return null;
-        RomPreviewState preview = romPreviews.get(stock.game());
+        RomPreviewState preview = previewFor(selectedEntry());
         return preview == null || preview.textureId == 0 || preview.sequence == null ? null : preview;
     }
 
@@ -2863,6 +2892,7 @@ public class MasterTitleScreen {
 
     private void resetRomPreviewTextureFrames() {
         romPreviews.values().forEach(preview -> preview.frameToken = Integer.MIN_VALUE);
+        hostedPreviews.values().forEach(preview -> preview.frameToken = Integer.MIN_VALUE);
     }
 
     public void setProjectionMatrix(float[] projectionMatrix) {
@@ -2917,6 +2947,8 @@ public class MasterTitleScreen {
         romPreviews.values().forEach(preview -> {
             PngTextureLoader.deleteTexture(preview.textureId);
         });
+        hostedPreviews.values().forEach(preview -> PngTextureLoader.deleteTexture(preview.textureId));
+        hostedPreviews.clear();
         deleteSuspendedTexture();
         releaseSuspendFrame();
         if (renderer != null) renderer.cleanup();

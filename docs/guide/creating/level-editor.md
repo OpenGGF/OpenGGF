@@ -76,6 +76,14 @@ Sonic 1 loop flags, fail with an explanation; use **New blank level** with that 
 library instead. An incompatible stock object can also prevent playtesting or
 export until it is removed or replaced.
 
+Sonic CD native-project persistence is under development. Its source-backed
+`.ogfproject` representation retains the disc identity and exact stage payload
+(zone, act, period and program). The CD loader checks this reference against the
+opened disc before materializing it. Native project selection, authored-edit
+replay and playtesting are not yet connected to this workflow. The stored editor
+view is not a flat playable level; flat playtest and directory-export paths reject
+source-backed documents.
+
 ### Open and import
 
 **Open project** reopens a complete `.ogfproject`. **Import exported level** reads a canonical level
@@ -566,3 +574,20 @@ To package the exported directory into a mod, continue with the
 [`ggfmod` conversion/validation](../../modding/ggfmod.md). Exported ROM-derived
 assets remain subject to their original rights; exporting them does not grant
 permission to redistribute them.
+
+### Sonic CD native projects
+
+Choose **Sonic CD**, a zone, then an act and time period to create a project
+from that native stage. The verified USA disc is required. Projects retain a
+bounded source reference, the original layout dimensions and authored edits.
+Player starts use terrain coordinates; native camera limits remain camera origins.
+Save/reopen and cloning preserve the source. Playtest reloads the native stage
+through the game owner before applying terrain, tile, object and ring edits.
+Existing placement IDs retain their second subtype and time mask after moves;
+new IDs default to second subtype zero and the selected period only.
+Resized native layouts are refused by replay. Importing a saved `.ogfproject`
+through the content importer and saving it again preserves its native reference.
+Reopening or playtesting requires the matching verified USA disc. Flat directory
+export and a ZIP made from that flat format are explicitly unsupported: they lack
+native program/PLC/placement context. Retain the source-backed `.ogfproject` rather
+than substituting a portable level.

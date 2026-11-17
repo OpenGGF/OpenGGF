@@ -27,6 +27,15 @@ import static org.mockito.Mockito.*;
 class TestAuthoredStageplayServices {
     @TempDir Path directory;
 
+    @Test void cdScenePreparationKeepsRegisteredOwnership() throws Exception {
+        StageplayStore.write(directory.resolve("cd.stageplay"), StageplayDocument.empty("scd", 0, 1, 640, 300, 320, 224));
+        var prepared = AuthoredStageplayServices.prepareForEditor(directory, "scd", List.of("cd.stageplay"));
+        try {
+            assertTrue(prepared.service().play("cd.stageplay", true));
+            assertThrows(IllegalArgumentException.class, () -> prepared.service().play("undeclared.stageplay", true));
+        } finally { prepared.controller().close(); }
+    }
+
     @Test void multipleScenesShareOneControllerAndBusyGateWithIndependentRewindState() throws Exception {
         scenes();
         var prepared = AuthoredStageplayServices.prepareForEditor(directory, "s2", List.of("one.stageplay", "two.stageplay"));

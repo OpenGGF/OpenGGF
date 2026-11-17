@@ -303,8 +303,7 @@ public final class StageplayPlayback implements GameplayFrameController, RewindS
         private LiveHost(StageplayDocument document, Map<String, byte[]> assets,
                          Map<StageplayDocument.SetSource, com.openggf.level.Level> sets) {
             this.document = document;
-            try { library = new SceneRomLibrary(GameServices.module(), GameServices.rom().getRom(), GameServices.rom()); }
-            catch (IOException failure) { throw new UncheckedIOException(failure); }
+            library = new SceneRomLibrary(GameServices.module(), com.openggf.game.session.SessionManager.getCurrentWorldSession().getDataSource(), GameServices.rom());
             resources = new StageplayResources(library, false);
             resources.setAssetReader(path -> preparedAsset(assets, path));
             sets.forEach((source, level) -> resources.registerSet(source, level));

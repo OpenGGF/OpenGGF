@@ -156,13 +156,13 @@ public final class StageplayTool {
     }
 
     private static Object simulate(Map<String, String> flags) throws IOException {
-        allow(flags, "scene", "out", "every", "s1-rom", "s2-rom", "s3k-rom");
+        allow(flags, "scene", "out", "every", "s1-rom", "s2-rom", "s3k-rom", "scd-rom");
         Path scene = path(flags, "scene").toAbsolutePath().normalize(), out = path(flags, "out");
         var document = StageplayStore.read(scene);
         int every = Integer.parseInt(flags.getOrDefault("every", "1"));
         if (every < 1 || every > document.durationFrames()) throw new IOException("Invalid simulation sampling interval");
         var paths = new LinkedHashMap<String, Path>();
-        for (String game : List.of("s1", "s2", "s3k")) {
+        for (String game : List.of("s1", "s2", "s3k", "scd")) {
             if (flags.containsKey(game + "-rom")) paths.put(game, path(flags, game + "-rom"));
         }
         if (paths.isEmpty()) throw new IOException("Simulation requires supplied ROM paths (--s1-rom, --s2-rom or --s3k-rom)");
@@ -193,7 +193,7 @@ public final class StageplayTool {
     }
 
     private static Object ground(Map<String,String> flags) throws IOException {
-        allow(flags,"set","scene","frame","queries","s1-rom","s2-rom","s3k-rom");
+        allow(flags,"set","scene","frame","queries","s1-rom","s2-rom","s3k-rom","scd-rom");
         if (flags.containsKey("set") == flags.containsKey("scene")) throw new IOException("Ground needs exactly one --set game/zone/act or --scene");
         StageplayDocument scene = flags.containsKey("scene") ? StageplayStore.read(path(flags,"scene")) : null;
         int frame = Integer.parseInt(flags.getOrDefault("frame","0"));
@@ -212,7 +212,7 @@ public final class StageplayTool {
         var batch = StageplayGround.Json.decodeBatch(Files.readString(queryFile),scene);
         StageplayGround.Basis basis = scene == null ? new StageplayGround.EntryLayout(source) : new StageplayGround.SceneFrame(source,frame);
         var paths = new LinkedHashMap<String,Path>();
-        for (String game : List.of("s1","s2","s3k")) if (flags.containsKey(game+"-rom")) paths.put(game,path(flags,game+"-rom"));
+        for (String game : List.of("s1","s2","s3k","scd")) if (flags.containsKey(game+"-rom")) paths.put(game,path(flags,game+"-rom"));
         StageplayGround.Report report;
         try (var library = SceneRomLibrary.open(paths); var resources = new StageplayResources(library,false)) {
             if (scene == null) report = resources.ground(source,batch,() -> Thread.currentThread().isInterrupted());

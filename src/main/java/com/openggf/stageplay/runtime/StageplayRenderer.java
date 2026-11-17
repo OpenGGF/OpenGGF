@@ -14,6 +14,10 @@ public final class StageplayRenderer {
     /** Mapping frame shared by staged rendering and optional native player direction. */
     public int mappingFrame(StageplayTimeline.ActorPose actor) {
         var set = resources.character(actor.gameId(), actor.character());
+        return mappingFrame(actor, set);
+    }
+
+    private int mappingFrame(StageplayTimeline.ActorPose actor, SceneSpriteSet set) {
         if (actor.pose() >= 0) return actor.pose();
         int[] frames = set.animationFrames(actor.animation());
         if (frames.length == 0) throw new IllegalArgumentException("Actor animation is unavailable: " + actor.actorId());
@@ -53,8 +57,8 @@ public final class StageplayRenderer {
                             StageplayTimeline.CameraPose camera, float zoom, boolean nativeWorld) {
         for (var actor : frame.actors()) {
             if (!actor.visible() || nativeWorld && document.puppets().stream().anyMatch(p -> p.actorId().equals(actor.actorId()))) continue;
-            var set = resources.character(actor.gameId(), actor.character());
-            var sprite = set.frame(mappingFrame(actor));
+            var set = resources.actorArt(frame.set(), actor.gameId()).character(actor.character());
+            var sprite = set.frame(mappingFrame(actor, set));
             if (sprite == null) throw new IllegalArgumentException("Actor animation is unavailable: " + actor.actorId());
             float x = (float) ((actor.x() - camera.x()) * zoom), y = (float) ((actor.y() - camera.y()) * zoom);
             var style = SceneDraw.plain().withScale((float) actor.scale() * zoom).withFlipX(actor.flipX()).withFlipY(actor.flipY());
@@ -80,7 +84,7 @@ public final class StageplayRenderer {
 
     private SceneAccessoryPose accessory(StageplayDocument document, StageplayTimeline.Frame frame,
                                           StageplayTimeline.ActorPose actor) {
-        var rom = resources.rom(actor.gameId());
+        var rom = resources.actorArt(frame.set(), actor.gameId());
         var nativePose = frame.puppets().stream().filter(value -> value.actorId().equals(actor.actorId())).findFirst();
         if (nativePose.isPresent()) {
             var tail = nativePose.get().accessory();

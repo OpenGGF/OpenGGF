@@ -47,7 +47,8 @@ public final class CdLevel extends AbstractLevel implements com.openggf.game.int
         com.openggf.game.internal.CollisionLayoutColumnWindow,
         com.openggf.game.internal.CollisionChunkOriginReadsBlank,
         com.openggf.game.internal.VerticalScrollWrapAtTop,
-        com.openggf.game.internal.BackgroundRowLayout {
+        com.openggf.game.internal.BackgroundRowLayout,
+        com.openggf.game.internal.NativeProjectLevel {
     private static final int SONIC_PALETTE_ID = 3;   // LevelStart: moveq #3,d0; bsr LoadPalette (scddisasm/src/Level/Main.asm:240-243)
     private static final int CHUNK_BYTES = 0x200;     // GetBlockData: subq.b #1; ror.w #7 (Block Draw.asm:217-219)
     private static final int CHUNK_GRID = 16;
@@ -70,6 +71,10 @@ public final class CdLevel extends AbstractLevel implements com.openggf.game.int
     }
 
     private final CdStagePayload payload;
+    private final com.openggf.game.internal.NativeProjectSource projectSource;
+
+    @Override public com.openggf.game.internal.NativeProjectSource nativeProjectSource() { return projectSource; }
+    @Override public int[] nativeProjectStart() { return new int[]{startX, startY}; }
     // --- common2 ---
     private com.openggf.game.soniccd.objects.common.CdLevelFlags flags;
 
@@ -83,7 +88,7 @@ public final class CdLevel extends AbstractLevel implements com.openggf.game.int
     private final int startX;
     private final int cameraYCentre;
     private final int startY;
-    private final List<CdPlacement> placements;
+    private List<CdPlacement> placements;
     private java.util.Map<ObjectSpawn, List<com.openggf.level.rings.RingSpawn>> ringPlacementMapping = java.util.Map.of();
     private boolean[] fgLoopFlags;
     private int fgMapWidth;
@@ -92,9 +97,12 @@ public final class CdLevel extends AbstractLevel implements com.openggf.game.int
     private com.openggf.game.soniccd.zones.ppz.PpzBackgroundRows ppzBackgroundRows;
 
     CdLevel(CdStagePayload payload, CdStageImage image, CdStageCatalogue.Entry entry, int zoneIndex,
-            boolean publishGraphics) throws IOException {
+            boolean publishGraphics, String mediaIdentity) throws IOException {
         super(zoneIndex);
         this.payload = payload;
+        this.projectSource = new com.openggf.game.internal.NativeProjectSource(mediaIdentity, payload.name(),
+                payload.stage().zone().nativeRound(), payload.stage().actNumber(), payload.stage().period().name(),
+                payload.file().isoName(), CHUNK_GRID);
         int index = entry.levelDataIndex();
         GraphicsManager graphics = publishGraphics ? GameServices.graphics() : null;
 
@@ -225,9 +233,66 @@ public final class CdLevel extends AbstractLevel implements com.openggf.game.int
      * 0 for a spawn that is not a layout entry.
      */
     public int subtype2(ObjectSpawn spawn) {
-        int index = spawn.layoutIndex();
-        return index >= 0 && index < placements.size() && placements.get(index).x() == spawn.x()
-                ? placements.get(index).subtype2() : 0;
+        return placements.stream().filter(p -> p.layoutIndex() == spawn.layoutIndex())
+                .mapToInt(CdPlacement::subtype2).findFirst().orElse(0);
+    }
+
+    /**
+     * Apply a detached editor view to this freshly decoded stage. Native layout
+     * windows, loop flags, payload, flags and presentation owners remain here.
+     * Existing slots retain both unrepresented placement bytes even after moves;
+     * new slots use secondary subtype zero and this payload's active time bit.
+     */
+    public void applyProject(com.openggf.level.Level authored) throws IOException {
+        if (authored.getChunksPerBlockSide() != CHUNK_GRID
+                || authored.getMap().getWidth() != map.getWidth()
+                || authored.getMap().getHeight() != map.getHeight()
+                || authored.getMap().getLayerCount() != map.getLayerCount())
+            throw new IOException("Native project replay requires the source layout dimensions and grid");
+        var copy = com.openggf.level.MutableLevel.snapshot(authored);
+        var oldById = new java.util.HashMap<Integer, CdPlacement>();
+        placements.forEach(p -> oldById.put(p.layoutIndex(), p));
+        var replacement = new java.util.LinkedHashMap<Integer, CdPlacement>();
+        // Preserve other periods' placements, which the authoring view never exposed.
+        int timeZone = nativeTimeZone(payload.stage().period());
+        placements.stream().filter(p -> !p.spawnsIn(timeZone)).forEach(p -> replacement.put(p.layoutIndex(), p));
+        var ids = new java.util.HashSet<Integer>();
+        for (ObjectSpawn spawn : copy.getObjects()) {
+            if (spawn.layoutIndex() < 0 || !ids.add(spawn.layoutIndex()))
+                throw new IOException("Native project objects require unique nonnegative placement ids");
+            CdPlacement original = oldById.get(spawn.layoutIndex());
+            if (original != null && !original.spawnsIn(timeZone))
+                throw new IOException("Authored placement id collides with an unexposed native period");
+            replacement.put(spawn.layoutIndex(), new CdPlacement(spawn.layoutIndex(), spawn.x(), spawn.rawYWord(),
+                    spawn.objectId() | (spawn.respawnTracked() ? 0x80 : 0), spawn.subtype(),
+                    original == null ? 1 << (timeZone + 5) : original.timeZones(),
+                    original == null ? 0 : original.subtype2()));
+        }
+        // The editor omits invalid unused trailing definitions from its palette.
+        // Retain those native definitions unless an authored definition replaces them.
+        Block[] nextBlocks = new Block[copy.getBlockCount()];
+        for (int i = 0; i < nextBlocks.length; i++) {
+            Block candidate = copy.getBlock(i);
+            boolean empty = java.util.Arrays.stream(candidate.saveState()).allMatch(word -> word == 0);
+            boolean unavailable = i < blockCount && java.util.Arrays.stream(blocks[i].saveState())
+                    .anyMatch(word -> (word & 0x3FF) >= chunkCount);
+            nextBlocks[i] = empty && unavailable ? blocks[i] : candidate;
+        }
+        patterns = new Pattern[copy.getPatternCount()];
+        for (int i = 0; i < patterns.length; i++) patterns[i] = copy.getPattern(i);
+        patternCount = patterns.length;
+        chunks = new Chunk[copy.getChunkCount()];
+        for (int i = 0; i < chunks.length; i++) chunks[i] = copy.getChunk(i);
+        chunkCount = chunks.length;
+        blocks = nextBlocks; blockCount = blocks.length;
+        solidTiles = new SolidTile[copy.getSolidTileCount()];
+        for (int i = 0; i < solidTiles.length; i++) solidTiles[i] = copy.getSolidTile(i);
+        solidTileCount = solidTiles.length;
+        for (int i = 0; i < PALETTE_COUNT; i++) palettes[i] = copy.getPalette(i);
+        map = copy.getMap(); objects = List.copyOf(copy.getObjects()); rings = List.copyOf(copy.getRings());
+        ringPlacementMapping = java.util.Map.copyOf(copy.ringObjectPlacementMapping());
+        placements = List.copyOf(replacement.values());
+        minX = copy.getMinX(); maxX = copy.getMaxX(); minY = copy.getMinY(); maxY = copy.getMaxY();
     }
 
     /** Every entry of the stage's object layout, before the time-zone filter. */

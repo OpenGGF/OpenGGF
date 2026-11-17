@@ -136,6 +136,19 @@ canonical placement encoding, palette ownership, and selected game-host checks;
 a successful project save alone does not establish that it can be exported.
 
 
+A native-source `.ogfproject` also retains a bounded `nativeSource` in its
+checksummed payload: media identity, stage, zone, act, period, program and block
+grid side. It contains no filesystem path or executable provider name. Missing
+`nativeSource` in older flat projects means the original flat contract; it does
+not authorize native collision remaps. Source-backed runtime materialization must
+validate the reference against opened media and reload native stage data before
+applying edits. Directory/ZIP level exports have no such contract and cannot
+represent these projects. Internal CD replay now reloads through the native game
+owner and applies the saved authored state, retaining source loop/layout semantics
+and object secondary bytes by placement ID. New object IDs use second subtype
+zero and the current period mask. Layout resizing is explicitly refused by replay.
+Creator-facing playtest integration remains under development.
+
 ## Editor palette authoring
 
 The level editor edits creator-owned palette cells using exact Genesis 9-bit

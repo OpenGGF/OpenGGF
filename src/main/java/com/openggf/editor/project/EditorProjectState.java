@@ -28,6 +28,10 @@ record EditorProjectState(int zoneIndex, int blockGridSide, byte[][] patterns, i
         return capture(source, includeBacking, false, 0, 0).state();
     }
 
+    static EditorProjectState captureNativeView(Level source) {
+        return capture(source, true, false, 0, 0, true).state();
+    }
+
     /** Blank authoring retains only resolvable definitions, without importing native layout geometry. */
     static BlankCapture captureBlankLibrary(Level source, int width, int height) {
         EditorProjectLevel.validateDimensions(source.getChunksPerBlockSide(), width, height);
@@ -37,6 +41,11 @@ record EditorProjectState(int zoneIndex, int blockGridSide, byte[][] patterns, i
     record BlankCapture(EditorProjectState state, int omittedChunks, int omittedBlocks) {}
 
     private static BlankCapture capture(Level source, boolean includeBacking, boolean blank, int width, int height) {
+        return capture(source, includeBacking, blank, width, height, false);
+    }
+
+    private static BlankCapture capture(Level source, boolean includeBacking, boolean blank, int width, int height,
+                                         boolean nativeView) {
         checkCount(source.getPatternCount(), MAX_PATTERNS, "patterns");
         checkCount(source.getChunkCount(), MAX_CHUNKS, "chunks");
         checkCount(source.getBlockCount(), 256, "blocks");
@@ -132,6 +141,23 @@ record EditorProjectState(int zoneIndex, int blockGridSide, byte[][] patterns, i
             chunks = usableChunks.toArray(int[][]::new);
             blocks = usableBlocks.toArray(int[][]::new);
         } else {
+            if (nativeView) {
+                // Native files expose addressable trailing definitions beyond the real library.
+                // Omit only unused invalid definitions from the authoring palette. Runtime retains
+                // the original bytes through the source reference; this view is never loadable.
+                boolean[] placed = new boolean[blocks.length];
+                for (byte cell : source.getMap().getData()) {
+                    int index = Byte.toUnsignedInt(cell);
+                    if (index < placed.length) placed[index] = true;
+                }
+                for (int b = 0; b < blocks.length; b++) {
+                    if (placed[b]) continue;
+                    for (int word : blocks[b]) if ((word & 0x3FF) >= chunks.length) {
+                        blocks[b] = new int[source.getChunksPerBlockSide() * source.getChunksPerBlockSide()];
+                        break;
+                    }
+                }
+            }
             patterns = neutralizeUnplacedUnavailableArt(source, patterns, chunks, blocks);
         }
         int side = source.getChunksPerBlockSide();
