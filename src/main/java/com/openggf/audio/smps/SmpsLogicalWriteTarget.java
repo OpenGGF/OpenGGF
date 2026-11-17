@@ -21,6 +21,14 @@ public interface SmpsLogicalWriteTarget extends Synthesizer {
     }
 
     /**
+     * Writes the retail volume tail's bus byte under the source channel's
+     * ownership. Its unchecked high bits can select another hardware latch.
+     */
+    default void writePsgDriverVolume(Object source, int sourceChannel, int value) {
+        writePsg(source, value);
+    }
+
+    /**
      * Writes the driver's PSG track-stop transaction. The ROM routine owns
      * this physical bus operation independently of ordinary channel-write
      * arbitration: tone silence, an optional noise silence, then the retail

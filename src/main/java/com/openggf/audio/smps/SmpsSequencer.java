@@ -398,6 +398,7 @@ public class SmpsSequencer implements CoordFlagContext {
         to.voiceData = from.voiceData;
         System.arraycopy(from.voiceScratch, 0, to.voiceScratch, 0, to.voiceScratch.length);
         to.voiceId = from.voiceId;
+        to.s3kTlPointerInitialized = from.s3kTlPointerInitialized;
         to.baseFnum = from.baseFnum;
         to.baseBlock = from.baseBlock;
         if (to.loopCounters.length != from.loopCounters.length) {
@@ -432,6 +433,7 @@ public class SmpsSequencer implements CoordFlagContext {
         to.modEnvMult = from.modEnvMult;
         to.modEnvCache = from.modEnvCache;
         to.modEnvHold = from.modEnvHold;
+        to.sustainFmFrequency = from.sustainFmFrequency;
         to.rawFreqMode = from.rawFreqMode;
         to.rawFrequency = from.rawFrequency;
         to.instrumentId = from.instrumentId;
@@ -579,6 +581,7 @@ public class SmpsSequencer implements CoordFlagContext {
         // Scratch buffer for voice data modification (avoids allocation in refreshInstrument)
         public final byte[] voiceScratch = new byte[25];
         public int voiceId;
+        public boolean s3kTlPointerInitialized;
         public int baseFnum;
         public int baseBlock;
         public int[] loopCounters = new int[8]; // Increased from 4 to reduce runtime reallocation
@@ -613,6 +616,7 @@ public class SmpsSequencer implements CoordFlagContext {
         public int modEnvMult;
         public int modEnvCache;
         public boolean modEnvHold;
+        private boolean sustainFmFrequency;
         public boolean rawFreqMode;
         public int rawFrequency;
         public int instrumentId;
@@ -743,7 +747,7 @@ public class SmpsSequencer implements CoordFlagContext {
         this.tempoModBase = this.config.getTempoModBase();
         this.dacData = dacData;
         dividingTiming = smpsData.getDividingTiming();
-        if (dividingTiming == 0) {
+        if (dividingTiming == 0 && !usesS3kZ80Rules()) {
             dividingTiming = 1;
         }
         normalTempo = smpsData.getTempo();
@@ -1536,6 +1540,8 @@ public class SmpsSequencer implements CoordFlagContext {
             nextEvent = Math.min(nextEvent, getSamplesUntilNextTempoFrame());
         }
 
+        boolean s3k = usesS3kZ80Rules();
+        boolean countsFill = config.isDirect68kDriver() || s3k;
         for (Track t : tracks) {
             if (!t.active) {
                 continue;
@@ -1547,10 +1553,9 @@ public class SmpsSequencer implements CoordFlagContext {
 
             nextEvent = Math.min(nextEvent, samplesUntilTempoTicks(t.duration));
 
-            boolean fillPending = config.isDirect68kDriver() ? t.fillCounter > 0 : t.fill > 0;
-            if (fillPending && !t.tieNext && t.type != TrackType.DAC) {
-                int fillTicks = config.isDirect68kDriver()
-                        ? t.fillCounter : Math.max(0, t.fill + t.duration - t.scaledDuration);
+            boolean fillPending = countsFill ? t.fillCounter > 0 : t.fill > 0;
+            if (fillPending && (!t.tieNext || s3k) && t.type != TrackType.DAC) {
+                int fillTicks = countsFill ? t.fillCounter : Math.max(0, t.fill + t.duration - t.scaledDuration);
                 nextEvent = Math.min(nextEvent, samplesUntilTempoTicks(fillTicks));
             }
         }
@@ -1764,33 +1769,28 @@ public class SmpsSequencer implements CoordFlagContext {
                     // .notegoing (s2.sounddriver.asm:832-834) and S1 from
                     // FMUpdateTrack's .notegoing (s1.sounddriver.asm:358-361).
                     // An expired timer goes to the next stream unit instead.
-                    if (!t.tieNext && t.type != TrackType.DAC) {
+                    boolean s3kTrackTiming = usesS3kZ80Rules();
+                    if (s3kTrackTiming && t.type != TrackType.DAC) {
+                        // Continuing FM notes update the volume envelope before
+                        // fill (zUpdateFMorPSGTrack). HOLD preserves the live
+                        // timeout. Expiry still skips the rest of this pass,
+                        // even when HOLD or ownership suppresses FM key-off.
+                        if (t.type == TrackType.FM) processFmVolEnvelope(t);
+                        if (t.fillCounter > 0 && --t.fillCounter == 0) {
+                            if (t.type == TrackType.PSG) {
+                                restTrack(t);
+                            } else if (!t.tieNext && !t.overridden) {
+                                stopNote(t);
+                            }
+                            return;
+                        }
+                    } else if (!t.tieNext && t.type != TrackType.DAC) {
                         if (config.isDirect68kDriver()) {
                             if (t.fillCounter > 0 && --t.fillCounter == 0) {
                                 // S1/S2 NoteTimeoutUpdate tampers with the return address:
                                 // after note-off, the rest of this track update is skipped.
                                 stopNote(t);
                                 t.resting = true;
-                                return;
-                            }
-                        } else if (config.getNoteFillTail()
-                                == SmpsSequencerConfig.NoteFillTail.S3K_SPLIT) {
-                            if (t.fillCounter > 0 && --t.fillCounter == 0) {
-                            // S3K's note fill is the same per-pass countdown,
-                            // armed unscaled from NoteFillMaster at note start
-                            // (Sound/Z80 Sound Driver.asm:1067-1068), but its two
-                            // tails differ by track type and both are tail jumps,
-                            // so the rest of the pass is skipped either way.
-                            // zUpdatePSGTrack's `jp z, zRestTrack` only sets the
-                            // rest bit and writes nothing (:4070-4074,
-                            // :2160-2164), while zUpdateFMorPSGTrack's
-                            // `jp z, zKeyOffIfActive` keys the channel off
-                            // (:786-790, :2148-2152).
-                                if (t.type == TrackType.PSG) {
-                                    restTrack(t);
-                                } else {
-                                    stopNote(t);
-                                }
                                 return;
                             }
                         } else if (t.fill > 0 && (t.scaledDuration - t.duration) >= t.fill) {
@@ -1816,7 +1816,7 @@ public class SmpsSequencer implements CoordFlagContext {
                         if (!psgFrequencyFirst) {
                             processPsgEnvelope(t);
                         }
-                    } else if (t.type == TrackType.FM) {
+                    } else if (t.type == TrackType.FM && !s3kTrackTiming) {
                         processFmVolEnvelope(t);
                     }
                     if (t.type == TrackType.FM || t.type == TrackType.PSG) {
@@ -1829,9 +1829,18 @@ public class SmpsSequencer implements CoordFlagContext {
                         // moved the frequency.
                         boolean resendEveryPass = config.getNoteGoingFreqSend()
                                 == SmpsSequencerConfig.NoteGoingFreqSend.EVERY_PASS;
+                        // zUpdateFMorPSGTrack's .keep_going (Sound/Z80 Sound
+                        // Driver.asm:791-799) tests PlaybackControl bit 6
+                        // after the envelope and note fill.
+                        if (t.type == TrackType.FM && t.sustainFmFrequency) {
+                            return;
+                        }
                         int freqDelta = t.modEnabled
                                 ? applyModulation(t, !resendEveryPass)
                                 : 0;
+                        if (modulationAbortsTrackPass(t)) {
+                            return;
+                        }
                         // S3K's FM .note_going returns on the rest bit before
                         // it reaches the send (Sound/Z80 Sound
                         // Driver.asm:781-783), but zUpdatePSGTrack's rest check
@@ -1939,8 +1948,7 @@ public class SmpsSequencer implements CoordFlagContext {
                     break;
                 } else {
                     t.pos++;
-                    // 0x00 is not a valid SMPS command/note in standard mode.
-                    if (cmd == 0x00) {
+                    if (cmd == 0x00 && !usesS3kZ80Rules()) {
                         t.active = false;
                         break;
                     }
@@ -1951,6 +1959,7 @@ public class SmpsSequencer implements CoordFlagContext {
             }
 
             if (t.active && t.type == TrackType.PSG && !t.resting && t.tieNext
+                    && !modulationAbortsTrackPass(t)
                     && config.getPsgEnvRestCmd()
                             == SmpsSequencerConfig.PsgEnvRestCmd.Z80_81_AND_83) {
                 // zUpdatePSGTrack's note-start entry falls through to the same
@@ -2103,9 +2112,11 @@ public class SmpsSequencer implements CoordFlagContext {
         tempoAccumulator += tempoWeight;
         if (tempoAccumulator >= tempoModBase) {
             tempoAccumulator -= tempoModBase;
-            // Carry → delay: the pre-increment cancels this update's decrement.
+            // Carry → delay: the pre-increment usually cancels the decrement.
+            // A saved zero is represented by 256. Native INC wraps that
+            // stored byte to one, and DEC then expires the note on this pass.
             for (Track t : tracks) {
-                t.duration++;
+                t.duration = usesS3kZ80Rules() ? (t.duration & 0xFF) + 1 : t.duration + 1;
             }
         } else {
             applyMusicTempoPercent();
@@ -2855,10 +2866,20 @@ public class SmpsSequencer implements CoordFlagContext {
     private int scaleDuration(Track track, int rawDuration) {
         int factor = track.dividingTiming;
         int scaled = rawDuration * factor;
+        if (usesS3kZ80Rules()) {
+            scaled &= 0xFF;
+            return scaled == 0 ? 256 : scaled;
+        }
         if (scaled == 0) {
             return 65536; // Emulate SMPS wrap-around behavior (0 ticks -> 65536 ticks)
         }
         return scaled;
+    }
+
+    private boolean usesS3kZ80Rules() {
+        // The S3K profile selects the native split FM/PSG timer tails.
+        // The CD FM driver shares the Z80 voice writes and modulation math.
+        return config.getNoteFillTail() == SmpsSequencerConfig.NoteFillTail.S3K_SPLIT;
     }
 
     private int[] getFmFreqTable() {
@@ -2919,10 +2940,9 @@ public class SmpsSequencer implements CoordFlagContext {
 
     @Override
     public void loadVoice(Track t, int voiceId) {
-        if (selectVoice(t, voiceId) && !t.tieNext) {
-            // Continuous SFX (cfx_*) loop back through smpsSetvoice while tied.
-            // Preserve the existing Z80 HOLD behavior rather than refreshing the
-            // live channel mid-sustain.
+        if (selectVoice(t, voiceId) && (!t.tieNext || usesS3kZ80Rules())) {
+            // The S3K cfSetVoice upload still runs during HOLD. Other profiles
+            // retain their voice-selection rule for tied continuous effects.
             refreshInstrument(t);
         }
     }
@@ -3037,6 +3057,9 @@ public class SmpsSequencer implements CoordFlagContext {
                 if (t.customModEnabled) {
                     prepareCustomModulation(t);
                 }
+            }
+            if (t.note != 0x80 || config.isDirect68kDriver()
+                    || config.isNoteResetAliasesModulationState()) {
                 resetModEnvelopeState(t);
             }
         }
@@ -3073,6 +3096,12 @@ public class SmpsSequencer implements CoordFlagContext {
                 // (S2 sd:1123-1131, 1276-1312).
                 primePsgRestEnvelope(t);
             }
+            return;
+        }
+        if (t.type == TrackType.DAC && t.note == 0x80
+                && config.isDacNoteKeysOffFm6AndRestoresFm3()) {
+            // zUpdateDACTrack's bare duration reuses SavedDAC. A saved
+            // rest goes straight to the duration update without FM writes.
             return;
         }
 
@@ -3223,6 +3252,9 @@ public class SmpsSequencer implements CoordFlagContext {
             if (modulationSendsNoteFrequency) {
                 t.forceModulationWrite = true;
                 applyModulation(t);
+                if (modulationAbortsTrackPass(t)) {
+                    return;
+                }
             }
 
             // S1/S2 smpsNoAttack suppresses FMNoteOff and the per-note state
@@ -3306,6 +3338,9 @@ public class SmpsSequencer implements CoordFlagContext {
                 t.forceModulationWrite = config.getNoteGoingFreqSend()
                         == SmpsSequencerConfig.NoteGoingFreqSend.EVERY_PASS;
                 applyModulation(t);
+                if (modulationAbortsTrackPass(t)) {
+                    return;
+                }
                 // Claim the shared ROM tail only when this pass necessarily
                 // emitted it: S3K forces every-pass sends, and only a live,
                 // unowned tone channel reaches writeTrackFrequency's PSG pair.
@@ -3601,16 +3636,24 @@ public class SmpsSequencer implements CoordFlagContext {
             if (t.overridden) {
                 return;
             }
-            // The rest test is the track's rest BIT, not the last note byte
-            // read. zUpdatePSGTrack's volume tail adds Volume to the envelope
-            // value and only forces 0Fh when that addition sets bit 4
-            // (Sound/Z80 Sound Driver.asm:4098-4112); the rest bit gates
-            // whether the write happens at all, one line above. Keying on the
-            // note byte instead silenced a track whose last byte was a rest
-            // but which a later duration-only unit had already brought back.
-            int vol = t.resting ? 0x0f
-                    : Math.min(0x0F, Math.max(0, t.volumeOffset + t.envValue));
+            int sum = t.volumeOffset + t.envValue;
             int ch = t.channelId;
+            if (config.getPsgEnvRestCmd() == SmpsSequencerConfig.PsgEnvRestCmd.Z80_81_AND_83) {
+                // zUpdatePSGTrack (Sound/Z80 Sound Driver.asm:4108-4135)
+                // tests bit 4 of the byte sum. Other high bits can survive
+                // the OR with VoiceControl and change the command on the bus.
+                if (ch <= 3) {
+                    int attenuation = (sum & 0x10) == 0 ? sum & 0xFF : 0x0F;
+                    int latch = (0x80 | (ch << 5) | attenuation) + 0x10;
+                    if (t.noiseMode) {
+                        latch += 0x20;
+                    }
+                    int sourceChannel = t.noiseMode && ch == 2 ? 3 : ch;
+                    synth.writePsgDriverVolume(this, sourceChannel, latch & 0xFF);
+                }
+                return;
+            }
+            int vol = Math.min(0x0F, Math.max(0, sum));
             if (t.noiseMode && ch == 2) {
                 ch = 3;
             }
@@ -3779,8 +3822,9 @@ public class SmpsSequencer implements CoordFlagContext {
         if (t.envData == null || t.envHold)
             return;
 
-        // Loop to handle envelope commands that may require immediate progression
-        while (true) {
+        // Immediate commands are deterministic at each cursor. More visits
+        // than there are bytes indicate a malformed non-yielding cycle.
+        for (int step = 0; step < t.envData.length; step++) {
             if (t.envPos >= t.envData.length) {
                 t.envHold = true;
                 t.envAtRest = true;
@@ -3875,6 +3919,8 @@ public class SmpsSequencer implements CoordFlagContext {
                 }
             }
         }
+        t.envHold = true;
+        t.envAtRest = true;
     }
 
     private void processFmVolEnvelope(Track t) {
@@ -3979,7 +4025,10 @@ public class SmpsSequencer implements CoordFlagContext {
         switch (config.getFmVoiceWriteProfile()) {
             case S1_68K -> write68kInstrument(t, voice);
             case S2_Z80 -> writeS2Instrument(t, voice, hasTl);
-            case S3K_Z80 -> writeS3kInstrument(t, voice, hasTl);
+            case S3K_Z80 -> {
+                writeS3kInstrument(t, voice, hasTl);
+                if (usesS3kZ80Rules()) t.s3kTlPointerInitialized = hasTl;
+            }
         }
 
         // S3K's coordination flag owns SSG-EG independently of its voice table.
@@ -4078,7 +4127,8 @@ public class SmpsSequencer implements CoordFlagContext {
         int port = (hwCh < 3) ? 0 : 1;
         int ch = (hwCh % 3);
         int reg = 0xB4 + ch;
-        int val = (t.pan & 0xC0) | ((t.ams & 0x3) << 4) | (t.fms & 0x7);
+        int panMask = usesS3kZ80Rules() ? 0xC8 : 0xC0;
+        int val = (t.pan & panMask) | ((t.ams & 0x3) << 4) | (t.fms & 0x7);
         synth.writeFm(this, port, reg, val);
     }
 
@@ -4124,7 +4174,7 @@ public class SmpsSequencer implements CoordFlagContext {
         int freqDelta = t.modStepDelta + t.modEnvStepDelta;
         boolean changed = t.modStepChanged || t.modEnvStepChanged || t.forceModulationWrite;
         t.forceModulationWrite = false;
-        if (!write || !changed) {
+        if (!write || !changed || modulationAbortsTrackPass(t)) {
             return freqDelta;
         }
         writeTrackFrequency(t, freqDelta, true);
@@ -4292,6 +4342,16 @@ public class SmpsSequencer implements CoordFlagContext {
         t.modStepDelta = t.modAccumulator;
     }
 
+    private boolean modulationAbortsTrackPass(Track t) {
+        if (!usesS3kZ80Rules()
+                || !t.modEnabled || !t.modEnvHold || t.modEnvData == null
+                || t.modEnvPos >= t.modEnvData.length) {
+            return false;
+        }
+        int command = t.modEnvData[t.modEnvPos] & 0xFF;
+        return command == 0x81 || command == 0x83;
+    }
+
     private void stepModEnvelope(Track t) {
         if (t.modEnvId == 0 || t.modEnvData == null || t.modEnvData.length == 0) {
             t.modEnvStepInEffect = false;
@@ -4316,7 +4376,10 @@ public class SmpsSequencer implements CoordFlagContext {
             int value = t.modEnvData[t.modEnvPos] & 0xFF;
             t.modEnvPos++;
 
-            if (value < 0x80) {
+            // zlocApplyModEnvMod (Sound/Z80 Sound Driver.asm:1408-1420)
+            // sign-extends bytes above the reserved 80h–84h
+            // commands. DJNZ treats a zero loop count as 256 iterations.
+            if (value < 0x80 || (value > 0x84 && usesS3kZ80Rules())) {
                 int envVal = (byte) value;
                 int multiplier = t.modEnvMult + 1; // S3K DefDrv: EnvMult = Z80
                 t.modEnvCache = (short) (envVal * multiplier);
@@ -4334,6 +4397,12 @@ public class SmpsSequencer implements CoordFlagContext {
                 case 0x83: // VOLSTOP_MODHOLD => HOLD for modulation envelopes
                     t.modEnvPos--;
                     t.modEnvHold = true;
+                    // zDoModEnvelope_cont (Sound/Z80 Sound Driver.asm:1361-1372)
+                    // sets the sustain bit and discards the caller's return.
+                    // With fix_sndbugs=0, zKeyOnOff (:1168-1176) leaves it set.
+                    if (t.type == TrackType.FM && usesS3kZ80Rules()) {
+                        t.sustainFmFrequency = true;
+                    }
                     t.modEnvStepInEffect = true;
                     t.modEnvStepChanged = false;
                     t.modEnvStepDelta = t.modEnvCache;
@@ -4904,6 +4973,7 @@ public class SmpsSequencer implements CoordFlagContext {
                 track.modEnvMult,
                 track.modEnvCache,
                 track.modEnvHold,
+                track.sustainFmFrequency,
                 track.rawFreqMode,
                 track.rawFrequency,
                 track.instrumentId,
@@ -4935,7 +5005,8 @@ public class SmpsSequencer implements CoordFlagContext {
                 track.customSsgEgPayload,
                 track.customSsgEgPayloadKnown,
                 track.rawPsgNoise,
-                track.rawPsgNoiseKnown);
+                track.rawPsgNoiseKnown,
+                track.s3kTlPointerInitialized);
     }
 
     private static Track restoreTrack(SmpsTrackSnapshot snapshot) {
@@ -4998,6 +5069,7 @@ public class SmpsSequencer implements CoordFlagContext {
         track.modEnvMult = snapshot.modEnvMult();
         track.modEnvCache = snapshot.modEnvCache();
         track.modEnvHold = snapshot.modEnvHold();
+        track.sustainFmFrequency = snapshot.sustainFmFrequency();
         track.rawFreqMode = snapshot.rawFreqMode();
         track.rawFrequency = snapshot.rawFrequency();
         track.instrumentId = snapshot.instrumentId();
@@ -5030,6 +5102,7 @@ public class SmpsSequencer implements CoordFlagContext {
         track.customSsgEgPayloadKnown = snapshot.customSsgEgPayloadKnown();
         track.rawPsgNoise = snapshot.rawPsgNoise();
         track.rawPsgNoiseKnown = snapshot.rawPsgNoiseKnown();
+        track.s3kTlPointerInitialized = snapshot.s3kTlPointerInitialized();
     }
 
     private static byte[] copy(byte[] values) {

@@ -29,6 +29,56 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestSmpsSequencerCadence {
 
     @Test
+    void s3kWrapsExplicitDurationAndReusesTheWrappedCounter() {
+        // zComputeNoteDuration keeps A's low byte. A saved zero expires after
+        // 256 decrements unless TempoWait increments it to one first.
+        byte[] program = {(byte) 0x81, 0x40, (byte) 0x82, 0, (byte) 0x83, 3, (byte) 0xF2};
+        var config = com.openggf.game.sonic3k.audio.Sonic3kSmpsSequencerConfig.CONFIG;
+        var sequencer = newSequencer(config, 0, program);
+        Track track = addFmTrack(sequencer);
+        track.dividingTiming = 4;
+        runUpdate(sequencer, 0);
+        assertEquals(256, track.duration);
+        for (int update = 1; update <= 256; update++) runUpdate(sequencer, update);
+        assertEquals(0x82, track.note);
+        assertEquals(256, track.duration);
+        for (int update = 257; update <= 512; update++) runUpdate(sequencer, update);
+        assertEquals(0x83, track.note);
+        assertEquals(12, track.duration);
+
+        // The loading service walks tracks with the seeded tempo. The
+        // following service adds 90h to the seed and carries.
+        var delayed = newSequencer(config, 0x90, program);
+        Track delayedTrack = addFmTrack(delayed);
+        delayedTrack.dividingTiming = 4;
+        runUpdate(delayed, 0);
+        assertEquals(256, delayedTrack.duration);
+        runUpdate(delayed, 1);
+        assertEquals(0x82, delayedTrack.note, "TempoWait increments zero to one before the decrement");
+    }
+
+    @Test
+    void s3kCountsScaledFillDuringHoldAndKeepsTheChipSpecificTail() {
+        // cfNoteFill writes both timers. zFinishTrackUpdate leaves them
+        // alone on HOLD. The PSG tail sets rest; the FM key-off checks HOLD.
+        byte[] program = {(byte) 0xE8, 2, (byte) 0xE7, (byte) 0x91, 6, (byte) 0xF2};
+        var config = com.openggf.game.sonic3k.audio.Sonic3kSmpsSequencerConfig.CONFIG;
+        for (TrackType type : List.of(TrackType.FM, TrackType.PSG)) {
+            var sequencer = newSequencer(config, 0, program);
+            Track track = new Track(0, type, 0);
+            track.dividingTiming = 2;
+            sequencer.addTrack(track);
+            runUpdate(sequencer, 0);
+            assertTrue(track.tieNext);
+            assertEquals(4, track.fill);
+            assertEquals(4, track.fillCounter);
+            for (int update = 1; update <= 4; update++) runUpdate(sequencer, update);
+            assertEquals(0, track.fillCounter);
+            assertEquals(type == TrackType.PSG, track.resting, type.toString());
+        }
+    }
+
+    @Test
     void implicitDurationKeepsTheSavedScaledDurationAcrossDividerChanges() {
         // S1 SetDuration saves the byte-scaled duration. FinishTrackUpdate and
         // DACUpdateTrack reuse SavedDuration directly after cfSetTempoDivider.

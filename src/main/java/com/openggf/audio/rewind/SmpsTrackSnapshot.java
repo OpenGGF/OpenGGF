@@ -57,6 +57,7 @@ public record SmpsTrackSnapshot(
         int modEnvMult,
         int modEnvCache,
         boolean modEnvHold,
+        boolean sustainFmFrequency,
         boolean rawFreqMode,
         int rawFrequency,
         int instrumentId,
@@ -88,7 +89,8 @@ public record SmpsTrackSnapshot(
         int[] customSsgEgPayload,
         boolean customSsgEgPayloadKnown,
         int rawPsgNoise,
-        boolean rawPsgNoiseKnown) {
+        boolean rawPsgNoiseKnown,
+        boolean s3kTlPointerInitialized) {
 
     public SmpsTrackSnapshot {
         voiceData = copy(voiceData);

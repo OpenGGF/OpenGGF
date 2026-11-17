@@ -144,6 +144,36 @@ class TestSonic3kCartridgeResources {
         assertFalse(java.util.Arrays.equals(skB2, s3B2), "each native cartridge supplies its own $B2 drum");
     }
 
+    @Test
+    void retailModulationLoopReadsCodeAndCanRunPastTheRawProgram() {
+        var loaders = Map.of(
+                LOCKED_ON, new Sonic3kSmpsLoader(combined),
+                SONIC_KNUCKLES, new Sonic3kSmpsLoader(sk, SONIC_KNUCKLES),
+                SONIC_3, new Sonic3kSmpsLoader(s3, SONIC_3));
+        for (var entry : loaders.entrySet()) {
+            Sonic3kSmpsLoader loader = entry.getValue();
+            byte[] rawSlot5 = loader.getModEnvelopes().get(5);
+            assertEquals(12, rawSlot5.length);
+            assertEquals(0x82, Byte.toUnsignedInt(rawSlot5[10]));
+            assertEquals(2, Byte.toUnsignedInt(rawSlot5[11]));
+
+            // zlocChangeModEnvIndex reads code at $000B when slot 5 reaches
+            // its 82h at index 10. The native code byte is $06 in both drivers.
+            byte[] resolvedSlot5 = rawSlot5.clone();
+            resolvedSlot5[11] = 6;
+            assertArrayEquals(resolvedSlot5, loader.getPlaybackModEnvelopes().get(5));
+            int titleId = entry.getKey().musicId(0x25);
+            assertArrayEquals(resolvedSlot5, loader.loadMusic(titleId).getModEnvelope(5));
+
+            byte[] slot6 = loader.getPlaybackModEnvelopes().get(6);
+            assertEquals(121, slot6.length);
+            assertEquals(102, Byte.toUnsignedInt(slot6[17]));
+            assertEquals(0x15, Byte.toUnsignedInt(slot6[102]));
+            assertEquals(0x82, Byte.toUnsignedInt(slot6[119]));
+            assertEquals(15, Byte.toUnsignedInt(slot6[120]));
+        }
+    }
+
     private static void sample(DacData dac, int id, int rate, int length, String sha256) throws Exception {
         assertEquals(rate, dac.mappingForNote(id).rate());
         assertEquals(length, dac.sample(id).length());

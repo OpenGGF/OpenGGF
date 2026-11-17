@@ -146,7 +146,7 @@ public final class S3kAudioStateNormalizer {
         // So a PSG track carries the byte in ROM RAM, the engine's Track holds
         // the same default, and projecting null here would drop a real field.
         Integer amsFmsPan =
-                (track.pan() & 0xc0) | ((track.ams() & 0x03) << 4) | (track.fms() & 0x07);
+                (track.pan() & 0xc8) | ((track.ams() & 0x03) << 4) | (track.fms() & 0x07);
         return new S3kAudioTrackState(role, true,
                 track.overridden(),
                 track.tieNext(),
