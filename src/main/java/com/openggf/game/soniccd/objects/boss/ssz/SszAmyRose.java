@@ -310,6 +310,7 @@ public final class SszAmyRose extends SszBossPiece implements TouchResponseListe
     private void pauseTimer() {
         var state = services().levelGamestate();
         if (state != null) state.pauseTimer();
+        signalActCompletion();
     }
 
     /**

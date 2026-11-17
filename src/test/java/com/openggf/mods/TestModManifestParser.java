@@ -15,6 +15,15 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestModManifestParser {
+    @Test void sonicCdIsAnExplicitPatchHost() throws Exception {
+        assertEquals("scd", parser().parse(bytes(canonicalPatch().replace("baseGame: s2", "baseGame: scd"))).baseGame());
+    }
+
+    @Test void sonicCdSceneAndMusicAddressesAreAccepted() {
+        assertEquals("scd", new com.openggf.mods.scene.SceneLaunch("scd", "sonic", List.of()).gameId());
+        assertTrue(ModMusicResolver.EMPTY.resolveStockOverride("scd", 0x21).isEmpty());
+    }
+
     @Test void engineOwnerCannotBeDeclaredByACreatorManifest() {
         assertThrows(ModManifestException.class,()->parser().parse(bytes(
                 canonicalPatch().replace("id: example-music", "id: openggf"))));

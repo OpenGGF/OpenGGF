@@ -18,8 +18,8 @@ public final class ModMusicResolver {
 
     public Optional<ResolvedMusic> resolveStockOverride(String gameCode, int musicId) {
         Objects.requireNonNull(gameCode, "gameCode");
-        if (!"s1".equals(gameCode) && !"s2".equals(gameCode) && !"s3k".equals(gameCode)) {
-            throw new IllegalArgumentException("Game code must be exactly s1, s2, or s3k");
+        if (!"s1".equals(gameCode) && !"s2".equals(gameCode) && !"s3k".equals(gameCode) && !"scd".equals(gameCode)) {
+            throw new IllegalArgumentException("Game code must be exactly s1, s2, s3k, or scd");
         }
         if (musicId < 0) throw new IllegalArgumentException("Music id must be nonnegative");
         return Optional.ofNullable(music.resolveStockOverride(gameCode, musicId));

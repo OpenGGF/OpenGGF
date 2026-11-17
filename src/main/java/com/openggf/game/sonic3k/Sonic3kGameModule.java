@@ -93,6 +93,8 @@ import java.util.logging.Logger;
  * data select, special/bonus-stage providers, and level initialization hooks.
  */
 public class Sonic3kGameModule implements GameModule, com.openggf.game.internal.SpriteTableBuildProfile {
+    @Override public java.util.List<String> getStockRunCharacters() { return java.util.List.of("sonic", "tails", "knuckles"); }
+
     @Override
     public PlacedRings placedRingEmission() {
         return PlacedRings.BEFORE_OBJECT_BUCKETS;

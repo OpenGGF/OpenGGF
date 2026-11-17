@@ -26,7 +26,7 @@ import java.util.logging.Logger;
  */
 final class SceneDonorMusic implements AutoCloseable {
     private static final Logger LOG = Logger.getLogger(SceneDonorMusic.class.getName());
-    private static final List<String> GAMES = List.of("s1", "s2", "s3k");
+    private static final List<String> GAMES = List.of("s1", "s2", "s3k", "scd");
     private final AudioManager audio;
     private final SceneRomLibrary library;
     private final Map<String, GameAudioProfile> profiles = new HashMap<>();
@@ -52,6 +52,13 @@ final class SceneDonorMusic implements AutoCloseable {
     boolean play(String gameId, int musicId) {
         String game = validate(gameId, musicId);
         if (closed) return false;
+        if (game.equals(library.activeGame())
+                && library.module(game).getAudioProfile() instanceof com.openggf.audio.ExternalMusicCommands) {
+            com.openggf.game.audio.RomSoundCatalog.music(game, musicId);
+            audio.playMusic(musicId);
+            donorPlaying = false;
+            return true;
+        }
         Rom rom = library.sourceRom(game);
         if (rom == null) return false;
         GameAudioProfile profile = profiles.computeIfAbsent(game,

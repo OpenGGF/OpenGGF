@@ -485,6 +485,15 @@ under the matching area heading; see the
 
 ## Modding and tools
 
+- **Sonic CD mod host:** admit `scd` patch manifests and `any` registrations;
+  route hosted runs through the disc launcher, expose file-addressed scene and
+  object art, and accept CDDA/PCM music-command replacements. Module capabilities
+  select native run characters and explicitly refuse unsupported donor hosts.
+  CD authored terrain supports owned objects; native objects retain their stage
+  program context. Audio-state restoration also restores the native/streamed
+  music selection. This extends unpublished API candidate 0.7.0.
+
+
 - **Game rules belong to the module:** `GameModule.getPolicies()` now returns an
   immutable `GamePolicies` record holding the game's `GameRules`, so camera, ring,
   object, sidekick, power-up and drowning rules are no longer supplied by the

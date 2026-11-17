@@ -2584,8 +2584,19 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 
 		GameModule rootModule;
 		GameDataSource dataSource;
-		try {
-			Rom rom = romManager.getRom();
+        var hosted = com.openggf.game.launch.HostedMediaLaunch.hostedGame(spec.gameId());
+        if (hosted.isPresent()) {
+            try {
+                var opened = hostedMediaLaunch.open(hosted.get(), configService,
+                        com.openggf.game.save.SavePaths.root());
+                rootModule = opened.module();
+                dataSource = opened.source();
+            } catch (IOException e) {
+                romError.accept("Failed to load media for run launch: " + e.getMessage());
+                return false;
+            }
+        } else try {
+            Rom rom = romManager.getRom();
 			var detectedModule = romDetectionService.detectAndCreateModule(rom);
 			if (detectedModule.isEmpty()) {
 				romError.accept("ROM not recognized or corrupt for run: " + spec.gameId());

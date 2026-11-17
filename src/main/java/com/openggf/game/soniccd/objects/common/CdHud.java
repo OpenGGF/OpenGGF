@@ -98,8 +98,7 @@ public final class CdHud extends CdObject implements FixedRuntimeObjectInstance,
     /** UpdateHUD's counters, rewritten only when their value changes (HUD and Points/Main.asm:219-311). */
     private void updateDigits() {
         var sheet = services().renderManager() == null ? null : services().renderManager().getSheet(CdObjectArtProvider.HUD);
-        var provider = services().renderManager() == null ? null
-                : services().renderManager().getArtProvider() instanceof CdObjectArtProvider p ? p : null;
+        var provider = artProvider();
         if (sheet == null || provider == null || provider.image() == null) return;
         Pattern[] tiles = sheet.getPatterns();
         int numbers = provider.entry().hudNumbersArt();
@@ -171,7 +170,7 @@ public final class CdHud extends CdObject implements FixedRuntimeObjectInstance,
 
     private void writeDigit(Pattern[] tiles, int numbers, int cell, int digit) {
         if (cell + 1 >= tiles.length) return;
-        var provider = (CdObjectArtProvider) services().renderManager().getArtProvider();
+        var provider = artProvider();
         byte[] bytes = digit < 0 ? new byte[DIGIT_BYTES] : provider.image().slice(numbers + digit * DIGIT_BYTES, DIGIT_BYTES);
         tiles[cell].fromSegaFormat(Arrays.copyOfRange(bytes, 0, 32));
         tiles[cell + 1].fromSegaFormat(Arrays.copyOfRange(bytes, 32, 64));

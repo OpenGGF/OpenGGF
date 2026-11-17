@@ -23,7 +23,7 @@ import java.util.List;
  * Sonic 1 by a word entry count ({@code move.w (a2)+,d1}, LoadSonicDynPLC,
  * Level/_Objects/Sonic/Main.asm:3069-3073). Art is uncompressed.
  */
-final class CdPlayerArt {
+public final class CdPlayerArt {
     /** ObjSonic_Init: move.w #$780,oTile(a0) (Level/_Objects/Sonic/Main.asm:147). */
     static final int ART_TILE = 0x780;
 
@@ -109,7 +109,7 @@ final class CdPlayerArt {
                 CommonSpriteDataLoader.resolveBankSize(dplcs, mappings), profile, animations);
     }
 
-    private static List<SpriteDplcFrame> loadWordCountDplcs(RomByteReader reader, int table) {
+    public static List<SpriteDplcFrame> loadWordCountDplcs(RomByteReader reader, int table) {
         int frames = reader.readU16BE(table) / 2;
         List<SpriteDplcFrame> result = new ArrayList<>(frames);
         for (int i = 0; i < frames; i++) {

@@ -31,15 +31,34 @@ public final class SceneRomLibrary implements AutoCloseable {
     private final SceneRomAudioSources audioSources = new SceneRomAudioSources(this);
     private boolean closed;
     private final String activeGame;
+    private com.openggf.game.GameDataSource activeSource;
+    private com.openggf.game.internal.MediaSceneArt mediaArt;
+
+    public SceneRomLibrary(GameModule activeModule, com.openggf.game.GameDataSource source, RomManager roms) {
+        this(activeModule, source.rom().orElse(null), roms);
+        activeSource = source;
+        mediaArt = activeModule.getGameService(com.openggf.game.internal.MediaSceneArt.class);
+        if (mediaArt != null) {
+            art.put(activeGame, SceneRomArtFactory.forMedia(mediaArt.defaultArt(source)));
+            modules.put(activeGame, activeModule);
+        }
+    }
+
+    public SceneRomArt program(String game, String path) {
+        requireOpen();
+        if (!activeGame.equals(game) || mediaArt == null)
+            throw new IllegalArgumentException("No file-addressed scene art for " + game);
+        return SceneRomArtFactory.forMedia(mediaArt.program(activeSource, path));
+    }
 
     public SceneRomLibrary(GameModule activeModule, Rom activeRom, RomManager roms) {
         Objects.requireNonNull(activeModule, "activeModule");
-        Objects.requireNonNull(activeRom, "activeRom");
+
         Objects.requireNonNull(roms, "roms");
         String active = activeModule.getGameId().code();
         activeGame = active;
         for (String code : GAMES) {
-            if (code.equals(active)) {
+            if (code.equals(active) && activeRom != null) {
                 art.put(code, SceneRomArtFactory.forModule(activeModule, activeRom));
                 sourceRoms.put(code, activeRom);
                 modules.put(code, activeModule);
@@ -147,7 +166,7 @@ public final class SceneRomLibrary implements AutoCloseable {
 
     public SceneRomArt rom(String gameId) {
         requireOpen();
-        if (gameId == null || !GAMES.contains(gameId)) throw new IllegalArgumentException("Unknown stock game: " + gameId);
+        if (gameId == null || !java.util.List.of("s1", "s2", "s3k", "scd").contains(gameId)) throw new IllegalArgumentException("Unknown stock game: " + gameId);
         return art.get(gameId);
     }
 
@@ -165,7 +184,7 @@ public final class SceneRomLibrary implements AutoCloseable {
     /** The same supplied-ROM view used by art; borrowed by the scene's audio owner. */
     public Rom sourceRom(String gameId) {
         requireOpen();
-        if (gameId == null || !GAMES.contains(gameId)) {
+        if (gameId == null || !java.util.List.of("s1", "s2", "s3k", "scd").contains(gameId)) {
             throw new IllegalArgumentException("Unknown stock game: " + gameId);
         }
         return sourceRoms.get(gameId);

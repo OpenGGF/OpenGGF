@@ -4,7 +4,10 @@ import com.openggf.game.ModApi;
 import java.util.Objects;
 
 /**
- * Staged request to materialize object art from the user's named Sonic 1 or Sonic 2 ROM at gameplay launch.
+ * Staged request to materialize object art from a named Sonic 1/2 ROM or host program file.
+ * A non-null {@code programPath} names a file on the stock medium; its addresses are
+ * file-relative and its {@code source} selects the mapping decoder, not a cartridge prerequisite.
+ * Prefer {@link ModContext#registerProgramObjectArt} for that owned transaction.
  * Registration happens with no ROM open; addresses are validated against static bounds at
  * registration and against the real ROM during materialization. {@code paletteLine} is a
  * palette line index (0-3) into the active zone palette, not color data. {@code dplcAddress}
@@ -20,7 +23,14 @@ public record RomArtRequest(
         int dplcAddress,
         int paletteLine,
         int bankSize,
-        com.openggf.game.patch.LogicalRom source) {
+        com.openggf.game.patch.LogicalRom source, String programPath) {
+
+    /** Cartridge request retained for existing callers. */
+    public RomArtRequest(int artAddress, RomArtCompression compression, int uncompressedByteSize,
+            int mappingAddress, int dplcAddress, int paletteLine, int bankSize,
+            com.openggf.game.patch.LogicalRom source) {
+        this(artAddress, compression, uncompressedByteSize, mappingAddress, dplcAddress, paletteLine, bankSize, source, null);
+    }
 
     public RomArtRequest(int artAddress, RomArtCompression compression, int uncompressedByteSize,
             int mappingAddress, int dplcAddress, int paletteLine, int bankSize) {
@@ -30,6 +40,9 @@ public record RomArtRequest(
 
     public RomArtRequest {
         Objects.requireNonNull(source, "source");
+        if (programPath != null && (programPath.isBlank() || programPath.length() > 255
+                || programPath.contains("/") || programPath.contains("\\") || programPath.contains("..")))
+            throw new IllegalArgumentException("Program art requires a single native media filename");
         if (source != com.openggf.game.patch.LogicalRom.S1 && source != com.openggf.game.patch.LogicalRom.S2)
             throw new IllegalArgumentException("Object art supports S1 or S2 logical ROMs");
         if (source == com.openggf.game.patch.LogicalRom.S1 && dplcAddress != 0)

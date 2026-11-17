@@ -54,7 +54,7 @@ class TestTypingHedgehogPackage {
         }
     }
 
-    @Test void registersOneMultiGameJarWithAPatchPerGame() {
+    @Test void registersOneMultiGameJarWithOnlyItsDeclaredPerGamePatches() {
         var plan = harness.plan();
         assertEquals("any", plan.baseGameId());
         assertEquals("WIDE_16_9", plan.requiredDisplayAspect());
@@ -62,8 +62,12 @@ class TestTypingHedgehogPackage {
         assertTrue(plan.objectFactories().keySet().stream().anyMatch(key -> key.endsWith(":puppet")));
         assertTrue(plan.serviceBundles().containsKey("course"));
         var perGame = plan.stockScenePlans();
-        assertEquals(List.of("s1", "s2", "s3k"), perGame.stream().map(ModRegistrationPlan::baseGameId).toList());
+        assertEquals(List.of("s1", "s2", "s3k", "scd"), perGame.stream().map(ModRegistrationPlan::baseGameId).toList());
         for (var stock : perGame) {
+            if ("scd".equals(stock.baseGameId())) {
+                assertTrue(stock.explicitPatches().isEmpty(), "Stageplay cartridge patches must not leak into CD");
+                continue;
+            }
             assertEquals(1, stock.explicitPatches().size(), stock.baseGameId());
             assertEquals(stock.baseGameId(), stock.explicitPatches().getFirst().baseGameId());
         }

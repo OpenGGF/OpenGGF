@@ -3,6 +3,14 @@ package com.openggf.level.objects;
 /** Builds lossless, game-native object placement records for editor mutations. */
 @com.openggf.game.ModApi
 public interface ObjectPlacementEncoding {
+    /** Places owned additions into a source inventory without changing native placement identities. */
+    default java.util.List<ObjectSpawn> mergeAdditions(java.util.List<ObjectSpawn> source,
+            java.util.List<ObjectSpawn> additions) {
+        var result = new java.util.ArrayList<>(source);
+        result.addAll(additions);
+        return java.util.List.copyOf(result);
+    }
+
     ObjectSpawn create(int x, int y, int objectId, int subtype, int renderFlags,
                        boolean respawnTracked, int placementId);
 

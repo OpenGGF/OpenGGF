@@ -68,12 +68,9 @@ final class ModSceneLauncher {
     /** Startup scenes bypass title/level initialization, so attach their base ROM audio here. */
     static void prepareSceneAudio(GameModule module) {
         if (GameModuleRouting.isStandalone(module)) return;
-        try {
-            GameServices.audio().setAudioProfile(module.getAudioProfile());
-            GameServices.audio().setRom(GameServices.rom().getRom());
-        } catch (IOException error) {
-            throw new IllegalStateException("Cannot initialize mod scene ROM audio", error);
-        }
+        GameServices.audio().setAudioProfile(module.getAudioProfile());
+        var source = com.openggf.game.session.SessionManager.getCurrentWorldSession().getDataSource();
+        if (source.rom().isPresent()) GameServices.audio().setRom(source.rom().orElseThrow());
     }
 
     /**
@@ -112,21 +109,19 @@ final class ModSceneLauncher {
             return null;
         }
         try {
-            return SceneRomArtFactory.forModule(module, GameServices.rom().getRom());
-        } catch (IOException | RuntimeException e) {
-            LOG.log(Level.WARNING, "Mod scene opened without ROM art", e);
-            return null;
+            var source = com.openggf.game.session.SessionManager.getCurrentWorldSession().getDataSource();
+            var media = module.getGameService(com.openggf.game.internal.MediaSceneArt.class);
+            return media == null ? SceneRomArtFactory.forModule(module, GameServices.rom().getRom())
+                    : SceneRomArtFactory.forMedia(media.defaultArt(source));
+        } catch (IOException e) {
+            throw new IllegalStateException("Cannot prepare stock media art for mod scene", e);
         }
     }
 
     private static SceneRomLibrary romLibrary(GameModule module) {
         if (GameModuleRouting.isStandalone(module)) return null;
-        try {
-            return new SceneRomLibrary(module, GameServices.rom().getRom(), GameServices.rom());
-        } catch (IOException | RuntimeException e) {
-            LOG.log(Level.WARNING, "Mod scene opened without multi-ROM content", e);
-            return null;
-        }
+        return new SceneRomLibrary(module,
+                com.openggf.game.session.SessionManager.getCurrentWorldSession().getDataSource(), GameServices.rom());
     }
 
     /** Window coordinates (GLFW screen units) to logical scene pixels, through the letterboxed viewport. */

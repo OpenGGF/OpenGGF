@@ -227,6 +227,8 @@ public final class ModApiVersion {
      * CrossGameFeatureProvider exposes getHybridPolicies(). Compiled mods rebuild; the
      * candidate remains 0.7.0.
      */
+    // CD host admission, file-addressed scene/program art, native run characters and explicit donor-host capability.
+    // The release descriptor keeps this unpublished candidate at 0.7.0 for the 0.8 engine line.
     public static final SemanticVersion CURRENT = SemanticVersion.parse("0.7.0");
     public static final List<SemanticVersion> SUPPORTED_CONTRACTS = List.of(CURRENT);
 

@@ -43,8 +43,9 @@ public final class CdSubCpuAudio {
     public record Command(int id, String name, Action action, int argument) { }
 
     /** Rewind state of the whole owner; {@code pcm} is null before a stage loads a bank. */
-    public record State(CdCddaPlayer.State cdda, int pcmQueue, PcmState pcm) {
-        public State(CdCddaPlayer.State cdda, int pcmQueue) { this(cdda, pcmQueue, null); }
+    public record State(CdCddaPlayer.State cdda, int pcmQueue, PcmState pcm, boolean musicSuppressed) {
+        public State(CdCddaPlayer.State cdda, int pcmQueue, PcmState pcm) { this(cdda, pcmQueue, pcm, false); }
+        public State(CdCddaPlayer.State cdda, int pcmQueue) { this(cdda, pcmQueue, null, false); }
     }
 
     /** The loaded bank, its driver, the chip and the two clocks' phases. */
@@ -69,6 +70,11 @@ public final class CdSubCpuAudio {
     private CdCddaPlayer.State pendingRestore = CdCddaPlayer.State.IDLE;
     private int pcmQueue;
     private int outputRate;
+    /** Native-versus-streamed selection follows this audio owner's captured state. */
+    private boolean suppressMusic;
+    public void suppressMusic(boolean value) { suppressMusic = value; }
+    boolean musicSuppressed() { return suppressMusic; }
+
     /** Presentation gains, {@link AudioPresentationMixer#UNITY_GAIN} = 1; config, never rewind state. */
     private int musicGain = AudioPresentationMixer.UNITY_GAIN;
     private int sfxGain = AudioPresentationMixer.UNITY_GAIN;
@@ -158,7 +164,7 @@ public final class CdSubCpuAudio {
     /** Mixes CD audio into one presentation packet on the output clock. */
     public void render(short[] target, int stereoFrames) {
         if (cdda != null) {
-            if (unity(musicGain)) {
+            if (unity(suppressMusic ? 0 : musicGain)) {
                 cdda.render(target, stereoFrames);
             } else {
                 cdda.render(silence(stereoFrames), stereoFrames);
@@ -166,7 +172,7 @@ public final class CdSubCpuAudio {
             }
         }
         if (program != null) {
-            if (unity(musicGain)) {
+            if (unity(suppressMusic ? 0 : musicGain)) {
                 program.render(target, stereoFrames);
             } else {
                 program.render(silence(stereoFrames), stereoFrames);
@@ -210,7 +216,7 @@ public final class CdSubCpuAudio {
 
     private void addAtMusicGain(short[] target, int stereoFrames) {
         for (int i = 0; i < stereoFrames * 2; i++) {
-            target[i] = (short) Math.clamp(target[i] + ((scratch[i] * musicGain) >> 8), -32768, 32767);
+            target[i] = (short) Math.clamp(target[i] + ((scratch[i] * (suppressMusic ? 0 : musicGain)) >> 8), -32768, 32767);
         }
     }
 
@@ -301,7 +307,7 @@ public final class CdSubCpuAudio {
      */
     private void renderPcm(short[] target, int stereoFrames) {
         long period = (long) CdPcmDriver.CHIP_RATE_DENOMINATOR * outputRate;
-        boolean split = !unity(musicGain) || !unity(sfxGain);
+        boolean split = !unity(suppressMusic ? 0 : musicGain) || !unity(sfxGain);
         int sfxChannels = split ? pcm.sfxChannelMask() : 0;
         for (int i = 0; i < stereoFrames; i++) {
             pcmPhase += CdPcmDriver.CHIP_RATE_NUMERATOR;
@@ -332,20 +338,21 @@ public final class CdSubCpuAudio {
     private int splitSample(int sfxChannels) {
         chip.stepSplit(sfxChannels);
         int sfxLeft = chip.selectedLeft(), sfxRight = chip.selectedRight();
-        int left = ((chip.sumLeft() - sfxLeft) * musicGain + sfxLeft * sfxGain) >> 8;
-        int right = ((chip.sumRight() - sfxRight) * musicGain + sfxRight * sfxGain) >> 8;
+        int left = ((chip.sumLeft() - sfxLeft) * (suppressMusic ? 0 : musicGain) + sfxLeft * sfxGain) >> 8;
+        int right = ((chip.sumRight() - sfxRight) * (suppressMusic ? 0 : musicGain) + sfxRight * sfxGain) >> 8;
         return (Math.clamp(left, -32768, 32767) << 16) | (Math.clamp(right, -32768, 32767) & 0xFFFF);
     }
 
     public State state() {
         PcmState pcmState = pcm == null ? null : new PcmState(loadedBank, pcm.capture(), chip.captureState(),
                 pcmPhase, pcmTickCounter, pcmPrevious, pcmCurrent);
-        return new State(cdda == null ? pendingRestore : cdda.state(), pcmQueue, pcmState);
+        return new State(cdda == null ? pendingRestore : cdda.state(), pcmQueue, pcmState, suppressMusic);
     }
 
     public void restore(State state) {
         Objects.requireNonNull(state, "state");
         pcmQueue = state.pcmQueue();
+        suppressMusic = state.musicSuppressed();
         restorePcm(state.pcm());
         if (cdda == null && state.cdda().track() == 0) {
             pendingRestore = state.cdda();

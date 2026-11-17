@@ -247,6 +247,12 @@ Future). `SonicCdEndingCaptureTool --ending good|bad` films an ending.
   hosted" step: choosing RAM DATA, D.A. Garden or Visual Mode on the title
   menu (the last two appear once unlocked) fades out and returns to the
   title, and an attract demo is skipped.
+- CD patch mods, `any` registrations, scenes and Sonic gameplay runs use the disc
+  pipeline. Authored zones are limited to flat terrain with owned objects;
+  native CD objects/rings need their stage context. Cross-game feature donation
+  on a CD host is refused until stage-owned animation families have a composition
+  adapter. Stageplay/editor/import support remains a separate lane. See the
+  [CD mod contracts](../../modding/ggfmod.md#sonic-cd-runtime-mods).
 - The master title has no Setup page for Sonic CD: it always starts with
   Sonic alone, under the all-games display and rewind settings.
 - Special stage results graphics, pause and exit fade are not drawn.

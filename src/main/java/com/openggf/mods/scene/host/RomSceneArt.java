@@ -476,13 +476,13 @@ final class RomSceneArt implements SceneRomArt {
         int count = request.mappingFrameCount();
         if (count == 0) {
             return switch (game) {
-                case S1 -> S1SpriteDataLoader.loadMappingFrames(reader(), address);
+                case S1, SCD -> S1SpriteDataLoader.loadMappingFrames(reader(), address);
                 case S2 -> S2SpriteDataLoader.loadMappingFrames(reader(), address);
                 default -> S3kSpriteDataLoader.loadMappingFrames(reader(), address);
             };
         }
         return switch (game) {
-            case S1 -> S1SpriteDataLoader.loadMappingFrames(reader(), address, count);
+            case S1, SCD -> S1SpriteDataLoader.loadMappingFrames(reader(), address, count);
             case S2 -> S2SpriteDataLoader.loadMappingFrames(reader(), address, count);
             default -> S3kSpriteDataLoader.loadMappingFrames(reader(), address, count);
         };
@@ -492,6 +492,7 @@ final class RomSceneArt implements SceneRomArt {
         int address = request.dplcAddress();
         return switch (game) {
             case S1 -> S1SpriteDataLoader.loadDplcFrames(reader(), address);
+            case SCD -> com.openggf.game.soniccd.CdPlayerArt.loadWordCountDplcs(reader(), address);
             case S2 -> S2SpriteDataLoader.loadDplcFrames(reader(), address);
             default -> request.dplcLayout() == RomSpriteRequest.DplcLayout.PLAYER
                     ? S3kSpriteDataLoader.loadDplcFrames(reader(), address)

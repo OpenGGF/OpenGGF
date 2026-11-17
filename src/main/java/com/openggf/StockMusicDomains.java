@@ -13,6 +13,8 @@ public final class StockMusicDomains {
             case "s1" -> Sonic1Music.titleMap().containsKey(musicId);
             case "s2" -> Sonic2Music.titleMap().containsKey(musicId);
             case "s3k" -> Sonic3kMusic.titleMap().containsKey(musicId);
+            case "scd" -> com.openggf.game.soniccd.audio.SonicCdAudioProfile.nativeSounds().music()
+                    .stream().anyMatch(entry -> entry.soundId() == musicId);
             default -> false;
         };
     }

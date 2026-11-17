@@ -1,10 +1,16 @@
 # Title entries and gameplay runs
 
 A mod can add one entry to the OpenGGF master title and, from that entry's scene, launch
-**stock gameplay runs**: an act of Sonic 1, 2 or 3&K played exactly as the shipped game plays
+**stock gameplay runs**: an act of Sonic 1, 2, 3&K or Sonic CD played as the host game plays
 it, observed and timed by your code. The bundled Time Attack mod is built entirely on this.
 
 This is a candidate Mod API (0.7 line): signatures may still change before publication.
+
+CD runs admit native Sonic alone. Zone indices are 0–6; act indices include time
+period (0–3 for act 1, 4–7 for act 2, 8–9 for act 3). The launcher opens the
+verified USA disc through the hosted-media pipeline. Hosted arenas are a separate
+capability and CD does not provide one. Stageplay/route tapes and editor/import
+work remain outside this runtime lane.
 
 ## Register a title entry
 

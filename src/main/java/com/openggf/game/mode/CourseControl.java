@@ -139,12 +139,7 @@ public final class CourseControl {
         var snapshot = p.captureRewindState();
         var extra = snapshot.playerExtra();
         String game = context.getWorldSession().getGameModule().getGameCode();
-        boolean stock = switch (game) {
-            case "s1" -> p.getCode().equals("sonic");
-            case "s2" -> p.getCode().equals("sonic") || p.getCode().equals("tails");
-            case "s3k" -> p.getCode().equals("sonic") || p.getCode().equals("tails") || p.getCode().equals("knuckles");
-            default -> false;
-        };
+        boolean stock = context.getWorldSession().getGameModule().getStockRunCharacters().contains(p.getCode());
         if (!stock || p.getDead() || p.isHurt() || p.isControlLocked() || p.isObjectControlled()
                 || p.isOnObject() || context.getLevelManager().getObjectManager().getRidingObject(p) != null
                 || p.isObjectMappingFrameControl() || p.isSuperSonic() || p.isDebugMode()

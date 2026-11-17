@@ -124,8 +124,7 @@ public final class CdTitleCard extends CdObject implements FixedRuntimeObjectIns
         slideInTarget = 0xF0;
         animTime = 0x5A;
         priority = 4;
-        var provider = services().renderManager() != null
-                && services().renderManager().getArtProvider() instanceof CdObjectArtProvider p ? p : null;
+        var provider = artProvider();
         var objects = services().objectManager();
         if (provider == null || provider.image() == null || objects == null) return;
         var image = provider.image();

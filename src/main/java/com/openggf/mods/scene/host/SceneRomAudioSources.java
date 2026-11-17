@@ -28,7 +28,8 @@ public final class SceneRomAudioSources implements AutoCloseable {
         Entry entry = epoch.sources.get(game);
         if (entry == null) {
             var donor = library.module(game).getAudioProfile();
-            var loader = donor.createSmpsLoader(library.sourceRom(game));
+            var loader = donor instanceof com.openggf.audio.RomlessSmpsSource media
+                    ? media.createRomlessSmpsLoader() : donor.createSmpsLoader(library.sourceRom(game));
             if (loader == null) throw new IllegalArgumentException("Scene ROM has no native sound loader: " + game);
             entry = new Entry(ScopedDonorAudio.register(audio,game,loader,loader.loadDacData(),donor.getSequencerConfig(),donor));
             epoch.sources.put(game,entry);

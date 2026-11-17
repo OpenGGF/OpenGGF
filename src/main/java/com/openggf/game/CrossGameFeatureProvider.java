@@ -152,6 +152,11 @@ public class CrossGameFeatureProvider implements PlayerSpriteArtProvider, Spinda
      * @throws IOException if the donor ROM cannot be opened
      */
     public void initialize(String donorGameCode) throws IOException {
+        if (!GameServices.module().supportsCrossGameHost()) {
+            close();
+            throw new IOException("Cross-game donation is unsupported by host " + GameServices.module().getIdentifier()
+                    + ": native animation-family composition is not available");
+        }
         instaShieldBanks.clear();
         familyAnimationIds.clear();
         this.donorGameId = GameId.fromCode(donorGameCode);

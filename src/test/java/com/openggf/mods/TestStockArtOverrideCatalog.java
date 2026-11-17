@@ -11,7 +11,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class TestStockArtOverrideCatalog {
     @Test void catalogueTracksTheOwningProviderKeyInventories() throws Exception {
         var expected = new TreeSet<String>();
-        for (Class<?> source : new Class<?>[]{ObjectArtKeys.class, Sonic2ObjectArtKeys.class, Sonic3kObjectArtKeys.class}) {
+        for (Class<?> source : new Class<?>[]{ObjectArtKeys.class, Sonic2ObjectArtKeys.class, Sonic3kObjectArtKeys.class, com.openggf.game.soniccd.objects.art.CdObjectArtProvider.class}) {
             for (var field : source.getFields()) {
                 if (field.getType() == String.class && Modifier.isStatic(field.getModifiers()))
                     expected.add((String) field.get(null));
