@@ -175,7 +175,7 @@ class TestGameLoopSpecialStageLifecycle {
     void resultsUpdateRereadsReboundScreenIncludingNullFailure(boolean toNull) throws Exception {
         mode(GameMode.SPECIAL_STAGE_RESULTS); var first = mock(ResultsScreen.class); var later = mock(ResultsScreen.class);
         write(loop, "resultsScreen", first); when(later.isComplete()).thenReturn(false);
-        doAnswer(c -> { write(loop, "resultsScreen", toNull ? null : later); return null; }).when(first).update(eq(1), isNull());
+        doAnswer(c -> { write(loop, "resultsScreen", toNull ? null : later); return null; }).when(first).update(eq(1), same(input)); // the results context is the loop's input handler
         if (toNull) assertThrows(NullPointerException.class, this::iteration); else { iteration(); verify(later).isComplete(); }
         verify(first, never()).isComplete(); assertEquals(1, read(loop, "resultsFrameCounter"));
     }
