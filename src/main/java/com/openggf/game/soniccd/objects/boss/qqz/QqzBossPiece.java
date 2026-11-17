@@ -89,7 +89,7 @@ abstract class QqzBossPiece extends CdBossPart {
         var camera = services().camera();
         if (camera == null) return false;
         int dx = (short) (x - camera.getX());
-        if ((short) (dx + width) < 0 || (short) (dx - width) >= 0x140) return true;
+        if ((short) (dx + width) < 0 || (short) (dx - width) >= com.openggf.game.soniccd.objects.CdObjectWindowing.simulationWidth()) return true;
         int dy = (short) (y - camera.getY());
         return (short) (dy + yRadius) < 0 || (short) (dy - yRadius) >= 0xE0;
     }

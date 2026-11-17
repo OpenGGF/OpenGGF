@@ -21,7 +21,6 @@ import java.util.List;
 @CameraRelativeDraw(CameraRelativeDraw.Use.CULL_ONLY)
 public final class MmzBigbom extends MmzObject implements TouchResponseProvider, ObjectVisualFacing.Source {
     /** CheckObjDespawn2: cmpi.w #$80+(320+$40)+$80,d0; bls (Level/Object Spawner.asm:385-399). */
-    private static final int DESPAWN_RANGE = 0x80 + (320 + 0x40) + 0x80;
     /** word_20D8B0 (objects/r8/bigbom.asm:386-392): frames to show each walk frame. */
     private static final int[] FRAME_TIMES = {0x19, 0x0F, 0x19, 0x12};
 
@@ -307,9 +306,7 @@ public final class MmzBigbom extends MmzObject implements TouchResponseProvider,
     @Override
     public boolean isCustomOutOfRange(int cameraX) {
         if (!despawnsByCheckObjDespawn()) return false;
-        int chunk = despawnX() & 0xFF80;
-        int cameraChunk = (cameraX - 0x80) & 0xFF80;
-        return ((chunk - cameraChunk) & 0xFFFF) > DESPAWN_RANGE;
+        return outsideDespawnRange(despawnX(), cameraX, false);
     }
 
     @Override

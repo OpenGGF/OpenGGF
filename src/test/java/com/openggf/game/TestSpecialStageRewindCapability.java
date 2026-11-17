@@ -45,6 +45,15 @@ class TestSpecialStageRewindCapability {
     }
 
     @Test
+    void sonicCdCapabilityDoesNotOpenTheDisc() {
+        var cd = new com.openggf.game.soniccd.special.CdSpecialStageProvider(() -> {
+            throw new AssertionError("Capability must not load media");
+        });
+        assertTrue(cd.supportsRewind());
+        assertEquals(SpecialStageProvider.SPECIAL_STAGE_REWIND_KEY, cd.rewindAdapter().orElseThrow().key());
+    }
+
+    @Test
     void lagBypassIsWriteOnlyProviderConfiguration() {
         assertThrows(NoSuchMethodException.class,
                 () -> SpecialStageProvider.class.getMethod("getLagCompensation"));

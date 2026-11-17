@@ -334,4 +334,65 @@ public final class CdSpecialStage {
     public int updates() { return updates; }
     public List<CdSpecialSound> sounds() { return List.copyOf(sounds); }
     public CdSpecialStageTitleCard titleCard() { return titleCard; }
+
+    State capture() { return new State(
+            List.copyOf(sounds), sonicShadowStarted, stageOver, gotTimeStone, stageInactive, timeStopped, exited,
+            manualExit, rngSeed, timeStones, timerSpeedUp, timerFrames, ufoRingBonus, jumpTimer, playerHold,
+            playerTap, scrollFlags, rings, timer, ufoCount, updates, image, sonicArt, floor.capture(),
+            view.capture(), trace.capture(), sonic.capture(), titleCard.capture(), ufos.capture(), splash.capture(),
+            sprites.capture(), effects.capture(), sonicShadow.capture(), timeStone.capture()); }
+    void restore(State s) {
+        sounds.clear();
+        sounds.addAll(s.sounds());
+        sonicShadowStarted = s.sonicShadowStarted();
+        stageOver = s.stageOver();
+        gotTimeStone = s.gotTimeStone();
+        stageInactive = s.stageInactive();
+        timeStopped = s.timeStopped();
+        exited = s.exited();
+        manualExit = s.manualExit();
+        rngSeed = s.rngSeed();
+        timeStones = s.timeStones();
+        timerSpeedUp = s.timerSpeedUp();
+        timerFrames = s.timerFrames();
+        ufoRingBonus = s.ufoRingBonus();
+        jumpTimer = s.jumpTimer();
+        playerHold = s.playerHold();
+        playerTap = s.playerTap();
+        scrollFlags = s.scrollFlags();
+        rings = s.rings();
+        timer = s.timer();
+        ufoCount = s.ufoCount();
+        updates = s.updates();
+        System.arraycopy(s.image(), 0, image, 0, image.length);
+        System.arraycopy(s.sonicArt(), 0, sonicArt, 0, sonicArt.length);
+        floor.restore(s.floor());
+        view.restore(s.view());
+        trace.restore(s.trace());
+        sonic.restore(s.sonic());
+        titleCard.restore(s.titleCard());
+        ufos.restore(s.ufos());
+        splash.restore(s.splash());
+        sprites.restore(s.sprites());
+        effects.restore(s.effects());
+        sonicShadow.restore(s.sonicShadow());
+        timeStone.restore(s.timeStone());
+    }
+    record State(
+            List<CdSpecialSound> sounds, boolean sonicShadowStarted, boolean stageOver, boolean gotTimeStone,
+            boolean stageInactive, boolean timeStopped, boolean exited, boolean manualExit, int rngSeed,
+            int timeStones, int timerSpeedUp, int timerFrames, int ufoRingBonus, int jumpTimer, int playerHold,
+            int playerTap, int scrollFlags, int rings, int timer, int ufoCount, int updates, byte[] image,
+            byte[] sonicArt, CdStampFloor.State floor, CdSpecialStageView.State view, CdStampTrace.State trace,
+            CdSpecialStageSonic.State sonic, CdSpecialStageTitleCard.State titleCard, CdSpecialStageUfos.State ufos,
+            CdSpecialSplash.State splash, CdSpecialSprites.State sprites, CdSpecialEffects.State effects,
+            CdSpecialSprites.Sprite.State sonicShadow, CdSpecialTimeStone.State timeStone) {
+        State {
+            sounds = List.copyOf(sounds);
+            image = image.clone();
+            sonicArt = sonicArt.clone();
+        }
+        @Override public byte[] image() { return image.clone(); }
+        @Override public byte[] sonicArt() { return sonicArt.clone(); }
+    }
 }
