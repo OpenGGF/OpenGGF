@@ -154,7 +154,10 @@ public final class StandaloneAudioPresentationHost
             boolean noDevice,
             ExecutorService ownerExecutor,
             java.util.function.UnaryOperator<AudioPresentationSink> decorateSink, boolean isolateDevice) {
-        String boundGameId = normalizeGameId(gameId);
+        // A native media profile declares its own presentation identity. Legacy callers
+        // retain stock-id validation, including invalid-id precedence over a null profile.
+        String boundGameId = profile != null && gameId != null && gameId.equals(profile.presentationGameId())
+                ? gameId : normalizeGameId(gameId);
         java.util.Objects.requireNonNull(profile, "profile");
         AudioPresentationSink sink;
         AtomicReference<AudioManager> managerRef = new AtomicReference<>();
@@ -216,6 +219,11 @@ public final class StandaloneAudioPresentationHost
         Runnable devicePump = sink != originalSink && originalSink instanceof OpenAlPcmSink openAl
                 ? openAl::updateDevice : () -> { };
         return new StandaloneAudioPresentationHost(boundGameId, manager, ownerExecutor, devicePump);
+    }
+
+    /** Native request dispatch on this isolated producer, including media-backed music. */
+    public void playNativeMusic(int id) {
+        runOnOwner(() -> manager.playMusic(id));
     }
 
     public void playMusic(AbstractSmpsData data, DacData dac) {

@@ -485,6 +485,19 @@ under the matching area heading; see the
 
 ## Modding and tools
 
+- **Sonic CD menu media:** show the native disc title on its master-title card
+  and play its title theme in an isolated optional hub audio session. The preview
+  closes its media after decoding; menu audio retains its own media until closed.
+  Native editor persistence now retains a bounded disc/stage reference and validates
+  it before native materialization. The flat-project collision guard remains
+  unchanged. Internal edit replay reloads the native stage through its game owner
+  and applies authored terrain, tiles, objects and rings, retaining loop semantics
+  and existing object secondary bytes after moves. Source-backed playtests now
+  use fresh native stage owners and authored spawn coordinates. The creator menu
+  offers CD zones with act/period labels and creates a source-backed stage copy.
+  Native player starts retain terrain coordinates independently of camera limits.
+  Content-import/save round trips retain the reference; flat directory/ZIP export
+  is explicitly refused because it cannot retain native stage context.
 - **Sonic CD Stageplay preview:** open verified disc media for native scenes and
   cold-level route tapes; preserve zone/act/period program identity through
   detached art and worker transport. Finish native title-card preparation before

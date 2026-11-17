@@ -58,6 +58,17 @@ public interface HostedGameMedia {
         return openConfiguredMedia(com.openggf.game.GameServices.configuration());
     }
 
+    /** Optional native menu theme and its owned media lifetime. */
+    default java.util.Optional<HostedMenuMusic> menuMusic(SonicConfigurationService config) throws IOException {
+        return java.util.Optional.empty();
+    }
+
+    /** Detached title pixels; all media reads finish before returning. */
+    default java.util.Optional<com.openggf.game.preview.TitlePreviewProvider.Sequence> titlePreview(
+            SonicConfigurationService config) throws IOException {
+        return java.util.Optional.empty();
+    }
+
     /** The level a recorded trace's directory starts in, read from its {@code metadata.json}. */
     Level levelOfTrace(Path traceDir) throws IOException;
 

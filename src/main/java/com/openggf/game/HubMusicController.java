@@ -58,12 +58,12 @@ public final class HubMusicController implements AutoCloseable {
     /** Called once per hub update, including child menus. Slow ROM/device work stays off the UI. */
     public void update(String gameId, boolean ducked) {
         if (closed) return;
-        boolean stock = "s1".equals(gameId) || "s2".equals(gameId) || "s3k".equals(gameId);
+        boolean stock = java.util.Arrays.stream(GameId.values()).anyMatch(id -> id != GameId.STANDALONE && id.code().equals(gameId));
         request = new Request(gameId, stock && config.getBoolean(AUDIO_ENABLED)
                 && config.getBoolean(AUDIO_HUB_MUSIC_ENABLED), config.getInt(AUDIO_HUB_MUSIC_VOLUME), ducked,
                 config.getString(ROMS_DIRECTORY) + "|" + config.getString(SONIC_1_ROM) + "|"
                         + config.getString(SONIC_2_ROM) + "|" + config.getString(SONIC_3K_ROM)
-                        + "|" + config.getBoolean(ROMS_PREFER_COMPOSITE));
+                        + "|" + config.getBoolean(ROMS_PREFER_COMPOSITE) + "|" + config.getString(SONIC_CD_DISC));
         if (pending.compareAndSet(false, true)) executor.execute(() -> {
             try { if (!closed) present(request); }
             finally { pending.set(false); }
@@ -107,6 +107,9 @@ public final class HubMusicController implements AutoCloseable {
     }
 
     static Session openRomSession(String gameId, SonicConfigurationService config, boolean noDevice) throws Exception {
+        GameId selected = GameId.fromCode(gameId);
+        if (GameModuleRegistry.mediaKind(selected) == GameModuleRegistry.MediaKind.HOSTED_MEDIA)
+            return openHostedSession(selected, config, noDevice);
         RomIdentity identity = switch (gameId) { case "s1" -> RomIdentity.S1; case "s2" -> RomIdentity.S2; default -> RomIdentity.S3K; };
         GameId stockGame = switch (gameId) { case "s1" -> GameId.S1; case "s2" -> GameId.S2; default -> GameId.S3K; };
         var source = GameModuleRegistry.createStockMenuAudio(stockGame);
@@ -129,6 +132,35 @@ public final class HubMusicController implements AutoCloseable {
                 @Override public void restart() { host.playMusic(music, dac); }
                 @Override public void close() { host.close(); }
             };
+        }
+    }
+    private static Session openHostedSession(GameId game, SonicConfigurationService config, boolean noDevice)
+            throws Exception {
+        var source = GameModuleRegistry.hostedMedia(game).menuMusic(config)
+                .orElseThrow(() -> new IllegalArgumentException("Hosted media supplies no menu theme"));
+        try {
+            HubMusicPresentationSink[] filter = new HubMusicPresentationSink[1];
+            var host = StandaloneAudioPresentationHost.open(source.profile().presentationGameId(), source.profile(), config, null, noDevice,
+                    sink -> filter[0] = new HubMusicPresentationSink(sink));
+            try { host.playNativeMusic(source.musicId()); }
+            catch (RuntimeException | Error failure) { host.close(); throw failure; }
+            return new Session() {
+                @Override public void volume(int percent, boolean ducked) { filter[0].setVolume(percent, ducked); }
+                @Override public void frame() { host.presentFrame(); }
+                // presentFrame synchronously finishes on the producer owner before this read.
+                @Override public boolean complete() { return source.complete(); }
+                @Override public void restart() { host.playNativeMusic(source.musicId()); }
+                @Override public void close() {
+                    try { host.close(); }
+                    finally {
+                        try { source.close(); }
+                        catch (java.io.IOException failure) { throw new java.io.UncheckedIOException(failure); }
+                    }
+                }
+            };
+        } catch (Exception | Error failure) {
+            try { source.close(); } catch (java.io.IOException cleanup) { failure.addSuppressed(cleanup); }
+            throw failure;
         }
     }
 }

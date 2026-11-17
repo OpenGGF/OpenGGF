@@ -51,7 +51,7 @@ public final class EditorProjectStore {
         Objects.requireNonNull(document, "document");
         EditorProjectMetadata metadata = document.metadata();
         EditorProjectLevel level = document.snapshot();
-        Payload payload = new Payload(MetadataState.capture(metadata), EditorProjectState.capture(level), document.assets());
+        Payload payload = new Payload(MetadataState.capture(metadata), EditorProjectState.capture(level), document.assets(), document.nativeSource());
         byte[] payloadBytes = mapper.writeValueAsBytes(payload);
         byte[] bytes = mapper.writeValueAsBytes(new Envelope(FORMAT, VERSION, payload, checksum(payloadBytes)));
         if (bytes.length > MAX_BYTES) throw new IOException("Project exceeds the 64 MiB storage limit");
@@ -98,7 +98,10 @@ public final class EditorProjectStore {
                 throw new IOException("Project checksum does not match its complete payload");
             }
             EditorProjectAssets.validateJson(rawPayload.get("assets"));
-            Payload payload = mapper.treeToValue(rawPayload, Payload.class);
+            // Version-one flat projects predate the optional native source field.
+            var decodedPayload = rawPayload.deepCopy();
+            if (!decodedPayload.has("nativeSource")) ((com.fasterxml.jackson.databind.node.ObjectNode) decodedPayload).putNull("nativeSource");
+            Payload payload = mapper.treeToValue(decodedPayload, Payload.class);
             payload.level().validate();
             EditorProjectMetadata metadata = payload.metadata().metadata();
             EditorProjectLevel level = new EditorProjectLevel(payload.level(), null);
@@ -106,7 +109,7 @@ public final class EditorProjectStore {
                     || metadata.minY() != level.getMinY() || metadata.maxY() != level.getMaxY()) {
                 throw new IOException("Project metadata and level bounds disagree");
             }
-            var document = EditorProjectDocument.create(metadata, level);
+            var document = EditorProjectDocument.restore(metadata, level, payload.nativeSource());
             document.restoreAssets(payload.assets());
             document.requireObjectPreviewLibrary();
             return document;
@@ -138,7 +141,8 @@ public final class EditorProjectStore {
     }
 
     record Envelope(String format, int version, Payload payload, String checksum) {}
-    record Payload(MetadataState metadata, EditorProjectState level, EditorProjectAssets assets) {}
+    record Payload(MetadataState metadata, EditorProjectState level, EditorProjectAssets assets,
+            com.openggf.game.internal.NativeProjectSource nativeSource) {}
     record MetadataState(String gameCode, String name, int sourceZone, int sourceAct, String sourceFingerprint,
             int startX, int startY, int minX, int maxX, int minY, int maxY, MusicState music, String objectZoneSet, JsonNode settings, java.util.List<String> campaign) {
         static MetadataState capture(EditorProjectMetadata value) {

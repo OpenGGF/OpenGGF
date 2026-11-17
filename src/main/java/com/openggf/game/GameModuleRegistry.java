@@ -120,7 +120,7 @@ public final class GameModuleRegistry {
                     com.openggf.game.sonic2.audio.Sonic2Music.TITLE.id);
             case S3K -> new StockMenuAudio(new com.openggf.game.sonic3k.audio.Sonic3kAudioProfile(),
                     com.openggf.game.sonic3k.audio.Sonic3kMusic.TITLE.id);
-            case SCD -> throw new IllegalArgumentException("Sonic CD title audio is not hosted yet");
+            case SCD -> throw new IllegalArgumentException("Hosted media owns its menu audio source");
             case STANDALONE -> throw new IllegalArgumentException("Standalone has no stock title theme");
         };
     }

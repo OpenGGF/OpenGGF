@@ -188,3 +188,18 @@ assets and registers the existing multi-act contribution in the owner's transact
 no code trust or generated Java is needed. Completion ends at credits. Built-in
 host gizmos and bounded Stageplay dependencies are included; external creator
 object/track dependencies still require a separately authored package.
+
+The Sonic CD master-title card decodes its native title from the verified USA disc.
+Optional hub music opens a separate disc/audio source; suspending a game does
+not transfer its audio owner to the menu. Native CD editor projects save a bounded
+verified-disc/stage reference plus authored edits in `.ogfproject`. Importing that
+file through the content importer and saving it again preserves the reference;
+reopening/playtesting still requires the matching USA disc. The reference contains no media path or payload. Saved authoring snapshots can
+contain ROM-derived pixels; their original redistribution rights still apply. Zone, act and period selection creates a native stage copy.
+
+Flat level-directory export of a source-backed CD project is explicitly refused,
+so it cannot be repackaged as a flat level ZIP either. Those formats lack native
+program/PLC/placement context. Use the `.ogfproject` round trip for these projects;
+this is distinct from supported separately authored flat CD zones with owned
+object keys. Native replay refuses resized layouts. Existing placement IDs retain
+secondary subtype/time-mask data; newly added IDs select only the active period.

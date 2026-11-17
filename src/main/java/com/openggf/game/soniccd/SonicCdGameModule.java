@@ -226,6 +226,24 @@ public final class SonicCdGameModule implements GameModule {
 
     @Override
     public <T> T getGameService(Class<T> type) {
+        if (type == com.openggf.game.internal.NativeProjectHost.class) return type.cast(
+                new com.openggf.game.internal.NativeProjectHost() {
+                    @Override public String stageLabel(int zone, int act) {
+                        var stage = SonicCdZoneRegistry.payload(zone, act).stage();
+                        return com.openggf.i18n.UiMessages.text("editor.project.native_stage", java.util.Map.of(
+                                "act", stage.actNumber(), "period", stage.period().name().toLowerCase(java.util.Locale.ROOT).replace('_', ' ')));
+                    }
+                    @Override public Target target(com.openggf.game.internal.NativeProjectSource source) throws java.io.IOException {
+                        if (game == null) throw new java.io.IOException("Open the project disc before native playtesting");
+                        var payload = new com.openggf.game.soniccd.level.CdStageLoader(game.disc()).validate(source);
+                        return new Target(SonicCdZoneRegistry.zoneIndex(payload), SonicCdZoneRegistry.actIndex(payload), payload.ordinal());
+                    }
+                    @Override public com.openggf.level.Level load(com.openggf.game.internal.NativeProjectSource source,
+                            com.openggf.level.Level authored, int x, int y) throws java.io.IOException {
+                        target(source);
+                        return game.loadProject(source, authored, x, y);
+                    }
+                });
         if (type == com.openggf.game.internal.SceneEntryPreparation.class)
             return type.cast((com.openggf.game.internal.SceneEntryPreparation) world ->
                 world.getLevelManager().getObjectManager().getActiveObjects().stream().anyMatch(object ->

@@ -18,6 +18,7 @@ import java.util.Objects;
 /** Durable authored data and saved revision, retained across transient playtest sessions. */
 public final class EditorProjectDocument {
     private EditorProjectMetadata metadata;
+    private final com.openggf.game.internal.NativeProjectSource nativeSource;
     private MutableLevel level;
     private Path path;
     private EditorProjectMetadata savedMetadata;
@@ -28,7 +29,38 @@ public final class EditorProjectDocument {
     private boolean objectPreviewLibraryMissing;
 
     private EditorProjectDocument(EditorProjectMetadata metadata, Level source) {
+        this(metadata, source, source instanceof com.openggf.game.internal.NativeProjectLevel nativeLevel
+                ? nativeLevel.nativeProjectSource() : null);
+    }
+
+    private EditorProjectDocument(EditorProjectMetadata metadata, Level source,
+            com.openggf.game.internal.NativeProjectSource nativeSource) {
+        this.nativeSource = nativeSource;
+        if (nativeSource != null && !metadata.sourceFingerprint().equals(nativeSource.mediaIdentity()))
+            throw new IllegalArgumentException("Native project metadata and media identity disagree");
         replace(metadata, source);
+    }
+
+    static EditorProjectDocument restore(EditorProjectMetadata metadata, Level source,
+            com.openggf.game.internal.NativeProjectSource nativeSource) {
+        return new EditorProjectDocument(metadata, source, nativeSource);
+    }
+
+    public com.openggf.game.internal.NativeProjectSource nativeSource() { return nativeSource; }
+
+    private void validateMetadata(EditorProjectMetadata value, Level source) {
+        if (nativeSource == null) value.validateAgainst(source);
+        else {
+            if (!value.sourceFingerprint().equals(nativeSource.mediaIdentity()))
+                throw new IllegalArgumentException("Native project metadata and media identity disagree");
+            if (source instanceof com.openggf.game.internal.NativeProjectLevel nativeLevel
+                    && !nativeSource.equals(nativeLevel.nativeProjectSource()))
+                throw new IllegalArgumentException("Cannot replace a native project with a different source stage");
+            value.validateAgainst(source, nativeSource.blockGridSide());
+            if (value.startX() >= (long) source.getMap().getWidth() * source.getBlockPixelSize()
+                    || value.startY() >= (long) source.getMap().getHeight() * source.getBlockPixelSize())
+                throw new IllegalArgumentException("Native project start must lie inside terrain dimensions");
+        }
     }
 
     public static EditorProjectDocument create(EditorProjectMetadata metadata, Level source) {
@@ -36,6 +68,7 @@ public final class EditorProjectDocument {
     }
 
     public static EditorProjectDocument cloneLevel(EditorProjectMetadata metadata, Level source) {
+        if (source instanceof com.openggf.game.internal.NativeProjectLevel) return create(metadata, source);
         return create(metadata, EditorProjectLevel.withSpareSlots(EditorProjectLevel.copyOf(source)));
     }
 
@@ -62,7 +95,7 @@ public final class EditorProjectDocument {
 
     /** Duplicate authored assets, including unused transparent imported tiles, without a savepoint. */
     public EditorProjectDocument duplicate(EditorProjectMetadata value) {
-        var candidate = create(value, level);
+        var candidate = restore(value, level, nativeSource);
         candidate.assets = assets;
         candidate.objectPreviewLibraryMissing = objectPreviewLibraryMissing;
         return candidate;
@@ -122,7 +155,7 @@ public final class EditorProjectDocument {
 
     /** Prepare a structural replacement without publishing it or losing its savepoint. */
     EditorProjectDocument copyForReplacement() {
-        var candidate = create(metadata, level);
+        var candidate = restore(metadata, level, nativeSource);
         candidate.path = path;
         candidate.savedMetadata = savedMetadata;
         candidate.savedLevel = savedLevel;
@@ -133,7 +166,7 @@ public final class EditorProjectDocument {
     }
 
     public void setMetadata(EditorProjectMetadata value) {
-        Objects.requireNonNull(value, "metadata").validateAgainst(level);
+        validateMetadata(Objects.requireNonNull(value, "metadata"), level);
         boolean boundsChanged = value.minX() != level.getMinX() || value.maxX() != level.getMaxX()
                 || value.minY() != level.getMinY() || value.maxY() != level.getMaxY();
         if (boundsChanged) replace(value, level);
@@ -142,8 +175,9 @@ public final class EditorProjectDocument {
 
     /** Atomic document replacement suitable for host-owned undoable property/resize commands. */
     public void replace(EditorProjectMetadata value, Level source) {
-        Objects.requireNonNull(value, "metadata").validateAgainst(source);
-        EditorProjectLevel replacement = EditorProjectLevel.withBounds(source, value.minX(), value.maxX(), value.minY(), value.maxY());
+        validateMetadata(Objects.requireNonNull(value, "metadata"), source);
+        EditorProjectLevel replacement = EditorProjectLevel.withBounds(
+                nativeSource != null && source instanceof com.openggf.game.internal.NativeProjectLevel ? EditorProjectLevel.nativeView(source) : source, value.minX(), value.maxX(), value.minY(), value.maxY());
         assets.validateAgainst(replacement.getPatternCount());
         MutableLevel mutable = MutableLevel.snapshot(replacement);
         metadata = value; level = mutable;
@@ -170,7 +204,7 @@ public final class EditorProjectDocument {
     }
 
     public EditorProjectLevel snapshot() {
-        metadata.validateAgainst(level);
+        validateMetadata(metadata, level);
         return EditorProjectLevel.copyOf(level);
     }
 

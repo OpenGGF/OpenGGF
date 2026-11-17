@@ -166,12 +166,11 @@ stage including its period, and prepare a native Sonic scene or cold-level
 route tape. Native/frozen/baked object pictures preserve foreground occlusion
 in a disc-backed Palmtree Panic Past canopy regression. Poser body and accessory
 lookups use the selected stage program. Disc-backed scene cues exercise CDDA
-and the Past-stage PCM driver through offline production audio. This is not full editor
-or authoring certification; see the
+and the Past-stage PCM driver through offline production audio. This is not authoring
+certification; see the
 [bounded validation record](../../architecture/validation/2026-11-16-sonic-cd-stageplay-editor.md).
 
-
-**Status: on the `next` development line. It is on the master title shelf when
+**Status: on the `develop` (0.8) development line. It is on the master title shelf when
 your USA disc image is in the ROM folder; it also runs in tests, trace replay
 and the capture tools.**
 
@@ -196,7 +195,9 @@ in either of two ways:
   engine looks there and up to two sub-folders down, and recognises the disc by
   its data track's header, not by file names.
 
-Sonic CD then appears on the master title shelf; with the master title turned
+Sonic CD then appears on the master title shelf with its disc-backed native title
+preview and optional hub theme. Menu playback owns its own disc/audio session,
+so it does not replace suspended gameplay audio. With the master title turned
 off, `roms.default: scd` starts it directly. A `roms.soniccd` path that is not
 the USA disc is refused, not replaced by the folder search.
 
@@ -261,7 +262,10 @@ Future). `SonicCdEndingCaptureTool --ending good|bad` films an ending.
   pipeline. Authored zones are limited to flat terrain with owned objects;
   native CD objects/rings need their stage context. Cross-game feature donation
   on a CD host is refused until stage-owned animation families have a composition
-  adapter. Stageplay/editor/import support remains a separate lane. See the
+  adapter. Editor persistence now has a bounded disc/stage source-reference foundation;
+  native edit replay now retains the loaded game owners, source layout semantics
+  and object secondary bytes. Creator-facing project creation selects a zone, act
+  and time period; source-backed playtests reload the native owners. Stageplay remains a separate lane. See the
   [CD mod contracts](../../modding/ggfmod.md#sonic-cd-runtime-mods).
 - The master title has no Setup page for Sonic CD: it always starts with
   Sonic alone, under the all-games display and rewind settings.

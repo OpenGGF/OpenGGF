@@ -225,10 +225,11 @@ public final class EditorProjectWorkspace {
     /** Explicitly copies a compatible loaded layout into a portable authored project. */
     public void adoptLoadedLevel(GameModule module, Level level, int zone, int act) throws IOException {
         // First native entry uses complete ROM libraries; reopening authored data preserves its pixels.
-        if (!(level instanceof com.openggf.level.MutableLevel) && !(level instanceof EditorProjectLevel))
+        if (!(level instanceof com.openggf.game.internal.NativeProjectLevel) && !(level instanceof com.openggf.level.MutableLevel) && !(level instanceof EditorProjectLevel))
             level = com.openggf.level.LevelObjectArt.authoringLibrary(level, module.getObjectArtProvider());
         var zones = module.getZoneRegistry();
-        int[] start = zones.getStartPosition(zone, act);
+        int[] start = level instanceof com.openggf.game.internal.NativeProjectLevel nativeLevel
+                ? nativeLevel.nativeProjectStart() : zones.getStartPosition(zone, act);
         ModObjectZoneSet family = module.getGameId() == GameId.S3K
                 ? ModObjectZoneSet.valueOf((level instanceof Sonic3kLevel nativeLevel
                         ? nativeLevel.getObjectZoneSet() : S3kZoneSet.forZone(level.getZoneIndex())).name()) : null;
@@ -242,7 +243,8 @@ public final class EditorProjectWorkspace {
         menu.showActions(UiMessages.text("editor.editor_project_workspace.choose_project_game_1w6dj36"), List.of(
                 action(UiMessages.text("editor.editor_project_workspace.sonic_1_1t0f5st"), () -> chooseSource(GameId.S1)),
                 action(UiMessages.text("editor.editor_project_workspace.sonic_2_1t0f5su"), () -> chooseSource(GameId.S2)),
-                action(UiMessages.text("editor.editor_project_workspace.sonic_3_knuckles_138eayj"), () -> chooseSource(GameId.S3K))));
+                action(UiMessages.text("editor.editor_project_workspace.sonic_3_knuckles_138eayj"), () -> chooseSource(GameId.S3K)),
+                action(UiMessages.text("editor.project.sonic_cd"), () -> chooseSource(GameId.SCD))));
     }
 
     private void chooseSource(GameId game) {
@@ -263,12 +265,24 @@ public final class EditorProjectWorkspace {
         var choices = new ArrayList<EditorProjectMenu.Action>();
         for (int a = 0; a < module.getZoneRegistry().getActCount(zone); a++) {
             int act = a;
-            choices.add(action(UiMessages.text("editor.editor_project_workspace.act_1ffngk1", Map.of("value0", String.valueOf((a + 1)))), () -> newLevelForm(module, zone, act)));
+            var nativeHost = module.getGameService(com.openggf.game.internal.NativeProjectHost.class);
+            String label = nativeHost == null ? UiMessages.text("editor.editor_project_workspace.act_1ffngk1", Map.of("value0", String.valueOf((a + 1))))
+                    : nativeHost.stageLabel(zone, act);
+            choices.add(action(label, () -> newLevelForm(module, zone, act)));
         }
         menu.showActions(module.getZoneRegistry().getZoneName(zone), choices);
     }
 
     private void newLevelForm(GameModule module, int zone, int act) {
+        if (module.getGameService(com.openggf.game.internal.NativeProjectHost.class) != null) {
+            menu.showForm(UiMessages.text("editor.project.from_native_stage"), List.of(text("name", UiMessages.text("editor.editor_project_workspace.name_1fvl7"), "New Level")),
+                    UiMessages.text("editor.editor_project_workspace.create_level_3ua2yo"), values -> io(() -> {
+                        adoptLoadedLevel(module, host.loadLibrary(zone, act), zone, act);
+                        document.setMetadata(document.metadata().withName(values.get("name")));
+                    }));
+            menu.setSubtitle(UiMessages.text("editor.project.native_dimensions"));
+            return;
+        }
         menu.showForm(UiMessages.text("editor.editor_project_workspace.new_blank_level_12gxxco"), List.of(text("name", UiMessages.text("editor.editor_project_workspace.name_1fvl7"), "New Level"),
                 integer("width", UiMessages.text("editor.editor_project_workspace.width_in_blocks_1693i07"), 16), integer("height", UiMessages.text("editor.editor_project_workspace.height_in_blocks_pvahc8"), 8)),
                 UiMessages.text("editor.editor_project_workspace.create_level_3ua2yo"), values -> io(() -> {
