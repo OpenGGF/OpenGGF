@@ -1,5 +1,29 @@
 {
   "@@locale": "en",
+  "menu.soniccd.visual_mode.title": "Visual mode",
+  "@menu.soniccd.visual_mode.title": {
+    "description": "Sonic CD Visual Mode browser. Translate the complete message."
+  },
+  "menu.soniccd.visual_mode.opening": "Opening video",
+  "@menu.soniccd.visual_mode.opening": {
+    "description": "Sonic CD Visual Mode browser. Translate the complete message."
+  },
+  "menu.soniccd.visual_mode.good_ending": "Good ending",
+  "@menu.soniccd.visual_mode.good_ending": {
+    "description": "Sonic CD Visual Mode browser. Translate the complete message."
+  },
+  "menu.soniccd.visual_mode.bad_ending": "Bad ending",
+  "@menu.soniccd.visual_mode.bad_ending": {
+    "description": "Sonic CD Visual Mode browser. Translate the complete message."
+  },
+  "menu.soniccd.visual_mode.back_to_title": "Back to title",
+  "@menu.soniccd.visual_mode.back_to_title": {
+    "description": "Sonic CD Visual Mode browser. Translate the complete message."
+  },
+  "menu.soniccd.visual_mode.help": "Use Back to stop a video and return here.",
+  "@menu.soniccd.visual_mode.help": {
+    "description": "Sonic CD Visual Mode browser. Translate the complete message."
+  },
   "menu.text.value_details": "Value:\n{value}",
   "@menu.text.value_details": {
     "description": "OpenGGF host UI: menu.text.value_details. Translate the complete message; preserve named arguments.",

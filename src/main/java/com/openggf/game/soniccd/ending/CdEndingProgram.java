@@ -4,6 +4,7 @@ import com.openggf.data.compression.NemesisReader;
 import com.openggf.game.soniccd.fmv.CdFmvAssets;
 import com.openggf.game.soniccd.fmv.CdFmvStreamer;
 import com.openggf.game.soniccd.fmv.CdProgramScreenState;
+import com.openggf.game.soniccd.fmv.CdVideoProgram;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -38,7 +39,7 @@ import java.util.Objects;
  * <p>Start can stop the video only when the byte at $FF0F23 is set ({@code Ending_RequestSubCpuTransfer},
  * :630-638); nothing on the disc writes it, so the shipped ending cannot be skipped.
  */
-public final class CdEndingProgram {
+public final class CdEndingProgram implements CdVideoProgram {
     private enum Phase { LOOP, EXIT_DELAY, IMAGE, DONE }
 
     private static final int TAG_08 = 0x3038, TAG_15 = 0x3135, TAG_SR = 0x5352, TAG_NO = 0x4E4F, TAG_RS = 0x5253;
@@ -119,6 +120,7 @@ public final class CdEndingProgram {
     }
 
     /** One V-int and the main program's work until its next VSync. */
+    @Override
     public void frame(int pad) {
         frames++;
         if (phase == Phase.IMAGE) {
@@ -461,11 +463,13 @@ public final class CdEndingProgram {
         if (image.step()) phase = Phase.DONE;
     }
 
+    @Override
     public boolean done() { return phase == Phase.DONE; }
 
     /** {@code mmdReturnCode}: d0.b after the image's last fade ($10, positive): IPX does not run it again. */
     public int returnCode() { return 0x10; }
 
+    @Override
     public CdProgramScreenState screen() { return screen; }
 
     public CdFmvStreamer streamer() { return streamer; }
