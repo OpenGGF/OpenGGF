@@ -1299,8 +1299,10 @@ public class GameLoop {
             userRecordingControls.updateLevelControlInput(inputHandler);
         }
 
+        boolean specialStageOwnsStart = !userPaused && inputHandler.logical().player1().startPressed()
+                && specialStageLifecycle.ownsStartInput();
         boolean nextUserPaused = GameLoopPauseInput.nextUserPaused(currentGameMode, inputHandler,
-                configService, userPaused, overlayOwnsPause, playbackTakeoverConsumedPausePress,
+                configService, userPaused, overlayOwnsPause || specialStageOwnsStart, playbackTakeoverConsumedPausePress,
                 playbackDebugManager, userRecordingControls::handlePlaybackTakeoverRequest);
         applyInputPassUserPause(nextUserPaused);
 

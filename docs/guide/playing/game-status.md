@@ -248,6 +248,9 @@ Future). `SonicCdEndingCaptureTool --ending good|bad` films an ending.
   fresh backup RAM. The RAM DATA screen is not hosted, so the in-game way to
   erase a save is missing: delete `saves/soniccd/slot0.json` to start over.
 - FM sound effects, CD audio tracks, and PCM music and sound.
+- Pause holds a regular special stage. The stage fades to white on exit,
+  and the results show the ring and time bonuses. Press Start to finish the
+  tally and return through a second white fade.
 - Held-key live rewind in stages and special stages. Stage rewind restores the
   zones' rings, switches, lamps, bosses and Sonic's idle timer, as well as the
   CD audio and backup RAM state; special-stage rewind restores the floor
@@ -278,7 +281,6 @@ Future). `SonicCdEndingCaptureTool --ending good|bad` films an ending.
   either role with the missing donor character named. S3K elemental shields are
   exercised on the disc host. Donated life icons use their own object-art tiles,
   preserving transparent foreground cells and the native HUD.
-- Special stage results graphics, pause and exit fade are not drawn.
 - Robotnik's projector in the Past can be destroyed, but the animals in its
   hologram are not drawn.
 - Native frames dropped while the CPU is busy (lag frames) are not modelled;

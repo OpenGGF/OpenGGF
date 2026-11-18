@@ -6,6 +6,7 @@ import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
 import com.openggf.debug.playback.PlaybackDebugManager;
 import com.openggf.game.*;
+import com.openggf.game.internal.SpecialStageStartInput;
 import com.openggf.game.rewind.LiveRewindManager;
 import com.openggf.game.resources.PlcFrameLifecycleCoordinator.PlcLifecycleFrame;
 import com.openggf.game.resources.PlcLifecyclePhase;
@@ -64,6 +65,15 @@ final class GameLoopSpecialStageLifecycle {
 
     void setObservationPacing(GameLoop.SpecialStageObservationPacing pacing) { specialStageObservationPacing = pacing; }
     ResultsScreen resultsScreen() { return resultsScreen; }
+
+    boolean ownsStartInput() {
+        Object owner = switch (host.currentMode()) {
+            case SPECIAL_STAGE -> activeSpecialStageProvider;
+            case SPECIAL_STAGE_RESULTS -> resultsScreen;
+            default -> null;
+        };
+        return owner instanceof SpecialStageStartInput input && input.ownsStartInput();
+    }
     EmeraldRewardKind rewardKind() { return activeSpecialStageRewardKind; }
     boolean transitionPending() { return specialStageTransitionPending; }
     boolean returningFromSpecialStage() { return returningFromSpecialStage; }
