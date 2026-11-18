@@ -104,7 +104,7 @@ diverging row and the frontier test's cause label (a guess, not a diagnosis).
 | R41B | **green** 4,721 | asserted | green | |
 | R41C | **green** 6,013 | asserted | green | |
 | R41D | none | none | green | |
-| R42A | 4,286 / 6,411 | pending | green | Water: at row 4286 native is underwater and the engine is not (x, speeds, camera differ). The route does not reach its act end |
+| R42A | 4,286 / 6,411 | pending | green | At row 4286 the retail break pole captures Sonic. Both runs are already underwater. The route does not reach its act end |
 | R42B, R42C, R42D | none | none | green | |
 | R43C, R43D | boss movies | partial | green | Chase equal in both futures; fight compared to row 4887 of R43D; defeat, escape and capsule recorded, not compared |
 | R51A | **green** 4,756 | asserted | green | |
@@ -132,21 +132,51 @@ diverging row and the frontier test's cause label (a guess, not a diagnosis).
 | R81B | **green** 3,991 | none | green | Route does not reach the goal |
 | R81C | **green** 4,524 | none | green | Route does not reach the goal |
 | R81D | none | none | green | |
-| R82A | 5,029 / 5,697 | none | green | The twin walker's right platform uses its own top-solid check. At row 5029 the engine stops Sonic's upward motion one pixel early. The recording ends before the signpost |
+| R82A | **green** 5,697 | none | green | Player and camera match through the recording's end, before the signpost |
 | R82B, R82C, R82D | none | none | green | |
 | R83C, R83D | approach only | none | green | Approach green to row 1,762 of R83C; fight and endings run in the engine with test-driven hits, not compared; no native ending recording |
 
 Totals at `6c5c0e2764` and `45463c80bd`: routes 146,390 of 149,633 rows (97.8%; 26 of 28 to
-their end); fixtures 56,879 of 57,049 rows (68 of 70). The open routes are
-R42A (water) and R82A; the open fixtures are R11C and R51B (objects). A focused
-Metallic Madness rerun advanced R82A from row 4577 to 5029 and kept R81A, R81B
-and R81C green. The historical totals count the diverging row itself as compared.
-The cells above give the first diverging row. In the act-end column `none` means the route has
-no end-of-act assertion: it is not in `TestSonicCdActEndNative`'s set, either
+their end); fixtures 56,879 of 57,049 rows (68 of 70). The later focused
+Metallic Madness rerun closed R82A. R42A (break pole) remains open, as do the
+short fixtures R11C and R51B. The historical totals count the diverging row as
+compared. The cells above give the first diverging row. In the act-end column
+`none` means the route has no end-of-act assertion: it is not in
+`TestSonicCdActEndNative`'s set, either
 because it does not reach the goal or because no assertion was written. Every
 route in that set is `asserted` except R42A, which is `pending` until it
 reaches its end window. The per-stage tables behind these numbers are local
 measurement output, not committed.
+
+## First-divergence recheck (2026-11-18)
+
+All four recordings reproduced their original divergence in the following
+USA disc checks. Each selection used one focused fixture test with zero skips.
+
+- Full routes on `95cac51440`, using `TestSonicCdFixtureFrontier` with
+  `soniccd.fixtures.root=<native root>/rehost-long` and
+  `soniccd.fixture.payloads=R42A,R82A`.
+- Short fixtures on `9008241e6f`, using the same test with
+  `soniccd.fixtures.root=<native root>/rehost-fixtures` and
+  `soniccd.fixture.payloads=R11C,R51B`.
+
+The R42A replay first differs when object `$05` at `x=$1590` changes from
+routine 2 to 4. `ObjectIndex` (scddisasm/src/r4/object_index_2a.asm:3-8) resolves it to
+the break pole.
+`BreakPoleObject_0_Routine2` (scddisasm/src/objects/r4/break_pole.asm:27-52)
+sets Sonic's x to the pole's x plus `$18`
+on entry from the left and selects animation `$11`. The native row shows
+`x=$15A8` and animation `$11`. The engine stays at `x=$158D` and animation
+`$0F`. Both underwater flags are set. The frontier tool's Water label came
+from the existing underwater bit.
+
+In R82A, routing the right twin-walker platform's top-solid check to that
+platform fixed the horizontal speed loss at row 4577. The next stop at row
+5029 came from an invisible block cutting short Sonic's upward movement.
+The native routine lets him pass through the underside. With both fixes,
+R82A matches every one of its 5,697 recorded rows. The same selection kept
+R81A, R81B and R81C green. The source notes and commands are in the
+[trace frontier log](../../../status/trace-frontier-log.md#2026-11-18--sonic-cd-twin-walker-top-solid-receiver).
 
 ## Standard obligations
 
