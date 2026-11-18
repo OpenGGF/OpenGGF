@@ -21,7 +21,9 @@ import com.openggf.game.soniccd.CdNativeProgram;
 import com.openggf.game.soniccd.CdStagePayload;
 import com.openggf.game.soniccd.backupram.CdSaveVariables;
 import com.openggf.game.soniccd.level.CdLevel;
+import com.openggf.game.soniccd.program.CdNotHostedScreen;
 import com.openggf.game.soniccd.program.CdSceneCoordinator;
+import com.openggf.game.soniccd.special.CdSpecialStageProvider;
 import com.openggf.game.soniccd.title.CdTitleScreen;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.tests.TestEnvironment;
@@ -298,23 +300,27 @@ class TestSonicCdPlayerLaunch {
     }
 
     @Test
-    void programsThisBuildDoesNotHostReturnToTheTitle() {
+    void unlockedProgramsAndAttractPlaybackReturnToTheTitle() {
         // Unlocks as a finished campaign leaves them: RAM DATA, D.A. Garden and Visual Mode on the menu
         // (titleFlags bits 4, 3, 2; Menu/Main.asm:69-117), CONTINUE first (bit 6).
         bootWithTitleFlags(0x7C);
         // Menu order from CONTINUE: TIME ATTACK, RAM DATA, D.A. GARDEN, VISUAL MODE.
         record Option(int rights, CdNativeProgram program) { }
+        var save = scenes().flow().backupRam().readSave();
         for (Option option : List.of(new Option(2, CdNativeProgram.BURAMMGR), new Option(3, CdNativeProgram.DAGARDEN),
                 new Option(4, CdNativeProgram.VISMODE))) {
-            int before = scenes().notHosted().size();
             chooseTitleOption(option.rights());
-            until(() -> scenes().notHosted().size() > before, 600, option.program() + " requested");
+            until(() -> engine.getCurrentGameMode() == GameMode.OPTIONS, 600, option.program() + " opens");
             assertEquals(option.program(), scenes().notHosted().get(scenes().notHosted().size() - 1).program());
+            assertNotNull(scenes().lastProgramScreen());
+            assertFalse(scenes().lastProgramScreen() instanceof CdNotHostedScreen);
+            idle(60);
+            tap(0, 4);                                          // C is Back in OpenGGF menus.
             until(() -> engine.getCurrentGameMode() == GameMode.TITLE_SCREEN && title().program() != null,
                     600, option.program() + " returns to the title");
+            assertEquals(save, scenes().flow().backupRam().readSave());
         }
-        // Attract mode: the title times out (ObjMenu_TimeOut) into IPX Demo: the opening video (hosted;
-        // Start stops it, CheckFMVStop), then the Palmtree Panic demo and the special-stage demo (not hosted).
+        // IPX Demo cycles through the opening, the skipped Palmtree Panic demo, and a playable special-stage demo.
         int before = scenes().notHosted().size();
         until(() -> engine.getCurrentGameMode() == GameMode.OPTIONS, 2500, "the title's time-out into the opening video");
         assertEquals(CdNativeProgram.OPENING, scenes().notHosted().get(scenes().notHosted().size() - 1).program());
@@ -325,11 +331,16 @@ class TestSonicCdPlayerLaunch {
         for (int i = 0; i < 20; i++) press(0, true);
         until(() -> engine.getCurrentGameMode() == GameMode.TITLE_SCREEN && title().program() != null, 600,
                 "the opening video returns to the title");
-        for (CdNativeProgram demo : List.of(CdNativeProgram.R11ADEMO, CdNativeProgram.SPECSTAGE)) {
-            until(() -> requestedSince(before).contains(demo), 2500, demo + " requested");
-            until(() -> engine.getCurrentGameMode() == GameMode.TITLE_SCREEN && title().program() != null, 600,
-                    demo + " returns to the title");
-        }
+        until(() -> requestedSince(before).contains(CdNativeProgram.R11ADEMO), 2500, "Palmtree Panic demo requested");
+        until(() -> engine.getCurrentGameMode() == GameMode.TITLE_SCREEN && title().program() != null, 600,
+                "the unhosted demo returns to the title");
+        until(() -> engine.getCurrentGameMode() == GameMode.SPECIAL_STAGE, 3500, "the Stage 1 attract demo");
+        var provider = assertInstanceOf(CdSpecialStageProvider.class, engine.getGameLoop().getActiveSpecialStageProvider());
+        assertEquals(0, provider.getCurrentStage());
+        assertTrue(provider.session().stage().flags().demoInput());
+        until(() -> engine.getCurrentGameMode() == GameMode.TITLE_SCREEN && title().program() != null, 3000,
+                "the special-stage demo returns to the title");
+        assertEquals(save, scenes().flow().backupRam().readSave());
     }
 
     private List<CdNativeProgram> requestedSince(int before) {

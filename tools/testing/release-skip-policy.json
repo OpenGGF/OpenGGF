@@ -4361,7 +4361,7 @@
       "note": "BizHawk native reference (and the user's Sonic CD disc)"
     },
     {
-      "match": "com.openggf.TestSonicCdPlayerLaunch#programsThisBuildDoesNotHostReturnToTheTitle",
+      "match": "com.openggf.TestSonicCdPlayerLaunch#unlockedProgramsAndAttractPlaybackReturnToTheTitle",
       "category": "optional-fixture",
       "evidence": "src/test/java/com/openggf/TestSonicCdPlayerLaunch.java:65",
       "allowed_when_absent": "soniccd_disc",
