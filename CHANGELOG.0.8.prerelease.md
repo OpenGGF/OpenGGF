@@ -71,7 +71,8 @@ under the matching area heading; see the
   Japanese and European discs containing the identical driver bank. The title's
   RAM DATA entry confirms a reset of Sonic CD's save to disc defaults.
   Visual Mode plays the opening, both endings and the silent Pencil Test
-  from the verified USA disc. D.A. Garden plays disc music
+  from the verified USA disc. Completing the good ending in Visual Mode opens
+  a read-only Thank You disc preview. D.A. Garden plays disc music
   in an OpenGGF browser. Held-key live rewind works inside
   special stages, including the three-frame floor pipeline, UFOs and effects. The master
   title lists it when the disc is configured or found (`roms.default: scd` boots

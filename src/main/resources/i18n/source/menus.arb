@@ -117,6 +117,14 @@
   "@menu.soniccd.visual_mode.help": {
     "description": "Sonic CD Visual Mode browser. Translate the complete message."
   },
+  "menu.soniccd.thank_you.title": "Thank You",
+  "@menu.soniccd.thank_you.title": {
+    "description": "Title of the Sonic CD disc-media preview after the good ending."
+  },
+  "menu.soniccd.thank_you.description": "Disc tile samples",
+  "@menu.soniccd.thank_you.description": {
+    "description": "Caption for a contact sheet of graphic tiles loaded from the Sonic CD disc."
+  },
   "menu.soniccd.save_manager.title": "Sonic CD save data",
   "@menu.soniccd.save_manager.title": {
     "description": "Sonic CD save reset screen. Translate the complete message."

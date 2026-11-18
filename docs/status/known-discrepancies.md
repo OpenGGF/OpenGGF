@@ -229,6 +229,18 @@ the disc, so they are not modelled:
   playback view omits the native border, palette fades and closing effects.
   The stream uses the shared fallback seek of 20 V-INTs because it has no
   measured profile.
+- **Thank You disc preview.** Visual Mode opens a read-only archive contact
+  sheet when Good ending returns, following `VisualMode_GoodEnd`
+  (CD Initial Program/IPX.asm:1177-1187). Back during the video cancels it.
+  Back from the preview returns to the same browser row. Campaign endings
+  follow their own return path.
+  The preview uses the first 24 distinct references to the 154-tile bank in
+  the first 40×28 map. From `THANKS_D.BIN;1` it reads the Nemesis bank at
+  `[$0452, $0A1C)`, one real lookahead byte at `$0A1C` for the decoder, and
+  the Enigma map at `[$0A1C, $0AAA)`. The 64 palette words come from
+  `[$19CE, $1A4E)` in `THANKS_M.MMD;1`. The contact sheet uses OpenGGF menu
+  chrome and leaves the native composition, object and palette animations,
+  fades, and exit sequence unimplemented.
 - **Disc drive seeks: the video reads estimated from emulator timing in `FAST`
   and `PROFILED`, not in `NONE`.** The video player waits for the BIOS read that
   `ReadFMVSectors` (CD System Program/SP.asm:720-746) starts; the seek before

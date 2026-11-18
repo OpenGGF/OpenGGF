@@ -13,6 +13,7 @@ import com.openggf.game.soniccd.ending.CdEndings;
 import com.openggf.game.soniccd.program.CdProgramScreenRenderer;
 import com.openggf.game.soniccd.program.CdSceneCoordinator;
 import com.openggf.game.soniccd.title.CdTitleScreen;
+import com.openggf.graphics.PixelFont;
 import com.openggf.graphics.PixelFontTextRenderer;
 import com.openggf.i18n.UiMessages;
 
@@ -45,10 +46,11 @@ final class CdVisualModeScreen implements NativeMenuScreen {
 
     private static final Choice[] CHOICES = Choice.values();
     private final CdSceneCoordinator coordinator;
-    private final CdProgramScreenRenderer videoRenderer = new CdProgramScreenRenderer();
+    private final CdProgramScreenRenderer pictureRenderer = new CdProgramScreenRenderer();
     private final PixelFontTextRenderer menuText = PixelFontTextRenderer.menu();
     private CdVideoProgram video;
     private CdSubCpuAudio videoAudio;
+    private CdProgramScreenRenderer.Frame thankYouPreview;
     private InputHandler input;
     private int selected;
     private int frame;
@@ -74,7 +76,22 @@ final class CdVisualModeScreen implements NativeMenuScreen {
             if (back) stopVideo();
             else {
                 video.frame(CdTitleScreen.pad(input.logical().player1()));
-                if (video.done()) stopVideo();
+                if (video.done()) {
+                    stopVideo();
+                    // VisualMode_GoodEnd (CD Initial Program/IPX.asm:1177-1187) runs Thank You
+                    // after the ending returns. Back above cancels playback and restores the row.
+                    if (CHOICES[selected] == Choice.GOOD_ENDING) {
+                        thankYouPreview = CdThankYouPreview.load(coordinator.disc().assets());
+                        pictureRenderer.reset();
+                    }
+                }
+            }
+            return;
+        }
+        if (thankYouPreview != null) {
+            if (back) {
+                MenuFeedback.emit(MenuFeedback.Cue.CANCEL);
+                thankYouPreview = null;
             }
             return;
         }
@@ -111,7 +128,7 @@ final class CdVisualModeScreen implements NativeMenuScreen {
         var timing = CdLoadTiming.programTiming();
         if (choice == Choice.PENCIL_TEST) {
             video = new CdPencilTestProgram(disc, timing);
-            videoRenderer.reset();
+            pictureRenderer.reset();
             return;
         }
         var assets = new CdFmvAssets(coordinator.data());
@@ -128,7 +145,7 @@ final class CdVisualModeScreen implements NativeMenuScreen {
             stopVideo();
             throw failure;
         }
-        videoRenderer.reset();
+        pictureRenderer.reset();
     }
 
     private void stopVideo() {
@@ -141,7 +158,7 @@ final class CdVisualModeScreen implements NativeMenuScreen {
         var graphics = GameServices.graphics();
         if (graphics.isHeadlessMode()) return;
         if (video != null) {
-            videoRenderer.draw(video.screen().frame());
+            pictureRenderer.draw(video.screen().frame());
             return;
         }
 
@@ -153,23 +170,8 @@ final class CdVisualModeScreen implements NativeMenuScreen {
         glEnable(GL_BLEND);
         try {
             menuText.beginBatch();
-            MenuChrome.page(font, width, UiMessages.text("menu.soniccd.visual_mode.title"), null, null);
-            for (int i = 0; i < CHOICES.length; i++) {
-                var label = MenuStyle.pageText(CHOICES[i].label(), width - 2 * MARGIN - 8,
-                        MenuStyle.COMPACT, frame);
-                MenuChrome.button(font, MARGIN, rowY(i), width - 2 * MARGIN, rowHeight(), label,
-                        selected == i, false, frame);
-            }
-            int hintY = rowY(CHOICES.length) + 5;
-            for (String line : MenuStyle.wrap(UiMessages.text("menu.soniccd.visual_mode.help"), width - 2 * MARGIN, MenuStyle.COMPACT)) {
-                MenuChrome.compact(font, line, MARGIN, hintY, MenuChrome.MUTED);
-                hintY += Math.max(MenuChrome.DESCRIPTION_PITCH, MenuChrome.compactLineHeight());
-            }
-            MenuChrome.footer(font, width, null, List.of(
-                    MenuChrome.upDown(input, UiMessages.text("menu.details.move")),
-                    MenuChrome.hint(MenuChrome.confirmKey(input), UiMessages.text("menu.details.choose")),
-                    MenuChrome.hint(MenuChrome.backKey(input), UiMessages.text("menu.details.back_caps"))),
-                    MenuChrome.controller(input), frame);
+            if (thankYouPreview == null) drawBrowser(font, width);
+            else drawPreviewChrome(font, width);
         } finally {
             try {
                 menuText.endBatch();
@@ -177,18 +179,49 @@ final class CdVisualModeScreen implements NativeMenuScreen {
                 if (!blendEnabled) glDisable(GL_BLEND);
             }
         }
+        if (thankYouPreview != null) pictureRenderer.draw(thankYouPreview);
+    }
+
+    private void drawBrowser(PixelFont font, int width) {
+        MenuChrome.page(font, width, UiMessages.text("menu.soniccd.visual_mode.title"), null, null);
+        for (int i = 0; i < CHOICES.length; i++) {
+            var label = MenuStyle.pageText(CHOICES[i].label(), width - 2 * MARGIN - 8,
+                    MenuStyle.COMPACT, frame);
+            MenuChrome.button(font, MARGIN, rowY(i), width - 2 * MARGIN, rowHeight(), label,
+                    selected == i, false, frame);
+        }
+        int hintY = rowY(CHOICES.length) + 5;
+        for (String line : MenuStyle.wrap(UiMessages.text("menu.soniccd.visual_mode.help"), width - 2 * MARGIN, MenuStyle.COMPACT)) {
+            MenuChrome.compact(font, line, MARGIN, hintY, MenuChrome.MUTED);
+            hintY += Math.max(MenuChrome.DESCRIPTION_PITCH, MenuChrome.compactLineHeight());
+        }
+        MenuChrome.footer(font, width, null, List.of(
+                MenuChrome.upDown(input, UiMessages.text("menu.details.move")),
+                MenuChrome.hint(MenuChrome.confirmKey(input), UiMessages.text("menu.details.choose")),
+                MenuChrome.hint(MenuChrome.backKey(input), UiMessages.text("menu.details.back_caps"))),
+                MenuChrome.controller(input), frame);
+    }
+
+    private void drawPreviewChrome(PixelFont font, int width) {
+        MenuChrome.page(font, width, UiMessages.text("menu.soniccd.thank_you.title"), null,
+                UiMessages.text("menu.soniccd.thank_you.description"));
+        CdThankYouPreview.drawPanel(font, width);
+        MenuChrome.footer(font, width, null,
+                List.of(MenuChrome.hint(MenuChrome.backKey(input), UiMessages.text("menu.details.back_caps"))),
+                MenuChrome.controller(input), frame);
     }
 
     @Override public void setClearColor() {
         if (GameServices.graphics().isHeadlessMode()) return;
         if (video != null) {
             var screen = video.screen();
-            videoRenderer.setClearColor(screen.frame(), screen.backdrop());
+            pictureRenderer.setClearColor(screen.frame(), screen.backdrop());
         } else glClearColor(0, 0, 0, 1);
     }
 
     @Override public void reset() {
         stopVideo();
+        thankYouPreview = null;
         menuText.cleanup();
         input = null;
         exiting = false;

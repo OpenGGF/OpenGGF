@@ -1,15 +1,21 @@
 package com.openggf.game.soniccd.flow;
 
 import com.openggf.NativeMenuPresentationAccess;
+import com.openggf.data.compression.EnigmaReader;
+import com.openggf.data.compression.NemesisReader;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameServices;
 import com.openggf.game.soniccd.CdLoadTiming;
 import com.openggf.game.soniccd.CdNativeFile;
 import com.openggf.game.soniccd.CdStagePayload;
+import com.openggf.game.soniccd.audio.CdSubCpuAudio;
 import com.openggf.game.soniccd.audio.SonicCdAudioProfile;
 import com.openggf.game.soniccd.backupram.CdSaveRecord;
 import com.openggf.game.soniccd.backupram.CdSaveVariables;
+import com.openggf.game.soniccd.ending.CdEndings;
+import com.openggf.game.soniccd.fmv.CdFmvAssets;
 import com.openggf.game.soniccd.fmv.CdFmvStreamer;
+import com.openggf.game.soniccd.media.CdProgramAssets;
 import com.openggf.graphics.ScreenshotCapture;
 import com.openggf.level.Palette;
 import com.openggf.level.PaletteDisplayColor;
@@ -17,7 +23,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledOnOs;
 import org.junit.jupiter.api.condition.OS;
 
+import java.io.ByteArrayInputStream;
+import java.nio.ByteBuffer;
+import java.nio.channels.Channels;
 import java.util.Arrays;
+import java.util.HashSet;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.lwjgl.opengl.GL11.GL_COLOR_BUFFER_BIT;
@@ -55,6 +65,10 @@ class TestCdVisualModeFlow {
                 harness.step(0, CdFlowHarness.C, false);
                 assertArrayEquals(menu, draw(harness), "Back restores the same selected row");
                 harness.idle(1);
+                if (i == 1) {
+                    checkThankYouPreview(harness);
+                    harness.idle(1);
+                }
                 harness.step(CdFlowHarness.DOWN, 0, false);
                 harness.idle(1);
             }
@@ -70,6 +84,82 @@ class TestCdVisualModeFlow {
             assertNull(harness.scenes.pendingEnding());
             assertEquals(saved, harness.scenes.flow().backupRam().readSave());
         }
+    }
+
+    private static void checkThankYouPreview(CdFlowHarness harness) throws Exception {
+        var disc = harness.disc.assets();
+        var ending = CdEndings.program(new CdFmvAssets(harness.scenes.data()), disc, true,
+                CdSubCpuAudio.ProgramPcm.detached(), CdLoadTiming.programTiming());
+        for (int tick = 0; tick < 20_000 && !ending.done(); tick++) ending.frame(0);
+        assertTrue(ending.done(), "the reference good ending completes with neutral input");
+
+        var profile = assertInstanceOf(SonicCdAudioProfile.class, GameServices.audio().getAudioProfile());
+        var audio = profile.subCpuAudio();
+        audio.loadStage(CdStagePayload.R11A);
+        assertNotNull(audio.pcmDriver());
+        var cdda = audio.state().cdda();
+        int[] menu = draw(harness);
+        harness.step(0, CdFlowHarness.A, false);
+        assertNull(audio.pcmDriver(), "the ending takes over the PCM chip");
+        harness.idle(Math.toIntExact(ending.frames() - 1));
+        int[] lastEndingFrame = draw(harness);
+        assertFalse(Arrays.equals(menu, lastEndingFrame), "the ending still owns the frame before completion");
+        harness.idle(1);
+        int[] preview = draw(harness);
+        assertFalse(Arrays.equals(menu, preview), "natural completion opens the archive preview");
+        assertFalse(Arrays.equals(lastEndingFrame, preview), "the archive replaces the finished ending");
+        assertThankYouPixels(preview, disc);
+        assertEquals(cdda, audio.state().cdda());
+
+        // A released video port lets the mixer clock a newly loaded stage driver.
+        audio.loadStage(CdStagePayload.R11A);
+        audio.bindOutputRate(44_100);
+        long pcmPhase = audio.state().pcm().phase();
+        audio.render(new short[128], 64);
+        assertNotEquals(pcmPhase, audio.state().pcm().phase(), "the ending PCM port has been released");
+        harness.idle(60);
+        assertArrayEquals(preview, draw(harness), "the static preview waits for Back");
+        harness.step(0, CdFlowHarness.C, false);
+        assertArrayEquals(menu, draw(harness), "fresh Back returns to Good ending");
+        harness.step(0, CdFlowHarness.C, false);
+        assertEquals(GameMode.OPTIONS, harness.loop.getCurrentGameMode(), "held Back cannot leave Visual Mode");
+    }
+
+    private static void assertThankYouPixels(int[] picture, CdProgramAssets disc) throws Exception {
+        var bank = disc.read(CdNativeFile.THANKSDATA, 0x452, 0xA1D - 0x452);
+        var art = NemesisReader.decompress(Channels.newChannel(new ByteArrayInputStream(bank)));
+        assertEquals(154 * 32, art.length);
+        var map = disc.read(CdNativeFile.THANKSDATA, 0xA1C, 0xAAA - 0xA1C);
+        var cells = ByteBuffer.wrap(EnigmaReader.decompress(Channels.newChannel(new ByteArrayInputStream(map)), 0xC001));
+        assertEquals(40 * 28 * 2, cells.remaining());
+        var paletteBytes = disc.read(CdNativeFile.THANKSMAIN, 0x19CE, 128);
+        var seen = new HashSet<Integer>();
+        int samples = 0;
+        int opaque = 0;
+        while (cells.hasRemaining() && samples < 24) {
+            int word = Short.toUnsignedInt(cells.getShort());
+            int tile = word & 0x7ff;
+            if (tile == 0 || tile > 154 || !seen.add(tile)) continue;
+            int paletteOffset = ((word >> 13) & 3) * 32;
+            var palette = new Palette();
+            palette.fromSegaFormat(Arrays.copyOfRange(paletteBytes, paletteOffset, paletteOffset + 32));
+            for (int y = 0; y < 8; y++) {
+                for (int x = 0; x < 8; x++) {
+                    int sourceX = (word & 0x0800) == 0 ? x : 7 - x;
+                    int sourceY = (word & 0x1000) == 0 ? y : 7 - y;
+                    int packed = Byte.toUnsignedInt(art[(tile - 1) * 32 + sourceY * 4 + sourceX / 2]);
+                    int color = (sourceX % 2 == 0 ? packed >> 4 : packed) & 15;
+                    if (color == 0) continue;
+                    int expected = 0xff000000 | PaletteDisplayColor.packed(palette.colors[color], GameServices.graphics());
+                    int actual = picture[(80 + samples / 8 * 16 + y) * 320 + 100 + samples % 8 * 16 + x];
+                    assertEquals(expected, actual, "disc pixel in tile sample " + samples + " at " + x + "," + y);
+                    opaque++;
+                }
+            }
+            samples++;
+        }
+        assertEquals(24, samples);
+        assertTrue(opaque > 100, "the contact sheet includes visible disc pixels");
     }
 
     private static void checkPencilTest(CdFlowHarness harness) throws Exception {
