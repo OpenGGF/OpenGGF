@@ -5,7 +5,7 @@ import com.openggf.level.Level;
 import com.openggf.level.ModLevel;
 import java.util.Arrays;
 
-/** Flat authored terrain with owned objects; native CD objects require a stage program and its PLCs. */
+/** Authored terrain and owned objects; native CD objects require a stage program and its PLCs. */
 final class CdModZoneAdapter implements ModZoneAdapter {
     @Override public void validate(String owner, ModZoneLevelData data) {
         if (data.formatVersion() != 1 || data.blockGridSide() != 16)

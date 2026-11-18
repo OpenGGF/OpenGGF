@@ -152,10 +152,11 @@ request)` stages owned object sheets from named disc files with direct byte-coun
 mappings; DPLC requests are rejected. Cartridge `registerRomObjectArt` retains
 its named S1/S2 source semantics even on a CD host. No disc bytes are bundled.
 
-Authored CD zones currently admit flat 16x16-block terrain and owned object keys.
-Native CD objects/rings require a stage's program, PLC and per-stage state; use a
-native decoded-level patch for those. Authored stock deformation and water
-resources are not exposed. CD hosts cartridge-donated S1 Sonic, S2 Sonic/Tails,
+Authored CD zones admit 16x16 blocks, one collision path, and owned object keys.
+Set `settings.waterHeight` to add still water at a fixed height. The host reads
+the underwater palette from Tidal Tempest act 1 Present on the supplied disc.
+Native CD objects and rings require a stage's program, PLC, and state. Use a
+native decoded-level patch for those. Authored stock deformation remains unavailable. CD hosts cartridge-donated S1 Sonic, S2 Sonic/Tails,
 and S3K Sonic/Tails/Knuckles through the same donor provider as cartridge hosts.
 The host supplies stage-owned animation scripts; all donated drawings and name
 lettering come from the donor ROM. Unsupported donor characters fail explicitly.
@@ -210,6 +211,6 @@ contain ROM-derived pixels; their original redistribution rights still apply. Zo
 Flat level-directory export of a source-backed CD project is explicitly refused,
 so it cannot be repackaged as a flat level ZIP either. Those formats lack native
 program/PLC/placement context. Use the `.ogfproject` round trip for these projects;
-this is distinct from supported separately authored flat CD zones with owned
+this is distinct from separately authored CD zones with owned
 object keys. Native replay refuses resized layouts. Existing placement IDs retain
 secondary subtype/time-mask data; newly added IDs select only the active period.

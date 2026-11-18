@@ -9,6 +9,7 @@ import com.openggf.game.DebugOverlayProvider;
 import com.openggf.game.Game;
 import com.openggf.game.GameDataSource;
 import com.openggf.game.GameId;
+import com.openggf.game.GameServices;
 import com.openggf.game.GameModule;
 import com.openggf.game.LevelEventProvider;
 import com.openggf.game.LevelGamestate;
@@ -149,6 +150,10 @@ public final class SonicCdGameModule implements GameModule {
 
     @Override public com.openggf.game.modzone.ModZoneAdapter getModZoneAdapter() { return new CdModZoneAdapter(); }
 
+    @Override public com.openggf.game.modzone.ModLevelSettingsProvider getModLevelSettingsProvider() {
+        return new CdModLevelSettingsProvider(this::disc);
+    }
+
     @Override public String getIdentifier() { return "SonicCD"; }
     @Override public com.openggf.game.TitleScreenProvider getTitleScreenProvider() { return titleScreen; }
     @Override public com.openggf.game.LevelSelectProvider getLevelSelectProvider() { return stageSelect; }
@@ -172,12 +177,28 @@ public final class SonicCdGameModule implements GameModule {
 
     @Override
     public TouchResponseTable createTouchResponseTable(GameDataSource source) {
+        var levels = GameServices.levelOrNull();
+        if (levels != null && levels.getCurrentLevel() instanceof com.openggf.level.ModLevel
+                && source instanceof CdDiscDataSource disc) {
+            if (game != null) game.retireNativeStage();
+            // An authored act has no native program. Its owned objects use the common disc table.
+            try {
+                var image = new com.openggf.game.soniccd.level.CdStageLoader(disc).readStage(CdStagePayload.R11A);
+                return touchResponseTable(image, CdStagePayload.R11A);
+            } catch (java.io.IOException failure) {
+                throw new java.io.UncheckedIOException("Cannot read the Sonic CD authored touch sizes", failure);
+            }
+        }
         CdStageImage image = game == null ? null : game.currentImage();
         if (image == null) {
             throw new IllegalStateException("Sonic CD touch sizes come from the loaded stage");
         }
+        return touchResponseTable(image, game.currentLevel().payload());
+    }
+
+    private static TouchResponseTable touchResponseTable(CdStageImage image, CdStagePayload payload) {
         // .CheckWidth: andi.w #$3F; lea -2(ObjColSizes,d0.w) (Player Object Collision.asm:41-45).
-        int sizes = CdStageCatalogue.entry(game.currentLevel().payload()).objColSizes();
+        int sizes = CdStageCatalogue.entry(payload).objColSizes();
         return new TouchResponseTable(image.reader(), sizes - 2, 0x40);
     }
 

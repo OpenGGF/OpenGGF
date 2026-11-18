@@ -93,15 +93,16 @@ public final class CdObjectArtProvider implements ObjectArtProvider, com.openggf
 
     @Override
     public void loadArtForZone(int zoneIndex) throws IOException {
+        if (zoneIndex == -1) {
+            // Contributed acts publish their owned object sheets through the overlay provider.
+            clearStageArt();
+            return;
+        }
         CdLevel level = levels.get();
         CdStageImage stage = images.get();
         if (level == null || stage == null) throw new IllegalStateException("Sonic CD object art needs a loaded stage");
         if (level.payload() == loaded && stage == image) return;
-        donorLife = null;
-        donorLifeArt = null;
-        sheets.clear();
-        renderers.clear();
-        animations.clear();
+        clearStageArt();
         image = stage;
         loaded = level.payload();
         entry = CdObjectCatalogue.entry(loaded);
@@ -147,10 +148,22 @@ public final class CdObjectArtProvider implements ObjectArtProvider, com.openggf
         register(HUD, hud);
         register(TITLE_CARD, sheet(reader, entry.titleCardMappings(), TITLE_CARD_TILE));
         // Per-owner sheets: the common fragment, then the loaded zone's fragment (each lane owns its own).
-        zoneArt.clear();
         for (var fragment : com.openggf.game.soniccd.objects.SonicCdObjectRegistry.artFragments(loaded.stage().zone())) {
             fragment.registerArt(this);
         }
+    }
+
+    private void clearStageArt() {
+        donorLife = null;
+        donorLifeArt = null;
+        image = null;
+        loaded = null;
+        entry = null;
+        vram = null;
+        sheets.clear();
+        renderers.clear();
+        animations.clear();
+        zoneArt.clear();
     }
 
     // --- Fragment art API: object fragments register their own sheets through these. ---

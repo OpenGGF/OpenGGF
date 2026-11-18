@@ -525,8 +525,8 @@ under the matching area heading; see the
   CPU Tails fly-ins use the donor's flight poses; host-native followers retain
   host art when the donor lacks their sheet. Game Setup saves CD donor/team choices.
   Stage-backed host animation scripts no longer require a cartridge host.
-  CD authored terrain supports owned objects; native objects retain their stage
-  program context. Audio-state restoration also restores the native/streamed
+  CD authored terrain supports fixed-height water with a disc-supplied palette
+  and owned objects. Native objects retain their stage program context. Audio-state restoration also restores the native/streamed
   music selection. This extends unpublished API candidate 0.7.0.
 
 

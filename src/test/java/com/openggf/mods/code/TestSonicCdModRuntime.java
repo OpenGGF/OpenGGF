@@ -110,6 +110,47 @@ class TestSonicCdModRuntime {
         assertTrue(module.getGameplayPolicyProvider().hudProfile(destination).isPresent());
     }
 
+    @Test void authoredWaterLoadsFromDiscAtTheCreatorHeight() throws Exception {
+        var key = new com.openggf.game.ZoneKey.Mod("cd-water", "pool");
+        var declared = ModZoneContribution.singleAct(key.localName(), new BakedLevelRef("level.json"),
+                null, null, false);
+        var data = new ModLevelDefinition(1, "Pool", 0x40, 0x400, 16, 2, 2,
+                new ModLevelDefinition.Bounds(0, 511, 0, 511), new ModLevelDefinition.Start(96, 96),
+                new ModLevelDefinition.StockMusic(1), List.of(), List.of(),
+                new byte[32], new byte[8], new byte[1024], new byte[4], null,
+                new byte[16], new byte[16], new byte[1], new int[]{0}, new int[]{0},
+                new byte[][]{new byte[32], new byte[32], new byte[32], new byte[32]},
+                1, 1, 1, 1, null, List.of(),
+                com.openggf.game.modzone.ModLevelSettings.DEFAULT.withWaterHeight(160));
+        var prepared = PreparedModZone.prepared(key.ownerModId(), declared, data);
+        var plan = new ModRegistrationPlan(key.ownerModId(), "scd", Map.of(), Map.of(), Map.of(),
+                List.of(), List.of(declared), List.of(prepared));
+        var module = new ModBackedGamePatch(plan).apply(new SonicCdGameModule(),
+                new com.openggf.game.patch.PatchContext(ignored -> null, GameServices.configuration()));
+        int zone = module.getZoneRegistry().resolveZoneKey(key).orElseThrow();
+
+        try (var disc = CdDiscDataSource.open(CdTestMedia.usaCue());
+             var boot = new com.openggf.tools.HeadlessGameBoot(320, 224)) {
+            var loop = boot.boot(disc, module, zone, 0);
+            var levels = GameServices.level();
+            assertInstanceOf(com.openggf.level.ModLevel.class, levels.getCurrentLevel());
+            int featureZone = levels.getFeatureZoneId();
+            int featureAct = levels.getFeatureActId();
+            var water = GameServices.water();
+            assertTrue(water.hasWater(featureZone, featureAct));
+            assertEquals(160, water.getWaterLevelY(featureZone, featureAct));
+            var nativeStage = new CdStageLoader(disc).readStage(CdStagePayload.R41A);
+            var nativePalettes = new com.openggf.game.soniccd.zones.ttz.TtzWaterDataProvider(() -> nativeStage)
+                    .getUnderwaterPalette(null, CdZone.TIDAL_TEMPEST.ordinal(), 0,
+                            com.openggf.game.PlayerCharacter.SONIC_ALONE);
+            var authoredPalettes = water.getUnderwaterPalette(featureZone, featureAct);
+            assertEquals(4, authoredPalettes.length);
+            for (int i = 0; i < 4; i++) assertTrue(nativePalettes[i].dataEquals(authoredPalettes[i]));
+            for (int i = 0; i < 4; i++) loop.step();
+            assertEquals(160, water.getWaterLevelY(featureZone, featureAct));
+        }
+    }
+
     @Test void packagedExampleLoadsThroughTheProductionTrustedRuntime(
             @org.junit.jupiter.api.io.TempDir java.nio.file.Path directory) throws Exception {
         var jar = directory.resolve("cd-marker.jar");
