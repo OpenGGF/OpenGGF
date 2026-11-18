@@ -248,6 +248,10 @@ Future). `SonicCdEndingCaptureTool --ending good|bad` films an ending.
   fresh backup RAM. The RAM DATA screen is not hosted, so the in-game way to
   erase a save is missing: delete `saves/soniccd/slot0.json` to start over.
 - FM sound effects, CD audio tracks, and PCM music and sound.
+- Held-key live rewind in stages and special stages. Stage rewind restores the
+  zones' rings, switches, lamps, bosses and Sonic's idle timer, as well as the
+  CD audio and backup RAM state; special-stage rewind restores the floor
+  pipeline, UFOs, effects and Time Stone.
 
 ### Known gaps
 
