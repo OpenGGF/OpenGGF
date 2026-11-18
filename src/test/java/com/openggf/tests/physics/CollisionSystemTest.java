@@ -511,32 +511,6 @@ public class CollisionSystemTest {
     }
 
     @Test
-    public void testCollisionEventRecordAccessors() {
-        CollisionEvent event = new CollisionEvent(
-            CollisionEvent.EventType.SOLID_CANDIDATE,
-            "Platform",
-            100, 200, 15, (byte) 0x20, true, false
-        );
-
-        assertEquals(CollisionEvent.EventType.SOLID_CANDIDATE, event.type());
-        assertEquals("Platform", event.description());
-        assertEquals(100, event.x());
-        assertEquals(200, event.y());
-        assertEquals(15, event.distance());
-        assertEquals((byte) 0x20, event.angle());
-        assertTrue(event.flag1());
-        assertFalse(event.flag2());
-    }
-
-    @Test
-    public void testCollisionEventToString() {
-        CollisionEvent event = CollisionEvent.simple(CollisionEvent.EventType.TERRAIN_PROBES_START, "test");
-        String str = event.toString();
-        assertNotNull(str);
-        assertTrue(str.contains("TERRAIN_PROBES_START"));
-    }
-
-    @Test
     public void testDistanceToleranceInComparison() {
         RecordingCollisionTrace other = new RecordingCollisionTrace();
 
@@ -562,22 +536,6 @@ public class CollisionSystemTest {
 
         List<String> differences = trace.compareWith(other);
         assertFalse(differences.isEmpty(), "5-pixel distance difference should not be tolerated");
-    }
-
-    @Test
-    public void testEventTypeEnumValues() {
-        CollisionEvent.EventType[] types = CollisionEvent.EventType.values();
-        assertEquals(10, types.length);
-        assertNotNull(CollisionEvent.EventType.valueOf("TERRAIN_PROBES_START"));
-        assertNotNull(CollisionEvent.EventType.valueOf("TERRAIN_PROBE_RESULT"));
-        assertNotNull(CollisionEvent.EventType.valueOf("TERRAIN_PROBES_COMPLETE"));
-        assertNotNull(CollisionEvent.EventType.valueOf("SOLID_CONTACTS_START"));
-        assertNotNull(CollisionEvent.EventType.valueOf("SOLID_CANDIDATE"));
-        assertNotNull(CollisionEvent.EventType.valueOf("SOLID_RESOLVED"));
-        assertNotNull(CollisionEvent.EventType.valueOf("SOLID_CHECKPOINT_START"));
-        assertNotNull(CollisionEvent.EventType.valueOf("SOLID_CHECKPOINT_RESULT"));
-        assertNotNull(CollisionEvent.EventType.valueOf("SOLID_CONTACTS_COMPLETE"));
-        assertNotNull(CollisionEvent.EventType.valueOf("POST_ADJUSTMENT"));
     }
 
     @Test

@@ -798,20 +798,8 @@ public class Sonic2WFZBossInstance extends AbstractBossInstance
         return state.routine;
     }
 
-    public int getDefeatTimer() {
-        return defeatTimer;
-    }
-
     public int getCurrentFrame() {
         return currentFrame;
-    }
-
-    public int getActionTimer() {
-        return actionTimer;
-    }
-
-    public boolean isCollisionActive() {
-        return collisionActive;
     }
 
     public int getLeftBound() {

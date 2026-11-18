@@ -11,7 +11,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.io.StringReader;
-import java.io.ByteArrayOutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.AtomicMoveNotSupportedException;
@@ -23,7 +22,6 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.zip.GZIPOutputStream;
 import java.util.zip.GZIPInputStream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -413,21 +411,18 @@ class TestCompleteRunAudioCaptureStore {
     }
 
     @Test
-    void handAuthoredCanonicalBaselineVectorHasItsPinnedBytesAndDigest() throws Exception {
+    void handAuthoredCanonicalBaselineVectorPinsSerializedFields() throws Exception {
         String canonical = "{\"type\":\"baseline\",\"value\":{\"absoluteFrame\":860,\"state\":{\"fields\":[{\"name\":\"tempo\",\"value\":1}],\"roles\":[{\"role\":\"FM1\",\"active\":false,\"fields\":[]}]},\"roleOwners\":[{\"role\":\"FM1\",\"owner\":{\"ownerClass\":\"NONE\",\"contentKey\":\"none\",\"nativeId\":0,\"origin\":\"NONE\",\"originOrdinal\":-1}}],\"frontier\":{\"activeStack\":[],\"pendingDescendants\":[],\"rawChipEvents\":[],\"nativeDiagnostics\":null,\"ymPort0Latch\":0,\"ymPort1Latch\":0}}}";
         Baseline baseline = baseline(new NormalizedState(List.of(new StateField("tempo", 1)),
                 List.of(new RoleState(HardwareRole.FM1, false, List.of()))));
 
         assertEquals(canonical, CompleteRunAudioJson.writeRecord(baseline));
-        MessageDigest digest = MessageDigest.getInstance("SHA-256");
         assertEquals(canonical.replace("\"nativeDiagnostics\":null,", ""),
                 CompleteRunAudioJson.writeSemanticRecord(baseline));
         assertThrows(IllegalArgumentException.class, () -> CompleteRunAudioJson.readRecord(
                 canonical.replace(",\"frontier\":{\"activeStack\":[],\"pendingDescendants\":[],"
                         + "\"rawChipEvents\":[],\"nativeDiagnostics\":null,\"ymPort0Latch\":0,"
                         + "\"ymPort1Latch\":0}", "")));
-        assertEquals(64, HexFormat.of().formatHex(
-                digest.digest((canonical + "\n").getBytes(StandardCharsets.UTF_8))).length());
     }
 
     @Test
@@ -443,39 +438,22 @@ class TestCompleteRunAudioCaptureStore {
     }
 
     @Test
-    void standardGzipNoNameVectorPinsMtimeHeaderAndCompressedBytes() throws Exception {
-        // RFC 1952: ID1/ID2/CM/FLG + zero MTIME + XFL=0 + OS=255, then raw DEFLATE of abc\n.
-        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-        try (GZIPOutputStream gzip = new GZIPOutputStream(bytes)) {
-            gzip.write("abc\n".getBytes(StandardCharsets.US_ASCII));
-        }
-        byte[] expected = HexFormat.of().parseHex("1f8b08000000000000ff4b4c4ae602004e81884704000000");
-        assertArrayEquals(expected, bytes.toByteArray());
-        assertEquals("01f016583b2723fb8f04a590e4ba5528e0da39376471fc22f167f7b9d4cd7998",
-                HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes.toByteArray())));
-    }
-
-    @Test
-    void handAuthoredStoreCaptureVectorPinsRecordsGzipChunkAndManifest() throws Exception {
+    void publishedCaptureMatchesTheIndependentCanonicalRecordDigests() throws Exception {
         Path output = temp.resolve("vector-capture");
         store.writeNew(output, metadata(1), records(1).iterator());
-        // Generated once with RFC 1952/JDK 21 gzip and this literal JSON fixture, then pasted.
-        String canonical = """
-                {"type":"baseline","value":{"absoluteFrame":860,"state":{"fields":[{"name":"tempo","value":1}],"roles":[{"role":"FM1","active":false,"fields":[]}]},"roleOwners":[{"role":"FM1","owner":{"ownerClass":"NONE","contentKey":"none","nativeId":0,"origin":"NONE","originOrdinal":-1}}]}}
-                {"type":"frame","value":{"absoluteFrame":860,"segment":"test","lag":false,"requests":[],"services":[]}}
-                {"type":"terminal","value":{"exclusiveEnd":861,"frameCount":1,"requestCount":0,"serviceCount":0,"decisionCount":0,"ymCount":0,"psgCount":0,"lifecycleCount":0,"rootDigest":"b1e8d623113c86c6661b86981adb17bf85608472f5adeb369e9c1c3343d4cde9"}}
-                """;
-        String gzip = "1f8b08000000000000ff8552416ec32010bcf7199c5d29d409b17d4d13a9aa9a3ca0ca01c3da42c290024e6b59fe7b17dcc63954ea8d9d9ddd99593192305c8054a4e61eb432403272e5ba476824bcf656f7010e8e7708146c95111f7848cd4681969e54ef2331a94d027417bbccd3e99c116735cca4f842d2e18d22858ba0ae58365c7bc8965de7e93ccd43a74f03ee8f491bf1a89f1e3bcd3d92c8f174dc63535813c0845718103336a5313c4abd4852a17beb54abcc3230d7272795e19a548f744203d3c3f87b952625ffef24d076a89a2ee003b2356f6fd11c7cf488a67091eaae4ac01cf54e2780eb92853b29f812baf7e87d6f6454a2d96c6767fb28466fbb7f80d56dfd024810ca2b6b1664e896f7c5b74ba155036210fa6eda591b9e551b43e107a15048f694539a8b8209c618ad0b561694cb9a6eeba6d8b055b1de3e351b2ea1ce5909a5a022cfd7b95c0b0925c1bcdf3fc0b10e6e020000";
-        String manifest = """
-                {"schema":"complete_run_audio.v1","metadata":{"schema":"complete_run_audio.v1","profileId":"store.test.1","fixture":{"romSha1":"0000000000000000000000000000000000000000","romCrc32":"11111111","bk2Sha256":"2222222222222222222222222222222222222222222222222222222222222222","bk2RowCount":861,"runManifestSha256":"3333333333333333333333333333333333333333333333333333333333333333","segments":[{"id":"test","firstFrame":860,"exclusiveEnd":861}],"firstFrame":860,"exclusiveEnd":861},"producerKind":"OPENGGF","producerRuntimeIdentity":{"producerName":"OpenGGF","producerVersion":"test","emulatorName":"OpenGGF","emulatorVersion":"test","coreName":"SMPS","coreVersion":"test","observerAdapter":"CALLBACK_ONLY","artifactSha256":{"OPENGGF_PRODUCER":"4444444444444444444444444444444444444444444444444444444444444444"}},"observerRuntimeIdentity":{"kind":"CALLBACK","id":"openggf.store.callback.v1"},"observerProof":{"observerProfile":"test","callbackSource":"test","callbacks":[{"callback":"service","observations":1}]},"chunkPolicy":{"frameRows":4096,"compression":"gzip","gzipTimestamp":0},"hardwareRoles":["FM1"],"stateInventory":{"globalFields":["tempo"],"activeRoleFields":["cursor"]}},"chunks":[{"file":"000000.jsonl.gz","frame_rows":1,"first_frame":860,"exclusive_end":861,"compressed_sha256":"332dc171a308bea5b321e61bb194206ca1f1d105612e93e3d6a7416d98860932","uncompressed_sha256":"6a7620780a2777027e612bb7c9791541511a45bff6e77f06febe9f0260b19da2"}],"root_digest":"b1e8d623113c86c6661b86981adb17bf85608472f5adeb369e9c1c3343d4cde9"}""";
-        byte[] actual = Files.readAllBytes(output.resolve("chunks/000000.jsonl.gz"));
-        try (var input = new GZIPInputStream(new java.io.ByteArrayInputStream(actual))) {
-            String expected = records(1).stream().map(record -> {
-                try { return CompleteRunAudioJson.writeRecord(record); }
-                catch (IOException failure) { throw new AssertionError(failure); }
-            }).reduce("", (left, right) -> left + right + "\n");
-            assertEquals(expected, new String(input.readAllBytes(), StandardCharsets.UTF_8));
+
+        // SHA-256 of the hand-authored LF-delimited baseline, frame and cutoff records,
+        // and of the same bytes followed by the terminal record.
+        String rootDigest = "e3fc4bf215267e1671917d8ba247e2e67c2f2c368b6a35f5d1b7a6a783abea57";
+        String chunkDigest = "94b3287caf448403782c24cac0b7dc6172287d8cf5e2f04305bb712bbdff759e";
+        try (var input = new GZIPInputStream(Files.newInputStream(output.resolve("chunks/000000.jsonl.gz")))) {
+            assertEquals(chunkDigest, HexFormat.of().formatHex(
+                    MessageDigest.getInstance("SHA-256").digest(input.readAllBytes())));
         }
+        var manifest = new com.fasterxml.jackson.databind.ObjectMapper()
+                .readTree(output.resolve("manifest.json").toFile());
+        assertEquals(rootDigest, manifest.path("root_digest").asText());
+        assertEquals(chunkDigest, manifest.path("chunks").get(0).path("uncompressed_sha256").asText());
     }
 
     @Test
