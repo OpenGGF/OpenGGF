@@ -116,7 +116,8 @@ class TestSonicCdModRuntime {
                 null, null, false);
         var data = new ModLevelDefinition(1, "Pool", 0x40, 0x400, 16, 2, 2,
                 new ModLevelDefinition.Bounds(0, 511, 0, 511), new ModLevelDefinition.Start(96, 96),
-                new ModLevelDefinition.StockMusic(1), List.of(), List.of(),
+                new ModLevelDefinition.StockMusic(1), List.of(),
+                List.of(new ModLevelDefinition.RingEntry(0, 96, 96)),
                 new byte[32], new byte[8], new byte[1024], new byte[4], null,
                 new byte[16], new byte[16], new byte[1], new int[]{0}, new int[]{0},
                 new byte[][]{new byte[32], new byte[32], new byte[32], new byte[32]},
@@ -134,6 +135,12 @@ class TestSonicCdModRuntime {
             var loop = boot.boot(disc, module, zone, 0);
             var levels = GameServices.level();
             assertInstanceOf(com.openggf.level.ModLevel.class, levels.getCurrentLevel());
+            var ring = levels.getCurrentLevel().getRings().getFirst();
+            var ringArt = levels.getCurrentLevel().getRingSpriteSheet();
+            assertEquals(4, ringArt.getSpinFrameCount());
+            assertEquals(4, ringArt.getSparkleFrameCount());
+            assertEquals(1, ringArt.getPaletteIndex());
+            assertFalse(levels.getRingManager().isCollected(ring));
             int featureZone = levels.getFeatureZoneId();
             int featureAct = levels.getFeatureActId();
             var water = GameServices.water();
@@ -147,6 +154,7 @@ class TestSonicCdModRuntime {
             assertEquals(4, authoredPalettes.length);
             for (int i = 0; i < 4; i++) assertTrue(nativePalettes[i].dataEquals(authoredPalettes[i]));
             for (int i = 0; i < 4; i++) loop.step();
+            assertTrue(levels.getRingManager().isCollected(ring));
             assertEquals(160, water.getWaterLevelY(featureZone, featureAct));
         }
     }
