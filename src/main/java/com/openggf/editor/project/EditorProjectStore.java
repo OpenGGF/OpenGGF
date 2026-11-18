@@ -37,12 +37,16 @@ public final class EditorProjectStore {
 
     EditorProjectStore(AtomicPublisher publisher) {
         this.publisher = Objects.requireNonNull(publisher, "publisher");
+        mapper = projectMapper();
+    }
+
+    static ObjectMapper projectMapper() {
         StreamReadConstraints limits = StreamReadConstraints.builder().maxDocumentLength(MAX_BYTES)
                 .maxNestingDepth(24).maxTokenCount(4_000_000).maxStringLength(MAX_BYTES)
                 .maxNameLength(64).maxNumberLength(10).build();
         JsonFactory factory = JsonFactory.builder().enable(StreamReadFeature.STRICT_DUPLICATE_DETECTION)
                 .streamReadConstraints(limits).build();
-        mapper = new ObjectMapper(factory).enable(DeserializationFeature.FAIL_ON_MISSING_CREATOR_PROPERTIES,
+        return new ObjectMapper(factory).enable(DeserializationFeature.FAIL_ON_MISSING_CREATOR_PROPERTIES,
                 DeserializationFeature.FAIL_ON_NULL_FOR_PRIMITIVES, DeserializationFeature.FAIL_ON_TRAILING_TOKENS);
     }
 
@@ -126,16 +130,20 @@ public final class EditorProjectStore {
         return path;
     }
 
-    private static byte[] readBounded(Path file) throws IOException {
+    static byte[] readBounded(Path file) throws IOException {
         if (Files.size(file) > MAX_BYTES) throw new IOException("Project exceeds the 64 MiB storage limit");
         try (var input = Files.newInputStream(file)) {
-            byte[] bytes = input.readNBytes(MAX_BYTES + 1);
-            if (bytes.length > MAX_BYTES) throw new IOException("Project exceeds the 64 MiB storage limit");
-            return bytes;
+            return readBounded(input);
         }
     }
 
-    private static String checksum(byte[] bytes) {
+    static byte[] readBounded(java.io.InputStream input) throws IOException {
+        byte[] bytes = input.readNBytes(MAX_BYTES + 1);
+        if (bytes.length > MAX_BYTES) throw new IOException("Project exceeds the 64 MiB storage limit");
+        return bytes;
+    }
+
+    static String checksum(byte[] bytes) {
         try { return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes)); }
         catch (NoSuchAlgorithmException impossible) { throw new IllegalStateException(impossible); }
     }

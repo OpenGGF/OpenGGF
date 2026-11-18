@@ -9,6 +9,7 @@ import com.openggf.game.DebugOverlayProvider;
 import com.openggf.game.Game;
 import com.openggf.game.GameDataSource;
 import com.openggf.game.GameId;
+import com.openggf.game.GameServices;
 import com.openggf.game.GameModule;
 import com.openggf.game.LevelEventProvider;
 import com.openggf.game.LevelGamestate;
@@ -104,7 +105,8 @@ public final class SonicCdGameModule implements GameModule {
             new com.openggf.game.soniccd.zones.CdZoneWater(() -> this.game == null ? null : this.game.currentImage());
     private final com.openggf.game.soniccd.objects.art.CdObjectArtProvider objectArt =
             new com.openggf.game.soniccd.objects.art.CdObjectArtProvider(
-                    () -> game == null ? null : game.currentLevel(), () -> game == null ? null : game.currentImage());
+                    () -> game == null ? null : game.currentLevel(), () -> game == null ? null : game.currentImage(),
+                    this::disc);
 
     /** Non-level programs: the IPX flow owner and its title, stage-select and not-hosted hosts. */
     private final com.openggf.game.soniccd.program.CdSceneCoordinator scenes =
@@ -147,7 +149,11 @@ public final class SonicCdGameModule implements GameModule {
         return world != null && world.getDataSource() instanceof CdDiscDataSource source ? source : null;
     }
 
-    @Override public com.openggf.game.modzone.ModZoneAdapter getModZoneAdapter() { return new CdModZoneAdapter(); }
+    @Override public com.openggf.game.modzone.ModZoneAdapter getModZoneAdapter() { return new CdModZoneAdapter(this::disc); }
+
+    @Override public com.openggf.game.modzone.ModLevelSettingsProvider getModLevelSettingsProvider() {
+        return new CdModLevelSettingsProvider(this::disc);
+    }
 
     @Override public String getIdentifier() { return "SonicCD"; }
     @Override public com.openggf.game.TitleScreenProvider getTitleScreenProvider() { return titleScreen; }
@@ -172,12 +178,28 @@ public final class SonicCdGameModule implements GameModule {
 
     @Override
     public TouchResponseTable createTouchResponseTable(GameDataSource source) {
+        var levels = GameServices.levelOrNull();
+        if (levels != null && levels.getCurrentLevel() instanceof com.openggf.level.ModLevel
+                && source instanceof CdDiscDataSource disc) {
+            if (game != null) game.retireNativeStage();
+            // An authored act has no native program. Its owned objects use the common disc table.
+            try {
+                var image = new com.openggf.game.soniccd.level.CdStageLoader(disc).readStage(CdStagePayload.R11A);
+                return touchResponseTable(image, CdStagePayload.R11A);
+            } catch (java.io.IOException failure) {
+                throw new java.io.UncheckedIOException("Cannot read the Sonic CD authored touch sizes", failure);
+            }
+        }
         CdStageImage image = game == null ? null : game.currentImage();
         if (image == null) {
             throw new IllegalStateException("Sonic CD touch sizes come from the loaded stage");
         }
+        return touchResponseTable(image, game.currentLevel().payload());
+    }
+
+    private static TouchResponseTable touchResponseTable(CdStageImage image, CdStagePayload payload) {
         // .CheckWidth: andi.w #$3F; lea -2(ObjColSizes,d0.w) (Player Object Collision.asm:41-45).
-        int sizes = CdStageCatalogue.entry(game.currentLevel().payload()).objColSizes();
+        int sizes = CdStageCatalogue.entry(payload).objColSizes();
         return new TouchResponseTable(image.reader(), sizes - 2, 0x40);
     }
 
@@ -249,6 +271,12 @@ public final class SonicCdGameModule implements GameModule {
                         if (game == null) throw new java.io.IOException("Open the project disc before native playtesting");
                         var payload = new com.openggf.game.soniccd.level.CdStageLoader(game.disc()).validate(source);
                         return new Target(SonicCdZoneRegistry.zoneIndex(payload), SonicCdZoneRegistry.actIndex(payload), payload.ordinal());
+                    }
+                    @Override public com.openggf.game.internal.NativeProjectLevel preview(com.openggf.game.internal.NativeProjectSource source)
+                            throws java.io.IOException {
+                        var target = target(source);
+                        var stage = CdStagePayload.values()[target.levelIndex()];
+                        return new com.openggf.game.soniccd.level.CdStageLoader(game.disc()).load(stage, target.zone(), false);
                     }
                     @Override public com.openggf.level.Level load(com.openggf.game.internal.NativeProjectSource source,
                             com.openggf.level.Level authored, int x, int y) throws java.io.IOException {

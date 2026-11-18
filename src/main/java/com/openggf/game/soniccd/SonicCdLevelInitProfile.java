@@ -99,10 +99,7 @@ final class SonicCdLevelInitProfile extends AbstractLevelInitProfile
                     this::loadReservedObjects));
             steps.add(new InitStep("LoadCdTimeIcon",
                     "LevelStart: HUD time icon $19 subtype $A in objHUDIconSlot (Level/Main.asm:268-269)",
-                    () -> com.openggf.level.objects.ObjectLifetimeOps.addDynamicAtReservedSlot(
-                            com.openggf.game.GameServices.level().getObjectManager(),
-                            new com.openggf.game.soniccd.objects.common.CdTimeIcon(),
-                            com.openggf.game.soniccd.objects.common.CdTimeIcon.SLOT)));
+                    SonicCdLevelInitProfile::loadTimeIcon));
             steps.add(new InitStep("LoadCdZoneLevelStartObjects",
                     "Level initialization's objects without a layout row: Tidal Tempest's water surface $04 in "
                             + "object_spawn_pool (r4/main.asm:249)",
@@ -143,7 +140,13 @@ final class SonicCdLevelInitProfile extends AbstractLevelInitProfile
         return new InitStep("CdLoadLevelPcmDriver",
                 "RunMMD's SPCmd_LoadLevel: the stage's PCM driver before LevelStart's PlayLevelMusic "
                         + "(CD Initial Program/IPX.asm:1307-1309; CD System Program/SPX.asm:744-772; Level/Main.asm:154)",
-                () -> loadPcmDriver.accept(CdStagePayload.values()[ctx.getLevelIndex()]));
+                () -> {
+                    int levelIndex = ctx.getLevelIndex();
+                    var registry = com.openggf.game.GameServices.level().getGameModule().getZoneRegistry();
+                    if (registry.modZoneRuntimeContribution(levelIndex) == null) {
+                        loadPcmDriver.accept(CdStagePayload.values()[levelIndex]);
+                    }
+                });
     }
 
     /**
@@ -235,7 +238,9 @@ final class SonicCdLevelInitProfile extends AbstractLevelInitProfile
      * (Level/Main.asm:271-277).
      */
     private void loadReservedObjects() {
-        var objects = com.openggf.game.GameServices.level().getObjectManager();
+        var level = com.openggf.game.GameServices.level();
+        if (!(level.getCurrentLevel() instanceof com.openggf.game.soniccd.level.CdLevel)) return;
+        var objects = level.getObjectManager();
         if (arrival == null && titleCard) {
             com.openggf.game.soniccd.objects.common.CdFixedObjects.install(objects,
                     com.openggf.game.GameServices.level().getLevelGamestate());
@@ -245,6 +250,14 @@ final class SonicCdLevelInitProfile extends AbstractLevelInitProfile
             com.openggf.level.objects.ObjectLifetimeOps.addDynamicAtReservedSlot(objects,
                     new com.openggf.game.soniccd.objects.common.CdHud(kind), kind.slot());
         }
+    }
+
+    private static void loadTimeIcon() {
+        var level = com.openggf.game.GameServices.level();
+        if (!(level.getCurrentLevel() instanceof com.openggf.game.soniccd.level.CdLevel)) return;
+        com.openggf.level.objects.ObjectLifetimeOps.addDynamicAtReservedSlot(level.getObjectManager(),
+                new com.openggf.game.soniccd.objects.common.CdTimeIcon(),
+                com.openggf.game.soniccd.objects.common.CdTimeIcon.SLOT);
     }
 
     /** The stage zone's fragment places the objects its level initialization creates without a layout row. */

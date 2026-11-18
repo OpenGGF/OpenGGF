@@ -425,3 +425,68 @@ visually inspected again; their existing 8,226-pixel terrain difference remains.
 unavailable references; this change adds no disassembly citation or pin change.
 No category job was started and no runtime or shared renderer was edited.
 The branch/worktree and requested scratch evidence remain for PR review.
+
+## Portable native project export
+
+A folder and a ZIP both contain one `native-project.json`. It records a verified
+stage reference, a hash of the decoded editor baseline, and authored changes.
+Stable placement IDs retain unchanged objects and rings by reference when a
+placement moves or is deleted. The importer confirms the stage before applying
+the edits, then opens the result as an unsaved editor project. The exporter
+reads back each staged package and compares the reconstructed project with
+the open document before publishing it.
+
+The format preserves the original native layout dimensions. It depends on the
+matching decoded stage revision. The older complete `.ogfproject` save format
+and its flat-level export guard still have the same behavior.
+
+Verification on `e8c9ce60b6` with the export changes:
+
+```sh
+python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestCdEditorProjectSource,TestContentImportService,TestContentImportScreen,TestEditorProjectWorkspace,TestEditorProjects,TestEditorHostExports' test -B
+python3 tools/i18n/catalogs.py check
+```
+
+All 81 selected tests passed with zero skips. The verified USA CHD supplied
+the Past stage in both package round trips. The tests restore a map cell, art
+pixel, moved and removed objects, and an added ring. The native replay checks
+the existing object's second subtype after the move. The workspace test checks
+that export leaves the current stage and document active and prompts before
+replacing unsaved work. The run waited 407 seconds for the queue and Maven
+reported 1 minute 45 seconds of execution. User wait was zero. Other elapsed
+time was unmeasured. English catalog checks passed.
+
+## Source-backed layout resizing
+
+The editor validates resize requests against the selected stage's collision
+window. A crop keeps the top-left overlap and removes placements and ring groups
+outside it. Expansion uses the editor's empty terrain block. Native replay
+recognizes painted foreground columns, clips the background collision alias to
+the new width, and keeps loop flags on retained source cells with unchanged
+block IDs. The stage retains its native collision row mask and its PPZ
+background row selection.
+
+Version 1 native project packages still carry same-size edits. Version 2
+declares the new dimensions of a resized project. The reader hashes the
+original decoded stage before reshaping its layout and applying the edits.
+Comparing the reshaped baseline keeps unchanged disc cells out of the package
+when a resize moves their positions in the underlying map array.
+
+The real-disc test opens a native editor project, checks the invalid size error,
+and crops the project through the existing form. A Past stage replay compares
+the retained foreground, native loops, and background row mapping. An expanded
+project goes through save, ZIP export, import, native playtest, and a runtime
+collision query in the painted new column. The existing R11A unedited HUD
+comparison is part of the same selection.
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY python3 tools/testing/maven_queue.py -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestCdEditorProjectSource,TestCdEditorPlaytestRendering,TestEditorProjectWorkspace,TestEditorProjects,TestContentImportService' test -B
+```
+
+On export base `1de86c5457` with the resize changes, all 53 tests passed with no
+skips. The wrapper found the verified USA CHD. Queue wait was 373 seconds.
+Maven's elapsed time was 2:01, with no user wait. The catalog quick check and
+skip classifier also passed, with the classifier's existing preserved-report
+skip.

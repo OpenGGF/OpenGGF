@@ -113,6 +113,34 @@
   "@menu.soniccd.visual_mode.help": {
     "description": "Sonic CD Visual Mode browser. Translate the complete message."
   },
+  "menu.soniccd.save_manager.title": "Sonic CD save data",
+  "@menu.soniccd.save_manager.title": {
+    "description": "Sonic CD save reset screen. Translate the complete message."
+  },
+  "menu.soniccd.save_manager.description": "Resetting the save clears campaign progress, Time Stones, unlocks, and Time Attack records.",
+  "@menu.soniccd.save_manager.description": {
+    "description": "Sonic CD save reset screen. Translate the complete message."
+  },
+  "menu.soniccd.save_manager.error": "The save could not be reset. You can retry or keep the current save.",
+  "@menu.soniccd.save_manager.error": {
+    "description": "Sonic CD save reset screen. Translate the complete message."
+  },
+  "menu.soniccd.save_manager.keep": "Keep current save",
+  "@menu.soniccd.save_manager.keep": {
+    "description": "Sonic CD save reset screen. Translate the complete message."
+  },
+  "menu.soniccd.save_manager.reset": "Reset Sonic CD save",
+  "@menu.soniccd.save_manager.reset": {
+    "description": "Sonic CD save reset screen. Translate the complete message."
+  },
+  "menu.soniccd.save_manager.move": "Move",
+  "@menu.soniccd.save_manager.move": {
+    "description": "Sonic CD save reset screen. Translate the complete message."
+  },
+  "menu.soniccd.save_manager.choose": "Choose",
+  "@menu.soniccd.save_manager.choose": {
+    "description": "Sonic CD save reset screen. Translate the complete message."
+  },
   "menu.text.value_details": "Value:\n{value}",
   "@menu.text.value_details": {
     "description": "OpenGGF host UI: menu.text.value_details. Translate the complete message; preserve named arguments.",
@@ -1805,7 +1833,7 @@
       }
     }
   },
-  "import.help": "Drop one file or folder anywhere on the import screen, or choose Browse files. The path field supports normal typing, a controller keyboard, and Up to browse paths.\n\nEditable projects: .ogfproject\nLevels: a level folder, level.json, or a ZIP containing one level\nMods and mutators: mod JARs, or a ZIP containing one JAR\n\nReview the name, type and action before confirming. Projects and levels open in the editor. Mods install disabled; use Mods at the title screen to review, enable, trust code if required, and apply. Inspection does not run creator code. Canceling keeps the current project and mod choices.",
+  "import.help": "Drop one file or folder anywhere on the import screen, or choose Browse files. The path field supports normal typing, a controller keyboard, and Up to browse paths.\n\nEditable projects: .ogfproject, or a native project folder or ZIP\nLevels: a level folder, level.json, or a ZIP containing one level\nMods and mutators: mod JARs, or a ZIP containing one JAR\n\nReview the name, type and action before confirming. Projects and levels open in the editor. Mods install disabled; use Mods at the title screen to review, enable, trust code if required, and apply. Inspection does not run creator code. Canceling keeps the current project and mod choices.",
   "@import.help": {
     "description": "OpenGGF host UI: import.help. Translate the complete message; preserve named arguments."
   },
@@ -4597,5 +4625,9 @@
   "crash.details.build": "Version and system",
   "@crash.details.build": {
     "description": "OpenGGF host UI: crash.details.build. Translate the complete message; preserve named arguments."
+  },
+  "import.ui.native_project_disc_required": "Requires the matching disc to open in the editor",
+  "@import.ui.native_project_disc_required": {
+    "description": "Content import notice for a source-backed editor export"
   }
 }

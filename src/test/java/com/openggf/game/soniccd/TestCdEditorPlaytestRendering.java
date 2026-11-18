@@ -11,6 +11,7 @@ import com.openggf.graphics.ScreenshotCapture;
 import com.openggf.level.LevelManager;
 import com.openggf.tools.HeadlessGameBoot;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.api.parallel.Isolated;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -71,6 +72,64 @@ class TestCdEditorPlaytestRendering {
                 assertEquals(production.argb(x, y), editor.argb(x, y), "HUD pixel at " + x + "," + y);
             for (int y = 200; y < 216; y++) for (int x = 16; x < 48; x++)
                 assertEquals(production.argb(x, y), editor.argb(x, y), "Lives pixel at " + x + "," + y);
+        }
+    }
+
+    @Test void exportedExpansionSupportsCollisionInNewColumns(@TempDir Path temporary) throws Exception {
+        try (var disc = CdDiscDataSource.open(CdTestMedia.usaCue())) {
+            var module = new SonicCdGameModule();
+            var game = (SonicCdGame) module.createGame(disc);
+            var source = (com.openggf.game.soniccd.level.CdLevel) game.loadLevel(CdStagePayload.R11A.ordinal());
+            int width = source.getMap().getWidth();
+            int height = source.getMap().getHeight();
+            var metadata = new EditorProjectMetadata(GameId.SCD, "Expanded stage", 0, 0, disc.identity(),
+                    source.startX(), source.startY(), source.getMinX(), source.getMaxX(), source.getMinY(),
+                    source.getMaxY(), new FullLevelExporter.ExportMusic.Stock(1), null);
+            var document = EditorProjectDocument.create(metadata, source);
+            document.resize(width + 1, height + 1, false);
+            int paintedBlock = java.util.stream.IntStream.range(0, width * height)
+                    .map(cell -> Byte.toUnsignedInt(source.getMap().getValue(0, cell % width, cell / width)))
+                    .filter(block -> source.getBlock(block).getChunkDesc(1, 1).hasPrimarySolidity())
+                    .findFirst().orElseThrow();
+            document.level().getMap().setValue(0, width, 2, (byte) paintedBlock);
+
+            var store = new EditorProjectStore();
+            var saved = temporary.resolve("expanded.ogfproject");
+            store.save(saved, document);
+            var reopened = store.open(saved);
+            var exported = NativeEditorProjectPackage.export(temporary.resolve("expanded.zip"), reopened, source);
+            try (var archive = new java.util.zip.ZipFile(exported.toFile())) {
+                assertTrue(archive.getEntry(NativeEditorProjectPackage.ENTRY).getSize() < 4096,
+                        "the expanded row stride must not export unchanged source cells");
+            }
+            var importer = new com.openggf.ContentImportService(temporary.resolve("mods"));
+            EditorProjectDocument imported;
+            try (var prepared = importer.inspect(exported)) {
+                imported = prepared.nativeProject().orElseThrow().materialize(source);
+            }
+            assertArrayEquals(reopened.level().getMap().getData(), imported.level().getMap().getData());
+            assertEquals(width + 1, imported.level().getMap().getWidth());
+            assertEquals(height + 1, imported.level().getMap().getHeight());
+            assertEquals(source.nativeProjectSource(), imported.nativeSource());
+
+            var runtime = EditorProjectRuntimeModule.prepare(module, imported, source.startX(), source.startY());
+            try (var boot = new HeadlessGameBoot(320, 224)) {
+                boot.setModuleDecorator(base -> runtime);
+                var loop = boot.boot(disc, module, runtime.launchZone(), runtime.launchAct());
+                for (int frame = 0; frame < 180; frame++) loop.step();
+                var level = GameServices.level();
+                var replay = assertInstanceOf(com.openggf.game.soniccd.level.CdLevel.class, level.getCurrentLevel());
+                assertEquals(imported.metadata().maxX(), replay.getMaxX());
+                assertEquals(imported.metadata().maxY(), replay.getMaxY());
+                assertFalse(replay.hasLoopFlag(width, 2), "new cells have no native loop bits");
+                int x = width * 256 + 16;
+                int y = 2 * 256 + 16;
+                var expected = source.getBlock(paintedBlock).getChunkDesc(1, 1);
+                var actual = level.getChunkDescAt((byte) 0, x, y);
+                assertNotNull(actual, "paint in the expanded foreground is visible to collision");
+                assertEquals(expected.get(), actual.get());
+                assertNull(level.getChunkDescAt((byte) 0, x + 256, y));
+            }
         }
     }
 

@@ -1122,7 +1122,12 @@ public class GameLoop {
         }
     }
 
-    private void applyInputPassUserPause(boolean nextUserPaused) {
+    private void updateInputPassUserPause(boolean overlayOwnsPause, boolean takeoverConsumedPausePress) {
+        boolean specialStageOwnsStart = !userPaused && inputHandler.logical().player1().startPressed()
+                && specialStageLifecycle.ownsStartInput();
+        boolean nextUserPaused = GameLoopPauseInput.nextUserPaused(currentGameMode, inputHandler,
+                configService, userPaused, overlayOwnsPause || specialStageOwnsStart, takeoverConsumedPausePress,
+                playbackDebugManager, userRecordingControls::handlePlaybackTakeoverRequest);
         if (nextUserPaused == userPaused) return;
         // The resume tick is already inside its input pass. Retire the paused
         // interval and remap before any gameplay consumer can see that prefix.
@@ -1299,10 +1304,7 @@ public class GameLoop {
             userRecordingControls.updateLevelControlInput(inputHandler);
         }
 
-        boolean nextUserPaused = GameLoopPauseInput.nextUserPaused(currentGameMode, inputHandler,
-                configService, userPaused, overlayOwnsPause, playbackTakeoverConsumedPausePress,
-                playbackDebugManager, userRecordingControls::handlePlaybackTakeoverRequest);
-        applyInputPassUserPause(nextUserPaused);
+        updateInputPassUserPause(overlayOwnsPause, playbackTakeoverConsumedPausePress);
 
         boolean doFrameStep = !GameLoopPauseInput.configurationPaused(currentGameMode)
                 && GameLoopPauseInput.frameStep(inputHandler, configService, isPaused());

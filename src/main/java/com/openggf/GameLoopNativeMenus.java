@@ -274,7 +274,7 @@ final class GameLoopNativeMenus {
         }
         // The screen wrote the special stage's game mode itself: no level, ring flash,
         // power-up clear or entry sound. The stage's own fade-to-white runs over the screen.
-        loop.doEnterSpecialStage(provider, 0, false);
+        loop.doEnterSpecialStage(provider, nativeStage.nativeMenuStageIndex(), false);
     }
 
     /** True while a native-launched stage's entry fade still shows the launching screen. */

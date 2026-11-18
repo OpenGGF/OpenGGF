@@ -60,15 +60,39 @@ public final class CdProgramScreenRenderer {
     }
 
     public void draw(Frame frame) {
+        draw(frame, null);
+    }
+
+    /** Extends the scenery outside the stage's native H32 floor, HUD and sprite region. */
+    public void drawWideSpecialStage(Frame frame, Runnable drawFloorSides) {
+        draw(frame, drawFloorSides);
+    }
+
+    private record PlaneRegion(int left, int right, int top, int bottom) { }
+
+    private void draw(Frame frame, Runnable drawFloorSides) {
         GraphicsManager gm = GameServices.graphics();
         if (gm.isHeadlessMode()) return;
         upload(gm, frame);
         if (!frame.display()) return;
-        int offset = (Math.max(320, gm.getProjectionWidth()) - frame.width()) / 2;
+        int projection = Math.max(320, gm.getProjectionWidth());
+        int offset = (projection - frame.width()) / 2;
+        var nativeRegion = new PlaneRegion(0, frame.width(), 0, 224);
+        var background = drawFloorSides == null
+                ? nativeRegion : new PlaneRegion(-offset, projection - offset, 0, 224);
         for (int priority = 0; priority < 2; priority++) {
-            plane(gm, frame, frame.planeB(), frame.scrollB(), frame.vscrollB(), priority == 1, offset);
-            plane(gm, frame, frame.planeA(), frame.scrollA(), frame.vscrollA(), priority == 1, offset);
-            sprites(gm, frame, priority == 1, offset);
+            boolean high = priority == 1;
+            plane(gm, frame.planeB(), frame.scrollB(), frame.vscrollB(), high, offset, background);
+            if (drawFloorSides == null) {
+                plane(gm, frame.planeA(), frame.scrollA(), frame.vscrollA(), high, offset, nativeRegion);
+            } else {
+                specialStageForeground(gm, frame, offset, background, high);
+                if (!high) {
+                    gm.disableScissor();
+                    drawFloorSides.run();
+                }
+            }
+            sprites(gm, frame, high, offset);
         }
         gm.disableScissor();
     }
@@ -101,17 +125,28 @@ public final class CdProgramScreenRenderer {
         return bytes;
     }
 
+    private void specialStageForeground(GraphicsManager gm, Frame frame, int offset, PlaneRegion wide, boolean high) {
+        // Keep the HUD rows and both native floor buffers inside H32. The 104 scenery lines
+        // between them use the same signed screen coordinates as the wider back plane.
+        plane(gm, frame.planeA(), frame.scrollA(), frame.vscrollA(), high, offset,
+                new PlaneRegion(0, frame.width(), 0, 24));
+        plane(gm, frame.planeA(), frame.scrollA(), frame.vscrollA(), high, offset,
+                new PlaneRegion(wide.left(), wide.right(), 24, 128));
+        plane(gm, frame.planeA(), frame.scrollA(), frame.vscrollA(), high, offset,
+                new PlaneRegion(0, frame.width(), 128, 224));
+    }
+
     /** A 64x32 plane, in runs of lines that share one horizontal scroll value. */
-    private void plane(GraphicsManager gm, Frame frame, int[] map, IntUnaryOperator scroll, int vscroll,
-                       boolean high, int offset) {
+    private void plane(GraphicsManager gm, int[] map, IntUnaryOperator scroll, int vscroll,
+                       boolean high, int offset, PlaneRegion region) {
         PatternDesc desc = new PatternDesc();
         int v = vscroll & 0xFF;
-        int top = 0;
-        while (top < 224) {
+        int top = region.top();
+        while (top < region.bottom()) {
             int value = scroll.applyAsInt(top) & 0x1FF;
             int bottom = top;
-            while (bottom + 1 < 224 && (scroll.applyAsInt(bottom + 1) & 0x1FF) == value) bottom++;
-            clip(gm, frame, offset, top, bottom);
+            while (bottom + 1 < region.bottom() && (scroll.applyAsInt(bottom + 1) & 0x1FF) == value) bottom++;
+            clip(gm, offset + region.left(), region.right() - region.left(), top, bottom);
             gm.beginPatternBatch();
             for (int screenRow = (top + (v & 7)) >> 3; screenRow <= (bottom + (v & 7)) >> 3; screenRow++) {
                 // Screen line l shows plane line (l + vscroll) mod 256.
@@ -119,8 +154,8 @@ public final class CdProgramScreenRenderer {
                 int screenY = screenRow * 8 - (v & 7);
                 // Iterate visible columns, sampling the native 512-pixel plane. This also
                 // fills a wide tunnel beyond its first plane period; fixed programs keep width 320/256.
-                int firstX = (value & 7) - ((value & 7) == 0 ? 0 : 8);
-                for (int screenX = firstX; screenX < frame.width(); screenX += 8) {
+                int firstX = region.left() - ((region.left() - value) & 7);
+                for (int screenX = firstX; screenX < region.right(); screenX += 8) {
                     int column = ((screenX - value) & 0x1FF) >> 3;
                     int word = map[row * 64 + column];
                     if ((word & 0x7FF) == 0 || ((word & 0x8000) != 0) != high) continue;
@@ -136,7 +171,7 @@ public final class CdProgramScreenRenderer {
 
     /** Sprites in reverse list order, so the first entry is drawn last and lands on top. */
     private void sprites(GraphicsManager gm, Frame frame, boolean high, int offset) {
-        clip(gm, frame, offset, 0, 223);
+        clip(gm, offset, frame.width(), 0, 223);
         gm.beginPatternBatch();
         PatternDesc desc = new PatternDesc();
         List<Sprite> list = frame.sprites();
@@ -159,12 +194,12 @@ public final class CdProgramScreenRenderer {
     }
 
     /** Scissor to the program's active display lines [top, bottom], in the window's pixels. */
-    private static void clip(GraphicsManager gm, Frame frame, int offset, int top, int bottom) {
+    private static void clip(GraphicsManager gm, int offset, int width, int top, int bottom) {
         int projection = Math.max(320, gm.getProjectionWidth());
         float sx = (float) gm.getViewportWidth() / projection;
         float sy = (float) gm.getViewportHeight() / 224;
         int x = gm.getViewportX() + Math.round(offset * sx);
         int y = gm.getViewportY() + Math.round((223 - bottom) * sy);
-        gm.enableScissor(x, y, Math.round(frame.width() * sx), Math.max(1, Math.round((bottom - top + 1) * sy)));
+        gm.enableScissor(x, y, Math.round(width * sx), Math.max(1, Math.round((bottom - top + 1) * sy)));
     }
 }

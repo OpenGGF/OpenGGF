@@ -260,6 +260,11 @@ the disc, so they are not modelled:
   live play. Under the comparison rule above, the fight's slots and the
   palette-cycle timers equal native through both fades.
 
+**Special-stage widescreen.** Wider views sample the same animated floor
+map at additional columns beside the native display buffer. Background
+planes extend to the edges. The original playfield, sprites and HUD stay
+centred at 256 pixels. The wider picture has no native reference.
+
 **Cartridge-donated characters.** A cartridge sheet has no CD mini/3D/give-up
 art. Donation retains donor movement drawings, with CD's stage physics and
 semantic object animation writes. CD's give-up depends on specific native map

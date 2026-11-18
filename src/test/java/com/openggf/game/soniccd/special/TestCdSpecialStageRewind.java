@@ -262,8 +262,8 @@ class TestCdSpecialStageRewind {
         String owner = field.getDeclaringClass().getSimpleName();
         String name = field.getName();
         return switch (owner) {
-            // Host projection, disc supplier and exit callback belong to the engine.
-            case "CdSpecialStageProvider" -> List.of("viewport", "disc", "onEnded").contains(name);
+            // Host projection, atlas cache, disc supplier and exit callback belong to the engine.
+            case "CdSpecialStageProvider" -> List.of("viewport", "floorSidesRenderer", "disc", "onEnded").contains(name);
             // Per-update scratch: begin() clears before any read; updateShadows() queues after draw3D() and those entries are never drawn.
             case "CdSpecialSprites" -> name.equals("zBuffer");
             // dirty is the renderer upload cache, deliberately invalidated by restore().

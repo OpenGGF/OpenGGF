@@ -49,10 +49,12 @@ at the inherited host refusal, then all six boot/movement tests passed. Native
 act-end (25) and strict R11A replay (1) comparisons were selected but skipped for
 absent optional local native recordings. Named facing/construction guards passed.
 
-Flat authored CD zones admit owned objects and one collision path with 16x16-block
-terrain. Native objects/rings require their stage's program/PLC/state context and
-are refused there; a native decoded-level patch preserves that context. Stock
-insertion anchors, authored water/deformation and hosted arenas are not exposed.
+Authored CD zones admit owned objects and one collision path with 16x16 blocks.
+They can set a fixed water height with the underwater palette from Tidal Tempest
+act 1 Present. Fixed vertical and horizontal springs load the disc's common
+tiles and animation, using the authored palette. Other stock placements need
+the stage program and PLC context a native decoded-level patch preserves. Stock insertion
+anchors, stock deformation, and hosted arenas are not exposed.
 Common CD provider art keys are catalogued; stage-specific sheets remain expert
 art-provider overrides. Program object art intake supports direct mappings, not
 DPLC flattening. Scene character decoding retains native CD word-count DPLCs.

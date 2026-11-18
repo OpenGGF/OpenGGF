@@ -2,6 +2,7 @@ package com.openggf.game.soniccd;
 
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.game.GameServices;
+import com.openggf.game.soniccd.objects.common.CdAnimal;
 import com.openggf.game.soniccd.objects.common.CdExplosion;
 import com.openggf.game.soniccd.objects.projector.CdProjector;
 import com.openggf.game.soniccd.objects.projector.CdProjectorHologram;
@@ -27,6 +28,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.lwjgl.opengl.GL11.GL_COLOR_BUFFER_BIT;
 import static org.lwjgl.opengl.GL11.GL_DEPTH_BUFFER_BIT;
@@ -44,11 +46,10 @@ import static org.lwjgl.opengl.GL11.glFinish;
  * and camera equal the trace; lag-frame shots are not taken.
  *
  * <p>Compared: the pixels where the gameplay render differs from the tiles-only render (a sprite is drawn there) inside a
- * box around each live projector part (body and holograms) and each explosion, minus the HUD, the player's box and a
- * neighbourhood of every hologram animal (animals draw nothing yet, the animal owners' art), at 3 bits per channel against
- * the full engine frame. (Every pixel inside the boxes is reported too: it is about 94% equal; the rest is other owners' art, the
- * hologram animals and level objects that draw nothing yet, and it is as large in the frames after the projector is gone.) A negative control compares the same pixels against the engine five level frames later: the
- * holograms flicker and the explosions move on, so it must fall well below the real figure.
+ * box around each live projector part (body and holograms) and each explosion, minus the HUD, the player's box and the
+ * area around each animal, at 3 bits per channel. A negative control compares the same pixels against the engine five
+ * level frames later. For each animal, the test isolates its visible pixels by rendering the frame with and without that
+ * animal. The native picture must agree with those pixels and the render with the animal hidden must disagree.
  */
 @EnabledOnOs(OS.LINUX)
 class TestCdProjectorPictures {
@@ -60,6 +61,15 @@ class TestCdProjectorPictures {
     private static final class Tally {
         int same, total, controlSame, controlTotal, shots, allSame, allTotal;
         final Map<String, int[]> kinds = new LinkedHashMap<>();
+        final Map<String, AnimalPixels> animals = new LinkedHashMap<>();
+    }
+
+    private static final class AnimalPixels {
+        int same, hiddenSame, total, shots;
+
+        @Override public String toString() {
+            return String.format("%d/%d pixels in %d shots (hidden control %d/%d)", same, total, shots, hiddenSame, total);
+        }
     }
 
     @Test
@@ -96,12 +106,20 @@ class TestCdProjectorPictures {
                 tally.same, tally.total, tally.allSame, tally.allTotal, tally.shots, kinds.toString().trim(), CONTROL_SHIFT, tally.controlSame, tally.controlTotal);
         Path out = Path.of("target", "soniccd-projector");
         Files.createDirectories(out);
-        Files.writeString(out.resolve("report.txt"), String.join("\n", report) + "\n" + text + "\n");
-        System.out.println("PROJECTOR pictures:\n" + String.join("\n", report) + "\n" + text);
+        String results = String.join("\n", report) + "\n" + text + "\n" + tally.animals + "\n";
+        Files.writeString(out.resolve("report.txt"), results);
+        System.out.println("PROJECTOR pictures:\n" + results);
         assertTrue(tally.shots >= 20, "too few shots with a projector part on screen: " + text);
         assertTrue(tally.total >= 1500, "too few sprite pixels compared: " + text);
         assertTrue(tally.same * 100L >= tally.total * 95L, "below 95%: " + text);
         assertTrue(tally.controlSame * 100L <= tally.controlTotal * 90L, "negative control did not fail: " + text);
+        for (String kind : List.of("flying", "ground")) {
+            AnimalPixels pixels = tally.animals.get(kind);
+            assertTrue(pixels != null && pixels.shots >= 3 && pixels.total >= 150,
+                    "too few " + kind + " animal pixels: " + pixels);
+            assertEquals(pixels.total, pixels.same, kind + " animal pixels: " + pixels);
+            assertEquals(0, pixels.hiddenSame, kind + " animal control: " + pixels);
+        }
     }
 
     private static List<Shot> shots(Path frames) throws Exception {
@@ -168,7 +186,9 @@ class TestCdProjectorPictures {
                 Path dir = Path.of("target", "soniccd-projector");
                 Files.createDirectories(dir);
                 ScreenshotCapture.savePNG(frame.full, dir.resolve("engine-" + shot.probeFrame() + ".png"));
-                compare(shot, i, frame, frame.full, ScreenshotCapture.loadPNG(shot.file()), tally, report, false);
+                RgbaImage reference = ScreenshotCapture.loadPNG(shot.file());
+                compare(shot, i, frame, frame.full, reference, tally, report, false);
+                compareAnimals(frame.full, reference, tally);
                 tally.shots++;
             }
             for (Shot shot : controlAtRow.getOrDefault(i, List.of())) {
@@ -176,6 +196,34 @@ class TestCdProjectorPictures {
                 if (early == null) continue;
                 compare(shot, i, early, capture(sonic).full, ScreenshotCapture.loadPNG(shot.file()), tally, report, true);
             }
+        }
+    }
+
+    private static void compareAnimals(RgbaImage full, RgbaImage reference, Tally tally) {
+        for (ObjectInstance object : GameServices.level().getObjectManager().getActiveObjects()) {
+            if (!(object instanceof CdAnimal animal) || animal.isDestroyed() || animal.projectorSlot() < 0) continue;
+            String kind = (animal.getSpawn().subtype() & 0x7F) == 0 ? "flying" : "ground";
+            RgbaImage hidden;
+            animal.setDestroyed(true);
+            try {
+                hidden = render(LevelManager.LevelRenderOptions.gameplay());
+            } finally {
+                animal.setDestroyed(false);
+            }
+            AnimalPixels pixels = tally.animals.computeIfAbsent(kind, ignored -> new AnimalPixels());
+            int start = pixels.total;
+            for (int y = 0; y < 224; y++) {
+                for (int x = 0; x < 320; x++) {
+                    int drawn = TestMmzObjectsPictures.level(full.argb(x, y));
+                    int control = TestMmzObjectsPictures.level(hidden.argb(x, y));
+                    if (drawn == control) continue;
+                    int nativePixel = TestMmzObjectsPictures.level(reference.argb(x, y));
+                    pixels.total++;
+                    if (drawn == nativePixel) pixels.same++;
+                    if (control == nativePixel) pixels.hiddenSame++;
+                }
+            }
+            if (pixels.total > start) pixels.shots++;
         }
     }
 

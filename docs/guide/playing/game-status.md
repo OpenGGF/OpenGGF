@@ -176,11 +176,11 @@ and the capture tools.**
 
 Sonic CD runs from your own copy of the **USA** Mega-CD release. Nothing from
 the disc is in the repository. The engine reads the disc image directly: the
-data track's program files and the CD audio tracks. No BIOS image is needed;
-the backup RAM format the BIOS writes is reimplemented. The Japanese and
-European releases are not supported: the sound and backup RAM loaders refuse
-a disc whose header is not the USA release. A header check does not certify a
-dump.
+data track's program files and the CD audio tracks. The engine implements the
+backup RAM format the BIOS writes, so it needs no BIOS image. Tests can also
+verify and play FM effects from the Japanese and European discs. See the
+[regional media validation](../../architecture/validation/2026-11-18-sonic-cd-regional-media.md)
+for the remaining startup and gameplay dependencies.
 
 ### Disc setup
 
@@ -236,8 +236,9 @@ Future). `SonicCdEndingCaptureTool --ending good|bad` films an ending.
   idle timer: left alone long enough, Sonic gives up: he jumps, falls and dies.
 - Time travel: time posts, the warp and its cutscene, good and bad futures.
 - Special stages (floor, UFOs, timer and presentation), the title screen, the
-  stage-select secret, Time Attack, the sound test and its secrets, best
-  staff times, the opening video and both endings with credits.
+  stage-select secret, Time Attack, Special Stage 8 from the sound test,
+  the sound-test pictures, best staff times, the opening video, both
+  special-stage attract demos and both endings with credits.
 - The title's unlockable **Visual Mode** opens an OpenGGF browser for the
   opening video and both endings. **Back** stops the current video and
   returns to the browser.
@@ -251,9 +252,14 @@ Future). `SonicCdEndingCaptureTool --ending good|bad` films an ending.
   the title's unlocks. CONTINUE, Time Attack times and unlocked menu entries
   survive a restart. A missing file starts like a console with new backup
   RAM; a damaged file is kept as `slot0.json.corrupt` and the game starts on
-  fresh backup RAM. The RAM DATA screen is not hosted, so the in-game way to
-  erase a save is missing: delete `saves/soniccd/slot0.json` to start over.
+  fresh backup RAM. **RAM DATA** opens an OpenGGF prompt. Choose
+  **Reset Sonic CD save** to restore disc defaults for campaign progress,
+  Time Stones, unlocks, and Time Attack records. The default choice keeps the save.
+  Other backup RAM files are preserved.
 - FM sound effects, CD audio tracks, and PCM music and sound.
+- Pause holds a regular special stage. The stage fades to white on exit,
+  and the results show the ring and time bonuses. Press Start to finish the
+  tally and return through a second white fade.
 - Held-key live rewind in stages and special stages. Stage rewind restores the
   zones' rings, switches, lamps, bosses and Sonic's idle timer, as well as the
   CD audio and backup RAM state; special-stage rewind restores the floor
@@ -261,20 +267,22 @@ Future). `SonicCdEndingCaptureTool --ending good|bad` films an ending.
 
 ### Known gaps
 
-- Not hosted: the pencil test, Thank You, Comin'
-  Soon, the attract demos (the opening video plays; the stage and special
-  stage demos do not), the backup RAM manager (RAM DATA), Special Stage 8
-  from the sound test. Each is a recorded "not
-  hosted" step. The D.A. Garden planet and animations are also missing.
+- The pencil test, Thank You, Comin' Soon, ordinary-stage attract demos, the
+  D.A. Garden planet animation, and the credits for beating Special Stage 8
+  remain unhosted. The attract cycle skips ordinary-stage demos.
 - CD patch mods, `any` registrations, scenes and Sonic gameplay runs use the disc
-  pipeline. Authored zones are limited to flat terrain with owned objects;
-  native CD objects/rings need their stage context. Cartridge donation supports
+  pipeline. Authored zones support flat scrolling, one collision path, fixed-height water,
+  owned objects, collectible rings, and fixed vertical and horizontal springs.
+  Other stock placements and native ring group edits need their stage context.
+  Cartridge donation supports
   S1 Sonic, S2 Sonic/Tails and S3K Sonic/Tails/Knuckles; route coverage remains
   bounded to the donor-host validation record. Editor projects keep a bounded
   disc/stage source reference: native edit replay retains the loaded game owners,
   source layout semantics and object secondary bytes, project creation selects a
-  zone, act and time period, and source-backed playtests reload the native owners. See the
-  [CD mod contracts](../../modding/ggfmod.md#sonic-cd-runtime-mods).
+  zone, act and time period, and source-backed playtests reload the native owners.
+  Projects can resize within the stage's collision limits. Native editor exports
+  share edits in folders or ZIPs. The importer reloads the referenced stage from
+  the matching disc. See the [CD mod contracts](../../modding/ggfmod.md#sonic-cd-runtime-mods).
 - Sonic CD Game Setup saves Borrow from and character choices. Without donation
   it defaults to Sonic alone. CD itself cannot donate player art.
   Each donor's supported roster can also be paired as leader/follower, including
@@ -282,9 +290,9 @@ Future). `SonicCdEndingCaptureTool --ending good|bad` films an ending.
   either role with the missing donor character named. S3K elemental shields are
   exercised on the disc host. Donated life icons use their own object-art tiles,
   preserving transparent foreground cells and the native HUD.
-- Special stage results graphics, pause and exit fade are not drawn.
-- Robotnik's projector in the Past can be destroyed, but the animals in its
-  hologram are not drawn.
+- Robotnik's projector in the Past can be destroyed. Its flying and ground
+  hologram animals animate in both Palmtree Panic Past acts, with native picture
+  checks on act 1. Animal animation coverage varies elsewhere.
 - Native frames dropped while the CPU is busy (lag frames) are not modelled;
   the engine reimplements the game, not the console's CPU timing. How long a
   stage load and the opening video's disc wait take follows timings measured on
@@ -292,8 +300,12 @@ Future). `SonicCdEndingCaptureTool --ending good|bad` films an ending.
   `PROFILED`); `NONE` uses no measured timing. Other disc loads are not
   paced. See
   [known discrepancies](../../status/known-discrepancies.md#sonic-cd-hardware-timings-not-modelled).
-- Whether the music keeps playing while paused has not been checked against a
-  console.
+- OpenGGF pauses music with gameplay. The USA disc's level program explicitly
+  pauses CD audio or Past-stage PCM, and the special-stage program pauses CD
+  audio through the BIOS. This is verified in the disc program instructions
+  (`PauseMusic`, scddisasm/src/Level/Main.asm:620-643; `MainLoop`,
+  scddisasm/src/Special Stage/Sub.asm:255-274). Physical-console audio timing
+  remains unmeasured.
 - Wider stage views extend object visibility, touch eligibility, load/unload
   windows and boss arena centring. Static Palmtree Panic background bands
   retain their 512-pixel repeat beside moving bands; the time tunnel fills
@@ -302,8 +314,10 @@ Future). `SonicCdEndingCaptureTool --ending good|bad` films an ending.
   pieces (including period and time-warp icons) follow the centred or left-edge
   HUD setting in EDGE and NATIVE modes; time posts remain world-positioned.
   At 320 these presentation offsets are zero. These are engine extensions without a native wide
-  reference. Fixed-width programs and the special stage stay pillarboxed;
-  level walls and scripted world coordinates retain their native positions.
+  reference. In special stages, widescreen extends the scenery and floor
+  beside the original playfield. The HUD, sprites and gameplay stay centred.
+  Results and other fixed-width programs retain their original dimensions.
+  Level walls and scripted world coordinates retain their native positions.
 - Accuracy is measured against native recordings; how far each stage is
   certified is in the [Sonic CD stage matrix](../../architecture/validation/levels/scd-stages.md).
 

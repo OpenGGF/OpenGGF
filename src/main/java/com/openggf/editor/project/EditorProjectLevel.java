@@ -141,10 +141,8 @@ public final class EditorProjectLevel extends AbstractLevel implements RingObjec
             emptyBlock = library.ensureEmptyBlock();
         }
         EditorProjectState base = EditorProjectState.capture(library);
-        com.openggf.level.Map resized = new com.openggf.level.Map(base.layers(), width, height);
-        Arrays.fill(resized.getData(), (byte) emptyBlock);
-        for (int l = 0; l < base.layers(); l++) for (int y = 0; y < Math.min(height, base.height()); y++)
-            for (int x = 0; x < Math.min(width, base.width()); x++) resized.setValue(l, x, y, source.getMap().getValue(l, x, y));
+        byte[] resized = resizeMap(base.map(), base.layers(), new LayoutSize(base.width(), base.height()),
+                new LayoutSize(width, height), (byte) emptyBlock);
         int pixelWidth = width * source.getBlockPixelSize(), pixelHeight = height * source.getBlockPixelSize();
         Set<Integer> removedObjects = new HashSet<>(), removedRings = new HashSet<>();
         if (shrinking && allowCrop) {
@@ -160,8 +158,24 @@ public final class EditorProjectLevel extends AbstractLevel implements RingObjec
         List<EditorProjectState.RingState> rings = base.rings().stream().filter(r -> !removedRings.contains(r.placementId())).toList();
         List<EditorProjectState.BackingState> backing = base.ringBacking().stream().filter(g -> !removedObjects.contains(g.objectPlacementId())).toList();
         return LevelObjectArt.inherit(new EditorProjectLevel(new EditorProjectState(base.zoneIndex(), base.blockGridSide(), base.patterns(), base.chunks(), base.blocks(),
-                base.solids(), base.palettes(), base.layers(), width, height, resized.getData(), objects, rings, backing,
+                base.solids(), base.palettes(), base.layers(), width, height, resized, objects, rings, backing,
                 Math.min(base.minX(), pixelWidth - 1), pixelWidth - 1, Math.min(base.minY(), pixelHeight - 1), pixelHeight - 1), source.getRingSpriteSheet()), source);
+    }
+
+    record LayoutSize(int width, int height) { }
+
+    /** Copy the overlapping top-left rectangle of each plane at its new row stride. */
+    static byte[] resizeMap(byte[] source, int layers, LayoutSize from, LayoutSize to, byte emptyBlock) {
+        byte[] result = new byte[layers * to.width() * to.height()];
+        Arrays.fill(result, emptyBlock);
+        for (int y = 0; y < Math.min(from.height(), to.height()); y++) {
+            for (int layer = 0; layer < layers; layer++) {
+                int row = y * layers + layer;
+                System.arraycopy(source, row * from.width(), result, row * to.width(),
+                        Math.min(from.width(), to.width()));
+            }
+        }
+        return result;
     }
 
     /** Finds actual empty terrain, allocating definitions only when the library has none. */

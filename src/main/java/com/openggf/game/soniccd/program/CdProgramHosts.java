@@ -13,6 +13,7 @@ final class CdProgramHosts {
             new com.openggf.game.soniccd.audio.CdGardenMusicHost(),
             // --- lane TA (Time Attack and backup RAM)
             new com.openggf.game.soniccd.timeattack.CdTimeAttackHost(),
+            new com.openggf.game.soniccd.backupram.CdSaveManagerHost(),
             // --- end lane TA
             // --- lane FLOW2 (time-warp cutscene)
             new com.openggf.game.soniccd.warp.CdWarpCutsceneHost(),
