@@ -1,11 +1,14 @@
 package com.openggf.game.soniccd.special;
 
+import com.openggf.game.GameMode;
 import com.openggf.game.GameServices;
 import com.openggf.game.ResultsScreen;
 import com.openggf.game.SpecialStageAccessType;
 import com.openggf.game.SpecialStageDebugProvider;
 import com.openggf.game.SpecialStageProvider;
 import com.openggf.game.SpecialStageViewport;
+import com.openggf.game.internal.SpecialStageStartInput;
+import com.openggf.game.nativemenu.NativeMenuSpecialStage;
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.soniccd.CdDiscDataSource;
 import com.openggf.game.soniccd.program.CdProgramScreenRenderer;
@@ -13,6 +16,7 @@ import com.openggf.game.soniccd.program.CdProgramScreenRenderer;
 import java.io.IOException;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 /**
@@ -21,13 +25,16 @@ import java.util.function.Supplier;
  * {@link #initializeStage(int)} enters stage {@code n} in normal mode with the stones last
  * reported, for development. When it ends, {@link #result()} is the exit contract.
  */
-public final class CdSpecialStageProvider implements SpecialStageProvider {
+public final class CdSpecialStageProvider implements SpecialStageProvider, NativeMenuSpecialStage, SpecialStageStartInput {
     private final Supplier<CdDiscDataSource> disc;
     private CdSpecialStageAssets assets;
     private CdSpecialStageSession session;
     /** Draws the program's picture ({@link CdSpecialStageScreen}): planes, HUD, sprites and fades. */
     private final CdProgramScreenRenderer renderer = new CdProgramScreenRenderer();
+    private final CdSpecialStageFloorSidesRenderer floorSidesRenderer = new CdSpecialStageFloorSidesRenderer();
     private CdSpecialStageEntry pending;
+    private MenuVisit pendingVisit;
+    private MenuVisit activeVisit;
     private int timeStones;
     private int held;
     private SpecialStageViewport viewport = SpecialStageViewport.nativeViewport();
@@ -36,19 +43,40 @@ public final class CdSpecialStageProvider implements SpecialStageProvider {
         this.disc = Objects.requireNonNull(disc, "disc");
     }
 
-    private java.util.function.Consumer<CdSpecialStageResult> onEnded = result -> { };
+    private Consumer<CdSpecialStageResult> onEnded = result -> { };
     private boolean reported;
     /** The exit contract of the stage that ended last; the engine resets the session before its results. */
     private CdSpecialStageResult ended;
 
     /** Receives the exit contract once, when the stage ends (the program flow's return). */
-    public void onEnded(java.util.function.Consumer<CdSpecialStageResult> listener) {
+    public void onEnded(Consumer<CdSpecialStageResult> listener) {
         this.onEnded = Objects.requireNonNull(listener, "listener");
     }
 
     /** Primes the next {@link #initializeStage(int)} with the flow's entry, without starting it. */
     public void prepare(CdSpecialStageEntry entry) {
         pending = Objects.requireNonNull(entry, "entry");
+    }
+
+    private record MenuVisit(CdSpecialStageEntry entry, GameMode returnMode,
+                             Consumer<CdSpecialStageResult> onReturn) { }
+
+    public void prepareMenuStage(CdSpecialStageEntry entry, GameMode returnMode,
+                                 Consumer<CdSpecialStageResult> onReturn) {
+        pendingVisit = new MenuVisit(Objects.requireNonNull(entry, "entry"),
+                Objects.requireNonNull(returnMode, "returnMode"), Objects.requireNonNull(onReturn, "onReturn"));
+    }
+
+    @Override public boolean returnsToNativeMenu() { return pendingVisit != null || activeVisit != null; }
+
+    @Override public int nativeMenuStageIndex() { return pendingVisit.entry().stageId(); }
+
+    @Override
+    public GameMode finishNativeMenuStage(boolean cleared) {
+        MenuVisit visit = activeVisit;
+        activeVisit = null;
+        visit.onReturn().accept(CdSpecialStageResult.of(session.stage()));
+        return visit.returnMode();
     }
 
     /** The program-flow entry: stage, mode and stones (see {@link CdSpecialStageEntry}). */
@@ -59,12 +87,17 @@ public final class CdSpecialStageProvider implements SpecialStageProvider {
 
     @Override
     public void initializeStage(int stageIndex) throws IOException {
+        MenuVisit visit = pendingVisit;
+        pendingVisit = null;
         if (assets == null) assets = CdSpecialStageAssets.load(Objects.requireNonNull(disc.get(), "Sonic CD disc"));
-        CdSpecialStageEntry entry = pending != null && pending.stageId() == stageIndex ? pending
+        CdSpecialStageEntry entry = visit != null ? visit.entry()
+                : pending != null && pending.stageId() == stageIndex ? pending
                 : CdSpecialStageEntry.normal(stageIndex, timeStones);
         pending = null;
-        session = new CdSpecialStageSession(assets, entry);
+        session = new CdSpecialStageSession(assets, entry, GameServices.graphics().getProjectionWidth());
+        activeVisit = visit;
         renderer.reset();
+        floorSidesRenderer.reset();
         held = 0;
         reported = false;
     }
@@ -74,11 +107,11 @@ public final class CdSpecialStageProvider implements SpecialStageProvider {
     @Override
     public void update() {
         if (session == null) return;
-        session.frame(held);
+        session.frame(held, GameServices.graphics().getProjectionWidth());
         // PlaySubFMSounds: the update's FM requests reach the driver when its output is collected
         // (Main.asm:3233, 2686-2696). They are requested by native FM ID.
         for (CdSpecialSound sound : session.takeSounds()) GameServices.audio().playSfx(sound.fmId());
-        if (session.ended() && !reported) {
+        if (session.ended() && !reported && activeVisit == null) {
             reported = true;
             CdSpecialStageResult result = result();
             ended = result;
@@ -97,7 +130,14 @@ public final class CdSpecialStageProvider implements SpecialStageProvider {
 
     @Override
     public void draw() {
-        if (session != null) renderer.draw(session.screen().frame());
+        if (session == null) return;
+        var frame = session.screen().frame();
+        if (viewport.logicalWidth() > SpecialStageViewport.NATIVE_WIDTH) {
+            renderer.drawWideSpecialStage(frame, () -> floorSidesRenderer.draw(
+                    GameServices.graphics(), viewport.innerH32OriginX(), session.displayedFloorSides()));
+        } else {
+            renderer.draw(frame);
+        }
     }
 
     /** The backdrop is CRAM entry $20 ({@code StageVDPRegs} register 7, scddisasm/src/Special Stage/Main.asm:3503). */
@@ -108,7 +148,16 @@ public final class CdSpecialStageProvider implements SpecialStageProvider {
 
     @Override public void handleInput(int heldButtons, int pressedButtons) { held = heldButtons & 0xFF; }
     @Override public boolean isFinished() { return session != null && session.ended(); }
-    @Override public void reset() { session = null; }
+    @Override
+    public void reset() {
+        session = null;
+        activeVisit = null;
+    }
+
+    @Override
+    public boolean ownsStartInput() {
+        return session != null && !session.ended() && session.stage().flags().temporary();
+    }
     @Override public boolean isInitialized() { return session != null; }
     @Override public boolean hasSpecialStages() { return true; }
     @Override public SpecialStageAccessType getAccessType() { return SpecialStageAccessType.GIANT_RING; }
@@ -160,6 +209,8 @@ public final class CdSpecialStageProvider implements SpecialStageProvider {
                 });
     }
 
+    @Override public boolean ownsEmeraldReward() { return activeVisit != null; }
+
     @Override public boolean supportsRewind() { return true; }
     @Override public Optional<RewindSnapshottable<?>> rewindAdapter() {
         return Optional.of(new CdSpecialStageRewindAdapter(this));
@@ -179,6 +230,7 @@ public final class CdSpecialStageProvider implements SpecialStageProvider {
         reported = s.reported();
         ended = s.ended();
         renderer.reset(); // the restored screen re-uploads every tile
+        floorSidesRenderer.reset();
     }
 
     record State(CdSpecialStageSession owner, CdSpecialStageSession.State session,

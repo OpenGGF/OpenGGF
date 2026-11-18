@@ -9,6 +9,9 @@ public interface NativeMenuSpecialStage {
     /** True while the active stage was launched by a native screen. */
     boolean returnsToNativeMenu();
 
+    /** The stage armed by the launching screen, when it specifies an index. */
+    default int nativeMenuStageIndex() { return 0; }
+
     /**
      * Reports the finished stage to the screen that launched it and forgets the
      * route. Called once, after the stage's exit fade, before the mode changes.

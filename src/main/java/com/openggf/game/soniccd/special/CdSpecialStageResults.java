@@ -3,6 +3,7 @@ package com.openggf.game.soniccd.special;
 import com.openggf.control.InputHandler;
 import com.openggf.game.LevelBackdropResultsScreen;
 import com.openggf.game.ResultsScreen;
+import com.openggf.game.internal.SpecialStageStartInput;
 import com.openggf.game.soniccd.program.CdProgramScreenRenderer;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.Palette;
@@ -31,7 +32,7 @@ import java.util.function.IntConsumer;
  * <p>Scores are in units of ten, as the program keeps them. When the screen ends, the points it
  * added go to the campaign once through {@code award}, which applies {@code AddScore}'s thresholds.
  */
-public final class CdSpecialStageResults implements ResultsScreen, LevelBackdropResultsScreen {
+public final class CdSpecialStageResults implements ResultsScreen, LevelBackdropResultsScreen, SpecialStageStartInput {
     public enum Header { SPECIAL_STAGE, TIME_STONES, GOT_THEM_ALL }
 
     /** {@code PrepFadeFromWhite}'s V-blank and {@code FadeFromWhite}'s 24 (Main.asm:349-353, 2493-2525). */
@@ -151,6 +152,8 @@ public final class CdSpecialStageResults implements ResultsScreen, LevelBackdrop
     }
 
     @Override public boolean isComplete() { return complete; }
+
+    @Override public boolean ownsStartInput() { return !complete; }
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {

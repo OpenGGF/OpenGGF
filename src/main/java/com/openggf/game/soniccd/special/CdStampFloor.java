@@ -112,13 +112,19 @@ public final class CdStampFloor {
      */
     public void render(CdStampTrace trace, byte[] image) {
         if (image.length != IMAGE_WIDTH * IMAGE_HEIGHT) throw new IllegalArgumentException("Image must be 256 x 96");
+        renderRange(trace, 0, image);
+    }
+
+    /** Samples a screen-space column range of the same projection for presentation. */
+    void renderRange(CdStampTrace trace, int firstColumn, byte[] image) {
+        int width = image.length / IMAGE_HEIGHT;
         for (int line = 0; line < IMAGE_HEIGHT; line++) {
-            int x = (trace.x(line) & 0xFFFF) << 8;
-            int y = (trace.y(line) & 0xFFFF) << 8;
             int dx = (short) trace.dx(line);
             int dy = (short) trace.dy(line);
-            int row = line * IMAGE_WIDTH;
-            for (int dot = 0; dot < IMAGE_WIDTH; dot++) {
+            int x = ((trace.x(line) << 8) + firstColumn * dx) & POSITION_MASK;
+            int y = ((trace.y(line) << 8) + firstColumn * dy) & POSITION_MASK;
+            int row = line * width;
+            for (int dot = 0; dot < width; dot++) {
                 image[row + dot] = (byte) colourAt(x >>> 11, y >>> 11);
                 x = (x + dx) & POSITION_MASK;
                 y = (y + dy) & POSITION_MASK;

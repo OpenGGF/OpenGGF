@@ -1,10 +1,14 @@
 package com.openggf.game.soniccd.flow;
 
+import com.openggf.configuration.SonicConfiguration;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameServices;
 import com.openggf.game.soniccd.CdStagePayload;
 import com.openggf.game.soniccd.program.CdProgramRequest;
+import com.openggf.game.soniccd.special.CdSpecialStageProvider;
+import com.openggf.game.soniccd.special.CdSpecialStageResults;
 import com.openggf.game.soniccd.timetravel.CdTimeZone;
+import com.openggf.graphics.FadeManager.FadeState;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledOnOs;
 import org.junit.jupiter.api.condition.OS;
@@ -12,6 +16,8 @@ import org.junit.jupiter.api.condition.OS;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.lwjgl.glfw.GLFW.GLFW_PRESS;
+import static org.lwjgl.glfw.GLFW.GLFW_RELEASE;
 
 /**
  * Sonic CD's main flow through the engine against native runs of the USA disc
@@ -319,6 +325,34 @@ class TestCdGameFlowNative {
             assertEquals(nat.hex(nextLevel, "score") * 10, GameServices.gameState().getScore(),
                     "time bonus plus the 50-ring bonus (rings * 100)");
             assertEquals(nat.dec(nextLevel, "lives"), GameServices.gameState().getLives());
+
+            var provider = (CdSpecialStageProvider) h.loop.getActiveSpecialStageProvider();
+            var input = h.loop.getInputHandler();
+            int enter = GameServices.configuration().getInt(SonicConfiguration.PAUSE_KEY);
+            int beforePause = provider.session().frameCount();
+            input.handleKeyEvent(enter, GLFW_PRESS);
+            h.step(0, 0, true);
+            assertTrue(h.loop.isUserPaused());
+            input.handleKeyEvent(enter, GLFW_RELEASE);
+            h.idle(15);
+            assertEquals(beforePause, provider.session().frameCount(), "pause holds the floor and stage timer");
+            input.handleKeyEvent(enter, GLFW_PRESS);
+            h.step(0, 0, true);
+            assertFalse(h.loop.isUserPaused());
+            input.handleKeyEvent(enter, GLFW_RELEASE);
+
+            h.until(provider::isFinished, 6000, 0);
+            assertEquals(FadeState.FADING_TO_WHITE, GameServices.fade().getState());
+            h.until(() -> h.loop.getCurrentGameMode() == GameMode.SPECIAL_STAGE_RESULTS, 120, 0);
+            var results = assertInstanceOf(CdSpecialStageResults.class, h.loop.getResultsScreen());
+            h.idle(26); // The results picture has faded in before its tally accepts Start.
+            input.handleKeyEvent(enter, GLFW_PRESS);
+            h.step(0, 0, true);
+            assertFalse(h.loop.isUserPaused(), "Enter belongs to the results tally");
+            assertTrue(results.isComplete());
+            assertEquals(FadeState.FADING_TO_WHITE, GameServices.fade().getState());
+            input.handleKeyEvent(enter, GLFW_RELEASE);
+
             h.until(() -> h.loop.getCurrentGameMode() == GameMode.LEVEL && h.level() != null
                     && h.level().payload() == CdStagePayload.R12A && !h.row().ctrlLocked(), 12000, 0);
             var at = h.row();

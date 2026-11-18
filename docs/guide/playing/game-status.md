@@ -236,8 +236,9 @@ Future). `SonicCdEndingCaptureTool --ending good|bad` films an ending.
   idle timer: left alone long enough, Sonic gives up: he jumps, falls and dies.
 - Time travel: time posts, the warp and its cutscene, good and bad futures.
 - Special stages (floor, UFOs, timer and presentation), the title screen, the
-  stage-select secret, Time Attack, the sound test and its secrets, best
-  staff times, the opening video and both endings with credits.
+  stage-select secret, Time Attack, Special Stage 8 from the sound test,
+  the sound-test pictures, best staff times, the opening video, both
+  special-stage attract demos and both endings with credits.
 - Saves: the backup RAM, in the format the BIOS writes, is kept in
   `saves/soniccd/slot0.json` beside the other games' saves (`openggf.saveRoot`
   moves the folder). It is written whenever the game writes its backup RAM:
@@ -250,6 +251,9 @@ Future). `SonicCdEndingCaptureTool --ending good|bad` films an ending.
   Time Stones, unlocks, and Time Attack records. The default choice keeps the save.
   Other backup RAM files are preserved.
 - FM sound effects, CD audio tracks, and PCM music and sound.
+- Pause holds a regular special stage. The stage fades to white on exit,
+  and the results show the ring and time bonuses. Press Start to finish the
+  tally and return through a second white fade.
 - Held-key live rewind in stages and special stages. Stage rewind restores the
   zones' rings, switches, lamps, bosses and Sonic's idle timer, as well as the
   CD audio and backup RAM state; special-stage rewind restores the floor
@@ -258,11 +262,10 @@ Future). `SonicCdEndingCaptureTool --ending good|bad` films an ending.
 ### Known gaps
 
 - Not hosted: Visual Mode, D.A. Garden, the pencil test, Thank You, Comin'
-  Soon, the attract demos (the opening video plays; the stage and special
-  stage demos do not), and Special Stage 8 from the sound test. Each is a
-  recorded "not hosted" step: choosing D.A. Garden or Visual Mode on the title
-  menu (the last two appear once unlocked) fades out and returns to the
-  title, and an attract demo is skipped.
+  Soon, the ordinary-stage attract demos, and the credits for beating Special
+  Stage 8. Choosing D.A. Garden or Visual Mode on the title menu fades out
+  and returns to the title.
+  The attract cycle skips ordinary-stage demos.
 - CD patch mods, `any` registrations, scenes and Sonic gameplay runs use the disc
   pipeline. Authored zones support flat scrolling, one collision path, fixed-height water,
   owned objects, collectible rings, and fixed vertical and horizontal springs.
@@ -283,7 +286,6 @@ Future). `SonicCdEndingCaptureTool --ending good|bad` films an ending.
   either role with the missing donor character named. S3K elemental shields are
   exercised on the disc host. Donated life icons use their own object-art tiles,
   preserving transparent foreground cells and the native HUD.
-- Special stage results graphics, pause and exit fade are not drawn.
 - Robotnik's projector in the Past can be destroyed. Its flying and ground
   hologram animals animate in both Palmtree Panic Past acts, with native picture
   checks on act 1. Animal animation coverage varies elsewhere.
@@ -294,8 +296,12 @@ Future). `SonicCdEndingCaptureTool --ending good|bad` films an ending.
   `PROFILED`); `NONE` uses no measured timing. Other disc loads are not
   paced. See
   [known discrepancies](../../status/known-discrepancies.md#sonic-cd-hardware-timings-not-modelled).
-- Whether the music keeps playing while paused has not been checked against a
-  console.
+- OpenGGF pauses music with gameplay. The USA disc's level program explicitly
+  pauses CD audio or Past-stage PCM, and the special-stage program pauses CD
+  audio through the BIOS. This is verified in the disc program instructions
+  (`PauseMusic`, scddisasm/src/Level/Main.asm:620-643; `MainLoop`,
+  scddisasm/src/Special Stage/Sub.asm:255-274). Physical-console audio timing
+  remains unmeasured.
 - Wider stage views extend object visibility, touch eligibility, load/unload
   windows and boss arena centring. Static Palmtree Panic background bands
   retain their 512-pixel repeat beside moving bands; the time tunnel fills
@@ -304,8 +310,10 @@ Future). `SonicCdEndingCaptureTool --ending good|bad` films an ending.
   pieces (including period and time-warp icons) follow the centred or left-edge
   HUD setting in EDGE and NATIVE modes; time posts remain world-positioned.
   At 320 these presentation offsets are zero. These are engine extensions without a native wide
-  reference. Fixed-width programs and the special stage stay pillarboxed;
-  level walls and scripted world coordinates retain their native positions.
+  reference. In special stages, widescreen extends the scenery and floor
+  beside the original playfield. The HUD, sprites and gameplay stay centred.
+  Results and other fixed-width programs retain their original dimensions.
+  Level walls and scripted world coordinates retain their native positions.
 - Accuracy is measured against native recordings; how far each stage is
   certified is in the [Sonic CD stage matrix](../../architecture/validation/levels/scd-stages.md).
 

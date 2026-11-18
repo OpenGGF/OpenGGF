@@ -54,15 +54,19 @@ under the matching area heading; see the
   score and bonus digits. Wider views extend CD object draw/touch and lifetime
   windows, centre boss locks, title cards, results and game-over text, and fill the time tunnel
   through its white fade. CD HUD pieces, including the time-period and warp icons,
-  follow the centred or left-edge HUD setting in both widescreen draw modes. Native 320-wide math, level walls and pillarboxed
-  programs/special stages retain their native dimensions. Holding Escape returns Sonic CD to the game shelf
+  follow the centred or left-edge HUD setting in both widescreen draw modes.
+  Special-stage widescreen extends the backdrop and projected floor. The
+  centre picture, sprites, HUD and playfield retain their native dimensions,
+  as do level walls and fixed-width programs. Holding Escape returns Sonic CD to the game shelf
   with a resumable card, the correct act label and settings restored on resume.
   Sonic plays on Sonic 1's physics
   with Sonic CD's own rules (spin dash and super peel-out, the extended camera,
   the 3D ramps, per-zone player routines and the idle timer that ends in
   Sonic giving up). Time travel, special stages
-  and their results (the bonuses reach the score), the title, stage select, Time Attack and
-  backup RAM (saved in `saves/soniccd`), the opening video, both endings, FM
+  (with pause during play, exit fades and a visible results tally that Start can finish),
+  the title, stage select, Time Attack, Special Stage 8 from the sound test,
+  both special-stage attract demos, backup RAM (saved in `saves/soniccd`),
+  the opening video, both endings, FM
   effects, CD audio and PCM sound are hosted. The FM loader also accepts verified
   Japanese and European discs containing the identical driver bank. The title's
   RAM DATA entry confirms a reset of Sonic CD's save to disc defaults. Held-key
@@ -76,7 +80,8 @@ under the matching area heading; see the
   hunk CRCs and the header SHA-1s checked) and refuses delta, older-version
   and non-CD CHDs by name. Not
   included: Visual Mode, D.A. Garden, the pencil test, Thank You,
-  Comin' Soon, attract demos, and the Japanese and European releases. Disc audio, video songs and PCM sound follow the music
+  Comin' Soon, ordinary-stage attract demos, Stage 8 credits, and Japanese and
+  European gameplay. Disc audio, video songs and PCM sound follow the music
   and effects volumes; CD audio and PCM also share the FM presentation scale
   for their relative level. The time-warp stars are drawn and Robotnik's projector
   can be destroyed in the Past. Both Palmtree Panic Past acts draw its flying
