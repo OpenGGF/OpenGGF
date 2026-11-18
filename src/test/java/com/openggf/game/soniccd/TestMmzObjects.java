@@ -170,6 +170,28 @@ class TestMmzObjects {
     }
 
     @Test
+    void invisibleBlockLeavesUpwardMovementFromBelowIntact() throws Exception {
+        boot(CdStagePayload.R82A);
+        var manager = GameServices.level().getObjectManager();
+        var camera = GameServices.camera();
+        int x = camera.getX() + 0x90;
+        int y = camera.getY() + 0x50;
+        add(new MmzInvisibleBlock(new ObjectSpawn(x, y, 0x09, 0, 0, false, 0)));
+        runner.stepIdleFrames(2);
+
+        // One pixel of penetration into the underside of the solid box.
+        int playerY = y + sonic.getYRadius() + 0x10 + 1;
+        sonic.setCentreX((short) x);
+        sonic.setCentreY((short) playerY);
+        sonic.setAir(true);
+        sonic.setYSpeed((short) -0x530);
+        manager.update(camera.getX(), sonic, List.of(), 0, false, true, true);
+        assertEquals(playerY, sonic.getCentreY());
+        assertEquals(-0x530, sonic.getYSpeed());
+        assertTrue(sonic.getAir());
+    }
+
+    @Test
     void vanishPlatformStartsInFrameSixAndBecomesSolidAfterItsDelay() throws Exception {
         boot(CdStagePayload.R81A);
         MmzVanishPlatform platform = add(new MmzVanishPlatform(at(0x40, -0x30, 0x2C, 0)));

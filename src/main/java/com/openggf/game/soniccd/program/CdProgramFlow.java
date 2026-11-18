@@ -122,13 +122,8 @@ public final class CdProgramFlow {
     /** {@code BuRAMManager} (IPX.asm:101-105): the manager returned; {@code ReadSaveData}, then {@code .GameLoop}. */
     public void backupRamManagerReturned() { readSaveData(); }
 
-    /**
-     * {@code BuRAMManager} (IPX.asm:101-105): the manager, then {@code ReadSaveData}, which drops any variable IPX
-     * changed but never wrote (GameOver's {@code savedLevel}). The manager is not hosted and changes nothing, so the
-     * read runs at once; a manager host calls {@link #backupRamManagerReturned} after its own changes.
-     */
+    /** {@code BuRAMManager} (IPX.asm:101-105): the hosted manager rereads backup RAM when it returns. */
     private CdProgramRequest backupRamManager() {
-        readSaveData();
         return notHosted(CdNativeProgram.BURAMMGR, "BuRAMManager");
     }
 

@@ -4,6 +4,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.solid.ObjectSolidExecutionContext;
 import com.openggf.game.solid.SolidCall;
 import com.openggf.game.solid.SolidCheckpointBatch;
+import com.openggf.game.solid.SolidExecutionFrames;
 import com.openggf.game.solid.SolidExecutionRegistry;
 
 import java.util.List;
@@ -66,7 +67,7 @@ final class ObjectExecutionController {
         SolidEntryRegisters entryRegisters = entry;
         ObjectSolidExecutionContext.Resolver resolver =
                 mode == SolidExecutionMode.MANUAL_CHECKPOINT
-                        ? new ObjectSolidExecutionContext.Resolver() {
+                        ? new SolidExecutionFrames.NativeReceiverResolver() {
                             @Override
                             public SolidCheckpointBatch resolve(SolidCall call) {
                                 InitialObjectDispatchController.requireCurrent(original);
@@ -82,6 +83,24 @@ final class ObjectExecutionController {
                                 InitialObjectDispatchController.requireCurrent(original);
                                 var batch = objects.solidContacts().processParticipantCheckpoint(
                                         instance, participant, solidPostMovement, entryRegisters.withCall(call));
+                                InitialObjectDispatchController.requireCurrent(original);
+                                return batch;
+                            }
+
+                            @Override
+                            public SolidCheckpointBatch resolveNativeReceiver(ObjectInstance receiver) {
+                                InitialObjectDispatchController.requireCurrent(original);
+                                if (!(instance instanceof ReevaluatingSolidObject)
+                                        || !(receiver instanceof ReevaluatingSolidObject)
+                                        || receiver == instance
+                                        || objects.objectQuery().identityOf(receiver).isEmpty()
+                                        || objects.objectCallbacks().owner(instance) != null
+                                        || objects.objectCallbacks().owner(receiver) != null) {
+                                    return new SolidCheckpointBatch(receiver, java.util.Map.of());
+                                }
+                                // The re-evaluating routine reads the receiver itself instead of d1-d4.
+                                var batch = objects.processManualSolidCheckpoint(
+                                        receiver, player, sidekicks, solidPostMovement, null);
                                 InitialObjectDispatchController.requireCurrent(original);
                                 return batch;
                             }

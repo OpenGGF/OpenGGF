@@ -14,7 +14,7 @@ import java.util.HexFormat;
 import java.util.Objects;
 
 /**
- * Detached, authenticated USA MDINIT FM program/SFX bytes in their origin-zero Z80 domain.
+ * Detached, authenticated MDINIT FM program/SFX bytes in their origin-zero Z80 domain.
  * This is data ownership, not a native driver execution, SMPS parser, audio installation or clock.
  * Source pin1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff: Mega Drive Init/Main.asm Start:46-59,
  * FMSFXDriver:133-143; Sound Drivers/FM/_Driver.asm DriverInfo:1874-1886.
@@ -48,22 +48,22 @@ public final class CdFmSoundAssets {
 
     /**
      * Read through the existing observed-disc/program capability while it is open. No file handle is retained.
-     * Other regional offsets/driver identities remain unadmitted. Missing relocation bytes are never padded:
-     * the native byte-copy source is entirely inside the actual file-backed MDINIT payload.
+     * The profiled USA, European and Japanese discs contain the same complete MDINIT file. The native
+     * byte-copy source is entirely inside that file-backed payload, so it needs no relocation padding.
      */
     public static CdFmSoundAssets fromPrograms(CdProgramAssets programs) throws IOException {
         Objects.requireNonNull(programs, "actual CD program owner");
-        var release = CdRetailReleases.find(programs.identity())
+        var identity = programs.identity();
+        var release = CdRetailReleases.find(identity)
                 .orElseThrow(() -> new IOException("FM assets require an observed known retail content record"));
-        if (release.variant() != CdReleaseVariant.USA
-                || programs.header().observedVariant().orElse(null) != CdReleaseVariant.USA) {
-            throw new IOException("Only the authenticated USA MDINIT FM bank is admitted");
+        if (programs.header().observedVariant().orElse(null) != release.variant()) {
+            throw new IOException("FM assets require a header matching the authenticated retail release");
         }
         var image = programs.mmd(CdNativeFile.MDINIT);
         byte[] file = image.readFile(0, image.fileBytes());
         String fileHash = sha256(file);
         if (!MDINIT_SHA256.equals(fileHash) || image.fileBytes() != 0x1D5A) {
-            throw new IOException("USA MDINIT file identity does not match its authenticated FM source");
+            throw new IOException("MDINIT file identity does not match the authenticated FM source");
         }
         var expectedHeader = new CdMmdHeader(0x40, 0, 0xFF2000, 0x7FF, 0xFF2000, 0, 0);
         if (!expectedHeader.equals(image.header()) || image.unresolvedCopyBytes() != 934) {
@@ -81,7 +81,7 @@ public final class CdFmSoundAssets {
         if (!BANK_SHA256.equals(sha256(bank.copy()))) {
             throw new IOException("MDINIT FM copy bytes do not match the authenticated bank");
         }
-        var source = new Source(release.variant(), programs.identity().normalizedSha256(), CdNativeFile.MDINIT,
+        var source = new Source(release.variant(), identity.normalizedSha256(), CdNativeFile.MDINIT,
                 fileHash, image.header(), image.unresolvedCopyBytes());
         return new CdFmSoundAssets(source, bank);
     }
