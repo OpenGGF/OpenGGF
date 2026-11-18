@@ -3575,17 +3575,6 @@ public class TestScalarOnlyCodecDeletion {
     // =====================================================================
 
     @Test
-    void batch2ClassesAllImplementRewindRecreatable() {
-        for (String fqn : BATCH2_DELETED_CODEC_FQNS) {
-            Class<?> cls;
-            try { cls = Class.forName(fqn); }
-            catch (ClassNotFoundException e) { throw new AssertionError(e); }
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    fqn + " must implement RewindRecreatable (codec deleted in batch 2)");
-        }
-    }
-
-    @Test
     void batch2ClassesGenericRecreateProducesInstance() {
         for (String fqn : BATCH2_DELETED_CODEC_FQNS) {
             ObjectInstance result = invokeGenericRecreate(fqn, 0x120, 0x240, GameId.S3K);
@@ -3607,17 +3596,6 @@ public class TestScalarOnlyCodecDeletion {
     // =====================================================================
     // Batch 3: deleted-codec candidates covered by generic recreate
     // =====================================================================
-
-    @Test
-    void batch3ClassesAllImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : BATCH3_DELETED_CODECS) {
-            Class<?> cls;
-            try { cls = Class.forName(candidate.fqn()); }
-            catch (ClassNotFoundException e) { throw new AssertionError(e); }
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable (codec deleted in batch 3)");
-        }
-    }
 
     @Test
     void batch3ClassesGenericRecreateProducesInstance() {
@@ -3645,17 +3623,6 @@ public class TestScalarOnlyCodecDeletion {
     // =====================================================================
 
     @Test
-    void auditedLiveReferenceClassesAllImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : AUDITED_LIVE_REFERENCE_DELETED_CODECS) {
-            Class<?> cls;
-            try { cls = Class.forName(candidate.fqn()); }
-            catch (ClassNotFoundException e) { throw new AssertionError(e); }
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable (audited live-reference deletion)");
-        }
-    }
-
-    @Test
     void auditedLiveReferenceClassesGenericRecreateProducesInstance() {
         for (CodecDeletionCandidate candidate : AUDITED_LIVE_REFERENCE_DELETED_CODECS) {
             ObjectInstance result = invokeGenericRecreate(candidate.fqn(), 0x120, 0x240, candidate.gameId());
@@ -3679,17 +3646,6 @@ public class TestScalarOnlyCodecDeletion {
     // =====================================================================
     // Batch 4: two scalar-only self-contained dynamics - codec deleted
     // =====================================================================
-
-    @Test
-    void batch4ClassesAllImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : BATCH4_DELETED_CODECS) {
-            Class<?> cls;
-            try { cls = Class.forName(candidate.fqn()); }
-            catch (ClassNotFoundException e) { throw new AssertionError(e); }
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable (codec deleted in batch 4)");
-        }
-    }
 
     @Test
     void batch4ClassesGenericRecreateProducesInstance() {
@@ -3717,17 +3673,6 @@ public class TestScalarOnlyCodecDeletion {
     // =====================================================================
 
     @Test
-    void batch5ClassesAllImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : BATCH5_DELETED_CODECS) {
-            Class<?> cls;
-            try { cls = Class.forName(candidate.fqn()); }
-            catch (ClassNotFoundException e) { throw new AssertionError(e); }
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable (codec deleted in batch 5)");
-        }
-    }
-
-    @Test
     void batch5ClassesGenericRecreateProducesInstance() {
         for (CodecDeletionCandidate candidate : BATCH5_DELETED_CODECS) {
             ObjectInstance result = invokeGenericRecreate(candidate.fqn(), 0x120, 0x240, candidate.gameId());
@@ -3751,17 +3696,6 @@ public class TestScalarOnlyCodecDeletion {
     // =====================================================================
     // Batch 6: MGZ drilling Robotnik - codec deleted
     // =====================================================================
-
-    @Test
-    void batch6ClassesAllImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : BATCH6_DELETED_CODECS) {
-            Class<?> cls;
-            try { cls = Class.forName(candidate.fqn()); }
-            catch (ClassNotFoundException e) { throw new AssertionError(e); }
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable (codec deleted in batch 6)");
-        }
-    }
 
     @Test
     void batch6ClassesGenericRecreateProducesInstance() {
@@ -3789,17 +3723,6 @@ public class TestScalarOnlyCodecDeletion {
     // =====================================================================
 
     @Test
-    void batch7ClassesAllImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : BATCH7_DELETED_CODECS) {
-            Class<?> cls;
-            try { cls = Class.forName(candidate.fqn()); }
-            catch (ClassNotFoundException e) { throw new AssertionError(e); }
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable (codec deleted in batch 7)");
-        }
-    }
-
-    @Test
     void batch7ClassesGenericRecreateProducesInstance() {
         for (CodecDeletionCandidate candidate : BATCH7_DELETED_CODECS) {
             ObjectInstance result = invokeGenericRecreate(candidate.fqn(), 0x120, 0x240, candidate.gameId());
@@ -3823,17 +3746,6 @@ public class TestScalarOnlyCodecDeletion {
     // =====================================================================
     // Batch 8: points popups - codec deleted
     // =====================================================================
-
-    @Test
-    void batch8ClassesAllImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : BATCH8_DELETED_CODECS) {
-            Class<?> cls;
-            try { cls = Class.forName(candidate.fqn()); }
-            catch (ClassNotFoundException e) { throw new AssertionError(e); }
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable (codec deleted in batch 8)");
-        }
-    }
 
     @Test
     void batch8ClassesGenericRecreateProducesInstance() {
@@ -3861,20 +3773,6 @@ public class TestScalarOnlyCodecDeletion {
     // =====================================================================
 
     @Test
-    void batch9ClassesAllImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : BATCH9_DELETED_CODECS) {
-            Class<?> cls;
-            try {
-                cls = Class.forName(candidate.fqn());
-            } catch (ClassNotFoundException e) {
-                throw new AssertionError(e);
-            }
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable (codec deleted in batch 9)");
-        }
-    }
-
-    @Test
     void batch9ClassesGenericRecreateProducesInstance() {
         for (CodecDeletionCandidate candidate : BATCH9_DELETED_CODECS) {
             ObjectInstance result = invokeGenericRecreate(candidate.fqn(), 0x120, 0x240, candidate.gameId());
@@ -3898,20 +3796,6 @@ public class TestScalarOnlyCodecDeletion {
     // =====================================================================
     // Batch 10: S2 MTZ Conveyor - codec deleted, captured constructor base preserved
     // =====================================================================
-
-    @Test
-    void batch10ClassesAllImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : BATCH10_DELETED_CODECS) {
-            Class<?> cls;
-            try {
-                cls = Class.forName(candidate.fqn());
-            } catch (ClassNotFoundException e) {
-                throw new AssertionError(e);
-            }
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable (codec deleted in batch 10)");
-        }
-    }
 
     @Test
     void batch10ClassesGenericRecreateProducesInstance() {
@@ -3981,20 +3865,6 @@ public class TestScalarOnlyCodecDeletion {
     // =====================================================================
 
     @Test
-    void batch11ClassesAllImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : BATCH11_DELETED_CODECS) {
-            Class<?> cls;
-            try {
-                cls = Class.forName(candidate.fqn());
-            } catch (ClassNotFoundException e) {
-                throw new AssertionError(e);
-            }
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable (codec deleted in batch 11)");
-        }
-    }
-
-    @Test
     void batch11ClassesGenericRecreateProducesInstance() {
         for (CodecDeletionCandidate candidate : BATCH11_DELETED_CODECS) {
             ObjectInstance result = invokeGenericRecreate(candidate.fqn(), 0x120, 0x240, candidate.gameId());
@@ -4018,20 +3888,6 @@ public class TestScalarOnlyCodecDeletion {
     // =====================================================================
     // Batch 12: self-contained S3K transient/effect/reward children
     // =====================================================================
-
-    @Test
-    void batch12ClassesAllImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : BATCH12_DELETED_CODECS) {
-            Class<?> cls;
-            try {
-                cls = Class.forName(candidate.fqn());
-            } catch (ClassNotFoundException e) {
-                throw new AssertionError(e);
-            }
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable (codec deleted in batch 12)");
-        }
-    }
 
     @Test
     void batch12ClassesGenericRecreateProducesInstance() {
@@ -4059,20 +3915,6 @@ public class TestScalarOnlyCodecDeletion {
     // =====================================================================
 
     @Test
-    void batch13ClassesAllImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : BATCH13_DELETED_CODECS) {
-            Class<?> cls;
-            try {
-                cls = Class.forName(candidate.fqn());
-            } catch (ClassNotFoundException e) {
-                throw new AssertionError(e);
-            }
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable (codec deleted in batch 13)");
-        }
-    }
-
-    @Test
     void batch13ClassesGenericRecreateProducesInstance() {
         for (CodecDeletionCandidate candidate : BATCH13_DELETED_CODECS) {
             ObjectInstance result = invokeGenericRecreate(candidate.fqn(), 0x120, 0x240, candidate.gameId());
@@ -4096,20 +3938,6 @@ public class TestScalarOnlyCodecDeletion {
     // =====================================================================
     // Batch 14: self-contained S3K transient/countdown/badnik-child dynamics
     // =====================================================================
-
-    @Test
-    void batch14ClassesAllImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : BATCH14_DELETED_CODECS) {
-            Class<?> cls;
-            try {
-                cls = Class.forName(candidate.fqn());
-            } catch (ClassNotFoundException e) {
-                throw new AssertionError(e);
-            }
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable (codec deleted in batch 14)");
-        }
-    }
 
     @Test
     void batch14ClassesGenericRecreateProducesInstance() {
@@ -4137,20 +3965,6 @@ public class TestScalarOnlyCodecDeletion {
     // =====================================================================
 
     @Test
-    void batch15ClassesAllImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : BATCH15_DELETED_CODECS) {
-            Class<?> cls;
-            try {
-                cls = Class.forName(candidate.fqn());
-            } catch (ClassNotFoundException e) {
-                throw new AssertionError(e);
-            }
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable (codec deleted in batch 15)");
-        }
-    }
-
-    @Test
     void batch15ClassesGenericRecreateProducesInstance() {
         for (CodecDeletionCandidate candidate : BATCH15_DELETED_CODECS) {
             ObjectInstance result = invokeGenericRecreate(candidate.fqn(), 0x120, 0x240, candidate.gameId());
@@ -4174,20 +3988,6 @@ public class TestScalarOnlyCodecDeletion {
     // =====================================================================
     // Batch 16: session-level/no-ref exact-spawn S3K dynamics
     // =====================================================================
-
-    @Test
-    void batch16ClassesAllImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : BATCH16_DELETED_CODECS) {
-            Class<?> cls;
-            try {
-                cls = Class.forName(candidate.fqn());
-            } catch (ClassNotFoundException e) {
-                throw new AssertionError(e);
-            }
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable (codec deleted in batch 16)");
-        }
-    }
 
     @Test
     void batch16ClassesGenericRecreateProducesInstance() {
@@ -4215,20 +4015,6 @@ public class TestScalarOnlyCodecDeletion {
     // =====================================================================
 
     @Test
-    void batch17ClassesAllImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : BATCH17_DELETED_CODECS) {
-            Class<?> cls;
-            try {
-                cls = Class.forName(candidate.fqn());
-            } catch (ClassNotFoundException e) {
-                throw new AssertionError(e);
-            }
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable (codec deleted in batch 17)");
-        }
-    }
-
-    @Test
     void batch17ClassesGenericRecreateProducesInstance() {
         for (CodecDeletionCandidate candidate : BATCH17_DELETED_CODECS) {
             ObjectInstance result = invokeGenericRecreate(candidate.fqn(), 0x120, 0x240, candidate.gameId());
@@ -4252,20 +4038,6 @@ public class TestScalarOnlyCodecDeletion {
     // =====================================================================
     // Batch 18: remaining no-ref S3K exact-spawn end capsules
     // =====================================================================
-
-    @Test
-    void batch18ClassesAllImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : BATCH18_DELETED_CODECS) {
-            Class<?> cls;
-            try {
-                cls = Class.forName(candidate.fqn());
-            } catch (ClassNotFoundException e) {
-                throw new AssertionError(e);
-            }
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable (codec deleted in batch 18)");
-        }
-    }
 
     @Test
     void batch18ClassesGenericRecreateProducesInstance() {
@@ -4293,20 +4065,6 @@ public class TestScalarOnlyCodecDeletion {
     // =====================================================================
 
     @Test
-    void batch19ClassesAllImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : BATCH19_DELETED_CODECS) {
-            Class<?> cls;
-            try {
-                cls = Class.forName(candidate.fqn());
-            } catch (ClassNotFoundException e) {
-                throw new AssertionError(e);
-            }
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable (codec deleted in batch 19)");
-        }
-    }
-
-    @Test
     void batch19ClassesGenericRecreateProducesInstance() {
         for (CodecDeletionCandidate candidate : BATCH19_DELETED_CODECS) {
             ObjectInstance result = invokeGenericRecreate(candidate.fqn(), 0x120, 0x240, candidate.gameId());
@@ -4330,20 +4088,6 @@ public class TestScalarOnlyCodecDeletion {
     // =====================================================================
     // Batch 20: session-verified no-ref S3K exact-spawn dynamics
     // =====================================================================
-
-    @Test
-    void batch20ClassesAllImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : BATCH20_DELETED_CODECS) {
-            Class<?> cls;
-            try {
-                cls = Class.forName(candidate.fqn());
-            } catch (ClassNotFoundException e) {
-                throw new AssertionError(e);
-            }
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable (codec deleted in batch 20)");
-        }
-    }
 
     @Test
     void batch20ClassesGenericRecreateProducesInstance() {
@@ -4371,20 +4115,6 @@ public class TestScalarOnlyCodecDeletion {
     // =====================================================================
 
     @Test
-    void batch21ClassesAllImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : BATCH21_DELETED_CODECS) {
-            Class<?> cls;
-            try {
-                cls = Class.forName(candidate.fqn());
-            } catch (ClassNotFoundException e) {
-                throw new AssertionError(e);
-            }
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable (codec deleted in batch 21)");
-        }
-    }
-
-    @Test
     void batch21ClassesGenericRecreateProducesInstance() {
         for (CodecDeletionCandidate candidate : BATCH21_DELETED_CODECS) {
             ObjectInstance result = invokeGenericRecreate(candidate.fqn(), 0x120, 0x240, candidate.gameId());
@@ -4408,20 +4138,6 @@ public class TestScalarOnlyCodecDeletion {
     // =====================================================================
     // Batch 22: S2 self-contained projectile/effect dynamics
     // =====================================================================
-
-    @Test
-    void batch22ClassesAllImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : BATCH22_DELETED_CODECS) {
-            Class<?> cls;
-            try {
-                cls = Class.forName(candidate.fqn());
-            } catch (ClassNotFoundException e) {
-                throw new AssertionError(e);
-            }
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable (codec deleted in batch 22)");
-        }
-    }
 
     @Test
     void batch22ClassesGenericRecreateProducesInstance() {
@@ -4449,20 +4165,6 @@ public class TestScalarOnlyCodecDeletion {
     // =====================================================================
 
     @Test
-    void batch23ClassesAllImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : BATCH23_DELETED_CODECS) {
-            Class<?> cls;
-            try {
-                cls = Class.forName(candidate.fqn());
-            } catch (ClassNotFoundException e) {
-                throw new AssertionError(e);
-            }
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable (codec deleted in batch 23)");
-        }
-    }
-
-    @Test
     void batch23ClassesGenericRecreateProducesInstance() {
         for (CodecDeletionCandidate candidate : BATCH23_DELETED_CODECS) {
             ObjectInstance result = invokeGenericRecreate(candidate.fqn(), 0x120, 0x240, candidate.gameId());
@@ -4488,20 +4190,6 @@ public class TestScalarOnlyCodecDeletion {
     // =====================================================================
 
     @Test
-    void batch24ClassesAllImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : BATCH24_DELETED_CODECS) {
-            Class<?> cls;
-            try {
-                cls = Class.forName(candidate.fqn());
-            } catch (ClassNotFoundException e) {
-                throw new AssertionError(e);
-            }
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable (codec deleted in batch 24)");
-        }
-    }
-
-    @Test
     void batch24ClassesGenericRecreateProducesInstance() {
         for (CodecDeletionCandidate candidate : BATCH24_DELETED_CODECS) {
             ObjectInstance result = invokeGenericRecreate(candidate.fqn(), 0x120, 0x240, candidate.gameId());
@@ -4525,20 +4213,6 @@ public class TestScalarOnlyCodecDeletion {
     // =====================================================================
     // Batch 25: S2 scalar-only no-ref dynamics
     // =====================================================================
-
-    @Test
-    void batch25ClassesAllImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : BATCH25_DELETED_CODECS) {
-            Class<?> cls;
-            try {
-                cls = Class.forName(candidate.fqn());
-            } catch (ClassNotFoundException e) {
-                throw new AssertionError(e);
-            }
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable (codec deleted in batch 25)");
-        }
-    }
 
     @Test
     void batch25ClassesGenericRecreateProducesInstance() {
@@ -5450,20 +5124,6 @@ public class TestScalarOnlyCodecDeletion {
     // =====================================================================
 
     @Test
-    void batch26ClassesAllImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : BATCH26_DELETED_CODECS) {
-            Class<?> cls;
-            try {
-                cls = Class.forName(candidate.fqn());
-            } catch (ClassNotFoundException e) {
-                throw new AssertionError(e);
-            }
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable (codec deleted in batch 26)");
-        }
-    }
-
-    @Test
     void batch26ClassesGenericRecreateProducesInstance() {
         for (CodecDeletionCandidate candidate : BATCH26_DELETED_CODECS) {
             ObjectInstance result = invokeGenericRecreate(candidate.fqn(), 0x120, 0x240, candidate.gameId());
@@ -5487,20 +5147,6 @@ public class TestScalarOnlyCodecDeletion {
     // =====================================================================
     // Batch 27: S2 shared badnik projectile dynamic
     // =====================================================================
-
-    @Test
-    void batch27ClassesAllImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : BATCH27_DELETED_CODECS) {
-            Class<?> cls;
-            try {
-                cls = Class.forName(candidate.fqn());
-            } catch (ClassNotFoundException e) {
-                throw new AssertionError(e);
-            }
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable (codec deleted in batch 27)");
-        }
-    }
 
     @Test
     void batch27ClassesGenericRecreateProducesInstance() {
@@ -5528,20 +5174,6 @@ public class TestScalarOnlyCodecDeletion {
     // =====================================================================
 
     @Test
-    void batch28ClassesAllImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : BATCH28_DELETED_CODECS) {
-            Class<?> cls;
-            try {
-                cls = Class.forName(candidate.fqn());
-            } catch (ClassNotFoundException e) {
-                throw new AssertionError(e);
-            }
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable (codec deleted in batch 28)");
-        }
-    }
-
-    @Test
     void batch28ClassesGenericRecreateProducesInstance() {
         for (CodecDeletionCandidate candidate : BATCH28_DELETED_CODECS) {
             ObjectInstance result = invokeGenericRecreate(candidate.fqn(), 0x120, 0x240, candidate.gameId());
@@ -5565,20 +5197,6 @@ public class TestScalarOnlyCodecDeletion {
     // =====================================================================
     // Batch 29: S2 SpikyBlock spike dynamic, session-tail verified
     // =====================================================================
-
-    @Test
-    void batch29ClassesAllImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : BATCH29_DELETED_CODECS) {
-            Class<?> cls;
-            try {
-                cls = Class.forName(candidate.fqn());
-            } catch (ClassNotFoundException e) {
-                throw new AssertionError(e);
-            }
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable (codec deleted in batch 29)");
-        }
-    }
 
     @Test
     void batch29ClassesGenericRecreateProducesInstance() {
@@ -5606,20 +5224,6 @@ public class TestScalarOnlyCodecDeletion {
     // =====================================================================
 
     @Test
-    void batch30ClassesAllImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : BATCH30_DELETED_CODECS) {
-            Class<?> cls;
-            try {
-                cls = Class.forName(candidate.fqn());
-            } catch (ClassNotFoundException e) {
-                throw new AssertionError(e);
-            }
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable (codec deleted in batch 30)");
-        }
-    }
-
-    @Test
     void batch30ClassesGenericRecreateProducesInstance() {
         for (CodecDeletionCandidate candidate : BATCH30_DELETED_CODECS) {
             ObjectInstance result = invokeGenericRecreate(candidate.fqn(), 0x120, 0x240, candidate.gameId());
@@ -5643,20 +5247,6 @@ public class TestScalarOnlyCodecDeletion {
     // =====================================================================
     // Batch 31: S2 bomb prize dynamic
     // =====================================================================
-
-    @Test
-    void batch31ClassesAllImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : BATCH31_DELETED_CODECS) {
-            Class<?> cls;
-            try {
-                cls = Class.forName(candidate.fqn());
-            } catch (ClassNotFoundException e) {
-                throw new AssertionError(e);
-            }
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable (codec deleted in batch 31)");
-        }
-    }
 
     @Test
     void batch31ClassesGenericRecreateProducesInstance() {
@@ -5726,20 +5316,6 @@ public class TestScalarOnlyCodecDeletion {
     // =====================================================================
     // Batch 33: S1 session-verified scalar/no-reference projectile dynamics
     // =====================================================================
-
-    @Test
-    void batch33ClassesAllImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : BATCH33_DELETED_CODECS) {
-            Class<?> cls;
-            try {
-                cls = Class.forName(candidate.fqn());
-            } catch (ClassNotFoundException e) {
-                throw new AssertionError(e);
-            }
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable (codec deleted in batch 33)");
-        }
-    }
 
     @Test
     void batch33ClassesGenericRecreateProducesInstance() {
@@ -5997,20 +5573,6 @@ public class TestScalarOnlyCodecDeletion {
     // =====================================================================
 
     @Test
-    void batch39ClassesAllImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : BATCH39_DELETED_CODECS) {
-            Class<?> cls;
-            try {
-                cls = Class.forName(candidate.fqn());
-            } catch (ClassNotFoundException e) {
-                throw new AssertionError(e);
-            }
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable (codec deleted in batch 39)");
-        }
-    }
-
-    @Test
     void batch39ClassesGenericRecreateProducesInstance() {
         for (CodecDeletionCandidate candidate : BATCH39_DELETED_CODECS) {
             ObjectInstance result = invokeGenericRecreate(candidate.fqn(), 0x120, 0x240, candidate.gameId());
@@ -6082,20 +5644,6 @@ public class TestScalarOnlyCodecDeletion {
     // =====================================================================
 
     @Test
-    void batch41ClassesAllImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : BATCH41_DELETED_CODECS) {
-            Class<?> cls;
-            try {
-                cls = Class.forName(candidate.fqn());
-            } catch (ClassNotFoundException e) {
-                throw new AssertionError(e);
-            }
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable (codec deleted in batch 41)");
-        }
-    }
-
-    @Test
     void batch41ClassesGenericRecreateProducesInstance() {
         for (CodecDeletionCandidate candidate : BATCH41_DELETED_CODECS) {
             ObjectInstance result = invokeGenericRecreate(candidate.fqn(), 0x220, 0x1B4, candidate.gameId());
@@ -6136,20 +5684,6 @@ public class TestScalarOnlyCodecDeletion {
     // =====================================================================
     // Batch 42: S3K MHZ end-boss defeat fragment, no live-boss dependency
     // =====================================================================
-
-    @Test
-    void batch42ClassesAllImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : BATCH42_DELETED_CODECS) {
-            Class<?> cls;
-            try {
-                cls = Class.forName(candidate.fqn());
-            } catch (ClassNotFoundException e) {
-                throw new AssertionError(e);
-            }
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable (codec deleted in batch 42)");
-        }
-    }
 
     @Test
     void batch42ClassesGenericRecreateProducesInstance() {
@@ -6208,20 +5742,6 @@ public class TestScalarOnlyCodecDeletion {
     // =====================================================================
     // Batch 43: S3K Madmole side-drill child, no live-parent dependency
     // =====================================================================
-
-    @Test
-    void batch43ClassesAllImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : BATCH43_DELETED_CODECS) {
-            Class<?> cls;
-            try {
-                cls = Class.forName(candidate.fqn());
-            } catch (ClassNotFoundException e) {
-                throw new AssertionError(e);
-            }
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable (codec deleted in batch 43)");
-        }
-    }
 
     @Test
     void batch43ClassesGenericRecreateProducesInstance() {
@@ -7137,20 +6657,6 @@ public class TestScalarOnlyCodecDeletion {
     // =====================================================================
 
     @Test
-    void batch50ClassesAllImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : BATCH50_DELETED_CODECS) {
-            Class<?> cls;
-            try {
-                cls = Class.forName(candidate.fqn());
-            } catch (ClassNotFoundException e) {
-                throw new AssertionError(e);
-            }
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable (codec deleted in batch 50)");
-        }
-    }
-
-    @Test
     void batch50ClassesGenericRecreateProducesInstanceAndRelinksParent() {
         for (CodecDeletionCandidate candidate : BATCH50_DELETED_CODECS) {
             ObjectManager[] holder = new ObjectManager[1];
@@ -7211,15 +6717,6 @@ public class TestScalarOnlyCodecDeletion {
     // =====================================================================
 
     @Test
-    void batch51ClassesAllImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : BATCH51_DELETED_CODECS) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable (codec deleted in batch 51)");
-        }
-    }
-
-    @Test
     void batch51ClassesGenericRecreateProducesInstanceAndRelinksParent() {
         for (CodecDeletionCandidate candidate : BATCH51_DELETED_CODECS) {
             ObjectManager[] holder = new ObjectManager[1];
@@ -7277,15 +6774,6 @@ public class TestScalarOnlyCodecDeletion {
     // =====================================================================
     // Batch 52: S2 boss children, generic recreate relinks live parent
     // =====================================================================
-
-    @Test
-    void batch52ClassesAllImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : BATCH52_DELETED_CODECS) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable (codec deleted in batch 52)");
-        }
-    }
 
     @Test
     void batch52ClassesGenericRecreateProducesInstanceAndRelinksClosestLiveParent() {
@@ -7354,16 +6842,6 @@ public class TestScalarOnlyCodecDeletion {
     // =====================================================================
 
     @Test
-    void sharedHelperClassesAllImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : SHARED_HELPER_DELETED_CODECS) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn()
-                            + " must implement RewindRecreatable after shared helper codec deletion");
-        }
-    }
-
-    @Test
     void sharedHelperClassesRoundTripThroughGenericRecreate() {
         for (CodecDeletionCandidate candidate : SHARED_HELPER_DELETED_CODECS) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
@@ -7386,16 +6864,6 @@ public class TestScalarOnlyCodecDeletion {
     // =====================================================================
 
     @Test
-    void sharedSparkleClassesAllImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : SHARED_SPARKLE_DELETED_CODECS) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn()
-                            + " must implement RewindRecreatable after shared sparkle codec deletion");
-        }
-    }
-
-    @Test
     void sharedSparkleClassesRoundTripThroughGenericRecreate() {
         for (CodecDeletionCandidate candidate : SHARED_SPARKLE_DELETED_CODECS) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
@@ -7407,16 +6875,6 @@ public class TestScalarOnlyCodecDeletion {
     // =====================================================================
     // Shared placeholder generic recreate: unmapped object fallback
     // =====================================================================
-
-    @Test
-    void sharedPlaceholderClassesAllImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : SHARED_PLACEHOLDER_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn()
-                            + " must implement RewindRecreatable after shared placeholder coverage");
-        }
-    }
 
     @Test
     void sharedPlaceholderClassesRoundTripThroughGenericRecreate() {
@@ -7432,15 +6890,6 @@ public class TestScalarOnlyCodecDeletion {
     // =====================================================================
 
     @Test
-    void sharedWaterEffectClassesAllImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : SHARED_WATER_EFFECT_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after shared water-effect coverage");
-        }
-    }
-
-    @Test
     void sharedWaterEffectClassesRoundTripThroughGenericRecreate() {
         for (CodecDeletionCandidate candidate : SHARED_WATER_EFFECT_RECREATE_CLASSES) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
@@ -7452,15 +6901,6 @@ public class TestScalarOnlyCodecDeletion {
     // =====================================================================
     // S2 Speed Launcher generic recreate
     // =====================================================================
-
-    @Test
-    void s2SpeedLauncherClassesAllImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S2_SPEED_LAUNCHER_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after Speed Launcher coverage");
-        }
-    }
 
     @Test
     void s2SpeedLauncherClassesRoundTripThroughGenericRecreate() {
@@ -7476,15 +6916,6 @@ public class TestScalarOnlyCodecDeletion {
     // =====================================================================
 
     @Test
-    void s2MtzSpinTubeClassesAllImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S2_MTZ_SPIN_TUBE_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after MTZ Spin Tube coverage");
-        }
-    }
-
-    @Test
     void s2MtzSpinTubeClassesRoundTripThroughGenericRecreate() {
         for (CodecDeletionCandidate candidate : S2_MTZ_SPIN_TUBE_RECREATE_CLASSES) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
@@ -7496,15 +6927,6 @@ public class TestScalarOnlyCodecDeletion {
     // =====================================================================
     // S2 CPZ Spin Tube generic recreate
     // =====================================================================
-
-    @Test
-    void s2CpzSpinTubeClassesAllImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S2_CPZ_SPIN_TUBE_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after CPZ Spin Tube coverage");
-        }
-    }
 
     @Test
     void s2CpzSpinTubeClassesRoundTripThroughGenericRecreate() {
@@ -7537,15 +6959,6 @@ public class TestScalarOnlyCodecDeletion {
     // =====================================================================
 
     @Test
-    void s2MtzLongPlatformClassesAllImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S2_MTZ_LONG_PLATFORM_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after MTZ Long Platform coverage");
-        }
-    }
-
-    @Test
     void s2MtzLongPlatformClassesRoundTripThroughGenericRecreate() {
         for (CodecDeletionCandidate candidate : S2_MTZ_LONG_PLATFORM_RECREATE_CLASSES) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
@@ -7557,15 +6970,6 @@ public class TestScalarOnlyCodecDeletion {
     // =====================================================================
     // S2 collapsing platform generic recreate
     // =====================================================================
-
-    @Test
-    void s2CollapsingPlatformClassesAllImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S2_COLLAPSING_PLATFORM_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after collapsing-platform coverage");
-        }
-    }
 
     @Test
     void s2CollapsingPlatformClassesRoundTripThroughGenericRecreate() {
@@ -7590,15 +6994,6 @@ public class TestScalarOnlyCodecDeletion {
                     throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
                 }
             }
-        }
-    }
-
-    @Test
-    void s2CollapsingPlatformFragmentClassesAllImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S2_COLLAPSING_PLATFORM_FRAGMENT_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after collapsing-platform fragment coverage");
         }
     }
 
@@ -7808,16 +7203,6 @@ public class TestScalarOnlyCodecDeletion {
     // =====================================================================
 
     @Test
-    void s3kStaticHazardClassesImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S3K_STATIC_HAZARD_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn()
-                            + " must implement RewindRecreatable after S3K static hazard batch");
-        }
-    }
-
-    @Test
     void s3kStaticHazardClassesRoundTripPassedWithoutCodec() {
         for (CodecDeletionCandidate candidate : S3K_STATIC_HAZARD_RECREATE_CLASSES) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
@@ -7831,16 +7216,6 @@ public class TestScalarOnlyCodecDeletion {
     // =====================================================================
     // S3K button/path-swap scalar batch: trigger buttons and path-swap markers
     // =====================================================================
-
-    @Test
-    void s3kButtonPathSwapClassesImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S3K_BUTTON_PATH_SWAP_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn()
-                            + " must implement RewindRecreatable after S3K button/path-swap batch");
-        }
-    }
 
     @Test
     void s3kButtonPathSwapClassesRoundTripPassedWithoutCodec() {
@@ -7858,16 +7233,6 @@ public class TestScalarOnlyCodecDeletion {
     // =====================================================================
 
     @Test
-    void s3kUtilityClassesImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S3K_UTILITY_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn()
-                            + " must implement RewindRecreatable after S3K utility batch");
-        }
-    }
-
-    @Test
     void s3kUtilityClassesRoundTripPassedWithoutCodec() {
         for (CodecDeletionCandidate candidate : S3K_UTILITY_RECREATE_CLASSES) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
@@ -7881,16 +7246,6 @@ public class TestScalarOnlyCodecDeletion {
     // =====================================================================
     // S3K CNZ local mechanics batch: balloon, rising platform, light bulb, barber pole
     // =====================================================================
-
-    @Test
-    void s3kCnzLocalMechanicsClassesImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S3K_CNZ_LOCAL_MECHANICS_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn()
-                            + " must implement RewindRecreatable after S3K CNZ local mechanics batch");
-        }
-    }
 
     @Test
     void s3kCnzLocalMechanicsClassesRoundTripPassedWithoutCodec() {
@@ -7908,15 +7263,6 @@ public class TestScalarOnlyCodecDeletion {
     // =====================================================================
 
     @Test
-    void s3kCnzMechanismClassesImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S3K_CNZ_MECHANISM_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S3K CNZ mechanism batch");
-        }
-    }
-
-    @Test
     void s3kCnzMechanismClassesRoundTripPassedWithoutCodec() {
         for (CodecDeletionCandidate candidate : S3K_CNZ_MECHANISM_RECREATE_CLASSES) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
@@ -7930,15 +7276,6 @@ public class TestScalarOnlyCodecDeletion {
     // =====================================================================
     // S3K ICZ ice-object batch: top-level ice/wall object-manager restores
     // =====================================================================
-
-    @Test
-    void s3kIczIceObjectClassesImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S3K_ICZ_ICE_OBJECT_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S3K ICZ ice-object batch");
-        }
-    }
 
     @Test
     void s3kIczIceObjectClassesRoundTripPassedWithoutCodec() {
@@ -7956,15 +7293,6 @@ public class TestScalarOnlyCodecDeletion {
     // =====================================================================
 
     @Test
-    void s3kHczMechanismClassesImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S3K_HCZ_MECHANISM_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S3K HCZ mechanism batch");
-        }
-    }
-
-    @Test
     void s3kHczMechanismClassesRoundTripPassedWithoutCodec() {
         for (CodecDeletionCandidate candidate : S3K_HCZ_MECHANISM_RECREATE_CLASSES) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
@@ -7978,15 +7306,6 @@ public class TestScalarOnlyCodecDeletion {
     // =====================================================================
     // S3K ICZ platform/hazard batch: top-level platform/hazard object-manager restores
     // =====================================================================
-
-    @Test
-    void s3kIczPlatformHazardClassesImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S3K_ICZ_PLATFORM_HAZARD_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S3K ICZ platform/hazard batch");
-        }
-    }
 
     @Test
     void s3kIczPlatformHazardClassesRoundTripPassedWithoutCodec() {
@@ -8004,15 +7323,6 @@ public class TestScalarOnlyCodecDeletion {
     // =====================================================================
 
     @Test
-    void s3kUtilityMotionClassesImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S3K_UTILITY_MOTION_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S3K utility/motion batch");
-        }
-    }
-
-    @Test
     void s3kUtilityMotionClassesRoundTripPassedWithoutCodec() {
         for (CodecDeletionCandidate candidate : S3K_UTILITY_MOTION_RECREATE_CLASSES) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
@@ -8026,15 +7336,6 @@ public class TestScalarOnlyCodecDeletion {
     // =====================================================================
     // S3K pachinko/standalone batch: scalar object-manager restores
     // =====================================================================
-
-    @Test
-    void s3kPachinkoStandaloneClassesImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S3K_PACHINKO_STANDALONE_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S3K pachinko standalone batch");
-        }
-    }
 
     @Test
     void s3kPachinkoStandaloneClassesRoundTripPassedWithoutCodec() {
@@ -8052,15 +7353,6 @@ public class TestScalarOnlyCodecDeletion {
     // =====================================================================
 
     @Test
-    void s3kControllerClassesImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S3K_CONTROLLER_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S3K controller batch");
-        }
-    }
-
-    @Test
     void s3kControllerClassesRoundTripPassedWithoutCodec() {
         for (CodecDeletionCandidate candidate : S3K_CONTROLLER_RECREATE_CLASSES) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
@@ -8074,15 +7366,6 @@ public class TestScalarOnlyCodecDeletion {
     // =====================================================================
     // Standalone controller batch: no live object refs, object-manager restores covered
     // =====================================================================
-
-    @Test
-    void standaloneControllerClassesImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : STANDALONE_CONTROLLER_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after standalone controller batch");
-        }
-    }
 
     @Test
     void standaloneControllerClassesRoundTripPassedWithoutCodec() {
@@ -8362,15 +7645,6 @@ public class TestScalarOnlyCodecDeletion {
     }
 
     @Test
-    void s3kDragonflyGraphBatch219ClassesImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S3K_DRAGONFLY_GRAPH_BATCH219_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S3K Dragonfly graph batch 219");
-        }
-    }
-
-    @Test
     void s3kDragonflyGraphBatch219ClassesRoundTripPassedWithoutCodec() {
         for (CodecDeletionCandidate candidate : S3K_DRAGONFLY_GRAPH_BATCH219_RECREATE_CLASSES) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
@@ -8378,15 +7652,6 @@ public class TestScalarOnlyCodecDeletion {
                     candidate.fqn()
                             + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
                             + result);
-        }
-    }
-
-    @Test
-    void s3kSpikerGraphBatch220ClassesImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S3K_SPIKER_GRAPH_BATCH220_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S3K Spiker graph batch 220");
         }
     }
 
@@ -8421,15 +7686,6 @@ public class TestScalarOnlyCodecDeletion {
     }
 
     @Test
-    void s3kMegaChopperBatch222ClassesImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S3K_MEGA_CHOPPER_BATCH222_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S3K MegaChopper batch 222");
-        }
-    }
-
-    @Test
     void s3kMegaChopperBatch222ClassesRoundTripPassedWithoutCodec() {
         for (CodecDeletionCandidate candidate : S3K_MEGA_CHOPPER_BATCH222_RECREATE_CLASSES) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
@@ -8437,15 +7693,6 @@ public class TestScalarOnlyCodecDeletion {
                     candidate.fqn()
                             + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
                             + result);
-        }
-    }
-
-    @Test
-    void s3kCluckoidArrowBatch223ClassesImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S3K_CLUCKOID_ARROW_BATCH223_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S3K Cluckoid arrow batch 223");
         }
     }
 
@@ -8461,15 +7708,6 @@ public class TestScalarOnlyCodecDeletion {
     }
 
     @Test
-    void s3kMushmeanieGraphBatch224ClassesImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S3K_MUSHMEANIE_GRAPH_BATCH224_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S3K Mushmeanie graph batch 224");
-        }
-    }
-
-    @Test
     void s3kMushmeanieGraphBatch224ClassesRoundTripPassedWithoutCodec() {
         for (CodecDeletionCandidate candidate : S3K_MUSHMEANIE_GRAPH_BATCH224_RECREATE_CLASSES) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
@@ -8477,15 +7715,6 @@ public class TestScalarOnlyCodecDeletion {
                     candidate.fqn()
                             + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
                             + result);
-        }
-    }
-
-    @Test
-    void s3kMantisGraphBatch225ClassesImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S3K_MANTIS_GRAPH_BATCH225_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S3K Mantis graph batch 225");
         }
     }
 
@@ -8501,15 +7730,6 @@ public class TestScalarOnlyCodecDeletion {
     }
 
     @Test
-    void s3kRibotVisualGraphBatch226ClassesImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S3K_RIBOT_VISUAL_GRAPH_BATCH226_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S3K Ribot visual graph batch 226");
-        }
-    }
-
-    @Test
     void s3kRibotVisualGraphBatch226ClassesRoundTripPassedWithoutCodec() {
         for (CodecDeletionCandidate candidate : S3K_RIBOT_VISUAL_GRAPH_BATCH226_RECREATE_CLASSES) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
@@ -8517,15 +7737,6 @@ public class TestScalarOnlyCodecDeletion {
                     candidate.fqn()
                             + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
                             + result);
-        }
-    }
-
-    @Test
-    void s3kSnaleBlasterGraphBatch227ClassesImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S3K_SNALE_BLASTER_GRAPH_BATCH227_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S3K SnaleBlaster graph batch 227");
         }
     }
 
@@ -8541,15 +7752,6 @@ public class TestScalarOnlyCodecDeletion {
     }
 
     @Test
-    void s3kCaterkillerJrGraphBatch228ClassesImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S3K_CATERKILLER_JR_GRAPH_BATCH228_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S3K Caterkiller Jr graph batch 228");
-        }
-    }
-
-    @Test
     void s3kCaterkillerJrGraphBatch228ClassesRoundTripPassedWithoutCodec() {
         for (CodecDeletionCandidate candidate : S3K_CATERKILLER_JR_GRAPH_BATCH228_RECREATE_CLASSES) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
@@ -8557,15 +7759,6 @@ public class TestScalarOnlyCodecDeletion {
                     candidate.fqn()
                             + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
                             + result);
-        }
-    }
-
-    @Test
-    void s3kTunnelbotGraphBatch229ClassesImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S3K_TUNNELBOT_GRAPH_BATCH229_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S3K Tunnelbot graph batch 229");
         }
     }
 
@@ -8581,15 +7774,6 @@ public class TestScalarOnlyCodecDeletion {
     }
 
     @Test
-    void s3kCollapsingBridgeBatch230ClassesImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S3K_COLLAPSING_BRIDGE_BATCH230_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S3K collapsing bridge batch 230");
-        }
-    }
-
-    @Test
     void s3kCollapsingBridgeBatch230ClassesRoundTripPassedWithoutCodec() {
         for (CodecDeletionCandidate candidate : S3K_COLLAPSING_BRIDGE_BATCH230_RECREATE_CLASSES) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
@@ -8601,15 +7785,6 @@ public class TestScalarOnlyCodecDeletion {
     }
 
     @Test
-    void s3kTensionBridgeBatch231ClassesImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S3K_TENSION_BRIDGE_BATCH231_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S3K tension bridge batch 231");
-        }
-    }
-
-    @Test
     void s3kTensionBridgeBatch231ClassesRoundTripPassedWithoutCodec() {
         for (CodecDeletionCandidate candidate : S3K_TENSION_BRIDGE_BATCH231_RECREATE_CLASSES) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
@@ -8617,15 +7792,6 @@ public class TestScalarOnlyCodecDeletion {
                     candidate.fqn()
                             + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
                             + result);
-        }
-    }
-
-    @Test
-    void s3kDestructibleFragmentBatch232ClassesImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S3K_DESTRUCTIBLE_FRAGMENT_BATCH232_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S3K fragment batch 232");
         }
     }
 
@@ -8686,15 +7852,6 @@ public class TestScalarOnlyCodecDeletion {
     }
 
     @Test
-    void sharedBoxBatch237ClassesImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : SHARED_BOX_BATCH237_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after shared box batch 237");
-        }
-    }
-
-    @Test
     void sharedBoxBatch237ClassesRoundTripPassedWithoutCodec() {
         for (CodecDeletionCandidate candidate : SHARED_BOX_BATCH237_RECREATE_CLASSES) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
@@ -8706,15 +7863,6 @@ public class TestScalarOnlyCodecDeletion {
     }
 
     @Test
-    void s3kLbzTriggerBridgeBatch238ClassesImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S3K_LBZ_TRIGGER_BRIDGE_BATCH238_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after LBZ trigger bridge batch 238");
-        }
-    }
-
-    @Test
     void s3kLbzTriggerBridgeBatch238ClassesRoundTripPassedWithoutCodec() {
         for (CodecDeletionCandidate candidate : S3K_LBZ_TRIGGER_BRIDGE_BATCH238_RECREATE_CLASSES) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
@@ -8722,15 +7870,6 @@ public class TestScalarOnlyCodecDeletion {
                     candidate.fqn()
                             + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
                             + result);
-        }
-    }
-
-    @Test
-    void s3kAizEmeraldScatterBatch240ClassesImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S3K_AIZ_EMERALD_SCATTER_BATCH240_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after AIZ emerald scatter batch 240");
         }
     }
 
@@ -8750,15 +7889,6 @@ public class TestScalarOnlyCodecDeletion {
     // =====================================================================
 
     @Test
-    void s3kBadnikParentClassesImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S3K_BADNIK_PARENT_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S3K badnik parent coverage");
-        }
-    }
-
-    @Test
     void s3kBadnikParentClassesRoundTripPassedWithoutCodec() {
         for (CodecDeletionCandidate candidate : S3K_BADNIK_PARENT_RECREATE_CLASSES) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
@@ -8766,15 +7896,6 @@ public class TestScalarOnlyCodecDeletion {
                     candidate.fqn()
                             + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
                             + result);
-        }
-    }
-
-    @Test
-    void s3kBadnikParentBatch87ClassesImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S3K_BADNIK_PARENT_BATCH87_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S3K badnik parent batch 87");
         }
     }
 
@@ -8790,15 +7911,6 @@ public class TestScalarOnlyCodecDeletion {
     }
 
     @Test
-    void s3kBadnikParentBatch88ClassesImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S3K_BADNIK_PARENT_BATCH88_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S3K badnik parent batch 88");
-        }
-    }
-
-    @Test
     void s3kBadnikParentBatch88ClassesRoundTripPassedWithoutCodec() {
         for (CodecDeletionCandidate candidate : S3K_BADNIK_PARENT_BATCH88_RECREATE_CLASSES) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
@@ -8806,15 +7918,6 @@ public class TestScalarOnlyCodecDeletion {
                     candidate.fqn()
                             + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
                             + result);
-        }
-    }
-
-    @Test
-    void s3kObjectParentBatch89ClassesImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S3K_OBJECT_PARENT_BATCH89_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S3K object parent batch 89");
         }
     }
 
@@ -8830,15 +7933,6 @@ public class TestScalarOnlyCodecDeletion {
     }
 
     @Test
-    void s3kObjectParentBatch90ClassesImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S3K_OBJECT_PARENT_BATCH90_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S3K object parent batch 90");
-        }
-    }
-
-    @Test
     void s3kObjectParentBatch90ClassesRoundTripPassedWithoutCodec() {
         for (CodecDeletionCandidate candidate : S3K_OBJECT_PARENT_BATCH90_RECREATE_CLASSES) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
@@ -8846,15 +7940,6 @@ public class TestScalarOnlyCodecDeletion {
                     candidate.fqn()
                             + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
                             + result);
-        }
-    }
-
-    @Test
-    void s3kObjectParentBatch91ClassesImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S3K_OBJECT_PARENT_BATCH91_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S3K object parent batch 91");
         }
     }
 
@@ -8870,15 +7955,6 @@ public class TestScalarOnlyCodecDeletion {
     }
 
     @Test
-    void s3kObjectParentBatch92ClassesImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S3K_OBJECT_PARENT_BATCH92_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S3K object parent batch 92");
-        }
-    }
-
-    @Test
     void s3kObjectParentBatch92ClassesRoundTripPassedWithoutCodec() {
         for (CodecDeletionCandidate candidate : S3K_OBJECT_PARENT_BATCH92_RECREATE_CLASSES) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
@@ -8886,15 +7962,6 @@ public class TestScalarOnlyCodecDeletion {
                     candidate.fqn()
                             + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
                             + result);
-        }
-    }
-
-    @Test
-    void s3kIczDebrisBatch93ClassesImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S3K_ICZ_DEBRIS_BATCH93_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S3K ICZ debris batch 93");
         }
     }
 
@@ -8910,15 +7977,6 @@ public class TestScalarOnlyCodecDeletion {
     }
 
     @Test
-    void s3kDynamicChildBatch94ClassesImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S3K_DYNAMIC_CHILD_BATCH94_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S3K dynamic child batch 94");
-        }
-    }
-
-    @Test
     void s3kDynamicChildBatch94ClassesRoundTripPassedWithoutCodec() {
         for (CodecDeletionCandidate candidate : S3K_DYNAMIC_CHILD_BATCH94_RECREATE_CLASSES) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
@@ -8926,15 +7984,6 @@ public class TestScalarOnlyCodecDeletion {
                     candidate.fqn()
                             + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
                             + result);
-        }
-    }
-
-    @Test
-    void s3kDynamicChildBatch95ClassesImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S3K_DYNAMIC_CHILD_BATCH95_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S3K dynamic child batch 95");
         }
     }
 
@@ -8950,15 +7999,6 @@ public class TestScalarOnlyCodecDeletion {
     }
 
     @Test
-    void s3kWaterWallChildBatch96ClassesImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S3K_WATER_WALL_CHILD_BATCH96_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S3K water-wall child batch 96");
-        }
-    }
-
-    @Test
     void s3kWaterWallChildBatch96ClassesRoundTripPassedWithoutCodec() {
         for (CodecDeletionCandidate candidate : S3K_WATER_WALL_CHILD_BATCH96_RECREATE_CLASSES) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
@@ -8966,15 +8006,6 @@ public class TestScalarOnlyCodecDeletion {
                     candidate.fqn()
                             + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
                             + result);
-        }
-    }
-
-    @Test
-    void s3kParticleChildBatch97ClassesImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S3K_PARTICLE_CHILD_BATCH97_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S3K particle child batch 97");
         }
     }
 
@@ -8990,15 +8021,6 @@ public class TestScalarOnlyCodecDeletion {
     }
 
     @Test
-    void s3kTurboSpikerParticleBatch98ClassesImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S3K_TURBO_SPIKER_PARTICLE_BATCH98_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S3K Turbo Spiker batch 98");
-        }
-    }
-
-    @Test
     void s3kTurboSpikerParticleBatch98ClassesRoundTripPassedWithoutCodec() {
         for (CodecDeletionCandidate candidate : S3K_TURBO_SPIKER_PARTICLE_BATCH98_RECREATE_CLASSES) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
@@ -9006,15 +8028,6 @@ public class TestScalarOnlyCodecDeletion {
                     candidate.fqn()
                             + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
                             + result);
-        }
-    }
-
-    @Test
-    void s3kMhzTreeChipBatch99ClassesImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S3K_MHZ_TREE_CHIP_BATCH99_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S3K MHZ tree-chip batch 99");
         }
     }
 
@@ -9030,15 +8043,6 @@ public class TestScalarOnlyCodecDeletion {
     }
 
     @Test
-    void s3kMhz2LeafParticleBatch100ClassesImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S3K_MHZ2_LEAF_PARTICLE_BATCH100_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S3K MHZ2 leaf batch 100");
-        }
-    }
-
-    @Test
     void s3kMhz2LeafParticleBatch100ClassesRoundTripPassedWithoutCodec() {
         for (CodecDeletionCandidate candidate : S3K_MHZ2_LEAF_PARTICLE_BATCH100_RECREATE_CLASSES) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
@@ -9046,15 +8050,6 @@ public class TestScalarOnlyCodecDeletion {
                     candidate.fqn()
                             + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
                             + result);
-        }
-    }
-
-    @Test
-    void s3kIczFrostPuffBatch101ClassesImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S3K_ICZ_FROST_PUFF_BATCH101_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S3K ICZ frost puff batch 101");
         }
     }
 
@@ -9070,15 +8065,6 @@ public class TestScalarOnlyCodecDeletion {
     }
 
     @Test
-    void s3kAizDrawBridgeBatch102ClassesImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S3K_AIZ_DRAW_BRIDGE_BATCH102_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S3K AIZ draw bridge batch 102");
-        }
-    }
-
-    @Test
     void s3kAizDrawBridgeBatch102ClassesRoundTripPassedWithoutCodec() {
         for (CodecDeletionCandidate candidate : S3K_AIZ_DRAW_BRIDGE_BATCH102_RECREATE_CLASSES) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
@@ -9086,15 +8072,6 @@ public class TestScalarOnlyCodecDeletion {
                     candidate.fqn()
                             + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
                             + result);
-        }
-    }
-
-    @Test
-    void s3kAizLrzRockBatch218ClassesImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S3K_AIZ_LRZ_ROCK_BATCH218_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S3K AIZ/LRZ rock batch 218");
         }
     }
 
@@ -9110,15 +8087,6 @@ public class TestScalarOnlyCodecDeletion {
     }
 
     @Test
-    void s3kSparkleChildBatch103ClassesImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S3K_SPARKLE_CHILD_BATCH103_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S3K Sparkle child batch 103");
-        }
-    }
-
-    @Test
     void s3kSparkleChildBatch103ClassesRoundTripPassedWithoutCodec() {
         for (CodecDeletionCandidate candidate : S3K_SPARKLE_CHILD_BATCH103_RECREATE_CLASSES) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
@@ -9126,15 +8094,6 @@ public class TestScalarOnlyCodecDeletion {
                     candidate.fqn()
                             + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
                             + result);
-        }
-    }
-
-    @Test
-    void s3kMhzSwingBarBatch104ClassesImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S3K_MHZ_SWING_BAR_BATCH104_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S3K MHZ swing-bar batch 104");
         }
     }
 
@@ -9150,15 +8109,6 @@ public class TestScalarOnlyCodecDeletion {
     }
 
     @Test
-    void s3kMhzMechanismBatch105ClassesImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S3K_MHZ_MECHANISM_BATCH105_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S3K MHZ mechanism batch 105");
-        }
-    }
-
-    @Test
     void s3kMhzMechanismBatch105ClassesRoundTripPassedWithoutCodec() {
         for (CodecDeletionCandidate candidate : S3K_MHZ_MECHANISM_BATCH105_RECREATE_CLASSES) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
@@ -9166,15 +8116,6 @@ public class TestScalarOnlyCodecDeletion {
                     candidate.fqn()
                             + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
                             + result);
-        }
-    }
-
-    @Test
-    void s3kMechanismBatch106ClassesImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S3K_MECHANISM_BATCH106_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S3K mechanism batch 106");
         }
     }
 
@@ -9190,15 +8131,6 @@ public class TestScalarOnlyCodecDeletion {
     }
 
     @Test
-    void s3kLbzMechanismBatch107ClassesImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S3K_LBZ_MECHANISM_BATCH107_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S3K LBZ mechanism batch 107");
-        }
-    }
-
-    @Test
     void s3kLbzMechanismBatch107ClassesRoundTripPassedWithoutCodec() {
         for (CodecDeletionCandidate candidate : S3K_LBZ_MECHANISM_BATCH107_RECREATE_CLASSES) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
@@ -9206,15 +8138,6 @@ public class TestScalarOnlyCodecDeletion {
                     candidate.fqn()
                             + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
                             + result);
-        }
-    }
-
-    @Test
-    void s3kMhzMgzMechanismBatch108ClassesImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S3K_MHZ_MGZ_MECHANISM_BATCH108_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S3K batch 108");
         }
     }
 
@@ -9349,16 +8272,6 @@ public class TestScalarOnlyCodecDeletion {
     // =====================================================================
 
     @Test
-    void s3kKnucklesCutsceneControllersAllImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S3K_KNUCKLES_CUTSCENE_CONTROLLER_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn()
-                            + " must implement RewindRecreatable after S3K Knuckles cutscene controller coverage");
-        }
-    }
-
-    @Test
     void s3kKnucklesCutsceneControllersRoundTripPassedWithoutCodec() {
         for (CodecDeletionCandidate candidate : S3K_KNUCKLES_CUTSCENE_CONTROLLER_RECREATE_CLASSES) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
@@ -9372,16 +8285,6 @@ public class TestScalarOnlyCodecDeletion {
     // =====================================================================
     // S3K standalone cutscene controller batch: scalar-only cutscene controllers
     // =====================================================================
-
-    @Test
-    void s3kStandaloneCutsceneControllersAllImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S3K_STANDALONE_CUTSCENE_CONTROLLER_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn()
-                            + " must implement RewindRecreatable after S3K standalone cutscene coverage");
-        }
-    }
 
     @Test
     void s3kStandaloneCutsceneControllersRoundTripPassedWithoutCodec() {
@@ -9399,16 +8302,6 @@ public class TestScalarOnlyCodecDeletion {
     // =====================================================================
 
     @Test
-    void s3kStageControllersAllImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S3K_STAGE_CONTROLLER_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn()
-                            + " must implement RewindRecreatable after S3K stage controller coverage");
-        }
-    }
-
-    @Test
     void s3kStageControllersRoundTripPassedWithoutCodec() {
         for (CodecDeletionCandidate candidate : S3K_STAGE_CONTROLLER_RECREATE_CLASSES) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
@@ -9424,16 +8317,6 @@ public class TestScalarOnlyCodecDeletion {
     // =====================================================================
 
     @Test
-    void s2BossControllersImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S2_BOSS_CONTROLLER_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn()
-                            + " must implement RewindRecreatable after S2 boss controller coverage");
-        }
-    }
-
-    @Test
     void s2BossControllersRoundTripPassedWithoutCodec() {
         for (CodecDeletionCandidate candidate : S2_BOSS_CONTROLLER_RECREATE_CLASSES) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
@@ -9447,15 +8330,6 @@ public class TestScalarOnlyCodecDeletion {
     // =====================================================================
     // S1 Egg Prison button graph batch: placed button/body back-reference relink
     // =====================================================================
-
-    @Test
-    void s1EggPrisonButtonGraphClassesAllImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S1_EGG_PRISON_BUTTON_GRAPH_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S1 Egg Prison button graph batch");
-        }
-    }
 
     @Test
     void s1EggPrisonButtonGraphClassesRoundTripPassedWithoutCodec() {
@@ -9530,15 +8404,6 @@ public class TestScalarOnlyCodecDeletion {
     }
 
     @Test
-    void s1ScrapEggmanGraphClassesImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S1_SCRAP_EGGMAN_GRAPH_COVERED_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S1 Scrap Eggman graph coverage");
-        }
-    }
-
-    @Test
     void s1ScrapEggmanGraphClassesRoundTripPassedWithoutCodec() {
         for (CodecDeletionCandidate candidate : S1_SCRAP_EGGMAN_GRAPH_COVERED_CLASSES) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
@@ -9559,15 +8424,6 @@ public class TestScalarOnlyCodecDeletion {
     }
 
     @Test
-    void s1JunctionChildClassImplementsRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S1_JUNCTION_CHILD_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S1 junction child coverage");
-        }
-    }
-
-    @Test
     void s1JunctionChildClassRoundTripsWithoutCodec() {
         for (CodecDeletionCandidate candidate : S1_JUNCTION_CHILD_RECREATE_CLASSES) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
@@ -9579,15 +8435,6 @@ public class TestScalarOnlyCodecDeletion {
     }
 
     @Test
-    void s1LavaWallGraphClassImplementsRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S1_LAVA_WALL_GRAPH_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S1 lava wall graph coverage");
-        }
-    }
-
-    @Test
     void s1LavaWallGraphClassRoundTripsWithoutCodec() {
         for (CodecDeletionCandidate candidate : S1_LAVA_WALL_GRAPH_RECREATE_CLASSES) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
@@ -9595,15 +8442,6 @@ public class TestScalarOnlyCodecDeletion {
                     candidate.fqn()
                             + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
                             + result);
-        }
-    }
-
-    @Test
-    void s1LavaGeyserGraphClassesImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S1_LAVA_GEYSER_GRAPH_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S1 lava geyser graph coverage");
         }
     }
 
@@ -9637,15 +8475,6 @@ public class TestScalarOnlyCodecDeletion {
     }
 
     @Test
-    void s1EffectScalarRecreateClassesImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S1_EFFECT_SCALAR_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S1 effect scalar coverage");
-        }
-    }
-
-    @Test
     void s1EffectScalarRecreateClassesRoundTripPassedWithoutCodec() {
         for (CodecDeletionCandidate candidate : S1_EFFECT_SCALAR_RECREATE_CLASSES) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
@@ -9657,15 +8486,6 @@ public class TestScalarOnlyCodecDeletion {
     }
 
     @Test
-    void s1BossFireScalarRecreateClassesImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S1_BOSS_FIRE_SCALAR_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S1 boss-fire scalar coverage");
-        }
-    }
-
-    @Test
     void s1BossFireScalarRecreateClassesRoundTripPassedWithoutCodec() {
         for (CodecDeletionCandidate candidate : S1_BOSS_FIRE_SCALAR_RECREATE_CLASSES) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
@@ -9673,15 +8493,6 @@ public class TestScalarOnlyCodecDeletion {
                     candidate.fqn()
                             + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
                             + result);
-        }
-    }
-
-    @Test
-    void s1CollapsingFragmentsImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S1_COLLAPSING_FRAGMENT_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S1 collapsing fragment coverage");
         }
     }
 
@@ -9718,15 +8529,6 @@ public class TestScalarOnlyCodecDeletion {
     }
 
     @Test
-    void s1DestructionFragmentsImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S1_DESTRUCTION_FRAGMENT_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S1 destruction fragment coverage");
-        }
-    }
-
-    @Test
     void s1DestructionFragmentsRoundTripPassedWithoutCodec() {
         for (CodecDeletionCandidate candidate : S1_DESTRUCTION_FRAGMENT_RECREATE_CLASSES) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
@@ -9734,15 +8536,6 @@ public class TestScalarOnlyCodecDeletion {
                     candidate.fqn()
                             + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
                             + result);
-        }
-    }
-
-    @Test
-    void s1SpikedBallChainChildrenImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S1_SPIKED_BALL_CHAIN_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S1 chain graph coverage");
         }
     }
 
@@ -9758,15 +8551,6 @@ public class TestScalarOnlyCodecDeletion {
     }
 
     @Test
-    void s1FalseFloorFragmentImplementsRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S1_FALSE_FLOOR_FRAGMENT_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S1 false-floor fragment coverage");
-        }
-    }
-
-    @Test
     void s1FalseFloorFragmentRoundTripPassedWithoutCodec() {
         for (CodecDeletionCandidate candidate : S1_FALSE_FLOOR_FRAGMENT_RECREATE_CLASSES) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
@@ -9774,15 +8558,6 @@ public class TestScalarOnlyCodecDeletion {
                     candidate.fqn()
                             + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
                             + result);
-        }
-    }
-
-    @Test
-    void s1BossControllersImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S1_BOSS_CONTROLLER_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S1 boss controller coverage");
         }
     }
 
@@ -9803,15 +8578,6 @@ public class TestScalarOnlyCodecDeletion {
             Class<?> cls = loadClass(candidate.fqn());
             assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
                     candidate.fqn() + " must implement RewindRecreatable after S2 scalar named coverage");
-        }
-    }
-
-    @Test
-    void s2CnzScalarRecreateClassesImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S2_CNZ_SCALAR_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S2 CNZ scalar coverage");
         }
     }
 
@@ -9844,15 +8610,6 @@ public class TestScalarOnlyCodecDeletion {
     }
 
     @Test
-    void s2UtilityScalarRecreateClassesImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S2_UTILITY_SCALAR_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S2 utility scalar coverage");
-        }
-    }
-
-    @Test
     void s2UtilityScalarRecreateClassesRoundTripPassedWithoutCodec() {
         for (CodecDeletionCandidate candidate : S2_UTILITY_SCALAR_RECREATE_CLASSES) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
@@ -9881,15 +8638,6 @@ public class TestScalarOnlyCodecDeletion {
     }
 
     @Test
-    void s2PlatformVisualRecreateClassesImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S2_PLATFORM_VISUAL_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S2 platform/visual coverage");
-        }
-    }
-
-    @Test
     void s2PlatformVisualRecreateClassesRoundTripPassedWithoutCodec() {
         for (CodecDeletionCandidate candidate : S2_PLATFORM_VISUAL_RECREATE_CLASSES) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
@@ -9897,15 +8645,6 @@ public class TestScalarOnlyCodecDeletion {
                     candidate.fqn()
                             + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
                             + result);
-        }
-    }
-
-    @Test
-    void s2MechanismScalarRecreateClassesImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S2_MECHANISM_SCALAR_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S2 mechanism scalar coverage");
         }
     }
 
@@ -9938,15 +8677,6 @@ public class TestScalarOnlyCodecDeletion {
     }
 
     @Test
-    void s2BoxSolidScalarRecreateClassesImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S2_BOX_SOLID_SCALAR_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S2 box/solid scalar coverage");
-        }
-    }
-
-    @Test
     void s2BoxSolidScalarRecreateClassesRoundTripPassedWithoutCodec() {
         for (CodecDeletionCandidate candidate : S2_BOX_SOLID_SCALAR_RECREATE_CLASSES) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
@@ -9971,15 +8701,6 @@ public class TestScalarOnlyCodecDeletion {
                     throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
                 }
             }
-        }
-    }
-
-    @Test
-    void s2TriggerMotionScalarRecreateClassesImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S2_TRIGGER_MOTION_SCALAR_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S2 trigger/motion scalar coverage");
         }
     }
 
@@ -10012,15 +8733,6 @@ public class TestScalarOnlyCodecDeletion {
     }
 
     @Test
-    void s2BadnikScalarRecreateClassesImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S2_BADNIK_SCALAR_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S2 badnik scalar coverage");
-        }
-    }
-
-    @Test
     void s2BadnikScalarRecreateClassesRoundTripPassedWithoutCodec() {
         for (CodecDeletionCandidate candidate : S2_BADNIK_SCALAR_RECREATE_CLASSES) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
@@ -10045,15 +8757,6 @@ public class TestScalarOnlyCodecDeletion {
                     throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
                 }
             }
-        }
-    }
-
-    @Test
-    void s2MiscScalarRecreateClassesImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S2_MISC_SCALAR_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S2 misc scalar coverage");
         }
     }
 
@@ -10086,15 +8789,6 @@ public class TestScalarOnlyCodecDeletion {
     }
 
     @Test
-    void s2MechanismTailRecreateClassesImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S2_MECHANISM_TAIL_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S2 mechanism tail coverage");
-        }
-    }
-
-    @Test
     void s2MechanismTailRecreateClassesRoundTripPassedWithoutCodec() {
         for (CodecDeletionCandidate candidate : S2_MECHANISM_TAIL_RECREATE_CLASSES) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
@@ -10119,16 +8813,6 @@ public class TestScalarOnlyCodecDeletion {
                     throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
                 }
             }
-        }
-    }
-
-    @Test
-    void s2MechanismFragmentParentRecreateClassesImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S2_MECHANISM_FRAGMENT_PARENT_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn()
-                            + " must implement RewindRecreatable after S2 mechanism fragment-parent coverage");
         }
     }
 
@@ -10161,15 +8845,6 @@ public class TestScalarOnlyCodecDeletion {
     }
 
     @Test
-    void s2DebrisFragmentRecreateClassesImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S2_DEBRIS_FRAGMENT_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S2 debris fragment coverage");
-        }
-    }
-
-    @Test
     void s2DebrisFragmentRecreateClassesRoundTripPassedWithoutCodec() {
         for (CodecDeletionCandidate candidate : S2_DEBRIS_FRAGMENT_RECREATE_CLASSES) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
@@ -10194,15 +8869,6 @@ public class TestScalarOnlyCodecDeletion {
                     throw new AssertionError("Missing scalar field " + cls.getName() + "#" + fieldName, e);
                 }
             }
-        }
-    }
-
-    @Test
-    void s2InteractionScalarRecreateClassesImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S2_INTERACTION_SCALAR_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S2 interaction scalar coverage");
         }
     }
 
@@ -10235,15 +8901,6 @@ public class TestScalarOnlyCodecDeletion {
     }
 
     @Test
-    void s2MczRotPformsGraphRecreateClassesImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S2_MCZ_ROT_PFORMS_GRAPH_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S2 MCZ graph coverage");
-        }
-    }
-
-    @Test
     void s2MczRotPformsGraphRecreateClassesRoundTripPassedWithoutCodec() {
         for (CodecDeletionCandidate candidate : S2_MCZ_ROT_PFORMS_GRAPH_RECREATE_CLASSES) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
@@ -10272,15 +8929,6 @@ public class TestScalarOnlyCodecDeletion {
     }
 
     @Test
-    void s2SidewaysPformGraphRecreateClassesImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S2_SIDEWAYS_PFORM_GRAPH_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S2 Sideways graph coverage");
-        }
-    }
-
-    @Test
     void s2SidewaysPformGraphRecreateClassesRoundTripPassedWithoutCodec() {
         for (CodecDeletionCandidate candidate : S2_SIDEWAYS_PFORM_GRAPH_RECREATE_CLASSES) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
@@ -10288,15 +8936,6 @@ public class TestScalarOnlyCodecDeletion {
                     candidate.fqn()
                             + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
                             + result);
-        }
-    }
-
-    @Test
-    void s2FallingPillarGraphRecreateClassesImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S2_FALLING_PILLAR_GRAPH_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S2 Falling Pillar graph coverage");
         }
     }
 
@@ -10403,15 +9042,6 @@ public class TestScalarOnlyCodecDeletion {
     }
 
     @Test
-    void s2LauncherGraphRecreateClassesImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S2_LAUNCHER_GRAPH_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S2 launcher graph coverage");
-        }
-    }
-
-    @Test
     void s2LauncherGraphRecreateClassesRoundTripPassedWithoutCodec() {
         for (CodecDeletionCandidate candidate : S2_LAUNCHER_GRAPH_RECREATE_CLASSES) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
@@ -10423,15 +9053,6 @@ public class TestScalarOnlyCodecDeletion {
     }
 
     @Test
-    void s2FlipperGraphRecreateClassesImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S2_FLIPPER_GRAPH_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S2 flipper graph coverage");
-        }
-    }
-
-    @Test
     void s2FlipperGraphRecreateClassesRoundTripPassedWithoutCodec() {
         for (CodecDeletionCandidate candidate : S2_FLIPPER_GRAPH_RECREATE_CLASSES) {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
@@ -10439,15 +9060,6 @@ public class TestScalarOnlyCodecDeletion {
                     candidate.fqn()
                             + " must round-trip as Passed via RewindRecreatable path (no codec); got: "
                             + result);
-        }
-    }
-
-    @Test
-    void s2SpiralGraphRecreateClassesImplementRewindRecreatable() {
-        for (CodecDeletionCandidate candidate : S2_SPIRAL_GRAPH_RECREATE_CLASSES) {
-            Class<?> cls = loadClass(candidate.fqn());
-            assertTrue(RewindRecreatable.class.isAssignableFrom(cls),
-                    candidate.fqn() + " must implement RewindRecreatable after S2 spiral graph coverage");
         }
     }
 
