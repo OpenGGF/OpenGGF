@@ -155,8 +155,11 @@ its named S1/S2 source semantics even on a CD host. No disc bytes are bundled.
 Authored CD zones admit 16x16 blocks, one collision path, and owned object keys.
 Set `settings.waterHeight` to add still water at a fixed height. The host reads
 the underwater palette from Tidal Tempest act 1 Present on the supplied disc.
-Native CD objects and rings require a stage's program, PLC, and state. Use a
-native decoded-level patch for those. Authored stock deformation remains unavailable. CD hosts cartridge-donated S1 Sonic, S2 Sonic/Tails,
+Use `stockObjectId: 10` for a fixed vertical or horizontal spring. The spring
+uses the disc's common art and the authored level's palette. Keep subtype bit 3
+clear. Diagonal springs and other stock placements require a native decoded-level
+patch. Authored stock deformation remains unavailable. CD hosts cartridge-donated
+S1 Sonic, S2 Sonic/Tails,
 and S3K Sonic/Tails/Knuckles through the same donor provider as cartridge hosts.
 The host supplies stage-owned animation scripts; all donated drawings and name
 lettering come from the donor ROM. Unsupported donor characters fail explicitly.

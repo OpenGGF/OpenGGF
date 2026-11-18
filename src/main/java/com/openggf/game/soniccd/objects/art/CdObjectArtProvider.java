@@ -3,10 +3,13 @@ package com.openggf.game.soniccd.objects.art;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.ObjectArtProvider;
 import com.openggf.game.common.CommonSpriteDataLoader;
+import com.openggf.game.soniccd.CdDiscDataSource;
 import com.openggf.game.soniccd.CdStagePayload;
 import com.openggf.game.soniccd.level.CdLevel;
 import com.openggf.game.soniccd.level.CdStageCatalogue;
 import com.openggf.game.soniccd.level.CdStageImage;
+import com.openggf.game.soniccd.level.CdStageLoader;
+import com.openggf.game.soniccd.objects.common.CdAnimator;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Pattern;
 import com.openggf.level.objects.ObjectSpriteSheet;
@@ -75,6 +78,7 @@ public final class CdObjectArtProvider implements ObjectArtProvider, com.openggf
 
     private final Supplier<CdLevel> levels;
     private final Supplier<CdStageImage> images;
+    private final Supplier<CdDiscDataSource> discs;
     private final Map<String, ObjectSpriteSheet> sheets = new LinkedHashMap<>();
     private final Map<String, PatternSpriteRenderer> renderers = new HashMap<>();
     private final Map<String, SpriteAnimationSet> animations = new HashMap<>();
@@ -85,17 +89,23 @@ public final class CdObjectArtProvider implements ObjectArtProvider, com.openggf
     private CdStageImage image;
     private CdObjectCatalogue.Entry entry;
     private CdStageVram vram;
+    private Supplier<CdAnimator> springAnimation;
 
     public CdObjectArtProvider(Supplier<CdLevel> levels, Supplier<CdStageImage> images) {
+        this(levels, images, () -> null);
+    }
+
+    public CdObjectArtProvider(Supplier<CdLevel> levels, Supplier<CdStageImage> images, Supplier<CdDiscDataSource> discs) {
         this.levels = levels;
         this.images = images;
+        this.discs = discs;
     }
 
     @Override
     public void loadArtForZone(int zoneIndex) throws IOException {
         if (zoneIndex == -1) {
-            // Contributed acts publish their owned object sheets through the overlay provider.
             clearStageArt();
+            loadAuthoredSprings();
             return;
         }
         CdLevel level = levels.get();
@@ -125,9 +135,7 @@ public final class CdObjectArtProvider implements ObjectArtProvider, com.openggf
         register(MONITOR, sheet(reader, entry.monitorMappings(), MONITOR_TILE));
         animations.put(MONITOR, animationSet(reader, entry.monitorAnimations()));
         register(MONITOR_ITEM, monitorItemSheet(reader));
-        register(SPRING_UP, sheet(reader, entry.springMappings1(), SPRING_TILE));
-        register(SPRING_SIDE, sheet(reader, entry.springMappings2(), SPRING_TILE));
-        animations.put(SPRING_UP, animationSet(reader, entry.springAnimations()));
+        registerFixedSprings(stage, entry, vram);
         for (int tile : objectTileIds(TILE_ID_DIAGONAL_SPRING)) {
             register(SPRING_DIAGONAL + tile, sheet(reader, entry.springMappings3(), tile));
         }
@@ -153,6 +161,32 @@ public final class CdObjectArtProvider implements ObjectArtProvider, com.openggf
         }
     }
 
+    private void loadAuthoredSprings() throws IOException {
+        CdDiscDataSource disc = discs.get();
+        if (disc == null) return;
+        // PLC_Std contains Art_Springs at byte $A400 (Palmtree Panic/Data (Act 1 Present).asm:54-71).
+        // Read only the common cue into a temporary tile buffer. The act keeps its authored layout and palettes.
+        CdStagePayload source = CdStagePayload.R11A;
+        CdStageImage stage = new CdStageLoader(disc).readStage(source);
+        CdStageVram common = new CdStageVram();
+        common.loadPlc(stage, CdStageCatalogue.entry(source).plcLists(), STANDARD_PLC);
+        registerFixedSprings(stage, CdObjectCatalogue.entry(source), common);
+    }
+
+    private void registerFixedSprings(CdStageImage stage, CdObjectCatalogue.Entry tables, CdStageVram tiles) {
+        RomByteReader reader = stage.reader();
+        register(SPRING_UP, sheet(reader, tables.springMappings1(), SPRING_TILE, tiles));
+        register(SPRING_SIDE, sheet(reader, tables.springMappings2(), SPRING_TILE, tiles));
+        int script = tables.springAnimations();
+        animations.put(SPRING_UP, animationSet(reader, script));
+        springAnimation = () -> new CdAnimator(stage, script, 0);
+    }
+
+    /** A spring owns its script cursor and timer, including in an authored act. */
+    public CdAnimator newSpringAnimator() {
+        return springAnimation == null ? null : springAnimation.get();
+    }
+
     private void clearStageArt() {
         donorLife = null;
         donorLifeArt = null;
@@ -160,6 +194,7 @@ public final class CdObjectArtProvider implements ObjectArtProvider, com.openggf
         loaded = null;
         entry = null;
         vram = null;
+        springAnimation = null;
         sheets.clear();
         renderers.clear();
         animations.clear();
@@ -358,5 +393,5 @@ public final class CdObjectArtProvider implements ObjectArtProvider, com.openggf
         return next;
     }
 
-    @Override public boolean isReady() { return loaded != null; }
+    @Override public boolean isReady() { return loaded != null || springAnimation != null; }
 }

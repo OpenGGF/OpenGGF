@@ -108,7 +108,10 @@ public final class CdSpring extends CdObject implements ReevaluatingSolidObject,
         }
         if (animating) {
             // ObjSpring_Anim_*: AnimateObject; its $FC advances to the reset routine (Spring/Main.asm:281-285).
-            if (animator == null) animator = animator(e -> e.springAnimations(), 0);
+            if (animator == null) {
+                var provider = services().gameModule().getGameService(CdObjectArtProvider.class);
+                if (provider != null) animator = provider.newSpringAnimator();
+            }
             if (animator == null) return;
             if (animator.step() == 2) resetPending = true;
             else mapFrame = animator.mapFrame();
