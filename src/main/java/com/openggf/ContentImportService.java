@@ -85,7 +85,7 @@ public final class ContentImportService {
                 if (Files.exists(source.resolve(NativeEditorProjectPackage.ENTRY), LinkOption.NOFOLLOW_LINKS)) {
                     if (Files.exists(source.resolve("level.json"), LinkOption.NOFOLLOW_LINKS))
                         throw new IOException("Folder contains both a native project and an exported level");
-                    return PreparedImport.nativeProject(source, NativeEditorProjectPackage.read(assets));
+                    return prepareNativeProject(source, assets);
                 }
                 return PreparedImport.level(source, ModLevelDefinitionParser.read(assets, new BakedLevelRef("level.json")));
             }
@@ -113,8 +113,13 @@ public final class ContentImportService {
                 retained = true;
                 return result;
             }
-            if (names.contains(NativeEditorProjectPackage.ENTRY))
-                return PreparedImport.nativeProject(source, NativeEditorProjectPackage.read(assets));
+            if (names.contains(NativeEditorProjectPackage.ENTRY)) {
+                if (!names.equals(List.of(NativeEditorProjectPackage.ENTRY))) {
+                    throw new IOException("Native project ZIP must contain only " + NativeEditorProjectPackage.ENTRY
+                            + " at its root");
+                }
+                return prepareNativeProject(source, assets);
+            }
             List<String> levels = names.stream().filter(ContentImportService::isLevelEntry).toList();
             List<String> jars = names.stream().filter(ContentImportService::isWrappedJarEntry).toList();
             int choices = levels.size() + jars.size();
@@ -296,6 +301,11 @@ public final class ContentImportService {
     }
 
     /** Validated payload and owned archive lease, kept alive until the user chooses an action. */
+    private static PreparedImport prepareNativeProject(Path source, ModAssetRoot assets) throws IOException {
+        var data = assets.readBounded(NativeEditorProjectPackage.ENTRY, NativeEditorProjectPackage.MAX_BYTES);
+        return PreparedImport.nativeProject(source, NativeEditorProjectPackage.decode(data));
+    }
+
     public static final class PreparedImport implements AutoCloseable {
         private final Kind kind;
         private final Path source;

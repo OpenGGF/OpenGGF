@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.BinaryNode;
 import com.fasterxml.jackson.databind.node.IntNode;
-import com.fasterxml.jackson.databind.node.NullNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import java.io.IOException;
@@ -69,7 +69,7 @@ record EditorProjectEdits(JsonNode value, Map<String, EditorProjectEdits> change
             byte[] result = Arrays.copyOf(original, editedLength(original.length));
             for (var entry : changes.entrySet()) {
                 int position = position(entry.getKey(), result.length);
-                var replacement = edit(entry).apply(NullNode.getInstance());
+                var replacement = edit(entry).apply(JsonNodeFactory.instance.nullNode());
                 if (!replacement.isIntegralNumber() || !replacement.canConvertToInt()
                         || replacement.intValue() < 0 || replacement.intValue() > 255) throw invalid();
                 result[position] = (byte) replacement.intValue();
@@ -79,7 +79,7 @@ record EditorProjectEdits(JsonNode value, Map<String, EditorProjectEdits> change
         if (source instanceof ArrayNode before) {
             int size = editedLength(before.size());
             ArrayNode result = before.arrayNode();
-            for (int i = 0; i < size; i++) result.add(i < before.size() ? before.get(i) : NullNode.getInstance());
+            for (int i = 0; i < size; i++) result.add(i < before.size() ? before.get(i) : JsonNodeFactory.instance.nullNode());
             for (var entry : changes.entrySet()) {
                 int position = position(entry.getKey(), size);
                 result.set(position, edit(entry).apply(result.get(position)));

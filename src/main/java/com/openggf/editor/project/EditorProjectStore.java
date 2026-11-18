@@ -133,10 +133,14 @@ public final class EditorProjectStore {
     static byte[] readBounded(Path file) throws IOException {
         if (Files.size(file) > MAX_BYTES) throw new IOException("Project exceeds the 64 MiB storage limit");
         try (var input = Files.newInputStream(file)) {
-            byte[] bytes = input.readNBytes(MAX_BYTES + 1);
-            if (bytes.length > MAX_BYTES) throw new IOException("Project exceeds the 64 MiB storage limit");
-            return bytes;
+            return readBounded(input);
         }
+    }
+
+    static byte[] readBounded(java.io.InputStream input) throws IOException {
+        byte[] bytes = input.readNBytes(MAX_BYTES + 1);
+        if (bytes.length > MAX_BYTES) throw new IOException("Project exceeds the 64 MiB storage limit");
+        return bytes;
     }
 
     static String checksum(byte[] bytes) {
