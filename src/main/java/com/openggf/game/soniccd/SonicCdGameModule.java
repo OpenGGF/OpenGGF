@@ -149,7 +149,7 @@ public final class SonicCdGameModule implements GameModule {
         return world != null && world.getDataSource() instanceof CdDiscDataSource source ? source : null;
     }
 
-    @Override public com.openggf.game.modzone.ModZoneAdapter getModZoneAdapter() { return new CdModZoneAdapter(); }
+    @Override public com.openggf.game.modzone.ModZoneAdapter getModZoneAdapter() { return new CdModZoneAdapter(this::disc); }
 
     @Override public com.openggf.game.modzone.ModLevelSettingsProvider getModLevelSettingsProvider() {
         return new CdModLevelSettingsProvider(this::disc);

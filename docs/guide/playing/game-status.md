@@ -263,9 +263,10 @@ Future). `SonicCdEndingCaptureTool --ending good|bad` films an ending.
   menu (the last two appear once unlocked) fades out and returns to the
   title, and an attract demo is skipped.
 - CD patch mods, `any` registrations, scenes and Sonic gameplay runs use the disc
-  pipeline. Authored zones support one collision path, fixed-height water, owned
-  objects, and fixed vertical and horizontal springs. Other stock placements
-  need their disc stage. Cartridge donation supports
+  pipeline. Authored zones support one collision path, fixed-height water,
+  owned objects, collectible rings, and fixed vertical and horizontal springs.
+  Other stock placements and native ring group edits need their stage context.
+  Cartridge donation supports
   S1 Sonic, S2 Sonic/Tails and S3K Sonic/Tails/Knuckles; route coverage remains
   bounded to the donor-host validation record. Editor projects keep a bounded
   disc/stage source reference: native edit replay retains the loaded game owners,

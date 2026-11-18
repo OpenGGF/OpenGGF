@@ -152,14 +152,17 @@ request)` stages owned object sheets from named disc files with direct byte-coun
 mappings; DPLC requests are rejected. Cartridge `registerRomObjectArt` retains
 its named S1/S2 source semantics even on a CD host. No disc bytes are bundled.
 
-Authored CD zones admit 16x16 blocks, one collision path, and owned object keys.
+Authored CD zones admit 16x16 blocks, one collision path, owned object keys,
+and collectible `rings` entries. Ring graphics come from the supplied disc
+and use the authored palette's line 1. Coordinates use the CD placement range
+(X 0–65534, Y 0–4095).
 Set `settings.waterHeight` to add still water at a fixed height. The host reads
 the underwater palette from Tidal Tempest act 1 Present on the supplied disc.
 Use `stockObjectId: 10` for a fixed vertical or horizontal spring. The spring
 uses the disc's common art and the authored level's palette. Keep subtype bit 3
-clear. Diagonal springs and other stock placements require a native decoded-level
-patch. Authored stock deformation remains unavailable. CD hosts cartridge-donated
-S1 Sonic, S2 Sonic/Tails,
+clear. Use a native decoded-level patch for diagonal springs, other stock
+placements, and native ring group edits. Authored stock deformation remains
+unavailable. CD hosts cartridge-donated S1 Sonic, S2 Sonic/Tails,
 and S3K Sonic/Tails/Knuckles through the same donor provider as cartridge hosts.
 The host supplies stage-owned animation scripts; all donated drawings and name
 lettering come from the donor ROM. Unsupported donor characters fail explicitly.

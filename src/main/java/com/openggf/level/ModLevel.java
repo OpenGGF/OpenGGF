@@ -17,7 +17,7 @@ import java.util.List;
 import java.util.Objects;
 
 /** A ROM-free level decoded entirely from bounded mod-owned resources. */
-public final class ModLevel extends AbstractLevel {
+public sealed class ModLevel extends AbstractLevel permits ModLevel.RingBacked {
     private static final int MAP_LAYERS = 2;
 
     private final int blockGridSide;
@@ -52,6 +52,20 @@ public final class ModLevel extends AbstractLevel {
         minY = source.minY;
         maxY = source.maxY;
         publishGraphicsCaches();
+    }
+
+    static final class RingBacked extends ModLevel implements com.openggf.level.objects.RingObjectPlacementMapping {
+        private final java.util.Map<ObjectSpawn, List<RingSpawn>> backings;
+
+        private RingBacked(Builder source, java.util.Map<ObjectSpawn, List<RingSpawn>> backings) throws IOException {
+            super(source);
+            this.backings = java.util.Map.copyOf(backings);
+        }
+
+        @Override
+        public java.util.Map<ObjectSpawn, List<RingSpawn>> ringObjectPlacementMapping() {
+            return backings;
+        }
     }
 
     @Override
@@ -362,6 +376,11 @@ public final class ModLevel extends AbstractLevel {
 
         public ModLevel build() throws IOException {
             return new ModLevel(this);
+        }
+
+        /** Used by hosts whose placed rings run as touch-response objects. */
+        public ModLevel buildWithRingBackings(java.util.Map<ObjectSpawn, List<RingSpawn>> backings) throws IOException {
+            return backings.isEmpty() ? build() : new RingBacked(this, backings);
         }
 
         private int blockRecordSize() {
