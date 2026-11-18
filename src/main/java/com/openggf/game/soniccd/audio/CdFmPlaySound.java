@@ -147,7 +147,7 @@ public final class CdFmPlaySound {
             // Other pre-06D7 bytes contain interspersed tables and unreviewed code.
             // They remain readable when defined, but writes are UNOWNED_WRITE, not guessed self-modification.
             return new NativeView(image,defined,writable,code,new Layout(8,0x322,0x3BB),true,
-                    Objects.requireNonNull(assets.source()),"retained-USA-asset");
+                    Objects.requireNonNull(assets.source()),"retained-MDINIT-bank");
         }
 
         /**
@@ -442,12 +442,12 @@ public final class CdFmPlaySound {
             }
         }
 
-        /** Only the existing actual retained-USA capability can reach this constructor. */
+        /** This view requires the authenticated MDINIT bank. */
         public static TrackView fromNative(NativeView source) {
             Objects.requireNonNull(source);
             if (!source.authenticated || source.actualSource==null || source.driverInfo!=0x6D7
                     || !source.layout.equals(new Layout(8,0x322,0x3BB))) {
-                throw new IllegalArgumentException("Track view requires the authenticated retained USA format");
+                throw new IllegalArgumentException("Track view requires the authenticated retained MDINIT format");
             }
             for (int a=0;a<INSTALLED_BYTES;a++) if (!source.defined.get(a)) {
                 throw new IllegalArgumentException("Incomplete retained bank source");

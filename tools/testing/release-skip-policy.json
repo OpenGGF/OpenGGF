@@ -3304,44 +3304,44 @@
       "note": "user's Sonic CD disc"
     },
     {
-      "match": "com.openggf.game.soniccd.audio.TestCdFmSoundAssets#actualMediaAdmitsOnlyTheMeasuredUsaMdinitAndDetachesItsEntireBank(CdReleaseVariant)[1]",
+      "match": "com.openggf.game.soniccd.audio.TestCdFmSoundAssets#authenticatedRegionalDiscLoadsAndPlaysItsOwnFmBank(CdReleaseVariant)[1]",
       "category": "optional-fixture",
-      "evidence": "src/test/java/com/openggf/game/soniccd/audio/TestCdFmSoundAssets.java:125",
+      "evidence": "src/test/java/com/openggf/game/soniccd/audio/TestCdFmSoundAssets.java:40",
       "allowed_when_absent": "soniccd_media",
-      "note": "user's Sonic CD disc"
+      "note": "user's regional Sonic CD disc"
     },
     {
-      "match": "com.openggf.game.soniccd.audio.TestCdFmSoundAssets#actualMediaAdmitsOnlyTheMeasuredUsaMdinitAndDetachesItsEntireBank(CdReleaseVariant)[2]",
+      "match": "com.openggf.game.soniccd.audio.TestCdFmSoundAssets#authenticatedRegionalDiscLoadsAndPlaysItsOwnFmBank(CdReleaseVariant)[2]",
       "category": "optional-fixture",
-      "evidence": "src/test/java/com/openggf/game/soniccd/audio/TestCdFmSoundAssets.java:125",
+      "evidence": "src/test/java/com/openggf/game/soniccd/audio/TestCdFmSoundAssets.java:40",
       "allowed_when_absent": "soniccd_disc",
       "note": "user's Sonic CD disc"
     },
     {
-      "match": "com.openggf.game.soniccd.audio.TestCdFmSoundAssets#actualMediaAdmitsOnlyTheMeasuredUsaMdinitAndDetachesItsEntireBank(CdReleaseVariant)[3]",
+      "match": "com.openggf.game.soniccd.audio.TestCdFmSoundAssets#authenticatedRegionalDiscLoadsAndPlaysItsOwnFmBank(CdReleaseVariant)[3]",
       "category": "optional-fixture",
-      "evidence": "src/test/java/com/openggf/game/soniccd/audio/TestCdFmSoundAssets.java:125",
+      "evidence": "src/test/java/com/openggf/game/soniccd/audio/TestCdFmSoundAssets.java:40",
       "allowed_when_absent": "soniccd_media",
-      "note": "user's Sonic CD disc"
+      "note": "user's regional Sonic CD disc"
     },
     {
       "match": "com.openggf.game.soniccd.audio.TestCdFmSoundAssets#commonHeadersAndBackwardChargeStopVoiceUseTheCompleteBank",
       "category": "optional-fixture",
-      "evidence": "src/test/java/com/openggf/game/soniccd/audio/TestCdFmSoundAssets.java:125",
+      "evidence": "src/test/java/com/openggf/game/soniccd/audio/TestCdFmSoundAssets.java:154",
       "allowed_when_absent": "soniccd_disc",
       "note": "user's Sonic CD disc"
     },
     {
       "match": "com.openggf.game.soniccd.audio.TestCdFmSoundAssets#indexAndPriorityViewsKeepLittleEndianOriginZeroAndTheReal79Of80Boundary",
       "category": "optional-fixture",
-      "evidence": "src/test/java/com/openggf/game/soniccd/audio/TestCdFmSoundAssets.java:125",
+      "evidence": "src/test/java/com/openggf/game/soniccd/audio/TestCdFmSoundAssets.java:154",
       "allowed_when_absent": "soniccd_disc",
       "note": "user's Sonic CD disc"
     },
     {
       "match": "com.openggf.game.soniccd.audio.TestCdFmSoundAssets#sourceAndRamCoordinatesNeverAliasTheBoundedInstalledZ80Image",
       "category": "optional-fixture",
-      "evidence": "src/test/java/com/openggf/game/soniccd/audio/TestCdFmSoundAssets.java:125",
+      "evidence": "src/test/java/com/openggf/game/soniccd/audio/TestCdFmSoundAssets.java:154",
       "allowed_when_absent": "soniccd_disc",
       "note": "user's Sonic CD disc"
     },

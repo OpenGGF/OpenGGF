@@ -176,11 +176,11 @@ and the capture tools.**
 
 Sonic CD runs from your own copy of the **USA** Mega-CD release. Nothing from
 the disc is in the repository. The engine reads the disc image directly: the
-data track's program files and the CD audio tracks. No BIOS image is needed;
-the backup RAM format the BIOS writes is reimplemented. The Japanese and
-European releases are not supported: the sound and backup RAM loaders refuse
-a disc whose header is not the USA release. A header check does not certify a
-dump.
+data track's program files and the CD audio tracks. The engine implements the
+backup RAM format the BIOS writes, so it needs no BIOS image. Tests can also
+verify and play FM effects from the Japanese and European discs. See the
+[regional media validation](../../architecture/validation/2026-11-18-sonic-cd-regional-media.md)
+for the remaining startup and gameplay dependencies.
 
 ### Disc setup
 

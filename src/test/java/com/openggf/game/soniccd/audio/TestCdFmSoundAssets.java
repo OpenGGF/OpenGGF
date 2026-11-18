@@ -1,8 +1,16 @@
 package com.openggf.game.soniccd.audio;
 
+import com.openggf.audio.AudioManager;
+import com.openggf.audio.AudioManagerInternalAccess;
+import com.openggf.audio.NullAudioBackend;
+import com.openggf.audio.presentation.PresentationMode;
+import com.openggf.game.soniccd.CdDiscDataSource;
 import com.openggf.game.soniccd.CdNativeFile;
 import com.openggf.game.soniccd.CdReleaseVariant;
+import com.openggf.game.soniccd.CdTestMedia;
 import com.openggf.game.soniccd.media.CdProgramAssets;
+import com.openggf.game.soniccd.release.CdRetailReleases;
+import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
@@ -11,37 +19,39 @@ import java.nio.ReadOnlyBufferException;
 import java.security.MessageDigest;
 import java.util.HexFormat;
 import java.util.Optional;
+import java.util.stream.IntStream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/** MDINIT byte ownership only: no driver, sound, default RAM or clock installation. */
+/** Authenticated MDINIT byte ownership and playback through the shared audio producer. */
 class TestCdFmSoundAssets {
     @Test void nullProgramOwnerDoesNotCreateAnAsset() {
         assertThrows(NullPointerException.class, () -> CdFmSoundAssets.fromPrograms(null));
     }
 
     @ParameterizedTest @EnumSource(CdReleaseVariant.class)
-    void actualMediaAdmitsOnlyTheMeasuredUsaMdinitAndDetachesItsEntireBank(CdReleaseVariant variant) throws Exception {
+    void authenticatedRegionalDiscLoadsAndPlaysItsOwnFmBank(CdReleaseVariant variant) throws Exception {
+        var release = switch (variant) {
+            case JAPAN -> CdRetailReleases.JAPAN;
+            case USA -> CdRetailReleases.USA;
+            case EUROPE -> CdRetailReleases.EUROPE;
+        };
         CdFmSoundAssets assets;
-        try (var programs = open(variant)) {
-            if (variant != CdReleaseVariant.USA) {
-                assertThrows(java.io.IOException.class, () -> CdFmSoundAssets.fromPrograms(programs));
-                // Regional source is still usable; this audio rejection did not close it or admit USA offsets.
-                assertTrue(programs.entry(CdNativeFile.MDINIT).size() > 0);
-                return;
-            }
+        try (var disc = CdDiscDataSource.open(CdTestMedia.disc(variant))) {
+            var programs = disc.assets();
             assets = CdFmSoundAssets.fromPrograms(programs);
             var image = programs.mmd(CdNativeFile.MDINIT);
             assertEquals(7514, image.fileBytes()); assertEquals(934, image.unresolvedCopyBytes());
             assertEquals("abd4735cb55aac797402d611b6d732276f02f1394ef39e7e1af6cd9dbd6fdf7e",
                     hash(image.readFile(0, image.fileBytes())));
             assertArrayEquals(image.readFile(0x1DA, 0x1AD6), assets.bank().copy());
+            assertAudibleJump(disc);
         }
         assertEquals(6870, assets.bank().length());
         assertEquals("23f3df846b228c8de5b55cb6503318f05df1a49c5bdfe282ceecf2502ce5bc99", hash(assets.bank().copy()));
-        assertEquals(CdReleaseVariant.USA, assets.source().variant());
+        assertEquals(variant, assets.source().variant());
         assertEquals(CdNativeFile.MDINIT, assets.source().file());
-        assertEquals("a6b026a2381f926485cebb2da0bded29319cfd515ef7956a3ca79b18645bdb2b", assets.source().wholeDiscSha256());
+        assertEquals(release.normalizedSha256(), assets.source().wholeDiscSha256());
         assertEquals(0xFF2000L, assets.source().header().origin());
         assertEquals(0xFF2000L, assets.source().header().entry());
         assertEquals(0x2000, assets.source().header().declaredCopyBytes());
@@ -110,6 +120,30 @@ class TestCdFmSoundAssets {
         for (int id : new int[] {-1, 0x8F, 0xE0, 0x100, Integer.MAX_VALUE}) {
             assertThrows(IllegalArgumentException.class, () -> a.sfxHeaderAddress(id));
             assertThrows(IllegalArgumentException.class, () -> a.nativePriorityByte(id));
+        }
+    }
+
+    private static void assertAudibleJump(CdDiscDataSource disc) {
+        TestEnvironment.resetAll();
+        var audio = AudioManager.getInstance();
+        audio.setBackend(new NullAudioBackend());
+        var profile = new SonicCdAudioProfile(() -> disc);
+        try {
+            AudioManagerInternalAccess.installMatchedSource(audio, null, profile);
+            assertNotNull(profile.createRomlessSmpsLoader().loadSfx(0x92));
+            try (var capture = audio.beginLiveCaptureAudio(60)) {
+                assertTrue(audio.playSfx(0x92));
+                var pcm = new short[capture.maxStereoFramesPerPacket() * 2];
+                boolean audible = false;
+                for (int i = 0; i < 30 && !audible; i++) {
+                    audio.presentFrame(PresentationMode.FORWARD);
+                    int samples = capture.drainPresentationFrame(pcm) * 2;
+                    audible = IntStream.range(0, samples).anyMatch(sample -> Math.abs(pcm[sample]) > 64);
+                }
+                assertTrue(audible, "FM_JUMP produces samples through the shared producer");
+            }
+        } finally {
+            audio.resetState();
         }
     }
 
