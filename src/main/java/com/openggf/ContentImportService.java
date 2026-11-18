@@ -3,7 +3,9 @@ package com.openggf;
 import com.openggf.StockMusicDomains;
 import com.openggf.editor.project.EditorProjectDocument;
 import com.openggf.editor.project.EditorProjectStore;
+import com.openggf.editor.project.NativeEditorProjectPackage;
 import com.openggf.game.GameId;
+import com.openggf.i18n.UiMessages;
 import com.openggf.io.DirectoryAccess;
 import com.openggf.io.ModAssetRoot;
 import com.openggf.io.ModInputLimits;
@@ -80,6 +82,11 @@ public final class ContentImportService {
         if (Files.isSymbolicLink(source)) throw new IOException("Drop a regular file or directory, not a symbolic link");
         if (Files.isDirectory(source, LinkOption.NOFOLLOW_LINKS)) {
             try (var assets = ModAssetRoot.directory(source.getParent(), source, limits, DirectoryAccess.DEVELOPMENT)) {
+                if (Files.exists(source.resolve(NativeEditorProjectPackage.ENTRY), LinkOption.NOFOLLOW_LINKS)) {
+                    if (Files.exists(source.resolve("level.json"), LinkOption.NOFOLLOW_LINKS))
+                        throw new IOException("Folder contains both a native project and an exported level");
+                    return PreparedImport.nativeProject(source, NativeEditorProjectPackage.read(assets));
+                }
                 return PreparedImport.level(source, ModLevelDefinitionParser.read(assets, new BakedLevelRef("level.json")));
             }
         }
@@ -106,6 +113,8 @@ public final class ContentImportService {
                 retained = true;
                 return result;
             }
+            if (names.contains(NativeEditorProjectPackage.ENTRY))
+                return PreparedImport.nativeProject(source, NativeEditorProjectPackage.read(assets));
             List<String> levels = names.stream().filter(ContentImportService::isLevelEntry).toList();
             List<String> jars = names.stream().filter(ContentImportService::isWrappedJarEntry).toList();
             int choices = levels.size() + jars.size();
@@ -295,6 +304,7 @@ public final class ContentImportService {
         private final String detail;
         private final GameId suggestedGame;
         private final EditorProjectDocument project;
+        private final NativeEditorProjectPackage nativeProject;
         private final ModLevelDefinition level;
         private final ModDescriptor descriptor;
         private final PackedModAssetRoot assets;
@@ -302,30 +312,38 @@ public final class ContentImportService {
         private boolean closed;
 
         private PreparedImport(Kind kind, Path source, String displayName, String facts, String detail, GameId game,
-                               EditorProjectDocument project, ModLevelDefinition level, ModDescriptor descriptor,
+                               EditorProjectDocument project, NativeEditorProjectPackage nativeProject,
+                               ModLevelDefinition level, ModDescriptor descriptor,
                                PackedModAssetRoot assets) {
             this.kind = kind; this.source = source; this.displayName = displayName; this.facts = facts; this.detail = detail;
-            this.suggestedGame = game; this.project = project; this.level = level; this.descriptor = descriptor; this.assets = assets;
+            this.suggestedGame = game; this.project = project; this.nativeProject = nativeProject;
+            this.level = level; this.descriptor = descriptor; this.assets = assets;
         }
 
         static PreparedImport project(Path source, EditorProjectDocument project) {
             return new PreparedImport(Kind.PROJECT, source, project.metadata().name(), "",
                     "A complete project, editable as saved",
-                    project.metadata().gameId(), project, null, null, null);
+                    project.metadata().gameId(), project, null, null, null, null);
+        }
+
+        static PreparedImport nativeProject(Path source, NativeEditorProjectPackage project) {
+            return new PreparedImport(Kind.PROJECT, source, project.metadata().name(), project.source().stage(),
+                    UiMessages.text("import.ui.native_project_disc_required"),
+                    project.metadata().gameId(), null, project, null, null, null);
         }
 
         static PreparedImport level(Path source, ModLevelDefinition level) {
             GameId game = level.formatVersion() == 2 ? GameId.S3K : level.blockGridSide() == 16 ? GameId.S1 : GameId.S2;
             return new PreparedImport(Kind.LEVEL, source, level.zoneName(),
                     level.width() + " x " + level.height() + " blocks", "Becomes a new editable project in the editor",
-                    game, null, level, null, null);
+                    game, null, null, level, null, null);
         }
 
         static PreparedImport mod(Path source, ModDescriptor descriptor, PackedModAssetRoot assets) {
             // The button already says it installs disabled; this line says what comes next.
             String detail = "Afterwards, turn it on" + (descriptor.containsCode() ? " and trust its code" : "") + " in Mods";
             return new PreparedImport(Kind.MOD, source, descriptor.manifest().name(),
-                    descriptor.manifest().id() + " " + descriptor.manifest().version(), detail, null, null, null, descriptor, assets);
+                    descriptor.manifest().id() + " " + descriptor.manifest().version(), detail, null, null, null, null, descriptor, assets);
         }
 
         public Kind kind() { return kind; }
@@ -336,7 +354,15 @@ public final class ContentImportService {
         /** What confirming does, in one sentence. */
         public String detail() { return detail; }
         public Optional<GameId> suggestedGame() { return Optional.ofNullable(suggestedGame); }
-        public EditorProjectDocument project() { requireKind(Kind.PROJECT); return project; }
+        public EditorProjectDocument project() {
+            requireKind(Kind.PROJECT);
+            if (project == null) throw new IllegalStateException("Native project requires its source stage");
+            return project;
+        }
+        public Optional<NativeEditorProjectPackage> nativeProject() {
+            requireKind(Kind.PROJECT);
+            return Optional.ofNullable(nativeProject);
+        }
         public ModLevelDefinition level() { requireKind(Kind.LEVEL); return level; }
         public ModDescriptor modDescriptor() { requireKind(Kind.MOD); return descriptor; }
         public List<ModFinding> findings() { return descriptor == null ? List.of() : descriptor.findings(); }

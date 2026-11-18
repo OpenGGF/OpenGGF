@@ -496,8 +496,9 @@ under the matching area heading; see the
   use fresh native stage owners and authored spawn coordinates. The creator menu
   offers CD zones with act/period labels and creates a source-backed stage copy.
   Native player starts retain terrain coordinates independently of camera limits.
-  Content-import/save round trips retain the reference; flat directory/ZIP export
-  is explicitly refused because it cannot retain native stage context.
+  Content-import and save round trips retain the reference. Native folder and ZIP
+  exports carry the stage reference and authored differences. The content importer
+  reconstructs the editor project using the matching verified disc.
 - **Sonic CD Stageplay preview:** open verified disc media for native scenes and
   cold-level route tapes; preserve zone/act/period program identity through
   detached art and worker transport. Finish native title-card preparation before

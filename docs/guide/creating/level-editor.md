@@ -76,13 +76,10 @@ Sonic 1 loop flags, fail with an explanation; use **New blank level** with that 
 library instead. An incompatible stock object can also prevent playtesting or
 export until it is removed or replaced.
 
-Sonic CD native-project persistence is under development. Its source-backed
-`.ogfproject` representation retains the disc identity and exact stage payload
-(zone, act, period and program). The CD loader checks this reference against the
-opened disc before materializing it. Native project selection, authored-edit
-replay and playtesting are not yet connected to this workflow. The stored editor
-view is not a flat playable level; flat playtest and directory-export paths reject
-source-backed documents.
+A source-backed Sonic CD `.ogfproject` retains the disc identity and exact stage
+payload (zone, act, period and program). Playtest reloads that stage before
+applying the edits. See [Sonic CD native projects](#sonic-cd-native-projects) for
+the disc and export requirements.
 
 ### Open and import
 
@@ -92,13 +89,14 @@ game so native geometry and object semantics can be checked. Import creates an
 editable project rather than overwriting the export.
 
 **Advanced → Import content** also accepts `.ogfproject` files, level folders,
-`level.json`, and level ZIPs. A level ZIP can hold the exported files at its root
+`level.json`, level ZIPs, and [native project folders and ZIPs](#sonic-cd-native-projects).
+A level ZIP can hold the exported files at its root
 or inside one enclosing folder. Drop one item onto the idle master title or
 editor window, or use **Browse files**, then review the detected name, game and
 action. **Import level into editor** creates a new editable project;
-**Open project in editor** reopens the project file. Both preserve the current document until any required
-save/discard/cancel choice is resolved. Invalid content reports an error without
-changing the source.
+**Open project in editor** opens a saved project or a native project export. Both
+preserve the current document until any required save/discard/cancel choice is
+resolved. Invalid content reports an error without changing the source.
 
 The shared screen also installs mod and mutator packages at the master title.
 They remain disabled, and **MODS** opens for enablement, code trust and Apply.
@@ -587,7 +585,15 @@ Existing placement IDs retain their second subtype and time mask after moves;
 new IDs default to second subtype zero and the selected period only.
 Resized native layouts are refused by replay. Importing a saved `.ogfproject`
 through the content importer and saving it again preserves its native reference.
-Reopening or playtesting requires the matching verified USA disc. Flat directory
-export and a ZIP made from that flat format are explicitly unsupported: they lack
-native program/PLC/placement context. Retain the source-backed `.ogfproject` rather
-than substituting a portable level.
+Reopening or playtesting requires the matching verified USA disc.
+
+To share a native project, choose **Export native project** in **Editor projects**
+or press `Ctrl+Shift+E`. Enter a new folder path, or end the path in `.zip` to
+write an archive. The package contains one `native-project.json` with the stage
+reference and edits. The source disc supplies the unchanged terrain, art and
+placements. Export keeps your current project and save point.
+
+To edit the export, drop its folder or ZIP onto the content importer. Open the
+project with the matching verified disc and save it as a new `.ogfproject`.
+The exported package depends on the same decoded stage revision and native layout
+dimensions. It is an editable project format.

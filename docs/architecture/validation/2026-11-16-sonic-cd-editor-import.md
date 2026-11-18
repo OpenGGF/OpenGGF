@@ -425,3 +425,33 @@ visually inspected again; their existing 8,226-pixel terrain difference remains.
 unavailable references; this change adds no disassembly citation or pin change.
 No category job was started and no runtime or shared renderer was edited.
 The branch/worktree and requested scratch evidence remain for PR review.
+
+## Portable native project export
+
+A folder and a ZIP both contain one `native-project.json`. It records a verified
+stage reference, a hash of the decoded editor baseline, and authored changes.
+Stable placement IDs retain unchanged objects and rings by reference when a
+placement moves or is deleted. The importer confirms the stage before applying
+the edits, then opens the result as an unsaved editor project. The exporter
+reads back each staged package and compares the reconstructed project with
+the open document before publishing it.
+
+The format preserves the original native layout dimensions. It depends on the
+matching decoded stage revision. The older complete `.ogfproject` save format
+and its flat-level export guard still have the same behavior.
+
+Verification on `e8c9ce60b6` with the export changes:
+
+```sh
+python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestCdEditorProjectSource,TestContentImportService,TestContentImportScreen,TestEditorProjectWorkspace,TestEditorProjects,TestEditorHostExports' test -B
+python3 tools/i18n/catalogs.py check
+```
+
+All 81 selected tests passed with zero skips. The verified USA CHD supplied
+the Past stage in both package round trips. The tests restore a map cell, art
+pixel, moved and removed objects, and an added ring. The native replay checks
+the existing object's second subtype after the move. The workspace test checks
+that export leaves the current stage and document active and prompts before
+replacing unsaved work. The run waited 407 seconds for the queue and Maven
+reported 1 minute 45 seconds of execution. User wait was zero. Other elapsed
+time was unmeasured. English catalog checks passed.

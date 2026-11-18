@@ -7189,5 +7189,17 @@
   },
   "@editor.project.native_dimensions": {
     "description": "Editor native project creation"
+  },
+  "editor.project.export_native": "Export native project",
+  "@editor.project.export_native": {
+    "description": "Editor native project export command and form title"
+  },
+  "editor.project.export_native_destination": "New folder or .zip file",
+  "@editor.project.export_native_destination": {
+    "description": "Destination for editor native project export"
+  },
+  "editor.project.export_native_description": "Share your edits with someone using the same disc",
+  "@editor.project.export_native_description": {
+    "description": "Editor native project export description"
   }
 }

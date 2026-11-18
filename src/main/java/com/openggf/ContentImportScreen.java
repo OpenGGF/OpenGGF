@@ -40,6 +40,9 @@ public final class ContentImportScreen implements AutoCloseable {
     /** The host retains its normal unsaved-project and mod activation boundaries. */
     public interface Host {
         void openProject(EditorProjectDocument candidate);
+        default void openNativeProject(com.openggf.editor.project.NativeEditorProjectPackage candidate) {
+            throw new UnsupportedOperationException("This editor cannot open native projects");
+        }
         void importLevel(ModLevelDefinition level, GameId game);
         void modInstalled(Path installedPath);
         default boolean allowedToInstallMods() { return true; }
@@ -235,7 +238,8 @@ public final class ContentImportScreen implements AutoCloseable {
         open = false;
         try {
             switch (accepted.kind()) {
-                case PROJECT -> host.openProject(accepted.project());
+                case PROJECT -> accepted.nativeProject().ifPresentOrElse(host::openNativeProject,
+                        () -> host.openProject(accepted.project()));
                 case LEVEL -> host.importLevel(accepted.level(), selectedGame);
                 case MOD -> throw new IllegalStateException(UiMessages.text("menu.contentimportscreen.mod_installation_was_not_scheduled"));
             }
