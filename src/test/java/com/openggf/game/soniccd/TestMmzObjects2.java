@@ -171,6 +171,37 @@ class TestMmzObjects2 {
     }
 
     @Test
+    void twinWalkerUsesTopSolidOnEachPlatformDuringTheControllerTurn() throws Exception {
+        boot(CdStagePayload.R82A);
+        var manager = GameServices.level().getObjectManager();
+        var camera = GameServices.camera();
+        int x = camera.getX() + 0x90;
+        int y = camera.getY() + 0x50;
+        var walker = add(new MmzTwinWalker(new ObjectSpawn(x, y, 0x26, 0, 0, false, 0)));
+        runner.stepIdleFrames(2);
+
+        // One pixel of side overlap on the left must pass through TopSolidObject (common/solid_object.asm:240-244).
+        int edgeX = walker.getX() - 0x21;
+        sonic.setCentreX((short) edgeX);
+        sonic.setCentreY((short) (walker.getY() - 0x35));
+        sonic.setAir(true);
+        sonic.setXSpeed((short) 0x600);
+        sonic.setYSpeed((short) 0x5B0);
+        manager.update(camera.getX(), sonic, List.of(), 0, false, true, true);
+        assertEquals(edgeX, sonic.getCentreX());
+        assertEquals(0x600, sonic.getXSpeed());
+        assertTrue(sonic.getAir());
+
+        // The right pivot is a separate solid even though its own slot only tests the controller's lifetime.
+        var right = walker.rightPlatform();
+        sonic.setCentreX((short) right.getX());
+        sonic.setCentreY((short) (right.getY() - 0x29 - sonic.getYRadius() + 1));
+        manager.update(camera.getX(), sonic, List.of(), 0, false, true, true);
+        assertTrue(manager.isRidingObject(sonic, right));
+        assertFalse(manager.isRidingObject(sonic, walker));
+    }
+
+    @Test
     void bigbomBodyFallsThenPatrolsAndLightsItsFuseNearAPlayer() throws Exception {
         boot(CdStagePayload.R82A);
         sonic.setInvincibleFrames(4000);                 // loc_20696C: the hurt types skip an invincible player

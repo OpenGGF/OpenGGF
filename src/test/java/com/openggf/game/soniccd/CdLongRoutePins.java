@@ -27,7 +27,7 @@ final class CdLongRoutePins {
         FIRST_DIVERGENCE.put(CdStagePayload.R81A, 4736);
         FIRST_DIVERGENCE.put(CdStagePayload.R81B, 3991);
         FIRST_DIVERGENCE.put(CdStagePayload.R81C, 4524);
-        FIRST_DIVERGENCE.put(CdStagePayload.R82A, 4577);
+        FIRST_DIVERGENCE.put(CdStagePayload.R82A, 5697);
     }
 
     private CdLongRoutePins() { }

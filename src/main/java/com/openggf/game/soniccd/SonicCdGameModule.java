@@ -272,6 +272,12 @@ public final class SonicCdGameModule implements GameModule {
                         var payload = new com.openggf.game.soniccd.level.CdStageLoader(game.disc()).validate(source);
                         return new Target(SonicCdZoneRegistry.zoneIndex(payload), SonicCdZoneRegistry.actIndex(payload), payload.ordinal());
                     }
+                    @Override public com.openggf.game.internal.NativeProjectLevel preview(com.openggf.game.internal.NativeProjectSource source)
+                            throws java.io.IOException {
+                        var target = target(source);
+                        var stage = CdStagePayload.values()[target.levelIndex()];
+                        return new com.openggf.game.soniccd.level.CdStageLoader(game.disc()).load(stage, target.zone(), false);
+                    }
                     @Override public com.openggf.level.Level load(com.openggf.game.internal.NativeProjectSource source,
                             com.openggf.level.Level authored, int x, int y) throws java.io.IOException {
                         target(source);

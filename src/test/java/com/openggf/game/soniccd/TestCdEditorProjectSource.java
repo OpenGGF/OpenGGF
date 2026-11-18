@@ -6,6 +6,7 @@ import com.openggf.game.GameId;
 import com.openggf.game.soniccd.level.CdStageLoader;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -39,6 +40,65 @@ class TestCdEditorProjectSource {
                 assertTrue(failure.getMessage().contains(".ogfproject"));
                 assertFalse(java.nio.file.Files.exists(directory.resolve("flat")));
             }
+        }
+    }
+
+    @Test void portableNativeFolderAndZipRestoreEditsThroughContentImport() throws Exception {
+        try (var disc = CdDiscDataSource.open(CdTestMedia.usaCue())) {
+            var loader = new CdStageLoader(disc);
+            var source = loader.load(CdStagePayload.R11B, 0, false);
+            var start = source.nativeProjectStart();
+            var metadata = new EditorProjectMetadata(GameId.SCD, "Portable edits", 0, 1, disc.identity(),
+                    start[0], start[1], source.getMinX(), source.getMaxX(), source.getMinY(), source.getMaxY(),
+                    new FullLevelExporter.ExportMusic.Stock(1), null);
+            var document = EditorProjectDocument.create(metadata, source);
+            var edited = document.level();
+            int mapValue = Byte.toUnsignedInt(source.getMap().getValue(0, 0, 0));
+            int newCell = (mapValue + 1) % source.getBlockCount();
+            edited.getMap().setValue(0, 0, 0, (byte) newCell);
+            int newPixel = (source.getPattern(1).getPixel(0, 0) + 1) & 15;
+            edited.getPattern(1).setPixel(0, 0, (byte) newPixel);
+            var unchanged = edited.getObjects().stream().filter(o -> o.objectId() != 0x10).findFirst().orElseThrow();
+            var moved = edited.getObjects().stream().filter(o -> o.objectId() != 0x10 && !o.equals(unchanged)).findFirst().orElseThrow();
+            var replacement = moved.withPosition(moved.x() + 8, moved.y());
+            edited.removeObjectSpawn(unchanged);
+            edited.moveObjectSpawn(moved, replacement);
+            var ring = new com.openggf.level.rings.RingSpawn(1024, 128, 10000);
+            edited.addRingSpawn(ring);
+
+            var importer = new com.openggf.ContentImportService(directory.resolve("mods"));
+            Path folder = directory.resolve("portable");
+            Path zip = directory.resolve("portable.zip");
+            for (Path destination : java.util.List.of(folder, zip)) {
+                assertEquals(destination, NativeEditorProjectPackage.export(destination, document, source));
+                assertThrows(java.io.IOException.class, () -> NativeEditorProjectPackage.export(destination, document, source));
+                try (var prepared = importer.inspect(destination)) {
+                    assertEquals(com.openggf.ContentImportService.Kind.PROJECT, prepared.kind());
+                    var portable = prepared.nativeProject().orElseThrow();
+                    assertEquals(source.nativeProjectSource(), portable.source());
+                    var wrong = loader.load(CdStagePayload.R11A, 0, false);
+                    assertThrows(java.io.IOException.class, () -> portable.materialize(wrong));
+                    var project = portable.materialize(loader.load(CdStagePayload.R11B, 0, false));
+                    assertEquals(metadata, project.metadata());
+                    assertNull(project.path(), "import creates a new editable project");
+                    assertEquals(newCell, Byte.toUnsignedInt(project.level().getMap().getValue(0, 0, 0)));
+                    assertEquals(newPixel, project.level().getPattern(1).getPixel(0, 0));
+                    assertEquals(edited.getObjects(), project.level().getObjects());
+                    assertEquals(edited.getRings(), project.level().getRings());
+                    assertNotNull(project.level().getRingSpriteSheet());
+                    var replay = new SonicCdGame(disc).loadProject(project.nativeSource(), project.level());
+                    assertEquals(source.subtype2(moved), replay.subtype2(replacement));
+                    assertTrue(replay.getRings().contains(ring));
+                }
+            }
+            try (var entries = Files.list(folder)) {
+                assertEquals(java.util.List.of(NativeEditorProjectPackage.ENTRY),
+                        entries.map(p -> p.getFileName().toString()).toList());
+            }
+            assertTrue(Files.size(folder.resolve(NativeEditorProjectPackage.ENTRY)) < 16_384,
+                    "small edits carry no unchanged terrain or art banks");
+            assertNull(document.path());
+            assertTrue(document.isModified());
         }
     }
 
@@ -80,6 +140,93 @@ class TestCdEditorProjectSource {
             assertEquals(1, document.metadata().sourceAct());
             assertEquals(game.currentLevel().startX(), document.metadata().startX());
             assertEquals(game.currentLevel().startY(), document.metadata().startY());
+
+            var activeLevel = game.currentLevel();
+            Path archive = directory.resolve("workspace.zip");
+            workspace.export();
+            workspace.menu().setValue("path", archive.toString()); workspace.menu().submit();
+            assertNull(workspace.menu().error());
+            assertSame(activeLevel, game.currentLevel(), "export does not load into gameplay");
+            assertSame(document, workspace.document());
+            assertTrue(document.isModified());
+            var importer = new com.openggf.ContentImportService(directory.resolve("mods"));
+            try (var prepared = importer.inspect(archive)) {
+                workspace.openNativeProject(prepared.nativeProject().orElseThrow());
+                assertSame(document, workspace.document(), "opening asks before replacing dirty work");
+                workspace.menu().runAction(2);
+                assertNull(workspace.menu().error());
+                assertNotSame(document, workspace.document());
+                assertEquals(document.metadata(), workspace.document().metadata());
+                assertEquals(document.nativeSource(), workspace.document().nativeSource());
+                assertNull(workspace.document().path());
+            }
+            var imported = workspace.document();
+            int width = imported.level().getMap().getWidth();
+            workspace.resize();
+            workspace.menu().setValue("width", "65");
+            workspace.menu().submit();
+            assertNotNull(workspace.menu().error());
+            assertSame(imported, workspace.document(), "an invalid resize leaves the current project open");
+
+            workspace.resize();
+            workspace.menu().setValue("width", Integer.toString(width - 1));
+            workspace.menu().setValue("crop", "yes");
+            workspace.menu().submit();
+            assertNull(workspace.menu().error());
+            assertEquals(width - 1, workspace.document().level().getMap().getWidth());
+            assertEquals(imported.nativeSource(), workspace.document().nativeSource());
+        }
+    }
+
+    @Test void cropKeepsSurvivingNativeRemapsAndRejectsOutOfWindowReplay() throws Exception {
+        try (var disc = CdDiscDataSource.open(CdTestMedia.usaCue())) {
+            var loader = new CdStageLoader(disc);
+            var source = loader.load(CdStagePayload.R11B, 0, false);
+            int width = source.getMap().getWidth();
+            int height = source.getMap().getHeight();
+            int croppedWidth = width - 1;
+            var metadata = new EditorProjectMetadata(GameId.SCD, "Cropped stage", 0, 1, disc.identity(),
+                    source.startX(), source.startY(), source.getMinX(), source.getMaxX(), source.getMinY(),
+                    source.getMaxY(), new FullLevelExporter.ExportMusic.Stock(1), null);
+            var project = EditorProjectDocument.create(metadata, source);
+            int croppedX = croppedWidth * source.getBlockPixelSize() + 32;
+            var croppedObject = new com.openggf.level.objects.ObjectSpawn(croppedX, 128, 3, 0, 0, true, 128, 10_000);
+            var croppedRing = new com.openggf.level.rings.RingSpawn(croppedX, 128, 10_000);
+            project.level().addObjectSpawn(croppedObject);
+            project.level().addRingSpawn(croppedRing);
+            assertThrows(IllegalArgumentException.class, () -> project.resize(croppedWidth, height, false));
+            assertEquals(width, project.level().getMap().getWidth());
+            project.resize(croppedWidth, height, true);
+            var replay = new SonicCdGame(disc).loadProject(project.nativeSource(), project.level());
+            assertEquals(croppedWidth, replay.getMap().getWidth());
+            assertEquals(-1, replay.collisionLayoutColumn(croppedWidth * 256), "collision never reads a cropped column");
+            assertEquals(source.verticalScrollWrapRange(), replay.verticalScrollWrapRange());
+            assertEquals(source.collisionLayoutYMask(), replay.collisionLayoutYMask());
+            assertTrue(replay.getObjects().stream().allMatch(o -> o.x() < croppedWidth * 256));
+            assertTrue(replay.getRings().stream().allMatch(r -> r.x() < croppedWidth * 256));
+            boolean comparedLoop = false;
+            for (int y = 0; y < height; y++) {
+                assertEquals(source.backgroundLayoutX(896, y * 256 + 16), replay.backgroundLayoutX(896, y * 256 + 16));
+                for (int x = 0; x < croppedWidth; x++) {
+                    assertEquals(source.getMap().getValue(0, x, y), replay.getMap().getValue(0, x, y));
+                    assertEquals(source.hasLoopFlag(x, y), replay.hasLoopFlag(x, y));
+                    comparedLoop |= source.hasLoopFlag(x, y);
+                }
+            }
+            assertTrue(comparedLoop, "the overlap includes native loop cells");
+            assertFalse(replay.getObjects().contains(croppedObject));
+            assertFalse(replay.getRings().contains(croppedRing));
+            assertTrue(source.hasLoopFlag(7, 2));
+            project.level().getMap().setValue(0, 7, 2, (byte) 0);
+            var clearedLoop = new SonicCdGame(disc).loadProject(project.nativeSource(), project.level());
+            assertFalse(clearedLoop.hasLoopFlag(7, 2), "replacing an original loop cell clears its flag");
+            assertTrue(clearedLoop.hasLoopFlag(33, 3), "the other loop retains its native path");
+
+            project.resize(65, height, false);
+            assertThrows(java.io.IOException.class,
+                    () -> new SonicCdGame(disc).loadProject(project.nativeSource(), project.level()));
+            var ttz = loader.load(CdStagePayload.R41A, 2, false);
+            assertThrows(java.io.IOException.class, () -> ttz.validateProjectDimensions(32, 9));
         }
     }
 

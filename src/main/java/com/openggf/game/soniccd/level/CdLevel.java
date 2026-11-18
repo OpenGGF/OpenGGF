@@ -237,18 +237,28 @@ public final class CdLevel extends AbstractLevel implements com.openggf.game.int
                 .mapToInt(CdPlacement::subtype2).findFirst().orElse(0);
     }
 
+    @Override
+    public void validateProjectDimensions(int width, int height) throws IOException {
+        int columns = LAYOUT_ROW_BYTES / 2;
+        int rows = (collisionLayoutYMask() + 1) / getBlockPixelSize();
+        if (width < 1 || width > columns || height < 1 || height > rows) {
+            throw new IOException("The stage layout must be 1 to " + columns
+                    + " columns and 1 to " + rows + " rows");
+        }
+    }
+
     /**
-     * Apply a detached editor view to this freshly decoded stage. Native layout
-     * windows, loop flags, payload, flags and presentation owners remain here.
+     * Apply a detached editor view to this freshly decoded stage. The native
+     * payload, collision masks and presentation owners remain here.
      * Existing slots retain both unrepresented placement bytes even after moves;
      * new slots use secondary subtype zero and this payload's active time bit.
      */
     public void applyProject(com.openggf.level.Level authored) throws IOException {
+        Map authoredMap = authored.getMap();
         if (authored.getChunksPerBlockSide() != CHUNK_GRID
-                || authored.getMap().getWidth() != map.getWidth()
-                || authored.getMap().getHeight() != map.getHeight()
-                || authored.getMap().getLayerCount() != map.getLayerCount())
-            throw new IOException("Native project replay requires the source layout dimensions and grid");
+                || authoredMap.getLayerCount() != map.getLayerCount())
+            throw new IOException("Native project replay requires the source layout layers and grid");
+        validateProjectDimensions(authoredMap.getWidth(), authoredMap.getHeight());
         var copy = com.openggf.level.MutableLevel.snapshot(authored);
         var oldById = new java.util.HashMap<Integer, CdPlacement>();
         placements.forEach(p -> oldById.put(p.layoutIndex(), p));
@@ -289,10 +299,36 @@ public final class CdLevel extends AbstractLevel implements com.openggf.game.int
         for (int i = 0; i < solidTiles.length; i++) solidTiles[i] = copy.getSolidTile(i);
         solidTileCount = solidTiles.length;
         for (int i = 0; i < PALETTE_COUNT; i++) palettes[i] = copy.getPalette(i);
-        map = copy.getMap(); objects = List.copyOf(copy.getObjects()); rings = List.copyOf(copy.getRings());
+        applyProjectLayout(copy.getMap());
+        objects = List.copyOf(copy.getObjects()); rings = List.copyOf(copy.getRings());
         ringPlacementMapping = java.util.Map.copyOf(copy.ringObjectPlacementMapping());
         placements = List.copyOf(replacement.values());
         minX = copy.getMinX(); maxX = copy.getMaxX(); minY = copy.getMinY(); maxY = copy.getMaxY();
+    }
+
+    private void applyProjectLayout(Map authored) {
+        int retainedWidth = Math.min(fgMapWidth, authored.getWidth());
+        int retainedHeight = Math.min(fgMapHeight, authored.getHeight());
+        int collisionWidth = retainedWidth;
+        // The editor canvas can include columns that were blank in the source
+        // foreground. Admit authored terrain in those columns to collision too.
+        for (int y = 0; y < authored.getHeight(); y++) {
+            for (int x = collisionWidth; x < authored.getWidth(); x++) {
+                if (authored.getValue(0, x, y) != 0) collisionWidth = x + 1;
+            }
+        }
+        boolean[] loops = new boolean[collisionWidth * retainedHeight];
+        for (int y = 0; y < retainedHeight; y++) {
+            for (int x = 0; x < retainedWidth; x++) {
+                loops[y * collisionWidth + x] = fgLoopFlags[y * fgMapWidth + x]
+                        && authored.getValue(0, x, y) == map.getValue(0, x, y);
+            }
+        }
+        fgLoopFlags = loops;
+        fgMapWidth = collisionWidth;
+        fgMapHeight = retainedHeight;
+        bgMapWidth = Math.min(bgMapWidth, authored.getWidth());
+        map = authored;
     }
 
     /** Every entry of the stage's object layout, before the time-zone filter. */

@@ -73,6 +73,10 @@ public final class DefaultSolidExecutionRegistry
         current.put(batch.object(), batch);
     }
 
+    void publishNativeReceiver(SolidCheckpointBatch batch) {
+        current.put(batch.object(), batch);
+    }
+
     @Override
     public void endObject(ObjectInstance object) {
         currentContext = ObjectSolidExecutionContext.inert();

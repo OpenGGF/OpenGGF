@@ -40,6 +40,9 @@ public final class ContentImportScreen implements AutoCloseable {
     /** The host retains its normal unsaved-project and mod activation boundaries. */
     public interface Host {
         void openProject(EditorProjectDocument candidate);
+        default void openNativeProject(com.openggf.editor.project.NativeEditorProjectPackage candidate) {
+            throw new UnsupportedOperationException("This editor cannot open native projects");
+        }
         void importLevel(ModLevelDefinition level, GameId game);
         void modInstalled(Path installedPath);
         default boolean allowedToInstallMods() { return true; }
@@ -232,6 +235,10 @@ public final class ContentImportScreen implements AutoCloseable {
             }
             return;
         }
+        if (accepted.kind() == ContentImportService.Kind.PROJECT && accepted.nativeProject().isPresent()) {
+            openNativeProject(accepted);
+            return;
+        }
         open = false;
         try {
             switch (accepted.kind()) {
@@ -244,6 +251,22 @@ public final class ContentImportScreen implements AutoCloseable {
         } catch (RuntimeException failure) {
             open = true; selected = 0; report(failure);
         } finally { closeLease(accepted); }
+    }
+
+    private void openNativeProject(PreparedImport accepted) {
+        open = false;
+        try {
+            host.openNativeProject(accepted.nativeProject().orElseThrow());
+            host.closed();
+            MenuFeedback.emit(MenuFeedback.Cue.CONFIRM);
+        } catch (IllegalArgumentException | IllegalStateException | UnsupportedOperationException
+                 | java.io.UncheckedIOException failure) {
+            open = true;
+            selected = 0;
+            report(failure);
+        } finally {
+            closeLease(accepted);
+        }
     }
 
     private EditorProjectMenu.Action gameAction(String label, GameId game) {

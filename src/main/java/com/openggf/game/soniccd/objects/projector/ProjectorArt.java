@@ -2,6 +2,7 @@ package com.openggf.game.soniccd.objects.projector;
 
 import com.openggf.data.RomByteReader;
 import com.openggf.game.soniccd.CdStagePayload;
+import com.openggf.game.soniccd.level.CdLevel;
 import com.openggf.game.soniccd.level.CdStageCatalogue;
 import com.openggf.game.soniccd.level.CdStageImage;
 import com.openggf.game.soniccd.objects.art.CdObjectArtProvider;
@@ -23,6 +24,8 @@ import java.util.List;
  */
 public final class ProjectorArt {
     public static final String PROJECTOR = "cd.projector.";
+    public static final String FLYING_ANIMAL = "cd.projector.animal.flying";
+    public static final String GROUND_ANIMAL = "cd.projector.animal.ground";
     /** PLC 2: the title card's slide-out cue, the level's art where a stage has no sections (Title Card/Main.asm:145-148). */
     private static final int TITLE_CARD_PLC = 2;
 
@@ -36,6 +39,11 @@ public final class ProjectorArt {
             while (section < bounds.length - 1 && (cameraX & 0xFFFF) >= bounds[section]) section++;
             return keys.get(Math.min(section, keys.size() - 1));
         }
+    }
+
+    /** The tile word and script tables of the animals loaded by the projector's cue. */
+    public record Animals(int tile, int flyingAnimations, int groundAnimations) {
+        public int animations(boolean flying) { return flying ? flyingAnimations : groundAnimations; }
     }
 
     /** Registers the sheets where the stage's object index starts the projector. */
@@ -81,6 +89,23 @@ public final class ProjectorArt {
         }
         final int[] finalBounds = bounds;
         art.zoneArt(Sections.class, () -> new Sections(finalBounds, keys));
+        registerAnimals(art, variant, plcLists);
+    }
+
+    private static void registerAnimals(CdObjectArtProvider art, ProjectorVariant variant, int plcLists) throws IOException {
+        CdStagePayload payload = art.payload();
+        int baseTiles = ProjectorObjectCatalogue.animalBaseTiles(payload);
+        if (baseTiles < 0) return;
+        CdStageImage stage = art.image();
+        CdStageVram vram = art.vram().copy();
+        vram.loadPlc(stage, plcLists, variant.plc());
+        // ObjAnimal_SetBaseTile (Palmtree Panic/Objects/Animal/Main.asm:209-217).
+        int index = (payload.stage().actNumber() - 1) * 4 + CdLevel.nativeTimeZone(payload.stage().period());
+        int tile = stage.u16(baseTiles + index * 2);
+        art.register(FLYING_ANIMAL, art.sheet(stage.reader(), ProjectorObjectCatalogue.animalMappings(payload, true), tile, vram));
+        art.register(GROUND_ANIMAL, art.sheet(stage.reader(), ProjectorObjectCatalogue.animalMappings(payload, false), tile, vram));
+        art.zoneArt(Animals.class, () -> new Animals(tile, ProjectorObjectCatalogue.animalAnimations(payload, true),
+                ProjectorObjectCatalogue.animalAnimations(payload, false)));
     }
 
     /** The sheet key for the camera's section, or {@code null} where no sheet is registered. */
