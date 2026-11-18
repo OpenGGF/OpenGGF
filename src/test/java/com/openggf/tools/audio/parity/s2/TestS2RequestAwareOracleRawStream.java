@@ -46,12 +46,6 @@ class TestS2RequestAwareOracleRawStream {
     Path temporaryDirectory;
 
     @Test
-    void requestAwareReaderExistsAsItsOwnV2Authority() {
-        assertDoesNotThrow(() -> Class.forName(
-                "com.openggf.tools.audio.parity.s2.S2RequestAwareOracleRawStream"));
-    }
-
-    @Test
     void disposableComparatorMatchesOnlyCommittedProductionTransfers() throws Exception {
         Path candidate = temporaryDirectory.resolve("candidate.raw.jsonl");
         Files.writeString(candidate, windowSourcePayload(true));

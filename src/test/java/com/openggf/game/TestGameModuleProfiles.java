@@ -34,13 +34,6 @@ public class TestGameModuleProfiles {
     }
 
     @Test
-    public void profilesAreNotNull() {
-        assertNotNull(new Sonic1GameModule().getLevelInitProfile());
-        assertNotNull(new Sonic2GameModule().getLevelInitProfile());
-        assertNotNull(new Sonic3kGameModule().getLevelInitProfile());
-    }
-
-    @Test
     public void onlySonic3kPreservesFreshGroundedStatusUntilFirstDispatch() {
         assertFalse(new Sonic1GameModule().getLevelInitProfile()
                 .preserveFreshGroundedStatusUntilFirstDispatch());

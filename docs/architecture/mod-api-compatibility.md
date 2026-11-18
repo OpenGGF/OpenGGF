@@ -676,39 +676,34 @@ engine-owned and outside the creator surface.
 ## 0.7 reset inventory
 
 The reset removed provisional compatibility shims before establishing the first
-baseline. `TestNoProvisionalModApiShims` is the executable evidence that these
-members remain absent.
+baseline. The signature pin tracks the current creator API. This is the
+historical inventory of removed members.
 
-| Removed member or family | Evidence marker |
-| --- | --- |
-| Legacy `CheckpointState.RewindState` constructor | canonical-record constructor assertion |
-| Legacy `CameraSnapshot` constructor | canonical-record constructor assertion |
-| Legacy `GameStateSnapshot` constructor | canonical-record constructor assertion |
-| Legacy `WaterSystemSnapshot.DynamicWaterEntry` constructor | canonical-record constructor assertion |
-| Legacy `CollisionRules` constructor families | exact canonical-plus-`AirCollisionRules` constructor set |
-| Legacy `ObjectInteractionRules` constructor | canonical-record constructor assertion |
-| Legacy `PlayerAnimationRules` constructor | canonical-record constructor assertion |
-| Legacy `PlayerCapabilityRules` constructor | canonical-record constructor assertion |
-| Legacy `RingRules` constructor families | canonical-record constructor assertion |
-| Legacy `SidekickCpuRules` constructor | canonical-record constructor assertion |
-| Legacy `PerObjectRewindSnapshot.SidekickCpuRewindExtra` constructor | canonical-record constructor assertion |
-| Legacy `PerObjectRewindSnapshot.PlayerRewindExtra` constructor | canonical-record constructor assertion |
-| Legacy `ModZoneContribution` constructor | canonical-record constructor assertion |
-| Legacy `PlayableSpriteMovement.RewindState` constructor | canonical-record constructor assertion |
-| Legacy `PlayableSpriteController.RewindState` constructor | canonical-record constructor assertion |
-| Legacy `TraceMetadata` constructor | canonical-record constructor assertion |
-| `SpriteManager.drawUnifiedBucketWithPriority(int, GraphicsManager, Runnable, Runnable)` | reflected method-absence assertion |
-| `ObjectManager.snapshotPersistentDynamicObjectsForTransition()` | reflected method-absence assertion |
-| `AbstractPlayableSprite.mgzTopPlatformCarrySolidContactObject` | reflected field-absence assertion |
-| `AbstractPlayableSprite.mgzTopPlatformSpringHandoffPending` | reflected field-absence assertion |
-| `AbstractPlayableSprite.mgzTopPlatformSpringHandoffXVel` | reflected field-absence assertion |
-| `AbstractPlayableSprite.mgzTopPlatformSpringHandoffYVel` | reflected field-absence assertion |
-| Provisional compatibility comments and marker phrases in production Java | exact empty marker allowlist |
+- Legacy `CheckpointState.RewindState` constructor
+- Legacy `CameraSnapshot` constructor
+- Legacy `GameStateSnapshot` constructor
+- Legacy `WaterSystemSnapshot.DynamicWaterEntry` constructor
+- Legacy `CollisionRules` constructor families
+- Legacy `ObjectInteractionRules` constructor
+- Legacy `PlayerAnimationRules` constructor
+- Legacy `PlayerCapabilityRules` constructor
+- Legacy `RingRules` constructor families
+- Legacy `SidekickCpuRules` constructor
+- Legacy `PerObjectRewindSnapshot.SidekickCpuRewindExtra` constructor
+- Legacy `PerObjectRewindSnapshot.PlayerRewindExtra` constructor
+- Legacy `ModZoneContribution` constructor
+- Legacy `PlayableSpriteMovement.RewindState` constructor
+- Legacy `PlayableSpriteController.RewindState` constructor
+- Legacy `TraceMetadata` constructor
+- `SpriteManager.drawUnifiedBucketWithPriority(int, GraphicsManager, Runnable, Runnable)`
+- `ObjectManager.snapshotPersistentDynamicObjectsForTransition()`
+- `AbstractPlayableSprite.mgzTopPlatformCarrySolidContactObject`
+- `AbstractPlayableSprite.mgzTopPlatformSpringHandoffPending`
+- `AbstractPlayableSprite.mgzTopPlatformSpringHandoffXVel`
+- `AbstractPlayableSprite.mgzTopPlatformSpringHandoffYVel`
 
-The underlying current behaviors remain available through their canonical 0.7
-owners; this inventory records deleted shims, not removed product capabilities.
 Zone declarations use named `ModZoneContribution.singleAct(...)` and
-`multiAct(...)` factories; the record retains only its canonical constructor.
+`multiAct(...)` factories.
 
 ## Historical development corpus
 

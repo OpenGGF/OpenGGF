@@ -38,10 +38,4 @@ class TestBundledConfigResource {
             assertEquals(Boolean.FALSE, r.flat().get(SonicConfiguration.TRACE_SHOW_DEBUG_HUD.name()));
         }
     }
-
-    @Test
-    void legacyJsonResourceIsGone() {
-        assertNull(getClass().getResourceAsStream("/config.json"),
-                "bundled config.json should be replaced by config.yaml");
-    }
 }

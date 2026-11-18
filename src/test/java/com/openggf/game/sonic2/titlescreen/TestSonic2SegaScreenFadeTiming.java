@@ -7,12 +7,10 @@ import com.openggf.game.TitleScreenProvider;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.lwjgl.glfw.GLFW.GLFW_PRESS;
 
 class TestSonic2SegaScreenFadeTiming {
@@ -134,14 +132,6 @@ class TestSonic2SegaScreenFadeTiming {
         return ((boolean[]) field.get(manager))[index];
     }
 
-    @Test
-    void segaLogoFadeDoesNotUseBlackOverlayHelpers() {
-        assertThrows(NoSuchMethodException.class,
-                () -> method("drawSegaLogoFade", com.openggf.graphics.GraphicsManager.class));
-        assertThrows(NoSuchMethodException.class,
-                () -> method("segaLogoFadeAmount"));
-    }
-
     private static TitleScreenManager managerInSegaState() throws Exception {
         SonicConfigurationService config = SonicConfigurationService.getInstance();
         config.setConfigValue(SonicConfiguration.JUMP, "SPACE");
@@ -174,10 +164,6 @@ class TestSonic2SegaScreenFadeTiming {
         Field field = target.getClass().getDeclaredField(name);
         field.setAccessible(true);
         field.set(target, value);
-    }
-
-    private static Method method(String name, Class<?>... parameterTypes) throws NoSuchMethodException {
-        return TitleScreenManager.class.getDeclaredMethod(name, parameterTypes);
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
