@@ -28,10 +28,10 @@ class TestSonicCdPlayerMovies {
         assertEqualsThrough("rehost-long", CdStagePayload.R42A, 3163);
     }
 
-    /** The cold route through all three break poles, underwater $37 contact and post-hurt current. */
+    /** The full cold route through all three break poles, underwater $37 contact, current and signpost. */
     @Test
     void tidalTempestBreakPolesAndSpikeBallContactMatchNative() throws Exception {
-        assertEqualsThrough("rehost-long", CdStagePayload.R42A, 5678);
+        assertEqualsThrough("rehost-long", CdStagePayload.R42A, 6410);
     }
 
     /**

@@ -125145,3 +125145,37 @@ The same five-test selection with empty `soniccd.disc.path`,
 skips the four existing movie cases (zero failures or errors, 13 s queued,
 35.462 s Maven). `classify_surefire_skips.py --check-evidence` with
 `soniccd_native=false` accepts all four existing identities.
+
+## 2026-11-18 — R42A replay and act-end qualification
+
+The hurt-input commit `22e3d557c0` and the Time Stars catalogue commit
+`c4e844223f` were combined in tree `6ee6d78d3830a1cf5ccf0bd7c49e1129346fe7b4`.
+Both sets of focused tests and their optional-media rules are present. The
+warp-tail anchor fills the ten Tidal Tempest animation offsets, including
+R42A at `$3ED94`. The continuation passes row 5679 and matches all 6,411
+player and camera rows, with zero comparison errors. R41A (5,449 rows),
+R41B (4,721) and R41C (6,013) still match through their recorded ends.
+
+The matched Java 25 invocation above used `TestSonicCdFixtureFrontier`,
+`TestSonicCdPlayerMovies`, `TestTtzObjects`, `TestSonicCdRoutesBLongNative`,
+`TestLogicalInputControlLockLatch`, `TestNativeDrowningDispatch`,
+`TestCdHurtLogicalInput` and `TestCdTimeStarsPictures`, with the same
+authenticated USA disc and local recordings. It passed 83 tests with zero
+skips, with 0 s queue wait and 1 min 33 s Maven time.
+
+The strict R42A movie pin now includes row 6410. The existing native act-end
+test promotes R42A to its asserted set. It compares 748 rows covering the
+signpost at row 5693 and the results window. The native and engine exit rows
+are both 6411 and the engine requests R43D. The goal probe separately
+compares ring and score state, object and results state, sound requests and
+the handoff, which the route comparator does not cover.
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY python3 tools/testing/maven_queue.py -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl -Dsoniccd.media.root="$MEDIA_ROOT" \
+  -Dsoniccd.native.root="$NATIVE_ROOT" -Dopenggf.surefire.reports="$REPORTS" \
+  -Dtest=TestSonicCdActEndNative,TestSonicCdPlayerMovies test -B
+```
+
+All 25 act-end cases and four player movie cases passed, with zero skips,
+0 s queue wait and 1 min 26 s Maven time.
