@@ -1,6 +1,7 @@
 package com.openggf.game.soniccd.objects.common;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.game.soniccd.objects.art.CdObjectArtProvider;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectSpawn;
@@ -26,7 +27,7 @@ public final class CdExplosion extends CdObject implements ObjectVisualFacing.No
     private int pointsFrame;
     private int layer;
     private int routine;
-    private CdAnimator animator;
+    private transient CdAnimator animator;
     /** The animator's script bytes and animation, kept as scalars so a restore rebuilds it exactly. */
     private int animId;
     private int[] animState = {-1, 0, 0, 0, 0};
@@ -55,10 +56,7 @@ public final class CdExplosion extends CdObject implements ObjectVisualFacing.No
     @Override
     public void update(int vIntRunCount, PlayableEntity player) {
         if (routine == 0) init();
-        if (animator == null && routine != 0) {                       // after a rewind restore
-            animator = animator(e -> e.explosionAnimations(), animId);
-            if (animator != null) animator.restoreScriptState(animState);
-        }
+        if (animator == null && routine == 2) restoreAnimator();
         if (routine == 2 && animator != null) {
             routine += animator.step();
             animState = animator.scriptState();
@@ -88,7 +86,23 @@ public final class CdExplosion extends CdObject implements ObjectVisualFacing.No
         if (fromBadnik) makePoints();
         // tst.b oSubtype; beq; move.w #$100,oAnim (Explosion/Main.asm:81-83).
         animId = spawn.subtype() != 0 ? 1 : 0;
-        animator = animator(e -> e.explosionAnimations(), animId);
+        animator = newAnimator();
+    }
+
+    private CdAnimator newAnimator() {
+        var provider = services().gameModule().getGameService(CdObjectArtProvider.class);
+        return provider == null ? null : provider.newExplosionAnimator(animId);
+    }
+
+    private void restoreAnimator() {
+        animator = newAnimator();
+        if (animator != null) animator.restoreScriptState(animState);
+    }
+
+    @Override
+    protected void afterGenericRewindStateRestored(RewindCaptureContext context) {
+        animator = null;
+        if (routine != 0) restoreAnimator();
     }
 
     /** ObjExplosion_MakePoints (scddisasm/src/Level/_Objects/Explosion/Main.asm:14-39): FindObjSlot, $1C with subtype $80|frame. */
