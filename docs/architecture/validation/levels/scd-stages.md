@@ -132,16 +132,16 @@ diverging row and the frontier test's cause label (a guess, not a diagnosis).
 | R81B | **green** 3,991 | none | green | Route does not reach the goal |
 | R81C | **green** 4,524 | none | green | Route does not reach the goal |
 | R81D | none | none | green | |
-| R82A | 4,577 / 5,697 | none | green | Route stops short of the goal: at row 4577 the player loses `$600` of x speed at a walker platform's edge (native stands on object `$26`) |
+| R82A | 5,029 / 5,697 | none | green | The twin walker's right platform uses its own top-solid check. At row 5029 the engine stops Sonic's upward motion one pixel early. The recording ends before the signpost |
 | R82B, R82C, R82D | none | none | green | |
 | R83C, R83D | approach only | none | green | Approach green to row 1,762 of R83C; fight and endings run in the engine with test-driven hits, not compared; no native ending recording |
 
 Totals at `6c5c0e2764` and `45463c80bd`: routes 146,390 of 149,633 rows (97.8%; 26 of 28 to
 their end); fixtures 56,879 of 57,049 rows (68 of 70). The open routes are
-R42A (water) and R82A (an unhosted object); the open fixtures are R11C and
-R51B (objects). The totals count the diverging row itself as compared, so each
-open stage is counted one row above its first divergence; the cells above
-give the first diverging row. In the act-end column `none` means the route has
+R42A (water) and R82A; the open fixtures are R11C and R51B (objects). A focused
+Metallic Madness rerun advanced R82A from row 4577 to 5029 and kept R81A, R81B
+and R81C green. The historical totals count the diverging row itself as compared.
+The cells above give the first diverging row. In the act-end column `none` means the route has
 no end-of-act assertion: it is not in `TestSonicCdActEndNative`'s set, either
 because it does not reach the goal or because no assertion was written. Every
 route in that set is `asserted` except R42A, which is `pending` until it

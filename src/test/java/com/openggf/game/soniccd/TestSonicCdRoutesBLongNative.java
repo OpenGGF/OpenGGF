@@ -26,8 +26,9 @@ class TestSonicCdRoutesBLongNative {
      * countdown ticked on the frame hurt ended, one frame early, so the acceleration fell from $18 to $C two rows early; the powerup
      * check belongs to the turn of the routine that began the frame, objects/r6/player.asm:590-621, :649-710). R81B (3851 was a spin platform at ($19EC,$4C2) with no native counterpart: its followers outlived
      * a leader that CheckObjectDespawn2 unloaded, because they tested the leader's Java object, not the ID byte in its slot, as
-     * loc_20D30C does, objects/r8/spin_platform_1.asm:141-160); R82A 4577: the player moves 5 of 6 pixels and loses its x_speed ($600 against 0) in the air, at x $1690, the edge of the twin
-     * walker's left platform; native moves 6 and keeps the speed; slots equal to row 4580.
+     * loc_20D30C does, objects/r8/spin_platform_1.asm:141-160). R82A now keeps x speed at row 4577 because the
+     * twin walker's right-platform call resolves against that platform (TwinWalkerObject_0_Routine2,
+     * objects/r8/twin_walker.asm:60-65). Row 5029 is the next stop, an upward movement interrupted by one pixel.
      */
     @ParameterizedTest(name = "{0} equals native through row {1}")
     @org.junit.jupiter.params.provider.MethodSource("pins")
