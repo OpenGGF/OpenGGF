@@ -1,5 +1,6 @@
 package com.openggf.game.soniccd.objects.common;
 
+import com.openggf.game.solid.SolidExecutionFrames;
 import com.openggf.game.soniccd.audio.CdSoundRequests;
 
 import com.openggf.graphics.RenderPriority;
@@ -279,7 +280,12 @@ public abstract class CdObject extends AbstractObjectInstance {
     protected boolean solidObject(com.openggf.level.objects.ReevaluatingSolidObject.Entry entry) {
         solidEntry = entry;
         try {
-            var batch = services().solidExecution().resolveSolidNowAll();
+            var context = services().solidExecution();
+            // TwinWalkerObject_0_Routine2/Routine6 switch a0 to the right platform for their helper calls
+            // (objects/r8/twin_walker.asm:60-65, 98-104). Its own slot only checks that the controller is alive.
+            var batch = context.isInert() || context.object() == this
+                    ? context.resolveSolidNowAll()
+                    : SolidExecutionFrames.resolveNativeReceiver(services().solidExecutionRegistry(), this);
             for (var result : batch.perPlayer().values()) {
                 if (result != null && (result.kind() == com.openggf.game.solid.ContactKind.TOP
                         || result.kind() == com.openggf.game.solid.ContactKind.BOTTOM)) {

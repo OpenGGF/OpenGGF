@@ -26,6 +26,9 @@ public final class MmzInvisibleBlock extends MmzObject implements ReevaluatingSo
         solidObject(Entry.SOLID);                    // InvisibleBlockObject_0_Routine2 (:27-32)
     }
 
+    /** {@code SolidObjectCheckTopContact} (common/solid_object.asm:415-419) releases a player hitting from below. */
+    @Override public Role solidRole() { return Role.PASS_UNDER; }
+
     @Override protected boolean despawnsByCheckObjDespawn() { return true; }
 
     @Override

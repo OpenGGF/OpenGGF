@@ -64,8 +64,9 @@ under the matching area heading; see the
   and their results (the bonuses reach the score), the title, stage select, Time Attack and
   backup RAM (saved in `saves/soniccd`), the opening video, both endings, FM
   effects, CD audio and PCM sound are hosted. The FM loader also accepts verified
-  Japanese and European discs containing the identical driver bank. Gameplay
-  starts from the USA disc. Held-key live rewind works inside
+  Japanese and European discs containing the identical driver bank. The title's
+  RAM DATA entry confirms a reset of Sonic CD's save to disc defaults. Held-key
+  live rewind works inside
   special stages, including the three-frame floor pipeline, UFOs and effects. The master
   title lists it when the disc is configured or found (`roms.default: scd` boots
   it directly) and verifies it against the USA release before starting. A CHD
@@ -75,16 +76,19 @@ under the matching area heading; see the
   hunk CRCs and the header SHA-1s checked) and refuses delta, older-version
   and non-CD CHDs by name. Not
   included: Visual Mode, D.A. Garden, the pencil test, Thank You,
-  Comin' Soon, attract demos, the backup RAM manager, and the Japanese and
-  European releases. Disc audio, video songs and PCM sound follow the music
+  Comin' Soon, attract demos, and the Japanese and European releases. Disc audio, video songs and PCM sound follow the music
   and effects volumes; CD audio and PCM also share the FM presentation scale
   for their relative level. The time-warp stars are drawn and Robotnik's projector
-  can be destroyed in the Past (its hologram animals are not drawn).
+  can be destroyed in the Past. Both Palmtree Panic Past acts draw its flying
+  and ground hologram animals from the disc.
   Accuracy is measured against native recordings made on an emulator running
   the USA disc: 26 of 28 full-act routes (start to signpost) equal native on
   every compared field to their end (146,390 of 149,633 rows), and 68 of 70
-  fourteen-second stage fixtures do (56,879 of 57,049 rows). Open: R42A (water)
-  and R82A, R11C and R51B (objects). Rings are compared too: the counter and
+  fourteen-second stage fixtures do (56,879 of 57,049 rows). On a focused rerun,
+  the recorded Metallic Madness Present act 2 route also matches through its end.
+  Its walker platforms let Sonic pass their sides, and the invisible blocks let
+  him jump through from below. R42A (break pole), R11C and R51B (objects) still
+  have open comparisons. The ring counter and
   every placed ring's position equal native on every compared row of the 28
   routes and two runs through Palmtree Panic loops, except lost rings after a hit
   in two Metallic Madness routes. Stage loads clear the state native

@@ -12,6 +12,7 @@ final class CdProgramHosts {
     static final List<CdProgramHost> HOSTS = List.of(
             // --- lane TA (Time Attack and backup RAM)
             new com.openggf.game.soniccd.timeattack.CdTimeAttackHost(),
+            new com.openggf.game.soniccd.backupram.CdSaveManagerHost(),
             // --- end lane TA
             // --- lane FLOW2 (time-warp cutscene)
             new com.openggf.game.soniccd.warp.CdWarpCutsceneHost(),

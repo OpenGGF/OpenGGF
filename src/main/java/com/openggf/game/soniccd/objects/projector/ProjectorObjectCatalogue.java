@@ -20,6 +20,16 @@ public final class ProjectorObjectCatalogue {
 
     public static int animations(CdStagePayload payload) { return TABLES.offset(payload, "projectorAnimations"); }
 
+    static int animalBaseTiles(CdStagePayload payload) { return TABLES.offset(payload, "animalBaseTiles"); }
+
+    static int animalMappings(CdStagePayload payload, boolean flying) {
+        return TABLES.offset(payload, flying ? "animalFlyingMappings" : "animalGroundMappings");
+    }
+
+    static int animalAnimations(CdStagePayload payload, boolean flying) {
+        return TABLES.offset(payload, flying ? "animalFlyingAnimations" : "animalGroundAnimations");
+    }
+
     /**
      * Whether the stage's object index starts the projector: its code is linked and the stage is not an act 3 boss
      * arena, where the zone's boss reuses the projector's ID.
