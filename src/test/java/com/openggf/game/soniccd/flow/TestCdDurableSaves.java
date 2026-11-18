@@ -20,6 +20,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.lwjgl.opengl.GL11.*;
 
 /**
  * Interactive startup's durable backup RAM ({@code SonicCdGameModule.attachInteractiveBackupRam}): a New Game
@@ -60,11 +61,19 @@ class TestCdDurableSaves {
                 openRamData(h);
                 var screen = h.scenes.lastProgramScreen();
                 screen.setClearColor();
-                org.lwjgl.opengl.GL11.glClear(org.lwjgl.opengl.GL11.GL_COLOR_BUFFER_BIT);
+                glEnable(GL_BLEND);
+                glClear(GL_COLOR_BUFFER_BIT);
                 screen.draw();
                 var image = ScreenshotCapture.captureFramebuffer(320, 224);
                 assertTrue(java.util.Arrays.stream(image.pixels()).distinct().count() > 8,
                         "the RAM DATA prompt renders through the OpenGGF menu font");
+                glDisable(GL_BLEND);
+                glClear(GL_COLOR_BUFFER_BIT);
+                screen.draw();
+                assertFalse(glIsEnabled(GL_BLEND), "the screen leaves the incoming blend state intact");
+                assertArrayEquals(image.pixels(), ScreenshotCapture.captureFramebuffer(320, 224).pixels(),
+                        "the prompt draws identically after a native render pass disables blend");
+                glEnable(GL_BLEND);
 
                 h.step(0, 0, true);
                 h.until(() -> h.loop.getCurrentGameMode() == GameMode.TITLE_SCREEN, 300, 0);

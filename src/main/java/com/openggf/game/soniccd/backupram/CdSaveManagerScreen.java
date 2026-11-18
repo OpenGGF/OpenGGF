@@ -17,7 +17,11 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import static org.lwjgl.opengl.GL11.GL_BLEND;
 import static org.lwjgl.opengl.GL11.glClearColor;
+import static org.lwjgl.opengl.GL11.glDisable;
+import static org.lwjgl.opengl.GL11.glEnable;
+import static org.lwjgl.opengl.GL11.glIsEnabled;
 
 /** OpenGGF's single-save reset prompt, reached from the Sonic CD title. */
 final class CdSaveManagerScreen implements NativeMenuScreen {
@@ -94,6 +98,8 @@ final class CdSaveManagerScreen implements NativeMenuScreen {
     @Override public void draw() {
         text.setProjectionMatrix(GameServices.graphics().getProjectionMatrixBuffer());
         PixelFont font = text.font();
+        boolean blending = glIsEnabled(GL_BLEND);
+        if (!blending) glEnable(GL_BLEND);
         text.beginBatch();
         try {
             MenuChrome.page(font, WIDTH, UiMessages.text("menu.soniccd.save_manager.title"), null, null);
@@ -114,7 +120,11 @@ final class CdSaveManagerScreen implements NativeMenuScreen {
                         MenuInput.controller(input), frame);
             }
         } finally {
-            text.endBatch();
+            try {
+                text.endBatch();
+            } finally {
+                if (!blending) glDisable(GL_BLEND);
+            }
         }
     }
 
