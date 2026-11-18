@@ -6,6 +6,7 @@ import com.openggf.game.GameId;
 import com.openggf.game.soniccd.level.CdStageLoader;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -39,6 +40,65 @@ class TestCdEditorProjectSource {
                 assertTrue(failure.getMessage().contains(".ogfproject"));
                 assertFalse(java.nio.file.Files.exists(directory.resolve("flat")));
             }
+        }
+    }
+
+    @Test void portableNativeFolderAndZipRestoreEditsThroughContentImport() throws Exception {
+        try (var disc = CdDiscDataSource.open(CdTestMedia.usaCue())) {
+            var loader = new CdStageLoader(disc);
+            var source = loader.load(CdStagePayload.R11B, 0, false);
+            var start = source.nativeProjectStart();
+            var metadata = new EditorProjectMetadata(GameId.SCD, "Portable edits", 0, 1, disc.identity(),
+                    start[0], start[1], source.getMinX(), source.getMaxX(), source.getMinY(), source.getMaxY(),
+                    new FullLevelExporter.ExportMusic.Stock(1), null);
+            var document = EditorProjectDocument.create(metadata, source);
+            var edited = document.level();
+            int mapValue = Byte.toUnsignedInt(source.getMap().getValue(0, 0, 0));
+            int newCell = (mapValue + 1) % source.getBlockCount();
+            edited.getMap().setValue(0, 0, 0, (byte) newCell);
+            int newPixel = (source.getPattern(1).getPixel(0, 0) + 1) & 15;
+            edited.getPattern(1).setPixel(0, 0, (byte) newPixel);
+            var unchanged = edited.getObjects().stream().filter(o -> o.objectId() != 0x10).findFirst().orElseThrow();
+            var moved = edited.getObjects().stream().filter(o -> o.objectId() != 0x10 && !o.equals(unchanged)).findFirst().orElseThrow();
+            var replacement = moved.withPosition(moved.x() + 8, moved.y());
+            edited.removeObjectSpawn(unchanged);
+            edited.moveObjectSpawn(moved, replacement);
+            var ring = new com.openggf.level.rings.RingSpawn(1024, 128, 10000);
+            edited.addRingSpawn(ring);
+
+            var importer = new com.openggf.ContentImportService(directory.resolve("mods"));
+            Path folder = directory.resolve("portable");
+            Path zip = directory.resolve("portable.zip");
+            for (Path destination : java.util.List.of(folder, zip)) {
+                assertEquals(destination, NativeEditorProjectPackage.export(destination, document, source));
+                assertThrows(java.io.IOException.class, () -> NativeEditorProjectPackage.export(destination, document, source));
+                try (var prepared = importer.inspect(destination)) {
+                    assertEquals(com.openggf.ContentImportService.Kind.PROJECT, prepared.kind());
+                    var portable = prepared.nativeProject().orElseThrow();
+                    assertEquals(source.nativeProjectSource(), portable.source());
+                    var wrong = loader.load(CdStagePayload.R11A, 0, false);
+                    assertThrows(java.io.IOException.class, () -> portable.materialize(wrong));
+                    var project = portable.materialize(loader.load(CdStagePayload.R11B, 0, false));
+                    assertEquals(metadata, project.metadata());
+                    assertNull(project.path(), "import creates a new editable project");
+                    assertEquals(newCell, Byte.toUnsignedInt(project.level().getMap().getValue(0, 0, 0)));
+                    assertEquals(newPixel, project.level().getPattern(1).getPixel(0, 0));
+                    assertEquals(edited.getObjects(), project.level().getObjects());
+                    assertEquals(edited.getRings(), project.level().getRings());
+                    assertNotNull(project.level().getRingSpriteSheet());
+                    var replay = new SonicCdGame(disc).loadProject(project.nativeSource(), project.level());
+                    assertEquals(source.subtype2(moved), replay.subtype2(replacement));
+                    assertTrue(replay.getRings().contains(ring));
+                }
+            }
+            try (var entries = Files.list(folder)) {
+                assertEquals(java.util.List.of(NativeEditorProjectPackage.ENTRY),
+                        entries.map(p -> p.getFileName().toString()).toList());
+            }
+            assertTrue(Files.size(folder.resolve(NativeEditorProjectPackage.ENTRY)) < 16_384,
+                    "small edits carry no unchanged terrain or art banks");
+            assertNull(document.path());
+            assertTrue(document.isModified());
         }
     }
 
@@ -80,6 +140,26 @@ class TestCdEditorProjectSource {
             assertEquals(1, document.metadata().sourceAct());
             assertEquals(game.currentLevel().startX(), document.metadata().startX());
             assertEquals(game.currentLevel().startY(), document.metadata().startY());
+
+            var activeLevel = game.currentLevel();
+            Path archive = directory.resolve("workspace.zip");
+            workspace.export();
+            workspace.menu().setValue("path", archive.toString()); workspace.menu().submit();
+            assertNull(workspace.menu().error());
+            assertSame(activeLevel, game.currentLevel(), "export does not load into gameplay");
+            assertSame(document, workspace.document());
+            assertTrue(document.isModified());
+            var importer = new com.openggf.ContentImportService(directory.resolve("mods"));
+            try (var prepared = importer.inspect(archive)) {
+                workspace.openNativeProject(prepared.nativeProject().orElseThrow());
+                assertSame(document, workspace.document(), "opening asks before replacing dirty work");
+                workspace.menu().runAction(2);
+                assertNull(workspace.menu().error());
+                assertNotSame(document, workspace.document());
+                assertEquals(document.metadata(), workspace.document().metadata());
+                assertEquals(document.nativeSource(), workspace.document().nativeSource());
+                assertNull(workspace.document().path());
+            }
         }
     }
 

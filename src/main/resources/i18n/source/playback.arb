@@ -265,7 +265,7 @@
       }
     }
   },
-  "import.details.guide": "Drop one file or folder anywhere on the import screen, or choose a path below. The path field supports normal typing, a controller keyboard, and Up to browse paths.\n\nEditable projects: .ogfproject\nLevels: a level folder, level.json, or a ZIP containing one level\nMods and mutators: mod JARs, or a ZIP containing one JAR\n\nReview the name, type and action before confirming. Projects and levels open in the editor. Mods install disabled; use Mods at the title screen to review, enable, trust code if required, and apply. Inspection does not run creator code. Canceling keeps the current screen unchanged.",
+  "import.details.guide": "Drop one file or folder anywhere on the import screen, or choose a path below. The path field supports normal typing, a controller keyboard, and Up to browse paths.\n\nEditable projects: .ogfproject, or a native project folder or ZIP\nLevels: a level folder, level.json, or a ZIP containing one level\nMods and mutators: mod JARs, or a ZIP containing one JAR\n\nReview the name, type and action before confirming. Projects and levels open in the editor. Mods install disabled; use Mods at the title screen to review, enable, trust code if required, and apply. Inspection does not run creator code. Canceling keeps the current screen unchanged.",
   "@import.details.guide": {
     "description": "Complete read-only import guide. Up is a navigation control, not upload. Preserve .ogfproject, level.json, ZIP, JAR. Installation remains disabled; code trust is separate. Do not omit safety or file-format instructions."
   }

@@ -264,14 +264,15 @@ Future). `SonicCdEndingCaptureTool --ending good|bad` films an ending.
   menu (the last two appear once unlocked) fades out and returns to the
   title, and an attract demo is skipped.
 - CD patch mods, `any` registrations, scenes and Sonic gameplay runs use the disc
-  pipeline. Authored zones are limited to flat terrain with owned objects;
-  native CD objects/rings need their stage context. Cartridge donation supports
+  pipeline. Authored zones support flat scrolling, authored collision, and owned
+  objects. Native CD objects and rings need their stage context. Cartridge donation supports
   S1 Sonic, S2 Sonic/Tails and S3K Sonic/Tails/Knuckles; route coverage remains
   bounded to the donor-host validation record. Editor projects keep a bounded
   disc/stage source reference: native edit replay retains the loaded game owners,
   source layout semantics and object secondary bytes, project creation selects a
-  zone, act and time period, and source-backed playtests reload the native owners. See the
-  [CD mod contracts](../../modding/ggfmod.md#sonic-cd-runtime-mods).
+  zone, act and time period, and source-backed playtests reload the native owners.
+  Native editor exports share edits in folders or ZIPs. The importer reloads the
+  referenced stage from the matching disc. See the [CD mod contracts](../../modding/ggfmod.md#sonic-cd-runtime-mods).
 - Sonic CD Game Setup saves Borrow from and character choices. Without donation
   it defaults to Sonic alone. CD itself cannot donate player art.
   Each donor's supported roster can also be paired as leader/follower, including

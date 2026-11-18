@@ -13,6 +13,7 @@ import com.openggf.game.GameId;
 import com.openggf.game.GameModule;
 import com.openggf.game.MusicReference;
 import com.openggf.game.modzone.ModObjectZoneSet;
+import com.openggf.game.internal.NativeProjectHost;
 import com.openggf.game.session.EditorCursorState;
 import com.openggf.game.sonic3k.Sonic3kLevel;
 import com.openggf.game.sonic3k.constants.S3kZoneSet;
@@ -212,7 +213,13 @@ public final class EditorProjectWorkspace {
             actions.add(action(UiMessages.text("editor.editor_project_workspace.clone_this_layout_1r5xy89"), UiMessages.text("editor.menu.editor_project_workspace.start_a_new_project_from_a_copy_of_this_one"), () -> beforeReplace(this::cloneCurrent)));
             actions.add(action(UiMessages.text("editor.editor_project_workspace.level_properties_j6i9nz"), UiMessages.text("editor.menu.editor_project_workspace.name_start_position_and_camera_limits"), this::properties));
             actions.add(action(UiMessages.text("editor.editor_project_workspace.resize_level_qdn41k"), UiMessages.text("editor.menu.editor_project_workspace.width_and_height_in_blocks_undo_restores_it"), this::resize));
-            actions.add(action(UiMessages.text("editor.editor_project_workspace.export_level_zarsqg"), UiMessages.text("editor.menu.editor_project_workspace.validate_and_write_a_playable_level_folder"), this::export));
+            if (document.nativeSource() == null) {
+                actions.add(action(UiMessages.text("editor.editor_project_workspace.export_level_zarsqg"),
+                        UiMessages.text("editor.menu.editor_project_workspace.validate_and_write_a_playable_level_folder"), this::export));
+            } else {
+                actions.add(action(UiMessages.text("editor.project.export_native"),
+                        UiMessages.text("editor.project.export_native_description"), this::export));
+            }
             actions.add(action(UiMessages.text("editor.editor_project_workspace.close_project_qnwtld"), UiMessages.text("editor.menu.editor_project_workspace.asks_to_save_unsaved_changes_first"), this::requestClose));
             actions.add(action(UiMessages.text("editor.editor_project_workspace.campaign_levels_jo1x7j"), UiMessages.text("editor.menu.editor_project_workspace.order_the_levels_a_campaign_plays"), this::campaign));
             actions.add(action(UiMessages.text("editor.editor_project_workspace.export_playable_campaign_e6xafq"), UiMessages.text("editor.menu.editor_project_workspace.validate_and_package_the_campaign_as_a_mod_jar"), this::exportCampaign));
@@ -322,8 +329,33 @@ public final class EditorProjectWorkspace {
         beforeReplace(() -> io(() -> publishProject(candidate)));
     }
 
+    /** Resolves the verified source only after the editor can replace the current project. */
+    public void openNativeProject(NativeEditorProjectPackage candidate) {
+        Objects.requireNonNull(candidate, "candidate");
+        beforeReplace(() -> io(() -> {
+            var module = host.selectGame(candidate.metadata().gameId());
+            var nativeHost = requireNativeProjectHost(module);
+            var target = nativeHost.target(candidate.source());
+            var metadata = candidate.metadata();
+            if (target.zone() != metadata.sourceZone() || target.act() != metadata.sourceAct())
+                throw new IOException("Native project stage coordinates disagree with its source");
+            var document = candidate.materialize(nativeHost.preview(candidate.source()));
+            document.requireObjectPreviewLibrary();
+            publishProject(document, module);
+        }));
+    }
+
+    private static NativeProjectHost requireNativeProjectHost(GameModule module) throws IOException {
+        var nativeHost = module.getGameService(NativeProjectHost.class);
+        if (nativeHost == null) throw new IOException("The selected game cannot load a native editor project");
+        return nativeHost;
+    }
+
     private void publishProject(EditorProjectDocument candidate) throws IOException {
-        var module = host.selectGame(candidate.metadata().gameId());
+        publishProject(candidate, host.selectGame(candidate.metadata().gameId()));
+    }
+
+    private void publishProject(EditorProjectDocument candidate, GameModule module) throws IOException {
         // Deserialization marks missing presentation art; a prepared document can also have a save path.
         if (candidate.needsObjectPreviewLibrary()) {
             Level library = com.openggf.level.LevelObjectArt.authoringLibrary(host.loadLibrary(candidate.metadata().sourceZone(), candidate.metadata().sourceAct()), module.getObjectArtProvider());
@@ -461,6 +493,10 @@ public final class EditorProjectWorkspace {
     public void export() {
         host.finishPendingEdits();
         var current = requireDocument();
+        if (current.nativeSource() != null) {
+            exportNativeProject(current);
+            return;
+        }
         menu.showForm(UiMessages.text("editor.editor_project_workspace.export_playable_level_11k1um6"), List.of(path("path", UiMessages.text("editor.editor_project_workspace.new_export_directory_1fpj4pt"), "exports/editor/"
                 + current.metadata().gameId().code() + "/" + slug(current.metadata().name()))), UiMessages.text("editor.editor_project_workspace.validate_and_export_1cta3wn"), values -> io(() -> {
             GameModule module = host.currentModule();
@@ -469,6 +505,18 @@ public final class EditorProjectWorkspace {
             var result = exporter.export(current.level(), EditorProjectRuntimeModule.request(current,
                     Path.of(values.get("path")), m.startX(), m.startY()));
             host.status(UiMessages.text("editor.editor_project_workspace.exported_6a0trk", Map.of("value0", String.valueOf(result.directory()))));
+        }));
+    }
+
+    private void exportNativeProject(EditorProjectDocument current) {
+        String suggestion = "exports/editor/" + current.metadata().gameId().code() + "/" + slug(current.metadata().name()) + ".zip";
+        menu.showForm(UiMessages.text("editor.project.export_native"), List.of(path("path",
+                UiMessages.text("editor.project.export_native_destination"), suggestion)),
+                UiMessages.text("editor.editor_project_workspace.validate_and_export_1cta3wn"), values -> io(() -> {
+            var source = requireNativeProjectHost(host.currentModule()).preview(current.nativeSource());
+            Path destination = NativeEditorProjectPackage.export(Path.of(values.get("path")), current, source);
+            host.status(UiMessages.text("editor.editor_project_workspace.exported_6a0trk",
+                    Map.of("value0", destination.toString())));
         }));
     }
 

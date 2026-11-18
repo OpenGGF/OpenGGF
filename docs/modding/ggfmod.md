@@ -152,7 +152,8 @@ request)` stages owned object sheets from named disc files with direct byte-coun
 mappings; DPLC requests are rejected. Cartridge `registerRomObjectArt` retains
 its named S1/S2 source semantics even on a CD host. No disc bytes are bundled.
 
-Authored CD zones currently admit flat 16x16-block terrain and owned object keys.
+Authored CD zones support flat scrolling over 16x16-block terrain, with one
+authored collision path and owned object keys.
 Native CD objects/rings require a stage's program, PLC and per-stage state; use a
 native decoded-level patch for those. Authored stock deformation and water
 resources are not exposed. CD hosts cartridge-donated S1 Sonic, S2 Sonic/Tails,
@@ -207,9 +208,10 @@ file through the content importer and saving it again preserves the reference;
 reopening/playtesting still requires the matching USA disc. The reference contains no media path or payload. Saved authoring snapshots can
 contain ROM-derived pixels; their original redistribution rights still apply. Zone, act and period selection creates a native stage copy.
 
-Flat level-directory export of a source-backed CD project is explicitly refused,
-so it cannot be repackaged as a flat level ZIP either. Those formats lack native
-program/PLC/placement context. Use the `.ogfproject` round trip for these projects;
-this is distinct from supported separately authored flat CD zones with owned
-object keys. Native replay refuses resized layouts. Existing placement IDs retain
-secondary subtype/time-mask data; newly added IDs select only the active period.
+Use [Export native project](../guide/creating/level-editor.md#sonic-cd-native-projects)
+to share source-backed edits in a folder or ZIP. The recipient opens the package in
+the content importer and supplies the matching disc. Packages carry `native-project.json`
+and load as editor projects. Separately authored CD zones use the flat mod level
+format with owned object keys. Native replay requires the original layout dimensions.
+Existing placement IDs retain secondary subtype and time-mask data. Newly added
+IDs select the active period.
