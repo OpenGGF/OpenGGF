@@ -357,10 +357,9 @@ What is still open at `6c5c0e2764`, from the lane reports' stopped and
 unverified lists. The order is not a priority order.
 
 **Accuracy frontiers**
-- Full-act routes R42A (water: native is underwater at row 4286, the engine is
-  not) and R82A (row 4577: the player loses `$600` x speed at a walker
-  platform's edge). Fixtures R11C (row 677) and R51B (row 549), both on an
-  unhosted object.
+- Full-act route R42A stops at the break pole at row 4286. The R82A follow-up
+  matches all 5,697 recorded rows. Fixtures R11C (row 677) and R51B (row 549)
+  still diverge near native objects. See the [stage matrix](../validation/levels/scd-stages.md#first-divergence-recheck-2026-11-18).
 - 28 stages have a full-act route; the other 42 have only the 14-second
   fixture, and 14 of those (the act 3 stages) also have boss movies. No
   complete-run recording exists. Three routes (R81B, R81C, R82A) have no

@@ -176,11 +176,11 @@ and the capture tools.**
 
 Sonic CD runs from your own copy of the **USA** Mega-CD release. Nothing from
 the disc is in the repository. The engine reads the disc image directly: the
-data track's program files and the CD audio tracks. No BIOS image is needed;
-the backup RAM format the BIOS writes is reimplemented. The Japanese and
-European releases are not supported: the sound and backup RAM loaders refuse
-a disc whose header is not the USA release. A header check does not certify a
-dump.
+data track's program files and the CD audio tracks. The engine implements the
+backup RAM format the BIOS writes, so it needs no BIOS image. Tests can also
+verify and play FM effects from the Japanese and European discs. See the
+[regional media validation](../../architecture/validation/2026-11-18-sonic-cd-regional-media.md)
+for the remaining startup and gameplay dependencies.
 
 ### Disc setup
 
@@ -245,8 +245,10 @@ Future). `SonicCdEndingCaptureTool --ending good|bad` films an ending.
   the title's unlocks. CONTINUE, Time Attack times and unlocked menu entries
   survive a restart. A missing file starts like a console with new backup
   RAM; a damaged file is kept as `slot0.json.corrupt` and the game starts on
-  fresh backup RAM. The RAM DATA screen is not hosted, so the in-game way to
-  erase a save is missing: delete `saves/soniccd/slot0.json` to start over.
+  fresh backup RAM. **RAM DATA** opens an OpenGGF prompt. Choose
+  **Reset Sonic CD save** to restore disc defaults for campaign progress,
+  Time Stones, unlocks, and Time Attack records. The default choice keeps the save.
+  Other backup RAM files are preserved.
 - FM sound effects, CD audio tracks, and PCM music and sound.
 - Held-key live rewind in stages and special stages. Stage rewind restores the
   zones' rings, switches, lamps, bosses and Sonic's idle timer, as well as the
@@ -257,9 +259,8 @@ Future). `SonicCdEndingCaptureTool --ending good|bad` films an ending.
 
 - Not hosted: Visual Mode, D.A. Garden, the pencil test, Thank You, Comin'
   Soon, the attract demos (the opening video plays; the stage and special
-  stage demos do not), the backup RAM manager (RAM DATA), Special Stage 8
-  from the sound test. Each is a recorded "not
-  hosted" step: choosing RAM DATA, D.A. Garden or Visual Mode on the title
+  stage demos do not), and Special Stage 8 from the sound test. Each is a
+  recorded "not hosted" step: choosing D.A. Garden or Visual Mode on the title
   menu (the last two appear once unlocked) fades out and returns to the
   title, and an attract demo is skipped.
 - CD patch mods, `any` registrations, scenes and Sonic gameplay runs use the disc
@@ -281,8 +282,9 @@ Future). `SonicCdEndingCaptureTool --ending good|bad` films an ending.
   exercised on the disc host. Donated life icons use their own object-art tiles,
   preserving transparent foreground cells and the native HUD.
 - Special stage results graphics, pause and exit fade are not drawn.
-- Robotnik's projector in the Past can be destroyed, but the animals in its
-  hologram are not drawn.
+- Robotnik's projector in the Past can be destroyed. Its flying and ground
+  hologram animals animate in both Palmtree Panic Past acts, with native picture
+  checks on act 1. Animal animation coverage varies elsewhere.
 - Native frames dropped while the CPU is busy (lag frames) are not modelled;
   the engine reimplements the game, not the console's CPU timing. How long a
   stage load and the opening video's disc wait take follows timings measured on
