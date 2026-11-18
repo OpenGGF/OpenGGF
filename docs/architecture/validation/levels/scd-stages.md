@@ -108,7 +108,7 @@ diverging row and the frontier test's cause label (a guess, not a diagnosis).
 | R42B, R42C, R42D | none | none | green | |
 | R43C, R43D | boss movies | partial | green | Chase equal in both futures; fight compared to row 4887 of R43D; defeat, escape and capsule recorded, not compared |
 | R51A | **green** 4,756 | asserted | green | |
-| R51B | **green** 5,494 | asserted | 549 / 569, object | Fixture stops on an unhosted object (`$03`, `$10` nearby) |
+| R51B | **green** 5,494 | asserted | **green** 569 | The conveyor switches to its warp step on the trigger frame |
 | R51C | **green** 7,151 | asserted | green | |
 | R51D | none | none | green | |
 | R52A | **green** 4,772 | asserted | green | |
@@ -138,8 +138,9 @@ diverging row and the frontier test's cause label (a guess, not a diagnosis).
 
 Totals at `6c5c0e2764` and `45463c80bd`: routes 146,390 of 149,633 rows (97.8%; 26 of 28 to
 their end); fixtures 56,879 of 57,049 rows (68 of 70). The later focused
-Metallic Madness rerun closed R82A. R42A (break pole) remains open, as do the
-short fixtures R11C and R51B. The historical totals count the diverging row as
+Metallic Madness rerun closed R82A, and the focused Quartz Quadrant rerun closed
+the R51B fixture. R42A (break pole) and the R11C fixture remain open.
+The historical totals count the diverging row as
 compared. The cells above give the first diverging row. In the act-end column
 `none` means the route has no end-of-act assertion: it is not in
 `TestSonicCdActEndNative`'s set, either
@@ -177,6 +178,19 @@ The native routine lets him pass through the underside. With both fixes,
 R82A matches every one of its 5,697 recorded rows. The same selection kept
 R81A, R81B and R81C green. The source notes and commands are in the
 [trace frontier log](../../../status/trace-frontier-log.md#2026-11-18--sonic-cd-twin-walker-top-solid-receiver).
+
+## Quartz Quadrant conveyor recheck (2026-11-18)
+
+The R51B short fixture first differed at row 549, when Sonic triggered the
+warp out of the Past. The conveyor selects its block list from the live period
+and its speed from the period and warp flag. The trigger changes both values
+before the conveyor runs in the same player update. Sonic's x velocity stays
+at `$0616` while the conveyor's step changes from half a pixel to two pixels.
+The short fixture now matches through all 569 recorded rows, including the 20
+rows that differed on the baseline. R51A, R51C, R52A and R52B also match through
+their short recordings. The R51A, R51B, R51C and R52A long routes match through
+their recorded ends. These comparisons use the existing frontier fields and
+recordings. See the [trace frontier log](../../../status/trace-frontier-log.md#2026-11-18--sonic-cd-quartz-quadrant-conveyor-at-warp-trigger).
 
 ## Standard obligations
 

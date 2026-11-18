@@ -124951,3 +124951,49 @@ ends. `TestSonicCdFixtureFrontier`, `TestSonicCdRoutesBLongNative`,
 the Maven queue with `-Dmse=off`, headless EGL and `-Dsoniccd.native.root=<native>`.
 The strict long-route set includes all 16 routes sharing `CdLongRoutePins`.
 The R82A movie ends before the signpost, so its outcome covers the recorded route.
+
+## 2026-11-18 — Sonic CD Quartz Quadrant conveyor at warp trigger
+
+On `fix-r51b-conveyor-speed` at base `22bd4167d1`, the short R51B fixture
+first differed at row 549 (CSV frame `$0225`). The native x and fraction were
+`$0629:$AA00` against the engine's `$0628:$2A00`. Both x and ground velocity
+stayed at `$0616`. The native audit found `time_zone` changing from `$00` to
+`$81`. Native displacement went from `$69600` at row 548 to `$81600` at
+row 549 in 16.16 units. The old engine's cached `$8000` conveyor step explains
+the `$18000` difference from the native `$20000` step.
+
+`PlayerGroundStateNormal` (objects/player.asm:656-666) calls the warp check
+before movement. `PlayerCheckWarpTransitionThreshold` (objects/player.asm:573-602)
+commits the destination period and sets bit 7 at timer 210.
+`PlayerMainNormalState` (objects/player.asm:306-312) calls the conveyor check
+after the movement mode returns. For eligibility, `sub_2066BA`
+(r5/player_block_check.asm:46-57) masks bit 7 and adds `good_future` only in
+the Future. For speed, `loc_2068AA` (r5/player_block_check.asm:308-316) tests
+the full byte. The `$8000` and `$10000` steps require ordinary Past and
+Present respectively. A Future or a committed warp takes `$20000`.
+`QqzPlayerProfile` selects a disc-backed block list from the live
+`CdTimeTravel` period and good-future flag and uses `warping()` to select the
+full step. The conveyor reads the same-update publication from
+`CdTimeTravel.trigger`.
+
+Matched Java 25 checks on the verified USA disc used the following command in
+the orchestration checkout, with fresh report and table paths for each run.
+
+```sh
+python3 tools/testing/maven_queue.py -Dmse=off -B \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dopenggf.surefire.reports=$reports" "-Dsoniccd.frontier.out=$table" \
+  "-Dsoniccd.fixtures.root=$fixtures" "-Dsoniccd.fixture.payloads=$payloads" \
+  -Dsoniccd.frontier.continue=true -Dtest=TestSonicCdFixtureFrontier test
+```
+
+Each invocation ran one test with zero failures, errors or skips. On
+`rehost-fixtures` (`R51A,R51B,R51C,R52A,R52B`), baseline R51B reported
+`x` and `x_sub` at 549 and 20 error rows in the continued run with no
+reconvergence. The candidate (runtime blob `2641bca05e`) processed all 569
+rows with zero error rows and no later frontier. R51A (841 rows), R51C (840),
+R52A (600) and R52B (842) matched through their ends on both runs.
+On `rehost-long` (`R51A,R51B,R51C,R52A`), both tables were identical.
+R51B matched through 5,494 rows and the controls through 4,756, 7,151 and
+4,772 rows respectively. Coverage is the frontier comparator's player and
+camera fields through each recording's end. Ring count is excluded.

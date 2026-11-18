@@ -358,8 +358,9 @@ unverified lists. The order is not a priority order.
 
 **Accuracy frontiers**
 - Full-act route R42A stops at the break pole at row 4286. The R82A follow-up
-  matches all 5,697 recorded rows. Fixtures R11C (row 677) and R51B (row 549)
-  still diverge near native objects. See the [stage matrix](../validation/levels/scd-stages.md#first-divergence-recheck-2026-11-18).
+  matches all 5,697 recorded rows. The R11C fixture still diverges near a native
+  object at row 677. The R51B conveyor follow-up matches all 569 rows of its
+  short fixture. See the [stage matrix](../validation/levels/scd-stages.md#quartz-quadrant-conveyor-recheck-2026-11-18).
 - 28 stages have a full-act route; the other 42 have only the 14-second
   fixture, and 14 of those (the act 3 stages) also have boss movies. No
   complete-run recording exists. Three routes (R81B, R81C, R82A) have no
