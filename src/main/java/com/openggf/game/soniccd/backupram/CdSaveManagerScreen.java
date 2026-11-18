@@ -24,7 +24,6 @@ final class CdSaveManagerScreen implements NativeMenuScreen {
     private static final Logger LOGGER = Logger.getLogger(CdSaveManagerScreen.class.getName());
     private static final int WIDTH = 320, LEFT = 12, ROW_WIDTH = WIDTH - 2 * LEFT;
     private static final int FIRST_ROW = 112, ROW_HEIGHT = 24, ROW_GAP = 6;
-    private static final String KEY = "menu.soniccd.save_manager.";
 
     private final CdSceneCoordinator coordinator;
     private final PixelFontTextRenderer text = PixelFontTextRenderer.menu();
@@ -97,19 +96,20 @@ final class CdSaveManagerScreen implements NativeMenuScreen {
         PixelFont font = text.font();
         text.beginBatch();
         try {
-            MenuChrome.page(font, WIDTH, UiMessages.text(KEY + "title"), null, null);
-            String body = UiMessages.text(KEY + (writeFailed ? "error" : "description"));
+            MenuChrome.page(font, WIDTH, UiMessages.text("menu.soniccd.save_manager.title"), null, null);
+            String body = writeFailed ? UiMessages.text("menu.soniccd.save_manager.error")
+                    : UiMessages.text("menu.soniccd.save_manager.description");
             int y = 48 + MenuChrome.compactMetrics().above();
             for (String line : MenuStyle.wrap(body, ROW_WIDTH - 12, MenuStyle.COMPACT)) {
                 MenuChrome.compact(font, line, LEFT + 6, y, writeFailed ? MenuChrome.AMBER : MenuChrome.TEXT);
                 y += Math.max(MenuChrome.DESCRIPTION_PITCH, MenuChrome.compactLineHeight());
             }
-            drawOption(font, false, MenuChrome.Icon.CHECK, "keep");
-            drawOption(font, true, MenuChrome.Icon.WARNING, "reset");
+            drawOption(font, false, MenuChrome.Icon.CHECK, UiMessages.text("menu.soniccd.save_manager.keep"));
+            drawOption(font, true, MenuChrome.Icon.WARNING, UiMessages.text("menu.soniccd.save_manager.reset"));
             if (input != null) {
                 MenuChrome.footer(font, WIDTH, null, List.of(
-                        MenuChrome.upDown(input, UiMessages.text(KEY + "move")),
-                        MenuChrome.hint(MenuInput.confirmLabel(input), UiMessages.text(KEY + "choose")),
+                        MenuChrome.upDown(input, UiMessages.text("menu.soniccd.save_manager.move")),
+                        MenuChrome.hint(MenuInput.confirmLabel(input), UiMessages.text("menu.soniccd.save_manager.choose")),
                         MenuChrome.hint(MenuInput.backLabel(input), UiMessages.text("menu.details.back"))),
                         MenuInput.controller(input), frame);
             }
@@ -124,7 +124,7 @@ final class CdSaveManagerScreen implements NativeMenuScreen {
         if (selected) MenuChrome.focus(font, LEFT, y, ROW_WIDTH, ROW_HEIGHT, frame);
         else MenuChrome.panel(font, LEFT, y, ROW_WIDTH, ROW_HEIGHT);
         MenuChrome.icon(font, icon, LEFT + 8, y + 8, reset ? MenuChrome.AMBER : MenuChrome.CYAN);
-        MenuChrome.compact(font, UiMessages.text(KEY + label), LEFT + 24,
+        MenuChrome.compact(font, label, LEFT + 24,
                 y + (ROW_HEIGHT - MenuChrome.compactLineHeight()) / 2 + MenuChrome.compactMetrics().above(),
                 selected ? MenuChrome.WHITE : MenuChrome.TEXT);
     }
