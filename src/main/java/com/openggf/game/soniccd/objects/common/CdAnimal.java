@@ -4,7 +4,6 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.soniccd.objects.art.CdObjectArtProvider;
 import com.openggf.game.soniccd.objects.projector.ProjectorArt;
 import com.openggf.graphics.GLCommand;
-import com.openggf.level.objects.CameraRelativeDraw;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.physics.ObjectTerrainUtils;
@@ -28,7 +27,6 @@ import java.util.List;
  * longer holds its ID or it has been shot down, and otherwise circle (flying) or stay (ground). The Palmtree Panic Past
  * holograms draw from the projector's disc-backed art cue.
  */
-@CameraRelativeDraw(CameraRelativeDraw.Use.CULL_ONLY)
 public final class CdAnimal extends CdObject
         implements com.openggf.game.soniccd.objects.projector.ProjectorChild, com.openggf.level.objects.RewindRecreatable,
         ObjectVisualFacing.Source {
