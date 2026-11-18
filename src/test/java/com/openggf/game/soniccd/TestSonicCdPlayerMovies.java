@@ -21,11 +21,17 @@ class TestSonicCdPlayerMovies {
      * pad holds Up alone. The lag V-INT ({@code VInt_Lag}, Level/Main.asm:738-766) does not read the pad, so
      * {@code playerCtrlTap} at row 2070 is taken against row 2068's held A and has no A press: native does not jump
      * (with ground speed $300 from the shooter's missile, {@code ObjSonic_CheckJump} would, scddisasm/src/Level/_Objects/Sonic/Main.asm:1779-1801).
-     * Row 3164 is the next stop, not the player's: native lands on the wood block $44 (slot 79), which is not hosted.
+     * Row 3163 bounds this check of the controller edge.
      */
     @Test
     void aJumpPressIsTakenAgainstTheLastPolledRow() throws Exception {
         assertEqualsThrough("rehost-long", CdStagePayload.R42A, 3163);
+    }
+
+    /** The cold route takes the break poles at rows 4286 and 4329 and releases them at 4301 and 4384. */
+    @Test
+    void tidalTempestBreakPoleInteractionsMatchNative() throws Exception {
+        assertEqualsThrough("rehost-long", CdStagePayload.R42A, 4403);
     }
 
     /**

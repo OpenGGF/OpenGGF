@@ -104,7 +104,7 @@ diverging row and the frontier test's cause label (a guess, not a diagnosis).
 | R41B | **green** 4,721 | asserted | green | |
 | R41C | **green** 6,013 | asserted | green | |
 | R41D | none | none | green | |
-| R42A | 4,286 / 6,411 | pending | green | At row 4286 the retail break pole captures Sonic. Both runs are already underwater. The route does not reach its act end |
+| R42A | 4,404 / 6,411 | pending | green | The first two break-pole grips and releases match. At row 4404 native Sonic takes damage beside the unhosted `$37` spike ball |
 | R42B, R42C, R42D | none | none | green | |
 | R43C, R43D | boss movies | partial | green | Chase equal in both futures; fight compared to row 4887 of R43D; defeat, escape and capsule recorded, not compared |
 | R51A | **green** 4,756 | asserted | green | |
@@ -138,7 +138,7 @@ diverging row and the frontier test's cause label (a guess, not a diagnosis).
 
 Totals at `6c5c0e2764` and `45463c80bd`: routes 146,390 of 149,633 rows (97.8%; 26 of 28 to
 their end); fixtures 56,879 of 57,049 rows (68 of 70). The later focused
-Metallic Madness rerun closed R82A. R42A (break pole) remains open, as do the
+Metallic Madness rerun closed R82A. R42A (underwater hurt) remains open, as do the
 short fixtures R11C and R51B. The historical totals count the diverging row as
 compared. The cells above give the first diverging row. In the act-end column
 `none` means the route has no end-of-act assertion: it is not in
@@ -169,6 +169,16 @@ on entry from the left and selects animation `$11`. The native row shows
 `x=$15A8` and animation `$11`. The engine stays at `x=$158D` and animation
 `$0F`. Both underwater flags are set. The frontier tool's Water label came
 from the existing underwater bit.
+
+The break-pole follow-up matches R42A through row 4403, including the grips at
+4286 and 4329 and the releases at 4301 and 4384. Row 4404 is the new first
+divergence. Native takes underwater hurt and spills rings near the `$37` spike
+ball at `($1690,$0750)`. R41A, R41B and R41C still match to their recorded
+ends. `TestSonicCdPlayerMovies` pins the matched R42A prefix. `TestTtzObjects`
+checks either approach, both climb limits, the two timers, input-edge release,
+death and replacement cleanup, unload, ownership through rewind recreation, and
+the two disc-backed mapping frames. The third native grip at row 4666 is beyond
+the matched prefix. See the [trace frontier log](../../../status/trace-frontier-log.md#2026-11-18--sonic-cd-tidal-tempest-break-pole).
 
 In R82A, routing the right twin-walker platform's top-solid check to that
 platform fixed the horizontal speed loss at row 4577. The next stop at row

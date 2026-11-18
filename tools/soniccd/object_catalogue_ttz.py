@@ -148,13 +148,28 @@ FIRST_HIT = {
     # PlatformChainObject_0_Routine0 (objects/r4/platform_chain.asm:53-66); R43C and R43D assemble it twice.
     'platformChainMappings': '0028 0004 0001 317C 4340 0002 0C39 0002 ???????? 66?? 317C 4400 0002 217C AAAAAAAA 0004',
 }
-EXTRA_COLUMNS = tuple(FIRST_HIT)
+BREAK_POLE_INIT = '0028 0004 0001 317C 42F8 0002 217C AAAAAAAA 0004 5428 0024'
+EXTRA_COLUMNS = (*FIRST_HIT, 'breakPoleMappings')
 
 
 def extra_columns(stage: str, data: bytes) -> dict:
-    from object_catalogue import operands
+    from object_catalogue import operands, pattern
+    from object_catalogue_common import OBJECT_INDEX
+    from stage_catalogue import WORD_RAM, require
+
     out = {}
     for column, signature in FIRST_HIT.items():
         hits = operands(data, signature)
         out[column] = hits[0] if hits else None
+
+    # ObjectIndex slot $05 (r4/object_index_2a.asm:3-8) starts BreakPoleObject only in acts 1 and 2.
+    # The retained copy in the act 3 binaries is not dispatched. The init follows the dispatcher
+    # and four-entry routine table by $22 (BreakPoleObject, objects/r4/break_pole.asm:3-25).
+    indexes = operands(data, OBJECT_INDEX)
+    require(len(indexes) == 1, f"{stage} ObjectIndex: expected one operand, got {indexes}")
+    slot = indexes[0] + 4 * (0x05 - 1)
+    entry = int.from_bytes(data[slot:slot + 4], "big") - WORD_RAM
+    match = pattern(BREAK_POLE_INIT).match(data, entry + 0x22) if entry >= 0 else None
+    require((match is not None) == (stage[2] in "12"), f"{stage} unexpected $05 dispatch")
+    out['breakPoleMappings'] = int.from_bytes(match.group("abs"), "big") - WORD_RAM if match else None
     return out

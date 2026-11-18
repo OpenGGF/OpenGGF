@@ -14,18 +14,23 @@ import com.openggf.game.session.SessionManager;
 import com.openggf.game.soniccd.level.CdLevel;
 import com.openggf.game.soniccd.objects.art.CdObjectArtProvider;
 import com.openggf.game.soniccd.objects.ttz.*;
+import com.openggf.game.soniccd.player.CdSonicAnimation;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.physics.GroundSensor;
+import com.openggf.physics.Direction;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 import com.openggf.tests.HeadlessTestRunner;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tools.HeadlessGameBoot;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.nio.file.Path;
 import java.util.List;
@@ -33,6 +38,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -105,6 +111,131 @@ class TestTtzObjects {
 
     private int floorDistance(AbstractObjectInstance o, int yRadius) {
         return ObjectTerrainUtils.checkFloorDist(o.getX(), o.getY(), yRadius).distance();
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {-1, 1})
+    void breakPoleGripsClimbsAndBreaksOnAFreshPress(int approach) throws Exception {
+        boot(CdStagePayload.R42A);
+        var pole = addBreakPole(0);
+        sonic.setXSpeed((short) (approach * 0x100));
+        sonic.setYSpeed((short) 0x234);
+        sonic.setGSpeed((short) 0x345);
+        sonic.setSubpixelRaw(0x1357, 0x2468);
+        sonic.setJumpInputPressed(true, false);
+        pole.update(0, sonic);
+        assertTrue(sonic.isObjectControlled());
+        assertTrue(sonic.isObjectControlSuppressesMovement());
+        assertFalse(sonic.isTouchResponseSuppressedByObjectControl());
+        assertEquals(pole.getX() + approach * 24, sonic.getCentreX());
+        assertEquals(approach < 0 ? Direction.LEFT : Direction.RIGHT, sonic.getDirection());
+        assertEquals(CdSonicAnimation.HANG.id(), sonic.getAnimationId());
+        assertEquals(0x1357, sonic.getXSubpixelRaw());
+
+        sonic.setDirectionalInputPressed(true, true, false, false);
+        pole.update(0, sonic);
+        assertEquals(pole.getY() - 1, sonic.getCentreY(), "Up wins when both directions are held");
+        for (int i = 0; i < 30; i++) pole.update(0, sonic);
+        assertTrue(sonic.isObjectControlled(), "a held button supplies no new edge");
+        assertEquals(pole.getY() - 24, sonic.getCentreY());
+        sonic.setDirectionalInputPressed(false, true, false, false);
+        for (int i = 0; i < 50; i++) pole.update(0, sonic);
+        assertEquals(pole.getY() + 24, sonic.getCentreY());
+        assertEquals(0x2468, sonic.getYSubpixelRaw());
+
+        sonic.setDirectionalInputPressed(true, false, false, false);
+        sonic.setJumpInputPressed(true, true);
+        pole.update(0, sonic);
+        assertFalse(sonic.isObjectControlled());
+        assertEquals(pole.getY() + 24, sonic.getCentreY(), "the press takes precedence over climbing");
+        assertEquals(approach * 0x100, sonic.getXSpeed());
+        assertEquals(0x234, sonic.getYSpeed());
+        assertEquals(0x345, sonic.getGSpeed());
+        sonic.setCentreX((short) pole.getX());
+        sonic.setCentreY((short) pole.getY());
+        pole.update(0, sonic);
+        assertFalse(sonic.isObjectControlled(), "a broken pole cannot grip again");
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {0, 0x80})
+    void breakPoleTimesOutOnItsNativeSubtypeTimer(int subtype) throws Exception {
+        boot(CdStagePayload.R42A);
+        var pole = addBreakPole(subtype);
+        pole.update(0, sonic);
+        int ticks = subtype == 0 ? 180 : 60;
+        for (int i = 1; i < ticks; i++) pole.update(0, sonic);
+        assertTrue(sonic.isObjectControlled());
+        pole.update(0, sonic);
+        assertFalse(sonic.isObjectControlled());
+    }
+
+    @Test
+    void breakPoleRewindRecreatesGripAndUnloadReleasesIt() throws Exception {
+        boot(CdStagePayload.R42A);
+        var pole = addBreakPole(1);
+        pole.update(0, sonic);
+        for (int i = 0; i < 12; i++) pole.update(0, sonic);
+        var manager = GameServices.level().getObjectManager();
+        var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+        int slot = ((AbstractObjectInstance) pole).getSlotIndex();
+        var captured = registry.capture();
+        manager.removeDynamicObject(pole);
+        assertFalse(sonic.isObjectControlled(), "retiring the owner releases its player");
+
+        registry.restore(captured);
+        var restored = live(0x05).stream().map(AbstractObjectInstance.class::cast)
+                .filter(object -> object.getSlotIndex() == slot).findFirst().orElseThrow();
+        assertNotSame(pole, restored);
+        assertTrue(sonic.isObjectControlled());
+        for (int i = 0; i < 47; i++) restored.update(0, sonic);
+        assertTrue(sonic.isObjectControlled(), "the recreated pole retains its timer and player binding");
+        restored.update(0, sonic);
+        assertFalse(sonic.isObjectControlled());
+    }
+
+    @Test
+    void breakPoleRetiresADeadOrReplacedOwner() throws Exception {
+        boot(CdStagePayload.R42A);
+        var deathPole = addBreakPole(0);
+        deathPole.update(0, sonic);
+        sonic.setDead(true);
+        deathPole.update(0, sonic);
+        assertFalse(sonic.isObjectControlled());
+        sonic.setDead(false);
+
+        var stalePole = addBreakPole(0);
+        stalePole.update(0, sonic);
+        // A replacement can claim the same flag combination. Only the generation distinguishes the owners.
+        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(sonic);
+        sonic.setDirectionalInputPressed(true, false, false, false);
+        stalePole.update(0, sonic);
+        assertTrue(sonic.isObjectControlled());
+        assertEquals(stalePole.getY(), sonic.getCentreY());
+    }
+
+    @Test
+    void breakPoleUsesTwoDiscBackedMappingFrames() throws Exception {
+        boot(CdStagePayload.R42A);
+        var provider = art();
+        var key = TtzObjectArt.key(provider, TtzObjectArt.BREAK_POLE, 0x42F8, GameServices.camera().getX());
+        assertNotNull(key);
+        var sheet = provider.getSheet(key);
+        assertEquals(2, sheet.getFrameCount());
+        assertEquals(2, sheet.getPaletteIndex());
+        assertTrue(java.util.Arrays.stream(sheet.getPatterns()).anyMatch(pattern -> {
+            for (int y = 0; y < 8; y++) {
+                for (int x = 0; x < 8; x++) {
+                    if (pattern.getPixel(x, y) != 0) return true;
+                }
+            }
+            return false;
+        }), "the stage PLC supplies nontransparent art at the mapping's tile base");
+    }
+
+    private ObjectInstance addBreakPole(int subtype) {
+        return add(SessionManager.requireCurrentGameModule().createObjectRegistry()
+                .create(spawn(sonic.getCentreX(), sonic.getCentreY(), 0x05, subtype)));
     }
 
     // ---- Water surface at level start (r4/main.asm:249) ----------------------------------------------

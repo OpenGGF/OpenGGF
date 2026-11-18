@@ -124951,3 +124951,44 @@ ends. `TestSonicCdFixtureFrontier`, `TestSonicCdRoutesBLongNative`,
 the Maven queue with `-Dmse=off`, headless EGL and `-Dsoniccd.native.root=<native>`.
 The strict long-route set includes all 16 routes sharing `CdLongRoutePins`.
 The R82A movie ends before the signpost, so its outcome covers the recorded route.
+
+## 2026-11-18 — Sonic CD Tidal Tempest break pole
+
+Baseline `55c5964fd3` reproduced the R42A first difference at row 4286 from
+`rehost-long/R42A`. Native `$05` grips Sonic at X `$15A8` and selects animation
+`$11`. The engine was at X `$158D` and animation `$0F`. The pole uses the live
+`$05` dispatch in all eight act 1/2 programs. `BreakPoleObject_0_Routine2`
+(objects/r4/break_pole.asm:27-52) preserves velocities and subpixels on the
+grip. `BreakPoleObject_0_Routine4` (objects/r4/break_pole.asm:59-88) climbs
+one pixel within 24 pixels of the pole's Y and releases on the P1 button edge
+or timeout. The adapter uses existing player control and the disc PLC's art
+at tile base `$2F8`. The BK2 provides input and the trace supplies comparisons.
+
+The `ttz-break-pole-interaction` candidate on that base matches R42A until
+row 4404. Native/engine then diverge in `x` (`$167F/$1680`), `x_speed`
+(`-$100/$400`), `y_speed` (`-$200/$0000`), `g_speed` (`$0000/$02D7`),
+`routine` (`$04/$02`) and `player_animation_id` (`$1A/$0F`). Native
+spills rings on that row. The likely damage source is the unhosted slot 38
+spike ball at `($1690,$0750)`. `ObjectIndex` (r4/object_index_2a.asm:51-59)
+and `SpikeBallObject` (objects/r4/spike_ball.asm:3-18) identify `$37` as a
+harmful `$A9` collision. The recorder does not identify which object the
+collision loop selected. The continuation replayed all 6,411 rows with
+1,978 error rows and no reconvergence in compared gameplay state. R41A (5,449),
+R41B (4,721), and R41C (6,013) match to the end on both trees.
+
+Run on Java 25 with the user-supplied USA disc and native recordings:
+
+```sh
+python3 tools/testing/maven_queue.py -Dmse=off \
+  -Dsoniccd.media.root="$MEDIA_ROOT" -Dsoniccd.fixtures.root="$NATIVE_ROOT/rehost-long" \
+  -Dsoniccd.fixture.payloads=R42A,R41A,R41B,R41C \
+  -Dtest=TestSonicCdFixtureFrontier test -B
+```
+
+Baseline stopped on the first error and the diagnostic test passed without
+skips. The candidate also used `-Dsoniccd.frontier.continue=true` and selected
+`TestTtzObjects`, `TestCdUnhostedObjectCensus` and
+`TestNativeObjectFacingGuard` in the same invocation. All 98 tests passed
+without skips. A separate queued run with `TestCdObjectRegistryStageScope`
+and `TestSonicCdPlayerMovies#tidalTempestBreakPoleInteractionsMatchNative`
+verified the stage scope and the strict R42A prefix through row 4403.

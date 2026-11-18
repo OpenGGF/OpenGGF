@@ -48,6 +48,7 @@ public final class TtzObjectArt {
             HMOVE1 = "hmove1", HMOVE2 = "hmove2", HMOVE3 = "hmove3", HMOVE4 = "hmove4", HMOVE5 = "hmove5", HMOVE6 = "hmove6",
             TAGA1 = "taga1", TAGA2 = "taga2", TAGA_MISSILE = "tagamissile", ANIMAL1 = "animal1", ANIMAL2 = "animal2",
             SPIKES = "spikes", WOOD_BLOCK = "woodblock", PRIZE_SWITCH = "prizeswitch", RING_PRIZE = "ringprize", POINTS_PRIZE = "pointsprize";
+    public static final String BREAK_POLE = "breakpole";
 
     /** The tile words the routines load (cited on each class): move.w #tile,obj.sprite_tile. */
     public static final int MOVE_WALL_TILE = 0x446A,      // objects/r4/move_wall.asm:27
@@ -118,6 +119,7 @@ public final class TtzObjectArt {
             new Spec(TAGA_MISSILE, "tagaMissileMappings", new int[] {TAGA_TILE}),
             new Spec(SPIKES, "spikesMappings", new int[] {ObjSpikes.TILE}),
             new Spec(WOOD_BLOCK, "woodBlockMappings", new int[] {ObjWoodBlock.TILE}),
+            new Spec(BREAK_POLE, "breakPoleMappings", new int[] {ObjBreakPole.TILE}),
             new Spec(PRIZE_SWITCH, "prizeSwitchMappings", new int[] {ObjPrizeSwitch.TILE}),
             new Spec(RING_PRIZE, "ringPrizeMappings", new int[] {ObjRingPrize.TILE}),
             new Spec(POINTS_PRIZE, "pointsPrizeMappings", new int[] {ObjPointsPrize.TILE}),

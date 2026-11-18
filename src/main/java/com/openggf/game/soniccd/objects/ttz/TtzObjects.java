@@ -14,6 +14,8 @@ public final class TtzObjects implements CdObjectRegistration {
         registrar.object(0x52, "Projector", com.openggf.game.soniccd.objects.projector.ProjectorObjectCatalogue::indexedIn,
                 (spawn, r) -> new com.openggf.game.soniccd.objects.projector.CdProjector(spawn));
         registrar.object(0x04, "Water surface", (spawn, r) -> new ObjWaterSurface(spawn));
+        registrar.object(0x05, "Break pole", p -> TtzObjectCatalogue.offset(p, "breakPoleMappings") >= 0,
+                (spawn, r) -> new ObjBreakPole(spawn));
         for (int id = 0x0B; id <= 0x0E; id++) {
             registrar.object(id, "Splash", (spawn, r) -> new ObjSplash(spawn));
         }
