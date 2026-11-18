@@ -280,8 +280,9 @@ Future). `SonicCdEndingCaptureTool --ending good|bad` films an ending.
   exercised on the disc host. Donated life icons use their own object-art tiles,
   preserving transparent foreground cells and the native HUD.
 - Special stage results graphics, pause and exit fade are not drawn.
-- Robotnik's projector in the Past can be destroyed, but the animals in its
-  hologram are not drawn.
+- Robotnik's projector in the Past can be destroyed. Its flying and ground
+  hologram animals animate in both Palmtree Panic Past acts, with native picture
+  checks on act 1. Animal animation coverage varies elsewhere.
 - Native frames dropped while the CPU is busy (lag frames) are not modelled;
   the engine reimplements the game, not the console's CPU timing. How long a
   stage load and the opening video's disc wait take follows timings measured on
