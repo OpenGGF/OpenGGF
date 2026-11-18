@@ -71,7 +71,9 @@ under the matching area heading; see the
   Japanese and European discs containing the identical driver bank. The title's
   RAM DATA entry confirms a reset of Sonic CD's save to disc defaults.
   Visual Mode plays the opening and both endings. D.A. Garden plays disc music
-  in an OpenGGF browser. Held-key live rewind works inside
+  in an OpenGGF browser with an optional still view of the Present planet.
+  Disc music continues as you view the art and return to the selected track.
+  Held-key live rewind works inside
   special stages, including the three-frame floor pipeline, UFOs and effects. The master
   title lists it when the disc is configured or found (`roms.default: scd` boots
   it directly) and verifies it against the USA release before starting. A CHD
@@ -80,7 +82,7 @@ under the matching area heading; see the
   pure Java (CHD v5; `cdzl`, `cdlz`, `cdfl` and `cdzs` hunks or uncompressed;
   hunk CRCs and the header SHA-1s checked) and refuses delta, older-version
   and non-CD CHDs by name. Not
-  included: the D.A. Garden planet presentation, the pencil test, Thank You,
+  included: the D.A. Garden planet animation, the pencil test, Thank You,
   Comin' Soon, ordinary-stage attract demos, Stage 8 credits, and Japanese and
   European gameplay. Disc audio, video songs and PCM sound follow the music
   and effects volumes; CD audio and PCM also share the FM presentation scale

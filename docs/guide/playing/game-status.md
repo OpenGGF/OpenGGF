@@ -244,7 +244,10 @@ Future). `SonicCdEndingCaptureTool --ending good|bad` films an ending.
   returns to the browser.
 - The unlockable **D.A. Garden** opens an OpenGGF browser for music tracks
   from the disc. Choose a track to play it, or choose the playing track
-  again to stop it. Back returns to the title.
+  again to stop it. **Planet** (F1 or the controller's Details button)
+  opens a still view of Little Planet in the Present. Music continues
+  while the art is open. Back returns to your selected track, and Back
+  from the track list returns to the title.
 - Saves: the backup RAM, in the format the BIOS writes, is kept in
   `saves/soniccd/slot0.json` beside the other games' saves (`openggf.saveRoot`
   moves the folder). It is written whenever the game writes its backup RAM:
