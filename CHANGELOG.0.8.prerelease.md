@@ -535,8 +535,9 @@ under the matching area heading; see the
   host art when the donor lacks their sheet. Game Setup saves CD donor/team choices.
   Stage-backed host animation scripts no longer require a cartridge host.
   CD authored acts support fixed-height water, collectible rings with disc art,
-  and owned objects. Native objects retain their stage program context. Audio-state restoration also restores the native/streamed
-  music selection. This extends unpublished API candidate 0.7.0.
+  fixed vertical and horizontal springs, and owned objects. Audio-state
+  restoration also restores the native/streamed music selection. This extends
+  unpublished API candidate 0.7.0.
 
 
 - **Game rules belong to the module:** `GameModule.getPolicies()` now returns an

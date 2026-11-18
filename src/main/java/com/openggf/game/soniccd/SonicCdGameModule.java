@@ -105,7 +105,8 @@ public final class SonicCdGameModule implements GameModule {
             new com.openggf.game.soniccd.zones.CdZoneWater(() -> this.game == null ? null : this.game.currentImage());
     private final com.openggf.game.soniccd.objects.art.CdObjectArtProvider objectArt =
             new com.openggf.game.soniccd.objects.art.CdObjectArtProvider(
-                    () -> game == null ? null : game.currentLevel(), () -> game == null ? null : game.currentImage());
+                    () -> game == null ? null : game.currentLevel(), () -> game == null ? null : game.currentImage(),
+                    this::disc);
 
     /** Non-level programs: the IPX flow owner and its title, stage-select and not-hosted hosts. */
     private final com.openggf.game.soniccd.program.CdSceneCoordinator scenes =

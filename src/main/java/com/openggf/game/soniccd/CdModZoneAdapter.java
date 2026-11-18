@@ -19,7 +19,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.function.Supplier;
 
-/** Authored terrain, owned objects, and common rings decoded from the supplied disc. */
+/** Authored terrain and owned objects, with common ring and spring art from the supplied disc. */
 final class CdModZoneAdapter implements ModZoneAdapter {
     private final Supplier<CdDiscDataSource> disc;
 
@@ -32,9 +32,10 @@ final class CdModZoneAdapter implements ModZoneAdapter {
             throw new ModZoneRegistrationException(owner, "CD authored terrain requires v1 and 16x16 blocks");
         if (!Arrays.equals(data.primaryCollisionIndices(), data.secondaryCollisionIndices()))
             throw new ModZoneRegistrationException(owner, "CD has one collision path");
-        if (data.objects().stream().anyMatch(s -> s.objectKey() == null))
+        if (data.objects().stream().anyMatch(spawn -> spawn.objectKey() == null
+                && (spawn.objectId() != 0x0A || (spawn.subtype() & 8) != 0)))
             throw new ModZoneRegistrationException(owner,
-                    "CD authored zones require owned object keys; native objects need a disc stage's program/PLC context");
+                    "CD authored zones admit owned objects and non-diagonal fixed springs; other stock placements need a disc stage");
         for (RingSpawn ring : data.rings()) {
             if (ring.x() < 0 || ring.x() >= 0xFFFF || ring.y() < 0 || ring.y() > 0x0FFF) {
                 throw new ModZoneRegistrationException(owner, "CD rings require coordinates x=0..65534, y=0..4095");
