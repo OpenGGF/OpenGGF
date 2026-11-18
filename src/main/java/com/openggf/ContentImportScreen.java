@@ -235,11 +235,14 @@ public final class ContentImportScreen implements AutoCloseable {
             }
             return;
         }
+        if (accepted.kind() == ContentImportService.Kind.PROJECT && accepted.nativeProject().isPresent()) {
+            openNativeProject(accepted);
+            return;
+        }
         open = false;
         try {
             switch (accepted.kind()) {
-                case PROJECT -> accepted.nativeProject().ifPresentOrElse(host::openNativeProject,
-                        () -> host.openProject(accepted.project()));
+                case PROJECT -> host.openProject(accepted.project());
                 case LEVEL -> host.importLevel(accepted.level(), selectedGame);
                 case MOD -> throw new IllegalStateException(UiMessages.text("menu.contentimportscreen.mod_installation_was_not_scheduled"));
             }
@@ -248,6 +251,22 @@ public final class ContentImportScreen implements AutoCloseable {
         } catch (RuntimeException failure) {
             open = true; selected = 0; report(failure);
         } finally { closeLease(accepted); }
+    }
+
+    private void openNativeProject(PreparedImport accepted) {
+        open = false;
+        try {
+            host.openNativeProject(accepted.nativeProject().orElseThrow());
+            host.closed();
+            MenuFeedback.emit(MenuFeedback.Cue.CONFIRM);
+        } catch (IllegalArgumentException | IllegalStateException | UnsupportedOperationException
+                 | java.io.UncheckedIOException failure) {
+            open = true;
+            selected = 0;
+            report(failure);
+        } finally {
+            closeLease(accepted);
+        }
     }
 
     private EditorProjectMenu.Action gameAction(String label, GameId game) {

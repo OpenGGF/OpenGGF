@@ -9,24 +9,22 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.openggf.editor.project.EditorProjectLevel.LayoutSize;
 import com.openggf.game.internal.NativeProjectLevel;
 import com.openggf.game.internal.NativeProjectSource;
-import com.openggf.io.ModAssetRoot;
-import com.openggf.io.PackedModAssetRoot;
-import com.openggf.io.ModInputLimits;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.util.Comparator;
-import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
 import java.util.zip.ZipOutputStream;
 
 /** Portable native project. The matching native stage supplies the unchanged editor data. */
 public final class NativeEditorProjectPackage {
     public static final String ENTRY = "native-project.json";
+    public static final int MAX_BYTES = EditorProjectStore.MAX_BYTES;
     private static final int VERSION = 1;
     private static final int RESIZED_VERSION = 2;
     private static final String FORMAT = "OpenGGFNativeEditorProject";
@@ -63,7 +61,7 @@ public final class NativeEditorProjectPackage {
                 document.assets(), baseChecksum, EditorProjectEdits.between(base, indexed(edited)), resized);
         int version = resized == null ? VERSION : RESIZED_VERSION;
         byte[] bytes = MAPPER.writeValueAsBytes(new Envelope(FORMAT, version, payload, checksum(MAPPER.valueToTree(payload))));
-        if (bytes.length > EditorProjectStore.MAX_BYTES) throw new IOException("Native project exceeds the 64 MiB storage limit");
+        if (bytes.length > MAX_BYTES) throw new IOException("Native project exceeds the 64 MiB storage limit");
         Path target = destination.toAbsolutePath().normalize();
         Path parent = target.getParent();
         if (parent == null || Files.exists(target, LinkOption.NOFOLLOW_LINKS))
@@ -79,8 +77,14 @@ public final class NativeEditorProjectPackage {
                     output.putNextEntry(new ZipEntry(ENTRY));
                     output.write(bytes);
                 }
-                try (var archive = ModAssetRoot.jar(parent, staging, ModInputLimits.production())) {
-                    staged = read(archive);
+                try (var archive = new ZipFile(staging.toFile())) {
+                    ZipEntry entry = archive.getEntry(ENTRY);
+                    if (archive.size() != 1 || entry == null) {
+                        throw new IOException("Invalid staged native project archive");
+                    }
+                    try (var input = archive.getInputStream(entry)) {
+                        staged = decode(EditorProjectStore.readBounded(input));
+                    }
                 }
             } else {
                 Path file = staging.resolve(ENTRY);
@@ -100,18 +104,8 @@ public final class NativeEditorProjectPackage {
         }
     }
 
-    public static NativeEditorProjectPackage read(ModAssetRoot assets) throws IOException {
-        return decode(assets.readBounded(ENTRY, EditorProjectStore.MAX_BYTES));
-    }
-
-    public static NativeEditorProjectPackage read(PackedModAssetRoot archive) throws IOException {
-        if (!archive.validatedEntryNames().equals(List.of(ENTRY)))
-            throw new IOException("Native project ZIP must contain only " + ENTRY + " at its root");
-        return read((ModAssetRoot) archive);
-    }
-
-    static NativeEditorProjectPackage decode(byte[] bytes) throws IOException {
-        if (bytes.length > EditorProjectStore.MAX_BYTES) throw new IOException("Native project exceeds the 64 MiB storage limit");
+    public static NativeEditorProjectPackage decode(byte[] bytes) throws IOException {
+        if (bytes.length > MAX_BYTES) throw new IOException("Native project exceeds the 64 MiB storage limit");
         try {
             var node = MAPPER.readTree(bytes);
             if (node == null || !node.isObject() || node.size() != 4
