@@ -18,6 +18,7 @@ import com.openggf.game.soniccd.player.CdSonicAnimation;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.physics.GroundSensor;
 import com.openggf.physics.Direction;
 import com.openggf.physics.ObjectTerrainUtils;
@@ -30,6 +31,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.nio.file.Path;
@@ -37,6 +39,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -236,6 +239,90 @@ class TestTtzObjects {
     private ObjectInstance addBreakPole(int subtype) {
         return add(SessionManager.requireCurrentGameModule().createObjectRegistry()
                 .create(spawn(sonic.getCentreX(), sonic.getCentreY(), 0x05, subtype)));
+    }
+
+    @Test
+    void stationarySpikeBallHurtsAtContactAndRecreatesThroughRewind() throws Exception {
+        boot(CdStagePayload.R42A);
+        var manager = GameServices.level().getObjectManager();
+        var registry = SessionManager.requireCurrentGameModule().createObjectRegistry();
+        int x = sonic.getCentreX() + 64;
+        int y = sonic.getCentreY() + 11;
+        var ball = add(assertInstanceOf(AbstractObjectInstance.class, registry.create(spawn(x, y, 0x37, 0))));
+        assertEquals(0, ((TouchResponseProvider) ball).getCollisionFlags());
+        runner.stepIdleFrames(2);
+        assertEquals(x, ball.getX());
+        assertEquals(y, ball.getY());
+        assertEquals(3, ball.getPriorityBucket());
+        assertEquals(0xA9, ((TouchResponseProvider) ball).getCollisionFlags());
+        assertTrue(ball.isOnScreenForTouch());
+
+        sonic.setInvulnerableFrames(0);
+        sonic.setInWater(true);
+        GameServices.level().getLevelGamestate().setRings(5);
+        sonic.setCentreY((short) (y - 11));
+        // R42A's two pre-current offsets: -21 clears the 12-pixel half-width, -17 overlaps it.
+        sonic.setCentreX((short) (x - 21));
+        manager.runTouchResponsesForPlayer(sonic, 1);
+        assertFalse(sonic.isHurt());
+        assertEquals(5, GameServices.level().getLevelGamestate().getRings());
+
+        int slot = ball.getSlotIndex();
+        var rewind = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+        var beforeContact = rewind.capture();
+        assertStationarySpikeBallContact(x, 2);
+
+        manager.removeDynamicObject(ball);
+        rewind.restore(beforeContact);
+        var restored = live(0x37).stream().map(AbstractObjectInstance.class::cast)
+                .filter(object -> object.getSlotIndex() == slot).findFirst().orElseThrow();
+        assertNotSame(ball, restored);
+        assertEquals(x, restored.getX());
+        assertEquals(y, restored.getY());
+        assertEquals(0xA9, ((TouchResponseProvider) restored).getCollisionFlags());
+        assertTrue(restored.isOnScreenForTouch());
+        assertFalse(sonic.isHurt());
+        assertStationarySpikeBallContact(x, 2);
+    }
+
+    private void assertStationarySpikeBallContact(int ballX, int touchFrame) {
+        sonic.setCentreX((short) (ballX - 17));
+        GameServices.level().getObjectManager().runTouchResponsesForPlayer(sonic, touchFrame);
+        assertTrue(sonic.isHurt());
+        assertEquals(-0x100, sonic.getXSpeed());
+        assertEquals(-0x200, sonic.getYSpeed());
+        assertEquals(0, sonic.getGSpeed());
+        runner.stepIdleFrames(1); // The shared ring owner processes the queued spill during the level update.
+        assertEquals(0, GameServices.level().getLevelGamestate().getRings());
+        assertEquals(5, GameServices.level().getRingManager().getActiveLostRings().size());
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = CdStagePayload.class, names = {"R42A", "R42C", "R42D"})
+    void stationarySpikeBallUsesItsDiscMappingAndPlc(CdStagePayload payload) throws Exception {
+        boot(payload);
+        var provider = art();
+        var key = TtzObjectArt.key(provider, TtzObjectArt.STATIONARY_SPIKE_BALL, 0x370, GameServices.camera().getX());
+        assertNotNull(key);
+        var sheet = provider.getSheet(key);
+        assertEquals(1, sheet.getFrameCount());
+        assertEquals(0, sheet.getPaletteIndex());
+        var piece = sheet.getFrame(0).pieces().getFirst();
+        assertEquals(1, sheet.getFrame(0).pieces().size());
+        assertEquals(-16, piece.xOffset());
+        assertEquals(-16, piece.yOffset());
+        assertEquals(4, piece.widthTiles());
+        assertEquals(4, piece.heightTiles());
+        assertEquals(0, piece.tileIndex());
+        var patterns = sheet.getPatterns();
+        assertTrue(java.util.Arrays.stream(patterns).anyMatch(pattern -> {
+            for (int y = 0; y < 8; y++) {
+                for (int x = 0; x < 8; x++) {
+                    if (pattern.getPixel(x, y) != 0) return true;
+                }
+            }
+            return false;
+        }), "the stage PLC supplies visible art for the single $370 mapping");
     }
 
     // ---- Water surface at level start (r4/main.asm:249) ----------------------------------------------

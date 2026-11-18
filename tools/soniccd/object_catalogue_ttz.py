@@ -149,7 +149,10 @@ FIRST_HIT = {
     'platformChainMappings': '0028 0004 0001 317C 4340 0002 0C39 0002 ???????? 66?? 317C 4400 0002 217C AAAAAAAA 0004',
 }
 BREAK_POLE_INIT = '0028 0004 0001 317C 42F8 0002 217C AAAAAAAA 0004 5428 0024'
-EXTRA_COLUMNS = (*FIRST_HIT, 'breakPoleMappings')
+# SpikeBallObject (objects/r4/spike_ball.asm:3-14): match the entry and its mapping operand.
+STATIONARY_SPIKE_BALL = ('4A28 0024 6636 5428 0024 0028 0004 0001 117C 0003 0018 117C 00A9 0020 '
+                         '117C 0010 0017 117C 0010 0019 117C 0010 0016 317C 0370 0002 217C AAAAAAAA 0004')
+EXTRA_COLUMNS = (*FIRST_HIT, 'breakPoleMappings', 'stationarySpikeBallMappings')
 
 
 def extra_columns(stage: str, data: bytes) -> dict:
@@ -172,4 +175,12 @@ def extra_columns(stage: str, data: bytes) -> dict:
     match = pattern(BREAK_POLE_INIT).match(data, entry + 0x22) if entry >= 0 else None
     require((match is not None) == (stage[2] in "12"), f"{stage} unexpected $05 dispatch")
     out['breakPoleMappings'] = int.from_bytes(match.group("abs"), "big") - WORD_RAM if match else None
+
+    # ObjectIndex (r4/object_index_2a.asm:51-59 and r4/object_index_2c_2d.asm:51-59).
+    # Matching retained code in R43C/D must not register an object those indexes never call.
+    slot = indexes[0] + 4 * (0x37 - 1)
+    entry = int.from_bytes(data[slot:slot + 4], "big") - WORD_RAM
+    match = pattern(STATIONARY_SPIKE_BALL).match(data, entry) if entry >= 0 else None
+    require((match is not None) == (stage in {"R42A", "R42C", "R42D"}), f"{stage} unexpected $37 dispatch")
+    out['stationarySpikeBallMappings'] = int.from_bytes(match.group("abs"), "big") - WORD_RAM if match else None
     return out

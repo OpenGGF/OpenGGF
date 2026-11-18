@@ -124992,3 +124992,73 @@ skips. The candidate also used `-Dsoniccd.frontier.continue=true` and selected
 without skips. A separate queued run with `TestCdObjectRegistryStageScope`
 and `TestSonicCdPlayerMovies#tidalTempestBreakPoleInteractionsMatchNative`
 verified the stage scope and the strict R42A prefix through row 4403.
+
+## 2026-11-18 — Sonic CD Tidal Tempest stationary spike ball
+
+The `r42a-stationary-hazard` worktree starts at `a031832246fd7f98e33882349396f7e6e5831077`,
+the break-pole candidate. Its matched continuation reproduces the first error at
+R42A row 4404 and counts 1,978 error rows over all 6,411 rows, with no reconvergence.
+For R42A, R41A, R41B and R41C, the BK2, physics CSV, aux JSONL, USA CUE and USA data
+track match their respective long-manifest SHA-256 entries. Current v5 metadata
+matches the older manifest for R41B/C and differs for R42A and R41A. Both runs use
+the same current local inputs.
+
+Rows 4403 and 4404 record slot 38 at `($1690,$0750)` and slot 39 at
+`($1690,$0770)`. The first ball's `$A9` byte (SpikeBallObject,
+objects/r4/spike_ball.asm:3-18) selects the 12×16 radii at size `$09`
+(byte_207510, r4/player_object_collide.asm:397-406). The player samples touch
+with an eight-pixel horizontal half-width (PlayerObjectCollide,
+r4/player_object_collide.asm:3-27). His right bound at pre-current X `$167B`
+is `$1683`, just short of the ball's left bound `$1684`. At X `$167F`,
+Y `$0745` it overlaps slot 38 and clears slot 39 vertically. The usual
+right-input pixel is added after the object pass (StageMainLoopDraw,
+r4/main.asm:381-403 and CheckWaterCurrentsInputRight, r4/main.asm:848-851).
+HurtPlayer (r4/player_object_collide.asm:226-263) sets routine `$04`, which
+bypasses the pixel adjustment (CheckWaterCurrentsApplyCurrent, r4/main.asm:817-825).
+Native records the hurt and ring scatter on 4404. The selected collision
+pointer is unavailable.
+
+The stationarity, collision and draw/despawn order are owned by the Tidal
+Tempest adapter. The USA disc's live `$37` entry and mapping offsets are
+`$EA54/$EA9C` in R42A, `$F0E0/$F128` in R42C and `$F0CE/$F116` in R42D.
+The R43C/D indexes point elsewhere despite retaining a copy of the routine.
+The generated catalogue carries only the live mapping offsets.
+
+Java 25 command used for both revisions, with `DISPLAY` unset and a fresh
+`REPORTS` for each run:
+
+```sh
+python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  -Dsoniccd.media.root="$MEDIA_ROOT" -Dsoniccd.fixtures.root="$NATIVE_ROOT/rehost-long" \
+  -Dsoniccd.fixture.payloads=R42A,R41A,R41B,R41C -Dsoniccd.frontier.continue=true \
+  -Dopenggf.surefire.reports="$REPORTS" -Dtest=TestSonicCdFixtureFrontier test -B
+```
+
+The diagnostic completes with zero skips on each revision. With the adapter,
+the player and camera comparison matches through R42A row 4493, including the
+damage and knockback at 4404. On row 4494 Sonic returns from hurt to routine
+`$02` with no directional input. Native stays at X `$162F` while the engine
+moves to `$162E`. Both move to Y `$076C` and take the current's X velocity
+`$400` and animation `$0F`. PlayerHurt (objects/player.asm:2206-2219) moves
+first and calls PlayerHurtRecover (objects/player.asm:2223-2239) for airborne
+terrain checks and recovery. The first observed disagreement is the X
+correction on that landing. The trace lacks the side probe result, so the
+specific terrain branch remains open. The diagnostic's post-divergence pass
+stops in `CdTimeStars.update` when its animator reads a missing table offset
+(`Read outside the stage file: -1+1`). There is no completed continuation
+count for the candidate and row 4666's third grip is beyond the matched prefix.
+
+R41A (5,449 rows), R41B (4,721) and R41C (6,013) match to their ends on both
+revisions. The strict R42A prefix is pinned by
+`TestSonicCdPlayerMovies#tidalTempestBreakPolesAndSpikeBallContactMatchNative`.
+The replay comparison excludes ring counts. `TestTtzObjects` separately checks
+pre-contact clearance, underwater knockback, the queued ring scatter, recreation
+and repeat contact after rewind, and disc-backed mapping and art in all three
+enabled payloads. `TestCdObjectRegistryStageScope` and
+`TestCdUnhostedObjectCensus` check dispatch scope and the placed-ID census.
+
+The hazard declares camera-relative art selection for the section sheet. The
+first camera guard run reported only the inherited break-pole omission. The
+follow-up is based on `e8e284f35081debbb31c460bfeaf02919171f3a2`, whose only
+change from `a031832246fd7f98e33882349396f7e6e5831077` is the pole's matching
+camera annotation and import.

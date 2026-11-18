@@ -34,6 +34,8 @@ public final class TtzObjects implements CdObjectRegistration {
         registrar.object(0x33, "Crush blocks", (spawn, r) -> new ObjCrushBlocks(spawn));
         registrar.object(0x35, "Fan", (spawn, r) -> new ObjFan(spawn));
         registrar.object(0x36, "Mace", (spawn, r) -> new ObjMace(spawn));
+        registrar.object(0x37, "Stationary spike ball", p -> TtzObjectCatalogue.offset(p, "stationarySpikeBallMappings") >= 0,
+                (spawn, r) -> new ObjStationarySpikeBall(spawn));
         registrar.object(0x38, "Circle spike ball", (spawn, r) -> new ObjCircleSpikeBall(spawn));
         registrar.object(0x3E, "Platform chain", (spawn, r) -> new ObjPlatformChain(spawn));
         registrar.object(0x3D, "Rotate block", (spawn, r) -> new ObjRotateBlock(spawn));

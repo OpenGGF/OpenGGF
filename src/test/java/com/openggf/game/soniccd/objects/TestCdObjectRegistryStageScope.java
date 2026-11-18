@@ -46,6 +46,20 @@ class TestCdObjectRegistryStageScope {
     }
 
     @Test
+    void stationarySpikeBallIsScopedToTheLiveTidalTempestDispatches() {
+        for (CdStagePayload payload : CdStagePayload.values()) {
+            var factory = registry.zoneFactory(payload, 0x37);
+            switch (payload) {
+                case R42A, R42C, R42D ->
+                        assertEquals("Stationary spike ball", ((ObjectInstance) created(factory, 0x37)).getName());
+                default -> {
+                    if (payload.name().startsWith("R4")) assertNull(factory, payload.name());
+                }
+            }
+        }
+    }
+
+    @Test
     void theMetallicMadnessLaserIsScopedToTheStagesThatIndexIt() {
         for (CdStagePayload laserStage : new CdStagePayload[]{CdStagePayload.R82A, CdStagePayload.R82D}) {
             assertInstanceOf(MmzLaser.class, created(registry.zoneFactory(laserStage, 0x1D), 0x1D), laserStage.name());

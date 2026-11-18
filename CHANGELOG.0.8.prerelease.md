@@ -93,8 +93,9 @@ under the matching area heading; see the
   fourteen-second stage fixtures do (56,879 of 57,049 rows). On a focused rerun,
   the recorded Metallic Madness Present act 2 route also matches through its end.
   Its walker platforms let Sonic pass their sides, and the invisible blocks let
-  him jump through from below. R42A (break pole), R11C and R51B (objects) still
-  have open comparisons. The ring counter and
+  him jump through from below. Tidal Tempest now hosts its break poles and
+  stationary spike balls, with sprites loaded from the disc. R42A (underwater
+  hurt recovery), R11C and R51B (objects) still have open comparisons. The ring counter and
   every placed ring's position equal native on every compared row of the 28
   routes and two runs through Palmtree Panic loops, except lost rings after a hit
   in two Metallic Madness routes. Stage loads clear the state native
