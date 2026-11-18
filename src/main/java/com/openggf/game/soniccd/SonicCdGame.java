@@ -92,6 +92,13 @@ public final class SonicCdGame extends Game implements PlayerSpriteArtProvider, 
         return new com.openggf.game.soniccd.objects.common.CdGlobalAnimations(zoneTiles);
     }
 
+    /** An authored act does not retain the native stage or its art. */
+    void retireNativeStage() {
+        current = null;
+        currentImage = null;
+        projectStart = null;
+    }
+
     public CdLevel currentLevel() { return current; }
 
     /** The loaded stage file, or {@code null} before the first load. */

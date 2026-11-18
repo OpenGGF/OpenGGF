@@ -2548,6 +2548,13 @@
       "note": "user's Sonic CD disc"
     },
     {
+      "match": "com.openggf.mods.code.TestSonicCdModRuntime#authoredWaterLoadsFromDiscAtTheCreatorHeight",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/mods/code/TestSonicCdModRuntime.java:133",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
       "match": "com.openggf.game.soniccd.TestCdEditorProjectSource#portableNativeFolderAndZipRestoreEditsThroughContentImport",
       "category": "optional-fixture",
       "evidence": "src/test/java/com/openggf/game/soniccd/TestCdEditorProjectSource.java:47",
