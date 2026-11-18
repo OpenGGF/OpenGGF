@@ -54,8 +54,10 @@ under the matching area heading; see the
   score and bonus digits. Wider views extend CD object draw/touch and lifetime
   windows, centre boss locks, title cards, results and game-over text, and fill the time tunnel
   through its white fade. CD HUD pieces, including the time-period and warp icons,
-  follow the centred or left-edge HUD setting in both widescreen draw modes. Native 320-wide math, level walls and pillarboxed
-  programs/special stages retain their native dimensions. Holding Escape returns Sonic CD to the game shelf
+  follow the centred or left-edge HUD setting in both widescreen draw modes.
+  Special-stage widescreen extends the backdrop and projected floor. The
+  centre picture, sprites, HUD and playfield retain their native dimensions,
+  as do level walls and fixed-width programs. Holding Escape returns Sonic CD to the game shelf
   with a resumable card, the correct act label and settings restored on resume.
   Sonic plays on Sonic 1's physics
   with Sonic CD's own rules (spin dash and super peel-out, the extended camera,

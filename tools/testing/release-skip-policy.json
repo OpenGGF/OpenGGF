@@ -2982,6 +2982,13 @@
       "note": "Sonic CD disc and native captures"
     },
     {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageWidescreen#extendsTheFloorAndRetainsTheCentredNativePictureThroughRewind",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/TestCdSpecialStageWidescreen.java:21",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
       "match": "com.openggf.game.soniccd.special.TestCdSpecialStageResults#thePictureFadesInAndDrawsTheTallyFromTheDisc",
       "category": "optional-fixture",
       "evidence": "src/test/java/com/openggf/game/soniccd/special/TestCdSpecialStageResults.java:74",

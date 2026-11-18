@@ -49,14 +49,22 @@ public final class CdSpecialStageSession {
     private int shownBuffer;
     private int pass;
     private int fillBuffer;
+    private CdSpecialStageFloorSides projectedSides;
+    private CdSpecialStageFloorSides collectedSides;
+    private final CdSpecialStageFloorSides[] floorSides = new CdSpecialStageFloorSides[2];
 
     public CdSpecialStageSession(CdSpecialStageAssets assets, CdSpecialStageEntry entry) throws IOException {
+        this(assets, entry, CdSpecialStageScreen.WIDTH);
+    }
+
+    CdSpecialStageSession(CdSpecialStageAssets assets, CdSpecialStageEntry entry, int logicalWidth) throws IOException {
         Objects.requireNonNull(entry, "entry");
         this.stage = new CdSpecialStage(assets, entry.stageId(), entry.flags(), entry.timeStones());
         this.demo = entry.flags().demoInput() ? assets.demo(entry.stageId() == 5 ? 5 : 0) : null;
         // Start (Main.asm:146-170): one update renders the first floor, then the fade from white.
         this.screen = new CdSpecialStageScreen(assets, entry.stageId(), entry.flags());
         stage.update(0, 0);
+        projectedSides = CdSpecialStageFloorSides.project(stage, logicalWidth);
         stage.finishUpdate(0);
         collect();
         fadeFrames = FADE_IN_FRAMES;
@@ -77,6 +85,7 @@ public final class CdSpecialStageSession {
     /** {@code GetSubCPUData} (scddisasm/src/Special Stage/Main.asm:3207-3233): the image, sprites, scroll flags and Sonic's art. */
     private void collect() {
         System.arraycopy(stage.image(), 0, collected, 0, collected.length);
+        collectedSides = projectedSides;
         screen.scrollFlags = stage.scrollFlags;
         stage.scrollFlags = 0;
         collectedSprites = java.util.List.copyOf(stage.spriteEntries());
@@ -96,6 +105,8 @@ public final class CdSpecialStageSession {
         screen.copyHScroll();
         System.arraycopy(collected, 0, buffers[fillBuffer], 0, collected.length / 2);
         screen.copyFloor(collected, fillBuffer, 0);
+        // The other buffer stays hidden until both parts of its native floor have been copied.
+        floorSides[fillBuffer] = collectedSides;
     }
 
     /**
@@ -103,6 +114,10 @@ public final class CdSpecialStageSession {
      * Genesis bit order: Start, A, C, B, Right, Left, Down, Up from bit 7).
      */
     public void frame(int padHold) {
+        frame(padHold, CdSpecialStageScreen.WIDTH);
+    }
+
+    void frame(int padHold, int logicalWidth) {
         if (ended) return;
         frame++;
         if (fadeFrames > 0) {
@@ -116,7 +131,7 @@ public final class CdSpecialStageSession {
             screen.display = true; // bset #6,ipxVDPReg1+1 after the first VSync (Main.asm:163-165)
             if (--fadeFrames == 0) {
                 demoActive = demo != null; // Main.asm:168
-                passStart();
+                passStart(logicalWidth);
             }
             return;
         }
@@ -152,7 +167,7 @@ public final class CdSpecialStageSession {
                     return;
                 }
                 collect();                             // GetSubCPUData (Main.asm:196-201)
-                passStart();
+                passStart(logicalWidth);
                 return;
             }
         }
@@ -160,8 +175,9 @@ public final class CdSpecialStageSession {
     }
 
     /** {@code MainLoop}'s head (Main.asm:176-180): start the sub-CPU update, scroll section 1. */
-    private void passStart() {
+    private void passStart(int logicalWidth) {
         stage.update(latchedHold, latchedTap);
+        projectedSides = CdSpecialStageFloorSides.project(stage, logicalWidth);
         screen.bgScroll(1, false);
         pass++;
         phase = 0;
@@ -194,6 +210,8 @@ public final class CdSpecialStageSession {
     /** The floor image on screen this frame (row-major 256 x 96 colour indices, palette line 1). */
     public byte[] displayedFloor() { return buffers[shownBuffer]; }
 
+    CdSpecialStageFloorSides displayedFloorSides() { return floorSides[shownBuffer]; }
+
     /** The exit contract for the program-flow owner. */
     public CdSpecialStageResult result() {
         if (!ended) throw new IllegalStateException("The special stage has not ended");
@@ -203,7 +221,8 @@ public final class CdSpecialStageSession {
     State capture() { return new State(
             buffers[0], buffers[1], collectedSprites, java.util.List.copyOf(pendingSounds), demoCursor, latchedHold,
             latchedTap, previousHold, frame, phase, fadeFrames, shownBuffer, pass, fillBuffer, demoActive, ended,
-            endAfterPass, collected, collectedArt, stage.capture(), screen.capture()); }
+            endAfterPass, collected, collectedArt, stage.capture(), screen.capture(),
+            projectedSides, collectedSides, floorSides[0], floorSides[1]); }
     void restore(State s) {
         System.arraycopy(s.buffer0(), 0, buffers[0], 0, buffers[0].length);
         System.arraycopy(s.buffer1(), 0, buffers[1], 0, buffers[1].length);
@@ -227,13 +246,19 @@ public final class CdSpecialStageSession {
         System.arraycopy(s.collectedArt(), 0, collectedArt, 0, collectedArt.length);
         stage.restore(s.stage());
         screen.restore(s.screen());
+        projectedSides = s.projectedSides();
+        collectedSides = s.collectedSides();
+        floorSides[0] = s.floorSides0();
+        floorSides[1] = s.floorSides1();
     }
     record State(
             byte[] buffer0, byte[] buffer1, java.util.List<CdSpecialSprites.Entry> collectedSprites,
             java.util.List<CdSpecialSound> pendingSounds, int demoCursor, int latchedHold, int latchedTap,
             int previousHold, int frame, int phase, int fadeFrames, int shownBuffer, int pass, int fillBuffer,
             boolean demoActive, boolean ended, boolean endAfterPass, byte[] collected, byte[] collectedArt,
-            CdSpecialStage.State stage, CdSpecialStageScreen.State screen) {
+            CdSpecialStage.State stage, CdSpecialStageScreen.State screen,
+            CdSpecialStageFloorSides projectedSides, CdSpecialStageFloorSides collectedSides,
+            CdSpecialStageFloorSides floorSides0, CdSpecialStageFloorSides floorSides1) {
         State {
             buffer0 = buffer0.clone(); buffer1 = buffer1.clone();
             collectedSprites = java.util.List.copyOf(collectedSprites); pendingSounds = java.util.List.copyOf(pendingSounds);

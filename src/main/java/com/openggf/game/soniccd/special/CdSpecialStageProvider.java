@@ -31,6 +31,7 @@ public final class CdSpecialStageProvider implements SpecialStageProvider, Nativ
     private CdSpecialStageSession session;
     /** Draws the program's picture ({@link CdSpecialStageScreen}): planes, HUD, sprites and fades. */
     private final CdProgramScreenRenderer renderer = new CdProgramScreenRenderer();
+    private final CdSpecialStageFloorSidesRenderer floorSidesRenderer = new CdSpecialStageFloorSidesRenderer();
     private CdSpecialStageEntry pending;
     private MenuVisit pendingVisit;
     private MenuVisit activeVisit;
@@ -93,9 +94,10 @@ public final class CdSpecialStageProvider implements SpecialStageProvider, Nativ
                 : pending != null && pending.stageId() == stageIndex ? pending
                 : CdSpecialStageEntry.normal(stageIndex, timeStones);
         pending = null;
-        session = new CdSpecialStageSession(assets, entry);
+        session = new CdSpecialStageSession(assets, entry, GameServices.graphics().getProjectionWidth());
         activeVisit = visit;
         renderer.reset();
+        floorSidesRenderer.reset();
         held = 0;
         reported = false;
     }
@@ -105,7 +107,7 @@ public final class CdSpecialStageProvider implements SpecialStageProvider, Nativ
     @Override
     public void update() {
         if (session == null) return;
-        session.frame(held);
+        session.frame(held, GameServices.graphics().getProjectionWidth());
         // PlaySubFMSounds: the update's FM requests reach the driver when its output is collected
         // (Main.asm:3233, 2686-2696). They are requested by native FM ID.
         for (CdSpecialSound sound : session.takeSounds()) GameServices.audio().playSfx(sound.fmId());
@@ -128,7 +130,14 @@ public final class CdSpecialStageProvider implements SpecialStageProvider, Nativ
 
     @Override
     public void draw() {
-        if (session != null) renderer.draw(session.screen().frame());
+        if (session == null) return;
+        var frame = session.screen().frame();
+        if (viewport.logicalWidth() > SpecialStageViewport.NATIVE_WIDTH) {
+            renderer.drawWideSpecialStage(frame, () -> floorSidesRenderer.draw(
+                    GameServices.graphics(), viewport.innerH32OriginX(), session.displayedFloorSides()));
+        } else {
+            renderer.draw(frame);
+        }
     }
 
     /** The backdrop is CRAM entry $20 ({@code StageVDPRegs} register 7, scddisasm/src/Special Stage/Main.asm:3503). */
@@ -221,6 +230,7 @@ public final class CdSpecialStageProvider implements SpecialStageProvider, Nativ
         reported = s.reported();
         ended = s.ended();
         renderer.reset(); // the restored screen re-uploads every tile
+        floorSidesRenderer.reset();
     }
 
     record State(CdSpecialStageSession owner, CdSpecialStageSession.State session,

@@ -303,8 +303,10 @@ Future). `SonicCdEndingCaptureTool --ending good|bad` films an ending.
   pieces (including period and time-warp icons) follow the centred or left-edge
   HUD setting in EDGE and NATIVE modes; time posts remain world-positioned.
   At 320 these presentation offsets are zero. These are engine extensions without a native wide
-  reference. Fixed-width programs and the special stage stay pillarboxed;
-  level walls and scripted world coordinates retain their native positions.
+  reference. In special stages, widescreen extends the scenery and floor
+  beside the original playfield. The HUD, sprites and gameplay stay centred.
+  Results and other fixed-width programs retain their original dimensions.
+  Level walls and scripted world coordinates retain their native positions.
 - Accuracy is measured against native recordings; how far each stage is
   certified is in the [Sonic CD stage matrix](../../architecture/validation/levels/scd-stages.md).
 
