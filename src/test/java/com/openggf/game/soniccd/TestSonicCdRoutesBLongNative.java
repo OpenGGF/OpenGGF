@@ -28,7 +28,8 @@ class TestSonicCdRoutesBLongNative {
      * a leader that CheckObjectDespawn2 unloaded, because they tested the leader's Java object, not the ID byte in its slot, as
      * loc_20D30C does, objects/r8/spin_platform_1.asm:141-160). R82A now keeps x speed at row 4577 because the
      * twin walker's right-platform call resolves against that platform (TwinWalkerObject_0_Routine2,
-     * objects/r8/twin_walker.asm:60-65). Row 5029 is the next stop, an upward movement interrupted by one pixel.
+     * objects/r8/twin_walker.asm:60-65). The invisible block releases Sonic from below on row 5029
+     * (SolidObjectCheckTopContact, common/solid_object.asm:415-419). R82A matches through the recording's end.
      */
     @ParameterizedTest(name = "{0} equals native through row {1}")
     @org.junit.jupiter.params.provider.MethodSource("pins")

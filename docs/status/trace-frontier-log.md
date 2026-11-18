@@ -124915,7 +124915,7 @@ full-solid entry. The controller changes the receiver in
 `SolidObjectResolveVerticalPenetration` (common/solid_object.asm:240-244)
 releases a top-solid side overlap. The recorded standing slot at that row was
 stale. At row 5029, the engine reports `y=$0574`, `y_speed=$0000` and
-`camera_y=$052F`, against native `$0573`, `$FAD0` and `$052E`. Its cause is open.
+`camera_y=$052F`, against native `$0573`, `$FAD0` and `$052E`. The follow-up below identifies its cause.
 
 Replayed the verified USA disc and local `rehost-long` fixtures with
 `python3 tools/testing/maven_queue.py -Dmse=off -B
@@ -124933,3 +124933,21 @@ The strict run selected `TestSonicCdRoutesBLongNative`, `TestMmzObjects2`,
 same headless EGL option. It passed all 41 tests without skips. All 16 pinned
 long routes reached their expected rows. The focused walker test also checks
 that Sonic can land on the right platform while the controller's slot is active.
+
+## 2026-11-18 — Sonic CD invisible block underside contact
+
+At `46f894fd38`, the next R82A stop was row 5029. The engine resolved
+one pixel of underside overlap against the invisible block `$09` at
+`($1BC5,$055A)`, moving Sonic down one pixel and clearing his upward speed.
+The native `SolidObjectCheckTopContact` (common/solid_object.asm:415-419)
+releases `$09` on underside contact. `MmzInvisibleBlock` now uses the
+existing pass-under role. A focused case verifies upward movement through
+its underside, and the top support case still passes.
+
+With the same USA disc and four `rehost-long` inputs as above, `R82A` now
+matches all 5,697 rows. `R81A`, `R81B` and `R81C` still match to their recorded
+ends. `TestSonicCdFixtureFrontier`, `TestSonicCdRoutesBLongNative`,
+`TestMmzObjects` and `TestMmzObjects2` passed 37 tests with zero skips through
+the Maven queue with `-Dmse=off`, headless EGL and `-Dsoniccd.native.root=<native>`.
+The strict long-route set includes all 16 routes sharing `CdLongRoutePins`.
+The R82A movie ends before the signpost, so its outcome covers the recorded route.
