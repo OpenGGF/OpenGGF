@@ -81,8 +81,11 @@ under the matching area heading; see the
   Accuracy is measured against native recordings made on an emulator running
   the USA disc: 26 of 28 full-act routes (start to signpost) equal native on
   every compared field to their end (146,390 of 149,633 rows), and 68 of 70
-  fourteen-second stage fixtures do (56,879 of 57,049 rows). Open: R42A (water)
-  and R82A, R11C and R51B (objects). Rings are compared too: the counter and
+  fourteen-second stage fixtures do (56,879 of 57,049 rows). On a focused rerun,
+  the recorded Metallic Madness Present act 2 route also matches through its end.
+  Its walker platforms let Sonic pass their sides, and the invisible blocks let
+  him jump through from below. R42A (break pole), R11C and R51B (objects) still
+  have open comparisons. The ring counter and
   every placed ring's position equal native on every compared row of the 28
   routes and two runs through Palmtree Panic loops, except lost rings after a hit
   in two Metallic Madness routes. Stage loads clear the state native

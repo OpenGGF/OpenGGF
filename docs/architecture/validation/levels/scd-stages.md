@@ -132,17 +132,17 @@ diverging row and the frontier test's cause label (a guess, not a diagnosis).
 | R81B | **green** 3,991 | none | green | Route does not reach the goal |
 | R81C | **green** 4,524 | none | green | Route does not reach the goal |
 | R81D | none | none | green | |
-| R82A | 4,577 / 5,697 | none | green | At row 4577 the engine clears Sonic's horizontal speed while native retains `$600`. A twin walker is nearby. The cause is still open |
+| R82A | **green** 5,697 | none | green | Player and camera match through the recording's end, before the signpost |
 | R82B, R82C, R82D | none | none | green | |
 | R83C, R83D | approach only | none | green | Approach green to row 1,762 of R83C; fight and endings run in the engine with test-driven hits, not compared; no native ending recording |
 
 Totals at `6c5c0e2764` and `45463c80bd`: routes 146,390 of 149,633 rows (97.8%; 26 of 28 to
-their end); fixtures 56,879 of 57,049 rows (68 of 70). The open routes are
-R42A (break pole) and R82A (horizontal speed loss); the open fixtures are R11C and
-R51B (objects). The totals count the diverging row itself as compared, so each
-open stage is counted one row above its first divergence; the cells above
-give the first diverging row. In the act-end column `none` means the route has
-no end-of-act assertion: it is not in `TestSonicCdActEndNative`'s set, either
+their end); fixtures 56,879 of 57,049 rows (68 of 70). The later focused
+Metallic Madness rerun closed R82A. R42A (break pole) remains open, as do the
+short fixtures R11C and R51B. The historical totals count the diverging row as
+compared. The cells above give the first diverging row. In the act-end column
+`none` means the route has no end-of-act assertion: it is not in
+`TestSonicCdActEndNative`'s set, either
 because it does not reach the goal or because no assertion was written. Every
 route in that set is `asserted` except R42A, which is `pending` until it
 reaches its end window. The per-stage tables behind these numbers are local
@@ -150,9 +150,8 @@ measurement output, not committed.
 
 ## First-divergence recheck (2026-11-18)
 
-The four open recordings still diverge at the recorded rows. These are
-first-divergence checks on the USA disc, with one focused fixture test per
-selection. Neither test skipped.
+All four recordings reproduced their original divergence in the following
+USA disc checks. Each selection used one focused fixture test with zero skips.
 
 - Full routes on `95cac51440`, using `TestSonicCdFixtureFrontier` with
   `soniccd.fixtures.root=<native root>/rehost-long` and
@@ -171,10 +170,13 @@ on entry from the left and selects animation `$11`. The native row shows
 `$0F`. Both underwater flags are set. The frontier tool's Water label came
 from the existing underwater bit.
 
-R82A matches through row 4576. At row 4577 the engine's x speed is zero
-and the native speed stays `$600`. The position differs by one pixel.
-The twin walker `$26` has an engine implementation. Proximity alone does
-not establish which interaction zeroed the speed.
+In R82A, routing the right twin-walker platform's top-solid check to that
+platform fixed the horizontal speed loss at row 4577. The next stop at row
+5029 came from an invisible block cutting short Sonic's upward movement.
+The native routine lets him pass through the underside. With both fixes,
+R82A matches every one of its 5,697 recorded rows. The same selection kept
+R81A, R81B and R81C green. The source notes and commands are in the
+[trace frontier log](../../../status/trace-frontier-log.md#2026-11-18--sonic-cd-twin-walker-top-solid-receiver).
 
 ## Standard obligations
 
