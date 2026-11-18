@@ -24,6 +24,9 @@ public interface CdBackupRamHost {
 
     void commit(Images images);
 
+    /** A player-confirmed reset must report disk errors before the screen exits. */
+    default void commitReset(Images images) { commit(images); }
+
     /** No host file: the backup RAM lives for this session only (tests, replays, capture tools). */
     CdBackupRamHost SESSION = new CdBackupRamHost() {
         @Override public Optional<Images> load() { return Optional.empty(); }
@@ -103,15 +106,27 @@ public interface CdBackupRamHost {
         }
 
         @Override public void commit(Images images) {
+            try {
+                saves.writeSlotAsync(GAME, SLOT, payload(images));
+            } catch (IOException failure) {
+                throw new UncheckedIOException(failure);
+            }
+        }
+
+        @Override public void commitReset(Images images) {
+            try {
+                saves.writeSlot(GAME, SLOT, payload(images));
+            } catch (IOException failure) {
+                throw new UncheckedIOException(failure);
+            }
+        }
+
+        private static Map<String, Object> payload(Images images) {
             Map<String, Object> payload = new LinkedHashMap<>();
             payload.put("format", FORMAT);
             payload.put("internal", Base64.getEncoder().encodeToString(images.internal()));
             if (images.cartridge() != null) payload.put("cartridge", Base64.getEncoder().encodeToString(images.cartridge()));
-            try {
-                saves.writeSlotAsync(GAME, SLOT, payload);
-            } catch (IOException failure) {
-                throw new UncheckedIOException(failure);
-            }
+            return payload;
         }
 
         /** The stored file was unusable: keep it aside ({@code .corrupt}) rather than losing it. */

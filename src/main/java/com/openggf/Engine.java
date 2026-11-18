@@ -543,6 +543,9 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 						.map(descriptor -> descriptor.manifest().id()).collect(java.util.stream.Collectors.toSet())),
 				new ContentImportScreen.Host() {
 					public void openProject(EditorProjectDocument candidate) { editorProjects.openProject(candidate); }
+					@Override public void openNativeProject(com.openggf.editor.project.NativeEditorProjectPackage candidate) {
+						editorProjects.openNativeProject(candidate);
+					}
 					public void importLevel(com.openggf.mods.code.ModLevelDefinition level, GameId game) {
 						editorProjects.importLevel(level, game);
 					}
