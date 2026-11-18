@@ -125062,3 +125062,86 @@ first camera guard run reported only the inherited break-pole omission. The
 follow-up is based on `e8e284f35081debbb31c460bfeaf02919171f3a2`, whose only
 change from `a031832246fd7f98e33882349396f7e6e5831077` is the pole's matching
 camera annotation and import.
+
+## 2026-11-18 — Sonic CD logical input on hurt recovery
+
+The `scd-hurt-input-latch` worktree uses stationary hazard base
+`d741cded6d3e76a87f7855d941e9aa97d53c8715`. Long-fixture row ordinals
+below are zero-based. The R42A, R41A, R41B and R41C movies, physics, aux, USA
+CUE and data track match the long manifests. Both revisions use the same local
+v5 metadata. It differs from the older manifests for R42A and R41A.
+
+On R42A row 4404, the last normal player pass copies Right before the
+underwater hit sets routine `$04`. VBlank can keep polling the raw pad
+(VBlankStage, r4/main.asm:1078-1082). The normal pass copies both bytes of the
+pad word (PlayerMainAfterDebugCheat, objects/player.asm:284-289). Hurt moves
+and checks the floor, can set routine `$02`, and still exits through its own
+draw path (PlayerHurt, objects/player.asm:2206-2219 and PlayerHurtRecover,
+objects/player.asm:2223-2239). StageMainLoopUpdateScroll
+(r4/main.asm:398-403) scrolls before running currents.
+CheckWaterCurrentsApplyCurrent (r4/main.asm:817-825) sees routine `$02` on
+4494, and CheckWaterCurrentsInputRight (r4/main.asm:848-851) reads the
+retained Right bit and adds one to center X.
+
+On 4494, the base matches camera X `$158E`, Y `$076C`, current X speed
+`$0400` and float animation `$0F`. Engine X is `$162E`, one pixel behind
+native `$162F`. The existing `hurtRoutineLatchesLogicalInput` rule keeps
+the logical hold and jump press through the hurt pass while
+`SpriteManager.publishInputState` refreshes raw input before movement.
+The CD post-scroll current already reads the logical word. The candidate
+uses the existing rule and its snapshot fields.
+
+Java 25 queued runs used the following common arguments, with fresh
+`REPORTS` beneath the worktree's `target/`:
+
+```sh
+env -u DISPLAY python3 tools/testing/maven_queue.py -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl -Dsoniccd.media.root="$MEDIA_ROOT" \
+  -Dsoniccd.fixtures.root="$NATIVE_ROOT/rehost-long" \
+  -Dsoniccd.fixture.payloads=R42A,R41A,R41B,R41C \
+  -Dsoniccd.frontier.continue=true -Dopenggf.surefire.reports="$REPORTS" \
+  -Dtest="$TESTS" test -B
+```
+
+The matched selection was `TestSonicCdFixtureFrontier,TestSonicCdPlayerMovies,
+TestTtzObjects,TestSonicCdRoutesBLongNative,TestLogicalInputControlLockLatch,
+TestNativeDrowningDispatch`. The base ran 80 tests with zero failures,
+errors or skips (0 s queued, 2 min 26 s Maven). Baseline continuation
+stops after the row 4494 divergence with `IllegalArgumentException`; the
+total error-row count for the suffix is unavailable. With only the
+regression and pin change applied, the focused two-test run fails on the lost
+logical bits and the row 4494 X difference (2 failures, zero errors or skips,
+80 s queued, 39.313 s Maven).
+
+The candidate adds `TestCdHurtLogicalInput` to that selection. The recovery
+probe observes raw Right false and logical hold `$0018` on rows 4493 and
+4494, with player X matching native at `$162F` on 4494. The next player
+pass at 4496 refreshes logical hold to `$0000` and matches X `$1633`.
+The native logical pad word is inferred from dispatch and the recorded
+input and position. The fixture does not directly record that word.
+
+The continuation completes 5,679 of 6,411 rows with zero comparison
+errors, including the third pole grip at row 4666. Row 5679 interrupts
+before comparison in `CdTimeStars.update` → `CdAnimator.step` with
+`Read outside the stage file: -1+1`. That leaves rows 5679–6410
+unverified. The diagnostic's one failure is that interruption (81 tests,
+zero test errors or skips, 28 s queued, 2 min 27 s Maven). The 16
+later-zone routes, 27 TTZ object cases, 32 shared input and drowning
+controls and all other cases pass. R41A (5,449 rows), R41B (4,721) and
+R41C (6,013) match through their ends in both runs. Player and camera
+comparisons run on the fixture's eligible gameplay boundaries and
+exclude ring counts.
+
+After removing the temporary logging, the strict R42A pin extends
+through row 5678 inclusive. A queued real-media rerun with
+`-Dtest=TestSonicCdPlayerMovies,TestCdHurtLogicalInput` passes all five
+tests with zero skips (21 s queued, 43.103 s Maven). The focused test
+checks raw direction and jump refresh, logical hold and press retention,
+current suppression while hurt, the one-pixel move after recovery and
+the fresh neutral copy on the next normal pass.
+
+The same five-test selection with empty `soniccd.disc.path`,
+`soniccd.media.root` and `soniccd.native.root` runs the focused case and
+skips the four existing movie cases (zero failures or errors, 13 s queued,
+35.462 s Maven). `classify_surefire_skips.py --check-evidence` with
+`soniccd_native=false` accepts all four existing identities.

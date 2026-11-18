@@ -69,7 +69,10 @@ public final class SonicCdRules {
                 m.rollStopsBelowMinimumSpeed(),
                 m.rollControlledDecelUsesEffectiveDecelQuarter(),
                 m.controlLockLatchesLogicalInput(),
-                m.hurtRoutineLatchesLogicalInput(),
+                // PlayerMainAfterDebugCheat (objects/player.asm:284-289) copies the pad.
+                // PlayerHurt (objects/player.asm:2206-2219) skips the copy even when
+                // PlayerHurtRecover (objects/player.asm:2223-2239) returns to routine 2.
+                true,
                 m.waterExitBoostSkipsFastUpwardVelocity(),
                 m.slopeResistAppliesAtZeroInertia(),
                 m.tailsRollSpeedUsesEffectiveDecelQuarter(),
