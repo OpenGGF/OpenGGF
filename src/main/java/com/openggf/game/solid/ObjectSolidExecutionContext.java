@@ -146,6 +146,13 @@ public final class ObjectSolidExecutionContext {
         return fresh;
     }
 
+    SolidCheckpointBatch resolveNativeReceiver(ObjectInstance receiver) {
+        if (!isInert() && resolver instanceof SolidExecutionFrames.NativeReceiverResolver nativeResolver) {
+            return nativeResolver.resolveNativeReceiver(receiver);
+        }
+        return emptyBatchFor(receiver);
+    }
+
     public SolidCheckpointBatch lastCheckpoint() {
         return lastCheckpoint;
     }

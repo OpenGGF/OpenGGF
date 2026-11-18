@@ -168,6 +168,26 @@ public final class CdBackupRam {
         commitIfChanged();
     }
 
+    /** Restore this game's record to disc defaults, preserving other files and the RAM cartridge. */
+    void resetGameSave() {
+        if (saveDisabled) {
+            System.arraycopy(initialRecord, 0, temp, 0, temp.length);
+            return;
+        }
+        CdBackupRamVolume reset = CdBackupRamVolume.of(internal.image());
+        if (!reset.write(CdSaveRecord.FILE_NAME, 0, CdSaveRecord.FILE_BLOCKS, initialRecord)) {
+            throw new java.io.UncheckedIOException(new java.io.IOException("No room for the Sonic CD save"));
+        }
+        byte[] now = reset.image();
+        byte[] cart = cartridge == null ? null : cartridge.image();
+        host.commitReset(new CdBackupRamHost.Images(now, cart));
+        internal.restore(now);
+        committedInternal = now;
+        committedCartridge = cart;
+        System.arraycopy(initialRecord, 0, temp, 0, temp.length);
+        commits++;
+    }
+
     /** IPX {@code ReadSaveData} (IPX.asm:1420-1432). */
     public CdSaveVariables readVariables() { return readSave().variables(); }
 
