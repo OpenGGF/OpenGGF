@@ -84,7 +84,8 @@ under the matching area heading; see the
   Comin' Soon, ordinary-stage attract demos, Stage 8 credits, and Japanese and
   European gameplay. Disc audio, video songs and PCM sound follow the music
   and effects volumes; CD audio and PCM also share the FM presentation scale
-  for their relative level. The time-warp stars are drawn and Robotnik's projector
+  for their relative level. The time-warp stars animate from the disc in every
+  stage, including Tidal Tempest, and Robotnik's projector
   can be destroyed in the Past. Both Palmtree Panic Past acts draw its flying
   and ground hologram animals from the disc.
   Accuracy is measured against native recordings made on an emulator running

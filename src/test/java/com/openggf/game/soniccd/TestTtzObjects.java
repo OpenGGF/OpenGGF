@@ -13,7 +13,10 @@ import com.openggf.game.session.GameplayTeamBootstrap;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.soniccd.level.CdLevel;
 import com.openggf.game.soniccd.objects.art.CdObjectArtProvider;
+import com.openggf.game.soniccd.objects.common.CdTimeStars;
 import com.openggf.game.soniccd.objects.ttz.*;
+import com.openggf.game.soniccd.release.CdRetailReleases;
+import com.openggf.game.soniccd.timetravel.CdTimeTravel;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
@@ -405,5 +408,35 @@ class TestTtzObjects {
         assertEquals(2, amenbo.routine());
         runner.stepIdleFrames(23);
         assertEquals(4, amenbo.routine(), "routine 2 ends at the -1.5 pixel limit and brakes (routine 4)");
+    }
+
+    @Test
+    void timeStarsAnimateAndRetireInR42a() throws Exception {
+        boot(CdStagePayload.R42A);
+        assertEquals(CdRetailReleases.USA, CdRetailReleases.find(disc.assets().identity()).orElseThrow());
+        var timeTravel = CdTimeTravel.of(SessionManager.requireCurrentGameModule());
+        assertEquals(CdStagePayload.R42A, timeTravel.loadedPayload());
+
+        // Enter the ordinary warp routine at running speed after a past-post touch.
+        timeTravel.touchTimePost(true);
+        sonic.setGSpeed((short) 0x600);
+        sonic.setXSpeed((short) 0x600);
+        runner.stepFrame(false, false, false, true, false);
+        assertTrue(timeTravel.starsActive());
+        var stars = live(0x03).stream().filter(CdTimeStars.class::isInstance).map(CdTimeStars.class::cast).toList();
+        assertEquals(List.of(5, 6, 7, 8), stars.stream().map(CdTimeStars::animation).sorted().toList());
+
+        // The creation frame only initialises each star. Later object passes read PowerupAnims
+        // and animate the live trail (loc_2060B2, scddisasm/src/objects/powerup.asm:127-141).
+        for (int i = 0; i < 12; i++) {
+            // Keep the warp speed on the opening slope so the production star pass can run.
+            sonic.setGSpeed((short) 0x700);
+            runner.stepFrame(false, false, false, true, false);
+            assertTrue(timeTravel.starsActive(), "warp stars should stay active during the run");
+        }
+        assertTrue(stars.stream().noneMatch(CdTimeStars::isDestroyed));
+        timeTravel.stopTimeWarp();
+        runner.stepIdleFrames(1);
+        assertTrue(stars.stream().allMatch(CdTimeStars::isDestroyed));
     }
 }
