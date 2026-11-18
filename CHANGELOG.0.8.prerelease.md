@@ -63,8 +63,10 @@ under the matching area heading; see the
   Sonic giving up). Time travel, special stages
   and their results (the bonuses reach the score), the title, stage select, Time Attack and
   backup RAM (saved in `saves/soniccd`), the opening video, both endings, FM
-  effects, CD audio and PCM sound are hosted. The title's RAM DATA entry opens
-  a confirmation prompt to reset Sonic CD's save to disc defaults. Held-key live rewind works inside
+  effects, CD audio and PCM sound are hosted. The FM loader also accepts verified
+  Japanese and European discs containing the identical driver bank. The title's
+  RAM DATA entry confirms a reset of Sonic CD's save to disc defaults. Held-key
+  live rewind works inside
   special stages, including the three-frame floor pipeline, UFOs and effects. The master
   title lists it when the disc is configured or found (`roms.default: scd` boots
   it directly) and verifies it against the USA release before starting. A CHD
