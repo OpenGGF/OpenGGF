@@ -3,6 +3,7 @@ package com.openggf.game.soniccd.objects.ttz;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.soniccd.player.CdSonicAnimation;
 import com.openggf.graphics.GLCommand;
+import com.openggf.level.objects.CameraRelativeDraw;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.PlayerControlOwners;
@@ -15,6 +16,7 @@ import com.openggf.sprites.playable.ObjectControlState;
 import java.util.List;
 
 /** Act 1/2 object $05, BreakPoleObject (objects/r4/break_pole.asm:3-52). */
+@CameraRelativeDraw(CameraRelativeDraw.Use.ART_SELECTION)
 final class ObjBreakPole extends TtzObject implements SpawnRewindRecreatable, ObjectVisualFacing.PoseOwned {
     static final int TILE = 0x42F8; // BreakPoleObject_0_Routine0 (objects/r4/break_pole.asm:21-25)
     private static final int GRIP_OFFSET = 0x18;
