@@ -67,12 +67,13 @@ final class GameLoopSpecialStageLifecycle {
     ResultsScreen resultsScreen() { return resultsScreen; }
 
     boolean ownsStartInput() {
-        Object owner = switch (host.currentMode()) {
-            case SPECIAL_STAGE -> activeSpecialStageProvider;
-            case SPECIAL_STAGE_RESULTS -> resultsScreen;
-            default -> null;
+        return switch (host.currentMode()) {
+            case SPECIAL_STAGE -> activeSpecialStageProvider instanceof SpecialStageStartInput input
+                    && input.ownsStartInput();
+            case SPECIAL_STAGE_RESULTS -> resultsScreen instanceof SpecialStageStartInput input
+                    && input.ownsStartInput();
+            default -> false;
         };
-        return owner instanceof SpecialStageStartInput input && input.ownsStartInput();
     }
     EmeraldRewardKind rewardKind() { return activeSpecialStageRewardKind; }
     boolean transitionPending() { return specialStageTransitionPending; }
