@@ -8,12 +8,16 @@ import com.openggf.game.soniccd.program.CdSceneCoordinator;
 
 import java.util.Set;
 
-/** The opening video ({@code OPENING}, IPX {@code Demo}'s first entry) for the native-program host. */
+/** Runs the opening attract video and the unlocked Visual Mode browser. */
 public final class CdFmvHost implements CdProgramHost {
-    @Override public Set<CdNativeProgram> programs() { return Set.of(CdNativeProgram.OPENING); }
+    @Override public Set<CdNativeProgram> programs() { return Set.of(CdNativeProgram.OPENING, CdNativeProgram.VISMODE); }
 
     @Override
     public NativeMenuScreen screen(CdProgramRequest.NotHosted step, CdSceneCoordinator coordinator) {
-        return new CdFmvScreen(coordinator);
+        return switch (step.program()) {
+            case OPENING -> new CdFmvScreen(coordinator);
+            case VISMODE -> new CdVisualModeScreen(coordinator);
+            default -> throw new IllegalArgumentException("No video host for " + step.program());
+        };
     }
 }

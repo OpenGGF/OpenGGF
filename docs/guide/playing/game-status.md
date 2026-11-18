@@ -239,6 +239,12 @@ Future). `SonicCdEndingCaptureTool --ending good|bad` films an ending.
   stage-select secret, Time Attack, Special Stage 8 from the sound test,
   the sound-test pictures, best staff times, the opening video, both
   special-stage attract demos and both endings with credits.
+- The title's unlockable **Visual Mode** opens an OpenGGF browser for the
+  opening video and both endings. **Back** stops the current video and
+  returns to the browser.
+- The unlockable **D.A. Garden** opens an OpenGGF browser for music tracks
+  from the disc. Choose a track to play it, or choose the playing track
+  again to stop it. Back returns to the title.
 - Saves: the backup RAM, in the format the BIOS writes, is kept in
   `saves/soniccd/slot0.json` beside the other games' saves (`openggf.saveRoot`
   moves the folder). It is written whenever the game writes its backup RAM:
@@ -261,11 +267,9 @@ Future). `SonicCdEndingCaptureTool --ending good|bad` films an ending.
 
 ### Known gaps
 
-- Not hosted: Visual Mode, D.A. Garden, the pencil test, Thank You, Comin'
-  Soon, the ordinary-stage attract demos, and the credits for beating Special
-  Stage 8. Choosing D.A. Garden or Visual Mode on the title menu fades out
-  and returns to the title.
-  The attract cycle skips ordinary-stage demos.
+- The pencil test, Thank You, Comin' Soon, ordinary-stage attract demos, the
+  D.A. Garden planet animation, and the credits for beating Special Stage 8
+  remain unhosted. The attract cycle skips ordinary-stage demos.
 - CD patch mods, `any` registrations, scenes and Sonic gameplay runs use the disc
   pipeline. Authored zones support flat scrolling, one collision path, fixed-height water,
   owned objects, collectible rings, and fixed vertical and horizontal springs.

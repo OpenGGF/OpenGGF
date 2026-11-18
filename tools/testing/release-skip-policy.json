@@ -2569,9 +2569,23 @@
       "note": "user's Sonic CD disc"
     },
     {
+      "match": "com.openggf.game.soniccd.flow.TestCdGardenMusicFlow#unlockedTitlePlaysDiscTracksAndRestoresTitleMusicOnBack",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/flow/TestCdGardenMusicFlow.java:25",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
       "match": "com.openggf.mods.code.TestSonicCdAuthoredSprings#coldAuthoredActDrawsBothSpringSheetsAndLaunchesSonicTwice",
       "category": "optional-fixture",
       "evidence": "src/test/java/com/openggf/mods/code/TestSonicCdAuthoredSprings.java:52",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.flow.TestCdVisualModeFlow#titleOpensVisualModeAndAllThreeFilmsReturnWithoutWritingSaveData",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/flow/TestCdVisualModeFlow.java:22",
       "allowed_when_absent": "soniccd_disc",
       "note": "user's Sonic CD disc"
     },

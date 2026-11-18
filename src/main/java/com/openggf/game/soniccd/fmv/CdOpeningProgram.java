@@ -15,7 +15,7 @@ import java.util.Objects;
  * :295-303), 7.5 V-ints a frame; after the eighth frame the program waits for the next bank
  * ({@code FrameRead_NextFrame .SwapWordRAM} :327-331).
  */
-public final class CdOpeningProgram {
+public final class CdOpeningProgram implements CdVideoProgram {
     /** Pad bits as the program reads them (start = bit 7). */
     public static final int START = 0x80;
 
@@ -91,6 +91,7 @@ public final class CdOpeningProgram {
     }
 
     /** One V-int and the main program's work until its next VSync. */
+    @Override
     public void frame(int pad) {
         frames++;
         vInterrupt(pad);
@@ -277,11 +278,13 @@ public final class CdOpeningProgram {
         vsyncFlag = true;
     }
 
+    @Override
     public boolean done() { return phase == Phase.DONE; }
 
     /** {@code mmdReturnCode}: d0.b when the program returns; negative asks IPX to run it again. */
     public int returnCode() { return 0x0F; }
 
+    @Override
     public CdProgramScreenState screen() { return screen; }
 
     public CdFmvStreamer streamer() { return streamer; }
