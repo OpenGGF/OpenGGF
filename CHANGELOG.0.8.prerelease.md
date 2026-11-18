@@ -77,7 +77,8 @@ under the matching area heading; see the
   European releases. Disc audio, video songs and PCM sound follow the music
   and effects volumes; CD audio and PCM also share the FM presentation scale
   for their relative level. The time-warp stars are drawn and Robotnik's projector
-  can be destroyed in the Past (its hologram animals are not drawn).
+  can be destroyed in the Past. Both Palmtree Panic Past acts draw its flying
+  and ground hologram animals from the disc.
   Accuracy is measured against native recordings made on an emulator running
   the USA disc: 26 of 28 full-act routes (start to signpost) equal native on
   every compared field to their end (146,390 of 149,633 rows), and 68 of 70

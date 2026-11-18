@@ -1,11 +1,16 @@
 package com.openggf.game.soniccd.objects.common;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.soniccd.objects.art.CdObjectArtProvider;
+import com.openggf.game.soniccd.objects.projector.ProjectorArt;
 import com.openggf.graphics.GLCommand;
+import com.openggf.level.objects.CameraRelativeDraw;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TrigLookupTable;
 
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -20,11 +25,13 @@ import java.util.List;
  * and despawning on its initial X. Ground: it hops, X +1.0 and Y -4.0 a frame with $2000 gravity,
  * frame 0 while rising, and on the floor turns round. Holographic animals (subtype bit 7) follow
  * the Metal Sonic projector (oVar3E, hosted by objects/projector): they delete themselves when its slot no
- * longer holds its ID or it has been shot down, and otherwise circle (flying) or stay (ground). The animal mappings and base tiles are per-zone data not in the catalogue:
- * nothing is drawn.
+ * longer holds its ID or it has been shot down, and otherwise circle (flying) or stay (ground). The Palmtree Panic Past
+ * holograms draw from the projector's disc-backed art cue.
  */
+@CameraRelativeDraw(CameraRelativeDraw.Use.CULL_ONLY)
 public final class CdAnimal extends CdObject
-        implements com.openggf.game.soniccd.objects.projector.ProjectorChild, com.openggf.level.objects.RewindRecreatable {
+        implements com.openggf.game.soniccd.objects.projector.ProjectorChild, com.openggf.level.objects.RewindRecreatable,
+        ObjectVisualFacing.Source {
     private int projectorSlot = -1;
     private int projectorId;
     private int routine;
@@ -38,6 +45,10 @@ public final class CdAnimal extends CdObject
     private int xVel;
     private int yVel;
     private int mapFrame;
+    private boolean drawHologram;
+    private int spriteFlip;
+    /** AnimateObject's script bytes are stored in rewind-captured state. */
+    private int[] hologramScript = {-1, 0, 0, 0, 0};
 
     public CdAnimal(ObjectSpawn spawn) {
         super(spawn, "Animal");
@@ -59,7 +70,7 @@ public final class CdAnimal extends CdObject
         return new CdAnimal(ctx.spawn());
     }
 
-    /** The hologram routines' test of the projector (oVar3E, oVar3F; Palmtree Panic/Objects/Animal/Main.asm:77-82, 170-175). */
+    /** The hologram routines' test of the projector (oVar3E, oVar3F; Palmtree Panic/Objects/Animal/Main.asm:90-94, 183-187). */
     private boolean projectorAlive() {
         if (com.openggf.game.soniccd.objects.projector.ProjectorChild.parentAlive(services(), projectorSlot, projectorId)) return true;
         setDestroyed(true);                                  // bne.w ObjAnimal_Destroy
@@ -68,6 +79,7 @@ public final class CdAnimal extends CdObject
 
     @Override
     public void update(int vIntRunCount, PlayableEntity player) {
+        drawHologram = false;
         if (!checkPresence()) return;
         if ((spawn.subtype() & 0x7F) != 0) ground();
         else flying();
@@ -118,12 +130,13 @@ public final class CdAnimal extends CdObject
                 angle = next;
             }
             case 4 -> {
-                // ObjFlyingAnimal_Hologram (:77-91): the projector's slot must hold its ID and not be shot down; the animal
+                // ObjFlyingAnimal_Hologram (:86-104): the projector's slot must hold its ID and not be shot down; the animal
                 // circles its start (cos >> 3, sin >> 4) at 4 a frame and turns round at 0 and $80, drawing the other frames.
                 if (!projectorAlive()) return;
                 move(3, 4);
                 angle = (angle + 4) & 0xFF;
                 if ((angle & 0x7F) == 0) xFlip = !xFlip;     // beq.w ObjAnimal_XFlip: no animation or draw this turn
+                else animateHologram(true);
             }
             default -> setDestroyed(true);
         }
@@ -171,9 +184,26 @@ public final class CdAnimal extends CdObject
                     xFlip = !xFlip;
                 }
             }
-            case 4 -> projectorAlive();                      // ObjGroundAnimal_Hologram (:170-178): animate and draw while the projector lives
+            case 4 -> {
+                // ObjGroundAnimal_Hologram (:182-190): animate and draw while the projector lives.
+                if (projectorAlive()) animateHologram(false);
+            }
             default -> setDestroyed(true);
         }
+    }
+
+    private void animateHologram(boolean flying) {
+        CdObjectArtProvider provider = artProvider();
+        ProjectorArt.Animals animals = provider == null ? null : provider.zoneArt(ProjectorArt.Animals.class);
+        if (animals == null) return;
+        CdAnimator animator = new CdAnimator(provider.image(), animals.animations(flying), flying ? 1 : 0);
+        animator.restoreScriptState(hologramScript);
+        animator.step();
+        hologramScript = animator.scriptState();
+        tileWord = animals.tile();
+        mapFrame = animator.mapFrame();
+        spriteFlip = animator.flipBits() ^ (xFlip ? 1 : 0);
+        drawHologram = true;
     }
 
     @Override protected boolean despawnsByCheckObjDespawn() { return true; }
@@ -182,5 +212,22 @@ public final class CdAnimal extends CdObject
     int mapFrame() { return mapFrame; }
     boolean facesLeft() { return xFlip; }
 
-    @Override public void appendRenderCommands(List<GLCommand> commands) { }
+    @Override
+    public ObjectVisualFacing.Basis nativeFacing() {
+        return (spriteFlip & 1) != 0 ? ObjectVisualFacing.Basis.RIGHT : ObjectVisualFacing.Basis.LEFT;
+    }
+
+    @Override
+    public void appendRenderCommands(List<GLCommand> commands) {
+        // DrawObject tests the camera before the level scroll (Level/Object Functions.asm:136-191).
+        if (!drawHologram || !renderFlagOnScreen() || isDestroyed()) return;
+        String key = (spawn.subtype() & 0x7F) == 0 ? ProjectorArt.FLYING_ANIMAL : ProjectorArt.GROUND_ANIMAL;
+        drawFrame(key, mapFrame, (spriteFlip & 1) != 0, (spriteFlip & 2) != 0);
+    }
+
+    @Override
+    public String traceDebugDetails() {
+        return "routine=" + routine + " phase=" + angle + " map=" + mapFrame + " flip=" + spriteFlip
+                + " drawn=" + drawHologram + " script=" + Arrays.toString(hologramScript);
+    }
 }
