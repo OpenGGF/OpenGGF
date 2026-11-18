@@ -236,8 +236,9 @@ Future). `SonicCdEndingCaptureTool --ending good|bad` films an ending.
   idle timer: left alone long enough, Sonic gives up: he jumps, falls and dies.
 - Time travel: time posts, the warp and its cutscene, good and bad futures.
 - Special stages (floor, UFOs, timer and presentation), the title screen, the
-  stage-select secret, Time Attack, the sound test and its secrets, best
-  staff times, the opening video and both endings with credits.
+  stage-select secret, Time Attack, Special Stage 8 from the sound test,
+  the sound-test pictures, best staff times, the opening video, both
+  special-stage attract demos and both endings with credits.
 - Saves: the backup RAM, in the format the BIOS writes, is kept in
   `saves/soniccd/slot0.json` beside the other games' saves (`openggf.saveRoot`
   moves the folder). It is written whenever the game writes its backup RAM:
@@ -259,12 +260,10 @@ Future). `SonicCdEndingCaptureTool --ending good|bad` films an ending.
 ### Known gaps
 
 - Not hosted: Visual Mode, D.A. Garden, the pencil test, Thank You, Comin'
-  Soon, the attract demos (the opening video plays; the stage and special
-  stage demos do not), the backup RAM manager (RAM DATA), Special Stage 8
-  from the sound test. Each is a recorded "not
-  hosted" step: choosing RAM DATA, D.A. Garden or Visual Mode on the title
-  menu (the last two appear once unlocked) fades out and returns to the
-  title, and an attract demo is skipped.
+  Soon, the ordinary-stage attract demos, the backup RAM manager (RAM DATA),
+  and the credits for beating Special Stage 8. Choosing RAM DATA, D.A. Garden
+  or Visual Mode on the title menu fades out and returns to the title.
+  The attract cycle skips ordinary-stage demos.
 - CD patch mods, `any` registrations, scenes and Sonic gameplay runs use the disc
   pipeline. Authored zones are limited to flat terrain with owned objects;
   native CD objects/rings need their stage context. Cartridge donation supports
@@ -290,8 +289,12 @@ Future). `SonicCdEndingCaptureTool --ending good|bad` films an ending.
   `PROFILED`); `NONE` uses no measured timing. Other disc loads are not
   paced. See
   [known discrepancies](../../status/known-discrepancies.md#sonic-cd-hardware-timings-not-modelled).
-- Whether the music keeps playing while paused has not been checked against a
-  console.
+- OpenGGF pauses music with gameplay. The USA disc's level program explicitly
+  pauses CD audio or Past-stage PCM, and the special-stage program pauses CD
+  audio through the BIOS. This is verified in the disc program instructions
+  (`PauseMusic`, scddisasm/src/Level/Main.asm:620-643; `MainLoop`,
+  scddisasm/src/Special Stage/Sub.asm:255-274). Physical-console audio timing
+  remains unmeasured.
 - Wider stage views extend object visibility, touch eligibility, load/unload
   windows and boss arena centring. Static Palmtree Panic background bands
   retain their 512-pixel repeat beside moving bands; the time tunnel fills

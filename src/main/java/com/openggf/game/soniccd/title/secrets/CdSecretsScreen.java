@@ -9,8 +9,10 @@ import com.openggf.game.soniccd.audio.CdSubCpuAudio;
 import com.openggf.game.soniccd.audio.SonicCdAudioProfile;
 import com.openggf.game.soniccd.fmv.CdFmvAssets;
 import com.openggf.game.soniccd.fmv.CdProgramScreenState;
+import com.openggf.game.soniccd.program.CdProgramRequest;
 import com.openggf.game.soniccd.program.CdProgramScreenRenderer;
 import com.openggf.game.soniccd.program.CdSceneCoordinator;
+import com.openggf.game.soniccd.special.CdSpecialStageProvider;
 import com.openggf.game.soniccd.title.CdTitleScreen;
 
 import java.io.BufferedReader;
@@ -37,7 +39,7 @@ public final class CdSecretsScreen implements NativeMenuScreen {
     private CdSoundTestProgram soundTest;
     private CdSecretImageProgram image;
     private CdBestTimesProgram bestTimes;
-    private boolean exiting;
+    private Exit pendingExit = Exit.NONE;
 
     public CdSecretsScreen(CdSceneCoordinator coordinator, CdNativeProgram program) {
         this.coordinator = Objects.requireNonNull(coordinator, "coordinator");
@@ -63,26 +65,26 @@ public final class CdSecretsScreen implements NativeMenuScreen {
             default -> throw new IllegalArgumentException("Not a secret program: " + program);
         }
         renderer.reset();
-        exiting = false;
+        pendingExit = Exit.NONE;
     }
 
     @Override
     public void update(InputHandler input) {
-        if (exiting) return;
+        if (pendingExit != Exit.NONE) return;
         int pad = CdTitleScreen.pad(input.logical().player1());
         if (soundTest != null) {
             soundTest.frame(pad);
             for (CdSoundTestProgram.Request request : soundTest.drainRequests()) play(request);
             if (soundTest.done()) {
-                coordinator.soundTestExited(soundTest.exitCode());
-                exiting = true;
+                CdProgramRequest request = coordinator.soundTestExited(soundTest.exitCode());
+                pendingExit = request instanceof CdProgramRequest.SpecialStage step ? launchStage(step) : titleExit();
             }
         } else if (bestTimes != null) {
             bestTimes.frame(pad);
-            if (bestTimes.done()) exiting = true;
+            if (bestTimes.done()) pendingExit = titleExit();
         } else if (image != null) {
             image.frame(pad);
-            if (image.done()) exiting = true;
+            if (image.done()) pendingExit = titleExit();
         }
     }
 
@@ -113,13 +115,27 @@ public final class CdSecretsScreen implements NativeMenuScreen {
     public void reset() {
         soundTest = null;
         image = null;
-        exiting = false;
+        pendingExit = Exit.NONE;
     }
 
     @Override
     public Exit consumeExit() {
-        if (!exiting) return Exit.NONE;
-        exiting = false;
+        Exit exit = pendingExit;
+        pendingExit = Exit.NONE;
+        return exit;
+    }
+
+    private Exit launchStage(CdProgramRequest.SpecialStage step) {
+        CdSpecialStageProvider provider = (CdSpecialStageProvider) GameServices.module().getSpecialStageProvider();
+        provider.prepareMenuStage(step.entry(), mode(), result -> {
+            coordinator.nativeMenuStageEnded(step, result);
+            renderer.reset();
+            pendingExit = titleExit();
+        });
+        return new Exit(Destination.SPECIAL_STAGE, null, false);
+    }
+
+    private static Exit titleExit() {
         return new Exit(Destination.TITLE_SCREEN, null, false);
     }
 

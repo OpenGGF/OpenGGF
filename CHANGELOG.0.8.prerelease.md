@@ -62,8 +62,8 @@ under the matching area heading; see the
   the 3D ramps, per-zone player routines and the idle timer that ends in
   Sonic giving up). Time travel, special stages
   (with pause during play, exit fades and a visible results tally that Start can finish),
-  the title, stage select, Time Attack and
-  backup RAM (saved in `saves/soniccd`), the opening video, both endings, FM
+  the title, stage select, Time Attack, Special Stage 8 from the sound test,
+  both special-stage attract demos and backup RAM (saved in `saves/soniccd`), the opening video, both endings, FM
   effects, CD audio and PCM sound are hosted. Held-key live rewind works inside
   special stages, including the three-frame floor pipeline, UFOs and effects. The master
   title lists it when the disc is configured or found (`roms.default: scd` boots
@@ -74,7 +74,7 @@ under the matching area heading; see the
   hunk CRCs and the header SHA-1s checked) and refuses delta, older-version
   and non-CD CHDs by name. Not
   included: Visual Mode, D.A. Garden, the pencil test, Thank You,
-  Comin' Soon, attract demos, the backup RAM manager, and the Japanese and
+  Comin' Soon, ordinary-stage attract demos, the backup RAM manager, and the Japanese and
   European releases. Disc audio, video songs and PCM sound follow the music
   and effects volumes; CD audio and PCM also share the FM presentation scale
   for their relative level. The time-warp stars are drawn and Robotnik's projector

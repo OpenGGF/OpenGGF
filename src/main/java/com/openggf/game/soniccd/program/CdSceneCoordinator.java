@@ -192,13 +192,6 @@ public final class CdSceneCoordinator {
         titleRequest = request;
         route.add("-> " + request);
         stageStartedByIpx(request);
-        if (request instanceof SpecialStage step) {
-            // The attract special-stage demos start from the title; the engine has no title-to-
-            // SPECIAL_STAGE action, so they are still recorded as not hosted (see the program contract).
-            request = skipNotHosted(new NotHosted(com.openggf.game.soniccd.CdNativeProgram.SPECSTAGE,
-                    step.nativeCaller(), step.then()));
-            titleRequest = request;
-        }
         return switch (request) {
             case Stage ignored -> TitleScreenAction.ONE_PLAYER;
             case StageSelect ignored -> TitleScreenAction.LEVEL_SELECT;
@@ -206,7 +199,7 @@ public final class CdSceneCoordinator {
             // which hands back to the title.
             case Title ignored -> TitleScreenAction.OPTIONS;
             case NotHosted ignored -> throw new IllegalStateException("not-hosted steps are skipped");
-            case SpecialStage ignored -> throw new IllegalStateException("title special stages are recorded above");
+            case SpecialStage ignored -> TitleScreenAction.OPTIONS;
             case CdProgramRequest.Ending ignored -> throw new IllegalStateException("IPX runs the ending only from GameDone"); // lane END
         };
     }
@@ -413,20 +406,26 @@ public final class CdSceneCoordinator {
     // --- lane END: the sound test's exit
     /**
      * The sound test returned exit code {@code d0} ({@code SoundTest .Exits}, IPX.asm:1035-1049). A hidden picture
-     * has a host, which the title host resumes into; Special Stage 8 has no route from the native-program host to
-     * {@code SPECIAL_STAGE}, so it is recorded as not hosted (as the attract special-stage demos are).
+     * has a host, which the title host resumes into. The sound test itself launches Special Stage 8.
      */
-    public void soundTestExited(int exitCode) {
+    public CdProgramRequest soundTestExited(int exitCode) {
         route.add("sound test exit " + exitCode);
+        return routeNativeMenuReturn(flow().soundTestExited(exitCode));
+    }
+
+    /** Applies the outcome after a native menu stage's exit fade. */
+    public void nativeMenuStageEnded(SpecialStage step, CdSpecialStageResult result) {
+        route.add("special stage ended " + result);
+        routeNativeMenuReturn(flow().specialStageEnded(step, result));
+    }
+
+    private CdProgramRequest routeNativeMenuReturn(CdProgramRequest request) {
         int before = notHosted.size();
-        CdProgramRequest request = flow().soundTestExited(exitCode);
-        if (request instanceof SpecialStage step) {
-            request = new NotHosted(com.openggf.game.soniccd.CdNativeProgram.SPECSTAGE, step.nativeCaller(), step.then());
-        }
-        request = skipNotHosted(request);
-        route.add("-> " + request);
-        titleRequest = request;
+        CdProgramRequest next = skipNotHosted(request);
+        route.add("-> " + next);
+        titleRequest = next;
         if (resumesProgram(before)) resume = TitleScreenAction.OPTIONS;
+        return next;
     }
 
     // --- lane END: the ending's coordinator calls
@@ -454,6 +453,10 @@ public final class CdSceneCoordinator {
      * host of the program IPX would run, else {@link CdNotHostedScreen}.
      */
     public com.openggf.game.nativemenu.NativeMenuScreen programScreen() {
+        if (titleRequest instanceof SpecialStage step) {
+            lastProgramScreen = new CdSpecialStageProgramScreen(step, this);
+            return lastProgramScreen;
+        }
         lastProgramScreen = new CdNotHostedScreen(this);
         if (!notHosted.isEmpty()) {
             NotHosted step = notHosted.get(notHosted.size() - 1);
