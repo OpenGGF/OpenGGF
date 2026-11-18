@@ -1,5 +1,33 @@
 {
   "@@locale": "en",
+  "menu.soniccd.save_manager.title": "Sonic CD save data",
+  "@menu.soniccd.save_manager.title": {
+    "description": "Sonic CD save reset screen. Translate the complete message."
+  },
+  "menu.soniccd.save_manager.description": "Resetting the save clears campaign progress, Time Stones, unlocks, and Time Attack records.",
+  "@menu.soniccd.save_manager.description": {
+    "description": "Sonic CD save reset screen. Translate the complete message."
+  },
+  "menu.soniccd.save_manager.error": "The save could not be reset. You can retry or keep the current save.",
+  "@menu.soniccd.save_manager.error": {
+    "description": "Sonic CD save reset screen. Translate the complete message."
+  },
+  "menu.soniccd.save_manager.keep": "Keep current save",
+  "@menu.soniccd.save_manager.keep": {
+    "description": "Sonic CD save reset screen. Translate the complete message."
+  },
+  "menu.soniccd.save_manager.reset": "Reset Sonic CD save",
+  "@menu.soniccd.save_manager.reset": {
+    "description": "Sonic CD save reset screen. Translate the complete message."
+  },
+  "menu.soniccd.save_manager.move": "Move",
+  "@menu.soniccd.save_manager.move": {
+    "description": "Sonic CD save reset screen. Translate the complete message."
+  },
+  "menu.soniccd.save_manager.choose": "Choose",
+  "@menu.soniccd.save_manager.choose": {
+    "description": "Sonic CD save reset screen. Translate the complete message."
+  },
   "menu.text.value_details": "Value:\n{value}",
   "@menu.text.value_details": {
     "description": "OpenGGF host UI: menu.text.value_details. Translate the complete message; preserve named arguments.",

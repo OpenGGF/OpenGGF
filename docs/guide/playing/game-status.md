@@ -245,8 +245,10 @@ Future). `SonicCdEndingCaptureTool --ending good|bad` films an ending.
   the title's unlocks. CONTINUE, Time Attack times and unlocked menu entries
   survive a restart. A missing file starts like a console with new backup
   RAM; a damaged file is kept as `slot0.json.corrupt` and the game starts on
-  fresh backup RAM. The RAM DATA screen is not hosted, so the in-game way to
-  erase a save is missing: delete `saves/soniccd/slot0.json` to start over.
+  fresh backup RAM. **RAM DATA** opens an OpenGGF prompt. Choose
+  **Reset Sonic CD save** to restore disc defaults for campaign progress,
+  Time Stones, unlocks, and Time Attack records. The default choice keeps the save.
+  Other backup RAM files are preserved.
 - FM sound effects, CD audio tracks, and PCM music and sound.
 - Held-key live rewind in stages and special stages. Stage rewind restores the
   zones' rings, switches, lamps, bosses and Sonic's idle timer, as well as the
@@ -257,9 +259,8 @@ Future). `SonicCdEndingCaptureTool --ending good|bad` films an ending.
 
 - Not hosted: Visual Mode, D.A. Garden, the pencil test, Thank You, Comin'
   Soon, the attract demos (the opening video plays; the stage and special
-  stage demos do not), the backup RAM manager (RAM DATA), Special Stage 8
-  from the sound test. Each is a recorded "not
-  hosted" step: choosing RAM DATA, D.A. Garden or Visual Mode on the title
+  stage demos do not), and Special Stage 8 from the sound test. Each is a
+  recorded "not hosted" step: choosing D.A. Garden or Visual Mode on the title
   menu (the last two appear once unlocked) fades out and returns to the
   title, and an attract demo is skipped.
 - CD patch mods, `any` registrations, scenes and Sonic gameplay runs use the disc
