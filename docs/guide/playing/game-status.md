@@ -242,6 +242,8 @@ Future). `SonicCdEndingCaptureTool --ending good|bad` films an ending.
 - The title's unlockable **Visual Mode** opens an OpenGGF browser for the
   opening video and both endings. **Back** stops the current video and
   returns to the browser.
+- The stage-select **Comin' Soon** row opens an OpenGGF contact sheet of tiles
+  from the verified USA disc. **Back** returns to the title.
 - The unlockable **D.A. Garden** opens an OpenGGF browser for music tracks
   from the disc. Choose a track to play it, or choose the playing track
   again to stop it. Back returns to the title.
@@ -267,7 +269,7 @@ Future). `SonicCdEndingCaptureTool --ending good|bad` films an ending.
 
 ### Known gaps
 
-- The pencil test, Thank You, Comin' Soon, ordinary-stage attract demos, the
+- The pencil test, Thank You, ordinary-stage attract demos, the
   D.A. Garden planet animation, and the credits for beating Special Stage 8
   remain unhosted. The attract cycle skips ordinary-stage demos.
 - CD patch mods, `any` registrations, scenes and Sonic gameplay runs use the disc

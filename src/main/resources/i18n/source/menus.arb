@@ -113,6 +113,14 @@
   "@menu.soniccd.visual_mode.help": {
     "description": "Sonic CD Visual Mode browser. Translate the complete message."
   },
+  "menu.soniccd.comin_soon.title": "Comin' Soon",
+  "@menu.soniccd.comin_soon.title": {
+    "description": "Stage-select row name and title of the OpenGGF disc-art preview."
+  },
+  "menu.soniccd.comin_soon.description": "Disc art preview",
+  "@menu.soniccd.comin_soon.description": {
+    "description": "Subtitle identifying the OpenGGF preview of art tiles from the disc."
+  },
   "menu.soniccd.save_manager.title": "Sonic CD save data",
   "@menu.soniccd.save_manager.title": {
     "description": "Sonic CD save reset screen. Translate the complete message."

@@ -176,7 +176,9 @@ public final class CdProgramFlow {
         }
         var stage = row.stage();
         if (stage.isPresent()) return new Stage(stage.get(), Route.STAGE_SELECT);
-        // Warp, opening FMV and Comin' Soon rows run their program, then rts to .GameLoop.
+        // StageSels (IPX.asm:757-759): the Comin' Soon row uses the OpenGGF disc-art preview.
+        if (row.command() == CdCommand.COMINSOON) return new CdProgramRequest.CominSoonPreview();
+        // The stage-select Warp and Opening rows return to .GameLoop without opening their hosts.
         CdNativeProgram program = row.program().orElseThrow(() -> new IllegalStateException(
                 "StageSels row " + index + " names neither a stage nor a program: " + row.command()));
         return notHosted(program, "StageSelect");
