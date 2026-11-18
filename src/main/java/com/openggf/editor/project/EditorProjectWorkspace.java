@@ -478,8 +478,14 @@ public final class EditorProjectWorkspace {
                 text("crop", UiMessages.text("editor.editor_project_workspace.allow_cropping_yes_no_rgb160"), "no")), UiMessages.text("editor.editor_project_workspace.resize_new_undo_checkpoint_1xxz1mv"), values -> io(() -> {
             String crop = values.get("crop").strip().toLowerCase(java.util.Locale.ROOT);
             if (!crop.equals("yes") && !crop.equals("no")) throw new IllegalArgumentException(UiMessages.text("editor.editor_project_workspace.crop_must_be_yes_or_no_3q8jf3"));
+            int width = number(values, "width");
+            int height = number(values, "height");
+            if (current.nativeSource() != null) {
+                requireNativeProjectHost(host.currentModule()).preview(current.nativeSource())
+                        .validateProjectDimensions(width, height);
+            }
             var candidate = current.copyForReplacement();
-            candidate.resize(number(values, "width"), number(values, "height"), crop.equals("yes"));
+            candidate.resize(width, height, crop.equals("yes"));
             replaceDocument(candidate);
             host.status(UiMessages.text("editor.editor_project_workspace.level_resized_a_new_undo_checkpoint_has_started_save_to_xvvdpq"));
         }));

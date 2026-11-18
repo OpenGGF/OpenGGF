@@ -212,6 +212,6 @@ Use [Export native project](../guide/creating/level-editor.md#sonic-cd-native-pr
 to share source-backed edits in a folder or ZIP. The recipient opens the package in
 the content importer and supplies the matching disc. Packages carry `native-project.json`
 and load as editor projects. Separately authored CD zones use the flat mod level
-format with owned object keys. Native replay requires the original layout dimensions.
-Existing placement IDs retain secondary subtype and time-mask data. Newly added
-IDs select the active period.
+format with owned object keys. Source-backed projects can resize within their
+stage's collision limits. Existing placement IDs retain secondary subtype and
+time-mask data. Newly added IDs select the active period.

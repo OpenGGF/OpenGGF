@@ -7169,7 +7169,7 @@
   "editor.project.sonic_cd": "Sonic CD",
   "editor.project.native_stage": "Act {act} · {period}",
   "editor.project.from_native_stage": "Create from native stage",
-  "editor.project.native_dimensions": "Retains the selected stage layout dimensions and native source.",
+  "editor.project.native_dimensions": "Starts with the selected stage layout. Use Resize level to change its size.",
   "@editor.project.native_stage": {
     "description": "Native source stage choice, with one-based act and time period",
     "placeholders": {

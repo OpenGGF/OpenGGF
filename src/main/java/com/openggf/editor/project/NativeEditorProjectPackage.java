@@ -1,15 +1,17 @@
 package com.openggf.editor.project;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.BinaryNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.openggf.editor.project.EditorProjectLevel.LayoutSize;
 import com.openggf.game.internal.NativeProjectLevel;
 import com.openggf.game.internal.NativeProjectSource;
 import com.openggf.io.ModAssetRoot;
 import com.openggf.io.PackedModAssetRoot;
 import com.openggf.io.ModInputLimits;
-import com.openggf.level.Level;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -26,6 +28,7 @@ import java.util.zip.ZipOutputStream;
 public final class NativeEditorProjectPackage {
     public static final String ENTRY = "native-project.json";
     private static final int VERSION = 1;
+    private static final int RESIZED_VERSION = 2;
     private static final String FORMAT = "OpenGGFNativeEditorProject";
     private static final ObjectMapper STATE_MAPPER = EditorProjectStore.projectMapper();
     private static final ObjectMapper MAPPER = STATE_MAPPER.copy()
@@ -42,17 +45,24 @@ public final class NativeEditorProjectPackage {
     public EditorProjectMetadata metadata() { return metadata; }
     public NativeProjectSource source() { return payload.source(); }
 
-    public static Path export(Path destination, EditorProjectDocument document, Level nativeLevel) throws IOException {
+    public static Path export(Path destination, EditorProjectDocument document, NativeProjectLevel nativeLevel) throws IOException {
         var source = Objects.requireNonNull(document.nativeSource(), "native project source");
         var original = captureBase(nativeLevel, source);
         var edited = EditorProjectState.capture(document.snapshot());
-        if (original.width() != edited.width() || original.height() != edited.height()
-                || original.layers() != edited.layers() || original.blockGridSide() != edited.blockGridSide())
-            throw new IOException("Native project export requires the source layout dimensions and grid");
+        if (original.layers() != edited.layers() || original.blockGridSide() != edited.blockGridSide())
+            throw new IOException("Native project export requires the source layout layers and grid");
+        var dimensions = new LayoutSize(edited.width(), edited.height());
+        LayoutSize resized = layoutSize(original).equals(dimensions) ? null : dimensions;
         var base = indexed(original);
+        String baseChecksum = checksum(base);
+        if (resized != null) {
+            nativeLevel.validateProjectDimensions(resized.width(), resized.height());
+            reshapeBaseline(base, original, resized);
+        }
         var payload = new Payload(source, EditorProjectStore.MetadataState.capture(document.metadata()),
-                document.assets(), checksum(base), EditorProjectEdits.between(base, indexed(edited)));
-        byte[] bytes = MAPPER.writeValueAsBytes(new Envelope(FORMAT, VERSION, payload, checksum(MAPPER.valueToTree(payload))));
+                document.assets(), baseChecksum, EditorProjectEdits.between(base, indexed(edited)), resized);
+        int version = resized == null ? VERSION : RESIZED_VERSION;
+        byte[] bytes = MAPPER.writeValueAsBytes(new Envelope(FORMAT, version, payload, checksum(MAPPER.valueToTree(payload))));
         if (bytes.length > EditorProjectStore.MAX_BYTES) throw new IOException("Native project exceeds the 64 MiB storage limit");
         Path target = destination.toAbsolutePath().normalize();
         Path parent = target.getParent();
@@ -106,11 +116,15 @@ public final class NativeEditorProjectPackage {
             var node = MAPPER.readTree(bytes);
             if (node == null || !node.isObject() || node.size() != 4
                     || !FORMAT.equals(node.path("format").textValue())
-                    || !node.path("version").isIntegralNumber() || !node.path("version").canConvertToInt()
-                    || node.path("version").intValue() != VERSION)
+                    || !node.path("version").isIntegralNumber() || !node.path("version").canConvertToInt())
                 throw new IOException("Unsupported native project format or version");
+            int version = node.path("version").intValue();
+            if (version != VERSION && version != RESIZED_VERSION)
+                throw new IOException("Unsupported native project format or version");
+            boolean hasResize = version == RESIZED_VERSION;
             var rawPayload = node.path("payload");
-            if (!rawPayload.isObject() || rawPayload.size() != 5 || !rawPayload.has("edits")
+            if (!rawPayload.isObject() || rawPayload.size() != (hasResize ? 6 : 5)
+                    || !rawPayload.has("edits") || rawPayload.has("resizedLayout") != hasResize
                     || !checksum(rawPayload).equals(node.path("checksum").textValue()))
                 throw new IOException("Native project checksum does not match its payload");
             EditorProjectAssets.validateJson(rawPayload.get("assets"));
@@ -119,7 +133,14 @@ public final class NativeEditorProjectPackage {
             var assets = STATE_MAPPER.treeToValue(rawPayload.path("assets"), EditorProjectAssets.class);
             var baseChecksum = rawPayload.path("baseChecksum").textValue();
             var edits = MAPPER.treeToValue(rawPayload.get("edits"), EditorProjectEdits.class);
-            var payload = new Payload(source, metadataState, assets, baseChecksum, edits);
+            LayoutSize resized = null;
+            if (hasResize) {
+                var size = rawPayload.get("resizedLayout");
+                if (!size.isObject() || !isInteger(size.get("width")) || !isInteger(size.get("height")))
+                    throw new IOException("Invalid native project layout size");
+                resized = STATE_MAPPER.treeToValue(size, LayoutSize.class);
+            }
+            var payload = new Payload(source, metadataState, assets, baseChecksum, edits, resized);
             var metadata = metadataState.metadata();
             if (!metadata.sourceFingerprint().equals(payload.source().mediaIdentity())
                     || payload.baseChecksum() == null || !payload.baseChecksum().matches("[a-f0-9]{64}"))
@@ -130,12 +151,18 @@ public final class NativeEditorProjectPackage {
         }
     }
 
-    public EditorProjectDocument materialize(Level nativeLevel) throws IOException {
+    public EditorProjectDocument materialize(NativeProjectLevel nativeLevel) throws IOException {
         try {
             var original = captureBase(nativeLevel, source());
             var base = indexed(original);
             if (!payload.baseChecksum().equals(checksum(base)))
                 throw new IOException("Native project requires the same decoded stage revision");
+            LayoutSize dimensions = layoutSize(original);
+            if (payload.resizedLayout() != null) {
+                dimensions = payload.resizedLayout();
+                nativeLevel.validateProjectDimensions(dimensions.width(), dimensions.height());
+                reshapeBaseline(base, original, dimensions);
+            }
             var result = payload.edits() == null ? base : payload.edits().apply(base);
             if (!(result instanceof ObjectNode level)) throw new IOException("Native project must produce an editor level");
             EditorProjectEdits.restorePlacements(level, "objects", "placementId");
@@ -143,10 +170,9 @@ public final class NativeEditorProjectPackage {
             EditorProjectEdits.restorePlacements(level, "ringBacking", "objectPlacementId");
             var state = STATE_MAPPER.treeToValue(level, EditorProjectState.class);
             state.validate();
-            if (original.width() != state.width() || original.height() != state.height()
-                    || original.layers() != state.layers() || original.blockGridSide() != state.blockGridSide()
-                    || original.zoneIndex() != state.zoneIndex())
-                throw new IOException("Native project edits change the source layout dimensions or grid");
+            if (!dimensions.equals(layoutSize(state)) || original.layers() != state.layers()
+                    || original.blockGridSide() != state.blockGridSide() || original.zoneIndex() != state.zoneIndex())
+                throw new IOException("Native project edits disagree with the declared layout or source grid");
             if (state.minX() != metadata.minX() || state.maxX() != metadata.maxX()
                     || state.minY() != metadata.minY() || state.maxY() != metadata.maxY())
                 throw new IOException("Native project metadata and edited bounds disagree");
@@ -159,10 +185,25 @@ public final class NativeEditorProjectPackage {
         }
     }
 
-    private static EditorProjectState captureBase(Level nativeLevel, NativeProjectSource source) throws IOException {
-        if (!(nativeLevel instanceof NativeProjectLevel level) || !source.equals(level.nativeProjectSource()))
+    private static EditorProjectState captureBase(NativeProjectLevel nativeLevel, NativeProjectSource source) throws IOException {
+        if (!source.equals(nativeLevel.nativeProjectSource()))
             throw new IOException("Native project source does not match the opened stage");
         return EditorProjectState.captureNativeView(nativeLevel);
+    }
+
+    private static boolean isInteger(JsonNode value) {
+        return value != null && value.isIntegralNumber() && value.canConvertToInt();
+    }
+
+    private static LayoutSize layoutSize(EditorProjectState state) {
+        return new LayoutSize(state.width(), state.height());
+    }
+
+    private static void reshapeBaseline(ObjectNode base, EditorProjectState source, LayoutSize dimensions) {
+        byte[] map = EditorProjectLevel.resizeMap(source.map(), source.layers(), layoutSize(source), dimensions, (byte) 0);
+        base.put("width", dimensions.width());
+        base.put("height", dimensions.height());
+        base.set("map", BinaryNode.valueOf(map));
     }
 
     private static ObjectNode indexed(EditorProjectState state) {
@@ -186,5 +227,6 @@ public final class NativeEditorProjectPackage {
 
     private record Envelope(String format, int version, Payload payload, String checksum) {}
     private record Payload(NativeProjectSource source, EditorProjectStore.MetadataState metadata,
-            EditorProjectAssets assets, String baseChecksum, EditorProjectEdits edits) {}
+            EditorProjectAssets assets, String baseChecksum, EditorProjectEdits edits,
+            @JsonInclude(JsonInclude.Include.NON_NULL) LayoutSize resizedLayout) {}
 }
