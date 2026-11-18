@@ -105,6 +105,10 @@
   "@menu.soniccd.visual_mode.bad_ending": {
     "description": "Sonic CD Visual Mode browser. Translate the complete message."
   },
+  "menu.soniccd.visual_mode.pencil_test": "Pencil Test",
+  "@menu.soniccd.visual_mode.pencil_test": {
+    "description": "Visual Mode row for the silent Sonic CD Pencil Test video."
+  },
   "menu.soniccd.visual_mode.back_to_title": "Back to title",
   "@menu.soniccd.visual_mode.back_to_title": {
     "description": "Sonic CD Visual Mode browser. Translate the complete message."

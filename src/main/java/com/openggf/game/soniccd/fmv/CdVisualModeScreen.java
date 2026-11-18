@@ -30,13 +30,14 @@ final class CdVisualModeScreen implements NativeMenuScreen {
     private static final int TOP = 45, MARGIN = 12, ROW_GAP = 5;
 
     private enum Choice {
-        OPENING, GOOD_ENDING, BAD_ENDING, BACK;
+        OPENING, GOOD_ENDING, BAD_ENDING, PENCIL_TEST, BACK;
 
         String label() {
             return switch (this) {
                 case OPENING -> UiMessages.text("menu.soniccd.visual_mode.opening");
                 case GOOD_ENDING -> UiMessages.text("menu.soniccd.visual_mode.good_ending");
                 case BAD_ENDING -> UiMessages.text("menu.soniccd.visual_mode.bad_ending");
+                case PENCIL_TEST -> UiMessages.text("menu.soniccd.visual_mode.pencil_test");
                 case BACK -> UiMessages.text("menu.soniccd.visual_mode.back_to_title");
             };
         }
@@ -106,9 +107,14 @@ final class CdVisualModeScreen implements NativeMenuScreen {
     }
 
     private void startVideo(Choice choice) {
-        var assets = new CdFmvAssets(coordinator.data());
         var disc = coordinator.disc().assets();
         var timing = CdLoadTiming.programTiming();
+        if (choice == Choice.PENCIL_TEST) {
+            video = new CdPencilTestProgram(disc, timing);
+            videoRenderer.reset();
+            return;
+        }
+        var assets = new CdFmvAssets(coordinator.data());
         videoAudio = CdFmvScreen.subCpuAudio();
         var pcm = videoAudio != null ? videoAudio.beginProgramPcm() : CdSubCpuAudio.ProgramPcm.detached();
         try {
@@ -116,7 +122,7 @@ final class CdVisualModeScreen implements NativeMenuScreen {
                 case OPENING -> CdFmvScreen.opening(assets, disc, pcm, timing);
                 case GOOD_ENDING -> CdEndings.program(assets, disc, true, pcm, timing);
                 case BAD_ENDING -> CdEndings.program(assets, disc, false, pcm, timing);
-                case BACK -> throw new IllegalArgumentException("Back has no video");
+                default -> throw new IllegalArgumentException("No sound video for " + choice);
             };
         } catch (RuntimeException | Error failure) {
             stopVideo();
@@ -175,8 +181,10 @@ final class CdVisualModeScreen implements NativeMenuScreen {
 
     @Override public void setClearColor() {
         if (GameServices.graphics().isHeadlessMode()) return;
-        if (video != null) videoRenderer.setClearColor(video.screen().frame());
-        else glClearColor(0, 0, 0, 1);
+        if (video != null) {
+            var screen = video.screen();
+            videoRenderer.setClearColor(screen.frame(), screen.backdrop());
+        } else glClearColor(0, 0, 0, 1);
     }
 
     @Override public void reset() {

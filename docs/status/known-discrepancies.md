@@ -223,6 +223,12 @@ the disc, so they are not modelled:
   replay services every row of them: 18 Quartz Quadrant recordings and control
   traces were re-recorded, and the counter census shows no lost V-INT in the
   other 140. The HUD's RINGS flash phase has no native row to check against.
+- **Pencil Test playback.** OpenGGF presents all 840 five-sector picture banks
+  from the verified USA disc in Visual Mode. It publishes the complete picture
+  and palette together on the second update of bank processing. The
+  playback view omits the native border, palette fades and closing effects.
+  The stream uses the shared fallback seek of 20 V-INTs because it has no
+  measured profile.
 - **Disc drive seeks: the video reads estimated from emulator timing in `FAST`
   and `PROFILED`, not in `NONE`.** The video player waits for the BIOS read that
   `ReadFMVSectors` (CD System Program/SP.asm:720-746) starts; the seek before
