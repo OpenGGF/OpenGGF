@@ -11,15 +11,20 @@ import com.openggf.game.soniccd.CdDiscDataSource;
 import com.openggf.game.soniccd.CdStagePayload;
 import com.openggf.game.soniccd.CdTestMedia;
 import com.openggf.game.soniccd.SonicCdGameModule;
+import com.openggf.game.soniccd.backupram.CdBackupRamHost;
+import com.openggf.game.soniccd.backupram.CdBackupRamVolume;
+import com.openggf.game.soniccd.backupram.CdSaveRecord;
 import com.openggf.game.soniccd.level.CdLevel;
 import com.openggf.game.soniccd.program.CdSceneCoordinator;
 import com.openggf.game.soniccd.timetravel.CdTimeTravel;
+import com.openggf.game.soniccd.title.CdTitleScreen;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tools.HeadlessGameBoot;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.BooleanSupplier;
 
 /**
@@ -79,14 +84,39 @@ final class CdFlowHarness implements AutoCloseable {
         return f;
     }
 
-    /** Title: PRESS START, then NEW GAME (the default menu entry), until the stage is loaded. */
-    void newGame() {
+    static void attachReadOnlySave(SonicCdGameModule module, CdSaveRecord record) {
+        var volume = CdBackupRamVolume.formatted(CdBackupRamVolume.INTERNAL_BYTES);
+        if (!volume.write(CdSaveRecord.FILE_NAME, 0, CdSaveRecord.FILE_BLOCKS, record.encode())) {
+            throw new AssertionError("Test save did not fit in backup RAM");
+        }
+        module.getGameService(CdSceneCoordinator.class).attachBackupRamHost(new CdBackupRamHost() {
+            @Override public Optional<Images> load() {
+                return Optional.of(new Images(volume.image(), null));
+            }
+
+            @Override public void commit(Images images) {
+                throw new AssertionError("This title visit must preserve the test save");
+            }
+        }, 0);
+    }
+
+    /** Confirm the title option a given number of places to the right of the default. */
+    void selectTitleOption(int rightPresses) {
         until(() -> loop.getCurrentGameMode() == GameMode.TITLE_SCREEN, 600, 0);
-        var title = (com.openggf.game.soniccd.title.CdTitleScreen) loop.getTitleScreenProvider();
+        var title = (CdTitleScreen) loop.getTitleScreenProvider();
         until(() -> title.program() != null && title.program().acceptsMenuInput(), 3000, 0);
         step(0, 0, true);
         idle(60);
+        for (int i = 0; i < rightPresses; i++) {
+            step(RIGHT, 0, false);
+            idle(60);
+        }
         step(0, 0, true);
+    }
+
+    /** Starts a new game with the default NEW GAME selection. */
+    void newGame() {
+        selectTitleOption(0);
         until(() -> loop.getCurrentGameMode() == GameMode.LEVEL, 900, 0);
     }
 

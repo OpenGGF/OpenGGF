@@ -241,6 +241,9 @@ Future). `SonicCdEndingCaptureTool --ending good|bad` films an ending.
 - The title's unlockable **Visual Mode** opens an OpenGGF browser for the
   opening video and both endings. **Back** stops the current video and
   returns to the browser.
+- The unlockable **D.A. Garden** opens an OpenGGF browser for music tracks
+  from the disc. Choose a track to play it, or choose the playing track
+  again to stop it. Back returns to the title.
 - Saves: the backup RAM, in the format the BIOS writes, is kept in
   `saves/soniccd/slot0.json` beside the other games' saves (`openggf.saveRoot`
   moves the folder). It is written whenever the game writes its backup RAM:
@@ -258,13 +261,11 @@ Future). `SonicCdEndingCaptureTool --ending good|bad` films an ending.
 
 ### Known gaps
 
-- Not hosted: D.A. Garden, the pencil test, Thank You, Comin'
+- Not hosted: the pencil test, Thank You, Comin'
   Soon, the attract demos (the opening video plays; the stage and special
   stage demos do not), the backup RAM manager (RAM DATA), Special Stage 8
   from the sound test. Each is a recorded "not
-  hosted" step: choosing RAM DATA or D.A. Garden on the title
-  menu (D.A. Garden appears once unlocked) fades out and returns to the
-  title, and an attract demo is skipped.
+  hosted" step. The D.A. Garden planet and animations are also missing.
 - CD patch mods, `any` registrations, scenes and Sonic gameplay runs use the disc
   pipeline. Authored zones are limited to flat terrain with owned objects;
   native CD objects/rings need their stage context. Cartridge donation supports

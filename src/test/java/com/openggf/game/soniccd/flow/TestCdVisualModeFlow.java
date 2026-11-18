@@ -3,19 +3,14 @@ package com.openggf.game.soniccd.flow;
 import com.openggf.NativeMenuPresentationAccess;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameServices;
-import com.openggf.game.soniccd.backupram.CdBackupRamHost;
-import com.openggf.game.soniccd.backupram.CdBackupRamVolume;
 import com.openggf.game.soniccd.backupram.CdSaveRecord;
 import com.openggf.game.soniccd.backupram.CdSaveVariables;
-import com.openggf.game.soniccd.program.CdSceneCoordinator;
-import com.openggf.game.soniccd.title.CdTitleScreen;
 import com.openggf.graphics.ScreenshotCapture;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledOnOs;
 import org.junit.jupiter.api.condition.OS;
 
 import java.util.Arrays;
-import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.lwjgl.opengl.GL11.GL_COLOR_BUFFER_BIT;
@@ -27,27 +22,8 @@ class TestCdVisualModeFlow {
     void titleOpensVisualModeAndAllThreeFilmsReturnWithoutWritingSaveData() throws Exception {
         var saved = CdSaveRecord.decode(new byte[CdSaveRecord.FILE_BYTES]);
         saved.store(new CdSaveVariables(0x0215, 3, 0x04, 0x15, 0, 4, 0x0f));
-        var volume = CdBackupRamVolume.formatted(CdBackupRamVolume.INTERNAL_BYTES);
-        assertTrue(volume.write(CdSaveRecord.FILE_NAME, 0, CdSaveRecord.FILE_BLOCKS, saved.encode()));
-        var host = new CdBackupRamHost() {
-            @Override public Optional<Images> load() {
-                return Optional.of(new Images(volume.image(), null));
-            }
-
-            @Override public void commit(Images images) {
-                fail("Visual Mode must leave the campaign and Time Attack record intact");
-            }
-        };
-        try (var harness = new CdFlowHarness(module ->
-                module.getGameService(CdSceneCoordinator.class).attachBackupRamHost(host, 0))) {
-            harness.until(() -> harness.loop.getCurrentGameMode() == GameMode.TITLE_SCREEN, 600, 0);
-            var title = (CdTitleScreen) harness.loop.getTitleScreenProvider();
-            harness.until(() -> title.program() != null && title.program().acceptsMenuInput(), 3000, 0);
-            harness.step(0, 0, true);
-            harness.idle(60);
-            harness.step(CdFlowHarness.RIGHT, 0, false);
-            harness.idle(60);
-            harness.step(0, 0, true);
+        try (var harness = new CdFlowHarness(module -> CdFlowHarness.attachReadOnlySave(module, saved))) {
+            harness.selectTitleOption(1);
             harness.until(() -> harness.loop.getCurrentGameMode() == GameMode.OPTIONS
                     && !GameServices.fade().isActive(), 600, 0);
 

@@ -64,7 +64,8 @@ under the matching area heading; see the
   and their results (the bonuses reach the score), the title, stage select, Time Attack and
   backup RAM (saved in `saves/soniccd`), the opening video, both endings, FM
   effects, CD audio and PCM sound are hosted. The unlockable Visual Mode browser
-  plays the opening video and both endings. Held-key live rewind works inside
+  plays the opening video and both endings. D.A. Garden plays the disc music
+  in an OpenGGF browser. Held-key live rewind works inside
   special stages, including the three-frame floor pipeline, UFOs and effects. The master
   title lists it when the disc is configured or found (`roms.default: scd` boots
   it directly) and verifies it against the USA release before starting. A CHD
@@ -73,7 +74,7 @@ under the matching area heading; see the
   pure Java (CHD v5; `cdzl`, `cdlz`, `cdfl` and `cdzs` hunks or uncompressed;
   hunk CRCs and the header SHA-1s checked) and refuses delta, older-version
   and non-CD CHDs by name. Not
-  included: D.A. Garden, the pencil test, Thank You,
+  included: the D.A. Garden planet presentation, the pencil test, Thank You,
   Comin' Soon, attract demos, the backup RAM manager, and the Japanese and
   European releases. Disc audio, video songs and PCM sound follow the music
   and effects volumes; CD audio and PCM also share the FM presentation scale

@@ -10,6 +10,7 @@ final class CdProgramHosts {
     private CdProgramHosts() { }
 
     static final List<CdProgramHost> HOSTS = List.of(
+            new com.openggf.game.soniccd.audio.CdGardenMusicHost(),
             // --- lane TA (Time Attack and backup RAM)
             new com.openggf.game.soniccd.timeattack.CdTimeAttackHost(),
             // --- end lane TA

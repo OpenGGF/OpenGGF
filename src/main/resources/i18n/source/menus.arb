@@ -1,5 +1,94 @@
 {
   "@@locale": "en",
+  "menu.soniccd.garden.title": "D.A. Garden",
+  "@menu.soniccd.garden.title": {
+    "description": "D.A. Garden disc music browser. Translate the complete message."
+  },
+  "menu.soniccd.garden.select": "Choose an audio track from the disc.",
+  "@menu.soniccd.garden.select": {
+    "description": "D.A. Garden disc music browser. Translate the complete message."
+  },
+  "menu.soniccd.garden.playing_track": "Playing track {track}",
+  "@menu.soniccd.garden.playing_track": {
+    "description": "D.A. Garden disc music browser. Translate the complete message.",
+    "placeholders": {
+      "track": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.soniccd.garden.play_stop": "PLAY / STOP",
+  "@menu.soniccd.garden.play_stop": {
+    "description": "D.A. Garden disc music browser. Translate the complete message."
+  },
+  "menu.soniccd.garden.present": "Present",
+  "@menu.soniccd.garden.present": {
+    "description": "D.A. Garden disc music browser. Translate the complete message."
+  },
+  "menu.soniccd.garden.good_future": "Good future",
+  "@menu.soniccd.garden.good_future": {
+    "description": "D.A. Garden disc music browser. Translate the complete message."
+  },
+  "menu.soniccd.garden.bad_future": "Bad future",
+  "@menu.soniccd.garden.bad_future": {
+    "description": "D.A. Garden disc music browser. Translate the complete message."
+  },
+  "menu.soniccd.garden.zone_track": "{zone} ({period})",
+  "@menu.soniccd.garden.zone_track": {
+    "description": "D.A. Garden disc music browser. Translate the complete message.",
+    "placeholders": {
+      "zone": {
+        "type": "String"
+      },
+      "period": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.soniccd.garden.boss": "Boss",
+  "@menu.soniccd.garden.boss": {
+    "description": "D.A. Garden disc music browser. Translate the complete message."
+  },
+  "menu.soniccd.garden.final_boss": "Final boss",
+  "@menu.soniccd.garden.final_boss": {
+    "description": "D.A. Garden disc music browser. Translate the complete message."
+  },
+  "menu.soniccd.garden.title_screen": "Title screen",
+  "@menu.soniccd.garden.title_screen": {
+    "description": "D.A. Garden disc music browser. Translate the complete message."
+  },
+  "menu.soniccd.garden.time_attack": "Time Attack",
+  "@menu.soniccd.garden.time_attack": {
+    "description": "D.A. Garden disc music browser. Translate the complete message."
+  },
+  "menu.soniccd.garden.results": "Results",
+  "@menu.soniccd.garden.results": {
+    "description": "D.A. Garden disc music browser. Translate the complete message."
+  },
+  "menu.soniccd.garden.speed_shoes": "Speed shoes",
+  "@menu.soniccd.garden.speed_shoes": {
+    "description": "D.A. Garden disc music browser. Translate the complete message."
+  },
+  "menu.soniccd.garden.invincibility": "Invincibility",
+  "@menu.soniccd.garden.invincibility": {
+    "description": "D.A. Garden disc music browser. Translate the complete message."
+  },
+  "menu.soniccd.garden.game_over": "Game over",
+  "@menu.soniccd.garden.game_over": {
+    "description": "D.A. Garden disc music browser. Translate the complete message."
+  },
+  "menu.soniccd.garden.special_stage": "Special stage",
+  "@menu.soniccd.garden.special_stage": {
+    "description": "D.A. Garden disc music browser. Translate the complete message."
+  },
+  "menu.soniccd.garden.ending": "Ending music",
+  "@menu.soniccd.garden.ending": {
+    "description": "D.A. Garden disc music browser. Translate the complete message."
+  },
+  "menu.soniccd.garden.unknown_track": "Disc audio",
+  "@menu.soniccd.garden.unknown_track": {
+    "description": "D.A. Garden disc music browser. Translate the complete message."
+  },
   "menu.soniccd.visual_mode.title": "Visual mode",
   "@menu.soniccd.visual_mode.title": {
     "description": "Sonic CD Visual Mode browser. Translate the complete message."
