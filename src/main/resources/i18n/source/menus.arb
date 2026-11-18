@@ -1,5 +1,13 @@
 {
   "@@locale": "en",
+  "menu.soniccd.stage8.cleared": "Special Stage 8 cleared",
+  "@menu.soniccd.stage8.cleared": {
+    "description": "Heading on the acknowledgement after clearing the secret Special Stage 8 in Sonic CD."
+  },
+  "menu.soniccd.stage8.back_to_title": "Back to title",
+  "@menu.soniccd.stage8.back_to_title": {
+    "description": "Button on the Special Stage 8 clear acknowledgement that returns to the Sonic CD title."
+  },
   "menu.soniccd.garden.title": "D.A. Garden",
   "@menu.soniccd.garden.title": {
     "description": "D.A. Garden disc music browser. Translate the complete message."

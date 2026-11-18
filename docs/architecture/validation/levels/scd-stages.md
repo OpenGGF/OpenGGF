@@ -197,6 +197,17 @@ Breadth: Sonic CD has one character and no teams; it is not a donor, and
 donation into it is not assessed. Widths 400, 528 and 800 draw full pictures in
 the capture tools but have no native reference; the other presets are unchecked.
 
+## Sound Test Special Stage 8
+
+`TestCdSoundTestStageEntry` enters via the USA disc's title and Sound Test.
+The completion case sets the UFO count to zero and empties the six UFO slots
+after entry. The production stage session then detects completion and runs
+its exit fade. The test checks the acknowledgement at 320 and 400 pixels,
+the ending and title cues, held versus fresh confirmation, and unchanged
+backup RAM and campaign progress. A separate case checks Start abort.
+Both local native recordings end with six UFOs remaining. A natural clear
+and parity for the original `SPEEND.MMD` credits presentation remain open.
+
 ## Cartridge donor hosting (2026-11-16)
 
 `TestCdDonorHosting` boots R11A on the USA disc with six cartridge combinations:

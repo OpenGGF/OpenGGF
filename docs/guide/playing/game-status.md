@@ -239,6 +239,9 @@ Future). `SonicCdEndingCaptureTool --ending good|bad` films an ending.
   stage-select secret, Time Attack, Special Stage 8 from the sound test,
   the sound-test pictures, best staff times, the opening video, both
   special-stage attract demos and both endings with credits.
+- Clearing Special Stage 8 opens an OpenGGF acknowledgement with the disc's
+  ending music. Choose **Back to title** to dismiss it. The visit preserves
+  your saves and Time Stones.
 - The title's unlockable **Visual Mode** opens an OpenGGF browser for the
   opening video and both endings. **Back** stops the current video and
   returns to the browser.
@@ -268,8 +271,8 @@ Future). `SonicCdEndingCaptureTool --ending good|bad` films an ending.
 ### Known gaps
 
 - The pencil test, Thank You, Comin' Soon, ordinary-stage attract demos, the
-  D.A. Garden planet animation, and the credits for beating Special Stage 8
-  remain unhosted. The attract cycle skips ordinary-stage demos.
+  D.A. Garden planet animation, and the original Special Stage 8 credits
+  presentation remain unhosted. The attract cycle skips ordinary-stage demos.
 - CD patch mods, `any` registrations, scenes and Sonic gameplay runs use the disc
   pipeline. Authored zones support flat scrolling, one collision path, fixed-height water,
   owned objects, collectible rings, and fixed vertical and horizontal springs.

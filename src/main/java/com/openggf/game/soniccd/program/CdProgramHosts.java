@@ -20,7 +20,8 @@ final class CdProgramHosts {
             // --- end lane FLOW2
             // --- lane END (video programs)
             new com.openggf.game.soniccd.fmv.CdFmvHost(),
-            new com.openggf.game.soniccd.title.secrets.CdSecretsHost()
+            new com.openggf.game.soniccd.title.secrets.CdSecretsHost(),
+            new com.openggf.game.soniccd.title.secrets.CdStage8ClearHost()
             // --- end lane END
     );
 }
