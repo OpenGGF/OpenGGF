@@ -577,15 +577,18 @@ permission to redistribute them.
 
 Choose **Sonic CD**, a zone, then an act and time period to create a project
 from that native stage. The verified USA disc is required. Projects retain a
-bounded source reference, the original layout dimensions and authored edits.
-Player starts use terrain coordinates; native camera limits remain camera origins.
+bounded source reference, the current layout dimensions, and authored edits.
+Player starts use terrain coordinates. Native camera limits are camera origins.
 Save/reopen and cloning preserve the source. Playtest reloads the native stage
 through the game owner before applying terrain, tile, object and ring edits.
 Existing placement IDs retain their second subtype and time mask after moves;
 new IDs default to second subtype zero and the selected period only.
-Resized native layouts are refused by replay. Importing a saved `.ogfproject`
-through the content importer and saving it again preserves its native reference.
-Reopening or playtesting requires the matching verified USA disc.
+Choose **Resize level** to grow or crop either dimension. The top-left overlap
+keeps its contents, and new cells start empty. For a smaller layout, allow
+cropping to remove objects and ring groups beyond the new edge. Move the
+player start inside the retained area before cropping if needed. Layouts can
+have up to 64 columns and 16 rows. Tidal Tempest collision addresses up to
+eight rows. Reopening or playtesting requires the matching verified USA disc.
 
 To share a native project, choose **Export native project** in **Editor projects**
 or press `Ctrl+Shift+E`. Enter a new folder path, or end the path in `.zip` to
@@ -595,5 +598,5 @@ placements. Export keeps your current project and save point.
 
 To edit the export, drop its folder or ZIP onto the content importer. Open the
 project with the matching verified disc and save it as a new `.ogfproject`.
-The exported package depends on the same decoded stage revision and native layout
-dimensions. It is an editable project format.
+The package retains resized dimensions and depends on the same decoded stage
+revision. It is an editable project format.

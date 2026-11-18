@@ -504,7 +504,9 @@ under the matching area heading; see the
   Native player starts retain terrain coordinates independently of camera limits.
   Content-import and save round trips retain the reference. Native folder and ZIP
   exports carry the stage reference and authored differences. The content importer
-  reconstructs the editor project using the matching verified disc.
+  reconstructs the editor project using the matching verified disc. The resize
+  command grows or crops source-backed stages within their collision limits
+  and carries the resulting dimensions through playtest, save, and export.
 - **Sonic CD Stageplay preview:** open verified disc media for native scenes and
   cold-level route tapes; preserve zone/act/period program identity through
   detached art and worker transport. Finish native title-card preparation before

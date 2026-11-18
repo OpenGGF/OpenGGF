@@ -271,8 +271,9 @@ Future). `SonicCdEndingCaptureTool --ending good|bad` films an ending.
   disc/stage source reference: native edit replay retains the loaded game owners,
   source layout semantics and object secondary bytes, project creation selects a
   zone, act and time period, and source-backed playtests reload the native owners.
-  Native editor exports share edits in folders or ZIPs. The importer reloads the
-  referenced stage from the matching disc. See the [CD mod contracts](../../modding/ggfmod.md#sonic-cd-runtime-mods).
+  Projects can resize within the stage's collision limits. Native editor exports
+  share edits in folders or ZIPs. The importer reloads the referenced stage from
+  the matching disc. See the [CD mod contracts](../../modding/ggfmod.md#sonic-cd-runtime-mods).
 - Sonic CD Game Setup saves Borrow from and character choices. Without donation
   it defaults to Sonic alone. CD itself cannot donate player art.
   Each donor's supported roster can also be paired as leader/follower, including
