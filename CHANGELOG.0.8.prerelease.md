@@ -75,7 +75,9 @@ under the matching area heading; see the
   Visual Mode plays the opening, both endings and the silent Pencil Test
   from the verified USA disc. Completing the good ending in Visual Mode opens
   a read-only Thank You disc preview. D.A. Garden plays disc music
-  in an OpenGGF browser. Held-key live rewind works inside
+  in an OpenGGF browser. The stage-select Comin' Soon row opens an OpenGGF
+  contact sheet of tiles from the verified USA disc. Back returns to the title.
+  Held-key live rewind works inside
   special stages, including the three-frame floor pipeline, UFOs and effects. The master
   title lists it when the disc is configured or found (`roms.default: scd` boots
   it directly) and verifies it against the USA release before starting. A CHD
@@ -83,10 +85,9 @@ under the matching area heading; see the
   accepted exactly when its decoded tracks equal the Redump set; the reader is
   pure Java (CHD v5; `cdzl`, `cdlz`, `cdfl` and `cdzs` hunks or uncompressed;
   hunk CRCs and the header SHA-1s checked) and refuses delta, older-version
-  and non-CD CHDs by name. Not
-  included: the D.A. Garden planet presentation, Thank You,
-  Comin' Soon, ordinary-stage attract demos, the original Stage 8 credits presentation, and Japanese and
-  European gameplay. Disc audio, video songs and PCM sound follow the music
+  and non-CD CHDs by name.
+  The original D.A. Garden planet animation, ordinary-stage attract demos,
+  the original Stage 8 credits and Japanese and European gameplay remain open. Disc audio, video songs and PCM sound follow the music
   and effects volumes; CD audio and PCM also share the FM presentation scale
   for their relative level. The time-warp stars animate from the disc in every
   stage, including Tidal Tempest, and Robotnik's projector

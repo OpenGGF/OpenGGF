@@ -16,6 +16,9 @@ public sealed interface CdProgramRequest {
     /** Run the stage-select secret program STSEL_.MMD ({@code StageSelect}, IPX.asm:710-728). */
     record StageSelect() implements CdProgramRequest { }
 
+    /** Stage select's SCMD_COMINSOON row opens OpenGGF's disc-art preview, then a fresh title. */
+    record CominSoonPreview() implements CdProgramRequest { }
+
     /** Run one stage program. */
     record Stage(CdStagePayload payload, Route route) implements CdProgramRequest {
         public Stage {

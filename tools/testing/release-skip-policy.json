@@ -2576,16 +2576,30 @@
       "note": "user's Sonic CD disc"
     },
     {
-      "match": "com.openggf.game.soniccd.flow.TestCdStageSelectExits#aRowNamingAProgramReturnsToTheTitle",
+      "match": "com.openggf.game.soniccd.flow.TestCdStageSelectExits#otherNonStageRowsStillReturnToTheTitle(CdCommand)[1]",
       "category": "optional-fixture",
-      "evidence": "src/test/java/com/openggf/game/soniccd/flow/TestCdStageSelectExits.java:58",
+      "evidence": "src/test/java/com/openggf/game/soniccd/flow/TestCdStageSelectExits.java:79",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.flow.TestCdStageSelectExits#otherNonStageRowsStillReturnToTheTitle(CdCommand)[2]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/flow/TestCdStageSelectExits.java:79",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.flow.TestCdStageSelectExits#cominSoonOpensTheDiscPreviewAndBackStartsAFreshTitleWithoutWritingTheSave",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/flow/TestCdStageSelectExits.java:95",
       "allowed_when_absent": "soniccd_disc",
       "note": "user's Sonic CD disc"
     },
     {
       "match": "com.openggf.game.soniccd.flow.TestCdStageSelectExits#theSpecialStageRowRunsTheStageOneDemoThenTheTitle",
       "category": "optional-fixture",
-      "evidence": "src/test/java/com/openggf/game/soniccd/flow/TestCdStageSelectExits.java:71",
+      "evidence": "src/test/java/com/openggf/game/soniccd/flow/TestCdStageSelectExits.java:166",
       "allowed_when_absent": "soniccd_disc",
       "note": "user's Sonic CD disc"
     },
