@@ -75,8 +75,9 @@ under the matching area heading; see the
   ending music and a return to the title.
   Visual Mode plays the opening, both endings and the silent Pencil Test
   from the verified USA disc. Completing the good ending in Visual Mode opens
-  a read-only Thank You disc preview. D.A. Garden plays disc music
-  in an OpenGGF browser. The stage-select Comin' Soon row opens an OpenGGF
+  a read-only Thank You disc preview. D.A. Garden plays disc music and can
+  show a still view of Little Planet in the Present while music continues.
+  The stage-select Comin' Soon row opens an OpenGGF
   contact sheet of tiles from the verified USA disc. Back returns to the title.
   Held-key live rewind works inside
   special stages, including the three-frame floor pipeline, UFOs and effects. The master

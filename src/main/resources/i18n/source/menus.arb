@@ -29,6 +29,22 @@
   "@menu.soniccd.garden.play_stop": {
     "description": "D.A. Garden disc music browser. Translate the complete message."
   },
+  "menu.soniccd.garden.planet": "PLANET",
+  "@menu.soniccd.garden.planet": {
+    "description": "Footer action that opens the Present planet art view."
+  },
+  "menu.soniccd.garden.planet_title": "Present planet",
+  "@menu.soniccd.garden.planet_title": {
+    "description": "Page title for the still artwork of Little Planet in the Present time period."
+  },
+  "menu.soniccd.garden.tracks": "TRACKS",
+  "@menu.soniccd.garden.tracks": {
+    "description": "Footer action that returns from the planet art to the music tracks."
+  },
+  "menu.soniccd.garden.planet_unavailable": "Planet art unavailable",
+  "@menu.soniccd.garden.planet_unavailable": {
+    "description": "Shown when D.A. Garden cannot load the Present planet art."
+  },
   "menu.soniccd.garden.present": "Present",
   "@menu.soniccd.garden.present": {
     "description": "D.A. Garden disc music browser. Translate the complete message."
