@@ -50,11 +50,15 @@ final class CdFlowHarness implements AutoCloseable {
                int x, int y, boolean dead, boolean ctrlLocked, boolean fading, boolean timerPaused) { }
 
     CdFlowHarness(java.util.function.Consumer<SonicCdGameModule> beforeBoot) throws Exception {
+        this(320, beforeBoot);
+    }
+
+    CdFlowHarness(int width, java.util.function.Consumer<SonicCdGameModule> beforeBoot) throws Exception {
         Path cue = CdTestMedia.usaCue();
         GameServices.configuration().setSessionOverride(SonicConfiguration.AUDIO_ENABLED, false);
         GameServices.configuration().setSessionOverride(SonicConfiguration.LEVEL_SELECT_ON_STARTUP, false);
         disc = CdDiscDataSource.open(cue);
-        boot = new HeadlessGameBoot(320, 224);
+        boot = new HeadlessGameBoot(width, 224);
         module = new SonicCdGameModule();
         scenes = module.getGameService(CdSceneCoordinator.class);
         if (beforeBoot != null) beforeBoot.accept(module);

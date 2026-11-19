@@ -70,6 +70,8 @@ under the matching area heading; see the
   effects, CD audio and PCM sound are hosted. The FM loader also accepts verified
   Japanese and European discs containing the identical driver bank. The title's
   RAM DATA entry confirms a reset of Sonic CD's save to disc defaults.
+  Clearing Special Stage 8 opens an OpenGGF acknowledgement with the disc's
+  ending music and a return to the title.
   Visual Mode plays the opening, both endings and the silent Pencil Test
   from the verified USA disc. Completing the good ending in Visual Mode opens
   a read-only Thank You disc preview. D.A. Garden plays disc music
@@ -83,7 +85,7 @@ under the matching area heading; see the
   hunk CRCs and the header SHA-1s checked) and refuses delta, older-version
   and non-CD CHDs by name. Not
   included: the D.A. Garden planet presentation, Thank You,
-  Comin' Soon, ordinary-stage attract demos, Stage 8 credits, and Japanese and
+  Comin' Soon, ordinary-stage attract demos, the original Stage 8 credits presentation, and Japanese and
   European gameplay. Disc audio, video songs and PCM sound follow the music
   and effects volumes; CD audio and PCM also share the FM presentation scale
   for their relative level. The time-warp stars animate from the disc in every
