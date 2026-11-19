@@ -2590,11 +2590,18 @@
       "note": "user's Sonic CD disc"
     },
     {
-      "match": "com.openggf.game.soniccd.flow.TestCdVisualModeFlow#titleOpensVisualModeAndAllThreeFilmsReturnWithoutWritingSaveData",
+      "match": "com.openggf.game.soniccd.flow.TestCdVisualModeFlow#titleOpensVisualModeAndAllFourClipsReturnWithoutWritingSaveData",
       "category": "optional-fixture",
-      "evidence": "src/test/java/com/openggf/game/soniccd/flow/TestCdVisualModeFlow.java:22",
+      "evidence": "src/test/java/com/openggf/game/soniccd/flow/TestCdVisualModeFlow.java:38",
       "allowed_when_absent": "soniccd_disc",
       "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.fmv.TestCdPencilTestProgram#publishesAllDiscBanksAtTheMuteStreamCadenceAndDrainsTheLastPicture",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/fmv/TestCdPencilTestProgram.java:17",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Requires the user-supplied USA disc through CdTestMedia.usaCue; required when the disc is supplied."
     },
     {
       "match": "com.openggf.mods.code.TestSonicCdModRuntime#authoredWaterLoadsFromDiscAtTheCreatorHeight",
