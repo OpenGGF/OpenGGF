@@ -32,7 +32,7 @@ python3 tools/testing/run_categories.py --category all --workers 2 --run
 # Focused regression (reviewed small classes select lean automatically).
 python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestCollisionLogic test
 # Single method.
-python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestCollisionLogic#testCollisionLogic' test
+python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestCollisionLogic#decodesRetailEhzAndHtzPrimaryCollisionIndices' test
 # Public release preparation ONLY: the former complete ordinary suite.
 python3 tools/testing/maven_queue.py -Dmse=off -Pfull-suite test -B
 ```

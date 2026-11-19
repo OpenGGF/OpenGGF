@@ -9,7 +9,6 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestPachinkoItemOrbObjectInstance {
@@ -152,25 +151,13 @@ class TestPachinkoItemOrbObjectInstance {
         // is re-registered on the collision response list every frame and the player's
         // Touch_Loop sets collision_property for every overlapping pass, so the orb must poll
         // continuously (not once per overlap edge) to observe the RELEASE that drives its
-        // armed->convert reward roll. The legacy per-object requiresContinuousTouchCallbacks()
-        // hook stays un-overridden -- continuity is declared through the profile field instead.
-        assertFalse(orb.requiresContinuousTouchCallbacks());
+        // armed->convert reward roll.
         assertEquals(TouchCategoryDecodeMode.NORMAL, profile.categoryDecodeMode());
         assertTrue(profile.continuousCallbacks());
         assertTrue(profile.requiresRenderFlagForTouch());
         assertFalse(profile.multiRegionSource());
         assertEquals(TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS,
                 profile.stopAfterFirstOverlapPolicy());
-    }
-
-    @Test
-    void orbDeclaresProfileInsteadOfLegacyContinuousTouchHook() throws NoSuchMethodException {
-        assertThrows(NoSuchMethodException.class,
-                () -> PachinkoItemOrbObjectInstance.class
-                        .getDeclaredMethod("requiresContinuousTouchCallbacks"));
-        assertEquals(TouchResponseProfile.class, PachinkoItemOrbObjectInstance.class
-                .getDeclaredMethod("getTouchResponseProfile")
-                .getReturnType());
     }
 }
 

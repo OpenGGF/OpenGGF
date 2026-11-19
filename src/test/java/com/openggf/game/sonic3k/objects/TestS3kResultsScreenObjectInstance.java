@@ -21,7 +21,6 @@ import com.openggf.sprites.playable.ObjectControlState;
 import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.Test;
 
-import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -82,25 +81,6 @@ class TestS3kResultsScreenObjectInstance {
         updateResultsSlots(services, results, 19, player);
 
         assertEquals(List.of("0:1"), services.titleCard.calls);
-    }
-
-    @Test
-    void timingCompensationDoesNotDelayReadinessGatedCreate() throws Exception {
-        // ROM Obj_LevelResultsCreate gates on Kos_modules_left alone
-        // (docs/skdisasm/sonic3k.asm:62636-62638); no dispatch countdown
-        // delays child creation once the queued results art is ready.
-        S3kResultsScreenObjectInstance none = resultsWithTimingAdjustment("NONE", true);
-        S3kResultsScreenObjectInstance compensation = resultsWithTimingAdjustment(
-                "UNSUPPORTED_GROUNDED_COMPENSATION", true);
-
-        assertThrows(NoSuchFieldException.class,
-                () -> none.getClass().getDeclaredField("createGateFrames"),
-                "readiness-gated create keeps no dispatch countdown");
-        assertThrows(NoSuchFieldException.class,
-                () -> compensation.getClass().getDeclaredField("createGateFrames"));
-        assertTrue(privateBoolean(none, "usesShortResultsChildRetireTail"));
-        assertTrue(privateBoolean(compensation, "usesShortResultsChildRetireTail"),
-                "short-tail retirement remains independent from create-gate timing compensation");
     }
 
     @Test
@@ -474,36 +454,6 @@ class TestS3kResultsScreenObjectInstance {
         assertEquals(0x0668, services.camera.getMaxY() & 0xFFFF);
     }
 
-    private static S3kResultsScreenObjectInstance resultsWithTimingAdjustment(
-            String adjustmentName, boolean usesShortResultsChildRetireTail) throws Exception {
-        Class<?> adjustmentClass = Class.forName(
-                S3kSignpostInstance.class.getName() + "$ResultsChildTimingAdjustment");
-        @SuppressWarnings({"rawtypes", "unchecked"})
-        Object adjustment = Enum.valueOf((Class) adjustmentClass, adjustmentName);
-        Constructor<S3kResultsScreenObjectInstance> constructor =
-                S3kResultsScreenObjectInstance.class.getDeclaredConstructor(
-                        PlayerCharacter.class, int.class, int.class, int.class,
-                        adjustmentClass, boolean.class);
-        constructor.setAccessible(true);
-        TestObjectServices services = new TestObjectServices();
-        S3kResultsScreenObjectInstance results = ObjectConstructionContext.withRewindActiveRestore(
-                () -> ObjectConstructionContext.construct(services,
-                        () -> constructResults(constructor, adjustment, usesShortResultsChildRetireTail)));
-        results.setServices(services);
-        return results;
-    }
-
-    private static S3kResultsScreenObjectInstance constructResults(
-            Constructor<S3kResultsScreenObjectInstance> constructor,
-            Object adjustment, boolean usesShortResultsChildRetireTail) {
-        try {
-            return constructor.newInstance(PlayerCharacter.SONIC_AND_TAILS, 0,
-                    0, 0, adjustment, usesShortResultsChildRetireTail);
-        } catch (ReflectiveOperationException e) {
-            throw new AssertionError("Could not construct results child", e);
-        }
-    }
-
     private static void invokeCreateElements(S3kResultsScreenObjectInstance results)
             throws Exception {
         Method createElements =
@@ -537,13 +487,6 @@ class TestS3kResultsScreenObjectInstance {
             }
         }
     }
-
-    private static boolean privateBoolean(Object instance, String fieldName) throws Exception {
-        Field field = instance.getClass().getDeclaredField(fieldName);
-        field.setAccessible(true);
-        return field.getBoolean(instance);
-    }
-
 
     private static S3kResultsScreenObjectInstance transitionShell(
             TestObjectServices services, PlayerCharacter character, int act) {

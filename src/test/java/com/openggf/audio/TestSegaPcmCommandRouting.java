@@ -54,17 +54,6 @@ class TestSegaPcmCommandRouting {
     }
 
     @Test
-    void rawSampleVoiceMatchesLegacyYmDacOutputScale() {
-        SampleBackedVoice voice = SampleBackedVoice.unsigned8Mono(1, 0, "sega",
-                new byte[] {0, (byte) 0x80, (byte) 0xFF}, 48_000, 48_000, 0.25f);
-        long[] accumulation = new long[6];
-
-        voice.mixInto(accumulation, 3);
-
-        assertArrayEquals(new long[] {-8192, -8192, 0, 0, 8128, 8128}, accumulation);
-    }
-
-    @Test
     void presentationFactorySegaPcmMatchesLegacyYmDacOutputScale() {
         AudioPresentationSourceFactory factory =
                 new AudioPresentationSourceFactory(

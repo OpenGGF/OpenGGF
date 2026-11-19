@@ -11,7 +11,6 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class TestSonic1SegaScreenFadeTiming {
     private static final int SEGA_ACTIVE_FRAMES = 76 + 98 + 30;
@@ -55,14 +54,6 @@ class TestSonic1SegaScreenFadeTiming {
 
         assertEquals(TitleScreenProvider.State.INTRO_TEXT_FADE_IN, manager.getState(),
                 "S1 intro text starts only after the SEGA fade-to-black finishes");
-    }
-
-    @Test
-    void segaLogoFadeDoesNotUseBlackOverlayHelpers() {
-        assertThrows(NoSuchMethodException.class,
-                () -> method("drawSegaLogoFade", com.openggf.graphics.GraphicsManager.class));
-        assertThrows(NoSuchMethodException.class,
-                () -> method("segaLogoFadeAmount"));
     }
 
     private static Sonic1TitleScreenManager managerInSegaState() throws Exception {

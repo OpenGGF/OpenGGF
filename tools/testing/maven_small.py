@@ -55,7 +55,6 @@ QUALIFIED_CLASSES = frozenset({
     'com.openggf.configuration.TestSparseUserConfig',
     'com.openggf.configuration.TestUnknownConfigPreservation',
     'com.openggf.configuration.TestWidescreenAspect',
-    'com.openggf.configuration.TestYamlDependencyAvailable',
     'com.openggf.configuration.TraceVisibilityConfigDefaultsTest',
     'com.openggf.control.TestActionReducer',
     'com.openggf.control.TestButtonPrompts',

@@ -126,7 +126,7 @@ python3 tools/testing/run_categories.py --base "$BASE" --workers 2 --run
 
 # Run a single test class or method.
 python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestCollisionLogic test
-python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestCollisionLogic#testCollisionLogic' test
+python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestCollisionLogic#decodesRetailEhzAndHtzPrimaryCollisionIndices' test
 ```
 
 Use focused checks for bounded changes and the change-based smoke selection for

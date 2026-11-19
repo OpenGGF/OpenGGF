@@ -21,6 +21,7 @@ import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.ArrayList;
@@ -223,12 +224,27 @@ class TestS3kResultsKosQueueAndChildren {
     }
 
     @ParameterizedTest
-    @ValueSource(booleans = {false, true})
-    void completedResultsArtStillWaitsForAnUnrelatedPhysicalModule(boolean retryAfterClaim)
+    @CsvSource({
+            "false, NONE",
+            "true, NONE",
+            "false, UNSUPPORTED_GROUNDED_COMPENSATION",
+            "true, UNSUPPORTED_GROUNDED_COMPENSATION"
+    })
+    void completedResultsArtStillWaitsForAnUnrelatedPhysicalModule(
+            boolean retryAfterClaim, S3kSignpostInstance.ResultsChildTimingAdjustment timingAdjustment)
             throws Exception {
         HeadlessTestFixture fixture = fixture();
-        S3kResultsScreenObjectInstance root = createResults();
+        S3kResultsScreenObjectInstance root = ObjectConstructionContext.construct(
+                TestEnvironment.objectServices(),
+                () -> new S3kResultsScreenObjectInstance(
+                        PlayerCharacter.SONIC_ALONE, 0, 0, 0, timingAdjustment, true));
         GameServices.level().getObjectManager().addDynamicObject(root);
+        if (timingAdjustment == S3kSignpostInstance.ResultsChildTimingAdjustment.UNSUPPORTED_GROUNDED_COMPENSATION) {
+            // The signpost's short-tail handoff defers Obj_LevelResultsInit by one dispatch.
+            root.update(GameServices.level().getObjectManager().getVblaCounter(), fixture.sprite());
+            assertEquals(0, GameServices.hardwareTiming().incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE));
+            assertTrue(resultChildren().isEmpty());
+        }
         awaitResultsArt(fixture, root);
 
         if (retryAfterClaim) {
@@ -260,7 +276,8 @@ class TestS3kResultsKosQueueAndChildren {
         assertFalse(moduleQueue.hasPendingPhysicalModules());
         root.update(2, fixture.sprite());
         assertTrue(root.hasLoadedResultsArt());
-        assertEquals(12, resultChildren().size());
+        assertEquals(12, resultChildren().size(), "Create allocates on the first dispatch after the queue clears");
+        assertEquals(0, root.activeResultsFrames(), "the results wait begins on the next dispatch");
         assertTrue(actTransitionPublished());
         assertEquals(0, GameServices.level().getCurrentAct());
     }

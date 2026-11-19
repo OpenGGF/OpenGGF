@@ -7,6 +7,7 @@ import java.lang.reflect.Field;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestSonic3kSpecialStageGameplaySnapshot {
     @Test
@@ -92,8 +93,8 @@ class TestSonic3kSpecialStageGameplaySnapshot {
     @Test
     void collisionQueueSnapshotRestoresAllQueueArrays() throws Exception {
         Sonic3kSpecialStageCollisionQueue queue = new Sonic3kSpecialStageCollisionQueue();
-        queue.addRing(0x22);
-        queue.addBlueSphere(0x44);
+        assertTrue(queue.addRing(0x22));
+        assertTrue(queue.addBlueSphere(0x44));
 
         Sonic3kSpecialStageSnapshot.CollisionQueueSnapshot snapshot = queue.captureRewindSnapshot();
         queue.clear();
