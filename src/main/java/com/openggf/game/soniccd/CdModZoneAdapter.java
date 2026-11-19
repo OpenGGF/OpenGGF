@@ -4,6 +4,7 @@ import com.openggf.game.modzone.*;
 import com.openggf.game.soniccd.level.CdLevel;
 import com.openggf.game.soniccd.level.CdStageLoader;
 import com.openggf.game.soniccd.objects.art.CdObjectArtProvider;
+import com.openggf.game.soniccd.objects.common.CdMonitor;
 import com.openggf.level.Level;
 import com.openggf.level.ModLevel;
 import com.openggf.level.Pattern;
@@ -19,7 +20,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.function.Supplier;
 
-/** Authored terrain and owned objects, with common ring and spring art from the supplied disc. */
+/** Authored terrain and owned objects, with common ring, spring and monitor art from the supplied disc. */
 final class CdModZoneAdapter implements ModZoneAdapter {
     private final Supplier<CdDiscDataSource> disc;
 
@@ -33,9 +34,11 @@ final class CdModZoneAdapter implements ModZoneAdapter {
         if (!Arrays.equals(data.primaryCollisionIndices(), data.secondaryCollisionIndices()))
             throw new ModZoneRegistrationException(owner, "CD has one collision path");
         if (data.objects().stream().anyMatch(spawn -> spawn.objectKey() == null
-                && (spawn.objectId() != 0x0A || (spawn.subtype() & 8) != 0)))
+                && !(spawn.objectId() == 0x0A && (spawn.subtype() & 8) == 0)
+                && !CdMonitor.isTenRingPlacement(spawn)))
             throw new ModZoneRegistrationException(owner,
-                    "CD authored zones admit owned objects and non-diagonal fixed springs; other stock placements need a disc stage");
+                    "CD authored zones admit owned objects, non-diagonal fixed springs and ten-ring monitors;"
+                            + " other stock placements need a disc stage");
         for (RingSpawn ring : data.rings()) {
             if (ring.x() < 0 || ring.x() >= 0xFFFF || ring.y() < 0 || ring.y() > 0x0FFF) {
                 throw new ModZoneRegistrationException(owner, "CD rings require coordinates x=0..65534, y=0..4095");

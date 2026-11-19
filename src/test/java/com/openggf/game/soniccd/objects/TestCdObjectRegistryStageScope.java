@@ -4,6 +4,7 @@ import com.openggf.game.soniccd.CdStagePayload;
 import com.openggf.game.soniccd.objects.common.CdSpikes;
 import com.openggf.game.soniccd.objects.mmz.MmzLaser;
 import com.openggf.level.objects.ObjectFactory;
+import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import org.junit.jupiter.api.Test;
 
@@ -29,6 +30,33 @@ class TestCdObjectRegistryStageScope {
                     created(registry.stageFactory(payload, 0x1B), 0x1B), payload.name());
         }
         assertEquals("Boulder", registry.getPrimaryName(0x1B));
+    }
+
+    @Test
+    void tidalTempestBreakPoleIsScopedToActsOneAndTwo() {
+        for (CdStagePayload payload : CdStagePayload.values()) {
+            var factory = registry.zoneFactory(payload, 0x05);
+            if (payload.name().startsWith("R4") && payload.stage().actNumber() < 3) {
+                assertNotNull(factory, payload.name());
+                assertEquals("Break pole", ((ObjectInstance) created(factory, 0x05)).getName(), payload.name());
+            } else if (payload.name().startsWith("R4")) {
+                assertNull(factory, payload.name());
+            }
+        }
+    }
+
+    @Test
+    void stationarySpikeBallIsScopedToTheLiveTidalTempestDispatches() {
+        for (CdStagePayload payload : CdStagePayload.values()) {
+            var factory = registry.zoneFactory(payload, 0x37);
+            switch (payload) {
+                case R42A, R42C, R42D ->
+                        assertEquals("Stationary spike ball", ((ObjectInstance) created(factory, 0x37)).getName());
+                default -> {
+                    if (payload.name().startsWith("R4")) assertNull(factory, payload.name());
+                }
+            }
+        }
     }
 
     @Test

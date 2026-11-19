@@ -10,7 +10,9 @@ import com.openggf.game.soniccd.level.CdStageCatalogue;
 import com.openggf.game.soniccd.level.CdStageImage;
 import com.openggf.game.soniccd.level.CdStageLoader;
 import com.openggf.game.soniccd.objects.common.CdAnimator;
+import com.openggf.game.soniccd.objects.common.CdMonitor;
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.level.ModLevel;
 import com.openggf.level.Pattern;
 import com.openggf.level.objects.ObjectSpriteSheet;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -75,6 +77,8 @@ public final class CdObjectArtProvider implements ObjectArtProvider, com.openggf
     private static final int LIFE_ICON_BYTES = 0x80;
     /** LevelStart .LoadStdPLCs: moveq #1,d0; bsr.w LoadPLCImm (Level/Main.asm:163-165). */
     private static final int STANDARD_PLC = 1;
+    /** ObjExplosion_Init selects animation 1 for the monitor's subtype 1 explosion (Explosion/Main.asm:81-83). */
+    private static final int MONITOR_EXPLOSION_ANIM = 1;
 
     private final Supplier<CdLevel> levels;
     private final Supplier<CdStageImage> images;
@@ -90,6 +94,8 @@ public final class CdObjectArtProvider implements ObjectArtProvider, com.openggf
     private CdObjectCatalogue.Entry entry;
     private CdStageVram vram;
     private Supplier<CdAnimator> springAnimation;
+    private byte[] authoredMonitorScript;
+    private byte[] authoredMonitorExplosionScript;
 
     public CdObjectArtProvider(Supplier<CdLevel> levels, Supplier<CdStageImage> images) {
         this(levels, images, () -> null);
@@ -105,7 +111,7 @@ public final class CdObjectArtProvider implements ObjectArtProvider, com.openggf
     public void loadArtForZone(int zoneIndex) throws IOException {
         if (zoneIndex == -1) {
             clearStageArt();
-            loadAuthoredSprings();
+            loadAuthoredCommonArt();
             return;
         }
         CdLevel level = levels.get();
@@ -134,7 +140,7 @@ public final class CdObjectArtProvider implements ObjectArtProvider, com.openggf
         animations.put(RING, animationSet(reader, entry.ringAnimations()));
         register(MONITOR, sheet(reader, entry.monitorMappings(), MONITOR_TILE));
         animations.put(MONITOR, animationSet(reader, entry.monitorAnimations()));
-        register(MONITOR_ITEM, monitorItemSheet(reader));
+        register(MONITOR_ITEM, monitorItemSheet(reader, entry.monitorMappings(), vram));
         registerFixedSprings(stage, entry, vram);
         for (int tile : objectTileIds(TILE_ID_DIAGONAL_SPRING)) {
             register(SPRING_DIAGONAL + tile, sheet(reader, entry.springMappings3(), tile));
@@ -161,16 +167,50 @@ public final class CdObjectArtProvider implements ObjectArtProvider, com.openggf
         }
     }
 
-    private void loadAuthoredSprings() throws IOException {
+    private void loadAuthoredCommonArt() throws IOException {
         CdDiscDataSource disc = discs.get();
         if (disc == null) return;
-        // PLC_Std contains Art_Springs at byte $A400 (Palmtree Panic/Data (Act 1 Present).asm:54-71).
-        // Read only the common cue into a temporary tile buffer. The act keeps its authored layout and palettes.
+        // PLC_Std (Palmtree Panic/Data (Act 1 Present).asm:54-77) contains the spring, monitor and explosion art.
+        // Decode the common cue into a temporary buffer. The act keeps its authored layout and palettes.
         CdStagePayload source = CdStagePayload.R11A;
         CdStageImage stage = new CdStageLoader(disc).readStage(source);
         CdStageVram common = new CdStageVram();
         common.loadPlc(stage, CdStageCatalogue.entry(source).plcLists(), STANDARD_PLC);
-        registerFixedSprings(stage, CdObjectCatalogue.entry(source), common);
+        var tables = CdObjectCatalogue.entry(source);
+        registerFixedSprings(stage, tables, common);
+
+        var levels = com.openggf.game.GameServices.levelOrNull();
+        if (levels != null && levels.getCurrentLevel() instanceof ModLevel authored
+                && authored.getObjects().stream().anyMatch(CdMonitor::isTenRingPlacement)) {
+            registerAuthoredMonitorArt(stage, tables, common);
+        }
+    }
+
+    private void registerAuthoredMonitorArt(CdStageImage stage, CdObjectCatalogue.Entry tables, CdStageVram common)
+            throws IOException {
+        RomByteReader reader = stage.reader();
+        var monitor = sheet(reader, tables.monitorMappings(), MONITOR_TILE, common);
+        var item = monitorItemSheet(reader, tables.monitorMappings(), common);
+        var explosion = sheet(reader, tables.explosionMappings(), tables.explosionTile(), common);
+        authoredMonitorScript = detachedScript(stage, reader, tables.monitorAnimations(), CdMonitor.TEN_RING_SUBTYPE,
+                0xFF, monitor.getFrameCount());
+        authoredMonitorExplosionScript = detachedScript(stage, reader, tables.explosionAnimations(),
+                MONITOR_EXPLOSION_ANIM, 0xFC, explosion.getFrameCount());
+        register(MONITOR, monitor);
+        register(MONITOR_ITEM, item);
+        register(EXPLOSION, explosion);
+    }
+
+    /** Copy only the delay, frame bytes and terminal command of the selected script. */
+    private static byte[] detachedScript(CdStageImage stage, RomByteReader reader, int table, int anim,
+                                         int terminal, int frameCount) throws IOException {
+        int offset = table + (short) stage.u16(table + anim * 2);
+        var script = CommonSpriteDataLoader.parseAnimationScript(reader, offset);
+        if (script.frames().isEmpty() || script.flatByteAt(script.frames().size()) != terminal
+                || script.frames().stream().anyMatch(frame -> frame >= 0x80 || (frame & 0x1F) >= frameCount)) {
+            throw new IOException("Unexpected common Sonic CD animation at stage offset " + offset);
+        }
+        return stage.slice(offset, script.frames().size() + 2);
     }
 
     private void registerFixedSprings(CdStageImage stage, CdObjectCatalogue.Entry tables, CdStageVram tiles) {
@@ -187,6 +227,18 @@ public final class CdObjectArtProvider implements ObjectArtProvider, com.openggf
         return springAnimation == null ? null : springAnimation.get();
     }
 
+    public CdAnimator newMonitorAnimator(int subtype) {
+        if (entry != null) return new CdAnimator(image, entry.monitorAnimations(), subtype);
+        return subtype == CdMonitor.TEN_RING_SUBTYPE && authoredMonitorScript != null
+                ? new CdAnimator(authoredMonitorScript, subtype) : null;
+    }
+
+    public CdAnimator newExplosionAnimator(int anim) {
+        if (entry != null) return new CdAnimator(image, entry.explosionAnimations(), anim);
+        return anim == MONITOR_EXPLOSION_ANIM && authoredMonitorExplosionScript != null
+                ? new CdAnimator(authoredMonitorExplosionScript, anim) : null;
+    }
+
     private void clearStageArt() {
         donorLife = null;
         donorLifeArt = null;
@@ -195,6 +247,8 @@ public final class CdObjectArtProvider implements ObjectArtProvider, com.openggf
         entry = null;
         vram = null;
         springAnimation = null;
+        authoredMonitorScript = null;
+        authoredMonitorExplosionScript = null;
         sheets.clear();
         renderers.clear();
         animations.clear();
@@ -294,8 +348,7 @@ public final class CdObjectArtProvider implements ObjectArtProvider, com.openggf
      * DrawObjects .StaticMap draws exactly that piece, without consulting oMapFrame
      * (Level/Object Functions.asm:328-345; Level/_Objects/Monitor and Time Post/Main.asm:446-459).
      */
-    private ObjectSpriteSheet monitorItemSheet(RomByteReader reader) {
-        int table = entry.monitorMappings();
+    private ObjectSpriteSheet monitorItemSheet(RomByteReader reader, int table, CdStageVram tiles) {
         List<SpriteMappingFrame> frames = new ArrayList<>();
         for (int k = 0; k < 8; k++) {
             int piece = table + (short) reader.readU16BE(table + k * 2) + 1;
@@ -307,7 +360,7 @@ public final class CdObjectArtProvider implements ObjectArtProvider, com.openggf
                     (tile & 0x800) != 0, (tile & 0x1000) != 0, (tile >> 13) & 3,
                     (tile & 0x8000) != 0))));
         }
-        return new ObjectSpriteSheet(vram.window(MONITOR_ITEM_TILE & 0x7FF, span(frames)), frames,
+        return new ObjectSpriteSheet(tiles.window(MONITOR_ITEM_TILE & 0x7FF, span(frames)), frames,
                 tilePalette(MONITOR_ITEM_TILE), 1);
     }
 

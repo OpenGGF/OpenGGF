@@ -147,7 +147,7 @@ class TestSonicCdActEndNative {
     @CsvSource({
             "R11A, 3502, asserted, 0", "R11B, 2452, asserted, 0", "R11C, 5071, asserted, 0", "R12A, 3525, asserted, 0",
             "R31A, 4572, asserted, 0", "R31B, 7523, asserted, 0", "R31C, 6277, asserted, 0", "R32A, 5963, asserted, 0",
-            "R41A, 4731, asserted, 0", "R41B, 4003, asserted, 0", "R41C, 5286, asserted, 0", "R42A, 5693, pending, 0",
+            "R41A, 4731, asserted, 0", "R41B, 4003, asserted, 0", "R41C, 5286, asserted, 0", "R42A, 5693, asserted, 0",
             "R51A, 4037, asserted, 0", "R51B, 4775, asserted, 0", "R51C, 6433, asserted, 0", "R52A, 4053, asserted, 0",
             "R61A, 4174, asserted, 0", "R61B, 4731, asserted, 0", "R61C, 6049, asserted, 0", "R62A, 4068, asserted, 0",
             "R71A, 3258, asserted, 0", "R71B, 4199, asserted, 0", "R71C, 5378, asserted, 0", "R72A, 3681, asserted, 0",

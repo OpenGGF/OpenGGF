@@ -8,6 +8,7 @@ import com.openggf.game.MenuFeedback;
 import com.openggf.game.MenuStyle;
 import com.openggf.game.nativemenu.NativeMenuScreen;
 import com.openggf.game.soniccd.SonicCdZoneRegistry;
+import com.openggf.graphics.PixelFont;
 import com.openggf.graphics.PixelFontTextRenderer;
 import com.openggf.i18n.UiMessages;
 
@@ -27,16 +28,25 @@ final class CdGardenMusicScreen implements NativeMenuScreen {
     private static final int FIRST_STAGE_TRACK = 3, FIRST_CUE_TRACK = 24;
     private static final int STOP = CdSubCpuAudio.commandId("SCMD_STOPCDDA");
     private static final int TOP = 43, LEFT = 12, SCROLL_MARGIN = 16, ROW_GAP = 4;
+    private static final int ART_WIDTH = 176, ART_TOP = 46, ART_PADDING = 4;
+    private static final int PLANET_HINT = 2, TRACKS_HINT = 0;
     private static final List<CdSubCpuAudio.Command> TRACKS = trackCommands();
 
     private final PixelFontTextRenderer text = PixelFontTextRenderer.menu();
     private final SonicCdZoneRegistry zones = new SonicCdZoneRegistry();
+    private final CdGardenPlanetArt planet;
+    private List<MenuChrome.FooterTarget> footerTargets = List.of();
     private InputHandler input;
     private CdSubCpuAudio audio;
     private int selected;
     private int first;
     private int frame;
     private boolean exiting;
+    private boolean viewingPlanet;
+
+    CdGardenMusicScreen(CdGardenPlanetArt planet) {
+        this.planet = planet;
+    }
 
     private static List<CdSubCpuAudio.Command> trackCommands() {
         var byTrack = new TreeMap<Integer, CdSubCpuAudio.Command>();
@@ -55,6 +65,8 @@ final class CdGardenMusicScreen implements NativeMenuScreen {
         first = 0;
         frame = 0;
         exiting = false;
+        viewingPlanet = false;
+        footerTargets = List.of();
         var manager = GameServices.audio();
         audio = manager.getAudioProfile() instanceof SonicCdAudioProfile cd ? cd.subCpuAudio() : null;
         manager.playMusic(STOP);
@@ -65,15 +77,30 @@ final class CdGardenMusicScreen implements NativeMenuScreen {
         this.input = input;
         frame++;
         int width = width();
-        int rows = visibleRows();
         var pointer = MenuInput.pointer(input, width, presentationHeight());
-        if (MenuInput.back(input) || pointer.inside() && pointer.rightPressed()) {
+        boolean back = MenuInput.back(input) || pointer.inside() && pointer.rightPressed();
+        if (viewingPlanet) {
+            if (back || clickedHint(pointer, TRACKS_HINT)) {
+                viewingPlanet = false;
+                footerTargets = List.of();
+                MenuFeedback.emit(MenuFeedback.Cue.CANCEL);
+            }
+            return;
+        }
+        if (back) {
             MenuFeedback.emit(MenuFeedback.Cue.CANCEL);
             exiting = true;
             return;
         }
+        if (planet != null && (MenuInput.details(input) || clickedHint(pointer, PLANET_HINT))) {
+            viewingPlanet = true;
+            footerTargets = List.of();
+            MenuFeedback.emit(MenuFeedback.Cue.CONFIRM);
+            return;
+        }
 
         int previous = selected;
+        int rows = visibleRows();
         if (MenuInput.up(input)) selected = Math.floorMod(selected - 1, TRACKS.size());
         else if (MenuInput.down(input)) selected = (selected + 1) % TRACKS.size();
         else if (pointer.wheel() != 0) selected = Math.clamp(selected - pointer.wheel(), 0, TRACKS.size() - 1);
@@ -100,45 +127,88 @@ final class CdGardenMusicScreen implements NativeMenuScreen {
         var graphics = GameServices.graphics();
         if (graphics.isHeadlessMode()) return;
         int width = width();
-        int rows = visibleRows();
-        int playing = playingTrack();
-        text.setProjectionMatrix(graphics.getProjectionMatrixBuffer());
+        float[] projection = graphics.getProjectionMatrixBuffer();
+        text.setProjectionMatrix(projection);
         var font = text.font();
         boolean blendEnabled = glIsEnabled(GL_BLEND);
         glEnable(GL_BLEND);
         try {
+            boolean hasArt = viewingPlanet && planet.prepare();
             text.beginBatch();
-            String subtitle = playing == 0 ? UiMessages.text("menu.soniccd.garden.select")
-                    : UiMessages.text("menu.soniccd.garden.playing_track", Map.of("track", number(playing)));
-            MenuChrome.page(font, width, UiMessages.text("menu.soniccd.garden.title"), null, subtitle);
-            for (int row = 0; row < rows && first + row < TRACKS.size(); row++) {
-                int index = first + row;
-                int track = TRACKS.get(index).argument();
-                int y = rowY(row);
-                int rowWidth = width - LEFT - SCROLL_MARGIN;
-                if (index == selected) MenuChrome.focus(font, LEFT, y, rowWidth, rowHeight(), frame);
-                else MenuChrome.panel(font, LEFT, y, rowWidth, rowHeight());
-                if (track == playing) MenuChrome.icon(font, MenuChrome.Icon.PLAY, LEFT + 6, y + (rowHeight() - 7) / 2,
-                        MenuChrome.CYAN);
-                int textY = y + (rowHeight() - MenuChrome.compactLineHeight()) / 2 + MenuChrome.compactMetrics().above();
-                MenuChrome.compact(font, number(track), LEFT + 20, textY, MenuChrome.DIM);
-                MenuChrome.compact(font, MenuStyle.pageText(trackLabel(track), rowWidth - 49, MenuStyle.COMPACT, frame),
-                        LEFT + 42, textY, index == selected ? MenuChrome.WHITE : MenuChrome.TEXT);
-            }
-            MenuChrome.scrollbar(font, width - 9, TOP, rows * (rowHeight() + ROW_GAP) - ROW_GAP,
-                    first, rows, TRACKS.size());
-            MenuChrome.footer(font, width, null, List.of(
-                    MenuChrome.upDown(input, UiMessages.text("menu.details.move")),
-                    MenuChrome.hint(MenuChrome.confirmKey(input), UiMessages.text("menu.soniccd.garden.play_stop")),
-                    MenuChrome.hint(MenuChrome.backKey(input), UiMessages.text("menu.details.back_caps"))),
-                    MenuChrome.controller(input), frame);
-        } finally {
             try {
-                text.endBatch();
+                int playing = playingTrack();
+                String subtitle = playing == 0 ? null
+                        : UiMessages.text("menu.soniccd.garden.playing_track", Map.of("track", number(playing)));
+                if (viewingPlanet) {
+                    MenuChrome.page(font, width, UiMessages.text("menu.soniccd.garden.planet_title"), null, subtitle);
+                    drawPlanetPanel(font, width, hasArt);
+                } else {
+                    if (subtitle == null) subtitle = UiMessages.text("menu.soniccd.garden.select");
+                    MenuChrome.page(font, width, UiMessages.text("menu.soniccd.garden.title"), null, subtitle);
+                    drawTrackRows(font, width, playing);
+                }
+                var hints = footerHints();
+                footerTargets = MenuChrome.footerLayout(width, null, hints, frame).targets();
+                MenuChrome.footer(font, width, null, hints, MenuChrome.controller(input), frame);
             } finally {
-                if (!blendEnabled) glDisable(GL_BLEND);
+                text.endBatch();
             }
+            if (hasArt) {
+                planet.draw(projection, (width - ART_WIDTH) / 2,
+                        MenuChrome.SCREEN_H - ART_TOP - CdGardenPlanetArt.heightAtWidth(ART_WIDTH), ART_WIDTH);
+            }
+        } finally {
+            if (!blendEnabled) glDisable(GL_BLEND);
         }
+    }
+
+    private void drawTrackRows(PixelFont font, int width, int playing) {
+        int rows = visibleRows();
+        for (int row = 0; row < rows && first + row < TRACKS.size(); row++) {
+            int index = first + row;
+            int track = TRACKS.get(index).argument();
+            int y = rowY(row);
+            int rowWidth = width - LEFT - SCROLL_MARGIN;
+            if (index == selected) MenuChrome.focus(font, LEFT, y, rowWidth, rowHeight(), frame);
+            else MenuChrome.panel(font, LEFT, y, rowWidth, rowHeight());
+            if (track == playing) MenuChrome.icon(font, MenuChrome.Icon.PLAY, LEFT + 6, y + (rowHeight() - 7) / 2,
+                    MenuChrome.CYAN);
+            int textY = y + (rowHeight() - MenuChrome.compactLineHeight()) / 2 + MenuChrome.compactMetrics().above();
+            MenuChrome.compact(font, number(track), LEFT + 20, textY, MenuChrome.DIM);
+            MenuChrome.compact(font, MenuStyle.pageText(trackLabel(track), rowWidth - 49, MenuStyle.COMPACT, frame),
+                    LEFT + 42, textY, index == selected ? MenuChrome.WHITE : MenuChrome.TEXT);
+        }
+        MenuChrome.scrollbar(font, width - 9, TOP, rows * (rowHeight() + ROW_GAP) - ROW_GAP,
+                first, rows, TRACKS.size());
+    }
+
+    private void drawPlanetPanel(PixelFont font, int width, boolean hasArt) {
+        int height = CdGardenPlanetArt.heightAtWidth(ART_WIDTH);
+        MenuChrome.panel(font, (width - ART_WIDTH) / 2 - ART_PADDING, ART_TOP - ART_PADDING,
+                ART_WIDTH + 2 * ART_PADDING, height + 2 * ART_PADDING);
+        if (!hasArt) {
+            String unavailable = MenuStyle.pageText(UiMessages.text("menu.soniccd.garden.planet_unavailable"),
+                    ART_WIDTH, MenuStyle.COMPACT, frame);
+            MenuChrome.compact(font, unavailable, (width - MenuChrome.compactWidth(unavailable)) / 2,
+                    ART_TOP + (height - MenuChrome.compactLineHeight()) / 2 + MenuChrome.compactMetrics().above(),
+                    MenuChrome.MUTED);
+        }
+    }
+
+    private List<MenuChrome.Hint> footerHints() {
+        var back = MenuChrome.backKey(input);
+        if (viewingPlanet) return List.of(MenuChrome.hint(back, UiMessages.text("menu.soniccd.garden.tracks")));
+        var move = MenuChrome.upDown(input, UiMessages.text("menu.details.move"));
+        var play = MenuChrome.hint(MenuChrome.confirmKey(input), UiMessages.text("menu.soniccd.garden.play_stop"));
+        var exit = MenuChrome.hint(back, UiMessages.text("menu.details.back_caps"));
+        if (planet == null) return List.of(move, play, exit);
+        var art = MenuChrome.hint(MenuChrome.detailsKey(input), UiMessages.text("menu.soniccd.garden.planet"));
+        return List.of(move, play, art, exit);
+    }
+
+    private boolean clickedHint(MenuInput.Pointer pointer, int index) {
+        return pointer.leftPressed() && footerTargets.stream().anyMatch(target -> target.index() == index
+                        && pointer.over(target.x(), target.y(), target.width(), target.height()));
     }
 
     private String trackLabel(int track) {
@@ -177,6 +247,8 @@ final class CdGardenMusicScreen implements NativeMenuScreen {
         if (audio != null) audio.submit(STOP);
         audio = null;
         input = null;
+        footerTargets = List.of();
+        if (planet != null) planet.reset();
         text.cleanup();
     }
 

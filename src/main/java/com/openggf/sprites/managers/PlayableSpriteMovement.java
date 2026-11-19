@@ -1021,7 +1021,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// at that same state boundary; checking before slope resistance misses
 		// the facing flip even though doGroundMove subsequently applies it.
 		updatePushingOnDirectionChange(inputLeft, inputRight);
-		doGroundMove();
+		boolean directionalPoseAdmitted = doGroundMove();
 		preRollGroundSpeed = sprite.getGSpeed();
 		doCheckStartRoll();
 		// Move and the later Roll check own anim before SpeedToPos/AnglePos.
@@ -1036,7 +1036,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// Tails_SlopeRepel s2.asm:40683-40706). Do not synthesize Wait there.
 		// A later low-speed Roll Duck write is independent of that angle gate.
 		boolean standingPoseWrite = preFrictionGroundSpeed == 0 && isOnFlatGround();
-		if (standingPoseWrite || sprite.getLookingUp() || sprite.getCrouching()) {
+		boolean publishGroundPose = standingPoseWrite || sprite.getLookingUp() || sprite.getCrouching();
+		if (publishGroundPose) {
 			sprite.getAnimationManager().publishGroundPoseAnimation(romVisibleLevelFrameCounter());
 		}
 		doLevelBoundary();
@@ -1044,7 +1045,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		collisionSystem().applyDeferredGroundWallVelocityResponse(sprite);
 		doAnglePosWithSensorUpdate(originalX, originalY);
 		applyMissedDetachSlopeResist();
-		doSlopeRepel();
+		doSlopeRepel(directionalPoseAdmitted && !publishGroundPose);
 		if (applyFatalBackgroundFloorOverlap()) return;
 		collisionSystem().resolvePostMovementBackgroundWallClamp(
 				FrameCollisionPlan.terrainOnly(), sprite);
@@ -3237,7 +3238,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	}
 
 	/** Sonic_Move: Ground input handling, accel/decel, wall collision (s2.asm:36551) */
-	private void doGroundMove() {
+	private boolean doGroundMove() {
 		short gSpeed = sprite.getGSpeed();
 
 		// ROM: _btst #status_secondary.sliding,status_secondary(a0) / _bne.w Obj01_Traction
@@ -3248,7 +3249,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			sprite.setGSpeed(gSpeed);
 			calculateXYFromGSpeed();
 			collisionSystem().resolveGroundWallCollision(FrameCollisionPlan.terrainOnly(), sprite);
-			return;
+			return false;
 		}
 
 		short runAccel = sprite.getRunAccel();
@@ -3262,7 +3263,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// ROM: When move_lock is active, branches to Obj01_ResetScr which continues
 		// to friction check. It does NOT return early and skip friction.
 		boolean moveLockActive = sprite.getMoveLockTimer() > 0;
-		boolean directionalHelperPublishedAnimation = false;
+		boolean directionalPoseAdmitted = false;
 
 		if (moveLockActive) {
 			// Sonic_Move tests locktime before any direction or animation write,
@@ -3295,7 +3296,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 					if (shouldTriggerGroundSkid(gSpeed, false)) {
 						sprite.setDirection(Direction.RIGHT);
 						handleSkid();
-						directionalHelperPublishedAnimation = true;
+						directionalPoseAdmitted = true;
 					} else if (sprite.getSkidding()) {
 						advanceSkidDustTimer();
 					}
@@ -3304,7 +3305,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 					if (inputRight && sprite.getDirection() != Direction.LEFT) bothHeldFacingFlip();
 					sprite.setDirection(Direction.LEFT);
 					gSpeed = accelerateLeft(gSpeed, runAccel, max);
-					directionalHelperPublishedAnimation = true;
+					directionalPoseAdmitted = true;
 				}
 			}
 
@@ -3321,7 +3322,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 					if (shouldTriggerGroundSkid(gSpeed, true)) {
 						sprite.setDirection(Direction.LEFT);
 						handleSkid();
-						directionalHelperPublishedAnimation = true;
+						directionalPoseAdmitted = true;
 					} else if (sprite.getSkidding()) {
 						advanceSkidDustTimer();
 					}
@@ -3330,14 +3331,14 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 					if (inputLeft && sprite.getDirection() != Direction.RIGHT) bothHeldFacingFlip();
 					sprite.setDirection(Direction.RIGHT);
 					gSpeed = accelerateRight(gSpeed, runAccel, max);
-					directionalHelperPublishedAnimation = true;
+					directionalPoseAdmitted = true;
 				}
 			}
 
 			if (!inputLeft && !inputRight) {
 				sprite.setSkidding(false);
 			}
-			if ((inputLeft || inputRight) && !directionalHelperPublishedAnimation
+			if ((inputLeft || inputRight) && !directionalPoseAdmitted
 					&& gSpeed != 0 && chargeTimer == 0) {
 				// The opposite-direction deceleration tail returns without writing
 				// anim, including the frame it carries inertia across zero.
@@ -3370,7 +3371,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 					// (Main.asm:1013), so x/y velocity keeps its previous value.
 					preFrictionGroundSpeed = gSpeed;
 					sprite.getAnimationManager().captureGroundMovementAnimSpeed(gSpeed);
-					return;
+					return false; // .Peelout already writes its own pose.
 				}
 			} else {
 			boolean lookGateActive = isOnFlatGround() && gSpeed == 0;
@@ -3467,6 +3468,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		calculateXYFromGSpeed();
 		collisionSystem().resolveGroundWallCollision(FrameCollisionPlan.terrainOnly(), sprite);
 		clearFacingFlipPushAfterGroundWallCollision();
+		return directionalPoseAdmitted;
 	}
 
 	/** Sonic_Roll / SonicKnux_Roll: Check if should start rolling.
@@ -4663,6 +4665,10 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 	/** Sonic_SlopeRepel: Slip/fall check (s2.asm:37781) */
 	private void doSlopeRepel() {
+		doSlopeRepel(false);
+	}
+
+	private void doSlopeRepel(boolean pendingDirectionalPose) {
 		if (sprite.isStickToConvex()) return;
 		int activeMoveLock = sprite.getMoveLockTimer();
 		if (activeMoveLock > 0) {
@@ -4704,6 +4710,14 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		if (isOnFlatGround()) return;
 		if (Math.abs(sprite.getGSpeed()) >= SLOPE_REPEL_MIN_SPEED) return;
 
+		// ObjSonic_MdGround (Level/_Objects/Sonic/Main.asm:694-704) runs the
+		// directional writes in ObjSonic_MoveGndLeft (Level/_Objects/Sonic/Main.asm:1235-1262)
+		// and ObjSonic_MoveGndRight (Level/_Objects/Sonic/Main.asm:1291-1315)
+		// before ObjSonic_CheckFallOff (Level/_Objects/Sonic/Main.asm:1974-2000).
+		// Publish the pending pose while the new lock cannot suppress it.
+		if (pendingDirectionalPose) {
+			sprite.getAnimationManager().publishGroundPoseAnimation(romVisibleLevelFrameCounter());
+		}
 		sprite.setGSpeed((short) 0);
 		sprite.setAir(true);
 		sprite.setSlopeRepelJustSlipped(true);

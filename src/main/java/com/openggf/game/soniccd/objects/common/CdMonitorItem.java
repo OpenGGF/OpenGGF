@@ -5,6 +5,7 @@ import com.openggf.game.soniccd.objects.art.CdObjectArtProvider;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectVisualFacing;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
@@ -17,7 +18,7 @@ import java.util.List;
  * invincibility and shoes). Time stop and the combine ring set {@code timeStopTimer} and
  * {@code combineRing}, which have no consumer yet; those two items are not hosted.
  */
-public final class CdMonitorItem extends CdObject implements ObjectVisualFacing.NonDirectional {
+public final class CdMonitorItem extends CdObject implements ObjectVisualFacing.NonDirectional, SpawnRewindRecreatable {
     /** USA: move.w #1320,objPlayerSlot+oPlayerInvinc.w / oPlayerShoes (Monitor and Time Post/Main.asm:539-543,572-576). */
     static final int USA_POWER_FRAMES = 1320;
 

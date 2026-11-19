@@ -88,7 +88,7 @@ diverging row and the frontier test's cause label (a guess, not a diagnosis).
 | --- | --- | --- | --- | --- |
 | R11A | **green** 4,220 | asserted | green | K2 trace green on all 1,411 rows |
 | R11B | **green** 3,171 | asserted | green | |
-| R11C | **green** 5,790 | asserted | 677 / 829, object | Route green, fixture not: different inputs; native stands on an object (`$03`) at the fixture's row 677 |
+| R11C | **green** 5,790 | asserted | **green** 829 | The short fixture matches through slope fall-off at row 677 |
 | R11D | none | none | green | |
 | R12A | **green** 4,244 | asserted | green | |
 | R12B, R12C, R12D | none | none | green | |
@@ -104,11 +104,11 @@ diverging row and the frontier test's cause label (a guess, not a diagnosis).
 | R41B | **green** 4,721 | asserted | green | |
 | R41C | **green** 6,013 | asserted | green | |
 | R41D | none | none | green | |
-| R42A | 4,286 / 6,411 | pending | green | At row 4286 the retail break pole captures Sonic. Both runs are already underwater. The route does not reach its act end |
+| R42A | **green** 6,411 | asserted | green | All three break-pole grips, underwater `$37` damage, hurt recovery and signpost match. Results exit on row 6411 and load R43D |
 | R42B, R42C, R42D | none | none | green | |
 | R43C, R43D | boss movies | partial | green | Chase equal in both futures; fight compared to row 4887 of R43D; defeat, escape and capsule recorded, not compared |
 | R51A | **green** 4,756 | asserted | green | |
-| R51B | **green** 5,494 | asserted | 549 / 569, object | Fixture stops on an unhosted object (`$03`, `$10` nearby) |
+| R51B | **green** 5,494 | asserted | **green** 569 | The conveyor switches to its warp step on the trigger frame |
 | R51C | **green** 7,151 | asserted | green | |
 | R51D | none | none | green | |
 | R52A | **green** 4,772 | asserted | green | |
@@ -137,16 +137,15 @@ diverging row and the frontier test's cause label (a guess, not a diagnosis).
 | R83C, R83D | approach only | none | green | Approach green to row 1,762 of R83C; fight and endings run in the engine with test-driven hits, not compared; no native ending recording |
 
 Totals at `6c5c0e2764` and `45463c80bd`: routes 146,390 of 149,633 rows (97.8%; 26 of 28 to
-their end); fixtures 56,879 of 57,049 rows (68 of 70). The later focused
-Metallic Madness rerun closed R82A. R42A (break pole) remains open, as do the
-short fixtures R11C and R51B. The historical totals count the diverging row as
-compared. The cells above give the first diverging row. In the act-end column
+their end); fixtures 56,879 of 57,049 rows (68 of 70). Later focused
+reruns closed the R82A and R42A routes and the R11C and R51B short
+fixtures. The historical totals count the diverging row as compared.
+The cells above give the matched prefix length. In the act-end column
 `none` means the route has no end-of-act assertion: it is not in
 `TestSonicCdActEndNative`'s set, either
-because it does not reach the goal or because no assertion was written. Every
-route in that set is `asserted` except R42A, which is `pending` until it
-reaches its end window. The per-stage tables behind these numbers are local
-measurement output, not committed.
+because it does not reach the goal or because no assertion was written. All 25
+routes in that set are asserted after the R42A rerun. The per-stage tables
+behind these numbers are local measurement output.
 
 ## First-divergence recheck (2026-11-18)
 
@@ -170,6 +169,35 @@ on entry from the left and selects animation `$11`. The native row shows
 `$0F`. Both underwater flags are set. The frontier tool's Water label came
 from the existing underwater bit.
 
+The break-pole follow-up matched R42A through row 4403, including the grips at
+4286 and 4329 and the releases at 4301 and 4384. Row 4404 is the new first
+divergence. Native takes underwater hurt and spills rings near the `$37` spike
+ball at `($1690,$0750)`. R41A, R41B and R41C still match to their recorded
+ends. `TestSonicCdPlayerMovies` pins the matched R42A prefix. `TestTtzObjects`
+checks either approach, both climb limits, the two timers, input-edge release,
+death and replacement cleanup, unload, ownership through rewind recreation, and
+the two disc-backed mapping frames.
+
+The stationary spike ball follow-up matches R42A through row 4493, including the
+underwater hit at row 4404. The first difference is X on the row 4494 recovery
+from routine `$04` to `$02` (native `$162F`, engine `$162E`). The third grip
+at row 4666 is outside the matched prefix. `TestTtzObjects` checks clearance
+before contact, underwater knockback, ring spill, recreation and repeat contact
+after rewind, and the disc mapping and nontransparent PLC tiles in R42A, R42C
+and R42D. R42C/D still have fixture and focused evidence only. See the
+[trace frontier log](../../../status/trace-frontier-log.md#2026-11-18--sonic-cd-tidal-tempest-stationary-spike-ball).
+
+The hurt-input follow-up uses the logical pad word from the last normal
+player pass while the hurt routine lands. On row 4494 the raw pad is
+neutral, and the post-scroll current reads the retained Right bit. Player X
+now matches at `$162F`; camera X remains `$158E`. The strict long-route
+test originally reached row 5678, including the third grip at row 4666, before
+a Time Stars lookup interrupted the next row. With the catalogue correction,
+the strict movie matches all 6,411 rows. The separate act-end assertion
+matches 748 rows around the signpost and results, then requests R43D on the
+native exit row 6411. See the
+[trace frontier log](../../../status/trace-frontier-log.md#2026-11-18--sonic-cd-logical-input-on-hurt-recovery).
+
 In R82A, routing the right twin-walker platform's top-solid check to that
 platform fixed the horizontal speed loss at row 4577. The next stop at row
 5029 came from an invisible block cutting short Sonic's upward movement.
@@ -178,12 +206,35 @@ R82A matches every one of its 5,697 recorded rows. The same selection kept
 R81A, R81B and R81C green. The source notes and commands are in the
 [trace frontier log](../../../status/trace-frontier-log.md#2026-11-18--sonic-cd-twin-walker-top-solid-receiver).
 
+## Palmtree Panic slope fall-off recheck (2026-11-18)
+
+The R11C short fixture first differed at row 677 in the animation ID and
+mapping frame. The frontier label inferred object support from the retained
+standing-slot byte `$2D`. The native On Object bit was clear and Air was set
+on that row. Ground Right had selected Walk before the slope fall-off
+locked movement. Publishing the admitted pose before the new lock brings
+the short fixture to 829/829 rows and retains 5,790/5,790 on the long route.
+See the [row evidence and commands](../../../status/trace-frontier-log.md#2026-11-18--sonic-cd-r11c-slope-fall-off-pose).
+
+## Quartz Quadrant conveyor recheck (2026-11-18)
+
+The R51B short fixture first differed at row 549, when Sonic triggered the
+warp out of the Past. The conveyor selects its block list from the live period
+and its speed from the period and warp flag. The trigger changes both values
+before the conveyor runs in the same player update. Sonic's x velocity stays
+at `$0616` while the conveyor's step changes from half a pixel to two pixels.
+The short fixture now matches through all 569 recorded rows, including the 20
+rows that differed on the baseline. R51A, R51C, R52A and R52B also match through
+their short recordings. The R51A, R51B, R51C and R52A long routes match through
+their recorded ends. These comparisons use the existing frontier fields and
+recordings. See the [trace frontier log](../../../status/trace-frontier-log.md#2026-11-18--sonic-cd-quartz-quadrant-conveyor-at-warp-trigger).
+
 ## Standard obligations
 
 | Obligation | State | Gap |
 | --- | --- | --- |
 | ENTRY | All 70 stages load from the disc (`TestCdStageLoaderAllPayloads`); three fixtures enter through the retail title and stage-select route (`TestCdRetailRouteReplay`); the master title lists Sonic CD and `TestSonicCdPlayerLaunch` starts a new game from it and equals native on 806 compared rows of R11A | Intro-skip and alternate entries not assessed; the attract demos are not hosted |
-| OBJECT | Per-zone object tests and slot-exact appearance windows; see the lanes' per-object native checks | Many objects have no native picture; layout entries without a saved-state bit respawn while live (R41C); ring collection order (R51A) |
+| OBJECT | Per-zone object tests and slot-exact appearance windows. `TestTtzObjects#timeStarsAnimateAndRetireInR42a` exercises all four active time-warp stars on the authenticated USA disc from a direct post-touch setup | Many objects have no native picture; layout entries without a saved-state bit respawn while live (R41C); ring collection order (R51A) |
 | EVENT, CAMERA | Level events, boss arenas and scroll locks hosted; routes cover them where they pass | Wide-view triggers unchecked |
 | BOSS | Seven bosses; native fights for six, as above | Tidal Tempest defeat onwards and the Metallic Madness fight have no native comparison |
 | LIFE | Deaths, game over and checkpoints run through the program flow (`TestCdGameFlowNative`, six native runs set up with RAM pokes); the idle timer and give-up equal native on an 11,490-row movie; saves persist across runs, and RAM DATA resets the Sonic CD record through the title menu (`TestCdDurableSaves`) | Checkpoint respawn after time travel unverified |
@@ -196,6 +247,17 @@ R81A, R81B and R81C green. The source notes and commands are in the
 Breadth: Sonic CD has one character and no teams; it is not a donor, and
 donation into it is not assessed. Widths 400, 528 and 800 draw full pictures in
 the capture tools but have no native reference; the other presets are unchecked.
+
+## Sound Test Special Stage 8
+
+`TestCdSoundTestStageEntry` enters via the USA disc's title and Sound Test.
+The completion case sets the UFO count to zero and empties the six UFO slots
+after entry. The production stage session then detects completion and runs
+its exit fade. The test checks the acknowledgement at 320 and 400 pixels,
+the ending and title cues, held versus fresh confirmation, and unchanged
+backup RAM and campaign progress. A separate case checks Start abort.
+Both local native recordings end with six UFOs remaining. A natural clear
+and parity for the original `SPEEND.MMD` credits presentation remain open.
 
 ## Cartridge donor hosting (2026-11-16)
 

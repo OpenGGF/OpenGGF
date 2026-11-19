@@ -62,7 +62,8 @@ under the matching area heading; see the
   Sonic plays on Sonic 1's physics
   with Sonic CD's own rules (spin dash and super peel-out, the extended camera,
   the 3D ramps, per-zone player routines and the idle timer that ends in
-  Sonic giving up). Time travel, special stages
+  Sonic giving up). Sonic keeps the walking pose selected by ground input on
+  the frame he slips off a steep slope. Time travel, special stages
   (with pause during play, exit fades and a visible results tally that Start can finish),
   the title, stage select, Time Attack, Special Stage 8 from the sound test,
   both special-stage attract demos, backup RAM (saved in `saves/soniccd`),
@@ -70,8 +71,15 @@ under the matching area heading; see the
   effects, CD audio and PCM sound are hosted. The FM loader also accepts verified
   Japanese and European discs containing the identical driver bank. The title's
   RAM DATA entry confirms a reset of Sonic CD's save to disc defaults.
-  Visual Mode plays the opening and both endings. D.A. Garden plays disc music
-  in an OpenGGF browser. Held-key live rewind works inside
+  Clearing Special Stage 8 opens an OpenGGF acknowledgement with the disc's
+  ending music and a return to the title.
+  Visual Mode plays the opening, both endings and the silent Pencil Test
+  from the verified USA disc. Completing the good ending in Visual Mode opens
+  a read-only Thank You disc preview. D.A. Garden plays disc music and can
+  show a still view of Little Planet in the Present while music continues.
+  The stage-select Comin' Soon row opens an OpenGGF
+  contact sheet of tiles from the verified USA disc. Back returns to the title.
+  Held-key live rewind works inside
   special stages, including the three-frame floor pipeline, UFOs and effects. The master
   title lists it when the disc is configured or found (`roms.default: scd` boots
   it directly) and verifies it against the USA release before starting. A CHD
@@ -79,12 +87,12 @@ under the matching area heading; see the
   accepted exactly when its decoded tracks equal the Redump set; the reader is
   pure Java (CHD v5; `cdzl`, `cdlz`, `cdfl` and `cdzs` hunks or uncompressed;
   hunk CRCs and the header SHA-1s checked) and refuses delta, older-version
-  and non-CD CHDs by name. Not
-  included: the D.A. Garden planet presentation, the pencil test, Thank You,
-  Comin' Soon, ordinary-stage attract demos, Stage 8 credits, and Japanese and
-  European gameplay. Disc audio, video songs and PCM sound follow the music
+  and non-CD CHDs by name.
+  The original D.A. Garden planet animation, ordinary-stage attract demos,
+  the original Stage 8 credits and Japanese and European gameplay remain open. Disc audio, video songs and PCM sound follow the music
   and effects volumes; CD audio and PCM also share the FM presentation scale
-  for their relative level. The time-warp stars are drawn and Robotnik's projector
+  for their relative level. The time-warp stars animate from the disc in every
+  stage, including Tidal Tempest, and Robotnik's projector
   can be destroyed in the Past. Both Palmtree Panic Past acts draw its flying
   and ground hologram animals from the disc.
   Accuracy is measured against native recordings made on an emulator running
@@ -93,9 +101,13 @@ under the matching area heading; see the
   fourteen-second stage fixtures do (56,879 of 57,049 rows). On a focused rerun,
   the recorded Metallic Madness Present act 2 route also matches through its end.
   Its walker platforms let Sonic pass their sides, and the invisible blocks let
-  him jump through from below. R42A (break pole), R11C and R51B (objects) still
-  have open comparisons. The ring counter and
-  every placed ring's position equal native on every compared row of the 28
+  him jump through from below. Tidal Tempest hosts its break poles and
+  stationary spike balls, with sprites loaded from the disc. Its post-scroll
+  currents use the retained direction on the hurt recovery frame. R42A matches
+  through the results and next-act handoff. Quartz Quadrant Past conveyors
+  change speed on the warp trigger frame, and the R51B short fixture matches
+  all 569 recorded rows. The ring counter and every placed ring's position
+  equal native on every compared row of the 28
   routes and two runs through Palmtree Panic loops, except lost rings after a hit
   in two Metallic Madness routes. Stage loads clear the state native
   clears, so playing stages in any order matches playing each alone. In normal
@@ -541,7 +553,7 @@ under the matching area heading; see the
   host art when the donor lacks their sheet. Game Setup saves CD donor/team choices.
   Stage-backed host animation scripts no longer require a cartridge host.
   CD authored acts support fixed-height water, collectible rings with disc art,
-  fixed vertical and horizontal springs, and owned objects. Audio-state
+  fixed vertical and horizontal springs, ten-ring monitors, and owned objects. Audio-state
   restoration also restores the native/streamed music selection. This extends
   unpublished API candidate 0.7.0.
 

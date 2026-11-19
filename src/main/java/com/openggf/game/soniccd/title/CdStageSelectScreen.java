@@ -12,9 +12,9 @@ import java.util.Objects;
 /**
  * Hosts the stage-select secret ({@link CdStageSelectProgram}) in {@code LEVEL_SELECT}. A stage
  * row exits to the host's level load; the special-stage row runs {@code SpecStage1Demo} through the
- * host's special-stage exit (IPX.asm:721-722); a row naming another program (warp, opening FMV,
- * Comin' Soon) is recorded as not hosted by the coordinator and returns to the title, where IPX's
- * {@code rts} goes back to {@code .GameLoop} (IPX.asm:710-728).
+ * host's special-stage exit (IPX.asm:721-722). The coordinator resumes the Comin' Soon row into
+ * the disc-art preview via the title host. Warp and Opening return directly to the title
+ * after {@code StageSelect} (IPX.asm:710-728).
  */
 public final class CdStageSelectScreen implements LevelSelectProvider,
         com.openggf.game.internal.TitleReturningLevelSelect {

@@ -124951,3 +124951,317 @@ ends. `TestSonicCdFixtureFrontier`, `TestSonicCdRoutesBLongNative`,
 the Maven queue with `-Dmse=off`, headless EGL and `-Dsoniccd.native.root=<native>`.
 The strict long-route set includes all 16 routes sharing `CdLongRoutePins`.
 The R82A movie ends before the signpost, so its outcome covers the recorded route.
+
+## 2026-11-18 — Sonic CD Tidal Tempest break pole
+
+Baseline `55c5964fd3` reproduced the R42A first difference at row 4286 from
+`rehost-long/R42A`. Native `$05` grips Sonic at X `$15A8` and selects animation
+`$11`. The engine was at X `$158D` and animation `$0F`. The pole uses the live
+`$05` dispatch in all eight act 1/2 programs. `BreakPoleObject_0_Routine2`
+(objects/r4/break_pole.asm:27-52) preserves velocities and subpixels on the
+grip. `BreakPoleObject_0_Routine4` (objects/r4/break_pole.asm:59-88) climbs
+one pixel within 24 pixels of the pole's Y and releases on the P1 button edge
+or timeout. The adapter uses existing player control and the disc PLC's art
+at tile base `$2F8`. The BK2 provides input and the trace supplies comparisons.
+
+The `ttz-break-pole-interaction` candidate on that base matches R42A until
+row 4404. Native/engine then diverge in `x` (`$167F/$1680`), `x_speed`
+(`-$100/$400`), `y_speed` (`-$200/$0000`), `g_speed` (`$0000/$02D7`),
+`routine` (`$04/$02`) and `player_animation_id` (`$1A/$0F`). Native
+spills rings on that row. The likely damage source is the unhosted slot 38
+spike ball at `($1690,$0750)`. `ObjectIndex` (r4/object_index_2a.asm:51-59)
+and `SpikeBallObject` (objects/r4/spike_ball.asm:3-18) identify `$37` as a
+harmful `$A9` collision. The recorder does not identify which object the
+collision loop selected. The continuation replayed all 6,411 rows with
+1,978 error rows and no reconvergence in compared gameplay state. R41A (5,449),
+R41B (4,721), and R41C (6,013) match to the end on both trees.
+
+Run on Java 25 with the user-supplied USA disc and native recordings:
+
+```sh
+python3 tools/testing/maven_queue.py -Dmse=off \
+  -Dsoniccd.media.root="$MEDIA_ROOT" -Dsoniccd.fixtures.root="$NATIVE_ROOT/rehost-long" \
+  -Dsoniccd.fixture.payloads=R42A,R41A,R41B,R41C \
+  -Dtest=TestSonicCdFixtureFrontier test -B
+```
+
+Baseline stopped on the first error and the diagnostic test passed without
+skips. The candidate also used `-Dsoniccd.frontier.continue=true` and selected
+`TestTtzObjects`, `TestCdUnhostedObjectCensus` and
+`TestNativeObjectFacingGuard` in the same invocation. All 98 tests passed
+without skips. A separate queued run with `TestCdObjectRegistryStageScope`
+and `TestSonicCdPlayerMovies#tidalTempestBreakPoleInteractionsMatchNative`
+verified the stage scope and the strict R42A prefix through row 4403.
+
+## 2026-11-18 — Sonic CD Tidal Tempest stationary spike ball
+
+The `r42a-stationary-hazard` worktree starts at `a031832246fd7f98e33882349396f7e6e5831077`,
+the break-pole candidate. Its matched continuation reproduces the first error at
+R42A row 4404 and counts 1,978 error rows over all 6,411 rows, with no reconvergence.
+For R42A, R41A, R41B and R41C, the BK2, physics CSV, aux JSONL, USA CUE and USA data
+track match their respective long-manifest SHA-256 entries. Current v5 metadata
+matches the older manifest for R41B/C and differs for R42A and R41A. Both runs use
+the same current local inputs.
+
+Rows 4403 and 4404 record slot 38 at `($1690,$0750)` and slot 39 at
+`($1690,$0770)`. The first ball's `$A9` byte (SpikeBallObject,
+objects/r4/spike_ball.asm:3-18) selects the 12×16 radii at size `$09`
+(byte_207510, r4/player_object_collide.asm:397-406). The player samples touch
+with an eight-pixel horizontal half-width (PlayerObjectCollide,
+r4/player_object_collide.asm:3-27). His right bound at pre-current X `$167B`
+is `$1683`, just short of the ball's left bound `$1684`. At X `$167F`,
+Y `$0745` it overlaps slot 38 and clears slot 39 vertically. The usual
+right-input pixel is added after the object pass (StageMainLoopDraw,
+r4/main.asm:381-403 and CheckWaterCurrentsInputRight, r4/main.asm:848-851).
+HurtPlayer (r4/player_object_collide.asm:226-263) sets routine `$04`, which
+bypasses the pixel adjustment (CheckWaterCurrentsApplyCurrent, r4/main.asm:817-825).
+Native records the hurt and ring scatter on 4404. The selected collision
+pointer is unavailable.
+
+The stationarity, collision and draw/despawn order are owned by the Tidal
+Tempest adapter. The USA disc's live `$37` entry and mapping offsets are
+`$EA54/$EA9C` in R42A, `$F0E0/$F128` in R42C and `$F0CE/$F116` in R42D.
+The R43C/D indexes point elsewhere despite retaining a copy of the routine.
+The generated catalogue carries only the live mapping offsets.
+
+Java 25 command used for both revisions, with `DISPLAY` unset and a fresh
+`REPORTS` for each run:
+
+```sh
+python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  -Dsoniccd.media.root="$MEDIA_ROOT" -Dsoniccd.fixtures.root="$NATIVE_ROOT/rehost-long" \
+  -Dsoniccd.fixture.payloads=R42A,R41A,R41B,R41C -Dsoniccd.frontier.continue=true \
+  -Dopenggf.surefire.reports="$REPORTS" -Dtest=TestSonicCdFixtureFrontier test -B
+```
+
+The diagnostic completes with zero skips on each revision. With the adapter,
+the player and camera comparison matches through R42A row 4493, including the
+damage and knockback at 4404. On row 4494 Sonic returns from hurt to routine
+`$02` with no directional input. Native stays at X `$162F` while the engine
+moves to `$162E`. Both move to Y `$076C` and take the current's X velocity
+`$400` and animation `$0F`. PlayerHurt (objects/player.asm:2206-2219) moves
+first and calls PlayerHurtRecover (objects/player.asm:2223-2239) for airborne
+terrain checks and recovery. The first observed disagreement is the X
+correction on that landing. The trace lacks the side probe result, so the
+specific terrain branch remains open. The diagnostic's post-divergence pass
+stops in `CdTimeStars.update` when its animator reads a missing table offset
+(`Read outside the stage file: -1+1`). There is no completed continuation
+count for the candidate and row 4666's third grip is beyond the matched prefix.
+
+R41A (5,449 rows), R41B (4,721) and R41C (6,013) match to their ends on both
+revisions. The strict R42A prefix is pinned by
+`TestSonicCdPlayerMovies#tidalTempestBreakPolesAndSpikeBallContactMatchNative`.
+The replay comparison excludes ring counts. `TestTtzObjects` separately checks
+pre-contact clearance, underwater knockback, the queued ring scatter, recreation
+and repeat contact after rewind, and disc-backed mapping and art in all three
+enabled payloads. `TestCdObjectRegistryStageScope` and
+`TestCdUnhostedObjectCensus` check dispatch scope and the placed-ID census.
+
+The hazard declares camera-relative art selection for the section sheet. The
+first camera guard run reported only the inherited break-pole omission. The
+follow-up is based on `e8e284f35081debbb31c460bfeaf02919171f3a2`, whose only
+change from `a031832246fd7f98e33882349396f7e6e5831077` is the pole's matching
+camera annotation and import.
+
+## 2026-11-18 — Sonic CD logical input on hurt recovery
+
+The `scd-hurt-input-latch` worktree uses stationary hazard base
+`d741cded6d3e76a87f7855d941e9aa97d53c8715`. Long-fixture row ordinals
+below are zero-based. The R42A, R41A, R41B and R41C movies, physics, aux, USA
+CUE and data track match the long manifests. Both revisions use the same local
+v5 metadata. It differs from the older manifests for R42A and R41A.
+
+On R42A row 4404, the last normal player pass copies Right before the
+underwater hit sets routine `$04`. VBlank can keep polling the raw pad
+(VBlankStage, r4/main.asm:1078-1082). The normal pass copies both bytes of the
+pad word (PlayerMainAfterDebugCheat, objects/player.asm:284-289). Hurt moves
+and checks the floor, can set routine `$02`, and still exits through its own
+draw path (PlayerHurt, objects/player.asm:2206-2219 and PlayerHurtRecover,
+objects/player.asm:2223-2239). StageMainLoopUpdateScroll
+(r4/main.asm:398-403) scrolls before running currents.
+CheckWaterCurrentsApplyCurrent (r4/main.asm:817-825) sees routine `$02` on
+4494, and CheckWaterCurrentsInputRight (r4/main.asm:848-851) reads the
+retained Right bit and adds one to center X.
+
+On 4494, the base matches camera X `$158E`, Y `$076C`, current X speed
+`$0400` and float animation `$0F`. Engine X is `$162E`, one pixel behind
+native `$162F`. The existing `hurtRoutineLatchesLogicalInput` rule keeps
+the logical hold and jump press through the hurt pass while
+`SpriteManager.publishInputState` refreshes raw input before movement.
+The CD post-scroll current already reads the logical word. The candidate
+uses the existing rule and its snapshot fields.
+
+Java 25 queued runs used the following common arguments, with fresh
+`REPORTS` beneath the worktree's `target/`:
+
+```sh
+env -u DISPLAY python3 tools/testing/maven_queue.py -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl -Dsoniccd.media.root="$MEDIA_ROOT" \
+  -Dsoniccd.fixtures.root="$NATIVE_ROOT/rehost-long" \
+  -Dsoniccd.fixture.payloads=R42A,R41A,R41B,R41C \
+  -Dsoniccd.frontier.continue=true -Dopenggf.surefire.reports="$REPORTS" \
+  -Dtest="$TESTS" test -B
+```
+
+The matched selection was `TestSonicCdFixtureFrontier,TestSonicCdPlayerMovies,
+TestTtzObjects,TestSonicCdRoutesBLongNative,TestLogicalInputControlLockLatch,
+TestNativeDrowningDispatch`. The base ran 80 tests with zero failures,
+errors or skips (0 s queued, 2 min 26 s Maven). Baseline continuation
+stops after the row 4494 divergence with `IllegalArgumentException`; the
+total error-row count for the suffix is unavailable. With only the
+regression and pin change applied, the focused two-test run fails on the lost
+logical bits and the row 4494 X difference (2 failures, zero errors or skips,
+80 s queued, 39.313 s Maven).
+
+The candidate adds `TestCdHurtLogicalInput` to that selection. The recovery
+probe observes raw Right false and logical hold `$0018` on rows 4493 and
+4494, with player X matching native at `$162F` on 4494. The next player
+pass at 4496 refreshes logical hold to `$0000` and matches X `$1633`.
+The native logical pad word is inferred from dispatch and the recorded
+input and position. The fixture does not directly record that word.
+
+The continuation completes 5,679 of 6,411 rows with zero comparison
+errors, including the third pole grip at row 4666. Row 5679 interrupts
+before comparison in `CdTimeStars.update` → `CdAnimator.step` with
+`Read outside the stage file: -1+1`. That leaves rows 5679–6410
+unverified. The diagnostic's one failure is that interruption (81 tests,
+zero test errors or skips, 28 s queued, 2 min 27 s Maven). The 16
+later-zone routes, 27 TTZ object cases, 32 shared input and drowning
+controls and all other cases pass. R41A (5,449 rows), R41B (4,721) and
+R41C (6,013) match through their ends in both runs. Player and camera
+comparisons run on the fixture's eligible gameplay boundaries and
+exclude ring counts.
+
+After removing the temporary logging, the strict R42A pin extends
+through row 5678 inclusive. A queued real-media rerun with
+`-Dtest=TestSonicCdPlayerMovies,TestCdHurtLogicalInput` passes all five
+tests with zero skips (21 s queued, 43.103 s Maven). The focused test
+checks raw direction and jump refresh, logical hold and press retention,
+current suppression while hurt, the one-pixel move after recovery and
+the fresh neutral copy on the next normal pass.
+
+The same five-test selection with empty `soniccd.disc.path`,
+`soniccd.media.root` and `soniccd.native.root` runs the focused case and
+skips the four existing movie cases (zero failures or errors, 13 s queued,
+35.462 s Maven). `classify_surefire_skips.py --check-evidence` with
+`soniccd_native=false` accepts all four existing identities.
+
+## 2026-11-18 — R42A replay and act-end qualification
+
+The hurt-input commit `22e3d557c0` and the Time Stars catalogue commit
+`c4e844223f` were combined in tree `6ee6d78d3830a1cf5ccf0bd7c49e1129346fe7b4`.
+Both sets of focused tests and their optional-media rules are present. The
+warp-tail anchor fills the ten Tidal Tempest animation offsets, including
+R42A at `$3ED94`. The continuation passes row 5679 and matches all 6,411
+player and camera rows, with zero comparison errors. R41A (5,449 rows),
+R41B (4,721) and R41C (6,013) still match through their recorded ends.
+
+The matched Java 25 invocation above used `TestSonicCdFixtureFrontier`,
+`TestSonicCdPlayerMovies`, `TestTtzObjects`, `TestSonicCdRoutesBLongNative`,
+`TestLogicalInputControlLockLatch`, `TestNativeDrowningDispatch`,
+`TestCdHurtLogicalInput` and `TestCdTimeStarsPictures`, with the same
+authenticated USA disc and local recordings. It passed 83 tests with zero
+skips, with 0 s queue wait and 1 min 33 s Maven time.
+
+The strict R42A movie pin now includes row 6410. The existing native act-end
+test promotes R42A to its asserted set. It compares 748 rows covering the
+signpost at row 5693 and the results window. The native and engine exit rows
+are both 6411 and the engine requests R43D. The goal probe separately
+compares ring and score state, object and results state, sound requests and
+the handoff, which the route comparator does not cover.
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY python3 tools/testing/maven_queue.py -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl -Dsoniccd.media.root="$MEDIA_ROOT" \
+  -Dsoniccd.native.root="$NATIVE_ROOT" -Dopenggf.surefire.reports="$REPORTS" \
+  -Dtest=TestSonicCdActEndNative,TestSonicCdPlayerMovies test -B
+```
+
+All 25 act-end cases and four player movie cases passed, with zero skips,
+0 s queue wait and 1 min 26 s Maven time.
+
+## 2026-11-18 — Sonic CD Quartz Quadrant conveyor at warp trigger
+
+On `fix-r51b-conveyor-speed` at base `22bd4167d1`, the short R51B fixture
+first differed at row 549 (CSV frame `$0225`). The native x and fraction were
+`$0629:$AA00` against the engine's `$0628:$2A00`. Both x and ground velocity
+stayed at `$0616`. The native audit found `time_zone` changing from `$00` to
+`$81`. Native displacement went from `$69600` at row 548 to `$81600` at
+row 549 in 16.16 units. The old engine's cached `$8000` conveyor step explains
+the `$18000` difference from the native `$20000` step.
+
+`PlayerGroundStateNormal` (objects/player.asm:656-666) calls the warp check
+before movement. `PlayerCheckWarpTransitionThreshold` (objects/player.asm:573-602)
+commits the destination period and sets bit 7 at timer 210.
+`PlayerMainNormalState` (objects/player.asm:306-312) calls the conveyor check
+after the movement mode returns. For eligibility, `sub_2066BA`
+(r5/player_block_check.asm:46-57) masks bit 7 and adds `good_future` only in
+the Future. For speed, `loc_2068AA` (r5/player_block_check.asm:308-316) tests
+the full byte. The `$8000` and `$10000` steps require ordinary Past and
+Present respectively. A Future or a committed warp takes `$20000`.
+`QqzPlayerProfile` selects a disc-backed block list from the live
+`CdTimeTravel` period and good-future flag and uses `warping()` to select the
+full step. The conveyor reads the same-update publication from
+`CdTimeTravel.trigger`.
+
+Matched Java 25 checks on the verified USA disc used the following command in
+the orchestration checkout, with fresh report and table paths for each run.
+
+```sh
+python3 tools/testing/maven_queue.py -Dmse=off -B \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dopenggf.surefire.reports=$reports" "-Dsoniccd.frontier.out=$table" \
+  "-Dsoniccd.fixtures.root=$fixtures" "-Dsoniccd.fixture.payloads=$payloads" \
+  -Dsoniccd.frontier.continue=true -Dtest=TestSonicCdFixtureFrontier test
+```
+
+Each invocation ran one test with zero failures, errors or skips. On
+`rehost-fixtures` (`R51A,R51B,R51C,R52A,R52B`), baseline R51B reported
+`x` and `x_sub` at 549 and 20 error rows in the continued run with no
+reconvergence. The candidate (runtime blob `2641bca05e`) processed all 569
+rows with zero error rows and no later frontier. R51A (841 rows), R51C (840),
+R52A (600) and R52B (842) matched through their ends on both runs.
+On `rehost-long` (`R51A,R51B,R51C,R52A`), both tables were identical.
+R51B matched through 5,494 rows and the controls through 4,756, 7,151 and
+4,772 rows respectively. Coverage is the frontier comparator's player and
+camera fields through each recording's end. Ring count is excluded.
+
+## 2026-11-18 — Sonic CD R11C slope fall-off pose
+
+On the `sonic-cd-r11c-animation` orchestration branch at base `22bd4167d1`,
+the R11C short fixture first differed at row 677. Right was held, both
+runs had angle `$98`, velocities `$FFF6/$FFF9`, ground speed zero and
+status `$02`. Native showed Walk and mapping `$47`. The engine showed
+Idle and mapping `$01`. The comparator's object label used the retained
+standing-slot byte `$2D` and nearby object `$03`. The On Object bit was
+clear. The continued baseline replay encountered 15 error rows.
+
+`ObjSonic_MdGround` (Level/_Objects/Sonic/Main.asm:694-704) calls ground
+movement before terrain collision and fall-off. `ObjSonic_MoveGndRight`
+(Level/_Objects/Sonic/Main.asm:1291-1315) writes Walk on the acceleration
+path. `ObjSonic_CheckFallOff` (Level/_Objects/Sonic/Main.asm:1974-2000)
+then clears ground speed, sets Air and arms the 30-frame movement lock.
+The shared classic fall-off path now publishes a pending, admitted
+directional pose through the existing animation selector before the new
+lock can suppress it. Existing early standing and Roll pose selection
+keeps its priority.
+
+Both versions ran the exact USA disc input and each R11C fixture separately:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  -Dtest=TestSonicCdFixtureFrontier -Dsoniccd.fixture.payloads=R11C \
+  -Dsoniccd.frontier.continue=true "-Dsoniccd.fixtures.root=<native root>/<lane>" \
+  "-Dopenggf.surefire.reports=<fresh target report directory>" test -B
+```
+
+The short lane (`rehost-fixtures`) now matches through all 829 rows with
+zero comparator errors. The long lane (`rehost-long`) matches through all
+5,790 rows on both versions. Each replay test ran without skips. The
+focused S1/S2/S3K detachment, movement, animation, gravity, rewind and
+S3K load controls passed on both versions (320 tests, zero skips) via the
+same queue and GL settings. The test selection was
+`TestGroundedDetachNativeProfiles,TestPlayableSpriteMovement,TestPlayableSpriteAnimation,TestObjectControlledGravity,TestKnucklesDetachPoseRewind,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`.
+This covers the fields selected by the R11C
+frontier comparator and the recorded route. The broader Sonic CD matrix,
+act-end assertions and pixel checks were outside this rerun.

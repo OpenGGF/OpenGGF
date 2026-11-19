@@ -239,12 +239,23 @@ Future). `SonicCdEndingCaptureTool --ending good|bad` films an ending.
   stage-select secret, Time Attack, Special Stage 8 from the sound test,
   the sound-test pictures, best staff times, the opening video, both
   special-stage attract demos and both endings with credits.
+- Clearing Special Stage 8 opens an OpenGGF acknowledgement with the disc's
+  ending music. Choose **Back to title** to dismiss it. The visit preserves
+  your saves and Time Stones.
 - The title's unlockable **Visual Mode** opens an OpenGGF browser for the
-  opening video and both endings. **Back** stops the current video and
-  returns to the browser.
+  opening video, both endings and the silent **Pencil Test** from the
+  verified USA disc. **Back** stops the current video and returns to the
+  selected row. Pencil Test also returns there when the clip ends.
+  When the good ending completes, Visual Mode opens a static **Thank You**
+  contact sheet of disc tiles. **Back** returns to the Good ending row.
+- The stage-select **Comin' Soon** row opens an OpenGGF contact sheet of tiles
+  from the verified USA disc. **Back** returns to the title.
 - The unlockable **D.A. Garden** opens an OpenGGF browser for music tracks
   from the disc. Choose a track to play it, or choose the playing track
-  again to stop it. Back returns to the title.
+  again to stop it. **Planet** (F1 or the controller's Details button)
+  opens a still view of Little Planet in the Present. Music continues
+  while the art is open. Back returns to your selected track, and Back
+  from the track list returns to the title.
 - Saves: the backup RAM, in the format the BIOS writes, is kept in
   `saves/soniccd/slot0.json` beside the other games' saves (`openggf.saveRoot`
   moves the folder). It is written whenever the game writes its backup RAM:
@@ -267,12 +278,16 @@ Future). `SonicCdEndingCaptureTool --ending good|bad` films an ending.
 
 ### Known gaps
 
-- The pencil test, Thank You, Comin' Soon, ordinary-stage attract demos, the
-  D.A. Garden planet animation, and the credits for beating Special Stage 8
+- The Pencil Test clip uses OpenGGF's playback view. The native border fades
+  and closing effects remain open.
+- The Thank You preview covers a static tile sample. The original screen's
+  composition, animations, fades, and exit sequence remain open.
+- Ordinary-stage attract demos, the
+  D.A. Garden planet animation, and the original Special Stage 8 credits presentation
   remain unhosted. The attract cycle skips ordinary-stage demos.
 - CD patch mods, `any` registrations, scenes and Sonic gameplay runs use the disc
   pipeline. Authored zones support flat scrolling, one collision path, fixed-height water,
-  owned objects, collectible rings, and fixed vertical and horizontal springs.
+  owned objects, collectible rings, fixed vertical and horizontal springs, and ten-ring monitors.
   Other stock placements and native ring group edits need their stage context.
   Cartridge donation supports
   S1 Sonic, S2 Sonic/Tails and S3K Sonic/Tails/Knuckles; route coverage remains

@@ -6,15 +6,27 @@ import com.openggf.audio.LiveCaptureAudioHandle;
 import com.openggf.audio.NullAudioBackend;
 import com.openggf.audio.presentation.PresentationMode;
 import com.openggf.game.soniccd.CdDiscDataSource;
+import com.openggf.game.soniccd.CdNativeFile;
+import com.openggf.game.soniccd.CdReleaseVariant;
+import com.openggf.game.soniccd.CdStagePayload;
+import com.openggf.game.soniccd.CdTestMedia;
+import com.openggf.game.soniccd.media.CdDiscHeader;
+import com.openggf.game.soniccd.release.CdRetailReleases;
 import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
+import java.io.IOException;
+import java.nio.file.Path;
 import java.util.Arrays;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -28,10 +40,15 @@ class TestCdAudioLivePath {
     private LiveCaptureAudioHandle capture;
 
     @BeforeEach
-    void install() throws Exception {
+    void installUsa() throws IOException {
+        install(CdAudioTestMedia.usaCue());
+    }
+
+    private void install(Path image) throws IOException {
         TestEnvironment.resetAll();
-        disc = CdDiscDataSource.open(CdAudioTestMedia.usaCue());
-        profile = new SonicCdAudioProfile(() -> disc);
+        var openedDisc = CdDiscDataSource.open(image);
+        disc = openedDisc;
+        profile = new SonicCdAudioProfile(() -> openedDisc);
         audio = AudioManager.getInstance();
         audio.resetState();
         audio.setBackend(new NullAudioBackend());
@@ -41,10 +58,19 @@ class TestCdAudioLivePath {
     }
 
     @AfterEach
-    void close() throws Exception {
-        if (capture != null) capture.close();
-        if (audio != null) audio.resetState();
-        if (disc != null) disc.close();
+    void close() throws IOException {
+        if (capture != null) {
+            capture.close();
+            capture = null;
+        }
+        if (audio != null) {
+            audio.resetState();
+            audio = null;
+        }
+        if (disc != null) {
+            disc.close();
+            disc = null;
+        }
     }
 
     @Test
@@ -85,16 +111,56 @@ class TestCdAudioLivePath {
     /** A Past stage's bank and SCMD_PASTMUS: the PCM driver's music through the producer. */
     @Test
     void pastMusicPlaysThroughThePcmDriverAndFades() {
-        profile.subCpuAudio().loadStage(com.openggf.game.soniccd.CdStagePayload.R11B);
-        audio.playMusic(CdSubCpuAudio.commandId("SCMD_PASTMUS"));
-        short[] music = present(90);
-        assertTrue(audible(Arrays.copyOfRange(music, music.length / 2, music.length)), "Past music is mixed in");
+        playPastMusic();
         var before = profile.subCpuAudio().state();
-        audio.playMusic(CdSubCpuAudio.commandId("SCMD_FADEPCM"));
-        present(200);
-        assertTrue(!audible(present(10)), "Cmd_FadeOut reaches silence");
+        assertPastMusicFades();
         profile.subCpuAudio().rewindAdapter().restore(before);
         assertTrue(audible(present(30)), "rewind restores the playing driver, chip and wave RAM");
+    }
+
+    @ParameterizedTest
+    @EnumSource(CdReleaseVariant.class)
+    void authenticatedRegionalDiscPlaysTheSamePastPcmAsUsa(CdReleaseVariant variant) throws IOException {
+        Path regionalImage = CdTestMedia.disc(variant);
+        assertAuthenticatedDisc(CdReleaseVariant.USA);
+        int sampleRate = capture.sampleRate();
+        short[] usa = playPastMusic();
+        close();
+
+        // A fresh disc, profile and capture lease also make USA a repeatability control.
+        install(regionalImage);
+        assertAuthenticatedDisc(variant);
+        assertEquals(sampleRate, capture.sampleRate(), "compare at the same output sample rate");
+        short[] regional = playPastMusic();
+        assertArrayEquals(usa, regional, variant + " Past PCM samples");
+        assertPastMusicFades();
+    }
+
+    private void assertAuthenticatedDisc(CdReleaseVariant expected) {
+        var programs = disc.assets();
+        var release = CdRetailReleases.find(programs.identity())
+                .orElseThrow(() -> new AssertionError("Expected authenticated retail disc for " + expected));
+        assertEquals(expected, release.variant());
+        assertEquals(CdDiscHeader.Match.MATCH, programs.header().match(expected));
+    }
+
+    private short[] playPastMusic() {
+        var subCpu = profile.subCpuAudio();
+        subCpu.loadStage(CdStagePayload.R11B);
+        audio.playMusic(CdSubCpuAudio.commandId("SCMD_PASTMUS"));
+        short[] music = present(90);
+        var state = subCpu.state();
+        assertNotNull(state.pcm(), "Past stage loads the sub-CPU PCM driver");
+        assertEquals(CdNativeFile.R1PCM.isoName(), state.pcm().bank());
+        assertEquals(CdCddaPlayer.State.IDLE, state.cdda(), "Past music leaves CDDA idle");
+        assertTrue(audible(Arrays.copyOfRange(music, music.length / 2, music.length)), "Past music is mixed in");
+        return music;
+    }
+
+    private void assertPastMusicFades() {
+        audio.playMusic(CdSubCpuAudio.commandId("SCMD_FADEPCM"));
+        present(200);
+        assertFalse(audible(present(10)), "Cmd_FadeOut reaches silence");
     }
 
     @Test
@@ -131,15 +197,16 @@ class TestCdAudioLivePath {
     }
 
     private short[] present(int frames) {
-        short[] all = new short[0];
         short[] packet = new short[capture.maxStereoFramesPerPacket() * 2];
+        short[] all = new short[packet.length * frames];
+        int offset = 0;
         for (int i = 0; i < frames; i++) {
             audio.presentFrame(PresentationMode.FORWARD);
-            int n = capture.drainPresentationFrame(packet);
-            all = Arrays.copyOf(all, all.length + n * 2);
-            System.arraycopy(packet, 0, all, all.length - n * 2, n * 2);
+            int samples = capture.drainPresentationFrame(packet) * 2;
+            System.arraycopy(packet, 0, all, offset, samples);
+            offset += samples;
         }
-        return all;
+        return Arrays.copyOf(all, offset);
     }
 
     private static boolean audible(short[] pcm) {

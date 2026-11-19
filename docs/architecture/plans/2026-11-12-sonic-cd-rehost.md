@@ -234,6 +234,12 @@ The per-stage cells for the latest row (`6c5c0e2764`) are in the
 | Full-act routes after the third route passes, placement, launcher, player 3, session and timing lanes, `65a21fd7a2` | 144,085 of 149,633 (96.3%) | 24 of 28 | R42A (an unhosted wood block), R81A, R81B, R82A (objects). Fixtures on the same build: 56,679 of 57,049 rows, 67 of 70 green |
 | Full-act routes after routes C, `4a97d84a6b`; unchanged by the lost V-INT, capture, notice, licence and load-time lanes, `6c5c0e2764` | 146,390 of 149,633 (97.8%) | 26 of 28 | R42A (water, row 4286), R82A (an unhosted object, row 4577). Fixtures on the same build: 56,879 of 57,049 rows, 68 of 70 green (open: R11C row 677, R51B row 549). Both totals count the diverging row as compared, so each open stage is one row high. Per-stage cells: [stage matrix](../validation/levels/scd-stages.md) |
 
+The focused Tidal Tempest follow-ups closed all 6,411 R42A rows and
+verified its act-end handoff. R41A, R41B and R41C reached their recorded
+ends again. The slope fall-off pose fix matched all 829 R11C short-fixture
+rows and all 5,790 long-route rows. The conveyor fix matched all 569
+R51B short-fixture rows. See the [stage matrix](../validation/levels/scd-stages.md#first-divergence-recheck-2026-11-18).
+
 ## Native references
 
 `~/Downloads/Sonic-CD/native/rehost-fixtures/<payload>/` holds, for each of
@@ -357,9 +363,10 @@ What is still open at `6c5c0e2764`, from the lane reports' stopped and
 unverified lists. The order is not a priority order.
 
 **Accuracy frontiers**
-- Full-act route R42A stops at the break pole at row 4286. The R82A follow-up
-  matches all 5,697 recorded rows. Fixtures R11C (row 677) and R51B (row 549)
-  still diverge near native objects. See the [stage matrix](../validation/levels/scd-stages.md#first-divergence-recheck-2026-11-18).
+- R42A matches all 6,411 recorded rows and the next-act handoff. R82A
+  matches all 5,697 recorded rows. The R51B conveyor follow-up matches all
+  569 rows of its short fixture, and R11C matches all 829.
+  See the [stage matrix](../validation/levels/scd-stages.md#first-divergence-recheck-2026-11-18).
 - 28 stages have a full-act route; the other 42 have only the 14-second
   fixture, and 14 of those (the act 3 stages) also have boss movies. No
   complete-run recording exists. Three routes (R81B, R81C, R82A) have no

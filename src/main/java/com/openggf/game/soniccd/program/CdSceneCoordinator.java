@@ -9,6 +9,7 @@ import com.openggf.game.soniccd.backupram.CdBackupRamAssets;
 import com.openggf.game.soniccd.backupram.CdBackupRamHost;
 import com.openggf.game.EmeraldRewardKind;
 import com.openggf.game.SpecialStageEntryRequest;
+import com.openggf.game.soniccd.program.CdProgramRequest.CominSoonPreview;
 import com.openggf.game.soniccd.program.CdProgramRequest.NotHosted;
 import com.openggf.game.soniccd.program.CdProgramRequest.SpecialStage;
 import com.openggf.game.soniccd.special.CdSpecialStageEntry;
@@ -16,6 +17,7 @@ import com.openggf.game.soniccd.special.CdSpecialStageResult;
 import com.openggf.game.soniccd.program.CdProgramRequest.Stage;
 import com.openggf.game.soniccd.program.CdProgramRequest.StageSelect;
 import com.openggf.game.soniccd.program.CdProgramRequest.Title;
+import com.openggf.game.soniccd.title.CdCominSoonPreviewScreen;
 import com.openggf.level.LevelManager;
 
 import java.util.ArrayList;
@@ -41,7 +43,7 @@ public final class CdSceneCoordinator {
     // Lane TA: the session's backup RAM and the program loops IPX runs without .GameLoop.
     private CdBackupRamHost backupRamHost = CdBackupRamHost.SESSION;
     private int ramCartridgeBytes;
-    /** A title action the next title start returns at once (TimeAttack loops, IPX.asm:1214-1238). */
+    /** A title action the next title start returns at once, to continue the current program route. */
     private TitleScreenAction resume;
     private java.util.function.Consumer<CdSpecialStageEntry> specialStagePrimer = entry -> { };
     private SpecialStage pendingSpecialStage;
@@ -195,6 +197,7 @@ public final class CdSceneCoordinator {
         return switch (request) {
             case Stage ignored -> TitleScreenAction.ONE_PLAYER;
             case StageSelect ignored -> TitleScreenAction.LEVEL_SELECT;
+            case CominSoonPreview ignored -> throw new IllegalStateException("Only stage select opens the disc-art preview");
             // Unhosted programs that return to .GameLoop: the host opens the not-hosted screen,
             // which hands back to the title.
             case Title ignored -> TitleScreenAction.OPTIONS;
@@ -212,16 +215,18 @@ public final class CdSceneCoordinator {
     public CdProgramRequest titleRequest() { return titleRequest; }
 
     /**
-     * STSEL_.MMD returned {@code index}. A stage is returned for the host's level load; anything
-     * else returns empty after recording the not-hosted program (the stage select then restarts,
-     * see the program contract).
+     * STSEL_.MMD returned {@code index}. A normal stage is returned for the host's level load.
+     * The preview resumes into OPTIONS via the title host, and the demo uses the special-stage provider.
      */
     public java.util.Optional<Stage> stageSelected(int index) {
         route.add("stage select " + index);
         CdProgramRequest request = skipNotHosted(flow().stageSelected(index));
         route.add("-> " + request);
         stageStartedByIpx(request);
-        if (request instanceof SpecialStage step) {
+        if (request instanceof CominSoonPreview preview) {
+            titleRequest = preview;
+            resume = TitleScreenAction.OPTIONS;
+        } else if (request instanceof SpecialStage step) {
             pendingSpecialStage = step;
             specialStagePrimer.accept(step.entry());
         }
@@ -264,6 +269,7 @@ public final class CdSceneCoordinator {
                 level.requestGameOverExit(GameOverExit.TITLE_SCREEN);
             }
             case StageSelect ignored -> throw new IllegalStateException("IPX never returns from a stage to STSEL");
+            case CominSoonPreview ignored -> throw new IllegalStateException("Only stage select opens the disc-art preview");
             case NotHosted ignored -> throw new IllegalStateException("not-hosted steps are skipped");
             // --- lane END: GameDone's ending runs in ENDING_CUTSCENE through the module's EndingProvider.
             case CdProgramRequest.Ending step -> {
@@ -453,6 +459,10 @@ public final class CdSceneCoordinator {
      * host of the program IPX would run, else {@link CdNotHostedScreen}.
      */
     public com.openggf.game.nativemenu.NativeMenuScreen programScreen() {
+        if (titleRequest instanceof CominSoonPreview) {
+            lastProgramScreen = new CdCominSoonPreviewScreen(disc().assets());
+            return lastProgramScreen;
+        }
         if (titleRequest instanceof SpecialStage step) {
             lastProgramScreen = new CdSpecialStageProgramScreen(step, this);
             return lastProgramScreen;

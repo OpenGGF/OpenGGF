@@ -1,5 +1,13 @@
 {
   "@@locale": "en",
+  "menu.soniccd.stage8.cleared": "Special Stage 8 cleared",
+  "@menu.soniccd.stage8.cleared": {
+    "description": "Heading on the acknowledgement after clearing the secret Special Stage 8 in Sonic CD."
+  },
+  "menu.soniccd.stage8.back_to_title": "Back to title",
+  "@menu.soniccd.stage8.back_to_title": {
+    "description": "Button on the Special Stage 8 clear acknowledgement that returns to the Sonic CD title."
+  },
   "menu.soniccd.garden.title": "D.A. Garden",
   "@menu.soniccd.garden.title": {
     "description": "D.A. Garden disc music browser. Translate the complete message."
@@ -20,6 +28,22 @@
   "menu.soniccd.garden.play_stop": "PLAY / STOP",
   "@menu.soniccd.garden.play_stop": {
     "description": "D.A. Garden disc music browser. Translate the complete message."
+  },
+  "menu.soniccd.garden.planet": "PLANET",
+  "@menu.soniccd.garden.planet": {
+    "description": "Footer action that opens the Present planet art view."
+  },
+  "menu.soniccd.garden.planet_title": "Present planet",
+  "@menu.soniccd.garden.planet_title": {
+    "description": "Page title for the still artwork of Little Planet in the Present time period."
+  },
+  "menu.soniccd.garden.tracks": "TRACKS",
+  "@menu.soniccd.garden.tracks": {
+    "description": "Footer action that returns from the planet art to the music tracks."
+  },
+  "menu.soniccd.garden.planet_unavailable": "Planet art unavailable",
+  "@menu.soniccd.garden.planet_unavailable": {
+    "description": "Shown when D.A. Garden cannot load the Present planet art."
   },
   "menu.soniccd.garden.present": "Present",
   "@menu.soniccd.garden.present": {
@@ -105,6 +129,10 @@
   "@menu.soniccd.visual_mode.bad_ending": {
     "description": "Sonic CD Visual Mode browser. Translate the complete message."
   },
+  "menu.soniccd.visual_mode.pencil_test": "Pencil Test",
+  "@menu.soniccd.visual_mode.pencil_test": {
+    "description": "Visual Mode row for the silent Sonic CD Pencil Test video."
+  },
   "menu.soniccd.visual_mode.back_to_title": "Back to title",
   "@menu.soniccd.visual_mode.back_to_title": {
     "description": "Sonic CD Visual Mode browser. Translate the complete message."
@@ -112,6 +140,22 @@
   "menu.soniccd.visual_mode.help": "Use Back to stop a video and return here.",
   "@menu.soniccd.visual_mode.help": {
     "description": "Sonic CD Visual Mode browser. Translate the complete message."
+  },
+  "menu.soniccd.thank_you.title": "Thank You",
+  "@menu.soniccd.thank_you.title": {
+    "description": "Title of the Sonic CD disc-media preview after the good ending."
+  },
+  "menu.soniccd.thank_you.description": "Disc tile samples",
+  "@menu.soniccd.thank_you.description": {
+    "description": "Caption for a contact sheet of graphic tiles loaded from the Sonic CD disc."
+  },
+  "menu.soniccd.comin_soon.title": "Comin' Soon",
+  "@menu.soniccd.comin_soon.title": {
+    "description": "Stage-select row name and title of the OpenGGF disc-art preview."
+  },
+  "menu.soniccd.comin_soon.description": "Disc art preview",
+  "@menu.soniccd.comin_soon.description": {
+    "description": "Subtitle identifying the OpenGGF preview of art tiles from the disc."
   },
   "menu.soniccd.save_manager.title": "Sonic CD save data",
   "@menu.soniccd.save_manager.title": {

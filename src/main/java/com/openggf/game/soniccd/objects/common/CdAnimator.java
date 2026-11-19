@@ -10,6 +10,7 @@ import com.openggf.game.soniccd.level.CdStageImage;
  */
 public final class CdAnimator {
     private final CdStageImage image;
+    private final byte[] fixedScript;
     private final int table;
     public int anim;
     private int prevAnim = -1;
@@ -20,7 +21,16 @@ public final class CdAnimator {
 
     public CdAnimator(CdStageImage image, int table, int anim) {
         this.image = image;
+        this.fixedScript = null;
         this.table = table;
+        this.anim = anim;
+    }
+
+    /** One detached script beginning with its delay byte. The caller validates that it cannot switch animations. */
+    public CdAnimator(byte[] fixedScript, int anim) {
+        this.image = null;
+        this.fixedScript = fixedScript.clone();
+        this.table = 0;
         this.anim = anim;
     }
 
@@ -33,22 +43,22 @@ public final class CdAnimator {
         }
         animTime = (animTime - 1) & 0xFF;
         if ((animTime & 0x80) == 0) return 0;              // subq.b #1; bpl.s .End
-        int script = table + (short) image.u16(table + anim * 2);
-        animTime = image.u8(script);
-        int value = image.u8(script + 1 + animFrame);
+        int script = fixedScript == null ? table + (short) image.u16(table + anim * 2) : 0;
+        animTime = scriptByte(script);
+        int value = scriptByte(script + 1 + animFrame);
         if (value < 0x80) return show(value);
         switch (value) {
             case 0xFF -> {
                 animFrame = 0;
-                return show(image.u8(script + 1));
+                return show(scriptByte(script + 1));
             }
             case 0xFE -> {
-                int back = image.u8(script + 2 + animFrame);
+                int back = scriptByte(script + 2 + animFrame);
                 animFrame = (animFrame - back) & 0xFF;
-                return show(image.u8(script + 1 + animFrame));
+                return show(scriptByte(script + 1 + animFrame));
             }
             case 0xFD -> {
-                anim = image.u8(script + 2 + animFrame);
+                anim = scriptByte(script + 2 + animFrame);
                 return 0;
             }
             case 0xFC -> {
@@ -62,6 +72,10 @@ public final class CdAnimator {
                 return value == 0xFA ? -2 : 0;               // the caller adds 2 to routine 2
             }
         }
+    }
+
+    private int scriptByte(int offset) {
+        return fixedScript == null ? image.u8(offset) : Byte.toUnsignedInt(fixedScript[offset]);
     }
 
     private int show(int value) {

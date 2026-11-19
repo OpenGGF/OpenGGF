@@ -40,8 +40,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  *       Null entries ($05..$3F where the stage's index says so). The other zones' {@code NullObject} deletes itself
  *       (objects/null.asm) and is hosted by {@code CdNullObject}, so no Null ID is left here for them.</li>
  *   <li>Real routines still unhosted, by zone: Palmtree Panic $35 (tunnel door), $2F in R11A (Amy
- *       Rose); Collision Chaos $2C (spike chain); Tidal Tempest $05 (break pole, R42x), $23 (vertical move block), $29 (swing, R41A), $30 (switch elevator, R41A), $37 (spike ball,
- *       R42A/C/D), $52 (not the projector: the projector's $52 in R41B/R42B is hosted by objects/projector); Wacky Workbench
+ *       Rose); Collision Chaos $2C (spike chain); Tidal Tempest $23 (vertical move block), $29 (swing, R41A), $30 (switch elevator, R41A),
+ *       $52 (not the projector: the projector's $52 in R41B/R42B is hosted by objects/projector); Wacky Workbench
  *       $29 (animal); Metallic Madness $2E (poh bee, R81x).</li>
  * </ul>
  */
@@ -68,10 +68,10 @@ class TestCdUnhostedObjectCensus {
         Map.entry("R41B", "23 28 29 30 39 3F"),
         Map.entry("R41C", "23 28 29 30 39 51 52"),
         Map.entry("R41D", "23 28 29 30 39 51 52"),
-        Map.entry("R42A", "05 23 37 52"),
-        Map.entry("R42B", "05 23 28 37 44"),
-        Map.entry("R42C", "05 23 37 44 51 52"),
-        Map.entry("R42D", "05 23 37 44 51 52"),
+        Map.entry("R42A", "23 52"),
+        Map.entry("R42B", "23 28 37 44"),
+        Map.entry("R42C", "23 44 51 52"),
+        Map.entry("R42D", "23 44 51 52"),
         Map.entry("R61A", "29"),
         Map.entry("R61B", "29"),
         Map.entry("R61C", "29"),

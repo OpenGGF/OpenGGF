@@ -1,7 +1,7 @@
 package com.openggf.game.soniccd.objects.common;
 
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.soniccd.player.CdSonicAnimation;
+import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.game.soniccd.objects.art.CdObjectArtProvider;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectLifetimeOps;
@@ -35,6 +35,8 @@ import java.util.List;
 public final class CdMonitor extends CdObject
         implements TouchResponseProvider, TouchResponseListener, ReevaluatingSolidObject,
         ObjectVisualFacing.NonDirectional {
+    /** .GiveRings (Monitor and Time Post/Main.asm:502-513). */
+    public static final int TEN_RING_SUBTYPE = 1;
     /** .NotBroken: move.b #$40|6,oColType(a0) (Monitor and Time Post/Main.asm:329). */
     private static final int COLLISION_FLAGS = 0x46;
     /** ObjMonitor_Break: move.b #$11,oMapFrame(a0) (Monitor and Time Post/Main.asm:408). */
@@ -45,8 +47,13 @@ public final class CdMonitor extends CdObject
     private int ySub;
     private int yVel;
     private boolean pendingBreak;
-    private CdAnimator animator;
+    private transient CdAnimator animator;
+    private int[] animState = {-1, 0, 0, 0, 0};
     private int mapFrame;
+
+    public static boolean isTenRingPlacement(ObjectSpawn spawn) {
+        return spawn.objectKey() == null && spawn.objectId() == 0x19 && spawn.subtype() == TEN_RING_SUBTYPE;
+    }
 
     public CdMonitor(ObjectSpawn spawn) {
         super(spawn, "Monitor");
@@ -75,6 +82,7 @@ public final class CdMonitor extends CdObject
         if (animator != null) {
             animator.step();
             mapFrame = animator.mapFrame();
+            animState = animator.scriptState();
         }
     }
 
@@ -86,7 +94,18 @@ public final class CdMonitor extends CdObject
         }
         // bclr #7 of the saved flags lets the spawner place the monitor again (Monitor and Time Post/Main.asm:319-320); the broken
         // bit 0 keeps it broken (Monitor and Time Post/Main.asm:322-326), which the shared respawn state models as remembered.
-        animator = animator(e -> e.monitorAnimations(), spawn.subtype());
+        animator = newAnimator();
+    }
+
+    private CdAnimator newAnimator() {
+        var provider = services().gameModule().getGameService(CdObjectArtProvider.class);
+        return provider == null ? null : provider.newMonitorAnimator(spawn.subtype());
+    }
+
+    @Override
+    protected void afterGenericRewindStateRestored(RewindCaptureContext context) {
+        animator = routine == 2 ? newAnimator() : null;
+        if (animator != null) animator.restoreScriptState(animState);
     }
 
     /** Monitor and Time Post/Main.asm:343-350: ObjMoveGrv then ObjGetFloorDist. */
