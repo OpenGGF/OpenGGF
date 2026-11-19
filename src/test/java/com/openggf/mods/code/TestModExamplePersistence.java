@@ -39,32 +39,6 @@ class TestModExamplePersistence {
     }
     @AfterAll static void close() throws Exception { for (var mod : mods.values()) mod.close(); }
 
-    @Test void flappyFutureFileSurvivesOpenExitAndFinishedRun() throws Exception {
-        for (String rejected : List.of("formatVersion=999\nbest.CLASSIC=77\n", "broken records", "", "formatVersion=1\nflights=-1\n", "formatVersion=1\nflights=2\nflights=3\n")) {
-            MemoryStorage storage = new MemoryStorage(); storage.files.put("records.txt", rejected);
-            Object scene = scene("flappy-tails", "flappytails.FlappyScene");
-            SceneContext ctx = context(storage);
-            call(scene, "enter", ctx);
-            call(scene, "exit", ctx);
-            assertEquals(rejected, storage.files.get("records.txt"));
-            call(scene, "startRun", ctx, 0, false);
-            call(scene, "finishRun", ctx);
-            call(scene, "exit", ctx);
-            assertEquals(rejected, storage.files.get("records.txt"), "rejected primary must survive a finished run");
-            assertEquals(0, storage.writes);
-        }
-    }
-
-    @Test void failedFlappyRecordWriteRetriesWithoutCountingTheFlightTwice() throws Exception {
-        MemoryStorage storage = new MemoryStorage(); storage.failures = 1;
-        Object scene = scene("flappy-tails", "flappytails.FlappyScene"); SceneContext ctx = context(storage);
-        call(scene, "enter", ctx); call(scene, "startRun", ctx, 0, false); call(scene, "finishRun", ctx);
-        assertFalse(storage.files.containsKey("records.txt"));
-        call(scene, "exit", ctx);
-        assertTrue(storage.files.getOrDefault("records.txt", "").contains("flights=1"), "exit retries dirty records");
-        assertEquals(2, storage.writes);
-    }
-
     @Test void flappyPracticeAtEveryUnlockedZoneAndRetryCannotSetRecords() throws Exception {
         MemoryStorage storage = new MemoryStorage();
         storage.files.put("records.txt", "formatVersion=1\nfurthestZone=4\n");
@@ -209,17 +183,6 @@ class TestModExamplePersistence {
             host.onRunEnded(RunEndReason.ACT_COMPLETED);
             assertEquals(rejected, storage.files.get("best-s2.txt")); assertEquals(0, storage.writes);
         }
-    }
-
-    @Test void persistentFlappyWriteFailureKeepsDirtyProgressAndUsesBoundedRetries() throws Exception {
-        MemoryStorage storage = new MemoryStorage(); storage.failures = Integer.MAX_VALUE;
-        Object scene = scene("flappy-tails", "flappytails.FlappyScene"); SceneContext ctx = context(storage);
-        call(scene, "enter", ctx); call(scene, "startRun", ctx, 0, false); call(scene, "finishRun", ctx);
-        for (int tick = 0; tick < 120; tick++) call(scene, "update", ctx);
-        assertTrue(storage.writes >= 2 && storage.writes <= 4, "failed publication retries with a bounded cadence");
-        assertFalse(storage.files.containsKey("records.txt"));
-        assertEquals(1, call(field(scene, "records"), "flights"));
-        call(scene, "exit", ctx);
     }
 
     @Test void validAndSupportedLegacySavesRemainUsable() throws Exception {

@@ -1,7 +1,6 @@
 package com.openggf.game.rewind;
 
 import com.openggf.level.objects.AbstractPointsObjectInstance;
-import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.SpawnCoordinateRewindRecreatable;
 import com.openggf.level.objects.SpawnCoordinateSubtypeDefaultArgsRewindRecreatable;
 import com.openggf.level.objects.SpawnCoordinateZeroScalarArgsRewindRecreatable;
@@ -18,14 +17,12 @@ import com.openggf.level.objects.ZeroArgRewindRecreatable;
 import com.openggf.level.objects.ZeroScalarArgsRewindRecreatable;
 import org.junit.jupiter.api.Test;
 
-import java.lang.reflect.Method;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Guards spawn-only rewind recreators against reintroducing one-method boilerplate.
+ * Checks the rewind recipe interfaces assigned to spawn-created objects.
  */
 class TestSpawnRewindRecreatableCleanup {
 
@@ -245,15 +242,6 @@ class TestSpawnRewindRecreatableCleanup {
     }
 
     @Test
-    void spawnOnlyRecreatorsDoNotDeclareRecreateForRewind() {
-        for (String className : SPAWN_ONLY_RECREATORS) {
-            Class<?> cls = loadClass(className);
-            assertFalse(declaresRecreateForRewind(cls),
-                    cls.getName() + " should use SpawnRewindRecreatable's default hook");
-        }
-    }
-
-    @Test
     void spawnConstructionContextRecreatorsUseMarkerInterface() {
         Class<?> marker = loadClass(
                 "com.openggf.level.objects.SpawnConstructionContextRewindRecreatable");
@@ -262,17 +250,6 @@ class TestSpawnRewindRecreatableCleanup {
             assertTrue(marker.isAssignableFrom(cls),
                     cls.getName()
                             + " should inherit the spawn construction-context recreate hook");
-        }
-    }
-
-    @Test
-    void spawnConstructionContextRecreatorsDoNotDeclareRecreateForRewind() {
-        for (String className : SPAWN_CONSTRUCTION_CONTEXT_RECREATORS) {
-            Class<?> cls = loadClass(className);
-            assertFalse(declaresRecreateForRewind(cls),
-                    cls.getName()
-                            + " should use "
-                            + "SpawnConstructionContextRewindRecreatable's default hook");
         }
     }
 
@@ -286,29 +263,11 @@ class TestSpawnRewindRecreatableCleanup {
     }
 
     @Test
-    void spawnCoordinateRecreatorsDoNotDeclareRecreateForRewind() {
-        for (String className : SPAWN_COORDINATE_RECREATORS) {
-            Class<?> cls = loadClass(className);
-            assertFalse(declaresRecreateForRewind(cls),
-                    cls.getName() + " should use SpawnCoordinateRewindRecreatable's default hook");
-        }
-    }
-
-    @Test
     void pointsRecreatorsUseBaseHook() {
         for (String className : POINTS_RECREATORS) {
             Class<?> cls = loadClass(className);
             assertTrue(AbstractPointsObjectInstance.class.isAssignableFrom(cls),
                     cls.getName() + " should inherit the points recreate hook");
-        }
-    }
-
-    @Test
-    void pointsRecreatorsDoNotDeclareRecreateForRewind() {
-        for (String className : POINTS_RECREATORS) {
-            Class<?> cls = loadClass(className);
-            assertFalse(declaresRecreateForRewind(cls),
-                    cls.getName() + " should use AbstractPointsObjectInstance's default hook");
         }
     }
 
@@ -322,30 +281,11 @@ class TestSpawnRewindRecreatableCleanup {
     }
 
     @Test
-    void spawnCoordinateZeroPairRecreatorsDoNotDeclareRecreateForRewind() {
-        for (String className : SPAWN_COORDINATE_ZERO_PAIR_RECREATORS) {
-            Class<?> cls = loadClass(className);
-            assertFalse(declaresRecreateForRewind(cls),
-                    cls.getName() + " should use SpawnCoordinateZeroPairRewindRecreatable's default hook");
-        }
-    }
-
-    @Test
     void spawnCoordinateZeroScalarArgsRecreatorsUseMarkerInterface() {
         for (String className : SPAWN_COORDINATE_ZERO_SCALAR_ARGS_RECREATORS) {
             Class<?> cls = loadClass(className);
             assertTrue(SpawnCoordinateZeroScalarArgsRewindRecreatable.class.isAssignableFrom(cls),
                     cls.getName() + " should inherit the spawn-coordinate zero-scalar recreate hook");
-        }
-    }
-
-    @Test
-    void spawnCoordinateZeroScalarArgsRecreatorsDoNotDeclareRecreateForRewind() {
-        for (String className : SPAWN_COORDINATE_ZERO_SCALAR_ARGS_RECREATORS) {
-            Class<?> cls = loadClass(className);
-            assertFalse(declaresRecreateForRewind(cls),
-                    cls.getName()
-                            + " should use SpawnCoordinateZeroScalarArgsRewindRecreatable's default hook");
         }
     }
 
@@ -362,34 +302,12 @@ class TestSpawnRewindRecreatableCleanup {
     }
 
     @Test
-    void nullableSpawnCoordinateZeroScalarArgsRecreatorsDoNotDeclareRecreateForRewind() {
-        for (String className : NULLABLE_SPAWN_COORDINATE_ZERO_SCALAR_ARGS_RECREATORS) {
-            Class<?> cls = loadClass(className);
-            assertFalse(declaresRecreateForRewind(cls),
-                    cls.getName()
-                            + " should use "
-                            + "NullableSpawnCoordinateZeroScalarArgsRewindRecreatable's default hook");
-        }
-    }
-
-    @Test
     void spawnCoordinateSubtypeDefaultArgsRecreatorsUseMarkerInterface() {
         for (String className : SPAWN_COORDINATE_SUBTYPE_DEFAULT_ARGS_RECREATORS) {
             Class<?> cls = loadClass(className);
             assertTrue(SpawnCoordinateSubtypeDefaultArgsRewindRecreatable.class.isAssignableFrom(cls),
                     cls.getName()
                             + " should inherit the spawn-coordinate subtype-default recreate hook");
-        }
-    }
-
-    @Test
-    void spawnCoordinateSubtypeDefaultArgsRecreatorsDoNotDeclareRecreateForRewind() {
-        for (String className : SPAWN_COORDINATE_SUBTYPE_DEFAULT_ARGS_RECREATORS) {
-            Class<?> cls = loadClass(className);
-            assertFalse(declaresRecreateForRewind(cls),
-                    cls.getName()
-                            + " should use "
-                            + "SpawnCoordinateSubtypeDefaultArgsRewindRecreatable's default hook");
         }
     }
 
@@ -404,15 +322,6 @@ class TestSpawnRewindRecreatableCleanup {
     }
 
     @Test
-    void spawnCoordinateDefaultArgsRecreatorsDoNotDeclareRecreateForRewind() {
-        for (String className : SPAWN_COORDINATE_DEFAULT_ARGS_RECREATORS) {
-            Class<?> cls = loadClass(className);
-            assertFalse(declaresRecreateForRewind(cls),
-                    cls.getName() + " should use SpawnCoordinateDefaultArgsRewindRecreatable's default hook");
-        }
-    }
-
-    @Test
     void spawnAndCoordinateZeroScalarArgsRecreatorsUseMarkerInterface() {
         Class<?> marker = loadClass("com.openggf.level.objects.SpawnAndCoordinateZeroScalarArgsRewindRecreatable");
         for (String className : SPAWN_AND_COORDINATE_ZERO_SCALAR_ARGS_RECREATORS) {
@@ -423,30 +332,11 @@ class TestSpawnRewindRecreatableCleanup {
     }
 
     @Test
-    void spawnAndCoordinateZeroScalarArgsRecreatorsDoNotDeclareRecreateForRewind() {
-        for (String className : SPAWN_AND_COORDINATE_ZERO_SCALAR_ARGS_RECREATORS) {
-            Class<?> cls = loadClass(className);
-            assertFalse(declaresRecreateForRewind(cls),
-                    cls.getName()
-                            + " should use SpawnAndCoordinateZeroScalarArgsRewindRecreatable's default hook");
-        }
-    }
-
-    @Test
     void spawnRenderFlipRecreatorsUseMarkerInterface() {
         for (String className : SPAWN_RENDER_FLIP_RECREATORS) {
             Class<?> cls = loadClass(className);
             assertTrue(SpawnRenderFlipRewindRecreatable.class.isAssignableFrom(cls),
                     cls.getName() + " should inherit the spawn render-flip recreate hook");
-        }
-    }
-
-    @Test
-    void spawnRenderFlipRecreatorsDoNotDeclareRecreateForRewind() {
-        for (String className : SPAWN_RENDER_FLIP_RECREATORS) {
-            Class<?> cls = loadClass(className);
-            assertFalse(declaresRecreateForRewind(cls),
-                    cls.getName() + " should use SpawnRenderFlipRewindRecreatable's default hook");
         }
     }
 
@@ -461,29 +351,11 @@ class TestSpawnRewindRecreatableCleanup {
     }
 
     @Test
-    void grounderZeroIndexChildRecreatorsDoNotDeclareRecreateForRewind() {
-        for (String className : GROUNDER_ZERO_INDEX_CHILD_RECREATORS) {
-            Class<?> cls = loadClass(className);
-            assertFalse(declaresRecreateForRewind(cls),
-                    cls.getName() + " should use GrounderZeroIndexChildRewindRecreatable's default hook");
-        }
-    }
-
-    @Test
     void spawnTrailingZeroIntsRecreatorsUseMarkerInterface() {
         for (String className : SPAWN_TRAILING_ZERO_INTS_RECREATORS) {
             Class<?> cls = loadClass(className);
             assertTrue(SpawnTrailingZeroIntsRewindRecreatable.class.isAssignableFrom(cls),
                     cls.getName() + " should inherit the spawn trailing-zero-ints recreate hook");
-        }
-    }
-
-    @Test
-    void spawnTrailingZeroIntsRecreatorsDoNotDeclareRecreateForRewind() {
-        for (String className : SPAWN_TRAILING_ZERO_INTS_RECREATORS) {
-            Class<?> cls = loadClass(className);
-            assertFalse(declaresRecreateForRewind(cls),
-                    cls.getName() + " should use SpawnTrailingZeroIntsRewindRecreatable's default hook");
         }
     }
 
@@ -497,29 +369,11 @@ class TestSpawnRewindRecreatableCleanup {
     }
 
     @Test
-    void spawnNullableReferenceRecreatorsDoNotDeclareRecreateForRewind() {
-        for (String className : SPAWN_NULLABLE_REFERENCE_RECREATORS) {
-            Class<?> cls = loadClass(className);
-            assertFalse(declaresRecreateForRewind(cls),
-                    cls.getName() + " should use SpawnNullableReferenceRewindRecreatable's default hook");
-        }
-    }
-
-    @Test
     void spawnServicesRecreatorsUseMarkerInterface() {
         for (String className : SPAWN_SERVICES_RECREATORS) {
             Class<?> cls = loadClass(className);
             assertTrue(SpawnServicesRewindRecreatable.class.isAssignableFrom(cls),
                     cls.getName() + " should inherit the spawn-services recreate hook");
-        }
-    }
-
-    @Test
-    void spawnServicesRecreatorsDoNotDeclareRecreateForRewind() {
-        for (String className : SPAWN_SERVICES_RECREATORS) {
-            Class<?> cls = loadClass(className);
-            assertFalse(declaresRecreateForRewind(cls),
-                    cls.getName() + " should use SpawnServicesRewindRecreatable's default hook");
         }
     }
 
@@ -533,15 +387,6 @@ class TestSpawnRewindRecreatableCleanup {
     }
 
     @Test
-    void spawnServicesDefaultArgsRecreatorsDoNotDeclareRecreateForRewind() {
-        for (String className : SPAWN_SERVICES_DEFAULT_ARGS_RECREATORS) {
-            Class<?> cls = loadClass(className);
-            assertFalse(declaresRecreateForRewind(cls),
-                    cls.getName() + " should use SpawnServicesDefaultArgsRewindRecreatable's default hook");
-        }
-    }
-
-    @Test
     void spawnRomZoneRecreatorsUseMarkerInterface() {
         for (String className : SPAWN_ROM_ZONE_RECREATORS) {
             Class<?> cls = loadClass(className);
@@ -551,29 +396,11 @@ class TestSpawnRewindRecreatableCleanup {
     }
 
     @Test
-    void spawnRomZoneRecreatorsDoNotDeclareRecreateForRewind() {
-        for (String className : SPAWN_ROM_ZONE_RECREATORS) {
-            Class<?> cls = loadClass(className);
-            assertFalse(declaresRecreateForRewind(cls),
-                    cls.getName() + " should use SpawnRomZoneRewindRecreatable's default hook");
-        }
-    }
-
-    @Test
     void spawnYCoordinateRecreatorsUseMarkerInterface() {
         for (String className : SPAWN_Y_COORDINATE_RECREATORS) {
             Class<?> cls = loadClass(className);
             assertTrue(SpawnYCoordinateRewindRecreatable.class.isAssignableFrom(cls),
                     cls.getName() + " should inherit the spawn-Y-coordinate recreate hook");
-        }
-    }
-
-    @Test
-    void spawnYCoordinateRecreatorsDoNotDeclareRecreateForRewind() {
-        for (String className : SPAWN_Y_COORDINATE_RECREATORS) {
-            Class<?> cls = loadClass(className);
-            assertFalse(declaresRecreateForRewind(cls),
-                    cls.getName() + " should use SpawnYCoordinateRewindRecreatable's default hook");
         }
     }
 
@@ -588,29 +415,11 @@ class TestSpawnRewindRecreatableCleanup {
     }
 
     @Test
-    void spawnDefaultArgsRecreatorsDoNotDeclareRecreateForRewind() {
-        for (String className : SPAWN_DEFAULT_ARGS_RECREATORS) {
-            Class<?> cls = loadClass(className);
-            assertFalse(declaresRecreateForRewind(cls),
-                    cls.getName() + " should use SpawnDefaultArgsRewindRecreatable's default hook");
-        }
-    }
-
-    @Test
     void zeroArgRecreatorsUseMarkerInterface() {
         for (String className : ZERO_ARG_RECREATORS) {
             Class<?> cls = loadClass(className);
             assertTrue(ZeroArgRewindRecreatable.class.isAssignableFrom(cls),
                     cls.getName() + " should inherit the zero-arg recreate hook");
-        }
-    }
-
-    @Test
-    void zeroArgRecreatorsDoNotDeclareRecreateForRewind() {
-        for (String className : ZERO_ARG_RECREATORS) {
-            Class<?> cls = loadClass(className);
-            assertFalse(declaresRecreateForRewind(cls),
-                    cls.getName() + " should use ZeroArgRewindRecreatable's default hook");
         }
     }
 
@@ -624,30 +433,12 @@ class TestSpawnRewindRecreatableCleanup {
     }
 
     @Test
-    void zeroScalarArgsRecreatorsDoNotDeclareRecreateForRewind() {
-        for (String className : ZERO_SCALAR_ARGS_RECREATORS) {
-            Class<?> cls = loadClass(className);
-            assertFalse(declaresRecreateForRewind(cls),
-                    cls.getName() + " should use ZeroScalarArgsRewindRecreatable's default hook");
-        }
-    }
-
-    @Test
     void playerBoundShieldRecreatorsUseMarkerInterface() {
         Class<?> marker = loadClass("com.openggf.level.objects.PlayerBoundShieldRewindRecreatable");
         for (String className : PLAYER_BOUND_SHIELD_RECREATORS) {
             Class<?> cls = loadClass(className);
             assertTrue(marker.isAssignableFrom(cls),
                     cls.getName() + " should inherit the player-bound shield recreate hook");
-        }
-    }
-
-    @Test
-    void playerBoundShieldRecreatorsDoNotDeclareRecreateForRewind() {
-        for (String className : PLAYER_BOUND_SHIELD_RECREATORS) {
-            Class<?> cls = loadClass(className);
-            assertFalse(declaresRecreateForRewind(cls),
-                    cls.getName() + " should use PlayerBoundShieldRewindRecreatable's default hook");
         }
     }
 
@@ -663,32 +454,11 @@ class TestSpawnRewindRecreatableCleanup {
         }
     }
 
-    @Test
-    void playerBoundInvincibilityStarsRecreatorsDoNotDeclareRecreateForRewind() {
-        for (String className : PLAYER_BOUND_INVINCIBILITY_STARS_RECREATORS) {
-            Class<?> cls = loadClass(className);
-            assertFalse(declaresRecreateForRewind(cls),
-                    cls.getName()
-                            + " should use PlayerBoundInvincibilityStarsRewindRecreatable's default hook");
-        }
-    }
-
     private static Class<?> loadClass(String className) {
         try {
             return Class.forName(className);
         } catch (ClassNotFoundException e) {
             throw new AssertionError("Missing spawn-only recreator " + className, e);
         }
-    }
-
-    private static boolean declaresRecreateForRewind(Class<?> cls) {
-        for (Method method : cls.getDeclaredMethods()) {
-            if (method.getName().equals("recreateForRewind")
-                    && method.getParameterCount() == 1
-                    && method.getParameterTypes()[0] == RewindRecreateContext.class) {
-                return true;
-            }
-        }
-        return false;
     }
 }

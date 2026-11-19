@@ -545,10 +545,6 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         return false;
     }
 
-    static boolean romResultsCreateGateReady(int framesAfterDecrement) {
-        return framesAfterDecrement <= 0;
-    }
-
     /**
      * ROM: Obj_LevelResultsWait2 after 90-frame wait (sonic3k.asm lines 62726-62730).
      * Increments exit queue counter each frame. Children start sliding out when

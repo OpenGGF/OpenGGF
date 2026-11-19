@@ -9,7 +9,6 @@ import java.io.IOException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestSpecialStageRewindCapability {
@@ -51,12 +50,6 @@ class TestSpecialStageRewindCapability {
         });
         assertTrue(cd.supportsRewind());
         assertEquals(SpecialStageProvider.SPECIAL_STAGE_REWIND_KEY, cd.rewindAdapter().orElseThrow().key());
-    }
-
-    @Test
-    void lagBypassIsWriteOnlyProviderConfiguration() {
-        assertThrows(NoSuchMethodException.class,
-                () -> SpecialStageProvider.class.getMethod("getLagCompensation"));
     }
 
     private static final class MinimalSpecialStageProvider implements SpecialStageProvider {

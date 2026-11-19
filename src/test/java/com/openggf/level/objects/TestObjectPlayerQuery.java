@@ -78,7 +78,6 @@ class TestObjectPlayerQuery {
         ObjectPlayerQuery.PlayerVisitor<java.util.List<PlayableEntity>> visitor=java.util.List::add;
         query.visitPlayers(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS,visited,visitor);
         assertEquals(21,visited.size());assertSame(main,visited.getFirst());for(int i=0;i<20;i++)assertSame(unique[i],visited.get(i+1));
-        assertSame(visitor,visitor,"caller can retain one visitor instance across hot-path iterations");
     }
 
     @Test
