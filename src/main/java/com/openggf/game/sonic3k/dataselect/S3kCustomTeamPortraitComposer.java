@@ -5,9 +5,11 @@ import com.openggf.level.render.SpriteMappingFrame;
 import com.openggf.level.render.SpriteMappingPiece;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 
 final class S3kCustomTeamPortraitComposer {
@@ -30,6 +32,28 @@ final class S3kCustomTeamPortraitComposer {
     private static final int EXTRA_STACK_BOTTOM_STEP = 0;
     private static final int TARGET_SINGLE_SIDEKICK_OVERLAP = 10;
 
+    private static final List<String> FIFTEEN_SONICS = Collections.nCopies(15, "sonic");
+    private static final List<String> EIGHT_TAILS = Collections.nCopies(8, "tails");
+
+    /**
+     * Hand-placed rosters. Each was laid out against rendered NO SAVE and save-slot windows,
+     * because no single spacing rule kept every mix of native poses readable inside the narrower
+     * slot (56 px between its rails) and off the NO SAVE arrows.
+     * Layers are front to back; a placement is the pose's x shift, its feet line relative to
+     * the slot anchor, and whether it is mirrored. Unlisted rosters use the generic layout.
+     */
+    private static final Map<Roster, List<Placement>> AUTHORED_LAYOUTS = Map.of(
+            new Roster("sonic", List.of("tails", "knuckles")), List.of(
+                    new Placement("sonic", 0, 0, false),
+                    new Placement("tails", -6, -3, false),
+                    new Placement("knuckles", 8, -3, true)),
+            new Roster("sonic", List.of("tails", "tails")), tailsPairBehindSonic(),
+            new Roster("sonic", EIGHT_TAILS), tailsPairBehindSonic(),
+            new Roster("sonic", FIFTEEN_SONICS), List.of(
+                    new Placement("sonic", 1, 0, false),
+                    new Placement("sonic", -9, -4, true),
+                    new Placement("sonic", 12, -4, false)));
+
     private final List<SpriteMappingFrame> mappings;
     private final java.util.function.Function<String, SpriteMappingFrame> customFrames;
 
@@ -49,6 +73,15 @@ final class S3kCustomTeamPortraitComposer {
         }
         List<String> sidekicks = team.sidekicks();
         List<PortraitLayer> layers = new ArrayList<>();
+        List<Placement> authored = AUTHORED_LAYOUTS.get(new Roster(canonical(team.mainCharacter()),
+                sidekicks.stream().map(S3kCustomTeamPortraitComposer::canonical).toList()));
+        if (authored != null) {
+            for (Placement placement : authored) {
+                layers.add(layerFor(placement.characterCode(), placement.xOffset(), placement.feetY(),
+                        placement.hFlip()));
+            }
+            return List.copyOf(layers);
+        }
         if (sidekicks.size() <= 1) {
             String main = canonical(team.mainCharacter());
             int mainX = sidekicks.isEmpty() ? MAIN_SINGLE_X : MAIN_SINGLE_WITH_SIDEKICK_X;
@@ -120,6 +153,13 @@ final class S3kCustomTeamPortraitComposer {
             return false;
         }
         return !("sonic".equals(main) && sidekicks.equals(List.of("tails")));
+    }
+
+    private static List<Placement> tailsPairBehindSonic() {
+        return List.of(
+                new Placement("sonic", -1, 0, false),
+                new Placement("tails", -6, -4, false),
+                new Placement("tails", 16, -4, true));
     }
 
     private PortraitLayer layerFor(String characterCode, int xOffset, int targetBottom, boolean hFlip) {
@@ -221,6 +261,12 @@ final class S3kCustomTeamPortraitComposer {
     }
 
     private record FrameBounds(int minX, int minY, int maxXExclusive, int maxYExclusive) {
+    }
+
+    private record Roster(String main, List<String> sidekicks) {
+    }
+
+    private record Placement(String characterCode, int xOffset, int feetY, boolean hFlip) {
     }
 
     record PortraitLayer(String characterCode, int xOffset, int yOffset, boolean hFlip) {
