@@ -172,8 +172,8 @@ class TestS3kCustomTeamPortraitComposer {
         SpriteMappingFrame frame = composer.compose(new SelectedTeam("sonic", List.of("tails", "knuckles")));
 
         assertEquals(0, maxBottom(frame.pieces().subList(0, 1)));
-        assertEquals(-3, maxBottom(frame.pieces().subList(1, 2)));
-        assertEquals(-3, maxBottom(frame.pieces().subList(2, 3)));
+        assertEquals(-4, maxBottom(frame.pieces().subList(1, 2)));
+        assertEquals(-4, maxBottom(frame.pieces().subList(2, 3)));
     }
 
     @Test

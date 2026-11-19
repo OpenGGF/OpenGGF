@@ -40,8 +40,8 @@ import static org.lwjgl.opengl.GL11.*;
 /**
  * Renders each hand-placed roster in the NO SAVE window and an occupied save slot, and checks
  * the composed portrait against the windows' own art: inside the slot's 56 px between its
- * rails, clear of both NO SAVE arrows, inside the NO SAVE frame and standing on the native
- * feet line. Sprite pixels are those that differ from the same screen with an empty portrait.
+ * rails, inside the NO SAVE frame and below its up arrow, and standing on the native feet
+ * line. Sprite pixels are those that differ from the same screen with an empty portrait.
  */
 @RequiresRom(SonicGame.SONIC_3K)
 class TestS3kCustomTeamPortraitFit {
@@ -107,8 +107,6 @@ class TestS3kCustomTeamPortraitFit {
                 Bounds noSave = spriteBounds(portrait, background, 0, 0, 100, 100);
                 Bounds slot = spriteBounds(portrait, background, 100, 80, 200, 150);
                 assertTrue(noSave.exists() && slot.exists(), roster + " portrait did not render");
-                assertEquals(NO_SAVE_X - noSave.minX(), SLOT_X - slot.minX(),
-                        "both windows draw the same composed frame");
 
                 assertTrue(slot.minX() >= SLOT_INNER_LEFT && slot.maxX() <= SLOT_INNER_RIGHT,
                         roster + " crosses the save-slot rails: " + slot);
@@ -160,9 +158,11 @@ class TestS3kCustomTeamPortraitFit {
     @SuppressWarnings("unchecked")
     private static void replacePortrait(S3kDataSelectPresentation presentation, SelectedTeam team,
                                         SpriteMappingFrame frame) throws Exception {
-        Field field = S3kDataSelectPresentation.class.getDeclaredField("cachedPortraitFrames");
-        field.setAccessible(true);
-        ((Map<SelectedTeam, SpriteMappingFrame>) field.get(presentation)).put(team, frame);
+        for (String name : List.of("cachedPortraitFrames", "cachedNoSavePortraitFrames")) {
+            Field field = S3kDataSelectPresentation.class.getDeclaredField(name);
+            field.setAccessible(true);
+            ((Map<SelectedTeam, SpriteMappingFrame>) field.get(presentation)).put(team, frame);
+        }
     }
 
     private static Bounds spriteBounds(RgbaImage image, RgbaImage background, int x0, int y0, int x1, int y1) {

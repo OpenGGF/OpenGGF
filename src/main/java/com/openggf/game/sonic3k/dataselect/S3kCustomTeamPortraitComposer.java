@@ -37,22 +37,30 @@ final class S3kCustomTeamPortraitComposer {
 
     /**
      * Hand-placed rosters. Each was laid out against rendered NO SAVE and save-slot windows,
-     * because no single spacing rule kept every mix of native poses readable inside the narrower
-     * slot (56 px between its rails) and off the NO SAVE arrows.
-     * Layers are front to back; a placement is the pose's x shift, its feet line relative to
-     * the slot anchor, and whether it is mirrored. Unlisted rosters use the generic layout.
+     * because no single spacing rule kept every mix of native poses readable inside the save
+     * slot (56 px between its rails) and off the NO SAVE arrows. Layers are front to back:
+     * the leader stands in front and the flanking characters face outwards behind it. Each
+     * placement gives the pose's x shift in the slot and in the wider NO SAVE window, where the
+     * flanks spread further out, then its feet line relative to the window anchor and whether
+     * it is mirrored. Unlisted rosters use the generic layout.
      */
     private static final Map<Roster, List<Placement>> AUTHORED_LAYOUTS = Map.of(
             new Roster("sonic", List.of("tails", "knuckles")), List.of(
-                    new Placement("sonic", 0, 0, false),
-                    new Placement("tails", -6, -3, false),
-                    new Placement("knuckles", 8, -3, true)),
-            new Roster("sonic", List.of("tails", "tails")), tailsPairBehindSonic(),
-            new Roster("sonic", EIGHT_TAILS), tailsPairBehindSonic(),
+                    new Placement("sonic", 1, 1, 0, false),
+                    new Placement("tails", -2, -7, -4, true),
+                    new Placement("knuckles", 9, 14, -4, false)),
+            new Roster("sonic", List.of("tails", "tails")), tailsFlankingSonic(),
+            new Roster("sonic", EIGHT_TAILS), tailsFlankingSonic(),
             new Roster("sonic", FIFTEEN_SONICS), List.of(
-                    new Placement("sonic", 1, 0, false),
-                    new Placement("sonic", -9, -4, true),
-                    new Placement("sonic", 12, -4, false)));
+                    new Placement("sonic", 1, 1, 0, false),
+                    new Placement("sonic", -11, -16, -4, false),
+                    new Placement("sonic", 15, 20, -4, true)));
+
+    /** The window a composed portrait is drawn in. */
+    enum Window {
+        SAVE_SLOT,
+        NO_SAVE
+    }
 
     private final List<SpriteMappingFrame> mappings;
     private final java.util.function.Function<String, SpriteMappingFrame> customFrames;
@@ -68,6 +76,10 @@ final class S3kCustomTeamPortraitComposer {
     }
 
     List<PortraitLayer> layoutLayers(SelectedTeam team) {
+        return layoutLayers(team, Window.SAVE_SLOT);
+    }
+
+    List<PortraitLayer> layoutLayers(SelectedTeam team, Window window) {
         if (team == null) {
             return List.of();
         }
@@ -77,8 +89,8 @@ final class S3kCustomTeamPortraitComposer {
                 sidekicks.stream().map(S3kCustomTeamPortraitComposer::canonical).toList()));
         if (authored != null) {
             for (Placement placement : authored) {
-                layers.add(layerFor(placement.characterCode(), placement.xOffset(), placement.feetY(),
-                        placement.hFlip()));
+                int x = window == Window.NO_SAVE ? placement.noSaveX() : placement.slotX();
+                layers.add(layerFor(placement.characterCode(), x, placement.feetY(), placement.hFlip()));
             }
             return List.copyOf(layers);
         }
@@ -110,8 +122,12 @@ final class S3kCustomTeamPortraitComposer {
     }
 
     SpriteMappingFrame compose(SelectedTeam team) {
+        return compose(team, Window.SAVE_SLOT);
+    }
+
+    SpriteMappingFrame compose(SelectedTeam team, Window window) {
         List<SpriteMappingPiece> combined = new ArrayList<>();
-        for (PortraitLayer layer : layoutLayers(team)) {
+        for (PortraitLayer layer : layoutLayers(team, window)) {
             SpriteMappingFrame frame = baseFrameFor(layer.characterCode());
             if (frame == null) {
                 continue;
@@ -155,11 +171,11 @@ final class S3kCustomTeamPortraitComposer {
         return !("sonic".equals(main) && sidekicks.equals(List.of("tails")));
     }
 
-    private static List<Placement> tailsPairBehindSonic() {
+    private static List<Placement> tailsFlankingSonic() {
         return List.of(
-                new Placement("sonic", -1, 0, false),
-                new Placement("tails", -6, -4, false),
-                new Placement("tails", 16, -4, true));
+                new Placement("sonic", 1, 1, 0, false),
+                new Placement("tails", -2, -7, -4, true),
+                new Placement("tails", 13, 18, -4, false));
     }
 
     private PortraitLayer layerFor(String characterCode, int xOffset, int targetBottom, boolean hFlip) {
@@ -266,7 +282,7 @@ final class S3kCustomTeamPortraitComposer {
     private record Roster(String main, List<String> sidekicks) {
     }
 
-    private record Placement(String characterCode, int xOffset, int feetY, boolean hFlip) {
+    private record Placement(String characterCode, int slotX, int noSaveX, int feetY, boolean hFlip) {
     }
 
     record PortraitLayer(String characterCode, int xOffset, int yOffset, boolean hFlip) {
