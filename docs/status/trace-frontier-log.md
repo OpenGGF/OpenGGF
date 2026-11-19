@@ -125225,3 +125225,43 @@ On `rehost-long` (`R51A,R51B,R51C,R52A`), both tables were identical.
 R51B matched through 5,494 rows and the controls through 4,756, 7,151 and
 4,772 rows respectively. Coverage is the frontier comparator's player and
 camera fields through each recording's end. Ring count is excluded.
+
+## 2026-11-18 — Sonic CD R11C slope fall-off pose
+
+On the `sonic-cd-r11c-animation` orchestration branch at base `22bd4167d1`,
+the R11C short fixture first differed at row 677. Right was held, both
+runs had angle `$98`, velocities `$FFF6/$FFF9`, ground speed zero and
+status `$02`. Native showed Walk and mapping `$47`. The engine showed
+Idle and mapping `$01`. The comparator's object label used the retained
+standing-slot byte `$2D` and nearby object `$03`. The On Object bit was
+clear. The continued baseline replay encountered 15 error rows.
+
+`ObjSonic_MdGround` (Level/_Objects/Sonic/Main.asm:694-704) calls ground
+movement before terrain collision and fall-off. `ObjSonic_MoveGndRight`
+(Level/_Objects/Sonic/Main.asm:1291-1315) writes Walk on the acceleration
+path. `ObjSonic_CheckFallOff` (Level/_Objects/Sonic/Main.asm:1974-2000)
+then clears ground speed, sets Air and arms the 30-frame movement lock.
+The shared classic fall-off path now publishes a pending, admitted
+directional pose through the existing animation selector before the new
+lock can suppress it. Existing early standing and Roll pose selection
+keeps its priority.
+
+Both versions ran the exact USA disc input and each R11C fixture separately:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  -Dtest=TestSonicCdFixtureFrontier -Dsoniccd.fixture.payloads=R11C \
+  -Dsoniccd.frontier.continue=true "-Dsoniccd.fixtures.root=<native root>/<lane>" \
+  "-Dopenggf.surefire.reports=<fresh target report directory>" test -B
+```
+
+The short lane (`rehost-fixtures`) now matches through all 829 rows with
+zero comparator errors. The long lane (`rehost-long`) matches through all
+5,790 rows on both versions. Each replay test ran without skips. The
+focused S1/S2/S3K detachment, movement, animation, gravity, rewind and
+S3K load controls passed on both versions (320 tests, zero skips) via the
+same queue and GL settings. The test selection was
+`TestGroundedDetachNativeProfiles,TestPlayableSpriteMovement,TestPlayableSpriteAnimation,TestObjectControlledGravity,TestKnucklesDetachPoseRewind,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`.
+This covers the fields selected by the R11C
+frontier comparator and the recorded route. The broader Sonic CD matrix,
+act-end assertions and pixel checks were outside this rerun.

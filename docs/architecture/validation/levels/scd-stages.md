@@ -88,7 +88,7 @@ diverging row and the frontier test's cause label (a guess, not a diagnosis).
 | --- | --- | --- | --- | --- |
 | R11A | **green** 4,220 | asserted | green | K2 trace green on all 1,411 rows |
 | R11B | **green** 3,171 | asserted | green | |
-| R11C | **green** 5,790 | asserted | 677 / 829, object | Route green, fixture not: different inputs; native stands on an object (`$03`) at the fixture's row 677 |
+| R11C | **green** 5,790 | asserted | **green** 829 | The short fixture matches through slope fall-off at row 677 |
 | R11D | none | none | green | |
 | R12A | **green** 4,244 | asserted | green | |
 | R12B, R12C, R12D | none | none | green | |
@@ -138,9 +138,9 @@ diverging row and the frontier test's cause label (a guess, not a diagnosis).
 
 Totals at `6c5c0e2764` and `45463c80bd`: routes 146,390 of 149,633 rows (97.8%; 26 of 28 to
 their end); fixtures 56,879 of 57,049 rows (68 of 70). Later focused
-reruns closed the R82A and R42A routes and the R51B short fixture. The
-R11C short fixture remains open. The historical totals count the diverging
-row as compared. The cells above give the matched prefix length. In the act-end column
+reruns closed the R82A and R42A routes and the R11C and R51B short
+fixtures. The historical totals count the diverging row as compared.
+The cells above give the matched prefix length. In the act-end column
 `none` means the route has no end-of-act assertion: it is not in
 `TestSonicCdActEndNative`'s set, either
 because it does not reach the goal or because no assertion was written. All 25
@@ -205,6 +205,16 @@ The native routine lets him pass through the underside. With both fixes,
 R82A matches every one of its 5,697 recorded rows. The same selection kept
 R81A, R81B and R81C green. The source notes and commands are in the
 [trace frontier log](../../../status/trace-frontier-log.md#2026-11-18--sonic-cd-twin-walker-top-solid-receiver).
+
+## Palmtree Panic slope fall-off recheck (2026-11-18)
+
+The R11C short fixture first differed at row 677 in the animation ID and
+mapping frame. The frontier label inferred object support from the retained
+standing-slot byte `$2D`. The native On Object bit was clear and Air was set
+on that row. Ground Right had selected Walk before the slope fall-off
+locked movement. Publishing the admitted pose before the new lock brings
+the short fixture to 829/829 rows and retains 5,790/5,790 on the long route.
+See the [row evidence and commands](../../../status/trace-frontier-log.md#2026-11-18--sonic-cd-r11c-slope-fall-off-pose).
 
 ## Quartz Quadrant conveyor recheck (2026-11-18)
 
