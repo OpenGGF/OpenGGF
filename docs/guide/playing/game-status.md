@@ -282,7 +282,7 @@ Future). `SonicCdEndingCaptureTool --ending good|bad` films an ending.
   remain unhosted. The attract cycle skips ordinary-stage demos.
 - CD patch mods, `any` registrations, scenes and Sonic gameplay runs use the disc
   pipeline. Authored zones support flat scrolling, one collision path, fixed-height water,
-  owned objects, collectible rings, and fixed vertical and horizontal springs.
+  owned objects, collectible rings, fixed vertical and horizontal springs, and ten-ring monitors.
   Other stock placements and native ring group edits need their stage context.
   Cartridge donation supports
   S1 Sonic, S2 Sonic/Tails and S3K Sonic/Tails/Knuckles; route coverage remains

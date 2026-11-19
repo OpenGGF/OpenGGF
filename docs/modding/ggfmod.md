@@ -160,8 +160,11 @@ Set `settings.waterHeight` to add still water at a fixed height. The host reads
 the underwater palette from Tidal Tempest act 1 Present on the supplied disc.
 Use `stockObjectId: 10` for a fixed vertical or horizontal spring. The spring
 uses the disc's common art and the authored level's palette. Keep subtype bit 3
-clear. Use a native decoded-level patch for diagonal springs, other stock
-placements, and native ring group edits. Authored stock deformation remains
+clear. Use `stockObjectId: 25` with `subtype: 1` for a ten-ring monitor. The
+monitor, rising item and break explosion use the disc's common art and the
+authored palette's line 0. Diagonal springs, time posts, other monitor subtypes,
+other stock placements and native ring group edits require a native
+decoded-level patch. Authored stock deformation remains
 unavailable. CD hosts cartridge-donated S1 Sonic, S2 Sonic/Tails,
 and S3K Sonic/Tails/Knuckles through the same donor provider as cartridge hosts.
 The host supplies stage-owned animation scripts; all donated drawings and name

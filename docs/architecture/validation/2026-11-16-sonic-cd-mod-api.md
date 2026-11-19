@@ -51,8 +51,9 @@ absent optional local native recordings. Named facing/construction guards passed
 
 Authored CD zones admit owned objects and one collision path with 16x16 blocks.
 They can set a fixed water height with the underwater palette from Tidal Tempest
-act 1 Present. Fixed vertical and horizontal springs load the disc's common
-tiles and animation, using the authored palette. Other stock placements need
+act 1 Present. Fixed vertical and horizontal springs and the ten-ring monitor
+(`$19:1`) load common tiles and scripts from the disc and use the authored palette.
+The monitor's item and explosion use the common runtime handlers. Other stock placements need
 the stage program and PLC context a native decoded-level patch preserves. Stock insertion
 anchors, stock deformation, and hosted arenas are not exposed.
 Common CD provider art keys are catalogued; stage-specific sheets remain expert

@@ -548,7 +548,7 @@ under the matching area heading; see the
   host art when the donor lacks their sheet. Game Setup saves CD donor/team choices.
   Stage-backed host animation scripts no longer require a cartridge host.
   CD authored acts support fixed-height water, collectible rings with disc art,
-  fixed vertical and horizontal springs, and owned objects. Audio-state
+  fixed vertical and horizontal springs, ten-ring monitors, and owned objects. Audio-state
   restoration also restores the native/streamed music selection. This extends
   unpublished API candidate 0.7.0.
 
