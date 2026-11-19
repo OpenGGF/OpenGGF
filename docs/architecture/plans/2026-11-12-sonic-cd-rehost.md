@@ -361,10 +361,10 @@ What is still open at `6c5c0e2764`, from the lane reports' stopped and
 unverified lists. The order is not a priority order.
 
 **Accuracy frontiers**
-- Full-act route R42A matches the break-pole sequence through row 4403 and
-  first differs on underwater hurt at row 4404. The R82A follow-up
-  matches all 5,697 recorded rows. Fixtures R11C (row 677) and R51B (row 549)
-  still diverge near native objects. See the [stage matrix](../validation/levels/scd-stages.md#first-divergence-recheck-2026-11-18).
+- R42A matches all 6,411 recorded rows and the next-act handoff. R82A
+  matches all 5,697 recorded rows. The R51B conveyor follow-up matches all
+  569 rows of its short fixture. The R11C fixture still diverges at row 677.
+  See the [stage matrix](../validation/levels/scd-stages.md#first-divergence-recheck-2026-11-18).
 - 28 stages have a full-act route; the other 42 have only the 14-second
   fixture, and 14 of those (the act 3 stages) also have boss movies. No
   complete-run recording exists. Three routes (R81B, R81C, R82A) have no

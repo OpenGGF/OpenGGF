@@ -8,6 +8,8 @@ import com.openggf.game.soniccd.level.CdStageImage;
 import com.openggf.game.soniccd.player.CdPlayerStageTables;
 import com.openggf.game.soniccd.player.CdSpecialChunks;
 import com.openggf.game.soniccd.player.CdZonePlayerProfile;
+import com.openggf.game.soniccd.timetravel.CdTimeTravel;
+import com.openggf.game.soniccd.timetravel.CdTimeZone;
 import com.openggf.level.LevelManager;
 import com.openggf.physics.CollisionSystem;
 import com.openggf.physics.CollisionSystemInternalAccess;
@@ -29,10 +31,10 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
  * player_block_check.asm:11-13) is {@link QqzScrollHandler#bossFlags()}, which the boss drives.
  */
 final class QqzPlayerProfile implements CdZonePlayerProfile {
-    /** {@code move.l #$8000/#$10000/#$20000,d0} by {@code time_zone} (loc_2068AA, player_block_check.asm:308-316). */
+    /** {@code loc_2068AA} (r5/player_block_check.asm:308-316) tests the full {@code time_zone} byte. */
     private static final int PAST_CONVEYOR_STEP = 0x8000;
     private static final int PRESENT_CONVEYOR_STEP = 0x10000;
-    private static final int FUTURE_CONVEYOR_STEP = 0x20000;
+    private static final int FUTURE_OR_WARP_CONVEYOR_STEP = 0x20000;
     /** {@code move.b #$C0,d1}: the {@code PlayerCheckBlockFront} angle (player_block_check.asm:319-323). */
     private static final int CONVEYOR_WALL_ANGLE = 0xC0;
     /** {@code addq.w #2,d2}: the probe sits 2px under the feet (sub_20665A, player_block_check.asm:15-19). */
@@ -46,8 +48,7 @@ final class QqzPlayerProfile implements CdZonePlayerProfile {
     private static final int BLOCK_ID_MASK = 0x7FF;
 
     private final CdSpecialChunks specialChunks;
-    private final int[] conveyorBlocks;
-    private final int conveyorStep;
+    private final int[][] conveyorBlockLists;
     private final CdStageImage image;
     private final int chunksOffset;
     private final int zoneIndex;
@@ -56,17 +57,11 @@ final class QqzPlayerProfile implements CdZonePlayerProfile {
         int[] ids = CdPlayerStageTables.specialChunks(payload, image);
         specialChunks = ids == null ? null
                 : CdSpecialChunks.of(ids, -1, CdSpecialChunks.SpecialLoopRule.AIRBORNE_LOWER_PATH);
-        CdPeriod period = payload.stage().period();
-        int timeZone = CdLevel.nativeTimeZone(period);
-        // sub_2066BA (scddisasm/src/r5/player_block_check.asm:46-57). loc_2068AA tests time_zone without
-        // the $7F mask (309-316); its bit 7 is clear outside a warp.: time_zone & $7F, plus good_future
-        // in the future, indexes the table.
-        int list = timeZone == 2 && period == CdPeriod.GOOD_FUTURE ? 3 : timeZone;
-        conveyorBlocks = CdPlayerStageTables.playerBlocks(payload, image, list);
-        conveyorStep = switch (timeZone) {
-            case 0 -> PAST_CONVEYOR_STEP;
-            case 1 -> PRESENT_CONVEYOR_STEP;
-            default -> FUTURE_CONVEYOR_STEP;
+        conveyorBlockLists = new int[][] {
+                CdPlayerStageTables.playerBlocks(payload, image, 0), // Past
+                CdPlayerStageTables.playerBlocks(payload, image, 1), // Present
+                CdPlayerStageTables.playerBlocks(payload, image, 2), // Bad Future
+                CdPlayerStageTables.playerBlocks(payload, image, 3)  // Good Future
         };
         this.image = image;
         this.zoneIndex = com.openggf.game.soniccd.SonicCdZoneRegistry.zoneIndex(payload);
@@ -86,19 +81,34 @@ final class QqzPlayerProfile implements CdZonePlayerProfile {
      */
     @Override
     public void blockCheck(AbstractPlayableSprite player) {
-        if (conveyorBlocks == null) return;
         if (bossFlags()) return;                             // tst.b boss_flags / bne.s locret_206658 (:12-13)
         LevelManager levels = player.currentLevelManagerIfAvailable();
         if (levels == null || !(levels.getCurrentLevel() instanceof CdLevel level)) return;
+        // PlayerCheckWarpCommitTimeZone (objects/player.asm:598-602) has already updated the live
+        // period and warp flag. sub_2066BA (r5/player_block_check.asm:46-57) masks that flag for
+        // eligibility and adds good_future only in the Future.
+        CdTimeTravel timeTravel = CdTimeTravel.of(player.currentGameModule());
+        CdPeriod loadedPeriod = level.payload().stage().period();
+        CdTimeZone timeZone = timeTravel != null ? timeTravel.timeZone() : CdTimeZone.of(loadedPeriod);
+        boolean goodFuture = timeTravel != null ? timeTravel.goodFuture() : loadedPeriod == CdPeriod.GOOD_FUTURE;
+        int list = timeZone.nativeValue() + (timeZone == CdTimeZone.FUTURE && goodFuture ? 1 : 0);
+        int[] conveyorBlocks = conveyorBlockLists[list];
+        if (conveyorBlocks == null) return;
         int x = player.getCentreX();
         int footY = player.getCentreY() + player.getYRadius() + FOOT_PROBE_DROP;
-        if (onConveyor(level, player, x - player.getXRadius(), footY)
-                || onConveyor(level, player, x + player.getXRadius(), footY)) {
-            ride(player);
+        if (onConveyor(level, player, conveyorBlocks, x - player.getXRadius(), footY)
+                || onConveyor(level, player, conveyorBlocks, x + player.getXRadius(), footY)) {
+            // loc_2068AA (r5/player_block_check.asm:308-316): bit 7 takes the 2px step in any period.
+            int step = timeTravel != null && timeTravel.warping() ? FUTURE_OR_WARP_CONVEYOR_STEP : switch (timeZone) {
+                case PAST -> PAST_CONVEYOR_STEP;
+                case PRESENT -> PRESENT_CONVEYOR_STEP;
+                case FUTURE -> FUTURE_OR_WARP_CONVEYOR_STEP;
+            };
+            ride(player, step);
         }
     }
 
-    private boolean onConveyor(CdLevel level, AbstractPlayableSprite player, int x, int y) {
+    private boolean onConveyor(CdLevel level, AbstractPlayableSprite player, int[] conveyorBlocks, int x, int y) {
         int block = blockAt(level, player, x & 0xFFFF, y & 0xFFFF) & BLOCK_ID_MASK;
         for (int id : conveyorBlocks) {
             if (id == block) return true;                             // loc_2066E2 / loc_2066F2 (scddisasm/src/r5/player_block_check.asm:62-73)
@@ -149,10 +159,10 @@ final class QqzPlayerProfile implements CdZonePlayerProfile {
      * tail copies those to its tilt bytes (src/objects/player.asm:312-319), so a conveyor ride
      * keeps the next frame's ledge balance from seeing the empty-floor value 3.
      */
-    private void ride(AbstractPlayableSprite player) {
+    private void ride(AbstractPlayableSprite player, int step) {
         boolean reverse = conveyorReverse();
         // neg.l d0; neg.b d1 when reversed (:320-323): $C0 becomes $40.
-        NativePositionOps.addXPos16_16(player, reverse ? -conveyorStep : conveyorStep);   // add.l d0,obj.x(a0)
+        NativePositionOps.addXPos16_16(player, reverse ? -step : step);   // add.l d0,obj.x(a0)
         CollisionSystem collision = player.currentCollisionSystemOrNull();
         if (collision == null) return;
         int distance = CollisionSystemInternalAccess.projectedWallDistance(collision, player,
