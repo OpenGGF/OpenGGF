@@ -6,6 +6,7 @@ import com.openggf.game.DynamicWaterHandler;
 import com.openggf.game.GameServices;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.WaterDataProvider;
+import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.soniccd.CdStagePayload;
 import com.openggf.game.soniccd.CdZone;
 import com.openggf.game.soniccd.SonicCdZoneRegistry;
@@ -37,7 +38,8 @@ import java.util.function.Supplier;
  * Not in scope: currents ({@code CheckWaterCurrents}), the water-surface and bubble objects, drowning and
  * water physics.
  */
-public final class TtzWaterDataProvider implements WaterDataProvider {
+public final class TtzWaterDataProvider implements WaterDataProvider, RewindSnapshottable<TtzWaterHandler.Snapshot> {
+    private static final TtzWaterHandler.Snapshot INITIAL_WATER = new TtzWaterHandler.Snapshot(0, 1, 0);
     private static final int ENTRY_WATER = 0;                 // moveq #0,d0 ; bsr.w LoadWaterPalette (main.asm:299-301)
     private static final int[][] WATER_HEIGHTS = {            // WaterHeights (scddisasm/src/r4/main.asm:604-607): rows act 1-3
             {0x300, 0x280, 0x1D0}, {0x5B0, 0x530, 0x510}, {0x490, 0x490, 0x490}};
@@ -70,6 +72,7 @@ public final class TtzWaterDataProvider implements WaterDataProvider {
     private final Supplier<CdStageImage> stage;
     private final PlayerView player;
     private volatile int bob;
+    private TtzWaterHandler handler;
 
     /** {@code stage} yields the loaded stage file (null before the first load). */
     public TtzWaterDataProvider(Supplier<CdStageImage> stage) {
@@ -126,7 +129,23 @@ public final class TtzWaterDataProvider implements WaterDataProvider {
     @Override
     public DynamicWaterHandler getDynamicHandler(int zoneId, int actId, PlayerCharacter character) {
         bob = 0;                                              // water_angle starts at 0 with the stage variables
-        return new TtzWaterHandler(payload(zoneId, actId), this, player);
+        handler = new TtzWaterHandler(payload(zoneId, actId), this, player);
+        return handler;
+    }
+
+    @Override
+    public String key() {
+        return "cd-ttz-water";
+    }
+
+    @Override
+    public TtzWaterHandler.Snapshot capture() {
+        return handler == null ? INITIAL_WATER : handler.capture();
+    }
+
+    @Override
+    public void restore(TtzWaterHandler.Snapshot snapshot) {
+        if (handler != null) handler.restore(snapshot);
     }
 
     @Override

@@ -16,7 +16,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.ToIntFunction;
 
 /**
  * Stardust Speedway object art, registered by {@link SszObjects} through the art provider's fragment
@@ -72,11 +71,6 @@ public final class SszObjectArt {
     public static String key(CdObjectArtProvider art, String kind, int tileWord, int cameraX) {
         SszObjectArt state = art == null ? null : art.zoneArt(SszObjectArt.class);
         return state == null ? null : state.sheets.get(index(kind, tileWord, state.section(cameraX)));
-    }
-
-    /** An animator over one of the Stardust Speedway script tables, or {@code null} before art is loaded. */
-    static SszAnimator animator(CdObjectArtProvider art, ToIntFunction<SszObjectCatalogue.Entry> table, int anim) {
-        return art == null ? null : new SszAnimator(art.image(), table.applyAsInt(SszObjectCatalogue.entry(art.payload())), anim);
     }
 
     private void registerAll(CdObjectArtProvider art, CdStageImage stage, RomByteReader reader) throws IOException {

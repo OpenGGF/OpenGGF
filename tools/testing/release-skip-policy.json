@@ -3059,9 +3059,422 @@
       "note": "user's Sonic CD disc"
     },
     {
-      "match": "com.openggf.game.soniccd.TestTtzWorldRewind#replaysLiveObjectsAfterRestore",
+      "match": "com.openggf.game.soniccd.TestTtzWorldRewind#replaysLiveObjectsAfterRestore(CdStagePayload)[1]",
       "category": "optional-fixture",
-      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzWorldRewind.java:35",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzWorldRewind.java:49",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzWorldRewind#replaysLiveObjectsAfterRestore(CdStagePayload)[2]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzWorldRewind.java:49",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzWorldRewind#replaysLiveObjectsAfterRestore(CdStagePayload)[3]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzWorldRewind.java:49",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzWorldRewind#replaysLiveObjectsAfterRestore(CdStagePayload)[4]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzWorldRewind.java:49",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzWorldRewind#replaysLiveObjectsAfterRestore(CdStagePayload)[5]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzWorldRewind.java:49",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzWorldRewind#replaysLiveObjectsAfterRestore(CdStagePayload)[6]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzWorldRewind.java:49",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzWorldRewind#replaysLiveObjectsAfterRestore(CdStagePayload)[7]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzWorldRewind.java:49",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzWorldRewind#replaysLiveObjectsAfterRestore(CdStagePayload)[8]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzWorldRewind.java:49",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzWorldRewind#replaysLiveObjectsAfterRestore(CdStagePayload)[9]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzWorldRewind.java:49",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzWorldRewind#replaysLiveObjectsAfterRestore(CdStagePayload)[10]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzWorldRewind.java:49",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzWorldRewind#replaysLiveObjectsAfterRestore(CdStagePayload)[11]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzWorldRewind.java:49",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzWorldRewind#replaysLiveObjectsAfterRestore(CdStagePayload)[12]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzWorldRewind.java:49",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzWorldRewind#replaysLiveObjectsAfterRestore(CdStagePayload)[13]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzWorldRewind.java:49",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzWorldRewind#replaysLiveObjectsAfterRestore(CdStagePayload)[14]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzWorldRewind.java:49",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzWorldRewind#replaysLiveObjectsAfterRestore(CdStagePayload)[15]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzWorldRewind.java:49",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzWorldRewind#replaysLiveObjectsAfterRestore(CdStagePayload)[16]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzWorldRewind.java:49",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzWorldRewind#replaysLiveObjectsAfterRestore(CdStagePayload)[17]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzWorldRewind.java:49",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzWorldRewind#replaysLiveObjectsAfterRestore(CdStagePayload)[18]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzWorldRewind.java:49",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzWorldRewind#replaysLiveObjectsAfterRestore(CdStagePayload)[19]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzWorldRewind.java:49",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzWorldRewind#replaysLiveObjectsAfterRestore(CdStagePayload)[20]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzWorldRewind.java:49",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzWorldRewind#replaysLiveObjectsAfterRestore(CdStagePayload)[21]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzWorldRewind.java:49",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzWorldRewind#replaysLiveObjectsAfterRestore(CdStagePayload)[22]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzWorldRewind.java:49",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzWorldRewind#replaysLiveObjectsAfterRestore(CdStagePayload)[23]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzWorldRewind.java:49",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzWorldRewind#replaysLiveObjectsAfterRestore(CdStagePayload)[24]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzWorldRewind.java:49",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzWorldRewind#replaysLiveObjectsAfterRestore(CdStagePayload)[25]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzWorldRewind.java:49",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzWorldRewind#replaysLiveObjectsAfterRestore(CdStagePayload)[26]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzWorldRewind.java:49",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzWorldRewind#replaysLiveObjectsAfterRestore(CdStagePayload)[27]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzWorldRewind.java:49",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzWorldRewind#replaysLiveObjectsAfterRestore(CdStagePayload)[28]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzWorldRewind.java:49",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzWorldRewind#replaysLiveObjectsAfterRestore(CdStagePayload)[29]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzWorldRewind.java:49",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzWorldRewind#replaysLiveObjectsAfterRestore(CdStagePayload)[30]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzWorldRewind.java:49",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzWorldRewind#replaysLiveObjectsAfterRestore(CdStagePayload)[31]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzWorldRewind.java:49",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzWorldRewind#replaysLiveObjectsAfterRestore(CdStagePayload)[32]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzWorldRewind.java:49",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzWorldRewind#replaysLiveObjectsAfterRestore(CdStagePayload)[33]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzWorldRewind.java:49",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzWorldRewind#replaysLiveObjectsAfterRestore(CdStagePayload)[34]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzWorldRewind.java:49",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzWorldRewind#replaysLiveObjectsAfterRestore(CdStagePayload)[35]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzWorldRewind.java:49",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzWorldRewind#replaysLiveObjectsAfterRestore(CdStagePayload)[36]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzWorldRewind.java:49",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzWorldRewind#replaysLiveObjectsAfterRestore(CdStagePayload)[37]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzWorldRewind.java:49",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzWorldRewind#replaysLiveObjectsAfterRestore(CdStagePayload)[38]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzWorldRewind.java:49",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzWorldRewind#replaysLiveObjectsAfterRestore(CdStagePayload)[39]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzWorldRewind.java:49",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzWorldRewind#replaysLiveObjectsAfterRestore(CdStagePayload)[40]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzWorldRewind.java:49",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzWorldRewind#replaysLiveObjectsAfterRestore(CdStagePayload)[41]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzWorldRewind.java:49",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzWorldRewind#replaysLiveObjectsAfterRestore(CdStagePayload)[42]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzWorldRewind.java:49",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzWorldRewind#replaysLiveObjectsAfterRestore(CdStagePayload)[43]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzWorldRewind.java:49",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzWorldRewind#replaysLiveObjectsAfterRestore(CdStagePayload)[44]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzWorldRewind.java:49",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzWorldRewind#replaysLiveObjectsAfterRestore(CdStagePayload)[45]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzWorldRewind.java:49",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzWorldRewind#replaysLiveObjectsAfterRestore(CdStagePayload)[46]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzWorldRewind.java:49",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzWorldRewind#replaysLiveObjectsAfterRestore(CdStagePayload)[47]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzWorldRewind.java:49",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzWorldRewind#replaysLiveObjectsAfterRestore(CdStagePayload)[48]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzWorldRewind.java:49",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzWorldRewind#replaysLiveObjectsAfterRestore(CdStagePayload)[49]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzWorldRewind.java:49",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzWorldRewind#replaysLiveObjectsAfterRestore(CdStagePayload)[50]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzWorldRewind.java:49",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzWorldRewind#replaysLiveObjectsAfterRestore(CdStagePayload)[51]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzWorldRewind.java:49",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzWorldRewind#replaysLiveObjectsAfterRestore(CdStagePayload)[52]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzWorldRewind.java:49",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzWorldRewind#replaysLiveObjectsAfterRestore(CdStagePayload)[53]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzWorldRewind.java:49",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzWorldRewind#replaysLiveObjectsAfterRestore(CdStagePayload)[54]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzWorldRewind.java:49",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzWorldRewind#replaysLiveObjectsAfterRestore(CdStagePayload)[55]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzWorldRewind.java:49",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzWorldRewind#replaysLiveObjectsAfterRestore(CdStagePayload)[56]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzWorldRewind.java:49",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzWorldRewind#restoresTheWaterLineAndRetainedPumpSpeed",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzWorldRewind.java:94",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzWorldRewind#replaysBoosterSparksAfterRestore",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzWorldRewind.java:131",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzWorldRewind#replaysPlacedPathSwapFlashAfterRestore",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzWorldRewind.java:155",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzWorldRewind#replaysUnindexedLightEdgeAnimationAfterRestore",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzWorldRewind.java:174",
       "allowed_when_absent": "soniccd_disc",
       "note": "user's Sonic CD disc"
     },
@@ -4212,62 +4625,6 @@
       "evidence": "src/test/java/com/openggf/game/soniccd/TestCdBackupRamNative.java:119",
       "allowed_when_absent": "soniccd_native",
       "note": "Sonic CD disc and native backup-RAM dumps"
-    },
-    {
-      "match": "com.openggf.game.soniccd.audio.TestCdRecordedPauseMusic#recordedStartPausesAndResumesMusic(Music)[1]",
-      "category": "optional-fixture",
-      "evidence": "src/test/java/com/openggf/game/soniccd/audio/TestCdRecordedPauseMusic.java:69",
-      "allowed_when_absent": "soniccd_disc",
-      "note": "Sonic CD USA disc for recorded Start and the native stage music sources"
-    },
-    {
-      "match": "com.openggf.game.soniccd.audio.TestCdRecordedPauseMusic#recordedStartPausesAndResumesMusic(Music)[2]",
-      "category": "optional-fixture",
-      "evidence": "src/test/java/com/openggf/game/soniccd/audio/TestCdRecordedPauseMusic.java:69",
-      "allowed_when_absent": "soniccd_disc",
-      "note": "Sonic CD USA disc for recorded Start and the native stage music sources"
-    },
-    {
-      "match": "com.openggf.game.soniccd.audio.TestCdRecordedPauseMusic#recordedStartPausesAndResumesMusic(Music)[3]",
-      "category": "optional-fixture",
-      "evidence": "src/test/java/com/openggf/game/soniccd/audio/TestCdRecordedPauseMusic.java:69",
-      "allowed_when_absent": "soniccd_disc",
-      "note": "Sonic CD USA disc for recorded Start and the native stage music sources"
-    },
-    {
-      "match": "com.openggf.game.soniccd.audio.TestCdRecordedPauseMusic#recordedStartPausesAndResumesMusic(Music)[4]",
-      "category": "optional-fixture",
-      "evidence": "src/test/java/com/openggf/game/soniccd/audio/TestCdRecordedPauseMusic.java:69",
-      "allowed_when_absent": "soniccd_disc",
-      "note": "Sonic CD USA disc for recorded Start and the native stage music sources"
-    },
-    {
-      "match": "com.openggf.game.soniccd.audio.TestCdRecordedPauseMusic#recordedStartPausesAndResumesMusic(Music)[5]",
-      "category": "optional-fixture",
-      "evidence": "src/test/java/com/openggf/game/soniccd/audio/TestCdRecordedPauseMusic.java:69",
-      "allowed_when_absent": "soniccd_disc",
-      "note": "Sonic CD USA disc for recorded Start and the native stage music sources"
-    },
-    {
-      "match": "com.openggf.game.soniccd.audio.TestCdRecordedPauseMusic#recordedStartPausesAndResumesMusic(Music)[6]",
-      "category": "optional-fixture",
-      "evidence": "src/test/java/com/openggf/game/soniccd/audio/TestCdRecordedPauseMusic.java:69",
-      "allowed_when_absent": "soniccd_disc",
-      "note": "Sonic CD USA disc for recorded Start and the native stage music sources"
-    },
-    {
-      "match": "com.openggf.game.soniccd.audio.TestCdRecordedPauseMusic#recordedStartPausesAndResumesMusic(Music)[7]",
-      "category": "optional-fixture",
-      "evidence": "src/test/java/com/openggf/game/soniccd/audio/TestCdRecordedPauseMusic.java:69",
-      "allowed_when_absent": "soniccd_disc",
-      "note": "Sonic CD USA disc for recorded Start and the native stage music sources"
-    },
-    {
-      "match": "com.openggf.game.soniccd.audio.TestCdRecordedPauseMusic#recordedStartPausesAndResumesMusic(Music)[8]",
-      "category": "optional-fixture",
-      "evidence": "src/test/java/com/openggf/game/soniccd/audio/TestCdRecordedPauseMusic.java:69",
-      "allowed_when_absent": "soniccd_disc",
-      "note": "Sonic CD USA disc for recorded Start and the native stage music sources"
     },
     {
       "match": "com.openggf.game.soniccd.TestCdPauseExit#timeAttackReturnsToItsMenu(int)[1]",
@@ -6979,13 +7336,6 @@
       "note": "Explicit PresentationOffscreenTestContext.requested() opt-in; run with surfaceless EGL."
     },
     {
-      "match": "com.openggf.TestS3kSoloArenaViewPixels#zoomDrawsFullSizeBodyAndGhostAtDoubledPositionsWithoutAnyStateWrites",
-      "category": "gl-context",
-      "evidence": "src/test/java/com/openggf/TestS3kSoloArenaViewPixels.java:51",
-      "allowed_when_absent": "gl",
-      "note": "Explicit PresentationOffscreenTestContext.requested() opt-in; run with surfaceless EGL."
-    },
-    {
       "match": "com.openggf.graphics.TestPaletteDrawProjectionPixels#normalWaterAndPrivateRowsUseTheProjectionAndRestoreAfterFailure",
       "category": "gl-context",
       "evidence": "src/test/java/com/openggf/graphics/TestPaletteDrawProjectionPixels.java:16",
@@ -8587,6 +8937,69 @@
       "evidence": "src/test/java/com/openggf/game/soniccd/TestCdGameplaySoundCues.java:140",
       "allowed_when_absent": "soniccd_native",
       "note": "Sonic CD disc and native Wacky Workbench recording"
+    },
+    {
+      "match": "com.openggf.game.soniccd.audio.TestCdRecordedPauseMusic#recordedStartPausesAndResumesMusic(Music)[1]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/audio/TestCdRecordedPauseMusic.java:69",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Sonic CD USA disc for recorded Start and the native stage music sources"
+    },
+    {
+      "match": "com.openggf.game.soniccd.audio.TestCdRecordedPauseMusic#recordedStartPausesAndResumesMusic(Music)[2]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/audio/TestCdRecordedPauseMusic.java:69",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Sonic CD USA disc for recorded Start and the native stage music sources"
+    },
+    {
+      "match": "com.openggf.game.soniccd.audio.TestCdRecordedPauseMusic#recordedStartPausesAndResumesMusic(Music)[3]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/audio/TestCdRecordedPauseMusic.java:69",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Sonic CD USA disc for recorded Start and the native stage music sources"
+    },
+    {
+      "match": "com.openggf.game.soniccd.audio.TestCdRecordedPauseMusic#recordedStartPausesAndResumesMusic(Music)[4]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/audio/TestCdRecordedPauseMusic.java:69",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Sonic CD USA disc for recorded Start and the native stage music sources"
+    },
+    {
+      "match": "com.openggf.game.soniccd.audio.TestCdRecordedPauseMusic#recordedStartPausesAndResumesMusic(Music)[5]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/audio/TestCdRecordedPauseMusic.java:69",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Sonic CD USA disc for recorded Start and the native stage music sources"
+    },
+    {
+      "match": "com.openggf.game.soniccd.audio.TestCdRecordedPauseMusic#recordedStartPausesAndResumesMusic(Music)[6]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/audio/TestCdRecordedPauseMusic.java:69",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Sonic CD USA disc for recorded Start and the native stage music sources"
+    },
+    {
+      "match": "com.openggf.game.soniccd.audio.TestCdRecordedPauseMusic#recordedStartPausesAndResumesMusic(Music)[7]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/audio/TestCdRecordedPauseMusic.java:69",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Sonic CD USA disc for recorded Start and the native stage music sources"
+    },
+    {
+      "match": "com.openggf.game.soniccd.audio.TestCdRecordedPauseMusic#recordedStartPausesAndResumesMusic(Music)[8]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/audio/TestCdRecordedPauseMusic.java:69",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Sonic CD USA disc for recorded Start and the native stage music sources"
+    },
+    {
+      "match": "com.openggf.TestS3kSoloArenaViewPixels#zoomDrawsFullSizeBodyAndGhostAtDoubledPositionsWithoutAnyStateWrites",
+      "category": "gl-context",
+      "evidence": "src/test/java/com/openggf/TestS3kSoloArenaViewPixels.java:51",
+      "allowed_when_absent": "gl",
+      "note": "Explicit PresentationOffscreenTestContext.requested() opt-in; run with surfaceless EGL."
     }
   ]
 }
