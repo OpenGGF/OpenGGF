@@ -861,6 +861,34 @@
       "note": "Sonic CD disc and native captures"
     },
     {
+      "match": "com.openggf.game.soniccd.TestPpzObjectsA#mosquiLandsSilentlyOffScreen",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestPpzObjectsA.java:219",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestPpzObjectsA#tagaTagaJumpsAndLandsSilentlyOffScreen",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestPpzObjectsA.java:318",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestPpzObjectsA#tamabbohFiresSilentlyOffScreen",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestPpzObjectsA.java:370",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestPpzObjectsA#tamabbohPlaysItsShotWithOnlyOneMissileSlot",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestPpzObjectsA.java:384",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
       "match": "com.openggf.game.soniccd.TestPpzObjectsA#sectionsAndSheetsComeFromTheStageFile",
       "category": "optional-fixture",
       "evidence": "src/test/java/com/openggf/game/soniccd/TestPpzObjectsA.java:127",
@@ -3582,6 +3610,34 @@
       "evidence": "src/test/java/com/openggf/game/soniccd/audio/TestCdFmSoundEffects.java:134",
       "allowed_when_absent": "soniccd_native",
       "note": "Sonic CD disc and native sound-test captures"
+    },
+    {
+      "match": "com.openggf.game.soniccd.audio.TestCdAudioLivePath#badnikEffectsProduceAudibleSamples(int)[1]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/audio/TestCdAudioLivePath.java:85",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.audio.TestCdAudioLivePath#badnikEffectsProduceAudibleSamples(int)[2]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/audio/TestCdAudioLivePath.java:85",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.audio.TestCdAudioLivePath#badnikEffectsProduceAudibleSamples(int)[3]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/audio/TestCdAudioLivePath.java:85",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.audio.TestCdAudioLivePath#badnikEffectsProduceAudibleSamples(int)[4]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/audio/TestCdAudioLivePath.java:85",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
     },
     {
       "match": "com.openggf.game.soniccd.audio.TestCdAudioLivePath#anFmEffectRequestedByIdIsSynthesisedThroughTheSharedProducer",

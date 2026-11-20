@@ -45,6 +45,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -108,6 +109,12 @@ class TestPpzObjectsA {
             if (id == soundId) requests.add(id);
         });
         return requests;
+    }
+
+    private void keepCameraBelowBadniks() {
+        var camera = GameServices.camera();
+        camera.setY((short) (sonic.getCentreY() + 0x200));
+        camera.setFrozen(true);
     }
 
     private <T extends ObjectInstance> T add(T object) {
@@ -208,6 +215,18 @@ class TestPpzObjectsA {
         assertEquals(-8, floorDistance(mosqui, 0x10));
     }
 
+    @Test
+    void mosquiLandsSilentlyOffScreen() throws Exception {
+        boot(CdStagePayload.R11A);
+        keepCameraBelowBadniks();
+        List<Integer> sounds = observeSound(0xA7);
+        ObjMosqui mosqui = add(new ObjMosqui(spawn(sonic.getCentreX() + 0x10, sonic.getCentreY() - 0x30, 0x3D, 0)));
+        for (int step = 0; step < 200 && mosqui.routine() < 8; step++) runner.stepIdleFrames(1);
+
+        assertEquals(8, mosqui.routine(), "Mosqui reached the floor");
+        assertEquals(List.of(), sounds, "ObjMosqui_Dive gates FM_A7 (Mosqui/Main.asm:131-134)");
+    }
+
     // ---- Anton -------------------------------------------------------------------------------------
 
     @Test
@@ -295,6 +314,26 @@ class TestPpzObjectsA {
         assertEquals(0, taga.getCollisionFlags(), "ObjTagaTaga_Init2 clears oColType");
     }
 
+    @Test
+    void tagaTagaJumpsAndLandsSilentlyOffScreen() throws Exception {
+        boot(CdStagePayload.R11A);
+        keepCameraBelowBadniks();
+        List<Integer> sounds = observeSound(0xA2);
+        ObjTagaTaga taga = add(new ObjTagaTaga(spawn(sonic.getCentreX() + 0x80, sonic.getCentreY() + 0x40, 0x40, 0)));
+        for (int step = 0; step < 300 && taga.getCollisionFlags() == 0; step++) runner.stepIdleFrames(1);
+        assertEquals(0x2E, taga.getCollisionFlags(), "Taga-Taga took off");
+        List<Integer> takeoffSounds = List.copyOf(sounds);
+        sounds.clear();
+        for (int step = 0; step < 400 && taga.routine() != 2; step++) runner.stepIdleFrames(1);
+        assertEquals(2, taga.routine(), "Taga-Taga landed");
+
+        assertAll(
+                () -> assertEquals(List.of(), takeoffSounds,
+                        "ObjTagaTaga_Jump gates FM_A2 (Taga-Taga/Main.asm:84-87)"),
+                () -> assertEquals(List.of(), sounds,
+                        "ObjTagaTaga_Main gates FM_A2 (Taga-Taga/Main.asm:100-104)"));
+    }
+
     // ---- Tamabboh ----------------------------------------------------------------------------------
 
     @Test
@@ -325,6 +364,43 @@ class TestPpzObjectsA {
         assertTrue(x2 - second.getX() >= 2, "left missile moves left");
         assertTrue(first.getY() < y1, "both rise at first");
         assertEquals(ObjTamabboh.class, tamabboh.getClass());
+    }
+
+    @Test
+    void tamabbohFiresSilentlyOffScreen() throws Exception {
+        boot(CdStagePayload.R11A);
+        keepCameraBelowBadniks();
+        List<Integer> sounds = observeSound(0xA0);
+        ObjTamabboh tamabboh = add(new ObjTamabboh(spawn(sonic.getCentreX() + 0x30, sonic.getCentreY(), 0x22, 0)));
+        for (int step = 0; step < 400 && tamabboh.routine() != 10; step++) runner.stepIdleFrames(1);
+        assertEquals(10, tamabboh.routine(), "Tamabboh is ready to fire");
+        runner.stepIdleFrames(1);
+
+        assertEquals(2L, live(0x22).stream().filter(ObjTamabbohMissile.class::isInstance).count());
+        assertEquals(List.of(), sounds, "ObjTamabboh_Fire gates FM_A0 (Tamabboh/Main.asm:168-178)");
+    }
+
+    @Test
+    void tamabbohPlaysItsShotWithOnlyOneMissileSlot() throws Exception {
+        boot(CdStagePayload.R11A);
+        List<Integer> sounds = observeSound(0xA0);
+        ObjTamabboh tamabboh = add(new ObjTamabboh(spawn(sonic.getCentreX() + 0x30, sonic.getCentreY(), 0x22, 0)));
+        for (int step = 0; step < 400 && tamabboh.routine() != 10; step++) runner.stepIdleFrames(1);
+        assertEquals(10, tamabboh.routine(), "Tamabboh is ready to fire");
+
+        var objects = GameServices.level().getObjectManager();
+        int missileSlot = objects.allocateDynamicSlot();
+        assertTrue(missileSlot >= 0, "Tamabboh has a first missile slot");
+        while (objects.allocateDynamicSlot() >= 0) {
+            // Hold the rest of the table full for the firing frame.
+        }
+        objects.releaseDynamicSlot(missileSlot);
+        runner.stepIdleFrames(1);
+
+        List<Integer> missileSlots = live(0x22).stream().filter(ObjTamabbohMissile.class::isInstance)
+                .map(ObjTamabbohMissile.class::cast).map(ObjTamabbohMissile::getSlotIndex).toList();
+        assertEquals(List.of(missileSlot), missileSlots);
+        assertEquals(List.of(0xA0), sounds, "ObjTamabboh_Fire sounds after the first slot (Tamabboh/Main.asm:168-181)");
     }
 
     // ---- kills and the good future ------------------------------------------------------------------

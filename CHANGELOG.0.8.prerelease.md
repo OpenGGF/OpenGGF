@@ -54,9 +54,9 @@ under the matching area heading; see the
   Flowers finish growing, diagonal springs and monitor rewards use their proper
   graphics, and object names follow the current stage's object table. Defeated badniks
   play the disc's destroy sound, and Mosqui, Tamabboh and Palmtree Panic's Taga-Taga
-  play their own effects on impact, firing, takeoff or landing. Palmtree
-  Panic backgrounds sample each row's own camera section, retaining static-row
-  repetition without wrapping the moving scenery. Results show the changing
+  play their own effects on impact, firing, takeoff or landing while the badnik is
+  on screen. Palmtree Panic backgrounds sample each row's own camera section,
+  retaining static-row repetition without wrapping the moving scenery. Results show the changing
   score and bonus digits. Wider views extend CD object draw/touch and lifetime
   windows, centre boss locks, title cards, results and game-over text, and fill the time tunnel
   through its white fade. CD HUD pieces, including the time-period and warp icons,
