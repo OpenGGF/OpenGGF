@@ -135,7 +135,7 @@ public final class CdProjector extends CdObject implements ReevaluatingSolidObje
     /**
      * A hologram animal: the zone's animal object at the offset with subtype $80/$81 and this projector's slot in
      * {@code oVar3E}. The animal is created through the stage's own registry; a zone whose animal routine does not
-     * host the hologram branch (Tidal Tempest's walker, Wacky Workbench's unhosted animal) creates none.
+     * host the hologram branch (Tidal Tempest's walker) creates none.
      */
     private boolean spawnAnimal(ProjectorVariant variant, int[] offset, int subtype, int slot) {
         var registry = services().gameModule().createObjectRegistry();

@@ -12,6 +12,16 @@ def STAGES_COVERED(stage: str) -> bool:
 
 
 ANCHORS = [
+    ('animalFlyingMappings', '217C 08080108 0016 217C AAAAAAAA 0004 3168 0008 002A 3168 000C 002C',
+     'optional', 'AnimalObject_1_Routine0 (objects/r6/animal.asm:23-30) loads AnimalSprites1'),
+    ('animalGroundMappings', '217C 08080408 0016 217C AAAAAAAA 0004 6100 ???? 4A28 0028',
+     'optional', 'AnimalObject_0_Routine0 (objects/r6/animal.asm:123-129) loads AnimalSprites2'),
+    ('animalFlyingAnimations', '1140 002E 43FA PPPP 4EB9 ???????? 4EB9 ???????? 3028 002A',
+     'optional', 'AnimalApplyOscillationFrame (objects/r6/animal.asm:63-69) loads AnimalAnims1'),
+    ('animalGroundAnimations', '3268 003E 0C29 002F 0000 6600 ???? 4A29 003F 6600 ???? 43FA PPPP 4EB9 ???????? 4EF9',
+     'optional', 'AnimalObject_0_Routine8 (objects/r6/animal.asm:173-181) loads AnimalAnims2'),
+    ('animalBaseTiles', '43FA PPPP 7000 1039 ???????? E540 D039 ???????? D040 3171 0000 0002 4E75',
+     'optional', 'AnimalSelectSpriteTile (objects/r6/animal.asm:197-205) loads AnimalSpriteTileTable'),
     ('launcherMappings', '0028 0004 0001 317C 0400 0002 217C AAAAAAAA 0004 3168 0008 002E', 'optional',
      'ObjLauncher_Init (Launcher/Main.asm:31-35): ori.b #4,oSprFlags; move.w #$400,oTile; move.l #MapSpr_Launcher,oMap; move.w oX,oLaunchX'),
     ('pistonMappings', '5428 0024 0028 0004 0001 317C 0340 0002 217C AAAAAAAA 0004', 'optional',

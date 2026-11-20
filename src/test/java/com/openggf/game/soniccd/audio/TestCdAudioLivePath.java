@@ -18,6 +18,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -77,6 +78,13 @@ class TestCdAudioLivePath {
     void anFmEffectRequestedByIdIsSynthesisedThroughTheSharedProducer() {
         assertTrue(audio.playSfx(0x92));
         assertTrue(audible(present(30)), "FM_JUMP produced sound");
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {0x96, 0xA0, 0xA2, 0xA7})
+    void badnikEffectsProduceAudibleSamples(int id) {
+        assertTrue(audio.playSfx(id));
+        assertTrue(audible(present(60)), "FM $%02X produced sound".formatted(id));
     }
 
     @Test
@@ -194,6 +202,37 @@ class TestCdAudioLivePath {
         AudioManagerInternalAccess.installMatchedSource(audio, null, profile);
         present(5);
         assertEquals(3, profile.subCpuAudio().state().cdda().track(), "level re-entry keeps the source");
+    }
+
+    @Test
+    void resultsTallyProducesAudibleFm() {
+        audio.playSfx(0xBD);
+        assertTrue(audible(present(30)), "FM_TALLY produced sound");
+    }
+
+    @Test
+    void resultsChimeProducesAudibleFm() {
+        AudioManagerInternalAccess.playSecondaryNativeRequest(audio, 0x9A);
+        assertTrue(audible(present(30)), "FM_KACHING produced sound");
+    }
+
+    @Test
+    void specialStageWarpProducesAudibleFm() {
+        audio.playSfx(0xC8);
+        assertTrue(audible(present(30)), "FM_SSWARP produced sound");
+    }
+
+    @Test
+    void workbenchBounceProducesAudibleFm() {
+        audio.playSfx(0xDA);
+        assertTrue(audible(present(30)), "FM_DA produced sound");
+    }
+
+    @Test
+    void ringExtraLifeProducesAudiblePcm() {
+        profile.subCpuAudio().loadStage(com.openggf.game.soniccd.CdStagePayload.R11A);
+        AudioManagerInternalAccess.playRingExtraLife(audio);
+        assertTrue(audible(present(30)), "SCMD_YESSFX produced sound");
     }
 
     private short[] present(int frames) {

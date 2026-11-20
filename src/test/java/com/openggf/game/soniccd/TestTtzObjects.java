@@ -657,4 +657,110 @@ class TestTtzObjects {
         runner.stepIdleFrames(1);
         assertTrue(stars.stream().allMatch(CdTimeStars::isDestroyed));
     }
+
+    // ---- Vertical move blocks ----
+
+    @Test
+    void verticalBlockSheetsUseDiscMappingsAndVisibleTiles() throws Exception {
+        boot(CdStagePayload.R42B);
+        var provider = art();
+        // First piece of VMoveBlockSprites1/2/3/7 (objects/r4/v_move_block.asm:149-151,
+        // 193-195, 297-299, 798-800) and their disc-backed five-byte mappings.
+        for (int[] shape : new int[][]{
+                {1, 4, -16, -64, 0}, {2, 12, -32, -96, 0},
+                {3, 3, -16, -48, 0}, {7, 1, -16, -16, 0x10}}) {
+            int x = shape[0] == 3 ? 0x1940 : 0x570;
+            var sheet = provider.getSheet(TtzObjectArt.key(provider, "vmove" + shape[0], 0x446A, x));
+            assertNotNull(sheet, "vertical block sheet " + shape[0]);
+            var pieces = sheet.getFrame(0).pieces();
+            var piece = pieces.getFirst();
+            assertEquals(List.of(shape[1], shape[2], shape[3], shape[4], 4, 4, 2),
+                    List.of(pieces.size(), piece.xOffset(), piece.yOffset(), piece.tileIndex(),
+                            piece.widthTiles(), piece.heightTiles(), sheet.getPaletteIndex()));
+            assertTrue(java.util.Arrays.stream(sheet.getPatterns()).anyMatch(pattern -> {
+                for (int row = 0; row < 8; row++) {
+                    for (int col = 0; col < 8; col++) {
+                        if (pattern.getPixel(col, row) != 0) return true;
+                    }
+                }
+                return false;
+            }), "stage PLC supplies visible art for shape " + shape[0]);
+        }
+    }
+
+    @Test
+    void verticalWaveCarriesSonicAndRepeatsAfterRewind() throws Exception {
+        boot(CdStagePayload.R41B);
+        var manager = GameServices.level().getObjectManager();
+        var block = add(new ObjVerticalMoveBlock(spawn(0xC0, 0x53, 0x23, 0xA)));
+        runner.stepIdleFrames(2);
+        sonic.setCentreX((short) block.getX());
+        sonic.setCentreY((short) (block.getY() - 16 - sonic.getYRadius()));
+        sonic.setYSpeed((short) 0);
+        sonic.setAir(true);
+        runner.stepIdleFrames(1);
+        assertTrue(sonic.isOnObject(), "Sonic lands on the short moving block");
+        int sonicY = sonic.getCentreY();
+        runner.stepIdleFrames(12);
+        assertTrue(sonic.getCentreY() > sonicY, "the short block carries Sonic as it descends");
+
+        int slot = block.getSlotIndex();
+        var rewind = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+        var checkpoint = rewind.capture();
+        int cycleY = block.getY();
+        runner.stepIdleFrames(256);
+        assertEquals(cycleY, block.getY());
+        var positions = verticalBlockPositions();
+        for (var object : live(0x23)) {
+            manager.removeDynamicObject((AbstractObjectInstance) object);
+        }
+        rewind.restore(checkpoint);
+        var restored = live(0x23).stream().map(AbstractObjectInstance.class::cast)
+                .filter(object -> object.getSlotIndex() == slot).findFirst().orElseThrow();
+        assertNotSame(block, restored);
+        runner.stepIdleFrames(256);
+        assertEquals(positions, verticalBlockPositions());
+    }
+
+    private List<List<Integer>> verticalBlockPositions() {
+        return live(0x23).stream().map(AbstractObjectInstance.class::cast)
+                .sorted(java.util.Comparator.comparingInt(AbstractObjectInstance::getSlotIndex))
+                .map(object -> List.of(object.getSlotIndex(), object.getX(), object.getY())).toList();
+    }
+
+    @Test
+    void verticalSpikedBlocksCarryAndRetireTheirHurtSpikes() throws Exception {
+        boot(CdStagePayload.R41B);
+        var manager = GameServices.level().getObjectManager();
+        var block = add(new ObjVerticalMoveBlock(spawn(0xE0, 0x60, 0x23, 4)));
+        runner.stepIdleFrames(2);
+        var spike = live(0x22).stream().filter(object -> object.getX() == block.getX())
+                .map(ObjSpikes.class::cast).findFirst().orElseThrow();
+        int blockSlot = block.getSlotIndex();
+        int spikeSlot = spike.getSlotIndex();
+        var rewind = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+        var attached = rewind.capture();
+        manager.removeDynamicObject(spike);
+        rewind.restore(attached);
+        var restoredBlock = live(0x23).stream().map(ObjVerticalMoveBlock.class::cast)
+                .filter(object -> object.getSlotIndex() == blockSlot).findFirst().orElseThrow();
+        var restoredSpike = live(0x22).stream().map(ObjSpikes.class::cast)
+                .filter(object -> object.getSlotIndex() == spikeSlot).findFirst().orElseThrow();
+        assertNotSame(spike, restoredSpike);
+        runner.stepIdleFrames(28);
+        assertEquals(List.of(0x83, restoredBlock.getY() + 0x40),
+                List.of(restoredSpike.getCollisionFlags(), restoredSpike.getY()));
+        sonic.setInvulnerableFrames(0);
+        sonic.setCentreX((short) restoredSpike.getX());
+        sonic.setCentreY((short) restoredSpike.getY());
+        sonic.giveShield();
+        // The nearby ring takes the first touch pass. The second reaches the attached spikes.
+        manager.runTouchResponsesForPlayer(sonic, 1);
+        manager.runTouchResponsesForPlayer(sonic, 2);
+        assertTrue(sonic.isHurt(), "the attached spikes damage Sonic on contact");
+        manager.removeDynamicObject(restoredBlock);
+        runner.stepIdleFrames(1);
+        assertTrue(restoredSpike.isDestroyed(), "the spikes retire when the block's slot clears");
+    }
+
 }

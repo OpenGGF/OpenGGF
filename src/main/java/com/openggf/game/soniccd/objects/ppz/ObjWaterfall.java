@@ -16,12 +16,11 @@ import java.util.List;
  * 4 pixels a frame for $180 pixels and deletes itself, animating {@code Ani_Waterfall} and drawing priority 1,
  * $10 wide (tile $3BA). It has no despawn check.
  *
- * <p>Not hosted: each fall step also calls {@code PlaceBlockAtPos} over twelve 16 pixel columns when the row
- * is aligned (Effects/Main.asm:45-58), which writes block data into the level layout and the VDP plane. No
- * shipped Palmtree Panic layout places this object (checked by {@code TestPpzObjectsA}), and the write would be
- * a chunk-wide layout mutation that belongs to the level mutation surface, so only movement, animation and
- * deletion are modelled. The sibling stubs {@code ObjEarthquake} and {@code ObjEarthquakeSet} (IDs $05 and $08) only
- * {@code rts} (Effects/Main.asm:65-72).
+ * <p>The block writes are unhosted. {@code ObjWaterfall_Main} (Level/Palmtree Panic/Objects/Effects/Main.asm:36-58)
+ * calls {@code PlaceBlockAtPos} on aligned rows. The generator is unused in the Present {@code ObjectIndex}
+ * (Level/Palmtree Panic/Object Index (Act 1 Present).asm:7-11). {@code TestPpzObjectsA} checks that all ten
+ * USA Palmtree Panic layouts have zero placements of object $04. The sibling stubs {@code ObjEarthquake} and
+ * {@code ObjEarthquakeSet} (IDs $05 and $08) only {@code rts} (Effects/Main.asm:65-72).
  */
 @com.openggf.level.objects.CameraRelativeDraw(com.openggf.level.objects.CameraRelativeDraw.Use.CULL_ONLY)
 public final class ObjWaterfall extends CdObject implements ObjectVisualFacing.NonDirectional {
@@ -61,7 +60,7 @@ public final class ObjWaterfall extends CdObject implements ObjectVisualFacing.N
                 return;
             }
             y = next;
-            // PlaceBlockAtPos over 12 columns (Effects/Main.asm:45-58): not hosted, see the class comment.
+            // No USA Palmtree Panic layout reaches the twelve PlaceBlockAtPos calls.
         }
         if (animator != null) {
             animator.step();

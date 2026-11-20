@@ -39,6 +39,8 @@ public final class CczObjectArt {
             DRAIN_SWITCH = "drainswitch", BUMPER = "bumper", BLOCK = "block", HIDDEN_BLOCK = "hiddenblock", SPIKES = "spikes", FLIPPER = "flipper", AMY = "amy", HEART = "heart",
             ANIMAL_FLYING = "animalflying", ANIMAL_GROUND = "animalground", DOOR = "door";
 
+    static final String SPIKE_CHAIN_PIVOT = "spikechainpivot", SPIKE_CHAIN_BALL = "spikechainball";
+
     /** ObjDoor_Init: move.w #$371,oTile(a0) (Level/Collision Chaos/Objects/Door/Main.asm, ObjDoor_Init). */
     public static final int DOOR_TILE = 0x0371;
 
@@ -144,6 +146,8 @@ public final class CczObjectArt {
         sheet(art, reader, FIRE_SHOOT, "fireShootMappings", FIRE_SHOOT_TILE, -1);
         sheet(art, reader, BUMPER_PLATFORM, "bumperPlatformMappings", BUMPER_PLATFORM_TILE, -1);
         sheet(art, reader, GLASS_BREAK, "glassBreakMappings", act == 2 ? GLASS_TILE_ACT3 : GLASS_TILE, -1);
+        sheet(art, reader, SPIKE_CHAIN_PIVOT, "spikeChainPivotMappings", CczSpikeChain.TILE, -1);
+        sheet(art, reader, SPIKE_CHAIN_BALL, "spikeChainBallMappings", CczSpikeChain.TILE, -1);
         sheet(art, reader, GA1, "gaMappings1", GA_TILE, -1);
         sheet(art, reader, GA2, "gaMappings2", GA_TILE, -1);
         sheet(art, reader, POCKET1, "pocketMappings1", POCKET_TILE, -1);
