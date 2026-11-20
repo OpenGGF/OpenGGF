@@ -110,10 +110,11 @@ under the matching area heading; see the
   currents use the retained direction on the hurt recovery frame. R42A matches
   through the results and next-act handoff. Quartz Quadrant Past conveyors
   change speed on the warp trigger frame, and the R51B short fixture matches
-  all 569 recorded rows. The ring counter and every placed ring's position
-  equal native on every compared row of the 28
-  routes and two runs through Palmtree Panic loops, except lost rings after a hit
-  in two Metallic Madness routes. Stage loads clear the state native
+  all 569 recorded rows. Metallic Madness Act 1 hosts Poh-Bee and its swinging
+  weights. Its shared badnik defeat and Good Future explosion preserve native
+  slot use. Ring counts and positions match native over the 28 recorded routes
+  and two Palmtree Panic loops. Ring spills and slots now match throughout the
+  recorded Metallic Madness Present, Past, and Good Future routes. Stage loads clear the state native
   clears, so playing stages in any order matches playing each alone. In normal
   play the object clock a stage starts from and the video player's disc wait
   follow measured emulator timings under `gameplay.loadTimeSimulation`
