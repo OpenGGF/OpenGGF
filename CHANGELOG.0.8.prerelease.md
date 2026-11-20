@@ -72,8 +72,9 @@ under the matching area heading; see the
   the title, stage select, Time Attack, Special Stage 8 from the sound test,
   both special-stage attract demos, backup RAM (saved in `saves/soniccd`),
   the opening video, both endings, FM
-  effects, CD audio and PCM sound are hosted. The FM loader also accepts verified
-  Japanese and European discs containing the identical driver bank. The title's
+  effects, CD audio and PCM sound are hosted. Special-stage extra lives cap the
+  campaign total at 249. Level 1-Ups can raise it past 249. The FM loader also
+  accepts verified Japanese and European discs containing the identical driver bank. The title's
   RAM DATA entry confirms a reset of Sonic CD's save to disc defaults.
   Clearing Special Stage 8 opens an OpenGGF acknowledgement with the disc's
   ending music and a return to the title.

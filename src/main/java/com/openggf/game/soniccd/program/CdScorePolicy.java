@@ -33,6 +33,10 @@ public final class CdScorePolicy implements ScoreAdditionPolicy {
             while (score >= nextLifeScore) {                 // .Check1UP loops (Special Stage/Main.asm:437-446)
                 nextLifeScore += LIFE_STEP;
                 state.addLife();
+                int cappedLives = capSpecialStageLives(state.getLives());
+                while (state.getLives() > cappedLives) {
+                    state.loseLife();
+                }
             }
             return;
         }
@@ -43,9 +47,16 @@ public final class CdScorePolicy implements ScoreAdditionPolicy {
     }
 
     /**
-     * Points the special stage results added ({@code AddScore}, scddisasm/src/Special Stage/Main.asm:433-455):
-     * every threshold crossed adds a life, with no voice. The 249-life cap is not modelled; the engine's
-     * lives counter has no cap.
+     * Wraps an incremented life count to a byte, then caps it as in
+     * {@code AddScore} (Special Stage/Main.asm:437-446).
+     */
+    public static int capSpecialStageLives(int incrementedLives) {
+        return Math.min(incrementedLives & 0xFF, 249);
+    }
+
+    /**
+     * Applies the special-stage tally to the campaign ({@code AddScore}, Special Stage/Main.asm:433-455).
+     * Each crossed threshold awards a life without the level's 1-Up voice and applies the 249-life cap.
      */
     public void awardSpecialStageResults(GameStateManager state, int points) {
         specialStageResults = true;
