@@ -86,6 +86,16 @@ public final class CdTimeTravel implements RewindSnapshottable<CdTimeTravel.Snap
                            boolean goodFuture, int goodFutureFlags, int goodFutures, boolean projectorDestroyed,
                            int timeStones, CdStagePayload loadedPayload, Entry nextEntry) { }
 
+    private final java.util.function.BooleanSupplier timeAttackMode;
+
+    public CdTimeTravel() {
+        this(() -> false);
+    }
+
+    public CdTimeTravel(java.util.function.BooleanSupplier timeAttackMode) {
+        this.timeAttackMode = timeAttackMode;
+    }
+
     private CdTimeZone timeZone = CdTimeZone.PRESENT;
     private boolean warping;
     private int warpDirection;
@@ -105,6 +115,16 @@ public final class CdTimeTravel implements RewindSnapshottable<CdTimeTravel.Snap
     /** The module's owner, or null when the module is not Sonic CD's. */
     public static CdTimeTravel of(GameModule module) {
         return module == null ? null : module.getGameService(CdTimeTravel.class);
+    }
+
+    /**
+     * Native collision immunity reads the warp-stars flag. PlayerMakeWarpStars
+     * (objects/player.asm:116-120) sets it before PlayerCheckWarpCommitTimeZone
+     * (objects/player.asm:598-602) sets the destination bit.
+     */
+    public static boolean starsActive(GameModule module) {
+        CdTimeTravel travel = of(module);
+        return travel != null && travel.starsActive();
     }
 
     // ---- Reads -------------------------------------------------------------------
@@ -173,9 +193,8 @@ public final class CdTimeTravel implements RewindSnapshottable<CdTimeTravel.Snap
             }
             case RESTART -> { }
         }
-        // cmpi.b #$7F,timeStones; tst.b timeAttackMode; move.b #1,goodFuture (Level/Main.asm:22-26).
-        // Time Attack is not hosted, so its branch reads clear.
-        if (timeStones == ALL_TIME_STONES) goodFuture = true;
+        // LevelStart (Level/Main.asm:19-26).
+        if (timeStones == ALL_TIME_STONES && !timeAttackMode.getAsBoolean()) goodFuture = true;
         // .FromWhite: bclr #7,timeZone (Level/Main.asm:314-315).
         warping = false;
         // .ClearCamera covers timeWarpDir and timeWarpTimer (Level/Main.asm:209-216; _Definitions.inc:301-303).
@@ -294,13 +313,17 @@ public final class CdTimeTravel implements RewindSnapshottable<CdTimeTravel.Snap
         prepareEntry(Entry.NEXT_ACT);
         if (completedAct >= 3) {
             goodFutureFlags = 0;                                        // Results/Main.asm:316-321
-            if (goodFuture) goodFutures |= 1 << zone.ordinal();         // IPX.asm:185-187
+            // TimeAttack (IPX.asm:1214-1238) loops back to the menu before campaign credit can run.
+            // RunR1 (IPX.asm:185-187) records goodFutures before falling through to RunR3.
+            if (goodFuture && !timeAttackMode.getAsBoolean()) goodFutures |= 1 << zone.ordinal();
             goodFuture = false;
             timeZone = CdTimeZone.PRESENT;
             return;
         }
         timeZone = completedAct == 2 ? CdTimeZone.FUTURE : CdTimeZone.PRESENT;   // Results/Main.asm:293-300
-        if (timeStones == ALL_TIME_STONES) {                            // Results/Main.asm:327-328
+        // ObjResults_NextLevel (Level/_Objects/Results/Main.asm:323-340).
+        if (timeAttackMode.getAsBoolean()) return;
+        if (timeStones == ALL_TIME_STONES) {
             goodFuture = true;
             return;
         }

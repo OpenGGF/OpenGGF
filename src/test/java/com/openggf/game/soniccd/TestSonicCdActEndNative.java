@@ -133,8 +133,7 @@ class TestSonicCdActEndNative {
      * native's row. {@code pending}: the route diverges before its window. {@code slots}: it reaches its window but its
      * results' slot is on the other side of the signpost's than native's. {@code rings}: it reaches its window with the
      * ring counter different over it.
-     * R81A is asserted although its ring counter differs from row 3466 (the hurt that spills the rings) to before the window:
-     * every channel equals native over the window and the exit row is equal.
+     * R81A matches through its signpost, results and exit. Its earlier spills are checked by {@link TestCdRingNativeParity}.
      * R52A was {@code rings} (25 against native's 24 from row 2005) until the replay
      * admitted its lost V-INT: native's row-1478 VBlank produced no interrupt entry (a handler still running), and the
      * spilled rings' floor check is gated by {@code levelVIntCounter+3} plus RunObjects' {@code d7}
