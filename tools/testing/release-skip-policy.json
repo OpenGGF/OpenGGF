@@ -2667,6 +2667,34 @@
       "note": "user's Sonic CD disc"
     },
     {
+      "match": "com.openggf.game.soniccd.TestTtzObjects#verticalBlockSheetsUseDiscMappingsAndVisibleTiles",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzObjects.java:664",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "requires the USA Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzObjects#verticalWaveCarriesSonicAndRepeatsAfterRewind",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzObjects.java:692",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "requires the USA Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzObjects#verticalSpikedBlocksCarryAndRetireTheirHurtSpikes",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzObjects.java:732",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "requires the USA Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzVerticalMoveBlockNative#pastWaveStartsInTheSameSlotsAndPositionsAsTheDisc",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzVerticalMoveBlockNative.java:23",
+      "allowed_when_absent": "soniccd_native",
+      "note": "requires the user-local Sonic CD R41B native recording"
+    },
+    {
       "match": "com.openggf.game.soniccd.TestTtzObjects#breakPoleGripsClimbsAndBreaksOnAFreshPress(int)[1]",
       "category": "optional-fixture",
       "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzObjects.java:118",

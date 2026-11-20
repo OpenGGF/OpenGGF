@@ -57,6 +57,9 @@ public final class TtzObjects implements CdObjectRegistration {
                 (spawn, r) -> new ObjWoodBlock(spawn));
         registrar.object(0x28, "Door", p -> p.stage().actNumber() != 3 && TtzObjectCatalogue.offset(p, "doorMappings") >= 0,
                 (spawn, r) -> new TtzDoor(spawn));
+        registrar.object(ObjVerticalMoveBlock.ID, "Vertical move block",
+                p -> TtzObjectCatalogue.offset(p, "vMoveMappings1") >= 0,
+                (spawn, r) -> new ObjVerticalMoveBlock(spawn));
         // $24 and $39: the r4 horizontal move blocks and collapse floor, where the stage image holds their code.
         registrar.object(0x24, "Horizontal move block", p -> TtzObjectCatalogue.offset(p, "hMoveMappings1") >= 0
                 || TtzObjectCatalogue.offset(p, "hMoveMappings2") >= 0 || TtzObjectCatalogue.offset(p, "hMoveMappings3") >= 0,
