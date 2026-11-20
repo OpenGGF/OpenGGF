@@ -16,6 +16,7 @@ import java.util.List;
  *
  * <p>The transient foreground redraw is unhosted. {@code PlaceBlock} (r8/stage_draw_3c.asm:398-428,
  * r8/stage_draw_3d.asm:398-428) draws into VDP plane A and leaves layout and collision data intact.
+ * Its visibility check skips off-screen blocks (r8/stage_draw_3c.asm:415-416).
  */
 final class MmzBossDoor extends MmzBossPiece {
     static final int ID = 0x3D;

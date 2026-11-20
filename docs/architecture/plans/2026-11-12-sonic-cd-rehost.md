@@ -359,8 +359,8 @@ Report:     <SHA, command, counts, skips, limits; ten lines>
 
 ## Open items
 
-What is still open at `6c5c0e2764`, from the lane reports' stopped and
-unverified lists. The order is not a priority order.
+These items come from the lane reports through `6c5c0e2764`, with later
+fixes noted below. The order is not a priority order.
 
 **Accuracy frontiers**
 - R42A matches all 6,411 recorded rows and the next-act handoff. R82A
@@ -378,10 +378,12 @@ unverified lists. The order is not a priority order.
   animals draw nothing, Tidal Tempest's and Wacky Workbench's hologram animals
   are not hosted, and Collision Chaos's ground hologram animation is
   unverified.
-- [PR #397](https://github.com/OpenGGF/OpenGGF/pull/397) hosts Metallic
-  Madness's Poh-Bee (`$2E`) and makes lost-ring counts, positions and slots
-  exact on the recorded R81A, R81B and R81C routes. Whether rings collected
-  in one time period stay collected after a time warp is unmeasured.
+- After [PR #397](https://github.com/OpenGGF/OpenGGF/pull/397) merged at
+  `a9547c71ac`, `TestCdRingNativeParity` pins exact lost-ring counts, positions
+  and slots on R81A, R81B and R81C. Hosting Metallic Madness's Poh-Bee (`$2E`)
+  resolved the earlier divergences at R81A row 3343 and R81C row 3968.
+  Whether rings collected in one period stay collected after a time warp is
+  unmeasured.
   `ObjRing_Init` reads the earlier periods' flags (Ring/Main.asm:96-113).
   The engine builds a new ring owner per load. The spill when the hurting
   object runs before the spill's owner has no native row.

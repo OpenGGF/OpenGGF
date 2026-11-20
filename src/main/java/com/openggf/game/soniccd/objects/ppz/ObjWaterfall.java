@@ -17,8 +17,9 @@ import java.util.List;
  * $10 wide (tile $3BA). It has no despawn check.
  *
  * <p>The block writes are unhosted. {@code ObjWaterfall_Main} (Level/Palmtree Panic/Objects/Effects/Main.asm:36-58)
- * calls {@code PlaceBlockAtPos} on aligned rows. All ten USA Palmtree Panic stage payloads have zero placements
- * of object $04, as checked by {@code TestPpzObjectsA}. The sibling stubs {@code ObjEarthquake} and
+ * calls {@code PlaceBlockAtPos} on aligned rows. The generator is unused in the Present {@code ObjectIndex}
+ * (Level/Palmtree Panic/Object Index (Act 1 Present).asm:7-11). {@code TestPpzObjectsA} checks that all ten
+ * USA Palmtree Panic layouts have zero placements of object $04. The sibling stubs {@code ObjEarthquake} and
  * {@code ObjEarthquakeSet} (IDs $05 and $08) only {@code rts} (Effects/Main.asm:65-72).
  */
 @com.openggf.level.objects.CameraRelativeDraw(com.openggf.level.objects.CameraRelativeDraw.Use.CULL_ONLY)

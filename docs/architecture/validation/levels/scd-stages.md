@@ -117,7 +117,7 @@ diverging row and the frontier test's cause label (a guess, not a diagnosis).
 | R41D | none | none | green | |
 | R42A | **green** 6,411 | asserted | green | All three break-pole grips, underwater `$37` damage, hurt recovery and signpost match. Results exit on row 6411 and load R43D |
 | R42B, R42C, R42D | none | none | green | |
-| R43C, R43D | boss movies | partial | green | Chase equal in both futures; fight compared to row 4887 of R43D; defeat, escape and capsule recorded, not compared |
+| R43C, R43D | boss movies | partial | green | Chase equal in both futures. Fight player and camera match through row 5959. Capsule and act exit remain unverified. |
 | R51A | **green** 4,756 | asserted | green | |
 | R51B | **green** 5,494 | asserted | **green** 569 | The conveyor switches to its warp step on the trigger frame |
 | R51C | **green** 7,151 | asserted | green | |
@@ -277,28 +277,11 @@ and parity for the original `SPEEND.MMD` credits presentation remain open.
   (objects/r8/boss_door.asm:64-88) clears foreground columns as the door opens.
   `PlaceBlock` draws to VDP plane A and leaves the layout and collision data
   intact (r8/stage_draw_3c.asm:398-428, r8/stage_draw_3d.asm:398-428).
+  `PlaceBlock` (r8/stage_draw_3c.asm:415-416) skips the draw when
+  `CheckBlockVisible` fails, so off-screen blocks stay intact.
   In R83C and R83D, record camera positions and foreground tiles from before
   the door trigger through the slide and the next camera redraw. Use the
   visible lifetime of the cleared columns to specify an engine render operation.
-- **Palmtree Panic waterfall.** `ObjWaterfall_Main`
-  (Level/Palmtree Panic/Objects/Effects/Main.asm:36-58) calls `PlaceBlockAtPos`
-  on aligned rows. That routine writes the chunk block and redraws it if visible
-  (Level/Block Draw.asm:286-319). The ten USA stage payloads have zero
-  placements of object `$04` (`TestPpzObjectsA`). A shipped placement or
-  spawn path would justify recording the fall and checking its writes.
-- **Recorded-input pause audio.** The ROM pause path in the engine omits the
-  CDDA and PCM pause requests. `PauseMusic` (Level/Main.asm:620-643) selects
-  CDDA outside the Past and for invincibility or speed shoes, and PCM for
-  ordinary Past music. Record Start pause and resume with a native pad movie
-  and audio in R11A and R11B. Include an R11B case with invincibility or speed
-  shoes and check which music source stops and resumes in each case.
-- **Extra-life ring sound.** The shared collector also plays the ordinary
-  pickup cue when the 100th or 200th ring awards a life.
-  `CollectRing .GainLife` (Level/_Objects/Ring/Main.asm:290-312) requests
-  only the extra-life voice. Start Sonic beside a placed ring at 99 and
-  199 rings with the respective award flag clear. Collect it by controller
-  input. Compare the cue requests and audio against an ordinary pickup in
-  the same stage.
 - **Palmtree Panic campaign Amy Rose.** R11A object `$2F` remains a
   placeholder (`ObjAmyRose`, Level/Palmtree Panic/Objects/Amy Rose/Main.asm:7-26).
   Start R11A in campaign mode and stay in the Present. Record Sonic approaching
@@ -308,12 +291,49 @@ and parity for the original `SPEEND.MMD` credits presentation remain open.
 - **Wacky Workbench defeat fades.** Eggman's update runs two blocking fades
   (`EggmanDefeatSequenceFadeScreen` and `EggmanDefeatSequenceFadeObjects`,
   objects/r6/boss.asm:545-559). Each runs 22 programmed VSync steps.
-  See `FadeToWhite` (Level/Palette Fade.asm:273-285) and
+  Wacky Workbench links the shared fade code (Level/Wacky Workbench/R6 Shared.asm:31).
+  See `FadeToWhite` (common/palette_fade.asm:285-295) and
   `BossFadeObjectsFromWhite` (common/palette_fade.asm:463-484).
   Live play takes one frame per fade. The existing comparison matches slots
   and palette-cycle timers at completed level frames. Record every VBlank
   in R63C or R63D from the final hit through the capsule spawn. Capture the
   palette and object-pass progress to verify the fade steps and held updates.
+- **Pencil Test playback.** Visual Mode plays all 840 picture banks. The
+  native border, palette fades and closing sequence remain open.
+  Capture native frames from entry through exit and use the program's disc
+  data for the border and palettes. See `Start` and `MainLoop`
+  (FMV/Main (Pencil Test).asm:91-98, 118-137).
+- **Thank You presentation.** Visual Mode opens an archive contact sheet
+  after the good ending. Capture native frames from entry through the
+  composition, animations, fades and exit. Use the program's
+  `THANKS_M.MMD;1` and `THANKS_D.BIN;1` data. See `ThankYou_CommandLoop`
+  and `ThankYou_UpdateFrame` (Thank You/Main.asm:70-107).
+- **Comin' Soon presentation.** Stage select opens an archive contact
+  sheet. Capture the native composition and palette changes through the
+  return to title, and use the graphics, maps and palette in `COME__.MMD;1`.
+  See `Start` and `VInterrupt` (Comin Soon/Main.asm:49-150).
+
+## Scheduled Sonic CD fixes
+
+- **Recorded-input pause audio (open gap).** The engine's recorded-input
+  pause omits the music pause requests. `PauseMusic` selects PCM for
+  ordinary Past music and CDDA otherwise, including Past invincibility
+  and speed shoes (Level/Main.asm:620-643).
+- **Extra-life ring sound (open gap).** Develop requests the ordinary
+  pickup cue and has no YES voice request for the ring award.
+  [PR #399](https://github.com/OpenGGF/OpenGGF/pull/399) adds the YES voice.
+  The shared collector still requests the ordinary pickup cue on an
+  award. Native `CollectRing .GainLife` requests only `SCMD_YESSFX`
+  (Level/_Objects/Ring/Main.asm:290-312).
+
+## Unreachable in shipped data
+
+- **Palmtree Panic waterfall.** The Present object index calls `$04` an
+  unused, broken waterfall generator (`ObjectIndex`, Level/Palmtree Panic/Object Index (Act 1 Present).asm:7-11).
+  [`TestPpzObjectsA`](../../../../src/test/java/com/openggf/game/soniccd/TestPpzObjectsA.java#L548-L562)
+  confirms zero placements across all ten USA Palmtree Panic layouts.
+  The generator's `PlaceBlockAtPos` writes are unimplemented
+  (`ObjWaterfall_Main`, Level/Palmtree Panic/Objects/Effects/Main.asm:36-58).
 
 ## Native recordings still needed
 
@@ -325,9 +345,10 @@ with the recorded rows or audio and pictures needed by the check.
 | Campaign endings | Start before the final fight on the campaign route in R83C with all seven Time Stones or all seven good futures secured by the clear. Repeat in R83D with neither set complete. Win both fights by controller input and let each ending finish. | Final stage exit, saved progress flags, ending selection, full video and audio, credits, and return to the title. `GameDone` selects the ending (CD Initial Program/IPX.asm:301-326). |
 | Full campaign | Cold boot with empty backup RAM, select a new game, and play from R11A through the R83 clear. Use ordinary act exits and include a time warp and a giant-ring special-stage return. | One continuous movie with each stage entry and exit, the period and special-stage handoffs, lives and progress carried between acts, and the last save and ending. |
 | Natural Special Stage 8 clear | Cold boot to the title, enter Special Stage 8 through Sound Test, and hit all six UFOs by controller input before time runs out. Let the credits play. | UFO count reaching zero, success state, fade, `SPEEND.MMD` credits with audio, and return to the title (`SoundTest_SpecStg8`, CD Initial Program/IPX.asm:1065-1079). |
-| Remaining boss coverage | In R43C and R43D, use the recorded defeat and capsule route where it covers the interval. For missing coverage, start before the chase and fight through the exit. In R83C and R83D, start before the arena approach and play through the collapse floor, each hit and the final defeat. | Player and camera rows, boss and child slots, hit and phase transitions, escape or defeat, capsule release where present, and the next program. |
+| R43C and R43D boss and act exit | Reuse the fight movies from water re-entry at row 5960. Extend them through the next program if needed. | Player and camera through capsule release and results. Boss and child slots from the end of the first bubble pop, where `TestTtzBossNative` stops checking slot parity. |
+| R83C and R83D boss | Start before the arena approach and play through the collapse floor, each hit and the final defeat. | Player and camera rows, boss and child slots, hit and phase transitions, and the act exit. |
 | R81B, R81C and R82A act ends | Cold boot into each stage via stage select and extend its recorded route past the signpost. Wait through the results and enter the next stage. | Signpost trigger, ring and time tallies, results exit, and first playable row of the next stage. |
-| R41A swing and switch elevator | Start R41A from stage select. Take the route to the `$29` swing at `($0480,$0180)`. Board the seat, press its switch, ride, and dismount. For the `$30` elevator at `($09E0,$0540)`, land on its pressure switch, ride up, then release it and ride the side platform. See `StageObjects` (r4/stage_object_maps_1.asm:38-41, 93-94). | Player support and position, swing phase and switch state, plus the elevator column and side platform positions on press, travel and release. |
+| R41A swing and switch elevator ([PR #403](https://github.com/OpenGGF/OpenGGF/pull/403), open) | Start R41A from stage select. Take the route to the `$29` swing at `($0480,$0180)`. Board the seat, press its switch, ride, and dismount. For the `$30` elevator at `($09E0,$0540)`, land on its pressure switch, ride up, then release it and ride the side platform. See `StageObjects` (r4/stage_object_maps_1.asm:38-41, 93-94). | Player support and position, swing phase and switch state, plus the elevator column and side platform positions on press, travel and release. |
 
 ## Cartridge donor hosting (2026-11-16)
 
