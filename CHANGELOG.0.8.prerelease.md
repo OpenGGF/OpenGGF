@@ -86,7 +86,8 @@ under the matching area heading; see the
   the opening video, both endings, FM
   effects, CD audio and PCM sound are hosted. Special-stage extra lives cap the
   campaign total at 249. Level 1-Ups can raise it past 249 and wrap from 255
-  to 0. The FM loader also accepts verified Japanese and European discs
+  to 0. Live rewind starts a fresh timeline after each time warp or act load.
+  The FM loader also accepts verified Japanese and European discs
   containing the identical driver bank. The title's RAM DATA entry confirms a
   reset of Sonic CD's save to disc defaults.
   Time Attack follows the disc's object rules for time posts, the HUD time icon,

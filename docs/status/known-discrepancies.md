@@ -124,6 +124,7 @@ no discrepancy entry was added or reclassified by the cutover.
 22. [Frame-0 Trace Bootstrap Snapshot Coverage Debt](#frame-0-trace-bootstrap-snapshot-coverage-debt)
 23. [Sonic 1 Embedded Runtime Data Ratchet](#sonic-1-embedded-runtime-data-ratchet)
 24. [Special-stage Live Rewind Scope](#special-stage-live-rewind-scope)
+   - [Sonic CD stage-load live rewind](#sonic-cd-stage-load-live-rewind)
 25. [Mod Music Uses PCM Presentation Rather Than Mega Drive SMPS](#mod-music-uses-pcm-presentation-rather-than-mega-drive-smps)
 26. [S2 Native Debug Placement Capability Boundary](#s2-native-debug-placement-capability-boundary)
 27. [S2 Competition Split Screen, Native Lag and Rewind Scope](#s2-competition-split-screen-native-lag-and-rewind-scope)
@@ -330,6 +331,19 @@ Focused execution and inherited route limits are recorded in the audit's
 ## Special-stage Live Rewind Scope
 
 Held live rewind is supported only inside rewind-capable special-stage providers. It does not rewind across the LEVEL -> SPECIAL_STAGE or SPECIAL_STAGE -> results/LEVEL boundaries; those transitions intentionally start fresh rewind timelines.
+
+### Sonic CD stage-load live rewind
+
+A Sonic CD time warp or act advance starts a fresh live rewind timeline.
+Held rewind stops at the first rewindable frame of the destination. The disc's
+`RunLevel` (scddisasm/src/CD Initial Program/IPX.asm:542-573) runs the warp
+program and loads the destination period's stage program.
+`ObjResults_NextLevel` (scddisasm/src/Level/_Objects/Results/Main.asm:278-300)
+requests the next act, and `RunR12` (scddisasm/src/CD Initial Program/IPX.asm:362-365)
+loads Palmtree Panic act 2 through the same stage-program loader. OpenGGF
+treats both loads as `LEVEL_LOAD` rewind boundaries. If a load seeds history
+during a callback-bearing fade, the first completed frame after the fade
+becomes the rewind floor.
 
 ---
 
