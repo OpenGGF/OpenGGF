@@ -86,6 +86,7 @@ public final class SonicCdGameModule implements GameModule {
     private final com.openggf.game.soniccd.objects.shared.SharedSwitchFlags switchFlags =
             new com.openggf.game.soniccd.objects.shared.SharedSwitchFlags();
     private final CdLevelEventProvider levelEvents = new CdLevelEventProvider(() -> timeTravel);
+    private final CdLevelPause levelPause = new CdLevelPause();
     /** {@code levelVIntCounter} at stage start: cleared by every load, base 0 unless a replay seeds it. */
     private final CdLevelVIntCounter levelVIntCounter = new CdLevelVIntCounter();
     /** The frame a stage load runs in: it already ran iteration 1, so the loop runs no other that frame. */
@@ -252,6 +253,8 @@ public final class SonicCdGameModule implements GameModule {
 
     @Override
     public <T> T getGameService(Class<T> type) {
+        if (type == com.openggf.game.LevelInputOverlay.class
+                || type == com.openggf.game.internal.NativeLevelInputOwner.class) return type.cast(levelPause);
         if (type == com.openggf.game.internal.HostAnimationSource.class) return type.cast(
                 new com.openggf.game.internal.HostAnimationSource() {
                     public java.util.Map<Integer, com.openggf.game.AnimationFamilies.Binding> families() {

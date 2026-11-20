@@ -100,7 +100,8 @@ class TestCdPauseExit {
             scenes.stageStartingFromHost(GameServices.gameState());
             GameServices.level().skipPendingInitialTitleCardPresentation();
             try (var ignored = RecordedInputOwnership.acquire(loop.getInputHandler())) {
-                for (int frame = 0; frame < 40; frame++) {
+                var levelState = GameServices.level().getLevelGamestate();
+                for (int frame = 0; frame < 360 && levelState.getTimerFrames() == 0; frame++) {
                     step(loop, 0, false);
                 }
                 check.run(loop, scenes);
