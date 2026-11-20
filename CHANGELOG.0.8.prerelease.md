@@ -52,7 +52,9 @@ under the matching area heading; see the
   has its own presentation, objects and boss. Palmtree Panic's solid boulders
   use the current section's graphics, replacing the title-card tiles after loading.
   Flowers finish growing, diagonal springs and monitor rewards use their proper
-  graphics, and object names follow the current stage's object table. Collision
+  graphics, and object names follow the current stage's object table. The
+  Palmtree Panic Act 3 time-stop monitor holds palette cycling and selected
+  object animations until the stage reloads. Collision
   Chaos acts 1 and 2 have rotating spike chains with period-specific lengths
   and graphics loaded from the disc. Defeated badniks
   play the disc's destroy sound, and Mosqui, Tamabboh and Palmtree Panic's Taga-Taga

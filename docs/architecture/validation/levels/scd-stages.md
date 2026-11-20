@@ -240,6 +240,24 @@ their short recordings. The R51A, R51B, R51C and R52A long routes match through
 their recorded ends. These comparisons use the existing frontier fields and
 recordings. See the [trace frontier log](../../../status/trace-frontier-log.md#2026-11-18--sonic-cd-quartz-quadrant-conveyor-at-warp-trigger).
 
+## Palmtree Panic time-stop monitor
+
+The USA disc places subtype 5 at `$0BF0,$0350` in R13C and R13D
+(`StageObjects`, r1/stage_object_maps_3.asm:65-68). The item writes 300
+(`ObjMonitorItem_Main`, Level/_Objects/Monitor and Time Post/Main.asm:593-611).
+Native R13C captures at completed level frames 98–456 retained 300 and
+the same palette step and timer. The matching unbroken control continued
+cycling. `LevelStart` clears the word with the flower buffer
+(Level/Main.asm:178-184), including death reentry (Level_MainLoop,
+Level/Main.asm:401-408) and loading a warp destination.
+
+`TestSonicCdCommonObjects#placedTimeStopMonitorFreezesTheStageUntilRestart`
+drives Sonic into the disc placement in R13C and checks palette and ring
+mapping frames across 401 subsequent level frames, rewind, and a death
+reload. The ring witness uses an added slot because this part of the layout
+has no rings. The native probe staged a monitor break and sampled palette
+state. The ring witness and alternate future lack a native comparison.
+
 ## Standard obligations
 
 | Obligation | State | Gap |
