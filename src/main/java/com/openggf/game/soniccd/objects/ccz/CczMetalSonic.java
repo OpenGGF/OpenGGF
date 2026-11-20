@@ -208,8 +208,7 @@ public final class CczMetalSonic extends CczObject implements ObjectVisualFacing
     private void captureAmy() {
         var level = cdLevel();
         if (level != null) {
-            CczIntroState.of(level).captureAmy();
-            CczIntroState.of(level).restoreStagePalette(services());   // lea StagePalette,a3; bsr.w IntroLoadPalette
+            CczIntroState.of(level).captureAmy(services(), level, provider());
         }
         setDestroyed(true);
     }

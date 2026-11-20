@@ -6,6 +6,7 @@ import com.openggf.game.palette.PaletteWriteSupport;
 import com.openggf.game.soniccd.CdStagePayload;
 import com.openggf.game.soniccd.SonicCdZoneRegistry;
 import com.openggf.game.soniccd.level.CdStageImage;
+import com.openggf.game.soniccd.zones.CdPaletteCycleGate;
 import com.openggf.level.Level;
 import com.openggf.level.Palette;
 import com.openggf.level.animation.AnimatedPaletteManager;
@@ -68,6 +69,7 @@ final class QqzPaletteCycle implements AnimatedPaletteManager {
 
     @Override
     public void update() {
+        if (CdPaletteCycleGate.isStopped(level)) return;
         if (rows.isEmpty()) return;
         QqzScrollHandler state = state();
         int bgChange = state == null ? 0 : state.backgroundChange();

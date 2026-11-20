@@ -87,6 +87,16 @@ public final class CdSceneCoordinator {
         return data;
     }
 
+    /** Reads the current run mode without opening IPX or backup RAM for a direct stage load. */
+    public boolean timeAttackMode() {
+        return flow != null && flow.timeAttackMode();
+    }
+
+    public static boolean isTimeAttack(com.openggf.game.GameModule module) {
+        var scenes = module == null ? null : module.getGameService(CdSceneCoordinator.class);
+        return scenes != null && scenes.timeAttackMode();
+    }
+
     public CdProgramFlow flow() {
         if (flow == null) {
             flow = CdProgramFlow.read(data());

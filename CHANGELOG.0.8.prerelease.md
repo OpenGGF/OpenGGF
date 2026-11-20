@@ -52,10 +52,20 @@ under the matching area heading; see the
   has its own presentation, objects and boss. Palmtree Panic's solid boulders
   use the current section's graphics, replacing the title-card tiles after loading.
   Flowers finish growing, diagonal springs and monitor rewards use their proper
-  graphics, and object names follow the current stage's object table. Palmtree
+  graphics, and object names follow the current stage's object table. The
+  Palmtree Panic Act 3 time-stop monitor holds palette cycling and selected
+  object animations until the stage reloads. Collision
+  Chaos acts 1 and 2 have rotating spike chains with period-specific lengths
+  and graphics loaded from the disc. Defeated badniks
+  play the disc's destroy sound, and Mosqui, Tamabboh and Palmtree Panic's Taga-Taga
+  play their own effects on impact, firing, takeoff or landing while the badnik is
+  on screen. Palmtree
   Panic backgrounds sample each row's own camera section, retaining static-row
   repetition without wrapping the moving scenery. Results show the changing
-  score and bonus digits. Wider views extend CD object draw/touch and lifetime
+  score and bonus digits and play the tally, final chime and special-stage warp cues.
+  Ring extra lives play the voice jingle, and Wacky Workbench's bouncy floor
+  plays its cue when it sends Sonic into a roll. The level HUD shows the same point total as the
+  results screen. Wider views extend CD object draw/touch and lifetime
   windows, centre boss locks, title cards, results and game-over text, and fill the time tunnel
   through its white fade. CD HUD pieces, including the time-period and warp icons,
   follow the centred or left-edge HUD setting in both widescreen draw modes.
@@ -72,9 +82,13 @@ under the matching area heading; see the
   the title, stage select, Time Attack, Special Stage 8 from the sound test,
   both special-stage attract demos, backup RAM (saved in `saves/soniccd`),
   the opening video, both endings, FM
-  effects, CD audio and PCM sound are hosted. The FM loader also accepts verified
-  Japanese and European discs containing the identical driver bank. The title's
-  RAM DATA entry confirms a reset of Sonic CD's save to disc defaults.
+  effects, CD audio and PCM sound are hosted. Special-stage extra lives cap the
+  campaign total at 249. Level 1-Ups can raise it past 249 and wrap from 255
+  to 0. The FM loader also accepts verified Japanese and European discs
+  containing the identical driver bank. The title's RAM DATA entry confirms a
+  reset of Sonic CD's save to disc defaults.
+  Time Attack follows the disc's object rules for time posts, the HUD time icon,
+  1-Up monitors, the special-stage ring and the Collision Chaos intro.
   Clearing Special Stage 8 opens an OpenGGF acknowledgement with the disc's
   ending music and a return to the title.
   Visual Mode plays the opening, both endings and the silent Pencil Test
@@ -96,9 +110,16 @@ under the matching area heading; see the
   the original Stage 8 credits and Japanese and European gameplay remain open. Disc audio, video songs and PCM sound follow the music
   and effects volumes; CD audio and PCM also share the FM presentation scale
   for their relative level. The time-warp stars animate from the disc in every
-  stage, including Tidal Tempest, and Robotnik's projector
-  can be destroyed in the Past. Both Palmtree Panic Past acts draw its flying
-  and ground hologram animals from the disc.
+  stage, including Tidal Tempest. While the warp stars are active, Sonic keeps
+  his rings when he lands on spikes with the disc's warp check or touches a
+  Tidal Tempest boss missile. The stars also protect Sonic from Wacky
+  Workbench's freezer, electric beams and sparks, and let him attack Metallic
+  Madness's scarab from its vulnerable side. Grabbing a Wacky Workbench hang
+  bar ends star protection and resets the warp timer. Robotnik's projectors can be destroyed in the
+  Past. In the Past acts of Palmtree Panic and Wacky Workbench, the projectors'
+  flying and ground hologram animals use art from the disc.
+  Wacky Workbench's layout animals fly or hop after the projector is destroyed
+  and in the Good Future.
   Accuracy is measured against native recordings made on an emulator running
   the USA disc: 26 of 28 full-act routes (start to signpost) equal native on
   every compared field to their end (146,390 of 149,633 rows), and 68 of 70
@@ -112,10 +133,11 @@ under the matching area heading; see the
   currents use the retained direction on the hurt recovery frame. R42A matches
   through the results and next-act handoff. Quartz Quadrant Past conveyors
   change speed on the warp trigger frame, and the R51B short fixture matches
-  all 569 recorded rows. The ring counter and every placed ring's position
-  equal native on every compared row of the 28
-  routes and two runs through Palmtree Panic loops, except lost rings after a hit
-  in two Metallic Madness routes. Stage loads clear the state native
+  all 569 recorded rows. Metallic Madness Act 1 hosts Poh-Bee and its swinging
+  weights. Its shared badnik defeat and Good Future explosion preserve native
+  slot use. Ring counts and positions match native over the 28 recorded routes
+  and two Palmtree Panic loops. Ring spills and slots now match throughout the
+  recorded Metallic Madness Present, Past, and Good Future routes. Stage loads clear the state native
   clears, so playing stages in any order matches playing each alone. In normal
   play the object clock a stage starts from and the video player's disc wait
   follow measured emulator timings under `gameplay.loadTimeSimulation`
@@ -559,7 +581,8 @@ under the matching area heading; see the
   host art when the donor lacks their sheet. Game Setup saves CD donor/team choices.
   Stage-backed host animation scripts no longer require a cartridge host.
   CD authored acts support fixed-height water, collectible rings with disc art,
-  fixed vertical and horizontal springs, ten-ring monitors, and owned objects. Audio-state
+  fixed vertical and horizontal springs, ten-ring monitors, and owned objects, which
+  spawn in X order whether or not the act has rings. Audio-state
   restoration also restores the native/streamed music selection. This extends
   unpublished API candidate 0.7.0.
 

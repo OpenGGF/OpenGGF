@@ -48,6 +48,11 @@ public final class CdStageImage {
         return Arrays.copyOfRange(bytes, offset, offset + length);
     }
 
+    /** The first sixteen colours of a stage's PaletteTable entry. */
+    public byte[] paletteEntryFirstLine(int table, int id) {
+        return slice(offsetOf(u32(table + id * 8)), com.openggf.level.Palette.PALETTE_SIZE_IN_ROM);
+    }
+
     /** Bytes from {@code offset} to the end of the file. */
     public byte[] tail(int offset) {
         return slice(offset, bytes.length - check(offset, 0));

@@ -23,8 +23,7 @@ import java.util.List;
  * Collision.asm:302-306, 383-385) sets the campaign's warp direction and plays the voice
  * clip, spins for 60 frames on {@code Ani_Monitor} and then shows the activated frame.
  * Subtype $A is the HUD time icon ({@link CdTimeIcon}); in Time Attack both delete
- * themselves ({@code ObjTimePostTimeIcon}, Monitor and Time Post/Main.asm:64-71), which
- * is not hosted (Time Attack mode reads clear).
+ * themselves ({@code ObjTimePostTimeIcon}, Monitor and Time Post/Main.asm:64-71).
  *
  * <p>On a stage whose objects test layers (Metallic Madness) a layer-1 post draws in front
  * (Monitor and Time Post/Main.asm:105-110) and a touch counts only for a player on the post's
@@ -82,6 +81,11 @@ public final class CdTimePost extends CdObject
 
     @Override
     public void update(int vIntRunCount, PlayableEntity player) {
+        // ObjTimePostTimeIcon (Level/_Objects/Monitor and Time Post/Main.asm:64-71).
+        if (timeAttackMode()) {
+            setDestroyed(true);
+            return;
+        }
         switch (routine) {
             case INIT -> init();
             case MAIN -> main();
