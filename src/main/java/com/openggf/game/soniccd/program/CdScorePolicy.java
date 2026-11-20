@@ -1,6 +1,7 @@
 package com.openggf.game.soniccd.program;
 
 import com.openggf.game.GameStateManager;
+import com.openggf.game.NativeGameStateOps;
 import com.openggf.game.internal.ScoreAdditionPolicy;
 
 import java.util.function.IntConsumer;
@@ -32,20 +33,32 @@ public final class CdScorePolicy implements ScoreAdditionPolicy {
         if (specialStageResults) {
             while (score >= nextLifeScore) {                 // .Check1UP loops (Special Stage/Main.asm:437-446)
                 nextLifeScore += LIFE_STEP;
-                state.addLife();
+                NativeGameStateOps.restoreLives(state, capSpecialStageLives(state.getLives() + 1));
             }
             return;
         }
         if (score < nextLifeScore) return;                   // cmp.l nextLifeScore,d0; bcs.s .End
         nextLifeScore += LIFE_STEP;
-        state.addLife();
+        awardLevelLife(state);
         subCpuCommand.accept(com.openggf.game.soniccd.audio.CdSoundRequests.YES_VOICE);
     }
 
+    /** The uncapped byte increment in {@code AddPoints} (HUD and Points/Main.asm:173-174). */
+    public static void awardLevelLife(GameStateManager state) {
+        NativeGameStateOps.restoreLives(state, (state.getLives() + 1) & 0xFF);
+    }
+
     /**
-     * Points the special stage results added ({@code AddScore}, scddisasm/src/Special Stage/Main.asm:433-455):
-     * every threshold crossed adds a life, with no voice. The 249-life cap is not modelled; the engine's
-     * lives counter has no cap.
+     * Wraps an incremented life count to a byte, then caps it as in
+     * {@code AddScore} (Special Stage/Main.asm:437-446).
+     */
+    public static int capSpecialStageLives(int incrementedLives) {
+        return Math.min(incrementedLives & 0xFF, 249);
+    }
+
+    /**
+     * Applies the special-stage tally to the campaign ({@code AddScore}, Special Stage/Main.asm:433-455).
+     * Each crossed threshold awards a life without the level's 1-Up voice and applies the 249-life cap.
      */
     public void awardSpecialStageResults(GameStateManager state, int points) {
         specialStageResults = true;

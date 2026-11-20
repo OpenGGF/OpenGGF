@@ -4,6 +4,7 @@ import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameServices;
+import com.openggf.game.NativeGameStateOps;
 import com.openggf.game.patch.ModuleResolutionService;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.EngineServices;
@@ -15,12 +16,16 @@ import com.openggf.game.soniccd.player.CdSonicAnimation;
 import com.openggf.game.soniccd.level.CdLevel;
 import com.openggf.game.soniccd.objects.common.CdExplosion;
 import com.openggf.game.soniccd.objects.common.CdMonitor;
+import com.openggf.game.soniccd.objects.common.CdMonitorItem;
+import com.openggf.game.soniccd.objects.common.CdRing;
 import com.openggf.game.soniccd.objects.common.CdPoints;
 import com.openggf.game.soniccd.objects.common.CdSpikes;
 import com.openggf.game.soniccd.objects.common.CdSpring;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.TouchCategory;
+import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.physics.Direction;
 import com.openggf.physics.GroundSensor;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -31,6 +36,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import java.nio.file.Path;
 import java.util.List;
@@ -129,6 +136,35 @@ class TestSonicCdCommonObjects {
         // The item rises from -$300 by $18 a frame: 32 frames until its velocity is non-negative.
         runner.stepIdleFrames(40);
         assertEquals(rings + 10, GameServices.level().getLevelGamestate().getRings(), ".GiveRings adds 10");
+    }
+
+    @ParameterizedTest
+    @CsvSource({"0, 0", "1, 90"})
+    void monitorOneUpWrapsTheLivesByte(int item, int startingRings) {
+        var campaign = GameServices.gameState();
+        NativeGameStateOps.restoreLives(campaign, 255);
+        GameServices.level().getLevelGamestate().setRings(startingRings);
+        add(new CdMonitorItem(sonic.getCentreX(), sonic.getCentreY(), item, 0));
+
+        runner.stepIdleFrames(40);
+
+        assertEquals(0, campaign.getLives(), "the 1-Up and ten-ring items both reach the byte increment");
+    }
+
+    @Test
+    void hundredthPlacedRingWrapsTheLivesByte() {
+        var campaign = GameServices.gameState();
+        NativeGameStateOps.restoreLives(campaign, 255);
+        GameServices.level().getLevelGamestate().setRings(99);
+        var stage = (CdLevel) GameServices.level().getCurrentLevel();
+        var spawn = stage.ringObjectPlacementMapping().keySet().stream()
+                .filter(entry -> entry.x() == 0xF0).findFirst().orElseThrow();
+        var ring = add(new CdRing(spawn));
+        ring.update(0, sonic);
+
+        ring.onTouchResponse(sonic, new TouchResponseResult(7, 8, 8, TouchCategory.SPECIAL), 0);
+
+        assertEquals(0, campaign.getLives(), "CollectRing increments the lives byte at 100 rings");
     }
 
     /** Steps single frames until {@code done} holds (at most {@code max}); returns the count. */
