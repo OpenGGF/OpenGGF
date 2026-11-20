@@ -35,7 +35,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * its entries in the same commit. What the IDs are (native routine per index, the stages that place them and how
  * many): the object lanes' reports. Notes that keep the table honest:
  * <ul>
- *   <li>Tidal Tempest's census also includes inert and out-of-period layout records. $23 calls NullObject
+ *   <li>Tidal Tempest's {@code NullObject} is the {@code ObjNull} compatibility stub
+ *       (Level/Tidal Tempest/R4 Compatibility.asm:204-206). The stub returns without deleting the object,
+ *       so the placed ID stays in its slot. The census includes inert and out-of-period records. $23 calls NullObject
  *       in R41A/R42A (ObjectIndex, r4/object_index_1a.asm:37-39 and r4/object_index_2a.asm:37-39).
  *       $52 is the hosted projector in R41B/R42B and a Past-only layout record in the other periods.</li>
  *   <li>Real routines still unhosted, by zone: Palmtree Panic $35 (tunnel door), $2F in R11A (Amy

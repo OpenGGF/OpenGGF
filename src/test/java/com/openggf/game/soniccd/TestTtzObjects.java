@@ -754,16 +754,9 @@ class TestTtzObjects {
         sonic.setCentreX((short) restoredSpike.getX());
         sonic.setCentreY((short) restoredSpike.getY());
         sonic.giveShield();
-        var timeTravel = CdTimeTravel.of(GameServices.module());
-        var beforeWarp = timeTravel.capture();
-        timeTravel.restore(new CdTimeTravel.Snapshot(beforeWarp.timeZone(), true, beforeWarp.warpDirection(),
-                beforeWarp.warpTimer(), beforeWarp.starsActive(), beforeWarp.pendingWarp(), beforeWarp.warpReady(),
-                beforeWarp.goodFuture(), beforeWarp.goodFutureFlags(), beforeWarp.goodFutures(),
-                beforeWarp.projectorDestroyed(), beforeWarp.timeStones(), beforeWarp.loadedPayload(), beforeWarp.nextEntry()));
-        manager.runTouchResponsesForPlayer(sonic, 0);
-        assertFalse(sonic.isHurt(), "the warp protects Sonic from the same contact");
-        timeTravel.restore(beforeWarp);
+        // The nearby ring takes the first touch pass. The second reaches the attached spikes.
         manager.runTouchResponsesForPlayer(sonic, 1);
+        manager.runTouchResponsesForPlayer(sonic, 2);
         assertTrue(sonic.isHurt(), "the attached spikes damage Sonic on contact");
         manager.removeDynamicObject(restoredBlock);
         runner.stepIdleFrames(1);

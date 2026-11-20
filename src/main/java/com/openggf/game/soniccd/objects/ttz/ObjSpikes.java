@@ -1,7 +1,6 @@
 package com.openggf.game.soniccd.objects.ttz;
 
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.soniccd.timetravel.CdTimeTravel;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectVisualFacing;
@@ -46,16 +45,7 @@ public final class ObjSpikes extends TtzObject implements ReevaluatingSolidObjec
         this.originX = originX;
     }
 
-    @Override
-    public int getCollisionFlags() {
-        // sub_20730C (r4/player_object_collide.asm:208-224).
-        return colType != 0 && !warping() ? colType : 0;
-    }
-
-    private boolean warping() {
-        var timeTravel = CdTimeTravel.of(services().gameModule());
-        return timeTravel != null && timeTravel.warping();
-    }
+    @Override public int getCollisionFlags() { return colType; }
     @Override public int getCollisionProperty() { return 0; }
 
     @Override
@@ -64,7 +54,7 @@ public final class ObjSpikes extends TtzObject implements ReevaluatingSolidObjec
             routine = 2;
             tileWord = TILE;
             priority = 4;
-            if (originX == 0) originX = x;
+            if (originX == 0) originX = x;                               // SpikesObject_0_Routine0 (objects/r4/spikes.asm:88-90)
             homeY = y;
             width = 0x12;
             yRadius = 0xC;
@@ -84,7 +74,7 @@ public final class ObjSpikes extends TtzObject implements ReevaluatingSolidObjec
             return;
         }
         if (!solidObject(Entry.SOLID) || sprite == null || !stoodOn(sprite)) return;   // loc_20C0C0
-        if (warping() || sprite.getInvincibleFrames() > 0) return;     // loc_20C0C0 (objects/r4/spikes.asm:49-58)
+        if (sprite.getInvincibleFrames() > 0) return;                  // tst.b invincible
         if (sprite.isHurt() || sprite.getDead() || sprite.getInvulnerableFrames() > 0) return;   // cmpi.b #4,obj.routine; tst.w obj.var_30
         NativePositionOps.addYPos16_16(sprite, -(sprite.getYSpeed() << 8));   // oY.l -= oYVel << 8
         boolean hadRings = sprite.getRingCount() > 0;
