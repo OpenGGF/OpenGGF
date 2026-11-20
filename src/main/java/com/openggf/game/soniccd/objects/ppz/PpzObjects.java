@@ -44,6 +44,8 @@ public final class PpzObjects implements CdObjectRegistration {
         registrar.object(0x23, "Missile", (spawn, r) -> new PpzBlankObject(spawn, false));
         registrar.object(0x28, "Springboard", (spawn, r) -> new ObjSpringBoard(spawn));
         registrar.object(0x31, "Sonic hole", (spawn, r) -> new ObjSonicHole(spawn));
+        registrar.object(0x35, "Vertical tunnel door", p -> PpzObjectCatalogue.tunnelDoorMappings(p) >= 0,
+                (spawn, r) -> new PpzTunnelDoor(spawn));
         registrar.object(0x36, "Breakable wall", (spawn, r) -> new ObjBreakableWall(spawn));
         // --- end ppzobjb ---
         // --- ppz: routes A2 ---
