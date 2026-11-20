@@ -204,6 +204,37 @@ class TestCdAudioLivePath {
         assertEquals(3, profile.subCpuAudio().state().cdda().track(), "level re-entry keeps the source");
     }
 
+    @Test
+    void resultsTallyProducesAudibleFm() {
+        audio.playSfx(0xBD);
+        assertTrue(audible(present(30)), "FM_TALLY produced sound");
+    }
+
+    @Test
+    void resultsChimeProducesAudibleFm() {
+        AudioManagerInternalAccess.playSecondaryNativeRequest(audio, 0x9A);
+        assertTrue(audible(present(30)), "FM_KACHING produced sound");
+    }
+
+    @Test
+    void specialStageWarpProducesAudibleFm() {
+        audio.playSfx(0xC8);
+        assertTrue(audible(present(30)), "FM_SSWARP produced sound");
+    }
+
+    @Test
+    void workbenchBounceProducesAudibleFm() {
+        audio.playSfx(0xDA);
+        assertTrue(audible(present(30)), "FM_DA produced sound");
+    }
+
+    @Test
+    void ringExtraLifeProducesAudiblePcm() {
+        profile.subCpuAudio().loadStage(com.openggf.game.soniccd.CdStagePayload.R11A);
+        AudioManagerInternalAccess.playRingExtraLife(audio);
+        assertTrue(audible(present(30)), "SCMD_YESSFX produced sound");
+    }
+
     private short[] present(int frames) {
         short[] packet = new short[capture.maxStereoFramesPerPacket() * 2];
         short[] all = new short[packet.length * frames];

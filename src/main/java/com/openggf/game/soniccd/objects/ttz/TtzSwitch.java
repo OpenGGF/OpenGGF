@@ -3,10 +3,10 @@ package com.openggf.game.soniccd.objects.ttz;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.soniccd.objects.shared.SharedSwitchFlags;
 import com.openggf.graphics.GLCommand;
-import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.ReevaluatingSolidObject;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -22,7 +22,8 @@ import java.util.List;
  * the player on top ({@code sub_20CCCE}, :130-139).
  */
 @com.openggf.level.objects.CameraRelativeDraw(com.openggf.level.objects.CameraRelativeDraw.Use.CULL_ONLY)
-public final class TtzSwitch extends TtzObject implements ReevaluatingSolidObject, ObjectVisualFacing.NonDirectional {
+public final class TtzSwitch extends TtzObject
+        implements ReevaluatingSolidObject, ObjectVisualFacing.NonDirectional, SpawnRewindRecreatable {
     static final int TILE = 0x050A;
     /** move.w #$BF,d0; jsr PlayFmSound (:65-66). */
     private static final int FM_BF = 0xBF;
@@ -31,9 +32,20 @@ public final class TtzSwitch extends TtzObject implements ReevaluatingSolidObjec
     private boolean pressed;         // var_3f
     private int previous;            // var_3e: the previous pressed byte, then the press/release code
     private int mapFrame;
+    private int swingSeatSlot = -1;
+    private int swingAnchorX;
+    private int attachedYOffset;
+    private int xSpeed;
 
     public TtzSwitch(ObjectSpawn spawn) {
         super(spawn, "Switch");
+    }
+
+    TtzSwitch(ObjectSpawn spawn, int swingSeatSlot, int swingAnchorX) {
+        this(spawn);
+        this.swingSeatSlot = swingSeatSlot;
+        this.swingAnchorX = swingAnchorX;
+        attachedYOffset = -0x10; // SwingObject_0_Routine0 (objects/r4/swing.asm:69-77)
     }
 
     @Override
@@ -44,6 +56,17 @@ public final class TtzSwitch extends TtzObject implements ReevaluatingSolidObjec
             priority = 3;
             width = 0x10;
             yRadius = 0xA;
+        }
+        if (swingSeatSlot >= 0) {
+            // loc_20CBCE (objects/r4/switch.asm:20-35): the mounted switch moves before its solid call.
+            if (!(slotOccupant(swingSeatSlot) instanceof ObjTtzSwing seat)) {
+                setDestroyed(true);
+                return;
+            }
+            int oldX = x;
+            x = seat.getX() + 0x10;
+            y = seat.getY() + attachedYOffset;
+            xSpeed = (short) ((x - oldX) << 8);
         }
         // loc_20CBFE (:38-44): var_3e = var_3f; SolidObject; seat the player on a contact.
         boolean was = pressed;
@@ -64,23 +87,43 @@ public final class TtzSwitch extends TtzObject implements ReevaluatingSolidObjec
             if (renderFlagOnScreen()) services().playSfx(FM_BF);
             bits ^= 0x20;                                           // bchg #5,(a4)
             if (sprite != null) NativePositionOps.addYPosPreserveSubpixel(sprite, 8);
-            y = (y + 4) & 0xFFFF;
+            moveButton(4);
             mapFrame = 1;
             yRadius -= 4;
         }
         if (was && !pressed) {                                      // cmpi.w #-$100,var_3e (:86-101)
             if (sprite != null) NativePositionOps.addYPosPreserveSubpixel(sprite, -8);
-            y = (y - 4) & 0xFFFF;
+            moveButton(-4);
             mapFrame = 0;
             yRadius += 4;
         }
         if (flags != null) flags.set(index, bits);
     }
 
+    private void moveButton(int dy) {
+        if (swingSeatSlot >= 0) {
+            // loc_20CC50 (objects/r4/switch.asm:69-83) and loc_20CC72 (objects/r4/switch.asm:85-101)
+            // change the mount offset. The new world Y is applied on the next update.
+            attachedYOffset += dy;
+        } else {
+            y = (y + dy) & 0xFFFF;
+        }
+    }
+
     /** sub_20CCCE (:130-139): the player's Y so that his bottom is one pixel inside the top. */
     private void seat(AbstractPlayableSprite sprite) {
         int seatY = (y - (byte) yRadius - (byte) sprite.getYRadius() + 1) & 0xFFFF;
         NativePositionOps.writeYPosPreserveSubpixel(sprite, seatY);
+    }
+
+    @Override public int solidXVelocity() { return xSpeed; }
+
+    @Override protected int despawnX() { return swingSeatSlot >= 0 ? swingAnchorX : super.despawnX(); }
+
+    @Override
+    public boolean isCustomOutOfRange(int cameraX) {
+        // loc_20CCA8 (objects/r4/switch.asm:111-126) uses the swing pivot, even while the switch is visible.
+        return swingSeatSlot >= 0 ? outsideChunkRange(swingAnchorX, cameraX) : super.isCustomOutOfRange(cameraX);
     }
 
     @Override public int solidWidth() { return width; }
