@@ -2,6 +2,7 @@ package com.openggf.game.soniccd;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.openggf.LevelFrameResult;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.game.GameServices;
 import com.openggf.graphics.GraphicsManager;
@@ -125,8 +126,11 @@ class TestWwzBossPictures {
             if (row == null) break;
             if (levelFrame > 1) {
                 int input = row[5];
-                runner.stepFrame((input & 1) != 0, (input & 2) != 0, (input & 4) != 0, (input & 8) != 0,
-                        (input & 0x70) != 0);
+                LevelFrameResult result;
+                do {
+                    result = runner.stepFrame((input & 1) != 0, (input & 2) != 0, (input & 4) != 0,
+                            (input & 8) != 0, (input & 0x70) != 0);
+                } while (result == LevelFrameResult.HELD);
             }
             for (Shot shot : shots) {
                 if (shot.levelFrames() != levelFrame) continue;

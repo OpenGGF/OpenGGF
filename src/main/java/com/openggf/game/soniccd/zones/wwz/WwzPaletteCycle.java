@@ -1,12 +1,15 @@
 package com.openggf.game.soniccd.zones.wwz;
 
 import com.openggf.game.GameServices;
+import com.openggf.game.internal.StagePaletteWait;
 import com.openggf.game.palette.PaletteOwnershipRegistry;
 import com.openggf.game.palette.PaletteWriteSupport;
 import com.openggf.game.soniccd.CdStagePayload;
 import com.openggf.game.soniccd.level.CdStageImage;
+import com.openggf.game.soniccd.objects.boss.wwz.WwzBossEggman;
 import com.openggf.game.soniccd.zones.CdPaletteCycleGate;
 import com.openggf.level.Level;
+import com.openggf.level.LevelManager;
 import com.openggf.level.Palette;
 import com.openggf.level.animation.AnimatedPaletteManager;
 
@@ -40,7 +43,7 @@ import java.util.function.BooleanSupplier;
  * pattern); it is driven by this routine, not by an object. Rewind of the timers is not registered yet,
  * matching the other Sonic CD palette cyclers.
  */
-final class WwzPaletteCycle implements AnimatedPaletteManager {
+final class WwzPaletteCycle implements AnimatedPaletteManager, StagePaletteWait.Source {
     private static final String OWNER = "scd.wwz.paletteCycle";
     private static final int PRIORITY = 100;
     private static final int BOSS_COLOR_SLOT = 3;
@@ -49,6 +52,7 @@ final class WwzPaletteCycle implements AnimatedPaletteManager {
     private record Script(int colorIndex, int[] lengths, int[] picks, int[] colors) { }
 
     private final Level level;
+    private final boolean bossAct;
     private final PaletteOwnershipRegistry registry;
     private final BooleanSupplier bossPalette;
     private final List<Script> scripts = new ArrayList<>();
@@ -62,6 +66,7 @@ final class WwzPaletteCycle implements AnimatedPaletteManager {
 
     WwzPaletteCycle(CdStagePayload payload, Level level, CdStageImage image, BooleanSupplier bossPalette) {
         this.level = level;
+        this.bossAct = payload.stage().actNumber() == 3;
         this.bossPalette = bossPalette;
         // The gameplay session owns the registry and begins its frame (GameplayModeContext).
         this.registry = GameServices.paletteOwnershipRegistry();
@@ -115,6 +120,15 @@ final class WwzPaletteCycle implements AnimatedPaletteManager {
         int[] words = new int[count];
         for (int i = 0; i < count; i++) words[i] = image.u16(offset + 2 * i);
         return words;
+    }
+
+    @Override
+    public StagePaletteWait pendingPaletteWait(LevelManager levels) {
+        if (!bossAct || levels.getObjectManager() == null) return null;
+        for (WwzBossEggman boss : levels.getObjectManager().activeObjectsOfType(WwzBossEggman.class)) {
+            if (boss.hasPendingPaletteWait()) return boss;
+        }
+        return null;
     }
 
     @Override

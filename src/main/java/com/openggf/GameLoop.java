@@ -166,7 +166,7 @@ public class GameLoop {
          * <p>{@code SpecialStage_MainLoop} is two loops, not one
          * (docs/s2disasm/s2.asm:6674-6721), and one observation can own a pass
          * from each: the pre-start loop copies {@code Ctrl_1}/{@code Ctrl_2}
-         * <em>before</em> its {@code WaitForVint} (s2.asm:6675-6676), so its
+         * <em>before</em> the wait in {@code SpecialStage} (s2.asm:6674-6680), so its
          * terminal pass owns no post-V-int controller sample for the recurring
          * loop's binding path to consume. A driver that can tell the two apart
          * overrides this to publish such a pass through the startup boundary
@@ -182,8 +182,8 @@ public class GameLoop {
          * Runs after pass {@code index}'s object scan, for a pass the ROM
          * finished BEFORE this observation's V-int.
          *
-         * <p>{@code SS_MainLoop} waits for the V-int and only then runs
-         * {@code RunObjects} (docs/s2disasm/s2.asm:6694-6721), so a pass that
+         * <p>The recurring loop waits for V-INT before the object scan in
+         * {@code SpecialStage} (docs/s2disasm/s2.asm:6694-6721), so a pass that
          * returned during the preceding frame had its queued work carried
          * through the V-blank that opened this observation, and that V-blank
          * already ran {@code ProcessDMAQueue} (s2.asm:1770) over it. Work
@@ -974,10 +974,10 @@ public class GameLoop {
      * no object pass at all, and the first one belongs to the destination's
      * next V-blank, i.e. its recorded row 0. S1 orders the same two routines the
      * same way ({@code Level_StartGame} at docs/s1disasm/sonic.asm:2990-2991,
-     * then {@code Level_MainLoop}'s {@code WaitForVBlank} at :2998-3001 ahead of
+     * then the wait in {@code Level_MainLoop} (sonic.asm:2998-3001) ahead of
      * {@code jsr (ExecuteObjects).l} at :3006), and so does S3K
      * ({@code bclr #7,(Game_mode).w} at docs/skdisasm/sonic3k.asm:7914, then
-     * {@code Wait_VSync} at :7920 ahead of {@code Process_Sprites} at :7926).
+     * the wait and object scan in {@code LevelLoop} (sonic3k.asm:7916-7926)).
      *
      * <p>Without this term the latch survived every locked title-card row (a
      * title-card iteration never reaches the gap-body test) and was consumed by
@@ -1344,7 +1344,7 @@ public class GameLoop {
         // session. Its menu has no world timers until a run actually loads.
         if (timerManager != null && !playbackDebugManager.isCurrentGameplayTickSuppressed()) {
             profiler.beginSection("timers");
-            timerManager.update();
+            LevelFrameStep.updateTimers(timerManager, levelManager);
             profiler.endSection("timers");
         }
 
@@ -2323,7 +2323,7 @@ public class GameLoop {
      * (s2.asm:44875-44877), S3K {@code SSEntryFlash_GoSS} (s3.asm:79688). The
      * white-out that precedes the stage belongs to the special-stage entry
      * itself ({@code GM_Special}'s {@code PaletteWhiteOut}, sonic.asm:3227 /
-     * {@code SpecialStage}'s {@code Pal_FadeToWhite}, s2.asm:6546), which
+     * the white-out call in {@code SpecialStage}, s2.asm:6546), which
      * {@link SpecialStageEntryPresentationController} owns: it fades the
      * level's frozen last frame to white (the Engine keeps drawing the level
      * while {@link SpecialStageProvider#isEntryFadeToWhiteActive()} holds) and

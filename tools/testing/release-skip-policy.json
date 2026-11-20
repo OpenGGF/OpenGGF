@@ -1155,6 +1155,20 @@
       "note": "Sonic CD disc and native captures"
     },
     {
+      "match": "com.openggf.game.soniccd.TestWwzBossFades#goodFutureFadesMatchNativeOnEveryVBlank",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestWwzBossFades.java:27",
+      "allowed_when_absent": "soniccd_native",
+      "note": "Sonic CD disc and native captures"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestWwzBossFades#badFutureFadesMatchNativeOnEveryVBlank",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestWwzBossFades.java:32",
+      "allowed_when_absent": "soniccd_native",
+      "note": "Sonic CD disc and native captures"
+    },
+    {
       "match": "com.openggf.game.soniccd.TestWwzBossNative#r63cDeathOnTheElectrifiedFloorReplaysAgainstNative",
       "category": "optional-fixture",
       "evidence": "src/test/java/com/openggf/game/soniccd/TestWwzBossNative.java:85",
