@@ -1,5 +1,6 @@
 package com.openggf.game.soniccd;
 
+import com.openggf.audio.AudioRequestObserver;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameModuleRegistry;
@@ -41,6 +42,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -91,12 +93,21 @@ class TestPpzObjectsA {
 
     @AfterEach
     void cleanup() throws Exception {
+        if (sonic != null) sonic.currentAudioManager().setRequestObserver(AudioRequestObserver.NONE);
         GroundSensor.setLevelManager(null);
         SessionManager.clear();
         GameModuleRegistry.reset();
         if (previous != null) EngineServices.configure(previous);
         TestEnvironment.resetAll();
         if (disc != null) disc.close();
+    }
+
+    private List<Integer> observeSound(int soundId) {
+        List<Integer> requests = new ArrayList<>();
+        sonic.currentAudioManager().setRequestObserver((kind, id) -> {
+            if (id == soundId) requests.add(id);
+        });
+        return requests;
     }
 
     private <T extends ObjectInstance> T add(T object) {
@@ -180,6 +191,7 @@ class TestPpzObjectsA {
         ObjMosqui mosqui = add(new ObjMosqui(spawn(sonic.getCentreX() + 0x10, sonic.getCentreY() - 0x30, 0x3D, 0)));
         // The player sits inside the window of ObjMosqui_CheckInRange (Mosqui/Main.asm:98-112): dive at once.
         int steps = 0;
+        List<Integer> sounds = observeSound(0xA7);
         int diveFrames = 0;
         while (mosqui.routine() < 8 && steps++ < 200) {
             int before = mosqui.getY();
@@ -188,6 +200,7 @@ class TestPpzObjectsA {
             if (wasDiving) diveFrames++;
             // addq.w #6,oY(a0) every frame of the dive (Mosqui/Main.asm:124).
             if (wasDiving && mosqui.routine() == 6) assertEquals(before + 6, mosqui.getY());
+            assertEquals(mosqui.routine() == 8 ? List.of(0xA7) : List.of(), sounds, "FM_A7 on floor impact");
         }
         assertTrue(diveFrames > 0, "routine 6 ran");
         assertEquals(8, mosqui.routine(), "the dive ended in the wait routine");
@@ -250,6 +263,7 @@ class TestPpzObjectsA {
     @Test
     void tagaTagaJumpsToTheCalculatedHeightAndLands() throws Exception {
         boot(CdStagePayload.R11A);
+        List<Integer> sounds = observeSound(0xA2);
         int y0 = sonic.getCentreY() + 0x40;
         ObjTagaTaga taga = add(new ObjTagaTaga(spawn(sonic.getCentreX() + 0x80, y0, 0x40, 0)));
         runner.stepIdleFrames(1);
@@ -257,16 +271,23 @@ class TestPpzObjectsA {
         assertEquals(4, taga.routine());
         assertEquals(0, taga.getCollisionFlags());
         int steps = 0;
-        while (taga.getCollisionFlags() == 0 && steps++ < 300) runner.stepIdleFrames(1);
+        while (taga.getCollisionFlags() == 0 && steps++ < 300) {
+            assertTrue(sounds.isEmpty(), "the wait animation is silent");
+            runner.stepIdleFrames(1);
+        }
+        assertEquals(List.of(0xA2), sounds, "FM_A2 on takeoff");
+        sounds.clear();
         assertEquals(0x2E, taga.getCollisionFlags(), "move.b #$2E,oColType(a0) (Taga-Taga/Main.asm:81)");
         // The jump frame already flies: y = y0 - $3C000 -> y0 - 4 (Taga-Taga/Main.asm:92-94).
         assertEquals(y0 - 4, taga.getY());
         int top = taga.getY();
         steps = 0;
         while (taga.routine() != 2 && steps++ < 400) {
+            assertTrue(sounds.isEmpty(), "the flight is silent");
             runner.stepIdleFrames(1);
             top = Math.min(top, taga.getY());
         }
+        assertEquals(List.of(0xA2), sounds, "FM_A2 on landing");
         assertEquals(2, taga.routine(), "falling back past the start sets routine 2");
         // v0 = 3.75 px/frame against 1/16 px/frame^2: the peak is v0^2 / 2g = 112.5 pixels above the start.
         assertEquals(y0 - 113, top, 3);
@@ -279,11 +300,14 @@ class TestPpzObjectsA {
     @Test
     void tamabbohFiresTwoMissilesLobbedOppositeWays() throws Exception {
         boot(CdStagePayload.R11A);
+        List<Integer> sounds = observeSound(0xA0);
         ObjTamabboh tamabboh = add(new ObjTamabboh(spawn(sonic.getCentreX() + 0x30, sonic.getCentreY(), 0x22, 0)));
         int steps = 0;
         while (live(0x22).stream().noneMatch(o -> o instanceof ObjTamabbohMissile) && steps++ < 400) {
+            assertTrue(sounds.isEmpty(), "Tamabboh is silent until the missiles fire");
             runner.stepIdleFrames(1);
         }
+        assertEquals(List.of(0xA0), sounds, "FM_A0 plays once for both missiles");
         List<ObjectInstance> missiles = live(0x22).stream().filter(o -> o instanceof ObjTamabbohMissile).toList();
         assertEquals(2, missiles.size(), "ObjTamabboh_Fire allocates two (Tamabboh/Main.asm:168-181)");
         ObjTamabbohMissile first = (ObjTamabbohMissile) missiles.get(0);
@@ -312,7 +336,9 @@ class TestPpzObjectsA {
         ObjMosqui first = add(new ObjMosqui(spawn(sonic.getCentreX() + 0x40, sonic.getCentreY() - 0x100, 0x3D, 0)));
         runner.stepIdleFrames(1);
         int slot = first.getSlotIndex();
+        List<Integer> sounds = observeSound(0x96);
         first.onPlayerAttack(sonic, null);
+        assertEquals(List.of(0x96), sounds, "FM_DESTROY on enemy defeat");
         assertTrue(first.isDestroyed());
         assertEquals(score + 100, GameServices.gameState().getScore(), "EnemyPoints 10 x AddPoints' 10");
         var explosion = live(0x18).stream().filter(o -> o instanceof CdExplosion).findFirst().orElseThrow();
