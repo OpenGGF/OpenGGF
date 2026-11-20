@@ -1,8 +1,11 @@
 package com.openggf.game.soniccd.audio;
 
 import com.openggf.audio.AudioManagerInternalAccess;
+import com.openggf.audio.GameSound;
 import com.openggf.game.soniccd.CdPeriod;
 import com.openggf.game.soniccd.level.CdLevel;
+import com.openggf.game.soniccd.timetravel.CdTimeTravel;
+import com.openggf.game.soniccd.timetravel.CdTimeZone;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -32,12 +35,20 @@ public final class CdSoundRequests {
 
     private CdSoundRequests() { }
 
+    /** {@code PauseMusic} (Level/Main.asm:620-625) requests {@code FM_CHARGESTOP} on every paused frame. */
+    public static void stopChargeSound(ObjectServices services) {
+        services.playSfx(GameSound.CHARGE_STOP);
+    }
+
     /**
      * {@code PauseMusic} (Level/Main.asm:620-643) and {@code UnpauseMusic} (Level/Main.asm:652-672)
-     * send one command per pause transition. The Past uses PCM unless a power-up plays a CD track.
+     * use the live time zone with the warp bit cleared.
+     * {@code ObjSonic_TimeWarp} (Level/_Objects/Sonic/Main.asm:639-643) sets the destination
+     * before the new stage loads.
      */
     public static void setLevelMusicPaused(ObjectServices services, AbstractPlayableSprite player, boolean paused) {
-        if (inPast(services) && player.getInvincibleFrames() == 0 && !player.hasSpeedShoes()) {
+        var timeTravel = CdTimeTravel.of(services.gameModule());
+        if (timeTravel.timeZone() == CdTimeZone.PAST && player.getInvincibleFrames() == 0 && !player.hasSpeedShoes()) {
             services.playMusic(paused ? PAUSE_PCM : UNPAUSE_PCM);
         } else {
             services.playMusic(paused ? PAUSE_CDDA : UNPAUSE_CDDA);
