@@ -22,6 +22,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TouchResponseProvider;
+import com.openggf.level.rings.LostRingObjectInstance;
 import com.openggf.physics.GroundSensor;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.HeadlessTestRunner;
@@ -338,5 +339,38 @@ class TestMmzObjects {
         // call it has run; whether it ran in its spawn frame depends on its slot (SpawnObjectAfter).
         int delta = beam.getY() - (emitter.getY() & 0xFFF0);
         assertTrue(delta == 0 || delta == 4, "beam Y " + delta + " below the aligned emitter Y");
+    }
+
+    @Test
+    void spilledRingsCanOnlyBeCollectedOnTheLayerWhereSonicWasHurt() throws Exception {
+        boot(CdStagePayload.R81A);
+        MmzBuzzsaw saw = add(new MmzBuzzsaw(at(0x70, -0x20, 0x27, 0)));
+        runner.stepIdleFrames(2);
+        if (signals().stageLayer() == 0) signals().flipStageLayer();
+        sonic.setRingCount(2);
+        sonic.setCentreX((short) saw.getX());
+        sonic.setCentreY((short) saw.getY());
+        var objects = GameServices.level().getObjectManager();
+        objects.runTouchResponsesForPlayer(sonic, 2);
+        saw.setDestroyed(true);
+
+        // HurtPlayer (r8/player_object_collide.asm:273-282) stamps the layer when it allocates the owner.
+        signals().flipStageLayer();
+        runner.stepIdleFrames(2);
+        var rings = objects.getActiveObjects().stream().filter(LostRingObjectInstance.class::isInstance)
+                .map(LostRingObjectInstance.class::cast).toList();
+        assertEquals(2, rings.size());
+        var first = rings.getFirst();
+        sonic.setHurt(false);
+        sonic.setInvulnerableFrames(0);
+        sonic.setCentreX((short) first.getX());
+        sonic.setCentreY((short) first.getY());
+
+        // loc_206978 (r8/player_object_collide.asm:104-127) rejects the other layer before advancing the routine.
+        objects.runTouchResponsesForPlayer(sonic, 5);
+        assertTrue(rings.stream().noneMatch(LostRingObjectInstance::isCollected));
+        signals().flipStageLayer();
+        objects.runTouchResponsesForPlayer(sonic, 6);
+        assertTrue(rings.stream().anyMatch(LostRingObjectInstance::isCollected));
     }
 }

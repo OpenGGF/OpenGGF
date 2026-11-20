@@ -2114,6 +2114,13 @@
       "note": "Sonic CD disc and native captures"
     },
     {
+      "match": "com.openggf.game.soniccd.TestMmzObjects#spilledRingsCanOnlyBeCollectedOnTheLayerWhereSonicWasHurt",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestMmzObjects.java:345",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
       "match": "com.openggf.game.soniccd.TestMmzObjects#hvPlatformHoldsEachShapeForItsTimer",
       "category": "optional-fixture",
       "evidence": "src/test/java/com/openggf/game/soniccd/TestMmzObjects.java:92",
@@ -2264,6 +2271,13 @@
       "match": "com.openggf.game.soniccd.TestMmzObjects2#bigbomBodyFallsThenPatrolsAndLightsItsFuseNearAPlayer",
       "category": "optional-fixture",
       "evidence": "src/test/java/com/openggf/game/soniccd/TestMmzObjects2.java:74",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestMmzObjects2#scarabEnemyTouchHurtsSonicAcrossLayers",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestMmzObjects2.java:263",
       "allowed_when_absent": "soniccd_disc",
       "note": "user's Sonic CD disc"
     },
