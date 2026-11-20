@@ -42,7 +42,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  *   <li>Real routines still unhosted, by zone: Palmtree Panic $35 (tunnel door), $2F in R11A (Amy
  *       Rose); Tidal Tempest $23 (vertical move block), $29 (swing, R41A), $30 (switch elevator, R41A),
  *       $52 (not the projector: the projector's $52 in R41B/R42B is hosted by objects/projector); Wacky Workbench
- *       $29 (animal); Metallic Madness $2E (poh bee, R81x).</li>
+ *       $29 (animal).</li>
  * </ul>
  */
 class TestCdUnhostedObjectCensus {
@@ -73,11 +73,7 @@ class TestCdUnhostedObjectCensus {
         Map.entry("R62C", "29"),
         Map.entry("R62D", "29"),
         Map.entry("R63C", "29"),
-        Map.entry("R63D", "29"),
-        Map.entry("R81A", "2E"),
-        Map.entry("R81B", "2E"),
-        Map.entry("R81C", "2E"),
-        Map.entry("R81D", "2E")
+        Map.entry("R63D", "29")
     );
 
     @TempDir

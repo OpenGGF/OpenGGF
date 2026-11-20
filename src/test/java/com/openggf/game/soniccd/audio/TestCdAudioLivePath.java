@@ -18,6 +18,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -77,6 +78,13 @@ class TestCdAudioLivePath {
     void anFmEffectRequestedByIdIsSynthesisedThroughTheSharedProducer() {
         assertTrue(audio.playSfx(0x92));
         assertTrue(audible(present(30)), "FM_JUMP produced sound");
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {0x96, 0xA0, 0xA2, 0xA7})
+    void badnikEffectsProduceAudibleSamples(int id) {
+        assertTrue(audio.playSfx(id));
+        assertTrue(audible(present(60)), "FM $%02X produced sound".formatted(id));
     }
 
     @Test

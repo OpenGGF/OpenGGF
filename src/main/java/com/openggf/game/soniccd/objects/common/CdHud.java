@@ -112,7 +112,8 @@ public final class CdHud extends CdObject implements FixedRuntimeObjectInstance,
         if (score != lastScore) {
             // HUD_ResetScore writes six blanks and a 0 (HUD and Points/Main.asm:369-418), then HUD_DrawScore.
             if (lastScore < 0) writeCells(tiles, numbers, SCORE_DIGITS, new int[] {-1, -1, -1, -1, -1, -1, 0});
-            drawCounter(tiles, numbers, SCORE_DIGITS, score, 6);
+            // HUD_DrawScore (Level/_Objects/HUD and Points/Main.asm:516-518) receives the score in tens.
+            drawCounter(tiles, numbers, SCORE_DIGITS, score / 10, 6);
             lastScore = score;
             changed = true;
         }
