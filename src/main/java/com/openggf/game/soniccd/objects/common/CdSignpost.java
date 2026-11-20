@@ -25,8 +25,6 @@ public final class CdSignpost extends CdObject implements ObjectVisualFacing.Non
     private static final int SPIN_FRAMES = 120;
     /** ObjSignpost_Spin: move.b #60,oLvlEndTimer(a0) (Level End/Main.asm:792-800). */
     private static final int RESULTS_DELAY = 60;
-    /** {@code FM_SIGNPOST} ($9D, FM/_Sound IDs.inc:23): {@code move.w #FM_SIGNPOST,d0} (Level End/Main.asm:782-783). */
-    private static final int FM_SIGNPOST = 0x9D;
 
     private int routine;
     private int timer;
@@ -73,7 +71,7 @@ public final class CdSignpost extends CdObject implements ObjectVisualFacing.Non
         mapFrame = 0;
         routine = 4;
         sprite.setInvincibleFrames(0);                       // clr.b invincible
-        services().playSfx(FM_SIGNPOST);
+        services().playSfx(com.openggf.game.soniccd.audio.CdSoundRequests.SIGNPOST);
     }
 
     /** ObjSignpost_Spin (Level End/Main.asm:792-803). */

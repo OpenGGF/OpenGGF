@@ -1,11 +1,19 @@
 package com.openggf.game.soniccd.timetravel;
 
+import com.openggf.game.soniccd.CdDiscDataSource;
 import com.openggf.game.soniccd.CdStagePayload;
+import com.openggf.game.soniccd.CdTestMedia;
 import com.openggf.game.soniccd.CdZone;
+import com.openggf.game.soniccd.program.CdProgramData;
+import com.openggf.game.soniccd.program.CdProgramFlow;
+import com.openggf.game.soniccd.program.CdProgramRequest.SpecialStage;
+import com.openggf.game.soniccd.program.CdStageResult;
+import com.openggf.game.soniccd.special.CdSpecialStageResult;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -111,12 +119,27 @@ class TestCdTimeTravel {
     }
 
     @Test
-    void allTimeStonesForceTheGoodFuture() {
-        // cmpi.b #$7F,timeStones (Level/Main.asm:22-26).
-        CdTimeTravel tt = new CdTimeTravel();
-        tt.setTimeStones(CdTimeTravel.ALL_TIME_STONES);
-        tt.levelStart(CdStagePayload.R31A);
-        assertTrue(tt.goodFuture());
+    void allTimeStonesForceTheGoodFuture() throws Exception {
+        try (var disc = CdDiscDataSource.open(CdTestMedia.usaCue())) {
+            var flow = CdProgramFlow.read(new CdProgramData(disc));
+            flow.titleExited(CdProgramFlow.EXIT_NEW_GAME);
+            var special = assertInstanceOf(SpecialStage.class,
+                    flow.stageEnded(new CdStageResult(3, CdStageResult.TIME_PRESENT, false, true, 0x3F)));
+            flow.specialStageEnded(special, new CdSpecialStageResult(6, true, 0, 0x7F, 0, 0, 0, false, true));
+            // LevelStart (Level/Main.asm:19-26).
+            var tt = new CdTimeTravel(flow::timeAttackMode, flow::timeStones);
+            tt.levelStart(CdStagePayload.R31A);
+            assertTrue(tt.goodFuture());
+
+            var snapshot = flow.timeAttackState();
+            flow.titleExited(CdProgramFlow.EXIT_NEW_GAME);
+            tt.gameOver();
+            tt.levelStart(CdStagePayload.R31A);
+            assertFalse(tt.goodFuture());
+            flow.restoreTimeAttackState(snapshot);
+            tt.levelStart(CdStagePayload.R31A);
+            assertTrue(tt.goodFuture());
+        }
     }
 
     @Test

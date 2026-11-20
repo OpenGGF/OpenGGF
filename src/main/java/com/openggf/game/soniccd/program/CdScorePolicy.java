@@ -1,6 +1,7 @@
 package com.openggf.game.soniccd.program;
 
 import com.openggf.game.GameStateManager;
+import com.openggf.game.NativeGameStateOps;
 import com.openggf.game.internal.ScoreAdditionPolicy;
 
 import java.util.function.IntConsumer;
@@ -19,7 +20,6 @@ public final class CdScorePolicy implements ScoreAdditionPolicy {
 
     private final IntConsumer subCpuCommand;
     private int nextLifeScore = LIFE_STEP;
-    private boolean specialStageResults;
 
     public CdScorePolicy(IntConsumer subCpuCommand) {
         this.subCpuCommand = subCpuCommand;
@@ -29,28 +29,33 @@ public final class CdScorePolicy implements ScoreAdditionPolicy {
 
     @Override
     public void scoreAdded(GameStateManager state, int score) {
-        if (specialStageResults) {
-            while (score >= nextLifeScore) {                 // .Check1UP loops (Special Stage/Main.asm:437-446)
-                nextLifeScore += LIFE_STEP;
-                state.addLife();
-            }
-            return;
-        }
         if (score < nextLifeScore) return;                   // cmp.l nextLifeScore,d0; bcs.s .End
         nextLifeScore += LIFE_STEP;
-        state.addLife();
+        awardLevelLife(state);
         subCpuCommand.accept(com.openggf.game.soniccd.audio.CdSoundRequests.YES_VOICE);
     }
 
+    /** The uncapped byte increment in {@code AddPoints} (HUD and Points/Main.asm:173-174). */
+    public static void awardLevelLife(GameStateManager state) {
+        NativeGameStateOps.restoreLives(state, (state.getLives() + 1) & 0xFF);
+    }
+
     /**
-     * Points the special stage results added ({@code AddScore}, scddisasm/src/Special Stage/Main.asm:433-455):
-     * every threshold crossed adds a life, with no voice. The 249-life cap is not modelled; the engine's
-     * lives counter has no cap.
+     * Wraps an incremented life count to a byte, then caps it as in
+     * {@code AddScore} (Special Stage/Main.asm:437-446).
      */
-    public void awardSpecialStageResults(GameStateManager state, int points) {
-        specialStageResults = true;
-        state.addScore(points);
-        specialStageResults = false;
+    public static int capSpecialStageLives(int incrementedLives) {
+        return Math.min(incrementedLives & 0xFF, 249);
+    }
+
+    /**
+     * Carries back the special stage's completed tally ({@code AddScore}, Special Stage/Main.asm:433-455).
+     * The score and next threshold arrive in engine points.
+     */
+    public void commitSpecialStageResults(GameStateManager state, int score, int nextLifeScore, int lives) {
+        NativeGameStateOps.restoreScore(state, Math.min(MAXIMUM, score + state.getScore() % 10));
+        NativeGameStateOps.restoreLives(state, lives);
+        this.nextLifeScore = nextLifeScore;
     }
 
     /** {@code LevelStart}'s first load. */

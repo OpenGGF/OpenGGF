@@ -123,6 +123,12 @@ ANCHORS = [
      'ObjCCAnimal_Flying_Orbit (Animal/Main.asm:76-84): lea Ani_CCAnimalFlying(pc),a1; jsr AnimateObject; jsr DrawObject; move.w oCCAnimalBaseX(a0),d0; jmp CCAnimalDespawn2'),
     ('animalGroundMappings', '217C 0C080408 ???? 217C AAAAAAAA 0004', 'optional',
      'ObjCCAnimal_Ground_Init (Animal/Main.asm:132-136): move.l #$C080408,oYRadius(a0); move.l #MapSpr_CCAnimalGround,oMap(a0)'),
+    ('animalGroundAnimations', '0C29 0038 0000 6600 ???? 4A29 003F 6600 ???? 43FA PPPP 4EB9 ???????? 4EF9', 'optional',
+     'ObjCCAnimal_Ground_Hologram (Level/Collision Chaos/Objects/Animal/Main.asm:203-211): check projector, then lea Ani_CCAnimalGround(pc),a1'),
+    ('spikeChainPivotMappings', '217C AAAAAAAA 0004 317C 03BD 0002 317C 0100 002C', 'optional',
+     'ObjSpikeChain_Init (Level/Collision Chaos/Objects/Spike Chain/Main.asm:75-86)'),
+    ('spikeChainBallMappings', '217C AAAAAAAA 0004 317C 03BD 0002 117C 008B 0020', 'optional',
+     'ObjSpikeChain_Child_Init (Level/Collision Chaos/Objects/Spike Chain/Main.asm:214-220)'),
 ]
 
 EXTRA_COLUMNS = ["animalBaseTiles"]

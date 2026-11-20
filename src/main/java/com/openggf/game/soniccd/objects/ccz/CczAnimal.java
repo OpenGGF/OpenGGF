@@ -29,6 +29,7 @@ public final class CczAnimal extends CczObject
         com.openggf.level.objects.RewindRecreatable {
     private int projectorSlot = -1;
     private int projectorId;
+    private int[] groundHologramScriptState;
 
     private int baseX;               // oVar2A
     private int baseY;               // oVar2C
@@ -173,7 +174,16 @@ public final class CczAnimal extends CczObject
                 xVel = -xVel;
                 flipHorizontally();
             }
-            case 8 -> projectorAlive();                                    // ObjCCAnimal_Ground_Hologram (:203-211); Ani_CCAnimalGround has no catalogue anchor
+            case 8 -> {                                                    // ObjCCAnimal_Ground_Hologram (Level/Collision Chaos/Objects/Animal/Main.asm:203-211)
+                if (!projectorAlive()) return;
+                var script = CczObjectArt.animator(provider(), "animalGroundAnimations", 0);
+                if (script == null) return;
+                if (groundHologramScriptState != null) script.restoreScriptState(groundHologramScriptState);
+                script.step();
+                groundHologramScriptState = script.scriptState();
+                mapFrame = script.mapFrame();
+                spriteFlip = (statusFlip ^ script.flipBits()) & 3;
+            }
             default -> setDestroyed(true);
         }
     }
@@ -196,8 +206,16 @@ public final class CczAnimal extends CczObject
         CdObjectArtProvider provider = provider();
         if (provider == null) return;
         boolean flying = (spawn.subtype() & 0x7F) == 0;
-        String key = CczObjectArt.key(provider, flying ? CczObjectArt.ANIMAL_FLYING : CczObjectArt.ANIMAL_GROUND,
-                tileWord & 0x7FFF, services().camera().getX());
+        String sheet;
+        if (flying) {
+            sheet = CczObjectArt.ANIMAL_FLYING;
+        } else if (routine == 8) {
+            if (groundHologramScriptState == null) return;
+            sheet = CczObjectArt.GROUND_HOLOGRAM;
+        } else {
+            sheet = CczObjectArt.ANIMAL_GROUND;
+        }
+        String key = CczObjectArt.key(provider, sheet, tileWord & 0x7FFF, services().camera().getX());
         if (key != null) drawFrame(key, mapFrame, (spriteFlip & 1) != 0, (spriteFlip & 2) != 0);
     }
 

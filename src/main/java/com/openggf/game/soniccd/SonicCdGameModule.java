@@ -12,7 +12,6 @@ import com.openggf.game.GameId;
 import com.openggf.game.GameServices;
 import com.openggf.game.GameModule;
 import com.openggf.game.LevelEventProvider;
-import com.openggf.game.LevelGamestate;
 import com.openggf.game.LevelInitProfile;
 import com.openggf.game.LevelState;
 import com.openggf.game.ObjectArtProvider;
@@ -79,13 +78,17 @@ public final class SonicCdGameModule implements GameModule {
     private final com.openggf.game.soniccd.objects.common.CdFixedObjects fixedObjects =
             new com.openggf.game.soniccd.objects.common.CdFixedObjects();
     private final SonicCdZoneRegistry zoneRegistry = new SonicCdZoneRegistry();
+    /** Non-level programs: the IPX flow owner and its title, stage-select and not-hosted hosts. */
+    private final com.openggf.game.soniccd.program.CdSceneCoordinator scenes =
+            new com.openggf.game.soniccd.program.CdSceneCoordinator(this::disc);
     /** The campaign time owner (time-travel lane): period, warp, generator/projector, good future. */
     private final com.openggf.game.soniccd.timetravel.CdTimeTravel timeTravel =
-            new com.openggf.game.soniccd.timetravel.CdTimeTravel();
+            new com.openggf.game.soniccd.timetravel.CdTimeTravel(scenes::timeAttackMode, scenes::timeStones);
     /** {@code switchFlags} (Level/_Definitions.inc:336): written by switches, read by doors, fans and chains. */
     private final com.openggf.game.soniccd.objects.shared.SharedSwitchFlags switchFlags =
             new com.openggf.game.soniccd.objects.shared.SharedSwitchFlags();
     private final CdLevelEventProvider levelEvents = new CdLevelEventProvider(() -> timeTravel);
+    private final CdLevelPause levelPause = new CdLevelPause();
     /** {@code levelVIntCounter} at stage start: cleared by every load, base 0 unless a replay seeds it. */
     private final CdLevelVIntCounter levelVIntCounter = new CdLevelVIntCounter();
     /** The frame a stage load runs in: it already ran iteration 1, so the loop runs no other that frame. */
@@ -108,12 +111,10 @@ public final class SonicCdGameModule implements GameModule {
                     () -> game == null ? null : game.currentLevel(), () -> game == null ? null : game.currentImage(),
                     this::disc);
 
-    /** Non-level programs: the IPX flow owner and its title, stage-select and not-hosted hosts. */
-    private final com.openggf.game.soniccd.program.CdSceneCoordinator scenes =
-            new com.openggf.game.soniccd.program.CdSceneCoordinator(this::disc);
     {
         scenes.bindTimeTravel(() -> timeTravel);
     }
+
     /** The death's game-over branch (lane FLOW2). */
     private final com.openggf.game.soniccd.program.CdGameOverFlow gameOverFlow =
             new com.openggf.game.soniccd.program.CdGameOverFlow(scenes);
@@ -232,7 +233,7 @@ public final class SonicCdGameModule implements GameModule {
 
     @Override public LevelEventProvider getLevelEventProvider() { return levelEvents; }
     @Override public RespawnState createRespawnState() { return new CheckpointState(); }
-    @Override public LevelState createLevelState() { return new LevelGamestate(); }
+    @Override public LevelState createLevelState() { return new CdLevelGamestate(); }
     @Override public ZoneRegistry getZoneRegistry() { return zoneRegistry; }
     @Override public ScrollHandlerProvider getScrollHandlerProvider() { return scrollHandlerProvider; }
     @Override public ZoneFeatureProvider getZoneFeatureProvider() { return zoneFeatures; }
@@ -248,6 +249,8 @@ public final class SonicCdGameModule implements GameModule {
 
     @Override
     public <T> T getGameService(Class<T> type) {
+        if (type == com.openggf.game.LevelInputOverlay.class) return type.cast(levelPause.recordedInputOverlay);
+        if (type == com.openggf.game.internal.NativeLevelInputOwner.class) return type.cast(levelPause);
         if (type == com.openggf.game.internal.HostAnimationSource.class) return type.cast(
                 new com.openggf.game.internal.HostAnimationSource() {
                     public java.util.Map<Integer, com.openggf.game.AnimationFamilies.Binding> families() {
@@ -330,6 +333,7 @@ public final class SonicCdGameModule implements GameModule {
         if (type == com.openggf.game.soniccd.objects.shared.SharedSwitchFlags.class) return type.cast(switchFlags);
         // The player's water state outside the player object (bubbles read the timer and the current flag).
         if (type == com.openggf.game.soniccd.player.CdPlayerWater.class) return type.cast(playerStage.water());
+        if (type == com.openggf.game.internal.LevelLifePolicy.class) return type.cast(CdLevelLifePolicy.INSTANCE);
         // AddPoints: cap and score extra life (HUD and Points/Main.asm:157-180).
         if (type == com.openggf.game.internal.ScoreAdditionPolicy.class) return type.cast(scenes.scorePolicy());
         // The load runs Level_MainLoop's first iteration, whose addq.w #1,levelFrames precedes its
@@ -376,14 +380,17 @@ public final class SonicCdGameModule implements GameModule {
     private final com.openggf.game.soniccd.objects.boss.CdBossFlagsRewind bossFlags =
             new com.openggf.game.soniccd.objects.boss.CdBossFlagsRewind(com.openggf.game.GameServices::levelOrNull);
 
+    private final com.openggf.game.soniccd.level.CdTimeStopRewind timeStop =
+            new com.openggf.game.soniccd.level.CdTimeStopRewind(com.openggf.game.GameServices::levelOrNull);
+
     /**
      * Campaign time state, the sub-CPU audio command state, the program flow with its backup RAM and the
-     * level's switch flags, the player's water state and the stage's {@code bossFlags} are captured by rewind.
+     * level's switch flags, the player's water state and the stage's boss flags and stop word are captured by rewind.
      */
     @Override
     public java.util.List<com.openggf.game.rewind.RewindSnapshottable<?>> rewindAdapters() {
         return java.util.List.of(timeTravel, audioProfile.subCpuAudio().rewindAdapter(), scenes.rewindAdapter(),
-                switchFlags, playerStage.water(), playerStage.signalsRewindAdapter(), bossFlags);
+                switchFlags, playerStage.water(), playerStage.signalsRewindAdapter(), bossFlags, timeStop);
     }
 
     /** {@code ObjSonic_DeadChkGone}'s game-over object and restart timer (scddisasm/src/Level/_Objects/Sonic/Main.asm:2419-2444). */

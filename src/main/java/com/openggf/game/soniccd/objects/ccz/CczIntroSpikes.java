@@ -2,6 +2,7 @@ package com.openggf.game.soniccd.objects.ccz;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.soniccd.objects.art.CdObjectArtProvider;
+import com.openggf.game.soniccd.timetravel.CdTimeTravel;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManagerInternalAccess;
@@ -25,8 +26,7 @@ import java.util.List;
  *
  * <p>The hurting barrier calls SolidObject and, on a top contact with the player standing on it, hurts the player
  * unless time warping, invincible, already hurt or past routine 4 (:562-590), after moving the player back by its Y
- * velocity (:576-584) as Sonic 1's spikes do. Time Attack mode (which deletes the object, :540-541) is not hosted
- * in-level.
+ * velocity (:576-584) as Sonic 1's spikes do. Time Attack deletes the barrier before its routine runs.
  */
 @com.openggf.level.objects.CameraRelativeDraw(com.openggf.level.objects.CameraRelativeDraw.Use.CULL_ONLY)
 public final class CczIntroSpikes extends CczObject implements ReevaluatingSolidObject, TouchResponseProvider,
@@ -56,6 +56,11 @@ public final class CczIntroSpikes extends CczObject implements ReevaluatingSolid
     @Override
     public void update(int vIntRunCount, PlayableEntity player) {
         if (routine == 0 && CczStage.standDownFromIntro(this, services())) return;
+        // IntroSpikesObject (objects/r3/intro.asm:536-542).
+        if (timeAttackMode()) {
+            setDestroyed(true);
+            return;
+        }
         switch (routine) {
             case 0 -> {
                 if (init()) main(vIntRunCount, player);
@@ -126,10 +131,10 @@ public final class CczIntroSpikes extends CczObject implements ReevaluatingSolid
         return d0 >= 0 && d0 < 2 * d1;
     }
 
-    /** IntroSpikesSolidHurt (:562-590). */
+    /** IntroSpikesSolidHurt (objects/r3/intro.asm:562-590). */
     private void solidHurt(int vIntRunCount, PlayableEntity player) {
         if (!solidObject(Entry.SOLID) || !(player instanceof AbstractPlayableSprite sprite) || !stoodOn(sprite)) return;
-        if (sprite.getInvincibleFrames() > 0) return;                      // tst.b invincible; tst.b warping is not hosted
+        if (CdTimeTravel.starsActive(services().gameModule()) || sprite.getInvincibleFrames() > 0) return;
         if (sprite.isHurt() || sprite.getDead() || sprite.getInvulnerableFrames() > 0) return;
         NativePositionOps.addYPos16_16(sprite, -(sprite.getYSpeed() << 8));    // :576-584
         boolean hadRings = sprite.getRingCount() > 0;
