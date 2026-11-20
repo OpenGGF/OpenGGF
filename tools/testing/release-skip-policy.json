@@ -4195,21 +4195,21 @@
     {
       "match": "com.openggf.game.soniccd.TestSonicCdCommonObjects#placedTimeStopMonitorFreezesTheStageUntilRestart",
       "category": "optional-fixture",
-      "evidence": "src/test/java/com/openggf/game/soniccd/TestSonicCdCommonObjects.java:111",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestSonicCdCommonObjects.java:120",
       "allowed_when_absent": "soniccd_disc",
       "note": "user's Sonic CD disc"
     },
     {
       "match": "com.openggf.game.soniccd.TestSonicCdCommonObjects#palmtreePanicPlatformHoldsItsPositionDuringTimeStop",
       "category": "optional-fixture",
-      "evidence": "src/test/java/com/openggf/game/soniccd/TestSonicCdCommonObjects.java:186",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestSonicCdCommonObjects.java:195",
       "allowed_when_absent": "soniccd_disc",
       "note": "user's Sonic CD disc"
     },
     {
       "match": "com.openggf.game.soniccd.TestSonicCdCommonObjects#combineRingItemRequestsOnlyTheSignpostSound",
       "category": "optional-fixture",
-      "evidence": "src/test/java/com/openggf/game/soniccd/TestSonicCdCommonObjects.java:211",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestSonicCdCommonObjects.java:220",
       "allowed_when_absent": "soniccd_disc",
       "note": "user's Sonic CD disc"
     },
