@@ -7,6 +7,7 @@ import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.soniccd.objects.boss.ttz.TtzBossMissile;
 import com.openggf.game.soniccd.objects.mmz.MmzScarabBody;
+import com.openggf.game.soniccd.player.CdPlayerStage;
 import com.openggf.game.soniccd.timetravel.CdTimeTravel;
 import com.openggf.game.soniccd.timetravel.CdTimeWarp;
 import com.openggf.game.soniccd.zones.wwz.WwzPlayerProfile;
@@ -29,6 +30,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import java.nio.file.Path;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -202,6 +204,50 @@ class TestCdWarpHurtGates {
         assertTrue(runUntilFrozen(), "the same freezer captures unprotected Sonic");
     }
 
+    @Test
+    void wwzBeamChecksWarpStars() throws Exception {
+        boot(CdStagePayload.R61A);
+        WwzPlayerProfile.setBeamMode(sonic, 1);
+        placeSonic(0xC78, 0x1B8); // Act 1 Present, blue beam block $1AA.
+        startWarpStars();
+        CdPlayerStage.of(sonic).afterMovementMode(sonic);
+        assertSafe();
+
+        timeTravel.stopTimeWarp();
+        CdPlayerStage.of(sonic).afterMovementMode(sonic);
+        assertHurt();
+    }
+
+    @Test
+    void wwzSparksCheckWarpStars() throws Exception {
+        boot(CdStagePayload.R61A);
+        placeSonic(0xF08, 0x168); // Act 1 Present, spark block $243.
+        startWarpStars();
+        CdPlayerStage.of(sonic).afterMovementMode(sonic);
+        assertSafe();
+
+        timeTravel.stopTimeWarp();
+        CdPlayerStage.of(sonic).afterMovementMode(sonic);
+        assertHurt();
+    }
+
+    @ParameterizedTest
+    @CsvSource({"89, -1", "90, 0"})
+    void wwzHangBarClearsWarp(int timer, int directionAfterGrab) throws Exception {
+        boot(CdStagePayload.R61A);
+        placeSonic(0x1308, 0x170); // The bar probe reaches block $159 at ($1308, $158).
+        startWarpStars();
+        while (timeTravel.warpTimer() < timer) timeTravel.vIntTick(false);
+
+        CdPlayerStage.of(sonic).afterMovementMode(sonic);
+
+        assertAll(
+                () -> assertEquals(0x2C, sonic.getAnimationId(), "Sonic grabs the bar"),
+                () -> assertFalse(timeTravel.starsActive(), "grabbing the bar ends star protection"),
+                () -> assertEquals(0, timeTravel.warpTimer(), "grabbing the bar resets the timer"),
+                () -> assertEquals(directionAfterGrab, timeTravel.warpDirection(), "bar grab direction at timer " + timer));
+    }
+
     private boolean runUntilFrozen() {
         for (int i = 0; i < 700; i++) {
             stepObjects();
@@ -211,8 +257,9 @@ class TestCdWarpHurtGates {
     }
 
     private void assertSafe() {
-        assertFalse(sonic.isHurt() || sonic.getDead(), "warp stars prevent hurt");
-        assertEquals(5, sonic.getRingCount());
+        assertAll(
+                () -> assertFalse(sonic.isHurt() || sonic.getDead(), "warp stars prevent hurt"),
+                () -> assertEquals(5, sonic.getRingCount(), "warp stars preserve rings"));
     }
 
     private void assertHurt() {

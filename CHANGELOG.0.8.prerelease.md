@@ -99,8 +99,9 @@ under the matching area heading; see the
   stage, including Tidal Tempest. While the warp stars are active, Sonic keeps
   his rings when he lands on spikes with the disc's warp check or touches a
   Tidal Tempest boss missile. The stars also protect Sonic from Wacky
-  Workbench's freezer and let him attack Metallic Madness's scarab from
-  its vulnerable side. Robotnik's projector
+  Workbench's freezer, electric beams and sparks, and let him attack Metallic
+  Madness's scarab from its vulnerable side. Grabbing a Wacky Workbench hang
+  bar ends star protection and resets the warp timer. Robotnik's projector
   can be destroyed in the Past. Both Palmtree Panic Past acts draw its flying
   and ground hologram animals from the disc.
   Accuracy is measured against native recordings made on an emulator running
