@@ -3,7 +3,6 @@ package com.openggf.game.soniccd.objects.ppz;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.soniccd.objects.common.CdObject;
 import com.openggf.graphics.GLCommand;
-import com.openggf.level.objects.CameraRelativeDraw;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.ReevaluatingSolidObject;
@@ -15,7 +14,6 @@ import java.util.List;
  * Palmtree Panic's vertical spin tunnel door. ObjTunnelDoorV
  * (Level/Palmtree Panic/Objects/Tunnel Door/Main.asm:7-20).
  */
-@CameraRelativeDraw(CameraRelativeDraw.Use.CULL_ONLY)
 public final class PpzTunnelDoor extends CdObject implements ReevaluatingSolidObject, ObjectVisualFacing.NonDirectional, SpawnRewindRecreatable {
     private enum Phase { INIT, READY, RESET }
 
@@ -55,7 +53,6 @@ public final class PpzTunnelDoor extends CdObject implements ReevaluatingSolidOb
 
     private void ready(PlayableEntity player) {
         // ObjTunnelDoorV_Main (Level/Palmtree Panic/Objects/Tunnel Door/Main.asm:47-71).
-        // The USA MMDs use BCC after both range compares (R11A $20CE3E and $20CE4E).
         if (player != null) {
             int dx = (x & 0xFFFF) - (player.getCentreX() & 0xFFFF);
             int dy = Math.abs((y & 0xFFFF) - (player.getCentreY() & 0xFFFF));
