@@ -370,7 +370,7 @@ unverified lists. The order is not a priority order.
 - 28 stages have a full-act route; the other 42 have only the 14-second
   fixture, and 14 of those (the act 3 stages) also have boss movies. No
   complete-run recording exists. Three routes (R81B, R81C, R82A) have no
-  act-end assertion, and R42A's is `pending`.
+  act-end assertion; R42A's is asserted through its R43D handoff.
 - 38 of 70 stages place an object ID the engine does not host (pinned in
   `TestCdUnhostedObjectCensus`; 54 before Robotnik's projector was hosted).
 - Robotnik's projector: its picture is compared with native in Palmtree Panic
