@@ -63,7 +63,7 @@ under the matching area heading; see the
   Panic backgrounds sample each row's own camera section, retaining static-row
   repetition without wrapping the moving scenery. Results show the changing
   score and bonus digits and play the tally, final chime and special-stage warp cues.
-  Placed rings that award a life play only the voice jingle. Wacky Workbench's
+  Placed and lost rings that award a life play only the voice jingle. Wacky Workbench's
   bouncy floor plays its cue when it sends Sonic into a roll. The level HUD shows the same point total as the
   results screen. Wider views extend CD object draw/touch and lifetime
   windows, centre boss locks, title cards, results and game-over text, and fill the time tunnel

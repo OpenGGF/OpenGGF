@@ -564,9 +564,8 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         if (renderer != null && renderer.getSparkleFrameCount() > 0) {
             placement.setSparkleStartFrame(index, frameCounter);
         }
-        LevelState pickupState = ringExtraLifeReplacesPickupSound ? player.currentLevelState() : null;
-        int previousPickupLifeFlags = pickupState != null ? pickupState.getRingExtraLifeFlags() : 0;
         if (!ringExtraLifeReplacesPickupSound) playRingAcquisitionSound();
+        boolean awardedExtraLife;
         var roster = nativeCompetitionStreamingActive() ? nativeCompetitionRoster() : null;
         if (roster != null) {
             int slot = roster.slotOf(player);
@@ -574,12 +573,17 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             var state = roster.levelState(slot);
             int previousLifeFlags = state.getRingExtraLifeFlags();
             state.addRings(1);
-            if ((state.getRingExtraLifeFlags() & ~previousLifeFlags) != 0) {
+            awardedExtraLife = (state.getRingExtraLifeFlags() & ~previousLifeFlags) != 0;
+            if (awardedExtraLife) {
                 com.openggf.audio.AudioManagerInternalAccess.playRingExtraLife(audioManager);
             }
-        } else player.addRings(1);
-        if (ringExtraLifeReplacesPickupSound
-                && (pickupState == null || (pickupState.getRingExtraLifeFlags() & ~previousPickupLifeFlags) == 0)) {
+        } else {
+            LevelState state = ringExtraLifeReplacesPickupSound ? player.currentLevelState() : null;
+            int previousLifeFlags = state != null ? state.getRingExtraLifeFlags() : 0;
+            player.addRings(1);
+            awardedExtraLife = state != null && (state.getRingExtraLifeFlags() & ~previousLifeFlags) != 0;
+        }
+        if (ringExtraLifeReplacesPickupSound && !awardedExtraLife) {
             playRingAcquisitionSound();
         }
         notifyNativeRingPickup(player);
