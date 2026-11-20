@@ -3,6 +3,7 @@ package com.openggf.game.soniccd;
 import com.openggf.game.AbstractLevelInitProfile;
 import com.openggf.game.InitStep;
 import com.openggf.game.LevelLoadContext;
+import com.openggf.game.soniccd.player.CdPlayerStage;
 
 import java.util.List;
 
@@ -16,8 +17,7 @@ final class SonicCdLevelInitProfile extends AbstractLevelInitProfile
     private final CdLevelEventProvider events;
     private final com.openggf.game.soniccd.timetravel.CdTimeTravel timeTravel;
     private final com.openggf.game.soniccd.objects.shared.SharedSwitchFlags switchFlags;
-    /** The player's stage state outside the player object (CdPlayerStage.resetForLevel). */
-    private final Runnable resetPlayerStage;
+    private final CdPlayerStage playerStage;
     private final CdLevelVIntCounter levelVIntCounter;
     private final CdLoadFrame loadFrame;
     /** The session's disc, for the stage load's identity (null before a disc is open). */
@@ -34,12 +34,12 @@ final class SonicCdLevelInitProfile extends AbstractLevelInitProfile
 
     SonicCdLevelInitProfile(CdLevelEventProvider events, com.openggf.game.soniccd.timetravel.CdTimeTravel timeTravel,
                             com.openggf.game.soniccd.objects.shared.SharedSwitchFlags switchFlags,
-                            Runnable resetPlayerStage, CdLevelVIntCounter levelVIntCounter, CdLoadFrame loadFrame,
+                            CdPlayerStage playerStage, CdLevelVIntCounter levelVIntCounter, CdLoadFrame loadFrame,
                             java.util.function.Supplier<CdDiscDataSource> disc,
                             java.util.function.Consumer<CdStagePayload> loadPcmDriver) {
         this.disc = disc;
         this.loadPcmDriver = java.util.Objects.requireNonNull(loadPcmDriver, "loadPcmDriver");
-        this.resetPlayerStage = resetPlayerStage;
+        this.playerStage = playerStage;
         this.levelVIntCounter = levelVIntCounter;
         this.loadFrame = loadFrame;
         this.events = events;
@@ -65,7 +65,7 @@ final class SonicCdLevelInitProfile extends AbstractLevelInitProfile
         steps.add(new InitStep("ResetCdPlayerStage",
                 "InitStage's drown timer and the cleared object and flag RAM: the bubbles slot and "
                         + "water_current_flag (r4/main.asm:212; Level/Main.asm:210-216)",
-                resetPlayerStage));
+                playerStage::resetForLevel));
         for (InitStep core : buildCoreSteps(ctx)) {
             steps.add(core);
             if (core.name().equals("InitGameModule")) steps.add(loadLevelCommandStep(ctx));
@@ -239,11 +239,13 @@ final class SonicCdLevelInitProfile extends AbstractLevelInitProfile
      */
     private void loadReservedObjects() {
         var level = com.openggf.game.GameServices.level();
-        if (!(level.getCurrentLevel() instanceof com.openggf.game.soniccd.level.CdLevel)) return;
+        if (!(level.getCurrentLevel() instanceof com.openggf.game.soniccd.level.CdLevel cd)) return;
         var objects = level.getObjectManager();
         if (arrival == null && titleCard) {
-            com.openggf.game.soniccd.objects.common.CdFixedObjects.install(objects,
-                    com.openggf.game.GameServices.level().getLevelGamestate());
+            com.openggf.game.soniccd.objects.common.CdFixedObjects.install(objects, level.getLevelGamestate());
+            // InitStageWaitForGfx (r4/main.asm:242-252) locks the cleared pad before the first object pass.
+            var player = com.openggf.game.GameServices.sprites().getMainPlayable();
+            if (player != null) playerStage.applyControlLock(player, cd);
             return;
         }
         for (var kind : com.openggf.game.soniccd.objects.common.CdHud.Kind.values()) {
