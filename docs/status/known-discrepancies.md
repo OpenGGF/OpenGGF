@@ -242,7 +242,7 @@ disc-drive timing. The cases below describe how those limits affect play.
   (CD System Program/SPX.asm:1877-1881) starts 41 to 83 frames early in the
   engine. Native latency grows with the track's distance on the disc.
   The engine starts playback at the request without modelling the drive seek.
-- **Special-stage stamp cost.** `CdStampOperationRequest.cyclesPerLine`
+- **Unmeasured special-stage stamp widths and physical timing.** `CdStampOperationRequest.cyclesPerLine`
   estimates CD master clocks per rendered line from its width and the image
   cursor's offset within a word. The estimate matches BizHawk 2.11 measurements
   at widths 256 and 304. Other widths are unmeasured, and physical stamp

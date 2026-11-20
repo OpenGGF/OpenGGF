@@ -375,9 +375,9 @@ fixes noted below. The order is not a priority order.
   `TestCdUnhostedObjectCensus`; 54 before Robotnik's projector was hosted).
 - Robotnik's projector picture and destruction are compared with native in
   Palmtree Panic only. Wacky Workbench's hologram animals are hosted
-  ([PR #395](https://github.com/OpenGGF/OpenGGF/pull/395), merged). Tidal
-  Tempest's projector holograms are in open
-  [PR #408](https://github.com/OpenGGF/OpenGGF/pull/408). Collision Chaos's
+  ([PR #395](https://github.com/OpenGGF/OpenGGF/pull/395), merged).
+  [PR #408](https://github.com/OpenGGF/OpenGGF/pull/408) hosts Tidal Tempest's
+  projector holograms. Collision Chaos's
   ground hologram animation remains unverified.
 - After [PR #397](https://github.com/OpenGGF/OpenGGF/pull/397) merged at
   `a9547c71ac`, `TestCdRingNativeParity` matches the ring counter, placed-ring
