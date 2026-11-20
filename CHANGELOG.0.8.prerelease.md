@@ -52,7 +52,12 @@ under the matching area heading; see the
   has its own presentation, objects and boss. Palmtree Panic's solid boulders
   use the current section's graphics, replacing the title-card tiles after loading.
   Flowers finish growing, diagonal springs and monitor rewards use their proper
-  graphics, and object names follow the current stage's object table. Palmtree
+  graphics, and object names follow the current stage's object table. Collision
+  Chaos acts 1 and 2 have rotating spike chains with period-specific lengths
+  and graphics loaded from the disc. Defeated badniks
+  play the disc's destroy sound, and Mosqui, Tamabboh and Palmtree Panic's Taga-Taga
+  play their own effects on impact, firing, takeoff or landing while the badnik is
+  on screen. Palmtree
   Panic backgrounds sample each row's own camera section, retaining static-row
   repetition without wrapping the moving scenery. Results show the changing
   score and bonus digits. The level HUD shows the same point total as the
@@ -73,9 +78,11 @@ under the matching area heading; see the
   the title, stage select, Time Attack, Special Stage 8 from the sound test,
   both special-stage attract demos, backup RAM (saved in `saves/soniccd`),
   the opening video, both endings, FM
-  effects, CD audio and PCM sound are hosted. The FM loader also accepts verified
-  Japanese and European discs containing the identical driver bank. The title's
-  RAM DATA entry confirms a reset of Sonic CD's save to disc defaults.
+  effects, CD audio and PCM sound are hosted. Special-stage extra lives cap the
+  campaign total at 249. Level 1-Ups can raise it past 249 and wrap from 255
+  to 0. The FM loader also accepts verified Japanese and European discs
+  containing the identical driver bank. The title's RAM DATA entry confirms a
+  reset of Sonic CD's save to disc defaults.
   Time Attack follows the disc's object rules for time posts, the HUD time icon,
   1-Up monitors, the special-stage ring and the Collision Chaos intro.
   Clearing Special Stage 8 opens an OpenGGF acknowledgement with the disc's
@@ -99,7 +106,12 @@ under the matching area heading; see the
   the original Stage 8 credits and Japanese and European gameplay remain open. Disc audio, video songs and PCM sound follow the music
   and effects volumes; CD audio and PCM also share the FM presentation scale
   for their relative level. The time-warp stars animate from the disc in every
-  stage, including Tidal Tempest, and Robotnik's projector
+  stage, including Tidal Tempest. While the warp stars are active, Sonic keeps
+  his rings when he lands on spikes with the disc's warp check or touches a
+  Tidal Tempest boss missile. The stars also protect Sonic from Wacky
+  Workbench's freezer, electric beams and sparks, and let him attack Metallic
+  Madness's scarab from its vulnerable side. Grabbing a Wacky Workbench hang
+  bar ends star protection and resets the warp timer. Robotnik's projector
   can be destroyed in the Past. Both Palmtree Panic Past acts draw its flying
   and ground hologram animals from the disc.
   Accuracy is measured against native recordings made on an emulator running
@@ -113,10 +125,11 @@ under the matching area heading; see the
   currents use the retained direction on the hurt recovery frame. R42A matches
   through the results and next-act handoff. Quartz Quadrant Past conveyors
   change speed on the warp trigger frame, and the R51B short fixture matches
-  all 569 recorded rows. The ring counter and every placed ring's position
-  equal native on every compared row of the 28
-  routes and two runs through Palmtree Panic loops, except lost rings after a hit
-  in two Metallic Madness routes. Stage loads clear the state native
+  all 569 recorded rows. Metallic Madness Act 1 hosts Poh-Bee and its swinging
+  weights. Its shared badnik defeat and Good Future explosion preserve native
+  slot use. Ring counts and positions match native over the 28 recorded routes
+  and two Palmtree Panic loops. Ring spills and slots now match throughout the
+  recorded Metallic Madness Present, Past, and Good Future routes. Stage loads clear the state native
   clears, so playing stages in any order matches playing each alone. In normal
   play the object clock a stage starts from and the video player's disc wait
   follow measured emulator timings under `gameplay.loadTimeSimulation`

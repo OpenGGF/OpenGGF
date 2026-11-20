@@ -12,7 +12,6 @@ import com.openggf.game.GameId;
 import com.openggf.game.GameServices;
 import com.openggf.game.GameModule;
 import com.openggf.game.LevelEventProvider;
-import com.openggf.game.LevelGamestate;
 import com.openggf.game.LevelInitProfile;
 import com.openggf.game.LevelState;
 import com.openggf.game.ObjectArtProvider;
@@ -236,7 +235,7 @@ public final class SonicCdGameModule implements GameModule {
 
     @Override public LevelEventProvider getLevelEventProvider() { return levelEvents; }
     @Override public RespawnState createRespawnState() { return new CheckpointState(); }
-    @Override public LevelState createLevelState() { return new LevelGamestate(); }
+    @Override public LevelState createLevelState() { return new CdLevelGamestate(); }
     @Override public ZoneRegistry getZoneRegistry() { return zoneRegistry; }
     @Override public ScrollHandlerProvider getScrollHandlerProvider() { return scrollHandlerProvider; }
     @Override public ZoneFeatureProvider getZoneFeatureProvider() { return zoneFeatures; }
