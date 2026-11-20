@@ -376,14 +376,17 @@ public final class SonicCdGameModule implements GameModule {
     private final com.openggf.game.soniccd.objects.boss.CdBossFlagsRewind bossFlags =
             new com.openggf.game.soniccd.objects.boss.CdBossFlagsRewind(com.openggf.game.GameServices::levelOrNull);
 
+    private final com.openggf.game.soniccd.level.CdTimeStopRewind timeStop =
+            new com.openggf.game.soniccd.level.CdTimeStopRewind(com.openggf.game.GameServices::levelOrNull);
+
     /**
      * Campaign time state, the sub-CPU audio command state, the program flow with its backup RAM and the
-     * level's switch flags, the player's water state and the stage's {@code bossFlags} are captured by rewind.
+     * level's switch flags, the player's water state and the stage's boss flags and stop word are captured by rewind.
      */
     @Override
     public java.util.List<com.openggf.game.rewind.RewindSnapshottable<?>> rewindAdapters() {
         return java.util.List.of(timeTravel, audioProfile.subCpuAudio().rewindAdapter(), scenes.rewindAdapter(),
-                switchFlags, playerStage.water(), playerStage.signalsRewindAdapter(), bossFlags);
+                switchFlags, playerStage.water(), playerStage.signalsRewindAdapter(), bossFlags, timeStop);
     }
 
     /** {@code ObjSonic_DeadChkGone}'s game-over object and restart timer (scddisasm/src/Level/_Objects/Sonic/Main.asm:2419-2444). */

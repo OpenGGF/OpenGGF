@@ -52,7 +52,9 @@ under the matching area heading; see the
   has its own presentation, objects and boss. Palmtree Panic's solid boulders
   use the current section's graphics, replacing the title-card tiles after loading.
   Flowers finish growing, diagonal springs and monitor rewards use their proper
-  graphics, and object names follow the current stage's object table. Palmtree
+  graphics, and object names follow the current stage's object table. The
+  Palmtree Panic Act 3 time-stop monitor holds palette cycling and selected
+  object animations until the stage reloads. Palmtree
   Panic backgrounds sample each row's own camera section, retaining static-row
   repetition without wrapping the moving scenery. Results show the changing
   score and bonus digits. Wider views extend CD object draw/touch and lifetime

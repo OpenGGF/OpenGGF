@@ -22,6 +22,9 @@ public final class CdSoundRequests {
     /** {@code FM_SHIELD} (FM/_Sound IDs.inc:17). */
     public static final int SHIELD = 0x97;
 
+    /** {@code FM_SIGNPOST} (FM/_Sound IDs.inc:23). */
+    public static final int SIGNPOST = 0x9D;
+
     private CdSoundRequests() { }
 
     /**

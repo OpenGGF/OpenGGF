@@ -26,9 +26,8 @@ import java.util.List;
  * player with a jump of $680 ($380 in water) along {@code oAngle - $40}, the roll-jump setup of a normal jump and
  * {@code FM_A0}. A player in routine 6 or later is let go of the circling but keeps the control bit.
  *
- * <p>Not modelled: {@code miniSonic} radii (no stage sets it here) and the disc's {@code timeStopTimer}
- * animation gate (no time stop is hosted); the water test reads the disc's {@code oFlags} bit 6, which nothing sets
- * in Palmtree Panic. Control uses the shared object-control seam (movement skipped, touch response running).
+ * <p>The stop word holds the sprite animation while the rider routine continues. The water test reads
+ * the disc's {@code oFlags} bit 6, which Palmtree Panic leaves clear. Mini-Sonic radii remain unimplemented.
  */
 @com.openggf.level.objects.CameraRelativeDraw(com.openggf.level.objects.CameraRelativeDraw.Use.CULL_ONLY)
 public final class ObjSpinningDisc extends CdObject implements ReevaluatingSolidObject,
@@ -60,7 +59,8 @@ public final class ObjSpinningDisc extends CdObject implements ReevaluatingSolid
             init();
         }
         main();
-        animate();
+        // ObjSpinningDisc (Palmtree Panic/Objects/Spinning Disc/Main.asm:15-26).
+        if (!flags().timeStopped()) animate();
     }
 
     /** ObjSpinningDisc_Init (scddisasm/src/Level/Palmtree Panic/Objects/Spinning Disc/Main.asm:36-47). */

@@ -15,11 +15,14 @@ import com.openggf.game.soniccd.player.CdSonicAnimation;
 import com.openggf.game.soniccd.level.CdLevel;
 import com.openggf.game.soniccd.objects.common.CdExplosion;
 import com.openggf.game.soniccd.objects.common.CdMonitor;
+import com.openggf.game.soniccd.objects.common.CdMonitorItem;
+import com.openggf.game.soniccd.objects.common.CdRing;
 import com.openggf.game.soniccd.objects.common.CdPoints;
 import com.openggf.game.soniccd.objects.common.CdSpikes;
 import com.openggf.game.soniccd.objects.common.CdSpring;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.physics.Direction;
 import com.openggf.physics.GroundSensor;
@@ -33,8 +36,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Path;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -98,6 +104,97 @@ class TestSonicCdCommonObjects {
     private List<ObjectInstance> live(int objectId) {
         return GameServices.level().getObjectManager().getActiveObjects().stream()
                 .filter(o -> !o.isDestroyed() && o.getSpawn().objectId() == objectId).toList();
+    }
+
+    @Test
+    void placedTimeStopMonitorFreezesTheStageUntilRestart() throws Exception {
+        var levels = GameServices.level();
+        levels.loadZoneAndAct(SonicCdZoneRegistry.zoneIndex(CdStagePayload.R13C),
+                SonicCdZoneRegistry.actIndex(CdStagePayload.R13C));
+        CdLevel stage = (CdLevel) levels.getCurrentLevel();
+        sonic.setCentreX((short) 0xB58);
+        sonic.setCentreY((short) 0x346);
+        GameServices.camera().updatePosition(true);
+        // This part of the disc layout has no ring placements. Keep a witness slot in the same object pass.
+        CdRing ring = add(new CdRing(new ObjectSpawn(0xB90, 0x338, 0x10, 0, 0, false, 0)));
+        runner.stepIdleFrames(128);
+        var color = stage.getPalette(3).getColor(5);
+        Set<Integer> controlColors = new HashSet<>();
+        Set<Integer> controlRingFrames = new HashSet<>();
+        for (int frame = 0; frame < 32; frame++) {
+            runner.stepIdleFrames(1);
+            controlColors.add(paletteColor(color));
+            controlRingFrames.add(ring.mapFrame());
+        }
+        CdMonitor box = live(0x19).stream().filter(CdMonitor.class::isInstance).map(CdMonitor.class::cast)
+                .filter(o -> o.getSpawn().x() == 0xBF0 && o.getSpawn().y() == 0x350
+                        && o.getSpawn().subtype() == 5).findFirst().orElseThrow();
+        var rewind = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+        var beforeBreak = rewind.capture();
+        runner.stepFrame(false, true, false, false, false);
+        for (int frame = 0; frame < 44; frame++) {
+            runner.stepFrame(false, true, false, false, true);
+        }
+        for (int frame = 0; frame < 18 && box.mapFrame() != 0x11; frame++) {
+            runner.stepIdleFrames(1);
+        }
+        int brokenFrame = box.mapFrame();
+        // Eggman lowers the bottom boundary during the pickup rise. Observe the reward from the upper ledge.
+        sonic.setCentreX((short) 0xBF0);
+        sonic.setCentreY((short) 0x1A4);
+        sonic.setGSpeed((short) 0);
+        sonic.setXSpeed((short) 0);
+        sonic.setYSpeed((short) 0);
+        GameServices.camera().updatePosition(true);
+        runner.stepIdleFrames(40);
+        var afterBreak = rewind.capture();
+        int frozenColor = paletteColor(color);
+        int frozenRingFrame = ring.mapFrame();
+        int startFrame = levels.getFrameCounter();
+        Set<Integer> stoppedWords = new HashSet<>();
+        Set<Integer> stoppedColors = new HashSet<>();
+        Set<Integer> stoppedRingFrames = new HashSet<>();
+        for (int frame = 0; frame < 401; frame++) {
+            runner.stepIdleFrames(1);
+            stoppedWords.add(stage.flags().timeStopWord);
+            stoppedColors.add(paletteColor(color));
+            stoppedRingFrames.add(ring.mapFrame());
+        }
+        int completedFrames = levels.getFrameCounter() - startFrame;
+        rewind.restore(beforeBreak);
+        int rewoundWord = stage.flags().timeStopWord;
+        rewind.restore(afterBreak);
+        int restoredWord = stage.flags().timeStopWord;
+        levels.restartCurrentLevelAfterDeath();
+        CdLevel restarted = (CdLevel) levels.getCurrentLevel();
+
+        assertAll(
+                () -> assertEquals(3, controlColors.size(), "all R13C palette phases while the box is intact"),
+                () -> assertEquals(Set.of(0, 1, 2, 3), controlRingFrames, "ring completes a spin while the box is intact"),
+                () -> assertEquals(0x11, brokenFrame, "Sonic breaks the disc placement while rolling into it"),
+                () -> assertEquals(401, completedFrames, "freeze is observed across completed level frames"),
+                () -> assertEquals(Set.of(300), stoppedWords, "the stop word does not count down"),
+                () -> assertEquals(Set.of(frozenColor), stoppedColors, "PPZ palette cycling is held"),
+                () -> assertEquals(Set.of(frozenRingFrame), stoppedRingFrames, "the ring keeps its mapping frame"),
+                () -> assertEquals(0, rewoundWord, "rewind before the break restores the clear word"),
+                () -> assertEquals(300, restoredWord, "rewind after the pickup restores the stop word"),
+                () -> assertEquals(0, restarted.flags().timeStopWord, "death reload clears the stop word"));
+    }
+
+    @Test
+    void combineRingItemRequestsOnlyTheSignpostSound() {
+        var item = new CdMonitorItem(0, 0, 6, 0);
+        var services = org.mockito.Mockito.mock(ObjectServices.class);
+        item.setServices(services);
+        for (int frame = 0; frame < 64; frame++) item.update(frame, sonic);
+        org.mockito.Mockito.verify(services).playSfx(0x9D);
+        org.mockito.Mockito.verify(services).gameState();
+        org.mockito.Mockito.verify(services).levelGamestate();
+        org.mockito.Mockito.verifyNoMoreInteractions(services);
+    }
+
+    private static int paletteColor(com.openggf.level.Palette.Color color) {
+        return (color.r & 0xFF) << 16 | (color.g & 0xFF) << 8 | (color.b & 0xFF);
     }
 
     @Test

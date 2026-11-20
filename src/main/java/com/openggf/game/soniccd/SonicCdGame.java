@@ -74,8 +74,16 @@ public final class SonicCdGame extends Game implements PlayerSpriteArtProvider, 
     @Override
     public AnimatedPaletteManager loadAnimatedPaletteManager(Level level, int zoneIndex) {
         if (!(level instanceof CdLevel stage) || currentImage == null) return null;
-        return com.openggf.game.soniccd.zones.CdZones.fragment(stage.payload().stage().zone())
+        CdStageKey key = stage.payload().stage();
+        AnimatedPaletteManager cycle = com.openggf.game.soniccd.zones.CdZones.fragment(key.zone())
                 .createPaletteCycle(stage.payload(), level, currentImage);
+        // USA's acts 1 and 2 always cycle (loc_2018F2, r5/main.asm:375-387).
+        // Act 3 uses StageMainLoopDraw (common/main.asm:443-447).
+        if (cycle == null || (key.zone() == CdZone.QUARTZ_QUADRANT && key instanceof CdStageKey.Traversal)) return cycle;
+        return () -> {
+            // Level_MainLoop (Level/Main.asm:420-427) and StageMainLoopDraw (r4/main.asm:401-406).
+            if (!stage.flags().timeStopped()) cycle.update();
+        };
     }
 
     /**

@@ -79,7 +79,8 @@ public final class CdMonitor extends CdObject
         } else {
             if (onPlayerLayer()) solidObject(ReevaluatingSolidObject.Entry.SOLID);   // ObjMonitor_Solid (:242-259)
         }
-        if (animator != null) {
+        // ObjMonitor_Animate (Monitor and Time Post/Main.asm:363-367).
+        if (animator != null && !flags().timeStopped()) {
             animator.step();
             mapFrame = animator.mapFrame();
             animState = animator.scriptState();

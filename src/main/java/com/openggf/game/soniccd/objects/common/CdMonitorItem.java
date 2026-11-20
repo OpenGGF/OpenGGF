@@ -15,8 +15,8 @@ import java.util.List;
  * rises from -$300 slowing by $18 a frame, then gives its item and stays 30 frames. Items by
  * {@code oAnim}: 0 1UP, 1 ten rings (1UP at 100 and 200), 2 shield, 3 invincibility, 4 speed
  * shoes (1320 frames each on USA, Monitor and Time Post/Main.asm:539-543,572-576), 5 time stop, 6 combine ring, 7 S (shield,
- * invincibility and shoes). Time stop and the combine ring set {@code timeStopTimer} and
- * {@code combineRing}, which have no consumer yet; those two items are not hosted.
+ * invincibility and shoes). The combine-ring flag's only reader is in a non-USA Metallic
+ * Madness demo (HurtPlayer, r8/player_object_collide.asm:266-273).
  */
 public final class CdMonitorItem extends CdObject implements ObjectVisualFacing.NonDirectional, SpawnRewindRecreatable {
     /** USA: move.w #1320,objPlayerSlot+oPlayerInvinc.w / oPlayerShoes (Monitor and Time Post/Main.asm:539-543,572-576). */
@@ -97,6 +97,9 @@ public final class CdMonitorItem extends CdObject implements ObjectVisualFacing.
             case 2 -> { if (player != null) player.giveShield(); services().playSfx(com.openggf.game.soniccd.audio.CdSoundRequests.SHIELD); }
             case 3 -> { if (player != null) player.giveInvincibility(USA_POWER_FRAMES); com.openggf.game.soniccd.audio.CdSoundRequests.powerUpMusic(services(), com.openggf.game.soniccd.audio.CdSoundRequests.INVINCIBILITY); }
             case 4 -> { if (player != null) player.giveSpeedShoes(USA_POWER_FRAMES); com.openggf.game.soniccd.audio.CdSoundRequests.powerUpMusic(services(), com.openggf.game.soniccd.audio.CdSoundRequests.SPEED_SHOES); }
+            // ObjMonitorItem_Main .GiveTimeStop/.GiveCombineRing (Monitor and Time Post/Main.asm:593-611).
+            case 5 -> flags().timeStopWord = 300;
+            case 6 -> services().playSfx(com.openggf.game.soniccd.audio.CdSoundRequests.SIGNPOST);
             case 7 -> {
                 // .CheckS: shield, invincibility, then speed shoes (Monitor and Time Post/Main.asm:615-618).
                 if (player != null) {
