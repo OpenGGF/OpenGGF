@@ -809,7 +809,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         var sprites = GameServices.spritesOrNull();
         if (sprites != null && sprites.getMainPlayable() instanceof com.openggf.sprites.playable.AbstractPlayableSprite main
                 && main.getSuperStateController() instanceof Sonic3kSuperStateController powered) {
-            powered.advanceDoomsdayTransformationAtAnPal();
+            powered.advanceDoomsdayPaletteAtAnPal();
         }
         // D01 Animate_Palette precedes SpecialEvents/Process_Sprites. The
         // ordinary animator's post-object tail retains only its late resolution.

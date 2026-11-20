@@ -9,14 +9,14 @@ import static org.mockito.Mockito.when;
 
 class TestHyperFormTrailSample {
     @Test
-    void evenAndOddFramesUseRomCAnd14ByteHistoryOffsets() {
+    void evenAndOddFramesSubtractRomOffsetsFromNextWriteSlot() {
         AbstractPlayableSprite player = mock(AbstractPlayableSprite.class);
-        when(player.getCentreX(3)).thenReturn((short) 30);
-        when(player.getCentreY(3)).thenReturn((short) 31);
-        when(player.getArtTileAttributeHistory(3)).thenReturn((byte) 0x80);
-        when(player.getCentreX(5)).thenReturn((short) 50);
-        when(player.getCentreY(5)).thenReturn((short) 51);
-        when(player.getArtTileAttributeHistory(5)).thenReturn((byte) 0x05);
+        when(player.getCentreX(2)).thenReturn((short) 30);
+        when(player.getCentreY(2)).thenReturn((short) 31);
+        when(player.getArtTileAttributeHistory(2)).thenReturn((byte) 0x80);
+        when(player.getCentreX(4)).thenReturn((short) 50);
+        when(player.getCentreY(4)).thenReturn((short) 51);
+        when(player.getArtTileAttributeHistory(4)).thenReturn((byte) 0x05);
         when(player.getMappingFrame()).thenReturn(0xB7);
         when(player.getRenderHFlip()).thenReturn(true);
         when(player.getRenderVFlip()).thenReturn(false);

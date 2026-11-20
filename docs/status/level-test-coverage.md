@@ -1294,6 +1294,12 @@ A mirrored slope-snap error was reproduced and fixed;161 focused checks pass,
 zero skips. This is reference coverage, not full-act or combined delivery approval.
 
 
+DDZ presentation follow-up (2026-11-20): the
+[DDZ matrix](../architecture/validation/levels/s3k-ddz.md#boss-height-hyper-trail-and-exit-palette-2026-11-20)
+records seeded 320px native comparisons for phase-2 boss height, the Hyper
+after-image and the exit fade. Other viewports, teams and whole-scene pixel
+coverage remain open.
+
 DDZ presentation follow-up (2026-09-25): Hyper-star startup now follows native
 module completion, matching506 observed child updates. Focused, full DDZ route
 and rewind-guard checks pass; the DDZ matrix records commands and capture limits.

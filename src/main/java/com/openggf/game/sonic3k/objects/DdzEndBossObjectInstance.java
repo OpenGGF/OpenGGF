@@ -302,7 +302,9 @@ public final class DdzEndBossObjectInstance extends AbstractDdzObjectInstance
         camera.setMinY((short) cameraY);
         // Camera_max_Y_pos and Camera_target_max_Y_pos.
         camera.setMaxY((short) cameraY);
-        yPos = ((cameraY + 0xE0) & 0xFFFF) << 16;
+        // loc_81A28 (sonic3k.asm:173689-173707) stores only the integer
+        // word. The fraction from the first fight survives the rise and chase.
+        yPos = (((cameraY + 0xE0) & 0xFFFF) << 16) | (yPos & 0xFFFF);
         xVel = 0;
         yVel = -0x200;
         for (int i = 0; i < 3; i++) {
