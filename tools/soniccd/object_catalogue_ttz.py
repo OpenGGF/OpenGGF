@@ -16,6 +16,12 @@ ANCHORS = [
      'InitSectionGfx (src/r4/section_gfx_2a.asm:3-15): lea SectionGfxRanges(pc),a1; the update and init lists follow it (:52-70)'),
     ('switchMappings', '117C 0010 0017 117C 0010 0019 317C 050A 0002 217C AAAAAAAA 0004 117C 000A 0016', 'optional',
      'SwitchObject (objects/r4/switch.asm:9-13): oXRadius and oWidth $10; move.w #$50A,oTile(a0); move.l #SwitchSprites,oMap(a0); move.b #$A,oYRadius(a0)'),
+    ('swingMappings', '117C 0004 0018 217C AAAAAAAA 0004 317C 0340 0002', 'optional',
+     'SwingObject_0_Routine0 (objects/r4/swing.asm:53-61): SwingSprites and tile $340'),
+    ('switchElevatorMappings', '317C 446A 0002 117C 0003 0018 217C AAAAAAAA 0004 4A28 003C', 'optional',
+     'SwitchElevatorObject_0_Routine0 (objects/r4/switch_elevator.asm:173-180): SwitchElevatorSprites and tile $446A'),
+    ('elevatorSwitchMappings', '317C 050A 0002 117C 0003 0018 217C AAAAAAAA 0004 4A68 0036', 'optional',
+     'SwitchObject2_0_Routine0 (objects/r4/switch_elevator.asm:42-50): SwitchSprites2 and tile $50A'),
     ('doorMappings', '317C 4440 0002 117C 0002 0018 217C AAAAAAAA 0004', 'optional',
      'DoorObject_0_Routine0 (objects/r4/door.asm:30-32): move.w #$4440,oTile(a0); move.b #2,oPriority(a0); move.l #DoorSprites,oMap(a0)'),
     ('doorSizes', '43FB 00QQ 1159 0019 1159 0016 1159 003B 1159 001A', 'optional',
@@ -152,7 +158,12 @@ BREAK_POLE_INIT = '0028 0004 0001 317C 42F8 0002 217C AAAAAAAA 0004 5428 0024'
 # SpikeBallObject (objects/r4/spike_ball.asm:3-14): match the entry and its mapping operand.
 STATIONARY_SPIKE_BALL = ('4A28 0024 6636 5428 0024 0028 0004 0001 117C 0003 0018 117C 00A9 0020 '
                          '117C 0010 0017 117C 0010 0019 117C 0010 0016 317C 0370 0002 217C AAAAAAAA 0004')
-EXTRA_COLUMNS = (*FIRST_HIT, 'breakPoleMappings', 'stationarySpikeBallMappings')
+# VMoveBlockObject (objects/r4/v_move_block.asm:3-24). Follow the stage's
+# dispatch table to each placed subtype's init, then read its mapping operand.
+VERTICAL_MOVE_BLOCK = '7000 1028 0028 D000 303B 0006 4EFB 0002'
+VERTICAL_MOVE_INIT = '5428 0024 0028 0004 0001 317C 446A 0002 117C 0003 0018 217C AAAAAAAA 0004'
+VERTICAL_MOVE_SUBTYPES = {'vMoveMappings1': 1, 'vMoveMappings2': 3, 'vMoveMappings3': 4, 'vMoveMappings7': 10}
+EXTRA_COLUMNS = (*FIRST_HIT, 'breakPoleMappings', 'stationarySpikeBallMappings', *VERTICAL_MOVE_SUBTYPES)
 
 
 def extra_columns(stage: str, data: bytes) -> dict:
@@ -183,4 +194,21 @@ def extra_columns(stage: str, data: bytes) -> dict:
     match = pattern(STATIONARY_SPIKE_BALL).match(data, entry) if entry >= 0 else None
     require((match is not None) == (stage in {"R42A", "R42C", "R42D"}), f"{stage} unexpected $37 dispatch")
     out['stationarySpikeBallMappings'] = int.from_bytes(match.group("abs"), "big") - WORD_RAM if match else None
+    # ObjectIndex (r4/object_index_1b.asm:37-39) dispatches $23 only in Past and Future.
+    slot = indexes[0] + 4 * (0x23 - 1)
+    entry = int.from_bytes(data[slot:slot + 4], "big") - WORD_RAM
+    dispatched = entry >= 0 and pattern(VERTICAL_MOVE_BLOCK).match(data, entry) is not None
+    require(dispatched == (stage[2] in "12" and stage[3] in "BCD"), f"{stage} unexpected $23 dispatch")
+    for column, subtype in VERTICAL_MOVE_SUBTYPES.items():
+        out[column] = None
+        if dispatched:
+            table = entry + 16
+            handler = table + int.from_bytes(data[table + 2 * subtype:table + 2 * subtype + 2], "big", signed=True)
+            # Each handler starts by loading its routine table with move.w d8(PC,d0.w),d0.
+            require(data[handler + 6:handler + 9] == bytes.fromhex("303B00"), f"{stage} {column}: missing routine table")
+            routines = handler + 8 + int.from_bytes(data[handler + 9:handler + 10], "big", signed=True)
+            init = routines + int.from_bytes(data[routines:routines + 2], "big", signed=True)
+            mapping = pattern(VERTICAL_MOVE_INIT).match(data, init)
+            require(mapping is not None, f"{stage} {column}: missing init mapping load")
+            out[column] = int.from_bytes(mapping.group("abs"), "big") - WORD_RAM
     return out

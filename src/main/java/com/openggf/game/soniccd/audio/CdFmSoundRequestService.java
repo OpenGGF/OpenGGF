@@ -93,6 +93,18 @@ public final class CdFmSoundRequestService implements AudioRequestService, GameP
         }
     }
 
+    @Override
+    public void submitSecondarySound(int nativeRequestId, AudioCommand command) {
+        if (nativeRequestId == CdSoundRequests.RESULTS_CHIME) {
+            // FMDrvQueue1 is the driver's pending request, downstream of the three stage queues.
+            Snapshot s = state;
+            state = new Snapshot(s.queue1(), s.queue2(), s.queue3(), nativeRequestId,
+                    s.slot1(), s.slot2(), s.slot3(), s.curPriority());
+        } else {
+            submitSound(nativeRequestId, command);
+        }
+    }
+
     private static Snapshot with(Snapshot s, int q1, int q2, int q3) {
         return new Snapshot(q1, q2, q3, s.sndPlay(), s.slot1(), s.slot2(), s.slot3(), s.curPriority());
     }

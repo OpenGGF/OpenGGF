@@ -124,11 +124,10 @@ public final class ObjFreezer extends WwzObject implements ObjectVisualFacing.No
         if (result == 2) routine += 2;                           // $FC: addq.b #2,oRoutine
     }
 
-    /** ObjFreezer_CheckSonic (:306-344). */
+    /** FreezerCheckPlayerOverlap (objects/r6/freezer.asm:284-314). */
     private boolean canFreeze(AbstractPlayableSprite player) {
         if (player.getInvincibleFrames() > 0) return false;      // tst.b invincible
-        var tt = CdTimeTravel.of(services().gameModule());
-        if (tt != null && tt.warping()) return false;            // tst.b timeWarp
+        if (CdTimeTravel.starsActive(services().gameModule())) return false;
         if (player.isHurt() || player.getDead()) return false;   // cmpi.b #4,oRoutine(a1) / bcc.s
         if (WwzPlayerProfile.playerControl(player) != 0) return false;   // tst.b oPlayerCtrl(a1)
         int reachX = player.getXRadius() + 16;
