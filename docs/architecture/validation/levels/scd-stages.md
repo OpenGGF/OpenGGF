@@ -44,6 +44,17 @@ records the original failures and loading correction. This bounded art check
 does not advance the route matrix; section-transition screenshots, broader
 viewport coverage and inherited rewind/lifecycle gaps remain unassessed.
 
+## Time Attack object rules
+
+`TestCdTimeAttackObjects` loads the USA disc for R11A and R31A, both with
+the IPX Time Attack selection and with the flag clear. It checks a placed
+time post, the reserved HUD icon, the 1-Up monitor, the special-stage ring,
+and the two Amy routines and intro spikes. It also checks when all seven
+Time Stones can force a good future. `TestCdTimeAttackFlow` covers entry from
+the title and restores the running mode through the existing rewind adapter.
+The campaign interaction with Amy in R11A still uses a placeholder. These
+checks cover the object rules in the two tested stage files.
+
 ## Playtest follow-up (2026-11-15)
 
 The [bounded validation record](../2026-11-15-sonic-cd-playtest-fixes.md)
@@ -115,8 +126,8 @@ diverging row and the frontier test's cause label (a guess, not a diagnosis).
 | R52B, R52C, R52D | none | none | green | |
 | R53C, R53D | boss movies | boss | green | Both fights green past the capsule to the stage exit; act end reaches R61A |
 | R61A | **green** 4,892 | asserted | green | |
-| R61B | **green** 5,449 | asserted | green | |
-| R61C | **green** 6,767 | asserted | green | |
+| R61B | **green** 5,449 | asserted | green | The full-act recording observes both projector animals entering at row 2749 and leaving at row 3209. The route passes above their sprites. |
+| R61C | **green** 6,767 | asserted | green | The short fixture observes the flying animal placed at `($0488,$04D0)`. Its on-screen region matches native at rows 631 and 647 at 3 bits per color channel. |
 | R61D | none | none | green | |
 | R62A | **green** 4,787 | asserted | green | |
 | R62B, R62C, R62D | none | none | green | |
@@ -229,6 +240,24 @@ their short recordings. The R51A, R51B, R51C and R52A long routes match through
 their recorded ends. These comparisons use the existing frontier fields and
 recordings. See the [trace frontier log](../../../status/trace-frontier-log.md#2026-11-18--sonic-cd-quartz-quadrant-conveyor-at-warp-trigger).
 
+## Palmtree Panic time-stop monitor
+
+The USA disc places subtype 5 at `$0BF0,$0350` in R13C and R13D
+(`StageObjects`, r1/stage_object_maps_3.asm:65-68). The item writes 300
+(`ObjMonitorItem_Main`, Level/_Objects/Monitor and Time Post/Main.asm:593-611).
+Native R13C captures at completed level frames 98–456 retained 300 and
+the same palette step and timer. The matching unbroken control continued
+cycling. `LevelStart` clears the word with the flower buffer
+(Level/Main.asm:178-184), including death reentry (Level_MainLoop,
+Level/Main.asm:401-408) and loading a warp destination.
+
+`TestSonicCdCommonObjects#placedTimeStopMonitorFreezesTheStageUntilRestart`
+drives Sonic into the disc placement in R13C and checks palette and ring
+mapping frames across 401 subsequent level frames, rewind, and a death
+reload. The ring witness uses an added slot because this part of the layout
+has no rings. The native probe staged a monitor break and sampled palette
+state. The ring witness and alternate future lack a native comparison.
+
 ## Standard obligations
 
 | Obligation | State | Gap |
@@ -244,8 +273,9 @@ recordings. See the [trace frontier log](../../../status/trace-frontier-log.md#2
 | ROUTE | 28 full-act routes as above | Act 1 Bad Future and act 2 Past and futures: fixtures only; no complete-run recording |
 | ORACLE | Constants and branches cite `docs/scddisasm`; trace rows comparison-only | Lag-frame CPU timing not modelled ([known discrepancy](../../../status/known-discrepancies.md#sonic-cd-hardware-timings-not-modelled)) |
 
-Breadth: Sonic CD has one character and no teams; it is not a donor, and
-donation into it is not assessed. Widths 400, 528 and 800 draw full pictures in
+Breadth: Sonic CD has one character and no teams; it is not a donor. Donation
+into it has bounded R11A coverage only (see
+[cartridge donor hosting](#cartridge-donor-hosting-2026-11-16)). Widths 400, 528 and 800 draw full pictures in
 the capture tools but have no native reference; the other presets are unchecked.
 
 ## Sound Test Special Stage 8
