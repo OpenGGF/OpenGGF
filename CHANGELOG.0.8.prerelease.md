@@ -55,7 +55,8 @@ under the matching area heading; see the
   graphics, and object names follow the current stage's object table. Palmtree
   Panic backgrounds sample each row's own camera section, retaining static-row
   repetition without wrapping the moving scenery. Results show the changing
-  score and bonus digits. Wider views extend CD object draw/touch and lifetime
+  score and bonus digits. The level HUD shows the same point total as the
+  results screen. Wider views extend CD object draw/touch and lifetime
   windows, centre boss locks, title cards, results and game-over text, and fill the time tunnel
   through its white fade. CD HUD pieces, including the time-period and warp icons,
   follow the centred or left-edge HUD setting in both widescreen draw modes.
