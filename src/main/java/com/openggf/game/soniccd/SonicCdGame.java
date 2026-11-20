@@ -32,6 +32,7 @@ public final class SonicCdGame extends Game implements PlayerSpriteArtProvider, 
     private CdStageImage currentImage;
     private CdStageDemo currentDemo;
     private CdStageImage demoImage;
+    private int demoEntryInputReads;
     private java.util.function.Supplier<CdStageDemo> demoSelection = () -> null;
 
     public SonicCdGame(CdDiscDataSource disc) {
@@ -61,6 +62,7 @@ public final class SonicCdGame extends Game implements PlayerSpriteArtProvider, 
         CdStageDemo demo = demoSelection.get();
         currentDemo = demo != null && demo.payload() == payload ? demo : null;
         demoImage = currentDemo == null ? null : loader.readDemo(currentDemo);
+        demoEntryInputReads = demoImage == null ? 0 : currentDemo.entryInputReads(demoImage);
         int zone = SonicCdZoneRegistry.zoneIndex(payload);
         current = currentDemo == null ? loader.load(payload, currentImage, zone, true)
                 : loader.loadDemo(currentDemo, demoImage, currentImage, zone);
@@ -110,12 +112,17 @@ public final class SonicCdGame extends Game implements PlayerSpriteArtProvider, 
         currentImage = null;
         currentDemo = null;
         demoImage = null;
+        demoEntryInputReads = 0;
         projectStart = null;
     }
 
     public CdLevel currentLevel() { return current; }
 
     CdStageDemo currentDemo() { return currentDemo; }
+
+    int nextDemoSample(int completedIterations) {
+        return demoEntryInputReads + completedIterations;
+    }
 
     int demoWord(int index) {
         return demoImage.u16(CdStageCatalogue.entry(currentDemo).demoInput() + index * 2);

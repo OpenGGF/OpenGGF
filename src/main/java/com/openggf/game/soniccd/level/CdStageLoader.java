@@ -31,16 +31,16 @@ public final class CdStageLoader {
     /** Decodes an already-read stage image. */
     public CdLevel load(CdStagePayload payload, CdStageImage image, int zoneIndex, boolean publishGraphics)
             throws IOException {
-        return new CdLevel(payload, image, CdStageCatalogue.entry(payload), zoneIndex, publishGraphics, disc.identity(), image);
+        return new CdLevel(payload, image, CdStageCatalogue.entry(payload), zoneIndex, publishGraphics, disc.identity(), image, null);
     }
     public CdStageImage readDemo(CdStageDemo demo) throws IOException {
-        return new CdStageImage(disc.readFile(demo.program().loadFiles().getFirst()));
+        return new CdStageImage(disc.readFile(demo.file()));
     }
 
     public CdLevel loadDemo(CdStageDemo demo, CdStageImage image, CdStageImage objectImage, int zoneIndex)
             throws IOException {
         return new CdLevel(demo.payload(), image, CdStageCatalogue.entry(demo), zoneIndex, true, disc.identity(),
-                objectImage);
+                objectImage, demo);
     }
 
     /** Reject foreign media and inconsistent payload coordinates before reading a stage. */

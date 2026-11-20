@@ -162,6 +162,11 @@ final class SonicCdLevelInitProfile extends AbstractLevelInitProfile
         boolean present = timeTravel.timeZone() == com.openggf.game.soniccd.timetravel.CdTimeZone.PRESENT;
         boolean checkpoint = ctx.hasCheckpoint();
         titleCard = !deathRestart || (!checkpoint && present);
+        if (com.openggf.game.GameServices.level().getCurrentLevel()
+                instanceof com.openggf.game.soniccd.level.CdLevel cd && cd.demo() != null) {
+            titleCard = cd.demo().showsTitleCard() && titleCard;
+            if (checkpoint) ctx.snapshotCheckpoint(null);
+        }
         if (deathRestart && checkpoint && !present) ctx.snapshotCheckpoint(null);
         checkpointSpawn = deathRestart && ctx.hasCheckpoint();
     }
@@ -180,18 +185,22 @@ final class SonicCdLevelInitProfile extends AbstractLevelInitProfile
             return null;
         }
         CdStagePayload payload = cd.payload();
+        CdStageDemo demo = cd.demo();
+        CdNativeFile fileName = demo == null ? payload.file() : demo.file();
         try {
             boolean spawnModeSet = checkpointSpawn || arrival != null;
             int plc = 0;
             if (spawnModeSet || !titleCard) {
-                byte[] file = source.readFile(payload.file());
-                int levelDataPlc = file[com.openggf.game.soniccd.level.CdStageCatalogue.entry(payload).levelDataIndex() + 4]
+                byte[] file = source.readFile(fileName);
+                var entry = demo == null ? com.openggf.game.soniccd.level.CdStageCatalogue.entry(payload)
+                        : com.openggf.game.soniccd.level.CdStageCatalogue.entry(demo);
+                int levelDataPlc = file[entry.levelDataIndex() + 4]
                         & 0xFF;                                   // move.b (a2),d0 after addq.w #4,a2 (:44-46)
                 int section = spawnModeSet ? CdLoadTiming.sectionInitPlc(file, CdLoadTiming.sectionRanges(payload),
                         com.openggf.game.GameServices.camera().getX()) : 0;
                 plc = CdLoadTiming.levelStartPlc(spawnModeSet, true, levelDataPlc, section);
             }
-            return CdLoadTiming.stageLoad(source.assets().entry(payload.file()), plc);
+            return CdLoadTiming.stageLoad(source.assets().entry(fileName), plc);
         } catch (java.io.IOException e) {
             throw new java.io.UncheckedIOException("stage load identity for " + payload, e);
         }

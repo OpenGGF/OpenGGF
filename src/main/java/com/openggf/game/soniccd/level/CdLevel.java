@@ -3,6 +3,7 @@ package com.openggf.game.soniccd.level;
 import com.openggf.data.compression.NemesisReader;
 import com.openggf.game.GameServices;
 import com.openggf.game.soniccd.CdPeriod;
+import com.openggf.game.soniccd.CdStageDemo;
 import com.openggf.game.soniccd.CdStagePayload;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.AbstractLevel;
@@ -71,12 +72,15 @@ public final class CdLevel extends AbstractLevel implements com.openggf.game.int
     }
 
     private final CdStagePayload payload;
+    private final CdStageDemo demo;
     private final com.openggf.game.internal.NativeProjectSource projectSource;
 
     @Override public com.openggf.game.internal.NativeProjectSource nativeProjectSource() { return projectSource; }
     @Override public int[] nativeProjectStart() { return new int[]{startX, startY}; }
     // --- common2 ---
     private com.openggf.game.soniccd.objects.common.CdLevelFlags flags;
+
+    public CdStageDemo demo() { return demo; }
 
     /** The common objects' level flags; goodFuture starts set for a Good Future stage. */
     public com.openggf.game.soniccd.objects.common.CdLevelFlags flags() {
@@ -97,9 +101,11 @@ public final class CdLevel extends AbstractLevel implements com.openggf.game.int
     private com.openggf.game.soniccd.zones.ppz.PpzBackgroundRows ppzBackgroundRows;
 
     CdLevel(CdStagePayload payload, CdStageImage image, CdStageCatalogue.Entry entry, int zoneIndex,
-            boolean publishGraphics, String mediaIdentity, CdStageImage objectImage) throws IOException {
+            boolean publishGraphics, String mediaIdentity, CdStageImage objectImage, CdStageDemo demo)
+            throws IOException {
         super(zoneIndex);
         this.payload = payload;
+        this.demo = demo;
         this.projectSource = new com.openggf.game.internal.NativeProjectSource(mediaIdentity, payload.name(),
                 payload.stage().zone().nativeRound(), payload.stage().actNumber(), payload.stage().period().name(),
                 payload.file().isoName(), CHUNK_GRID);

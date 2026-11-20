@@ -253,7 +253,7 @@ public final class SonicCdGameModule implements GameModule {
     private final com.openggf.game.internal.LevelDemoPlayback demoPlayback =
             new com.openggf.game.internal.LevelDemoPlayback() {
                 @Override public com.openggf.control.PlayerInputState inputForNextIteration() {
-                    int sample = CdStageDemo.ENTRY_INPUT_WORDS + GameServices.level().getFrameCounter();
+                    int sample = game.nextDemoSample(GameServices.level().getFrameCounter());
                     return CdStageDemo.decodeInput(game.demoWord(sample));
                 }
 
@@ -265,7 +265,7 @@ public final class SonicCdGameModule implements GameModule {
                 }
 
                 @Override public boolean hasFinished() {
-                    return CdStageDemo.ENTRY_INPUT_WORDS + GameServices.level().getFrameCounter()
+                    return game.nextDemoSample(GameServices.level().getFrameCounter())
                             >= CdStageDemo.INPUT_WORDS;
                 }
             };

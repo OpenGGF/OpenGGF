@@ -6,6 +6,7 @@ import com.openggf.control.PlayerInputState;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameServices;
 import com.openggf.game.soniccd.level.CdLevel;
+import com.openggf.game.soniccd.objects.common.CdTitleCard;
 import com.openggf.game.soniccd.program.CdProgramFlow;
 import com.openggf.game.soniccd.program.CdSceneCoordinator;
 import com.openggf.tools.HeadlessGameBoot;
@@ -19,7 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class TestCdStageDemos {
     private record Position(int x, int y) { }
-    private record Observation(CdStagePayload stage, Position spawn, Position afterPlayback, int rings,
+    private record Observation(CdStagePayload stage, Position spawn, boolean showsTitleCard, Position afterPlayback, int rings,
                                int returnedAtLevelFrame, GameMode returnedMode) { }
 
     @Test
@@ -39,11 +40,14 @@ class TestCdStageDemos {
                 var stage = (CdLevel) level.getCurrentLevel();
                 var player = GameServices.sprites().getMainPlayable();
                 var spawn = new Position(player.getCentreX(), player.getCentreY());
-                stepUntil(loop, 500, () -> level.getFrameCounter() == 360);
+                boolean titleCard = level.getObjectManager().getActiveObjects().stream()
+                        .anyMatch(CdTitleCard.class::isInstance);
+                int sampleFrame = demo == CdStageDemo.R82A ? 120 : 360;
+                stepUntil(loop, 500, () -> level.getFrameCounter() == sampleFrame);
                 var afterPlayback = new Position(player.getCentreX(), player.getCentreY());
                 int rings = player.getRingCount();
 
-                boolean naturalEnd = demo == CdStageDemo.R11A;
+                boolean naturalEnd = demo != CdStageDemo.R82A;
                 if (!naturalEnd) {
                     loop.getInputHandler().setLogicalOverride(LogicalInputSnapshot.ofPlayers(
                             PlayerInputState.of(0, 0, 0, 0, true, true), PlayerInputState.neutral()));
@@ -51,20 +55,20 @@ class TestCdStageDemos {
                     loop.getInputHandler().clearLogicalOverride();
                 }
                 stepUntil(loop, naturalEnd ? 2200 : 90, () -> loop.getCurrentGameMode() == GameMode.TITLE_SCREEN);
-                observations.add(new Observation(stage.payload(), spawn, afterPlayback, rings,
+                observations.add(new Observation(stage.payload(), spawn, titleCard, afterPlayback, rings,
                         level.getFrameCounter(), loop.getCurrentGameMode()));
             }
         }
 
-        // Start positions come from the demo MMDs. Iteration 360 pins observable
-        // playback through the shared level loop. The two Start exits stop there.
+        // Observations from an uninterrupted USA disc idle rotation, sampled
+        // at iteration 360 (R11A and R43C) and iteration 120 (R82A).
         assertEquals(List.of(
-                new Observation(CdStagePayload.R11A, new Position(64, 1899), new Position(796, 1820),
+                new Observation(CdStagePayload.R11A, new Position(64, 1899), true, new Position(796, 1820),
                         1, 2025, GameMode.TITLE_SCREEN),
-                new Observation(CdStagePayload.R43C, new Position(976, 940), new Position(1013, 940),
-                        0, 360, GameMode.TITLE_SCREEN),
-                new Observation(CdStagePayload.R82A, new Position(6947, 1484), new Position(7093, 1406),
-                        1, 360, GameMode.TITLE_SCREEN)), observations);
+                new Observation(CdStagePayload.R43C, new Position(976, 940), false, new Position(1578, 1254),
+                        0, 2006, GameMode.TITLE_SCREEN),
+                new Observation(CdStagePayload.R82A, new Position(6947, 1484), false, new Position(7014, 1452),
+                        0, 120, GameMode.TITLE_SCREEN)), observations);
     }
 
     private static void stepUntil(GameLoop loop, int max, BooleanSupplier reached) {

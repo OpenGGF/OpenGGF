@@ -273,6 +273,14 @@ state. The ring witness and alternate future lack a native comparison.
 | ROUTE | 28 full-act routes as above | Act 1 Bad Future and act 2 Past and futures: fixtures only; no complete-run recording |
 | ORACLE | Constants and branches cite `docs/scddisasm`; trace rows comparison-only | Lag-frame CPU timing not modelled ([known discrepancy](../../../status/known-discrepancies.md#sonic-cd-hardware-timings-not-modelled)) |
 
+The USA idle rotation reads 23 controller samples before R11A's first level
+iteration and 42 before each of R43C and R82A. R43C and R82A skip the title card
+and drain a stage-art queue. All three return after sample 2048, for 2025, 2006,
+and 2006 level iterations respectively. The disc-backed test compares Sonic's
+position and rings at iterations 360, 360, and 120 respectively. The recordings
+show later movement differences in R11A and R82A. In R82A, the first sampled
+position difference is at iteration 127 around a hurt response.
+
 Breadth: Sonic CD has one character and no teams; it is not a donor. Donation
 into it has bounded R11A coverage only (see
 [cartridge donor hosting](#cartridge-donor-hosting-2026-11-16)). Widths 400, 528 and 800 draw full pictures in
