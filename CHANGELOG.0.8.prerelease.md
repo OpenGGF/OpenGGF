@@ -52,7 +52,9 @@ under the matching area heading; see the
   has its own presentation, objects and boss. Palmtree Panic's solid boulders
   use the current section's graphics, replacing the title-card tiles after loading.
   Flowers finish growing, diagonal springs and monitor rewards use their proper
-  graphics, and object names follow the current stage's object table. Palmtree
+  graphics, and object names follow the current stage's object table. Collision
+  Chaos acts 1 and 2 have rotating spike chains with period-specific lengths
+  and graphics loaded from the disc. Palmtree
   Panic backgrounds sample each row's own camera section, retaining static-row
   repetition without wrapping the moving scenery. Results show the changing
   score and bonus digits. Wider views extend CD object draw/touch and lifetime
