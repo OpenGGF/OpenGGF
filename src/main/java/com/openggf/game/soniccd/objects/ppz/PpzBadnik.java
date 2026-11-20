@@ -27,8 +27,7 @@ import java.util.List;
  * subtype 1) and keeps {@code oLayer}; the kill count is the shared chain (100, 200, 500, 1000,
  * then 10000 from the sixteenth, {@code EnemyPoints} times {@code AddPoints}'s 10) and
  * {@code oVar3E} is its table index (0, 2, 4, 6, or $A) which the explosion turns into the points
- * sprite. The explosion's flower and animal belong to other lanes. {@code FM_DESTROY} is not hosted
- * (the FM effect driver has no object-facing API yet).
+ * sprite. The collision routine requests {@code FM_DESTROY} before rewriting the slot.
  *
  * <p>The player-side decisions (attack by rolling or invincibility, hurt otherwise, bounce) are the
  * shared touch response's, which are Sonic 1's React_Enemy in Sonic CD (Player Object Collision.asm:130-197).
@@ -47,7 +46,9 @@ abstract class PpzBadnik extends CdObject
     /** oXSub and oYSub, the low words of oX and oY. */
     protected int xSub;
     protected int ySub;
-    protected CdAnimator animator;
+    protected transient CdAnimator animator;
+    private final CdAnimator.StageRewind rewindAnimation =
+            new CdAnimator.StageRewind(() -> artProvider().image(), () -> animator, restored -> animator = restored);
     protected int mapFrame;
     protected int xRadius;
     private boolean artReady;

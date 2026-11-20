@@ -119,6 +119,16 @@ public final class CdTimeTravel implements RewindSnapshottable<CdTimeTravel.Snap
         return module == null ? null : module.getGameService(CdTimeTravel.class);
     }
 
+    /**
+     * Native collision immunity reads the warp-stars flag. PlayerMakeWarpStars
+     * (objects/player.asm:116-120) sets it before PlayerCheckWarpCommitTimeZone
+     * (objects/player.asm:598-602) sets the destination bit.
+     */
+    public static boolean starsActive(GameModule module) {
+        CdTimeTravel travel = of(module);
+        return travel != null && travel.starsActive();
+    }
+
     // ---- Reads -------------------------------------------------------------------
 
     public CdTimeZone timeZone() { return timeZone; }
