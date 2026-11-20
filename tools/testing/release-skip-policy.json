@@ -3731,6 +3731,34 @@
       "note": "Sonic CD disc and native backup-RAM dumps"
     },
     {
+      "match": "com.openggf.game.soniccd.audio.TestCdRecordedPauseMusic#recordedStartPausesAndResumesMusic(Music)[1]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/audio/TestCdRecordedPauseMusic.java:45",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Sonic CD USA disc for recorded Start and the native stage music sources"
+    },
+    {
+      "match": "com.openggf.game.soniccd.audio.TestCdRecordedPauseMusic#recordedStartPausesAndResumesMusic(Music)[2]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/audio/TestCdRecordedPauseMusic.java:45",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Sonic CD USA disc for recorded Start and the native stage music sources"
+    },
+    {
+      "match": "com.openggf.game.soniccd.audio.TestCdRecordedPauseMusic#recordedStartPausesAndResumesMusic(Music)[3]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/audio/TestCdRecordedPauseMusic.java:45",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Sonic CD USA disc for recorded Start and the native stage music sources"
+    },
+    {
+      "match": "com.openggf.game.soniccd.audio.TestCdRecordedPauseMusic#recordedStartPausesAndResumesMusic(Music)[4]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/audio/TestCdRecordedPauseMusic.java:45",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Sonic CD USA disc for recorded Start and the native stage music sources"
+    },
+    {
       "match": "com.openggf.game.soniccd.TestCdPauseExit#timeAttackReturnsToItsMenu(int)[1]",
       "category": "optional-fixture",
       "evidence": "src/test/java/com/openggf/game/soniccd/TestCdPauseExit.java:36",
