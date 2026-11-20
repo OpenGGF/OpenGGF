@@ -973,6 +973,125 @@
       "note": "Sonic CD disc and native captures"
     },
     {
+      "match": "com.openggf.game.soniccd.TestCdWarpHurtGates#freezerCannotCaptureSonicWhileWarpStarsAreActive",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdWarpHurtGates.java:194",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Sonic CD USA disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestCdWarpHurtGates#missileTouchStillCountsWhileWarpStarsPreventHurt",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdWarpHurtGates.java:143",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Sonic CD USA disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestCdWarpHurtGates#scarabEnemySideChecksWarpStars(boolean)[1]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdWarpHurtGates.java:174",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Sonic CD USA disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestCdWarpHurtGates#scarabEnemySideChecksWarpStars(boolean)[2]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdWarpHurtGates.java:174",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Sonic CD USA disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestCdWarpHurtGates#sidewaysSpikesUseSharedTouchGate",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdWarpHurtGates.java:128",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Sonic CD USA disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestCdWarpHurtGates#standingOnSpikesChecksWarpStars(CdStagePayload, int, int)[1]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdWarpHurtGates.java:110",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Sonic CD USA disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestCdWarpHurtGates#standingOnSpikesChecksWarpStars(CdStagePayload, int, int)[2]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdWarpHurtGates.java:110",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Sonic CD USA disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestCdWarpHurtGates#standingOnSpikesChecksWarpStars(CdStagePayload, int, int)[3]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdWarpHurtGates.java:110",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Sonic CD USA disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestCdWarpHurtGates#standingOnSpikesChecksWarpStars(CdStagePayload, int, int)[4]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdWarpHurtGates.java:110",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Sonic CD USA disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestCdWarpHurtGates#standingOnSpikesChecksWarpStars(CdStagePayload, int, int)[5]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdWarpHurtGates.java:110",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Sonic CD USA disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestCdWarpHurtGates#standingOnSpikesChecksWarpStars(CdStagePayload, int, int)[6]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdWarpHurtGates.java:110",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Sonic CD USA disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestCdWarpHurtGates#standingOnSpikesChecksWarpStars(CdStagePayload, int, int)[7]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdWarpHurtGates.java:110",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Sonic CD USA disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestCdWarpHurtGates#standingOnSpikesChecksWarpStars(CdStagePayload, int, int)[8]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdWarpHurtGates.java:110",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Sonic CD USA disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestCdWarpHurtGates#wwzBeamChecksWarpStars",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdWarpHurtGates.java:208",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Sonic CD USA disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestCdWarpHurtGates#wwzHangBarClearsWarp(int, int)[1]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdWarpHurtGates.java:236",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Sonic CD USA disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestCdWarpHurtGates#wwzHangBarClearsWarp(int, int)[2]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdWarpHurtGates.java:236",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Sonic CD USA disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestCdWarpHurtGates#wwzSparksCheckWarpStars",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdWarpHurtGates.java:222",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Sonic CD USA disc"
+    },
+    {
       "match": "com.openggf.game.soniccd.TestSonicCdTimeTravel#r52aPastPostWarpTriggersAndLocksTheCameraAsNative",
       "category": "optional-fixture",
       "evidence": "src/test/java/com/openggf/game/soniccd/TestSonicCdTimeTravel.java:53",
