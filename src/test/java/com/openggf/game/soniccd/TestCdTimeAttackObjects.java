@@ -10,7 +10,6 @@ import com.openggf.game.soniccd.level.CdStageCatalogue;
 import com.openggf.game.soniccd.objects.art.CdObjectArtProvider;
 import com.openggf.game.soniccd.objects.ccz.CczIntroState;
 import com.openggf.game.soniccd.objects.ccz.CczMetalSonic;
-import com.openggf.game.soniccd.objects.common.CdBigRing;
 import com.openggf.game.soniccd.objects.common.CdMonitor;
 import com.openggf.game.soniccd.objects.common.CdTimeIcon;
 import com.openggf.game.soniccd.program.CdSceneCoordinator;
@@ -25,6 +24,7 @@ import com.openggf.tests.HeadlessTestRunner;
 import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.nio.file.Path;
@@ -120,14 +120,17 @@ class TestCdTimeAttackObjects {
     }
 
     @ParameterizedTest
-    @ValueSource(booleans = {false, true})
-    void bigRingWithEnoughRings(boolean timeAttack) throws Exception {
+    @CsvSource({"63, false, true", "127, false, false", "63, true, false"})
+    void bigRingWithEnoughRings(int timeStones, boolean timeAttack, boolean expectedPresent) throws Exception {
         run(CdStagePayload.R11A, 1, timeAttack, sonic -> {
-            var spawn = new ObjectSpawn(sonic.getCentreX() + 64, sonic.getCentreY(), 0x14, 0, 0, false, 0);
-            GameServices.level().getObjectManager().addDynamicObject(new CdBigRing(spawn));
+            var spawn = level().getObjects().stream()
+                    .filter(object -> object.objectId() == 0x14 && object.subtype() == 0)
+                    .findFirst().orElseThrow();
+            var travel = CdTimeTravel.of(SessionManager.requireCurrentGameModule());
+            travel.setTimeStones(timeStones);
             GameServices.level().getLevelGamestate().setRings(50);
-            new HeadlessTestRunner(sonic).stepIdleFrames(2);
-            assertEquals(!timeAttack, live(spawn), "big ring after the 50-ring check");
+            frameAt(sonic, spawn);
+            assertEquals(expectedPresent, live(spawn), "placed big ring after the 50-ring check");
         });
     }
 
