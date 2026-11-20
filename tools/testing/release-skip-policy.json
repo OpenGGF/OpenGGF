@@ -4767,20 +4767,6 @@
       "note": "user's Sonic CD disc"
     },
     {
-      "match": "com.openggf.game.soniccd.TestCdTimeAttackObjects#bigRingWithEnoughRings(boolean)[1]",
-      "category": "optional-fixture",
-      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdTimeAttackObjects.java:124",
-      "allowed_when_absent": "soniccd_disc",
-      "note": "user's Sonic CD disc"
-    },
-    {
-      "match": "com.openggf.game.soniccd.TestCdTimeAttackObjects#bigRingWithEnoughRings(boolean)[2]",
-      "category": "optional-fixture",
-      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdTimeAttackObjects.java:124",
-      "allowed_when_absent": "soniccd_disc",
-      "note": "user's Sonic CD disc"
-    },
-    {
       "match": "com.openggf.game.soniccd.TestCdTimeAttackObjects#bigRingWithEnoughRings(int, boolean, boolean)[1]",
       "category": "optional-fixture",
       "evidence": "src/test/java/com/openggf/game/soniccd/TestCdTimeAttackObjects.java:131",
