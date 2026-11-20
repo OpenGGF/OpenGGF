@@ -7,6 +7,10 @@ under the matching area heading; see the
 
 ## Gameplay and presentation
 
+- **Sonic 2 positioned starts:** object loading publishes the new camera
+  position before the next object update. Widescreen EDGE keeps Emerald Hill's
+  loop switchers alive so Sonic can follow both sides of the loop.
+
 - **The Doomsday Zone:** the second boss phase preserves the ship's fractional
   vertical position, Hyper Sonic's after-image uses the original history slots,
   and his palette keeps cycling through the white exit fade.
