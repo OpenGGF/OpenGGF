@@ -663,13 +663,23 @@ class TestTtzObjects {
         var stars = live(0x03).stream().filter(CdTimeStars.class::isInstance).map(CdTimeStars.class::cast).toList();
         assertEquals(List.of(5, 6, 7, 8), stars.stream().map(CdTimeStars::animation).sorted().toList());
 
-        // The creation frame only initialises each star. Later object passes read PowerupAnims
-        // and animate the live trail (loc_2060B2, scddisasm/src/objects/powerup.asm:127-141).
-        for (int i = 0; i < 12; i++) {
+        // PowerupAnims (r4/data_2a.asm:426-428) selects .Anim5 through .Anim8 in anims/powerup.asm.
+        // These are the first twelve displayed frames, including .Anim5's $FF loop.
+        int[][] mappingFrames = {
+                {8, 9, 10, 11, 12, 11, 10, 9, 8, 0, 8, 9},
+                {8, 8, 0, 8, 8, 0, 9, 9, 0, 9, 9, 0},
+                {8, 8, 0, 8, 0, 0, 9, 9, 0, 9, 0, 0},
+                {8, 0, 0, 8, 0, 0, 9, 0, 0, 9, 0, 0}
+        };
+        for (int i = 0; i < mappingFrames[0].length; i++) {
             // Keep the warp speed on the opening slope so the production star pass can run.
             sonic.setGSpeed((short) 0x700);
             runner.stepFrame(false, false, false, true, false);
             assertTrue(timeTravel.starsActive(), "warp stars should stay active during the run");
+            for (var star : stars) {
+                assertEquals(mappingFrames[star.animation() - 5][i], star.mappingFrame(),
+                        "animation " + star.animation() + ", tick " + (i + 1));
+            }
         }
         assertTrue(stars.stream().noneMatch(CdTimeStars::isDestroyed));
         timeTravel.stopTimeWarp();
