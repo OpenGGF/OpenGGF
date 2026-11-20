@@ -55,9 +55,11 @@ under the matching area heading; see the
   graphics, and object names follow the current stage's object table. Defeated badniks
   play the disc's destroy sound, and Mosqui, Tamabboh and Palmtree Panic's Taga-Taga
   play their own effects on impact, firing, takeoff or landing while the badnik is
-  on screen. Palmtree Panic backgrounds sample each row's own camera section,
-  retaining static-row repetition without wrapping the moving scenery. Results show the changing
-  score and bonus digits. Wider views extend CD object draw/touch and lifetime
+  on screen. Palmtree
+  Panic backgrounds sample each row's own camera section, retaining static-row
+  repetition without wrapping the moving scenery. Results show the changing
+  score and bonus digits. The level HUD shows the same point total as the
+  results screen. Wider views extend CD object draw/touch and lifetime
   windows, centre boss locks, title cards, results and game-over text, and fill the time tunnel
   through its white fade. CD HUD pieces, including the time-period and warp icons,
   follow the centred or left-edge HUD setting in both widescreen draw modes.
@@ -74,9 +76,13 @@ under the matching area heading; see the
   the title, stage select, Time Attack, Special Stage 8 from the sound test,
   both special-stage attract demos, backup RAM (saved in `saves/soniccd`),
   the opening video, both endings, FM
-  effects, CD audio and PCM sound are hosted. The FM loader also accepts verified
-  Japanese and European discs containing the identical driver bank. The title's
-  RAM DATA entry confirms a reset of Sonic CD's save to disc defaults.
+  effects, CD audio and PCM sound are hosted. Special-stage extra lives cap the
+  campaign total at 249. Level 1-Ups can raise it past 249 and wrap from 255
+  to 0. The FM loader also accepts verified Japanese and European discs
+  containing the identical driver bank. The title's RAM DATA entry confirms a
+  reset of Sonic CD's save to disc defaults.
+  Time Attack follows the disc's object rules for time posts, the HUD time icon,
+  1-Up monitors, the special-stage ring and the Collision Chaos intro.
   Clearing Special Stage 8 opens an OpenGGF acknowledgement with the disc's
   ending music and a return to the title.
   Visual Mode plays the opening, both endings and the silent Pencil Test
@@ -98,7 +104,12 @@ under the matching area heading; see the
   the original Stage 8 credits and Japanese and European gameplay remain open. Disc audio, video songs and PCM sound follow the music
   and effects volumes; CD audio and PCM also share the FM presentation scale
   for their relative level. The time-warp stars animate from the disc in every
-  stage, including Tidal Tempest, and Robotnik's projector
+  stage, including Tidal Tempest. While the warp stars are active, Sonic keeps
+  his rings when he lands on spikes with the disc's warp check or touches a
+  Tidal Tempest boss missile. The stars also protect Sonic from Wacky
+  Workbench's freezer, electric beams and sparks, and let him attack Metallic
+  Madness's scarab from its vulnerable side. Grabbing a Wacky Workbench hang
+  bar ends star protection and resets the warp timer. Robotnik's projector
   can be destroyed in the Past. Both Palmtree Panic Past acts draw its flying
   and ground hologram animals from the disc.
   Accuracy is measured against native recordings made on an emulator running
@@ -559,7 +570,8 @@ under the matching area heading; see the
   host art when the donor lacks their sheet. Game Setup saves CD donor/team choices.
   Stage-backed host animation scripts no longer require a cartridge host.
   CD authored acts support fixed-height water, collectible rings with disc art,
-  fixed vertical and horizontal springs, ten-ring monitors, and owned objects. Audio-state
+  fixed vertical and horizontal springs, ten-ring monitors, and owned objects, which
+  spawn in X order whether or not the act has rings. Audio-state
   restoration also restores the native/streamed music selection. This extends
   unpublished API candidate 0.7.0.
 

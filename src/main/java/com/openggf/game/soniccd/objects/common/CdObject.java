@@ -49,6 +49,10 @@ public abstract class CdObject extends AbstractObjectInstance {
     @Override public int getOnScreenHalfHeight() { return yRadius; }
     @Override protected boolean usesCustomRenderHeight() { return true; }
 
+    protected final boolean timeAttackMode() {
+        return com.openggf.game.soniccd.program.CdSceneCoordinator.isTimeAttack(services().gameModule());
+    }
+
     /** True once a DrawObjects pass has run since this object was created. */
     private boolean renderPassSeen;
     /** {@code oSprFlags} bit 7 as the last frame's {@code DrawObject} left it. */

@@ -12,12 +12,14 @@ import java.util.List;
 
 /**
  * Big ring, object $14 ({@code ObjBigRing}, Level/_Objects/Level End/Main.asm:429-562). With fewer than
- * 50 rings it only runs its despawn check; it deletes itself when all seven time stones are held or
- * in Time Attack. Otherwise (tile $2488, width and Y radius $20) it animates until the player's box,
+ * 50 rings it only runs its despawn check. At 50 rings or more it deletes itself in Time Attack.
+ * OpenGGF omits the disc's deletion when all seven Time Stones are held
+ * ({@code ObjBigRing_Init}, Level/_Objects/Level End/Main.asm:466-468).
+ * Otherwise (tile $2488, width and Y radius $20) it animates until the player's box,
  * X radius + 16 by Y radius + 32, overlaps its centre: then it sets {@code specialStage}, moves the
  * player 336 pixels right of the camera, stops it, forces Right ({@code ctrlLocked} bit 0,
  * {@code playerCtrlHold} $808), sets {@code scrollLock} and spawns the flash (subtype 1, tile $3EF,
- * Ani_BigRingFlash then delete). Time stones and Time Attack are other lanes' state: none held.
+ * Ani_BigRingFlash then delete).
  */
 public final class CdBigRing extends CdObject implements ObjectVisualFacing.NonDirectional {
     /** cmpi.w #50,rings (Level End/Main.asm:432). */
@@ -45,7 +47,11 @@ public final class CdBigRing extends CdObject implements ObjectVisualFacing.NonD
         if (state == null || state.getRings() < RING_THRESHOLD) return;   // LevelEndDespawn only
         switch (routine) {
             case 0 -> {
-                // ObjBigRing_Init (Level End/Main.asm:465-485).
+                // ObjBigRing_Init (Level/_Objects/Level End/Main.asm:465-475).
+                if (timeAttackMode()) {
+                    setDestroyed(true);
+                    return;
+                }
                 routine = 2;
                 tileWord = CommonObjectArt.BIG_RING_TILE;
                 width = 0x20;
