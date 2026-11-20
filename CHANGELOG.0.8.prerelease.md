@@ -85,8 +85,10 @@ under the matching area heading; see the
   show a still view of Little Planet in the Present while music continues.
   The stage-select Comin' Soon row opens an OpenGGF
   contact sheet of tiles from the verified USA disc. Back returns to the title.
-  Held-key live rewind works inside
-  special stages, including the three-frame floor pipeline, UFOs and effects. The master
+  Held-key live rewind works inside special stages, including the three-frame
+  floor pipeline, UFOs and effects. Stage rewind restores Tidal Tempest's rotate
+  block parts, Wacky Workbench's launcher sides, and Stardust Speedway's swings
+  and spring launcher parts. The master
   title lists it when the disc is configured or found (`roms.default: scd` boots
   it directly) and verifies it against the USA release before starting. A CHD
   is verified by the same content fingerprint as a BIN/CUE set, so it is

@@ -1,6 +1,7 @@
 package com.openggf.game.soniccd.objects.ttz;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.RewindCapturedReference;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectSpawn;
@@ -37,7 +38,9 @@ public final class ObjRotateBlock extends TtzObject implements ObjectVisualFacin
     private int state;
     private int timer;
     private int step;
+    @RewindCapturedReference(reason = "The block reads its standing surface after restore")
     private ObjRotateBlockPart standPart;
+    @RewindCapturedReference(reason = "The block reads its push surface after restore")
     private ObjRotateBlockPart pushPart;
 
     public ObjRotateBlock(ObjectSpawn spawn) {
@@ -66,10 +69,20 @@ public final class ObjRotateBlock extends TtzObject implements ObjectVisualFacin
         width = 0x40;
         mapFrame = spawn.subtype() & 3;
         state = mapFrame;
-        standPart = new ObjRotateBlockPart(x, y, this, 0);
-        if (!spawnChild(standPart)) { setDestroyed(true); return; }      // bne.w loc_20EBE2: DespawnObject
-        pushPart = new ObjRotateBlockPart(x, y, this, 1);
-        if (!spawnChild(pushPart)) setDestroyed(true);
+        standPart = spawnPart(0);
+        if (standPart == null) { setDestroyed(true); return; }          // bne.w loc_20EBE2: DespawnObject
+        pushPart = spawnPart(1);
+        if (pushPart == null) setDestroyed(true);
+    }
+
+    private ObjRotateBlockPart spawnPart(int kind) {
+        var part = spawnFreeChild(() -> new ObjRotateBlockPart(childSpawn(x, y, 0x3D, 0, 0), this, kind));
+        return part.getSlotIndex() >= 0 && !part.isDestroyed() ? part : null;
+    }
+
+    void partUnloaded(ObjRotateBlockPart part) {
+        if (standPart == part) standPart = null;
+        if (pushPart == part) pushPart = null;
     }
 
     int mapFrame() { return mapFrame; }
