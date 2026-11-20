@@ -126,8 +126,8 @@ diverging row and the frontier test's cause label (a guess, not a diagnosis).
 | R52B, R52C, R52D | none | none | green | |
 | R53C, R53D | boss movies | boss | green | Both fights green past the capsule to the stage exit; act end reaches R61A |
 | R61A | **green** 4,892 | asserted | green | |
-| R61B | **green** 5,449 | asserted | green | |
-| R61C | **green** 6,767 | asserted | green | |
+| R61B | **green** 5,449 | asserted | green | The full-act recording observes both projector animals entering at row 2749 and leaving at row 3209. The route passes above their sprites. |
+| R61C | **green** 6,767 | asserted | green | The short fixture observes the flying animal placed at `($0488,$04D0)`. Its on-screen region matches native at rows 631 and 647 at 3 bits per color channel. |
 | R61D | none | none | green | |
 | R62A | **green** 4,787 | asserted | green | |
 | R62B, R62C, R62D | none | none | green | |
@@ -239,6 +239,24 @@ rows that differed on the baseline. R51A, R51C, R52A and R52B also match through
 their short recordings. The R51A, R51B, R51C and R52A long routes match through
 their recorded ends. These comparisons use the existing frontier fields and
 recordings. See the [trace frontier log](../../../status/trace-frontier-log.md#2026-11-18--sonic-cd-quartz-quadrant-conveyor-at-warp-trigger).
+
+## Palmtree Panic time-stop monitor
+
+The USA disc places subtype 5 at `$0BF0,$0350` in R13C and R13D
+(`StageObjects`, r1/stage_object_maps_3.asm:65-68). The item writes 300
+(`ObjMonitorItem_Main`, Level/_Objects/Monitor and Time Post/Main.asm:593-611).
+Native R13C captures at completed level frames 98–456 retained 300 and
+the same palette step and timer. The matching unbroken control continued
+cycling. `LevelStart` clears the word with the flower buffer
+(Level/Main.asm:178-184), including death reentry (Level_MainLoop,
+Level/Main.asm:401-408) and loading a warp destination.
+
+`TestSonicCdCommonObjects#placedTimeStopMonitorFreezesTheStageUntilRestart`
+drives Sonic into the disc placement in R13C and checks palette and ring
+mapping frames across 401 subsequent level frames, rewind, and a death
+reload. The ring witness uses an added slot because this part of the layout
+has no rings. The native probe staged a monitor break and sampled palette
+state. The ring witness and alternate future lack a native comparison.
 
 ## Standard obligations
 

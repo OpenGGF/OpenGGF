@@ -1,6 +1,7 @@
 package com.openggf.game.soniccd.objects.ttz;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.soniccd.timetravel.CdTimeTravel;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectVisualFacing;
@@ -74,7 +75,8 @@ public final class ObjSpikes extends TtzObject implements ReevaluatingSolidObjec
             return;
         }
         if (!solidObject(Entry.SOLID) || sprite == null || !stoodOn(sprite)) return;   // loc_20C0C0
-        if (sprite.getInvincibleFrames() > 0) return;                  // tst.b invincible
+        // loc_20C0C0 (objects/r4/spikes.asm:49-58).
+        if (CdTimeTravel.starsActive(services().gameModule()) || sprite.getInvincibleFrames() > 0) return;
         if (sprite.isHurt() || sprite.getDead() || sprite.getInvulnerableFrames() > 0) return;   // cmpi.b #4,obj.routine; tst.w obj.var_30
         NativePositionOps.addYPos16_16(sprite, -(sprite.getYSpeed() << 8));   // oY.l -= oYVel << 8
         boolean hadRings = sprite.getRingCount() > 0;

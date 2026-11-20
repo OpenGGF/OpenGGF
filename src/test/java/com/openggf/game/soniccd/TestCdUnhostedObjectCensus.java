@@ -41,8 +41,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  *       in R41A/R42A (ObjectIndex, r4/object_index_1a.asm:37-39 and r4/object_index_2a.asm:37-39).
  *       $52 is the hosted projector in R41B/R42B and a Past-only layout record in the other periods.</li>
  *   <li>Real routines still unhosted, by zone: Palmtree Panic $35 (tunnel door), $2F in R11A (Amy
- *       Rose); Collision Chaos $2C (spike chain); Tidal Tempest $29 (swing, R41A), $30 (switch elevator, R41A); Wacky Workbench
- *       $29 (animal); Metallic Madness $2E (poh bee, R81x).</li>
+ *       Rose).</li>
  * </ul>
  */
 class TestCdUnhostedObjectCensus {
@@ -56,36 +55,14 @@ class TestCdUnhostedObjectCensus {
         Map.entry("R12B", "35"),
         Map.entry("R12C", "35"),
         Map.entry("R12D", "35"),
-        Map.entry("R31A", "2C"),
-        Map.entry("R31B", "2C"),
-        Map.entry("R31C", "2C"),
-        Map.entry("R31D", "2C"),
-        Map.entry("R32A", "2C"),
-        Map.entry("R32B", "2C"),
-        Map.entry("R32C", "2C"),
-        Map.entry("R32D", "2C"),
-        Map.entry("R41A", "23 29 30 3F 52"),
+        Map.entry("R41A", "23 3F 52"),
         Map.entry("R41B", "28 29 30 39 3F"),
         Map.entry("R41C", "28 29 30 39 51 52"),
         Map.entry("R41D", "28 29 30 39 51 52"),
         Map.entry("R42A", "23 52"),
         Map.entry("R42B", "28 37 44"),
         Map.entry("R42C", "44 51 52"),
-        Map.entry("R42D", "44 51 52"),
-        Map.entry("R61A", "29"),
-        Map.entry("R61B", "29"),
-        Map.entry("R61C", "29"),
-        Map.entry("R61D", "29"),
-        Map.entry("R62A", "29"),
-        Map.entry("R62B", "29"),
-        Map.entry("R62C", "29"),
-        Map.entry("R62D", "29"),
-        Map.entry("R63C", "29"),
-        Map.entry("R63D", "29"),
-        Map.entry("R81A", "2E"),
-        Map.entry("R81B", "2E"),
-        Map.entry("R81C", "2E"),
-        Map.entry("R81D", "2E")
+        Map.entry("R42D", "44 51 52")
     );
 
     @TempDir

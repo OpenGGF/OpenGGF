@@ -2,6 +2,7 @@ package com.openggf.game.soniccd.objects.common;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.soniccd.objects.art.CdObjectArtProvider;
+import com.openggf.game.soniccd.timetravel.CdTimeTravel;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectVisualFacing;
@@ -50,10 +51,10 @@ public final class CdSpikes extends CdObject implements ReevaluatingSolidObject,
             solidObject(ReevaluatingSolidObject.Entry.SOLID);  // Spikes/Main.asm:46-50
             return;
         }
-        // .ChkStand: SolidObject; beq; btst #3,oFlags(a0); timeWarp; invincible (Spikes/Main.asm:54-61).
+        // ObjSpikes_Main .ChkStand (Level/_Objects/Spikes/Main.asm:54-62).
         if (!solidObject(ReevaluatingSolidObject.Entry.SOLID) || !stoodOn(sprite)
-                || sprite.getInvincibleFrames() > 0) return;
-        // cmpi.b #4,oRoutine; bcc; tst.w oPlayerHurt; bne (Spikes/Main.asm:66-69). Time warp is not hosted.
+                || CdTimeTravel.starsActive(services().gameModule()) || sprite.getInvincibleFrames() > 0) return;
+        // cmpi.b #4,oRoutine; bcc; tst.w oPlayerHurt; bne (Spikes/Main.asm:66-69).
         if (sprite.isHurt() || sprite.getDead() || sprite.getInvulnerableFrames() > 0) return;
         // oY.l -= oYVel << 8 before HurtPlayer (Spikes/Main.asm:70-76).
         NativePositionOps.addYPos16_16(sprite, -(sprite.getYSpeed() << 8));

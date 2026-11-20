@@ -88,7 +88,8 @@ final class MmzScarabItem extends MmzObject
         } else if (player instanceof AbstractPlayableSprite) {
             solidObject(Entry.SOLID);                                // sub_20E2F6
         }
-        if (animator != null) {
+        // ScarabObject_0_Routine6 (objects/r8/scarab.asm:548-552).
+        if (animator != null && !flags().timeStopped()) {
             animator.step();
             mapFrame = animator.mapFrame();
         }
