@@ -1,5 +1,6 @@
 package com.openggf.game.soniccd.objects.ttz;
 
+import com.openggf.game.soniccd.CdStagePayload;
 import com.openggf.game.soniccd.objects.CdObjectRegistration;
 
 /**
@@ -24,6 +25,13 @@ public final class TtzObjects implements CdObjectRegistration {
                 ? new ObjBubbleSpawner(spawn) : new ObjBubble(spawn, false, 0));
         registrar.object(0x26, "Elevator", (spawn, r) -> new ObjElevator(spawn));
         registrar.object(0x25, "Big door", (spawn, r) -> new ObjBigDoor(spawn));
+        // ObjectIndex (r4/object_index_1a.asm:44-52). R42A links the swing but has no placement.
+        registrar.object(ObjTtzSwing.ID, "Swing", p -> p == CdStagePayload.R41A,
+                (spawn, r) -> new ObjTtzSwing(spawn));
+        registrar.object(ObjSwitchElevator.ID, "Switch elevator", p -> p == CdStagePayload.R41A,
+                (spawn, r) -> new ObjSwitchElevator(spawn));
+        registrar.object(ObjElevatorSwitch.ID, "Elevator switch", p -> p == CdStagePayload.R41A,
+                (spawn, r) -> new ObjElevatorSwitch(spawn));
         registrar.object(0x2A, "Geyser", (spawn, r) -> new ObjGeyser(spawn));
         registrar.object(0x2C, "Amenbo", (spawn, r) -> new ObjAmenbo(spawn));
         registrar.object(0x2B, "Tonbo", (spawn, r) -> new ObjTonbo(spawn));

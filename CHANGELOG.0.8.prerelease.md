@@ -127,7 +127,9 @@ under the matching area heading; see the
   the recorded Metallic Madness Present act 2 route also matches through its end.
   Its walker platforms let Sonic pass their sides, and the invisible blocks let
   him jump through from below. Tidal Tempest hosts its break poles and
-  stationary spike balls, with sprites loaded from the disc. Its post-scroll
+  stationary spike balls, with sprites loaded from the disc. In Act 1 Present,
+  Sonic can ride the rotating swing and raise the elevator with its pressure
+  switch. Its post-scroll
   currents use the retained direction on the hurt recovery frame. R42A matches
   through the results and next-act handoff. Quartz Quadrant Past conveyors
   change speed on the warp trigger frame, and the R51B short fixture matches

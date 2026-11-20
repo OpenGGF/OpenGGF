@@ -1582,6 +1582,34 @@
       "note": "Sonic CD disc and native captures"
     },
     {
+      "match": "com.openggf.game.soniccd.TestTtzPresentPlatforms#swingSpawnsFromDiscAndReturnsAfterOneFullTurn",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzPresentPlatforms.java:61",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Sonic CD USA disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzPresentPlatforms#swingCarriesSonicOnItsFarEnd",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzPresentPlatforms.java:94",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Sonic CD USA disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzPresentPlatforms#pressureSwitchRaisesBothElevatorPiecesAndCarriesSonic",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzPresentPlatforms.java:111",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Sonic CD USA disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzPresentPlatforms#appearanceUsesTheDiscMappingsAndPlcTiles",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzPresentPlatforms.java:149",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Sonic CD USA disc"
+    },
+    {
       "match": "com.openggf.game.soniccd.TestSonicCdTimedChargeMoves#fullSpinDashReleasesAtTwiceTopSpeedLessRollFriction",
       "category": "optional-fixture",
       "evidence": "src/test/java/com/openggf/game/soniccd/TestSonicCdTimedChargeMoves.java:107",
