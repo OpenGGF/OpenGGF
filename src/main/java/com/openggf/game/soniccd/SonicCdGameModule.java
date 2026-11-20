@@ -253,8 +253,8 @@ public final class SonicCdGameModule implements GameModule {
 
     @Override
     public <T> T getGameService(Class<T> type) {
-        if (type == com.openggf.game.LevelInputOverlay.class
-                || type == com.openggf.game.internal.NativeLevelInputOwner.class) return type.cast(levelPause);
+        if (type == com.openggf.game.LevelInputOverlay.class) return type.cast(levelPause.recordedInputOverlay);
+        if (type == com.openggf.game.internal.NativeLevelInputOwner.class) return type.cast(levelPause);
         if (type == com.openggf.game.internal.HostAnimationSource.class) return type.cast(
                 new com.openggf.game.internal.HostAnimationSource() {
                     public java.util.Map<Integer, com.openggf.game.AnimationFamilies.Binding> families() {

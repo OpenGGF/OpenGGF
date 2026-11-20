@@ -50,6 +50,13 @@ final class GameLoopPauseInput {
         return overlay != null && overlay.handleInput(input);
     }
 
+    static boolean handleHostPausedInput(GameMode mode, InputHandler input) {
+        var owner = nativeInputOwner(mode);
+        return owner != null && !RecordedInputOwnership.active(input)
+                && !ExternalFrameOrInputOwnership.active(com.openggf.game.session.EngineServices.current())
+                && owner.handleHostPausedInput(input);
+    }
+
     static NativeLevelInputOwner nativeInputOwner(GameMode mode) {
         var world = SessionManager.getCurrentWorldSession();
         return mode == GameMode.LEVEL && world != null && world.getGameModule() != null

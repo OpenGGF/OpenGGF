@@ -77,8 +77,9 @@ under the matching area heading; see the
   RAM DATA entry confirms a reset of Sonic CD's save to disc defaults.
   Time Attack follows the disc's object rules for time posts, the HUD time icon,
   1-Up monitors, the special-stage ring and the Collision Chaos intro.
-  Press A, B or C during a Sonic CD pause to leave a Time Attack attempt
-  or spend one life and restart a campaign stage.
+  Start pauses Sonic CD gameplay and music and allows frame-stepping.
+  Press A, B or C during a pause to leave a Time Attack attempt or spend one
+  life in the campaign. The stage restarts if lives remain.
   Clearing Special Stage 8 opens an OpenGGF acknowledgement with the disc's
   ending music and a return to the title.
   Visual Mode plays the opening, both endings and the silent Pencil Test

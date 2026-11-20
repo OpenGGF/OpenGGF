@@ -1,6 +1,7 @@
 package com.openggf.game.soniccd;
 
 import com.openggf.control.InputHandler;
+import com.openggf.control.RecordedInputOwnership;
 import com.openggf.game.GameServices;
 import com.openggf.game.LevelInputOverlay;
 import com.openggf.game.NativeGameStateOps;
@@ -10,26 +11,44 @@ import com.openggf.game.soniccd.program.CdSceneCoordinator;
 import com.openggf.game.soniccd.program.CdStageExit;
 
 /** The pad branch of {@code Level_MainLoop} (Level/Main.asm:333-395). */
-final class CdLevelPause implements LevelInputOverlay, NativeLevelInputOwner {
+final class CdLevelPause implements NativeLevelInputOwner {
+    final LevelInputOverlay recordedInputOverlay =
+            input -> RecordedInputOwnership.active(input) && handleInput(input);
+
     @Override
     public boolean handleInput(InputHandler input) {
+        return handlePauseInput(input, false);
+    }
+
+    @Override
+    public boolean handleHostPausedInput(InputHandler input) {
+        return handlePauseInput(input, true);
+    }
+
+    private boolean handlePauseInput(InputHandler input, boolean hostPaused) {
         var levels = GameServices.levelOrNull();
         if (levels == null || !(levels.getCurrentLevel() instanceof CdLevel level)) {
             return false;
         }
         var pad = input.logical().player1();
         boolean start = pad.startPressed();
+        boolean action = pad.actionPressedMask() != 0;
+        boolean nativeStart = !hostPaused && start;
+        if (hostPaused && (start || !action)) {
+            return false;
+        }
         if (levels.isLevelInactiveForTransition() || GameServices.fade().isActive()) {
-            return start;
+            return nativeStart;
         }
         var services = levels.getObjectManager().getObjectServices();
         var game = services.gameState();
         var player = services.camera().getFocusedSprite();
-        if (start && !level.flags().ctrlLocked && player != null && !player.getDead()) {
+        boolean canPause = !level.flags().ctrlLocked && player != null && !player.getDead();
+        if (nativeStart && canPause) {
             game.applyPauseToggle(true);
         }
-        if (!game.isGamePaused() || pad.actionPressedMask() == 0) {
-            return start;
+        if (!action || !(hostPaused ? canPause : game.isGamePaused())) {
+            return nativeStart;
         }
 
         if (CdSceneCoordinator.isTimeAttack(services.gameModule())) {

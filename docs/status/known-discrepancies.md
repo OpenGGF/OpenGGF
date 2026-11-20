@@ -21,6 +21,21 @@ FM6 dust effect without executing native memory corruption. Shared SMPS admissio
 still rejects invalid channels and pointers. This prevents a real-session admission
 exception when dust is requested, including at a live rewind presentation boundary.
 
+## Sonic CD campaign pause restart
+
+The engine uses the ordinary death reload to fade out and restart the stage
+after a campaign pause exit. This can replay the present-day title card.
+The disc's pause exit leaves the card marked as loaded
+(`Level_MainLoop`, Level/Main.asm:368-395). The death path clears that flag
+for a present-day restart without a checkpoint
+(`ObjSonic_Restart`, Level/_Objects/Sonic/Main.asm:2465-2472).
+
+Quartz Quadrant acts 1 and 2 clear `spawn_mode` and keep
+`respawn_checkpoint` while lives remain
+(`loc_201858`, r5/main.asm:328-337 and `loc_201898`, r5/main.asm:346-349).
+The engine clears its checkpoint state to start from the beginning because
+an active checkpoint selects the saved spawn on a present-day death reload.
+
 ## Hosted Competition checkpoint reload and monitor OFF (2026-11-07)
 
 `FAST_FROM_CHECKPOINT` omits the death reload's fades and initial title-card
@@ -3045,8 +3060,8 @@ reports zero errors and zero warnings.
   until its pending `ObjB2_Init` update installs the subtype-derived routine
   (`s2.asm:78777-78813`).
 - **`objoff_2f` at WFZ rows 13378-13440.** The WFZ-end snapshot now encodes the low byte of
-  the word incremented by `ObjB2_Wait_Leader_position`, then the jump countdown installed
-  by `ObjB2_Prepare_to_jump` (`s2.asm:78972-78979, 79157-79167`). The Java model already
+  the word incremented by `ObjB2_Wait_Leader_position` (`s2.asm:79088-79095`), then the
+  jump countdown installed by `ObjB2_Prepare_to_jump` (`s2.asm:79157-79167`). The Java model already
   owned those values as `leaderWaitCounter` and `jumpTimer`; no trace value supplies them.
 
 The resolved SCZ `x` span at row 7103 was caused by the engine treating an airborne,

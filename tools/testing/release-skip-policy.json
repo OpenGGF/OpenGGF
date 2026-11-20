@@ -3705,42 +3705,56 @@
     {
       "match": "com.openggf.game.soniccd.TestCdPauseExit#timeAttackReturnsToItsMenu(int)[1]",
       "category": "optional-fixture",
-      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdPauseExit.java:32",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdPauseExit.java:36",
       "allowed_when_absent": "soniccd_disc",
       "note": "Sonic CD USA disc for the native level pause and exit path"
     },
     {
       "match": "com.openggf.game.soniccd.TestCdPauseExit#timeAttackReturnsToItsMenu(int)[2]",
       "category": "optional-fixture",
-      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdPauseExit.java:32",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdPauseExit.java:36",
       "allowed_when_absent": "soniccd_disc",
       "note": "Sonic CD USA disc for the native level pause and exit path"
     },
     {
       "match": "com.openggf.game.soniccd.TestCdPauseExit#timeAttackReturnsToItsMenu(int)[3]",
       "category": "optional-fixture",
-      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdPauseExit.java:32",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdPauseExit.java:36",
       "allowed_when_absent": "soniccd_disc",
       "note": "Sonic CD USA disc for the native level pause and exit path"
     },
     {
       "match": "com.openggf.game.soniccd.TestCdPauseExit#campaignRestartsFromTheBeginning(int)[1]",
       "category": "optional-fixture",
-      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdPauseExit.java:62",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdPauseExit.java:67",
       "allowed_when_absent": "soniccd_disc",
       "note": "Sonic CD USA disc for the native level pause and exit path"
     },
     {
       "match": "com.openggf.game.soniccd.TestCdPauseExit#campaignRestartsFromTheBeginning(int)[2]",
       "category": "optional-fixture",
-      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdPauseExit.java:62",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdPauseExit.java:67",
       "allowed_when_absent": "soniccd_disc",
       "note": "Sonic CD USA disc for the native level pause and exit path"
     },
     {
       "match": "com.openggf.game.soniccd.TestCdPauseExit#campaignRestartsFromTheBeginning(int)[3]",
       "category": "optional-fixture",
-      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdPauseExit.java:62",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdPauseExit.java:67",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Sonic CD USA disc for the native level pause and exit path"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestCdPauseExit#liveStartPausesAudioAndAllowsFrameStep",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdPauseExit.java:94",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Sonic CD USA disc for the native level pause and exit path"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestCdPauseExit#hostPausedCampaignExitsOnLastLife",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdPauseExit.java:141",
       "allowed_when_absent": "soniccd_disc",
       "note": "Sonic CD USA disc for the native level pause and exit path"
     },

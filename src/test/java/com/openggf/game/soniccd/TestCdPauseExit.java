@@ -1,18 +1,22 @@
 package com.openggf.game.soniccd;
 
 import com.openggf.GameLoop;
+import com.openggf.audio.presentation.PresentationMode;
+import com.openggf.audio.presentation.ScenePcmSource;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.control.RecordedInputOwnership;
 import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.debug.playback.RecordedInputSnapshots;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameServices;
+import com.openggf.game.NativeGameStateOps;
 import com.openggf.game.soniccd.backupram.CdBackupRamHost;
 import com.openggf.game.soniccd.program.CdProgramFlow;
 import com.openggf.game.soniccd.program.CdProgramRequest.Route;
 import com.openggf.game.soniccd.program.CdSceneCoordinator;
 import com.openggf.game.soniccd.timeattack.CdTimeAttackScreen;
 import com.openggf.tools.HeadlessGameBoot;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledOnOs;
 import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -22,6 +26,8 @@ import static com.openggf.control.InputActionMasks.ACTION_A;
 import static com.openggf.control.InputActionMasks.ACTION_B;
 import static com.openggf.control.InputActionMasks.ACTION_C;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.lwjgl.glfw.GLFW.GLFW_PRESS;
+import static org.lwjgl.glfw.GLFW.GLFW_RELEASE;
 
 @EnabledOnOs(OS.LINUX)
 class TestCdPauseExit {
@@ -30,7 +36,7 @@ class TestCdPauseExit {
     @ParameterizedTest
     @ValueSource(ints = {ACTION_A, ACTION_B, ACTION_C})
     void timeAttackReturnsToItsMenu(int button) throws Exception {
-        runStage(Route.TIME_ATTACK, (loop, scenes) -> {
+        runStageOnBothInputs(Route.TIME_ATTACK, (loop, scenes) -> {
             var state = GameServices.gameState();
             var levels = GameServices.level();
             var checkpoint = levels.getCheckpointState();
@@ -45,7 +51,8 @@ class TestCdPauseExit {
 
             assertAll(
                     () -> assertEquals(0, state.getLives(), "remaining lives"),
-                    () -> assertFalse(state.isGamePaused(), "pause cleared"),
+                    () -> assertFalse(loop.isUserPaused(), "host pause cleared"),
+                    () -> assertFalse(state.isGamePaused(), "ROM pause cleared"),
                     () -> assertFalse(checkpoint.isActive(), "checkpoint cleared"),
                     () -> assertEquals(pausedTime, levels.getLevelGamestate().getTimerFrames(), "no extra gameplay tick"),
                     () -> assertNull(scenes.flow().route(), "the stage returned to IPX"));
@@ -60,7 +67,7 @@ class TestCdPauseExit {
     @ParameterizedTest
     @ValueSource(ints = {ACTION_A, ACTION_B, ACTION_C})
     void campaignRestartsFromTheBeginning(int button) throws Exception {
-        runStage(Route.CAMPAIGN, (loop, scenes) -> {
+        runStageOnBothInputs(Route.CAMPAIGN, (loop, scenes) -> {
             var state = GameServices.gameState();
             var levels = GameServices.level();
             var checkpoint = levels.getCheckpointState();
@@ -73,7 +80,8 @@ class TestCdPauseExit {
 
             assertAll(
                     () -> assertEquals(lives - 1, state.getLives(), "one life spent"),
-                    () -> assertFalse(state.isGamePaused(), "pause cleared"),
+                    () -> assertFalse(loop.isUserPaused(), "host pause cleared"),
+                    () -> assertFalse(state.isGamePaused(), "ROM pause cleared"),
                     () -> assertFalse(checkpoint.isActive(), "checkpoint cleared"),
                     () -> assertEquals(Route.CAMPAIGN, scenes.flow().route(), "campaign still running"));
             for (int frame = 0; frame < 180 && levels.getCurrentLevel() == original; frame++) {
@@ -83,7 +91,73 @@ class TestCdPauseExit {
         });
     }
 
-    private void runStage(Route route, StageCheck check) throws Exception {
+    @Test
+    void liveStartPausesAudioAndAllowsFrameStep() throws Exception {
+        runStage(Route.CAMPAIGN, false, (loop, scenes) -> {
+            var state = GameServices.gameState();
+            var level = GameServices.level().getLevelGamestate();
+            int lives = state.getLives();
+            var audio = GameServices.audio();
+            class AudioProbe implements ScenePcmSource {
+                boolean paused;
+                @Override public void render(short[] target, int stereoFrames) { }
+                @Override public void onHostPause() { paused = true; }
+                @Override public boolean onHostResume() { paused = false; return true; }
+            }
+            var probe = new AudioProbe();
+            audio.setScenePcmSource(probe);
+            try {
+                step(loop, ACTION_A | ACTION_B | ACTION_C, false);
+                step(loop, 0, false);
+                long runningTime = level.getTimerFrames();
+                step(loop, 0, true);
+                step(loop, 0, false);
+                assertAll(
+                        () -> assertTrue(loop.isUserPaused(), "live Start enters host pause"),
+                        () -> assertFalse(state.isGamePaused(), "live Start leaves ROM pause clear"),
+                        () -> assertTrue(probe.paused, "audio received host pause"),
+                        () -> assertEquals(PresentationMode.SILENT, loop.presentationModeForOuterFrame(false, false)),
+                        () -> assertEquals(runningTime, level.getTimerFrames(), "host pause freezes the level clock"),
+                        () -> assertEquals(lives, state.getLives(), "unpaused A/B/C and Start spend no lives"),
+                        () -> assertEquals(Route.CAMPAIGN, scenes.flow().route(), "unpaused input leaves campaign running"));
+
+                int frameStep = GameServices.configuration().getInt(SonicConfiguration.FRAME_STEP_KEY);
+                loop.getInputHandler().handleKeyEvent(frameStep, GLFW_PRESS);
+                step(loop, 0, false);
+                loop.getInputHandler().handleKeyEvent(frameStep, GLFW_RELEASE);
+                step(loop, 0, false);
+                assertEquals(runningTime + 1, level.getTimerFrames(), "frame-step runs one gameplay tick");
+                step(loop, ACTION_A, true);
+                assertAll(
+                        () -> assertFalse(loop.isUserPaused(), "Start resumes host pause"),
+                        () -> assertFalse(probe.paused, "audio received host resume"),
+                        () -> assertEquals(lives, state.getLives(), "Start takes priority over A"));
+            } finally {
+                audio.setScenePcmSource(null);
+            }
+        });
+    }
+
+    @Test
+    void hostPausedCampaignExitsOnLastLife() throws Exception {
+        runStage(Route.CAMPAIGN, false, (loop, scenes) -> {
+            var state = GameServices.gameState();
+            NativeGameStateOps.restoreLives(state, 1);
+            step(loop, 0, true);
+            step(loop, ACTION_B, false);
+            assertAll(
+                    () -> assertEquals(0, state.getLives(), "last life spent"),
+                    () -> assertFalse(loop.isUserPaused(), "game over releases host pause"),
+                    () -> assertNull(scenes.flow().route(), "game over returns to IPX"));
+        });
+    }
+
+    private void runStageOnBothInputs(Route route, StageCheck check) throws Exception {
+        runStage(route, true, check);
+        runStage(route, false, check);
+    }
+
+    private void runStage(Route route, boolean recorded, StageCheck check) throws Exception {
         try (var disc = CdDiscDataSource.open(CdTestMedia.usaCue());
              var boot = new HeadlessGameBoot(320, 224)) {
             GameServices.configuration().setSessionOverride(SonicConfiguration.AUDIO_ENABLED, false);
@@ -99,11 +173,13 @@ class TestCdPauseExit {
             }
             scenes.stageStartingFromHost(GameServices.gameState());
             GameServices.level().skipPendingInitialTitleCardPresentation();
-            try (var ignored = RecordedInputOwnership.acquire(loop.getInputHandler())) {
+            previous = null;
+            try (var ignored = recorded ? RecordedInputOwnership.acquire(loop.getInputHandler()) : null) {
                 var levelState = GameServices.level().getLevelGamestate();
                 for (int frame = 0; frame < 360 && levelState.getTimerFrames() == 0; frame++) {
                     step(loop, 0, false);
                 }
+                assertTrue(levelState.getTimerFrames() > 0, "stage reached live gameplay");
                 check.run(loop, scenes);
             }
         }
