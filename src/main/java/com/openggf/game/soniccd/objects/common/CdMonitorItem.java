@@ -1,7 +1,10 @@
 package com.openggf.game.soniccd.objects.common;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.soniccd.CdLevelGamestate;
+import com.openggf.game.soniccd.audio.CdSoundRequests;
 import com.openggf.game.soniccd.objects.art.CdObjectArtProvider;
+import com.openggf.game.soniccd.program.CdScorePolicy;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectVisualFacing;
@@ -15,8 +18,8 @@ import java.util.List;
  * rises from -$300 slowing by $18 a frame, then gives its item and stays 30 frames. Items by
  * {@code oAnim}: 0 1UP, 1 ten rings (1UP at 100 and 200), 2 shield, 3 invincibility, 4 speed
  * shoes (1320 frames each on USA, Monitor and Time Post/Main.asm:539-543,572-576), 5 time stop, 6 combine ring, 7 S (shield,
- * invincibility and shoes). Time stop and the combine ring set {@code timeStopTimer} and
- * {@code combineRing}, which have no consumer yet; those two items are not hosted.
+ * invincibility and shoes). The combine-ring flag's only reader is in a non-USA Metallic
+ * Madness demo (HurtPlayer, r8/player_object_collide.asm:266-273).
  */
 public final class CdMonitorItem extends CdObject implements ObjectVisualFacing.NonDirectional, SpawnRewindRecreatable {
     /** USA: move.w #1320,objPlayerSlot+oPlayerInvinc.w / oPlayerShoes (Monitor and Time Post/Main.asm:539-543,572-576). */
@@ -73,23 +76,14 @@ public final class CdMonitorItem extends CdObject implements ObjectVisualFacing.
     }
 
     private void give(AbstractPlayableSprite player) {
-        var game = services().gameState();
         var state = services().levelGamestate();
         switch (item) {
-            case 0 -> { oneUp(game); com.openggf.game.soniccd.audio.CdSoundRequests.oneUp(services()); }
+            case 0 -> oneUp();
             case 1 -> {
-                // .GiveRings: +10; bset #1/#2 of livesFlags at 100/200 gives a 1UP (Monitor and Time Post/Main.asm:502-513).
                 if (state == null) return;
-                state.addRings(10);
-                int flags = state.getRingExtraLifeFlags();
-                if (state.getRings() >= 100 && (flags & 2) == 0) {
-                    state.setRingExtraLifeFlags(flags | 2);
-                    oneUp(game);
-                    com.openggf.game.soniccd.audio.CdSoundRequests.oneUp(services());
-                } else if (state.getRings() >= 200 && (flags & 4) == 0) {
-                    state.setRingExtraLifeFlags(flags | 4);
-                    oneUp(game);
-                    com.openggf.game.soniccd.audio.CdSoundRequests.oneUp(services());
+                state.setRings(state.getRings() + 10);
+                if (CdLevelGamestate.claimRingExtraLife(state)) {
+                    oneUp();
                 } else {
                     services().playSfx(com.openggf.audio.GameSound.RING); // .RingSound: FM_RING
                 }
@@ -97,6 +91,9 @@ public final class CdMonitorItem extends CdObject implements ObjectVisualFacing.
             case 2 -> { if (player != null) player.giveShield(); services().playSfx(com.openggf.game.soniccd.audio.CdSoundRequests.SHIELD); }
             case 3 -> { if (player != null) player.giveInvincibility(USA_POWER_FRAMES); com.openggf.game.soniccd.audio.CdSoundRequests.powerUpMusic(services(), com.openggf.game.soniccd.audio.CdSoundRequests.INVINCIBILITY); }
             case 4 -> { if (player != null) player.giveSpeedShoes(USA_POWER_FRAMES); com.openggf.game.soniccd.audio.CdSoundRequests.powerUpMusic(services(), com.openggf.game.soniccd.audio.CdSoundRequests.SPEED_SHOES); }
+            // ObjMonitorItem_Main .GiveTimeStop/.GiveCombineRing (Monitor and Time Post/Main.asm:593-611).
+            case 5 -> flags().timeStopWord = 300;
+            case 6 -> services().playSfx(com.openggf.game.soniccd.audio.CdSoundRequests.SIGNPOST);
             case 7 -> {
                 // .CheckS: shield, invincibility, then speed shoes (Monitor and Time Post/Main.asm:615-618).
                 if (player != null) {
@@ -110,8 +107,11 @@ public final class CdMonitorItem extends CdObject implements ObjectVisualFacing.
         }
     }
 
-    private static void oneUp(com.openggf.game.GameStateManager game) {
-        if (game != null) game.addLife();   // .Give1UP: addq.b #1,lives (Monitor and Time Post/Main.asm:490-494)
+    /** {@code ObjMonitorItem_Main} .Give1UP (Monitor and Time Post/Main.asm:490-494). */
+    private void oneUp() {
+        var game = services().gameState();
+        if (game != null) CdScorePolicy.awardLevelLife(game);
+        CdSoundRequests.oneUp(services());
     }
 
     @Override
