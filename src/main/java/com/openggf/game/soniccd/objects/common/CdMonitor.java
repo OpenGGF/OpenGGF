@@ -66,6 +66,8 @@ public final class CdMonitor extends CdObject
 
     @Override
     public void update(int vIntRunCount, PlayableEntity player) {
+        // ObjMonitorTimepost (Level/_Objects/Monitor and Time Post/Main.asm:269-274).
+        if (spawn.subtype() == 0 && timeAttackMode()) return;
         if (routine == 0) init();
         if (pendingBreak) {
             pendingBreak = false;
@@ -166,6 +168,7 @@ public final class CdMonitor extends CdObject
     /** SolidObject: cmpi.b #$19,oID(a0) lets a rolling player through (Object Solid.asm:329-332). */
     @Override public Role solidRole() { return Role.MONITOR; }
 
+    @Override protected boolean calledDrawObjectThisFrame() { return routine != 0; }
     @Override protected boolean despawnsByCheckObjDespawn() { return true; }
 
     public int mapFrame() { return mapFrame; }
