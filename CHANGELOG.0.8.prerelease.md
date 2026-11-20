@@ -52,7 +52,10 @@ under the matching area heading; see the
   has its own presentation, objects and boss. Palmtree Panic's solid boulders
   use the current section's graphics, replacing the title-card tiles after loading.
   Flowers finish growing, diagonal springs and monitor rewards use their proper
-  graphics, and object names follow the current stage's object table. Palmtree
+  graphics, and object names follow the current stage's object table. Defeated badniks
+  play the disc's destroy sound, and Mosqui, Tamabboh and Palmtree Panic's Taga-Taga
+  play their own effects on impact, firing, takeoff or landing while the badnik is
+  on screen. Palmtree
   Panic backgrounds sample each row's own camera section, retaining static-row
   repetition without wrapping the moving scenery. Results show the changing
   score and bonus digits. The level HUD shows the same point total as the
