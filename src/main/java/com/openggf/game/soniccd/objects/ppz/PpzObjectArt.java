@@ -43,6 +43,9 @@ public final class PpzObjectArt {
             PPZ_COLLAPSE1 = "collapse1", PPZ_COLLAPSE2 = "collapse2", PPZ_COLLAPSE3 = "collapse3",
             PPZ_COLLAPSE4 = "collapse4", PPZ_WALL = "wall", PPZ_PLATFORM = "platform", PPZ_DISC = "disc", PPZ_SPRINGBOARD = "springboard",
             PPZ_HOLE = "hole", PPZ_SWING = "swing", PPZ_BOULDER = "boulder", PPZ_GENERATOR = "generator";
+    public static final String TUNNEL_DOOR = "cd.ppz.tunnelDoor.";
+    /** ObjTunnelDoorV_Init (Level/Palmtree Panic/Objects/Tunnel Door/Main.asm:39-42). */
+    public static final int TILE_ID_TUNNEL_DOOR = 0xC;
     /** SetObjectTileID IDs of the spinning disc and the springboard (Spinning Disc/Main.asm:42-43, Springboard/Main.asm:122-123). */
     public static final int TILE_ID_SPINNING_DISC = 6, TILE_ID_SPRINGBOARD = 7;
     /** moveq #$11,d0; jsr SetObjectTileID (Swing/Main.asm:88-89). */
@@ -92,6 +95,13 @@ public final class PpzObjectArt {
         if (entry.mosquiMappings1() < 0 && entry.plantMappings() < 0 && entry.sceneryMappings() < 0
                 && entry.logShadowMappings() < 0 && entry.waterfallMappings() < 0) {
             return;                                                  // not a Palmtree Panic stage
+        }
+        // PLC_Std loads the door before section art (Level/Palmtree Panic/Data (Act 1 Present).asm:54-59).
+        int doorMappings = PpzObjectCatalogue.tunnelDoorMappings(loaded);
+        if (doorMappings >= 0) {
+            for (int tile : art.objectTileIds(TILE_ID_TUNNEL_DOOR)) {
+                art.register(TUNNEL_DOOR + tile, art.sheet(reader, doorMappings, tile));
+            }
         }
         var stageEntry = CdStageCatalogue.entry(loaded);
         if (entry.sectionRanges() >= 0) {

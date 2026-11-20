@@ -27,6 +27,9 @@ public final class CczObjects implements CdObjectRegistration {
         registrar.object(0x29, "Glass shatter", (spawn, r) -> new CczGlassShatter(spawn));
         registrar.object(0x2A, "Bumper platform", (spawn, r) -> new CczBumperPlatform(spawn));
         registrar.object(0x2B, "Teleporter", (spawn, r) -> new CczTeleporter(spawn));
+        // ObjSpikeChain (Level/Collision Chaos/Objects/Spike Chain/Main.asm:36-47) dispatches on the subtype sign.
+        registrar.object(CczSpikeChain.ID, "Spike chain", (spawn, r) -> (byte) spawn.subtype() < 0
+                ? new CczSpikeChain.Ball(spawn) : new CczSpikeChain(spawn));
         registrar.badnik(0x2D, "Ga", (spawn, r) -> CczGa.isParent(spawn.subtype()) ? new CczGa(spawn) : new CczGa.Dust(spawn));
         registrar.badnik(0x2E, "Tentou", (spawn, r) -> CczTentou.isParent(spawn.subtype()) ? new CczTentou(spawn) : new CczTentou.Bomb(spawn));
         registrar.object(0x2F, "Pocket", (spawn, r) -> new CczPocket(spawn));
