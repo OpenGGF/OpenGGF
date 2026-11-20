@@ -303,7 +303,9 @@ public final class CdTimeTravel implements RewindSnapshottable<CdTimeTravel.Snap
         prepareEntry(Entry.NEXT_ACT);
         if (completedAct >= 3) {
             goodFutureFlags = 0;                                        // Results/Main.asm:316-321
-            if (goodFuture && !timeAttackMode.getAsBoolean()) goodFutures |= 1 << zone.ordinal(); // IPX.asm:185-187
+            // TimeAttack (IPX.asm:1214-1238) loops back to the menu before campaign credit can run.
+            // RunR1 (IPX.asm:185-187) records goodFutures before falling through to RunR3.
+            if (goodFuture && !timeAttackMode.getAsBoolean()) goodFutures |= 1 << zone.ordinal();
             goodFuture = false;
             timeZone = CdTimeZone.PRESENT;
             return;

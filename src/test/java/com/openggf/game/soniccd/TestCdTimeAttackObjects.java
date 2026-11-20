@@ -6,6 +6,8 @@ import com.openggf.game.palette.PaletteWriteSupport;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.soniccd.level.CdLevel;
+import com.openggf.game.soniccd.level.CdStageCatalogue;
+import com.openggf.game.soniccd.objects.art.CdObjectArtProvider;
 import com.openggf.game.soniccd.objects.ccz.CczIntroState;
 import com.openggf.game.soniccd.objects.common.CdBigRing;
 import com.openggf.game.soniccd.objects.common.CdMonitor;
@@ -13,6 +15,7 @@ import com.openggf.game.soniccd.objects.common.CdTimeIcon;
 import com.openggf.game.soniccd.program.CdSceneCoordinator;
 import com.openggf.game.soniccd.timetravel.CdTimeTravel;
 import com.openggf.graphics.GLCommand;
+import com.openggf.level.Palette;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.physics.GroundSensor;
 import com.openggf.sprites.NativePositionOps;
@@ -25,6 +28,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.function.Consumer;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -63,7 +67,16 @@ class TestCdTimeAttackObjects {
     @ParameterizedTest
     @ValueSource(booleans = {false, true})
     void collisionChaosAmy(boolean timeAttack) throws Exception {
-        assertIntroPlacement(0x32, timeAttack);
+        run(CdStagePayload.R31A, 4, timeAttack, sonic -> {
+            var amy = level().getObjects().stream().filter(spawn -> spawn.objectId() == 0x32)
+                    .findFirst().orElseThrow();
+            // PaletteTable (Level/Collision Chaos/Palette Data (Act 1 Present).asm:24-26) points to StagePalette.
+            int[] expected = discPaletteLine(4);
+            if (timeAttack) level().getPalette(1).getColor(0).fromSegaFormat(expected[0] ^ 0xEEE);
+            frameAt(sonic, amy);
+            assertEquals(!timeAttack, live(amy), "intro placement " + amy);
+            if (timeAttack) assertArrayEquals(expected, paletteLine(), "Amy restores StagePalette to line 1");
+        });
     }
 
     private void assertIntroPlacement(int id, boolean timeAttack) throws Exception {
@@ -117,20 +130,22 @@ class TestCdTimeAttackObjects {
             var amy = level().getObjects().stream().filter(spawn -> spawn.objectId() == 0x2F)
                     .findFirst().orElseThrow();
             var color = level().getPalette(1).getColor(0);
-            int original = PaletteWriteSupport.segaWordFromColor(color);
-            int sentinel = original ^ 0xEEE;
-            color.fromSegaFormat(new byte[] {(byte) (sentinel >> 8), (byte) sentinel}, 0);
+            // Pal_Level (Level/Palmtree Panic/Palette Data (Act 1 Present).asm:48-60) shares Pal_LevelEnd data.
+            int[] expected = discPaletteLine(5);
+            int sentinel = expected[0] ^ 0xEEE;
+            color.fromSegaFormat(sentinel);
             frameAt(sonic, amy);
             var slot = GameServices.level().getObjectManager().getActiveObjects().stream()
                     .filter(object -> !object.isDestroyed() && amy.equals(object.getSpawn()))
                     .findFirst().orElseThrow();
             var commands = new ArrayList<GLCommand>();
             slot.appendRenderCommands(commands);
-            assertAll(
-                    () -> assertEquals(!timeAttack, !commands.isEmpty(), "Amy's slot draws"),
-                    () -> assertEquals(timeAttack ? original : sentinel,
-                            PaletteWriteSupport.segaWordFromColor(level().getPalette(1).getColor(0)),
-                            "Amy restores line 1"));
+            assertEquals(!timeAttack, !commands.isEmpty(), "Amy's slot draws");
+            if (timeAttack) {
+                assertArrayEquals(expected, paletteLine(), "Amy restores Pal_LevelEnd to line 1");
+            } else {
+                assertEquals(sentinel, PaletteWriteSupport.segaWordFromColor(color), "Amy leaves colour 0 alone");
+            }
         });
     }
 
@@ -151,6 +166,23 @@ class TestCdTimeAttackObjects {
                         assertEquals(!timeAttack, travel.goodFuture(), "stage load");
                     });
         });
+    }
+
+    private static int[] discPaletteLine(int entry) {
+        var image = SessionManager.requireCurrentGameModule().getGameService(CdObjectArtProvider.class).image();
+        int table = CdStageCatalogue.entry(level().payload()).paletteTable();
+        int source = image.offsetOf(image.u32(table + 8 * entry));
+        int[] colors = new int[Palette.PALETTE_SIZE];
+        for (int i = 0; i < colors.length; i++) {
+            colors[i] = image.u16(source + Palette.BYTES_PER_COLOR * i) & 0xEEE;
+        }
+        return colors;
+    }
+
+    private static int[] paletteLine() {
+        return Arrays.stream(level().getPalette(1).colors)
+                .mapToInt(PaletteWriteSupport::segaWordFromColor)
+                .toArray();
     }
 
     private static void frameAt(AbstractPlayableSprite sonic, ObjectSpawn placement) {
