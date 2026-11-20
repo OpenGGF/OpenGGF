@@ -73,9 +73,10 @@ under the matching area heading; see the
   both special-stage attract demos, backup RAM (saved in `saves/soniccd`),
   the opening video, both endings, FM
   effects, CD audio and PCM sound are hosted. Special-stage extra lives cap the
-  campaign total at 249. Level 1-Ups can raise it past 249. The FM loader also
-  accepts verified Japanese and European discs containing the identical driver bank. The title's
-  RAM DATA entry confirms a reset of Sonic CD's save to disc defaults.
+  campaign total at 249. Level 1-Ups can raise it past 249 and wrap from 255
+  to 0. The FM loader also accepts verified Japanese and European discs
+  containing the identical driver bank. The title's RAM DATA entry confirms a
+  reset of Sonic CD's save to disc defaults.
   Clearing Special Stage 8 opens an OpenGGF acknowledgement with the disc's
   ending music and a return to the title.
   Visual Mode plays the opening, both endings and the silent Pencil Test

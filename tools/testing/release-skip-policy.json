@@ -3185,6 +3185,41 @@
       "note": "user's Sonic CD disc"
     },
     {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageResults#specialStageAwardsTwoLivesToTheCampaignUsingTheDiscLimit(int, int)[1]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/TestCdSpecialStageResults.java:82",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageResults#specialStageAwardsTwoLivesToTheCampaignUsingTheDiscLimit(int, int)[2]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/TestCdSpecialStageResults.java:82",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageResults#specialStageAwardsTwoLivesToTheCampaignUsingTheDiscLimit(int, int)[3]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/TestCdSpecialStageResults.java:82",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageResults#levelScoreOneUpWrapsTheLivesByte",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/TestCdSpecialStageResults.java:110",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.special.TestCdSpecialStageResults#levelScoreOneUpCanPassTheSpecialStageLimit",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/special/TestCdSpecialStageResults.java:123",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
       "match": "com.openggf.game.soniccd.special.TestCdSpecialStageProvider#theStageSelectDemoEndsWithTheNativeOutcome",
       "category": "optional-fixture",
       "evidence": "src/test/java/com/openggf/game/soniccd/special/TestCdSpecialStageProvider.java:18",
@@ -3734,6 +3769,27 @@
       "match": "com.openggf.game.soniccd.TestSonicCdCommonObjects#monitorBreaksIntoItemAndExplosionAndGivesTenRings",
       "category": "optional-fixture",
       "evidence": "src/test/java/com/openggf/game/soniccd/TestSonicCdCommonObjects.java:115",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestSonicCdCommonObjects#hundredthPlacedRingWrapsTheLivesByte",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestSonicCdCommonObjects.java:155",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestSonicCdCommonObjects#monitorOneUpWrapsTheLivesByte(int, int)[1]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestSonicCdCommonObjects.java:143",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestSonicCdCommonObjects#monitorOneUpWrapsTheLivesByte(int, int)[2]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestSonicCdCommonObjects.java:143",
       "allowed_when_absent": "soniccd_disc",
       "note": "user's Sonic CD disc"
     },

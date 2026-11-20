@@ -2,6 +2,7 @@ package com.openggf.game.soniccd.special;
 
 import com.openggf.game.GameMode;
 import com.openggf.game.GameServices;
+import com.openggf.game.NativeGameStateOps;
 import com.openggf.game.soniccd.CdDiscDataSource;
 import com.openggf.game.soniccd.SonicCdGameModule;
 import com.openggf.tools.HeadlessGameBoot;
@@ -102,6 +103,19 @@ class TestCdSpecialStageResults {
             results.frame(true);
 
             assertEquals(expectedLives, campaign.getLives(), "campaign lives after the special-stage tally");
+        }
+    }
+
+    @Test
+    void levelScoreOneUpWrapsTheLivesByte() throws Exception {
+        try (var disc = CdSpecialNative.disc(); var boot = new HeadlessGameBoot(320, 224)) {
+            boot.boot(disc, new SonicCdGameModule(), 0, 0);
+            var campaign = GameServices.gameState();
+            NativeGameStateOps.restoreLives(campaign, 255);
+
+            campaign.addScore(50_000);
+
+            assertEquals(0, campaign.getLives(), "AddPoints increments the lives byte");
         }
     }
 

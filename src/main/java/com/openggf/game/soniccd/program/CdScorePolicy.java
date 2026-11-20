@@ -1,6 +1,7 @@
 package com.openggf.game.soniccd.program;
 
 import com.openggf.game.GameStateManager;
+import com.openggf.game.NativeGameStateOps;
 import com.openggf.game.internal.ScoreAdditionPolicy;
 
 import java.util.function.IntConsumer;
@@ -32,18 +33,19 @@ public final class CdScorePolicy implements ScoreAdditionPolicy {
         if (specialStageResults) {
             while (score >= nextLifeScore) {                 // .Check1UP loops (Special Stage/Main.asm:437-446)
                 nextLifeScore += LIFE_STEP;
-                state.addLife();
-                int cappedLives = capSpecialStageLives(state.getLives());
-                while (state.getLives() > cappedLives) {
-                    state.loseLife();
-                }
+                NativeGameStateOps.restoreLives(state, capSpecialStageLives(state.getLives() + 1));
             }
             return;
         }
         if (score < nextLifeScore) return;                   // cmp.l nextLifeScore,d0; bcs.s .End
         nextLifeScore += LIFE_STEP;
-        state.addLife();
+        awardLevelLife(state);
         subCpuCommand.accept(com.openggf.game.soniccd.audio.CdSoundRequests.YES_VOICE);
+    }
+
+    /** The uncapped byte increment in {@code AddPoints} (HUD and Points/Main.asm:173-174). */
+    public static void awardLevelLife(GameStateManager state) {
+        NativeGameStateOps.restoreLives(state, (state.getLives() + 1) & 0xFF);
     }
 
     /**
