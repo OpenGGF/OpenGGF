@@ -51,6 +51,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockingDetails;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * Focused behaviour of the common Sonic CD objects on the loaded R11A stage (its object art
@@ -214,14 +218,31 @@ class TestSonicCdCommonObjects {
 
     @Test
     void combineRingItemRequestsOnlyTheSignpostSound() {
+        var campaign = GameServices.gameState();
+        var level = GameServices.level().getLevelGamestate();
+        campaign.addScore(100);
+        level.setRings(17);
+        int lives = campaign.getLives();
+        int score = campaign.getScore();
+        int rings = level.getRings();
+
         var item = new CdMonitorItem(0, 0, 6, 0);
-        var services = org.mockito.Mockito.mock(ObjectServices.class);
+        var services = mock(ObjectServices.class);
+        when(services.gameState()).thenReturn(campaign);
+        when(services.levelGamestate()).thenReturn(level);
         item.setServices(services);
         for (int frame = 0; frame < 64; frame++) item.update(frame, sonic);
-        org.mockito.Mockito.verify(services).playSfx(0x9D);
-        org.mockito.Mockito.verify(services).gameState();
-        org.mockito.Mockito.verify(services).levelGamestate();
-        org.mockito.Mockito.verifyNoMoreInteractions(services);
+
+        verify(services).playSfx(0x9D);
+        long soundRequests = mockingDetails(services).getInvocations().stream()
+                .map(invocation -> invocation.getMethod().getName())
+                .filter(name -> name.equals("playSfx") || name.startsWith("playMusic"))
+                .count();
+        assertEquals(1, soundRequests, "FM_SIGNPOST is the only sound request");
+        assertAll(
+                () -> assertEquals(lives, campaign.getLives(), "lives"),
+                () -> assertEquals(rings, level.getRings(), "rings"),
+                () -> assertEquals(score, campaign.getScore(), "score"));
     }
 
     private static int paletteColor(com.openggf.level.Palette.Color color) {
