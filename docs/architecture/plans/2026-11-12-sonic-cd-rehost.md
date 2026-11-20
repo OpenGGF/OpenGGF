@@ -378,14 +378,13 @@ unverified lists. The order is not a priority order.
   animals draw nothing, Tidal Tempest's and Wacky Workbench's hologram animals
   are not hosted, and Collision Chaos's ground hologram animation is
   unverified.
-- Lost rings after a hit differ from native in R81A (from row 3343) and R81C
-  (from row 3968): Metallic Madness's Poh-Bee (`$2E`) is not hosted, so the
-  spilled rings take other slots and their slot-phased floor checks bounce
-  them on other rows. Whether rings collected in one time period stay
-  collected after a time warp is unmeasured (`ObjRing_Init` reads the earlier
-  periods' flags, Ring/Main.asm:96-113; the engine builds a new ring owner per
-  load). The spill when the hurting object runs before the spill's owner has
-  no native row.
+- [PR #397](https://github.com/OpenGGF/OpenGGF/pull/397) hosts Metallic
+  Madness's Poh-Bee (`$2E`) and makes lost-ring counts, positions and slots
+  exact on the recorded R81A, R81B and R81C routes. Whether rings collected
+  in one time period stay collected after a time warp is unmeasured.
+  `ObjRing_Init` reads the earlier periods' flags (Ring/Main.asm:96-113).
+  The engine builds a new ring owner per load. The spill when the hurting
+  object runs before the spill's owner has no native row.
 - About 228 places in the disassembly call `DrawObject` just before the
   despawn check, which clears the on-screen bit so the object leaves by range
   alone; most engine objects read the previous frame's bit there and stay

@@ -271,6 +271,64 @@ backup RAM and campaign progress. A separate case checks Start abort.
 Both local native recordings end with six UFOs remaining. A natural clear
 and parity for the original `SPEEND.MMD` credits presentation remain open.
 
+## Parked Sonic CD gaps
+
+- **Metallic Madness boss door.** `BossDoorObject_0_Routine4`
+  (objects/r8/boss_door.asm:64-88) clears foreground columns as the door opens.
+  `PlaceBlock` draws to VDP plane A and leaves the layout and collision data
+  intact (r8/stage_draw_3c.asm:398-428, r8/stage_draw_3d.asm:398-428).
+  In R83C and R83D, record camera positions and foreground tiles from before
+  the door trigger through the slide and the next camera redraw. Use the
+  visible lifetime of the cleared columns to specify an engine render operation.
+- **Palmtree Panic waterfall.** `ObjWaterfall_Main`
+  (Level/Palmtree Panic/Objects/Effects/Main.asm:36-58) calls `PlaceBlockAtPos`
+  on aligned rows. That routine writes the chunk block and redraws it if visible
+  (Level/Block Draw.asm:286-319). The ten USA stage payloads have zero
+  placements of object `$04` (`TestPpzObjectsA`). A shipped placement or
+  spawn path would justify recording the fall and checking its writes.
+- **Recorded-input pause audio.** The ROM pause path in the engine omits the
+  CDDA and PCM pause requests. `PauseMusic` (Level/Main.asm:620-643) selects
+  CDDA outside the Past and for invincibility or speed shoes, and PCM for
+  ordinary Past music. Record Start pause and resume with a native pad movie
+  and audio in R11A and R11B. Include an R11B case with invincibility or speed
+  shoes and check which music source stops and resumes in each case.
+- **Extra-life ring sound.** The shared collector also plays the ordinary
+  pickup cue when the 100th or 200th ring awards a life.
+  `CollectRing .GainLife` (Level/_Objects/Ring/Main.asm:290-312) requests
+  only the extra-life voice. Start Sonic beside a placed ring at 99 and
+  199 rings with the respective award flag clear. Collect it by controller
+  input. Compare the cue requests and audio against an ordinary pickup in
+  the same stage.
+- **Palmtree Panic campaign Amy Rose.** R11A object `$2F` remains a
+  placeholder (`ObjAmyRose`, Level/Palmtree Panic/Objects/Amy Rose/Main.asm:7-26).
+  Start R11A in campaign mode and stay in the Present. Record Sonic approaching
+  Amy near the act end, her grabbing Sonic, Sonic breaking free, and Amy
+  leaving. Include Amy and heart slots, Sonic's motion, and the palette before
+  and after the encounter.
+- **Wacky Workbench defeat fades.** Eggman's update runs two blocking fades
+  (`EggmanDefeatSequenceFadeScreen` and `EggmanDefeatSequenceFadeObjects`,
+  objects/r6/boss.asm:545-559). Each runs 22 programmed VSync steps.
+  See `FadeToWhite` (Level/Palette Fade.asm:273-285) and
+  `BossFadeObjectsFromWhite` (common/palette_fade.asm:463-484).
+  Live play takes one frame per fade. The existing comparison matches slots
+  and palette-cycle timers at completed level frames. Record every VBlank
+  in R63C or R63D from the final hit through the capsule spawn. Capture the
+  palette and object-pass progress to verify the fade steps and held updates.
+
+## Native recordings still needed
+
+Use the USA disc in BizHawk 2.11. Keep the starting state and input together
+with the recorded rows or audio and pictures needed by the check.
+
+| Gap | Start and route | Evidence to retain |
+| --- | --- | --- |
+| Campaign endings | Start before the final fight on the campaign route in R83C with all seven Time Stones or all seven good futures secured by the clear. Repeat in R83D with neither set complete. Win both fights by controller input and let each ending finish. | Final stage exit, saved progress flags, ending selection, full video and audio, credits, and return to the title. `GameDone` selects the ending (CD Initial Program/IPX.asm:301-326). |
+| Full campaign | Cold boot with empty backup RAM, select a new game, and play from R11A through the R83 clear. Use ordinary act exits and include a time warp and a giant-ring special-stage return. | One continuous movie with each stage entry and exit, the period and special-stage handoffs, lives and progress carried between acts, and the last save and ending. |
+| Natural Special Stage 8 clear | Cold boot to the title, enter Special Stage 8 through Sound Test, and hit all six UFOs by controller input before time runs out. Let the credits play. | UFO count reaching zero, success state, fade, `SPEEND.MMD` credits with audio, and return to the title (`SoundTest_SpecStg8`, CD Initial Program/IPX.asm:1065-1079). |
+| Remaining boss coverage | In R43C and R43D, use the recorded defeat and capsule route where it covers the interval. For missing coverage, start before the chase and fight through the exit. In R83C and R83D, start before the arena approach and play through the collapse floor, each hit and the final defeat. | Player and camera rows, boss and child slots, hit and phase transitions, escape or defeat, capsule release where present, and the next program. |
+| R81B, R81C and R82A act ends | Cold boot into each stage via stage select and extend its recorded route past the signpost. Wait through the results and enter the next stage. | Signpost trigger, ring and time tallies, results exit, and first playable row of the next stage. |
+| R41A swing and switch elevator | Start R41A from stage select. Take the route to the `$29` swing at `($0480,$0180)`. Board the seat, press its switch, ride, and dismount. For the `$30` elevator at `($09E0,$0540)`, land on its pressure switch, ride up, then release it and ride the side platform. See `StageObjects` (r4/stage_object_maps_1.asm:38-41, 93-94). | Player support and position, swing phase and switch state, plus the elevator column and side platform positions on press, travel and release. |
+
 ## Cartridge donor hosting (2026-11-16)
 
 `TestCdDonorHosting` boots R11A on the USA disc with six cartridge combinations:
