@@ -2191,6 +2191,13 @@
       "note": "Sonic CD disc and native captures"
     },
     {
+      "match": "com.openggf.game.soniccd.TestMmzObjects#laserBeamShrinksSonicOnTheNativeContactFrame",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestMmzObjects.java:343",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Sonic CD USA disc"
+    },
+    {
       "match": "com.openggf.game.soniccd.TestMmzObjects#pohBeeAttackReplacesItsSlotAndRewindRecreatesTheChains",
       "category": "optional-fixture",
       "evidence": "src/test/java/com/openggf/game/soniccd/TestMmzObjects.java:201",
