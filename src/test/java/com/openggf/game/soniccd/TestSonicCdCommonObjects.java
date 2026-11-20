@@ -20,6 +20,7 @@ import com.openggf.game.soniccd.objects.common.CdRing;
 import com.openggf.game.soniccd.objects.common.CdPoints;
 import com.openggf.game.soniccd.objects.common.CdSpikes;
 import com.openggf.game.soniccd.objects.common.CdSpring;
+import com.openggf.game.soniccd.objects.ppz.PpzPlatform;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectServices;
@@ -179,6 +180,31 @@ class TestSonicCdCommonObjects {
                 () -> assertEquals(0, rewoundWord, "rewind before the break restores the clear word"),
                 () -> assertEquals(300, restoredWord, "rewind after the pickup restores the stop word"),
                 () -> assertEquals(0, restarted.flags().timeStopWord, "death reload clears the stop word"));
+    }
+
+    @Test
+    void palmtreePanicPlatformHoldsItsPositionDuringTimeStop() throws Exception {
+        var levels = GameServices.level();
+        levels.loadZoneAndAct(SonicCdZoneRegistry.zoneIndex(CdStagePayload.R13C),
+                SonicCdZoneRegistry.actIndex(CdStagePayload.R13C));
+        CdLevel stage = (CdLevel) levels.getCurrentLevel();
+        int x = sonic.getCentreX() + 0x60;
+        int y = sonic.getCentreY() - 0x80;
+        // R13C includes ObjPlatform, but has no platform placement in its layout.
+        PpzPlatform platform = add(new PpzPlatform(new ObjectSpawn(x, y, 0x21, 0, 0, false, 0)));
+        runner.stepIdleFrames(1);
+
+        // ObjPlatform_Subtype0X advances the angle one step per update (Level/Palmtree Panic/Objects/Platform/Main.asm:135-140).
+        runner.stepIdleFrames(64);
+        int movingY = platform.getY();
+        stage.flags().timeStopWord = 300;
+        runner.stepIdleFrames(64);
+        int stoppedY = platform.getY();
+        stage.flags().timeStopWord = 0;
+        runner.stepIdleFrames(64);
+
+        assertEquals(List.of(y + 32, y + 32, y), List.of(movingY, stoppedY, platform.getY()),
+                "the platform holds at the crest and resumes from the same phase");
     }
 
     @Test
