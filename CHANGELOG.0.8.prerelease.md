@@ -143,7 +143,9 @@ under the matching area heading; see the
   weights. Its shared badnik defeat and Good Future explosion preserve native
   slot use. Ring counts and positions match native over the 28 recorded routes
   and two Palmtree Panic loops. Ring spills and slots now match throughout the
-  recorded Metallic Madness Present, Past, and Good Future routes. Stage loads clear the state native
+  recorded Metallic Madness Present, Past, and Good Future routes. In Quartz
+  Quadrant, Noro Noro frees its spike slot when Sonic leaves range, preserving
+  the disc's object allocation order. Stage loads clear the state native
   clears, so playing stages in any order matches playing each alone. In normal
   play the object clock a stage starts from and the video player's disc wait
   follow measured emulator timings under `gameplay.loadTimeSimulation`
