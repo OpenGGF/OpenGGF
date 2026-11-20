@@ -3,6 +3,7 @@ package com.openggf.game.soniccd;
 import com.openggf.game.CheckpointState;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameServices;
+import com.openggf.game.internal.ScoreAdditionPolicy;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.SessionManager;
@@ -18,9 +19,12 @@ import com.openggf.game.soniccd.objects.common.CdFlower;
 import com.openggf.game.soniccd.objects.common.CdGameOver;
 import com.openggf.game.soniccd.objects.common.CdGoalPost;
 import com.openggf.game.soniccd.objects.common.CdPlcQueue;
+import com.openggf.game.soniccd.objects.common.CdResults;
 import com.openggf.game.soniccd.objects.common.CdRobotGenerator;
 import com.openggf.game.soniccd.objects.common.CdSignpost;
 import com.openggf.game.soniccd.objects.common.CdTestBadnik;
+import com.openggf.game.soniccd.program.CdScorePolicy;
+import com.openggf.level.Pattern;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
@@ -34,8 +38,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -316,6 +322,67 @@ class TestSonicCdCommonObjects2 {
         assertTrue(badnik.isDestroyed());
         var explosion = (AbstractObjectInstance) live(0x18).getFirst();
         assertEquals(slot, explosion.getSlotIndex(), ".KillEnemy rewrites the slot (Player Object Collision.asm:174-178)");
+    }
+
+    @Test
+    void firstBadnikDisplaysOneHundredOnTheHud() throws Exception {
+        boot(CdStagePayload.R11A);
+        CdTestBadnik badnik = add(new CdTestBadnik(at(0x60, -0x20, 0x06, 0)));
+        runner.stepIdleFrames(1);
+        badnik.onPlayerAttack(sonic, null);
+        runner.stepIdleFrames(1);
+
+        assertEquals(100, GameServices.gameState().getScore());
+        var provider = (CdObjectArtProvider) GameServices.level().getObjectRenderManager().getArtProvider();
+        var tiles = provider.getSheet(CdObjectArtProvider.HUD).getPatterns();
+        int firstCell = 0xB060 / 32 - (CdObjectArtProvider.HUD_TILE & 0x7FF);
+        int[] digits = {-1, -1, -1, -1, 1, 0, 0};
+        for (int cell = 0; cell < digits.length; cell++) {
+            int digit = digits[cell];
+            byte[] art = digit < 0 ? new byte[64]
+                    : provider.image().slice(provider.entry().hudNumbersArt() + digit * 64, 64);
+            for (int half = 0; half < 2; half++) {
+                var pattern = new Pattern();
+                pattern.fromSegaFormat(Arrays.copyOfRange(art, half * 32, (half + 1) * 32));
+                byte[] expected = new byte[64];
+                byte[] actual = new byte[64];
+                pattern.copyInto(expected, 0);
+                tiles[firstCell + cell * 2 + half].copyInto(actual, 0);
+                assertArrayEquals(expected, actual, "SCORE cell " + cell + ", tile " + half);
+            }
+        }
+    }
+
+    @Test
+    void levelScoreAwardsOneUpAtFiftyThousandPoints() throws Exception {
+        boot(CdStagePayload.R11A);
+        var game = GameServices.gameState();
+        int startingLives = game.getLives();
+        game.addScore(49_990);
+        assertEquals(startingLives, game.getLives());
+        game.addScore(10);
+        assertEquals(startingLives + 1, game.getLives());
+    }
+
+    @Test
+    void actResultsTallyAddsBothBonusesInPoints() throws Exception {
+        boot(CdStagePayload.R11A);
+        var results = add(new CdResults(1, 100, 100));
+        sonic.setX((short) (GameServices.camera().getX() + 400));
+        for (int frame = 0; frame < 100; frame++) results.update(frame, sonic);
+        assertEquals(200, GameServices.gameState().getScore());
+    }
+
+    @Test
+    void specialStageAwardCrossesTheCampaignsFiftyThousandPointThreshold() throws Exception {
+        boot(CdStagePayload.R11A);
+        var game = GameServices.gameState();
+        var policy = (CdScorePolicy) GameServices.module().getGameService(ScoreAdditionPolicy.class);
+        int startingLives = game.getLives();
+        game.addScore(49_800);
+        policy.awardSpecialStageResults(game, 200);
+        assertEquals(50_000, game.getScore());
+        assertEquals(startingLives + 1, game.getLives());
     }
 
     @Test
