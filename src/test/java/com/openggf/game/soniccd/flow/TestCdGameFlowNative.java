@@ -3,6 +3,7 @@ package com.openggf.game.soniccd.flow;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameServices;
+import com.openggf.game.NativeGameStateOps;
 import com.openggf.game.soniccd.CdStagePayload;
 import com.openggf.game.soniccd.program.CdProgramRequest;
 import com.openggf.game.soniccd.special.CdSpecialStageProvider;
@@ -12,6 +13,8 @@ import com.openggf.graphics.FadeManager.FadeState;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledOnOs;
 import org.junit.jupiter.api.condition.OS;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import java.util.Map;
 
@@ -394,6 +397,58 @@ class TestCdGameFlowNative {
             assertNull(h.scenes.flow().route(), "the run is over");
             assertFalse(h.timeTravel().goodFuture(), "GameOver clears goodFuture (IPX.asm:337)");
             assertTrue(h.scenes.route().contains("-> Title[]"), "IPX returns to .GameLoop");
+        }
+    }
+
+    @ParameterizedTest
+    @CsvSource({"129, 0", "128, 127"})
+    void deathUsesTheSignedLivesByte(int startingLives, int remainingLives) throws Exception {
+        try (CdFlowHarness h = new CdFlowHarness(null)) {
+            h.newGame();
+            h.until(() -> !h.row().ctrlLocked(), 300, 0);
+            NativeGameStateOps.restoreLives(GameServices.gameState(), startingLives);
+
+            kill(h);
+            h.until(() -> h.player().isInDeathRestartRoutine(), 300, 0);
+
+            assertEquals(remainingLives, h.row().lives(), "lives when Sonic enters the restart routine");
+            if (remainingLives == 0) {
+                h.step(0, 0, true);
+                assertFalse(GameServices.gameState().isGamePaused(), "Start cannot pause the game-over delay");
+                h.until(() -> h.loop.getCurrentGameMode() == GameMode.TITLE_SCREEN, 1200, 0);
+                assertNull(h.scenes.flow().route(), "the campaign ended");
+            } else {
+                h.until(() -> !h.player().getDead(), 900, 0);
+                assertEquals(GameMode.LEVEL, h.loop.getCurrentGameMode());
+                assertEquals(remainingLives, h.row().lives(), "lives after restarting the act");
+            }
+        }
+    }
+
+    @Test
+    void livingSonicCanPauseAndResumeAfterTheLivesByteWraps() throws Exception {
+        try (CdFlowHarness h = new CdFlowHarness(null)) {
+            h.newGame();
+            var campaign = GameServices.gameState();
+            NativeGameStateOps.restoreLives(campaign, 255);
+            campaign.addScore(50_000);
+            assertEquals(0, campaign.getLives());
+
+            assertTrue(h.row().ctrlLocked(), "the title card still owns the controls");
+            h.idle(1);
+            h.step(0, 0, true);
+            assertFalse(campaign.isGamePaused(), "Start cannot pause the title card");
+            h.until(() -> !h.row().ctrlLocked(), 300, 0);
+            long time = h.row().time();
+
+            h.step(0, 0, true);
+            assertTrue(campaign.isGamePaused(), "a live player can pause with a zero lives byte");
+            h.idle(2);
+            assertEquals(time, h.row().time(), "the level clock stays paused");
+
+            h.step(0, 0, true);
+            assertFalse(campaign.isGamePaused());
+            assertTrue(h.row().time() > time, "the level clock resumes");
         }
     }
 }
