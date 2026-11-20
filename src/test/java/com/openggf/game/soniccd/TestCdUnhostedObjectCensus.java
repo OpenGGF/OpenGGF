@@ -39,7 +39,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  *       Compatibility.asm:204-206), which leaves the object in its slot: the placeholder is what native holds for the
  *       Null entries ($05..$3F where the stage's index says so). The other zones' {@code NullObject} deletes itself
  *       (objects/null.asm) and is hosted by {@code CdNullObject}, so no Null ID is left here for them.</li>
- *   <li>Real routines still unhosted, by zone: Palmtree Panic $35 (tunnel door), $2F in R11A (Amy
+ *   <li>Real routines still unhosted, by zone: Palmtree Panic $2F in R11A (Amy
  *       Rose); Collision Chaos $2C (spike chain); Tidal Tempest $23 (vertical move block), $29 (swing, R41A), $30 (switch elevator, R41A),
  *       $52 (not the projector: the projector's $52 in R41B/R42B is hosted by objects/projector); Wacky Workbench
  *       $29 (animal); Metallic Madness $2E (poh bee, R81x).</li>
@@ -48,14 +48,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class TestCdUnhostedObjectCensus {
     /** Stage to the placed IDs (hex, ascending) that resolve to the shared placeholder; stages not listed place none. */
     private static final Map<String, String> UNHOSTED = Map.ofEntries(
-        Map.entry("R11A", "2F 35"),
-        Map.entry("R11B", "35"),
-        Map.entry("R11C", "35"),
-        Map.entry("R11D", "35"),
-        Map.entry("R12A", "35"),
-        Map.entry("R12B", "35"),
-        Map.entry("R12C", "35"),
-        Map.entry("R12D", "35"),
+        Map.entry("R11A", "2F"),
         Map.entry("R31A", "2C"),
         Map.entry("R31B", "2C"),
         Map.entry("R31C", "2C"),

@@ -38,6 +38,24 @@ public final class PpzObjectCatalogue {
         return Objects.requireNonNull(ENTRIES.get(Objects.requireNonNull(payload, "payload")));
     }
 
+    /**
+     * USA MMD offsets resolved from the live ObjectIndex $35 entry's mapping operand.
+     * ObjTunnelDoorV_Init (Level/Palmtree Panic/Objects/Tunnel Door/Main.asm:34-42).
+     */
+    static int tunnelDoorMappings(CdStagePayload payload) {
+        return switch (payload) {
+            case R11A -> 0xCE9A;
+            case R11B -> 0xCEEC;
+            case R11C -> 0xCA5E;
+            case R11D -> 0xCA50;
+            case R12A -> 0xCBC4;
+            case R12B -> 0xCB52;
+            case R12C -> 0xCA98;
+            case R12D -> 0xCA90;
+            default -> -1;
+        };
+    }
+
     private static Map<CdStagePayload, Entry> load() {
         Map<CdStagePayload, Entry> out = new EnumMap<>(CdStagePayload.class);
         for (CdStagePayload p : CdStagePayload.values()) {

@@ -51,6 +51,8 @@ under the matching area heading; see the
   Present, Past, Good Future and Bad Future; act 3 in both futures. Each zone
   has its own presentation, objects and boss. Palmtree Panic's solid boulders
   use the current section's graphics, replacing the title-card tiles after loading.
+  The vertical tunnel doors in acts 1 and 2 now open from the left and block
+  Sonic from the right while closed.
   Flowers finish growing, diagonal springs and monitor rewards use their proper
   graphics, and object names follow the current stage's object table. Palmtree
   Panic backgrounds sample each row's own camera section, retaining static-row
