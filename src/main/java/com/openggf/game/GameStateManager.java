@@ -455,7 +455,8 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
     }
 
     private static LevelLifePolicy levelLifePolicy() {
-        return GameServices.currentOrBootstrapGameModule().getGameService(LevelLifePolicy.class);
+        var world = com.openggf.game.session.SessionManager.getCurrentWorldSession();
+        return world == null ? null : world.getGameModule().getGameService(LevelLifePolicy.class);
     }
 
     /**
