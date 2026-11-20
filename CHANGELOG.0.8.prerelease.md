@@ -7,6 +7,10 @@ under the matching area heading; see the
 
 ## Gameplay and presentation
 
+- **The Doomsday Zone:** the second boss phase preserves the ship's fractional
+  vertical position, Hyper Sonic's after-image uses the original history slots,
+  and his palette keeps cycling through the white exit fade.
+
 - **Frame interpolation background continuity:** vertical camera movement no longer
   mistakes parallax band crossings for horizontal teleports. The previous frozen
   scroll phase is composed at the current vertical view before comparing horizontal
