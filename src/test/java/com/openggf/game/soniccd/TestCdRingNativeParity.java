@@ -94,11 +94,10 @@ class TestCdRingNativeParity {
 
     /**
      * Measured after the RINGS lane (2026-11-13). {@code positions}: the slot table differs first at the listed row,
-     * after another object's lifetime differs (listed per stage in the re-host plan). {@code differs}: R81A and R81C,
-     * whose spilled rings take other slots than native's because Metallic Madness's Poh-Bee ($2E,
-     * objects/r8/poh_bee.asm) is not hosted (16 live natively at R81A's hurt, row 3201; in R81C one is destroyed in the
-     * good future on row 2397 where the engine keeps one), so their floor checks, phased by {@code d7} (Ring/Main.asm:
-     * 415-418), bounce them on other rows and a ring is collected on another row.
+     * after another object's lifetime differs (listed per stage in the re-host plan). R81A, R81B and R81C now
+     * match ring slots throughout their recordings. Poh-Bee's chains occupy the native slots in Present and Past.
+     * In Good Future, the body becomes an explosion in its own slot before the chains are allocated
+     * (loc_20D918, objects/r8/poh_bee.asm:11-24).
      */
     @ParameterizedTest(name = "{0}: {2}")
     @CsvSource({
@@ -109,7 +108,7 @@ class TestCdRingNativeParity {
             "R51C, 7151, exact, -1", "R52A, 4772, positions, 2202", "R61A, 4892, exact, -1",
             "R61B, 5449, positions, 2749", "R61C, 6767, positions, 5412", "R62A, 4787, exact, -1",
             "R71A, 3977, exact, -1", "R71B, 4918, exact, -1", "R71C, 6096, positions, 808", "R72A, 4399, exact, -1",
-            "R81A, 4736, differs, 3343", "R81B, 3991, positions, 2566", "R81C, 4524, differs, 3968",
+            "R81A, 4736, exact, -1", "R81B, 3991, exact, -1", "R81C, 4524, exact, -1",
             "R82A, 4577, exact, -1", "R11B-loop, 2163, exact, -1", "R13C-loop, 785, exact, -1"})
     void ringsEqualNative(String recording, int rows, String status, int firstRow) throws Exception {
         Path dir = recordingDir(recording);

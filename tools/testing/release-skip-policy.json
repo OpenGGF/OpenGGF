@@ -2163,6 +2163,48 @@
       "note": "Sonic CD disc and native captures"
     },
     {
+      "match": "com.openggf.game.soniccd.TestMmzObjects#pohBeeAttackReplacesItsSlotAndRewindRecreatesTheChains",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestMmzObjects.java:201",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "The user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestMmzObjects#pohBeeFliesAndSwingsItsWeights(int, int, int, int, int, int, int, int)[1]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestMmzObjects.java:172",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "The user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestMmzObjects#pohBeeFliesAndSwingsItsWeights(int, int, int, int, int, int, int, int)[2]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestMmzObjects.java:172",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "The user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestMmzPohBeeNative#pohBeeSlotsMatchTheRetailRoute(CdStagePayload, int)[1]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestMmzPohBeeNative.java:24",
+      "allowed_when_absent": "soniccd_native",
+      "note": "BizHawk native reference (and the user's Sonic CD disc)"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestMmzPohBeeNative#pohBeeSlotsMatchTheRetailRoute(CdStagePayload, int)[2]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestMmzPohBeeNative.java:24",
+      "allowed_when_absent": "soniccd_native",
+      "note": "BizHawk native reference (and the user's Sonic CD disc)"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestMmzPohBeePicture#placedPohBeeMatchesTheSpriteFromTheDisc",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestMmzPohBeePicture.java:25",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "The user's Sonic CD disc"
+    },
+    {
       "match": "com.openggf.game.soniccd.TestMmzObjects2#spikeCrusherBuildsItsThreePartsAndTwoTips",
       "category": "optional-fixture",
       "evidence": "src/test/java/com/openggf/game/soniccd/TestMmzObjects2.java:74",
