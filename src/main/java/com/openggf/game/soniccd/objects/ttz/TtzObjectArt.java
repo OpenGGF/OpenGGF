@@ -188,6 +188,9 @@ public final class TtzObjectArt {
             vram.loadPlc(stage, stageEntry.plcLists(), TITLE_CARD_PLC);
             sectionVram.add(vram);
         }
+        for (var shape : ObjVerticalMoveBlock.Shape.values()) {
+            add(art, shape.sheet, TtzObjectCatalogue.offset(loaded, shape.mappingColumn), ObjVerticalMoveBlock.TILE);
+        }
         for (Spec spec : SPECS) {
             for (int tile : spec.tileWords()) add(art, spec.kind(), TtzObjectCatalogue.offset(loaded, spec.mappingsColumn()), tile);
         }

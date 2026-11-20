@@ -35,13 +35,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * its entries in the same commit. What the IDs are (native routine per index, the stages that place them and how
  * many): the object lanes' reports. Notes that keep the table honest:
  * <ul>
- *   <li>Tidal Tempest's {@code NullObject} is the compatibility stub ({@code moveq #0,d0; rts}, Level/Tidal Tempest/R4
- *       Compatibility.asm:204-206), which leaves the object in its slot: the placeholder is what native holds for the
- *       Null entries ($05..$3F where the stage's index says so). The other zones' {@code NullObject} deletes itself
- *       (objects/null.asm) and is hosted by {@code CdNullObject}, so no Null ID is left here for them.</li>
+ *   <li>Tidal Tempest's {@code NullObject} is the {@code ObjNull} compatibility stub
+ *       (Level/Tidal Tempest/R4 Compatibility.asm:204-206). The stub returns without deleting the object,
+ *       so the placed ID stays in its slot. The census includes inert and out-of-period records. $23 calls NullObject
+ *       in R41A/R42A (ObjectIndex, r4/object_index_1a.asm:37-39 and r4/object_index_2a.asm:37-39).
+ *       $52 is the hosted projector in R41B/R42B and a Past-only layout record in the other periods.</li>
  *   <li>Real routines still unhosted, by zone: Palmtree Panic $35 (tunnel door), $2F in R11A (Amy
- *       Rose); Tidal Tempest $23 (vertical move block),
- *       $52 (not the projector: the projector's $52 in R41B/R42B is hosted by objects/projector).</li>
+ *       Rose).</li>
  * </ul>
  */
 class TestCdUnhostedObjectCensus {
@@ -56,13 +56,13 @@ class TestCdUnhostedObjectCensus {
         Map.entry("R12C", "35"),
         Map.entry("R12D", "35"),
         Map.entry("R41A", "23 3F 52"),
-        Map.entry("R41B", "23 28 29 30 39 3F"),
-        Map.entry("R41C", "23 28 29 30 39 51 52"),
-        Map.entry("R41D", "23 28 29 30 39 51 52"),
+        Map.entry("R41B", "28 29 30 39 3F"),
+        Map.entry("R41C", "28 29 30 39 51 52"),
+        Map.entry("R41D", "28 29 30 39 51 52"),
         Map.entry("R42A", "23 52"),
-        Map.entry("R42B", "23 28 37 44"),
-        Map.entry("R42C", "23 44 51 52"),
-        Map.entry("R42D", "23 44 51 52")
+        Map.entry("R42B", "28 37 44"),
+        Map.entry("R42C", "44 51 52"),
+        Map.entry("R42D", "44 51 52")
     );
 
     @TempDir
