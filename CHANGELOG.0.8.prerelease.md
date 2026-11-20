@@ -126,6 +126,8 @@ under the matching area heading; see the
   and vanish when Sonic shuts it down.
   Wacky Workbench's layout animals fly or hop after the projector is destroyed
   and in the Good Future.
+  Stardust Speedway's freed ground animals now draw with the disc's sprites,
+  hop twice before turning, and leave their slots at the disc's range boundary.
   Accuracy is measured against native recordings made on an emulator running
   the USA disc: 26 of 28 full-act routes (start to signpost) equal native on
   every compared field to their end (146,390 of 149,633 rows), and 68 of 70
