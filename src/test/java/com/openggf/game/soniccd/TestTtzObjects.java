@@ -40,6 +40,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import java.nio.file.Path;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -223,6 +224,50 @@ class TestTtzObjects {
         pole.update(0, sonic);
         assertFalse(sonic.isObjectControlSuppressesMovement(), "the pole clears bit 0 on timeout");
         assertTrue(sonic.isTouchResponseSuppressedByObjectControl(), "drowning keeps bit 7 set");
+    }
+
+    @Test
+    void breakPoleReleaseRestoresAirControlDuringDrowning() throws Exception {
+        boot(CdStagePayload.R42A);
+        sonic.setCentreX((short) 5170);
+        sonic.setCentreY((short) 1608);
+        sonic.setAir(true);
+        GameServices.camera().updatePosition(true);
+
+        runner.stepIdleFrames(1680);
+        for (int i = 0; i < 22; i++) runner.stepFrame(false, false, false, true, false);
+        for (int i = 0; i < 180 && !sonic.isDrowningPreDeath(); i++) runner.stepIdleFrames(1);
+        assertTrue(sonic.isDrowningPreDeath(), "air runs out while Sonic holds the placed pole");
+        assertTrue(sonic.isObjectControlSuppressesMovement());
+        for (int i = 0; i < 180 && sonic.isObjectControlSuppressesMovement(); i++) {
+            // Climb down during the hold so the first released steps have clear water below.
+            runner.stepFrame(false, true, false, false, false);
+        }
+        assertFalse(sonic.isObjectControlSuppressesMovement());
+
+        // PlayerFallState (objects/player.asm:673-696) moves first and adds $38 - $28.
+        // loc_206364 (objects/r4/player_bubbles.asm:249-255) moves again and adds $10.
+        // PlayerMoveAir (objects/player.asm:1494-1547) uses twice the water acceleration (6).
+        int x = (sonic.getCentreX() << 16) + sonic.getXSubpixelRaw();
+        int y = (sonic.getCentreY() << 16) + sonic.getYSubpixelRaw();
+        int dy = sonic.getYSpeed();
+        int[] steeredSpeeds = {-12, 0, 12, 24};
+        for (int vx : steeredSpeeds) {
+            x += 2 * vx << 8;
+            y += (2 * dy + 0x10) << 8;
+            dy += 0x20;
+            int expectedX = x;
+            int expectedY = y;
+            int expectedYSpeed = dy;
+            runner.stepFrame(false, false, vx < 0, vx >= 0, false);
+            assertAll("released underwater step",
+                    () -> assertTrue(sonic.isDrowningPreDeath(), "the bubbles slot still owns the sink"),
+                    () -> assertEquals(CdSonicAnimation.WALK.id(), sonic.getAnimationId(), "falling writes Walk"),
+                    () -> assertEquals(vx, sonic.getXSpeed(), "directional input steers the fall"),
+                    () -> assertEquals(expectedX, (sonic.getCentreX() << 16) + sonic.getXSubpixelRaw(), "two X moves"),
+                    () -> assertEquals(expectedYSpeed, sonic.getYSpeed(), "combined underwater gravity"),
+                    () -> assertEquals(expectedY, (sonic.getCentreY() << 16) + sonic.getYSubpixelRaw(), "two Y moves"));
+        }
     }
 
     @ParameterizedTest
