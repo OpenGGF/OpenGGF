@@ -3,11 +3,9 @@ package com.openggf.game.soniccd.audio;
 import com.openggf.game.soniccd.CdPeriod;
 import com.openggf.game.soniccd.level.CdLevel;
 import com.openggf.level.objects.ObjectServices;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 
-/**
- * The request sequences stage objects send for power-ups, so an object's call site is one
- * line that names its native request.
- */
+/** Sub-CPU audio requests from the Sonic CD level program and its objects. */
 public final class CdSoundRequests {
     public static final int YES_VOICE = CdSubCpuAudio.commandId("SCMD_YESSFX");
     public static final int FADE_PCM = CdSubCpuAudio.commandId("SCMD_FADEPCM");
@@ -22,7 +20,24 @@ public final class CdSoundRequests {
     /** {@code FM_SHIELD} (FM/_Sound IDs.inc:17). */
     public static final int SHIELD = 0x97;
 
+    private static final int PAUSE_CDDA = CdSubCpuAudio.commandId("SCMD_PAUSECDA");
+    private static final int UNPAUSE_CDDA = CdSubCpuAudio.commandId("SCMD_UNPAUSECDA");
+    private static final int PAUSE_PCM = CdSubCpuAudio.commandId("SCMD_PAUSEPCM");
+    private static final int UNPAUSE_PCM = CdSubCpuAudio.commandId("SCMD_UNPAUSEPCM");
+
     private CdSoundRequests() { }
+
+    /**
+     * {@code PauseMusic} (Level/Main.asm:620-643) and {@code UnpauseMusic} (Level/Main.asm:652-672)
+     * send one command per pause transition. The Past uses PCM unless a power-up plays a CD track.
+     */
+    public static void setLevelMusicPaused(ObjectServices services, AbstractPlayableSprite player, boolean paused) {
+        if (inPast(services) && player.getInvincibleFrames() == 0 && !player.hasSpeedShoes()) {
+            services.playMusic(paused ? PAUSE_PCM : UNPAUSE_PCM);
+        } else {
+            services.playMusic(paused ? PAUSE_CDDA : UNPAUSE_CDDA);
+        }
+    }
 
     /**
      * {@code .GiveInvinc}/{@code .GiveSpeedShoes}: in the past the PCM music is faded first,
