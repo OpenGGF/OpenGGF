@@ -22,13 +22,6 @@ class SszAnimator {
     private int flipBits;
     private boolean showed;
 
-    SszAnimator() { }
-
-    SszAnimator(CdStageImage image, int table, int anim) {
-        bindScript(image, table);
-        this.anim = anim;
-    }
-
     void bindScript(CdStageImage image, int table) {
         this.image = image;
         this.table = table;
