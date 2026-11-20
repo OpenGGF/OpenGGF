@@ -1,7 +1,6 @@
 package com.openggf.game.soniccd.objects.ppz;
 
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.soniccd.CdStagePayload;
 import com.openggf.game.soniccd.level.CdLevel;
 import com.openggf.game.soniccd.level.CdStageCatalogue;
 import com.openggf.game.soniccd.objects.art.CdObjectArtProvider;
@@ -21,12 +20,8 @@ final class PpzAmyRose extends PlaceholderObjectInstance {
 
     @Override
     public void update(int vIntRunCount, PlayableEntity player) {
-        if (!(services().levelManager().getCurrentLevel() instanceof CdLevel level)
-                || level.payload() != CdStagePayload.R11A) {
-            setDestroyed(true); // ObjNull (Level/Palmtree Panic/Object Index (Act 1 Past).asm:77-79).
-            return;
-        }
-        if (CdSceneCoordinator.isTimeAttack(services().gameModule())) {
+        if (CdSceneCoordinator.isTimeAttack(services().gameModule())
+                && services().currentLevel() instanceof CdLevel level) {
             // ObjAmyRose (Level/Palmtree Panic/Objects/Amy Rose/Main.asm:7-25).
             // Pal_Level (Level/Palmtree Panic/Palette Data (Act 1 Present).asm:48-60) shares Pal_LevelEnd data.
             var art = services().gameModule().getGameService(CdObjectArtProvider.class);

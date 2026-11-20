@@ -9,6 +9,7 @@ import com.openggf.game.soniccd.level.CdLevel;
 import com.openggf.game.soniccd.level.CdStageCatalogue;
 import com.openggf.game.soniccd.objects.art.CdObjectArtProvider;
 import com.openggf.game.soniccd.objects.ccz.CczIntroState;
+import com.openggf.game.soniccd.objects.ccz.CczMetalSonic;
 import com.openggf.game.soniccd.objects.common.CdBigRing;
 import com.openggf.game.soniccd.objects.common.CdMonitor;
 import com.openggf.game.soniccd.objects.common.CdTimeIcon;
@@ -72,10 +73,17 @@ class TestCdTimeAttackObjects {
                     .findFirst().orElseThrow();
             // PaletteTable (Level/Collision Chaos/Palette Data (Act 1 Present).asm:24-26) points to StagePalette.
             int[] expected = discPaletteLine(4);
-            if (timeAttack) level().getPalette(1).getColor(0).fromSegaFormat(expected[0] ^ 0xEEE);
+            level().getPalette(1).getColor(0).fromSegaFormat(expected[0] ^ 0xEEE);
             frameAt(sonic, amy);
             assertEquals(!timeAttack, live(amy), "intro placement " + amy);
-            if (timeAttack) assertArrayEquals(expected, paletteLine(), "Amy restores StagePalette to line 1");
+            if (!timeAttack) {
+                var metal = new CczMetalSonic(new ObjectSpawn(0x500, 0x3E8, 0x31, 0, 0, false, 0));
+                GameServices.level().getObjectManager().addDynamicObject(metal);
+                // Run Metal's player-passed exit independently of Amy's own exit.
+                NativePositionOps.writeXPosPreserveSubpixel(sonic, 0x4C0);
+                metal.update(0, sonic);
+            }
+            assertArrayEquals(expected, paletteLine(), "Capture restores StagePalette to line 1");
         });
     }
 

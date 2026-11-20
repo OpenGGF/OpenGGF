@@ -2,7 +2,6 @@ package com.openggf.game.soniccd.objects.ccz;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.soniccd.level.CdLevel;
-import com.openggf.game.soniccd.level.CdStageCatalogue;
 import com.openggf.game.soniccd.objects.art.CdObjectArtProvider;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.CameraRelativeDraw;
@@ -62,10 +61,7 @@ public final class CczAmyRose extends CczObject implements ObjectVisualFacing.So
     /** MetalSonicCaptureAmy (objects/r3/intro.asm:204-208). */
     private void endIntro(CdLevel level) {
         if (level != null) {
-            CczIntroState.of(level).captureAmy();
-            // PaletteTable (Level/Collision Chaos/Palette Data (Act 1 Present).asm:24-26) points to StagePalette.
-            int table = CdStageCatalogue.entry(level.payload()).paletteTable();
-            services().updatePalette(1, provider().image().paletteEntryFirstLine(table, 4));
+            CczIntroState.of(level).captureAmy(services(), level, provider());
         }
         setDestroyed(true);
     }
@@ -75,7 +71,7 @@ public final class CczAmyRose extends CczObject implements ObjectVisualFacing.So
         priority = 1;
         tileWord = CczObjectArt.AMY_TILE;
         var level = cdLevel();
-        if (level != null) CczIntroState.of(level).loadAmyPalette(services(), level, provider());   // AmyRoseLoadPalette
+        if (level != null) CczIntroState.loadAmyPalette(services(), level, provider());   // AmyRoseLoadPalette
         facePlayer(player);
         if (player instanceof AbstractPlayableSprite sprite && (sprite.getCentreX() & 0xFFFF) >= (x & 0xFFFF)) {
             routine += 2;                                                  // cmp.w obj.x(a0),d0; bcs.s .Animate
