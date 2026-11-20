@@ -40,21 +40,14 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  *       so the placed ID stays in its slot. The census includes inert and out-of-period records. $23 calls NullObject
  *       in R41A/R42A (ObjectIndex, r4/object_index_1a.asm:37-39 and r4/object_index_2a.asm:37-39).
  *       $52 is the hosted projector in R41B/R42B and a Past-only layout record in the other periods.</li>
- *   <li>Real routines still unhosted, by zone: Palmtree Panic $35 (tunnel door), $2F in R11A (Amy
+ *   <li>Real routines still unhosted, by zone: Palmtree Panic $2F in R11A (Amy
  *       Rose).</li>
  * </ul>
  */
 class TestCdUnhostedObjectCensus {
     /** Stage to the placed IDs (hex, ascending) that resolve to the shared placeholder; stages not listed place none. */
     private static final Map<String, String> UNHOSTED = Map.ofEntries(
-        Map.entry("R11A", "2F 35"),
-        Map.entry("R11B", "35"),
-        Map.entry("R11C", "35"),
-        Map.entry("R11D", "35"),
-        Map.entry("R12A", "35"),
-        Map.entry("R12B", "35"),
-        Map.entry("R12C", "35"),
-        Map.entry("R12D", "35"),
+        Map.entry("R11A", "2F"),
         Map.entry("R41A", "23 3F 52"),
         Map.entry("R41B", "28 29 30 39 3F"),
         Map.entry("R41C", "28 29 30 39 51 52"),

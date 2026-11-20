@@ -51,6 +51,8 @@ under the matching area heading; see the
   Present, Past, Good Future and Bad Future; act 3 in both futures. Each zone
   has its own presentation, objects and boss. Palmtree Panic's solid boulders
   use the current section's graphics, replacing the title-card tiles after loading.
+  The vertical tunnel doors in acts 1 and 2 now open from the left and block
+  Sonic from the right while closed.
   Flowers finish growing, diagonal springs and monitor rewards use their proper
   graphics, and object names follow the current stage's object table. The
   Palmtree Panic Act 3 time-stop monitor holds palette cycling and selected
@@ -98,8 +100,10 @@ under the matching area heading; see the
   show a still view of Little Planet in the Present while music continues.
   The stage-select Comin' Soon row opens an OpenGGF
   contact sheet of tiles from the verified USA disc. Back returns to the title.
-  Held-key live rewind works inside
-  special stages, including the three-frame floor pipeline, UFOs and effects. The master
+  Held-key live rewind works inside special stages, including the three-frame
+  floor pipeline, UFOs and effects. Stage rewind restores Tidal Tempest's rotate
+  block parts, Wacky Workbench's launcher sides, and Stardust Speedway's swings
+  and spring launcher parts. The master
   title lists it when the disc is configured or found (`roms.default: scd` boots
   it directly) and verifies it against the USA release before starting. A CHD
   is verified by the same content fingerprint as a BIN/CUE set, so it is
@@ -119,6 +123,8 @@ under the matching area heading; see the
   bar ends star protection and resets the warp timer. Robotnik's projectors can be destroyed in the
   Past. In the Past acts of Palmtree Panic and Wacky Workbench, the projectors'
   flying and ground hologram animals use art from the disc.
+  In both Tidal Tempest Past acts, two hologram animals circle the projector
+  and vanish when Sonic shuts it down.
   Wacky Workbench's layout animals fly or hop after the projector is destroyed
   and in the Good Future.
   Accuracy is measured against native recordings made on an emulator running

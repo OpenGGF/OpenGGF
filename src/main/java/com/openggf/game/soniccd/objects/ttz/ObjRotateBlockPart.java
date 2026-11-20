@@ -4,7 +4,10 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectManagerInternalAccess;
 import com.openggf.level.objects.ObjectVisualFacing;
+import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ReevaluatingSolidObject;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RewindRecreateContext;
 
 import java.util.List;
 
@@ -15,22 +18,39 @@ import java.util.List;
  * ({@code sne}, loc_20EEA0 :295-303); part 1 publishes the first frame of a push (loc_20EED8, :315-329).
  */
 @com.openggf.level.objects.CameraRelativeDraw(com.openggf.level.objects.CameraRelativeDraw.Use.CULL_ONLY)
-final class ObjRotateBlockPart extends TtzObject implements ReevaluatingSolidObject, ObjectVisualFacing.NonDirectional {
+final class ObjRotateBlockPart extends TtzObject implements ReevaluatingSolidObject,
+        ObjectVisualFacing.NonDirectional, RewindRecreatable {
     /** byte_20EF04 (byte_20EF04, objects/r4/rotate_block.asm:340-344): part 0's offset for the parent's frames 0-3. */
     private static final int[][] STAND_OFFSETS = {{-0x10, 0}, {-0x10, 0}, {0x10, 0}, {0x10, 0}};
     /** byte_20EF0C (byte_20EF0C, objects/r4/rotate_block.asm:346-350): part 1's offsets. */
     private static final int[][] PUSH_OFFSETS = {{0, -0x20}, {0, 0x20}, {0, 0x20}, {0, -0x20}};
 
     private final ObjRotateBlock parent;
-    private final int kind;
+    private int kind;
     private int routine;
     /** oVar3E as a word: $FFFF set, 0 clear; the byte tests read its high byte. */
     private int flagWord;
 
-    ObjRotateBlockPart(int x, int y, ObjRotateBlock parent, int kind) {
-        super(childSpawn(x, y, 0x3D, 0, 0), "RotateBlockPart");
+    private ObjRotateBlockPart(ObjectSpawn spawn) {
+        this(spawn, null, 0);
+    }
+
+    ObjRotateBlockPart(ObjectSpawn spawn, ObjRotateBlock parent, int kind) {
+        super(spawn, "RotateBlockPart");
         this.parent = parent;
         this.kind = kind;
+        this.parentX = spawn.x();                              // RotateBlockObject_1_Routine0 (objects/r4/rotate_block.asm:45-60)
+    }
+
+    @Override
+    public ObjRotateBlockPart recreateForRewind(RewindRecreateContext context) {
+        return new ObjRotateBlockPart(context.spawn(), context.capturedParent(ObjRotateBlock.class), 0);
+    }
+
+    @Override
+    public void onUnload() {
+        super.onUnload();
+        if (parent != null) parent.partUnloaded(this);
     }
 
     boolean standingFlag() { return (flagWord & 0x8000) != 0; }
@@ -52,11 +72,10 @@ final class ObjRotateBlockPart extends TtzObject implements ReevaluatingSolidObj
             routine += 2;
             priority = 3;
             tileWord = TtzObjectArt.ROTATE_BLOCK_TILE;
-            parentX = parent.getX();                            // move.w obj.x(a0),obj.var_36(a1) (RotateBlockObject_1_Routine0, objects/r4/rotate_block.asm:48)
             width = kind == 0 ? 0x20 : 0x10;
             yRadius = 0x10;
         }
-        if (parent.isDestroyed()) return;
+        if (parent == null || parent.isDestroyed()) return;
         int frame = parent.mapFrame();
         if (frame >= 4) {                                      // loc_20EEFA: GetOffObject
             var p = mainPlayer();
@@ -83,7 +102,7 @@ final class ObjRotateBlockPart extends TtzObject implements ReevaluatingSolidObj
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
-        if (routine == 0 || parent.isDestroyed()) return;
+        if (routine == 0 || parent == null || parent.isDestroyed()) return;
         drawSheet(TtzObjectArt.ROTATE_BLOCK, 8, false, false);  // move.b #8,obj.sprite_frame(a0)
     }
 }
