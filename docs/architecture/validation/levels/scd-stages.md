@@ -282,10 +282,10 @@ and parity for the original `SPEEND.MMD` credits presentation remain open.
   In R83C and R83D, record camera positions and foreground tiles from before
   the door trigger through the slide and the next camera redraw. Use the
   visible lifetime of the cleared columns to specify an engine render operation.
-- **Palmtree Panic campaign Amy Rose.** R11A object `$2F` (`ObjAmyRose`,
-  Level/Palmtree Panic/Objects/Amy Rose/Main.asm:7-26). Not hosted. The
+- **Palmtree Panic campaign Amy Rose.** R11A object `$2F`. Not hosted. The
   implementation unit was declined by the assigned agent. The user decides
   whether to assign it elsewhere.
+  See `ObjAmyRose` (Level/Palmtree Panic/Objects/Amy Rose/Main.asm:7-26).
   Start R11A in campaign mode and stay in the Present. Record Sonic approaching
   Amy near the act end, her grabbing Sonic, Sonic breaking free, and Amy
   leaving. Include Amy and heart slots, Sonic's motion, and the palette before
