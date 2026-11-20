@@ -60,8 +60,10 @@ final class CdModZoneAdapter implements ModZoneAdapter {
             backings.put(backing, List.of(ring));
             objects.add(backing);
         }
-        // The CD spawner stops evaluating entries at the first one beyond its X window.
-        if (!backings.isEmpty()) objects.sort(Comparator.comparingInt(ObjectSpawn::x));
+        // Sonic CD keeps the stored layout order and stops at the first entry beyond its X window
+        // (SpawnObjects_Forward, Object Spawner.asm:183-196), so an authored list must reach it sorted by X
+        // whether or not rings were added. The sort is stable: entries at one X keep the creator's order.
+        objects.sort(Comparator.comparingInt(ObjectSpawn::x));
         return ModLevel.builder(data.zoneIndex(), 16, data.patternBytes(), data.chunkBytes(), data.blockBytes())
                 .layout(data.width(), data.height(), data.foregroundMap(), data.backgroundMap().orElse(null))
                 .paletteLines(data.paletteLines())

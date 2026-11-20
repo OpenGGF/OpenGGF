@@ -255,8 +255,9 @@ recordings. See the [trace frontier log](../../../status/trace-frontier-log.md#2
 | ROUTE | 28 full-act routes as above | Act 1 Bad Future and act 2 Past and futures: fixtures only; no complete-run recording |
 | ORACLE | Constants and branches cite `docs/scddisasm`; trace rows comparison-only | Lag-frame CPU timing not modelled ([known discrepancy](../../../status/known-discrepancies.md#sonic-cd-hardware-timings-not-modelled)) |
 
-Breadth: Sonic CD has one character and no teams; it is not a donor, and
-donation into it is not assessed. Widths 400, 528 and 800 draw full pictures in
+Breadth: Sonic CD has one character and no teams; it is not a donor. Donation
+into it has bounded R11A coverage only (see
+[cartridge donor hosting](#cartridge-donor-hosting-2026-11-16)). Widths 400, 528 and 800 draw full pictures in
 the capture tools but have no native reference; the other presets are unchecked.
 
 ## Sound Test Special Stage 8
