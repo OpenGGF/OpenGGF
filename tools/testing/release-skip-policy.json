@@ -1248,23 +1248,30 @@
     {
       "match": "com.openggf.game.soniccd.TestTtzPlayerWaterMovies#drowningFollowsTheBubblesSlotCountdown",
       "category": "optional-fixture",
-      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzPlayerWaterMovies.java:39",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzPlayerWaterMovies.java:42",
       "allowed_when_absent": "soniccd_native",
       "note": "Sonic CD disc and native captures"
     },
     {
       "match": "com.openggf.game.soniccd.TestTtzPlayerWaterMovies#drowningRequestsTheNativeSounds",
       "category": "optional-fixture",
-      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzPlayerWaterMovies.java:68",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzPlayerWaterMovies.java:71",
       "allowed_when_absent": "soniccd_native",
       "note": "Sonic CD disc and native captures"
     },
     {
       "match": "com.openggf.game.soniccd.TestTtzPlayerWaterMovies#currentPushesForOneFrameAndReleases",
       "category": "optional-fixture",
-      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzPlayerWaterMovies.java:96",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzPlayerWaterMovies.java:99",
       "allowed_when_absent": "soniccd_native",
       "note": "Sonic CD disc and native captures"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzPlayerWaterMovies#layoutBlockClaimsItsSlotBeforeAPlayerBubble",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzPlayerWaterMovies.java:117",
+      "allowed_when_absent": "soniccd_native",
+      "note": "Sonic CD disc and native R42A recording"
     },
     {
       "match": "com.openggf.game.soniccd.TestCdBossResultsMusic#capsuleRequestsTheResultsMusicOnNativesRow",

@@ -146,10 +146,10 @@ public final class LevelFrameStep {
         // trace profile and errors 8 previously green S3K classes, all with the
         // same owner=PALETTE_FADE shape.
         //
-        // For S3K that loss is ROM-correct, not an open defect. Both blocking
-        // fades rewrite V_int_routine = $12 on every loop iteration before
-        // Wait_VSync (Pal_FadeToBlack sonic3k.asm:5077-5082, Pal_FadeFromBlack
-        // :4938-4943), so a V-blank inside an S3K fade always dispatches VInt_12
+        // Both S3K fades select V_int_routine = $12 before the VBlank wait
+        // on every pass. See loc_3BEE (sonic3k.asm:5078-5082) and
+        // loc_3AFE (sonic3k.asm:4940-4944).
+        // A VBlank inside an S3K fade always dispatches VInt_12
         // (:871-874) and can never reach VInt_0_Main -- the lag path, taken only
         // when V_int_routine is 0 (:535-536) and the sole bump of Lag_frame_count
         // (:592). VInt_12 does the frame's art work (bra.w Process_Nem_Queue,
@@ -287,9 +287,9 @@ public final class LevelFrameStep {
             throw new NullPointerException("context");
         }
 
-        // S3K fresh-level assembly runs Load_Sprites then Process_Sprites once
-        // before entering LevelLoop (docs/skdisasm/sonic3k.asm:7881-7887,
-        // 7889-7906). executeWithPause reaches this body only after its pause
+        // S3K fresh-level setup at loc_6468 (sonic3k.asm:7881-7887) runs
+        // Load_Sprites then Process_Sprites once before entering LevelLoop.
+        // executeWithPause reaches this body only after its pause
         // gate, so a paused first frame retains the one-shot authority.
         if (levelManager.consumePendingInitialProcessSpritesPass()) {
             LevelSpritePresentation.prepare(levelManager, context.spriteManager());
@@ -364,8 +364,8 @@ public final class LevelFrameStep {
         //    ROM: LZWaterFeatures runs before ExecuteObjects (sonic.asm:3042).
         levelManager.updateZoneFeaturesPrePhysics();
 
-        // 1b. Pre-physics level-event routines that the ROM runs in WaterEffects
-        //     immediately before RunObjects (docs/s2disasm/s2.asm:5094-5095).
+        // 1b. Level_MainLoop (s2.asm:5094-5095) runs the pre-physics level
+        //     events in WaterEffects immediately before RunObjects.
         //     OOZ OilSlides reads the previous-frame player position and sets the
         //     sliding status bit before the player's friction/move code runs the
         //     same frame; running it post-physics applied oil friction one frame
@@ -414,7 +414,14 @@ public final class LevelFrameStep {
             // 2. Player slots first (ExecuteObjects / RunObjects / Process_Sprites
             //    dispatch slot 0, then slot 1). Touch responses run per player inside
             //    tickPlayablePhysics after movement.
-            if (!objectsFrozen) wrapper.wrap("physics", spriteUpdate);
+            if (!objectsFrozen) {
+                var objects = levelManager.getObjectManager();
+                if (objects != null) {
+                    com.openggf.level.objects.ObjectManagerInternalAccess.runSpawnerBeforeObjectPass(
+                            objects, camera.getX());
+                }
+                wrapper.wrap("physics", spriteUpdate);
+            }
 
             LevelEventProvider fixedSlotEvents = context.levelEventProvider();
             if (!objectsFrozen && fixedSlotEvents != null) {
@@ -571,9 +578,9 @@ public final class LevelFrameStep {
         }
         serviceBoundary(context, HardwareServiceBoundary.POST_OBJECTS);
 
-        // ROM LevelLoop's Process_Kos_Queue (docs/skdisasm/sonic3k.asm:7919)
-        // runs after this iteration's Process_Kos_Module_Queue (7908) and before
-        // Wait_VSync (7888) increments Level_frame_counter (7889), so the direct
+        // LevelLoop (sonic3k.asm:7916-7921) calls Process_Kos_Queue before
+        // Wait_VSync and the frame counter increment. The preceding pass calls
+        // Process_Kos_Module_Queue at Level_NotLRZ (sonic3k.asm:7937-7940), so the direct
         // FIFO service is the tail of THIS frame. Servicing it here lets a
         // Queue_Kos_Module issued by an object during this frame's pass have its
         // first child decompressed on the same frame, which the frame-top
@@ -588,7 +595,7 @@ public final class LevelFrameStep {
         //     boundary easing and post-camera systems observe the changed level.
         levelManager.flushQueuedLayoutMutations();
 
-        // 4c'. ROM ScreenEvents ends in DrawTilesAsYouMove (sonic3k.asm:105024):
+        // 4c'. AIZ2SE_End (sonic3k.asm:105023-105024) jumps to DrawTilesAsYouMove:
         //      the AIZ2 forest-loop plane ring pairs this frame's live camera with
         //      its Level_repeat_offset here, before the VBlank publishes scroll.
         LevelForegroundPlane.drawAsYouMove(levelManager);
@@ -647,8 +654,8 @@ public final class LevelFrameStep {
             wrapper.wrap("level-loop-tail", loopTailEvents::updateAtLevelLoopTail);
         }
 
-        // Native044 Level_NotLRZ: Animate_Tiles -> Process_Nem_Queue_Init
-        // -> Process_Kos_Module_Queue (sonic3k.asm:7938-7940). Preparing here
+        // Level_NotLRZ (sonic3k.asm:7937-7940) animates tiles before calling
+        // Process_Nem_Queue_Init and Process_Kos_Module_Queue. Preparing here
         // changes no pixels and cannot spend this VBlank's remaining budget.
         if (frame.isOwnedBy(phase) && frame.preparesAfterLevelAnimation()) {
             frame.prepareAfterLoop(phase);
