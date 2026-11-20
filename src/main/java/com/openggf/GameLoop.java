@@ -1122,12 +1122,11 @@ public class GameLoop {
         }
     }
 
-    private void updateInputPassUserPause(boolean overlayOwnsPause, boolean takeoverConsumedPausePress,
-                                          boolean hostPauseExit) {
+    private void updateInputPassUserPause(GameLoopPauseInput.Ownership ownership, boolean takeoverConsumedPausePress) {
         boolean specialStageOwnsStart = !userPaused && inputHandler.logical().player1().startPressed()
                 && specialStageLifecycle.ownsStartInput();
-        boolean nextUserPaused = !hostPauseExit && GameLoopPauseInput.nextUserPaused(currentGameMode, inputHandler,
-                configService, userPaused, overlayOwnsPause || specialStageOwnsStart, takeoverConsumedPausePress,
+        boolean nextUserPaused = !ownership.hostPauseExit() && GameLoopPauseInput.nextUserPaused(currentGameMode, inputHandler,
+                configService, userPaused, ownership.ownsPause() || specialStageOwnsStart, takeoverConsumedPausePress,
                 playbackDebugManager, userRecordingControls::handlePlaybackTakeoverRequest);
         if (nextUserPaused == userPaused) return;
         // The resume tick is already inside its input pass. Retire the paused
@@ -1291,10 +1290,8 @@ public class GameLoop {
         }
         var pauseOwnership = GameLoopPauseInput.resolveOwnership(() -> currentGameMode,
                 inputHandler, playbackDebugManager, this::syncPlaybackInputBridge,
-                hostedRuns, this::getTitleScreenProviderLazy);
-        boolean hostPauseExit = userPaused && !pauseOwnership.ownsPause()
-                && GameLoopPauseInput.handleHostPausedInput(currentGameMode, inputHandler);
-        boolean overlayOwnsPause = pauseOwnership.ownsPause() || hostPauseExit;
+                hostedRuns, this::getTitleScreenProviderLazy, userPaused);
+        boolean overlayOwnsPause = pauseOwnership.ownsPause();
         boolean titleOwnsEscape = pauseOwnership.titleOwnsEscape();
         var overlay = pauseOwnership.configurationOverlay();
         if (overlayOwnsPause || titleOwnsEscape) escapeToMasterTitleController.reset();
@@ -1307,7 +1304,7 @@ public class GameLoop {
             userRecordingControls.updateLevelControlInput(inputHandler);
         }
 
-        updateInputPassUserPause(overlayOwnsPause, playbackTakeoverConsumedPausePress, hostPauseExit);
+        updateInputPassUserPause(pauseOwnership, playbackTakeoverConsumedPausePress);
 
         boolean doFrameStep = !GameLoopPauseInput.configurationPaused(currentGameMode)
                 && GameLoopPauseInput.frameStep(inputHandler, configService, isPaused());
