@@ -148,16 +148,15 @@ no discrepancy entry was added or reclassified by the cutover.
 ## Sonic CD Hardware Timings Not Modelled
 
 **Location:** `game/soniccd/fmv/CdFmvStreamer.java`, `game/soniccd/audio/CdCddaPlayer.java`,
-`game/soniccd/objects/boss/wwz/WwzBossEggman.java`, `game/soniccd/CdLevelVIntCounter.java`,
+`game/soniccd/CdLevelVIntCounter.java`,
 `game/soniccd/CdLoadTiming.java`;
 test-side sampling in `CdFixtureReplay.completedRow`; replay's lost-V-INT admission in
 `trace/replay/TraceVIntServiceCoordinator.java`.
 **Disc reference:** `docs/scddisasm` (USA build).
 
 Sonic CD is hosted under the same [reimplementation boundary](../architecture/engine-map.md#reimplementation-boundary)
-as the cartridge games: the engine runs the game's algorithms, not the 68000s,
-the drive or the BIOS. These timings come from the hardware, not from code on
-the disc, so they are not modelled:
+as the cartridge games. Live play omits exact 68000, VBlank service and
+disc-drive timing. The cases below describe how those limits affect play.
 
 - **Lag frames.** When a main-loop pass overruns its frame, `VInterrupt`
   (Level/Main.asm:681-686) finds `vintRoutine` clear and takes `VInt_Lag`
@@ -167,8 +166,9 @@ the disc, so they are not modelled:
   overruns. The V-INT work that is game logic is kept (Tidal Tempest's water,
   the time-warp timer and the counter). Trace replay compares each engine row
   with the last native row of the same level frame, which only chooses the
-  comparison row and never moves the engine. The boredom timer's lag-frame
-  ticks are not reproduced.
+  comparison row and never moves the engine. The boredom timer is game logic.
+  Its extra lag-frame ticks depend on how many V-INTs the 68000 services
+  during an overrun, so live play omits those ticks.
 - **V-INTs taken by a stage load: estimated from emulator timing in `FAST` and
   `PROFILED`, not in `NONE`.** `LevelStart` clears `levelVIntCounter`
   (`.ClearFlowers`, Level/Main.asm:178-184), then the load runs for 37 to 80
@@ -189,14 +189,14 @@ the disc, so they are not modelled:
   with the disassembly for 12 stages (R31C, R31D, R32C, R32D, R51A, R51C, R51D,
   R52A, R52C, R52D, R53C and R53D), so their checkpoint and warp keys may name
   the wrong list. Their fresh entries are measured and unaffected. Loads between
-  programs (title, Time Attack, special stage, the warp cutscene) are not
-  measured or paced. A real disc's timing
-  varies read to read; the emulator's does not. Known difference: R12A entered
-  after an act clear or a special stage takes one V-INT more natively (46)
-  than from the stage select (45); the manifest keeps 45. With `NONE` every
-  stage starts the counter at 0 and the first pass sees 1. The player's loop
-  runs no V-INT for a native lag or held frame (above), so in play the counter
-  falls behind native from the stage's first lag frame. Two things
+  programs (title, Time Attack, special stage, the warp cutscene) run without
+  pacing for CPU work or disc reads. A real disc's read timing varies.
+  R12A starts one V-INT short after act clear or a special stage. The native
+  load takes 46 V-INTs on those entries, and the manifest uses the 45 from
+  stage select. These samples count interrupts serviced during loading.
+  With `NONE`, every stage starts the counter at 0 and the first pass sees 1.
+  Live play has no extra interrupt-only pass for a native lag frame. Omitting
+  those passes can leave the counter behind native. Two things
   read the counter's low bits: a spilled ring tests the floor only when
   `(levelVIntCounter + d7) & 3` is 0 (Level/_Objects/Ring/Main.asm:413-418),
   and the HUD's RINGS label flips colour when its low nibble is 0 with no
@@ -223,29 +223,6 @@ the disc, so they are not modelled:
   replay services every row of them: 18 Quartz Quadrant recordings and control
   traces were re-recorded, and the counter census shows no lost V-INT in the
   other 140. The HUD's RINGS flash phase has no native row to check against.
-- **Pencil Test playback.** OpenGGF presents all 840 five-sector picture banks
-  from the verified USA disc in Visual Mode. It publishes the complete picture
-  and palette together on the second update of bank processing. The
-  playback view omits the native border, palette fades and closing effects.
-  The stream uses the shared fallback seek of 20 V-INTs because it has no
-  measured profile.
-- **Thank You disc preview.** Visual Mode opens a read-only archive contact
-  sheet when Good ending returns, following `VisualMode_GoodEnd`
-  (CD Initial Program/IPX.asm:1177-1187). Back during the video cancels it.
-  Back from the preview returns to the same browser row. Campaign endings
-  follow their own return path.
-  The preview uses the first 24 distinct references to the 154-tile bank in
-  the first 40×28 map. From `THANKS_D.BIN;1` it reads the Nemesis bank at
-  `[$0452, $0A1C)`, one real lookahead byte at `$0A1C` for the decoder, and
-  the Enigma map at `[$0A1C, $0AAA)`. The 64 palette words come from
-  `[$19CE, $1A4E)` in `THANKS_M.MMD;1`. The contact sheet uses OpenGGF menu
-  chrome and leaves the native composition, object and palette animations,
-  fades, and exit sequence unimplemented.
-- **Comin' Soon disc preview.** The stage-select Comin' Soon row opens a
-  read-only contact sheet instead of running `COME__.MMD;1`. It shows the
-  file's 150 tiles at `[$02D8, $07DC)` in declaration order with the palette
-  at `$02B8`, using OpenGGF menu chrome. Back returns to the title. The native
-  composition and fades are not implemented.
 - **Disc drive seeks: the video reads estimated from emulator timing in `FAST`
   and `PROFILED`, not in `NONE`.** The video player waits for the BIOS read that
   `ReadFMVSectors` (CD System Program/SP.asm:720-746) starts; the seek before
@@ -261,27 +238,28 @@ the disc, so they are not modelled:
   `CdFmvStreamer.SEEK_VINTS` (20 V-ints). Any value from 12 to 46 leaves every
   picture and PCM copy unchanged; only when the first bank shows moves with it.
   A real disc's seek varies with the head's position and from read to read;
-  other disc reads are not paced. CD audio
-  started through `LoopCDDA` (CD System Program/SPX.asm:1877-1881) plays at
-  once; native starts 41 to 83 frames later, growing with the track's distance
-  on the disc. No seek model exists and no constant is fitted for music.
-- **Chip edge cases with no source.** The PCM chip is a translation of MAME's
-  `rf5c68` and the stamp renderer of MAME's `megacd` (BSD-3-Clause); both
-  depart from MAME where native recordings required it (negative channel
-  products round down and a loop jump is not stepped in the same sample;
-  stamp flip is applied before rotation), each pinned by native fixtures. A few
-  behaviours have no source and nothing measured depends on them: the PCM's
-  pan after reset and its reads of unmapped registers, the stamp renderer's
-  priority mode 3, and the register widths for its V cell, H dot and V dot
-  counts (Sonic CD's values fit all of them). The stamp operation's cost is
-  measured only at widths 256 and 304.
-- **Blocking fades inside an object.** Wacky Workbench's Eggman calls
-  `FadeToWhite` and `BossFadeObjectsFromWhite` from his own update
-  (`EggmanDefeatSequenceFadeScreen`, objects/r6/boss.asm:545-559): each fade
-  loops on V-INT for 22 frames while the rest of the object pass waits. The
-  engine applies each fade within one frame and does not hold the pass in
-  live play. Under the comparison rule above, the fight's slots and the
-  palette-cycle timers equal native through both fades.
+  other disc reads are not paced. CD audio requested through `LoopCDDA`
+  (CD System Program/SPX.asm:1877-1881) starts 41 to 83 frames early in the
+  engine. Native latency grows with the track's distance on the disc.
+  The engine starts playback at the request without modelling the drive seek.
+- **Unmeasured special-stage stamp widths and physical timing.** `CdStampOperationRequest.cyclesPerLine`
+  estimates CD master clocks per rendered line from its width and the image
+  cursor's offset within a word. The estimate matches BizHawk 2.11 measurements
+  at widths 256 and 304. Other widths are unmeasured, and physical stamp
+  timing remains uncertified.
+
+The Wacky Workbench defeat fades have a
+[separate gameplay parity gap](../architecture/validation/levels/scd-stages.md#parked-sonic-cd-gaps).
+
+### Other Sonic CD differences
+
+**Chip edge cases without reference evidence.** The PCM chip is a translation
+of MAME's `rf5c68` and the stamp renderer of MAME's `megacd` (BSD-3-Clause).
+Native fixtures pin three differences. Negative channel products round down,
+a loop jump skips the address step in that sample, and stamp flip precedes
+rotation. The available recordings do not exercise
+PCM pan after reset, reads of unmapped PCM registers, stamp priority mode 3,
+or the limits of the stamp renderer's V cell, H dot and V dot counts.
 
 **Special-stage widescreen.** Wider views sample the same animated floor
 map at additional columns beside the native display buffer. Background
@@ -3050,8 +3028,8 @@ reports zero errors and zero warnings.
   until its pending `ObjB2_Init` update installs the subtype-derived routine
   (`s2.asm:78777-78813`).
 - **`objoff_2f` at WFZ rows 13378-13440.** The WFZ-end snapshot now encodes the low byte of
-  the word incremented by `ObjB2_Wait_Leader_position`, then the jump countdown installed
-  by `ObjB2_Prepare_to_jump` (`s2.asm:78972-78979, 79157-79167`). The Java model already
+  the word incremented by `ObjB2_Wait_Leader_position` (`s2.asm:79088-79095`), then the
+  jump countdown installed by `ObjB2_Prepare_to_jump` (`s2.asm:79157-79167`). The Java model already
   owned those values as `leaderWaitCounter` and `jumpTimer`; no trace value supplies them.
 
 The resolved SCZ `x` span at row 7103 was caused by the engine treating an airborne,
