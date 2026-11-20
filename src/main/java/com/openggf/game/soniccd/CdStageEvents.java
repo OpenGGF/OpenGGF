@@ -17,9 +17,10 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
  * kept equal so the shared boundary easing, which follows Sonic 1's later order and 2-pixel
  * step, never moves it.
  *
- * <p>Not hosted, because they need state no hosted owner provides yet: the boss arenas
- * ({@code CheckBossStart}/{@code SetBossBounds} and every {@code bossFlags} branch, read as
- * clear) and Palmtree Panic 1's left-boundary lock at $820. Palmtree Panic 1's 3D-ramp
+ * <p>The act 3 boss arenas ({@code CheckBossStart}/{@code SetBossBounds} and the {@code bossFlags}
+ * branches) run in the boss tier, {@link com.openggf.game.soniccd.objects.boss.CdBossLevelEvents};
+ * this class only adopts the target they leave. Not hosted, because it needs state no hosted owner
+ * provides yet: Palmtree Panic 1's left-boundary lock at $820. Palmtree Panic 1's 3D-ramp
  * {@code camYCenter} is hosted as the camera's Y bias.
  * {@code btmBoundShift} stays set until the scroll's {@code .StopCam} clears it; the camera
  * keeps it for one scroll, which differs only on a frame after the boundary stops.

@@ -55,7 +55,8 @@ under the matching area heading; see the
   graphics, and object names follow the current stage's object table. Palmtree
   Panic backgrounds sample each row's own camera section, retaining static-row
   repetition without wrapping the moving scenery. Results show the changing
-  score and bonus digits. Wider views extend CD object draw/touch and lifetime
+  score and bonus digits. The level HUD shows the same point total as the
+  results screen. Wider views extend CD object draw/touch and lifetime
   windows, centre boss locks, title cards, results and game-over text, and fill the time tunnel
   through its white fade. CD HUD pieces, including the time-period and warp icons,
   follow the centred or left-edge HUD setting in both widescreen draw modes.
@@ -562,7 +563,8 @@ under the matching area heading; see the
   host art when the donor lacks their sheet. Game Setup saves CD donor/team choices.
   Stage-backed host animation scripts no longer require a cartridge host.
   CD authored acts support fixed-height water, collectible rings with disc art,
-  fixed vertical and horizontal springs, ten-ring monitors, and owned objects. Audio-state
+  fixed vertical and horizontal springs, ten-ring monitors, and owned objects, which
+  spawn in X order whether or not the act has rings. Audio-state
   restoration also restores the native/streamed music selection. This extends
   unpublished API candidate 0.7.0.
 

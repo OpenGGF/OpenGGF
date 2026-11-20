@@ -44,6 +44,10 @@ class TestSonicCdRoutesBLongNative {
             assertTrue(outcome.firstErrorRow() < 0 || outcome.firstErrorRow() >= pinnedFirstDivergence,
                     payload + " diverges from the native trace at row " + outcome.firstErrorRow()
                             + ", before the pinned row " + pinnedFirstDivergence + ": " + outcome.fields());
+            // A replay that ends early has no divergent row either: a match counts only when it reached the pin.
+            assertTrue(outcome.firstErrorRow() >= 0 || outcome.rowsCompared() >= pinnedFirstDivergence,
+                    payload + " matched only " + outcome.rowsCompared() + " rows, short of the pinned row "
+                            + pinnedFirstDivergence);
         }
     }
 
