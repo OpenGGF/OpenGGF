@@ -1,6 +1,10 @@
 package com.openggf.game.soniccd.objects.common;
 
+import com.openggf.game.rewind.RewindStateful;
 import com.openggf.game.soniccd.level.CdStageImage;
+
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 /**
  * {@code AnimateObject} (Level/Object Animate.asm:14-94) over a script table in the stage
@@ -32,6 +36,47 @@ public final class CdAnimator {
         this.fixedScript = fixedScript.clone();
         this.table = 0;
         this.anim = anim;
+    }
+
+    /** AnimateObject (Level/Object Animate.asm:14-94) reads the actor's cursor and its stage script table. */
+    public record StageState(int table, int anim, int prevAnim, int animFrame, int animTime,
+                             int mapFrame, int flipBits) { }
+
+    /** Captures a stage-backed animator's cursor and rebinds its table to the current stage image on restore. */
+    public static final class StageRewind implements RewindStateful<StageState> {
+        private final Supplier<CdStageImage> stage;
+        private final Supplier<CdAnimator> read;
+        private final Consumer<CdAnimator> write;
+
+        public StageRewind(Supplier<CdStageImage> stage, Supplier<CdAnimator> read, Consumer<CdAnimator> write) {
+            this.stage = stage;
+            this.read = read;
+            this.write = write;
+        }
+
+        @Override
+        public StageState captureRewindStateValue() {
+            CdAnimator value = read.get();
+            if (value == null) return null;
+            if (value.image == null) throw new IllegalStateException("Expected a stage-backed animation script");
+            return new StageState(value.table, value.anim, value.prevAnim, value.animFrame,
+                    value.animTime, value.mapFrame, value.flipBits);
+        }
+
+        @Override
+        public void restoreRewindStateValue(StageState state) {
+            if (state == null) {
+                write.accept(null);
+                return;
+            }
+            CdAnimator value = new CdAnimator(stage.get(), state.table(), state.anim());
+            value.prevAnim = state.prevAnim();
+            value.animFrame = state.animFrame();
+            value.animTime = state.animTime();
+            value.mapFrame = state.mapFrame();
+            value.flipBits = state.flipBits();
+            write.accept(value);
+        }
     }
 
     /** One AnimateObject call; returns the routine increment the script requested (0 or 2). */

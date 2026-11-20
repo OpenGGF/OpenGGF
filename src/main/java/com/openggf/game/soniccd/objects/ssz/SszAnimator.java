@@ -1,5 +1,6 @@
 package com.openggf.game.soniccd.objects.ssz;
 
+import com.openggf.game.rewind.RewindStateful;
 import com.openggf.game.soniccd.level.CdStageImage;
 
 /**
@@ -47,6 +48,11 @@ class SszAnimator {
         mapFrame = state.mapFrame();
         flipBits = state.flipBits();
         showed = state.showed();
+    }
+
+    static final class Rewindable extends SszAnimator implements RewindStateful<State> {
+        @Override public State captureRewindStateValue() { return captureScriptState(); }
+        @Override public void restoreRewindStateValue(State state) { restoreScriptState(state); }
     }
 
     /** One AnimateObject call. */

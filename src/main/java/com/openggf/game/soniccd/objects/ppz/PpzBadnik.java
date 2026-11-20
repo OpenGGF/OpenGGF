@@ -47,7 +47,9 @@ abstract class PpzBadnik extends CdObject
     /** oXSub and oYSub, the low words of oX and oY. */
     protected int xSub;
     protected int ySub;
-    protected CdAnimator animator;
+    protected transient CdAnimator animator;
+    private final CdAnimator.StageRewind rewindAnimation =
+            new CdAnimator.StageRewind(() -> artProvider().image(), () -> animator, restored -> animator = restored);
     protected int mapFrame;
     protected int xRadius;
     private boolean artReady;
