@@ -797,7 +797,10 @@ under the matching area heading; see the
   results now select Miles/Tails with the native graphics-region setting.
   Data-select save life counters use the character HUD icon; miniature continue
   counters reuse its continue pose. NO SAVE refreshes custom solo/team portraits
-  immediately, and the S2 half-pipe ring HUD composes names from its native
+  immediately; the Sonic+Tails+Knuckles, Sonic+Tails+Tails, Sonic+eight Tails and
+  sixteen-Sonic S3K team portraits use hand-placed layouts: the leader stands in
+  front with the flanking characters facing outwards, inside the save-slot rails
+  and spread wider in the NO SAVE window, clear of its arrows. The S2 half-pipe ring HUD composes names from its native
   SONIC/MILES/TAILS alphabet with supplements for missing glyphs. Stock fallbacks
   and native screen/stage/ending choreography remain intact.
 - **Simpler creator examples:** decoded native-level patches can add registered

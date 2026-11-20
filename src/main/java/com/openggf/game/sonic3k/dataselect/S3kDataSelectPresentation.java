@@ -73,6 +73,7 @@ public class S3kDataSelectPresentation extends AbstractDataSelectProvider {
     // Cached computation results — avoid per-frame allocations
     private S3kCustomTeamPortraitComposer cachedPortraitComposer;
     private final java.util.Map<SelectedTeam, SpriteMappingFrame> cachedPortraitFrames = new java.util.HashMap<>();
+    private final java.util.Map<SelectedTeam, SpriteMappingFrame> cachedNoSavePortraitFrames = new java.util.HashMap<>();
     private List<List<Integer>> cachedEmeraldFrames;
     private List<SaveSlotSummary> cachedEmeraldSummaries;
 
@@ -372,6 +373,7 @@ public class S3kDataSelectPresentation extends AbstractDataSelectProvider {
         cachedEmeraldFrames = null;
         cachedEmeraldSummaries = null;
         cachedPortraitFrames.clear();
+        cachedNoSavePortraitFrames.clear();
         List<SaveSlotSummary> summaries = new ArrayList<>();
         for (int slot = 1; slot <= hostProfile.slotCount(); slot++) {
             try {
@@ -452,7 +454,7 @@ public class S3kDataSelectPresentation extends AbstractDataSelectProvider {
         SelectedTeam noSaveTeam = sessionController.noSaveTeam();
         return new S3kSaveScreenObjectState.VisualState(
                 resolveNoSaveMappingFrame(noSaveTeam),
-                resolveCustomPortraitFrame(noSaveTeam),
+                resolveCustomPortraitFrame(noSaveTeam, S3kCustomTeamPortraitComposer.Window.NO_SAVE),
                 selectedRow == 0 && blinkVisible && !menuModel().isDeleteMode() ? 0xF : -1,
                 resolveDeleteMappingFrame(),
                 resolveDeleteChildMappingFrame(),
@@ -779,7 +781,7 @@ public class S3kDataSelectPresentation extends AbstractDataSelectProvider {
         S3kSaveScreenObjectState.SlotVisualKind kind = classifySlot(summary);
         SelectedTeam team = resolveTeamForSlot(slotIndex, summary);
         int objectMappingFrame = resolveSlotObjectMappingFrame(team);
-        var customObjectFrame = resolveCustomPortraitFrame(team);
+        var customObjectFrame = resolveCustomPortraitFrame(team, S3kCustomTeamPortraitComposer.Window.SAVE_SLOT);
         int sub2MappingFrame = resolveSlotSub2MappingFrame(kind, selected);
         S3kSaveScreenObjectState.SlotLabelKind labelKind = resolveSlotLabelKind(kind, summary, selected);
         int zoneDisplayNumber = resolveZoneDisplayNumber(summary, kind, selected, labelKind);
@@ -1043,11 +1045,14 @@ public class S3kDataSelectPresentation extends AbstractDataSelectProvider {
         return frame;
     }
 
-    private SpriteMappingFrame resolveCustomPortraitFrame(SelectedTeam team) {
+    private SpriteMappingFrame resolveCustomPortraitFrame(SelectedTeam team,
+                                                          S3kCustomTeamPortraitComposer.Window window) {
         if (!isCustomPortraitTeam(team)) {
             return null;
         }
-        return cachedPortraitFrames.computeIfAbsent(team, t -> portraitComposer().compose(t));
+        var cache = window == S3kCustomTeamPortraitComposer.Window.NO_SAVE
+                ? cachedNoSavePortraitFrames : cachedPortraitFrames;
+        return cache.computeIfAbsent(team, t -> portraitComposer().compose(t, window));
     }
 
     private int headerStyleIndexFor(SelectedTeam team) {
