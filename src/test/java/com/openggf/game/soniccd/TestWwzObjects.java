@@ -58,6 +58,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.HexFormat;
 import java.util.TreeMap;
@@ -652,4 +653,57 @@ class TestWwzObjects {
         assertEquals(2, launcher.routine(), "waiting: no rider");
         assertEquals(1, ((WwzObject) sides.get(0)).mapFrame());
     }
+
+    @Test
+    void projectorChildrenReturnWhenRewindingAcrossDestruction() throws Exception {
+        boot(CdStagePayload.R61B);
+        var spawn = spawn(sonic.getCentreX() + 0x50, sonic.getCentreY() - 0x40, 0x2F, 0);
+        var projector = add(new CdProjector(spawn));
+        runner.stepIdleFrames(12);
+        int parentSlot = projector.getSlotIndex();
+        var rewind = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+        var snapshot = rewind.capture();
+        List<List<HologramState>> reference = new ArrayList<>();
+        for (int frame = 0; frame < 40; frame++) {
+            runner.stepIdleFrames(1);
+            reference.add(hologramStates(parentSlot));
+        }
+
+        rewind.restore(snapshot);
+        var restoredParent = (CdProjector) live(CdProjector.class).stream()
+                .filter(p -> p.getSpawn().equals(spawn)).findFirst().orElseThrow();
+        sonic.setAnimationId(CdAnimationIds.resolve(sonic, CanonicalAnimation.ROLL));
+        restoredParent.onTouchResponse(sonic, null, 0);
+        runner.stepIdleFrames(3);
+        // ProjectorObject_0_Routine4 (objects/r6/projector.asm:111-120) invalidates both children.
+        assertTrue(restoredParent.childrenInvalid());
+        assertEquals(List.of(), hologramStates(parentSlot), "both holograms disappear within three frames");
+        // ProjectorExplosionRecords (objects/r6/projector.asm:220-233) ends at $28, then
+        // ProjectorStartShutdown (objects/r6/projector.asm:150-153) waits another $3C frames.
+        runner.stepIdleFrames(0x28 + 0x3C);
+        assertTrue(restoredParent.isDestroyed(), "the projector finishes its shutdown before rewind");
+
+        rewind.restore(snapshot);
+        // AnimalObject_1_Routine4 (objects/r6/animal.asm:73-88) and
+        // AnimalObject_0_Routine8 (objects/r6/animal.asm:173-181).
+        assertEquals(List.of(List.of(0x80, 0x2F, 4), List.of(0x81, 0x2F, 8)),
+                hologramStates(parentSlot).stream()
+                        .map(state -> List.of(state.subtype(), state.parentId(), state.routine())).toList(),
+                "rewind recreates the flying and ground holograms linked to the projector");
+        for (int frame = 0; frame < reference.size(); frame++) {
+            runner.stepIdleFrames(1);
+            assertEquals(reference.get(frame), hologramStates(parentSlot), "replayed frame " + (frame + 1));
+        }
+    }
+
+    private List<HologramState> hologramStates(int parentSlot) {
+        return live(ObjWwzAnimal.class).stream().map(ObjWwzAnimal.class::cast)
+                .filter(animal -> animal.projectorSlot() == parentSlot)
+                .map(animal -> new HologramState(animal.getSpawn().subtype(), animal.projectorId(), animal.routine(),
+                        animal.objectX(), animal.objectY(), animal.mapFrame(), animal.spriteFlip()))
+                .sorted(Comparator.comparingInt(HologramState::subtype))
+                .toList();
+    }
+
+    private record HologramState(int subtype, int parentId, int routine, int x, int y, int mapFrame, int spriteFlip) { }
 }

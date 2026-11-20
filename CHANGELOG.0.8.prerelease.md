@@ -96,9 +96,9 @@ under the matching area heading; see the
   the original Stage 8 credits and Japanese and European gameplay remain open. Disc audio, video songs and PCM sound follow the music
   and effects volumes; CD audio and PCM also share the FM presentation scale
   for their relative level. The time-warp stars animate from the disc in every
-  stage, including Tidal Tempest, and Robotnik's projector
-  can be destroyed in the Past. Both Palmtree Panic and Wacky Workbench
-  draw its flying and ground hologram animals from the disc in their Past acts.
+  stage, including Tidal Tempest. Robotnik's projectors can be destroyed in the
+  Past. In the Past acts of Palmtree Panic and Wacky Workbench, the projectors'
+  flying and ground hologram animals use art from the disc.
   Wacky Workbench's layout animals fly or hop after the projector is destroyed
   and in the Good Future.
   Accuracy is measured against native recordings made on an emulator running
