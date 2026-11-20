@@ -97,8 +97,10 @@ under the matching area heading; see the
   and effects volumes; CD audio and PCM also share the FM presentation scale
   for their relative level. The time-warp stars animate from the disc in every
   stage, including Tidal Tempest, and Robotnik's projector
-  can be destroyed in the Past. Both Palmtree Panic Past acts draw its flying
-  and ground hologram animals from the disc.
+  can be destroyed in the Past. Both Palmtree Panic and Wacky Workbench
+  draw its flying and ground hologram animals from the disc in their Past acts.
+  Wacky Workbench's layout animals fly or hop after the projector is destroyed
+  and in the Good Future.
   Accuracy is measured against native recordings made on an emulator running
   the USA disc: 26 of 28 full-act routes (start to signpost) equal native on
   every compared field to their end (146,390 of 149,633 rows), and 68 of 70

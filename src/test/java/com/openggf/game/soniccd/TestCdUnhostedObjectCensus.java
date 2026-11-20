@@ -41,8 +41,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  *       (objects/null.asm) and is hosted by {@code CdNullObject}, so no Null ID is left here for them.</li>
  *   <li>Real routines still unhosted, by zone: Palmtree Panic $35 (tunnel door), $2F in R11A (Amy
  *       Rose); Collision Chaos $2C (spike chain); Tidal Tempest $23 (vertical move block), $29 (swing, R41A), $30 (switch elevator, R41A),
- *       $52 (not the projector: the projector's $52 in R41B/R42B is hosted by objects/projector); Wacky Workbench
- *       $29 (animal); Metallic Madness $2E (poh bee, R81x).</li>
+ *       $52 (not the projector: the projector's $52 in R41B/R42B is hosted by objects/projector);
+ *       Metallic Madness $2E (poh bee, R81x).</li>
  * </ul>
  */
 class TestCdUnhostedObjectCensus {
@@ -72,16 +72,6 @@ class TestCdUnhostedObjectCensus {
         Map.entry("R42B", "23 28 37 44"),
         Map.entry("R42C", "23 44 51 52"),
         Map.entry("R42D", "23 44 51 52"),
-        Map.entry("R61A", "29"),
-        Map.entry("R61B", "29"),
-        Map.entry("R61C", "29"),
-        Map.entry("R61D", "29"),
-        Map.entry("R62A", "29"),
-        Map.entry("R62B", "29"),
-        Map.entry("R62C", "29"),
-        Map.entry("R62D", "29"),
-        Map.entry("R63C", "29"),
-        Map.entry("R63D", "29"),
         Map.entry("R81A", "2E"),
         Map.entry("R81B", "2E"),
         Map.entry("R81C", "2E"),

@@ -115,8 +115,8 @@ diverging row and the frontier test's cause label (a guess, not a diagnosis).
 | R52B, R52C, R52D | none | none | green | |
 | R53C, R53D | boss movies | boss | green | Both fights green past the capsule to the stage exit; act end reaches R61A |
 | R61A | **green** 4,892 | asserted | green | |
-| R61B | **green** 5,449 | asserted | green | |
-| R61C | **green** 6,767 | asserted | green | |
+| R61B | **green** 5,449 | asserted | green | The full-act recording observes both projector animals entering at row 2749 and leaving at row 3209. The route passes above their sprites. |
+| R61C | **green** 6,767 | asserted | green | The short fixture observes the flying animal placed at `($0488,$04D0)`. Its on-screen region matches native at rows 631 and 647 at 3 bits per color channel. |
 | R61D | none | none | green | |
 | R62A | **green** 4,787 | asserted | green | |
 | R62B, R62C, R62D | none | none | green | |
