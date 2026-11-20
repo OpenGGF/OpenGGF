@@ -1023,7 +1023,7 @@ public class GameLoop {
     private boolean isRewindBlocked() {
         // fadeManager can be null in non-gameplay modes (e.g.
         // MASTER_TITLE_SCREEN with no active session).
-        return levelDemo() != null || GameLoopPauseInput.configurationPaused(currentGameMode)
+        return GameLoopLevelDemo.find(currentGameMode, levelManager) != null || GameLoopPauseInput.configurationPaused(currentGameMode)
                 // Input movies are append-only and cannot represent a world rollback.
                 || userRecordingSessionLauncher.hasActiveRecordingSession()
                 || isNonRewindableTransitionPending()
@@ -1123,7 +1123,7 @@ public class GameLoop {
     private void updateInputPassUserPause(boolean overlayOwnsPause, boolean takeoverConsumedPausePress) {
         boolean specialStageOwnsStart = !userPaused && inputHandler.logical().player1().startPressed()
                 && specialStageLifecycle.ownsStartInput();
-        boolean nativeOwnsStart = specialStageOwnsStart || levelDemo() != null;
+        boolean nativeOwnsStart = specialStageOwnsStart || GameLoopLevelDemo.find(currentGameMode, levelManager) != null;
         boolean nextUserPaused = GameLoopPauseInput.nextUserPaused(currentGameMode, inputHandler,
                 configService, userPaused, overlayOwnsPause || nativeOwnsStart, takeoverConsumedPausePress,
                 playbackDebugManager, userRecordingControls::handlePlaybackTakeoverRequest);
@@ -1299,7 +1299,7 @@ public class GameLoop {
             return;
         }
         if (!overlayOwnsPause && !titleOwnsEscape) escapeToMasterTitleController.update(currentGameMode, inputHandler);
-        if (currentGameMode == GameMode.LEVEL && !overlayOwnsPause && levelDemo() == null) {
+        if (currentGameMode == GameMode.LEVEL && !overlayOwnsPause && GameLoopLevelDemo.find(currentGameMode, levelManager) == null) {
             userRecordingControls.updateLevelControlInput(inputHandler);
         }
 
@@ -1621,14 +1621,11 @@ public class GameLoop {
             return false; // Skip normal level update this frame
         }
 
-        var demo = levelDemo();
+        var demo = GameLoopLevelDemo.find(currentGameMode, levelManager);
         // Check for transition requests that need fade-to-black
         FadeManager fadeManager = this.fadeManager;
         if (!fadeManager.isActive()) {
-            if (demo != null && (demo.hasFinished()
-                    || demo.playerCanInterrupt() && inputHandler.logical().player1().startPressed())) {
-                levelManager.requestGameOverExit(GameOverExit.TITLE_SCREEN);
-            }
+            GameLoopLevelDemo.requestExitIfFinishedOrInterrupted(demo, inputHandler, levelManager);
             if (levelManager.consumeRespawnRequest()) {
                 startRespawnFade();
                 levelIterationAdmission.finishPlaybackBoundary(
@@ -1756,10 +1753,7 @@ public class GameLoop {
                 int heldVblank = levelManager.getObjectManager() != null
                         ? levelManager.getObjectManager().getVblaCounter()
                         : 0;
-                LevelFrameResult frameResult = demo == null ? executeLevelFrame()
-                        : com.openggf.control.InputHandlerInternalAccess.withNativeInput(inputHandler,
-                                com.openggf.control.LogicalInputSnapshot.ofPlayers(demo.inputForNextIteration(),
-                                        com.openggf.control.PlayerInputState.neutral()), this::executeLevelFrame);
+                LevelFrameResult frameResult = GameLoopLevelDemo.runFrame(demo, inputHandler, this::executeLevelFrame);
                 if (frameResult == LevelFrameResult.GAMEPLAY_FRAME) {
                     playbackDebugManager.onCurrentGameplayTickExecuted();
                 }
@@ -2281,13 +2275,6 @@ public class GameLoop {
                 && inputHandler.isKeyPressedWithoutModifiers(keyCode);
     }
 
-    private com.openggf.game.internal.LevelDemoPlayback levelDemo() {
-        if (currentGameMode != GameMode.LEVEL || levelManager == null || levelManager.getGameModule() == null) {
-            return null;
-        }
-        return levelManager.getGameModule().getGameService(com.openggf.game.internal.LevelDemoPlayback.class);
-    }
-
     private LevelFrameResult executeLevelFrame() {
         spriteManager.publishHeldInputForLevelEvents(inputHandler);
         // Native pause is reserved for recorded controller input.
@@ -2307,7 +2294,7 @@ public class GameLoop {
     }
 
     private boolean protectedInputSession() {
-        return levelDemo() != null || TraceSessionLauncher.active() != null
+        return GameLoopLevelDemo.find(currentGameMode, levelManager) != null || TraceSessionLauncher.active() != null
                 || playbackDebugManager.hasActiveOrScheduledSession()
                 || userRecordingSessionLauncher.hasActiveRecordingSession();
     }
@@ -2590,15 +2577,7 @@ public class GameLoop {
     public void initializeTitleScreenMode() {
         LOGGER.info("Initializing game in Title Screen mode");
 
-        // Ensure the ROM is loaded and audio is initialized
-        try {
-            var profile = GameServices.module().getAudioProfile();
-            var rom = profile instanceof com.openggf.audio.RomlessSmpsSource ? null : romManager.getRom();
-            audioManager.setAudioProfile(profile);
-            audioManager.setRom(rom);
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to load ROM for title screen", e);
-        }
+        nativeMenuFlow.initializeTitleAudio(GameServices.module().getAudioProfile(), romManager);
 
         GameMode oldMode = changeGameModeForBoundary(GameMode.TITLE_SCREEN);
 

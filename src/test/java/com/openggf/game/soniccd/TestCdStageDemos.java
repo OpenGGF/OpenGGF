@@ -49,10 +49,7 @@ class TestCdStageDemos {
 
                 boolean naturalEnd = demo != CdStageDemo.R82A;
                 if (!naturalEnd) {
-                    loop.getInputHandler().setLogicalOverride(LogicalInputSnapshot.ofPlayers(
-                            PlayerInputState.of(0, 0, 0, 0, true, true), PlayerInputState.neutral()));
-                    loop.step();
-                    loop.getInputHandler().clearLogicalOverride();
+                    pressStart(loop);
                 }
                 stepUntil(loop, naturalEnd ? 2200 : 90, () -> loop.getCurrentGameMode() == GameMode.TITLE_SCREEN);
                 observations.add(new Observation(stage.payload(), spawn, titleCard, afterPlayback, rings,
@@ -69,6 +66,52 @@ class TestCdStageDemos {
                         0, 2006, GameMode.TITLE_SCREEN),
                 new Observation(CdStagePayload.R82A, new Position(6947, 1484), false, new Position(7014, 1452),
                         0, 120, GameMode.TITLE_SCREEN)), observations);
+    }
+
+    @Test
+    void titleIdleTimeoutStartsPalmtreePanicDemo() throws Exception {
+        try (var disc = CdDiscDataSource.open(CdTestMedia.usaCue());
+             var boot = new HeadlessGameBoot(320, 224)) {
+            GameLoop loop = idleUntilFirstDemo(boot, disc);
+            assertEquals(CdStageDemo.R11A, loop.getCurrentGameMode() == GameMode.LEVEL
+                    && GameServices.level().getCurrentLevel() instanceof CdLevel stage ? stage.demo() : null);
+        }
+    }
+
+    @Test
+    void startDuringDemoTitleCardLetsPlaybackContinue() throws Exception {
+        try (var disc = CdDiscDataSource.open(CdTestMedia.usaCue());
+             var boot = new HeadlessGameBoot(320, 224)) {
+            GameLoop loop = idleUntilFirstDemo(boot, disc);
+            stepUntil(loop, 60, () -> !GameServices.fade().isActive());
+            var level = GameServices.level();
+            if (loop.getCurrentGameMode() != GameMode.LEVEL || GameServices.fade().isActive()
+                    || !(level.getCurrentLevel() instanceof CdLevel stage)
+                    || stage.demo() != CdStageDemo.R11A || !stage.flags().ctrlLocked) {
+                throw new IllegalStateException("Expected a visible Palmtree Panic demo with controls locked");
+            }
+            int beforeStart = level.getFrameCounter();
+            pressStart(loop);
+            assertEquals(beforeStart + 1, level.getFrameCounter(), "Start must let the demo play its next frame");
+        }
+    }
+
+    private static GameLoop idleUntilFirstDemo(HeadlessGameBoot boot, CdDiscDataSource disc) throws Exception {
+        boot.setBootToTitle(true);
+        GameLoop loop = boot.boot(disc, new SonicCdGameModule(), 0, 0);
+        stepUntil(loop, 9000, () -> loop.getCurrentGameMode() == GameMode.LEVEL);
+        return loop;
+    }
+
+    private static void pressStart(GameLoop loop) {
+        var input = loop.getInputHandler();
+        input.setLogicalOverride(LogicalInputSnapshot.ofPlayers(
+                PlayerInputState.of(0, 0, 0, 0, true, true), PlayerInputState.neutral()));
+        try {
+            loop.step();
+        } finally {
+            input.clearLogicalOverride();
+        }
     }
 
     private static void stepUntil(GameLoop loop, int max, BooleanSupplier reached) {

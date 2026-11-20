@@ -277,9 +277,26 @@ The USA idle rotation reads 23 controller samples before R11A's first level
 iteration and 42 before each of R43C and R82A. R43C and R82A skip the title card
 and drain a stage-art queue. All three return after sample 2048, for 2025, 2006,
 and 2006 level iterations respectively. The disc-backed test compares Sonic's
-position and rings at iterations 360, 360, and 120 respectively. The recordings
-show later movement differences in R11A and R82A. In R82A, the first sampled
-position difference is at iteration 127 around a hurt response.
+position and rings at iterations 360, 360, and 120 respectively. R43C matches
+native through all 2,006 level iterations.
+
+- **R11A.** The first difference is at iteration 2. The first gameplay
+  samples hold Right (`$0800`). On the disc, controls are locked before the
+  level loop (scddisasm/src/Level/Main.asm:262-275, `LevelStart` sets
+  `ctrlLocked=1`), so Sonic stands still.
+  The engine applies Right for one iteration at X velocity 12, leaving an
+  X sub-pixel offset of `$0C00` before `CdPlayerStage.applyControlLock` takes
+  effect. That offset first shows as a one-pixel difference at iteration 154.
+  Velocities match until Sonic rolls down a slope at iteration 1423. Rings
+  first differ at iteration 1658. Normal stage starts share the control-lock
+  gap, which has its own follow-up.
+- **R82A.** The runs match through iteration 125. The engine hurts Sonic at
+  iteration 126. On the same approach on the disc, Sonic pushes into laser
+  `$1D` at (7033, 1415) at iteration 127 and enters the hurt routine at 128.
+  See `loc_20B62A` (scddisasm/src/objects/r8/laser.asm:183-216) for the
+  overlap check and hurt write. Rings first differ at iteration 212. The
+  follow-up still needs to establish whether the laser cycle or spawn timing
+  causes the earlier contact.
 
 Breadth: Sonic CD has one character and no teams; it is not a donor. Donation
 into it has bounded R11A coverage only (see

@@ -118,6 +118,14 @@ public final class CdLevel extends AbstractLevel implements com.openggf.game.int
         loadBlockMappings(image, image.offsetOf(image.u32(index + 4)), entry.levelCollision());
         loadChunks(image, image.offsetOf(image.u32(index + 8)));
         loadLayouts(image, entry.levelLayouts());
+        // The shared object catalogue uses retail offsets. USA disc comparison
+        // found identical ring deltas, mapping frames and all 14 tiles loaded by
+        // PLC 1 in each of the three DEMO/retail pairs. The 128 PPZ background
+        // row entries also match between DEMO11A and R11A.
+        // ObjRing_Deltas (scddisasm/src/Level/_Objects/Ring/Main.asm:20-35),
+        // ObjRing_Init (scddisasm/src/Level/_Objects/Ring/Main.asm:156-157),
+        // LevelStart (scddisasm/src/Level/Main.asm:156-165),
+        // BGCameraSectIDs (scddisasm/src/Level/Palmtree Panic/Scroll (Act 1 Present).asm:1123-1156).
         if (payload.stage().zone() == com.openggf.game.soniccd.CdZone.PALMTREE_PANIC) {
             ppzBackgroundRows = com.openggf.game.soniccd.zones.ppz.PpzBackgroundRows.read(objectImage);
         }
