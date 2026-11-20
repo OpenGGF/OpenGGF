@@ -2,6 +2,7 @@ package com.openggf.game.soniccd;
 
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.game.DamageCause;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameServices;
 import com.openggf.game.patch.ModuleResolutionService;
@@ -170,8 +171,12 @@ class TestTtzObjects {
         var pole = addBreakPole(subtype);
         pole.update(0, sonic);
         int ticks = subtype == 0 ? 180 : 60;
-        for (int i = 1; i < ticks; i++) pole.update(0, sonic);
-        assertTrue(sonic.isObjectControlled());
+        for (int i = 1; i < ticks - 1; i++) pole.update(0, sonic);
+        sonic.setInvulnerableFrames(0);
+        assertTrue(sonic.applyHurtOrDeath(sonic.getCentreX() + 32, DamageCause.SPIKE, true));
+        assertTrue(sonic.isHurt());
+        pole.update(0, sonic);
+        assertTrue(sonic.isObjectControlled(), "hurt leaves the pole's control intact before timeout");
         pole.update(0, sonic);
         assertFalse(sonic.isObjectControlled());
     }
@@ -203,11 +208,25 @@ class TestTtzObjects {
     @Test
     void breakPoleRetiresADeadOrReplacedOwner() throws Exception {
         boot(CdStagePayload.R42A);
-        var deathPole = addBreakPole(0);
-        deathPole.update(0, sonic);
-        sonic.setDead(true);
-        deathPole.update(0, sonic);
-        assertFalse(sonic.isObjectControlled());
+        var placement = GameServices.level().getObjectManager().getAllSpawns().stream()
+                .filter(spawn -> spawn.objectId() == 0x05).findFirst().orElseThrow();
+        sonic.setCentreX((short) placement.x());
+        sonic.setCentreY((short) placement.y());
+        GameServices.camera().updatePosition(true);
+        runner.stepIdleFrames(1);
+        assertEquals(CdSonicAnimation.HANG.id(), sonic.getAnimationId());
+        assertTrue(sonic.isObjectControlled(), "the disc-placed pole gripped Sonic");
+
+        int ticks = placement.subtype() == 0 ? 180 : 60;
+        runner.stepIdleFrames(ticks - 2);
+        assertTrue(sonic.isObjectControlled(), "the pole is still intact two ticks before timeout");
+        sonic.setInvulnerableFrames(0);
+        assertTrue(sonic.applyHurtOrDeath(sonic.getCentreX() + 32, DamageCause.SPIKE, false));
+        assertTrue(sonic.getDead());
+        runner.stepIdleFrames(1);
+        assertTrue(sonic.isObjectControlled(), "death leaves the pole's control intact");
+        runner.stepIdleFrames(1);
+        assertFalse(sonic.isObjectControlled(), "the pole releases on its original timeout");
         sonic.setDead(false);
 
         var stalePole = addBreakPole(0);

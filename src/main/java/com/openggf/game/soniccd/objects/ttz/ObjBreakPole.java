@@ -40,10 +40,13 @@ final class ObjBreakPole extends TtzObject implements SpawnRewindRecreatable, Ob
         var main = services().playerQuery().mainPlayerOrNull();
         if (!grip.isEmpty()) {
             var held = grip.players().getFirst();
-            if (held != main || !canHang(held) || !ownsControl(held)) {
+            // BreakPoleObject_0_Routine4 (objects/r4/break_pole.asm:59-88) counts down
+            // during hurt and death and reads P1's fresh A/B/C edge before climbing.
+            if (--gripTimer == 0
+                    || (main instanceof AbstractPlayableSprite sprite && sprite.isRawControllerJumpJustPressed())) {
                 releaseGrip();
-            } else {
-                updateGrip(held);
+            } else if (held == main && held.isNativeSlotPresent() && ownsControl(held)) {
+                climb(held);
             }
         } else if (main instanceof AbstractPlayableSprite sprite && canHang(sprite)
                 && !sprite.isObjectControlled()) {
@@ -74,12 +77,8 @@ final class ObjBreakPole extends TtzObject implements SpawnRewindRecreatable, Ob
         gripTimer = (spawn.subtype() & 0xFF) == 0 ? 0xB4 : 0x3C;
     }
 
-    private void updateGrip(AbstractPlayableSprite player) {
-        // BreakPoleObject_0_Routine4 (objects/r4/break_pole.asm:59-88) reads physical P1:
-        // fresh A/B/C takes precedence over held Up/Down, and Up wins if both are held.
-        if (--gripTimer == 0 || player.isRawControllerJumpJustPressed()) {
-            releaseGrip();
-        } else if (player.isUpPressed()) {
+    private void climb(AbstractPlayableSprite player) {
+        if (player.isUpPressed()) {
             int nextY = (player.getCentreY() - 1) & 0xFFFF;
             NativePositionOps.writeYPosPreserveSubpixel(player, Math.max(nextY, (y - CLIMB_LIMIT) & 0xFFFF));
         } else if (player.isDownPressed()) {
