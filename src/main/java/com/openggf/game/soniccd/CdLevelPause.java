@@ -45,14 +45,13 @@ final class CdLevelPause implements NativeLevelInputOwner {
         var game = services.gameState();
         var player = services.camera().getFocusedSprite();
         boolean canPause = !level.flags().ctrlLocked && player != null && !player.getDead();
-        if (nativeStart && canPause) {
-            boolean wasPaused = game.isGamePaused();
-            boolean isPaused = game.applyPauseToggle(true);
-            if (wasPaused != isPaused) {
-                CdSoundRequests.setLevelMusicPaused(services, player, isPaused);
-            }
+        boolean wasPaused = game.isGamePaused();
+        boolean paused = nativeStart && canPause ? game.applyPauseToggle(true) : wasPaused;
+        if (!hostPaused) {
+            if (paused) CdSoundRequests.stopChargeSound(services);
+            if (wasPaused != paused) CdSoundRequests.setLevelMusicPaused(services, player, paused);
         }
-        if (!action || !(hostPaused ? canPause : game.isGamePaused())) {
+        if (!action || !(hostPaused ? canPause : paused)) {
             return nativeStart;
         }
 

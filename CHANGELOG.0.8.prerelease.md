@@ -96,7 +96,9 @@ under the matching area heading; see the
   makes the rings available again.
   Start pauses Sonic CD gameplay and music and allows frame-stepping during
   live play. During movie playback, recorded Start pauses and resumes the
-  current CD track or Past PCM music.
+  CD track or Past PCM according to the current time zone, including the
+  destination once a time warp begins. Pausing stops the charge sound each
+  paused frame. Passing a signpost clears the speed-shoes flag.
   Press A, B or C during a pause to leave a Time Attack attempt or spend one
   life in the campaign. The stage restarts if lives remain.
   Clearing Special Stage 8 opens an OpenGGF acknowledgement with the disc's
@@ -110,8 +112,10 @@ under the matching area heading; see the
   Held-key live rewind works inside special stages, including the three-frame
   floor pipeline, UFOs and effects. Stage rewind restores Tidal Tempest's rotate
   block parts, Wacky Workbench's launcher sides, and Stardust Speedway's swings
-  and spring launcher parts. Stardust Speedway's Kanabun and Kabasira resume
-  their saved animation script frame and timer. Rewind also restores the title
+  and spring launcher parts. Tidal Tempest's water resumes at its saved height,
+  bob phase, and pump speed. Stardust Speedway's Kanabun, Kabasira, booster
+  sparks, and path swaps resume their saved animation script frame and timer.
+  Rewind also restores the title
   card, HUD, and points popups. The master title lists Sonic CD when the disc is
   configured or found (`roms.default: scd` boots it directly) and verifies it
   against the USA release before starting. A CHD
