@@ -221,6 +221,10 @@ public final class CdProgramFlow {
         // .CheckNoLives clears plcLoadFlags (Level/Main.asm:97-99); in Time Attack ObjResults_NextLevel
         // clears bit 0 too (Results/Main.asm:287-289).
         if (result.lives() == 0 || route == Route.TIME_ATTACK) levelLoaded = false;
+        if (route == Route.ATTRACT_DEMO) {
+            route = null;
+            return new Title();
+        }
         if (route == Route.TIME_ATTACK) {
             // move.b #0,checkpoint; move.l time,timeAttackTime; bra.s TimeAttack (IPX.asm:1235-1238).
             timeAttackTime = result.time();
@@ -400,7 +404,23 @@ public final class CdProgramFlow {
         if (DEMOS[id] == CdNativeProgram.SPECSTAGE) {
             return new SpecialStage(CdSpecialStageEntry.demo(id == 2 ? 0 : 5), id == 2 ? "SpecStage1Demo" : "SpecStage6Demo", new Title());
         }
-        return notHosted(DEMOS[id], "Demo");
+        var demo = switch (DEMOS[id]) {
+            case R11ADEMO -> com.openggf.game.soniccd.CdStageDemo.R11A;
+            case R43CDEMO -> com.openggf.game.soniccd.CdStageDemo.R43C;
+            case R82ADEMO -> com.openggf.game.soniccd.CdStageDemo.R82A;
+            default -> null;
+        };
+        if (demo == null) return notHosted(DEMOS[id], "Demo");
+        // Demo_R11A (CD Initial Program/IPX.asm:961-970), Demo_R43C (:976-985) and Demo_R82A
+        // (:991-1000) reset PLC flags and select the period before RunMMD.
+        CdStagePayload payload = demo.payload();
+        zone = com.openggf.game.soniccd.SonicCdZoneRegistry.zoneIndex(payload);
+        act = payload.stage().actNumber() - 1;
+        goodFuture = payload.stage().period() == com.openggf.game.soniccd.CdPeriod.GOOD_FUTURE;
+        timeZone = goodFuture ? CdStageResult.TIME_FUTURE : CdStageResult.TIME_PRESENT;
+        levelLoaded = false;
+        route = Route.ATTRACT_DEMO;
+        return new Stage(payload, route);
     }
 
     private static NotHosted notHosted(CdNativeProgram program, String caller) {

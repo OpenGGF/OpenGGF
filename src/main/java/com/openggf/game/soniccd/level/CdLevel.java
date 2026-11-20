@@ -97,7 +97,7 @@ public final class CdLevel extends AbstractLevel implements com.openggf.game.int
     private com.openggf.game.soniccd.zones.ppz.PpzBackgroundRows ppzBackgroundRows;
 
     CdLevel(CdStagePayload payload, CdStageImage image, CdStageCatalogue.Entry entry, int zoneIndex,
-            boolean publishGraphics, String mediaIdentity) throws IOException {
+            boolean publishGraphics, String mediaIdentity, CdStageImage objectImage) throws IOException {
         super(zoneIndex);
         this.payload = payload;
         this.projectSource = new com.openggf.game.internal.NativeProjectSource(mediaIdentity, payload.name(),
@@ -113,7 +113,7 @@ public final class CdLevel extends AbstractLevel implements com.openggf.game.int
         loadChunks(image, image.offsetOf(image.u32(index + 8)));
         loadLayouts(image, entry.levelLayouts());
         if (payload.stage().zone() == com.openggf.game.soniccd.CdZone.PALMTREE_PANIC) {
-            ppzBackgroundRows = com.openggf.game.soniccd.zones.ppz.PpzBackgroundRows.read(image);
+            ppzBackgroundRows = com.openggf.game.soniccd.zones.ppz.PpzBackgroundRows.read(objectImage);
         }
 
         // CamBounds: unused word, left, right, top, bottom, Y centre (LevelSizeLoad,
@@ -137,7 +137,7 @@ public final class CdLevel extends AbstractLevel implements com.openggf.game.int
             ObjectSpawn spawn = toSpawn(placement);
             spawns.add(spawn);
             if (spawn.objectId() == RING_OBJECT_ID) {
-                List<com.openggf.level.rings.RingSpawn> group = expandRings(image, payload, spawn, ringSpawns.size());
+                List<com.openggf.level.rings.RingSpawn> group = expandRings(objectImage, payload, spawn, ringSpawns.size());
                 ringSpawns.addAll(group);
                 ringGroups.put(spawn, group);
             }
@@ -145,8 +145,8 @@ public final class CdLevel extends AbstractLevel implements com.openggf.game.int
         objects = List.copyOf(spawns);
         rings = List.copyOf(ringSpawns);
         ringPlacementMapping = java.util.Collections.unmodifiableMap(ringGroups);
-        ringSpriteSheet = com.openggf.game.soniccd.objects.art.CdObjectArtProvider.ringSheet(image, payload,
-                com.openggf.game.soniccd.objects.art.CdObjectArtProvider.loadVram(image, payload));
+        ringSpriteSheet = com.openggf.game.soniccd.objects.art.CdObjectArtProvider.ringSheet(objectImage, payload,
+                com.openggf.game.soniccd.objects.art.CdObjectArtProvider.loadVram(objectImage, payload));
     }
 
     /**

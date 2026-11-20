@@ -170,6 +170,7 @@ public final class SonicCdGameModule implements GameModule {
         }
         if (game == null || game.disc() != disc) {
             game = new SonicCdGame(disc);
+            game.bindDemoSelection(scenes::titleDemo);
         }
         return game;
     }
@@ -249,8 +250,33 @@ public final class SonicCdGameModule implements GameModule {
     private static final com.openggf.game.internal.LoadedLevelFrameCounter LOADED_LEVEL_FRAMES =
             new com.openggf.game.internal.LoadedLevelFrameCounter(1);
 
+    private final com.openggf.game.internal.LevelDemoPlayback demoPlayback =
+            new com.openggf.game.internal.LevelDemoPlayback() {
+                @Override public com.openggf.control.PlayerInputState inputForNextIteration() {
+                    int sample = CdStageDemo.ENTRY_INPUT_WORDS + GameServices.level().getFrameCounter();
+                    return CdStageDemo.decodeInput(game.demoWord(sample));
+                }
+
+                // Level_MainLoop (Level/Main.asm:333-355): live Start ends a demo after the
+                // title-card control lock releases, while Sonic is alive.
+                @Override public boolean playerCanInterrupt() {
+                    var player = GameServices.sprites().getMainPlayable();
+                    return !game.currentLevel().flags().ctrlLocked && player != null && !player.getDead();
+                }
+
+                @Override public boolean hasFinished() {
+                    return CdStageDemo.ENTRY_INPUT_WORDS + GameServices.level().getFrameCounter()
+                            >= CdStageDemo.INPUT_WORDS;
+                }
+            };
+
     @Override
     public <T> T getGameService(Class<T> type) {
+        if (type == com.openggf.game.internal.LevelDemoPlayback.class) {
+            var level = GameServices.levelOrNull();
+            return game != null && game.currentDemo() != null && scenes.titleDemo() != null
+                    && level != null && level.getCurrentLevel() == game.currentLevel() ? type.cast(demoPlayback) : null;
+        }
         if (type == com.openggf.game.internal.HostAnimationSource.class) return type.cast(
                 new com.openggf.game.internal.HostAnimationSource() {
                     public java.util.Map<Integer, com.openggf.game.AnimationFamilies.Binding> families() {

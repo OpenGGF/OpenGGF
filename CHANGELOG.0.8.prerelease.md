@@ -79,7 +79,8 @@ under the matching area heading; see the
   Sonic giving up). Sonic keeps the walking pose selected by ground input on
   the frame he slips off a steep slope. Time travel, special stages
   (with pause during play, exit fades and a visible results tally that Start can finish),
-  the title, stage select, Time Attack, Special Stage 8 from the sound test,
+  the title, ordinary title-idle stage demos with recorded disc inputs, stage
+  select, Time Attack, Special Stage 8 from the sound test,
   both special-stage attract demos, backup RAM (saved in `saves/soniccd`),
   the opening video, both endings, FM
   effects, CD audio and PCM sound are hosted. Special-stage extra lives cap the
