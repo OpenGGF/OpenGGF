@@ -3059,6 +3059,41 @@
       "note": "user's Sonic CD disc"
     },
     {
+      "match": "com.openggf.game.soniccd.TestTtzObjects#pastProjectorsSpawnBothAnimalForms(CdStagePayload)[1]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzObjects.java:128",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzObjects#pastProjectorsSpawnBothAnimalForms(CdStagePayload)[2]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzObjects.java:128",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzObjects#projectorAnimalsMatchNativePositionsAcrossAnOrbit",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzObjects.java:137",
+      "allowed_when_absent": "soniccd_native",
+      "note": "BizHawk native reference (and the user's Sonic CD disc)"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzObjects#projectorAnimalsRetireWhenTheProjectorShutsDown",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzObjects.java:171",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzObjects#rewindAcrossProjectorDestructionRestoresTheAnimalsAndTheirMotion",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzObjects.java:179",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
       "match": "com.openggf.game.soniccd.TestTtzObjects#levelStartCreatesTheWaterSurfaceInTheFirstDynamicSlot",
       "category": "optional-fixture",
       "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzObjects.java:113",
