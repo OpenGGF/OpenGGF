@@ -360,7 +360,8 @@ public final class WwzPlayerProfile implements CdZonePlayerProfile {
         player.setRolling(true);                                    // $E/7 radii, SonAni_Roll
         NativePositionOps.writeXPosPreserveSubpixel(player, centreX);
         NativePositionOps.writeYPosPreserveSubpixel(player, centreY + 5);   // addq.w #5,oY
-        // FM_DA, the bounce sound: the zone's sound list is not hosted yet.
+        // ObjSonic_CheckBouncyFloor .Bounce (Level/Wacky Workbench/Objects/Sonic/Main.asm:567-582).
+        player.currentAudioManager().playSfx(0xDA);
     }
 
     /** {@code ObjSonic_CheckSparks} (WW scddisasm/src/Level/Wacky Workbench/Objects/Sonic/Main.asm:440-512; r6:389-460). */

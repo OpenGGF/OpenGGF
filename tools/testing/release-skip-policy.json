@@ -7705,6 +7705,69 @@
       "evidence": "src/test/java/com/openggf/level/TestCdInitialMotionArenaMask.java:17",
       "allowed_when_absent": "soniccd_disc",
       "note": "Loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.audio.TestCdAudioLivePath#resultsTallyProducesAudibleFm",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/audio/TestCdAudioLivePath.java:44",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.audio.TestCdAudioLivePath#resultsChimeProducesAudibleFm",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/audio/TestCdAudioLivePath.java:44",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.audio.TestCdAudioLivePath#specialStageWarpProducesAudibleFm",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/audio/TestCdAudioLivePath.java:44",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.audio.TestCdAudioLivePath#workbenchBounceProducesAudibleFm",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/audio/TestCdAudioLivePath.java:44",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.audio.TestCdAudioLivePath#ringExtraLifeProducesAudiblePcm",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/audio/TestCdAudioLivePath.java:44",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestCdGameplaySoundCues#resultsUseTheTimerHighByteAndChimeOnTheLastBonusStep",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdGameplaySoundCues.java:35",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestCdGameplaySoundCues#resultsRequestTheWarpCueOnlyWhenTheArmedCountdownReachesThirty",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdGameplaySoundCues.java:68",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestCdGameplaySoundCues#ringLifeThresholdsRequestTheYesVoiceOnThePickup",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdGameplaySoundCues.java:100",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestCdGameplaySoundCues#workbenchRequestsBounceOnTheNativeStandingToRollingFrame",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdGameplaySoundCues.java:140",
+      "allowed_when_absent": "soniccd_native",
+      "note": "Sonic CD disc and native Wacky Workbench recording"
     }
   ]
 }
