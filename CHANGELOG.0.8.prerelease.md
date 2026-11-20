@@ -108,7 +108,8 @@ under the matching area heading; see the
   Its walker platforms let Sonic pass their sides, and the invisible blocks let
   him jump through from below. Tidal Tempest hosts its break poles and
   stationary spike balls, with sprites loaded from the disc. A pole keeps its
-  release timer after Sonic takes a hit or dies during the grip. Its post-scroll
+  release timer through hurt, death and drowning. Sonic can still climb while
+  drowning, and the pole releases him while the sink continues. The post-scroll
   currents use the retained direction on the hurt recovery frame. R42A matches
   through the results and next-act handoff. Quartz Quadrant Past conveyors
   change speed on the warp trigger frame, and the R51B short fixture matches

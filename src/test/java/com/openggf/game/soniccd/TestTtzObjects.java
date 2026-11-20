@@ -27,7 +27,6 @@ import com.openggf.physics.GroundSensor;
 import com.openggf.physics.Direction;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
-import com.openggf.sprites.playable.ObjectControlState;
 import com.openggf.tests.HeadlessTestRunner;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tools.HeadlessGameBoot;
@@ -206,7 +205,51 @@ class TestTtzObjects {
     }
 
     @Test
-    void breakPoleRetiresADeadOrReplacedOwner() throws Exception {
+    void breakPoleClimbsAndTimesOutDuringDrowning() throws Exception {
+        boot(CdStagePayload.R42A);
+        var pole = addBreakPole(1);
+        pole.update(0, sonic);
+        assertTrue(sonic.applyDrownDeath());
+        sonic.setDirectionalInputPressed(true, false, false, false);
+        pole.update(0, sonic);
+        assertEquals(pole.getY() - 1, sonic.getCentreY(), "Up still climbs during the drowning sink");
+        sonic.setDirectionalInputPressed(false, true, false, false);
+        pole.update(0, sonic);
+        assertEquals(pole.getY(), sonic.getCentreY(), "Down still climbs during the drowning sink");
+        sonic.setDirectionalInputPressed(false, false, false, false);
+        for (int i = 2; i < 59; i++) pole.update(0, sonic);
+        assertTrue(sonic.isObjectControlSuppressesMovement(), "bit 0 stays set until timeout");
+
+        pole.update(0, sonic);
+        assertFalse(sonic.isObjectControlSuppressesMovement(), "the pole clears bit 0 on timeout");
+        assertTrue(sonic.isTouchResponseSuppressedByObjectControl(), "drowning keeps bit 7 set");
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void breakPoleGripsDeadAndDrowningPlayers(boolean drowning) throws Exception {
+        boot(CdStagePayload.R42A);
+        var pole = addBreakPole(1);
+        if (drowning) {
+            assertTrue(sonic.applyDrownDeath());
+        } else {
+            sonic.setInvulnerableFrames(0);
+            assertTrue(sonic.applyHurtOrDeath(sonic.getCentreX() + 32, DamageCause.SPIKE, false));
+        }
+
+        pole.update(0, sonic);
+        assertEquals(pole.getX() + 24, sonic.getCentreX());
+        assertEquals(CdSonicAnimation.HANG.id(), sonic.getAnimationId());
+        assertTrue(sonic.isObjectControlSuppressesMovement());
+        assertEquals(drowning, sonic.isTouchResponseSuppressedByObjectControl());
+        for (int i = 0; i < 60; i++) pole.update(0, sonic);
+        assertFalse(sonic.isObjectControlSuppressesMovement());
+        assertEquals(drowning, sonic.isTouchResponseSuppressedByObjectControl());
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void breakPoleLetsHurtAndDeadPlayersMoveInTheFrameLoop(boolean hadRings) throws Exception {
         boot(CdStagePayload.R42A);
         var placement = GameServices.level().getObjectManager().getAllSpawns().stream()
                 .filter(spawn -> spawn.objectId() == 0x05).findFirst().orElseThrow();
@@ -215,28 +258,29 @@ class TestTtzObjects {
         GameServices.camera().updatePosition(true);
         runner.stepIdleFrames(1);
         assertEquals(CdSonicAnimation.HANG.id(), sonic.getAnimationId());
-        assertTrue(sonic.isObjectControlled(), "the disc-placed pole gripped Sonic");
+        assertTrue(sonic.isObjectControlSuppressesMovement(), "the disc-placed pole gripped Sonic");
+        assertTrue(sonic.isInWater(), "the R42A pole is underwater");
 
         int ticks = placement.subtype() == 0 ? 180 : 60;
         runner.stepIdleFrames(ticks - 2);
-        assertTrue(sonic.isObjectControlled(), "the pole is still intact two ticks before timeout");
+        assertTrue(sonic.isObjectControlSuppressesMovement(), "the pole is still intact two ticks before timeout");
+        sonic.setSubpixelRaw(0, 0);
+        int x = sonic.getCentreX();
+        int y = sonic.getCentreY();
         sonic.setInvulnerableFrames(0);
-        assertTrue(sonic.applyHurtOrDeath(sonic.getCentreX() + 32, DamageCause.SPIKE, false));
-        assertTrue(sonic.getDead());
+        assertTrue(sonic.applyHurtOrDeath(x + 32, DamageCause.SPIKE, hadRings));
         runner.stepIdleFrames(1);
-        assertTrue(sonic.isObjectControlled(), "death leaves the pole's control intact");
-        runner.stepIdleFrames(1);
-        assertFalse(sonic.isObjectControlled(), "the pole releases on its original timeout");
-        sonic.setDead(false);
 
-        var stalePole = addBreakPole(0);
-        stalePole.update(0, sonic);
-        // A replacement can claim the same flag combination. Only the generation distinguishes the owners.
-        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(sonic);
-        sonic.setDirectionalInputPressed(true, false, false, false);
-        stalePole.update(0, sonic);
-        assertTrue(sonic.isObjectControlled());
-        assertEquals(stalePole.getY(), sonic.getCentreY());
+        // HurtPlayer (r4/player_object_collide.asm:243-263) starts underwater recoil.
+        // PlayerHurt (objects/player.asm:2206-2219) moves before adding $10.
+        // KillPlayer (r4/player_object_collide.asm:273-288) starts the death bounce.
+        // PlayerDead (objects/player.asm:2244-2249) uses MoveObjectFall (common/object.asm:27-61).
+        assertEquals(x - (hadRings ? 1 : 0), sonic.getCentreX(), "horizontal recoil while held");
+        assertEquals(y - (hadRings ? 2 : 7), sonic.getCentreY(), "vertical recoil while held");
+        assertEquals(hadRings ? -0x200 + 0x10 : -0x700 + 0x38, sonic.getYSpeed(), "gravity during recoil");
+        assertTrue(sonic.isObjectControlSuppressesMovement(), "the pole still holds during recoil");
+        runner.stepIdleFrames(1);
+        assertFalse(sonic.isObjectControlSuppressesMovement(), "the pole releases on its original timeout");
     }
 
     @Test
