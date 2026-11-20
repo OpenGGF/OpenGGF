@@ -8,6 +8,7 @@ import com.openggf.audio.GameSound;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameServices;
 import com.openggf.game.LevelState;
+import com.openggf.game.internal.RingExtraLifeReplacesPickupSound;
 import com.openggf.physics.BackgroundPlaneCollisionProvider;
 import com.openggf.physics.Direction;
 import com.openggf.graphics.GraphicsManager;
@@ -68,6 +69,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
     private final BackgroundPlaneCollisionProvider backgroundPlaneCollisionProvider;
     private final AudioManager audioManager;
     private final boolean stageRingsUseObjectTouchCollection;
+    private final boolean ringExtraLifeReplacesPickupSound;
     private final com.openggf.game.internal.SpriteTableBuildProfile spriteTableProfile;
     private PatternSpriteRenderer.FrameBounds spinBounds;
     private final AttractedRing[] attractedRings;
@@ -122,6 +124,8 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                 && module.getGameService(com.openggf.game.internal.LostRingSpillAtOwnerTurn.class) != null;
         this.stageRingsUseObjectTouchCollection =
                 ringRules != null && ringRules.stageRingsUseObjectTouchCollection();
+        this.ringExtraLifeReplacesPickupSound = module != null
+                && module.getGameService(RingExtraLifeReplacesPickupSound.class) != null;
         this.attractedRings = new AttractedRing[MAX_ATTRACTED_RINGS];
         for (int i = 0; i < MAX_ATTRACTED_RINGS; i++) {
             attractedRings[i] = new AttractedRing();
@@ -560,7 +564,9 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         if (renderer != null && renderer.getSparkleFrameCount() > 0) {
             placement.setSparkleStartFrame(index, frameCounter);
         }
-        playRingAcquisitionSound();
+        LevelState pickupState = ringExtraLifeReplacesPickupSound ? player.currentLevelState() : null;
+        int previousPickupLifeFlags = pickupState != null ? pickupState.getRingExtraLifeFlags() : 0;
+        if (!ringExtraLifeReplacesPickupSound) playRingAcquisitionSound();
         var roster = nativeCompetitionStreamingActive() ? nativeCompetitionRoster() : null;
         if (roster != null) {
             int slot = roster.slotOf(player);
@@ -572,6 +578,10 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                 com.openggf.audio.AudioManagerInternalAccess.playRingExtraLife(audioManager);
             }
         } else player.addRings(1);
+        if (ringExtraLifeReplacesPickupSound
+                && (pickupState == null || (pickupState.getRingExtraLifeFlags() & ~previousPickupLifeFlags) == 0)) {
+            playRingAcquisitionSound();
+        }
         notifyNativeRingPickup(player);
     }
 
@@ -2235,10 +2245,10 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         }
 
         private void reset() {
-            // Obj37 slots are owned by LostRingObjectInstance now. S1 RingLoss
-            // creates new spilled rings with FindFreeObj and resets the shared
-            // v_ani3_time, but it does not sweep existing Obj37 slots first
-            // (docs/s1disasm/_incObj/25 & 37 Rings.asm:199-219,284-313).
+            // LostRingObjectInstance owns the Obj37 slots.
+            // RingLoss (_incObj/25, 37 Rings.asm:219-229) dispatches to RLoss_Count.
+            // RLoss_Count (_incObj/25, 37 Rings.asm:234-311) uses FindFreeObj and resets
+            // v_ani3_time without sweeping existing Obj37 slots first.
             // Releasing the legacy LostRing slot here can mark a still-live or
             // later-reused SST slot free, corrupting the allocator before the
             // next ObjPosLoad.
@@ -2342,8 +2352,8 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             // Atomic stop-on-(-1) slot-allocation contract (ROM Obj37_Init s2.asm:25143-25144:
             // `bsr.w AllocateObject; bne.w +++` — a failed AllocateObject branches PAST the
             // spill loop, truncating the spill). S1 allocates every Obj37 from the loop. S2
-            // HurtCharacter preallocates ring 0 with AllocateObject, then Obj37_Init uses
-            // plain AllocateObject for the remainder (s2.asm:85444-85461,25125-25146). S3K
+            // HurtCharacter (s2.asm:85604-85622) preallocates ring 0 with AllocateObject.
+            // Obj37_Init (s2.asm:25125-25146) uses AllocateObject for the remaining rings. S3K
             // uses the owner slot and AllocateObjectAfterCurrent for the rest
             // (sonic3k.asm:21101-21124,35589-35631).
             boolean preallocateOwnerSlot = objectManager != null && objectManager.preallocatesLostRingOwnerSlot();

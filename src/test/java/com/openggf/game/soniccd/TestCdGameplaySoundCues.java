@@ -94,8 +94,10 @@ class TestCdGameplaySoundCues {
         }
     }
 
+    private record SoundRequest(AudioRequestObserver.RequestClass kind, int id) {}
+
     @Test
-    void ringLifeThresholdsRequestTheYesVoiceOnThePickup() throws Exception {
+    void ringPickupsRequestOnlyTheNativeCue() throws Exception {
         TestEnvironment.resetAll();
         try (var disc = CdDiscDataSource.open(CdTestMedia.usaCue())) {
             var sonic = CdFixtureReplay.boot(config, disc, CdStagePayload.R11A);
@@ -104,32 +106,25 @@ class TestCdGameplaySoundCues {
             var level = levels.getLevelGamestate();
             var rings = levels.getCurrentLevel().getRings().iterator();
             var placements = levels.getRingManager();
-            List<Integer> requests = new ArrayList<>();
-            GameServices.audio().setRequestObserver((kind, id) -> {
-                if (kind == AudioRequestObserver.RequestClass.MUSIC) requests.add(id);
-            });
+            List<SoundRequest> requests = new ArrayList<>();
+            GameServices.audio().setRequestObserver((kind, id) -> requests.add(new SoundRequest(kind, id)));
             int lives = GameServices.gameState().getLives();
 
-            int frame = 0;
+            var pickup = new SoundRequest(AudioRequestObserver.RequestClass.SFX, 0x95);
+            var extraLife = new SoundRequest(AudioRequestObserver.RequestClass.MUSIC, 0x7A);
+            var expected = List.of(List.of(pickup), List.of(extraLife), List.of(pickup),
+                    List.of(pickup), List.of(extraLife), List.of(pickup));
+            List<List<SoundRequest>> actual = new ArrayList<>();
             level.setRings(98);
-            assertTrue(placements.collectPlacedRing(rings.next(), sonic, frame++));
-            var at99 = List.copyOf(requests);
-            assertTrue(placements.collectPlacedRing(rings.next(), sonic, frame++));
-            var at100 = List.copyOf(requests);
-            requests.clear();
-            level.setRings(198);
-            assertTrue(placements.collectPlacedRing(rings.next(), sonic, frame++));
-            var at199 = List.copyOf(requests);
-            assertTrue(placements.collectPlacedRing(rings.next(), sonic, frame++));
-            var at200 = List.copyOf(requests);
-            requests.clear();
-            assertTrue(placements.collectPlacedRing(rings.next(), sonic, frame++));
+            for (int frame = 0; frame < expected.size(); frame++) {
+                if (frame == 3) level.setRings(198);
+                assertTrue(placements.collectPlacedRing(rings.next(), sonic, frame));
+                actual.add(List.copyOf(requests));
+                requests.clear();
+            }
+
             assertAll(
-                    () -> assertEquals(List.of(), at99),
-                    () -> assertEquals(List.of(0x7A), at100),
-                    () -> assertEquals(List.of(), at199),
-                    () -> assertEquals(List.of(0x7A), at200),
-                    () -> assertEquals(List.of(), requests),
+                    () -> assertEquals(expected, actual, "Sound requests at 99, 100, 101, 199, 200 and 201 rings"),
                     () -> assertEquals(lives + 2, GameServices.gameState().getLives()));
         }
     }
