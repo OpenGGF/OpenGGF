@@ -3365,8 +3365,33 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
                     "PSG frequency transaction must start with a tone latch");
         }
 
+        if (!admitPsgTrackWrite(source, hardwareChannel)) {
+            return;
+        }
+
+        // zUpdatePSGTrack gates the source track once, then writes both bytes
+        // without another ownership check (:4085-4095). Keep both physical
+        // bytes verbatim: S3K's unmasked second byte can itself be a latch.
+        synthesizer.writePsg(source, first);
+        synthesizer.writePsg(source, second);
+        int physicalLatchChannel = (second & 0x80) != 0
+                ? (second >> 5) & 0x03 : hardwareChannel;
+        cachePsgLatchChannel(source, physicalLatchChannel);
+    }
+
+    @Override
+    public void writePsgDriverVolume(Object source, int sourceChannel, int value) {
+        if (!admitPsgTrackWrite(source, sourceChannel)) {
+            return;
+        }
+        synthesizer.writePsg(source, value);
+        if ((value & 0x80) != 0) {
+            cachePsgLatchChannel(source, (value >> 5) & 0x03);
+        }
+    }
+
+    private boolean admitPsgTrackWrite(Object source, int hardwareChannel) {
         int ownershipChannel = psgOwnershipChannel(hardwareChannel, source);
-        boolean admitted;
         if (isSfx(source)) {
             LockDecision decision = decideLock(SfxContentionObserver.Bus.PSG,
                     ownershipChannel, psgLocks[ownershipChannel],
@@ -3382,25 +3407,16 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
                         ownershipChannel, true);
             }
             reportLockDecision(decision);
-            admitted = psgLocks[ownershipChannel] == source;
-        } else {
-            admitted = psgLocks[ownershipChannel] == null;
+            return psgLocks[ownershipChannel] == source;
         }
-        if (!admitted) {
-            return;
-        }
+        return psgLocks[ownershipChannel] == null;
+    }
 
-        // zUpdatePSGTrack gates the source track once, then writes both bytes
-        // without another ownership check (:4085-4095). Keep both physical
-        // bytes verbatim: S3K's unmasked second byte can itself be a latch.
-        synthesizer.writePsg(source, first);
-        synthesizer.writePsg(source, second);
-        int physicalLatchChannel = (second & 0x80) != 0
-                ? (second >> 5) & 0x03 : hardwareChannel;
+    private void cachePsgLatchChannel(Object source, int hardwareChannel) {
         if (source instanceof SmpsSequencer sequencer) {
-            sequencer.setPsgLatchChannel(physicalLatchChannel);
+            sequencer.setPsgLatchChannel(hardwareChannel);
         } else {
-            psgLatches.put(source, physicalLatchChannel);
+            psgLatches.put(source, hardwareChannel);
         }
     }
 
@@ -3419,11 +3435,7 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
             synthesizer.writePsg(source, 0xFF);
         }
         synthesizer.writePsg(source, 0xFF);
-        if (source instanceof SmpsSequencer sequencer) {
-            sequencer.setPsgLatchChannel(PSG_NOISE_CHANNEL);
-        } else {
-            psgLatches.put(source, PSG_NOISE_CHANNEL);
-        }
+        cachePsgLatchChannel(source, PSG_NOISE_CHANNEL);
     }
 
     /** PSG3, the tone channel a noise track's own slot names. */

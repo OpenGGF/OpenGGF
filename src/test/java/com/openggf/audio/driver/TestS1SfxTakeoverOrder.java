@@ -156,6 +156,29 @@ class TestS1SfxTakeoverOrder {
     }
 
     @Test
+    void retailVolumeByteUsesTheSourceTrackGateAndKeepsItsPhysicalLatch() {
+        SmpsDriver driver = SmpsDriverTestAccess.create(48_000);
+        RecordingObserver observer = new RecordingObserver();
+        SmpsDriverTestAccess.setChipWriteObserver(driver, observer);
+        SmpsSequencer noiseOwner = sequencer(
+                driver, Sonic3kSmpsSequencerConfig.CONFIG, 0xC0, 0xC1);
+        driver.addSequencer(noiseOwner, true);
+        driver.writePsg(noiseOwner, 0xFF);
+        SmpsSequencer music = sequencer(
+                driver, Sonic3kSmpsSequencerConfig.CONFIG, 0xA0, 0x81);
+        observer.events.clear();
+
+        driver.writePsgDriverVolume(music, 1, 0xF0);
+        driver.writePsgDriverVolume(music, 3, 0xA0);
+
+        assertEquals(List.of("PSG:F0"), observer.events);
+        var psg = SmpsDriverTestAccess.captureSynthSnapshot(driver).psg();
+        assertEquals(7, psg.latch());
+        assertEquals(0, psg.attenuations()[3]);
+        assertEquals(3, music.getPsgLatchChannel());
+    }
+
+    @Test
     void deniedFrequencyPairChangesNeitherBusNorPhysicalLatch() {
         SmpsDriver driver = SmpsDriverTestAccess.create(48_000);
         RecordingObserver observer = new RecordingObserver();

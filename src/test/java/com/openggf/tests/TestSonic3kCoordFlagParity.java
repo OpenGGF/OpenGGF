@@ -54,6 +54,13 @@ public class TestSonic3kCoordFlagParity {
     private static class CaptureSynth extends VirtualSynthesizer {
         final List<FmWrite> fmWrites = new ArrayList<>();
         final List<Integer> psgWrites = new ArrayList<>();
+        int dacStops;
+
+        @Override
+        public void stopDac(Object source) {
+            dacStops++;
+            super.stopDac(source);
+        }
 
         @Override
         public void writeFm(Object source, int port, int reg, int val) {
@@ -66,6 +73,145 @@ public class TestSonic3kCoordFlagParity {
             psgWrites.add(val & 0xFF);
             super.writePsg(source, val);
         }
+    }
+
+    @Test
+    public void e0WritesDacPanToPartTwoAndRetainsLowerBits() {
+        byte[] dacTrack = {
+                (byte) 0xE0, (byte) 0x9B,
+                (byte) 0xE0, 0x64,
+                (byte) 0xE0, (byte) 0x80,
+                (byte) 0xF2
+        };
+        CaptureSynth synth = new CaptureSynth();
+        Sonic3kSmpsData smps = createMusicData(1, 0, null, null,
+                null, null, 0x80, dacTrack);
+        SmpsSequencer seq = new SmpsSequencer(smps, EMPTY_DAC, synth,
+                GameServices.audio(), Sonic3kSmpsSequencerConfig.CONFIG);
+        synth.fmWrites.clear();
+        seq.advanceSamples(20000);
+
+        assertEquals(List.of(0x9B, 0x7F, 0xBF), synth.fmWrites.stream()
+                .filter(w -> w.port == 1 && w.reg == 0xB6)
+                .map(w -> w.val).toList());
+        assertFalse(synth.fmWrites.stream().anyMatch(w -> w.port == 0 && w.reg == 0xB6));
+        assertTrue(synth.fmWrites.stream().anyMatch(w -> w.port == 0
+                && w.reg == 0x28 && w.val == 6));
+        assertEquals(0, synth.dacStops, "F2 must leave the queued PCM alone");
+    }
+
+    @Test
+    public void e0UpdatesOverriddenTrackButWithholdsTheWrite() {
+        CaptureSynth synth = new CaptureSynth();
+        Sonic3kSmpsData smps = createMusicData(2, 0,
+                new byte[] { (byte) 0xE0, 0x49 }, null, null);
+        SmpsSequencer seq = new SmpsSequencer(smps, EMPTY_DAC, synth,
+                GameServices.audio(), Sonic3kSmpsSequencerConfig.CONFIG);
+        SmpsSequencer.Track fm = findTrack(seq, SmpsSequencer.TrackType.FM);
+        fm.overridden = true;
+        synth.fmWrites.clear();
+        fm.pos++;
+        new Sonic3kCoordFlagHandler().handleFlag(seq, fm, 0xE0);
+        assertEquals(0x48, fm.pan);
+        assertEquals(1, fm.fms);
+        assertTrue(synth.fmWrites.isEmpty());
+    }
+
+    @Test
+    public void efOnPsgConsumesOptionalOperandAndPreservesTheEnvelopeCursor() {
+        byte[] psgTrack = {
+                (byte) 0xEF, 0x04,
+                (byte) 0xEF, (byte) 0x85, 0x01,
+                (byte) 0xF2
+        };
+        CaptureSynth synth = new CaptureSynth();
+        Sonic3kSmpsData smps = createMusicData(1, 1, null, psgTrack,
+                Map.of(4, new byte[] { 1, 2, 3 }, 0x85, new byte[] { 5, 6, 7 }));
+        SmpsSequencer seq = new SmpsSequencer(smps, EMPTY_DAC, synth,
+                GameServices.audio(), Sonic3kSmpsSequencerConfig.CONFIG);
+        SmpsSequencer.Track psg = findTrack(seq, SmpsSequencer.TrackType.PSG);
+        Sonic3kCoordFlagHandler handler = new Sonic3kCoordFlagHandler();
+        psg.envPos = 2;
+        int start = psg.pos;
+        synth.fmWrites.clear();
+        synth.psgWrites.clear();
+        psg.pos++;
+        handler.handleFlag(seq, psg, 0xEF);
+        assertEquals(4, psg.instrumentId);
+        assertEquals(3, psg.envData[psg.envPos]);
+        assertEquals(start + 2, psg.pos);
+        psg.pos++;
+        handler.handleFlag(seq, psg, 0xEF);
+        assertEquals(0x85, psg.instrumentId);
+        assertEquals(7, psg.envData[psg.envPos]);
+        assertEquals(start + 5, psg.pos);
+        assertTrue(synth.fmWrites.isEmpty());
+        assertTrue(synth.psgWrites.isEmpty());
+    }
+
+    @Test
+    public void volumeBeforeFirstVoiceUsesRetailInitialTotalLevels() {
+        byte[] fmTrack = {
+                (byte) 0xE6, 0x11,
+                (byte) 0xEF, 0x00,
+                (byte) 0xF2
+        };
+        CaptureSynth synth = new CaptureSynth();
+        Sonic3kSmpsData smps = createMusicData(2, 0, fmTrack, null, null);
+        SmpsSequencer seq = new SmpsSequencer(smps, EMPTY_DAC, synth,
+                GameServices.audio(), Sonic3kSmpsSequencerConfig.CONFIG);
+        synth.fmWrites.clear();
+        seq.advanceSamples(20000);
+
+        // zSendTL traverses 40, 48, 44, 4C. Attenuation applies to
+        // the first three initial levels and wraps at seven bits.
+        List<Integer> tlWrites = synth.fmWrites.stream()
+                .filter(w -> w.port == 0 && (w.reg & 0xF0) == 0x40)
+                .map(w -> (w.reg << 8) | w.val).toList();
+        assertEquals(List.of(0x4004, 0x4804, 0x447E, 0x4C56),
+                tlWrites.stream().limit(4).toList());
+        assertTrue(tlWrites.size() > 4, "EF must subsequently send the voice's levels");
+    }
+
+    @Test
+    public void e8ScalesAndWrapsBothFillFieldsAtCommandTime() {
+        CaptureSynth synth = new CaptureSynth();
+        Sonic3kSmpsData smps = createMusicData(2, 0,
+                new byte[] { (byte) 0xE8, 0x67 }, null, null);
+        SmpsSequencer seq = new SmpsSequencer(smps, EMPTY_DAC, synth,
+                GameServices.audio(), Sonic3kSmpsSequencerConfig.CONFIG);
+        SmpsSequencer.Track fm = findTrack(seq, SmpsSequencer.TrackType.FM);
+        fm.dividingTiming = 3;
+        fm.pos++;
+        new Sonic3kCoordFlagHandler().handleFlag(seq, fm, 0xE8);
+        assertEquals(0x35, fm.fill);
+        assertEquals(0x35, fm.fillCounter);
+    }
+
+    @Test
+    public void faDisablesNormalModulationButRetainsEnvelopeState() {
+        byte[] fmTrack = { (byte) 0xFA };
+        Sonic3kSmpsData smps = createMusicData(2, 0, fmTrack, null, null);
+        SmpsSequencer seq = new SmpsSequencer(smps, EMPTY_DAC, new CaptureSynth(),
+                GameServices.audio(), Sonic3kSmpsSequencerConfig.CONFIG);
+        SmpsSequencer.Track fm = findTrack(seq, SmpsSequencer.TrackType.FM);
+        Sonic3kCoordFlagHandler handler = new Sonic3kCoordFlagHandler();
+        fm.modEnabled = true;
+        fm.modEnvId = 2;
+        fm.modEnvPos = 1;
+        fm.modEnvCache = 4;
+        handler.handleFlag(seq, fm, 0xFA);
+        assertTrue(fm.modEnabled);
+        assertEquals(2, fm.modEnvId);
+        assertEquals(1, fm.modEnvPos);
+        assertEquals(4, fm.modEnvCache);
+        fm.modEnvId = 0;
+        fm.customModEnabled = true;
+        fm.modAccumulator = 12;
+        handler.handleFlag(seq, fm, 0xFA);
+        assertFalse(fm.modEnabled);
+        assertFalse(fm.customModEnabled);
+        assertEquals(12, fm.modAccumulator);
     }
 
     @Test
@@ -675,6 +821,12 @@ public class TestSonic3kCoordFlagParity {
 
     private static Sonic3kSmpsData createMusicData(int channels, int psgChannels, byte[] fmTrack, byte[] psgTrack,
             Map<Integer, byte[]> psgEnvelopes, Map<Integer, byte[]> modEnvelopes, int tempo) {
+        return createMusicData(channels, psgChannels, fmTrack, psgTrack,
+                psgEnvelopes, modEnvelopes, tempo, new byte[] { (byte) 0xF2 });
+    }
+
+    private static Sonic3kSmpsData createMusicData(int channels, int psgChannels, byte[] fmTrack, byte[] psgTrack,
+            Map<Integer, byte[]> psgEnvelopes, Map<Integer, byte[]> modEnvelopes, int tempo, byte[] dacTrack) {
         byte[] data = new byte[0x240];
         setLe16(data, 0x00, 0x100); // voice table pointer
         data[0x02] = (byte) channels;
@@ -687,7 +839,7 @@ public class TestSonic3kCoordFlagParity {
             int off = 0x06 + (i * 4);
             if (i == 0) {
                 setLe16(data, off, 0x80); // DAC track
-                data[0x80] = (byte) 0xF2;
+                System.arraycopy(dacTrack, 0, data, 0x80, dacTrack.length);
             } else if (i == 1 && fmTrack != null) {
                 setLe16(data, off, 0x90);
                 System.arraycopy(fmTrack, 0, data, 0x90, fmTrack.length);

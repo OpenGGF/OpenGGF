@@ -63,17 +63,18 @@ public class Sonic3kCoordFlagHandler implements CoordFlagHandler {
 
             case 0xE0: // PANAFMS - set pan/AMS/FMS
                 if (t.pos < program.dataLength()) {
-                    int val = program.dataByteAt(t.pos++) & 0xFF;
-                    t.pan = ((val & 0x80) != 0 ? 0x80 : 0) | ((val & 0x40) != 0 ? 0x40 : 0);
-                    t.ams = (val >> 4) & 0x3;
-                    t.fms = val & 0x7;
-                    if (t.type == SmpsSequencer.TrackType.FM) {
-                        int hwCh = t.channelId;
-                        int port = (hwCh < 3) ? 0 : 1;
-                        int ch = hwCh % 3;
-                        int reg = 0xB4 + ch;
-                        int regVal = (t.pan & 0xC0) | ((t.ams & 0x3) << 4) | (t.fms & 0x7);
-                        ctx.writeFm(port, reg, regVal);
+                    int operand = program.dataByteAt(t.pos++) & 0xFF;
+                    // cfPanningAMSFMS retains all six low bits, including
+                    // unused bit 3, and ORs in the entire operand.
+                    int value = (t.pan & 0x08) | (t.ams << 4) | t.fms | operand;
+                    t.pan = value & 0xC8;
+                    t.ams = (value >> 4) & 0x3;
+                    t.fms = value & 0x7;
+                    // zWriteFMIorII treats the DAC's voice control 06h as
+                    // FM6, so its physical pan write goes to part II B6h.
+                    if (t.type != SmpsSequencer.TrackType.PSG && !t.overridden) {
+                        int port = t.channelId < 3 ? 0 : 1;
+                        ctx.writeFm(port, 0xB4 + t.channelId % 3, value);
                     }
                 }
                 return true;
@@ -117,7 +118,7 @@ public class Sonic3kCoordFlagHandler implements CoordFlagHandler {
                     if (t.type == SmpsSequencer.TrackType.FM) {
                         // 00(min)..7F(max) -> 7F(min)..00(max)
                         t.volumeOffset = (~raw) & 0x7F;
-                        ctx.refreshVolume(t);
+                        sendFmVolume(ctx, t);
                     } else if (t.type == SmpsSequencer.TrackType.PSG) {
                         // 00(min)..7F(max) -> 0F(min)..00(max)
                         t.volumeOffset = ((raw >> 3) & 0x0F) ^ 0x0F;
@@ -137,7 +138,7 @@ public class Sonic3kCoordFlagHandler implements CoordFlagHandler {
                     int volChange = program.dataByteAt(t.pos++);
                     if (t.type == SmpsSequencer.TrackType.FM) {
                         applySignedFmVolumeDelta(t, volChange);
-                        ctx.refreshVolume(t);
+                        sendFmVolume(ctx, t);
                     }
                 }
                 return true;
@@ -147,7 +148,7 @@ public class Sonic3kCoordFlagHandler implements CoordFlagHandler {
                     int delta = program.dataByteAt(t.pos++);
                     if (t.type == SmpsSequencer.TrackType.FM) {
                         applySignedFmVolumeDelta(t, delta);
-                        ctx.refreshVolume(t);
+                        sendFmVolume(ctx, t);
                     }
                 }
                 return true;
@@ -158,7 +159,11 @@ public class Sonic3kCoordFlagHandler implements CoordFlagHandler {
 
             case 0xE8: // NOTE_STOP (NSTOP_MULT) - set fill
                 if (t.pos < program.dataLength()) {
-                    t.fill = program.dataByteAt(t.pos++) & 0xFF;
+                    int fill = program.dataByteAt(t.pos++) & 0xFF;
+                    // cfNoteFill uses zComputeNoteDuration and stores both
+                    // the live timeout and its master as single bytes.
+                    t.fill = (fill * t.dividingTiming) & 0xFF;
+                    t.fillCounter = t.fill;
                 }
                 return true;
 
@@ -229,6 +234,16 @@ public class Sonic3kCoordFlagHandler implements CoordFlagHandler {
 
             case 0xEF: // INSTRUMENT (INS_C_FMP) - load voice/instrument
                 if (t.pos < program.dataLength()) {
+                    int voiceId = program.dataByteAt(t.pos++) & 0xFF;
+                    if (t.type == SmpsSequencer.TrackType.PSG) {
+                        // zSetVoicePSG stores the first byte verbatim. Its
+                        // high bit marks a second, unused stream operand.
+                        if ((voiceId & 0x80) != 0 && t.pos < program.dataLength()) {
+                            t.pos++;
+                        }
+                        selectPsgEnvelope(program, t, voiceId);
+                        return true;
+                    }
                     // cfSetVoice releases the channel's envelope before it even
                     // reads the voice index: for any non-PSG track it calls
                     // zSetMaxRelRate, which writes 0FFh to 80h + operator for
@@ -240,7 +255,7 @@ public class Sonic3kCoordFlagHandler implements CoordFlagHandler {
                     // (s1.sounddriver.asm:2313-2360) nor S2 cfSetVoice
                     // (s2.sounddriver.asm:3271-3293) does this, which is why it
                     // lives in the S3K handler.
-                    if (t.type != SmpsSequencer.TrackType.PSG && !t.overridden) {
+                    if (!t.overridden) {
                         int port = (t.channelId < 3) ? 0 : 1;
                         int channelOffset = t.channelId % 3;
                         for (int operator = 0; operator < 4; operator++) {
@@ -248,7 +263,6 @@ public class Sonic3kCoordFlagHandler implements CoordFlagHandler {
                                     0x80 + (operator * 4) + channelOffset, 0xFF);
                         }
                     }
-                    int voiceId = program.dataByteAt(t.pos++) & 0xFF;
                     ctx.loadVoice(t, voiceId);
                 }
                 return true;
@@ -309,6 +323,12 @@ public class Sonic3kCoordFlagHandler implements CoordFlagHandler {
                     // ownership is restored (Sound/Z80 Sound Driver.asm:
                     // 2115-2142, 3443-3469, 4226-4249).
                     ctx.stopPsgNoteWithDriverSilence(t);
+                } else if (t.type == SmpsSequencer.TrackType.DAC) {
+                    // cfStopTrack calls zKeyOffIfActive on FM6. The DAC
+                    // sample already queued by the track runs independently.
+                    if (!t.tieNext && !t.overridden) {
+                        ctx.writeFm(0, 0x28, 0x06);
+                    }
                 } else {
                     ctx.stopNote(t);
                 }
@@ -369,8 +389,9 @@ public class Sonic3kCoordFlagHandler implements CoordFlagHandler {
             case 0xF5: // PSG_INSTRUMENT (INS_C_PSG) - load PSG envelope
                 if (t.pos < program.dataLength()) {
                     int insId = program.dataByteAt(t.pos++) & 0xFF;
-                    t.instrumentId = insId;
-                    ctx.loadPsgEnvelope(t, insId);
+                    if (t.type == SmpsSequencer.TrackType.PSG) {
+                        selectPsgEnvelope(program, t, insId);
+                    }
                 }
                 return true;
 
@@ -395,7 +416,12 @@ public class Sonic3kCoordFlagHandler implements CoordFlagHandler {
                 return true;
 
             case 0xFA: // MODS_OFF - disable modulation
-                ctx.clearModulation(t);
+                // cfDisableModulation clears only the normal-modulation
+                // bit. Envelope mode and its progress survive this flag.
+                if (t.customModEnabled) {
+                    t.customModEnabled = false;
+                    t.modEnabled = false;
+                }
                 return true;
 
             case 0xFB: // TRANSPOSE_ADD - add to transposition
@@ -716,6 +742,39 @@ public class Sonic3kCoordFlagHandler implements CoordFlagHandler {
             default:
                 LOGGER.warning("S3K unknown meta command: FF " + String.format("%02X", sub));
                 break;
+        }
+    }
+
+    private static void sendFmVolume(CoordFlagContext ctx, SmpsSequencer.Track t) {
+        if (t.overridden) {
+            return;
+        }
+        if (t.s3kTlPointerInitialized) {
+            ctx.refreshVolume(t);
+            return;
+        }
+        // zZeroFillTrackRAM leaves TLPtr at zero until zSendFMInstrument.
+        // Retail zSendTL then reads DI / DI / IM 1 at driver entry. Model
+        // the resulting TL values directly, without a Z80 memory image.
+        int port = t.channelId < 3 ? 0 : 1;
+        int channel = t.channelId % 3;
+        int diLevel = (0x73 + t.volumeOffset) & 0x7F;
+        ctx.writeFm(port, 0x40 + channel, diLevel);
+        ctx.writeFm(port, 0x48 + channel, diLevel);
+        ctx.writeFm(port, 0x44 + channel, (0x6D + t.volumeOffset) & 0x7F);
+        ctx.writeFm(port, 0x4C + channel, 0x56);
+    }
+
+    private static void selectPsgEnvelope(
+            SmpsProgramView program, SmpsSequencer.Track t, int id) {
+        // cfStoreNewVoice changes VoiceIndex only. zDoVolEnv resumes at
+        // the existing VolEnv index if HOLD suppresses the note-start reset.
+        t.instrumentId = id;
+        t.envData = id == 0 ? null : copyPsgEnvelope(program, id);
+        t.envHold = false;
+        t.envAtRest = false;
+        if (t.envData == null) {
+            t.envValue = 0;
         }
     }
 

@@ -43,7 +43,7 @@ class TestS3kE4StopSfxPlan {
         voice[24] = 0x44;
         S3kE4Projection.S3kE4Track music = track(
                 S3kE4Projection.S3kE4Slot.FM3, true, false, true,
-                true, 0x00, voice, 7, 0x80, true,
+                true, 0x00, voice, 7, 0x88, true,
                 new int[] {0, 0x0E, 0, 0x0F});
 
         S3kE4StopSfxPlan plan = S3kE4StopSfxPlan.prepare(
@@ -224,7 +224,7 @@ class TestS3kE4StopSfxPlan {
         writes.add(new SmpsChipWrite.Ym2612(0, 0x28, 0x02));
         writes.add(new SmpsChipWrite.Ym2612(0, 0x28, 0x02));
         writes.add(new SmpsChipWrite.Ym2612(0, 0x27, 0x4F));
-        writes.add(new SmpsChipWrite.Ym2612(0, 0xB6, 0x80));
+        writes.add(new SmpsChipWrite.Ym2612(0, 0xB6, 0x88));
         writes.add(new SmpsChipWrite.Ym2612(0, 0xB2, 0x01));
         int[] offsets = {0, 8, 4, 12};
         int[] groups = {0x30, 0x50, 0x60, 0x70, 0x80};

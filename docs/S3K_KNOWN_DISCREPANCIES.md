@@ -267,6 +267,26 @@ See the [Competition swap design](architecture/designs/2026-11-07-s3k-competitio
 
 ---
 
+## S3K music stream and envelope boundaries
+
+The S3K sequencer keeps the byte-based duration and note-fill timers. It
+preserves FM6 panning, DAC tails at track end, and the PSG envelope cursor
+when a track changes instruments. The PSG volume sum uses the native bit 4
+test and can produce a chip byte that addresses a different latch. The music
+track's source slot still controls ownership admission for that write.
+
+The cartridge loader resolves modulation commands `82` and `84` from the
+driver's code-memory operands. The playback view preserves cursor addresses
+including jumps past the initially declared envelope. The loader also exposes
+the original bytes. The resolved view follows each installed cartridge
+envelope from cursor zero. General code-memory reads from arbitrary cursors,
+unreached PSG envelope controls, and raw Z80 memory mutation remain outside
+the playback contract.
+
+Focused tests cover three cartridge profiles, byte-wrapped durations, HOLD
+and note fill, FM6 pan, PSG envelope placement and signed frequency changes.
+Whole-song bus timing and PCM comparisons remain separate from these tests.
+
 ## YM Service Timing: Source-Relative Timeline Without Absolute VInt Phase
 
 **Location:** `YmServiceTimingProfile`, `YmWriteTimeline`, `SmpsDriver`, and

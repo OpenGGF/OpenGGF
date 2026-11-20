@@ -15,6 +15,8 @@ import com.openggf.data.compression.KosinskiReader;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.channels.Channels;
+import java.util.Arrays;
+import java.util.BitSet;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Level;
@@ -59,6 +61,7 @@ public class Sonic3kSmpsLoader extends AbstractSmpsLoader {
     // Parsed from S&K Z80 data
     private byte[] globalVoiceData;
     private Map<Integer, byte[]> modEnvelopes;
+    private Map<Integer, byte[]> playbackModEnvelopes;
     private Map<Integer, byte[]> psgEnvelopes;
     private int[] musicBankAddresses;
     private int[] musicPointers;
@@ -162,7 +165,7 @@ public class Sonic3kSmpsLoader extends AbstractSmpsLoader {
             LOGGER.info("  First 8 bytes: " + hexDump(raw, 0, 8));
 
             Sonic3kSmpsData data = new Sonic3kSmpsData(raw, z80Ptr);
-            data.setModEnvelopes(modEnvelopes);
+            data.setModEnvelopes(playbackModEnvelopes);
             data.setPsgEnvelopes(psgEnvelopes);
             data.setGlobalVoiceData(globalVoiceData);
 
@@ -229,7 +232,7 @@ public class Sonic3kSmpsLoader extends AbstractSmpsLoader {
             byte[] raw = rom.readBytes(Sonic3kSmpsConstants.SFX_BANK_BASE, readLength);
 
             Sonic3kSfxData sfx = new Sonic3kSfxData(raw, Sonic3kSmpsConstants.Z80_BANK_BASE, 0, headerOffset);
-            sfx.setModEnvelopes(modEnvelopes);
+            sfx.setModEnvelopes(playbackModEnvelopes);
             sfx.setPsgEnvelopes(psgEnvelopes);
             sfx.setGlobalVoiceData(globalVoiceData);
             sfx.setId(sfxId);
@@ -378,6 +381,14 @@ public class Sonic3kSmpsLoader extends AbstractSmpsLoader {
     }
 
     /**
+     * Returns modulation envelopes with retail code-memory operands resolved
+     * for playback. Out-of-record bytes reached by those commands are included.
+     */
+    public Map<Integer, byte[]> getPlaybackModEnvelopes() {
+        return playbackModEnvelopes;
+    }
+
+    /**
      * Returns the global instrument (voice) table data.
      */
     public byte[] getGlobalVoiceData() {
@@ -494,7 +505,7 @@ public class Sonic3kSmpsLoader extends AbstractSmpsLoader {
                     + ", " + raw.length + " bytes)");
 
             Sonic3kSmpsData data = new Sonic3kSmpsData(raw, z80Ptr);
-            data.setModEnvelopes(modEnvelopes);
+            data.setModEnvelopes(playbackModEnvelopes);
             data.setPsgEnvelopes(psgEnvelopes);
             data.setGlobalVoiceData(globalVoiceData);
 
@@ -801,6 +812,7 @@ public class Sonic3kSmpsLoader extends AbstractSmpsLoader {
 
     private void loadModEnvelopes() {
         modEnvelopes = new HashMap<>();
+        playbackModEnvelopes = new HashMap<>();
 
         if (z80AdditionalData == null) {
             return;
@@ -830,19 +842,70 @@ public class Sonic3kSmpsLoader extends AbstractSmpsLoader {
             }
 
             int envRelOffset = ptr - additionalBase;
-            if (envRelOffset < 0 || envRelOffset >= z80AdditionalData.length) {
-                // Fallback for pointers into the main driver blob.
-                if (z80Driver != null && ptr < z80Driver.length) {
-                    loadEnvelopeFromData(i, z80Driver, ptr, modEnvelopes);
-                    continue;
-                }
+            byte[] source = z80AdditionalData;
+            if (envRelOffset < 0 || envRelOffset >= source.length) {
+                source = z80Driver;
+                envRelOffset = ptr;
+            }
+            if (source == null || envRelOffset >= source.length) {
                 continue;
             }
 
-            loadEnvelopeFromData(i, z80AdditionalData, envRelOffset, modEnvelopes);
+            loadEnvelopeFromData(i, source, envRelOffset, modEnvelopes);
+            try {
+                playbackModEnvelopes.put(i, resolveModEnvelope(source, envRelOffset, z80Driver));
+            } catch (IllegalArgumentException unsupported) {
+                // Keep raw diagnostics for a malformed or modified driver.
+                // Only publish playback bytes when code references resolve.
+                LOGGER.log(Level.WARNING, "Cannot bind S3K modulation envelope " + i, unsupported);
+            }
         }
 
         LOGGER.info("Loaded " + modEnvelopes.size() + " S3K modulation envelopes.");
+    }
+
+    private static byte[] resolveModEnvelope(byte[] source, int offset, byte[] driverCode) {
+        // With fix_sndbugs=0, zlocChangeModEnvIndex and
+        // zlocModEnvIncMultiplier (Sound/Z80 Sound Driver.asm:1377-1402)
+        // read (BC+1), where BC holds the byte cursor, not the envelope
+        // address. Follow that deterministic path and inline the actual
+        // operand wherever the sequencer expects a parameter.
+        int length = Math.min(256, source.length - offset);
+        byte[] playback = Arrays.copyOfRange(source, offset, offset + length);
+        BitSet commands = new BitSet(length);
+        BitSet operands = new BitSet(length);
+        int pos = 0;
+        int extent = 0;
+        while (!commands.get(pos)) {
+            if (pos >= length || operands.get(pos)) {
+                throw new IllegalArgumentException("Cannot resolve retail modulation envelope cursor " + pos);
+            }
+            commands.set(pos);
+            extent = Math.max(extent, pos + 1);
+            int sample = playback[pos] & 0xFF;
+            if (sample == 0x81 || sample == 0x83) {
+                break;
+            }
+            if (sample == 0x80) {
+                pos = 0;
+                continue;
+            }
+            if (sample == 0x82 || sample == 0x84) {
+                int operand = pos + 1;
+                if (operand >= length || driverCode == null || operand >= driverCode.length
+                        || commands.get(operand)) {
+                    throw new IllegalArgumentException(
+                            "Cannot resolve retail modulation envelope operand " + operand);
+                }
+                operands.set(operand);
+                playback[operand] = driverCode[operand];
+                extent = Math.max(extent, operand + 1);
+                pos = sample == 0x82 ? playback[operand] & 0xFF : (pos + 2) & 0xFF;
+                continue;
+            }
+            pos = (pos + 1) & 0xFF;
+        }
+        return Arrays.copyOf(playback, extent);
     }
 
     private void loadEnvelopeFromData(int id, byte[] sourceData, int offset, Map<Integer, byte[]> target) {
@@ -859,7 +922,7 @@ public class Sonic3kSmpsLoader extends AbstractSmpsLoader {
             } else if (b == 0x82 || b == 0x84) {
                 // LOOP (82) or CHG_MULT (84) - takes a parameter byte
                 j++;
-                if (offset + j < sourceData.length) {
+                if (len < buffer.length && offset + j < sourceData.length) {
                     buffer[len++] = sourceData[offset + j];
                 }
                 if (b == 0x82) break; // LOOP terminates

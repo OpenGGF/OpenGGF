@@ -170,7 +170,7 @@ public record S3kE4StopSfxPlan(boolean accepted,
         }
         byte[] voice = music.materializedVoice();
         writes.add(new SmpsChipWrite.Ym2612(port, 0xB4 + channel,
-                (music.pan() & 0xC0)
+                (music.pan() & 0xC8)
                         | ((music.ams() & 0x3) << 4)
                         | (music.fms() & 0x7)));
         writes.add(new SmpsChipWrite.Ym2612(port, 0xB0 + channel,

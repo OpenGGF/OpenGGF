@@ -7,6 +7,11 @@ under the matching area heading; see the
 
 ## Gameplay and presentation
 
+- **Sonic 3 & Knuckles music:** DAC pan reaches FM6, drum samples can finish
+  after the track ends, and HOLD keeps the native note-fill countdown.
+  PSG volume and signed modulation envelopes follow the cartridge driver,
+  including its code-table operands and byte-wrapped durations.
+
 - **Frame interpolation background continuity:** vertical camera movement no longer
   mistakes parallax band crossings for horizontal teleports. The previous frozen
   scroll phase is composed at the current vertical view before comparing horizontal
