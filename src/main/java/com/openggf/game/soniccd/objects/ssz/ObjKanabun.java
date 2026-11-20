@@ -1,6 +1,8 @@
 package com.openggf.game.soniccd.objects.ssz;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.schema.RewindCaptureContext;
+import com.openggf.game.soniccd.objects.art.CdObjectArtProvider;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.physics.TrigLookupTable;
 
@@ -34,7 +36,7 @@ public final class ObjKanabun extends SszBadnik {
     private int phase;
     private int phaseStep;
     private boolean second;
-    private SszAnimator animator;
+    private final SszAnimator.Rewindable animator = new SszAnimator.Rewindable();
 
     public ObjKanabun(ObjectSpawn spawn) {
         super(spawn, "Kanabun");
@@ -68,9 +70,19 @@ public final class ObjKanabun extends SszBadnik {
         second = spawn.subtype() != 0;
         phaseStep = second ? -0x100 : -0x200;
         xSpeed = -0x4000;
-        animator = SszObjectArt.animator(artProvider(),
-                second ? SszObjectCatalogue.Entry::kanabunAnimations2 : SszObjectCatalogue.Entry::kanabunAnimations1, 0);
+        bindAnimationScript(artProvider());
         initialised = true;
+    }
+
+    @Override
+    protected void afterGenericRewindStateRestored(RewindCaptureContext context) {
+        if (initialised) bindAnimationScript(artProvider());
+    }
+
+    /** loc_20D11E (objects/r7/kanabun.asm:28-32) selects the script kept in oVar36. */
+    private void bindAnimationScript(CdObjectArtProvider provider) {
+        var entry = SszObjectCatalogue.entry(provider.payload());
+        animator.bindScript(provider.image(), second ? entry.kanabunAnimations2() : entry.kanabunAnimations1());
     }
 
     /** loc_20D12E (:35-73). */

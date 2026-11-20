@@ -1,6 +1,7 @@
 package com.openggf.game.soniccd.objects.common;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.soniccd.audio.CdSoundRequests;
 import com.openggf.game.soniccd.objects.art.CdObjectArtProvider;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
@@ -21,8 +22,7 @@ import java.util.List;
  * empty its timer becomes at least 45 and counts down to the next-level routine.
  *
  * <p>The next-level routine reports the cleared act to the program flow
- * ({@link com.openggf.game.soniccd.program.CdStageExit#actCleared}). Not hosted: Stardust Speedway act 3's
- * own mappings and tile, and the sounds.
+ * ({@link com.openggf.game.soniccd.program.CdStageExit#actCleared}).
  */
 @com.openggf.level.objects.CameraRelativeDraw(com.openggf.level.objects.CameraRelativeDraw.Use.SCREEN_POSITION)
 public final class CdResults extends CdObject implements ObjectVisualFacing.NonDirectional {
@@ -34,6 +34,8 @@ public final class CdResults extends CdObject implements ObjectVisualFacing.NonD
     private static final int LINES = 3;
     /** ObjResults_Init: moveq #$10,d0; jsr LoadPLC (Results/Main.asm:66-68). */
     private static final int RESULTS_PLC = 0x10;
+    private static final int FM_TALLY = 0xBD;
+    private static final int FM_SSWARP = 0xC8;
 
     /** {@code timeBonus.w} and {@code ringBonus.w}, shared by every line. */
     static final class Bonuses implements com.openggf.game.rewind.RewindStateful<Bonuses.State> {
@@ -176,12 +178,18 @@ public final class CdResults extends CdObject implements ObjectVisualFacing.NonD
         } else {
             timer = (timer - 1) & 0xFFFF;                    // subq.w #1; bpl .ChkWarpSound
             if ((timer & 0x8000) != 0) routine = 8;
+            // ObjResults_Bonus .ChkWarpSound (Level/_Objects/Results/Main.asm:211-219).
+            if (timer == 30 && flags().specialStage) services().playSfx(FM_SSWARP);
             return;
         }
         if (bonuses.time != 0 || bonuses.ring != 0) {
-            if (timer != 0) timer--;                         // .HaveBonus
-        } else if (timer < 45) {
-            timer = 45;                                      // cmpi.w #45; bcc .AddPoints; move.w #45 (USA)
+            if (timer != 0) timer--;
+            // ObjResults_Bonus .PlayTallySound tests bit 0 of the timer's high byte
+            // (Level/_Objects/Results/Main.asm:258-267).
+            if ((timer & 0x100) == 0) services().playSfx(FM_TALLY);
+        } else {
+            CdSoundRequests.resultsChime(services());
+            timer = Math.max(timer, 45);
         }
         var game = services().gameState();
         if (game != null) game.addScore(points * 10);        // ResultsAddPoints, units of ten

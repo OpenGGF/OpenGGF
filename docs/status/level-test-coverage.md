@@ -76,6 +76,15 @@ smoke remains FAILED with input/skip gaps; end-to-end rewind and user acceptance
 remain pending. These
 checks do not advance the historical route totals.
 
+Palmtree Panic's vertical tunnel door ($35) uses the USA disc's two mappings
+and twelve patterns in all eight act 1 and 2 programs. The R11A constructed
+check covers the silent first trigger, the 32-update reset, side contact, and
+rewind while open. The native R11A fixture matches its spawn in slot 32 at level
+frame 556. The R12A native full-act movie passes the placed door at
+`($24BC,$02E0)`. The disc and OpenGGF agree on the closed and open sprite
+regions at trace rows 3165 and 3166. The placement masks select no active door
+in R11B. Passage and frame-by-frame picture evidence cover R12A.
+
 S2 Competition monitor outcomes (2026-11-09): eight cold-title EHZ1 fixtures
 exercise P1 breaking for all eight outcomes and hold the award for six seconds.
 The [bounded matrix](../architecture/plans/2026-11-07-s2-competition-parity.md#question-mark-monitor-outcomes-2026-11-09)
