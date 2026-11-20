@@ -109,6 +109,35 @@ class TestCdSpecialStageResults {
     }
 
     @Test
+    void specialStageAwardCrossesTheCampaignsFiftyThousandPointThreshold() throws Exception {
+        try (var disc = CdSpecialNative.disc(); var boot = new HeadlessGameBoot(320, 224)) {
+            var module = new SonicCdGameModule();
+            var loop = boot.boot(disc, module, 0, 0);
+            var campaign = GameServices.gameState();
+            int startingLives = campaign.getLives();
+            campaign.addScore(49_800);
+
+            loop.enterSpecialStage();
+            var provider = (CdSpecialStageProvider) module.getSpecialStageProvider();
+            provider.onEnded(ignored -> { });
+            var stage = provider.session().stage();
+            stage.addRings(1);
+            stage.timer = 0;
+            stage.stageOver = true;
+
+            for (int frame = 0; frame < 120 && loop.getCurrentGameMode() != GameMode.SPECIAL_STAGE_RESULTS; frame++) {
+                loop.step();
+            }
+            var results = (CdSpecialStageResults) loop.getResultsScreen();
+            for (int frame = 0; frame < CdSpecialStageResults.FADE_IN_FRAMES; frame++) results.frame(false);
+            results.frame(true);
+
+            assertEquals(50_000, campaign.getScore());
+            assertEquals(startingLives + 1, campaign.getLives());
+        }
+    }
+
+    @Test
     void campaignKeepsTheSpecialStageLifeEarnedAtTheScoreCap() throws Exception {
         try (var disc = CdSpecialNative.disc(); var boot = new HeadlessGameBoot(320, 224)) {
             var module = new SonicCdGameModule();

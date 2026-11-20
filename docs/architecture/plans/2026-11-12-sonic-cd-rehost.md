@@ -359,8 +359,8 @@ Report:     <SHA, command, counts, skips, limits; ten lines>
 
 ## Open items
 
-What is still open at `6c5c0e2764`, from the lane reports' stopped and
-unverified lists. The order is not a priority order.
+These items come from the lane reports through `6c5c0e2764`, with later
+fixes noted below. The order is not a priority order.
 
 **Accuracy frontiers**
 - R42A matches all 6,411 recorded rows and the next-act handoff. R82A
@@ -370,22 +370,25 @@ unverified lists. The order is not a priority order.
 - 28 stages have a full-act route; the other 42 have only the 14-second
   fixture, and 14 of those (the act 3 stages) also have boss movies. No
   complete-run recording exists. Three routes (R81B, R81C, R82A) have no
-  act-end assertion, and R42A's is `pending`.
-- 38 of 70 stages place an object ID the engine does not host (pinned in
+  act-end assertion; R42A's is asserted through its R43D handoff.
+- 16 of 70 stages place an object ID the engine does not host (pinned in
   `TestCdUnhostedObjectCensus`; 54 before Robotnik's projector was hosted).
-- Robotnik's projector: its picture is compared with native in Palmtree Panic
-  only, and its destruction is observed natively there only; the hologram
-  animals draw nothing, Tidal Tempest's and Wacky Workbench's hologram animals
-  are not hosted, and Collision Chaos's ground hologram animation is
-  unverified.
-- Lost rings after a hit differ from native in R81A (from row 3343) and R81C
-  (from row 3968): Metallic Madness's Poh-Bee (`$2E`) is not hosted, so the
-  spilled rings take other slots and their slot-phased floor checks bounce
-  them on other rows. Whether rings collected in one time period stay
-  collected after a time warp is unmeasured (`ObjRing_Init` reads the earlier
-  periods' flags, Ring/Main.asm:96-113; the engine builds a new ring owner per
-  load). The spill when the hurting object runs before the spill's owner has
-  no native row.
+- Robotnik's projector picture and destruction are compared with native in
+  Palmtree Panic only. Wacky Workbench's hologram animals are hosted
+  ([PR #395](https://github.com/OpenGGF/OpenGGF/pull/395), merged).
+  [PR #408](https://github.com/OpenGGF/OpenGGF/pull/408) hosts Tidal Tempest's
+  projector holograms. Collision Chaos's
+  ground hologram animation remains unverified.
+- After [PR #397](https://github.com/OpenGGF/OpenGGF/pull/397) merged at
+  `a9547c71ac`, `TestCdRingNativeParity` matches the ring counter, placed-ring
+  (`$10`) positions, lost-ring (`$11`) counts, and slot identity for both types
+  on R81A, R81B and R81C. Hosting Metallic Madness's Poh-Bee (`$2E`)
+  resolved the earlier divergences at R81A row 3343 and R81C row 3968.
+  Whether rings collected in one period stay collected after a time warp is
+  unmeasured.
+  `ObjRing_Init` reads the earlier periods' flags (Ring/Main.asm:96-113).
+  The engine builds a new ring owner per load. The spill when the hurting
+  object runs before the spill's owner has no native row.
 - About 228 places in the disassembly call `DrawObject` just before the
   despawn check, which clears the on-screen bit so the object leaves by range
   alone; most engine objects read the previous frame's bit there and stay

@@ -86,6 +86,8 @@ public final class ObjMovingSpring extends CdObject implements ObjectVisualFacin
 
     /** sub_2082E2 (:80-97). */
     private void move() {
+        // sub_2082E2 (objects/spring.asm:80-97); ObjMovingSpring_Main (Spring/Main.asm:76-94).
+        if (flags().timeStopped()) return;
         y = (y + floorDistance()) & 0xFFFF;
         if (((settledY - y) & 0xFFFF) >= 0xC) xSpeed = -xSpeed;      // cmpi.w #$C,d0; bcs.s (:85-89)
         int position = ((x & 0xFFFF) << 16 | xSub) + (xSpeed << 8);  // MoveObject: x_speed << 8 onto the 16.16 X

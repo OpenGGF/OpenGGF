@@ -14,8 +14,8 @@ import java.util.function.ToIntFunction;
  *
  * <p>Routines (Mosqui/Main.asm:19-24): 0 init, 2 patrol, 4 animate until the dive animation's
  * {@code $FC}, 6 dive, 8 wait. Collision $2B (enemy, size $2B) stays on throughout.
- * {@code debugMode} (Main.asm:60-61) is not modelled; the dive sound {@code FM_A7}
- * (Main.asm:131-134) is not hosted. Shipped {@code FixBugs = 0}: the routines are modelled as assembled.
+ * {@code debugMode} (Main.asm:60-61) is not modelled. Shipped {@code FixBugs = 0}: the routines
+ * are modelled as assembled.
  */
 @com.openggf.level.objects.CameraRelativeDraw(com.openggf.level.objects.CameraRelativeDraw.Use.CULL_ONLY)
 public final class ObjMosqui extends PpzBadnik {
@@ -99,7 +99,8 @@ public final class ObjMosqui extends PpzBadnik {
         if (d1 > -8) return;                            // cmpi.w #-8,d1; bgt.s .End
         y = (y + d1 + 8) & 0xFFFF;                      // subi.w #-8,d1; add.w d1,oY(a0)
         routine += 2;
-        // tst.b oSprFlags(a0); bpl.s .End; FM_A7 (Mosqui/Main.asm:131-134): not hosted.
+        // ObjMosqui_Dive tests the retained draw flag before requesting FM_A7 (Mosqui/Main.asm:131-134).
+        if (renderFlagOnScreen()) services().playSfx(0xA7);
     }
 
     /** ObjMosqui_Wait (Mosqui/Main.asm:142-150): off screen, DespawnObject. */

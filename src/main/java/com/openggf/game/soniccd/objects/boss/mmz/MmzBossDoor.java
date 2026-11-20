@@ -14,9 +14,9 @@ import java.util.List;
  * boss.asm:344), clear {@code boss_door_flag} and slide apart 2 pixels a frame; at every 16-pixel column they
  * {@code PlaceBlock} block 0 over 12 rows from Y - $60, and despawn after 17 columns.
  *
- * <p>Not hosted: {@code PlaceBlock} (Level/Block Draw.asm:286) rewrites the stage's 16-pixel block entries in the
- * chunk RAM, a terrain write the engine reaches through {@code LevelMutationSurface}; the columns are counted and the
- * halves move, but the map is not changed (the boss lane reports it).
+ * <p>The transient foreground redraw is unhosted. {@code PlaceBlock} (r8/stage_draw_3c.asm:398-428,
+ * r8/stage_draw_3d.asm:398-428) draws into VDP plane A and leaves layout and collision data intact.
+ * Its visibility check skips off-screen blocks (r8/stage_draw_3c.asm:415-416).
  */
 final class MmzBossDoor extends MmzBossPiece {
     static final int ID = 0x3D;
@@ -86,7 +86,7 @@ final class MmzBossDoor extends MmzBossPiece {
                 deleteObject();                                   // jmp DespawnObject
                 return;
             }
-            // PlaceBlock of block 0 at (column, y - $60 + 16 * row), rows 0-11: not hosted (class comment).
+            // PlaceBlock would redraw plane A here without changing layout or collision.
         }
         x = (x + (left ? -2 : 2)) & 0xFFFF;
     }

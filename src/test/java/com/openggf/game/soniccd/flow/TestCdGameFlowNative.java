@@ -242,7 +242,7 @@ class TestCdGameFlowNative {
             var tt = h.timeTravel();
             tt.restore(new com.openggf.game.soniccd.timetravel.CdTimeTravel.Snapshot(CdTimeZone.PRESENT, false,
                     (byte) nat.hex(setup, "timeWarpDir"), nat.hex(setup, "timeWarpTimer"), nat.hex(setup, "timeWarp") != 0,
-                    null, false, false, 0, 0, false, 0, CdStagePayload.R11A, null));
+                    null, false, false, 0, 0, false, CdStagePayload.R11A, null));
             CdFlowHarness.Row atTrigger = null;
             for (int r = setup + 1; r <= restart; r++) {
                 int[] pad = nat.pad(r);
