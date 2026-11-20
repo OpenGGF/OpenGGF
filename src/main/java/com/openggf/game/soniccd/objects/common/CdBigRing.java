@@ -1,7 +1,7 @@
 package com.openggf.game.soniccd.objects.common;
 
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.soniccd.timetravel.CdTimeTravel;
+import com.openggf.game.soniccd.program.CdSceneCoordinator;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectVisualFacing;
@@ -9,6 +9,8 @@ import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
+
+import static com.openggf.game.soniccd.timetravel.CdTimeTravel.ALL_TIME_STONES;
 
 /**
  * Big ring, object $14 ({@code ObjBigRing}, Level/_Objects/Level End/Main.asm:429-562). With fewer than
@@ -48,8 +50,9 @@ public final class CdBigRing extends CdObject implements ObjectVisualFacing.NonD
             case 0 -> {
                 // ObjBigRing_Init (Level/_Objects/Level End/Main.asm:465-475).
                 // BigRingInit (objects/stage_end.asm:309-324).
-                var travel = CdTimeTravel.of(services().gameModule());
-                if ((travel != null && travel.timeStones() == CdTimeTravel.ALL_TIME_STONES) || timeAttackMode()) {
+                var module = services().gameModule();
+                var scenes = module == null ? null : module.getGameService(CdSceneCoordinator.class);
+                if (scenes != null && (scenes.timeStones() == ALL_TIME_STONES || scenes.timeAttackMode())) {
                     setDestroyed(true);
                     return;
                 }

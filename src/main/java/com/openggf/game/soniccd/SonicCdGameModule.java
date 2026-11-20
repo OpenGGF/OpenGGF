@@ -79,9 +79,12 @@ public final class SonicCdGameModule implements GameModule {
     private final com.openggf.game.soniccd.objects.common.CdFixedObjects fixedObjects =
             new com.openggf.game.soniccd.objects.common.CdFixedObjects();
     private final SonicCdZoneRegistry zoneRegistry = new SonicCdZoneRegistry();
+    /** Non-level programs: the IPX flow owner and its title, stage-select and not-hosted hosts. */
+    private final com.openggf.game.soniccd.program.CdSceneCoordinator scenes =
+            new com.openggf.game.soniccd.program.CdSceneCoordinator(this::disc);
     /** The campaign time owner (time-travel lane): period, warp, generator/projector, good future. */
     private final com.openggf.game.soniccd.timetravel.CdTimeTravel timeTravel =
-            new com.openggf.game.soniccd.timetravel.CdTimeTravel(this::timeAttackMode);
+            new com.openggf.game.soniccd.timetravel.CdTimeTravel(scenes::timeAttackMode, scenes::timeStones);
     /** {@code switchFlags} (Level/_Definitions.inc:336): written by switches, read by doors, fans and chains. */
     private final com.openggf.game.soniccd.objects.shared.SharedSwitchFlags switchFlags =
             new com.openggf.game.soniccd.objects.shared.SharedSwitchFlags();
@@ -108,14 +111,8 @@ public final class SonicCdGameModule implements GameModule {
                     () -> game == null ? null : game.currentLevel(), () -> game == null ? null : game.currentImage(),
                     this::disc);
 
-    /** Non-level programs: the IPX flow owner and its title, stage-select and not-hosted hosts. */
-    private final com.openggf.game.soniccd.program.CdSceneCoordinator scenes =
-            new com.openggf.game.soniccd.program.CdSceneCoordinator(this::disc);
     {
         scenes.bindTimeTravel(() -> timeTravel);
-    }
-    private boolean timeAttackMode() {
-        return scenes.timeAttackMode();
     }
 
     /** The death's game-over branch (lane FLOW2). */
