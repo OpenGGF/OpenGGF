@@ -4,6 +4,7 @@ import com.openggf.audio.AudioRequestObserver;
 import com.openggf.game.GameServices;
 import com.openggf.game.soniccd.level.CdLevel;
 import com.openggf.game.soniccd.objects.common.CdResults;
+import com.openggf.level.rings.LostRingObjectInstance;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.trace.TraceData;
@@ -126,6 +127,43 @@ class TestCdGameplaySoundCues {
             assertAll(
                     () -> assertEquals(expected, actual, "Sound requests at 99, 100, 101, 199, 200 and 201 rings"),
                     () -> assertEquals(lives + 2, GameServices.gameState().getLives()));
+        }
+    }
+
+    @Test
+    void lostRingPickupsRequestOnlyTheNativeCue() throws Exception {
+        TestEnvironment.resetAll();
+        try (var disc = CdDiscDataSource.open(CdTestMedia.usaCue())) {
+            var sonic = CdFixtureReplay.boot(config, disc, CdStagePayload.R11A);
+            var levels = GameServices.level();
+            CdFixtureReplay.releaseTitleCard(new com.openggf.tests.HeadlessTestRunner(sonic));
+            var level = levels.getLevelGamestate();
+            level.setRings(2);
+            levels.getRingManager().spawnLostRings(sonic, 2, 0);
+            assertEquals(0, level.getRings());
+            var lostRings = levels.getObjectManager().activeObjectsOfType(LostRingObjectInstance.class);
+            assertEquals(2, lostRings.size());
+            level.setRings(99);
+            int lives = GameServices.gameState().getLives();
+            List<SoundRequest> requests = new ArrayList<>();
+            GameServices.audio().setRequestObserver((kind, id) -> requests.add(new SoundRequest(kind, id)));
+
+            var awardingRing = lostRings.get(0);
+            awardingRing.markCollected(0, sonic);
+            awardingRing.update(1, sonic);
+            assertEquals(100, level.getRings());
+            assertEquals(lives + 1, GameServices.gameState().getLives());
+            assertEquals(List.of(new SoundRequest(AudioRequestObserver.RequestClass.MUSIC, 0x7A)),
+                    requests, "Lost-ring sound requests at 100 rings");
+
+            requests.clear();
+            var ordinaryRing = lostRings.get(1);
+            ordinaryRing.markCollected(1, sonic);
+            ordinaryRing.update(2, sonic);
+            assertEquals(101, level.getRings());
+            assertEquals(lives + 1, GameServices.gameState().getLives());
+            assertEquals(List.of(new SoundRequest(AudioRequestObserver.RequestClass.SFX, 0x95)),
+                    requests, "Lost-ring sound requests at 101 rings");
         }
     }
 
