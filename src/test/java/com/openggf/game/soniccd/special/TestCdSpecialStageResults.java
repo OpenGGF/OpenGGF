@@ -1,7 +1,14 @@
 package com.openggf.game.soniccd.special;
 
+import com.openggf.game.GameMode;
+import com.openggf.game.GameServices;
+import com.openggf.game.NativeGameStateOps;
 import com.openggf.game.soniccd.CdDiscDataSource;
+import com.openggf.game.soniccd.SonicCdGameModule;
+import com.openggf.tools.HeadlessGameBoot;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -68,6 +75,61 @@ class TestCdSpecialStageResults {
             frames++;
         }
         assertEquals(CdSpecialStageResults.FADE_IN_FRAMES + 8 * 60, frames);
+    }
+
+    @ParameterizedTest
+    @CsvSource({"248, 249", "250, 249", "255, 1"})
+    void specialStageAwardsTwoLivesToTheCampaignUsingTheDiscLimit(int startingLives, int expectedLives)
+            throws Exception {
+        try (var disc = CdSpecialNative.disc(); var boot = new HeadlessGameBoot(320, 224)) {
+            var module = new SonicCdGameModule();
+            var loop = boot.boot(disc, module, 0, 0);
+            var campaign = GameServices.gameState();
+            while (campaign.getLives() < startingLives) campaign.addLife();
+
+            loop.enterSpecialStage();
+            var provider = (CdSpecialStageProvider) module.getSpecialStageProvider();
+            // Direct entry has no campaign route to advance when the stage ends.
+            provider.onEnded(ignored -> { });
+            var stage = provider.session().stage();
+            stage.addRings(500); // The results award 10,000 native score units, crossing two thresholds.
+            stage.stageOver = true;
+
+            for (int frame = 0; frame < 120 && loop.getCurrentGameMode() != GameMode.SPECIAL_STAGE_RESULTS; frame++) {
+                loop.step();
+            }
+            var results = (CdSpecialStageResults) loop.getResultsScreen();
+            for (int frame = 0; frame < CdSpecialStageResults.FADE_IN_FRAMES; frame++) results.frame(false);
+            results.frame(true);
+
+            assertEquals(expectedLives, campaign.getLives(), "campaign lives after the special-stage tally");
+        }
+    }
+
+    @Test
+    void levelScoreOneUpWrapsTheLivesByte() throws Exception {
+        try (var disc = CdSpecialNative.disc(); var boot = new HeadlessGameBoot(320, 224)) {
+            boot.boot(disc, new SonicCdGameModule(), 0, 0);
+            var campaign = GameServices.gameState();
+            NativeGameStateOps.restoreLives(campaign, 255);
+
+            campaign.addScore(50_000);
+
+            assertEquals(0, campaign.getLives(), "AddPoints increments the lives byte");
+        }
+    }
+
+    @Test
+    void levelScoreOneUpCanPassTheSpecialStageLimit() throws Exception {
+        try (var disc = CdSpecialNative.disc(); var boot = new HeadlessGameBoot(320, 224)) {
+            boot.boot(disc, new SonicCdGameModule(), 0, 0);
+            var campaign = GameServices.gameState();
+            while (campaign.getLives() < 249) campaign.addLife();
+
+            campaign.addScore(50_000);
+
+            assertEquals(250, campaign.getLives(), "campaign lives after a level score 1-Up");
+        }
     }
 
     @Test

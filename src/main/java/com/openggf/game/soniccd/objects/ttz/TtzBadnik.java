@@ -31,7 +31,9 @@ abstract class TtzBadnik extends TtzObject
     protected int spriteFlip;
     protected int xSub;
     protected int ySub;
-    protected CdAnimator animator;
+    protected transient CdAnimator animator;
+    private final CdAnimator.StageRewind rewindAnimation =
+            new CdAnimator.StageRewind(() -> artProvider().image(), () -> animator, restored -> animator = restored);
     protected int mapFrame;
     protected boolean initialised;
 

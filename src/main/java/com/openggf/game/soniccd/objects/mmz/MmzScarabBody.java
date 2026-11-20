@@ -284,11 +284,11 @@ public final class MmzScarabBody extends MmzBadnik implements TouchResponseListe
         }
     }
 
-    /** sub_2069E8 (r8/player_object_collide.asm:sub_2069E8..loc_206A2C): the ordinary enemy touch. */
+    /** sub_2069E8 (r8/player_object_collide.asm:161-167): the ordinary enemy touch. */
     private void enemy(AbstractPlayableSprite sprite) {
-        var tt = CdTimeTravel.of(services().gameModule());
-        boolean safe = (tt != null && tt.warping()) || sprite.getInvincibleFrames() > 0 || sprite.getAnimationId() == 2;
-        if (!safe) {                                                 // sub_206AB2: HurtPlayer
+        boolean attacks = CdTimeTravel.starsActive(services().gameModule())
+                || sprite.getInvincibleFrames() > 0 || sprite.getAnimationId() == 2;
+        if (!attacks) {                                                 // sub_206AB2: HurtPlayer
             if (sprite.isHurt() || sprite.getDead() || sprite.getInvulnerableFrames() > 0) return;
             boolean hadRings = sprite.getRingCount() > 0;
             if (hadRings && !sprite.hasShield()) services().spawnLostRings(sprite, 0);

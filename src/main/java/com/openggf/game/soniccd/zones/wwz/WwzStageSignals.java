@@ -1,7 +1,5 @@
 package com.openggf.game.soniccd.zones.wwz;
 
-import com.openggf.sprites.playable.AbstractPlayableSprite;
-
 /**
  * The stage state Wacky Workbench's player checks read but do not own. Each method is
  * one RAM variable or flag that an unhosted owner writes; {@link #CLEAR} answers every
@@ -59,21 +57,8 @@ public interface WwzStageSignals {
         return false;
     }
 
-    /** {@code timeWarp}: a warp is in progress (Main.asm:379-380, 443-444). Owner: time travel. */
-    default boolean timeWarping() {
-        return false;
-    }
-
     /** {@code spawnMode == 2}: the player is returning from a warp (Main.asm:327-328). Owner: time travel. */
     default boolean warpSpawn() {
         return false;
-    }
-
-    /**
-     * {@code ObjSonic_CheckHangBar} stops a warp on grabbing a bar: {@code timeWarpTimer}
-     * and {@code timeWarp} clear, and {@code timeWarpDir} too when the timer had reached 90
-     * (Main.asm:344-350). Owner: time travel.
-     */
-    default void stopTimeWarp(AbstractPlayableSprite player) {
     }
 }

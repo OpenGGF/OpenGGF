@@ -13,12 +13,15 @@ import com.openggf.game.soniccd.objects.mmz.MmzLaser;
 import com.openggf.game.soniccd.objects.mmz.MmzSpikes;
 import com.openggf.game.soniccd.objects.mmz.MmzTrapDoor;
 import com.openggf.game.soniccd.objects.mmz.MmzMechaBu;
+import com.openggf.game.soniccd.objects.mmz.MmzPohBee;
 import com.openggf.game.soniccd.objects.mmz.MmzSpikeWall;
 import com.openggf.game.soniccd.objects.mmz.MmzSpinDisc;
 import com.openggf.game.soniccd.objects.mmz.MmzVanishPlatform;
 import com.openggf.game.soniccd.zones.mmz.MmzStageSignals;
+import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.physics.GroundSensor;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.HeadlessTestRunner;
@@ -27,8 +30,12 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -158,6 +165,73 @@ class TestMmzObjects {
         // timer to $199 and negates the speed, so every later call adds +$5000; 16 of them are exactly +5 pixels
         // (objects/r8/mecha_bu.asm:73-97).
         assertEquals(x + 5, bu.getX());
+    }
+
+    @ParameterizedTest
+    @CsvSource({"0, 16, 3, 98, 130, 128, 259, 9", "1, 11, 1, 82, 258, 128, 515, 3"})
+    void pohBeeFliesAndSwingsItsWeights(int subtype, int parts, int firstBob, int weightY,
+                                        int turnFrame, int turnX, int returnFrame, int endBob) throws Exception {
+        boot(CdStagePayload.R81A);
+        ObjectSpawn spawn = at(0x90, -0x90, 0x2E, subtype);
+        MmzPohBee bee = add(new MmzPohBee(spawn));
+        runner.stepIdleFrames(1);
+        List<Integer> samples = new ArrayList<>();
+        samples.add(pohBeeActors().size() - 1);
+        samples.add(bee.getX() - spawn.x());
+        samples.add(bee.getY() - spawn.y());
+        samples.add(bee.mapFrame());
+        runner.stepIdleFrames(3);
+        samples.add(bee.mapFrame());
+        runner.stepIdleFrames(60);
+        var weight = pohBeeActors().stream().filter(o -> o instanceof TouchResponseProvider p
+                && p.getCollisionFlags() == 0xAF).findFirst().orElseThrow();
+        samples.add(weight.getY() - spawn.y());
+        runner.stepIdleFrames(turnFrame - 64);
+        samples.add(bee.getX() - spawn.x());
+        runner.stepIdleFrames(returnFrame - turnFrame);
+        samples.add(bee.getX() - spawn.x());
+        samples.add(bee.getY() - spawn.y());
+
+        // loc_20DA38 (objects/r8/poh_bee.asm:81-108) and loc_20DB5E (objects/r8/poh_bee.asm:165-216).
+        // The long weight passes the quarter turn before call 64 and is swinging back upward.
+        assertEquals(List.of(parts, -1, firstBob, 0, 1, weightY, turnX, -1, endBob), samples);
+    }
+
+    @Test
+    void pohBeeAttackReplacesItsSlotAndRewindRecreatesTheChains() throws Exception {
+        boot(CdStagePayload.R81A);
+        MmzPohBee bee = add(new MmzPohBee(at(0x80, -0x60, 0x2E, 0)));
+        runner.stepIdleFrames(27);
+        var objects = GameServices.level().getObjectManager();
+        var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+        var snapshot = registry.capture();
+        int slot = bee.getSlotIndex();
+        runner.stepIdleFrames(40);
+        var forward = pohBeePositions();
+        int score = GameServices.gameState().getScore();
+        bee.onPlayerAttack(sonic, null);
+        runner.stepIdleFrames(1);
+        int replacement = objects.objectIdInSlot(slot);
+        int points = GameServices.gameState().getScore() - score;
+        int survivingParts = pohBeeActors().size();
+        registry.restore(snapshot);
+        runner.stepIdleFrames(40);
+
+        // loc_20DC18 (objects/r8/poh_bee.asm:230-239): the explosion ID retires every part.
+        assertEquals(List.of(0x18, 100, 0, forward),
+                List.of(replacement, points, survivingParts, pohBeePositions()));
+    }
+
+    private List<ObjectInstance> pohBeeActors() {
+        return GameServices.level().getObjectManager().getActiveObjects().stream()
+                .filter(o -> !o.isDestroyed() && o.getSpawn().objectId() == 0x2E)
+                .sorted(Comparator.comparingInt(o -> ((AbstractObjectInstance) o).getSlotIndex()))
+                .toList();
+    }
+
+    private List<List<Integer>> pohBeePositions() {
+        return pohBeeActors().stream().map(o -> List.of(((AbstractObjectInstance) o).getSlotIndex(),
+                o.getX(), o.getY(), o instanceof MmzPohBee body ? body.mapFrame() : -1)).toList();
     }
 
     @Test

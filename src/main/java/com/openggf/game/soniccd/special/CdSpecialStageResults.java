@@ -5,6 +5,7 @@ import com.openggf.game.LevelBackdropResultsScreen;
 import com.openggf.game.ResultsScreen;
 import com.openggf.game.internal.SpecialStageStartInput;
 import com.openggf.game.soniccd.program.CdProgramScreenRenderer;
+import com.openggf.game.soniccd.program.CdScorePolicy;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.Palette;
 
@@ -133,9 +134,8 @@ public final class CdSpecialStageResults implements ResultsScreen, LevelBackdrop
         int total = score + points;
         while (Integer.compareUnsigned(total, nextLifeScore) >= 0) {
             nextLifeScore += 5000;
-            lives++;
+            lives = CdScorePolicy.capSpecialStageLives(lives + 1);
             extraLives++;
-            if (lives >= 250) lives = 249;
         }
         score = total >= 1_000_000 ? 999_999 : total;
     }

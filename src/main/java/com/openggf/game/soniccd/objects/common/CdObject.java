@@ -1,5 +1,6 @@
 package com.openggf.game.soniccd.objects.common;
 
+import com.openggf.audio.GameSound;
 import com.openggf.game.solid.SolidExecutionFrames;
 import com.openggf.game.soniccd.audio.CdSoundRequests;
 
@@ -359,6 +360,8 @@ public abstract class CdObject extends AbstractObjectInstance {
             case 1000 -> 6;
             default -> 0xA;               // the sixteenth kill on: move.w #$A,oVar3E(a1)
         };
+        // Player_TouchEnemy .KillEnemy (Palmtree Panic/Player Object Collision.asm:174-175).
+        services().playSfx(GameSound.BADNIK_HIT);
         becomeExplosion(pointsIndex, layer, 1, fromBadnik);
     }
 

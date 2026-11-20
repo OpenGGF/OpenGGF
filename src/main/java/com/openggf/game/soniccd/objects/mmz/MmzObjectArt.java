@@ -138,6 +138,11 @@ public final class MmzObjectArt {
     /** TwinWalkerObject_0_Routine0: move.w #$318,obj.sprite_tile(a1) (objects/r8/twin_walker.asm:46-52). */
     public static final int TWIN_WALKER_TILE = 0x0318;
 
+    static final String POH_BEE_1 = "cd.mmz.pohBee1";
+    static final String POH_BEE_2 = "cd.mmz.pohBee2";
+    /** loc_20D918 (objects/r8/poh_bee.asm:21-22). */
+    static final int POH_BEE_TILE = 0x2455;
+
     public static final String SCARAB = "cd.mmz.scarab";
     /** ScarabObject_1_Routine0: move.w #$243F,obj.sprite_tile (objects/r8/scarab.asm:225-240). */
     public static final int SCARAB_TILE = 0x243F;
@@ -188,6 +193,8 @@ public final class MmzObjectArt {
         }
         if (MmzBumper.indexedIn(art.payload())) sheet(art, BUMPER, "bumperMappings", BUMPER_TILE);
         sheet(art, TWIN_WALKER, "twinWalkerMappings", TWIN_WALKER_TILE);
+        sheet(art, POH_BEE_1, "pohBeeMappings1", POH_BEE_TILE);
+        sheet(art, POH_BEE_2, "pohBeeMappings2", POH_BEE_TILE);
         sheet(art, SCARAB, "scarabMappings", SCARAB_TILE);
         sheet(art, BUZZSAW_HANDLE, "buzzsawHandleMappings", BUZZSAW_TILE);
         int moveSpring = MmzObjectCatalogue.offset(art.payload(), "moveSpringMappings");

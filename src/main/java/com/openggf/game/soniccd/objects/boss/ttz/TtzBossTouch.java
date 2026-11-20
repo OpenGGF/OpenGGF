@@ -1,6 +1,7 @@
 package com.openggf.game.soniccd.objects.boss.ttz;
 
 import com.openggf.game.soniccd.player.CdPlayerWater;
+import com.openggf.game.soniccd.timetravel.CdTimeTravel;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 /**
@@ -18,12 +19,12 @@ final class TtzBossTouch {
     private TtzBossTouch() { }
 
     /**
-     * sub_20730C and HurtPlayer (r4/player_object_collide.asm:208-270): no effect while invincible or while the
-     * hurt timer ({@code oPlayerHurt}, var_30) runs; otherwise the shared hurt (lost rings, or death without rings
-     * or shield) away from {@code source}. The time-warp gate ({@code warping}) is not hosted.
+     * sub_20730C (r4/player_object_collide.asm:208-224) checks the warp flag, invincibility and the hurt timer
+     * before HurtPlayer (r4/player_object_collide.asm:226-270) knocks Sonic away from the source.
      */
     static void hurt(AbstractPlayableSprite player, TtzBossPart source, int frameCounter) {
-        if (player.getInvincibleFrames() > 0 || player.getInvulnerableFrames() > 0 || player.getDead()) return;
+        if (CdTimeTravel.starsActive(source.objectServices().gameModule())
+                || player.getInvincibleFrames() > 0 || player.getInvulnerableFrames() > 0 || player.getDead()) return;
         boolean hadRings = player.getRingCount() > 0;
         if (hadRings && !player.hasShield()) source.objectServices().spawnLostRings(player, frameCounter);
         player.applyHurtOrDeath(source.getX(), false, hadRings);
