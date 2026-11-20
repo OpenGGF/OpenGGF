@@ -48,6 +48,11 @@ public final class CdTimeIcon extends CdObject implements FixedRuntimeObjectInst
 
     @Override
     public void update(int vIntRunCount, PlayableEntity player) {
+        // ObjTimePostTimeIcon (Level/_Objects/Monitor and Time Post/Main.asm:64-71).
+        if (timeAttackMode()) {
+            setDestroyed(true);
+            return;
+        }
         CdTimeTravel tt = CdTimeTravel.of(services().gameModule());
         int direction = tt == null ? 0 : tt.warpDirection();
         // ObjTimeIcon_Main: $12, then $13 unless timeWarpDir is negative.

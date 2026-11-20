@@ -81,7 +81,7 @@ public final class SonicCdGameModule implements GameModule {
     private final SonicCdZoneRegistry zoneRegistry = new SonicCdZoneRegistry();
     /** The campaign time owner (time-travel lane): period, warp, generator/projector, good future. */
     private final com.openggf.game.soniccd.timetravel.CdTimeTravel timeTravel =
-            new com.openggf.game.soniccd.timetravel.CdTimeTravel();
+            new com.openggf.game.soniccd.timetravel.CdTimeTravel(this::timeAttackMode);
     /** {@code switchFlags} (Level/_Definitions.inc:336): written by switches, read by doors, fans and chains. */
     private final com.openggf.game.soniccd.objects.shared.SharedSwitchFlags switchFlags =
             new com.openggf.game.soniccd.objects.shared.SharedSwitchFlags();
@@ -114,6 +114,10 @@ public final class SonicCdGameModule implements GameModule {
     {
         scenes.bindTimeTravel(() -> timeTravel);
     }
+    private boolean timeAttackMode() {
+        return scenes.timeAttackMode();
+    }
+
     /** The death's game-over branch (lane FLOW2). */
     private final com.openggf.game.soniccd.program.CdGameOverFlow gameOverFlow =
             new com.openggf.game.soniccd.program.CdGameOverFlow(scenes);

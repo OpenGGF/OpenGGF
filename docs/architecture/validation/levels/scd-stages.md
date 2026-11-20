@@ -44,6 +44,17 @@ records the original failures and loading correction. This bounded art check
 does not advance the route matrix; section-transition screenshots, broader
 viewport coverage and inherited rewind/lifecycle gaps remain unassessed.
 
+## Time Attack object rules
+
+`TestCdTimeAttackObjects` loads the USA disc for R11A and R31A, both with
+the IPX Time Attack selection and with the flag clear. It checks a placed
+time post, the reserved HUD icon, the 1-Up monitor, the special-stage ring,
+and the two Amy routines and intro spikes. It also checks when all seven
+Time Stones can force a good future. `TestCdTimeAttackFlow` covers entry from
+the title and restores the running mode through the existing rewind adapter.
+The campaign interaction with Amy in R11A still uses a placeholder. These
+checks cover the object rules in the two tested stage files.
+
 ## Playtest follow-up (2026-11-15)
 
 The [bounded validation record](../2026-11-15-sonic-cd-playtest-fixes.md)

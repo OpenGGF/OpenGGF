@@ -20,9 +20,7 @@ import java.util.List;
  * and is carried ({@code AmyRoseCaptured}, routine 4) beside him ({@code $8} ahead, $4 below). Every 32 frames she emits a
  * heart ({@link Heart}) above her leading shoulder. She and the intro end when {@code amy_captured} is set or the player passes X $4C0.
  *
- * <p>Not modelled: {@code AddGfxQueue} of PLC {@code $B} (art is resident, see {@link CczObjectArt}), Amy's palette load
- * ({@code AmyRoseLoadPalette}, objects/r3/intro.asm:478-496: sixteen words into palette line 1) and Time Attack, which need a
- * palette-write and a mode service this lane does not own.
+ * Time Attack takes the capture exit before the intro starts. The intro art is resident (see {@link CczObjectArt}).
  */
 @CameraRelativeDraw(CameraRelativeDraw.Use.CULL_ONLY)
 public final class CczAmyRose extends CczObject implements ObjectVisualFacing.Source {
@@ -43,9 +41,10 @@ public final class CczAmyRose extends CczObject implements ObjectVisualFacing.So
     public void update(int vIntRunCount, PlayableEntity player) {
         if (routine == 0 && CczStage.standDownFromIntro(this, services())) return;
         var level = cdLevel();
-        if (level != null && CczIntroState.of(level).amyCaptured()) {      // tst.b amy_captured; bne MetalSonicCaptureAmy
-            CczIntroState.of(level).restoreStagePalette(services());
-            setDestroyed(true);
+        // AmyRoseObject (objects/r3/intro.asm:248-252).
+        boolean timeAttack = timeAttackMode();
+        if (timeAttack || (level != null && CczIntroState.of(level).amyCaptured())) {
+            endIntro(level, timeAttack);
             return;
         }
         switch (routine) {
@@ -55,12 +54,24 @@ public final class CczAmyRose extends CczObject implements ObjectVisualFacing.So
         }
         if (isDestroyed()) return;
         if (player instanceof AbstractPlayableSprite sprite && (sprite.getCentreX() & 0xFFFF) >= 0x4C0) {
-            if (level != null) {
-                CczIntroState.of(level).captureAmy();                      // cmpi.w #$4C0,8(a1); bcc MetalSonicCaptureAmy
-                CczIntroState.of(level).restoreStagePalette(services());
-            }
-            setDestroyed(true);
+            endIntro(level, false);
         }
+    }
+
+    /** MetalSonicCaptureAmy (objects/r3/intro.asm:204-208). */
+    private void endIntro(com.openggf.game.soniccd.level.CdLevel level, boolean timeAttack) {
+        if (level != null) {
+            var intro = CczIntroState.of(level);
+            intro.captureAmy();
+            if (timeAttack) {
+                // PaletteTable (Level/Collision Chaos/Palette Data (Act 1 Present).asm:24-26) points to StagePalette.
+                int table = com.openggf.game.soniccd.level.CdStageCatalogue.entry(level.payload()).paletteTable();
+                services().updatePalette(1, provider().image().paletteEntryFirstLine(table, 4));
+            } else {
+                intro.restoreStagePalette(services());
+            }
+        }
+        setDestroyed(true);
     }
 
     /** AmyRoseInit (:271-296). */

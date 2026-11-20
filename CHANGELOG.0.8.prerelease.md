@@ -75,6 +75,8 @@ under the matching area heading; see the
   effects, CD audio and PCM sound are hosted. The FM loader also accepts verified
   Japanese and European discs containing the identical driver bank. The title's
   RAM DATA entry confirms a reset of Sonic CD's save to disc defaults.
+  Time Attack follows the disc's object rules for time posts, the HUD time icon,
+  1-Up monitors, the special-stage ring and the Collision Chaos intro.
   Clearing Special Stage 8 opens an OpenGGF acknowledgement with the disc's
   ending music and a return to the title.
   Visual Mode plays the opening, both endings and the silent Pencil Test

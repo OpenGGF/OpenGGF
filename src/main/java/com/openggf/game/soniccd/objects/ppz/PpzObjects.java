@@ -48,12 +48,11 @@ public final class PpzObjects implements CdObjectRegistration {
                 (spawn, r) -> new PpzSwing(spawn));
         // --- end ppz: routes A2 ---
         // $13 is the checkpoint in the Present indexes and ObjNull in the others (Palmtree Panic/Object Index (Act 1 Past).asm:26);
-        // $2F is Amy Rose in Act 1 Present (unhosted) and ObjNull in every other index (:54). ObjNull deletes itself
+        // $2F is Amy Rose in Act 1 Present and ObjNull in every other index (:54). ObjNull deletes itself
         // (ObjNull, Palmtree Panic/Object Index (Act 1 Past).asm:77-79).
         registrar.object(0x13, "Null", p -> com.openggf.game.soniccd.objects.art.CdObjectCatalogue.entry(p).offset("checkpointId") != 0x13,
                 (spawn, r) -> new com.openggf.game.soniccd.objects.common.CdNullObject(spawn));
-        registrar.object(0x2F, "Null", p -> p != com.openggf.game.soniccd.CdStagePayload.R11A,
-                (spawn, r) -> new com.openggf.game.soniccd.objects.common.CdNullObject(spawn));
+        registrar.object(0x2F, "Amy Rose", (spawn, r) -> new PpzAmyRose(spawn));
     }
 
     @Override

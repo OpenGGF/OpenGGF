@@ -17,7 +17,7 @@ import java.util.List;
  * X radius + 16 by Y radius + 32, overlaps its centre: then it sets {@code specialStage}, moves the
  * player 336 pixels right of the camera, stops it, forces Right ({@code ctrlLocked} bit 0,
  * {@code playerCtrlHold} $808), sets {@code scrollLock} and spawns the flash (subtype 1, tile $3EF,
- * Ani_BigRingFlash then delete). Time stones and Time Attack are other lanes' state: none held.
+ * Ani_BigRingFlash then delete).
  */
 public final class CdBigRing extends CdObject implements ObjectVisualFacing.NonDirectional {
     /** cmpi.w #50,rings (Level End/Main.asm:432). */
@@ -45,7 +45,11 @@ public final class CdBigRing extends CdObject implements ObjectVisualFacing.NonD
         if (state == null || state.getRings() < RING_THRESHOLD) return;   // LevelEndDespawn only
         switch (routine) {
             case 0 -> {
-                // ObjBigRing_Init (Level End/Main.asm:465-485).
+                // ObjBigRing_Init (Level/_Objects/Level End/Main.asm:465-475).
+                if (timeAttackMode()) {
+                    setDestroyed(true);
+                    return;
+                }
                 routine = 2;
                 tileWord = CommonObjectArt.BIG_RING_TILE;
                 width = 0x20;
