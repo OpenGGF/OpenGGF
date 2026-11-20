@@ -100,7 +100,8 @@ under the matching area heading; see the
   for their relative level. The time-warp stars animate from the disc in every
   stage, including Tidal Tempest, and Robotnik's projector
   can be destroyed in the Past. Both Palmtree Panic Past acts draw its flying
-  and ground hologram animals from the disc.
+  and ground hologram animals from the disc. In both Tidal Tempest Past acts,
+  two hologram animals circle the projector and vanish when Sonic shuts it down.
   Accuracy is measured against native recordings made on an emulator running
   the USA disc: 26 of 28 full-act routes (start to signpost) equal native on
   every compared field to their end (146,390 of 149,633 rows), and 68 of 70

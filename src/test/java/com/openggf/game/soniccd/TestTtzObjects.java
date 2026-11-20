@@ -14,6 +14,7 @@ import com.openggf.game.session.SessionManager;
 import com.openggf.game.soniccd.level.CdLevel;
 import com.openggf.game.soniccd.objects.art.CdObjectArtProvider;
 import com.openggf.game.soniccd.objects.common.CdTimeStars;
+import com.openggf.game.soniccd.objects.projector.CdProjector;
 import com.openggf.game.soniccd.objects.ttz.*;
 import com.openggf.game.soniccd.player.CdSonicAnimation;
 import com.openggf.game.soniccd.release.CdRetailReleases;
@@ -38,6 +39,9 @@ import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.nio.file.Path;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -117,6 +121,118 @@ class TestTtzObjects {
 
     private int floorDistance(AbstractObjectInstance o, int yRadius) {
         return ObjectTerrainUtils.checkFloorDist(o.getX(), o.getY(), yRadius).distance();
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = CdStagePayload.class, names = {"R41B", "R42B"})
+    void pastProjectorsSpawnBothAnimalForms(CdStagePayload payload) throws Exception {
+        CdProjector projector = bootWithProjector(payload);
+        assertEquals(List.of(
+                new AnimalPosition(projector.getX() - 0x4C, projector.getY() - 0x1C, 5),
+                new AnimalPosition(projector.getX() - 0x54, projector.getY() - 0x11, 5)),
+                positions());
+    }
+
+    @Test
+    void projectorAnimalsMatchNativePositionsAcrossAnOrbit() throws Exception {
+        Path movie = CdTestMedia.nativeFile("rehost-long/R41B/movie.bk2");
+        Path trace = CdTestMedia.nativeFile("rehost-long/R41B/trace/physics.csv").getParent();
+        // Read-only BizHawk 2.11 playback of this movie. Slots 82 and 83, level frames 1750 through 1879.
+        record NativeSample(int row, AnimalPosition first, AnimalPosition second) { }
+        List<NativeSample> samples = List.of(
+                new NativeSample(1844, new AnimalPosition(0x0884, 0x0558, 5), new AnimalPosition(0x087c, 0x0563, 5)),
+                new NativeSample(1846, new AnimalPosition(0x08a4, 0x0558, 5), new AnimalPosition(0x0888, 0x0572, 5)),
+                new NativeSample(1848, new AnimalPosition(0x08a4, 0x0559, 5), new AnimalPosition(0x088a, 0x0571, 5)),
+                new NativeSample(1850, new AnimalPosition(0x08a4, 0x055a, 5), new AnimalPosition(0x088b, 0x0571, 5)),
+                new NativeSample(1888, new AnimalPosition(0x0892, 0x0566, 5), new AnimalPosition(0x089c, 0x0564, 3)),
+                new NativeSample(1889, new AnimalPosition(0x0890, 0x0567, 5), new AnimalPosition(0x089c, 0x0563, 3)),
+                new NativeSample(1897, new AnimalPosition(0x0884, 0x0568, 5), new AnimalPosition(0x089a, 0x055d, 3)),
+                new NativeSample(1928, new AnimalPosition(0x0864, 0x0559, 3), new AnimalPosition(0x0871, 0x0554, 3)),
+                new NativeSample(1929, new AnimalPosition(0x0864, 0x0558, 3), new AnimalPosition(0x0870, 0x0554, 3)),
+                new NativeSample(1954, new AnimalPosition(0x0876, 0x054a, 3), new AnimalPosition(0x085c, 0x0562, 5)),
+                new NativeSample(1955, new AnimalPosition(0x0878, 0x0549, 3), new AnimalPosition(0x085c, 0x0563, 5)),
+                new NativeSample(1963, new AnimalPosition(0x0884, 0x0548, 3), new AnimalPosition(0x085f, 0x0569, 5)),
+                new NativeSample(1994, new AnimalPosition(0x08a4, 0x0557, 5), new AnimalPosition(0x0887, 0x0572, 5)),
+                new NativeSample(1995, new AnimalPosition(0x08a4, 0x0558, 5), new AnimalPosition(0x0888, 0x0572, 5)));
+        var pending = new ArrayDeque<>(samples);
+        try (CdDiscDataSource source = CdDiscDataSource.open(CdTestMedia.usaCue())) {
+            var fixture = new CdFixtureReplay.Fixture(CdStagePayload.R41B, trace, movie);
+            CdFixtureReplay.replay(source, tempDir, fixture, samples.getLast().row(), false, -1, -1, row -> {
+                var sample = pending.peek();
+                if (sample == null || row != sample.row()) return;
+                assertEquals(List.of(sample.first(), sample.second()), positions(), "native R41B row " + row);
+                pending.remove();
+            });
+        }
+        assertTrue(pending.isEmpty(), "all native samples were reached");
+    }
+
+    @Test
+    void projectorAnimalsRetireWhenTheProjectorShutsDown() throws Exception {
+        var projector = bootWithProjector(CdStagePayload.R41B);
+        hitProjector(projector);
+        assertTrue(projector.childrenInvalid());
+        assertEquals(List.of(), positions());
+    }
+
+    @Test
+    void rewindAcrossProjectorDestructionRestoresTheAnimalsAndTheirMotion() throws Exception {
+        var projector = bootWithProjector(CdStagePayload.R41B);
+        runner.stepIdleFrames(31);
+        var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+        var snapshot = registry.capture();
+        var captured = hologramState();
+        assertEquals(2, captured.size());
+        var forward = new ArrayList<List<AnimalFrame>>();
+        for (int frame = 0; frame < 40; frame++) {
+            runner.stepIdleFrames(1);
+            forward.add(hologramState());
+        }
+        hitProjector(projector);
+        runner.stepIdleFrames(160);
+        assertTrue(projector.isDestroyed());
+        assertEquals(List.of(), hologramState());
+        registry.restore(snapshot);
+        assertEquals(captured, hologramState(), "the removed pair returns in its saved slots");
+        for (int frame = 0; frame < forward.size(); frame++) {
+            runner.stepIdleFrames(1);
+            assertEquals(forward.get(frame), hologramState(), "frame " + frame + " after restoration");
+        }
+    }
+
+    private CdProjector bootWithProjector(CdStagePayload payload) throws Exception {
+        boot(payload);
+        var projector = add(new CdProjector(spawn(sonic.getCentreX() + 120, sonic.getCentreY(), 0x52, 0)));
+        runner.stepIdleFrames(1);
+        return projector;
+    }
+
+    private void hitProjector(CdProjector projector) {
+        sonic.setAnimationId(CdSonicAnimation.ROLL);
+        projector.onTouchResponse(sonic, null, 0);
+        runner.stepIdleFrames(2);
+    }
+
+    private record AnimalPosition(int x, int y, int layer) { }
+
+    private List<TtzAnimal> holograms() {
+        return live(0x2F).stream()
+                .filter(o -> (o.getSpawn().subtype() & 0x80) != 0)
+                .map(TtzAnimal.class::cast)
+                .sorted(Comparator.comparingInt(o -> o.getSpawn().subtype()))
+                .toList();
+    }
+
+    private List<AnimalPosition> positions() {
+        return holograms().stream()
+                .map(o -> new AnimalPosition(o.getX(), o.getY(), o.getPriorityBucket())).toList();
+    }
+
+    private record AnimalFrame(int slot, int x, int y, String pose) { }
+
+    private List<AnimalFrame> hologramState() {
+        return holograms().stream()
+                .map(o -> new AnimalFrame(o.getSlotIndex(), o.getX(), o.getY(), o.traceDebugDetails())).toList();
     }
 
     @ParameterizedTest
