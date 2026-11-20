@@ -102,8 +102,8 @@ class TestCdRingNativeParity {
     @ParameterizedTest(name = "{0}: {2}")
     @CsvSource({
             "R11A, 4220, exact, -1", "R11B, 3171, positions, 1600", "R11C, 5790, exact, -1", "R12A, 4244, exact, -1",
-            "R31A, 5290, positions, 2836", "R31B, 8241, positions, 5488", "R31C, 6995, positions, 4098",
-            "R32A, 6682, positions, 1756", "R41A, 5449, positions, 918", "R41B, 4721, positions, 292",
+            "R31A, 5290, exact, -1", "R31B, 8241, positions, 5682", "R31C, 6995, exact, -1",
+            "R32A, 6682, exact, -1", "R41A, 5449, positions, 918", "R41B, 4721, positions, 292",
             "R41C, 6013, exact, -1", "R42A, 4286, positions, 1196", "R51A, 4756, exact, -1", "R51B, 5494, exact, -1",
             "R51C, 7151, exact, -1", "R52A, 4772, positions, 2202", "R61A, 4892, exact, -1",
             "R61B, 5449, positions, 2749", "R61C, 6767, positions, 5412", "R62A, 4787, exact, -1",
