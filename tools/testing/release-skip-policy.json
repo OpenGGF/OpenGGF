@@ -2954,6 +2954,34 @@
       "note": "user's Sonic CD disc"
     },
     {
+      "match": "com.openggf.game.soniccd.TestSonicCdCommonObjects2#firstBadnikDisplaysOneHundredOnTheHud",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestSonicCdCommonObjects2.java:328",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestSonicCdCommonObjects2#levelScoreAwardsOneUpAtFiftyThousandPoints",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestSonicCdCommonObjects2.java:357",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestSonicCdCommonObjects2#actResultsTallyAddsBothBonusesInPoints",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestSonicCdCommonObjects2.java:368",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestSonicCdCommonObjects2#specialStageAwardCrossesTheCampaignsFiftyThousandPointThreshold",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestSonicCdCommonObjects2.java:377",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
       "match": "com.openggf.game.soniccd.TestSonicCdCommonObjects2#shieldAndStarsUseTheSharedPowerUpsWithCdArt",
       "category": "optional-fixture",
       "evidence": "src/test/java/com/openggf/game/soniccd/TestSonicCdCommonObjects2.java:240",

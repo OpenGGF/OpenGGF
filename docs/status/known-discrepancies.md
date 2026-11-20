@@ -241,6 +241,11 @@ the disc, so they are not modelled:
   `[$19CE, $1A4E)` in `THANKS_M.MMD;1`. The contact sheet uses OpenGGF menu
   chrome and leaves the native composition, object and palette animations,
   fades, and exit sequence unimplemented.
+- **Comin' Soon disc preview.** The stage-select Comin' Soon row opens a
+  read-only contact sheet instead of running `COME__.MMD;1`. It shows the
+  file's 150 tiles at `[$02D8, $07DC)` in declaration order with the palette
+  at `$02B8`, using OpenGGF menu chrome. Back returns to the title. The native
+  composition and fades are not implemented.
 - **Disc drive seeks: the video reads estimated from emulator timing in `FAST`
   and `PROFILED`, not in `NONE`.** The video player waits for the BIOS read that
   `ReadFMVSectors` (CD System Program/SP.asm:720-746) starts; the seek before
