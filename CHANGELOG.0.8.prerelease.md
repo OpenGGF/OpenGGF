@@ -111,9 +111,11 @@ under the matching area heading; see the
   Tidal Tempest boss missile. The stars also protect Sonic from Wacky
   Workbench's freezer, electric beams and sparks, and let him attack Metallic
   Madness's scarab from its vulnerable side. Grabbing a Wacky Workbench hang
-  bar ends star protection and resets the warp timer. Robotnik's projector
-  can be destroyed in the Past. Both Palmtree Panic Past acts draw its flying
-  and ground hologram animals from the disc.
+  bar ends star protection and resets the warp timer. Robotnik's projectors can be destroyed in the
+  Past. In the Past acts of Palmtree Panic and Wacky Workbench, the projectors'
+  flying and ground hologram animals use art from the disc.
+  Wacky Workbench's layout animals fly or hop after the projector is destroyed
+  and in the Good Future.
   Accuracy is measured against native recordings made on an emulator running
   the USA disc: 26 of 28 full-act routes (start to signpost) equal native on
   every compared field to their end (146,390 of 149,633 rows), and 68 of 70
