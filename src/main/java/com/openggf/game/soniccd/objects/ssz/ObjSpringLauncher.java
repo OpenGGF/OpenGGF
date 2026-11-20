@@ -1,8 +1,13 @@
 package com.openggf.game.soniccd.objects.ssz;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.RewindCapturedReference;
+import com.openggf.game.rewind.RewindStateful;
+import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectVisualFacing;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.physics.Direction;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.NativePositionOps;
@@ -38,7 +43,7 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
  * and delete themselves ({@code oVar3E}, :6-8, :31-52).
  */
 @com.openggf.level.objects.CameraRelativeDraw(com.openggf.level.objects.CameraRelativeDraw.Use.CULL_ONLY)
-public final class ObjSpringLauncher extends SszObject implements ObjectVisualFacing.NonDirectional {
+public final class ObjSpringLauncher extends SszObject implements ObjectVisualFacing.NonDirectional, RewindRecreatable {
     /** byte_20BC4E: heading -> spring sheet (0 horizontal, 1 vertical, 2 diagonal), scddisasm/src/objects/r7/launch.asm:226-236. */
     private static final int[] SHEET = {2, 0, 2, 1, 2, 0, 2, 1, 2, 0};
     /** unk_20BC64, unk_20BC6E, unk_20BC78: heading -> sprite flip bits per subtype (:243-277). */
@@ -83,7 +88,8 @@ public final class ObjSpringLauncher extends SszObject implements ObjectVisualFa
     private static final int TILE_ARM_ODD = SszObjectArt.SPRING_TILE_A;
     private static final int TILE_ARM_EVEN = SszObjectArt.SPRING_TILE_B;
 
-    private ObjSpringLauncher parent;
+    private final ObjSpringLauncher parent;
+    @RewindCapturedReference(reason = "The launcher gates and parent drive the captured spring arm")
     private ObjSpringLauncher arm;
     private ObjSpringLauncher gateB;
     private ObjSpringLauncher gateC;
@@ -99,20 +105,39 @@ public final class ObjSpringLauncher extends SszObject implements ObjectVisualFa
     private boolean deleteFlag;
     private boolean visible = true;
     private String sheet = SszObjectArt.LAUNCH;
-    private SszAnimator animator;
+    private final LauncherAnimator animator = new LauncherAnimator();
+
+    private static final class LauncherAnimator extends SszAnimator implements RewindStateful<SszAnimator.State> {
+        @Override public State captureRewindStateValue() { return captureScriptState(); }
+        @Override public void restoreRewindStateValue(State state) { restoreScriptState(state); }
+    }
 
     /** A launcher placed in the layout. */
     public ObjSpringLauncher(ObjectSpawn spawn) {
-        super(spawn, "Spring launcher");
-        this.subtype = spawn.subtype();
+        this(spawn, null, 0);
     }
 
     private ObjSpringLauncher(ObjectSpawn spawn, ObjSpringLauncher parent, int routine) {
         super(spawn, "Spring launcher");
         this.parent = parent;
         this.routine = routine;
-        this.subtype = parent.subtype;
-        this.originX = parent.x;
+        this.subtype = spawn.subtype();
+        this.originX = spawn.x();
+    }
+
+    @Override
+    public ObjSpringLauncher recreateForRewind(RewindRecreateContext context) {
+        return new ObjSpringLauncher(context.spawn(), context.capturedParent(ObjSpringLauncher.class), 0);
+    }
+
+    @Override
+    protected void afterGenericRewindStateRestored(RewindCaptureContext context) {
+        if (!initialised || routine < 2 || routine > 8) return;
+        var provider = artProvider();
+        int table = routine == 2
+                ? SszObjectCatalogue.entry(provider.payload()).launchAnimations()
+                : provider.entry().springAnimations();
+        animator.bindScript(provider.image(), table);
     }
 
     @Override protected String sheetKind() { return sheet; }
@@ -135,7 +160,7 @@ public final class ObjSpringLauncher extends SszObject implements ObjectVisualFa
     @Override
     public void update(int vIntRunCount, PlayableEntity entity) {
         AbstractPlayableSprite player = entity instanceof AbstractPlayableSprite p ? p : null;
-        if (routine >= 4 && deleteFlag) {                    // :4-8
+        if (routine >= 4 && (deleteFlag || parent == null)) {                    // :4-8
             setDestroyed(true);
             return;
         }
@@ -174,7 +199,7 @@ public final class ObjSpringLauncher extends SszObject implements ObjectVisualFa
         width = 8;
         yRadius = 8;
         mapFrame = 1;
-        animator = SszObjectArt.animator(provider, SszObjectCatalogue.Entry::launchAnimations, 0);
+        animator.bindScript(provider.image(), SszObjectCatalogue.entry(provider.payload()).launchAnimations());
         initialised = true;
         if (subtype >= 2) {                                  // :80-87
             state = subtype - 1;
@@ -186,9 +211,9 @@ public final class ObjSpringLauncher extends SszObject implements ObjectVisualFa
         int[] routines = {4, 0xA, 0xC};
         ObjSpringLauncher[] made = new ObjSpringLauncher[3];
         for (int i = 0; i < 3; i++) {
-            ObjSpringLauncher child = new ObjSpringLauncher(new ObjectSpawn(x, y, spawn.objectId(), subtype, 0, false, 0),
-                    this, routines[i]);
-            objects.addDynamicObjectAfterCurrent(child);     // jsr SpawnObjectAfter
+            int childRoutine = routines[i];
+            var childSpawn = new ObjectSpawn(x, y, spawn.objectId(), subtype, 0, false, 0);
+            var child = spawnChild(() -> new ObjSpringLauncher(childSpawn, this, childRoutine)); // loc_20BAFE (objects/r7/launch.asm:107-149)
             if (child.isDestroyed()) {                       // the room check of :89-96: DeleteObject
                 for (int j = 0; j < i; j++) made[j].setDestroyed(true);
                 setDestroyed(true);
@@ -215,7 +240,8 @@ public final class ObjSpringLauncher extends SszObject implements ObjectVisualFa
             yRadius = 0x20;
         }
         if (index == 0) {
-            animator = new SszAnimator(artProvider().image(), artProvider().entry().springAnimations(), 0);
+            var provider = artProvider();
+            animator.bindScript(provider.image(), provider.entry().springAnimations());
         }
     }
 
@@ -442,7 +468,7 @@ public final class ObjSpringLauncher extends SszObject implements ObjectVisualFa
     }
 
     /** The parent's heading (its script index, {@code obj.anim_index}). */
-    public int parentHeading() { return animator == null ? 0 : animator.animFrame(); }
+    public int parentHeading() { return animator.animFrame(); }
 
     public int heldFramesLeft() { return timer; }
 }
