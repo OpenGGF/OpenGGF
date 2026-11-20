@@ -371,16 +371,18 @@ fixes noted below. The order is not a priority order.
   fixture, and 14 of those (the act 3 stages) also have boss movies. No
   complete-run recording exists. Three routes (R81B, R81C, R82A) have no
   act-end assertion; R42A's is asserted through its R43D handoff.
-- 38 of 70 stages place an object ID the engine does not host (pinned in
+- 16 of 70 stages place an object ID the engine does not host (pinned in
   `TestCdUnhostedObjectCensus`; 54 before Robotnik's projector was hosted).
-- Robotnik's projector: its picture is compared with native in Palmtree Panic
-  only, and its destruction is observed natively there only; the hologram
-  animals draw nothing, Tidal Tempest's and Wacky Workbench's hologram animals
-  are not hosted, and Collision Chaos's ground hologram animation is
-  unverified.
+- Robotnik's projector picture and destruction are compared with native in
+  Palmtree Panic only. Wacky Workbench's hologram animals are hosted
+  ([PR #395](https://github.com/OpenGGF/OpenGGF/pull/395), merged). Tidal
+  Tempest's projector holograms are in open
+  [PR #408](https://github.com/OpenGGF/OpenGGF/pull/408). Collision Chaos's
+  ground hologram animation remains unverified.
 - After [PR #397](https://github.com/OpenGGF/OpenGGF/pull/397) merged at
-  `a9547c71ac`, `TestCdRingNativeParity` pins exact lost-ring counts, positions
-  and slots on R81A, R81B and R81C. Hosting Metallic Madness's Poh-Bee (`$2E`)
+  `a9547c71ac`, `TestCdRingNativeParity` matches the ring counter, placed-ring
+  (`$10`) positions, lost-ring (`$11`) counts, and slot identity for both types
+  on R81A, R81B and R81C. Hosting Metallic Madness's Poh-Bee (`$2E`)
   resolved the earlier divergences at R81A row 3343 and R81C row 3968.
   Whether rings collected in one period stay collected after a time warp is
   unmeasured.

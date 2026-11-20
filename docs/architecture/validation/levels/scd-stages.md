@@ -117,7 +117,7 @@ diverging row and the frontier test's cause label (a guess, not a diagnosis).
 | R41D | none | none | green | |
 | R42A | **green** 6,411 | asserted | green | All three break-pole grips, underwater `$37` damage, hurt recovery and signpost match. Results exit on row 6411 and load R43D |
 | R42B, R42C, R42D | none | none | green | |
-| R43C, R43D | boss movies | partial | green | Chase equal in both futures. Fight player and camera match through row 5959. Capsule and act exit remain unverified. |
+| R43C, R43D | boss movies | partial | green | Chase matches in both futures. Fight player and camera match through row 5959, before the engine misses water entry at row 5960. Slot parity stops at the first bubble pop, which ends a frame late in the engine. Capsule release is recorded natively and unverified in the engine. |
 | R51A | **green** 4,756 | asserted | green | |
 | R51B | **green** 5,494 | asserted | **green** 569 | The conveyor switches to its warp step on the trigger frame |
 | R51C | **green** 7,151 | asserted | green | |
@@ -282,8 +282,10 @@ and parity for the original `SPEEND.MMD` credits presentation remain open.
   In R83C and R83D, record camera positions and foreground tiles from before
   the door trigger through the slide and the next camera redraw. Use the
   visible lifetime of the cleared columns to specify an engine render operation.
-- **Palmtree Panic campaign Amy Rose.** R11A object `$2F` remains a
-  placeholder (`ObjAmyRose`, Level/Palmtree Panic/Objects/Amy Rose/Main.asm:7-26).
+- **Palmtree Panic campaign Amy Rose.** R11A object `$2F` (`ObjAmyRose`,
+  Level/Palmtree Panic/Objects/Amy Rose/Main.asm:7-26). Not hosted. The
+  implementation unit was declined by the assigned agent. The user decides
+  whether to assign it elsewhere.
   Start R11A in campaign mode and stay in the Present. Record Sonic approaching
   Amy near the act end, her grabbing Sonic, Sonic breaking free, and Amy
   leaving. Include Amy and heart slots, Sonic's motion, and the palette before
@@ -298,11 +300,17 @@ and parity for the original `SPEEND.MMD` credits presentation remain open.
   and palette-cycle timers at completed level frames. Record every VBlank
   in R63C or R63D from the final hit through the capsule spawn. Capture the
   palette and object-pass progress to verify the fade steps and held updates.
+
+The three screen items below stay parked until native picture sequences
+are available to certify parity. Each needs a visual review against its
+capture before it can close.
+
 - **Pencil Test playback.** Visual Mode plays all 840 picture banks. The
-  native border, palette fades and closing sequence remain open.
-  Capture native frames from entry through exit and use the program's disc
-  data for the border and palettes. See `Start` and `MainLoop`
-  (FMV/Main (Pencil Test).asm:91-98, 118-137).
+  stream has no measured seek and uses `CdFmvStreamer.SEEK_VINTS` (20 V-INTs).
+  Capture native frames from entry through exit, including the border,
+  palette fades and closing sequence. Use the program's disc data for
+  the border and palettes. See `Start` (FMV/Main (Pencil Test).asm:71-98)
+  and `MainLoop` (FMV/Main (Pencil Test).asm:118-137).
 - **Thank You presentation.** Visual Mode opens an archive contact sheet
   after the good ending. Capture native frames from entry through the
   composition, animations, fades and exit. Use the program's
@@ -311,20 +319,26 @@ and parity for the original `SPEEND.MMD` credits presentation remain open.
 - **Comin' Soon presentation.** Stage select opens an archive contact
   sheet. Capture the native composition and palette changes through the
   return to title, and use the graphics, maps and palette in `COME__.MMD;1`.
-  See `Start` and `VInterrupt` (Comin Soon/Main.asm:49-150).
+  See `Start` (Comin Soon/Main.asm:49-118) and
+  `VInterrupt` (Comin Soon/Main.asm:119-156).
 
-## Scheduled Sonic CD fixes
+## Open Sonic CD fixes (owned)
 
-- **Recorded-input pause audio (open gap).** The engine's recorded-input
-  pause omits the music pause requests. `PauseMusic` selects PCM for
-  ordinary Past music and CDDA otherwise, including Past invincibility
-  and speed shoes (Level/Main.asm:620-643).
-- **Extra-life ring sound (open gap).** Develop requests the ordinary
-  pickup cue and has no YES voice request for the ring award.
-  [PR #399](https://github.com/OpenGGF/OpenGGF/pull/399) adds the YES voice.
-  The shared collector still requests the ordinary pickup cue on an
-  award. Native `CollectRing .GainLife` requests only `SCMD_YESSFX`
-  (Level/_Objects/Ring/Main.asm:290-312).
+- **Recorded-input pause audio.** An open fix unit owns this gap (PR pending).
+  The engine's recorded-input pause omits the music pause requests.
+  `PauseMusic` selects PCM for ordinary Past music and CDDA otherwise,
+  including Past invincibility and speed shoes (Level/Main.asm:620-643).
+- **Extra-life ring sound.** The disc's `CollectRing .GainLife` requests only
+  `SCMD_YESSFX` (Level/_Objects/Ring/Main.asm:290-312). The engine's shared
+  collector also plays the ordinary pickup cue. A fix unit following
+  [PR #399](https://github.com/OpenGGF/OpenGGF/pull/399), which adds the YES
+  voice, owns the pickup cue fix.
+- **R43C and R43D boss fight.** Open fix, owned by the Sonic CD gap program.
+  At row 5960 the native player enters the water and the engine misses the
+  entry, ending player and camera parity. Boss slot parity stops at the first
+  bubble pop because the engine ends its animation one frame late. The
+  existing native movies cover both differences and capsule release.
+  [`TestTtzBossNative`](../../../../src/test/java/com/openggf/game/soniccd/TestTtzBossNative.java#L39-L84).
 
 ## Unreachable in shipped data
 
@@ -345,7 +359,7 @@ with the recorded rows or audio and pictures needed by the check.
 | Campaign endings | Start before the final fight on the campaign route in R83C with all seven Time Stones or all seven good futures secured by the clear. Repeat in R83D with neither set complete. Win both fights by controller input and let each ending finish. | Final stage exit, saved progress flags, ending selection, full video and audio, credits, and return to the title. `GameDone` selects the ending (CD Initial Program/IPX.asm:301-326). |
 | Full campaign | Cold boot with empty backup RAM, select a new game, and play from R11A through the R83 clear. Use ordinary act exits and include a time warp and a giant-ring special-stage return. | One continuous movie with each stage entry and exit, the period and special-stage handoffs, lives and progress carried between acts, and the last save and ending. |
 | Natural Special Stage 8 clear | Cold boot to the title, enter Special Stage 8 through Sound Test, and hit all six UFOs by controller input before time runs out. Let the credits play. | UFO count reaching zero, success state, fade, `SPEEND.MMD` credits with audio, and return to the title (`SoundTest_SpecStg8`, CD Initial Program/IPX.asm:1065-1079). |
-| R43C and R43D boss and act exit | Reuse the fight movies from water re-entry at row 5960. Extend them through the next program if needed. | Player and camera through capsule release and results. Boss and child slots from the end of the first bubble pop, where `TestTtzBossNative` stops checking slot parity. |
+| R43C and R43D results and next program | Extend the native fight movies past the recorded capsule release through results and the next program. | Results tally, exit and first row of the next program. |
 | R83C and R83D boss | Start before the arena approach and play through the collapse floor, each hit and the final defeat. | Player and camera rows, boss and child slots, hit and phase transitions, and the act exit. |
 | R81B, R81C and R82A act ends | Cold boot into each stage via stage select and extend its recorded route past the signpost. Wait through the results and enter the next stage. | Signpost trigger, ring and time tallies, results exit, and first playable row of the next stage. |
 | R41A swing and switch elevator ([PR #403](https://github.com/OpenGGF/OpenGGF/pull/403), open) | Start R41A from stage select. Take the route to the `$29` swing at `($0480,$0180)`. Board the seat, press its switch, ride, and dismount. For the `$30` elevator at `($09E0,$0540)`, land on its pressure switch, ride up, then release it and ride the side platform. See `StageObjects` (r4/stage_object_maps_1.asm:38-41, 93-94). | Player support and position, swing phase and switch state, plus the elevator column and side platform positions on press, travel and release. |
