@@ -359,7 +359,6 @@ class TestMmzObjects {
         runner.stepIdleFrames(2);
         var rings = objects.getActiveObjects().stream().filter(LostRingObjectInstance.class::isInstance)
                 .map(LostRingObjectInstance.class::cast).toList();
-        assertEquals(2, rings.size());
         var first = rings.getFirst();
         sonic.setHurt(false);
         sonic.setInvulnerableFrames(0);
@@ -368,9 +367,12 @@ class TestMmzObjects {
 
         // loc_206978 (r8/player_object_collide.asm:104-127) rejects the other layer before advancing the routine.
         objects.runTouchResponsesForPlayer(sonic, 5);
-        assertTrue(rings.stream().noneMatch(LostRingObjectInstance::isCollected));
+        long collectedOnOtherLayer = rings.stream().filter(LostRingObjectInstance::isCollected).count();
         signals().flipStageLayer();
         objects.runTouchResponsesForPlayer(sonic, 6);
-        assertTrue(rings.stream().anyMatch(LostRingObjectInstance::isCollected));
+        long collectedOnSpillLayer = rings.stream().filter(LostRingObjectInstance::isCollected).count();
+        assertEquals(List.of(List.of(1, 1), 0L, 1L),
+                List.of(rings.stream().map(LostRingObjectInstance::touchLayer).toList(),
+                        collectedOnOtherLayer, collectedOnSpillLayer));
     }
 }

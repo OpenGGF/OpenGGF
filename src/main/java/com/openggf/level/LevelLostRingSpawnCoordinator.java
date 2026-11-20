@@ -1,5 +1,6 @@
 package com.openggf.level;
 
+import com.openggf.game.internal.PlayerStageRoutines;
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.rings.RingManagerInternalAccess;
@@ -88,7 +89,8 @@ final class LevelLostRingSpawnCoordinator
         }
         pending.add(new PendingLostRingSpawn(
                 player, count, scatter.beyondNativeLimit(), player.getCentreX(), player.getCentreY(),
-                scheduledFrame, preallocatedSlots, slotsFullyReserved, deferOwnerRingClear));
+                scheduledFrame, preallocatedSlots, slotsFullyReserved, deferOwnerRingClear,
+                PlayerStageRoutines.captureLostRingTouchLayer(player)));
     }
 
     void processPending() {
@@ -103,7 +105,12 @@ final class LevelLostRingSpawnCoordinator
                 continue;
             }
             if (allowSpill(spawn.player()) && spawn.player().getRingCount() > 0) {
-                if (spawn.beyondNativeLimit()) {
+                if (spawn.touchLayer() >= 0) {
+                    RingManagerInternalAccess.spawnLayeredLostRingsWithInitialObjectStep(
+                            levelManager.ringManager, spawn.player(), spawn.ringCount(), frameCounter,
+                            spawn.x(), spawn.y(), spawn.preallocatedSlots(), spawn.slotsFullyReserved(),
+                            spawn.deferOwnerRingClear(), spawn.beyondNativeLimit(), spawn.touchLayer());
+                } else if (spawn.beyondNativeLimit()) {
                     RingManagerInternalAccess.spawnLostRingsBeyondNativeLimitWithInitialObjectStep(
                             levelManager.ringManager, spawn.player(), spawn.ringCount(), frameCounter,
                             spawn.x(), spawn.y(), spawn.preallocatedSlots(),
@@ -180,7 +187,7 @@ final class LevelLostRingSpawnCoordinator
             pendingSnapshots[i] = new PendingLostRingSpawnSnapshot(
                     spawn.player().getCode(), spawn.ringCount(), spawn.beyondNativeLimit(), spawn.x(), spawn.y(),
                     spawn.frameCounter(), spawn.preallocatedSlots(), spawn.slotsFullyReserved(),
-                    spawn.deferOwnerRingClear());
+                    spawn.deferOwnerRingClear(), spawn.touchLayer());
         }
         return new Snapshot(pendingSnapshots);
     }
@@ -203,7 +210,7 @@ final class LevelLostRingSpawnCoordinator
             pending.add(new PendingLostRingSpawn(
                     player, saved.ringCount(), saved.beyondNativeLimit(), saved.x(), saved.y(),
                     saved.frameCounter(), saved.preallocatedSlots(), saved.slotsFullyReserved(),
-                    saved.deferOwnerRingClear()));
+                    saved.deferOwnerRingClear(), saved.touchLayer()));
         }
     }
 
@@ -249,7 +256,7 @@ final class LevelLostRingSpawnCoordinator
 
     private record PendingLostRingSpawn(
             AbstractPlayableSprite player, int ringCount, boolean beyondNativeLimit, int x, int y, int frameCounter,
-            int[] preallocatedSlots, boolean slotsFullyReserved, boolean deferOwnerRingClear) {
+            int[] preallocatedSlots, boolean slotsFullyReserved, boolean deferOwnerRingClear, int touchLayer) {
         private PendingLostRingSpawn {
             preallocatedSlots = preallocatedSlots.clone();
         }
@@ -273,7 +280,7 @@ final class LevelLostRingSpawnCoordinator
 
     private record PendingLostRingSpawnSnapshot(
             String playerCode, int ringCount, boolean beyondNativeLimit, int x, int y, int frameCounter,
-            int[] preallocatedSlots, boolean slotsFullyReserved, boolean deferOwnerRingClear) {
+            int[] preallocatedSlots, boolean slotsFullyReserved, boolean deferOwnerRingClear, int touchLayer) {
         private PendingLostRingSpawnSnapshot {
             preallocatedSlots = preallocatedSlots.clone();
         }

@@ -74,6 +74,14 @@ public final class RingManagerInternalAccess {
         rings.spawnLostRingsBeyondNativeLimit(player, ringCount, frameCounter);
     }
 
+    public static void spawnLayeredLostRingsWithInitialObjectStep(
+            RingManager rings, AbstractPlayableSprite player, int ringCount, int frameCounter, int x, int y,
+            int[] preallocatedSlots, boolean slotsFullyReserved, boolean forceDeferredOwnerRingClear,
+            boolean beyondNativeLimit, int touchLayer) {
+        rings.spawnLayeredLostRingsWithInitialObjectStep(player, ringCount, frameCounter, x, y,
+                preallocatedSlots, slotsFullyReserved, forceDeferredOwnerRingClear, beyondNativeLimit, touchLayer);
+    }
+
     /** Deferred spill that may exceed the native ceiling; only native entries use reserved slots. */
     public static void spawnLostRingsBeyondNativeLimitWithInitialObjectStep(
             RingManager rings, AbstractPlayableSprite player, int ringCount, int frameCounter, int x, int y,

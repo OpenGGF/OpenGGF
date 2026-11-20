@@ -99,6 +99,7 @@ public class LostRingObjectInstance extends AbstractObjectInstance
     private int pendingSpillRings;
     private int pendingSpillX;
     private int pendingSpillY;
+    private int touchLayer = -1;
 
     /**
      * Shared spin owner; the displayed frame = owner.frame() + phaseOffset. This is
@@ -361,8 +362,7 @@ public class LostRingObjectInstance extends AbstractObjectInstance
         int vblaCounter = resolveVblaCounter() + resolveFloorCheckCounterPhase();
         boolean boundaryChecksOnlyOnCadence =
                 lostRingBoundaryChecksOnlyOnProbeCadence();
-        // ROM: both bodies test the same sign. loc_1A75C `bmi.s loc_1A7B0` (:35807) and
-        // loc_1A7E8 `bmi.s loc_1A83C` (:35719) both skip the probe while y_vel is negative,
+        // loc_1A75C (sonic3k.asm:35664-35668) and loc_1A7E8 (sonic3k.asm:35715-35719) skip the probe for negative y_vel,
         // because positive y_vel always means "falling", toward whichever surface is the floor.
         boolean movingTowardSurface = yVel >= 0;
         if (!movingTowardSurface) {
@@ -590,8 +590,8 @@ public class LostRingObjectInstance extends AbstractObjectInstance
     }
 
     /**
-     * ROM {@code Level_MainLoop} runs the object pass, then the camera step, then
-     * BuildSprites (s2.asm:5088-5112), and BuildSprites is what latches
+     * Level_MainLoop (s2.asm:5088-5112) runs the object pass, the camera step, and then BuildSprites.
+     * BuildSprites latches
      * {@code render_flags.on_screen} against {@code Camera_X_pos_copy}
      * (s2.asm:30560-30575). Latching at the tail of the object pass instead would
      * read the pre-scroll camera, i.e. a camera one frame stale, which for a ring
@@ -843,6 +843,14 @@ public class LostRingObjectInstance extends AbstractObjectInstance
     @Override
     public int getCollisionProperty() {
         return 0;
+    }
+
+    public int touchLayer() {
+        return touchLayer;
+    }
+
+    void setTouchLayer(int layer) {
+        touchLayer = layer;
     }
 
     public boolean isCollected() {

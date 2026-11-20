@@ -142,9 +142,11 @@ under the matching area heading; see the
   all 569 recorded rows. Metallic Madness Act 1 hosts Poh-Bee and its swinging
   weights. Its shared badnik defeat and Good Future explosion preserve native
   slot use. Ring counts and positions match native over the 28 recorded routes
-  and two Palmtree Panic loops. Ring spills and slots now match throughout the
-  recorded Metallic Madness Present, Past, and Good Future routes. Stage loads clear the state native
-  clears, so playing stages in any order matches playing each alone. In normal
+  and two Palmtree Panic loops. Ring spills and slots match throughout the
+  recorded Metallic Madness Present, Past, and Good Future routes. Metallic Madness
+  uses the collision type to decide which objects Sonic can touch across layers.
+  Sonic can recover dropped rings on the layer where he was hurt. Stage loads
+  clear the same state as the disc, so stages behave the same when played in any order. In normal
   play the object clock a stage starts from and the video player's disc wait
   follow measured emulator timings under `gameplay.loadTimeSimulation`
   (`FAST` and `PROFILED`; `NONE` starts the clock at 0); trace replay admits

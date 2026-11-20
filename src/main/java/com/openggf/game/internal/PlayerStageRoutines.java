@@ -209,6 +209,17 @@ public interface PlayerStageRoutines {
         return true;
     }
 
+    /** Layer inherited by a hurt spill, or -1 for a stage without a ring touch layer. */
+    default int lostRingTouchLayer(AbstractPlayableSprite player) {
+        return -1;
+    }
+
+    static int captureLostRingTouchLayer(AbstractPlayableSprite player) {
+        var module = player == null ? null : player.currentGameModule();
+        var provider = module == null ? null : module.getPhysicsProvider();
+        return provider instanceof PlayerStageRoutines stage ? stage.lostRingTouchLayer(player) : -1;
+    }
+
     // ---- The player's water routine (Sonic CD ObjSonic_Water / PlayerCheckWater) ----------
 
     /**
