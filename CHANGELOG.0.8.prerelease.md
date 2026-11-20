@@ -135,9 +135,10 @@ under the matching area heading; see the
   him jump through from below. Tidal Tempest hosts its vertical moving blocks,
   break poles and stationary spike balls, with sprites loaded from the disc. In Act 1 Present,
   Sonic can ride the rotating swing and raise the elevator with its pressure
-  switch. Its post-scroll
-  currents use the retained direction on the hurt recovery frame. R42A matches
-  through the results and next-act handoff. Quartz Quadrant Past conveyors
+  switch. Its post-scroll currents use the retained direction on the hurt
+  recovery frame. R42A matches through the results and next-act handoff. Amenbo
+  and Taga-Taga missiles free their object slots at the disc's despawn checks.
+  Quartz Quadrant Past conveyors
   change speed on the warp trigger frame, and the R51B short fixture matches
   all 569 recorded rows. Metallic Madness Act 1 hosts Poh-Bee and its swinging
   weights. Its shared badnik defeat and Good Future explosion preserve native
