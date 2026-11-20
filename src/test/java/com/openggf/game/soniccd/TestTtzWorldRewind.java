@@ -11,31 +11,27 @@ import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
+import java.lang.reflect.Field;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+import java.util.TreeSet;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestTtzWorldRewind {
+    private static final int REPLAY_FRAMES = 120;
+
     @TempDir
     Path configDir;
 
-    @ParameterizedTest
+    @ParameterizedTest(name = "{0}")
     @EnumSource(value = CdStagePayload.class, names = "R[1345678][12][ABCD]", mode = EnumSource.Mode.MATCH_ALL)
-    void restoresTheWorldAfterAdvancing(CdStagePayload payload) throws Exception {
-        checkRewind(payload, 0);
-    }
-
-    @ParameterizedTest
-    @EnumSource(value = CdStagePayload.class, names = {"R42B", "R62A", "R71B", "R72C"})
-    void replaysMultipartObjectMotionAfterRestore(CdStagePayload payload) throws Exception {
-        checkRewind(payload, 16);
-    }
-
-    private void checkRewind(CdStagePayload payload, int replayFrames) throws Exception {
+    void replaysLiveObjectsAfterRestore(CdStagePayload payload) throws Exception {
         TestEnvironment.resetAll();
         var previous = EngineServices.current();
         try (var disc = CdDiscDataSource.open(CdTestMedia.usaCue())) {
@@ -49,32 +45,37 @@ class TestTtzWorldRewind {
                 var registry = gameplay.getRewindRegistry();
                 var snapshot = registry.capture();
                 var objects = level.getObjectManager();
-                int objectId = switch (payload) {
+                var savedPoses = poses(objects);
+                int multipartId = switch (payload) {
                     case R42B -> 0x3D;
                     case R62A, R62B, R62C, R62D -> 0x04;
                     case R71B -> 0x20;
                     case R72A, R72B, R72C, R72D -> 0x1E;
                     default -> -1;
                 };
-                var savedPoses = poses(objects, objectId);
-                if (objectId >= 0) {
-                    assertTrue(savedPoses.size() > 1, payload + " has spawned the multipart object");
+                assertTrue(!savedPoses.isEmpty(), payload + " has live objects at capture");
+                if (multipartId >= 0) {
+                    assertTrue(savedPoses.values().stream().filter(pose -> pose.id() == multipartId).count() > 1,
+                            payload + " has spawned the multipart object");
                 }
 
-                List<List<ObjectPose>> replay = new ArrayList<>();
-                for (int frame = 0; frame < 120; frame++) {
+                List<Map<Integer, ObjectPose>> replay = new ArrayList<>(REPLAY_FRAMES);
+                for (int frame = 0; frame < REPLAY_FRAMES; frame++) {
                     runner.stepIdleFrames(1);
-                    if (frame < replayFrames) replay.add(poses(objects, objectId));
+                    replay.add(poses(objects));
                 }
                 assertTrue(level.getFrameCounter() > savedFrame, "the level advanced after capture");
 
                 registry.restore(snapshot);
                 assertEquals(savedFrame, level.getFrameCounter(), "rewind restores the saved level frame");
-                assertEquals(savedPoses, poses(objects, objectId), "rewind restores the parts in their saved slots");
-                for (int frame = 0; frame < replay.size(); frame++) {
+                Map<String, String> differences = new LinkedHashMap<>();
+                comparePoses(savedPoses, poses(objects), 0, differences);
+                for (int frame = 1; frame <= REPLAY_FRAMES; frame++) {
                     runner.stepIdleFrames(1);
-                    assertEquals(replay.get(frame), poses(objects, objectId), "replayed frame " + (frame + 1));
+                    comparePoses(replay.get(frame - 1), poses(objects), frame, differences);
                 }
+                assertTrue(differences.isEmpty(), () -> payload + " first divergence per object type:\n"
+                        + String.join("\n", differences.values()));
             } finally {
                 SessionManager.clear();
                 EngineServices.configure(previous);
@@ -83,15 +84,54 @@ class TestTtzWorldRewind {
         }
     }
 
-    private static List<ObjectPose> poses(ObjectManager objects, int objectId) {
-        return objects.getActiveObjects().stream()
-                .filter(object -> !object.isDestroyed() && object.getSpawn().objectId() == objectId)
-                .map(AbstractObjectInstance.class::cast)
-                .map(object -> new ObjectPose(object.getSlotIndex(), object.getX(), object.getY(),
-                        object instanceof ObjSpringLauncher launcher ? launcher.parentHeading() : 0))
-                .sorted(Comparator.comparingInt(ObjectPose::slot))
-                .toList();
+    private static Map<Integer, ObjectPose> poses(ObjectManager objects) throws IllegalAccessException {
+        Map<Integer, ObjectPose> poses = new TreeMap<>();
+        for (var instance : objects.getActiveObjects()) {
+            if (instance.isDestroyed()) continue;
+            var object = (AbstractObjectInstance) instance;
+            int slot = object.getSlotIndex();
+            var pose = new ObjectPose(object.getClass().getSimpleName(), object.getLiveObjectId(),
+                    object.getX(), object.getY(),
+                    readState(object, "mapFrame", "animFrame", "frame"),
+                    readState(object, "routine", "state"),
+                    object instanceof ObjSpringLauncher launcher ? launcher.parentHeading() : 0);
+            assertTrue(poses.putIfAbsent(slot, pose) == null, () -> "multiple live objects in slot " + slot);
+        }
+        return poses;
     }
 
-    private record ObjectPose(int slot, int x, int y, int animationIndex) { }
+    // The CD object families keep separate fields for native mapping and routine bytes.
+    private static Object readState(AbstractObjectInstance object, String... names) throws IllegalAccessException {
+        for (String name : names) {
+            for (Class<?> type = object.getClass(); type != AbstractObjectInstance.class; type = type.getSuperclass()) {
+                Field field;
+                try {
+                    field = type.getDeclaredField(name);
+                } catch (NoSuchFieldException ignored) {
+                    continue;
+                }
+                field.setAccessible(true);
+                return field.get(object);
+            }
+        }
+        return null;
+    }
+
+    private static void comparePoses(Map<Integer, ObjectPose> expected, Map<Integer, ObjectPose> actual,
+                                     int frame, Map<String, String> differences) {
+        if (expected.equals(actual)) return;
+        var slots = new TreeSet<>(expected.keySet());
+        slots.addAll(actual.keySet());
+        for (int slot : slots) {
+            ObjectPose before = expected.get(slot);
+            ObjectPose after = actual.get(slot);
+            if (java.util.Objects.equals(before, after)) continue;
+            String mismatch = "frame " + frame + ", slot " + slot + ": expected " + before + ", got " + after;
+            if (before != null) differences.putIfAbsent(before.type(), mismatch);
+            if (after != null) differences.putIfAbsent(after.type(), mismatch);
+        }
+    }
+
+    private record ObjectPose(String type, int id, int x, int y, Object mappingFrame, Object routine,
+                              int launcherHeading) { }
 }
