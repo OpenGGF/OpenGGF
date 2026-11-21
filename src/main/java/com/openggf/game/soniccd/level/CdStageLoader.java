@@ -2,6 +2,7 @@ package com.openggf.game.soniccd.level;
 
 import com.openggf.game.soniccd.CdDiscDataSource;
 import com.openggf.game.soniccd.CdStagePayload;
+import com.openggf.game.soniccd.CdStageDemo;
 
 import java.io.IOException;
 import java.util.Objects;
@@ -30,8 +31,18 @@ public final class CdStageLoader {
     /** Decodes an already-read stage image. */
     public CdLevel load(CdStagePayload payload, CdStageImage image, int zoneIndex, boolean publishGraphics)
             throws IOException {
-        return new CdLevel(payload, image, CdStageCatalogue.entry(payload), zoneIndex, publishGraphics, disc.identity());
+        return new CdLevel(payload, image, CdStageCatalogue.entry(payload), zoneIndex, publishGraphics, disc.identity(), image, null);
     }
+    public CdStageImage readDemo(CdStageDemo demo) throws IOException {
+        return new CdStageImage(disc.readFile(demo.file()));
+    }
+
+    public CdLevel loadDemo(CdStageDemo demo, CdStageImage image, CdStageImage objectImage, int zoneIndex)
+            throws IOException {
+        return new CdLevel(demo.payload(), image, CdStageCatalogue.entry(demo), zoneIndex, true, disc.identity(),
+                objectImage, demo);
+    }
+
     /** Reject foreign media and inconsistent payload coordinates before reading a stage. */
     public CdLevel load(com.openggf.game.internal.NativeProjectSource source, int zoneIndex,
                         boolean publishGraphics) throws IOException {

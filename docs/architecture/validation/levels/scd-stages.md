@@ -262,7 +262,7 @@ state. The ring witness and alternate future lack a native comparison.
 
 | Obligation | State | Gap |
 | --- | --- | --- |
-| ENTRY | All 70 stages load from the disc (`TestCdStageLoaderAllPayloads`); three fixtures enter through the retail title and stage-select route (`TestCdRetailRouteReplay`); the master title lists Sonic CD and `TestSonicCdPlayerLaunch` starts a new game from it and equals native on 806 compared rows of R11A | Intro-skip and alternate entries not assessed; the attract demos are not hosted |
+| ENTRY | All 70 stages load from the disc (`TestCdStageLoaderAllPayloads`); three fixtures enter through the retail title and stage-select route (`TestCdRetailRouteReplay`); the master title lists Sonic CD and `TestSonicCdPlayerLaunch` starts a new game from it and equals native on 806 compared rows of R11A | Ordinary attract entries R11A, R43C and R82A have idle-title coverage in `TestCdStageDemos`. Intro-skip remains open. |
 | OBJECT | Per-zone object tests and slot-exact appearance windows. `TestTtzObjects#timeStarsAnimateAndRetireInR42a` exercises all four active time-warp stars on the authenticated USA disc from a direct post-touch setup | Many objects have no native picture; layout entries without a saved-state bit respawn while live (R41C); ring collection order (R51A) |
 | EVENT, CAMERA | Level events, boss arenas and scroll locks hosted; routes cover them where they pass | Wide-view triggers unchecked |
 | BOSS | Seven bosses with native fight recordings | Tidal Tempest after the fight comparison limits and Metallic Madness boss slots and stage exit lack native assertions |
@@ -272,6 +272,31 @@ state. The ring witness and alternate future lack a native comparison.
 | PRESENT | Zone pictures per the presentation lanes (most early and end shots equal native); `TestCdTitlePicture` | Uncertified shots listed in each zone test; widths other than 320 draw but have no native reference |
 | ROUTE | 28 full-act routes as above | Act 1 Bad Future and act 2 Past and futures: fixtures only; no complete-run recording |
 | ORACLE | Constants and branches cite `docs/scddisasm`; trace rows comparison-only | Lag-frame CPU timing not modelled ([known discrepancy](../../../status/known-discrepancies.md#sonic-cd-hardware-timings-not-modelled)) |
+
+The USA idle rotation reads 23 controller samples before R11A's first level
+iteration and 42 before each of R43C and R82A. R43C and R82A skip the title card
+and drain a stage-art queue. All three return after sample 2048, for 2025, 2006,
+and 2006 level iterations respectively. The disc-backed test compares Sonic's
+position and rings at iterations 360, 360, and 120 respectively. R43C matches
+native through all 2,006 level iterations.
+
+- **R11A.** The first difference is at iteration 2. The first gameplay
+  samples hold Right (`$0800`). On the disc, controls are locked before the
+  level loop (scddisasm/src/Level/Main.asm:262-275, `LevelStart` sets
+  `ctrlLocked=1`), so Sonic stands still.
+  The engine applies Right for one iteration at X velocity 12, leaving an
+  X sub-pixel offset of `$0C00` before `CdPlayerStage.applyControlLock` takes
+  effect. That offset first shows as a one-pixel difference at iteration 154.
+  Velocities match until Sonic rolls down a slope at iteration 1423. Rings
+  first differ at iteration 1658. Normal stage starts share the control-lock
+  gap, which has its own follow-up.
+- **R82A.** The runs match through iteration 125. The engine hurts Sonic at
+  iteration 126. On the same approach on the disc, Sonic pushes into laser
+  `$1D` at (7033, 1415) at iteration 127 and enters the hurt routine at 128.
+  See `loc_20B62A` (scddisasm/src/objects/r8/laser.asm:183-216) for the
+  overlap check and hurt write. Rings first differ at iteration 212. The
+  follow-up still needs to establish whether the laser cycle or spawn timing
+  causes the earlier contact.
 
 Breadth: Sonic CD has one character and no teams; it is not a donor. Donation
 into it has bounded R11A coverage only (see

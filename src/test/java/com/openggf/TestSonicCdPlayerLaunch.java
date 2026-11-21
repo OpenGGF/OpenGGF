@@ -18,6 +18,7 @@ import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.soniccd.CdFixtureReplayAccess;
 import com.openggf.game.soniccd.CdNativeProgram;
+import com.openggf.game.soniccd.CdStageDemo;
 import com.openggf.game.soniccd.CdStagePayload;
 import com.openggf.game.soniccd.backupram.CdSaveVariables;
 import com.openggf.game.soniccd.level.CdLevel;
@@ -320,8 +321,7 @@ class TestSonicCdPlayerLaunch {
                     600, option.program() + " returns to the title");
             assertEquals(save, scenes().flow().backupRam().readSave());
         }
-        // IPX Demo cycles through the opening, the skipped Palmtree Panic demo, and a playable special-stage demo.
-        int before = scenes().notHosted().size();
+        // IPX Demo cycles through the opening, Palmtree Panic, and the first special stage.
         until(() -> engine.getCurrentGameMode() == GameMode.OPTIONS, 2500, "the title's time-out into the opening video");
         assertEquals(CdNativeProgram.OPENING, scenes().notHosted().get(scenes().notHosted().size() - 1).program());
         idle(120);
@@ -331,9 +331,10 @@ class TestSonicCdPlayerLaunch {
         for (int i = 0; i < 20; i++) press(0, true);
         until(() -> engine.getCurrentGameMode() == GameMode.TITLE_SCREEN && title().program() != null, 600,
                 "the opening video returns to the title");
-        until(() -> requestedSince(before).contains(CdNativeProgram.R11ADEMO), 2500, "Palmtree Panic demo requested");
-        until(() -> engine.getCurrentGameMode() == GameMode.TITLE_SCREEN && title().program() != null, 600,
-                "the unhosted demo returns to the title");
+        until(() -> engine.getCurrentGameMode() == GameMode.LEVEL && level() != null
+                && level().demo() == CdStageDemo.R11A, 2500, "Palmtree Panic demo starts");
+        until(() -> engine.getCurrentGameMode() == GameMode.TITLE_SCREEN && title().program() != null, 2200,
+                "the Palmtree Panic demo returns to the title");
         until(() -> engine.getCurrentGameMode() == GameMode.SPECIAL_STAGE, 3500, "the Stage 1 attract demo");
         var provider = assertInstanceOf(CdSpecialStageProvider.class, engine.getGameLoop().getActiveSpecialStageProvider());
         assertEquals(0, provider.getCurrentStage());
@@ -341,10 +342,5 @@ class TestSonicCdPlayerLaunch {
         until(() -> engine.getCurrentGameMode() == GameMode.TITLE_SCREEN && title().program() != null, 3000,
                 "the special-stage demo returns to the title");
         assertEquals(save, scenes().flow().backupRam().readSave());
-    }
-
-    private List<CdNativeProgram> requestedSince(int before) {
-        var steps = scenes().notHosted();
-        return steps.subList(Math.min(before, steps.size()), steps.size()).stream().map(s -> s.program()).toList();
     }
 }

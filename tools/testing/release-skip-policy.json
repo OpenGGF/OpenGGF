@@ -896,6 +896,27 @@
       "note": "Sonic CD disc and native captures"
     },
     {
+      "match": "com.openggf.game.soniccd.TestCdStageDemos#idleTitlePlaysEachOrdinaryDemo",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdStageDemos.java:27",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestCdStageDemos#titleIdleTimeoutStartsPalmtreePanicDemo",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdStageDemos.java:72",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestCdStageDemos#startDuringDemoTitleCardLetsPlaybackContinue",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdStageDemos.java:82",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
       "match": "com.openggf.game.soniccd.TestPpzObjectsA#mosquiLandsSilentlyOffScreen",
       "category": "optional-fixture",
       "evidence": "src/test/java/com/openggf/game/soniccd/TestPpzObjectsA.java:219",

@@ -3,6 +3,7 @@ package com.openggf.game.soniccd.level;
 import com.openggf.data.compression.NemesisReader;
 import com.openggf.game.GameServices;
 import com.openggf.game.soniccd.CdPeriod;
+import com.openggf.game.soniccd.CdStageDemo;
 import com.openggf.game.soniccd.CdStagePayload;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.AbstractLevel;
@@ -71,12 +72,15 @@ public final class CdLevel extends AbstractLevel implements com.openggf.game.int
     }
 
     private final CdStagePayload payload;
+    private final CdStageDemo demo;
     private final com.openggf.game.internal.NativeProjectSource projectSource;
 
     @Override public com.openggf.game.internal.NativeProjectSource nativeProjectSource() { return projectSource; }
     @Override public int[] nativeProjectStart() { return new int[]{startX, startY}; }
     // --- common2 ---
     private com.openggf.game.soniccd.objects.common.CdLevelFlags flags;
+
+    public CdStageDemo demo() { return demo; }
 
     /** The common objects' level flags; goodFuture starts set for a Good Future stage. */
     public com.openggf.game.soniccd.objects.common.CdLevelFlags flags() {
@@ -97,9 +101,11 @@ public final class CdLevel extends AbstractLevel implements com.openggf.game.int
     private final com.openggf.game.internal.BackgroundRowLayout backgroundRows;
 
     CdLevel(CdStagePayload payload, CdStageImage image, CdStageCatalogue.Entry entry, int zoneIndex,
-            boolean publishGraphics, String mediaIdentity) throws IOException {
+            boolean publishGraphics, String mediaIdentity, CdStageImage objectImage, CdStageDemo demo)
+            throws IOException {
         super(zoneIndex);
         this.payload = payload;
+        this.demo = demo;
         this.projectSource = new com.openggf.game.internal.NativeProjectSource(mediaIdentity, payload.name(),
                 payload.stage().zone().nativeRound(), payload.stage().actNumber(), payload.stage().period().name(),
                 payload.file().isoName(), CHUNK_GRID);
@@ -112,8 +118,16 @@ public final class CdLevel extends AbstractLevel implements com.openggf.game.int
         loadBlockMappings(image, image.offsetOf(image.u32(index + 4)), entry.levelCollision());
         loadChunks(image, image.offsetOf(image.u32(index + 8)));
         loadLayouts(image, entry.levelLayouts());
+        // The shared object catalogue uses retail offsets. USA disc comparison
+        // found identical ring deltas, mapping frames and all 14 tiles loaded by
+        // PLC 1 in each of the three DEMO/retail pairs. The 128 PPZ background
+        // row entries also match between DEMO11A and R11A.
+        // ObjRing_Deltas (scddisasm/src/Level/_Objects/Ring/Main.asm:20-35),
+        // ObjRing_Init (scddisasm/src/Level/_Objects/Ring/Main.asm:156-157),
+        // LevelStart (scddisasm/src/Level/Main.asm:156-165),
+        // BGCameraSectIDs (scddisasm/src/Level/Palmtree Panic/Scroll (Act 1 Present).asm:1123-1156).
         if (payload.stage().zone() == com.openggf.game.soniccd.CdZone.PALMTREE_PANIC) {
-            backgroundRows = com.openggf.game.soniccd.zones.ppz.PpzBackgroundRows.read(image)::layoutX;
+            backgroundRows = com.openggf.game.soniccd.zones.ppz.PpzBackgroundRows.read(objectImage)::layoutX;
         } else if (payload.stage().zone() == com.openggf.game.soniccd.CdZone.WACKY_WORKBENCH) {
             backgroundRows = readWwzBackgroundRows(payload, image);
         } else {
@@ -141,7 +155,7 @@ public final class CdLevel extends AbstractLevel implements com.openggf.game.int
             ObjectSpawn spawn = toSpawn(placement);
             spawns.add(spawn);
             if (spawn.objectId() == RING_OBJECT_ID) {
-                List<com.openggf.level.rings.RingSpawn> group = expandRings(image, payload, spawn, ringSpawns.size());
+                List<com.openggf.level.rings.RingSpawn> group = expandRings(objectImage, payload, spawn, ringSpawns.size());
                 ringSpawns.addAll(group);
                 ringGroups.put(spawn, group);
             }
@@ -149,8 +163,8 @@ public final class CdLevel extends AbstractLevel implements com.openggf.game.int
         objects = List.copyOf(spawns);
         rings = List.copyOf(ringSpawns);
         ringPlacementMapping = java.util.Collections.unmodifiableMap(ringGroups);
-        ringSpriteSheet = com.openggf.game.soniccd.objects.art.CdObjectArtProvider.ringSheet(image, payload,
-                com.openggf.game.soniccd.objects.art.CdObjectArtProvider.loadVram(image, payload));
+        ringSpriteSheet = com.openggf.game.soniccd.objects.art.CdObjectArtProvider.ringSheet(objectImage, payload,
+                com.openggf.game.soniccd.objects.art.CdObjectArtProvider.loadVram(objectImage, payload));
     }
 
     /**
