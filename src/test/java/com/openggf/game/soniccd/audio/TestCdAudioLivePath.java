@@ -5,6 +5,7 @@ import com.openggf.audio.AudioManagerInternalAccess;
 import com.openggf.audio.LiveCaptureAudioHandle;
 import com.openggf.audio.NullAudioBackend;
 import com.openggf.audio.presentation.PresentationMode;
+import com.openggf.audio.synth.ChipWriteObserver;
 import com.openggf.game.soniccd.CdDiscDataSource;
 import com.openggf.game.soniccd.CdNativeFile;
 import com.openggf.game.soniccd.CdReleaseVariant;
@@ -22,7 +23,9 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -78,6 +81,58 @@ class TestCdAudioLivePath {
     void anFmEffectRequestedByIdIsSynthesisedThroughTheSharedProducer() {
         assertTrue(audio.playSfx(0x92));
         assertTrue(audible(present(30)), "FM_JUMP produced sound");
+    }
+
+    @Test
+    void dustReplacesTheJumpFm1TrackWithoutChangingItsKey() throws IOException {
+        // BizHawk 2.11 USA Sound Test, u63-dust-fm1-KeIh0GZH/fm1-keys-and-banked-reads.csv.
+        // Compare writes between requests to allow for the video-frame/Timer B phase.
+        for (boolean requestDust : List.of(false, true)) {
+            if (requestDust) {
+                close();
+                install(CdAudioTestMedia.usaCue());
+            }
+            List<Integer> fm1Keys = new ArrayList<>();
+            List<Integer> fm1SsgEg = new ArrayList<>();
+            audio.setChipWriteObserver(new ChipWriteObserver() {
+                @Override
+                public void onYm2612Write(int port, int register, int value) {
+                    if (port == 0 && register == 0x28 && (value & 7) == 0) {
+                        fm1Keys.add(value);
+                    }
+                    if (port == 0 && register >= 0x90 && register <= 0x9C && register % 4 == 0) {
+                        fm1SsgEg.add(register);
+                    }
+                }
+
+                @Override
+                public void onPsgWrite(int value) { }
+            });
+            audio.playSfx(0x96); // Frame 2400 in the native recording.
+            present(10);
+            audio.playSfx(0x92);
+            present(15);
+            List<Integer> beforeDust = List.copyOf(fm1Keys);
+            fm1Keys.clear();
+            fm1SsgEg.clear();
+
+            if (requestDust) audio.playSfx(0xD6); // Frame 2425.
+            present(360);
+            List<Integer> beforeReplacement = List.copyOf(fm1Keys);
+            List<Integer> dustSsgEg = List.copyOf(fm1SsgEg);
+            fm1Keys.clear();
+
+            audio.playSfx(0x92); // Frame 2785.
+            present(36);
+            assertEquals(
+                    List.of(List.of(0, 0, 0xF0, 0, 0xF0),
+                            requestDust ? List.of() : List.of(0), // Control key-off at frame 2435.
+                            List.of(0, 0, 0xF0, 0, 0xF0, 0),
+                            List.of()),
+                    List.of(beforeDust, beforeReplacement, fm1Keys, dustSsgEg),
+                    "FM1 key writes before dust, before replacement and after replacement, then SSG-EG writes "
+                            + "during the dust window. Dust requested=" + requestDust);
+        }
     }
 
     @ParameterizedTest
