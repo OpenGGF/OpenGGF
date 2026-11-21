@@ -105,9 +105,13 @@ under the matching area heading; see the
   Held-key live rewind works inside special stages, including the three-frame
   floor pipeline, UFOs and effects. Stage rewind restores Tidal Tempest's rotate
   block parts, Wacky Workbench's launcher sides, and Stardust Speedway's swings
-  and spring launcher parts. The master
-  title lists it when the disc is configured or found (`roms.default: scd` boots
-  it directly) and verifies it against the USA release before starting. A CHD
+  and spring launcher parts. Tidal Tempest's water resumes at its saved height,
+  bob phase, and pump speed. Stardust Speedway's Kanabun, Kabasira, booster
+  sparks, and path swaps resume their saved animation script frame and timer.
+  Rewind also restores the title
+  card, HUD, and points popups. The master title lists Sonic CD when the disc is
+  configured or found (`roms.default: scd` boots it directly) and verifies it
+  against the USA release before starting. A CHD
   is verified by the same content fingerprint as a BIN/CUE set, so it is
   accepted exactly when its decoded tracks equal the Redump set; the reader is
   pure Java (CHD v5; `cdzl`, `cdlz`, `cdfl` and `cdzs` hunks or uncompressed;

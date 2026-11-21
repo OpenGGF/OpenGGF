@@ -7,6 +7,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.FixedRuntimeObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectVisualFacing;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
@@ -25,7 +26,8 @@ import java.util.List;
  * The player and camera owners do not read the two flags yet.
  */
 @com.openggf.level.objects.CameraRelativeDraw(com.openggf.level.objects.CameraRelativeDraw.Use.SCREEN_POSITION)
-public final class CdTitleCard extends CdObject implements FixedRuntimeObjectInstance, ObjectVisualFacing.NonDirectional {
+public final class CdTitleCard extends CdObject implements FixedRuntimeObjectInstance, ObjectVisualFacing.NonDirectional,
+        SpawnRewindRecreatable {
     /** objTtlCardSlot (Level/_Definitions.inc:135). */
     public static final int PARENT_SLOT = 4;
     private static final int PIECES = 8;          // moveq #7,d6 (Title Card/Main.asm:50)
@@ -36,7 +38,7 @@ public final class CdTitleCard extends CdObject implements FixedRuntimeObjectIns
     /** moveq #2,d0; jmp LoadPLC (Title Card/Main.asm:147-148). */
     private static final int TITLE_CARD_PLC = 2;
 
-    private Routine routine;
+    private Routine routine = Routine.INIT;
     private int plcDrain;
     private int screenY;
     private int frame;
@@ -51,7 +53,7 @@ public final class CdTitleCard extends CdObject implements FixedRuntimeObjectIns
 
     private CdTitleCard(Routine routine, int x, int screenY, int frame, int animTime, int slideInTarget,
                         int slideOutTarget) {
-        super(new ObjectSpawn(x, 0, 0x3C, 0, 0, false, 0), "TitleCard");
+        this(new ObjectSpawn(x, 0, 0x3C, 0, 0, false, 0));
         this.routine = routine;
         this.x = x;
         this.screenY = screenY;
@@ -59,6 +61,10 @@ public final class CdTitleCard extends CdObject implements FixedRuntimeObjectIns
         this.animTime = animTime;
         this.slideInTarget = slideInTarget;
         this.slideOutTarget = slideOutTarget;
+    }
+
+    private CdTitleCard(ObjectSpawn spawn) {
+        super(spawn, "TitleCard");
         this.tileWord = CdObjectArtProvider.TITLE_CARD_TILE;
     }
 
