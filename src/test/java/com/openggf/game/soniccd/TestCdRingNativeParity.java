@@ -109,7 +109,7 @@ class TestCdRingNativeParity {
             "R42A, 6411, positions, 1550", "R51A, 4756, exact, -1", "R51B, 5494, exact, -1",
             "R51C, 7151, exact, -1", "R52A, 4772, exact, -1", "R61A, 4892, exact, -1",
             "R61B, 5449, exact, -1", "R61C, 6767, exact, -1", "R62A, 4787, exact, -1",
-            "R71A, 3977, exact, -1", "R71B, 4918, exact, -1", "R71C, 6096, positions, 808", "R72A, 4399, exact, -1",
+            "R71A, 3977, exact, -1", "R71B, 4918, exact, -1", "R71C, 6096, exact, -1", "R72A, 4399, exact, -1",
             "R81A, 4736, exact, -1", "R81B, 3991, exact, -1", "R81C, 4524, exact, -1",
             "R82A, 4577, exact, -1", "R11B-loop, 2163, exact, -1", "R13C-loop, 785, exact, -1"})
     void ringsEqualNative(String recording, int rows, String status, int firstRow) throws Exception {

@@ -9072,6 +9072,13 @@
       "note": "user's Sonic CD disc"
     },
     {
+      "match": "com.openggf.game.soniccd.TestSszGroundAnimal#groundAnimalMatchesNativeHopsDrawAndRetirement",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestSszGroundAnimal.java:41",
+      "allowed_when_absent": "soniccd_native",
+      "note": "Sonic CD disc and the native R71C full-act recording"
+    },
+    {
       "match": "com.openggf.game.soniccd.TestCdGameplaySoundCues#workbenchRequestsBounceOnTheNativeStandingToRollingFrame",
       "category": "optional-fixture",
       "evidence": "src/test/java/com/openggf/game/soniccd/TestCdGameplaySoundCues.java:140",
