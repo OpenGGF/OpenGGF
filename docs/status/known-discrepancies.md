@@ -1,12 +1,14 @@
 # Known Discrepancies from Original ROMs
 
-This document records limits of the hardware OpenGGF does not emulate. For
-Sonic CD, game logic and ordering that differ from the shipped disc belong
-in [known bugs](known-bugs.md). Engine feature extensions are identified
-where they affect the comparison. Historical cartridge records also describe
-earlier engineering decisions. See the [S3K hardware limits and historical
-records](../S3K_KNOWN_DISCREPANCIES.md) and [S3K known bugs](s3k-known-bugs.md)
-for game-specific coverage.
+OpenGGF has no deliberate engine-wide differences. A known discrepancy must
+come from hardware OpenGGF does not emulate, such as CPU lag. The Sonic CD
+entries have been audited against this rule. They document hardware limits
+and identify engine features explicitly as features. Sonic CD parity gaps
+belong in [known bugs](known-bugs.md).
+
+The Sonic 1, Sonic 2 and Knuckles in Sonic 2 entries here and the separate
+[S3K known discrepancies](../S3K_KNOWN_DISCREPANCIES.md) predate this rule and
+still need the same audit. See also [S3K known bugs](s3k-known-bugs.md).
 
 ## Hosted Competition checkpoint reload and monitor OFF (2026-11-07)
 
@@ -104,32 +106,31 @@ no discrepancy entry was added or reclassified by the cutover.
 15. [Legacy Pre-Level Intro Prefix Trace Bootstrap Contract](#legacy-pre-level-intro-prefix-trace-bootstrap-contract)
 16. [S2 Tornado Ride-Start Trace Bootstrap Contract](#s2-tornado-ride-start-trace-bootstrap-contract)
 17. [S2 CNZ Slot-Machine Trace Bootstrap Contract](#s2-cnz-slot-machine-trace-bootstrap-contract)
-18. [Whole-Run Level-Restart Admission Row](#whole-run-level-restart-admission-row)
-19. [S3K Production Lifecycle and Structural Trace Replay Scheduling](#s3k-production-lifecycle-and-structural-trace-replay-scheduling)
-20. [Hardware-Timing Replay Input Exception](#hardware-timing-replay-input-exception)
-21. [S3K Complete-Run Segment Start-Position Bootstrap Debt](#s3k-complete-run-segment-start-position-bootstrap-debt)
-22. [Frame-0 Trace Bootstrap Snapshot Coverage Debt](#frame-0-trace-bootstrap-snapshot-coverage-debt)
-23. [Sonic 1 Embedded Runtime Data Ratchet](#sonic-1-embedded-runtime-data-ratchet)
-24. [Special-stage Live Rewind Scope](#special-stage-live-rewind-scope)
+18. [S3K Production Lifecycle and Structural Trace Replay Scheduling](#s3k-production-lifecycle-and-structural-trace-replay-scheduling)
+19. [Hardware-Timing Replay Input Exception](#hardware-timing-replay-input-exception)
+20. [S3K Complete-Run Segment Start-Position Bootstrap Debt](#s3k-complete-run-segment-start-position-bootstrap-debt)
+21. [Frame-0 Trace Bootstrap Snapshot Coverage Debt](#frame-0-trace-bootstrap-snapshot-coverage-debt)
+22. [Sonic 1 Embedded Runtime Data Ratchet](#sonic-1-embedded-runtime-data-ratchet)
+23. [Special-stage Live Rewind Scope](#special-stage-live-rewind-scope)
    - [Sonic CD stage-load live rewind](#sonic-cd-stage-load-live-rewind)
-25. [Mod Music Uses PCM Presentation Rather Than Mega Drive SMPS](#mod-music-uses-pcm-presentation-rather-than-mega-drive-smps)
-26. [S2 Native Debug Placement Capability Boundary](#s2-native-debug-placement-capability-boundary)
-27. [S2 Competition Split Screen, Native Lag and Rewind Scope](#s2-competition-split-screen-native-lag-and-rewind-scope)
-28. [S2 Whole-Run V-int Clock Cannot Be Made Exact](#s2-whole-run-v-int-clock-cannot-be-made-exact)
-29. [S2 Push-Release Animation Restart Fires Once Extra At A Contact-End Frame](#s2-push-release-animation-restart-fires-once-extra-at-a-contact-end-frame)
-30. [S2 CPZ Boss Truncates The Object Pass (`fixBugs = 0`)](#s2-cpz-boss-truncates-the-object-pass-fixbugs--0)
-31. [S2 Interactive Special-Stage Hardware Lag Is Approximated](#s2-interactive-special-stage-hardware-lag-is-approximated)
-32. [YM2612 Output Scale, Resting Level and DAC Presentation](#ym2612-output-scale-resting-level-and-dac-presentation)
-33. [PSG Tone-2-Linked Noise at Period 0/1 Follows the Reference Cores](#psg-tone-2-linked-noise-at-period-01-follows-the-reference-cores)
-34. [FM:PSG Mix Balance Is Pre-Rewrite Parity, Not a Hardware Calibration](#fmpsg-mix-balance-is-pre-rewrite-parity-not-a-hardware-calibration)
-35. [S2 Compressed-Music Load Timing Omits Sub-Frame Bus Contention](#s2-compressed-music-load-timing-omits-sub-frame-bus-contention)
-36. [S2 stopMusic Bypasses the Mailbox While a Compressed Load Blocks It](#s2-stopmusic-bypasses-the-mailbox-while-a-compressed-load-blocks-it)
-37. [Fast FM Register-Level Timing and Output](#fast-fm-register-level-timing-and-output)
-38. [Knuckles in Sonic 2 Runs Tier Two With the Lock-On Dump and Tier One Without It](#knuckles-in-sonic-2-runs-tier-two-with-the-lock-on-dump-and-tier-one-without-it)
-39. [Fixed Native Sprite Capacity in Wider Presentation](#fixed-native-sprite-capacity-in-wider-presentation)
-40. [S2 Sideways Platform Safe Admission and Owned-Child Retirement](#s2-sideways-platform-safe-admission-and-owned-child-retirement)
-41. [Knuckles Climbs Sonic 1 Edge Walls](#knuckles-climbs-sonic-1-edge-walls)
-42. [Sonic CD Hardware Timings Not Modelled](#sonic-cd-hardware-timings-not-modelled)
+24. [Mod Music Uses PCM Presentation Rather Than Mega Drive SMPS](#mod-music-uses-pcm-presentation-rather-than-mega-drive-smps)
+25. [S2 Native Debug Placement Capability Boundary](#s2-native-debug-placement-capability-boundary)
+26. [S2 Competition Split Screen, Native Lag and Rewind Scope](#s2-competition-split-screen-native-lag-and-rewind-scope)
+27. [S2 Whole-Run V-int Clock Cannot Be Made Exact](#s2-whole-run-v-int-clock-cannot-be-made-exact)
+28. [S2 Push-Release Animation Restart Fires Once Extra At A Contact-End Frame](#s2-push-release-animation-restart-fires-once-extra-at-a-contact-end-frame)
+29. [S2 CPZ Boss Truncates The Object Pass (`fixBugs = 0`)](#s2-cpz-boss-truncates-the-object-pass-fixbugs--0)
+30. [S2 Interactive Special-Stage Hardware Lag Is Approximated](#s2-interactive-special-stage-hardware-lag-is-approximated)
+31. [YM2612 Output Scale, Resting Level and DAC Presentation](#ym2612-output-scale-resting-level-and-dac-presentation)
+32. [PSG Tone-2-Linked Noise at Period 0/1 Follows the Reference Cores](#psg-tone-2-linked-noise-at-period-01-follows-the-reference-cores)
+33. [FM:PSG Mix Balance Is Pre-Rewrite Parity, Not a Hardware Calibration](#fmpsg-mix-balance-is-pre-rewrite-parity-not-a-hardware-calibration)
+34. [S2 Compressed-Music Load Timing Omits Sub-Frame Bus Contention](#s2-compressed-music-load-timing-omits-sub-frame-bus-contention)
+35. [S2 stopMusic Bypasses the Mailbox While a Compressed Load Blocks It](#s2-stopmusic-bypasses-the-mailbox-while-a-compressed-load-blocks-it)
+36. [Fast FM Register-Level Timing and Output](#fast-fm-register-level-timing-and-output)
+37. [Knuckles in Sonic 2 Runs Tier Two With the Lock-On Dump and Tier One Without It](#knuckles-in-sonic-2-runs-tier-two-with-the-lock-on-dump-and-tier-one-without-it)
+38. [Fixed Native Sprite Capacity in Wider Presentation](#fixed-native-sprite-capacity-in-wider-presentation)
+39. [S2 Sideways Platform Safe Admission and Owned-Child Retirement](#s2-sideways-platform-safe-admission-and-owned-child-retirement)
+40. [Knuckles Climbs Sonic 1 Edge Walls](#knuckles-climbs-sonic-1-edge-walls)
+41. [Sonic CD Hardware Timings Not Modelled](#sonic-cd-hardware-timings-not-modelled)
 
 ---
 
@@ -176,9 +177,6 @@ disc-drive timing. The cases below describe how those limits affect play.
   shipped stage program selects. Loads between
   programs (title, Time Attack, special stage, the warp cutscene) run without
   pacing for CPU work or disc reads. A real disc's read timing varies.
-  R12A starts one V-INT short after act clear or a special stage. The native
-  load takes 46 V-INTs on those entries, and the manifest uses the 45 from
-  stage select. These samples count interrupts serviced during loading.
   With `NONE`, every stage starts the counter at 0 and the first pass sees 1.
   Live play has no extra interrupt-only pass for a native lag frame. Omitting
   those passes can leave the counter behind native. Two things

@@ -8227,56 +8227,56 @@
     {
       "match": "com.openggf.game.soniccd.TestSonicCdLoadTimeManifest#noneKeepsTheBaseAtZero",
       "category": "optional-fixture",
-      "evidence": "src/test/java/com/openggf/game/soniccd/TestSonicCdLoadTimeManifest.java:100",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestSonicCdLoadTimeManifest.java:132",
       "allowed_when_absent": "soniccd_native",
       "note": "BizHawk native reference (and the user's Sonic CD disc)"
     },
     {
       "match": "com.openggf.game.soniccd.TestSonicCdLoadTimeManifest#normalPlayStageLoadEqualsNative(String)[1]",
       "category": "optional-fixture",
-      "evidence": "src/test/java/com/openggf/game/soniccd/TestSonicCdLoadTimeManifest.java:100",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestSonicCdLoadTimeManifest.java:120",
       "allowed_when_absent": "soniccd_native",
       "note": "BizHawk native reference (and the user's Sonic CD disc)"
     },
     {
       "match": "com.openggf.game.soniccd.TestSonicCdLoadTimeManifest#normalPlayStageLoadEqualsNative(String)[2]",
       "category": "optional-fixture",
-      "evidence": "src/test/java/com/openggf/game/soniccd/TestSonicCdLoadTimeManifest.java:100",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestSonicCdLoadTimeManifest.java:120",
       "allowed_when_absent": "soniccd_native",
       "note": "BizHawk native reference (and the user's Sonic CD disc)"
     },
     {
       "match": "com.openggf.game.soniccd.TestSonicCdLoadTimeManifest#normalPlayStageLoadEqualsNative(String)[3]",
       "category": "optional-fixture",
-      "evidence": "src/test/java/com/openggf/game/soniccd/TestSonicCdLoadTimeManifest.java:100",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestSonicCdLoadTimeManifest.java:120",
       "allowed_when_absent": "soniccd_native",
       "note": "BizHawk native reference (and the user's Sonic CD disc)"
     },
     {
       "match": "com.openggf.game.soniccd.TestSonicCdLoadTimeManifest#normalPlayStageLoadEqualsNative(String)[4]",
       "category": "optional-fixture",
-      "evidence": "src/test/java/com/openggf/game/soniccd/TestSonicCdLoadTimeManifest.java:100",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestSonicCdLoadTimeManifest.java:120",
       "allowed_when_absent": "soniccd_native",
       "note": "BizHawk native reference (and the user's Sonic CD disc)"
     },
     {
       "match": "com.openggf.game.soniccd.TestSonicCdLoadTimeManifest#normalPlayStageLoadEqualsNative(String)[5]",
       "category": "optional-fixture",
-      "evidence": "src/test/java/com/openggf/game/soniccd/TestSonicCdLoadTimeManifest.java:100",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestSonicCdLoadTimeManifest.java:120",
       "allowed_when_absent": "soniccd_native",
       "note": "BizHawk native reference (and the user's Sonic CD disc)"
     },
     {
       "match": "com.openggf.game.soniccd.TestSonicCdLoadTimeManifest#normalPlayStageLoadEqualsNative(String)[6]",
       "category": "optional-fixture",
-      "evidence": "src/test/java/com/openggf/game/soniccd/TestSonicCdLoadTimeManifest.java:100",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestSonicCdLoadTimeManifest.java:120",
       "allowed_when_absent": "soniccd_native",
       "note": "BizHawk native reference (and the user's Sonic CD disc)"
     },
     {
       "match": "com.openggf.game.soniccd.TestSonicCdLoadTimeManifest#normalPlayStageLoadEqualsNative(String)[7]",
       "category": "optional-fixture",
-      "evidence": "src/test/java/com/openggf/game/soniccd/TestSonicCdLoadTimeManifest.java:100",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestSonicCdLoadTimeManifest.java:120",
       "allowed_when_absent": "soniccd_native",
       "note": "BizHawk native reference (and the user's Sonic CD disc)"
     },
