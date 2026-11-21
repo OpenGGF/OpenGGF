@@ -101,7 +101,9 @@ under the matching area heading; see the
   live play. During movie playback, recorded Start pauses and resumes the
   CD track or Past PCM according to the current time zone, including the
   destination once a time warp begins. Pausing stops the charge sound each
-  paused frame. Passing a signpost clears the speed-shoes flag.
+  paused frame. Passing a signpost clears the speed-shoes flag and leaves the
+  boosted movement constants in effect until the next native physics write.
+  Power-up music checks the live time zone, including the warp bit, before fading PCM.
   Press A, B or C during a pause to leave a Time Attack attempt or spend one
   life in the campaign. The stage restarts if lives remain.
   Clearing Special Stage 8 opens an OpenGGF acknowledgement with the disc's
