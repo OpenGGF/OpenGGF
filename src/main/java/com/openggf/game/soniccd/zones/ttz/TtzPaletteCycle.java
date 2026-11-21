@@ -161,7 +161,7 @@ final class TtzPaletteCycle implements AnimatedPaletteManager {
     private void flush() {
         Palette[] palettes = new Palette[level.getPaletteCount()];
         for (int i = 0; i < palettes.length; i++) palettes[i] = level.getPalette(i);
-        registry.resolveInto(palettes, null, GameServices.graphics(), null);
+        registry.resolveInto(palettes, null, null, null);
     }
 
     private void write(int colorIndex, int segaWord) {

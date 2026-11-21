@@ -100,7 +100,7 @@ final class SszPaletteCycle implements AnimatedPaletteManager {
         for (int slot = 0; slot < scripts.size(); slot++) cycleColor(slot, scripts.get(slot));
         Palette[] palettes = new Palette[level.getPaletteCount()];
         for (int i = 0; i < palettes.length; i++) palettes[i] = level.getPalette(i);
-        registry.resolveInto(palettes, null, GameServices.graphics(), null);
+        registry.resolveInto(palettes, null, null, null);
     }
 
     /** CycleColor (r7/palette_cycle_a.asm:17-49). */

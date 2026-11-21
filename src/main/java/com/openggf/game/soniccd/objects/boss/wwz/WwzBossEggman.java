@@ -1,5 +1,6 @@
 package com.openggf.game.soniccd.objects.boss.wwz;
 
+import com.openggf.game.soniccd.level.CdStagePalette;
 import com.openggf.game.soniccd.zones.wwz.WwzStageState;
 import com.openggf.camera.Camera;
 import com.openggf.game.PlayableEntity;
@@ -86,7 +87,6 @@ public final class WwzBossEggman extends WwzBossPiece
 
     private ProgrammedFade programmedFade;
     private int fadeVSyncsRemaining;
-    private int[] nextFadePalette;
     private boolean skipDraw;
 
     public WwzBossEggman(ObjectSpawn spawn) {
@@ -644,7 +644,7 @@ public final class WwzBossEggman extends WwzBossPiece
                 bytes[c * 2] = (byte) (words[line * 16 + c] >> 8);
                 bytes[c * 2 + 1] = (byte) words[line * 16 + c];
             }
-            services().updatePalette(line, bytes);
+            CdStagePalette.writeLine(services(), line, bytes);
         }
     }
 
@@ -681,9 +681,10 @@ public final class WwzBossEggman extends WwzBossPiece
         ram().publishPaletteWait(spawn);
         programmedFade = fade;
         fadeVSyncsRemaining = 0x15 + 1;
-        nextFadePalette = paletteWords();
         if (fade == ProgrammedFade.OBJECTS_FROM_WHITE) {
-            java.util.Arrays.fill(nextFadePalette, 0, 0x30, 0xEEE);
+            int[] words = paletteWords();
+            java.util.Arrays.fill(words, 0, 0x30, 0xEEE);
+            writeWords(words);
         }
     }
 
@@ -697,16 +698,16 @@ public final class WwzBossEggman extends WwzBossPiece
      */
     @Override
     public void advancePaletteWait() {
-        writeWords(nextFadePalette);
+        int[] words = paletteWords();
         if (programmedFade == ProgrammedFade.TO_WHITE) {
-            for (int c = 0; c < 64; c++) nextFadePalette[c] = toWhite(nextFadePalette[c]);
+            for (int c = 0; c < words.length; c++) words[c] = toWhite(words[c]);
         } else {
-            for (int c = 0; c < 0x30; c++) nextFadePalette[c] = fromWhite(nextFadePalette[c], fadeTarget[c]);
-            nextFadePalette[0x20] = 0xEEE;
+            for (int c = 0; c < 0x30; c++) words[c] = fromWhite(words[c], fadeTarget[c]);
+            words[0x20] = 0xEEE;
         }
+        writeWords(words);
         if (--fadeVSyncsRemaining == 0) {
             programmedFade = null;
-            nextFadePalette = null;
         }
     }
 

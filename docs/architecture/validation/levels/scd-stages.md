@@ -314,7 +314,20 @@ backup RAM and campaign progress. A separate case checks Start abort.
 Both local native recordings end with six UFOs remaining. A natural clear
 and parity for the original `SPEEND.MMD` credits presentation remain open.
 
-## Wacky Workbench defeat fades (closed)
+## Stage palette publication and Wacky Workbench defeat fades
+
+`StageMainLoop` (common/main.asm:329-340) waits for `VBlankStage`
+(common/main.asm:854-877), which publishes the stage palette before
+`StageMainLoopUpdate` (common/main.asm:406-410) runs objects and
+`StageMainLoopDraw` (common/main.asm:443-453) calls the palette cycler.
+The other stage dialect uses the same order in
+`Level_MainLoop` (Level/Main.asm:333-335, 397-430) and `VInt_Level`
+(Level/Main.asm:821-847). In Wacky Workbench, `CycleColor`
+(r6/palette_cycle_c.asm:23-46), `BossFadeStageWritePalette`
+(common/palette_fade.asm:412-434), and `ElectricBeamsAnimateMainPalette`
+(objects/r6/electric_beams.asm:201-211) write the working palette.
+A write in frame N first appears on frame N+1. The stage renderer and
+the backdrop use the palette published at the start of the frame.
 
 `EggmanDefeatSequenceFadeScreen` and `EggmanDefeatSequenceFadeObjects`
 (objects/r6/boss.asm:545-559) hold the stage loop at two points in the defeat
@@ -323,18 +336,24 @@ sequence. `FadeToWhite` (common/palette_fade.asm:285-295) and
 times. `VBlankCommon` (common/main.asm:1014-1025) publishes the current
 palette before the fade routine computes the next one. The restore reads the
 separate target buffer that `LoadFadePalette` (common/palette_load_fade.asm:3-15)
-fills from the disc. The palette cycler changes only the active buffer.
-Both waits request
-`VBlankPaletteFade` (common/main.asm:951-962), which reads the pads through
-`VBlankCommon`. BizHawk reports zero lag frames in the captured windows.
+fills from the disc. Both waits request `VBlankPaletteFade`
+(common/main.asm:951-962), which reads the pads through `VBlankCommon`.
 
-`TestWwzBossFades` uses the defeat movies and compares 64 displayed words on
-every row of both holds against the user-local `rehost-boss-wwz/R63C-fades`
-and `R63D-fades` CRAM recordings. Each window includes the entry and 22
-subsequent V-INTs. Good Future rows are 5473–5495 and 5553–5575. Bad Future
-rows are 5724–5746 and 5804–5826. The test also checks that the stage frame
-counter holds and resumes. `TestWwzBossNative` checks slots and timers at
+`TestWwzBossFades` replays both defeat movies and compares all 64 uploaded
+palette words at each of the 672 rows in each user-local palette recording.
+Neither recording has lag frames in that window. Good Future hold rows are
+5473-5495 and 5553-5575. Bad Future hold rows are 5724-5746 and 5804-5826.
+The test compares the level frame counter throughout the window, including
+when the stage loop resumes. `TestWwzBossNative` checks slots and timers at
 completed level frames.
+
+Picture fixtures that draw the preceding iteration's object and scroll state
+publish its palette before rendering. This samples the next VBlank's palette
+at the same point as the native picture. The defeat palette test advances
+the ordinary frame loop and observes what that loop actually published.
+The Palmtree Panic end shots for R11D, R12B and R12D now match all 42,926,
+39,767 and 36,326 unmasked pixels respectively. The R11A end shot remains
+uncertified.
 
 ## Parked Sonic CD gaps
 

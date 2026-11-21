@@ -106,6 +106,7 @@ class TestSonicCdR11aObjectPicture {
         graphics.setDisplayColorProfile(DisplayColorProfile.RAW_RGB);
         graphics.setDisplayColorExpansion(DisplayColorExpansion.FULL);
         var level = GameServices.level();
+        CdFixtureReplay.publishPaletteForPreparedPicture();
         level.setClearColor();
         org.lwjgl.opengl.GL11.glClear(org.lwjgl.opengl.GL11.GL_COLOR_BUFFER_BIT | org.lwjgl.opengl.GL11.GL_DEPTH_BUFFER_BIT);
         level.drawWithSpritePriority(GameServices.sprites(), true);

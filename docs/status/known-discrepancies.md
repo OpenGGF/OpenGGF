@@ -264,9 +264,6 @@ disc-drive timing. The cases below describe how those limits affect play.
   at widths 256 and 304. Other widths are unmeasured, and physical stamp
   timing remains uncertified.
 
-The Wacky Workbench defeat fades have a
-[separate gameplay parity gap](../architecture/validation/levels/scd-stages.md#parked-sonic-cd-gaps).
-
 ### Other Sonic CD differences
 
 **Chip edge cases without reference evidence.** The PCM chip is a translation

@@ -3,6 +3,7 @@ package com.openggf.game.soniccd.objects.ppz;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.soniccd.level.CdLevel;
 import com.openggf.game.soniccd.level.CdStageCatalogue;
+import com.openggf.game.soniccd.level.CdStagePalette;
 import com.openggf.game.soniccd.objects.art.CdObjectArtProvider;
 import com.openggf.game.soniccd.program.CdSceneCoordinator;
 import com.openggf.graphics.GLCommand;
@@ -27,7 +28,7 @@ final class PpzAmyRose extends PlaceholderObjectInstance {
             var art = services().gameModule().getGameService(CdObjectArtProvider.class);
             var image = art.image();
             int table = CdStageCatalogue.entry(level.payload()).paletteTable();
-            services().updatePalette(1, image.paletteEntryFirstLine(table, 5));
+            CdStagePalette.writeLine(services(), 1, image.paletteEntryFirstLine(table, 5));
         }
     }
 
