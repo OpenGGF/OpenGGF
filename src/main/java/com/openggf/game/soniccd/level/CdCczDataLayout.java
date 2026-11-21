@@ -1,14 +1,41 @@
 package com.openggf.game.soniccd.level;
 import com.openggf.game.soniccd.*;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.*;
 /** Closed original-USA missing CCZ DATA declarations. Actual CdProgramAssets/common reader
  * owns all bytes. N1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff, shipped FixBugs=0.
  * Canonical includes, real consumer views and products are distinct; no live/terrain grant.
- * R31A/R32A keep their existing enum keys/owners and are deliberately not re-registered. */
+ * R31A/R32A keep their existing programme owners. Only their background row tables are declared here. */
 public final class CdCczDataLayout {
     private CdCczDataLayout() {}
     public record Range(String key,int fileOffset,int length,String sha256) {}
     public record Operand(int fileOffset,String hex) {}
+
+    // unk_203500 (Level/Collision Chaos/Stage Draw (Act 1 Present).asm:282-286).
+    private static final Range R31A_BACKGROUND_ROWS = new Range("BackgroundRows", 0x3504, 50,
+            "2a2a2a30fe4a460e0fdd45a0d941fe7b0e1cee3ee4fd2a9aacbee6ba6c517e2a");
+    // unk_2034F2 (r3/stage_draw_2a.asm:557-607).
+    private static final Range R32A_BACKGROUND_ROWS = new Range("BackgroundRows", 0x34F6, 50,
+            "a21448fdc0be189d3b285084fb55114514e079714adc780f9aeed2b45e24ec6f");
+
+    static byte[] readBackgroundRows(CdStagePayload payload, CdStageImage image) {
+        Range table = switch (payload) {
+            case R31A -> R31A_BACKGROUND_ROWS;
+            case R32A -> R32A_BACKGROUND_ROWS;
+            default -> Programme.valueOf(payload.name()).range("BackgroundRows");
+        };
+        byte[] bytes = image.slice(table.fileOffset(), table.length());
+        try {
+            byte[] digest = MessageDigest.getInstance("SHA-256").digest(bytes);
+            if (!table.sha256().equals(HexFormat.of().formatHex(digest))) {
+                throw new IllegalStateException(payload + ": background row selector hash differs from the USA disc");
+            }
+        } catch (NoSuchAlgorithmException e) {
+            throw new AssertionError(e);
+        }
+        return bytes;
+    }
     public enum Programme {
         R31B("2a7dbe5463233d4cfb69b34dfcf480f8bec93407918d53883ee1d96771247862",rangesR31B(),operandsR31B()),
         R31C("cdb48963c2661c537c19986f2f360ce89bc39d8dab0974d05ebca6557fefa987",rangesR31C(),operandsR31C()),
