@@ -85,12 +85,27 @@ under the matching area heading; see the
   both special-stage attract demos, backup RAM (saved in `saves/soniccd`),
   the opening video, both endings, FM
   effects, CD audio and PCM sound are hosted. Special-stage extra lives cap the
-  campaign total at 249. Level 1-Ups can raise it past 249 and wrap from 255
-  to 0. The FM loader also accepts verified Japanese and European discs
+  campaign total at 249 and can award a life before the score caps. Level 1-Ups
+  can raise lives past 249 and wrap from 255 to 0, where a living Sonic can
+  still pause. Dying with 129 or more lives triggers Game Over, as on the disc.
+  The FM loader also accepts verified Japanese and European discs
   containing the identical driver bank. The title's RAM DATA entry confirms a
   reset of Sonic CD's save to disc defaults.
+  The prompt also runs in headless sessions.
   Time Attack follows the disc's object rules for time posts, the HUD time icon,
   1-Up monitors, the special-stage ring and the Collision Chaos intro.
+  The special-stage ring disappears once Sonic holds all seven Time Stones,
+  including after loading a save. Starting a new game clears the stones and
+  makes the rings available again.
+  Start pauses Sonic CD gameplay and music and allows frame-stepping during
+  live play. During movie playback, recorded Start pauses and resumes the
+  CD track or Past PCM according to the current time zone, including the
+  destination once a time warp begins. Pausing stops the charge sound each
+  paused frame. Passing a signpost clears the speed-shoes flag and leaves the
+  boosted movement constants in effect until the next native physics write.
+  Power-up music checks the live time zone, including the warp bit, before fading PCM.
+  Press A, B or C during a pause to leave a Time Attack attempt or spend one
+  life in the campaign. The stage restarts if lives remain.
   Clearing Special Stage 8 opens an OpenGGF acknowledgement with the disc's
   ending music and a return to the title.
   Visual Mode plays the opening, both endings and the silent Pencil Test
@@ -102,9 +117,13 @@ under the matching area heading; see the
   Held-key live rewind works inside special stages, including the three-frame
   floor pipeline, UFOs and effects. Stage rewind restores Tidal Tempest's rotate
   block parts, Wacky Workbench's launcher sides, and Stardust Speedway's swings
-  and spring launcher parts. The master
-  title lists it when the disc is configured or found (`roms.default: scd` boots
-  it directly) and verifies it against the USA release before starting. A CHD
+  and spring launcher parts. Tidal Tempest's water resumes at its saved height,
+  bob phase, and pump speed. Stardust Speedway's Kanabun, Kabasira, booster
+  sparks, and path swaps resume their saved animation script frame and timer.
+  Rewind also restores the title
+  card, HUD, and points popups. The master title lists Sonic CD when the disc is
+  configured or found (`roms.default: scd` boots it directly) and verifies it
+  against the USA release before starting. A CHD
   is verified by the same content fingerprint as a BIN/CUE set, so it is
   accepted exactly when its decoded tracks equal the Redump set; the reader is
   pure Java (CHD v5; `cdzl`, `cdlz`, `cdfl` and `cdzs` hunks or uncompressed;
@@ -122,6 +141,8 @@ under the matching area heading; see the
   bar ends star protection and resets the warp timer. Robotnik's projectors can be destroyed in the
   Past. In the Past acts of Palmtree Panic and Wacky Workbench, the projectors'
   flying and ground hologram animals use art from the disc.
+  In both Collision Chaos Past acts, the ground hologram cycles through the
+  disc's standing, leaping, and blank frames.
   In both Tidal Tempest Past acts, two hologram animals circle the projector
   and vanish when Sonic shuts it down.
   Wacky Workbench's layout animals fly or hop after the projector is destroyed
@@ -134,18 +155,29 @@ under the matching area heading; see the
   fourteen-second stage fixtures do (56,879 of 57,049 rows). On a focused rerun,
   the recorded Metallic Madness Present act 2 route also matches through its end.
   Its walker platforms let Sonic pass their sides, and the invisible blocks let
-  him jump through from below. Tidal Tempest hosts its vertical moving blocks,
+  him jump through from below. In Stardust Speedway and Metallic Madness, a
+  curled Dango bumps rolling Sonic away and reacts as an ordinary enemy to
+  standing Sonic. Tidal Tempest hosts its vertical moving blocks,
   break poles and stationary spike balls, with sprites loaded from the disc. In Act 1 Present,
   Sonic can ride the rotating swing and raise the elevator with its pressure
-  switch. Its post-scroll
+  switch. A break pole keeps its release timer through hurt, death and
+  drowning. Sonic can still climb while drowning. After the pole releases
+  him, he returns to the walk pose and can steer as he falls while the
+  bubbles slot continues the sink. Tidal Tempest's post-scroll
   currents use the retained direction on the hurt recovery frame. R42A matches
-  through the results and next-act handoff. Quartz Quadrant Past conveyors
+  through the results and next-act handoff. Both Tidal Tempest Act 3 boss
+  recordings now verify Sonic's water re-entry after Robotnik escapes and
+  check the boss slots past the first bubble's final pop frame.
+  Amenbo and Taga-Taga missiles free their object slots at the disc's despawn checks.
+  Quartz Quadrant Past conveyors
   change speed on the warp trigger frame, and the R51B short fixture matches
   all 569 recorded rows. Metallic Madness Act 1 hosts Poh-Bee and its swinging
   weights. Its shared badnik defeat and Good Future explosion preserve native
   slot use. Ring counts and positions match native over the 28 recorded routes
   and two Palmtree Panic loops. Ring spills and slots now match throughout the
-  recorded Metallic Madness Present, Past, and Good Future routes. Stage loads clear the state native
+  recorded Metallic Madness Present, Past, and Good Future routes. In Quartz
+  Quadrant, Noro Noro frees its spike slot when Sonic leaves range, preserving
+  the disc's object allocation order. Stage loads clear the state native
   clears, so playing stages in any order matches playing each alone. In normal
   play the object clock a stage starts from and the video player's disc wait
   follow measured emulator timings under `gameplay.loadTimeSimulation`

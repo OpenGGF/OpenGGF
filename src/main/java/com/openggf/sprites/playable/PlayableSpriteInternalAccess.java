@@ -189,6 +189,12 @@ public final class PlayableSpriteInternalAccess {
         else player.nativeSpeedWords.forget();
     }
 
+    /** Native flag clear outside the expiry routine. Discard the inactive countdown without applying expiry effects. */
+    public static void clearSpeedShoesFlag(AbstractPlayableSprite player) {
+        player.speedShoes = false;
+        PlayableSpeedShoesLifecycle.restoreTimer(player, false, 0);
+    }
+
     static void expireNativeSpeedShoes(AbstractPlayableSprite player) {
         var policy = player.nativeSpeedPolicy();
         if (policy != null) policy.expireSpeedShoes(player);

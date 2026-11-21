@@ -12,6 +12,11 @@ public final class NativeGameStateOps {
         return state.specialRingCollection();
     }
 
+    /** Transfers a completed native tally's stored score. */
+    public static void restoreScore(GameStateManager state, int score) {
+        state.restoreScore(score);
+    }
+
     /** {@code Life_count} carried into a standalone trace segment. */
     public static void restoreLives(GameStateManager state, int lives) {
         state.restoreLives(lives);
