@@ -97,6 +97,12 @@ public final class LiveRewindInputSource implements InputSource {
         append(neutralFrameInput(0));
     }
 
+    void resetToFrameZero(Bk2FrameInput floorInput, LiveRewindPacingFrame pacing) {
+        clear();
+        baseFrame = 0;
+        appendFrame(floorInput, pacing);
+    }
+
     public void retainOnlyFrame(int frame) {
         if (frame < earliestFrame() || frame >= frameCount()) {
             resetToSingleNeutralFrame(frame);

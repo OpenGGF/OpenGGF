@@ -812,6 +812,20 @@
       "note": "Sonic CD disc and native captures"
     },
     {
+      "match": "com.openggf.game.soniccd.flow.TestCdStageLoadRewind#heldRewindStopsAtTimeWarpArrival",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/flow/TestCdStageLoadRewind.java:41",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "The campaign flow harness opens the user-supplied USA disc through CdTestMedia.usaCue."
+    },
+    {
+      "match": "com.openggf.game.soniccd.flow.TestCdStageLoadRewind#heldRewindStopsAtNextActArrival",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/flow/TestCdStageLoadRewind.java:62",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "The campaign flow harness opens the user-supplied USA disc through CdTestMedia.usaCue."
+    },
+    {
       "match": "com.openggf.game.soniccd.flow.TestCdGameFlowNative#actOneClearTalliesAndEntersActTwoAsNative",
       "category": "optional-fixture",
       "evidence": "src/test/java/com/openggf/game/soniccd/flow/TestCdGameFlowNative.java:45",

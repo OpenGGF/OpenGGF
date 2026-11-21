@@ -17,7 +17,7 @@ Per-zone phase tests cover the stage/program variants, immutable dependencies,
 water/ramp/band arithmetic and 448-row sampling. The combined initial check runs
 54 tests without skips. No new native-reference, cold-route or time-travel frontier
 is certified. Rendered pixels for other periods/acts, exhaustive wraps, swap edges
-and complete rewind/load/time-travel histories remain obligations. These checks
+and complete within-stage rewind histories remain obligations. These checks
 supersede the earlier test that pinned CD's profile exclusion.
 
 Game `scd`, all seven zones, Sonic only. A partial matrix under the
@@ -268,7 +268,7 @@ state. The ring witness and alternate future lack a native comparison.
 | BOSS | Seven bosses with native fight recordings | Tidal Tempest after the fight comparison limits and Metallic Madness boss slots and stage exit lack native assertions |
 | LIFE | Deaths, game over and checkpoints run through the program flow (`TestCdGameFlowNative`, six native runs set up with RAM pokes); the idle timer and give-up equal native on an 11,490-row movie; saves persist across runs, and RAM DATA resets the Sonic CD record through the title menu (`TestCdDurableSaves`) | Checkpoint respawn after time travel unverified |
 | LOAD | Act clear to the next stage, warp to another period, giant ring to the special stage and back; state a stage change leaves behind is cleared as native does (`TestSonicCdStageChangeIsolation`); stage-load and video-read timing in normal play is estimated from emulator measurements (`gameplay.loadTimeSimulation`) | Carry into a native warp destination unverified; the checkpoint and warp entries are single samples, and 12 stages' checkpoint and warp keys may name the wrong queued list ([known discrepancy](../../../status/known-discrepancies.md#sonic-cd-hardware-timings-not-modelled)) |
-| REWIND | Boss rewind tests for six zones, rings, zone signals, the Stardust Speedway lamp, the Collision Chaos drain | Spot coverage per the rewind contract not assessed; cross-load rewind not assessed |
+| REWIND | Boss rewind tests for six zones, rings, zone signals, the Stardust Speedway lamp, the Collision Chaos drain. `TestCdStageLoadRewind` verifies that held rewind stops at the destination floor after R11A → R11D (time warp) and R11A → R12A (act clear) on the USA disc. See the [stage-load rewind policy](../../../status/known-discrepancies.md#sonic-cd-stage-load-live-rewind). | Within-stage rewind across complete routes and the other load edges remain unassessed. |
 | PRESENT | Zone pictures per the presentation lanes (most early and end shots equal native); `TestCdTitlePicture` | Uncertified shots listed in each zone test; widths other than 320 draw but have no native reference |
 | ROUTE | 28 full-act routes as above | Act 1 Bad Future and act 2 Past and futures: fixtures only; no complete-run recording |
 | ORACLE | Constants and branches cite `docs/scddisasm`; trace rows comparison-only | Lag-frame CPU timing not modelled ([known discrepancy](../../../status/known-discrepancies.md#sonic-cd-hardware-timings-not-modelled)) |
