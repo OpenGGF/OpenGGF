@@ -3,6 +3,8 @@ package com.openggf.game.soniccd;
 import com.openggf.game.AbstractLevelInitProfile;
 import com.openggf.game.InitStep;
 import com.openggf.game.LevelLoadContext;
+import com.openggf.game.LevelLoadRuntimeAccess;
+import com.openggf.sprites.playable.PlayableSpriteInternalAccess;
 
 import java.util.List;
 
@@ -77,6 +79,16 @@ final class SonicCdLevelInitProfile extends AbstractLevelInitProfile
             steps.add(restoreCheckpointStep(ctx));
             steps.add(spawnPlayerStep(ctx));
             steps.add(resetPlayerStateStep(ctx));
+            steps.add(new InitStep("InitCdPlayerSpeedWords",
+                    "LoadPlayer (Level/Main.asm:438-446) installs the object whose ObjSonic_Init"
+                            + " writes the stage's starting speed words (Level/_Objects/Sonic/Main.asm:152-154)",
+                    () -> {
+                        var player = LevelLoadRuntimeAccess.requireSprites(ctx).getMainPlayable();
+                        if (player != null) {
+                            PlayableSpriteInternalAccess.initializeNativeSpeedWords(
+                                    player, LevelLoadRuntimeAccess.requireWorld(ctx));
+                        }
+                    }));
             steps.add(new InitStep("CdLoadCheckpointData",
                     "LoadCheckpointData's time and LoadPlayer's invulnerability (Load Saved Data.asm:44-56; "
                             + "Level/Main.asm:438-446)",
