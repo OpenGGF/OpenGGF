@@ -91,6 +91,9 @@ under the matching area heading; see the
   reset of Sonic CD's save to disc defaults.
   Time Attack follows the disc's object rules for time posts, the HUD time icon,
   1-Up monitors, the special-stage ring and the Collision Chaos intro.
+  The special-stage ring disappears once Sonic holds all seven Time Stones,
+  including after loading a save. Starting a new game clears the stones and
+  makes the rings available again.
   Start pauses Sonic CD gameplay and music and allows frame-stepping during
   live play. During movie playback, recorded Start pauses and resumes the
   CD track or Past PCM according to the current time zone, including the

@@ -305,7 +305,7 @@ class TestSonicCdCommonObjects2 {
         var s = timeTravel.capture();
         timeTravel.restore(new com.openggf.game.soniccd.timetravel.CdTimeTravel.Snapshot(s.timeZone(), s.warping(),
                 s.warpDirection(), s.warpTimer(), true, s.pendingWarp(), s.warpReady(), s.goodFuture(),
-                s.goodFutureFlags(), s.goodFutures(), s.projectorDestroyed(), s.timeStones(), s.loadedPayload(),
+                s.goodFutureFlags(), s.goodFutures(), s.projectorDestroyed(), s.loadedPayload(),
                 s.nextEntry()));
         // tst.b timeWarp beside tst.b invincible in Player_TouchEnemy and Player_TouchHazard
         // (Player Object Collision.asm:130-134, 211-216).
