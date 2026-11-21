@@ -1873,8 +1873,17 @@ public class SmpsSequencer implements CoordFlagContext {
                 // (:3212-3221).
                 t.tieNext = false;
             }
+            int creatorCommandBudget = 1024;
+            boolean creatorMusic = SmpsMusicParameters.isCreatorMusic(smpsData);
             while (t.duration == 0 && t.active) {
-                if (t.pos >= programView.dataLength()) {
+                if (creatorMusic && --creatorCommandBudget < 0) {
+                    // An external bank can jump forever without yielding a note or duration.
+                    t.active = false;
+                    stopNote(t);
+                    LOGGER.warning("Stopped non-yielding SMPS package channel");
+                    break;
+                }
+                if (t.pos < 0 || t.pos >= programView.dataLength()) {
                     // Running off the end of the data has no ROM counterpart,
                     // since every stream ends with a track-end flag. Keep the
                     // engine's safety stop here rather than after the loop, so
@@ -4725,7 +4734,7 @@ public class SmpsSequencer implements CoordFlagContext {
     // -----------------------------------------------------------------------
 
     public void setSpeedMultiplier(int multiplier) {
-        this.speedMultiplier = Math.max(1, multiplier);
+        this.speedMultiplier = SmpsMusicParameters.of(smpsData).tempoEffects() ? Math.max(1, multiplier) : 1;
         if (this.speedMultiplier <= 1) {
             this.speedupTimeout = 0;
         }

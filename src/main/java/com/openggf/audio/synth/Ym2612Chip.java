@@ -551,7 +551,7 @@ public class Ym2612Chip implements FmChip {
         if (ch < 0 || ch >= 6) {
             return;
         }
-        outputGains[ch] = Math.clamp(gain, 0, UNITY_GAIN);
+        outputGains[ch] = Math.clamp(gain, 0, 4 * UNITY_GAIN);
         boolean unity = true;
         for (int g : outputGains) {
             unity &= g == UNITY_GAIN;

@@ -25,6 +25,7 @@ import com.openggf.graphics.PixelFont;
 import com.openggf.mods.ui.ModManagerScreen;
 import com.openggf.audio.AudioManager;
 import com.openggf.audio.StreamedMusicPort;
+import com.openggf.data.Rom;
 import com.openggf.io.ModInputLimits;
 
 import java.nio.file.Path;
@@ -358,13 +359,17 @@ public final class ModSubsystem implements AutoCloseable {
     }
 
     public void beginNormalSession(int outputRate, String gameCode) {
+        beginNormalSession(outputRate, gameCode, null);
+    }
+
+    void beginNormalSession(int outputRate, String gameCode, Rom rom) {
         long expectedEpoch;
         synchronized (this) {
             if (!policy.mayUseInSession()) return;
             expectedEpoch = sessionEpoch;
         }
         SessionExternalContentView replacement = Objects.requireNonNull(
-                sessionFactory.prepare(outputRate, gameCode), "prepared session view");
+                sessionFactory.prepare(outputRate, gameCode, rom), "prepared session view");
         synchronized (this) {
             if (sessionEpoch != expectedEpoch || !policy.mayUseInSession()) {
                 replacement.close();
@@ -458,23 +463,31 @@ public final class ModSubsystem implements AutoCloseable {
         Objects.requireNonNull(effective, "effective");
         Objects.requireNonNull(registry, "registry");
         Objects.requireNonNull(sfxRegistry, "sfxRegistry");
-        return (outputRate, gameCode) -> {
-            boolean stock = "s1".equals(gameCode) || "s2".equals(gameCode) || "s3k".equals(gameCode) || "scd".equals(gameCode);
-            boolean selectedTrack = stock ? !registry.tracks().isEmpty() : registry.tracks().stream()
-                    .anyMatch(track -> track.key().modId().equals(gameCode));
-            boolean selectedSfx = stock ? !sfxRegistry.sfx().isEmpty() : sfxRegistry.sfx().stream()
-                    .anyMatch(sfx -> sfx.key().modId().equals(gameCode));
-            if (!selectedTrack && !selectedSfx) return SessionExternalContentView.EMPTY;
-            PreparedAudioSession audio = preparer.prepare(effective, registry, sfxRegistry, outputRate);
-            PreparedModMusic music;
-            try {
-                music = PreparedModMusic.build(effective, registry, sfxRegistry, audio, outputRate,
-                        stock ? null : gameCode);
-            } catch (RuntimeException error) {
-                audio.close();
-                throw error;
+        return new SessionViewFactory() {
+            @Override
+            public SessionExternalContentView prepare(int outputRate, String gameCode) {
+                return prepare(outputRate, gameCode, null);
             }
-            return SessionExternalContentView.fromPreparedMusic(music, gameCode);
+
+            @Override
+            public SessionExternalContentView prepare(int outputRate, String gameCode, Rom rom) {
+                boolean stock = "s1".equals(gameCode) || "s2".equals(gameCode) || "s3k".equals(gameCode) || "scd".equals(gameCode);
+                boolean selectedTrack = stock ? !registry.tracks().isEmpty() : registry.tracks().stream()
+                        .anyMatch(track -> track.key().modId().equals(gameCode));
+                boolean selectedSfx = stock ? !sfxRegistry.sfx().isEmpty() : sfxRegistry.sfx().stream()
+                        .anyMatch(sfx -> sfx.key().modId().equals(gameCode));
+                if (!selectedTrack && !selectedSfx) return SessionExternalContentView.EMPTY;
+                PreparedAudioSession audio = preparer.prepare(effective, registry, sfxRegistry, outputRate, gameCode, rom);
+                PreparedModMusic music;
+                try {
+                    music = PreparedModMusic.build(effective, registry, sfxRegistry, audio, outputRate,
+                            stock ? null : gameCode);
+                } catch (RuntimeException error) {
+                    audio.close();
+                    throw error;
+                }
+                return SessionExternalContentView.fromPreparedMusic(music, gameCode);
+            }
         };
     }
 
@@ -625,6 +638,10 @@ public final class ModSubsystem implements AutoCloseable {
     @FunctionalInterface
     public interface SessionViewFactory {
         SessionExternalContentView prepare(int outputRate, String gameCode);
+
+        default SessionExternalContentView prepare(int outputRate, String gameCode, Rom rom) {
+            return prepare(outputRate, gameCode);
+        }
     }
 
     public interface SessionAudioBoundary {

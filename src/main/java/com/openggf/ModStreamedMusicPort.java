@@ -1,6 +1,6 @@
 package com.openggf;
 
-import com.openggf.audio.StreamedMusicPort;
+import com.openggf.audio.NativeMusicOverridePort;
 import com.openggf.mods.ModMusicResolver;
 import com.openggf.mods.PreparedModMusic;
 import com.openggf.mods.PreparedTrack;
@@ -17,7 +17,7 @@ import java.util.Objects;
 import java.util.Optional;
 
 /** Mod-runtime adapter for the audio-owned streamed presentation boundary. */
-public final class ModStreamedMusicPort implements StreamedMusicPort {
+public final class ModStreamedMusicPort implements NativeMusicOverridePort {
     private final PreparedModMusic music;
     private final ModMusicResolver resolver;
     private final StreamedMusicPlayer player;
@@ -38,6 +38,14 @@ public final class ModStreamedMusicPort implements StreamedMusicPort {
     public int outputRate() {
         requireOpen();
         return music.outputRate();
+    }
+
+    @Override
+    public Song nativeMusicOverride(int musicId) {
+        requireOpen();
+        var song = music.resolveSmpsOverride(gameCode, musicId);
+        if (song == null) return null;
+        return new Song(new TrackRef(song.key().modId(), song.key().localName()), song.data(), song.dac());
     }
 
     @Override

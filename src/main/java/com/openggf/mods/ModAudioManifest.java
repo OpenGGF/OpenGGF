@@ -10,7 +10,7 @@ import java.util.Set;
 public record ModAudioManifest(int formatVersion, List<ModAudioTrack> tracks,
                                List<ModAudioSfx> sfx) {
     public ModAudioManifest {
-        if (formatVersion != 1) throw new IllegalArgumentException("formatVersion must be 1");
+        if (formatVersion != 1 && formatVersion != 2) throw new IllegalArgumentException("formatVersion must be 1 or 2");
         tracks = List.copyOf(Objects.requireNonNull(tracks, "tracks"));
         sfx = List.copyOf(Objects.requireNonNull(sfx, "sfx"));
         if (tracks.size() > ModInputLimits.DEFAULT_MAX_COLLECTION_ENTRIES
@@ -19,6 +19,7 @@ public record ModAudioManifest(int formatVersion, List<ModAudioTrack> tracks,
         }
         Set<TrackKey> trackKeys = new HashSet<>();
         for (ModAudioTrack track : tracks) {
+            if (formatVersion == 1 && track.isSmpsPackage()) throw new IllegalArgumentException("SMPS packages require formatVersion 2");
             if (!trackKeys.add(track.key())) throw new IllegalArgumentException("Duplicate track id: " + track.key());
         }
         Set<SfxKey> sfxKeys = new HashSet<>();

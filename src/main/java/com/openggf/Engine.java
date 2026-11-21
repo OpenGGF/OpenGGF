@@ -1333,7 +1333,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			return;
 		}
 		applyRequiredDisplayAspect(module);
-		if (!preparePresentationForLaunch(module)) {
+		if (!preparePresentationForLaunch(module, null, dataSource.rom().orElse(null))) {
 			return;
 		}
 		GameplayModeContext gameplayMode = SessionManager.openGameplaySession(
@@ -1370,7 +1370,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			GameplayModeContext gameplay = launch.gameplay();
 			GameModule module = gameplay.getWorldSession().getGameModule();
 			pinStandaloneTeam(launch.team());
-			if (!preparePresentationForLaunch(module, descriptor.manifest().id())) return;
+			if (!preparePresentationForLaunch(module, descriptor.manifest().id(), null)) return;
 			initializeGameplayRuntime(gameplay, true);
 			loadLevelFromDataSelect(launch.zone(), launch.act());
 			restoreGameplayModeFromDataSelectPayload(gameplay, launch.payload());
@@ -2436,11 +2436,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		}
 	}
 
-	private boolean preparePresentationForLaunch(GameModule module) {
-		return preparePresentationForLaunch(module, null);
-	}
-
-	private boolean preparePresentationForLaunch(GameModule module, String standaloneOwner) {
+	private boolean preparePresentationForLaunch(GameModule module, String standaloneOwner, Rom rom) {
 		try {
 			if (configuredHeadlessSession) {
 				if (!audioManager.hasInstalledBackend(configuredHeadlessBackend)) {
@@ -2457,7 +2453,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			// tracks/SFX through the launch-owned port, so prepare that port for
 			// every content-enabled session even when no device backend is opened.
 			if (subsystem.policy().mayUseInSession()) {
-				subsystem.beginNormalSession(audioManager.outputSampleRate(), module.getGameCode());
+				subsystem.beginNormalSession(audioManager.outputSampleRate(), module.getGameCode(), rom);
 			}
 			return true;
 		} catch (RuntimeException error) {
@@ -2627,7 +2623,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 
 		GameModule module = resolveHostedRunModule(rootModule, spec);
 		ModSubsystem.disableCurrentSessionForDeterminism();
-		if (!preparePresentationForLaunch(module)) {
+		if (!preparePresentationForLaunch(module, null, dataSource.rom().orElse(null))) {
 			return false;
 		}
 		if (spec.kind() == com.openggf.mods.run.TrackKind.ARENA)

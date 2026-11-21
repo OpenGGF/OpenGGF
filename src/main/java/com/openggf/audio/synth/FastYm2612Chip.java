@@ -269,7 +269,7 @@ public final class FastYm2612Chip implements FmChip {
     @Override
     public void setOutputGain(int ch, int gain) {
         if (ch >= 0 && ch < 6) {
-            outputGains[ch] = Math.clamp(gain, 0, UNITY_GAIN);
+            outputGains[ch] = Math.clamp(gain, 0, 4 * UNITY_GAIN);
         }
     }
 

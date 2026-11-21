@@ -27,6 +27,15 @@ final class ModAudioValidation {
         return path;
     }
 
+    static String requirePackagePath(String path, int maxBytes) {
+        if (!path.matches("audio/smps/[a-z0-9][a-z0-9._-]*/")
+                || path.length() > maxBytes) {
+            throw new IllegalArgumentException("SMPS package path must be a lower-case audio/smps/<id>/ directory");
+        }
+        ModAssetRoot.requireNormalizedEntry(path.substring(0, path.length() - 1));
+        return path;
+    }
+
     static void requireGain(float gain) {
         if (!Float.isFinite(gain) || gain < 0 || gain > 4) {
             throw new IllegalArgumentException("Audio gain must be finite and in 0..4");

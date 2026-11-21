@@ -197,3 +197,40 @@ pipeline. Unreplaced music returns to the native route. Stop, fade and CDDA
 pause/resume commands control an active replacement. FM effect IDs, PCM voices
 and system commands are not music override targets. The sound catalog lists
 music commands separately from FM effects, whose IDs may overlap.
+
+## Native SMPS packages
+
+A data-only Sonic 3 & Knuckles patch can replace a stock music ID with a
+native song exported by an external authoring tool such as OpenSMPSDeck.
+Extract the package into your mod staging tree, keeping its entry names and
+bytes. For the example below, the package's JSON manifest will be at
+`audio/smps/new-zone/manifest.json`.
+
+Set `baseGame: s3k` in `META-INF/openggf-mod.yaml` and map the desired stock
+music ID to `new-zone` in `audioOverrides`. Use this declaration in
+`audio/audio-manifest.yaml`:
+
+```yaml
+formatVersion: 2
+tracks:
+  - id: new-zone
+    smpsPackage: audio/smps/new-zone/
+    gain: 1.0
+    tempoEffects: true
+sfx: []
+```
+
+Package the staging tree with the usual `ggfmod package` command. The native
+sequence controls its own loops. `tempoEffects` enables the S3K driver's
+speed-shoes behavior. A native replacement participates in the game's fades,
+jingles and rewind.
+
+A stock reference is resolved from the game cartridge already loaded for the
+session. The Mod Manager reports invalid packages and missing or mismatched
+assets. An affected track drops out of the override order, leaving the prior
+valid override or stock music. Sonic 1 and Sonic 2 packages are disabled.
+Packages marked as containing retail song or ROM-derived bytes are for personal
+use only. Use stock references when preparing a package for distribution.
+
+See the [SMPS package format](formats/smps-package.md) for the entry layout,
+driver contract and limits.

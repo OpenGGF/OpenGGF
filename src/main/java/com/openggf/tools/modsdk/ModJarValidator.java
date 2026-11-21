@@ -221,7 +221,7 @@ public final class ModJarValidator {
         }
         try {
             for (ModAudioTrack track : tracks.stream()
-                    .filter(value -> value.key().modId().equals(descriptor.manifest().id()))
+                    .filter(value -> !value.isSmpsPackage() && value.key().modId().equals(descriptor.manifest().id()))
                     .sorted(Comparator.comparing(value -> value.key().toString())).toList()) {
                 try {
                     byte[] encoded = assets.readBounded(track.assetPath(), limits.maxAssetBytes());

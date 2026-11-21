@@ -1508,9 +1508,10 @@ public class AudioManager implements MusicRestoreSink {
 
         if (source.loader() != null) {
             presentationBinding.ensureShadowPresentation();
-            SmpsAssetKey key = new SmpsAssetKey(
-                    baseGameId(source), SmpsAssetKey.Route.BASE_MUSIC,
-                    musicId, null);
+            SmpsAssetKey packageKey = presentationBinding.shadowFactory.registerPackageMusic(
+                    baseGameId(source), musicId, source.generation(), source.config());
+            SmpsAssetKey key = packageKey != null ? packageKey : new SmpsAssetKey(
+                    baseGameId(source), SmpsAssetKey.Route.BASE_MUSIC, musicId, null);
             boolean registered = presentationBinding.shadowFactory.findRegisteredSmpsMusicAsset(
                     key, source.generation()) != null;
             AbstractSmpsData data = null;
@@ -4035,7 +4036,7 @@ public class AudioManager implements MusicRestoreSink {
                 com.openggf.audio.presentation.SmpsAssetKey.Route route,
                 String donorGameId) {
             return switch (route) {
-                case BASE_MUSIC, BASE_ID, BASE_NAME -> {
+                case BASE_MUSIC, PACKAGE_MUSIC, BASE_ID, BASE_NAME -> {
                     BaseAudioSource source = baseAudioSource;
                     yield new AudioPresentationCommandResolver.SourceAccess(
                             baseGameId(source), source.generation(),

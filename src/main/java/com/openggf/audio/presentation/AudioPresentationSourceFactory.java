@@ -7,6 +7,7 @@ import com.openggf.audio.AudioDiagnosticObserverException;
 import com.openggf.audio.SmpsSfxPlaybackPolicy;
 import com.openggf.audio.MusicRestoreSink;
 import com.openggf.audio.StreamedMusicPort;
+import com.openggf.audio.NativeMusicOverridePort;
 import com.openggf.audio.driver.SfxContentionObserver;
 import com.openggf.audio.driver.SmpsDriver;
 import com.openggf.audio.driver.SmpsDriverServiceObserver;
@@ -654,6 +655,16 @@ public final class AudioPresentationSourceFactory
         return registeredPlayback(entry);
     }
 
+    public SmpsAssetKey registerPackageMusic(String gameId, int musicId, long generation,
+                                            SmpsSequencerConfig config) {
+        var song = NativeMusicOverridePort.find(streamedSession.port(), musicId);
+        if (song == null) return null;
+        var key = new SmpsAssetKey(gameId, SmpsAssetKey.Route.PACKAGE_MUSIC, musicId,
+                song.track().owner() + ":" + song.track().name());
+        registerSmpsMusicAsset(key, generation, song.data(), song.dac(), config);
+        return key;
+    }
+
     public SmpsAssetCatalog.ProgramEntry registerSmpsMusicAsset(
             SmpsAssetKey key,
             long dependencyGeneration,
@@ -949,6 +960,8 @@ public final class AudioPresentationSourceFactory
     /** Retires every logical streamed cursor before the manager closes the port. */
     public void retireStreamedMusicPort() {
         streamedSession.detach();
+        assetCatalog.retirePackageMusic();
+        sourcesByDescriptor.keySet().removeIf(source -> source.kind() == SmpsSourceDescriptor.Kind.PACKAGE_MUSIC);
     }
 
     public StreamedMusicPort streamedMusicPort() {
@@ -1492,7 +1505,7 @@ public final class AudioPresentationSourceFactory
                             "named SMPS route requires a name");
                 }
             }
-            case BASE_MUSIC, DONOR_MUSIC ->
+            case BASE_MUSIC, DONOR_MUSIC, PACKAGE_MUSIC ->
                     throw new IllegalArgumentException(
                             "music route cannot register an SFX asset");
         }
@@ -1500,6 +1513,11 @@ public final class AudioPresentationSourceFactory
 
     private static void validateMusicKey(SmpsAssetKey key) {
         switch (key.route()) {
+            case PACKAGE_MUSIC -> {
+                if (key.assetId() < 0 || key.assetName() == null || key.assetName().isBlank()) {
+                    throw new IllegalArgumentException("Package music requires a stock id and track key");
+                }
+            }
             case BASE_MUSIC, DONOR_MUSIC -> {
                 if (key.assetId() < 0 || key.assetName() != null) {
                     throw new IllegalArgumentException(

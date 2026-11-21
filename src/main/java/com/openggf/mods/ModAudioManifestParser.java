@@ -25,6 +25,7 @@ public final class ModAudioManifestParser {
     private static final Set<String> ROOT = Set.of("formatVersion", "tracks", "sfx");
     private static final Set<String> TRACK = Set.of("id", "assetPath", "loop", "loopStartFrame",
             "loopEndFrame", "gain", "tempoEffects");
+    private static final Set<String> PACKAGE_TRACK = Set.of("id", "smpsPackage", "gain", "tempoEffects");
     private static final Set<String> SFX = Set.of("id", "assetPath", "gain", "dac");
     private static final Set<String> DAC = Set.of("sampleRate", "bits", "lowpassHz", "recoveryMix", "recoveryHighpassHz");
     private static final Pattern NUMERIC_TOKEN = Pattern.compile(
@@ -80,11 +81,11 @@ public final class ModAudioManifestParser {
             if (root == null || !root.isObject()) throw new ModManifestException("Audio manifest root must be a mapping");
             only(root, ROOT, "audio manifest");
             int version = integer(required(root, "formatVersion"), "formatVersion");
-            if (version != 1) throw new ModManifestException("Unsupported audio formatVersion: " + version);
-            List<ModAudioTrack> tracks = parseTracks(required(root, "tracks"));
+            if (version != 1 && version != 2) throw new ModManifestException("Unsupported audio formatVersion: " + version);
+            List<ModAudioTrack> tracks = parseTracks(required(root, "tracks"), version);
             JsonNode sfxNode = root.get("sfx");
             List<ModAudioSfx> sfx = sfxNode == null ? List.of() : parseSfx(nonNull(sfxNode, "sfx"));
-            return new ModAudioManifest(1, tracks, sfx);
+            return new ModAudioManifest(version, tracks, sfx);
         } catch (ModManifestException error) {
             throw error;
         } catch (IllegalArgumentException | CharacterCodingException error) {
@@ -96,18 +97,23 @@ public final class ModAudioManifestParser {
 
     public byte[] writeCanonical(ModAudioManifest manifest) {
         Objects.requireNonNull(manifest, "manifest");
-        StringBuilder out = new StringBuilder("formatVersion: 1\ntracks:");
+        StringBuilder out = new StringBuilder("formatVersion: ").append(manifest.formatVersion()).append("\ntracks:");
         if (manifest.tracks().isEmpty()) out.append(" []\n");
         else {
             out.append('\n');
             for (ModAudioTrack track : manifest.tracks()) {
                 requireOwner(track.key().modId());
-                ModAudioValidation.requireAudioPath(track.assetPath(), limits.maxEntryNameBytes());
-                out.append("  - id: ").append(yamlId(track.key().localName())).append('\n')
-                        .append("    assetPath: ").append(track.assetPath()).append('\n')
-                        .append("    loop: ").append(track.loop()).append('\n')
-                        .append("    loopStartFrame: ").append(track.loopStartFrame()).append('\n');
-                track.loopEndFrame().ifPresent(value -> out.append("    loopEndFrame: ").append(value).append('\n'));
+                out.append("  - id: ").append(yamlId(track.key().localName())).append('\n');
+                if (track.isSmpsPackage()) {
+                    out.append("    smpsPackage: ").append(ModAudioValidation.requirePackagePath(
+                            track.smpsPackage(), limits.maxEntryNameBytes())).append('\n');
+                } else {
+                    ModAudioValidation.requireAudioPath(track.assetPath(), limits.maxEntryNameBytes());
+                    out.append("    assetPath: ").append(track.assetPath()).append('\n')
+                            .append("    loop: ").append(track.loop()).append('\n')
+                            .append("    loopStartFrame: ").append(track.loopStartFrame()).append('\n');
+                    track.loopEndFrame().ifPresent(value -> out.append("    loopEndFrame: ").append(value).append('\n'));
+                }
                 out.append("    gain: ").append(Float.toString(track.gain())).append('\n')
                         .append("    tempoEffects: ").append(track.tempoEffects()).append('\n');
             }
@@ -143,11 +149,20 @@ public final class ModAudioManifestParser {
         return bytes;
     }
 
-    private List<ModAudioTrack> parseTracks(JsonNode node) throws ModManifestException {
+    private List<ModAudioTrack> parseTracks(JsonNode node, int version) throws ModManifestException {
         if (!node.isArray() || node.size() > limits.maxCollectionEntries()) throw new ModManifestException("tracks must be a bounded sequence");
         List<ModAudioTrack> values = new ArrayList<>();
         for (JsonNode item : node) {
             if (!item.isObject()) throw new ModManifestException("Each track must be a mapping");
+            if (version == 2 && item.has("smpsPackage")) {
+                only(item, PACKAGE_TRACK, "SMPS package track");
+                String path = ModAudioValidation.requirePackagePath(
+                        text(required(item, "smpsPackage"), "smpsPackage"), limits.maxEntryNameBytes());
+                values.add(new ModAudioTrack(new TrackKey(owner, text(required(item, "id"), "track id")),
+                        null, false, 0, OptionalLong.empty(), finiteFloat(required(item, "gain"), "gain"),
+                        bool(required(item, "tempoEffects"), "tempoEffects"), path));
+                continue;
+            }
             only(item, TRACK, "track");
             String id = text(required(item, "id"), "track id");
             String path = ModAudioValidation.requireAudioPath(text(required(item, "assetPath"), "assetPath"), limits.maxEntryNameBytes());

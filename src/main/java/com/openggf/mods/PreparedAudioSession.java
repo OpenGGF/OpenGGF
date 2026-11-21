@@ -17,6 +17,7 @@ import java.util.Set;
 public final class PreparedAudioSession implements AutoCloseable {
     private List<PreparedTrack> tracks;
     private List<PreparedSfx> sfx;
+    private java.util.Map<TrackKey, PreparedSmpsTrack> smpsTracks;
     private final List<ModFinding> findings;
     private final Set<String> failedOwners;
     private Runnable release;
@@ -39,6 +40,13 @@ public final class PreparedAudioSession implements AutoCloseable {
 
     PreparedAudioSession(List<PreparedTrack> tracks, List<PreparedSfx> sfx,
                          List<ModFinding> findings, Set<String> failedOwners, Runnable release) {
+        this(tracks, sfx, findings, failedOwners, release, java.util.Map.of());
+    }
+
+    PreparedAudioSession(List<PreparedTrack> tracks, List<PreparedSfx> sfx,
+                         List<ModFinding> findings, Set<String> failedOwners, Runnable release,
+                         java.util.Map<TrackKey, PreparedSmpsTrack> smpsTracks) {
+        this.smpsTracks = java.util.Map.copyOf(smpsTracks);
         this.tracks = List.copyOf(Objects.requireNonNull(tracks, "tracks"));
         this.sfx = List.copyOf(Objects.requireNonNull(sfx, "sfx"));
         this.findings = List.copyOf(Objects.requireNonNull(findings, "findings"));
@@ -74,6 +82,8 @@ public final class PreparedAudioSession implements AutoCloseable {
         return sfx;
     }
 
+    synchronized java.util.Map<TrackKey, PreparedSmpsTrack> smpsTracks() { return smpsTracks; }
+
     public List<ModFinding> findings() { return findings; }
     public Set<String> failedOwners() { return failedOwners; }
     public synchronized boolean isClosed() { return closed; }
@@ -84,6 +94,7 @@ public final class PreparedAudioSession implements AutoCloseable {
         closed = true;
         tracks = List.of();
         sfx = List.of();
+        smpsTracks = java.util.Map.of();
         Runnable ownedRelease = release;
         release = () -> { };
         ownedRelease.run();

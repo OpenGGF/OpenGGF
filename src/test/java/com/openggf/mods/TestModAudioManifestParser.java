@@ -91,7 +91,7 @@ class TestModAudioManifestParser {
     @Test
     void strictYamlAndInvalidTypedUnionsAreRejected() {
         for (String yaml : List.of(
-                "", "formatVersion: 2\ntracks: []\n", "formatVersion: 1\ntracks: null\n",
+                "", "formatVersion: 3\ntracks: []\n", "formatVersion: 1\ntracks: null\n",
                 GOLDEN + "unknown: true\n",
                 GOLDEN.replace("loop: true", "loop: 'true'"),
                 GOLDEN.replace("loopStartFrame: 44100", "loopStartFrame: -1"),

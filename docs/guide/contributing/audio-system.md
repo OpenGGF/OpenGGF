@@ -91,13 +91,11 @@ The strict CFG also treats bank-end falloff, malformed roots/pointers, and
 unknown commands/subcommands as unresolved rather than silently advancing;
 `EB` follows its ROM index-plus-pointer layout. The handler recognizes and
 consumes the three commands' documented widths only as defensive syntax
-handling; it does not dispatch sound, halt/resume the native nine song-track
-records, or copy shared Z80 memory. Custom/imported execution is unsupported,
-not a partially implemented feature. The current mod-audio design uses streamed
-media and defines neither a custom SMPS format nor an ingestion route. See
-`docs/architecture/designs/2026-08-09-s3k-custom-smps-meta-command-capability.md`
-for the integration, memory, rewind, variant, and validation gates that must
-all exist before this boundary can change.
+handling. They have no dispatch, pause/resume, or shared-memory semantics for
+stock or custom banks. [Native package tracks](../../modding/formats/smps-package.md)
+use the same sequencer and supported commands. The existing
+[meta-command design](../../architecture/designs/2026-08-09-s3k-custom-smps-meta-command-capability.md)
+records the remaining work for those commands.
 
 ## Per-Game Driver Differences
 

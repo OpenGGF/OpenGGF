@@ -1,5 +1,6 @@
 package com.openggf.mods;
 
+import com.openggf.data.Rom;
 import com.openggf.io.ModAssetRoot;
 import com.openggf.io.ModInputLimits;
 import com.openggf.io.PackedModAssetRoot;
@@ -9,19 +10,21 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.Collections;
-import java.util.Locale;
+import java.util.logging.Logger;
 
 import static java.security.MessageDigest.getInstance;
 
 /** Launch-only, owner-atomic decode/resample transaction. Performs no playback work. */
 public final class ModAudioPreparer {
+    private static final Logger LOGGER = Logger.getLogger(ModAudioPreparer.class.getName());
     private final Path root;
     private final ModInputLimits limits;
     private final ModRuntimeFindingStore findingStore;
@@ -60,6 +63,11 @@ public final class ModAudioPreparer {
     public synchronized PreparedAudioSession prepare(EffectiveModCatalog effective,
                                                      ModTrackRegistry registry,
                                                      ModSfxRegistry sfxRegistry, int outputRate) {
+        return prepare(effective, registry, sfxRegistry, outputRate, null, null);
+    }
+
+    public synchronized PreparedAudioSession prepare(EffectiveModCatalog effective, ModTrackRegistry registry,
+            ModSfxRegistry sfxRegistry, int outputRate, String game, Rom rom) {
         Objects.requireNonNull(effective, "effective");
         Objects.requireNonNull(registry, "registry");
         Objects.requireNonNull(sfxRegistry, "sfxRegistry");
@@ -92,6 +100,8 @@ public final class ModAudioPreparer {
         Map<String, Set<CacheKey>> keysByOwner = new LinkedHashMap<>();
         LinkedHashMap<CacheKey, CachedPcm> nextCache = new LinkedHashMap<>();
         LinkedHashMap<PrimaryKey, CacheKey> nextPrimaryCache = new LinkedHashMap<>();
+        Map<TrackKey, PreparedSmpsTrack> preparedSmps = new LinkedHashMap<>();
+        var stockResolver = new S3kPackageStockResolver(rom);
         long retainedBytes = activeBytes();
         for (ModDescriptor descriptor : effective.orderedEnabled()) {
             String owner = descriptor.manifest().id();
@@ -114,6 +124,7 @@ public final class ModAudioPreparer {
             LinkedHashMap<CacheKey, CachedPcm> ownerCache = new LinkedHashMap<>();
             LinkedHashMap<PrimaryKey, CacheKey> ownerPrimaryCache = new LinkedHashMap<>();
             long provisionalBytes = 0;
+            List<ModFinding> packageFindings = new ArrayList<>();
             try {
             SnapshotModAssetRoot sourceAssets = descriptor.retainedSource() != null
                     ? descriptor.retainedSource() : ModAssetRoot.jar(root,descriptor.jarPath(),limits);
@@ -124,7 +135,46 @@ public final class ModAudioPreparer {
                 }
                 record Declaration(String assetPath, ModAudioTrack track, ModAudioSfx sfx) { }
                 List<Declaration> declarations = new ArrayList<>();
-                if (ownerTracks != null) ownerTracks.forEach(track -> declarations.add(new Declaration(track.assetPath(), track, null)));
+                if (ownerTracks != null) {
+                    for (ModAudioTrack track : ownerTracks) {
+                        if (!track.isSmpsPackage()) {
+                            declarations.add(new Declaration(track.assetPath(), track, null));
+                            continue;
+                        }
+                        String baseGame = descriptor.manifest().baseGame();
+                        if (descriptor.manifest().type() != ModType.PATCH
+                                || !Objects.equals(baseGame, game)) continue;
+                        var warnings = new LinkedHashSet<String>();
+                        try {
+                            SmpsPackageReader.Result song = new SmpsPackageReader(assets,
+                                    sourceAssets.validatedEntryNames(), track.smpsPackage(), limits,
+                                    locator -> {
+                                        byte[] bytes = stockResolver.resolve(locator);
+                                        if (stockResolver.unknownImage()) warnings.add(
+                                                "UNKNOWN_ROM_IMAGE: The ROM image is unknown. Asset hashes determine compatibility.");
+                                        return bytes;
+                                    }, warnings::add).read(baseGame, track.gain(), track.tempoEffects());
+                            if (song.retainedBytes() > limits.maxAudioCacheBytes() - retainedBytes - provisionalBytes) {
+                                throw new IOException("Prepared audio cache budget exceeded");
+                            }
+                            provisionalBytes += song.retainedBytes();
+                            preparedSmps.put(track.key(), new PreparedSmpsTrack(track.key(), song.data(), song.dac()));
+                        } catch (IOException | RuntimeException error) {
+                            String message = track.key() + ": " + safeMessage(error);
+                            LOGGER.warning(message);
+                            packageFindings.add(new ModFinding(ModFindingSeverity.WARNING,
+                                    "SMPS_PACKAGE_DISABLED", message, track.smpsPackage()));
+                        }
+                        for (String warning : warnings) {
+                            String message = track.key() + ": " + warning;
+                            LOGGER.warning(message);
+                            if (warning.startsWith("UNKNOWN_ROM_IMAGE:")) {
+                                packageFindings.add(new ModFinding(ModFindingSeverity.WARNING,
+                                        "SMPS_PACKAGE_PROVENANCE", message, track.smpsPackage()));
+                            }
+                        }
+                    }
+                }
                 if (ownerSfx != null) ownerSfx.forEach(sfx -> declarations.add(new Declaration(sfx.assetPath(), null, sfx)));
                 for (Declaration declaration : declarations) {
                     String codec = codec(declaration.assetPath());
@@ -232,7 +282,7 @@ public final class ModAudioPreparer {
                 preparedByOwner.put(owner, List.copyOf(ownerPrepared));
                 preparedSfxByOwner.put(owner, List.copyOf(ownerPreparedSfx));
                 keysByOwner.put(owner, Set.copyOf(ownerCache.keySet()));
-                ownerFindings.put(owner, List.of());
+                ownerFindings.put(owner, List.copyOf(packageFindings));
             }} catch (ChangedJar error) {
                 failOwner(owner, "MOD_JAR_CHANGED", error.getMessage(), failed, ownerFindings);
             } catch (IOException | IllegalArgumentException | ArithmeticException | SecurityException error) {
@@ -278,8 +328,9 @@ public final class ModAudioPreparer {
         cache = Collections.unmodifiableMap(new LinkedHashMap<>(nextCache));
         primaryCache = Collections.unmodifiableMap(new LinkedHashMap<>(nextPrimaryCache));
         registerActive(leaseKeys);
+        preparedSmps.keySet().removeIf(key -> failed.contains(key.modId()));
         return new PreparedAudioSession(prepared, preparedSfx, sessionFindings, failed,
-                () -> releaseActive(leaseKeys));
+                () -> releaseActive(leaseKeys), preparedSmps);
     }
 
     private static void failOwner(String owner, String code, String message,
