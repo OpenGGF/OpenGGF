@@ -245,8 +245,13 @@ public final class TtzBossBubble extends TtzBossPart implements TouchResponseLis
     private boolean orbitReversed(boolean popped) {
         if (!popped) return eggman != null && eggman.reversed();
         CdStageImage image = stageImage();
+        if (image == null) {
+            throw new IllegalStateException("Missing stage image for Tidal Tempest boss bubble in " + payload());
+        }
         int table = TtzBossCatalogue.offset(payload(), "bubbleAnimations");
-        if (image == null || table < 0) return false;
+        if (table < 0) {
+            throw new IllegalStateException("Missing bubbleAnimations table for Tidal Tempest boss in " + payload());
+        }
         int script = table + (short) image.u16(table + POP_ANIMATION * 2);
         return (image.u8(script + 0x2C) & 0x08) != 0;
     }
