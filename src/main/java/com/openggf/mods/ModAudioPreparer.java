@@ -1,6 +1,10 @@
 package com.openggf.mods;
 
+import com.openggf.audio.smps.PackageStockResolver;
 import com.openggf.data.Rom;
+import com.openggf.game.sonic1.audio.smps.Sonic1PackageStockResolver;
+import com.openggf.game.sonic2.audio.smps.Sonic2PackageStockResolver;
+import com.openggf.game.sonic3k.audio.smps.Sonic3kPackageStockResolver;
 import com.openggf.io.ModAssetRoot;
 import com.openggf.io.ModInputLimits;
 import com.openggf.io.PackedModAssetRoot;
@@ -101,10 +105,10 @@ public final class ModAudioPreparer {
         LinkedHashMap<CacheKey, CachedPcm> nextCache = new LinkedHashMap<>();
         LinkedHashMap<PrimaryKey, CacheKey> nextPrimaryCache = new LinkedHashMap<>();
         Map<TrackKey, PreparedSmpsTrack> preparedSmps = new LinkedHashMap<>();
-        SmpsPackageReader.StockResolver stockResolver = switch (Objects.toString(game, "")) {
-            case "s1" -> new ClassicPackageStockResolver(rom, true);
-            case "s2" -> new ClassicPackageStockResolver(rom, false);
-            default -> new PackageStockResolverS3k(rom);
+        PackageStockResolver stockResolver = switch (Objects.toString(game, "")) {
+            case "s1" -> new Sonic1PackageStockResolver(rom);
+            case "s2" -> new Sonic2PackageStockResolver(rom);
+            default -> new Sonic3kPackageStockResolver(rom);
         };
         long retainedBytes = activeBytes();
         for (ModDescriptor descriptor : effective.orderedEnabled()) {
@@ -163,7 +167,7 @@ public final class ModAudioPreparer {
                             }
                             provisionalBytes += song.retainedBytes();
                             preparedSmps.put(track.key(), new PreparedSmpsTrack(track.key(), song.data(), song.dac()));
-                        } catch (IOException | RuntimeException error) {
+                        } catch (IOException error) {
                             String message = track.key() + ": " + safeMessage(error);
                             LOGGER.warning(message);
                             packageFindings.add(new ModFinding(ModFindingSeverity.WARNING,
@@ -302,13 +306,8 @@ public final class ModAudioPreparer {
             sessionFindings.addAll(findings);
         }
         if (!failed.isEmpty()) {
-            ModStateSaveResult save;
-            try {
-                save = Objects.requireNonNull(stateSink.disableAndSave(
-                        Collections.unmodifiableSet(new LinkedHashSet<>(failed))), "state save result");
-            } catch (RuntimeException error) {
-                save = new ModStateSaveResult.Failed(safeMessage(error));
-            }
+            ModStateSaveResult save = Objects.requireNonNull(stateSink.disableAndSave(
+                    Collections.unmodifiableSet(new LinkedHashSet<>(failed))), "state save result");
             if (save instanceof ModStateSaveResult.Failed failure) {
                 ModFinding finding = error("MOD_STATE_SAVE_FAILED", failure.message());
                 sessionFindings.add(finding);

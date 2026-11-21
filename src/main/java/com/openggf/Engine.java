@@ -1333,7 +1333,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			return;
 		}
 		applyRequiredDisplayAspect(module);
-		if (!preparePresentationForLaunch(module, null, dataSource.rom().orElse(null))) {
+		if (!preparePresentationForLaunch(module)) {
 			return;
 		}
 		GameplayModeContext gameplayMode = SessionManager.openGameplaySession(
@@ -1370,7 +1370,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			GameplayModeContext gameplay = launch.gameplay();
 			GameModule module = gameplay.getWorldSession().getGameModule();
 			pinStandaloneTeam(launch.team());
-			if (!preparePresentationForLaunch(module, descriptor.manifest().id(), null)) return;
+			if (!preparePresentationForLaunch(module, descriptor.manifest().id())) return;
 			initializeGameplayRuntime(gameplay, true);
 			loadLevelFromDataSelect(launch.zone(), launch.act());
 			restoreGameplayModeFromDataSelectPayload(gameplay, launch.payload());
@@ -2252,7 +2252,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 				() -> Path.of("mods").toAbsolutePath().normalize(),
 				ModInputLimits.production(), StockMusicDomains::containsSupported,
 				ModSubsystem.SessionAudioBoundary.audioManager(audioManager),
-				com.openggf.mods.BundledModSource.Locator.production()));
+				com.openggf.mods.BundledModSource.Locator.production(), romManager::loadedRom));
 		try {
 			var effectiveMods = ModSubsystem.current().processCatalog().effective();
 			ModSubsystem.current().transferDevelopmentSourceOwnership();
@@ -2269,7 +2269,8 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		ModSubsystem candidate = ModSubsystem.normalBootLoader(
 				() -> Path.of("mods").toAbsolutePath().normalize(),
 				ModInputLimits.production(), StockMusicDomains::containsSupported,
-				ModSubsystem.SessionAudioBoundary.audioManager(audioManager)).get();
+				ModSubsystem.SessionAudioBoundary.audioManager(audioManager),
+				com.openggf.mods.BundledModSource.Locator.NONE, romManager::loadedRom).get();
 		ModRuntime replacement;
 		try {
 			replacement = new ModClassLoaderFactory(Engine.class.getClassLoader())
@@ -2436,7 +2437,11 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		}
 	}
 
-	private boolean preparePresentationForLaunch(GameModule module, String standaloneOwner, Rom rom) {
+	private boolean preparePresentationForLaunch(GameModule module) {
+		return preparePresentationForLaunch(module, null);
+	}
+
+	private boolean preparePresentationForLaunch(GameModule module, String standaloneOwner) {
 		try {
 			if (configuredHeadlessSession) {
 				if (!audioManager.hasInstalledBackend(configuredHeadlessBackend)) {
@@ -2453,7 +2458,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			// tracks/SFX through the launch-owned port, so prepare that port for
 			// every content-enabled session even when no device backend is opened.
 			if (subsystem.policy().mayUseInSession()) {
-				subsystem.beginNormalSession(audioManager.outputSampleRate(), module.getGameCode(), rom);
+				subsystem.beginNormalSession(audioManager.outputSampleRate(), module.getGameCode());
 			}
 			return true;
 		} catch (RuntimeException error) {
@@ -2623,7 +2628,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 
 		GameModule module = resolveHostedRunModule(rootModule, spec);
 		ModSubsystem.disableCurrentSessionForDeterminism();
-		if (!preparePresentationForLaunch(module, null, dataSource.rom().orElse(null))) {
+		if (!preparePresentationForLaunch(module)) {
 			return false;
 		}
 		if (spec.kind() == com.openggf.mods.run.TrackKind.ARENA)

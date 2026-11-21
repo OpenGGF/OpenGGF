@@ -7,6 +7,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.DacData;
+import com.openggf.audio.smps.PackageStockResolver;
+import com.openggf.audio.smps.PackageStockResolver.Locator;
 import com.openggf.audio.smps.SmpsMusicParameters;
 import com.openggf.game.sonic1.audio.Sonic1Music;
 import com.openggf.game.sonic1.audio.smps.Sonic1SmpsData;
@@ -19,6 +21,7 @@ import com.openggf.io.ModInputLimits;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -80,23 +83,6 @@ final class SmpsPackageReader {
         }
     }
 
-    record Locator(String table, int index, int songId) {}
-    interface StockResolver {
-        byte[] resolve(Locator locator) throws IOException;
-
-        default boolean unknownImage() { return false; }
-
-        static byte[] decodedDacSample(DacData dac, int note) {
-            if (dac == null) return null;
-            var entry = dac.mappingForNote(note);
-            var sample = entry == null ? null : dac.sample(entry.sampleId());
-            if (sample == null || sample.length() > 65535) return null;
-            byte[] bytes = new byte[sample.length()];
-            for (int i = 0; i < bytes.length; i++) bytes[i] = sample.byteAt(i);
-            return bytes;
-        }
-    }
-
     record Result(AbstractSmpsData data, DacData dac, long retainedBytes) {}
     private record Asset(Kind kind, int ordinal, byte[] bytes, boolean reference) {}
 
@@ -105,7 +91,7 @@ final class SmpsPackageReader {
     private final Set<String> remaining;
     private final ModInputLimits limits;
     private final Map<String, Asset> assets = new LinkedHashMap<>();
-    private final StockResolver resolver;
+    private final PackageStockResolver resolver;
     private final Consumer<String> warnings;
     private long remainingBytes;
     private long transformWork = 32L << 20;
@@ -115,7 +101,7 @@ final class SmpsPackageReader {
     private List<JsonNode> globalKeys = List.of();
 
     SmpsPackageReader(ModAssetRoot root, Collection<String> inventory, String directory,
-                      ModInputLimits limits, StockResolver resolver, Consumer<String> warnings) throws IOException {
+                      ModInputLimits limits, PackageStockResolver resolver, Consumer<String> warnings) throws IOException {
         this.root = root;
         this.directory = directory;
         this.limits = limits;
@@ -213,8 +199,9 @@ final class SmpsPackageReader {
         readSource(document);
         check(remaining.isEmpty(), "Unexpected package entry " + remaining.stream().findFirst().orElse(""));
         if (classic) {
-            ClassicPackageBank.validate(rawBank, driver.equals("s1"), base, voiceCount,
-                    classicVoiceOffsets, psg.keySet(), bindings.keySet());
+            boolean bigEndian = driver.equals("s1");
+            ClassicPackageBank.validate(rawBank, bigEndian ? ByteOrder.BIG_ENDIAN : ByteOrder.LITTLE_ENDIAN,
+                    bigEndian ? 2 : 1, base, voiceCount, classicVoiceOffsets, psg.keySet(), bindings.keySet());
         } else {
             validateHeader(assembled == null ? rawBank : assembled, base, header, voiceCount);
         }
@@ -413,8 +400,9 @@ final class SmpsPackageReader {
         if (resolver != null) {
             try {
                 bytes = resolver.resolve(locator);
-            } catch (IOException | RuntimeException error) {
-                throw invalid(context + ": expected SHA-256 " + expected + ", actual unavailable (" + error.getMessage() + ")");
+            } catch (IOException error) {
+                throw new IOException(context + ": expected SHA-256 " + expected
+                        + ", actual unavailable (" + error.getMessage() + ")", error);
             }
             check(bytes != null, context + ": expected SHA-256 " + expected + ", actual unavailable");
             verifyHash(context, expected, bytes);

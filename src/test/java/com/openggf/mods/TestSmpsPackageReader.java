@@ -1,5 +1,6 @@
 package com.openggf.mods;
 
+import com.openggf.audio.smps.PackageStockResolver;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.openggf.audio.AudioManager;
@@ -337,7 +338,7 @@ class TestSmpsPackageReader {
         zip.closeEntry();
     }
 
-    static SmpsPackageReader reader(com.openggf.io.PackedModAssetRoot root, SmpsPackageReader.StockResolver resolver)
+    static SmpsPackageReader reader(com.openggf.io.PackedModAssetRoot root, PackageStockResolver resolver)
             throws IOException {
         return new SmpsPackageReader(root, root.validatedEntryNames(), DIRECTORY, ModInputLimits.production(),
                 resolver, warning -> {});

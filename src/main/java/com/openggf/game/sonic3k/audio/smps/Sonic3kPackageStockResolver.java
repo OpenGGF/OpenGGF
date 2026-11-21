@@ -1,34 +1,37 @@
-package com.openggf.mods;
+package com.openggf.game.sonic3k.audio.smps;
 
 import com.openggf.audio.smps.DacData;
+import com.openggf.audio.smps.PackageStockResolver;
 import com.openggf.data.Rom;
 import com.openggf.data.RomFingerprint;
 import com.openggf.data.RomIdentity;
 import com.openggf.data.RomIdentityTable;
 import com.openggf.game.sonic3k.audio.Sonic3kAudioResourceProfile;
-import com.openggf.game.sonic3k.audio.smps.Sonic3kSmpsData;
-import com.openggf.game.sonic3k.audio.smps.Sonic3kSmpsLoader;
 
 import java.io.IOException;
 import java.util.Arrays;
 
 /** Launch-scoped lookup against the base game's pinned cartridge view. */
-final class PackageStockResolverS3k implements SmpsPackageReader.StockResolver {
+public final class Sonic3kPackageStockResolver implements PackageStockResolver {
     private final Rom rom;
     private Sonic3kAudioResourceProfile profile;
     private Sonic3kSmpsLoader loader;
     private DacData dac;
     private boolean unknownImage;
 
-    PackageStockResolverS3k(Rom rom) {
+    public Sonic3kPackageStockResolver(Rom rom) {
         this.rom = rom;
     }
 
     @Override
-    public byte[] resolve(SmpsPackageReader.Locator locator) throws IOException {
+    public byte[] resolve(Locator locator) throws IOException {
         if (rom == null || !rom.isOpen()) throw new IOException("No loaded base-game ROM");
         if (loader == null) {
-            profile = Sonic3kAudioResourceProfile.fromRom(rom);
+            try {
+                profile = Sonic3kAudioResourceProfile.fromRom(rom);
+            } catch (IllegalArgumentException unsupported) {
+                throw new IOException(unsupported.getMessage(), unsupported);
+            }
             RomIdentity identity = switch (profile) {
                 case LOCKED_ON -> RomIdentity.S3K;
                 case SONIC_3 -> RomIdentity.S3;
@@ -40,7 +43,11 @@ final class PackageStockResolverS3k implements SmpsPackageReader.StockResolver {
                 unknownImage = RomIdentityTable.verify(RomIdentity.SK, RomFingerprint.of(image, 0, 0x200000)).isEmpty()
                         || RomIdentityTable.verify(RomIdentity.S3, RomFingerprint.of(image, 0x200000, 0x200000)).isEmpty();
             }
-            loader = new Sonic3kSmpsLoader(rom, profile);
+            try {
+                loader = new Sonic3kSmpsLoader(rom, profile);
+            } catch (IllegalStateException unreadable) {
+                throw new IOException(unreadable.getMessage(), unreadable);
+            }
         }
         int index = locator.index();
         return switch (locator.table()) {
@@ -72,8 +79,14 @@ final class PackageStockResolverS3k implements SmpsPackageReader.StockResolver {
         return Arrays.copyOfRange(bytes, start, start + 25);
     }
 
-    private byte[] dacSample(int note) {
-        if (dac == null) dac = loader.loadDacData();
-        return SmpsPackageReader.StockResolver.decodedDacSample(dac, note);
+    private byte[] dacSample(int note) throws IOException {
+        if (dac == null) {
+            try {
+                dac = loader.loadDacData();
+            } catch (IllegalStateException unreadable) {
+                throw new IOException(unreadable.getMessage(), unreadable);
+            }
+        }
+        return PackageStockResolver.decodedDacSample(dac, note);
     }
 }

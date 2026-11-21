@@ -1,6 +1,8 @@
 package com.openggf.mods;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -10,18 +12,19 @@ import static com.openggf.mods.SmpsPackageReader.check;
 final class ClassicPackageBank {
     private ClassicPackageBank() {}
 
-    static void validate(byte[] bank, boolean s1, int base, int voiceCount,
+    static void validate(byte[] bank, ByteOrder pointerOrder, int minimumTempo, int base, int voiceCount,
                          Set<Integer> voiceOffsets, Set<Integer> psgSlots, Set<Integer> dacNotes)
             throws IOException {
         int fm = bank[2] & 255;
         int psg = bank[3] & 255;
         check(fm <= 7 && psg <= 3 && fm + psg > 0, "Invalid classic SMPS channel counts");
         check(bank[4] != 0, "Header timing divisor must be nonzero");
-        check((bank[5] & 255) >= (s1 ? 2 : 1), "Header tempo cannot advance music durations");
+        check((bank[5] & 255) >= minimumTempo, "Header tempo cannot advance music durations");
         int fmEnd = 6 + 4 * fm;
         int headerEnd = fmEnd + 6 * psg;
         check(headerEnd <= bank.length, "Truncated classic SMPS music header");
-        int voicePointer = word(bank, 0, s1);
+        var pointers = ByteBuffer.wrap(bank).order(pointerOrder);
+        int voicePointer = Short.toUnsignedInt(pointers.getShort(0));
         int streamEnd = voiceCount == 0 ? bank.length : voicePointer - base;
         check(voiceCount == 0 ? voicePointer == 0 : voicePointer != 0 && streamEnd >= headerEnd
                         && bank.length - streamEnd == voiceCount * 25,
@@ -36,7 +39,7 @@ final class ClassicPackageBank {
         boundaries.add(streamEnd);
         for (int channel = 0; channel < starts.length; channel++) {
             int offset = channel < fm ? 6 + channel * 4 : fmEnd + (channel - fm) * 6;
-            int start = word(bank, offset, s1) - base;
+            int start = Short.toUnsignedInt(pointers.getShort(offset)) - base;
             check(start >= headerEnd && start < streamEnd, "Track pointer outside the stream region at " + offset);
             starts[channel] = start;
             boundaries.add(start);
@@ -49,11 +52,6 @@ final class ClassicPackageBank {
             int start = starts[channel];
             scan(bank, start, boundaries.higher(start), channel, fm, voiceCount, psgSlots, dacNotes);
         }
-    }
-
-    private static int word(byte[] bank, int offset, boolean s1) {
-        return s1 ? ((bank[offset] & 255) << 8) | (bank[offset + 1] & 255)
-                : SmpsPackageReader.read16(bank, offset);
     }
 
     private static void scan(byte[] bank, int at, int end, int channel, int fm, int voiceCount,

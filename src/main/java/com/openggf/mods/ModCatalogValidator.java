@@ -181,7 +181,7 @@ public final class ModCatalogValidator {
                             ? descriptor.manifest().baseGame() : null;
                     new SmpsPackageReader(assets, inventory, track.smpsPackage(), limits, null, warnings::add)
                             .read(baseGame);
-                } catch (IOException | RuntimeException failure) {
+                } catch (IOException failure) {
                     findings.add(new ModFinding(ModFindingSeverity.WARNING, "SMPS_PACKAGE_DISABLED",
                             track.key() + ": " + safeMessage(failure), track.smpsPackage()));
                 }

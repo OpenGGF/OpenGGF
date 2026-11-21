@@ -1,5 +1,8 @@
 package com.openggf.mods;
 
+import com.openggf.audio.smps.PackageStockResolver;
+import com.openggf.game.sonic1.audio.smps.Sonic1PackageStockResolver;
+import com.openggf.game.sonic2.audio.smps.Sonic2PackageStockResolver;
 import com.openggf.audio.smps.SmpsLoader;
 import com.openggf.data.Rom;
 import com.openggf.data.compression.SaxmanDecompressor;
@@ -106,7 +109,7 @@ class TestClassicSmpsPackageStockRom {
         doc.withArray("envelopeBindings").addObject().put("asset", "psg/0").put("slot", 1);
         doc.withArray("dacBindings").addObject().put("asset", "dac/0").put("note", 0x81).put("rate", 7);
 
-        var resolver = new ClassicPackageStockResolver(rom, s1);
+        PackageStockResolver resolver = s1 ? new Sonic1PackageStockResolver(rom) : new Sonic2PackageStockResolver(rom);
         try (var root = packed(temp, doc.toString(), bank, Map.of())) {
             assertNull(reader(root, null).read(game), "Stock packages can be validated structurally without a ROM");
             var loaded = reader(root, resolver).read(game);
@@ -117,7 +120,7 @@ class TestClassicSmpsPackageStockRom {
             assertEquals(pcm.length, loaded.dac().sample(0).length());
             assertFalse(resolver.unknownImage());
         }
-        assertNull(resolver.resolve(new SmpsPackageReader.Locator("local-fm", s1 ? 2 : 38, s1 ? 0x93 : 0xbd)));
+        assertNull(resolver.resolve(new PackageStockResolver.Locator("local-fm", s1 ? 2 : 38, s1 ? 0x93 : 0xbd)));
         psg.withObject("/ref").put("sha256", "0".repeat(64));
         try (var root = packed(temp, doc.toString(), bank, Map.of())) {
             var error = assertThrows(IOException.class, () -> reader(root, resolver).read(game));
