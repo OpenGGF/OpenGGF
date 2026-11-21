@@ -2,6 +2,7 @@ package com.openggf.game.soniccd.objects.ccz;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.soniccd.objects.art.CdObjectArtProvider;
+import com.openggf.game.soniccd.objects.common.CdAnimator;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.CameraRelativeDraw;
 import com.openggf.level.objects.ObjectSpawn;
@@ -29,7 +30,9 @@ public final class CczAnimal extends CczObject
         com.openggf.level.objects.RewindRecreatable {
     private int projectorSlot = -1;
     private int projectorId;
-    private int[] groundHologramScriptState;
+    private final CdAnimator.StageRewind rewindAnimation =
+            new CdAnimator.StageRewind(() -> provider().image(), () -> animator, restored -> animator = restored);
+    private boolean drawHologram;
 
     private int baseX;               // oVar2A
     private int baseY;               // oVar2C
@@ -67,6 +70,7 @@ public final class CczAnimal extends CczObject
 
     @Override
     public void update(int vIntRunCount, PlayableEntity player) {
+        drawHologram = false;
         if (!checkPresence()) return;
         if ((spawn.subtype() & 0x7F) != 0) ground();
         else flying();
@@ -74,7 +78,7 @@ public final class CczAnimal extends CczObject
 
     /** CheckAnimalPrescence (Object Time Check.asm:52-81); false when the routine does not run this frame. */
     private boolean checkPresence() {
-        if ((byte) spawn.subtype() < 0) return true;
+        if (hologram()) return true;
         var flags = flags();
         if (timeZone() >= 2) {
             if (flags.goodFuture) return true;
@@ -97,7 +101,7 @@ public final class CczAnimal extends CczObject
                 baseY = y;
                 flipHorizontally();                                        // ObjCCAnimal_XFlip
                 tileWord = CczObjectArt.animalTile(provider());
-                if ((byte) spawn.subtype() < 0) {
+                if (hologram()) {
                     routine = 4;                                           // .Holographic: oAnim 1, priority 3
                     priority = 3;
                     return;
@@ -127,8 +131,7 @@ public final class CczAnimal extends CczObject
                     flipHorizontally();
                     return;
                 }
-                if (animator == null) animator = CczObjectArt.animator(provider(), "animalFlyingAnimations", 1);
-                animate();
+                animateHologram("animalFlyingAnimations", 1);
             }
             default -> setDestroyed(true);
         }
@@ -149,7 +152,7 @@ public final class CczAnimal extends CczObject
                 priority = 4;
                 width = 8;
                 tileWord = CczObjectArt.animalTile(provider());
-                if ((byte) spawn.subtype() < 0) {
+                if (hologram()) {
                     routine = 8;                                           // .Holographic
                     flipHorizontally();
                     return;
@@ -176,19 +179,33 @@ public final class CczAnimal extends CczObject
             }
             case 8 -> {                                                    // ObjCCAnimal_Ground_Hologram (Level/Collision Chaos/Objects/Animal/Main.asm:203-211)
                 if (!projectorAlive()) return;
-                var script = CczObjectArt.animator(provider(), "animalGroundAnimations", 0);
-                if (script == null) return;
-                if (groundHologramScriptState != null) script.restoreScriptState(groundHologramScriptState);
-                script.step();
-                groundHologramScriptState = script.scriptState();
-                mapFrame = script.mapFrame();
-                spriteFlip = (statusFlip ^ script.flipBits()) & 3;
+                animateHologram("animalGroundAnimations", 0);
             }
             default -> setDestroyed(true);
         }
     }
 
-    @Override protected boolean despawnsByCheckObjDespawn() { return true; }
+    private void animateHologram(String table, int script) {
+        if (animator == null) animator = CczObjectArt.animator(provider(), table, script);
+        animate();
+        drawHologram = animator != null;
+    }
+
+    @Override
+    protected boolean despawnsByCheckObjDespawn() {
+        // ObjCCAnimal_Flying_Hologram (Level/Collision Chaos/Objects/Animal/Main.asm:106-121) and
+        // ObjCCAnimal_Ground_Hologram (Level/Collision Chaos/Objects/Animal/Main.asm:203-211) retire with the projector.
+        return !hologram();
+    }
+
+    @Override
+    protected boolean calledDrawObjectThisFrame() {
+        return !hologram() || drawHologram;
+    }
+
+    private boolean hologram() {
+        return (spawn.subtype() & 0x80) != 0;
+    }
 
     @Override
     protected int despawnX() {
@@ -207,13 +224,11 @@ public final class CczAnimal extends CczObject
         if (provider == null) return;
         boolean flying = (spawn.subtype() & 0x7F) == 0;
         String sheet;
-        if (flying) {
-            sheet = CczObjectArt.ANIMAL_FLYING;
-        } else if (routine == 8) {
-            if (groundHologramScriptState == null) return;
-            sheet = CczObjectArt.GROUND_HOLOGRAM;
+        if (hologram()) {
+            if (!drawHologram) return;
+            sheet = flying ? CczObjectArt.FLYING_HOLOGRAM : CczObjectArt.GROUND_HOLOGRAM;
         } else {
-            sheet = CczObjectArt.ANIMAL_GROUND;
+            sheet = flying ? CczObjectArt.ANIMAL_FLYING : CczObjectArt.ANIMAL_GROUND;
         }
         String key = CczObjectArt.key(provider, sheet, tileWord & 0x7FFF, services().camera().getX());
         if (key != null) drawFrame(key, mapFrame, (spriteFlip & 1) != 0, (spriteFlip & 2) != 0);
