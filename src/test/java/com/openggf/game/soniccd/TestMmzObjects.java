@@ -22,6 +22,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TouchResponseProvider;
+import com.openggf.level.rings.LostRingObjectInstance;
 import com.openggf.physics.GroundSensor;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.HeadlessTestRunner;
@@ -339,6 +340,42 @@ class TestMmzObjects {
         int delta = beam.getY() - (emitter.getY() & 0xFFF0);
         assertTrue(delta == 0 || delta == 4, "beam Y " + delta + " below the aligned emitter Y");
     }
+
+    @Test
+    void spilledRingsCanOnlyBeCollectedOnTheLayerWhereSonicWasHurt() throws Exception {
+        boot(CdStagePayload.R81A);
+        MmzBuzzsaw saw = add(new MmzBuzzsaw(at(0x70, -0x20, 0x27, 0)));
+        runner.stepIdleFrames(2);
+        if (signals().stageLayer() == 0) signals().flipStageLayer();
+        sonic.setRingCount(2);
+        sonic.setCentreX((short) saw.getX());
+        sonic.setCentreY((short) saw.getY());
+        var objects = GameServices.level().getObjectManager();
+        objects.runTouchResponsesForPlayer(sonic, 2);
+        saw.setDestroyed(true);
+
+        // HurtPlayer (r8/player_object_collide.asm:273-282) stamps the layer when it allocates the owner.
+        signals().flipStageLayer();
+        runner.stepIdleFrames(2);
+        var rings = objects.getActiveObjects().stream().filter(LostRingObjectInstance.class::isInstance)
+                .map(LostRingObjectInstance.class::cast).toList();
+        var first = rings.getFirst();
+        sonic.setHurt(false);
+        sonic.setInvulnerableFrames(0);
+        sonic.setCentreX((short) first.getX());
+        sonic.setCentreY((short) first.getY());
+
+        // loc_206978 (r8/player_object_collide.asm:104-127) rejects the other layer before advancing the routine.
+        objects.runTouchResponsesForPlayer(sonic, 5);
+        long collectedOnOtherLayer = rings.stream().filter(LostRingObjectInstance::isCollected).count();
+        signals().flipStageLayer();
+        objects.runTouchResponsesForPlayer(sonic, 6);
+        long collectedOnSpillLayer = rings.stream().filter(LostRingObjectInstance::isCollected).count();
+        assertEquals(List.of(List.of(1, 1), 0L, 1L),
+                List.of(rings.stream().map(LostRingObjectInstance::touchLayer).toList(),
+                        collectedOnOtherLayer, collectedOnSpillLayer));
+    }
+
     @Test
     void laserBeamShrinksSonicOnTheNativeContactFrame() throws Exception {
         boot(CdStagePayload.R82A);

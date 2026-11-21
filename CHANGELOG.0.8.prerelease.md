@@ -185,7 +185,9 @@ under the matching area heading; see the
   and two Palmtree Panic loops. Ring spills and slots now match throughout the
   recorded Metallic Madness Present, Past, and Good Future routes. In Quartz
   Quadrant, Noro Noro frees its spike slot when Sonic leaves range, preserving
-  the disc's object allocation order. Stage loads clear the state native
+  the disc's object allocation order. Metallic Madness uses the collision type
+  to decide which objects Sonic can touch across layers. Sonic can recover
+  dropped rings on the layer where he was hurt. Stage loads clear the state native
   clears, so playing stages in any order matches playing each alone. In normal
   play the object clock a stage starts from and the video player's disc wait
   follow measured emulator timings under `gameplay.loadTimeSimulation`

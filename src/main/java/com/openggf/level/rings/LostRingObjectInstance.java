@@ -102,6 +102,7 @@ public class LostRingObjectInstance extends AbstractObjectInstance
     private int pendingSpillRings;
     private int pendingSpillX;
     private int pendingSpillY;
+    private int touchLayer = -1;
 
     /**
      * Shared spin owner; the displayed frame = owner.frame() + phaseOffset. This is
@@ -854,6 +855,14 @@ public class LostRingObjectInstance extends AbstractObjectInstance
     @Override
     public int getCollisionProperty() {
         return 0;
+    }
+
+    public int touchLayer() {
+        return touchLayer;
+    }
+
+    void setTouchLayer(int layer) {
+        touchLayer = layer;
     }
 
     public boolean isCollected() {
