@@ -4,8 +4,10 @@ import com.openggf.data.Rom;
 import com.openggf.game.DynamicWaterHandler;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.WaterDataProvider;
+import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.soniccd.CdZone;
 import com.openggf.game.soniccd.level.CdStageImage;
+import com.openggf.game.soniccd.zones.ttz.TtzWaterDataProvider;
 import com.openggf.level.Palette;
 
 import java.util.EnumMap;
@@ -27,6 +29,10 @@ public final class CdZoneWater implements WaterDataProvider {
         if (zoneId < 0 || zoneId >= zones.length) return null;
         return providers.computeIfAbsent(zones[zoneId],
                 z -> Optional.ofNullable(CdZones.fragment(z).createWaterProvider(stage))).orElse(null);
+    }
+
+    public RewindSnapshottable<?> tidalTempestRewindAdapter() {
+        return (TtzWaterDataProvider) zone(CdZone.TIDAL_TEMPEST.ordinal());
     }
 
     @Override

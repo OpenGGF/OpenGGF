@@ -310,12 +310,11 @@ public final class CdPlayerStage implements PlayerStageRoutines {
     private AbstractPlayableSprite lockedPlayer;
 
     /**
-     * {@code ObjSonic_Main} ({@code tst.b ctrlLocked.w; bne.s .CtrlLock}, Level/_Objects/Sonic/Main.asm:
-     * 296-298): while {@code ctrlLocked} is set the player keeps {@code playerCtrlHold} (the signpost's and big
-     * ring's $808, Right; 0 to stand still) instead of the pad. Run after the object pass, so a lock an object sets
-     * in one level frame drives the player's next frame, as the player's slot runs first.
+     * ObjSonic_Main (Level/_Objects/Sonic/Main.asm:296-301) skips the pad copy while locked.
+     * The title card starts with a cleared pad. A later object can set a forced pad, which
+     * the after-scroll call publishes for the next player slot.
      */
-    private void applyControlLock(AbstractPlayableSprite player, CdLevel level) {
+    public void applyControlLock(AbstractPlayableSprite player, CdLevel level) {
         var flags = level.flags();
         if (flags.ctrlLocked) {
             int hold = (flags.playerCtrlHold >> 8) & 0xFF;

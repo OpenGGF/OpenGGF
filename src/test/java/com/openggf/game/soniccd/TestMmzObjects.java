@@ -375,4 +375,40 @@ class TestMmzObjects {
                 List.of(rings.stream().map(LostRingObjectInstance::touchLayer).toList(),
                         collectedOnOtherLayer, collectedOnSpillLayer));
     }
+
+    @Test
+    void laserBeamShrinksSonicOnTheNativeContactFrame() throws Exception {
+        boot(CdStagePayload.R82A);
+        var camera = GameServices.camera();
+        camera.setX((short) 6869);
+        camera.setY((short) 1356);
+        sonic.setCentreX((short) 7029);
+        sonic.setCentreY((short) 1452);
+        sonic.applyCustomRadii(9, 19);
+
+        // The USA disc's R82A demo fires at iteration 121, hits at 128, clears
+        // the beam and splash at 148, and fires again at 151. Hold Sonic at
+        // the contact position across one cycle to isolate the object pass.
+        var manager = GameServices.level().getObjectManager();
+        for (int frame = 1; frame <= 31; frame++) {
+            manager.update(camera.getX(), sonic, List.of(), frame, false, true, true);
+            List<Integer> laserYs = live(0x1D).stream().filter(laser -> laser.getX() == 7033)
+                    .map(ObjectInstance::getY).sorted().toList();
+
+            if (frame <= 8) {
+                assertEquals(List.of(1415, 1408 + 4 * frame).stream().sorted().toList(), laserYs,
+                        "descending beam on cycle frame " + frame);
+            } else if (frame >= 28) {
+                assertEquals(frame == 31 ? List.of(1412, 1415) : List.of(1415), laserYs,
+                        "beam off and refire on cycle frame " + frame);
+            }
+            assertEquals(frame >= 8, sonic.isHurt(), "knockback on cycle frame " + frame);
+            if (frame == 8) {
+                assertEquals(-0x200, sonic.getXSpeed());
+                assertEquals(-0x400, sonic.getYSpeed());
+                assertTrue(signals().shrunk());
+            }
+        }
+    }
+
 }

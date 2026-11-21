@@ -257,9 +257,10 @@ public final class MmzScarabBody extends MmzBadnik implements TouchResponseListe
         despawned = true;
     }
 
-    /** {@code jsr DeleteOtherObject}. */
+    /** loc_20DE3E (scddisasm/src/objects/r8/scarab.asm:175-177). */
     void deleteOther() {
         setDestroyed(true);
+        services().objectManager().removeDynamicObject(this);
     }
 
     @Override
