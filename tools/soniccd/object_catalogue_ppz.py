@@ -10,6 +10,14 @@ def STAGES_COVERED(stage: str) -> bool:
 
 
 ANCHORS = [
+    ('flyingAnimalMappings', '217C 08080408 0016 217C AAAAAAAA 0004 3168 0008 002A 3168 000C 002C', 'optional',
+     'ObjFlyingAnimal_Init (Level/Palmtree Panic/Objects/Animal/Main.asm:34-40)'),
+    ('groundAnimalMappings', '217C 08080408 0016 217C AAAAAAAA 0004 3168 0008 002A 6100 ???? 4A28 0028', 'optional',
+     'ObjGroundAnimal_Init (Level/Palmtree Panic/Objects/Animal/Main.asm:136-143)'),
+    ('flyingAnimalAnimations', '1140 002E 43FA PPPP 4EB9 ???????? 4EB9 ???????? 3028 002A', 'optional',
+     'ObjFlyingAnimal_Flying (Level/Palmtree Panic/Objects/Animal/Main.asm:76-81)'),
+    ('animalBaseTiles', '43FA PPPP 7000 1039 ???????? E540 D039 ???????? D040 3171 0000 0002 4E75', 'optional',
+     'ObjAnimal_SetBaseTile (Level/Palmtree Panic/Objects/Animal/Main.asm:209-217)'),
     ('plantMappings', '217C AAAAAAAA 0004 317C 4424 0002', 'optional',
      'Obj3DPlant_Init (3D Ramp/Main.asm:24-27): move.l #MapSpr_3DPlant,oMap(a0); move.w #$4424,oTile(a0)'),
     ('rampMappings', '217C AAAAAAAA 0004 317C 0441 0002', 'optional',

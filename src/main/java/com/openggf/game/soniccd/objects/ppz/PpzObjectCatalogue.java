@@ -69,7 +69,7 @@ public final class PpzObjectCatalogue {
         return Map.copyOf(out);
     }
 
-    private static int o(CdStagePayload payload, String column) {
+    static int o(CdStagePayload payload, String column) {
         return TABLES.offset(payload, column);
     }
 }
