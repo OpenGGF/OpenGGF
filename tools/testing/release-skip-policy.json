@@ -5383,9 +5383,16 @@
       "note": "Sonic CD disc and BizHawk native reference"
     },
     {
-      "match": "com.openggf.game.soniccd.TestCczBackgroundPicture#goodFutureForegroundWobblesLikeTheNativeFrame",
+      "match": "com.openggf.game.soniccd.TestCczBackgroundPicture#pastForegroundWobblesLikeTheNativeFrame",
       "category": "optional-fixture",
       "evidence": "src/test/java/com/openggf/game/soniccd/TestCczBackgroundPicture.java:29",
+      "allowed_when_absent": "soniccd_native",
+      "note": "Sonic CD disc and BizHawk native reference"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestCczBackgroundPicture#goodFutureForegroundWobblesLikeTheNativeFrame",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCczBackgroundPicture.java:34",
       "allowed_when_absent": "soniccd_native",
       "note": "Sonic CD disc and BizHawk native reference"
     },

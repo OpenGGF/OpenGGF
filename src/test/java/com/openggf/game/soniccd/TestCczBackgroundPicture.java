@@ -26,11 +26,20 @@ class TestCczBackgroundPicture {
     }
 
     @Test
+    void pastForegroundWobblesLikeTheNativeFrame() throws Exception {
+        assertForegroundWobble(CdStagePayload.R31B, 518);
+    }
+
+    @Test
     void goodFutureForegroundWobblesLikeTheNativeFrame() throws Exception {
-        var payload = CdStagePayload.R31C;
-        var shot = CdTestMedia.nativeFile("rehost-fixtures-ccz2/R31C/screenshot-lf0500-row0520.png");
+        assertForegroundWobble(CdStagePayload.R31C, 520);
+    }
+
+    private static void assertForegroundWobble(CdStagePayload payload, int traceRow) throws Exception {
+        var shot = CdTestMedia.nativeFile("rehost-fixtures-ccz2/%s/screenshot-lf0500-row%04d.png"
+                .formatted(payload, traceRow));
         var rows = CczNativePictureCheck.rows(payload);
-        var row = rows.get(520);
+        var row = rows.get(traceRow);
         assertEquals(500, row.levelFrame(), "native shot's level frame");
         var config = GameServices.configuration();
         boolean oldAudio = config.getBoolean(SonicConfiguration.AUDIO_ENABLED);
@@ -55,13 +64,13 @@ class TestCczBackgroundPicture {
             } finally {
                 modes.restore(savedModes);
             }
-            var before = compareBelowWaterline(uniform, nativeImage, row, waterline, out.resolve("R31C-wobble-off.png"));
-            var after = compareBelowWaterline(engine, nativeImage, row, waterline, out.resolve("R31C-wobble-on.png"));
+            var before = compareBelowWaterline(uniform, nativeImage, row, waterline, out.resolve(payload + "-wobble-off.png"));
+            var after = compareBelowWaterline(engine, nativeImage, row, waterline, out.resolve(payload + "-wobble-on.png"));
             var red = assertThrows(AssertionFailedError.class, () -> assertExact(before),
                     "a uniform foreground must fail the native picture assertion");
-            System.out.println("R31C uniform foreground control: " + red.getMessage());
-            System.out.printf("R31C frame %d, camera %X,%X: %d/%d unmasked pixels below the wobble threshold match%n",
-                    row.levelFrame(), engine.cameraX(), engine.cameraY(), after.same(), after.total());
+            System.out.println(payload + " uniform foreground control: " + red.getMessage());
+            System.out.printf("%s frame %d, camera %X,%X: %d/%d unmasked pixels below the wobble threshold match%n",
+                    payload, row.levelFrame(), engine.cameraX(), engine.cameraY(), after.same(), after.total());
             assertExact(after);
         } finally {
             config.setSessionOverride(SonicConfiguration.AUDIO_ENABLED, oldAudio);
@@ -73,7 +82,9 @@ class TestCczBackgroundPicture {
         var comparison = CczNativePictureCheck.compare(engine.image(), reference, engine, row,
                 CczNativePictureCheck.OBJECT_MARGIN, new int[][] {{0, 0, reference.width(), waterline}});
         ScreenshotCapture.savePNG(CczNativePictureCheck.panel(engine.image(), reference, comparison.ignored()), panel);
-        assertTrue(comparison.total() > reference.width(), "enough unmasked pixels below the wobble threshold");
+        assertTrue(comparison.total() >= 10_000,
+                () -> panel.getFileName() + ": expected at least 10,000 unmasked pixels below the wobble threshold, got "
+                        + comparison.total());
         return comparison;
     }
 
