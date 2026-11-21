@@ -128,6 +128,10 @@ public final class CdLevel extends AbstractLevel implements com.openggf.game.int
         // BGCameraSectIDs (scddisasm/src/Level/Palmtree Panic/Scroll (Act 1 Present).asm:1123-1156).
         if (payload.stage().zone() == com.openggf.game.soniccd.CdZone.PALMTREE_PANIC) {
             backgroundRows = com.openggf.game.soniccd.zones.ppz.PpzBackgroundRows.read(objectImage)::layoutX;
+        } else if (payload.stage().zone() == com.openggf.game.soniccd.CdZone.COLLISION_CHAOS) {
+            // loc_2033AC (r3/stage_draw_1b.asm:542-553) skips the offscreen selector.
+            // sub_203418 (r3/stage_draw_1b.asm:617-638) streams moving rows from their layer X.
+            backgroundRows = staticBackgroundRows(CdCczDataLayout.readBackgroundRows(payload, image));
         } else if (payload.stage().zone() == com.openggf.game.soniccd.CdZone.WACKY_WORKBENCH) {
             backgroundRows = readWwzBackgroundRows(payload, image);
         } else {
@@ -218,10 +222,14 @@ public final class CdLevel extends AbstractLevel implements com.openggf.game.int
         // streamed rows use the layout X of their selected layer.
         var programme = CdR6DataLayout.Programme.valueOf(payload.name());
         var table = programme.range(payload == CdStagePayload.R61A ? "BGCameraSectIDs" : "R6StageDrawScrollLayerTable");
-        byte[] selectors = image.slice(table.fileOffset() + 1, table.length() - 1);
+        return staticBackgroundRows(image.slice(table.fileOffset(), table.length()));
+    }
+
+    private static com.openggf.game.internal.BackgroundRowLayout staticBackgroundRows(byte[] selectors) {
+        // Selector zero fills the whole 32-block row from layout X=0.
         return (sourceX, sourceY) -> {
-            int row = Math.floorDiv(sourceY, 16);
-            return row >= 0 && row < selectors.length && selectors[row] == 0
+            int row = Math.floorDiv(sourceY, 16) + 1;
+            return row > 0 && row < selectors.length && selectors[row] == 0
                     ? Math.floorMod(sourceX, 512) : sourceX;
         };
     }
