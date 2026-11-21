@@ -97,6 +97,7 @@ class TestPpzObjectsAPictures {
         GameServices.configuration().setSessionOverride(SonicConfiguration.AUDIO_ENABLED, false);
         Map<String, Tally> kinds = new LinkedHashMap<>();
         List<String> report = new ArrayList<>();
+        HudTimeChecks hudTime = new HudTimeChecks();
         try (CdDiscDataSource disc = CdDiscDataSource.open(cue);
              HeadlessGameBoot boot = new HeadlessGameBoot(320, 224)) {
             boolean first = true;
@@ -111,7 +112,7 @@ class TestPpzObjectsAPictures {
                     GameServices.level().loadZoneAndAct(SonicCdZoneRegistry.zoneIndex(payload),
                             SonicCdZoneRegistry.actIndex(payload));
                 }
-                playStage(payload, shots.get(payload), traces.get(payload), kinds, report);
+                playStage(payload, shots.get(payload), traces.get(payload), kinds, report, hudTime);
             }
         } finally {
             GameServices.configuration().setSessionOverride(SonicConfiguration.AUDIO_ENABLED, oldAudio);
@@ -131,12 +132,13 @@ class TestPpzObjectsAPictures {
         Files.createDirectories(out);
         Files.writeString(out.resolve("report.txt"), String.join("\n", report) + "\n" + text);
         System.out.println("PPZOBJA pictures:\n" + String.join("\n", report) + "\n" + text);
+        hudTime.assertComplete();
         assertTrue(!kinds.isEmpty(), "no object of this lane was on screen in any shot");
         assertTrue(failures.isEmpty(), "kinds below 95%: " + failures + "\n" + text);
     }
 
     private static void playStage(CdStagePayload payload, List<Shot> shots, Map<Integer, int[]> rows,
-                                  Map<String, Tally> kinds, List<String> report) throws Exception {
+                                  Map<String, Tally> kinds, List<String> report, HudTimeChecks hudTime) throws Exception {
         AbstractPlayableSprite sonic = GameServices.camera().getFocusedSprite();
         HeadlessTestRunner runner = new HeadlessTestRunner(sonic);
         int next = 0;
@@ -156,14 +158,14 @@ class TestPpzObjectsAPictures {
                 return;
             }
             if (levelFrame == shots.get(next).levelFrames()) {
-                compare(payload, shots.get(next), sonic, kinds, report);
+                compare(payload, shots.get(next), sonic, kinds, report, hudTime);
                 next++;
             }
         }
     }
 
     private static void compare(CdStagePayload payload, Shot shot, AbstractPlayableSprite sonic,
-                                Map<String, Tally> kinds, List<String> report) throws Exception {
+                                Map<String, Tally> kinds, List<String> report, HudTimeChecks hudTime) throws Exception {
         int cx = GameServices.camera().getX(), cy = GameServices.camera().getY();
         List<int[]> boxes = new ArrayList<>();
         List<String> names = new ArrayList<>();
@@ -174,12 +176,17 @@ class TestPpzObjectsAPictures {
             boxes.add(new int[] {sx - BOX, sy - BOX, sx + BOX, sy + BOX});
             names.add(o.getClass().getSimpleName());
         }
-        if (boxes.isEmpty()) return;
+        HudTimeShot timeShot = hudTime.pending.stream()
+                .filter(candidate -> candidate.payload() == payload && candidate.levelFrame() == shot.levelFrames())
+                .findFirst().orElse(null);
+        if (boxes.isEmpty() && timeShot == null) return;
 
-        RgbaImage tiles = render(LevelManager.LevelRenderOptions.tilesOnly());
-        RgbaImage objectsOnly = render(new LevelManager.LevelRenderOptions(false, true, false, false, false, false, false));
+        RgbaImage tiles = boxes.isEmpty() ? null : render(LevelManager.LevelRenderOptions.tilesOnly());
+        RgbaImage objectsOnly = boxes.isEmpty() ? null
+                : render(new LevelManager.LevelRenderOptions(false, true, false, false, false, false, false));
         RgbaImage full = render(LevelManager.LevelRenderOptions.gameplay());
         RgbaImage reference = ScreenshotCapture.loadPNG(shot.file());
+        if (timeShot != null) hudTime.compare(timeShot, reference, full);
         Path out = Path.of("target", "soniccd-ppzobja");
         Files.createDirectories(out);
         ScreenshotCapture.savePNG(full, out.resolve("engine-" + payload + "-lf" + shot.levelFrames() + ".png"));
@@ -205,6 +212,69 @@ class TestPpzObjectsAPictures {
             if (!t.shots.contains(label)) t.shots.add(label);
             report.add(String.format("%s lf %d %s box(%d,%d): %d/%d", payload, shot.levelFrames(), names.get(i),
                     (b[0] + b[2]) / 2, (b[1] + b[3]) / 2, same, total));
+        }
+    }
+
+    private record HudTimeShot(CdStagePayload payload, int levelFrame, String residentDigits,
+                               String previousDigits, int lastDigitRefreshY) { }
+
+    // UpdateHUD (Level/_Objects/HUD and Points/Main.asm:252-305) runs in all of these
+    // V-INTs. The VRAM bytes arrive after scanout for part or all of the changed glyphs.
+    // The Sonic CD hardware timings entry records the per-digit write scanlines.
+    private static final List<HudTimeShot> LATE_HUD_TIME_WRITES = List.of(
+            new HudTimeShot(CdStagePayload.R11A, 330, "00306", "00305", 33),
+            new HudTimeShot(CdStagePayload.R11A, 370, "00373", "00371", 40),
+            new HudTimeShot(CdStagePayload.R11A, 440, "00490", "00488", 40),
+            new HudTimeShot(CdStagePayload.R12A, 320, "00283", "00281", 40),
+            new HudTimeShot(CdStagePayload.R12A, 370, "00366", "00365", 40),
+            new HudTimeShot(CdStagePayload.R12A, 430, "00466", "00465", 40));
+
+    private static final class HudTimeChecks {
+        private static final int[] DIGIT_X = {56, 72, 80, 96, 104};
+
+        private final List<HudTimeShot> pending = new ArrayList<>(LATE_HUD_TIME_WRITES);
+        private final List<String> differences = new ArrayList<>();
+
+        HudTimeChecks() {
+            pending.add(new HudTimeShot(CdStagePayload.R11A, 320, "00290", "00290", 24));
+            pending.add(new HudTimeShot(CdStagePayload.R12A, 330, "00300", "00300", 24));
+        }
+
+        void compare(HudTimeShot shot, RgbaImage reference, RgbaImage engine) {
+            var art = (com.openggf.game.soniccd.objects.art.CdObjectArtProvider)
+                    GameServices.module().getObjectArtProvider();
+            int digits = art.entry().hudNumbersArt();
+            for (int column = 0; column < DIGIT_X.length; column++) {
+                byte[] resident = art.image().slice(digits + 64 * (shot.residentDigits().charAt(column) - '0'), 64);
+                byte[] previous = art.image().slice(digits + 64 * (shot.previousDigits().charAt(column) - '0'), 64);
+                int engineErrors = 0, nativeErrors = 0;
+                for (int row = 0; row < 16; row++) {
+                    int y = 24 + row;
+                    byte[] scanned = column == 4 && y >= shot.lastDigitRefreshY() ? resident : previous;
+                    for (int x = 0; x < 8; x++) {
+                        if (!matchesGlyphPixel(engine, DIGIT_X[column], y, x, row, resident)) engineErrors++;
+                        if (!matchesGlyphPixel(reference, DIGIT_X[column], y, x, row, scanned)) nativeErrors++;
+                    }
+                }
+                if (engineErrors != 0 || nativeErrors != 0) {
+                    differences.add("%s lf %d TIME digit x=%d: %d engine and %d native opaque pixel mismatches"
+                            .formatted(shot.payload(), shot.levelFrame(), DIGIT_X[column], engineErrors, nativeErrors));
+                }
+            }
+            pending.remove(shot);
+        }
+
+        private static boolean matchesGlyphPixel(RgbaImage frame, int left, int y, int x, int row, byte[] glyph) {
+            int index = (glyph[row * 4 + x / 2] >>> ((1 - x % 2) * 4)) & 0xF;
+            // Transparent glyph pixels show the stage behind the HUD.
+            if (index == 0) return true;
+            return level(frame.argb(left + x, y)) == (index == 1 ? 0 : 0x1FF);
+        }
+
+        void assertComplete() {
+            assertTrue(pending.isEmpty(), () -> "Missing native TIME shots: " + pending);
+            assertTrue(differences.isEmpty(), () -> String.join("\n", differences));
+            System.out.println("PPZ TIME: 8 pictures match the measured scanout and published digit art");
         }
     }
 
