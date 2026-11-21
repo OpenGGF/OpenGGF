@@ -152,6 +152,21 @@ differences between dialects are script output only and need a hand check
 before K3c relies on them. Japan and Europe differ from USA in 718 file
 deltas, mostly the player, monitor and results code.
 
+### Disassembly compatibility aliases
+
+`DeleteOtherObject EQU DeleteObject` in the R3, R4 and R5 compatibility
+files conflates two entry points. Wacky Workbench's R6 compatibility file
+includes the R5 aliases. For an object-deletion port, resolve the actual
+`jsr`, `jmp` or `bsr` target in the shipped stage MMD. The entry for
+`DeleteObject` starts with `2248` (`movea.l a0,a1`). The entry two bytes
+later starts with `7200` (`moveq #0,d1`) and clears the 64-byte slot already
+addressed by `a1`. See DeleteOtherObject (scddisasm/src/common/object.asm:180-187).
+
+For example, the R52A Noro Noro call at `$20D01E` targets `$203BE4` and
+enters at `7200`. The Collision Chaos and Tidal Tempest boss calls, the
+R41A falling spike call, and the R81A through R81D Scarab and Poh-Bee calls use the
+same entry convention at their own stage addresses.
+
 ## Lanes
 
 Tier S is Opus, Fable or Sol. Tier M is Sonnet-class. Tier C is Haiku-class or a

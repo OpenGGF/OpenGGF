@@ -5,6 +5,7 @@ import com.openggf.game.soniccd.objects.common.CdAnimator;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectVisualFacing;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 
 import java.util.List;
 
@@ -15,13 +16,15 @@ import java.util.List;
  * {@code + $A0 + $60}) and sits two pixels below {@code water_y}; it never despawns.
  */
 @com.openggf.level.objects.CameraRelativeDraw(com.openggf.level.objects.CameraRelativeDraw.Use.CULL_ONLY)
-public final class ObjWaterSurface extends TtzObject implements ObjectVisualFacing.NonDirectional {
+public final class ObjWaterSurface extends TtzObject implements ObjectVisualFacing.NonDirectional, SpawnRewindRecreatable {
     /** {@code object_spawn_pool}, the first dynamic slot, where InitStage creates it (r4/main.asm:249). */
     public static final int LEVEL_START_SLOT = 32;
     private int routine;
     /** oVar2A: the toggle byte (WaterSurfaceObject_0_Routine2, objects/r4/water_surface.asm:25-33). */
     private int toggle;
-    private CdAnimator animator;
+    private transient CdAnimator animator;
+    private final CdAnimator.StageRewind rewindAnimation =
+            new CdAnimator.StageRewind(() -> artProvider().image(), () -> animator, restored -> animator = restored);
     private int mapFrame;
     private int flipBits;
 

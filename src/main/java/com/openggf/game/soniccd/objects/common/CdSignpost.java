@@ -5,20 +5,21 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.PlayableSpriteInternalAccess;
 
 import java.util.List;
 
 /**
  * Signpost, object $17 ({@code ObjSignpost}, Level/_Objects/Level End/Main.asm:708-907): width $18,
  * Y radius $20, priority 4, tile $43C (high priority except in Quartz Quadrant). When the player
- * passes it within 128 pixels vertically it locks the left boundary, stops the HUD timer, clears
- * invincibility and spins for 120 frames (Ani_Signpost), shows the player side (frame 3) and, 60
- * frames later, forces Right ({@code ctrlLocked} bit 0, {@code playerCtrlHold} $808; none in Stardust
+ * passes it within 128 pixels vertically it locks the left boundary, stops the HUD timer, and clears
+ * speed shoes and invincibility. It spins for 120 frames (Ani_Signpost), shows the player side
+ * (frame 3), and 60 frames later forces Right ({@code ctrlLocked} bit 0, {@code playerCtrlHold} $808; none in Stardust
  * Speedway act 3), computes the time bonus ({@code TimeBonuses[min((m*60+s)/15, 20)]}) and ring bonus
  * (rings * 100) and spawns the results object $3A with FindObjSlot and a 16-frame delay.
  *
  * <p>Sounds by ID: {@code FM_SIGNPOST} when passed, and at StartResults {@code SCMD_FADEPCM} in the past then
- * {@code SCMD_RESULTMUS}. Not hosted: the speed-shoes flag clear (the player's timer owner has no flag-only write).
+ * {@code SCMD_RESULTMUS}.
  */
 public final class CdSignpost extends CdObject implements ObjectVisualFacing.NonDirectional {
     /** ObjSignpost_Main: move.b #120,oLvlEndTimer(a0) (Level End/Main.asm:758-775). */
@@ -70,7 +71,9 @@ public final class CdSignpost extends CdObject implements ObjectVisualFacing.Non
         timer = SPIN_FRAMES;
         mapFrame = 0;
         routine = 4;
-        sprite.setInvincibleFrames(0);                       // clr.b invincible
+        // ObjSignpost_Main (Level End/Main.asm:779-780) clears both flags and leaves the speed words alone.
+        PlayableSpriteInternalAccess.clearSpeedShoesFlag(sprite);
+        sprite.setInvincibleFrames(0);
         services().playSfx(com.openggf.game.soniccd.audio.CdSoundRequests.SIGNPOST);
     }
 

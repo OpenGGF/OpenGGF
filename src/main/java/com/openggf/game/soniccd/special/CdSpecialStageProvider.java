@@ -204,8 +204,10 @@ public final class CdSpecialStageProvider implements SpecialStageProvider, Nativ
         var cd = policy instanceof com.openggf.game.soniccd.program.CdScorePolicy p ? p : null;
         int nextLife = cd != null ? cd.nextLifeScore() / 10 : 5000;
         return new CdSpecialStageResults(result, game == null ? 0 : game.getScore() / 10, nextLife,
-                game == null ? 3 : game.getLives(), assets, points -> {
-                    if (game != null && cd != null) cd.awardSpecialStageResults(game, points * 10);
+                game == null ? 3 : game.getLives(), assets, tally -> {
+                    if (game != null && cd != null) {
+                        cd.commitSpecialStageResults(game, tally.score() * 10, tally.nextLifeScore() * 10, tally.lives());
+                    }
                 });
     }
 

@@ -1,6 +1,8 @@
 package com.openggf.game.soniccd.objects.common;
 
 import com.openggf.audio.GameSound;
+import com.openggf.camera.CameraPresentationAccess;
+import com.openggf.configuration.SonicConfiguration;
 import com.openggf.game.solid.SolidExecutionFrames;
 import com.openggf.game.soniccd.audio.CdSoundRequests;
 
@@ -226,8 +228,22 @@ public abstract class CdObject extends AbstractObjectInstance {
         return renderer == null || !renderer.isReady() ? null : renderer;
     }
 
+    /**
+     * DrawObject (Level/Object Functions.asm:137-191) rejects camera-relative objects
+     * before they consume sprite-table entries. When limits apply, use the visibility
+     * from the completed object pass, whose camera predates level scroll. Native widescreen margins also
+     * display objects beyond the simulation camera.
+     */
+    protected final boolean admitsWorldSprite() {
+        return !renderPassSeen || drawnOnScreen
+                || !services().graphicsManager().isSpriteSatCollectionActive()
+                || !services().configuration().getBoolean(SonicConfiguration.DISPLAY_SPRITE_SCANLINE_LIMIT)
+                || CameraPresentationAccess.hasMargin(services().camera());
+    }
+
     /** Draws frame {@code frame} at the object's position with its tile word's palette line. */
     protected void drawFrame(String key, int frame, boolean hFlip, boolean vFlip) {
+        if (!admitsWorldSprite()) return;
         PatternSpriteRenderer renderer = art(key);
         if (renderer != null) {
             renderer.drawFrameIndex(frame, x, y, hFlip, vFlip, CdObjectArtProvider.tilePalette(tileWord));

@@ -1,7 +1,10 @@
 package com.openggf.game.soniccd.objects.ssz;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.schema.RewindCaptureContext;
+import com.openggf.game.soniccd.objects.art.CdObjectArtProvider;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.TouchOverlapStopPolicy;
 import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseResult;
@@ -34,7 +37,7 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
  * The shot's velocity low word is the unspecified upper word of {@code d1} at entry, modelled as zero.
  */
 @com.openggf.level.objects.CameraRelativeDraw(com.openggf.level.objects.CameraRelativeDraw.Use.CULL_ONLY)
-public final class ObjKabasira extends SszBadnik {
+public final class ObjKabasira extends SszBadnik implements SpawnRewindRecreatable {
     /** The kinds named by the secondary subtype. */
     private enum Kind { HEAD, FOLLOWER, SHOT }
 
@@ -51,11 +54,10 @@ public final class ObjKabasira extends SszBadnik {
     private static final int FM_SHOT = 0xA0;
     private static final int FM_BURST = 0x9E;
 
-    private final Kind kind;
-    private ObjKabasira head;
+    private Kind kind;
     /** A follower's obj.var_3e: the head's slot ({@code move.w a0,obj.var_3e(a1)}, objects/r7/kabasira.asm:80). */
-    private final int headSlot;
-    private SszAnimator animator;
+    private int headSlot;
+    private final SszAnimator.Rewindable animator = new SszAnimator.Rewindable();
     /** oVar2A:oVar2C and oVar2E:oVar30 as 16.16 longs: the figure's origin, or the shot's velocity. */
     private int originX;
     private int originY;
@@ -68,19 +70,27 @@ public final class ObjKabasira extends SszBadnik {
     private int stepY;
     /** oVar3A: the shot cooldown. */
     private int cooldown;
-    private int anim;
     private boolean burst;
 
     /** A head placed in the layout. */
     public ObjKabasira(ObjectSpawn spawn) {
-        this(spawn, Kind.HEAD, null);
+        this(spawn, Kind.HEAD, -1);
     }
 
-    private ObjKabasira(ObjectSpawn spawn, Kind kind, ObjKabasira head) {
+    private ObjKabasira(ObjectSpawn spawn, Kind kind, int headSlot) {
         super(spawn, "Kabasira");
         this.kind = kind;
-        this.head = head;
-        this.headSlot = head == null ? -1 : head.getSlotIndex();
+        this.headSlot = headSlot;
+    }
+
+    @Override
+    protected void afterGenericRewindStateRestored(RewindCaptureContext context) {
+        if (initialised) bindAnimationScript(artProvider());
+    }
+
+    /** KabasiraObject (objects/r7/kabasira.asm:3-33) resumes the part's saved animation. */
+    private void bindAnimationScript(CdObjectArtProvider provider) {
+        animator.bindScript(provider.image(), SszObjectCatalogue.entry(provider.payload()).kabasiraAnimations());
     }
 
     @Override protected String sheetKind() { return SszObjectArt.KABASIRA; }
@@ -117,7 +127,6 @@ public final class ObjKabasira extends SszBadnik {
     }
 
     private void animate() {
-        if (animator == null) return;
         animator.step();
         mapFrame = animator.mapFrame();
         if (animator.showedFrame()) spriteFlip = (statusFlip ^ animator.flipBits()) & 3;
@@ -142,8 +151,9 @@ public final class ObjKabasira extends SszBadnik {
         boolean slow = spawn.subtype() != 0;
         stepX = slow ? 0x100 : 0x200;
         stepY = slow ? 0x80 : 0x100;
-        anim = slow ? 0 : 4;
-        animator = SszObjectArt.animator(provider, SszObjectCatalogue.Entry::kabasiraAnimations, anim);
+        int anim = slow ? 0 : 4;
+        animator.anim = anim;
+        bindAnimationScript(provider);
         commonInit();
         int offsetX = slow ? 0x2000 : 0x1000;
         int offsetY = slow ? 0x1000 : 0x800;
@@ -154,15 +164,15 @@ public final class ObjKabasira extends SszBadnik {
             phaseOffsetX -= offsetX;
             phaseOffsetY -= offsetY;
             ObjKabasira follower = new ObjKabasira(new ObjectSpawn(x, y, spawn.objectId(), spawn.subtype(), 0, false, 0),
-                    Kind.FOLLOWER, this);
-            follower.anim = n + anim;                                // add.b obj.anim_id(a0),d0
+                    Kind.FOLLOWER, getSlotIndex());
+            follower.animator.anim = n + anim;                                // add.b obj.anim_id(a0),d0
             follower.phaseX = phaseOffsetX & 0xFFFF;
             follower.phaseY = phaseOffsetY & 0xFFFF;
             follower.originX = originX;
             follower.originY = originY;
             follower.stepX = stepX;
             follower.stepY = stepY;
-            follower.animator = SszObjectArt.animator(provider, SszObjectCatalogue.Entry::kabasiraAnimations, follower.anim);
+            follower.bindAnimationScript(provider);
             follower.commonInit();
             if (objects == null) continue;
             objects.addDynamicObjectAfterCurrent(follower);          // jsr SpawnObjectAfter
@@ -204,11 +214,11 @@ public final class ObjKabasira extends SszBadnik {
         cooldown = SHOOT_COOLDOWN;
         var objects = services().objectManager();
         if (objects == null) return;
-        ObjKabasira shot = new ObjKabasira(new ObjectSpawn(x, y, spawn.objectId(), 0, 0, false, 0), Kind.SHOT, this);
-        shot.anim = SHOT_ANIM;
+        ObjKabasira shot = new ObjKabasira(new ObjectSpawn(x, y, spawn.objectId(), 0, 0, false, 0), Kind.SHOT, getSlotIndex());
+        shot.animator.anim = SHOT_ANIM;
         shot.colType = SHOT_COLLISION;
         shot.commonInit();
-        shot.animator = SszObjectArt.animator(artProvider(), SszObjectCatalogue.Entry::kabasiraAnimations, SHOT_ANIM);
+        shot.bindAnimationScript(artProvider());
         int angle = TrigLookupTable.calcAngle((short) dx, (short) dy);            // jsr Atan2
         shot.velocityX = (TrigLookupTable.cosHex(angle & 0xFF) << 16) >> 7;
         shot.velocityY = (TrigLookupTable.sinHex(angle & 0xFF) << 16) >> 7;
