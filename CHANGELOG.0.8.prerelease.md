@@ -78,7 +78,8 @@ under the matching area heading; see the
   Sonic plays on Sonic 1's physics
   with Sonic CD's own rules (spin dash and super peel-out, the extended camera,
   the 3D ramps, per-zone player routines and the idle timer that ends in
-  Sonic giving up). Sonic keeps the walking pose selected by ground input on
+  Sonic giving up). The stage title card holds player controls from load until
+  its art queue drains. Sonic keeps the walking pose selected by ground input on
   the frame he slips off a steep slope. Time travel, special stages
   (with pause during play, exit fades and a visible results tally that Start can finish),
   the title, stage select, Time Attack, Special Stage 8 from the sound test,

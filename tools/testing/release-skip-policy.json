@@ -5313,6 +5313,13 @@
       "note": "user's Sonic CD disc"
     },
     {
+      "match": "com.openggf.game.soniccd.TestSonicCdR11aOpeningIdle#heldRightMovesOnlyAfterTheTitleCardAndHeldJumpDoesNotTap",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestSonicCdR11aOpeningIdle.java:96",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
       "match": "com.openggf.game.soniccd.TestSonicCdR11aOpeningIdle#openingIdleFramesMatchTheNativeTrace",
       "category": "optional-fixture",
       "evidence": "src/test/java/com/openggf/game/soniccd/TestSonicCdR11aOpeningIdle.java:72",

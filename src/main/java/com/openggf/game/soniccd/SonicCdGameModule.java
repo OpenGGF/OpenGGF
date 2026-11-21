@@ -93,11 +93,11 @@ public final class SonicCdGameModule implements GameModule {
     private final CdLevelVIntCounter levelVIntCounter = new CdLevelVIntCounter();
     /** The frame a stage load runs in: it already ran iteration 1, so the loop runs no other that frame. */
     private final CdLoadFrame loadFrame = new CdLoadFrame();
+    private final CdPlayerStage playerStage = new CdPlayerStage(() -> this.game);
     private final LevelInitProfile levelInitProfile = new SonicCdLevelInitProfile(levelEvents, timeTravel, switchFlags,
-            () -> this.playerStage.resetForLevel(), levelVIntCounter, loadFrame, this::disc,
+            playerStage, levelVIntCounter, loadFrame, this::disc,
             payload -> this.audioProfile.subCpuAudio().loadStage(payload));
     private final ScrollHandlerProvider scrollHandlerProvider = new CdScrollHandlerProvider();
-    private final CdPlayerStage playerStage = new CdPlayerStage(() -> this.game);
     private final PhysicsProvider physicsProvider = new SonicCdPhysicsProvider(playerStage);
     private final com.openggf.game.soniccd.audio.SonicCdAudioProfile audioProfile =
             new com.openggf.game.soniccd.audio.SonicCdAudioProfile(() -> this.disc());
