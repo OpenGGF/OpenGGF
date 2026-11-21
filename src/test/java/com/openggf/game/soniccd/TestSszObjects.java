@@ -24,6 +24,7 @@ import com.openggf.game.soniccd.objects.ssz.ObjPathSwap;
 import com.openggf.game.soniccd.objects.ssz.ObjSearchlight;
 import com.openggf.game.soniccd.objects.ssz.ObjSparks;
 import com.openggf.game.soniccd.objects.ssz.SszStageLayer;
+import com.openggf.game.soniccd.player.CdSonicAnimation;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.physics.Direction;
@@ -379,6 +380,36 @@ class TestSszObjects {
         head.setDestroyed(true);
         ((ObjKabasira) follower).update(244, sonic);
         assertTrue(follower.isDestroyed());
+    }
+
+    @Test
+    void kabasiraShotDefeatReboundsUnrolledInvincibleSonic() {
+        settleOnGround();
+        var before = live(0x22);
+        int x = sonic.getCentreX();
+        int y = sonic.getCentreY() - 0x50;
+        ObjKabasira head = add(new ObjKabasira(new ObjectSpawn(x + 0x50, y, 0x22, 0, 0, false, 0)));
+        head.update(1, sonic);
+        head.update(2, sonic);
+        ObjKabasira shot = since(before, 0x22).stream().map(ObjKabasira.class::cast)
+                .filter(object -> object.getCollisionFlags() == 0xF1).findFirst().orElseThrow();
+        for (int frame = 3; frame <= 24; frame++) {
+            shot.snapshotPreUpdatePosition();
+            shot.update(frame, sonic);
+        }
+        sonic.setCentreX((short) shot.getX());
+        sonic.setCentreY((short) shot.getY());
+        sonic.setRolling(false);
+        sonic.setAnimationId(CdSonicAnimation.WALK.id());
+        sonic.setInvincibleFrames(60);
+        sonic.setYSpeed((short) 0x300);
+        var objects = GameServices.level().getObjectManager();
+        objects.refreshPostCameraRenderState();
+        objects.runTouchResponsesForPlayer(sonic, 25);
+
+        // loc_20703E (r7/player_object_collide.asm:398-401) branches to the enemy routine.
+        // loc_206E24 (r7/player_object_collide.asm:190-192) subtracts $100 when Sonic is level with the shot.
+        assertEquals(0x200, sonic.getYSpeed());
     }
 
     private List<ObjectInstance> placed;

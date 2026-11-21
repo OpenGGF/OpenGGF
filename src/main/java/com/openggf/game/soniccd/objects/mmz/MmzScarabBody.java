@@ -1,7 +1,6 @@
 package com.openggf.game.soniccd.objects.mmz;
 
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.soniccd.timetravel.CdTimeTravel;
 import com.openggf.game.soniccd.zones.mmz.MmzStageSignals;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.CameraRelativeDraw;
@@ -269,9 +268,7 @@ public final class MmzScarabBody extends MmzBadnik implements TouchResponseListe
         super.becomeExplosion(pointsIndex, layer, explosionSubtype, fromBadnik);
     }
 
-    // ---- touch: loc_206CD8 (r8/player_object_collide.asm:loc_206CD8) ---------------------------------------------
-
-    /** Collision $F0 is a $C0 type whose size index $30 the player's touch response sends to loc_206CD8. */
+    /** Collision $F0 dispatches to loc_206CD8 (r8/player_object_collide.asm:456-463). */
     @Override public boolean usesS3kTouchSpecialPropertyResponse() { return (colType & 0xC0) == 0xC0; }
 
     @Override
@@ -287,23 +284,21 @@ public final class MmzScarabBody extends MmzBadnik implements TouchResponseListe
 
     /** sub_2069E8 (r8/player_object_collide.asm:161-167): the ordinary enemy touch. */
     private void enemy(AbstractPlayableSprite sprite) {
-        boolean attacks = CdTimeTravel.starsActive(services().gameModule())
-                || sprite.getInvincibleFrames() > 0 || sprite.getAnimationId() == 2;
-        if (!attacks) {                                                 // sub_206AB2: HurtPlayer
+        if (!attacksOnEnemyTouch(sprite)) {                          // sub_206AB2: HurtPlayer
             if (sprite.isHurt() || sprite.getDead() || sprite.getInvulnerableFrames() > 0) return;
             boolean hadRings = sprite.getRingCount() > 0;
             if (hadRings && !sprite.hasShield()) services().spawnLostRings(sprite, 0);
             sprite.applyHurtOrDeath(x, true, hadRings);
             return;
         }
-        if (collideStatus != 0) {                                    // loc_20A02: bounce off a beetle that has been touched
+        if (collideStatus != 0) {                                    // loc_206A02: bounce off a beetle that has been touched
             sprite.setXSpeed((short) (-sprite.getXSpeed() >> 1));
             sprite.setYSpeed((short) (-sprite.getYSpeed() >> 1));
             colType = 0;
             collideStatus = (collideStatus - 1) & 0xFF;
             return;
         }
-        killAsEnemy(sprite, 0, true);
+        killAsEnemyFromSpecialTouch(sprite, 0, true);
     }
 
     @Override public int getCollisionFlags() { return initialised ? colType : 0; }

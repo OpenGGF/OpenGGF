@@ -76,9 +76,12 @@ class TestCdDangoTouch {
             assertTrue(timeTravel.starsActive());
             int slot = contact.dango.getSlotIndex();
             int score = GameServices.gameState().getScore();
+            contact.sonic.setYSpeed((short) -0x500);
 
             contact.objects.runTouchResponsesForPlayer(contact.sonic, 1);
 
+            // loc_206E1C (r7/player_object_collide.asm:184-186) and loc_206A94 (r8/player_object_collide.asm:220-222).
+            assertEquals(-0x400, contact.sonic.getYSpeed(), "The enemy defeat adds $100 while Sonic rises");
             assertTrue(contact.dango.isDestroyed(), "The enemy routine accepts warp stars");
             assertEquals(score + 100, GameServices.gameState().getScore());
             assertTrue(contact.objects.getActiveObjects().stream().anyMatch(
