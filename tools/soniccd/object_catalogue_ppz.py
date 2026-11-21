@@ -10,6 +10,14 @@ def STAGES_COVERED(stage: str) -> bool:
 
 
 ANCHORS = [
+    ('flyingAnimalMappings', '217C 08080408 0016 217C AAAAAAAA 0004 3168 0008 002A 3168 000C 002C', 'optional',
+     'ObjFlyingAnimal_Init (Level/Palmtree Panic/Objects/Animal/Main.asm:34-40)'),
+    ('groundAnimalMappings', '217C 08080408 0016 217C AAAAAAAA 0004 3168 0008 002A 6100 ???? 4A28 0028', 'optional',
+     'ObjGroundAnimal_Init (Level/Palmtree Panic/Objects/Animal/Main.asm:136-143)'),
+    ('flyingAnimalAnimations', '1140 002E 43FA PPPP 4EB9 ???????? 4EB9 ???????? 3028 002A', 'optional',
+     'ObjFlyingAnimal_Flying (Level/Palmtree Panic/Objects/Animal/Main.asm:76-81)'),
+    ('animalBaseTiles', '43FA PPPP 7000 1039 ???????? E540 D039 ???????? D040 3171 0000 0002 4E75', 'optional',
+     'ObjAnimal_SetBaseTile (Level/Palmtree Panic/Objects/Animal/Main.asm:209-217)'),
     ('amyMappings', '317C 2370 0002 117C 0001 0018 217C AAAAAAAA 0004 117C 000C 0019 117C 0010', 'optional',
      'ObjAmyRose_Init (Level/Palmtree Panic/Objects/Amy Rose/Main.asm:36-42): move.l #MapSpr_AmyRose,oMap(a0)'),
     ('amyAnimations', '117C 0005 001C 43F9 AAAAAAAA 6000', 'optional',
