@@ -166,6 +166,7 @@ under the matching area heading; see the
   through the results and next-act handoff. Both Tidal Tempest Act 3 boss
   recordings now verify Sonic's water re-entry after Robotnik escapes and
   check the boss slots past the first bubble's final pop frame.
+  Amenbo and Taga-Taga missiles free their object slots at the disc's despawn checks.
   Quartz Quadrant Past conveyors
   change speed on the warp trigger frame, and the R51B short fixture matches
   all 569 recorded rows. Metallic Madness Act 1 hosts Poh-Bee and its swinging
