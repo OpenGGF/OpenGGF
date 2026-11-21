@@ -36,6 +36,7 @@ import com.openggf.game.soniccd.objects.ccz.CczObjectCatalogue;
 import com.openggf.game.soniccd.objects.ccz.CczPocket;
 import com.openggf.game.soniccd.objects.ccz.CczSpikeChain;
 import com.openggf.game.soniccd.objects.ccz.CczTentou;
+import com.openggf.game.soniccd.objects.projector.CdProjector;
 import com.openggf.level.Pattern;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
@@ -576,6 +577,50 @@ class TestCczObjects {
         flipper.flipperSwing();
         runner.stepIdleFrames(1);
         assertEquals(flipper, CczFlipperObject.standingOn(sonic), "animation 1 stops the collision test but does not release him");
+    }
+
+    @Test
+    void groundHologramPlaysItsDiscLoopAndResumesAfterRewind() throws Exception {
+        // Ani_CCAnimalGround (Level/Collision Chaos/Objects/Animal/Main.asm:243-245)
+        // selects a delay of zero, 56 mapping frames, then $FF to loop.
+        String loop = "33233233" + "23323322" + "33223322" + "33224424"
+                + "42442442" + "44224422" + "44224422";
+        int rewindAt = 13;
+        for (var payload : List.of(CdStagePayload.R31B, CdStagePayload.R32B)) {
+            load(payload);
+            var projector = add(new CdProjector(spawn(0x38, 0xB0, -0x40, 0)));
+            runner.stepIdleFrames(1);
+            int parentSlot = projector.getSlotIndex();
+            var ground = groundHologram(parentSlot);
+            if (ground.routine() == 0) runner.stepIdleFrames(1);
+
+            var rewind = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+            String prefix = hologramFrames(ground, rewindAt);
+            var snapshot = rewind.capture();
+            String suffix = hologramFrames(ground, loop.length() - rewindAt + 4);
+            assertEquals(loop + loop.substring(0, 4), prefix + suffix, payload + " forward playback");
+
+            ground.setDestroyed(true);
+            runner.stepIdleFrames(1);
+            rewind.restore(snapshot);
+            assertEquals(loop.substring(rewindAt) + loop.substring(0, 4),
+                    hologramFrames(groundHologram(parentSlot), suffix.length()), payload + " after rewind");
+        }
+    }
+
+    private CczAnimal groundHologram(int parentSlot) {
+        return live(0x39).stream().filter(CczAnimal.class::isInstance).map(CczAnimal.class::cast)
+                .filter(animal -> animal.getSpawn().subtype() == 0x81 && animal.projectorSlot() == parentSlot)
+                .findFirst().orElseThrow();
+    }
+
+    private String hologramFrames(CczAnimal ground, int count) {
+        StringBuilder frames = new StringBuilder();
+        for (int update = 0; update < count; update++) {
+            runner.stepIdleFrames(1);
+            frames.append(ground.mapFrame());
+        }
+        return frames.toString();
     }
 
     @Test

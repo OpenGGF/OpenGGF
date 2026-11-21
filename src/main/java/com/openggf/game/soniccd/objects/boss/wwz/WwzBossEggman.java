@@ -3,7 +3,9 @@ package com.openggf.game.soniccd.objects.boss.wwz;
 import com.openggf.game.soniccd.zones.wwz.WwzStageState;
 import com.openggf.camera.Camera;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.internal.StagePaletteWait;
 import com.openggf.game.soniccd.audio.CdSubCpuAudio;
+import com.openggf.game.soniccd.level.CdStageCatalogue;
 import com.openggf.game.soniccd.level.CdStageImage;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -33,7 +35,8 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
  * half speed and clears the type (PlayerObjectCollideEnemy, src/r6/player_object_collide.asm:133-153),
  * anyone else is hurt. A cleared type on either is a hit ({@code FixBugs = 0}: the attack is not tested).
  */
-public final class WwzBossEggman extends WwzBossPiece implements com.openggf.level.objects.TouchResponseAttackable {
+public final class WwzBossEggman extends WwzBossPiece
+        implements com.openggf.level.objects.TouchResponseAttackable, StagePaletteWait {
     /** Object $34: EggmanObject is entry $33 of r6/object_index_3.asm:3-69. */
     public static final int ID = 0x34;
     /** EggmanWaitForPlayer: cmpi.w #$A80,obj.x(a1) (objects/r6/boss.asm:99-105). */
@@ -77,8 +80,13 @@ public final class WwzBossEggman extends WwzBossPiece implements com.openggf.lev
     /** var_3e / var_3f: the stage-palette fade timer and table index. */
     private int fadeTimer;
     private int fadeIndex;
-    /** {@code fadePalette} after LoadFadePalette 6: colours 0-$2F as Sega words (the FadeObjects target). */
+    /** The independently loaded fade palette's words $00-$2F. */
     private int[] fadeTarget = new int[0x30];
+    private enum ProgrammedFade { TO_WHITE, OBJECTS_FROM_WHITE }
+
+    private ProgrammedFade programmedFade;
+    private int fadeVSyncsRemaining;
+    private int[] nextFadePalette;
     private boolean skipDraw;
 
     public WwzBossEggman(ObjectSpawn spawn) {
@@ -201,8 +209,8 @@ public final class WwzBossEggman extends WwzBossPiece implements com.openggf.lev
             if (timer == 0x78) enterBattle(ram);
             return;
         }
-        loadPalette(BOSS_PALETTE);                           // LoadFadePalette 6 (the target), LoadPalette 6
-        captureFadeTarget();
+        loadFadeTarget();
+        loadPalette(BOSS_PALETTE);
         // AddGfxQueue $13: the sheets are registered at the stage load (WwzBossArt).
         spawnChildren();
         priority = 4;
@@ -415,7 +423,7 @@ public final class WwzBossEggman extends WwzBossPiece implements com.openggf.lev
         switch (t) {                                         // EggmanDefeatSequenceCheckEvents
             case 0x145 -> {
                 setPaletteCycleSlow();
-                fadeToWhite();
+                startProgrammedFade(ProgrammedFade.TO_WHITE);
                 return;
             }
             case 0x146 -> {
@@ -423,7 +431,7 @@ public final class WwzBossEggman extends WwzBossPiece implements com.openggf.lev
                 return;
             }
             case 0x17F -> {
-                fadeObjectsFromWhite();
+                startProgrammedFade(ProgrammedFade.OBJECTS_FROM_WHITE);
                 return;
             }
             default -> { }
@@ -640,23 +648,66 @@ public final class WwzBossEggman extends WwzBossPiece implements com.openggf.lev
         }
     }
 
-    /** LoadFadePalette 6 wrote the same entry to {@code fadePalette}; colours 0-$2F are the FadeObjects target. */
-    private void captureFadeTarget() {
-        int[] words = paletteWords();
-        System.arraycopy(words, 0, fadeTarget, 0, fadeTarget.length);
+    /**
+     * InitStage (common/main.asm:243-250) loads player entry 3, then LoadStageData
+     * (r6/stage_data_load_3c.asm:3-19) loads the stage entry. EggmanInitialize
+     * (objects/r6/boss.asm:111-119) overlays boss entry 6. LoadFadePalette
+     * (common/palette_load_fade.asm:3-15) writes a separate buffer that palette cycling does not touch.
+     */
+    private void loadFadeTarget() {
+        CdStageImage image = stageImage();
+        if (image == null) return;
+        var stage = CdStageCatalogue.entry(payload());
+        int table = stage.paletteTable();
+        int paletteBase = image.u16(table + 4);
+        int stagePalette = image.u8(stage.levelDataIndex() + 15);
+        for (int id : new int[] {3, stagePalette, BOSS_PALETTE}) {
+            int entry = table + id * 8;
+            int source = image.offsetOf(image.u32(entry));
+            int firstColor = (image.u16(entry + 4) - paletteBase) / 2;
+            int colorCount = (image.u16(entry + 6) + 1) * 2;
+            int end = Math.min(firstColor + colorCount, fadeTarget.length);
+            for (int color = firstColor; color < end; color++) {
+                fadeTarget[color] = image.u16(source + 2 * (color - firstColor));
+            }
+        }
     }
 
     /**
-     * FadeToWhite (common/palette_fade.asm:285-296; FadeColorsToWhite :298-318, FadeColorToWhite :322-357): 22 VSync
-     * iterations inside the routine, each stepping every colour one component toward white. The main loop stands still
-     * for them (the level frame counter does not advance); the engine applies the 22 steps in this frame.
+     * FadeToWhite (common/palette_fade.asm:285-295) and BossFadeObjectsFromWhite
+     * (common/palette_fade.asm:463-484) both wait 22 times. The latter fills words $00-$2F first.
      */
-    private void fadeToWhite() {
-        int[] words = paletteWords();
-        for (int i = 0; i <= 0x15; i++) {
-            for (int c = 0; c < 64; c++) words[c] = toWhite(words[c]);
+    private void startProgrammedFade(ProgrammedFade fade) {
+        ram().publishPaletteWait(spawn);
+        programmedFade = fade;
+        fadeVSyncsRemaining = 0x15 + 1;
+        nextFadePalette = paletteWords();
+        if (fade == ProgrammedFade.OBJECTS_FROM_WHITE) {
+            java.util.Arrays.fill(nextFadePalette, 0, 0x30, 0xEEE);
         }
-        writeWords(words);
+    }
+
+    boolean hasPendingPaletteWait() {
+        return fadeVSyncsRemaining > 0;
+    }
+
+    /**
+     * VBlankPaletteFade (common/main.asm:951-962) publishes the palette via VBlankCommon
+     * (common/main.asm:1014-1025). The loop computes its next colors after VSync returns.
+     */
+    @Override
+    public void advancePaletteWait() {
+        writeWords(nextFadePalette);
+        if (programmedFade == ProgrammedFade.TO_WHITE) {
+            for (int c = 0; c < 64; c++) nextFadePalette[c] = toWhite(nextFadePalette[c]);
+        } else {
+            for (int c = 0; c < 0x30; c++) nextFadePalette[c] = fromWhite(nextFadePalette[c], fadeTarget[c]);
+            nextFadePalette[0x20] = 0xEEE;
+        }
+        if (--fadeVSyncsRemaining == 0) {
+            programmedFade = null;
+            nextFadePalette = null;
+        }
     }
 
     private static int toWhite(int color) {
@@ -665,20 +716,6 @@ public final class WwzBossEggman extends WwzBossPiece implements com.openggf.lev
         if ((color & 0xE0) != 0xE0) return color + 0x20;
         if ((color & 0xE00) != 0xE00) return color + 0x200;
         return color;
-    }
-
-    /**
-     * BossFadeObjectsFromWhite (common/palette_fade.asm:463-484): colours 0-$2F to white, then 22 VSync iterations of
-     * FadeColorsFromWhite (:216-243) toward {@code fadePalette} with colour $20 held white, applied in this frame.
-     */
-    private void fadeObjectsFromWhite() {
-        int[] words = paletteWords();
-        for (int c = 0; c < 0x30; c++) words[c] = 0xEEE;
-        for (int i = 0; i <= 0x15; i++) {
-            for (int c = 0; c < 0x30; c++) words[c] = fromWhite(words[c], fadeTarget[c]);
-            words[0x20] = 0xEEE;
-        }
-        writeWords(words);
     }
 
     /** FadeColorFromWhite (common/palette_fade.asm:247-279). */

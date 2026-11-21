@@ -141,6 +141,8 @@ public final class TraceSuppressedRowClosure {
         Objects.requireNonNull(applyInLevelTitleCardControlLock,
                 "applyInLevelTitleCardControlLock");
 
+        if (LevelFrameStep.holdForStagePaletteWait(context, lifecycleFrame, levelManager)) return;
+
         TitleCardProvider titleCardProvider =
                 context.gameModule().getTitleCardProvider();
         LevelEventProvider levelEvents = context.levelEventProvider();
@@ -208,7 +210,8 @@ public final class TraceSuppressedRowClosure {
             }
             // The absorbed lag V-blank is behind this row, so the iteration that
             // absorbed it reaches its own loop tail here, before the row is
-            // sampled (docs/s1disasm/sonic.asm:709 VBlank_Lag, :3032 RunPLC).
+            // sampled (VBlank_Lag at docs/s1disasm/sonic.asm:709 and the RunPLC call
+            // in Level_SkipScroll at sonic.asm:3032).
             // The tail arms only what its own readiness allows.
             context.runtimeArtCoordinator().runHeldIterationLoopTail();
         }

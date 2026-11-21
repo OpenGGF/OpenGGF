@@ -24,7 +24,10 @@ public final class CdPlcQueue {
 
     /** Level frames from the queueing frame until the queue is empty again. */
     public static int framesToDrain(CdStageImage image, CdStagePayload payload, int plcId, int batch) {
-        int plcLists = CdStageCatalogue.entry(payload).plcLists();
+        return framesToDrain(image, CdStageCatalogue.entry(payload).plcLists(), plcId, batch);
+    }
+
+    public static int framesToDrain(CdStageImage image, int plcLists, int plcId, int batch) {
         if (!com.openggf.game.soniccd.objects.art.CdStageVram.hasPlc(image, plcLists, plcId)) return 0;
         var definition = PlcParser.parse(image.reader(), plcLists, plcId);
         int frames = 0;

@@ -163,10 +163,9 @@ public class GameLoop {
         /**
          * Executes pass {@code index}.
          *
-         * <p>{@code SpecialStage_MainLoop} is two loops, not one
-         * (docs/s2disasm/s2.asm:6674-6721), and one observation can own a pass
-         * from each: the pre-start loop copies {@code Ctrl_1}/{@code Ctrl_2}
-         * <em>before</em> its {@code WaitForVint} (s2.asm:6675-6676), so its
+         * <p>One observation can own a pass from each of the two loops in
+         * {@code SpecialStage} (docs/s2disasm/s2.asm:6674-6721). The pre-start
+         * loop copies {@code Ctrl_1}/{@code Ctrl_2} before {@code WaitForVint}, so its
          * terminal pass owns no post-V-int controller sample for the recurring
          * loop's binding path to consume. A driver that can tell the two apart
          * overrides this to publish such a pass through the startup boundary
@@ -182,8 +181,8 @@ public class GameLoop {
          * Runs after pass {@code index}'s object scan, for a pass the ROM
          * finished BEFORE this observation's V-int.
          *
-         * <p>{@code SS_MainLoop} waits for the V-int and only then runs
-         * {@code RunObjects} (docs/s2disasm/s2.asm:6694-6721), so a pass that
+         * <p>The recurring loop in {@code SpecialStage} (docs/s2disasm/s2.asm:6695-6721)
+         * waits for the V-int before it calls {@code RunObjects}, so a pass that
          * returned during the preceding frame had its queued work carried
          * through the V-blank that opened this observation, and that V-blank
          * already ran {@code ProcessDMAQueue} (s2.asm:1770) over it. Work
@@ -973,11 +972,12 @@ public class GameLoop {
      * (docs/s2disasm/s2.asm:5088-5095) -- so the release row itself dispatches
      * no object pass at all, and the first one belongs to the destination's
      * next V-blank, i.e. its recorded row 0. S1 orders the same two routines the
-     * same way ({@code Level_StartGame} at docs/s1disasm/sonic.asm:2990-2991,
-     * then {@code Level_MainLoop}'s {@code WaitForVBlank} at :2998-3001 ahead of
-     * {@code jsr (ExecuteObjects).l} at :3006), and so does S3K
-     * ({@code bclr #7,(Game_mode).w} at docs/skdisasm/sonic3k.asm:7914, then
-     * {@code Wait_VSync} at :7920 ahead of {@code Process_Sprites} at :7926).
+     * same way. {@code Level_StartGame} (docs/s1disasm/sonic.asm:2990-2991)
+     * releases into {@code Level_MainLoop} (docs/s1disasm/sonic.asm:2998-3006),
+     * which calls {@code WaitForVBlank} before {@code ExecuteObjects}.
+     * In S3K, {@code loc_64DC} (docs/skdisasm/sonic3k.asm:7914) releases into
+     * {@code LevelLoop} (docs/skdisasm/sonic3k.asm:7916-7926), which calls
+     * {@code Wait_VSync} before {@code Process_Sprites}.
      *
      * <p>Without this term the latch survived every locked title-card row (a
      * title-card iteration never reaches the gap-body test) and was consumed by
@@ -1025,7 +1025,7 @@ public class GameLoop {
     private boolean isRewindBlocked() {
         // fadeManager can be null in non-gameplay modes (e.g.
         // MASTER_TITLE_SCREEN with no active session).
-        return GameLoopPauseInput.configurationPaused(currentGameMode)
+        return GameLoopLevelDemo.find(currentGameMode, levelManager) != null || GameLoopPauseInput.configurationPaused(currentGameMode)
                 // Input movies are append-only and cannot represent a world rollback.
                 || userRecordingSessionLauncher.hasActiveRecordingSession()
                 || isNonRewindableTransitionPending()
@@ -1122,11 +1122,12 @@ public class GameLoop {
         }
     }
 
-    private void updateInputPassUserPause(boolean overlayOwnsPause, boolean takeoverConsumedPausePress) {
+    private void updateInputPassUserPause(GameLoopPauseInput.Ownership ownership, boolean takeoverConsumedPausePress) {
         boolean specialStageOwnsStart = !userPaused && inputHandler.logical().player1().startPressed()
                 && specialStageLifecycle.ownsStartInput();
-        boolean nextUserPaused = GameLoopPauseInput.nextUserPaused(currentGameMode, inputHandler,
-                configService, userPaused, overlayOwnsPause || specialStageOwnsStart, takeoverConsumedPausePress,
+        boolean nativeOwnsStart = specialStageOwnsStart || GameLoopLevelDemo.find(currentGameMode, levelManager) != null;
+        boolean nextUserPaused = !ownership.hostPauseExit() && GameLoopPauseInput.nextUserPaused(currentGameMode, inputHandler,
+                configService, userPaused, ownership.ownsPause() || nativeOwnsStart, takeoverConsumedPausePress,
                 playbackDebugManager, userRecordingControls::handlePlaybackTakeoverRequest);
         if (nextUserPaused == userPaused) return;
         // The resume tick is already inside its input pass. Retire the paused
@@ -1290,7 +1291,7 @@ public class GameLoop {
         }
         var pauseOwnership = GameLoopPauseInput.resolveOwnership(() -> currentGameMode,
                 inputHandler, playbackDebugManager, this::syncPlaybackInputBridge,
-                hostedRuns, this::getTitleScreenProviderLazy);
+                hostedRuns, this::getTitleScreenProviderLazy, userPaused);
         boolean overlayOwnsPause = pauseOwnership.ownsPause();
         boolean titleOwnsEscape = pauseOwnership.titleOwnsEscape();
         var overlay = pauseOwnership.configurationOverlay();
@@ -1300,11 +1301,11 @@ public class GameLoop {
             return;
         }
         if (!overlayOwnsPause && !titleOwnsEscape) escapeToMasterTitleController.update(currentGameMode, inputHandler);
-        if (currentGameMode == GameMode.LEVEL && !overlayOwnsPause) {
+        if (currentGameMode == GameMode.LEVEL && !overlayOwnsPause && GameLoopLevelDemo.find(currentGameMode, levelManager) == null) {
             userRecordingControls.updateLevelControlInput(inputHandler);
         }
 
-        updateInputPassUserPause(overlayOwnsPause, playbackTakeoverConsumedPausePress);
+        updateInputPassUserPause(pauseOwnership, playbackTakeoverConsumedPausePress);
 
         boolean doFrameStep = !GameLoopPauseInput.configurationPaused(currentGameMode)
                 && GameLoopPauseInput.frameStep(inputHandler, configService, isPaused());
@@ -1344,7 +1345,7 @@ public class GameLoop {
         // session. Its menu has no world timers until a run actually loads.
         if (timerManager != null && !playbackDebugManager.isCurrentGameplayTickSuppressed()) {
             profiler.beginSection("timers");
-            timerManager.update();
+            LevelFrameStep.updateTimers(timerManager, levelManager);
             profiler.endSection("timers");
         }
 
@@ -1622,9 +1623,11 @@ public class GameLoop {
             return false; // Skip normal level update this frame
         }
 
+        var demo = GameLoopLevelDemo.find(currentGameMode, levelManager);
         // Check for transition requests that need fade-to-black
         FadeManager fadeManager = this.fadeManager;
         if (!fadeManager.isActive()) {
+            GameLoopLevelDemo.requestExitIfFinishedOrInterrupted(demo, inputHandler, levelManager);
             if (levelManager.consumeRespawnRequest()) {
                 startRespawnFade();
                 levelIterationAdmission.finishPlaybackBoundary(
@@ -1749,26 +1752,10 @@ public class GameLoop {
             boolean holdVblankForPendingLoad =
                     playbackDebugManager.shouldHoldVblankForPendingLevelLoad();
             if (!skipGameplay) {
-                // Canonical level tick sequence — see LevelFrameStep for ordering rationale.
-                spriteManager.publishHeldInputForLevelEvents(inputHandler);
-                // Native pause is reserved for recorded controller input. Live Start
-                // uses the visible host pause before ordinary frame admission.
-                userRecordingControls.beforeLevelFrame(inputHandler);
-                if (hostedRuns.isActive()) {
-                    hostedRuns.beforeStep(inputHandler);
-                }
                 int heldVblank = levelManager.getObjectManager() != null
                         ? levelManager.getObjectManager().getVblaCounter()
                         : 0;
-                LevelFrameResult frameResult = LevelFrameStep.execute(
-                        LevelFrameContext.from(gameplayMode),
-                        activePlcLifecycleFrame, PlcLifecyclePhase.ORDINARY_LEVEL,
-                        levelManager, camera, () -> spriteManager.update(inputHandler),
-                        (name, step) -> {
-                            profiler.beginSection(name);
-                            step.run();
-                            profiler.endSection(name);
-                        });
+                LevelFrameResult frameResult = GameLoopLevelDemo.runFrame(demo, inputHandler, this::executeLevelFrame);
                 if (frameResult == LevelFrameResult.GAMEPLAY_FRAME) {
                     playbackDebugManager.onCurrentGameplayTickExecuted();
                 }
@@ -1815,9 +1802,7 @@ public class GameLoop {
             boolean seamlessTransitionCompleted =
                     levelManager.consumeActTransitionRewindBoundaryDuringFrame();
             TraceSessionLauncher traceSession = TraceSessionLauncher.active();
-            if ((traceSession != null
-                    && !TraceSessionLauncher.isRunFrameDriverActive())
-                    || traceSession == null) {
+            if (demo == null && (traceSession == null || !TraceSessionLauncher.isRunFrameDriverActive())) {
                 // Reached only inside the !freezeForNonRewindableTransition branch,
                 // so the transition-pending predicate is guaranteed false here.
                 LevelRewindFrameRecorder.record(
@@ -2292,8 +2277,26 @@ public class GameLoop {
                 && inputHandler.isKeyPressedWithoutModifiers(keyCode);
     }
 
+    private LevelFrameResult executeLevelFrame() {
+        spriteManager.publishHeldInputForLevelEvents(inputHandler);
+        // Native pause is reserved for recorded controller input.
+        userRecordingControls.beforeLevelFrame(inputHandler);
+        if (hostedRuns.isActive()) {
+            hostedRuns.beforeStep(inputHandler);
+        }
+        return LevelFrameStep.execute(
+                LevelFrameContext.from(gameplayMode),
+                activePlcLifecycleFrame, PlcLifecyclePhase.ORDINARY_LEVEL,
+                levelManager, camera, () -> spriteManager.update(inputHandler),
+                (name, step) -> {
+                    profiler.beginSection(name);
+                    step.run();
+                    profiler.endSection(name);
+                });
+    }
+
     private boolean protectedInputSession() {
-        return TraceSessionLauncher.active() != null
+        return GameLoopLevelDemo.find(currentGameMode, levelManager) != null || TraceSessionLauncher.active() != null
                 || playbackDebugManager.hasActiveOrScheduledSession()
                 || userRecordingSessionLauncher.hasActiveRecordingSession();
     }
@@ -2322,9 +2325,10 @@ public class GameLoop {
      * ("_incObj/3A Got Through Card.asm":198-201), S2 {@code Obj79_Star}
      * (s2.asm:44875-44877), S3K {@code SSEntryFlash_GoSS} (s3.asm:79688). The
      * white-out that precedes the stage belongs to the special-stage entry
-     * itself ({@code GM_Special}'s {@code PaletteWhiteOut}, sonic.asm:3227 /
-     * {@code SpecialStage}'s {@code Pal_FadeToWhite}, s2.asm:6546), which
-     * {@link SpecialStageEntryPresentationController} owns: it fades the
+     * itself. S1 calls {@code PaletteWhiteOut} from {@code GM_Special}
+     * (docs/s1disasm/sonic.asm:3227). S2 calls {@code Pal_FadeToWhite} from
+     * {@code SpecialStage} (docs/s2disasm/s2.asm:6546). In the engine,
+     * {@link SpecialStageEntryPresentationController} fades the
      * level's frozen last frame to white (the Engine keeps drawing the level
      * while {@link SpecialStageProvider#isEntryFadeToWhiteActive()} holds) and
      * parks white until the provider's reveal boundary. Fading here first
@@ -2577,16 +2581,7 @@ public class GameLoop {
     public void initializeTitleScreenMode() {
         LOGGER.info("Initializing game in Title Screen mode");
 
-        // Ensure the ROM is loaded and audio is initialized
-        try {
-            var rom = romManager.getRom();
-            var gameModule = GameServices.module();
-
-            audioManager.setAudioProfile(gameModule.getAudioProfile());
-            audioManager.setRom(gameModule.getAudioProfile() instanceof com.openggf.audio.RomlessSmpsSource ? null : rom);
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to load ROM for title screen", e);
-        }
+        nativeMenuFlow.initializeTitleAudio(GameServices.module().getAudioProfile(), romManager);
 
         GameMode oldMode = changeGameModeForBoundary(GameMode.TITLE_SCREEN);
 

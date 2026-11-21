@@ -30,10 +30,18 @@ public final class SonicCdGame extends Game implements PlayerSpriteArtProvider, 
     private CdLevel current;
     private int[] projectStart;
     private CdStageImage currentImage;
+    private CdStageDemo currentDemo;
+    private CdStageImage demoImage;
+    private int demoEntryInputReads;
+    private java.util.function.Supplier<CdStageDemo> demoSelection = () -> null;
 
     public SonicCdGame(CdDiscDataSource disc) {
         this.disc = Objects.requireNonNull(disc, "disc");
         this.loader = new CdStageLoader(disc);
+    }
+
+    void bindDemoSelection(java.util.function.Supplier<CdStageDemo> selection) {
+        demoSelection = selection;
     }
 
     public CdDiscDataSource disc() { return disc; }
@@ -51,7 +59,13 @@ public final class SonicCdGame extends Game implements PlayerSpriteArtProvider, 
         projectStart = null;
         CdStagePayload payload = CdStagePayload.values()[levelIdx];
         currentImage = loader.readStage(payload);
-        current = loader.load(payload, currentImage, SonicCdZoneRegistry.zoneIndex(payload), true);
+        CdStageDemo demo = demoSelection.get();
+        currentDemo = demo != null && demo.payload() == payload ? demo : null;
+        demoImage = currentDemo == null ? null : loader.readDemo(currentDemo);
+        demoEntryInputReads = demoImage == null ? 0 : currentDemo.entryInputReads(demoImage);
+        int zone = SonicCdZoneRegistry.zoneIndex(payload);
+        current = currentDemo == null ? loader.load(payload, currentImage, zone, true)
+                : loader.loadDemo(currentDemo, demoImage, currentImage, zone);
         return current;
     }
 
@@ -96,12 +110,25 @@ public final class SonicCdGame extends Game implements PlayerSpriteArtProvider, 
     void retireNativeStage() {
         current = null;
         currentImage = null;
+        currentDemo = null;
+        demoImage = null;
+        demoEntryInputReads = 0;
         projectStart = null;
     }
 
     public CdLevel currentLevel() { return current; }
 
-    /** The loaded stage file, or {@code null} before the first load. */
+    CdStageDemo currentDemo() { return currentDemo; }
+
+    int nextDemoSample(int completedIterations) {
+        return demoEntryInputReads + completedIterations;
+    }
+
+    int demoWord(int index) {
+        return demoImage.u16(CdStageCatalogue.entry(currentDemo).demoInput() + index * 2);
+    }
+
+    /** Source of the catalogued stage object and presentation tables, or null before the first load. */
     public CdStageImage currentImage() { return currentImage; }
 
     @Override
@@ -117,6 +144,7 @@ public final class SonicCdGame extends Game implements PlayerSpriteArtProvider, 
             return null;
         }
         // Authored terrain has no native stage load; read Sonic's art from the supplied disc.
+        if (currentDemo != null) return CdPlayerArt.load(demoImage, CdStageCatalogue.entry(currentDemo));
         return currentImage == null
                 ? CdPlayerArt.load(loader.readStage(CdStagePayload.R11A), CdStageCatalogue.entry(CdStagePayload.R11A))
                 : CdPlayerArt.load(currentImage, CdStageCatalogue.entry(current.payload()));
