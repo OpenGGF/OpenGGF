@@ -273,6 +273,9 @@ public final class LiveRewindManager {
             return false;
         }
         if (scripted || held) {
+            // Allow a completed forward frame to replace a load floor that still
+            // contains an unfinished fade callback.
+            if (rewindController.hasUnrestorableFadeFloor()) return false;
             if (!rewinding) {
                 audio.beginReverseAudioPresentation();
                 beginReverseFadePresentation();
@@ -463,6 +466,12 @@ public final class LiveRewindManager {
                         && executedBonusProvider != executedOwner.getActiveBonusStageProvider())
                     || (mode == GameMode.SPECIAL_STAGE
                         && executedProvider != executedOwner.getRegisteredSpecialStageProvider())) return;
+            if (controller.hasUnrestorableFadeFloor() && !installedFade.hasPendingCompletion()) {
+                // Keep the completed floor's pad state for the next frame's edge detection.
+                recordedInputs.resetToFrameZero(capturedInput, pacing);
+                resetControllerToFrameZero(controller);
+                return;
+            }
             recordedInputs.discardAfter(controller.currentFrame());
             recordedInputs.appendFrame(capturedInput, pacing);
             if (controller.recordExternalStep()) pruneOldHistory();
@@ -668,13 +677,16 @@ public final class LiveRewindManager {
                         && special != owner.getRegisteredSpecialStageProvider())
                     || bonus != owner.getActiveBonusStageProvider()) return;
             inputSource.resetToFrameZero();
-            controller.resetToFrameZero();
-            // A fresh logical floor also retires PCM from the outgoing level;
-            // held rewind must not drain audio older than that floor.
-            controller.clearPcmHistory();
+            resetControllerToFrameZero(controller);
             rewinding = false;
             effectEnvelope.reset();
         });
+    }
+
+    private static void resetControllerToFrameZero(RewindController controller) {
+        controller.resetToFrameZero();
+        // Held rewind must not drain audio older than the gameplay floor.
+        controller.clearPcmHistory();
     }
 
     private void handleSeamlessLevelTransitionBoundary(RewindContext context) {

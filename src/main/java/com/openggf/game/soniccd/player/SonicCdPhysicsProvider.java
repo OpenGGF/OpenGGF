@@ -242,6 +242,11 @@ public final class SonicCdPhysicsProvider implements PhysicsProvider, PlayerStag
     }
 
     @Override
+    public int lostRingTouchLayer(AbstractPlayableSprite player) {
+        return stage.lostRingTouchLayer(player);
+    }
+
+    @Override
     public boolean deathKeepsXSpeed(AbstractPlayableSprite player) {
         return stage.deathKeepsXSpeed(player);
     }

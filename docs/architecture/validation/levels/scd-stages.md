@@ -17,7 +17,7 @@ Per-zone phase tests cover the stage/program variants, immutable dependencies,
 water/ramp/band arithmetic and 448-row sampling. The combined initial check runs
 54 tests without skips. No new native-reference, cold-route or time-travel frontier
 is certified. Rendered pixels for other periods/acts, exhaustive wraps, swap edges
-and complete rewind/load/time-travel histories remain obligations. These checks
+and complete within-stage rewind histories remain obligations. These checks
 supersede the earlier test that pinned CD's profile exclusion.
 
 Game `scd`, all seven zones, Sonic only. A partial matrix under the
@@ -131,7 +131,7 @@ diverging row and the frontier test's cause label (a guess, not a diagnosis).
 | R61D | none | none | green | |
 | R62A | **green** 4,787 | asserted | green | |
 | R62B, R62C, R62D | none | none | green | |
-| R63C, R63D | boss movies | boss | green | Complete fights by real play: defeat, escape, capsule, results and the next stage equal native |
+| R63C, R63D | boss movies | boss | green | Complete fights by real play: defeat, escape, capsule, results and the next stage equal native. Both defeat fades have per-V-INT palette comparisons. |
 | R71A | **green** 3,977 | asserted | green | |
 | R71B | **green** 4,918 | asserted | green | |
 | R71C | **green** 6,096 | asserted | green | |
@@ -262,16 +262,41 @@ state. The ring witness and alternate future lack a native comparison.
 
 | Obligation | State | Gap |
 | --- | --- | --- |
-| ENTRY | All 70 stages load from the disc (`TestCdStageLoaderAllPayloads`); three fixtures enter through the retail title and stage-select route (`TestCdRetailRouteReplay`); the master title lists Sonic CD and `TestSonicCdPlayerLaunch` starts a new game from it and equals native on 806 compared rows of R11A | Intro-skip and alternate entries not assessed; the attract demos are not hosted |
+| ENTRY | All 70 stages load from the disc (`TestCdStageLoaderAllPayloads`); three fixtures enter through the retail title and stage-select route (`TestCdRetailRouteReplay`); the master title lists Sonic CD and `TestSonicCdPlayerLaunch` starts a new game from it and equals native on 806 compared rows of R11A | Ordinary attract entries R11A, R43C and R82A have idle-title coverage in `TestCdStageDemos`. Intro-skip remains open. |
 | OBJECT | Per-zone object tests and slot-exact appearance windows. `TestTtzObjects#timeStarsAnimateAndRetireInR42a` exercises all four active time-warp stars on the authenticated USA disc from a direct post-touch setup | Many objects have no native picture; layout entries without a saved-state bit respawn while live (R41C); ring collection order (R51A) |
 | EVENT, CAMERA | Level events, boss arenas and scroll locks hosted; routes cover them where they pass | Wide-view triggers unchecked |
 | BOSS | Seven bosses with native fight recordings | Tidal Tempest after the fight comparison limits and Metallic Madness boss slots and stage exit lack native assertions |
 | LIFE | Deaths, game over and checkpoints run through the program flow (`TestCdGameFlowNative`, six native runs set up with RAM pokes); the idle timer and give-up equal native on an 11,490-row movie; saves persist across runs, and RAM DATA resets the Sonic CD record through the title menu (`TestCdDurableSaves`) | Checkpoint respawn after time travel unverified |
 | LOAD | Act clear to the next stage, warp to another period, giant ring to the special stage and back; state a stage change leaves behind is cleared as native does (`TestSonicCdStageChangeIsolation`); stage-load and video-read timing in normal play is estimated from emulator measurements (`gameplay.loadTimeSimulation`) | Carry into a native warp destination unverified; the checkpoint and warp entries are single samples, and 12 stages' checkpoint and warp keys may name the wrong queued list ([known discrepancy](../../../status/known-discrepancies.md#sonic-cd-hardware-timings-not-modelled)) |
-| REWIND | Boss rewind tests for six zones, rings, zone signals, the Stardust Speedway lamp, the Collision Chaos drain | Spot coverage per the rewind contract not assessed; cross-load rewind not assessed |
+| REWIND | Boss rewind tests for six zones, rings, zone signals, the Stardust Speedway lamp, the Collision Chaos drain. `TestCdStageLoadRewind` verifies that held rewind stops at the destination floor after R11A → R11D (time warp) and R11A → R12A (act clear) on the USA disc. See the [stage-load rewind policy](../../../status/known-discrepancies.md#sonic-cd-stage-load-live-rewind). | Within-stage rewind across complete routes and the other load edges remain unassessed. |
 | PRESENT | Zone pictures per the presentation lanes (most early and end shots equal native); `TestCdTitlePicture` | Uncertified shots listed in each zone test; widths other than 320 draw but have no native reference |
 | ROUTE | 28 full-act routes as above | Act 1 Bad Future and act 2 Past and futures: fixtures only; no complete-run recording |
 | ORACLE | Constants and branches cite `docs/scddisasm`; trace rows comparison-only | Lag-frame CPU timing not modelled ([known discrepancy](../../../status/known-discrepancies.md#sonic-cd-hardware-timings-not-modelled)) |
+
+The USA idle rotation reads 23 controller samples before R11A's first level
+iteration and 42 before each of R43C and R82A. R43C and R82A skip the title card
+and drain a stage-art queue. All three return after sample 2048, for 2025, 2006,
+and 2006 level iterations respectively. The disc-backed test compares Sonic's
+position and rings at iterations 360, 360, and 120 respectively. R43C matches
+native through all 2,006 level iterations.
+
+- **R11A.** The first difference is at iteration 2. The first gameplay
+  samples hold Right (`$0800`). On the disc, controls are locked before the
+  level loop (scddisasm/src/Level/Main.asm:262-275, `LevelStart` sets
+  `ctrlLocked=1`), so Sonic stands still.
+  The engine applies Right for one iteration at X velocity 12, leaving an
+  X sub-pixel offset of `$0C00` before `CdPlayerStage.applyControlLock` takes
+  effect. That offset first shows as a one-pixel difference at iteration 154.
+  Velocities match until Sonic rolls down a slope at iteration 1423. Rings
+  first differ at iteration 1658. Normal stage starts share the control-lock
+  gap, which has its own follow-up.
+- **R82A.** The runs match through iteration 125. The engine hurts Sonic at
+  iteration 126. On the same approach on the disc, Sonic pushes into laser
+  `$1D` at (7033, 1415) at iteration 127 and enters the hurt routine at 128.
+  See `loc_20B62A` (scddisasm/src/objects/r8/laser.asm:183-216) for the
+  overlap check and hurt write. Rings first differ at iteration 212. The
+  follow-up still needs to establish whether the laser cycle or spawn timing
+  causes the earlier contact.
 
 Breadth: Sonic CD has one character and no teams; it is not a donor. Donation
 into it has bounded R11A coverage only (see
@@ -288,6 +313,28 @@ the ending and title cues, held versus fresh confirmation, and unchanged
 backup RAM and campaign progress. A separate case checks Start abort.
 Both local native recordings end with six UFOs remaining. A natural clear
 and parity for the original `SPEEND.MMD` credits presentation remain open.
+
+## Wacky Workbench defeat fades (closed)
+
+`EggmanDefeatSequenceFadeScreen` and `EggmanDefeatSequenceFadeObjects`
+(objects/r6/boss.asm:545-559) hold the stage loop at two points in the defeat
+sequence. `FadeToWhite` (common/palette_fade.asm:285-295) and
+`BossFadeObjectsFromWhite` (common/palette_fade.asm:463-484) each wait 22
+times. `VBlankCommon` (common/main.asm:1014-1025) publishes the current
+palette before the fade routine computes the next one. The restore reads the
+separate target buffer that `LoadFadePalette` (common/palette_load_fade.asm:3-15)
+fills from the disc. The palette cycler changes only the active buffer.
+Both waits request
+`VBlankPaletteFade` (common/main.asm:951-962), which reads the pads through
+`VBlankCommon`. BizHawk reports zero lag frames in the captured windows.
+
+`TestWwzBossFades` uses the defeat movies and compares 64 displayed words on
+every row of both holds against the user-local `rehost-boss-wwz/R63C-fades`
+and `R63D-fades` CRAM recordings. Each window includes the entry and 22
+subsequent V-INTs. Good Future rows are 5473–5495 and 5553–5575. Bad Future
+rows are 5724–5746 and 5804–5826. The test also checks that the stage frame
+counter holds and resumes. `TestWwzBossNative` checks slots and timers at
+completed level frames.
 
 ## Parked Sonic CD gaps
 
@@ -310,17 +357,6 @@ and parity for the original `SPEEND.MMD` credits presentation remain open.
   Amy near the act end, her grabbing Sonic, Sonic breaking free, and Amy
   leaving. Include Amy and heart slots, Sonic's motion, and the palette before
   and after the encounter.
-- **Wacky Workbench defeat fades.** Eggman's update runs two blocking fades
-  (`EggmanDefeatSequenceFadeScreen` and `EggmanDefeatSequenceFadeObjects`,
-  objects/r6/boss.asm:545-559). Each runs 22 programmed VSync steps.
-  Wacky Workbench links the shared fade code (Level/Wacky Workbench/R6 Shared.asm:31).
-  See `FadeToWhite` (common/palette_fade.asm:285-295) and
-  `BossFadeObjectsFromWhite` (common/palette_fade.asm:463-484).
-  Live play takes one frame per fade. The `R63C-defeat` and `R63D-defeat`
-  probes record lag, `levelFrames`, palette-cycle timers, and object slots from
-  the final hit through the capsule. `TestWwzBossNative` compares slots and
-  timers at completed level frames. Capture the missing per-VBlank palette
-  color words on either movie to check both fades.
 
 The three screen items below stay parked until native picture sequences
 are available to certify parity. Each needs a visual review against its

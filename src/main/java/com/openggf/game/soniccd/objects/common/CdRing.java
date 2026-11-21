@@ -196,7 +196,7 @@ public final class CdRing extends CdObject
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
         RingManager rings = services().ringManager();
-        if (rings == null || state == State.INIT || ring == null) return;
+        if (rings == null || state == State.INIT || ring == null || !admitsWorldSprite()) return;
         if (state == State.MAIN && flags().timeStopped() && !rings.isCollected(ring)) {
             if (rings.isRenderable(ring, 0)) {
                 SpritePresentation.withLayer(services().graphicsManager(), SpritePresentation.Layer.RINGS,
