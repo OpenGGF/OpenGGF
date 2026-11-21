@@ -17,6 +17,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledOnOs;
 import org.junit.jupiter.api.condition.OS;
 
+import java.util.zip.CRC32;
+
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -71,7 +73,9 @@ class TestCczLeftEdgePicture {
             RgbaImage limited = render(LevelRenderOptions.gameplay());
             assertAll(
                     () -> assertSprite("spring", 5, 21, tiles, unrestricted, limited),
-                    () -> assertSprite("block", 21, 53, tiles, unrestricted, limited));
+                    () -> assertSprite("block", 21, 53, tiles, unrestricted, limited),
+                    () -> assertLightBand("left", 35, 85, 0x04C87E18L, limited),
+                    () -> assertLightBand("right", 215, 280, 0xFCBA7112L, limited));
         } finally {
             config.setSessionOverride(SonicConfiguration.DISPLAY_SPRITE_SCANLINE_LIMIT, oldLimits);
             config.setSessionOverride(SonicConfiguration.AUDIO_ENABLED, oldAudio);
@@ -104,6 +108,19 @@ class TestCczLeftEdgePicture {
         }
         assertTrue(spritePixels > 0, name + " must draw over the terrain");
         assertEquals(0, mismatches, name + " pixels changed when native sprite limits were enabled");
+    }
+
+    private static void assertLightBand(String side, int left, int right, long nativeCrc, RgbaImage image) {
+        // CRC of the native row 2927 crop, with each 3-bit RGB channel packed into a 16-bit word.
+        CRC32 colors = new CRC32();
+        for (int y = 56; y < 64; y++) {
+            for (int x = left; x < right; x++) {
+                int rgb = CczNativePictureCheck.level(image.argb(x, y));
+                colors.update(rgb >>> 8);
+                colors.update(rgb);
+            }
+        }
+        assertEquals(nativeCrc, colors.getValue(), side + " background lights below the HUD");
     }
 
     private static RgbaImage render(LevelRenderOptions options) {

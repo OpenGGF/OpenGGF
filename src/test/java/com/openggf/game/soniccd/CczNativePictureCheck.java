@@ -172,13 +172,11 @@ final class CczNativePictureCheck {
      * Sprites of objects the engine does not host that are not at their placement: they were spawned or moved
      * during the run, so the placement boxes cannot cover them. Screen boxes {x0, y0, x1, y1} (x1 and y1
      * exclusive) read off the native end screenshots of the first report's mismatch clusters, each checked against
-     * the native picture to be a sprite: R31A Amy Rose and her hearts, the left-edge machine parts and a spark;
-     * R31B two rings at the left edge; R32D a floating platform and a ring; R33C and R33D the act 3 boss machine and
-     * a ring. Only end shots have
-     * any, and the share of the frame they cover is printed with the result.
+     * the native picture to be a sprite: R31B two rings at the left edge, R32D a floating platform and a ring,
+     * and R33C and R33D the act 3 boss machine and a ring. Only end shots have extra masks. The comparison
+     * reports the masked share of the frame.
      */
     private static final java.util.Map<CdStagePayload, int[][]> UNHOSTED_AT_END = java.util.Map.of(
-            CdStagePayload.R31A, new int[][] {{0, 54, 24, 86}, {0, 102, 24, 118}, {24, 54, 94, 124}, {118, 8, 132, 17}},
             CdStagePayload.R31B, new int[][] {{12, 84, 30, 128}},
             // The platform is hosted now and the engine draws it; its right edge column (x 158, y 171-173)
             // differs from native at this frame, which is the object lane's to explain, not the background's.

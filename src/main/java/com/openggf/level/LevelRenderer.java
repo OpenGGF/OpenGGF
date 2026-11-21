@@ -14,6 +14,8 @@ import com.openggf.game.GameServices;
 import com.openggf.game.PhysicsProvider;
 import com.openggf.game.ZoneFeatureProvider;
 import com.openggf.game.ghost.GhostRenderRegistry;
+import com.openggf.game.internal.SpriteTableBuildProfile;
+import com.openggf.game.internal.SpriteTableBuildProfile.PlacedRings;
 import com.openggf.game.palette.PaletteOwnershipRegistry;
 import com.openggf.game.palette.PaletteWriteSupport;
 import com.openggf.game.render.AdvancedRenderFrameState;
@@ -2194,8 +2196,10 @@ public final class LevelRenderer {
                 lm.hudRenderManager.draw(lm.levelGamestate, lm.camera.getFocusedSprite());
                 graphicsManager.setCurrentSpriteHighPriority(false);
             }
-            if (ringManager != null && lm.gameModule instanceof com.openggf.game.internal.SpriteTableBuildProfile profile
-                    && profile.placedRingEmission() == com.openggf.game.internal.SpriteTableBuildProfile.PlacedRings.BEFORE_OBJECT_BUCKETS) {
+            SpriteTableBuildProfile ringProfile = lm.gameModule instanceof SpriteTableBuildProfile profile
+                    ? profile : lm.gameModule == null ? null : lm.gameModule.getGameService(SpriteTableBuildProfile.class);
+            PlacedRings placedRings = ringProfile == null ? null : ringProfile.placedRingEmission();
+            if (ringManager != null && placedRings == PlacedRings.BEFORE_OBJECT_BUCKETS) {
                 SpritePresentation.layer(graphicsManager, SpritePresentation.Layer.RINGS);
                 ringAccess(ringManager).drawPlaced(lm.frameCounter,
                         lm.camera.getYWithShake(), lm.camera.screenYWrapValue());
@@ -2219,8 +2223,9 @@ public final class LevelRenderer {
                     SpritePresentation.layer(graphicsManager, SpritePresentation.Layer.OBJECT);
                     objectPass.draw(bucket, attractedRings == null ? java.util.List.of() : attractedRings.slottedAttracted(bucket));
                 }
-                if (!(lm.gameModule instanceof com.openggf.game.internal.SpriteTableBuildProfile))
-                    drawStageRingsForBucket(ringManager, graphicsManager, bucket, true);
+                if (placedRings == null || placedRings == PlacedRings.OBJECT_SLOTS_WITH_LAYOUT_MARGINS) {
+                    drawStageRingsForBucket(ringManager, graphicsManager, bucket, placedRings != null);
+                }
                 if (bucketSpriteSource != null) {
                     // Appended after this level's own entries, exactly as the ROM does.
                     SpritePresentation.layer(graphicsManager, SpritePresentation.Layer.OBJECT);
@@ -2296,8 +2301,8 @@ public final class LevelRenderer {
     private void drawStageRingsForBucket(RingManager ringManager,
                                          GraphicsManager graphicsManager,
                                          int bucket,
-                                         boolean includeRings) {
-        if (ringManager == null || !includeRings || bucket != RenderPriority.PLAYER_DEFAULT) {
+                                         boolean dormantOnly) {
+        if (ringManager == null || bucket != RenderPriority.PLAYER_DEFAULT) {
             return;
         }
 
@@ -2311,14 +2316,18 @@ public final class LevelRenderer {
             graphicsManager.flushPatternBatch();
             graphicsManager.setCurrentSpriteHighPriority(false);
             graphicsManager.beginPatternBatch();
-            ringManager.draw(lm.frameCounter);
+            if (dormantOnly) {
+                ringAccess(ringManager).drawDormantMargins();
+            } else {
+                ringManager.draw(lm.frameCounter);
 
-            // ROM: Lost rings (Ring_LostRing) use art_tile with priority bit set,
-            // rendering them in front of both playfield layers (including waterfalls).
-            graphicsManager.flushPatternBatch();
-            graphicsManager.setCurrentSpriteHighPriority(true);
-            graphicsManager.beginPatternBatch();
-            ringManager.drawLostRings(lm.frameCounter);
+                // ROM: Lost rings (Ring_LostRing) use art_tile with priority bit set,
+                // rendering them in front of both playfield layers (including waterfalls).
+                graphicsManager.flushPatternBatch();
+                graphicsManager.setCurrentSpriteHighPriority(true);
+                graphicsManager.beginPatternBatch();
+                ringManager.drawLostRings(lm.frameCounter);
+            }
 
             graphicsManager.flushPatternBatch();
             graphicsManager.setCurrentSpriteHighPriority(false);

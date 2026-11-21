@@ -50,6 +50,9 @@ public final class RingDrawInternalAccess {
         public void drawPlaced(int frameCounter, int cameraY, int screenYWrapMask) {
             manager.drawPlaced(frameCounter, cameraY, screenYWrapMask);
         }
+        public void drawDormantMargins() {
+            manager.drawDormantMargins();
+        }
         public void drawPlacedObject(RingSpawn ring, int frameCounter) { manager.drawPlacedObject(ring, frameCounter); }
         public java.util.List<com.openggf.level.render.SpriteSlotEmission> slottedAttracted(int bucket) {
             return inBucket(manager.legacyAttractedRenderEntries(), bucket);

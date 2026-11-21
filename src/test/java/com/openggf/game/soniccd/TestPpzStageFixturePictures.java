@@ -234,14 +234,7 @@ class TestPpzStageFixturePictures {
      */
     private static final java.util.Map<String, String> UNCERTIFIED = java.util.Map.of(
             "R11A end", "Present past the first 3D ramp (X >= $800): the ramp control bit is not exposed, so the "
-                    + "cloud and mountain offsets (Scroll (Act 1 Present).asm:203-229) are missing",
-            "R11D end", "band rows at far camera X need a Plane B window per band (shared renderer); static cloud "
-                    + "rows forbid following the layers with the single window",
-            "R12D end", "same renderer limit as R11D end",
-            "R12B end", "the bush band (screen rows 49-108) is 32 px left of native; native's H-scroll table at the "
-                    + "shot (probe frame 3158) is plane B -258 on lines 0-44 and -388 from line 45 with VSRAM B 147, "
-                    + "the engine's equal on the paired frame, so the offset is plane B content (the band's tiles), "
-                    + "not a scroll input: a Plane B window cause, as R11D/R12D");
+                    + "cloud and mountain offsets (Scroll (Act 1 Present).asm:203-229) are missing");
 
     /**
      * Stages in the order they are loaded into the one boot (a second headless GL boot in a JVM fails
