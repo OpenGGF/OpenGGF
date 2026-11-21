@@ -330,7 +330,19 @@ public final class CczScrollHandler extends AbstractZoneScrollHandler implements
     }
 
     /**
-     * The hscroll pass (…Act1Present_ScrollWaterRowsSetup :451-476, ...ScrollWriteWaterRowsMain :506-542).
+     * Each stage writes the foreground word in the high half of the packed line, with a
+     * wobble at and below world Y $5C0:
+     * R31A CollisionChaos_Act1Present_ScrollWriteWaterRow (Level/Collision Chaos/Scroll (Act 1 Present).asm:514-539);
+     * R31B loc_202AFE (r3/scroll_1b.asm:502-526);
+     * R31C loc_202C22 (r3/scroll_1c.asm:476-500);
+     * R31D loc_202BEA (r3/scroll_1d.asm:464-488);
+     * R32A loc_202C1A (r3/scroll_2a.asm:477-501);
+     * R32B loc_202AE4 (r3/scroll_2b.asm:493-517);
+     * R32C loc_202C1E (r3/scroll_2c.asm:474-498);
+     * R32D loc_202BEE (r3/scroll_2d.asm:464-488);
+     * R33C loc_202C10 (r3/scroll_3c.asm:473-497);
+     * R33D loc_202BD8 (r3/scroll_3d.asm:460-484).
+     *
      * Registers: d1 groups left, d2 first-group skip, d4 background line of the next group, a2 row word,
      * a3 section bound, d5 wobble phase.
      */

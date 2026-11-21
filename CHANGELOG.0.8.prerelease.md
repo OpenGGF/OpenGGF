@@ -61,7 +61,8 @@ under the matching area heading; see the
   and graphics loaded from the disc. Offscreen object sprites no longer displace
   visible springs and blocks when sprite limits are enabled. All ten Collision
   Chaos stages draw moving background bands from their disc layouts and keep
-  the static bands repeating. Defeated badniks
+  the static bands repeating. Their foreground terrain wobbles along the lower
+  part of the stage as it does on the disc. Defeated badniks
   play the disc's destroy sound, and Mosqui, Tamabboh and Palmtree Panic's Taga-Taga
   play their own effects on impact, firing, takeoff or landing while the badnik is
   on screen. Palmtree
