@@ -132,6 +132,9 @@ under the matching area heading; see the
   and spring launcher parts. Tidal Tempest's water resumes at its saved height,
   bob phase, and pump speed. Stardust Speedway's Kanabun, Kabasira, booster
   sparks, and path swaps resume their saved animation script frame and timer.
+  In Palmtree Panic Act 1 Present, Amy Rose chases even a stationary Sonic
+  until she's close enough to wait. Sonic can jump free, and removing Amy
+  during a grab also returns control. Time Attack restores the stage palette.
   Rewind also restores the title
   card, HUD, and points popups. The master title lists Sonic CD when the disc is
   configured or found (`roms.default: scd` boots it directly) and verifies it
