@@ -12,6 +12,14 @@ def STAGES_COVERED(stage: str) -> bool:
 
 
 ANCHORS = [
+    ('flyingAnimalMappings', '217C 08080408 0016 217C AAAAAAAA 0004 3168 0008 002A 3168 000C 002C', 'optional',
+     'AnimalObject_1_Routine0 (objects/r5/animal.asm:22-30)'),
+    ('groundAnimalMappings', '217C 08080408 0016 217C AAAAAAAA 0004 3168 0008 002A 6100 ???? 4A28 0028', 'optional',
+     'AnimalObject_0_Routine0 (objects/r5/animal.asm:119-126)'),
+    ('flyingAnimalAnimations', '1140 002E 43FA PPPP 4EB9 ???????? 4EB9 ???????? 3028 002A', 'optional',
+     'loc_20ED2A (objects/r5/animal.asm:62-68)'),
+    ('animalBaseTiles', '43FA PPPP 7000 1039 ???????? E540 D039 ???????? D040 3171 0000 0002 4E75', 'optional',
+     'sub_20EE82 (objects/r5/animal.asm:187-195)'),
     # --- Noro Noro (objects/r5/noro_noro.asm) ---
     ('noroMappings1', '217C FFFFC000 002C 5428 0024 43FA PPPP 4A28 0028', 'optional',
      'NoroNoroObject_0_Routine0 (objects/r5/noro_noro.asm:25-39): move.l #-$4000,obj.var_2c(a0); addq.b #2,obj.routine(a0); lea NoroNoroSprites1(pc),a1; tst.b obj.subtype(a0)'),

@@ -1,5 +1,6 @@
 package com.openggf.game.soniccd.objects.ppz;
 
+import com.openggf.game.soniccd.objects.common.CdAnimalArt;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.soniccd.CdStagePayload;
 import com.openggf.game.soniccd.level.CdLevel;
@@ -133,6 +134,12 @@ public final class PpzObjectArt {
             sectionVram.add(vram);
         }
 
+        CdAnimalArt.register(art,
+                PpzObjectCatalogue.o(loaded, "animalBaseTiles"),
+                PpzObjectCatalogue.o(loaded, "flyingAnimalMappings"),
+                PpzObjectCatalogue.o(loaded, "groundAnimalMappings"),
+                PpzObjectCatalogue.o(loaded, "flyingAnimalAnimations"),
+                0x8000, 8, sectionVram, this::ppzSection);
         // PLC_Cam1_Full (Palmtree Panic/Data (Act 1 Present).asm:85-89) replaces title-card
         // tiles with Art_Boulder. Use section VRAM, just like the other section-owned objects.
         for (int tile : art.objectTileIds(com.openggf.game.soniccd.objects.common.CommonObjectArt.TILE_ID_BOULDER)) {

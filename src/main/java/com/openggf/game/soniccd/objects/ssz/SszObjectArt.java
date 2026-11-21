@@ -1,5 +1,6 @@
 package com.openggf.game.soniccd.objects.ssz;
 
+import com.openggf.game.soniccd.objects.common.CdAnimalArt;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.soniccd.CdStagePayload;
 import com.openggf.game.soniccd.level.CdLevel;
@@ -104,6 +105,12 @@ public final class SszObjectArt {
             vram.loadPlc(stage, stageEntry.plcLists(), TITLE_CARD_PLC);
             sectionVram.add(vram);
         }
+        CdAnimalArt.register(art,
+                SszObjectCatalogue.offset(loaded, "animalBaseTiles"),
+                SszObjectCatalogue.offset(loaded, "flyingAnimalMappings"),
+                -1,
+                SszObjectCatalogue.offset(loaded, "flyingAnimalAnimations"),
+                0, 12, sectionVram, this::section);
         sheet(art, reader, GROUND_ANIMAL, SszObjectCatalogue.offset(loaded, "groundAnimalMappings"),
                 groundAnimalTile(art));
         sheet(art, reader, MESH, entry.meshMappings(), MESH_TILE);
