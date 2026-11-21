@@ -91,6 +91,7 @@ under the matching area heading; see the
   The FM loader also accepts verified Japanese and European discs
   containing the identical driver bank. The title's RAM DATA entry confirms a
   reset of Sonic CD's save to disc defaults.
+  The prompt also runs in headless sessions.
   Time Attack follows the disc's object rules for time posts, the HUD time icon,
   1-Up monitors, the special-stage ring and the Collision Chaos intro.
   The special-stage ring disappears once Sonic holds all seven Time Stones,
@@ -157,7 +158,10 @@ under the matching area heading; see the
   standing Sonic. Tidal Tempest hosts its vertical moving blocks,
   break poles and stationary spike balls, with sprites loaded from the disc. In Act 1 Present,
   Sonic can ride the rotating swing and raise the elevator with its pressure
-  switch. Its post-scroll
+  switch. A break pole keeps its release timer through hurt, death and
+  drowning. Sonic can still climb while drowning. After the pole releases
+  him, he returns to the walk pose and can steer as he falls while the
+  bubbles slot continues the sink. Tidal Tempest's post-scroll
   currents use the retained direction on the hurt recovery frame. R42A matches
   through the results and next-act handoff. Both Tidal Tempest Act 3 boss
   recordings now verify Sonic's water re-entry after Robotnik escapes and

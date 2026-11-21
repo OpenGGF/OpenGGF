@@ -3080,9 +3080,44 @@
       "note": "user's Sonic CD disc"
     },
     {
-      "match": "com.openggf.game.soniccd.TestTtzObjects#breakPoleRetiresADeadOrReplacedOwner",
+      "match": "com.openggf.game.soniccd.TestTtzObjects#breakPoleClimbsAndTimesOutDuringDrowning",
       "category": "optional-fixture",
-      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzObjects.java:198",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzObjects.java:208",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzObjects#breakPoleReleaseRestoresAirControlDuringDrowning",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzObjects.java:230",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzObjects#breakPoleGripsDeadAndDrowningPlayers(boolean)[1]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzObjects.java:230",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzObjects#breakPoleGripsDeadAndDrowningPlayers(boolean)[2]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzObjects.java:230",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzObjects#breakPoleLetsHurtAndDeadPlayersMoveInTheFrameLoop(boolean)[1]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzObjects.java:252",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzObjects#breakPoleLetsHurtAndDeadPlayersMoveInTheFrameLoop(boolean)[2]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzObjects.java:252",
       "allowed_when_absent": "soniccd_disc",
       "note": "user's Sonic CD disc"
     },
