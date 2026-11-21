@@ -31,7 +31,6 @@ import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -44,6 +43,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.lwjgl.glfw.GLFW.GLFW_PRESS;
 
 class TestGameLoopSpecialStageRewindBoundary {
     private SonicConfigurationService config;
@@ -102,6 +102,30 @@ class TestGameLoopSpecialStageRewindBoundary {
         FadeManagerSnapshot fade = (FadeManagerSnapshot) snapshot.get("fademanager");
         assertEquals(FadeManager.FadeState.FADING_FROM_WHITE, fade.state(),
                 "special-stage frame zero must capture the reveal fade after entry setup, not a pre-entry level fade");
+    }
+
+    @Test
+    void heldRewindReachesFirstFrameAfterSpecialStageReveal() {
+        doEnterSpecialStage(new RewindableProvider());
+        FadeManager fade = context.getFadeManager();
+        assertTrue(fade.hasPendingCompletion());
+
+        for (int frame = 0; frame < 45; frame++) {
+            loop.step();
+        }
+        assertFalse(fade.hasPendingCompletion());
+        RewindController controller = context.getRewindController();
+        assertNotNull(controller);
+        assertTrue(controller.currentFrame() > 0);
+
+        loop.getInputHandler().handleKeyEvent(config.getInt(SonicConfiguration.LIVE_REWIND_KEY), GLFW_PRESS);
+        for (int frame = 0; frame < 90; frame++) {
+            loop.step();
+        }
+
+        assertEquals(GameMode.SPECIAL_STAGE, loop.getCurrentGameMode());
+        assertEquals(0, controller.currentFrame(), "held rewind should reach the first post-reveal frame");
+        assertFalse(fade.isActive(), "the restored floor should have a completed reveal");
     }
 
     @Test
