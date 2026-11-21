@@ -6,7 +6,6 @@ import com.openggf.game.soniccd.objects.projector.ProjectorArt;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectVisualFacing;
-import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TrigLookupTable;
 
 import java.util.Arrays;
@@ -173,7 +172,7 @@ public final class CdAnimal extends CdObject
                 mapFrame = yVel < 0 ? 0 : 1;                 // smi d0; addq.b #1,d0
                 x = xLong >> 16;
                 y = yLong >> 16;
-                var floor = ObjectTerrainUtils.checkFloorDist(x, y, yRadius);
+                var floor = checkFloor(x, y, yRadius);
                 if (floor.hasCollision() && floor.distance() < 0) {
                     y += floor.distance();
                     yLong = (y << 16) | (yLong & 0xFFFF);

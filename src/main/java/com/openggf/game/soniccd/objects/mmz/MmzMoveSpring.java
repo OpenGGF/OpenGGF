@@ -102,7 +102,7 @@ public final class MmzMoveSpring extends MmzObject implements ObjectVisualFacing
     }
 
     private int floorDistance() {
-        return ObjectTerrainUtils.checkFloorDist(x, y, yRadius).distance();
+        return checkFloor(x, y, yRadius).distance();
     }
 
     @Override protected boolean despawnsByCheckObjDespawn() { return true; }

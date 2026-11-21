@@ -203,7 +203,7 @@ public final class CdCapsule extends CdBossPart {
         if (yVel >= 0x1000) yVel = 0x1000;                      // .NoGravity: the fall-speed cap
         setXLong(px & 0xFFFFFFFFL);
         setYLong(py & 0xFFFFFFFFL);
-        int floor = com.openggf.physics.ObjectTerrainUtils.checkFloorDist(x, y, yRadius).distance();
+        int floor = checkFloor(x, y, yRadius).distance();
         if (floor >= 0) return;
         var objects = services().objectManager();
         int slot = ObjectLifetimeOps.detachSlotForTransfer(this);

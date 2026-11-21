@@ -12,7 +12,6 @@ import com.openggf.level.objects.TouchResponseListener;
 import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchResponseResult;
-import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
@@ -119,7 +118,7 @@ public final class CdMonitor extends CdObject
         if (yVel >= 0 && yVel >= 0x1000) yVel = 0x1000;
         y = position >> 8;
         ySub = position & 0xFF;
-        var floor = ObjectTerrainUtils.checkFloorDist(x, y, yRadius);
+        var floor = checkFloor(x, y, yRadius);
         if (floor.hasCollision()) {
             y += floor.distance();
             yVel = 0;

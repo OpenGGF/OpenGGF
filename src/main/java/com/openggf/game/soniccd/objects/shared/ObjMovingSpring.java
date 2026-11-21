@@ -7,7 +7,6 @@ import com.openggf.game.soniccd.objects.common.CdSpring;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectVisualFacing;
-import com.openggf.physics.ObjectTerrainUtils;
 
 import java.util.List;
 
@@ -102,7 +101,7 @@ public final class ObjMovingSpring extends CdObject implements ObjectVisualFacin
     }
 
     private int floorDistance() {
-        return ObjectTerrainUtils.checkFloorDist(x, y, yRadius).distance();
+        return checkFloor(x, y, yRadius).distance();
     }
 
     /** andi.w #$FF80 on var_36 and the camera - $80; cmpi.w #$280; bhi DeleteObject (:8-17). */

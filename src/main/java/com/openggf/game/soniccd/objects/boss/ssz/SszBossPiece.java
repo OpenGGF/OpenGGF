@@ -200,7 +200,7 @@ abstract class SszBossPiece extends CdBossPart {
      * common/block_collide.asm:238-243,332-337): Sonic CD's object floor rule.
      */
     final int floorDistance(int dy) {
-        return com.openggf.physics.ObjectTerrainUtils.checkFloorDist(x, (y + dy) & 0xFFFF, (byte) yRadius).distance();
+        return checkFloor(x, (y + dy) & 0xFFFF, (byte) yRadius).distance();
     }
 
     /** The player object ({@code player_object}), or null. */

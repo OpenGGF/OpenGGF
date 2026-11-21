@@ -6,7 +6,6 @@ import com.openggf.game.soniccd.zones.mmz.MmzStageSignals;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectVisualFacing;
-import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
@@ -154,7 +153,7 @@ public final class MmzLaser extends MmzObject implements ObjectVisualFacing.NonD
     }
 
     private int floorDistance() {
-        return ObjectTerrainUtils.checkFloorDist(x, y, yRadius).distance();
+        return checkFloor(x, y, yRadius).distance();
     }
 
     /** loc_20B60A (objects/r8/laser.asm:156-241): the beam catches the player. */
