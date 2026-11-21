@@ -8,6 +8,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.CameraRelativeDraw;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectVisualFacing;
+import com.openggf.level.objects.PlayerControlOwners;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.physics.Direction;
 import com.openggf.physics.ObjectTerrainUtils;
@@ -24,6 +25,7 @@ public final class PpzAmyRose extends CdObject implements ObjectVisualFacing.Sou
 
     private enum Routine { INIT, CHASE, HOLD, FOLLOW, WAIT_LAND }
 
+    private final PlayerControlOwners heldPlayers = new PlayerControlOwners();
     private Routine routine = Routine.INIT;
     private int xSubpixel;
     private int ySubpixel;
@@ -75,9 +77,8 @@ public final class PpzAmyRose extends CdObject implements ObjectVisualFacing.Sou
         width = 0xC;
         yRadius = 0x10;
         writePalette(false);
-        // The placed object has floor below it. Bound the search for arbitrary debug/editor placements.
         int distance = floorDistance();
-        for (int probes = 0; distance != 0 && probes < 0x800; probes++) {
+        while (distance != 0) {
             y = (y + distance) & 0xFFFF;
             distance = floorDistance();
         }
@@ -94,7 +95,7 @@ public final class PpzAmyRose extends CdObject implements ObjectVisualFacing.Sou
             return;
         }
         int distance = playerDistance(sonic);
-        if (waitingBesideSonic ? distance < 0x20 : sonic.getXSpeed() == 0 && distance >= 0xA) {
+        if (waitingBesideSonic ? distance < 0x20 : sonic.getXSpeed() == 0 && distance < 0xA) {
             waitingBesideSonic = true;
             stand();
             return;
@@ -178,7 +179,7 @@ public final class PpzAmyRose extends CdObject implements ObjectVisualFacing.Sou
 
     // ObjAmyRose_HoldSonic (Level/Palmtree Panic/Objects/Amy Rose/Main.asm:224-262).
     private void hold(AbstractPlayableSprite sonic) {
-        sonic.setObjectControlled(true);
+        heldPlayers.acquire(sonic).setObjectControlled(true);
         sonic.setAnimationId(CdSonicAnimation.IDLE);
         slowSonic(sonic);
         facePlayer(sonic);
@@ -208,7 +209,7 @@ public final class PpzAmyRose extends CdObject implements ObjectVisualFacing.Sou
 
     // Player_Jump2 (Level/Palmtree Panic/Objects/Amy Rose/Main.asm:346-388).
     private void releaseWithJump(AbstractPlayableSprite sonic) {
-        sonic.setObjectControlled(false);
+        heldPlayers.relinquish(sonic).setObjectControlled(false);
         int angle = (sonic.getAngle() - 0x40) & 0xFF;
         sonic.setXSpeed((short) (sonic.getXSpeed() + ((TrigLookupTable.cosHex(angle) * 0x680) >> 8)));
         sonic.setYSpeed((short) (sonic.getYSpeed() + ((TrigLookupTable.sinHex(angle) * 0x680) >> 8)));
@@ -225,6 +226,18 @@ public final class PpzAmyRose extends CdObject implements ObjectVisualFacing.Sou
             sonic.setRollingFlagPreserveRadii(true);
             sonic.setAnimationId(CdSonicAnimation.ROLL);
         }
+    }
+
+    @Override
+    public void releasePlayersForVisualDirection() {
+        for (var player : heldPlayers.players()) player.setObjectControlled(false);
+        heldPlayers.clear();
+    }
+
+    @Override
+    public void onUnload() {
+        releasePlayersForVisualDirection();
+        super.onUnload();
     }
 
     // ObjAmyRose_FollowSonic (Level/Palmtree Panic/Objects/Amy Rose/Main.asm:267-308) falls into WaitLand.

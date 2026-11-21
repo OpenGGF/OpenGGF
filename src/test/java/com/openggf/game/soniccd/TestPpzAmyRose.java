@@ -2,10 +2,13 @@ package com.openggf.game.soniccd;
 
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameServices;
+import com.openggf.game.palette.PaletteWriteSupport;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.SessionManager;
+import com.openggf.game.soniccd.objects.art.CdObjectArtProvider;
 import com.openggf.game.soniccd.objects.ppz.PpzAmyRose;
 import com.openggf.game.soniccd.program.CdSceneCoordinator;
+import com.openggf.level.Palette;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.physics.Direction;
 import com.openggf.physics.GroundSensor;
@@ -20,10 +23,12 @@ import org.junit.jupiter.api.io.TempDir;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.TreeMap;
 import java.util.regex.Pattern;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -106,20 +111,7 @@ class TestPpzAmyRose {
     @Test
     void campaignAmyGrabsAndSonicJumpsFree() throws Exception {
         inStage(sonic -> {
-            var amy = spawnPlacedAmy();
-            NativePositionOps.writeXPosResetSubpixel(sonic, amy.getX() - 0x12);
-            sonic.setDirection(Direction.LEFT);
-            sonic.setAir(false);
-            sonic.setXSpeed((short) -0x200);
-            sonic.setYSpeed((short) 0);
-            sonic.setAngle((byte) 0);
-            amy.update(0, sonic);
-            NativePositionOps.writeYPosResetSubpixel(sonic, amy.getY());
-            amy.update(0, sonic);
-            assertFalse(sonic.isObjectControlled(), "the grab changes Amy's routine before it takes player control");
-            amy.update(0, sonic);
-            assertTrue(sonic.isObjectControlled(), "the hold routine takes control");
-            assertEquals(0xC, amy.getX() - sonic.getCentreX());
+            var amy = grabSonic(sonic);
 
             sonic.setJumpInputPressed(true, true);
             amy.update(0, sonic);
@@ -135,11 +127,89 @@ class TestPpzAmyRose {
     }
 
     @Test
+    void amyChasesStandingSonicAndWaitsOnlyWithinNativeRanges() throws Exception {
+        inStage(sonic -> {
+            var amy = spawnPlacedAmy();
+            int startX = amy.getX();
+            NativePositionOps.writeXPosResetSubpixel(sonic, startX - 0x40);
+            sonic.setXSpeed((short) 0);
+            amy.update(0, sonic);
+            for (int frame = 1; frame <= 16; frame++) amy.update(frame, sonic);
+            int chasedX = amy.getX();
+
+            NativePositionOps.writeXPosResetSubpixel(sonic, chasedX - 9);
+            amy.update(17, sonic);
+            int closeX = amy.getX();
+            NativePositionOps.writeXPosResetSubpixel(sonic, closeX - 0x1F);
+            amy.update(18, sonic);
+            int waitingX = amy.getX();
+            NativePositionOps.writeXPosResetSubpixel(sonic, waitingX - 0x20);
+            for (int frame = 19; frame <= 22; frame++) amy.update(frame, sonic);
+            assertEquals(List.of(startX - 9, startX - 9, startX - 9, startX - 10),
+                    List.of(chasedX, closeX, waitingX, amy.getX()),
+                    "Amy accelerates toward still Sonic, waits inside $A, and resumes at $20");
+        });
+    }
+
+    @Test
+    void removingAmyReleasesSonicBeforeAndAfterRewind() throws Exception {
+        inStage(sonic -> {
+            var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+            var beforeGrab = registry.capture();
+            var amy = grabSonic(sonic);
+            var held = registry.capture();
+            var objects = GameServices.level().getObjectManager();
+            objects.removeDynamicObject(amy);
+            assertFalse(sonic.isObjectControlled(), "Removing Amy frees Sonic without a jump");
+            assertFalse(sonic.getAir());
+
+            registry.restore(held);
+            var restoredAmy = assertInstanceOf(PpzAmyRose.class, actors(AMY).getFirst());
+            assertTrue(sonic.isObjectControlled(), "The held snapshot restores Sonic's control state");
+            objects.removeDynamicObject(restoredAmy);
+            assertFalse(sonic.isObjectControlled(), "The recreated Amy still owns the hold");
+
+            registry.restore(held);
+            registry.restore(beforeGrab);
+            assertTrue(actors(AMY).isEmpty(), "Rewind retires the future Amy");
+            assertFalse(sonic.isObjectControlled(), "Rewind restores Sonic's pre-grab control");
+        });
+    }
+
+    private static PpzAmyRose grabSonic(AbstractPlayableSprite sonic) {
+        var amy = spawnPlacedAmy();
+        NativePositionOps.writeXPosResetSubpixel(sonic, amy.getX() - 0x12);
+        sonic.setDirection(Direction.LEFT);
+        sonic.setAir(false);
+        sonic.setXSpeed((short) -0x200);
+        sonic.setYSpeed((short) 0);
+        sonic.setAngle((byte) 0);
+        amy.update(0, sonic);
+        NativePositionOps.writeYPosResetSubpixel(sonic, amy.getY());
+        amy.update(0, sonic);
+        assertFalse(sonic.isObjectControlled(), "the grab changes Amy's routine before it takes player control");
+        amy.update(0, sonic);
+        assertTrue(sonic.isObjectControlled(), "the hold routine takes control");
+        assertEquals(0xC, amy.getX() - sonic.getCentreX());
+        return amy;
+    }
+
+    @Test
     void timeAttackDoesNotInitializeAmyOrEmitHearts() throws Exception {
         inStage(sonic -> {
             var scenes = SessionManager.requireCurrentGameModule().getGameService(CdSceneCoordinator.class);
             scenes.flow().timeAttackSelected(1);
             assertTrue(scenes.timeAttackMode());
+
+            var image = SessionManager.requireCurrentGameModule().getGameService(CdObjectArtProvider.class).image();
+            var level = GameServices.level().getCurrentLevel();
+            var palette = level.getPalette(1);
+            int[] expected = new int[Palette.PALETTE_SIZE];
+            // Pal_LevelEnd (Level/Palmtree Panic/Palette Data (Act 1 Present).asm:58-60).
+            for (int i = 0; i < expected.length; i++) {
+                expected[i] = image.u16(0x7B4 + Palette.BYTES_PER_COLOR * i) & 0xEEE;
+                palette.getColor(i).fromSegaFormat(expected[i] ^ 0xEEE);
+            }
 
             var amy = spawnPlacedAmy();
             int y = amy.getY();
@@ -148,6 +218,9 @@ class TestPpzAmyRose {
             assertEquals(0, amy.getOnScreenHalfWidth(), "the slot never sets its sprite dimensions");
             assertFalse(amy.isCustomOutOfRange(0), "the palette-only branch never checks despawn");
             assertTrue(actors(HEART).isEmpty());
+            assertArrayEquals(expected, Arrays.stream(level.getPalette(1).colors)
+                    .mapToInt(PaletteWriteSupport::segaWordFromColor).toArray(),
+                    "Time Attack restores Pal_LevelEnd to palette line 1");
         });
     }
 

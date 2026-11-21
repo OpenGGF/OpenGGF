@@ -340,8 +340,9 @@ completed level frames.
 
 R11A hosts Amy (`$2F`) and her hearts
 (`$30`). `TestPpzAmyRose` compares slot, sampled position and despawn with
-the stage-select R11A recording. Its disc-backed cases cover the grab,
-jump release, rewind and the palette-only Time Attack path.
+the stage-select R11A recording. Its disc-backed cases cover the stationary
+chase and wait thresholds, grab, jump release, removal while holding Sonic
+before and after rewind, and the Time Attack write of the level-end palette.
 See `ObjAmyRose` (Level/Palmtree Panic/Objects/Amy Rose/Main.asm:7-26).
 The stage-select route passes Amy without a grab. Native grab and release
 still need a dedicated recording.
