@@ -93,6 +93,9 @@ under the matching area heading; see the
   containing the identical driver bank. The title's RAM DATA entry confirms a
   reset of Sonic CD's save to disc defaults.
   The prompt also runs in headless sessions.
+  Linked objects in Collision Chaos, Tidal Tempest and Metallic Madness free
+  their slots immediately when the disc calls for it, so later objects can
+  reuse those slots in the same frame.
   Time Attack follows the disc's object rules for time posts, the HUD time icon,
   1-Up monitors, the special-stage ring and the Collision Chaos intro.
   The special-stage ring disappears once Sonic holds all seven Time Stones,

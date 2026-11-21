@@ -2310,6 +2310,62 @@
       "note": "user's Sonic CD disc"
     },
     {
+      "match": "com.openggf.game.soniccd.TestCdDeleteOtherObject#entryBarrierReleasesGearOnArenaEntry",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdDeleteOtherObject.java:58",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestCdDeleteOtherObject#bossMachineReleasesGearOnEncounterExit",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdDeleteOtherObject.java:58",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestCdDeleteOtherObject#eggmanReleasesTheMobileAtTheEscapeBoundary",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdDeleteOtherObject.java:58",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestCdDeleteOtherObject#chaseEggmanReleasesOneDoorPerUpdate",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdDeleteOtherObject.java:58",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestCdDeleteOtherObject#fallingSpikesReleaseTheTipOnFloorContact",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdDeleteOtherObject.java:58",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestCdDeleteOtherObject#scarabReleasesTheBeetleWhenTheMonitorDespawns",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdDeleteOtherObject.java:58",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestCdDeleteOtherObject#scarabReleasesTheMonitorWhenTheBeetleDespawns",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdDeleteOtherObject.java:58",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestCdDeleteOtherObject#pohBeeWeightReleasesTheBodyOnLinkAllocationFailure",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdDeleteOtherObject.java:58",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
       "match": "com.openggf.game.soniccd.TestMmzObjectsPictures#objectSpritesMatchTheNativeFrames",
       "category": "optional-fixture",
       "evidence": "src/test/java/com/openggf/game/soniccd/TestMmzObjectsPictures.java:108",
