@@ -140,10 +140,10 @@ diverging row and the frontier test's cause label (a guess, not a diagnosis).
 | R72B, R72C, R72D | none | none | green | |
 | R73C, R73D | boss movies | boss | green | Both race wins equal native on every row; ten movies with zero slot mismatches |
 | R81A | **green** 4,736 | asserted | green | |
-| R81B | **green** 3,991 | none | green | Route does not reach the goal |
-| R81C | **green** 4,524 | none | green | Route does not reach the goal |
+| R81B | **green** 3,991 | native, engine pending | green | The separate 5,396-row act-end recording reaches the signpost, tally, and R82A exit state. Engine replay first differs at row 2635 on a Scarab rebound. |
+| R81C | **green** 4,524 | none | green | A separate 4,694-row attempt reaches `($1AD5,$042E)` before stalling against terrain. |
 | R81D | none | none | green | |
-| R82A | **green** 5,697 | none | green | Player and camera match through the recording's end, before the signpost |
+| R82A | **green** 5,697 | none | green | A separate 6,958-row attempt takes Mini Sonic through the lower passage and reaches `($1D9C,$0168)`, below the exit lane. |
 | R82B, R82C, R82D | none | none | green | |
 | R83C, R83D | boss movies | partial | green | Both fights are recorded through defeat, escape, Amy, and the stage-select return to title. `TestMmzPlayerMovies` matches player and camera through rows 6965 and 5576, respectively. Boss slots and the stage exit lack native assertions. |
 
@@ -155,8 +155,9 @@ The cells above give the matched prefix length. In the act-end column
 `none` means the route has no end-of-act assertion: it is not in
 `TestSonicCdActEndNative`'s set, either
 because it does not reach the goal or because no assertion was written. All 25
-routes in that set are asserted after the R42A rerun. The per-stage tables
-behind these numbers are local measurement output.
+routes in that set are asserted after the R42A rerun. R81B has a separate
+native act-end assertion and an earlier engine frontier described below. The
+per-stage tables behind these numbers are local measurement output.
 
 ## First-divergence recheck (2026-11-18)
 
@@ -405,6 +406,39 @@ capture before it can close.
   two divergences through the exit.
   [`TestTtzBossNative`](../../../../src/test/java/com/openggf/game/soniccd/TestTtzBossNative.java#L39-L84).
 
+## Metallic Madness act-end routes (2026-11-21)
+
+Cold BizHawk 2.11 replays used the USA disc and controller-only movies from
+retail stage select. The movies, v5 traces and goal probes stay under the
+user-local native root, in `u50-mmz-act-end/R81B` and
+`u50-mmz-act-end/partial/{R81C,R82A}`. The original route pins remain the
+source of the player and camera counts in the table.
+
+- **R81B.** The 7,995-input movie triggers the signpost on trace row 4677 and
+  stops the timer. The results object appears on row 4857 with 4,000 time points
+  and 200 ring points. The score rises from 300 to 4,500. The goal probe
+  continues one row beyond the trace to catch restart 2 and the Act 2 Present
+  (R82A) exit state at row 5396. Retail stage select returns to the title.
+  The results' exit state supplies the campaign selection reference.
+  `TestSonicCdActEndNative#metallicMadnessPastActEnd` checks the native tail
+  and bounds engine comparison at row 2635, where native reverses Sonic's
+  downward speed from `$0F18` to `-$0F18` when Scarab `$2F` becomes
+  explosion `$18`. The engine retains `$0F18`.
+  `loc_206CD8` (scddisasm/src/r8/player_object_collide.asm:456-463)
+  dispatches the rear touch to `sub_2069E8`.
+  `loc_206A5E` (scddisasm/src/r8/player_object_collide.asm:203-216)
+  awards points, changes the object ID, and negates downward speed when
+  Sonic is above the enemy. The engine's `MmzScarabBody.enemy` calls
+  `killAsEnemy` on the special-touch path, which bypasses the shared
+  enemy rebound.
+- **R81C.** The 7,047-input movie stalls against terrain at `($1AD5,$042E)`.
+  Additional branches reached the upper platform and the spring below the
+  ceiling, and no branch reached the signpost.
+- **R82A.** The 9,297-input movie takes the lower passage as Mini Sonic and
+  reaches the upper chamber below the exit lane. The return toward the
+  restoring laser stalls at the one-way door near `$1DA8`.
+  That movie has no signpost trigger.
+
 ## Metallic Madness fight comparison
 
 `rehost-boss-mmz` has 7,331 rows for R83C and 6,520 for R83D, with boss,
@@ -435,7 +469,7 @@ with the recorded rows or audio and pictures needed by the check.
 | Campaign endings | R83C and R83D stage-select fights return to the title. `rehost-programs` has video and audio of both endings entered through Visual Mode. | On the campaign route, clear R83C with all Time Stones or all good futures, and clear R83D with neither set complete. Capture the final stage exit, saved flags, `GameDone` selection, and the campaign path through credits back to title (CD Initial Program/IPX.asm:301-326). |
 | Full campaign | `rehost-timetravel` records New Game warps. `rehost-flow` records act and giant-ring handoffs with RAM setup. | One cold-boot movie from empty backup RAM and New Game through the R83 clear. Include ordinary act exits, a warp, a giant-ring return, carryover between acts, and the last save and ending. |
 | Natural Special Stage 8 clear | `rehost-programs/st-ss8` records Sound Test entry. `rehost-special` adds a timeout and a terrain run, both with all six UFOs left at the last active sample. | Clear all six UFOs by controller input. Capture the success state, fade, `SPEEND.MMD` credits with audio, and return to title (`SoundTest_SpecStg8`, CD Initial Program/IPX.asm:1065-1079). |
-| R81B, R81C and R82A act ends | The routes have 3,991, 4,524, and 5,697 rows. The goal probes run 60 frames farther and capture no signpost trigger. | Extend each route from stage select through the signpost trigger, ring and time tallies, results exit, and first playable row of the next stage. |
+| R81C and R82A act ends | The new partial attempts have 4,694 and 6,958 trace rows, respectively. The goal probes capture no signpost trigger. | Complete both routes through the signpost, time and ring tallies, and results exit. |
 | R41A swing and switch elevator ([PR #403](https://github.com/OpenGGF/OpenGGF/pull/403)) | The long trace logs spawn events for the `$29` swing and `$30` elevator. Its player rows show no support by either object. | Ride the swing seat at `($0480,$0180)` and press its switch. At the elevator at `($09E0,$0540)`, press and release the switch and ride the side platform. Capture rider support, swing phase, switch states, and column and platform motion during those interactions. See `StageObjects` (r4/stage_object_maps_1.asm:38-41, 93-94). |
 
 ## Cartridge donor hosting (2026-11-16)
