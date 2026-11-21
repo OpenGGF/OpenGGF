@@ -1,6 +1,7 @@
 package com.openggf.game.soniccd;
 
 import com.openggf.data.cd.Iso9660FileSystem;
+import com.openggf.game.soniccd.level.CdStageCatalogue;
 import com.openggf.game.timing.HardwareServiceBoundary;
 import com.openggf.game.timing.HardwareTimingService;
 import com.openggf.game.timing.HardwareWorkHandle;
@@ -66,14 +67,11 @@ public final class CdLoadTiming {
      * set (a checkpoint restart or a time-warp arrival) {@code LoadSectionArt}'s list for the camera's section;
      * otherwise, with the title card already loaded ({@code plcLoadFlags} bit 1), the level PLC in
      * {@code LevelDataIndex}'s fifth byte; otherwise none, 0 (the same {@code beq.s .End} a level PLC of 0 takes).
-     *
-     * @param sectionInitPlc {@code SectionInitPLCs} at the camera's section, or -1 where the engine does not
-     *                       catalogue the stage's section table (no measurement exists for those entries)
      */
-    public static int levelStartPlc(boolean spawnModeSet, boolean titleCardAlreadyLoaded, int levelDataPlc,
-                                    int sectionInitPlc) {
-        if (spawnModeSet) return sectionInitPlc;
-        return titleCardAlreadyLoaded ? levelDataPlc : 0;
+    static int levelStartPlc(byte[] file, CdStageCatalogue.Entry stage, int cameraX,
+                             boolean spawnModeSet, boolean titleCardAlreadyLoaded) {
+        if (spawnModeSet) return sectionInitPlc(file, sectionRanges(stage.payload()), cameraX);
+        return titleCardAlreadyLoaded ? file[stage.levelDataIndex() + 4] & 0xFF : 0;
     }
 
     /**

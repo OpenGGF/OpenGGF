@@ -206,11 +206,8 @@ final class SonicCdLevelInitProfile extends AbstractLevelInitProfile
                 byte[] file = source.readFile(fileName);
                 var entry = demo == null ? com.openggf.game.soniccd.level.CdStageCatalogue.entry(payload)
                         : com.openggf.game.soniccd.level.CdStageCatalogue.entry(demo);
-                int levelDataPlc = file[entry.levelDataIndex() + 4]
-                        & 0xFF;                                   // move.b (a2),d0 after addq.w #4,a2 (:44-46)
-                int section = spawnModeSet ? CdLoadTiming.sectionInitPlc(file, CdLoadTiming.sectionRanges(payload),
-                        com.openggf.game.GameServices.camera().getX()) : 0;
-                plc = CdLoadTiming.levelStartPlc(spawnModeSet, true, levelDataPlc, section);
+                plc = CdLoadTiming.levelStartPlc(file, entry, com.openggf.game.GameServices.camera().getX(),
+                        spawnModeSet, true);
             }
             return CdLoadTiming.stageLoad(source.assets().entry(fileName), plc);
         } catch (java.io.IOException e) {
