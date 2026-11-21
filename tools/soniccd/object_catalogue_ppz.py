@@ -10,6 +10,22 @@ def STAGES_COVERED(stage: str) -> bool:
 
 
 ANCHORS = [
+    ('flyingAnimalMappings', '217C 08080408 0016 217C AAAAAAAA 0004 3168 0008 002A 3168 000C 002C', 'optional',
+     'ObjFlyingAnimal_Init (Level/Palmtree Panic/Objects/Animal/Main.asm:34-40)'),
+    ('groundAnimalMappings', '217C 08080408 0016 217C AAAAAAAA 0004 3168 0008 002A 6100 ???? 4A28 0028', 'optional',
+     'ObjGroundAnimal_Init (Level/Palmtree Panic/Objects/Animal/Main.asm:136-143)'),
+    ('flyingAnimalAnimations', '1140 002E 43FA PPPP 4EB9 ???????? 4EB9 ???????? 3028 002A', 'optional',
+     'ObjFlyingAnimal_Flying (Level/Palmtree Panic/Objects/Animal/Main.asm:76-81)'),
+    ('animalBaseTiles', '43FA PPPP 7000 1039 ???????? E540 D039 ???????? D040 3171 0000 0002 4E75', 'optional',
+     'ObjAnimal_SetBaseTile (Level/Palmtree Panic/Objects/Animal/Main.asm:209-217)'),
+    ('amyMappings', '317C 2370 0002 117C 0001 0018 217C AAAAAAAA 0004 117C 000C 0019 117C 0010', 'optional',
+     'ObjAmyRose_Init (Level/Palmtree Panic/Objects/Amy Rose/Main.asm:36-42): move.l #MapSpr_AmyRose,oMap(a0)'),
+    ('amyAnimations', '117C 0005 001C 43F9 AAAAAAAA 6000', 'optional',
+     'ObjAmyRose_Init (Level/Palmtree Panic/Objects/Amy Rose/Main.asm:68-71): lea Ani_AmyRose,a1'),
+    ('amyPalette', '47FA PPPP 49F8 FB20 4CDB 000F', 'optional',
+     'ObjAmyRose_LoadPal (Level/Palmtree Panic/Objects/Amy Rose/Main.asm:649-658): lea Pal_AmyRose(pc),a3'),
+    ('amyRestorePalette', '0C28 002F 0000 670A 47F9 AAAAAAAA 6100 ???? 4E75', 'optional',
+     'ObjAmyRose (Level/Palmtree Panic/Objects/Amy Rose/Main.asm:17-25): lea Pal_LevelEnd,a3'),
     ('plantMappings', '217C AAAAAAAA 0004 317C 4424 0002', 'optional',
      'Obj3DPlant_Init (3D Ramp/Main.asm:24-27): move.l #MapSpr_3DPlant,oMap(a0); move.w #$4424,oTile(a0)'),
     ('rampMappings', '217C AAAAAAAA 0004 317C 0441 0002', 'optional',

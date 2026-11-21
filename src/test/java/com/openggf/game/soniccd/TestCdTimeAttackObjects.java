@@ -14,13 +14,13 @@ import com.openggf.game.soniccd.objects.ccz.CczIntroState;
 import com.openggf.game.soniccd.objects.ccz.CczMetalSonic;
 import com.openggf.game.soniccd.objects.common.CdMonitor;
 import com.openggf.game.soniccd.objects.common.CdTimeIcon;
+import com.openggf.game.soniccd.objects.ppz.PpzAmyRose;
 import com.openggf.game.soniccd.program.CdProgramFlow;
 import com.openggf.game.soniccd.program.CdProgramRequest;
 import com.openggf.game.soniccd.program.CdSceneCoordinator;
 import com.openggf.game.soniccd.program.CdStageResult;
 import com.openggf.game.soniccd.special.CdSpecialStageResult;
 import com.openggf.game.soniccd.timetravel.CdTimeTravel;
-import com.openggf.graphics.GLCommand;
 import com.openggf.level.Palette;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.physics.GroundSensor;
@@ -35,7 +35,6 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.function.Consumer;
 
@@ -206,19 +205,20 @@ class TestCdTimeAttackObjects {
             var color = level().getPalette(1).getColor(0);
             // Pal_Level (Level/Palmtree Panic/Palette Data (Act 1 Present).asm:48-60) shares Pal_LevelEnd data.
             int[] expected = discPaletteLine(5);
-            int sentinel = expected[0] ^ 0xEEE;
-            color.fromSegaFormat(sentinel);
+            color.fromSegaFormat(0x222);
             frameAt(sonic, amy);
             var slot = GameServices.level().getObjectManager().getActiveObjects().stream()
                     .filter(object -> !object.isDestroyed() && amy.equals(object.getSpawn()))
                     .findFirst().orElseThrow();
-            var commands = new ArrayList<GLCommand>();
-            slot.appendRenderCommands(commands);
-            assertEquals(!timeAttack, !commands.isEmpty(), "Amy's slot draws");
+            var amyObject = assertInstanceOf(PpzAmyRose.class, slot);
+            assertEquals(!timeAttack, amyObject.isOnScreenForTouch(), "Amy's DrawObject sets the on-screen flag");
             if (timeAttack) {
                 assertArrayEquals(expected, paletteLine(), "Amy restores Pal_LevelEnd to line 1");
             } else {
-                assertEquals(sentinel, PaletteWriteSupport.segaWordFromColor(color), "Amy leaves colour 0 alone");
+                // Pal_AmyRose (Level/Palmtree Panic/Objects/Amy Rose/Main.asm:665-667).
+                var image = SessionManager.requireCurrentGameModule().getGameService(CdObjectArtProvider.class).image();
+                assertEquals(image.u16(0xEE9A) & 0xEEE, paletteLine()[0],
+                        "Amy initializes her campaign palette");
             }
         });
     }
