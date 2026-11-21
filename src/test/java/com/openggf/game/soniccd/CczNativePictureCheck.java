@@ -178,7 +178,7 @@ final class CczNativePictureCheck {
      * any, and the share of the frame they cover is printed with the result.
      */
     private static final java.util.Map<CdStagePayload, int[][]> UNHOSTED_AT_END = java.util.Map.of(
-            CdStagePayload.R31A, new int[][] {{0, 54, 24, 86}, {0, 102, 24, 118}, {24, 54, 94, 124}, {118, 8, 132, 17}},
+            CdStagePayload.R31A, new int[][] {{0, 54, 24, 86}, {0, 102, 24, 118}, {24, 64, 94, 124}, {118, 8, 132, 17}},
             CdStagePayload.R31B, new int[][] {{12, 84, 30, 128}},
             // The platform is hosted now and the engine draws it; its right edge column (x 158, y 171-173)
             // differs from native at this frame, which is the object lane's to explain, not the background's.

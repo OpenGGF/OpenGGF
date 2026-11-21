@@ -65,6 +65,7 @@ public final class CczScrollHandler extends AbstractZoneScrollHandler implements
     private static final int WOBBLE_SIZE = 256;            // d5 and $FF (r3) or (d5 and $7F)*2 (R31A)
 
     private final CdStagePayload payload;
+    private final int backgroundPeriod;
     private final CczScrollProfiles.Profile profile;
     private final Supplier<CdStageImage> image;
     private final ScrollEffectComposer composer = new ScrollEffectComposer();
@@ -95,6 +96,11 @@ public final class CczScrollHandler extends AbstractZoneScrollHandler implements
     public CczScrollHandler(CdStagePayload payload, Supplier<CdStageImage> image) {
         this.payload = payload;
         this.profile = CczScrollProfiles.of(payload);
+        // The USA StageMapBg headers declare seven 256-pixel columns in acts 1/2 and three in act 3
+        // (StageMapBg (r3/data_1a.asm:76-78), StageMapBg (r3/data_3c.asm:312-314)).
+        // Cover the streamed layout and align the window to the 512-pixel static-row repeat.
+        int layoutColumns = payload.stage().actNumber() == 3 ? 3 : 7;
+        this.backgroundPeriod = (layoutColumns + 1) / 2 * 512;
         this.image = image;
         this.deform = new int[profile.rates().length + profile.curveCount()];
     }
@@ -509,9 +515,7 @@ public final class CczScrollHandler extends AbstractZoneScrollHandler implements
 
     @Override
     public int getBgPeriodWidth() {
-        // R31A's moving rows stream across its seven 256-pixel layout columns.
-        // Keep them in one render window. CdLevel repeats the static rows within it.
-        return payload == CdStagePayload.R31A ? 2048 : 512;
+        return backgroundPeriod;
     }
 
     @Override
