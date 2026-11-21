@@ -4,6 +4,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectVisualFacing;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.physics.TrigLookupTable;
 
@@ -19,9 +20,9 @@ import java.util.List;
  * entry deletes itself by CheckObjectDespawn; the other balls follow it and delete when it is gone.
  */
 @com.openggf.level.objects.CameraRelativeDraw(com.openggf.level.objects.CameraRelativeDraw.Use.CULL_ONLY)
-public final class ObjCircleSpikeBall extends TtzObject implements TouchResponseProvider, ObjectVisualFacing.NonDirectional {
-    private final ObjCircleSpikeBall parent;
-    /** The slot of {@code parent} the native child stores and tests each turn ({@code cmpi.b #$38,obj.id(a1)}). */
+public final class ObjCircleSpikeBall extends TtzObject implements TouchResponseProvider, ObjectVisualFacing.NonDirectional,
+        SpawnRewindRecreatable {
+    /** CircleSpikeBallObject (objects/r4/circle_spike_ball.asm:3-19) tests the parent's slot for each child. */
     private int parentSlot = -1;
     private int routine;
     private int centreX;
@@ -33,24 +34,22 @@ public final class ObjCircleSpikeBall extends TtzObject implements TouchResponse
 
     public ObjCircleSpikeBall(ObjectSpawn spawn) {
         super(spawn, "CircleSpikeBall");
-        this.parent = null;
     }
 
     private ObjCircleSpikeBall(ObjCircleSpikeBall parent, int phaseOffset, int priority) {
         super(childSpawn(parent.getX(), parent.getY(), 0x38, parent.spawn.subtype(), 0), "CircleSpikeBall");
-        this.parent = parent;
-        this.parentSlot = parent == null ? -1 : parent.getSlotIndex();
+        this.parentSlot = parent.getSlotIndex();
         this.phase = phaseOffset;
         this.priority = priority;
     }
 
-    @Override protected boolean despawnsByCheckObjDespawn() { return parent == null; }
+    @Override protected boolean despawnsByCheckObjDespawn() { return parentSlot < 0; }
     @Override public int getCollisionFlags() { return initialised ? 0xA9 : 0; }
     @Override public int getCollisionProperty() { return 0; }
 
     @Override
     public void update(int vIntRunCount, PlayableEntity player) {
-        if (parent != null && !slotHoldsId(parentSlot, 0x38)) { setDestroyed(true); return; }   // cmpi.b #$38,obj.id(a1); bne
+        if (parentSlot >= 0 && !slotHoldsId(parentSlot, 0x38)) { setDestroyed(true); return; }   // cmpi.b #$38,obj.id(a1); bne
         if (routine == 0) {
             makeBalls();
             return;
