@@ -164,8 +164,9 @@ under the matching area heading; see the
   bubbles slot continues the sink. Tidal Tempest's post-scroll
   currents use the retained direction on the hurt recovery frame. R42A matches
   through the results and next-act handoff. Both Tidal Tempest Act 3 boss
-  recordings now verify Sonic's water re-entry after Robotnik escapes and
-  check the boss slots past the first bubble's final pop frame.
+  recordings now verify Sonic's water re-entry after Robotnik escapes. Boss
+  bubbles turn and pop where they do on the disc, and the boss slot comparisons
+  run through the end of both recordings.
   Quartz Quadrant Past conveyors
   change speed on the warp trigger frame, and the R51B short fixture matches
   all 569 recorded rows. Metallic Madness Act 1 hosts Poh-Bee and its swinging
