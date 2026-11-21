@@ -154,8 +154,10 @@ under the matching area heading; see the
   bar ends star protection and resets the warp timer. Robotnik's projectors can be destroyed in the
   Past. In the Past acts of Palmtree Panic and Wacky Workbench, the projectors'
   flying and ground hologram animals use art from the disc.
-  In both Collision Chaos Past acts, the ground hologram cycles through the
-  disc's standing, leaping, and blank frames.
+  In both Collision Chaos Past acts, the flying and ground holograms use
+  the projector's art and animate from the disc. In Palmtree Panic and
+  Collision Chaos, hologram animals keep their slots until their projector
+  shuts down or unloads.
   In both Tidal Tempest Past acts, two hologram animals circle the projector
   and vanish when Sonic shuts it down.
   Wacky Workbench's layout animals fly or hop after the projector is destroyed
@@ -182,8 +184,9 @@ under the matching area heading; see the
   bubbles slot continues the sink. Tidal Tempest's post-scroll
   currents use the retained direction on the hurt recovery frame. R42A matches
   through the results and next-act handoff. Both Tidal Tempest Act 3 boss
-  recordings now verify Sonic's water re-entry after Robotnik escapes and
-  check the boss slots past the first bubble's final pop frame.
+  recordings now verify Sonic's water re-entry after Robotnik escapes. Boss
+  bubbles turn and pop where they do on the disc, and the boss slot comparisons
+  run through the end of both recordings.
   Amenbo and Taga-Taga missiles free their object slots at the disc's despawn checks.
   Quartz Quadrant Past conveyors
   change speed on the warp trigger frame, and the R51B short fixture matches

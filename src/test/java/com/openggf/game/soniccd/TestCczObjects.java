@@ -15,6 +15,7 @@ import com.openggf.game.session.SessionManager;
 import com.openggf.game.soniccd.level.CdLevel;
 import com.openggf.game.soniccd.level.CdStageCatalogue;
 import com.openggf.game.soniccd.objects.art.CdObjectArtProvider;
+import com.openggf.game.soniccd.objects.art.CdStageVram;
 import com.openggf.game.soniccd.objects.ccz.CczAmyRose;
 import com.openggf.game.soniccd.objects.ccz.CczAnimal;
 import com.openggf.game.soniccd.objects.ccz.CczBumper;
@@ -36,10 +37,16 @@ import com.openggf.game.soniccd.objects.ccz.CczObjectCatalogue;
 import com.openggf.game.soniccd.objects.ccz.CczPocket;
 import com.openggf.game.soniccd.objects.ccz.CczSpikeChain;
 import com.openggf.game.soniccd.objects.ccz.CczTentou;
+import com.openggf.game.soniccd.objects.common.CdAnimal;
 import com.openggf.game.soniccd.objects.projector.CdProjector;
+import com.openggf.game.soniccd.objects.projector.ProjectorChild;
+import com.openggf.game.soniccd.player.CdSonicAnimation;
 import com.openggf.level.Pattern;
 import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectRenderManager;
+import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.level.render.SpriteMappingPiece;
 import com.openggf.level.resources.PlcParser;
 import com.openggf.physics.GroundSensor;
@@ -52,6 +59,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.mockito.ArgumentCaptor;
 
 import java.io.ByteArrayInputStream;
 import java.nio.channels.Channels;
@@ -67,6 +75,11 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * Focused behaviour of the Collision Chaos objects on loaded stages (their art and tables come from the disc). Each
@@ -614,13 +627,113 @@ class TestCczObjects {
                 .findFirst().orElseThrow();
     }
 
-    private String hologramFrames(CczAnimal ground, int count) {
+    private String hologramFrames(CczAnimal animal, int count) {
         StringBuilder frames = new StringBuilder();
         for (int update = 0; update < count; update++) {
             runner.stepIdleFrames(1);
-            frames.append(ground.mapFrame());
+            frames.append(animal.mapFrame());
         }
         return frames.toString();
+    }
+
+    @Test
+    void palmtreeHologramsStayAliveOutsideRangeUntilProjectorShutsDown() throws Exception {
+        checkDistantHolograms(CdStagePayload.R11B, 0x2E, 0x24);
+    }
+
+    @Test
+    void collisionChaosHologramsStayAliveOutsideRangeUntilProjectorShutsDown() throws Exception {
+        checkDistantHolograms(CdStagePayload.R31B, 0x38, 0x39);
+    }
+
+    private void checkDistantHolograms(CdStagePayload payload, int parentId, int animalId) throws Exception {
+        load(payload);
+        var projector = add(new CdProjector(spawn(parentId, 0xB0, -0x40, 0)));
+        runner.stepIdleFrames(1);
+        List<ProjectorChild> distant = new ArrayList<>();
+        for (int subtype : List.of(0x80, 0x81)) {
+            ObjectSpawn outside = spawn(animalId, 0x800, -0x40, subtype);
+            ProjectorChild child = payload == CdStagePayload.R11B
+                    ? add(new CdAnimal(outside)) : add(new CczAnimal(outside));
+            child.linkProjector(projector.getSlotIndex(), parentId);
+            distant.add(child);
+        }
+        runner.stepIdleFrames(3);
+        assertTrue(live(animalId).containsAll(distant), "both distant holograms keep their slots while the parent is live");
+
+        sonic.setAnimationId(CdSonicAnimation.ROLL);
+        projector.onTouchResponse(sonic, null, 0);
+        runner.stepIdleFrames(3);
+        assertTrue(projector.childrenInvalid(), "the shutdown flag is set");
+        assertFalse(projector.isDestroyed(), "the projector still occupies its slot during the explosion sequence");
+        assertTrue(live(animalId).stream().noneMatch(distant::contains), "the shutdown flag retires both holograms");
+    }
+
+    @Test
+    void flyingHologramPlaysTheDiscScriptAndDrawsTheProjectorTilesAfterRewind() throws Exception {
+        // Ani_CCAnimalFlying (Level/Collision Chaos/Objects/Animal/Main.asm:239-241) uses animation 1 for holograms.
+        String firstFrames = "00200200200211221122";
+        for (var payload : List.of(CdStagePayload.R31B, CdStagePayload.R32B)) {
+            load(payload);
+            var projector = add(new CdProjector(spawn(0x38, 0xB0, -0x40, 0)));
+            runner.stepIdleFrames(1);
+            int parentSlot = projector.getSlotIndex();
+            var flying = flyingHologram(parentSlot);
+            if (flying.routine() == 0) runner.stepIdleFrames(1);
+
+            assertEquals(firstFrames.substring(0, 5), hologramFrames(flying, 5));
+            var rewind = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+            var snapshot = rewind.capture();
+            assertEquals(firstFrames.substring(5), hologramFrames(flying, firstFrames.length() - 5));
+            flying.setDestroyed(true);
+            runner.stepIdleFrames(1);
+            rewind.restore(snapshot);
+            flying = flyingHologram(parentSlot);
+            assertEquals(firstFrames.substring(5), hologramFrames(flying, firstFrames.length() - 5));
+            runner.stepIdleFrames(1);
+            assertProjectorArt(flying, payload);
+        }
+    }
+
+    private CczAnimal flyingHologram(int parentSlot) {
+        return live(0x39).stream().filter(CczAnimal.class::isInstance).map(CczAnimal.class::cast)
+                .filter(animal -> animal.getSpawn().subtype() == 0x80 && animal.projectorSlot() == parentSlot)
+                .findFirst().orElseThrow();
+    }
+
+    private void assertProjectorArt(CczAnimal flying, CdStagePayload payload) throws Exception {
+        var services = mock(ObjectServices.class);
+        var renderManager = mock(ObjectRenderManager.class);
+        var renderer = mock(PatternSpriteRenderer.class);
+        when(services.gameModule()).thenReturn(GameServices.module());
+        when(services.camera()).thenReturn(GameServices.camera());
+        when(services.renderManager()).thenReturn(renderManager);
+        when(renderer.isReady()).thenReturn(true);
+        var key = ArgumentCaptor.forClass(String.class);
+        when(renderManager.getRenderer(key.capture())).thenReturn(renderer);
+        flying.setServices(services);
+        flying.appendRenderCommands(new ArrayList<>());
+        verify(renderer).drawFrameIndex(eq(flying.mapFrame()), eq(flying.getX()), eq(flying.getY()),
+                eq((flying.spriteFlip() & 1) != 0), eq(false), anyInt());
+
+        var art = (CdObjectArtProvider) GameServices.module().getObjectArtProvider();
+        // The first eight tiles are identical in PLC 4 and 5 in the USA Past stages.
+        String projectorKey = CczObjectArt.key(art, "flyinghologram", 0x797, GameServices.camera().getX());
+        assertEquals(projectorKey, key.getValue(), payload + " must select the projector sheet");
+        var sheet = art.getSheet(key.getValue());
+        assertNotNull(sheet, "the renderer has a registered sheet");
+        // PLC_Projector (Level/Collision Chaos/Graphics Lists (Act 1 Variant).asm:223-226) uploads at byte $F2E0.
+        var vram = new CdStageVram();
+        vram.loadPlc(art.image(), CdStageCatalogue.entry(payload).plcLists(), 5);
+        Pattern[] patterns = sheet.getPatterns();
+        var expected = new byte[patterns.length * Pattern.PATTERN_SIZE_IN_MEM];
+        var actual = new byte[expected.length];
+        for (int tile = 0; tile < patterns.length; tile++) {
+            int offset = tile * Pattern.PATTERN_SIZE_IN_MEM;
+            vram.tile(0x797 + tile).copyInto(expected, offset);
+            patterns[tile].copyInto(actual, offset);
+        }
+        assertArrayEquals(expected, actual, payload + " must draw tiles from PLC 5");
     }
 
     @Test

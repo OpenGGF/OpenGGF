@@ -2611,6 +2611,27 @@
       "note": "Sonic CD disc and native captures"
     },
     {
+      "match": "com.openggf.game.soniccd.TestCczObjects#palmtreeHologramsStayAliveOutsideRangeUntilProjectorShutsDown",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCczObjects.java:640",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Projector hologram behavior on a stage loaded from the USA disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestCczObjects#collisionChaosHologramsStayAliveOutsideRangeUntilProjectorShutsDown",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCczObjects.java:645",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Projector hologram behavior on a stage loaded from the USA disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestCczObjects#flyingHologramPlaysTheDiscScriptAndDrawsTheProjectorTilesAfterRewind",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCczObjects.java:673",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Projector hologram behavior on a stage loaded from the USA disc"
+    },
+    {
       "match": "com.openggf.game.soniccd.TestCczObjects#groundHologramPlaysItsDiscLoopAndResumesAfterRewind",
       "category": "optional-fixture",
       "evidence": "src/test/java/com/openggf/game/soniccd/TestCczObjects.java:583",
