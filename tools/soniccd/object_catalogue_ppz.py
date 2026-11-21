@@ -10,6 +10,14 @@ def STAGES_COVERED(stage: str) -> bool:
 
 
 ANCHORS = [
+    ('amyMappings', '317C 2370 0002 117C 0001 0018 217C AAAAAAAA 0004 117C 000C 0019 117C 0010', 'optional',
+     'ObjAmyRose_Init (Level/Palmtree Panic/Objects/Amy Rose/Main.asm:36-42): move.l #MapSpr_AmyRose,oMap(a0)'),
+    ('amyAnimations', '117C 0005 001C 43F9 AAAAAAAA 6000', 'optional',
+     'ObjAmyRose_Init (Level/Palmtree Panic/Objects/Amy Rose/Main.asm:68-71): lea Ani_AmyRose,a1'),
+    ('amyPalette', '47FA PPPP 49F8 FB20 4CDB 000F', 'optional',
+     'ObjAmyRose_LoadPal (Level/Palmtree Panic/Objects/Amy Rose/Main.asm:649-658): lea Pal_AmyRose(pc),a3'),
+    ('amyRestorePalette', '0C28 002F 0000 670A 47F9 AAAAAAAA 6100 ???? 4E75', 'optional',
+     'ObjAmyRose (Level/Palmtree Panic/Objects/Amy Rose/Main.asm:17-25): lea Pal_LevelEnd,a3'),
     ('plantMappings', '217C AAAAAAAA 0004 317C 4424 0002', 'optional',
      'Obj3DPlant_Init (3D Ramp/Main.asm:24-27): move.l #MapSpr_3DPlant,oMap(a0); move.w #$4424,oTile(a0)'),
     ('rampMappings', '217C AAAAAAAA 0004 317C 0441 0002', 'optional',
