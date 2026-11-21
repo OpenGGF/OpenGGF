@@ -143,9 +143,16 @@ class MicaCleanupTests(unittest.TestCase):
         self.assertEqual([('0','-8'),('0','-16'),('0','-16'),('-8','-8'),('-16','-8'),('0','0'),('0','0'),('0','0')],
                          [tuple(row[3:]) for row in table])
         import noise_audit
-        for frame in json.loads((self.MICA/'titles/s1-despeckle.json').read_text())['frames']:
+        # frames 6 and 7 of the wag loop are frame 5's body with their own hand (wag continuity), so each is held to
+        # its source rows as the script composes them; the despeckle never moves the glove's whites, so the hand is
+        # the same either side of it
+        spec=importlib.util.spec_from_file_location('s1_despeckle',self.MICA/'titles/s1_despeckle.py')
+        s1=importlib.util.module_from_spec(spec);spec.loader.exec_module(s1)
+        frames=json.loads((self.MICA/'titles/s1-despeckle.json').read_text())['frames']
+        composed=s1.wag_continuity({f['file']:([[int(v,16) for v in row] for row in f['source_rows']],f['palette']) for f in frames})
+        for frame in frames:
             grid,lum=style_audit.load(self.ART/'titles'/frame['file'])
-            was=[[int(v,16) for v in row] for row in frame['source_rows']]
+            was=composed[frame['file']][0]
             self.assertEqual([[min(v,2) for v in row] for row in was],[[min(v,2) for v in row] for row in grid],frame['file'])
             self.assertLess(noise_audit.metrics(grid,lum)['noise'],0.75*noise_audit.metrics(was,lum)['noise'],frame['file'])
 
