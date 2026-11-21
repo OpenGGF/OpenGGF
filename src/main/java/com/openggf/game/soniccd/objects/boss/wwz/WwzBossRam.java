@@ -42,6 +42,13 @@ public final class WwzBossRam implements WwzStageSignals {
         paletteWaitOwner = bossPlacement;
     }
 
+    public boolean willStartPaletteWait(LevelManager level) {
+        var objects = level.getObjectManager();
+        if (objects == null || (bossFlags & 0x0F) == 0) return false;
+        return objects.getActiveObjects().stream().anyMatch(object ->
+                object instanceof WwzBossEggman boss && !boss.isDestroyed() && boss.willStartPaletteWait());
+    }
+
     public StagePaletteWait pendingPaletteWait(LevelManager level) {
         var objects = level.getObjectManager();
         if (paletteWaitOwner == null || objects == null) return null;

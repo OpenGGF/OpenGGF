@@ -133,6 +133,12 @@ final class WwzAnimatedTiles implements AnimatedPatternManager {
 
     @Override
     public void update() {
+        // VBlankPaletteFade (common/main.asm:951-962) omits AnimateStageGfx.
+        if (shape == Shape.BOSSGATE) {
+            var levels = GameServices.levelOrNull();
+            if (levels != null && levels.getCurrentLevel() == level
+                    && com.openggf.game.internal.StagePaletteWait.pending(levels) != null) return;
+        }
         switch (shape) {
             case PLAIN -> {
                 for (int slot = 0; slot < animators.size(); slot++) animate(slot, slot);

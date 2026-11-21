@@ -46,6 +46,16 @@ public final class CdFixedObjects implements NativeFixedLevelObjectPass {
         }
     }
 
+    public static void publishHudCounters(ObjectManager objects) {
+        if (objects == null) return;
+        for (ObjectInstance object : objects.getActiveObjects()) {
+            if (object instanceof CdHud hud && hud.kind() == CdHud.Kind.SCORE_TIME) {
+                hud.publishCounters();
+                return;
+            }
+        }
+    }
+
     /**
      * LevelStart's reserved objects: HUD score, lives and rings ($1C), and the title card ($3C)
      * with {@code ctrlLocked} set, which holds the HUD timer (Level/Main.asm:262-275).

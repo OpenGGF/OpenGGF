@@ -16,10 +16,19 @@ public interface StagePaletteWait {
     }
 
     static StagePaletteWait pending(LevelManager level) {
+        var source = source(level);
+        return source == null ? null : source.pendingPaletteWait(level);
+    }
+
+    static boolean supported(LevelManager level) {
+        return source(level) != null;
+    }
+
+    private static Source source(LevelManager level) {
         var world = level == null ? null : level.getWorldSession();
         var source = world == null ? null : world.getGameModule().getGameService(Source.class);
         return source != null && !Proxy.isProxyClass(source.getClass())
                 && source.getClass().getClassLoader() == StagePaletteWait.class.getClassLoader()
-                ? source.pendingPaletteWait(level) : null;
+                ? source : null;
     }
 }

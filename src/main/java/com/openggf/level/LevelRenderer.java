@@ -1291,7 +1291,28 @@ public final class LevelRenderer {
     private LevelScrollPresentation scrollForDraw() {
         if (nativeCompetitionScroll != null) return nativeCompetitionScroll;
         if (cinematicDraw) return cinematicScroll;
+        var held = paletteWaitPicture();
+        if (held != null) return held.scroll();
         return LevelSpritePresentation.enabled(lm) ? spriteTables.publishedScroll() : null;
+    }
+
+    private LevelSpritePresentation.HeldPicture paletteWaitPicture() {
+        return !cinematicDraw && spriteTables.heldPicture != null
+                && com.openggf.game.internal.StagePaletteWait.pending(lm) != null
+                ? spriteTables.heldPicture : null;
+    }
+
+    private SpritePresentation.Frame liveSpriteTableForDraw(SpriteManager sprites) {
+        var held = paletteWaitPicture();
+        return held == null ? captureSceneSpriteTable(sprites) : held.sprites();
+    }
+
+    void retainForPaletteWait(SpriteManager sprites) {
+        currentTraceVisibility = TraceRenderVisibility.fromConfig(lm.configService);
+        resolveAdvancedRenderFrameState(lm.frameCounter);
+        var scroll = lm.parallaxManager == null ? null
+                : LevelScrollPresentation.capture(lm, currentAdvancedRenderFrameState);
+        spriteTables.heldPicture = new LevelSpritePresentation.HeldPicture(captureSceneSpriteTable(sprites), scroll);
     }
 
     LevelSpritePresentation.BackgroundScroll backgroundScrollForDraw() {
@@ -1596,7 +1617,7 @@ public final class LevelRenderer {
         liveSpriteFrame = null;
         resolvePendingPaletteOwnershipWrites();
         currentScrollPresentation = scrollForDraw();
-        adoptMotion();
+        if (paletteWaitPicture() == null) adoptMotion();
         if (currentScrollPresentation == null) resolveAdvancedRenderFrameState(lm.frameCounter);
         else currentAdvancedRenderFrameState = currentScrollPresentation.renderMode();
         insetNativePresentation();
@@ -1646,7 +1667,7 @@ public final class LevelRenderer {
                             layer -> layer == SpritePresentation.Layer.HUD_COUNTERS);
                 }
             } else {
-                if (liveSpriteFrame == null) liveSpriteFrame = captureSceneSpriteTable(spriteManager);
+                if (liveSpriteFrame == null) liveSpriteFrame = liveSpriteTableForDraw(spriteManager);
                 drawPresentedSprites(liveSpriteFrame, camera.getXWithShake(), camera.getYWithShake(), SpritePresentation.Layer::isHud);
             }
         }
@@ -2095,7 +2116,7 @@ public final class LevelRenderer {
         } else if (preparingSpritePresentation) {
             prepareOrDrawLiveSprites(spriteManager);
         } else {
-            if (!motionAdopted || liveSpriteFrame == null) liveSpriteFrame = captureSceneSpriteTable(spriteManager);
+            if (!motionAdopted || liveSpriteFrame == null) liveSpriteFrame = liveSpriteTableForDraw(spriteManager);
             drawHomingAttackEffects(liveSpriteFrame);
             drawPresentedSprites(liveSpriteFrame, lm.camera.getXWithShake(), lm.camera.getYWithShake(), layer -> !layer.isHud());
             drawHomingAttackOverlay();
@@ -2277,7 +2298,7 @@ public final class LevelRenderer {
                 case HUD, HUD_COUNTERS -> false;
             });
         } else {
-            if (!motionAdopted || liveSpriteFrame == null) liveSpriteFrame = captureSceneSpriteTable(spriteManager);
+            if (!motionAdopted || liveSpriteFrame == null) liveSpriteFrame = liveSpriteTableForDraw(spriteManager);
             drawPresentedSprites(liveSpriteFrame, lm.camera.getXWithShake(), lm.camera.getYWithShake(), layer -> switch (layer) {
                         case PLAYER -> options.includePlayerSprites();
                         case OBJECT -> options.includeObjectSprites();

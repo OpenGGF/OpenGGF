@@ -2,6 +2,7 @@ package com.openggf.level;
 
 import com.openggf.camera.CameraPresentationAccess;
 import com.openggf.game.internal.SpriteTablePublication;
+import com.openggf.game.internal.StagePaletteWait;
 import com.openggf.game.resources.PlcLifecyclePhase;
 import com.openggf.game.rewind.RewindRegistry;
 import com.openggf.game.rewind.RewindSnapshottable;
@@ -75,11 +76,14 @@ public final class LevelSpritePresentation {
         return level == null ? null : level.spritePresentationRenderer().spritePositionForDraw(key);
     }
 
+    record HeldPicture(SpritePresentation.Frame sprites, LevelScrollPresentation scroll) { }
+
     static final class Tables implements RewindSnapshottable<Tables.State> {
         record State(SpritePresentation.Frame prepared, SpritePresentation.Frame published,
                      SpritePresentation.Frame counters, LevelScrollPresentation preparedScroll,
                      LevelScrollPresentation publishedScroll,
-                     PaletteUploadPresentation.DisplayedFade displayedFade) { }
+                     PaletteUploadPresentation.DisplayedFade displayedFade, HeldPicture heldPicture) { }
+        HeldPicture heldPicture;
         private SpritePresentation.Frame prepared = SpritePresentation.Frame.empty();
         private SpritePresentation.Frame published = SpritePresentation.Frame.empty();
         private SpritePresentation.Frame counters = SpritePresentation.Frame.empty();
@@ -112,13 +116,14 @@ public final class LevelSpritePresentation {
             counters = prepared;
             preparedScroll = null;
             publishedScroll = null;
+            heldPicture = null;
         }
         @Override public String key() { return "level-sprite-presentation"; }
         @Override public State capture() {
             // The displayed CRAM fade belongs to the same V-int publication as the SAT and scroll.
             var graphics = com.openggf.game.GameServices.hasRuntime() ? com.openggf.game.GameServices.graphics() : null;
             return new State(prepared, published, counters, preparedScroll, publishedScroll,
-                    PaletteUploadPresentation.captureDisplayedFade(graphics));
+                    PaletteUploadPresentation.captureDisplayedFade(graphics), heldPicture);
         }
         @Override public void restore(State state) {
             // A restore redraws without a V-int publication: upload any latched palette
@@ -136,6 +141,7 @@ public final class LevelSpritePresentation {
             counters = state.counters();
             preparedScroll = state.preparedScroll();
             publishedScroll = state.publishedScroll();
+            heldPicture = state.heldPicture();
         }
         @Override public void resetForMissingSnapshot() { reset(); }
     }
@@ -155,6 +161,15 @@ public final class LevelSpritePresentation {
             // Render_Sprites also places sprite-object title-card pieces in this table.
             com.openggf.game.internal.TitleCardVintPublication.prepare(level.gameModule.getTitleCardProvider());
         }
+    }
+
+    /** Retains the completed loop's picture before an object can enter a blocking fade. */
+    public static void retainForPaletteWait(LevelManager level, SpriteManager sprites) {
+        level.spritePresentationRenderer().retainForPaletteWait(sprites);
+    }
+
+    public static void releasePaletteWaitPicture(LevelManager level) {
+        level.spritePresentationRenderer().spriteTables.heldPicture = null;
     }
 
     public static void publish(LevelManager level, PlcLifecyclePhase phase) {
@@ -205,6 +220,6 @@ public final class LevelSpritePresentation {
         if (level.camera != null) {
             registry.register(com.openggf.camera.CameraBoundaryPresentation.rewindAdapter(level.camera));
         }
-        if (enabled(level)) registry.register(renderer.spriteTables);
+        if (enabled(level) || StagePaletteWait.supported(level)) registry.register(renderer.spriteTables);
     }
 }

@@ -73,6 +73,7 @@ final class CdFirstMainLoopIteration {
             palette.update();                            // iteration 1: bsr.w PaletteCycle (Level/Main.asm:423-425)
         }
         animateTiles();                                  // iteration 2's VInt_Level, as the engine's frame runs it
+        com.openggf.game.soniccd.objects.common.CdFixedObjects.publishHudCounters(objects);
     }
 
     /**

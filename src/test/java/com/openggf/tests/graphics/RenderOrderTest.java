@@ -249,6 +249,8 @@ public class RenderOrderTest {
                 "private void prepareOrDrawLiveSprites(");
         String filtered = sourceBetween(source, "private void renderSpriteObjectPassFiltered(",
                 "private void drawStageRingsForBucket(");
+        String liveTable = sourceBetween(source, "private SpritePresentation.Frame liveSpriteTableForDraw(",
+                "void retainForPaletteWait(");
         String capture = sourceBetween(source, "SpritePresentation.Frame captureSceneSpriteTable(",
                 "private boolean cinematicDraw;");
         String publication = sourceBetween(source, "void prepareSpritePresentation(",
@@ -258,9 +260,10 @@ public class RenderOrderTest {
 
         assertTrue(regular.contains("drawPublishedSprites("));
         assertTrue(regular.contains("prepareOrDrawLiveSprites(spriteManager);"));
-        assertTrue(regular.contains("captureSceneSpriteTable(spriteManager)"));
+        assertTrue(regular.contains("liveSpriteTableForDraw(spriteManager)"));
         assertTrue(filtered.contains("drawPublishedSprites("));
-        assertTrue(filtered.contains("captureSceneSpriteTable(spriteManager)"));
+        assertTrue(filtered.contains("liveSpriteTableForDraw(spriteManager)"));
+        assertTrue(liveTable.contains("held == null ? captureSceneSpriteTable(sprites) : held.sprites()"));
         assertTrue(capture.contains("prepareOrDrawLiveSprites(sprites)"));
         assertTrue(publication.contains("renderSpriteObjectPass(sprites, false);"));
         assertEquals(0, countOccurrences(regular + filtered, "drawStageRingsForBucket(ringManager,"),

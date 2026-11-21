@@ -1,6 +1,11 @@
 package com.openggf.game.soniccd;
 
+import com.openggf.game.GameServices;
 import com.openggf.game.LevelEventProvider;
+import com.openggf.game.internal.StagePaletteWait;
+import com.openggf.game.soniccd.objects.common.CdFixedObjects;
+import com.openggf.game.soniccd.objects.boss.wwz.WwzBossRam;
+import com.openggf.level.LevelSpritePresentation;
 
 /**
  * Level events: {@code RunLevelEvents} (Level/_Events.asm) through {@link CdStageEvents}, after
@@ -23,6 +28,21 @@ final class CdLevelEventProvider implements LevelEventProvider {
     @Override public void updatePrePhysics() {
         runBoredTimer();
         runTimeWarp();
+        var level = GameServices.levelOrNull();
+        if (level != null && GameServices.module().getObjectArtProvider() instanceof
+                com.openggf.game.soniccd.objects.art.CdObjectArtProvider art) {
+            var boss = art.zoneArt(WwzBossRam.class);
+            if (boss != null && boss.willStartPaletteWait(level)) {
+                LevelSpritePresentation.retainForPaletteWait(level, GameServices.sprites());
+            }
+        }
+    }
+
+    @Override public void updateAtLevelLoopTail() {
+        var level = GameServices.levelOrNull();
+        if (level != null && StagePaletteWait.pending(level) == null) {
+            CdFixedObjects.publishHudCounters(level.getObjectManager());
+        }
     }
 
     /**
