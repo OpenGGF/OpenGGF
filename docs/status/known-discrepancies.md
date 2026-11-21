@@ -3937,3 +3937,37 @@ pieces. Reserved attracted rings submit at their actual object-slot phase, and
 ring visibility is filtered after admission. Explicit native FIFO entries precede
 the existing legacy SST suffix; this mixed bridge does not establish every
 object's native DisplaySprite topology. See the [design and source evidence](../architecture/designs/2026-10-22-native-sprite-scanline-budgets.md).
+
+## Sonic CD dust SFX reads the Sega CD boot ROM through the Z80 bank window
+
+The special-stage rough surface queues $D6. See
+`ObjSonic_Rough` (Special Stage/Objects/Sonic/Main.asm:652-670).
+The shipped `SonicCD_D6_Header` (Sound Drivers/FM/SFX/D6.asm:1-11) declares two
+tracks and supplies a single FM6 header. With FixBugs=0,
+`PlaySFX` (Sound Drivers/FM/_Driver.asm:818-861) copies the FM6 stream's first
+six bytes as an FM1 header.
+The resulting $EF flags suppress both the admission key-off and the SSG-EG
+clear. See `SetKeyOff` (Sound Drivers/FM/_Driver.asm:545-556) and
+`WriteYMTrk` (Sound Drivers/FM/_Driver.asm:670-692).
+
+`ParseTrackData` (Sound Drivers/FM/_Driver.asm:261-265) clears legato and rest.
+`ParseNextTrackCmd` (Sound Drivers/FM/_Driver.asm:267-278) reads from $80E0.
+In BizHawk 2.11's USA Sound Test with FM1 already keyed on by the jump effect,
+the bank mapped that read to 68000 address $0000E0. The next four boot-ROM
+bytes were `00 00 02 00`.
+The raw-frequency path interprets these as zero frequency, portamento speed
+2 and zero duration. See `ParseTrackData` (Sound Drivers/FM/_Driver.asm:334-376).
+The zero byte counter wraps on the following service.
+See `UpdateDuration` (Sound Drivers/FM/_Driver.asm:420-424).
+
+Dust was admitted at frame 2425. FM1 wrote neither key-on nor key-off until
+the next jump at 2785, whose register $28 writes were $00, $00, $F0.
+The control without dust keyed off at 2435. With no replacement request,
+the USA Model 1 v1.10 and Model 2 v2.21 BIOS runs first consumed different
+durations at $00011B ($32 and $33). The first FM1 operator write was
+register $80 = $FF at frames 9189 and 9529, respectively. The first key-off
+arrived at frames 9204 and 9558 (6779 and 7133 frames after admission).
+Sonic CD's music plays separately through CDDA or PCM. The malformed track's
+continuation depends on the boot ROM exposed by the Z80 bank window, which
+OpenGGF does not model. `TestCdFmPlaySound` covers the disc-backed admission
+and first unsupported read in the bounded driver projection.
