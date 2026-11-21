@@ -134,6 +134,47 @@ class TestSonicCdCaptureTools {
                         "the clip has one stereo audio frame per video frame"));
     }
 
+    @Test
+    void traceCaptureKeepsGameplayWhenTheRecorderLagFlagIsLate() throws Exception {
+        Path traceDir = nativeFile("rehost-long/R51B/trace");
+        Path out = temp.resolve("late-lag-flag");
+        HeadlessGameBoot boot = runTraceCapture(new String[] {"--trace", traceDir.toString(),
+                "--clip", "frames:1576:1592", "--skip-lag-frames", "--width", "320",
+                "--no-ghosts", "--scale", "1", "--codec", "ffv1", "--out-dir", out.toString()});
+        boot.close();
+
+        List<String> state = Files.readAllLines(out.resolve(TraceCaptureStateWriter.FILE_NAME));
+        int rowColumn = List.of(state.getFirst().split(",")).indexOf("trace_row");
+        List<Integer> filmed = state.stream().skip(1)
+                .map(line -> Integer.parseInt(line.split(",", -1)[rowColumn])).toList();
+
+        Path video;
+        try (Stream<Path> files = Files.list(out)) {
+            video = files.filter(path -> path.toString().endsWith(".mkv") || path.toString().endsWith(".mov"))
+                    .findFirst().orElseThrow();
+        }
+        String ffmpeg = FfmpegEncoder.findFfmpeg().map(Path::toString).orElse("ffmpeg");
+        Process decode = new ProcessBuilder(ffmpeg, "-v", "error", "-i", video.toString(),
+                "-map", "0:v:0", "-f", "framemd5", "pipe:1")
+                .redirectError(ProcessBuilder.Redirect.INHERIT).start();
+        List<String> hashes = new String(decode.getInputStream().readAllBytes(), StandardCharsets.UTF_8)
+                .lines().filter(line -> !line.startsWith("#"))
+                .map(line -> line.substring(line.lastIndexOf(',') + 1).strip()).toList();
+        assertEquals(0, decode.waitFor(), "decode the exported video");
+        assertEquals(filmed.size(), hashes.size(), "one picture per exported state row");
+
+        TraceData trace = TraceData.load(traceDir);
+        List<Integer> gameplayRows = IntStream.rangeClosed(1576, 1592)
+                .filter(row -> trace.getFrame(row).gameplayFrameCounter()
+                        != trace.getFrame(row - 1).gameplayFrameCounter()).boxed().toList();
+        List<Integer> duplicateRows = IntStream.range(1, hashes.size())
+                .filter(frame -> hashes.get(frame).equals(hashes.get(frame - 1)))
+                .mapToObj(filmed::get).toList();
+        assertAll(
+                () -> assertEquals(gameplayRows, filmed, "film every gameplay row in the clip"),
+                () -> assertEquals(List.of(), duplicateRows, "no consecutive pictures repeat"));
+    }
+
     /**
      * A clip that runs past the warp fixture's last row hands the game to its production loop: the stage is left
      * (fade, title host) and the warp's program screen runs, with no player on it. The first rows still equal the

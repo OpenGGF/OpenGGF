@@ -40,7 +40,7 @@ class TestTraceCaptureLagFrames {
     }
 
     @Test
-    void aRowNeedsAnElapsedVblankAndARowBeforeIt() {
+    void aCartridgeRowNeedsAnElapsedVblankAndARowBeforeIt() {
         TraceFrame[] rows = {row(10, 0x200, 0x100), row(11, 0x200, 0x100), row(12, 0x201, 0x101)};
 
         assertFalse(lag(TraceExecutionPhase.VBLANK_ONLY, rows, 1),
@@ -61,9 +61,9 @@ class TestTraceCaptureLagFrames {
         for (int index = 1; index <= TraceCaptureLagFrames.LONGEST_LAG_HOLD + 1; index++) {
             assertFalse(lag(TraceExecutionPhase.VBLANK_ONLY, longHold, index), "row " + index);
         }
-        assertEquals(0, TraceCaptureLagFrames.holdRows(i -> longHold[i], longHold.length, 0));
+        assertEquals(0, TraceCaptureLagFrames.holdRows(i -> longHold[i], longHold.length, 0, true));
         assertEquals(0, TraceCaptureLagFrames.holdRows(
-                i -> longHold[i], longHold.length, longHold.length - 1));
+                i -> longHold[i], longHold.length, longHold.length - 1, true));
     }
 
     @Test
@@ -115,7 +115,7 @@ class TestTraceCaptureLagFrames {
     }
 
     private static boolean lag(TraceExecutionPhase phase, TraceFrame[] rows, int index) {
-        return TraceCaptureLagFrames.isLagRow(phase, i -> rows[i], rows.length, index);
+        return TraceCaptureLagFrames.isLagRow(phase, i -> rows[i], rows.length, index, true);
     }
 
     /** One played row, {@code length} rows holding its gameplay counter, one played row. */

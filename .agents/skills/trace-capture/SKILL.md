@@ -63,14 +63,13 @@ still while the display went on, and the clip shows the previous picture again: 
 times in `s2/cpz2` rows 4439 to 4505, which a viewer reads as the engine stuttering.
 `--skip-lag-frames` leaves them out:
 
-- **What counts as lag** comes from the recording. Hosted traces such as Sonic CD
-  use `lag_state.lagged` in `aux_state.jsonl`, keyed by the trace frame number.
-  Rows without that event stay in the clip, including the production tail past
-  the trace. For cartridge traces, the replay ran no gameplay frame for the row,
-  `vblank_counter` advanced, `gameplay_frame_counter` held, and the hold is at most
-  four rows long. In the committed cartridge traces, a level loop that fell behind
-  held for one row, rarely two. Holds of five rows or more represent title cards,
-  fades or loads and stay in the clip.
+- **What counts as lag** is a hold of at most four rows in the recorded gameplay
+  counter, on a row the replay drove without gameplay. Cartridge clips require
+  the VBlank counter to advance. Hosted clips such as Sonic CD also film rows
+  with both counters held by default, so skipping removes those short repeats
+  as well. The Sonic CD recorder's lag flag can arrive on the next gameplay row.
+  Holds of five rows or more, such as title cards, fades or loads, stay in the
+  clip. The production tail past the end of the trace stays as well.
 - **The window still means trace rows** START to END. The clip is shorter by the lag
   rows inside it. The tool prints the rows it left out and the output-frame to trace-row
   mapping (`clip: output frame -> trace row: 0-138 -> 4300-4438, 139-142 -> 4440-4443,

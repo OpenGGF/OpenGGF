@@ -925,9 +925,10 @@ under the matching area heading; see the
   --skip-lag-frames`, with `--clip frames:START:END`, leaves out the frames on
   which the recorded game could not keep up. A frame window films every row the
   original displayed, so on those rows the picture repeated and the footage
-  looked as if the engine stuttered. Sonic CD uses the recording's per-row lag
-  flag. Cartridge traces use a hold of the gameplay frame counter over elapsed
-  V-blanks for at most four rows, so title cards, fades, loads and pauses stay.
+  looked as if the engine stuttered. The clip drops short counter holds on rows
+  where the replay ran without gameplay. Cartridge clips require an elapsed
+  VBlank. Sonic CD also drops short repeats where both counters hold. Longer
+  holds such as title cards, fades, loads and pauses stay.
   The window still selects trace rows. The tool prints the output-frame to
   trace-row mapping and writes it to the capture manifest. Each omitted row
   shortens the picture and sound by one frame. The flag is off by default.

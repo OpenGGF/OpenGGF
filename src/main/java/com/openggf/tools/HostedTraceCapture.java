@@ -59,7 +59,7 @@ import java.util.stream.Stream;
  * loaded state and its BK2 row is consumed without a step; every later row is a full step or, on a
  * frame the native loop did not complete, a V-INT-only row, chosen by the shared counter model
  * ({@link TraceReplayBootstrap#phaseForReplay}). Each row is presented by default.
- * With {@code --skip-lag-frames}, recorded lag rows contribute neither picture nor sound.
+ * With {@code --skip-lag-frames}, short gameplay holds contribute neither picture nor sound.
  *
  * <p>The trace is comparison only: the BK2 inputs drive the engine, the recorded input of each row
  * is checked against them (a mismatch is a misaligned movie and stops the capture), and the first
@@ -253,7 +253,7 @@ final class HostedTraceCapture {
         }
         TraceCaptureTool.HeadlessOuterAudioFrames audio = new TraceCaptureTool.HeadlessOuterAudioFrames(audioTap);
         TraceCaptureLagFrames lagFrames = args.skipLagFrames()
-                ? TraceCaptureLagFrames.skipLagFrames() : TraceCaptureLagFrames.KEEP;
+                ? TraceCaptureLagFrames.skipHostedLagFrames() : TraceCaptureLagFrames.KEEP;
         short[] pcm = new short[16384];
         long captured = 0;
         boolean succeeded = false;
@@ -263,15 +263,12 @@ final class HostedTraceCapture {
             TailDrive tail = new TailDrive(loop, module, media, movie, trace.metadata().bk2FrameOffset());
             for (int row = 0; row <= last; row++) {
                 if (row < trace.frameCount()) {
-                    replay.drive(row);
-                    if (lagFrames.skipping()) {
-                        var lag = trace.lagStateForFrame(trace.getFrame(row).frame());
-                        if (lag != null && lag.lagged()) {
-                            if (row >= first) {
-                                lagFrames.skipped(row);
-                            }
-                            continue;
+                    TraceExecutionPhase phase = replay.drive(row);
+                    if (lagFrames.skips(phase, trace, row)) {
+                        if (row >= first) {
+                            lagFrames.skipped(row);
                         }
+                        continue;
                     }
                 } else {
                     tail.step(row);
@@ -339,7 +336,7 @@ final class HostedTraceCapture {
             this.loadIsFirstRow = loadIsFirstRow;
         }
 
-        void drive(int row) {
+        TraceExecutionPhase drive(int row) {
             TraceFrame expected = trace.getFrame(row);
             TraceFrame prior = row > 0 ? trace.getFrame(row - 1) : null;
             int input;
@@ -369,6 +366,7 @@ final class HostedTraceCapture {
             if (firstDivergentRow < 0 && TraceReplayBootstrap.shouldCompareGameplayStateForReplay(phase)) {
                 compare(row, TraceReplayBootstrap.frameForGameplayComparison(trace, row, prior, expected, phase));
             }
+            return phase;
         }
 
         private void compare(int row, TraceFrame expected) {
