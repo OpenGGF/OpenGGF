@@ -2,8 +2,6 @@ package com.openggf.game.soniccd.audio;
 
 import com.openggf.audio.AudioManagerInternalAccess;
 import com.openggf.audio.GameSound;
-import com.openggf.game.soniccd.CdPeriod;
-import com.openggf.game.soniccd.level.CdLevel;
 import com.openggf.game.soniccd.timetravel.CdTimeTravel;
 import com.openggf.game.soniccd.timetravel.CdTimeZone;
 import com.openggf.level.objects.ObjectServices;
@@ -56,11 +54,14 @@ public final class CdSoundRequests {
     }
 
     /**
-     * {@code .GiveInvinc}/{@code .GiveSpeedShoes}: in the past the PCM music is faded first,
-     * then the power-up's CD track starts (Level/_Objects/Monitor and Time Post/Main.asm:534-591).
+     * ObjMonitorItem_Main .GiveInvinc/.GiveSpeedShoes tests the whole timeZone byte
+     * before fading PCM (Level/_Objects/Monitor and Time Post/Main.asm:554-561,582-589).
      */
     public static void powerUpMusic(ObjectServices services, int command) {
-        if (inPast(services)) services.playMusic(FADE_PCM);
+        var timeTravel = CdTimeTravel.of(services.gameModule());
+        if (timeTravel != null && timeTravel.timeZone() == CdTimeZone.PAST && !timeTravel.warping()) {
+            services.playMusic(FADE_PCM);
+        }
         services.playMusic(command);
     }
 
@@ -87,12 +88,5 @@ public final class CdSoundRequests {
     /** {@code move.w #$92,d0; jsr SubCpuCommand}: a glass block breaks (r3/player_block_check.asm:346-347). */
     public static void glassBreak(ObjectServices services) {
         services.playMusic(GLASS_BREAK);
-    }
-
-    /** {@code tst.b timeZone}: zero is the past. */
-    static boolean inPast(ObjectServices services) {
-        var levels = services.levelManager();
-        return levels != null && levels.getCurrentLevel() instanceof CdLevel level
-                && level.payload().stage().period() == CdPeriod.PAST;
     }
 }
