@@ -43,6 +43,11 @@ public final class PpzObjectArt {
             PPZ_COLLAPSE1 = "collapse1", PPZ_COLLAPSE2 = "collapse2", PPZ_COLLAPSE3 = "collapse3",
             PPZ_COLLAPSE4 = "collapse4", PPZ_WALL = "wall", PPZ_PLATFORM = "platform", PPZ_DISC = "disc", PPZ_SPRINGBOARD = "springboard",
             PPZ_HOLE = "hole", PPZ_SWING = "swing", PPZ_BOULDER = "boulder", PPZ_GENERATOR = "generator";
+    static final String AMY = "amy", HEART = "amyheart";
+    /** ObjAmyRose_Init (Level/Palmtree Panic/Objects/Amy Rose/Main.asm:36-40). */
+    static final int AMY_TILE = 0x2370;
+    /** ObjAmyHeart_Init (Level/Palmtree Panic/Objects/Amy Rose/Main.asm:684-691). */
+    static final int HEART_TILE = 0x0370;
     public static final String TUNNEL_DOOR = "cd.ppz.tunnelDoor.";
     /** ObjTunnelDoorV_Init (Level/Palmtree Panic/Objects/Tunnel Door/Main.asm:39-42). */
     public static final int TILE_ID_TUNNEL_DOOR = 0xC;
@@ -141,6 +146,9 @@ public final class PpzObjectArt {
                     com.openggf.game.soniccd.objects.common.CommonObjectArt.robotGeneratorTile(
                             stage, loaded, generatorTiles));
         }
+        // PLC_Cam5_Full (Level/Palmtree Panic/Data (Act 1 Present).asm:155-160).
+        ppz(art, reader, AMY, entry.amyMappings(), AMY_TILE);
+        ppz(art, reader, HEART, entry.amyMappings(), HEART_TILE);
         ppz(art, reader, PPZ_PLANT, entry.plantMappings(), PLANT_TILE);
         ppz(art, reader, PPZ_RAMP, entry.rampMappings(), RAMP_TILE);
         for (int tile : sceneryTiles()) ppz(art, reader, PPZ_SCENERY, entry.sceneryMappings(), tile);
