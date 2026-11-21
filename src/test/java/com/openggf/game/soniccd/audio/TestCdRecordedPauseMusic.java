@@ -18,6 +18,7 @@ import com.openggf.game.soniccd.objects.common.CdTimePost;
 import com.openggf.game.soniccd.timetravel.CdTimeTravel;
 import com.openggf.game.soniccd.timetravel.CdTimeWarp;
 import com.openggf.game.soniccd.timetravel.CdTimeZone;
+import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tools.HeadlessGameBoot;
@@ -31,6 +32,10 @@ import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class TestCdRecordedPauseMusic {
     private enum Music {
@@ -86,10 +91,15 @@ class TestCdRecordedPauseMusic {
                 var player = GameServices.camera().getFocusedSprite();
                 if (music.warpDestination != null) {
                     enterWarpWindow(loop, capture, CdTimeTravel.of(module), player, music);
+                    assertPowerUpMusicDuringWarp(module);
                 }
                 if (music == Music.PAST_SIGNPOST_WITH_SPEED_SHOES) {
                     addSignpostBehind(player);
                     present(loop, capture, 1);
+                    assertAll(
+                            () -> assertFalse(player.hasSpeedShoes(), "the signpost clears the speed-shoes flag"),
+                            () -> assertEquals(0xC00, player.getEffectiveMax(), "the signpost leaves top speed boosted"),
+                            () -> assertEquals(0x18, player.getEffectiveRunAccel(), "the signpost leaves acceleration boosted"));
                 }
 
                 boolean fadingPcm = music == Music.PAST_WARPING_TO_PRESENT;
@@ -153,6 +163,34 @@ class TestCdRecordedPauseMusic {
                 } finally {
                     audio.setRequestObserver(AudioRequestObserver.NONE);
                 }
+                if (music == Music.PAST_SIGNPOST_WITH_SPEED_SHOES) {
+                    sample(loop, released, start);
+                    var level = (CdLevel) GameServices.level().getCurrentLevel();
+                    for (int frame = 0; frame < 240 && !level.flags().ctrlLocked; frame++) {
+                        present(loop, capture, 1);
+                    }
+                    assertTrue(level.flags().ctrlLocked, "the signpost starts the forced results run");
+                    assertEquals(0xC00, player.getMax(), "results movement still uses boosted top speed");
+                    assertEquals(0x18, player.getRunAccel(), "results movement still uses boosted acceleration");
+
+                    var resultsState = player.captureRewindState();
+                    player.giveSpeedShoes();
+                    player.deactivateSpeedShoes();
+                    assertEquals(0x600, player.getMax(), "ordinary expiry writes normal top speed");
+                    assertEquals(0xC, player.getRunAccel(), "ordinary expiry writes normal acceleration");
+                    player.restoreRewindState(resultsState);
+                    assertFalse(player.hasSpeedShoes(), "rewind restores the cleared flag");
+                    assertEquals(0xC00, player.getMax(), "rewind restores boosted top speed");
+                    assertEquals(0x18, player.getRunAccel(), "rewind restores boosted acceleration");
+                }
+            }
+            if (music == Music.PAST_SIGNPOST_WITH_SPEED_SHOES) {
+                // ObjSonic_Init (Level/_Objects/Sonic/Main.asm:152-154) writes the new act's words.
+                GameServices.level().loadZoneAndAct(
+                        SonicCdZoneRegistry.zoneIndex(CdStagePayload.R12A), SonicCdZoneRegistry.actIndex(CdStagePayload.R12A));
+                var nextPlayer = GameServices.camera().getFocusedSprite();
+                assertEquals(0x600, nextPlayer.getMax(), "the next act initializes normal top speed");
+                assertEquals(0xC, nextPlayer.getRunAccel(), "the next act initializes normal acceleration");
             }
         } finally {
             config.setSessionOverride(SonicConfiguration.AUDIO_ENABLED, oldAudio);
@@ -199,6 +237,19 @@ class TestCdRecordedPauseMusic {
                 () -> assertEquals(music.stage, level.payload(), "the source stage is still loaded"),
                 () -> assertEquals(music.warpDestination, timeTravel.timeZone(), "the warp has set the destination time zone"),
                 () -> assertTrue(timeTravel.warping() && !timeTravel.warpReady(), "the warp has triggered before restart"));
+    }
+
+    private static void assertPowerUpMusicDuringWarp(SonicCdGameModule module) {
+        var services = mock(ObjectServices.class);
+        when(services.gameModule()).thenReturn(module);
+        when(services.levelManager()).thenReturn(GameServices.level());
+
+        CdSoundRequests.powerUpMusic(services, CdSoundRequests.INVINCIBILITY);
+        CdSoundRequests.powerUpMusic(services, CdSoundRequests.SPEED_SHOES);
+
+        verify(services).playMusic(CdSoundRequests.INVINCIBILITY);
+        verify(services).playMusic(CdSoundRequests.SPEED_SHOES);
+        verify(services, never()).playMusic(CdSoundRequests.FADE_PCM);
     }
 
     private static boolean presentLateInWarpPause(GameLoop loop, LiveCaptureAudioHandle capture) {

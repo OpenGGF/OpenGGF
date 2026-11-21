@@ -71,7 +71,7 @@ public final class CdSignpost extends CdObject implements ObjectVisualFacing.Non
         timer = SPIN_FRAMES;
         mapFrame = 0;
         routine = 4;
-        // ObjSignpost_Main (Level End/Main.asm:779-780) clears both power-up flags.
+        // ObjSignpost_Main (Level End/Main.asm:779-780) clears both flags and leaves the speed words alone.
         PlayableSpriteInternalAccess.clearSpeedShoesFlag(sprite);
         sprite.setInvincibleFrames(0);
         services().playSfx(com.openggf.game.soniccd.audio.CdSoundRequests.SIGNPOST);
