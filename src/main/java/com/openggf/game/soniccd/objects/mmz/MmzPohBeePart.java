@@ -87,9 +87,9 @@ final class MmzPohBeePart extends MmzObject implements TouchResponseProvider, Sp
             var link = new MmzPohBeePart(linkSpawn, Role.LINK, bodySlot);
             link.copyDrawState(this);
             if (!findNextObjSlot(link)) {
-                // The failed allocation deletes the body. Its parts retire when its slot loses the ID.
+                // loc_20DB06 (scddisasm/src/objects/r8/poh_bee.asm:138-142) clears the body before returning.
                 body.setDestroyed(true);
-                setDestroyed(true);
+                services().objectManager().releaseSlot(body);
                 return false;
             }
             linkSlots[i] = link.getSlotIndex();

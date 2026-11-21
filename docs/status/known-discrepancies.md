@@ -21,6 +21,21 @@ FM6 dust effect without executing native memory corruption. Shared SMPS admissio
 still rejects invalid channels and pointers. This prevents a real-session admission
 exception when dust is requested, including at a live rewind presentation boundary.
 
+## Sonic CD campaign pause restart
+
+The engine uses the ordinary death reload to fade out and restart the stage
+after a campaign pause exit. This can replay the present-day title card.
+The disc's pause exit leaves the card marked as loaded
+(`Level_MainLoop`, Level/Main.asm:368-395). The death path clears that flag
+for a present-day restart without a checkpoint
+(`ObjSonic_Restart`, Level/_Objects/Sonic/Main.asm:2465-2472).
+
+Quartz Quadrant acts 1 and 2 clear `spawn_mode` and keep
+`respawn_checkpoint` while lives remain
+(`loc_201858`, r5/main.asm:328-337 and `loc_201898`, r5/main.asm:346-349).
+The engine clears its checkpoint state to start from the beginning because
+an active checkpoint selects the saved spawn on a present-day death reload.
+
 ## Hosted Competition checkpoint reload and monitor OFF (2026-11-07)
 
 `FAST_FROM_CHECKPOINT` omits the death reload's fades and initial title-card

@@ -8,8 +8,8 @@ import java.util.Map;
  * oscillation state. Static configuration (waterConfigs, underwater palettes)
  * is loaded at zone init and excluded.
  *
- * <p>Dynamic handler references are not captured — they are stateless lambdas
- * set at zone load and do not change during gameplay.
+ * <p>Dynamic handlers are installed at zone load. Game-specific rewind adapters
+ * can capture mutable handler state separately.
  */
 @com.openggf.game.ModApi
 public record WaterSystemSnapshot(
@@ -22,7 +22,7 @@ public record WaterSystemSnapshot(
 
     /**
      * Numeric fields of one {@link com.openggf.level.WaterSystem.DynamicWaterState}
-     * entry. The {@code handler} reference is excluded (stateless, set at zone load).
+     * entry. The {@code handler} reference is excluded.
      */
     @com.openggf.game.ModApi
     public record DynamicWaterEntry(

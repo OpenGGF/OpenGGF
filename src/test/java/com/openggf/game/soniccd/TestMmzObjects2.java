@@ -258,4 +258,21 @@ class TestMmzObjects2 {
         runner.stepIdleFrames(29);
         assertEquals(60, beetle.pauseTimer(), "oVar34 reaches -30 on the 90th call and reloads 60 (:376-383)");
     }
+
+    @Test
+    void scarabEnemyTouchHurtsSonicAcrossLayers() throws Exception {
+        boot(CdStagePayload.R81B);
+        add(new MmzScarab(at(0x50, -0x20, 0x2F, 0x80)));
+        runner.stepIdleFrames(2);
+        MmzScarabBody beetle = live(0x2F).stream().filter(MmzScarabBody.class::isInstance)
+                .map(MmzScarabBody.class::cast).findFirst().orElseThrow();
+
+        // loc_206CD8 (r8/player_object_collide.asm:456-463): the right side of this $F0 beetle uses enemy touch.
+        if (signals().stageLayer() == 0) signals().flipStageLayer();
+        sonic.setRingCount(1);
+        sonic.setCentreX((short) (beetle.getX() + 6));
+        sonic.setCentreY((short) beetle.getY());
+        GameServices.level().getObjectManager().runTouchResponsesForPlayer(sonic, 3);
+        assertTrue(sonic.isHurt());
+    }
 }

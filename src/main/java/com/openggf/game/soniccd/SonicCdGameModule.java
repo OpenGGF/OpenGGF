@@ -70,6 +70,8 @@ public final class SonicCdGameModule implements GameModule {
             new com.openggf.game.internal.UntrackedEntriesSpawnWhileLive() { };
     private static final com.openggf.game.internal.FailedSpawnUnmarksEntry FAILED_SPAWN_UNMARKS =
             new com.openggf.game.internal.FailedSpawnUnmarksEntry() { };
+    private static final com.openggf.game.internal.RingExtraLifeReplacesPickupSound RING_EXTRA_LIFE_REPLACES_PICKUP =
+            new com.openggf.game.internal.RingExtraLifeReplacesPickupSound() { };
     private static final com.openggf.game.internal.LostRingObjectId LOST_RING_ID = () -> 0x11;
     private static final com.openggf.game.internal.LostRingSpillAtOwnerTurn SPILL_AT_OWNER_TURN =
             new com.openggf.game.internal.LostRingSpillAtOwnerTurn() { };
@@ -78,43 +80,41 @@ public final class SonicCdGameModule implements GameModule {
     private final com.openggf.game.soniccd.objects.common.CdFixedObjects fixedObjects =
             new com.openggf.game.soniccd.objects.common.CdFixedObjects();
     private final SonicCdZoneRegistry zoneRegistry = new SonicCdZoneRegistry();
+    /** Non-level programs: the IPX flow owner and its title, stage-select and not-hosted hosts. */
+    private final com.openggf.game.soniccd.program.CdSceneCoordinator scenes =
+            new com.openggf.game.soniccd.program.CdSceneCoordinator(this::disc);
     /** The campaign time owner (time-travel lane): period, warp, generator/projector, good future. */
     private final com.openggf.game.soniccd.timetravel.CdTimeTravel timeTravel =
-            new com.openggf.game.soniccd.timetravel.CdTimeTravel(this::timeAttackMode);
+            new com.openggf.game.soniccd.timetravel.CdTimeTravel(scenes::timeAttackMode, scenes::timeStones);
     /** {@code switchFlags} (Level/_Definitions.inc:336): written by switches, read by doors, fans and chains. */
     private final com.openggf.game.soniccd.objects.shared.SharedSwitchFlags switchFlags =
             new com.openggf.game.soniccd.objects.shared.SharedSwitchFlags();
     private final CdLevelEventProvider levelEvents = new CdLevelEventProvider(() -> timeTravel);
+    private final CdLevelPause levelPause = new CdLevelPause();
     /** {@code levelVIntCounter} at stage start: cleared by every load, base 0 unless a replay seeds it. */
     private final CdLevelVIntCounter levelVIntCounter = new CdLevelVIntCounter();
     /** The frame a stage load runs in: it already ran iteration 1, so the loop runs no other that frame. */
     private final CdLoadFrame loadFrame = new CdLoadFrame();
+    private final CdPlayerStage playerStage = new CdPlayerStage(() -> this.game);
     private final LevelInitProfile levelInitProfile = new SonicCdLevelInitProfile(levelEvents, timeTravel, switchFlags,
-            () -> this.playerStage.resetForLevel(), levelVIntCounter, loadFrame, this::disc,
+            playerStage, levelVIntCounter, loadFrame, this::disc,
             payload -> this.audioProfile.subCpuAudio().loadStage(payload));
     private final ScrollHandlerProvider scrollHandlerProvider = new CdScrollHandlerProvider();
-    private final CdPlayerStage playerStage = new CdPlayerStage(() -> this.game);
     private final PhysicsProvider physicsProvider = new SonicCdPhysicsProvider(playerStage);
     private final com.openggf.game.soniccd.audio.SonicCdAudioProfile audioProfile =
             new com.openggf.game.soniccd.audio.SonicCdAudioProfile(() -> this.disc());
     private final ZoneFeatureProvider zoneFeatures = new com.openggf.game.soniccd.zones.CdZoneFeatures(playerStage);
     private ObjectRegistry objectRegistry;
     private SonicCdGame game;
-    private final com.openggf.game.WaterDataProvider zoneWater =
+    private final com.openggf.game.soniccd.zones.CdZoneWater zoneWater =
             new com.openggf.game.soniccd.zones.CdZoneWater(() -> this.game == null ? null : this.game.currentImage());
     private final com.openggf.game.soniccd.objects.art.CdObjectArtProvider objectArt =
             new com.openggf.game.soniccd.objects.art.CdObjectArtProvider(
                     () -> game == null ? null : game.currentLevel(), () -> game == null ? null : game.currentImage(),
                     this::disc);
 
-    /** Non-level programs: the IPX flow owner and its title, stage-select and not-hosted hosts. */
-    private final com.openggf.game.soniccd.program.CdSceneCoordinator scenes =
-            new com.openggf.game.soniccd.program.CdSceneCoordinator(this::disc);
     {
         scenes.bindTimeTravel(() -> timeTravel);
-    }
-    private boolean timeAttackMode() {
-        return scenes.timeAttackMode();
     }
 
     /** The death's game-over branch (lane FLOW2). */
@@ -251,6 +251,8 @@ public final class SonicCdGameModule implements GameModule {
 
     @Override
     public <T> T getGameService(Class<T> type) {
+        if (type == com.openggf.game.LevelInputOverlay.class) return type.cast(levelPause.recordedInputOverlay);
+        if (type == com.openggf.game.internal.NativeLevelInputOwner.class) return type.cast(levelPause);
         if (type == com.openggf.game.internal.HostAnimationSource.class) return type.cast(
                 new com.openggf.game.internal.HostAnimationSource() {
                     public java.util.Map<Integer, com.openggf.game.AnimationFamilies.Binding> families() {
@@ -309,6 +311,10 @@ public final class SonicCdGameModule implements GameModule {
         if (type == com.openggf.game.internal.UntrackedEntriesSpawnWhileLive.class) return type.cast(UNTRACKED_COPIES);
         // A spawn that finds no free slot clears its entry's loaded bit again (.SpawnFailed, Object Spawner.asm:144-151).
         if (type == com.openggf.game.internal.FailedSpawnUnmarksEntry.class) return type.cast(FAILED_SPAWN_UNMARKS);
+        // CollectRing (Level/_Objects/Ring/Main.asm:290-312) jumps to SubCPUCmd for
+        // SCMD_YESSFX on .GainLife. Only .PlaySound submits FM_RING.
+        if (type == com.openggf.game.internal.RingExtraLifeReplacesPickupSound.class)
+            return type.cast(RING_EXTRA_LIFE_REPLACES_PICKUP);
         // Ring loss writes ID $11 into each spilled ring's slot (Level/_Objects/Ring/Main.asm:353; HurtPlayer,
         // Level/Palmtree Panic/Player Object Collision.asm:236), not Sonic 1's $37.
         if (type == com.openggf.game.internal.LostRingObjectId.class) return type.cast(LOST_RING_ID);
@@ -333,6 +339,7 @@ public final class SonicCdGameModule implements GameModule {
         if (type == com.openggf.game.soniccd.objects.shared.SharedSwitchFlags.class) return type.cast(switchFlags);
         // The player's water state outside the player object (bubbles read the timer and the current flag).
         if (type == com.openggf.game.soniccd.player.CdPlayerWater.class) return type.cast(playerStage.water());
+        if (type == com.openggf.game.internal.LevelLifePolicy.class) return type.cast(CdLevelLifePolicy.INSTANCE);
         // AddPoints: cap and score extra life (HUD and Points/Main.asm:157-180).
         if (type == com.openggf.game.internal.ScoreAdditionPolicy.class) return type.cast(scenes.scorePolicy());
         // The load runs Level_MainLoop's first iteration, whose addq.w #1,levelFrames precedes its
@@ -384,12 +391,13 @@ public final class SonicCdGameModule implements GameModule {
 
     /**
      * Campaign time state, the sub-CPU audio command state, the program flow with its backup RAM and the
-     * level's switch flags, the player's water state and the stage's boss flags and stop word are captured by rewind.
+     * level's switch flags, player and Tidal Tempest water state, boss flags and stop word are captured by rewind.
      */
     @Override
     public java.util.List<com.openggf.game.rewind.RewindSnapshottable<?>> rewindAdapters() {
         return java.util.List.of(timeTravel, audioProfile.subCpuAudio().rewindAdapter(), scenes.rewindAdapter(),
-                switchFlags, playerStage.water(), playerStage.signalsRewindAdapter(), bossFlags, timeStop);
+                switchFlags, playerStage.water(), playerStage.signalsRewindAdapter(), bossFlags, timeStop,
+                zoneWater.tidalTempestRewindAdapter());
     }
 
     /** {@code ObjSonic_DeadChkGone}'s game-over object and restart timer (scddisasm/src/Level/_Objects/Sonic/Main.asm:2419-2444). */
