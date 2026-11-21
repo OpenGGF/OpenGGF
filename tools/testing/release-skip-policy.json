@@ -1015,6 +1015,13 @@
       "note": "Sonic CD disc and native captures"
     },
     {
+      "match": "com.openggf.game.soniccd.TestCczLeftEdgePicture#visibleSpringAndBlockSurviveTheNativeSpriteBudget",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCczLeftEdgePicture.java:33",
+      "allowed_when_absent": "soniccd_native",
+      "note": "Sonic CD USA disc and full-act R31A native movie and trace."
+    },
+    {
       "match": "com.openggf.game.soniccd.TestRoutesA3Pictures#objectSpritesMatchTheNativeFrames",
       "category": "optional-fixture",
       "evidence": "src/test/java/com/openggf/game/soniccd/TestRoutesA3Pictures.java:129",
