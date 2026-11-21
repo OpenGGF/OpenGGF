@@ -70,9 +70,8 @@ under the matching area heading; see the
   score and bonus digits and play the tally, final chime and special-stage warp cues.
   Placed and lost rings that award a life play only the voice jingle. Wacky Workbench's
   bouncy floor plays its cue when it sends Sonic into a roll. Both Wacky Workbench boss
-  defeat fades hold gameplay and change the palette over 22 V-INTs each.
-  Stage palette writes, including the boss's background flash, become visible
-  on the next V-INT as they do on the disc.
+  defeat fades hold gameplay for 22 V-INTs each and show the colors the disc
+  displays on each corresponding frame.
   The level HUD shows the same point total as the
   results screen. Wider views extend CD object draw/touch and lifetime
   windows, centre boss locks, title cards, results and game-over text, and fill the time tunnel

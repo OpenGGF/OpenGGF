@@ -71,15 +71,6 @@ public final class CdLevel extends AbstractLevel implements com.openggf.game.int
         }
     }
 
-    private final CdStagePalette stagePalette = new CdStagePalette(this);
-
-    public CdStagePalette stagePalette() { return stagePalette; }
-
-    @Override
-    public Palette.Color getBackdropColor() {
-        return stagePalette.backdrop(getBackdropPaletteLine());
-    }
-
     private final CdStagePayload payload;
     private final CdStageDemo demo;
     private final com.openggf.game.internal.NativeProjectSource projectSource;
@@ -465,7 +456,9 @@ public final class CdLevel extends AbstractLevel implements com.openggf.game.int
         int paletteBase = image.u16(table + 4);
         applyPaletteEntry(image, table, paletteBase, SONIC_PALETTE_ID);
         applyPaletteEntry(image, table, paletteBase, levelPaletteId);
-        if (graphics != null) stagePalette.publish(graphics);
+        if (graphics != null && graphics.isGlInitialized()) {
+            for (int i = 0; i < palettes.length; i++) graphics.cachePaletteTexture(palettes[i], i);
+        }
     }
 
     private void applyPaletteEntry(CdStageImage image, int table, int paletteBase, int id) {

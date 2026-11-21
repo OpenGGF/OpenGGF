@@ -1,6 +1,5 @@
 package com.openggf.game.soniccd.objects.boss.wwz;
 
-import com.openggf.game.soniccd.level.CdStagePalette;
 import com.openggf.game.soniccd.zones.wwz.WwzStageState;
 import com.openggf.camera.Camera;
 import com.openggf.game.PlayableEntity;
@@ -644,7 +643,7 @@ public final class WwzBossEggman extends WwzBossPiece
                 bytes[c * 2] = (byte) (words[line * 16 + c] >> 8);
                 bytes[c * 2 + 1] = (byte) words[line * 16 + c];
             }
-            CdStagePalette.writeLine(services(), line, bytes);
+            services().updatePalette(line, bytes);
         }
     }
 
@@ -693,8 +692,9 @@ public final class WwzBossEggman extends WwzBossPiece
     }
 
     /**
-     * VBlankPaletteFade (common/main.asm:951-962) publishes the palette via VBlankCommon
-     * (common/main.asm:1014-1025). The loop computes its next colors after VSync returns.
+     * VBlankPaletteFade (common/main.asm:951-962) publishes the prepared palette via VBlankCommon
+     * (common/main.asm:1014-1025). FadeToWhite (common/palette_fade.asm:285-295) then prepares the
+     * next picture's colors. The engine draws that prepared picture after stepping, as on ordinary rows.
      */
     @Override
     public void advancePaletteWait() {

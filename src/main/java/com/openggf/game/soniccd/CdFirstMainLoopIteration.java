@@ -1,9 +1,6 @@
 package com.openggf.game.soniccd;
 
 import com.openggf.game.GameServices;
-import com.openggf.game.session.SessionManager;
-import com.openggf.game.soniccd.level.CdLevel;
-import com.openggf.game.soniccd.level.CdStagePalette;
 
 /**
  * The one owner of what the level load runs in place of the ROM's level start and first main-loop
@@ -34,9 +31,10 @@ import com.openggf.game.soniccd.level.CdStagePalette;
  * {@code AnimateStageGfx} twice. The engine's frame runs the zone scroll, the tile animator and the palette
  * cycle once each after the object pass. Its tile update stands for the next frame's {@code VInt_Level}
  * call: that call reads only the animator's own timers (and the boss and time-stop flags the previous
- * iteration left) and runs before the next iteration's objects. The load therefore also runs
- * iteration 2's tile update: three tile updates in all. The displayed palette still comes
- * from iteration 1's V-INT, before its object pass and palette cycle.
+ * iteration left), runs before the next iteration's objects, and is on screen with this iteration's sprite
+ * table and palette (both DMA'd by the same V-INT, Level/Main.asm:829-831). The load therefore also runs
+ * iteration 2's V-INT call: three tile updates in all, so that iteration n's objects read
+ * {@code AnimateStageGfx} after n+1 calls, as native's do.
  *
  * <p>{@code UpdateGlobalAnims} keeps no engine state (the ring frame is derived from the object pass counter,
  * {@code CdGlobalAnimations}); {@code UpdateSectionArt} and the PLC queue are owned by the objects that
@@ -59,13 +57,6 @@ final class CdFirstMainLoopIteration {
         // (r4/main.asm:1078-1082), so native water_angle is 2 on row 0 of every Tidal Tempest stage (LAG lane
         // probe). A no-op without water; the engine's frame moves it once per later V-INT.
         level.advanceDynamicWaterLevel();
-        var stagePalette = level.getCurrentLevel() instanceof CdLevel cd ? cd.stagePalette() : null;
-        var graphics = GameServices.graphics();
-        if (stagePalette != null) stagePalette.publish(graphics);
-        var mode = SessionManager.getCurrentGameplayMode();
-        if (mode != null && mode.getRewindRegistry() != null) {
-            CdStagePalette.bindRewind(mode.getRewindRegistry(), graphics, stagePalette);
-        }
         var player = camera.getFocusedSprite();
         // VInt_Level's UpdateHUD ticks the clock unless the title card's ctrlLocked holds it
         // (Level/Main.asm:847; HUD and Points/Main.asm:255-267): a warp arrival or a checkpoint restart has no

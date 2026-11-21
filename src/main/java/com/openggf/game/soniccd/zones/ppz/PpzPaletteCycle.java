@@ -100,7 +100,7 @@ final class PpzPaletteCycle implements AnimatedPaletteManager {
         for (int i = 0; i < scripts.size(); i++) cycleColor(slots.get(i)[0], scripts.get(i));
         Palette[] palettes = new Palette[level.getPaletteCount()];
         for (int i = 0; i < palettes.length; i++) palettes[i] = level.getPalette(i);
-        registry.resolveInto(palettes, null, null, null);
+        registry.resolveInto(palettes, null, GameServices.graphics(), null);
     }
 
     /** CycleColor (Level/Palette Cycle Script.asm:15-47). */

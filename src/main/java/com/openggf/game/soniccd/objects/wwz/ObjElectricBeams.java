@@ -1,6 +1,8 @@
 package com.openggf.game.soniccd.objects.wwz;
 
+import com.openggf.game.GameServices;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.palette.PaletteWriteSupport;
 import com.openggf.game.soniccd.zones.wwz.WwzPlayerProfile;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectVisualFacing;
@@ -19,6 +21,8 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
  */
 public final class ObjElectricBeams extends WwzObject implements ObjectVisualFacing.NonDirectional {
     private static final int MAIN = 2, FLASH = 4;
+    private static final String PALETTE_OWNER = "scd.wwz.beams";
+    private static final int PALETTE_PRIORITY = 110;
     /** {@code ObjElectricBeams_ModeColors}: 0, 2, 4 (:206-210) added to {@code palette+$64}, which is line 3 colour 2. */
     private static final int BEAM_COLOR_LINE = 3, BEAM_COLOR_BASE = 2;
     /** {@code palette+$40} (line 2 colour 0) in the past, {@code palette+$7A} (line 3 colour 13) otherwise. */
@@ -186,12 +190,15 @@ public final class ObjElectricBeams extends WwzObject implements ObjectVisualFac
         else writeColor(BACKGROUND_LINE, BACKGROUND_COLOR, word);
     }
 
-    /** The object's flash changes the working stage palette immediately. */
+    /**
+     * {@code move.w d0,(a2)+}: the palette in RAM is written at once, not queued with the zone's palette cycle (which
+     * resolves its own claims at its own point of the frame), so the colours are in place for this frame and a queued
+     * write cannot outlive the stage.
+     */
     private void writeColor(int line, int index, int segaWord) {
         var levels = services().levelManager();
-        if (levels != null && levels.getCurrentLevel() != null) {
-            levels.getCurrentLevel().getPalette(line).getColor(index).fromSegaFormat(segaWord);
-        }
+        PaletteWriteSupport.applyColor(null, levels == null ? null : levels.getCurrentLevel(), GameServices.graphics(),
+                PALETTE_OWNER, PALETTE_PRIORITY, line, index, segaWord);
     }
 
     @Override protected boolean despawnsByCheckObjDespawn() { return true; }

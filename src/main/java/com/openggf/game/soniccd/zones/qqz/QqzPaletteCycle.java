@@ -87,7 +87,7 @@ final class QqzPaletteCycle implements AnimatedPaletteManager {
         }
         Palette[] palettes = new Palette[level.getPaletteCount()];
         for (int i = 0; i < palettes.length; i++) palettes[i] = level.getPalette(i);
-        registry.resolveInto(palettes, null, null, null);
+        registry.resolveInto(palettes, null, GameServices.graphics(), null);
     }
 
     /** The table interpreter, palette_cycle_a.asm:27-53. Header: colour index, frames, colours per frame, reload. */

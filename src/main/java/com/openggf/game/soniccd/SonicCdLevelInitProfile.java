@@ -1,11 +1,9 @@
 package com.openggf.game.soniccd;
 
 import com.openggf.game.AbstractLevelInitProfile;
-import com.openggf.game.GameServices;
 import com.openggf.game.InitStep;
 import com.openggf.game.LevelLoadContext;
 import com.openggf.game.LevelLoadRuntimeAccess;
-import com.openggf.game.soniccd.level.CdLevel;
 import com.openggf.game.soniccd.player.CdPlayerStage;
 import com.openggf.sprites.playable.PlayableSpriteInternalAccess;
 
@@ -49,14 +47,6 @@ final class SonicCdLevelInitProfile extends AbstractLevelInitProfile
         this.events = events;
         this.timeTravel = timeTravel;
         this.switchFlags = switchFlags;
-    }
-
-    @Override
-    public void serviceLevelLoadVBlank() {
-        var levels = GameServices.levelOrNull();
-        if (levels != null && levels.getCurrentLevel() instanceof CdLevel cd) {
-            cd.stagePalette().publish(GameServices.graphics());
-        }
     }
 
     @Override

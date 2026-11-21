@@ -1,7 +1,6 @@
 package com.openggf.game.soniccd.objects.boss;
 
 import com.openggf.game.soniccd.level.CdStageImage;
-import com.openggf.game.soniccd.level.CdStagePalette;
 import com.openggf.game.soniccd.objects.art.CdObjectArtProvider;
 import com.openggf.game.soniccd.objects.common.CdExplosion;
 import com.openggf.game.soniccd.objects.common.CdObject;
@@ -196,7 +195,7 @@ public abstract class CdBossPart extends CdObject
                 int at = line * 32 + i - destination;
                 if (at >= 0 && at < bytes) lineBytes[i] = data[at];
             }
-            CdStagePalette.writeLine(services(), line, lineBytes);
+            services().updatePalette(line, lineBytes);
         }
     }
 

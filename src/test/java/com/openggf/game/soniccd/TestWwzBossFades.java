@@ -47,6 +47,7 @@ class TestWwzBossFades {
         for (String line : lines.subList(1, lines.size())) {
             String[] columns = line.split(",");
             int row = Integer.parseInt(columns[0]) - offset - 1;
+            assertEquals("0", columns[1], "adjacent displayed frames at row " + row);
             int[] words = new int[64];
             assertEquals(words.length * 4, columns[6].length());
             for (int i = 0; i < words.length; i++) {
@@ -78,16 +79,18 @@ class TestWwzBossFades {
                         public void after(HeadlessTestRunner runner, AbstractPlayableSprite sonic) {
                             int fadeRows = 0;
                             for (int row = firstRow; row <= lastRow; row++) {
-                                runner.stepFrameFromRecording();
+                                // The probe samples CRAM after FrameAdvance. Its V-INT
+                                // displays what the engine has prepared through row - 1.
                                 Sample sample = observations.get(row);
-                                assertEquals(sample.levelFrame(), GameServices.level().getFrameCounter(),
-                                        "level frame at row " + row);
                                 if (!Arrays.equals(sample.colors(), displayedWords())) mismatches.add(row);
                                 var level = GameServices.level().getCurrentLevel();
                                 int backdrop = PaletteWriteSupport.segaWordFromColor(level.getBackdropColor());
                                 if (backdrop != sample.colors()[level.getBackdropPaletteLine() * 16]) {
                                     backdropMismatches.add(row);
                                 }
+                                runner.stepFrameFromRecording();
+                                assertEquals(sample.levelFrame(), GameServices.level().getFrameCounter(),
+                                        "level frame at row " + row);
                                 Sample previous = observations.get(row - 1);
                                 if (sample.vblankRoutine() == 0x12
                                         || previous != null && previous.vblankRoutine() == 0x12) fadeRows++;

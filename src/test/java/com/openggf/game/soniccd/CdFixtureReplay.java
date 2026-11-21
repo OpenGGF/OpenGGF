@@ -100,15 +100,6 @@ final class CdFixtureReplay {
 
     private CdFixtureReplay() { }
 
-    /**
-     * A native picture fixture renders the object and scroll state the preceding
-     * level iteration prepared. Publish that iteration's palette as the next
-     * VBlank does before drawing the picture.
-     */
-    static void publishPaletteForPreparedPicture() {
-        GameServices.level().getGameModule().getLevelInitProfile().serviceLevelLoadVBlank();
-    }
-
     /** Optional observers: each replayed row, and the live session after the last row. */
     interface Hooks {
         Hooks NONE = new Hooks() { };

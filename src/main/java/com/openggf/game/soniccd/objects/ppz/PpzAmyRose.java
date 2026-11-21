@@ -1,7 +1,6 @@
 package com.openggf.game.soniccd.objects.ppz;
 
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.soniccd.level.CdStagePalette;
 import com.openggf.game.soniccd.objects.common.CdObject;
 import com.openggf.game.soniccd.player.CdSonicAnimation;
 import com.openggf.game.soniccd.timetravel.CdTimeTravel;
@@ -343,7 +342,7 @@ public final class PpzAmyRose extends CdObject implements ObjectVisualFacing.Sou
         if (source < 0) return;
         byte[] palette = new byte[32];
         for (int i = 0; i < palette.length; i++) palette[i] = (byte) art.image().u8(source + i);
-        CdStagePalette.writeLine(services(), 1, palette);
+        services().updatePalette(1, palette);
     }
 
     // DespawnObjTimeWarp (Level/Object Spawner.asm:442-445).

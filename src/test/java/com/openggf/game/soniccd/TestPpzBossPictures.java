@@ -194,7 +194,6 @@ class TestPpzBossPictures {
         graphics.setDisplayColorProfile(DisplayColorProfile.RAW_RGB);
         graphics.setDisplayColorExpansion(DisplayColorExpansion.FULL);
         var level = GameServices.level();
-        CdFixtureReplay.publishPaletteForPreparedPicture();
         level.setClearColor();
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         level.drawWithRenderOptions(GameServices.sprites(), options);

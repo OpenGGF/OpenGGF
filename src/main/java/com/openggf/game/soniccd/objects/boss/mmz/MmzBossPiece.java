@@ -3,7 +3,6 @@ package com.openggf.game.soniccd.objects.boss.mmz;
 import com.openggf.game.palette.PaletteWriteSupport;
 import com.openggf.game.soniccd.CdStagePayload;
 import com.openggf.game.soniccd.level.CdStageImage;
-import com.openggf.game.soniccd.level.CdStagePalette;
 import com.openggf.game.soniccd.objects.boss.CdBossPart;
 import com.openggf.level.objects.ObjectSpawn;
 
@@ -132,7 +131,7 @@ abstract class MmzBossPiece extends CdBossPart {
                 bytes[c * 2] = (byte) (word >> 8);
                 bytes[c * 2 + 1] = (byte) word;
             }
-            CdStagePalette.writeLine(services(), line, bytes);
+            services().updatePalette(line, bytes);
         }
     }
 

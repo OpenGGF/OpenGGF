@@ -2,7 +2,6 @@ package com.openggf.game.soniccd.objects.ccz;
 
 import com.openggf.game.soniccd.level.CdLevel;
 import com.openggf.game.soniccd.level.CdStageCatalogue;
-import com.openggf.game.soniccd.level.CdStagePalette;
 import com.openggf.game.soniccd.objects.art.CdObjectArtProvider;
 import com.openggf.level.objects.ObjectServices;
 
@@ -30,7 +29,7 @@ public final class CczIntroState {
         if (table < 0 || art == null) return;
         byte[] bytes = new byte[32];
         for (int i = 0; i < 32; i++) bytes[i] = (byte) art.image().u8(table + i);
-        CdStagePalette.writeLine(services, 1, bytes);
+        services.updatePalette(1, bytes);
     }
 
     private CczIntroState() { }
@@ -48,6 +47,6 @@ public final class CczIntroState {
         amyCaptured = true;
         // PaletteTable (Level/Collision Chaos/Palette Data (Act 1 Present).asm:24-26) points to StagePalette.
         int table = CdStageCatalogue.entry(level.payload()).paletteTable();
-        CdStagePalette.writeLine(services, 1, art.image().paletteEntryFirstLine(table, 4));
+        services.updatePalette(1, art.image().paletteEntryFirstLine(table, 4));
     }
 }
