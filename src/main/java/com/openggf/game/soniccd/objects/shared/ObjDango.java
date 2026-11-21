@@ -2,8 +2,12 @@ package com.openggf.game.soniccd.objects.shared;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.soniccd.objects.common.CdAnimator;
+import com.openggf.game.soniccd.player.CdSonicAnimation;
+import com.openggf.game.soniccd.timetravel.CdTimeTravel;
 import com.openggf.level.objects.CameraRelativeDraw;
+import com.openggf.level.objects.EnemyDefeatBounce;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.TouchCategory;
 import com.openggf.level.objects.TouchResponseListener;
 import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseResult;
@@ -15,8 +19,8 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
  * Dango, the armadillo badnik (object $2A in Stardust Speedway's indexes, {@code DangoObject}, objects/r7/dango.asm:3-281; Metallic
  * Madness's act 2 assembles the same body with one tile word, objects/r8/dango.asm). It drops to the floor (routine 2), walks along it at $6000 a frame ($1000
  * for subtype 1) turning at walls and ledges, and when the player is within $80 pixels on both axes and in front of it
- * rolls up (routines 8 to $10): collision type $ED, a bumper that throws the player away ($F900 times the cosine and sine of the angle
- * from the player) and goes into a fast roll of its own, then unrolls and walks on. Collision type $2C (walking) is an enemy.
+ * rolls up (routines 8 to $10). While curled ($ED), Dango bumps a rolling player away and goes into a fast roll. Other
+ * players take the same enemy response as when Dango walks ($2C).
  */
 @CameraRelativeDraw(CameraRelativeDraw.Use.ART_SELECTION)
 public final class ObjDango extends SharedBadnik implements TouchResponseListener {
@@ -27,7 +31,7 @@ public final class ObjDango extends SharedBadnik implements TouchResponseListene
 
     private int speed;                    // obj.var_2a (a long: x velocity, 16.16)
     private int height = HEIGHT;
-    private boolean touched;              // obj.collide_status
+    private int hitCount;                 // obj.collide_status
 
     public ObjDango(ObjectSpawn spawn) {
         super(spawn, "Dango");
@@ -141,7 +145,7 @@ public final class ObjDango extends SharedBadnik implements TouchResponseListene
 
     /** DangoObject_0_Routine12 (:153-168) and the rolled-ball move after a bump. */
     private void rolled(AbstractPlayableSprite player) {
-        if (touched && player != null) {
+        if (hitCount != 0 && player != null) {
             bump(player);
             return;
         }
@@ -165,7 +169,7 @@ public final class ObjDango extends SharedBadnik implements TouchResponseListene
         player.setRollingJump(false);                                             // bclr #4,obj.flags(a1)
         player.setPushing(false);                                                 // bclr #5,obj.flags(a1)
         player.setJumping(false);                                                 // clr.b obj.var_3c(a1)
-        touched = false;
+        hitCount = 0;
         speed = (-(short) velocityX) << 8;                                         // neg.w d1; ext.l d1; asl.l #8,d1
         animator.anim = 4;
         routine = 0x16;
@@ -192,9 +196,64 @@ public final class ObjDango extends SharedBadnik implements TouchResponseListene
         return false;
     }
 
+    /** loc_20703E (r7/player_object_collide.asm:398-401) and loc_206CCC (r8/player_object_collide.asm:449-452). */
     @Override
     public void onTouchResponse(PlayableEntity player, TouchResponseResult result, int frameCounter) {
-        touched = true;                                                           // addq.b #1,oColStatus(a0)
+        if (result.category() != TouchCategory.SPECIAL || !(player instanceof AbstractPlayableSprite sprite)) {
+            return;
+        }
+        if (sprite.getRolling()) {
+            hitCount = (hitCount + 1) & 0xFF;
+            return;
+        }
+        touchAsEnemy(sprite, result, frameCounter);
+    }
+
+    /** sub_206D70 (r7/player_object_collide.asm:125-131) and sub_2069E8 (r8/player_object_collide.asm:161-167). */
+    private void touchAsEnemy(AbstractPlayableSprite player, TouchResponseResult result, int frameCounter) {
+        CdTimeTravel timeTravel = CdTimeTravel.of(services().gameModule());
+        if ((timeTravel != null && timeTravel.starsActive()) || player.getInvincibleFrames() > 0
+                || player.getAnimationId() == CdSonicAnimation.ROLL.id()) {
+            boolean hadHits = hitCount != 0;
+            onPlayerAttack(player, result);
+            if (hadHits) {
+                player.setXSpeed((short) ((short) -player.getXSpeed() >> 1));
+                player.setYSpeed((short) ((short) -player.getYSpeed() >> 1));
+            } else {
+                EnemyDefeatBounce.apply(player, y, services().worldSession());
+            }
+            return;
+        }
+
+        // sub_206E3A (r7/player_object_collide.asm:208-235) and sub_206AB2 (r8/player_object_collide.asm:244-282).
+        if (player.getInvulnerable()) return;
+        boolean hadRings = player.getRingCount() > 0;
+        if (hadRings && !player.hasShield() && !player.suppressesLostRingSpawnOnHurt()) {
+            services().spawnLostRingsAfterCurrentFrame(player, frameCounter - 1);
+        }
+        player.applyHurtOrDeath(x, false, hadRings);
+    }
+
+    /** loc_206950 (r8/player_object_collide.asm:85-116) gates $40 touches by layer. Dango uses $ED and $2C. */
+    @Override
+    public boolean onPlayerLayerForTouch() {
+        return true;
+    }
+
+    @Override
+    public int getCollisionProperty() {
+        return hitCount;
+    }
+
+    @Override
+    public void onPlayerAttack(PlayableEntity player, TouchResponseResult result) {
+        // loc_206D8A (r7/player_object_collide.asm:133-146) and loc_206A02 (r8/player_object_collide.asm:169-182).
+        if (hitCount != 0) {
+            colType = 0;
+            hitCount--;
+        } else {
+            super.onPlayerAttack(player, result);
+        }
     }
 
     @Override

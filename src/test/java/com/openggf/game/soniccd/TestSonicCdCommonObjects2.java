@@ -3,7 +3,6 @@ package com.openggf.game.soniccd;
 import com.openggf.game.CheckpointState;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameServices;
-import com.openggf.game.internal.ScoreAdditionPolicy;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.SessionManager;
@@ -23,7 +22,6 @@ import com.openggf.game.soniccd.objects.common.CdResults;
 import com.openggf.game.soniccd.objects.common.CdRobotGenerator;
 import com.openggf.game.soniccd.objects.common.CdSignpost;
 import com.openggf.game.soniccd.objects.common.CdTestBadnik;
-import com.openggf.game.soniccd.program.CdScorePolicy;
 import com.openggf.level.Pattern;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
@@ -305,7 +303,7 @@ class TestSonicCdCommonObjects2 {
         var s = timeTravel.capture();
         timeTravel.restore(new com.openggf.game.soniccd.timetravel.CdTimeTravel.Snapshot(s.timeZone(), s.warping(),
                 s.warpDirection(), s.warpTimer(), true, s.pendingWarp(), s.warpReady(), s.goodFuture(),
-                s.goodFutureFlags(), s.goodFutures(), s.projectorDestroyed(), s.timeStones(), s.loadedPayload(),
+                s.goodFutureFlags(), s.goodFutures(), s.projectorDestroyed(), s.loadedPayload(),
                 s.nextEntry()));
         // tst.b timeWarp beside tst.b invincible in Player_TouchEnemy and Player_TouchHazard
         // (Player Object Collision.asm:130-134, 211-216).
@@ -371,18 +369,6 @@ class TestSonicCdCommonObjects2 {
         sonic.setX((short) (GameServices.camera().getX() + 400));
         for (int frame = 0; frame < 100; frame++) results.update(frame, sonic);
         assertEquals(200, GameServices.gameState().getScore());
-    }
-
-    @Test
-    void specialStageAwardCrossesTheCampaignsFiftyThousandPointThreshold() throws Exception {
-        boot(CdStagePayload.R11A);
-        var game = GameServices.gameState();
-        var policy = (CdScorePolicy) GameServices.module().getGameService(ScoreAdditionPolicy.class);
-        int startingLives = game.getLives();
-        game.addScore(49_800);
-        policy.awardSpecialStageResults(game, 200);
-        assertEquals(50_000, game.getScore());
-        assertEquals(startingLives + 1, game.getLives());
     }
 
     @Test

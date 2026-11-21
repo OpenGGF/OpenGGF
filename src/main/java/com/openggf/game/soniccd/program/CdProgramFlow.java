@@ -52,6 +52,7 @@ public final class CdProgramFlow {
     private int titleFlags;
     private int timeAttackUnlock;
     private int curSpecStage;
+    /** Campaign byte shared by IPX and stage programs (Main CPU Variables.inc:38). */
     private int timeStones;
     private int demoId;
     private int unkBuRAMVar;       // unkBuRAMVar (Main CPU Variables.inc:31), kept through the save
@@ -436,12 +437,13 @@ public final class CdProgramFlow {
     public int act() { return act; }
     public Route route() { return route; }
     public int demoId() { return demoId; }
-    /** Time Attack variables and the running route, for gameplay rewind (lane TA). */
+    /** Time Attack and campaign variables captured for gameplay rewind. */
     public record TimeAttackState(boolean mode, int time, int level, int lives, Route route, int zone, int act,
-                                  int timeZone, boolean goodFuture, int titleFlags) { }
+                                  int timeZone, boolean goodFuture, int titleFlags, int timeStones) { }
 
     public TimeAttackState timeAttackState() {
-        return new TimeAttackState(timeAttackMode, timeAttackTime, timeAttackLevel, lives, route, zone, act, timeZone, goodFuture, titleFlags);
+        return new TimeAttackState(timeAttackMode, timeAttackTime, timeAttackLevel, lives, route, zone, act,
+                timeZone, goodFuture, titleFlags, timeStones);
     }
 
     public void restoreTimeAttackState(TimeAttackState s) {
@@ -455,6 +457,7 @@ public final class CdProgramFlow {
         timeZone = s.timeZone();
         goodFuture = s.goodFuture();
         titleFlags = s.titleFlags();
+        timeStones = s.timeStones();
     }
 
     public boolean timeAttackMode() { return timeAttackMode; }

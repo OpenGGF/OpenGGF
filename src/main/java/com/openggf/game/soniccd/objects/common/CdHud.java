@@ -9,6 +9,8 @@ import com.openggf.level.Pattern;
 import com.openggf.level.objects.FixedRuntimeObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectVisualFacing;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.Arrays;
@@ -27,7 +29,8 @@ import java.util.List;
  * Sonic 1's single HUD sprite. The debug position tracker (frame 2) is not hosted.
  */
 @com.openggf.level.objects.CameraRelativeDraw(com.openggf.level.objects.CameraRelativeDraw.Use.SCREEN_POSITION)
-public final class CdHud extends CdObject implements FixedRuntimeObjectInstance, ObjectVisualFacing.NonDirectional {
+public final class CdHud extends CdObject implements FixedRuntimeObjectInstance, ObjectVisualFacing.NonDirectional,
+        RewindRecreatable {
     public enum Kind {
         /** Frame 0 at (16+128, 8+128): SCORE, TIME and the ring digits (HUD and Points/Main.asm:91-92,134). */
         SCORE_TIME(2, 0, 8),
@@ -62,16 +65,29 @@ public final class CdHud extends CdObject implements FixedRuntimeObjectInstance,
     private static final int DIGIT_BYTES = 0x40;
 
     private final Kind kind;
-    private int lastScore = -1;
-    private int lastRings = -1;
-    private long lastTime = -1;
-    private int lastLives = -1;
+    private transient int lastScore = -1;
+    private transient int lastRings = -1;
+    private transient long lastTime = -1;
+    private transient int lastLives = -1;
 
     public CdHud(Kind kind) {
         super(new ObjectSpawn(0, 0, 0x1C, kind == Kind.LIVES ? 1 : 0, 0, false, 0), "HUD");
         this.kind = kind;
         this.tileWord = CdObjectArtProvider.HUD_TILE;
         this.priority = 0;
+    }
+
+    private CdHud() {
+        this(Kind.SCORE_TIME);
+    }
+
+    @Override
+    public CdHud recreateForRewind(RewindRecreateContext context) {
+        int slot = context.state().slotIndex();
+        for (Kind candidate : Kind.values()) {
+            if (candidate.slot() == slot) return new CdHud(candidate);
+        }
+        throw new IllegalStateException("No Sonic CD HUD object in slot " + slot);
     }
 
     public Kind kind() { return kind; }
