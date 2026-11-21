@@ -71,7 +71,7 @@ def repository_file(root, relative):
 
 def selected_gates(catalogue, games):
     core.require(games and len(games) == len(set(games)) and set(games) <= core.ROMS.keys(),
-                 'games must be unique members of s1,s2,s3k')
+                 'games must be unique members of ' + ','.join(core.ROMS))
     gates = []
     for game in games:
         candidates = [o for o in catalogue.obligations if o.game == game and 'native_trace' in o.definition]
@@ -352,7 +352,7 @@ def measure(root, games, rom_paths, environment):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--root', type=Path, default=core.ROOT)
-    parser.add_argument('--games', default='s1,s2,s3k')
+    parser.add_argument('--games', default=','.join(core.ROMS))
     for game in core.ROMS:
         parser.add_argument('--' + game + '-rom', type=Path)
     parser.add_argument('--format', choices=('json', 'markdown'), default='markdown')

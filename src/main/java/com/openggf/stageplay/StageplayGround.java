@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.*;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.openggf.catalog.StockGameCatalog;
 import com.openggf.stageplay.route.StageplayRouteFootprint;
 import java.io.IOException;
 import java.util.*;
@@ -26,7 +27,7 @@ public final class StageplayGround {
     public sealed interface Performer permits Player, Visual {}
     public record Player(String game, String character, int path) implements Performer {
         public Player {
-            if (!Set.of("s1", "s2", "s3k", "scd").contains(game) || character == null || character.isBlank()
+            if (!StockGameCatalog.isStockCode(game) || character == null || character.isBlank()
                     || path < 0 || path > 1) throw new IllegalArgumentException("Invalid native player profile");
         }
     }

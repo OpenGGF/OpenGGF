@@ -2,6 +2,7 @@ package com.openggf.tools;
 
 import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
+import com.openggf.catalog.StockGameCatalog;
 import com.openggf.level.LevelData;
 import com.openggf.level.objects.ObjectSpawn;
 
@@ -248,6 +249,10 @@ public class ObjectDiscoveryTool {
             "s3k", new Sonic3kObjectProfile()
     );
 
+    private static List<String> selectedGamesForProfiles() {
+        return StockGameCatalog.cartridgeCodes().stream().filter(PROFILES::containsKey).toList();
+    }
+
     public static void main(String[] args) {
         // Parse --game argument
         List<String> selectedGames = new ArrayList<>();
@@ -266,14 +271,14 @@ public class ObjectDiscoveryTool {
 
         // Default: run all available games
         if (selectedGames.isEmpty()) {
-            selectedGames.addAll(List.of("s1", "s2", "s3k"));
+            selectedGames.addAll(selectedGamesForProfiles());
         }
 
         boolean anyRan = false;
         for (String gameId : selectedGames) {
             GameObjectProfile profile = PROFILES.get(gameId);
             if (profile == null) {
-                System.err.println("Unknown game: " + gameId + " (valid: s1, s2, s3k)");
+                System.err.println("Unknown game: " + gameId + " (valid: " + String.join(", ", selectedGamesForProfiles()) + ")");
                 continue;
             }
 

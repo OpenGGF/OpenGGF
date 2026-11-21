@@ -27,12 +27,12 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 MANIFEST_DIR = Path(__file__).resolve().with_name('hero-reels')
-GAMES = ('s1', 's2', 's3k')
 TRACE_ROOT = Path('src/test/resources/traces')
 CLASSPATH_FILE = Path('target/hero-reels-classpath.txt')
 ROM_PROPERTY_GAME = {'sonic1.rom.path': 's1', 'sonic2.rom.path': 's2', 's3k.rom.path': 's3k',
                      'kis2.rom.path': 'kis2'}
 ROM_CONFIG_KEY = {'s1': 'sonic1', 's2': 'sonic2', 's3k': 'sonic3k'}
+GAMES = tuple(ROM_CONFIG_KEY)
 SOURCES = ('trace', 'capture')
 # Kis2GameModule logs this when no lock-on dump serves the KIS2 logical ROM.
 TIER_ONE_LOG = 'Knuckles in Sonic 2 tier one'

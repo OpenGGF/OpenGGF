@@ -1,10 +1,14 @@
 package com.openggf.configuration;
 
+import com.openggf.catalog.StockGameCatalog;
+
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static com.openggf.configuration.ConfigKeyMeta.derived;
 import static com.openggf.configuration.ConfigKeyMeta.of;
@@ -32,7 +36,9 @@ public final class ConfigCatalog {
             "global", "NATIVE_4_3", "WIDE_16_10", "WIDE_16_9", "ULTRA_21_9", "SUPER_32_9");
     /** Per-game switches: {@code global} follows the all-games setting; on/off override it. */
     private static final Set<String> LAUNCH_TOGGLE_VALUES = Set.of("global", "on", "off");
-    private static final Set<String> LAUNCH_CROSS_GAME_VALUES = Set.of("off", "s1", "s2", "s3k");
+    private static final Set<String> LAUNCH_CROSS_GAME_VALUES =
+            Stream.concat(Stream.of("off"), StockGameCatalog.cartridgeCodes().stream())
+                    .collect(Collectors.toUnmodifiableSet());
     private static final Set<String> LAUNCH_MAIN_CHARACTER_VALUES = Set.of("sonic", "tails", "knuckles");
     private static final Set<String> LAUNCH_SIDEKICK_VALUES = Set.of("none", "sonic", "tails", "knuckles");
     private static final Set<String> CONTROLLER_ASSIGNMENT_VALUES = Set.of("auto", "none");
@@ -215,7 +221,7 @@ public final class ConfigCatalog {
         put(ROMS_PREFER_COMPOSITE, of("roms", "preferComposite", BOOL,
                 "Prefer separate Sonic 3 and Sonic & Knuckles images over a single lock-on dump"));
         put(DEFAULT_ROM, ofEnum("roms", "default", "Which game to load by default",
-                Set.of("s1", "s2", "s3k", "scd")));
+                Set.copyOf(StockGameCatalog.stockCodes())));
 
         // startup
         put(TITLE_SCREEN_ON_STARTUP, of("startup", "titleScreen", BOOL, "Show the title screen on startup"));
@@ -269,7 +275,7 @@ public final class ConfigCatalog {
         put(CROSS_GAME_FEATURES_ENABLED, of("crossGame", "enabled", BOOL,
                 "Enable cross-game feature donation (e.g. S2 sprites in S1)"));
         put(CROSS_GAME_SOURCE, ofEnum("crossGame", "source",
-                "Donor game for cross-game features", Set.of("s1", "s2", "s3k")));
+                "Donor game for cross-game features", Set.copyOf(StockGameCatalog.cartridgeCodes())));
 
         // launch (per-game master-title profile defaults)
         put(LAUNCH_CD_REWIND, ofEnum("launch.cd", "rewind",

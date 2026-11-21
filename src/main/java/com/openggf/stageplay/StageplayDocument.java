@@ -1,6 +1,7 @@
 package com.openggf.stageplay;
 
 import com.openggf.game.ModApi;
+import com.openggf.catalog.StockGameCatalog;
 
 import java.util.HashSet;
 import java.util.List;
@@ -883,7 +884,7 @@ public record StageplayDocument(int version, String name, int durationFrames, in
     public enum AudioKind { ROM_MUSIC, ROM_SFX, VOICE, MUSIC_STOP }
 
     private static String game(String value) {
-        require("s1".equals(value) || "s2".equals(value) || "s3k".equals(value) || "scd".equals(value), "Unknown gameId: " + value);
+        require(StockGameCatalog.isStockCode(value), "Unknown gameId: " + value);
         return value;
     }
 

@@ -76,11 +76,12 @@ def main(default_name=None, output=None):
     parser.add_argument("--skip-engine", action="store_true", help="reuse the existing engine build in target/")
     parser.add_argument("--engine", type=Path, help="matching absolute universal engine jar (artifact-only mode)")
     parser.add_argument("--sdk", type=Path, help="matching absolute SDK jar (artifact-only mode)")
-    for name in ("s1", "s2", "s3k"):
+    for name in portable.CARTRIDGE_INPUTS:
         parser.add_argument("--" + name, type=Path, help="explicit ROM path for an isolated development launch")
     args = parser.parse_args()
     build(args.name, run=args.run, skip_engine=args.skip_engine, engine=args.engine, sdk=args.sdk,
-          roms=dict(zip(("sonic1", "sonic2", "sonic3k"), (args.s1, args.s2, args.s3k))), output=output)
+          roms={key: getattr(args, game) for game, (key, _) in portable.CARTRIDGE_INPUTS.items()},
+          output=output)
 
 
 if __name__ == "__main__":

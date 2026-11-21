@@ -1,6 +1,7 @@
 package com.openggf.game;
 
 import com.openggf.architecture.CompositionRoot;
+import com.openggf.catalog.StockGameCatalog;
 import com.openggf.data.Rom;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic2.Sonic2GameModule;
@@ -73,11 +74,11 @@ public final class GameModuleRegistry {
 
     /** The media a stock game boots from; the launcher lists and boots each kind its own way. */
     public static MediaKind mediaKind(GameId gameId) {
-        return switch (java.util.Objects.requireNonNull(gameId, "gameId")) {
-            case S1, S2, S3K -> MediaKind.CARTRIDGE_ROM;
-            case SCD -> MediaKind.HOSTED_MEDIA;
-            case STANDALONE -> throw new IllegalArgumentException("Standalone has no stock media");
-        };
+        String code = java.util.Objects.requireNonNull(gameId, "gameId").code();
+        if (!StockGameCatalog.isStockCode(code)) {
+            throw new IllegalArgumentException("Standalone has no stock media");
+        }
+        return StockGameCatalog.isCartridgeCode(code) ? MediaKind.CARTRIDGE_ROM : MediaKind.HOSTED_MEDIA;
     }
 
     /** The stock games hosted from media other than a ROM, in {@link GameId} order. */

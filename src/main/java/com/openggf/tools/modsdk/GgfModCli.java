@@ -1,5 +1,6 @@
 package com.openggf.tools.modsdk;
 
+import com.openggf.catalog.StockGameCatalog;
 import java.io.PrintStream;
 import java.nio.file.Path;
 import java.nio.file.InvalidPathException;
@@ -270,7 +271,7 @@ public final class GgfModCli {
 
     private static int artKeys(String[] args, PrintStream output) {
         String game = "any";
-        if (args.length == 3 && args[1].equals("--game") && java.util.Set.of("s1", "s2", "s3k", "any").contains(args[2])) game = args[2];
+        if (args.length == 3 && args[1].equals("--game") && ("any".equals(args[2]) || StockGameCatalog.isStockCode(args[2]))) game = args[2];
         else if (args.length != 1) return usage(output);
         com.openggf.mods.StockArtOverrideCatalog.keys(game).forEach(output::println);
         return 0;
@@ -336,7 +337,7 @@ public final class GgfModCli {
                 + " size= line= offset= pal=<addr>:<colours>:<line>] | char=<sonic|tails|knuckles>");
         output.println("       ggfmod head-inventory <rom> <s1|s2|s3k> <out-directory> (CPU-only players/animations)");
         output.println("       ggfmod object-head-inventory <rom> <s1|s2|s3k> <out-directory> (CPU-only native object art)");
-        output.println("       ggfmod art-keys [--game s1|s2|s3k|any]");
+        output.println("       ggfmod art-keys [--game " + String.join("|", StockGameCatalog.stockCodes()) + "|any]");
         return 1;
     }
 }

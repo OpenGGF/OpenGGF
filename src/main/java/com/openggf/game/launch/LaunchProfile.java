@@ -2,6 +2,7 @@ package com.openggf.game.launch;
 
 import com.openggf.configuration.WidescreenAspect;
 import com.openggf.game.MasterTitleScreen;
+import com.openggf.catalog.StockGameCatalog;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -279,13 +280,7 @@ public record LaunchProfile(
     }
 
     private String effectiveCharacterDonor(MasterTitleScreen.GameEntry entry) {
-        if (OFF.equals(crossGameSource)) {
-            return gameId(entry);
-        }
-        return switch (crossGameSource) {
-            case "s1", "s2", "s3k" -> crossGameSource;
-            default -> gameId(entry);
-        };
+        return StockGameCatalog.isCartridgeCode(crossGameSource) ? crossGameSource : gameId(entry);
     }
 
     private static List<String> sidekickCandidatesForDonor(String donor) {

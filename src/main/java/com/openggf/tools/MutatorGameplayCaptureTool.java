@@ -24,6 +24,7 @@ import com.openggf.game.CheckpointState;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameServices;
 import com.openggf.game.SpecialStageViewport;
+import com.openggf.catalog.StockGameCatalog;
 import com.openggf.game.mutators.GameplayMutatorPacing;
 import com.openggf.game.mutators.GameplayMutatorPolicySource;
 import com.openggf.game.mutators.LevelMutatorPolicySource;
@@ -82,7 +83,7 @@ public final class MutatorGameplayCaptureTool {
                 }
             }
             var a = GameplayCaptureTool.Arguments.parse(base.toArray(String[]::new));
-            if (!Set.of("s1", "s2", "s3k").contains(a.game()))
+            if (!StockGameCatalog.isCartridgeCode(a.game()))
                 throw new IllegalArgumentException("--game must be s1, s2 or s3k");
             if (a.settle() < 0 || a.inputStart() < 0 || a.captureFrom() < 0 || a.deathGrace() < 0)
                 throw new IllegalArgumentException("frame offsets and death grace must be nonnegative");

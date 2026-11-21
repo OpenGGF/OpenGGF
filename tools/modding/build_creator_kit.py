@@ -17,6 +17,8 @@ from urllib.parse import quote
 import xml.etree.ElementTree as ET
 import zipfile
 
+from build_project import CARTRIDGE_INPUTS
+
 ROOT = Path(__file__).resolve().parents[2]
 CAMPAIGN_SOURCE = Path("src/test/resources/mods/sample-two-act-campaign-src/project")
 CAMPAIGN_ASSETS = frozenset(("patterns.bin", "chunks.bin", "blocks.bin", "fg-map.bin", "bg-map.bin",
@@ -126,9 +128,9 @@ def export_examples(root):
                     template.read_text().replace("{{PACKAGE}}", "creator.exported").replace("{{MOD_ID}}", mod_id).encode())
         readme = project / "README.md"
         manifest = (project / "src/main/resources/META-INF/openggf-mod.yaml").read_text()
-        base_game = re.search(r"(?m)^baseGame:\s*(s1|s2|s3k)\s*$", manifest)
-        game = base_game.group(1) if base_game else "s2"
-        test_rom = f" --{game} /absolute/own-{game}.gen" if base_game else ""
+        base_game = re.search(r"(?m)^baseGame:\s*(\w+)\s*$", manifest)
+        game = base_game.group(1) if base_game else None
+        test_rom = f" --{game} /absolute/own-{game}.gen" if game in CARTRIDGE_INPUTS else ""
         legacy = " --expert-legacy" if name in pending else ""
         legacy_note = ("\nThis example still references engine internals outside the supported Mod API\n"
                        "while its facades are written, so its commands pass `--expert-legacy`. Do not\n"

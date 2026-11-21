@@ -3,6 +3,7 @@ import com.openggf.route.RouteEditorFiles;
 
 import com.openggf.game.MenuTextEditor;
 import com.openggf.editor.project.EditorProjectMenu;
+import com.openggf.catalog.StockGameCatalog;
 import com.openggf.i18n.UiMessages;
 import com.openggf.route.Inlet;
 import com.openggf.route.InputTape;
@@ -937,7 +938,7 @@ public final class RouteTapeWorkspace {
         var fields = new ArrayList<>(List.of(
                 new EditorProjectMenu.Field("path", UiMessages.text("editor.route_tape.field_manifest"),
                         host.initialDirectory().resolve("new-route" + RouteFiles.MANIFEST_SUFFIX).toString(), MenuTextEditor.Mode.PATH),
-                new EditorProjectMenu.Field("game", UiMessages.text("editor.route_tape.field_game"), game, List.of("s1", "s2", "s3k", "scd")),
+                new EditorProjectMenu.Field("game", UiMessages.text("editor.route_tape.field_game"), game, StockGameCatalog.stockCodes()),
                 new EditorProjectMenu.Field("zone", UiMessages.text("editor.route_tape.field_zone"), String.valueOf(zone), MenuTextEditor.Mode.TEXT, 3),
                 new EditorProjectMenu.Field("act", UiMessages.text("editor.route_tape.field_act"), String.valueOf(act + 1), MenuTextEditor.Mode.TEXT, 2),
                 new EditorProjectMenu.Field("main", UiMessages.text("editor.route_tape.field_main"), "sonic", MenuTextEditor.Mode.TEXT, 24),

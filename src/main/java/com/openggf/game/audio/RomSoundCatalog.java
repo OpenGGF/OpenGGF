@@ -2,6 +2,7 @@ package com.openggf.game.audio;
 
 import com.openggf.game.GameId;
 import com.openggf.game.GameModuleRegistry;
+import com.openggf.catalog.StockGameCatalog;
 
 import java.util.Comparator;
 import java.util.List;
@@ -72,9 +73,9 @@ public final class RomSoundCatalog {
     }
 
     private static Catalog catalog(String game) {
-        if (game == null || !List.of("s1", "s2", "s3k", "scd").contains(game)) {
+        if (!StockGameCatalog.isStockCode(game)) {
             throw new IllegalArgumentException("Unknown ROM sound game: " + game
-                    + " (expected s1, s2, s3k or scd)");
+                    + " (expected " + String.join(", ", StockGameCatalog.stockCodes()) + ")");
         }
         return GameModuleRegistry.stockRomSoundCatalog(GameId.fromCode(game));
     }

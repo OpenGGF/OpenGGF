@@ -141,6 +141,12 @@ class TestArchUnitRules {
             "trace",
             "util");
     private static final Set<String> CORE_RUNTIME_TOP_LEVEL_DEPENDENCY_EDGES = Set.of(
+            // Stock game IDs and media kinds are data shared with configuration and Stageplay.
+            // The Stageplay owner rule verifies the catalogue has no engine dependencies.
+            "editor -> catalog",
+            "game -> catalog",
+            "tools -> catalog",
+            "trace -> catalog",
             // Host wording is shared by menus, editor and trace UI. The locale owner
             // activates only the graphics text context; it owns no gameplay service.
             "editor -> i18n",
@@ -943,7 +949,16 @@ class TestArchUnitRules {
                 // to their element type, just as for ordinary value-type references.
                 if (target.isArray()) target = target.getBaseComponentType();
                 String targetSlice = topLevelSlice(target);
+                String stockGameCatalog = "com.openggf.catalog.StockGameCatalog";
+                if (typeOrNested(origin.getName(), stockGameCatalog)
+                        && target.getName().startsWith("com.openggf.") && !typeOrNested(target.getName(), stockGameCatalog)) {
+                    violations.add(dependency.getDescription());
+                }
                 if (targetSlice == null || isCompatibilityMarker(target)) continue;
+                // Stageplay file values may validate against the shared, dependency-free stock codes.
+                if (target.getName().equals(stockGameCatalog)
+                        && (typeOrNested(origin.getName(), "com.openggf.stageplay.StageplayDocument")
+                        || origin.getName().equals("com.openggf.stageplay.StageplayGround$Player"))) continue;
                 // This transient authoring model must never enter runtime playback or export.
                 if (typeOrNested(target.getName(), "com.openggf.stageplay.editor.StageplayRouteOverlay")
                         && !typeOrNested(origin.getName(), "com.openggf.stageplay.editor.StageplayRouteOverlay")

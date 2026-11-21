@@ -71,13 +71,15 @@ BUDGET_60 = 1000.0 / 60.0
 
 # Trace fixtures: one per level the trace catalogue covers (top-level, capturable
 # directories only; multi-segment runs/ are not accepted by TraceBenchmarkTool).
-S1_TRACES = ["ghz1", "ghz2", "ghz3", "mz1", "mz2", "mz3", "syz1", "syz2", "syz3",
-             "lz1", "lz2", "lz3", "slz1", "slz2", "slz3", "sbz1", "sbz2", "sbz3", "fz"]
-S2_TRACES = ["ehz1_fullrun", "cpz", "cpz2", "arz", "arz2", "cnz", "cnz2", "htz", "htz2",
-             "mcz", "mcz2", "ooz", "ooz2", "mtz", "mtz2", "mtz3", "scz", "wfz",
-             "dez_ending", "special_stage"]
-S3K_TRACES = ["aiz", "hcz", "mgz", "cnz", "fbz", "icz", "lbz", "mhz", "soz", "lrz",
-              "hpz", "hpz22", "ssz", "dez", "ddz"]
+TRACE_GAMES = {
+    "s1": ("Sonic 1", ["ghz1", "ghz2", "ghz3", "mz1", "mz2", "mz3", "syz1", "syz2", "syz3",
+                     "lz1", "lz2", "lz3", "slz1", "slz2", "slz3", "sbz1", "sbz2", "sbz3", "fz"]),
+    "s2": ("Sonic 2", ["ehz1_fullrun", "cpz", "cpz2", "arz", "arz2", "cnz", "cnz2", "htz", "htz2",
+                     "mcz", "mcz2", "ooz", "ooz2", "mtz", "mtz2", "mtz3", "scz", "wfz",
+                     "dez_ending", "special_stage"]),
+    "s3k": ("Sonic 3 & Knuckles", ["aiz", "hcz", "mgz", "cnz", "fbz", "icz", "lbz", "mhz", "soz", "lrz",
+                                  "hpz", "hpz22", "ssz", "dez", "ddz"]),
+}
 
 # Route movies: (id, file, zone, act, main, sidekick, extra probe flags). Launch
 # state follows each route's acceptance test or script header.
@@ -107,7 +109,7 @@ def trace_dir(game, name):
 
 def matrix():
     cases = []
-    for game, names in (("s1", S1_TRACES), ("s2", S2_TRACES), ("s3k", S3K_TRACES)):
+    for game, (_, names) in TRACE_GAMES.items():
         for name in names:
             cases.append({"id": f"{game}-{name}", "game": game, "kind": "trace",
                           "level": name, "path": str(trace_dir(game, name))})
@@ -428,7 +430,6 @@ def esc(text):
 
 def write_html(results, path, notes_path, reproducible=None):
     first = [s for s in results if s["rep"] == 1]
-    games = {"s1": "Sonic 1", "s2": "Sonic 2", "s3k": "Sonic 3 & Knuckles"}
     parts = ["<!doctype html><meta charset=utf-8><title>OpenGGF all-level performance sweep</title>",
              "<style>body{font:14px system-ui,sans-serif;margin:24px;max-width:1400px;color:#1b1b1f}"
              "table{border-collapse:collapse;margin:8px 0 24px}td,th{border-bottom:1px solid #ddd;padding:3px 8px;"
@@ -442,11 +443,11 @@ def write_html(results, path, notes_path, reproducible=None):
     # Cross-level chart: p99 and max (log scale) per level, first run.
     parts.append("<h2>Cross-level frame time (first run, settled frames)</h2>")
     parts.append(chart(first))
-    for game in ("s1", "s2", "s3k"):
+    for game, (label, _) in TRACE_GAMES.items():
         rows = [s for s in first if s["game"] == game]
         if not rows:
             continue
-        parts.append(f"<h2>{games[game]}</h2><table><tr><th class=l>level</th><th class=l>driver</th>"
+        parts.append(f"<h2>{label}</h2><table><tr><th class=l>level</th><th class=l>driver</th>"
                      "<th>frames</th><th>mean ms</th><th>p99</th><th>p99.9</th><th>max</th><th>&gt;8.33</th>"
                      "<th>&gt;16.67</th><th>alloc KB/f (med)</th><th>alloc KB/f (mean)</th><th>GC n</th>"
                      "<th>GC ms</th><th>warmup &gt;16.67</th><th class=l>progress</th>"
@@ -600,7 +601,6 @@ def cmd_compare(args):
 
 def write_compare_html(ids, base, new, args):
     bl, nl = esc(args.base_label), esc(args.new_label)
-    games = {"s1": "Sonic 1", "s2": "Sonic 2", "s3k": "Sonic 3 & Knuckles"}
     parts = ["<!doctype html><meta charset=utf-8><title>OpenGGF performance sweep comparison</title>",
              "<style>.viz-root{--surface:#fcfcfb;--ink:#0b0b0b;--ink2:#52514e;--grid:#e4e3df;"
              "--base:#eb6834;--new:#2a78d6;--bad:#b3261e;--good:#1d7a3a}"
@@ -629,11 +629,11 @@ def write_compare_html(ids, base, new, args):
                            lambda c: c["runs"] < 2))
     parts.append("<h2>Median allocation per settled frame (KB)</h2>" + legend)
     parts.append(dot_chart(rows, base, new, lambda c: c["alloc_med_kb"], "KB/frame", False, lambda c: False))
-    for game in ("s1", "s2", "s3k"):
+    for game, (label, _) in TRACE_GAMES.items():
         gids = [cid for cid in ids if cid.split("-")[0] == game]
         if not gids:
             continue
-        parts.append(f"<h2>{games[game]}</h2><p class=b>Each cell: {bl} &rarr; {nl}. Mean/p99/p99.9/alloc/GC are "
+        parts.append(f"<h2>{label}</h2><p class=b>Each cell: {bl} &rarr; {nl}. Mean/p99/p99.9/alloc/GC are "
                      "medians over runs; max lists every run; recurring counts need two runs.</p>"
                      "<table><tr><th class=l>level</th><th>runs</th><th>frames</th><th>mean ms</th><th>p99</th>"
                      "<th>p99.9</th><th class=l>max per run</th><th>&gt;8.33 recurring</th>"

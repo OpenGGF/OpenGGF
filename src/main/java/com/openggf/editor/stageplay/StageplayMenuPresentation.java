@@ -1,5 +1,6 @@
 package com.openggf.editor.stageplay;
 
+import com.openggf.catalog.StockGameCatalog;
 import com.openggf.i18n.UiMessages;
 import java.util.Map;
 
@@ -50,7 +51,7 @@ final class StageplayMenuPresentation {
             menu.configureField(f.key(),labels.getOrDefault(f.key(),f.label()));
             List<String> choices=List.of();
             if(f.value().equals("true")||f.value().equals("false"))choices=List.of("false","true");
-            else if(f.key().equals("game"))choices=List.of("s1","s2","s3k","scd");
+            else if(f.key().equals("game"))choices=StockGameCatalog.stockCodes();
             else if(f.key().equals("interpolation"))choices=context.choices().get("Interpolation");
             else if(f.key().equals("transition"))choices=context.choices().get("Transition");
             else if(f.key().equals("condition"))choices=context.choices().get("WaitCondition");
