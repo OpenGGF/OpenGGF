@@ -15,10 +15,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * <movie>/}: BK2, v5 trace and the boss probe's post-frame RAM; comparison only), through {@link TtzBossNativeCheck}.
  * Each movie enters the act 3 stage through the retail stage-select secret.
  *
- * <p>The fight movies compare the player, camera, boss appearances, camera bounds and air timer through the end.
- * The boss slot comparison includes the first bubble's final pop frame and removal. It stops at a later bubble's
- * position difference during its pop. The chase and hit movies also check boss slot state, and R43C-wrap checks
- * the stage's vertical wrap at $800.
+ * <p>The fight movies compare the player, camera, boss slots and appearances, camera bounds and air timer through
+ * the end. The chase and hit movies also check boss slot state, and R43C-wrap checks the stage's vertical wrap at $800.
  */
 class TestTtzBossNative {
     @TempDir
@@ -36,21 +34,19 @@ class TestTtzBossNative {
 
     @Test
     void r43cFightReplaysUnderWater() throws Exception {
-        checkFight(TtzBossNativeCheck.run(tempDir, "R43C-fight", CdStagePayload.R43C), 4887);
+        checkFight(TtzBossNativeCheck.run(tempDir, "R43C-fight", CdStagePayload.R43C));
     }
 
     @Test
     void r43dFightReplaysPastTheDefeat() throws Exception {
-        checkFight(TtzBossNativeCheck.run(tempDir, "R43D-fight", CdStagePayload.R43D), 4886);
+        checkFight(TtzBossNativeCheck.run(tempDir, "R43D-fight", CdStagePayload.R43D));
     }
 
-    private static void checkFight(TtzBossNativeCheck.Result r, int lastMatchingSlotRow) {
+    private static void checkFight(TtzBossNativeCheck.Result r) {
         // Both movies show Sonic surface at row 5963 and dive again at row 5986.
         assertTrue(r.lastRow() > 5986 && r.defeatRow() > 0, r.movie() + ": recording must include defeat and re-entry");
-        assertTrue(r.firstPopEndRow() >= 0 && r.firstPopEndRow() < lastMatchingSlotRow,
+        assertTrue(r.firstPopEndRow() >= 0 && r.firstPopEndRow() < r.lastRow(),
                 r.movie() + ": slot comparison must include a bubble reaching routine $E and being removed");
-        // The next row in each movie first differs in a later popping bubble's X and Y.
-        List<TtzBossNativeCheck.Note> mismatches = r.beforeRow(r.mismatches(), lastMatchingSlotRow + 1);
         System.out.printf("TTZBOSS %s: %d rows, first player/camera divergence %d %s, defeat row %d, "
                         + "first pop end row %d, first slot difference %s%n",
                 r.movie(), r.rowsCompared(), r.firstError(), r.fields(), r.defeatRow(), r.firstPopEndRow(),
@@ -58,8 +54,8 @@ class TestTtzBossNative {
         assertAll(r.movie(),
                 () -> assertEquals(-1, r.firstError(),
                         () -> "player/camera diverge at row " + r.firstError() + " " + r.fields()),
-                () -> assertTrue(mismatches.isEmpty(),
-                        () -> "first boss slot mismatch: " + mismatches.getFirst()),
+                () -> assertTrue(r.mismatches().isEmpty(),
+                        () -> "first boss slot mismatch: " + r.mismatches().getFirst()),
                 () -> assertEquals(r.appearBefore(r.nativeAppear()), r.appearBefore(r.engineAppear()),
                         "boss appearances (row:ID:count)"),
                 () -> assertTrue(r.bounds().isEmpty(), () -> "camera bounds differ: " + r.bounds().getFirst()),
