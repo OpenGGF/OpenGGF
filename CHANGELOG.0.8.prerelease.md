@@ -63,7 +63,9 @@ under the matching area heading; see the
   play their own effects on impact, firing, takeoff or landing while the badnik is
   on screen. Palmtree
   Panic backgrounds sample each row's own camera section, retaining static-row
-  repetition without wrapping the moving scenery. Results show the changing
+  repetition without wrapping the moving scenery. Wacky Workbench's Bad Future
+  boss arena also preserves its static background while the moving rows show
+  the correct scenery behind the platforms. Results show the changing
   score and bonus digits and play the tally, final chime and special-stage warp cues.
   Ring extra lives play the voice jingle, and Wacky Workbench's bouncy floor
   plays its cue when it sends Sonic into a roll. The level HUD shows the same point total as the

@@ -23,8 +23,9 @@ class TestWwzFrozenProjection {
             h.init(0, 512, 128);
             int[] nativeWords = new int[224];
             h.rebuildOutput(nativeWords, 512, 128, 7, 0);
+            int period = payload == com.openggf.game.soniccd.CdStagePayload.R63D ? 1024 : 512;
             var output = new ScrollProjection(nativeWords, null, null, null, (short)128,
-                    h.getVscrollFactorBG(), 0, 512, 0, 0, BgTilemapUpdateMode.STATIC_WINDOW);
+                    h.getVscrollFactorBG(), 0, period, 0, 0, BgTilemapUpdateMode.STATIC_WINDOW);
             var phase = h.captureProjection(new ScrollProjectionContext(512,128,7,0,320,224,output));
             var nativeSample = phase.sample(new ScrollView(512,128,320,224));
             assertEquals(output, nativeSample);

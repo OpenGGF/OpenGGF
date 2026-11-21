@@ -94,7 +94,7 @@ public final class CdLevel extends AbstractLevel implements com.openggf.game.int
     private int fgMapWidth;
     private int fgMapHeight;
     private int bgMapWidth;
-    private com.openggf.game.soniccd.zones.ppz.PpzBackgroundRows ppzBackgroundRows;
+    private final com.openggf.game.internal.BackgroundRowLayout backgroundRows;
 
     CdLevel(CdStagePayload payload, CdStageImage image, CdStageCatalogue.Entry entry, int zoneIndex,
             boolean publishGraphics, String mediaIdentity) throws IOException {
@@ -113,7 +113,11 @@ public final class CdLevel extends AbstractLevel implements com.openggf.game.int
         loadChunks(image, image.offsetOf(image.u32(index + 8)));
         loadLayouts(image, entry.levelLayouts());
         if (payload.stage().zone() == com.openggf.game.soniccd.CdZone.PALMTREE_PANIC) {
-            ppzBackgroundRows = com.openggf.game.soniccd.zones.ppz.PpzBackgroundRows.read(image);
+            backgroundRows = com.openggf.game.soniccd.zones.ppz.PpzBackgroundRows.read(image)::layoutX;
+        } else if (payload == CdStagePayload.R63D) {
+            backgroundRows = readWwzBossBackgroundRows(image);
+        } else {
+            backgroundRows = null;
         }
 
         // CamBounds: unused word, left, right, top, bottom, Y centre (LevelSizeLoad,
@@ -189,7 +193,19 @@ public final class CdLevel extends AbstractLevel implements com.openggf.game.int
 
     @Override
     public int backgroundLayoutX(int sourceX, int sourceY) {
-        return ppzBackgroundRows == null ? sourceX : ppzBackgroundRows.layoutX(sourceX, sourceY);
+        return backgroundRows == null ? sourceX : backgroundRows.backgroundLayoutX(sourceX, sourceY);
+    }
+
+    private static com.openggf.game.internal.BackgroundRowLayout readWwzBossBackgroundRows(CdStageImage image) {
+        var table = CdR6DataLayout.Programme.R63D.range("R6StageDrawScrollLayerTable");
+        byte[] selectors = image.slice(table.fileOffset() + 1, table.length() - 1);
+        // R6StageDrawUpdateBackgroundRow (r6/stage_draw_3d.asm:93-121) redraws selector 0
+        // from layout X=0 for 32 blocks. Other rows stream the layout at their layer's X.
+        return (sourceX, sourceY) -> {
+            int row = Math.floorDiv(sourceY, 16);
+            return row >= 0 && row < selectors.length && selectors[row] == 0
+                    ? Math.floorMod(sourceX, 512) : sourceX;
+        };
     }
 
     /**

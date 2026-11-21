@@ -7,6 +7,7 @@ import com.openggf.game.soniccd.level.CdStageImage;
 import com.openggf.level.scroll.AbstractZoneScrollHandler;
 import com.openggf.level.scroll.ScrollOutputRebuilder;
 import com.openggf.level.scroll.compose.ScrollEffectComposer;
+import com.openggf.level.spawn.PlacementViewportWidth;
 
 import java.util.Arrays;
 
@@ -335,14 +336,33 @@ public final class WwzScrollHandler extends AbstractZoneScrollHandler implements
             int[] words = new int[view.height()];
             // R6ScrollWriteScrollLinePattern's first partial block and subsequent 8-line bands;
             // presentation rasters extend the same table walk beyond the native 224 lines.
-            for (int i = 0; i < words.length; i++)
-                words[i] = ((-view.cameraX() & 0xFFFF) << 16)
-                        | (scratch.deformWord(((y & 0x3F8) >>> 3) + ((i + (y & 7)) >>> 3)) & 0xFFFF);
+            int rightmostSourceX = 0;
+            for (int i = 0; i < words.length; i++) {
+                short background = scratch.deformWord(((y & 0x3F8) >>> 3) + ((i + (y & 7)) >>> 3));
+                words[i] = ((-view.cameraX() & 0xFFFF) << 16) | (background & 0xFFFF);
+                rightmostSourceX = Math.max(rightmostSourceX, -background);
+            }
             var nativeOutput = context.nativeOutput();
+            int period = frozenPayload == CdStagePayload.R63D
+                    ? visibleBackgroundPeriod(rightmostSourceX, view.width()) : nativeOutput.backgroundPeriod();
             return new com.openggf.level.scroll.ScrollProjection(words, null, null, null,
                     (short) view.cameraY(), word(scratch.bgY), nativeOutput.backgroundX(),
-                    nativeOutput.backgroundPeriod(), nativeOutput.shakeX(), nativeOutput.shakeY(), nativeOutput.tilemapMode());
+                    period, nativeOutput.shakeX(), nativeOutput.shakeY(), nativeOutput.tilemapMode());
         };
+    }
+
+    @Override
+    public int getBgPeriodWidth() {
+        if (payload != CdStagePayload.R63D) return super.getBgPeriodWidth();
+        // The renderer samples the streamed rows directly from the layout. Keep their full
+        // visible source span resident; CdLevel repeats the static rows independently.
+        return visibleBackgroundPeriod(-foreground - minScrollOffset, Math.max(320, PlacementViewportWidth.current()));
+    }
+
+    private static int visibleBackgroundPeriod(int rightmostSourceX, int viewportWidth) {
+        int period = 512;
+        while (period < rightmostSourceX + viewportWidth) period <<= 1;
+        return period;
     }
 
     // Rewind
