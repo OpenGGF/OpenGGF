@@ -21,6 +21,6 @@ not accepted by the current format.
 
 ## Using native chip music
 
-For a Sonic 3 & Knuckles patch, follow the [native SMPS package setup](../music-packs.md#native-smps-packages)
+For a Sonic 1, Sonic 2 or Sonic 3 & Knuckles patch, follow the [native SMPS package setup](../music-packs.md#native-smps-packages)
 to use an external tool's song export. The package replaces the streamed track
 declaration and uses the same stock ID mapping and mod packaging steps.

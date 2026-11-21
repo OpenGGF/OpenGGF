@@ -13,14 +13,14 @@ import java.io.IOException;
 import java.util.Arrays;
 
 /** Launch-scoped lookup against the base game's pinned cartridge view. */
-final class S3kPackageStockResolver implements SmpsPackageReader.StockResolver {
+final class PackageStockResolverS3k implements SmpsPackageReader.StockResolver {
     private final Rom rom;
     private Sonic3kAudioResourceProfile profile;
     private Sonic3kSmpsLoader loader;
     private DacData dac;
     private boolean unknownImage;
 
-    S3kPackageStockResolver(Rom rom) {
+    PackageStockResolverS3k(Rom rom) {
         this.rom = rom;
     }
 
@@ -53,7 +53,7 @@ final class S3kPackageStockResolver implements SmpsPackageReader.StockResolver {
         };
     }
 
-    boolean unknownImage() { return unknownImage; }
+    @Override public boolean unknownImage() { return unknownImage; }
 
     private byte[] localVoice(int songId, int slot) {
         if (profile == Sonic3kAudioResourceProfile.SONIC_3) {
@@ -74,12 +74,6 @@ final class S3kPackageStockResolver implements SmpsPackageReader.StockResolver {
 
     private byte[] dacSample(int note) {
         if (dac == null) dac = loader.loadDacData();
-        if (dac == null) return null;
-        var entry = dac.mappingForNote(note);
-        var sample = entry == null ? null : dac.sample(entry.sampleId());
-        if (sample == null || sample.length() > 65535) return null;
-        byte[] bytes = new byte[sample.length()];
-        for (int i = 0; i < bytes.length; i++) bytes[i] = sample.byteAt(i);
-        return bytes;
+        return SmpsPackageReader.StockResolver.decodedDacSample(dac, note);
     }
 }

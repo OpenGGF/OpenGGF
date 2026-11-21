@@ -29,8 +29,19 @@ The root requires `schemaVersion: 4`, `profile: "portable"`, `package`,
 `generator`, `provenance`, `requires`, `driverOptions`, `bank`, `assets`,
 `envelopeBindings`, `dacBindings`, `globalVoices`, and `source`.
 `driver` defaults to `s3k`. The host requires a patch with a matching
-`baseGame`. Only S3K is implemented and its `driverOptions` is an empty
-object. `s1` and `s2` fail closed.
+`baseGame`. Each driver uses its own native sequencer and DAC timing.
+
+| Driver | Package features | `driverOptions` |
+| --- | --- | --- |
+| `s1` | Big-endian relative bank, local FM voices, PSG hold envelopes and PCM DAC at 301 base cycles | `{"speedUpTempo": <0–255 or null>}` |
+| `s2` | Little-endian Z80 bank, local FM voices, PSG hold envelopes and PCM DAC at 295 base cycles | `{"speedUpTempo": <0–255 or null>}` |
+| `s3k` | Little-endian Z80 bank, local and global FM voices, PSG and modulation envelopes, and PCM DAC at 297 base cycles | `{}` |
+
+S1 and S2 use the supplied speed-shoes tempo byte while the effect is active
+and restore normal tempo when it ends. A null value leaves tempo unchanged.
+S3K uses the native speed-shoes frame multiplier. See the complete bank and
+asset contract in [OpenSMPSDeck's portable package specification](https://github.com/raiscan/open-smps-deck/blob/multi-driver-portable-songs/docs/architecture/portable-package.md)
+and the [driver feature matrix](https://github.com/raiscan/open-smps-deck/blob/multi-driver-portable-songs/docs/architecture/driver-support.md).
 
 - `package` carries `id` (lower-case slug, at most 64 characters), `name`,
   strict `version` (major.minor.patch), `authors` (at most 32), nullable
@@ -54,11 +65,13 @@ object. `s1` and `s2` fail closed.
 Use `bank.form: "embedded"`, `path: "track.bin"`, the stored `sha256`
 and the `assembledSha256` after all fills. The reserved patch form is
 unsupported. `base` is 0 for normalized pointers or 32768 for the
-absolute Z80 window. `headerOffset` is the offset in the bank.
-`localVoiceCount` gives the number of local voices.
+absolute Z80 window. S1 requires base 0. `headerOffset` is the offset in the
+bank and must be 0 for S1 and S2. `localVoiceCount` gives the number of
+local voices. S1 and S2 put their finite tracks before the local voice table.
 `previewFrames` is informational. `relocations` lists the sorted unique
-offsets of 16-bit little-endian pointers, with `relocationsComplete` indicating
-whether the authoring tool proved full coverage.
+offsets of 16-bit pointers, with `relocationsComplete` indicating whether the
+authoring tool proved full coverage. Words are big-endian on S1 and little-endian
+on S2 and S3K.
 
 An asset declares `key` (zero-based `fm/`, `psg/`, `mod/` or `dac/`
 ordinal in declaration order), `kind` (`FM_VOICE`, `PSG_VOLUME`,
@@ -73,31 +86,36 @@ ROM-derived provenance warning.
 
 - `bank.fills` lists sorted, nonoverlapping `{offset, length, asset}`
   mappings for 25-byte zero holes. The asset must be a referenced FM voice.
-- `globalVoices` is null or `{path, sha256, voices}`. The path is
+- `globalVoices` is null for S1 and S2. S3K accepts null or `{path, sha256, voices}`. The path is
   `voices/global.bin`, the hash covers the stored file and `voices` is the
   ordered list of FM asset keys. Referenced voices occupy zero holes.
 - `envelopeBindings` lists `{asset, slot}` mappings. PSG slots are 1–255
-  and modulation slots 1–127. Envelopes must stay within their declared bytes
-  and yield between control cycles.
+  and S3K modulation slots 1–127. S1 and S2 PSG envelopes are attenuation
+  bytes below `80` hex followed by one `80` hold terminator. S3K envelopes
+  must stay within their declared bytes and yield between control cycles.
 - `dacBindings` lists sorted `{note, asset, rate}` mappings, one per note
   (129–223). Multiple notes can use the same sample. Rate is 0–255, with zero
   representing 256 iterations of the native delay loop.
 
 ## Stock references
 
-Every `ref` carries `game: "s3k"`, `table` and the raw asset `sha256`.
+Every `ref` carries the matching driver in `game`, a `table` and the raw
+asset `sha256`.
 
-| Table | Locator fields | Bytes |
+| Drivers | Table | Locator fields and payload |
 | --- | --- | --- |
-| `global-fm` | `slot` | One 25-byte voice from the universal table |
-| `local-fm` | `songId`, `slot` | One 25-byte voice through the native song header's voice pointer |
-| `psg` | `index` | The loader's PSG envelope |
-| `mod` | `index` | The playback envelope with native operands resolved |
-| `dac` | `note` (129–196) | Decoded unsigned PCM for the native note |
+| S3K | `global-fm` | `slot` selects a 25-byte voice from the universal table |
+| All | `local-fm` | Engine `songId` and zero-based `slot` select a raw 25-byte voice through the native song header |
+| S1 | `psg` | `index` 1–9 selects the ROM envelope including its terminator |
+| S2 | `psg` | `index` 1–13 selects the envelope including its terminator from the ROM's decompressed Z80 `zPSG_EnvTbl` |
+| S3K | `psg`, `mod` | `index` selects the loader's PSG or resolved playback modulation envelope |
+| All | `dac` | `note` selects decoded unsigned PCM. S1 accepts hex 81–83 and 88–8B, S2 accepts 81–91, and S3K accepts 81–C4 |
 
-The cartridge profile selects the available S3 and S&K tables. An unknown
-valid ROM image emits a warning and each asset's SHA-256 determines acceptance.
-Missing assets or mismatched hashes disable the track.
+Use OpenGGF's engine music IDs, including S2's sparse numbering. Both REV00
+and REV01 can supply S1 and S2 assets. The cartridge profile selects the
+available S3 and S&K tables. An unknown valid ROM image emits a warning and
+each asset's SHA-256 determines acceptance. Missing assets or mismatched
+hashes disable the track.
 
 Apply `transforms` in order and provide `resultSha256` when the list is
 nonempty. DAC supports `gain` with a `Double.toHexString` factor

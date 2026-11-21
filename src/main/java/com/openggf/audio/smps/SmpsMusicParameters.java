@@ -1,7 +1,11 @@
 package com.openggf.audio.smps;
 
 /** Presentation parameters carried by native creator songs and frozen with their program. */
-public record SmpsMusicParameters(float gain, boolean tempoEffects) {
+public record SmpsMusicParameters(float gain, boolean tempoEffects, Integer speedUpTempo) {
+    public SmpsMusicParameters(float gain, boolean tempoEffects) {
+        this(gain, tempoEffects, null);
+    }
+
     private static final SmpsMusicParameters STOCK = new SmpsMusicParameters(1.0f, true);
 
     public interface Source {

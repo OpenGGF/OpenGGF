@@ -975,6 +975,14 @@ public class SmpsSequencer implements CoordFlagContext {
         calculateTempo();
     }
 
+    /** Seeds a newly activated classic package after the session applies its speed-shoes state. */
+    public void seedPackageTempoOnActivation() {
+        var parameters = SmpsMusicParameters.of(smpsData);
+        if (speedShoes && parameters.tempoEffects() && parameters.speedUpTempo() != null) {
+            tempoAccumulator = tempoWeight;
+        }
+    }
+
     public void setFm6DacOff(boolean active) {
         this.fm6DacOff = active;
     }
@@ -1293,7 +1301,14 @@ public class SmpsSequencer implements CoordFlagContext {
         int base = normalTempo;
 
         if (speedShoes) {
-            base = config.getSpeedUpTempos().getOrDefault(smpsData.getId(), base);
+            var parameters = SmpsMusicParameters.of(smpsData);
+            if (SmpsMusicParameters.isCreatorMusic(smpsData)) {
+                if (parameters.tempoEffects() && parameters.speedUpTempo() != null) {
+                    base = parameters.speedUpTempo();
+                }
+            } else {
+                base = config.getSpeedUpTempos().getOrDefault(smpsData.getId(), base);
+            }
         }
 
         // PAL compensation belongs to the ROM driver's update counter, not to

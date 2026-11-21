@@ -65,7 +65,7 @@ class TestSmpsPackageReader {
     }
 
     @Test
-    void rejectsUnknownFieldsDuplicateKeysBannedDriversAndWrongHost() throws Exception {
+    void rejectsUnknownFieldsDuplicateKeysUnknownDriversAndWrongHost() throws Exception {
         byte[] bank = songBank();
         ObjectNode document = manifest(bank);
         document.put("extra", true);
@@ -74,9 +74,12 @@ class TestSmpsPackageReader {
         assertFailure("Duplicate field", document.toString().replace("\"portable\"", "\"portable\", \"profile\": \"portable\""),
                 bank, Map.of(), "s3k");
         assertFailure("requires a patch with baseGame s3k", document.toString(), bank, Map.of(), "s2");
-        for (String driver : new String[]{"s1", "s2"}) {
+        document.put("driver", "scd");
+        assertFailure("Unknown driver scd", document.toString(), bank, Map.of(), "scd");
+        for (String driver : List.of("s1", "s2")) {
             document.put("driver", driver);
-            assertFailure("driver not yet supported: " + driver, document.toString(), bank, Map.of(), driver);
+            assertFailure("requires a patch with baseGame " + driver, document.toString(), bank, Map.of(), "s3k");
+            assertFailure("Missing package field speedUpTempo", document.toString(), bank, Map.of(), driver);
         }
     }
 
@@ -125,7 +128,7 @@ class TestSmpsPackageReader {
         try (var root = packed(temp, doc.toString(), bank, Map.of("voices/global.bin", new byte[25]))) {
             var result = reader(root, loc -> loc.table().equals("dac") ? pcm : voice).read("s3k");
             assertArrayEquals(patched, result.data().getVoice(0));
-            assertArrayEquals(assembled, result.data().getBankData());
+            assertArrayEquals(assembled, ((Sonic3kSmpsData) result.data()).getBankData());
             // Read a second view using the global table alone to verify its fill independently.
             byte[] globalBank = bank.clone();
             globalBank[0] = 0;

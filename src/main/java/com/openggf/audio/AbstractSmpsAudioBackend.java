@@ -1243,6 +1243,7 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
                 describeSmpsSource(descriptor, data, false));
         sequencer.setSampleRate(stream.outputSampleRate());
         sequencer.setSpeedShoes(speedShoesEnabled);
+        sequencer.seedPackageTempoOnActivation();
         sequencer.setSpeedMultiplier(speedMultiplier);
         sequencer.setMusicTempoPercent(musicTempoPercent);
         sequencer.setFm6DacOff(configService.getBoolean(

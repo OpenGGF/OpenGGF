@@ -101,7 +101,11 @@ public final class ModAudioPreparer {
         LinkedHashMap<CacheKey, CachedPcm> nextCache = new LinkedHashMap<>();
         LinkedHashMap<PrimaryKey, CacheKey> nextPrimaryCache = new LinkedHashMap<>();
         Map<TrackKey, PreparedSmpsTrack> preparedSmps = new LinkedHashMap<>();
-        var stockResolver = new S3kPackageStockResolver(rom);
+        SmpsPackageReader.StockResolver stockResolver = switch (Objects.toString(game, "")) {
+            case "s1" -> new ClassicPackageStockResolver(rom, true);
+            case "s2" -> new ClassicPackageStockResolver(rom, false);
+            default -> new PackageStockResolverS3k(rom);
+        };
         long retainedBytes = activeBytes();
         for (ModDescriptor descriptor : effective.orderedEnabled()) {
             String owner = descriptor.manifest().id();

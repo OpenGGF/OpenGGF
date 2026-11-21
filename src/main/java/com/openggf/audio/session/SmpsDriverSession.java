@@ -1168,6 +1168,7 @@ public final class SmpsDriverSession implements AutoCloseable {
         if (resolved.readiness().immediate()) {
             restoreLogicalWithoutWrites(transition.logical());
             applyCurrentLogicalControls();
+            driver.firstMusicSequencer().seedPackageTempoOnActivation();
         } else {
             withPort(driverIdentity, port -> {
                 applyProgram(port, policy.beginMusicLoad());

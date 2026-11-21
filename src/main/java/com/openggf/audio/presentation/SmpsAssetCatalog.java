@@ -403,6 +403,7 @@ final class SmpsAssetCatalog {
             AbstractSmpsData frozen,
             AbstractSmpsData candidate) {
         if (!Arrays.equals(frozen.getData(), candidate.getData())
+                || !SmpsMusicParameters.of(frozen).equals(SmpsMusicParameters.of(candidate))
                 || !sameIndexedProgram(frozen, candidate)
                 || frozen.getVoicePtr() != candidate.getVoicePtr()
                 || frozen.getChannels() != candidate.getChannels()

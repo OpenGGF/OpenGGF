@@ -5,8 +5,14 @@ import com.fasterxml.jackson.core.StreamReadConstraints;
 import com.fasterxml.jackson.core.StreamReadFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsMusicParameters;
+import com.openggf.game.sonic1.audio.Sonic1Music;
+import com.openggf.game.sonic1.audio.smps.Sonic1SmpsData;
+import com.openggf.game.sonic2.audio.Sonic2Music;
+import com.openggf.game.sonic2.audio.smps.Sonic2PackageEnvelopes;
+import com.openggf.game.sonic2.audio.smps.Sonic2SmpsData;
 import com.openggf.game.sonic3k.audio.smps.Sonic3kSmpsData;
 import com.openggf.io.ModAssetRoot;
 import com.openggf.io.ModInputLimits;
@@ -77,9 +83,21 @@ final class SmpsPackageReader {
     record Locator(String table, int index, int songId) {}
     interface StockResolver {
         byte[] resolve(Locator locator) throws IOException;
+
+        default boolean unknownImage() { return false; }
+
+        static byte[] decodedDacSample(DacData dac, int note) {
+            if (dac == null) return null;
+            var entry = dac.mappingForNote(note);
+            var sample = entry == null ? null : dac.sample(entry.sampleId());
+            if (sample == null || sample.length() > 65535) return null;
+            byte[] bytes = new byte[sample.length()];
+            for (int i = 0; i < bytes.length; i++) bytes[i] = sample.byteAt(i);
+            return bytes;
+        }
     }
 
-    record Result(Sonic3kSmpsData data, DacData dac, long retainedBytes) {}
+    record Result(AbstractSmpsData data, DacData dac, long retainedBytes) {}
     private record Asset(Kind kind, int ordinal, byte[] bytes, boolean reference) {}
 
     private final ModAssetRoot root;
@@ -92,6 +110,7 @@ final class SmpsPackageReader {
     private long remainingBytes;
     private long transformWork = 32L << 20;
     private byte[] rawBank;
+    private final Set<Integer> classicVoiceOffsets = new HashSet<>();
     private byte[] globalTable;
     private List<JsonNode> globalKeys = List.of();
 
@@ -142,9 +161,18 @@ final class SmpsPackageReader {
         literal(document, "profile", "portable");
         String driver = document.has("driver") ? string(document, "driver") : "s3k";
         check(DRIVERS.contains(driver), "Unknown driver " + driver);
-        check(driver.equals("s3k"), "SMPS driver not yet supported: " + driver);
         check(driver.equals(baseGame), "SMPS driver " + driver + " requires a patch with baseGame " + driver);
-        fields(document.get("driverOptions"));
+        boolean classic = !driver.equals("s3k");
+        JsonNode options = document.get("driverOptions");
+        Integer speedUpTempo = null;
+        if (classic) {
+            fields(options, "speedUpTempo");
+            if (!options.get("speedUpTempo").isNull()) {
+                speedUpTempo = number(options, "speedUpTempo", 0, 255);
+            }
+        } else {
+            fields(options);
+        }
         metadata(document);
         JsonNode bank = document.get("bank");
         fields(bank, "form", "path", "sha256", "assembledSha256", "base", "headerOffset",
@@ -154,9 +182,10 @@ final class SmpsPackageReader {
         literal(bank, "path", "track.bin");
         rawBank = hashedEntry(bank, BANK_LIMIT);
         int base = number(bank, "base", 0, 32768);
-        check(base == 0 || base == 32768, "Invalid S3K bank base");
-        int header = number(bank, "headerOffset", 0, rawBank.length - 8);
-        int voiceCount = number(bank, "localVoiceCount", 0, BANK_LIMIT / VOICE_SIZE);
+        check(base == 0 || (!driver.equals("s1") && base == 32768), "Invalid " + driver + " bank base");
+        check(rawBank.length >= 8, "Truncated music bank");
+        int header = number(bank, "headerOffset", 0, classic ? 0 : rawBank.length - 8);
+        int voiceCount = number(bank, "localVoiceCount", 0, classic ? 128 : BANK_LIMIT / VOICE_SIZE);
         number(bank, "previewFrames", 0, Integer.MAX_VALUE);
         bool(bank, "relocationsComplete");
         validateRelocations(bank);
@@ -164,6 +193,7 @@ final class SmpsPackageReader {
 
         JsonNode globals = document.get("globalVoices");
         if (!globals.isNull()) {
+            check(!classic, "Global FM voices are only supported for s3k");
             fields(globals, "path", "sha256", "voices");
             literal(globals, "path", "voices/global.bin");
             globalKeys = array(globals, "voices", 256);
@@ -172,25 +202,39 @@ final class SmpsPackageReader {
         }
 
         int dacBytes = readAssets(document, driver);
-        byte[] assembled = fillBank(bank, header);
+        byte[] assembled = fillBank(bank, header, classic);
         if (assembled != null) verifyHash("assembled track.bin", assembledHash, assembled);
         byte[] voices = fillGlobalVoices();
         Map<Integer, byte[]> psg = new HashMap<>();
         Map<Integer, byte[]> modulation = new HashMap<>();
         envelopeBindings(document, psg, modulation);
-        DacData dac = dacBindings(document);
+        Map<Integer, DacData.DacEntry> bindings = new HashMap<>();
+        DacData dac = dacBindings(document, driver, bindings);
         readSource(document);
         check(remaining.isEmpty(), "Unexpected package entry " + remaining.stream().findFirst().orElse(""));
-        validateHeader(assembled == null ? rawBank : assembled, base, header, voiceCount);
+        if (classic) {
+            ClassicPackageBank.validate(rawBank, driver.equals("s1"), base, voiceCount,
+                    classicVoiceOffsets, psg.keySet(), bindings.keySet());
+        } else {
+            validateHeader(assembled == null ? rawBank : assembled, base, header, voiceCount);
+        }
         if (assembled == null || (resolver == null && assets.values().stream().anyMatch(Asset::reference))) {
             return null;
         }
-        Sonic3kSmpsData data = new PackageData(Arrays.copyOfRange(assembled, header, assembled.length),
-                base + header, new SmpsMusicParameters(gain, tempoEffects));
-        data.setBankData(assembled, base);
-        data.setPsgEnvelopes(psg);
-        data.setModEnvelopes(modulation);
-        if (voices != null) data.setGlobalVoiceData(voices);
+        var parameters = new SmpsMusicParameters(gain, tempoEffects, speedUpTempo);
+        AbstractSmpsData data = switch (driver) {
+            case "s1" -> new S1PackageData(assembled, psg, parameters);
+            case "s2" -> new S2PackageData(assembled, base, psg, parameters);
+            default -> {
+                var s3k = new PackageData(Arrays.copyOfRange(assembled, header, assembled.length),
+                        base + header, parameters);
+                s3k.setBankData(assembled, base);
+                s3k.setPsgEnvelopes(psg);
+                s3k.setModEnvelopes(modulation);
+                if (voices != null) s3k.setGlobalVoiceData(voices);
+                yield s3k;
+            }
+        };
         long resourceBytes = 2L * assembled.length + dacBytes + (voices == null ? 0 : voices.length);
         resourceBytes += psg.values().stream().mapToInt(value -> value.length).sum();
         resourceBytes += modulation.values().stream().mapToInt(value -> value.length).sum();
@@ -245,6 +289,7 @@ final class SmpsPackageReader {
             } catch (IllegalArgumentException failure) {
                 throw invalid("Unknown asset kind for " + key);
             }
+            check(driver.equals("s3k") || kind != Kind.MODULATION, "Modulation envelopes require s3k");
             int ordinal = counts.merge(kind, 1, Integer::sum) - 1;
             check(ordinal < kind.count && key.equals(kind.prefix + "/" + ordinal), "Invalid asset ordinal: " + key);
             string(entry, "id");
@@ -264,6 +309,9 @@ final class SmpsPackageReader {
             } else if (offset) {
                 check(kind == Kind.FM_VOICE, "Only FM voices can use bankOffset");
                 int start = number(entry, "bankOffset", 0, rawBank.length - VOICE_SIZE);
+                if (!driver.equals("s3k")) {
+                    check(classicVoiceOffsets.add(start), "Duplicate local FM asset offset " + start);
+                }
                 bytes = Arrays.copyOfRange(rawBank, start, start + VOICE_SIZE);
             } else {
                 literal(entry, "path", kind.path(ordinal));
@@ -276,7 +324,7 @@ final class SmpsPackageReader {
                 }
             }
             if (bytes != null) {
-                validateAsset(kind, bytes);
+                validateAsset(kind, bytes, driver);
                 if (kind == Kind.DAC_SAMPLE) {
                     dacBytes += bytes.length;
                     check(dacBytes <= DAC_LIMIT, "DAC sample bytes exceed 512 KiB");
@@ -317,26 +365,44 @@ final class SmpsPackageReader {
         literal(ref, "game", driver);
         String table = string(ref, "table");
         String expected = hashField(ref, "sha256");
+        boolean classic = !driver.equals("s3k");
         Locator locator = switch (table) {
             case "global-fm" -> {
                 fields(ref, "game", "table", "sha256", "slot");
-                check(kind == Kind.FM_VOICE, "global-fm requires FM_VOICE");
+                check(!classic && kind == Kind.FM_VOICE, "global-fm requires s3k FM_VOICE");
                 yield new Locator(table, number(ref, "slot", 0, 255), 0);
             }
             case "local-fm" -> {
                 fields(ref, "game", "table", "sha256", "slot", "songId");
                 check(kind == Kind.FM_VOICE, "local-fm requires FM_VOICE");
-                yield new Locator(table, number(ref, "slot", 0, 255), number(ref, "songId", 1, 0x1ff));
+                int songId = number(ref, "songId", 1, 0x1ff);
+                if (classic) {
+                    var ids = driver.equals("s1") ? Sonic1Music.titleMap() : Sonic2Music.titleMap();
+                    check(ids.containsKey(songId), "Unknown " + driver + " engine music ID " + songId);
+                }
+                yield new Locator(table, number(ref, "slot", 0, 255), songId);
             }
             case "psg", "mod" -> {
                 fields(ref, "game", "table", "sha256", "index");
                 check(kind.prefix.equals(table), "Wrong kind for table " + table);
-                yield new Locator(table, number(ref, "index", 0, 255), 0);
+                int last = switch (driver) {
+                    case "s1" -> 9;
+                    case "s2" -> Sonic2PackageEnvelopes.COUNT;
+                    default -> 255;
+                };
+                yield new Locator(table, number(ref, "index", classic ? 1 : 0, last), 0);
             }
             case "dac" -> {
                 fields(ref, "game", "table", "sha256", "note");
                 check(kind == Kind.DAC_SAMPLE, "dac requires DAC_SAMPLE");
-                yield new Locator(table, number(ref, "note", 0x81, 0xc4), 0);
+                int last = switch (driver) {
+                    case "s1" -> 0x8b;
+                    case "s2" -> 0x91;
+                    default -> 0xc4;
+                };
+                int note = number(ref, "note", 0x81, last);
+                check(!driver.equals("s1") || note <= 0x83 || note >= 0x88, "Invalid s1 stock DAC note " + note);
+                yield new Locator(table, note, 0);
             }
             default -> throw invalid("Unknown stock table " + table);
         };
@@ -424,7 +490,7 @@ final class SmpsPackageReader {
         }
     }
 
-    private byte[] fillBank(JsonNode bank, int header) throws IOException {
+    private byte[] fillBank(JsonNode bank, int header, boolean classic) throws IOException {
         byte[] result = rawBank.clone();
         boolean resolved = true;
         int end = 0;
@@ -436,6 +502,7 @@ final class SmpsPackageReader {
             check(asset.reference(), "Bank fill requires a referenced FM voice");
             int headerEnd = header + 6 + (rawBank[header + 2] & 255) * 4 + (rawBank[header + 3] & 255) * 6;
             check(offset + VOICE_SIZE <= header || offset >= headerEnd, "Bank fill overlaps the header");
+            if (classic) check(classicVoiceOffsets.add(offset), "Duplicate local FM asset offset " + offset);
             checkZero(rawBank, offset);
             if (asset.bytes() == null) resolved = false;
             else System.arraycopy(asset.bytes(), 0, result, offset, VOICE_SIZE);
@@ -489,9 +556,9 @@ final class SmpsPackageReader {
         }
     }
 
-    private DacData dacBindings(JsonNode document) throws IOException {
+    private DacData dacBindings(JsonNode document, String driver, Map<Integer, DacData.DacEntry> bindings)
+            throws IOException {
         Map<Integer, byte[]> samples = new HashMap<>();
-        Map<Integer, DacData.DacEntry> bindings = new HashMap<>();
         for (Asset asset : assets.values()) {
             if (asset.kind() == Kind.DAC_SAMPLE && asset.bytes() != null) {
                 samples.put(asset.ordinal(), asset.bytes());
@@ -505,7 +572,12 @@ final class SmpsPackageReader {
             bindings.put(note, new DacData.DacEntry(asset.ordinal(), number(binding, "rate", 0, 255)));
             previous = note;
         }
-        return new DacData(samples, bindings, 297);
+        int baseCycles = switch (driver) {
+            case "s1" -> 301;
+            case "s2" -> 295;
+            default -> 297;
+        };
+        return new DacData(samples, bindings, baseCycles);
     }
 
     private Asset asset(JsonNode binding, Kind... kinds) throws IOException {
@@ -554,11 +626,22 @@ final class SmpsPackageReader {
         return (bytes[offset] & 255) | ((bytes[offset + 1] & 255) << 8);
     }
 
-    private static void validateAsset(Kind kind, byte[] bytes) throws IOException {
+    private static void validateAsset(Kind kind, byte[] bytes, String driver) throws IOException {
         check(bytes.length >= 1 && bytes.length <= kind.size, "Invalid " + kind + " byte length");
         switch (kind) {
             case FM_VOICE -> check(bytes.length == VOICE_SIZE, "FM voice must have 25 bytes");
-            case PSG_VOLUME, MODULATION -> validateEnvelope(bytes, kind == Kind.MODULATION);
+            case PSG_VOLUME -> {
+                if (driver.equals("s3k")) {
+                    validateEnvelope(bytes, false);
+                } else {
+                    check(bytes.length >= 2 && bytes[bytes.length - 1] == (byte) 0x80,
+                            "Classic PSG envelope requires an 80 hold terminator");
+                    for (int i = 0; i < bytes.length - 1; i++) {
+                        check(bytes[i] >= 0, "Classic PSG envelope requires attenuation before the hold terminator");
+                    }
+                }
+            }
+            case MODULATION -> validateEnvelope(bytes, true);
             case DAC_SAMPLE -> { }
         }
     }
@@ -703,8 +786,36 @@ final class SmpsPackageReader {
         return node.intValue();
     }
 
-    private static void check(boolean condition, String message) throws IOException {
+    static void check(boolean condition, String message) throws IOException {
         if (!condition) throw invalid(message);
+    }
+
+    private static final class S1PackageData extends Sonic1SmpsData implements SmpsMusicParameters.Source {
+        private final SmpsMusicParameters parameters;
+
+        private S1PackageData(byte[] bank, Map<Integer, byte[]> psg, SmpsMusicParameters parameters) {
+            super(bank);
+            this.parameters = parameters;
+            byte[][] slots = new byte[psg.keySet().stream().mapToInt(Integer::intValue).max().orElse(0)][];
+            psg.forEach((slot, bytes) -> slots[slot - 1] = bytes);
+            setPsgEnvelopes(slots);
+        }
+
+        @Override public SmpsMusicParameters musicParameters() { return parameters; }
+    }
+
+    private static final class S2PackageData extends Sonic2SmpsData implements SmpsMusicParameters.Source {
+        private final SmpsMusicParameters parameters;
+        private final Map<Integer, byte[]> psg;
+
+        private S2PackageData(byte[] bank, int base, Map<Integer, byte[]> psg, SmpsMusicParameters parameters) {
+            super(bank, base);
+            this.parameters = parameters;
+            this.psg = Map.copyOf(psg);
+        }
+
+        @Override public SmpsMusicParameters musicParameters() { return parameters; }
+        @Override public byte[] getPsgEnvelope(int slot) { return psg.get(slot); }
     }
 
     private static final class PackageData extends Sonic3kSmpsData implements SmpsMusicParameters.Source {

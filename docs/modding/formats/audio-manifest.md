@@ -51,8 +51,10 @@ With `formatVersion: 2`, a track may use `smpsPackage` in place of the
 streamed path and loop fields. Its fields are `id`, `smpsPackage`, `gain` and
 `tempoEffects`. The package path is a lower-case contained directory of the
 form `audio/smps/<id>/`. The slash is required. `gain` is in 0–4.
-`tempoEffects` is a boolean controlling native speed-shoes behavior. The
-patch's `baseGame` must match the package driver. SFX declarations and
-version 1 manifests keep their existing semantics.
+The patch's `baseGame` must match the package driver (`s1`, `s2` or `s3k`).
+When `tempoEffects` is true, S1 and S2 use the package's
+`driverOptions.speedUpTempo` byte if provided, and S3K uses its native
+speed-shoes multiplier. SFX declarations and version 1 manifests keep their
+existing semantics.
 
 See the [SMPS package format](smps-package.md) for the contents of that directory.

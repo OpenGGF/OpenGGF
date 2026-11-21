@@ -1,0 +1,142 @@
+{
+  "schemaVersion": 4,
+  "profile": "portable",
+  "driver": "s3k",
+  "package": {
+    "id": "lantern-walk-dac-percussion",
+    "name": "Lantern walk / DAC percussion",
+    "version": "1.0.0",
+    "authors": [],
+    "license": "GPL-3.0-only",
+    "rights": {
+      "composition": null,
+      "notes": null
+    }
+  },
+  "generator": {
+    "tool": "OpenSMPSDeck",
+    "version": "0.1.0-SNAPSHOT",
+    "openggfAudio": "f3175b2225ad3b15be40d9075a7bb6a4dbeae4ca"
+  },
+  "provenance": {
+    "containsRomDerivedData": false,
+    "containsRetailSongData": false,
+    "derivedFromRetailSong": null,
+    "warnings": []
+  },
+  "requires": {
+    "stockAssets": false,
+    "games": []
+  },
+  "driverOptions": {},
+  "bank": {
+    "form": "embedded",
+    "path": "track.bin",
+    "sha256": "1f1216a905496ddfe24941deb91d965a26015d177406a5cbbf4c98fb96f6f729",
+    "assembledSha256": "1f1216a905496ddfe24941deb91d965a26015d177406a5cbbf4c98fb96f6f729",
+    "base": 0,
+    "headerOffset": 0,
+    "localVoiceCount": 2,
+    "previewFrames": 1604,
+    "relocations": [
+      0,
+      6,
+      10,
+      14,
+      18,
+      22
+    ],
+    "relocationsComplete": true,
+    "fills": []
+  },
+  "assets": [
+    {
+      "key": "fm/0",
+      "kind": "FM_VOICE",
+      "id": "voice-lead",
+      "name": "Glass keys",
+      "origin": {
+        "type": "original"
+      },
+      "bankOffset": 561
+    },
+    {
+      "key": "fm/1",
+      "kind": "FM_VOICE",
+      "id": "voice-bass",
+      "name": "Round bass",
+      "origin": {
+        "type": "original"
+      },
+      "bankOffset": 586
+    },
+    {
+      "key": "psg/0",
+      "kind": "PSG_VOLUME",
+      "id": "env-fireflies",
+      "name": "Firefly pluck",
+      "origin": {
+        "type": "original"
+      },
+      "path": "psg/asset-001.bin",
+      "sha256": "e7a26e1a06c99514f9e78499e2e61b7bdd406a68bcdc84bb22b61299b7aa40d1"
+    },
+    {
+      "key": "mod/0",
+      "kind": "MODULATION",
+      "id": "env-shimmer",
+      "name": "Shimmer lift",
+      "origin": {
+        "type": "original"
+      },
+      "path": "mod/asset-001.bin",
+      "sha256": "7cc2f3fc97b394f7139bbcb991c1dc49edd75cd2a7ef92ed07f6b43b6e21f8fe"
+    },
+    {
+      "key": "dac/0",
+      "kind": "DAC_SAMPLE",
+      "id": "kick",
+      "name": "Soft kick",
+      "origin": {
+        "type": "original"
+      },
+      "path": "dac/asset-000.pcm",
+      "sha256": "7da40d5869d32d30a5a86ab7d2ddc24959a70dad441d40f8e382f87ad55b5b22"
+    },
+    {
+      "key": "dac/1",
+      "kind": "DAC_SAMPLE",
+      "id": "snare",
+      "name": "Brush snare",
+      "origin": {
+        "type": "original"
+      },
+      "path": "dac/asset-001.pcm",
+      "sha256": "94f0c8d9b6c3332d3fa6bbc6245be8bca0b0fa1f5dce5140f209ca023adef3e2"
+    }
+  ],
+  "envelopeBindings": [
+    {
+      "asset": "psg/0",
+      "slot": 1
+    },
+    {
+      "asset": "mod/0",
+      "slot": 1
+    }
+  ],
+  "dacBindings": [
+    {
+      "note": 129,
+      "asset": "dac/0",
+      "rate": 12
+    },
+    {
+      "note": 130,
+      "asset": "dac/1",
+      "rate": 12
+    }
+  ],
+  "globalVoices": null,
+  "source": null
+}

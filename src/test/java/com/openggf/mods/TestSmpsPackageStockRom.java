@@ -49,7 +49,7 @@ class TestSmpsPackageStockRom {
         reference(asset(doc, "dac/0", "DAC_SAMPLE"), "dac", "note", 0x81, pcm);
         doc.withArray("dacBindings").addObject().put("asset", "dac/0").put("note", 0x81).put("rate", 7);
         try (var root = packed(temp, doc.toString(), bank, Map.of())) {
-            var resolver = new S3kPackageStockResolver(rom);
+            var resolver = new PackageStockResolverS3k(rom);
             var loaded = reader(root, resolver).read("s3k");
             assertEquals(pcm.length, loaded.dac().sample(0).length());
             assertFalse(resolver.unknownImage());
@@ -63,8 +63,8 @@ class TestSmpsPackageStockRom {
         var reader = RomByteReader.fromRom(rom);
         try (var s3 = Rom.fromReader(reader.window(0x200000, 0x200000), "S3 window");
              var sk = Rom.fromReader(reader.window(0, 0x200000), "SK window")) {
-            var s3Resolver = new S3kPackageStockResolver(s3);
-            var skResolver = new S3kPackageStockResolver(sk);
+            var s3Resolver = new PackageStockResolverS3k(s3);
+            var skResolver = new PackageStockResolverS3k(sk);
             var localS3 = new SmpsPackageReader.Locator("local-fm", 0, 0x12e);
             assertArrayEquals(loader.loadMusic(0x12e).getVoice(0), s3Resolver.resolve(localS3));
             assertNull(skResolver.resolve(localS3));

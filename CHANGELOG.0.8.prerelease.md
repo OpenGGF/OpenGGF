@@ -606,8 +606,8 @@ under the matching area heading; see the
 
 ## Modding and tools
 
-- Music-pack patches can replace Sonic 3 & Knuckles songs with native SMPS
-  packages exported by external authoring tools. Package tracks keep native
+- Music-pack patches can replace Sonic 1, Sonic 2 and Sonic 3 & Knuckles songs
+  with native SMPS packages exported by external authoring tools. Package tracks keep native
   sequencing, jingle restoration and rewind. Failed package tracks fall back
   through the normal override order and show a reason in the Mod Manager.
 
