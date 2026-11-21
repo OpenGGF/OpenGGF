@@ -5390,6 +5390,20 @@
       "note": "Sonic CD disc and BizHawk native reference"
     },
     {
+      "match": "com.openggf.game.soniccd.TestCczStreamedBackgroundPicture#pastRowsRepeatOrStreamFromTheDiscLayout",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCczStreamedBackgroundPicture.java:31",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestCczStreamedBackgroundPicture#goodFutureRowsRepeatOrStreamFromTheDiscLayout",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCczStreamedBackgroundPicture.java:37",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
       "match": "com.openggf.game.soniccd.TestCczStagesScroll#everyStageScrollsAndCyclesForThreeHundredFrames",
       "category": "optional-fixture",
       "evidence": "src/test/java/com/openggf/game/soniccd/TestCczStagesScroll.java:46",
