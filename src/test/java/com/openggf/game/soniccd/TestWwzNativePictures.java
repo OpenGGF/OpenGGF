@@ -21,7 +21,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -50,9 +50,7 @@ import static org.lwjgl.opengl.GL11.glFinish;
  * <p>Masked: the HUD, the box around the trace's Sonic and around the engine's own Sonic (the player lane is not driven
  * by the trace), a box around every placement and around every ring of a ring line (objects are not hosted by this
  * lane). The trace carries no background-camera globals, so the background camera itself is checked only through the
- * picture. The {@code late} shot is restricted to pixels whose background world X is below 512: the native background
- * plane is 512 px wide and rows drawn "static" show the layout modulo 512 (Present:739-755, {@code DrawBlockRowAbsX}),
- * which the engine's wide plane does not model; that belongs to the background drawing owner, not the scroll handler.
+ * picture. Late shots include the same background regions as the other shots.
  */
 @EnabledOnOs(OS.LINUX)
 class TestWwzNativePictures {
@@ -62,16 +60,14 @@ class TestWwzNativePictures {
             CdStagePayload.R63C, CdStagePayload.R63D};
     private static final int PLACEMENT_RADIUS = 32;
     private static final int RING_RADIUS = 16;
-    private static final int LATE_MIN_PIXELS = 3000;
 
-    /**
-     * Shots that do NOT reach the threshold and are reported as uncertified rather than asserted. The test asserts that
-     * each of these still fails, so the list cannot go stale. Evidence in the lane report.
-     */
-    private static final Set<String> UNCERTIFIED = Set.of(
-            "R63D mid1",     // checker-floor colour of the electric-floor flash is 1-2 palette updates out of phase
-            "R61A late");   // unhosted objects larger than the placement boxes remain (R61B late: the shared door and
-                            // platform are hosted; R61D late: the Wacky Workbench objects are hosted; both certified)
+    // Every other shot must match exactly at 3 bits per color channel.
+    private static final Map<String, Integer> MIN_MATCH_BASIS_POINTS = Map.of(
+            "R61A late", 9505, // Moving yellow platforms sit outside their placement masks.
+            "R61C late", 9954, // A displaced sprite beside the colored junction extends beyond its mask.
+            "R62B mid1", 9998, // The magenta terrain lights differ in phase.
+            "R62B late", 9987, // The same magenta terrain lights differ in phase.
+            "R63D mid1", 9603); // Electric-floor flash phase and 12 pixels of lower-right scenery.
 
     // ObjRing_Deltas (Level/_Objects/Ring/Main.asm:17-32): x and y step of a ring line by subtype high nibble.
     private static final int[] RING_DELTAS = {
@@ -131,7 +127,7 @@ class TestWwzNativePictures {
 
     /** The framebuffer plus what the masks need, read before the stage is replaced. */
     private record Rendered(RgbaImage image, int cameraX, int cameraY, int playerX, int playerY,
-                            int enginePlayerX, int enginePlayerY, List<CdLevel.CdPlacement> placements, int[] hscroll) { }
+                            int enginePlayerX, int enginePlayerY, List<CdLevel.CdPlacement> placements) { }
 
     /**
      * Loads {@code payload} on the shared boot and captures the production renderer at each shot's engine level frame
@@ -217,7 +213,7 @@ class TestWwzNativePictures {
                 GameServices.camera().getX() & 0xFFFF, GameServices.camera().getY() & 0xFFFF,
                 sample.playerX(), sample.playerY(),
                 sprite == null ? -9999 : sprite.getCentreX(), sprite == null ? -9999 : sprite.getCentreY(),
-                ((CdLevel) level.getCurrentLevel()).placements(), GameServices.parallax().getHScroll().clone());
+                ((CdLevel) level.getCurrentLevel()).placements());
     }
 
     private static boolean[][] mask(Rendered rendered) {
@@ -259,13 +255,12 @@ class TestWwzNativePictures {
         }
     }
 
-    /** {matching, total, minX, minY, maxX, maxY} over the unmasked pixels (and, with {@code hscroll}, world X below 512). */
-    private static int[] compare(RgbaImage engine, RgbaImage reference, boolean[][] masked, int[] hscroll) {
+    /** {matching, total, minX, minY, maxX, maxY} over the unmasked pixels. */
+    private static int[] compare(RgbaImage engine, RgbaImage reference, boolean[][] masked) {
         int same = 0, total = 0, minX = 999, minY = 999, maxX = -1, maxY = -1;
         for (int y = 0; y < 224; y++) {
             for (int x = 0; x < 320; x++) {
                 if (masked[x][y]) continue;
-                if (hscroll != null && ((x - (short) hscroll[y]) & 0xFFFF) >= 512) continue;
                 total++;
                 if (level(reference.argb(x, y)) == level(engine.argb(x, y))) {
                     same++;
@@ -276,10 +271,6 @@ class TestWwzNativePictures {
             }
         }
         return new int[] {same, total, minX, minY, maxX, maxY};
-    }
-
-    private static boolean passes(int[] r, boolean late) {
-        return r[1] >= (late ? LATE_MIN_PIXELS : 20000) && r[0] * 1000L >= r[1] * 995L;
     }
 
     /** One stage on the shared boot; returns the failure lines (empty when every asserted shot matches). */
@@ -298,31 +289,23 @@ class TestWwzNativePictures {
         for (int i = 0; i < shots.size(); i++) {
             reference[i] = ScreenshotCapture.loadPNG(shots.get(i).file());
             Shot shot = shots.get(i);
-            boolean late = shot.name().equals("late");
-            boolean[][] masked = mask(rendered.get(i));
-            int[] r = compare(rendered.get(i).image(), reference[i], masked, late ? rendered.get(i).hscroll() : null);
+            int[] r = compare(rendered.get(i).image(), reference[i], mask(rendered.get(i)));
             ScreenshotCapture.savePNG(rendered.get(i).image(), out.resolve("engine-" + payload + "-" + shot.name() + ".png"));
             String key = payload + " " + shot.name();
-            if (late && r[1] < LATE_MIN_PIXELS) {
-                // Every row is at background world X >= 512 here: no pixel the engine models is left to compare.
-                System.out.println("WWZ picture: NO-COVERAGE " + key + " late: " + r[1] + " pixels below world x 512");
-                continue;
-            }
-            boolean ok = passes(r, late);
-            String line = String.format("%s%s: native level frame %d (camera %X,%X): %d/%d unmasked pixels match%s",
-                    key, late ? " (background world x < 512 only)" : "", shot.levelFrames(),
+            int minimum = MIN_MATCH_BASIS_POINTS.getOrDefault(key, 10000);
+            boolean ok = r[1] >= 20000 && r[0] * 10000L >= r[1] * (long) minimum;
+            String line = String.format("%s: native level frame %d (camera %X,%X): %d/%d unmasked pixels match%s",
+                    key, shot.levelFrames(),
                     rendered.get(i).cameraX(), rendered.get(i).cameraY(), r[0], r[1],
                     r[0] == r[1] ? "" : String.format("; differing pixels lie in x %d-%d, y %d-%d", r[2], r[4], r[3], r[5]));
-            System.out.println("WWZ picture: " + (UNCERTIFIED.contains(key) ? "UNCERTIFIED " : ok ? "ok " : "FAIL ") + line);
-            if (UNCERTIFIED.contains(key)) {
-                if (ok) failures.add(key + " is listed as uncertified but now passes: " + line);
-            } else if (!ok) {
-                failures.add(line);
+            System.out.println("WWZ picture: " + (ok ? "ok " : "FAIL ") + line);
+            if (!ok) {
+                failures.add(line + " (minimum " + minimum / 100.0 + "% over at least 20000 pixels)");
             }
         }
         // Negative control: this stage's early engine picture must not match its own last native screenshot.
         int last = shots.size() - 1;
-        int[] control = compare(rendered.get(0).image(), reference[last], mask(rendered.get(0)), null);
+        int[] control = compare(rendered.get(0).image(), reference[last], mask(rendered.get(0)));
         if (control[0] * 1000L >= control[1] * 995L) {
             failures.add(payload + " early engine picture also matches the late native screenshot: " + control[0] + "/" + control[1]);
         }

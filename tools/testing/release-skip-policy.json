@@ -1918,6 +1918,20 @@
       "note": "Sonic CD disc and native captures"
     },
     {
+      "match": "com.openggf.game.soniccd.TestWwzBossPictures#badFutureArenaTilesMatchTheNativeFrame",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestWwzBossPictures.java:118",
+      "allowed_when_absent": "soniccd_native",
+      "note": "USA Sonic CD disc and R63D-defeat native trace and screenshot"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestWwzBossPictures#goodFutureArenaTilesMatchTheNativeFrames",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestWwzBossPictures.java:123",
+      "allowed_when_absent": "soniccd_native",
+      "note": "USA Sonic CD disc and R63C-defeat and R63C-hit native traces and screenshots"
+    },
+    {
       "match": "com.openggf.game.soniccd.TestWwzBossRewind#bossGraphRestoresAndReplaysForward",
       "category": "optional-fixture",
       "evidence": "src/test/java/com/openggf/game/soniccd/TestWwzBossRewind.java:34",
