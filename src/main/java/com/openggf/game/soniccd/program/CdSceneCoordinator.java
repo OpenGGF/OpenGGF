@@ -226,6 +226,11 @@ public final class CdSceneCoordinator {
 
     public int titleStartAct() { return titleRequest instanceof Stage s ? SonicCdZoneRegistry.actIndex(s.payload()) : 0; }
 
+    public com.openggf.game.soniccd.CdStageDemo titleDemo() {
+        return titleRequest instanceof Stage stage && stage.route() == CdProgramRequest.Route.ATTRACT_DEMO
+                ? com.openggf.game.soniccd.CdStageDemo.valueOf(stage.payload().name()) : null;
+    }
+
     /** The pending title request, for tests and the not-hosted screen. */
     public CdProgramRequest titleRequest() { return titleRequest; }
 

@@ -148,7 +148,7 @@ public final class ObjectManagerInternalAccess {
         if (manager != null) manager.solidContacts().reevaluatingGetOffObject(player, instance);
     }
 
-    /** Frame-start spawner pass for a game's fixed-slot owner; a no-op unless enabled. */
+    /** Frame-start spawner pass for games that place layout entries before the player slot. */
     public static void runSpawnerBeforeObjectPass(ObjectManager manager, int cameraX) {
         manager.placement.runSpawnerBeforeObjectPass(cameraX);
     }

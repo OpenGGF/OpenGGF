@@ -348,7 +348,7 @@ final class ObjectTouchResponseController {
             return;
         }
 
-        // ROM Sonic_Display (sonic3k.asm:22055-22057) and S2/S1 equivalents
+        // ROM loc_10C7E (sonic3k.asm:22054-22058) and S2/S1 equivalents
         // skip TouchResponse when object_control's bit 7 (or $A0 in S3K) is
         // set — i.e. flight/CATCH_UP_FLIGHT/FLIGHT_AUTO_RECOVERY/super/debug
         // states where the controlling object owns the sprite. Without this
@@ -634,6 +634,14 @@ final class ObjectTouchResponseController {
                 }
             }
 
+            // loc_206950 (r8/player_object_collide.asm:85-93) sends $40 to the layer check.
+            // An object with raw type $C0 can also decode to SPECIAL for dispatch.
+            if (category == TouchCategory.SPECIAL && (flags & 0xC0) == 0x40
+                    && !stageAdmitsSpecialTouch(player, instance)) {
+                buildingSet.remove(instance);
+                break;
+            }
+
             // Type-keyed lost-ring collectible: ROM Touch_ChkValue ring branch
             // (docs/s2disasm/s2.asm:85196-85219). Evaluated EVERY frame on overlap
             // (NOT edge-triggered) so the ring collects the frame invulnerable_time
@@ -681,13 +689,6 @@ final class ObjectTouchResponseController {
             // every-frame loop in S1 (`docs/s1disasm/_incObj/sub ReactToItem.asm`)
             // and S3K (`docs/skdisasm/sonic3k.asm` `Collision_response_list`
             // dispatcher).
-            //
-            // Sonic CD Metallic Madness: a $40-type object on the other layer ends the pass with no
-            // response (r8/player_object_collide.asm:104-116); every other game's routines admit it.
-            if (category == TouchCategory.SPECIAL && !stageAdmitsSpecialTouch(player, instance)) {
-                buildingSet.remove(instance);
-                break;
-            }
             boolean shouldTrigger = category == TouchCategory.BOSS
                     || category == TouchCategory.HURT
                     || category == TouchCategory.ENEMY
@@ -982,7 +983,7 @@ final class ObjectTouchResponseController {
                 : instance != null
                         ? objectCallbacks.call(instance, instance::getCollisionX)
                         : sidekick.getCentreX();
-        // HurtCharacter's common tail always publishes $1A (sonic3k.asm:21357).
+        // HurtCharacter's common tail loc_10320 (sonic3k.asm:21143-21146) always publishes $1A.
         // Where the ROM appears to keep the prior byte it is the solid
         // push-release tail erasing it later in the same frame, which
         // ObjectSolidContactController owns; the touch path has no say in it.
@@ -1070,11 +1071,8 @@ final class ObjectTouchResponseController {
         }
         if (categoryBits == 0xC0 && profile != null
                 && profile.categoryDecodeMode() == TouchCategoryDecodeMode.S3K_SPECIAL_PROPERTY) {
-            // ROM: S3K Touch_ChkValue sends every $C0 collision flag to
-            // Touch_Special (sonic3k.asm:20809-20814). Touch_Special only
-            // increments collision_property for selected size indices and
-            // otherwise returns (sonic3k.asm:21198-21230); it is never the
-            // generic boss-bounce path.
+            // S3K Touch_ChkValue (sonic3k.asm:20809-20814) sends every $C0 flag to Touch_Special.
+            // Touch_Special (sonic3k.asm:21198-21230) increments collision_property for selected size indices.
             return TouchCategory.SPECIAL;
         }
         if (categoryBits == 0xC0 && profile != null) {
@@ -1098,8 +1096,7 @@ final class ObjectTouchResponseController {
 
     private static boolean isSonic1TouchSpecialPropertyIndex(int sizeIndex) {
         return switch (sizeIndex) {
-            // S1 React_Special increments obColProp for $D7 and $E1 only:
-            // docs/s1disasm/_incObj/sub ReactToItem.asm:377-427.
+            // S1 React_Special (_incObj/Sonic ReactToItem.asm:510-521) routes $D7 and $E1 to property handlers.
             case 0x17, 0x21 -> true;
             default -> false;
         };

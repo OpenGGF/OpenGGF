@@ -812,6 +812,20 @@
       "note": "Sonic CD disc and native captures"
     },
     {
+      "match": "com.openggf.game.soniccd.flow.TestCdStageLoadRewind#heldRewindStopsAtTimeWarpArrival",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/flow/TestCdStageLoadRewind.java:41",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "The campaign flow harness opens the user-supplied USA disc through CdTestMedia.usaCue."
+    },
+    {
+      "match": "com.openggf.game.soniccd.flow.TestCdStageLoadRewind#heldRewindStopsAtNextActArrival",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/flow/TestCdStageLoadRewind.java:62",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "The campaign flow harness opens the user-supplied USA disc through CdTestMedia.usaCue."
+    },
+    {
       "match": "com.openggf.game.soniccd.flow.TestCdGameFlowNative#actOneClearTalliesAndEntersActTwoAsNative",
       "category": "optional-fixture",
       "evidence": "src/test/java/com/openggf/game/soniccd/flow/TestCdGameFlowNative.java:45",
@@ -880,6 +894,27 @@
       "evidence": "src/test/java/com/openggf/game/soniccd/TestSonicCdSharedObjectPictures.java:146",
       "allowed_when_absent": "soniccd_native",
       "note": "Sonic CD disc and native captures"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestCdStageDemos#idleTitlePlaysEachOrdinaryDemo",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdStageDemos.java:27",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestCdStageDemos#titleIdleTimeoutStartsPalmtreePanicDemo",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdStageDemos.java:72",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestCdStageDemos#startDuringDemoTitleCardLetsPlaybackContinue",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdStageDemos.java:82",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
     },
     {
       "match": "com.openggf.game.soniccd.TestPpzObjectsA#mosquiLandsSilentlyOffScreen",
@@ -1013,6 +1048,13 @@
       "evidence": "src/test/java/com/openggf/game/soniccd/TestPpzObjectsA.java:423",
       "allowed_when_absent": "soniccd_disc",
       "note": "Sonic CD disc and native captures"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestCczLeftEdgePicture#visibleSpringAndBlockSurviveTheNativeSpriteBudget",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCczLeftEdgePicture.java:33",
+      "allowed_when_absent": "soniccd_native",
+      "note": "Sonic CD USA disc and full-act R31A native movie and trace."
     },
     {
       "match": "com.openggf.game.soniccd.TestRoutesA3Pictures#objectSpritesMatchTheNativeFrames",
@@ -1176,6 +1218,20 @@
       "note": "Sonic CD disc and native captures"
     },
     {
+      "match": "com.openggf.game.soniccd.TestWwzBossFades#goodFutureFadesMatchNativeOnEveryVBlank",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestWwzBossFades.java:27",
+      "allowed_when_absent": "soniccd_native",
+      "note": "Sonic CD disc and native captures"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestWwzBossFades#badFutureFadesMatchNativeOnEveryVBlank",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestWwzBossFades.java:32",
+      "allowed_when_absent": "soniccd_native",
+      "note": "Sonic CD disc and native captures"
+    },
+    {
       "match": "com.openggf.game.soniccd.TestWwzBossNative#r63cDeathOnTheElectrifiedFloorReplaysAgainstNative",
       "category": "optional-fixture",
       "evidence": "src/test/java/com/openggf/game/soniccd/TestWwzBossNative.java:85",
@@ -1269,23 +1325,30 @@
     {
       "match": "com.openggf.game.soniccd.TestTtzPlayerWaterMovies#drowningFollowsTheBubblesSlotCountdown",
       "category": "optional-fixture",
-      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzPlayerWaterMovies.java:39",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzPlayerWaterMovies.java:42",
       "allowed_when_absent": "soniccd_native",
       "note": "Sonic CD disc and native captures"
     },
     {
       "match": "com.openggf.game.soniccd.TestTtzPlayerWaterMovies#drowningRequestsTheNativeSounds",
       "category": "optional-fixture",
-      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzPlayerWaterMovies.java:68",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzPlayerWaterMovies.java:71",
       "allowed_when_absent": "soniccd_native",
       "note": "Sonic CD disc and native captures"
     },
     {
       "match": "com.openggf.game.soniccd.TestTtzPlayerWaterMovies#currentPushesForOneFrameAndReleases",
       "category": "optional-fixture",
-      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzPlayerWaterMovies.java:96",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzPlayerWaterMovies.java:99",
       "allowed_when_absent": "soniccd_native",
       "note": "Sonic CD disc and native captures"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestTtzPlayerWaterMovies#layoutBlockClaimsItsSlotBeforeAPlayerBubble",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestTtzPlayerWaterMovies.java:117",
+      "allowed_when_absent": "soniccd_native",
+      "note": "Sonic CD disc and native R42A recording"
     },
     {
       "match": "com.openggf.game.soniccd.TestCdBossResultsMusic#capsuleRequestsTheResultsMusicOnNativesRow",
@@ -1911,6 +1974,20 @@
       "note": "Sonic CD disc and native captures"
     },
     {
+      "match": "com.openggf.game.soniccd.TestWwzBossPictures#badFutureArenaTilesMatchTheNativeFrame",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestWwzBossPictures.java:118",
+      "allowed_when_absent": "soniccd_native",
+      "note": "USA Sonic CD disc and R63D-defeat native trace and screenshot"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestWwzBossPictures#goodFutureArenaTilesMatchTheNativeFrames",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestWwzBossPictures.java:123",
+      "allowed_when_absent": "soniccd_native",
+      "note": "USA Sonic CD disc and R63C-defeat and R63C-hit native traces and screenshots"
+    },
+    {
       "match": "com.openggf.game.soniccd.TestWwzBossRewind#bossGraphRestoresAndReplaysForward",
       "category": "optional-fixture",
       "evidence": "src/test/java/com/openggf/game/soniccd/TestWwzBossRewind.java:34",
@@ -2135,6 +2212,13 @@
       "note": "Sonic CD disc and native captures"
     },
     {
+      "match": "com.openggf.game.soniccd.TestMmzObjects#spilledRingsCanOnlyBeCollectedOnTheLayerWhereSonicWasHurt",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestMmzObjects.java:345",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
       "match": "com.openggf.game.soniccd.TestMmzObjects#hvPlatformHoldsEachShapeForItsTimer",
       "category": "optional-fixture",
       "evidence": "src/test/java/com/openggf/game/soniccd/TestMmzObjects.java:92",
@@ -2210,6 +2294,13 @@
       "evidence": "src/test/java/com/openggf/game/soniccd/TestMmzObjects.java:234",
       "allowed_when_absent": "soniccd_disc",
       "note": "Sonic CD disc and native captures"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestMmzObjects#laserBeamShrinksSonicOnTheNativeContactFrame",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestMmzObjects.java:343",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Sonic CD USA disc"
     },
     {
       "match": "com.openggf.game.soniccd.TestMmzObjects#pohBeeAttackReplacesItsSlotAndRewindRecreatesTheChains",
@@ -2289,6 +2380,13 @@
       "note": "user's Sonic CD disc"
     },
     {
+      "match": "com.openggf.game.soniccd.TestMmzObjects2#scarabEnemyTouchHurtsSonicAcrossLayers",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestMmzObjects2.java:263",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
       "match": "com.openggf.game.soniccd.TestMmzObjects2#scarabSpawnerMakesTheBeetleItsShellAndTheMonitorOnItsBack",
       "category": "optional-fixture",
       "evidence": "src/test/java/com/openggf/game/soniccd/TestMmzObjects2.java:74",
@@ -2299,6 +2397,62 @@
       "match": "com.openggf.game.soniccd.TestMmzObjects2#scarabBeetleWalksSixtyOneCallsRestsAndWalksAgain",
       "category": "optional-fixture",
       "evidence": "src/test/java/com/openggf/game/soniccd/TestMmzObjects2.java:74",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestCdDeleteOtherObject#entryBarrierReleasesGearOnArenaEntry",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdDeleteOtherObject.java:58",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestCdDeleteOtherObject#bossMachineReleasesGearOnEncounterExit",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdDeleteOtherObject.java:58",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestCdDeleteOtherObject#eggmanReleasesTheMobileAtTheEscapeBoundary",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdDeleteOtherObject.java:58",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestCdDeleteOtherObject#chaseEggmanReleasesOneDoorPerUpdate",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdDeleteOtherObject.java:58",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestCdDeleteOtherObject#fallingSpikesReleaseTheTipOnFloorContact",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdDeleteOtherObject.java:58",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestCdDeleteOtherObject#scarabReleasesTheBeetleWhenTheMonitorDespawns",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdDeleteOtherObject.java:58",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestCdDeleteOtherObject#scarabReleasesTheMonitorWhenTheBeetleDespawns",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdDeleteOtherObject.java:58",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestCdDeleteOtherObject#pohBeeWeightReleasesTheBodyOnLinkAllocationFailure",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdDeleteOtherObject.java:58",
       "allowed_when_absent": "soniccd_disc",
       "note": "user's Sonic CD disc"
     },
@@ -5309,6 +5463,13 @@
       "match": "com.openggf.game.soniccd.TestWwzStagesScroll#everyStageScrollsCyclesAndAnimatesForThreeHundredFrames",
       "category": "optional-fixture",
       "evidence": "src/test/java/com/openggf/game/soniccd/TestWwzStagesScroll.java:57",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestSonicCdR11aOpeningIdle#heldRightMovesOnlyAfterTheTitleCardAndHeldJumpDoesNotTap",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestSonicCdR11aOpeningIdle.java:96",
       "allowed_when_absent": "soniccd_disc",
       "note": "user's Sonic CD disc"
     },
@@ -9065,16 +9226,30 @@
       "note": "user's Sonic CD disc"
     },
     {
-      "match": "com.openggf.game.soniccd.TestCdGameplaySoundCues#ringLifeThresholdsRequestTheYesVoiceOnThePickup",
+      "match": "com.openggf.game.soniccd.TestCdGameplaySoundCues#ringPickupsRequestOnlyTheNativeCue",
       "category": "optional-fixture",
-      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdGameplaySoundCues.java:100",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdGameplaySoundCues.java:101",
       "allowed_when_absent": "soniccd_disc",
       "note": "user's Sonic CD disc"
     },
     {
+      "match": "com.openggf.game.soniccd.TestCdGameplaySoundCues#lostRingPickupsRequestOnlyTheNativeCue",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdGameplaySoundCues.java:134",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestSszGroundAnimal#groundAnimalMatchesNativeHopsDrawAndRetirement",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestSszGroundAnimal.java:41",
+      "allowed_when_absent": "soniccd_native",
+      "note": "Sonic CD disc and the native R71C full-act recording"
+    },
+    {
       "match": "com.openggf.game.soniccd.TestCdGameplaySoundCues#workbenchRequestsBounceOnTheNativeStandingToRollingFrame",
       "category": "optional-fixture",
-      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdGameplaySoundCues.java:140",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdGameplaySoundCues.java:171",
       "allowed_when_absent": "soniccd_native",
       "note": "Sonic CD disc and native Wacky Workbench recording"
     },

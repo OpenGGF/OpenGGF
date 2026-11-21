@@ -1025,7 +1025,7 @@ public class GameLoop {
     private boolean isRewindBlocked() {
         // fadeManager can be null in non-gameplay modes (e.g.
         // MASTER_TITLE_SCREEN with no active session).
-        return GameLoopPauseInput.configurationPaused(currentGameMode)
+        return GameLoopLevelDemo.find(currentGameMode, levelManager) != null || GameLoopPauseInput.configurationPaused(currentGameMode)
                 // Input movies are append-only and cannot represent a world rollback.
                 || userRecordingSessionLauncher.hasActiveRecordingSession()
                 || isNonRewindableTransitionPending()
@@ -1125,8 +1125,9 @@ public class GameLoop {
     private void updateInputPassUserPause(GameLoopPauseInput.Ownership ownership, boolean takeoverConsumedPausePress) {
         boolean specialStageOwnsStart = !userPaused && inputHandler.logical().player1().startPressed()
                 && specialStageLifecycle.ownsStartInput();
+        boolean nativeOwnsStart = specialStageOwnsStart || GameLoopLevelDemo.find(currentGameMode, levelManager) != null;
         boolean nextUserPaused = !ownership.hostPauseExit() && GameLoopPauseInput.nextUserPaused(currentGameMode, inputHandler,
-                configService, userPaused, ownership.ownsPause() || specialStageOwnsStart, takeoverConsumedPausePress,
+                configService, userPaused, ownership.ownsPause() || nativeOwnsStart, takeoverConsumedPausePress,
                 playbackDebugManager, userRecordingControls::handlePlaybackTakeoverRequest);
         if (nextUserPaused == userPaused) return;
         // The resume tick is already inside its input pass. Retire the paused
@@ -1300,7 +1301,7 @@ public class GameLoop {
             return;
         }
         if (!overlayOwnsPause && !titleOwnsEscape) escapeToMasterTitleController.update(currentGameMode, inputHandler);
-        if (currentGameMode == GameMode.LEVEL && !overlayOwnsPause) {
+        if (currentGameMode == GameMode.LEVEL && !overlayOwnsPause && GameLoopLevelDemo.find(currentGameMode, levelManager) == null) {
             userRecordingControls.updateLevelControlInput(inputHandler);
         }
 
@@ -1344,7 +1345,7 @@ public class GameLoop {
         // session. Its menu has no world timers until a run actually loads.
         if (timerManager != null && !playbackDebugManager.isCurrentGameplayTickSuppressed()) {
             profiler.beginSection("timers");
-            timerManager.update();
+            LevelFrameStep.updateTimers(timerManager, levelManager);
             profiler.endSection("timers");
         }
 
@@ -1622,9 +1623,11 @@ public class GameLoop {
             return false; // Skip normal level update this frame
         }
 
+        var demo = GameLoopLevelDemo.find(currentGameMode, levelManager);
         // Check for transition requests that need fade-to-black
         FadeManager fadeManager = this.fadeManager;
         if (!fadeManager.isActive()) {
+            GameLoopLevelDemo.requestExitIfFinishedOrInterrupted(demo, inputHandler, levelManager);
             if (levelManager.consumeRespawnRequest()) {
                 startRespawnFade();
                 levelIterationAdmission.finishPlaybackBoundary(
@@ -1749,26 +1752,10 @@ public class GameLoop {
             boolean holdVblankForPendingLoad =
                     playbackDebugManager.shouldHoldVblankForPendingLevelLoad();
             if (!skipGameplay) {
-                // Canonical level tick sequence — see LevelFrameStep for ordering rationale.
-                spriteManager.publishHeldInputForLevelEvents(inputHandler);
-                // Native pause is reserved for recorded controller input. Live Start
-                // uses the visible host pause before ordinary frame admission.
-                userRecordingControls.beforeLevelFrame(inputHandler);
-                if (hostedRuns.isActive()) {
-                    hostedRuns.beforeStep(inputHandler);
-                }
                 int heldVblank = levelManager.getObjectManager() != null
                         ? levelManager.getObjectManager().getVblaCounter()
                         : 0;
-                LevelFrameResult frameResult = LevelFrameStep.execute(
-                        LevelFrameContext.from(gameplayMode),
-                        activePlcLifecycleFrame, PlcLifecyclePhase.ORDINARY_LEVEL,
-                        levelManager, camera, () -> spriteManager.update(inputHandler),
-                        (name, step) -> {
-                            profiler.beginSection(name);
-                            step.run();
-                            profiler.endSection(name);
-                        });
+                LevelFrameResult frameResult = GameLoopLevelDemo.runFrame(demo, inputHandler, this::executeLevelFrame);
                 if (frameResult == LevelFrameResult.GAMEPLAY_FRAME) {
                     playbackDebugManager.onCurrentGameplayTickExecuted();
                 }
@@ -1815,9 +1802,7 @@ public class GameLoop {
             boolean seamlessTransitionCompleted =
                     levelManager.consumeActTransitionRewindBoundaryDuringFrame();
             TraceSessionLauncher traceSession = TraceSessionLauncher.active();
-            if ((traceSession != null
-                    && !TraceSessionLauncher.isRunFrameDriverActive())
-                    || traceSession == null) {
+            if (demo == null && (traceSession == null || !TraceSessionLauncher.isRunFrameDriverActive())) {
                 // Reached only inside the !freezeForNonRewindableTransition branch,
                 // so the transition-pending predicate is guaranteed false here.
                 LevelRewindFrameRecorder.record(
@@ -2292,8 +2277,26 @@ public class GameLoop {
                 && inputHandler.isKeyPressedWithoutModifiers(keyCode);
     }
 
+    private LevelFrameResult executeLevelFrame() {
+        spriteManager.publishHeldInputForLevelEvents(inputHandler);
+        // Native pause is reserved for recorded controller input.
+        userRecordingControls.beforeLevelFrame(inputHandler);
+        if (hostedRuns.isActive()) {
+            hostedRuns.beforeStep(inputHandler);
+        }
+        return LevelFrameStep.execute(
+                LevelFrameContext.from(gameplayMode),
+                activePlcLifecycleFrame, PlcLifecyclePhase.ORDINARY_LEVEL,
+                levelManager, camera, () -> spriteManager.update(inputHandler),
+                (name, step) -> {
+                    profiler.beginSection(name);
+                    step.run();
+                    profiler.endSection(name);
+                });
+    }
+
     private boolean protectedInputSession() {
-        return TraceSessionLauncher.active() != null
+        return GameLoopLevelDemo.find(currentGameMode, levelManager) != null || TraceSessionLauncher.active() != null
                 || playbackDebugManager.hasActiveOrScheduledSession()
                 || userRecordingSessionLauncher.hasActiveRecordingSession();
     }
@@ -2578,16 +2581,7 @@ public class GameLoop {
     public void initializeTitleScreenMode() {
         LOGGER.info("Initializing game in Title Screen mode");
 
-        // Ensure the ROM is loaded and audio is initialized
-        try {
-            var rom = romManager.getRom();
-            var gameModule = GameServices.module();
-
-            audioManager.setAudioProfile(gameModule.getAudioProfile());
-            audioManager.setRom(gameModule.getAudioProfile() instanceof com.openggf.audio.RomlessSmpsSource ? null : rom);
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to load ROM for title screen", e);
-        }
+        nativeMenuFlow.initializeTitleAudio(GameServices.module().getAudioProfile(), romManager);
 
         GameMode oldMode = changeGameModeForBoundary(GameMode.TITLE_SCREEN);
 

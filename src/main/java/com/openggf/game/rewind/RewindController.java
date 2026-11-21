@@ -125,6 +125,12 @@ public final class RewindController {
         return isPoisonedFadeCapture(snapshot.get(FADE_MANAGER_KEY));
     }
 
+    boolean hasUnrestorableFadeFloor() {
+        return keyframes.latestAtOrBefore(earliestAvailableFrame())
+                .map(entry -> isPoisonedFadeSnapshot(entry.snapshot()))
+                .orElse(false);
+    }
+
     private boolean isLiveFadePoisoned() {
         return isPoisonedFadeCapture(registry.captureEntry(FADE_MANAGER_KEY));
     }

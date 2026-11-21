@@ -1,6 +1,9 @@
 package com.openggf.game.soniccd;
 
 import com.openggf.audio.AudioRequestObserver;
+import com.openggf.game.GameServices;
+import com.openggf.game.soniccd.objects.shared.ObjBlock;
+import com.openggf.game.soniccd.objects.ttz.ObjBubble;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -103,6 +106,50 @@ class TestTtzPlayerWaterMovies {
         assertEquals(0, pushed.xSpeed());
         assertEquals(0x2F2, pushed.y(), "the Down nudge after the roll's $2F1");
         assertEquals(0, outcome.row(442).anim(), "out of the box: walk pose");
+    }
+
+    /**
+     * R42A's long movie reaches a layout chunk and emits a player bubble in the same pass.
+     * Native assigns the layout block slot 43 and the bubble slot 63. Both use the first free
+     * slot. StageMainLoopUpdate (r4/main.asm:379-383) runs layout first.
+     */
+    @Test
+    void layoutBlockClaimsItsSlotBeforeAPlayerBubble() throws Exception {
+        int arrival = 1550;
+        Path movie = CdTestMedia.nativeFile("rehost-long/R42A/movie.bk2");
+        var fixture = new CdFixtureReplay.Fixture(CdStagePayload.R42A, movie.getParent().resolve("trace"), movie);
+        var previousBubbles = java.util.Collections.newSetFromMap(
+                new java.util.IdentityHashMap<ObjBubble, Boolean>());
+        try (CdDiscDataSource disc = CdDiscDataSource.open(CdTestMedia.usaCue())) {
+            var outcome = CdFixtureReplay.replay(disc, tempDir, fixture, arrival, true, -1, -1,
+                    new CdFixtureReplay.Hooks() {
+                        @Override
+                        public void row(int row, AbstractPlayableSprite sonic) {
+                            if (row != arrival - 1 && row != arrival) return;
+                            var active = GameServices.level().getObjectManager().getActiveObjects();
+                            var bubbles = active.stream().filter(ObjBubble.class::isInstance)
+                                    .map(ObjBubble.class::cast)
+                                    .filter(bubble -> !bubble.isDestroyed() && bubble.getSpawn().objectId() == 0x21)
+                                    .toList();
+                            if (row < arrival) {
+                                previousBubbles.addAll(bubbles);
+                                return;
+                            }
+                            var block = active.stream().filter(ObjBlock.class::isInstance).map(ObjBlock.class::cast)
+                                    .filter(object -> !object.isDestroyed() && object.getSpawn().x() == 0x0AA0
+                                            && object.getSpawn().y() == 0x0470)
+                                    .findFirst().orElseThrow();
+                            var newBubbles = bubbles.stream().filter(bubble -> !previousBubbles.contains(bubble)).toList();
+                            assertEquals(1, newBubbles.size(), "one player bubble appears in the layout pass's frame");
+                            int blockSlot = block.getSlotIndex();
+                            int bubbleSlot = newBubbles.getFirst().getSlotIndex();
+                            assertTrue(blockSlot < bubbleSlot, "expected the block to allocate before the bubble: "
+                                    + blockSlot + " vs " + bubbleSlot);
+                        }
+                    });
+            assertTrue(outcome.firstErrorRow() < 0, () -> "R42A player or camera diverged: " + outcome.fields());
+            assertEquals(arrival + 1, outcome.rowsCompared());
+        }
     }
 
     private CdFixtureReplay.Outcome replay(String name, CdStagePayload payload, int lastRow, int keepFrom, int keepTo)
