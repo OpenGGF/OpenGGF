@@ -34,8 +34,8 @@ class TestCdDangoTouch {
             contact.objects.runTouchResponsesForPlayer(contact.sonic, 1);
 
             assertTrue(contact.sonic.isHurt(), "A standing player takes the ordinary enemy hit");
-            GameServices.level().advanceLevelFrameCounter();
-            GameServices.level().update();
+            // LostRingInit runs in the object pass after HurtPlayer allocates the $11 owner.
+            contact.objects.update(GameServices.camera().getX(), contact.sonic, List.of(), 1, false);
             assertEquals(0, contact.sonic.getRingCount());
             assertEquals(3, GameServices.level().getRingManager().getActiveLostRings().size());
             assertFalse(contact.dango.isDestroyed());

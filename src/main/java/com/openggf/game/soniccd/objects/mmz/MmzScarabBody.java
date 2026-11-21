@@ -276,19 +276,16 @@ public final class MmzScarabBody extends MmzBadnik implements TouchResponseListe
         if (!(player instanceof AbstractPlayableSprite sprite) || isDestroyed()) return;
         int side = (sprite.getCentreX() - x) < 0 ? 0xFF : 0;         // smi.b d0
         if ((side ^ dir) == 0) {                                     // eor.b d0,d1; beq sub_2069E8
-            enemy(sprite);
+            enemy(sprite, frameCounter);
         } else {
             collideStatus = (collideStatus + 1) & 0xFF;              // loc_206C76: addq.b #1,oColStatus(a1)
         }
     }
 
     /** sub_2069E8 (r8/player_object_collide.asm:161-167): the ordinary enemy touch. */
-    private void enemy(AbstractPlayableSprite sprite) {
-        if (!attacksOnEnemyTouch(sprite)) {                          // sub_206AB2: HurtPlayer
-            if (sprite.isHurt() || sprite.getDead() || sprite.getInvulnerableFrames() > 0) return;
-            boolean hadRings = sprite.getRingCount() > 0;
-            if (hadRings && !sprite.hasShield()) services().spawnLostRings(sprite, 0);
-            sprite.applyHurtOrDeath(x, true, hadRings);
+    private void enemy(AbstractPlayableSprite sprite, int frameCounter) {
+        if (!attacksOnEnemyTouch(sprite)) {
+            hurtFromSpecialEnemyTouch(sprite, frameCounter);
             return;
         }
         if (collideStatus != 0) {                                    // loc_206A02: bounce off a beetle that has been touched

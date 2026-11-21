@@ -3,6 +3,7 @@ package com.openggf.game.soniccd.objects.common;
 import com.openggf.audio.GameSound;
 import com.openggf.camera.CameraPresentationAccess;
 import com.openggf.configuration.SonicConfiguration;
+import com.openggf.game.DamageCause;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.solid.SolidExecutionFrames;
 import com.openggf.game.soniccd.audio.CdSoundRequests;
@@ -400,14 +401,18 @@ public abstract class CdObject extends AbstractObjectInstance {
         EnemyDefeatBounce.apply(player, y, services().worldSession());
     }
 
-    /** sub_206E3A (r7/player_object_collide.asm:208-242) and sub_206AB2 (r8/player_object_collide.asm:244-282). */
+    /**
+     * sub_206E3A (r7/player_object_collide.asm:208-242) and sub_206AB2 (r8/player_object_collide.asm:244-282).
+     * HurtPlayer (r8/player_object_collide.asm:266-282) allocates $11 during the player turn.
+     * UpdateObjects (common/object.asm:5-23) reaches its slot in the same pass.
+     */
     protected final void hurtFromSpecialEnemyTouch(AbstractPlayableSprite player, int frameCounter) {
         if (player.getInvulnerable()) return;
         boolean hadRings = player.getRingCount() > 0;
         if (hadRings && !player.hasShield() && !player.suppressesLostRingSpawnOnHurt()) {
-            services().spawnLostRingsAfterCurrentFrame(player, frameCounter - 1);
+            services().spawnLostRings(player, frameCounter);
         }
-        player.applyHurtOrDeath(x, false, hadRings);
+        player.applyHurtOrDeath(x, DamageCause.NORMAL, hadRings);
     }
 
     /**

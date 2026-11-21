@@ -154,6 +154,8 @@ under the matching area heading; see the
   Tidal Tempest boss missile. The stars also protect Sonic from Wacky
   Workbench's freezer, electric beams and sparks, and let him attack Metallic
   Madness's Scarab from its vulnerable side. Defeating it rebounds Sonic.
+  When a Scarab, curled Dango, or Kabasira shot hurts Sonic, his lost rings
+  scatter in the contact frame.
   Grabbing a Wacky Workbench hang
   bar ends star protection and resets the warp timer. Robotnik's projectors can be destroyed in the
   Past. In the Past acts of Palmtree Panic and Wacky Workbench, the projectors'
