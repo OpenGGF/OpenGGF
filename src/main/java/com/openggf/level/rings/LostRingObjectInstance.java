@@ -6,7 +6,8 @@ import com.openggf.game.GameModule;
 import com.openggf.game.LevelState;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.competition.NativeCompetitionRoster;
-import com.openggf.game.internal.ObjectFloorProbePriority;
+import com.openggf.game.internal.ObjectTerrainProbeLayout;
+import com.openggf.game.internal.ObjectTerrainProbeLayout.SpriteState;
 import com.openggf.game.internal.RingExtraLifeReplacesPickupSound;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.game.rules.GameRules;
@@ -51,7 +52,7 @@ import java.util.List;
  * listener path.
  */
 public class LostRingObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, RewindRecreatable, NativeSpriteSubmissionSource {
+        implements TouchResponseProvider, RewindRecreatable, NativeSpriteSubmissionSource, SpriteState {
 
     /** ROM Obj37 collision_flags while uncollected: $40 SPECIAL + size index $07. */
     public static final int LOST_RING_COLLISION_FLAGS = 0x47;
@@ -93,6 +94,7 @@ public class LostRingObjectInstance extends AbstractObjectInstance
     // Native mapping word: conversion retains it, then each routine2 dispatch copies the global.
     private int retainedMappingFrame = -1;
     private boolean retainedArtPriority;
+    private boolean terrainProbeLoopPath;
     private boolean hasRetainedArtPriority;
     private boolean directSharedSpillFrame;
     private boolean nativeDisplaySubmissions;
@@ -805,18 +807,21 @@ public class LostRingObjectInstance extends AbstractObjectInstance
         ObjectServices objectServices = servicesOrNull();
         var levels = objectServices == null ? null : objectServices.levelManager();
         if (levels == null) return 0;
-        var background = objectServices.backgroundPlaneCollisionProvider();
-        boolean secondary = objectServices.useSecondaryTerrainCollisionPath();
-        var result = levels.getCurrentLevel() instanceof ObjectFloorProbePriority
-                ? ObjectTerrainUtils.checkFloorDist(levels, background, secondary, x, y, this::setFloorProbePriority)
-                : ObjectTerrainUtils.checkFloorDist(levels, background, secondary, x, y);
+        var result = levels.getCurrentLevel() instanceof ObjectTerrainProbeLayout
+                ? ObjectTerrainUtils.checkObjectFloor(levels, x, y, this)
+                : ObjectTerrainUtils.checkFloorDist(levels, objectServices.backgroundPlaneCollisionProvider(),
+                        objectServices.useSecondaryTerrainCollisionPath(), x, y);
         if (!result.foundSurface()) {
             return 0;
         }
         return result.distance();
     }
 
-    private void setFloorProbePriority(boolean high) {
+    @Override public boolean terrainProbeLoopPath() { return terrainProbeLoopPath; }
+    @Override public void setTerrainProbeLoopPath(boolean onLoopPath) { terrainProbeLoopPath = onLoopPath; }
+
+    @Override
+    public void setTerrainProbePriority(boolean high) {
         retainedArtPriority = high;
         hasRetainedArtPriority = true;
     }

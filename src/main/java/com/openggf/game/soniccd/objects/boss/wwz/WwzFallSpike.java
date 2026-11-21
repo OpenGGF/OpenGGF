@@ -42,7 +42,7 @@ final class WwzFallSpike extends WwzBossPiece {
         }
         if (routine == 2) {                                  // FallSpikeDrop (:972-983)
             addYLong(FALL_STEP);
-            int distance = com.openggf.physics.ObjectTerrainUtils.checkFloorDist(x, y, yRadius).distance() - 3;
+            int distance = checkFloor(x, y, yRadius).distance() - 3;
             if (distance > 0) return;
             addY(-distance);
             routine = 4;

@@ -4,6 +4,7 @@ import com.openggf.audio.GameSound;
 import com.openggf.camera.CameraPresentationAccess;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.game.solid.SolidExecutionFrames;
+import com.openggf.game.internal.ObjectTerrainProbeLayout.SpriteState;
 import com.openggf.game.soniccd.audio.CdSoundRequests;
 
 import com.openggf.graphics.RenderPriority;
@@ -31,7 +32,7 @@ import com.openggf.game.soniccd.objects.art.CdObjectArtProvider;
  *   <li>{@code oPriority} n is render bucket n; bit 15 of the tile word is high priority.</li>
  * </ul>
  */
-public abstract class CdObject extends AbstractObjectInstance {
+public abstract class CdObject extends AbstractObjectInstance implements SpriteState {
     protected int x;
     protected int y;
     protected int priority;
@@ -53,12 +54,27 @@ public abstract class CdObject extends AbstractObjectInstance {
     @Override public int getOnScreenHalfHeight() { return yRadius; }
     @Override protected boolean usesCustomRenderHeight() { return true; }
 
-    /** CheckBlockDown measures from the radius point and can also update the object's tile word. */
+    /** The object path bit in oSprFlags, captured by the object's rewind schema. */
+    private boolean terrainProbeLoopPath;
+
+    @Override public final boolean terrainProbeLoopPath() { return terrainProbeLoopPath; }
+    @Override public final void setTerrainProbeLoopPath(boolean onLoopPath) { terrainProbeLoopPath = onLoopPath; }
+
+    @Override
+    public final void setTerrainProbePriority(boolean high) {
+        tileWord = high ? tileWord | 0x8000 : tileWord & 0x7FFF;
+    }
+
     protected final TerrainCheckResult checkFloor(int probeX, int probeY, int radius) {
-        var services = services();
-        return ObjectTerrainUtils.checkFloorDist(services.levelManager(),
-                services.backgroundPlaneCollisionProvider(), services.useSecondaryTerrainCollisionPath(),
-                probeX, probeY + radius, high -> tileWord = high ? tileWord | 0x8000 : tileWord & 0x7FFF);
+        return ObjectTerrainUtils.checkObjectFloor(services().levelManager(), probeX, probeY + radius, this);
+    }
+
+    protected final TerrainCheckResult checkWall(int probeX, int probeY, boolean left) {
+        return ObjectTerrainUtils.checkObjectWall(services().levelManager(), probeX, probeY, left, this);
+    }
+
+    protected final TerrainCheckResult checkCeiling(int probeX, int probeY, int radius) {
+        return ObjectTerrainUtils.checkObjectCeiling(services().levelManager(), probeX, probeY, radius, this);
     }
 
     protected final boolean timeAttackMode() {
@@ -471,6 +487,7 @@ public abstract class CdObject extends AbstractObjectInstance {
     protected final void copyDrawState(CdObject source) {
         renderPassSeen = source.renderPassSeen;
         drawnOnScreen = source.drawnOnScreen;
+        terrainProbeLoopPath = source.terrainProbeLoopPath;
         drawCameraKnown = source.drawCameraKnown;
         drawCameraX = source.drawCameraX;
         drawCameraY = source.drawCameraY;

@@ -11,7 +11,6 @@ import com.openggf.level.objects.TouchCategory;
 import com.openggf.level.objects.TouchResponseListener;
 import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseResult;
-import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -182,9 +181,7 @@ public final class ObjDango extends SharedBadnik implements TouchResponseListene
     private boolean step() {
         addToX(speed);
         int probe = (x + ((speed >> 16) < 0 ? -width : width)) & 0xFFFF;
-        int wall = (speed >> 16) < 0
-                ? ObjectTerrainUtils.checkLeftWallDist(probe, y).distance()         // CheckBlockLeft (no eori.w #$F)
-                : ObjectTerrainUtils.checkRightWallDist(probe, y).distance();
+        int wall = checkWall(probe, y, speed < 0).distance();
         if (wall >= 0) {
             int floor = checkFloor(x, y, height).distance();
             if (((floor + 7) & 0xFFFF) < 0xE) {                                    // addq.w #7,d0; subi.w #$E,d0; bcc
