@@ -170,10 +170,12 @@ under the matching area heading; see the
   fourteen-second stage fixtures do (56,879 of 57,049 rows). On a focused rerun,
   the recorded Metallic Madness Present act 2 route also matches through its end.
   Its walker platforms let Sonic pass their sides, and the invisible blocks let
-  him jump through from below. Metallic Madness lasers shrink Sonic on the
-  original contact frame. In Stardust Speedway and Metallic Madness, a
-  curled Dango bumps rolling Sonic away and reacts as an ordinary enemy to
-  standing Sonic. Tidal Tempest hosts its vertical moving blocks,
+  him jump through from below. A separate native recording captures Metallic
+  Madness Past act 1 through its signpost, tally and Act 2 Present exit state.
+  Engine comparison reaches the earlier Scarab rebound. Metallic Madness
+  lasers shrink Sonic on the original contact frame. In Stardust Speedway and
+  Metallic Madness, a curled Dango bumps rolling Sonic away and reacts as an
+  ordinary enemy to standing Sonic. Tidal Tempest hosts its vertical moving blocks,
   break poles and stationary spike balls, with sprites loaded from the disc. In Act 1 Present,
   Sonic can ride the rotating swing and raise the elevator with its pressure
   switch. A break pole keeps its release timer through hurt, death and

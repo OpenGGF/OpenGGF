@@ -6489,6 +6489,13 @@
       "note": "BizHawk native reference (and the user's Sonic CD disc)"
     },
     {
+      "match": "com.openggf.game.soniccd.TestSonicCdActEndNative#metallicMadnessPastActEnd",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestSonicCdActEndNative.java:190",
+      "allowed_when_absent": "soniccd_native",
+      "note": "BizHawk native R81B act-end reference and the user's Sonic CD disc"
+    },
+    {
       "match": "com.openggf.game.soniccd.TestSonicCdActEndNative#actEndEqualsNative(CdStagePayload, int, String, int)[10]",
       "category": "optional-fixture",
       "evidence": "src/test/java/com/openggf/game/soniccd/TestSonicCdActEndNative.java:201",
