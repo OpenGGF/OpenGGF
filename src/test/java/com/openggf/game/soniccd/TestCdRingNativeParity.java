@@ -107,7 +107,7 @@ class TestCdRingNativeParity {
             // R41A and R42A: a $21 bubble takes a slot the native layout spawner uses for $34.
             "R41A, 5449, positions, 3626", "R41B, 4721, exact, -1", "R41C, 6013, exact, -1",
             "R42A, 6411, positions, 1550", "R51A, 4756, exact, -1", "R51B, 5494, exact, -1",
-            "R51C, 7151, exact, -1", "R52A, 4772, positions, 2202", "R61A, 4892, exact, -1",
+            "R51C, 7151, exact, -1", "R52A, 4772, exact, -1", "R61A, 4892, exact, -1",
             "R61B, 5449, exact, -1", "R61C, 6767, exact, -1", "R62A, 4787, exact, -1",
             "R71A, 3977, exact, -1", "R71B, 4918, exact, -1", "R71C, 6096, positions, 808", "R72A, 4399, exact, -1",
             "R81A, 4736, exact, -1", "R81B, 3991, exact, -1", "R81C, 4524, exact, -1",
