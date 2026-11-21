@@ -125,8 +125,10 @@ final class MmzScarabItem extends MmzObject
 
     boolean gone() { return gone; }
 
+    /** loc_20DE4A (scddisasm/src/objects/r8/scarab.asm:182-185). */
     void deleteOther() {
         setDestroyed(true);
+        services().objectManager().removeDynamicObject(this);
     }
 
     @Override public int solidXVelocity() { return xVel; }

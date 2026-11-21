@@ -85,13 +85,13 @@ public final class TtzChaseEggman extends TtzBossPart {
         if ((short) player.getCentreX() < 0x840 || (short) player.getCentreY() < 0x550) return;
         flags().bossFlags = 4;                                          // move.b #4,boss_flags
         if (upperDoor != null && !upperDoor.isDestroyed()) {            // tst.b obj.id(a1); jmp DeleteOtherObject
-            upperDoor.setDestroyed(true);
+            deleteOther(upperDoor);
             upperDoor = null;
             return;
         }
         upperDoor = null;
         if (lowerDoor != null && !lowerDoor.isDestroyed()) {
-            lowerDoor.setDestroyed(true);
+            deleteOther(lowerDoor);
             lowerDoor = null;
             return;
         }
