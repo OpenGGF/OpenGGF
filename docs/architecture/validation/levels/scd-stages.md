@@ -355,6 +355,17 @@ The Palmtree Panic end shots for R11D, R12B and R12D now match all 42,926,
 39,767 and 36,326 unmasked pixels respectively. The R11A end shot remains
 uncertified.
 
+## Palmtree Panic campaign Amy Rose (hosted)
+
+R11A hosts Amy (`$2F`) and her hearts
+(`$30`). `TestPpzAmyRose` compares slot, sampled position and despawn with
+the stage-select R11A recording. Its disc-backed cases cover the stationary
+chase and wait thresholds, grab, jump release, removal while holding Sonic
+before and after rewind, and the Time Attack write of the level-end palette.
+See `ObjAmyRose` (Level/Palmtree Panic/Objects/Amy Rose/Main.asm:7-26).
+The stage-select route passes Amy without a grab. Native grab and release
+still need a dedicated recording.
+
 ## Parked Sonic CD gaps
 
 - **Metallic Madness boss door.** `BossDoorObject_0_Routine4`
@@ -367,15 +378,6 @@ uncertified.
   slots. Use those movies to capture the foreground plane A tile entries
   from before the trigger through the slide and the next camera redraw.
   Use the visible lifetime of the cleared columns to specify an engine render operation.
-- **Palmtree Panic campaign Amy Rose.** R11A object `$2F`. Not hosted. The
-  implementation unit was declined by the assigned agent. The user decides
-  whether to assign it elsewhere.
-  See `ObjAmyRose` (Level/Palmtree Panic/Objects/Amy Rose/Main.asm:7-26).
-  The stage-select R11A trace records `$2F` appearing. Start R11A in
-  campaign mode and stay in the Present. Record Sonic approaching
-  Amy near the act end, her grabbing Sonic, Sonic breaking free, and Amy
-  leaving. Include Amy and heart slots, Sonic's motion, and the palette before
-  and after the encounter.
 
 The three screen items below stay parked until native picture sequences
 are available to certify parity. Each needs a visual review against its
