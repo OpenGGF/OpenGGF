@@ -95,7 +95,9 @@ class TestCdPauseExit {
     }
 
     @ParameterizedTest
-    @CsvSource({"R11A, false", "R51A, true", "R52A, true"})
+    // QQZ act 3 uses StageMainLoopRestart (common/main.asm:395-402).
+    // Tidal Tempest act 2 uses StageMainLoopRestart (r4/main.asm:368-375).
+    @CsvSource({"R11A, false", "R51A, true", "R52A, true", "R53D, false", "R42A, false"})
     void campaignPauseReloadUsesStageStart(CdStagePayload payload, boolean retainsCheckpoint) throws Exception {
         runStageOnBothInputs(Route.CAMPAIGN, payload, (loop, scenes) -> {
             var levels = GameServices.level();

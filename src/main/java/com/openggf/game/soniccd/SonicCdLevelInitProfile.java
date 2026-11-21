@@ -177,8 +177,9 @@ final class SonicCdLevelInitProfile extends AbstractLevelInitProfile
         boolean pauseRequested = levelPause.consumeRestartRequest();
         boolean deathRestart = ctx.getLoadCause() == com.openggf.game.LevelLoadCause.FULL_DEATH_RELOAD;
         if (pauseRequested && deathRestart) {
-            // R5 keeps the checkpoint bank. Clear the load context's copy after restoring the bank
-            // so player and camera assembly still see spawn mode 0 per loc_201858 (scddisasm/src/r5/main.asm:328-337).
+            // Only the R5 act 1 and 2 programs reach this branch with a saved checkpoint.
+            // Clear the context's copy after restoring the bank so player and camera assembly
+            // use spawn mode 0 per loc_201858 (scddisasm/src/r5/main.asm:328-337).
             com.openggf.game.GameServices.level().restoreCheckpointState(ctx);
             ctx.snapshotCheckpoint(null);
             checkpointSpawn = false;

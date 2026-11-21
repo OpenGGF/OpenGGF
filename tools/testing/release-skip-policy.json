@@ -5000,21 +5000,35 @@
     {
       "match": "com.openggf.game.soniccd.TestCdPauseExit#campaignPauseReloadUsesStageStart(CdStagePayload, boolean)[1]",
       "category": "optional-fixture",
-      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdPauseExit.java:97",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdPauseExit.java:101",
       "allowed_when_absent": "soniccd_disc",
       "note": "Sonic CD USA disc for the campaign pause restart"
     },
     {
       "match": "com.openggf.game.soniccd.TestCdPauseExit#campaignPauseReloadUsesStageStart(CdStagePayload, boolean)[2]",
       "category": "optional-fixture",
-      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdPauseExit.java:97",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdPauseExit.java:101",
       "allowed_when_absent": "soniccd_disc",
       "note": "Sonic CD USA disc for the campaign pause restart"
     },
     {
       "match": "com.openggf.game.soniccd.TestCdPauseExit#campaignPauseReloadUsesStageStart(CdStagePayload, boolean)[3]",
       "category": "optional-fixture",
-      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdPauseExit.java:97",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdPauseExit.java:101",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Sonic CD USA disc for the campaign pause restart"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestCdPauseExit#campaignPauseReloadUsesStageStart(CdStagePayload, boolean)[4]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdPauseExit.java:101",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Sonic CD USA disc for the campaign pause restart"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestCdPauseExit#campaignPauseReloadUsesStageStart(CdStagePayload, boolean)[5]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdPauseExit.java:101",
       "allowed_when_absent": "soniccd_disc",
       "note": "Sonic CD USA disc for the campaign pause restart"
     },
