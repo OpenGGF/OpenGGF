@@ -85,8 +85,10 @@ under the matching area heading; see the
   both special-stage attract demos, backup RAM (saved in `saves/soniccd`),
   the opening video, both endings, FM
   effects, CD audio and PCM sound are hosted. Special-stage extra lives cap the
-  campaign total at 249. Level 1-Ups can raise it past 249 and wrap from 255
-  to 0. The FM loader also accepts verified Japanese and European discs
+  campaign total at 249 and can award a life before the score caps. Level 1-Ups
+  can raise lives past 249 and wrap from 255 to 0, where a living Sonic can
+  still pause. Dying with 129 or more lives triggers Game Over, as on the disc.
+  The FM loader also accepts verified Japanese and European discs
   containing the identical driver bank. The title's RAM DATA entry confirms a
   reset of Sonic CD's save to disc defaults.
   Time Attack follows the disc's object rules for time posts, the HUD time icon,

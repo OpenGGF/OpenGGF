@@ -333,6 +333,7 @@ public final class SonicCdGameModule implements GameModule {
         if (type == com.openggf.game.soniccd.objects.shared.SharedSwitchFlags.class) return type.cast(switchFlags);
         // The player's water state outside the player object (bubbles read the timer and the current flag).
         if (type == com.openggf.game.soniccd.player.CdPlayerWater.class) return type.cast(playerStage.water());
+        if (type == com.openggf.game.internal.LevelLifePolicy.class) return type.cast(CdLevelLifePolicy.INSTANCE);
         // AddPoints: cap and score extra life (HUD and Points/Main.asm:157-180).
         if (type == com.openggf.game.internal.ScoreAdditionPolicy.class) return type.cast(scenes.scorePolicy());
         // The load runs Level_MainLoop's first iteration, whose addq.w #1,levelFrames precedes its
