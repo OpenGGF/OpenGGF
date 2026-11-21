@@ -103,10 +103,10 @@ class TestCdRingNativeParity {
     @CsvSource({
             "R11A, 4220, exact, -1", "R11B, 3171, positions, 1600", "R11C, 5790, exact, -1", "R12A, 4244, exact, -1",
             "R31A, 5290, exact, -1", "R31B, 8241, positions, 5682", "R31C, 6995, exact, -1",
-            "R32A, 6682, exact, -1", "R41A, 5449, positions, 918", "R41B, 4721, positions, 292",
+            "R32A, 6682, exact, -1", "R41A, 5449, positions, 918", "R41B, 4721, exact, -1",
             "R41C, 6013, exact, -1", "R42A, 4286, positions, 1196", "R51A, 4756, exact, -1", "R51B, 5494, exact, -1",
-            "R51C, 7151, exact, -1", "R52A, 4772, positions, 2202", "R61A, 4892, exact, -1",
-            "R61B, 5449, positions, 2749", "R61C, 6767, positions, 5412", "R62A, 4787, exact, -1",
+            "R51C, 7151, exact, -1", "R52A, 4772, exact, -1", "R61A, 4892, exact, -1",
+            "R61B, 5449, exact, -1", "R61C, 6767, exact, -1", "R62A, 4787, exact, -1",
             "R71A, 3977, exact, -1", "R71B, 4918, exact, -1", "R71C, 6096, positions, 808", "R72A, 4399, exact, -1",
             "R81A, 4736, exact, -1", "R81B, 3991, exact, -1", "R81C, 4524, exact, -1",
             "R82A, 4577, exact, -1", "R11B-loop, 2163, exact, -1", "R13C-loop, 785, exact, -1"})
