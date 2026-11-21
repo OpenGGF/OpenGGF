@@ -59,6 +59,11 @@ final class CdLevelPause implements NativeLevelInputOwner {
             NativeGameStateOps.restoreLives(game, 0);
         } else {
             game.loseLife();
+            var zone = level.payload().stage().zone();
+            // StageMainLoopRestartLife (r4/main.asm:352-354) and loc_201858 (r5/main.asm:333-335).
+            if (zone == CdZone.TIDAL_TEMPEST || zone == CdZone.QUARTZ_QUADRANT) {
+                CdSoundRequests.releaseHeldFmEffects(services.gameModule());
+            }
         }
         game.setGamePaused(false);
         services.checkpointState().clear();

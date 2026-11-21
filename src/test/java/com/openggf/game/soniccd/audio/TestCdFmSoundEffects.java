@@ -57,8 +57,12 @@ class TestCdFmSoundEffects {
     @Test
     void everyShippedEffectRunsToItsStopOnTheCommandsTheHandlerModels() {
         List<String> failures = new ArrayList<>();
+        var driver = new CdFmDriverState();
+        // Allow the three held effects to run their tails in this command coverage sweep.
+        driver.setJumpCondition(true);
+        var config = CdFmSequencerConfig.create(new CdFmCoordFlagHandler(driver));
         for (int id = CdFmSmpsLoader.FIRST_SFX; id <= CdFmSmpsLoader.LAST_SFX; id++) {
-            Run run = run(id, CdFmSequencerConfig.standalone(), 2048);
+            Run run = run(id, config, 2048);
             if (run.writes == 0) failures.add(String.format("%02X wrote nothing", id));
             if (!run.finished) failures.add(String.format("%02X did not stop in 2048 ticks", id));
         }

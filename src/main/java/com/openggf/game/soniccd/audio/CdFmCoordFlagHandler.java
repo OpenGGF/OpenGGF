@@ -57,9 +57,15 @@ public final class CdFmCoordFlagHandler implements CoordFlagHandler {
             // (FM/_Driver.asm:1450-1454, :261-265): the next note neither keys off nor on and keeps its
             // vibrato and staccato (FM/_Driver.asm:377-391, :545-548), the shared no-attack tie.
             case 0xE7 -> t.tieNext = true;
-            // TrkCmd_CondJump jumps while jumpCondition is zero (FM/_Driver.asm:1266-1272). Nothing writes
-            // jumpCondition (FM/_Variables.inc:96) after StopSound clears it, so it always jumps.
-            case 0xEB, 0xF6 -> jump(ctx, t);
+            // TrkCmd_CondJump (Sound Drivers/FM/_Driver.asm:1266-1271).
+            case 0xEB -> {
+                if (driver.jumpCondition()) {
+                    t.pos += 2;
+                } else {
+                    jump(ctx, t);
+                }
+            }
+            case 0xF6 -> jump(ctx, t);
             case 0xEF -> {
                 // TrkCmd_Instrument: SetInstrumentMaxRel writes FFh to 80h+op first
                 // (FM/_Driver.asm:1525-1535, :1066-1088), then UpdateInstrument sends the

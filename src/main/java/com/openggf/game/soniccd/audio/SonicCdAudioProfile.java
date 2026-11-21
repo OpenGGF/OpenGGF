@@ -127,6 +127,10 @@ public final class SonicCdAudioProfile extends AbstractAudioProfile implements R
         return SOUND_MAP;
     }
 
+    void releaseHeldFmEffects() {
+        fmDriver.setJumpCondition(true);
+    }
+
     public CdSubCpuAudio subCpuAudio() {
         return subCpu;
     }
