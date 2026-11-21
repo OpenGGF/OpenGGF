@@ -138,6 +138,8 @@ under the matching area heading; see the
   bar ends star protection and resets the warp timer. Robotnik's projectors can be destroyed in the
   Past. In the Past acts of Palmtree Panic and Wacky Workbench, the projectors'
   flying and ground hologram animals use art from the disc.
+  In both Collision Chaos Past acts, the ground hologram cycles through the
+  disc's standing, leaping, and blank frames.
   In both Tidal Tempest Past acts, two hologram animals circle the projector
   and vanish when Sonic shuts it down.
   Wacky Workbench's layout animals fly or hop after the projector is destroyed

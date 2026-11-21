@@ -2436,6 +2436,13 @@
       "note": "Sonic CD disc and native captures"
     },
     {
+      "match": "com.openggf.game.soniccd.TestCczObjects#groundHologramPlaysItsDiscLoopAndResumesAfterRewind",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCczObjects.java:583",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Collision Chaos Past animation reads the USA disc"
+    },
+    {
       "match": "com.openggf.game.soniccd.TestCczObjects#amyRunsFromThePlayerAndEmitsAHeartEveryThirtyTwoFrames",
       "category": "optional-fixture",
       "evidence": "src/test/java/com/openggf/game/soniccd/TestCczObjects.java:465",
