@@ -445,7 +445,17 @@ public final class LevelFrameStep {
             // 2. Player slots first (ExecuteObjects / RunObjects / Process_Sprites
             //    dispatch slot 0, then slot 1). Touch responses run per player inside
             //    tickPlayablePhysics after movement.
-            if (!objectsFrozen) wrapper.wrap("physics", spriteUpdate);
+            if (!objectsFrozen) {
+                if (context.gameModule().getGameService(
+                        com.openggf.game.internal.SpawnerBeforeObjectPass.class) != null) {
+                    var objects = levelManager.getObjectManager();
+                    if (objects != null) {
+                        com.openggf.level.objects.ObjectManagerInternalAccess.runSpawnerBeforeObjectPass(
+                                objects, camera.getX());
+                    }
+                }
+                wrapper.wrap("physics", spriteUpdate);
+            }
 
             LevelEventProvider fixedSlotEvents = context.levelEventProvider();
             if (!objectsFrozen && fixedSlotEvents != null) {

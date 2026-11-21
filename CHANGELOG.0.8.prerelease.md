@@ -158,6 +158,8 @@ under the matching area heading; see the
   and vanish when Sonic shuts it down.
   Wacky Workbench's layout animals fly or hop after the projector is destroyed
   and in the Good Future.
+  Layout objects claim slots before Sonic's turn, so player bubbles and splashes
+  use the slots left by the layout pass.
   Stardust Speedway's freed ground animals now draw with the disc's sprites,
   hop twice before turning, and leave their slots at the disc's range boundary.
   Accuracy is measured against native recordings made on an emulator running
