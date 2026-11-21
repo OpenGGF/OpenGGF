@@ -1,4 +1,8 @@
-package com.openggf.audio.smps;
+package com.openggf.game.audio;
+
+import com.openggf.audio.smps.DacData;
+import com.openggf.audio.smps.PackageStockResolver;
+import com.openggf.audio.smps.SmpsLoader;
 
 import com.openggf.data.Rom;
 import com.openggf.data.RomFingerprint;

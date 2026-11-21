@@ -1,9 +1,9 @@
 package com.openggf.game.sonic2.audio.smps;
 
-import com.openggf.audio.smps.ClassicPackageStockResolver;
 import com.openggf.data.Rom;
 import com.openggf.data.RomHeaderName;
 import com.openggf.data.RomIdentity;
+import com.openggf.game.audio.ClassicPackageStockResolver;
 import com.openggf.game.sonic2.audio.Sonic2Music;
 
 import java.io.IOException;
