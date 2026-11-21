@@ -2,6 +2,7 @@ package com.openggf.game.soniccd;
 
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.game.DamageCause;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameServices;
 import com.openggf.game.patch.ModuleResolutionService;
@@ -27,7 +28,6 @@ import com.openggf.physics.GroundSensor;
 import com.openggf.physics.Direction;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
-import com.openggf.sprites.playable.ObjectControlState;
 import com.openggf.tests.HeadlessTestRunner;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tools.HeadlessGameBoot;
@@ -44,6 +44,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -286,8 +287,12 @@ class TestTtzObjects {
         var pole = addBreakPole(subtype);
         pole.update(0, sonic);
         int ticks = subtype == 0 ? 180 : 60;
-        for (int i = 1; i < ticks; i++) pole.update(0, sonic);
-        assertTrue(sonic.isObjectControlled());
+        for (int i = 1; i < ticks - 1; i++) pole.update(0, sonic);
+        sonic.setInvulnerableFrames(0);
+        assertTrue(sonic.applyHurtOrDeath(sonic.getCentreX() + 32, DamageCause.SPIKE, true));
+        assertTrue(sonic.isHurt());
+        pole.update(0, sonic);
+        assertTrue(sonic.isObjectControlled(), "hurt leaves the pole's control intact before timeout");
         pole.update(0, sonic);
         assertFalse(sonic.isObjectControlled());
     }
@@ -317,23 +322,126 @@ class TestTtzObjects {
     }
 
     @Test
-    void breakPoleRetiresADeadOrReplacedOwner() throws Exception {
+    void breakPoleClimbsAndTimesOutDuringDrowning() throws Exception {
         boot(CdStagePayload.R42A);
-        var deathPole = addBreakPole(0);
-        deathPole.update(0, sonic);
-        sonic.setDead(true);
-        deathPole.update(0, sonic);
-        assertFalse(sonic.isObjectControlled());
-        sonic.setDead(false);
-
-        var stalePole = addBreakPole(0);
-        stalePole.update(0, sonic);
-        // A replacement can claim the same flag combination. Only the generation distinguishes the owners.
-        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(sonic);
+        var pole = addBreakPole(1);
+        pole.update(0, sonic);
+        assertTrue(sonic.applyDrownDeath());
         sonic.setDirectionalInputPressed(true, false, false, false);
-        stalePole.update(0, sonic);
-        assertTrue(sonic.isObjectControlled());
-        assertEquals(stalePole.getY(), sonic.getCentreY());
+        pole.update(0, sonic);
+        assertEquals(pole.getY() - 1, sonic.getCentreY(), "Up still climbs during the drowning sink");
+        sonic.setDirectionalInputPressed(false, true, false, false);
+        pole.update(0, sonic);
+        assertEquals(pole.getY(), sonic.getCentreY(), "Down still climbs during the drowning sink");
+        sonic.setDirectionalInputPressed(false, false, false, false);
+        for (int i = 2; i < 59; i++) pole.update(0, sonic);
+        assertTrue(sonic.isObjectControlSuppressesMovement(), "bit 0 stays set until timeout");
+
+        pole.update(0, sonic);
+        assertFalse(sonic.isObjectControlSuppressesMovement(), "the pole clears bit 0 on timeout");
+        assertTrue(sonic.isTouchResponseSuppressedByObjectControl(), "drowning keeps bit 7 set");
+    }
+
+    @Test
+    void breakPoleReleaseRestoresAirControlDuringDrowning() throws Exception {
+        boot(CdStagePayload.R42A);
+        sonic.setCentreX((short) 5170);
+        sonic.setCentreY((short) 1608);
+        sonic.setAir(true);
+        GameServices.camera().updatePosition(true);
+
+        runner.stepIdleFrames(1680);
+        for (int i = 0; i < 22; i++) runner.stepFrame(false, false, false, true, false);
+        for (int i = 0; i < 180 && !sonic.isDrowningPreDeath(); i++) runner.stepIdleFrames(1);
+        assertTrue(sonic.isDrowningPreDeath(), "air runs out while Sonic holds the placed pole");
+        assertTrue(sonic.isObjectControlSuppressesMovement());
+        for (int i = 0; i < 180 && sonic.isObjectControlSuppressesMovement(); i++) {
+            // Climb down during the hold so the first released steps have clear water below.
+            runner.stepFrame(false, true, false, false, false);
+        }
+        assertFalse(sonic.isObjectControlSuppressesMovement());
+
+        // PlayerFallState (objects/player.asm:673-696) moves first and adds $38 - $28.
+        // loc_206364 (objects/r4/player_bubbles.asm:249-255) moves again and adds $10.
+        // PlayerMoveAir (objects/player.asm:1494-1547) uses twice the water acceleration (6).
+        int x = (sonic.getCentreX() << 16) + sonic.getXSubpixelRaw();
+        int y = (sonic.getCentreY() << 16) + sonic.getYSubpixelRaw();
+        int dy = sonic.getYSpeed();
+        int[] steeredSpeeds = {-12, 0, 12, 24};
+        for (int vx : steeredSpeeds) {
+            x += 2 * vx << 8;
+            y += (2 * dy + 0x10) << 8;
+            dy += 0x20;
+            int expectedX = x;
+            int expectedY = y;
+            int expectedYSpeed = dy;
+            runner.stepFrame(false, false, vx < 0, vx >= 0, false);
+            assertAll("released underwater step",
+                    () -> assertTrue(sonic.isDrowningPreDeath(), "the bubbles slot still owns the sink"),
+                    () -> assertEquals(CdSonicAnimation.WALK.id(), sonic.getAnimationId(), "falling writes Walk"),
+                    () -> assertEquals(vx, sonic.getXSpeed(), "directional input steers the fall"),
+                    () -> assertEquals(expectedX, (sonic.getCentreX() << 16) + sonic.getXSubpixelRaw(), "two X moves"),
+                    () -> assertEquals(expectedYSpeed, sonic.getYSpeed(), "combined underwater gravity"),
+                    () -> assertEquals(expectedY, (sonic.getCentreY() << 16) + sonic.getYSubpixelRaw(), "two Y moves"));
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void breakPoleGripsDeadAndDrowningPlayers(boolean drowning) throws Exception {
+        boot(CdStagePayload.R42A);
+        var pole = addBreakPole(1);
+        if (drowning) {
+            assertTrue(sonic.applyDrownDeath());
+        } else {
+            sonic.setInvulnerableFrames(0);
+            assertTrue(sonic.applyHurtOrDeath(sonic.getCentreX() + 32, DamageCause.SPIKE, false));
+        }
+
+        pole.update(0, sonic);
+        assertEquals(pole.getX() + 24, sonic.getCentreX());
+        assertEquals(CdSonicAnimation.HANG.id(), sonic.getAnimationId());
+        assertTrue(sonic.isObjectControlSuppressesMovement());
+        assertEquals(drowning, sonic.isTouchResponseSuppressedByObjectControl());
+        for (int i = 0; i < 60; i++) pole.update(0, sonic);
+        assertFalse(sonic.isObjectControlSuppressesMovement());
+        assertEquals(drowning, sonic.isTouchResponseSuppressedByObjectControl());
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void breakPoleLetsHurtAndDeadPlayersMoveInTheFrameLoop(boolean hadRings) throws Exception {
+        boot(CdStagePayload.R42A);
+        var placement = GameServices.level().getObjectManager().getAllSpawns().stream()
+                .filter(spawn -> spawn.objectId() == 0x05).findFirst().orElseThrow();
+        sonic.setCentreX((short) placement.x());
+        sonic.setCentreY((short) placement.y());
+        GameServices.camera().updatePosition(true);
+        runner.stepIdleFrames(1);
+        assertEquals(CdSonicAnimation.HANG.id(), sonic.getAnimationId());
+        assertTrue(sonic.isObjectControlSuppressesMovement(), "the disc-placed pole gripped Sonic");
+        assertTrue(sonic.isInWater(), "the R42A pole is underwater");
+
+        int ticks = placement.subtype() == 0 ? 180 : 60;
+        runner.stepIdleFrames(ticks - 2);
+        assertTrue(sonic.isObjectControlSuppressesMovement(), "the pole is still intact two ticks before timeout");
+        sonic.setSubpixelRaw(0, 0);
+        int x = sonic.getCentreX();
+        int y = sonic.getCentreY();
+        sonic.setInvulnerableFrames(0);
+        assertTrue(sonic.applyHurtOrDeath(x + 32, DamageCause.SPIKE, hadRings));
+        runner.stepIdleFrames(1);
+
+        // HurtPlayer (r4/player_object_collide.asm:243-263) starts underwater recoil.
+        // PlayerHurt (objects/player.asm:2206-2219) moves before adding $10.
+        // KillPlayer (r4/player_object_collide.asm:273-288) starts the death bounce.
+        // PlayerDead (objects/player.asm:2244-2249) uses MoveObjectFall (common/object.asm:27-61).
+        assertEquals(x - (hadRings ? 1 : 0), sonic.getCentreX(), "horizontal recoil while held");
+        assertEquals(y - (hadRings ? 2 : 7), sonic.getCentreY(), "vertical recoil while held");
+        assertEquals(hadRings ? -0x200 + 0x10 : -0x700 + 0x38, sonic.getYSpeed(), "gravity during recoil");
+        assertTrue(sonic.isObjectControlSuppressesMovement(), "the pole still holds during recoil");
+        runner.stepIdleFrames(1);
+        assertFalse(sonic.isObjectControlSuppressesMovement(), "the pole releases on its original timeout");
     }
 
     @Test
@@ -760,13 +868,23 @@ class TestTtzObjects {
         var stars = live(0x03).stream().filter(CdTimeStars.class::isInstance).map(CdTimeStars.class::cast).toList();
         assertEquals(List.of(5, 6, 7, 8), stars.stream().map(CdTimeStars::animation).sorted().toList());
 
-        // The creation frame only initialises each star. Later object passes read PowerupAnims
-        // and animate the live trail (loc_2060B2, scddisasm/src/objects/powerup.asm:127-141).
-        for (int i = 0; i < 12; i++) {
+        // PowerupAnims (r4/data_2a.asm:426-428) selects .Anim5 through .Anim8 in anims/powerup.asm.
+        // These are the first twelve displayed frames, including .Anim5's $FF loop.
+        int[][] mappingFrames = {
+                {8, 9, 10, 11, 12, 11, 10, 9, 8, 0, 8, 9},
+                {8, 8, 0, 8, 8, 0, 9, 9, 0, 9, 9, 0},
+                {8, 8, 0, 8, 0, 0, 9, 9, 0, 9, 0, 0},
+                {8, 0, 0, 8, 0, 0, 9, 0, 0, 9, 0, 0}
+        };
+        for (int i = 0; i < mappingFrames[0].length; i++) {
             // Keep the warp speed on the opening slope so the production star pass can run.
             sonic.setGSpeed((short) 0x700);
             runner.stepFrame(false, false, false, true, false);
             assertTrue(timeTravel.starsActive(), "warp stars should stay active during the run");
+            for (var star : stars) {
+                assertEquals(mappingFrames[star.animation() - 5][i], star.mappingFrame(),
+                        "animation " + star.animation() + ", tick " + (i + 1));
+            }
         }
         assertTrue(stars.stream().noneMatch(CdTimeStars::isDestroyed));
         timeTravel.stopTimeWarp();

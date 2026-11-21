@@ -20,12 +20,20 @@ import java.util.function.Supplier;
 final class GameLoopPauseInput {
     private GameLoopPauseInput() { }
 
-    record Ownership(boolean ownsPause, boolean titleOwnsEscape, LevelInputOverlay configurationOverlay) { }
+    record Ownership(boolean ownsPause, boolean hostPauseExit, boolean titleOwnsEscape,
+                     LevelInputOverlay configurationOverlay) { }
 
     /** Publish the movie sample before native Start consumers, then arbitrate host pause/configuration. */
     static Ownership resolveOwnership(Supplier<GameMode> mode, InputHandler input,
                                       PlaybackDebugManager playback, Runnable publishPlayback,
                                       HostedRunController hostedRuns, Supplier<TitleScreenProvider> titleScreen) {
+        return resolveOwnership(mode, input, playback, publishPlayback, hostedRuns, titleScreen, false);
+    }
+
+    static Ownership resolveOwnership(Supplier<GameMode> mode, InputHandler input,
+                                      PlaybackDebugManager playback, Runnable publishPlayback,
+                                      HostedRunController hostedRuns, Supplier<TitleScreenProvider> titleScreen,
+                                      boolean userPaused) {
         boolean recordedNativeOwnsPause = false;
         var nativeOwner = nativeInputOwner(mode.get());
         if (nativeOwner != null && playback.isDriving(mode.get())) {
@@ -35,19 +43,27 @@ final class GameLoopPauseInput {
         }
         boolean ownsPause = recordedNativeOwnsPause || handleOverlay(mode.get(), input)
                 || hostedRuns.ownsStart(mode.get());
+        boolean hostPauseExit = userPaused && !ownsPause && handleHostPausedInput(mode.get(), input);
         var configurationOverlay = overlay(mode.get());
         var titleOwner = mode.get() == GameMode.TITLE_SCREEN ? titleScreen.get() : null;
         boolean titleOwnsEscape = titleOwner != null && titleOwner.ownsEscapeInput();
         if (configurationOverlay == null && titleOwnsEscape) {
             configurationOverlay = GameServices.module().getGameService(LevelInputOverlay.class);
         }
-        return new Ownership(ownsPause, titleOwnsEscape, configurationOverlay);
+        return new Ownership(ownsPause || hostPauseExit, hostPauseExit, titleOwnsEscape, configurationOverlay);
     }
 
     static boolean handleOverlay(GameMode mode, InputHandler input) {
         if (ExternalFrameOrInputOwnership.active(com.openggf.game.session.EngineServices.current())) return false;
         var overlay = overlay(mode);
         return overlay != null && overlay.handleInput(input);
+    }
+
+    private static boolean handleHostPausedInput(GameMode mode, InputHandler input) {
+        var owner = nativeInputOwner(mode);
+        return owner != null && !RecordedInputOwnership.active(input)
+                && !ExternalFrameOrInputOwnership.active(com.openggf.game.session.EngineServices.current())
+                && owner.handleHostPausedInput(input);
     }
 
     static NativeLevelInputOwner nativeInputOwner(GameMode mode) {

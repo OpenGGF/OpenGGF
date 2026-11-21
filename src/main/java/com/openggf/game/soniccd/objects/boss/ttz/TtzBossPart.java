@@ -125,8 +125,11 @@ abstract class TtzBossPart extends CdBossPart {
     }
 
     /** {@code jsr DeleteOtherObject} on a linked slot, when it still holds the object. */
-    static void deleteOther(CdBossPart other) {
-        if (other != null && !other.isDestroyed()) other.setDestroyed(true);
+    final void deleteOther(CdBossPart other) {
+        if (other != null) {
+            other.setDestroyed(true);
+            services().objectManager().removeDynamicObject(other);
+        }
     }
 
     @Override protected boolean drawn() { return !hidden && routine != 0; }

@@ -1,9 +1,12 @@
 package com.openggf.level.rings;
 
+import com.openggf.audio.GameSound;
 import com.openggf.camera.Camera;
 import com.openggf.game.GameModule;
+import com.openggf.game.LevelState;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.competition.NativeCompetitionRoster;
+import com.openggf.game.internal.RingExtraLifeReplacesPickupSound;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.game.rules.GameRules;
 import com.openggf.game.rules.RingRules;
@@ -99,6 +102,7 @@ public class LostRingObjectInstance extends AbstractObjectInstance
     private int pendingSpillRings;
     private int pendingSpillX;
     private int pendingSpillY;
+    private int touchLayer = -1;
 
     /**
      * Shared spin owner; the displayed frame = owner.frame() + phaseOffset. This is
@@ -361,8 +365,8 @@ public class LostRingObjectInstance extends AbstractObjectInstance
         int vblaCounter = resolveVblaCounter() + resolveFloorCheckCounterPhase();
         boolean boundaryChecksOnlyOnCadence =
                 lostRingBoundaryChecksOnlyOnProbeCadence();
-        // ROM: both bodies test the same sign. loc_1A75C `bmi.s loc_1A7B0` (:35807) and
-        // loc_1A7E8 `bmi.s loc_1A83C` (:35719) both skip the probe while y_vel is negative,
+        // loc_1A75C (sonic3k.asm:35664-35668) and loc_1A7E8 (sonic3k.asm:35715-35719)
+        // both skip the probe while y_vel is negative,
         // because positive y_vel always means "falling", toward whichever surface is the floor.
         boolean movingTowardSurface = yVel >= 0;
         if (!movingTowardSurface) {
@@ -496,18 +500,26 @@ public class LostRingObjectInstance extends AbstractObjectInstance
             // Obj37 slot next executes (loc_1A7C2), which can be later in the
             // same object pass or on the following frame depending on slot order.
             ObjectServices services = servicesOrNull();
-            if (collectorRoster != null) {
-                collectorRoster.levelState(nativeCollectorSlot).addRings(1);
-            } else if (services != null && services.levelGamestate() != null) {
-                services.levelGamestate().addRings(1);
-            } else if (player instanceof com.openggf.sprites.playable.AbstractPlayableSprite playable) {
+            LevelState pickupState = collectorRoster != null ? collectorRoster.levelState(nativeCollectorSlot)
+                    : services != null ? services.levelGamestate() : null;
+            GameModule module = pickupState != null && services != null ? services.gameModule() : null;
+            boolean replacesPickupSound = module != null
+                    && module.getGameService(RingExtraLifeReplacesPickupSound.class) != null;
+            int previousLifeFlags = replacesPickupSound ? pickupState.getRingExtraLifeFlags() : 0;
+            if (pickupState != null) {
+                pickupState.addRings(1);
+            } else if (player instanceof AbstractPlayableSprite playable) {
                 playable.addRings(1);
             }
             if (services != null) {
                 var policies = com.openggf.game.mutators.NativeObjectPolicyAccess.port(services);
                 if (policies != null) policies.ringAcquired(collectorRoster != null
                         ? collectorRoster.player(nativeCollectorSlot) : player);
-                services.playSfx(com.openggf.audio.GameSound.RING);
+                // ObjLostRing_Collect (Level/_Objects/Ring/Main.asm:440-444) calls CollectRing
+                // (Level/_Objects/Ring/Main.asm:290-312), which selects one cue.
+                if (!replacesPickupSound || (pickupState.getRingExtraLifeFlags() & ~previousLifeFlags) == 0) {
+                    services.playSfx(GameSound.RING);
+                }
             }
             sparkleStartFrame = executedFrame;
         }
@@ -590,10 +602,10 @@ public class LostRingObjectInstance extends AbstractObjectInstance
     }
 
     /**
-     * ROM {@code Level_MainLoop} runs the object pass, then the camera step, then
-     * BuildSprites (s2.asm:5088-5112), and BuildSprites is what latches
-     * {@code render_flags.on_screen} against {@code Camera_X_pos_copy}
-     * (s2.asm:30560-30575). Latching at the tail of the object pass instead would
+     * ROM Level_MainLoop (s2.asm:5088-5112) runs the object pass, the camera step, and then BuildSprites.
+     * BuildSprites_ObjLoop (s2.asm:30542-30578) gates on {@code Camera_X_pos_copy}.
+     * BuildSprites_DrawSprite (s2.asm:30613-30627) latches {@code render_flags.on_screen}.
+     * Latching at the tail of the object pass instead would
      * read the pre-scroll camera, i.e. a camera one frame stale, which for a ring
      * skirting the screen edge flips the gate on {@link #hasRomRenderFlagForFloorProbe}
      * and skips a floor probe.
@@ -843,6 +855,14 @@ public class LostRingObjectInstance extends AbstractObjectInstance
     @Override
     public int getCollisionProperty() {
         return 0;
+    }
+
+    public int touchLayer() {
+        return touchLayer;
+    }
+
+    void setTouchLayer(int layer) {
+        touchLayer = layer;
     }
 
     public boolean isCollected() {

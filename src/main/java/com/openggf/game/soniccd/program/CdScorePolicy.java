@@ -20,7 +20,6 @@ public final class CdScorePolicy implements ScoreAdditionPolicy {
 
     private final IntConsumer subCpuCommand;
     private int nextLifeScore = LIFE_STEP;
-    private boolean specialStageResults;
 
     public CdScorePolicy(IntConsumer subCpuCommand) {
         this.subCpuCommand = subCpuCommand;
@@ -30,13 +29,6 @@ public final class CdScorePolicy implements ScoreAdditionPolicy {
 
     @Override
     public void scoreAdded(GameStateManager state, int score) {
-        if (specialStageResults) {
-            while (score >= nextLifeScore) {                 // .Check1UP loops (Special Stage/Main.asm:437-446)
-                nextLifeScore += LIFE_STEP;
-                NativeGameStateOps.restoreLives(state, capSpecialStageLives(state.getLives() + 1));
-            }
-            return;
-        }
         if (score < nextLifeScore) return;                   // cmp.l nextLifeScore,d0; bcs.s .End
         nextLifeScore += LIFE_STEP;
         awardLevelLife(state);
@@ -57,13 +49,13 @@ public final class CdScorePolicy implements ScoreAdditionPolicy {
     }
 
     /**
-     * Applies the special-stage tally to the campaign ({@code AddScore}, Special Stage/Main.asm:433-455).
-     * Each crossed threshold awards a life without the level's 1-Up voice and applies the 249-life cap.
+     * Carries back the special stage's completed tally ({@code AddScore}, Special Stage/Main.asm:433-455).
+     * The score and next threshold arrive in engine points.
      */
-    public void awardSpecialStageResults(GameStateManager state, int points) {
-        specialStageResults = true;
-        state.addScore(points);
-        specialStageResults = false;
+    public void commitSpecialStageResults(GameStateManager state, int score, int nextLifeScore, int lives) {
+        NativeGameStateOps.restoreScore(state, Math.min(MAXIMUM, score + state.getScore() % 10));
+        NativeGameStateOps.restoreLives(state, lives);
+        this.nextLifeScore = nextLifeScore;
     }
 
     /** {@code LevelStart}'s first load. */

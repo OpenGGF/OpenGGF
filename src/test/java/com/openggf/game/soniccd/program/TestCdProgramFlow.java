@@ -179,8 +179,11 @@ class TestCdProgramFlow {
             if (demo == CdNativeProgram.SPECSTAGE) {
                 // SpecStage1Demo / SpecStage6Demo (IPX.asm:111-131) run the special stage provider.
                 assertInstanceOf(CdProgramRequest.SpecialStage.class, request);
-            } else {
+            } else if (demo == CdNativeProgram.OPENING) {
                 assertEquals(demo, assertInstanceOf(NotHosted.class, request).program());
+            } else {
+                assertEquals(new Stage(CdStagePayload.valueOf(demo.name().substring(0, 4)),
+                        CdProgramRequest.Route.ATTRACT_DEMO), request);
             }
         }
     }
