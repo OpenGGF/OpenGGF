@@ -292,8 +292,7 @@ public class RenderOrderTest {
         int placed = preparation.indexOf("ringAccess(ringManager).drawPlaced(lm.frameCounter,");
         int buckets = preparation.indexOf(
                 "for (int bucket = RenderPriority.MIN; bucket <= RenderPriority.MAX; bucket++)");
-        assertTrue(preparation.contains("profile.placedRingEmission() == "
-                + "com.openggf.game.internal.SpriteTableBuildProfile.PlacedRings.BEFORE_OBJECT_BUCKETS"));
+        assertTrue(preparation.contains("placedRings == PlacedRings.BEFORE_OBJECT_BUCKETS"));
         assertTrue(placed >= 0 && placed < buckets,
                 "the native ring-list profile emits its rows before object buckets");
         assertTrue(preparation.contains("var attractedRings = objectPass == null || ringManager == null ? null"
@@ -301,11 +300,11 @@ public class RenderOrderTest {
                         && preparation.contains("objectPass.draw(bucket, attractedRings == null ? java.util.List.of()"
                         + " : attractedRings.slottedAttracted(bucket));"),
                 "physical ring slots join the matching object bucket instead of a late global draw");
-        int legacyGuard = preparation.indexOf(
-                "if (!(lm.gameModule instanceof com.openggf.game.internal.SpriteTableBuildProfile))");
-        int legacyDraw = preparation.indexOf("drawStageRingsForBucket(ringManager,");
-        assertTrue(buckets < legacyGuard && legacyGuard < legacyDraw,
-                "native emission profiles never receive an additional legacy ring pass");
+        int fallbackGuard = preparation.indexOf(
+                "if (placedRings == null || placedRings == PlacedRings.OBJECT_SLOTS_WITH_LAYOUT_MARGINS)");
+        int fallbackDraw = preparation.indexOf("drawStageRingsForBucket(ringManager,");
+        assertTrue(buckets < fallbackGuard && fallbackGuard < fallbackDraw,
+                "only the unprofiled and layout-margin paths need a ring pass in the object buckets");
     }
 
     private static String sourceBetween(String source, String start, String end) {

@@ -755,7 +755,8 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
      * placement, collection or touch state is read beyond the collected and active sets.
      * See docs/architecture/designs/2026-11-13-widescreen-native-draw-mode.md (D12).
      */
-    private void drawDormantMargins() {
+    void drawDormantMargins() {
+        if (!ringsAllowed() || renderer == null) return;
         Camera camera = GameServices.camera();
         var style = dormantStyle(camera);
         if (style == null) return;
