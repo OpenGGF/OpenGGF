@@ -917,6 +917,48 @@
       "note": "user's Sonic CD disc"
     },
     {
+      "match": "com.openggf.game.soniccd.TestPpzAmyRose#nativeSlotAndPositionMatchUntilDespawn",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestPpzAmyRose.java:51",
+      "allowed_when_absent": "soniccd_native",
+      "note": "Sonic CD disc and native captures"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestPpzAmyRose#campaignAmyGrabsAndSonicJumpsFree",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestPpzAmyRose.java:112",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestPpzAmyRose#amyChasesStandingSonicAndWaitsOnlyWithinNativeRanges",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestPpzAmyRose.java:130",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestPpzAmyRose#removingAmyReleasesSonicBeforeAndAfterRewind",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestPpzAmyRose.java:155",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestPpzAmyRose#timeAttackDoesNotInitializeAmyOrEmitHearts",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestPpzAmyRose.java:198",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestPpzAmyRose#rewindRestoresAmyAndHerHeart",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestPpzAmyRose.java:228",
+      "allowed_when_absent": "soniccd_native",
+      "note": "Sonic CD disc and native captures"
+    },
+    {
       "match": "com.openggf.game.soniccd.TestPpzObjectsA#mosquiLandsSilentlyOffScreen",
       "category": "optional-fixture",
       "evidence": "src/test/java/com/openggf/game/soniccd/TestPpzObjectsA.java:219",
@@ -5105,14 +5147,14 @@
     {
       "match": "com.openggf.game.soniccd.TestCdTimeAttackObjects#palmtreePanicAmy(boolean)[1]",
       "category": "optional-fixture",
-      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdTimeAttackObjects.java:202",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdTimeAttackObjects.java:201",
       "allowed_when_absent": "soniccd_disc",
       "note": "user's Sonic CD disc"
     },
     {
       "match": "com.openggf.game.soniccd.TestCdTimeAttackObjects#palmtreePanicAmy(boolean)[2]",
       "category": "optional-fixture",
-      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdTimeAttackObjects.java:202",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdTimeAttackObjects.java:201",
       "allowed_when_absent": "soniccd_disc",
       "note": "user's Sonic CD disc"
     },

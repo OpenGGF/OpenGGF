@@ -65,6 +65,9 @@ public final class PpzObjects implements CdObjectRegistration {
                 GameServices.level().getCurrentLevel() instanceof CdLevel level && level.payload() == CdStagePayload.R11A
                         ? new PpzAmyRose(spawn)
                         : new CdNullObject(spawn));
+        // ObjectIndex (Level/Palmtree Panic/Object Index (Act 1 Present).asm:54-55).
+        registrar.object(0x30, "Amy heart", p -> PpzObjectCatalogue.entry(p).amyMappings() >= 0,
+                (spawn, r) -> new PpzAmyRose.Heart(spawn));
     }
 
     @Override
