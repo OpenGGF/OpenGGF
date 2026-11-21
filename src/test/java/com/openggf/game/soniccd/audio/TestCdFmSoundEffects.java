@@ -203,6 +203,7 @@ class TestCdFmSoundEffects {
         // header channel maps to the sequencer's linear FM channel like GetSFXTrackPtr.
         List<SmpsSequencer.Track> byHeader = new ArrayList<>();
         for (var entry : sfx(id).getTrackEntries()) {
+            if (entry.holdsFmState()) continue;
             tracks.stream().filter(t -> t.channelId == slot(entry.channelMask()) && !byHeader.contains(t))
                     .findFirst().ifPresent(byHeader::add);
         }

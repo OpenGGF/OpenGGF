@@ -26,8 +26,11 @@ import java.util.List;
 public final class CdFmSfxData extends AbstractSmpsData implements SmpsSfxData {
     /** One {@code smpsHeaderSFXChannel} entry. */
     public record TrackEntry(int playbackFlags, int channelMask, int pointer,
-                             int transpose, int volume) implements SmpsSfxTrack { }
+                             int transpose, int volume, boolean holdsFmState) implements SmpsSfxTrack { }
 
+    private static final int DUST = 0xD6;
+    private static final int SOUND_DISABLED = 0x04;
+    private static final int BANK_WINDOW_START = 0x8000;
     private static final int VOICE_BYTES = 0x19;
 
     private final int headerAddress;
@@ -57,17 +60,23 @@ public final class CdFmSfxData extends AbstractSmpsData implements SmpsSfxData {
         tempo = 0;
         int count = data[base + 3] & 0xFF;
         int pos = base + 4;
-        // The retail D6 header declares two tracks but supplies only one before
-        // SonicCD_D6_FM6 (FM/SFX/D6.asm:1-9). FixBugs=0 reads bytecode as a
-        // second header and corrupts FM1 with pointer 80E0h. Keep authored tracks
-        // inside their header region; do not model that native memory corruption.
-        // The fixed native branch would change the declared count to one.
         int trackDataStart = data.length;
-        for (int i = 0; i < count && pos + 6 <= trackDataStart; i++, pos += 6) {
+        for (int i = 0; i < count && pos + 6 <= data.length; i++, pos += 6) {
+            int flags = data[pos] & 0xFF;
+            int channel = data[pos + 1] & 0xFF;
             int pointer = read16(pos + 2);
+            boolean overlapsTrackData = pos + 6 > trackDataStart;
+            // FixBugs=0 uses the declared count. SonicCD_D6_Header (Sound Drivers/FM/SFX/D6.asm:1-11)
+            // has a second entry at the start of the FM6 stream. The corrected count would be one.
+            // PlaySFX (Sound Drivers/FM/_Driver.asm:826-861) takes over FM1 with sound disabled.
+            // SetKeyOff (Sound Drivers/FM/_Driver.asm:545-556) and WriteYM1Trk
+            // (Sound Drivers/FM/_Driver.asm:674-677) suppress the admission writes.
+            // The pointer reaches the boot ROM, so keep the chip state until FM1 is replaced.
+            boolean holdsFmState = getId() == DUST && overlapsTrackData && channel == 0
+                    && (flags & SOUND_DISABLED) != 0 && pointer >= BANK_WINDOW_START;
+            if (overlapsTrackData && !holdsFmState) break;
             if (pointer >= pos + 6 && pointer < trackDataStart) trackDataStart = pointer;
-            tracks.add(new TrackEntry(data[pos] & 0xFF, data[pos + 1] & 0xFF, read16(pos + 2),
-                    data[pos + 4], data[pos + 5]));
+            tracks.add(new TrackEntry(flags, channel, pointer, data[pos + 4], data[pos + 5], holdsFmState));
         }
         // The driver has six FM track slots and no PSG or DAC tracks (FM/_Variables.inc:11, :98-103).
         channels = tracks.size();

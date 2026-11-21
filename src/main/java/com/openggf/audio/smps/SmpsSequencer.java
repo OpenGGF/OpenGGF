@@ -56,6 +56,8 @@ public class SmpsSequencer implements CoordFlagContext {
     private final DacData dacData;
     private final int tempoModBase;
     private final List<Track> tracks = new ArrayList<>();
+    // Derived from the immutable SFX program when the sequencer is constructed.
+    private int heldFmSfxChannels;
     /** Immutable ROM-header-order projection into {@link #tracks}. */
     private int[] sfxHeaderOrderIndices = new int[0];
 
@@ -1206,6 +1208,11 @@ public class SmpsSequencer implements CoordFlagContext {
         return Collections.unmodifiableList(ordered);
     }
 
+    public boolean holdsFmState(Track track) {
+        return heldFmSfxChannels != 0 && track.type == TrackType.FM
+                && (heldFmSfxChannels & (1 << track.channelId)) != 0;
+    }
+
     public int trackCount() {
         return tracks.size();
     }
@@ -1249,11 +1256,16 @@ public class SmpsSequencer implements CoordFlagContext {
         for (int index = 0; index < entries.size(); index++) {
             SmpsSfxData.SmpsSfxTrack entry = entries.get(index);
             int pointer = relocate(entry.pointer(), z80Start);
-            if (pointer < 0 || pointer >= programView.dataLength()) {
+            int channel = entry.channelMask();
+            if (entry.holdsFmState()) {
+                if (mapFmChannel(channel) < 0) {
+                    throw new IllegalArgumentException(
+                            sfxAdmissionError("Only an FM track can hold chip state", index, entry, pointer));
+                }
+            } else if (pointer < 0 || pointer >= programView.dataLength()) {
                 throw new IllegalArgumentException(
                         sfxAdmissionError("SFX track pointer is outside the program", index, entry, pointer));
             }
-            int channel = entry.channelMask();
             boolean valid = channel == 0x16 || channel == 0x10
                     || mapFmChannel(channel) >= 0
                     || mapPsgChannel(channel) >= 0;
@@ -1340,7 +1352,7 @@ public class SmpsSequencer implements CoordFlagContext {
 
         for (SmpsSfxData.SmpsSfxTrack entry : sfxData.getTrackEntries()) {
             int ptr = relocate(entry.pointer(), z80Start);
-            if (ptr < 0 || ptr >= programView.dataLength()) {
+            if (!entry.holdsFmState() && (ptr < 0 || ptr >= programView.dataLength())) {
                 continue;
             }
 
@@ -1376,7 +1388,11 @@ public class SmpsSequencer implements CoordFlagContext {
                 t.pan = 0xC0;
                 t.ams = 0;
                 t.fms = 0;
-                primeVoice(t, 0);
+                if (entry.holdsFmState()) {
+                    heldFmSfxChannels |= 1 << linearCh;
+                } else {
+                    primeVoice(t, 0);
+                }
             }
             tracks.add(t);
         }
@@ -1728,7 +1744,7 @@ public class SmpsSequencer implements CoordFlagContext {
 
     private void tickTrack(Track t) {
         {
-            if (!t.active)
+            if (!t.active || holdsFmState(t))
                 return;
             // Note: In SMPS, overridden tracks continue to process (tick) in the
             // background,
@@ -4627,7 +4643,7 @@ public class SmpsSequencer implements CoordFlagContext {
      */
     public void refreshAllVoices() {
         for (Track t : tracks) {
-            if (!t.active)
+            if (!t.active || holdsFmState(t))
                 continue;
             if (t.type == TrackType.FM) {
                 refreshInstrument(t);

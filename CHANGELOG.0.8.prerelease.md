@@ -148,7 +148,9 @@ under the matching area heading; see the
   The original D.A. Garden planet animation, ordinary-stage attract demos,
   the original Stage 8 credits and Japanese and European gameplay remain open. Disc audio, video songs and PCM sound follow the music
   and effects volumes; CD audio and PCM also share the FM presentation scale
-  for their relative level. The time-warp stars animate from the disc in every
+  for their relative level. Special-stage dust replaces any active FM1 effect
+  without retriggering or releasing its note, as the disc does at admission.
+  The time-warp stars animate from the disc in every
   stage, including Tidal Tempest. While the warp stars are active, Sonic keeps
   his rings when he lands on spikes with the disc's warp check or touches a
   Tidal Tempest boss missile. The stars also protect Sonic from Wacky
