@@ -415,10 +415,13 @@ public final class LevelFrameStep {
             //    dispatch slot 0, then slot 1). Touch responses run per player inside
             //    tickPlayablePhysics after movement.
             if (!objectsFrozen) {
-                var objects = levelManager.getObjectManager();
-                if (objects != null) {
-                    com.openggf.level.objects.ObjectManagerInternalAccess.runSpawnerBeforeObjectPass(
-                            objects, camera.getX());
+                if (context.gameModule().getGameService(
+                        com.openggf.game.internal.SpawnerBeforeObjectPass.class) != null) {
+                    var objects = levelManager.getObjectManager();
+                    if (objects != null) {
+                        com.openggf.level.objects.ObjectManagerInternalAccess.runSpawnerBeforeObjectPass(
+                                objects, camera.getX());
+                    }
                 }
                 wrapper.wrap("physics", spriteUpdate);
             }
