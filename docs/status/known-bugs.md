@@ -7,7 +7,8 @@
 
 This document tracks **bugs**, incomplete implementations, and known parity gaps that we intend to fix but haven't addressed yet. Entries here are *not* intentional — they're acknowledged problems with a plan (or hope) of eventual resolution.
 
-For **intentional** deviations from the original ROMs (architectural choices, feature extensions, deliberate bug-fixes of ROM data), see [known-discrepancies.md](known-discrepancies.md).
+For hardware limits, engine feature extensions, and historical cartridge
+records, see [known discrepancies](known-discrepancies.md).
 
 Entries should include:
 - **Location** — the file(s) where the bug lives, if known
@@ -16,6 +17,41 @@ Entries should include:
 - **Removal condition** — what needs to be true for this entry to be deleted
 
 ---
+
+## Sonic CD campaign pause restart
+
+When Sonic still has lives after an A, B or C press during campaign pause,
+`CdLevelPause` requests the shared death reload. In the Present that path
+can show the stage title card again. The disc leaves the card's loaded bit set
+in `Level_MainLoop` (Level/Main.asm:368-395). Only the ordinary death path
+clears that bit on a Present restart without a checkpoint
+(`ObjSonic_Restart`, Level/_Objects/Sonic/Main.asm:2465-2472).
+
+Quartz Quadrant acts 1 and 2 also retain `respawn_checkpoint` while clearing
+`spawn_mode` (`loc_201858`, r5/main.asm:328-337 and `loc_201898`,
+r5/main.asm:346-349). The engine clears the checkpoint state because the shared
+death reload uses an active checkpoint to select the Present spawn.
+`TestCdPauseExit` confirms the life loss and reload for live and recorded input.
+It currently expects the checkpoint clear and stops before checking the
+restarted title card. Close the gap by exercising both input paths through a
+complete restart and checking the spawn position, saved checkpoint and title card.
+
+## Sonic CD dust SFX malformed track count
+
+The retail FM dust effect declares two tracks. Only one six-byte header
+precedes `SonicCD_D6_FM6` (scddisasm/src/Sound Drivers/FM/SFX/D6.asm:1-9).
+`PlaySFX` reads the first six track bytes as another header and initializes
+FM1 with track pointer $80E0 (Sound Drivers/FM/_Driver.asm:803-861).
+The copied $EF flags mark FM1 active and sound-disabled.
+`SetKeyOff` (Sound Drivers/FM/_Driver.asm:545-556) returns before writing
+the chip register. Subsequent reads through $80E0 reach the Z80's banked
+68000 address window.
+
+`CdFmSfxData` stops reading headers at the first track's data. The engine plays
+the FM6 effect and leaves any active FM1 effect running. Reproducing the native
+FM1 replacement requires preserving the chip state at admission and determining
+how long the replacement owns FM1. Capture the FM1 track state and register writes
+with an effect active when $D6 starts to measure the consequences of the bus read.
 
 ## Solid on-screen gate: render-pass approximations — 2026-11-02
 

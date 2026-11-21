@@ -476,16 +476,15 @@ identities and diagnostics above remain unchanged.
   user-authorized reviewed addition to the normally shrink-only inventory,
   not an allowance for logical draw writes. Rendered restore verification ran.
 - Audio source architecture: replaced the production comment's external-source
-  derivation with the independently inspectable OpenGGF presentation convention:
+  derivation with the engine's digital output scaling:
   `FastYm2612Chip.renderInternalFrame` uses `(channelOut[ch] * 3) >> 2`;
   `VirtualSynthesizer` uses `MASTER_GAIN_SHIFT = 1`. CD contributions join after
   that mix, hence the same `3/4 * 1/2 = 3/8` presentation gain. Native/disassembly
   retains ownership of player/device arithmetic. Constants, gain arithmetic,
-  native behavior and the source prohibition guard are unchanged. The comment
-  points to this artifact for corroboration provenance. Under the reviewed
-  repository contract, the engine-scale design does not require deriving
-  behavior from the prohibited external source. External corroboration cannot
-  authorize future native/device behavior changes.
+  native behavior and the source prohibition guard are unchanged. The 3/8 gain
+  matches the engine's FM output scale and headroom. The console mixes FM,
+  CD-DA and PCM in hardware. Their analogue mix has not been calibrated against
+  a physical console.
 
 ### Exact external audio evidence retained
 

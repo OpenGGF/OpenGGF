@@ -1,40 +1,12 @@
 # Known Discrepancies from Original ROMs
 
-This document tracks **intentional deviations** from the original Sonic 1 / 2 / 3&K ROMs and the Sonic CD disc that apply engine-wide (cross-game) or to Sonic 1 / Sonic 2 / Sonic CD specifically. Entries here are architectural choices we've made (cleaner code, added features, deliberate corrections of known ROM bugs) that we accept and do not plan to revert. Runtime gameplay behavior is preserved unless a rationale explicitly justifies a visible change (e.g., the multi-sidekick entry adds gameplay that the ROM never supported).
-
-**What does NOT belong here:**
-- Bugs, incomplete implementations, and parity gaps that we *intend to fix* → [known-bugs.md](known-bugs.md)
-- Sonic 3 & Knuckles-specific intentional discrepancies →
-  [S3K known discrepancies](../S3K_KNOWN_DISCREPANCIES.md)
-- Sonic 3 & Knuckles-specific bugs → [s3k-known-bugs.md](s3k-known-bugs.md)
-
-Each entry describes what the ROM does, what we do, and why — focusing on *why* the divergence is acceptable.
-
-## Sonic CD dust SFX malformed track count (2026-11-16)
-
-The retail FM dust effect declares two tracks but has only one header before
-`SonicCD_D6_FM6` (scddisasm/src/Sound Drivers/FM/SFX/D6.asm:1-9). With FixBugs=0,
-`PlaySFX` reads the bytecode as another header, overwriting FM1 with a track
-pointer of 80E0h (FM/_Driver.asm:803-860). The fixed data would declare one track.
-OpenGGF bounds CD FM headers at the first track's bytecode, preserving the authored
-FM6 dust effect without executing native memory corruption. Shared SMPS admission
-still rejects invalid channels and pointers. This prevents a real-session admission
-exception when dust is requested, including at a live rewind presentation boundary.
-
-## Sonic CD campaign pause restart
-
-The engine uses the ordinary death reload to fade out and restart the stage
-after a campaign pause exit. This can replay the present-day title card.
-The disc's pause exit leaves the card marked as loaded
-(`Level_MainLoop`, Level/Main.asm:368-395). The death path clears that flag
-for a present-day restart without a checkpoint
-(`ObjSonic_Restart`, Level/_Objects/Sonic/Main.asm:2465-2472).
-
-Quartz Quadrant acts 1 and 2 clear `spawn_mode` and keep
-`respawn_checkpoint` while lives remain
-(`loc_201858`, r5/main.asm:328-337 and `loc_201898`, r5/main.asm:346-349).
-The engine clears its checkpoint state to start from the beginning because
-an active checkpoint selects the saved spawn on a present-day death reload.
+This document records limits of the hardware OpenGGF does not emulate. For
+Sonic CD, game logic and ordering that differ from the shipped disc belong
+in [known bugs](known-bugs.md). Engine feature extensions are identified
+where they affect the comparison. Historical cartridge records also describe
+earlier engineering decisions. See the [S3K hardware limits and historical
+records](../S3K_KNOWN_DISCREPANCIES.md) and [S3K known bugs](s3k-known-bugs.md)
+for game-specific coverage.
 
 ## Hosted Competition checkpoint reload and monitor OFF (2026-11-07)
 
@@ -117,7 +89,7 @@ no discrepancy entry was added or reclassified by the cutover.
 
 1. [Gloop Sound Toggle](#gloop-sound-toggle)
 2. [Spindash Release Transpose Fix](#spindash-release-transpose-fix)
-3. [Pattern ID Ranges](#pattern-id-ranges-for-guiresults-screen)
+3. [Pattern ID Ranges](#pattern-id-ranges)
 4. [HTZ Cloud Scroll Precision Fix](#htz-cloud-scroll-precision-fix)
 5. [MCZ Rotating Platforms Child Cleanup](#mcz-rotating-platforms-child-cleanup)
 6. [Multi-Sidekick Daisy Chain](#multi-sidekick-daisy-chain)
@@ -180,11 +152,11 @@ disc-drive timing. The cases below describe how those limits affect play.
   `VInt_Finish` (Level/Main.asm:704-712) still runs the boredom and time-warp
   timers and the V-INT counter. The engine runs one pass per frame and never
   overruns. The V-INT work that is game logic is kept (Tidal Tempest's water,
-  the time-warp timer and the counter). Trace replay compares each engine row
-  with the last native row of the same level frame, which only chooses the
-  comparison row and never moves the engine. The boredom timer is game logic.
-  Its extra lag-frame ticks depend on how many V-INTs the 68000 services
-  during an overrun, so live play omits those ticks.
+  the time-warp timer and the counter). Trace replay uses recorded lag to
+  select a V-INT-only pass. It compares the gameplay pass with the last native
+  row of the same level frame. The boredom timer's extra lag-frame ticks
+  depend on how many V-INTs the 68000 services during an overrun, so live play
+  omits those ticks.
 - **V-INTs taken by a stage load: estimated from emulator timing in `FAST` and
   `PROFILED`, not in `NONE`.** `LevelStart` clears `levelVIntCounter`
   (`.ClearFlowers`, Level/Main.asm:178-184), then the load runs for 37 to 80
@@ -200,11 +172,8 @@ disc-drive timing. The cases below describe how those limits affect play.
   and one time-warp arrival (R11D); other checkpoint, warp and past or future
   death restarts have no measurement and start from 0. Each of those two
   measurements is a single sample, and has not been compared with native in an
-  engine run. A checkpoint or warp entry also depends on which pattern-load list
-  the stage's `LoadLevelData` queues; the engine's rule for that list disagrees
-  with the disassembly for 12 stages (R31C, R31D, R32C, R32D, R51A, R51C, R51D,
-  R52A, R52C, R52D, R53C and R53D), so their checkpoint and warp keys may name
-  the wrong list. Their fresh entries are measured and unaffected. Loads between
+  engine run. The load profile key includes the pattern-load list that the
+  shipped stage program selects. Loads between
   programs (title, Time Attack, special stage, the warp cutscene) run without
   pacing for CPU work or disc reads. A real disc's read timing varies.
   R12A starts one V-INT short after act clear or a special stage. The native
@@ -277,12 +246,12 @@ rotation. The available recordings do not exercise
 PCM pan after reset, reads of unmapped PCM registers, stamp priority mode 3,
 or the limits of the stamp renderer's V cell, H dot and V dot counts.
 
-**Special-stage widescreen.** Wider views sample the same animated floor
+**Special-stage widescreen feature.** Wider views sample the same animated floor
 map at additional columns beside the native display buffer. Background
 planes extend to the edges. The original playfield, sprites and HUD stay
 centred at 256 pixels. The wider picture has no native reference.
 
-**Cartridge-donated characters.** A cartridge sheet has no CD mini/3D/give-up
+**Cartridge-donated character feature.** A cartridge sheet has no CD mini/3D/give-up
 art. Donation retains donor movement drawings, with CD's stage physics and
 semantic object animation writes. CD's give-up depends on specific native map
 frames to start its fall; it is disabled for donated sheets rather than treating
@@ -291,8 +260,10 @@ sequence. Donor life icons keep a separate donor palette bank, and the results
 name uses donor ROM lettering fitted to CD's native 72-pixel cell. This is
 creator-selected cross-game behavior, not a correction to shipped CD physics.
 
-**Shipped bugs.** Sonic CD code models `FixBugs = 0` as the other games do. No
-intentional correction of a Sonic CD bug is recorded.
+**Shipped behavior.** Sonic CD targets the disc's assembled routines.
+The [dust effect's FM1 admission gap](known-bugs.md#sonic-cd-dust-sfx-malformed-track-count)
+includes a Z80 read from the banked 68000 address window. OpenGGF does not emulate
+that bus.
 
 ---
 
@@ -507,7 +478,9 @@ move.w  #tiles_to_bytes(ArtTile_Title_Card),d0
 
 ### Our Implementation
 
-We use **extended pattern ID ranges** with fixed bases that don't overlap:
+The host atlas uses extended pattern IDs with fixed bases. It does not model
+physical VDP VRAM capacity or transfer contention. Stage code still selects its
+art and the order in which it changes. The atlas allocations are:
 
 | Range | `PatternAtlasRange` | Notes |
 |------|----------|-------|
@@ -1103,7 +1076,7 @@ The ROM resolves the active wall sensor and floor angle from the current frame's
 
 ### Our Implementation
 
-The engine carries one narrow right-wall stability heuristic: `AbstractPlayableSprite.rightWallPenetrationTimer` gives a short grace period while resolving right-wall penetration and is captured in playable-sprite rewind snapshots.
+The engine carries one right-wall stability heuristic: `AbstractPlayableSprite.rightWallPenetrationTimer` gives a short grace period while resolving right-wall penetration and is captured in playable-sprite rewind snapshots. The timer starts only when the game collision rule or zone runtime opts in. Stock Sonic CD inherits Sonic 1's disabled game rule and has no zone opt-in.
 
 A second heuristic, `CollisionSystem.pendingOddSensorFallbackAngles` (a cross-frame cache of the alternate sensor angle applied when the selected sensor reported distance 0 with an odd angle), has been **removed**: ROM `Sonic_Angle` (`docs/s1disasm/_incObj/Sonic AnglePos.asm:186-208`) snaps an odd selected angle straight to `(angle+0x20)&0xC0` from the current frame, and the cache was resurrecting a stale angle one frame early on the S1 LZ3 and S3K CNZ right-wall paths (see the `CHANGELOG.0.6.md` entry "S1 right-wall odd-angle snap (LZ3/CNZ)").
 
@@ -1311,6 +1284,10 @@ The player's right level-boundary clamp is the level's design edge: `Camera_max_
 - **Normal path** (S1/S2/S3K non-strict ground/air): `Camera_max_X_pos + $128 + $40` (= `maxX + 320 - 24 + 64`)
 
 `camera.getMaxX()` holds the native ROM `Camera_Max_X_pos` (the level's right scroll limit, e.g. EHZ `0x2940`), so `maxX + 320` is the level's right wall. `RightBoundary.compute` is called with the fixed `LEVEL_DESIGN_WIDTH = 320`, so the clamp lands at the wall at **every** `DISPLAY_ASPECT` — fully reproducing the ROM `+$128` / `+$128 + $40` values. This is NOT a divergence: native and widescreen produce identical boundaries.
+
+Sonic CD uses the same native-width calculation with its own inset and extension.
+`ObjSonic_LevelBound` (Level/_Objects/Sonic/Main.asm:1686-1690) uses
+`rightBound + 304` during a boss fight and `rightBound + 360` otherwise.
 
 ### Why it must not widen
 
@@ -1743,7 +1720,7 @@ Three separate questions; do not collapse them.
 **Contract scope is cross-game.** Recorded timing *may* delay S1 Nemesis PLC,
 S2 DPLC, and S3K Kosinski readiness.
 
-**Implementation covers S1 and S3K.** The live registry is
+**Recorded readiness covers S1 and S3K.** The recordable kinds are
 `KOS_MODULE_QUEUE`, `KOS_DECOMPRESSION_QUEUE`, and `NEMESIS_PLC_QUEUE`
 (`HardwareWorkKind`), pinned by
 `TestS1S2PlcComparisonOnlyGuard.timingKindRegistryIsClosedToUndeclaredWork`.
@@ -1757,6 +1734,9 @@ and `S1RunCaptureRunner`; `S1PlcHardwareTimingObserver` supplies the S1 edges,
 only when the capture observed an edge. **S2 is not implemented at either end**
 — no source under `game/sonic2/` references `HardwareWorkKind`, and no S2
 recorder constructs `HardwareTimingEventEngine`.
+Sonic CD's `SCD_STAGE_LOAD` and `CD_READ_READY` pace live loads from profiles.
+Its recorded lag and lost-V-INT admissions are separate from readiness
+streams. See the [Sonic CD hardware limits](#sonic-cd-hardware-timings-not-modelled).
 
 **Fixture coverage includes one S1 chain and S3K.** The S1 complete-emerald
 chain carries 28 native timing streams with 242 Nemesis arm edges. Its four
@@ -3652,7 +3632,8 @@ sampling boundaries within that frame. It does not emulate the full bus
 pipeline, busy flag, LSI test registers, or analogue ladder-effect output stage.
 Its facade preserves stereo panning and the mixer's nominal 6144 full-scale
 channel level, with writes paced and diagnostics timestamped at frame
-boundaries. These deliberate approximations reduce synthesis CPU cost.
+boundaries. The omitted bus and analogue output stages are hardware limits
+of the fast core.
 
 `audio.fmCore=accurate` retains the cycle-exact Nuked implementation and is
 required for physical reference captures. New configurations select fast;

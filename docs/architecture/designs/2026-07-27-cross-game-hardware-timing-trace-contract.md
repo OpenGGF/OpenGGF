@@ -80,7 +80,7 @@ games' manifests pace theirs.
 
 | Wire name | `HardwareWorkKind` | Work | Fingerprint fields |
 |---|---|---|---|
-| `scd_stage_load` | `SCD_STAGE_LOAD` | `LevelStart` from `.ClearFlowers` to `Level_MainLoop`'s first `VSync` (scddisasm Level/Main.asm:182-333) | stage program file ISO extent and byte length; the PLC list `LoadLevelData` queues for the entry: 0 on a fresh entry, `SectionInitPLCs` at the camera's section for a checkpoint restart or time-warp arrival, the level PLC when the title card was already loaded (Palmtree Panic/Load Level Data.asm:37-48) |
+| `scd_stage_load` | `SCD_STAGE_LOAD` | `LevelStart` from `.ClearFlowers` to `Level_MainLoop`'s first `VSync` (scddisasm Level/Main.asm:182-333) | stage program file ISO extent and byte length; the PLC list the shipped loader queues. On a checkpoint or warp arrival, the section-aware loader uses the camera's section or a fixed list. Other loaders use the level-index PLC when the title card is already loaded. A fresh entry uses 0. See `LoadLevelData` (Level/Palmtree Panic/Load Level Data.asm:37-48), `InitSectionGfx` (r3/section_gfx_1c.asm:3-5), and `LoadStageData` (r5/stage_data_load_1a.asm:19-29). |
 | `cd_read_ready` | `CD_READ_READY` | `ROMREADN` to the first sector of a video stream (CD System Program/SP.asm:720-757) | stream file ISO extent; the sector count `.GetSectors` computes (SP.asm:691-699) |
 
 The engine's load is synchronous; the owner submits the finished work (`CdLoadTiming`), services it one
