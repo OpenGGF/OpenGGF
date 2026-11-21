@@ -56,12 +56,13 @@ public final class ControlledFrameRuntime {
             boolean transition = serviceLevelTransition(context);
             boolean presenting = !transition && presentation.service(context);
             if (transition || presenting) advance = false;
+            LevelFrameResult result = LevelFrameResult.HELD;
             if (advance) {
                 LogicalInputSnapshot nativeInput = disposition == GameplayFrameDisposition.ADVANCE_NATIVE_INPUT
                         ? snapshot : java.util.Objects.requireNonNull(controller.nativeInput(course), "native input");
                 beforeGameplay.run();
                 EngineTiming.vIntRunCounter(EngineServices.current()).serviceRepresentedVBlank();
-                context.plcFrameLifecycle().runLogicalIteration(frame -> { }, context.getFadeManager()::update,
+                result = context.plcFrameLifecycle().runLogicalIteration(frame -> { }, context.getFadeManager()::update,
                         frame -> {
                             var frameContext = LevelFrameContext.from(context);
                             LevelFrameStep.updateTimers(frameContext);
@@ -72,10 +73,11 @@ public final class ControlledFrameRuntime {
                                         () -> context.getSpriteManager().update(input), LevelFrameStep.DIRECT_WRAPPER);
                             });
                         });
+            } else if (!transition && !presenting) {
+                serviceHeldLevelEntry(context);
             }
-            if (!advance && !transition && !presenting) serviceHeldLevelEntry(context);
-            controller.afterTick(course, advance);
-            return advance ? LevelFrameResult.GAMEPLAY_FRAME : LevelFrameResult.HELD;
+            controller.afterTick(course, result == LevelFrameResult.GAMEPLAY_FRAME);
+            return result;
         } catch (RuntimeException | Error failure) {
             try { context.directedPlayerLease().abort(); }
             catch (RuntimeException | Error cleanupFailure) {

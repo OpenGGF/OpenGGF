@@ -105,7 +105,7 @@ public final class LevelFrameStep {
             PlcLifecyclePhase activePhase, PlcLifecyclePhase pausePhase,
             LevelManager levelManager, Camera camera, Runnable spriteUpdate,
             boolean startEdgePressed, StepWrapper wrapper) {
-        if (serviceStagePaletteWait(context, frame, levelManager)) return LevelFrameResult.HELD;
+        if (holdForStagePaletteWait(context, frame, levelManager)) return LevelFrameResult.HELD;
         GameStateManager gameState = context.gameStateManager();
         if (gameState != null && gameState.applyPauseToggle(startEdgePressed)) {
             serviceVBlankOnly(context, frame, pausePhase);
@@ -122,11 +122,12 @@ public final class LevelFrameStep {
         if (StagePaletteWait.pending(levelManager) == null) timers.update();
     }
 
-    /** Services an in-stage palette wait through the same boundary as a held transition fade. */
-    public static boolean serviceStagePaletteWait(
+    /** Returns true while a stage wait holds gameplay, even when VBlank already has an owner. */
+    public static boolean holdForStagePaletteWait(
             LevelFrameContext context, PlcLifecycleFrame frame, LevelManager levelManager) {
         var wait = StagePaletteWait.pending(levelManager);
-        if (wait == null || !frame.claim(PlcLifecyclePhase.PALETTE_FADE)) return false;
+        if (wait == null) return false;
+        if (!frame.claim(PlcLifecyclePhase.PALETTE_FADE)) return true;
         if (frame.consumedHeldLoopTailPreparation()) {
             context.runtimeArtCoordinator().deferProductionSubmissionForHeldLoopTailClosure();
         }
@@ -313,7 +314,7 @@ public final class LevelFrameStep {
         if (context == null) {
             throw new NullPointerException("context");
         }
-        if (phase == PlcLifecyclePhase.ORDINARY_LEVEL && serviceStagePaletteWait(context, frame, levelManager)) {
+        if (phase == PlcLifecyclePhase.ORDINARY_LEVEL && holdForStagePaletteWait(context, frame, levelManager)) {
             return LevelFrameResult.HELD;
         }
 

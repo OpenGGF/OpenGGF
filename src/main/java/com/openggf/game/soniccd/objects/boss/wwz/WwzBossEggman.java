@@ -678,6 +678,7 @@ public final class WwzBossEggman extends WwzBossPiece
      * (common/palette_fade.asm:463-484) both wait 22 times. The latter fills words $00-$2F first.
      */
     private void startProgrammedFade(ProgrammedFade fade) {
+        ram().publishPaletteWait(spawn);
         programmedFade = fade;
         fadeVSyncsRemaining = 0x15 + 1;
         nextFadePalette = paletteWords();
@@ -686,7 +687,7 @@ public final class WwzBossEggman extends WwzBossPiece
         }
     }
 
-    public boolean hasPendingPaletteWait() {
+    boolean hasPendingPaletteWait() {
         return fadeVSyncsRemaining > 0;
     }
 

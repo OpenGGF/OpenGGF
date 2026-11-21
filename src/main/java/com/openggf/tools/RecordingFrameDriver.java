@@ -297,6 +297,14 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
                 && snapshot.player1().startPressed()
                 && context.gameStateManager() != null
                 && !context.gameStateManager().isGamePaused();
+        if (LevelFrameStep.holdForStagePaletteWait(context, lifecycleFrame, levelManager)) {
+            frameCounter++;
+            lastFrameResult = LevelFrameResult.HELD;
+            lastFrameRanGameplay = false;
+            inputHandler.update();
+            previousDriverSnapshot = snapshot;
+            return lastFrameResult;
+        }
         FrameAdmission admission = LevelFrameStep.admit(
                 context, levelManager,
                 snapshot.player1().startPressed() && !deferPauseEntry);
@@ -306,12 +314,6 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
             return lastFrameResult;
         }
         frameCounter++;
-        if (lastFrameResult == LevelFrameResult.HELD) {
-            LevelFrameStep.serviceStagePaletteWait(context, lifecycleFrame, levelManager);
-            inputHandler.update();
-            previousDriverSnapshot = snapshot;
-            return lastFrameResult;
-        }
         if (lastFrameResult == LevelFrameResult.PAUSED) {
             LevelFrameStep.serviceVBlankOnly(
                     context, lifecycleFrame, PlcLifecyclePhase.NORMAL_PAUSE);
@@ -695,7 +697,7 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
         }
 
         LevelFrameContext context = LevelFrameContext.from(SessionManager.getCurrentGameplayMode());
-        if (LevelFrameStep.serviceStagePaletteWait(context, lifecycleFrame, levelManager)) {
+        if (LevelFrameStep.holdForStagePaletteWait(context, lifecycleFrame, levelManager)) {
             previousDriverSnapshot = RecordedInputSnapshots.fromBk2(frameInput, lastPolledBk2Input());
             markBk2RowPolled(currentBk2Index++);
             lastFrameResult = LevelFrameResult.HELD;

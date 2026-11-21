@@ -5,6 +5,10 @@ import com.openggf.game.GameModule;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.LevelEventProvider;
 import com.openggf.game.NoOpBonusStageProvider;
+import com.openggf.game.internal.StagePaletteWait;
+import com.openggf.game.resources.PlcFrameLifecycleCoordinator;
+import com.openggf.game.resources.PlcLifecyclePhase;
+import com.openggf.game.session.WorldSession;
 import com.openggf.game.timing.HardwareServiceBoundary;
 import com.openggf.game.timing.HardwareTimingService;
 import com.openggf.game.timing.HardwareWorkHandle;
@@ -19,6 +23,8 @@ import com.openggf.trace.timing.HardwareTimingReplayPort;
 import com.openggf.trace.timing.HardwareTimingSchedule;
 import com.openggf.trace.timing.TraceHardwareTimingBoundaryObserver;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -38,6 +44,34 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class TestLevelFrameHardwareTimingBoundaries {
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void stagePaletteWaitHoldsGameplayWhenAnotherPhaseOwnsVBlank(boolean withPause) {
+        List<String> events = new ArrayList<>();
+        var context = context(new HardwareTimingService(), boundary -> events.add(boundary.name()));
+        var level = mock(LevelManager.class);
+        var world = mock(WorldSession.class);
+        when(level.getWorldSession()).thenReturn(world);
+        when(world.getGameModule()).thenReturn(context.gameModule());
+        when(context.gameModule().getGameService(StagePaletteWait.Source.class))
+                .thenReturn(ignored -> () -> events.add("palette advanced"));
+        var lifecycle = new PlcFrameLifecycleCoordinator(context.gameModule());
+        var camera = mock(Camera.class);
+        Runnable physics = () -> events.add("physics");
+
+        var result = lifecycle.runLogicalIteration(() -> { }, frame -> {
+            frame.claim(PlcLifecyclePhase.LAG);
+            return withPause
+                    ? LevelFrameStep.executeWithPause(context, frame, PlcLifecyclePhase.ORDINARY_LEVEL,
+                            PlcLifecyclePhase.NORMAL_PAUSE, level, camera, physics, true, LevelFrameStep.DIRECT_WRAPPER)
+                    : LevelFrameStep.execute(context, frame, PlcLifecyclePhase.ORDINARY_LEVEL,
+                            level, camera, physics, LevelFrameStep.DIRECT_WRAPPER);
+        });
+
+        assertEquals(List.of(LevelFrameResult.HELD, List.of()), List.of(result, events),
+                "the wait suppresses physics and spends no second VBlank");
+    }
 
     @Test
     void frameRetiresPostObjectsAndDirectTailAfterScreenEvents() {

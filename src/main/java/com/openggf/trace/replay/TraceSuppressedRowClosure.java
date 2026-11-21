@@ -141,7 +141,7 @@ public final class TraceSuppressedRowClosure {
         Objects.requireNonNull(applyInLevelTitleCardControlLock,
                 "applyInLevelTitleCardControlLock");
 
-        if (LevelFrameStep.serviceStagePaletteWait(context, lifecycleFrame, levelManager)) return;
+        if (LevelFrameStep.holdForStagePaletteWait(context, lifecycleFrame, levelManager)) return;
 
         TitleCardProvider titleCardProvider =
                 context.gameModule().getTitleCardProvider();
