@@ -59,7 +59,9 @@ under the matching area heading; see the
   object animations until the stage reloads. Collision
   Chaos acts 1 and 2 have rotating spike chains with period-specific lengths
   and graphics loaded from the disc. Offscreen object sprites no longer displace
-  visible springs and blocks when sprite limits are enabled. Defeated badniks
+  visible springs and blocks when sprite limits are enabled. All ten Collision
+  Chaos stages draw moving background bands from their disc layouts and keep
+  the static bands repeating. Defeated badniks
   play the disc's destroy sound, and Mosqui, Tamabboh and Palmtree Panic's Taga-Taga
   play their own effects on impact, firing, takeoff or landing while the badnik is
   on screen. Palmtree
@@ -131,6 +133,9 @@ under the matching area heading; see the
   and spring launcher parts. Tidal Tempest's water resumes at its saved height,
   bob phase, and pump speed. Stardust Speedway's Kanabun, Kabasira, booster
   sparks, and path swaps resume their saved animation script frame and timer.
+  In Palmtree Panic Act 1 Present, Amy Rose chases even a stationary Sonic
+  until she's close enough to wait. Sonic can jump free, and removing Amy
+  during a grab also returns control. Time Attack restores the stage palette.
   Rewind also restores the title
   card, HUD, and points popups. The master title lists Sonic CD when the disc is
   configured or found (`roms.default: scd` boots it directly) and verifies it
