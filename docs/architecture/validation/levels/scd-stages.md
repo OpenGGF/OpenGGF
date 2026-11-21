@@ -131,7 +131,7 @@ diverging row and the frontier test's cause label (a guess, not a diagnosis).
 | R61D | none | none | green | |
 | R62A | **green** 4,787 | asserted | green | |
 | R62B, R62C, R62D | none | none | green | |
-| R63C, R63D | boss movies | boss | green | Complete fights by real play: defeat, escape, capsule, results and the next stage equal native |
+| R63C, R63D | boss movies | boss | green | Complete fights by real play: defeat, escape, capsule, results and the next stage equal native. Both defeat fades have per-V-INT palette comparisons. |
 | R71A | **green** 3,977 | asserted | green | |
 | R71B | **green** 4,918 | asserted | green | |
 | R71C | **green** 6,096 | asserted | green | |
@@ -314,6 +314,28 @@ backup RAM and campaign progress. A separate case checks Start abort.
 Both local native recordings end with six UFOs remaining. A natural clear
 and parity for the original `SPEEND.MMD` credits presentation remain open.
 
+## Wacky Workbench defeat fades (closed)
+
+`EggmanDefeatSequenceFadeScreen` and `EggmanDefeatSequenceFadeObjects`
+(objects/r6/boss.asm:545-559) hold the stage loop at two points in the defeat
+sequence. `FadeToWhite` (common/palette_fade.asm:285-295) and
+`BossFadeObjectsFromWhite` (common/palette_fade.asm:463-484) each wait 22
+times. `VBlankCommon` (common/main.asm:1014-1025) publishes the current
+palette before the fade routine computes the next one. The restore reads the
+separate target buffer that `LoadFadePalette` (common/palette_load_fade.asm:3-15)
+fills from the disc. The palette cycler changes only the active buffer.
+Both waits request
+`VBlankPaletteFade` (common/main.asm:951-962), which reads the pads through
+`VBlankCommon`. BizHawk reports zero lag frames in the captured windows.
+
+`TestWwzBossFades` uses the defeat movies and compares 64 displayed words on
+every row of both holds against the user-local `rehost-boss-wwz/R63C-fades`
+and `R63D-fades` CRAM recordings. Each window includes the entry and 22
+subsequent V-INTs. Good Future rows are 5473–5495 and 5553–5575. Bad Future
+rows are 5724–5746 and 5804–5826. The test also checks that the stage frame
+counter holds and resumes. `TestWwzBossNative` checks slots and timers at
+completed level frames.
+
 ## Parked Sonic CD gaps
 
 - **Metallic Madness boss door.** `BossDoorObject_0_Routine4`
@@ -335,17 +357,6 @@ and parity for the original `SPEEND.MMD` credits presentation remain open.
   Amy near the act end, her grabbing Sonic, Sonic breaking free, and Amy
   leaving. Include Amy and heart slots, Sonic's motion, and the palette before
   and after the encounter.
-- **Wacky Workbench defeat fades.** Eggman's update runs two blocking fades
-  (`EggmanDefeatSequenceFadeScreen` and `EggmanDefeatSequenceFadeObjects`,
-  objects/r6/boss.asm:545-559). Each runs 22 programmed VSync steps.
-  Wacky Workbench links the shared fade code (Level/Wacky Workbench/R6 Shared.asm:31).
-  See `FadeToWhite` (common/palette_fade.asm:285-295) and
-  `BossFadeObjectsFromWhite` (common/palette_fade.asm:463-484).
-  Live play takes one frame per fade. The `R63C-defeat` and `R63D-defeat`
-  probes record lag, `levelFrames`, palette-cycle timers, and object slots from
-  the final hit through the capsule. `TestWwzBossNative` compares slots and
-  timers at completed level frames. Capture the missing per-VBlank palette
-  color words on either movie to check both fades.
 
 The three screen items below stay parked until native picture sequences
 are available to certify parity. Each needs a visual review against its

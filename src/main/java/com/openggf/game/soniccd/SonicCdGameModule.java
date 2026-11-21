@@ -20,10 +20,12 @@ import com.openggf.game.RespawnState;
 import com.openggf.game.ScrollHandlerProvider;
 import com.openggf.game.ZoneFeatureProvider;
 import com.openggf.game.ZoneRegistry;
+import com.openggf.game.internal.StagePaletteWait;
 import com.openggf.game.profiles.trace.TracePlaybackProfile;
 import com.openggf.game.soniccd.level.CdStageCatalogue;
 import com.openggf.game.soniccd.level.CdStageImage;
 import com.openggf.game.soniccd.objects.SonicCdObjectRegistry;
+import com.openggf.game.soniccd.objects.boss.wwz.WwzBossRam;
 import com.openggf.game.soniccd.player.CdAnimationIds;
 import com.openggf.game.soniccd.player.CdPlayerStage;
 import com.openggf.game.soniccd.player.SonicCdPhysicsProvider;
@@ -250,6 +252,11 @@ public final class SonicCdGameModule implements GameModule {
     private static final com.openggf.game.internal.LoadedLevelFrameCounter LOADED_LEVEL_FRAMES =
             new com.openggf.game.internal.LoadedLevelFrameCounter(1);
 
+    private final StagePaletteWait.Source stagePaletteWait = level -> {
+        var ram = objectArt.zoneArt(WwzBossRam.class);
+        return ram == null ? null : ram.pendingPaletteWait(level);
+    };
+
     private final com.openggf.game.internal.LevelDemoPlayback demoPlayback =
             new com.openggf.game.internal.LevelDemoPlayback() {
                 @Override public com.openggf.control.PlayerInputState inputForNextIteration() {
@@ -272,6 +279,7 @@ public final class SonicCdGameModule implements GameModule {
 
     @Override
     public <T> T getGameService(Class<T> type) {
+        if (type == StagePaletteWait.Source.class) return type.cast(stagePaletteWait);
         if (type == com.openggf.game.internal.LevelDemoPlayback.class) {
             var level = GameServices.levelOrNull();
             return game != null && game.currentDemo() != null && scenes.titleDemo() != null

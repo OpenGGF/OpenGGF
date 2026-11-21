@@ -297,6 +297,14 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
                 && snapshot.player1().startPressed()
                 && context.gameStateManager() != null
                 && !context.gameStateManager().isGamePaused();
+        if (LevelFrameStep.holdForStagePaletteWait(context, lifecycleFrame, levelManager)) {
+            frameCounter++;
+            lastFrameResult = LevelFrameResult.HELD;
+            lastFrameRanGameplay = false;
+            inputHandler.update();
+            previousDriverSnapshot = snapshot;
+            return lastFrameResult;
+        }
         FrameAdmission admission = LevelFrameStep.admit(
                 context, levelManager,
                 snapshot.player1().startPressed() && !deferPauseEntry);
@@ -688,6 +696,16 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
             mask |= AbstractPlayableSprite.INPUT_JUMP;
         }
 
+        LevelFrameContext context = LevelFrameContext.from(SessionManager.getCurrentGameplayMode());
+        if (LevelFrameStep.holdForStagePaletteWait(context, lifecycleFrame, levelManager)) {
+            previousDriverSnapshot = RecordedInputSnapshots.fromBk2(frameInput, lastPolledBk2Input());
+            markBk2RowPolled(currentBk2Index++);
+            lastFrameResult = LevelFrameResult.HELD;
+            lastFrameRanGameplay = false;
+            inputHandler.update();
+            return mask;
+        }
+
         // An ordinary lag row did not reach Joypad_Read, so its press-edge
         // baseline stays at the last polled movie row. Pause_Loop is different:
         // VInt_10 polls controllers on every Wait_VSync before checking Start
@@ -714,8 +732,6 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
             return mask;
         }
         applyPauseToggleForSuppressedRow(snapshot);
-        LevelFrameContext context =
-                LevelFrameContext.from(SessionManager.getCurrentGameplayMode());
         TraceSuppressedRowClosure.executeUnownedTitleCardWork(
                 true,
                 // The normal title owner still standing from a previous row is
@@ -895,8 +911,8 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
     /**
      * ROM {@code Joypad_Read} computes {@code pressed = new & ~stored_held} and only
      * then overwrites {@code stored_held} (s2.asm:1361-1387, sonic.asm:1088-1119). It
-     * is reached only from the polling V-int routines: {@code Vint_Level} calls
-     * {@code ReadJoypads} (s2.asm:706) while {@code Vint_Lag}/{@code VintSub0} does not
+     * is reached only from polling V-INT routines such as {@code Vint_Level}
+     * (s2.asm:698-701). {@code Vint_Lag}/{@code VintSub0} does not poll
      * (s2.asm:528-543), and identically {@code VBlank_Lag} in S1 (sonic.asm:711-712).
      * So on a lag frame {@code Ctrl_1_Held} is not refreshed, and the next polled frame
      * computes its press edge against the older held byte — the press survives the lag

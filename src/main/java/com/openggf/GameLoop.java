@@ -1345,7 +1345,7 @@ public class GameLoop {
         // session. Its menu has no world timers until a run actually loads.
         if (timerManager != null && !playbackDebugManager.isCurrentGameplayTickSuppressed()) {
             profiler.beginSection("timers");
-            timerManager.update();
+            LevelFrameStep.updateTimers(timerManager, levelManager);
             profiler.endSection("timers");
         }
 
