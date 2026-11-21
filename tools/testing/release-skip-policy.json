@@ -8937,6 +8937,69 @@
       "evidence": "src/test/java/com/openggf/game/soniccd/TestCdGameplaySoundCues.java:140",
       "allowed_when_absent": "soniccd_native",
       "note": "Sonic CD disc and native Wacky Workbench recording"
+    },
+    {
+      "match": "com.openggf.game.soniccd.audio.TestCdRecordedPauseMusic#recordedStartPausesAndResumesMusic(Music)[1]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/audio/TestCdRecordedPauseMusic.java:69",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Sonic CD USA disc for recorded Start and the native stage music sources"
+    },
+    {
+      "match": "com.openggf.game.soniccd.audio.TestCdRecordedPauseMusic#recordedStartPausesAndResumesMusic(Music)[2]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/audio/TestCdRecordedPauseMusic.java:69",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Sonic CD USA disc for recorded Start and the native stage music sources"
+    },
+    {
+      "match": "com.openggf.game.soniccd.audio.TestCdRecordedPauseMusic#recordedStartPausesAndResumesMusic(Music)[3]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/audio/TestCdRecordedPauseMusic.java:69",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Sonic CD USA disc for recorded Start and the native stage music sources"
+    },
+    {
+      "match": "com.openggf.game.soniccd.audio.TestCdRecordedPauseMusic#recordedStartPausesAndResumesMusic(Music)[4]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/audio/TestCdRecordedPauseMusic.java:69",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Sonic CD USA disc for recorded Start and the native stage music sources"
+    },
+    {
+      "match": "com.openggf.game.soniccd.audio.TestCdRecordedPauseMusic#recordedStartPausesAndResumesMusic(Music)[5]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/audio/TestCdRecordedPauseMusic.java:69",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Sonic CD USA disc for recorded Start and the native stage music sources"
+    },
+    {
+      "match": "com.openggf.game.soniccd.audio.TestCdRecordedPauseMusic#recordedStartPausesAndResumesMusic(Music)[6]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/audio/TestCdRecordedPauseMusic.java:69",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Sonic CD USA disc for recorded Start and the native stage music sources"
+    },
+    {
+      "match": "com.openggf.game.soniccd.audio.TestCdRecordedPauseMusic#recordedStartPausesAndResumesMusic(Music)[7]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/audio/TestCdRecordedPauseMusic.java:69",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Sonic CD USA disc for recorded Start and the native stage music sources"
+    },
+    {
+      "match": "com.openggf.game.soniccd.audio.TestCdRecordedPauseMusic#recordedStartPausesAndResumesMusic(Music)[8]",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/audio/TestCdRecordedPauseMusic.java:69",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Sonic CD USA disc for recorded Start and the native stage music sources"
+    },
+    {
+      "match": "com.openggf.TestS3kSoloArenaViewPixels#zoomDrawsFullSizeBodyAndGhostAtDoubledPositionsWithoutAnyStateWrites",
+      "category": "gl-context",
+      "evidence": "src/test/java/com/openggf/TestS3kSoloArenaViewPixels.java:51",
+      "allowed_when_absent": "gl",
+      "note": "Explicit PresentationOffscreenTestContext.requested() opt-in; run with surfaceless EGL."
     }
   ]
 }

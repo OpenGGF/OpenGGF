@@ -6,6 +6,7 @@ import com.openggf.game.GameServices;
 import com.openggf.game.LevelInputOverlay;
 import com.openggf.game.NativeGameStateOps;
 import com.openggf.game.internal.NativeLevelInputOwner;
+import com.openggf.game.soniccd.audio.CdSoundRequests;
 import com.openggf.game.soniccd.level.CdLevel;
 import com.openggf.game.soniccd.program.CdSceneCoordinator;
 import com.openggf.game.soniccd.program.CdStageExit;
@@ -44,10 +45,13 @@ final class CdLevelPause implements NativeLevelInputOwner {
         var game = services.gameState();
         var player = services.camera().getFocusedSprite();
         boolean canPause = !level.flags().ctrlLocked && player != null && !player.getDead();
-        if (nativeStart && canPause) {
-            game.applyPauseToggle(true);
+        boolean wasPaused = game.isGamePaused();
+        boolean paused = nativeStart && canPause ? game.applyPauseToggle(true) : wasPaused;
+        if (!hostPaused) {
+            if (paused) CdSoundRequests.stopChargeSound(services);
+            if (wasPaused != paused) CdSoundRequests.setLevelMusicPaused(services, player, paused);
         }
-        if (!action || !(hostPaused ? canPause : game.isGamePaused())) {
+        if (!action || !(hostPaused ? canPause : paused)) {
             return nativeStart;
         }
 
