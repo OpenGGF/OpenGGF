@@ -5532,9 +5532,9 @@
     {
       "match": "com.openggf.game.soniccd.TestWwzNativePictures#everyStageMatchesItsNativeScreenshots",
       "category": "optional-fixture",
-      "evidence": "src/test/java/com/openggf/game/soniccd/TestWwzNativePictures.java:105",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestWwzNativePictures.java:367",
       "allowed_when_absent": "soniccd_native",
-      "note": "Sonic CD disc and BizHawk native reference"
+      "note": "Sonic CD disc and BizHawk native reference, including WWZ probe-frames.csv observations"
     },
     {
       "match": "com.openggf.game.soniccd.TestWwzStagesScroll#everyStageScrollsCyclesAndAnimatesForThreeHundredFrames",

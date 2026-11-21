@@ -6,6 +6,7 @@ import com.openggf.audio.NullAudioBackend;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.debug.playback.Bk2MovieLoader;
 import com.openggf.game.GameServices;
+import com.openggf.game.session.SessionManager;
 import com.openggf.game.soniccd.level.CdLevel;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.RgbaImage;
@@ -14,8 +15,12 @@ import com.openggf.graphics.color.DisplayColorExpansion;
 import com.openggf.graphics.color.DisplayColorProfile;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.HeadlessTestRunner;
+import com.openggf.tests.trace.TraceReplayFrameClosureDriver;
 import com.openggf.tools.HeadlessGameBoot;
 import com.openggf.trace.TraceData;
+import com.openggf.trace.TraceFrame;
+import com.openggf.trace.TraceReplayBootstrap;
+import com.openggf.trace.replay.TraceVIntServiceCoordinator;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledOnOs;
 import org.junit.jupiter.api.condition.OS;
@@ -23,13 +28,14 @@ import org.junit.jupiter.api.condition.OS;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.lwjgl.opengl.GL11.GL_COLOR_BUFFER_BIT;
 import static org.lwjgl.opengl.GL11.GL_DEPTH_BUFFER_BIT;
@@ -43,7 +49,7 @@ import static org.lwjgl.opengl.GL11.glFinish;
  * 180 level frames in) and four more taken from the same movie while the camera moves right: at camera X about
  * $80, $100 and $180 ({@code mid1}-{@code mid3}) and at the last trace row ({@code late}). The extra shots are made
  * with {@code rehost-fixtures/_tools/probe.sh} and live in {@code native/rehost-fixtures-wwz/<payload>/} (see its
- * {@code mid.json}); the test skips when they or the fixtures are absent.
+ * {@code mid.json} and the matching post-frame observations in {@code probe-frames.csv}).
  *
  * <p>The test projects the recorded camera path to isolate the presentation from player movement. R61A and R61C
  * replay the controller movie so their platforms and animals see the previous camera during the object pass.
@@ -64,27 +70,6 @@ class TestWwzNativePictures {
 
     private static final Set<CdStagePayload> MOVIE_PAYLOADS = Set.of(CdStagePayload.R61A, CdStagePayload.R61C);
 
-    private record ProbeFrame(CdStagePayload payload, int frame) { }
-
-    // Probe counters measured by rerunning the stage schedules and checking the resulting PNGs against mid.json.
-    private static final Map<ProbeFrame, Integer> CAPTURE_COUNTERS = Map.of(
-            new ProbeFrame(CdStagePayload.R62B, 2822), 307,
-            new ProbeFrame(CdStagePayload.R62B, 2873), 358,
-            new ProbeFrame(CdStagePayload.R62B, 2884), 369,
-            new ProbeFrame(CdStagePayload.R62B, 3331), 813,
-            new ProbeFrame(CdStagePayload.R63D, 2771), 306,
-            new ProbeFrame(CdStagePayload.R63D, 2792), 327,
-            new ProbeFrame(CdStagePayload.R63D, 2814), 349,
-            new ProbeFrame(CdStagePayload.R63D, 3276), 811);
-
-    private record CameraClock(int firstTraceFrame, int captureFrameOffset) { }
-
-    // Match the physics trace's camera samples to the probe run's level clock. Both changes in clock
-    // alignment occur while the camera is stationary. R62B trace level 725 is probe level 722.
-    private static final Map<CdStagePayload, List<CameraClock>> PROBE_CAMERA_CLOCKS = Map.of(
-            CdStagePayload.R62B, List.of(new CameraClock(1, -1), new CameraClock(725, -3)),
-            CdStagePayload.R63D, List.of(new CameraClock(1, 1)));
-
     // ObjRing_Deltas (Level/_Objects/Ring/Main.asm:17-32): x and y step of a ring line by subtype high nibble.
     private static final int[] RING_DELTAS = {
             0x10, 0, 0x18, 0, 0x20, 0, 0, 0x10, 0, 0x18, 0, 0x20, 0x10, 0x10, 0x18, 0x18,
@@ -98,63 +83,63 @@ class TestWwzNativePictures {
         return (r << 6) | (g << 3) | b;
     }
 
-    /** One trace row. */
-    private record Sample(int levelFrames, int cameraX, int cameraY, int playerX, int playerY) { }
+    private record Position(int playerX, int playerY, int cameraX, int cameraY) {
+        static Position fromTrace(TraceFrame frame) {
+            return new Position(frame.x(), frame.y(), frame.cameraX(), frame.cameraY());
+        }
+    }
 
-    private static List<Sample> samples(CdStagePayload payload) throws Exception {
-        Path file = CdTestMedia.nativeFile("rehost-fixtures/" + payload + "/trace/physics.csv");
+    private record ProbeFrame(int frame, int levelFrames, Position position) { }
+
+    private static List<ProbeFrame> probeFrames(Path file) throws Exception {
         List<String> lines = Files.readAllLines(file);
-        String[] header = lines.get(0).split(",");
-        int camX = indexOf(header, "camera_x");
-        int camY = indexOf(header, "camera_y");
-        int counter = indexOf(header, "gameplay_frame_counter");
-        int px = indexOf(header, "player_x");
-        int py = indexOf(header, "player_y");
-        List<Sample> out = new ArrayList<>();
-        for (int i = 1; i < lines.size(); i++) {
-            String[] cells = lines.get(i).split(",");
-            out.add(new Sample(Integer.parseInt(cells[counter], 16), Integer.parseInt(cells[camX], 16),
-                    Integer.parseInt(cells[camY], 16), Integer.parseInt(cells[px], 16), Integer.parseInt(cells[py], 16)));
+        assertEquals("frame,levelFrames,p_x,p_y,camera_x,camera_y", lines.getFirst(), file.toString());
+        List<ProbeFrame> frames = new ArrayList<>();
+        for (String line : lines.subList(1, lines.size())) {
+            String[] cells = line.split(",");
+            frames.add(new ProbeFrame(Integer.parseInt(cells[0]), Integer.parseInt(cells[1]),
+                    new Position(Integer.parseInt(cells[2]), Integer.parseInt(cells[3]),
+                            Integer.parseInt(cells[4]), Integer.parseInt(cells[5]))));
         }
-        return out;
+        return frames;
     }
 
-    private static int indexOf(String[] header, String name) {
-        for (int i = 0; i < header.length; i++) if (header[i].equals(name)) return i;
-        throw new IllegalStateException("no column " + name);
-    }
+    private record Shot(String name, Path file, int videoLevelFrames) { }
 
-    /** A native screenshot: its name, file, trace row and level-frame counter. */
-    private record Shot(String name, Path file, int traceRow, int levelFrames, Integer captureCounter) { }
-
-    private static List<Shot> shots(CdStagePayload payload) throws Exception {
+    private static List<Shot> shots(CdStagePayload payload, TraceData trace, List<ProbeFrame> probeFrames)
+            throws Exception {
+        var mapper = new ObjectMapper();
         Path manifest = CdTestMedia.nativeFile("rehost-fixtures/" + payload + "/manifest.json");
-        JsonNode early = new ObjectMapper().readTree(manifest.toFile()).get("screenshots").get("early");
+        JsonNode early = mapper.readTree(manifest.toFile()).required("screenshots").required("early");
         List<Shot> out = new ArrayList<>();
-        out.add(new Shot("early", CdTestMedia.nativeFile("rehost-fixtures/" + payload + "/" + early.get("file").asText()),
-                early.get("trace_row").asInt(), early.get("level_frames").asInt(), null));
+        out.add(new Shot("early", manifest.resolveSibling(early.required("file").asText()),
+                manifestLevelFrames(early, trace)));
+        Map<Integer, ProbeFrame> byFrame = new HashMap<>();
+        for (ProbeFrame frame : probeFrames) byFrame.put(frame.frame(), frame);
         Path mid = CdTestMedia.nativeFile("rehost-fixtures-wwz/" + payload + "/mid.json");
-        for (JsonNode shot : new ObjectMapper().readTree(mid.toFile()).get("shots")) {
-            out.add(new Shot(shot.get("name").asText(), mid.resolveSibling(shot.get("file").asText()),
-                    shot.get("trace_row").asInt(), shot.get("level_frames").asInt(),
-                    CAPTURE_COUNTERS.get(new ProbeFrame(payload, shot.path("probe_frame").asInt()))));
+        for (JsonNode shot : mapper.readTree(mid.toFile()).required("shots")) {
+            manifestLevelFrames(shot, trace);
+            String name = shot.required("name").asText();
+            ProbeFrame capture = byFrame.get(shot.required("probe_frame").asInt());
+            assertNotNull(capture, payload + " " + name + ": probe frame");
+            out.add(new Shot(name, mid.resolveSibling(shot.required("file").asText()), capture.levelFrames()));
         }
         return out;
+    }
+
+    private static int manifestLevelFrames(JsonNode shot, TraceData trace) {
+        int row = shot.required("trace_row").asInt();
+        int levelFrames = trace.getFrame(row).gameplayFrameCounter();
+        assertEquals(shot.required("level_frames").asInt(), levelFrames, "trace row " + row);
+        return levelFrames;
     }
 
     /** The framebuffer plus what the masks need, read before the stage is replaced. */
     private record Rendered(RgbaImage image, int cameraX, int cameraY, int playerX, int playerY,
                             int enginePlayerX, int enginePlayerY, List<CdLevel.CdPlacement> placements) { }
 
-    /**
-     * Loads {@code payload} on the shared boot and captures the production renderer at each shot's engine level frame
-     * ({@link #engineFrame}). The loaded stage is level frame 1, that iteration's scroll, palette cycle and tile
-     * animation included ({@code CdFirstMainLoopIteration}); every later distinct {@code gameplay_frame_counter} sets
-     * the native camera of that level frame and steps once, so the engine stands at level frame L after the step that
-     * took the trace's camera for L. The production tile animator advances with the level clock.
-     */
     private static List<Rendered> render(com.openggf.GameLoop loop, CdStagePayload payload, boolean firstBoot,
-                                         List<Sample> samples, List<Shot> shots) throws Exception {
+                                         TraceData trace, List<Position> cameraPath, int[] targets) throws Exception {
         if (!firstBoot) {
             // The headless GL context can be booted once per JVM, so later stages load through the same boot.
             // The previous stage's last camera is where the new stage would spawn its first objects: start from X 0, as a
@@ -165,88 +150,123 @@ class TestWwzNativePictures {
         assertInstanceOf(NullAudioBackend.class, GameServices.audio().getBackend());
         var game = (SonicCdGame) GameServices.level().getGame();
         assertEquals(payload, game.currentLevel().payload(), "stage loaded");
-        int[] targets = new int[shots.size()];
-        for (int i = 0; i < shots.size(); i++) targets[i] = engineFrame(shots.get(i), samples);
         if (MOVIE_PAYLOADS.contains(payload)) {
-            return replayMovie(payload, samples, targets);
+            return replayMovie(payload, trace, cameraPath, targets);
         }
-        samples = alignCameraClock(payload, samples);
-        Rendered[] out = new Rendered[shots.size()];
+
+        Rendered[] out = new Rendered[targets.length];
         GameServices.camera().setFrozen(true);
-        Sample first = samples.get(0);
-        GameServices.camera().setX((short) first.cameraX());
-        GameServices.camera().setY((short) first.cameraY());
-        int previous = first.levelFrames();
-        int captured = captureDue(previous, first, targets, out);
-        for (Sample sample : samples) {
-            if (captured == out.length) break;
-            if (sample.levelFrames() == previous) continue;   // lag: the level did not advance
-            assertEquals(previous + 1, sample.levelFrames(), payload + ": camera path level frame");
-            previous = sample.levelFrames();
-            GameServices.camera().setX((short) sample.cameraX());
-            GameServices.camera().setY((short) sample.cameraY());
-            loop.step();
-            captured += captureDue(previous, sample, targets, out);
+        int captured = 0;
+        for (int frame = 1; frame <= cameraPath.size(); frame++) {
+            Position position = cameraPath.get(frame - 1);
+            GameServices.camera().setX((short) position.cameraX());
+            GameServices.camera().setY((short) position.cameraY());
+            // CdFirstMainLoopIteration already ran scroll, palette and tile animation for frame 1.
+            if (frame > 1) loop.step();
+            captured += captureDue(frame, position, targets, out);
         }
-        assertEquals(shots.size(), captured, payload + ": shots captured");
+        assertEquals(targets.length, captured, payload + ": shots captured");
         return List.of(out);
     }
 
-    private static List<Rendered> replayMovie(CdStagePayload payload, List<Sample> samples, int[] targets)
-            throws Exception {
+    private static List<Rendered> replayMovie(CdStagePayload payload, TraceData trace, List<Position> cameraPath,
+                                               int[] targets) throws Exception {
         GameServices.camera().setFrozen(false);
-        String fixture = "rehost-fixtures/" + payload + "/";
-        Path traceDir = CdTestMedia.nativeFile(fixture + "trace/metadata.json").getParent();
-        Path movie = CdTestMedia.nativeFile(fixture + "movie.bk2");
-        var runner = new HeadlessTestRunner(GameServices.camera().getFocusedSprite());
-        runner.setBk2Movie(new Bk2MovieLoader().load(movie), TraceData.load(traceDir).metadata().bk2FrameOffset());
+        Path movie = CdTestMedia.nativeFile("rehost-fixtures/" + payload + "/movie.bk2");
+        var sonic = GameServices.camera().getFocusedSprite();
+        var runner = new HeadlessTestRunner(sonic);
+        runner.setBk2Movie(new Bk2MovieLoader().load(movie), trace.metadata().bk2FrameOffset());
+        var vint = TraceVIntServiceCoordinator.open(trace.sourceDirectory().orElseThrow(), trace,
+                SessionManager.requireCurrentGameModule());
         runner.consumeRecordingFrameInputOnly();
 
         // SpawnObjects_Main (Level/Object Spawner.asm:107-115) reads the previous camera because
         // the object pass precedes scroll, Level_MainLoop (Level/Main.asm:397-418).
         Rendered[] out = new Rendered[targets.length];
-        Sample first = samples.getFirst();
-        int captured = captureDue(first.levelFrames(), first, targets, out);
-        for (int row = 1; row < samples.size() && captured < targets.length; row++) {
-            Sample sample = samples.get(row);
-            if (sample.levelFrames() == samples.get(row - 1).levelFrames()) {
-                runner.skipFrameFromRecording();
+        int captured = 0;
+        for (int row = 1; row < trace.frameCount() && captured < targets.length; row++) {
+            TraceFrame expected = trace.getFrame(row);
+            if (!vint.vBlankServiced(row)) {
+                runner.consumeRecordingFrameInputOnly();
             } else {
-                runner.stepFrameFromRecording();
-                captured += captureDue(sample.levelFrames(), sample, targets, out);
+                var phase = TraceReplayBootstrap.phaseForReplay(trace, trace.getFrame(row - 1), expected);
+                TraceReplayFrameClosureDriver.driveGeneral(phase, runner::stepFrameFromRecording,
+                        runner::skipFrameFromRecording, () -> { });
+            }
+            int frame = expected.gameplayFrameCounter();
+            for (int i = 0; i < targets.length; i++) {
+                if (targets[i] == frame && out[i] == null) {
+                    String context = payload + " trace row " + row;
+                    assertEquals(frame, GameServices.level().getFrameCounter(), context + ": level frame");
+                    assertEquals(expected.x(), sonic.getCentreX(), context + ": Sonic X");
+                    out[i] = capture(cameraPath.get(frame - 1));
+                    captured++;
+                }
             }
         }
         assertEquals(targets.length, captured, payload + ": movie shots captured");
         return List.of(out);
     }
 
-    private static List<Sample> alignCameraClock(CdStagePayload payload, List<Sample> samples) {
-        List<CameraClock> clock = PROBE_CAMERA_CLOCKS.get(payload);
-        if (clock == null) return samples;
-        var aligned = new TreeMap<Integer, Sample>();
-        Sample first = samples.getFirst();
-        aligned.put(first.levelFrames(), first);
-        // Keep the loaded iteration when its camera sample precedes the first aligned sample.
-        int previous = -1;
-        int segment = 0;
-        for (Sample sample : samples) {
-            if (sample.levelFrames() == previous) continue;
-            previous = sample.levelFrames();
-            if (segment + 1 < clock.size() && previous >= clock.get(segment + 1).firstTraceFrame()) segment++;
-            int frame = previous + clock.get(segment).captureFrameOffset();
-            if (frame > 0) {
-                aligned.put(frame, new Sample(frame, sample.cameraX(), sample.cameraY(), sample.playerX(), sample.playerY()));
-            }
+    private static List<Position> alignCameraClock(TraceData trace, List<ProbeFrame> probeFrames, int lastFrame) {
+        Map<Integer, TraceFrame> traceByLevel = new HashMap<>();
+        for (int row = 0; row < trace.frameCount(); row++) {
+            TraceFrame frame = trace.getFrame(row);
+            traceByLevel.putIfAbsent(frame.gameplayFrameCounter(), frame);
         }
-        return List.copyOf(aligned.values());
+        Map<Integer, ProbeFrame> probeByLevel = new HashMap<>();
+        for (ProbeFrame frame : probeFrames) probeByLevel.putIfAbsent(frame.levelFrames(), frame);
+        ProbeFrame first = probeByLevel.get(1);
+        assertNotNull(first, "probe level entry");
+
+        // The first change in position distinguishes the clock alignment from the stationary entry frames.
+        ProbeFrame anchor = probeFrames.stream()
+                .filter(frame -> frame.levelFrames() > 1 && !frame.position().equals(first.position()))
+                .findFirst().orElseThrow();
+        TraceFrame matched = matchingTraceFrame(trace, anchor);
+        assertNotNull(matched, "trace position for probe frame " + anchor.frame());
+        int offset = matched.gameplayFrameCounter() - anchor.levelFrames();
+
+        List<Position> aligned = new ArrayList<>();
+        for (int frame = 1; frame <= lastFrame; frame++) {
+            ProbeFrame probe = probeByLevel.get(frame);
+            assertNotNull(probe, "probe level frame " + frame);
+            TraceFrame sample = traceByLevel.get(Math.max(trace.getFrame(0).gameplayFrameCounter(), frame + offset));
+            // Keep the established offset through repeated positions and movements unique to one recording.
+            // A new position match can establish a different offset after the clocks diverge.
+            if (sample == null || !probe.position().equals(Position.fromTrace(sample))) {
+                matched = matchingTraceFrame(trace, probe);
+                if (matched != null) {
+                    offset = matched.gameplayFrameCounter() - frame;
+                    sample = matched;
+                }
+            }
+            assertNotNull(sample, "trace camera for probe level frame " + frame);
+            aligned.add(Position.fromTrace(sample));
+        }
+        return aligned;
     }
 
-    /** Captures every shot whose engine level frame is {@code levelFrame}; returns how many. */
-    private static int captureDue(int levelFrame, Sample sample, int[] targets, Rendered[] out) {
+    private static TraceFrame matchingTraceFrame(TraceData trace, ProbeFrame probe) {
+        int nominalRow = probe.frame() - trace.metadata().bk2FrameOffset();
+        TraceFrame nearest = null;
+        int distance = Integer.MAX_VALUE;
+        for (int row = 0; row < trace.frameCount(); row++) {
+            TraceFrame frame = trace.getFrame(row);
+            int rowDistance = Math.abs(row - nominalRow);
+            if (rowDistance < distance && probe.position().equals(Position.fromTrace(frame))) {
+                nearest = frame;
+                distance = rowDistance;
+            }
+        }
+        return nearest;
+    }
+
+    private static int captureDue(int levelFrame, Position position, int[] targets, Rendered[] out) {
         int n = 0;
         for (int i = 0; i < targets.length; i++) {
             if (targets[i] == levelFrame && out[i] == null) {
-                out[i] = capture(sample);
+                out[i] = capture(position);
                 n++;
             }
         }
@@ -254,22 +274,15 @@ class TestWwzNativePictures {
     }
 
     /**
-     * The engine level frame a shot shows. A picture shows the state after the level frame before the one its row
-     * counts: the V-INT that starts the video frame DMAs the palette, scroll and sprite table the previous iteration
-     * wrote, VInt_Level (Level/Main.asm:821-837), and the tile animation it runs is the engine frame's own (see {@code
-     * CdFirstMainLoopIteration}). The fixture's early screenshot is its row's picture: level frame lf(row)-1. A
-     * {@code probe.sh} shot is the video frame after its row (probe frame {@code bk2_frame_offset + row + 1}, the run
-     * continuing), so it is row+1's picture: lf(row+1)-1. No row follows the last one; there the level is taken to
-     * advance, as it does on every frame without a pattern-load lag: lf(row).
+     * A picture shows the preceding completed iteration. VInt_Level (Level/Main.asm:821-837) uploads that
+     * iteration's palette, scroll and sprite table, then runs its tile animation. The early shot gets the
+     * video frame's counter from its trace row. Each supplemental shot gets it from the screenshot probe.
      */
-    private static int engineFrame(Shot shot, List<Sample> samples) {
-        if (shot.captureCounter() != null) return shot.captureCounter() - 1;
-        if (shot.name().equals("early")) return samples.get(shot.traceRow()).levelFrames() - 1;
-        int after = shot.traceRow() + 1;
-        return after < samples.size() ? samples.get(after).levelFrames() - 1 : samples.get(shot.traceRow()).levelFrames();
+    private static int engineFrame(Shot shot) {
+        return shot.videoLevelFrames() - 1;
     }
 
-    private static Rendered capture(Sample sample) {
+    private static Rendered capture(Position position) {
         GraphicsManager graphics = GameServices.graphics();
         graphics.setDisplayColorProfile(DisplayColorProfile.RAW_RGB);
         graphics.setDisplayColorExpansion(DisplayColorExpansion.FULL);
@@ -283,7 +296,7 @@ class TestWwzNativePictures {
         AbstractPlayableSprite sprite = GameServices.camera().getFocusedSprite();
         return new Rendered(ScreenshotCapture.captureFramebuffer(320, 224),
                 GameServices.camera().getX() & 0xFFFF, GameServices.camera().getY() & 0xFFFF,
-                sample.playerX(), sample.playerY(),
+                position.playerX(), position.playerY(),
                 sprite == null ? -9999 : sprite.getCentreX(), sprite == null ? -9999 : sprite.getCentreY(),
                 ((CdLevel) level.getCurrentLevel()).placements());
     }
@@ -349,13 +362,15 @@ class TestWwzNativePictures {
     private static List<String> check(com.openggf.GameLoop loop, CdStagePayload payload, boolean firstBoot) throws Exception {
         Path out = Path.of("target", "soniccd-wwz-pictures");
         Files.createDirectories(out);
-        List<Sample> samples = samples(payload);
-        List<Shot> shots = shots(payload);
-        // The trace and mid.json agree on the source camera row, even when the probe's level counter differs.
-        for (Shot shot : shots) {
-            assertEquals(shot.levelFrames(), samples.get(shot.traceRow()).levelFrames(), payload + " " + shot.name());
-        }
-        List<Rendered> rendered = render(loop, payload, firstBoot, samples, shots);
+        Path traceDir = CdTestMedia.nativeFile("rehost-fixtures/" + payload + "/trace/metadata.json").getParent();
+        TraceData trace = TraceData.load(traceDir);
+        List<ProbeFrame> probe = probeFrames(CdTestMedia.nativeFile(
+                "rehost-fixtures-wwz/" + payload + "/probe-frames.csv"));
+        List<Shot> shots = shots(payload, trace, probe);
+        int[] targets = shots.stream().mapToInt(TestWwzNativePictures::engineFrame).toArray();
+        int lastFrame = java.util.Arrays.stream(targets).max().orElseThrow();
+        List<Position> cameraPath = alignCameraClock(trace, probe, lastFrame);
+        List<Rendered> rendered = render(loop, payload, firstBoot, trace, cameraPath, targets);
         List<String> failures = new ArrayList<>();
         RgbaImage[] reference = new RgbaImage[shots.size()];
         for (int i = 0; i < shots.size(); i++) {
@@ -366,7 +381,7 @@ class TestWwzNativePictures {
             String key = payload + " " + shot.name();
             boolean ok = r[1] >= 20000 && r[0] == r[1];
             String line = String.format("%s: picture of level frame %d (camera %X,%X): %d/%d unmasked pixels match%s",
-                    key, engineFrame(shot, samples),
+                    key, engineFrame(shot),
                     rendered.get(i).cameraX(), rendered.get(i).cameraY(), r[0], r[1],
                     r[0] == r[1] ? "" : String.format("; differing pixels lie in x %d-%d, y %d-%d", r[2], r[4], r[3], r[5]));
             System.out.println("WWZ picture: " + (ok ? "ok " : "FAIL ") + line);
