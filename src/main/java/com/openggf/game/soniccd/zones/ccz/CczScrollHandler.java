@@ -508,6 +508,13 @@ public final class CczScrollHandler extends AbstractZoneScrollHandler implements
     }
 
     @Override
+    public int getBgPeriodWidth() {
+        // R31A's moving rows stream across its seven 256-pixel layout columns.
+        // Keep them in one render window. CdLevel repeats the static rows within it.
+        return payload == CdStagePayload.R31A ? 2048 : 512;
+    }
+
+    @Override
     public short getVscrollFactorBG() {
         return vscrollFactorBG;
     }

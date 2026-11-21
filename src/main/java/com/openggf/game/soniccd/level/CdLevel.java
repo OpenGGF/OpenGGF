@@ -128,6 +128,8 @@ public final class CdLevel extends AbstractLevel implements com.openggf.game.int
         // BGCameraSectIDs (scddisasm/src/Level/Palmtree Panic/Scroll (Act 1 Present).asm:1123-1156).
         if (payload.stage().zone() == com.openggf.game.soniccd.CdZone.PALMTREE_PANIC) {
             backgroundRows = com.openggf.game.soniccd.zones.ppz.PpzBackgroundRows.read(objectImage)::layoutX;
+        } else if (payload == CdStagePayload.R31A) {
+            backgroundRows = readR31aBackgroundRows(image);
         } else if (payload.stage().zone() == com.openggf.game.soniccd.CdZone.WACKY_WORKBENCH) {
             backgroundRows = readWwzBackgroundRows(payload, image);
         } else {
@@ -208,6 +210,19 @@ public final class CdLevel extends AbstractLevel implements com.openggf.game.int
     @Override
     public int backgroundLayoutX(int sourceX, int sourceY) {
         return backgroundRows == null ? sourceX : backgroundRows.backgroundLayoutX(sourceX, sourceY);
+    }
+
+    private static com.openggf.game.internal.BackgroundRowLayout readR31aBackgroundRows(CdStageImage image) {
+        // unk_203500 (Level/Collision Chaos/Stage Draw (Act 1 Present).asm:282-286) starts at
+        // $203504 on the USA disc. InitLevelDrawBG skips the offscreen top selector.
+        // sub_203542 (Level/Collision Chaos/Stage Draw (Act 1 Present).asm:296-317) fills
+        // static rows from X=0 and streams the other rows from their selected camera.
+        byte[] selectors = image.slice(0x3505, 49);
+        return (sourceX, sourceY) -> {
+            int row = Math.floorDiv(sourceY, 16);
+            return row >= 0 && row < selectors.length && selectors[row] == 0
+                    ? Math.floorMod(sourceX, 512) : sourceX;
+        };
     }
 
     private static com.openggf.game.internal.BackgroundRowLayout readWwzBackgroundRows(
