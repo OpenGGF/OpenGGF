@@ -7,6 +7,7 @@ import com.openggf.game.patch.LogicalRom;
 import com.openggf.game.patch.ModuleResolutionService;
 import com.openggf.game.patch.PatchContext;
 import com.openggf.game.patch.RegisteredPatch;
+import com.openggf.io.ModAssetRoot;
 import com.openggf.mods.*;
 import com.openggf.mods.validation.ModValidationReport;
 import org.junit.jupiter.api.Test;
@@ -46,6 +47,13 @@ class TestModRegistrationRuntime {
             assertEquals(List.of(0L, 1L, 2L, 3L), registrations.stream().map(RegisteredPatch::registrationIndex).toList());
             assertTrue(runtime.registrationFailures().isEmpty());
         }
+    }
+
+    @Test
+    void contributionReportScopesAnyRegistrationToSonicCd() {
+        var context = new ModContext("demo", "any", ModAssetRoot.forTests("demo"));
+        new SharedSceneEntrypoint().register(context);
+        assertEquals(List.of("s1", "s2", "s3k", "scd"), ModContributionReport.scopes(context.freeze()));
     }
 
     @Test

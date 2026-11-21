@@ -131,6 +131,7 @@ def export_examples(root):
         base_game = re.search(r"(?m)^baseGame:\s*(\w+)\s*$", manifest)
         game = base_game.group(1) if base_game else None
         test_rom = f" --{game} /absolute/own-{game}.gen" if game in CARTRIDGE_INPUTS else ""
+        launch_game = game if game in CARTRIDGE_INPUTS else "s2"
         legacy = " --expert-legacy" if name in pending else ""
         legacy_note = ("\nThis example still references engine internals outside the supported Mod API\n"
                        "while its facades are written, so its commands pass `--expert-legacy`. Do not\n"
@@ -154,7 +155,7 @@ python3 ../../tools/build_project.py .{legacy} --test --testkit ../../mod-testki
 ```
 
 Native gameplay tests need your original ROMs. The command includes the declared
-base game when present; add `--s1`, `--s2` or `--s3k` for other tested games or donors.
+cartridge base game when present. Add `--s1`, `--s2` or `--s3k` for other tested games or donors.
 
 The test launcher resolves pinned JUnit Platform Console 1.10.3 through Maven,
 compiles only `src/test` into `target/test-classes`, and fails on test failure or
@@ -169,11 +170,11 @@ artifact paths:
 mvn package -Dopenggf.engine.jar=/absolute/kit/engine.jar -Dopenggf.sdk.jar=/absolute/kit/sdk.jar
 ```
 
-Launch with your own ROM paths. This example supplies the {game} path; add the
+Launch with your own ROM paths. This example supplies the {launch_game} path; add the
 required game/donor paths using `--s1`, `--s2` or `--s3k` as needed:
 
 ```sh
-python3 ../../tools/build_project.py .{legacy} --run --{game} /absolute/own-{game}.gen
+python3 ../../tools/build_project.py .{legacy} --run --{launch_game} /absolute/own-{launch_game}.gen
 ```
 
 Use `--doctor --format json` for read-only prerequisite checks; add `--test` to

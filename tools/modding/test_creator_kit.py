@@ -157,8 +157,8 @@ class CreatorKitTest(unittest.TestCase):
         self.assertFalse(any(name.startswith("examples/link-demo/walkthroughs/")
                              for name in kit.export_examples(self.root)))
 
-    def test_generated_test_command_supplies_declared_base_game_rom(self):
-        for game in ("s1", "s2", "s3k", None):
+    def test_generated_commands_supply_supported_game_roms(self):
+        for game in ("s1", "s2", "s3k", "any", "scd", None):
             with self.subTest(base_game=game):
                 name = "native-" + game if game else "standalone-demo"
                 manifest = self.root / "examples" / name / "src/main/resources/META-INF/openggf-mod.yaml"
@@ -168,10 +168,17 @@ class CreatorKitTest(unittest.TestCase):
                 command = next(line for line in readme.splitlines()
                                if line.startswith("python3 ../../tools/build_project.py . --test "))
                 expected = "python3 ../../tools/build_project.py . --test --testkit ../../mod-testkit.jar"
-                if game:
-                    expected += " --" + game + " /absolute/own-" + game + ".gen"
+                if game in ("s1", "s2", "s3k"):
+                    expected += f" --{game} /absolute/own-{game}.gen"
                 self.assertEqual(expected, command)
                 self.assertIn("other tested games or donors", readme)
+
+                launch = next(line for line in readme.splitlines()
+                              if line.startswith("python3 ../../tools/build_project.py . --run "))
+                launch_game = game if game in ("s1", "s2", "s3k") else "s2"
+                self.assertEqual(
+                    f"python3 ../../tools/build_project.py . --run --{launch_game} /absolute/own-{launch_game}.gen",
+                    launch)
 
     def test_actual_second_strike_export_preserves_documented_controller_recipes(self):
         root = Path(__file__).resolve().parents[2]
