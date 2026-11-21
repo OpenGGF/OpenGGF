@@ -28,11 +28,12 @@ import java.util.List;
 public final class CczAnimal extends CczObject
         implements ObjectVisualFacing.Source, com.openggf.game.soniccd.objects.projector.ProjectorChild,
         com.openggf.level.objects.RewindRecreatable {
+    private boolean rangeOnly;
+    private boolean drawThisFrame;
     private int projectorSlot = -1;
     private int projectorId;
     private final CdAnimator.StageRewind rewindAnimation =
             new CdAnimator.StageRewind(() -> provider().image(), () -> animator, restored -> animator = restored);
-    private boolean drawHologram;
 
     private int baseX;               // oVar2A
     private int baseY;               // oVar2C
@@ -70,7 +71,8 @@ public final class CczAnimal extends CczObject
 
     @Override
     public void update(int vIntRunCount, PlayableEntity player) {
-        drawHologram = false;
+        rangeOnly = false;
+        drawThisFrame = false;
         if (!checkPresence()) return;
         if ((spawn.subtype() & 0x7F) != 0) ground();
         else flying();
@@ -86,7 +88,9 @@ public final class CczAnimal extends CczObject
             return false;
         }
         var time = com.openggf.game.soniccd.timetravel.CdTimeTravel.of(services().gameModule());
-        return time != null && time.projectorDestroyed();                  // else addq.l #4,sp; jmp CheckObjectDespawn
+        if (time != null && time.projectorDestroyed()) return true;
+        rangeOnly = true;
+        return false;
     }
 
     private void flying() {
@@ -122,6 +126,7 @@ public final class CczAnimal extends CczObject
                 phase = next;
                 if (animator == null) animator = CczObjectArt.animator(provider(), "animalFlyingAnimations", 0);
                 animate();
+                drawThisFrame = true;
             }
             case 4 -> {                                                    // ObjCCAnimal_Flying_Hologram (:99-114)
                 if (!projectorAlive()) return;
@@ -165,17 +170,19 @@ public final class CczAnimal extends CczObject
                 addToY(yVel);
                 yVel += 0x2000;
                 mapFrame = yVel < 0 ? 0 : 1;                               // smi d0; addq.b #1,d0
-                int d1 = ObjectTerrainUtils.checkFloorDist(x, y, yRadius).distance();
+                int d1 = ObjectTerrainUtils.checkFloorDist(services().levelManager(), x, y + yRadius).distance();
                 if (d1 < 0) {
                     routine += 2;
                     y = (y + d1) & 0xFFFF;
                     yVel = -0x40000;
                 }
+                drawThisFrame = true;
             }
             case 6 -> {                                                    // ObjCCAnimal_Ground_Turn (:167-171)
                 routine = 2;
                 xVel = -xVel;
                 flipHorizontally();
+                drawThisFrame = true;
             }
             case 8 -> {                                                    // ObjCCAnimal_Ground_Hologram (Level/Collision Chaos/Objects/Animal/Main.asm:203-211)
                 if (!projectorAlive()) return;
@@ -188,20 +195,23 @@ public final class CczAnimal extends CczObject
     private void animateHologram(String table, int script) {
         if (animator == null) animator = CczObjectArt.animator(provider(), table, script);
         animate();
-        drawHologram = animator != null;
+        drawThisFrame = animator != null;
     }
 
     @Override
     protected boolean despawnsByCheckObjDespawn() {
         // ObjCCAnimal_Flying_Hologram (Level/Collision Chaos/Objects/Animal/Main.asm:106-121) and
         // ObjCCAnimal_Ground_Hologram (Level/Collision Chaos/Objects/Animal/Main.asm:203-211) retire with the projector.
-        return !hologram();
+        return !hologram() && (rangeOnly || drawThisFrame);
     }
 
     @Override
     protected boolean calledDrawObjectThisFrame() {
-        return !hologram() || drawHologram;
+        return drawThisFrame;
     }
+
+    // ObjCCAnimal_Ground_Bounce (Level/Collision Chaos/Objects/Animal/Main.asm:173-191) draws before checking range.
+    @Override protected boolean drawsBeforeDespawnCheck() { return true; }
 
     private boolean hologram() {
         return (spawn.subtype() & 0x80) != 0;
@@ -209,7 +219,7 @@ public final class CczAnimal extends CczObject
 
     @Override
     protected int despawnX() {
-        return (spawn.subtype() & 0x7F) == 0 && routine != 0 ? baseX : x;
+        return (spawn.subtype() & 0x7F) == 0 && drawThisFrame ? baseX : x;
     }
 
     @Override
@@ -219,13 +229,12 @@ public final class CczAnimal extends CczObject
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
-        if (routine == 0) return;
+        if (!drawThisFrame || isDestroyed()) return;
         CdObjectArtProvider provider = provider();
         if (provider == null) return;
         boolean flying = (spawn.subtype() & 0x7F) == 0;
         String sheet;
         if (hologram()) {
-            if (!drawHologram) return;
             sheet = flying ? CczObjectArt.FLYING_HOLOGRAM : CczObjectArt.GROUND_HOLOGRAM;
         } else {
             sheet = flying ? CczObjectArt.ANIMAL_FLYING : CczObjectArt.ANIMAL_GROUND;
