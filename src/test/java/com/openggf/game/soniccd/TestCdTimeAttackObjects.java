@@ -5,15 +5,20 @@ import com.openggf.game.GameServices;
 import com.openggf.game.palette.PaletteWriteSupport;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.SessionManager;
+import com.openggf.game.soniccd.backupram.CdBackupRamHost;
+import com.openggf.game.soniccd.backupram.CdSaveVariables;
 import com.openggf.game.soniccd.level.CdLevel;
 import com.openggf.game.soniccd.level.CdStageCatalogue;
 import com.openggf.game.soniccd.objects.art.CdObjectArtProvider;
 import com.openggf.game.soniccd.objects.ccz.CczIntroState;
 import com.openggf.game.soniccd.objects.ccz.CczMetalSonic;
-import com.openggf.game.soniccd.objects.common.CdBigRing;
 import com.openggf.game.soniccd.objects.common.CdMonitor;
 import com.openggf.game.soniccd.objects.common.CdTimeIcon;
+import com.openggf.game.soniccd.program.CdProgramFlow;
+import com.openggf.game.soniccd.program.CdProgramRequest;
 import com.openggf.game.soniccd.program.CdSceneCoordinator;
+import com.openggf.game.soniccd.program.CdStageResult;
+import com.openggf.game.soniccd.special.CdSpecialStageResult;
 import com.openggf.game.soniccd.timetravel.CdTimeTravel;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.Palette;
@@ -23,8 +28,10 @@ import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.HeadlessTestRunner;
 import com.openggf.tests.TestEnvironment;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.nio.file.Path;
@@ -120,15 +127,74 @@ class TestCdTimeAttackObjects {
     }
 
     @ParameterizedTest
-    @ValueSource(booleans = {false, true})
-    void bigRingWithEnoughRings(boolean timeAttack) throws Exception {
-        run(CdStagePayload.R11A, 1, timeAttack, sonic -> {
-            var spawn = new ObjectSpawn(sonic.getCentreX() + 64, sonic.getCentreY(), 0x14, 0, 0, false, 0);
-            GameServices.level().getObjectManager().addDynamicObject(new CdBigRing(spawn));
-            GameServices.level().getLevelGamestate().setRings(50);
-            new HeadlessTestRunner(sonic).stepIdleFrames(2);
-            assertEquals(!timeAttack, live(spawn), "big ring after the 50-ring check");
+    @CsvSource({"63, false, true", "127, false, false", "63, true, false"})
+    void bigRingWithEnoughRings(int timeStones, boolean timeAttack, boolean expectedPresent) throws Exception {
+        run(CdStagePayload.R11A, 1, false, sonic -> {
+            var scenes = scenes();
+            loadSavedGame(scenes, timeStones);
+            if (timeAttack) {
+                scenes.titleStarting();
+                scenes.timeAttackSelected(1);
+                loadTitleStage(scenes, CdStagePayload.R11A);
+            }
+            assertBigRing(sonic, expectedPresent);
         });
+    }
+
+    @Test
+    void newGameRestoresBigRingAfterAllSevenStones() throws Exception {
+        run(CdStagePayload.R11A, 1, false, sonic -> {
+            var scenes = scenes();
+            loadSavedGame(scenes, 0x3F);
+            var special = assertInstanceOf(CdProgramRequest.SpecialStage.class,
+                    scenes.stageEnded(new CdStageResult(3, CdStageResult.TIME_PRESENT, false, true, 0x3F),
+                            GameServices.level()));
+            assertEquals(6, special.entry().stageId());
+            var next = assertInstanceOf(CdProgramRequest.Stage.class,
+                    scenes.specialStageEnded(new CdSpecialStageResult(6, true, 0, 0x7F, 0, 0, 0, false, true), null));
+            assertEquals(CdStagePayload.R32A, next.payload());
+            assertDoesNotThrow(() -> GameServices.level().loadZoneAndAct(
+                    SonicCdZoneRegistry.zoneIndex(next.payload()), SonicCdZoneRegistry.actIndex(next.payload())));
+            assertBigRing(sonic, false);
+
+            scenes.titleStarting();
+            scenes.titleExited(CdProgramFlow.EXIT_NEW_GAME);
+            loadTitleStage(scenes, CdStagePayload.R11A);
+            assertBigRing(sonic, true);
+        });
+    }
+
+    @Test
+    void directStageLoadHasBigRingWithoutStartingIpx() throws Exception {
+        run(CdStagePayload.R11A, 1, false, sonic -> {
+            assertBigRing(sonic, true);
+            scenes().attachBackupRamHost(CdBackupRamHost.SESSION, 0);
+        });
+    }
+
+    private static void assertBigRing(AbstractPlayableSprite sonic, boolean expectedPresent) {
+        var spawn = level().getObjects().stream()
+                .filter(object -> object.objectId() == 0x14 && object.subtype() == 0)
+                .findFirst().orElseThrow();
+        GameServices.level().getLevelGamestate().setRings(50);
+        frameAt(sonic, spawn);
+        assertEquals(expectedPresent, live(spawn), "placed big ring in " + level().payload());
+    }
+
+    private static CdSceneCoordinator scenes() {
+        return SessionManager.requireCurrentGameModule().getGameService(CdSceneCoordinator.class);
+    }
+
+    private static void loadSavedGame(CdSceneCoordinator scenes, int timeStones) {
+        scenes.titleStarting();
+        scenes.flow().backupRam().writeVariables(new CdSaveVariables(0x0100, 0, 0, 0, 0, 6, timeStones));
+        scenes.titleExited(CdProgramFlow.EXIT_LOAD_GAME);
+        loadTitleStage(scenes, CdStagePayload.R31A);
+    }
+
+    private static void loadTitleStage(CdSceneCoordinator scenes, CdStagePayload expected) {
+        assertDoesNotThrow(() -> GameServices.level().loadZoneAndAct(scenes.titleStartZone(), scenes.titleStartAct()));
+        assertEquals(expected, level().payload());
     }
 
     @ParameterizedTest
@@ -160,19 +226,19 @@ class TestCdTimeAttackObjects {
     @ParameterizedTest
     @ValueSource(booleans = {false, true})
     void stonesForceGoodFutureOnlyInCampaign(boolean timeAttack) throws Exception {
-        run(CdStagePayload.R11A, 1, timeAttack, sonic -> {
+        run(CdStagePayload.R11A, 1, false, sonic -> {
+            var scenes = scenes();
+            loadSavedGame(scenes, 0x7F);
+            if (timeAttack) {
+                scenes.titleStarting();
+                scenes.timeAttackSelected(1);
+                loadTitleStage(scenes, CdStagePayload.R11A);
+            }
             var travel = CdTimeTravel.of(SessionManager.requireCurrentGameModule());
-            travel.setTimeStones(CdTimeTravel.ALL_TIME_STONES);
-            assertAll(
-                    () -> {
-                        travel.actCompleted(CdZone.PALMTREE_PANIC, 1);
-                        assertEquals(!timeAttack, travel.goodFuture(), "act results");
-                    },
-                    () -> {
-                        travel.gameOver();
-                        travel.levelStart(CdStagePayload.R11A);
-                        assertEquals(!timeAttack, travel.goodFuture(), "stage load");
-                    });
+            assertEquals(!timeAttack, travel.goodFuture(), "stage load");
+            travel.gameOver();
+            travel.actCompleted(level().payload().stage().zone(), 1);
+            assertEquals(!timeAttack, travel.goodFuture(), "act results");
         });
     }
 

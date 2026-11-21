@@ -8,6 +8,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.FixedRuntimeObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectVisualFacing;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
@@ -20,7 +21,7 @@ import java.util.List;
  * {@code levelFrames} once the timer reaches 90.
  */
 @com.openggf.level.objects.CameraRelativeDraw(com.openggf.level.objects.CameraRelativeDraw.Use.SCREEN_POSITION)
-public final class CdTimeIcon extends CdObject implements FixedRuntimeObjectInstance, ObjectVisualFacing.NonDirectional {
+public final class CdTimeIcon extends CdObject implements FixedRuntimeObjectInstance, ObjectVisualFacing.NonDirectional, SpawnRewindRecreatable {
     /** objHUDIconSlot, reserved slot 31 (Level/_Definitions.inc:131-165). */
     public static final int SLOT = 31;
     /** {@code move.w #68+128,oX(a0); move.w #210+128,oYScr(a0)} (ObjTimeIcon_Init, Monitor and Time Post/Main.asm:40-41). */

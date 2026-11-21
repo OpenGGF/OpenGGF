@@ -16,7 +16,6 @@ import com.openggf.level.objects.ObjectSpawn;
  */
 @com.openggf.level.objects.CameraRelativeDraw(com.openggf.level.objects.CameraRelativeDraw.Use.CULL_ONLY)
 public final class ObjAmenbo extends TtzBadnik {
-    private int originX;
     private int shootTimer;     // oVar3C
     private int speed;          // oVar2C
     private int accel;          // oVar30
@@ -30,7 +29,9 @@ public final class ObjAmenbo extends TtzBadnik {
     }
 
     @Override protected String sheetKind() { return second ? TtzObjectArt.AMENBO2 : TtzObjectArt.AMENBO1; }
-    @Override protected int despawnX() { return originX; }
+
+    /** AmenboObject (objects/r4/amenbo.asm:3-12) calls DrawObject before the live-X despawn check. */
+    @Override protected boolean drawsBeforeDespawnCheck() { return true; }
 
     @Override
     protected void run(PlayableEntity player) {
@@ -54,7 +55,6 @@ public final class ObjAmenbo extends TtzBadnik {
         yRadius = 0xC;
         colType = 0x31;
         shootTimer = 0x78;
-        originX = x;
         xFixed = x << 16 | xSub;
         second = spawn.subtype() != 0;
         accel = second ? -0x200 : -0x600;
