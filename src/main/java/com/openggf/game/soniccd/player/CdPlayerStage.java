@@ -4,8 +4,12 @@ import com.openggf.game.internal.PlayerStageRoutines;
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.soniccd.SonicCdGame;
 import com.openggf.game.soniccd.level.CdLevel;
+import com.openggf.game.soniccd.objects.common.CdObject;
+import com.openggf.game.soniccd.objects.common.CdTimePost;
 import com.openggf.game.soniccd.zones.CdZones;
 import com.openggf.level.LevelManager;
+import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.rings.LostRingObjectInstance;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.managers.PlayableSpriteMovement;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -167,12 +171,29 @@ public final class CdPlayerStage implements PlayerStageRoutines {
     }
 
     /**
-     * The $40-type branch of the touch routine where the stage has layers ({@code tst.b stage_layer} against
-     * {@code obj.subtype_2(a1)}, r8/player_object_collide.asm:104-116): an object on the other layer gets no response.
+     * loc_206978 (r8/player_object_collide.asm:104-116): the $40 branch ends the touch pass when
+     * the object is on the other stage layer.
      */
     @Override
-    public boolean admitsSpecialTouch(AbstractPlayableSprite player, com.openggf.level.objects.ObjectInstance object) {
-        return !(object instanceof com.openggf.game.soniccd.objects.common.CdObject cd) || cd.onPlayerLayerForTouch();
+    public boolean admitsSpecialTouch(AbstractPlayableSprite player, ObjectInstance object) {
+        // The time post publishes a listener-only $5F for the native $DF
+        // (loc_208F62, objects/monitor_time.asm:112-115). TimePostMain
+        // (objects/monitor_time.asm:115-131) checks the layer on the post's own turn.
+        if (object instanceof CdTimePost) return true;
+        if (object instanceof LostRingObjectInstance ring) {
+            int layer = lostRingTouchLayer(player);
+            return layer < 0 || ring.touchLayer() < 0 || layer == ring.touchLayer();
+        }
+        return !(object instanceof CdObject cd) || cd.onPlayerLayerForTouch();
+    }
+
+    /** HurtPlayer (r8/player_object_collide.asm:273-282) copies the layer into the spill owner. */
+    @Override
+    public int lostRingTouchLayer(AbstractPlayableSprite player) {
+        CdLevel level = level(player);
+        if (level == null) return -1;
+        int layer = profile(level).playerLayerForObjects();
+        return layer < 0 ? -1 : (layer == 0 ? 0 : 1);
     }
 
     /** The boredom timer ({@code VInt_Finish}'s {@code RunBoredTimer}). */
@@ -289,12 +310,11 @@ public final class CdPlayerStage implements PlayerStageRoutines {
     private AbstractPlayableSprite lockedPlayer;
 
     /**
-     * {@code ObjSonic_Main} ({@code tst.b ctrlLocked.w; bne.s .CtrlLock}, Level/_Objects/Sonic/Main.asm:
-     * 296-298): while {@code ctrlLocked} is set the player keeps {@code playerCtrlHold} (the signpost's and big
-     * ring's $808, Right; 0 to stand still) instead of the pad. Run after the object pass, so a lock an object sets
-     * in one level frame drives the player's next frame, as the player's slot runs first.
+     * ObjSonic_Main (Level/_Objects/Sonic/Main.asm:296-301) skips the pad copy while locked.
+     * The title card starts with a cleared pad. A later object can set a forced pad, which
+     * the after-scroll call publishes for the next player slot.
      */
-    private void applyControlLock(AbstractPlayableSprite player, CdLevel level) {
+    public void applyControlLock(AbstractPlayableSprite player, CdLevel level) {
         var flags = level.flags();
         if (flags.ctrlLocked) {
             int hold = (flags.playerCtrlHold >> 8) & 0xFF;

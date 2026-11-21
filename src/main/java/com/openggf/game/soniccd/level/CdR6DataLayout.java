@@ -11,8 +11,13 @@ import java.util.*;
  * Ranges describe exact canonical includes or separately named finite read views.
  * No raw assets, decoder, stage loader, live invocation or terrain admission.
  */
-final class CdR6DataLayout {
+public final class CdR6DataLayout {
     private CdR6DataLayout() { }
+    /** Width of this stage's background layout, in 256-pixel layout cells. */
+    public static int backgroundColumns(CdStagePayload payload) {
+        return Programme.valueOf(payload.name()).terrain().backgroundColumns();
+    }
+
     record Range(String key,int fileOffset,int length,String sha256) { }
     record Operand(int fileOffset,String hex) { }
     record Terrain(int blockBytes,int patternBytes,int chunkBytes,int foregroundColumns,
@@ -91,6 +96,7 @@ final class CdR6DataLayout {
         Pal_Sonic 6E8 32 8391d8af82c19043c89e32abf87bdd057dbe2a845c58a3a58761edceaeeb9f8a
         Pal_Level 708 96 b054ef40e428fdd09dbe54833c8459de568953f5cf772c137368012e14b229f9
         Pal_LevelUnk 768 96 cc58aa9df8487f55bac536037063a28d69817ce141b23870e2ddfdd352a25bf4
+        BGCameraSectIDs 3388 50 fbb1a3cfed993ae2860736696ddc974a29eba5e5c986566c32d3323a18b6ddec
         LevelStartLoc 29CC 4 0ff22b0ebc98234a94e2af8ed46c0cac7c355f5914b918801dab610520642f8f
         Ani_Sonic 5B0E 582 1eb0199c5399069c3c00f1a4ba5f0e0839f7d78c5a45e4707446088c2e39ab78
         Include7 79D8 3696 2198042d18a51b5d9a8e19d47fb07631478d3dc3708dbfdcf9bf768d13428f17
