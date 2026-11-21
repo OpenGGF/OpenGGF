@@ -162,8 +162,11 @@ under the matching area heading; see the
   and in the Good Future.
   Layout objects claim slots before Sonic's turn, so player bubbles and splashes
   use the slots left by the layout pass.
-  Stardust Speedway's freed ground animals now draw with the disc's sprites,
-  hop twice before turning, and leave their slots at the disc's range boundary.
+  Stardust Speedway's freed ground animals hop twice before turning. Its
+  flying animals now flap with the disc's sprites and retire on the native
+  frame. Palmtree Panic, Quartz Quadrant and Metallic Madness draw their
+  freed animals from the current section's graphics. Freed animals check
+  their range after drawing, as on the disc.
   Accuracy is measured against native recordings made on an emulator running
   the USA disc: 26 of 28 full-act routes (start to signpost) equal native on
   every compared field to their end (146,390 of 149,633 rows), and 68 of 70
