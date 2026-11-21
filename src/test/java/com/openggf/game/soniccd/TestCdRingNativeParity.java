@@ -95,14 +95,16 @@ class TestCdRingNativeParity {
     /**
      * Measured after the RINGS lane (2026-11-13). {@code positions}: the slot table differs first at the listed row,
      * after another object's lifetime differs (listed per stage in the re-host plan). R81A, R81B and R81C now
-     * match ring slots throughout their recordings. Poh-Bee's chains occupy the native slots in Present and Past.
+     * match ring slots throughout their recordings. R11B and R31B also match after the projector holograms
+     * keep their slots until their parent's routine releases them.
+     * Poh-Bee's chains occupy the native slots in Present and Past.
      * In Good Future, the body becomes an explosion in its own slot before the chains are allocated
      * (loc_20D918, objects/r8/poh_bee.asm:11-24).
      */
     @ParameterizedTest(name = "{0}: {2}")
     @CsvSource({
-            "R11A, 4220, exact, -1", "R11B, 3171, positions, 1600", "R11C, 5790, exact, -1", "R12A, 4244, exact, -1",
-            "R31A, 5290, exact, -1", "R31B, 8241, positions, 5682", "R31C, 6995, exact, -1",
+            "R11A, 4220, exact, -1", "R11B, 3171, exact, -1", "R11C, 5790, exact, -1", "R12A, 4244, exact, -1",
+            "R31A, 5290, exact, -1", "R31B, 8241, exact, -1", "R31C, 6995, exact, -1",
             "R32A, 6682, exact, -1", "R41A, 5449, positions, 918", "R41B, 4721, positions, 292",
             "R41C, 6013, exact, -1", "R42A, 4286, positions, 1196", "R51A, 4756, exact, -1", "R51B, 5494, exact, -1",
             "R51C, 7151, exact, -1", "R52A, 4772, positions, 2202", "R61A, 4892, exact, -1",

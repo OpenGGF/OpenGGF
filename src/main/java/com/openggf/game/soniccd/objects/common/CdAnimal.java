@@ -204,7 +204,12 @@ public final class CdAnimal extends CdObject
         drawHologram = true;
     }
 
-    @Override protected boolean despawnsByCheckObjDespawn() { return true; }
+    @Override
+    protected boolean despawnsByCheckObjDespawn() {
+        // ObjFlyingAnimal_Hologram (Level/Palmtree Panic/Objects/Animal/Main.asm:86-104) and
+        // ObjGroundAnimal_Hologram (Level/Palmtree Panic/Objects/Animal/Main.asm:182-190) retire with the projector.
+        return (spawn.subtype() & 0x80) == 0;
+    }
     @Override protected int despawnX() { return (spawn.subtype() & 0x7F) == 0 && routine != 0 ? originX : x; }
 
     int mapFrame() { return mapFrame; }
