@@ -116,20 +116,31 @@ class TestWwzBossPictures {
 
     @Test
     void badFutureArenaTilesMatchTheNativeFrame() throws Exception {
+        compareArena(CdStagePayload.R63D, "defeat", 4744, 60, 140);
+    }
+
+    @Test
+    void goodFutureArenaTilesMatchTheNativeFrames() throws Exception {
+        compareArena(CdStagePayload.R63C, "defeat", 4493, 140);
+        compareArena(CdStagePayload.R63C, "hit", 2863, 60);
+    }
+
+    private static void compareArena(CdStagePayload payload, String route, int row, int... bandTops)
+            throws Exception {
         Path discPath = CdTestMedia.usaCue();
-        String fixture = "rehost-boss-wwz/R63D-defeat/";
+        String fixture = "rehost-boss-wwz/" + payload + "-" + route + "/";
         Path trace = CdTestMedia.nativeFile(fixture + "trace/physics.csv");
-        Path picture = CdTestMedia.nativeFile(fixture + "screenshot-row4744.png");
+        Path picture = CdTestMedia.nativeFile(fixture + "screenshot-row" + row + ".png");
         Map<Integer, int[]> rows = new LinkedHashMap<>();
         Map<Integer, Integer> levelFrameOfRow = new LinkedHashMap<>();
         readTrace(trace, rows, levelFrameOfRow);
-        int frame = levelFrameOfRow.get(4744) - 1;
+        int frame = levelFrameOfRow.get(row) - 1;
         RgbaImage engine;
         boolean oldAudio = GameServices.configuration().getBoolean(SonicConfiguration.AUDIO_ENABLED);
         GameServices.configuration().setSessionOverride(SonicConfiguration.AUDIO_ENABLED, false);
         try (CdDiscDataSource disc = CdDiscDataSource.open(discPath);
              CdFreshStageBoots boots = new CdFreshStageBoots(320, 224)) {
-            boots.boot(disc, CdStagePayload.R63D);
+            boots.boot(disc, payload);
             var runner = new HeadlessTestRunner(GameServices.camera().getFocusedSprite());
             for (int levelFrame = 2; levelFrame <= frame; levelFrame++) {
                 int input = rows.get(levelFrame)[5];
@@ -141,13 +152,14 @@ class TestWwzBossPictures {
             engine = render(LevelManager.LevelRenderOptions.tilesOnly());
             Path out = Path.of("target", "soniccd-boss-wwz");
             Files.createDirectories(out);
-            ScreenshotCapture.savePNG(engine, out.resolve("arena-R63D-row4744.png"));
+            ScreenshotCapture.savePNG(engine, out.resolve("arena-" + payload + "-row" + row + ".png"));
         } finally {
             GameServices.configuration().setSessionOverride(SonicConfiguration.AUDIO_ENABLED, oldAudio);
         }
         RgbaImage nativeFrame = ScreenshotCapture.loadPNG(picture);
-        compareArenaTileRows(engine, nativeFrame, 60, 92, "static rows");
-        compareArenaTileRows(engine, nativeFrame, 140, 172, "streamed rows");
+        for (int top : bandTops) {
+            compareArenaTileRows(engine, nativeFrame, top, top + 32, payload + " row " + row + " y=" + top);
+        }
     }
 
     private static void compareArenaTileRows(RgbaImage engine, RgbaImage nativeFrame, int top, int bottom, String band) {
@@ -161,9 +173,9 @@ class TestWwzBossPictures {
                 total++;
             }
         }
-        String result = "R63D row 4744 " + band + ": " + matching + "/" + total + " pixels match";
+        String result = band + ": " + matching + "/" + total + " pixels match";
         System.out.println(result);
-        assertTrue(matching * 100 >= total * 99, result);
+        assertEquals(total, matching, result);
     }
 
     private static void play(String movie, List<Shot> shots, Map<Integer, int[]> rows,

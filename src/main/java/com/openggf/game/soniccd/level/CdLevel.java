@@ -114,8 +114,8 @@ public final class CdLevel extends AbstractLevel implements com.openggf.game.int
         loadLayouts(image, entry.levelLayouts());
         if (payload.stage().zone() == com.openggf.game.soniccd.CdZone.PALMTREE_PANIC) {
             backgroundRows = com.openggf.game.soniccd.zones.ppz.PpzBackgroundRows.read(image)::layoutX;
-        } else if (payload == CdStagePayload.R63D) {
-            backgroundRows = readWwzBossBackgroundRows(image);
+        } else if (payload.stage().zone() == com.openggf.game.soniccd.CdZone.WACKY_WORKBENCH) {
+            backgroundRows = readWwzBackgroundRows(payload, image);
         } else {
             backgroundRows = null;
         }
@@ -196,11 +196,15 @@ public final class CdLevel extends AbstractLevel implements com.openggf.game.int
         return backgroundRows == null ? sourceX : backgroundRows.backgroundLayoutX(sourceX, sourceY);
     }
 
-    private static com.openggf.game.internal.BackgroundRowLayout readWwzBossBackgroundRows(CdStageImage image) {
-        var table = CdR6DataLayout.Programme.R63D.range("R6StageDrawScrollLayerTable");
+    private static com.openggf.game.internal.BackgroundRowLayout readWwzBackgroundRows(
+            CdStagePayload payload, CdStageImage image) {
+        // DrawLevelBG1 (Level/Wacky Workbench/Scroll (Act 1 Present).asm:731-772) and
+        // R6StageDrawUpdateBackgroundRow (r6/stage_draw_3d.asm:93-111) select static or streamed rows.
+        // Skip the offscreen top row. Static rows draw all 32 blocks from layout X=0;
+        // streamed rows use the layout X of their selected layer.
+        var programme = CdR6DataLayout.Programme.valueOf(payload.name());
+        var table = programme.range(payload == CdStagePayload.R61A ? "BGCameraSectIDs" : "R6StageDrawScrollLayerTable");
         byte[] selectors = image.slice(table.fileOffset() + 1, table.length() - 1);
-        // R6StageDrawUpdateBackgroundRow (r6/stage_draw_3d.asm:93-121) redraws selector 0
-        // from layout X=0 for 32 blocks. Other rows stream the layout at their layer's X.
         return (sourceX, sourceY) -> {
             int row = Math.floorDiv(sourceY, 16);
             return row >= 0 && row < selectors.length && selectors[row] == 0

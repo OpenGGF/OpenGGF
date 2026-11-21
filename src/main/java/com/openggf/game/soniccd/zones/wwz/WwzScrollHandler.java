@@ -3,11 +3,11 @@ package com.openggf.game.soniccd.zones.wwz;
 import com.openggf.game.GameServices;
 import com.openggf.game.soniccd.CdStagePayload;
 import com.openggf.game.soniccd.SonicCdGame;
+import com.openggf.game.soniccd.level.CdR6DataLayout;
 import com.openggf.game.soniccd.level.CdStageImage;
 import com.openggf.level.scroll.AbstractZoneScrollHandler;
 import com.openggf.level.scroll.ScrollOutputRebuilder;
 import com.openggf.level.scroll.compose.ScrollEffectComposer;
-import com.openggf.level.spawn.PlacementViewportWidth;
 
 import java.util.Arrays;
 
@@ -91,6 +91,7 @@ public final class WwzScrollHandler extends AbstractZoneScrollHandler implements
 
     private final CdStagePayload payload;
     private final Layout layout;
+    private final int backgroundPeriod;
     private int[] sine;                                       // signed words, read from the stage file
     private final ScrollEffectComposer composer = new ScrollEffectComposer();
 
@@ -117,6 +118,10 @@ public final class WwzScrollHandler extends AbstractZoneScrollHandler implements
         this.payload = payload;
         this.layout = layoutFor(payload);
         this.sine = sineTable;
+        // Streamed rows scroll at most half camera speed. The disc layout has room
+        // for that span and the widest gameplay viewport, even with an odd trailing
+        // layout column omitted to keep the cache period a multiple of 512.
+        this.backgroundPeriod = CdR6DataLayout.backgroundColumns(payload) / 2 * 512;
     }
 
     private int[] sine() {
@@ -336,33 +341,20 @@ public final class WwzScrollHandler extends AbstractZoneScrollHandler implements
             int[] words = new int[view.height()];
             // R6ScrollWriteScrollLinePattern's first partial block and subsequent 8-line bands;
             // presentation rasters extend the same table walk beyond the native 224 lines.
-            int rightmostSourceX = 0;
             for (int i = 0; i < words.length; i++) {
                 short background = scratch.deformWord(((y & 0x3F8) >>> 3) + ((i + (y & 7)) >>> 3));
                 words[i] = ((-view.cameraX() & 0xFFFF) << 16) | (background & 0xFFFF);
-                rightmostSourceX = Math.max(rightmostSourceX, -background);
             }
             var nativeOutput = context.nativeOutput();
-            int period = frozenPayload == CdStagePayload.R63D
-                    ? visibleBackgroundPeriod(rightmostSourceX, view.width()) : nativeOutput.backgroundPeriod();
             return new com.openggf.level.scroll.ScrollProjection(words, null, null, null,
                     (short) view.cameraY(), word(scratch.bgY), nativeOutput.backgroundX(),
-                    period, nativeOutput.shakeX(), nativeOutput.shakeY(), nativeOutput.tilemapMode());
+                    backgroundPeriod, nativeOutput.shakeX(), nativeOutput.shakeY(), nativeOutput.tilemapMode());
         };
     }
 
     @Override
     public int getBgPeriodWidth() {
-        if (payload != CdStagePayload.R63D) return super.getBgPeriodWidth();
-        // The renderer samples the streamed rows directly from the layout. Keep their full
-        // visible source span resident; CdLevel repeats the static rows independently.
-        return visibleBackgroundPeriod(-foreground - minScrollOffset, Math.max(320, PlacementViewportWidth.current()));
-    }
-
-    private static int visibleBackgroundPeriod(int rightmostSourceX, int viewportWidth) {
-        int period = 512;
-        while (period < rightmostSourceX + viewportWidth) period <<= 1;
-        return period;
+        return backgroundPeriod;
     }
 
     // Rewind
