@@ -1,5 +1,6 @@
 package com.openggf.game.soniccd.objects.qqz;
 
+import com.openggf.game.soniccd.objects.common.CdAnimalArt;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.soniccd.CdStagePayload;
 import com.openggf.game.soniccd.level.CdLevel;
@@ -106,6 +107,12 @@ public final class QqzObjectArt {
             vram.loadPlc(stage, stageEntry.plcLists(), TITLE_CARD_PLC);
             sectionVram.add(vram);
         }
+        CdAnimalArt.register(art,
+                QqzObjectCatalogue.offset(loaded, "animalBaseTiles"),
+                QqzObjectCatalogue.offset(loaded, "flyingAnimalMappings"),
+                QqzObjectCatalogue.offset(loaded, "groundAnimalMappings"),
+                QqzObjectCatalogue.offset(loaded, "flyingAnimalAnimations"),
+                0x8000, 8, sectionVram, this::section);
         add(art, reader, NORO1, "noroMappings1", NORO_TILE);
         add(art, reader, NORO2, "noroMappings2", NORO_TILE);
         add(art, reader, NORO_SPIKES, "noroSpikesMappings", NORO_TILE);

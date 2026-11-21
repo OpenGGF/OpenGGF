@@ -3,6 +3,7 @@ package com.openggf.level.rings;
 import com.openggf.audio.GameSound;
 import com.openggf.camera.Camera;
 import com.openggf.game.GameModule;
+import com.openggf.game.internal.LostRingDisplayProfile;
 import com.openggf.game.LevelState;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.competition.NativeCompetitionRoster;
@@ -993,9 +994,19 @@ public class LostRingObjectInstance extends AbstractObjectInstance
         ringManager.drawRingFrameAt(getX(), getY(), spinFrame);
     }
 
+    private LostRingDisplayProfile.Priority layerDisplayPriority() {
+        if (touchLayer < 0) return null;
+        ObjectServices services = servicesOrNull();
+        GameModule module = services != null ? services.gameModule() : null;
+        var profile = module != null ? module.getGameService(LostRingDisplayProfile.class) : null;
+        return profile != null ? profile.priorityForLayer(touchLayer) : null;
+    }
+
     @Override
     public boolean isHighPriority() {
         if (hasRetainedArtPriority) return retainedArtPriority;
+        var priority = layerDisplayPriority();
+        if (priority != null) return priority.highPriority();
         ObjectServices services = servicesOrNull();
         GameModule module = services != null ? services.gameModule() : null;
         return !(module instanceof com.openggf.game.internal.SpriteTableBuildProfile profile)
@@ -1006,7 +1017,9 @@ public class LostRingObjectInstance extends AbstractObjectInstance
     public int getPriorityBucket() {
         // GiveRing's own slot writes priority$80. A converted attracted ring
         // bypasses Init and keeps priority$100 for its entire uncollected life.
-        return RenderPriority.clamp(collectionRoutineStarted ? 1 : displayPriorityBucket);
+        if (collectionRoutineStarted) return 1;
+        var priority = layerDisplayPriority();
+        return RenderPriority.clamp(priority != null ? priority.bucket() : displayPriorityBucket);
     }
 
     private void drawSparkle(RingManager ringManager) {
