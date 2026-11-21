@@ -70,6 +70,8 @@ public final class SonicCdGameModule implements GameModule {
             new com.openggf.game.internal.UntrackedEntriesSpawnWhileLive() { };
     private static final com.openggf.game.internal.FailedSpawnUnmarksEntry FAILED_SPAWN_UNMARKS =
             new com.openggf.game.internal.FailedSpawnUnmarksEntry() { };
+    private static final com.openggf.game.internal.RingExtraLifeReplacesPickupSound RING_EXTRA_LIFE_REPLACES_PICKUP =
+            new com.openggf.game.internal.RingExtraLifeReplacesPickupSound() { };
     private static final com.openggf.game.internal.LostRingObjectId LOST_RING_ID = () -> 0x11;
     private static final com.openggf.game.internal.LostRingSpillAtOwnerTurn SPILL_AT_OWNER_TURN =
             new com.openggf.game.internal.LostRingSpillAtOwnerTurn() { };
@@ -309,6 +311,10 @@ public final class SonicCdGameModule implements GameModule {
         if (type == com.openggf.game.internal.UntrackedEntriesSpawnWhileLive.class) return type.cast(UNTRACKED_COPIES);
         // A spawn that finds no free slot clears its entry's loaded bit again (.SpawnFailed, Object Spawner.asm:144-151).
         if (type == com.openggf.game.internal.FailedSpawnUnmarksEntry.class) return type.cast(FAILED_SPAWN_UNMARKS);
+        // CollectRing (Level/_Objects/Ring/Main.asm:290-312) jumps to SubCPUCmd for
+        // SCMD_YESSFX on .GainLife. Only .PlaySound submits FM_RING.
+        if (type == com.openggf.game.internal.RingExtraLifeReplacesPickupSound.class)
+            return type.cast(RING_EXTRA_LIFE_REPLACES_PICKUP);
         // Ring loss writes ID $11 into each spilled ring's slot (Level/_Objects/Ring/Main.asm:353; HurtPlayer,
         // Level/Palmtree Panic/Player Object Collision.asm:236), not Sonic 1's $37.
         if (type == com.openggf.game.internal.LostRingObjectId.class) return type.cast(LOST_RING_ID);

@@ -68,8 +68,8 @@ under the matching area heading; see the
   preserve their static backgrounds while moving rows scroll through the stage layout,
   including the scenery behind both boss arenas. Results show the changing
   score and bonus digits and play the tally, final chime and special-stage warp cues.
-  Ring extra lives play the voice jingle, and Wacky Workbench's bouncy floor
-  plays its cue when it sends Sonic into a roll. The level HUD shows the same point total as the
+  Placed and lost rings that award a life play only the voice jingle. Wacky Workbench's
+  bouncy floor plays its cue when it sends Sonic into a roll. The level HUD shows the same point total as the
   results screen. Wider views extend CD object draw/touch and lifetime
   windows, centre boss locks, title cards, results and game-over text, and fill the time tunnel
   through its white fade. CD HUD pieces, including the time-period and warp icons,
