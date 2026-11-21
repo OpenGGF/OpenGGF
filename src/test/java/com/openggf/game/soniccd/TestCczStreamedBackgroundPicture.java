@@ -23,20 +23,23 @@ import static org.lwjgl.opengl.GL11.glFinish;
 class TestCczStreamedBackgroundPicture {
     private static final int WIDTH = 320;
     private static final int HEIGHT = 224;
+    private static final int STATIC_ROW_REPEAT = 512;
+
+    private enum RowKind { MOVING, STATIC }
 
     @Test
-    void pastMovingRowsUseTheDiscColumnsBeyondTwoChunks() throws Exception {
-        // Camera on rehost-long/R31B trace row $13E6.
-        compareMovingRows(CdStagePayload.R31B, 0x1403, 0x047C, 0x33DA);
+    void pastRowsRepeatOrStreamFromTheDiscLayout() throws Exception {
+        // Camera on rehost-long/R31B trace row $189C, where the static rows cross nonrepeating layout columns.
+        compareBackgroundRows(CdStagePayload.R31B, 0x2252, 0x0274, 0x33DA);
     }
 
     @Test
-    void goodFutureMovingRowsUseTheDiscColumnsBeyondTwoChunks() throws Exception {
+    void goodFutureRowsRepeatOrStreamFromTheDiscLayout() throws Exception {
         // Camera on rehost-long/R31C trace row $102A.
-        compareMovingRows(CdStagePayload.R31C, 0x1A00, 0x0510, 0x34FE);
+        compareBackgroundRows(CdStagePayload.R31C, 0x1A00, 0x0510, 0x34FE);
     }
 
-    private static void compareMovingRows(CdStagePayload payload, int cameraX, int cameraY, int selectorOffset)
+    private static void compareBackgroundRows(CdStagePayload payload, int cameraX, int cameraY, int selectorOffset)
             throws Exception {
         var config = GameServices.configuration();
         boolean oldAudio = config.getBoolean(SonicConfiguration.AUDIO_ENABLED);
@@ -74,29 +77,40 @@ class TestCczStreamedBackgroundPicture {
             PlaneRasterizer.TileSource tiles = (layer, index, x) -> level.getPattern(index);
             var scroll = GameServices.parallax();
             int[] words = scroll.getHScroll();
-            int compared = 0;
-            int mismatches = 0;
-            for (int y = 0; y < HEIGHT; y++) {
-                int sourceY = y + scroll.getVscrollFactorBG();
-                int row = sourceY / 16;
-                // The first selector belongs to the offscreen row above the layout.
-                if (row < 0 || row >= 49 || stage.u8(selectorOffset + 1 + row) == 0) continue;
-                int fgX = -(short) (words[y] >>> 16);
-                int fgY = y + scroll.getVscrollFactorFG();
-                int bgX = -(short) words[y];
-                int[] fgPixels = PlaneRasterizer.rasterize(level, tiles, 0, fgX, fgY, WIDTH, 1, 0);
-                int[] bgPixels = PlaneRasterizer.rasterize(level, tiles, 1, bgX, sourceY, WIDTH, 1, 0);
-                for (int x = 0; x < WIDTH; x++) {
-                    if (fgPixels[x] != 0 || bgPixels[x] == 0 || bgX + x < 512) continue;
-                    compared++;
-                    if (CczNativePictureCheck.level(bgPixels[x]) != CczNativePictureCheck.level(actual.argb(x, y))) {
-                        mismatches++;
+            for (RowKind kind : RowKind.values()) {
+                int compared = 0;
+                int mismatches = 0;
+                for (int y = 0; y < HEIGHT; y++) {
+                    int sourceY = y + scroll.getVscrollFactorBG();
+                    int row = sourceY / 16;
+                    // The first selector belongs to the offscreen row above the layout.
+                    if (row < 0 || row >= 49) continue;
+                    boolean staticRow = stage.u8(selectorOffset + 1 + row) == 0;
+                    if (staticRow != (kind == RowKind.STATIC)) continue;
+
+                    // The hosted foreground pass uses camera X even where the native scroll words wobble.
+                    int fgY = y + scroll.getVscrollFactorFG();
+                    int bgX = -(short) words[y];
+                    int[] fgPixels = PlaneRasterizer.rasterize(level, tiles, 0, cameraX, fgY, WIDTH, 1, 0);
+                    // The zero selector writes all 32 blocks from layout X=0.
+                    // loc_20343A (r3/stage_draw_1b.asm:632-638), loc_20355E (r3/stage_draw_1c.asm:632-638).
+                    int[] bgPixels = PlaneRasterizer.rasterize(level, tiles, 1, staticRow ? 0 : bgX,
+                            sourceY, staticRow ? STATIC_ROW_REPEAT : WIDTH, 1, 0);
+                    for (int x = 0; x < WIDTH; x++) {
+                        int sourceX = bgX + x;
+                        int expected = bgPixels[staticRow ? Math.floorMod(sourceX, STATIC_ROW_REPEAT) : x];
+                        if (fgPixels[x] != 0 || expected == 0 || sourceX < STATIC_ROW_REPEAT) continue;
+                        compared++;
+                        if (CczNativePictureCheck.level(expected) != CczNativePictureCheck.level(actual.argb(x, y))) {
+                            mismatches++;
+                        }
                     }
                 }
+                String label = payload + " " + kind + " rows beyond the 512px repeat";
+                assertTrue(compared >= WIDTH, label + ": too few exposed pixels (" + compared + ")");
+                assertEquals(0, mismatches, label + ": mismatching pixels out of " + compared);
+                System.out.println(label + ": " + compared + " exposed pixels match the disc layout");
             }
-            assertTrue(compared >= WIDTH, payload + " needs exposed moving rows beyond the 512px repeat");
-            assertEquals(0, mismatches, payload + " mismatching pixels out of " + compared + " beyond 512px");
-            System.out.println(payload + ": " + compared + " exposed moving-row pixels match the disc layout");
         } finally {
             config.setSessionOverride(SonicConfiguration.AUDIO_ENABLED, oldAudio);
         }

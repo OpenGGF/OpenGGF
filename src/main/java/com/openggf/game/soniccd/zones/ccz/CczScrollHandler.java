@@ -2,6 +2,7 @@ package com.openggf.game.soniccd.zones.ccz;
 
 import com.openggf.game.GameServices;
 import com.openggf.game.soniccd.CdStagePayload;
+import com.openggf.game.soniccd.level.CdStageCatalogue;
 import com.openggf.game.soniccd.level.CdStageImage;
 import com.openggf.level.scroll.AbstractZoneScrollHandler;
 import com.openggf.level.scroll.ScrollOutputRebuilder;
@@ -65,12 +66,12 @@ public final class CczScrollHandler extends AbstractZoneScrollHandler implements
     private static final int WOBBLE_SIZE = 256;            // d5 and $FF (r3) or (d5 and $7F)*2 (R31A)
 
     private final CdStagePayload payload;
-    private final int backgroundPeriod;
     private final CczScrollProfiles.Profile profile;
     private final Supplier<CdStageImage> image;
     private final ScrollEffectComposer composer = new ScrollEffectComposer();
 
     private byte[] wobble;
+    private int backgroundPeriod;
 
     // Native RAM this routine owns: cameraBgX/Bg2X/Bg3X/BgY are 16.16 longs (_Definitions.inc), the
     // deformation array is deformBuffer (rates first, then the 64-entry curve), bgWaterDeform is a word.
@@ -96,11 +97,6 @@ public final class CczScrollHandler extends AbstractZoneScrollHandler implements
     public CczScrollHandler(CdStagePayload payload, Supplier<CdStageImage> image) {
         this.payload = payload;
         this.profile = CczScrollProfiles.of(payload);
-        // The USA StageMapBg headers declare seven 256-pixel columns in acts 1/2 and three in act 3
-        // (StageMapBg (r3/data_1a.asm:76-78), StageMapBg (r3/data_3c.asm:312-314)).
-        // Cover the streamed layout and align the window to the 512-pixel static-row repeat.
-        int layoutColumns = payload.stage().actNumber() == 3 ? 3 : 7;
-        this.backgroundPeriod = (layoutColumns + 1) / 2 * 512;
         this.image = image;
         this.deform = new int[profile.rates().length + profile.curveCount()];
     }
@@ -113,11 +109,15 @@ public final class CczScrollHandler extends AbstractZoneScrollHandler implements
         return null;
     }
 
+    private CdStageImage stageImage() {
+        CdStageImage stage = image.get();
+        if (stage == null) throw new IllegalStateException(payload + ": stage file not loaded yet");
+        return stage;
+    }
+
     private byte[] wobble() {
         if (wobble == null) {
-            CdStageImage stage = image.get();
-            if (stage == null) throw new IllegalStateException(payload + ": stage file not loaded yet");
-            wobble = stage.slice(CczDiscTables.rows(payload, "wobble").get(0).a(), WOBBLE_SIZE);
+            wobble = stageImage().slice(CczDiscTables.rows(payload, "wobble").get(0).a(), WOBBLE_SIZE);
         }
         return wobble;
     }
@@ -515,6 +515,15 @@ public final class CczScrollHandler extends AbstractZoneScrollHandler implements
 
     @Override
     public int getBgPeriodWidth() {
+        if (backgroundPeriod == 0) {
+            CdStageImage stage = stageImage();
+            int layouts = CdStageCatalogue.entry(payload).levelLayouts();
+            int background = layouts + stage.u16(layouts + 2);
+            // StageMapBg (r3/data_1a.asm:76-78) begins with the last 256px column index.
+            // Align the window to the 512px repeat so static rows keep their phase at the edge.
+            int width = (stage.u8(background) + 1) * 256;
+            backgroundPeriod = Math.ceilDiv(width, 512) * 512;
+        }
         return backgroundPeriod;
     }
 
