@@ -286,13 +286,12 @@ See the [Competition swap design](architecture/designs/2026-11-07-s3k-competitio
 28. [Sprite_OnScreen_Test lifetime audit](#sprite_onscreen_test-lifetime-audit) — Other
 29. [LRZ boss lava-plane presentation](#lrz-boss-lava-plane-presentation) — Other
 30. [Blue Sphere player projection and shadows (local correction, 2026-10-17)](#blue-sphere-player-projection-and-shadows-local-correction-2026-10-17) — Other
-31. [AIZ miniboss defeat debris](#aiz-miniboss-defeat-debris) — Other
-32. [Retained HCZ replay qualification](#retained-hcz-replay-qualification) — Other
-33. [DDZ, LBZ and ICZ component history](#ddz-lbz-and-icz-component-history) — Other
-34. [DEZ final native terrain ownership — 2026-10-17](#dez-final-native-terrain-ownership--2026-10-17) — Other
-35. [Mega AIZ2 return loses source ownership at death/reload](#mega-aiz2-return-loses-source-ownership-at-deathreload) — Other
-36. [HCZ1 direct water art — bounded physical publication coverage](#hcz1-direct-water-art--bounded-physical-publication-coverage) — Other
-37. [Knuckles full-chain first-return pose — 2026-10-29](#knuckles-full-chain-first-return-pose--2026-10-29) — Other
+31. [Retained HCZ replay qualification](#retained-hcz-replay-qualification) — Other
+32. [DDZ, LBZ and ICZ component history](#ddz-lbz-and-icz-component-history) — Other
+33. [DEZ final native terrain ownership — 2026-10-17](#dez-final-native-terrain-ownership--2026-10-17) — Other
+34. [Mega AIZ2 return loses source ownership at death/reload](#mega-aiz2-return-loses-source-ownership-at-deathreload) — Other
+35. [HCZ1 direct water art — bounded physical publication coverage](#hcz1-direct-water-art--bounded-physical-publication-coverage) — Other
+36. [Knuckles full-chain first-return pose — 2026-10-29](#knuckles-full-chain-first-return-pose--2026-10-29) — Other
 
 ---
 
@@ -1600,19 +1599,6 @@ Whole-stage live HUD changes, transparent HUD plane composition, dense SAT
 limits, whole routes, cold routes, donor configurations, PAL and PCM remain
 unmeasured. The independent rewind fade-publication correction has its own
 gateway and release-latch checks. [Rewind evidence](architecture/plans/2026-10-13-s3k-playable-completion.md#immediate-scene-fade-publication-after-rewind--2026-10-17).
-
----
-
-## AIZ miniboss defeat debris
-
-**Kind:** Other
-
-In the ROM, `AIZMiniboss_SpawnEndSign` (sonic3k.asm:137460-137463) creates
-four children from `ChildObjDat_AIZMiniboss_DefeatDebris`
-(sonic3k.asm:137995-138004). OpenGGF's `AizMinibossInstance.startDefeatHandoff`
-starts the music fade and signpost flow without creating these children.
-The separate AIZ alternate replay's ring-count difference was fixed by
-`f798a5bde3`.
 
 ---
 
