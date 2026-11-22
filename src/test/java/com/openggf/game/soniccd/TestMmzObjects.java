@@ -6,6 +6,7 @@ import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.soniccd.level.CdLevel;
+import com.openggf.game.soniccd.objects.common.CdMonitor;
 import com.openggf.game.soniccd.objects.common.CdRobotGenerator;
 import com.openggf.game.soniccd.objects.mmz.MmzHvPlatform;
 import com.openggf.game.soniccd.objects.mmz.MmzBuzzsaw;
@@ -341,6 +342,51 @@ class TestMmzObjects {
         // call it has run; whether it ran in its spawn frame depends on its slot (SpawnObjectAfter).
         int delta = beam.getY() - (emitter.getY() & 0xFFF0);
         assertTrue(delta == 0 || delta == 4, "beam Y " + delta + " below the aligned emitter Y");
+    }
+
+    @Test
+    void ordinaryFloorProbeClearsLostRingTilePriority() throws Exception {
+        boot(CdStagePayload.R81B);
+        int x = 0x190;
+        int y = 0x710;
+        assertOrdinaryChunk(x, y + 8);
+        // Begin on the falling leg of LostRingMain, with the tile priority set at spill.
+        var ring = add(LostRingObjectInstance.spawn(0x11, x, y, 0, 0, 0, 255, null));
+        assertTrue(ring.isHighPriority());
+        runner.stepIdleFrames(4);
+        assertFalse(ring.isHighPriority(), "LostRingMain calls CheckBlockDown on its falling cadence");
+    }
+
+    @Test
+    void fallingMonitorClearsTilePriorityWithoutChangingItsBucket() throws Exception {
+        boot(CdStagePayload.R81B);
+        int x = 0x190;
+        int y = 0x710;
+        assertOrdinaryChunk(x, y + 0xE - 2);
+        GameServices.camera().setX((short) (x - 0x60));
+        GameServices.camera().setY((short) (y - 0x50));
+        CdMonitor monitor = add(new CdMonitor(new ObjectSpawn(x, y, 0x19, 1, 0, false, 0)));
+        monitor.snapshotPreUpdatePosition();
+        monitor.update(1, sonic);
+        monitor.refreshPostCameraRenderState();
+        assertTrue(monitor.isOnScreenForTouch());
+        assertTrue(monitor.isHighPriority());
+        int initialBucket = monitor.getPriorityBucket();
+
+        sonic.setCentreY((short) (y + 0x10));
+        sonic.setYSpeed((short) -0x100);
+        monitor.onTouchResponse(sonic, null, 2);
+        monitor.update(2, sonic);
+        assertEquals(y - 2, monitor.getY(), "the hit from below starts the monitor's fall routine");
+        assertFalse(monitor.isHighPriority(), "the monitor probes before its floor contact");
+        assertEquals(initialBucket, monitor.getPriorityBucket());
+    }
+
+    private void assertOrdinaryChunk(int x, int y) {
+        int column = x >> 8;
+        int row = y >> 8;
+        assertTrue(level().getMap().getValue(0, column, row) > 0);
+        assertFalse(level().hasLoopFlag(column, row));
     }
 
     @Test

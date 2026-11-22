@@ -7,6 +7,7 @@ import com.openggf.game.internal.LostRingDisplayProfile;
 import com.openggf.game.LevelState;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.competition.NativeCompetitionRoster;
+import com.openggf.game.internal.ObjectFloorProbePriority;
 import com.openggf.game.internal.RingExtraLifeReplacesPickupSound;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.game.rules.GameRules;
@@ -24,6 +25,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
+import com.openggf.physics.ObjectTerrainUtils;
 
 import java.util.List;
 
@@ -802,18 +804,22 @@ public class LostRingObjectInstance extends AbstractObjectInstance
      */
     protected int ringCheckFloorDist(int x, int y) {
         ObjectServices objectServices = servicesOrNull();
-        if (objectServices == null || objectServices.levelManager() == null) {
-            return 0;
-        }
-        com.openggf.physics.TerrainCheckResult result =
-                com.openggf.physics.ObjectTerrainUtils.checkFloorDist(
-                        objectServices.levelManager(),
-                        objectServices.backgroundPlaneCollisionProvider(),
-                        objectServices.useSecondaryTerrainCollisionPath(), x, y);
+        var levels = objectServices == null ? null : objectServices.levelManager();
+        if (levels == null) return 0;
+        var background = objectServices.backgroundPlaneCollisionProvider();
+        boolean secondary = objectServices.useSecondaryTerrainCollisionPath();
+        var result = levels.getCurrentLevel() instanceof ObjectFloorProbePriority
+                ? ObjectTerrainUtils.checkFloorDist(levels, background, secondary, x, y, this::setFloorProbePriority)
+                : ObjectTerrainUtils.checkFloorDist(levels, background, secondary, x, y);
         if (!result.foundSurface()) {
             return 0;
         }
         return result.distance();
+    }
+
+    private void setFloorProbePriority(boolean high) {
+        retainedArtPriority = high;
+        hasRetainedArtPriority = true;
     }
 
     /**

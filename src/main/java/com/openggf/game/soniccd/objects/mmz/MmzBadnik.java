@@ -82,7 +82,7 @@ abstract class MmzBadnik extends MmzObject
 
     /** CheckBlockDown (common/object_block_collide.asm:128-160): the distance from the radius point to the floor. */
     protected final int floorDistance() {
-        return com.openggf.physics.ObjectTerrainUtils.checkFloorDist(x, y, yRadius).distance();
+        return checkFloor(x, y, yRadius).distance();
     }
 
     /** {@code bchg #0,oSprFlags(a0); bchg #0,oFlags(a0)}. */
