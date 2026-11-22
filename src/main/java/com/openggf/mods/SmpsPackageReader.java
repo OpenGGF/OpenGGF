@@ -10,6 +10,7 @@ import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.PackageStockResolver;
 import com.openggf.audio.smps.PackageStockResolver.Locator;
 import com.openggf.audio.smps.SmpsMusicParameters;
+import com.openggf.catalog.StockGameCatalog;
 import com.openggf.game.sonic1.audio.Sonic1Music;
 import com.openggf.game.sonic1.audio.smps.Sonic1SmpsData;
 import com.openggf.game.sonic2.audio.Sonic2Music;
@@ -48,7 +49,7 @@ final class SmpsPackageReader {
     private static final int DAC_LIMIT = 512 * 1024;
     private static final int ENTRY_LIMIT = 482;
     private static final Pattern HASH = Pattern.compile("[0-9a-fA-F]{64}");
-    private static final Set<String> DRIVERS = Set.of("s1", "s2", "s3k");
+    private static final Set<String> DRIVERS = Set.copyOf(StockGameCatalog.cartridgeCodes());
     private static final Map<String, String> WARNINGS = Map.of(
             "RETAIL_SONG_DATA", "Contains retail song data. For personal use only. Do not redistribute.",
             "ROM_DERIVED_DATA", "Contains ROM-derived data. For personal use only. Do not redistribute.",
