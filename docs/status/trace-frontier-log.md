@@ -125330,7 +125330,7 @@ report directories. All configured ROM and disc inputs were found.
   tests before and after with zero skips. Both comparison gates retain 29,285
   comparisons from 31,482 planned rows, with zero differences.
 
-## 2026-11-22 - Mega AIZ2 boss head queue
+## 2026-11-22 — Mega AIZ2 boss head queue
 
 - Matched run: `TestS3kMegaRunChain#multiBonusSpecialStageRoundTrip` under
   `-Ptrace-replay-r7`, one fork, surfaceless EGL, all ROM properties found.

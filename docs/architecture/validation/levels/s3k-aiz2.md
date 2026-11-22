@@ -27,7 +27,7 @@ The initial native/default binding covers all three solo mains at 320; the finit
 | EVENT / ART: character-specific resize submission | `TestSonic3kAIZEvents#aiz2ResizeArtSubmissionsFollowNativeCharacterBranch` | [November 7 owner check](#native-resize-art-owners--2026-11-07): real direct/KosM submissions at both thresholds, native source/destination identities, registered restore and no resubmission. Knuckles omits the Sonic-only object archive; broader art and route obligations remain open. |
 | BOSS / HIT: ordinary active-glide rebound — HELD | Historical component `60b2e6137`; [November 7 rebound check](#ordinary-boss-glide-rebound--2026-11-07) | The native correction and its discriminators are preserved, but the component is excluded from delivery after the maintained Knuckles SOZ route became red. Original shared rules/touch tests are retained. No claim that the final delivered wave advances Mega past its death/reload frontier25811. |
 | BOSS / LOAD: end-boss graph, splash and sequence | `TestS3kAizEndBossGraphRewind`, `TestAiz2BossEndSequenceObjects`, `TestAizEndBossInstance` | Component/late boss contracts; independent arena entry and all required character routes remain open. Listed bindings were setup-inspected, not independently rerun as a whole in this slice. |
-| BOSS / ART: end-boss head initialization | `TestAizEndBossHeadArt`, `TestAizEndBossInstance#bossMainInitRunsOnTheDispatchAfterTheMusicCallback` | [Head-init check](#native-aiz2-boss-head-art-2026-11-22) covers the Knuckles module, Sonic control and two registered queue restore/replay cycles. The compared Mega slice verifies the first submission window. |
+| BOSS / ART: end-boss head initialization | `TestAizEndBossHeadArt`, `TestAizEndBossInstance#bossMainInitRunsOnTheDispatchAfterTheMusicCallback`, `TestS3kAizEndBossGraphRewind#shipHeadRestoresItsOwnerAndContinuesMidAnimation` | [Head-init check](#native-aiz2-boss-head-art-2026-11-22) covers the Knuckles EggRobo module, the Sonic and Tails Eggman controls, two queue restore/replay cycles and Eggman's head-to-ship graph rewind. The compared Mega slice verifies the first submission window. |
 | OBJECT / CAMERA: forest ring and team bounds | `TestAiz2ForestRingCameraGeneration`, `TestS3kAiz2BigRingFormation`, `TestS3kAiz2BigRingCollision`, `TestS3kAiz2SidekickBoundsSync` | Local scene/bounds contracts; configuration and before/active/after placement breadth remain open. Listed bindings were setup-inspected, not independently rerun as a whole in this slice. |
 | LIFE / LOAD: physical post, actual death/restart and incoming/outgoing worlds | Native checkpoint/death/reload owners and the edges listed above | All 140 supported preset/donor/main/roster products are qualified by `TestS3kAiz2EntryMatrix#actualDeathReloadPreservesTheSupportedProductAndReplaysEachIncomingWorldTwice`: two actual deaths/reloads, exactly one life lost per restart, new world owners, outgoing live-history retirement, restored current roster/camera and two complete-world 45-frame restore/replay cycles after each released destination. Physical post activation and incoming/outgoing route edges remain separate obligations. |
 | PRESENT: actual viewport, palette/scroll/plane and audio | Act-owned ROM art/AniPLC/AnPal/event and music/SFX owners | Decoded playable source is checked at entry. Scene pixels, native audiovisual timing and viewport-edge parity require their own bounded native/GPU evidence. |
@@ -1671,7 +1671,7 @@ next object pass. `loc_67D68` (136356-136361) allocates the head in a later
 slot. `Obj_RobotnikHeadInit` (136112-136120) reads live P1 character ID.
 `sub_67B14` / `loc_67B1C` (136125-136132) select EggRobo's maps and submit
 archive `$15FDDC` to VRAM `$A5C0` for Knuckles. The direct payload is
-`$15FDDE` to `$FFFFD000`. Sonic uses the existing Robotnik ship art.
+`$15FDDE` to `$FFFFD000`. Sonic and Tails keep Eggman's head from the existing Robotnik ship art.
 
 The managed-object test observes submission before the loop tail, the matching
 physical FIFO entry and queue retirement after two registered restores.
@@ -1682,4 +1682,4 @@ striped background and limits the visual comparison to the boss.
 Mega segments 0–7 remain clean. Segment 8’s first strict mismatch moves from
 row 1117 to row 1168 (`player_animation_id`). The continuous replay still
 stops before HCZ at the separate death/reload at BK2 cursor 25811.
-See the [run comparison](../../../status/trace-frontier-log.md#2026-11-22---mega-aiz2-boss-head-queue).
+See the [run comparison](../../../status/trace-frontier-log.md#2026-11-22--mega-aiz2-boss-head-queue).

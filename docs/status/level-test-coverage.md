@@ -2913,6 +2913,6 @@ The [MGZ1](../architecture/validation/levels/s3k-mgz-act1.md) and
 wider route, donor, team and viewport obligations.
 
 AIZ2 end-boss head art (2026-11-22): the [AIZ2 matrix](../architecture/validation/levels/s3k-aiz2.md#native-aiz2-boss-head-art-2026-11-22)
-covers the Knuckles and Sonic initialization branches, queue restoration and
-the Mega return window. The outgoing campaign and other configurations
-remain open.
+verifies that Knuckles gets EggRobo's head and Sonic and Tails keep Eggman's
+head. It also covers queue restoration, the head's graph rewind and the Mega
+return window. The outgoing campaign and other configurations remain open.
