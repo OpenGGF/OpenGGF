@@ -29,6 +29,8 @@ public final class TtzAnimal extends TtzObject
     private boolean xFlip;
     private transient CdAnimator animator;
     private int[] animState = {-1, 0, 0, 0, 0};
+    private boolean rangeOnly;
+    private boolean drawThisFrame;
     private int projectorSlot = -1;
     private int projectorId;
 
@@ -48,10 +50,12 @@ public final class TtzAnimal extends TtzObject
     @Override public int projectorSlot() { return projectorSlot; }
     @Override public int projectorId() { return projectorId; }
 
-    @Override protected boolean despawnsByCheckObjDespawn() { return !hologram(); }
+    @Override protected boolean despawnsByCheckObjDespawn() { return !hologram() && (rangeOnly || drawThisFrame); }
 
     @Override
     public void update(int vIntRunCount, PlayableEntity player) {
+        rangeOnly = false;
+        drawThisFrame = false;
         if (!checkPresence()) return;
         switch (motion) {
             case INITIALIZING -> init();
@@ -70,7 +74,9 @@ public final class TtzAnimal extends TtzObject
             return false;
         }
         var time = com.openggf.game.soniccd.timetravel.CdTimeTravel.of(services().gameModule());
-        return time != null && time.projectorDestroyed();    // else addq.l #4,sp; jmp CheckObjectDespawn
+        if (time != null && time.projectorDestroyed()) return true;
+        rangeOnly = true;
+        return false;
     }
 
     /** AnimalObject (objects/r4/animal.asm:8-22) and loc_20E3E0 (objects/r4/animal.asm:24-56). */
@@ -130,8 +136,8 @@ public final class TtzAnimal extends TtzObject
 
     /** loc_20E4EA (objects/r4/animal.asm:112-139). */
     private void walk() {
-        x += xVel >> 16;
-        y = originY + ((TrigLookupTable.sinHex((angle >> 8) & 0xFF) + 4) >> 3);
+        x = (x + (xVel >> 16)) & 0xFFFF;
+        y = (originY + ((TrigLookupTable.sinHex((angle >> 8) & 0xFF) + 4) >> 3)) & 0xFFFF;
         angle += angleStep;
         if (angle < 0 || angle >= 0x10000) {                 // bmi / cmpi.l #$10000 blt
             angleStep = -angleStep;
@@ -141,8 +147,13 @@ public final class TtzAnimal extends TtzObject
         animate();
     }
 
+    // loc_20E538 (objects/r4/animal.asm:135-139) draws before checking range.
+    @Override protected boolean drawsBeforeDespawnCheck() { return true; }
+    @Override protected boolean calledDrawObjectThisFrame() { return drawThisFrame; }
+
     /** loc_20E4DA (objects/r4/animal.asm:105-108) and loc_20E538 (objects/r4/animal.asm:135-139). */
     private void animate() {
+        drawThisFrame = true;
         if (animator != null) {
             animator.step();
             animState = animator.scriptState();
@@ -156,7 +167,7 @@ public final class TtzAnimal extends TtzObject
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
-        if (animator == null || (hologram() && animState[0] < 0)) return;
+        if (!drawThisFrame || animator == null || isDestroyed()) return;
         boolean hFlip = xFlip != ((animator.flipBits() & 1) != 0);
         drawSheet(secondSpecies() ? TtzObjectArt.ANIMAL2 : TtzObjectArt.ANIMAL1, animator.mapFrame(), hFlip, false);
     }
