@@ -2,6 +2,7 @@ package com.openggf.game.soniccd;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openggf.game.GameServices;
+import com.openggf.game.soniccd.level.CdStageCatalogue;
 import com.openggf.game.timing.HardwareSubmissionFingerprint;
 import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.game.timing.HardwareWorkSubmission;
@@ -21,6 +22,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -72,6 +74,44 @@ class TestSonicCdLoadTimeManifest {
         }
         assertTrue(new SonicCdGameModule().createLoadTimeProfile(LoadTimeSimulationMode.NONE, w -> { })
                 == com.openggf.game.timing.LoadTimeProfile.IMMEDIATE);
+    }
+
+    @Test
+    void reloadSelectsTheStageProgramsQueuedPlc() throws Exception {
+        var unchangedStarts = List.of(CdStagePayload.R11A, CdStagePayload.R51B);
+        var fixedSectionStarts = List.of(CdStagePayload.R31C, CdStagePayload.R31D,
+                CdStagePayload.R32C, CdStagePayload.R32D);
+        var indexedStarts = List.of(
+                CdStagePayload.R13C, CdStagePayload.R13D, CdStagePayload.R33C, CdStagePayload.R33D,
+                CdStagePayload.R41C, CdStagePayload.R41D, CdStagePayload.R42C, CdStagePayload.R42D,
+                CdStagePayload.R43C, CdStagePayload.R43D,
+                CdStagePayload.R51A, CdStagePayload.R51C, CdStagePayload.R51D, CdStagePayload.R52A,
+                CdStagePayload.R52C, CdStagePayload.R52D, CdStagePayload.R53C, CdStagePayload.R53D,
+                CdStagePayload.R61A, CdStagePayload.R61B, CdStagePayload.R61C, CdStagePayload.R61D,
+                CdStagePayload.R62A, CdStagePayload.R62B, CdStagePayload.R62C, CdStagePayload.R62D,
+                CdStagePayload.R63C, CdStagePayload.R63D,
+                CdStagePayload.R71C, CdStagePayload.R71D, CdStagePayload.R72C, CdStagePayload.R72D,
+                CdStagePayload.R73C, CdStagePayload.R73D, CdStagePayload.R83C, CdStagePayload.R83D);
+        // For the indexed Quartz loaders, the far camera selects list 4 in act 1 or 2
+        // and list 5 in act 3 if the engine incorrectly follows the section tables.
+        try (var disc = CdDiscDataSource.open(CdTestMedia.usaCue())) {
+            assertAll(
+                    () -> assertAll(unchangedStarts.stream().map(stage -> () ->
+                            assertReloadPlc(disc, stage, 0, 2))),
+                    () -> assertAll(fixedSectionStarts.stream().map(stage -> () ->
+                            assertReloadPlc(disc, stage, 0, 2))),
+                    () -> assertAll(indexedStarts.stream().map(stage -> () ->
+                            assertReloadPlc(disc, stage, 0x1700, 2))));
+        }
+    }
+
+    private static void assertReloadPlc(CdDiscDataSource disc, CdStagePayload stage, int cameraX,
+                                      int expectedPlc) throws Exception {
+        byte[] file = disc.readFile(stage.file());
+        var entry = CdStageCatalogue.entry(stage);
+        int plc = CdLoadTiming.levelStartPlc(file, entry, cameraX, true, true);
+        var submission = CdLoadTiming.stageLoad(disc.assets().entry(stage.file()), plc);
+        assertEquals(expectedPlc, submission.destinationAddress(), stage.name());
     }
 
     /** One stage per zone, normal play: the measured load base, then native on every compared row. */

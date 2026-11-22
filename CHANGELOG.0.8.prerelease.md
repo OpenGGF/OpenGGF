@@ -225,7 +225,8 @@ under the matching area heading; see the
   follow measured emulator timings under `gameplay.loadTimeSimulation`
   (`FAST` and `PROFILED`; `NONE` starts the clock at 0); trace replay admits
   the V-INTs the console dropped, under two timing-contract extensions the
-  owner approved on 2026-11-13. The capture tools can film Sonic CD
+  owner approved on 2026-11-13. A checkpoint or time-warp load uses the graphics list
+  selected by its stage program when looking up measured timings. The capture tools can film Sonic CD
   (`--no-hud` leaves the HUD out; a trace clip may run past the recording's
   last row into the game's own flow, such as a time warp). Queued test runs
   pass a USA CHD found in the project folder as `-Dsoniccd.disc.path`
