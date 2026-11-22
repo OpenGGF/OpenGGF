@@ -142,16 +142,6 @@ public class BlueBallsObjectInstance extends AbstractObjectInstance implements T
      */
     private static int activeInstanceCount = 0;
 
-    /**
-     * Gloop sound toggle flag. Only plays every other call.
-     * ROM: zGloopFlag in s2.sounddriver.asm lines 2144-2149
-     * <p>
-     * The original ROM implements this in the Z80 sound driver, but since
-     * Gloop is exclusively used by BlueBalls, we implement it here instead
-     * to keep the SMPS driver generic.
-     */
-    private static boolean gloopToggle = false;
-
     // ========================================================================
     // Instance State
     // ========================================================================
@@ -533,24 +523,10 @@ public class BlueBallsObjectInstance extends AbstractObjectInstance implements T
         }
     }
 
-    /**
-     * Plays the gloop sound effect with toggle behavior.
-     * <p>
-     * Two checks are performed:
-     * <ol>
-     *   <li>On-screen check: ROM's PlaySoundLocal (s2.asm line 1555) checks
-     *       render_flags.on_screen before queueing sound</li>
-     *   <li>Toggle check: ROM's zGloopFlag (s2.sounddriver.asm:2144) only
-     *       plays every other call to prevent sound spam from multiple balls</li>
-     * </ol>
-     */
     private void playGloopSound() {
+        // PlaySoundLocal (s2.asm:1555-1562) gates the SFX0 write on visibility.
+        // zPlaySound_CheckGloop (s2.sounddriver.asm:2138-2149) alternates at dispatch.
         if (!isOnScreen()) {
-            return;
-        }
-        // Toggle flag - only play every other call (ROM: zGloopFlag)
-        gloopToggle = !gloopToggle;
-        if (!gloopToggle) {
             return;
         }
         try {
@@ -644,12 +620,9 @@ public class BlueBallsObjectInstance extends AbstractObjectInstance implements T
     // ========================================================================
 
     /**
-     * Resets all global state for BlueBalls objects.
-     * Call this when loading a new level or restarting the current level
-     * to ensure clean sound state.
+     * Resets the instance count when loading or restarting a level.
      */
     public static void resetGlobalState() {
         activeInstanceCount = 0;
-        gloopToggle = false;
     }
 }

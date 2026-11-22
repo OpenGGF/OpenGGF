@@ -17,7 +17,13 @@ import com.openggf.data.Rom;
 import com.openggf.game.sonic2.audio.Sonic2AudioProfile;
 import com.openggf.game.sonic2.audio.Sonic2Music;
 import com.openggf.game.sonic2.audio.Sonic2SoundRequestService;
+import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
+import com.openggf.game.sonic2.objects.BlueBallsObjectInstance;
+import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectServices;
+import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.tests.RomTestUtils;
+import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterEach;
@@ -71,6 +77,78 @@ class TestSonic2RequestConsequencesRom {
                 audio.commandTimeline().entries().getFirst().command();
         assertEquals(music.id, command.musicId(),
                 "native mailbox translation must not change the resolved song");
+    }
+
+    @Test
+    void chemicalPlantBlueBallsSubmitEveryVisibleGloopAndPlayOnOddDispatches() {
+        ObjectServices services = TestEnvironment.objectServices();
+        BlueBallsObjectInstance.resetGlobalState();
+        AbstractObjectInstance.updateCameraBounds(0, 0, 320, 224, 0);
+        List<Sonic2SoundRequestService.Event> events = new ArrayList<>();
+        AudioManager audio = install(events::add);
+        List<Integer> playedOn = new ArrayList<>();
+
+        // Obj1D_Wait (s2.asm:48398-48404) calls PlaySoundLocal (s2.asm:1555-1562).
+        // zPlaySound_CheckGloop (s2.sounddriver.asm:2138-2149) complements the initially
+        // clear zGloopFlag (s2.sounddriver.asm:4092) and plays when it becomes nonzero.
+        for (int event = 1; event <= 4; event++) {
+            int previousCommands = audio.commandTimeline().entryCount();
+            startBlueBall(services, 112);
+            audio.presentFrame(PresentationMode.FORWARD);
+            if (audio.commandTimeline().entryCount() > previousCommands) {
+                AudioCommand.PlaySfx command = (AudioCommand.PlaySfx)
+                        audio.commandTimeline().entries().getLast().command();
+                assertEquals(0xDA, command.sfxId());
+                playedOn.add(event);
+            }
+        }
+
+        assertEquals(List.of(0xDA, 0xDA, 0xDA, 0xDA), submittedSounds(events),
+                "each on-screen Obj1D event writes its raw gloop request");
+        assertEquals(List.of(1, 3), playedOn);
+    }
+
+    @Test
+    void offScreenAndOverwrittenBlueBallEventsDoNotAdvanceGloopPhase() {
+        ObjectServices services = TestEnvironment.objectServices();
+        BlueBallsObjectInstance.resetGlobalState();
+        AbstractObjectInstance.updateCameraBounds(0, 0, 320, 224, 0);
+        List<Sonic2SoundRequestService.Event> events = new ArrayList<>();
+        AudioManager audio = install(events::add);
+
+        startBlueBall(services, 320);
+        audio.presentFrame(PresentationMode.FORWARD);
+        assertEquals(List.of(), submittedSounds(events));
+        assertEquals(0, requestSnapshot(audio).pipeline().gloopFlag());
+
+        startBlueBall(services, 112);
+        assertTrue(audio.playSfx(0xA0)); // A later SFX0 write wins the same frame.
+        audio.presentFrame(PresentationMode.FORWARD);
+        assertEquals(List.of(0xDA, 0xA0), submittedSounds(events));
+        assertEquals(0, requestSnapshot(audio).pipeline().gloopFlag());
+
+        startBlueBall(services, 112);
+        audio.presentFrame(PresentationMode.FORWARD);
+        assertEquals(0xFF, requestSnapshot(audio).pipeline().gloopFlag());
+        assertEquals(List.of(0xA0, 0xDA), audio.commandTimeline().entries().stream()
+                .map(entry -> ((AudioCommand.PlaySfx) entry.command()).sfxId()).toList());
+    }
+
+    private static void startBlueBall(ObjectServices services, int y) {
+        ObjectSpawn spawn = new ObjectSpawn(160, y, Sonic2ObjectIds.BLUE_BALLS,
+                0, 0, false, 0);
+        BlueBallsObjectInstance ball = new BlueBallsObjectInstance(spawn, "BlueBalls");
+        ball.setServices(services);
+        ball.update(1, null); // Obj1D_Init
+        ball.update(2, null); // Obj1D_Wait with its initial timer of zero
+        ball.onUnload();
+    }
+
+    private static List<Integer> submittedSounds(List<Sonic2SoundRequestService.Event> events) {
+        return events.stream()
+                .filter(Sonic2SoundRequestService.Submission.class::isInstance)
+                .map(Sonic2SoundRequestService.Submission.class::cast)
+                .map(Sonic2SoundRequestService.Submission::rawRequestId).toList();
     }
 
     @Test
