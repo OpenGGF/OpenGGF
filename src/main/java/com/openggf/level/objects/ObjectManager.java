@@ -803,8 +803,7 @@ public class ObjectManager {
                     runTwoAxisLoadThenExecutePlacement(cameraX, false);
                 }
                 assignPendingPlayerSlotAllocations();
-                // S2: NO pre-exec load. ROM S2 is RunObjects (s2.asm:5095) then
-                // exactly one ObjectsManager (s2.asm:5112) = exec -> one load.
+                // Level_MainLoop (s2.asm:5095-5112) runs objects before the sole placement pass.
                 // The single S2 load runs in the post-block below
                 // (RunObjects -> ObjectsManager position), after runExecLoop has
                 // applied the object-side MarkObjGone self-deletes.
@@ -1419,8 +1418,8 @@ public class ObjectManager {
             return cameraX;
         }
         // S2 RunObjects consumes Camera_X_pos_coarse from the previous
-        // ObjectsManager pass. ObjectsManager_Main rewrites that coarse value
-        // after BuildSprites (docs/s2disasm/s2.asm:5111-5112, 33033-33036),
+        // ObjectsManager pass. After Level_MainLoop builds sprites (s2.asm:5111-5112),
+        // ObjectsManager_Main rewrites that coarse value (s2.asm:33032-33036),
         // so object-side MarkObjGone/MarkObjGone2 checks in the next
         // RunObjects pass must use the latched post-camera value rather than
         // recomputing from the live pre-camera value.
@@ -2261,7 +2260,7 @@ public class ObjectManager {
                     // obRender bit 7 is clear, so this child must stay touch-ineligible
                     // for one extra frame relative to a same-frame (higher-slot) child
                     // -- i.e. until the frame after its first own execution.
-                    // (docs/s1disasm/_incObj/sub ReactToItem.asm:50-51)
+                    // (_incObj/Sonic ReactToItem.asm:50-51)
                     objectCallbacks.run(object, aoi2::markAwaitingFirstTouchExecution);
                 }
             }
@@ -2561,6 +2560,23 @@ public class ObjectManager {
         placement.enablePermanentDestroyLatch();
     }
 
+    /**
+     * Rebuilds the load window after a tool or host explicitly places the camera.
+     * Retire out-of-range placements first so the destination can use their slots.
+     */
+    void refreshPlacementAfterRelocation() {
+        if (competitionStreaming.active() || competitionStreaming.upfrontActive()) return;
+        int cameraX = camera.getX();
+        updateCameraBounds();
+        for (ObjectSpawn spawn : List.copyOf(population.placed.keySet())) {
+            ObjectInstance instance = population.placed.get(spawn);
+            if (instance != null) unloadIfOutsideLifetimeWindow(instance, spawn, -1, cameraX);
+        }
+        placement.rebuildRelocatedWindow(cameraX, (spawn, savedFlagsId) ->
+                population.placed.containsKey(spawn) || inlineCreateObject(spawn, savedFlagsId));
+        syncActiveSpawnsLoad(true);
+    }
+
     /** Package-private: {@code Seek_Object_Manager}, reached through {@link ObjectPlacementSeek}. */
     void seekPlacementCursors(int cameraX) {
         placement.seekCursors(cameraX);
@@ -2572,10 +2588,7 @@ public class ObjectManager {
      * ROM parity: when Level_repeat_offset is non-zero, the ROM's ObjPosLoad
      * adjusts its cursor boundaries by the wrap distance so that the forward/backward
      * scan sees a continuous camera motion instead of a discontinuous jump.
-     * Without this adjustment, the engine's ObjectPlacementController system detects a negative
-     * camera delta, triggering a full {@code refreshWindow()} that can re-spawn
-     * objects already in the scene (e.g., the AIZ2 end boss during the bombing
-     * sequence camera loop).
+     * A scroll loop therefore keeps advancing from its existing cursor state.
      *
      * @param wrapDelta the positive distance the camera was moved backward
      */
@@ -3290,8 +3303,7 @@ public class ObjectManager {
      * {@link ObjectInstance#usesCustomOutOfRangeCheck()} with a no-op
      * {@link ObjectInstance#isCustomOutOfRange(int)}) and instead call
      * {@code setDestroyedByOffscreen()} from their own routine — e.g. the
-     * Caterkiller, whose {@code Cat_Despawn} (docs/s1disasm/_incObj/78 Badnik -
-     * Caterkiller.asm:139-148) runs after its fragment-entry check and clears
+     * Caterkiller, whose {@code Cat_Despawn} (_incObj/78 Badnik - Caterkiller.asm:145-154) runs after its fragment-entry check and clears
      * {@code bit 7} of its {@code v_objstate} entry so the placement cursor
      * re-spawns it when the player returns. Those self-deletes reach the
      * destroyed-removal path, which previously only called

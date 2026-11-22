@@ -148,6 +148,10 @@ under the matching area heading; see the
   In Palmtree Panic Act 1 Present, Amy Rose chases even a stationary Sonic
   until she's close enough to wait. Sonic can jump free, and removing Amy
   during a grab also returns control. Time Attack restores the stage palette.
+  The layout spawner preserves its cursors and live slots during gameplay,
+  so objects load and run in disc order through the act clear. Explicit
+  relocations rebuild the object window and refresh collision responses so
+  Stageplay can capture rewind state at the destination.
   Rewind also restores the title
   card, HUD, and points popups. The master title lists Sonic CD when the disc is
   configured or found (`roms.default: scd` boots it directly) and verifies it

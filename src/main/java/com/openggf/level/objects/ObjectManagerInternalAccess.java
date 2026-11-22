@@ -99,6 +99,13 @@ public final class ObjectManagerInternalAccess {
     }
     private ObjectManagerInternalAccess() { }
 
+
+    /** Rebuilds the object window and collision responses after the host repositions a loaded viewport. */
+    public static void refreshPlacementAfterRelocation(ObjectManager manager) {
+        manager.refreshPlacementAfterRelocation();
+        manager.captureCollisionResponseListForNextFrame();
+    }
+
     /**
      * A ROM write to the object loop counter made by the main player's slot, which the engine runs before the object
      * pass: this frame's pass walks only {@code remainingSlots} further slots (see

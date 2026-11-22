@@ -24,6 +24,7 @@ import com.openggf.game.soniccd.objects.common.CdSpring;
 import com.openggf.game.soniccd.objects.ppz.PpzPlatform;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectManagerInternalAccess;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TouchCategory;
@@ -125,6 +126,7 @@ class TestSonicCdCommonObjects {
         sonic.setCentreX((short) 0xB58);
         sonic.setCentreY((short) 0x346);
         GameServices.camera().updatePosition(true);
+        ObjectManagerInternalAccess.refreshPlacementAfterRelocation(GameServices.level().getObjectManager());
         // This part of the disc layout has no ring placements. Keep a witness slot in the same object pass.
         CdRing ring = add(new CdRing(new ObjectSpawn(0xB90, 0x338, 0x10, 0, 0, false, 0)));
         runner.stepIdleFrames(128);

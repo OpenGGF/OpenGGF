@@ -392,6 +392,38 @@ public class TestObjectPlacementManager {
     }
 
     @Test
+    void forwardSpawnerRetriesParkedEntryWithTheSameSavedFlagsId() {
+        ObjectSpawn loaded = new ObjectSpawn(0x0280, 0x0100, 0x2D, 0, 0, true, 0x0100);
+        ObjectSpawn parked = new ObjectSpawn(0x0290, 0x0100, 0x2E, 0, 0, true, 0x0100);
+        var placement = new ObjectPlacementController(List.of(loaded, parked), () -> 320);
+        placement.enableCounterBasedRespawn();
+        placement.enableSpawnerBeforeObjectPass();
+        placement.unmarkEntryOnFailedSpawn();
+        placement.reset(0);
+
+        List<Integer> attempts = new ArrayList<>();
+        placement.updateAndLoad(0x0080, (spawn, savedFlagsId) -> {
+            attempts.add(savedFlagsId);
+            return spawn == loaded;
+        });
+        assertEquals(List.of(1, 2), attempts);
+
+        List<ObjectSpawn> retried = new ArrayList<>();
+        List<Integer> retryIds = new ArrayList<>();
+        ObjectPlacementController.SpawnCallback freeSlot = (spawn, savedFlagsId) -> {
+            retried.add(spawn);
+            retryIds.add(savedFlagsId);
+            return true;
+        };
+        placement.updateAndLoad(0x0081, freeSlot);
+        assertTrue(retried.isEmpty(), "A free slot alone does not restart the forward scan");
+
+        placement.updateAndLoad(0x0100, freeSlot);
+        assertEquals(List.of(parked), retried);
+        assertEquals(List.of(2), retryIds, "The parked object must reuse its saved-flags byte");
+    }
+
+    @Test
     public void testBackwardCounteredNonTrackedSpawnCreatesInlineDuringUpdateAndLoad() {
         ObjectSpawn spawn = new ObjectSpawn(0x0AD0, 0, 0x32, 0, 0, false, 0);
         ObjectPlacementController manager = new ObjectPlacementController(List.of(spawn), () -> 320);

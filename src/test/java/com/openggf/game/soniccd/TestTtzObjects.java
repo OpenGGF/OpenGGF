@@ -22,6 +22,7 @@ import com.openggf.game.soniccd.release.CdRetailReleases;
 import com.openggf.game.soniccd.timetravel.CdTimeTravel;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectManagerInternalAccess;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.physics.GroundSensor;
@@ -349,6 +350,7 @@ class TestTtzObjects {
         sonic.setCentreY((short) 1608);
         sonic.setAir(true);
         GameServices.camera().updatePosition(true);
+        ObjectManagerInternalAccess.refreshPlacementAfterRelocation(GameServices.level().getObjectManager());
 
         runner.stepIdleFrames(1680);
         for (int i = 0; i < 22; i++) runner.stepFrame(false, false, false, true, false);
@@ -417,6 +419,7 @@ class TestTtzObjects {
         sonic.setCentreX((short) placement.x());
         sonic.setCentreY((short) placement.y());
         GameServices.camera().updatePosition(true);
+        ObjectManagerInternalAccess.refreshPlacementAfterRelocation(GameServices.level().getObjectManager());
         runner.stepIdleFrames(1);
         assertEquals(CdSonicAnimation.HANG.id(), sonic.getAnimationId());
         assertTrue(sonic.isObjectControlSuppressesMovement(), "the disc-placed pole gripped Sonic");
