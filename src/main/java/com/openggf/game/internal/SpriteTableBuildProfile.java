@@ -6,7 +6,11 @@ import com.openggf.game.GameModule;
 public interface SpriteTableBuildProfile {
     static SpriteTableBuildProfile forModule(GameModule module) {
         if (module instanceof SpriteTableBuildProfile profile) return profile;
-        return module == null ? null : module.getGameService(SpriteTableBuildProfile.class);
+        if (module == null) return null;
+        var service = module.getGameService(SpriteTableBuildProfile.class);
+        if (service != null) return service;
+        // Decorators and engine-owned projections may only expose the GameModule surface.
+        return NativeGameModuleLineage.root(module) instanceof SpriteTableBuildProfile profile ? profile : null;
     }
 
     enum PlacedRings {

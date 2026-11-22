@@ -7,6 +7,10 @@ under the matching area heading; see the
 
 ## Gameplay and presentation
 
+- **Placed rings in patched and hosted levels** use the underlying
+  game's vertical placement and clipping rules. In Knuckles in Sonic 2, rings
+  disappear as their centres cross the top of the screen, as on the cartridge.
+
 - **The Doomsday Zone:** the second boss phase preserves the ship's fractional
   vertical position, Hyper Sonic's after-image uses the original history slots,
   and his palette keeps cycling through the white exit fade.
