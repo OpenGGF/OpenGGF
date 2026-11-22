@@ -16,6 +16,13 @@ Each entry has a kind in the [table of contents](#table-of-contents). Some
 entries also record related limits or historical evidence. See also [S3K known bugs](status/s3k-known-bugs.md), [cross-game known bugs](status/known-bugs.md),
 and [cross-game known discrepancies](status/known-discrepancies.md).
 
+**Badnik score-popup dispatch (2026-11-22):** normal badnik destruction
+allocates the score popup from the animal's first dispatch. The HCZ slice
+matches the native empty slot 17 on row 417 and the popup on row 418. The
+[remaining occupancy differences](status/known-discrepancies.md#object-slot-occupancy-is-not-compared-and-diverges-from-rom-in-all-three-games)
+include earlier allocation differences that change whether the animal runs in
+the explosion's pass.
+
 ## Hosted solo arena presentation (2026-11-07)
 
 **Kind:** Engine feature
