@@ -646,12 +646,15 @@ under the matching area heading; see the
   Object coverage inventories all 70 zone/act/period contexts without implying
   behavior or pixel certification. Cartridge preview and exports retain their
   reader boot path alongside disc hosting. Validation scope is recorded in the
-  Sonic CD Stageplay validation record.
+  Sonic CD Stageplay validation record. The preview worker accepts a supplied
+  Sonic CD disc in both media descriptor and direct-path modes.
 
 - **Sonic CD mod host:** admit `scd` patch manifests and `any` registrations;
   route hosted runs through the disc launcher, expose file-addressed scene and
-  object art, and accept CDDA/PCM music-command replacements. Module capabilities
-  select native run characters. CD can host cartridge-donated S1 Sonic, S2
+  object art, and accept CDDA/PCM music-command replacements. The stock game
+  catalogue supplies mod targets and tool choices. Contribution reports include
+  CD for `any` registrations, and `ggfmod art-keys --game scd` lists CD art keys.
+  Module capabilities select native run characters. CD can host cartridge-donated S1 Sonic, S2
   Sonic/Tails and S3K Sonic/Tails/Knuckles, with donor-owned art, abilities,
   life icons and results names. Donated life icons use owned object-pattern banks
   so empty foreground cells and HUD text retain the disc stage's tiles.

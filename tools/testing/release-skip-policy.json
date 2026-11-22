@@ -9450,6 +9450,13 @@
       "note": "Sonic CD disc and the native full-act recording"
     },
     {
+      "match": "com.openggf.tools.TestStageplayPreviewTool#previewsSonicCdFromDirectDiscPath",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/tools/TestStageplayPreviewTool.java:24",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Sonic CD USA disc for the direct-path Stageplay preview worker"
+    },
+    {
       "match": "com.openggf.game.soniccd.TestSszGroundAnimal#groundAnimalMatchesNativeHopsDrawAndRetirement",
       "category": "optional-fixture",
       "evidence": "src/test/java/com/openggf/game/soniccd/TestSszGroundAnimal.java:41",

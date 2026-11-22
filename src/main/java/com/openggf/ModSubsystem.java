@@ -1,5 +1,6 @@
 package com.openggf;
 
+import com.openggf.catalog.StockGameCatalog;
 import com.openggf.mods.EffectiveModCatalog;
 import com.openggf.mods.ModCatalog;
 import com.openggf.mods.ModCatalogEntry;
@@ -230,8 +231,8 @@ public final class ModSubsystem implements AutoCloseable {
         String preferred = com.openggf.game.GameServices.configuration().getString(
                 com.openggf.configuration.SonicConfiguration.DEFAULT_ROM);
         java.util.LinkedHashSet<String> games = new java.util.LinkedHashSet<>();
-        if (preferred != null && java.util.List.of("s1", "s2", "s3k", "scd").contains(preferred)) games.add(preferred);
-        games.addAll(java.util.List.of("s1", "s2", "s3k", "scd"));
+        if (StockGameCatalog.isStockCode(preferred)) games.add(preferred);
+        games.addAll(StockGameCatalog.stockCodes());
         for (String game : games) {
             var hosted = com.openggf.game.launch.HostedMediaLaunch.hostedGame(game);
             if (hosted.isPresent()) {
@@ -459,7 +460,7 @@ public final class ModSubsystem implements AutoCloseable {
         Objects.requireNonNull(registry, "registry");
         Objects.requireNonNull(sfxRegistry, "sfxRegistry");
         return (outputRate, gameCode) -> {
-            boolean stock = "s1".equals(gameCode) || "s2".equals(gameCode) || "s3k".equals(gameCode) || "scd".equals(gameCode);
+            boolean stock = StockGameCatalog.isStockCode(gameCode);
             boolean selectedTrack = stock ? !registry.tracks().isEmpty() : registry.tracks().stream()
                     .anyMatch(track -> track.key().modId().equals(gameCode));
             boolean selectedSfx = stock ? !sfxRegistry.sfx().isEmpty() : sfxRegistry.sfx().stream()

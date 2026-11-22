@@ -2,6 +2,7 @@ package com.openggf.trace.catalog;
 
 import com.openggf.debug.playback.Bk2Movie;
 import com.openggf.debug.playback.Bk2MovieLoader;
+import com.openggf.catalog.StockGameCatalog;
 import com.openggf.game.save.SelectedTeam;
 import com.openggf.trace.TraceFiles;
 import com.openggf.trace.TraceMetadata;
@@ -54,7 +55,7 @@ public final class TraceCatalog {
 
     private static final RunDescriptorPlanner DEFAULT_RUN_DESCRIPTOR_PLANNER =
             TraceRunReplayWalker::planDescriptors;
-    private static final List<String> VALID_GAME_IDS = List.of("s1", "s2", "s3k");
+    private static final List<String> VALID_GAME_IDS = StockGameCatalog.cartridgeCodes();
     private static final Comparator<String> GAME_ORDER =
             Comparator.comparingInt(VALID_GAME_IDS::indexOf);
 
