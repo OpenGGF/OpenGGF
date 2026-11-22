@@ -31,8 +31,6 @@ public final class CdSignpost extends CdObject implements ObjectVisualFacing.Non
     private int timer;
     private int mapFrame;
     private CdAnimator animator;
-    private int timeBonus;
-    private int ringBonus;
 
     public CdSignpost(ObjectSpawn spawn) {
         super(spawn, "Signpost");
@@ -93,17 +91,13 @@ public final class CdSignpost extends CdObject implements ObjectVisualFacing.Non
     /** StartResults (Level End/Main.asm:816-866) through the shared tail ({@link #startResults()}). */
     private void startResultsWhenDue() {
         if (--timer != 0) return;
-        ResultsBonuses bonuses = startResults();
+        startResults();
         timer = 180;
         routine = 8;
-        timeBonus = bonuses.time();
-        ringBonus = bonuses.ring();
     }
 
     int routine() { return routine; }
     int mapFrame() { return mapFrame; }
-    int timeBonus() { return timeBonus; }
-    int ringBonus() { return ringBonus; }
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {

@@ -8,7 +8,7 @@
 This document tracks **bugs**, incomplete implementations, and known parity gaps that we intend to fix but haven't addressed yet. Entries here are *not* intentional — they're acknowledged problems with a plan (or hope) of eventual resolution.
 
 OpenGGF has no deliberate engine-wide differences. [Known discrepancies](known-discrepancies.md)
-are limited to hardware OpenGGF does not emulate, such as CPU lag. The Sonic CD
+must be limited to hardware OpenGGF does not emulate, such as CPU lag. The Sonic CD
 entries have been audited against this rule and identify engine features
 explicitly as features. The Sonic 1, Sonic 2, Knuckles in Sonic 2 and
 [S3K entries](../S3K_KNOWN_DISCREPANCIES.md) predate the rule and still need

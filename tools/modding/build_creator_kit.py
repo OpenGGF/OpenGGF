@@ -132,7 +132,7 @@ def export_examples(root):
         game = base_game.group(1) if base_game else None
         launch_game = game if game in MEDIA_INPUTS else "s2"
         launch_media = ('--scd "/absolute/own-scd.chd"' if launch_game == "scd"
-                        else f"--{launch_game} /absolute/own-{launch_game}.gen")
+                        else f'--{launch_game} "/absolute/own-{launch_game}.gen"')
         test_media = f" {launch_media}" if game in MEDIA_INPUTS else ""
         legacy = " --expert-legacy" if name in pending else ""
         legacy_note = ("\nThis example still references engine internals outside the supported Mod API\n"
@@ -169,7 +169,7 @@ and resources enter that jar. Alternatively, build with Maven and matching absol
 artifact paths:
 
 ```sh
-mvn package -Dopenggf.engine.jar=/absolute/kit/engine.jar -Dopenggf.sdk.jar=/absolute/kit/sdk.jar
+mvn package -Dopenggf.engine.jar="/absolute/kit/engine.jar" -Dopenggf.sdk.jar="/absolute/kit/sdk.jar"
 ```
 
 Launch with your own game media. The command supplies the {launch_game} path.

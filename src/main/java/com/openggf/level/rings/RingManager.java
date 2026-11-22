@@ -6,6 +6,7 @@ import com.openggf.game.competition.NativeCompetitionRoster;
 import com.openggf.audio.AudioManager;
 import com.openggf.audio.GameSound;
 import com.openggf.game.GameModule;
+import com.openggf.game.internal.SpriteTableBuildProfile;
 import com.openggf.game.GameServices;
 import com.openggf.game.LevelState;
 import com.openggf.game.internal.RingExtraLifeReplacesPickupSound;
@@ -70,7 +71,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
     private final AudioManager audioManager;
     private final boolean stageRingsUseObjectTouchCollection;
     private final boolean ringExtraLifeReplacesPickupSound;
-    private final com.openggf.game.internal.SpriteTableBuildProfile spriteTableProfile;
+    private final SpriteTableBuildProfile spriteTableProfile;
     private PatternSpriteRenderer.FrameBounds spinBounds;
     private final AttractedRing[] attractedRings;
     private int attractedRingTargetX;
@@ -96,8 +97,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         // S1 routes stage rings through Obj25's touch-response pipeline (Touch_Rings);
         // S2/S3K collect them via the bounding-box sweep (Touch_Rings_Test).
         GameModule module = GameServices.currentOrBootstrapGameModule();
-        this.spriteTableProfile = module instanceof com.openggf.game.internal.SpriteTableBuildProfile profile
-                ? profile : null;
+        this.spriteTableProfile = SpriteTableBuildProfile.forModule(module);
         var lostRingId = module != null
                 ? module.getGameService(com.openggf.game.internal.LostRingObjectId.class) : null;
         this.lostRingObjectId = lostRingId != null
@@ -730,11 +730,11 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             if (index < 0) continue;
             RingSpawn ring = placement.getSpawn(index);
             var yRule = spriteTableProfile == null
-                    ? com.openggf.game.internal.SpriteTableBuildProfile.PlacedRingY.OBJECT_MAPPING
+                    ? SpriteTableBuildProfile.PlacedRingY.OBJECT_MAPPING
                     : spriteTableProfile.placedRingY();
             int drawY = ring.y();
-            if (yRule != com.openggf.game.internal.SpriteTableBuildProfile.PlacedRingY.OBJECT_MAPPING) {
-                int shifted = yRule == com.openggf.game.internal.SpriteTableBuildProfile.PlacedRingY.MASK_11_BEFORE_BIAS
+            if (yRule != SpriteTableBuildProfile.PlacedRingY.OBJECT_MAPPING) {
+                int shifted = yRule == SpriteTableBuildProfile.PlacedRingY.MASK_11_BEFORE_BIAS
                         ? ((ring.y() - cameraY) & 0x7FF) + 8
                         : (ring.y() - cameraY + 8) & screenYWrapMask;
                 // BuildRings (s2.asm:32043-32057), FixBugs=0: mask before +8;

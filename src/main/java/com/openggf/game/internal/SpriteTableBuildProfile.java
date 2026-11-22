@@ -1,7 +1,14 @@
 package com.openggf.game.internal;
 
+import com.openggf.game.GameModule;
+
 /** Native sprite-table producer order; independent of game names and presentation width. */
 public interface SpriteTableBuildProfile {
+    static SpriteTableBuildProfile forModule(GameModule module) {
+        if (module instanceof SpriteTableBuildProfile profile) return profile;
+        return module == null ? null : module.getGameService(SpriteTableBuildProfile.class);
+    }
+
     enum PlacedRings {
         OBJECT_SLOTS,
         OBJECT_SLOTS_WITH_LAYOUT_MARGINS,

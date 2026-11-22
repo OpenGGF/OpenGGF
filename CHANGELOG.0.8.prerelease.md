@@ -237,7 +237,9 @@ under the matching area heading; see the
   blocks, including wall probes and dropped rings. Dropped rings and other
   floor-probing objects lose high tile priority when their probe reads an ordinary
   chunk. In Wacky Workbench, floor, wall and ceiling reads track each object's
-  loop path and clear tile priority on entry through the loop chunk. The Past
+  loop path and clear tile priority on entry through the loop chunk. Seesaws
+  probe the inward edge of their pads, and Bata-pyon and the bounce platform
+  use the native upward ceiling probe. The Past
   robot generator reacts to rolling contact over the disc's wider touch box.
   Stage loads clear the state native
   clears, so playing stages in any order matches playing each alone. In normal

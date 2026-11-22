@@ -2217,8 +2217,7 @@ public final class LevelRenderer {
                 lm.hudRenderManager.draw(lm.levelGamestate, lm.camera.getFocusedSprite());
                 graphicsManager.setCurrentSpriteHighPriority(false);
             }
-            SpriteTableBuildProfile ringProfile = lm.gameModule instanceof SpriteTableBuildProfile profile
-                    ? profile : lm.gameModule == null ? null : lm.gameModule.getGameService(SpriteTableBuildProfile.class);
+            SpriteTableBuildProfile ringProfile = SpriteTableBuildProfile.forModule(lm.gameModule);
             PlacedRings placedRings = ringProfile == null ? null : ringProfile.placedRingEmission();
             if (ringManager != null && placedRings == PlacedRings.BEFORE_OBJECT_BUCKETS) {
                 SpritePresentation.layer(graphicsManager, SpritePresentation.Layer.RINGS);

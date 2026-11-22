@@ -76,6 +76,23 @@ class BuildProjectTest(unittest.TestCase):
         config = self.project / "target/play/config.yaml"
         self.assertIn(f"  soniccd: {json.dumps(str(disc))}", config.read_text().splitlines())
 
+    def test_sonic_cd_disc_is_passed_to_junit_launcher(self):
+        self.settings(scd="missing-local.chd", testkit="../testkit.jar")
+        disc = Path(self.temp.name) / "Sonic CD (USA).chd"
+        disc.touch()
+        source = self.project / "src/test/java/ModTest.java"
+        source.parent.mkdir(parents=True)
+        source.write_text("class ModTest {}")
+        console = self.project / "target/test-libs/junit-platform-console-standalone-1.10.3.jar"
+        console.parent.mkdir(parents=True)
+        console.touch()
+        with patch.object(launcher.subprocess, "run", side_effect=self.probe) as run:
+            result, _ = self.invoke("--test", "--scd", disc)
+        self.assertEqual(0, result)
+        command = next(call.args[0] for call in run.call_args_list
+                       if "com.openggf.mods.testing.CreatorTestLauncher" in call.args[0])
+        self.assertIn(f"-Dsoniccd.disc.path={disc.resolve()}", command)
+
     def test_supported_default_and_expert_opt_out(self):
         source = self.project / "src/main/java/Probe.java"
         source.parent.mkdir(parents=True)

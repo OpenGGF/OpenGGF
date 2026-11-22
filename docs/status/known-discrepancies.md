@@ -6,8 +6,8 @@ entries have been audited against this rule. They document hardware limits
 and identify engine features explicitly as features. Sonic CD parity gaps
 belong in [known bugs](known-bugs.md).
 
-The Sonic 1, Sonic 2 and Knuckles in Sonic 2 entries here and the separate
-[S3K known discrepancies](../S3K_KNOWN_DISCREPANCIES.md) predate this rule and
+Every other entry here, and the separate
+[S3K known discrepancies](../S3K_KNOWN_DISCREPANCIES.md), predate this rule and
 still need the same audit. See also [S3K known bugs](s3k-known-bugs.md).
 
 ## Hosted Competition checkpoint reload and monitor OFF (2026-11-07)
@@ -3973,7 +3973,9 @@ Model 2, at capture frames 9189 and 9529. It clears `sndPlay`, the queues,
 `rValue`, and all six track slots, stopping any other FM effects still
 playing. The driver then silences all six FM channels at 6,779 and 7,133
 frames after admission, at capture frames 9204 and 9558. The captures show
-writes to RR `$80–$8C = $FF`, TL `$40–$4C = $7F`, and SSG-EG
-`$90–$9C = $00`, with key-offs `$28 = 0,1,2,4,5,6`. OpenGGF has no boot-ROM
+writes of `$FF` to each channel's RR registers, `$7F` to its TL registers,
+and `$00` to its SSG-EG registers. `WriteYMTrk` (Sound Drivers/FM/_Driver.asm:670-677)
+and `WriteYM2Trk` (Sound Drivers/FM/_Driver.asm:703-707) select the part and
+add the channel offset. Key-offs write `0,1,2,4,5,6` to `$28`. OpenGGF has no boot-ROM
 stream and omits both BIOS-driven effects. The engine holds FM1 until
 another FM1 request replaces the track and leaves other FM effects playing.
