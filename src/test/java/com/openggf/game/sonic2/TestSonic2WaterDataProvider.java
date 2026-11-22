@@ -1,8 +1,12 @@
 package com.openggf.game.sonic2;
 
+import com.openggf.game.GameServices;
 import com.openggf.game.OscillationManager;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
+import com.openggf.tests.HeadlessTestFixture;
+import com.openggf.tests.rules.RequiresRom;
+import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -137,10 +141,8 @@ public class TestSonic2WaterDataProvider {
 
     @Test
     public void testCpz2GameplayOffsetTracksRawRomOscillationAfterStepping() {
-        // ROM MoveWater writes Water_Level_1 = Water_Level_2 +
-        // ((Oscillating_Data).w >> 1), then Sonic_Water compares against
-        // Water_Level_1. Refs: docs/s2disasm/s2.asm:5273-5282 and
-        // docs/s2disasm/s2.asm:36375-36380.
+        // MoveWater (s2.asm:5273-5282) shifts the first oscillator byte.
+        // Sonic_Water (s2.asm:36366-36380) compares against the resulting height.
         OscillationManager.reset();
         for (int frame = 1; frame <= 50; frame++) {
             OscillationManager.update(frame);
@@ -163,32 +165,49 @@ public class TestSonic2WaterDataProvider {
     // =========================================================================
 
     @Test
-    public void testCpz2VisualOffsetAtResetIsMinusEight() {
-        // CPZ centres the bob around 0 by subtracting half the limit (8) from
-        // oscillator 0's high byte. After reset, oscillator 0's value word is
-        // 0x0080 -> high byte 0x00 -> expected offset = 0 - 8 = -8.
+    public void testCpz2VisualOffsetMatchesGameplayAtReset() {
         OscillationManager.reset();
-        assertEquals(-8, provider.getVisualWaterLevelOffset(ZONE_CPZ, 1));
+        assertEquals(0, provider.getVisualWaterLevelOffset(ZONE_CPZ, 1));
+        assertEquals(provider.getGameplayWaterLevelOffset(ZONE_CPZ, 1),
+                provider.getVisualWaterLevelOffset(ZONE_CPZ, 1));
     }
 
     @Test
-    public void testCpz2VisualOffsetTracksOscillatorAfterStepping() {
-        // After stepping the oscillator several frames, getByte(0) must move
-        // off zero and the provider must return getByte(0) - 8.
+    public void testCpz2VisualOffsetMatchesGameplayAcrossOscillatorCycle() {
+        // MoveWater (s2.asm:5273-5296) uses the same Water_Level_1 for the palette split.
+        // ARZ bypasses the oscillator while CPZ2 applies half the unsigned byte.
         OscillationManager.reset();
-        for (int frame = 1; frame <= 50; frame++) {
+        int peak = 0;
+        int byte0 = 0;
+        for (int frame = 1; frame <= 256; frame++) {
             OscillationManager.update(frame);
+            byte0 = OscillationManager.getByte(0);
+            peak = Math.max(peak, byte0);
+            int visualOffset = provider.getVisualWaterLevelOffset(ZONE_CPZ, 1);
+            assertEquals(byte0 >> 1, visualOffset, "CPZ2 visual offset at frame " + frame);
+            assertEquals(provider.getGameplayWaterLevelOffset(ZONE_CPZ, 1), visualOffset);
+            assertEquals(0, provider.getVisualWaterLevelOffset(ZONE_ARZ, 0));
+            assertEquals(0, provider.getGameplayWaterLevelOffset(ZONE_ARZ, 0));
+            if (peak > 0 && byte0 == 0) {
+                break;
+            }
         }
-        int byte0 = OscillationManager.getByte(0);
-        assertNotEquals(0, byte0, "Oscillator 0 should have advanced after 50 update() calls");
-        assertEquals(byte0 - 8, provider.getVisualWaterLevelOffset(ZONE_CPZ, 1));
+        assertTrue(peak > 0, "Oscillator must rise above its starting byte");
+        assertEquals(0, byte0, "Oscillator must return to its starting byte");
     }
 
     @Test
-    public void testArzVisualOffsetIsZero() {
-        // S2 ARZ has a static water surface (no oscillation offset applied).
-        OscillationManager.reset();
-        assertEquals(0, provider.getVisualWaterLevelOffset(ZONE_ARZ, 0));
+    @RequiresRom(SonicGame.SONIC_2)
+    public void testCpz2BootPublishesNativeWaterHeightToRendering() throws Exception {
+        HeadlessTestFixture.builder().withZoneAndAct(Sonic2ZoneConstants.ZONE_CPZ, 1)
+                .withFreshLevelStartLifecycle().build();
+        var water = GameServices.water();
+        assertTrue(water.hasWater(ZONE_CPZ, 1));
+        // WaterHeight (s2.asm:5333-5341) supplies the starting base.
+        assertEquals(0x0710, water.getWaterLevelY(ZONE_CPZ, 1));
+        int expected = 0x0710 + (OscillationManager.getByte(0) >> 1);
+        assertEquals(expected, water.getGameplayWaterLevelY(ZONE_CPZ, 1));
+        assertEquals(expected, water.getVisualWaterLevelY(ZONE_CPZ, 1));
     }
 
     @Test
