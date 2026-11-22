@@ -7,6 +7,10 @@ under the matching area heading; see the
 
 ## Gameplay and presentation
 
+- **Angel Island Act 2:** the end boss now loads and shows EggRobo's head when
+  Knuckles reaches the fight. Sonic keeps Eggman's head. Rewind preserves the
+  art queue's progress through the encounter.
+
 - **Placed rings in patched and hosted levels** use the underlying
   game's vertical placement and clipping rules. In Knuckles in Sonic 2, rings
   disappear as their centres cross the top of the screen, as on the cartridge.

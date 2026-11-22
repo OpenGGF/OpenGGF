@@ -125302,3 +125302,23 @@ env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4 \
   -Dopenggf.surefire.reports=target/u54-focused \
   '-Dtest=TestCdScarabRebound,TestCdDangoTouch,TestMmzObjects2,TestSszObjects,TestSonicCdRoutesBLongNative,TestEnemyDefeatMutator,TestTouchResponseManager,TestTouchResponseProfileMapping,TestSonic1PoleThatBreaksObjectInstance,TestCrawlBadnikInstance,TestS3kSnaleBlasterBadnik,TestBroadCatchSwallowingGuard,TestZoneEventRuntimeAccessGuard,TestObjectPhysicsStandardizationGuard,TestRewindCoverageGuard,TestAudioPresentationArchitectureGuard,TestCameraRelativeDrawGuard,TestBuildToolingGuard,TestBootstrapModuleProviderCachingGuard' test -B
 ```
+
+## 2026-11-22 - Mega AIZ2 boss head queue
+
+- Matched run: `TestS3kMegaRunChain#multiBonusSpecialStageRoundTrip` under
+  `-Ptrace-replay-r7`, one fork, surfaceless EGL, all ROM properties found.
+  Base `766cb71d7d`. Both invocations report one failed test at the same
+  segment 8 source-closure assertion (LEVEL, generation 11, BK2 cursor 25811).
+- Segments 0–7 report zero errors on both sources. Segment 8's first error
+  moves from row 1117 `queue.s3k_kos_direct.busy` ROM true / Java false to
+  row 1168 `player_animation_id` ROM 0x0021 / Java 0x0020.
+  The incomplete slice has 3,447 → 3,453 field
+  errors. The animation count stays at 581. The physics group, which includes
+  queue fields, rises from 2,866 to 2,872. The first remaining physics error
+  is row 1169 `y_sub` ($7700/$9700) in the glide-rebound window.
+  The head consumes recorded direct completion #137 at PRE_MAIN_LOOP and
+  module #87 at POST_OBJECTS. The source-closure assertion remains at the same
+  movie cursor.
+- An intermediate candidate submitted one row early at 1116. Separating
+  `Obj_AIZEndBossMusic` from the next dispatch of `Obj_AIZEndBossMain` aligns
+  the native allocation pass. See the [AIZ2 matrix](../architecture/validation/levels/s3k-aiz2.md#native-aiz2-boss-head-art-2026-11-22).
