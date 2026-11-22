@@ -63,7 +63,8 @@ under the matching area heading; see the
   and stage rings share the sprite budget in object order. Stage rings draw
   once per frame, and unloaded rings in native widescreen margins stay frozen.
   All ten Collision Chaos stages draw moving background bands from their disc
-  layouts and keep the static bands repeating. Defeated badniks
+  layouts and keep the static bands repeating. Their foreground terrain wobbles
+  along the lower part of the stage as it does on the disc. Defeated badniks
   play the disc's destroy sound, and Mosqui, Tamabboh and Palmtree Panic's Taga-Taga
   play their own effects on impact, firing, takeoff or landing while the badnik is
   on screen. Palmtree
