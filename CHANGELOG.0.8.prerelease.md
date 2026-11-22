@@ -7,6 +7,9 @@ under the matching area heading; see the
 
 ## Gameplay and presentation
 
+- **Sonic 1 and Sonic 2 title cards** now count each serviced wait toward the
+  V-int clock used by objects, preserving the timing phase carried into the act.
+
 - **Placed rings in patched and hosted levels** use the underlying
   game's vertical placement and clipping rules. In Knuckles in Sonic 2, rings
   disappear as their centres cross the top of the screen, as on the cartridge.

@@ -2361,31 +2361,11 @@ controls are recorded in the [pause qualification](../architecture/validation/20
 This is a repaired parity defect, not an intentional paused-clock exception.
 Those bounded checks do not establish every whole-run clock row.
 
-Remaining row-specific limits are unchanged:
+Two row-specific limits remain:
 
 - **Seamless-boundary LAG rows** (deliberate). Some service
   `LevelFrameStep.serviceVBlankOnly` without an explicit counter tick; the pause
   repair changes only successful native pause claims.
-- **S1 and S2 title-card locked-phase rows** (deliberate, cross-game work
-  pending). `Level_TtlCard` runs its scroll-in loop with a `WaitForVint` on
-  every pass (`docs/s2disasm/s2.asm:4914-4916`; Sonic 1 has the identical
-  property), so each of those passes is a real serviced V-blank and the ROM
-  counter advances through the card. `Sonic2TitleCardManager` and
-  `Sonic1TitleCardManager` both leave
-  `shouldAdvanceVblankClockDuringLockedPhase()` at the `TitleCardProvider`
-  default of `false`, so the engine takes the camera-only branch and does not
-  tick. **`Sonic3kTitleCardManager` already returns `true`
-  (`Sonic3kTitleCardManager.java:827`), so S3K models this correctly and S1/S2
-  are the outliers** -- the correct end state is for all three to return `true`.
-  This was surfaced, not introduced, by `bugfix/ai-s2-seg15-r1`: before that
-  change S2 dispatched objects during the locked phase, which incidentally
-  advanced the clock, and freezing the objects to match `ObjectsManager`'s ROM
-  position at `s2.asm:5003` left the clock behaviour visible on its own. It is
-  not fixed there because S1 has the identical gap, making this a cross-game
-  change whose trace movement would be unattributable if folded into an
-  object-lifetime fix. It is a plausible cause of the current
-  `TestS2CompleteEmeraldRunChain` frontier at segment 15 frame 409.
-
 - **Special-stage results-screen presentation rows** (modelled around, not
   fixed). A trace run's stage-exit presentation bridge plays every recorded row
   of `SS_Finish`'s fade-out and the results screen, but no level loop runs on
@@ -2439,8 +2419,7 @@ and WFZ1 alone cannot identify a lost interrupt.
 
 These are hardware limits because the submission row and masked-window
 duration depend on CPU phase within a video frame, which the engine does
-not model. Production title-card waits are covered under
-[Remaining V-int Clock Limits Outside Native Start Pause](#remaining-v-int-clock-limits-outside-native-start-pause).
+not model. Production title-card waits count their own serviced V-ints.
 
 The HTZ1 → HTZ2 gap shows 32 transfer and ledger field differences after
 gameplay diverges. That gap, the chain's physics divergences at ARZ2 row 5512,
