@@ -92,6 +92,8 @@ public final class LiveRewindManager {
     private StepperKind installedStepperKind;
     private LiveRewindInputSource inputSource;
     private RewindController rewindController;
+    // Only a new history or an explicit boundary reset can replace its floor.
+    private boolean awaitingSafeFloor;
     private RewindSpeedController speedController = RewindSpeedController.disabled();
     private InputHandler activeInputHandler;
     private boolean rewinding;
@@ -116,7 +118,7 @@ public final class LiveRewindManager {
     /** Lifecycle facts from the host binding boundary; parking preserves the installed history. */
     public void bindOwner(GameplayModeContext owner, boolean parked, GameMode mode) {
         this.parked = parked;
-        this.boundOwner = parked && owner == null ? installedGameplayMode : owner;
+        boundOwner = parked && owner == null ? installedGameplayMode : owner;
         this.boundMode = Objects.requireNonNull(mode, "mode");
         if (rewindController != null && rewindController.isApplyingHistory()) return;
         observeBudgetContext();
@@ -273,9 +275,8 @@ public final class LiveRewindManager {
             return false;
         }
         if (scripted || held) {
-            // Allow a completed forward frame to replace a load floor that still
-            // contains an unfinished fade callback.
-            if (rewindController.hasUnrestorableFadeFloor()) return false;
+            // Let the first safe forward frame replace the entry snapshot.
+            if (awaitingSafeFloor) return false;
             if (!rewinding) {
                 audio.beginReverseAudioPresentation();
                 beginReverseFadePresentation();
@@ -466,10 +467,11 @@ public final class LiveRewindManager {
                         && executedBonusProvider != executedOwner.getActiveBonusStageProvider())
                     || (mode == GameMode.SPECIAL_STAGE
                         && executedProvider != executedOwner.getRegisteredSpecialStageProvider())) return;
-            if (controller.hasUnrestorableFadeFloor() && !installedFade.hasPendingCompletion()) {
+            if (awaitingSafeFloor && !installedFade.hasPendingCompletion()) {
                 // Keep the completed floor's pad state for the next frame's edge detection.
                 recordedInputs.resetToFrameZero(capturedInput, pacing);
                 resetControllerToFrameZero(controller);
+                awaitingSafeFloor = false;
                 return;
             }
             recordedInputs.discardAfter(controller.currentFrame());
@@ -635,6 +637,7 @@ public final class LiveRewindManager {
         installedSpecialProvider = requiredKind == StepperKind.SPECIAL_STAGE
                 ? gameplayMode.getRegisteredSpecialStageProvider() : null;
         installedFade = gameplayMode.getFadeManager();
+        awaitingSafeFloor = rewindController.hasUnrestorableFadeFloor();
         installationIdentity = new Object();
         Object identity = installationIdentity;
         rewindController.setReplayAdmission(() -> replayAdmitted(identity));
@@ -678,6 +681,7 @@ public final class LiveRewindManager {
                     || bonus != owner.getActiveBonusStageProvider()) return;
             inputSource.resetToFrameZero();
             resetControllerToFrameZero(controller);
+            awaitingSafeFloor = controller.hasUnrestorableFadeFloor();
             rewinding = false;
             effectEnvelope.reset();
         });
@@ -706,6 +710,7 @@ public final class LiveRewindManager {
         int frame = rewindController.currentFrame();
         inputSource.retainOnlyFrame(frame);
         rewindController.resetBufferAtCurrentFrame();
+        awaitingSafeFloor = rewindController.hasUnrestorableFadeFloor();
         rewinding = false;
         effectEnvelope.reset();
     }
@@ -959,6 +964,7 @@ public final class LiveRewindManager {
         deferredBoundaries.clear();
         inputSource = null;
         rewindController = null;
+        awaitingSafeFloor = false;
         activeInputHandler = null;
         speedController.reset();
         speedController = RewindSpeedController.disabled();

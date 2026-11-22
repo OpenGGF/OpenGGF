@@ -58,8 +58,12 @@ under the matching area heading; see the
   Palmtree Panic Act 3 time-stop monitor holds palette cycling and selected
   object animations until the stage reloads. Collision
   Chaos acts 1 and 2 have rotating spike chains with period-specific lengths
-  and graphics loaded from the disc. Offscreen object sprites no longer displace
-  visible springs and blocks when sprite limits are enabled. Defeated badniks
+  and graphics loaded from the disc. With sprite limits enabled, offscreen object
+  sprites no longer displace visible springs and blocks. Visible springs, blocks
+  and stage rings share the sprite budget in object order. Stage rings draw
+  once per frame, and unloaded rings in native widescreen margins stay frozen.
+  All ten Collision Chaos stages draw moving background bands from their disc
+  layouts and keep the static bands repeating. Defeated badniks
   play the disc's destroy sound, and Mosqui, Tamabboh and Palmtree Panic's Taga-Taga
   play their own effects on impact, firing, takeoff or landing while the badnik is
   on screen. Palmtree
@@ -97,6 +101,8 @@ under the matching area heading; see the
   can raise lives past 249 and wrap from 255 to 0, where a living Sonic can
   still pause. Dying with 129 or more lives triggers Game Over, as on the disc.
   Live rewind starts a fresh timeline after each time warp or act load.
+  In-level fades preserve later rewind history when older frames expire.
+  Special-stage rewind reaches the first frame after the reveal.
   The FM loader also accepts verified Japanese and European discs
   containing the identical driver bank. The title's RAM DATA entry confirms a
   reset of Sonic CD's save to disc defaults.
@@ -166,18 +172,23 @@ under the matching area heading; see the
   and in the Good Future.
   Layout objects claim slots before Sonic's turn, so player bubbles and splashes
   use the slots left by the layout pass.
-  Stardust Speedway's freed ground animals now draw with the disc's sprites,
-  hop twice before turning, and leave their slots at the disc's range boundary.
+  Stardust Speedway's freed ground animals hop twice before turning. Its
+  flying animals now flap with the disc's sprites and retire on the native
+  frame. Palmtree Panic, Quartz Quadrant and Metallic Madness draw their
+  freed animals from the current section's graphics. Freed animals check
+  their range after drawing, as on the disc.
   Accuracy is measured against native recordings made on an emulator running
   the USA disc: 26 of 28 full-act routes (start to signpost) equal native on
   every compared field to their end (146,390 of 149,633 rows), and 68 of 70
   fourteen-second stage fixtures do (56,879 of 57,049 rows). On a focused rerun,
   the recorded Metallic Madness Present act 2 route also matches through its end.
   Its walker platforms let Sonic pass their sides, and the invisible blocks let
-  him jump through from below. Metallic Madness lasers shrink Sonic on the
-  original contact frame. In Stardust Speedway and Metallic Madness, a
-  curled Dango bumps rolling Sonic away and reacts as an ordinary enemy to
-  standing Sonic. Tidal Tempest hosts its vertical moving blocks,
+  him jump through from below. A separate native recording captures Metallic
+  Madness Past act 1 through its signpost, tally and Act 2 Present exit state.
+  Engine comparison reaches the earlier Scarab rebound. Metallic Madness
+  lasers shrink Sonic on the original contact frame. In Stardust Speedway and
+  Metallic Madness, a curled Dango bumps rolling Sonic away and reacts as an
+  ordinary enemy to standing Sonic. Tidal Tempest hosts its vertical moving blocks,
   break poles and stationary spike balls, with sprites loaded from the disc. In Act 1 Present,
   Sonic can ride the rotating swing and raise the elevator with its pressure
   switch. A break pole keeps its release timer through hurt, death and
@@ -200,7 +211,11 @@ under the matching area heading; see the
   Quadrant, Noro Noro frees its spike slot when Sonic leaves range, preserving
   the disc's object allocation order. Metallic Madness uses the collision type
   to decide which objects Sonic can touch across layers. Sonic can recover
-  dropped rings on the layer where he was hurt. Stage loads clear the state native
+  dropped rings on the layer where he was hurt. That layer also sets the spill's
+  initial sprite bucket and tile priority. In Stardust Speedway and Metallic
+  Madness, dropped rings and other floor-probing objects lose high tile priority
+  as soon as their probe reads an ordinary chunk. The Past robot generator reacts to
+  rolling contact over the disc's wider touch box. Stage loads clear the state native
   clears, so playing stages in any order matches playing each alone. In normal
   play the object clock a stage starts from and the video player's disc wait
   follow measured emulator timings under `gameplay.loadTimeSimulation`

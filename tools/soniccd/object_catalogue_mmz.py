@@ -12,6 +12,14 @@ def STAGES_COVERED(stage: str) -> bool:
 
 
 ANCHORS = [
+    ('flyingAnimalMappings', '217C 08080408 0016 217C AAAAAAAA 0004 3168 0008 002A 3168 000C 002C', 'optional',
+     'AnimalObject_1_Routine0 (objects/r8/animal.asm:21-31)'),
+    ('groundAnimalMappings', '217C 07080408 0016 217C AAAAAAAA 0004 6100 ???? 217C 0001 0000 002C', 'optional',
+     'AnimalObject_0_Routine0 (objects/r8/animal.asm:86-94)'),
+    ('flyingAnimalAnimations', '1140 002E 43FA PPPP 4EB9 ???????? 4EB9 ???????? 3028 002A', 'optional',
+     'loc_20E6BA (objects/r8/animal.asm:49-55)'),
+    ('animalBaseTiles', '43FA PPPP 7000 1039 ???????? E540 D039 ???????? D040 3171 0000 0002 4E75', 'optional',
+     'sub_20E796 (objects/r8/animal.asm:132-140)'),
     ('hvPlatformMappings', '317C 041B 0002 217C AAAAAAAA 0004', 'optional',
      'HVPlatformObject_0_Routine0 (objects/r8/hv_platform.asm:24-31): move.w #$41B,oTile(a0); move.l #HVPlatformSprites,oMap(a0)'),
     ('invisibleBlockMappings', '217C AAAAAAAA 0004 117C 0010 0017 117C 0010 0019 117C 0010 0016', 'optional',

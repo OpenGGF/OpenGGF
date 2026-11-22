@@ -1,5 +1,6 @@
 package com.openggf.game.soniccd.objects.mmz;
 
+import com.openggf.game.soniccd.objects.common.CdAnimalArt;
 import com.openggf.game.soniccd.CdStagePayload;
 import com.openggf.game.soniccd.level.CdStageCatalogue;
 import com.openggf.game.soniccd.level.CdStageImage;
@@ -155,6 +156,12 @@ public final class MmzObjectArt {
     static void register(CdObjectArtProvider art) throws IOException {
         MmzObjectArt state = art.zoneArt(MmzObjectArt.class, () -> new MmzObjectArt(art.payload()));
         state.loadSections(art);
+        CdAnimalArt.register(art,
+                MmzObjectCatalogue.offset(art.payload(), "animalBaseTiles"),
+                MmzObjectCatalogue.offset(art.payload(), "flyingAnimalMappings"),
+                MmzObjectCatalogue.offset(art.payload(), "groundAnimalMappings"),
+                MmzObjectCatalogue.offset(art.payload(), "flyingAnimalAnimations"),
+                0, 7, state.sectionVram, state::section);
         sheet(art, HV_PLATFORM, "hvPlatformMappings", HV_PLATFORM_TILE);
         sheet(art, SPIKE_WALL, "spikeWallMappings", SPIKE_WALL_TILE);
         sheet(art, VANISH_PLATFORM, "vanishPlatformMappings", VANISH_PLATFORM_TILE);
