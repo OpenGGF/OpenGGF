@@ -7,6 +7,10 @@ under the matching area heading; see the
 
 ## Gameplay and presentation
 
+- **Knuckles' giant vine grab in Angel Island:** glide landings now emit the
+  original dust puffs. Their slots let the first giant-ring flash start on
+  the correct frame, so Knuckles can grab the ride vine after the special stage.
+
 - **Placed rings in patched and hosted levels** use the underlying
   game's vertical placement and clipping rules. In Knuckles in Sonic 2, rings
   disappear as their centres cross the top of the screen, as on the cartridge.

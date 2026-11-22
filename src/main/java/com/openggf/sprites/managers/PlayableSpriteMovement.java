@@ -41,6 +41,7 @@ import com.openggf.audio.AudioManager;
 import com.openggf.audio.GameSound;
 import com.openggf.audio.NativeAudioEffectCues;
 import com.openggf.level.objects.SkidDustObjectInstance;
+import com.openggf.game.internal.GlideLandingDustPolicy;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.PlayableSpriteInternalAccess;
@@ -2284,6 +2285,10 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		sprite.setAbilityMappingFrameControl(true);
 		sprite.setMappingFrame(0xCC);  // ROM: move.b #$CC,mapping_frame(a0)
 		// Knuckles_BeginSlide changes mapping_frame, not anim: retain glide ID.
+		var dustPolicy = glideLandingDustPolicy();
+		if (dustPolicy != null && dustPolicy.canArm(sprite)) {
+			sprite.setFixedSkidDustActive(true);
+		}
 	}
 
 	/**
@@ -5563,8 +5568,11 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			sprite.setFixedSkidDustActive(false);
 			return;
 		}
+		boolean slidingFromGlide = sprite.getSecondaryAbility() == SecondaryAbility.GLIDE
+				&& sprite.getDoubleJumpFlag() == 3 && sprite.isFixedSkidDustActive()
+				&& glideLandingDustPolicy() != null;
 		int skidAnimId = profile.getSkidAnimId();
-		if (skidAnimId < 0 || sprite.getAnimationId() != skidAnimId) {
+		if (!slidingFromGlide && (skidAnimId < 0 || sprite.getAnimationId() != skidAnimId)) {
 			fixedSkidDustTickPending = false;
 			sprite.setSkidDustTimer(0);
 			sprite.setFixedSkidDustActive(false);
@@ -5577,10 +5585,15 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		fixedSkidDustTickPending = false;
 		processingFixedSkidDustTick = true;
 		try {
-			advanceSkidDustTimer();
+			advanceSkidDustTimer(slidingFromGlide);
 		} finally {
 			processingFixedSkidDustTick = false;
 		}
+	}
+
+	private GlideLandingDustPolicy glideLandingDustPolicy() {
+		var host = sprite.currentGameModule();
+		return host == null ? null : host.getGameService(GlideLandingDustPolicy.class);
 	}
 
 	public int captureLastFixedSkidDustTickFrame() {
@@ -5592,6 +5605,10 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	}
 
 	private void advanceSkidDustTimer() {
+		advanceSkidDustTimer(false);
+	}
+
+	private void advanceSkidDustTimer(boolean slidingFromGlide) {
 		// ROM Obj08_CheckSkid keeps ticking the fixed Sonic_Dust/Tails_Dust
 		// object while the parent remains in the Stop animation; entering
 		// Sonic_TurnLeft/Right only switches the dust object into that routine
@@ -5608,7 +5625,15 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		int dustTimer = sprite.getSkidDustTimer() - 1;
 		if (dustTimer < 0) {
 			dustTimer = 3;
-			SkidDustObjectInstance.spawn(sprite);
+			if (slidingFromGlide) {
+				// loc_18CE4 (sonic3k.asm:34133-34145) reloads the timer
+				// even if underwater or the dynamic SST scan fails.
+				if (!sprite.isInWater()) {
+					SkidDustObjectInstance.spawnFromGlideSlide(sprite);
+				}
+			} else {
+				SkidDustObjectInstance.spawn(sprite);
+			}
 		}
 		sprite.setSkidDustTimer(dustTimer);
 	}

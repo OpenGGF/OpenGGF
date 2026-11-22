@@ -49,6 +49,7 @@ public class SkidDustObjectInstance extends AbstractObjectInstance implements Sp
     private int deleteRoutineDelay = -1;
     private boolean facingLeft;
     private boolean dplcPreloaded = false;
+    private boolean glideSlidePuff;
 
     /**
      * Creates a skid dust object at the specified position.
@@ -106,7 +107,7 @@ public class SkidDustObjectInstance extends AbstractObjectInstance implements Sp
             // a later RunObjects pass (docs/s2disasm/s2.asm:42660-42664,
             // 42846-42847).
             if (frameIndex >= SKID_FRAMES.length) {
-                deleteRoutineDelay = DELETE_ROUTINE_DELAY;
+                deleteRoutineDelay = glideSlidePuff ? 0 : DELETE_ROUTINE_DELAY;
             }
         }
     }
@@ -132,7 +133,7 @@ public class SkidDustObjectInstance extends AbstractObjectInstance implements Sp
     @Override
     public PerObjectRewindSnapshot captureRewindState() {
         return super.captureRewindState().withObjectSubclassExtra(
-                new SkidDustRewindExtra(animTimer, frameIndex, deleteRoutineDelay, dplcPreloaded, ownerCode));
+                new SkidDustRewindExtra(animTimer, frameIndex, deleteRoutineDelay, dplcPreloaded, ownerCode, glideSlidePuff));
     }
 
     @Override
@@ -144,6 +145,7 @@ public class SkidDustObjectInstance extends AbstractObjectInstance implements Sp
             deleteRoutineDelay = extra.deleteRoutineDelay();
             dplcPreloaded = extra.dplcPreloaded();
             ownerCode = extra.ownerCode();
+            glideSlidePuff = extra.glideSlidePuff();
             PlayerSpriteRenderer ownerRenderer = ownerDustRenderer(tryServices(), ownerCode);
             if (ownerRenderer != null) {
                 renderer = ownerRenderer;
@@ -208,6 +210,10 @@ public class SkidDustObjectInstance extends AbstractObjectInstance implements Sp
      * @return A new skid dust object, or null if renderer is not available
      */
     public static SkidDustObjectInstance create(PlayableEntity player) {
+        return create(player, false);
+    }
+
+    private static SkidDustObjectInstance create(PlayableEntity player, boolean glideSlidePuff) {
         // Get the dust/splash renderer from the player's dust manager
         // Escape hatch: getSpindashDustController() returns sprites.managers type,
         // not exposed on PlayableEntity to avoid game -> sprites.managers dependency.
@@ -215,12 +221,8 @@ public class SkidDustObjectInstance extends AbstractObjectInstance implements Sp
             return null;
         }
         var dustManager = aps.getSpindashDustController();
-        if (dustManager == null) {
-            return null;
-        }
-
-        PlayerSpriteRenderer renderer = dustManager.getRenderer();
-        if (renderer == null) {
+        PlayerSpriteRenderer renderer = dustManager == null ? null : dustManager.getRenderer();
+        if (renderer == null && !glideSlidePuff) {
             return null;
         }
 
@@ -228,7 +230,10 @@ public class SkidDustObjectInstance extends AbstractObjectInstance implements Sp
         // See s2.asm Obj08_SkidDust: move.w y_pos(a2),y_pos(a1) / addi.w #$10,y_pos(a1).
         // Tails then subtracts 4 because his sprite is shorter.
         int dustX = player.getCentreX();
-        int dustOffset = PlayableArchetype.isTails(player) ? 12 : 16;
+        int dustOffset = glideSlidePuff ? 6 : 16;
+        if (PlayableArchetype.isTails(player)) {
+            dustOffset -= 4;
+        }
         // S3K loc_18D14 negates the complete foot offset after Tails's
         // four-pixel adjustment. The spawned puff stays at that world position;
         // later gravity changes must not move an already detached effect.
@@ -238,10 +243,16 @@ public class SkidDustObjectInstance extends AbstractObjectInstance implements Sp
             dustOffset = -dustOffset;
         }
         int dustY = player.getCentreY() + dustOffset;
-        boolean facingLeft = player.getDirection() == Direction.LEFT;
-
+        // loc_18D1C (sonic3k.asm:34160-34176) clears status on the detached
+        // puff. Its first Animate_Sprite runs on the next dynamic object pass.
+        boolean facingLeft = !glideSlidePuff && player.getDirection() == Direction.LEFT;
         SkidDustObjectInstance dust = new SkidDustObjectInstance(dustX, dustY, renderer, facingLeft);
         dust.ownerCode = aps.getCode();
+        dust.glideSlidePuff = glideSlidePuff;
+        if (glideSlidePuff) {
+            dust.animTimer = 0;
+            dust.frameIndex = -1;
+        }
         return dust;
     }
 
@@ -252,6 +263,14 @@ public class SkidDustObjectInstance extends AbstractObjectInstance implements Sp
      * @param player The player sprite that started skidding
      */
     public static void spawn(PlayableEntity player) {
+        spawn(player, false);
+    }
+
+    public static void spawnFromGlideSlide(PlayableEntity player) {
+        spawn(player, true);
+    }
+
+    private static void spawn(PlayableEntity player, boolean glideSlidePuff) {
         if (ObjectConstructionContext.isProbeConstruction()) return;
         ObjectServices owner = constructionContext();
         // Ordinary fixed player dust runs outside an object callback. Its
@@ -262,7 +281,7 @@ public class SkidDustObjectInstance extends AbstractObjectInstance implements Sp
                 : level != null ? level.getObjectManager() : null;
         if (manager != null) {
             SkidDustObjectInstance dust = ObjectConstructionContext.construct(
-                    manager.getObjectServices(), () -> create(player));
+                    manager.getObjectServices(), () -> create(player, glideSlidePuff));
             if (dust != null) manager.addDynamicObject(dust);
         }
     }
@@ -272,7 +291,8 @@ public class SkidDustObjectInstance extends AbstractObjectInstance implements Sp
             int frameIndex,
             int deleteRoutineDelay,
             boolean dplcPreloaded,
-            String ownerCode
+            String ownerCode,
+            boolean glideSlidePuff
     ) implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra {
     }
 
