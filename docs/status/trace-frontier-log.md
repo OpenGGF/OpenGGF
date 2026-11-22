@@ -125302,3 +125302,30 @@ env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4 \
   -Dopenggf.surefire.reports=target/u54-focused \
   '-Dtest=TestCdScarabRebound,TestCdDangoTouch,TestMmzObjects2,TestSszObjects,TestSonicCdRoutesBLongNative,TestEnemyDefeatMutator,TestTouchResponseManager,TestTouchResponseProfileMapping,TestSonic1PoleThatBreaksObjectInstance,TestCrawlBadnikInstance,TestS3kSnaleBlasterBadnik,TestBroadCatchSwallowingGuard,TestZoneEventRuntimeAccessGuard,TestObjectPhysicsStandardizationGuard,TestRewindCoverageGuard,TestAudioPresentationArchitectureGuard,TestCameraRelativeDrawGuard,TestBuildToolingGuard,TestBootstrapModuleProviderCachingGuard' test -B
 ```
+
+
+## 2026-11-22 — HCZ end-boss platform landing
+
+In `bugfix/ai-hcz-boss-platform-landing` over develop
+`a3e55ad37a06b7364bd1050190ddffcda062d02c`, `HCZEndBossFan_SpawnPlatform` allocates
+after the turbine, so the water platform initializes on its spawn pass.
+On outgoing HCZ segment 15 row 1941, native and corrected rolling Tails land at
+`$07BA` where develop recorded `$07BB`. The native floor callback retains
+`$EC00`. [Checkpoint evidence and regression scope](../architecture/validation/levels/s3k-hcz2.md#end-boss-platform-allocation-and-rolling-tails-landing).
+
+The queued Java 25 checks used `-Dmse=off -Dopenggf.headless.gl=surfaceless-egl
+-Dsurefire.forkCount=1 -Dtrace.print.summary=true` and fresh trace and Surefire
+report directories. All configured ROM and disc inputs were found.
+
+- `-Ptrace-replay -Dtest=TestS3kSonicTailsCompleteEmeraldRunChain#aiz1ToDoomsdayCollectingEverySevenEmeralds test -B`
+  completes the same nine compared segment windows on both sources. Segment 15's
+  first strict error is still camera X at row 940 (`$3941/$3940`). The first
+  non-camera error moves from row 1941 `sidekick_y` (`$07BA/$07BB`) to row 2008
+  `y` (`$07CE/$07D0`). Physics field errors fall from 19,236 to 18,976 and
+  animation field errors from 5,155 to 5,153. Both reports have 145 lag rows and
+  zero bootstrap errors or warnings. MGZ admission still fails at movie cursor
+  100896. One test fails the strict full-campaign gate in each run, with zero
+  skips.
+- `-Ptrace-segments -Dtest=TestS3kHczZoneSliceTraceReplay test -B` passes both
+  tests before and after with zero skips. Both comparison gates retain 29,285
+  comparisons from 31,482 planned rows, with zero differences.
