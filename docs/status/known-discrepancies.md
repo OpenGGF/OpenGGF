@@ -8,9 +8,9 @@ uses recorded lag to reproduce missed gameplay passes.
   as CPU lag, lost V-INTs, VDP beam timing, or the Sega CD boot ROM.
 - **Engine feature** — opt-in or engine-added behavior that departs from the
   original code, such as widescreen, rewind, or hosted Competition.
-- **Other** — entries such as shipped-bug fixes, safety bounds, implementation
-  records, or possible parity bugs. See [runtime invariant 7](../../AGENTS.md#runtime-invariants)
-  for the shipped-bug and safety policy.
+- **Other** — entries such as safety bounds, implementation records, or
+  possible parity bugs. Fixes for bugs in the shipped game are candidate bugs
+  except for the S2 Sideways exception in [runtime invariant 7](../../AGENTS.md#runtime-invariants).
 
 Each entry has a kind in the [table of contents](#table-of-contents). Some
 entries also record related limits or historical evidence. See also [known bugs](known-bugs.md), [S3K known bugs](s3k-known-bugs.md), and
@@ -133,8 +133,8 @@ no discrepancy entry was added or reclassified by the cutover.
 29. [S2 CPZ Boss Truncates The Object Pass (`fixBugs = 0`)](#s2-cpz-boss-truncates-the-object-pass-fixbugs--0) — Other
 30. [S2 Interactive Special-Stage Hardware Lag Is Approximated](#s2-interactive-special-stage-hardware-lag-is-approximated) — Hardware limit
 31. [YM2612 Output Scale, Resting Level and DAC Presentation](#ym2612-output-scale-resting-level-and-dac-presentation) — Engine feature
-32. [PSG Tone-2-Linked Noise at Period 0/1 Follows the Reference Cores](#psg-tone-2-linked-noise-at-period-01-follows-the-reference-cores) — Hardware limit
-33. [FM:PSG Mix Balance Is Pre-Rewrite Parity, Not a Hardware Calibration](#fmpsg-mix-balance-is-pre-rewrite-parity-not-a-hardware-calibration) — Hardware limit
+32. [PSG Tone-2-Linked Noise at Period 0/1 Follows the Reference Cores](#psg-tone-2-linked-noise-at-period-01-follows-the-reference-cores) — Other
+33. [FM:PSG Mix Balance Is Pre-Rewrite Parity, Not a Hardware Calibration](#fmpsg-mix-balance-is-pre-rewrite-parity-not-a-hardware-calibration) — Other
 34. [S2 Compressed-Music Load Timing Omits Sub-Frame Bus Contention](#s2-compressed-music-load-timing-omits-sub-frame-bus-contention) — Hardware limit
 35. [S2 stopMusic Bypasses the Mailbox While a Compressed Load Blocks It](#s2-stopmusic-bypasses-the-mailbox-while-a-compressed-load-blocks-it) — Other
 36. [Fast FM Register-Level Timing and Output](#fast-fm-register-level-timing-and-output) — Engine feature
@@ -3742,7 +3742,7 @@ direct reads; no comparison-state hydration or fitted timing is permitted.
 
 ## PSG Tone-2-Linked Noise at Period 0/1 Follows the Reference Cores
 
-**Kind:** Hardware limit
+**Kind:** Other
 
 **Location:** `PsgChip.tickNoise()` / `PsgChip.linkedNoiseReload()`
 **Hardware Reference:** `docs/architecture/research/audio/2026-08-29-sn76489-clean-room-spec.md` §4.1, §10.5
@@ -3789,7 +3789,7 @@ identical transition counts, and cross-correlation 0.990–0.9999 at a constant 
 
 ## FM:PSG Mix Balance Is Pre-Rewrite Parity, Not a Hardware Calibration
 
-**Kind:** Hardware limit
+**Kind:** Other
 
 **Location:** `VirtualSynthesizer.PSG_PREAMP_PERCENT` (applied via `PsgChip.configure(38, 0xFF)`)
 **Reference:** `docs/architecture/validation/2026-08-29-audio-mix-calibration.md`

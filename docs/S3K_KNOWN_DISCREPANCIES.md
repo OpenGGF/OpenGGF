@@ -8,9 +8,9 @@ uses recorded lag to reproduce missed gameplay passes.
   as CPU lag, lost V-INTs, VDP beam timing, or the Sega CD boot ROM.
 - **Engine feature** — opt-in or engine-added behavior that departs from the
   original code, such as widescreen, rewind, or hosted Competition.
-- **Other** — entries such as shipped-bug fixes, safety bounds, implementation
-  records, or possible parity bugs. See [runtime invariant 7](../AGENTS.md#runtime-invariants)
-  for the shipped-bug and safety policy.
+- **Other** — entries such as safety bounds, implementation records, or
+  possible parity bugs. Fixes for bugs in the shipped game are candidate bugs
+  except for the S2 Sideways exception in [runtime invariant 7](../AGENTS.md#runtime-invariants).
 
 Each entry has a kind in the [table of contents](#table-of-contents). Some
 entries also record related limits or historical evidence. See also [S3K known bugs](status/s3k-known-bugs.md), [cross-game known bugs](status/known-bugs.md),
@@ -264,7 +264,7 @@ See the [Competition swap design](architecture/designs/2026-11-07-s3k-competitio
 6. [Save System](#save-system) — Engine feature
 7. [Tails Flying-With-Cargo Physics](#tails-flying-with-cargo-physics) — Other
 8. [MGZ2 Quake Chunk Source Address](#mgz2-quake-chunk-source-address) — Other
-9. [AIZ2 Battleship Ship-Loop Display Compensation](#aiz2-battleship-ship-loop-display-compensation) — Engine feature
+9. [AIZ2 Battleship Ship-Loop Display Compensation](#aiz2-battleship-ship-loop-display-compensation) — Other
 10. [LBZ1 Miniboss Box Pieces: PLC VRAM Restore Skipped](#lbz1-miniboss-box-pieces-plc-vram-restore-skipped) — Other
 11. [LBZ2 Launch Pad Collapse: Mutation Pipeline Offset](#lbz2-launch-pad-collapse-mutation-pipeline-offset) — Other
 12. [Standalone Cartridge Qualification Boundaries](#standalone-cartridge-qualification-boundaries) — Other
@@ -764,7 +764,7 @@ the permanent source. `TestArchitecturalSourceGuard` pins the constant and this 
 
 ## AIZ2 Battleship Ship-Loop Display Compensation
 
-**Kind:** Engine feature
+**Kind:** Other
 
 Gameplay state follows the S&K disassembly: `AIZ2_DoShipLoop` writes
 `Level_repeat_offset=$200` and subtracts `$200` from camera/player state when
