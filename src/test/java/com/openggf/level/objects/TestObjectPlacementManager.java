@@ -215,10 +215,10 @@ public class TestObjectPlacementManager {
         assertFalse(manager.isRemembered(spawn),
                 "Non-respawn-tracked spawns cannot persist destruction (ROM obRespawnNo == 0)");
 
-        // Relocate away and back: the spawn re-loads fresh because it was never remembered.
-        manager.rebuildRelocatedWindow(2000, null);
+        // Scroll away and back: the spawn re-loads fresh because it was never remembered.
+        manager.update(2000);
         assertFalse(manager.getActiveSpawns().contains(spawn));
-        manager.rebuildRelocatedWindow(0, null);
+        manager.update(0);
         assertTrue(manager.getActiveSpawns().contains(spawn),
                 "Non-respawn-tracked spawn re-creates fresh on camera return");
     }
@@ -241,7 +241,7 @@ public class TestObjectPlacementManager {
 
     @Test
     public void testRememberedObjectDoesNotRespawnOnCameraReturn() {
-        // Simulates: break a block, relocate away, relocate back - block should NOT reappear
+        // Simulates: break a block, scroll away, scroll back - block should NOT reappear
         ObjectSpawn spawn = new ObjectSpawn(500, 0, 0x32, 0, 0, true, 0x8000);
         ObjectPlacementController manager = new ObjectPlacementController(List.of(spawn), () -> 320);
 
@@ -254,13 +254,13 @@ public class TestObjectPlacementManager {
         assertTrue(manager.getActiveSpawns().contains(spawn), "Spawn should still be in active (single-arg doesn't remove)");
         assertTrue(manager.isRemembered(spawn), "Spawn should be remembered");
 
-        // Relocate far right - spawn goes out of window
-        manager.rebuildRelocatedWindow(2000, null);
+        // Scroll far right - spawn goes out of window
+        manager.update(2000);
         assertFalse(manager.getActiveSpawns().contains(spawn), "Spawn should have left the window");
         assertTrue(manager.isRemembered(spawn), "Spawn should still be remembered");
 
-        // Relocate back to the original position - spawn should NOT reappear
-        manager.rebuildRelocatedWindow(0, null);
+        // Scroll back to original position - spawn should NOT reappear
+        manager.update(0);
         assertFalse(manager.getActiveSpawns().contains(spawn), "Remembered spawn should NOT reappear on camera return");
         assertTrue(manager.isRemembered(spawn), "Spawn should still be remembered after return");
 
@@ -319,11 +319,11 @@ public class TestObjectPlacementManager {
         assertTrue(manager.isRemembered(canonical), "Spawn should be remembered even with different reference");
         assertTrue(manager.isRemembered(differentRef), "Spawn should also be remembered when queried with different ref");
 
-        // Relocate away and back - spawn should NOT reappear
-        manager.rebuildRelocatedWindow(2000, null);
+        // Scroll away and back - spawn should NOT reappear
+        manager.update(2000);
         assertFalse(manager.getActiveSpawns().contains(canonical), "Spawn should have left the window");
 
-        manager.rebuildRelocatedWindow(0, null);
+        manager.update(0);
         assertFalse(manager.getActiveSpawns().contains(canonical), "Remembered spawn should NOT reappear on camera return");
     }
 

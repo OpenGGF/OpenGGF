@@ -23,6 +23,7 @@ import com.openggf.game.soniccd.player.CdSonicAnimation;
 import com.openggf.game.soniccd.zones.mmz.MmzStageSignals;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectManagerInternalAccess;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.rings.LostRingObjectInstance;
@@ -495,6 +496,7 @@ class TestMmzObjects {
         // the beam and splash at 148, and fires again at 151. Hold Sonic at
         // the contact position across one cycle to isolate the object pass.
         var manager = GameServices.level().getObjectManager();
+        ObjectManagerInternalAccess.refreshPlacementAfterRelocation(manager);
         for (int frame = 1; frame <= 31; frame++) {
             manager.update(camera.getX(), sonic, List.of(), frame, false, true, true);
             List<Integer> laserYs = live(0x1D).stream().filter(laser -> laser.getX() == 7033)

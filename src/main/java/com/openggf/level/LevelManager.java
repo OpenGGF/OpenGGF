@@ -3126,7 +3126,12 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                             getFeatureZoneId(), getFeatureActId(), savedEntry);
                 }
             }
-            if (!nativeLoads.prefix && objectManager != null
+            if (!initializeLoadRegisters && !nativeLoads.prefix && objectManager != null
+                    && camera.getX() != preSnapCameraX && activeGameModule()
+                            .getGameService(com.openggf.game.internal.SpawnerBeforeObjectPass.class) != null) {
+                com.openggf.level.objects.ObjectManagerInternalAccess
+                        .refreshPlacementAfterRelocation(objectManager);
+            } else if (!nativeLoads.prefix && objectManager != null
                     && (objectManager.usesTwoAxisCursorPlacement()
                             || (camera.getX() != preSnapCameraX
                                     && (!objectManager.usesCounterBasedRespawn()
@@ -3154,10 +3159,6 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                 } else {
                     objectManager.reset(camera.getX(), persistentRespawnState);
                 }
-            } else if (!initializeLoadRegisters && !nativeLoads.prefix && objectManager != null
-                    && camera.getX() != preSnapCameraX) {
-                com.openggf.level.objects.ObjectManagerInternalAccess
-                        .refreshPlacementAfterRelocation(objectManager);
             }
             // Get_LevelSizeStart precedes Load_Rings in a native fresh load.
             // Bind an existing ring owner here; initRings binds the later owner.

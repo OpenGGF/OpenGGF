@@ -1153,6 +1153,13 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
         }
 
         int cameraChunk = toCoarseChunk(cameraX);
+        if (counterBasedRespawn && !spawnerBeforeObjectPass
+                && Math.abs((long) cameraX - lastCameraX) > (getLoadAhead() + UNLOAD_BEHIND)) {
+            // Rebuild the destination window after an engine camera jump.
+            lastScrollBackward = cameraX < lastCameraX;
+            refreshCounterBased(cameraX);
+            return;
+        }
         if (cameraChunk == lastCameraChunk) {
             lastCameraX = cameraX;
             return;
@@ -1162,8 +1169,8 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
             int delta = cameraX - lastCameraX;
             boolean discontinuity = (delta > 0 && cameraChunk < lastCameraChunk)
                     || (delta < 0 && cameraChunk > lastCameraChunk);
-            if (discontinuity) {
-                // The ROM mask maps negative widescreen origins to the end of the word.
+            if (discontinuity || Math.abs(delta) > getLoadAhead() + getUnloadBehind()) {
+                // Existing engine relocation policy; retain live ORT bits and identities.
                 resetTwoAxisWindow(cameraX);
                 lastScrollBackward = false;
             } else {
@@ -1175,25 +1182,35 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
             return;
         }
 
-        if (counterBasedRespawn) {
+        if (counterBasedRespawn && spawnerBeforeObjectPass) {
+            // SpawnObjects_Main (Level/Object Spawner.asm:107-127) scans from
+            // the live coarse X and keeps the existing layout cursors.
             lastScrollBackward = cameraChunk < lastCameraChunk;
-            // SpawnObjects_Main (Level/Object Spawner.asm:109-120) uses the live
-            // camera chunk while retaining both layout cursors and the occupied slots.
-            // Sonic 1 advances its stored chunk one step at a time.
-            int oplChunk = spawnerBeforeObjectPass ? cameraChunk
-                    : lastCameraChunk + (lastScrollBackward ? -CHUNK_STEP : CHUNK_STEP);
             if (lastScrollBackward) {
-                // SpawnObjects_Backward (Level/Object Spawner.asm:124-127) skips
-                // the left scan when subtracting $80 from the camera chunk borrows.
-                if (!spawnerBeforeObjectPass || oplChunk >= UNLOAD_BEHIND) {
-                    spawnBackwardCountered(oplChunk);
+                if (cameraChunk >= UNLOAD_BEHIND) {
+                    spawnBackwardCountered(cameraChunk);
                 }
-                trimRightCountered(oplChunk);
+                trimRightCountered(cameraChunk);
             } else {
+                spawnForwardCountered(cameraChunk);
+                trimLeftCountered(cameraChunk);
+            }
+            lastCameraChunk = cameraChunk;
+        } else if (counterBasedRespawn) {
+            // Engine policy for incremental counter-based cursor advancement.
+            if (cameraChunk > lastCameraChunk) {
+                lastScrollBackward = false;
+                int oplChunk = Math.min(lastCameraChunk + CHUNK_STEP, cameraChunk);
                 spawnForwardCountered(oplChunk);
                 trimLeftCountered(oplChunk);
+                lastCameraChunk = oplChunk;
+            } else {
+                lastScrollBackward = true;
+                int oplChunk = Math.max(lastCameraChunk - CHUNK_STEP, cameraChunk);
+                spawnBackwardCountered(oplChunk);
+                trimRightCountered(oplChunk);
+                lastCameraChunk = oplChunk;
             }
-            lastCameraChunk = oplChunk;
         } else {
             int delta = cameraX - lastCameraX;
             // A negative widescreen origin wraps in the ROM's 16-bit coarse mask.
@@ -1201,7 +1218,7 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
             // backward pass. Rebuild the window through the existing catch-up path.
             boolean coarseDiscontinuity = (delta > 0 && cameraChunk < lastCameraChunk)
                     || (delta < 0 && cameraChunk > lastCameraChunk);
-            if (coarseDiscontinuity) {
+            if (coarseDiscontinuity || Math.abs(delta) > (getLoadAhead() + getUnloadBehind())) {
                 lastScrollBackward = cameraX < lastCameraX;
                 refreshWindow(cameraX);
             } else if (cameraChunk > lastCameraChunk) {
@@ -1230,23 +1247,71 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
         lastCameraX = cameraX;
     }
 
+    private void refreshCounterBased(int cameraX) {
+        active.clear();
+        dormant.clear();
+        spawnToCounter.clear();
+        cursorIndex = 0;
+        leftCursorIndex = 0;
+        fwdCounter = 1;
+        bwdCounter = 1;
+        Arrays.fill(objState, 0);
+
+        int cameraChunk = cameraX & CHUNK_MASK;
+        int initD6 = Math.max(0, cameraX - 0x80) & CHUNK_MASK;
+
+        while (cursorIndex < spawns.size() && spawns.get(cursorIndex).x() < initD6) {
+            if (spawns.get(cursorIndex).respawnTracked()) {
+                fwdCounter = (fwdCounter + 1) & 0xFF;
+            }
+            cursorIndex++;
+        }
+
+        int leftD6 = initD6 - 0x80;
+        if (leftD6 > 0) {
+            while (leftCursorIndex < spawns.size()
+                    && spawns.get(leftCursorIndex).x() < leftD6) {
+                if (spawns.get(leftCursorIndex).respawnTracked()) {
+                    bwdCounter = (bwdCounter + 1) & 0xFF;
+                }
+                leftCursorIndex++;
+            }
+        }
+
+        int windowEnd = cameraChunk + getLoadAhead();
+        while (cursorIndex < spawns.size()
+                && spawns.get(cursorIndex).x() < windowEnd) {
+            if (!spawnForwardEntry(cursorIndex)) {
+                break;
+            }
+            cursorIndex++;
+        }
+
+        int leftTrimEdge = cameraChunk - UNLOAD_BEHIND;
+        if (leftTrimEdge > 0) {
+            while (leftCursorIndex < spawns.size()
+                    && spawns.get(leftCursorIndex).x() < leftTrimEdge) {
+                if (spawns.get(leftCursorIndex).respawnTracked()) {
+                    bwdCounter = (bwdCounter + 1) & 0xFF;
+                }
+                leftCursorIndex++;
+            }
+        }
+
+        // ROM parity: do NOT clear destroyedInWindow on window-leave (see update()).
+        lastCameraX = cameraX;
+        lastCameraChunk = cameraChunk;
+    }
+
     void rebuildRelocatedWindow(int cameraX, SpawnCallback create) {
         lastCameraX = cameraX;
         lastCameraChunk = toCoarseChunk(cameraX);
         lastScrollBackward = false;
         if (counterBasedRespawn) {
-            active.clear();
-            dormant.clear();
-            spawnToCounter.clear();
-            cursorIndex = 0;
-            leftCursorIndex = 0;
-            fwdCounter = 1;
-            bwdCounter = 1;
-            Arrays.fill(objState, 0);
             firstWindowPending = false;
             inlineCallback = create;
             try {
-                resetCounterBased(cameraX);
+                refreshCounterBased(cameraX);
             } finally {
                 inlineCallback = null;
             }

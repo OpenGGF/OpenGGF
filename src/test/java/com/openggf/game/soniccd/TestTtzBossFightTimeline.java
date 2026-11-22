@@ -4,6 +4,7 @@ import com.openggf.game.GameServices;
 import com.openggf.game.soniccd.objects.boss.CdBossPart;
 import com.openggf.game.soniccd.objects.boss.ttz.TtzBossEggman;
 import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectManagerInternalAccess;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.HeadlessTestRunner;
@@ -186,6 +187,7 @@ class TestTtzBossFightTimeline {
                             GameServices.camera().setY((short) 0x4F0);
                             // The bottom boundary the chase leaves (R43Events, boss_flags set by the chase Eggman).
                             GameServices.camera().setMaxY((short) 0x4F0);
+                            ObjectManagerInternalAccess.refreshPlacementAfterRelocation(GameServices.level().getObjectManager());
                             for (int i = 0; i < 30; i++) runner.stepFrame(false, false, false, false, false);
                             NativePositionOps.writeXPosResetSubpixel(sonic, Integer.getInteger("ttzboss.arenaX", 0xAAF));
                             NativePositionOps.writeYPosResetSubpixel(sonic, ARENA_FLOOR);

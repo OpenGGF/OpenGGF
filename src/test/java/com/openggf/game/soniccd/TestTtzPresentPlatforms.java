@@ -16,6 +16,7 @@ import com.openggf.game.soniccd.objects.ttz.TtzObjectArt;
 import com.openggf.game.soniccd.objects.ttz.TtzSwitch;
 import com.openggf.level.Pattern;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectManagerInternalAccess;
 import com.openggf.level.objects.ReevaluatingSolidObject;
 import com.openggf.physics.GroundSensor;
 import com.openggf.sprites.NativePositionOps;
@@ -211,6 +212,8 @@ class TestTtzPresentPlatforms {
             var contacts = GameServices.solidExecutionRegistry();
             contacts.beginFrame(GameServices.level().getFrameCounter(), List.of(sonic));
             contacts.finishFrame();
+        } else {
+            ObjectManagerInternalAccess.refreshPlacementAfterRelocation(GameServices.level().getObjectManager());
         }
         GameServices.level().updateObjectPositions();
     }

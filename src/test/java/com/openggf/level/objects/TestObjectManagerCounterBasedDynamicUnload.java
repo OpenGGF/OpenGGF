@@ -228,8 +228,7 @@ public class TestObjectManagerCounterBasedDynamicUnload {
         assertFalse(objectManager.getActiveObjects().contains(bridge),
                 "Obj_AIZDrawBridge's unconditional coarse-X tail must release the dynamic slot");
 
-        objectManager.update(0x0080, null, List.of(), 2);
-        objectManager.update(0, null, List.of(), 3);
+        objectManager.update(0, null, List.of(), 2);
 
         assertEquals(2, registry.createCount,
                 "AIZDrawBridge_ClearRespawn lets the S3K two-axis cursor recreate the layout entry");
@@ -444,7 +443,7 @@ public class TestObjectManagerCounterBasedDynamicUnload {
     }
 
     @Test
-    public void counterBasedExplicitRelocationLoadsTheDestinationWindow() {
+    public void counterBasedPostCameraPlacementCatchesUpAfterLargeCameraJump() {
         ObjectSpawn farSpawn = new ObjectSpawn(0x1000, 0x0100, 0x31, 0, 0, false, 0);
         TrackingRegistry registry = new TrackingRegistry();
         objectManager = new ObjectManager(List.of(farSpawn), registry, 0, null, null,
@@ -460,13 +459,12 @@ public class TestObjectManagerCounterBasedDynamicUnload {
         assertEquals(0, registry.createCount,
                 "Sanity check: far spawn should not preload into the initial window");
 
-        camera.setX((short) 0x1000);
-        objectManager.refreshPlacementAfterRelocation();
+        objectManager.postCameraPlacementUpdate(0x1000);
 
         assertNotNull(registry.instance,
-                "Explicit relocation should populate the destination window immediately");
+                "A large post-camera jump should populate the current counter-based window immediately");
         assertTrue(objectManager.getActiveSpawns().contains(farSpawn),
-                "The destination entry should be in the placement window");
+                "Placement active set should catch up to the jumped camera position");
     }
 
     private static final class TestDynamicObject extends AbstractObjectInstance {
