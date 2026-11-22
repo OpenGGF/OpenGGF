@@ -481,6 +481,10 @@ viewport/donor/roster breadth and the full continuous chain remain open. These
 bounded results do not certify a complete act.
 
 
+[The AIZ2 act matrix](../architecture/validation/levels/s3k-aiz2.md)
+records focused defeat-fragment allocation, motion and rewind checks. The
+earlier records below describe the missing debris at their historical SHAs.
+
 The subsequent [R7 child-retirement owner](../architecture/validation/levels/s3k-aiz2.md#r7-physical-parent-and-five-child-defeat-retirement--2026-10-17)
 closes the demonstrated early five-child cleanup: actual own-SST routines retain
 physical parent XY/flags through64wait, pending deletion and forced recreation.
