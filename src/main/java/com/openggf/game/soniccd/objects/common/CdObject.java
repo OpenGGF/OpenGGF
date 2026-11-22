@@ -10,6 +10,8 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.physics.ObjectTerrainUtils;
+import com.openggf.physics.TerrainCheckResult;
 import com.openggf.game.soniccd.objects.art.CdObjectArtProvider;
 
 /**
@@ -50,6 +52,14 @@ public abstract class CdObject extends AbstractObjectInstance {
     @Override public int getOnScreenHalfWidth() { return width; }
     @Override public int getOnScreenHalfHeight() { return yRadius; }
     @Override protected boolean usesCustomRenderHeight() { return true; }
+
+    /** CheckBlockDown measures from the radius point and can also update the object's tile word. */
+    protected final TerrainCheckResult checkFloor(int probeX, int probeY, int radius) {
+        var services = services();
+        return ObjectTerrainUtils.checkFloorDist(services.levelManager(),
+                services.backgroundPlaneCollisionProvider(), services.useSecondaryTerrainCollisionPath(),
+                probeX, probeY + radius, high -> tileWord = high ? tileWord | 0x8000 : tileWord & 0x7FFF);
+    }
 
     protected final boolean timeAttackMode() {
         return com.openggf.game.soniccd.program.CdSceneCoordinator.isTimeAttack(services().gameModule());

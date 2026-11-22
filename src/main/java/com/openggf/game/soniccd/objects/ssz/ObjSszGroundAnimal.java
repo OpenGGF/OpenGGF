@@ -9,7 +9,6 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RewindRecreateContext;
-import com.openggf.physics.ObjectTerrainUtils;
 
 import java.util.List;
 
@@ -62,7 +61,7 @@ public final class ObjSszGroundAnimal extends SszObject implements ObjectVisualF
                 ySub = yPosition & 0xFFFF;
                 hopVelocity += 0x2000;
                 mapFrame = hopVelocity < 0 ? 0 : 1;
-                int floor = ObjectTerrainUtils.checkFloorDist(services().levelManager(), x, y + yRadius).distance();
+                int floor = checkFloor(x, y, yRadius).distance();
                 if (floor < 0) {
                     y = (y + floor) & 0xFFFF;
                     hopVelocity = HOP_Y_SPEED;

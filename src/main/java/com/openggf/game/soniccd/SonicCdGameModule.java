@@ -21,6 +21,7 @@ import com.openggf.game.RespawnState;
 import com.openggf.game.ScrollHandlerProvider;
 import com.openggf.game.ZoneFeatureProvider;
 import com.openggf.game.ZoneRegistry;
+import com.openggf.game.internal.LostRingDisplayProfile;
 import com.openggf.game.internal.StagePaletteWait;
 import com.openggf.game.profiles.trace.TracePlaybackProfile;
 import com.openggf.game.soniccd.level.CdStageCatalogue;
@@ -86,6 +87,14 @@ public final class SonicCdGameModule implements GameModule, SpriteTableBuildProf
     private static final com.openggf.game.internal.LostRingObjectId LOST_RING_ID = () -> 0x11;
     private static final com.openggf.game.internal.LostRingSpillAtOwnerTurn SPILL_AT_OWNER_TURN =
             new com.openggf.game.internal.LostRingSpillAtOwnerTurn() { };
+    // loc_208B5A (objects/ring.asm:354-364): r8 puts layer 0 in bucket 0.
+    // The other layer uses bucket 3 and clears the tile word's priority bit.
+    private static final LostRingDisplayProfile.Priority FOREGROUND_SPILL =
+            new LostRingDisplayProfile.Priority(0, true);
+    private static final LostRingDisplayProfile.Priority BACKGROUND_SPILL =
+            new LostRingDisplayProfile.Priority(3, false);
+    private static final LostRingDisplayProfile MMZ_SPILL_DISPLAY =
+            layer -> layer == 0 ? FOREGROUND_SPILL : BACKGROUND_SPILL;
     private static final com.openggf.game.internal.StageLoadClearsStageRam CLEARED_STAGE_RAM =
             new com.openggf.game.internal.StageLoadClearsStageRam() { };
     private final com.openggf.game.soniccd.objects.common.CdFixedObjects fixedObjects =
@@ -364,6 +373,10 @@ public final class SonicCdGameModule implements GameModule, SpriteTableBuildProf
         if (type == com.openggf.game.internal.LostRingObjectId.class) return type.cast(LOST_RING_ID);
         // HurtPlayer only places the $11 owner; ObjLostRing_Init spills on the owner's turn (Ring/Main.asm:332-405).
         if (type == com.openggf.game.internal.LostRingSpillAtOwnerTurn.class) return type.cast(SPILL_AT_OWNER_TURN);
+        if (type == LostRingDisplayProfile.class && game != null && game.currentLevel() != null
+                && game.currentLevel().payload().stage().zone() == CdZone.METALLIC_MADNESS) {
+            return type.cast(MMZ_SPILL_DISPLAY);
+        }
         // LevelStart clears camera RAM (objSpawnRoutine too) and levelVIntCounter, then sets the start
         // camera before the first SpawnObjects_Init (Level/Main.asm:177-183, 210-216, 245, 402).
         if (type == com.openggf.game.internal.StageLoadClearsStageRam.class) return type.cast(CLEARED_STAGE_RAM);

@@ -16,9 +16,11 @@ scroll state/player/frame isolation and frozen scroll-lock capture after release
 Per-zone phase tests cover the stage/program variants, immutable dependencies,
 water/ramp/band arithmetic and 448-row sampling. The combined initial check runs
 54 tests without skips. No new native-reference, cold-route or time-travel frontier
-is certified. Rendered pixels for other periods/acts, exhaustive wraps, swap edges
-and complete within-stage rewind histories remain obligations. These checks
-supersede the earlier test that pinned CD's profile exclusion.
+is certified. Rendered pixels for other periods/acts, exhaustive wraps, swap edges,
+and complete within-stage rewind histories remain obligations. Load and time-travel
+rewind histories also remain open beyond the tested R11A → R11D time warp and
+R11A → R12A act clear. The motion checks supersede the earlier test that pinned
+CD's profile exclusion.
 
 Game `scd`, all seven zones, Sonic only. A partial matrix under the
 [zone and act testing standard](../../../guide/contributing/level-test-standard.md):
@@ -338,7 +340,8 @@ row R made ordinary writes appear early.
 `EggmanDefeatSequenceFadeScreen` and `EggmanDefeatSequenceFadeObjects`
 (objects/r6/boss.asm:545-559) hold the stage loop twice. The restore reads
 the separate target buffer filled by `LoadFadePalette`
-(common/palette_load_fade.asm:3-15).
+(common/palette_load_fade.asm:3-15). The palette cycler changes only the
+active buffer.
 
 The boss calls each fade from inside `UpdateObjects`
 (`StageMainLoopUpdate`, common/main.asm:406-410). The two waits set routine
@@ -352,7 +355,7 @@ dispatches `VBlankPaletteFade` (common/main.asm:951-962). Its
 table to VRAM `$F800` and H-scroll to `$FC00`, using the buffers that the
 last completed stage iteration prepared. The fade services
 `ProcessGfxQueueFast` (common/gfx_queue.asm:103-112) and advances the
-decompressor setup after VSync. `VBlankDispatchDone`
+decompressor setup after VSync, when the fade computes the next step. `VBlankDispatchDone`
 (common/main.asm:740-750) still flushes FM requests and advances its
 interrupt-owned counters.
 
@@ -370,7 +373,8 @@ WWZ animation art and player art were constant within each hold. Timer
 RAM was also constant.
 
 The engine retains the last sprite and scroll picture before the boss
-enters the wait. It displays each new fade palette with that picture.
+enters the wait. It displays the fade palette prepared by each held tick
+with that picture, using the same palette pairing as ordinary frames.
 The stage art and HUD publish when the next ordinary picture is due.
 In both restore holds, a duplicate offscreen ring had previously consumed
 16 pixels of the sprite scanline budget and clipped the escape pod.
@@ -383,16 +387,24 @@ which sprite table was on screen.
 The native probe reads CRAM after `FrameAdvance`, alongside the video
 buffer used for pictures. `TestWwzBossFades` compares CRAM and the backdrop
 at each of the 672 recorded V-INTs to the engine after the preceding row.
-It also checks the stage frame counter across resume. `TestWwzBossNative`
-checks the object slots and timers at completed level frames.
+The two recordings have no lag in these windows. Good Future hold rows are
+5473-5495 and 5553-5575. Bad Future hold rows are 5724-5746 and 5804-5826.
+The test also compares the stage frame counter at the same replay row,
+including when the stage loop resumes. The user-local CRAM recordings are
+under `rehost-boss-wwz/R63C-fades` and `R63D-fades`. Each hold window
+includes the entry and 22 subsequent V-INTs. A rewind check restores the
+first Good Future hold at row 5481 and checks the held rows, palette words,
+and gameplay resumption at row 5496 on both passes. `TestWwzBossNative`
+checks slots and timers at completed level frames.
+
 `TestWwzBossHoldPictures` compares all 320×224 pixels at native channel
 precision, including the HUD, during both holds in each recording and
 across their boundaries. It also checks the stage animation counters
 during the holds, when the fade can conceal a premature art update.
 Restoring a snapshot inside a wait also restores the last published HUD
 digits from the HUD object's captured values.
-The Good Future hold windows are rows 5475–5495
-and 5555–5575. The Bad Future windows are 5726–5746 and 5806–5826. These
+The Good Future picture windows are rows 5475–5495
+and 5555–5575. The Bad Future picture windows are 5726–5746 and 5806–5826. These
 rows have no lag. The lossless PNGs are user-local, under
 `rehost-boss-wwz/{R63C,R63D}-fades/pictures/`, indexed by trace row.
 The cartridge palette upload paths need their own displayed-frame checks.
