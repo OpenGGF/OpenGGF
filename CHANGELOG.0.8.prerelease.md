@@ -58,10 +58,12 @@ under the matching area heading; see the
   Palmtree Panic Act 3 time-stop monitor holds palette cycling and selected
   object animations until the stage reloads. Collision
   Chaos acts 1 and 2 have rotating spike chains with period-specific lengths
-  and graphics loaded from the disc. Offscreen object sprites no longer displace
-  visible springs and blocks when sprite limits are enabled. All ten Collision
-  Chaos stages draw moving background bands from their disc layouts and keep
-  the static bands repeating. Defeated badniks
+  and graphics loaded from the disc. With sprite limits enabled, offscreen object
+  sprites no longer displace visible springs and blocks. Visible springs, blocks
+  and stage rings share the sprite budget in object order. Stage rings draw
+  once per frame, and unloaded rings in native widescreen margins stay frozen.
+  All ten Collision Chaos stages draw moving background bands from their disc
+  layouts and keep the static bands repeating. Defeated badniks
   play the disc's destroy sound, and Mosqui, Tamabboh and Palmtree Panic's Taga-Taga
   play their own effects on impact, firing, takeoff or landing while the badnik is
   on screen. Palmtree
@@ -209,7 +211,11 @@ under the matching area heading; see the
   Quadrant, Noro Noro frees its spike slot when Sonic leaves range, preserving
   the disc's object allocation order. Metallic Madness uses the collision type
   to decide which objects Sonic can touch across layers. Sonic can recover
-  dropped rings on the layer where he was hurt. Stage loads clear the state native
+  dropped rings on the layer where he was hurt. That layer also sets the spill's
+  initial sprite bucket and tile priority. In Stardust Speedway and Metallic
+  Madness, dropped rings and other floor-probing objects lose high tile priority
+  as soon as their probe reads an ordinary chunk. The Past robot generator reacts to
+  rolling contact over the disc's wider touch box. Stage loads clear the state native
   clears, so playing stages in any order matches playing each alone. In normal
   play the object clock a stage starts from and the video player's disc wait
   follow measured emulator timings under `gameplay.loadTimeSimulation`
