@@ -120,10 +120,8 @@ public class Sonic2WaterDataProvider implements WaterDataProvider {
 
     @Override
     public int getGameplayWaterLevelOffset(int zoneId, int actId) {
-        // ROM MoveWater writes Water_Level_1 = Water_Level_2 +
-        // ((Oscillating_Data).w >> 1) for non-ARZ water before Sonic_Water
-        // compares y_pos against Water_Level_1.
-        // Refs: docs/s2disasm/s2.asm:5275-5282, 36375-36380.
+        // MoveWater (s2.asm:5273-5282) adds the shifted oscillator byte to
+        // Water_Level_2. Sonic_Water (s2.asm:36366-36380) reads the result.
         if (zoneId == ZONE_CPZ) {
             return OscillationManager.getByte(0) >> 1;
         }
@@ -132,18 +130,8 @@ public class Sonic2WaterDataProvider implements WaterDataProvider {
 
     @Override
     public int getVisualWaterLevelOffset(int zoneId, int actId) {
-        // CPZ: water oscillation using oscillator index 0 (limit=0x10, range 0..16).
-        // Center the bob around 0 by subtracting half the limit (8) so it
-        // produces +/-8 pixels of vertical motion (~ring height).
-        // ROM ref: docs/s2disasm/s2.asm:5273-5282 (MoveWater) reads
-        // (Oscillating_Data).w and lsr.w #1 then adds to (Water_Level_2). The
-        // engine instead centres the same oscillator around zero for visual use
-        // (the absolute water level is owned by WaterSystem / event managers).
-        if (zoneId == ZONE_CPZ) {
-            int oscillation = OscillationManager.getByte(0);
-            return oscillation - 8;
-        }
-        // ARZ and HPZ: no oscillation (fixed water surface)
-        return 0;
+        // MoveWater (s2.asm:5282-5296) and Obj04_Action (s2.asm:46309-46311)
+        // use the same Water_Level_1 for the palette split and surface sprite.
+        return getGameplayWaterLevelOffset(zoneId, actId);
     }
 }
