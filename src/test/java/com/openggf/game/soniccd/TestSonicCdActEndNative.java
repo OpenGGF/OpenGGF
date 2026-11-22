@@ -10,6 +10,7 @@ import com.openggf.trace.TraceExecutionPhase;
 import com.openggf.trace.TraceFrame;
 import com.openggf.trace.TraceReplayBootstrap;
 import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -22,6 +23,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -47,8 +49,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * listed with its first divergence and not asserted, and the test fails once it reaches its window, until it is moved
  * into the asserted set. A route that reaches its window but whose results land on the other side of the signpost's
  * slot than native's (FindObjSlot order, the slot lane's; they then run a frame apart) is pending on slot order, named
- * with both runs' slots, and fails once the slots agree. No alignment is applied. R81B, R81C and R82A never reach a
- * signpost (rehost-long README), so they have no end to check.
+ * with both runs' slots, and fails once the slots agree. No alignment is applied. The longer R81B movie
+ * under {@code native/u50-mmz-act-end} reaches the signpost. R81C and R82A still need complete routes.
  */
 class TestSonicCdActEndNative {
     /** Rows before the signpost row at which the end window starts. */
@@ -78,9 +80,7 @@ class TestSonicCdActEndNative {
     }
 
     /** The goal probe's rows by trace row ({@code probe frame = bk2_frame_offset + row + 1}). */
-    static Map<Integer, NativeRow> nativeRows(CdStagePayload payload, int bk2Offset) throws Exception {
-        Path csv = CdTestMedia.nativeFile("rehost-goal/" + payload + "/frames.csv");
-        Assumptions.assumeTrue(Files.isRegularFile(csv), "No goal probe for " + payload);
+    private static Map<Integer, NativeRow> nativeRows(Path csv, int bk2Offset) throws Exception {
         List<String> lines = Files.readAllLines(csv);
         String[] header = lines.getFirst().split(",", -1);
         Map<Integer, NativeRow> out = new HashMap<>();
@@ -182,6 +182,45 @@ class TestSonicCdActEndNative {
         }
     }
 
+    @Test
+    void metallicMadnessPastActEnd() throws Exception {
+        var payload = CdStagePayload.R81B;
+        Path root = CdTestMedia.nativeDir("u50-mmz-act-end");
+        var fixture = CdFixtureReplay.Fixture.under(root, payload);
+        Assumptions.assumeTrue(fixture.present(), "Missing complete R81B movie or trace");
+        TraceData trace = TraceData.load(fixture.traceDir());
+        Path csv = CdTestMedia.nativeFile("u50-mmz-act-end/R81B/goal/frames.csv");
+        var nativeRows = nativeRows(csv, trace.metadata().bk2FrameOffset());
+        int goalRow = 4677;
+        int tallyRow = 4857;
+        int exitRow = 5396;
+        NativeRow goal = nativeRows.get(goalRow);
+        NativeRow tally = nativeRows.get(tallyRow);
+        NativeRow exit = nativeRows.get(exitRow);
+        CdFixtureReplay.Outcome outcome;
+        try (CdDiscDataSource disc = CdDiscDataSource.open(CdTestMedia.usaCue())) {
+            outcome = CdFixtureReplay.replay(disc, tempDir, fixture, trace.frameCount() - 1, true, -1, -1);
+        }
+        System.out.printf("[scd-act-end] %s first differs at row %d: %s%n",
+                payload, outcome.firstErrorRow(), outcome.fields());
+
+        assertAll(
+                () -> assertEquals(new NativeFinish(5396, 1, 0, 4, 1, 4000, 200, 4200, 2, 6, 1, 1, 0),
+                        new NativeFinish(trace.frameCount(), nativeRows.get(goalRow - 1).hex("updateHUDTime"),
+                                goal.hex("updateHUDTime"), goal.objects(0x17).getFirst()[2], tally.objects(0x3A).size(),
+                                tally.hex("timeBonus"), tally.hex("ringBonus"), (exit.hex("score") - tally.hex("score")) * 10,
+                                exit.hex("levelRestart"), exit.dec("zone"), exit.dec("act"), exit.dec("timeZone"),
+                                exit.dec("goodFuture"))),
+                // The native Scarab kill reverses the downward velocity before this route reaches the signpost.
+                () -> assertEquals(2635, outcome.firstErrorRow(), outcome.fields().toString()),
+                () -> assertEquals(List.of("y_speed"), outcome.fields().stream()
+                        .map(field -> field.fieldName()).toList(), outcome.fields().toString()));
+    }
+
+    private record NativeFinish(int rows, int clockBefore, int clockAfter, int signpostRoutine, int results,
+                                int timeBonus, int ringBonus, int scoreGain, int restart, int zone, int act,
+                                int timeZone, int goodFuture) { }
+
     /** One engine level frame's end-of-act state, after that row was stepped. */
     private record EngineRow(CdActEndObjects.Snapshot objects, int score, int rings, String sounds) { }
 
@@ -201,7 +240,8 @@ class TestSonicCdActEndNative {
         var fixture = CdFixtureReplay.Fixture.under(root, payload);
         Assumptions.assumeTrue(fixture.present(), "Native route absent: " + payload);
         TraceData trace = TraceData.load(fixture.traceDir());
-        Map<Integer, NativeRow> nat = nativeRows(payload, trace.metadata().bk2FrameOffset());
+        Path csv = CdTestMedia.nativeFile("rehost-goal/" + payload + "/frames.csv");
+        var nat = nativeRows(csv, trace.metadata().bk2FrameOffset());
         Report report = new Report(payload);
         report.goal = goalRow;
         report.last = trace.frameCount() - 1;
