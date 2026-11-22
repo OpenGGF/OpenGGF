@@ -55,11 +55,6 @@ final class TtzBossNativeCheck {
             return firstUnderwaterRow;
         }
 
-        /** Findings before {@code row} (all of them for -1). */
-        List<Note> beforeRow(List<Note> notes, int row) {
-            return notes.stream().filter(n -> row < 0 || n.row() < row).toList();
-        }
-
         /** Findings before the first player/camera divergence (all of them on a clean replay). */
         List<Note> before(List<Note> notes) {
             return notes.stream().filter(n -> firstError < 0 || n.row() < firstError).toList();
