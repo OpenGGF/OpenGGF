@@ -283,15 +283,15 @@ See the [Competition swap design](architecture/designs/2026-11-07-s3k-competitio
 25. [Death Egg widescreen backgrounds](#death-egg-widescreen-backgrounds) — Engine feature
 26. [LRZ1 and DEZ2 widescreen arena framing](#lrz1-and-dez2-widescreen-arena-framing) — Engine feature
 27. [Ending scenes in a wider picture](#ending-scenes-in-a-wider-picture) — Engine feature
-29. [LRZ boss lava-plane presentation](#lrz-boss-lava-plane-presentation) — Other
-30. [Blue Sphere player projection and shadows (local correction, 2026-10-17)](#blue-sphere-player-projection-and-shadows-local-correction-2026-10-17) — Other
-31. [AIZ miniboss defeat debris](#aiz-miniboss-defeat-debris) — Other
-32. [Retained HCZ replay qualification](#retained-hcz-replay-qualification) — Other
-33. [DDZ, LBZ and ICZ component history](#ddz-lbz-and-icz-component-history) — Other
-34. [DEZ final native terrain ownership — 2026-10-17](#dez-final-native-terrain-ownership--2026-10-17) — Other
-35. [Player-owned glide and native-P2 damage — qualified local components](#player-owned-glide-and-native-p2-damage--qualified-local-components) — Other
-36. [HCZ1 direct water art — bounded physical publication coverage](#hcz1-direct-water-art--bounded-physical-publication-coverage) — Other
-37. [Knuckles full-chain first-return pose — 2026-10-29](#knuckles-full-chain-first-return-pose--2026-10-29) — Other
+28. [LRZ boss lava-plane presentation](#lrz-boss-lava-plane-presentation) — Other
+29. [Blue Sphere player projection and shadows (local correction, 2026-10-17)](#blue-sphere-player-projection-and-shadows-local-correction-2026-10-17) — Other
+30. [AIZ miniboss defeat debris](#aiz-miniboss-defeat-debris) — Other
+31. [Retained HCZ replay qualification](#retained-hcz-replay-qualification) — Other
+32. [DDZ, LBZ and ICZ component history](#ddz-lbz-and-icz-component-history) — Other
+33. [DEZ final native terrain ownership — 2026-10-17](#dez-final-native-terrain-ownership--2026-10-17) — Other
+34. [Player-owned glide and native-P2 damage — qualified local components](#player-owned-glide-and-native-p2-damage--qualified-local-components) — Other
+35. [HCZ1 direct water art — bounded physical publication coverage](#hcz1-direct-water-art--bounded-physical-publication-coverage) — Other
+36. [Knuckles full-chain first-return pose — 2026-10-29](#knuckles-full-chain-first-return-pose--2026-10-29) — Other
 
 ---
 

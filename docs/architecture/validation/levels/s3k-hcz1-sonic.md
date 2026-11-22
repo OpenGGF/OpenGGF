@@ -638,6 +638,10 @@ through object recreation. `Sprite_OnScreen_Test` and
 (sonic3k.asm:37302-37318,37341-37357). The vertical fall callback can also
 clear it while its cleanup slot stays live (sonic3k.asm:65327-65351).
 
-The dispatch fixture exercises native width and a Sonic player. Broader
-viewport, donor and team combinations, child sprite lifetime and whole-route
-native pixel parity remain outside this coverage.
+The dispatch fixture uses Sonic. It checks the unsigned coarse boundary at
+320 px and the horizontal wall's survival at 528 px, including admission of
+the first HCZ1 placement at X=$0A00 when the camera reaches X=$0780. Other
+viewport, donor and team combinations and whole-route native pixel parity
+remain outside this coverage. The
+[child lifetime and audio audit](../../../status/s3k-known-bugs.md#hcz-geyser-child-lifetimes-and-cleanup-sound-commands)
+tracks the remaining object parity gaps.

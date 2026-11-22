@@ -20,7 +20,6 @@ import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
-import com.openggf.level.objects.ObjectRangeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
@@ -744,7 +743,8 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance implement
         // Load_Sprites latches the live pre-scroll camera before Process_Sprites
         // (loc_1B7F2, sonic3k.asm:37590-37598,7925-7929). The object pass
         // camera supplies that sample rather than the shaken render copy.
-        if (ObjectRangeOps.outOfRangeX(x, cameraLeft())) {
+        // The bound is $280 at 320 px and grows with the simulation viewport.
+        if (isCoarseXOutOfRange(x, cameraLeft(), coarseXCullRange())) {
             ObjectLifetimeOps.destroyRespawnableOffscreen(this);
             return true;
         }
@@ -980,13 +980,11 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance implement
         }
 
         private void updateSinking() {
-            // ROM loc_301A8: keep moving with reduced gravity until the sprite
-            // leaves the screen; there is no short post-splash lifetime.
             SubpixelMotion.moveSprite(motion, SLOW_GRAVITY);
 
-            // ROM loc_301A8 ends in Sprite_OnScreen_Test.  The debris writes
-            // width/height=$18, so use the sprite render bounds rather than
-            // the manager's wider point-margin unload band.
+            // HCZGeyserDebris_MoveInWater (sonic3k.asm:65088-65093) checks
+            // the previous render bit before Draw_Sprite. Java currently
+            // tests the current sprite bounds after movement.
             if (!isWithinRenderSpriteBounds(0x18, 0x18)) {
                 setDestroyed(true);
             }
@@ -1098,10 +1096,9 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance implement
                 surfaceFrameCount = 0;
             }
 
-            // Off-screen check
-            // ROM loc_301DE ends in Sprite_OnScreen_Test with width/height=$18.
-            // A broad point margin keeps the vertical geyser's two-per-frame
-            // spray allocation alive long after the ROM has recycled it.
+            // HCZGeyserSpray_Animate (sonic3k.asm:65110-65115) checks
+            // the previous render bit before animation and Draw_Sprite.
+            // Java currently tests the current sprite bounds after movement.
             if (!isWithinRenderSpriteBounds(0x18, 0x18)) {
                 setDestroyed(true);
             }

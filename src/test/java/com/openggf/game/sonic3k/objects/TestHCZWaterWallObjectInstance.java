@@ -204,6 +204,33 @@ class TestHCZWaterWallObjectInstance {
     }
 
     @Test
+    void wideWaitingWallSurvivesBeyondTheNativeCoarseWindow() {
+        var world = new DispatchWorld(null, 528, 0x107F);
+        var wall = world.spawnAtSlot(0x1280, 0, 8);
+
+        world.finishArtLoad();
+
+        assertTrue(world.manager.getActiveObjects().contains(wall),
+                "At 528 px the waiting wall is within the coarse window and its left edge is visible");
+    }
+
+    @Test
+    void firstHcz1WallSurvivesAdmissionAtTheWidePlacementEdge() {
+        var placement = new ObjectSpawn(0x0A00, 0x580, 0x3B, 0, 0, false, 0x0580, 0);
+        var world = new DispatchWorld(placement, 528, 0x700);
+        world.player.setCentreX((short) 0x880);
+        assertFalse(world.hasWall());
+        world.cameraAt(0x780, 0x500);
+        world.step();
+        var wall = world.wall();
+
+        world.finishArtLoad();
+
+        assertTrue(world.manager.getActiveObjects().contains(wall),
+                "The first HCZ1 wall must survive its first waiting pass at the wide placement edge");
+    }
+
+    @Test
     void horizontalTriggerDrawsThenActiveTailDeletesAndClearsThePlacementBit() {
         var world = new DispatchWorld(true, 0);
         var wall = world.wall();
@@ -387,21 +414,25 @@ class TestHCZWaterWallObjectInstance {
         private int frame;
 
         DispatchWorld(boolean placed, int subtype) {
+            this(placed ? new ObjectSpawn(0x1100, 0x580, 0x3B, subtype, 0, true, 0x8580, 0) : null,
+                    320, 0x1000);
+        }
+
+        DispatchWorld(ObjectSpawn placement, int width, int cameraX) {
             player.setCentreX((short) 0x1000);
             player.setCentreY((short) 0x580);
-            when(camera.getWidth()).thenReturn((short) 320);
+            when(camera.getWidth()).thenReturn((short) width);
             when(camera.getHeight()).thenReturn((short) 224);
             when(camera.getFocusedSprite()).thenReturn(player);
-            cameraAt(0x1000, 0x500);
+            cameraAt(cameraX, 0x500);
             services.withCamera(camera).withGameModule(new Sonic3kGameModule());
-            var placement = new ObjectSpawn(0x1100, 0x580, 0x3B, subtype, 0, true, 0x8580, 0);
-            manager = new ObjectManager(placed ? List.of(placement) : List.of(), new Sonic3kObjectRegistry(),
+            manager = new ObjectManager(placement != null ? List.of(placement) : List.of(), new Sonic3kObjectRegistry(),
                     0, null, null, GraphicsManager.getInstance(), camera, services);
             services.withDirectObjectManager(manager);
             manager.enableExecThenLoadPlacement();
             manager.enforceSlotLimit();
             manager.enablePermanentDestroyLatch();
-            manager.reset(0x1000);
+            manager.reset(cameraX);
         }
 
         void cameraAt(int x, int y) {

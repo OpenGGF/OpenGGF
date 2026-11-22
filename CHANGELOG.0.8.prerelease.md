@@ -8,10 +8,11 @@ under the matching area heading; see the
 ## Gameplay and presentation
 
 - **Hydrocity water walls:** the horizontal wall and vertical geyser now use
-  the original coarse camera window and previous render pass to choose when
-  to disappear or begin cleanup. Respawn bits clear at the native callbacks,
-  enemy art reloads on the cleanup timer's underflow, and spray advances the
-  random stream only after a forward object slot is available.
+  the coarse camera window and previous render pass to choose when to
+  disappear or begin cleanup. The window retains the original bounds at
+  native width and expands to keep walls loaded in wider viewports. Respawn
+  bits clear at the native callbacks, enemy art reloads on cleanup underflow,
+  and spray advances the random stream only after a forward slot is available.
 
 - **Placed rings in patched and hosted levels** use the underlying
   game's vertical placement and clipping rules. In Knuckles in Sonic 2, rings
