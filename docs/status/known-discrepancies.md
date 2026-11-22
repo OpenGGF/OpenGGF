@@ -3937,7 +3937,14 @@ The USA Sound Test run mapped the first read to boot-ROM address $0000E0.
 
 Without a replacement request, the USA Model 1 v1.10 and Model 2 v2.21
 BIOS runs first consumed different durations at $00011B ($32 and $33).
-The first FM1 key-off arrived 6,779 and 7,133 frames after dust admission,
-respectively. OpenGGF holds FM1 until another FM1 request replaces the track.
-The engine omits the BIOS-timed key-off and preceding BIOS-driven register
-writes because it has no boot-ROM stream.
+After reading three `$FF` bytes from boot-ROM addresses `$000214–$000216`
+on Model 1 and `$00021C–$00021E` on Model 2, the driver clears Z80 RAM
+`$1C00–$1D5F` except `$1C08`. The clear occurs 6,764 frames after dust
+admission on Model 1 and 7,104 frames after admission on Model 2, at capture
+frames 9189 and 9529. It clears `sndPlay`, the queues, `rValue`, and all six
+track slots, stopping any other FM effects still playing. The driver then
+silences FM1 at 6,779 and 7,133 frames after admission, at capture frames
+9204 and 9558, by writing RR `$80–$8C = $FF`, TL `$40–$4C = $7F`,
+key-off `$28 = $00`, and SSG-EG `$90–$9C = $00`. OpenGGF has no boot-ROM
+stream and omits both BIOS-driven effects. The engine holds FM1 until
+another FM1 request replaces the track and leaves other FM effects playing.
