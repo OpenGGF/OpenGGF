@@ -2402,6 +2402,9 @@ Remaining row-specific limits are unchanged:
   a bridge is back on the recorded clock. The bridge's own rows remain frozen;
   nothing observes the counter there.
 
+Whether independently serviced S2 special-stage rows omit a production
+V-int tick remains unmeasured.
+
 The seamless-boundary and title-card gaps are separate from the reached pause
 consequences repaired above. Closing a remaining clock divergence is a phase
 change, not a refactor: the counter is the `vblaCounter` argument handed to every object instance each frame, so a one-tick
@@ -2438,6 +2441,11 @@ These are hardware limits because the submission row and masked-window
 duration depend on CPU phase within a video frame, which the engine does
 not model. Production title-card waits are covered under
 [Remaining V-int Clock Limits Outside Native Start Pause](#remaining-v-int-clock-limits-outside-native-start-pause).
+
+The HTZ1 → HTZ2 gap shows 32 transfer and ledger field differences after
+gameplay diverges. That gap, the chain's physics divergences at ARZ2 row 5512,
+HTZ1 row 605 and HTZ2 row 6920, and the missed HTZ2 load boundary are gameplay
+findings outside the scope of these hardware limits.
 
 ---
 

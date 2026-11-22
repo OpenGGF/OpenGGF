@@ -286,12 +286,13 @@ See the [Competition swap design](architecture/designs/2026-11-07-s3k-competitio
 28. [Sprite_OnScreen_Test lifetime audit](#sprite_onscreen_test-lifetime-audit) — Other
 29. [LRZ boss lava-plane presentation](#lrz-boss-lava-plane-presentation) — Other
 30. [Blue Sphere player projection and shadows (local correction, 2026-10-17)](#blue-sphere-player-projection-and-shadows-local-correction-2026-10-17) — Other
-31. [Retained HCZ replay qualification](#retained-hcz-replay-qualification) — Other
-32. [DDZ, LBZ and ICZ component history](#ddz-lbz-and-icz-component-history) — Other
-33. [DEZ final native terrain ownership — 2026-10-17](#dez-final-native-terrain-ownership--2026-10-17) — Other
-34. [Player-owned glide and native-P2 damage — qualified local components](#player-owned-glide-and-native-p2-damage--qualified-local-components) — Other
-35. [HCZ1 direct water art — bounded physical publication coverage](#hcz1-direct-water-art--bounded-physical-publication-coverage) — Other
-36. [Knuckles full-chain first-return pose — 2026-10-29](#knuckles-full-chain-first-return-pose--2026-10-29) — Other
+31. [AIZ miniboss defeat debris](#aiz-miniboss-defeat-debris) — Other
+32. [Retained HCZ replay qualification](#retained-hcz-replay-qualification) — Other
+33. [DDZ, LBZ and ICZ component history](#ddz-lbz-and-icz-component-history) — Other
+34. [DEZ final native terrain ownership — 2026-10-17](#dez-final-native-terrain-ownership--2026-10-17) — Other
+35. [Player-owned glide and native-P2 damage — qualified local components](#player-owned-glide-and-native-p2-damage--qualified-local-components) — Other
+36. [HCZ1 direct water art — bounded physical publication coverage](#hcz1-direct-water-art--bounded-physical-publication-coverage) — Other
+37. [Knuckles full-chain first-return pose — 2026-10-29](#knuckles-full-chain-first-return-pose--2026-10-29) — Other
 
 ---
 
@@ -1596,9 +1597,22 @@ samples include the HUD. `TestS3kSpecialStageSphereMappings` and
 [Capture protocol and test evidence](architecture/plans/2026-10-13-s3k-playable-completion.md#blue-sphere-sat-ownership-and-plane-a-composition--2026-10-17).
 
 Whole-stage live HUD changes, transparent HUD plane composition, dense SAT
-limits and other native configurations remain unmeasured. The independent
-rewind fade-publication correction has its own gateway and release-latch
-checks. [Rewind evidence](architecture/plans/2026-10-13-s3k-playable-completion.md#immediate-scene-fade-publication-after-rewind--2026-10-17).
+limits, whole routes, cold routes, donor configurations, PAL and PCM remain
+unmeasured. The independent rewind fade-publication correction has its own
+gateway and release-latch checks. [Rewind evidence](architecture/plans/2026-10-13-s3k-playable-completion.md#immediate-scene-fade-publication-after-rewind--2026-10-17).
+
+---
+
+## AIZ miniboss defeat debris
+
+**Kind:** Other
+
+In the ROM, `AIZMiniboss_SpawnEndSign` (sonic3k.asm:137460-137463) creates
+four children from `ChildObjDat_AIZMiniboss_DefeatDebris`
+(sonic3k.asm:137995-138004). OpenGGF's `AizMinibossInstance.startDefeatHandoff`
+starts the music fade and signpost flow without creating these children.
+The separate AIZ alternate replay's ring-count difference was fixed by
+`f798a5bde3`.
 
 ---
 
@@ -1614,6 +1628,9 @@ The engine records `$07BB`. Native SST 16 moves from `$07D7` to `$07D6` on the
 landing pass under `HCZEndBossPlatform_Rise`. This is a candidate gameplay
 bug. The first differing engine write in platform motion, top-only contact
 or Tails's roll-to-standing adjustment remains unidentified.
+
+Segment 11 retains 11 camera and 51 animation differences. Segment 13
+retains 182 animation differences.
 
 The same maintained `TestS3kSonicTailsCompleteEmeraldRunChain` run stops at
 MGZ admission (movie cursor 100896). The first unmatched work is a direct
@@ -1634,7 +1651,8 @@ terrain lookup still explicitly rejects unproduced definition20. LBZ's Death Egg
 launch copies two encoded row-pointer words, preserving source bytes and later
 mutation aliases through two forced whole-world restore/replay cycles. Exact
 pre-edit15/1F/14E and independent ROM-pointer1/1F -> final86 focused/118 affected
-guards all pass without skips.
+guards all pass without skips. This does not requalify HCZ8329/exit, independent
+slice/alternate/GLFW or full routes; no CPU/camera/unknown-RAM fallback changes.
 [Exact owner evidence and limits](architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r13-residency-smoke-regressions-native-row-pointers-and-ddz-fixture-entry--2026-10-17).
 
 ICZ1 Knuckles snow-free camera gate (2026-10-21): the native Player_mode3
@@ -1965,7 +1983,9 @@ HCZ receiving qualification (2026-10-26): merge `b3374a56c` preserves exact
 upstream08 and qualifies 297 unique focused cases without skips. Canonical six
 is 6/1F/0E/0S; five companions pass. Segment11 now crosses its giant-ring
 boundary, with no non-camera physics error and bounded residual 11 camera /
-51 animation errors. The receiving run then stopped before the later SS7 result boundary.
+51 animation errors. The run advanced through segment 13 into SS7 and
+stopped at the SS7 results boundary (movie cursor 97208). Commit
+`b9abe4a08a` later removed that stop.
 Jawz's independent waiting/initialization collision correction qualifies 69
 local/anchor cases without skips; it is not attributed to the row442 P2 hurt.
 Original ROM placement identifies that source as Turbo Spiker `$96`, a separate
