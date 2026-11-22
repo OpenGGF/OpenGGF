@@ -210,7 +210,9 @@ class TestCdPauseExit {
             "R41A, CAMPAIGN, true",
             "R51A, CAMPAIGN, true",
             "R11A, CAMPAIGN, false",
-            "R51A, TIME_ATTACK, false"
+            "R51A, TIME_ATTACK, false",
+            "R53D, CAMPAIGN, false",
+            "R43D, CAMPAIGN, true"
     })
     void pauseRestartReleasesHeldFmEffectsOnlyOnSupportedRoutes(
             CdStagePayload payload, Route route, boolean releasesEffects) throws Exception {

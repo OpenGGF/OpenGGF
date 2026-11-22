@@ -54,6 +54,11 @@ public interface CdZoneFragment {
         return false;
     }
 
+    /** Whether the stage program releases held FM effects when a pause restart spends a life. */
+    default boolean releasesHeldFmEffectsOnPauseRestart(CdStagePayload payload) {
+        return false;
+    }
+
     /** The zone's part of the player routine for one of its stages (see {@link CdZonePlayerProfile}). */
     /**
      * The objects the stage's level initialization writes into object RAM itself, with no layout row, after the
