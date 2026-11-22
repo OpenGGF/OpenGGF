@@ -184,11 +184,9 @@ final class SonicCdLevelInitProfile extends AbstractLevelInitProfile
     }
 
     /**
-     * This load as submitted work ({@link CdLoadTiming#stageLoad}): the stage program file and the PLC list
-     * {@code LoadLevelData} queues for this entry (Palmtree Panic/Load Level Data.asm:37-48). {@code spawnMode} is
-     * set for a checkpoint restart (1) and a time-warp arrival (2); the title card was already loaded when this
-     * load shows none ({@link #restartSpawnMode}). {@code LoadSectionArt} reads the camera {@code LevelScroll} has
-     * just placed (Level/Main.asm:245-248), which {@code initCameraStep} has set here.
+     * Submit the stage program file and the PLC its loader queues for this entry.
+     * {@code spawnMode} is set for a checkpoint restart (1) and a time-warp arrival (2).
+     * {@code LoadSectionArt} reads the camera {@code LevelScroll} just placed (Level/Main.asm:245-248).
      */
     private com.openggf.game.timing.HardwareWorkSubmission stageLoad() {
         var level = com.openggf.game.GameServices.level();
@@ -201,16 +199,14 @@ final class SonicCdLevelInitProfile extends AbstractLevelInitProfile
         CdNativeFile fileName = demo == null ? payload.file() : demo.file();
         try {
             boolean spawnModeSet = checkpointSpawn || arrival != null;
+            boolean titleCardAlreadyLoaded = arrival != null || !titleCard;
             int plc = 0;
-            if (spawnModeSet || !titleCard) {
+            if (spawnModeSet || titleCardAlreadyLoaded) {
                 byte[] file = source.readFile(fileName);
                 var entry = demo == null ? com.openggf.game.soniccd.level.CdStageCatalogue.entry(payload)
                         : com.openggf.game.soniccd.level.CdStageCatalogue.entry(demo);
-                int levelDataPlc = file[entry.levelDataIndex() + 4]
-                        & 0xFF;                                   // move.b (a2),d0 after addq.w #4,a2 (:44-46)
-                int section = spawnModeSet ? CdLoadTiming.sectionInitPlc(file, CdLoadTiming.sectionRanges(payload),
-                        com.openggf.game.GameServices.camera().getX()) : 0;
-                plc = CdLoadTiming.levelStartPlc(spawnModeSet, true, levelDataPlc, section);
+                plc = CdLoadTiming.levelStartPlc(file, entry, com.openggf.game.GameServices.camera().getX(),
+                        spawnModeSet, titleCardAlreadyLoaded);
             }
             return CdLoadTiming.stageLoad(source.assets().entry(fileName), plc);
         } catch (java.io.IOException e) {

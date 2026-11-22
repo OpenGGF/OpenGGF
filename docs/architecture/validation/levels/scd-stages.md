@@ -16,9 +16,11 @@ scroll state/player/frame isolation and frozen scroll-lock capture after release
 Per-zone phase tests cover the stage/program variants, immutable dependencies,
 water/ramp/band arithmetic and 448-row sampling. The combined initial check runs
 54 tests without skips. No new native-reference, cold-route or time-travel frontier
-is certified. Rendered pixels for other periods/acts, exhaustive wraps, swap edges
-and complete within-stage rewind histories remain obligations. These checks
-supersede the earlier test that pinned CD's profile exclusion.
+is certified. Rendered pixels for other periods/acts, exhaustive wraps, swap edges,
+and complete within-stage rewind histories remain obligations. Load and time-travel
+rewind histories also remain open beyond the tested R11A → R11D time warp and
+R11A → R12A act clear. The motion checks supersede the earlier test that pinned
+CD's profile exclusion.
 
 Game `scd`, all seven zones, Sonic only. A partial matrix under the
 [zone and act testing standard](../../../guide/contributing/level-test-standard.md):
@@ -268,7 +270,7 @@ state. The ring witness and alternate future lack a native comparison.
 | EVENT, CAMERA | Level events, boss arenas and scroll locks hosted; routes cover them where they pass | Wide-view triggers unchecked |
 | BOSS | Seven bosses with native fight recordings | Tidal Tempest after the fight comparison limits and Metallic Madness boss slots and stage exit lack native assertions |
 | LIFE | Deaths, game over and checkpoints run through the program flow (`TestCdGameFlowNative`, six native runs set up with RAM pokes); the idle timer and give-up equal native on an 11,490-row movie; saves persist across runs, and RAM DATA resets the Sonic CD record through the title menu (`TestCdDurableSaves`) | Checkpoint respawn after time travel unverified |
-| LOAD | Act clear to the next stage, warp to another period, giant ring to the special stage and back; state a stage change leaves behind is cleared as native does (`TestSonicCdStageChangeIsolation`); stage-load and video-read timing in normal play is estimated from emulator measurements (`gameplay.loadTimeSimulation`) | Carry into a native warp destination unverified; the checkpoint and warp entries are single samples, and 12 stages' checkpoint and warp keys may name the wrong queued list ([known discrepancy](../../../status/known-discrepancies.md#sonic-cd-hardware-timings-not-modelled)) |
+| LOAD | Act clear to the next stage, warp to another period, giant ring to the special stage and back; state a stage change leaves behind is cleared as native does (`TestSonicCdStageChangeIsolation`); stage-load and video-read timing in normal play is estimated from emulator measurements (`gameplay.loadTimeSimulation`) | Carry into a native warp destination unverified; the checkpoint and warp entries are single samples. The load key uses the list the stage program queues ([known discrepancy](../../../status/known-discrepancies.md#sonic-cd-hardware-timings-not-modelled)) |
 | REWIND | Boss rewind tests for six zones, rings, zone signals, the Stardust Speedway lamp, the Collision Chaos drain. `TestCdStageLoadRewind` verifies that held rewind stops at the destination floor after R11A → R11D (time warp) and R11A → R12A (act clear) on the USA disc. See the [stage-load rewind policy](../../../status/known-discrepancies.md#sonic-cd-stage-load-live-rewind). | Within-stage rewind across complete routes and the other load edges remain unassessed. |
 | PRESENT | Zone pictures per the presentation lanes (most early and end shots equal native); `TestCczBackgroundPicture` also compares the Act 1 Past and Good Future foreground below Y `$5C0` against native frames; `TestCdTitlePicture` | Uncertified shots listed in each zone test; widths other than 320 draw but have no native reference |
 | ROUTE | 28 full-act routes as above | Act 1 Bad Future and act 2 Past and futures: fixtures only; no complete-run recording |
@@ -315,27 +317,97 @@ backup RAM and campaign progress. A separate case checks Start abort.
 Both local native recordings end with six UFOs remaining. A natural clear
 and parity for the original `SPEEND.MMD` credits presentation remain open.
 
-## Wacky Workbench defeat fades (closed)
+## Stage pictures and Wacky Workbench defeat fades
+
+`StageMainLoop` (common/main.asm:329-340) waits for `VBlankStage`
+(common/main.asm:854-877). That V-INT uploads the palette, horizontal scroll
+and sprite table prepared by the same stage iteration. It also updates the
+animated tiles in `VBlankStagePlayerGfxDone` (common/main.asm:891-902).
+The other stage dialect does the same in `VInt_Level` (Level/Main.asm:821-847).
+`StageMainLoopUpdate` (common/main.asm:406-410) runs objects and
+`StageMainLoopDraw` (common/main.asm:443-453) cycles colors after drawing
+objects. In Wacky Workbench, `CycleColor` (r6/palette_cycle_c.asm:23-46),
+`BossFadeStageWritePalette` (common/palette_fade.asm:412-434), and
+`ElectricBeamsAnimateMainPalette` (objects/r6/electric_beams.asm:201-211)
+write the palette for that iteration.
+
+The live engine draws the completed iteration's sprites, scroll, palette,
+and animated tiles together. This is the picture the disc displays at the
+next V-INT. The base engine already matched ordinary palette rows at this
+pairing. Comparing engine-after-R to the CRAM sampled at the end of native
+row R made ordinary writes appear early.
 
 `EggmanDefeatSequenceFadeScreen` and `EggmanDefeatSequenceFadeObjects`
-(objects/r6/boss.asm:545-559) hold the stage loop at two points in the defeat
-sequence. `FadeToWhite` (common/palette_fade.asm:285-295) and
-`BossFadeObjectsFromWhite` (common/palette_fade.asm:463-484) each wait 22
-times. `VBlankCommon` (common/main.asm:1014-1025) publishes the current
-palette before the fade routine computes the next one. The restore reads the
-separate target buffer that `LoadFadePalette` (common/palette_load_fade.asm:3-15)
-fills from the disc. The palette cycler changes only the active buffer.
-Both waits request
-`VBlankPaletteFade` (common/main.asm:951-962), which reads the pads through
-`VBlankCommon`. BizHawk reports zero lag frames in the captured windows.
+(objects/r6/boss.asm:545-559) hold the stage loop twice. The restore reads
+the separate target buffer filled by `LoadFadePalette`
+(common/palette_load_fade.asm:3-15). The palette cycler changes only the
+active buffer.
 
-`TestWwzBossFades` uses the defeat movies and compares 64 displayed words on
-every row of both holds against the user-local `rehost-boss-wwz/R63C-fades`
-and `R63D-fades` CRAM recordings. Each window includes the entry and 22
-subsequent V-INTs. Good Future rows are 5473–5495 and 5553–5575. Bad Future
-rows are 5724–5746 and 5804–5826. The test also checks that the stage frame
-counter holds and resumes. `TestWwzBossNative` checks slots and timers at
-completed level frames.
+The boss calls each fade from inside `UpdateObjects`
+(`StageMainLoopUpdate`, common/main.asm:406-410). The two waits set routine
+`$12` and call VSync 22 times each (`FadeToWhite`,
+common/palette_fade.asm:285-295, and `BossFadeObjectsFromWhite`,
+common/palette_fade.asm:463-484). `VBlank` (common/main.asm:716-738) writes
+vertical scroll before dispatch. `VBlankIndex` (common/main.asm:754-765)
+dispatches `VBlankPaletteFade` (common/main.asm:951-962). Its
+`VBlankCommon` (common/main.asm:1014-1037) reads the pads and uploads CRAM.
+`VBlankCommonResume` (common/main.asm:1039-1054) then transfers the sprite
+table to VRAM `$F800` and H-scroll to `$FC00`, using the buffers that the
+last completed stage iteration prepared. The fade services
+`ProcessGfxQueueFast` (common/gfx_queue.asm:103-112) and advances the
+decompressor setup after VSync, when the fade computes the next step. `VBlankDispatchDone`
+(common/main.asm:740-750) still flushes FM requests and advances its
+interrupt-owned counters.
+
+The blocked object pass has yet to reach `StageMainLoopUpdateScroll` and
+`StageMainLoopDraw` (common/main.asm:440-453). The fade interrupt omits
+`LoadPlayerGfx` and `VBlankStagePlayerGfxDone`
+(`VBlankStage`, common/main.asm:854-900). Existing player art, stage
+animation patterns, plane maps and HUD digit tiles remain resident.
+`DrawStage` (r6/stage_draw_3c.asm:17-34 and r6/stage_draw_3d.asm:17-34)
+would stream the plane-map rows and columns on a regular stage V-INT.
+`UpdateHudNumbers` (objects/hud_points.asm:210-257) ticks the timer and
+writes its centiseconds on that same ordinary V-INT. During the four held
+windows, the native hashes of H-scroll, the SAT, both plane maps, HUD art,
+WWZ animation art and player art were constant within each hold. Timer
+RAM was also constant.
+
+The engine retains the last sprite and scroll picture before the boss
+enters the wait. It displays the fade palette prepared by each held tick
+with that picture, using the same palette pairing as ordinary frames.
+The stage art and HUD publish when the next ordinary picture is due.
+In both restore holds, a duplicate offscreen ring had previously consumed
+16 pixels of the sprite scanline budget and clipped the escape pod.
+Placed rings now enter the table through their object slots, as in
+`ObjRing_Main` (Level/_Objects/Ring/Main.asm:214-232) and `DrawObject`
+(common/object.asm:100-154). Tiles-only pictures already matched in all
+four holds. The full-picture differences came from sprite admission and
+which sprite table was on screen.
+
+The native probe reads CRAM after `FrameAdvance`, alongside the video
+buffer used for pictures. `TestWwzBossFades` compares CRAM and the backdrop
+at each of the 672 recorded V-INTs to the engine after the preceding row.
+The two recordings have no lag in these windows. Good Future hold rows are
+5473-5495 and 5553-5575. Bad Future hold rows are 5724-5746 and 5804-5826.
+The test also compares the stage frame counter at the same replay row,
+including when the stage loop resumes. The user-local CRAM recordings are
+under `rehost-boss-wwz/R63C-fades` and `R63D-fades`. Each hold window
+includes the entry and 22 subsequent V-INTs. A rewind check restores the
+first Good Future hold at row 5481 and checks the held rows, palette words,
+and gameplay resumption at row 5496 on both passes. `TestWwzBossNative`
+checks slots and timers at completed level frames.
+
+`TestWwzBossHoldPictures` compares all 320×224 pixels at native channel
+precision, including the HUD, during both holds in each recording and
+across their boundaries. It also checks the stage animation counters
+during the holds, when the fade can conceal a premature art update.
+Restoring a snapshot inside a wait also restores the last published HUD
+digits from the HUD object's captured values.
+The Good Future picture windows are rows 5475–5495
+and 5555–5575. The Bad Future picture windows are 5726–5746 and 5806–5826. These
+rows have no lag. The lossless PNGs are user-local, under
+`rehost-boss-wwz/{R63C,R63D}-fades/pictures/`, indexed by trace row.
+The cartridge palette upload paths need their own displayed-frame checks.
 
 ## Palmtree Panic campaign Amy Rose (hosted)
 

@@ -24,9 +24,13 @@ final class CdFreshStageBoots implements AutoCloseable {
 
     /** Closes the previous stage's boot and boots {@code payload} from {@code disc} in a new one, without audio. */
     GameLoop boot(CdDiscDataSource disc, CdStagePayload payload) throws Exception {
+        return boot(disc, new SonicCdGameModule(), payload);
+    }
+
+    GameLoop boot(CdDiscDataSource disc, SonicCdGameModule module, CdStagePayload payload) throws Exception {
         close();
         boot = new HeadlessGameBoot(width, height);
-        GameLoop loop = boot.boot(disc, new SonicCdGameModule(), SonicCdZoneRegistry.zoneIndex(payload),
+        GameLoop loop = boot.boot(disc, module, SonicCdZoneRegistry.zoneIndex(payload),
                 SonicCdZoneRegistry.actIndex(payload));
         assertInstanceOf(NullAudioBackend.class, GameServices.audio().getBackend());
         return loop;
