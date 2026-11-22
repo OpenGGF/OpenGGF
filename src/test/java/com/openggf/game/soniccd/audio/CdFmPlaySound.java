@@ -10,13 +10,13 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Pure, uncommitted byte-state projection of the shipped FM PlaySoundID/StopSound closure.
+ * Test-only byte-state projection of the shipped FM PlaySoundID/StopSound closure.
  * No instruction execution, CPU stack, timer, bus transaction, synthesis or audio ownership.
  * Native authority: scddisasm 1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff,
  * Sound Drivers/FM/_Driver.asm:545-556,670-722,774-995,1050-1088.
  * FixBugs=0: StopSound deliberately uses TrackInitData and stride two, not six track structs.
  */
-public final class CdFmPlaySound {
+final class CdFmPlaySound {
     private static final int RAM_BYTES = 0x2000;
     private static final int INSTALLED_BYTES = 0x1AD6;
     private static final int SND_PLAY = 0x1C09;

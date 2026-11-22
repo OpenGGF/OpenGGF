@@ -4837,9 +4837,16 @@
       "note": "BizHawk native special-stage run (soniccd.special.native.root, else <native root>/rehost-special); reached once the disc is supplied"
     },
     {
+      "match": "com.openggf.game.soniccd.audio.TestCdFmPlaySound#dustOverwritesActiveFm1WithoutAKeyWriteBeforeTheBankedRead",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/audio/TestCdFmPlaySound.java:320",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
       "match": "com.openggf.game.soniccd.audio.TestCdFmPlaySound#actualRetainedUsaBankAdmitsAnchorsAndPlansAfterTheDiscOwnerCloses",
       "category": "optional-fixture",
-      "evidence": "src/test/java/com/openggf/game/soniccd/audio/TestCdFmPlaySound.java:333",
+      "evidence": "src/test/java/com/openggf/game/soniccd/audio/TestCdFmPlaySound.java:364",
       "allowed_when_absent": "soniccd_disc",
       "note": "user's Sonic CD disc"
     },
@@ -4945,6 +4952,20 @@
       "match": "com.openggf.game.soniccd.audio.TestCdAudioLivePath#anFmEffectRequestedByIdIsSynthesisedThroughTheSharedProducer",
       "category": "optional-fixture",
       "evidence": "src/test/java/com/openggf/game/soniccd/audio/TestCdAudioLivePath.java:44",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.audio.TestCdAudioLivePath#dustReplacesTheJumpFm1TrackWithoutChangingItsKey",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/audio/TestCdAudioLivePath.java:87",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.audio.TestCdAudioLivePath#dustHoldsFm1UntilAReplacementAfter7200Frames",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/audio/TestCdAudioLivePath.java:139",
       "allowed_when_absent": "soniccd_disc",
       "note": "user's Sonic CD disc"
     },

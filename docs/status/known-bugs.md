@@ -49,23 +49,6 @@ service 46 during the load. The cause of the extra interrupt is open.
 `palFadeFlags`, so the entry path could determine the count. Establish the
 cause before changing how the engine selects the load count.
 
-## Sonic CD dust SFX malformed track count
-
-The retail FM dust effect declares two tracks. Only one six-byte header
-precedes `SonicCD_D6_FM6` (scddisasm/src/Sound Drivers/FM/SFX/D6.asm:1-9).
-`PlaySFX` reads the first six track bytes as another header and initializes
-FM1 with track pointer $80E0 (Sound Drivers/FM/_Driver.asm:803-861).
-The copied $EF flags mark FM1 active and sound-disabled.
-`SetKeyOff` (Sound Drivers/FM/_Driver.asm:545-556) returns before writing
-the chip register. Subsequent reads through $80E0 reach the Z80's banked
-68000 address window.
-
-`CdFmSfxData` stops reading headers at the first track's data. The engine plays
-the FM6 effect and leaves any active FM1 effect running. Reproducing the native
-FM1 replacement requires preserving the chip state at admission and determining
-how long the replacement owns FM1. Capture the FM1 track state and register writes
-with an effect active when $D6 starts to measure the consequences of the bus read.
-
 ## Solid on-screen gate: render-pass approximations — 2026-11-02
 
 The gate now reads `render_flags.on_screen` as the previous frame's BuildSprites /

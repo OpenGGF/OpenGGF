@@ -296,7 +296,7 @@ name uses donor ROM lettering fitted to CD's native 72-pixel cell. This is
 creator-selected cross-game behavior, not a correction to shipped CD physics.
 
 **Shipped behavior.** Sonic CD targets the disc's assembled routines.
-The [dust effect's FM1 admission gap](known-bugs.md#sonic-cd-dust-sfx-malformed-track-count)
+The [dust effect's BIOS-dependent playback](#sonic-cd-dust-sfx-reads-the-sega-cd-boot-rom-through-the-z80-bank-window)
 includes a Z80 read from the banked 68000 address window. OpenGGF does not emulate
 that bus.
 
@@ -3953,3 +3953,25 @@ pieces. Reserved attracted rings submit at their actual object-slot phase, and
 ring visibility is filtered after admission. Explicit native FIFO entries precede
 the existing legacy SST suffix; this mixed bridge does not establish every
 object's native DisplaySprite topology. See the [design and source evidence](../architecture/designs/2026-10-22-native-sprite-scanline-budgets.md).
+
+## Sonic CD dust SFX reads the Sega CD boot ROM through the Z80 bank window
+
+The disc-backed [dust fix](https://github.com/OpenGGF/OpenGGF/pull/448)
+models FM1's replacement and preserves its key state at admission. The
+shipped driver then reads the second track from the Z80 bank window at
+$80E0. See `ParseNextTrackCmd` (Sound Drivers/FM/_Driver.asm:267-278).
+The USA Sound Test run mapped the first read to boot-ROM address $0000E0.
+
+Without a replacement request, the USA Model 1 v1.10 and Model 2 v2.21
+BIOS runs first consumed different durations at $00011B ($32 and $33).
+After reading three `$FF` bytes from boot-ROM addresses `$000214–$000216`
+on Model 1 and `$00021C–$00021E` on Model 2, the driver clears Z80 RAM
+`$1C00–$1D5F` except `$1C08`. The clear occurs 6,764 frames after dust
+admission on Model 1 and 7,104 frames after admission on Model 2, at capture
+frames 9189 and 9529. It clears `sndPlay`, the queues, `rValue`, and all six
+track slots, stopping any other FM effects still playing. The driver then
+silences FM1 at 6,779 and 7,133 frames after admission, at capture frames
+9204 and 9558, by writing RR `$80–$8C = $FF`, TL `$40–$4C = $7F`,
+key-off `$28 = $00`, and SSG-EG `$90–$9C = $00`. OpenGGF has no boot-ROM
+stream and omits both BIOS-driven effects. The engine holds FM1 until
+another FM1 request replaces the track and leaves other FM effects playing.
