@@ -221,6 +221,36 @@ class TestObjectManagerRewindSnapshot {
     }
 
     @Test
+    void relocationRetiresCollisionPublishersBeforeRewindCapture() {
+        ObjectSpawn origin = spawn(100, 200);
+        ObjectRegistry registry = mock(ObjectRegistry.class);
+        when(registry.objectSlotLayout()).thenReturn(ObjectSlotLayout.SONIC_2);
+        when(registry.objectWindowingStrategy()).thenReturn(ObjectWindowingStrategy.LEGACY);
+        ReservedTouchPublisher retired = new ReservedTouchPublisher(origin);
+        when(registry.create(origin)).thenReturn(retired);
+        ObjectManager manager = new ObjectManager(List.of(origin), registry, 0, null, null);
+        manager.enableCounterBasedRespawn();
+        manager.reset(0);
+        ReservedTouchPublisher survivor = new ReservedTouchPublisher(spawn(0x410, 200));
+        manager.addDynamicObject(survivor);
+        manager.captureCollisionResponseListForNextFrame();
+        var retiredId = manager.objectQuery().identityOf(retired).orElseThrow();
+        var survivorId = manager.objectQuery().identityOf(survivor).orElseThrow();
+        var rewind = manager.rewindSnapshottable();
+        var before = rewind.capture().collisionResponseState();
+        assertTrue(before.previousCollisionObjectIds().containsAll(List.of(retiredId, survivorId)));
+        assertTrue(before.currentCollisionBuildObjectIds().containsAll(List.of(retiredId, survivorId)));
+
+        com.openggf.game.GameServices.camera().setX((short) 0x400);
+        ObjectManagerInternalAccess.refreshPlacementAfterRelocation(manager);
+
+        assertTrue(manager.objectQuery().identityOf(retired).isEmpty());
+        var after = rewind.capture().collisionResponseState();
+        assertEquals(List.of(survivorId), after.previousCollisionObjectIds());
+        assertEquals(List.of(survivorId), after.currentCollisionBuildObjectIds());
+    }
+
+    @Test
     void fullResetRetiresBothCollisionBuffersBeforeReusingSlots() {
         ObjectManager manager = makeManager(List.of(), new TrackingRegistry());
         ReservedTouchPublisher publisher = new ReservedTouchPublisher(spawn(100, 200));
