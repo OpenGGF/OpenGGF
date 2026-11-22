@@ -1644,6 +1644,13 @@ configuration/cold/PAL/PCM limits outside these products remain open.
 
 ## Retained HCZ replay qualification — 2026-10-17
 
+**Resolved platform landing.** The HCZ end-boss turbine allocates its rising
+platform after the turbine's own slot, so the initializer runs in the birth
+pass. On Sonic+Tails segment 15 row 1941, Tails lands at the native
+`$07BA.EC00`. The next non-camera difference is Sonic's Y at row 2008
+(`$07CE/$07D0`).
+[HCZ2 landing verification](architecture/validation/levels/s3k-hcz2.md#end-boss-platform-allocation-and-rolling-tails-landing).
+
 **Kind:** Other
 
 Worker source `b9c1c8b3d` closes the retained stored-carrier-target/X-lock and

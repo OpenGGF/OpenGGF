@@ -1310,3 +1310,27 @@ cylinder state/execution). No trace comparator, bootstrap, timing authority or
 fixture was changed. This is bounded native Sonic+Tails cross-act route evidence;
 configuration breadth, full-level certification and the pending-main-init
 restore spot remain unqualified.
+
+
+## End-boss platform allocation and rolling Tails landing
+
+`HCZEndBossFan_SpawnPlatform` (sonic3k.asm:141121-141125) invokes
+`CreateChild1_Normal` (sonic3k.asm:177015-177025) from the turbine's slot.
+A lower free slot between the boss and turbine made the old platform miss its
+first object pass. The turbine now allocates its own child, so the platform
+initializes on the birth pass and enters rise on the original schedule.
+
+The real object-manager regression starts with that lower slot free. It checks
+the platform's second rise position, rolling P2's native floor reset, both the
+Y fraction and standing radius, and one continued ride dispatch. It fails
+on develop at `$05DA/$05DB` and passes on the correction. The boss graph
+rewind tests pass. Alternate viewport, donor, roster and whole-act coverage
+remain inherited gaps.
+
+On the original continuous Sonic+Tails segment 15, native P2 enters the solid
+check at `$07BB.EC00` with radius 14. The native column sees `$07D6` after
+`HCZEndBossPlatform_Rise` (sonic3k.asm:141199-141211). The engine previously
+saw `$07D7`. `loc_1E45A` (sonic3k.asm:42038-42063) applies the incoming-radius
+snap, and `Tails_TouchFloor` (sonic3k.asm:29173-29203) adds the radius delta of
+`-1` while retaining `$EC00`. The corrected final Y is `$07BA`. The independent
+HCZ slice keeps its strict result. [Replay commands and residuals](../../../status/trace-frontier-log.md#2026-11-22--hcz-end-boss-platform-landing).
