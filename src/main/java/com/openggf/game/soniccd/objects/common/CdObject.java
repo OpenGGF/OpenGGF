@@ -3,17 +3,22 @@ package com.openggf.game.soniccd.objects.common;
 import com.openggf.audio.GameSound;
 import com.openggf.camera.CameraPresentationAccess;
 import com.openggf.configuration.SonicConfiguration;
-import com.openggf.game.solid.SolidExecutionFrames;
+import com.openggf.game.DamageCause;
+import com.openggf.game.PlayableEntity;
 import com.openggf.game.internal.ObjectTerrainProbeLayout.SpriteState;
+import com.openggf.game.solid.SolidExecutionFrames;
 import com.openggf.game.soniccd.audio.CdSoundRequests;
-
+import com.openggf.game.soniccd.objects.art.CdObjectArtProvider;
+import com.openggf.game.soniccd.player.CdSonicAnimation;
+import com.openggf.game.soniccd.timetravel.CdTimeTravel;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.EnemyDefeatBounce;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TerrainCheckResult;
-import com.openggf.game.soniccd.objects.art.CdObjectArtProvider;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 /**
  * Shared Sonic CD object semantics on the shared object owner.
@@ -405,6 +410,35 @@ public abstract class CdObject extends AbstractObjectInstance implements SpriteS
         // Player_TouchEnemy .KillEnemy (Palmtree Panic/Player Object Collision.asm:174-175).
         services().playSfx(GameSound.BADNIK_HIT);
         becomeExplosion(pointsIndex, layer, 1, fromBadnik);
+    }
+
+    /** sub_206D70 (r7/player_object_collide.asm:125-131) and sub_2069E8 (r8/player_object_collide.asm:161-167). */
+    protected final boolean attacksOnEnemyTouch(PlayableEntity player) {
+        return CdTimeTravel.starsActive(services().gameModule()) || player.getInvincibleFrames() > 0
+                || player.getAnimationId() == CdSonicAnimation.ROLL.id();
+    }
+
+    /**
+     * A special touch that branches into the normal enemy kill owns the rebound as well.
+     * loc_206DE6 (r7/player_object_collide.asm:167-192) and loc_206A5E (r8/player_object_collide.asm:203-228).
+     */
+    protected final void killAsEnemyFromSpecialTouch(PlayableEntity player, int layer, boolean fromBadnik) {
+        killAsEnemy(player, layer, fromBadnik);
+        EnemyDefeatBounce.apply(player, y, services().worldSession());
+    }
+
+    /**
+     * sub_206E3A (r7/player_object_collide.asm:208-242) and sub_206AB2 (r8/player_object_collide.asm:244-282).
+     * HurtPlayer (r8/player_object_collide.asm:266-282) allocates $11 during the player turn.
+     * UpdateObjects (common/object.asm:5-23) reaches its slot in the same pass.
+     */
+    protected final void hurtFromSpecialEnemyTouch(AbstractPlayableSprite player, int frameCounter) {
+        if (player.getInvulnerable()) return;
+        boolean hadRings = player.getRingCount() > 0;
+        if (hadRings && !player.hasShield() && !player.suppressesLostRingSpawnOnHurt()) {
+            services().spawnLostRings(player, frameCounter);
+        }
+        player.applyHurtOrDeath(x, DamageCause.NORMAL, hadRings);
     }
 
     /**

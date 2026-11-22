@@ -2940,6 +2940,13 @@
       "note": "user's Sonic CD disc"
     },
     {
+      "match": "com.openggf.game.soniccd.TestSszObjects#kabasiraShotDefeatReboundsUnrolledInvincibleSonic",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestSszObjects.java:386",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
       "match": "com.openggf.game.soniccd.TestSszObjects#kabasiraHeadSpawnsThreeFollowersThenShootsEveryTwoHundredFortyFrames",
       "category": "optional-fixture",
       "evidence": "src/test/java/com/openggf/game/soniccd/TestSszObjects.java:358",
@@ -6690,6 +6697,20 @@
       "evidence": "src/test/java/com/openggf/game/soniccd/TestQqzObjectsAppearances.java:94",
       "allowed_when_absent": "soniccd_native",
       "note": "BizHawk native reference (and the user's Sonic CD disc)"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestCdScarabRebound#r81bScarabHurtScattersRingsOnTheContactFrame",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdScarabRebound.java:43",
+      "allowed_when_absent": "soniccd_native",
+      "note": "user's Sonic CD disc and native R81B Scarab recording"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestCdScarabRebound#r81bScarabKillMatchesNativeRebound",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdScarabRebound.java:20",
+      "allowed_when_absent": "soniccd_native",
+      "note": "user's Sonic CD disc and native R81B act-end recording"
     },
     {
       "match": "com.openggf.game.soniccd.TestSonicCdActEndNative#metallicMadnessPastActEnd",

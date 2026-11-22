@@ -162,7 +162,10 @@ under the matching area heading; see the
   his rings when he lands on spikes with the disc's warp check or touches a
   Tidal Tempest boss missile. The stars also protect Sonic from Wacky
   Workbench's freezer, electric beams and sparks, and let him attack Metallic
-  Madness's scarab from its vulnerable side. Grabbing a Wacky Workbench hang
+  Madness's Scarab from its vulnerable side. Defeating it rebounds Sonic.
+  When a Scarab, curled Dango, or Kabasira shot hurts Sonic, his lost rings
+  scatter in the contact frame.
+  Grabbing a Wacky Workbench hang
   bar ends star protection and resets the warp timer. Robotnik's projectors can be destroyed in the
   Past. In the Past acts of Palmtree Panic and Wacky Workbench, the projectors'
   flying and ground hologram animals use art from the disc.
@@ -189,10 +192,13 @@ under the matching area heading; see the
   Its walker platforms let Sonic pass their sides, and the invisible blocks let
   him jump through from below. A separate native recording captures Metallic
   Madness Past act 1 through its signpost, tally and Act 2 Present exit state.
-  Engine comparison reaches the earlier Scarab rebound. Metallic Madness
-  lasers shrink Sonic on the original contact frame. In Stardust Speedway and
-  Metallic Madness, a curled Dango bumps rolling Sonic away and reacts as an
-  ordinary enemy to standing Sonic. Tidal Tempest hosts its vertical moving blocks,
+  The engine matches the recording's player and camera through the last trace
+  row. Metallic Madness lasers shrink Sonic on the original contact frame.
+  In Stardust Speedway and Metallic Madness, a curled Dango bumps rolling
+  Sonic away and reacts as an ordinary enemy to standing Sonic, including the
+  rebound on defeat. Kabasira's shot bursts on rolling contact and can be
+  defeated with a rebound by unrolled, invincible Sonic. Tidal Tempest hosts
+  its vertical moving blocks,
   break poles and stationary spike balls, with sprites loaded from the disc. In Act 1 Present,
   Sonic can ride the rotating swing and raise the elevator with its pressure
   switch. A break pole keeps its release timer through hurt, death and

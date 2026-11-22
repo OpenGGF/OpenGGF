@@ -34,8 +34,8 @@ class TestCdDangoTouch {
             contact.objects.runTouchResponsesForPlayer(contact.sonic, 1);
 
             assertTrue(contact.sonic.isHurt(), "A standing player takes the ordinary enemy hit");
-            GameServices.level().advanceLevelFrameCounter();
-            GameServices.level().update();
+            // LostRingInit runs in the object pass after HurtPlayer allocates the $11 owner.
+            contact.objects.update(GameServices.camera().getX(), contact.sonic, List.of(), 1, false);
             assertEquals(0, contact.sonic.getRingCount());
             assertEquals(3, GameServices.level().getRingManager().getActiveLostRings().size());
             assertFalse(contact.dango.isDestroyed());
@@ -76,9 +76,12 @@ class TestCdDangoTouch {
             assertTrue(timeTravel.starsActive());
             int slot = contact.dango.getSlotIndex();
             int score = GameServices.gameState().getScore();
+            contact.sonic.setYSpeed((short) -0x500);
 
             contact.objects.runTouchResponsesForPlayer(contact.sonic, 1);
 
+            // loc_206E1C (r7/player_object_collide.asm:184-186) and loc_206A94 (r8/player_object_collide.asm:220-222).
+            assertEquals(-0x400, contact.sonic.getYSpeed(), "The enemy defeat adds $100 while Sonic rises");
             assertTrue(contact.dango.isDestroyed(), "The enemy routine accepts warp stars");
             assertEquals(score + 100, GameServices.gameState().getScore());
             assertTrue(contact.objects.getActiveObjects().stream().anyMatch(

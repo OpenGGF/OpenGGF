@@ -142,7 +142,7 @@ diverging row and the frontier test's cause label (a guess, not a diagnosis).
 | R72B, R72C, R72D | none | none | green | |
 | R73C, R73D | boss movies | boss | green | Both race wins equal native on every row; ten movies with zero slot mismatches |
 | R81A | **green** 4,736 | asserted | green | |
-| R81B | **green** 3,991 | native, engine pending | green | The separate 5,396-row act-end recording reaches the signpost, tally, and R82A exit state. Engine replay first differs at row 2635 on a Scarab rebound. |
+| R81B | **green** 3,991 | native tail, engine player and camera | green | The separate 5,396-row act-end recording reaches the signpost, tally, and R82A exit state. Engine player and camera match through the last trace row. |
 | R81C | **green** 4,524 | none | green | A separate 4,694-row attempt reaches `($1AD5,$042E)` before stalling against terrain. |
 | R81D | none | none | green | |
 | R82A | **green** 5,697 | none | green | A separate 6,958-row attempt takes Mini Sonic through the lower passage and reaches `($1D9C,$0168)`, below the exit lane. |
@@ -158,7 +158,7 @@ The cells above give the matched prefix length. In the act-end column
 `TestSonicCdActEndNative`'s set, either
 because it does not reach the goal or because no assertion was written. All 25
 routes in that set are asserted after the R42A rerun. R81B has a separate
-native act-end assertion and an earlier engine frontier described below. The
+native act-end assertion and a full player and camera comparison described below. The
 per-stage tables behind these numbers are local measurement output.
 
 ## First-divergence recheck (2026-11-18)
@@ -493,16 +493,14 @@ source of the player and camera counts in the table.
   (R82A) exit state at row 5396. Retail stage select returns to the title.
   The results' exit state supplies the campaign selection reference.
   `TestSonicCdActEndNative#metallicMadnessPastActEnd` checks the native tail
-  and bounds engine comparison at row 2635, where native reverses Sonic's
-  downward speed from `$0F18` to `-$0F18` when Scarab `$2F` becomes
-  explosion `$18`. The engine retains `$0F18`.
+  and compares the engine's player and camera through all 5,396 rows.
+  At row 2635, the shared enemy defeat rebound reverses Sonic's downward
+  speed from `$0F18` to `-$0F18` when Scarab `$2F` becomes explosion `$18`.
   `loc_206CD8` (scddisasm/src/r8/player_object_collide.asm:456-463)
   dispatches the rear touch to `sub_2069E8`.
   `loc_206A5E` (scddisasm/src/r8/player_object_collide.asm:203-216)
   awards points, changes the object ID, and negates downward speed when
-  Sonic is above the enemy. The engine's `MmzScarabBody.enemy` calls
-  `killAsEnemy` on the special-touch path, which bypasses the shared
-  enemy rebound.
+  Sonic is above the enemy.
 - **R81C.** The 7,047-input movie stalls against terrain at `($1AD5,$042E)`.
   Additional branches reached the upper platform and the spring below the
   ceiling, and no branch reached the signpost.
