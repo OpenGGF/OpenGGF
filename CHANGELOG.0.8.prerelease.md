@@ -49,7 +49,9 @@ under the matching area heading; see the
   a stock game module on the shared engine. Nothing from the disc is in the
   repository. All 70 stage programs load: seven zones; acts 1 and 2 in the
   Present, Past, Good Future and Bad Future; act 3 in both futures. Each zone
-  has its own presentation, objects and boss. Palmtree Panic's solid boulders
+  has its own presentation, objects and boss. Quartz Quadrant's booth sound
+  fades after the booth gives out. Death restarts release held FM effects, as
+  do pause restarts in Tidal Tempest and Quartz Quadrant. Palmtree Panic's solid boulders
   use the current section's graphics, replacing the title-card tiles after loading.
   The vertical tunnel doors in acts 1 and 2 now open from the left and block
   Sonic from the right while closed.
@@ -63,7 +65,8 @@ under the matching area heading; see the
   and stage rings share the sprite budget in object order. Stage rings draw
   once per frame, and unloaded rings in native widescreen margins stay frozen.
   All ten Collision Chaos stages draw moving background bands from their disc
-  layouts and keep the static bands repeating. Defeated badniks
+  layouts and keep the static bands repeating. Their foreground terrain wobbles
+  along the lower part of the stage as it does on the disc. Defeated badniks
   play the disc's destroy sound, and Mosqui, Tamabboh and Palmtree Panic's Taga-Taga
   play their own effects on impact, firing, takeoff or landing while the badnik is
   on screen. Palmtree
@@ -74,8 +77,9 @@ under the matching area heading; see the
   score and bonus digits and play the tally, final chime and special-stage warp cues.
   Placed and lost rings that award a life play only the voice jingle. Wacky Workbench's
   bouncy floor plays its cue when it sends Sonic into a roll. Both Wacky Workbench boss
-  defeat fades hold gameplay and change the palette over 22 V-INTs each.
-  The level HUD shows the same point total as the
+  defeat fades hold gameplay for 22 V-INTs each. Sprites, scenery and HUD
+  tiles stay in place as the fade colors change. The level HUD updates its
+  digits with the ordinary stage picture and shows the same point total as the
   results screen. Wider views extend CD object draw/touch and lifetime
   windows, centre boss locks, title cards, results and game-over text, and fill the time tunnel
   through its white fade. CD HUD pieces, including the time-period and warp icons,
@@ -100,6 +104,8 @@ under the matching area heading; see the
   can raise lives past 249 and wrap from 255 to 0, where a living Sonic can
   still pause. Dying with 129 or more lives triggers Game Over, as on the disc.
   Live rewind starts a fresh timeline after each time warp or act load.
+  In-level fades preserve later rewind history when older frames expire.
+  Special-stage rewind reaches the first frame after the reveal.
   The FM loader also accepts verified Japanese and European discs
   containing the identical driver bank. The title's RAM DATA entry confirms a
   reset of Sonic CD's save to disc defaults.
@@ -120,7 +126,9 @@ under the matching area heading; see the
   boosted movement constants in effect until the next native physics write.
   Power-up music checks the live time zone, including the warp bit, before fading PCM.
   Press A, B or C during a pause to leave a Time Attack attempt or spend one
-  life in the campaign. The stage restarts if lives remain.
+  life in the campaign. With lives left, Sonic restarts at the stage entrance
+  with a fresh clock and zero rings. The title card stays hidden, and Quartz
+  Quadrant acts 1 and 2 keep the saved checkpoint.
   Clearing Special Stage 8 opens an OpenGGF acknowledgement with the disc's
   ending music and a return to the title.
   Visual Mode plays the opening, both endings and the silent Pencil Test
@@ -153,12 +161,18 @@ under the matching area heading; see the
   The original D.A. Garden planet animation, ordinary-stage attract demos,
   the original Stage 8 credits and Japanese and European gameplay remain open. Disc audio, video songs and PCM sound follow the music
   and effects volumes; CD audio and PCM also share the FM presentation scale
-  for their relative level. The time-warp stars animate from the disc in every
+  for their relative level. Special-stage dust replaces any active FM1 effect
+  without retriggering or releasing its note. FM1 stays held until the next
+  request for that channel.
+  The time-warp stars animate from the disc in every
   stage, including Tidal Tempest. While the warp stars are active, Sonic keeps
   his rings when he lands on spikes with the disc's warp check or touches a
   Tidal Tempest boss missile. The stars also protect Sonic from Wacky
   Workbench's freezer, electric beams and sparks, and let him attack Metallic
-  Madness's scarab from its vulnerable side. Grabbing a Wacky Workbench hang
+  Madness's Scarab from its vulnerable side. Defeating it rebounds Sonic.
+  When a Scarab, curled Dango, or Kabasira shot hurts Sonic, his lost rings
+  scatter in the contact frame.
+  Grabbing a Wacky Workbench hang
   bar ends star protection and resets the warp timer. Robotnik's projectors can be destroyed in the
   Past. In the Past acts of Palmtree Panic and Wacky Workbench, the projectors'
   flying and ground hologram animals use art from the disc.
@@ -185,10 +199,13 @@ under the matching area heading; see the
   Its walker platforms let Sonic pass their sides, and the invisible blocks let
   him jump through from below. A separate native recording captures Metallic
   Madness Past act 1 through its signpost, tally and Act 2 Present exit state.
-  Engine comparison reaches the earlier Scarab rebound. Metallic Madness
-  lasers shrink Sonic on the original contact frame. In Stardust Speedway and
-  Metallic Madness, a curled Dango bumps rolling Sonic away and reacts as an
-  ordinary enemy to standing Sonic. Tidal Tempest hosts its vertical moving blocks,
+  The engine matches the recording's player and camera through the last trace
+  row. Metallic Madness lasers shrink Sonic on the original contact frame.
+  In Stardust Speedway and Metallic Madness, a curled Dango bumps rolling
+  Sonic away and reacts as an ordinary enemy to standing Sonic, including the
+  rebound on defeat. Kabasira's shot bursts on rolling contact and can be
+  defeated with a rebound by unrolled, invincible Sonic. Tidal Tempest hosts
+  its vertical moving blocks,
   break poles and stationary spike balls, with sprites loaded from the disc. In Act 1 Present,
   Sonic can ride the rotating swing and raise the elevator with its pressure
   switch. A break pole keeps its release timer through hurt, death and
@@ -213,15 +230,20 @@ under the matching area heading; see the
   to decide which objects Sonic can touch across layers. Sonic can recover
   dropped rings on the layer where he was hurt. That layer also sets the spill's
   initial sprite bucket and tile priority. In Stardust Speedway and Metallic
-  Madness, dropped rings and other floor-probing objects lose high tile priority
-  as soon as their probe reads an ordinary chunk. The Past robot generator reacts to
-  rolling contact over the disc's wider touch box. Stage loads clear the state native
+  Madness, object terrain probes update sprite priority as they read collision
+  blocks, including wall probes and dropped rings. Dropped rings and other
+  floor-probing objects lose high tile priority when their probe reads an ordinary
+  chunk. In Wacky Workbench, floor, wall and ceiling reads track each object's
+  loop path and clear tile priority on entry through the loop chunk. The Past
+  robot generator reacts to rolling contact over the disc's wider touch box.
+  Stage loads clear the state native
   clears, so playing stages in any order matches playing each alone. In normal
   play the object clock a stage starts from and the video player's disc wait
   follow measured emulator timings under `gameplay.loadTimeSimulation`
   (`FAST` and `PROFILED`; `NONE` starts the clock at 0); trace replay admits
   the V-INTs the console dropped, under two timing-contract extensions the
-  owner approved on 2026-11-13. The capture tools can film Sonic CD
+  owner approved on 2026-11-13. A checkpoint or time-warp load uses the graphics list
+  selected by its stage program when looking up measured timings. The capture tools can film Sonic CD
   (`--no-hud` leaves the HUD out; a trace clip may run past the recording's
   last row into the game's own flow, such as a time warp). Queued test runs
   pass a USA CHD found in the project folder as `-Dsoniccd.disc.path`
@@ -646,12 +668,15 @@ under the matching area heading; see the
   Object coverage inventories all 70 zone/act/period contexts without implying
   behavior or pixel certification. Cartridge preview and exports retain their
   reader boot path alongside disc hosting. Validation scope is recorded in the
-  Sonic CD Stageplay validation record.
+  Sonic CD Stageplay validation record. The preview worker accepts a supplied
+  Sonic CD disc in both media descriptor and direct-path modes.
 
 - **Sonic CD mod host:** admit `scd` patch manifests and `any` registrations;
   route hosted runs through the disc launcher, expose file-addressed scene and
-  object art, and accept CDDA/PCM music-command replacements. Module capabilities
-  select native run characters. CD can host cartridge-donated S1 Sonic, S2
+  object art, and accept CDDA/PCM music-command replacements. The stock game
+  catalogue supplies mod targets and tool choices. Contribution reports include
+  CD for `any` registrations, and `ggfmod art-keys --game scd` lists CD art keys.
+  Module capabilities select native run characters. CD can host cartridge-donated S1 Sonic, S2
   Sonic/Tails and S3K Sonic/Tails/Knuckles, with donor-owned art, abilities,
   life icons and results names. Donated life icons use owned object-pattern banks
   so empty foreground cells and HUD text retain the disc stage's tiles.
@@ -941,13 +966,13 @@ under the matching area heading; see the
   --skip-lag-frames`, with `--clip frames:START:END`, leaves out the frames on
   which the recorded game could not keep up. A frame window films every row the
   original displayed, so on those rows the picture repeated and the footage
-  looked as if the engine stuttered. Lag is read from the recording's own
-  counters: the gameplay frame counter held over an elapsed V-blank for at most
-  four rows, so title cards, fades, loads and pauses stay. The window still
-  selects trace rows, the clip is shorter by the rows left out, and the tool
-  prints the output-frame to trace-row mapping and writes it to the capture
-  manifest. A row left out gets no audio either, so sound stays in sync. Off by
-  default; replay, comparison and gameplay are unchanged.
+  looked as if the engine stuttered. The clip drops short counter holds on rows
+  where the replay ran without gameplay. Cartridge clips require an elapsed
+  VBlank. Sonic CD also drops short repeats where both counters hold. Longer
+  holds such as title cards, fades, loads and pauses stay.
+  The window still selects trace rows. The tool prints the output-frame to
+  trace-row mapping and writes it to the capture manifest. Each omitted row
+  shortens the picture and sound by one frame. The flag is off by default.
 
 - **Wide trace captures let the act-end run-off leave the picture:** at the end
   of a Sonic 1 or Sonic 2 act the player runs right until the level's wall, which

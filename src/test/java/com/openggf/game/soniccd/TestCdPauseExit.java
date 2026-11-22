@@ -11,6 +11,8 @@ import com.openggf.game.GameMode;
 import com.openggf.game.GameServices;
 import com.openggf.game.NativeGameStateOps;
 import com.openggf.game.soniccd.backupram.CdBackupRamHost;
+import com.openggf.game.soniccd.level.CdLevel;
+import com.openggf.game.soniccd.objects.common.CdTitleCard;
 import com.openggf.game.soniccd.program.CdProgramFlow;
 import com.openggf.game.soniccd.program.CdProgramRequest.Route;
 import com.openggf.game.soniccd.program.CdSceneCoordinator;
@@ -20,6 +22,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledOnOs;
 import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import static com.openggf.control.InputActionMasks.ACTION_A;
@@ -91,6 +94,55 @@ class TestCdPauseExit {
         });
     }
 
+    @ParameterizedTest
+    // QQZ act 3 uses StageMainLoopRestart (common/main.asm:395-402).
+    // Tidal Tempest act 2 uses StageMainLoopRestart (r4/main.asm:368-375).
+    @CsvSource({"R11A, false", "R51A, true", "R52A, true", "R53D, false", "R42A, false"})
+    void campaignPauseReloadUsesStageStart(CdStagePayload payload, boolean retainsCheckpoint) throws Exception {
+        runStageOnBothInputs(Route.CAMPAIGN, payload, (loop, scenes) -> {
+            var levels = GameServices.level();
+            var original = (CdLevel) levels.getCurrentLevel();
+            var state = GameServices.gameState();
+            var oldLevelState = levels.getLevelGamestate();
+            var player = GameServices.sprites().getMainPlayable();
+            int lives = state.getLives();
+            var checkpoint = (com.openggf.game.CheckpointState) levels.getCheckpointState();
+            checkpoint.restoreFromSaved(original.startX() + 160, original.startY() - 32, 64, 128, 1);
+            checkpoint.saveActTimer(900);
+            checkpoint.saveRingState(32, 2);
+            player.setCentreX((short) (original.startX() + 80));
+            player.setRingCount(49);
+            oldLevelState.setRings(49);
+            oldLevelState.setRingExtraLifeFlags(2);
+            oldLevelState.setTimerFrames(1200);
+
+            step(loop, 0, true);
+            step(loop, ACTION_A, false);
+            for (int frame = 0; frame < 180 && levels.getCurrentLevel() == original; frame++) {
+                step(loop, 0, false);
+            }
+
+            assertNotSame(original, levels.getCurrentLevel(), "stage reloaded");
+            var restarted = GameServices.sprites().getMainPlayable();
+            var levelState = levels.getLevelGamestate();
+            var saved = (com.openggf.game.CheckpointState) levels.getCheckpointState();
+            assertAll(payload.name(),
+                    () -> assertFalse(levels.getObjectManager().getActiveObjects().stream()
+                            .anyMatch(CdTitleCard.class::isInstance), "title card stays loaded"),
+                    () -> assertEquals(original.startX(), restarted.getCentreX(), "stage-start X"),
+                    () -> assertEquals(original.startY(), restarted.getCentreY(), "stage-start Y"),
+                    () -> assertEquals(retainsCheckpoint ? 1 : -1, saved.getLastCheckpointIndex(),
+                            "saved checkpoint number"),
+                    () -> assertEquals(retainsCheckpoint ? 900 : 0, saved.getSavedTimerFrames(),
+                            "saved checkpoint time"),
+                    () -> assertEquals(1, levelState.getTimerFrames(), "first tick of reset clock"),
+                    () -> assertEquals(0, restarted.getRingCount(), "player rings reset"),
+                    () -> assertEquals(0, levelState.getRings(), "HUD rings reset"),
+                    () -> assertEquals(0, levelState.getRingExtraLifeFlags(), "ring life flags reset"),
+                    () -> assertEquals(lives - 1, state.getLives(), "one life spent"));
+        });
+    }
+
     @Test
     void liveStartPausesAudioAndAllowsFrameStep() throws Exception {
         runStage(Route.CAMPAIGN, false, (loop, scenes) -> {
@@ -153,18 +205,27 @@ class TestCdPauseExit {
     }
 
     private void runStageOnBothInputs(Route route, StageCheck check) throws Exception {
-        runStage(route, true, check);
-        runStage(route, false, check);
+        runStageOnBothInputs(route, CdStagePayload.R11A, check);
+    }
+
+    private void runStageOnBothInputs(Route route, CdStagePayload payload, StageCheck check) throws Exception {
+        runStage(route, payload, true, check);
+        runStage(route, payload, false, check);
     }
 
     private void runStage(Route route, boolean recorded, StageCheck check) throws Exception {
+        runStage(route, CdStagePayload.R11A, recorded, check);
+    }
+
+    private void runStage(Route route, CdStagePayload payload, boolean recorded, StageCheck check) throws Exception {
         try (var disc = CdDiscDataSource.open(CdTestMedia.usaCue());
              var boot = new HeadlessGameBoot(320, 224)) {
             GameServices.configuration().setSessionOverride(SonicConfiguration.AUDIO_ENABLED, false);
             SonicCdGameModule module = new SonicCdGameModule();
             var scenes = module.getGameService(CdSceneCoordinator.class);
             scenes.attachBackupRamHost(CdBackupRamHost.SESSION, 0);
-            GameLoop loop = boot.boot(disc, module, 0, 0);
+            GameLoop loop = boot.boot(disc, module,
+                    SonicCdZoneRegistry.zoneIndex(payload), SonicCdZoneRegistry.actIndex(payload));
             if (route == Route.TIME_ATTACK) {
                 scenes.timeAttackSelected(1);
                 scenes.consumeResume();

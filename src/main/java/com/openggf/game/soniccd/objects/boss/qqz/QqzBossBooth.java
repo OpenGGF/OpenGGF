@@ -1,6 +1,7 @@
 package com.openggf.game.soniccd.objects.boss.qqz;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.soniccd.audio.CdSoundRequests;
 import com.openggf.game.soniccd.objects.boss.CdBossPart;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ReevaluatingSolidObject;
@@ -217,9 +218,8 @@ public final class QqzBossBooth extends QqzBossPiece implements ReevaluatingSoli
         }
         timer = 0;
         routine = 0xC;
-        // move.b #1,Z80_RAM+$1C3E: the FM driver's flag that lets its conditional jumps branch (the player's death
-        // writes it too, Level/_Objects/Sonic/Main.asm:2461-2463). A Z80 RAM write; the FM driver here does not model
-        // it, so it is not reproduced (reported to the audio owner).
+        // BossBoothObject_0_RoutineA (objects/r5/boss.asm:474-476) releases the held belt sound.
+        CdSoundRequests.releaseHeldFmEffects(services().gameModule());
     }
 
     /** BossBoothObject_0_RoutineC (objects/r5/boss.asm:480-495). */

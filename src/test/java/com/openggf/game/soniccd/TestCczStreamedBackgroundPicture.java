@@ -88,10 +88,10 @@ class TestCczStreamedBackgroundPicture {
                     boolean staticRow = stage.u8(selectorOffset + 1 + row) == 0;
                     if (staticRow != (kind == RowKind.STATIC)) continue;
 
-                    // The hosted foreground pass uses camera X even where the native scroll words wobble.
                     int fgY = y + scroll.getVscrollFactorFG();
+                    int fgX = -(short) (words[y] >>> 16);
                     int bgX = -(short) words[y];
-                    int[] fgPixels = PlaneRasterizer.rasterize(level, tiles, 0, cameraX, fgY, WIDTH, 1, 0);
+                    int[] fgPixels = PlaneRasterizer.rasterize(level, tiles, 0, fgX, fgY, WIDTH, 1, 0);
                     // The zero selector writes all 32 blocks from layout X=0.
                     // loc_20343A (r3/stage_draw_1b.asm:632-638), loc_20355E (r3/stage_draw_1c.asm:632-638).
                     int[] bgPixels = PlaneRasterizer.rasterize(level, tiles, 1, staticRow ? 0 : bgX,

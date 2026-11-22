@@ -7,7 +7,6 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RewindRecreateContext;
-import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TrigLookupTable;
 
 /**
@@ -136,7 +135,8 @@ public final class ObjWwzAnimal extends WwzObject implements ProjectorChild, Rew
             addToY(yVelocity);
             yVelocity += 0x2000;
             mapFrame = yVelocity < 0 ? 0 : 1;
-            int floor = ObjectTerrainUtils.checkFloorDist(services().levelManager(), x, y + yRadius).distance();
+            int probeY = (y + yRadius) & 0xFFFF;
+            int floor = checkFloor(x, probeY, 0).distance();
             if (floor < 0) {
                 routine += 2;
                 y = (y + floor) & 0xFFFF;

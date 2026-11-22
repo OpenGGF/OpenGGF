@@ -7,7 +7,12 @@
 
 This document tracks **bugs**, incomplete implementations, and known parity gaps that we intend to fix but haven't addressed yet. Entries here are *not* intentional — they're acknowledged problems with a plan (or hope) of eventual resolution.
 
-For **intentional** deviations from the original ROMs (architectural choices, feature extensions, deliberate bug-fixes of ROM data), see [known-discrepancies.md](known-discrepancies.md).
+OpenGGF has no deliberate engine-wide differences. [Known discrepancies](known-discrepancies.md)
+are limited to hardware OpenGGF does not emulate, such as CPU lag. The Sonic CD
+entries have been audited against this rule and identify engine features
+explicitly as features. The Sonic 1, Sonic 2, Knuckles in Sonic 2 and
+[S3K entries](../S3K_KNOWN_DISCREPANCIES.md) predate the rule and still need
+the same audit.
 
 Entries should include:
 - **Location** — the file(s) where the bug lives, if known
@@ -16,6 +21,15 @@ Entries should include:
 - **Removal condition** — what needs to be true for this entry to be deleted
 
 ---
+
+## Sonic CD R12A stage-load V-INT count
+
+The stage-load manifest uses the 45 serviced V-INTs measured when entering
+R12A through stage select. Native entries after act clear or a special stage
+service 46 during the load. The cause of the extra interrupt is open.
+`LevelStart` (Level/Main.asm:90-104) branches on `levelRestart` and changes
+`palFadeFlags`, so the entry path could determine the count. Establish the
+cause before changing how the engine selects the load count.
 
 ## Solid on-screen gate: render-pass approximations — 2026-11-02
 

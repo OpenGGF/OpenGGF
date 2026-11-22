@@ -1,6 +1,7 @@
 package com.openggf.game.soniccd.objects.common;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.soniccd.audio.CdSoundRequests;
 import com.openggf.game.soniccd.objects.art.CdObjectArtProvider;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
@@ -105,6 +106,8 @@ public final class CdGameOver extends CdObject implements ObjectVisualFacing.Non
     private void restart() {
         var game = services().gameState();
         if (game != null && game.getLives() == 0) {
+            // ObjSonic_Restart (Level/_Objects/Sonic/Main.asm:2459-2463) writes even on the last life.
+            CdSoundRequests.releaseHeldFmEffects(services().gameModule());
             com.openggf.game.soniccd.program.CdStageExit.outOfLives(services());
             return;
         }

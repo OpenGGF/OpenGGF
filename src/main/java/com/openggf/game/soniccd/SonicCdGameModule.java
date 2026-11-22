@@ -117,7 +117,7 @@ public final class SonicCdGameModule implements GameModule, SpriteTableBuildProf
     private final CdLoadFrame loadFrame = new CdLoadFrame();
     private final CdPlayerStage playerStage = new CdPlayerStage(() -> this.game);
     private final LevelInitProfile levelInitProfile = new SonicCdLevelInitProfile(levelEvents, timeTravel, switchFlags,
-            playerStage, levelVIntCounter, loadFrame, this::disc,
+            playerStage, levelVIntCounter, loadFrame, levelPause, this::disc,
             payload -> this.audioProfile.subCpuAudio().loadStage(payload));
     private final ScrollHandlerProvider scrollHandlerProvider = new CdScrollHandlerProvider();
     private final PhysicsProvider physicsProvider = new SonicCdPhysicsProvider(playerStage);
@@ -448,13 +448,14 @@ public final class SonicCdGameModule implements GameModule, SpriteTableBuildProf
 
     /**
      * Campaign time state, the sub-CPU audio command state, the program flow with its backup RAM and the
-     * level's switch flags, player and Tidal Tempest water state, boss flags and stop word are captured by rewind.
+     * level's switch flags, player and Tidal Tempest water state, boss flags, stop word and pending pause restart
+     * are captured by rewind.
      */
     @Override
     public java.util.List<com.openggf.game.rewind.RewindSnapshottable<?>> rewindAdapters() {
         return java.util.List.of(timeTravel, audioProfile.subCpuAudio().rewindAdapter(), scenes.rewindAdapter(),
                 switchFlags, playerStage.water(), playerStage.signalsRewindAdapter(), bossFlags, timeStop,
-                zoneWater.tidalTempestRewindAdapter());
+                zoneWater.tidalTempestRewindAdapter(), levelPause);
     }
 
     /** {@code ObjSonic_DeadChkGone}'s game-over object and restart timer (scddisasm/src/Level/_Objects/Sonic/Main.asm:2419-2444). */
