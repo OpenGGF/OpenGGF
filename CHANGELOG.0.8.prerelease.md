@@ -100,6 +100,8 @@ under the matching area heading; see the
   can raise lives past 249 and wrap from 255 to 0, where a living Sonic can
   still pause. Dying with 129 or more lives triggers Game Over, as on the disc.
   Live rewind starts a fresh timeline after each time warp or act load.
+  In-level fades preserve later rewind history when older frames expire.
+  Special-stage rewind reaches the first frame after the reveal.
   The FM loader also accepts verified Japanese and European discs
   containing the identical driver bank. The title's RAM DATA entry confirms a
   reset of Sonic CD's save to disc defaults.

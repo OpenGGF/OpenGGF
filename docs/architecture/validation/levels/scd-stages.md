@@ -16,9 +16,11 @@ scroll state/player/frame isolation and frozen scroll-lock capture after release
 Per-zone phase tests cover the stage/program variants, immutable dependencies,
 water/ramp/band arithmetic and 448-row sampling. The combined initial check runs
 54 tests without skips. No new native-reference, cold-route or time-travel frontier
-is certified. Rendered pixels for other periods/acts, exhaustive wraps, swap edges
-and complete within-stage rewind histories remain obligations. These checks
-supersede the earlier test that pinned CD's profile exclusion.
+is certified. Rendered pixels for other periods/acts, exhaustive wraps, swap edges,
+and complete within-stage rewind histories remain obligations. Load and time-travel
+rewind histories also remain open beyond the tested R11A → R11D time warp and
+R11A → R12A act clear. The motion checks supersede the earlier test that pinned
+CD's profile exclusion.
 
 Game `scd`, all seven zones, Sonic only. A partial matrix under the
 [zone and act testing standard](../../../guide/contributing/level-test-standard.md):
@@ -334,7 +336,9 @@ every row of both holds against the user-local `rehost-boss-wwz/R63C-fades`
 and `R63D-fades` CRAM recordings. Each window includes the entry and 22
 subsequent V-INTs. Good Future rows are 5473–5495 and 5553–5575. Bad Future
 rows are 5724–5746 and 5804–5826. The test also checks that the stage frame
-counter holds and resumes. `TestWwzBossNative` checks slots and timers at
+counter holds and resumes. A rewind check restores the first Good Future hold
+at row 5481 and checks the held rows, palette words, and gameplay resumption
+at row 5496 on both passes. `TestWwzBossNative` checks slots and timers at
 completed level frames.
 
 ## Palmtree Panic campaign Amy Rose (hosted)
