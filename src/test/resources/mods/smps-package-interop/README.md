@@ -24,3 +24,17 @@ done
 java -jar "$jar" export examples/dac-percussion.smps.json s3k-dac-percussion.smps.zip \
   --format portable --driver s3k --no-source --license GPL-3.0-only
 ```
+
+## S3K retail patch fixture
+
+The ROM-gated fixture uses OpenSMPSDeck revision `2daa3a4eb6435f0df02ba9a3b549270a499de283`.
+Import locked-on Launch Base (music ID `0x0D`) with `import-rom-song` in a
+private scratch directory. Decode `nativeProgram.bankBase64`, set the tempo
+byte at `nativeProgram.headerOffset + 5` to 3, and re-encode the bank while
+preserving its retail provenance. Export the edited project with
+`compile-package PROJECT OUTPUT --portable --retail-patch --rom ROM`.
+
+The committed manifest is reformatted for compactness. The only binary
+entries are a seven-byte delta with one literal and a zero-filled global
+voice table. Stock references supply the voices, envelopes and DAC samples.
+The test reads the base bank from the active ROM.

@@ -12,7 +12,8 @@ manifest declares the track and maps it through
 | File | Content and limits |
 | --- | --- |
 | `manifest.json` | Strict UTF-8 JSON, at most 1 MiB |
-| `track.bin` | Native song bank, at most 32 KiB |
+| `track.bin` | Embedded native song bank, at most 32 KiB |
+| `track.delta` | S3K retail bank delta, at most 98,306 bytes. Rebuilt bank is at most 32 KiB |
 | `voices/global.bin` | Optional ordered native voice table, 25 bytes per voice |
 | `psg/asset-NNN.bin`, `mod/asset-NNN.bin` | Embedded envelope bytes, 1–256 bytes per envelope. Filenames use the one-based asset ordinal |
 | `dac/asset-NNN.pcm` | Embedded unsigned 8-bit mono PCM with midpoint 128. Zero-based asset ordinal, 1–65,535 bytes per sample, 95 samples and 512 KiB total |
@@ -56,15 +57,15 @@ and the [driver feature matrix](https://github.com/raiscan/open-smps-deck/blob/m
   provenance warnings do not disable playback. Packages embedding retail
   songs or ROM-derived bytes are for personal use only.
 - `requires` carries `stockAssets` and sorted unique `games` derived from the
-  stock references. The player's ROM supplies the referenced bytes.
+  stock references and the base game for a patch bank. The player's ROM
+  supplies the referenced bytes and the patch base.
 - `source` is null or an object with `path: "source.smps.json"`, `sha256` and
   boolean `redacted`.
 
 ## Bank and resources
 
 Use `bank.form: "embedded"`, `path: "track.bin"`, the stored `sha256`
-and the `assembledSha256` after all fills. The reserved patch form is
-unsupported. `base` is 0 for normalized pointers or 32768 for the
+and the `assembledSha256` after all fills. `base` is 0 for normalized pointers or 32768 for the
 absolute Z80 window. S1 requires base 0. `headerOffset` is the offset in the
 bank and must be 0 for S1 and S2. `localVoiceCount` gives the number of
 local voices. S1 and S2 put their finite tracks before the local voice table.
@@ -96,6 +97,26 @@ ROM-derived provenance warning.
 - `dacBindings` lists sorted `{note, asset, rate}` mappings, one per note
   (129–223). Multiple notes can use the same sample. Rate is 0–255, with zero
   representing 256 iterations of the native delay loop.
+
+## S3K retail patch banks
+
+Use `bank.form: "patch"` with `path: "track.delta"`. Its `sha256` covers the
+delta, and `assembledSha256` covers the rebuilt bank. The active cartridge
+profile maps the locked-on `provenance.derivedFromRetailSong.songId`. OpenGGF
+locates the song and verifies the locator's `bankSha256` against the full
+32 KiB ROM bank containing it.
+
+The delta starts with a big-endian unsigned 16-bit target length (10–32,768).
+Each run has a big-endian unsigned 16-bit offset and positive length followed
+by its literal bytes. The target starts as a copy of the base, truncated if
+needed. Runs must fit the target, leave at least one omitted byte between runs,
+and change every byte they replace. Any extension must be supplied in full.
+
+Patch banks have empty `fills`, no `bankOffset` assets and `source: null`.
+Set `requires.stockAssets: true` and `requires.games: ["s3k"]`. The provenance
+must give the S3K base song and bank hash, set `containsRetailSongData: false`,
+and include `DERIVED_FROM_RETAIL_SONG` without `RETAIL_SONG_DATA`. A missing
+or mismatched bank disables the track and leaves the normal fallback in place.
 
 ## Stock references
 
