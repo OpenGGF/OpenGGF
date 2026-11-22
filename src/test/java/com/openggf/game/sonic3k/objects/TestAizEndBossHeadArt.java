@@ -28,7 +28,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 @RequiresRom(SonicGame.SONIC_3K)
 class TestAizEndBossHeadArt {
     @ParameterizedTest
-    @ValueSource(strings = {"knuckles", "sonic"})
+    @ValueSource(strings = {"knuckles", "sonic", "tails"})
     void nativeHeadInitSubmitsOnlyForKnucklesAndReplaysTheSameQueueLifetime(String character) {
         TestEnvironment.configureGameModuleFixture(new Sonic3kGameModule());
         var config = GameServices.configuration();
@@ -39,8 +39,7 @@ class TestAizEndBossHeadArt {
             short cameraX = (short) (knuckles ? 0x4100 : 0x4880);
             var fixture = HeadlessTestFixture.builder().withZoneAndAct(0, 1)
                     .startPosition(cameraX, (short) 0x015A).startPositionIsCentre().build();
-            assertEquals(knuckles ? CharacterKey.KNUCKLES : CharacterKey.SONIC,
-                    fixture.sprite().characterKey());
+            assertEquals(CharacterKey.parsePersisted(character), fixture.sprite().characterKey());
             var objects = GameServices.level().getObjectManager();
             var physical = objects.getObjectServices().kosinskiModuleQueue();
             var registry = fixture.gameplayMode().getRewindRegistry();

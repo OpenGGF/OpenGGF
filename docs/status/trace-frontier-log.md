@@ -125312,13 +125312,16 @@ env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4 \
 - Segments 0–7 report zero errors on both sources. Segment 8's first error
   moves from row 1117 `queue.s3k_kos_direct.busy` ROM true / Java false to
   row 1168 `player_animation_id` ROM 0x0021 / Java 0x0020.
-  The incomplete slice has 3,447 → 3,453 field
-  errors. The animation count stays at 581. The physics group, which includes
-  queue fields, rises from 2,866 to 2,872. The first remaining physics error
-  is row 1169 `y_sub` ($7700/$9700) in the glide-rebound window.
+  The incomplete slice has 3,447 → 3,453 field errors. The net +6 is
+  10 queue errors fixed at rows 1117–1118 and 16 added `camera_x` errors at
+  rows 1452–1467, downstream of the row-1168 divergence. The animation count
+  stays at 581. The first remaining physics error is row 1169 `y_sub`
+  ($7700/$9700) in the glide-rebound window.
   The head consumes recorded direct completion #137 at PRE_MAIN_LOOP and
-  module #87 at POST_OBJECTS. The source-closure assertion remains at the same
-  movie cursor.
+  module #87 at POST_OBJECTS. The previous #137 miss masked the next unmatched
+  edge, `KOS_DECOMPRESSION_QUEUE#138` / `KOS_MODULE_QUEUE#88` at raw frame
+  2759. Production holds the recorded identity with a different descriptor.
+  The source-closure assertion remains at the same movie cursor.
 - An intermediate candidate submitted one row early at 1116. Separating
   `Obj_AIZEndBossMusic` from the next dispatch of `Obj_AIZEndBossMain` aligns
   the native allocation pass. See the [AIZ2 matrix](../architecture/validation/levels/s3k-aiz2.md#native-aiz2-boss-head-art-2026-11-22).
