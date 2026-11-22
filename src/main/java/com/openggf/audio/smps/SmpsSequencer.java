@@ -1727,9 +1727,16 @@ public class SmpsSequencer implements CoordFlagContext {
     private static final int SPECIAL_SFX_SLOT_WALK_BASE = 32;
 
     private void finishSfxTempoFrame() {
+        if (maxTicks == 0 && heldFmSfxChannels != 0) {
+            return;
+        }
         maxTicks--;
         if (maxTicks <= 0) {
             for (Track track : tracks) {
+                // A held slot has no bytecode to cap. Its retired siblings no longer own their channels.
+                if (heldFmSfxChannels != 0 && (!track.active || holdsFmState(track))) {
+                    continue;
+                }
                 track.active = false;
                 stopNote(track);
             }

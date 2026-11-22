@@ -28,7 +28,6 @@ public final class CdFmSfxData extends AbstractSmpsData implements SmpsSfxData {
     public record TrackEntry(int playbackFlags, int channelMask, int pointer,
                              int transpose, int volume, boolean holdsFmState) implements SmpsSfxTrack { }
 
-    private static final int DUST = 0xD6;
     private static final int SOUND_DISABLED = 0x04;
     private static final int BANK_WINDOW_START = 0x8000;
     private static final int VOICE_BYTES = 0x19;
@@ -72,8 +71,8 @@ public final class CdFmSfxData extends AbstractSmpsData implements SmpsSfxData {
             // SetKeyOff (Sound Drivers/FM/_Driver.asm:545-556) and WriteYM1Trk
             // (Sound Drivers/FM/_Driver.asm:674-677) suppress the admission writes.
             // The pointer reaches the boot ROM, so keep the chip state until FM1 is replaced.
-            boolean holdsFmState = getId() == DUST && overlapsTrackData && channel == 0
-                    && (flags & SOUND_DISABLED) != 0 && pointer >= BANK_WINDOW_START;
+            boolean holdsFmState = overlapsTrackData && (flags & SOUND_DISABLED) != 0
+                    && pointer >= BANK_WINDOW_START;
             if (overlapsTrackData && !holdsFmState) break;
             if (pointer >= pos + 6 && pointer < trackDataStart) trackDataStart = pointer;
             tracks.add(new TrackEntry(flags, channel, pointer, data[pos + 4], data[pos + 5], holdsFmState));

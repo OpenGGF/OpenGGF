@@ -3938,6 +3938,6 @@ The USA Sound Test run mapped the first read to boot-ROM address $0000E0.
 Without a replacement request, the USA Model 1 v1.10 and Model 2 v2.21
 BIOS runs first consumed different durations at $00011B ($32 and $33).
 The first FM1 key-off arrived 6,779 and 7,133 frames after dust admission,
-respectively. OpenGGF leaves the FM1 chip state alone until another request
-takes the channel. The eventual BIOS-timed key-off and preceding BIOS-driven
-register writes are omitted because the engine has no boot-ROM stream.
+respectively. OpenGGF holds FM1 until another FM1 request replaces the track.
+The engine omits the BIOS-timed key-off and preceding BIOS-driven register
+writes because it has no boot-ROM stream.

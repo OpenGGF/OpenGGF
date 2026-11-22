@@ -4858,6 +4858,13 @@
       "note": "user's Sonic CD disc"
     },
     {
+      "match": "com.openggf.game.soniccd.audio.TestCdAudioLivePath#dustHoldsFm1UntilAReplacementAfter7200Frames",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/audio/TestCdAudioLivePath.java:139",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
       "match": "com.openggf.game.soniccd.audio.TestCdAudioLivePath#authenticatedRegionalDiscPlaysTheSamePastPcmAsUsa(CdReleaseVariant)[1]",
       "category": "optional-fixture",
       "evidence": "src/test/java/com/openggf/game/soniccd/audio/TestCdAudioLivePath.java:124",

@@ -135,6 +135,43 @@ class TestCdAudioLivePath {
         }
     }
 
+    @Test
+    void dustHoldsFm1UntilAReplacementAfter7200Frames() {
+        List<String> fm1Writes = new ArrayList<>();
+        audio.setChipWriteObserver(new ChipWriteObserver() {
+            @Override
+            public void onYm2612Write(int port, int register, int value) {
+                boolean fm1Key = register == 0x28 && (value & 7) == 0;
+                boolean fm1Operator = register >= 0x30 && register <= 0x9C && register % 4 == 0;
+                boolean fm1Channel = register == 0xA0 || register == 0xA4
+                        || register == 0xB0 || register == 0xB4;
+                if (port == 0 && (fm1Key || fm1Operator || fm1Channel)) {
+                    fm1Writes.add("$%02X=$%02X".formatted(register, value));
+                }
+            }
+
+            @Override
+            public void onPsgWrite(int value) { }
+        });
+
+        assertTrue(audio.playSfx(0x92));
+        present(15);
+        assertTrue(fm1Writes.contains("$28=$F0"), "Jump keys FM1 on before dust");
+        fm1Writes.clear();
+
+        assertTrue(audio.playSfx(0xD6));
+        short[] packet = new short[capture.maxStereoFramesPerPacket() * 2];
+        for (int frame = 1; frame <= 7200; frame++) {
+            audio.presentFrame(PresentationMode.FORWARD);
+            capture.drainPresentationFrame(packet);
+            assertEquals(List.of(), fm1Writes, "FM1 writes at dust-relative frame " + frame);
+        }
+
+        assertTrue(audio.playSfx(0x92));
+        present(36);
+        assertTrue(fm1Writes.contains("$28=$F0"), "The replacement jump keys FM1 on");
+    }
+
     @ParameterizedTest
     @ValueSource(ints = {0x96, 0xA0, 0xA2, 0xA7})
     void badnikEffectsProduceAudibleSamples(int id) {
