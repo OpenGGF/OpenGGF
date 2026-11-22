@@ -22,15 +22,6 @@ Entries should include:
 
 ---
 
-## Sonic CD R12A stage-load V-INT count
-
-The stage-load manifest uses the 45 serviced V-INTs measured when entering
-R12A through stage select. Native entries after act clear or a special stage
-service 46 during the load. The cause of the extra interrupt is open.
-`LevelStart .SkipFade2` (Level/Main.asm:90-104) branches on `levelRestart` and changes
-`palFadeFlags`, so the entry path could determine the count. Establish the
-cause before changing how the engine selects the load count.
-
 ## Solid on-screen gate: render-pass approximations — 2026-11-02
 
 The gate now reads `render_flags.on_screen` as the previous frame's BuildSprites /
