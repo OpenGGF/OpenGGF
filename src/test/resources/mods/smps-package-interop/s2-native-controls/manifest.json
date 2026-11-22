@@ -1,0 +1,80 @@
+{
+  "schemaVersion": 4,
+  "profile": "portable",
+  "driver": "s2",
+  "package": {
+    "id": "lantern-walk-native-controls",
+    "name": "Lantern walk / native controls",
+    "version": "1.0.0",
+    "authors": [],
+    "license": "GPL-3.0-only",
+    "rights": {
+      "composition": null,
+      "notes": null
+    }
+  },
+  "generator": {
+    "tool": "OpenSMPSDeck",
+    "version": "0.1.0-SNAPSHOT",
+    "openggfAudio": "f3175b2225ad3b15be40d9075a7bb6a4dbeae4ca"
+  },
+  "provenance": {
+    "containsRomDerivedData": false,
+    "containsRetailSongData": false,
+    "derivedFromRetailSong": null,
+    "warnings": []
+  },
+  "requires": {
+    "stockAssets": false,
+    "games": []
+  },
+  "driverOptions": {
+    "speedUpTempo": 48
+  },
+  "bank": {
+    "form": "embedded",
+    "path": "track.bin",
+    "sha256": "818845fa1f50fdc2c7beb92db0678e55c30f021e8709897c6f6e1c4a1eb6b19e",
+    "assembledSha256": "818845fa1f50fdc2c7beb92db0678e55c30f021e8709897c6f6e1c4a1eb6b19e",
+    "base": 0,
+    "headerOffset": 0,
+    "localVoiceCount": 2,
+    "previewFrames": 575,
+    "relocations": [
+      0,
+      6,
+      10,
+      14,
+      18,
+      22
+    ],
+    "relocationsComplete": true,
+    "fills": []
+  },
+  "assets": [
+    {
+      "key": "fm/0",
+      "kind": "FM_VOICE",
+      "id": "voice-lead",
+      "name": "Glass keys",
+      "origin": {
+        "type": "original"
+      },
+      "bankOffset": 441
+    },
+    {
+      "key": "fm/1",
+      "kind": "FM_VOICE",
+      "id": "voice-bass",
+      "name": "Round bass",
+      "origin": {
+        "type": "original"
+      },
+      "bankOffset": 466
+    }
+  ],
+  "envelopeBindings": [],
+  "dacBindings": [],
+  "globalVoices": null,
+  "source": null
+}

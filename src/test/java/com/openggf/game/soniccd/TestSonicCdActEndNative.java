@@ -50,7 +50,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * into the asserted set. A route that reaches its window but whose results land on the other side of the signpost's
  * slot than native's (FindObjSlot order, the slot lane's; they then run a frame apart) is pending on slot order, named
  * with both runs' slots, and fails once the slots agree. No alignment is applied. The longer R81B movie
- * under {@code native/u50-mmz-act-end} reaches the signpost. R81C and R82A still need complete routes.
+ * under {@code native/u50-mmz-act-end} matches through the signpost, results and exit. R81C and R82A still need complete routes.
  */
 class TestSonicCdActEndNative {
     /** Rows before the signpost row at which the end window starts. */
@@ -167,19 +167,22 @@ class TestSonicCdActEndNative {
                 assertTrue(report.first.containsKey("rings"),
                         payload + " rings now equal native over its end window: move it into the asserted set. " + report.line());
             }
-            case "asserted" -> {
-                assertTrue(report.reachesWindow(), payload + " diverges before its end window: " + report.line());
-                assertTrue(!report.slotsDiffer, payload + " results land on the other side of the signpost's slot: " + report.line());
-                if (report.firstDivergence >= 0) {
-                    assertTrue(playerMayDifferFrom > 0 && report.firstDivergence >= playerMayDifferFrom,
-                            "player differs at row " + report.firstDivergence + ": " + report.line());
-                }
-                assertTrue(report.compared > (report.last - report.windowStart) / 2, "too few level frames compared: " + report.line());
-                assertEquals(report.nativeExit, report.engineExit, "the row ObjResults_NextLevel sets levelRestart: " + report.line());
-                assertTrue(report.first.isEmpty(), "differs from native: " + report.line());
-            }
+            case "asserted" -> assertActEnd(report, playerMayDifferFrom);
             default -> throw new IllegalArgumentException(status);
         }
+    }
+
+    private static void assertActEnd(Report report, int playerMayDifferFrom) {
+        var payload = report.payload;
+        assertTrue(report.reachesWindow(), payload + " diverges before its end window: " + report.line());
+        assertTrue(!report.slotsDiffer, payload + " results land on the other side of the signpost's slot: " + report.line());
+        if (report.firstDivergence >= 0) {
+            assertTrue(playerMayDifferFrom > 0 && report.firstDivergence >= playerMayDifferFrom,
+                    "player differs at row " + report.firstDivergence + ": " + report.line());
+        }
+        assertTrue(report.compared > (report.last - report.windowStart) / 2, "too few level frames compared: " + report.line());
+        assertEquals(report.nativeExit, report.engineExit, "the row ObjResults_NextLevel sets levelRestart: " + report.line());
+        assertTrue(report.first.isEmpty(), "differs from native: " + report.line());
     }
 
     @Test
@@ -197,12 +200,8 @@ class TestSonicCdActEndNative {
         NativeRow goal = nativeRows.get(goalRow);
         NativeRow tally = nativeRows.get(tallyRow);
         NativeRow exit = nativeRows.get(exitRow);
-        CdFixtureReplay.Outcome outcome;
-        try (CdDiscDataSource disc = CdDiscDataSource.open(CdTestMedia.usaCue())) {
-            outcome = CdFixtureReplay.replay(disc, tempDir, fixture, trace.frameCount() - 1, true, -1, -1);
-        }
-        System.out.printf("[scd-act-end] %s first differs at row %d: %s%n",
-                payload, outcome.firstErrorRow(), outcome.fields());
+        Report report = run(fixture, trace, nativeRows, goalRow, tempDir);
+        System.out.println("[scd-act-end] " + report.line());
 
         assertAll(
                 () -> assertEquals(new NativeFinish(5396, 1, 0, 4, 1, 4000, 200, 4200, 2, 6, 1, 1, 0),
@@ -211,8 +210,8 @@ class TestSonicCdActEndNative {
                                 tally.hex("timeBonus"), tally.hex("ringBonus"), (exit.hex("score") - tally.hex("score")) * 10,
                                 exit.hex("levelRestart"), exit.dec("zone"), exit.dec("act"), exit.dec("timeZone"),
                                 exit.dec("goodFuture"))),
-                () -> assertEquals(-1, outcome.firstErrorRow(), outcome.fields().toString()),
-                () -> assertEquals(trace.frameCount(), outcome.rowsCompared(), "Compare through the last trace row"));
+                () -> assertEquals(exitRow, report.nativeExit, "Native exit is one row past the trace"),
+                () -> assertActEnd(report, 0));
     }
 
     private record NativeFinish(int rows, int clockBefore, int clockAfter, int signpostRoutine, int results,
@@ -239,8 +238,12 @@ class TestSonicCdActEndNative {
         Assumptions.assumeTrue(fixture.present(), "Native route absent: " + payload);
         TraceData trace = TraceData.load(fixture.traceDir());
         Path csv = CdTestMedia.nativeFile("rehost-goal/" + payload + "/frames.csv");
-        var nat = nativeRows(csv, trace.metadata().bk2FrameOffset());
-        Report report = new Report(payload);
+        return run(fixture, trace, nativeRows(csv, trace.metadata().bk2FrameOffset()), goalRow, tempDir);
+    }
+
+    private static Report run(CdFixtureReplay.Fixture fixture, TraceData trace, Map<Integer, NativeRow> nat,
+                              int goalRow, Path tempDir) throws Exception {
+        Report report = new Report(fixture.payload());
         report.goal = goalRow;
         report.last = trace.frameCount() - 1;
         report.windowStart = goalRow - LEAD;
@@ -252,7 +255,7 @@ class TestSonicCdActEndNative {
         StringBuilder requested = new StringBuilder();
         CdStagePayload[] stage = new CdStagePayload[1];
         try (CdDiscDataSource disc = CdDiscDataSource.open(CdTestMedia.usaCue())) {
-            Path config = Files.createDirectories(tempDir.resolve(payload.name()));
+            Path config = Files.createDirectories(tempDir.resolve(fixture.payload().name()));
             var outcome = CdFixtureReplay.replay(disc, config, fixture, Integer.MAX_VALUE, false, -1, -1, new CdFixtureReplay.Hooks() {
                 @Override
                 public void row(int row, AbstractPlayableSprite sonic) {

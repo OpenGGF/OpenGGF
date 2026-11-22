@@ -226,7 +226,10 @@ class TestPpzObjectsAPictures {
         }
     }
 
+    // ObjHUD_Init (Level/_Objects/HUD and Points/Main.asm:87-92) sets screen origin (16, 8) and base tile $568.
+    // MapSpr_HUD .Score (Level/_Objects/HUD and Points/Data/Mappings (HUD).asm:17-21) supplies the digit offsets.
     private static final int[] TIME_DIGIT_X = {56, 72, 80, 96, 104};
+    // UpdateHUD (Level/_Objects/HUD and Points/Main.asm:281-292) writes minutes starting at ($568 + $29) * 32.
     private static final int TIME_VRAM_START = 0xB220;
     private static final int TIME_TOP = 24;
     private static final int GLYPH_ROWS = 16;

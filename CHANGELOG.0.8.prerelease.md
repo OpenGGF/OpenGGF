@@ -248,7 +248,8 @@ under the matching area heading; see the
   owner approved on 2026-11-13. A checkpoint or time-warp load uses the graphics list
   selected by its stage program when looking up measured timings. The capture tools can film Sonic CD
   (`--no-hud` leaves the HUD out; a trace clip may run past the recording's
-  last row into the game's own flow, such as a time warp). Queued test runs
+  last row into the game's own flow, such as a time warp; lag-free clips retain
+  every replayed gameplay step). Queued test runs
   pass a USA CHD found in the project folder as `-Dsoniccd.disc.path`
   (identified by its CHD header; the disc is verified whole when opened), so the
   single-disc Sonic CD tests run without a hand-set media root; the regional
@@ -640,6 +641,11 @@ under the matching area heading; see the
 
 ## Modding and tools
 
+- Music-pack patches can replace Sonic 1, Sonic 2 and Sonic 3 & Knuckles songs
+  with native SMPS packages exported by external authoring tools. Package tracks keep native
+  sequencing, jingle restoration and rewind. Failed package tracks fall back
+  through the normal override order and show a reason in the Mod Manager.
+
 - **Sonic CD menu media:** show the native disc title on its master-title card
   and play its title theme in an isolated optional hub audio session. The preview
   closes its media after decoding; menu audio retains its own media until closed.
@@ -679,6 +685,8 @@ under the matching area heading; see the
   object art, and accept CDDA/PCM music-command replacements. The stock game
   catalogue supplies mod targets and tool choices. Contribution reports include
   CD for `any` registrations, and `ggfmod art-keys --game scd` lists CD art keys.
+  The portable creator kit accepts a user's disc path with `--scd` and includes
+  that flag in Sonic CD example launch and test commands.
   Module capabilities select native run characters. CD can host cartridge-donated S1 Sonic, S2
   Sonic/Tails and S3K Sonic/Tails/Knuckles, with donor-owned art, abilities,
   life icons and results names. Donated life icons use owned object-pattern banks

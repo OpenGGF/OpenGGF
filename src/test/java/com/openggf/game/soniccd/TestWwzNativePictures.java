@@ -28,6 +28,7 @@ import org.junit.jupiter.api.condition.OS;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -37,6 +38,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.lwjgl.opengl.GL11.GL_COLOR_BUFFER_BIT;
 import static org.lwjgl.opengl.GL11.GL_DEPTH_BUFFER_BIT;
 import static org.lwjgl.opengl.GL11.glClear;
@@ -208,7 +210,9 @@ class TestWwzNativePictures {
         return List.of(out);
     }
 
-    private static List<Position> alignCameraClock(TraceData trace, List<ProbeFrame> probeFrames, int lastFrame) {
+    private static List<Position> alignCameraClock(CdStagePayload payload, TraceData trace,
+                                                   List<ProbeFrame> probeFrames, int[] targets) {
+        int lastFrame = Arrays.stream(targets).max().orElseThrow();
         Map<Integer, TraceFrame> traceByLevel = new HashMap<>();
         for (int row = 0; row < trace.frameCount(); row++) {
             TraceFrame frame = trace.getFrame(row);
@@ -232,13 +236,19 @@ class TestWwzNativePictures {
             ProbeFrame probe = probeByLevel.get(frame);
             assertNotNull(probe, "probe level frame " + frame);
             TraceFrame sample = traceByLevel.get(Math.max(trace.getFrame(0).gameplayFrameCounter(), frame + offset));
-            // Keep the established offset through repeated positions and movements unique to one recording.
             // A new position match can establish a different offset after the clocks diverge.
             if (sample == null || !probe.position().equals(Position.fromTrace(sample))) {
                 matched = matchingTraceFrame(trace, probe);
                 if (matched != null) {
                     offset = matched.gameplayFrameCounter() - frame;
                     sample = matched;
+                } else {
+                    String context = payload + " probe frame " + probe.frame() + " (level frame " + frame
+                            + ", " + probe.position() + ") has no matching trace position";
+                    if (Arrays.stream(targets).anyMatch(target -> target == probe.levelFrames())) {
+                        fail(context + " for a screenshot");
+                    }
+                    System.out.println("WWZ picture: " + context + "; keeping offset " + offset);
                 }
             }
             assertNotNull(sample, "trace camera for probe level frame " + frame);
@@ -368,8 +378,7 @@ class TestWwzNativePictures {
                 "rehost-fixtures-wwz/" + payload + "/probe-frames.csv"));
         List<Shot> shots = shots(payload, trace, probe);
         int[] targets = shots.stream().mapToInt(TestWwzNativePictures::engineFrame).toArray();
-        int lastFrame = java.util.Arrays.stream(targets).max().orElseThrow();
-        List<Position> cameraPath = alignCameraClock(trace, probe, lastFrame);
+        List<Position> cameraPath = alignCameraClock(payload, trace, probe, targets);
         List<Rendered> rendered = render(loop, payload, firstBoot, trace, cameraPath, targets);
         List<String> failures = new ArrayList<>();
         RgbaImage[] reference = new RgbaImage[shots.size()];

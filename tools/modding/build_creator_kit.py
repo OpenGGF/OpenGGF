@@ -17,7 +17,7 @@ from urllib.parse import quote
 import xml.etree.ElementTree as ET
 import zipfile
 
-from build_project import CARTRIDGE_INPUTS
+from build_project import MEDIA_INPUTS
 
 ROOT = Path(__file__).resolve().parents[2]
 CAMPAIGN_SOURCE = Path("src/test/resources/mods/sample-two-act-campaign-src/project")
@@ -130,8 +130,10 @@ def export_examples(root):
         manifest = (project / "src/main/resources/META-INF/openggf-mod.yaml").read_text()
         base_game = re.search(r"(?m)^baseGame:\s*(\w+)\s*$", manifest)
         game = base_game.group(1) if base_game else None
-        test_rom = f" --{game} /absolute/own-{game}.gen" if game in CARTRIDGE_INPUTS else ""
-        launch_game = game if game in CARTRIDGE_INPUTS else "s2"
+        launch_game = game if game in MEDIA_INPUTS else "s2"
+        launch_media = ('--scd "/absolute/own-scd.chd"' if launch_game == "scd"
+                        else f"--{launch_game} /absolute/own-{launch_game}.gen")
+        test_media = f" {launch_media}" if game in MEDIA_INPUTS else ""
         legacy = " --expert-legacy" if name in pending else ""
         legacy_note = ("\nThis example still references engine internals outside the supported Mod API\n"
                        "while its facades are written, so its commands pass `--expert-legacy`. Do not\n"
@@ -151,11 +153,11 @@ Run all authored Jupiter tests (including the exported adapters for older check
 programs) with the matching kit's separate testkit:
 
 ```sh
-python3 ../../tools/build_project.py .{legacy} --test --testkit ../../mod-testkit.jar{test_rom}
+python3 ../../tools/build_project.py .{legacy} --test --testkit ../../mod-testkit.jar{test_media}
 ```
 
-Native gameplay tests need your original ROMs. The command includes the declared
-cartridge base game when present. Add `--s1`, `--s2` or `--s3k` for other tested games or donors.
+Native gameplay tests need your original ROMs or disc. The command includes the declared
+base game when present. Add `--s1`, `--s2`, `--s3k` or `--scd` for other tested games or donors.
 
 The test launcher resolves pinned JUnit Platform Console 1.10.3 through Maven,
 compiles only `src/test` into `target/test-classes`, and fails on test failure or
@@ -170,21 +172,21 @@ artifact paths:
 mvn package -Dopenggf.engine.jar=/absolute/kit/engine.jar -Dopenggf.sdk.jar=/absolute/kit/sdk.jar
 ```
 
-Launch with your own ROM paths. This example supplies the {launch_game} path; add the
-required game/donor paths using `--s1`, `--s2` or `--s3k` as needed:
+Launch with your own game media. The command supplies the {launch_game} path.
+Use `--scd` for a Sonic CD (USA) .cue or .chd and `--s1`, `--s2` or `--s3k` for cartridge ROMs.
 
 ```sh
-python3 ../../tools/build_project.py .{legacy} --run --{launch_game} /absolute/own-{launch_game}.gen
+python3 ../../tools/build_project.py .{legacy} --run {launch_media}
 ```
 
 Use `--doctor --format json` for read-only prerequisite checks; add `--test` to
 check test prerequisites. Optional project-local `ggfmod.local.json` (schemaVersion 1)
-can store engine/sdk/testkit and s1/s2/s3k paths relative to that file; CLI flags
+can store engine/sdk/testkit and s1/s2/s3k/scd paths relative to that file; CLI flags
 override them. See `../../handbook/getting-started.md` for the strict schema.
 Keep this personal file out of version control. It never enters exported resources.
 
 The launcher keeps generated runtime configuration and saves under `target/play`.
-ROMs are read from your explicit paths and are not included in the exported project.
+The exported project reads game media from your supplied paths.
 
 ## Project behavior and source notes
 
@@ -326,7 +328,7 @@ def collect(root, commit, allow_dirty=False, source_dirty=False):
     relocate_markdown_links(root, entries, commit)
     entries["ggfmod"] = b'#!/bin/sh\nset -eu\nkit=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)\nexec "${JAVA_HOME:+$JAVA_HOME/bin/}java" --enable-native-access=ALL-UNNAMED -cp "$kit/engine.jar:$kit/sdk.jar" com.openggf.tools.modsdk.GgfModCli "$@"\n'
     entries["ggfmod.ps1"] = b'param([Parameter(ValueFromRemainingArguments=$true)][string[]]$CommandArgs)\n$javaExe = if ($env:JAVA_HOME) { Join-Path $env:JAVA_HOME "bin/java" } else { "java" }\n& $javaExe --enable-native-access=ALL-UNNAMED -cp "$PSScriptRoot/engine.jar$([IO.Path]::PathSeparator)$PSScriptRoot/sdk.jar" com.openggf.tools.modsdk.GgfModCli @CommandArgs\nexit $LASTEXITCODE\n'
-    entries["README.md"] = f'# OpenGGF {release} creator kit\n\nMutable unpublished Mod API {policy["currentApi"]} {policy["currentStatus"]}, built at {commit}. Read handbook/getting-started.md. Java 25 and Python 3 for portable builds; Maven 3.8+ for uncached test dependencies or advanced builds. No ROMs are included. This kit does not publish or freeze an API baseline.\n\nUse `sh ggfmod init /absolute/project --id my-mod --kind scene --package example.mymod`. Use `python3 tools/build_project.py /absolute/project --doctor` then the same command without `--doctor` to build starters or exported examples. Add `--test --testkit /absolute/kit/mod-testkit.jar` for tests or `--run` with the required supplied ROM paths to play. Matching engine.jar and sdk.jar default to this kit; optional local paths are documented in the handbook. The Maven workflow remains available. API docs are in api-docs.jar (unzip to browse); testkit support is in mod-testkit.jar.\n'.encode()
+    entries["README.md"] = f'# OpenGGF {release} creator kit\n\nMutable unpublished Mod API {policy["currentApi"]} {policy["currentStatus"]}, built at {commit}. Read handbook/getting-started.md. Java 25 and Python 3 for portable builds; Maven 3.8+ for uncached test dependencies or advanced builds. The kit requires your own ROMs or Sonic CD disc to play. This kit does not publish or freeze an API baseline.\n\nUse `sh ggfmod init /absolute/project --id my-mod --kind scene --package example.mymod`. Use `python3 tools/build_project.py /absolute/project --doctor` then the same command without `--doctor` to build starters or exported examples. Add `--test --testkit /absolute/kit/mod-testkit.jar` for tests or `--run` with the required game media paths to play. Matching engine.jar and sdk.jar default to this kit; optional local paths are documented in the handbook. The Maven workflow remains available. API docs are in api-docs.jar (unzip to browse); testkit support is in mod-testkit.jar.\n'.encode()
     entries["creator-kit.json"] = json.dumps({"formatVersion": 1, "engineVersion": release, "apiVersion": policy["currentApi"], "apiStatus": policy["currentStatus"], "sourceCommit": commit, "sourceDirty": dirty, "sha256": {name: hashlib.sha256(data).hexdigest() for name, data in sorted(entries.items())}}, indent=2, sort_keys=True).encode() + b"\n"
     return entries
 

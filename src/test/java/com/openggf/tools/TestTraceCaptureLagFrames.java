@@ -40,6 +40,18 @@ class TestTraceCaptureLagFrames {
     }
 
     @Test
+    void hostedCaptureSkipsHeldRowsOnlyWhenTheReplayRanVblankAlone() {
+        TraceFrame[] rows = {row(10, 0x200, 0x100), row(11, 0x200, 0x100)};
+
+        assertTrue(TraceCaptureLagFrames.isLagRow(
+                TraceExecutionPhase.VBLANK_ONLY, i -> rows[i], rows.length, 1, false));
+        assertFalse(TraceCaptureLagFrames.isLagRow(
+                TraceExecutionPhase.ADVANCE_ONLY, i -> rows[i], rows.length, 1, false));
+        assertFalse(TraceCaptureLagFrames.isLagRow(
+                TraceExecutionPhase.PLAYABLE_ANIMATION_ONLY, i -> rows[i], rows.length, 1, false));
+    }
+
+    @Test
     void aCartridgeRowNeedsAnElapsedVblankAndARowBeforeIt() {
         TraceFrame[] rows = {row(10, 0x200, 0x100), row(11, 0x200, 0x100), row(12, 0x201, 0x101)};
 

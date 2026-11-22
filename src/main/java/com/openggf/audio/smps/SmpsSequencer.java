@@ -977,6 +977,14 @@ public class SmpsSequencer implements CoordFlagContext {
         calculateTempo();
     }
 
+    /** Seeds a newly activated classic package after the session applies its speed-shoes state. */
+    public void seedPackageTempoOnActivation() {
+        var parameters = SmpsMusicParameters.of(smpsData);
+        if (speedShoes && parameters.tempoEffects() && parameters.speedUpTempo() != null) {
+            tempoAccumulator = tempoWeight;
+        }
+    }
+
     public void setFm6DacOff(boolean active) {
         this.fm6DacOff = active;
     }
@@ -1305,7 +1313,14 @@ public class SmpsSequencer implements CoordFlagContext {
         int base = normalTempo;
 
         if (speedShoes) {
-            base = config.getSpeedUpTempos().getOrDefault(smpsData.getId(), base);
+            var parameters = SmpsMusicParameters.of(smpsData);
+            if (SmpsMusicParameters.isCreatorMusic(smpsData)) {
+                if (parameters.tempoEffects() && parameters.speedUpTempo() != null) {
+                    base = parameters.speedUpTempo();
+                }
+            } else {
+                base = config.getSpeedUpTempos().getOrDefault(smpsData.getId(), base);
+            }
         }
 
         // PAL compensation belongs to the ROM driver's update counter, not to
@@ -1896,8 +1911,17 @@ public class SmpsSequencer implements CoordFlagContext {
                 // (:3212-3221).
                 t.tieNext = false;
             }
+            int creatorCommandBudget = 1024;
+            boolean creatorMusic = SmpsMusicParameters.isCreatorMusic(smpsData);
             while (t.duration == 0 && t.active) {
-                if (t.pos >= programView.dataLength()) {
+                if (creatorMusic && --creatorCommandBudget < 0) {
+                    // An external bank can jump forever without yielding a note or duration.
+                    t.active = false;
+                    stopNote(t);
+                    LOGGER.warning("Stopped non-yielding SMPS package channel");
+                    break;
+                }
+                if (t.pos < 0 || t.pos >= programView.dataLength()) {
                     // Running off the end of the data has no ROM counterpart,
                     // since every stream ends with a track-end flag. Keep the
                     // engine's safety stop here rather than after the loop, so
@@ -4748,7 +4772,7 @@ public class SmpsSequencer implements CoordFlagContext {
     // -----------------------------------------------------------------------
 
     public void setSpeedMultiplier(int multiplier) {
-        this.speedMultiplier = Math.max(1, multiplier);
+        this.speedMultiplier = SmpsMusicParameters.of(smpsData).tempoEffects() ? Math.max(1, multiplier) : 1;
         if (this.speedMultiplier <= 1) {
             this.speedupTimeout = 0;
         }
