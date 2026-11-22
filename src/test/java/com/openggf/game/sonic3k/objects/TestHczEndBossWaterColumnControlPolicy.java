@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.identity.PlayerRefId;
@@ -15,9 +16,13 @@ import com.openggf.game.sonic3k.objects.bosses.HczEndBossTurbine;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossWaterColumn;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectServices;
+import com.openggf.level.WaterSystem;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.TestObjectServices;
+import com.openggf.sprites.playable.SolidContactActorFixture;
+import com.openggf.sprites.playable.Tails;
 import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.Test;
 
@@ -45,6 +50,79 @@ class TestHczEndBossWaterColumnControlPolicy {
         invokeNoArgPrivate(column, "updateAnimate");
         assertEquals(4, getIntField(column, "routine"),
                 "Animate_Raw starts with cleared anim_frame_timer: ticks 1,5,9,13,17,21,25");
+    }
+
+    @Test
+    void turbineSpawnsInTimeForRollingP2ToLandAndRideTheRisingPlatform() throws Exception {
+        int waterY = 0x600;
+        int platformX = 0x500;
+        var configuration = SonicConfigurationService.createStandalone();
+        var camera = new Camera(configuration);
+        var services = new TestObjectServices()
+                .withConfiguration(configuration)
+                .withCamera(camera)
+                .withWaterSystem(new WaterSystem() {
+                    @Override public boolean hasWater(int zone, int act) { return true; }
+                    @Override public int getWaterLevelY(int zone, int act) { return waterY; }
+                });
+        var manager = new ObjectManager(List.of(), new Sonic3kObjectRegistry(), 0,
+                null, null, null, camera, services);
+        services.withDirectObjectManager(manager);
+        manager.reset(0);
+        var boss = manager.createDynamicObject(() -> new HczEndBossInstance(
+                new ObjectSpawn(platformX, waterY - 0x60, 0x9A, 0, 0, false, 0)) {
+            @Override protected void updateBossLogic(int vIntRunCount, PlayableEntity player) { }
+        });
+        boss.setPropellerActive(true);
+        // Leave a free slot between the boss and turbine. Native Child1 scans
+        // from the turbine, so the platform initializer still runs this pass.
+        var turbine = manager.createDynamicObjectAtSlot(() -> new HczEndBossTurbine(boss, 0, 0x24),
+                boss.getSlotIndex() + 2);
+        setIntField(turbine, "routine", 4);
+        setIntField(turbine, "animFrame", 3);
+        setIntField(turbine, "accelerationDelay", 0);
+        setIntField(turbine, "accelerationLoops", 7);
+
+        var p1 = new TestablePlayableSprite("sonic", (short) (platformX - 0x100), (short) (waterY - 0x100));
+        var p2 = SolidContactActorFixture.construct(() -> new Tails("tails",
+                (short) (platformX + 8), (short) (waterY - 0x60)));
+        p2.setAir(true);
+        p2.setRolling(true);
+        p2.setYSpeed((short) 0x100);
+        services.withSidekicks(List.of(p2));
+        List<PlayableEntity> sidekicks = List.of(p2);
+
+        for (int frame = 1; frame <= 27; frame++) {
+            manager.update(platformX - 0x80, p1, sidekicks, frame, false, true, true);
+        }
+        var platform = (HczEndBossWaterColumn) getObjectField(turbine, "waterColumn");
+
+        // Spawn/init, 25 Animate_Raw dispatches, then two MoveSprite2 rises.
+        int raisedY = waterY - 8 - 2;
+        p2.setCentreX((short) (platformX + 8));
+        p2.setCentreY((short) (raisedY - 0xC - 14));
+        p2.setSubpixelRaw(0x4C00, 0xAC00);
+        manager.update(platformX - 0x80, p1, sidekicks, 28, false, true, true);
+
+        // loc_1E45A seats one pixel above the surface using the incoming
+        // radius. Tails_TouchFloor then displaces the centre by 14 - 15.
+        int landedY = raisedY - 0xC - 15 - 1;
+        assertEquals(landedY, p2.getCentreY(), "P2 must land against the second rise position");
+        assertEquals(raisedY, platform.getY());
+        assertTrue(platform.getSlotIndex() > turbine.getSlotIndex());
+        assertFalse(p2.getRolling());
+        assertFalse(p2.getAir());
+        assertEquals(15, p2.getYRadius());
+        assertEquals(0xAC00, p2.getYSubpixelRaw());
+        assertTrue(manager.isRidingObject(p2, platform));
+
+        manager.update(platformX - 0x80, p1, sidekicks, 29, false, true, true);
+
+        // MvSonicOnPtfm uses the new platform Y and has no fresh-landing bias.
+        assertEquals(raisedY - 1, platform.getY());
+        assertEquals(landedY, p2.getCentreY());
+        assertEquals(0xAC00, p2.getYSubpixelRaw());
+        assertTrue(manager.isRidingObject(p2, platform));
     }
 
     @Test
