@@ -98,7 +98,7 @@ public final class PreparedModMusic implements AutoCloseable {
             }
             for (ModAudioTrack declaredTrack : registry.tracks()) {
                 String owner = declaredTrack.key().modId();
-                if (owners.contains(owner) && !session.failedOwners().contains(owner)
+                if (!declaredTrack.isSmpsPackage() && owners.contains(owner) && !session.failedOwners().contains(owner)
                         && (exposedOwner == null || exposedOwner.equals(owner))
                         && !localIndices.containsKey(declaredTrack.key())) {
                     throw new IllegalArgumentException(
@@ -154,7 +154,9 @@ public final class PreparedModMusic implements AutoCloseable {
                     if (!declaredTrack.key().modId().equals(owner)) {
                         throw new IllegalArgumentException("Override target owner differs from manifest owner");
                     }
-                    if (!localIndices.containsKey(target)) {
+                    if (declaredTrack.isSmpsPackage()) {
+                        if (!session.smpsTracks().containsKey(target)) continue;
+                    } else if (!localIndices.containsKey(target)) {
                         throw new IllegalArgumentException("Override target was not prepared: " + target);
                     }
                     mutableOverrides.get(baseGame).put(musicId, target);
@@ -214,8 +216,15 @@ public final class PreparedModMusic implements AutoCloseable {
         TrackKey key = byId == null ? null : byId.get(musicId);
         if (key == null) return null;
         PreparedTrack track = resolve(key);
-        if (track == null) throw new IllegalStateException("Override target index disappeared");
+        if (track == null) return null;
         return new ResolvedMusic(musicId, track);
+    }
+
+    public synchronized PreparedSmpsTrack resolveSmpsOverride(String gameCode, int musicId) {
+        requireOpen();
+        if (session == null) return null;
+        TrackKey key = overrides.getOrDefault(gameCode, Map.of()).get(musicId);
+        return key == null ? null : session.smpsTracks().get(key);
     }
 
     public synchronized java.util.Optional<PreparedSfx> resolveSfx(SfxKey key) {
