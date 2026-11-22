@@ -9,7 +9,6 @@ import com.openggf.game.soniccd.zones.wwz.WwzPlayerProfile;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.level.objects.ObjectVisualFacing;
-import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 /**
@@ -171,7 +170,7 @@ public final class ObjFreezer extends WwzObject implements ObjectVisualFacing.No
     private void iceBlock(AbstractPlayableSprite player) {
         yVel = (short) (yVel + ICE_GRAVITY);
         addToY((short) yVel << 8);
-        int floor = ObjectTerrainUtils.checkFloorDist(x, y, yRadius).distance();
+        int floor = checkFloor(x, y, yRadius).distance();
         if (floor < 0) {
             services().playMusic(CdSubCpuAudio.commandId("SCMD_BREAKSFX"));
             breakTime = 0xF;

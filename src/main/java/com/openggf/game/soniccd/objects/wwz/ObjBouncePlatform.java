@@ -5,7 +5,6 @@ import com.openggf.game.soniccd.zones.wwz.WwzStageState;
 import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ReevaluatingSolidObject;
-import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -80,10 +79,10 @@ public final class ObjBouncePlatform extends WwzObject implements ReevaluatingSo
     /** ObjBouncePlatform_Bounced (:60-87). */
     private void bounced(AbstractPlayableSprite player) {
         move();
-        if (ObjectTerrainUtils.checkCeilingDist(x, y, yRadius).distance() < 0) {   // jsr ObjGetCeilDist
+        if (checkCeiling(x, y, yRadius).distance() < 0) {   // jsr ObjGetCeilDist
             yVel = 0;
         }
-        if (ObjectTerrainUtils.checkFloorDist(x, y, yRadius).distance() < 0) {      // jsr ObjGetFloorDist
+        if (checkFloor(x, y, yRadius).distance() < 0) {      // jsr ObjGetFloorDist
             if (bounceAllowed()) {
                 yVel = BOUNCE_SPEED;
                 gravity = GRAVITY;
@@ -100,7 +99,7 @@ public final class ObjBouncePlatform extends WwzObject implements ReevaluatingSo
     /** ObjBouncePlatform_Landed (:91-103). */
     private void landed(AbstractPlayableSprite player) {
         move();
-        if (yVel >= 0 && ObjectTerrainUtils.checkFloorDist(x, y, yRadius).distance() < 0) {
+        if (yVel >= 0 && checkFloor(x, y, yRadius).distance() < 0) {
             yVel = 0;
             gravity = 0;
             routine -= 4;

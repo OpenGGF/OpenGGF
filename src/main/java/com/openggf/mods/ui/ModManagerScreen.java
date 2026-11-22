@@ -1,5 +1,6 @@
 package com.openggf.mods.ui;
 
+import com.openggf.catalog.StockGameCatalog;
 import com.openggf.i18n.UiMessages;
 import com.openggf.mods.InvalidModEntry;
 import com.openggf.mods.ModCatalog;
@@ -1270,14 +1271,14 @@ public final class ModManagerScreen {
 
     private static String gameLabel(com.openggf.mods.ModManifest manifest) {
         if (manifest.type() == com.openggf.mods.ModType.STANDALONE) return UiMessages.text("menu.mods.ui.standalone");
-        return switch (manifest.baseGame()) {
-            case "s1" -> "S1";
-            case "s2" -> "S2";
-            case "s3k" -> "S3K";
-            case "scd" -> "CD";
-            case "any" -> "S1/S2/S3K/CD";
-            default -> throw new IllegalStateException("Unexpected base game: " + manifest.baseGame());
-        };
+        return "any".equals(manifest.baseGame())
+                ? StockGameCatalog.stockCodes().stream().map(ModManagerScreen::gameBadge)
+                        .collect(java.util.stream.Collectors.joining("/"))
+                : gameBadge(manifest.baseGame());
+    }
+
+    private static String gameBadge(String game) {
+        return game.equals("scd") ? "CD" : game.toUpperCase(java.util.Locale.ROOT);
     }
 
     private static void addFindingBadges(Set<String> badges, List<ModFinding> findings, boolean runtime) {

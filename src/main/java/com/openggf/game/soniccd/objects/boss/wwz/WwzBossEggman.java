@@ -4,6 +4,8 @@ import com.openggf.game.soniccd.zones.wwz.WwzStageState;
 import com.openggf.camera.Camera;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.internal.StagePaletteWait;
+import com.openggf.game.soniccd.objects.common.CdFixedObjects;
+import com.openggf.level.LevelSpritePresentation;
 import com.openggf.game.soniccd.audio.CdSubCpuAudio;
 import com.openggf.game.soniccd.level.CdStageCatalogue;
 import com.openggf.game.soniccd.level.CdStageImage;
@@ -82,11 +84,21 @@ public final class WwzBossEggman extends WwzBossPiece
     private int fadeIndex;
     /** The independently loaded fade palette's words $00-$2F. */
     private int[] fadeTarget = new int[0x30];
-    private enum ProgrammedFade { TO_WHITE, OBJECTS_FROM_WHITE }
+    private enum ProgrammedFade {
+        TO_WHITE, OBJECTS_FROM_WHITE;
+
+        /** EggmanDefeatSequenceCheckEvents (objects/r6/boss.asm:503-509). */
+        static ProgrammedFade forTimer(int timer) {
+            return switch (timer) {
+                case 0x145 -> TO_WHITE;
+                case 0x17F -> OBJECTS_FROM_WHITE;
+                default -> null;
+            };
+        }
+    }
 
     private ProgrammedFade programmedFade;
     private int fadeVSyncsRemaining;
-    private int[] nextFadePalette;
     private boolean skipDraw;
 
     public WwzBossEggman(ObjectSpawn spawn) {
@@ -420,21 +432,14 @@ public final class WwzBossEggman extends WwzBossPiece
                 return;
             }
         }
-        switch (t) {                                         // EggmanDefeatSequenceCheckEvents
-            case 0x145 -> {
-                setPaletteCycleSlow();
-                startProgrammedFade(ProgrammedFade.TO_WHITE);
-                return;
-            }
-            case 0x146 -> {
-                turnIntoPod();
-                return;
-            }
-            case 0x17F -> {
-                startProgrammedFade(ProgrammedFade.OBJECTS_FROM_WHITE);
-                return;
-            }
-            default -> { }
+        var fade = ProgrammedFade.forTimer(t);
+        if (fade != null) {
+            startProgrammedFade(fade);
+            return;
+        }
+        if (t == 0x146) {
+            turnIntoPod();
+            return;
         }
         if (t >= 0x180 && t <= 0x1D4) {
             fadeStage(false);                                // EggmanDefeatSequenceFadeFromWhite
@@ -678,13 +683,19 @@ public final class WwzBossEggman extends WwzBossPiece
      * (common/palette_fade.asm:463-484) both wait 22 times. The latter fills words $00-$2F first.
      */
     private void startProgrammedFade(ProgrammedFade fade) {
+        if (fade == ProgrammedFade.TO_WHITE) setPaletteCycleSlow();
         ram().publishPaletteWait(spawn);
         programmedFade = fade;
         fadeVSyncsRemaining = 0x15 + 1;
-        nextFadePalette = paletteWords();
         if (fade == ProgrammedFade.OBJECTS_FROM_WHITE) {
-            java.util.Arrays.fill(nextFadePalette, 0, 0x30, 0xEEE);
+            int[] words = paletteWords();
+            java.util.Arrays.fill(words, 0, 0x30, 0xEEE);
+            writeWords(words);
         }
+    }
+
+    boolean willStartPaletteWait() {
+        return routine == 0xE && ProgrammedFade.forTimer(timer + 1) != null;
     }
 
     boolean hasPendingPaletteWait() {
@@ -692,21 +703,28 @@ public final class WwzBossEggman extends WwzBossPiece
     }
 
     /**
-     * VBlankPaletteFade (common/main.asm:951-962) publishes the palette via VBlankCommon
-     * (common/main.asm:1014-1025). The loop computes its next colors after VSync returns.
+     * VBlankPaletteFade (common/main.asm:951-962) publishes the prepared palette via VBlankCommon
+     * (common/main.asm:1014-1025). FadeToWhite (common/palette_fade.asm:285-295) then prepares the
+     * next picture's colors. The engine draws that prepared picture after stepping, as on ordinary rows.
      */
     @Override
     public void advancePaletteWait() {
-        writeWords(nextFadePalette);
+        int[] words = paletteWords();
         if (programmedFade == ProgrammedFade.TO_WHITE) {
-            for (int c = 0; c < 64; c++) nextFadePalette[c] = toWhite(nextFadePalette[c]);
+            for (int c = 0; c < words.length; c++) words[c] = toWhite(words[c]);
         } else {
-            for (int c = 0; c < 0x30; c++) nextFadePalette[c] = fromWhite(nextFadePalette[c], fadeTarget[c]);
-            nextFadePalette[0x20] = 0xEEE;
+            for (int c = 0; c < 0x30; c++) words[c] = fromWhite(words[c], fadeTarget[c]);
+            words[0x20] = 0xEEE;
         }
+        writeWords(words);
         if (--fadeVSyncsRemaining == 0) {
             programmedFade = null;
-            nextFadePalette = null;
+            var level = services().levelManager();
+            // The next picture is back on VBlankStagePlayerGfxDone (common/main.asm:891-900).
+            // Its stage-art and HUD uploads were deferred while $12 owned the waits.
+            level.getAnimatedPatternManager().update();
+            CdFixedObjects.publishHudCounters(level.getObjectManager());
+            LevelSpritePresentation.releasePaletteWaitPicture(level);
         }
     }
 

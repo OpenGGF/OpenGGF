@@ -1,5 +1,6 @@
 package com.openggf.mods.code;
 
+import com.openggf.catalog.StockGameCatalog;
 import com.openggf.mods.ModDescriptor;
 import java.util.*;
 
@@ -54,7 +55,7 @@ public record ModContributionReport(List<Target> targets) {
         return result;
     }
     static List<String> scopes(ModRegistrationPlan plan) {
-        return "any".equals(plan.baseGameId()) ? List.of("s1","s2","s3k")
+        return "any".equals(plan.baseGameId()) ? StockGameCatalog.stockCodes()
                 : List.of(plan.baseGameId() == null ? plan.ownerModId() : plan.baseGameId());
     }
     static Set<String> contributions(ModRegistrationPlan plan, ModDescriptor descriptor) {
