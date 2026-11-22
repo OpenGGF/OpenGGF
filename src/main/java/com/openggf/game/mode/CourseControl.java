@@ -217,13 +217,18 @@ public final class CourseControl {
      * Restores only entry player/camera state. When keeping the final position, entry control
      * policy is restored and the main player is released airborne, upright and motionless at
      * that position; native collision establishes support on the next ordinary step. The final
-     * camera origin is kept with its entry boundary/freeze policy. Audio and other actors are
-     * untouched. Pending gameplay input is cleared for either outcome.
+     * camera origin is kept with its entry boundary/freeze policy and the placement window
+     * is rebuilt if the viewport moved. Pending gameplay input is cleared for either outcome.
      */
     public void releaseDirectedPlayer(DirectedPlayerState state, boolean keepFinalPosition) {
         requireDirectedPlayer(state);
         restoreDirectedPlayer(state, keepFinalPosition);
         context.directedPlayerLease().complete(state);
+        var camera = context.getCamera();
+        if (keepFinalPosition && (camera.getX() != state.camera.x() || camera.getY() != state.camera.y())) {
+            com.openggf.level.objects.ObjectManagerInternalAccess
+                    .refreshPlacementAfterRelocation(context.getLevelManager().getObjectManager());
+        }
     }
 
     static void restoreDirectedPlayerAfterFailure(GameplayModeContext context, DirectedPlayerState state) {

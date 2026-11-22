@@ -28,7 +28,8 @@ public final class DataSelectPreviewCapture {
                     // position. Resync both before drawing, or the foreground tilemap
                     // samples world Y=0 and no nearby objects/badniks are spawned.
                     levelManager.recomputeParallaxAfterRewindRestore();
-                    levelManager.getObjectManager().postCameraPlacementUpdate(camera.getX());
+                    com.openggf.level.objects.ObjectManagerInternalAccess
+                            .refreshPlacementAfterRelocation(levelManager.getObjectManager());
                     levelManager.drawWithRenderOptions(null, LevelManager.LevelRenderOptions.previewCapture());
                     graphics.flush();
                     int viewportX = graphics.getViewportX();

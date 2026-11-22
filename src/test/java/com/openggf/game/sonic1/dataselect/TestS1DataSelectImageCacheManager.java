@@ -272,11 +272,11 @@ public class TestS1DataSelectImageCacheManager {
 
         try (var cameraService = org.mockito.Mockito.mockStatic(GameServices.class);
              var engineServicesStatic = org.mockito.Mockito.mockStatic(EngineServices.class);
-             var screenshot = org.mockito.Mockito.mockStatic(ScreenshotCapture.class)) {
+             var screenshot = org.mockito.Mockito.mockStatic(ScreenshotCapture.class);
+             var placement = org.mockito.Mockito.mockStatic(com.openggf.level.objects.ObjectManagerInternalAccess.class)) {
             cameraService.when(GameServices::camera).thenReturn(camera);
             cameraService.when(GameServices::level).thenReturn(levelManager);
             org.mockito.Mockito.when(levelManager.getObjectManager()).thenReturn(objectManager);
-            org.mockito.Mockito.when(camera.getX()).thenReturn((short) 0x180);
             GraphicsManager graphicsManager = org.mockito.Mockito.mock(GraphicsManager.class);
             EngineContext engineServices = org.mockito.Mockito.mock(EngineContext.class);
             engineServicesStatic.when(EngineServices::current).thenReturn(engineServices);
@@ -312,11 +312,13 @@ public class TestS1DataSelectImageCacheManager {
                     Sonic1ZoneConstants.ZONE_GHZ,
                     0,
                     com.openggf.game.LevelLoadMode.PREVIEW_CAPTURE);
-            org.mockito.Mockito.verify(camera).setX((short) 0x180);
-            org.mockito.Mockito.verify(camera).setY((short) (0x100 - 96));
-            org.mockito.Mockito.verify(levelManager).recomputeParallaxAfterRewindRestore();
-            org.mockito.Mockito.verify(objectManager).postCameraPlacementUpdate(0x180);
-            org.mockito.Mockito.verify(levelManager).drawWithRenderOptions(
+            var captureOrder = org.mockito.Mockito.inOrder(camera, levelManager);
+            captureOrder.verify(camera).setX((short) 0x180);
+            captureOrder.verify(camera).setY((short) (0x100 - 96));
+            captureOrder.verify(levelManager).recomputeParallaxAfterRewindRestore();
+            placement.verify(() -> com.openggf.level.objects.ObjectManagerInternalAccess
+                    .refreshPlacementAfterRelocation(objectManager));
+            captureOrder.verify(levelManager).drawWithRenderOptions(
                     null,
                     com.openggf.level.LevelManager.LevelRenderOptions.previewCapture());
             org.mockito.Mockito.verify(graphicsManager).flush();

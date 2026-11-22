@@ -304,8 +304,6 @@ public final class GameplayCaptureSession implements AutoCloseable {
             sidekickSeedX = player.getCentreX();
             sidekickSeedY = player.getCentreY();
             sidekickSeedFramesLeft = SIDEKICK_SEED_FRAMES;
-            Camera camera = GameServices.camera();
-            camera.updatePosition(true);
             com.openggf.level.LevelCameraInitialization.recenterPositionedEntry(level);
             level.initLevelEventsForLevel();
             level.updateObjectPositions();

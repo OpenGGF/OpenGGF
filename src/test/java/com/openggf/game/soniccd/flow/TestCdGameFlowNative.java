@@ -41,7 +41,7 @@ class TestCdGameFlowNative {
 
     private static void kill(CdFlowHarness h) {
         // Setup poke: oY = 2040, below the bottom boundary, so the level-bound check kills the player.
-        h.place(h.player().getCentreX(), 2040, GameServices.camera().getX(), GameServices.camera().getY());
+        h.pokePosition(h.player().getCentreX(), 2040, GameServices.camera().getX(), GameServices.camera().getY());
     }
 
     /** First engine frame index (harness frame) at which {@code test} holds, scanning the replayed rows. */
@@ -64,7 +64,7 @@ class TestCdGameFlowNative {
             int[] routeSize = {h.scenes.route().size()};
             int[] stageEnded = {-1};
             var rows = h.replay(nat, SETUP, nextLevel + 1, r -> {
-                if (r == SETUP) h.place(9728, 489, 9568, 393);
+                if (r == SETUP) h.pokePosition(9728, 489, 9568, 393);
             }, (r, row) -> {
                 if (stageEnded[0] < 0 && h.scenes.route().size() > routeSize[0]) stageEnded[0] = row.frame();
                 return false;
@@ -167,7 +167,7 @@ class TestCdGameFlowNative {
         try (CdFlowHarness h = new CdFlowHarness(null)) {
             h.newGame();
             var rows = h.replay(nat, SETUP, killRow + 1, r -> {
-                if (r == SETUP) h.place(2704, 640, 2544, 544);
+                if (r == SETUP) h.pokePosition(2704, 640, 2544, 544);
                 if (r == killRow) kill(h);
             }, null);
             var cp = GameServices.level().getCheckpointState();
@@ -316,7 +316,7 @@ class TestCdGameFlowNative {
             int[] touched = {-1};
             h.replay(nat, SETUP, nextLevel + 1, r -> {
                 if (r == SETUP) {
-                    h.place(9728, 489, 9568, 393);
+                    h.pokePosition(9728, 489, 9568, 393);
                     h.player().setRingCount(nat.hex(SETUP, "rings"));          // setup poke: rings = 50
                 }
             }, (r, row) -> {

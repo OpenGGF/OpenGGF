@@ -215,10 +215,10 @@ public class TestObjectPlacementManager {
         assertFalse(manager.isRemembered(spawn),
                 "Non-respawn-tracked spawns cannot persist destruction (ROM obRespawnNo == 0)");
 
-        // Scroll away and back: the spawn re-loads fresh because it was never remembered.
-        manager.update(2000);
+        // Relocate away and back: the spawn re-loads fresh because it was never remembered.
+        manager.rebuildRelocatedWindow(2000, null);
         assertFalse(manager.getActiveSpawns().contains(spawn));
-        manager.update(0);
+        manager.rebuildRelocatedWindow(0, null);
         assertTrue(manager.getActiveSpawns().contains(spawn),
                 "Non-respawn-tracked spawn re-creates fresh on camera return");
     }
@@ -241,7 +241,7 @@ public class TestObjectPlacementManager {
 
     @Test
     public void testRememberedObjectDoesNotRespawnOnCameraReturn() {
-        // Simulates: break a block, scroll away, scroll back - block should NOT reappear
+        // Simulates: break a block, relocate away, relocate back - block should NOT reappear
         ObjectSpawn spawn = new ObjectSpawn(500, 0, 0x32, 0, 0, true, 0x8000);
         ObjectPlacementController manager = new ObjectPlacementController(List.of(spawn), () -> 320);
 
@@ -254,13 +254,13 @@ public class TestObjectPlacementManager {
         assertTrue(manager.getActiveSpawns().contains(spawn), "Spawn should still be in active (single-arg doesn't remove)");
         assertTrue(manager.isRemembered(spawn), "Spawn should be remembered");
 
-        // Scroll far right - spawn goes out of window
-        manager.update(2000);
+        // Relocate far right - spawn goes out of window
+        manager.rebuildRelocatedWindow(2000, null);
         assertFalse(manager.getActiveSpawns().contains(spawn), "Spawn should have left the window");
         assertTrue(manager.isRemembered(spawn), "Spawn should still be remembered");
 
-        // Scroll back to original position - spawn should NOT reappear
-        manager.update(0);
+        // Relocate back to the original position - spawn should NOT reappear
+        manager.rebuildRelocatedWindow(0, null);
         assertFalse(manager.getActiveSpawns().contains(spawn), "Remembered spawn should NOT reappear on camera return");
         assertTrue(manager.isRemembered(spawn), "Spawn should still be remembered after return");
 
@@ -319,11 +319,11 @@ public class TestObjectPlacementManager {
         assertTrue(manager.isRemembered(canonical), "Spawn should be remembered even with different reference");
         assertTrue(manager.isRemembered(differentRef), "Spawn should also be remembered when queried with different ref");
 
-        // Scroll away and back - spawn should NOT reappear
-        manager.update(2000);
+        // Relocate away and back - spawn should NOT reappear
+        manager.rebuildRelocatedWindow(2000, null);
         assertFalse(manager.getActiveSpawns().contains(canonical), "Spawn should have left the window");
 
-        manager.update(0);
+        manager.rebuildRelocatedWindow(0, null);
         assertFalse(manager.getActiveSpawns().contains(canonical), "Remembered spawn should NOT reappear on camera return");
     }
 
@@ -389,6 +389,38 @@ public class TestObjectPlacementManager {
                 "Retreating the front cursor past the spawn removes it from the active window");
         assertFalse(manager.isDormant(spawn),
                 "Once the cursor has passed the entry, a later scan can load it again");
+    }
+
+    @Test
+    void forwardSpawnerRetriesParkedEntryWithTheSameSavedFlagsId() {
+        ObjectSpawn loaded = new ObjectSpawn(0x0280, 0x0100, 0x2D, 0, 0, true, 0x0100);
+        ObjectSpawn parked = new ObjectSpawn(0x0290, 0x0100, 0x2E, 0, 0, true, 0x0100);
+        var placement = new ObjectPlacementController(List.of(loaded, parked), () -> 320);
+        placement.enableCounterBasedRespawn();
+        placement.enableSpawnerBeforeObjectPass();
+        placement.unmarkEntryOnFailedSpawn();
+        placement.reset(0);
+
+        List<Integer> attempts = new ArrayList<>();
+        placement.updateAndLoad(0x0080, (spawn, savedFlagsId) -> {
+            attempts.add(savedFlagsId);
+            return spawn == loaded;
+        });
+        assertEquals(List.of(1, 2), attempts);
+
+        List<ObjectSpawn> retried = new ArrayList<>();
+        List<Integer> retryIds = new ArrayList<>();
+        ObjectPlacementController.SpawnCallback freeSlot = (spawn, savedFlagsId) -> {
+            retried.add(spawn);
+            retryIds.add(savedFlagsId);
+            return true;
+        };
+        placement.updateAndLoad(0x0081, freeSlot);
+        assertTrue(retried.isEmpty(), "A free slot alone does not restart the forward scan");
+
+        placement.updateAndLoad(0x0100, freeSlot);
+        assertEquals(List.of(parked), retried);
+        assertEquals(List.of(2), retryIds, "The parked object must reuse its saved-flags byte");
     }
 
     @Test
