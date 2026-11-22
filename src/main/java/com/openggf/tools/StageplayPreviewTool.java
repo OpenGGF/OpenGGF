@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openggf.capture.GlReadPixelsGrabber;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.game.GameServices;
+import com.openggf.catalog.StockGameCatalog;
 import com.openggf.mods.scene.host.SceneRomLibrary;
 import com.openggf.stageplay.StageplayStore;
 import com.openggf.stageplay.StageplayTimeline;
@@ -26,7 +27,7 @@ public final class StageplayPreviewTool {
         var paths = new LinkedHashMap<String, Path>();
         boolean descriptor = Arrays.equals(args, new String[]{"--rom-descriptor"});
         for (int i=0;!descriptor && i<args.length;i+=2) {
-            if (i+1==args.length || !List.of("s1","s2","s3k").contains(args[i])) throw new IllegalArgumentException("Expected game ROM pairs");
+            if (i+1==args.length || !StockGameCatalog.isStockCode(args[i])) throw new IllegalArgumentException("Expected stock game and media path pairs");
             paths.put(args[i],Path.of(args[i+1]));
         }
         try (var input = new StageplayProcessInput(new InputStreamReader(System.in, StandardCharsets.UTF_8))) {

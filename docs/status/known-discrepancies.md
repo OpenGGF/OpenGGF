@@ -206,6 +206,46 @@ disc-drive timing. The cases below describe how those limits affect play.
   replay services every row of them: 18 Quartz Quadrant recordings and control
   traces were re-recorded, and the counter census shows no lost V-INT in the
   other 140. The HUD's RINGS flash phase has no native row to check against.
+- **HUD TIME writes during active display.** The ordinary stage interrupt
+  draws the level and processes the graphics queue before calling
+  `UpdateHUD` (`VInt_Level`, Level/Main.asm:821-847).
+  `UpdateHUD` (Level/_Objects/HUD and Points/Main.asm:186) checks the timer flags
+  in its `.ChkTime` branch (Level/_Objects/HUD and Points/Main.asm:252-305) before writing digits.
+  When `DrawLevel` overruns VBlank, the digit writes can straddle the HUD
+  sprite's scanlines (24–39).
+  OpenGGF publishes the completed digits with the stage picture. The disc can
+  still show strokes from the previous digits in that picture.
+
+  BizHawk 2.11 GPGX replayed the USA R11A and R12A stage-select movies and
+  reproduced each of the pictures below pixel for pixel. Execute hooks
+  observed `UpdateHUD` at $20AE56 and $20AC7E respectively, and the per-row
+  writes from `HUD_DrawNum` (Level/_Objects/HUD and Points/Main.asm:686-717)
+  at $20B288–$20B2A6 and $20B0B0–$20B0CE. The probe read the core's VDP
+  scanline and checked VRAM after each write. All eight frames ran the
+  ordinary HUD path with debug, pause and control lock clear, the timer
+  enabled, and zero input lag. In the six late cases, `DrawLevel` began at
+  scanline 245 or 246 and finished during active display, on the same
+  scanline that `UpdateHUD` began. Level frame is the counter at HUD entry.
+  Probe frame identifies the hardware frame whose pixels were captured.
+
+  | Stage | Level frame | Probe frame | HUD entry scanline | VRAM $B2E0 write rows on scanlines | VRAM $B320 write rows on scanlines | Centiseconds drawn → resident |
+  | --- | ---: | ---: | ---: | ---: | ---: | --- |
+  | R11A | 320 | 2624 | 236 | 241–242 | 242–243 | 90 → 90 |
+  | R11A | 330 | 2634 | 14 | 26–30 | 30–33 | 05 with updated bottom rows → 06 |
+  | R11A | 370 | 2674 | 45 | 58–61 | 62–65 | 71 → 73 |
+  | R11A | 440 | 2744 | 42 | 55–58 | 59–62 | 88 → 90 |
+  | R12A | 320 | 2657 | 19 | 32–35 | 35–39 | 81 → 83 |
+  | R12A | 330 | 2667 | 236 | 241–242 | 242–243 | 00 → 00 |
+  | R12A | 370 | 2707 | 27 | 40–43 | 44–47 | 65 → 66 |
+  | R12A | 430 | 2767 | 20 | 32–36 | 36–39 | 65 → 66 |
+
+  For R11A level frame 330, the per-row writes preceded scanout of the last
+  glyph only from scanline 33 onward. The left edge of the final digit's
+  black outline changes at scanline 34, while the white strokes above keep
+  the shape of a 5. The PPZ picture test verifies the measured scanout on
+  native images and the resident digit art on engine images. It reads per-row
+  write scanlines and before/after VRAM from the user-local `timing.tsv`
+  recordings and checks every PPZ shot they cover.
 - **Disc drive seeks: the video reads estimated from emulator timing in `FAST`
   and `PROFILED`, not in `NONE`.** The video player waits for the BIOS read that
   `ReadFMVSectors` (CD System Program/SP.asm:720-746) starts; the seek before
@@ -230,9 +270,6 @@ disc-drive timing. The cases below describe how those limits affect play.
   cursor's offset within a word. The estimate matches BizHawk 2.11 measurements
   at widths 256 and 304. Other widths are unmeasured, and physical stamp
   timing remains uncertified.
-
-The Wacky Workbench defeat fades have a
-[separate gameplay parity gap](../architecture/validation/levels/scd-stages.md#parked-sonic-cd-gaps).
 
 ### Other Sonic CD differences
 

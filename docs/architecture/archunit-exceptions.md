@@ -376,7 +376,7 @@ are unchanged.
 `package_slices_are_free_of_cycles`: 0 committed cycle records after the
 explicit dependency-pair ignores below. This does not prove the full dependency
 graph is acyclic; the rule description still names one historical core-runtime cluster.
-`core_runtime_cycle_cluster_does_not_gain_top_level_edges`: 163 allowed
+`core_runtime_cycle_cluster_does_not_gain_top_level_edges`: 167 allowed
 source/target top-level package pairs inside or adjacent to that cluster.
 `TestArchitecturalReviewGuard` checks this permission count against the executable
 set. The live dependency census on 2026-10-23 found seven unused permissions:
@@ -403,8 +403,12 @@ engine route host reads native facing into samples), giving 161. The route tape 
 `editor -> route` for the planner facade and value types, giving 162; their worker job's protocol is
 an explicitly owned `editor -> tools` dependency. The bundled-mod
 packager's network-defaults overlay reuses the master address parser, restoring
-`tools -> net`, giving 163. The three
-matching obsolete
+`tools -> net`, giving 163. Shared stock game choices add four pairs. The route
+tape and Stageplay editors use `editor -> catalog` for game selectors. Launch
+profiles and sound discovery use `game -> catalog` for stock and cartridge codes.
+Command-line tools use `tools -> catalog` for game options and input validation.
+Trace discovery uses `trace -> catalog` for cartridge fixture IDs. This brings the
+set to 167 permissions. The three matching obsolete
 cycle ignores (`debug -> data`, `timer -> camera`, `util -> tools`) were removed too. The runtime-edge guard now rejects both
 unapproved edges and stale permissions; the documentation check verifies the
 published allowance count.

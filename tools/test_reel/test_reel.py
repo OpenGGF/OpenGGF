@@ -16,6 +16,10 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_SCOPE = Path(__file__).with_name('tas-2026-10-26.json')
+ROM_PROPERTIES = {
+    's1': 'sonic1.rom.path', 's2': 'sonic2.rom.path',
+    's3k': 's3k.rom.path', 'kis2': 'kis2.rom.path',
+}
 
 
 def git(*args):
@@ -218,7 +222,7 @@ def write_json(path, value):
 
 def rom_identities(args):
     result = {}
-    for game in ('s1','s2','s3k','kis2'):
+    for game in ROM_PROPERTIES:
         path = getattr(args, game+'_rom')
         if path:
             path = Path(path).resolve(strict=True)
@@ -286,7 +290,6 @@ def capture(args):
     out = Path(args.out).resolve()
     out.mkdir(parents=True,exist_ok=False)
     roms = rom_identities(args)
-    properties = {'s1':'sonic1.rom.path','s2':'sonic2.rom.path','s3k':'s3k.rom.path','kis2':'kis2.rom.path'}
     source_files = sorted(set(git('ls-files','--cached','--others','--exclude-standard','src','pom.xml').splitlines())
                           | {str(p.relative_to(ROOT)) for p in Path(__file__).parent.glob('*') if p.is_file()})
     source_hashes = {p:hashlib.sha256((ROOT/p).read_bytes()).hexdigest() for p in source_files if (ROOT/p).is_file()}
@@ -294,7 +297,7 @@ def capture(args):
     command = [sys.executable, 'tools/testing/maven_queue.py', '-Dmse=off', '-Dopenggf.headless.gl=surfaceless-egl',
                '-Dtest='+','.join(selectors), '-Dopenggf.testReel.dir='+str(out),
                '-Dopenggf.testReel.source='+plan['source_commit'], '-Dopenggf.testReel.fingerprint='+fingerprint,
-               *['-D'+properties[g]+'='+r['path'] for g,r in roms.items()], 'test']
+               *['-D'+ROM_PROPERTIES[g]+'='+r['path'] for g,r in roms.items()], 'test']
     env = dict(os.environ)
     env.pop('DISPLAY',None); env.pop('WAYLAND_DISPLAY',None)
     metadata = {'command':command,'roms':roms, 'source_diff':git('diff','HEAD','--','src','tools/test_reel'),
@@ -577,7 +580,7 @@ def main():
     p.add_argument('--add-commit',action='append',default=[]);p.add_argument('--include-unmerged',action='store_true');p.add_argument('--out',required=True)
     p=sub.add_parser('capture');p.add_argument('--inventory',required=True);p.add_argument('--select',action='append',required=True)
     p.add_argument('--out',required=True)
-    for game in ('s1','s2','s3k','kis2'):
+    for game in ROM_PROPERTIES:
         p.add_argument('--'+game+'-rom')
     p=sub.add_parser('reconcile');p.add_argument('--inventory',required=True);p.add_argument('--run-dir',required=True);p.add_argument('--out',required=True);p.add_argument('--allow-legacy-source',action='store_true')
     p=sub.add_parser('combine');p.add_argument('--inventory',required=True);p.add_argument('--manifest',action='append',required=True);p.add_argument('--out',required=True);p.add_argument('--prefer-last',action='store_true');p.add_argument('--allow-legacy-source',action='store_true')

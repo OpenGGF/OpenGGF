@@ -1,5 +1,6 @@
 package com.openggf.game;
 
+import com.openggf.catalog.StockGameCatalog;
 import com.openggf.audio.GameAudioProfile;
 import com.openggf.audio.debug.StandaloneAudioPresentationHost;
 import com.openggf.audio.presentation.HubMusicPresentationSink;
@@ -58,7 +59,7 @@ public final class HubMusicController implements AutoCloseable {
     /** Called once per hub update, including child menus. Slow ROM/device work stays off the UI. */
     public void update(String gameId, boolean ducked) {
         if (closed) return;
-        boolean stock = java.util.Arrays.stream(GameId.values()).anyMatch(id -> id != GameId.STANDALONE && id.code().equals(gameId));
+        boolean stock = StockGameCatalog.isStockCode(gameId);
         request = new Request(gameId, stock && config.getBoolean(AUDIO_ENABLED)
                 && config.getBoolean(AUDIO_HUB_MUSIC_ENABLED), config.getInt(AUDIO_HUB_MUSIC_VOLUME), ducked,
                 config.getString(ROMS_DIRECTORY) + "|" + config.getString(SONIC_1_ROM) + "|"
@@ -110,9 +111,8 @@ public final class HubMusicController implements AutoCloseable {
         GameId selected = GameId.fromCode(gameId);
         if (GameModuleRegistry.mediaKind(selected) == GameModuleRegistry.MediaKind.HOSTED_MEDIA)
             return openHostedSession(selected, config, noDevice);
-        RomIdentity identity = switch (gameId) { case "s1" -> RomIdentity.S1; case "s2" -> RomIdentity.S2; default -> RomIdentity.S3K; };
-        GameId stockGame = switch (gameId) { case "s1" -> GameId.S1; case "s2" -> GameId.S2; default -> GameId.S3K; };
-        var source = GameModuleRegistry.createStockMenuAudio(stockGame);
+        RomIdentity identity = selected.romGame().identity();
+        var source = GameModuleRegistry.createStockMenuAudio(selected);
         GameAudioProfile profile = source.profile();
         int titleId = source.titleMusicId();
         try (Rom rom = Rom.fromReader(RomImageCatalogue.forCurrentWorkingDirectory(config).open(identity), "hub " + gameId)) {

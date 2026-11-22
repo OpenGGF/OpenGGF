@@ -64,14 +64,19 @@ public final class WwzPlayerProfile implements CdZonePlayerProfile {
      */
     @Override
     public int playerLoopChunk(CdLevel level, int loopChunk, boolean onLoopPath) {
-        if (!onLoopPath) {
-            if (loopChunk == PATH_ENTRY_CHUNK && mainPlayer() instanceof AbstractPlayableSprite player) {
-                player.setLoopLowPlane(true);                       // bset #6,oSprFlags(a0)
-                player.setHighPriority(false);                      // andi.b #$7F,oTile(a0)
+        return resolveLoopChunk(loopChunk, onLoopPath, () -> {
+            if (mainPlayer() instanceof AbstractPlayableSprite player) {
+                player.setLoopLowPlane(true);
+                player.setHighPriority(false);
             }
-            return loopChunk;
-        }
-        return loopChunk(loopChunk);
+        });
+    }
+
+    /** GetLevelBlock (Level/Collision Floor.asm:519-555) uses the probing sprite's own path bit. */
+    public static int resolveLoopChunk(int loopChunk, boolean onLoopPath, Runnable enterLoopPath) {
+        if (onLoopPath) return loopChunk(loopChunk);
+        if (loopChunk == PATH_ENTRY_CHUNK) enterLoopPath.run();
+        return loopChunk;
     }
 
     /** The higher path's remap: $15, $1E, $1F, $32 -> $60-$63; other loop chunks read as themselves. */
