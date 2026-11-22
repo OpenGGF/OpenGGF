@@ -41,7 +41,7 @@ final class TraceCaptureLagFrames {
         return new TraceCaptureLagFrames(true, true);
     }
 
-    /** Hosted capture presents every trace row, including repeats with both counters held. */
+    /** Hosted capture may omit VBlank-only rows even when both counters held. */
     static TraceCaptureLagFrames skipHostedLagFrames() {
         return new TraceCaptureLagFrames(true, false);
     }
@@ -61,7 +61,8 @@ final class TraceCaptureLagFrames {
      * from the recording's own counters and never from pictures:
      * <ul>
      *   <li>the replay ran no gameplay frame for the row, so the engine has
-     *       nothing new of play to show on it;</li>
+     *       nothing new of play to show on it. For hosted replay only
+     *       {@code VBLANK_ONLY} is eligible;</li>
      *   <li>both rows have a recorded {@code vblank_counter}. Cartridge clips
      *       also require it to advance, since they present elapsed VBlanks;</li>
      *   <li>{@code gameplay_frame_counter} held, so its level loop did not
@@ -75,7 +76,8 @@ final class TraceCaptureLagFrames {
     static boolean isLagRow(TraceExecutionPhase phase, IntFunction<TraceFrame> rows,
             int rowCount, int index, boolean requireVblankAdvance) {
         if (phase == TraceExecutionPhase.FULL_LEVEL_FRAME
-                || phase == TraceExecutionPhase.FULL_LEVEL_FRAME_WITH_SIDEKICK_ANIMATION_HELD) {
+                || phase == TraceExecutionPhase.FULL_LEVEL_FRAME_WITH_SIDEKICK_ANIMATION_HELD
+                || (!requireVblankAdvance && phase != TraceExecutionPhase.VBLANK_ONLY)) {
             return false;
         }
         int hold = holdRows(rows, rowCount, index, requireVblankAdvance);

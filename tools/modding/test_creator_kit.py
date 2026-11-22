@@ -170,15 +170,17 @@ class CreatorKitTest(unittest.TestCase):
                 expected = "python3 ../../tools/build_project.py . --test --testkit ../../mod-testkit.jar"
                 if game in ("s1", "s2", "s3k"):
                     expected += f" --{game} /absolute/own-{game}.gen"
+                elif game == "scd":
+                    expected += ' --scd "/absolute/own-scd.chd"'
                 self.assertEqual(expected, command)
                 self.assertIn("other tested games or donors", readme)
 
                 launch = next(line for line in readme.splitlines()
                               if line.startswith("python3 ../../tools/build_project.py . --run "))
                 launch_game = game if game in ("s1", "s2", "s3k") else "s2"
-                self.assertEqual(
-                    f"python3 ../../tools/build_project.py . --run --{launch_game} /absolute/own-{launch_game}.gen",
-                    launch)
+                media = ('--scd "/absolute/own-scd.chd"' if game == "scd"
+                         else f"--{launch_game} /absolute/own-{launch_game}.gen")
+                self.assertEqual(f"python3 ../../tools/build_project.py . --run {media}", launch)
 
     def test_actual_second_strike_export_preserves_documented_controller_recipes(self):
         root = Path(__file__).resolve().parents[2]

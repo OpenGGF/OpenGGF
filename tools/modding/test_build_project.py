@@ -66,6 +66,16 @@ class BuildProjectTest(unittest.TestCase):
         self.assertEqual(self.testkit, kwargs["testkit"])
         self.assertTrue(kwargs["run"])
 
+    def test_run_writes_explicit_sonic_cd_disc_to_isolated_config(self):
+        self.settings(scd="missing-local.chd")
+        disc = Path(self.temp.name) / "Sonic CD (USA).chd"
+        disc.touch()
+        with patch.object(launcher.subprocess, "run", side_effect=self.probe):
+            result, _ = self.invoke("--run", "--scd", disc)
+        self.assertEqual(0, result)
+        config = self.project / "target/play/config.yaml"
+        self.assertIn(f"  soniccd: {json.dumps(str(disc))}", config.read_text().splitlines())
+
     def test_supported_default_and_expert_opt_out(self):
         source = self.project / "src/main/java/Probe.java"
         source.parent.mkdir(parents=True)

@@ -116,17 +116,7 @@ class TestSonicCdCaptureTools {
         List<Integer> expected = IntStream.rangeClosed(2884, 2982).boxed()
                 .filter(row -> !lagRows.contains(row)).toList();
 
-        Path video;
-        try (Stream<Path> files = Files.list(out)) {
-            video = files.filter(path -> path.toString().endsWith(".mkv") || path.toString().endsWith(".mov"))
-                    .findFirst().orElseThrow();
-        }
-        String ffmpeg = FfmpegEncoder.findFfmpeg().map(Path::toString).orElse("ffmpeg");
-        Process decode = new ProcessBuilder(ffmpeg, "-v", "error", "-i", video.toString(),
-                "-map", "0:a:0", "-f", "s16le", "pipe:1")
-                .redirectError(ProcessBuilder.Redirect.INHERIT).start();
-        byte[] pcm = decode.getInputStream().readAllBytes();
-        assertEquals(0, decode.waitFor(), "decode the exported audio");
+        byte[] pcm = decodeTrack(out, "0:a:0", "s16le");
         int bytesPerFrame = (48_000 / 60) * 2 * Short.BYTES;
         assertAll(
                 () -> assertEquals(expected, filmed, "the clip omits only native lag rows"),
@@ -148,19 +138,9 @@ class TestSonicCdCaptureTools {
         List<Integer> filmed = state.stream().skip(1)
                 .map(line -> Integer.parseInt(line.split(",", -1)[rowColumn])).toList();
 
-        Path video;
-        try (Stream<Path> files = Files.list(out)) {
-            video = files.filter(path -> path.toString().endsWith(".mkv") || path.toString().endsWith(".mov"))
-                    .findFirst().orElseThrow();
-        }
-        String ffmpeg = FfmpegEncoder.findFfmpeg().map(Path::toString).orElse("ffmpeg");
-        Process decode = new ProcessBuilder(ffmpeg, "-v", "error", "-i", video.toString(),
-                "-map", "0:v:0", "-f", "framemd5", "pipe:1")
-                .redirectError(ProcessBuilder.Redirect.INHERIT).start();
-        List<String> hashes = new String(decode.getInputStream().readAllBytes(), StandardCharsets.UTF_8)
+        List<String> hashes = new String(decodeTrack(out, "0:v:0", "framemd5"), StandardCharsets.UTF_8)
                 .lines().filter(line -> !line.startsWith("#"))
                 .map(line -> line.substring(line.lastIndexOf(',') + 1).strip()).toList();
-        assertEquals(0, decode.waitFor(), "decode the exported video");
         assertEquals(filmed.size(), hashes.size(), "one picture per exported state row");
 
         TraceData trace = TraceData.load(traceDir);
@@ -305,6 +285,23 @@ class TestSonicCdCaptureTools {
         assertTrue(assertThrows(IllegalArgumentException.class, () -> media.levelNamed("ghz", 1)).getMessage()
                 .contains("Unknown Sonic CD zone"));
         assertThrows(IllegalArgumentException.class, () -> media.levelNamed("ppz", 11));
+    }
+
+    private static byte[] decodeTrack(Path output, String track, String format) throws Exception {
+        Path video;
+        try (Stream<Path> files = Files.list(output)) {
+            video = files.filter(path -> path.toString().endsWith(".mkv") || path.toString().endsWith(".mov"))
+                    .findFirst().orElseThrow();
+        }
+        String ffmpeg = FfmpegEncoder.findFfmpeg().map(Path::toString).orElse("ffmpeg");
+        Process decode = new ProcessBuilder(ffmpeg, "-v", "error", "-i", video.toString(),
+                "-map", track, "-f", format, "pipe:1")
+                .redirectError(ProcessBuilder.Redirect.INHERIT).start();
+        try (var stdout = decode.getInputStream()) {
+            byte[] bytes = stdout.readAllBytes();
+            assertEquals(0, decode.waitFor(), "decode exported track " + track);
+            return bytes;
+        }
     }
 
     private static HeadlessGameBoot runTraceCapture(String[] argv) throws Exception {
