@@ -53,7 +53,7 @@ the repository for durable captures; `target/trace-videos` is disposable output.
 | `--no-sprite-limits` | Native sprite limits on | Render without native sprite dropout, as normal play does by default; for promotional footage, not ROM image comparison |
 | `--no-music` | Music recorded | Silence music and keep the sound effects on the audio track: a sound-effects stem of the run for footage that gets its own music. The picture does not change |
 
-A full-run capture presents no frame on trace lag rows (`lag_counter` != 0): MKV frame
+A cartridge full-run capture presents no frame on trace lag rows (`lag_counter` != 0): MKV frame
 n is row n only until the first lag row, then row minus the lag rows before it (measured
 on `soz_completerun`, 2026-09-17).
 
@@ -63,13 +63,13 @@ still while the display went on, and the clip shows the previous picture again: 
 times in `s2/cpz2` rows 4439 to 4505, which a viewer reads as the engine stuttering.
 `--skip-lag-frames` leaves them out:
 
-- **What counts as lag** comes from the recording's counters, never from comparing
-  pictures (a still scene repeats pictures too): the replay ran no gameplay frame for the
-  row, `vblank_counter` advanced, `gameplay_frame_counter` held, and the hold is at most
-  four rows long. In the committed traces of all three games a level loop that fell
-  behind held for one row, rarely two. Every longer hold there is five rows or more,
-  and is the game running outside its level loop (a title card, a fade, a load): not
-  lag, so it stays in. `lag_counter` is not read: only Sonic 3&K records one.
+- **What counts as lag** is a hold of at most four rows in the recorded gameplay
+  counter, on a row the replay drove without gameplay. Cartridge clips require
+  the VBlank counter to advance. Hosted clips such as Sonic CD also film rows
+  with both counters held by default, so skipping removes those short repeats
+  as well. The Sonic CD recorder's lag flag can arrive on the next gameplay row.
+  Holds of five rows or more, such as title cards, fades or loads, stay in the
+  clip. The production tail past the end of the trace stays as well.
 - **The window still means trace rows** START to END. The clip is shorter by the lag
   rows inside it. The tool prints the rows it left out and the output-frame to trace-row
   mapping (`clip: output frame -> trace row: 0-138 -> 4300-4438, 139-142 -> 4440-4443,

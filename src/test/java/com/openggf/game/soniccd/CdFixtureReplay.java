@@ -214,8 +214,8 @@ final class CdFixtureReplay {
     }
 
     /** Replays {@code fixture}'s movie over the stage just loaded (its row 0 is the loaded state). */
-    private static Outcome playLoaded(Fixture fixture, int lastRow, boolean stopAtFirstError, int keepFrom,
-                                      int keepTo, Hooks hooks) throws Exception {
+    static Outcome playLoaded(Fixture fixture, int lastRow, boolean stopAtFirstError, int keepFrom,
+                              int keepTo, Hooks hooks) throws Exception {
         TraceData trace = TraceData.load(fixture.traceDir());
         if (!"scd".equals(trace.metadata().game())) {
             throw new IllegalStateException(fixture + " is not an scd trace");

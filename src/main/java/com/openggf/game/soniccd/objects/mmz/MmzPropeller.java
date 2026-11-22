@@ -6,7 +6,6 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.TouchResponseProvider;
-import com.openggf.physics.ObjectTerrainUtils;
 
 import java.util.List;
 
@@ -85,7 +84,7 @@ public final class MmzPropeller extends MmzObject implements ObjectVisualFacing.
     }
 
     private int floorDistance() {
-        return ObjectTerrainUtils.checkFloorDist(x, y, yRadius).distance();
+        return checkFloor(x, y, yRadius).distance();
     }
 
     @Override protected boolean despawnsByCheckObjDespawn() { return true; }
