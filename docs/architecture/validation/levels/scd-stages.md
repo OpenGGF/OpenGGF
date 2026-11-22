@@ -338,17 +338,51 @@ pairing. Comparing engine-after-R to the CRAM sampled at the end of native
 row R made ordinary writes appear early.
 
 `EggmanDefeatSequenceFadeScreen` and `EggmanDefeatSequenceFadeObjects`
-(objects/r6/boss.asm:545-559) hold the stage loop twice.
-`FadeToWhite` (common/palette_fade.asm:285-295) and
-`BossFadeObjectsFromWhite` (common/palette_fade.asm:463-484) each wait 22
-times. `VBlankPaletteFade` (common/main.asm:951-962) uploads the already
-prepared colors and reads the pads through `VBlankCommon`
-(common/main.asm:1014-1025). After
-VSync returns, the fade computes the next step. The restore reads the
-separate target buffer filled by `LoadFadePalette`
+(objects/r6/boss.asm:545-559) hold the stage loop twice. The restore reads
+the separate target buffer filled by `LoadFadePalette`
 (common/palette_load_fade.asm:3-15). The palette cycler changes only the
-active buffer. The engine now draws the fade step prepared by the held tick,
-using the same pairing as ordinary frames.
+active buffer.
+
+The boss calls each fade from inside `UpdateObjects`
+(`StageMainLoopUpdate`, common/main.asm:406-410). The two waits set routine
+`$12` and call VSync 22 times each (`FadeToWhite`,
+common/palette_fade.asm:285-295, and `BossFadeObjectsFromWhite`,
+common/palette_fade.asm:463-484). `VBlank` (common/main.asm:716-738) writes
+vertical scroll before dispatch. `VBlankIndex` (common/main.asm:754-765)
+dispatches `VBlankPaletteFade` (common/main.asm:951-962). Its
+`VBlankCommon` (common/main.asm:1014-1037) reads the pads and uploads CRAM.
+`VBlankCommonResume` (common/main.asm:1039-1054) then transfers the sprite
+table to VRAM `$F800` and H-scroll to `$FC00`, using the buffers that the
+last completed stage iteration prepared. The fade services
+`ProcessGfxQueueFast` (common/gfx_queue.asm:103-112) and advances the
+decompressor setup after VSync, when the fade computes the next step. `VBlankDispatchDone`
+(common/main.asm:740-750) still flushes FM requests and advances its
+interrupt-owned counters.
+
+The blocked object pass has yet to reach `StageMainLoopUpdateScroll` and
+`StageMainLoopDraw` (common/main.asm:440-453). The fade interrupt omits
+`LoadPlayerGfx` and `VBlankStagePlayerGfxDone`
+(`VBlankStage`, common/main.asm:854-900). Existing player art, stage
+animation patterns, plane maps and HUD digit tiles remain resident.
+`DrawStage` (r6/stage_draw_3c.asm:17-34 and r6/stage_draw_3d.asm:17-34)
+would stream the plane-map rows and columns on a regular stage V-INT.
+`UpdateHudNumbers` (objects/hud_points.asm:210-257) ticks the timer and
+writes its centiseconds on that same ordinary V-INT. During the four held
+windows, the native hashes of H-scroll, the SAT, both plane maps, HUD art,
+WWZ animation art and player art were constant within each hold. Timer
+RAM was also constant.
+
+The engine retains the last sprite and scroll picture before the boss
+enters the wait. It displays the fade palette prepared by each held tick
+with that picture, using the same palette pairing as ordinary frames.
+The stage art and HUD publish when the next ordinary picture is due.
+In both restore holds, a duplicate offscreen ring had previously consumed
+16 pixels of the sprite scanline budget and clipped the escape pod.
+Placed rings now enter the table through their object slots, as in
+`ObjRing_Main` (Level/_Objects/Ring/Main.asm:214-232) and `DrawObject`
+(common/object.asm:100-154). Tiles-only pictures already matched in all
+four holds. The full-picture differences came from sprite admission and
+which sprite table was on screen.
 
 The native probe reads CRAM after `FrameAdvance`, alongside the video
 buffer used for pictures. `TestWwzBossFades` compares CRAM and the backdrop
@@ -363,9 +397,17 @@ first Good Future hold at row 5481 and checks the held rows, palette words,
 and gameplay resumption at row 5496 on both passes. `TestWwzBossNative`
 checks slots and timers at completed level frames.
 
-The palette recordings leave the held sprite table and R63C background tile
-pixels unverified during the fades. The cartridge palette upload paths
-need their own displayed-frame checks.
+`TestWwzBossHoldPictures` compares all 320×224 pixels at native channel
+precision, including the HUD, during both holds in each recording and
+across their boundaries. It also checks the stage animation counters
+during the holds, when the fade can conceal a premature art update.
+Restoring a snapshot inside a wait also restores the last published HUD
+digits from the HUD object's captured values.
+The Good Future picture windows are rows 5475–5495
+and 5555–5575. The Bad Future picture windows are 5726–5746 and 5806–5826. These
+rows have no lag. The lossless PNGs are user-local, under
+`rehost-boss-wwz/{R63C,R63D}-fades/pictures/`, indexed by trace row.
+The cartridge palette upload paths need their own displayed-frame checks.
 
 ## Palmtree Panic campaign Amy Rose (hosted)
 
