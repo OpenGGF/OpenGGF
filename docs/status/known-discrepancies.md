@@ -241,8 +241,9 @@ disc-drive timing. The cases below describe how those limits affect play.
   other 140. The HUD's RINGS flash phase has no native row to check against.
 - **HUD TIME writes during active display.** The ordinary stage interrupt
   draws the level and processes the graphics queue before calling
-  `UpdateHUD` (`VInt_Level`, Level/Main.asm:821-847). The timer flags decide
-  whether to write digits (`UpdateHUD`, Level/_Objects/HUD and Points/Main.asm:252-305).
+  `UpdateHUD` (`VInt_Level`, Level/Main.asm:821-847).
+  `UpdateHUD` (Level/_Objects/HUD and Points/Main.asm:186) checks the timer flags
+  in its `.ChkTime` branch (Level/_Objects/HUD and Points/Main.asm:252-305) before writing digits.
   When `DrawLevel` overruns VBlank, the digit writes can straddle the HUD
   sprite's scanlines (24–39).
   OpenGGF publishes the completed digits with the stage picture. The disc can
@@ -275,7 +276,9 @@ disc-drive timing. The cases below describe how those limits affect play.
   glyph only from scanline 33 onward. The left edge of the final digit's
   black outline changes at scanline 34, while the white strokes above keep
   the shape of a 5. The PPZ picture test verifies the measured scanout on
-  native images and the completed digit art on engine images.
+  native images and the resident digit art on engine images. It reads per-row
+  write scanlines and before/after VRAM from the user-local `timing.tsv`
+  recordings and checks every PPZ shot they cover.
 - **Disc drive seeks: the video reads estimated from emulator timing in `FAST`
   and `PROFILED`, not in `NONE`.** The video player waits for the BIOS read that
   `ReadFMVSectors` (CD System Program/SP.asm:720-746) starts; the seek before

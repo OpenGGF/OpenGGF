@@ -5385,9 +5385,16 @@
     {
       "match": "com.openggf.game.soniccd.TestPpzObjectsAPictures#objectSpritesMatchTheNativeFrames",
       "category": "optional-fixture",
-      "evidence": "src/test/java/com/openggf/game/soniccd/TestPpzObjectsAPictures.java:79",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestPpzObjectsAPictures.java:96",
       "allowed_when_absent": "soniccd_native",
       "note": "Sonic CD disc and BizHawk native reference"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestPpzObjectsAPictures#hudTimeMatchesRecordedScanout",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestPpzObjectsAPictures.java:242",
+      "allowed_when_absent": "soniccd_native",
+      "note": "Sonic CD disc and BizHawk PPZ per-row HUD timing.tsv recordings"
     },
     {
       "match": "com.openggf.game.soniccd.TestSszNativePictures#everyStageMatchesItsNativeScreenshots",
