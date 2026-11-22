@@ -22,24 +22,6 @@ Entries should include:
 
 ---
 
-## Sonic CD campaign pause restart
-
-When Sonic still has lives after an A, B or C press during campaign pause,
-`CdLevelPause` requests the shared death reload. In the Present that path
-can show the stage title card again. The disc leaves the card's loaded bit set
-in `Level_MainLoop` (Level/Main.asm:368-395). Only the ordinary death path
-clears that bit on a Present restart without a checkpoint
-(`ObjSonic_Restart`, Level/_Objects/Sonic/Main.asm:2465-2472).
-
-Quartz Quadrant acts 1 and 2 also retain `respawn_checkpoint` while clearing
-`spawn_mode` (`loc_201858`, r5/main.asm:328-337 and `loc_201898`,
-r5/main.asm:346-349). The engine clears the checkpoint state because the shared
-death reload uses an active checkpoint to select the Present spawn.
-`TestCdPauseExit` confirms the life loss and reload for live and recorded input.
-It currently expects the checkpoint clear and stops before checking the
-restarted title card. Close the gap by exercising both input paths through a
-complete restart and checking the spawn position, saved checkpoint and title card.
-
 ## Sonic CD R12A stage-load V-INT count
 
 The stage-load manifest uses the 45 serviced V-INTs measured when entering

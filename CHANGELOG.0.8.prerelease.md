@@ -124,7 +124,9 @@ under the matching area heading; see the
   boosted movement constants in effect until the next native physics write.
   Power-up music checks the live time zone, including the warp bit, before fading PCM.
   Press A, B or C during a pause to leave a Time Attack attempt or spend one
-  life in the campaign. The stage restarts if lives remain.
+  life in the campaign. With lives left, Sonic restarts at the stage entrance
+  with a fresh clock and zero rings. The title card stays hidden, and Quartz
+  Quadrant acts 1 and 2 keep the saved checkpoint.
   Clearing Special Stage 8 opens an OpenGGF acknowledgement with the disc's
   ending music and a return to the title.
   Visual Mode plays the opening, both endings and the silent Pencil Test
