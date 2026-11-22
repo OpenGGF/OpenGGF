@@ -5,6 +5,7 @@ import com.openggf.game.GameMode;
 import com.openggf.game.GameServices;
 import com.openggf.game.NativeGameStateOps;
 import com.openggf.game.soniccd.CdStagePayload;
+import com.openggf.game.soniccd.audio.CdFmSoundRequestService;
 import com.openggf.game.soniccd.program.CdProgramRequest;
 import com.openggf.game.soniccd.special.CdSpecialStageProvider;
 import com.openggf.game.soniccd.special.CdSpecialStageResults;
@@ -134,7 +135,10 @@ class TestCdGameFlowNative {
             assertTrue(rows.get(SETUP).dead(), "the setup kills the player");
             h.until(() -> h.row().lives() == 2, 600, 0);
             int engineGone = h.frame;
+            var fm = (CdFmSoundRequestService) h.module.getAudioProfile().createAudioRequestService();
+            assertFalse(fm.snapshot().jumpCondition(), "the death timer has not expired");
             h.until(() -> h.row().fading(), 600, 0);
+            assertTrue(fm.snapshot().jumpCondition(), "death restart releases held FM effects");
             // The fade starts on the frame after the restart request.
             assertEquals(nat.logicFrames(gone + 1, restart + 1), h.frame - 1 - engineGone,
                     "ObjSonic_Restart's 60-frame timer (Sonic/Main.asm:2443-2452)");
@@ -387,8 +391,11 @@ class TestCdGameFlowNative {
             }, null);
             h.until(() -> h.row().lives() == 0, 600, 0);
             int engineGone = h.frame;
+            var fm = (CdFmSoundRequestService) h.module.getAudioProfile().createAudioRequestService();
+            assertFalse(fm.snapshot().jumpCondition(), "the death timer has not expired");
             assertEquals(0x1E0, nat.hex(gone, "p_reset"), "native sets the 8-second timer");
             h.until(() -> h.row().fading(), 900, 0);
+            assertTrue(fm.snapshot().jumpCondition(), "death restart releases held FM effects");
             assertEquals(nat.logicFrames(gone + 1, restart + 1), h.frame - 1 - engineGone,
                     "ObjSonic_Restart's game-over timer (Sonic/Main.asm:2439)");
             h.until(() -> h.loop.getCurrentGameMode() == GameMode.TITLE_SCREEN, 600, 0);

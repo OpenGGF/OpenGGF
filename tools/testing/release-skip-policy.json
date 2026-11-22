@@ -4914,6 +4914,13 @@
       "note": "user's Sonic CD disc"
     },
     {
+      "match": "com.openggf.game.soniccd.objects.boss.qqz.TestQqzBoothFmRelease#boothDefeatReleasesTheHeldDiscEffectIntoItsFadeTail",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/objects/boss/qqz/TestQqzBoothFmRelease.java:24",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "USA FM driver bank for the Quartz Quadrant booth effect"
+    },
+    {
       "match": "com.openggf.game.soniccd.audio.TestCdFmSoundEffects#nativeDriverStateMatchesTheSequencerForEverySoundTestEffect",
       "category": "optional-fixture",
       "evidence": "src/test/java/com/openggf/game/soniccd/audio/TestCdFmSoundEffects.java:72",

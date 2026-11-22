@@ -2,6 +2,7 @@ package com.openggf.game.soniccd.audio;
 
 import com.openggf.audio.AudioManagerInternalAccess;
 import com.openggf.audio.GameSound;
+import com.openggf.game.GameModule;
 import com.openggf.game.soniccd.timetravel.CdTimeTravel;
 import com.openggf.game.soniccd.timetravel.CdTimeZone;
 import com.openggf.level.objects.ObjectServices;
@@ -32,6 +33,13 @@ public final class CdSoundRequests {
     private static final int UNPAUSE_PCM = CdSubCpuAudio.commandId("SCMD_UNPAUSEPCM");
 
     private CdSoundRequests() { }
+
+    /** Stage write of 1 to jumpCondition, releasing tracks held at a conditional jump. */
+    public static void releaseHeldFmEffects(GameModule module) {
+        if (module != null && module.getAudioProfile() instanceof SonicCdAudioProfile profile) {
+            profile.releaseHeldFmEffects();
+        }
+    }
 
     /** {@code PauseMusic} (Level/Main.asm:620-625) requests {@code FM_CHARGESTOP} on every paused frame. */
     public static void stopChargeSound(ObjectServices services) {

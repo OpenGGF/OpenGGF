@@ -49,7 +49,9 @@ under the matching area heading; see the
   a stock game module on the shared engine. Nothing from the disc is in the
   repository. All 70 stage programs load: seven zones; acts 1 and 2 in the
   Present, Past, Good Future and Bad Future; act 3 in both futures. Each zone
-  has its own presentation, objects and boss. Palmtree Panic's solid boulders
+  has its own presentation, objects and boss. Quartz Quadrant's booth sound
+  fades after the booth gives out. Death restarts release held FM effects, as
+  do pause restarts in Tidal Tempest and Quartz Quadrant. Palmtree Panic's solid boulders
   use the current section's graphics, replacing the title-card tiles after loading.
   The vertical tunnel doors in acts 1 and 2 now open from the left and block
   Sonic from the right while closed.
