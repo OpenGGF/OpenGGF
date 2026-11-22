@@ -1,15 +1,24 @@
 # Known Discrepancies from Original S3K ROM
 
-This document tracks **intentional deviations** from the original Sonic 3 & Knuckles ROM. Entries here are architectural choices we've made (cleaner code, added features, deliberate corrections of known ROM bugs) that we accept and do not plan to revert. Runtime gameplay behavior is preserved unless a rationale explicitly justifies a visible change (e.g., the "Save System" entry adds JSON persistence that replaces SRAM).
+Ordinary gameplay should match the shipped game. A difference in accuracy is
+a bug unless it arises from hardware OpenGGF leaves unemulated. Trace replay
+uses recorded lag to reproduce missed gameplay passes.
 
-**What does NOT belong here:**
-- Bugs, incomplete implementations, and parity gaps that we *intend to fix* → [s3k-known-bugs.md](status/s3k-known-bugs.md)
-- General (cross-game) engine-level issues → [known-bugs.md](status/known-bugs.md)
-- General (cross-game) intentional discrepancies → [known-discrepancies.md](status/known-discrepancies.md)
+- **Hardware limit** — an accuracy limit caused by unemulated hardware, such
+  as CPU lag, lost V-INTs, VDP beam timing, or the Sega CD boot ROM.
+- **Engine feature** — opt-in or engine-added behavior that departs from the
+  original code, such as widescreen, rewind, or hosted Competition.
+- **Other** — entries such as safety bounds, implementation records, or
+  possible parity bugs. Fixes for bugs in the shipped game are candidate bugs
+  except for the S2 Sideways exception in [runtime invariant 7](../AGENTS.md#runtime-invariants).
 
-Each entry describes what the ROM does, what we do, and why — focusing on *why* the divergence is acceptable.
+Each entry has a kind in the [table of contents](#table-of-contents). Some
+entries also record related limits or historical evidence. See also [S3K known bugs](status/s3k-known-bugs.md), [cross-game known bugs](status/known-bugs.md),
+and [cross-game known discrepancies](status/known-discrepancies.md).
 
 ## Hosted solo arena presentation (2026-11-07)
+
+**Kind:** Engine feature
 
 Hosted Competition arenas use one 320×224 P1 view instead of the ROM split screen.
 The extra rows are a display projection of the native terrain and sprite sources;
@@ -231,6 +240,8 @@ control and full-product/integration qualification remain open.
 
 ## Hosted network arena shoe partner (2026-11-07)
 
+**Kind:** Engine feature
+
 In an eligible hosted Competition attempt, the native swap box requests a
 server-selected remote partner instead of exchanging with the unspawned second
 slot immediately. An admitted command replaces only the speed-shoe bit, shoe
@@ -245,29 +256,48 @@ See the [Competition swap design](architecture/designs/2026-11-07-s3k-competitio
 
 ## Table of Contents
 
-1. [YM Service Timing: Source-Relative Timeline Without Absolute VInt Phase](#ym-service-timing-source-relative-timeline-without-absolute-vint-phase)
-2. [AIZ Intro Object Spawn Source](#aiz-intro-object-spawn-source)
-3. [Obj_Wait Timer Pattern](#obj_wait-timer-pattern)
-4. [Host-side KosM Preparation with Native Readiness](#host-side-kosm-preparation-with-native-readiness)
-5. [Knuckles DPLC Pre-Loading](#knuckles-dplc-pre-loading)
-6. [Save System](#save-system)
-7. [Tails Flying-With-Cargo Physics](#tails-flying-with-cargo-physics)
-8. [MGZ2 Quake Chunk Source Address](#mgz2-quake-chunk-source-address)
-9. [AIZ2 Battleship Ship-Loop Display Compensation](#aiz2-battleship-ship-loop-display-compensation)
-10. [LBZ1 Miniboss Box Pieces: PLC VRAM Restore Skipped](#lbz1-miniboss-box-pieces-plc-vram-restore-skipped)
-11. [LBZ2 Launch Pad Collapse: Mutation Pipeline Offset](#lbz2-launch-pad-collapse-mutation-pipeline-offset)
-12. [Standalone Cartridge Qualification Boundaries](#standalone-cartridge-qualification-boundaries)
-13. [Air Countdown Digits: Rebuilt Mapping Frames Instead of VRAM DMA](#air-countdown-digits-rebuilt-mapping-frames-instead-of-vram-dma)
-14. [s3k_kos_direct.prepared: a sub-frame ROM bit compared against a boundary-granular model](#s3k_kos_directprepared-a-sub-frame-rom-bit-compared-against-a-boundary-granular-model)
-15. [SEGA Screen: an engine addition the ROM does not have](#sega-screen-an-engine-addition-the-rom-does-not-have)
-16. [SOZ Spring Vine: Failed Display Allocation](#soz-spring-vine-failed-display-allocation)
-17. [SOZ Background Event Modes and Torch Animation](#soz-background-event-modes-and-torch-animation)
-18. [SSZ Act 2 Widescreen Background Columns](#ssz-act-2-widescreen-background-columns)
-19. [Blue Spheres NO WAY! Accepts Any Button](#blue-spheres-no-way-accepts-any-button)
+1. [YM Service Timing: Source-Relative Timeline Without Absolute VInt Phase](#ym-service-timing-source-relative-timeline-without-absolute-vint-phase) — Hardware limit
+2. [AIZ Intro Object Spawn Source](#aiz-intro-object-spawn-source) — Other
+3. [Obj_Wait Timer Pattern](#obj_wait-timer-pattern) — Other
+4. [Host-side KosM Preparation with Native Readiness](#host-side-kosm-preparation-with-native-readiness) — Hardware limit
+5. [Knuckles DPLC Pre-Loading](#knuckles-dplc-pre-loading) — Other
+6. [Save System](#save-system) — Engine feature
+7. [Tails Flying-With-Cargo Physics](#tails-flying-with-cargo-physics) — Other
+8. [MGZ2 Quake Chunk Source Address](#mgz2-quake-chunk-source-address) — Other
+9. [AIZ2 Battleship Ship-Loop Display Compensation](#aiz2-battleship-ship-loop-display-compensation) — Other
+10. [LBZ1 Miniboss Box Pieces: PLC VRAM Restore Skipped](#lbz1-miniboss-box-pieces-plc-vram-restore-skipped) — Other
+11. [LBZ2 Launch Pad Collapse: Mutation Pipeline Offset](#lbz2-launch-pad-collapse-mutation-pipeline-offset) — Other
+12. [Standalone Cartridge Qualification Boundaries](#standalone-cartridge-qualification-boundaries) — Other
+13. [Air Countdown Digits: Rebuilt Mapping Frames Instead of VRAM DMA](#air-countdown-digits-rebuilt-mapping-frames-instead-of-vram-dma) — Other
+14. [s3k_kos_direct.prepared: a sub-frame ROM bit compared against a boundary-granular model](#s3k_kos_directprepared-a-sub-frame-rom-bit-compared-against-a-boundary-granular-model) — Hardware limit
+15. [SEGA Screen: an engine addition the ROM does not have](#sega-screen-an-engine-addition-the-rom-does-not-have) — Engine feature
+16. [SOZ Spring Vine: Failed Display Allocation](#soz-spring-vine-failed-display-allocation) — Other
+17. [SOZ Background Event Modes and Torch Animation](#soz-background-event-modes-and-torch-animation) — Engine feature
+18. [SSZ Act 2 Widescreen Background Columns](#ssz-act-2-widescreen-background-columns) — Engine feature
+19. [Blue Spheres NO WAY! Accepts Any Button](#blue-spheres-no-way-accepts-any-button) — Engine feature
+20. [Hosted solo arena presentation (2026-11-07)](#hosted-solo-arena-presentation-2026-11-07) — Engine feature
+21. [Hosted network arena shoe partner (2026-11-07)](#hosted-network-arena-shoe-partner-2026-11-07) — Engine feature
+22. [KosM Adjacent-Memory Corruption](#kosm-adjacent-memory-corruption) — Other
+23. [SSZ Metropolis orb allocation and first dispatch (resolved local owner, 2026-10-21)](#ssz-metropolis-orb-allocation-and-first-dispatch-resolved-local-owner-2026-10-21) — Other
+24. [SSZ opening bridge top contact (resolved local owner, 2026-10-14)](#ssz-opening-bridge-top-contact-resolved-local-owner-2026-10-14) — Other
+25. [Large-bubble character branch (resolved local owner, 2026-10-14)](#large-bubble-character-branch-resolved-local-owner-2026-10-14) — Other
+26. [Death Egg widescreen backgrounds](#death-egg-widescreen-backgrounds) — Engine feature
+27. [LRZ1 and DEZ2 widescreen arena framing](#lrz1-and-dez2-widescreen-arena-framing) — Engine feature
+28. [Ending scenes in a wider picture](#ending-scenes-in-a-wider-picture) — Engine feature
+29. [Sprite_OnScreen_Test lifetime audit](#sprite_onscreen_test-lifetime-audit) — Other
+30. [LRZ boss lava-plane presentation](#lrz-boss-lava-plane-presentation) — Other
+31. [Blue Sphere player projection and shadows (local correction, 2026-10-17)](#blue-sphere-player-projection-and-shadows-local-correction-2026-10-17) — Other
+32. [Retained HCZ replay qualification — 2026-10-17](#retained-hcz-replay-qualification--2026-10-17) — Other
+33. [DEZ final native terrain ownership — 2026-10-17](#dez-final-native-terrain-ownership--2026-10-17) — Other
+34. [Player-owned glide and native-P2 damage — qualified local components](#player-owned-glide-and-native-p2-damage--qualified-local-components) — Other
+35. [HCZ1 direct water art — bounded physical publication coverage](#hcz1-direct-water-art--bounded-physical-publication-coverage) — Other
+36. [Knuckles full-chain first-return pose — 2026-10-29](#knuckles-full-chain-first-return-pose--2026-10-29) — Other
 
 ---
 
 ## YM Service Timing: Source-Relative Timeline Without Absolute VInt Phase
+
+**Kind:** Hardware limit
 
 **Location:** `YmServiceTimingProfile`, `YmWriteTimeline`, `SmpsDriver`, and
 `VirtualSynthesizer`.
@@ -311,6 +341,8 @@ guards, bounded playback trace, and three-ROM audio suites are recorded in
 
 
 ## AIZ Intro Object Spawn Source
+
+**Kind:** Other
 
 **Location:** `Sonic3kAIZEvents.java`  
 **ROM Reference:** `sonic3k.asm` line 8111+ (`SpawnLevelMainSprites`)
@@ -377,6 +409,8 @@ The intro object is active on the first frame of level execution, identical to t
 
 ## Obj_Wait Timer Pattern
 
+**Kind:** Other
+
 **Location:** `AizPlaneIntroInstance.java`, `CutsceneKnucklesAiz1Instance.java`  
 **ROM Reference:** `sonic3k.asm` `Obj_Wait` subroutine, SST offsets `$2E`/`$34`
 
@@ -421,6 +455,8 @@ Timer-driven routine transitions fire on the exact same frame as the ROM's `Obj_
 
 
 ## Host-side KosM Preparation with Native Readiness
+
+**Kind:** Hardware limit
 
 **Location:** `S3kKosModuleQueue.java`, `AizPlaneIntroInstance.java`, `Sonic3kAIZEvents.java`
 **ROM Reference:** `sonic3k.asm` `Queue_Kos_Module` calls at `loc_6777A`, `Kos_decomp_queue_count` gate in `AIZ1_Resize`
@@ -544,6 +580,8 @@ both positioned and checkpoint reloads at all five supported presets.
 
 ## Knuckles DPLC Pre-Loading
 
+**Kind:** Other
+
 **Location:** `CutsceneKnucklesAiz1Instance.java`  
 **ROM Reference:** `sonic3k.asm` `Perform_DPLC` calls in `CutsceneKnux_AIZ1`
 
@@ -591,6 +629,8 @@ Every Knuckles animation frame displays the correct patterns at the correct posi
 
 
 ## Save System
+
+**Kind:** Engine feature
 
 **Location:** `com.openggf.game.save`, `com.openggf.game.dataselect`, `com.openggf.game.sonic3k.dataselect`  
 **ROM Reference:** `sonic3k.asm` SRAM routines (`ReadSaveGame`, `WriteSaveGame`), save-screen objects (`ObjDat_SaveScreen`, `Obj_SaveScreen_*`)
@@ -666,6 +706,8 @@ composition delivery remain separate.
 
 ## Tails Flying-With-Cargo Physics
 
+**Kind:** Other
+
 **Location:** Tails flight physics (`TailsFlightController`, `PlayableSpriteMovement.applyGravity`); CNZ1 carry and CPU flight routines (`SidekickCpuController`)
 **ROM Reference:** `sonic3k.asm:27632` `Tails_Move_FlySwim` (+0x08 flight gravity), `sonic3k.asm:27633` `Tails_Stand_Freespace` (branch on `double_jump_flag`)
 
@@ -701,6 +743,8 @@ The engine reproduces this behavior with a feature-scoped gate rather than a fla
 
 ## MGZ2 Quake Chunk Source Address
 
+**Kind:** Other
+
 **Location:** `Sonic3kMGZEvents.MGZ_QUAKE_CHUNK_ROM_ADDR = 0x3CBBB4`
 **ROM Reference:** `MGZ2_QuakeChunks` (`sonic3k.lst:316889`), read by `sub_517EA`
 (`sonic3k.asm:106983-106996`)
@@ -719,6 +763,8 @@ the permanent source. `TestArchitecturalSourceGuard` pins the constant and this 
 
 
 ## AIZ2 Battleship Ship-Loop Display Compensation
+
+**Kind:** Other
 
 Gameplay state follows the S&K disassembly: `AIZ2_DoShipLoop` writes
 `Level_repeat_offset=$200` and subtracts `$200` from camera/player state when
@@ -743,6 +789,8 @@ Validation history: the 2026-05-29 seam plan and the 2026-06-16 capture.
 
 
 ## LBZ1 Miniboss Box Pieces: PLC VRAM Restore Skipped
+
+**Kind:** Other
 
 **Location:** `LbzMinibossBoxRig.java` (`Phase.LINGER` removal), `Lbz1RobotnikEventController.java`, `LbzMinibossBoxInstance.java`
 **ROM Reference:** `sonic3k.asm` `loc_8CF1E` (`PLC_LBZRobotnikAfter`, `PLC_MonitorsSpikesSprings`)
@@ -783,6 +831,8 @@ covers the piece lifecycle including the off-screen cull;
 
 
 ## LBZ2 Launch Pad Collapse: Mutation Pipeline Offset
+
+**Kind:** Other
 
 **Location:** `Sonic3kLBZEvents.java`, `LbzZoneRuntimeState.java`
 
@@ -836,6 +886,8 @@ gameplay map writes.
 
 ## Standalone Cartridge Qualification Boundaries
 
+**Kind:** Other
+
 The former locked-on-only product restriction is superseded by the
 [standalone startup work](architecture/validation/2026-10-28-tas-support-standalone.md).
 Verified original SK startup and original S3 title/Competition paths now select
@@ -855,6 +907,8 @@ S3 PAL compensation and SEGA mailbox timing still differ from the shared S&K
 sequencer; no full driver/waveform parity is claimed.
 
 ## KosM Adjacent-Memory Corruption
+
+**Kind:** Other
 
 The shipped overflow can write beyond the KosM queue into adjacent native mode
 state. `s3k-standalone:3`, `s3k-legacy-mode:1` and `s3k-mode:1` remain unsupported:
@@ -877,6 +931,8 @@ sideways-platform safe-admission exception.
 
 ## SSZ Metropolis orb allocation and first dispatch (resolved local owner, 2026-10-21)
 
+**Kind:** Other
+
 The head retains `CreateChild1_Normal` forward allocation. The first orb now uses
 `AllocateObject` globally, stays in routine0 until its own dispatch, and initializes
 itself plus at most six global siblings before returning at `loc_7AE12` without an
@@ -888,6 +944,8 @@ source-supported initializer omission; current cold-route impact and new native
 acceptance remain unmeasured. Existing freed-parent lifetime limits remain open.
 
 ## SSZ opening bridge top contact (resolved local owner, 2026-10-14)
+
+**Kind:** Other
 
 `sub_45026` passes SolidObjectTop d1/d2/d3=`$60/$10/$09`. New contact at
 `loc_1E44C` uses d3; `loc_1E45A` accepts unsigned word overlap`[-$10,-1]`
@@ -909,6 +967,8 @@ no fitted delay or accepted intentional difference is claimed.
 
 ## Large-bubble character branch (resolved local owner, 2026-10-14)
 
+**Kind:** Other
+
 `Obj_Bubbler` compares `Obj_Sonic` at sonic3k.asm:64759. Registration aliases
 such as`sonic_p2` are not native character routines. Sonic's rolling branch
 clears Roll and restores9/19 with Y−5; `loc_2FC5A` retains Roll and writes
@@ -922,6 +982,8 @@ whole-scene/audio parity or every supported donor/team interaction.
 ---
 
 ## Air Countdown Digits: Rebuilt Mapping Frames Instead of VRAM DMA
+
+**Kind:** Other
 
 **Location:** `Sonic3kObjectArtProvider.loadAirCountdownDigitArt()`, `S3kAirCountdownObjectInstance.java`
 **ROM Reference:** `sonic3k.asm:33360-33367` (`AirCountdown_Init`), `sonic3k.asm:33529-33556` (`AirCountdown_Load_Art`)
@@ -973,6 +1035,8 @@ dust, which buys nothing the tile rebase doesn't already give us.
 
 
 ## `s3k_kos_direct.prepared`: a sub-frame ROM bit compared against a boundary-granular model
+
+**Kind:** Hardware limit
 
 **Status:** bounded, permanent modelling limit. One asymmetric comparison-side excusal, added 2026-08-10 in
 `LoadQueueComparisonProjection`. It fires exactly once across the current fixture set
@@ -1060,6 +1124,8 @@ behaviour is cited.
 
 ## SEGA Screen: an engine addition the ROM does not have
 
+**Kind:** Engine feature
+
 **What the ROM does.** Nothing. There is no SEGA screen sequence in either half of the
 locked-on cartridge.
 
@@ -1109,6 +1175,8 @@ Full context:
 
 ## SOZ Spring Vine: Failed Display Allocation
 
+**Kind:** Other
+
 **Location:** `SozSpringVineObjectInstance`, native `Obj_SOZSpringVine` (`$40786`).
 
 The native initialization does not guard all subsequent child writes after a
@@ -1126,6 +1194,8 @@ the spring-vine parity claim.
 
 
 ## SOZ Background Event Modes and Torch Animation
+
+**Kind:** Engine feature
 
 **Widescreen arena admission:** `sub_55E96`'s `$4310` gate is evaluated at
 its centered native-width viewport origin. Comparing the wider outer left edge
@@ -1159,6 +1229,8 @@ rewind and compatibility evidence lives in the
 
 ## Death Egg widescreen backgrounds
 
+**Kind:** Engine feature
+
 Both cartridge acts use a fixed 320-pixel view (`PlainDeformation` and
 `DEZ1_BackgroundInit` / `DEZ2_BackgroundInit`). Wider views intentionally keep
 one centred native image. Act 1 reflects 32-pixel strips of its outer wall
@@ -1174,6 +1246,8 @@ and `TestS3kDezWidescreenBackground` for width, fade and load-boundary checks.
 
 
 ## LRZ1 and DEZ2 widescreen arena framing
+
+**Kind:** Engine feature
 
 The cartridge renders 320 pixels: LRZ1 `word_784E8` fixes camera X at `$2C00`,
 and DEZ2 `word_7F0C6` permits `$3400..$34E0`. On wider displays, the engine
@@ -1193,6 +1267,8 @@ arrival matches the same gameplay rows with camera X exactly 240 pixels left.
 This is engine regression evidence, not a new native parity certification.
 
 ## SSZ Act 2 Widescreen Background Columns
+
+**Kind:** Engine feature
 
 The encounter's `loc_58F46` / `loc_5904A` supplies twenty VSRAM column words for
 320 pixels. `SszAct2Deformation.columns` preserves those words, including the
@@ -1247,6 +1323,8 @@ donor presentation limits remain in the
 [ending matrix](architecture/validation/levels/s3k-ending.md#knuckles-eyecatch-native-sat-priority--2026-10-17).
 
 ## Ending scenes in a wider picture
+
+**Kind:** Engine feature
 
 The cartridge shows 320 pixels. On a wider display the ending scenes fill the
 picture: the internal level `$0D01` (the rescue, Angel Island's rise or the
@@ -1309,6 +1387,8 @@ extension. `TestEndingWideStage`, `TestEndingWidePlanes` and
 
 ## Sprite_OnScreen_Test lifetime audit
 
+**Kind:** Other
+
 LRZ Fireworm defeat correction (2026-09-29): body retirement previously cleared
 collision but froze the segments indefinitely. `loc_8F8F0` sets d0 to zero before
 `Child_DrawTouch_Sprite_FlickerMove`; `Set_IndexedVelocity` therefore selects the
@@ -1342,6 +1422,8 @@ and LBZ cup providers checked during this audit already implement range tests.
 
 
 ## LRZ boss lava-plane presentation
+
+**Kind:** Other
 
 The boss pool now uses its ROM high-priority background tiles over the
 low-priority foreground lava wall, including the per-column slope and matching
@@ -1519,6 +1601,8 @@ position state stays synchronized to native x/y, without a custom restore hook.
 
 ## Blue Sphere player projection and shadows (local correction, 2026-10-17)
 
+**Kind:** Other
+
 Native `sub_953E`/`sub_A206` project the main player and sidekick using
 ROM ScalarTable2 and their different depths; the former linear screen offset
 put their ground centres at 160/172 instead of 162/179 and distorted jumps.
@@ -1559,6 +1643,8 @@ configuration/cold/PAL/PCM limits outside these products remain open.
 
 
 ## Retained HCZ replay qualification — 2026-10-17
+
+**Kind:** Other
 
 Worker source `b9c1c8b3d` closes the retained stored-carrier-target/X-lock and
 water-owner extraction with focused/rewind/source evidence, but strict replay
@@ -1818,6 +1904,8 @@ certificate. [Exact source, commands, rejected JUnit-only inference and report](
 
 ## DEZ final native terrain ownership — 2026-10-17
 
+**Kind:** Other
+
 A validated matching synchronous native continuation now retains only the stock
 predecessor's actual written 128x128 definitions and known 16x16 pattern groups.
 The final scene's ROM prefix overwrites that state; current final collision
@@ -1952,6 +2040,8 @@ closed by raw animation publication. No whole-world/guard/native certificate.
 
 ## Player-owned glide and native-P2 damage — qualified local components
 
+**Kind:** Other
+
 The maintained glide correction in local `8bcf0ab6` carries the querying player's
 live top solidity bit and collision array through both foot probes and the
 extension, regress and edge scans. Reverse ceiling probes retain the player's
@@ -1997,6 +2087,8 @@ cause. [Commands and retained qualification limits](status/trace-frontier-log.md
 
 
 ## HCZ1 direct water art — bounded physical publication coverage
+
+**Kind:** Other
 
 Root HEAD691de518 with source8 tupleaa0310dc now carries the actual selected
 water producer into its load-owned Nemesis publication path. The selected unsigned
@@ -2163,6 +2255,8 @@ zero skips, including both publication phases and ordinary defeat. See the
 
 ## Knuckles full-chain first-return pose — 2026-10-29
 
+**Kind:** Other
+
 The first returned AIZ row's Duck `$08` / Wait `$05` and mapping `$9B/$56` discrepancy is
 resolved by preserving the grounded crouch selection when terrain collision
 sets InAir before animation publication. Original-movie native callbacks prove
@@ -2257,6 +2351,8 @@ for bounded route evidence and remaining arena gaps.
 ---
 
 ## Blue Spheres NO WAY! Accepts Any Button
+
+**Kind:** Engine feature
 
 **Location:** `S3kBlueSpheresTitle.waitForAbc`
 
