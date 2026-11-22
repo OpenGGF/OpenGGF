@@ -191,6 +191,25 @@ disc-drive timing. The cases below describe how those limits affect play.
   [timing contract](../architecture/designs/2026-07-27-cross-game-hardware-timing-trace-contract.md#4-hardware-relative-initial-base)
   that the other games' replays also take, and the counter then equals native
   on every row.
+
+  **Palmtree Panic Act 2 Present (R12A).** USA disc observations in BizHawk
+  2.11 counted 44 V-INTs after the counter clear on the stage-select route
+  and 45 after either an act clear or a special stage. All three reached the
+  new stage with `levelRestart = 0`. `LevelStart` (Level/Main.asm:85-115)
+  handles the previous stage's advance before the new program starts.
+  In the new program, all three routes serviced one routine-zero V-INT during
+  the remaining RAM clear and four during the initial level draw.
+  `LoadLevelData` (Level/Palmtree Panic/Load Level Data.asm:11-27) calls
+  `NemDecToRAM` for the same block data on all three routes. The stage-select
+  run took 16 V-INTs in the decoder. Each return route took 17, all with
+  `vintRoutine = 0` and interrupted PCs inside the same Nemesis decoder loop.
+  Each route then serviced one `LevelStart .WaitPLC2` (Level/Main.asm:253-259)
+  V-INT with an empty PLC queue, followed by 22 fade V-INTs. The special-stage
+  return faded from white, and the other two faded from black. The title card
+  starts in the object pass after the first gameplay V-INT, which brings the
+  counter to 45 or 46. The load profiles use 44 pre-gameplay V-INTs for R12A.
+  Exact VBlank arrival during synchronous decompression accounts for the
+  one-V-INT difference.
 - **Lost V-INTs.** A V-INT handler still running when the next VBlank arrives
   drops that VBlank: it produces no `VInterrupt` entry (Level/Main.asm:681),
   so native counts one V-INT fewer than frames. This happens 9 times in
