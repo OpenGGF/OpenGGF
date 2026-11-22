@@ -11,6 +11,8 @@ import com.openggf.game.sonic3k.audio.Sonic3kAudioResourceProfile;
 import java.io.IOException;
 import java.util.Arrays;
 
+import static com.openggf.game.sonic3k.audio.Sonic3kSmpsConstants.Z80_BANK_MASK;
+
 /** Launch-scoped lookup against the base game's pinned cartridge view. */
 public final class Sonic3kPackageStockResolver implements PackageStockResolver {
     private final Rom rom;
@@ -51,6 +53,7 @@ public final class Sonic3kPackageStockResolver implements PackageStockResolver {
         }
         int index = locator.index();
         return switch (locator.table()) {
+            case "bank" -> retailBank(locator.songId());
             case "global-fm" -> sliceVoice(loader.getGlobalVoiceData(), index * 25);
             case "local-fm" -> localVoice(locator.songId(), index);
             case "psg" -> loader.getPsgEnvelopes().get(index);
@@ -61,6 +64,17 @@ public final class Sonic3kPackageStockResolver implements PackageStockResolver {
     }
 
     @Override public boolean unknownImage() { return unknownImage; }
+
+    private byte[] retailBank(int songId) throws IOException {
+        final int musicId;
+        try {
+            musicId = profile.musicId(songId);
+        } catch (IllegalArgumentException absent) {
+            return null;
+        }
+        int address = loader.findMusicOffset(musicId);
+        return address < 0 ? null : rom.readBytes(address & ~Z80_BANK_MASK, Z80_BANK_MASK + 1);
+    }
 
     private byte[] localVoice(int songId, int slot) {
         if (profile == Sonic3kAudioResourceProfile.SONIC_3) {
