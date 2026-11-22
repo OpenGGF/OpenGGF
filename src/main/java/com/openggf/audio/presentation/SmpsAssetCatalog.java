@@ -462,7 +462,8 @@ final class SmpsAssetCatalog {
                 if (left.channelMask() != right.channelMask()
                         || left.pointer() != right.pointer()
                         || left.transpose() != right.transpose()
-                        || left.volume() != right.volume()) {
+                        || left.volume() != right.volume()
+                        || left.holdsFmState() != right.holdsFmState()) {
                     return false;
                 }
             }
@@ -702,7 +703,8 @@ final class SmpsAssetCatalog {
             tracks = sfx.getTrackEntries().stream()
                     .map(track -> new FrozenTrack(
                             track.channelMask(), track.pointer(),
-                            track.transpose(), track.volume()))
+                            track.transpose(), track.volume(),
+                            track.holdsFmState()))
                     .toList();
         }
 
@@ -715,7 +717,8 @@ final class SmpsAssetCatalog {
     }
 
     private record FrozenTrack(
-            int channelMask, int pointer, int transpose, int volume)
+            int channelMask, int pointer, int transpose, int volume,
+            boolean holdsFmState)
             implements SmpsSfxData.SmpsSfxTrack {
     }
 

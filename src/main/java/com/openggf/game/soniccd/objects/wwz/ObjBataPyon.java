@@ -2,7 +2,6 @@ package com.openggf.game.soniccd.objects.wwz;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.physics.ObjectTerrainUtils;
 
 /**
  * Bata-pyon, object $30 ({@code ObjBataPyon}, Level/Wacky Workbench/Objects/Bata-pyon/Main.asm:18-244): a
@@ -71,7 +70,7 @@ public final class ObjBataPyon extends WwzBadnik {
     private void fall() {
         addToX(xVel);
         addToY(yVel);
-        floorDist = ObjectTerrainUtils.checkFloorDist(x, y, yRadius).distance();
+        floorDist = checkFloor(x, y, yRadius).distance();
         int wall = wallDistance();
         if (wall < 0) {
             if (floorDist >= 0 || wall <= floorDist) {           // bpl.w Flip / cmp.w colDist,d1 / ble.w Flip
@@ -120,7 +119,7 @@ public final class ObjBataPyon extends WwzBadnik {
     private void jump() {
         addToX(xVel);
         addToY(yVel);
-        int ceiling = ObjectTerrainUtils.checkCeilingDist(x, y, yRadius).distance();   // jsr ObjGetCeilDist
+        int ceiling = checkCeiling(x, y, yRadius).distance();   // jsr ObjGetCeilDist
         int wall = wallDistance();
         boolean hitCeiling;
         if (wall < 0) {
@@ -157,8 +156,7 @@ public final class ObjBataPyon extends WwzBadnik {
     /** {@code jsr (a1)} with d3 = oBataSensorX: ObjGetLWallDist / ObjGetRWallDist (Collision Check.asm:213-250). */
     private int wallDistance() {
         int probe = x + sensorX;
-        return wallLeft ? ObjectTerrainUtils.checkLeftWallDist(probe, y).distance()
-                : ObjectTerrainUtils.checkRightWallDist(probe, y).distance();
+        return checkWall(probe, y, wallLeft).distance();
     }
 
     /** ObjBataPyon_SwapFrames (:224-242). */

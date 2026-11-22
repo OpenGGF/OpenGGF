@@ -3,6 +3,7 @@ package com.openggf.mods;
 import com.openggf.io.ModAssetRoot;
 import com.openggf.io.ModInputLimits;
 import com.openggf.game.ModKeySyntax;
+import com.openggf.catalog.StockGameCatalog;
 
 import java.util.List;
 import java.util.Map;
@@ -23,7 +24,6 @@ public record ModManifest(int formatVersion, String id, String name,
     private static final Pattern ENTRYPOINT = Pattern.compile(
             "[A-Za-z_$][A-Za-z0-9_$]*(?:\\.[A-Za-z_$][A-Za-z0-9_$]*)+");
     private static final Pattern INSERT_AFTER = Pattern.compile("[a-z0-9][a-z0-9-]{0,31}");
-    private static final Set<String> BASE_GAMES = Set.of("s1", "s2", "s3k", "scd", "any");
 
     public ModManifest {
         composition = Objects.requireNonNull(composition, "composition");
@@ -111,8 +111,8 @@ public record ModManifest(int formatVersion, String id, String name,
     }
 
     static void requireBaseGame(ModType type, String baseGame) {
-        if (type == ModType.PATCH && !BASE_GAMES.contains(baseGame)) {
-            throw new IllegalArgumentException("patch manifests require baseGame s1, s2, s3k, scd, or any");
+        if (type == ModType.PATCH && !"any".equals(baseGame) && !StockGameCatalog.isStockCode(baseGame)) {
+            throw new IllegalArgumentException("patch manifests require baseGame " + String.join(", ", StockGameCatalog.stockCodes()) + ", or any");
         }
         if (type == ModType.STANDALONE && baseGame != null) {
             throw new IllegalArgumentException("standalone manifests forbid baseGame");

@@ -8,7 +8,6 @@ import com.openggf.level.objects.TouchCategory;
 import com.openggf.level.objects.TouchResponseListener;
 import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseResult;
-import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -109,7 +108,7 @@ public final class ObjDango extends SharedBadnik implements TouchResponseListene
     /** DangoObject_0_Routine2 (:62-73): fall one pixel a frame until the floor is under it. */
     private void fall() {
         addToY(0x10000);
-        int d1 = ObjectTerrainUtils.checkFloorDist(x, y, height).distance();   // CheckBlockDown
+        int d1 = checkFloor(x, y, height).distance();   // CheckBlockDown
         if (d1 >= 0) return;
         y = (y + d1) & 0xFFFF;
         routine += 2;
@@ -179,11 +178,9 @@ public final class ObjDango extends SharedBadnik implements TouchResponseListene
     private boolean step() {
         addToX(speed);
         int probe = (x + ((speed >> 16) < 0 ? -width : width)) & 0xFFFF;
-        int wall = (speed >> 16) < 0
-                ? ObjectTerrainUtils.checkLeftWallDist(probe, y).distance()         // CheckBlockLeft (no eori.w #$F)
-                : ObjectTerrainUtils.checkRightWallDist(probe, y).distance();
+        int wall = checkWall(probe, y, speed < 0).distance();
         if (wall >= 0) {
-            int floor = ObjectTerrainUtils.checkFloorDist(x, y, height).distance();
+            int floor = checkFloor(x, y, height).distance();
             if (((floor + 7) & 0xFFFF) < 0xE) {                                    // addq.w #7,d0; subi.w #$E,d0; bcc
                 y = (y + floor) & 0xFFFF;
                 return true;

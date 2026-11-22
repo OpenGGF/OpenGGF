@@ -3,9 +3,12 @@ package com.openggf.level.rings;
 import com.openggf.audio.GameSound;
 import com.openggf.camera.Camera;
 import com.openggf.game.GameModule;
+import com.openggf.game.internal.LostRingDisplayProfile;
 import com.openggf.game.LevelState;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.competition.NativeCompetitionRoster;
+import com.openggf.game.internal.ObjectTerrainProbeLayout;
+import com.openggf.game.internal.ObjectTerrainProbeLayout.SpriteState;
 import com.openggf.game.internal.RingExtraLifeReplacesPickupSound;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.game.rules.GameRules;
@@ -23,6 +26,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
+import com.openggf.physics.ObjectTerrainUtils;
 
 import java.util.List;
 
@@ -49,7 +53,7 @@ import java.util.List;
  * listener path.
  */
 public class LostRingObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, RewindRecreatable, NativeSpriteSubmissionSource {
+        implements TouchResponseProvider, RewindRecreatable, NativeSpriteSubmissionSource, SpriteState {
 
     /** ROM Obj37 collision_flags while uncollected: $40 SPECIAL + size index $07. */
     public static final int LOST_RING_COLLISION_FLAGS = 0x47;
@@ -91,6 +95,7 @@ public class LostRingObjectInstance extends AbstractObjectInstance
     // Native mapping word: conversion retains it, then each routine2 dispatch copies the global.
     private int retainedMappingFrame = -1;
     private boolean retainedArtPriority;
+    private boolean terrainProbeLoopPath;
     private boolean hasRetainedArtPriority;
     private boolean directSharedSpillFrame;
     private boolean nativeDisplaySubmissions;
@@ -801,18 +806,25 @@ public class LostRingObjectInstance extends AbstractObjectInstance
      */
     protected int ringCheckFloorDist(int x, int y) {
         ObjectServices objectServices = servicesOrNull();
-        if (objectServices == null || objectServices.levelManager() == null) {
-            return 0;
-        }
-        com.openggf.physics.TerrainCheckResult result =
-                com.openggf.physics.ObjectTerrainUtils.checkFloorDist(
-                        objectServices.levelManager(),
-                        objectServices.backgroundPlaneCollisionProvider(),
+        var levels = objectServices == null ? null : objectServices.levelManager();
+        if (levels == null) return 0;
+        var result = levels.getCurrentLevel() instanceof ObjectTerrainProbeLayout
+                ? ObjectTerrainUtils.checkObjectFloor(levels, x, y, this)
+                : ObjectTerrainUtils.checkFloorDist(levels, objectServices.backgroundPlaneCollisionProvider(),
                         objectServices.useSecondaryTerrainCollisionPath(), x, y);
         if (!result.foundSurface()) {
             return 0;
         }
         return result.distance();
+    }
+
+    @Override public boolean terrainProbeLoopPath() { return terrainProbeLoopPath; }
+    @Override public void setTerrainProbeLoopPath(boolean onLoopPath) { terrainProbeLoopPath = onLoopPath; }
+
+    @Override
+    public void setTerrainProbePriority(boolean high) {
+        retainedArtPriority = high;
+        hasRetainedArtPriority = true;
     }
 
     /**
@@ -993,9 +1005,19 @@ public class LostRingObjectInstance extends AbstractObjectInstance
         ringManager.drawRingFrameAt(getX(), getY(), spinFrame);
     }
 
+    private LostRingDisplayProfile.Priority layerDisplayPriority() {
+        if (touchLayer < 0) return null;
+        ObjectServices services = servicesOrNull();
+        GameModule module = services != null ? services.gameModule() : null;
+        var profile = module != null ? module.getGameService(LostRingDisplayProfile.class) : null;
+        return profile != null ? profile.priorityForLayer(touchLayer) : null;
+    }
+
     @Override
     public boolean isHighPriority() {
         if (hasRetainedArtPriority) return retainedArtPriority;
+        var priority = layerDisplayPriority();
+        if (priority != null) return priority.highPriority();
         ObjectServices services = servicesOrNull();
         GameModule module = services != null ? services.gameModule() : null;
         return !(module instanceof com.openggf.game.internal.SpriteTableBuildProfile profile)
@@ -1006,7 +1028,9 @@ public class LostRingObjectInstance extends AbstractObjectInstance
     public int getPriorityBucket() {
         // GiveRing's own slot writes priority$80. A converted attracted ring
         // bypasses Init and keeps priority$100 for its entire uncollected life.
-        return RenderPriority.clamp(collectionRoutineStarted ? 1 : displayPriorityBucket);
+        if (collectionRoutineStarted) return 1;
+        var priority = layerDisplayPriority();
+        return RenderPriority.clamp(priority != null ? priority.bucket() : displayPriorityBucket);
     }
 
     private void drawSparkle(RingManager ringManager) {
