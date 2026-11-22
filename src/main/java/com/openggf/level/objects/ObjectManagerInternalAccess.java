@@ -100,9 +100,10 @@ public final class ObjectManagerInternalAccess {
     private ObjectManagerInternalAccess() { }
 
 
-    /** Rebuilds the object window after the host has explicitly repositioned a loaded viewport. */
+    /** Rebuilds the object window and collision responses after the host repositions a loaded viewport. */
     public static void refreshPlacementAfterRelocation(ObjectManager manager) {
         manager.refreshPlacementAfterRelocation();
+        manager.captureCollisionResponseListForNextFrame();
     }
 
     /**
