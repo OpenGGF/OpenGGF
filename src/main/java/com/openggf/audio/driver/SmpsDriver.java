@@ -845,7 +845,7 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
             if (track.type != SmpsSequencer.TrackType.FM || !initializeFm) {
                 continue;
             }
-            if (track.overridden) {
+            if (track.overridden || sequencer.holdsFmState(track)) {
                 continue;
             }
             int channel = track.channelId;

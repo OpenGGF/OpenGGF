@@ -164,7 +164,7 @@ class ClassifierTests(unittest.TestCase):
 class CheckedInPolicyTests(unittest.TestCase):
     def test_policy_loads_and_every_rule_is_exact(self):
         pol = csk.load_policy(POLICY)
-        self.assertGreaterEqual(len(pol["rules"]), 45)
+        self.assertGreaterEqual(len(pol["rules"]), 1353)
         for r in pol["rules"]:
             self.assertNotIn("*", r["match"])
 
@@ -185,7 +185,7 @@ class CheckedInPolicyTests(unittest.TestCase):
     def test_policy_evidence_sources_all_exist(self):
         pol = csk.load_policy(POLICY)
         self.assertEqual(csk.stale_rules(pol, ROOT), [])
-        self.assertEqual(len(pol["rules"]), 1348)
+        self.assertEqual(len(pol["rules"]), 1382)
 
     @unittest.skipUnless(EVIDENCE.is_dir(), "preserved f56d4fae1 ordinary reports not present")
     def test_preserved_f56d4fae1_reports(self):

@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.List;
+import java.util.stream.IntStream;
 
 import static com.openggf.game.soniccd.audio.CdFmPlaySound.*;
 import static org.junit.jupiter.api.Assertions.*;
@@ -313,6 +314,35 @@ class TestCdFmPlaySound {
         Fixture anchor=new Fixture().put(8,0);assertThrows(IllegalArgumentException.class,anchor::view);
         assertThrows(IllegalArgumentException.class,()->NativeView.declaredFormat("bad",new byte[0],new BitSet(),new BitSet(),new BitSet(),LAYOUT));
         assertThrows(IllegalArgumentException.class,()->NativeView.declaredFormat("",new byte[8192],new BitSet(),new BitSet(),new BitSet(),LAYOUT));
+    }
+
+    @Test
+    void dustOverwritesActiveFm1WithoutAKeyWriteBeforeTheBankedRead() throws Exception {
+        NativeView source;
+        try (var programs = CdAudioTestMedia.usaPrograms()) {
+            source = NativeView.fromAssets(CdFmSoundAssets.fromPrograms(programs));
+        }
+        // USA Sound Test after the second jump note, before the frame 2425 dust admission.
+        int fm1 = 0x1C40;
+        State before = State.supplied(source, List.of(new ByteStore(0x1C09, 0xD6),
+                new ByteStore(fm1, 0x80), new ByteStore(fm1 + 1, 0),
+                new ByteStore(fm1 + 3, 0xD1), new ByteStore(fm1 + 4, 0x08),
+                new ByteStore(0x1D31, 0)));
+        Returned admission = returned(plan(Entry.PLAY_SOUND_ID, before, source));
+        List<Integer> fm1Header = IntStream.range(fm1, fm1 + 12)
+                .mapToObj(admission.projected()::unsignedByte).toList();
+        TrackBoundedFault update = assertInstanceOf(TrackBoundedFault.class,
+                planTrack(new TrackCall(fm1), admission.projected(), TrackView.fromNative(source), new TrackLimits(1)));
+
+        assertEquals(
+                List.of(
+                        List.of(0xEF, 0, 1, 0xE0, 0x80, 0x99, 2, 0, 0, 0x30, 0xC0, 1),
+                        List.of(new YmRegisterIntent(0, 0x28, 6), new YmRegisterIntent(1, 0x92, 0),
+                                new YmRegisterIntent(1, 0x96, 0), new YmRegisterIntent(1, 0x9A, 0),
+                                new YmRegisterIntent(1, 0x9E, 0)),
+                        List.of(new ByteStore(fm1 + 11, 0), new ByteStore(fm1, 0xED), new ByteStore(fm1, 0xED)),
+                        new MemoryStop(new Fault(FaultKind.OUTSIDE_RAM, Access.READ, 0x80E0))),
+                List.of(fm1Header, ym(admission), update.steps(), update.stop()));
     }
 
     /** Optional caller-supplied retained asset check; no media opening or execution is supplied here. UNRUN. */

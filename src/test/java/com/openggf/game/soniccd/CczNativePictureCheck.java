@@ -144,7 +144,7 @@ final class CczNativePictureCheck {
         return out;
     }
 
-    private static Rendered capture() {
+    static Rendered capture() {
         GraphicsManager graphics = GameServices.graphics();
         graphics.setDisplayColorProfile(DisplayColorProfile.RAW_RGB);
         graphics.setDisplayColorExpansion(DisplayColorExpansion.FULL);

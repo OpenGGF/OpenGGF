@@ -7,6 +7,7 @@ import com.openggf.game.GameModule;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.BuiltInRomDetectors;
 import com.openggf.game.GameId;
+import com.openggf.catalog.StockGameCatalog;
 import com.openggf.mods.scene.SceneRomArt;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -24,7 +25,6 @@ import java.util.logging.Logger;
  */
 public final class SceneRomLibrary implements AutoCloseable {
     private static final Logger LOG = Logger.getLogger(SceneRomLibrary.class.getName());
-    private static final List<String> GAMES = List.of("s1", "s2", "s3k");
     private final Map<String, SceneRomArt> art = new LinkedHashMap<>();
     private final Map<String, GameModule> modules = new LinkedHashMap<>();
     private final Map<String, Rom> sourceRoms = new LinkedHashMap<>();
@@ -77,14 +77,14 @@ public final class SceneRomLibrary implements AutoCloseable {
         Objects.requireNonNull(roms, "roms");
         String active = activeModule.getGameId().code();
         activeGame = active;
-        for (String code : GAMES) {
+        for (String code : StockGameCatalog.cartridgeCodes()) {
             if (code.equals(active) && activeRom != null) {
                 art.put(code, SceneRomArtFactory.forModule(activeModule, activeRom));
                 sourceRoms.put(code, activeRom);
                 modules.put(code, activeModule);
                 continue;
             }
-            RomIdentity identity = identity(code);
+            RomIdentity identity = GameId.fromCode(code).romGame().identity();
             if (!roms.isLogicalRomAvailable(identity)) continue;
             Rom extra = null;
             try {
@@ -109,7 +109,7 @@ public final class SceneRomLibrary implements AutoCloseable {
 
     /** Exact offline logical-ROM views; this library owns wrappers, while readers remain immutable. */
     public static SceneRomLibrary openReaders(Map<String, com.openggf.data.RomByteReader> readers) throws IOException {
-        return openReaders(readers,GAMES.stream().filter(readers::containsKey).findFirst().orElse(""));
+        return openReaders(readers,StockGameCatalog.cartridgeCodes().stream().filter(readers::containsKey).findFirst().orElse(""));
     }
 
     public static SceneRomLibrary openReaders(Map<String, com.openggf.data.RomByteReader> readers, String activeGame) throws IOException {
@@ -122,12 +122,12 @@ public final class SceneRomLibrary implements AutoCloseable {
 
     private SceneRomLibrary(Map<String, com.openggf.data.RomByteReader> readers, String description, String activeGame, boolean media) throws IOException {
         Objects.requireNonNull(readers);
-        if ((!media && readers.isEmpty()) || !GAMES.containsAll(readers.keySet()))
+        if ((!media && readers.isEmpty()) || !StockGameCatalog.cartridgeCodes().containsAll(readers.keySet()))
             throw new IllegalArgumentException("Supply one or more named stock ROMs");
         if (!media && !readers.containsKey(activeGame)) throw new IllegalArgumentException("Supply the active scene ROM: " + activeGame);
         this.activeGame = activeGame;
         try {
-            for (String code : GAMES) {
+            for (String code : StockGameCatalog.cartridgeCodes()) {
                 if (!readers.containsKey(code)) continue;
                 Rom rom = Rom.fromReader(Objects.requireNonNull(readers.get(code)), description + code);
                 ownedRoms.add(rom);
@@ -168,8 +168,7 @@ public final class SceneRomLibrary implements AutoCloseable {
 
     private SceneRomLibrary(Map<String, java.nio.file.Path> paths) throws IOException {
         Objects.requireNonNull(paths);
-        if (paths.isEmpty() || !java.util.stream.Stream.concat(GAMES.stream(),
-                GameModuleRegistry.hostedMediaGames().stream().map(GameId::code)).toList().containsAll(paths.keySet()))
+        if (paths.isEmpty() || !StockGameCatalog.stockCodes().containsAll(paths.keySet()))
             throw new IllegalArgumentException("Supply one or more named stock ROMs");
         activeGame = paths.keySet().stream().sorted().findFirst().orElseThrow();
         try {
@@ -232,7 +231,7 @@ public final class SceneRomLibrary implements AutoCloseable {
 
     public SceneRomArt rom(String gameId) {
         requireOpen();
-        if (gameId == null || !java.util.List.of("s1", "s2", "s3k", "scd").contains(gameId)) throw new IllegalArgumentException("Unknown stock game: " + gameId);
+        if (!StockGameCatalog.isStockCode(gameId)) throw new IllegalArgumentException("Unknown stock game: " + gameId);
         return art.get(gameId);
     }
 
@@ -263,7 +262,7 @@ public final class SceneRomLibrary implements AutoCloseable {
     /** The same supplied-ROM view used by art; borrowed by the scene's audio owner. */
     public Rom sourceRom(String gameId) {
         requireOpen();
-        if (gameId == null || !java.util.List.of("s1", "s2", "s3k", "scd").contains(gameId)) {
+        if (!StockGameCatalog.isStockCode(gameId)) {
             throw new IllegalArgumentException("Unknown stock game: " + gameId);
         }
         return sourceRoms.get(gameId);
@@ -288,14 +287,6 @@ public final class SceneRomLibrary implements AutoCloseable {
             ownedMedia.clear(); sources.clear();
             if (error != null) throw error;
         }
-    }
-
-    private static RomIdentity identity(String code) {
-        return switch (code) {
-            case "s1" -> RomIdentity.S1;
-            case "s2" -> RomIdentity.S2;
-            default -> RomIdentity.S3K;
-        };
     }
 
     private static GameModule stockModule(String code) {

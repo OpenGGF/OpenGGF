@@ -40,7 +40,8 @@ public final class CdFmSoundRequestService implements AudioRequestService, GameP
      * this engine gain is independent of the player's music/SFX controls.
      * Relative calibration corroboration and its external-source provenance
      * are preserved in docs/architecture/validation/2026-11-15-sonic-cd-playtest-fixes.md.
-     * This is a presentation convention, not analog hardware calibration.
+     * The console mixes FM, CD-DA and PCM in hardware. The 3/8 gain has not
+     * been calibrated against that analogue mix on a physical console.
      */
     private static final int CD_PRESENTATION_NUMERATOR = 3;
     private static final int CD_PRESENTATION_DENOMINATOR = 8;
@@ -54,8 +55,8 @@ public final class CdFmSoundRequestService implements AudioRequestService, GameP
         static final Snapshot POWER_ON = new Snapshot(0, 0, 0, IDLE, 0, 0, 0, 0);
     }
 
-    /** The pipeline plus the driver's ring byte, as one rewind and rollback unit. */
-    public record ServiceSnapshot(Snapshot pipeline, int ringChannel, int trackQueued)
+    /** The request pipeline and shared FM driver state form one rewind and rollback unit. */
+    public record ServiceSnapshot(Snapshot pipeline, int ringChannel, int trackQueued, boolean jumpCondition)
             implements AudioPresentationForwardService.Snapshot { }
 
     private final IntUnaryOperator priorities;
@@ -114,8 +115,8 @@ public final class CdFmSoundRequestService implements AudioRequestService, GameP
     }
 
     @Override
-    public AudioPresentationForwardService.Snapshot snapshot() {
-        return new ServiceSnapshot(state, driver.ringChannel(), driver.trackQueued());
+    public ServiceSnapshot snapshot() {
+        return new ServiceSnapshot(state, driver.ringChannel(), driver.trackQueued(), driver.jumpCondition());
     }
 
     @Override
@@ -126,9 +127,14 @@ public final class CdFmSoundRequestService implements AudioRequestService, GameP
         if (forwardOpen) {
             throw new IllegalStateException("cannot restore during an open forward boundary");
         }
+        restoreState(selected);
+    }
+
+    private void restoreState(ServiceSnapshot selected) {
         state = selected.pipeline();
         driver.setRingChannel(selected.ringChannel());
         driver.setTrackQueued(selected.trackQueued());
+        driver.setJumpCondition(selected.jumpCondition());
     }
 
     @Override
@@ -164,7 +170,7 @@ public final class CdFmSoundRequestService implements AudioRequestService, GameP
             throw new IllegalStateException("Sonic CD request boundary is already open");
         }
         forwardOpen = true;
-        return new ForwardBoundary(new ServiceSnapshot(state, driver.ringChannel(), driver.trackQueued()));
+        return new ForwardBoundary(snapshot());
     }
 
     /** One V-int queue transfer, queue scan and driver tick. */
@@ -233,6 +239,10 @@ public final class CdFmSoundRequestService implements AudioRequestService, GameP
             state = dispatch.after();
             if (dispatch.consequence() != null) {
                 staged = dispatch.consequence();
+                if (staged instanceof AudioCommand.StopAllSfx) {
+                    // StopSound (Sound Drivers/FM/_Driver.asm:945-950) clears jumpCondition with the queues.
+                    driver.setJumpCondition(false);
+                }
                 commandSink.accept(staged);
             }
         }
@@ -291,9 +301,7 @@ public final class CdFmSoundRequestService implements AudioRequestService, GameP
         @Override
         public void rollback() {
             requireOpen();
-            state = before.pipeline();
-            driver.setRingChannel(before.ringChannel());
-            driver.setTrackQueued(before.trackQueued());
+            restoreState(before);
             closed = true;
             forwardOpen = false;
         }

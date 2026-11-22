@@ -125265,3 +125265,40 @@ same queue and GL settings. The test selection was
 This covers the fields selected by the R11C
 frontier comparator and the recorded route. The broader Sonic CD matrix,
 act-end assertions and pixel checks were outside this rerun.
+
+## 2026-11-21 — Sonic CD R81B Scarab defeat rebound
+
+The U50 act-end movie for Metallic Madness Act 1 Past matched through row
+2634 on develop base `b4042035e9`. Its first error was row 2635. Sonic's
+native Y speed was `-$0F18` after defeating the Scarab. OpenGGF held
+`+$0F18`. The replay stopped with one error row.
+
+`loc_206CD8` (r8/player_object_collide.asm:456-463) takes a vulnerable-side
+Scarab contact into the ordinary enemy routine.
+`loc_206A5E` (r8/player_object_collide.asm:203-228) applies its defeat rebound. The
+Sonic CD special-touch kill now calls the shared rebound helper. The same
+path handles curled Dango and Kabasira's shot when their special contact
+selects the ordinary enemy kill.
+
+`TestCdScarabRebound` replayed the longer R81B movie from
+`u50-mmz-act-end/R81B` on the verified USA disc. The patched worktree
+reached the end of the 5,396-row trace at row 5395 with zero comparator
+errors and matched the exact signed Y speed at the kill. This covers the
+replay's player and camera fields. Signpost objects, tally and exit state
+have their own act-end comparison.
+
+The focused run passed 429 tests with zero skips. The negative control
+reported four expected rebound assertion failures and zero skips. It
+used develop for Scarab and Kabasira and temporarily removed Dango's
+existing rebound for both disc variants.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsoniccd.disc.path=<USA CHD>" "-Dsoniccd.media.root=<media root>" \
+  "-Dsoniccd.native.root=<native root>" "-Dsonic1.rom.path=<Sonic 1 REV01>" \
+  "-Dsonic2.rom.path=<Sonic 2 REV01>" "-Ds3k.rom.path=<Sonic 3 & Knuckles>" \
+  -Dopenggf.surefire.reports=target/u54-focused \
+  '-Dtest=TestCdScarabRebound,TestCdDangoTouch,TestMmzObjects2,TestSszObjects,TestSonicCdRoutesBLongNative,TestEnemyDefeatMutator,TestTouchResponseManager,TestTouchResponseProfileMapping,TestSonic1PoleThatBreaksObjectInstance,TestCrawlBadnikInstance,TestS3kSnaleBlasterBadnik,TestBroadCatchSwallowingGuard,TestZoneEventRuntimeAccessGuard,TestObjectPhysicsStandardizationGuard,TestRewindCoverageGuard,TestAudioPresentationArchitectureGuard,TestCameraRelativeDrawGuard,TestBuildToolingGuard,TestBootstrapModuleProviderCachingGuard' test -B
+```

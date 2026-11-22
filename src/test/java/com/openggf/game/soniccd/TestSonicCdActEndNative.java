@@ -211,10 +211,8 @@ class TestSonicCdActEndNative {
                                 tally.hex("timeBonus"), tally.hex("ringBonus"), (exit.hex("score") - tally.hex("score")) * 10,
                                 exit.hex("levelRestart"), exit.dec("zone"), exit.dec("act"), exit.dec("timeZone"),
                                 exit.dec("goodFuture"))),
-                // The native Scarab kill reverses the downward velocity before this route reaches the signpost.
-                () -> assertEquals(2635, outcome.firstErrorRow(), outcome.fields().toString()),
-                () -> assertEquals(List.of("y_speed"), outcome.fields().stream()
-                        .map(field -> field.fieldName()).toList(), outcome.fields().toString()));
+                () -> assertEquals(-1, outcome.firstErrorRow(), outcome.fields().toString()),
+                () -> assertEquals(trace.frameCount(), outcome.rowsCompared(), "Compare through the last trace row"));
     }
 
     private record NativeFinish(int rows, int clockBefore, int clockAfter, int signpostRoutine, int results,

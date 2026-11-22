@@ -74,9 +74,7 @@ class TestMmzNativePictures {
      * Shots that do NOT reach the threshold and are reported as uncertified rather than asserted. The test asserts that
      * each of these still fails, so the list cannot go stale. Evidence in the lane report.
      */
-    private static final Set<String> UNCERTIFIED = Set.of(
-            // A freed animal (flying, not a placement) at x 110-135, y 52-65 is the whole residue; the background around it matches.
-            "R83C early");
+    private static final Set<String> UNCERTIFIED = Set.of();
 
     /** Every shot is compared only over pixels with background world X below 512 (see the class comment). */
     private static final boolean WRAP_RULE = true;

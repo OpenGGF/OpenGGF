@@ -1,5 +1,6 @@
 package com.openggf.mods;
 
+import com.openggf.catalog.StockGameCatalog;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -132,7 +133,7 @@ public final class PreparedModMusic implements AutoCloseable {
 
             LinkedHashMap<String, LinkedHashMap<Integer, TrackKey>> mutableOverrides = new LinkedHashMap<>();
             Map<String, List<TrackKey>> successfulSources = new java.util.TreeMap<>();
-            for (String game : List.of("s1", "s2", "s3k", "scd")) mutableOverrides.put(game, new LinkedHashMap<>());
+            for (String game : StockGameCatalog.stockCodes()) mutableOverrides.put(game, new LinkedHashMap<>());
             for (ModDescriptor descriptor : descriptors) {
                 String owner = descriptor.manifest().id();
                 if (session.failedOwners().contains(owner)) continue;
@@ -288,8 +289,8 @@ public final class PreparedModMusic implements AutoCloseable {
     }
 
     private static String requireGameCode(String gameCode) {
-        if (!"s1".equals(gameCode) && !"s2".equals(gameCode) && !"s3k".equals(gameCode) && !"scd".equals(gameCode)) {
-            throw new IllegalArgumentException("Base game must be exactly s1, s2, s3k, or scd");
+        if (!StockGameCatalog.isStockCode(gameCode)) {
+            throw new IllegalArgumentException("Base game must be one of " + String.join(", ", StockGameCatalog.stockCodes()));
         }
         return gameCode;
     }

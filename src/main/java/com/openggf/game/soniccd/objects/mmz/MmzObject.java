@@ -47,7 +47,7 @@ abstract class MmzObject extends CdObject {
      * the distance from that radius point to the floor.
      */
     protected final int floorDistanceAt(int probeY, int radius) {
-        return com.openggf.physics.ObjectTerrainUtils.checkFloorDist(x, probeY, radius).distance();
+        return checkFloor(x, probeY, radius).distance();
     }
 
     /** {@code add.l d0,oX(a0)}. */

@@ -3,14 +3,22 @@ package com.openggf.game.soniccd.objects.common;
 import com.openggf.audio.GameSound;
 import com.openggf.camera.CameraPresentationAccess;
 import com.openggf.configuration.SonicConfiguration;
+import com.openggf.game.DamageCause;
+import com.openggf.game.PlayableEntity;
+import com.openggf.game.internal.ObjectTerrainProbeLayout.SpriteState;
 import com.openggf.game.solid.SolidExecutionFrames;
 import com.openggf.game.soniccd.audio.CdSoundRequests;
-
+import com.openggf.game.soniccd.objects.art.CdObjectArtProvider;
+import com.openggf.game.soniccd.player.CdSonicAnimation;
+import com.openggf.game.soniccd.timetravel.CdTimeTravel;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.EnemyDefeatBounce;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.render.PatternSpriteRenderer;
-import com.openggf.game.soniccd.objects.art.CdObjectArtProvider;
+import com.openggf.physics.ObjectTerrainUtils;
+import com.openggf.physics.TerrainCheckResult;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 /**
  * Shared Sonic CD object semantics on the shared object owner.
@@ -29,7 +37,7 @@ import com.openggf.game.soniccd.objects.art.CdObjectArtProvider;
  *   <li>{@code oPriority} n is render bucket n; bit 15 of the tile word is high priority.</li>
  * </ul>
  */
-public abstract class CdObject extends AbstractObjectInstance {
+public abstract class CdObject extends AbstractObjectInstance implements SpriteState {
     protected int x;
     protected int y;
     protected int priority;
@@ -50,6 +58,29 @@ public abstract class CdObject extends AbstractObjectInstance {
     @Override public int getOnScreenHalfWidth() { return width; }
     @Override public int getOnScreenHalfHeight() { return yRadius; }
     @Override protected boolean usesCustomRenderHeight() { return true; }
+
+    /** The object path bit in oSprFlags, captured by the object's rewind schema. */
+    private boolean terrainProbeLoopPath;
+
+    @Override public final boolean terrainProbeLoopPath() { return terrainProbeLoopPath; }
+    @Override public final void setTerrainProbeLoopPath(boolean onLoopPath) { terrainProbeLoopPath = onLoopPath; }
+
+    @Override
+    public final void setTerrainProbePriority(boolean high) {
+        tileWord = high ? tileWord | 0x8000 : tileWord & 0x7FFF;
+    }
+
+    protected final TerrainCheckResult checkFloor(int probeX, int probeY, int radius) {
+        return ObjectTerrainUtils.checkObjectFloor(services().levelManager(), probeX, probeY + radius, this);
+    }
+
+    protected final TerrainCheckResult checkWall(int probeX, int probeY, boolean left) {
+        return ObjectTerrainUtils.checkObjectWall(services().levelManager(), probeX, probeY, left, this);
+    }
+
+    protected final TerrainCheckResult checkCeiling(int probeX, int probeY, int radius) {
+        return ObjectTerrainUtils.checkObjectCeiling(services().levelManager(), probeX, probeY, radius, this);
+    }
 
     protected final boolean timeAttackMode() {
         return com.openggf.game.soniccd.program.CdSceneCoordinator.isTimeAttack(services().gameModule());
@@ -381,6 +412,35 @@ public abstract class CdObject extends AbstractObjectInstance {
         becomeExplosion(pointsIndex, layer, 1, fromBadnik);
     }
 
+    /** sub_206D70 (r7/player_object_collide.asm:125-131) and sub_2069E8 (r8/player_object_collide.asm:161-167). */
+    protected final boolean attacksOnEnemyTouch(PlayableEntity player) {
+        return CdTimeTravel.starsActive(services().gameModule()) || player.getInvincibleFrames() > 0
+                || player.getAnimationId() == CdSonicAnimation.ROLL.id();
+    }
+
+    /**
+     * A special touch that branches into the normal enemy kill owns the rebound as well.
+     * loc_206DE6 (r7/player_object_collide.asm:167-192) and loc_206A5E (r8/player_object_collide.asm:203-228).
+     */
+    protected final void killAsEnemyFromSpecialTouch(PlayableEntity player, int layer, boolean fromBadnik) {
+        killAsEnemy(player, layer, fromBadnik);
+        EnemyDefeatBounce.apply(player, y, services().worldSession());
+    }
+
+    /**
+     * sub_206E3A (r7/player_object_collide.asm:208-242) and sub_206AB2 (r8/player_object_collide.asm:244-282).
+     * HurtPlayer (r8/player_object_collide.asm:266-282) allocates $11 during the player turn.
+     * UpdateObjects (common/object.asm:5-23) reaches its slot in the same pass.
+     */
+    protected final void hurtFromSpecialEnemyTouch(AbstractPlayableSprite player, int frameCounter) {
+        if (player.getInvulnerable()) return;
+        boolean hadRings = player.getRingCount() > 0;
+        if (hadRings && !player.hasShield() && !player.suppressesLostRingSpawnOnHurt()) {
+            services().spawnLostRings(player, frameCounter);
+        }
+        player.applyHurtOrDeath(x, DamageCause.NORMAL, hadRings);
+    }
+
     /**
      * The slot's object ID changes to the explosion in place: the slot is handed to the new object and
      * the layout entry stays loaded (the spawner's loaded bit is never cleared), which the shared
@@ -461,6 +521,7 @@ public abstract class CdObject extends AbstractObjectInstance {
     protected final void copyDrawState(CdObject source) {
         renderPassSeen = source.renderPassSeen;
         drawnOnScreen = source.drawnOnScreen;
+        terrainProbeLoopPath = source.terrainProbeLoopPath;
         drawCameraKnown = source.drawCameraKnown;
         drawCameraX = source.drawCameraX;
         drawCameraY = source.drawCameraY;

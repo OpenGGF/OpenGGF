@@ -22,13 +22,12 @@ final class SonicCdLevelInitProfile extends AbstractLevelInitProfile
     private final CdPlayerStage playerStage;
     private final CdLevelVIntCounter levelVIntCounter;
     private final CdLoadFrame loadFrame;
+    private final CdLevelPause levelPause;
     /** The session's disc, for the stage load's identity (null before a disc is open). */
     private final java.util.function.Supplier<CdDiscDataSource> disc;
     /** {@code SPCmd_LoadLevel}'s PCM-driver load for a stage: the audio profile's sub-CPU owner. */
     private final java.util.function.Consumer<CdStagePayload> loadPcmDriver;
     private com.openggf.game.soniccd.timetravel.CdWarpCarry arrival;
-    /** This load is {@code ObjSonic_Restart}'s reload with lives left (the engine's death reload). */
-    private boolean deathRestart;
     /** {@code spawnMode} 1 for this load: the checkpoint's saved position and time (LoadCheckpointData). */
     private boolean checkpointSpawn;
     /** {@code plcLoadFlags} bit 1 clear for this load: the title card is loaded (Level/Main.asm:271-277). */
@@ -37,6 +36,7 @@ final class SonicCdLevelInitProfile extends AbstractLevelInitProfile
     SonicCdLevelInitProfile(CdLevelEventProvider events, com.openggf.game.soniccd.timetravel.CdTimeTravel timeTravel,
                             com.openggf.game.soniccd.objects.shared.SharedSwitchFlags switchFlags,
                             CdPlayerStage playerStage, CdLevelVIntCounter levelVIntCounter, CdLoadFrame loadFrame,
+                            CdLevelPause levelPause,
                             java.util.function.Supplier<CdDiscDataSource> disc,
                             java.util.function.Consumer<CdStagePayload> loadPcmDriver) {
         this.disc = disc;
@@ -44,6 +44,7 @@ final class SonicCdLevelInitProfile extends AbstractLevelInitProfile
         this.playerStage = playerStage;
         this.levelVIntCounter = levelVIntCounter;
         this.loadFrame = loadFrame;
+        this.levelPause = levelPause;
         this.events = events;
         this.timeTravel = timeTravel;
         this.switchFlags = switchFlags;
@@ -74,7 +75,8 @@ final class SonicCdLevelInitProfile extends AbstractLevelInitProfile
         }
         if (ctx.isIncludePostLoadAssembly()) {
             steps.add(new InitStep("CdRestartSpawnMode",
-                    "ObjSonic_Restart's spawnMode and title-card reload (Sonic/Main.asm:2459-2491)",
+                    "Level_MainLoop's pause restart (Level/Main.asm:368-395) and ObjSonic_Restart's "
+                            + "death restart (Level/_Objects/Sonic/Main.asm:2459-2491)",
                     () -> restartSpawnMode(ctx)));
             steps.add(restoreCheckpointStep(ctx));
             steps.add(spawnPlayerStep(ctx));
@@ -168,9 +170,22 @@ final class SonicCdLevelInitProfile extends AbstractLevelInitProfile
      * checkpoint in the present ({@code bclr #1,plcLoadFlags}). Any other load spawns from the start with
      * its title card unless it is a warp arrival. The {@code checkpoint} number itself survives natively a
      * past or future restart; the engine's checkpoint state does not, so posts already passed re-arm.
+     * A pause restart always uses spawn mode 0 and keeps the title card's loaded bit set
+     * {@code Level_MainLoop} (scddisasm/src/Level/Main.asm:368-395).
      */
     private void restartSpawnMode(LevelLoadContext ctx) {
-        deathRestart = ctx.getLoadCause() == com.openggf.game.LevelLoadCause.FULL_DEATH_RELOAD;
+        boolean pauseRequested = levelPause.consumeRestartRequest();
+        boolean deathRestart = ctx.getLoadCause() == com.openggf.game.LevelLoadCause.FULL_DEATH_RELOAD;
+        if (pauseRequested && deathRestart) {
+            // Only the R5 act 1 and 2 programs reach this branch with a saved checkpoint.
+            // Clear the context's copy after restoring the bank so player and camera assembly
+            // use spawn mode 0 per loc_201858 (scddisasm/src/r5/main.asm:328-337).
+            com.openggf.game.GameServices.level().restoreCheckpointState(ctx);
+            ctx.snapshotCheckpoint(null);
+            checkpointSpawn = false;
+            titleCard = false;
+            return;
+        }
         boolean present = timeTravel.timeZone() == com.openggf.game.soniccd.timetravel.CdTimeZone.PRESENT;
         boolean checkpoint = ctx.hasCheckpoint();
         titleCard = !deathRestart || (!checkpoint && present);
@@ -184,11 +199,9 @@ final class SonicCdLevelInitProfile extends AbstractLevelInitProfile
     }
 
     /**
-     * This load as submitted work ({@link CdLoadTiming#stageLoad}): the stage program file and the PLC list
-     * {@code LoadLevelData} queues for this entry (Palmtree Panic/Load Level Data.asm:37-48). {@code spawnMode} is
-     * set for a checkpoint restart (1) and a time-warp arrival (2); the title card was already loaded when this
-     * load shows none ({@link #restartSpawnMode}). {@code LoadSectionArt} reads the camera {@code LevelScroll} has
-     * just placed (Level/Main.asm:245-248), which {@code initCameraStep} has set here.
+     * Submit the stage program file and the PLC its loader queues for this entry.
+     * {@code spawnMode} is set for a checkpoint restart (1) and a time-warp arrival (2).
+     * {@code LoadSectionArt} reads the camera {@code LevelScroll} just placed (Level/Main.asm:245-248).
      */
     private com.openggf.game.timing.HardwareWorkSubmission stageLoad() {
         var level = com.openggf.game.GameServices.level();
@@ -201,16 +214,14 @@ final class SonicCdLevelInitProfile extends AbstractLevelInitProfile
         CdNativeFile fileName = demo == null ? payload.file() : demo.file();
         try {
             boolean spawnModeSet = checkpointSpawn || arrival != null;
+            boolean titleCardAlreadyLoaded = arrival != null || !titleCard;
             int plc = 0;
-            if (spawnModeSet || !titleCard) {
+            if (spawnModeSet || titleCardAlreadyLoaded) {
                 byte[] file = source.readFile(fileName);
                 var entry = demo == null ? com.openggf.game.soniccd.level.CdStageCatalogue.entry(payload)
                         : com.openggf.game.soniccd.level.CdStageCatalogue.entry(demo);
-                int levelDataPlc = file[entry.levelDataIndex() + 4]
-                        & 0xFF;                                   // move.b (a2),d0 after addq.w #4,a2 (:44-46)
-                int section = spawnModeSet ? CdLoadTiming.sectionInitPlc(file, CdLoadTiming.sectionRanges(payload),
-                        com.openggf.game.GameServices.camera().getX()) : 0;
-                plc = CdLoadTiming.levelStartPlc(spawnModeSet, true, levelDataPlc, section);
+                plc = CdLoadTiming.levelStartPlc(file, entry, com.openggf.game.GameServices.camera().getX(),
+                        spawnModeSet, titleCardAlreadyLoaded);
             }
             return CdLoadTiming.stageLoad(source.assets().entry(fileName), plc);
         } catch (java.io.IOException e) {

@@ -1,5 +1,6 @@
 package com.openggf.game.soniccd.zones.qqz;
 
+import com.openggf.game.soniccd.CdStageKey;
 import com.openggf.game.soniccd.CdStagePayload;
 import com.openggf.game.soniccd.level.CdStageImage;
 import com.openggf.game.soniccd.player.CdZonePlayerProfile;
@@ -22,6 +23,12 @@ public final class QqzZone implements CdZoneFragment {
     @Override
     public AnimatedPaletteManager createPaletteCycle(CdStagePayload payload, Level level, CdStageImage image) {
         return QqzPaletteCycle.hasCycle(payload) ? new QqzPaletteCycle(payload, level, image) : null;
+    }
+
+    /** The act 1 and 2 programs leave respawn_checkpoint intact in loc_201898 (scddisasm/src/r5/main.asm:346-349). */
+    @Override
+    public boolean retainsCheckpointOnPauseRestart(CdStagePayload payload) {
+        return payload.stage() instanceof CdStageKey.Traversal;
     }
 
     @Override
