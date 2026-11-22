@@ -4,6 +4,7 @@ import com.openggf.audio.GameSound;
 import com.openggf.camera.Camera;
 import com.openggf.game.GameModule;
 import com.openggf.game.internal.LostRingDisplayProfile;
+import com.openggf.game.internal.SpriteTableBuildProfile;
 import com.openggf.game.LevelState;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.competition.NativeCompetitionRoster;
@@ -1020,8 +1021,8 @@ public class LostRingObjectInstance extends AbstractObjectInstance
         if (priority != null) return priority.highPriority();
         ObjectServices services = servicesOrNull();
         GameModule module = services != null ? services.gameModule() : null;
-        return !(module instanceof com.openggf.game.internal.SpriteTableBuildProfile profile)
-                || profile.lostRingHighPriority();
+        var profile = SpriteTableBuildProfile.forModule(module);
+        return profile == null || profile.lostRingHighPriority();
     }
 
     @Override

@@ -140,8 +140,10 @@ class TestWwzNativePictures {
     private record Rendered(RgbaImage image, int cameraX, int cameraY, int playerX, int playerY,
                             int enginePlayerX, int enginePlayerY, List<CdLevel.CdPlacement> placements) { }
 
+    private record CameraSample(int traceLevelFrame, Position position) { }
+
     private static List<Rendered> render(com.openggf.GameLoop loop, CdStagePayload payload, boolean firstBoot,
-                                         TraceData trace, List<Position> cameraPath, int[] targets) throws Exception {
+                                         TraceData trace, List<CameraSample> cameraPath, int[] targets) throws Exception {
         if (!firstBoot) {
             // The headless GL context can be booted once per JVM, so later stages load through the same boot.
             // The previous stage's last camera is where the new stage would spawn its first objects: start from X 0, as a
@@ -160,7 +162,7 @@ class TestWwzNativePictures {
         GameServices.camera().setFrozen(true);
         int captured = 0;
         for (int frame = 1; frame <= cameraPath.size(); frame++) {
-            Position position = cameraPath.get(frame - 1);
+            Position position = cameraPath.get(frame - 1).position();
             GameServices.camera().setX((short) position.cameraX());
             GameServices.camera().setY((short) position.cameraY());
             // CdFirstMainLoopIteration already ran scroll, palette and tile animation for frame 1.
@@ -171,7 +173,7 @@ class TestWwzNativePictures {
         return List.of(out);
     }
 
-    private static List<Rendered> replayMovie(CdStagePayload payload, TraceData trace, List<Position> cameraPath,
+    private static List<Rendered> replayMovie(CdStagePayload payload, TraceData trace, List<CameraSample> cameraPath,
                                                int[] targets) throws Exception {
         GameServices.camera().setFrozen(false);
         Path movie = CdTestMedia.nativeFile("rehost-fixtures/" + payload + "/movie.bk2");
@@ -197,11 +199,12 @@ class TestWwzNativePictures {
             }
             int frame = expected.gameplayFrameCounter();
             for (int i = 0; i < targets.length; i++) {
-                if (targets[i] == frame && out[i] == null) {
+                CameraSample sample = cameraPath.get(targets[i] - 1);
+                if (sample.traceLevelFrame() == frame && out[i] == null) {
                     String context = payload + " trace row " + row;
                     assertEquals(frame, GameServices.level().getFrameCounter(), context + ": level frame");
                     assertEquals(expected.x(), sonic.getCentreX(), context + ": Sonic X");
-                    out[i] = capture(cameraPath.get(frame - 1));
+                    out[i] = capture(sample.position());
                     captured++;
                 }
             }
@@ -210,7 +213,7 @@ class TestWwzNativePictures {
         return List.of(out);
     }
 
-    private static List<Position> alignCameraClock(CdStagePayload payload, TraceData trace,
+    private static List<CameraSample> alignCameraClock(CdStagePayload payload, TraceData trace,
                                                    List<ProbeFrame> probeFrames, int[] targets) {
         int lastFrame = Arrays.stream(targets).max().orElseThrow();
         Map<Integer, TraceFrame> traceByLevel = new HashMap<>();
@@ -231,7 +234,7 @@ class TestWwzNativePictures {
         assertNotNull(matched, "trace position for probe frame " + anchor.frame());
         int offset = matched.gameplayFrameCounter() - anchor.levelFrames();
 
-        List<Position> aligned = new ArrayList<>();
+        List<CameraSample> aligned = new ArrayList<>();
         for (int frame = 1; frame <= lastFrame; frame++) {
             ProbeFrame probe = probeByLevel.get(frame);
             assertNotNull(probe, "probe level frame " + frame);
@@ -252,7 +255,7 @@ class TestWwzNativePictures {
                 }
             }
             assertNotNull(sample, "trace camera for probe level frame " + frame);
-            aligned.add(Position.fromTrace(sample));
+            aligned.add(new CameraSample(sample.gameplayFrameCounter(), Position.fromTrace(sample)));
         }
         return aligned;
     }
@@ -378,7 +381,7 @@ class TestWwzNativePictures {
                 "rehost-fixtures-wwz/" + payload + "/probe-frames.csv"));
         List<Shot> shots = shots(payload, trace, probe);
         int[] targets = shots.stream().mapToInt(TestWwzNativePictures::engineFrame).toArray();
-        List<Position> cameraPath = alignCameraClock(payload, trace, probe, targets);
+        List<CameraSample> cameraPath = alignCameraClock(payload, trace, probe, targets);
         List<Rendered> rendered = render(loop, payload, firstBoot, trace, cameraPath, targets);
         List<String> failures = new ArrayList<>();
         RgbaImage[] reference = new RgbaImage[shots.size()];
