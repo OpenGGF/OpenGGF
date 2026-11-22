@@ -2,10 +2,13 @@ package com.openggf.game.soniccd;
 
 import com.openggf.game.GameServices;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.session.SessionManager;
+import com.openggf.game.soniccd.objects.common.CdAnimal;
 import com.openggf.game.soniccd.objects.common.CdObject;
 import com.openggf.game.soniccd.objects.ssz.SszStageLayer;
 import com.openggf.game.soniccd.objects.wwz.ObjSemi;
 import com.openggf.game.soniccd.level.CdLevel;
+import com.openggf.game.soniccd.timetravel.CdTimeTravel;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.tests.TestEnvironment;
@@ -18,6 +21,8 @@ import java.nio.file.Path;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestCdObjectTerrainProbePriority {
     private static final int WWZ_LOOP_X = 0xA80;
@@ -96,6 +101,36 @@ class TestCdObjectTerrainProbePriority {
         GameServices.level().getObjectManager().addDynamicObject(bomb);
         bomb.update(1, null);
         assertEquals(List.of(false, true), List.of(bomb.isHighPriority(), bomb.terrainProbeLoopPath()));
+    }
+
+    @Test
+    void releasedAnimalClearsPriorityOnPlainMmzChunk() throws Exception {
+        boot(CdStagePayload.R81B);
+        // AnimalObject_0_Routine2 (objects/r8/animal.asm:98-117) probes below its hop.
+        // R81B's chunk $19 is plain. GetBlockClearTileAnimation (common/block_collide.asm:31-32) clears bit 15.
+        CdAnimal animal = releasedAnimal(0x1780, 0x80);
+        animal.update(1, null);
+        animal.setTerrainProbePriority(true);
+        animal.update(2, null);
+        assertFalse(animal.isHighPriority(), "the released animal's next floor probe clears tile priority");
+    }
+
+    @Test
+    void releasedAnimalEntersWwzLoopPathThroughItsFloorProbe() throws Exception {
+        boot(CdStagePayload.R61A);
+        // R61A's marked $14 chunk selects the upper path (GetBlockResolveAnimatedAddress, common/block_collide.asm:61-71).
+        CdAnimal animal = releasedAnimal(WWZ_LOOP_X, WWZ_LOOP_Y);
+        assertFalse(animal.terrainProbeLoopPath());
+        animal.update(1, null);
+        animal.update(2, null);
+        assertTrue(animal.terrainProbeLoopPath(), "the released animal's floor probe sets the path bit");
+    }
+
+    private CdAnimal releasedAnimal(int x, int y) {
+        CdTimeTravel.of(SessionManager.requireCurrentGameModule()).destroyProjector();
+        var animal = new CdAnimal(new ObjectSpawn(x, y, 0x24, 1, 0, false, 0));
+        GameServices.level().getObjectManager().addDynamicObject(animal);
+        return animal;
     }
 
     private Probe boot(CdStagePayload payload, int tileWord) throws Exception {
