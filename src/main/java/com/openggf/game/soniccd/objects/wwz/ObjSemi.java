@@ -6,7 +6,6 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseProvider;
-import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 /**
@@ -160,7 +159,11 @@ public final class ObjSemi extends WwzBadnik {
         @Override
         public void update(int vIntRunCount, PlayableEntity player) {
             switch (routine) {
-                case 0 -> init();
+                case 0 -> {
+                    init();
+                    // ObjSemiBomb_Init falls through into ObjSemiBomb_Fall (Level/Wacky Workbench/Objects/Semi/Main.asm:232-249).
+                    fall();
+                }
                 case FALL -> fall();
                 case WAIT -> {
                     time = (time - 1) & 0xFFFF;
@@ -194,7 +197,7 @@ public final class ObjSemi extends WwzBadnik {
         private void fall() {
             addToY(yVel);
             yVel += 0x4000;
-            int floor = ObjectTerrainUtils.checkFloorDist(x, y, yRadius).distance();
+            int floor = checkFloor(x, y, yRadius).distance();
             if (floor >= 0) return;
             routine += 2;
             y = (y + floor) & 0xFFFF;

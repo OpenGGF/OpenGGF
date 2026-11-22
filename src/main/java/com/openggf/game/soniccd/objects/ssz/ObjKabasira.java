@@ -5,13 +5,8 @@ import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.game.soniccd.objects.art.CdObjectArtProvider;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnRewindRecreatable;
-import com.openggf.level.objects.TouchOverlapStopPolicy;
-import com.openggf.level.objects.TouchResponseProfile;
+import com.openggf.level.objects.TouchResponseListener;
 import com.openggf.level.objects.TouchResponseResult;
-import com.openggf.level.objects.TouchActorContextPolicy;
-import com.openggf.level.objects.TouchAttackBouncePolicy;
-import com.openggf.level.objects.TouchCategoryDecodeMode;
-import com.openggf.level.objects.TouchShieldDeflectCapability;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -29,7 +24,8 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
  * <p>The three kinds are the same ID told apart by the secondary subtype (:4-8): head (>= 0), follower
  * ({@code $FF}, deleted when its head's slot is no longer ID $22, :12-18) and shot ({@code $FE}, :203-235). The
  * shot flies on its velocity, becomes explosion $18 with {@code oRoutine2 = 1} (no points, no animal) and plays
- * {@code FM_9E} when the player touches it, and is deleted when the player is more than $E0 above or below it.
+ * {@code FM_9E} after rolling contact. Unrolled contact follows the ordinary enemy routine.
+ * The shot despawns when the player is more than $E0 above or below it.
  * Heads and followers end in {@code CheckObjectDespawn}; heads begin with {@code DestroyInGoodFuture}.
  *
  * <p>The sine terms are {@code asr.l} of {@code sine << 16} added to origins whose fraction is $8000; the
@@ -37,15 +33,10 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
  * The shot's velocity low word is the unspecified upper word of {@code d1} at entry, modelled as zero.
  */
 @com.openggf.level.objects.CameraRelativeDraw(com.openggf.level.objects.CameraRelativeDraw.Use.CULL_ONLY)
-public final class ObjKabasira extends SszBadnik implements SpawnRewindRecreatable {
+public final class ObjKabasira extends SszBadnik implements SpawnRewindRecreatable, TouchResponseListener {
     /** The kinds named by the secondary subtype. */
     private enum Kind { HEAD, FOLLOWER, SHOT }
 
-    /** The shot's touch: the enemy attack path with no bounce (loc_20703E -> loc_206FE8 in r7/player_object_collide.asm). */
-    private static final TouchResponseProfile SHOT_TOUCH = new TouchResponseProfile(
-            TouchCategoryDecodeMode.NORMAL, false, true, false, TouchShieldDeflectCapability.NONE, 0, false,
-            TouchAttackBouncePolicy.NONE, TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY,
-            TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS);
     private static final int HEAD_COLLISION = 0x31;
     private static final int SHOT_COLLISION = 0xF1;
     private static final int SHOT_ANIM = 8;
@@ -249,27 +240,21 @@ public final class ObjKabasira extends SszBadnik implements SpawnRewindRecreatab
         animate();
     }
 
+    /** loc_20703E (r7/player_object_collide.asm:398-401). */
     @Override
-    public void onPlayerAttack(PlayableEntity player, TouchResponseResult result) {
-        if (kind == Kind.SHOT) {
-            burst = true;                                             // loc_206FE8: addq.b #1,obj.collide_status(a1)
-            return;
+    public void onTouchResponse(PlayableEntity player, TouchResponseResult result, int frameCounter) {
+        if (kind != Kind.SHOT || !(player instanceof AbstractPlayableSprite sprite) || isDestroyed()) return;
+        if (sprite.getRolling()) {
+            burst = true;
+        } else if (attacksOnEnemyTouch(sprite)) {
+            killAsEnemyFromSpecialTouch(sprite, 0, true);
+        } else {
+            hurtFromSpecialEnemyTouch(sprite, frameCounter);
         }
-        super.onPlayerAttack(player, result);
     }
 
     @Override
-    public TouchResponseProfile getTouchResponseProfile() {
-        return getTouchResponseProfile(false);
-    }
-
-    @Override
-    public TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
-        return kind == Kind.SHOT ? SHOT_TOUCH : TouchResponseProfile.fromProvider(this, multiRegionSource);
-    }
-
-    @Override
-    public boolean usesEnemyTouchCategoryOverride() {
+    public boolean usesS3kTouchSpecialPropertyResponse() {
         return kind == Kind.SHOT;
     }
 }

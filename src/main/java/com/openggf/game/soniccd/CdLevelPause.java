@@ -6,13 +6,17 @@ import com.openggf.game.GameServices;
 import com.openggf.game.LevelInputOverlay;
 import com.openggf.game.NativeGameStateOps;
 import com.openggf.game.internal.NativeLevelInputOwner;
+import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.soniccd.audio.CdSoundRequests;
 import com.openggf.game.soniccd.level.CdLevel;
 import com.openggf.game.soniccd.program.CdSceneCoordinator;
 import com.openggf.game.soniccd.program.CdStageExit;
+import com.openggf.game.soniccd.zones.CdZones;
 
 /** The pad branch of {@code Level_MainLoop} (Level/Main.asm:333-395). */
-final class CdLevelPause implements NativeLevelInputOwner {
+final class CdLevelPause implements NativeLevelInputOwner, RewindSnapshottable<Boolean> {
+    private boolean restartRequested;
+
     final LevelInputOverlay recordedInputOverlay =
             input -> RecordedInputOwnership.active(input) && handleInput(input);
 
@@ -66,14 +70,31 @@ final class CdLevelPause implements NativeLevelInputOwner {
             }
         }
         game.setGamePaused(false);
-        services.checkpointState().clear();
         if (game.getLives() == 0) {
             // LevelStart (Level/Main.asm:85-115) returns to the caller when lives is zero.
+            services.checkpointState().clear();
             CdStageExit.outOfLives(services);
         } else {
+            var payload = level.payload();
+            if (!CdZones.fragment(payload.stage().zone()).retainsCheckpointOnPauseRestart(payload)) {
+                services.checkpointState().clear();
+            }
+            // The shared fade accounts for the spent life. Carry the stage program's reload intent.
+            restartRequested = true;
             levels.setLevelInactiveForTransition(true);
             levels.requestRespawn();
         }
         return true;
     }
+
+    boolean consumeRestartRequest() {
+        boolean requested = restartRequested;
+        restartRequested = false;
+        return requested;
+    }
+
+    @Override public String key() { return "soniccd.pauseRestart"; }
+    @Override public Boolean capture() { return restartRequested; }
+    @Override public void restore(Boolean requested) { restartRequested = requested; }
+    @Override public void resetForMissingSnapshot() { restartRequested = false; }
 }

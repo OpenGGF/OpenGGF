@@ -82,8 +82,8 @@ public final class SszPlayerProfile implements CdZonePlayerProfile {
         return loopChunk(loopChunk, onLoopPath, SszStageLayer.of(level).isSet());
     }
 
-    /** The branch's arithmetic for a loop chunk, the player's loop path and the {@code layer} byte. */
-    static int loopChunk(int loopChunk, boolean onLoopPath, boolean layer) {
+    /** The branch's arithmetic for a loop chunk, the probing sprite's loop path and the {@code layer} byte. */
+    public static int loopChunk(int loopChunk, boolean onLoopPath, boolean layer) {
         if (loopChunk == 4 || loopChunk == 6) {
             return onLoopPath ? loopChunk + 1 : loopChunk;         // .SwapChunkIfLow
         }

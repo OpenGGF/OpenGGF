@@ -2,13 +2,19 @@ package com.openggf.game.soniccd.level;
 
 import com.openggf.data.compression.NemesisReader;
 import com.openggf.game.GameServices;
+import com.openggf.game.internal.ObjectTerrainProbeLayout;
 import com.openggf.game.soniccd.CdPeriod;
 import com.openggf.game.soniccd.CdStageDemo;
 import com.openggf.game.soniccd.CdStagePayload;
+import com.openggf.game.soniccd.CdZone;
+import com.openggf.game.soniccd.objects.ssz.SszStageLayer;
+import com.openggf.game.soniccd.zones.ssz.SszPlayerProfile;
+import com.openggf.game.soniccd.zones.wwz.WwzPlayerProfile;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.AbstractLevel;
 import com.openggf.level.Block;
 import com.openggf.level.Chunk;
+import com.openggf.level.ChunkDesc;
 import com.openggf.level.Map;
 import com.openggf.level.Palette;
 import com.openggf.level.Pattern;
@@ -45,7 +51,7 @@ import java.util.List;
 public final class CdLevel extends AbstractLevel implements com.openggf.game.internal.PlayerLoopChunks,
         com.openggf.level.objects.RingObjectPlacementMapping,
         com.openggf.game.internal.CollisionLayoutRowWindow,
-        com.openggf.game.internal.CollisionLayoutColumnWindow,
+        com.openggf.game.internal.CollisionLayoutColumnWindow, ObjectTerrainProbeLayout,
         com.openggf.game.internal.CollisionChunkOriginReadsBlank,
         com.openggf.game.internal.VerticalScrollWrapAtTop,
         com.openggf.game.internal.BackgroundRowLayout,
@@ -95,6 +101,7 @@ public final class CdLevel extends AbstractLevel implements com.openggf.game.int
     private List<CdPlacement> placements;
     private java.util.Map<ObjectSpawn, List<com.openggf.level.rings.RingSpawn>> ringPlacementMapping = java.util.Map.of();
     private boolean[] fgLoopFlags;
+    private boolean[][] bgLoopFlags;
     private int fgMapWidth;
     private int fgMapHeight;
     private int bgMapWidth;
@@ -369,7 +376,16 @@ public final class CdLevel extends AbstractLevel implements com.openggf.game.int
         fgLoopFlags = loops;
         fgMapWidth = collisionWidth;
         fgMapHeight = retainedHeight;
-        bgMapWidth = Math.min(bgMapWidth, authored.getWidth());
+        int backgroundWidth = Math.min(bgMapWidth, authored.getWidth());
+        int backgroundHeight = Math.min(bgLoopFlags.length, authored.getHeight());
+        boolean[][] backgroundLoops = new boolean[backgroundHeight][backgroundWidth];
+        for (int y = 0; y < backgroundHeight; y++) {
+            for (int x = 0; x < backgroundWidth; x++) {
+                backgroundLoops[y][x] = bgLoopFlags[y][x] && authored.getValue(1, x, y) == map.getValue(1, x, y);
+            }
+        }
+        bgLoopFlags = backgroundLoops;
+        bgMapWidth = backgroundWidth;
         map = authored;
     }
 
@@ -399,6 +415,56 @@ public final class CdLevel extends AbstractLevel implements com.openggf.game.int
             return false;
         }
         return fgLoopFlags[mapY * fgMapWidth + mapX];
+    }
+
+    @Override
+    public ChunkDesc readObjectProbeBlock(int x, int y, SpriteState sprite) {
+        int column = collisionLayoutColumn(x);
+        int row = (y & collisionLayoutYMask()) >> 8;
+        if (column < 0 || row >= map.getHeight()) return ChunkDesc.EMPTY;
+
+        boolean background = (column & BACKGROUND_HALF) != 0;
+        int mapX = column & ~BACKGROUND_HALF;
+        int chunk = map.getValue(background ? 1 : 0, mapX, row) & MAX_CHUNK_ID;
+        boolean loop = background ? row < bgLoopFlags.length && bgLoopFlags[row][mapX] : hasLoopFlag(mapX, row);
+        if (chunk == 0 && !loop) return ChunkDesc.EMPTY;
+
+        int resolved = resolveObjectProbeChunk(chunk, loop, sprite);
+        int cellX = (x >> 4) & 0xF;
+        int cellY = (y >> 4) & 0xF;
+        // FindLevelFloor/FindLevelFloor2 and FindLevelWall/FindLevelWall2 treat the base pointer as blank.
+        if (resolved == ALIASED_CHUNK && cellX == 0 && cellY == 0) return ChunkDesc.EMPTY;
+        Block block = resolved < blockCount ? blocks[resolved] : null;
+        return block == null ? ChunkDesc.EMPTY : block.getChunkDesc(cellX, cellY);
+    }
+
+    private int resolveObjectProbeChunk(int chunk, boolean loop, SpriteState sprite) {
+        CdZone zone = payload.stage().zone();
+        if (!loop) {
+            // GetLevelBlock (Level/Collision Floor.asm:481-498) writes before checking solidity.
+            switch (zone) {
+                case STARDUST_SPEEDWAY, METALLIC_MADNESS -> sprite.setTerrainProbePriority(false);
+                case WACKY_WORKBENCH -> sprite.setTerrainProbeLoopPath(false);
+                default -> { }
+            }
+            return chunk;
+        }
+        return switch (zone) {
+            case WACKY_WORKBENCH -> WwzPlayerProfile.resolveLoopChunk(chunk, sprite.terrainProbeLoopPath(), () -> {
+                sprite.setTerrainProbeLoopPath(true);
+                sprite.setTerrainProbePriority(false);
+            });
+            case STARDUST_SPEEDWAY -> {
+                // GetBlockZone5AnimatedTiles (common/block_collide.asm:107-127) and
+                // GetBlockZone5TileVariants (common/block_collide.asm:132-135).
+                boolean layer = SszStageLayer.of(this).isSet();
+                sprite.setTerrainProbePriority(chunk != 4 && chunk != 6 && !layer);
+                yield SszPlayerProfile.loopChunk(chunk, sprite.terrainProbeLoopPath(), layer);
+            }
+            // GetBlockZone6AnimatedTiles (common/block_collide.asm:143-150) skips non-player objects.
+            case METALLIC_MADNESS -> chunk;
+            default -> PlayerLoopChunkRule.STANDARD.chunk(chunk, sprite.terrainProbeLoopPath());
+        };
     }
 
     /**
@@ -592,6 +658,7 @@ public final class CdLevel extends AbstractLevel implements com.openggf.game.int
         fgMapHeight = fgHeight;
         bgMapWidth = bgWidth;
         fgLoopFlags = new boolean[fgWidth * fgHeight];
+        bgLoopFlags = new boolean[bgHeight][bgWidth];
         int width = Math.max(fgWidth, bgWidth);
         int height = Math.max(NATIVE_DRAW_ROWS, Math.max(fgHeight, bgHeight));
         byte[] buffer = new byte[2 * width * height];
@@ -606,7 +673,9 @@ public final class CdLevel extends AbstractLevel implements com.openggf.game.int
         // background is repeated horizontally for the shared wide-plane renderer, as Sonic 1's is.
         for (int y = 0; y < bgHeight; y++) {
             for (int x = 0; x < width; x++) {
-                buffer[y * width * 2 + width + x] = (byte) (bgData[y * bgWidth + x % bgWidth] & 0x7F);
+                int value = bgData[y * bgWidth + x % bgWidth] & 0xFF;
+                if (x < bgWidth) bgLoopFlags[y][x] = (value & 0x80) != 0;
+                buffer[y * width * 2 + width + x] = (byte) (value & MAX_CHUNK_ID);
             }
         }
         map = new Map(2, width, height, buffer);

@@ -62,6 +62,12 @@ class TestCdFmSoundEffects {
         driver.setJumpCondition(true);
         var config = CdFmSequencerConfig.create(new CdFmCoordFlagHandler(driver));
         for (int id = CdFmSmpsLoader.FIRST_SFX; id <= CdFmSmpsLoader.LAST_SFX; id++) {
+            List<Integer> heldChannels = sfx(id).getTrackEntries().stream()
+                    .filter(CdFmSfxData.TrackEntry::holdsFmState)
+                    .map(CdFmSfxData.TrackEntry::channelMask)
+                    .toList();
+            assertEquals(id == 0xD6 ? List.of(0) : List.of(), heldChannels,
+                    "Held channels for effect $%02X".formatted(id));
             Run run = run(id, config, 2048);
             if (run.writes == 0) failures.add(String.format("%02X wrote nothing", id));
             if (!run.finished) failures.add(String.format("%02X did not stop in 2048 ticks", id));
@@ -207,6 +213,7 @@ class TestCdFmSoundEffects {
         // header channel maps to the sequencer's linear FM channel like GetSFXTrackPtr.
         List<SmpsSequencer.Track> byHeader = new ArrayList<>();
         for (var entry : sfx(id).getTrackEntries()) {
+            if (entry.holdsFmState()) continue;
             tracks.stream().filter(t -> t.channelId == slot(entry.channelMask()) && !byHeader.contains(t))
                     .findFirst().ifPresent(byHeader::add);
         }
