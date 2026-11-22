@@ -8,8 +8,6 @@ import com.openggf.level.objects.CameraRelativeDraw;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectVisualFacing;
-import com.openggf.physics.BackgroundPlaneCollisionProvider;
-import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TrigLookupTable;
 
 import java.util.Arrays;
@@ -183,12 +181,10 @@ public final class CdAnimal extends CdObject
                 y = yLong >>> 16;
                 // CheckBlockDown (common/object_block_collide.asm:143-159) uses word coordinates and top solidity.
                 // GetBlock (common/block_collide.asm:3-32) reads the stage-map window and can write tile priority.
-                int floor = ObjectTerrainUtils.checkFloorDist(services().levelManager(),
-                        BackgroundPlaneCollisionProvider.FOREGROUND_ONLY, false,
-                        x, (y + yRadius) & 0xFFFF,
-                        high -> tileWord = high ? tileWord | 0x8000 : tileWord & 0x7FFF).distance();
-                if (floor < 0) {
-                    y = (y + floor) & 0xFFFF;
+                int probeY = (y + yRadius) & 0xFFFF;
+                var floor = checkFloor(x, probeY, 0);
+                if (floor.hasCollision() && floor.distance() < 0) {
+                    y = (y + floor.distance()) & 0xFFFF;
                     yLong = (y << 16) | (yLong & 0xFFFF);
                     yVel = -0x40000;
                     xVel = -xVel;

@@ -2,16 +2,19 @@ package com.openggf.game.soniccd.level;
 
 import com.openggf.data.compression.NemesisReader;
 import com.openggf.game.GameServices;
-import com.openggf.game.internal.ObjectFloorProbePriority;
+import com.openggf.game.internal.ObjectTerrainProbeLayout;
 import com.openggf.game.soniccd.CdPeriod;
 import com.openggf.game.soniccd.CdStageDemo;
 import com.openggf.game.soniccd.CdStagePayload;
 import com.openggf.game.soniccd.CdZone;
 import com.openggf.game.soniccd.objects.ssz.SszStageLayer;
+import com.openggf.game.soniccd.zones.ssz.SszPlayerProfile;
+import com.openggf.game.soniccd.zones.wwz.WwzPlayerProfile;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.AbstractLevel;
 import com.openggf.level.Block;
 import com.openggf.level.Chunk;
+import com.openggf.level.ChunkDesc;
 import com.openggf.level.Map;
 import com.openggf.level.Palette;
 import com.openggf.level.Pattern;
@@ -48,7 +51,7 @@ import java.util.List;
 public final class CdLevel extends AbstractLevel implements com.openggf.game.internal.PlayerLoopChunks,
         com.openggf.level.objects.RingObjectPlacementMapping,
         com.openggf.game.internal.CollisionLayoutRowWindow,
-        com.openggf.game.internal.CollisionLayoutColumnWindow, ObjectFloorProbePriority,
+        com.openggf.game.internal.CollisionLayoutColumnWindow, ObjectTerrainProbeLayout,
         com.openggf.game.internal.CollisionChunkOriginReadsBlank,
         com.openggf.game.internal.VerticalScrollWrapAtTop,
         com.openggf.game.internal.BackgroundRowLayout,
@@ -415,26 +418,53 @@ public final class CdLevel extends AbstractLevel implements com.openggf.game.int
     }
 
     @Override
-    public Write objectFloorProbePriority(int x, int y) {
-        CdZone zone = payload.stage().zone();
-        if (zone != CdZone.STARDUST_SPEEDWAY && zone != CdZone.METALLIC_MADNESS) return Write.KEEP;
-
+    public ChunkDesc readObjectProbeBlock(int x, int y, SpriteState sprite) {
         int column = collisionLayoutColumn(x);
-        if (column < 0) return Write.KEEP;
         int row = (y & collisionLayoutYMask()) >> 8;
-        if (row >= map.getHeight()) return Write.KEEP;
+        if (column < 0 || row >= map.getHeight()) return ChunkDesc.EMPTY;
+
         boolean background = (column & BACKGROUND_HALF) != 0;
         int mapX = column & ~BACKGROUND_HALF;
         int chunk = map.getValue(background ? 1 : 0, mapX, row) & MAX_CHUNK_ID;
         boolean loop = background ? row < bgLoopFlags.length && bgLoopFlags[row][mapX] : hasLoopFlag(mapX, row);
+        if (chunk == 0 && !loop) return ChunkDesc.EMPTY;
 
-        // GetLevelBlock (Level/Collision Floor.asm:481-493) writes before checking the block's solidity.
-        if (!loop) return chunk == 0 ? Write.KEEP : Write.LOW;
-        // GetBlockZone6AnimatedTiles (common/block_collide.asm:143-150) skips non-player objects.
-        if (zone == CdZone.METALLIC_MADNESS) return Write.KEEP;
-        // GetBlockZone5AnimatedTiles (common/block_collide.asm:107-117) and GetBlockZone5TileVariants
-        // (common/block_collide.asm:132-135) write on each lookup, including the second floor block.
-        return chunk == 4 || chunk == 6 || SszStageLayer.of(this).isSet() ? Write.LOW : Write.HIGH;
+        int resolved = resolveObjectProbeChunk(chunk, loop, sprite);
+        int cellX = (x >> 4) & 0xF;
+        int cellY = (y >> 4) & 0xF;
+        // FindLevelFloor/FindLevelFloor2 and FindLevelWall/FindLevelWall2 treat the base pointer as blank.
+        if (resolved == ALIASED_CHUNK && cellX == 0 && cellY == 0) return ChunkDesc.EMPTY;
+        Block block = resolved < blockCount ? blocks[resolved] : null;
+        return block == null ? ChunkDesc.EMPTY : block.getChunkDesc(cellX, cellY);
+    }
+
+    private int resolveObjectProbeChunk(int chunk, boolean loop, SpriteState sprite) {
+        CdZone zone = payload.stage().zone();
+        if (!loop) {
+            // GetLevelBlock (Level/Collision Floor.asm:481-498) writes before checking solidity.
+            switch (zone) {
+                case STARDUST_SPEEDWAY, METALLIC_MADNESS -> sprite.setTerrainProbePriority(false);
+                case WACKY_WORKBENCH -> sprite.setTerrainProbeLoopPath(false);
+                default -> { }
+            }
+            return chunk;
+        }
+        return switch (zone) {
+            case WACKY_WORKBENCH -> WwzPlayerProfile.resolveLoopChunk(chunk, sprite.terrainProbeLoopPath(), () -> {
+                sprite.setTerrainProbeLoopPath(true);
+                sprite.setTerrainProbePriority(false);
+            });
+            case STARDUST_SPEEDWAY -> {
+                // GetBlockZone5AnimatedTiles (common/block_collide.asm:107-127) and
+                // GetBlockZone5TileVariants (common/block_collide.asm:132-135).
+                boolean layer = SszStageLayer.of(this).isSet();
+                sprite.setTerrainProbePriority(chunk != 4 && chunk != 6 && !layer);
+                yield SszPlayerProfile.loopChunk(chunk, sprite.terrainProbeLoopPath(), layer);
+            }
+            // GetBlockZone6AnimatedTiles (common/block_collide.asm:143-150) skips non-player objects.
+            case METALLIC_MADNESS -> chunk;
+            default -> PlayerLoopChunkRule.STANDARD.chunk(chunk, sprite.terrainProbeLoopPath());
+        };
     }
 
     /**

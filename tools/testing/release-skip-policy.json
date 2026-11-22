@@ -2303,6 +2303,41 @@
       "note": "user's Sonic CD disc"
     },
     {
+      "match": "com.openggf.game.soniccd.TestCdObjectTerrainProbePriority#rightWallReadsPlainChunkOnTheSecondBlock",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdObjectTerrainProbePriority.java:35",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestCdObjectTerrainProbePriority#leftWallAppliesTheSszLayerPriorityRule",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdObjectTerrainProbePriority.java:45",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestCdObjectTerrainProbePriority#ceilingProbeClearsWwzTilePriority",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdObjectTerrainProbePriority.java:57",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestCdObjectTerrainProbePriority#floorProbeRetainsTheWwzPathThroughRewindUntilAPlainRead",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdObjectTerrainProbePriority.java:67",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestCdObjectTerrainProbePriority#semiBombClearsPriorityOnItsFirstTurn",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdObjectTerrainProbePriority.java:88",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
       "match": "com.openggf.game.soniccd.TestMmzObjects#fallingMonitorClearsTilePriorityWithoutChangingItsBucket",
       "category": "optional-fixture",
       "evidence": "src/test/java/com/openggf/game/soniccd/TestMmzObjects.java:361",
