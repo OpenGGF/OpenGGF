@@ -14,6 +14,9 @@ under the matching area heading; see the
   bits clear at the native callbacks, enemy art reloads on cleanup underflow,
   and spray advances the random stream only after a forward slot is available.
 
+- **Angel Island Act 2:** defeating the miniboss sends four flickering pieces
+  of wreckage falling from the ship, as on the cartridge.
+
 - **Placed rings in patched and hosted levels** use the underlying
   game's vertical placement and clipping rules. In Knuckles in Sonic 2, rings
   disappear as their centres cross the top of the screen, as on the cartridge.
@@ -24,6 +27,9 @@ under the matching area heading; see the
 - **The Doomsday Zone:** the second boss phase preserves the ship's fractional
   vertical position, Hyper Sonic's after-image uses the original history slots,
   and his palette keeps cycling through the white exit fade.
+
+- **Hydrocity Zone Act 2:** the boss turbine starts the rising water platform
+  on the correct frame, so rolling Tails lands at the original height.
 
 - **Frame interpolation background continuity:** vertical camera movement no longer
   mistakes parallax band crossings for horizontal teleports. The previous frozen

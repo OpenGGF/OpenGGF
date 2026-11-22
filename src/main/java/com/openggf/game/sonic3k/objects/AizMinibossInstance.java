@@ -560,11 +560,8 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
     private void startDefeatHandoff() {
         if (defeatRenderComplete) return;
         defeatRenderComplete = true;
-        // Wait_FadeToLevelMusic allocates its independent music owner, then
-        // tail-calls loc_68C02. That callback installs Obj_EndSignControl in
-        // the SAME physical SST (044fa46:179742-179759,137455-137458).
-        // Wait_FadeToLevelMusic uses global AllocateObject (sonic3k.asm:179754),
-        // so a lower free SST first dispatches on the following Process_Sprites pass.
+        // Wait_FadeToLevelMusic (sonic3k.asm:179747-179762) allocates the
+        // music owner globally. A lower slot first dispatches on the next pass.
         spawnDynamicObjectLowestFreeSlot(SongFadeTransitionInstance.toLevelMusic(Sonic3kMusic.AIZ1.id));
         var retainedHeader = S3kChildDrawParentHeader.fromBoss(this);
         int slot = ObjectLifetimeOps.detachSlotForTransfer(this);
@@ -578,6 +575,14 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
         // auxiliary flow's displaced-entry/13-entry delays have no ROM owner.
         flow.retainChildDrawHeader(retainedHeader);
         flow.beginNativeReplacement(slot);
+        // AIZMiniboss_SpawnEndSign (sonic3k.asm:137460-137463) installs control first.
+        // CreateChild1_Normal then scans after that same physical slot, stopping on exhaustion.
+        for (int index = 0; index < AizMinibossDefeatDebrisChild.COUNT; index++) {
+            int fragment = index;
+            var child = flow.spawnHandoffChild(
+                    () -> new AizMinibossDefeatDebrisChild(state.x, state.y, fragment));
+            if (child.isDestroyed()) break;
+        }
     }
 
     private void setWait(int frames, WaitCallback callback) {
