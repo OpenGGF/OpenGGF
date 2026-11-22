@@ -51,8 +51,10 @@ under the matching area heading; see the
   Present, Past, Good Future and Bad Future; act 3 in both futures. Each zone
   has its own presentation, objects and boss. Quartz Quadrant's booth sound
   fades after the booth gives out. Death restarts release held FM effects, as
-  do pause restarts in Tidal Tempest and Quartz Quadrant. Palmtree Panic's solid boulders
-  use the current section's graphics, replacing the title-card tiles after loading.
+  do pause restarts in Tidal Tempest and Quartz Quadrant. Ring sounds alternate
+  speakers and resume on the right after the FM stop command. Palmtree Panic's
+  solid boulders use the current section's graphics, replacing the title-card
+  tiles after loading.
   The vertical tunnel doors in acts 1 and 2 now open from the left and block
   Sonic from the right while closed.
   Flowers finish growing, diagonal springs and monitor rewards use their proper

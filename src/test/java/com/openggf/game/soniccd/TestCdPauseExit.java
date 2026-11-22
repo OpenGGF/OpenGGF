@@ -10,6 +10,7 @@ import com.openggf.debug.playback.RecordedInputSnapshots;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameServices;
 import com.openggf.game.NativeGameStateOps;
+import com.openggf.game.soniccd.audio.CdFmSoundRequestService;
 import com.openggf.game.soniccd.backupram.CdBackupRamHost;
 import com.openggf.game.soniccd.level.CdLevel;
 import com.openggf.game.soniccd.objects.common.CdTitleCard;
@@ -201,6 +202,28 @@ class TestCdPauseExit {
                     () -> assertEquals(0, state.getLives(), "last life spent"),
                     () -> assertFalse(loop.isUserPaused(), "game over releases host pause"),
                     () -> assertNull(scenes.flow().route(), "game over returns to IPX"));
+        });
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "R41A, CAMPAIGN, true",
+            "R51A, CAMPAIGN, true",
+            "R11A, CAMPAIGN, false",
+            "R51A, TIME_ATTACK, false"
+    })
+    void pauseRestartReleasesHeldFmEffectsOnlyOnSupportedRoutes(
+            CdStagePayload payload, Route route, boolean releasesEffects) throws Exception {
+        runStageOnBothInputs(route, payload, (loop, scenes) -> {
+            var fm = (CdFmSoundRequestService) GameServices.module().getAudioProfile().createAudioRequestService();
+            step(loop, 0, true);
+            assertFalse(fm.snapshot().jumpCondition(), "pause alone leaves held FM effects playing");
+
+            step(loop, ACTION_A, false);
+            assertFalse(loop.isUserPaused(), "pause action exits host pause");
+            assertFalse(GameServices.gameState().isGamePaused(), "pause action exits ROM pause");
+            assertEquals(releasesEffects, fm.snapshot().jumpCondition(),
+                    payload + " " + route + " held FM effect release");
         });
     }
 

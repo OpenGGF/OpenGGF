@@ -199,6 +199,18 @@ class TestCdAudioLivePath {
         assertTrue(louder(left, 0, 1), "the second ring is panned left");
     }
 
+    @Test
+    void firstRingAfterStopSoundPansRight() {
+        audio.playSfx(com.openggf.audio.GameSound.RING);
+        assertTrue(louder(present(20), 1, 0), "the first ring is panned right");
+
+        // FMC_STOP (FM/_Sound IDs.inc:93-94) reaches StopSound through the driver queue.
+        assertTrue(audio.playSfx(0xE0));
+        present(1);
+        audio.playSfx(com.openggf.audio.GameSound.RING);
+        assertTrue(louder(present(20), 1, 0), "the first ring after StopSound is panned right");
+    }
+
     private static boolean louder(short[] pcm, int channel, int other) {
         long a = 0, b = 0;
         for (int i = 0; i + 1 < pcm.length; i += 2) {
