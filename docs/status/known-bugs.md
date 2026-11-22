@@ -27,7 +27,7 @@ Entries should include:
 The stage-load manifest uses the 45 serviced V-INTs measured when entering
 R12A through stage select. Native entries after act clear or a special stage
 service 46 during the load. The cause of the extra interrupt is open.
-`LevelStart` (Level/Main.asm:90-104) branches on `levelRestart` and changes
+`LevelStart .SkipFade2` (Level/Main.asm:90-104) branches on `levelRestart` and changes
 `palFadeFlags`, so the entry path could determine the count. Establish the
 cause before changing how the engine selects the load count.
 

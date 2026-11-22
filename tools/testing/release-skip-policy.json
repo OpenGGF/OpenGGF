@@ -2331,6 +2331,20 @@
       "note": "user's Sonic CD disc"
     },
     {
+      "match": "com.openggf.game.soniccd.TestCdObjectTerrainProbePriority#releasedAnimalClearsPriorityOnPlainMmzChunk",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdObjectTerrainProbePriority.java:107",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestCdObjectTerrainProbePriority#releasedAnimalEntersWwzLoopPathThroughItsFloorProbe",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdObjectTerrainProbePriority.java:119",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "user's Sonic CD disc"
+    },
+    {
       "match": "com.openggf.game.soniccd.TestCdObjectTerrainProbePriority#semiBombClearsPriorityOnItsFirstTurn",
       "category": "optional-fixture",
       "evidence": "src/test/java/com/openggf/game/soniccd/TestCdObjectTerrainProbePriority.java:88",
