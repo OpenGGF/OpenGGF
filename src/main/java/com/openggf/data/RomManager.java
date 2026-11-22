@@ -94,6 +94,11 @@ public class RomManager implements AutoCloseable {
         return initialized && rom != null && rom.isOpen();
     }
 
+    /** Returns the already-open primary ROM without opening or changing the selection. */
+    public synchronized Rom loadedRom() {
+        return isRomAvailable() ? rom : null;
+    }
+
     /**
      * Opens a secondary ROM by game ID without changing the active game module.
      * Used for cross-game feature donation (e.g., loading S2 sprites while playing S1).

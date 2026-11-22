@@ -1,6 +1,7 @@
 package com.openggf;
 
 import com.openggf.audio.StreamedMusicPort;
+import com.openggf.audio.NativeMusicOverridePort;
 import com.openggf.mods.ModMusicResolver;
 import com.openggf.mods.PreparedModMusic;
 import com.openggf.mods.StreamedMusicPlayer;
@@ -86,10 +87,11 @@ public final class SessionExternalContentView implements AutoCloseable {
     }
 
     /** Makes ambiguous install-failure ownership safe at the underlying PCM lease. */
-    private static final class CloseOncePort implements StreamedMusicPort {
+    private static final class CloseOncePort implements NativeMusicOverridePort {
         private final StreamedMusicPort delegate;
         private final AtomicBoolean closed = new AtomicBoolean();
         private CloseOncePort(StreamedMusicPort delegate) { this.delegate = delegate; }
+        @Override public Song nativeMusicOverride(int id) { return NativeMusicOverridePort.find(delegate, id); }
         @Override public int outputRate() { return delegate.outputRate(); }
         @Override public boolean hasStockOverride(int id) { return delegate.hasStockOverride(id); }
         @Override public boolean isCurrentStockOverride(int id) { return delegate.isCurrentStockOverride(id); }

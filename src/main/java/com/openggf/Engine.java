@@ -2255,7 +2255,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 				() -> Path.of("mods").toAbsolutePath().normalize(),
 				ModInputLimits.production(), StockMusicDomains::containsSupported,
 				ModSubsystem.SessionAudioBoundary.audioManager(audioManager),
-				com.openggf.mods.BundledModSource.Locator.production()));
+				com.openggf.mods.BundledModSource.Locator.production(), romManager::loadedRom));
 		try {
 			var effectiveMods = ModSubsystem.current().processCatalog().effective();
 			ModSubsystem.current().transferDevelopmentSourceOwnership();
@@ -2272,7 +2272,8 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		ModSubsystem candidate = ModSubsystem.normalBootLoader(
 				() -> Path.of("mods").toAbsolutePath().normalize(),
 				ModInputLimits.production(), StockMusicDomains::containsSupported,
-				ModSubsystem.SessionAudioBoundary.audioManager(audioManager)).get();
+				ModSubsystem.SessionAudioBoundary.audioManager(audioManager),
+				com.openggf.mods.BundledModSource.Locator.NONE, romManager::loadedRom).get();
 		ModRuntime replacement;
 		try {
 			replacement = new ModClassLoaderFactory(Engine.class.getClassLoader())

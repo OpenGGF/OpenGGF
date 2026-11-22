@@ -9,6 +9,7 @@ import com.openggf.mods.ModFindingSeverity;
 import com.openggf.mods.ModRuntimeFindingStore;
 import com.openggf.mods.ModCompatibilityReporter;
 import com.openggf.mods.ModAudioPreparer;
+import com.openggf.mods.ModSfxRegistry;
 import com.openggf.mods.ModTrackRegistry;
 import com.openggf.mods.PendingModStateEditor;
 import com.openggf.mods.PreparedAudioSession;
@@ -26,6 +27,7 @@ import com.openggf.graphics.PixelFont;
 import com.openggf.mods.ui.ModManagerScreen;
 import com.openggf.audio.AudioManager;
 import com.openggf.audio.StreamedMusicPort;
+import com.openggf.data.Rom;
 import com.openggf.io.ModInputLimits;
 
 import java.nio.file.Path;
@@ -448,25 +450,35 @@ public final class ModSubsystem implements AutoCloseable {
     public static SessionViewFactory preparedAudioFactory(ModAudioPreparer preparer,
                                                           EffectiveModCatalog effective,
                                                           ModTrackRegistry registry) {
-        return preparedAudioFactory(preparer, effective, registry, com.openggf.mods.ModSfxRegistry.EMPTY);
+        return preparedAudioFactory(preparer, effective, registry, ModSfxRegistry.EMPTY);
     }
 
     public static SessionViewFactory preparedAudioFactory(ModAudioPreparer preparer,
                                                           EffectiveModCatalog effective,
                                                           ModTrackRegistry registry,
-                                                          com.openggf.mods.ModSfxRegistry sfxRegistry) {
+                                                          ModSfxRegistry sfxRegistry) {
+        return preparedAudioFactory(preparer, effective, registry, sfxRegistry, () -> null);
+    }
+
+    private static SessionViewFactory preparedAudioFactory(ModAudioPreparer preparer,
+                                                            EffectiveModCatalog effective,
+                                                            ModTrackRegistry registry,
+                                                            ModSfxRegistry sfxRegistry,
+                                                            Supplier<Rom> loadedRom) {
         Objects.requireNonNull(preparer, "preparer");
         Objects.requireNonNull(effective, "effective");
         Objects.requireNonNull(registry, "registry");
         Objects.requireNonNull(sfxRegistry, "sfxRegistry");
         return (outputRate, gameCode) -> {
+            boolean cartridge = StockGameCatalog.isCartridgeCode(gameCode);
             boolean stock = StockGameCatalog.isStockCode(gameCode);
             boolean selectedTrack = stock ? !registry.tracks().isEmpty() : registry.tracks().stream()
                     .anyMatch(track -> track.key().modId().equals(gameCode));
             boolean selectedSfx = stock ? !sfxRegistry.sfx().isEmpty() : sfxRegistry.sfx().stream()
                     .anyMatch(sfx -> sfx.key().modId().equals(gameCode));
             if (!selectedTrack && !selectedSfx) return SessionExternalContentView.EMPTY;
-            PreparedAudioSession audio = preparer.prepare(effective, registry, sfxRegistry, outputRate);
+            PreparedAudioSession audio = preparer.prepare(effective, registry, sfxRegistry, outputRate,
+                    gameCode, cartridge ? loadedRom.get() : null);
             PreparedModMusic music;
             try {
                 music = PreparedModMusic.build(effective, registry, sfxRegistry, audio, outputRate,
@@ -500,11 +512,20 @@ public final class ModSubsystem implements AutoCloseable {
             Supplier<Path> rootSupplier, ModInputLimits limits,
             ModCatalogValidator.StockMusicDomain stockMusicDomain,
             SessionAudioBoundary audioBoundary, BundledModSource.Locator bundledLocator) {
+        return normalBootLoader(rootSupplier, limits, stockMusicDomain, audioBoundary, bundledLocator, () -> null);
+    }
+
+    static Supplier<ModSubsystem> normalBootLoader(
+            Supplier<Path> rootSupplier, ModInputLimits limits,
+            ModCatalogValidator.StockMusicDomain stockMusicDomain,
+            SessionAudioBoundary audioBoundary, BundledModSource.Locator bundledLocator,
+            Supplier<Rom> loadedRom) {
         Objects.requireNonNull(rootSupplier, "rootSupplier");
         Objects.requireNonNull(limits, "limits");
         Objects.requireNonNull(stockMusicDomain, "stockMusicDomain");
         Objects.requireNonNull(audioBoundary, "audioBoundary");
         Objects.requireNonNull(bundledLocator, "bundledLocator");
+        Objects.requireNonNull(loadedRom, "loadedRom");
         return () -> {
             Path declared = Objects.requireNonNull(rootSupplier.get(), "mod root");
             Path root = declared.toAbsolutePath().normalize();
@@ -564,7 +585,8 @@ public final class ModSubsystem implements AutoCloseable {
                     .map(entry -> ((com.openggf.mods.ModDescriptor) entry).manifest().id())
                     .collect(java.util.stream.Collectors.toUnmodifiableSet());
             ModSubsystem subsystem = new ModSubsystem(catalog, editor, findings,
-                    preparedAudioFactory(preparer, catalog.effective(), validated.registry(), validated.sfxRegistry()),
+                    preparedAudioFactory(preparer, catalog.effective(), validated.registry(),
+                            validated.sfxRegistry(), loadedRom),
                     audioBoundary, new ExternalContentPolicy(ExternalContentMode.NORMAL),
                     trustedOwners, startup);
             if (development != null) subsystem.bootResource = development;

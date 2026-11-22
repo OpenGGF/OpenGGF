@@ -9,6 +9,8 @@ import com.openggf.audio.rewind.SmpsDriverSnapshot;
 import com.openggf.audio.rewind.SmpsSourceDescriptor;
 import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsSequencer;
+import com.openggf.audio.smps.SmpsMusicParameters;
+import com.openggf.audio.synth.FmChip;
 import com.openggf.audio.smps.SmpsLoadReadiness;
 import com.openggf.audio.synth.ChipWriteObserver;
 import com.openggf.audio.synth.VirtualSynthesizer;
@@ -551,6 +553,11 @@ public final class SmpsDriverSession implements AutoCloseable {
     private PendingService pendingService;
     private int overrideCount;
     private boolean speedShoesEnabled;
+    private int musicMixGain = FmChip.UNITY_GAIN;
+    private int sfxMixGain = FmChip.UNITY_GAIN;
+    private int appliedMusicGain = musicMixGain;
+    private int appliedSfxGain = sfxMixGain;
+
     private int speedMultiplier = 1;
     private int musicTempoPercent = 100;
     private boolean ringLeft = true;
@@ -685,6 +692,7 @@ public final class SmpsDriverSession implements AutoCloseable {
                     }
                 });
         directRenderer = (buffer, frameOffset, frames) -> {
+            applyMusicGain();
             device.renderFrames(buffer, frameOffset * 2, frames);
             emitPendingDacSampleEnds();
         };
@@ -944,12 +952,26 @@ public final class SmpsDriverSession implements AutoCloseable {
      */
     public void setMixGains(int musicGain, int sfxGain) {
         requireInstalled();
-        device.setMixGains(musicGain, sfxGain);
+        musicMixGain = musicGain;
+        sfxMixGain = sfxGain;
+        applyMusicGain();
+    }
+
+    private void applyMusicGain() {
+        SmpsSequencer music = driver.firstMusicSequencer();
+        int gain = music == null ? musicMixGain : Math.round(musicMixGain
+                * SmpsMusicParameters.of(music.getSmpsData()).gain());
+        if (gain != appliedMusicGain || sfxMixGain != appliedSfxGain) {
+            device.setMixGains(gain, sfxMixGain);
+            appliedMusicGain = gain;
+            appliedSfxGain = sfxMixGain;
+        }
     }
 
     public int renderFrames(
             short[] target, int offsetSamples, int stereoFrames) {
         requireInstalled();
+        applyMusicGain();
         if (segaPcmTransport == null) {
             return device.renderFrames(target, offsetSamples, stereoFrames);
         }
@@ -1146,6 +1168,7 @@ public final class SmpsDriverSession implements AutoCloseable {
         if (resolved.readiness().immediate()) {
             restoreLogicalWithoutWrites(transition.logical());
             applyCurrentLogicalControls();
+            driver.firstMusicSequencer().seedPackageTempoOnActivation();
         } else {
             withPort(driverIdentity, port -> {
                 applyProgram(port, policy.beginMusicLoad());
