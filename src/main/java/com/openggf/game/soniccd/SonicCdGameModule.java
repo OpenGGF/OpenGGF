@@ -11,6 +11,7 @@ import com.openggf.game.GameDataSource;
 import com.openggf.game.GameId;
 import com.openggf.game.GameServices;
 import com.openggf.game.GameModule;
+import com.openggf.game.internal.SpriteTableBuildProfile;
 import com.openggf.game.LevelEventProvider;
 import com.openggf.game.LevelInitProfile;
 import com.openggf.game.LevelState;
@@ -44,7 +45,15 @@ import java.util.List;
  * differences in {@link com.openggf.game.soniccd.player.SonicCdRules}.
  * Stages come from the user's disc through {@link CdDiscDataSource}.
  */
-public final class SonicCdGameModule implements GameModule {
+public final class SonicCdGameModule implements GameModule, SpriteTableBuildProfile {
+    @Override
+    public PlacedRings placedRingEmission() {
+        // ObjRing_Main (Level/_Objects/Ring/Main.asm:214-232) and
+        // ObjRing_Sparkle (Level/_Objects/Ring/Main.asm:276-279) each call DrawObject.
+        // DrawObject (Level/Object Functions.asm:137-193) culls before queuing by priority.
+        return PlacedRings.OBJECT_SLOTS_WITH_LAYOUT_MARGINS;
+    }
+
     // Donated sheets and scripts are loaded from the donor cartridge, independently of the disc.
     @Override public boolean supportsCrossGameHost() { return true; }
     @Override public java.util.List<String> getStockRunCharacters() { return java.util.List.of("sonic"); }
@@ -288,6 +297,7 @@ public final class SonicCdGameModule implements GameModule {
 
     @Override
     public <T> T getGameService(Class<T> type) {
+        if (type == SpriteTableBuildProfile.class) return type.cast(this);
         if (type == StagePaletteWait.Source.class) return type.cast(stagePaletteWait);
         if (type == com.openggf.game.internal.LevelDemoPlayback.class) {
             var level = GameServices.levelOrNull();

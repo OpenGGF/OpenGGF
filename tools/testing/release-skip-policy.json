@@ -1407,6 +1407,20 @@
       "note": "Sonic CD disc and native captures"
     },
     {
+      "match": "com.openggf.game.soniccd.TestCdStageRingSubmissions#eachVisibleRingObjectSubmitsOneSpriteUnderNativeLimits",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdStageRingSubmissions.java:41",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
+      "match": "com.openggf.game.soniccd.TestCdStageRingSubmissions#nativeWidescreenDrawsDormantLayoutRingsFrozen",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/soniccd/TestCdStageRingSubmissions.java:67",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Loads the user-supplied USA disc through CdTestMedia.usaCue; required when supplied."
+    },
+    {
       "match": "com.openggf.game.soniccd.TestCdRingRewind#ringGroupsRestoreInTheirSlotsAndReplayForward",
       "category": "optional-fixture",
       "evidence": "src/test/java/com/openggf/game/soniccd/TestCdRingRewind.java:38",
