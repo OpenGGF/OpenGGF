@@ -206,7 +206,11 @@ under the matching area heading; see the
   Quadrant, Noro Noro frees its spike slot when Sonic leaves range, preserving
   the disc's object allocation order. Metallic Madness uses the collision type
   to decide which objects Sonic can touch across layers. Sonic can recover
-  dropped rings on the layer where he was hurt. Stage loads clear the state native
+  dropped rings on the layer where he was hurt. That layer also sets the spill's
+  initial sprite layer and tile priority. The disc can later clear high tile
+  priority when a dropped ring probes the floor in an ordinary chunk. The engine
+  keeps the initial priority through those probes. The Past robot generator reacts to
+  rolling contact over the disc's wider touch box. Stage loads clear the state native
   clears, so playing stages in any order matches playing each alone. In normal
   play the object clock a stage starts from and the video player's disc wait
   follow measured emulator timings under `gameplay.loadTimeSimulation`
