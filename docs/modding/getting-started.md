@@ -131,9 +131,9 @@ workflows still use Maven. Test/run are opt-in; build needs neither ROMs nor tes
 
 ### Optional local paths
 
-To avoid repeating artifact and ROM flags, create `ggfmod.local.json` at the
+To avoid repeating artifact and game media flags, create `ggfmod.local.json` at the
 project root yourself. The launcher never creates or overwrites it. This strict
-schema accepts only `schemaVersion`, `engine`, `sdk`, `testkit`, `s1`, `s2`, `s3k`;
+schema accepts `schemaVersion`, `engine`, `sdk`, `testkit`, `s1`, `s2`, `s3k` and `scd`;
 path fields are optional nonempty strings, and duplicate/unknown keys fail:
 
 ```json
@@ -145,6 +145,8 @@ path fields are optional nonempty strings, and duplicate/unknown keys fail:
   "s2": "/absolute/path/own-sonic2.gen"
 }
 ```
+
+For Sonic CD (USA), pass `--scd` with the path to your .cue or .chd, or set `scd` in this file.
 
 Every relative path in this file resolves against the **config file's directory**.
 Explicit CLI paths override config and resolve against the current working
