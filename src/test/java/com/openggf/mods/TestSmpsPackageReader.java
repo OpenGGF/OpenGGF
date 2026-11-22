@@ -177,8 +177,33 @@ class TestSmpsPackageReader {
         }
     }
 
+    @Test
+    void unavailableRetailBaseDisablesOnlyTheTrackAndLeavesTheStockSlotUnclaimed() throws Exception {
+        byte[] base = Arrays.copyOf(songBank(), SmpsPackageReader.BANK_LIMIT);
+        byte[] delta = {0, 21};
+        var doc = TestSmpsPackagePatchReader.patchManifest(delta, base, songBank());
+        Path jar = writePackage(temp, doc.toString(), null, Map.of("track.delta", delta));
+        var descriptor = descriptor("patch", jar);
+        var registry = new ModTrackRegistry(List.of(declaration("patch")));
+        var effective = new EffectiveModCatalog(List.of(descriptor));
+        var findings = new ModRuntimeFindingStore();
+        var preparer = new ModAudioPreparer(temp, ModInputLimits.production(), findings,
+                owners -> fail("A missing ROM must not disable the mod"));
+        try (var session = preparer.prepare(effective, registry, ModSfxRegistry.EMPTY, 48_000, "s3k", null);
+             var music = PreparedModMusic.build(effective, registry, session, 48_000)) {
+            assertTrue(session.failedOwners().isEmpty());
+            assertNull(music.resolveSmpsOverride("s3k", 1));
+            var finding = findings.findingsFor("patch").getFirst();
+            assertEquals("SMPS_PACKAGE_DISABLED", finding.code());
+            assertTrue(finding.message().contains("s3k song 42"), finding::message);
+        }
+    }
+
     private ModDescriptor descriptor(String owner, ObjectNode doc, byte[] bank) throws IOException {
-        Path file = writePackage(temp, doc.toString(), bank, Map.of());
+        return descriptor(owner, writePackage(temp, doc.toString(), bank, Map.of()));
+    }
+
+    private ModDescriptor descriptor(String owner, Path file) throws IOException {
         try (var root = ModAssetRoot.jar(temp, file)) {
             var manifest = new ModManifest(1, owner, owner, SemanticVersion.parse("1.0.0"), List.of("Author"),
                     "Synthetic fixture", VersionRange.parse("*"), ModType.PATCH, "s3k", null,
@@ -326,7 +351,7 @@ class TestSmpsPackageReader {
         Path file = Files.createTempFile(temp, "package-", ".jar");
         try (var zip = new ZipOutputStream(Files.newOutputStream(file))) {
             write(zip, "manifest.json", utf8(document));
-            write(zip, "track.bin", bank);
+            if (bank != null) write(zip, "track.bin", bank);
             for (var entry : entries.entrySet()) write(zip, entry.getKey(), entry.getValue());
         }
         return file;

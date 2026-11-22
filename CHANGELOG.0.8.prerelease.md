@@ -645,6 +645,8 @@ under the matching area heading; see the
   with native SMPS packages exported by external authoring tools. Package tracks keep native
   sequencing, jingle restoration and rewind. Failed package tracks fall back
   through the normal override order and show a reason in the Mod Manager.
+  S3K retail patch packages rebuild the song bank from the active cartridge
+  and display a retail-derivation warning in the Mod Manager and log.
 
 - **Sonic CD menu media:** show the native disc title on its master-title card
   and play its title theme in an isolated optional hub audio session. The preview
