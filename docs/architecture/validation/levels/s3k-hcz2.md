@@ -1331,6 +1331,6 @@ On the original continuous Sonic+Tails segment 15, native P2 enters the solid
 check at `$07BB.EC00` with radius 14. The native column sees `$07D6` after
 `HCZEndBossPlatform_Rise` (sonic3k.asm:141199-141211). The engine previously
 saw `$07D7`. `loc_1E45A` (sonic3k.asm:42038-42063) applies the incoming-radius
-snap, and `Tails_TouchFloor` (sonic3k.asm:29173-29203) adds the radius delta of
+snap, and `Tails_TouchFloor` (sonic3k.asm:29173-29210) adds the radius delta of
 `-1` while retaining `$EC00`. The corrected final Y is `$07BA`. The independent
 HCZ slice keeps its strict result. [Replay commands and residuals](../../../status/trace-frontier-log.md#2026-11-22--hcz-end-boss-platform-landing).
