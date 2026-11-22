@@ -1620,20 +1620,21 @@ The separate AIZ alternate replay's ring-count difference was fixed by
 
 **Kind:** Other
 
-In the Sonic+Tails complete-emerald chain on develop `2a23b59c5b`, the
-first non-camera physics difference across the three HCZ windows occurs
-in the outgoing segment (15, row 1941).
-Native Tails lands on the rising end-boss platform at centre Y `$07BA`.
-The engine records `$07BB`. Native SST 16 moves from `$07D7` to `$07D6` on the
-landing pass under `HCZEndBossPlatform_Rise`. This is a candidate gameplay
-bug. The first differing engine write in platform motion, top-only contact
-or Tails's roll-to-standing adjustment remains unidentified.
+**Resolved platform landing.** PR #469 makes the HCZ end-boss turbine allocate
+the rising platform after the turbine's own slot, so the platform initializes
+on its birth pass. In the Sonic+Tails complete-emerald chain, Tails now lands
+at the native centre Y `$07BA.EC00` on segment 15, row 1941. The first
+non-camera physics mismatch across the three HCZ windows is now Sonic's Y on
+segment 15, row 2008 (ROM `$07CE`, engine `$07D0`). The verifier confirmed
+that the row 2008 divergence was already present on develop.
+[HCZ2 landing verification](architecture/validation/levels/s3k-hcz2.md#end-boss-platform-allocation-and-rolling-tails-landing).
 
 Segment 11 retains 11 camera and 51 animation differences. Segment 13
 retains 182 animation differences.
 
-The same maintained `TestS3kSonicTailsCompleteEmeraldRunChain` run stops at
-MGZ admission (movie cursor 100896). The first unmatched work is a direct
+On develop `2a23b59c5b`, the maintained
+`TestS3kSonicTailsCompleteEmeraldRunChain` run stops at MGZ admission
+(movie cursor 100896). The first unmatched work is a direct
 completion at segment 15 raw row 2680 and a module completion at row 2681,
 both without a pending engine counterpart. Attribution needs a new
 maintained native reference that identifies the queue-submission callers
