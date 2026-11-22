@@ -7,6 +7,9 @@ under the matching area heading; see the
 
 ## Gameplay and presentation
 
+- **Sonic 2 Chemical Plant Act 2:** the visible water surface and underwater
+  palette split now bob at the same height where Sonic enters the water.
+
 - **The Doomsday Zone:** the second boss phase preserves the ship's fractional
   vertical position, Hyper Sonic's after-image uses the original history slots,
   and his palette keeps cycling through the white exit fade.
