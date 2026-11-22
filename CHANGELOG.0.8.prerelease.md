@@ -15,6 +15,9 @@ under the matching area heading; see the
   game's vertical placement and clipping rules. In Knuckles in Sonic 2, rings
   disappear as their centres cross the top of the screen, as on the cartridge.
 
+- **Sonic 2 Chemical Plant Act 2:** the visible water surface and underwater
+  palette split now bob at the same height where Sonic enters the water.
+
 - **The Doomsday Zone:** the second boss phase preserves the ship's fractional
   vertical position, Hyper Sonic's after-image uses the original history slots,
   and his palette keeps cycling through the white exit fade.

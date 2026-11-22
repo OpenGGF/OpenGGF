@@ -106,7 +106,7 @@ sampled cuts remain open. Participants are fixed by the ROM; viewport width is
 unassessed and held rewind is off by decision. No act is certified. ROM-backed Competition HUD tests cover signpost pole/face
 uploads and rewind, digit-five SAT mapping selection, and the interrupt-before-goal
 timer boundary. Scattered-ring recollection remains V-int-origin dependent under
-[S2 Whole-Run V-int Clock Cannot Be Made Exact](known-discrepancies.md#s2-whole-run-v-int-clock-cannot-be-made-exact);
+[S2 replay limits at sub-frame load boundaries](known-discrepancies.md#s2-replay-limits-at-sub-frame-load-boundaries);
 progressive HUD pixels and integrated recollection remain lead qualification work.
 
 LRZ title-owned enemy art (2026-11-07): the [submission audit](../architecture/audits/2026-11-07-lrz-enemy-art-submission.md)
