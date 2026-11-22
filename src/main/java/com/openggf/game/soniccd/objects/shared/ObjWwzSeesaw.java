@@ -127,8 +127,10 @@ public final class ObjWwzSeesaw extends CdObject implements ReevaluatingSolidObj
         padA.addY(step);
         padB.addY(step);
         int d3 = (short) padB.posX();
-        d3 += (d3 >= (short) x) ? padB.halfWidth() : -padB.halfWidth();   // move.b obj.width_2(a2),d0; cmp.w obj.x(a0),d3; blt.s; neg.w
-        int d1 = ObjectTerrainUtils.checkFloorDist(d3, padB.posY(), padB.radiusY()).distance();   // CheckBlockDown2 with a0 = the pad
+        // SeesawSelectChildWidthSign (objects/r6/seesaw.asm:138-148) probes the pad's inward edge.
+        d3 += d3 < (short) x ? padB.halfWidth() : -padB.halfWidth();
+        int d1 = ObjectTerrainUtils.checkObjectFloor(
+                services().levelManager(), d3, padB.posY() + padB.radiusY(), padB).distance();
         if (d1 < 0) {
             y = (y + d1) & 0xFFFF;
             padA.addY(d1);

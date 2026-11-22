@@ -5,7 +5,6 @@ import com.openggf.game.soniccd.objects.art.CdObjectArtProvider;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectVisualFacing;
-import com.openggf.physics.ObjectTerrainUtils;
 
 import java.util.List;
 
@@ -88,7 +87,7 @@ public final class CdFlower extends CdObject implements ObjectVisualFacing.NonDi
 
     /** ObjFlower_Seed (Flower/Main.asm:63-89). */
     private void seed() {
-        var floor = ObjectTerrainUtils.checkFloorDist(x, y, yRadius);
+        var floor = checkFloor(x, y, yRadius);
         if (floor.hasCollision() && floor.distance() < 0) {
             y += floor.distance();
             routine = Routine.ANIMATE;                      // .TouchDown

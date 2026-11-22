@@ -2,16 +2,12 @@ package com.openggf.game.soniccd.objects.shared;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.soniccd.objects.common.CdAnimator;
-import com.openggf.game.soniccd.player.CdSonicAnimation;
-import com.openggf.game.soniccd.timetravel.CdTimeTravel;
 import com.openggf.level.objects.CameraRelativeDraw;
-import com.openggf.level.objects.EnemyDefeatBounce;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TouchCategory;
 import com.openggf.level.objects.TouchResponseListener;
 import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseResult;
-import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -112,7 +108,7 @@ public final class ObjDango extends SharedBadnik implements TouchResponseListene
     /** DangoObject_0_Routine2 (:62-73): fall one pixel a frame until the floor is under it. */
     private void fall() {
         addToY(0x10000);
-        int d1 = ObjectTerrainUtils.checkFloorDist(x, y, height).distance();   // CheckBlockDown
+        int d1 = checkFloor(x, y, height).distance();   // CheckBlockDown
         if (d1 >= 0) return;
         y = (y + d1) & 0xFFFF;
         routine += 2;
@@ -182,11 +178,9 @@ public final class ObjDango extends SharedBadnik implements TouchResponseListene
     private boolean step() {
         addToX(speed);
         int probe = (x + ((speed >> 16) < 0 ? -width : width)) & 0xFFFF;
-        int wall = (speed >> 16) < 0
-                ? ObjectTerrainUtils.checkLeftWallDist(probe, y).distance()         // CheckBlockLeft (no eori.w #$F)
-                : ObjectTerrainUtils.checkRightWallDist(probe, y).distance();
+        int wall = checkWall(probe, y, speed < 0).distance();
         if (wall >= 0) {
-            int floor = ObjectTerrainUtils.checkFloorDist(x, y, height).distance();
+            int floor = checkFloor(x, y, height).distance();
             if (((floor + 7) & 0xFFFF) < 0xE) {                                    // addq.w #7,d0; subi.w #$E,d0; bcc
                 y = (y + floor) & 0xFFFF;
                 return true;
@@ -199,39 +193,23 @@ public final class ObjDango extends SharedBadnik implements TouchResponseListene
     /** loc_20703E (r7/player_object_collide.asm:398-401) and loc_206CCC (r8/player_object_collide.asm:449-452). */
     @Override
     public void onTouchResponse(PlayableEntity player, TouchResponseResult result, int frameCounter) {
-        if (result.category() != TouchCategory.SPECIAL || !(player instanceof AbstractPlayableSprite sprite)) {
+        if (result.category() != TouchCategory.SPECIAL || !(player instanceof AbstractPlayableSprite sprite)
+                || isDestroyed()) {
             return;
         }
         if (sprite.getRolling()) {
             hitCount = (hitCount + 1) & 0xFF;
             return;
         }
-        touchAsEnemy(sprite, result, frameCounter);
-    }
-
-    /** sub_206D70 (r7/player_object_collide.asm:125-131) and sub_2069E8 (r8/player_object_collide.asm:161-167). */
-    private void touchAsEnemy(AbstractPlayableSprite player, TouchResponseResult result, int frameCounter) {
-        CdTimeTravel timeTravel = CdTimeTravel.of(services().gameModule());
-        if ((timeTravel != null && timeTravel.starsActive()) || player.getInvincibleFrames() > 0
-                || player.getAnimationId() == CdSonicAnimation.ROLL.id()) {
-            boolean hadHits = hitCount != 0;
-            onPlayerAttack(player, result);
-            if (hadHits) {
-                player.setXSpeed((short) ((short) -player.getXSpeed() >> 1));
-                player.setYSpeed((short) ((short) -player.getYSpeed() >> 1));
-            } else {
-                EnemyDefeatBounce.apply(player, y, services().worldSession());
-            }
-            return;
+        if (!attacksOnEnemyTouch(sprite)) {
+            hurtFromSpecialEnemyTouch(sprite, frameCounter);
+        } else if (hitCount != 0) {
+            onPlayerAttack(sprite, result);
+            sprite.setXSpeed((short) ((short) -sprite.getXSpeed() >> 1));
+            sprite.setYSpeed((short) ((short) -sprite.getYSpeed() >> 1));
+        } else {
+            killAsEnemyFromSpecialTouch(sprite, subtype2(), routine2 == 0);
         }
-
-        // sub_206E3A (r7/player_object_collide.asm:208-235) and sub_206AB2 (r8/player_object_collide.asm:244-282).
-        if (player.getInvulnerable()) return;
-        boolean hadRings = player.getRingCount() > 0;
-        if (hadRings && !player.hasShield() && !player.suppressesLostRingSpawnOnHurt()) {
-            services().spawnLostRingsAfterCurrentFrame(player, frameCounter - 1);
-        }
-        player.applyHurtOrDeath(x, false, hadRings);
     }
 
     /** loc_206950 (r8/player_object_collide.asm:85-116) gates $40 touches by layer. Dango uses $ED and $2C. */

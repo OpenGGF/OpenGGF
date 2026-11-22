@@ -1,6 +1,7 @@
 package com.openggf.tools;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.openggf.catalog.StockGameCatalog;
 import com.openggf.mods.scene.host.SceneRomLibrary;
 import com.openggf.stageplay.StageplayStore;
 import com.openggf.stageplay.route.*;
@@ -250,7 +251,10 @@ public final class StageplayRouteTool {
         }
     }
     private static Map<String,String> flags(String[] args) throws IOException {
-        Set<String> allowed = Set.of("start","travel","ending","facing","scene","actor","frame","x","y","out","s1-rom","s2-rom","s3k-rom","scd-rom","frames","nodes","ticks","millis","urgency","speed","half-width","height","foot-offset","collision-path");
+        var allowed = new java.util.HashSet<>(Set.of("start", "travel", "ending", "facing", "scene", "actor", "frame",
+                "x", "y", "out", "frames", "nodes", "ticks", "millis", "urgency", "speed", "half-width",
+                "height", "foot-offset", "collision-path"));
+        StockGameCatalog.stockCodes().forEach(game -> allowed.add(game + "-rom"));
         var result = new LinkedHashMap<String,String>();
         for(int i=0;i<args.length;i+=2) {
             if(i+1==args.length || !args[i].startsWith("--") || !allowed.contains(args[i].substring(2))

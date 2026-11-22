@@ -40,7 +40,8 @@ public final class CdFmSoundRequestService implements AudioRequestService, GameP
      * this engine gain is independent of the player's music/SFX controls.
      * Relative calibration corroboration and its external-source provenance
      * are preserved in docs/architecture/validation/2026-11-15-sonic-cd-playtest-fixes.md.
-     * This is a presentation convention, not analog hardware calibration.
+     * The console mixes FM, CD-DA and PCM in hardware. The 3/8 gain has not
+     * been calibrated against that analogue mix on a physical console.
      */
     private static final int CD_PRESENTATION_NUMERATOR = 3;
     private static final int CD_PRESENTATION_DENOMINATOR = 8;
