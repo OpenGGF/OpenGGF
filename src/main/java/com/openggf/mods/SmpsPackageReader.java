@@ -16,6 +16,7 @@ import com.openggf.game.sonic1.audio.smps.Sonic1SmpsData;
 import com.openggf.game.sonic2.audio.Sonic2Music;
 import com.openggf.game.sonic2.audio.smps.Sonic2PackageEnvelopes;
 import com.openggf.game.sonic2.audio.smps.Sonic2SmpsData;
+import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.audio.smps.Sonic3kSmpsData;
 import com.openggf.io.ModAssetRoot;
 import com.openggf.io.ModInputLimits;
@@ -160,22 +161,35 @@ final class SmpsPackageReader {
         } else {
             fields(options);
         }
-        metadata(document);
         JsonNode bank = document.get("bank");
         fields(bank, "form", "path", "sha256", "assembledSha256", "base", "headerOffset",
                 "localVoiceCount", "previewFrames", "relocations", "relocationsComplete", "fills");
         String form = string(bank, "form");
-        check(form.equals("embedded"), "Unsupported bank form " + form + "; only embedded is supported");
-        literal(bank, "path", "track.bin");
-        rawBank = hashedEntry(bank, BANK_LIMIT);
+        boolean patch = form.equals("patch");
+        check(patch || form.equals("embedded"), "Unsupported bank form " + form);
+        check(!patch || !classic, "Retail patch banks are supported only for S3K");
+        metadata(document, patch);
+        literal(bank, "path", patch ? RetailBankDelta.PATH : "track.bin");
+        byte[] delta = null;
+        int bankLength;
+        if (patch) {
+            check(document.get("source").isNull(), "Retail patch source must be null");
+            check(array(bank, "fills", BANK_LIMIT / VOICE_SIZE).isEmpty(), "Retail patch fills must be empty");
+            delta = hashedEntry(bank, RetailBankDelta.MAX_BYTES);
+            bankLength = RetailBankDelta.targetLength(delta);
+        } else {
+            rawBank = hashedEntry(bank, BANK_LIMIT);
+            bankLength = rawBank.length;
+            check(bankLength >= 8, "Truncated music bank");
+        }
         int base = number(bank, "base", 0, 32768);
         check(base == 0 || (!driver.equals("s1") && base == 32768), "Invalid " + driver + " bank base");
-        check(rawBank.length >= 8, "Truncated music bank");
-        int header = number(bank, "headerOffset", 0, classic ? 0 : rawBank.length - 8);
-        int voiceCount = number(bank, "localVoiceCount", 0, classic ? 128 : BANK_LIMIT / VOICE_SIZE);
-        number(bank, "previewFrames", 0, Integer.MAX_VALUE);
+        int headerLimit = classic ? 0 : bankLength - (patch ? 6 : 8);
+        int header = number(bank, "headerOffset", 0, headerLimit);
+        int voiceCount = number(bank, "localVoiceCount", 0, classic || patch ? 128 : BANK_LIMIT / VOICE_SIZE);
+        number(bank, "previewFrames", patch ? 1 : 0, patch ? 36_000 : Integer.MAX_VALUE);
         bool(bank, "relocationsComplete");
-        validateRelocations(bank);
+        validateRelocations(bank, bankLength);
         String assembledHash = hashField(bank, "assembledSha256");
 
         JsonNode globals = document.get("globalVoices");
@@ -188,9 +202,12 @@ final class SmpsPackageReader {
             check(globalTable.length == globalKeys.size() * VOICE_SIZE, "Global voice table length mismatch");
         }
 
-        int dacBytes = readAssets(document, driver);
-        byte[] assembled = fillBank(bank, header, classic);
-        if (assembled != null) verifyHash("assembled track.bin", assembledHash, assembled);
+        byte[] assembled = patch ? assembleRetailBank(document, delta, assembledHash) : null;
+        int dacBytes = readAssets(document, driver, patch);
+        if (!patch) {
+            assembled = fillBank(bank, header, classic);
+            if (assembled != null) verifyHash("assembled track.bin", assembledHash, assembled);
+        }
         byte[] voices = fillGlobalVoices();
         Map<Integer, byte[]> psg = new HashMap<>();
         Map<Integer, byte[]> modulation = new HashMap<>();
@@ -203,7 +220,7 @@ final class SmpsPackageReader {
             boolean bigEndian = driver.equals("s1");
             ClassicPackageBank.validate(rawBank, bigEndian ? ByteOrder.BIG_ENDIAN : ByteOrder.LITTLE_ENDIAN,
                     bigEndian ? 2 : 1, base, voiceCount, classicVoiceOffsets, psg.keySet(), bindings.keySet());
-        } else {
+        } else if (assembled != null || !patch) {
             validateHeader(assembled == null ? rawBank : assembled, base, header, voiceCount);
         }
         if (assembled == null || (resolver == null && assets.values().stream().anyMatch(Asset::reference))) {
@@ -229,7 +246,7 @@ final class SmpsPackageReader {
         return new Result(data, dac, resourceBytes);
     }
 
-    private void metadata(JsonNode document) throws IOException {
+    private void metadata(JsonNode document, boolean patch) throws IOException {
         JsonNode info = document.get("package");
         fields(info, "id", "name", "version", "authors", "license", "rights");
         check(string(info, "id").matches("[a-z0-9][a-z0-9-]{0,63}"), "Invalid package id");
@@ -254,19 +271,46 @@ final class SmpsPackageReader {
         if (bool(provenance, "containsRomDerivedData")) codes.add("ROM_DERIVED_DATA");
         if (bool(provenance, "containsRetailSongData")) codes.add("RETAIL_SONG_DATA");
         JsonNode retail = provenance.get("derivedFromRetailSong");
+        if (patch) {
+            check(!retail.isNull() && "s3k".equals(retail.path("game").textValue()),
+                    "Retail patch requires provenance.derivedFromRetailSong for s3k");
+            check(codes.contains("DERIVED_FROM_RETAIL_SONG") && !codes.contains("RETAIL_SONG_DATA"),
+                    "Retail patch must declare DERIVED_FROM_RETAIL_SONG without RETAIL_SONG_DATA");
+        }
         if (!retail.isNull()) {
             fields(retail, "game", "songId", "bankSha256");
             check(DRIVERS.contains(string(retail, "game")), "Invalid retail song game");
-            number(retail, "songId", 0, 0xffff);
+            number(retail, "songId", patch ? 1 : 0, patch ? Sonic3kMusic.CREDITS_SK.id : 0xffff);
             hashField(retail, "bankSha256");
         }
         for (String code : codes) warn(code);
     }
 
-    private int readAssets(JsonNode document, String driver) throws IOException {
+    private byte[] assembleRetailBank(JsonNode document, byte[] delta, String assembledHash) throws IOException {
+        if (resolver == null) return null; // Catalog preflight validates framing without the cartridge.
+        JsonNode retail = document.get("provenance").get("derivedFromRetailSong");
+        int songId = retail.get("songId").intValue();
+        String context = "Retail base s3k song " + songId;
+        String expected = hashField(retail, "bankSha256");
+        byte[] base;
+        try {
+            base = resolver.resolve(new Locator("bank", 0, songId));
+        } catch (IOException error) {
+            throw new IOException(context + ": expected SHA-256 " + expected
+                    + ", actual missing (" + error.getMessage() + ")", error);
+        }
+        check(base != null && base.length == BANK_LIMIT,
+                context + ": expected SHA-256 " + expected + ", actual missing 32 KiB bank");
+        verifyHash(context, expected, base);
+        byte[] assembled = RetailBankDelta.apply(delta, base);
+        verifyHash("Assembled bank", assembledHash, assembled);
+        return assembled;
+    }
+
+    private int readAssets(JsonNode document, String driver, boolean patch) throws IOException {
         EnumMap<Kind, Integer> counts = new EnumMap<>(Kind.class);
         int dacBytes = 0;
-        boolean stock = false;
+        boolean stock = patch;
         for (JsonNode entry : array(document, "assets", Math.min(2048, limits.maxCollectionEntries()))) {
             fields(entry, "key", "kind", "id", "name", "origin", "path?", "sha256?", "bankOffset?",
                     "ref?", "transforms?", "resultSha256?");
@@ -295,6 +339,7 @@ final class SmpsPackageReader {
                 stock = true;
                 bytes = reference(entry, kind, driver, key);
             } else if (offset) {
+                check(!patch, "Retail patch assets cannot use bankOffset");
                 check(kind == Kind.FM_VOICE, "Only FM voices can use bankOffset");
                 int start = number(entry, "bankOffset", 0, rawBank.length - VOICE_SIZE);
                 if (!driver.equals("s3k")) {
@@ -312,7 +357,9 @@ final class SmpsPackageReader {
                 }
             }
             if (bytes != null) {
-                validateAsset(kind, bytes, driver);
+                boolean exactRetailPsg = patch && kind == Kind.PSG_VOLUME && ref
+                        && entry.get("transforms").isEmpty();
+                validateAsset(kind, bytes, driver, exactRetailPsg);
                 if (kind == Kind.DAC_SAMPLE) {
                     dacBytes += bytes.length;
                     check(dacBytes <= DAC_LIMIT, "DAC sample bytes exceed 512 KiB");
@@ -325,7 +372,8 @@ final class SmpsPackageReader {
         fields(requires, "stockAssets", "games");
         check(bool(requires, "stockAssets") == stock
                         && sortedStrings(requires, "games", DRIVERS).equals(stock ? Set.of(driver) : Set.of()),
-                "requires must describe the stock references");
+                patch ? "requires must describe the retail base and stock references"
+                        : "requires must describe the stock references");
         return dacBytes;
     }
 
@@ -471,10 +519,10 @@ final class SmpsPackageReader {
         return bytes;
     }
 
-    private void validateRelocations(JsonNode bank) throws IOException {
+    private void validateRelocations(JsonNode bank, int bankLength) throws IOException {
         int previous = -1;
         for (JsonNode entry : array(bank, "relocations", limits.maxCollectionEntries())) {
-            int offset = integer(entry, "relocation", previous + 1, rawBank.length - 2);
+            int offset = integer(entry, "relocation", previous + 1, bankLength - 2);
             previous = offset;
         }
     }
@@ -615,13 +663,14 @@ final class SmpsPackageReader {
         return (bytes[offset] & 255) | ((bytes[offset + 1] & 255) << 8);
     }
 
-    private static void validateAsset(Kind kind, byte[] bytes, String driver) throws IOException {
+    private static void validateAsset(Kind kind, byte[] bytes, String driver, boolean exactRetailPsg)
+            throws IOException {
         check(bytes.length >= 1 && bytes.length <= kind.size, "Invalid " + kind + " byte length");
         switch (kind) {
             case FM_VOICE -> check(bytes.length == VOICE_SIZE, "FM voice must have 25 bytes");
             case PSG_VOLUME -> {
                 if (driver.equals("s3k")) {
-                    validateEnvelope(bytes, false);
+                    validateEnvelope(bytes, false, exactRetailPsg);
                 } else {
                     check(bytes.length >= 2 && bytes[bytes.length - 1] == (byte) 0x80,
                             "Classic PSG envelope requires an 80 hold terminator");
@@ -630,13 +679,14 @@ final class SmpsPackageReader {
                     }
                 }
             }
-            case MODULATION -> validateEnvelope(bytes, true);
+            case MODULATION -> validateEnvelope(bytes, true, false);
             case DAC_SAMPLE -> { }
         }
     }
 
-    private static void validateEnvelope(byte[] bytes, boolean modulation) throws IOException {
-        if (!modulation) {
+    private static void validateEnvelope(byte[] bytes, boolean modulation, boolean exactRetailPsg)
+            throws IOException {
+        if (!modulation && !exactRetailPsg) {
             for (byte value : bytes) {
                 int command = value & 255;
                 check(command <= 0x81 || command == 0x83, "Unsupported PSG envelope command " + command);
@@ -657,10 +707,13 @@ final class SmpsPackageReader {
                 case 0x81, 0x83 -> { return; }
                 case 0x80 -> cursor = 0;
                 case 0x82, 0x84 -> {
-                    check(modulation && cursor + 1 < bytes.length, "Truncated envelope command");
-                    cursor = command == 0x82 ? bytes[cursor + 1] & 255 : (cursor + 2) & 255;
+                    check(cursor + 1 < bytes.length, "Truncated envelope command");
+                    cursor = command == 0x82 ? bytes[cursor + 1] & 255 : cursor + 2;
+                    if (modulation) cursor &= 255;
                 }
                 default -> {
+                    // The native sequencer holds at an unrecognized stock PSG command.
+                    if (exactRetailPsg && command >= 0x80) return;
                     cursor = modulation ? (cursor + 1) & 255 : cursor + 1;
                     writes++;
                 }
@@ -680,7 +733,12 @@ final class SmpsPackageReader {
     private byte[] readEntry(String path, long cap) throws IOException {
         check(remaining.remove(path), "Missing or repeated package entry " + path);
         check(remainingBytes > 0, "Package byte limit exceeded");
-        byte[] bytes = root.readBounded(directory + path, Math.min(Math.min(cap, remainingBytes), limits.maxAssetBytes()));
+        byte[] bytes;
+        try {
+            bytes = root.readBounded(directory + path, Math.min(Math.min(cap, remainingBytes), limits.maxAssetBytes()));
+        } catch (IOException error) {
+            throw new IOException(path + ": " + error.getMessage(), error);
+        }
         remainingBytes -= bytes.length;
         return bytes;
     }

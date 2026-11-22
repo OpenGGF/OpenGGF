@@ -6,15 +6,21 @@ import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.sonic3k.audio.smps.Sonic3kSmpsData;
 import com.openggf.game.sonic3k.audio.smps.Sonic3kSmpsLoader;
+import com.openggf.io.ModInputLimits;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Base64;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Properties;
 
 import static com.openggf.mods.TestSmpsPackageReader.*;
 import static org.junit.jupiter.api.Assertions.*;
@@ -59,6 +65,51 @@ class TestSmpsPackageStockRom {
     }
 
     @Test
+    void rebuildsAnOpenSmpsDeckRetailPatchFromTheActiveRom() throws Exception {
+        var rom = TestEnvironment.currentRom();
+        String fixture = "/mods/smps-package-interop/s3k-retail-patch/";
+        String manifest;
+        try (var input = getClass().getResourceAsStream(fixture + "manifest.json")) {
+            assertNotNull(input);
+            manifest = new String(input.readAllBytes(), StandardCharsets.UTF_8);
+        }
+        var binaryEntries = new Properties();
+        try (var input = getClass().getResourceAsStream(fixture + "binary-assets.properties")) {
+            assertNotNull(input);
+            binaryEntries.load(input);
+        }
+        var entries = new HashMap<String, byte[]>();
+        for (String name : binaryEntries.stringPropertyNames()) {
+            entries.put(name, Base64.getDecoder().decode(binaryEntries.getProperty(name)));
+        }
+
+        var loader = new Sonic3kSmpsLoader(rom);
+        int musicAddress = loader.findMusicOffset(0x0d);
+        assertTrue(musicAddress >= 0);
+        int bankSize = SmpsPackageReader.BANK_LIMIT;
+        int headerOffset = musicAddress % bankSize;
+        byte[] expected = rom.readBytes(musicAddress - headerOffset, bankSize);
+        assertNotEquals(3, expected[headerOffset + 5]);
+        expected[headerOffset + 5] = 3;
+
+        try (var root = packed(temp, manifest, null, entries)) {
+            var warnings = new ArrayList<String>();
+            assertNull(new SmpsPackageReader(root, root.validatedEntryNames(), DIRECTORY,
+                    ModInputLimits.production(), null, warnings::add).read("s3k"));
+            assertTrue(warnings.stream().anyMatch(warning -> warning.startsWith("DERIVED_FROM_RETAIL_SONG:")));
+            assertFalse(warnings.stream().anyMatch(warning -> warning.startsWith("RETAIL_SONG_DATA:")));
+
+            var result = reader(root, new Sonic3kPackageStockResolver(rom)).read("s3k");
+            var data = (Sonic3kSmpsData) result.data();
+            assertArrayEquals(expected, data.getBankData());
+            assertEquals(0x8000, data.getZ80StartAddress());
+            assertEquals(3, data.getTempo());
+            assertArrayEquals(loader.loadMusic(0x0d).getVoice(0), data.getVoice(0));
+            assertNotNull(result.dac().mappingForNote(0x81));
+        }
+    }
+
+    @Test
     void standaloneHalvesResolveTheirOwnStockMusicTable() throws Exception {
         var rom = TestEnvironment.currentRom();
         var loader = new Sonic3kSmpsLoader(rom);
@@ -70,6 +121,11 @@ class TestSmpsPackageStockRom {
             var localS3 = new PackageStockResolver.Locator("local-fm", 0, 0x12e);
             assertArrayEquals(loader.loadMusic(0x12e).getVoice(0), s3Resolver.resolve(localS3));
             assertNull(skResolver.resolve(localS3));
+            int s3Address = loader.findMusicOffset(0x12e);
+            assertTrue(s3Address >= 0x200000);
+            int bankSize = SmpsPackageReader.BANK_LIMIT;
+            assertArrayEquals(rom.readBytes(s3Address - s3Address % bankSize, bankSize),
+                    s3Resolver.resolve(new PackageStockResolver.Locator("bank", 0, 0x2e)));
             var global = new PackageStockResolver.Locator("global-fm", 0, 0);
             assertArrayEquals(Arrays.copyOf(loader.getGlobalVoiceData(), 25), skResolver.resolve(global));
         }
