@@ -240,7 +240,8 @@ public final class CdFmSoundRequestService implements AudioRequestService, GameP
             if (dispatch.consequence() != null) {
                 staged = dispatch.consequence();
                 if (staged instanceof AudioCommand.StopAllSfx) {
-                    // StopSound (Sound Drivers/FM/_Driver.asm:945-950) clears jumpCondition with the queues.
+                    // StopSound (Sound Drivers/FM/_Driver.asm:945-950) clears both bytes with the queues.
+                    driver.setRingChannel(0);
                     driver.setJumpCondition(false);
                 }
                 commandSink.accept(staged);

@@ -31,6 +31,15 @@ public final class QqzZone implements CdZoneFragment {
         return payload.stage() instanceof CdStageKey.Traversal;
     }
 
+    /**
+     * Acts 1 and 2 release held FM effects in loc_201858 (scddisasm/src/r5/main.asm:333-335).
+     * Act 3 uses StageMainLoopRestartLife (scddisasm/src/common/main.asm:364-378), which leaves them playing.
+     */
+    @Override
+    public boolean releasesHeldFmEffectsOnPauseRestart(CdStagePayload payload) {
+        return payload.stage() instanceof CdStageKey.Traversal;
+    }
+
     @Override
     public CdZonePlayerProfile playerProfile(CdStagePayload payload, CdStageImage image) {
         return new QqzPlayerProfile(payload, image);
