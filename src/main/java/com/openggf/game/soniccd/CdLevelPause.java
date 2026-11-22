@@ -59,13 +59,13 @@ final class CdLevelPause implements NativeLevelInputOwner, RewindSnapshottable<B
             return nativeStart;
         }
 
+        var payload = level.payload();
+        var fragment = CdZones.fragment(payload.stage().zone());
         if (CdSceneCoordinator.isTimeAttack(services.gameModule())) {
             NativeGameStateOps.restoreLives(game, 0);
         } else {
             game.loseLife();
-            var zone = level.payload().stage().zone();
-            // StageMainLoopRestartLife (r4/main.asm:352-354) and loc_201858 (r5/main.asm:333-335).
-            if (zone == CdZone.TIDAL_TEMPEST || zone == CdZone.QUARTZ_QUADRANT) {
+            if (fragment.releasesHeldFmEffectsOnPauseRestart(payload)) {
                 CdSoundRequests.releaseHeldFmEffects(services.gameModule());
             }
         }
@@ -75,8 +75,7 @@ final class CdLevelPause implements NativeLevelInputOwner, RewindSnapshottable<B
             services.checkpointState().clear();
             CdStageExit.outOfLives(services);
         } else {
-            var payload = level.payload();
-            if (!CdZones.fragment(payload.stage().zone()).retainsCheckpointOnPauseRestart(payload)) {
+            if (!fragment.retainsCheckpointOnPauseRestart(payload)) {
                 services.checkpointState().clear();
             }
             // The shared fade accounts for the spent life. Carry the stage program's reload intent.

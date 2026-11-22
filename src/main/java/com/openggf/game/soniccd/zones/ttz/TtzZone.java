@@ -62,6 +62,12 @@ public final class TtzZone implements CdZoneFragment {
         return true;
     }
 
+    /** All three acts use StageMainLoopRestartLife (scddisasm/src/r4/main.asm:352-354). */
+    @Override
+    public boolean releasesHeldFmEffectsOnPauseRestart(CdStagePayload payload) {
+        return true;
+    }
+
     /** Water, currents and special chunks: {@link TtzPlayerProfile}. */
     @Override
     public CdZonePlayerProfile playerProfile(CdStagePayload payload, CdStageImage image) {
