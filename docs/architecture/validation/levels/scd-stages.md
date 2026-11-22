@@ -317,29 +317,55 @@ backup RAM and campaign progress. A separate case checks Start abort.
 Both local native recordings end with six UFOs remaining. A natural clear
 and parity for the original `SPEEND.MMD` credits presentation remain open.
 
-## Wacky Workbench defeat fades (closed)
+## Stage pictures and Wacky Workbench defeat fades
+
+`StageMainLoop` (common/main.asm:329-340) waits for `VBlankStage`
+(common/main.asm:854-877). That V-INT uploads the palette, horizontal scroll
+and sprite table prepared by the same stage iteration. It also updates the
+animated tiles in `VBlankStagePlayerGfxDone` (common/main.asm:891-902).
+The other stage dialect does the same in `VInt_Level` (Level/Main.asm:821-847).
+`StageMainLoopUpdate` (common/main.asm:406-410) runs objects and
+`StageMainLoopDraw` (common/main.asm:443-453) cycles colors after drawing
+objects. In Wacky Workbench, `CycleColor` (r6/palette_cycle_c.asm:23-46),
+`BossFadeStageWritePalette` (common/palette_fade.asm:412-434), and
+`ElectricBeamsAnimateMainPalette` (objects/r6/electric_beams.asm:201-211)
+write the palette for that iteration.
+
+The live engine draws the completed iteration's sprites, scroll, palette,
+and animated tiles together. This is the picture the disc displays at the
+next V-INT. The base engine already matched ordinary palette rows at this
+pairing. Comparing engine-after-R to the CRAM sampled at the end of native
+row R made ordinary writes appear early.
 
 `EggmanDefeatSequenceFadeScreen` and `EggmanDefeatSequenceFadeObjects`
-(objects/r6/boss.asm:545-559) hold the stage loop at two points in the defeat
-sequence. `FadeToWhite` (common/palette_fade.asm:285-295) and
+(objects/r6/boss.asm:545-559) hold the stage loop twice.
+`FadeToWhite` (common/palette_fade.asm:285-295) and
 `BossFadeObjectsFromWhite` (common/palette_fade.asm:463-484) each wait 22
-times. `VBlankCommon` (common/main.asm:1014-1025) publishes the current
-palette before the fade routine computes the next one. The restore reads the
-separate target buffer that `LoadFadePalette` (common/palette_load_fade.asm:3-15)
-fills from the disc. The palette cycler changes only the active buffer.
-Both waits request
-`VBlankPaletteFade` (common/main.asm:951-962), which reads the pads through
-`VBlankCommon`. BizHawk reports zero lag frames in the captured windows.
+times. `VBlankPaletteFade` (common/main.asm:951-962) uploads the already
+prepared colors and reads the pads through `VBlankCommon`
+(common/main.asm:1014-1025). After
+VSync returns, the fade computes the next step. The restore reads the
+separate target buffer filled by `LoadFadePalette`
+(common/palette_load_fade.asm:3-15). The palette cycler changes only the
+active buffer. The engine now draws the fade step prepared by the held tick,
+using the same pairing as ordinary frames.
 
-`TestWwzBossFades` uses the defeat movies and compares 64 displayed words on
-every row of both holds against the user-local `rehost-boss-wwz/R63C-fades`
-and `R63D-fades` CRAM recordings. Each window includes the entry and 22
-subsequent V-INTs. Good Future rows are 5473–5495 and 5553–5575. Bad Future
-rows are 5724–5746 and 5804–5826. The test also checks that the stage frame
-counter holds and resumes. A rewind check restores the first Good Future hold
-at row 5481 and checks the held rows, palette words, and gameplay resumption
-at row 5496 on both passes. `TestWwzBossNative` checks slots and timers at
-completed level frames.
+The native probe reads CRAM after `FrameAdvance`, alongside the video
+buffer used for pictures. `TestWwzBossFades` compares CRAM and the backdrop
+at each of the 672 recorded V-INTs to the engine after the preceding row.
+The two recordings have no lag in these windows. Good Future hold rows are
+5473-5495 and 5553-5575. Bad Future hold rows are 5724-5746 and 5804-5826.
+The test also compares the stage frame counter at the same replay row,
+including when the stage loop resumes. The user-local CRAM recordings are
+under `rehost-boss-wwz/R63C-fades` and `R63D-fades`. Each hold window
+includes the entry and 22 subsequent V-INTs. A rewind check restores the
+first Good Future hold at row 5481 and checks the held rows, palette words,
+and gameplay resumption at row 5496 on both passes. `TestWwzBossNative`
+checks slots and timers at completed level frames.
+
+The palette recordings leave the held sprite table and R63C background tile
+pixels unverified during the fades. The cartridge palette upload paths
+need their own displayed-frame checks.
 
 ## Palmtree Panic campaign Amy Rose (hosted)
 
