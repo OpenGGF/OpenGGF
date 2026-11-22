@@ -110,7 +110,6 @@ no discrepancy entry was added or reclassified by the cutover.
 7. [Sonic 1 Monitor Sidekick Guard](#sonic-1-monitor-sidekick-guard) — Engine feature
 8. [Bonus Stage Game Mode](#bonus-stage-game-mode) — Other
 9. [HCZ Conveyor Belt Rolling State Clear (Resolved)](#hcz-conveyor-belt-rolling-state-clear-resolved) — Other
-10. [Right-Wall Penetration Timer Heuristic](#right-wall-penetration-timer-heuristic) — Other
 11. [S2 Music Offsets Resolved from Hardcoded REV01 Table](#s2-music-offsets-resolved-from-hardcoded-rev01-table) — Other
 12. [Right-Boundary Is Viewport-Independent (Level Edge)](#right-boundary-is-viewport-independent-level-edge) — Other
 13. [Object Despawn and Visibility Windows](#object-despawn-and-visibility-windows) — Engine feature
@@ -1186,33 +1185,6 @@ belt.
 ### Verification
 
 Retained as a record of the removed divergence. `TestHCZConveyorBeltObjectInstance` covers the capture/release sequence.
-
----
-
-## Right-Wall Penetration Timer Heuristic
-
-**Kind:** Other
-
-**Location:** `AbstractPlayableSprite.rightWallPenetrationTimer`
-**ROM Reference:** `AnglePos`/right-wall sensor selection paths in the Sonic 1, Sonic 2, and Sonic 3K disassemblies.
-
-### Original Implementation
-
-The ROM resolves the active wall sensor and floor angle from the current frame's sensor probes. Odd/flagged angle values are snapped from the same frame's result; there is no cross-frame map of prior alternate-sensor angles and no grace timer for right-wall penetration.
-
-### Our Implementation
-
-The engine carries one right-wall stability heuristic: `AbstractPlayableSprite.rightWallPenetrationTimer` gives a short grace period while resolving right-wall penetration and is captured in playable-sprite rewind snapshots. The timer starts only when the game collision rule or zone runtime opts in. Stock Sonic CD inherits Sonic 1's disabled game rule and has no zone opt-in.
-
-A second heuristic, `CollisionSystem.pendingOddSensorFallbackAngles` (a cross-frame cache of the alternate sensor angle applied when the selected sensor reported distance 0 with an odd angle), has been **removed**: ROM `Sonic_Angle` (`docs/s1disasm/_incObj/Sonic AnglePos.asm:186-208`) snaps an odd selected angle straight to `(angle+0x20)&0xC0` from the current frame, and the cache was resurrecting a stale angle one frame early on the S1 LZ3 and S3K CNZ right-wall paths (see the `CHANGELOG.0.6.md` entry "S1 right-wall odd-angle snap (LZ3/CNZ)").
-
-### Rationale
-
-The remaining timer prevents visible ground-mode oscillation at right-wall transitions in the Java collision model while the broader collision pipeline still differs structurally from the ROM's exact object RAM and terrain probe sequencing.
-
-### Verification
-
-`TestAbstractPlayableSpriteRewindCapture` covers the captured `rightWallPenetrationTimer` field.
 
 ---
 
