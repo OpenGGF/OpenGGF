@@ -39,6 +39,7 @@ import com.openggf.configuration.FrameRateResolver;
 import com.openggf.configuration.KeyChord;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.game.GameId;
+import com.openggf.catalog.StockGameCatalog;
 import com.openggf.graphics.ScreenshotCapture;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.configuration.WidescreenAspect;
@@ -603,9 +604,11 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	/** Whole configured ROM images the isolated route worker may verify against a route's launch hash. */
 	private Map<String, Path> routeTapeRoms() {
 		var roms = new java.util.HashMap<String, Path>();
-		for (var identity : java.util.List.of(com.openggf.data.RomIdentity.S1, com.openggf.data.RomIdentity.S2, com.openggf.data.RomIdentity.S3K))
-			romManager.resolveLogicalRom(identity).flatMap(com.openggf.data.RomImageCatalogue.Resolution::wholeImagePath)
-					.ifPresent(path -> roms.put(identity == com.openggf.data.RomIdentity.S1 ? "s1" : identity == com.openggf.data.RomIdentity.S2 ? "s2" : "s3k", path));
+		for (String game : StockGameCatalog.cartridgeCodes()) {
+			romManager.resolveLogicalRom(GameId.fromCode(game).romGame().identity())
+					.flatMap(com.openggf.data.RomImageCatalogue.Resolution::wholeImagePath)
+					.ifPresent(path -> roms.put(game, path));
+		}
 		com.openggf.tools.EngineRouteHosts.addConfiguredMedia(roms);
 		return roms;
 	}

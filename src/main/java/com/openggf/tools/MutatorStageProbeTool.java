@@ -13,6 +13,7 @@ import com.openggf.game.BonusStageType;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameServices;
 import com.openggf.game.SpecialStageEntryRequest;
+import com.openggf.catalog.StockGameCatalog;
 import com.openggf.game.internal.NativeStagePacingOwners;
 import com.openggf.game.mutators.GameplayMutatorPacing;
 import com.openggf.game.session.EngineContext;
@@ -106,7 +107,7 @@ public final class MutatorStageProbeTool {
                 default -> throw new IllegalArgumentException("audioFollow must be true/false");
             };
             int denyAt = Integer.parseInt(args[4]), samples = Integer.parseInt(args[5]);
-            if (!Set.of("s1", "s2", "s3k").contains(game) || speed < 25 || speed > 400
+            if (!StockGameCatalog.isCartridgeCode(game) || speed < 25 || speed > 400
                     || speed % 25 != 0 || samples < 8 || samples > 600 || denyAt < -2
                     || denyAt >= samples)
                 throw new IllegalArgumentException("Unbounded/invalid probe input");

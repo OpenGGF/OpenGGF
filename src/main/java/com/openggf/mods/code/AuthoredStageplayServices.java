@@ -9,6 +9,7 @@ import com.openggf.game.mode.GameplayFrameController;
 import com.openggf.game.mode.GameplayFrameDisposition;
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.control.LogicalInputSnapshot;
+import com.openggf.catalog.StockGameCatalog;
 import com.openggf.io.DirectoryAccess;
 import com.openggf.io.ModAssetRoot;
 import com.openggf.io.ModInputLimits;
@@ -57,13 +58,13 @@ public final class AuthoredStageplayServices {
 
     /** Validates declared scenes and their typed dependencies without applying or publishing services. */
     public static void validateAssets(ModAssetRoot assets, String game, List<String> resources) throws IOException {
-        if (!java.util.Arrays.stream(com.openggf.game.GameId.values()).filter(id -> id != com.openggf.game.GameId.STANDALONE).anyMatch(id -> id.code().equals(game))) throw new IOException("Authored scenes require a stock host");
+        if (!StockGameCatalog.isStockCode(game)) throw new IOException("Authored scenes require a stock host");
         register(new ModContext("authored-scene-validation", game, assets), resources);
     }
 
     /** Fresh editor graph with the same public player registration and immutable asset preparation. */
     public static Prepared prepareForEditor(Path root, String game, List<String> resources) throws IOException {
-        if (!java.util.Arrays.stream(com.openggf.game.GameId.values()).filter(id -> id != com.openggf.game.GameId.STANDALONE).anyMatch(id -> id.code().equals(game))) throw new IOException("Authored scenes require a stock host");
+        if (!StockGameCatalog.isStockCode(game)) throw new IOException("Authored scenes require a stock host");
         if (resources.isEmpty()) return new Prepared(blocking(resource -> null), null, List.of());
         Path source = root.toAbsolutePath().normalize();
         GameServiceBundle bundle;
