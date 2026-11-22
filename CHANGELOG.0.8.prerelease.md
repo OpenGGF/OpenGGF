@@ -941,13 +941,13 @@ under the matching area heading; see the
   --skip-lag-frames`, with `--clip frames:START:END`, leaves out the frames on
   which the recorded game could not keep up. A frame window films every row the
   original displayed, so on those rows the picture repeated and the footage
-  looked as if the engine stuttered. Lag is read from the recording's own
-  counters: the gameplay frame counter held over an elapsed V-blank for at most
-  four rows, so title cards, fades, loads and pauses stay. The window still
-  selects trace rows, the clip is shorter by the rows left out, and the tool
-  prints the output-frame to trace-row mapping and writes it to the capture
-  manifest. A row left out gets no audio either, so sound stays in sync. Off by
-  default; replay, comparison and gameplay are unchanged.
+  looked as if the engine stuttered. The clip drops short counter holds on rows
+  where the replay ran without gameplay. Cartridge clips require an elapsed
+  VBlank. Sonic CD also drops short repeats where both counters hold. Longer
+  holds such as title cards, fades, loads and pauses stay.
+  The window still selects trace rows. The tool prints the output-frame to
+  trace-row mapping and writes it to the capture manifest. Each omitted row
+  shortens the picture and sound by one frame. The flag is off by default.
 
 - **Wide trace captures let the act-end run-off leave the picture:** at the end
   of a Sonic 1 or Sonic 2 act the player runs right until the level's wall, which

@@ -1981,6 +1981,20 @@
       "note": "Sonic CD disc and native captures"
     },
     {
+      "match": "com.openggf.tools.TestSonicCdCaptureTools#traceCaptureSkipsNativeLagRowsAndTheirAudio",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/tools/TestSonicCdCaptureTools.java:104",
+      "allowed_when_absent": "soniccd_native",
+      "note": "Sonic CD disc and R31A full-act native recording"
+    },
+    {
+      "match": "com.openggf.tools.TestSonicCdCaptureTools#traceCaptureKeepsGameplayWhenTheRecorderLagFlagIsLate",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/tools/TestSonicCdCaptureTools.java:139",
+      "allowed_when_absent": "soniccd_native",
+      "note": "Sonic CD disc and R51B full-act native recording"
+    },
+    {
       "match": "com.openggf.tools.TestSonicCdCaptureTools#traceCaptureRejectsAMovieThatDoesNotDriveTheTrace",
       "category": "optional-fixture",
       "evidence": "src/test/java/com/openggf/tools/TestSonicCdCaptureTools.java:102",
