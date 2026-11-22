@@ -174,7 +174,22 @@ public final class ModCatalogValidator {
                 descriptor.manifest().id(), limits).parse(bytes);
         Set<String> inventory = new HashSet<>(names);
         for (ModAudioTrack track : audio.tracks()) {
-            if (!inventory.contains(track.assetPath())) {
+            if (track.isSmpsPackage()) {
+                var warnings = new java.util.LinkedHashSet<String>();
+                try {
+                    String baseGame = descriptor.manifest().type() == ModType.PATCH
+                            ? descriptor.manifest().baseGame() : null;
+                    new SmpsPackageReader(assets, inventory, track.smpsPackage(), limits, null, warnings::add)
+                            .read(baseGame);
+                } catch (IOException failure) {
+                    findings.add(new ModFinding(ModFindingSeverity.WARNING, "SMPS_PACKAGE_DISABLED",
+                            track.key() + ": " + safeMessage(failure), track.smpsPackage()));
+                }
+                for (String warning : warnings) {
+                    findings.add(new ModFinding(ModFindingSeverity.WARNING, "SMPS_PACKAGE_PROVENANCE",
+                            track.key() + ": " + warning, track.smpsPackage()));
+                }
+            } else if (!inventory.contains(track.assetPath())) {
                 findings.add(error("AUDIO_ASSET_MISSING",
                         "Missing audio asset: " + track.assetPath(), track.assetPath()));
             }

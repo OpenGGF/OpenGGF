@@ -6,6 +6,7 @@ public record SmpsAssetKey(
         String gameId, Route route, int assetId, String assetName) {
     public enum Route {
         BASE_MUSIC,
+        PACKAGE_MUSIC,
         DONOR_MUSIC,
         BASE_ID,
         BASE_NAME,

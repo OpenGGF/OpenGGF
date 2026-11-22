@@ -21,6 +21,7 @@ public record SmpsSourceDescriptor(
         BASE_SFX_ID,
         BASE_SFX_NAME,
         DONOR_MUSIC,
+        PACKAGE_MUSIC,
         DONOR_SFX_ID
     }
 
@@ -30,6 +31,11 @@ public record SmpsSourceDescriptor(
             throw new IllegalArgumentException(
                     "dependencyGeneration must be non-negative");
         }
+    }
+
+    public static SmpsSourceDescriptor packageMusic(String track, int musicId, long generation,
+            AbstractSmpsData data, int length, int hash) {
+        return describe(Kind.PACKAGE_MUSIC, track, null, generation, musicId, data, length, hash);
     }
 
     public static SmpsSourceDescriptor from(AbstractSmpsData data) {

@@ -18,3 +18,9 @@ checkout reference; follow its asset-generator instructions before manual packag
 Use the [full music guide](../music-packs.md) for loop frames, gain, tempo effects,
 codec limits, and per-game stock-id isolation. MP3 and base-game SFX replacement are
 not accepted by the current format.
+
+## Using native chip music
+
+For a Sonic 1, Sonic 2 or Sonic 3 & Knuckles patch, follow the [native SMPS package setup](../music-packs.md#native-smps-packages)
+to use an external tool's song export. The package replaces the streamed track
+declaration and uses the same stock ID mapping and mod packaging steps.

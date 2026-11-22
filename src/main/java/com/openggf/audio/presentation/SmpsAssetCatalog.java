@@ -3,6 +3,7 @@ package com.openggf.audio.presentation;
 import com.openggf.audio.SmpsSfxPlaybackPolicy;
 import com.openggf.audio.rewind.SmpsSourceDescriptor;
 import com.openggf.audio.smps.AbstractSmpsData;
+import com.openggf.audio.smps.SmpsMusicParameters;
 import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsCoordFlagHandlerOwner;
 import com.openggf.audio.smps.SmpsProgramView;
@@ -38,11 +39,12 @@ final class SmpsAssetCatalog {
 
     enum DependencyKind {
         BASE,
-        DONOR
+        DONOR,
+        PACKAGE
     }
 
     record DependencyKey(
-            String gameId, DependencyKind kind, long generation) {
+            String gameId, DependencyKind kind, long generation, String packageName) {
         DependencyKey {
             requireGameId(gameId);
             Objects.requireNonNull(kind, "kind");
@@ -59,7 +61,7 @@ final class SmpsAssetCatalog {
         DependencyKey dependencyKey() {
             return new DependencyKey(
                     assetKey.gameId(), dependencyKind(assetKey.route()),
-                    generation);
+                    generation, assetKey.route() == SmpsAssetKey.Route.PACKAGE_MUSIC ? assetKey.assetName() : null);
         }
     }
 
@@ -249,7 +251,8 @@ final class SmpsAssetCatalog {
             throw programConflict(key);
         }
 
-        FrozenSmpsData frozen = freeze(data);
+        FrozenSmpsData frozen = key.assetKey().route() == SmpsAssetKey.Route.PACKAGE_MUSIC
+                ? new FrozenSmpsData(data, new FrozenBytes(data), key.assetKey().assetId()) : freeze(data);
         SmpsSourceDescriptor descriptor = describe(
                 key, frozen, frozen.dataHash());
         ProgramEntry entry = new ProgramEntry(
@@ -292,6 +295,12 @@ final class SmpsAssetCatalog {
                     "no registered SMPS asset for " + descriptor);
         }
         return entry;
+    }
+
+    void retirePackageMusic() {
+        programs.keySet().removeIf(key -> key.assetKey().route() == SmpsAssetKey.Route.PACKAGE_MUSIC);
+        descriptors.keySet().removeIf(source -> source.kind() == SmpsSourceDescriptor.Kind.PACKAGE_MUSIC);
+        dependencies.keySet().removeIf(key -> key.kind() == DependencyKind.PACKAGE);
     }
 
     Snapshot snapshot() {
@@ -344,6 +353,8 @@ final class SmpsAssetCatalog {
             case BASE_MUSIC -> SmpsSourceDescriptor.baseMusic(
                     assetKey.assetId(), generation, data,
                     data.dataLength(), dataHash);
+            case PACKAGE_MUSIC -> SmpsSourceDescriptor.packageMusic(
+                    assetKey.assetName(), assetKey.assetId(), generation, data, data.dataLength(), dataHash);
             case DONOR_MUSIC -> SmpsSourceDescriptor.donorMusic(
                     assetKey.gameId(), assetKey.assetId(), generation, data,
                     data.dataLength(), dataHash);
@@ -364,6 +375,7 @@ final class SmpsAssetCatalog {
     private static DependencyKind dependencyKind(SmpsAssetKey.Route route) {
         return switch (route) {
             case DONOR_MUSIC, DONOR_ID -> DependencyKind.DONOR;
+            case PACKAGE_MUSIC -> DependencyKind.PACKAGE;
             case BASE_MUSIC, BASE_ID, BASE_NAME, FALLBACK_NAME ->
                     DependencyKind.BASE;
         };
@@ -372,7 +384,7 @@ final class SmpsAssetCatalog {
     private static int resolveAssetId(
             SmpsAssetKey key, AbstractSmpsData data) {
         return switch (key.route()) {
-            case BASE_MUSIC, DONOR_MUSIC ->
+            case BASE_MUSIC, DONOR_MUSIC, PACKAGE_MUSIC ->
                     key.assetId();
             case BASE_ID, BASE_NAME, DONOR_ID, FALLBACK_NAME ->
                     data.getId();
@@ -391,6 +403,7 @@ final class SmpsAssetCatalog {
             AbstractSmpsData frozen,
             AbstractSmpsData candidate) {
         if (!Arrays.equals(frozen.getData(), candidate.getData())
+                || !SmpsMusicParameters.of(frozen).equals(SmpsMusicParameters.of(candidate))
                 || !sameIndexedProgram(frozen, candidate)
                 || frozen.getVoicePtr() != candidate.getVoicePtr()
                 || frozen.getChannels() != candidate.getChannels()
@@ -528,7 +541,12 @@ final class SmpsAssetCatalog {
                 : new FrozenSmpsData(source);
     }
 
-    private static class FrozenSmpsData extends AbstractSmpsData {
+    private static class FrozenSmpsData extends AbstractSmpsData
+            implements SmpsMusicParameters.Source {
+        private final SmpsMusicParameters musicParameters;
+
+        @Override public SmpsMusicParameters musicParameters() { return musicParameters; }
+
         private final byte[][] voices = new byte[256][];
         private final byte[][] psgEnvelopes = new byte[256][];
         private final byte[][] modEnvelopes = new byte[256][];
@@ -541,12 +559,13 @@ final class SmpsAssetCatalog {
 
         private FrozenSmpsData(AbstractSmpsData source) {
             this(Objects.requireNonNull(source, "source"),
-                    new FrozenBytes(source));
+                    new FrozenBytes(source), source.getId());
         }
 
         private FrozenSmpsData(
-                AbstractSmpsData source, FrozenBytes frozenBytes) {
+                AbstractSmpsData source, FrozenBytes frozenBytes, int assetId) {
             super(frozenBytes.rawBytes, source.getZ80StartAddress());
+            musicParameters = SmpsMusicParameters.of(source);
             programBytes = frozenBytes.programBytes;
             dataHash = frozenBytes.hash;
             voicePtr = source.getVoicePtr();
@@ -563,7 +582,7 @@ final class SmpsAssetCatalog {
             psgVolumeOffsets = copy(source.getPsgVolumeOffsets());
             psgModEnvs = copy(source.getPsgModEnvs());
             psgInstruments = copy(source.getPsgInstruments());
-            id = source.getId();
+            id = assetId;
             palSpeedupDisabled = source.isPalSpeedupDisabled();
             baseNoteOffset = source.getBaseNoteOffset();
             psgBaseNoteOffset = source.getPsgBaseNoteOffset();
