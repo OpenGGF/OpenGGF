@@ -1,5 +1,6 @@
 package com.openggf.mods.scene;
 
+import com.openggf.catalog.StockGameCatalog;
 import java.util.List;
 import java.util.Objects;
 
@@ -15,7 +16,7 @@ public record SceneLaunch(String gameId, String mainCharacter, List<String> side
         Objects.requireNonNull(gameId, "gameId");
         Objects.requireNonNull(mainCharacter, "mainCharacter");
         sidekicks = List.copyOf(Objects.requireNonNull(sidekicks, "sidekicks"));
-        if (!List.of("s1", "s2", "s3k", "scd").contains(gameId)) {
+        if (!StockGameCatalog.isStockCode(gameId)) {
             throw new IllegalArgumentException("Unknown stock game: " + gameId);
         }
         if (mainCharacter.isBlank() || sidekicks.stream().anyMatch(String::isBlank)) {

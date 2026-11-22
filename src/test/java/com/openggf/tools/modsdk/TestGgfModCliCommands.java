@@ -55,6 +55,14 @@ class TestGgfModCliCommands {
         assertEquals(1, GgfModCli.run(new String[]{"art-keys", "--game", "bogus"}, new PrintStream(bytes)));
     }
 
+    @Test void artKeysListsSonicCdCatalogueEntries() {
+        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+        assertEquals(0, GgfModCli.run(new String[]{"art-keys", "--game", "scd"}, new PrintStream(bytes)));
+        var keys = bytes.toString().lines().toList();
+        assertTrue(keys.contains("cd.ring"), keys.toString());
+        assertTrue(keys.stream().allMatch(key -> key.startsWith("cd.")), keys.toString());
+    }
+
     @Test void engineExitCodesAreNormalizedToCliSuccessOrFailure() {
         assertEquals(0,GgfModCli.normalizeProcessExit(0));
         assertEquals(1,GgfModCli.normalizeProcessExit(2));

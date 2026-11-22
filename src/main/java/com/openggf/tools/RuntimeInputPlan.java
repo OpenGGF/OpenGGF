@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.debug.playback.Bk2MovieLoader;
+import com.openggf.catalog.StockGameCatalog;
 import com.openggf.trace.TraceData;
 import com.openggf.trace.replay.TraceReplayRowPolicy;
 import com.openggf.trace.timing.HardwareCompletionEdge;
@@ -25,7 +26,7 @@ public record RuntimeInputPlan(int schema, String game, int zone, int act, int t
             .enable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
 
     public RuntimeInputPlan {
-        if (schema != 1 || !List.of("s1", "s2", "s3k").contains(game)
+        if (schema != 1 || !StockGameCatalog.isCartridgeCode(game)
                 || zone < 0 || act < 0 || traceStart < 0 || rows.isEmpty()) {
             throw new IllegalArgumentException("Invalid runtime input plan");
         }

@@ -7,6 +7,7 @@ import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.soniccd.level.CdLevel;
 import com.openggf.game.soniccd.objects.common.CdMonitor;
+import com.openggf.game.soniccd.objects.common.CdRobotGenerator;
 import com.openggf.game.soniccd.objects.mmz.MmzHvPlatform;
 import com.openggf.game.soniccd.objects.mmz.MmzBuzzsaw;
 import com.openggf.game.soniccd.objects.mmz.MmzInvisibleBlock;
@@ -18,6 +19,7 @@ import com.openggf.game.soniccd.objects.mmz.MmzPohBee;
 import com.openggf.game.soniccd.objects.mmz.MmzSpikeWall;
 import com.openggf.game.soniccd.objects.mmz.MmzSpinDisc;
 import com.openggf.game.soniccd.objects.mmz.MmzVanishPlatform;
+import com.openggf.game.soniccd.player.CdSonicAnimation;
 import com.openggf.game.soniccd.zones.mmz.MmzStageSignals;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
@@ -385,6 +387,63 @@ class TestMmzObjects {
         int row = y >> 8;
         assertTrue(level().getMap().getValue(0, column, row) > 0);
         assertFalse(level().hasLoopFlag(column, row));
+    }
+
+    @Test
+    void rollingSonicBreaksThePastRobotGeneratorAtTheWiderMmzTouchEdge() throws Exception {
+        boot(CdStagePayload.R81B);
+        CdRobotGenerator generator = add(new CdRobotGenerator(at(0x70, 0, 0x43, 0)));
+        runner.stepIdleFrames(2);
+        var objects = GameServices.level().getObjectManager();
+        int collisionType = generator.getCollisionFlags();
+        // byte_206D2A (r8/player_object_collide.asm:494-552): $22 reaches 40 px horizontally,
+        // $3A reaches 32. Sonic contributes another 8 px.
+        sonic.setCentreX((short) (generator.getX() - 45));
+        sonic.setCentreY((short) generator.getY());
+        sonic.setAnimationId(CdSonicAnimation.WALK.id());
+        objects.runTouchResponsesForPlayer(sonic, 3);
+        generator.update(3, sonic);
+        assertFalse(level().flags().goodFuture, "walking contact leaves the generator intact");
+
+        // loc_206CBE (r8/player_object_collide.asm:439-445) accepts animation 2 on each overlap.
+        sonic.setAnimationId(CdSonicAnimation.ROLL.id());
+        objects.runTouchResponsesForPlayer(sonic, 4);
+        generator.update(4, sonic);
+        assertTrue(level().flags().goodFuture, "rolling contact at 45 px breaks the generator");
+        assertEquals(0xE2, collisionType);
+    }
+
+    @Test
+    void foregroundSpillUsesBucketZeroAndHighPriorityArt() throws Exception {
+        assertSpillPriority(0, 0, true);
+    }
+
+    @Test
+    void backgroundSpillUsesBucketThreeAndLowPriorityArt() throws Exception {
+        assertSpillPriority(1, 3, false);
+    }
+
+    private void assertSpillPriority(int layer, int bucket, boolean highPriority) throws Exception {
+        boot(CdStagePayload.R81A);
+        MmzBuzzsaw saw = add(new MmzBuzzsaw(at(0x70, -0x20, 0x27, 0)));
+        runner.stepIdleFrames(2);
+        if (signals().stageLayer() != layer) signals().flipStageLayer();
+        sonic.setRingCount(2);
+        sonic.setCentreX((short) saw.getX());
+        sonic.setCentreY((short) saw.getY());
+        var objects = GameServices.level().getObjectManager();
+        objects.runTouchResponsesForPlayer(sonic, 2);
+        saw.setDestroyed(true);
+
+        signals().flipStageLayer();
+        runner.stepIdleFrames(2);
+        // loc_208B5A (objects/ring.asm:346-364) uses the spill's layer for both render priorities.
+        var priorities = objects.getActiveObjects().stream()
+                .filter(LostRingObjectInstance.class::isInstance)
+                .map(LostRingObjectInstance.class::cast)
+                .map(ring -> List.of(ring.getPriorityBucket(), ring.isHighPriority()))
+                .toList();
+        assertEquals(List.of(List.of(bucket, highPriority), List.of(bucket, highPriority)), priorities);
     }
 
     @Test

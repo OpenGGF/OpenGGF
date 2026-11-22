@@ -29,6 +29,7 @@ public final class ObjWwzAnimal extends WwzObject implements ProjectorChild, Rew
     private int statusFlip;
     private int[] scriptState = {-1, 0, 0, 0, 0};
     private boolean drawThisFrame;
+    private boolean rangeOnly;
 
     public ObjWwzAnimal(ObjectSpawn spawn) {
         super(spawn, "Animal");
@@ -54,6 +55,7 @@ public final class ObjWwzAnimal extends WwzObject implements ProjectorChild, Rew
     @Override
     public void update(int vIntRunCount, PlayableEntity player) {
         drawThisFrame = false;
+        rangeOnly = false;
         if (!present()) return;
         if (routine == 0) {
             initialize();
@@ -74,7 +76,9 @@ public final class ObjWwzAnimal extends WwzObject implements ProjectorChild, Rew
             return false;
         }
         CdTimeTravel time = CdTimeTravel.of(services().gameModule());
-        return time != null && time.projectorDestroyed();
+        if (time != null && time.projectorDestroyed()) return true;
+        rangeOnly = true;
+        return false;
     }
 
     private void initialize() {
@@ -131,7 +135,8 @@ public final class ObjWwzAnimal extends WwzObject implements ProjectorChild, Rew
             addToY(yVelocity);
             yVelocity += 0x2000;
             mapFrame = yVelocity < 0 ? 0 : 1;
-            int floor = checkFloor(x, y, yRadius).distance();
+            int probeY = (y + yRadius) & 0xFFFF;
+            int floor = checkFloor(x, probeY, 0).distance();
             if (floor < 0) {
                 routine += 2;
                 y = (y + floor) & 0xFFFF;
@@ -182,10 +187,10 @@ public final class ObjWwzAnimal extends WwzObject implements ProjectorChild, Rew
         statusFlip ^= 1;
     }
 
-    @Override protected boolean despawnsByCheckObjDespawn() { return !hologram; }
+    @Override protected boolean despawnsByCheckObjDespawn() { return !hologram && (rangeOnly || drawThisFrame); }
     @Override protected boolean drawsBeforeDespawnCheck() { return true; }
     @Override protected boolean calledDrawObjectThisFrame() { return drawThisFrame; }
-    @Override protected int despawnX() { return flying && routine != 0 ? originX : x; }
+    @Override protected int despawnX() { return flying && drawThisFrame ? originX : x; }
 
     @Override
     protected String sheetKey() {

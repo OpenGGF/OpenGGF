@@ -7,6 +7,7 @@ import com.openggf.audio.smps.SmpsLoader;
 import com.openggf.data.Rom;
 import com.openggf.game.BuiltInRomDetectors;
 import com.openggf.game.GameId;
+import com.openggf.catalog.StockGameCatalog;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -26,7 +27,6 @@ import java.util.logging.Logger;
  */
 final class SceneDonorMusic implements AutoCloseable {
     private static final Logger LOG = Logger.getLogger(SceneDonorMusic.class.getName());
-    private static final List<String> GAMES = List.of("s1", "s2", "s3k", "scd");
     private final AudioManager audio;
     private final SceneRomLibrary library;
     private final Map<String, GameAudioProfile> profiles = new HashMap<>();
@@ -43,7 +43,7 @@ final class SceneDonorMusic implements AutoCloseable {
     /** The lower-case stock game code; throws for unknown games and negative music ids. */
     static String validate(String gameId, int musicId) {
         String game = Objects.requireNonNull(gameId, "gameId").toLowerCase(Locale.ROOT);
-        if (!GAMES.contains(game)) throw new IllegalArgumentException("Unknown stock game: " + gameId);
+        if (!StockGameCatalog.isStockCode(game)) throw new IllegalArgumentException("Unknown stock game: " + gameId);
         if (musicId < 0) throw new IllegalArgumentException("music id must be non-negative");
         return game;
     }
