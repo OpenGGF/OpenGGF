@@ -283,15 +283,14 @@ See the [Competition swap design](architecture/designs/2026-11-07-s3k-competitio
 25. [Death Egg widescreen backgrounds](#death-egg-widescreen-backgrounds) — Engine feature
 26. [LRZ1 and DEZ2 widescreen arena framing](#lrz1-and-dez2-widescreen-arena-framing) — Engine feature
 27. [Ending scenes in a wider picture](#ending-scenes-in-a-wider-picture) — Engine feature
-28. [Sprite_OnScreen_Test lifetime audit](#sprite_onscreen_test-lifetime-audit) — Other
-29. [LRZ boss lava-plane presentation](#lrz-boss-lava-plane-presentation) — Other
-30. [Blue Sphere player projection and shadows (local correction, 2026-10-17)](#blue-sphere-player-projection-and-shadows-local-correction-2026-10-17) — Other
-31. [Retained HCZ replay qualification](#retained-hcz-replay-qualification) — Other
-32. [DDZ, LBZ and ICZ component history](#ddz-lbz-and-icz-component-history) — Other
-33. [DEZ final native terrain ownership — 2026-10-17](#dez-final-native-terrain-ownership--2026-10-17) — Other
-34. [Mega AIZ2 return loses source ownership at death/reload](#mega-aiz2-return-loses-source-ownership-at-deathreload) — Other
-35. [HCZ1 direct water art — bounded physical publication coverage](#hcz1-direct-water-art--bounded-physical-publication-coverage) — Other
-36. [Knuckles full-chain first-return pose — 2026-10-29](#knuckles-full-chain-first-return-pose--2026-10-29) — Other
+28. [LRZ boss lava-plane presentation](#lrz-boss-lava-plane-presentation) — Other
+29. [Blue Sphere player projection and shadows (local correction, 2026-10-17)](#blue-sphere-player-projection-and-shadows-local-correction-2026-10-17) — Other
+30. [Retained HCZ replay qualification](#retained-hcz-replay-qualification) — Other
+31. [DDZ, LBZ and ICZ component history](#ddz-lbz-and-icz-component-history) — Other
+32. [DEZ final native terrain ownership — 2026-10-17](#dez-final-native-terrain-ownership--2026-10-17) — Other
+33. [Mega AIZ2 return loses source ownership at death/reload](#mega-aiz2-return-loses-source-ownership-at-deathreload) — Other
+34. [HCZ1 direct water art — bounded physical publication coverage](#hcz1-direct-water-art--bounded-physical-publication-coverage) — Other
+35. [Knuckles full-chain first-return pose — 2026-10-29](#knuckles-full-chain-first-return-pose--2026-10-29) — Other
 
 ---
 
@@ -1362,42 +1361,6 @@ few pixels of unloaded art at the right edge, past the end of Angel Island's
 layout. None of this has a native reference: it is an intentional presentation
 extension. `TestEndingWideStage`, `TestEndingWidePlanes` and
 `TestS3kEndingWidescreen` cover it.
-
-## Sprite_OnScreen_Test lifetime audit
-
-**Kind:** Other
-
-LRZ Fireworm defeat correction (2026-09-29): body retirement previously cleared
-collision but froze the segments indefinitely. `loc_8F8F0` sets d0 to zero before
-`Child_DrawTouch_Sprite_FlickerMove`; `Set_IndexedVelocity` therefore selects the
-first four velocity pairs, reflected by render flip. Segments now execute
-`Obj_FlickerMove` gravity, alternating visibility and unsigned offscreen deletion,
-including after orphan recreation. Visible head/body/flame palette 1 already
-matches `ObjSlot_Fireworm` / `ObjDat3_8F9FC`; palette 3 is the invisible spawner.
-Both acts' loaded-art checks protect that distinction. See the LRZ act matrices
-for verification scope; this is not whole-scene native visual certification.
-
-LRZ1 sinking-rock art correction (2026-09-29): `Obj_LRZSinkingRock` uses
-tile `$0D3`, palette 2, rather than `ArtTile_LRZMisc` (`$3A1`). The registry
-now binds the rock to its terrain tiles; Act 2 retains its separate `$090`
-base. The loaded-sheet regression checks both acts' ROM mappings and tile
-bindings. See the LRZ1 coverage matrix for validation and visual evidence.
-
-The LRZ cold-route audit based on `bc4e3285d` disproved the old guide claim
-that `Sprite_OnScreen_Test` only draws. Its out-of-range branch clears the
-respawn entry and deletes through `loc_1B5A0` (sonic3k.asm:37302–37318).
-LRZ sinking rocks, landed spikes, smashing platforms and intact collapsing
-bridges incorrectly suppressed this unload, retaining slots that change later
-button/door execution order. The LRZ1 matrix records the correction and checks.
-
-A sibling source audit found the same incorrect rationale in
-`HCZWaterWallObjectInstance`. Its per-phase range contract still needs a
-separate ROM audit: the actual cleanup countdown must remain persistent, but
-phases reaching `Sprite_OnScreen_Test` cannot be dismissed as drawing only.
-HCZ runtime behavior is unchanged by the LRZ correction; existing trace success
-is not evidence that every offscreen phase is faithful. The DEZ energy-bridge
-and LBZ cup providers checked during this audit already implement range tests.
-
 
 ## LRZ boss lava-plane presentation
 
