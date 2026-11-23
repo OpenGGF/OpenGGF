@@ -97,6 +97,34 @@ class TestSonic2SoundRequestService {
         assertEquals(before, service.snapshot());
     }
 
+    @Test
+    void rollbackRestoresPriorityAndTransformsAfterRefusalAndOverrideRestore() {
+        Sonic2SoundRequestService service = new Sonic2SoundRequestService();
+        var pipeline = new Sonic2SoundRequestPipeline<Sonic2SoundRequestService.PendingRequest>();
+        pipeline.submitSound(0xE0, new Sonic2SoundRequestService.PendingRequest(0xE0, sfx(0xE0)));
+        pipeline.bridge();
+        pipeline.cycleQueue();
+        pipeline.dispatchQueuedRequest();
+        pipeline.onOneUpStarted();
+        service.restore(new Sonic2SoundRequestService.Snapshot(pipeline.snapshot(), List.of()));
+
+        service.submitSound(0xDA, sfx(0xDA));
+        var before = service.snapshot();
+        var boundary = service.beginForwardBoundary(true);
+        List<AudioCommand> staged = new ArrayList<>();
+        boundary.service(staged::add);
+        var refused = service.snapshot().pipeline();
+        assertTrue(staged.isEmpty());
+        assertEquals(0, refused.sfxPriorityValue());
+        assertEquals(before.pipeline().gloopFlag(), refused.gloopFlag());
+        assertTrue(refused.spindashActive());
+
+        service.onMusicOverrideRestored();
+        assertEquals(0x70, service.snapshot().pipeline().sfxPriorityValue());
+        boundary.rollback();
+        assertEquals(before, service.snapshot());
+    }
+
     private static AudioCommand.PlayMusic music(int id) {
         return new AudioCommand.PlayMusic(id, AudioCommand.MusicRoute.BASE_SMPS, false, null);
     }

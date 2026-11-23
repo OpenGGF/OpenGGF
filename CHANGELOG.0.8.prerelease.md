@@ -7,6 +7,10 @@ under the matching area heading; see the
 
 ## Gameplay and presentation
 
+- **Sonic 2 extra-life audio:** requests refused during the jingle or its fade-in
+  clear the sound-effect priority without advancing ring panning, gloop alternation
+  or spindash pitch. The fade-in restores the saved priority, which the cartridge clears before backup.
+
 - **Death Egg's final fight:** entering the arena now links foreground and
   background rows 4 and 31 to the same terrain as foreground row 0, as on the
   cartridge. Rewind preserves those links and edits to the shared terrain.

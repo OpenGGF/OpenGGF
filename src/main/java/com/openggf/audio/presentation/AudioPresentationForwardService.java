@@ -15,6 +15,14 @@ public interface AudioPresentationForwardService {
 
     ForwardBoundary beginForwardBoundary();
 
+    /** Begins request service with the presentation owner's pre-dispatch SFX gate. */
+    default ForwardBoundary beginForwardBoundary(boolean sfxBlocked) {
+        return beginForwardBoundary();
+    }
+
+    /** The driver reached its native restore flag or committed an override restore command. */
+    default void onMusicOverrideRestored() { }
+
     interface Snapshot { }
 
     interface ForwardBoundary {

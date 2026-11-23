@@ -1016,10 +1016,14 @@ public final class AudioPresentationProducer {
                     commandBatch, registryMutation, sessionMutation);
             registry.commitLiveMutation(registryMutation);
             registryCommitted = true;
+            boolean restoredOverride = smpsSession.restoredMusicOverrideInLiveMutation();
             smpsSession.commitLiveMutation(sessionMutation);
             sessionCommitted = true;
             commands.commitPendingBatch(commandBatch);
             commandsCommitted = true;
+            if (restoredOverride && forwardService != null) {
+                forwardService.onMusicOverrideRestored();
+            }
             publishSessionDiagnosticsQuarantined(registryMutation);
         } catch (RuntimeException failure) {
             if (registryMutation != null && !registryCommitted) {
@@ -1203,7 +1207,8 @@ public final class AudioPresentationProducer {
         boolean loadBlocked = smpsSession.blocksForwardRequestConsumption();
         try {
             if (!loadBlocked && forwardService != null) {
-                forwardBoundary = forwardService.beginForwardBoundary();
+                forwardBoundary = forwardService.beginForwardBoundary(
+                        registry.blocksSfxBeforeDispatch());
                 if (forwardResolver == null) {
                     forwardBoundary.service(forwardCommandSink);
                 } else {
@@ -1265,11 +1270,23 @@ public final class AudioPresentationProducer {
                 requestOutcome = requestBatch.apply();
                 forwardBoundary.applyOutcome(requestOutcome);
             }
+            boolean restoredOverride = smpsSession.restoredMusicOverrideInLiveMutation();
+            if (restoredOverride && forwardBoundary != null) {
+                forwardService.onMusicOverrideRestored();
+            }
+            boolean restoreWasPending = registry.musicOverrideRestorePending();
             registry.beginRendering();
             forwardSfxTrackStopped = false;
             forwardNativePauseConsumed = null;
             short[] pcm = mixSessionForwardAtRate(stereoFrames);
             registry.endRendering();
+            if (forwardBoundary != null && !restoreWasPending
+                    && registry.musicOverrideRestorePending()) {
+                // The native coordination flag restores the request state in
+                // this service. The queued presentation restore consumes the
+                // music state before rendering the next packet.
+                forwardService.onMusicOverrideRestored();
+            }
             if (forwardBoundary != null && forwardNativePauseConsumed != null) {
                 forwardBoundary.onNativePauseConsumed();
             }
@@ -1321,6 +1338,9 @@ public final class AudioPresentationProducer {
             if (forwardBoundary != null) {
                 requestReceipt = forwardBoundary.commit();
                 forwardCommitted = true;
+            }
+            if (restoredOverride && forwardBoundary == null && forwardService != null) {
+                forwardService.onMusicOverrideRestored();
             }
             if (requestBatch != null) {
                 requestBatch.publishDiagnostics(requestReceipt);
@@ -1402,10 +1422,14 @@ public final class AudioPresentationProducer {
                     commandBatch, registryMutation, sessionMutation);
             registry.commitLiveMutation(registryMutation);
             registryCommitted = true;
+            boolean restoredOverride = smpsSession.restoredMusicOverrideInLiveMutation();
             smpsSession.commitLiveMutation(sessionMutation);
             sessionCommitted = true;
             commands.commitPendingBatch(commandBatch);
             commandsCommitted = true;
+            if (restoredOverride && forwardService != null) {
+                forwardService.onMusicOverrideRestored();
+            }
             publishSessionDiagnosticsQuarantined(registryMutation);
         } catch (RuntimeException failure) {
             if (registryMutation != null && !registryCommitted) {

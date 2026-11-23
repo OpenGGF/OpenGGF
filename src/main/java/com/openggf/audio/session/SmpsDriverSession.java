@@ -575,6 +575,7 @@ public final class SmpsDriverSession implements AutoCloseable {
     // Per-call outcome, not driver state: reset before every forward service.
     private boolean globalStopConsumedDuringService;
     private boolean transactionOpen;
+    private boolean restoredMusicOverrideInMutation;
     private boolean logicalMaterialization;
     private boolean closed;
     private SmpsDriverServiceObserver driverServiceObserver =
@@ -1473,6 +1474,7 @@ public final class SmpsDriverSession implements AutoCloseable {
                     "an SMPS session mutation is already active");
         }
         transactionOpen = true;
+        restoredMusicOverrideInMutation = false;
         try {
             return new SessionLiveMutation(device.captureSessionMutation());
         } catch (RuntimeException failure) {
@@ -1480,6 +1482,12 @@ public final class SmpsDriverSession implements AutoCloseable {
             if (mutationOverrides != null) Arrays.fill(mutationOverrides, null);
             throw failure;
         }
+    }
+
+    /** Reports only a saved override popped by the current command mutation. */
+    public boolean restoredMusicOverrideInLiveMutation() {
+        requireActive();
+        return transactionOpen && restoredMusicOverrideInMutation;
     }
 
     public void commitLiveMutation(LiveMutationToken token) {
@@ -1976,6 +1984,9 @@ public final class SmpsDriverSession implements AutoCloseable {
                                     speedShoesEnabled)));
         }
         applyCurrentLogicalControls();
+        if (transactionOpen) {
+            restoredMusicOverrideInMutation = true;
+        }
     }
 
     private void endOverride(int musicId) {

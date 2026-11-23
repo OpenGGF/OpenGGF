@@ -3267,8 +3267,7 @@ release gates; this tolerance result does not establish full SMPS parity. See th
 **Kind:** Other
 
 **Location:** `AudioVoiceRegistry` (`sfxBlocked`, `sfxBlockHeldThroughFadeIn`),
-`Sonic1StatefulCommandPolicy`, `Sonic2StatefulCommandPolicy`,
-`Sonic2SoundRequestPipeline`
+`Sonic1StatefulCommandPolicy`, `Sonic2StatefulCommandPolicy`
 
 The engine now models the two flags that refuse SFX around a Sonic 1 / Sonic 2
 extra life: the 1-up flag from the jingle's load to `cfFadeInToPrevious`
@@ -3276,18 +3275,8 @@ extra life: the 1-up flag from the jingle's load to `cfFadeInToPrevious`
 fade-in flag from there until the fade-in stepper's counter runs down
 (`s1:2220, :1650`; `s2:3151, :2740`), with `Sound_PlaySFX` /
 `zPlaySound_CheckRing` refusing while either is set (`s1:978-982`,
-`s2:2118-2120`). Three edges of the same mechanism are not modelled:
+`s2:2118-2120`). Two edges of the same mechanism remain:
 
-- **The refused request's priority clear.** Both refusals also zero the SFX
-  priority latch (`.clear_sndprio`, `s1:1085-1086`; `zKillSFXPrio`,
-  `s2:2334-2336`). Sonic 2's mailbox model
-  (`Sonic2SoundRequestPipeline.onSfxSuppressedDuringOneUpOrFadeIn`) has the
-  operation but the presentation's refusal is not reported back to the request
-  service, so the latch keeps the value `zCycleQueue` stored for the refused
-  request. Sonic 1's presentation admission is permissive and carries no latch.
-  Audible only as a lower-priority effect being turned away just after the
-  fade in, in the shipped-bug case where `cfFadeInToPrevious` restores a
-  non-zero latch from the RAM copy (`s2:1714-1722`).
 - **A jingle over silence.** With no song to save, the ROM still raises the
   fade-in flag at `cfFadeInToPrevious` and holds SFX for the `28h`-step fade of
   nothing. The engine has no song to fade, so it releases when the jingle ends.
