@@ -1,5 +1,6 @@
 package com.openggf.audio.session;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.openggf.audio.rewind.SmpsSourceDescriptor;
 
 import java.util.Objects;
@@ -18,7 +19,7 @@ public record SmpsDriverSessionSnapshot(
         SmpsPhysicalDevice.Snapshot physical,
         SmpsNativePauseState nativePause,
         int nativeHistoryCursor,
-        int silentFadeInServices) {
+        @JsonInclude(JsonInclude.Include.NON_DEFAULT) int silentFadeInServices) {
     public SmpsDriverSessionSnapshot(
             boolean initialized, SmpsPendingGlobalCommand pendingGlobalCommand,
             SmpsSessionProfileFingerprint profile, SmpsSourceDescriptor selectedDacSource,
