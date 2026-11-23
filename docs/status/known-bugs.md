@@ -22,6 +22,57 @@ Entries should include:
 
 ---
 
+## S2 game-over host fade stops music before the destination owns audio
+
+- **Location** — `GameLoopGameOverExit.startToBlack`.
+- **Symptom** — the shared host fade issues a plain music stop before opening
+  the destination. Under a compressed load, this stop can precede an older
+  mailbox play when the queues resume.
+- **ROM behavior** — `Obj39_Dismiss` (s2.asm:27737-27748) selects Continue or
+  SEGA. `ContinueScreen` (s2.asm:10319-10329) begins its fade without issuing
+  a stop. `SegaScreen` (s2.asm:4095-4099) submits `MusID_Stop` through
+  `PlayMusic` before its own fade.
+- **Removal condition** — the destination owns the game-over handoff's fade
+  and audio entry. Continue adds no stop and the SEGA fade services only the
+  destination's native mailbox stop.
+
+## S2 compressed music loads suspend the V-int mailbox transfer
+
+- **Location** — `AudioPresentationProducer` gates the whole
+  `Sonic2SoundRequestService` on `SmpsDriverSession.blocksForwardRequestConsumption()`.
+- **Symptom** — the producer holds the 68K-side transfer while Saxman is
+  pending. A stop submitted to `Music0` stays there until release, so another
+  `PlayMusic` write can go to `Music1` even after a service boundary. Transfers
+  from `SFX0` and `SFX1` to free Z80 queue slots are also held.
+- **ROM behavior** — `zPlaySoundByIndex` (s2.sounddriver.asm:1555-1567) sets
+  `QueueToPlay` to `$80`. `zBGMLoad` (s2.sounddriver.asm:1738-1739,1780-1804)
+  calls `zInitMusicPlayback` (s2.sounddriver.asm:2624-2629), which restores
+  `$80` before Saxman. V-int still calls `sndDriverInput`, including via
+  `Do_ControllerPal` (s2.asm:1153-1173). It can clear `Music0` and place
+  `$FD` in `QueueToPlay` during the load, and transfer SFX into free slots
+  (`sndDriverInput`, s2.asm:1270-1332). The driver dispatches the stop after
+  the synchronous song load returns.
+- **Removal condition** — V-int transfers run during a pending compressed load
+  using the native destination-slot checks, while driver dispatch still waits
+  for load completion. A ROM-backed check covers both transfer and dispatch.
+
+## S2 song loads leave the mailbox voice-table pointer clear
+
+- **Location** — `Sonic2SoundRequestPipeline.onMusicPlaybackInitialized` clears
+  `voiceTablePointer`. The mailbox can write it through the slot-3 alias, but
+  the engine never installs the pointer from the song header.
+- **Symptom** — after a song load, a request still in `Music1` can be consumed
+  by the fourth SFX transfer even when the shipped song would protect it with
+  a nonzero pointer low byte.
+- **ROM behavior** — `zBGMLoad` (s2.sounddriver.asm:1804-1810) copies the
+  first two header bytes to `VoiceTblPtr` for compressed and uncompressed
+  songs. Shipped `sndDriverInput` (s2.asm:1306-1329) with `fixBugs = 0`
+  transfers `Music1` through the slot-3 alias only if that low byte is zero
+  (`SoundQueue`, s2.constants.asm:1879-1885).
+- **Removal condition** — song initialization installs the native pointer
+  in the mailbox model, and a ROM-backed check verifies both retention with a
+  nonzero low byte and the shipped alias transfer with a clear low byte.
+
 ## Sonic 1 does not enforce SFX request priority
 
 - **Location** — `Sonic1AudioProfile`, `AudioPresentationSourceFactory.evaluateAdmission`.
