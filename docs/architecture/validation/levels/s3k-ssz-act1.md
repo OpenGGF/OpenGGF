@@ -2722,13 +2722,13 @@ physical FIFO preserves immediate head initialization and deferred successor
 initialization, actual child receipts, queued DMA and the sparse rewind journal.
 Ordinary full-FIFO rejection leaves pairing and actor deletion in native order.
 
-Rejected shortcut: exposing `MgzEndBossArtScaler` or projecting only its
-mapping-selected `Pattern[]` cannot supply native `$FFD000` scratch writes.
-The first `$7C` scale's mapping references 256 bytes but native DMA transmits 384.
-Current module transfers clone payloads; they do not read then-current shared RAM
-at drain. Full scratch/knownness, causal interrupted Kos writes/backreferences,
-live DMA source lifetime and displayed `$A000` generation closure remain open.
-There is no scaled-art completion, trace parity or natural-route claim here.
+The [EggRobo fly-by renderer](#eggrobo-fly-by-scaled-art) shares
+`S3kPackedArtScaler` with the MGZ end boss to produce the mapping-selected
+`Pattern[]`. At the first `$7C` scale, native DMA transmits 384 bytes from
+`$FFD000`, of which the mapping references 256. Current module transfers drain
+from cloned payloads. Full scratch contents and knownness, interrupted Kosinski
+writes and backreferences, live DMA source lifetime, and displayed `$A000`
+generations remain open, along with trace parity and natural-route coverage.
 
 | Contract | Focused control | Scope |
 | --- | --- | --- |
@@ -4843,3 +4843,28 @@ both cold-route checks and nine traversal cases. This is local contract coverage
 full-act, donor and participant breadth beyond these cases remains inherited.
 See the [ROM and trace audit](../../audits/2026-11-03-s3k-ssz-diagonal-transfer.md)
 for executed branch evidence, profile coverage and the remaining frontiers.
+
+
+## EggRobo fly-by scaled art
+
+`loc_91874` (sonic3k.asm:198842-198862) binds the zero-animation bank
+of `ArtScaled_EggRoboFly` at `$17B6E0`.
+`loc_91526` (sonic3k.asm:198552-198563) descends from `$7F` in steps of
+three, first scaling at `$7C` and stopping at `$04`.
+`ObjDat3_9199A` (sonic3k.asm:198961-198965) uses palette line 1, high art
+priority and `Map_ScaledArt`. The shared scaler routine
+`sub_246DA` (sonic3k.asm:49570-49675) samples a packed 128×64 raster, and
+`sub_2468A` (sonic3k.asm:49530-49553) caps the mapping index at `$1C`
+while keeping the full scale for sampling.
+
+`TestSszEggRoboPresentation#flyByDrawsStockScaledTilesAndRestoresItsEarlierPicture`
+compares emitted tiles at `$7C`, `$40` and `$04` with an independent
+decode of the ROM source and mapping. The first two steps share a mapping and
+differ in pixel data. The component runs all four placement flip combinations,
+checks the unscaled fighter bank, and verifies the early picture after
+destroying and recreating the fly-by through world rewind.
+
+The gameplay clip uses the placed group 6 fly-by and a declared checkpoint at
+`($1500,$0C80)` with native Sonic at 320 pixels. Synchronized cartridge
+framebuffer comparison, additional donor and team combinations, and shared
+scratch or DMA publication timing remain open.

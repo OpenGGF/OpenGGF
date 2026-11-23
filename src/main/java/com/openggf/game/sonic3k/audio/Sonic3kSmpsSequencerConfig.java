@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.audio;
 
+import com.openggf.audio.smps.SmpsConfigBinding;
 import com.openggf.audio.smps.SmpsSequencerConfig;
 import com.openggf.audio.smps.CoordFlagHandler;
 import com.openggf.game.sonic3k.audio.smps.Sonic3kCoordFlagHandler;
@@ -39,14 +40,21 @@ public final class Sonic3kSmpsSequencerConfig {
     public static final int[] PSG_CHANNEL_ORDER = SmpsSequencerConfig.DEFAULT_PSG_CHANNEL_ORDER;
 
     /** Pre-built sequencer config instance for S3K. */
-    public static final SmpsSequencerConfig CONFIG;
+    public static final SmpsSequencerConfig CONFIG = create(new Sonic3kCoordFlagHandler());
 
-    static {
-        CONFIG = create(new Sonic3kCoordFlagHandler());
-    }
+    // s3.asm:22 selects driver version 3. The retail fix_sndbugs=0
+    // zVInt (Sound/Z80 Sound Driver.asm:482-499) reloads 6. The fixed
+    // branch and S&K (driver version 4, sonic3k.asm:27) reload 5.
+    static final SmpsSequencerConfig ORIGINAL_S3_CONFIG =
+            create(new Sonic3kCoordFlagHandler(), 6);
 
     public static SmpsSequencerConfig create(CoordFlagHandler coordFlagHandler) {
-        return new SmpsSequencerConfig.Builder()
+        return create(coordFlagHandler, 5);
+    }
+
+    private static SmpsSequencerConfig create(CoordFlagHandler coordFlagHandler, int fullPalUpdateReload) {
+        return SmpsConfigBinding.withFullPalUpdateReload(
+                        new SmpsSequencerConfig.Builder(), fullPalUpdateReload)
                 .speedUpTempos(Collections.emptyMap())
                 .tempoModBase(TEMPO_MOD_BASE)
                 .fmChannelOrder(FM_CHANNEL_ORDER)
