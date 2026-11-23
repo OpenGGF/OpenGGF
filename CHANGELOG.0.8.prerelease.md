@@ -15,6 +15,12 @@ under the matching area heading; see the
   background rows 4 and 31 to the same terrain as foreground row 0, as on the
   cartridge. Rewind preserves those links and edits to the shared terrain.
 
+- **PAL music in live play:** Sonic 2 adds a music update every five driver
+  services, except during the drowning countdown. Standalone Sonic 3 repeats
+  the music and sound-effect update on services 6, 12 and 18, then every six.
+  Sonic & Knuckles and locked-on Sonic 3 & Knuckles repeat on services 6, 11
+  and 16, then every five.
+
 - **Sonic 1 and Sonic 2 title cards** now count each serviced wait toward the
   V-int clock used by objects, preserving the timing phase carried into the act.
 

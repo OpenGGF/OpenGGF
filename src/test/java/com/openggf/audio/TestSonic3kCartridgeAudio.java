@@ -2,6 +2,7 @@ package com.openggf.audio;
 
 import com.openggf.audio.presentation.PresentationMode;
 import com.openggf.audio.rewind.AudioLogicalSnapshot;
+import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.synth.NativeCompatiblePcmOutput;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.data.PhysicalImage;
@@ -185,6 +186,42 @@ class TestSonic3kCartridgeAudio {
         }
         assertFalse(Arrays.equals(output[0], output[1]), "the cartridges have distinct title arrangements");
         assertArrayEquals(output[0], output[2], "returning to S&K reloads its original resources and fresh device");
+    }
+
+    @Test
+    void originalS3PalPresentationRunsTheRetailDriverReload() {
+        installPalSynthesis();
+        var initial = audio.shadowSmpsDriverSnapshotForTesting();
+        assertEquals(SmpsSequencer.Region.PAL, initial.region());
+        assertEquals(5, initial.palUpdateCounter());
+
+        audio.playMusic(SONIC_3.musicId(0x02));
+        int firstRepeat = 0;
+        int previousCount = initial.palUpdateCounter();
+        for (int service = 1; service <= 36; service++) {
+            present(1);
+            int count = audio.shadowSmpsDriverSnapshotForTesting().palUpdateCounter();
+            if (previousCount == 0) {
+                assertEquals(5, count, "retail Sonic 3 reloads 6 and decrements on the repeat");
+                if (firstRepeat != 0) {
+                    assertEquals(6, service - firstRepeat);
+                    return;
+                }
+                firstRepeat = service;
+            }
+            previousCount = count;
+        }
+        fail("the ROM-backed song did not reach two PAL repeats");
+    }
+
+    private void installPalSynthesis() {
+        var config = GameServices.configuration();
+        config.setSessionOverride(SonicConfiguration.REGION, "PAL");
+        config.setSessionOverride(SonicConfiguration.AUDIO_ENABLED, true);
+        config.setSessionOverride(SonicConfiguration.AUDIO_MUSIC_VOLUME, 100);
+        audio.setNativeCompatiblePcmCapture(null);
+        audio.setBackend(new HeadlessSmpsAudioBackend(config, GameServices.profiler(), audio, audio));
+        install(SONIC_3);
     }
 
     private void install(Sonic3kAudioResourceProfile resources) {

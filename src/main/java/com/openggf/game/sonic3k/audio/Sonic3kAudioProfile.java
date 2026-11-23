@@ -169,7 +169,9 @@ public class Sonic3kAudioProfile extends AbstractAudioProfile implements com.ope
 
     @Override
     public SmpsSequencerConfig getSequencerConfig() {
-        return Sonic3kSmpsSequencerConfig.CONFIG;
+        return resources == Sonic3kAudioResourceProfile.SONIC_3
+                ? Sonic3kSmpsSequencerConfig.ORIGINAL_S3_CONFIG
+                : Sonic3kSmpsSequencerConfig.CONFIG;
     }
 
     @Override
