@@ -901,10 +901,11 @@ parity. They do not enable a corrupted locked-on mode flag to select another
 cartridge.
 
 Original-cartridge [audio qualification](architecture/validation/2026-10-28-tas-support-audio.md)
-covers NTSC ROM resources, PCM output and restore/reused-boot identity. PAL
-service tests cover both standalone cartridges' music and SFX repeat cadence
-and rewind across a repeat. Original S3 SEGA mailbox timing still differs from
-the shared S&K sequencer; no full driver/waveform parity is claimed.
+covers NTSC ROM resources, PCM output and restore/reused-boot identity. Live PAL
+music repeats on services 6, 12 and 18 for standalone Sonic 3, and on services 6,
+11 and 16 for Sonic & Knuckles and locked-on play. Service tests also cover SFX
+repeat order and rewind across a repeat. Original S3 SEGA mailbox timing still
+differs from the shared S&K sequencer.
 
 ## KosM Adjacent-Memory Corruption
 

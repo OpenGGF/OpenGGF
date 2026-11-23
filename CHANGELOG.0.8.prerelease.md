@@ -7,8 +7,11 @@ under the matching area heading; see the
 
 ## Gameplay and presentation
 
-- **Standalone Sonic 3 in PAL:** music and sound effects now repeat their driver
-  update every six services after the first repeat, matching the original cartridge.
+- **PAL music in live play:** Sonic 2 adds a music update every five driver
+  services, except during the drowning countdown. Standalone Sonic 3 repeats
+  the music and sound-effect update on services 6, 12 and 18, then every six.
+  Sonic & Knuckles and locked-on Sonic 3 & Knuckles repeat on services 6, 11
+  and 16, then every five.
 
 - **Sonic 3 & Knuckles badnik score popups** now rise from the freed animal's
   first object pass, matching the cartridge's timing and slot allocation.
