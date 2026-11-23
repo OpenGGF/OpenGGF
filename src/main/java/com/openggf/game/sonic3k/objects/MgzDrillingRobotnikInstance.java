@@ -1826,7 +1826,7 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
         }
 
         SpriteMappingFrame mapping = sheet.getFrame(frame);
-        MgzEndBossArtScaler.scale(source, airZoomCueScaleStep, mapping, generated);
+        S3kPackedArtScaler.scale(source, airZoomCueScaleStep, mapping, generated);
         scaledRenderer.updatePatternRange(services().graphicsManager(), 0, generated.length);
         airZoomCueGeneratedFrame = frame;
     }

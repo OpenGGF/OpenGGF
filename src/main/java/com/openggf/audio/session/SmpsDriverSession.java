@@ -711,6 +711,7 @@ public final class SmpsDriverSession implements AutoCloseable {
         }
         driver = SmpsDriver.createSessionDriver(
                 new SmpsSessionSynthesizerAccess());
+        driver.setRegion(configuration.region());
         driver.setDiagnosticIdentity(driverIdentity);
         installDriverObservers();
         withPort(driverIdentity, port -> {
