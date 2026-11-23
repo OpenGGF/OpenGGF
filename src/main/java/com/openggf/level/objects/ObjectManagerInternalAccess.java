@@ -87,6 +87,14 @@ public final class ObjectManagerInternalAccess {
         manager.completeDeferredPlacement();
     }
 
+    /** Level objects resume in the tail of a wait that already counted its VBlank. */
+    public static void runTitleReleaseObjectPass(ObjectManager manager, int cameraX,
+            com.openggf.game.PlayableEntity player, List<? extends com.openggf.game.PlayableEntity> sidekicks,
+            int touchFrameCounter) {
+        manager.executeObjectPass(cameraX, player, sidekicks, touchFrameCounter,
+                false, false, false, null);
+    }
+
     /** RunObjects was skipped; V-int and placement still belong to their actual owners. */
     public static void runFrozenPlacementPass(ObjectManager manager) {
         manager.advanceVblaCounter();

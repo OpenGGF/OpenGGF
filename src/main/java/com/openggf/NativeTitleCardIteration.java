@@ -119,7 +119,13 @@ public final class NativeTitleCardIteration {
                 playerPrelude.run();
                 ranPlayerPrelude = true;
             }
-            levelManager.updateObjectPositionsWithoutTouches();
+            if (scan.titleOnlyWaitServiced()) {
+                // Level_LoadObj (sonic.asm:2895-2898) follows the last
+                // Level_TtlCardLoop wait without another VBlank in FixBugs=0.
+                com.openggf.level.NativeLevelLoadAccess.runTitleReleaseObjectsAfterVBlank(levelManager);
+            } else {
+                levelManager.updateObjectPositionsWithoutTouches();
+            }
         }
         if (ranPlayerPrelude) {
             LevelInitProfile initProfile = scan.frameContext().gameModule().getLevelInitProfile();

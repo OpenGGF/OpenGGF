@@ -13,6 +13,9 @@ under the matching area heading; see the
   Sonic & Knuckles and locked-on Sonic 3 & Knuckles repeat on services 6, 11
   and 16, then every five.
 
+- **Sonic 1 and Sonic 2 title cards** now count each serviced wait toward the
+  V-int clock used by objects, preserving the timing phase carried into the act.
+
 - **Sonic 3 & Knuckles badnik score popups** now rise from the freed animal's
   first object pass, matching the cartridge's timing and slot allocation.
 
@@ -28,7 +31,9 @@ under the matching area heading; see the
 
 - **Angel Island Act 2:** the end boss now loads and shows EggRobo's head when
   Knuckles reaches the fight. Sonic and Tails keep Eggman's head. Rewind
-  preserves the art queue's progress through the encounter.
+  preserves the art queue's progress through the encounter. The arena camera
+  bounds begin expanding on the boss's first repositioning update. The boss
+  returns to the cartridge's emerge routine when the repositioning timer expires.
 
 - **Angel Island Act 1 right-wall transitions:** Sonic 3 and Sonic 3 & Knuckles
   now use the direction of the terrain probes for the ROM's penetration counter.
