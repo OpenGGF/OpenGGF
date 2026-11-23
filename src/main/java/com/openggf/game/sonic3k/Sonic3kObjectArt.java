@@ -6,6 +6,7 @@ import com.openggf.data.RomByteReader;
 import com.openggf.game.GameServices;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
+import com.openggf.game.sonic3k.objects.S3kPackedArtScaler;
 import com.openggf.game.sonic3k.resources.S3kKosModuleQueue;
 import com.openggf.game.timing.HardwareWorkHandle;
 import com.openggf.level.Level;
@@ -29,6 +30,10 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
+
+import static com.openggf.game.sonic3k.constants.Sonic3kConstants.EGG_ROBO_FLY_SCALE_FLOOR;
+import static com.openggf.game.sonic3k.constants.Sonic3kConstants.EGG_ROBO_FLY_SCALE_START;
+import static com.openggf.game.sonic3k.constants.Sonic3kConstants.EGG_ROBO_FLY_SCALE_STEP;
 
 /**
  * Builds object sprite sheets for S3K objects.
@@ -888,6 +893,28 @@ public class Sonic3kObjectArt {
         }
     }
 
+    private ObjectSpriteSheet loadEggRoboFlyBySheet(Rom rom,
+            Sonic3kPlcArtRegistry.StandaloneArtEntry entry) throws IOException {
+        byte[] source = rom.readBytes(entry.artAddr(), entry.artSize());
+        List<SpriteMappingFrame> nativeFrames = S3kSpriteDataLoader.loadMappingFrames(reader, entry.mappingAddr());
+        List<SpriteMappingFrame> frames = new ArrayList<>();
+        List<Pattern> patterns = new ArrayList<>();
+        // Perform_Art_Scaling (sonic3k.asm:181117-181130) publishes deterministic
+        // tiles for each reachable scale. Keep them in disjoint atlas ranges so
+        // concurrent fly-bys and rewind can select their own scale directly.
+        for (int step = EGG_ROBO_FLY_SCALE_FLOOR; step < EGG_ROBO_FLY_SCALE_START;
+                step += EGG_ROBO_FLY_SCALE_STEP) {
+            // sub_2468A (sonic3k.asm:49525-49538) caps only the mapping frame.
+            List<SpriteMappingFrame> nativeFrame = List.of(nativeFrames.get(Math.min(step, 0x1C)));
+            Pattern[] bank = new Pattern[mappingTileRange(nativeFrame).maxExclusive()];
+            Arrays.setAll(bank, ignored -> new Pattern());
+            S3kPackedArtScaler.scale(source, step, nativeFrame.getFirst(), bank);
+            frames.add(adjustTileIndices(nativeFrame, patterns.size()).getFirst());
+            patterns.addAll(Arrays.asList(bank));
+        }
+        return new ObjectSpriteSheet(patterns.toArray(Pattern[]::new), frames, entry.palette(), 1);
+    }
+
     /**
      * Loads a standalone art sheet from a registry entry.
      * Dispatches based on the entry's compression type and DPLC presence.
@@ -895,6 +922,9 @@ public class Sonic3kObjectArt {
     public ObjectSpriteSheet loadStandaloneSheet(Rom rom,
             Sonic3kPlcArtRegistry.StandaloneArtEntry entry) throws IOException {
         if (rom == null || reader == null) return null;
+        if (Sonic3kObjectArtKeys.SSZ_EGG_ROBO_FLY_BY.equals(entry.key())) {
+            return loadEggRoboFlyBySheet(rom, entry);
+        }
 
         Pattern[] patterns;
         switch (entry.compression()) {
