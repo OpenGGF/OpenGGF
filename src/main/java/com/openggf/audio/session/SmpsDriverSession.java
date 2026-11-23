@@ -881,8 +881,7 @@ public final class SmpsDriverSession implements AutoCloseable {
      *
      * <p>Its other half is the disable, emitted from
      * {@link #emitPendingDacSampleEnds()} when the chip exhausts the sample.
-     * The two must ship together: an enable without a disable leaves the DAC
-     * on holding its last level once the sample has finished.</p>
+     * That disable belongs to S3K. S1 leaves the DAC enabled between samples.</p>
      */
     private void emitDacIdleLoopEnableIfQueued() {
         if (!driver.consumeDacIdleLoopPass()) {

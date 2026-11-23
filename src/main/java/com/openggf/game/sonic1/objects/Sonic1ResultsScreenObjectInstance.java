@@ -126,6 +126,19 @@ public class Sonic1ResultsScreenObjectInstance extends AbstractResultsScreen
     private static final int FRAME_ACT_BASE = 6; // add v_act (0-indexed) for ACT 1/2/3
     private static final int FRAME_SCORE_DOTS = 9; // separator dots split from SCORE frame
 
+    // Got_ItemData slot order. Map_Got's score mapping is split into two engine frames.
+    private record CardPart(int element, int frame) {}
+    private static final CardPart[] CARD_PARTS = {
+            new CardPart(ELEM_SONIC_HAS, FRAME_SONIC_HAS),
+            new CardPart(ELEM_PASSED, FRAME_PASSED),
+            new CardPart(ELEM_ACT, FRAME_ACT_BASE),
+            new CardPart(ELEM_SCORE, FRAME_SCORE),
+            new CardPart(ELEM_SCORE, FRAME_SCORE_DOTS),
+            new CardPart(ELEM_TIME_BONUS, FRAME_TIME_BONUS),
+            new CardPart(ELEM_RING_BONUS, FRAME_RING_BONUS),
+            new CardPart(ELEM_OVAL, FRAME_OVAL)
+    };
+
     // Slide-in duration: determined by the slowest element (ring bonus)
     // Distance = |0x560 - 0x120| = 0x440 = 1088 pixels, at 16px/frame = 68 frames
     private static final int SLIDE_IN_FRAMES = 68;
@@ -632,51 +645,16 @@ public class Sonic1ResultsScreenObjectInstance extends AbstractResultsScreen
         // xOffset() == 0 at native 320 (byte-identical).
         int worldXBase = camera.getX() - 128 + xOffset();
 
-        // Draw order: oval first (behind), then text elements on top.
-        // On the VDP, earlier sprites in the link table render in front of later ones.
-        // The oval is last in Got_Config (object index 6), so it renders behind everything.
-        // Our renderer draws later calls on top, so we draw the oval first.
-
-        // Oval (frame 5) - drawn first so it appears behind other elements
-        renderer.drawFrameIndex(FRAME_OVAL,
-                worldXBase + elemCurrentX[ELEM_OVAL],
-                worldBaseY + ELEM_SCREEN_Y[ELEM_OVAL], false, false);
-
-        // "SONIC HAS" (frame 0)
-        renderer.drawFrameIndex(FRAME_SONIC_HAS,
-                worldXBase + elemCurrentX[ELEM_SONIC_HAS],
-                worldBaseY + ELEM_SCREEN_Y[ELEM_SONIC_HAS], false, false);
-
-        // "PASSED" (frame 1)
-        renderer.drawFrameIndex(FRAME_PASSED,
-                worldXBase + elemCurrentX[ELEM_PASSED],
-                worldBaseY + ELEM_SCREEN_Y[ELEM_PASSED], false, false);
-
-        // "ACT N" (frame 6 + act offset; v_act is 0-indexed, actNumber is 1-indexed)
-        int actFrame = FRAME_ACT_BASE + (actNumber - 1);
-        renderer.drawFrameIndex(actFrame,
-                worldXBase + elemCurrentX[ELEM_ACT],
-                worldBaseY + ELEM_SCREEN_Y[ELEM_ACT], false, false);
-
-        // Score separator dots (frame 9) - drawn before SCORE text so dots appear behind
-        renderer.drawFrameIndex(FRAME_SCORE_DOTS,
-                worldXBase + elemCurrentX[ELEM_SCORE],
-                worldBaseY + ELEM_SCREEN_Y[ELEM_SCORE], false, false);
-
-        // Score text + digits (frame 2)
-        renderer.drawFrameIndex(FRAME_SCORE,
-                worldXBase + elemCurrentX[ELEM_SCORE],
-                worldBaseY + ELEM_SCREEN_Y[ELEM_SCORE], false, false);
-
-        // Time Bonus (frame 3)
-        renderer.drawFrameIndex(FRAME_TIME_BONUS,
-                worldXBase + elemCurrentX[ELEM_TIME_BONUS],
-                worldBaseY + ELEM_SCREEN_Y[ELEM_TIME_BONUS], false, false);
-
-        // Ring Bonus (frame 4)
-        renderer.drawFrameIndex(FRAME_RING_BONUS,
-                worldXBase + elemCurrentX[ELEM_RING_BONUS],
-                worldBaseY + ELEM_SCREEN_Y[ELEM_RING_BONUS], false, false);
+        // Earlier opaque SAT pieces own the pixel. The direct painter needs
+        // the reverse order, including the two pieces of the score group.
+        boolean nativeOrder = services().graphicsManager().isSpriteSatCollectionActive();
+        for (int i = 0; i < CARD_PARTS.length; i++) {
+            CardPart part = CARD_PARTS[nativeOrder ? i : CARD_PARTS.length - 1 - i];
+            int element = part.element();
+            int frame = element == ELEM_ACT ? FRAME_ACT_BASE + actNumber - 1 : part.frame();
+            renderer.drawFrameIndex(frame, worldXBase + elemCurrentX[element],
+                    worldBaseY + ELEM_SCREEN_Y[element], false, false);
+        }
 
         // Update bonus digit patterns
         updateBonusPatterns(renderManager);
