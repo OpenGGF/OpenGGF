@@ -2162,9 +2162,10 @@ records the source-bound122focused,5exactguards and unchanged7route cases, all
 with zero skips. Native continuation retains actual known128/16 ROM writes with
 final collision bank; first production ScreenInit clears FF80F8..FF8FFF once,
 with two forced world replays before all tail assertions. Prior five route deaths
-no longer reproduce in that class. Four native alias writes, native whole-route
-descriptors/pixels/clocks, additional supported products/lifecycle and the separate
-cold campaign remain open; no full-suite/native-equivalence claim.
+no longer reproduced in that source epoch. Cold and native-continuation entry
+also cover the four installed row aliases, cross-layer edits and full-world
+restore. Whole-route native descriptors/pixels/clocks, additional supported
+products/lifecycle and the separate cold campaign remain open.
 
 
 ### Local ship and launcher presentation corrections — 2026-10-20

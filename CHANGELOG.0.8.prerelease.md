@@ -7,6 +7,10 @@ under the matching area heading; see the
 
 ## Gameplay and presentation
 
+- **Death Egg's final fight:** entering the arena now links foreground and
+  background rows 4 and 31 to the same terrain as foreground row 0, as on the
+  cartridge. Rewind preserves those links and edits to the shared terrain.
+
 - **Sonic 3 & Knuckles badnik score popups** now rise from the freed animal's
   first object pass, matching the cartridge's timing and slot allocation.
 
