@@ -7,6 +7,9 @@ under the matching area heading; see the
 
 ## Gameplay and presentation
 
+- **Standalone Sonic 3 in PAL:** music and sound effects now repeat their driver
+  update every six services after the first repeat, matching the original cartridge.
+
 - **Angel Island Act 2:** defeating the miniboss sends four flickering pieces
   of wreckage falling from the ship, as on the cartridge.
 

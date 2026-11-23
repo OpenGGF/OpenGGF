@@ -9,7 +9,16 @@ import com.openggf.audio.rewind.SmpsSequencerSnapshot;
 import com.openggf.audio.smps.SmpsSequencer.Track;
 import com.openggf.audio.smps.SmpsSequencer.TrackType;
 import com.openggf.audio.synth.VirtualSynthesizer;
+import com.openggf.data.Rom;
+import com.openggf.data.RomByteReader;
+import com.openggf.game.sonic3k.audio.Sonic3kAudioProfile;
+import com.openggf.game.sonic3k.audio.Sonic3kAudioResourceProfile;
+import com.openggf.tests.RomTestUtils;
+import com.openggf.tests.rules.RequiresRom;
+import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -315,6 +324,65 @@ class TestSmpsSequencerCadence {
         driver.serviceOuterFrame();
         assertEquals(4, driver.captureSnapshot().palUpdateCounter(),
                 "the restored zero phase repeats on the same next frame");
+    }
+
+    // zVInt (Sound/Z80 Sound Driver.asm:470-499) tests the divider after each
+    // full pass. Both carts start at 5, then S3 reloads 6 and S&K reloads 5.
+    @ParameterizedTest(name = "{0} {1}")
+    @CsvSource({
+            "SONIC_3, PAL, 6, 12, 18",
+            "SONIC_KNUCKLES, PAL, 6, 11, 16",
+            "SONIC_3, NTSC, 0, 0, 0"
+    })
+    @RequiresRom(SonicGame.SONIC_3K)
+    void originalCartridgesRepeatBothPassesOnTheirRetailPalCadence(
+            Sonic3kAudioResourceProfile expectedCartridge, SmpsSequencer.Region region,
+            int firstRepeat, int secondRepeat, int thirdRepeat) throws Exception {
+        try (var locked = new Rom()) {
+            assertTrue(locked.open(RomTestUtils.ensureSonic3kRomAvailable().getAbsolutePath()));
+            int offset = expectedCartridge == Sonic3kAudioResourceProfile.SONIC_3 ? 0x200000 : 0;
+            try (var cartridge = Rom.fromReader(RomByteReader.fromRom(locked).window(offset, 0x200000),
+                    expectedCartridge.name())) {
+                var resources = Sonic3kAudioResourceProfile.fromRom(cartridge);
+                assertEquals(expectedCartridge, resources);
+                var profile = new Sonic3kAudioProfile(resources);
+                var sourceConfig = profile.getSequencerConfig();
+                var config = SmpsConfigBinding.bind(sourceConfig, sourceConfig::getCoordFlagHandler);
+                var driver = new SmpsDriver(region == SmpsSequencer.Region.PAL ? 50.0 : 60.0);
+                driver.setRegion(region);
+                addPrimedDriverTrack(driver, config, 0, false);
+                addPrimedDriverTrack(driver, config, 0, true);
+
+                List<Boolean> serviceOrder = new ArrayList<>();
+                driver.setServiceObserver(new SmpsDriverServiceObserver() {
+                    @Override
+                    public void onServiceBegin(ServiceEvent event) {
+                        if (event.kind() == ServiceKind.SEQUENCER_TICK) {
+                            serviceOrder.add(event.sequencer().sfx());
+                        }
+                    }
+                });
+                for (int service = 1; service <= 5; service++) {
+                    assertFullPasses(driver, serviceOrder, service, false);
+                }
+                var beforeFirstRepeat = driver.captureSnapshot();
+                var repeats = List.of(firstRepeat, secondRepeat, thirdRepeat);
+                for (int replay = 0; replay < 2; replay++) {
+                    for (int service = 6; service <= 18; service++) {
+                        assertFullPasses(driver, serviceOrder, service, repeats.contains(service));
+                    }
+                    driver.restoreSnapshot(beforeFirstRepeat);
+                }
+            }
+        }
+    }
+
+    private static void assertFullPasses(SmpsDriver driver, List<Boolean> serviceOrder,
+            int service, boolean repeat) {
+        serviceOrder.clear();
+        driver.serviceOuterFrame();
+        assertEquals(repeat ? List.of(true, false, true, false) : List.of(true, false),
+                serviceOrder, "SFX then music on service " + service);
     }
 
     @Test

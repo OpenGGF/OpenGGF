@@ -902,9 +902,10 @@ parity. They do not enable a corrupted locked-on mode flag to select another
 cartridge.
 
 Original-cartridge [audio qualification](architecture/validation/2026-10-28-tas-support-audio.md)
-covers NTSC ROM resources, PCM output and restore/reused-boot identity. Original
-S3 PAL compensation and SEGA mailbox timing still differ from the shared S&K
-sequencer; no full driver/waveform parity is claimed.
+covers NTSC ROM resources, PCM output and restore/reused-boot identity. PAL
+service tests cover both standalone cartridges' music and SFX repeat cadence
+and rewind across a repeat. Original S3 SEGA mailbox timing still differs from
+the shared S&K sequencer; no full driver/waveform parity is claimed.
 
 ## KosM Adjacent-Memory Corruption
 
