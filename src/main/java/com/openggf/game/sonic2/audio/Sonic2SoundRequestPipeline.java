@@ -168,6 +168,10 @@ public final class Sonic2SoundRequestPipeline<P> {
      * gloop and spindash transforms are {@code :2116-2178}.
      */
     public DispatchResult<P> dispatchQueuedRequest() {
+        return dispatchQueuedRequest(false);
+    }
+
+    DispatchResult<P> dispatchQueuedRequest(boolean sfxBlocked) {
         QueueToPlayState<P> queued = queueToPlay;
         if (queued.requestByte() == READY) {
             return new DispatchResult<>(DispatchKind.NOTHING_TO_DISPATCH, 0, 0, null, 0);
@@ -182,6 +186,14 @@ public final class Sonic2SoundRequestPipeline<P> {
         if (requestByte < FIRST_SFX || requestByte > LAST_SFX) {
             return new DispatchResult<>(DispatchKind.NOT_YET_DISPATCHED, requestByte, requestByte,
                     queued.payload(), 0);
+        }
+
+        // zPlaySound_CheckRing reaches zKillSFXPrio before touching any transform
+        // (s2.sounddriver.asm:2116-2135,2334-2337).
+        if (sfxBlocked) {
+            sfxPriorityValue = 0;
+            return new DispatchResult<>(DispatchKind.REFUSED_ONE_UP_OR_FADE_IN,
+                    requestByte, requestByte, queued.payload(), 0);
         }
 
         spindashActive = false;
@@ -229,16 +241,20 @@ public final class Sonic2SoundRequestPipeline<P> {
         sfxPriorityValue = 0;
     }
 
-    /** Models {@code zKillSFXPrio} ({@code s2.sounddriver.asm:2116-2120,2334-2337}). */
-    public void onSfxSuppressedDuringOneUpOrFadeIn() {
-        sfxPriorityValue = 0;
-    }
-
     /** Models the post-save 1-up-start clear of the global priority latch. */
     public void onOneUpStarted() {
         savedOneUpSfxPriorityValue = sfxPriorityValue;
         oneUpPlaying = true;
         sfxPriorityValue = 0;
+    }
+
+    void onOneUpRestored() {
+        if (oneUpPlaying) {
+            // cfFadeInToPrevious copies back the priority in the saved region
+            // (s2.sounddriver.asm:1706-1722,3084-3090,3150-3155).
+            sfxPriorityValue = savedOneUpSfxPriorityValue;
+            oneUpPlaying = false;
+        }
     }
 
     public void onOrdinaryMusicStarted() {
@@ -439,6 +455,7 @@ public final class Sonic2SoundRequestPipeline<P> {
     public enum DispatchKind {
         NOTHING_TO_DISPATCH,
         NOT_YET_DISPATCHED,
+        REFUSED_ONE_UP_OR_FADE_IN,
         SUPPRESSED_GLOOP,
         IGNORED_UNDEFINED_ID
     }
