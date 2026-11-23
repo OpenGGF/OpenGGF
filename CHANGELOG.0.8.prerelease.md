@@ -10,12 +10,33 @@ under the matching area heading; see the
 - **Sonic 1 and Sonic 2 title cards** now count each serviced wait toward the
   V-int clock used by objects, preserving the timing phase carried into the act.
 
+- **Sonic 3 & Knuckles badnik score popups** now rise from the freed animal's
+  first object pass, matching the cartridge's timing and slot allocation.
+
+- **Hydrocity water walls:** the horizontal wall and vertical geyser now use
+  the coarse camera window and previous render pass to choose when to
+  disappear or begin cleanup. The window retains the original bounds at
+  native width and expands to keep walls loaded in wider viewports. Respawn
+  bits clear at the native callbacks, enemy art reloads on cleanup underflow,
+  and spray advances the random stream only after a forward slot is available.
+
+- **Angel Island Act 2:** defeating the miniboss sends four flickering pieces
+  of wreckage falling from the ship, as on the cartridge.
+
+- **Angel Island Act 2:** the end boss now loads and shows EggRobo's head when
+  Knuckles reaches the fight. Sonic and Tails keep Eggman's head. Rewind
+  preserves the art queue's progress through the encounter.
+
 - **Placed rings in patched and hosted levels** use the underlying
   game's vertical placement and clipping rules. In Knuckles in Sonic 2, rings
   disappear as their centres cross the top of the screen, as on the cartridge.
 
 - **Sonic 2 Chemical Plant Act 2:** the visible water surface and underwater
   palette split now bob at the same height where Sonic enters the water.
+
+- **Sonic 2 Chemical Plant:** blue balls use the previous sprite pass to decide
+  which gloop sounds to queue, matching the cartridge at screen edges and
+  on the first launch. The sound driver handles alternating playback.
 
 - **The Doomsday Zone:** the second boss phase preserves the ship's fractional
   vertical position, Hyper Sonic's after-image uses the original history slots,

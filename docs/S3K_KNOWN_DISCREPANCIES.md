@@ -283,16 +283,14 @@ See the [Competition swap design](architecture/designs/2026-11-07-s3k-competitio
 25. [Death Egg widescreen backgrounds](#death-egg-widescreen-backgrounds) — Engine feature
 26. [LRZ1 and DEZ2 widescreen arena framing](#lrz1-and-dez2-widescreen-arena-framing) — Engine feature
 27. [Ending scenes in a wider picture](#ending-scenes-in-a-wider-picture) — Engine feature
-28. [Sprite_OnScreen_Test lifetime audit](#sprite_onscreen_test-lifetime-audit) — Other
-29. [LRZ boss lava-plane presentation](#lrz-boss-lava-plane-presentation) — Other
-30. [Blue Sphere player projection and shadows (local correction, 2026-10-17)](#blue-sphere-player-projection-and-shadows-local-correction-2026-10-17) — Other
-31. [AIZ miniboss defeat debris](#aiz-miniboss-defeat-debris) — Other
-32. [Retained HCZ replay qualification](#retained-hcz-replay-qualification) — Other
-33. [DDZ, LBZ and ICZ component history](#ddz-lbz-and-icz-component-history) — Other
-34. [DEZ final native terrain ownership — 2026-10-17](#dez-final-native-terrain-ownership--2026-10-17) — Other
-35. [Player-owned glide and native-P2 damage — qualified local components](#player-owned-glide-and-native-p2-damage--qualified-local-components) — Other
-36. [HCZ1 direct water art — bounded physical publication coverage](#hcz1-direct-water-art--bounded-physical-publication-coverage) — Other
-37. [Knuckles full-chain first-return pose — 2026-10-29](#knuckles-full-chain-first-return-pose--2026-10-29) — Other
+28. [LRZ boss lava-plane presentation](#lrz-boss-lava-plane-presentation) — Other
+29. [Blue Sphere player projection and shadows (local correction, 2026-10-17)](#blue-sphere-player-projection-and-shadows-local-correction-2026-10-17) — Other
+30. [Retained HCZ replay qualification](#retained-hcz-replay-qualification) — Other
+31. [DDZ, LBZ and ICZ component history](#ddz-lbz-and-icz-component-history) — Other
+32. [DEZ final native terrain ownership — 2026-10-17](#dez-final-native-terrain-ownership--2026-10-17) — Other
+33. [Mega AIZ2 return loses source ownership at death/reload](#mega-aiz2-return-loses-source-ownership-at-deathreload) — Other
+34. [HCZ1 direct water art — bounded physical publication coverage](#hcz1-direct-water-art--bounded-physical-publication-coverage) — Other
+35. [Knuckles full-chain first-return pose — 2026-10-29](#knuckles-full-chain-first-return-pose--2026-10-29) — Other
 
 ---
 
@@ -1364,42 +1362,6 @@ layout. None of this has a native reference: it is an intentional presentation
 extension. `TestEndingWideStage`, `TestEndingWidePlanes` and
 `TestS3kEndingWidescreen` cover it.
 
-## Sprite_OnScreen_Test lifetime audit
-
-**Kind:** Other
-
-LRZ Fireworm defeat correction (2026-09-29): body retirement previously cleared
-collision but froze the segments indefinitely. `loc_8F8F0` sets d0 to zero before
-`Child_DrawTouch_Sprite_FlickerMove`; `Set_IndexedVelocity` therefore selects the
-first four velocity pairs, reflected by render flip. Segments now execute
-`Obj_FlickerMove` gravity, alternating visibility and unsigned offscreen deletion,
-including after orphan recreation. Visible head/body/flame palette 1 already
-matches `ObjSlot_Fireworm` / `ObjDat3_8F9FC`; palette 3 is the invisible spawner.
-Both acts' loaded-art checks protect that distinction. See the LRZ act matrices
-for verification scope; this is not whole-scene native visual certification.
-
-LRZ1 sinking-rock art correction (2026-09-29): `Obj_LRZSinkingRock` uses
-tile `$0D3`, palette 2, rather than `ArtTile_LRZMisc` (`$3A1`). The registry
-now binds the rock to its terrain tiles; Act 2 retains its separate `$090`
-base. The loaded-sheet regression checks both acts' ROM mappings and tile
-bindings. See the LRZ1 coverage matrix for validation and visual evidence.
-
-The LRZ cold-route audit based on `bc4e3285d` disproved the old guide claim
-that `Sprite_OnScreen_Test` only draws. Its out-of-range branch clears the
-respawn entry and deletes through `loc_1B5A0` (sonic3k.asm:37302–37318).
-LRZ sinking rocks, landed spikes, smashing platforms and intact collapsing
-bridges incorrectly suppressed this unload, retaining slots that change later
-button/door execution order. The LRZ1 matrix records the correction and checks.
-
-A sibling source audit found the same incorrect rationale in
-`HCZWaterWallObjectInstance`. Its per-phase range contract still needs a
-separate ROM audit: the actual cleanup countdown must remain persistent, but
-phases reaching `Sprite_OnScreen_Test` cannot be dismissed as drawing only.
-HCZ runtime behavior is unchanged by the LRZ correction; existing trace success
-is not evidence that every offscreen phase is faithful. The DEZ energy-bridge
-and LBZ cup providers checked during this audit already implement range tests.
-
-
 ## LRZ boss lava-plane presentation
 
 **Kind:** Other
@@ -1600,19 +1562,6 @@ Whole-stage live HUD changes, transparent HUD plane composition, dense SAT
 limits, whole routes, cold routes, donor configurations, PAL and PCM remain
 unmeasured. The independent rewind fade-publication correction has its own
 gateway and release-latch checks. [Rewind evidence](architecture/plans/2026-10-13-s3k-playable-completion.md#immediate-scene-fade-publication-after-rewind--2026-10-17).
-
----
-
-## AIZ miniboss defeat debris
-
-**Kind:** Other
-
-In the ROM, `AIZMiniboss_SpawnEndSign` (sonic3k.asm:137460-137463) creates
-four children from `ChildObjDat_AIZMiniboss_DefeatDebris`
-(sonic3k.asm:137995-138004). OpenGGF's `AizMinibossInstance.startDefeatHandoff`
-starts the music fade and signpost flow without creating these children.
-The separate AIZ alternate replay's ring-count difference was fixed by
-`f798a5bde3`.
 
 ---
 
@@ -1837,52 +1786,19 @@ representation and wider active-countdown bubble/timer limitations are not
 closed by raw animation publication. No whole-world/guard/native certificate.
 
 
-## Player-owned glide and native-P2 damage — qualified local components
+## Mega AIZ2 return loses source ownership at death/reload
 
 **Kind:** Other
 
-The maintained glide correction in local `8bcf0ab6` carries the querying player's
-live top solidity bit and collision array through both foot probes and the
-extension, regress and edge scans. Reverse ceiling probes retain the player's
-live LRB bit. Object defaults and foreground/background provider selection remain
-separate. Its isolated R110 affected selection passed 113 tests in 12 classes,
-including 18 independent terrain-query cases; that result belongs to that isolated
-source epoch.
+The Mega continuous replay still loses ownership of its AIZ2 source at BK2
+cursor 25811, when the level reloads into generation 11. Segment 8 first
+diverges at row 1168 (`player_animation_id`) at the
+[documented glide-rebound contact](architecture/validation/levels/s3k-aiz2.md#ordinary-boss-glide-rebound--2026-11-07).
+The replay has yet to reach HCZ through this return.
 
-The 2026-10-21 vertical-climb correction based on `c8516838` uses the native
-8/9 pre-offset plus signed X radius in upright, reverse and idle probes. Local
-movement now retains powered speed, signed upper bounds, BD-pose undo and strict
-negative floor landing with raw angle/current animation 5 and the existing climb
-timer. S3K idle still clobbers its animation delta with the floor distance under
-`FixBugs=0`; KiS2 still omits that probe. The
-[source and component validation record](architecture/research/trace/2026-09-14-kis2-chain-frontier.md#wall-climb-vertical-contract--2026-10-21)
-does not identify the separate CNZ wall-distance `-32` stall or certify a route.
-
-The local `dae6c29e` damage correction selects the ringless hurt tail by actual
-first native-P2 identity, the existing touch profile and module companion support,
-independently of CPU input ownership. Overlap, attack, listener, protection and
-cause handling retain their existing owners. Isolated R127 passed 195 tests in 14
-classes, including both P2 input variants, bit7 rejection and ringless P1 death.
-It does not qualify competition, extra-player or decorated-game breadth.
-
-Root's composed source on `691de518` passed the bounded combined lifecycle
-(session71445): **379T0F0E0S across46 report suites**, including the unchanged
-ordinary physical Nemesis oracle and full-key two restore/forward controls.
-Fresh guards (session93642) retained **107T2F0E0S**: both failures are byte-exact
-to the prior HubMusic issues; no new guard failure was observed. These are
-component and guard results. Both maintained original-route invocations remain
-**1T1F0E0S**.
-FDF R112's returned segment 2 is incomplete: 166 = 1 camera physics + 165 animation;
-Slots segment 3 is incomplete: 7,974 = 7,620 physics + 354 animation, first non-camera
-frame 220 `x_speed` ROM0/engine`-0400`. Production ownership is lost in TITLE_CARD,
-generation 6/cursor 10161, with 28 unmatched completions; SS/FDF remain unvisited.
-HCZ R128 retains the nine R122 logical payloads byte-for-byte: complete segment 11
-62 = 11 physics + 51 animation, complete segment 13 37,930 = 33,300 physics + 4,630 animation,
-first non-camera 442 `sidekick_x_speed` 01C7/`-0100`, then uncompared SS7 results at
-movie/destination97208. Historical ownership at 88306 is not reobserved.
-+21 remains UNWAIVED and -94 UNLOCALIZED. Neither component pass nor aggregate
-route totals identify a native winning tile, contact/damage caller or full-route
-cause. [Commands and retained qualification limits](status/trace-frontier-log.md#2026-10-18--root-composes-player-owned-glide-and-native-p2-hurt-tails).
+The [AIZ2 head-init evidence](architecture/validation/levels/s3k-aiz2.md#native-aiz2-boss-head-art-2026-11-22) records the closed queue window.
+The [glide and native-P2 component record](status/trace-frontier-log.md#2026-10-18--root-composes-player-owned-glide-and-native-p2-hurt-tails)
+preserves the earlier isolated fixes and their scope.
 
 
 ## HCZ1 direct water art — bounded physical publication coverage
