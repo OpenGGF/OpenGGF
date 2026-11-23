@@ -1,18 +1,27 @@
 package com.openggf.level.objects;
 
-import com.openggf.tests.TestEnvironment;
-import com.openggf.game.session.SessionManager;
 import com.openggf.game.GameServices;
+import com.openggf.game.GameStateManager;
+import com.openggf.game.PlayableEntity;
+import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic1.objects.Sonic1AnimalsObjectInstance;
 import com.openggf.game.sonic1.objects.badniks.Sonic1DestructionConfig;
+import com.openggf.game.sonic3k.objects.Sonic3kPointsObjectInstance;
+import com.openggf.game.sonic3k.objects.badniks.Sonic3kBadnikConfig;
 import com.openggf.level.objects.DestructionEffects.DestructionConfig;
+import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
 import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class TestDestructionEffects {
 
@@ -23,7 +32,18 @@ class TestDestructionEffects {
     void setUp() {
         TestEnvironment.resetAll();
 
+        var renderManager = mock(ObjectRenderManager.class);
         services = new StubObjectServices() {
+            @Override
+            public ObjectRenderManager renderManager() {
+                return renderManager;
+            }
+
+            @Override
+            public GameStateManager gameState() {
+                return GameServices.gameState();
+            }
+
             @Override
             public ObjectManager objectManager() {
                 return objectManager;
@@ -165,11 +185,11 @@ class TestDestructionEffects {
         assertEquals(1, objectManager.getActiveObjects().stream()
                         .filter(ExplosionObjectInstance.class::isInstance)
                         .count(),
-                "default S2/S3K destruction should immediately replace the badnik with Obj_Explosion");
+                "The shared recipe should immediately replace the badnik with an explosion");
         assertEquals(0, objectManager.getActiveObjects().stream()
                         .filter(RecordingChildObject.class::isInstance)
                         .count(),
-                "S3K Obj_Explosion routine 0 allocates animal/points; destroyBadnik must not spawn them directly");
+                "Explicit explosion-owned factories run when the explosion executes");
         assertEquals(15, objectManager.getActiveObjects().stream()
                         .filter(ExplosionObjectInstance.class::isInstance)
                         .map(ExplosionObjectInstance.class::cast)
@@ -235,6 +255,110 @@ class TestDestructionEffects {
                         + "(docs/s2disasm/s2.asm:24596-24636)");
     }
 
+    @Test
+    void s3kLowerAnimalSlotDefersPopupUntilNextPassEvenAfterRewind() {
+        useS3kSlotLayout();
+        destroyS3kBadnikAt(5);
+
+        objectManager.update(0, null, List.of(), 1);
+
+        var animal = activeAnimal();
+        assertEquals(4, animal.getSlotIndex());
+        assertEquals(120, animal.getY());
+        assertEquals(0, s3kPopups().size(), "The first pass has already visited the animal slot");
+
+        var rewind = objectManager.rewindSnapshottable();
+        var betweenPasses = rewind.capture();
+        objectManager.update(0, null, List.of(), 2);
+        assertS3kPopup(6, 117);
+        assertEquals(120, activeAnimal().getY(), "The animal initializes without moving");
+
+        objectManager.setRewindInPlaceRestoreEnabledForTest(false);
+        rewind.restore(betweenPasses);
+        assertNotSame(animal, activeAnimal());
+        assertEquals(0, s3kPopups().size());
+        objectManager.update(0, null, List.of(), 2);
+        assertS3kPopup(6, 117);
+        objectManager.update(0, null, List.of(), 3);
+        assertS3kPopup(6, 114);
+    }
+
+    @Test
+    void s3kHigherAnimalSlotAllocatesPopupDuringTheSamePass() {
+        useS3kSlotLayout();
+        var betweenExplosionAndAnimal = new RecordingChildObject(
+                new ObjectSpawn(0, 0, 1, 0, 0, false, 0), "Slot observer") {
+            @Override
+            public void update(int vIntRunCount, PlayableEntity player) {
+                assertEquals(6, activeAnimal().getSlotIndex());
+                assertEquals(0, s3kPopups().size(), "The later animal has yet to dispatch");
+            }
+        };
+        objectManager.addDynamicObjectAtSlot(betweenExplosionAndAnimal, 5);
+        destroyS3kBadnikAt(4);
+
+        objectManager.update(0, null, List.of(), 1);
+
+        assertEquals(120, activeAnimal().getY());
+        assertS3kPopup(7, 117);
+    }
+
+    @Test
+    void s3kFailedAnimalAllocationLeavesNoPopupAndDoesNotRetry() {
+        useS3kSlotLayout();
+        RecordingChildObject lastOccupant = null;
+        for (int slot = 5; slot < ObjectSlotLayout.SONIC_3K.lastDynamicSlotExclusive(); slot++) {
+            lastOccupant = new RecordingChildObject(new ObjectSpawn(0, 0, 1, 0, 0, false, 0), "Occupant");
+            objectManager.addDynamicObjectAtSlot(lastOccupant, slot);
+        }
+        destroyS3kBadnikAt(4);
+
+        objectManager.update(0, null, List.of(), 1);
+        assertNoS3kDestructionChildren();
+
+        lastOccupant.setDestroyed(true);
+        objectManager.update(0, null, List.of(), 2);
+        objectManager.update(0, null, List.of(), 3);
+        assertNoS3kDestructionChildren();
+    }
+
+    private void useS3kSlotLayout() {
+        objectManager = new ObjectManager(List.of(), new NoOpObjectRegistry(ObjectSlotLayout.SONIC_3K),
+                0, null, null, null, GameServices.camera(), services);
+    }
+
+    private void destroyS3kBadnikAt(int slot) {
+        var player = mock(PlayableEntity.class);
+        when(player.incrementBadnikChain()).thenReturn(500);
+        DestructionEffects.destroyBadnik(400, 120, new ObjectSpawn(400, 120, 0xA7, 0, 0, false, 0),
+                slot, player, services, Sonic3kBadnikConfig.destruction());
+    }
+
+    private AnimalObjectInstance activeAnimal() {
+        return objectManager.getActiveObjects().stream().filter(AnimalObjectInstance.class::isInstance)
+                .map(AnimalObjectInstance.class::cast).findFirst().orElseThrow();
+    }
+
+    private List<Sonic3kPointsObjectInstance> s3kPopups() {
+        return objectManager.getActiveObjects().stream().filter(Sonic3kPointsObjectInstance.class::isInstance)
+                .map(Sonic3kPointsObjectInstance.class::cast).toList();
+    }
+
+    private void assertS3kPopup(int slot, int y) {
+        var popups = s3kPopups();
+        assertEquals(1, popups.size());
+        AbstractPointsObjectInstance popup = popups.getFirst();
+        assertEquals(slot, popup.getSlotIndex());
+        assertEquals(400, popup.getX());
+        assertEquals(y, popup.getY());
+        assertEquals(2, popup.scoreFrame, "500 points must retain the native score mapping");
+    }
+
+    private void assertNoS3kDestructionChildren() {
+        assertFalse(objectManager.getActiveObjects().stream().anyMatch(AnimalObjectInstance.class::isInstance));
+        assertEquals(0, s3kPopups().size());
+    }
+
     private static final class NoOpObjectRegistry implements ObjectRegistry {
         private final ObjectSlotLayout slotLayout;
 
@@ -266,7 +390,7 @@ class TestDestructionEffects {
         }
     }
 
-    private static final class RecordingChildObject extends AbstractObjectInstance {
+    private static class RecordingChildObject extends AbstractObjectInstance {
         private RecordingChildObject(ObjectSpawn spawn, String name) {
             super(spawn, name);
         }
