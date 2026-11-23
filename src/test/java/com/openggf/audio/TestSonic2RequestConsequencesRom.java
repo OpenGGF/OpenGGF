@@ -17,7 +17,14 @@ import com.openggf.data.Rom;
 import com.openggf.game.sonic2.audio.Sonic2AudioProfile;
 import com.openggf.game.sonic2.audio.Sonic2Music;
 import com.openggf.game.sonic2.audio.Sonic2SoundRequestService;
+import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
+import com.openggf.game.sonic2.objects.BlueBallsObjectInstance;
+import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectServices;
+import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RenderFlagPassTestSupport;
 import com.openggf.tests.RomTestUtils;
+import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterEach;
@@ -71,6 +78,145 @@ class TestSonic2RequestConsequencesRom {
                 audio.commandTimeline().entries().getFirst().command();
         assertEquals(music.id, command.musicId(),
                 "native mailbox translation must not change the resolved song");
+    }
+
+    @Test
+    void chemicalPlantBlueBallsSubmitEveryVisibleGloopAndPlayOnOddDispatches() {
+        ObjectServices services = TestEnvironment.objectServices();
+        BlueBallsObjectInstance.resetGlobalState();
+        AbstractObjectInstance.updateCameraBounds(0, 0, 320, 224, 0);
+        List<Sonic2SoundRequestService.Event> events = new ArrayList<>();
+        AudioManager audio = install(events::add);
+        List<Integer> playedOn = new ArrayList<>();
+
+        // Obj1D_MoveStraight (s2.asm:48429-48440) calls PlaySoundLocal (s2.asm:1555-1562).
+        // zPlaySound_CheckGloop (s2.sounddriver.asm:2138-2149) complements the initially
+        // clear zGloopFlag (s2.sounddriver.asm:4092) and plays when it becomes nonzero.
+        for (int event = 1; event <= 4; event++) {
+            int previousCommands = audio.commandTimeline().entryCount();
+            triggerBlueBallGloop(services, 0, 0, 320);
+            audio.presentFrame(PresentationMode.FORWARD);
+            if (audio.commandTimeline().entryCount() > previousCommands) {
+                AudioCommand.PlaySfx command = (AudioCommand.PlaySfx)
+                        audio.commandTimeline().entries().getLast().command();
+                assertEquals(0xDA, command.sfxId());
+                playedOn.add(event);
+            }
+        }
+
+        assertEquals(List.of(0xDA, 0xDA, 0xDA, 0xDA), submittedSounds(events),
+                "each on-screen Obj1D event writes its raw gloop request");
+        assertEquals(List.of(1, 3), playedOn);
+    }
+
+    @Test
+    void offScreenAndOverwrittenBlueBallEventsDoNotAdvanceGloopPhase() {
+        ObjectServices services = TestEnvironment.objectServices();
+        BlueBallsObjectInstance.resetGlobalState();
+        AbstractObjectInstance.updateCameraBounds(0, 0, 320, 224, 0);
+        List<Sonic2SoundRequestService.Event> events = new ArrayList<>();
+        AudioManager audio = install(events::add);
+
+        triggerBlueBallGloop(services, -168, -168, 320);
+        audio.presentFrame(PresentationMode.FORWARD);
+        assertEquals(List.of(), submittedSounds(events));
+        assertEquals(0, requestSnapshot(audio).pipeline().gloopFlag());
+
+        triggerBlueBallGloop(services, 0, 0, 320);
+        assertTrue(audio.playSfx(0xA0)); // A later SFX0 write wins the same frame.
+        audio.presentFrame(PresentationMode.FORWARD);
+        assertEquals(List.of(0xDA, 0xA0), submittedSounds(events));
+        assertEquals(0, requestSnapshot(audio).pipeline().gloopFlag());
+
+        triggerBlueBallGloop(services, 0, 0, 320);
+        audio.presentFrame(PresentationMode.FORWARD);
+        assertEquals(0xFF, requestSnapshot(audio).pipeline().gloopFlag());
+        assertEquals(List.of(0xA0, 0xDA), audio.commandTimeline().entries().stream()
+                .map(entry -> ((AudioCommand.PlaySfx) entry.command()).sfxId()).toList());
+    }
+
+    @Test
+    void blueBallSoundUsesPreviousSpritePassAtTheScreenEdge() {
+        ObjectServices services = TestEnvironment.objectServices();
+        List<Sonic2SoundRequestService.Event> events = new ArrayList<>();
+        AudioManager audio = install(events::add);
+
+        // The centre at x=160 was 7 px past the right edge. BuildSprites
+        // admits it with Obj1D's width_pixels of 8, even if the camera moves.
+        triggerBlueBallGloop(services, -167, -180, 320);
+        audio.presentFrame(PresentationMode.FORWARD);
+        assertEquals(List.of(0xDA), submittedSounds(events));
+        assertEquals(0xFF, requestSnapshot(audio).pipeline().gloopFlag());
+
+        // At exactly 8 px past the right edge the retained bit is clear.
+        // Moving the camera onto the ball cannot retroactively admit the sound.
+        triggerBlueBallGloop(services, -168, -152, 320);
+        audio.presentFrame(PresentationMode.FORWARD);
+        assertEquals(List.of(0xDA), submittedSounds(events));
+        assertEquals(0xFF, requestSnapshot(audio).pipeline().gloopFlag());
+
+        triggerBlueBallGloop(services, -247, -260, 400);
+        audio.presentFrame(PresentationMode.FORWARD);
+        assertEquals(List.of(0xDA, 0xDA), submittedSounds(events));
+        assertEquals(0, requestSnapshot(audio).pipeline().gloopFlag());
+    }
+
+    @Test
+    void blueBallInitDoesNotSetTheLocalSoundGate() {
+        ObjectServices services = TestEnvironment.objectServices();
+        List<Sonic2SoundRequestService.Event> events = new ArrayList<>();
+        AudioManager audio = install(events::add);
+        AbstractObjectInstance.updateCameraBounds(0, 0, 320, 224, 0);
+        BlueBallsObjectInstance ball = newBlueBall(services);
+        try {
+            ball.update(1, null);
+            // The ordinary engine pass visits the object even though Obj1D_Init
+            // returned without reaching MarkObjGone / DisplaySprite.
+            RenderFlagPassTestSupport.pass(ball, false);
+            ball.update(2, null);
+            audio.presentFrame(PresentationMode.FORWARD);
+            assertEquals(List.of(), submittedSounds(events));
+        } finally {
+            ball.onUnload();
+        }
+    }
+
+    private static BlueBallsObjectInstance newBlueBall(ObjectServices services) {
+        ObjectSpawn spawn = new ObjectSpawn(64, 112, Sonic2ObjectIds.BLUE_BALLS,
+                0x10, 0, false, 0);
+        BlueBallsObjectInstance ball = new BlueBallsObjectInstance(spawn, "BlueBalls");
+        ball.setServices(services);
+        return ball;
+    }
+
+    private static void triggerBlueBallGloop(ObjectServices services, int renderCameraX,
+                                             int updateCameraX, int width) {
+        BlueBallsObjectInstance ball = newBlueBall(services);
+        try {
+            // Begin outside the vertical render band, then establish the previous
+            // BuildSprites result immediately before the $180 velocity event.
+            AbstractObjectInstance.updateCameraBounds(0, 256, width, 480, 0);
+            ball.update(1, null);
+            RenderFlagPassTestSupport.pass(ball, false);
+            ball.update(2, null);
+            for (int step = 1; step < 64; step++) {
+                ball.update(2 + step, null);
+            }
+            AbstractObjectInstance.updateCameraBounds(renderCameraX, 0, renderCameraX + width, 224, 0);
+            RenderFlagPassTestSupport.pass(ball, false);
+            AbstractObjectInstance.updateCameraBounds(updateCameraX, 0, updateCameraX + width, 224, 0);
+            ball.update(66, null); // (-$480 + 64 * $18) == $180
+        } finally {
+            ball.onUnload();
+            AbstractObjectInstance.updateCameraBounds(0, 0, 320, 224, 0);
+        }
+    }
+
+    private static List<Integer> submittedSounds(List<Sonic2SoundRequestService.Event> events) {
+        return events.stream()
+                .filter(Sonic2SoundRequestService.Submission.class::isInstance)
+                .map(Sonic2SoundRequestService.Submission.class::cast)
+                .map(Sonic2SoundRequestService.Submission::rawRequestId).toList();
     }
 
     @Test
