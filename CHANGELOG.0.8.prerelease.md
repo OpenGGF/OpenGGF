@@ -7,6 +7,10 @@ under the matching area heading; see the
 
 ## Gameplay and presentation
 
+- **Sonic 1 special-stage results** now advance the object V-int clock on each
+  native finish, tally and exit wait, preserving its phase through the level
+  reload. Results setup and straight-line return code add no tick.
+
 - **Death Egg's final fight:** entering the arena now links foreground and
   background rows 4 and 31 to the same terrain as foreground row 0, as on the
   cartridge. Rewind preserves those links and edits to the shared terrain.
