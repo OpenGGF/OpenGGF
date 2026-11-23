@@ -15,6 +15,12 @@ public final class GraphicsProjectionAccess {
             throw new SecurityException("Rendering projection installation belongs to the engine host");
     }
 
+    /** Saves the nullable local override without freezing the host's current projection. */
+    public static float[] matrixOverride(GraphicsManager graphics) {
+        engineProjection(null);
+        return graphics.rawProjectionMatrixBuffer();
+    }
+
     public static void install(GraphicsManager graphics, RenderProjection projection) {
         engineProjection(projection);
         Objects.requireNonNull(graphics,"graphics").setProjectionSource(projection);

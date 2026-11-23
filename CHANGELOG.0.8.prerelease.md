@@ -7,6 +7,11 @@ under the matching area heading; see the
 
 ## Gameplay and presentation
 
+- Sonic 1 draws the act number over the blue oval on the results card. Drum
+  samples resume when level music follows the special-stage theme. Leaving a
+  special stage also restores the active display projection, keeping sprites
+  aligned with terrain when switching to a game with a different aspect ratio.
+
 - **Sonic 1 special-stage results** now advance the object V-int clock on each
   native finish, tally and exit wait, preserving its phase through the level
   reload. Results setup and straight-line return code add no tick.
