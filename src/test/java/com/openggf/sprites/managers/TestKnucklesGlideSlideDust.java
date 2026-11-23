@@ -1,9 +1,12 @@
 package com.openggf.sprites.managers;
 
 import com.openggf.configuration.SonicConfiguration;
+import com.openggf.control.InputActionMasks;
+import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.game.GameServices;
 import com.openggf.game.patch.DelegatingGameModule;
 import com.openggf.game.sonic2.kis2.Kis2GamePatch;
+import com.openggf.level.objects.ObjectDrawInternalAccess;
 import com.openggf.level.objects.SkidDustObjectInstance;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.Knuckles;
@@ -78,6 +81,40 @@ class TestKnucklesGlideSlideDust {
             assertFalse(nextPuff.isDestroyed(), "the blank looping animation retains the slot");
 
             assertDamageClearsSlide(player, movement);
+        }
+    }
+
+    @Test
+    @RequiresRom(SonicGame.SONIC_2)
+    void kis2OrdinaryGlideSlideUsesTheMainDustArtBank() throws Exception {
+        File s3k = RomTestUtils.ensureSonic3kRomAvailable();
+        assumeTrue(s3k != null, "Sonic 3 & Knuckles ROM required for the S&K lock-on window");
+        try (var session = new GameplayCaptureSession(SETTINGS)) {
+            GameServices.configuration().setSessionOverride(SonicConfiguration.SONIC_3K_ROM, s3k.getAbsolutePath());
+            session.boot(RomTestUtils.ensureSonic2RomAvailable().toPath(), 0, 0, SETTINGS);
+            assertEquals(Kis2GamePatch.ID, assertInstanceOf(DelegatingGameModule.class, GameServices.module()).patchId());
+            var player = assertInstanceOf(Knuckles.class, GameServices.sprites().getMainPlayable());
+
+            for (int tick = 0; tick < 107; tick++) {
+                int direction = tick >= 71 ? AbstractPlayableSprite.INPUT_RIGHT : 0;
+                int buttons = tick == 40 ? InputActionMasks.ACTION_A
+                        : tick >= 71 ? InputActionMasks.ACTION_B : 0;
+                session.step(new Bk2FrameInput(tick, direction, buttons, false, "jump and glide on flat EHZ ground"));
+                if (player.getDoubleJumpFlag() != 3) {
+                    continue;
+                }
+                assertEquals(1, puffs().size(), "the production fixed slot allocates on the landing pass");
+                var puff = puffs().getFirst();
+                var dust = player.getSpindashDustController();
+                assertNotNull(dust, "Obj08_Init binds Knuckles to the Sonic_Dust art bank");
+                assertNotNull(dust.getRenderer());
+                assertEquals(-1, ObjectDrawInternalAccess.skidDustDisplayPose(puff).frame());
+                session.step(new Bk2FrameInput(tick + 1, direction, buttons, false, "hold the glide"));
+                assertEquals(0x11, ObjectDrawInternalAccess.skidDustDisplayPose(puff).frame(),
+                        "the first dynamic pass selects the first visible dust frame");
+                return;
+            }
+            fail("the jump and glide did not reach a ground slide");
         }
     }
 
