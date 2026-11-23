@@ -73,6 +73,23 @@ Entries should include:
   in the mailbox model, and a ROM-backed check verifies both retention with a
   nonzero low byte and the shipped alias transfer with a clear low byte.
 
+## Sonic 1 does not enforce SFX request priority
+
+- **Location** — `Sonic1AudioProfile`, `AudioPresentationSourceFactory.evaluateAdmission`.
+- **Symptom** — lower-priority effects can play in OpenGGF when the cartridge
+  refuses them.
+- **Cause** — `Sonic1AudioProfile` inherits
+  `SmpsRequestAdmissionPolicy.PERMISSIVE`. The live presentation path admits
+  every SFX at the priority check and has no global `v_sndprio` latch.
+  `CycleSoundQueue` (s1.sounddriver.asm:636-670) rejects requests below the
+  latched priority. `Sound_PlaySFX` (s1.sounddriver.asm:977-983) branches to
+  `.clear_sndprio` (s1.sounddriver.asm:1085-1086) when it refuses a request
+  during the extra-life jingle, fade-out, or fade-in. `cfStopTrack`
+  (s1.sounddriver.asm:2502-2506) clears the latch when an SFX track stops.
+- **Removal condition** — ROM-backed tests confirm that live Sonic 1 audio
+  matches the cartridge's priority updates, lower-priority rejection, and
+  latch clears on refusal and SFX track stop.
+
 ## S1/S2 recording driver omits locked title-card V-int ticks
 
 - **Location** — `RecordingFrameDriver.stepNormalTitleCard`, used by headless

@@ -1247,6 +1247,15 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         return sfxBlocked;
     }
 
+    boolean blocksSfxBeforeDispatch() {
+        assertOwnerBoundary();
+        return sfxBlocked && !sfxBlockFadeInFinished();
+    }
+
+    boolean musicOverrideRestorePending() {
+        return pendingRestore;
+    }
+
     private void blockOverrideSfx() {
         if (smpsSession != null && smpsSession.suppressesSfxDuringOverride()) {
             sfxBlocked = true;
@@ -1287,13 +1296,15 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
      * admitted, whatever the flag said a frame earlier.
      */
     private void releaseSfxBlockWhenFadeInEnds() {
-        if (!sfxBlocked || !sfxBlockHeldThroughFadeIn || smpsSession == null) {
-            return;
-        }
-        if (!smpsSession.isMusicFadingIn()) {
+        if (sfxBlocked && sfxBlockFadeInFinished()) {
             sfxBlocked = false;
             sfxBlockHeldThroughFadeIn = false;
         }
+    }
+
+    private boolean sfxBlockFadeInFinished() {
+        return sfxBlockHeldThroughFadeIn && smpsSession != null
+                && !smpsSession.isMusicFadingIn();
     }
 
     public void setPendingRestore(boolean pending) {

@@ -17,6 +17,8 @@ import com.openggf.data.Rom;
 import com.openggf.game.sonic2.audio.Sonic2AudioProfile;
 import com.openggf.game.sonic2.audio.Sonic2Music;
 import com.openggf.game.sonic2.audio.Sonic2SoundRequestService;
+import com.openggf.game.sonic2.audio.Sonic2SoundRequestService.Decision;
+import com.openggf.game.sonic2.audio.Sonic2SoundRequestService.DecisionReason;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.game.sonic2.objects.BlueBallsObjectInstance;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -220,7 +222,7 @@ class TestSonic2RequestConsequencesRom {
     }
 
     @Test
-    void oneUpStopsSfxBeforeSaveAndRetainsShippedPriorityBug() {
+    void oneUpStopsSfxAndClearsPriorityBeforeSaving() {
         List<Sonic2SoundRequestService.Event> events = new ArrayList<>();
         AudioManager audio = install(events::add);
 
@@ -235,12 +237,137 @@ class TestSonic2RequestConsequencesRom {
         Sonic2SoundRequestService.Snapshot afterOneUp = requestSnapshot(audio);
         assertTrue(afterOneUp.pipeline().oneUpPlaying(), events.toString());
         assertEquals(0, afterOneUp.pipeline().sfxPriorityValue());
-        assertEquals(0x7F,
-                afterOneUp.pipeline().savedOneUpSfxPriorityValue(),
-                "shipped FixDriverBugs=0 saves the old priority for restore");
+        assertEquals(0, afterOneUp.pipeline().savedOneUpSfxPriorityValue(),
+                "retail zPlayMusic calls zStopSoundEffects before saving");
         assertFalse(audio.shadowSmpsDriverSnapshotForTesting().sequencers()
                         .stream().anyMatch(entry -> entry.snapshot().sfx()),
                 "pre-one-up SFX must not survive in the saved driver region");
+    }
+
+    @Test
+    void oneUpRefusesRingBeforeChangingSpeakerAndClearsPriorityForTheNextRequest() {
+        List<Sonic2SoundRequestService.Event> events = new ArrayList<>();
+        AudioManager audio = install(events::add);
+        startLevelMusic(audio);
+        audio.playMusic(Sonic2Music.EXTRA_LIFE.id);
+        audio.presentFrame(PresentationMode.FORWARD);
+
+        assertTrue(audio.playSfx(0xB5));
+        AudioLogicalSnapshot queuedRing = audio.captureLogicalSnapshot();
+        audio.presentFrame(PresentationMode.FORWARD);
+        var afterRing = requestSnapshot(audio).pipeline();
+        assertTrue(audio.playSfx(0xC0));
+        audio.presentFrame(PresentationMode.FORWARD);
+
+        assertEquals(List.of("B5 ACCEPTED_PRIORITY 00->70", "C0 ACCEPTED_PRIORITY 00->6F"),
+                sfxDecisions(events), () -> events + "\nafter ring: " + afterRing);
+        assertEquals(0, afterRing.sfxPriorityValue());
+        assertEquals(0, afterRing.ringSpeaker(), "the next ring still selects the left speaker");
+        assertEquals(0, requestSnapshot(audio).pipeline().sfxPriorityValue());
+        assertFalse(hasActiveSfx(audio), "both requests were refused by the one-up flag");
+
+        audio.restoreLogicalSnapshot(queuedRing);
+        audio.presentFrame(PresentationMode.FORWARD);
+        assertEquals(afterRing, requestSnapshot(audio).pipeline(),
+                "replay makes the same refusal without advancing the speaker");
+    }
+
+    @Test
+    void oneUpFadeRestoresSavedPriorityAndOnlyReachedRefusalsClearIt() {
+        List<Sonic2SoundRequestService.Event> events = new ArrayList<>();
+        AudioManager audio = install(events::add);
+        startLevelMusic(audio);
+        assertTrue(audio.playSfx(0xBF));
+        audio.presentFrame(PresentationMode.FORWARD);
+        assertEquals(0x7F, requestSnapshot(audio).pipeline().sfxPriorityValue());
+        audio.playMusic(Sonic2Music.EXTRA_LIFE.id);
+        audio.presentFrame(PresentationMode.FORWARD);
+        assertEquals(0, requestSnapshot(audio).pipeline().sfxPriorityValue());
+
+        // zCycleQueue can latch 72h for F7h, which zPlaySoundByIndex ignores
+        // before the SFX refusal guard (s2.sounddriver.asm:1520-1536,1570-1573).
+        assertTrue(audio.playSfx(0xF7));
+        audio.presentFrame(PresentationMode.FORWARD);
+        assertEquals(0x72, requestSnapshot(audio).pipeline().sfxPriorityValue());
+
+        for (int frame = 0; frame < 900
+                && !audio.captureLogicalSnapshot().presentation().pendingRestore(); frame++) {
+            audio.presentFrame(PresentationMode.FORWARD);
+        }
+        assertTrue(audio.captureLogicalSnapshot().presentation().pendingRestore(),
+                "the real jingle reached cfFadeInToPrevious");
+        assertEquals(0, requestSnapshot(audio).pipeline().sfxPriorityValue(),
+                "E4 restores the saved byte before the next queue cycle");
+        assertFalse(requestSnapshot(audio).pipeline().oneUpPlaying());
+
+        events.clear();
+        assertTrue(audio.playSfx(0xB5));
+        audio.presentFrame(PresentationMode.FORWARD);
+        assertEquals(List.of("B5 ACCEPTED_PRIORITY 00->70"), sfxDecisions(events));
+        assertEquals(0, requestSnapshot(audio).pipeline().sfxPriorityValue());
+        assertEquals(0, requestSnapshot(audio).pipeline().ringSpeaker());
+        assertTrue(musicFadingIn(audio));
+        AudioLogicalSnapshot atRestore = audio.captureLogicalSnapshot();
+
+        assertTrue(audio.playSfx(0xF7));
+        audio.presentFrame(PresentationMode.FORWARD);
+        events.clear();
+        assertTrue(audio.playSfx(0xB5));
+        audio.presentFrame(PresentationMode.FORWARD);
+        assertEquals(List.of("B5 REJECTED_PRIORITY 72->72"), sfxDecisions(events));
+        assertEquals(0x72, requestSnapshot(audio).pipeline().sfxPriorityValue(),
+                "queue rejection never reaches zKillSFXPrio");
+
+        assertTrue(audio.playSfx(0xA0));
+        audio.presentFrame(PresentationMode.FORWARD);
+        assertEquals(0, requestSnapshot(audio).pipeline().sfxPriorityValue(),
+                "jump passes the queue and reaches the fade-in refusal");
+        assertFalse(hasActiveSfx(audio));
+
+        audio.restoreLogicalSnapshot(atRestore);
+        for (int frame = 0; frame < 400 && musicFadingIn(audio); frame++) {
+            audio.presentFrame(PresentationMode.FORWARD);
+        }
+        assertFalse(musicFadingIn(audio));
+        assertEquals(0, requestSnapshot(audio).pipeline().sfxPriorityValue());
+        assertTrue(audio.playSfx(0xB5));
+        audio.presentFrame(PresentationMode.FORWARD);
+        assertTrue(hasActiveSfx(audio), "ring plays after the fade");
+        assertEquals(0xFF, requestSnapshot(audio).pipeline().ringSpeaker());
+        assertEquals(0x70, requestSnapshot(audio).pipeline().sfxPriorityValue());
+        for (int frame = 0; frame < 120 && hasActiveSfx(audio); frame++) {
+            audio.presentFrame(PresentationMode.FORWARD);
+        }
+        assertFalse(hasActiveSfx(audio));
+        assertEquals(0, requestSnapshot(audio).pipeline().sfxPriorityValue(),
+                "a natural SFX track stop releases the latch");
+    }
+
+    private static List<String> sfxDecisions(List<Sonic2SoundRequestService.Event> events) {
+        return events.stream().filter(Decision.class::isInstance).map(Decision.class::cast)
+                .filter(decision -> decision.reason() == DecisionReason.ACCEPTED_PRIORITY
+                        || decision.reason() == DecisionReason.REJECTED_PRIORITY)
+                .map(decision -> "%02X %s %02X->%02X".formatted(decision.rawRequestId(),
+                        decision.reason(), decision.priorityBefore(), decision.priorityAfter()))
+                .toList();
+    }
+
+    private static void startLevelMusic(AudioManager audio) {
+        audio.playMusic(Sonic2Music.EMERALD_HILL.id);
+        for (int frame = 0; frame < 60; frame++) {
+            audio.presentFrame(PresentationMode.FORWARD);
+        }
+    }
+
+    private static boolean musicFadingIn(AudioManager audio) {
+        return audio.shadowSmpsDriverSnapshotForTesting().sequencers().stream()
+                .anyMatch(entry -> !entry.sfx() && entry.snapshot().fade().active()
+                        && !entry.snapshot().fade().fadeOut());
+    }
+
+    private static boolean hasActiveSfx(AudioManager audio) {
+        return audio.shadowSmpsDriverSnapshotForTesting().sequencers().stream()
+                .anyMatch(SmpsDriverSnapshot.SequencerEntry::sfx);
     }
 
     @Test

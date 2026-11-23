@@ -94,6 +94,11 @@ public final class Sonic2SoundRequestService implements AudioRequestService,
     }
 
     @Override
+    public void onMusicOverrideRestored() {
+        pipeline.onOneUpRestored();
+    }
+
+    @Override
     public Snapshot snapshot() {
         return new Snapshot(pipeline.snapshot(), List.copyOf(pendingSubmissionEvents), pendingNativePause);
     }
@@ -130,6 +135,7 @@ public final class Sonic2SoundRequestService implements AudioRequestService,
 
     public final class ForwardBoundary implements AudioPresentationForwardService.ForwardBoundary {
         private final Snapshot before;
+        private boolean sfxBlocked;
         private final List<EventTemplate> stagedEvents = new ArrayList<>();
         private boolean serviced;
         private AudioCommand stagedConsequence;
@@ -143,6 +149,15 @@ public final class Sonic2SoundRequestService implements AudioRequestService,
 
         private ForwardBoundary(Snapshot before) {
             this.before = before;
+        }
+
+        @Override
+        public void setSfxBlockedBeforeDispatch(boolean blocked) {
+            requireOpen();
+            if (serviced) {
+                throw new IllegalStateException("Sonic 2 request boundary was already serviced");
+            }
+            sfxBlocked = blocked;
         }
 
         @Override
@@ -189,7 +204,7 @@ public final class Sonic2SoundRequestService implements AudioRequestService,
             }
 
             Sonic2SoundRequestPipeline.DispatchResult<PendingRequest> dispatch =
-                    pipeline.dispatchQueuedRequest();
+                    pipeline.dispatchQueuedRequest(sfxBlocked);
             if (dispatch.kind() != Sonic2SoundRequestPipeline.DispatchKind.NOTHING_TO_DISPATCH) {
                 stagedEvents.add(new DispatchTemplate(dispatch.originalRequestByte(),
                         dispatch.selectedRequestByte(), dispatch.kind()));
@@ -248,10 +263,11 @@ public final class Sonic2SoundRequestService implements AudioRequestService,
                 return;
             }
             if (stagedConsequence instanceof AudioCommand.PlayMusic music) {
-                // Shipped FixDriverBugs=0 stops SFX before the one-up save;
-                // its misplaced priority clear occurs after the saved value.
-                // s2.sounddriver.asm:1667-1724.
                 if (music.musicId() == EXTRA_LIFE_MUSIC) {
+                    // Retail zPlayMusic calls zStopSoundEffects before it saves,
+                    // so even the saved priority is zero (s2.sounddriver.asm:1667-1676,
+                    // 1706-1722,2344-2347). The fixed branch clears directly before saving.
+                    pipeline.onStopAllSfx();
                     pipeline.onOneUpStarted();
                 } else {
                     pipeline.onOrdinaryMusicStarted();
@@ -377,7 +393,8 @@ public final class Sonic2SoundRequestService implements AudioRequestService,
 
     private static AudioCommand consequence(
             Sonic2SoundRequestPipeline.DispatchResult<PendingRequest> dispatch) {
-        if (dispatch.kind() == Sonic2SoundRequestPipeline.DispatchKind.SUPPRESSED_GLOOP
+        if (dispatch.kind() == Sonic2SoundRequestPipeline.DispatchKind.REFUSED_ONE_UP_OR_FADE_IN
+                || dispatch.kind() == Sonic2SoundRequestPipeline.DispatchKind.SUPPRESSED_GLOOP
                 || dispatch.kind() == Sonic2SoundRequestPipeline.DispatchKind.IGNORED_UNDEFINED_ID) {
             return null;
         }
