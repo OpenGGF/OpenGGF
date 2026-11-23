@@ -7,6 +7,13 @@ under the matching area heading; see the
 
 ## Gameplay and presentation
 
+- **Angel Island Act 2:** defeating the miniboss sends four flickering pieces
+  of wreckage falling from the ship, as on the cartridge.
+
+- **Angel Island Act 2:** the end boss now loads and shows EggRobo's head when
+  Knuckles reaches the fight. Sonic and Tails keep Eggman's head. Rewind
+  preserves the art queue's progress through the encounter.
+
 - **Angel Island Act 1 right-wall transitions:** Sonic 3 and Sonic 3 & Knuckles
   now use the direction of the terrain probes for the ROM's penetration counter.
   A deep right-wall probe arms a three-count hold. Subsequent shallow negative
@@ -19,9 +26,16 @@ under the matching area heading; see the
 - **Sonic 2 Chemical Plant Act 2:** the visible water surface and underwater
   palette split now bob at the same height where Sonic enters the water.
 
+- **Sonic 2 Chemical Plant:** blue balls use the previous sprite pass to decide
+  which gloop sounds to queue, matching the cartridge at screen edges and
+  on the first launch. The sound driver handles alternating playback.
+
 - **The Doomsday Zone:** the second boss phase preserves the ship's fractional
   vertical position, Hyper Sonic's after-image uses the original history slots,
   and his palette keeps cycling through the white exit fade.
+
+- **Hydrocity Zone Act 2:** the boss turbine starts the rising water platform
+  on the correct frame, so rolling Tails lands at the original height.
 
 - **Frame interpolation background continuity:** vertical camera movement no longer
   mistakes parallax band crossings for horizontal teleports. The previous frozen

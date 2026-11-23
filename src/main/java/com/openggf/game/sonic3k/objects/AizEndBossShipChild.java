@@ -13,7 +13,7 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import java.util.List;
 
 /**
- * Shared Robotnik ship + head overlay used by the AIZ end boss.
+ * Robotnik ship and owner of the AIZ end boss head allocation.
  *
  * <p>ROM composition:
  * <ul>
@@ -31,13 +31,10 @@ import java.util.List;
  */
 public class AizEndBossShipChild extends AbstractBossChild implements RewindRecreatable {
     private static final int SHIP_Y_OFFSET = -0x14;
-    private static final int HEAD_Y_OFFSET = -0x1C;
 
     // ROM: Map_RobotnikShip frames
     private static final int SHIP_FRAME_COMBAT = 0x08;   // subtype 8 — AIZ boss attachment
     private static final int SHIP_FRAME_ESCAPE = 0x05;   // ROM: loc_46110 move.b #5,mapping_frame
-    private static final int HEAD_FRAME_HURT = 0x02;
-    private static final int HEAD_FRAME_DEFEATED = 0x03;
 
     // ROM: loc_46110 — escape velocity and duration
     private static final int ESCAPE_INITIAL_Y_VEL = -0x200; // ROM: move.w #-$200,y_vel(a0)
@@ -48,8 +45,7 @@ public class AizEndBossShipChild extends AbstractBossChild implements RewindRecr
     private static final int STATE_DEFEAT_WAIT = 1;       // ROM: routine 4 (loc_460F8)
     private static final int STATE_DEFEAT_FLYING = 2;     // ROM: routine 6 (loc_4612A)
     private final AizEndBossInstance boss;
-    private int headAnimTimer;
-    private int headFrame;
+    private boolean initialized;
     private int shipFrame;
     private int defeatState = STATE_NORMAL;
     private int flyTimer;
@@ -63,8 +59,7 @@ public class AizEndBossShipChild extends AbstractBossChild implements RewindRecr
     public AizEndBossShipChild(AizEndBossInstance boss) {
         super(boss, "AIZEndBossShip", 5, 0);
         this.boss = boss;
-        this.headAnimTimer = 0;
-        this.headFrame = 0;
+        setPosition(boss.getX(), boss.getY() + SHIP_Y_OFFSET);
         this.shipFrame = SHIP_FRAME_COMBAT;
     }
 
@@ -85,6 +80,14 @@ public class AizEndBossShipChild extends AbstractBossChild implements RewindRecr
             return;
         }
 
+        if (!initialized) {
+            // loc_67D68 allocates Child1_MakeRoboHead2 once, after this ship's slot
+            // (sonic3k.asm:136356-136361, 136737-136740, 177015-177044).
+            initialized = true;
+            spawnChild(() -> new AizEndBossHeadChild(this));
+            return;
+        }
+
         switch (defeatState) {
             case STATE_NORMAL -> updateNormal();
             case STATE_DEFEAT_WAIT -> updateDefeatWait();
@@ -94,12 +97,10 @@ public class AizEndBossShipChild extends AbstractBossChild implements RewindRecr
 
     private void updateNormal() {
         setPosition(boss.getX(), boss.getY() + SHIP_Y_OFFSET);
-        updateHeadFrame();
 
         // ROM: Obj_RobotnikShipMain checks btst #7,status(a1) for defeat
         if (boss.getState().defeated) {
             defeatState = STATE_DEFEAT_WAIT;
-            headFrame = HEAD_FRAME_DEFEATED;
             // ROM: loc_460DC — the ship creates its own explosion controller here,
             // but in the engine the boss already manages the explosion controller.
         }
@@ -120,7 +121,6 @@ public class AizEndBossShipChild extends AbstractBossChild implements RewindRecr
             // ROM: loc_46110 — begin escape
             defeatState = STATE_DEFEAT_FLYING;
             shipFrame = SHIP_FRAME_ESCAPE;
-            headFrame = HEAD_FRAME_DEFEATED;
             flyX = getX();
             flyY = getY();
             flySub = 0;
@@ -149,17 +149,17 @@ public class AizEndBossShipChild extends AbstractBossChild implements RewindRecr
         }
     }
 
-    private void updateHeadFrame() {
-        if (boss.getState().defeated) {
-            headFrame = HEAD_FRAME_DEFEATED;
-            return;
-        }
-        if (boss.getState().invulnerable) {
-            headFrame = HEAD_FRAME_HURT;
-            return;
-        }
-        headAnimTimer++;
-        headFrame = (headAnimTimer / 6) & 1;
+    AizEndBossInstance bossForHead() {
+        return boss;
+    }
+
+    boolean isHidden() {
+        return defeatState == STATE_NORMAL && boss.isHidden();
+    }
+
+    @Override
+    protected boolean tracksViaChildComponents() {
+        return false;
     }
 
     @Override
@@ -169,7 +169,7 @@ public class AizEndBossShipChild extends AbstractBossChild implements RewindRecr
         }
         // During normal combat, hide when the boss is submerged behind the waterfall.
         // During defeat, always render (ROM: the ship renders independently of boss visibility).
-        if (defeatState == STATE_NORMAL && boss.isHidden()) {
+        if (isHidden()) {
             return;
         }
 
@@ -184,14 +184,6 @@ public class AizEndBossShipChild extends AbstractBossChild implements RewindRecr
         }
 
         boolean hFlip = boss.isFacingRight();
-        // Obj_RobotnikShip routine 0 (loc_67D68, sonic3k.asm:136357-136362) creates
-        // the head with Child1_MakeRoboHead2 / CreateChild1_Normal, which
-        // allocates after the current slot (176924-176929): the head follows the
-        // ship. Both are priority $280 (ObjDat_RobotnikShip 136658,
-        // Obj_RobotnikHeadInit -> ObjDat_RobotnikHead 136047-136048, 136648) and
-        // Draw_Sprite appends in slot order with the lower entry in front, so the
-        // ship covers the head. Painter's order: head, then ship.
-        renderer.drawFrameIndex(headFrame, getX(), getY() + HEAD_Y_OFFSET, hFlip, false);
         renderer.drawFrameIndex(shipFrame, getX(), getY(), hFlip, false);
     }
 

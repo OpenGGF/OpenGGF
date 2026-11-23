@@ -125302,3 +125302,53 @@ env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4 \
   -Dopenggf.surefire.reports=target/u54-focused \
   '-Dtest=TestCdScarabRebound,TestCdDangoTouch,TestMmzObjects2,TestSszObjects,TestSonicCdRoutesBLongNative,TestEnemyDefeatMutator,TestTouchResponseManager,TestTouchResponseProfileMapping,TestSonic1PoleThatBreaksObjectInstance,TestCrawlBadnikInstance,TestS3kSnaleBlasterBadnik,TestBroadCatchSwallowingGuard,TestZoneEventRuntimeAccessGuard,TestObjectPhysicsStandardizationGuard,TestRewindCoverageGuard,TestAudioPresentationArchitectureGuard,TestCameraRelativeDrawGuard,TestBuildToolingGuard,TestBootstrapModuleProviderCachingGuard' test -B
 ```
+
+
+## 2026-11-22 — HCZ end-boss platform landing
+
+In `bugfix/ai-hcz-boss-platform-landing` over develop
+`a3e55ad37a06b7364bd1050190ddffcda062d02c`, `HCZEndBossFan_SpawnPlatform` allocates
+after the turbine, so the water platform initializes on its spawn pass.
+On outgoing HCZ segment 15 row 1941, native and corrected rolling Tails land at
+`$07BA` where develop recorded `$07BB`. The native floor callback retains
+`$EC00`. [Checkpoint evidence and regression scope](../architecture/validation/levels/s3k-hcz2.md#end-boss-platform-allocation-and-rolling-tails-landing).
+
+The queued Java 25 checks used `-Dmse=off -Dopenggf.headless.gl=surfaceless-egl
+-Dsurefire.forkCount=1 -Dtrace.print.summary=true` and fresh trace and Surefire
+report directories. All configured ROM and disc inputs were found.
+
+- `-Ptrace-replay -Dtest=TestS3kSonicTailsCompleteEmeraldRunChain#aiz1ToDoomsdayCollectingEverySevenEmeralds test -B`
+  completes the same nine compared segment windows on both sources. Segment 15's
+  first strict error is still camera X at row 940 (`$3941/$3940`). The first
+  non-camera error moves from row 1941 `sidekick_y` (`$07BA/$07BB`) to row 2008
+  `y` (`$07CE/$07D0`). Physics field errors fall from 19,236 to 18,976 and
+  animation field errors from 5,155 to 5,153. Both reports have 145 lag rows and
+  zero bootstrap errors or warnings. MGZ admission still fails at movie cursor
+  100896. One test fails the strict full-campaign gate in each run, with zero
+  skips.
+- `-Ptrace-segments -Dtest=TestS3kHczZoneSliceTraceReplay test -B` passes both
+  tests before and after with zero skips. Both comparison gates retain 29,285
+  comparisons from 31,482 planned rows, with zero differences.
+
+## 2026-11-22 — Mega AIZ2 boss head queue
+
+- Matched run: `TestS3kMegaRunChain#multiBonusSpecialStageRoundTrip` under
+  `-Ptrace-replay-r7`, one fork, surfaceless EGL, all ROM properties found.
+  Base `766cb71d7d`. Both invocations report one failed test at the same
+  segment 8 source-closure assertion (LEVEL, generation 11, BK2 cursor 25811).
+- Segments 0–7 report zero errors on both sources. Segment 8's first error
+  moves from row 1117 `queue.s3k_kos_direct.busy` ROM true / Java false to
+  row 1168 `player_animation_id` ROM 0x0021 / Java 0x0020.
+  The incomplete slice has 3,447 → 3,453 field errors. The net +6 is
+  10 queue errors fixed at rows 1117–1118 and 16 added `camera_x` errors at
+  rows 1452–1467, downstream of the row-1168 divergence. The animation count
+  stays at 581. The first remaining physics error is row 1169 `y_sub`
+  ($7700/$9700) in the glide-rebound window.
+  The head consumes recorded direct completion #137 at PRE_MAIN_LOOP and
+  module #87 at POST_OBJECTS. The previous #137 miss masked the next unmatched
+  edge, `KOS_DECOMPRESSION_QUEUE#138` / `KOS_MODULE_QUEUE#88` at raw frame
+  2759. Production holds the recorded identity with a different descriptor.
+  The source-closure assertion remains at the same movie cursor.
+- An intermediate candidate submitted one row early at 1116. Separating
+  `Obj_AIZEndBossMusic` from the next dispatch of `Obj_AIZEndBossMain` aligns
+  the native allocation pass. See the [AIZ2 matrix](../architecture/validation/levels/s3k-aiz2.md#native-aiz2-boss-head-art-2026-11-22).

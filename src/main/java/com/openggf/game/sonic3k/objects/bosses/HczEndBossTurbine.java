@@ -223,13 +223,11 @@ public class HczEndBossTurbine extends AbstractBossChild implements TouchRespons
         }
     }
 
-    /**
-     * Spawns the water column child via the boss's public spawn delegate.
-     * ROM: loc_6B212 creates the water column after spin-up completes.
-     */
     private void spawnWaterColumn() {
-        waterColumn = new HczEndBossWaterColumn(boss, this);
-        boss.spawnDynamicChild(() -> waterColumn);
+        // HCZEndBossFan_SpawnPlatform (sonic3k.asm:141121-141125) calls
+        // CreateChild1_Normal (sonic3k.asm:177015-177025) from the turbine's slot.
+        // The platform initializer must run later in the same Process_Sprites pass.
+        waterColumn = spawnChild(() -> new HczEndBossWaterColumn(boss, this));
         LOG.fine("HCZ Turbine: spawned water column");
     }
 
