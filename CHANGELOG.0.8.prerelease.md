@@ -12,6 +12,9 @@ under the matching area heading; see the
   let the first giant-ring flash start on the correct frame, so Knuckles can
   grab the ride vine after the special stage.
 
+- **Sonic 1 and Sonic 2 title cards** now count each serviced wait toward the
+  V-int clock used by objects, preserving the timing phase carried into the act.
+
 - **Sonic 3 & Knuckles badnik score popups** now rise from the freed animal's
   first object pass, matching the cartridge's timing and slot allocation.
 
@@ -27,7 +30,9 @@ under the matching area heading; see the
 
 - **Angel Island Act 2:** the end boss now loads and shows EggRobo's head when
   Knuckles reaches the fight. Sonic and Tails keep Eggman's head. Rewind
-  preserves the art queue's progress through the encounter.
+  preserves the art queue's progress through the encounter. The arena camera
+  bounds begin expanding on the boss's first repositioning update. The boss
+  returns to the cartridge's emerge routine when the repositioning timer expires.
 
 - **Angel Island Act 1 right-wall transitions:** Sonic 3 and Sonic 3 & Knuckles
   now use the direction of the terrain probes for the ROM's penetration counter.
@@ -37,6 +42,12 @@ under the matching area heading; see the
 - **Placed rings in patched and hosted levels** use the underlying
   game's vertical placement and clipping rules. In Knuckles in Sonic 2, rings
   disappear as their centres cross the top of the screen, as on the cartridge.
+
+- **Sonic 2 Mystic Cave:** each rotating crate gets its final movement and
+  solid-object pass before its slot is freed. A crate set keeps only the
+  children that fit in the object slots available when it loads. In two-player
+  mode, crates that survive the unload of their parent's block keep their
+  original display orientation.
 
 - **Sonic 2 Chemical Plant Act 2:** the visible water surface and underwater
   palette split now bob at the same height where Sonic enters the water.
