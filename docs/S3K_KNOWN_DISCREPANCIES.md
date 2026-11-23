@@ -1519,7 +1519,7 @@ raw birth and INIT keep their cleared flips and unmirrored birth positions.
 The muzzle flash copies only horizontal facing and always starts at GunY-4.
 `sub_91930` retains delayed hover Y, falls back to live Y while `$32` is zero,
 and latches gun position/flags during firing. The flame uses live Y from
-`Refresh_ChildPositionAdjusted`. Scaled fly-by art remains an inherited gap.
+`Refresh_ChildPositionAdjusted`. The fly-by uses the ROM's scaled art and mappings on each scale step.
 The fly-by now retains the native waiter's saved-return low word `$151E` in its
 Y fraction when mode0 initializes (`Obj_EggRobo $91518`, `loc_91874`, `sub_86180`).
 Both historical Main and the preceding candidate cleared that residue. Focused

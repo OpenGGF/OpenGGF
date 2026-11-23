@@ -419,6 +419,11 @@ boundaries, including retained lease and complete registered-world replay. This
 does not close scaled pixels, shared scratch/DMA source lifetime, native
 presentation, intermediate viewport/donor/team breadth or cold-route obligations.
 
+The [SSZ EggRobo fly-by component](../architecture/validation/levels/s3k-ssz-act1.md#eggrobo-fly-by-scaled-art)
+checks scale-dependent ROM pixels, mapping geometry, flips, the unscaled
+fighter and reconstructed rewind. Native framebuffer comparison and shared
+DMA publication remain open.
+
 Slot retained-plane restore (2026-10-17): the [R7G qualification](../architecture/validation/levels/s3k-bonus-stage-transitions.md#r7g-actual-captured-plane-inlet-and-bounded-repair-qualification--2026-10-17)
 adds a genuine matched old-red/green with the actual stored parallax checkpoint,
 then all five maintained portal pilots pass, including twice-forward world

@@ -2018,6 +2018,15 @@ public class Sonic3kConstants {
     /** Native ArtTile_EggRoboBadnik, used by PLCKosM_SSZ and loc_91570. */
     public static final int ARTTILE_EGG_ROBO_BADNIK = 0x0500;
     public static final int MAP_EGG_ROBO_ADDR = 0x184F34;
+    /** {@code ArtScaled_EggRoboFly} (sonic3k.asm:201910-201912), bound by loc_91874. */
+    public static final int ART_SCALED_EGG_ROBO_FLY_ADDR = 0x17B6E0;
+    public static final int ART_SCALED_EGG_ROBO_FLY_SIZE = 0x1000;
+    /** Initial index and decrement in loc_91874 (sonic3k.asm:198842-198862)
+     * and loc_91526 (sonic3k.asm:198552-198563). */
+    public static final int EGG_ROBO_FLY_SCALE_START = 0x7F;
+    public static final int EGG_ROBO_FLY_SCALE_STEP = 3;
+    public static final int EGG_ROBO_FLY_SCALE_FLOOR = 4;
+
 
     // ===== DDZ (Doomsday) =====
     /** {@code ArtKosM_DDZMisc}: missiles, asteroids, boss parts (queued at {@code ArtTile_DDZMisc}). */

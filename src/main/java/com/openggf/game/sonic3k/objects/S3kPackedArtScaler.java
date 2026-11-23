@@ -6,15 +6,15 @@ import com.openggf.level.render.SpriteMappingPiece;
 
 import java.util.Arrays;
 
-/** Packed-byte translation of {@code sub_246DA} for MGZ's single 128x64 source bank. */
-final class MgzEndBossArtScaler {
+/** Scales one 128x64 packed source bank with {@code sub_246DA} (sonic3k.asm:49570-49675). */
+public final class S3kPackedArtScaler {
     static final int SOURCE_WIDTH = 0x80;
     static final int SOURCE_HEIGHT = 0x40;
     private static final int SOURCE_ROW_BYTES = SOURCE_WIDTH / 2;
 
-    private MgzEndBossArtScaler() { }
+    private S3kPackedArtScaler() { }
 
-    static void scale(byte[] source, int scaleStep, SpriteMappingFrame mapping, Pattern[] target) {
+    public static void scale(byte[] source, int scaleStep, SpriteMappingFrame mapping, Pattern[] target) {
         int modifiedScale = (scaleStep & 0x7F) + 4;
         Extents extents = extents(mapping);
         for (Pattern pattern : target) if (pattern != null) pattern.clear();

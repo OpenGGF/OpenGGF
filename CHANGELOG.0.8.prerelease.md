@@ -29,6 +29,9 @@ under the matching area heading; see the
   vertical position, Hyper Sonic's after-image uses the original history slots,
   and his palette keeps cycling through the white exit fade.
 
+- **Sky Sanctuary Act 1:** distant EggRobos grow into view using the cartridge's
+  scaled fly-by art.
+
 - **Hydrocity Zone Act 2:** the boss turbine starts the rising water platform
   on the correct frame, so rolling Tails lands at the original height.
 
