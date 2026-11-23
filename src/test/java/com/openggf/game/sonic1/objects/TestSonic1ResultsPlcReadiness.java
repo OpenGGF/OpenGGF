@@ -3,6 +3,9 @@ package com.openggf.game.sonic1.objects;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic1.resources.Sonic1PlcService;
 import com.openggf.level.objects.TestObjectServices;
+import com.openggf.level.objects.ObjectRenderManager;
+import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.graphics.GraphicsManager;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
@@ -11,8 +14,11 @@ import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 
 @RequiresRom(SonicGame.SONIC_1)
 class TestSonic1ResultsPlcReadiness {
@@ -56,6 +62,30 @@ class TestSonic1ResultsPlcReadiness {
         var commands = new ArrayList<com.openggf.graphics.GLCommand>();
         results.appendRenderCommands(commands);
         assertEquals(false, commands.isEmpty(), "an initialized card stays visible during unrelated PLC work");
+    }
+
+    @Test
+    void resultsSubmitTheOvalBehindTheActInBothRenderPaths() {
+        results.update(1, null);
+        var graphics = mock(GraphicsManager.class);
+        var manager = mock(ObjectRenderManager.class);
+        var renderer = mock(PatternSpriteRenderer.class);
+        when(manager.getResultsRenderer()).thenReturn(renderer);
+        results.setServices(new TestObjectServices() {
+            @Override public ObjectRenderManager renderManager() { return manager; }
+        }.withCamera(GameServices.camera()).withGraphicsManager(graphics));
+
+        var frames = new ArrayList<Integer>();
+        doAnswer(call -> frames.add(call.<Integer>getArgument(0))).when(renderer)
+                .drawFrameIndex(anyInt(), anyInt(), anyInt(), anyBoolean(), anyBoolean());
+        var nativeFrames = List.of(0, 1, 6, 2, 9, 3, 4, 5);
+        when(graphics.isSpriteSatCollectionActive()).thenReturn(true);
+        results.appendRenderCommands(new ArrayList<>());
+        assertEquals(nativeFrames, frames);
+        frames.clear();
+        when(graphics.isSpriteSatCollectionActive()).thenReturn(false);
+        results.appendRenderCommands(new ArrayList<>());
+        assertEquals(nativeFrames.reversed(), frames);
     }
 
     @Test
