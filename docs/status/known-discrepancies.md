@@ -2487,6 +2487,21 @@ test currently reaches, so it is unverifiable today. See
 
 **Kind:** Other
 
+**S3K badnik score popup corrected 2026-11-22.** In the HCZ slice, slot 17 is
+now clear on row 417 and holds the score popup at `$021C/$05BE` on row 418,
+matching the native trace. The explosion in slot 9 hands the selector to the
+animal in slot 8. The scan has already passed slot 8, so the animal allocates
+the popup on the next pass, following `loc_1E5F6`
+(sonic3k.asm:42215-42222) and `loc_2C940` (sonic3k.asm:61097-61131).
+
+The residual includes pre-existing slot differences at other badniks. On HCZ
+row 5726, the ROM's explosion and animal are in slots 13 and 15, so the animal
+can allocate a popup in slot 18 on the same pass. The engine's explosion and
+animal are in slots 10 and 7 and the animal must wait for the next pass.
+The HCZ gameplay comparator still passes. The diagnostic presence probe
+still differs on 1,880 of 2,387 sampled rows in slots 4–92. The probe
+measures slot presence only on those sampled rows.
+
 **Retitled 2026-08-21.** This entry was headed *"S3K object-slot occupancy…"*. Arming
 `SlotOccupancyProbe` across the full `-Ptrace-replay` sweep shows the defect is **not
 S3K-specific**: on presence/absence alone, S1 diverges on 45 of 48 fixtures and S2 on 33 of

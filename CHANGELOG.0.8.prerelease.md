@@ -11,6 +11,9 @@ under the matching area heading; see the
   original dust puffs. Their slots let the first giant-ring flash start on
   the correct frame, so Knuckles can grab the ride vine after the special stage.
 
+- **Sonic 3 & Knuckles badnik score popups** now rise from the freed animal's
+  first object pass, matching the cartridge's timing and slot allocation.
+
 - **Hydrocity water walls:** the horizontal wall and vertical geyser now use
   the coarse camera window and previous render pass to choose when to
   disappear or begin cleanup. The window retains the original bounds at
