@@ -7,6 +7,7 @@ import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsLogicalWriteTarget;
 import com.openggf.audio.smps.SmpsSequencer;
+import com.openggf.audio.smps.SmpsConfigBinding;
 import com.openggf.audio.smps.SmpsSequencerConfig;
 import com.openggf.audio.smps.SmpsSfxData;
 import com.openggf.audio.smps.SmpsSequencerHost;
@@ -128,7 +129,8 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
      * exactly as the ROM's global does rather than track a live sequencer.
      */
     private AbstractSmpsData s1SpecialVoicePointer;
-    /** Shared Z80 PAL cadence byte: zPALUpdTick / zPalDblUpdCounter. */
+    // S3/S&K zInitAudioDriver (Sound/Z80 Sound Driver.asm:548-549) seeds the divider at 5.
+    // The post-repeat reload is selected separately by the active music config.
     private int palUpdateCounter = 5;
     /**
      * Whether a DAC sample has been queued since the idle loop last looked.
@@ -2541,10 +2543,10 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
             if (palMode == SmpsSequencerConfig.PalUpdateMode.EXTRA_FULL) {
                 serviceSfxThenMusic();
                 if (region == SmpsSequencer.Region.PAL) {
-                    // S&K fix_sndbugs=0: test before decrement; zero reloads 5,
-                    // repeats zUpdateEverything, then the re-check stores 4.
+                    // zVInt tests before decrement. A zero reloads the divider,
+                    // repeats zUpdateEverything, then decrements the reload.
                     if (palUpdateCounter == 0) {
-                        palUpdateCounter = 5;
+                        palUpdateCounter = SmpsConfigBinding.fullPalUpdateReload(music.getConfig());
                         serviceSfxThenMusic();
                     }
                     palUpdateCounter--;
