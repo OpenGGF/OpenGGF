@@ -7,9 +7,10 @@ under the matching area heading; see the
 
 ## Gameplay and presentation
 
-- **Knuckles' giant vine grab in Angel Island:** glide landings now emit the
-  original dust puffs. Their slots let the first giant-ring flash start on
-  the correct frame, so Knuckles can grab the ride vine after the special stage.
+- **Knuckles' glide-slide dust:** Sonic 3 & Knuckles and Knuckles in Sonic 2 now
+  emit dust when Knuckles slides out of a glide. In Angel Island, the dust slots
+  let the first giant-ring flash start on the correct frame, so Knuckles can
+  grab the ride vine after the special stage.
 
 - **Sonic 3 & Knuckles badnik score popups** now rise from the freed animal's
   first object pass, matching the cartridge's timing and slot allocation.

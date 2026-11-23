@@ -597,10 +597,10 @@ public class Sonic3kGameModule implements GameModule, com.openggf.game.internal.
     private final com.openggf.game.internal.NativeLevelInputOwner nativeLevelInputOwner = this::handleNativeLevelInput;
     private final com.openggf.game.LevelInputOverlay nativeLevelInputOverlay = this::handleNativeLevelInput;
 
-    // loc_1693E (sonic3k.asm:30794-30809) arms Dust only when air_left >= 12.
+    // loc_1693E (sonic3k.asm:30794-30809) needs at least 12 seconds of air to arm.
+    // loc_18CE4 (sonic3k.asm:34137-34145) reloads the timer but skips allocation underwater.
     private static final com.openggf.game.internal.GlideLandingDustPolicy GLIDE_LANDING_DUST =
-            player -> player.getDrowningController() == null
-                    || player.getDrowningController().getRemainingAir() >= 12;
+            new com.openggf.game.internal.GlideLandingDustPolicy(false);
 
     @SuppressWarnings("unchecked")
     @Override

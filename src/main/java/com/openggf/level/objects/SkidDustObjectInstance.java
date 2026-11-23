@@ -1,5 +1,6 @@
 package com.openggf.level.objects;
 
+import com.openggf.game.internal.GlideLandingDustPolicy;
 import com.openggf.sprites.playable.PlayableArchetype;
 
 import com.openggf.graphics.GLCommand;
@@ -32,6 +33,7 @@ public class SkidDustObjectInstance extends AbstractObjectInstance implements Sp
     private static final int[] SKID_FRAMES = { 0x11, 0x12, 0x13, 0x14 };
     private static final int FRAME_DELAY = 3; // 4 game ticks per frame
     private static final int DELETE_ROUTINE_DELAY = 1;
+    private static final int NULL_ANIMATION = -2;
 
     // Frame 0x15 (21) has the DPLC that loads skid dust tiles.
     // Frames 0x11-0x14 have empty DPLCs and reuse tiles from frame 0x15.
@@ -94,6 +96,20 @@ public class SkidDustObjectInstance extends AbstractObjectInstance implements Sp
                 ObjectLifetimeOps.expireDynamic(this);
             }
             return;
+        }
+
+        if (frameIndex == NULL_ANIMATION) {
+            return;
+        }
+        if (glideSlidePuff) {
+            // Obj08_MdSkidDust (docs/kis2disasm/s2.asm:45884-45898) and
+            // loc_18C84 (sonic3k.asm:34098-34113) switch to the blank looping
+            // animation when drowning art takes over. The slot stays allocated.
+            AbstractPlayableSprite owner = dustOwner(tryServices(), ownerCode);
+            if (owner != null && !GlideLandingDustPolicy.hasAirForDust(owner)) {
+                frameIndex = NULL_ANIMATION;
+                return;
+            }
         }
 
         // Decrement animation timer
@@ -193,11 +209,15 @@ public class SkidDustObjectInstance extends AbstractObjectInstance implements Sp
     }
 
     private static PlayerSpriteRenderer ownerDustRenderer(ObjectServices services, String ownerCode) {
+        AbstractPlayableSprite owner = dustOwner(services, ownerCode);
+        return owner == null ? null : playerDustRenderer(owner);
+    }
+
+    private static AbstractPlayableSprite dustOwner(ObjectServices services, String ownerCode) {
         if (ownerCode == null || services == null || services.spriteManager() == null) {
             return null;
         }
-        return services.spriteManager().getSprite(ownerCode) instanceof AbstractPlayableSprite owner
-                ? playerDustRenderer(owner) : null;
+        return services.spriteManager().getSprite(ownerCode) instanceof AbstractPlayableSprite owner ? owner : null;
     }
 
     private static PlayerSpriteRenderer playerDustRenderer(AbstractPlayableSprite player) {
@@ -222,9 +242,9 @@ public class SkidDustObjectInstance extends AbstractObjectInstance implements Sp
 
     private static SkidDustObjectInstance create(AbstractPlayableSprite player, PlayerSpriteRenderer renderer,
                                                   boolean glideSlidePuff) {
-        // ROM: Skid dust position is player center + 0x10 to Y
-        // See s2.asm Obj08_SkidDust: move.w y_pos(a2),y_pos(a1) / addi.w #$10,y_pos(a1).
-        // Tails then subtracts 4 because his sprite is shorter.
+        // Both emitters add $10 for Stop or 6 for glide slide, less 4 for the
+        // second fixed Dust object (sonic3k.asm:34120-34158;
+        // docs/kis2disasm/s2.asm:45910-45955).
         int dustX = player.getCentreX();
         int dustOffset = glideSlidePuff ? 6 : 16;
         if (PlayableArchetype.isTails(player)) {
@@ -239,8 +259,9 @@ public class SkidDustObjectInstance extends AbstractObjectInstance implements Sp
             dustOffset = -dustOffset;
         }
         int dustY = player.getCentreY() + dustOffset;
-        // loc_18D1C (sonic3k.asm:34160-34176) clears status on the detached
-        // puff. Its first Animate_Sprite runs on the next dynamic object pass.
+        // loc_18D1C (sonic3k.asm:34157-34176) and Obj08_SkidDust
+        // (docs/kis2disasm/s2.asm:45957-45969) clear the detached puff's flip.
+        // Its first animation tick is on the next dynamic object pass.
         boolean facingLeft = !glideSlidePuff && player.getDirection() == Direction.LEFT;
         SkidDustObjectInstance dust = new SkidDustObjectInstance(dustX, dustY, renderer, facingLeft);
         dust.ownerCode = player.getCode();
@@ -281,6 +302,8 @@ public class SkidDustObjectInstance extends AbstractObjectInstance implements Sp
         ObjectManager manager = owner != null ? owner.objectManager()
                 : level != null ? level.getObjectManager() : null;
         if (manager != null) {
+            // AllocateObject starts at the first dynamic slot
+            // (sonic3k.asm:37951-37965; docs/kis2disasm/s2.asm:35314-35331).
             manager.createDynamicObject(() -> create(sprite, renderer, glideSlidePuff));
         }
     }
