@@ -870,9 +870,14 @@ control precede the final full `$FF80F8..$FF8FFF` clear assertions. Actual old-r
 76475:2intendedF at FF80FF; affected74516:122pass/0skips including15ScreenEntry
 cases and all `$F08` assertions; fresh5039:5exactsource/APIguardspass.
 
-Four native alias-word writes remain separate; definition0 emptiness and native
-route descriptor/pixel/clock equality are unproven. No new route product, native
-capture, broad/full suite, campaign or Hyper/Kos budget qualification follows.
+The first production ScreenInit cases also check `DEZ3_ScreenInit`
+(sonic3k.asm:120291-120315) copying the FG row-0 pointer into FG and BG rows 4
+and 31 before the clear. Cold and native-continuation entry both check all four
+encoded words, flattened cells, collision reads and edits through every alias.
+Full-world restore covers both initialized and uninitialized layouts, with
+two forward replays from before screen init. Native whole-route descriptors,
+pixels and clocks, broader route/lifecycle products and additional cold campaign
+coverage remain open.
 [Source hashes, exact commands and failed hypotheses](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#dez-screeninit-unused-encoded-layout-owner-source-and-independent-red-design--2026-10-17).
 
 ## Object-pipeline performance follow-up (2026-10-22)
