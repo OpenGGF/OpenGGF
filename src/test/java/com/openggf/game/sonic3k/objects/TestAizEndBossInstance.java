@@ -106,19 +106,51 @@ class TestAizEndBossInstance {
     }
 
     @Test
-    void retreatSubmergeAnimationRunsRepositionCallback() throws Exception {
+    void firstRepositionExpandsArenaOnEachScrollDispatch() throws Exception {
         RecordingServices services = new RecordingServices();
         services.withCamera(camera);
         services.withGameState(new GameStateManager());
 
         AizEndBossInstance boss = buildBoss(services);
+        camera.setMinX((short) 0x4880);
+        camera.setMaxX((short) 0x4880);
         invokeNoArg(boss, "beginReSubmerge");
 
-        for (int frame = 0; frame < 45; frame++) {
+        int frame = 0;
+        // Thirteen zero-delay updates of the emerge animation lead to the submerge callback.
+        for (; frame < 13; frame++) {
             boss.update(frame, null);
         }
 
-        assertEquals(12, boss.getState().routine);
+        // AIZEndBoss_FinishSubmerge schedules routine $C for the next dispatch.
+        assertEquals(0xC, boss.getState().routine);
+        assertEquals(0x4880, camera.getMinX() & 0xFFFF);
+        assertEquals(0x4880, camera.getMaxX() & 0xFFFF);
+
+        boss.update(frame++, null);
+        assertEquals(0x4882, camera.getMinX() & 0xFFFF, "first scroll dispatch minimum");
+        assertEquals(0x4882, camera.getMaxX() & 0xFFFF, "first scroll dispatch maximum");
+
+        boss.update(frame++, null);
+        assertEquals(0x4884, camera.getMinX() & 0xFFFF);
+        assertEquals(0x4884, camera.getMaxX() & 0xFFFF);
+
+        // Obj_Wait underflows after 128 dispatches from the initial $7F.
+        for (int dispatch = 3; dispatch < 128; dispatch++) {
+            boss.update(frame++, null);
+        }
+        assertEquals(0xC, boss.getState().routine);
+        assertEquals(0x48E0, camera.getMinX() & 0xFFFF);
+        assertEquals(0x497E, camera.getMaxX() & 0xFFFF);
+
+        boss.update(frame++, null);
+        assertEquals(0xA, boss.getState().routine);
+        assertEquals(0x48E0, camera.getMinX() & 0xFFFF);
+        assertEquals(0x4980, camera.getMaxX() & 0xFFFF);
+
+        boss.update(frame, null);
+        assertEquals(0x48E0, camera.getMinX() & 0xFFFF);
+        assertEquals(0x4980, camera.getMaxX() & 0xFFFF);
     }
 
     @Test
@@ -206,11 +238,11 @@ class TestAizEndBossInstance {
         assertEquals(0x4882, camera.getMinX() & 0xFFFF);
         assertEquals(0x4882, camera.getMaxX() & 0xFFFF);
 
-        camera.setMinX((short) 0x48E0);
+        camera.setMinX((short) 0x48DF);
         camera.setMaxX((short) 0x48E0);
         invokeNoArg(boss, "updateCameraScroll");
 
-        assertEquals(0x48E0, camera.getMinX() & 0xFFFF);
+        assertEquals(0x48DF, camera.getMinX() & 0xFFFF, "the proposed minimum would exceed the target");
         assertEquals(0x48E2, camera.getMaxX() & 0xFFFF);
     }
 

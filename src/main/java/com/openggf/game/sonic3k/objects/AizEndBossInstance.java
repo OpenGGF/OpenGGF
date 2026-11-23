@@ -150,10 +150,6 @@ public class AizEndBossInstance extends AbstractBossInstance
 
     private int waitTimer = -1;
     private WaitCallback waitCallback = WaitCallback.NONE;
-    /** Defers the first camera-bound write until the camera pass after routine $C is installed. */
-    private boolean cameraScrollBoundsPending;
-    /** Restores the skipped right-bound increment once it can no longer move the camera early. */
-    private boolean cameraScrollMaxCatchUpPending;
 
     private enum WaitCallback {
         NONE,
@@ -254,8 +250,6 @@ public class AizEndBossInstance extends AbstractBossInstance
         state.hitCount = HIT_COUNT;
         waitTimer = -1;
         waitCallback = WaitCallback.NONE;
-        cameraScrollBoundsPending = false;
-        cameraScrollMaxCatchUpPending = false;
         defeatRenderComplete = false;
         defeatExplosionController = null;
         fireSignalActive = false;
@@ -396,11 +390,6 @@ public class AizEndBossInstance extends AbstractBossInstance
         if (collisionEnablePending) {
             collisionEnabled = true;
             collisionEnablePending = false;
-        }
-        if (cameraScrollMaxCatchUpPending && state.routine != ROUTINE_CAMERA_SCROLL) {
-            int camMaxX = (services().camera().getMaxX() & 0xFFFF) + 2;
-            services().camera().setMaxX((short) camMaxX);
-            cameraScrollMaxCatchUpPending = false;
         }
         // Custom palette flash on hit
         if (state.invulnerable) {
@@ -786,7 +775,6 @@ public class AizEndBossInstance extends AbstractBossInstance
             // First time: scroll camera, set second cycle flag
             state.routine = ROUTINE_CAMERA_SCROLL;
             flags38 |= FLAG_SECOND_CYCLE;
-            cameraScrollBoundsPending = true;
         } else {
             // Second time: move to new position directly
             state.routine = ROUTINE_MOVE_WAIT;
@@ -802,30 +790,16 @@ public class AizEndBossInstance extends AbstractBossInstance
         waitCallback = WaitCallback.LOOP_BACK_TO_EMERGE;
     }
 
-    /** ROM: loc_69456 — Incrementally scroll camera right during reposition. */
+    /** ROM: AIZEndBoss_ScrollCamera (sonic3k.asm:138284-138296). */
     private void updateCameraScroll() {
-        if (cameraScrollBoundsPending) {
-            // loc_6942A installs routine $C during the boss object's pass. The
-            // camera has already consumed this frame's bounds, so loc_69456's
-            // first +2 becomes camera-visible on the following pass. Boss
-            // movement still begins now through loc_6946A/MoveSprite2.
-            cameraScrollBoundsPending = false;
-            cameraScrollMaxCatchUpPending = true;
-        } else {
-            // ROM: addq.w #2,(Camera_min_X_pos) until >= _unkFA84
-            int camMinX = services().camera().getMinX() & 0xFFFF;
-            if (camMinX < targetMaxX) {
-                camMinX += 2;
-                if (camMinX > targetMaxX) {
-                    camMinX = targetMaxX;
-                }
-                services().camera().setMinX((short) camMinX);
-            }
-            int camMaxX = (services().camera().getMaxX() & 0xFFFF) + 2;
-            services().camera().setMaxX((short) camMaxX);
+        // The camera reads these bounds after the object pass on this frame.
+        var camera = services().camera();
+        short nextMinX = (short) (camera.getMinX() + 2);
+        if ((nextMinX & 0xFFFF) <= targetMaxX) {
+            camera.setMinX(nextMinX);
         }
+        camera.setMaxX((short) (camera.getMaxX() + 2));
 
-        // Also do move+wait
         updateMoveWait();
     }
 

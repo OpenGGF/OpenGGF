@@ -22,7 +22,8 @@ under the matching area heading; see the
 
 - **Angel Island Act 2:** the end boss now loads and shows EggRobo's head when
   Knuckles reaches the fight. Sonic and Tails keep Eggman's head. Rewind
-  preserves the art queue's progress through the encounter.
+  preserves the art queue's progress through the encounter. The arena camera
+  bounds begin expanding on the boss's first repositioning update.
 
 - **Placed rings in patched and hosted levels** use the underlying
   game's vertical placement and clipping rules. In Knuckles in Sonic 2, rings

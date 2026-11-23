@@ -16,6 +16,11 @@ Each entry has a kind in the [table of contents](#table-of-contents). Some
 entries also record related limits or historical evidence. See also [S3K known bugs](status/s3k-known-bugs.md), [cross-game known bugs](status/known-bugs.md),
 and [cross-game known discrepancies](status/known-discrepancies.md).
 
+**AIZ2 end-boss camera bounds (2026-11-23):** the boss now publishes both
+arena bounds on its first scroll dispatch, clearing the two camera-X spans in
+the Sonic+Tails AIZ to HCZ replay. See the
+[replay evidence](status/trace-frontier-log.md#2026-11-23-aiz2-end-boss-camera-scroll).
+
 ## Hosted solo arena presentation (2026-11-07)
 
 **Kind:** Engine feature
