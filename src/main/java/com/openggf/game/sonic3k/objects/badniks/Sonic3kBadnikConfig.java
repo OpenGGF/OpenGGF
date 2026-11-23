@@ -13,8 +13,11 @@ public final class Sonic3kBadnikConfig {
 
     /** Shipped Touch_EnemyNormal recipe, including the native animal and points child order. */
     public static DestructionConfig destruction() {
+        // loc_1E5F6 (sonic3k.asm:42215-42222) copies the score selector.
+        // loc_2C940 (sonic3k.asm:61097-61131) allocates the popup on the animal's own dispatch.
         return new DestructionConfig(Sonic3kSfx.BREAK.id,
-                (spawn, services) -> AnimalObjectInstance.deferredArtVariant(spawn, services, null), false,
-                (spawn, services, points) -> new Sonic3kPointsObjectInstance(spawn, services, points), null, false);
+                (spawn, services) -> AnimalObjectInstance.deferredArtVariant(
+                        spawn, services, Sonic3kPointsObjectInstance::new),
+                false, null, null, false);
     }
 }
