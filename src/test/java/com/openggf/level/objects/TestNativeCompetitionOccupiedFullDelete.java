@@ -10,6 +10,8 @@ import com.openggf.game.rewind.RewindSnapshotDiff;
 import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.session.*;
 import com.openggf.game.sonic2.competition.Sonic2CompetitionObjectStreaming;
+import com.openggf.game.sonic2.objects.MCZRotPformsObjectInstance;
+import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
 import com.openggf.graphics.GLCommand;
 import com.openggf.mods.ModRuntimeFindingStore;
 import com.openggf.mods.ModStateSaveResult;
@@ -77,6 +79,47 @@ class TestNativeCompetitionOccupiedFullDelete {
         assertEquals(0, idZero.unloads);
         assertFalse(f.manager.reserveDynamicSlot(59));
         assertFalse(f.manager.reserveDynamicSlot(60), "an ID-empty reservation was not released");
+    }
+
+    @Test
+    void mczCrateChildrenKeepTheirRenderFlagsWhenTheySpillIntoTheNextBlock() {
+        var f = new Rig(List.of(), false, Sonic2ZoneConstants.ROM_ZONE_MCZ);
+        int blockStart = 56;
+        int blockSize = 12;
+        int nextBlock = blockStart + blockSize;
+        ObjectSpawn spawn = new ObjectSpawn(200, 100, 0x6A, 0x18, 1, false, 100);
+        var parent = f.manager.createDynamicObjectAtSlot(
+                () -> new MCZRotPformsObjectInstance(spawn, "crate"), nextBlock - 1);
+        assertNotNull(parent);
+        parent.update(0, null);
+
+        var right = assertInstanceOf(MCZRotPformsObjectInstance.class, currentOwner(f.manager, nextBlock));
+        var left = assertInstanceOf(MCZRotPformsObjectInstance.class, currentOwner(f.manager, nextBlock + 1));
+        assertEquals(5, parent.nativeDisplaySlot().renderFlags());
+        assertEquals(4, right.nativeDisplaySlot().renderFlags());
+        assertEquals(4, left.nativeDisplaySlot().renderFlags());
+
+        f.delete(blockStart, blockSize);
+
+        assertNull(currentOwner(f.manager, nextBlock - 1));
+        assertSame(right, currentOwner(f.manager, nextBlock));
+        assertSame(left, currentOwner(f.manager, nextBlock + 1));
+        // Obj6A_Init (s2.asm:54165-54169) sets only level_fg in a child's cleared render flags.
+        assertEquals(4, right.nativeDisplaySlot().renderFlags());
+        assertEquals(4, left.nativeDisplaySlot().renderFlags());
+
+        var registry = new RewindRegistry();
+        registry.register(f.manager.rewindSnapshottable());
+        var snapshot = registry.capture();
+        f.manager.setRewindInPlaceRestoreEnabledForTest(false);
+        registry.restore(snapshot);
+
+        var restoredRight = assertInstanceOf(MCZRotPformsObjectInstance.class, currentOwner(f.manager, nextBlock));
+        var restoredLeft = assertInstanceOf(MCZRotPformsObjectInstance.class, currentOwner(f.manager, nextBlock + 1));
+        assertNotSame(right, restoredRight);
+        assertNotSame(left, restoredLeft);
+        assertEquals(4, restoredRight.nativeDisplaySlot().renderFlags());
+        assertEquals(4, restoredLeft.nativeDisplaySlot().renderFlags());
     }
 
     @Test void liveIdZeroSkipsTheRespawnLatchAsWellAsTheWord() {
@@ -352,6 +395,10 @@ class TestNativeCompetitionOccupiedFullDelete {
         IntConsumer beforeClear = slot -> { };
         final ObjectManager manager;
         Rig(List<ObjectSpawn> spawns, boolean legacy) {
+            this(spawns, legacy, 0);
+        }
+
+        Rig(List<ObjectSpawn> spawns, boolean legacy, int zone) {
             Camera camera = new Camera(SonicConfigurationService.getInstance());
             var roster = mock(NativeCompetitionRoster.class);
             when(roster.camera(0)).thenReturn(camera); when(roster.camera(1)).thenReturn(camera);
@@ -364,6 +411,7 @@ class TestNativeCompetitionOccupiedFullDelete {
             manager = new ObjectManager(spawns, new Registry(boundary), -1, null, null, null, camera,
                     new StubObjectServices() {
                         @Override public ObjectManager objectManager() { return holder[0]; }
+                        @Override public int currentZone() { return zone; }
                         @Override public Camera camera() { return camera; }
                         @Override public WorldSession worldSession() { return world; }
                     });

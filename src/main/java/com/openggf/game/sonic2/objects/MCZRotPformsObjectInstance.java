@@ -142,6 +142,8 @@ public class MCZRotPformsObjectInstance extends AbstractObjectInstance
     private boolean yFlip;
     private boolean isParent;  // Only MCZ subtype 0x18 acts as parent.
 
+    private boolean allocatedChild; // Retained across owner unlink and rewind.
+
     // Rewind graph links. Each admitted crate owns its own lifetime.
     private final List<MCZRotPformsObjectInstance> children = new ArrayList<>();
     private MCZRotPformsObjectInstance owner;
@@ -157,16 +159,17 @@ public class MCZRotPformsObjectInstance extends AbstractObjectInstance
     private boolean spawnFrameSkipPending;
 
     public MCZRotPformsObjectInstance(ObjectSpawn spawn, String name) {
-        this(spawn, name, spawn.x(), spawn.y());
+        this(spawn, name, spawn.x(), spawn.y(), false);
     }
 
     private MCZRotPformsObjectInstance(
-            ObjectSpawn spawn, String name, int unloadAnchorX, int unloadAnchorY) {
+            ObjectSpawn spawn, String name, int unloadAnchorX, int unloadAnchorY, boolean allocatedChild) {
         super(spawn, name);
 
         this.xFlip = (spawn.renderFlags() & 0x01) != 0;
         this.yFlip = (spawn.renderFlags() & 0x02) != 0;
 
+        this.allocatedChild = allocatedChild;
         this.baseX = unloadAnchorX;
         this.baseY = unloadAnchorY;
         this.x = spawn.x();
@@ -457,7 +460,7 @@ public class MCZRotPformsObjectInstance extends AbstractObjectInstance
                 spawn.respawnTracked(),
                 spawn.rawYWord());
         MCZRotPformsObjectInstance child1 = spawnChild(
-                () -> new MCZRotPformsObjectInstance(child1Spawn, "MCZRotPforms", baseX, baseY));
+                () -> new MCZRotPformsObjectInstance(child1Spawn, "MCZRotPforms", baseX, baseY, true));
         if (manager.objectQuery().identityOf(child1).isEmpty()) {
             return;
         }
@@ -473,7 +476,7 @@ public class MCZRotPformsObjectInstance extends AbstractObjectInstance
                 spawn.respawnTracked(),
                 spawn.rawYWord());
         MCZRotPformsObjectInstance child2 = spawnChild(
-                () -> new MCZRotPformsObjectInstance(child2Spawn, "MCZRotPforms", baseX, baseY));
+                () -> new MCZRotPformsObjectInstance(child2Spawn, "MCZRotPforms", baseX, baseY, true));
         if (manager.objectQuery().identityOf(child2).isPresent()) {
             attachChild(child2);
         }
@@ -528,7 +531,7 @@ public class MCZRotPformsObjectInstance extends AbstractObjectInstance
         // Obj6A_InitSubObject (s2.asm:54213-54220) copies status, not render_flags.
         // Children run Obj6A_Init (s2.asm:54165-54190), ORing level_fg into cleared
         // render flags. Their copied status still selects their movement table.
-        int flags=4 | (owner==null ? spawn.renderFlags() & 3 : 0);
+        int flags = 4 | (allocatedChild ? 0 : spawn.renderFlags() & 3);
         return new ObjectSlot(0x6A,flags,x & 0xFFFF,y & 0xFFFF,32,32,
                 new Mapping(0x27D30,0),0x61EA,null);
     }

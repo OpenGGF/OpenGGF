@@ -95,7 +95,10 @@ S2 Mystic Cave rotating crates ($6A): the
 cover each crate's final movement at both native-width horizontal unload
 boundaries and the 528-pixel right-hand range limit. Exhausted, partial and full
 admission exercise graph restoration, one-shot initialization and camera-return
-respawn. Natural slot exhaustion, player contact on the retirement frame and
+respawn. The [two-player block-delete test](../../src/test/java/com/openggf/level/objects/TestNativeCompetitionOccupiedFullDelete.java)
+covers the display flags of both children when they spill into the next block
+and the x-flipped parent's block unloads. Natural slot exhaustion, player
+contact on the retirement frame and
 broader character, donor and viewport coverage remain open.
 
 S2 Competition monitor outcomes (2026-11-09): eight cold-title EHZ1 fixtures
