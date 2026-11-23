@@ -1207,8 +1207,8 @@ public final class AudioPresentationProducer {
         boolean loadBlocked = smpsSession.blocksForwardRequestConsumption();
         try {
             if (!loadBlocked && forwardService != null) {
-                forwardBoundary = forwardService.beginForwardBoundary(
-                        registry.blocksSfxBeforeDispatch());
+                forwardBoundary = forwardService.beginForwardBoundary();
+                forwardBoundary.setSfxBlockedBeforeDispatch(registry.blocksSfxBeforeDispatch());
                 if (forwardResolver == null) {
                     forwardBoundary.service(forwardCommandSink);
                 } else {

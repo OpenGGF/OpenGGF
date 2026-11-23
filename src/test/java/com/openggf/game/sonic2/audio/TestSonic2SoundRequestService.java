@@ -110,7 +110,8 @@ class TestSonic2SoundRequestService {
 
         service.submitSound(0xDA, sfx(0xDA));
         var before = service.snapshot();
-        var boundary = service.beginForwardBoundary(true);
+        var boundary = service.beginForwardBoundary();
+        boundary.setSfxBlockedBeforeDispatch(true);
         List<AudioCommand> staged = new ArrayList<>();
         boundary.service(staged::add);
         var refused = service.snapshot().pipeline();

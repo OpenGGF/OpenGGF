@@ -86,16 +86,11 @@ public final class Sonic2SoundRequestService implements AudioRequestService,
 
     @Override
     public ForwardBoundary beginForwardBoundary() {
-        return beginForwardBoundary(false);
-    }
-
-    @Override
-    public ForwardBoundary beginForwardBoundary(boolean sfxBlocked) {
         if (forwardOpen) {
             throw new IllegalStateException("Sonic 2 forward request boundary is already open");
         }
         forwardOpen = true;
-        return new ForwardBoundary(snapshot(), sfxBlocked);
+        return new ForwardBoundary(snapshot());
     }
 
     @Override
@@ -140,7 +135,7 @@ public final class Sonic2SoundRequestService implements AudioRequestService,
 
     public final class ForwardBoundary implements AudioPresentationForwardService.ForwardBoundary {
         private final Snapshot before;
-        private final boolean sfxBlocked;
+        private boolean sfxBlocked;
         private final List<EventTemplate> stagedEvents = new ArrayList<>();
         private boolean serviced;
         private AudioCommand stagedConsequence;
@@ -152,9 +147,17 @@ public final class Sonic2SoundRequestService implements AudioRequestService,
         private long preparedNextEventOrdinal;
         private boolean diagnosticsPublished;
 
-        private ForwardBoundary(Snapshot before, boolean sfxBlocked) {
+        private ForwardBoundary(Snapshot before) {
             this.before = before;
-            this.sfxBlocked = sfxBlocked;
+        }
+
+        @Override
+        public void setSfxBlockedBeforeDispatch(boolean blocked) {
+            requireOpen();
+            if (serviced) {
+                throw new IllegalStateException("Sonic 2 request boundary was already serviced");
+            }
+            sfxBlocked = blocked;
         }
 
         @Override
