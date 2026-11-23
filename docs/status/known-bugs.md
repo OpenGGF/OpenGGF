@@ -31,6 +31,8 @@ Entries should include:
   `Level_TtlCardLoop` (sonic.asm:2814-2819) and counts in `VBlank_Exit`
   (sonic.asm:684-685). S2 waits in `Level_TtlCard` (s2.asm:4914-4927) and
   `LoadZoneTiles` (s2.asm:6517-6523) and counts in `VintRet` (s2.asm:507-509).
+  The driver also skips S2's locked leave-loop object and player passes
+  (s2.asm:5060-5066).
 - **Cause** — the recording driver uses the LAG service path for these rows.
   Production uses `NativeTitleOnlyVBlankWait` for title-only waits and takes
   the last S2 upload row's tick from the leading `RunObjects` pass

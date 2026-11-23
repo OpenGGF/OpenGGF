@@ -2329,8 +2329,7 @@ and WFZ1 alone cannot identify a lost interrupt.
 
 These are hardware limits because the submission row and masked-window
 duration depend on CPU phase within a video frame, which the engine does
-not model. Production title-card waits are covered under
-[Remaining V-int Clock Limits Outside Native Start Pause](#remaining-v-int-clock-limits-outside-native-start-pause).
+not model. Production title-card waits count their own serviced V-ints.
 
 The HTZ1 → HTZ2 gap shows 32 transfer and ledger field differences after
 gameplay diverges. That gap, the chain's physics divergences at ARZ2 row 5512,
