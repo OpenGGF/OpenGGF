@@ -7,6 +7,10 @@ under the matching area heading; see the
 
 ## Gameplay and presentation
 
+- **Death Egg's final fight:** entering the arena now links foreground and
+  background rows 4 and 31 to the same terrain as foreground row 0, as on the
+  cartridge. Rewind preserves those links and edits to the shared terrain.
+
 - **Sonic 1 and Sonic 2 title cards** now count each serviced wait toward the
   V-int clock used by objects, preserving the timing phase carried into the act.
 

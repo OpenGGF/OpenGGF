@@ -12,6 +12,9 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @RequiresRom(SonicGame.SONIC_3K)
 class TestDezFinalScreenEntry {
+    private static final int[] ALIAS_WORD_OFFSETS = {0x18, 0x1A, 0x84, 0x86};
+    private static final int[] ALIAS_ROWS = {4, 31};
+
     @org.junit.jupiter.api.AfterEach void resetViewport() {
         com.openggf.configuration.SonicConfigurationService.getInstance().clearSessionOverrides();
         com.openggf.game.session.SessionManager.clear();
@@ -30,11 +33,11 @@ class TestDezFinalScreenEntry {
     private DezFinalBossZoneRuntimeState state() {
         return (DezFinalBossZoneRuntimeState) GameServices.zoneRuntimeState();
     }
-    @Test void coldFirstProductionScreenInitClearsOnlyRomUnusedLayoutTail() throws Exception {
+    @Test void coldFirstProductionScreenInitInstallsRomLayoutAliasesAndClearsTail() throws Exception {
         assertRomOwnedScreenInitLayout(boot(), false);
     }
 
-    @Test void publicNativeContinuationScreenInitClearsOnlyRomUnusedLayoutTail() throws Exception {
+    @Test void publicNativeContinuationScreenInitInstallsRomLayoutAliasesAndClearsTail() throws Exception {
         var fixture = HeadlessTestFixture.builder().withZoneAndAct(11, 1).build();
         var manager = GameServices.level();
         // Declared native continuation inlet, not a boss defeat or full-route claim.
@@ -46,12 +49,6 @@ class TestDezFinalScreenEntry {
         assertRomOwnedScreenInitLayout(fixture, true);
     }
 
-    /**
-     * DEZ3_ScreenInit $5A3DA..$5A400 clears unused Level_layout_header bytes,
-     * not RAM_start definitions or collision banks. Definition zero is NOT assumed empty.
-     * The two forced recreated-world continuations and independent controls deliberately
-     * precede the final discriminating clear assertions, so a tail old-red qualifies them.
-     */
     private void assertRomOwnedScreenInitLayout(HeadlessTestFixture fixture, boolean continuation)
             throws Exception {
         var rom = TestEnvironment.currentRom();
@@ -62,6 +59,11 @@ class TestDezFinalScreenEntry {
         assertArrayEquals(java.util.HexFormat.of().parseHex(
                 "43f880003011c0e9000432290002c2e90006d04106400088d2c0323c0fff9240421951c9fffc"),
                 rom.readBytes(0x05A3DA, 0x26), "complete native clear body including operands and DBF");
+        assertArrayEquals(java.util.HexFormat.of().parseHex("301337400010374000123740007c3740007e"),
+                rom.readBytes(0x05A3C0, 0x12), "DEZ3_ScreenInit reads FG row 0 and writes four aliases");
+        int sourcePointer = nativeWord(loaded, 8);
+        assertEquals(0x8088, sourcePointer);
+        assertAliasWords(0, loaded, "stock layout before ScreenInit");
         int clearOffset = ((nativeWord(loaded, 0) * nativeWord(loaded, 4)
                 + nativeWord(loaded, 2) * nativeWord(loaded, 6)) + 0x88) & 0xFFFF;
         assertEquals(0x00F8, clearOffset, "0x14*0x04 + 0x08*0x04 + 0x88; not 0x20*4");
@@ -85,8 +87,13 @@ class TestDezFinalScreenEntry {
         assertEquals(2, objects.activeObjectsOfType(DezFinalArenaFloor.class).size());
         assertEquals(1, objects.activeObjectsOfType(DezFinalBossController.class).size());
         var oldFloor = objects.activeObjectsOfType(DezFinalArenaFloor.class).getFirst();
+        assertInstalledAliases(registry.capture(), sourcePointer, loaded);
         applyDeclaredNativeBackgroundCellEdit();
         var initialized = registry.capture();
+        editThroughEachAlias(sourcePointer);
+        registry.restore(initialized);
+        sameNativeWorld(initialized, registry.capture());
+        assertInstalledAliases(registry.capture(), sourcePointer, loaded);
         assertScreenInitIsIdempotent(initialized);
         assertArrayEquals(definitions, finalDefinitionWords(), "ScreenInit edits layout only");
         assertFinalTargetResources(continuation);
@@ -95,32 +102,34 @@ class TestDezFinalScreenEntry {
         for (int replay = 0; replay < 2; replay++) {
             registry.restore(before);
             sameNativeWorld(before, registry.capture());
+            assertAliasWords(0, nativeLayout(registry.capture()).encoded(), "restored pre-init layout");
             assertFalse(state().screenInitApplied());
             fixture.stepIdleFrames(1);
             assertTrue(state().screenInitApplied());
             assertNotSame(oldFloor, manager.getObjectManager().activeObjectsOfType(DezFinalArenaFloor.class).getFirst(),
                     "forced registered-world restore recreates actual support owners");
             oldFloor = manager.getObjectManager().activeObjectsOfType(DezFinalArenaFloor.class).getFirst();
+            assertInstalledAliases(registry.capture(), sourcePointer, loaded);
             applyDeclaredNativeBackgroundCellEdit();
             sameNativeWorld(initialized, registry.capture());
             assertScreenInitIsIdempotent(initialized);
             fixture.stepIdleFrames(3);
             sameNativeWorld(forward, registry.capture());
+            assertInstalledAliases(registry.capture(), sourcePointer, loaded);
             assertArrayEquals(definitions, finalDefinitionWords());
             assertFinalTargetResources(continuation);
         }
 
-        // Prefix preservation is independent of the tail red. Native ScreenInit's
-        // four row-0 alias WORD writes are the only permitted prefix exceptions.
         byte[] actual = nativeLayout(registry.capture()).encoded();
         byte[] preserved = loaded.clone();
+        for (int offset : ALIAS_WORD_OFFSETS) {
+            preserved[offset] = (byte) (sourcePointer >>> 8);
+            preserved[offset + 1] = (byte) sourcePointer;
+        }
         int editOffset = nativeWord(loaded, 8 + 0x02 * 4) - 0x8000 + 0x0D;
         preserved[editOffset] = 0x1A; // Explicit legitimate later background edit below.
-        for (int offset = 0; offset < clearOffset; offset++) {
-            boolean aliasByte = offset >= 0x18 && offset < 0x1C || offset >= 0x84 && offset < 0x88;
-            if (!aliasByte) assertEquals(preserved[offset] & 0xFF, actual[offset] & 0xFF,
-                    "meaningful native prefix preserved at byte " + Integer.toHexString(offset));
-        }
+        assertArrayEquals(java.util.Arrays.copyOf(preserved, clearOffset),
+                java.util.Arrays.copyOf(actual, clearOffset), "only the row words and declared edit replace prefix bytes");
         int rowOne = nativeWord(loaded, 0x0C) - 0x8000;
         assertEquals(0x009C, rowOne);
         assertArrayEquals(java.util.Arrays.copyOfRange(loaded, rowOne, rowOne + 0x14),
@@ -131,6 +140,61 @@ class TestDezFinalScreenEntry {
         assertEquals(0, actual[0x0100] & 0xFF, "DEZ3_ScreenInit must clear native layout RAM $FF8100");
         for (int offset = clearOffset; offset < 0x1000; offset++)
             assertEquals(0, actual[offset] & 0xFF, "native inclusive clear through $FF8FFF, offset " + offset);
+    }
+
+    private static void assertAliasWords(int source, byte[] encoded, String boundary) {
+        var expected = java.util.Collections.nCopies(4, "$%04X".formatted(source));
+        var actual = java.util.Arrays.stream(ALIAS_WORD_OFFSETS)
+                .mapToObj(offset -> "$%04X".formatted(nativeWord(encoded, offset))).toList();
+        assertEquals(expected, actual, () -> "%s words at $18/$1A/$84/$86; tail $FF = $%02X"
+                .formatted(boundary, encoded[0xFF] & 0xFF));
+    }
+
+    private static void assertInstalledAliases(com.openggf.game.rewind.CompositeSnapshot snapshot,
+                                               int sourcePointer, byte[] loaded) {
+        assertAliasWords(sourcePointer, nativeLayout(snapshot).encoded(), "production ScreenInit");
+        var level = (com.openggf.game.sonic3k.Sonic3kLevel) GameServices.level().getCurrentLevel();
+        int source = sourcePointer - 0x8000;
+        var map = level.getMap();
+        for (int row : ALIAS_ROWS) {
+            assertTrue(level.hasBackgroundCollisionRowAt(row * 128));
+            for (int layer = 0; layer < 2; layer++) {
+                for (int x = 0; x < map.getWidth(); x++) {
+                    assertEquals(loaded[source + x], map.getValue(layer, x, row),
+                            "flattened source for plane %d row %d column %d".formatted(layer, row, x));
+                }
+                int probeX = 7 * 128;
+                assertEquals(level.collisionChunkDescAt((byte) 0, probeX, 0).get(),
+                        level.collisionChunkDescAt((byte) layer, probeX, row * 128).get(),
+                        "encoded collision reads row 0 through the alias");
+            }
+        }
+    }
+
+    private static void editThroughEachAlias(int sourcePointer) {
+        var manager = GameServices.level();
+        var level = manager.getCurrentLevel();
+        var registry = TestEnvironment.activeGameplayMode().getRewindRegistry();
+        var context = new com.openggf.game.mutation.LayoutMutationContext(
+                com.openggf.game.mutation.LevelMutationSurface.forLevel(level), manager::applyMutationEffects);
+        var pipeline = manager.getObjectManager().getObjectServices().zoneLayoutMutationPipeline();
+        int column = 7;
+        int block = 0;
+        for (int row : ALIAS_ROWS) {
+            for (int layer = 0; layer < 2; layer++) {
+                int nextBlock = ++block;
+                int destLayer = layer;
+                pipeline.applyImmediately(mutation -> mutation.surface()
+                        .setBlockInMapWithoutRedraw(destLayer, column, row, nextBlock), context);
+                assertEquals(nextBlock, level.getMap().getValue(0, column, 0) & 0xFF);
+                for (int alias : ALIAS_ROWS) {
+                    assertEquals(nextBlock, level.getMap().getValue(0, column, alias) & 0xFF);
+                    assertEquals(nextBlock, level.getMap().getValue(1, column, alias) & 0xFF);
+                }
+                assertEquals(nextBlock,
+                        nativeLayout(registry.capture()).encoded()[sourcePointer - 0x8000 + column] & 0xFF);
+            }
+        }
     }
 
     private void applyDeclaredNativeBackgroundCellEdit() {
