@@ -3481,8 +3481,11 @@ the owning KiS2 routine in the catalogue):
   rules; multi-sprite boss touch keeps $4D while normal duck touch uses $9C.
   Wall grabs now test both wall ends and the ROM ledge-fit range; glide floor
   angles include tile flips, and sliding retains the animation register. Wall grabs
-  store their native X anchor in `x_sub` and detach on displacement or object carry;
-  wall and ledge steps preserve the low position words. Ledge entries use the native
+  store their native X anchor in `x_sub` and detach on displacement or object carry.
+  The grab publishes mapping `$B7`, script duration `$7F` and cursor 0 while
+  preserving the animation ID (KiS2 `Knuckles_BeginClimb.success`, `c336fede`,
+  lines 38307–38311 of `s2.asm`). Wall and ledge steps preserve the low position
+  words. Ledge entries use the native
   six-slot animation holds and same-slot grounding, with bounded rewind checks.
   Vertical climb probes include the signed X radius after the caller's 8/9 offset,
   use powered one/two-pixel movement and the signed upper-bound clamp, undo the
