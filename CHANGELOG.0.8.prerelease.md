@@ -7,6 +7,12 @@ under the matching area heading; see the
 
 ## Gameplay and presentation
 
+- **Sonic 2 and Knuckles in Sonic 2** now play cartridge demos when the title
+  idles. The cycle runs Emerald Hill, Chemical Plant, Aquatic Ruin and Casino
+  Night. Stock Sonic 2 opens with split-screen Sonic and Tails. Knuckles in
+  Sonic 2 runs solo, with its demo jump height and glide and Super disabled.
+  The demo returns through SEGA on timeout or directly to the title on Start.
+
 - Sonic 1 draws the act number over the blue oval on the results card. Drum
   samples resume when level music follows the special-stage theme. Leaving a
   special stage also restores the active display projection, keeping sprites

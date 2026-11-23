@@ -8,6 +8,14 @@ deliberate bug-fixes of ROM data), see
 
 For general (cross-game) bugs, see [known-bugs.md](known-bugs.md).
 
+## Sonic 3 & Knuckles title attract demos are absent
+
+The title stays on screen after the native demo timer expires.
+`loc_4278` and `DemoLevels` (sonic3k.asm:5695-5775) choose the next level or
+Special Stage from the cartridge's cycle and advance the entry index using
+the lock-on mode. Remove this entry when the production title selects the
+native entries, plays their cartridge controls and handles timeout and Start.
+
 ## HCZ geyser child lifetimes and cleanup sound commands
 
 The water-wall parent's lifetime is covered by the

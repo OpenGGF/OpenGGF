@@ -69,6 +69,7 @@ final class Kis2GameModule extends DelegatingGameModule implements com.openggf.g
     private Kis2ChipArt chipArt;
     private Kis2SpecialStageProvider specialStageProvider;
     private Kis2TitleScreen titleScreen;
+    private com.openggf.game.sonic2.attract.Sonic2AttractProgram attractProgram;
     private Kis2LevelSelect levelSelect;
     private com.openggf.level.objects.ObjectRegistry objectRegistry;
     private com.openggf.game.ScrollHandlerProvider scrollHandlerProvider;
@@ -102,7 +103,7 @@ final class Kis2GameModule extends DelegatingGameModule implements com.openggf.g
     @Override
     public PhysicsProvider getPhysicsProvider() {
         if (physicsProvider == null) {
-            physicsProvider = new Kis2PhysicsProvider();
+            physicsProvider = new Kis2PhysicsProvider(() -> attractProgram != null && attractProgram.demoMode());
         }
         return physicsProvider;
     }
@@ -207,10 +208,24 @@ final class Kis2GameModule extends DelegatingGameModule implements com.openggf.g
     public void resetModuleScopedState() {
         super.resetModuleScopedState();
         chipPlcService = null;
+        attractProgram = null;
     }
 
     @Override
     public <T> T getGameService(Class<T> type) {
+        if (type == com.openggf.game.internal.TitleAttractDemo.class) {
+            // Tier one lacks the chip program and its input streams.
+            if (kis2Image().isEmpty()) return null;
+            if (attractProgram == null) {
+                try {
+                    attractProgram = com.openggf.game.sonic2.attract.Sonic2AttractProgram.forLockOn(
+                            kis2Image().orElseThrow());
+                } catch (java.io.IOException failure) {
+                    throw new java.io.UncheckedIOException("Cannot read the lock-on title demo", failure);
+                }
+            }
+            return type.cast(attractProgram);
+        }
         if (type == GlideLandingDustPolicy.class) return type.cast(GLIDE_LANDING_DUST);
         // This inherited scalar rule must not probe the optional chip or initialize special stages.
         if (type == com.openggf.game.internal.BadnikChainPolicy.class) return base().getGameService(type);

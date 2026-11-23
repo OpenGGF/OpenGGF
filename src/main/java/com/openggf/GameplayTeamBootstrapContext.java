@@ -70,6 +70,18 @@ final class GameplayTeamBootstrapContext {
                 publishMode, null, save, retainedProgress);
     }
 
+    void openTitleRuntime(GameModule rootModule, GameModule module, EngineContext services,
+            Consumer<GameplayModeContext> publishMode,
+            com.openggf.game.rewind.snapshot.GameStateSnapshot progress) throws IOException {
+        var mode = SessionManager.openGameplaySession(rootModule, module,
+                StockGameDataSources.pinned(services.roms().getRom(), rootModule), null);
+        GameplaySessionFactory.attachManagers(mode, services);
+        publishMode.accept(mode);
+        var team = GameplayTeamBootstrap.registerActiveTeam(module, mode.getSpriteManager(), services.configuration());
+        mode.getCamera().setFocusedSprite(team.mainSprite());
+        com.openggf.game.nativemenu.NativeMenuProgress.retainSpecialStageProgress(mode.getGameStateManager(), progress);
+    }
+
     private GameplayModeContext openAndLoad(GameModule rootModule, GameModule module,
             EngineContext engineServices, SonicConfigurationService configuration,
             int zone, int act, Consumer<GameplayModeContext> publishMode,

@@ -4,7 +4,9 @@ import com.openggf.control.InputActionMasks;
 import com.openggf.control.LogicalInputSnapshot;
 import com.openggf.control.PlayerInputState;
 import com.openggf.data.Rom;
+import com.openggf.data.RomByteReader;
 import com.openggf.game.CharacterKey;
+import com.openggf.game.GameplayLaunchTeam;
 import com.openggf.game.rewind.RewindSnapshottable;
 
 import java.io.IOException;
@@ -61,12 +63,12 @@ public final class Sonic2AttractService implements RewindSnapshottable<Sonic2Att
 
     /** Native zone/act and script addresses, rather than an engine-index or campaign-team guess. */
     public record LaunchPlan(int demoNumber, int nativeZoneAndAct, SessionKind sessionKind,
-                             int player1ScriptAddress, int player2ScriptAddress) {
+                             int player1ScriptAddress, int player2ScriptAddress, GameplayLaunchTeam team) {
         public int nativeZone() { return nativeZoneAndAct >>> 8; }
         public int actIndex() { return nativeZoneAndAct & 0xFF; }
         public boolean scriptedPlayer2() { return player2ScriptAddress >= 0; }
-        public CharacterKey player1Character() { return CharacterKey.SONIC; }
-        public CharacterKey player2Character() { return CharacterKey.TAILS; }
+        public CharacterKey player1Character() { return team.main(); }
+        public CharacterKey player2Character() { return team.sidekicks().isEmpty() ? null : team.sidekicks().getFirst(); }
         /** TitleScreen_Demo resets lives/counters, but deliberately does not clear emerald RAM. */
         public boolean resetEmeraldProgress() { return false; }
     }
@@ -108,7 +110,15 @@ public final class Sonic2AttractService implements RewindSnapshottable<Sonic2Att
     private boolean iterationPending;
 
     public Sonic2AttractService(Rom rom) throws IOException {
-        data = new Sonic2AttractData(rom);
+        this(new Sonic2AttractData(rom));
+    }
+
+    static Sonic2AttractService forLockOn(RomByteReader lockOn) throws IOException {
+        return new Sonic2AttractService(new Sonic2AttractData(lockOn, true));
+    }
+
+    Sonic2AttractService(Sonic2AttractData data) {
+        this.data = data;
         enterTitle();
     }
 

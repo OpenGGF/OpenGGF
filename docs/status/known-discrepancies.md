@@ -3318,8 +3318,7 @@ the owning KiS2 routine in the catalogue):
   pictures are implemented. KiS2's directional title code opens level select
   with A+Start; its Super sound-test sequence survives new-game initialization.
   Results headings move independently, including the all-emeralds Super message.
-  Attract demos still need a title-owned gameplay/input/return lifecycle; native
-  debug placement and its cheat remain absent. The wrapper inherits the native
+  Native debug placement and its cheat remain absent. The wrapper inherits the native
   placed-ring sprite-table rule, including rejecting a ring whose centre is
   above the viewport (#464, `766cb71d7d`,
   `TestKis2HeadlessBoot#kiS2PlacedRingDisappearsWhenItsCentreCrossesTheTopEdge`).
@@ -3333,9 +3332,8 @@ the owning KiS2 routine in the catalogue):
 - **Super Knuckles.** Chip palettes, sparse colour writes (2/3/5), 16-pass
   transform freeze, $800/$18/$C0 movement, unchanged $600/$300 jump, seeded ring
   drain, revert and controller rewind are implemented. KiS2 now accepts a fresh
-  second jump-button edge while another remains held. The ROM demo-mode gate
-  still lacks an engine attract-demo owner. Complete powered-form route and
-  gameplay rewind coverage remains open.
+  second jump-button edge while another remains held. Complete powered-form
+  route and gameplay rewind coverage remains open.
 - **Trace coverage.** The EHZ1 KiS2 fixture exists. The published 36-segment all-emeralds chain fixture
   has converted-art and chip SS transfer observations; all 36 segments pass
   v5 validation. The corrected patch launch and chip PLC queue let the first
