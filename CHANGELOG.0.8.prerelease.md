@@ -21,6 +21,10 @@ under the matching area heading; see the
 - **Sonic 2 Chemical Plant Act 2:** the visible water surface and underwater
   palette split now bob at the same height where Sonic enters the water.
 
+- **Sonic 2 Chemical Plant:** blue balls use the previous sprite pass to decide
+  which gloop sounds to queue, matching the cartridge at screen edges and
+  on the first launch. The sound driver handles alternating playback.
+
 - **The Doomsday Zone:** the second boss phase preserves the ship's fractional
   vertical position, Hyper Sonic's after-image uses the original history slots,
   and his palette keeps cycling through the white exit fade.
