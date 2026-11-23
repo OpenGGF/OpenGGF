@@ -25,6 +25,7 @@ import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic2.audio.Sonic2AudioProfile;
+import com.openggf.game.sonic2.audio.Sonic2SmpsConstants;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.tests.RomTestUtils;
 import com.openggf.tests.TestEnvironment;
@@ -120,6 +121,8 @@ class TestSonic2IntroInputPhases {
         tick(players(neutral(), start(true)), false);
         assertEquals("FADING_OUT", field("segaLogoFadePhase").toString());
         assertEquals(1, stopsSince(before));
+        assertNull(audio.captureLogicalSnapshot().presentation().smpsSession().segaPcmTransport(),
+                "the admitted title stop must interrupt the SEGA PCM loop");
 
         // Reach text naturally, then press both pads throughout all three text
         // owners. No input branch may skip their existing load/fade sequence.
@@ -267,7 +270,8 @@ class TestSonic2IntroInputPhases {
 
     private long stopsSince(int firstEntry) {
         return audio.commandTimeline().entries().stream().skip(firstEntry)
-                .filter(entry -> entry.command() instanceof AudioCommand.StopRawPcm).count();
+                .filter(entry -> new AudioCommand.RetainGlobalStop(Sonic2SmpsConstants.CMD_STOP_ALL)
+                        .equals(entry.command())).count();
     }
 
     private Object field(String name) throws Exception {
