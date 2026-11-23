@@ -513,6 +513,7 @@ public final class Sonic3kObjectArtKeys {
 
     // SSZ badniks
     public static final String SSZ_EGG_ROBO = "ssz_egg_robo";
+    public static final String SSZ_EGG_ROBO_FLY_BY = "ssz_egg_robo_fly_by";
     /** Obj_57C1E's arrival beam and the SSZ teleporter pads: make_art_tile(ArtTile_SSZMisc+$88,3,1). */
     public static final String SSZ_TELEPORTER = "ssz_teleporter";
     /** ObjDat3_664AA: Map_SSZDeathEggSmall over ArtKosM_SSZDeathEggSmall, palette 3. */

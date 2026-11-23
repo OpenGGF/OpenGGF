@@ -111,8 +111,11 @@ class TestSszEggRoboArtPriority {
         assertFalse(body.isHighPriority());
         body.update(3, null);
         assertTrue(body.isHighPriority());
-        // Both currently use empty frame0 here; the flyby's separate scaled-art gap is not repaired.
-        assertTrue(direct(scene, body).tiles().isEmpty());
+        if (subtype == 0) {
+            assertPriority(scene, body, true, true);
+        } else {
+            assertTrue(direct(scene, body).tiles().isEmpty(), "animal releaser draws empty frame zero");
+        }
     }
 
     @ParameterizedTest

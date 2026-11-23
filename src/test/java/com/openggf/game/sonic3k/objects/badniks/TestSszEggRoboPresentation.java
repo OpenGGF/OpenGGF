@@ -2,6 +2,7 @@ package com.openggf.game.sonic3k.objects.badniks;
 
 import com.openggf.game.GameServices;
 import com.openggf.game.rewind.identity.ObjectRefId;
+import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.runtime.SszZoneRuntimeState;
 import com.openggf.graphics.SpritePresentation;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -23,6 +24,111 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @RequiresRom(SonicGame.SONIC_3K)
 class TestSszEggRoboPresentation {
+    @ParameterizedTest
+    @ValueSource(ints = {0, 1, 2, 3})
+    void flyByDrawsStockScaledTilesAndRestoresItsEarlierPicture(int flags) throws Exception {
+        var fighter = aimingComponent(flags);
+        var services = TestEnvironment.objectServices();
+        var manager = services.objectManager();
+        var robo = new EggRoboBadnikInstance(new ObjectSpawn(0x200, 0xC00, 0xA0, 0, flags, false, 0));
+        manager.addDynamicObject(robo);
+        releasePlaceholder(robo);
+        robo.update(3, null);
+        var registry = fighter.fixture().gameplayMode().getRewindRegistry();
+        var saved = registry.capture();
+        var roboId = aimId(robo);
+        var fighterIds = aimIds(fighter);
+        var fighterPicture = draw(fighter.body());
+        assertFalse(fighterPicture.tiles().isEmpty());
+        var art = services.renderManager();
+        String fighterKey = Sonic3kObjectArtKeys.SSZ_EGG_ROBO;
+        int fighterBase = art.getRenderer(fighterKey).getPatternBase();
+        int fighterEnd = fighterBase + art.getSheet(fighterKey).getPatterns().length;
+        assertTrue(fighterPicture.tiles().stream().allMatch(tile ->
+                tile.patternId() >= fighterBase && tile.patternId() < fighterEnd),
+                "fighter still draws from the unscaled badnik bank");
+
+        assertStockFlyByPicture(robo, 124, flags);
+        // The same eight mapping tiles are drawn at both scales. Only a new
+        // source sample can change their pixels.
+        for (int tick = 4; tick <= 23; tick++) robo.update(tick, null);
+        assertStockFlyByPicture(robo, 64, flags);
+        for (int tick = 24; tick <= 43; tick++) robo.update(tick, null);
+        assertStockFlyByPicture(robo, 4, flags);
+        assertEquals(fighterPicture, draw(fighter.body()));
+
+        manager.removeDynamicObject(robo);
+        registry.restore(saved);
+        var table = manager.captureIdentityContext().requireIdentityTable();
+        var restored = (EggRoboBadnikInstance) table.resolveObject(roboId, true);
+        assertNotSame(robo, restored);
+        assertStockFlyByPicture(restored, 124, flags);
+        assertEquals(fighterPicture, draw(resolveAimFamily(fighter.fixture(), fighterIds).body()));
+    }
+
+    private static void assertStockFlyByPicture(EggRoboBadnikInstance robo, int step, int flags) throws Exception {
+        assertEquals(step, robo.scaleIndexForTest());
+        var rom = TestEnvironment.objectServices().rom();
+        // loc_91874 binds bank zero of ArtScaled_EggRoboFly. ObjDat3_9199A binds
+        // Map_ScaledArt, with frame min(step, $1C) from sub_2468A.
+        byte[] source = rom.readBytes(0x17B6E0, 0x1000);
+        int map = 0x024BE8;
+        int address = map + (short) rom.read16BitAddr(map + 2 * Math.min(step, 0x1C));
+        int count = rom.read16BitAddr(address);
+        byte[] pieces = rom.readBytes(address + 2, count * 6);
+        var picture = draw(robo);
+        assertFalse(picture.tiles().isEmpty());
+        assertTrue(picture.tiles().stream().allMatch(tile -> tile.palette() == 1 && tile.priority()),
+                "ObjDat3_9199A uses high-priority palette line 1");
+        boolean hFlip = (flags & 1) != 0;
+        boolean vFlip = (flags & 2) != 0;
+        int expectedCount = 0;
+        for (int p = 0; p < pieces.length; p += 6) {
+            int x = (short) ((pieces[p + 4] & 255) << 8 | (pieces[p + 5] & 255));
+            int y = pieces[p];
+            int width = ((pieces[p + 1] >>> 2) & 3) + 1;
+            int height = (pieces[p + 1] & 3) + 1;
+            for (int column = 0; column < width; column++) {
+                for (int row = 0; row < height; row++) {
+                    expectedCount++;
+                    int sourceX = x + column * 8;
+                    int sourceY = y + row * 8;
+                    int drawX = robo.getX() + (hFlip ? -sourceX - 8 : sourceX);
+                    int drawY = robo.getY() + (vFlip ? -sourceY - 8 : sourceY);
+                    var tile = picture.tiles().stream().filter(t -> t.x() == drawX && t.y() == drawY)
+                            .findFirst().orElseThrow(() -> new AssertionError(
+                                    "Missing scaled mapping tile at " + drawX + "," + drawY));
+                    assertEquals(hFlip, tile.hFlip());
+                    assertEquals(vFlip, tile.vFlip());
+                    assertEquals(stockScaledTile(source, step + 4, sourceX, sourceY),
+                            SpritePresentation.patternSample(GameServices.graphics(), tile.patternId()),
+                            "ROM tile pixels at scale " + step + ", offset " + sourceX + "," + sourceY);
+                }
+            }
+        }
+        assertEquals(expectedCount, picture.tiles().size());
+    }
+
+    private static SpritePresentation.PatternVersion stockScaledTile(byte[] source, int scale, int x, int y) {
+        long[] words = new long[4];
+        // sub_246DA: each output row and nibble advances a scale/8 fixed-point
+        // accumulator. Generic full blocks keep the final nibble. The partial
+        // block clears it if the *next* index has already passed the row end.
+        // The scale-8 specialized loop is the exact, full-block case.
+        int fullBlockPixels = (64 / scale) * 8;
+        for (int pixel = 0; pixel < 64; pixel++) {
+            int outputX = x + pixel % 8;
+            int sourceY = (y + pixel / 8) * scale / 8;
+            int sourceByte = outputX * scale / 8;
+            if (sourceY >= 64 || sourceByte >= 64
+                    || (outputX >= fullBlockPixels && (outputX + 1) * scale / 8 >= 64)) continue;
+            int packed = Byte.toUnsignedInt(source[sourceY * 64 + sourceByte]);
+            int nibble = (outputX & 1) == 0 ? packed >>> 4 : packed & 15;
+            words[pixel / 16] |= (long) nibble << (4 * (pixel % 16));
+        }
+        return new SpritePresentation.PatternVersion(words[0], words[1], words[2], words[3]);
+    }
+
     /**
      * Declared component, not a cold route. The shipped JSR at $91518 returns to
      * $9151E; Wait stores that long at $34, and mode0 init replaces only its high
