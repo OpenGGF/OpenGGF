@@ -2,6 +2,7 @@ package com.openggf.game.sonic1.specialstage;
 
 import com.openggf.Engine;
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.graphics.GraphicsProjectionAccess;
 import com.openggf.graphics.HScrollBuffer;
 import com.openggf.graphics.ParallaxShaderProgram;
 import com.openggf.graphics.QuadRenderer;
@@ -171,7 +172,7 @@ public class Sonic1SpecialStageBackgroundRenderer {
      * Call BEFORE creating the pattern batch.
      */
     public void beginFBOProjection() {
-        fboProjectionStates.push(new ProjectionState(copyProjectionBuffer()));
+        fboProjectionStates.push(new ProjectionState(GraphicsProjectionAccess.matrixOverride(graphicsManager)));
         graphicsManager.setProjectionMatrixBuffer(fboProjectionBuffer());
     }
 
@@ -205,7 +206,7 @@ public class Sonic1SpecialStageBackgroundRenderer {
                 glGetInteger(GL_BLEND_SRC_RGB), glGetInteger(GL_BLEND_DST_RGB),
                 glGetInteger(GL_BLEND_SRC_ALPHA), glGetInteger(GL_BLEND_DST_ALPHA),
                 glGetInteger(GL_BLEND_EQUATION_RGB), glGetInteger(GL_BLEND_EQUATION_ALPHA),
-                copyProjectionBuffer());
+                GraphicsProjectionAccess.matrixOverride(graphicsManager));
         tilePassStates.push(state);
         try {
             graphicsManager.setProjectionMatrixBuffer(fboProjectionBuffer());
@@ -279,11 +280,6 @@ public class Sonic1SpecialStageBackgroundRenderer {
         float[] buffer = new float[16];
         new org.joml.Matrix4f().ortho2D(0, FBO_WIDTH, 0, FBO_HEIGHT).get(buffer);
         return buffer;
-    }
-
-    private float[] copyProjectionBuffer() {
-        float[] current = graphicsManager.getProjectionMatrixBuffer();
-        return current == null ? null : current.clone();
     }
 
     private Throwable finishTilePassState(TilePassState state, Throwable failure) {

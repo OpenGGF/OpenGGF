@@ -1,6 +1,8 @@
 package com.openggf.game.sonic1.specialstage;
 
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.graphics.GraphicsProjectionAccess;
+import com.openggf.graphics.RenderProjection;
 import com.openggf.graphics.HScrollBuffer;
 import com.openggf.graphics.ParallaxShaderProgram;
 import com.openggf.graphics.QuadRenderer;
@@ -12,12 +14,14 @@ import java.util.Arrays;
 import java.lang.reflect.Field;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.times;
 
@@ -56,6 +60,22 @@ class Sonic1SpecialStageBackgroundCleanupRetryTest {
         org.junit.jupiter.api.Assertions.assertArrayEquals(fbo, graphics.getProjectionMatrixBuffer());
         renderer.endFBOProjection();
         org.junit.jupiter.api.Assertions.assertArrayEquals(prior, graphics.getProjectionMatrixBuffer());
+    }
+
+    @Test
+    void switchingFromWidescreenSpecialStageToNativeAspectUsesTheNewHostProjection() {
+        GraphicsManager graphics = new GraphicsManager();
+        RenderProjection host = mock(RenderProjection.class);
+        float[] wide = new org.joml.Matrix4f().ortho2D(0, 352, 0, 224).get(new float[16]);
+        float[] nativeWidth = new org.joml.Matrix4f().ortho2D(0, 320, 0, 224).get(new float[16]);
+        when(host.getProjectionMatrixBuffer()).thenReturn(wide);
+        GraphicsProjectionAccess.install(graphics, host);
+        var renderer = new Sonic1SpecialStageBackgroundRenderer(graphics);
+        renderer.beginFBOProjection();
+        renderer.endFBOProjection();
+
+        when(host.getProjectionMatrixBuffer()).thenReturn(nativeWidth);
+        assertSame(nativeWidth, graphics.getProjectionMatrixBuffer());
     }
 
     @Test
