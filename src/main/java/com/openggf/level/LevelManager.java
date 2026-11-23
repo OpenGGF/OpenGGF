@@ -1405,12 +1405,21 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * that row along with the rest of the loop tail.
      */
     public void updateObjectPositionsWithoutTouches(boolean advanceOscillation) {
+        updateObjectPositionsWithoutTouches(advanceOscillation, true);
+    }
+
+    void updateObjectPositionsWithoutTouches(boolean advanceOscillation, boolean advanceVblankClock) {
         if (objectManager != null) {
             Sprite player = spriteManager.getSprite(resolveMainCharacterCode());
             AbstractPlayableSprite playable = player instanceof AbstractPlayableSprite ? (AbstractPlayableSprite) player : null;
 
             List<AbstractPlayableSprite> sidekicks = spriteManager.getSidekicks();
-            objectManager.update(camera.getX(), playable, sidekicks, frameCounter, false);
+            if (advanceVblankClock) {
+                objectManager.update(camera.getX(), playable, sidekicks, frameCounter, false);
+            } else {
+                com.openggf.level.objects.ObjectManagerInternalAccess.runTitleReleaseObjectPass(
+                        objectManager, camera.getX(), playable, sidekicks, frameCounter);
+            }
         }
 
         // ROM parity: OscillateNumDo runs AFTER ExecuteObjects in both S1
@@ -1458,7 +1467,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     }
 
     /**
-     * Advances the native VBlank clock while S3K dispatches title-card SSTs.
+     * Advances the native VBlank clock during a title-only wait.
      * The engine renders those SSTs outside {@link ObjectManager}, so this must
      * not execute already-loaded level objects or advance level-frame state.
      */

@@ -90,6 +90,17 @@ frame 556. The R12A native full-act movie passes the placed door at
 regions at trace rows 3165 and 3166. The placement masks select no active door
 in R11B. Passage and frame-by-frame picture evidence cover R12A.
 
+S2 Mystic Cave rotating crates ($6A): the
+[slot and rewind checks](../../src/test/java/com/openggf/game/sonic2/objects/TestS2MczRotPformsGraphRewind.java)
+cover each crate's final movement at both native-width horizontal unload
+boundaries and the 528-pixel right-hand range limit. Exhausted, partial and full
+admission exercise graph restoration, one-shot initialization and camera-return
+respawn. The [two-player block-delete test](../../src/test/java/com/openggf/level/objects/TestNativeCompetitionOccupiedFullDelete.java)
+covers the display flags of both children when they spill into the next block
+and the x-flipped parent's block unloads. Natural slot exhaustion, player
+contact on the retirement frame and
+broader character, donor and viewport coverage remain open.
+
 S2 Competition monitor outcomes (2026-11-09): eight cold-title EHZ1 fixtures
 exercise P1 breaking for all eight outcomes and hold the award for six seconds.
 The [bounded matrix](../architecture/plans/2026-11-07-s2-competition-parity.md#question-mark-monitor-outcomes-2026-11-09)
@@ -199,6 +210,10 @@ MGZ Bubbles activation (2026-11-03): the
 records the wait/restore/init boundary, object restore/forward regression and
 bounded native-pair trace evidence. Wider route, donor, viewport and team
 obligations remain inherited.
+
+AIZ2 end-boss camera scroll (2026-11-23): the [Act 2 matrix](../architecture/validation/levels/s3k-aiz2.md#obligations)
+records the focused first-dispatch and exit checks and the Sonic+Tails route
+replay. Broader character, viewport, donor and team obligations remain open.
 
 ## Shared act-reload shield ownership
 
@@ -2158,9 +2173,10 @@ records the source-bound122focused,5exactguards and unchanged7route cases, all
 with zero skips. Native continuation retains actual known128/16 ROM writes with
 final collision bank; first production ScreenInit clears FF80F8..FF8FFF once,
 with two forced world replays before all tail assertions. Prior five route deaths
-no longer reproduce in that class. Four native alias writes, native whole-route
-descriptors/pixels/clocks, additional supported products/lifecycle and the separate
-cold campaign remain open; no full-suite/native-equivalence claim.
+no longer reproduced in that source epoch. Cold and native-continuation entry
+also cover the four installed row aliases, cross-layer edits and full-world
+restore. Whole-route native descriptors/pixels/clocks, additional supported
+products/lifecycle and the separate cold campaign remain open.
 
 
 ### Local ship and launcher presentation corrections — 2026-10-20

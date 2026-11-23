@@ -125352,3 +125352,36 @@ report directories. All configured ROM and disc inputs were found.
 - An intermediate candidate submitted one row early at 1116. Separating
   `Obj_AIZEndBossMusic` from the next dispatch of `Obj_AIZEndBossMain` aligns
   the native allocation pass. See the [AIZ2 matrix](../architecture/validation/levels/s3k-aiz2.md#native-aiz2-boss-head-art-2026-11-22).
+
+## 2026-11-23 AIZ2 end-boss camera scroll
+
+- Base `241932f546`, worktree `.worktrees/aiz2-boss-camera-scroll`. The
+  Sonic+Tails fixture `aiz1_to_hcz_fullrun` went from two grouped camera-X
+  errors to zero errors and zero warnings. Both runs reached the comparison
+  gate and compared 20,463 of 20,798 planned rows. The old spans were
+  18849–18910 (starting ROM `$4882`, engine `$4880`) and 18960–18976
+  (starting ROM `$495F`, engine `$495E`).
+- `AIZEndBoss_FinishSubmerge` (sonic3k.asm:138271-138281) installs routine
+  `$C`. `AIZEndBoss_ScrollCamera` (sonic3k.asm:138284-138296) applies the
+  bound increments before movement and wait. `LevelLoop`
+  (sonic3k.asm:7916-7930) processes sprites before deformation.
+  `loc_1BFF0` (sonic3k.asm:38342-38348) passes the live bounds to
+  `MoveCameraX` (sonic3k.asm:38409-38465) on that frame.
+- Round 42 (`800887a54f`) corrected the revealed animation and also
+  deferred the first scroll write to compensate for the earlier dispatch.
+  PR #468 moved main initialization to the dispatch after the music callback
+  and exposed the stale defer and catch-up. R2 removes the skipped first step
+  and the deferred right-bound increment. It keeps the revealed-animation and
+  main-init timing.
+- Java 25 and the Maven queue, `-Dmse=off -Ptrace-replay
+  -Dsurefire.forkCount=1 -Dsurefire.reuseForks=false
+  -Dopenggf.headless.gl=surfaceless-egl -Dtrace.print.summary=true` with
+  `TestS3kAizTraceReplay` in the focused selection. All ROM inputs were found.
+  All 17 cases in that replay class passed with zero skips. The focused
+  `firstRepositionExpandsArenaOnEachScrollDispatch` test failed on develop at
+  the first minimum write (`$4882/$4880`) and passed with the correction.
+- Skipping only the first maximum write also failed the same test
+  (`$4882/$4880` at the maximum assertion). After restoration,
+  `-Ptrace-replay-r7` passed the focused regression and
+  `TestS3kKnucklesSuperAizSegmentTraceReplay`. The Knuckles segment
+  reached its comparison gate with 1,653 rows and zero divergences.
