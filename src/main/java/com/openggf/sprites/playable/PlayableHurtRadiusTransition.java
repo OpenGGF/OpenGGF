@@ -18,6 +18,12 @@ final class PlayableHurtRadiusTransition {
     private static void apply(AbstractPlayableSprite sprite, boolean death) {
         // Hurt_Sidekick (s2.asm:85629-85632), KillCharacter (s2.asm:85671-85677).
         PlayableNativeFloorReset.resetChain(sprite);
+        // Kill_Character calls Player_TouchFloor, which dispatches to Knux_TouchFloor
+        // (sonic3k.asm:21172-21185,24375-24379,32869-32907). KiS2 KillCharacter
+        // calls Sonic_ResetOnFloor_Part2 (docs/kis2disasm/s2.asm:88972-88982,40963-41016).
+        if (death && sprite.getSecondaryAbility() == SecondaryAbility.GLIDE && sprite.getDoubleJumpFlag() == 3) {
+            sprite.setDoubleJumpFlag(0);
+        }
         boolean wasRolling = sprite.getRolling();
         int nativeXBeforeRadiusChange = sprite.getCentreX();
         int nativeYBeforeRadiusChange = sprite.getCentreY();

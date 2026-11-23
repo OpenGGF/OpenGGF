@@ -21,6 +21,11 @@ under the matching area heading; see the
   Sonic & Knuckles and locked-on Sonic 3 & Knuckles repeat on services 6, 11
   and 16, then every five.
 
+- **Knuckles' glide-slide dust:** Sonic 3 & Knuckles and Knuckles in Sonic 2 now
+  emit dust when Knuckles slides out of a glide. In Angel Island, the dust slots
+  let the first giant-ring flash start on the correct frame, so Knuckles can
+  grab the ride vine after the special stage.
+
 - **Sonic 1 and Sonic 2 title cards** now count each serviced wait toward the
   V-int clock used by objects, preserving the timing phase carried into the act.
 
