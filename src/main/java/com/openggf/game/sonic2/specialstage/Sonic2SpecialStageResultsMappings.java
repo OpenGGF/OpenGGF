@@ -59,8 +59,8 @@ public final class Sonic2SpecialStageResultsMappings {
     public static final int FRAME_RING_BONUS = 13;             // Ring bonus display
     public static final int FRAME_SCORE_AREA_1 = 14;           // Score area variant 1
     public static final int FRAME_SCORE_AREA_2 = 15;           // Score area variant 2
-    public static final int FRAME_PERFECT_BONUS = 16;          // Perfect bonus display
-    public static final int FRAME_TOTAL = 17;                  // Total display
+    public static final int FRAME_GEMS_BONUS = 16;             // Gems bonus row
+    public static final int FRAME_PERFECT_BONUS = 17;          // Perfect bonus row
     public static final int FRAME_RING_BONUS_ZERO = 18;        // Ring bonus with zero (Map_obj6F_027E)
     public static final int FRAME_SCORE_ZERO_1 = 19;           // Score zero variant 1 (Map_obj6F_0314)
     public static final int FRAME_SCORE_ZERO_2 = 20;           // Score zero variant 2 (Map_obj6F_0346)
@@ -272,19 +272,19 @@ public final class Sonic2SpecialStageResultsMappings {
                     results(-0x14, 0, 2, 2, 0x5A0, 0),  // icon
                     numbers(0x40, 0, 4, 2, 0x530, 0),   // number digits
             },
-            // Frame 16 (Map_obj6F_0378): Perfect bonus
+            // Frame 16 (Map_obj6F_0378): Gems bonus
             {
-                    results(-0x60, 0, 4, 2, 0x598, 1),  // "PERFECT" text
+                    results(-0x60, 0, 4, 2, 0x598, 1),  // "GEMS" text
                     results(-0x30, 0, 4, 2, 0x590, 1),  // results text
                     hud(-0x10, 0, 1, 2, 0x6CA, 1),      // separator
                     results(-0x14, 0, 2, 2, 0x5A0, 0),  // icon
                     numbers(0x38, 0, 4, 2, 0x520, 0),   // number digits
                     hud(0x58, 0, 1, 2, 0x6F0, 0),       // fixed trailing zero
             },
-            // Frame 17 (Map_obj6F_03AA): Total display
+            // Frame 17 (Map_obj6F_03AA): Perfect bonus row
             {
-                    results(-0x70, 0, 4, 2, 0x5C0, 1),  // "TOTAL" text
-                    results(-0x50, 0, 3, 2, 0x5C8, 1),  // results text
+                    results(-0x70, 0, 4, 2, 0x5C0, 1),  // "PER"
+                    results(-0x50, 0, 3, 2, 0x5C8, 1),  // "FECT"
                     results(-0x30, 0, 4, 2, 0x590, 1),  // results text
                     hud(-0x10, 0, 1, 2, 0x6CA, 1),      // separator
                     results(-0x14, 0, 2, 2, 0x5A0, 0),  // icon
