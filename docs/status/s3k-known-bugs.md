@@ -8,6 +8,36 @@ deliberate bug-fixes of ROM data), see
 
 For general (cross-game) bugs, see [known-bugs.md](known-bugs.md).
 
+## HCZ geyser child lifetimes and cleanup sound commands
+
+The water-wall parent's lifetime is covered by the
+[HCZ1 water-wall checks](../architecture/validation/levels/s3k-hcz1-sonic.md#water-wall-lifetime-and-spray-admission).
+Its children and the cleanup audio still differ from the ROM.
+
+- `HCZGeyserDebris_MoveInWater` (sonic3k.asm:65088-65093) and
+  `HCZGeyserSpray_Fall` via `HCZGeyserSpray_Animate` (sonic3k.asm:65100-65115)
+  check the previous render pass's bit 7 before queuing `Draw_Sprite`.
+  Java checks the current sprite bounds after moving the sinking debris and
+  falling spray.
+- `HCZGeyserSpray_OnWater` (sonic3k.asm:65118-65125) also checks the previous
+  render bit and retires when `Animate_Sprite` changes the routine. Java runs
+  the surface spray without that render-bit check and deletes it after 13
+  animation ticks.
+- `HCZGeyserSplash_Animate` (sonic3k.asm:65128-65135) checks the previous
+  render bit and retires when `Animate_SpriteIrregularDelay` changes the
+  routine. Java uses eight fixed three-frame ticks without the render-bit check.
+- `HCZWaterWall_Horizontal_UpdateChildSprites` (sonic3k.asm:65016-65029)
+  submits `cmd_MutePSG` then `cmd_StopSFX` at cleanup entry.
+  `HCZWaterWall_Vertical_Fall` (sonic3k.asm:65327-65343) submits
+  `cmd_StopSFX`, `cmd_MutePSG`, then `cmd_StopSFX`. Java omits both
+  transitions' audio commands. The two-slot `Play_SFX` queue
+  (sonic3k.asm:1515-1533) determines which commands reach the sound driver.
+
+Remove the entry once tests verify each child's previous-render-bit and
+native animation retirement, including slot release across rewind, and
+both cleanup transitions deliver the native sound-command effects with
+the ROM's queue admission and ordering.
+
 ## FBZ inherited reload and sparse-cloud publication gaps — 2026-11-16
 
 Recorded during the [FBZ publication review](../architecture/audits/2026-11-15-s3k-fbz-event-publication.md),
