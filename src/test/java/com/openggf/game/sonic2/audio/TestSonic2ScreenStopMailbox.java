@@ -58,10 +58,15 @@ class TestSonic2ScreenStopMailbox {
         present();
         assertNotNull(state().smpsLogical().pendingService(), "Saxman must still own the driver");
         assertEquals(List.of(COMPRESSED.nativeId), dispatched());
-        assertEquals(STOP, mailbox().pipeline().music0().requestByte());
 
-        presentFrames(16);
+        for (int frame = 0; frame < 16; frame++) {
+            present();
+            if (state().smpsLogical().pendingService() != null) {
+                assertEquals(List.of(COMPRESSED.nativeId), dispatched());
+            }
+        }
 
+        assertNull(state().smpsLogical().pendingService());
         assertAdmittedStop();
         assertEquals(List.of(COMPRESSED.nativeId, STOP), dispatched());
         assertNull(state().activeMusic());
