@@ -46,6 +46,7 @@ import java.util.logging.Logger;
  */
 public class TitleCardManager implements TitleCardProvider, TitleCardLoopTail,
         com.openggf.game.internal.LockedTitleCardLevelStepGate,
+        com.openggf.game.internal.NativeTitleOnlyVBlankWait,
         RewindSnapshottable<TitleCardManager.Snapshot> {
     private static final Logger LOGGER = Logger.getLogger(TitleCardManager.class.getName());
     public static final String REWIND_KEY = "s2-title-card";
@@ -1053,6 +1054,19 @@ public class TitleCardManager implements TitleCardProvider, TitleCardLoopTail,
     @Override
     public boolean shouldRunLevelObjectsDuringLockedPhase() {
         return leavePass > 0;
+    }
+
+    @Override
+    public boolean ownsTitleOnlyVBlankWait() {
+        // Level_TtlCard (s2.asm:4914-4927) waits before RunObjects and again
+        // before the HUD upload. VintRet (s2.asm:507-509) counts each service.
+        // The final upload iteration hands off to the leading RunObjects pass,
+        // which already advances the clock for that wait.
+        return switch (state) {
+            case SLIDE_IN, DISPLAY -> true;
+            case ZONE_TILE_UPLOAD -> zoneTileUploadFramesLeft > 1;
+            default -> false;
+        };
     }
 
     /**

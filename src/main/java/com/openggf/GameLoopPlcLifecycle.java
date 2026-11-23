@@ -6,6 +6,7 @@ import com.openggf.game.TitleCardProvider;
 import com.openggf.game.internal.FreshLevelTitleBoundaryPublication;
 import com.openggf.game.internal.LevelEntryPresentation;
 import com.openggf.game.internal.LevelPaletteFadeOwner;
+import com.openggf.game.internal.NativeTitleOnlyVBlankWait;
 import com.openggf.game.internal.WorldTitleCardUpdate;
 import com.openggf.game.resources.PlcFrameLifecycleCoordinator;
 import com.openggf.game.resources.PlcFrameLifecycleCoordinator.PlcLifecycleFrame;
@@ -21,13 +22,13 @@ import java.util.function.Supplier;
 /** Bridges GameLoop-owned modes and fades to the session PLC lifecycle. */
 final class GameLoopPlcLifecycle {
     record TitleLoadScan(boolean parked, boolean preparedByFrameStep,
-                         boolean clockOwned, LevelFrameContext frameContext) { }
+                         boolean clockOwned, boolean titleOnlyWaitServiced, LevelFrameContext frameContext) { }
 
     /** Services the title scan around native load work; title release remains with its lifecycle owner. */
     static TitleLoadScan scanTitleLoad(TitleCardProvider titleCard, PlcLifecycleFrame frame,
                                       GameplayModeContext gameplayMode, LevelManager levelManager) {
         var load = com.openggf.level.NativeLevelLoadAccess.beginTitleScan(levelManager);
-        if (load.parked()) return new TitleLoadScan(true, false, false, null);
+        if (load.parked()) return new TitleLoadScan(true, false, false, false, null);
         boolean nativeLoadCompletedBeforeScan = load.completedBeforeScan();
         boolean nativeTitleClockOwned = load.clockOwned()
                 && titleCard != null && titleCard.shouldAdvanceVblankClockDuringLockedPhase();
@@ -41,6 +42,13 @@ final class GameLoopPlcLifecycle {
         // hardware service boundary -- VINT_SERVICE stays owned by
         // LevelFrameStep alone.
         if (!nativeLoadCompletedBeforeScan) LevelFrameStep.dispatchGameVBlank(frameContext, frame);
+        boolean titleOnlyWaitServiced = !nativeLoadCompletedBeforeScan
+                && frame.isOwnedBy(PlcLifecyclePhase.LEVEL_TITLE_CARD)
+                && titleCard instanceof NativeTitleOnlyVBlankWait wait
+                && wait.ownsTitleOnlyVBlankWait();
+        if (titleOnlyWaitServiced) {
+            frame.serviceAlternateNativeVBlankClock(levelManager::advanceTitleCardVblankOnly);
+        }
         // This caller claimed the title token before querying its provider;
         // the external scan only prepares a token it claimed itself.
         // The world-bound operation is resolved inside the object scan, after its
@@ -52,9 +60,9 @@ final class GameLoopPlcLifecycle {
                 && GameLoopPlcLifecycle.updateTitleCardProvider(
                         frameContext, frame, titleCard, gameplayMode,
                         () -> { if (nativeTitleClockOwned) levelManager.advanceTitleCardVblankOnly(); });
-        if (com.openggf.level.NativeLevelLoadAccess.finishTitleScan(levelManager)) return new TitleLoadScan(true, false, false, null);
+        if (com.openggf.level.NativeLevelLoadAccess.finishTitleScan(levelManager)) return new TitleLoadScan(true, false, false, false, null);
 
-        return new TitleLoadScan(false, preparedByFrameStep, nativeTitleClockOwned, frameContext);
+        return new TitleLoadScan(false, preparedByFrameStep, nativeTitleClockOwned, titleOnlyWaitServiced, frameContext);
     }
 
     private GameLoopPlcLifecycle() {
