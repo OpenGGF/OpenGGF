@@ -141,24 +141,26 @@ final class S3kCollisionLayout {
         // their first/next address relationships and the meaningful prefix stay intact.
     }
 
-    /** Native layout word write: change the row's address, preserving its source bytes. */
-    void copyRowPointer(Sonic3kLevel owner, int layer, int sourceRow, int destRow) {
-        if (layer < 0 || layer > 1 || sourceRow < 0 || destRow < 0
-                || sourceRow >= Math.min(height, 32) || destRow >= Math.min(height, 32))
+    /** Native layout word write: change the destination row's address, preserving the source bytes. */
+    int copyRowPointer(Sonic3kLevel owner, int sourceLayer, int sourceRow, int destLayer, int destRow) {
+        int rowCount = Math.min(height, 32);
+        if (sourceLayer < 0 || sourceLayer > 1 || destLayer < 0 || destLayer > 1
+                || sourceRow < 0 || sourceRow >= rowCount || destRow < 0 || destRow >= rowCount)
             throw new IllegalArgumentException("layout row pointer");
-        int pointer = rowPointer(layer, sourceRow * 4);
-        if (pointer == rowPointer(layer, destRow * 4)) return;
+        int pointer = rowPointer(sourceLayer, sourceRow * 4);
+        if (pointer == rowPointer(destLayer, destRow * 4)) return pointer;
         long epoch = owner.currentEpoch();
         ensureEncodedWritable(epoch);
         Map map = owner.getMap();
         map.cowEnsureWritable(epoch);
-        int offset = 8 + layer * 2 + destRow * 4;
+        int offset = 8 + destLayer * 2 + destRow * 4;
         encoded[offset] = (byte) (pointer >>> 8);
         encoded[offset + 1] = (byte) pointer;
         byte[] data = map.getData();
-        System.arraycopy(data, sourceRow * width * 2 + layer * width,
-                data, destRow * width * 2 + layer * width, width);
+        System.arraycopy(data, sourceRow * width * 2 + sourceLayer * width,
+                data, destRow * width * 2 + destLayer * width, width);
         rebuildAliases();
+        return pointer;
     }
 
     private void ensureEncodedWritable(long epoch) {
