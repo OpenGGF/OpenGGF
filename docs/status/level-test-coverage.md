@@ -90,6 +90,14 @@ frame 556. The R12A native full-act movie passes the placed door at
 regions at trace rows 3165 and 3166. The placement masks select no active door
 in R11B. Passage and frame-by-frame picture evidence cover R12A.
 
+S2 Mystic Cave rotating crates ($6A): the
+[slot and rewind checks](../../src/test/java/com/openggf/game/sonic2/objects/TestS2MczRotPformsGraphRewind.java)
+cover each crate's final movement at both native-width horizontal unload
+boundaries and the 528-pixel right-hand range limit. Exhausted, partial and full
+admission exercise graph restoration, one-shot initialization and camera-return
+respawn. Natural slot exhaustion, player contact on the retirement frame and
+broader character, donor and viewport coverage remain open.
+
 S2 Competition monitor outcomes (2026-11-09): eight cold-title EHZ1 fixtures
 exercise P1 breaking for all eight outcomes and hold the award for six seconds.
 The [bounded matrix](../architecture/plans/2026-11-07-s2-competition-parity.md#question-mark-monitor-outcomes-2026-11-09)

@@ -19,6 +19,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.lang.reflect.Field;
 import java.util.Comparator;
@@ -29,6 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -167,6 +169,99 @@ class TestS2MczRotPformsGraphRewind {
                 act + " assembly must cull together once the shared parent anchor leaves range");
     }
 
+    private static Stream<Arguments> retirementBoundaries() {
+        // MarkObjGone2 uses unsigned coarse distance and keeps the equal bucket.
+        // Anchor $980: camera $780 gives distance $280, camera $A7F gives zero.
+        return Stream.of(
+                Arguments.of(320, 0x780, 0x77F),
+                Arguments.of(320, 0xA7F, 0xA80),
+                Arguments.of(528, 0x700, 0x6FF));
+    }
+
+    @ParameterizedTest(name = "{0}px camera {1} to {2}")
+    @MethodSource("retirementBoundaries")
+    void eachCrateMovesOnItsRetirementSlot(int width, int lastLiveCameraX, int retirementCameraX) {
+        ObjectSpawn parentSpawn =
+                new ObjectSpawn(0x980, 0x580, Sonic2ObjectIds.MCZ_ROT_PFORMS, 0x18, 0, false, 0, 38);
+        int setupCameraX = 0x900;
+        ObjectManager manager = Harness.create(List.of(parentSpawn), setupCameraX, width).objectManager();
+        manager.update(setupCameraX, null, null, 0, false);
+        MCZRotPformsObjectInstance parent = onlyParent(manager, parentSpawn);
+        List<MCZRotPformsObjectInstance> children = childPlatforms(manager, parentSpawn);
+        MCZRotPformsObjectInstance right = childAt(children, parentSpawn.x() + 0x40);
+        MCZRotPformsObjectInstance left = childAt(children, parentSpawn.x() - 0x40);
+        assertTrue(parent.getSlotIndex() < right.getSlotIndex() && right.getSlotIndex() < left.getSlotIndex());
+
+        manager.postCameraPlacementUpdate(lastLiveCameraX);
+        manager.update(setupCameraX, null, null, 1, false);
+        assertEquals(3, livePlatforms(manager).size());
+        int parentX = parent.getX();
+        int rightX = right.getX();
+        int leftY = left.getY();
+
+        manager.postCameraPlacementUpdate(retirementCameraX);
+        manager.update(setupCameraX, null, null, 2, false);
+
+        assertEquals(parentX + 1, parent.getX());
+        assertEquals(rightX - 1, right.getX(), "right crate must run ObjectMove before its range tail");
+        assertEquals(leftY - 1, left.getY(), "left crate must run ObjectMove before its range tail");
+        assertEquals(List.of(), livePlatforms(manager));
+        for (var crate : List.of(parent, right, left)) {
+            assertTrue(manager.objectQuery().identityOf(crate).isEmpty());
+        }
+        assertEquals(List.of(), readChildren(parent));
+        assertNull(readOwner(right));
+        assertNull(readOwner(left));
+        manager.validateRewindReferenceClosure();
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {0, 1, 2})
+    void graphContainsOnlyAdmittedChildrenAndReinitializesOnRespawn(int freeSlots) {
+        ObjectManager manager = Harness.create(List.of(PARENT_SPAWN)).objectManager();
+        MCZRotPformsObjectInstance parent = onlyParent(manager);
+        manager.reserveAllButNFreeSlots(freeSlots);
+        manager.update(0, null, null, 0, false);
+        List<MCZRotPformsObjectInstance> admitted = childPlatforms(manager).stream()
+                .sorted(Comparator.comparingInt(MCZRotPformsObjectInstance::getSlotIndex))
+                .toList();
+        assertEquals(freeSlots, admitted.size());
+        assertEquals(admitted, readChildren(parent),
+                "Obj6A_Init must link only successfully allocated slots");
+        if (freeSlots > 0) {
+            assertEquals(PARENT_SPAWN.x() + 0x40, readChildren(parent).getFirst().getSpawn().x(),
+                    "the right crate is attempted first");
+        }
+        manager.validateRewindReferenceClosure();
+        RewindRegistry rewind = registryFor(manager);
+        CompositeSnapshot snapshot = rewind.capture();
+        rewind.restore(snapshot);
+        parent = onlyParent(manager);
+        assertEquals(freeSlots, readChildren(parent).size());
+
+        // Make two later slots available. Obj6A has already left its init routine.
+        for (int i = 1; i <= 2 - freeSlots; i++) {
+            manager.releaseDynamicSlot(parent.getSlotIndex() + i);
+        }
+        manager.update(0, null, null, 1, false);
+        assertEquals(freeSlots, childPlatforms(manager).size(), "initialization does not retry");
+
+        int departureX = 0x500;
+        manager.postCameraPlacementUpdate(departureX);
+        manager.update(departureX, null, null, 2, false);
+        assertEquals(List.of(), livePlatforms(manager));
+
+        manager.update(0, null, null, 3, false);
+        manager.postCameraPlacementUpdate(0);
+        manager.update(0, null, null, 4, false);
+        MCZRotPformsObjectInstance respawned = onlyParent(manager);
+        assertNotSame(parent, respawned);
+        assertEquals(2, childPlatforms(manager).size());
+        assertEquals(2, readChildren(respawned).size());
+        manager.validateRewindReferenceClosure();
+        rewind.capture();
+    }
+
     @Test
     void defensiveChildDetachRelinksAcrossRestoreAndIgnoresLateOldCallback() {
         Harness harness = Harness.create(List.of(PARENT_SPAWN));
@@ -229,8 +324,12 @@ class TestS2MczRotPformsGraphRewind {
         }
 
         static Harness create(List<ObjectSpawn> spawns, int resetCameraX) {
+            return create(spawns, resetCameraX, 320);
+        }
+
+        static Harness create(List<ObjectSpawn> spawns, int resetCameraX, int width) {
             ObjectManager[] holder = new ObjectManager[1];
-            Camera camera = mockCamera();
+            Camera camera = mockCamera(width);
             ObjectServices services = new StubObjectServices() {
                 @Override public ObjectManager objectManager() { return holder[0]; }
                 @Override public Camera camera() { return camera; }
@@ -406,11 +505,11 @@ class TestS2MczRotPformsGraphRewind {
         throw new NoSuchFieldException(fieldName);
     }
 
-    private static Camera mockCamera() {
+    private static Camera mockCamera(int width) {
         return new Camera() {
             @Override public short getX() { return 0; }
             @Override public short getY() { return 0; }
-            @Override public short getWidth() { return 320; }
+            @Override public short getWidth() { return (short) width; }
             @Override public short getHeight() { return 224; }
             @Override public boolean isVerticalWrapEnabled() { return false; }
         };
