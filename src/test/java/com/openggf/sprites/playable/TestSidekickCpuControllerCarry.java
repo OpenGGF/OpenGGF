@@ -332,9 +332,24 @@ class TestSidekickCpuControllerCarry {
         assertFalse(sonic.isObjectControlled());
         assertEquals(0x3C, controller.getReleaseCooldownForTest(),
                 "loc_1446A sets the cooldown in the CPU pass");
-        pair[1].getTailsCarryController().updateAfterTailsCollision(0);
+        AbstractPlayableSprite tails = pair[1];
+        TailsCarryController carry = tails.getTailsCarryController();
+        carry.updateAfterTailsCollision(0);
         assertEquals(0x3B, controller.getReleaseCooldownForTest(),
                 "loc_14534 consumes one tick in the later Sonic+Tails carry pass");
+
+        var released = carry.capture();
+        carry.clearState();
+        carry.restore(released);
+        assertTrue(PlayableSpriteInternalAccess.isFlyingAfterIntroRelease(tails),
+                "The release flight owner survives rewind");
+        carry.setCooldown(0);
+        assertTrue(PlayableSpriteInternalAccess.isFlyingAfterIntroRelease(tails),
+                "Cooldown expiration does not end Tails's flight");
+        tails.setAir(false);
+        carry.updateAfterTailsCollision(0);
+        assertFalse(PlayableSpriteInternalAccess.isFlyingAfterIntroRelease(tails),
+                "Tails's landing ends the release flight");
     }
 
     // --- solo-leader transient carrier fly-off (ROM routine $10) ---------

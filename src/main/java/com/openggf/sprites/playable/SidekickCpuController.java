@@ -2148,6 +2148,9 @@ public class SidekickCpuController {
             } else {
                 releaseCarry(carryTrigger.carryLatchReleaseCooldownFrames(),
                         transientCarrySidekick ? State.CARRY_FLYOFF : State.NORMAL);
+                if (!transientCarrySidekick) {
+                    carryController().retainIntroFlightAfterRelease();
+                }
             }
             return;
         }
@@ -2879,6 +2882,9 @@ public class SidekickCpuController {
         State nextState = mgzBossTransitionCarry || cooldownFrames > 0 || transientCarrySidekick
                 ? State.CARRYING : State.NORMAL;
         releaseCarry(cooldownFrames, nextState);
+        if (!mgzBossTransitionCarry && cooldownFrames == 0) {
+            sidekick.setAnimationId(flyAnimId);
+        }
     }
 
     private void releaseCarry(int cooldownFrames, State nextState) {

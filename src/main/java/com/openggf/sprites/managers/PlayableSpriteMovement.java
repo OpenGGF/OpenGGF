@@ -1855,7 +1855,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// to normal follow with its flight flag intact. Tails_Stand_Freespace
 		// (sonic3k.asm:27593-27595) dispatches on that flag.
 		return !sprite.isCpuControlled()
-				|| (cpu != null && (cpu.isUnderManualControl() || cpu.getState() == SidekickCpuController.State.NORMAL))
+				|| (cpu != null && (cpu.isUnderManualControl()
+						|| (cpu.getState() == SidekickCpuController.State.NORMAL
+						&& PlayableSpriteInternalAccess.isFlyingAfterIntroRelease(sprite))))
 				|| hasScriptedNativeInput();
 	}
 
