@@ -2124,7 +2124,7 @@ public class SidekickCpuController {
         if (!leader.getAir()) {
             // ROM loc_14016 (sonic3k.asm:26963-26986) runs BEFORE Tails_Carry_Sonic
             // branches to loc_1445A. It resets Tails's own airborne state so the
-            // next tick runs Tails_FlyingSwimming from a freshly-zeroed velocity
+            // same tick runs Tails_FlyingSwimming from a freshly-zeroed velocity
             // (y_vel=0, then Tails_Move_FlySwim's +$08 gravity):
             //   move.w #0, x_vel(a0)     ; Tails
             //   move.w #0, y_vel(a0)     ; Tails
@@ -2141,14 +2141,16 @@ public class SidekickCpuController {
             // Small upward impulse on the carried Sonic before clearing
             // object_control, matching ROM fall-through into loc_14460/loc_14466.
             leader.setYSpeed((short) -0x100);
-            carryController().setParentagePending(false);
-            releaseCarry(0);
-            if (transientCarrySidekick) {
-                // ROM loc_14016: when Sonic lands while being carried, the routine
-                // goes STRAIGHT to $10 (fly off) — not the loc_14534 cooldown/regrab
-                // loop that a mid-air jump-off enters. Override releaseCarry()'s
-                // released sub-state with the fly-off transition.
-                enterCarryFlyoff();
+            // loc_1445A falls through loc_1446A (sonic3k.asm:27308-27320).
+            // The intro's cooldown is independent of the routine written by loc_14016.
+            if (mgzBossTransitionCarry) {
+                releaseCarry(0);
+            } else {
+                releaseCarry(carryTrigger.carryLatchReleaseCooldownFrames(),
+                        transientCarrySidekick ? State.CARRY_FLYOFF : State.NORMAL);
+                if (!transientCarrySidekick) {
+                    carryController().retainIntroFlightAfterRelease();
+                }
             }
             return;
         }
@@ -2877,43 +2879,31 @@ public class SidekickCpuController {
 
     private void releaseCarry(int cooldownFrames) {
         boolean mgzBossTransitionCarry = carryTrigger != null && carryTrigger.usesMgzBossTransitionControl();
-        carryController().releaseWithCooldown(cooldownFrames);
-        if (cooldownFrames > 0) {
-            // A release from the CPU-side Tails_Carry_Sonic call does not skip
-            // Tails_FlyingSwimming's later call. With the carry flag now clear,
-            // that post-movement pass immediately consumes the first cooldown
-            // tick and may move the eventual proximity regrab to the CPU pass.
-            carryController().setParentagePending(true);
-        }
-        sidekick.setControlLocked(false);
-        sidekick.setForcedAnimationId(mgzBossTransitionCarry ? flyAnimId : -1);
+        State nextState = mgzBossTransitionCarry || cooldownFrames > 0 || transientCarrySidekick
+                ? State.CARRYING : State.NORMAL;
+        releaseCarry(cooldownFrames, nextState);
         if (!mgzBossTransitionCarry && cooldownFrames == 0) {
-            // loc_14016 clears Tails's anim byte before the same object slot
-            // continues through Tails_FlyingSwimming/Animate_Tails. The shared
-            // engine separates CPU control from animation selection, so publish
-            // the resulting ordinary flight animation at the handoff here.
             sidekick.setAnimationId(flyAnimId);
         }
+    }
+
+    private void releaseCarry(int cooldownFrames, State nextState) {
+        carryController().releaseWithCooldown(cooldownFrames);
+        sidekick.setControlLocked(false);
         mgzCarryIntroAscend = false;
         mgzReleasedChaseLatched = false;
-        if (mgzBossTransitionCarry) {
-            state = State.CARRYING;
-            sidekick.setAir(true);
-            sidekick.setDoubleJumpProperty((byte) 0xF0);
-        } else if (cooldownFrames > 0 || transientCarrySidekick) {
-            // ROM Tails_Carry_Sonic jump-out / external-velocity / hurt release
-            // (loc_14428/loc_1445A/loc_14460/loc_14466) clears
-            // Flying_carrying_Sonic_flag and sets the cooldown byte, but leaves
-            // Tails_CPU_routine at $0E. Tails keeps flying and runs loc_14534's
-            // cooldown/regrab loop until pickup succeeds or the landed-Sonic path
-            // transitions out. Only the ground-release path uses cooldown 0 and
-            // falls back to NORMAL for a persistent sidekick.
-            state = State.CARRYING;
+        state = nextState;
+        if (nextState == State.CARRYING) {
+            // The CPU carry routine will continue to check cooldown/regrab.
+            // The post-movement pass can also consume a cooldown tick.
+            carryController().setParentagePending(cooldownFrames > 0);
             sidekick.setAir(true);
             sidekick.setDoubleJumpProperty((byte) 0xF0);
             sidekick.setForcedAnimationId(flyAnimId);
+        } else if (nextState == State.CARRY_FLYOFF) {
+            enterCarryFlyoff();
         } else {
-            state = State.NORMAL;
+            sidekick.setForcedAnimationId(-1);
             normalFrameCount = 0;
         }
     }

@@ -11,6 +11,10 @@ under the matching area heading; see the
   native finish, tally and exit wait, preserving its phase through the level
   reload. Results setup and straight-line return code add no tick.
 
+- **Sonic 2 extra-life audio:** requests refused during the jingle or its fade-in
+  clear the sound-effect priority without advancing ring panning, gloop alternation
+  or spindash pitch. The fade-in restores the saved priority, which the cartridge clears before backup.
+
 - **Death Egg's final fight:** entering the arena now links foreground and
   background rows 4 and 31 to the same terrain as foreground row 0, as on the
   cartridge. Rewind preserves those links and edits to the shared terrain.
@@ -29,6 +33,10 @@ under the matching area heading; see the
 - **Sonic 1 and Sonic 2 title cards** now count each serviced wait toward the
   V-int clock used by objects, preserving the timing phase carried into the act.
 
+- **Sonic 2 spindash release:** the sound effect now keeps the cartridge's
+  original FM5 transpose byte. The opening FM hit and delayed PSG noise sound
+  the same.
+
 - **Sonic 3 & Knuckles badnik score popups** now rise from the freed animal's
   first object pass, matching the cartridge's timing and slot allocation.
 
@@ -41,6 +49,10 @@ under the matching area heading; see the
 
 - **Knuckles in Sonic 2 and Sonic 3 & Knuckles:** grabbing a wall initializes
   Knuckles' animation duration and cursor to the cartridge values.
+
+- **Carnival Night Act 1:** Tails keeps flying and playing his flight sound
+  after setting Sonic down. The carry cooldown starts at the cartridge value
+  and advances during the team flight pass.
 
 - **Angel Island Act 2:** defeating the miniboss sends four flickering pieces
   of wreckage falling from the ship, as on the cartridge.
