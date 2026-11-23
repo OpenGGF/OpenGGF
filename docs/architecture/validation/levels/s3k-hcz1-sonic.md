@@ -1,5 +1,17 @@
 # S3K HCZ act 1 — Sonic route coverage
 
+## Badnik score popup dispatch (2026-11-22)
+
+`TestDestructionEffects` checks first-free allocation with the freed animal
+both before and after the explosion in the slot scan. It checks the score
+mapping, first three-pixel rise, failed animal allocation and restore to a
+freshly recreated animal between passes. The original-input HCZ slice
+independently observes a clear slot 17 on row 417 and the popup at
+`$021C/$05BE` on row 418, with zero differences on 29,285 retained comparator
+rows. The existing [slot-occupancy discrepancy](../../../status/known-discrepancies.md#object-slot-occupancy-is-not-compared-and-diverges-from-rom-in-all-three-games)
+covers other placement and allocation differences. The viewport, donor and
+team matrix and full-world rewind at the HCZ encounter remain open.
+
 ## Temporal scroll matching (2026-11-16)
 
 `TestHczMotionContinuity` adds 12 bounded ROM-backed checks across both acts:
@@ -626,3 +638,22 @@ multi-sidekick tests cover extension-owner relinking and cleanup.
 These are local release/rewind obligations. The HCZ slice and sibling traces
 remain the route checks; inherited segment-start state differences, broader
 character/donor/viewport coverage and the matrix's other gaps remain open.
+
+## Water-wall lifetime and spray admission
+
+`TestHCZWaterWallObjectInstance` dispatches both Hydrocity wall subtypes
+through the S3K object manager. It covers the inclusive coarse-X fringe,
+draw-tail deletion, placement readmission, the previous render bit, the
+cleanup underflow and enemy-art submission, and forward spray slots and RNG
+through object recreation. `Sprite_OnScreen_Test` and
+`Delete_Sprite_If_Not_In_Range` clear the placement bit before deletion
+(sonic3k.asm:37302-37318,37341-37357). The vertical fall callback can also
+clear it while its cleanup slot stays live (sonic3k.asm:65327-65351).
+
+The dispatch fixture uses Sonic. It checks the unsigned coarse boundary at
+320 px and the horizontal wall's survival at 528 px, including admission of
+the first HCZ1 placement at X=$0A00 when the camera reaches X=$0780. Other
+viewport, donor and team combinations and whole-route native pixel parity
+remain outside this coverage. The
+[child lifetime and audio audit](../../../status/s3k-known-bugs.md#hcz-geyser-child-lifetimes-and-cleanup-sound-commands)
+tracks the remaining object parity gaps.

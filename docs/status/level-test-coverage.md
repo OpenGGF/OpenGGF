@@ -1,5 +1,10 @@
 # Level test coverage backlog
 
+HCZ1 badnik score allocation (2026-11-22): the [HCZ1 matrix](../architecture/validation/levels/s3k-hcz1-sonic.md#badnik-score-popup-dispatch-2026-11-22)
+records the native slot and movement on rows 417–418. Manager tests cover
+both dispatch orders, a full object table and recreation between passes.
+Other placements, routes and full-world rewind remain open.
+
 Temporal scroll matching (2026-11-16): [HCZ1](../architecture/validation/levels/s3k-hcz1-sonic.md#temporal-scroll-matching-2026-11-16)
 and [HCZ2](../architecture/validation/levels/s3k-hcz2.md#temporal-scroll-matching-2026-11-16)
 record 12 typed-publication motion checks, retaining event lifecycle, history,
@@ -168,6 +173,14 @@ or the broader configuration matrix; see the
 [shared design](../architecture/designs/2026-11-03-seamless-request-retargeting.md).
 
 MGZ swinging-platform arithmetic (2026-11-03): the [MGZ1 matrix](../architecture/validation/levels/s3k-mgz-act1.md#swinging-platform-fractional-input--2026-11-03) records native fractional input ownership, spring timer/read and rewind bindings, and the unchanged wider route/configuration/presentation obligations.
+
+HCZ water walls: the [HCZ1 water-wall checks](../architecture/validation/levels/s3k-hcz1-sonic.md#water-wall-lifetime-and-spray-admission)
+cover placement deletion and readmission, render-bit transitions, cleanup
+art and spray admission through rewind. The dispatch tests cover the native
+coarse boundary and the first wall's admission at 528 px. Other viewport,
+donor and team combinations and the
+[child lifetime and cleanup audio gaps](s3k-known-bugs.md#hcz-geyser-child-lifetimes-and-cleanup-sound-commands)
+remain open.
 
 HCZ slice parity (2026-11-03): the [HCZ2 matrix](../architecture/validation/levels/s3k-hcz2.md#native-capsuleresults-handoff-and-green-slice--2026-11-03) records the green native Sonic+Tails cross-act slice, unchanged sibling frontiers, 97 focused/terminal/rewind/startup checks, absent aux schemas and remaining breadth/restore limits.
 
