@@ -12,10 +12,11 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Supplier;
 import java.util.logging.Logger;
 
 /**
- * Which stock games still carry a support notice, and which notices the player has hidden.
+ * Which launches carry a support notice, and which notices the player has hidden.
  * Starting a listed game from the hub first shows {@link com.openggf.game.GameSupportNoticeDialog};
  * Back returns to the hub, Continue starts the game. To gate a game, add its game ID to
  * {@link #DEFAULT_STAGES}; to release it, remove the entry.
@@ -26,10 +27,11 @@ import java.util.logging.Logger;
 public final class GameSupportNotices {
     private static final Logger LOGGER = Logger.getLogger(GameSupportNotices.class.getName());
 
-    /** Support stage named by the notice; the code selects the catalog wording. */
+    /** Notice kind, with a stable code for persistence. */
     public enum Stage {
         ALPHA("alpha"),
-        BETA("beta");
+        BETA("beta"),
+        KIS2_TIER_ONE("kis2-tier-one");
 
         private final String code;
 
@@ -58,7 +60,12 @@ public final class GameSupportNotices {
 
     /** The notice to show before starting {@code gameId}, or empty when it is ungated or hidden. */
     public Optional<Stage> pendingNotice(String gameId) {
-        return stageOf(gameId).filter(stage -> !dismissed().contains(token(gameId, stage)));
+        return pendingNotice(gameId, Optional::empty);
+    }
+
+    /** Checks the stock stage, falling back to a notice for the selected launch variant. */
+    public Optional<Stage> pendingNotice(String gameId, Supplier<Optional<Stage>> variantNotice) {
+        return stageOf(gameId).or(variantNotice).filter(stage -> !dismissed().contains(token(gameId, stage)));
     }
 
     /** Remembers Don't show again for this game and stage. A failed save only logs: the game still starts. */

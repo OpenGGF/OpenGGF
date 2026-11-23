@@ -3,6 +3,10 @@ package com.openggf.game;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.launch.GameSupportNotices;
+import com.openggf.game.patch.LogicalRomResolver;
+import com.openggf.game.patch.ModuleResolutionService;
+import com.openggf.game.patch.PatchEnablement;
+import com.openggf.game.session.BuiltInPatches;
 import com.openggf.game.launch.LaunchProfileStore;
 import com.openggf.i18n.UiLanguage;
 import com.openggf.i18n.UiMessages;
@@ -11,6 +15,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -200,6 +206,73 @@ class TestMasterTitleSupportNotice {
         assertEquals(GameSupportNotices.Stage.BETA, gated.supportNoticeForTest().stage());
     }
 
+    @Test void startingKnucklesInSonic2WithoutTheLockOnImageAsksFirstAndSavesDismissal() throws IOException {
+        UiMessages.selectLanguage("en");
+        var config = config();
+        var screen = kis2Screen(config, false);
+        press(screen, GLFW_KEY_ENTER);
+        var notice = screen.supportNoticeForTest();
+        assertNotNull(notice, "tier-one KiS2 asks before starting");
+        assertFalse(screen.isGameSelected());
+        assertEquals(GameSupportNotices.Stage.KIS2_TIER_ONE, notice.stage());
+        assertTrue(notice.bodyText().contains("title screen, special stages and ending"));
+        assertTrue(notice.bodyText().contains("Super Knuckles is unavailable."));
+        assertTrue(notice.bodyText().contains("lock-on image"));
+
+        press(screen, GLFW_KEY_LEFT);
+        press(screen, GLFW_KEY_ENTER);
+        assertTrue(notice.dontShowAgain());
+        assertFalse(screen.isGameSelected());
+        press(screen, GLFW_KEY_RIGHT);
+        press(screen, GLFW_KEY_ENTER);
+        assertTrue(screen.isGameSelected());
+
+        var later = kis2Screen(config(), false);
+        press(later, GLFW_KEY_ENTER);
+        assertNull(later.supportNoticeForTest(), "dismissal survives reopening configuration from disk");
+        assertTrue(later.isGameSelected());
+    }
+
+    @Test void startingKnucklesInSonic2WithTheLockOnImageStartsDirectly() throws IOException {
+        var screen = kis2Screen(config(), true);
+        press(screen, GLFW_KEY_ENTER);
+        assertNull(screen.supportNoticeForTest());
+        assertTrue(screen.isGameSelected());
+    }
+
+    private MasterTitleScreen kis2Screen(SonicConfigurationService config, boolean lockOn) throws IOException {
+        // These files exercise the ROM catalogue's header classification. No gameplay bytes are needed.
+        writeImage("s2-fixture.gen", 0x100000, "SONIC THE HEDGEHOG 2", null);
+        writeImage("sk-fixture.gen", 0x200000, "SONIC & KNUCKLES", null);
+        String dump = lockOn ? System.getProperty("kis2.rom.path", "") : "";
+        if (lockOn && dump.isBlank()) {
+            writeImage("lock-on-fixture.gen", 0x340000, "SONIC & KNUCKLES", "SONIC THE HEDGEHOG 2");
+        }
+        config.setConfigValue(SonicConfiguration.ROMS_DIRECTORY, directory.toString());
+        config.setConfigValue(SonicConfiguration.SONIC_2_ROM, dump);
+        config.setConfigValue(SonicConfiguration.SONIC_3K_ROM, "");
+        config.setConfigValue(SonicConfiguration.LAUNCH_S2_MAIN_CHARACTER, "knuckles");
+        var resolver = new ModuleResolutionService(BuiltInPatches.registrations(), PatchEnablement.ALL_ENABLED,
+                new LogicalRomResolver(() -> new byte[0x200000]), config);
+        var store = new LaunchProfileStore(config, resolver,
+                resolver.prepareLaunch(ModuleResolutionService.LaunchPolicy.STANDARD));
+        var screen = prepared(new MasterTitleScreen(config, store));
+        assertEquals("knuckles", screen.currentLaunchProfileForTest().mainCharacter());
+        return screen;
+    }
+
+    private void writeImage(String name, int size, String title, String lockOnTitle) throws IOException {
+        byte[] bytes = new byte[size];
+        stampTitle(bytes, 0x120, title);
+        if (lockOnTitle != null) stampTitle(bytes, 0x200120, lockOnTitle);
+        Files.write(directory.resolve(name), bytes);
+    }
+
+    private static void stampTitle(byte[] bytes, int offset, String title) {
+        byte[] text = title.getBytes(StandardCharsets.US_ASCII);
+        System.arraycopy(text, 0, bytes, offset, text.length);
+    }
+
     @Test void theNoticeNamesTheGameAndStageInEveryParagraph() {
         var dialog = new GameSupportNoticeDialog("Sonic 3 & Knuckles", GameSupportNotices.Stage.BETA);
         String body = dialog.bodyText();
@@ -237,10 +310,15 @@ class TestMasterTitleSupportNotice {
             int lines = 0;
             for (int page = 0; page < layout.pages(); page++) lines += layout.page(page).size();
             assertTrue(lines > 0, where);
-            for (GameSupportNoticeDialog.Focus focus : GameSupportNoticeDialog.Focus.values()) {
-                MasterTitleScreen.Rect r = layout.bounds(focus);
+            var controls = new ArrayList<>(layout.links());
+            controls.add(layout.toggle());
+            controls.add(layout.button());
+            for (var r : controls) {
                 assertTrue(r.x() >= layout.x() && r.x() + r.w() <= layout.x() + layout.w()
-                        && r.y() + r.h() <= layout.y() + layout.h(), where + ": " + focus + " sits inside the panel");
+                        && r.y() + r.h() <= layout.y() + layout.h(), where + ": controls sit inside the panel");
+            }
+            if (stage == GameSupportNotices.Stage.KIS2_TIER_ONE) {
+                assertEquals(1, layout.pages(), where + ": the tier-one warning fits on one page");
             }
         }
     }

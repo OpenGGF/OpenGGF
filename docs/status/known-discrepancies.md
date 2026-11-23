@@ -3221,8 +3221,10 @@ code and data from a 256 KiB chip that only the user-supplied S&K + Sonic 2
 lock-on dump (3,407,872 bytes, MD5 `3E5E4B18D035775B916A06F2B3DC5031`)
 holds. With that dump present the patch runs **tier two** and reads the
 chip's in-level data; without it the patch runs **tier one** and this entry's
-tier-one list applies. Neither tier is the full presentation of Knuckles in
-Sonic 2 yet.
+tier-one list applies. The hub warns before launching tier one, explains the
+stock Sonic 2 presentation and unavailable Super Knuckles, and tells players
+how to supply the optional lock-on image. Players can hide this notice.
+Neither tier is the full presentation of Knuckles in Sonic 2 yet.
 
 ### Original Implementation
 

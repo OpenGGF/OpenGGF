@@ -7,6 +7,11 @@ under the matching area heading; see the
 
 ## Gameplay and presentation
 
+- **Knuckles in Sonic 2:** the hub warns when starting tier one with the stock
+  Sonic 2 title screen, special stages and ending and without Super Knuckles.
+  The notice explains how to supply the optional lock-on image for tier two
+  and can be hidden for later launches.
+
 - **Sonic 1 special-stage results** now advance the object V-int clock on each
   native finish, tally and exit wait, preserving its phase through the level
   reload. Results setup and straight-line return code add no tick.

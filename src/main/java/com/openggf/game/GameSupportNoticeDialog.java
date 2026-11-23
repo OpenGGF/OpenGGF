@@ -13,9 +13,8 @@ import java.util.Optional;
 
 /**
  * "Please note" dialog over the dimmed hub, shown before starting a game whose support is not
- * finished ({@link GameSupportNotices}). It names the stage, asks for bug reports with two links the
- * player can open in a browser, and offers Don't show again beside Continue. Back returns to the hub
- * without starting anything.
+ * finished or has limited ROM data ({@link GameSupportNotices}). It offers Don't show again
+ * beside Continue. Back returns to the hub without starting anything.
  *
  * <p>Long translations and tall scripts page the body (Left/Right or the wheel while it has more
  * than one page) instead of clipping it; the toggle and Continue stack when they cannot share a row.
@@ -42,6 +41,7 @@ public final class GameSupportNoticeDialog {
 
     private final String gameName;
     private final GameSupportNotices.Stage stage;
+    private final List<Link> links;
     private Focus focus = Focus.CONTINUE;
     private boolean dontShowAgain;
     private Result result = Result.NONE;
@@ -52,6 +52,7 @@ public final class GameSupportNoticeDialog {
     public GameSupportNoticeDialog(String gameName, GameSupportNotices.Stage stage) {
         this.gameName = Objects.requireNonNull(gameName, "gameName");
         this.stage = Objects.requireNonNull(stage, "stage");
+        this.links = stage == GameSupportNotices.Stage.KIS2_TIER_ONE ? List.of() : LINKS;
     }
 
     public GameSupportNotices.Stage stage() { return stage; }
@@ -60,7 +61,7 @@ public final class GameSupportNoticeDialog {
 
     /** The address of the focused link, which {@link Result#OPEN_LINK} asks the host to open. */
     public Optional<String> focusedLink() {
-        return LINKS.stream().filter(link -> link.focus() == focus).map(Link::address).findFirst();
+        return links.stream().filter(link -> link.focus() == focus).map(Link::address).findFirst();
     }
 
     /** The decision taken this frame, cleared once read. */
@@ -81,7 +82,8 @@ public final class GameSupportNoticeDialog {
         }
         if (pointer != null) {
             for (Focus target : Focus.values()) {
-                if (!layout.bounds(target).contains(pointer)) continue;
+                MasterTitleScreen.Rect bounds = layout.bounds(target);
+                if (bounds == null || !bounds.contains(pointer)) continue;
                 if (pointer.moved() && focus != target) { focus = target; MenuFeedback.emit(MenuFeedback.Cue.NAVIGATE); }
                 if (pointer.click()) { focus = target; activate(); return; }
             }
@@ -103,15 +105,25 @@ public final class GameSupportNoticeDialog {
 
     /** Up/Down step through the rows: each link, then the controls (one row, or two when stacked). */
     private void moveRow(Layout layout, int delta) {
-        List<List<Focus>> rows = layout.stacked()
-                ? List.of(List.of(Focus.DISCORD), List.of(Focus.REPORT_ISSUE), List.of(Focus.DONT_SHOW_AGAIN), List.of(Focus.CONTINUE))
-                : List.of(List.of(Focus.DISCORD), List.of(Focus.REPORT_ISSUE), List.of(Focus.DONT_SHOW_AGAIN, Focus.CONTINUE));
+        List<List<Focus>> rows = focusRows(layout.stacked() || (layout.pages() > 1 && links.isEmpty()));
         int row = 0;
         while (!rows.get(row).contains(focus)) row++;
         int target = Math.clamp(row + delta, 0, rows.size() - 1);
         if (target == row) return;
         // Arriving on the shared controls row lands on Continue, the primary action.
         focusOn(rows.get(target).contains(Focus.CONTINUE) ? Focus.CONTINUE : rows.get(target).getFirst());
+    }
+
+    private List<List<Focus>> focusRows(boolean separateControls) {
+        List<List<Focus>> rows = new java.util.ArrayList<>();
+        for (Link link : links) rows.add(List.of(link.focus()));
+        if (separateControls) {
+            rows.add(List.of(Focus.DONT_SHOW_AGAIN));
+            rows.add(List.of(Focus.CONTINUE));
+        } else {
+            rows.add(List.of(Focus.DONT_SHOW_AGAIN, Focus.CONTINUE));
+        }
+        return rows;
     }
 
     private void focusOn(Focus target) {
@@ -162,13 +174,13 @@ public final class GameSupportNoticeDialog {
                     y + MenuChrome.compactMetrics().above(), MenuChrome.TEXT);
             y += line.isEmpty() ? GAP / 2 : bodyPitch();
         }
-        if (l.pages() > 1) {
-            String pageText = (bodyPage + 1) + "/" + l.pages();
+        String pageText = (bodyPage + 1) + "/" + l.pages();
+        if (l.pages() > 1 && !links.isEmpty()) {
             MenuChrome.compact(font, pageText, l.x() + l.w() - PAD - MenuChrome.compactWidth(pageText),
-                    l.bounds(LINKS.getFirst().focus()).y() + (linkHeight() - MenuChrome.compactLineHeight()) / 2 + 1
+                    l.bounds(links.getFirst().focus()).y() + (linkHeight() - MenuChrome.compactLineHeight()) / 2 + 1
                             + MenuChrome.compactMetrics().above(), MenuChrome.DIM);
         }
-        for (Link link : LINKS) {
+        for (Link link : links) {
             MasterTitleScreen.Rect r = l.bounds(link.focus());
             boolean focused = focus == link.focus();
             if (focused) MenuChrome.focus(font, r.x(), r.y(), r.w(), r.h(), frame);
@@ -191,7 +203,10 @@ public final class GameSupportNoticeDialog {
                 focus == Focus.CONTINUE, true, frame);
 
         List<MenuChrome.Hint> hints = new java.util.ArrayList<>();
-        if (l.pages() > 1) hints.add(MenuChrome.leftRight(menuInput, UiMessages.text("menu.details.page")));
+        if (l.pages() > 1) {
+            String label = UiMessages.text("menu.details.page");
+            hints.add(MenuChrome.leftRight(menuInput, links.isEmpty() ? label + " " + pageText : label));
+        }
         hints.add(MenuChrome.hint(MenuChrome.confirmKey(menuInput),
                 UiMessages.text(focusedLink().isPresent() ? "hub.ui.open_caps" : "hub.ui.select_caps")));
         hints.add(MenuChrome.hint(MenuChrome.backKey(menuInput), UiMessages.text("hub.ui.back_caps")));
@@ -209,7 +224,7 @@ public final class GameSupportNoticeDialog {
             return switch (focus) {
                 case CONTINUE -> button;
                 case DONT_SHOW_AGAIN -> toggle;
-                default -> links.get(focus.ordinal() - Focus.DISCORD.ordinal());
+                default -> focus.ordinal() < links.size() ? links.get(focus.ordinal()) : null;
             };
         }
     }
@@ -221,8 +236,8 @@ public final class GameSupportNoticeDialog {
         int buttonW = Math.max(88, MenuChrome.compactWidth(continueLabel()) + 24);
         boolean stacked = toggleW + GAP + buttonW > inner;
         int controlsH = stacked ? 2 * BUTTON_H + GAP : BUTTON_H;
-        int linksH = LINKS.size() * linkHeight() + (LINKS.size() - 1) * LINK_GAP;
-        int fixed = PAD + MenuChrome.labelLineHeight() + GAP + GAP + linksH + GAP + controlsH + PAD;
+        int linksH = links.isEmpty() ? 0 : links.size() * linkHeight() + (links.size() - 1) * LINK_GAP + GAP;
+        int fixed = PAD + MenuChrome.labelLineHeight() + GAP + GAP + linksH + controlsH + PAD;
         int maxBodyH = MenuChrome.FOOTER_Y - 8 - fixed;
         List<String> lines = MenuStyle.wrap(bodyText(), inner, MenuStyle.COMPACT);
         List<List<String>> pages = paginate(lines, maxBodyH);
@@ -233,13 +248,13 @@ public final class GameSupportNoticeDialog {
         int titleY = y + PAD;
         int bodyY = titleY + MenuChrome.labelLineHeight() + GAP;
         int linkY = bodyY + bodyH + GAP;
-        List<MasterTitleScreen.Rect> links = new java.util.ArrayList<>();
-        for (Link link : LINKS) {
+        List<MasterTitleScreen.Rect> linkBounds = new java.util.ArrayList<>();
+        for (Link link : links) {
             int linkW = Math.min(inner, 6 + MenuChrome.ICON_SIZE + 4 + MenuChrome.compactWidth(link.address()) + 6);
-            links.add(new MasterTitleScreen.Rect(x + (w - linkW) / 2, linkY, linkW, linkHeight()));
+            linkBounds.add(new MasterTitleScreen.Rect(x + (w - linkW) / 2, linkY, linkW, linkHeight()));
             linkY += linkHeight() + LINK_GAP;
         }
-        int controlsY = linkY - LINK_GAP + GAP;
+        int controlsY = bodyY + bodyH + GAP + linksH;
         MasterTitleScreen.Rect toggle;
         MasterTitleScreen.Rect button;
         if (stacked) {
@@ -249,7 +264,7 @@ public final class GameSupportNoticeDialog {
             toggle = new MasterTitleScreen.Rect(x + PAD, controlsY, toggleW, BUTTON_H);
             button = new MasterTitleScreen.Rect(x + w - PAD - buttonW, controlsY, buttonW, BUTTON_H);
         }
-        return new Layout(x, y, w, h, titleY, bodyY, pages, List.copyOf(links), toggle, button, stacked);
+        return new Layout(x, y, w, h, titleY, bodyY, pages, List.copyOf(linkBounds), toggle, button, stacked);
     }
 
     private static List<List<String>> paginate(List<String> lines, int maxHeight) {
@@ -281,10 +296,14 @@ public final class GameSupportNoticeDialog {
     private static int labelAbove() { return Math.max(0, MenuChrome.labelLineHeight() - 10); }
 
     String bodyText() {
+        if (stage == GameSupportNotices.Stage.KIS2_TIER_ONE) return UiMessages.text("hub.notice.kis2_tier_one.body");
         return UiMessages.text("hub.notice.body", Map.of("game", gameName, "stage", stage.code()));
     }
 
-    private String stageTag() { return UiMessages.text("hub.notice.stage_caps", Map.of("stage", stage.code())); }
+    private String stageTag() {
+        if (stage == GameSupportNotices.Stage.KIS2_TIER_ONE) return UiMessages.text("hub.notice.kis2_tier_one.tag_caps");
+        return UiMessages.text("hub.notice.stage_caps", Map.of("stage", stage.code()));
+    }
     private static String dontShowAgainLabel() { return UiMessages.text("hub.notice.dont_show_again"); }
     private static String continueLabel() { return UiMessages.text("hub.notice.continue"); }
 }

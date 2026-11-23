@@ -1189,7 +1189,12 @@ public class MasterTitleScreen {
 
     /** Asks before starting a game whose support is unfinished, unless the player hid that notice. */
     private boolean openSupportNotice(MasterTitleEntry.Stock stock) {
-        var stage = supportNotices.pendingNotice(stock.gameId());
+        var profile = launchProfileStore.load(stock.game());
+        var request = new com.openggf.game.patch.GameplayLaunchRequest(stock.gameId(), profile.mainCharacter(),
+                java.util.List.of(profile.sidekick()));
+        var stage = supportNotices.pendingNotice(stock.gameId(),
+                () -> com.openggf.game.session.BuiltInPatches.launchNotice(request, () -> romCatalogue != null
+                        ? romCatalogue : RomImageCatalogue.forCurrentWorkingDirectory(configService)));
         if (stage.isEmpty()) return false;
         supportNotice = new GameSupportNoticeDialog(stock.displayName(), stage.get());
         supportNoticeEntry = stock;
