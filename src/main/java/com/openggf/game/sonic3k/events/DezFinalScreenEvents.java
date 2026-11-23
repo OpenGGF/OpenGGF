@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.events;
 
+import com.openggf.game.sonic3k.Sonic3kLevel;
 import com.openggf.game.sonic3k.runtime.DezFinalCamera;
 
 import com.openggf.game.sonic3k.objects.DezFinalArenaFloor;
@@ -18,14 +19,17 @@ public final class DezFinalScreenEvents {
 
     public static void initializeObjectsAndCamera(ObjectManager objects, DezFinalBossZoneRuntimeState state) {
         if (state.screenInitApplied()) return;
-        // DEZ3_ScreenInit loc_5A3FA clears the header-sized unused layout tail
-        // before object allocation. Keep this native scene write on the existing
-        // encoded owner/pipeline; Load_Level and resident definition tables are separate.
         var layoutManager = objects.getObjectServices().levelManager();
-        if (layoutManager.getCurrentLevel() instanceof com.openggf.game.sonic3k.Sonic3kLevel level) {
+        if (layoutManager.getCurrentLevel() instanceof Sonic3kLevel level) {
             var context = new LayoutMutationContext(LevelMutationSurface.forLevel(level),
                     layoutManager::applyMutationEffects);
             objects.getObjectServices().zoneLayoutMutationPipeline().applyImmediately(mutation -> {
+                // DEZ3_ScreenInit (sonic3k.asm:120291-120315) aliases both planes
+                // to FG row 0 before clearing the unused layout tail.
+                level.copyLayoutRowPointer(0, 0, 0, 4);
+                level.copyLayoutRowPointer(0, 0, 1, 4);
+                level.copyLayoutRowPointer(0, 0, 0, 31);
+                level.copyLayoutRowPointer(0, 0, 1, 31);
                 level.clearUnusedSceneLayoutTail();
                 return MutationEffects.NONE;
             }, context);
@@ -127,7 +131,8 @@ public final class DezFinalScreenEvents {
 
     /** The Plane B source cell DEZ3_ScreenInit/Draw_BGNoVert read for arena column x, row y. */
     public static int arenaDescriptor(LevelManager level, int x, int y) {
-        // The same ScreenInit pointer writes alias BG rows 4 and 31 to FG row 0.
+        // The generic BG draw lookup wraps at its declared height and width.
+        // Resolve the installed aliases using their FG source coordinates.
         int sourceY = y & 0xFFF;
         if ((sourceY >>> 7) == 4 || (sourceY >>> 7) == 31)
             return level.getForegroundTileDescriptorAtWorld(x & 0xFFFF, sourceY & 0x7F);
@@ -135,8 +140,8 @@ public final class DezFinalScreenEvents {
     }
 
     private static int bossDescriptor(LevelManager level, int x, int y) {
-        // DEZ3_ScreenInit copies FG row-0's pointer to FG rows 4 and 31. The engine
-        // stores decoded chunk grids, so resolve these native aliases at the draw read.
+        // The generic FG draw lookup is bounded by the declared height.
+        // Both installed rows outside those bounds use FG row 0's coordinates.
         int sourceY = y & 0xFFF;
         if ((sourceY >>> 7) == 4 || (sourceY >>> 7) == 31) sourceY &= 0x7F;
         return level.getForegroundTileDescriptorAtWorld(x & 0xFFFF, sourceY);
