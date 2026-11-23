@@ -169,7 +169,8 @@ public class AizEndBossInstance extends AbstractBossInstance
         /** ROM {@code AIZEndBoss_StartDefeat}, installed in {@code $34} by the defeat callback. */
         START_DEFEAT,
         /** ROM {@code AIZEndBoss_StartCapsuleSequence}, installed in {@code $34} by StartDefeat. */
-        START_CAPSULE_SEQUENCE
+        START_CAPSULE_SEQUENCE,
+        START_MAIN_INIT
     }
 
     /** ROM: angle ($26) — selects position index (0, 4, 8, or $C). */
@@ -499,18 +500,14 @@ public class AizEndBossInstance extends AbstractBossInstance
         // Transition to wait-then-play-music
         waitTimer = WAIT_BEFORE_MUSIC;
         waitCallback = WaitCallback.START_BOSS_MUSIC;
-        state.routine = ROUTINE_EMERGE; // Will be overridden after wait
-        // But first we wait — handle via the emerge routine checking waitTimer
-
-        // Actually, the ROM flows: lock → Obj_Wait($78) → Obj_AIZEndBossMusic → Obj_AIZEndBossMain
-        // Let's use ROUTINE_ATTACK_WAIT as a generic "wait" state for the pre-music delay
         state.routine = ROUTINE_ATTACK_WAIT;
     }
 
-    /** ROM: Obj_AIZEndBossMusic — Play boss music, transition to main init. */
+    /** Obj_AIZEndBossMusic (sonic3k.asm:138107-138112) installs the main handler for the next dispatch. */
     private void startBossMusic() {
         services().playMusic(Sonic3kMusic.BOSS.id);
-        doMainInit();
+        waitTimer = 0;
+        waitCallback = WaitCallback.START_MAIN_INIT;
     }
 
     /**
@@ -1190,7 +1187,6 @@ public class AizEndBossInstance extends AbstractBossInstance
 
     private void spawnShipChild() {
         shipChild = spawnChild(() -> new AizEndBossShipChild(this));
-        childComponents.add(shipChild);
     }
 
     private void spawnArmChildren() {
@@ -1213,9 +1209,6 @@ public class AizEndBossInstance extends AbstractBossInstance
 
     void rewindAttachShipChild(AizEndBossShipChild shipChild) {
         this.shipChild = shipChild;
-        if (shipChild != null && !childComponents.contains(shipChild)) {
-            childComponents.add(shipChild);
-        }
     }
 
     void rewindAttachArmChild(AizEndBossArmChild armChild) {
@@ -1340,6 +1333,7 @@ public class AizEndBossInstance extends AbstractBossInstance
         waitCallback = WaitCallback.NONE;
         switch (callback) {
             case START_BOSS_MUSIC -> startBossMusic();
+            case START_MAIN_INIT -> doMainInit();
             case ON_EMERGE_COMPLETE -> onEmergeComplete();
             case BEGIN_HOVER -> beginHover();
             case ON_HOVER_COMPLETE -> onHoverComplete();
