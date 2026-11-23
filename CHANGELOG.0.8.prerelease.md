@@ -7,6 +7,10 @@ under the matching area heading; see the
 
 ## Gameplay and presentation
 
+- **Sonic 2 extra-life audio:** requests refused during the jingle or its fade-in
+  clear the sound-effect priority without advancing ring panning, gloop alternation
+  or spindash pitch. The fade-in restores the saved priority, which the cartridge clears before backup.
+
 - **Death Egg's final fight:** entering the arena now links foreground and
   background rows 4 and 31 to the same terrain as foreground row 0, as on the
   cartridge. Rewind preserves those links and edits to the shared terrain.
@@ -24,6 +28,10 @@ under the matching area heading; see the
 
 - **Sonic 1 and Sonic 2 title cards** now count each serviced wait toward the
   V-int clock used by objects, preserving the timing phase carried into the act.
+
+- **Sonic 2 spindash release:** the sound effect now keeps the cartridge's
+  original FM5 transpose byte. The opening FM hit and delayed PSG noise sound
+  the same.
 
 - **Sonic 3 & Knuckles badnik score popups** now rise from the freed animal's
   first object pass, matching the cartridge's timing and slot allocation.

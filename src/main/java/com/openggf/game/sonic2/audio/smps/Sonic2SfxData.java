@@ -114,12 +114,8 @@ public class Sonic2SfxData extends AbstractSmpsData implements SmpsSfxData {
             int flags = data[pos] & 0xFF;
             int channelId = data[pos + 1] & 0xFF;
             int ptr = relocatePtr(read16(pos + 2));
-            int transpose = (byte) data[pos + 4];
-            // Sonic 2 SFX: spindash release uses an invalid $90 transpose for FM5.
-            // Patch only that value so legitimate negative transposes keep their sign.
-            if ((channelId & 0x80) == 0 && transpose == (byte) 0x90) {
-                transpose = 0x10;
-            }
+            // zPlaySound (s2.sounddriver.asm:2275-2295) copies the key offset byte as shipped.
+            int transpose = data[pos + 4];
             int volume = (byte) data[pos + 5];
 
             tracks.add(new TrackEntry(flags, channelId, transpose, volume, ptr));
