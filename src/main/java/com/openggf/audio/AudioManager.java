@@ -3305,9 +3305,10 @@ public class AudioManager implements MusicRestoreSink {
                 nativeCompatiblePcmSessions++;
             }
             SmpsDriverSessionConfiguration sessionConfiguration =
-                    new SmpsDriverSessionConfiguration(base.profile() != null
-                            ? base.profile().smpsStatefulCommandPolicy()
-                            : com.openggf.audio.session.SmpsStatefulCommandPolicy.NONE);
+                    new SmpsDriverSessionConfiguration(
+                            base.profile() != null ? base.profile().smpsStatefulCommandPolicy()
+                                    : com.openggf.audio.session.SmpsStatefulCommandPolicy.NONE,
+                            tuning.region());
             SmpsDriverSession smpsSession = new SmpsDriverSession(
                     physicalSettings, physicalPolicy, diagnosticInstallation.chipWriteObserver(),
                     new SmpsSessionProfileFingerprint(
