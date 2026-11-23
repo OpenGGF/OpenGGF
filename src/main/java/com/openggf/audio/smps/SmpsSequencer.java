@@ -4509,6 +4509,12 @@ public class SmpsSequencer implements CoordFlagContext {
         speedShoes = false;
     }
 
+    /** A local test-before-decrement fade reaches zero on the next service. */
+    public boolean localFadeOutIsTerminalNextService() {
+        return fadeState.active && fadeState.fadeOut
+                && fadeState.steps == 1 && fadeState.delayCounter <= 0;
+    }
+
     /** Whether a fade in armed by {@link #triggerFadeIn} is still running. */
     public boolean isFadingIn() {
         return fadeState.active && !fadeState.fadeOut;
@@ -4629,6 +4635,10 @@ public class SmpsSequencer implements CoordFlagContext {
      * @param delay frames between each volume step (ROM default: 3)
      */
     public void triggerFadeOut(int steps, int delay) {
+        triggerFadeOut(steps, delay, false);
+    }
+
+    public void triggerFadeOut(int steps, int delay, boolean armedAfterFadeStep) {
         if (steps <= 0) {
             return;
         }
@@ -4637,7 +4647,9 @@ public class SmpsSequencer implements CoordFlagContext {
         fadeState.fadeOut = true;
         setFadeSteps(steps);
         setFadeDelayReload(delay);
-        setFadeDelayCounter(delay);
+        // The arming service still walks the song, but its fade phase preceded
+        // the request. Use one extra initial wait with the normal reload intact.
+        setFadeDelayCounter(armedAfterFadeStep ? Math.max(0, delay) + 1 : delay);
         fadeState.active = true;
 
         // Stop DAC track immediately (can't fade it) - matches ROM zFadeOutMusic
