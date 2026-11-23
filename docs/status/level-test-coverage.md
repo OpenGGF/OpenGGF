@@ -2915,3 +2915,8 @@ trace regressions are resolved: all eleven reports exactly match baseline;
 The [MGZ1](../architecture/validation/levels/s3k-mgz-act1.md) and
 [MGZ2](../architecture/validation/levels/s3k-mgz-act2.md) matrices retain their
 wider route, donor, team and viewport obligations.
+
+AIZ2 end-boss head art (2026-11-22): the [AIZ2 matrix](../architecture/validation/levels/s3k-aiz2.md#native-aiz2-boss-head-art-2026-11-22)
+verifies that Knuckles gets EggRobo's head and Sonic and Tails keep Eggman's
+head. It also covers queue restoration, the head's graph rewind and the Mega
+return window. The outgoing campaign and other configurations remain open.
