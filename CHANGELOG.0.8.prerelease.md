@@ -7,6 +7,11 @@ under the matching area heading; see the
 
 ## Gameplay and presentation
 
+- **Sonic 2 runtime art:** the Wing Fortress Tornado cue and shared animal
+  and explosion graphics now change tiles as the native queue services them.
+  Their prior pixels remain visible until the write, and rewind restores
+  partially written art.
+
 - **Sonic 1 special-stage results** now advance the object V-int clock on each
   native finish, tally and exit wait, preserving its phase through the level
   reload. Results setup and straight-line return code add no tick.

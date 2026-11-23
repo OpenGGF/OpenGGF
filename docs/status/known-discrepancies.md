@@ -1483,9 +1483,12 @@ game-owned frame lifecycle and producer owners.
 S1 and S2 PLC readiness is deterministic ROM-derived production state. The
 engine submits each represented ROM cue to its native-shape FIFO, services it
 at the owning VBlank lifecycle boundary, and lets results, Final Zone, ARZ, and
-other implemented consumers poll that queue. Runtime rendering remains eager
+other implemented consumers poll that queue. S1 runtime rendering remains eager
 so a submitted cue's prepared art can be displayed without tying host decode
-cost to Mega Drive timing.
+cost to Mega Drive timing. S2 decodes ahead of service, then publishes each
+serviced pattern slice to the native slot views used by Wing Fortress Tornado
+art and shared animal and explosion art. Independently preloaded S2 sheets
+are tracked in the [open bug ledger](known-bugs.md#sonic-2-preloaded-object-art-outside-native-plc-slot-views).
 
 Skipped and visible initial title-card paths converge on the same idempotent
 production boundary. S1 drains its locked primary queue, publishes the

@@ -1,5 +1,14 @@
 # Level test coverage backlog
 
+Wing Fortress runtime art: `TestSonic2RuntimePlcRendererRefresh` checks the
+resident propeller tiles through request, the Tornado body's 27 service passes,
+the first three thruster writes and mid-write rewind.
+`TestSonic2PlcSharedArtRendering` checks the
+six-pattern VBlank against the existing animal and explosion mappings with EGL.
+The positioned propeller and early thruster are controlled witnesses. In both
+stock WFZ traces the thruster child arrives after its cue drains. The tests
+leave full-route pixel parity and other preloaded sprite sheets open.
+
 HCZ1 badnik score allocation (2026-11-22): the [HCZ1 matrix](../architecture/validation/levels/s3k-hcz1-sonic.md#badnik-score-popup-dispatch-2026-11-22)
 records the native slot and movement on rows 417–418. Manager tests cover
 both dispatch orders, a full object table and recreation between passes.

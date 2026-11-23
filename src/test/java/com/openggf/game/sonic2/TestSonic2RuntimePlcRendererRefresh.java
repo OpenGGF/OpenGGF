@@ -41,6 +41,7 @@ import java.util.logging.Handler;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -102,21 +103,82 @@ class TestSonic2RuntimePlcRendererRefresh {
     }
 
     @Test
-    void runtimePlcPublishesNewRendererInSameFrameAndRefreshesOnce() {
-        assertNull(provider.getRenderer(Sonic2ObjectArtKeys.TORNADO_THRUSTER));
+    void runtimeThrusterWritesOnlyWhenItsFifoHeadIsServiced() throws Exception {
+        var rom = TestEnvironment.currentRom();
+        Sonic2PlcService plc = GameServices.module().getGameService(Sonic2PlcService.class);
+        String thrusterKey = Sonic2ObjectArtKeys.TORNADO_THRUSTER;
+        String propellerKey = Sonic2ObjectArtKeys.WFZ_VPROPELLER;
+        var propeller = pixels(provider.getSheet(propellerKey).getPatterns());
+        GameplayModeContext gameplay = SessionManager.getCurrentGameplayMode();
+        gameplay.registerLevelAdapters(levelManager);
+        gameplay.registerPlcArtAdapter(provider);
+        RewindRegistry registry = gameplay.getRewindRegistry();
+        CompositeSnapshot beforeRequest = registry.capture();
+        assertEquals(plc.capture(), beforeRequest.get(Sonic2PlcService.REWIND_KEY));
+        assertNull(provider.getRenderer(thrusterKey));
 
         events.requestForTest(Sonic2Constants.PLC_TORNADO);
 
-        PatternSpriteRenderer renderer =
-                provider.getRenderer(Sonic2ObjectArtKeys.TORNADO_THRUSTER);
+        PatternSpriteRenderer renderer = provider.getRenderer(thrusterKey);
         assertNotNull(renderer);
-        assertTrue(renderer.isReady(), "the event-triggered renderer must be cache-ready immediately");
+        assertTrue(renderer.isReady());
+        var pendingThruster = pixels(provider.getSheet(thrusterKey).getPatterns());
+        var installed = com.openggf.util.PatternDecompressor.nemesis(rom,
+                Sonic2Constants.ART_NEM_TORNADO_THRUSTER_ADDR);
+        assertArrayEquals(propeller, java.util.Arrays.copyOf(pendingThruster, propeller.length),
+                "a requested renderer still reads the preceding $561 occupant");
+        assertArrayEquals(propeller, pixels(provider.getSheet(propellerKey).getPatterns()));
+
+        // PlrList_Tornado (s2.asm:90002-90006) queues 79 body tiles ahead of the thruster.
+        // RunPLC_RAM (s2.asm:2148-2194) arms the head and ProcessDPLC2 (s2.asm:2219-2250)
+        // writes three tiles per level VBlank, without using spare budget on the next head.
+        plc.serviceLevelVBlank();
+        for (int pass = 0; pass < 27; pass++) {
+            plc.prepare();
+            plc.serviceLevelVBlank();
+        }
+        plc.prepare();
+        assertArrayEquals(pendingThruster, pixels(provider.getSheet(thrusterKey).getPatterns()));
+        CompositeSnapshot beforeWrite = registry.capture();
+        plc.serviceLevelVBlank();
+
+        var partial = pixels(provider.getSheet(thrusterKey).getPatterns());
+        var expected = pendingThruster.clone();
+        System.arraycopy(pixels(installed), 0, expected, 0, 3 * 64);
+        assertArrayEquals(expected, partial, "first owning VBlank writes exactly three tiles");
+        assertArrayEquals(java.util.Arrays.copyOf(expected, propeller.length),
+                pixels(provider.getSheet(propellerKey).getPatterns()), "old mapping samples the same native slots");
+        CompositeSnapshot partialWrite = registry.capture();
+
+        while (plc.isBusy()) {
+            plc.prepare();
+            plc.serviceLevelVBlank();
+        }
+        assertArrayEquals(pixels(installed), pixels(provider.getSheet(thrusterKey).getPatterns()));
+
+        registry.restore(partialWrite);
+        assertArrayEquals(partial, pixels(provider.getSheet(thrusterKey).getPatterns()));
+        plc.serviceLevelVBlank();
+        System.arraycopy(pixels(installed), 3 * 64, expected, 3 * 64, 3 * 64);
+        assertArrayEquals(expected, pixels(provider.getSheet(thrusterKey).getPatterns()),
+                "restored FIFO continues at the next tile");
+        registry.restore(beforeWrite);
+        assertArrayEquals(pendingThruster, pixels(provider.getSheet(thrusterKey).getPatterns()));
+        registry.restore(beforeRequest);
+        assertFalse(plc.isBusy());
+        assertArrayEquals(propeller, pixels(provider.getSheet(propellerKey).getPatterns()));
+        assertArrayEquals(pendingThruster, pixels(provider.getSheet(thrusterKey).getPatterns()));
+        assertSame(renderer, provider.getRenderer(thrusterKey));
         assertSame(preExistingRenderer, provider.getRenderer(ObjectArtKeys.MONITOR));
-        assertEquals(preExistingPatternBase, preExistingRenderer.getPatternBase(),
-                "appending runtime PLC art must not relocate already-cached renderers");
-        assertTrue(renderer.getPatternBase() > preExistingPatternBase,
-                "the runtime PLC renderer should append after the initial WFZ allocation");
+        assertEquals(preExistingPatternBase, preExistingRenderer.getPatternBase());
+        assertTrue(renderer.getPatternBase() > preExistingPatternBase);
         verify(levelManager, times(1)).refreshObjectArtPatterns();
+    }
+
+    private static byte[] pixels(com.openggf.level.Pattern[] patterns) {
+        byte[] bytes = new byte[patterns.length * 64];
+        for (int i = 0; i < patterns.length; i++) patterns[i].copyInto(bytes, i * 64);
+        return bytes;
     }
 
     @Test

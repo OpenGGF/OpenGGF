@@ -341,7 +341,6 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider, HudSatLayoutS
 
         // Obj28 and Obj58 consume native tile ranges, not private asset identities.
         // Obj58_Init (s2.asm:61314-61326), PlrList_DezAnimals (s2.asm:89909-89912).
-        // Only these ROM-static views participate; patched/dynamic composites keep their owners.
         bindStaticArtSlots(ObjectArtKeys.ANIMAL, ANIMAL_ART_TILE);
         bindStaticArtSlots(Sonic2ObjectArtKeys.BOSS_EXPLOSION, Sonic2Constants.ART_TILE_FIERY_EXPLOSION);
 
@@ -358,10 +357,33 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider, HudSatLayoutS
         for (var entry : plc.entries()) {
             var registration = Sonic2PlcArtRegistry.lookup(entry.romAddr());
             if (registration != null && !sheets.containsKey(registration.key())) {
+                String key = registration.key();
                 ObjectSpriteSheet sheet = registration.builder().build(artLoader);
-                registerSheet(registration.key(), sheet);
+                int count = slotViewPatternCount(key, sheet, entry.romAddr());
+                if (count == 0) {
+                    registerSheet(key, sheet);
+                } else {
+                    ObjectSpriteSheet view = Sonic2PlcArtSlots.detached(sheet);
+                    registerSheet(key, view);
+                    staticArtSlots.bind(entry.tileIndex(), view, renderers.get(key), count);
+                }
             }
         }
+    }
+
+    private int slotViewPatternCount(String key, ObjectSpriteSheet sheet, int source) throws IOException {
+        if (staticArtSlots == null || sheet == null
+                || sheetPatches.stream().anyMatch(patch -> patch.sheetKey().equals(key))) {
+            return 0;
+        }
+        // PlrList_Wfz1 (s2.asm:89525-89537) and PlrList_Tornado (s2.asm:90002-90006).
+        // Tornado's native body is a prefix of the sheet, with player art at independent offsets.
+        return switch (key) {
+            case Sonic2ObjectArtKeys.TORNADO, Sonic2ObjectArtKeys.TORNADO_THRUSTER,
+                    Sonic2ObjectArtKeys.CLOUDS, Sonic2ObjectArtKeys.WFZ_VPROPELLER,
+                    Sonic2ObjectArtKeys.BALKIRY -> Math.min(sheet.getPatterns().length, staticArtSlots.sourceCount(source));
+            default -> 0;
+        };
     }
 
     private void registerEagerSheets(int zoneIndex) {
@@ -405,7 +427,8 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider, HudSatLayoutS
                         && preparedKeys.add(registration.key())) {
                     ObjectSpriteSheet sheet = registration.builder().build(artLoader);
                     if (sheet != null) {
-                        preparedSheets.add(new PreparedSheet(registration.key(), sheet));
+                        preparedSheets.add(new PreparedSheet(registration.key(), sheet, entry.tileIndex(),
+                                slotViewPatternCount(registration.key(), sheet, entry.romAddr())));
                     }
                 }
             }
@@ -426,18 +449,50 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider, HudSatLayoutS
         }
     }
 
-    /** Publishes prepared ROM art and refreshes the ranges of already resident consumers. */
+    /** Installs prepared ROM art for a synchronous resource load. */
     public boolean publishPreparedPlc(PreparedPlc prepared) {
         validateStaticArtSlots(prepared);
+        boolean registered = registerPlcSheets(prepared, false);
+        if (staticArtSlots != null) staticArtSlots.publish(prepared.writes(), GameServices.graphics());
+        return registered;
+    }
+
+    /** Allocates renderer views of the current native tiles ahead of FIFO service. */
+    public boolean registerRuntimePlcSheets(PreparedPlc prepared) {
+        return registerPlcSheets(prepared, true);
+    }
+
+    private boolean registerPlcSheets(PreparedPlc prepared, boolean deferred) {
         int sheetCountBefore = sheetOrder.size();
-        for (PreparedSheet preparedSheet : prepared.sheets()) {
-            if (!sheets.containsKey(preparedSheet.key())) {
-                registerSheet(preparedSheet.key(), preparedSheet.sheet());
+        for (PreparedSheet recipe : prepared.sheets()) {
+            if (sheets.containsKey(recipe.key())) continue;
+            if (recipe.nativePatternCount() == 0) {
+                registerSheet(recipe.key(), recipe.sheet());
+            } else {
+                ObjectSpriteSheet view = Sonic2PlcArtSlots.detached(recipe.sheet());
+                registerSheet(recipe.key(), view);
+                if (deferred) {
+                    staticArtSlots.bindDeferred(recipe.destinationTile(), view, renderers.get(recipe.key()),
+                            recipe.nativePatternCount());
+                } else {
+                    staticArtSlots.bind(recipe.destinationTile(), view, renderers.get(recipe.key()),
+                            recipe.nativePatternCount());
+                }
             }
         }
         loadEpoch++;
-        if (staticArtSlots != null) staticArtSlots.publish(prepared.writes(), GameServices.graphics());
         return sheetOrder.size() > sheetCountBefore;
+    }
+
+    /** Projects the native FIFO's serviced slice into all bound renderer views. */
+    public void publishServicedPlcPatterns(int source, int base, int first, int count) {
+        if (staticArtSlots != null) {
+            try {
+                staticArtSlots.service(source, base, first, count, GameServices.graphics());
+            } catch (IOException e) {
+                throw new UncheckedIOException("Could not publish serviced ROM art", e);
+            }
+        }
     }
 
     public record PreparedPlc(List<PreparedSheet> sheets,
@@ -470,7 +525,7 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider, HudSatLayoutS
         }
     }
 
-    public record PreparedSheet(String key, ObjectSpriteSheet sheet) {
+    public record PreparedSheet(String key, ObjectSpriteSheet sheet, int destinationTile, int nativePatternCount) {
     }
 
     /**
