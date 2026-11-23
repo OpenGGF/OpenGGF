@@ -77,6 +77,8 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider, HudSatLayoutS
 
     private Sonic2ObjectArt artLoader;
     private Rom sceneRom;
+    private final Rom plcArtRom;
+    private final int stockArtSourceBase;
     private ObjectArtData artData;
     private int currentZoneIndex = -2; // Use -2 to distinguish from explicit -1
     private int loadEpoch = 0;
@@ -135,6 +137,13 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider, HudSatLayoutS
      * for the zone, so a later runtime PLC request cannot undo them.
      */
     public Sonic2ObjectArtProvider(Sonic2ArtOverlays overlays) {
+        this(overlays, null, 0);
+    }
+
+    /** The native FIFO may address a larger ROM image than the standalone sheet builders. */
+    public Sonic2ObjectArtProvider(Sonic2ArtOverlays overlays, Rom plcArtRom, int stockArtSourceBase) {
+        this.plcArtRom = plcArtRom;
+        this.stockArtSourceBase = stockArtSourceBase;
         this.mainCharacterLifeIcon = overlays == null ? null : overlays.mainCharacterLifeIcon();
         this.sheetPatches = overlays == null ? List.of() : overlays.sheetPatches();
         this.resultsSheetOverlay = overlays == null ? java.util.function.UnaryOperator.identity() : overlays.resultsSheet();
@@ -147,6 +156,8 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider, HudSatLayoutS
     public Sonic2ObjectArtProvider(Rom rom, RomByteReader reader) {
         this.artLoader = new Sonic2ObjectArt(rom, reader);
         this.sceneRom = rom;
+        this.plcArtRom = rom;
+        this.stockArtSourceBase = 0;
         hudSatLayout = loadHudSatLayout(reader);
         this.mainCharacterLifeIcon = null;
         this.sheetPatches = List.of();
@@ -194,7 +205,7 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider, HudSatLayoutS
         }
 
         ensureArtLoader();
-        if (staticArtSlots == null) staticArtSlots = new Sonic2PlcArtSlots(sceneRom);
+        if (staticArtSlots == null) staticArtSlots = new Sonic2PlcArtSlots(plcArtRom == null ? sceneRom : plcArtRom);
         artData = artLoader.loadForZone(zoneIndex);
         // Outside the native table, the loader uses its default animal pair
         // and the PLC parser falls back to Std1. These static bindings belong
@@ -381,7 +392,8 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider, HudSatLayoutS
         return switch (key) {
             case Sonic2ObjectArtKeys.TORNADO, Sonic2ObjectArtKeys.TORNADO_THRUSTER,
                     Sonic2ObjectArtKeys.CLOUDS, Sonic2ObjectArtKeys.WFZ_VPROPELLER,
-                    Sonic2ObjectArtKeys.BALKIRY -> Math.min(sheet.getPatterns().length, staticArtSlots.sourceCount(source));
+                    Sonic2ObjectArtKeys.BALKIRY ->
+                            Math.min(sheet.getPatterns().length, staticArtSlots.sourceCount(stockArtSourceBase + source));
             default -> 0;
         };
     }
@@ -420,7 +432,7 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider, HudSatLayoutS
             var plc = Sonic2PlcLoader.parsePlc(rom, plcId);
             for (var entry : plc.entries()) {
                 if (staticArtSlots != null) {
-                    writes.addAll(staticArtSlots.prepare(entry.romAddr(), entry.tileIndex()));
+                    writes.addAll(staticArtSlots.prepare(stockArtSourceBase + entry.romAddr(), entry.tileIndex()));
                 }
                 var registration = Sonic2PlcArtRegistry.lookup(entry.romAddr());
                 if (registration != null && !sheets.containsKey(registration.key())

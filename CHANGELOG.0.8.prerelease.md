@@ -10,7 +10,8 @@ under the matching area heading; see the
 - **Sonic 2 runtime art:** the Wing Fortress Tornado cue and shared animal
   and explosion graphics now change tiles as the native queue services them.
   Their prior pixels remain visible until the write, and rewind restores
-  partially written art.
+  partially written art. Knuckles in Sonic 2 uses the lock-on ROM for its
+  queue's pattern sources.
 
 - **Sonic 1 special-stage results** now advance the object V-int clock on each
   native finish, tally and exit wait, preserving its phase through the level
