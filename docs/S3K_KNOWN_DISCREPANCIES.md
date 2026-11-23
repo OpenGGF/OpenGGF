@@ -262,35 +262,34 @@ See the [Competition swap design](architecture/designs/2026-11-07-s3k-competitio
 4. [Host-side KosM Preparation with Native Readiness](#host-side-kosm-preparation-with-native-readiness) — Hardware limit
 5. [Knuckles DPLC Pre-Loading](#knuckles-dplc-pre-loading) — Other
 6. [Save System](#save-system) — Engine feature
-7. [Tails Flying-With-Cargo Physics](#tails-flying-with-cargo-physics) — Other
-8. [MGZ2 Quake Chunk Source Address](#mgz2-quake-chunk-source-address) — Other
-9. [AIZ2 Battleship Ship-Loop Display Compensation](#aiz2-battleship-ship-loop-display-compensation) — Other
-10. [LBZ1 Miniboss Box Pieces: PLC VRAM Restore Skipped](#lbz1-miniboss-box-pieces-plc-vram-restore-skipped) — Other
-11. [LBZ2 Launch Pad Collapse: Mutation Pipeline Offset](#lbz2-launch-pad-collapse-mutation-pipeline-offset) — Other
-12. [Standalone Cartridge Qualification Boundaries](#standalone-cartridge-qualification-boundaries) — Other
-13. [Air Countdown Digits: Rebuilt Mapping Frames Instead of VRAM DMA](#air-countdown-digits-rebuilt-mapping-frames-instead-of-vram-dma) — Other
-14. [s3k_kos_direct.prepared: a sub-frame ROM bit compared against a boundary-granular model](#s3k_kos_directprepared-a-sub-frame-rom-bit-compared-against-a-boundary-granular-model) — Hardware limit
-15. [SEGA Screen: an engine addition the ROM does not have](#sega-screen-an-engine-addition-the-rom-does-not-have) — Engine feature
-16. [SOZ Spring Vine: Failed Display Allocation](#soz-spring-vine-failed-display-allocation) — Other
-17. [SOZ Background Event Modes and Torch Animation](#soz-background-event-modes-and-torch-animation) — Engine feature
-18. [SSZ Act 2 Widescreen Background Columns](#ssz-act-2-widescreen-background-columns) — Engine feature
-19. [Blue Spheres NO WAY! Accepts Any Button](#blue-spheres-no-way-accepts-any-button) — Engine feature
-20. [Hosted solo arena presentation (2026-11-07)](#hosted-solo-arena-presentation-2026-11-07) — Engine feature
-21. [Hosted network arena shoe partner (2026-11-07)](#hosted-network-arena-shoe-partner-2026-11-07) — Engine feature
-22. [KosM Adjacent-Memory Corruption](#kosm-adjacent-memory-corruption) — Other
-23. [SSZ Metropolis orb allocation and first dispatch (resolved local owner, 2026-10-21)](#ssz-metropolis-orb-allocation-and-first-dispatch-resolved-local-owner-2026-10-21) — Other
-24. [Large-bubble character branch (resolved local owner, 2026-10-14)](#large-bubble-character-branch-resolved-local-owner-2026-10-14) — Other
-25. [Death Egg widescreen backgrounds](#death-egg-widescreen-backgrounds) — Engine feature
-26. [LRZ1 and DEZ2 widescreen arena framing](#lrz1-and-dez2-widescreen-arena-framing) — Engine feature
-27. [Ending scenes in a wider picture](#ending-scenes-in-a-wider-picture) — Engine feature
-28. [LRZ boss lava-plane presentation](#lrz-boss-lava-plane-presentation) — Other
-29. [Blue Sphere player projection and shadows (local correction, 2026-10-17)](#blue-sphere-player-projection-and-shadows-local-correction-2026-10-17) — Other
-30. [Retained HCZ replay qualification](#retained-hcz-replay-qualification) — Other
-31. [DDZ, LBZ and ICZ component history](#ddz-lbz-and-icz-component-history) — Other
-32. [DEZ final native terrain ownership — 2026-10-17](#dez-final-native-terrain-ownership--2026-10-17) — Other
-33. [Mega AIZ2 return loses source ownership at death/reload](#mega-aiz2-return-loses-source-ownership-at-deathreload) — Other
-34. [HCZ1 direct water art — bounded physical publication coverage](#hcz1-direct-water-art--bounded-physical-publication-coverage) — Other
-35. [Knuckles full-chain first-return pose — 2026-10-29](#knuckles-full-chain-first-return-pose--2026-10-29) — Other
+7. [MGZ2 Quake Chunk Source Address](#mgz2-quake-chunk-source-address) — Other
+8. [AIZ2 Battleship Ship-Loop Display Compensation](#aiz2-battleship-ship-loop-display-compensation) — Other
+9. [LBZ1 Miniboss Box Pieces: PLC VRAM Restore Skipped](#lbz1-miniboss-box-pieces-plc-vram-restore-skipped) — Other
+10. [LBZ2 Launch Pad Collapse: Mutation Pipeline Offset](#lbz2-launch-pad-collapse-mutation-pipeline-offset) — Other
+11. [Standalone Cartridge Qualification Boundaries](#standalone-cartridge-qualification-boundaries) — Other
+12. [Air Countdown Digits: Rebuilt Mapping Frames Instead of VRAM DMA](#air-countdown-digits-rebuilt-mapping-frames-instead-of-vram-dma) — Other
+13. [s3k_kos_direct.prepared: a sub-frame ROM bit compared against a boundary-granular model](#s3k_kos_directprepared-a-sub-frame-rom-bit-compared-against-a-boundary-granular-model) — Hardware limit
+14. [SEGA Screen: an engine addition the ROM does not have](#sega-screen-an-engine-addition-the-rom-does-not-have) — Engine feature
+15. [SOZ Spring Vine: Failed Display Allocation](#soz-spring-vine-failed-display-allocation) — Other
+16. [SOZ Background Event Modes and Torch Animation](#soz-background-event-modes-and-torch-animation) — Engine feature
+17. [SSZ Act 2 Widescreen Background Columns](#ssz-act-2-widescreen-background-columns) — Engine feature
+18. [Blue Spheres NO WAY! Accepts Any Button](#blue-spheres-no-way-accepts-any-button) — Engine feature
+19. [Hosted solo arena presentation (2026-11-07)](#hosted-solo-arena-presentation-2026-11-07) — Engine feature
+20. [Hosted network arena shoe partner (2026-11-07)](#hosted-network-arena-shoe-partner-2026-11-07) — Engine feature
+21. [KosM Adjacent-Memory Corruption](#kosm-adjacent-memory-corruption) — Other
+22. [SSZ Metropolis orb allocation and first dispatch (resolved local owner, 2026-10-21)](#ssz-metropolis-orb-allocation-and-first-dispatch-resolved-local-owner-2026-10-21) — Other
+23. [Large-bubble character branch (resolved local owner, 2026-10-14)](#large-bubble-character-branch-resolved-local-owner-2026-10-14) — Other
+24. [Death Egg widescreen backgrounds](#death-egg-widescreen-backgrounds) — Engine feature
+25. [LRZ1 and DEZ2 widescreen arena framing](#lrz1-and-dez2-widescreen-arena-framing) — Engine feature
+26. [Ending scenes in a wider picture](#ending-scenes-in-a-wider-picture) — Engine feature
+27. [LRZ boss lava-plane presentation](#lrz-boss-lava-plane-presentation) — Other
+28. [Blue Sphere player projection and shadows (local correction, 2026-10-17)](#blue-sphere-player-projection-and-shadows-local-correction-2026-10-17) — Other
+29. [Retained HCZ replay qualification](#retained-hcz-replay-qualification) — Other
+30. [DDZ, LBZ and ICZ component history](#ddz-lbz-and-icz-component-history) — Other
+31. [DEZ final native terrain ownership — 2026-10-17](#dez-final-native-terrain-ownership--2026-10-17) — Other
+32. [Mega AIZ2 return loses source ownership at death/reload](#mega-aiz2-return-loses-source-ownership-at-deathreload) — Other
+33. [HCZ1 direct water art — bounded physical publication coverage](#hcz1-direct-water-art--bounded-physical-publication-coverage) — Other
+34. [Knuckles full-chain first-return pose — 2026-10-29](#knuckles-full-chain-first-return-pose--2026-10-29) — Other
 
 ---
 
@@ -694,43 +693,6 @@ composition delivery remain separate.
 ### Manual Validation
 
 - `2026-04-13`: native S3K parity pass captured via `com.openggf.game.sonic3k.dataselect.S3kDataSelectVisualCapture`, which renders the live native S3K Data Select frontend with real ROM assets into `target/s3k-dataselect-visual/native_s3k_dataselect_slot1.png` for inspection.
-
----
-
-
-
-
-
-
-
-## Tails Flying-With-Cargo Physics
-
-**Kind:** Other
-
-**Location:** Tails flight physics (`TailsFlightController`, `PlayableSpriteMovement.applyGravity`); CNZ1 carry and CPU flight routines (`SidekickCpuController`)
-**ROM Reference:** `sonic3k.asm:27632` `Tails_Move_FlySwim` (+0x08 flight gravity), `sonic3k.asm:27633` `Tails_Stand_Freespace` (branch on `double_jump_flag`)
-
-### Original Implementation
-
-ROM `Tails_Stand_Freespace` at `sonic3k.asm:27593-27595` branches to `Tails_FlyingSwimming` whenever `double_jump_flag(a0)` is non-zero, swapping the normal `+0x38` air gravity for `+0x08` flight gravity from `Tails_Move_FlySwim` (sonic3k.asm:27673 `loc_1488C`). The flag is set when Tails picks up Sonic for the CNZ1 carry intro (`loc_13FC2` at sonic3k.asm:26944 writes `double_jump_flag=1`) and is NOT cleared by the ground-release path at `loc_14016` — Tails continues under flight physics until he actually touches the floor.
-
-### Our Implementation
-
-The engine reproduces this behavior with a feature-scoped gate rather than a flat bit check:
-
-1. `SidekickCpuController.updateCarryInit()` sets `sidekick.setDoubleJumpFlag(1)` at the same point ROM `loc_13FC2` writes the flag.
-2. The ground-release branch in `updateCarrying()` zeros Tails's `x_vel/y_vel/ground_vel` and keeps the air bit set (matching ROM `loc_14016` at sonic3k.asm:26963-26986). Crucially, it does NOT clear `double_jump_flag` — the ROM leaves it set so Tails continues in flight physics for at least one more tick while the carry-release impulse propagates to Sonic.
-3. `PlayableSpriteMovement.applyGravity()` and `doObjectMoveAndFall()` gate flight gravity on `sprite.getSecondaryAbility() == FLY && sprite.getDoubleJumpFlag() != 0` (mirrors `Tails_Stand_Freespace` → `Tails_FlyingSwimming` branch).
-4. Tails's CPU flight AI — `Tails_Catch_Up_Flying` (routine 0x02 at `sonic3k.asm:26514`) and `Tails_FlySwim_Unknown` (routine 0x04 at `sonic3k.asm:26574`) — is ported into `SidekickCpuController.CATCH_UP_FLIGHT` / `FLIGHT_AUTO_RECOVERY`, plus the NORMAL → `FLIGHT_AUTO_RECOVERY` transition on a dead leader.
-
-### Rationale
-
-1. **Feature-scoped gate over raw flag** — `double_jump_flag` is overloaded in the ROM: Sonic's insta-shield uses it (values 1-$20 during shield timing), Knuckles's glide uses it (1=gliding, 2=stopped, 3=sliding), and Tails's flight uses it (non-zero = flight-gravity). Gating the flight-gravity substitution on `SecondaryAbility.FLY` prevents Sonic's insta-shield and Knuckles's glide from accidentally acquiring the `+0x08` gravity. The ROM achieves the same scoping naturally because only Tails's code path hits `Tails_Stand_Freespace`.
-2. **Plan reference** — See `docs/architecture/plans/2026-04-24-s3k-tails-cpu-flight-ai.md` for the full breakdown of the carry-release and flight-AI ports.
-
-### Verification
-
-`TestSidekickCpuControllerCarry`, `TestSidekickCpuControllerCatchUpFlight`, and `TestSidekickCpuControllerFlightAutoRecovery` cover the state-machine transitions. `TestS3kCnzCarryHeadless` verifies the CNZ1 intro carry-release frame window.
 
 ---
 

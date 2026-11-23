@@ -330,8 +330,11 @@ class TestSidekickCpuControllerCarry {
 
         assertEquals(SidekickCpuController.State.NORMAL, controller.getState());
         assertFalse(sonic.isObjectControlled());
-        assertEquals(0, controller.getReleaseCooldownForTest(),
-                "Ground release has no cooldown");
+        assertEquals(0x3C, controller.getReleaseCooldownForTest(),
+                "loc_1446A sets the cooldown in the CPU pass");
+        pair[1].getTailsCarryController().updateAfterTailsCollision(0);
+        assertEquals(0x3B, controller.getReleaseCooldownForTest(),
+                "loc_14534 consumes one tick in the later Sonic+Tails carry pass");
     }
 
     // --- solo-leader transient carrier fly-off (ROM routine $10) ---------
