@@ -423,9 +423,9 @@ tracks title-owner admission, retained versus automatic claims, physical VInt
 publication and two-way registered-world replay after fly-by deletion. The
 [backpressure followup](../architecture/validation/levels/s3k-ssz-act1.md#incidental-producers-and-armed-title-backpressure--2026-10-21)
 adds both incidental producers at physical-full, logical-full and last-slot
-boundaries, including retained lease and complete registered-world replay. This
-does not close scaled pixels, shared scratch/DMA source lifetime, native
-presentation, intermediate viewport/donor/team breadth or cold-route obligations.
+boundaries, including retained lease and complete registered-world replay.
+Shared scratch and DMA source lifetime, native presentation, intermediate
+viewport, donor and team coverage, and cold-route obligations remain open.
 
 The [SSZ EggRobo fly-by component](../architecture/validation/levels/s3k-ssz-act1.md#eggrobo-fly-by-scaled-art)
 checks scale-dependent ROM pixels, mapping geometry, flips, the unscaled

@@ -2722,13 +2722,13 @@ physical FIFO preserves immediate head initialization and deferred successor
 initialization, actual child receipts, queued DMA and the sparse rewind journal.
 Ordinary full-FIFO rejection leaves pairing and actor deletion in native order.
 
-Rejected shortcut: exposing `MgzEndBossArtScaler` or projecting only its
-mapping-selected `Pattern[]` cannot supply native `$FFD000` scratch writes.
-The first `$7C` scale's mapping references 256 bytes but native DMA transmits 384.
-Current module transfers clone payloads; they do not read then-current shared RAM
-at drain. Full scratch/knownness, causal interrupted Kos writes/backreferences,
-live DMA source lifetime and displayed `$A000` generation closure remain open.
-There is no scaled-art completion, trace parity or natural-route claim here.
+The [EggRobo fly-by renderer](#eggrobo-fly-by-scaled-art) shares
+`S3kPackedArtScaler` with the MGZ end boss to produce the mapping-selected
+`Pattern[]`. At the first `$7C` scale, native DMA transmits 384 bytes from
+`$FFD000`, of which the mapping references 256. Current module transfers drain
+from cloned payloads. Full scratch contents and knownness, interrupted Kosinski
+writes and backreferences, live DMA source lifetime, and displayed `$A000`
+generations remain open, along with trace parity and natural-route coverage.
 
 | Contract | Focused control | Scope |
 | --- | --- | --- |
