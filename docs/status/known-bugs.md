@@ -22,6 +22,24 @@ Entries should include:
 
 ---
 
+## S1/S2 recording driver omits locked title-card V-int ticks
+
+- **Location** — `RecordingFrameDriver.stepNormalTitleCard`, used by headless
+  trace replay and capture tools.
+- **Symptom** — the driver advances the title provider without advancing the
+  level-object V-int counter on serviced S1/S2 title waits. S1 waits in
+  `Level_TtlCardLoop` (sonic.asm:2814-2819) and counts in `VBlank_Exit`
+  (sonic.asm:684-685). S2 waits in `Level_TtlCard` (s2.asm:4914-4927) and
+  `LoadZoneTiles` (s2.asm:6517-6523) and counts in `VintRet` (s2.asm:507-509).
+- **Cause** — the recording driver uses the LAG service path for these rows.
+  Production uses `NativeTitleOnlyVBlankWait` for title-only waits and takes
+  the last S2 upload row's tick from the leading `RunObjects` pass
+  (s2.asm:5007). The recording driver also bypasses that object pass,
+  so using the wait predicate alone would still miss that row.
+- **Removal condition** — ROM-backed recording tests confirm one tick per
+  serviced locked wait, including the S2 upload-to-object-pass handoff, with
+  no extra tick from S1's release prelude (`Level_LoadObj`, sonic.asm:2895-2898).
+
 ## Solid on-screen gate: render-pass approximations — 2026-11-02
 
 The gate now reads `render_flags.on_screen` as the previous frame's BuildSprites /
