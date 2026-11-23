@@ -9,7 +9,6 @@ import com.openggf.game.sonic2.audio.smps.Sonic2SmpsData;
 import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.synth.VirtualSynthesizer;
 import com.openggf.game.sonic2.audio.smps.Sonic2SmpsLoader;
-import com.openggf.audio.smps.DacData;
 import com.openggf.data.Rom;
 
 import java.io.File;
@@ -511,47 +510,47 @@ public class TestSmpsSequencer {
 
     @Test
     public void testSfxBcFmVoicePlaysWithCenteredPan() {
-        // Load real SFX 0xBC from ROM to exercise the FM blip.
-        File romFile = RomTestUtils.ensureRomAvailable();
-        assumeTrue(romFile != null, "Sonic 2 ROM not available Ã¢â‚¬â€ skipping test");
-        Rom rom = new Rom();
-        assertTrue(rom.open(romFile.getAbsolutePath()), "Failed to open ROM");
-        Sonic2SmpsLoader loader = new Sonic2SmpsLoader(rom);
-        AbstractSmpsData sfx = loader.loadSfx(0xBC);
-        assertNotNull(sfx, "SFX 0xBC should load");
-        assertTrue(sfx instanceof Sonic2SfxData, "Expected Sonic2SfxData for SFX 0xBC");
-        assertNotNull(sfx.getVoice(0), "SFX 0xBC should have voice 0");
-        Sonic2SfxData sfxData = (Sonic2SfxData) sfx;
-        int ptr = sfxData.getTrackEntries().get(0).pointer;
-        assertTrue(ptr >= 0 && ptr < sfxData.getData().length, "Track pointer should be within data");
-        assertEquals((byte) 0xEF, sfxData.getData()[ptr], "SFX 0xBC track should start with Set Voice");
+        File romFile = RomTestUtils.ensureSonic2RomAvailable();
+        assumeTrue(romFile != null, "Sonic 2 ROM not available");
+        try (Rom rom = new Rom()) {
+            assertTrue(rom.open(romFile.getAbsolutePath()), "Failed to open ROM");
+            Sonic2SmpsLoader loader = new Sonic2SmpsLoader(rom);
+            Sonic2SfxData sfx = assertInstanceOf(Sonic2SfxData.class, loader.loadSfx(0xBC));
+            assertNotNull(sfx.getVoice(0), "SFX 0xBC should have voice 0");
 
-        DacData dacData = loader.loadDacData();
-        MockFmSynth synth = new MockFmSynth();
-        SmpsSequencer seq = new SmpsSequencer(sfx, dacData, synth, GameServices.audio(), Sonic2SmpsSequencerConfig.CONFIG);
+            List<Integer> psgWrites = new ArrayList<>();
+            MockFmSynth synth = new MockFmSynth() {
+                @Override
+                public void writePsg(Object source, int value) {
+                    psgWrites.add(value & 0xFF);
+                    super.writePsg(source, value);
+                }
+            };
+            SmpsSequencer seq = new SmpsSequencer(sfx, loader.loadDacData(), synth,
+                    GameServices.audio(), Sonic2SmpsSequencerConfig.CONFIG);
+            seq.serviceOuterFrame();
 
-        // Prime and run a few ticks
-        seq.advanceSamples(2);
-        SmpsSequencer.DebugState initial = seq.debugState();
-        seq.advance(20000);
+            // zFMSetFreq (s2.sounddriver.asm:874-879) doubles ($CD - $80 + $90)
+            // in eight bits. $BA addresses zFrequencies entry 93 (block 7, F-number $3FF).
+            int keyOn = synth.fmLog.indexOf("0:28:F5");
+            assertTrue(keyOn >= 2, "FM5 should key on during the first service");
+            assertEquals(List.of("1:A5:3B", "1:A1:FF"), synth.fmLog.subList(keyOn - 2, keyOn));
+            assertTrue(synth.fmLog.contains("1:B5:C0"), "FM5 should pan to both speakers");
 
-        boolean hasKeyEvent = false;
-        boolean hasCenteredPan = false;
-        for (String log : synth.fmLog) {
-            if (log.contains(":28:")) {
-                hasKeyEvent = true;
+            // Sound3C_SpindashRelease_PSG3 rests for seven services before setting noise.
+            for (int service = 1; service < 7; service++) {
+                seq.serviceOuterFrame();
             }
-            if (log.startsWith("1:B") && log.endsWith("C0")) {
-                hasCenteredPan = true;
-            }
+            assertFalse(psgWrites.contains(0xE7), "PSG3 must finish its seven-service rest");
+            assertFalse(psgWrites.stream().anyMatch(value -> value >= 0xF0 && value < 0xFF),
+                    "The noise channel must stay silent during the rest");
+            seq.serviceOuterFrame();
+            assertTrue(psgWrites.contains(0xE7), "PSG3 should select noise on service eight");
+            assertTrue(psgWrites.stream().anyMatch(value -> value >= 0xF0 && value < 0xFF),
+                    "The noise channel should become audible on service eight");
+
+            assertEquals(0x90, sfx.getTrackEntries().getFirst().transpose() & 0xFF,
+                    "The parsed FM5 transpose should preserve the shipped header byte");
         }
-
-        assertFalse(initial.tracks.isEmpty(), "FM track should exist");
-        assertEquals(SmpsSequencer.TrackType.FM, initial.tracks.get(0).type, "Track 0 should be FM for SFX 0xBC");
-        assertEquals(0, initial.tracks.get(0).voiceId, "FM track should use voice 0");
-        assertFalse(initial.tracks.get(0).tieNext, "FM track should not be tied when key-on expected");
-
-        assertTrue(hasKeyEvent, "SFX 0xBC FM should poke the key on/off register. FM log: " + synth.fmLog);
-        assertTrue(hasCenteredPan, "SFX 0xBC FM should center pan (not inherit music pan). FM log: " + synth.fmLog);
     }
 }
