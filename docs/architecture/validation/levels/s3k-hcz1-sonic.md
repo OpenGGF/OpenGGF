@@ -626,3 +626,22 @@ multi-sidekick tests cover extension-owner relinking and cleanup.
 These are local release/rewind obligations. The HCZ slice and sibling traces
 remain the route checks; inherited segment-start state differences, broader
 character/donor/viewport coverage and the matrix's other gaps remain open.
+
+## Water-wall lifetime and spray admission
+
+`TestHCZWaterWallObjectInstance` dispatches both Hydrocity wall subtypes
+through the S3K object manager. It covers the inclusive coarse-X fringe,
+draw-tail deletion, placement readmission, the previous render bit, the
+cleanup underflow and enemy-art submission, and forward spray slots and RNG
+through object recreation. `Sprite_OnScreen_Test` and
+`Delete_Sprite_If_Not_In_Range` clear the placement bit before deletion
+(sonic3k.asm:37302-37318,37341-37357). The vertical fall callback can also
+clear it while its cleanup slot stays live (sonic3k.asm:65327-65351).
+
+The dispatch fixture uses Sonic. It checks the unsigned coarse boundary at
+320 px and the horizontal wall's survival at 528 px, including admission of
+the first HCZ1 placement at X=$0A00 when the camera reaches X=$0780. Other
+viewport, donor and team combinations and whole-route native pixel parity
+remain outside this coverage. The
+[child lifetime and audio audit](../../../status/s3k-known-bugs.md#hcz-geyser-child-lifetimes-and-cleanup-sound-commands)
+tracks the remaining object parity gaps.
