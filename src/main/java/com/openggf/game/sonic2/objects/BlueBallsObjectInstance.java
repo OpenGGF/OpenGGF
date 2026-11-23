@@ -195,6 +195,9 @@ public class BlueBallsObjectInstance extends AbstractObjectInstance implements T
      */
     private boolean initialized;
 
+    /** A wait or movement routine has reached MarkObjGone and queued the ball. */
+    private boolean hasQueuedDisplay;
+
     public BlueBallsObjectInstance(ObjectSpawn spawn, String name) {
         super(spawn, name);
         this.currentX = spawn.x() << 8; // Convert to subpixels
@@ -286,7 +289,7 @@ public class BlueBallsObjectInstance extends AbstractObjectInstance implements T
             return;
         }
 
-        // ROM Obj1D_Init (s2.asm:48341-48390) initializes all balls and returns
+        // ROM Obj1D_Init (s2.asm:48346-48395) initializes all balls and returns
         // without falling through into Obj1D_Wait. Children are constructed as
         // already-initialized because the parent filled their SST fields before
         // AllocateObjectAfterCurrent lets higher slots execute in the same pass.
@@ -306,6 +309,7 @@ public class BlueBallsObjectInstance extends AbstractObjectInstance implements T
             case STATE_WAIT_STRAIGHT -> updateWaitStraight();
             case STATE_MOVE_STRAIGHT -> updateMoveStraight();
         }
+        hasQueuedDisplay = true;
     }
 
     /**
@@ -372,11 +376,11 @@ public class BlueBallsObjectInstance extends AbstractObjectInstance implements T
      * Initial wait state for straight-motion balls (ROM routine 6 = Obj1D_Wait).
      * <p>
      * This is the SAME shared {@code Obj1D_Wait} routine used by arc balls
-     * (s2.asm:48339-48345): it decrements the stagger timer, and on underflow
+     * (s2.asm:48398-48407): it decrements the stagger timer, and on underflow
      * advances the routine by +2 (here: into MOVE_STRAIGHT), reloads the timer
      * with $3B, and plays the gloop sound. After this one-time wait the ball
      * enters MOVE_STRAIGHT and NEVER returns to a Wait routine -- ROM
-     * {@code Obj1D_MoveStraight} (s2.asm:48423-48445) bounces continuously with
+     * {@code Obj1D_MoveStraight} (s2.asm:48429-48451) bounces continuously with
      * no routine change.
      */
     private void updateWaitStraight() {
@@ -385,7 +389,7 @@ public class BlueBallsObjectInstance extends AbstractObjectInstance implements T
             return; // Still waiting
         }
         // Timer underflowed - advance into straight motion.
-        // ROM Obj1D_Wait reloads $3B and plays gloop (s2.asm:48396-48398).
+        // ROM Obj1D_Wait reloads $3B and plays gloop (s2.asm:48401-48404).
         waitTimer = WAIT_DURATION;
         playGloopSound();
         state = STATE_MOVE_STRAIGHT;
@@ -428,18 +432,18 @@ public class BlueBallsObjectInstance extends AbstractObjectInstance implements T
      * Straight motion: continuous vertical bounce with apex/bottom X teleports.
      * <p>
      * Faithful port of ROM {@code Obj1D_MoveStraight} (routine 8),
-     * s2.asm:48370-48392. The ball bounces FOREVER -- it never returns to a
+     * s2.asm:48429-48451. The ball bounces FOREVER -- it never returns to a
      * Wait routine and never has a pause at the apex. Per frame:
      * <ol>
      *   <li>{@code ObjectMove}: x_pos += x_vel, y_pos += y_vel (x_vel stays 0 in
-     *       straight motion) -- s2.asm:48371, ObjectMove s2.asm:30185-30198.</li>
+     *       straight motion) (s2.asm:48430, ObjectMove s2.asm:30191-30205).</li>
      *   <li>{@code y_vel += $18} (gravity). If the new y_vel == 0 (apex),
      *       teleport x_pos = blueballs_x_pos + blueballs_offset and CONTINUE the
-     *       same frame -- no pause, no return (s2.asm:48372-48376).</li>
-     *   <li>If y_vel == $180, play gloop (s2.asm:48378-48381).</li>
+     *       same frame -- no pause, no return (s2.asm:48431-48435).</li>
+     *   <li>If y_vel == $180, play gloop (s2.asm:48437-48440).</li>
      *   <li>If y_pos >= blueballs_y_pos (initialY), reset: y_vel = blueballs_y_vel
      *       (-$480), x_pos = blueballs_x_pos, play gloop. NO routine change --
-     *       stay in MOVE_STRAIGHT (s2.asm:48383-48389).</li>
+     *       stay in MOVE_STRAIGHT (s2.asm:48442-48448).</li>
      * </ol>
      * <p>
      * The previous implementation invented a {@code STATE_WAIT_STRAIGHT} 59-frame
@@ -450,29 +454,29 @@ public class BlueBallsObjectInstance extends AbstractObjectInstance implements T
      * high near the apex (y~$021A) while the player passes underneath at y~$026C.
      */
     private void updateMoveStraight() {
-        // ObjectMove: advance position by current velocity (s2.asm:48371).
+        // Obj1D_MoveStraight (s2.asm:48429-48430) advances position by velocity.
         // x_vel is never set in straight motion, so only y moves; the X column
         // is driven purely by the apex/bottom teleports below.
         currentX += xVelocity;
         currentY += yVelocity;
 
-        // y_vel += $18 gravity (s2.asm:48372).
+        // y_vel += $18 gravity (s2.asm:48431).
         yVelocity += GRAVITY;
 
         // Apex: when the post-gravity y_vel hits exactly 0, teleport X to the far
         // side and CONTINUE this frame -- ROM does NOT pause or return here
-        // (s2.asm:48373-48377).
+        // (s2.asm:48432-48436).
         if (yVelocity == 0) {
             currentX = (initialX + xDistance) << 8;
         }
 
-        // Terminal-velocity gloop (s2.asm:48378-48381).
+        // Terminal-velocity gloop (s2.asm:48437-48440).
         if (yVelocity == 0x180) {
             playGloopSound();
         }
 
         // Bottom: y_pos >= blueballs_y_pos (initialY). ROM cmp/bhi skips the reset
-        // only while blueballs_y_pos > y_pos (s2.asm:48383-48389).
+        // only while blueballs_y_pos > y_pos (s2.asm:48442-48448).
         int pixelY = currentY >> 8;
         if (pixelY >= initialY) {
             // Reset y_vel = blueballs_y_vel (-$480) and x_pos = blueballs_x_pos,
@@ -524,9 +528,10 @@ public class BlueBallsObjectInstance extends AbstractObjectInstance implements T
     }
 
     private void playGloopSound() {
-        // PlaySoundLocal (s2.asm:1555-1562) gates the SFX0 write on visibility.
-        // zPlaySound_CheckGloop (s2.sounddriver.asm:2138-2149) alternates at dispatch.
-        if (!isOnScreen()) {
+        // PlaySoundLocal (s2.asm:1555-1562) reads the previous BuildSprites result.
+        // Obj1D_InitBall (s2.asm:48368-48395) clears the bit and returns without
+        // queuing DisplaySprite, even though the engine's bounds pass visits the ball.
+        if (!hasQueuedDisplay || !isWithinSolidContactBounds()) {
             return;
         }
         try {
@@ -592,6 +597,12 @@ public class BlueBallsObjectInstance extends AbstractObjectInstance implements T
             boolean vFlip = (spawn.renderFlags() & 0x02) != 0;
             renderer.drawFrameIndex(0, drawX, drawY, hFlip, vFlip);
         }
+    }
+
+    @Override
+    public int getOnScreenHalfWidth() {
+        // Obj1D_InitBall sets width_pixels to 8 (s2.asm:48383).
+        return 8;
     }
 
     @Override
