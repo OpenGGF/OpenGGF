@@ -25,6 +25,11 @@ under the matching area heading; see the
   preserves the art queue's progress through the encounter. The arena camera
   bounds begin expanding on the boss's first repositioning update.
 
+- **Angel Island Act 1 right-wall transitions:** Sonic 3 and Sonic 3 & Knuckles
+  now use the direction of the terrain probes for the ROM's penetration counter.
+  A deep right-wall probe arms a three-count hold. Subsequent shallow negative
+  right-wall results spend one count, keep the wall angle and leave X in place.
+
 - **Placed rings in patched and hosted levels** use the underlying
   game's vertical placement and clipping rules. In Knuckles in Sonic 2, rings
   disappear as their centres cross the top of the screen, as on the cartridge.
