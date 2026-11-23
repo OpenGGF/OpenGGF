@@ -55,7 +55,7 @@ import java.util.logging.Logger;
  * <p>control is released at the start of SLIDE_OUT. The elements slide off-screen
  * as an overlay while the player can already move.
  */
-public class Sonic1TitleCardManager implements TitleCardProvider {
+public class Sonic1TitleCardManager implements TitleCardProvider, com.openggf.game.internal.NativeTitleOnlyVBlankWait {
     private static final Logger LOGGER = Logger.getLogger(Sonic1TitleCardManager.class.getName());
 
     private static Sonic1TitleCardManager instance;
@@ -525,6 +525,13 @@ public class Sonic1TitleCardManager implements TitleCardProvider {
     @Override
     public boolean shouldRunLevelObjectsDuringLockedPhase() {
         return false;
+    }
+
+    @Override
+    public boolean ownsTitleOnlyVBlankWait() {
+        // Level_TtlCardLoop (sonic.asm:2814-2819) waits before ExecuteObjects.
+        // VBlank_Exit (sonic.asm:684-685) counts that service.
+        return state == Sonic1TitleCardState.SLIDE_IN || state == Sonic1TitleCardState.DISPLAY;
     }
 
     @Override
