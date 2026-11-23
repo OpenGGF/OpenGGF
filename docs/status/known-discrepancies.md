@@ -3288,6 +3288,9 @@ fade-in flag from there until the fade-in stepper's counter runs down
   the SFX block set during a fade-out of the jingle and omitting the global
   FM mode-reset write.
 
+The priority clear on a refused Sonic 1 request is tracked in
+[Sonic 1 does not enforce SFX request priority](known-bugs.md#sonic-1-does-not-enforce-sfx-request-priority).
+
 ---
 
 ## Knuckles in Sonic 2 Runs Tier Two With the Lock-On Dump and Tier One Without It
