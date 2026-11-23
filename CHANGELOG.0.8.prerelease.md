@@ -24,6 +24,9 @@ under the matching area heading; see the
   bits clear at the native callbacks, enemy art reloads on cleanup underflow,
   and spray advances the random stream only after a forward slot is available.
 
+- **Knuckles in Sonic 2 and Sonic 3 & Knuckles:** grabbing a wall initializes
+  Knuckles' animation duration and cursor to the cartridge values.
+
 - **Angel Island Act 2:** defeating the miniboss sends four flickering pieces
   of wreckage falling from the ship, as on the cartridge.
 
@@ -41,6 +44,12 @@ under the matching area heading; see the
 - **Placed rings in patched and hosted levels** use the underlying
   game's vertical placement and clipping rules. In Knuckles in Sonic 2, rings
   disappear as their centres cross the top of the screen, as on the cartridge.
+
+- **Sonic 2 Mystic Cave:** each rotating crate gets its final movement and
+  solid-object pass before its slot is freed. A crate set keeps only the
+  children that fit in the object slots available when it loads. In two-player
+  mode, crates that survive the unload of their parent's block keep their
+  original display orientation.
 
 - **Sonic 2 Chemical Plant Act 2:** the visible water surface and underwater
   palette split now bob at the same height where Sonic enters the water.
