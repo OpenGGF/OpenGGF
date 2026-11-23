@@ -125353,6 +125353,48 @@ report directories. All configured ROM and disc inputs were found.
   `Obj_AIZEndBossMusic` from the next dispatch of `Obj_AIZEndBossMain` aligns
   the native allocation pass. See the [AIZ2 matrix](../architecture/validation/levels/s3k-aiz2.md#native-aiz2-boss-head-art-2026-11-22).
 
+## 2026-11-22 — Knuckles AIZ glide dust and giant vine capture
+
+Branch `bugfix/ai-aiz-vine-angle-phase` in `.worktrees/aiz-vine-angle-phase`,
+based on `a3e55ad37a06b7364bd1050190ddffcda062d02c`. The original BK2
+was replayed with Java 25 and the verified locked-on ROM.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless \
+  LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl -Dsurefire.forkCount=1 \
+  -Dtrace.print.summary=true -Dopenggf.surefire.reports=target/u4b-green/surefire \
+  -Dopenggf.trace.reports=target/u4b-green/trace -Ptrace-replay-r7 \
+  '-Dtest=TestS3kKnucklesSuperEmeraldRunChain#firstGiantRingEntryAndReturnPreserveVineClock+aiz1ToDoomsdayAcrossEverySpecialAndBonusStage' test -B
+```
+
+Before, segment 2 first disagreed at row 446, player X `$2026/$201B`
+(ROM/engine). The incomplete segment recorded 37,726 errors before it lost
+level ownership at input 12011. With glide-slide dust active, the focused
+clock test passes and segment 2 compares past the native vine grab. Its
+first strict error is row 4194, camera X `$02A4/$02A2`. The incomplete
+segment records 142 camera X errors before production takes the Act 2 load
+at input 12780. Skipped tests and bootstrap errors were zero on both runs.
+Segment 0 and the two observed dynamic-art gaps pass in both runs.
+The campaign still fails on the early Act 2 transition and unconsumed
+hardware completions.
+
+At the first source glide landing, `Knux_Gliding_HitFloor` and its
+`loc_1693E` branch (sonic3k.asm:30776-30809) arm the fixed Dust object.
+`loc_18CB6` and `loc_18CE4` (sonic3k.asm:34115-34178) emit puffs every
+four iterations. The ROM's first five puffs occupy SSTs 7–11 until the
+next placement pass, changing the slots chosen by later objects that stay
+in the scene. At the ring touch on BK2 input 2421 the native ring is in
+SST 8 and allocates its flash in SST 9. Develop uses SSTs 10 and 7,
+deferring the flash's first dispatch by one iteration.
+
+`LevelLoop` (sonic3k.asm:7916-7953) reaches `ChangeRingFrame` after
+`SSEntryFlash_GoSS` writes special-stage mode. The ROM preserves the
+resulting vine word `$B100` until the returned object pass at input 8423.
+The extra engine iteration had advanced it to `$B280`. Restoring the
+glide dust's native cadence and slot lifetime also restores the last
+level iteration and the vine phase at return.
+
 ## 2026-11-23 AIZ2 end-boss camera scroll
 
 - Base `241932f546`, worktree `.worktrees/aiz2-boss-camera-scroll`. The
