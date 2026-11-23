@@ -49,7 +49,7 @@ import java.util.logging.Logger;
  *   <li>Revealed: animation + becomes hittable, spawns flame column</li>
  *   <li>Hover: sine oscillation (Swing_UpAndDown)</li>
  *   <li>Attack wait: countdown (fire window)</li>
- *   <li>Re-emerge: reuses routine 2 (submerge splash, reposition)</li>
+ *   <li>Submerge: reuses the emerge handler (submerge splash, reposition)</li>
  *   <li>Camera scroll: incrementally move camera min/max X</li>
  *   <li>Move + wait: travel to new random position</li>
  * </ol>
@@ -75,7 +75,7 @@ public class AizEndBossInstance extends AbstractBossInstance
     private static final int ROUTINE_REVEALED = 4;
     private static final int ROUTINE_HOVER = 6;
     private static final int ROUTINE_ATTACK_WAIT = 8;
-    private static final int ROUTINE_RE_EMERGE = 10;
+    private static final int ROUTINE_SUBMERGE = 10;
     private static final int ROUTINE_CAMERA_SCROLL = 12;
     private static final int ROUTINE_MOVE_WAIT = 14;
     private static final int ROUTINE_DEFEATED = 16;
@@ -406,7 +406,7 @@ public class AizEndBossInstance extends AbstractBossInstance
 
         switch (state.routine) {
             case ROUTINE_INIT -> updateInit();
-            case ROUTINE_EMERGE, ROUTINE_RE_EMERGE -> updateEmerge();
+            case ROUTINE_EMERGE, ROUTINE_SUBMERGE -> updateEmerge();
             case ROUTINE_REVEALED -> updateRevealed();
             case ROUTINE_HOVER -> updateHover();
             case ROUTINE_ATTACK_WAIT -> updateAttackWait();
@@ -521,13 +521,12 @@ public class AizEndBossInstance extends AbstractBossInstance
         // Right arm at offset -$14, -4 (subtype != 0)
         spawnArmChildren();
 
-        // Begin first emerge sequence (ROM: loc_692A0)
-        beginEmerge(false);
+        beginEmerge();
     }
 
-    /** ROM: loc_692A0 — Begin submerge/emerge cycle. */
-    private void beginEmerge(boolean isReEmerge) {
-        state.routine = isReEmerge ? ROUTINE_RE_EMERGE : ROUTINE_EMERGE;
+    /** ROM: AIZEndBoss_StartEmerge (sonic3k.asm:138149-138164). */
+    private void beginEmerge() {
+        state.routine = ROUTINE_EMERGE;
         services().playSfx(Sonic3kSfx.WATERFALL_SPLASH.id);
 
         // ROM: bset #3,$38 ; bset #6,$38 — child reveal + hidden
@@ -747,9 +746,9 @@ public class AizEndBossInstance extends AbstractBossInstance
         fireSignalActive = false;
     }
 
-    /** ROM: loc_693FA — Re-submerge (splash + move to new position). */
+    /** ROM: AIZEndBoss_StartSubmerge (sonic3k.asm:138258-138268). */
     private void beginReSubmerge() {
-        state.routine = ROUTINE_RE_EMERGE;
+        state.routine = ROUTINE_SUBMERGE;
         services().playSfx(Sonic3kSfx.WATERFALL_SPLASH.id);
 
         // Clear collision while submerged
@@ -815,11 +814,11 @@ public class AizEndBossInstance extends AbstractBossInstance
         }
     }
 
-    /** ROM: loc_69476 — Loop back to emerge for next attack cycle. */
+    /** ROM: AIZEndBoss_RestartEmerge (sonic3k.asm:138299-138302). */
     private void loopBackToEmerge() {
         state.xVel = 0;
         state.yVel = 0;
-        beginEmerge(true);
+        beginEmerge();
     }
 
     /** ROM: loc_693F0 — Generic wait state (countdown + hit check). */

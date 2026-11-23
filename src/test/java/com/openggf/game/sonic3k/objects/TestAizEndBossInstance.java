@@ -144,7 +144,9 @@ class TestAizEndBossInstance {
         assertEquals(0x497E, camera.getMaxX() & 0xFFFF);
 
         boss.update(frame++, null);
-        assertEquals(0xA, boss.getState().routine);
+        // AIZEndBoss_RestartEmerge (sonic3k.asm:138299-138302) branches to
+        // AIZEndBoss_StartEmerge (sonic3k.asm:138149-138150), which writes routine $2.
+        assertEquals(0x2, boss.getState().routine, "move wait restarts emerge");
         assertEquals(0x48E0, camera.getMinX() & 0xFFFF);
         assertEquals(0x4980, camera.getMaxX() & 0xFFFF);
 
