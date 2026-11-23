@@ -1104,14 +1104,15 @@ driver-owned, `3Ch`-frame timeout, saturating 0-11). Any other SFX request clear
 only `zSpindashActiveFlag` (`sd:2122`), not the index; the ladder restarts at 0
 once the counter has expired before the next rev.
 
-**Spindash release** (`BCh`) is a different SFX: its FM5 header transpose ships as
-`90h` (`BC - Spin Dash Release.asm:7-12`, FixMusicAndSFXDataBugs off) — the
-"fixed" value is `10h`. The shipped driver uses `90h` verbatim: index
-`= (note - 80h) + 90h`, an 8-bit wrap into a large positive offset with the §7
-page-wrap rule. Engine: `Sonic2SfxData.java:118-125` patches `90h → 10h`
-(documented divergence, KD "Spindash Release Transpose Fix"; CD REQ-04/DEF-05 —
-CD's note that `CHANGELOG.0.6.md:3778-3780` claims the opposite landed is
-consistent with what the engine source shows today: the patch is present).
+**Spindash release** (`BCh`) is a different SFX. With
+`FixMusicAndSFXDataBugs=0`, `Sound3C_SpindashRelease_Header` supplies `90h`
+for FM5 (`BC - Spin Dash Release.asm:1-13`). `zPlaySound` copies the byte
+(`s2.sounddriver.asm:2275-2295`). For `nE6=CDh`, `zFMSetFreq` doubles
+`CDh - 80h + 90h` in the 8-bit accumulator, yielding `BAh`
+(`s2.sounddriver.asm:874-879`). The optional `10h` header value gives the
+same offset. Entry 93 of `zFrequencies` gives block 7 and F-number `3FFh`
+(`s2.sounddriver.asm:1384-1409`). OpenGGF preserves `90h` in the parsed
+header and produces the same lookup through its seven-bit note index.
 Engine spindash ladder: **not modelled for S2** — `Sonic2AudioProfile` overrides no
 `adjustSfxPitch` (the default `GameAudioProfile.adjustSfxPitch` is identity; only
 `Sonic3kAudioProfile` overrides it). Divergence; adaptation per GA §1.2 #19

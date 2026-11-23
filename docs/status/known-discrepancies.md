@@ -101,68 +101,67 @@ no discrepancy entry was added or reclassified by the cutover.
 
 ## Table of Contents
 
-1. [Spindash Release Transpose Fix](#spindash-release-transpose-fix) — Other
-2. [Pattern ID Ranges](#pattern-id-ranges) — Other
-3. [HTZ Cloud Scroll Precision Fix](#htz-cloud-scroll-precision-fix) — Other
-4. [Multi-Sidekick Daisy Chain](#multi-sidekick-daisy-chain) — Engine feature
-5. [Sonic 1 Monitor Sidekick Guard](#sonic-1-monitor-sidekick-guard) — Engine feature
-6. [Bonus Stage Game Mode](#bonus-stage-game-mode) — Other
-7. [HCZ Conveyor Belt Rolling State Clear (Resolved)](#hcz-conveyor-belt-rolling-state-clear-resolved) — Other
-8. [S2 Music Offsets Resolved from Hardcoded REV01 Table](#s2-music-offsets-resolved-from-hardcoded-rev01-table) — Other
-9. [Right-Boundary Is Viewport-Independent (Level Edge)](#right-boundary-is-viewport-independent-level-edge) — Other
-10. [Object Despawn and Visibility Windows](#object-despawn-and-visibility-windows) — Engine feature
-11. [Legacy Pre-Level Intro Prefix Trace Bootstrap Contract](#legacy-pre-level-intro-prefix-trace-bootstrap-contract) — Other
-12. [S2 Tornado Ride-Start Trace Bootstrap Contract](#s2-tornado-ride-start-trace-bootstrap-contract) — Other
-13. [S2 CNZ Slot-Machine Trace Bootstrap Contract](#s2-cnz-slot-machine-trace-bootstrap-contract) — Other
-14. [S3K Production Lifecycle and Structural Trace Replay Scheduling](#s3k-production-lifecycle-and-structural-trace-replay-scheduling) — Other
-15. [Hardware-Timing Replay Input Exception](#hardware-timing-replay-input-exception) — Hardware limit
-16. [S3K Complete-Run Segment Start-Position Bootstrap Debt](#s3k-complete-run-segment-start-position-bootstrap-debt) — Other
-17. [Frame-0 Trace Bootstrap Snapshot Coverage Debt](#frame-0-trace-bootstrap-snapshot-coverage-debt) — Other
-18. [Sonic 1 Embedded Runtime Data Ratchet](#sonic-1-embedded-runtime-data-ratchet) — Other
-19. [Special-stage Live Rewind Scope](#special-stage-live-rewind-scope) — Engine feature
+1. [Pattern ID Ranges](#pattern-id-ranges) — Other
+2. [HTZ Cloud Scroll Precision Fix](#htz-cloud-scroll-precision-fix) — Other
+3. [Multi-Sidekick Daisy Chain](#multi-sidekick-daisy-chain) — Engine feature
+4. [Sonic 1 Monitor Sidekick Guard](#sonic-1-monitor-sidekick-guard) — Engine feature
+5. [Bonus Stage Game Mode](#bonus-stage-game-mode) — Other
+6. [HCZ Conveyor Belt Rolling State Clear (Resolved)](#hcz-conveyor-belt-rolling-state-clear-resolved) — Other
+7. [S2 Music Offsets Resolved from Hardcoded REV01 Table](#s2-music-offsets-resolved-from-hardcoded-rev01-table) — Other
+8. [Right-Boundary Is Viewport-Independent (Level Edge)](#right-boundary-is-viewport-independent-level-edge) — Other
+9. [Object Despawn and Visibility Windows](#object-despawn-and-visibility-windows) — Engine feature
+10. [Legacy Pre-Level Intro Prefix Trace Bootstrap Contract](#legacy-pre-level-intro-prefix-trace-bootstrap-contract) — Other
+11. [S2 Tornado Ride-Start Trace Bootstrap Contract](#s2-tornado-ride-start-trace-bootstrap-contract) — Other
+12. [S2 CNZ Slot-Machine Trace Bootstrap Contract](#s2-cnz-slot-machine-trace-bootstrap-contract) — Other
+13. [S3K Production Lifecycle and Structural Trace Replay Scheduling](#s3k-production-lifecycle-and-structural-trace-replay-scheduling) — Other
+14. [Hardware-Timing Replay Input Exception](#hardware-timing-replay-input-exception) — Hardware limit
+15. [S3K Complete-Run Segment Start-Position Bootstrap Debt](#s3k-complete-run-segment-start-position-bootstrap-debt) — Other
+16. [Frame-0 Trace Bootstrap Snapshot Coverage Debt](#frame-0-trace-bootstrap-snapshot-coverage-debt) — Other
+17. [Sonic 1 Embedded Runtime Data Ratchet](#sonic-1-embedded-runtime-data-ratchet) — Other
+18. [Special-stage Live Rewind Scope](#special-stage-live-rewind-scope) — Engine feature
    - [Sonic CD stage-load live rewind](#sonic-cd-stage-load-live-rewind) — Engine feature
-20. [Mod Music Uses PCM Presentation Rather Than Mega Drive SMPS](#mod-music-uses-pcm-presentation-rather-than-mega-drive-smps) — Engine feature
-21. [S2 Native Debug Placement Capability Boundary](#s2-native-debug-placement-capability-boundary) — Other
-22. [S2 Competition Split Screen, Native Lag and Rewind Scope](#s2-competition-split-screen-native-lag-and-rewind-scope) — Hardware limit
-23. [S2 replay limits at sub-frame load boundaries](#s2-replay-limits-at-sub-frame-load-boundaries) — Hardware limit
-24. [S2 CPZ Boss Truncates The Object Pass (`fixBugs = 0`)](#s2-cpz-boss-truncates-the-object-pass-fixbugs--0) — Other
-25. [S2 Interactive Special-Stage Hardware Lag Is Approximated](#s2-interactive-special-stage-hardware-lag-is-approximated) — Hardware limit
-26. [YM2612 Output Scale, Resting Level and DAC Presentation](#ym2612-output-scale-resting-level-and-dac-presentation) — Engine feature
-27. [PSG Tone-2-Linked Noise at Period 0/1 Follows the Reference Cores](#psg-tone-2-linked-noise-at-period-01-follows-the-reference-cores) — Other
-28. [FM:PSG Mix Balance Is Pre-Rewrite Parity, Not a Hardware Calibration](#fmpsg-mix-balance-is-pre-rewrite-parity-not-a-hardware-calibration) — Other
-29. [S2 Compressed-Music Load Timing Omits Sub-Frame Bus Contention](#s2-compressed-music-load-timing-omits-sub-frame-bus-contention) — Hardware limit
-30. [Fast FM Register-Level Timing and Output](#fast-fm-register-level-timing-and-output) — Engine feature
-31. [Knuckles in Sonic 2 Runs Tier Two With the Lock-On Dump and Tier One Without It](#knuckles-in-sonic-2-runs-tier-two-with-the-lock-on-dump-and-tier-one-without-it) — Other
-32. [Fixed Native Sprite Capacity in Wider Presentation](#fixed-native-sprite-capacity-in-wider-presentation) — Engine feature
-33. [S2 Sideways Platform Safe Admission and Owned-Child Retirement](#s2-sideways-platform-safe-admission-and-owned-child-retirement) — Other
-34. [Knuckles Climbs Sonic 1 Edge Walls](#knuckles-climbs-sonic-1-edge-walls) — Engine feature
-35. [Sonic CD Hardware Timings Not Modelled](#sonic-cd-hardware-timings-not-modelled) — Hardware limit
-36. [Hosted Competition checkpoint reload and monitor OFF (2026-11-07)](#hosted-competition-checkpoint-reload-and-monitor-off-2026-11-07) — Engine feature
-37. [Hosted S2 monitor draws and streamed Competition swaps (2026-11-07)](#hosted-s2-monitor-draws-and-streamed-competition-swaps-2026-11-07) — Engine feature
-38. [TAS hardware-level limits](#tas-hardware-level-limits) — Hardware limit
-39. [Bonus Stage Rewind Scope (Within-Stage Only)](#bonus-stage-rewind-scope-within-stage-only) — Engine feature
-40. [Sonic 1 credits demo trace replay divergences (post-frame-0-hydration removal)](#sonic-1-credits-demo-trace-replay-divergences-post-frame-0-hydration-removal) — Other
-41. [Sonic 1/2 Native PLC Readiness](#sonic-12-native-plc-readiness) — Other
-42. [Dynamic-Art Row Stamps Are Not Compared In Unrepresented, Unclosed Spans](#dynamic-art-row-stamps-are-not-compared-in-unrepresented-unclosed-spans) — Other
-43. [Batch-2 Rewind: Transient Cosmetic Children Not Rewound (Re-emit In-Frame)](#batch-2-rewind-transient-cosmetic-children-not-rewound-re-emit-in-frame) — Engine feature
-44. [Batch-3 Rewind: Transient Cosmetic Children Not Rewound (Re-emit In-Frame)](#batch-3-rewind-transient-cosmetic-children-not-rewound-re-emit-in-frame) — Engine feature
-45. [Batch-4 Rewind: Transient Cosmetic Children Not Rewound (Re-emit In-Frame)](#batch-4-rewind-transient-cosmetic-children-not-rewound-re-emit-in-frame) — Engine feature
-46. [Batch-5 Rewind: Transient Cosmetic Children Not Rewound (Re-emit In-Frame)](#batch-5-rewind-transient-cosmetic-children-not-rewound-re-emit-in-frame) — Engine feature
-47. [Batch-6 Rewind: Transient Cosmetic Children Not Rewound (Re-emit In-Frame)](#batch-6-rewind-transient-cosmetic-children-not-rewound-re-emit-in-frame) — Engine feature
-48. [Batch-7 Rewind: Transient Cosmetic Children Not Rewound (Re-emit In-Frame)](#batch-7-rewind-transient-cosmetic-children-not-rewound-re-emit-in-frame) — Engine feature
-49. [Batch-inner1 Rewind: Inner-Class Children](#batch-inner1-rewind-inner-class-children) — Engine feature
-50. [Construction-Spawned Boss/Object Children: Adopted In Place At Exact State, No Codec](#construction-spawned-bossobject-children-adopted-in-place-at-exact-state-no-codec) — Engine feature
-51. [Remaining V-int Clock Limits Outside Native Start Pause](#remaining-v-int-clock-limits-outside-native-start-pause) — Other
-52. [28. S2 Run-Gap Art Submission Rows Are Sub-Frame CPU Position](#28-s2-run-gap-art-submission-rows-are-sub-frame-cpu-position) — Hardware limit
-53. [Object-slot occupancy is not compared, and diverges from ROM in all three games](#object-slot-occupancy-is-not-compared-and-diverges-from-rom-in-all-three-games) — Other
-54. [30. S3K standalone special stages choose their stage from carried state (resolved 2026-11-03)](#30-s3k-standalone-special-stages-choose-their-stage-from-carried-state-resolved-2026-11-03) — Other
-55. [S2 tornado (ObjB2): recorded single-instance SST rows are exact](#s2-tornado-objb2-recorded-single-instance-sst-rows-are-exact) — Other
-56. [S3K Music DAC Byte Stream Partition (Oracle Comparison)](#s3k-music-dac-byte-stream-partition-oracle-comparison) — Hardware limit
-57. [S2 Music DAC Byte Stream Partition (Oracle Comparison)](#s2-music-dac-byte-stream-partition-oracle-comparison) — Hardware limit
-58. [S2 Headless Oracle Capture Starts Mid-Run (Driver Variables Outside The Music Load's Clear)](#s2-headless-oracle-capture-starts-mid-run-driver-variables-outside-the-music-loads-clear) — Other
-59. [Audio Harness Startup and Compatibility Fade Boundaries](#audio-harness-startup-and-compatibility-fade-boundaries) — Other
-60. [S1/S2 Extra-Life SFX Block: Residual Flag Edges](#s1s2-extra-life-sfx-block-residual-flag-edges) — Other
-61. [Sonic CD dust SFX reads the Sega CD boot ROM through the Z80 bank window](#sonic-cd-dust-sfx-reads-the-sega-cd-boot-rom-through-the-z80-bank-window) — Hardware limit
+19. [Mod Music Uses PCM Presentation Rather Than Mega Drive SMPS](#mod-music-uses-pcm-presentation-rather-than-mega-drive-smps) — Engine feature
+20. [S2 Native Debug Placement Capability Boundary](#s2-native-debug-placement-capability-boundary) — Other
+21. [S2 Competition Split Screen, Native Lag and Rewind Scope](#s2-competition-split-screen-native-lag-and-rewind-scope) — Hardware limit
+22. [S2 replay limits at sub-frame load boundaries](#s2-replay-limits-at-sub-frame-load-boundaries) — Hardware limit
+23. [S2 CPZ Boss Truncates The Object Pass (`fixBugs = 0`)](#s2-cpz-boss-truncates-the-object-pass-fixbugs--0) — Other
+24. [S2 Interactive Special-Stage Hardware Lag Is Approximated](#s2-interactive-special-stage-hardware-lag-is-approximated) — Hardware limit
+25. [YM2612 Output Scale, Resting Level and DAC Presentation](#ym2612-output-scale-resting-level-and-dac-presentation) — Engine feature
+26. [PSG Tone-2-Linked Noise at Period 0/1 Follows the Reference Cores](#psg-tone-2-linked-noise-at-period-01-follows-the-reference-cores) — Other
+27. [FM:PSG Mix Balance Is Pre-Rewrite Parity, Not a Hardware Calibration](#fmpsg-mix-balance-is-pre-rewrite-parity-not-a-hardware-calibration) — Other
+28. [S2 Compressed-Music Load Timing Omits Sub-Frame Bus Contention](#s2-compressed-music-load-timing-omits-sub-frame-bus-contention) — Hardware limit
+29. [Fast FM Register-Level Timing and Output](#fast-fm-register-level-timing-and-output) — Engine feature
+30. [Knuckles in Sonic 2 Runs Tier Two With the Lock-On Dump and Tier One Without It](#knuckles-in-sonic-2-runs-tier-two-with-the-lock-on-dump-and-tier-one-without-it) — Other
+31. [Fixed Native Sprite Capacity in Wider Presentation](#fixed-native-sprite-capacity-in-wider-presentation) — Engine feature
+32. [S2 Sideways Platform Safe Admission and Owned-Child Retirement](#s2-sideways-platform-safe-admission-and-owned-child-retirement) — Other
+33. [Knuckles Climbs Sonic 1 Edge Walls](#knuckles-climbs-sonic-1-edge-walls) — Engine feature
+34. [Sonic CD Hardware Timings Not Modelled](#sonic-cd-hardware-timings-not-modelled) — Hardware limit
+35. [Hosted Competition checkpoint reload and monitor OFF (2026-11-07)](#hosted-competition-checkpoint-reload-and-monitor-off-2026-11-07) — Engine feature
+36. [Hosted S2 monitor draws and streamed Competition swaps (2026-11-07)](#hosted-s2-monitor-draws-and-streamed-competition-swaps-2026-11-07) — Engine feature
+37. [TAS hardware-level limits](#tas-hardware-level-limits) — Hardware limit
+38. [Bonus Stage Rewind Scope (Within-Stage Only)](#bonus-stage-rewind-scope-within-stage-only) — Engine feature
+39. [Sonic 1 credits demo trace replay divergences (post-frame-0-hydration removal)](#sonic-1-credits-demo-trace-replay-divergences-post-frame-0-hydration-removal) — Other
+40. [Sonic 1/2 Native PLC Readiness](#sonic-12-native-plc-readiness) — Other
+41. [Dynamic-Art Row Stamps Are Not Compared In Unrepresented, Unclosed Spans](#dynamic-art-row-stamps-are-not-compared-in-unrepresented-unclosed-spans) — Other
+42. [Batch-2 Rewind: Transient Cosmetic Children Not Rewound (Re-emit In-Frame)](#batch-2-rewind-transient-cosmetic-children-not-rewound-re-emit-in-frame) — Engine feature
+43. [Batch-3 Rewind: Transient Cosmetic Children Not Rewound (Re-emit In-Frame)](#batch-3-rewind-transient-cosmetic-children-not-rewound-re-emit-in-frame) — Engine feature
+44. [Batch-4 Rewind: Transient Cosmetic Children Not Rewound (Re-emit In-Frame)](#batch-4-rewind-transient-cosmetic-children-not-rewound-re-emit-in-frame) — Engine feature
+45. [Batch-5 Rewind: Transient Cosmetic Children Not Rewound (Re-emit In-Frame)](#batch-5-rewind-transient-cosmetic-children-not-rewound-re-emit-in-frame) — Engine feature
+46. [Batch-6 Rewind: Transient Cosmetic Children Not Rewound (Re-emit In-Frame)](#batch-6-rewind-transient-cosmetic-children-not-rewound-re-emit-in-frame) — Engine feature
+47. [Batch-7 Rewind: Transient Cosmetic Children Not Rewound (Re-emit In-Frame)](#batch-7-rewind-transient-cosmetic-children-not-rewound-re-emit-in-frame) — Engine feature
+48. [Batch-inner1 Rewind: Inner-Class Children](#batch-inner1-rewind-inner-class-children) — Engine feature
+49. [Construction-Spawned Boss/Object Children: Adopted In Place At Exact State, No Codec](#construction-spawned-bossobject-children-adopted-in-place-at-exact-state-no-codec) — Engine feature
+50. [Remaining V-int Clock Limits Outside Native Start Pause](#remaining-v-int-clock-limits-outside-native-start-pause) — Other
+51. [28. S2 Run-Gap Art Submission Rows Are Sub-Frame CPU Position](#28-s2-run-gap-art-submission-rows-are-sub-frame-cpu-position) — Hardware limit
+52. [Object-slot occupancy is not compared, and diverges from ROM in all three games](#object-slot-occupancy-is-not-compared-and-diverges-from-rom-in-all-three-games) — Other
+53. [30. S3K standalone special stages choose their stage from carried state (resolved 2026-11-03)](#30-s3k-standalone-special-stages-choose-their-stage-from-carried-state-resolved-2026-11-03) — Other
+54. [S2 tornado (ObjB2): recorded single-instance SST rows are exact](#s2-tornado-objb2-recorded-single-instance-sst-rows-are-exact) — Other
+55. [S3K Music DAC Byte Stream Partition (Oracle Comparison)](#s3k-music-dac-byte-stream-partition-oracle-comparison) — Hardware limit
+56. [S2 Music DAC Byte Stream Partition (Oracle Comparison)](#s2-music-dac-byte-stream-partition-oracle-comparison) — Hardware limit
+57. [S2 Headless Oracle Capture Starts Mid-Run (Driver Variables Outside The Music Load's Clear)](#s2-headless-oracle-capture-starts-mid-run-driver-variables-outside-the-music-loads-clear) — Other
+58. [Audio Harness Startup and Compatibility Fade Boundaries](#audio-harness-startup-and-compatibility-fade-boundaries) — Other
+59. [S1/S2 Extra-Life SFX Block: Residual Flag Edges](#s1s2-extra-life-sfx-block-residual-flag-edges) — Other
+60. [Sonic CD dust SFX reads the Sega CD boot ROM through the Z80 bank window](#sonic-cd-dust-sfx-reads-the-sega-cd-boot-rom-through-the-z80-bank-window) — Hardware limit
 
 ---
 
@@ -453,46 +452,6 @@ it again. This closes the unwired live entry presentation, while its full CPU/
 device derivation and PAL duration remain unqualified. The recurring bucket
 approximation above is still present; this hold is not evidence of exact live
 hardware pacing. See the [current source and validation record](../architecture/research/2026-10-22-s2-chain-pacing.md).
-
----
-
-## Spindash Release Transpose Fix
-
-**Kind:** Other
-
-**Location:** `Sonic2SfxData.java`
-**ROM Reference:** `docs/s2disasm/sound/sfx/BC - Spin Dash Release.asm`
-
-### Original Implementation
-
-The ROM SFX header for Spindash Release (0xBC) uses an invalid transpose value for FM5:
-
-```asm
-    smpsHeaderSFXChannel cFM5, Sound3C_SpindashRelease_FM5, $90, $00
-```
-
-This value is called out in the disasm as a bug. Some SMPS drivers interpret `$90` as a large negative transpose, which can underflow the note calculation and skip the initial FM burst.
-
-### Our Implementation
-
-We patch only this invalid FM transpose value when parsing SFX headers:
-
-```java
-int transpose = (byte) data[pos + 4];
-if ((channelId & 0x80) == 0 && transpose == (byte) 0x90) {
-    transpose = 0x10;
-}
-```
-
-### Rationale
-
-1. **Targets a known bad data value** - The disasm explicitly documents the `$90` transpose as invalid for this SFX.
-2. **Preserves other SFX behavior** - We do not mask or normalize all transposes, only this exact FM case.
-3. **Improves fidelity** - Restores the missing initial FM burst for 0xBC that is audible in hardware/driver-correct playback.
-
-### Verification
-
-Spindash Release now includes the initial FM5 hit before the delayed PSG noise, matching expected playback.
 
 ---
 
