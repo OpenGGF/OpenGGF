@@ -3683,6 +3683,13 @@ public final class Sonic3kPlcArtRegistry {
     private static void addAizEntries(int actIndex,
                                       List<StandaloneArtEntry> standalone,
                                       List<LevelArtEntry> levelArt) {
+        if (actIndex == 1) {
+            // Obj_RobotnikHeadInit shares the HCZ2 head's resident art bank.
+            levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.EGG_ROBO_HEAD,
+                    Sonic3kConstants.MAP_EGG_ROBO_HEAD_ADDR,
+                    Sonic3kConstants.ART_TILE_ROBOTNIK_SHIP, 0, null, 4));
+        }
+
         // Badniks (both acts)
         standalone.add(new StandaloneArtEntry(
                 Sonic3kObjectArtKeys.BLOOMINATOR,
