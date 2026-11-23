@@ -211,6 +211,10 @@ records the wait/restore/init boundary, object restore/forward regression and
 bounded native-pair trace evidence. Wider route, donor, viewport and team
 obligations remain inherited.
 
+AIZ2 end-boss camera scroll (2026-11-23): the [Act 2 matrix](../architecture/validation/levels/s3k-aiz2.md#obligations)
+records the focused first-dispatch and exit checks and the Sonic+Tails route
+replay. Broader character, viewport, donor and team obligations remain open.
+
 ## Shared act-reload shield ownership
 
 The 2026-11-02 shield continuity regression
