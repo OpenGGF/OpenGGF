@@ -20,6 +20,9 @@ under the matching area heading; see the
   bits clear at the native callbacks, enemy art reloads on cleanup underflow,
   and spray advances the random stream only after a forward slot is available.
 
+- **Knuckles in Sonic 2 and Sonic 3 & Knuckles:** grabbing a wall initializes
+  Knuckles' animation duration and cursor to the cartridge values.
+
 - **Angel Island Act 2:** defeating the miniboss sends four flickering pieces
   of wreckage falling from the ship, as on the cartridge.
 
