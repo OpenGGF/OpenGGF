@@ -16,6 +16,8 @@ import com.openggf.game.timing.HardwareWorkHandle;
 import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectLifetimeOps;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
@@ -143,11 +145,9 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance implement
     private HardwareWorkHandle artHandle;
     private long artOrdinal = -1;
 
-    // ROM render_flags bit 7 as observed by the object: Render_Sprites sets or
-    // clears it after the object executed, so a routine testing it reacts one
-    // frame after the sprite left the draw cull. True until a phase that
-    // maintains it observes a non-drawn frame.
-    private boolean drawnLastFrame = true;
+    // Render_Sprites publishes bit 7 only for a wall queued through Draw_Sprite.
+    private boolean drawQueued;
+    private boolean drawnLastFrame;
 
     // Mapping frame for rendering
     private int mappingFrame;
@@ -183,42 +183,14 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance implement
     }
 
     /**
-     * {@code Obj_HCZWaterWall} owns every delete test it has; none of them is
-     * the shared {@code out_of_range} / {@code MarkObjGone} camera unload, so
-     * the manager must not apply one on the object's behalf.
-     *
-     * <p>Auditing the whole object body
-     * ({@code docs/skdisasm/sonic3k.asm:64876-65120}) there are exactly three
-     * deletes and no range macro at all:
-     * <ul>
-     *   <li>{@code HCZWaterWall_Horizontal_CheckPlayerY} (:64885-64890)
-     *       {@code Delete_Current_Sprite} when Player 1 {@code y_pos < $500} —
-     *       a player-Y test on the first dispatch, not a camera test;</li>
-     *   <li>{@code HCZWaterWall_Vertical_DeleteIfFar} (:65175-65176)
-     *       {@code Delete_Sprite_If_Not_In_Range}, reached only from
-     *       {@code HCZWaterWall_Vertical_WaitPlayer} — modelled in
-     *       {@link #updateVertProximityCheck};</li>
-     *   <li>{@code HCZGeyser_ReloadEnemyArtAndDelete} (:65042-65045), the end
-     *       of the 150-frame {@code HCZGeyser_CleanupDelay} countdown.</li>
-     * </ul>
-     * The three {@code Sprite_OnScreen_Test} tails (:64877, :64959, :65034) are
-     * draw calls, not unloads.
-     *
-     * <p>This matters beyond the object itself:
-     * {@code HCZGeyser_CleanupDelay} (:65036-65040) is a bare
-     * {@code subq.w #1,$30(a0)} with no range test, and its expiry runs
-     * {@code jsr (LoadEnemyArt).l} — re-queueing all four {@code PLCKosM_HCZ1}
-     * archives (:64394-64399) whose VRAM the geyser sheet overwrote. The
-     * horizontal geyser scrolls off screen long before that countdown ends, so
-     * a shared camera unload kills the object mid-countdown and the ROM's
-     * {@code Queue_Kos_Module} submissions never happen.
+     * The wall owns its range tails. Art waits, vertical rise and cleanup
+     * retain their slots regardless of the placement manager's unload window.
      */
     @Override
     public boolean usesCustomOutOfRangeCheck() {
         return true;
     }
 
-    /** @see #usesCustomOutOfRangeCheck() — the ROM object has no range unload. */
     @Override
     public boolean isCustomOutOfRange(int cameraX) {
         return false;
@@ -227,6 +199,7 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance implement
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (isDestroyed()) return;
+        drawQueued = false;
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
 
         if (isHorizontal) {
@@ -245,8 +218,8 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance implement
             case Y_GUARD -> updateHorzYGuard(player);
             case ART_LOAD -> updateHorzArtLoad(player);
             case WAIT_PROXIMITY -> updateHorzWaitProximity(player);
-            case SPRAY_ANIM -> updateHorzSprayAnim(player);
-            case CLEANUP -> updateHorzCleanup();
+            case SPRAY_ANIM -> updateHorzSprayAnim();
+            case CLEANUP -> updateCleanup();
         }
     }
 
@@ -295,10 +268,7 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance implement
     private void updateHorzWaitProximity(AbstractPlayableSprite player) {
         int playerX = player.getCentreX();
         if (playerX - HORZ_PLAYER_TRIGGER_OFFSET < x) {
-            // Not yet in range - check if off-screen for deletion
-            if (!isOnScreenX(0x100)) {
-                setDestroyed(true);
-            }
+            drawIfInRange();
             return;
         }
 
@@ -323,6 +293,9 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance implement
         }
 
         horzPhase = HorzPhase.SPRAY_ANIM;
+        // HCZWaterWall_Horizontal_DrawWaiting also follows the debris loop
+        // (sonic3k.asm:64921-64959).
+        drawIfInRange();
     }
 
     /**
@@ -332,7 +305,7 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance implement
      * countdown once render_flags bit 7 is clear — i.e. when the wall has
      * scrolled off screen, not when the timer expires.
      */
-    private void updateHorzSprayAnim(AbstractPlayableSprite player) {
+    private void updateHorzSprayAnim() {
         // ROM: HCZWaterWall_Horizontal_Erupt — while $30 is non-zero the geyser
         // moves right 8px/frame; the move stopping does NOT end the phase.
         if (timer > 0) {
@@ -340,17 +313,14 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance implement
             x += HORZ_SPRAY_MOVE_PX;
         }
 
-        // ROM: HCZWaterWall_Horizontal_SpawnSpray runs every frame the phase is
-        // active (also consuming Random_Number), not only while moving.
+        // HCZWaterWall_Horizontal_SpawnSpray attempts a spray on every active pass.
         spawnHorzSprayChild();
 
-        // ROM: HCZWaterWall_Horizontal_UpdateChildSprites tests render_flags
-        // bit 7 — cleanup begins the frame after Render_Sprites' cull
-        // (width_pixels=$80 / height_pixels=$20, sonic3k.asm loc_1AEA2) stops
-        // drawing the sprite, not on the move timer.
-        boolean wasDrawn = drawnLastFrame;
-        drawnLastFrame = isWithinRenderSpriteBounds(0x80, 0x20);
-        if (!wasDrawn) {
+        // HCZWaterWall_Horizontal_UpdateChildSprites uses the prior draw bit
+        // to select DrawActive or CleanupDelay (sonic3k.asm:65016-65034).
+        if (drawnLastFrame) {
+            drawIfInRange();
+        } else {
             // ROM: clr.b (Palette_cycle_counters+$00).w
             HCZWaterRushObjectInstance.HCZWaterRushPaletteCycleGate.setActive(false);
             timer = HORZ_CLEANUP_TIMER;
@@ -359,16 +329,13 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance implement
     }
 
     /**
-     * Phase 6: Cleanup.
-     * ROM: HCZGeyser_CleanupDelay - Counts down timer, then
-     * HCZGeyser_ReloadEnemyArtAndDelete calls LoadEnemyArt (re-queueing the
-     * act's PLCKosM enemy archives the geyser sheet overwrote) and deletes.
+     * HCZGeyser_CleanupDelay holds at zero. On underflow, reload the
+     * act's enemy archives and delete the wall (sonic3k.asm:65036-65045).
      */
-    private void updateHorzCleanup() {
-        timer--;
-        if (timer <= 0) {
+    private void updateCleanup() {
+        if (--timer < 0) {
             reloadEnemyArt();
-            setDestroyed(true);
+            ObjectLifetimeOps.deleteNoRespawn(this);
         }
     }
 
@@ -388,7 +355,14 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance implement
      * 75% main art, 25% bubble art.
      */
     private void spawnHorzSprayChild() {
-        // ROM loc_3004A: one random number supplies both the x offset
+        ObjectManager manager = services().objectManager();
+        int slot = reserveSpraySlot(manager);
+        if (slot < 0) {
+            return;
+        }
+
+        // HCZWaterWall_Horizontal_SpawnSpray draws one word after allocation
+        // (sonic3k.asm:64986-65014). It supplies both the x offset
         // (((rand & $F) << 3) - $50) and the animation ((rand >> 4) & 3); the
         // bubble art is used exactly when that animation is 0.
         int random = services().rng().nextWord();
@@ -400,7 +374,7 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance implement
         WaterWallSprayChild spray = new WaterWallSprayChild(
                 sprayX, sprayY, 0x400, 0,
                 useBubbleArt, animId, artKey, 0);
-        spawnDynamicObject(spray);
+        spawnReservedSpray(spray, slot);
     }
 
     // =====================================================================
@@ -414,7 +388,7 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance implement
             case RISE -> updateVertRise(player);
             case ERUPTION -> updateVertEruption(player);
             case FALLING -> updateVertFalling();
-            case CLEANUP -> updateVertCleanup();
+            case CLEANUP -> updateCleanup();
         }
     }
 
@@ -443,10 +417,9 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance implement
             return;
         }
 
-        // Not in range - check for deletion
-        if (!isOnScreenX(0x100)) {
-            setDestroyed(true);
-        }
+        // HCZWaterWall_Vertical_DeleteIfFar reaches Delete_Sprite_If_Not_In_Range
+        // (sonic3k.asm:65141-65154), the same test without a Draw_Sprite call.
+        deleteIfOutsideCoarseWindow();
     }
 
     /**
@@ -604,8 +577,8 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance implement
         ySub = motionState.ySub;
         yVel = motionState.yVel;
 
-        // Spawn spray pairs each frame
         spawnVertSprayPair();
+        drawIfInRange();
     }
 
     /** ROM loc_3041A release: x_vel=0, y_vel=-$C00, jumping=0. */
@@ -627,6 +600,9 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance implement
         if (!drawnLastFrame) {
             // ROM: clr.b (Palette_cycle_counters+$00).w
             HCZWaterRushObjectInstance.HCZWaterRushPaletteCycleGate.setActive(false);
+            // HCZWaterWall_Vertical_Fall clears the placement bit while the
+            // current SST begins its cleanup wait (sonic3k.asm:65327-65345).
+            ObjectLifetimeOps.releaseSpawnForRespawn(services().objectManager(), this, getSpawn());
             timer = VERT_CLEANUP_TIMER;
             vertPhase = VertPhase.CLEANUP;
             return;
@@ -637,21 +613,8 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance implement
         y = motionState.y;
         ySub = motionState.ySub;
         yVel = motionState.yVel;
-        drawnLastFrame = isWithinRenderSpriteBounds(0x20, 0x60);
-    }
-
-    /**
-     * Phase 7: Cleanup.
-     * ROM: loc_30106 - Counts down timer, then deletes.
-     */
-    private void updateVertCleanup() {
-        timer--;
-        if (timer <= 0) {
-            // ROM: the vertical fall path also ends in HCZGeyser_CleanupDelay ->
-            // HCZGeyser_ReloadEnemyArtAndDelete (LoadEnemyArt + delete).
-            reloadEnemyArt();
-            setDestroyed(true);
-        }
+        // HCZWaterWall_Vertical_FallMove (sonic3k.asm:65348-65351).
+        drawIfInRange();
     }
 
     /**
@@ -659,9 +622,14 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance implement
      * ROM: sub_304DA - Random positioning, 75% main art / 25% bubble art.
      */
     private void spawnVertSprayPair() {
-        // ROM loc_30470 draws ONE random number and derives both children from
-        // it: the pair is mirrored about the column (x +/- $10) and shares the
-        // same animation, which is also what selects the bubble art.
+        ObjectManager manager = services().objectManager();
+        int rightSlot = reserveSpraySlot(manager);
+        if (rightSlot < 0) {
+            return;
+        }
+
+        // HCZWaterWall_Vertical_MoveAndSpray (sonic3k.asm:65273-65301)
+        // draws one word after the first allocation. Both sides share it.
         int random = services().rng().nextWord();
         int sprayXVel = (random & 0xF) << 6;
         int animId = (random >> 4) & 3;
@@ -673,12 +641,26 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance implement
         WaterWallSprayChild right = new WaterWallSprayChild(
                 x + VERT_SPRAY_X_OFFSET, sprayY, sprayXVel, VERT_SPRAY_Y_VEL,
                 useBubbleArt, animId, artKey, 0);
-        spawnDynamicObject(right);
+        spawnReservedSpray(right, rightSlot);
 
+        int leftSlot = reserveSpraySlot(manager);
+        if (leftSlot < 0) {
+            return;
+        }
         WaterWallSprayChild left = new WaterWallSprayChild(
                 x - VERT_SPRAY_X_OFFSET, sprayY, -sprayXVel, VERT_SPRAY_Y_VEL,
                 useBubbleArt, animId, artKey, 0);
-        spawnDynamicObject(left);
+        spawnReservedSpray(left, leftSlot);
+    }
+
+    private int reserveSpraySlot(ObjectManager manager) {
+        return manager == null ? -1
+                : ObjectLifetimeOps.reserveFindNextFreeChildSlot(manager, getSlotIndex());
+    }
+
+    private void spawnReservedSpray(WaterWallSprayChild spray, int slot) {
+        spray.setSlotIndex(slot);
+        spawnDynamicObject(spray);
     }
 
     // ===== Player Control Helpers =====
@@ -751,29 +733,31 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance implement
 
     // ===== Rendering =====
 
-    /**
-     * ROM parity: only the routines that actually reach {@code Draw_Sprite}
-     * put the geyser in the sprite table.
-     * <p>
-     * Horizontal: {@code loc_2FF04}/{@code loc_2FF2A} (Y guard, art queue) and
-     * {@code loc_30106} (cleanup countdown) end in {@code rts} or
-     * {@code Delete_Current_Sprite}; {@code loc_2FF7C} and {@code loc_3003C}
-     * both end at {@code Sprite_OnScreen_Test} -&gt; {@code Draw_Sprite}.
-     * <p>
-     * Vertical: {@code loc_30294} ends at {@code Delete_Sprite_If_Not_In_Range}
-     * and {@code loc_302E6} / {@code loc_30338} end in {@code rts}, so the
-     * column stays invisible while it waits, loads art and rises. It first
-     * appears at {@code loc_3041A} (eruption) and stays visible through
-     * {@code loc_3052A} (falling), then vanishes again for the cleanup
-     * countdown (sonic3k.asm:65216-65230, 65278-65286).
-     */
-    private boolean isDrawnThisPhase() {
-        if (isHorizontal) {
-            return horzPhase == HorzPhase.WAIT_PROXIMITY
-                    || horzPhase == HorzPhase.SPRAY_ANIM;
+    private void drawIfInRange() {
+        drawQueued = !deleteIfOutsideCoarseWindow();
+    }
+
+    private boolean deleteIfOutsideCoarseWindow() {
+        // Sprite_OnScreen_Test / Delete_Sprite_If_Not_In_Range clear bit 7
+        // before deleting (sonic3k.asm:37302-37318,37341-37357).
+        // Load_Sprites latches the live pre-scroll camera before Process_Sprites
+        // (loc_1B7F2, sonic3k.asm:37590-37598,7925-7929). The object pass
+        // camera supplies that sample rather than the shaken render copy.
+        // The bound is $280 at 320 px and grows with the simulation viewport.
+        if (isCoarseXOutOfRange(x, cameraLeft(), coarseXCullRange())) {
+            ObjectLifetimeOps.destroyRespawnableOffscreen(this);
+            return true;
         }
-        return vertPhase == VertPhase.ERUPTION
-                || vertPhase == VertPhase.FALLING;
+        return false;
+    }
+
+    @Override
+    public void refreshPostCameraRenderState() {
+        if (drawQueued) {
+            drawnLastFrame = isHorizontal
+                    ? isWithinRenderSpriteBounds(0x80, 0x20)
+                    : isWithinRenderSpriteBounds(0x20, 0x60);
+        }
     }
 
     @Override
@@ -784,7 +768,7 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance implement
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
-        if (!isDrawnThisPhase()) {
+        if (!drawQueued) {
             return;
         }
         PatternSpriteRenderer renderer = getRenderer(artKey);
@@ -996,13 +980,11 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance implement
         }
 
         private void updateSinking() {
-            // ROM loc_301A8: keep moving with reduced gravity until the sprite
-            // leaves the screen; there is no short post-splash lifetime.
             SubpixelMotion.moveSprite(motion, SLOW_GRAVITY);
 
-            // ROM loc_301A8 ends in Sprite_OnScreen_Test.  The debris writes
-            // width/height=$18, so use the sprite render bounds rather than
-            // the manager's wider point-margin unload band.
+            // HCZGeyserDebris_MoveInWater (sonic3k.asm:65088-65093) checks
+            // the previous render bit before Draw_Sprite. Java currently
+            // tests the current sprite bounds after movement.
             if (!isWithinRenderSpriteBounds(0x18, 0x18)) {
                 setDestroyed(true);
             }
@@ -1114,10 +1096,9 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance implement
                 surfaceFrameCount = 0;
             }
 
-            // Off-screen check
-            // ROM loc_301DE ends in Sprite_OnScreen_Test with width/height=$18.
-            // A broad point margin keeps the vertical geyser's two-per-frame
-            // spray allocation alive long after the ROM has recycled it.
+            // HCZGeyserSpray_Animate (sonic3k.asm:65110-65115) checks
+            // the previous render bit before animation and Draw_Sprite.
+            // Java currently tests the current sprite bounds after movement.
             if (!isWithinRenderSpriteBounds(0x18, 0x18)) {
                 setDestroyed(true);
             }
