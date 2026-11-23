@@ -90,6 +90,17 @@ frame 556. The R12A native full-act movie passes the placed door at
 regions at trace rows 3165 and 3166. The placement masks select no active door
 in R11B. Passage and frame-by-frame picture evidence cover R12A.
 
+S2 Mystic Cave rotating crates ($6A): the
+[slot and rewind checks](../../src/test/java/com/openggf/game/sonic2/objects/TestS2MczRotPformsGraphRewind.java)
+cover each crate's final movement at both native-width horizontal unload
+boundaries and the 528-pixel right-hand range limit. Exhausted, partial and full
+admission exercise graph restoration, one-shot initialization and camera-return
+respawn. The [two-player block-delete test](../../src/test/java/com/openggf/level/objects/TestNativeCompetitionOccupiedFullDelete.java)
+covers the display flags of both children when they spill into the next block
+and the x-flipped parent's block unloads. Natural slot exhaustion, player
+contact on the retirement frame and
+broader character, donor and viewport coverage remain open.
+
 S2 Competition monitor outcomes (2026-11-09): eight cold-title EHZ1 fixtures
 exercise P1 breaking for all eight outcomes and hold the award for six seconds.
 The [bounded matrix](../architecture/plans/2026-11-07-s2-competition-parity.md#question-mark-monitor-outcomes-2026-11-09)
@@ -199,6 +210,10 @@ MGZ Bubbles activation (2026-11-03): the
 records the wait/restore/init boundary, object restore/forward regression and
 bounded native-pair trace evidence. Wider route, donor, viewport and team
 obligations remain inherited.
+
+AIZ2 end-boss camera scroll (2026-11-23): the [Act 2 matrix](../architecture/validation/levels/s3k-aiz2.md#obligations)
+records the focused first-dispatch and exit checks and the Sonic+Tails route
+replay. Broader character, viewport, donor and team obligations remain open.
 
 ## Shared act-reload shield ownership
 
@@ -428,14 +443,9 @@ tracks title-owner admission, retained versus automatic claims, physical VInt
 publication and two-way registered-world replay after fly-by deletion. The
 [backpressure followup](../architecture/validation/levels/s3k-ssz-act1.md#incidental-producers-and-armed-title-backpressure--2026-10-21)
 adds both incidental producers at physical-full, logical-full and last-slot
-boundaries, including retained lease and complete registered-world replay.
-Shared scratch and DMA source lifetime, native presentation, intermediate
-viewport, donor and team coverage, and cold-route obligations remain open.
-
-The [SSZ EggRobo fly-by component](../architecture/validation/levels/s3k-ssz-act1.md#eggrobo-fly-by-scaled-art)
-checks scale-dependent ROM pixels, mapping geometry, flips, the unscaled
-fighter and reconstructed rewind. Native framebuffer comparison and shared
-DMA publication remain open.
+boundaries, including retained lease and complete registered-world replay. This
+does not close scaled pixels, shared scratch/DMA source lifetime, native
+presentation, intermediate viewport/donor/team breadth or cold-route obligations.
 
 Slot retained-plane restore (2026-10-17): the [R7G qualification](../architecture/validation/levels/s3k-bonus-stage-transitions.md#r7g-actual-captured-plane-inlet-and-bounded-repair-qualification--2026-10-17)
 adds a genuine matched old-red/green with the actual stored parallax checkpoint,

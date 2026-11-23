@@ -750,9 +750,16 @@ public class ObjectManager {
             int touchFrameCounter, boolean enableTouchResponses,
             boolean inlineSolidResolution, boolean solidPostMovement,
             Runnable afterExecBeforePlacement) {
+        vblaCounter++;
+        executeObjectPass(cameraX, player, sidekicks, touchFrameCounter, enableTouchResponses,
+                inlineSolidResolution, solidPostMovement, afterExecBeforePlacement);
+    }
+
+    void executeObjectPass(int cameraX, PlayableEntity player, List<? extends PlayableEntity> sidekicks,
+            int touchFrameCounter, boolean enableTouchResponses,
+            boolean inlineSolidResolution, boolean solidPostMovement, Runnable afterExecBeforePlacement) {
         List<? extends PlayableEntity> activeSidekicks = sidekicks != null ? sidekicks : List.of();
         frameCounter++;
-        vblaCounter++;
         beginNativeSpriteFrame();
         // Inline-physics path: snapshotTouchResponseState() ran earlier this
         // frame and already refreshed the cached camera bounds. The second

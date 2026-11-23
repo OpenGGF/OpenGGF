@@ -258,7 +258,7 @@ class TestS3kAizEndBossGraphRewind {
         assertEquals(occupiedA.getSlotIndex() + 1, occupiedB.getSlotIndex(),
                 "test fixture must occupy contiguous forward slots");
 
-        invokeBooleanArg(boss, "beginEmerge", false);
+        invokeNoArg(boss, "beginEmerge");
         AizEndBossWaterfallChild emerge = only(objectManager, AizEndBossWaterfallChild.class);
         assertEquals(0, emerge.getSpawn().subtype(),
                 "ChildObjDat_69D2E starts subtype 0 for the first emerge");
@@ -368,7 +368,7 @@ class TestS3kAizEndBossGraphRewind {
         ObjectManager objectManager = harness.objectManager();
         AizEndBossInstance boss = only(objectManager, AizEndBossInstance.class);
 
-        invokeBooleanArg(boss, "beginEmerge", true);
+        invokeNoArg(boss, "loopBackToEmerge");
         AizEndBossWaterfallChild child = only(objectManager, AizEndBossWaterfallChild.class);
         assertEquals(0, child.getSpawn().subtype(), "re-emerge also uses ChildObjDat subtype 0");
         int x = child.getX();
@@ -787,16 +787,6 @@ class TestS3kAizEndBossGraphRewind {
             Method method = target.getClass().getDeclaredMethod(methodName);
             method.setAccessible(true);
             method.invoke(target);
-        } catch (ReflectiveOperationException e) {
-            throw new AssertionError("Unable to invoke " + methodName + " on " + target.getClass(), e);
-        }
-    }
-
-    private static void invokeBooleanArg(Object target, String methodName, boolean value) {
-        try {
-            Method method = target.getClass().getDeclaredMethod(methodName, boolean.class);
-            method.setAccessible(true);
-            method.invoke(target, value);
         } catch (ReflectiveOperationException e) {
             throw new AssertionError("Unable to invoke " + methodName + " on " + target.getClass(), e);
         }
