@@ -1,10 +1,17 @@
 package com.openggf.tests.trace.runs;
 
+import com.openggf.game.GameServices;
+import com.openggf.game.sonic3k.AizVineAngleProvider;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;
+import java.util.HashMap;
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Chain integration test for the committed
@@ -37,6 +44,30 @@ class TestS3kKnucklesSuperEmeraldRunChain extends AbstractRunChainTest {
     @Test
     void aiz1ThroughGiantRingIntoFirstSpecialStageRow() throws Exception {
         assertChainReplayThroughSegmentRow(RUN_DIR, 1, 1);
+    }
+
+    @Test
+    void firstGiantRingEntryAndReturnPreserveVineClock() throws Exception {
+        Map<Integer, Integer> angleAfterInput = new HashMap<>();
+        afterProductionStep = () -> {
+            if (productionMovieRow != 2463 && productionMovieRow != 2464 && productionMovieRow != 8423) {
+                return;
+            }
+            var level = GameServices.level();
+            if (level.getAnimatedPatternManager() instanceof AizVineAngleProvider vineAngle) {
+                angleAfterInput.put(productionMovieRow, vineAngle.aizVineAngleWord());
+            }
+        };
+        assertChainReplayThroughSegmentRow(RUN_DIR, 2, 1);
+
+        // LevelLoop reaches ChangeRingFrame after SSEntryFlash_GoSS changes the
+        // mode (sonic3k.asm:7926-7953,128442-128463). The ROM leaves the
+        // word intact in the special-stage input and through its return load
+        // (SpecialStage and loc_60DE, sonic3k.asm:10642,7654).
+        assertAll(
+                () -> assertEquals(0xB100, angleAfterInput.get(2463), "entry after ChangeRingFrame"),
+                () -> assertEquals(0xB100, angleAfterInput.get(2464), "first special-stage input"),
+                () -> assertEquals(0xB280, angleAfterInput.get(8423), "first returned ChangeRingFrame"));
     }
 
     /**

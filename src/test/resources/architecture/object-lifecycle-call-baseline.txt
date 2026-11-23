@@ -496,7 +496,6 @@ com/openggf/level/objects/EggPrisonAnimalInstance.java#EggPrisonAnimalInstance#u
 com/openggf/level/objects/EggPrisonAnimalInstance.java#EggPrisonAnimalInstance#updatePrisonWait(int)->setDestroyed(true)	1	Legacy raw deletion; migration requires native slot, remember-state and respawn parity.
 com/openggf/level/objects/EggPrisonAnimalInstance.java#EggPrisonAnimalInstance#updateWalk()->setDestroyed(true)	1	Legacy raw deletion; migration requires native slot, remember-state and respawn parity.
 com/openggf/level/objects/InvincibilityStarsObjectInstance.java#InvincibilityStarsObjectInstance#destroy()->setDestroyed(true)	1	Legacy raw deletion; migration requires native slot, remember-state and respawn parity.
-com/openggf/level/objects/SkidDustObjectInstance.java#SkidDustObjectInstance#spawn(PlayableEntity)->addDynamicObject	1	Player-runtime bootstrap outside an object callback; preserve manager-owned dynamic dust allocation.
 com/openggf/level/objects/boss/AbstractBossChild.java#AbstractBossChild#isDestroyed()->setDestroyed(true)	1	Legacy raw deletion; migration requires native slot, remember-state and respawn parity.
 com/openggf/level/objects/boss/AbstractBossInstance.java#AbstractBossInstance#spawnDefeatExplosion()->addDynamicObject	1	Shared boss defeat explosion allocation retains its existing dynamic slot and update cadence.
 com/openggf/level/objects/boss/BossExplosionObjectInstance.java#BossExplosionObjectInstance#update(int,PlayableEntity)->setDestroyed(true)	1	Legacy raw deletion; migration requires native slot, remember-state and respawn parity.
