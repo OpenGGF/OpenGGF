@@ -69,6 +69,10 @@ under the matching area heading; see the
   which gloop sounds to queue, matching the cartridge at screen edges and
   on the first launch. The sound driver handles alternating playback.
 
+- **Sonic 2 SEGA and title screens:** the original music-stop request goes
+  through the sound mailbox, so an admitted stop waits for a compressed song
+  load to finish before it takes effect.
+
 - **The Doomsday Zone:** the second boss phase preserves the ship's fractional
   vertical position, Hyper Sonic's after-image uses the original history slots,
   and his palette keeps cycling through the white exit fade.
