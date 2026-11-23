@@ -13,6 +13,7 @@ import com.openggf.game.GameModule;
 import com.openggf.game.ObjectArtProvider;
 import com.openggf.game.PhysicsProvider;
 import com.openggf.game.WaterDataProvider;
+import com.openggf.game.internal.GlideLandingDustPolicy;
 import com.openggf.game.patch.DelegatingGameModule;
 import com.openggf.game.patch.LogicalRom;
 import com.openggf.game.patch.PatchContext;
@@ -43,6 +44,10 @@ import java.util.logging.Logger;
 final class Kis2GameModule extends DelegatingGameModule implements com.openggf.game.internal.NativeRewindPublicationOwner {
 
     private static final Logger LOGGER = Logger.getLogger(Kis2GameModule.class.getName());
+
+    // loc_315780 (docs/kis2disasm/s2.asm:38234-38246) arms Sonic_Dust when air_left >= 12.
+    // Obj08_SkidDust (docs/kis2disasm/s2.asm:45930-45957) allocates even underwater.
+    private static final GlideLandingDustPolicy GLIDE_LANDING_DUST = new GlideLandingDustPolicy(true);
 
     /** Which lock-on windows the module reads. */
     enum Fidelity {
@@ -206,6 +211,7 @@ final class Kis2GameModule extends DelegatingGameModule implements com.openggf.g
 
     @Override
     public <T> T getGameService(Class<T> type) {
+        if (type == GlideLandingDustPolicy.class) return type.cast(GLIDE_LANDING_DUST);
         // This inherited scalar rule must not probe the optional chip or initialize special stages.
         if (type == com.openggf.game.internal.BadnikChainPolicy.class) return base().getGameService(type);
         if (type == com.openggf.game.resources.PlayerArtTransferPlan.class) {

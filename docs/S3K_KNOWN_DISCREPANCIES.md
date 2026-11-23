@@ -1882,12 +1882,13 @@ the ordering; 170 focused cases, including real-ROM registered restore/replay,
 pass without skips. The [bounded audit](architecture/audits/trace/2026-10-29-knuckles-return-animation.md)
 records the independent old-reds and exact source/commands.
 
-The chain remains red: first error 446 X `$2026/$201B`, 37,726 incomplete-segment
-errors and the same production-ownership rejection at BK2 cursor 12011. Native
-vine capture is the next physical symptom; its causal phase/position/admission
-owner is not yet proven. Unmatched direct #35/module #24 timing completions remain
-strict failures. This local animation correction certifies no terminal tail,
-fixture endpoint, act-wide route or pixel parity.
+The first returned giant-vine grab now matches the ROM at row 446. Knuckles'
+glide-slide dust puffs restore the object slot order, so the earlier giant-ring
+flash starts on the touch frame and the vine word has the native phase after
+the special stage. The remaining chain frontier is camera X at row 4194
+(`$02A4` ROM, `$02A2` engine). Segment 2 records 142 camera-X errors before
+it loses production ownership at BK2 cursor 12780. Recorded hardware completion
+edges also remain unconsumed. See the [vine and campaign evidence](status/trace-frontier-log.md#2026-11-22--knuckles-aiz-glide-dust-and-giant-vine-capture).
 
 
 The [shared-owner qualification follow-up](architecture/audits/trace/2026-10-29-knuckles-return-animation.md#shared-owner-qualification-follow-up-2026-10-29)

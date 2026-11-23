@@ -17,6 +17,11 @@ under the matching area heading; see the
   Sonic & Knuckles and locked-on Sonic 3 & Knuckles repeat on services 6, 11
   and 16, then every five.
 
+- **Knuckles' glide-slide dust:** Sonic 3 & Knuckles and Knuckles in Sonic 2 now
+  emit dust when Knuckles slides out of a glide. In Angel Island, the dust slots
+  let the first giant-ring flash start on the correct frame, so Knuckles can
+  grab the ride vine after the special stage.
+
 - **Sonic 1 and Sonic 2 title cards** now count each serviced wait toward the
   V-int clock used by objects, preserving the timing phase carried into the act.
 
@@ -67,6 +72,10 @@ under the matching area heading; see the
 - **Sonic 2 Chemical Plant:** blue balls use the previous sprite pass to decide
   which gloop sounds to queue, matching the cartridge at screen edges and
   on the first launch. The sound driver handles alternating playback.
+
+- **Sonic 2 SEGA and title screens:** the original music-stop request goes
+  through the sound mailbox, so an admitted stop waits for a compressed song
+  load to finish before it takes effect.
 
 - **The Doomsday Zone:** the second boss phase preserves the ship's fractional
   vertical position, Hyper Sonic's after-image uses the original history slots,
