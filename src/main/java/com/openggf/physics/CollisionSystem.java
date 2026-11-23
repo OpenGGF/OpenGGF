@@ -654,6 +654,7 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
         }
 
         updateGroundMode(sprite);
+        GroundMode probeMode = sprite.getGroundMode();
         publishTerrainAddressFraction(sprite);
 
         SensorResult[] groundResult = terrainProbes(sprite, sprite.getGroundSensors(), "ground");
@@ -661,11 +662,6 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
         SensorResult rightSensor = groundResult[1];
 
         SensorResult selectedResult = selectSensorWithAngle(sprite, rightSensor, leftSensor);
-        // Refresh ground mode after the angle has been updated by selectSensorWithAngle.
-        // The initial updateGroundMode (line 292) uses the PREVIOUS frame's end-angle for
-        // sensor configuration. This second call uses the NEW angle from terrain probes,
-        // matching the ROM's end-of-frame ground mode calculation.
-        updateGroundMode(sprite);
 
         if (selectedResult == null) {
             // FindFloor initializes both angle outputs to the flagged empty-tile
@@ -686,25 +682,30 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
         }
 
         byte distance = selectedResult.distance();
+        // Player_WalkVertR (sonic3k.asm:18920-18975) keeps its original dispatch
+        // after Player_Angle writes the selected angle. Original Sonic 3's
+        // Player_WalkVertR (s3.asm:16982-17037) does the same.
+        if (distance < 0 && probeMode == GroundMode.RIGHTWALL) {
+            if (distance < -14) {
+                if (preservesRightWallPenetrationOnDeepProbe(sprite)) {
+                    sprite.setAngle((byte) 0xC0);
+                    sprite.setRightWallPenetrationTimer(3);
+                    return;
+                }
+            } else if (sprite.getRightWallPenetrationTimer() > 0) {
+                sprite.setRightWallPenetrationTimer(sprite.getRightWallPenetrationTimer() - 1);
+                sprite.setAngle((byte) 0xC0);
+                return;
+            }
+        }
+
+        // Publish the selected mode only once the counter can no longer override it.
+        updateGroundMode(sprite);
         if (distance == 0) {
             return;
         }
 
         if (distance < 0) {
-            if (sprite.getGroundMode() == GroundMode.RIGHTWALL) {
-                if (distance < -14) {
-                    if (preservesRightWallPenetrationOnDeepProbe(sprite)) {
-                        sprite.setAngle((byte) 0xC0);
-                        sprite.setRightWallPenetrationTimer(3);
-                    }
-                    return;
-                }
-                if (sprite.getRightWallPenetrationTimer() > 0) {
-                    sprite.setRightWallPenetrationTimer(sprite.getRightWallPenetrationTimer() - 1);
-                    sprite.setAngle((byte) 0xC0);
-                    return;
-                }
-            }
             if (distance >= -14) {
                 moveForSensorResult(sprite, selectedResult);
             }
