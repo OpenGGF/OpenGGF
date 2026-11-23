@@ -178,10 +178,10 @@ class TestMgzEndBossArtScaler {
         output[64] = null;
         byte[] source = new byte[0x1000];
         Arrays.fill(source, (byte) 0xFF);
-        MgzEndBossArtScaler.scale(source, 4, ROM_FRAME_FOUR, output);
+        S3kPackedArtScaler.scale(source, 4, ROM_FRAME_FOUR, output);
         assertEquals(15, output[63].getPixel(7, 7));
 
-        MgzEndBossArtScaler.scale(source, 0x7C, ROM_FRAME_MAX, output);
+        S3kPackedArtScaler.scale(source, 0x7C, ROM_FRAME_MAX, output);
         // Modified$80 has zero full blocks. Byte indices0,16,32,48 are read;
         // advance from48 to64 clears that fourth (low) sample in sub_24802.
         assertPackedRow(output[0], 0, 0xFF, 0xF0, 0, 0);
@@ -243,7 +243,7 @@ class TestMgzEndBossArtScaler {
     private static Pattern[] scale(byte[] source, int step, SpriteMappingFrame frame, int count) {
         Pattern[] output = new Pattern[count];
         Arrays.setAll(output, ignored -> new Pattern());
-        MgzEndBossArtScaler.scale(source, step, frame, output);
+        S3kPackedArtScaler.scale(source, step, frame, output);
         return output;
     }
 
