@@ -1,5 +1,12 @@
 # Level test coverage backlog
 
+S2 native debug placement uses focused EHZ1 controller, placement and
+rewind checks, a CPZ1 tube entry control and the chip-backed EHZ1 sound-test
+launch for Knuckles. The ROM catalogue test checks all list aliases and
+row ordering. The [remaining debug placement coverage](known-bugs.md#s2-debug-placement-object-and-gate-coverage)
+includes unimplemented factories, additional viewport/team combinations,
+slot exhaustion and native recordings.
+
 HCZ1 badnik score allocation (2026-11-22): the [HCZ1 matrix](../architecture/validation/levels/s3k-hcz1-sonic.md#badnik-score-popup-dispatch-2026-11-22)
 records the native slot and movement on rows 417–418. Manager tests cover
 both dispatch orders, a full object table and recreation between passes.

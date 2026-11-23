@@ -740,6 +740,9 @@ public enum SonicConfiguration {
 	 * lossless chdman {@code .chd} (YAML {@code roms.soniccd}, listed with the other games' ROM keys). Blank means the disc is
 	 * found by its header in {@code roms.directory}. Appended to preserve existing enum ordinals.
 	 */
-	SONIC_CD_DISC;
+	SONIC_CD_DISC,
+
+	/** Selects native placement or engine free-fly for supported games. */
+	LEVEL_DEBUG_MODE;
 
 }

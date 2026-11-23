@@ -1,5 +1,6 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.game.LevelDebugPlacement;
 import com.openggf.level.objects.ObjectVisualFacing;
 
 import com.openggf.camera.Camera;
@@ -654,6 +655,8 @@ public class TornadoObjectInstance extends AbstractObjectInstance
         renderThisFrame = true;
         solidActive = true;
         highPriority = player.isHighPriority();
+        // ObjB2_Main_SCZ (s2.asm:78931-78933) takes its animation-only path.
+        if (LevelDebugPlacement.isActive(services().gameState())) return;
 
         // ObjB2_Move_with_player reads Sonic's live Status_OnObj bit before
         // the inline SolidObject call refreshes this object's own standing bit

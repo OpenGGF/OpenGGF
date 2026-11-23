@@ -60,6 +60,11 @@ is appended to preserve existing enum ordinals. The mutable `0.7` signature pin
 candidate description include it; descriptor candidate `0.7.0` and the empty
 published-baseline set are unchanged.
 
+The appended `SonicConfiguration.LEVEL_DEBUG_MODE` key sets
+`debug.flags.levelDebugMode`. The `rom` default selects cartridge item
+placement when the game module supplies it. The `engine` value selects free-fly.
+This addition retains candidate 0.7.0 and existing enum ordinals.
+
 Stageplay uses the engine's unpublished 0.7.0 candidate. Canonical documents
 (version seven) and screenplays (version six) accept only their current shape;
 there is no published Stageplay format to migrate. Every set uses the same native

@@ -1682,7 +1682,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     }
 
     public void applyPlaneSwitchers(AbstractPlayableSprite player) {
-        if (player == null) {
+        if (player == null || com.openggf.game.LevelDebugPlacement.isActiveFor(player)) {
             return;
         }
         if (objectManager != null) {

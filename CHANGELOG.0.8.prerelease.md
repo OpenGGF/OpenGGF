@@ -7,6 +7,11 @@ under the matching area heading; see the
 
 ## Gameplay and presentation
 
+- **Sonic 2 and Knuckles in Sonic 2** now recognize their level-select debug
+  cheats and use the cartridge object lists for B/A/C placement. Rewind
+  restores the cursor and its placed objects. Select Engine free-fly in
+  Settings to use the debug movement shortcut.
+
 - **Sonic 1 special-stage results** now advance the object V-int clock on each
   native finish, tally and exit wait, preserving its phase through the level
   reload. Results setup and straight-line return code add no tick.

@@ -1,5 +1,6 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.game.LevelDebugPlacement;
 import com.openggf.level.objects.ObjectVisualFacing;
 
 import com.openggf.debug.DebugRenderContext;
@@ -290,7 +291,7 @@ public class GrabObjectInstance extends AbstractObjectInstance implements Rewind
 
         // Check debug placement mode
         // ROM: tst.w (Debug_placement_mode).w / bne.s ObjD9_CheckCharacter_End
-        if (player.isDebugMode()) {
+        if (player.isDebugMode() || LevelDebugPlacement.isActive(services().gameState())) {
             return;  // In debug mode
         }
 

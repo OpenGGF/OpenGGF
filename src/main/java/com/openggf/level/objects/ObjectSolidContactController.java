@@ -1018,7 +1018,7 @@ public final class ObjectSolidContactController {
             contactState.clearRidingObject(player);
             return null;
         }
-        if (player.isDebugMode()) {
+        if (com.openggf.game.LevelDebugPlacement.bypassesInteractions(player)) {
             contactState.clearRidingObject(player);
             return null;
         }

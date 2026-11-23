@@ -53,6 +53,10 @@ public final class RingManagerInternalAccess {
     }
 
     /** Capture the placement index used by collection, including equal legacy records. */
+    public static boolean awardDynamicStageRing(RingManager rings, AbstractPlayableSprite player) {
+        return rings.awardDynamicStageRing(player);
+    }
+
     public static int spawnIndexForRewind(RingManager rings, RingSpawn spawn) {
         return rings.spawnIndexForRewind(spawn);
     }

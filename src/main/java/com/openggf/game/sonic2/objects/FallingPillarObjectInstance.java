@@ -1,5 +1,6 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.game.LevelDebugPlacement;
 import com.openggf.level.objects.ObjectVisualFacing;
 
 import com.openggf.game.PlayableEntity;
@@ -181,7 +182,8 @@ public class FallingPillarObjectInstance extends AbstractObjectInstance
     }
 
     private void updateWaitForTrigger(AbstractPlayableSprite player) {
-        if (player == null) {
+        // loc_2595E (s2.asm:51729-51731) returns before testing either player's position.
+        if (player == null || LevelDebugPlacement.isActive(services().gameState())) {
             return;
         }
         int dx = x - player.getCentreX();

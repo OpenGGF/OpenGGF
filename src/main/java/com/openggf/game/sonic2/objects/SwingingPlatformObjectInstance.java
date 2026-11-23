@@ -1,5 +1,6 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.game.LevelDebugPlacement;
 import com.openggf.game.sonic2.competition.view.Sonic2NativeDisplaySource;
 import com.openggf.game.sonic2.competition.view.Sonic2CompetitionDisplayInputs.*;
 
@@ -483,9 +484,9 @@ public class SwingingPlatformObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        // Check if player is nearby
+        // loc_FF6E (s2.asm:22690-22695) suppresses new proximity triggers.
         boolean playerNearby = false;
-        if (player != null) {
+        if (player != null && !LevelDebugPlacement.isActive(services().gameState())) {
             int playerX = player.getCentreX();
             int dx = playerX - baseX;
             if (Math.abs(dx) < 0x20) {

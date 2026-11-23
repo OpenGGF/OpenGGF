@@ -3145,7 +3145,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         private boolean applyDeath(DamageCause cause) {
-                if (dead) {
+                if (dead || com.openggf.game.LevelDebugPlacement.isActiveFor(this)) {
                         return false;
                 }
                 setDead(true);

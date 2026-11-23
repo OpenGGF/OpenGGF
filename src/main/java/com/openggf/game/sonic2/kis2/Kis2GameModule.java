@@ -14,6 +14,8 @@ import com.openggf.game.ObjectArtProvider;
 import com.openggf.game.PhysicsProvider;
 import com.openggf.game.WaterDataProvider;
 import com.openggf.game.internal.GlideLandingDustPolicy;
+import com.openggf.game.internal.LevelDebugPlacementProvider;
+import com.openggf.game.sonic2.debug.Sonic2LevelDebugPlacement;
 import com.openggf.game.patch.DelegatingGameModule;
 import com.openggf.game.patch.LogicalRom;
 import com.openggf.game.patch.PatchContext;
@@ -58,6 +60,7 @@ final class Kis2GameModule extends DelegatingGameModule implements com.openggf.g
     }
 
     private final PatchContext context;
+    private LevelDebugPlacementProvider levelDebugPlacement;
     private PhysicsProvider physicsProvider;
     private ObjectArtProvider objectArtProvider;
     private RomByteReader sk;
@@ -211,6 +214,12 @@ final class Kis2GameModule extends DelegatingGameModule implements com.openggf.g
 
     @Override
     public <T> T getGameService(Class<T> type) {
+        if (type == LevelDebugPlacementProvider.class && kis2Image().isPresent()) {
+            if (levelDebugPlacement == null) {
+                levelDebugPlacement = new Sonic2LevelDebugPlacement(kis2Image().orElseThrow());
+            }
+            return type.cast(levelDebugPlacement);
+        }
         if (type == GlideLandingDustPolicy.class) return type.cast(GLIDE_LANDING_DUST);
         // This inherited scalar rule must not probe the optional chip or initialize special stages.
         if (type == com.openggf.game.internal.BadnikChainPolicy.class) return base().getGameService(type);

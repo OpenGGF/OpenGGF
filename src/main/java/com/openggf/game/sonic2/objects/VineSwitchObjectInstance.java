@@ -1,5 +1,6 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.game.LevelDebugPlacement;
 import com.openggf.level.objects.ObjectVisualFacing;
 
 import com.openggf.debug.DebugRenderContext;
@@ -263,7 +264,7 @@ public class VineSwitchObjectInstance extends AbstractObjectInstance implements 
      * @param isPlayer2 true if this is player 2
      */
     private void handleGrabbedPlayer(AbstractPlayableSprite player, boolean isPlayer2) {
-        if (player.getDead() || player.isHurt() || player.isDebugMode()) {
+        if (player.getDead() || player.isHurt() || player.isDebugMode() || LevelDebugPlacement.isActive(services().gameState())) {
             releasePlayer(player, isPlayer2);
             return;
         }

@@ -150,6 +150,10 @@ final class EngineSettingLabels {
         if (key == SonicConfiguration.CAPTURE_FPS) return raw + " FPS";
         if (key == SonicConfiguration.CAPTURE_SCALE) return raw + "x";
         if (ConfigCatalog.meta(key).type() != ConfigType.ENUM) return raw;
+        if (key == SonicConfiguration.LEVEL_DEBUG_MODE) {
+            return UiMessages.text("engine".equals(raw)
+                    ? "settings.value.engine_free_fly" : "settings.value.rom_placement");
+        }
         if (key == SonicConfiguration.DISPLAY_HUD_ANCHOR) {
             return switch (raw) {
                 case "DEFAULT" -> UiMessages.text("settings.value.native_centred");

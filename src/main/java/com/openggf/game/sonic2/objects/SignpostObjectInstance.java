@@ -1,5 +1,6 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.game.LevelDebugPlacement;
 import com.openggf.game.sonic2.competition.view.Sonic2NativeDisplaySource;
 import com.openggf.game.sonic2.competition.view.Sonic2CompetitionDisplayInputs.*;
 
@@ -184,7 +185,10 @@ public class SignpostObjectInstance extends BoxObjectInstance implements Sonic2N
             case STATE_SPINNING -> updateSpinning(vIntRunCount);
             // ExecuteObjects runs after the player slots, so this update already
             // sees Sonic's post-movement state.
-            case STATE_WALK_OFF -> updateWalkOff(player);
+            case STATE_WALK_OFF -> {
+                // Obj0D_Main_State3 (s2.asm:34815-34817) defers the walk-off while placing.
+                if (!LevelDebugPlacement.isActive(services().gameState())) updateWalkOff(player);
+            }
             case STATE_DONE -> {
                 // ROM: Obj0D_Main_StateNull. The signpost remains visible but
                 // no longer drives control or spawns follow-up objects.

@@ -353,6 +353,55 @@ class TestKis2HeadlessBoot {
     }
 
     @Test
+    void lockOnSoundTestCheatEnablesBAndUsesTheChipMonitorRow() throws Exception {
+        var s2 = RomTestUtils.ensureSonic2RomAvailable();
+        assumeTrue(Kis2TestRoms.lockOnDumpOrNull() != null, "KiS2 lock-on dump required");
+        try (var rom = new Rom()) {
+            assertTrue(rom.open(s2.getAbsolutePath()));
+            var config = SonicConfigurationService.createStandalone(tempDir);
+            config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "knuckles");
+            config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "");
+            config.setConfigValue(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, false);
+            var engine = catalogueBackedContext(config);
+            EngineServices.configure(engine);
+            engine.roms().setRom(rom);
+            var context = HeadlessGameBoot.openResolvedSessionForBoot(engine, new Sonic2GameModule());
+            GameplaySessionFactory.attachManagers(context, engine);
+            engine.graphics().initHeadless();
+            var module = SessionManager.requireCurrentGameModule();
+            var team = GameplayTeamBootstrap.registerActiveTeam(module, GameServices.sprites(), config);
+            var player = assertInstanceOf(Knuckles.class, team.mainSprite());
+            GameServices.camera().setFocusedSprite(player);
+            var level = GameServices.level();
+            level.loadZoneAndAct(0, 0);
+            var select = assertInstanceOf(Kis2LevelSelect.class, module.getLevelSelectProvider());
+
+            com.openggf.game.sonic2.debug.TestSonic2NativeDebugPlacement.enableFromSoundTest(
+                    select, 1, 9, 9, 4, 1, 0, 1, 8);
+            var input = new com.openggf.control.InputHandler();
+            updateDebugPad(input, com.openggf.control.InputActionMasks.ACTION_B);
+            var placement = com.openggf.game.LevelDebugPlacement.of(GameServices.gameState());
+            assertTrue(placement.isActive());
+
+            updateDebugPad(input, com.openggf.control.InputActionMasks.ACTION_A);
+            updateDebugPad(input, com.openggf.control.InputActionMasks.ACTION_C);
+            assertTrue(level.getObjectManager().getActiveObjects().stream().anyMatch(object -> {
+                var spawn = object.getSpawn();
+                return spawn.objectId() == 0x26 && spawn.subtype() == 4
+                        && spawn.x() == player.getCentreX() && spawn.y() == player.getCentreY();
+            }));
+            assertEquals(2, com.openggf.game.LevelDebugPlacement.provider(level).entries(level).size());
+        }
+    }
+
+    private static void updateDebugPad(com.openggf.control.InputHandler input, int action) {
+        input.setLogicalOverride(com.openggf.control.LogicalInputSnapshot.ofPlayers(
+                com.openggf.control.PlayerInputState.of(0, 0, action, action, false, false),
+                com.openggf.control.PlayerInputState.neutral()));
+        GameServices.sprites().update(input);
+    }
+
+    @Test
     void repeatedFullLoadsRecreateTheActualChipPlcPublication() throws Exception {
         var s2 = RomTestUtils.ensureSonic2RomAvailable();
         assertNotNull(s2);

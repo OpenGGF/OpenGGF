@@ -22,6 +22,24 @@ Entries should include:
 
 ---
 
+## S2 debug placement object and gate coverage
+
+- **Location** — Sonic 2 placement catalogue and runtime object factories.
+- **Symptom** — The OOZ Ball ($46), Rotating Rings ($73) and Bomb Prize ($D3)
+  remain selectable, but C cannot admit them into the live object table.
+  Some rows have no preview from the resident object sheets. The focused
+  tests cover the primary actor, not every object that samples the global
+  placement flag or the retail two-player dispatcher.
+- **ROM behavior** — `Debug_SpawnObject` (s2.asm:88759-88786) admits these IDs
+  through the ordinary slot allocator. Obj46 (s2.asm:50647-50848) owns a ball
+  and pressure spring. Obj73 (s2.asm:55464-55625) claims a rotating chain of
+  solid pieces. ObjD3 (s2.asm:58832-58886) normally depends on parent-owned
+  prize state, which raw debug allocation omits. The game also reads
+  `Debug_placement_mode` from individual object, results and scroll routines.
+- **Removal condition** — Provide bounded lifetimes and previews for these
+  rows, exercise each active-placement gate and qualify the cases with native
+  input, including allocation exhaustion and two-player entry.
+
 ## S2 game-over host fade stops music before the destination owns audio
 
 - **Location** — `GameLoopGameOverExit.startToBlack`.

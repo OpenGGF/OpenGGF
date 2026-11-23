@@ -228,6 +228,7 @@ public class LevelSelectManager implements LevelSelectProvider {
 
         // Handle start/jump to select
         if (nativeMenuKeyPressed(input, jumpKey) || input.logical().menuAccept()) {
+            if (!isSoundTestSelected()) onLevelSelected(input.logical().player1());
             handleSelect();
         }
 
@@ -286,6 +287,7 @@ public class LevelSelectManager implements LevelSelectProvider {
 
     protected boolean usesControllerSoundTestButtons() { return false; }
     protected void onSoundTestPlayed(int value) { }
+    protected void onLevelSelected(com.openggf.control.PlayerInputState input) { }
 
     private void handleSelect() {
         int zoneAct = LevelSelectConstants.LEVEL_ORDER[selectedIndex];

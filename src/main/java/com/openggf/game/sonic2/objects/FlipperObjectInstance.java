@@ -1,5 +1,6 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.game.LevelDebugPlacement;
 import static com.openggf.game.sonic2.Sonic2RomAddresses.address;
 
 import com.openggf.level.objects.ObjectVisualFacing;
@@ -283,7 +284,8 @@ public class FlipperObjectInstance extends BoxObjectInstance
      * so a single jump from EITHER standing player launches BOTH.
      */
     private void processVerticalLaunch(List<PlayableEntity> participants) {
-        if (!verticalLaunchTriggered) {
+        // Obj86_UpwardsType (s2.asm:58448-58450) leaves launch pending while placing.
+        if (!verticalLaunchTriggered || LevelDebugPlacement.isActive(services().gameState())) {
             return;
         }
         verticalLaunchTriggered = false;

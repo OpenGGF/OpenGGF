@@ -1,5 +1,6 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.game.LevelDebugPlacement;
 import com.openggf.level.objects.ObjectVisualFacing;
 
 import com.openggf.configuration.SonicConfiguration;
@@ -151,6 +152,11 @@ public class LavaMarkerObjectInstance extends AbstractObjectInstance
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
+        // Obj31_Main (s2.asm:46542-46547) shows the marker during placement.
+        if (LevelDebugPlacement.isActive(services().gameState())) {
+            com.openggf.game.sonic2.Sonic2NativeDebugGeometry.draw(services(),
+                    0x20E74, subtypeIndex, spawn.x(), spawn.y(), false, false);
+        }
         // Invisible during normal gameplay - only render in debug mode
         var config = services().configuration();
         if (!config.getBoolean(SonicConfiguration.DEBUG_VIEW_ENABLED)) {
