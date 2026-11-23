@@ -197,9 +197,12 @@ public class SkidDustObjectInstance extends AbstractObjectInstance implements Sp
             return null;
         }
         return services.spriteManager().getSprite(ownerCode) instanceof AbstractPlayableSprite owner
-                && owner.getSpindashDustController() != null
-                ? owner.getSpindashDustController().getRenderer()
-                : null;
+                ? playerDustRenderer(owner) : null;
+    }
+
+    private static PlayerSpriteRenderer playerDustRenderer(AbstractPlayableSprite player) {
+        var dustManager = player.getSpindashDustController();
+        return dustManager == null ? null : dustManager.getRenderer();
     }
 
     /**
@@ -210,22 +213,15 @@ public class SkidDustObjectInstance extends AbstractObjectInstance implements Sp
      * @return A new skid dust object, or null if renderer is not available
      */
     public static SkidDustObjectInstance create(PlayableEntity player) {
-        return create(player, false);
-    }
-
-    private static SkidDustObjectInstance create(PlayableEntity player, boolean glideSlidePuff) {
-        // Get the dust/splash renderer from the player's dust manager
-        // Escape hatch: getSpindashDustController() returns sprites.managers type,
-        // not exposed on PlayableEntity to avoid game -> sprites.managers dependency.
         if (!(player instanceof AbstractPlayableSprite aps)) {
             return null;
         }
-        var dustManager = aps.getSpindashDustController();
-        PlayerSpriteRenderer renderer = dustManager == null ? null : dustManager.getRenderer();
-        if (renderer == null && !glideSlidePuff) {
-            return null;
-        }
+        PlayerSpriteRenderer renderer = playerDustRenderer(aps);
+        return renderer == null ? null : create(aps, renderer, false);
+    }
 
+    private static SkidDustObjectInstance create(AbstractPlayableSprite player, PlayerSpriteRenderer renderer,
+                                                  boolean glideSlidePuff) {
         // ROM: Skid dust position is player center + 0x10 to Y
         // See s2.asm Obj08_SkidDust: move.w y_pos(a2),y_pos(a1) / addi.w #$10,y_pos(a1).
         // Tails then subtracts 4 because his sprite is shorter.
@@ -238,7 +234,7 @@ public class SkidDustObjectInstance extends AbstractObjectInstance implements Sp
         // four-pixel adjustment. The spawned puff stays at that world position;
         // later gravity changes must not move an already detached effect.
         ObjectServices owner = constructionContext();
-        var gameState = owner != null ? owner.gameState() : aps.currentGameStateOrNull();
+        var gameState = owner != null ? owner.gameState() : player.currentGameStateOrNull();
         if (gameState != null && gameState.isReverseGravityActive()) {
             dustOffset = -dustOffset;
         }
@@ -247,7 +243,7 @@ public class SkidDustObjectInstance extends AbstractObjectInstance implements Sp
         // puff. Its first Animate_Sprite runs on the next dynamic object pass.
         boolean facingLeft = !glideSlidePuff && player.getDirection() == Direction.LEFT;
         SkidDustObjectInstance dust = new SkidDustObjectInstance(dustX, dustY, renderer, facingLeft);
-        dust.ownerCode = aps.getCode();
+        dust.ownerCode = player.getCode();
         dust.glideSlidePuff = glideSlidePuff;
         if (glideSlidePuff) {
             dust.animTimer = 0;
@@ -271,18 +267,21 @@ public class SkidDustObjectInstance extends AbstractObjectInstance implements Sp
     }
 
     private static void spawn(PlayableEntity player, boolean glideSlidePuff) {
-        if (ObjectConstructionContext.isProbeConstruction()) return;
+        if (ObjectConstructionContext.isProbeConstruction() || !(player instanceof AbstractPlayableSprite sprite)) {
+            return;
+        }
+        PlayerSpriteRenderer renderer = playerDustRenderer(sprite);
+        if (renderer == null && !glideSlidePuff) {
+            return;
+        }
         ObjectServices owner = constructionContext();
         // Ordinary fixed player dust runs outside an object callback. Its
         // existing player-runtime level is the explicit bootstrap in that path.
-        var level = owner == null && player instanceof AbstractPlayableSprite sprite
-                ? sprite.currentLevelManagerIfAvailable() : null;
+        var level = owner == null ? sprite.currentLevelManagerIfAvailable() : null;
         ObjectManager manager = owner != null ? owner.objectManager()
                 : level != null ? level.getObjectManager() : null;
         if (manager != null) {
-            SkidDustObjectInstance dust = ObjectConstructionContext.construct(
-                    manager.getObjectServices(), () -> create(player, glideSlidePuff));
-            if (dust != null) manager.addDynamicObject(dust);
+            manager.createDynamicObject(() -> create(sprite, renderer, glideSlidePuff));
         }
     }
 
