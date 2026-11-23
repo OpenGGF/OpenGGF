@@ -7,6 +7,9 @@ under the matching area heading; see the
 
 ## Gameplay and presentation
 
+- **Sonic 1 and Sonic 2 title cards** now count each serviced wait toward the
+  V-int clock used by objects, preserving the timing phase carried into the act.
+
 - **Sonic 3 & Knuckles badnik score popups** now rise from the freed animal's
   first object pass, matching the cartridge's timing and slot allocation.
 
