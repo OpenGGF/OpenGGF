@@ -3095,10 +3095,13 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// S3K Knuckles_Gliding_HitWall uses the same x_pos+2 alias.
 		sprite.setSubpixelRaw(sprite.getCentreX() & 0xFFFF, sprite.getYSubpixelRaw());
 
-		// Wall climb animation — mapping frame 0xB7
-		// The native grab changes mapping_frame, leaving anim(a0) intact.
+		// KiS2 Knuckles_BeginClimb.success (lines 38307-38311 of s2.asm at c336fede)
+		// and S3K Knuckles_Gliding_HitWall.success (sonic3k.asm:30859-30863)
+		// publish direct mapping and script state without changing anim(a0).
 		sprite.setAbilityMappingFrameControl(true);
 		sprite.setMappingFrame(0xB7);
+		sprite.setAnimationTick(0x7F);
+		sprite.setAnimationFrameIndex(0);
 	}
 
 	// Wall climb boundary checking is now integrated into updateWallClimb()
