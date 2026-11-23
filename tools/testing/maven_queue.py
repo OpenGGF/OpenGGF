@@ -9,6 +9,7 @@ Test lifecycles add verified original ROM properties the caller did not set
 (see rom_inputs.py); build, custom-goal and alternate-POM commands run as written.
 The OS owns execution and waiting leases. Short estimated runs are preferred;
 five-minute aging protects larger waiters. Origin: 2026-09-14 testing queue cleanup.
+On Linux, an available agent-run admits this CLI before any repository lock.
 `maven_queue.py --stats` summarises recorded wait/hold/memory telemetry.
 `maven_queue.py --dashboard [--port 8766]` serves a read-only local browser view.
 """
@@ -16,9 +17,11 @@ from contextlib import contextmanager, ExitStack, nullcontext
 import errno
 import math
 import os
+import re
 from pathlib import Path
 import signal
 import shlex
+import shutil
 import subprocess
 import sys
 import time
@@ -389,9 +392,46 @@ def maven_slot(root, *, exclusive=False, estimate=900, kind='maven', reservation
                 pass  # Telemetry never changes the job's result.
 
 
+def machine_lease_fd():
+    """Recognize the agent-run slot inherited by this process on Linux."""
+    if sys.platform == 'linux':
+        try:
+            fd = int(os.environ['AGENT_RUN_LEASE_FD'])
+            slot = Path(os.readlink(f'/proc/self/fd/{fd}'))
+        except (KeyError, ValueError, OSError):
+            return None
+        state = Path(os.environ.get('XDG_STATE_HOME') or Path.home() / '.local/state')
+        if slot.parent == (state / 'agent-run').resolve() and re.fullmatch(r'slot-[0-9]+\.lock', slot.name):
+            return fd
+    return None
+
+
+def enter_machine_queue(root, estimate, *, lean):
+    """Re-enter this CLI under a machine lease, before any repository lock."""
+    if sys.platform != 'linux' or machine_lease_fd() is not None:
+        return
+    runner = shutil.which('agent-run')
+    if not runner:
+        return
+    from maven_resources import GIB, policy
+
+    config = policy(root)
+    memory = math.ceil(config['memoryGiB'] * GIB)
+    cores = math.ceil(config['cpuCores'])
+    if lean:
+        # One lease covers both normal-memory preparation and lean execution.
+        memory, cores = max(memory, 4 * GIB), max(cores, 4)
+    os.execv(runner, [runner, '--mem', str(memory), '--cores', str(cores),
+                      '--est', f'{math.ceil(estimate)}s', '--label', 'OpenGGF Maven',
+                      '--', sys.executable, str(Path(__file__).resolve()), *sys.argv[1:]])
+
+
 def inherited_slot(fd, extra=()):
     # Retain all leases in Maven if the Python parent is killed unexpectedly.
     descriptors = (fd if isinstance(fd, tuple) else () if fd is None else (fd,)) + extra
+    machine = machine_lease_fd()
+    if machine is not None and machine not in descriptors:
+        descriptors += (machine,)
     if os.name != 'posix' or not descriptors:
         return {}
     return {'pass_fds': descriptors}
@@ -650,9 +690,13 @@ def main(argv=None):
     kind = maven_kind(args, exclusive)
     estimate = maven_estimate(args)
     automatic = bounded = initial = None
-    if not normal and not build_only(args):
+    build = build_only(args)
+    if not normal and not build:
         from maven_small import automatic_lean
         automatic = automatic_lean(args, root=Path.cwd())
+    if argv is None and args not in (['-v'], ['--version']):
+        enter_machine_queue(Path.cwd(), 600 if build else estimate,
+                            lean=lean or automatic is not None)
     if lean or automatic is not None:
         import xml.etree.ElementTree as ET
         from run_categories import tree_state, validate_preparation_contract

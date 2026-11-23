@@ -787,6 +787,60 @@ with queue.worktree_build_slot(root) as tree_fd:
                     head.remove()
         self.assertEqual([True], checked)
 
+    @unittest.skipUnless(sys.platform == 'linux', 'agent-run requires Linux')
+    def test_cli_admits_machine_lease_before_worktree_and_passes_it_to_maven(self):
+        tools = Path(self.temp.name) / 'bin'
+        tools.mkdir()
+        state = Path(self.temp.name) / 'state'
+        slots = state / 'agent-run'
+        slots.mkdir(parents=True)
+
+        def fake_executable(name, body):
+            executable = tools / name
+            executable.write_text(f'#!{sys.executable}\n' + body)
+            executable.chmod(0o755)
+
+        fake_executable('agent-run', '''
+import fcntl, os, sys
+from pathlib import Path
+options, command = sys.argv[1:sys.argv.index('--')], sys.argv[sys.argv.index('--') + 1:]
+assert dict(zip(options[::2], options[1::2])) == {
+    '--mem': str(5 * 1024**3), '--cores': '3', '--est': '600s', '--label': 'OpenGGF Maven'}
+# The machine scheduler must run before any repository lock is taken.
+with Path('.git/maven-worktree.lock').open('a') as tree:
+    fcntl.flock(tree, fcntl.LOCK_EX | fcntl.LOCK_NB)
+path = Path(os.environ['XDG_STATE_HOME']) / 'agent-run' / 'slot-0.lock'
+fd = os.open(path, os.O_CREAT | os.O_RDWR, 0o600)
+fcntl.flock(fd, fcntl.LOCK_EX)
+os.set_inheritable(fd, True)
+os.environ['AGENT_RUN_LEASE_FD'] = str(fd)
+Path('agent-run-called').touch()
+os.execv(command[0], command)
+''')
+        fake_executable('mvn', '''
+import fcntl, os, sys
+from pathlib import Path
+assert sys.argv[1:] == ['-DskipTests', 'package'], sys.argv
+fd = int(os.environ['AGENT_RUN_LEASE_FD'])
+os.fstat(fd)
+try:
+    with Path(os.readlink(f'/proc/self/fd/{fd}')).open() as other:
+        fcntl.flock(other, fcntl.LOCK_EX | fcntl.LOCK_NB)
+except BlockingIOError:
+    sys.exit(37)
+sys.exit('machine lease was not held')
+''')
+        self.git('config', 'openggf.mavenMemoryGiB', '5')
+        self.git('config', 'openggf.mavenCpuCores', '2.5')
+        # An inherited string with a closed descriptor must not bypass admission.
+        env = dict(os.environ, PATH=f'{tools}{os.pathsep}{os.environ["PATH"]}',
+                   XDG_STATE_HOME=str(state), AGENT_RUN_LEASE_FD='424242')
+        result = subprocess.run([sys.executable, str(TOOLS / 'maven_queue.py'),
+                                 '-DskipTests', 'package'], cwd=self.root, env=env,
+                                capture_output=True, text=True, timeout=5)
+        self.assertEqual(37, result.returncode, result.stdout + result.stderr)
+        self.assertTrue((self.root / 'agent-run-called').exists())
+
     def test_normal_cli_opt_out_and_auto_lean_share_the_expected_budget_contract(self):
         from contextlib import nullcontext
         import maven_queue as queue
