@@ -7,6 +7,11 @@ under the matching area heading; see the
 
 ## Gameplay and presentation
 
+- Sonic 1 draws the act number over the blue oval on the results card. Drum
+  samples resume when level music follows the special-stage theme. Leaving a
+  special stage also restores the active display projection, keeping sprites
+  aligned with terrain when switching to a game with a different aspect ratio.
+
 - **Sonic 2 and Knuckles in Sonic 2** now recognize their level-select debug
   cheats and use the cartridge object lists for B/A/C placement. Rewind
   restores the cursor and its placed objects. Select Engine free-fly in

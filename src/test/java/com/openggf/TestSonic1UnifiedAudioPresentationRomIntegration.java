@@ -103,7 +103,7 @@ class TestSonic1UnifiedAudioPresentationRomIntegration {
     }
 
     @Test
-    void coldGameplayAndTitleHaveAudibleDacPercussionWithoutSegaChant() throws Exception {
+    void coldGameplayTitleAndPostSpecialStageGameplayHaveAudibleDacPercussion() throws Exception {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(ZONE, ACT).build();
         speaker = AudioManagerTestDiagnostics.attachPresentationCapture(audio, audio.presentationFrameRate());
@@ -111,7 +111,7 @@ class TestSonic1UnifiedAudioPresentationRomIntegration {
         // missing drum bank, DAC enable, or stereo routing during a cold load.
         audio.toggleSolo(com.openggf.audio.ChannelType.DAC, 5);
         short[] packet = new short[speaker.maxStereoFramesPerPacket() * 2];
-        for (int music : new int[] {Sonic1Music.GHZ.id, Sonic1Music.TITLE.id}) {
+        for (int music : new int[] {Sonic1Music.GHZ.id, Sonic1Music.TITLE.id, Sonic1Music.SPECIAL_STAGE.id, Sonic1Music.GHZ.id}) {
             audio.playMusic(music);
             boolean percussion = false;
             for (int frame = 0; frame < 120; frame++) {
@@ -127,6 +127,8 @@ class TestSonic1UnifiedAudioPresentationRomIntegration {
                 }
                 percussion |= leftMax - leftMin > 256 && rightMax - rightMin > 256;
             }
+            // The special-stage song uses FM6. Check the DAC again on return to GHZ.
+            if (music == Sonic1Music.SPECIAL_STAGE.id) continue;
             assertTrue(percussion, "ROM drum waveform must reach both output channels for music " + music);
         }
     }
