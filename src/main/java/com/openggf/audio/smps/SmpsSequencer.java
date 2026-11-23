@@ -199,6 +199,7 @@ public class SmpsSequencer implements CoordFlagContext {
         private int fadeAddPsg;
         private boolean fadeActive;
         private boolean fadeOut;
+        private boolean deferFirstFadeStep;
         private double sampleRate;
         private double samplesPerFrame;
         private double sampleCounter;
@@ -269,6 +270,7 @@ public class SmpsSequencer implements CoordFlagContext {
         token.fadeAddPsg = fadeState.addPsg;
         token.fadeActive = fadeState.active;
         token.fadeOut = fadeState.fadeOut;
+        token.deferFirstFadeStep = fadeState.deferFirstStep;
         token.sampleRate = sampleRate;
         token.samplesPerFrame = samplesPerFrame;
         token.sampleCounter = sampleCounter;
@@ -330,6 +332,7 @@ public class SmpsSequencer implements CoordFlagContext {
         fadeState.addPsg = token.fadeAddPsg;
         fadeState.active = token.fadeActive;
         fadeState.fadeOut = token.fadeOut;
+        fadeState.deferFirstStep = token.deferFirstFadeStep;
         sampleRate = token.sampleRate;
         samplesPerFrame = token.samplesPerFrame;
         sampleCounter = token.sampleCounter;
@@ -476,6 +479,7 @@ public class SmpsSequencer implements CoordFlagContext {
         int addPsg;
         boolean active;
         boolean fadeOut; // true = Fade Out, false = Fade In
+        boolean deferFirstStep;
     }
 
     private final FadeState fadeState = new FadeState();
@@ -2312,8 +2316,9 @@ public class SmpsSequencer implements CoordFlagContext {
     }
 
     private void processFade() {
-        if (fadeArmedOutsideService) {
+        if (fadeArmedOutsideService || fadeState.deferFirstStep) {
             fadeArmedOutsideService = false;
+            fadeState.deferFirstStep = false;
             return;
         }
         // ROM: Check if fade counter is already 0 BEFORE processing
@@ -2617,6 +2622,7 @@ public class SmpsSequencer implements CoordFlagContext {
             fadeState.delayCounter = fadeState.delayInit;
             fadeState.active = true;
             fadeState.fadeOut = true;
+            fadeState.deferFirstStep = false;
         }
     }
 
@@ -4501,6 +4507,7 @@ public class SmpsSequencer implements CoordFlagContext {
         fadeState.active = false;
         fadeState.steps = 0;
         fadeState.delayCounter = 0;
+        fadeState.deferFirstStep = false;
         // The clear covers the driver's variables too, so the master tempo and
         // its timeout are both zeroed alongside the track RAM.
         normalTempo = 0;
@@ -4512,6 +4519,7 @@ public class SmpsSequencer implements CoordFlagContext {
     /** A local test-before-decrement fade reaches zero on the next service. */
     public boolean localFadeOutIsTerminalNextService() {
         return fadeState.active && fadeState.fadeOut
+                && !fadeState.deferFirstStep
                 && fadeState.steps == 1 && fadeState.delayCounter <= 0;
     }
 
@@ -4546,6 +4554,7 @@ public class SmpsSequencer implements CoordFlagContext {
         setFadeDelayCounter(config.isDriverOwnedFadeDelay() ? delay : 0);
         fadeState.active = true;
         fadeState.fadeOut = false; // Fade IN
+        fadeState.deferFirstStep = false;
 
         // Add steps to existing volumeOffset (attenuate by 'steps'), then fade
         // decreases it.
@@ -4638,7 +4647,7 @@ public class SmpsSequencer implements CoordFlagContext {
         triggerFadeOut(steps, delay, false);
     }
 
-    public void triggerFadeOut(int steps, int delay, boolean armedAfterFadeStep) {
+    public void triggerFadeOut(int steps, int delay, boolean deferFirstStep) {
         if (steps <= 0) {
             return;
         }
@@ -4647,9 +4656,11 @@ public class SmpsSequencer implements CoordFlagContext {
         fadeState.fadeOut = true;
         setFadeSteps(steps);
         setFadeDelayReload(delay);
-        // The arming service still walks the song, but its fade phase preceded
-        // the request. Use one extra initial wait with the normal reload intact.
-        setFadeDelayCounter(armedAfterFadeStep ? Math.max(0, delay) + 1 : delay);
+        setFadeDelayCounter(delay);
+        // UpdateMusic (s1.sounddriver.asm:179-203) runs DoFadeOut before
+        // handling requests. Forward presentation applies requests before
+        // it enters the driver, so defer the new fade past that old phase.
+        fadeState.deferFirstStep = deferFirstStep;
         fadeState.active = true;
 
         // Stop DAC track immediately (can't fade it) - matches ROM zFadeOutMusic
@@ -4855,7 +4866,8 @@ public class SmpsSequencer implements CoordFlagContext {
                         fadeState.addFm,
                         fadeState.addPsg,
                         fadeState.active,
-                        fadeState.fadeOut),
+                        fadeState.fadeOut,
+                        fadeState.deferFirstStep),
                 sampleRate,
                 samplesPerFrame,
                 sampleCounter,
@@ -4895,6 +4907,7 @@ public class SmpsSequencer implements CoordFlagContext {
         fadeState.addPsg = snapshot.fade().addPsg();
         fadeState.active = snapshot.fade().active();
         fadeState.fadeOut = snapshot.fade().fadeOut();
+        fadeState.deferFirstStep = snapshot.fade().deferFirstStep();
         sampleRate = snapshot.sampleRate();
         samplesPerFrame = snapshot.samplesPerFrame();
         sampleCounter = snapshot.sampleCounter();

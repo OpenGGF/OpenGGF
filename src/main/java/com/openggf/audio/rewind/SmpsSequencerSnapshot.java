@@ -48,6 +48,11 @@ public record SmpsSequencerSnapshot(
             int addFm,
             int addPsg,
             boolean active,
-            boolean fadeOut) {
+            boolean fadeOut,
+            boolean deferFirstStep) {
+        public FadeSnapshot(int steps, int delayInit, int delayCounter,
+                int addFm, int addPsg, boolean active, boolean fadeOut) {
+            this(steps, delayInit, delayCounter, addFm, addPsg, active, fadeOut, false);
+        }
     }
 }

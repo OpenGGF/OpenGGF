@@ -1229,7 +1229,7 @@ public final class SmpsDriverSession implements AutoCloseable {
                     endOverride(end.musicId());
             case SmpsSessionCommand.FadeMusic fade -> {
                 prepareFadeOut();
-                armFadeOut(fade.steps(), fade.delay());
+                armFadeOut(fade.steps(), fade.delay(), true);
             }
             case SmpsSessionCommand.SetSpeedMultiplier speed -> {
                 speedMultiplier = speed.multiplier();
@@ -2076,6 +2076,10 @@ public final class SmpsDriverSession implements AutoCloseable {
 
     /** Arms the fade at the host's command-dispatch boundary. */
     public void armFadeOut(int steps, int delay) {
+        armFadeOut(steps, delay, false);
+    }
+
+    private void armFadeOut(int steps, int delay, boolean beforeService) {
         requireInstalled();
         SmpsFadeOutEffects effects = configuration.statefulCommandPolicy().fadeOutEffects();
         if (effects.driverOwnedCounters()) {
@@ -2084,7 +2088,7 @@ public final class SmpsDriverSession implements AutoCloseable {
         SmpsSequencer music = driver.firstMusicSequencer();
         withPort(driverIdentity, port -> {
             if (music != null) {
-                music.triggerFadeOut(steps, delay, usesLocalGlobalStopFade(music));
+                music.triggerFadeOut(steps, delay, beforeService && usesLocalGlobalStopFade(music));
             }
             port.applyTransientPsgSilence(effects.psgSilence());
             return null;
