@@ -2567,6 +2567,12 @@ public final class Sonic1SpecialStageManager implements com.openggf.game.interna
                 : com.openggf.game.resources.PlcLifecyclePhase.SPECIAL_STAGE;
     }
 
+    boolean awaitsResultsEntryVblank() {
+        // SS_FinLoop (sonic.asm:3346-3364) spends its first wait after SS_Finish
+        // arms the timer. The setup at 3367-3380 masks interrupts.
+        return exitFadeStarted && !finished;
+    }
+
     public boolean isFinished() {
         return finished;
     }

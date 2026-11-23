@@ -145,11 +145,13 @@ public final class LevelFrameStep {
      */
     public static void serviceVBlankOnly(
             LevelFrameContext context, PlcLifecycleFrame frame, PlcLifecyclePhase phase) {
-        serviceVBlankOnly(context, frame, phase, () -> {
-            var level = context.levelManager();
-            var objects = level != null ? level.getObjectManager() : null;
-            if (objects != null) objects.advanceVblaCounter();
-        });
+        serviceVBlankOnly(context, frame, phase, () -> advanceObjectVblankClock(context));
+    }
+
+    private static void advanceObjectVblankClock(LevelFrameContext context) {
+        var level = context.levelManager();
+        var objects = level != null ? level.getObjectManager() : null;
+        if (objects != null) objects.advanceVblaCounter();
     }
 
     /**
@@ -271,6 +273,22 @@ public final class LevelFrameStep {
     public static void executeHardwareTimedObjectScan(
             LevelFrameContext context, PlcLifecycleFrame frame,
             PlcLifecyclePhase phase, Runnable objectScan) {
+        executeHardwareTimedObjectScan(context, frame, phase, false, objectScan);
+    }
+
+    /** The live stage and its rewind stepper service the same finish-loop wait. */
+    public static void executeHardwareTimedSpecialStageScan(
+            LevelFrameContext context, PlcLifecycleFrame frame,
+            PlcLifecyclePhase phase, com.openggf.game.SpecialStageProvider provider,
+            Runnable scan) {
+        executeHardwareTimedObjectScan(context, frame, phase,
+                provider instanceof com.openggf.game.internal.NativeSpecialStageResultsClock clock
+                        && clock.awaitsResultsEntryVblank(), scan);
+    }
+
+    static void executeHardwareTimedObjectScan(
+            LevelFrameContext context, PlcLifecycleFrame frame,
+            PlcLifecyclePhase phase, boolean advancesObjectClock, Runnable objectScan) {
         Objects.requireNonNull(objectScan, "objectScan");
         boolean claimed = frame.claim(phase);
         if (frame.consumedHeldLoopTailPreparation()) {
@@ -278,7 +296,14 @@ public final class LevelFrameStep {
                     .deferProductionSubmissionForHeldLoopTailClosure();
         }
         dispatchGameVBlank(context, frame);
-        serviceBoundary(context, HardwareServiceBoundary.VINT_SERVICE);
+        // A held fade can service V-int before its update. The following scan
+        // still runs its own tail, with the same interrupt already spent.
+        if (!frame.hasServicedHeldFadeVBlank()) {
+            serviceBoundary(context, HardwareServiceBoundary.VINT_SERVICE);
+        }
+        if (claimed && advancesObjectClock) {
+            advanceObjectVblankClock(context);
+        }
         objectScan.run();
         if (phase == PlcLifecyclePhase.LEVEL_TITLE_CARD) {
             // Special stages own a separate scene/table; never scan the parked

@@ -2215,12 +2215,10 @@ public final class TraceSessionLauncher {
 
     /**
      * Seeds the object VBlank clock a special stage's results-screen bridge
-     * plays on. Nothing on that bridge runs a level loop, so the production
-     * counter is frozen for the whole of it and the level after it would
-     * otherwise inherit an anchor short by the stage interior and the bridge
-     * together. The seed derives only from the level that entered the stage and
-     * the manifest's movie-row distance; the bridge's own tail is derived by
-     * {@link TraceRunVblankClock} from the game's profiled non-advancing rows.
+     * plays on, accounting for the shortened stage interior. The seed derives
+     * from the level that entered the stage and the manifest's movie-row
+     * distance. The destination budget stays anchored to that seed so it
+     * includes each bridge wait once.
      */
     private void applyRunPresentationBridgeVblankAdmission(
             int destinationIndex,

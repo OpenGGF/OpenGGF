@@ -28,7 +28,9 @@ import java.util.Optional;
  * game-mode pipeline as Sonic 2. The underlying stage gameplay is scaffolded
  * and expanded in follow-up parity passes.
  */
-public final class Sonic1SpecialStageProvider implements SpecialStageProvider, com.openggf.game.internal.NativeSpecialStagePacing {
+public final class Sonic1SpecialStageProvider implements SpecialStageProvider,
+        com.openggf.game.internal.NativeSpecialStagePacing,
+        com.openggf.game.internal.NativeSpecialStageResultsClock {
     private final Sonic1SpecialStageManager manager = new Sonic1SpecialStageManager();
     private SpecialStageViewport viewport = SpecialStageViewport.nativeViewport();
     private boolean resultsPlcSubmitted;
@@ -144,6 +146,11 @@ public final class Sonic1SpecialStageProvider implements SpecialStageProvider, c
     @Override
     public com.openggf.game.resources.PlcLifecyclePhase specialStagePlcLifecyclePhase() {
         return manager.plcLifecyclePhase();
+    }
+
+    @Override
+    public boolean awaitsResultsEntryVblank() {
+        return manager.awaitsResultsEntryVblank();
     }
 
     @Override

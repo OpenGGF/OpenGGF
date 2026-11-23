@@ -2154,7 +2154,7 @@ the stock ROM-backed SMPS path remains unchanged.
 
 The engine's `ObjectManager.vblaCounter` models the ROM V-int run counter --
 `Vint_runcount` (`docs/s2disasm/s2.asm:508`), `v_vblank_count`
-(`docs/s1disasm/sonic.asm:682`) and `V_int_run_count`
+(`docs/s1disasm/sonic.asm:684-685`) and `V_int_run_count`
 (`docs/skdisasm/sonic3k.asm:559`) -- which the ROM increments once at V-int
 exit regardless of which V-int routine the mode jump table dispatched.
 
@@ -2167,37 +2167,16 @@ controls are recorded in the [pause qualification](../architecture/validation/20
 This is a repaired parity defect, not an intentional paused-clock exception.
 Those bounded checks do not establish every whole-run clock row.
 
-Two row-specific limits remain:
-
-- **Seamless-boundary LAG rows** (deliberate). Some service
-  `LevelFrameStep.serviceVBlankOnly` without an explicit counter tick; the pause
-  repair changes only successful native pause claims.
-- **Special-stage results-screen presentation rows** (modelled around, not
-  fixed). A trace run's stage-exit presentation bridge plays every recorded row
-  of `SS_Finish`'s fade-out and the results screen, but no level loop runs on
-  any of them, so the production counter is frozen for the whole segment while
-  the ROM's keeps ticking. This one is **not** unobservable: measured on the
-  `s1-sonic-complete-withemeralds` route, the engine reached GHZ3 act 2 with a
-  1,587-tick deficit, which is 3 mod 8 and 19 mod 32 and so de-phased both the
-  prison capsule's `Pri_Animals` spawn gate and `Anml_ChkFloor`'s `btst #4`
-  escape-direction flip. `TraceRunVblankClock` now seeds the bridge from the
-  level that entered the stage and derives the bridge's own tail from
-  `TracePlaybackProfile.stageResultsEntryNonAdvancingMovieRows` (S1: the seven
-  V-ints `SS_Finish` builds the results screen through with interrupts
-  disabled, docs/s1disasm/sonic.asm:3369-3383), so every gameplay segment after
-  a bridge is back on the recorded clock. The bridge's own rows remain frozen;
-  nothing observes the counter there.
+On a queued seamless reload, the rebuilt object manager inherits the source
+clock and advances it once before GameLoop closes the frame.
+`LevelFrameStep.serviceVBlankOnly` closes that row without another tick.
+In S3K's inline AIZ transition, the ordinary object pass spends the tick
+before the level event rebuilds the manager. The ROM's `LevelLoop`
+(`docs/skdisasm/sonic3k.asm:7916-7930`) services V-int before `ScreenEvents`,
+which runs the reload in `AIZ1BGE_Finish` (`docs/skdisasm/sonic3k.asm:104773-104808`).
 
 Whether independently serviced S2 special-stage rows omit a production
 V-int tick remains unmeasured.
-
-The seamless-boundary and special-stage results gaps are distinct from the
-pause consequences repaired above. Closing a remaining clock divergence is a phase
-change, not a refactor: the counter is the `vblaCounter` argument handed to every object instance each frame, so a one-tick
-shift moves spilled-ring floor-probe cadence in all three games, the S3K slot
-bonus-stage RNG seed, LBZ/MGZ/ICZ object phasing, and every rewind snapshot's
-stored scalar. Any such change needs affected ROM/trace phase and rewind checks
-of its own; the pause repair does not qualify these remaining owners.
 
 ---
 
