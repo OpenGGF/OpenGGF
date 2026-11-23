@@ -9,6 +9,7 @@ import com.openggf.game.GameServices;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
+import com.openggf.game.sonic3k.objects.Sonic3kPointsObjectInstance;
 import com.openggf.game.session.SessionManager;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.sprites.NativePositionOps;
@@ -135,9 +136,14 @@ class TestSecondStrikeEnemiesNative {
         var explosion = manager.getActiveObjects().stream().filter(ExplosionObjectInstance.class::isInstance)
                 .map(ExplosionObjectInstance.class::cast).findFirst().orElseThrow();
         explosion.update(4, sonic);
-        assertEquals(1, manager.getActiveObjects().stream().filter(AnimalObjectInstance.class::isInstance).count());
+        var animals = manager.getActiveObjects().stream()
+                .filter(AnimalObjectInstance.class::isInstance).map(AnimalObjectInstance.class::cast).toList();
+        assertEquals(1, animals.size());
+        assertEquals(0, manager.getActiveObjects().stream()
+                .filter(Sonic3kPointsObjectInstance.class::isInstance).count());
+        animals.getFirst().update(4, sonic);
         assertEquals(1, manager.getActiveObjects().stream()
-                .filter(com.openggf.game.sonic3k.objects.Sonic3kPointsObjectInstance.class::isInstance).count());
+                .filter(Sonic3kPointsObjectInstance.class::isInstance).count());
         explosion.update(5, sonic);
         assertEquals(1, manager.getActiveObjects().stream().filter(AnimalObjectInstance.class::isInstance).count(),
                 "the rewarded final touch allocates one native animal, once");

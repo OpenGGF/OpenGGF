@@ -7,6 +7,9 @@ under the matching area heading; see the
 
 ## Gameplay and presentation
 
+- **Sonic 3 & Knuckles badnik score popups** now rise from the freed animal's
+  first object pass, matching the cartridge's timing and slot allocation.
+
 - **Hydrocity water walls:** the horizontal wall and vertical geyser now use
   the coarse camera window and previous render pass to choose when to
   disappear or begin cleanup. The window retains the original bounds at

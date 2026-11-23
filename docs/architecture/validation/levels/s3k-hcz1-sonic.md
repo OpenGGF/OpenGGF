@@ -1,5 +1,17 @@
 # S3K HCZ act 1 — Sonic route coverage
 
+## Badnik score popup dispatch (2026-11-22)
+
+`TestDestructionEffects` checks first-free allocation with the freed animal
+both before and after the explosion in the slot scan. It checks the score
+mapping, first three-pixel rise, failed animal allocation and restore to a
+freshly recreated animal between passes. The original-input HCZ slice
+independently observes a clear slot 17 on row 417 and the popup at
+`$021C/$05BE` on row 418, with zero differences on 29,285 retained comparator
+rows. The existing [slot-occupancy discrepancy](../../../status/known-discrepancies.md#object-slot-occupancy-is-not-compared-and-diverges-from-rom-in-all-three-games)
+covers other placement and allocation differences. The viewport, donor and
+team matrix and full-world rewind at the HCZ encounter remain open.
+
 ## Temporal scroll matching (2026-11-16)
 
 `TestHczMotionContinuity` adds 12 bounded ROM-backed checks across both acts:

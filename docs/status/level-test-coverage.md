@@ -1,5 +1,10 @@
 # Level test coverage backlog
 
+HCZ1 badnik score allocation (2026-11-22): the [HCZ1 matrix](../architecture/validation/levels/s3k-hcz1-sonic.md#badnik-score-popup-dispatch-2026-11-22)
+records the native slot and movement on rows 417–418. Manager tests cover
+both dispatch orders, a full object table and recreation between passes.
+Other placements, routes and full-world rewind remain open.
+
 Temporal scroll matching (2026-11-16): [HCZ1](../architecture/validation/levels/s3k-hcz1-sonic.md#temporal-scroll-matching-2026-11-16)
 and [HCZ2](../architecture/validation/levels/s3k-hcz2.md#temporal-scroll-matching-2026-11-16)
 record 12 typed-publication motion checks, retaining event lifecycle, history,
