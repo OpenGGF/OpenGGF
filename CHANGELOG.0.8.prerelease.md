@@ -10,13 +10,26 @@ under the matching area heading; see the
 - **Sonic 3 & Knuckles badnik score popups** now rise from the freed animal's
   first object pass, matching the cartridge's timing and slot allocation.
 
+- **Angel Island Act 2:** defeating the miniboss sends four flickering pieces
+  of wreckage falling from the ship, as on the cartridge.
+
+- **Angel Island Act 2:** the end boss now loads and shows EggRobo's head when
+  Knuckles reaches the fight. Sonic and Tails keep Eggman's head. Rewind
+  preserves the art queue's progress through the encounter.
+
 - **Placed rings in patched and hosted levels** use the underlying
   game's vertical placement and clipping rules. In Knuckles in Sonic 2, rings
   disappear as their centres cross the top of the screen, as on the cartridge.
 
+- **Sonic 2 Chemical Plant Act 2:** the visible water surface and underwater
+  palette split now bob at the same height where Sonic enters the water.
+
 - **The Doomsday Zone:** the second boss phase preserves the ship's fractional
   vertical position, Hyper Sonic's after-image uses the original history slots,
   and his palette keeps cycling through the white exit fade.
+
+- **Hydrocity Zone Act 2:** the boss turbine starts the rising water platform
+  on the correct frame, so rolling Tails lands at the original height.
 
 - **Frame interpolation background continuity:** vertical camera movement no longer
   mistakes parallax band crossings for horizontal teleports. The previous frozen

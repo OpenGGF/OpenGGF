@@ -286,17 +286,17 @@ See the [Competition swap design](architecture/designs/2026-11-07-s3k-competitio
 21. [Hosted network arena shoe partner (2026-11-07)](#hosted-network-arena-shoe-partner-2026-11-07) — Engine feature
 22. [KosM Adjacent-Memory Corruption](#kosm-adjacent-memory-corruption) — Other
 23. [SSZ Metropolis orb allocation and first dispatch (resolved local owner, 2026-10-21)](#ssz-metropolis-orb-allocation-and-first-dispatch-resolved-local-owner-2026-10-21) — Other
-24. [SSZ opening bridge top contact (resolved local owner, 2026-10-14)](#ssz-opening-bridge-top-contact-resolved-local-owner-2026-10-14) — Other
-25. [Large-bubble character branch (resolved local owner, 2026-10-14)](#large-bubble-character-branch-resolved-local-owner-2026-10-14) — Other
-26. [Death Egg widescreen backgrounds](#death-egg-widescreen-backgrounds) — Engine feature
-27. [LRZ1 and DEZ2 widescreen arena framing](#lrz1-and-dez2-widescreen-arena-framing) — Engine feature
-28. [Ending scenes in a wider picture](#ending-scenes-in-a-wider-picture) — Engine feature
-29. [Sprite_OnScreen_Test lifetime audit](#sprite_onscreen_test-lifetime-audit) — Other
-30. [LRZ boss lava-plane presentation](#lrz-boss-lava-plane-presentation) — Other
-31. [Blue Sphere player projection and shadows (local correction, 2026-10-17)](#blue-sphere-player-projection-and-shadows-local-correction-2026-10-17) — Other
-32. [Retained HCZ replay qualification — 2026-10-17](#retained-hcz-replay-qualification--2026-10-17) — Other
+24. [Large-bubble character branch (resolved local owner, 2026-10-14)](#large-bubble-character-branch-resolved-local-owner-2026-10-14) — Other
+25. [Death Egg widescreen backgrounds](#death-egg-widescreen-backgrounds) — Engine feature
+26. [LRZ1 and DEZ2 widescreen arena framing](#lrz1-and-dez2-widescreen-arena-framing) — Engine feature
+27. [Ending scenes in a wider picture](#ending-scenes-in-a-wider-picture) — Engine feature
+28. [Sprite_OnScreen_Test lifetime audit](#sprite_onscreen_test-lifetime-audit) — Other
+29. [LRZ boss lava-plane presentation](#lrz-boss-lava-plane-presentation) — Other
+30. [Blue Sphere player projection and shadows (local correction, 2026-10-17)](#blue-sphere-player-projection-and-shadows-local-correction-2026-10-17) — Other
+31. [Retained HCZ replay qualification](#retained-hcz-replay-qualification) — Other
+32. [DDZ, LBZ and ICZ component history](#ddz-lbz-and-icz-component-history) — Other
 33. [DEZ final native terrain ownership — 2026-10-17](#dez-final-native-terrain-ownership--2026-10-17) — Other
-34. [Player-owned glide and native-P2 damage — qualified local components](#player-owned-glide-and-native-p2-damage--qualified-local-components) — Other
+34. [Mega AIZ2 return loses source ownership at death/reload](#mega-aiz2-return-loses-source-ownership-at-deathreload) — Other
 35. [HCZ1 direct water art — bounded physical publication coverage](#hcz1-direct-water-art--bounded-physical-publication-coverage) — Other
 36. [Knuckles full-chain first-return pose — 2026-10-29](#knuckles-full-chain-first-return-pose--2026-10-29) — Other
 
@@ -950,28 +950,6 @@ tracks managed slot order, publication and rewind boundaries. This closes the
 source-supported initializer omission; current cold-route impact and new native
 acceptance remain unmeasured. Existing freed-parent lifetime limits remain open.
 
-## SSZ opening bridge top contact (resolved local owner, 2026-10-14)
-
-**Kind:** Other
-
-`sub_45026` passes SolidObjectTop d1/d2/d3=`$60/$10/$09`. New contact at
-`loc_1E44C` uses d3; `loc_1E45A` accepts unsigned word overlap`[-$10,-1]`
-and writes relative Y before Player_TouchFloor. The former generic profile
-selected d2 and a later absolute snap. Existing provider semantics now model
-that native call. Ten literal controls, original-controller full-world replay
-and existing bridge/profile consumers pass54/0/0/0. This fixes identified
-native poll1342 acquisition, not whole SSZ RGB/audio or campaign parity.
-
-The corrected passive capture now matches all1432 native P1/camera/counter/
-ring observations. Maintained320/800 completions retain50/44 two-cycle
-whole-world windows and actual DEZ incoming history retirement. The separate
-P2 arrival discrepancy remains open: one X row and74 Y rows within119–209.
-Native continuation allocation and dispatch order still need exact ownership;
-no fitted delay or accepted intentional difference is claimed.
-
-
----
-
 ## Large-bubble character branch (resolved local owner, 2026-10-14)
 
 **Kind:** Other
@@ -1610,213 +1588,56 @@ position state stays synchronized to native x/y, without a custom restore hook.
 
 **Kind:** Other
 
-Native `sub_953E`/`sub_A206` project the main player and sidekick using
-ROM ScalarTable2 and their different depths; the former linear screen offset
-put their ground centres at 160/172 instead of 162/179 and distorted jumps.
-The renderer now uses the ROM integer projection. `Draw_SSShadows`' fixed
-4x4 shadow operators are also drawn behind ordinary sprites after the boot
-fade, with the publication phase captured for rewind. The
-[sanctuary matrix](architecture/validation/levels/s3k-hpz-sanctuary.md#blue-sphere-presentation-components--2026-10-17)
-records old-source failures and 106 focused passes. A new actual framebuffer
-comparison, remaining sphere/HUD phase differences, whole routes, donor,
-PAL and PCM remain open; component passes do not certify those products.
+The renderer uses the ROM integer player and sidekick projection from
+`sub_953E` and `sub_A206`. It draws the fixed 4x4 `Draw_SSShadows` operators
+behind ordinary sprites after boot fade and captures the publication phase
+for rewind. [Projection and shadow checks](architecture/validation/levels/s3k-hpz-sanctuary.md#blue-sphere-presentation-components--2026-10-17).
 
-Composed native RGB follow-up (2026-10-17): the actual seven-Chaos v8 capture
-reduces stage reveal+22 from1112 to330 differing pixels, confined above y58;
-all pixels at y128..223 match at +0/+10/+22. The17 sampled results frames
-remain exact and both state/event CSVs are byte-identical to v6. See the
-completion plan's composed presentation qualification. This certifies those
-sampled native320 Tails/NTSC/Limited-RAW_RGB pictures only; upper HUD/distant
-object phase and the wider route/configuration/PAL/PCM obligations stay open.
+Commit `e79e1334bc` applies the unsigned `$54` priority gate and resolves the
+first opaque sprite pixel in SAT order before clipping against Plane A.
+The native-v2 versus engine-v11 comparison had zero RGB differences in all
+12 sampled stage-reveal frames (+0 through +22 by two), including the former
++22 overlap mismatch, and in all 17 sampled results frames. The reveal
+samples include the HUD. `TestS3kSpecialStageSphereMappings` and
+`TestS3kSpecialStageSpritePixels` cover ROM mappings and GPU composition.
+[Capture protocol and test evidence](architecture/plans/2026-10-13-s3k-playable-completion.md#blue-sphere-sat-ownership-and-plane-a-composition--2026-10-17).
 
+Whole-stage live HUD changes, transparent HUD plane composition, dense SAT
+limits, whole routes, cold routes, donor configurations, PAL and PCM remain
+unmeasured. The independent rewind fade-publication correction has its own
+gateway and release-latch checks. [Rewind evidence](architecture/plans/2026-10-13-s3k-playable-completion.md#immediate-scene-fade-publication-after-rewind--2026-10-17).
 
-Distant-sphere follow-up (2026-10-17): the actual ROM mapping table aliases
-several far-depth frames. Using those bytes passes138 focused checks without
-skips and reduces stage reveal+22 from330 to46 raw RGB differences; the17
-sampled results frames remain exact and gameplay/event CSVs are unchanged.
-The remaining far-sphere overlap/priority gap is explicit in the
-[completion plan](architecture/plans/2026-10-13-s3k-playable-completion.md#blue-sphere-distant-mapping-frames--2026-10-17).
-These sampled native320 Tails/NTSC/Limited-RAW_RGB pictures do not certify
-complete stage/cold routes, donor/PAL/PCM or other native configurations.
+---
 
-
-Rewind fade-publication follow-up (2026-10-17): the composed white-fade change
-left a restored displayed generation held in scenes without a level upload latch.
-The normal scene release now flushes that independent hold. Old-source gateway
-and short latch assertions fail; corrected focused112 and complete sanctuary
-entry/return matrices2006 pass without skips. The [completion plan](architecture/plans/2026-10-13-s3k-playable-completion.md#immediate-scene-fade-publication-after-rewind--2026-10-17)
-records exact commands and scope. Native RGB residuals, strict traces and
-configuration/cold/PAL/PCM limits outside these products remain open.
-
-
-## Retained HCZ replay qualification — 2026-10-17
+## Retained HCZ replay qualification
 
 **Kind:** Other
 
-Worker source `b9c1c8b3d` closes the retained stored-carrier-target/X-lock and
-water-owner extraction with focused/rewind/source evidence, but strict replay
-remains red. Returned HCZ's first reported non-camera physics is7134 `sidekick_x`
-(`0175/0176`), with133771 total errors over a longer window through14207 and no
-owned giant-ring exit. Its summary does not expose the first animation error or
-full span history. These are b9/866 observations; the returned HCZ route has
-not been requalified on the subsequent load-owner fix. That bounded followup
-moves Nemesis submission to the real load and closes first-title-loop preparation;
-its canonical prefix fully closes segment8's four7126 fields and reaches the first
-segment9 row. Independent old-red/green, focused134 and named guards131 pass
-without skips. This is not a full canonical or all-auxiliary qualification.
+**Resolved platform landing.** PR #469 makes the HCZ end-boss turbine allocate
+the rising platform after the turbine's own slot, so the platform initializes
+on its birth pass. In the Sonic+Tails complete-emerald chain, Tails now lands
+at the native centre Y `$07BA.EC00` on segment 15, row 1941. The first
+non-camera physics mismatch across the three HCZ windows is now Sonic's Y on
+segment 15, row 2008 (ROM `$07CE`, engine `$07D0`). The verifier confirmed
+that the row 2008 divergence was already present on develop.
+[HCZ2 landing verification](architecture/validation/levels/s3k-hcz2.md#end-boss-platform-allocation-and-rolling-tails-landing).
 
-Pre-fix matched dc338/866 HCZ-slice windows have4699/4353 spans and the same9482
-`air` (1/0) frontier. Exact span/field-row comparison is mixed, with newly
-mismatching CPU respawn counter at10834; historical3738 is not a matched baseline.
-The full slice is not requalified on the new source. The distinct alternate is
-requalified and retains exactly one26179 `rings` span (72/0).
-[Followup evidence](architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#bounded-followup-qualification-and-limits).
-The engine pixel oracle fails at GLFW init; native-only 320 Sonic+Tails images
-and passing named guards do not certify missing auxiliary channels, other
-products or downstream campaign. [Exact evidence and limits](architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#final-single-invocation-strict-qualification),
-[frontier log](status/trace-frontier-log.md#2026-10-17--retained-hcz-repair-on-root-stored-targets-and-qualified-limits).
+Segment 11 retains 11 camera and 51 animation differences. Segment 13
+retains 182 animation differences.
 
-Blue Sphere SAT/plane follow-up (2026-10-17): the private indexed compositor
-resolves the first opaque sprite pixel before Plane A priority, preserves
-native cell/mapping-piece order and the original unsigned `$54` gate, and
-keeps players/HUD sprites before the grid and shadows after it. The fresh
-maintained v11 capture has zero raw RGB differences at all 12 original-native
-stage reveal checkpoints (+0..22 by 2), replacing the prior 19..46 residuals;
-all 17 results samples remain exact. Its entire state.csv and ledger.csv are
-byte-identical to v10, including LRZ2 return frame 2423. The [implementation,
-focused GPU/resource checks and exact capture protocol](architecture/plans/2026-10-13-s3k-playable-completion.md#blue-sphere-sat-ownership-and-plane-a-composition--2026-10-17)
-record the bounded result. This repairs the sampled overlap gap without an
-accepted ROM deviation; complete timelines, other native configurations,
-cold/donor/PAL/PCM and strict timing/trace products remain separate obligations.
+On develop `2a23b59c5b`, the maintained
+`TestS3kSonicTailsCompleteEmeraldRunChain` run stops at MGZ admission
+(movie cursor 100896). The first unmatched work is a direct
+completion at segment 15 raw row 2680 and a module completion at row 2681,
+both without a pending engine counterpart. Attribution needs a new
+maintained native reference that identifies the queue-submission callers
+and records destination admission.
 
+---
 
-HCZ retained-carrier continuation (2026-10-25): native capture retains the
-camera-derived target; the corrected HCZ event owner now does too. Independent
-P1/P2 old-red and registered before/pending/moving restore controls are qualified
-by 110 passing local/anchor cases with no skips. The affected chain walks all
-14,208 stored segment-11 rows without the former input-71601 replacement, but
-still fails its required giant-ring exit (1/1F/0E/0S), with 137,113 strict
-differences and first monitor/rings difference 3832 (104/94). First P1 motion
-moves to 8329: a measured held-versus-logical-press error in the HCZ water-skim
-handler. This is local progress, not route certification. The existing HCZ audit
-records exact source, selectors, queue/execution times and excluded shared
-monitor-content lifetime boundary; rings/setup timing remain outside this task.
+## DDZ, LBZ and ICZ component history
 
-
-HCZ skim follow-up and upstream hold (2026-10-25): eight independent P1/P2
-held/logical/raw press and registered rewind controls fail on the old guard;
-the corrected local selection passes 118/0F/0E/0S, including all four S3K anchors.
-Develop then advanced to `08f0a5e78`, which already contains that guard, retained
-carrier targets, boss next-pass initialization and independent monitor contents.
-No post-skim chain or current-upstream route qualification is claimed. Launcher
-and Chopper review corrections and complete drowning ownership still require
-receiving-tree reconciliation. See the existing audit's upstream boundary;
-parent owns that review, affected replays and combined smoke. This extends no
-act/viewport/donor/team or whole-route rewind certification.
-
-R3 HCZ follow-up (2026-10-17), local worker merge21327d78a with Main460:
-full canonical6/1F/0E/0S reaches returned HCZ11's complete14208-row reference
-window but lacks the giant-ring exit;134710 field errors split115689physics and
-19021animation, first reported non-camera6674 `rings`114/0. Independent full
-HCZ slice2/1F/0E/0S reproduces all4353 spans(3424physics/929animation), first9482
-air and9486 animation, with Poindexter passing. These are completed strict-red
-qualifications, not new product certification. Matched dc3384699/8664353 remains
-mixed,3738 unmatched; alternate760's one26179 ring span is reused, not freshly
-passed. Active-level title-parent/movement-latch causality and the exact GLFW
-oracle remain open; no fitted delay or separate fresh-load fix was substituted.
-[Commands, windows, all groups and causal limits](architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r3-current-composed-strict-qualification--2026-10-17).
-
-
-R4 HCZ retained-title correction (2026-10-17): the real parent survives until
-its higher-slot children stop writing the movement latch. Native reset follows
-last movement→parent clear→stationary parent poll; short whole-world replay twice,
-focused182 and guards131 pass. New canonical chain first reported non-camera
-frontier is7134 sidekick_x0175/0176, closing6674 rings;133771 field errors remain
-over the complete14208-row returned-HCZ window, with its giant-ring exit absent.
-The distinct independent HCZ slice reproduces all4353 spans/first9482air and
-passes Poindexter. No clean route/auxiliary/product/GLFW certification or second
-fix; alternate760 reused, matched4699/4353 mixed,3738 unmatched.
-[Exact native evidence, selectors, windows and limits](architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r4-retained-title-parent-and-child-movement-latch--2026-10-17).
-
-
-### AIZ animal lifetime correction and remaining new alternate rings (2026-10-17 R5)
-
-The ordinary subtype0 freed-animal owner now uses the preceding Render_Sprites
-bit7, with MAIN polling before motion and walk/flight after routine work. Its
-render width8/height0 and copied-camera word-mask bounds remain separate from
-collision y_radiusC and S2's approximate Y bounds. Independent natural flight,
-hole reuse, edge/wrap and twice-recreated whole-world replay checks pass, as do
-73 affected cases, original AIZ, all20 exact standing assertions and the two-SS
-prefix. S1/S2 behavior, animal physics/RNG/points and allocators are unchanged.
-
-This useful owner correction does **not** resolve the alternate ring blocker:
-39799 retains R3's11 ring entries, first13740rings1/2; a matched published803
-control78232 has only trailing26179rings72/0. The ten early spans are new and
-cannot be waived as inherited. The same animal correction alone is disproved
-as their complete explanation. Post-fix ring/SST causality, nonzero-subtype and
-ending/capsule animals, four native68E98 debris, fullaux/configuration/BK2/cold/
-viewport/roster/fullchain coverage remain open. Local result, no Main delivery.
-[Exact commands, profile qualification, evidence and limits](architecture/validation/levels/s3k-aiz2.md#r5-low-sst-journal-and-animal-lifetime-owner--2026-10-17).
-
-
-### AIZ component lifetime correction closes the new alternate rings (2026-10-17 R7)
-
-Normal body/arm/three barrels now keep their own SST dispatch through fatal
-status7 and the literal fade wait, then retire one own entry after the physical
-parent's bit4 tail. Captured known parent XY/render/$38/status survives same-slot
-replacement; body animation and active barrel callbacks continue before the
-separate touch/deletion gates. FallingShot reads that physical grandparent after
-its own routine, including a final replacement-pass birth. Independent natural
-production/forced-recreation controls and65 affected checks pass; original AIZ,
-all20 standing assertions, twoSS and exact affected guards pass.
-
-The once alternate72859 has only26179rings expected72/actual0, the exact remaining
-published803-control identity/values; ten new13740..16669 spans are resolved.
-The raw replay is still red for that inherited trailing field. Full aux/native
-SST/phase/position comparison, four omitted68E98 debris and cold/otherBK2/config/
-viewport/donor/roster/fullchain coverage remain open. This is a local owner
-qualification; Root owns composed validation and Main delivery.
-[Source, old-reds, review findings, commands and limits](architecture/validation/levels/s3k-aiz2.md#r7-physical-parent-and-five-child-defeat-retirement--2026-10-17).
-
-
-R10 HCZ internal asset ownership (2026-10-17): production HCZ1→HCZ2 preserves
-unwritten128×128 destination bytes; encoded native word lookup reads current
-16×16/layout assets and positive MOVEA.W aliases from a bounded immutable copy
-of the current ROM. Independent old-red/green and twice-recreated whole-world
-mutation/scene/ROM-binding replay pass. Original prefix49095 closes7134's wall:
-FG31/BG-1/combined-1, P20175.F800/vx0170/g0/pushing matches native. Through7135,
-returned HCZ consumes7136/14208 rows with206 errors (11camera physics and195
-animation), no non-camera physics mismatch, and no later frontier measured.
-Full returned-HCZ, independent slice, alternate and exact GLFW remain unqualified
-on the new source; this is not route certification. Focused mock error and two
-MenuAudio source-guard failures are exactly attributed as inherited, not passes.
-[Commands, prior refusal boundary, source hashes and limits](architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r10-encoded-collision-words-resident-destinations-and-rom-aliases--2026-10-17).
-
-
-R11 HCZBlock Full2 owner (2026-10-17,152d07 composition): native loc1F3CA
-bypasses both player and object offscreen gates. Existing object-local capability
-now preserves underside separation offscreen. Independent corrected old-red
-3/2F→visibility/world-replay4 green,157 total focused/118 affected guards pass
-without skips. Original once prefix7687 closes7807 sidekick_y and matches7808;
-HCZ7809/14208 rows remains206=11camera physics+195animation, no non-camera
-physics mismatch through7808, warnings/bootstrap0. First remaining all-group
-error3475 sidekick_animation_id17/1C; later non-camera frontier is unmeasured.
-No full returned-HCZ/exit/slice/alternate/GLFW or route certification is claimed.
-[Native source, exact controls/commands/hashes and limits](architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r11-hczblock-full2-visibility-owner-closes7807-through7808--2026-10-17).
-
-
-R12 current composed HCZ qualification (2026-10-17,bef8 unchanged): one maintained
-full canonical17194 compares all14208 returnedHCZ rows,125612 total field errors
-(107498physics+18114animation),first non-camera8329y_speed0000/-0680. Earlier
-six windows complete zero-error, but giant_ring exit remains absent; no onward
-segment/playable exit. Four suppressed unmatched hardware completions are
-unattributed. Separate slice witness proves10834counter0/1 is a correct consumer
-of10833cached offscreen caused by enginecamera copy019A versus native0199 at
-an inclusive left edge. Fresh-entry delay is disabled; no CPU/cache/runtime fix.
-Selected P1/history/camera-latch producer remains unqualified. No extra selection,
-native or broad run, and no general green.
-[Exact fixtures, commands, clocks, windows, phase correction and handback](architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r12-slice-cached-visibility-consequence-and-full-composed-canonical--2026-10-17).
-
+**Kind:** Other
 
 R13 residency smoke regression repair (2026-10-17): DDZ component fixtures now
 select their existing native fresh-start/no-floor inlet; manual undeclared FF82AF
@@ -1827,26 +1648,6 @@ pre-edit15/1F/14E and independent ROM-pointer1/1F -> final86 focused/118 affecte
 guards all pass without skips. This does not requalify HCZ8329/exit, independent
 slice/alternate/GLFW or full routes; no CPU/camera/unknown-RAM fallback changes.
 [Exact owner evidence and limits](architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r13-residency-smoke-regressions-native-row-pointers-and-ddz-fixture-entry--2026-10-17).
-
-R14 camera-input witness (2026-10-17, unchanged0cd178d8f production): original
-82EA prefix through10835 remains104spans/10773 rows, first9482air1/0 and
-10834counter0/1. Actual10833delay1 selects enginehistory023A, while current
-P1word0231;186+(23A−186−A0)=019A is correct. Native selected table contents,
-H_scroll, forced/latch state and camera-entry P1 are unobserved; final poses and
-Pos_table_index are insufficient. No Camera/CPU repair or parity claim. Existing
-named RecordPos10D80 pin is an operand in the actual ROM; verified entry10D66
-is recorded for future plan review without changing capture authority/fixtures.
-[Exact original inputs, phases, source pins and limits](architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r14-slice-camera-entry-history-inputs-no-camera-or-cpu-repair--2026-10-17).
-
-R15 native camera input (2026-10-17): the missing native selection is now observed
-in one original82EA power-on pass, all four endpoint controls/60 callbacks match.
-10833 RecordPos writes0239.E0; delay0100 selects0239 ->0199. Engine R14 history
-023A ->019A is also correct. This moves the causal input question upstream to
-P1 arriving at RecordPos, not Camera/CPU. Exact earlier engine writer remains
-unproven; no runtime fix or new engine/route/visual qualification is claimed.
-[Actual byte-verified instruction phases and limits](architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r15-original-native-camerahistory-input-plan--2026-10-17).
-
-
 
 ICZ1 Knuckles snow-free camera gate (2026-10-21): the native Player_mode3
 branch skips ICZ1_BigSnowFall, so its zero snow offset must not block loc_1C9FA
@@ -1892,22 +1693,6 @@ remain open. [Exact evidence and limits](architecture/validation/levels/s3k-icz-
 R11 ICZ final five exact source/API guards also pass without skips (89633);
 Root's bounded P2 resolution inspection has no remaining material objection.
 No extra construction/trace/broad re-execution or integration clearance follows.
-
-
-R20/R21 spinning-column owner (2026-10-17, local f196-based candidate): native
-cached offscreen release preserves OnObj/kinematics, while the existing native
-column standing latch permits subsequent recapture. ClearHeldFlag alone does
-not clear control. This repairs an implementation defect, not an accepted ROM
-deviation; no shared solid/CPU/camera/cache/API changes. Genuine independent
-old-red→green,73focused0skip, twice-world release/recapture and original native
-8715..20endpoint equality are qualified. Separately authorized actual final
-report95476 compares8721/14208, completefalse:206=11camera physics+195animation,
-firstNonCameraNULL through8720, lag59/warnbootstrap0. Same-window10733 is213
-(15/198), but bounded recent5 does not prove exhaustive residual-array identity.
-Strict1F remains; first all-group3475animation17/1C. No later frontier, full
-returned-HCZ/exit, independent slice/alternate/GLFW/native or product breadth
-certificate. [Exact source, commands, rejected JUnit-only inference and report](architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r21-actual-final-prefix-report-qualifies-the-local-column-repair--2026-10-17).
-
 
 ## DEZ final native terrain ownership — 2026-10-17
 
@@ -2045,75 +1830,39 @@ representation and wider active-countdown bubble/timer limitations are not
 closed by raw animation publication. No whole-world/guard/native certificate.
 
 
-## Player-owned glide and native-P2 damage — qualified local components
+## Mega AIZ2 return loses source ownership at death/reload
 
 **Kind:** Other
 
-The maintained glide correction in local `8bcf0ab6` carries the querying player's
-live top solidity bit and collision array through both foot probes and the
-extension, regress and edge scans. Reverse ceiling probes retain the player's
-live LRB bit. Object defaults and foreground/background provider selection remain
-separate. Its isolated R110 affected selection passed 113 tests in 12 classes,
-including 18 independent terrain-query cases; that result belongs to that isolated
-source epoch.
+The Mega continuous replay still loses ownership of its AIZ2 source at BK2
+cursor 25811, when the level reloads into generation 11. Segment 8 first
+diverges at row 1168 (`player_animation_id`) at the
+[documented glide-rebound contact](architecture/validation/levels/s3k-aiz2.md#ordinary-boss-glide-rebound--2026-11-07).
+The replay has yet to reach HCZ through this return.
 
-The 2026-10-21 vertical-climb correction based on `c8516838` uses the native
-8/9 pre-offset plus signed X radius in upright, reverse and idle probes. Local
-movement now retains powered speed, signed upper bounds, BD-pose undo and strict
-negative floor landing with raw angle/current animation 5 and the existing climb
-timer. S3K idle still clobbers its animation delta with the floor distance under
-`FixBugs=0`; KiS2 still omits that probe. The
-[source and component validation record](architecture/research/trace/2026-09-14-kis2-chain-frontier.md#wall-climb-vertical-contract--2026-10-21)
-does not identify the separate CNZ wall-distance `-32` stall or certify a route.
-
-The local `dae6c29e` damage correction selects the ringless hurt tail by actual
-first native-P2 identity, the existing touch profile and module companion support,
-independently of CPU input ownership. Overlap, attack, listener, protection and
-cause handling retain their existing owners. Isolated R127 passed 195 tests in 14
-classes, including both P2 input variants, bit7 rejection and ringless P1 death.
-It does not qualify competition, extra-player or decorated-game breadth.
-
-Root's composed source on `691de518` passed the bounded combined lifecycle
-(session71445): **379T0F0E0S across46 report suites**, including the unchanged
-ordinary physical Nemesis oracle and full-key two restore/forward controls.
-Fresh guards (session93642) retained **107T2F0E0S**: both failures are byte-exact
-to the prior HubMusic issues; no new guard failure was observed. These are
-component and guard results. Both maintained original-route invocations remain
-**1T1F0E0S**.
-FDF R112's returned segment 2 is incomplete: 166 = 1 camera physics + 165 animation;
-Slots segment 3 is incomplete: 7,974 = 7,620 physics + 354 animation, first non-camera
-frame 220 `x_speed` ROM0/engine`-0400`. Production ownership is lost in TITLE_CARD,
-generation 6/cursor 10161, with 28 unmatched completions; SS/FDF remain unvisited.
-HCZ R128 retains the nine R122 logical payloads byte-for-byte: complete segment 11
-62 = 11 physics + 51 animation, complete segment 13 37,930 = 33,300 physics + 4,630 animation,
-first non-camera 442 `sidekick_x_speed` 01C7/`-0100`, then uncompared SS7 results at
-movie/destination97208. Historical ownership at 88306 is not reobserved.
-+21 remains UNWAIVED and -94 UNLOCALIZED. Neither component pass nor aggregate
-route totals identify a native winning tile, contact/damage caller or full-route
-cause. [Commands and retained qualification limits](status/trace-frontier-log.md#2026-10-18--root-composes-player-owned-glide-and-native-p2-hurt-tails).
+The [AIZ2 head-init evidence](architecture/validation/levels/s3k-aiz2.md#native-aiz2-boss-head-art-2026-11-22) records the closed queue window.
+The [glide and native-P2 component record](status/trace-frontier-log.md#2026-10-18--root-composes-player-owned-glide-and-native-p2-hurt-tails)
+preserves the earlier isolated fixes and their scope.
 
 
 ## HCZ1 direct water art — bounded physical publication coverage
 
 **Kind:** Other
 
-Root HEAD691de518 with source8 tupleaa0310dc now carries the actual selected
-water producer into its load-owned Nemesis publication path. The selected unsigned
-physical-X branch retains the native three-pattern service; incompatible selection,
-replacement and enclosing load failure cannot borrow an earlier admission.
-The queue and selected schedule restore together through the existing world registry.
-The source contract is native044 Level load/water order7674/7931/7938..7939,
-HCZ1 unsigned branch8521..8538 and direct V-int path792..809. H-int2's separate
-flag-clear branch at1276 is not part of this component claim.
+The selected HCZ1 water producer uses the load-owned Nemesis publication
+path introduced in `05bebcc2eb`. The unsigned camera-X branch selects the
+producer, and direct V-int service publishes three physical patterns per
+pass. All seven `TestS3kHcz1DirectWaterNemesisPublication` cases passed on
+develop `2a23b59c5b`, including replacement and foreign-producer controls
+and two full-registry restore/forward cases. The separate H-int2 path and
+beam rendering were outside that measurement.
+[Load and publication evidence](architecture/plans/2026-10-13-s3k-playable-completion.md).
 
-The sole normal/no-profile 29-class focus, session46923, passed232T/0F/0E/0S.
-All seven water cases passed, including the unchanged physical publication oldred
-and twice full-registry restore/forward control, alongside load/rewind/transition
-consumers and required S3K checks. This is a local uncommitted tested source epoch.
-It does not certify H-int rendering, an actual complete route or native caller,
-and does not waive the earlier HCZ/FDF/Cold residuals or +21/-94 limits.
-[Exact command, original report accounting and source limits](architecture/plans/2026-10-13-s3k-playable-completion.md).
-
+The maintained Sonic+Tails chain completes all 5,393 segment 13 rows with
+zero physics errors and 182 animation errors on the same source. The HCZ
+fan changes `efb0a98953` and `563b7712bf` precede this measurement, and all
+three `TestHczFanNativeDispatch` cases passed. The outgoing segment 15 and
+admission evidence are recorded under [Retained HCZ replay qualification](#retained-hcz-replay-qualification).
 
 HCZ2 snake-block lifetime (2026-10-22): the snake's native saved-base range
 predicate now owns culling, without the manager's additional animated-X gate.
@@ -2122,12 +1871,6 @@ manager counterexamples cover the valid-base/invalid-animated fringe and the
 permanent latch;92 affected cases and33 fresh owning guards pass without skips.
 The final native-viewport fixture separately passes all17 owning manager cases.
 
-The unchanged original chain now completes HCZ2 segment13 and moves its first
-non-camera mismatch from row287 Y to row442 P2 horizontal speed01C7/−0100.
-It remains red with later HCZ errors and an SS7 results-boundary stop at97208.
-Native contact/cause, whole-world lifetime breadth and complete-route parity
-remain open. The rejected first candidate's earlier ownership stop and its
-correction are preserved in the dated plan.
 [Scope and remaining obligations](architecture/validation/levels/s3k-hcz2.md#snake-block-respawn-lifecycle--2026-10-22).
 
 MHZ Knuckles native glide source composition (2026-10-22): the four-quadrant
@@ -2201,7 +1944,9 @@ HCZ receiving qualification (2026-10-26): merge `b3374a56c` preserves exact
 upstream08 and qualifies 297 unique focused cases without skips. Canonical six
 is 6/1F/0E/0S; five companions pass. Segment11 now crosses its giant-ring
 boundary, with no non-camera physics error and bounded residual 11 camera /
-51 animation errors. Segment13 and the later SS7 result boundary remain open.
+51 animation errors. The run advanced through segment 13 into SS7 and
+stopped at the SS7 results boundary (movie cursor 97208). Commit
+`b9abe4a08a` later removed that stop.
 Jawz's independent waiting/initialization collision correction qualifies 69
 local/anchor cases without skips; it is not attributed to the row442 P2 hurt.
 Original ROM placement identifies that source as Turbo Spiker `$96`, a separate
@@ -2231,22 +1976,6 @@ registered fresh body/shell phase restore. The existing initialized-state gate
 now qualifies 81 local/API/anchor cases with zero skips, preserving shell and
 shared touch owners. Final affected chain results follow in the existing audit;
 this local qualification adds no viewport/donor/team or full-route claim.
-
-
-Final local HCZ receiving result (2026-10-26, runtime `0d7c25c68`): the exact
-affected chain is 1/1F/0E/0S. Segment11 completes 14,208 stored rows and crosses
-its required giant-ring exit with no non-camera physics error; residuals are
-11 camera / 51 animation errors, 59 lag rows, zero bootstrap errors. This
-qualifies the requested production continuity, not a zero-difference trace or
-act-wide breadth. Turbo Spiker's row442 P2 hurt is gone: segment13 first
-non-camera state now differs at2147 P1 Y `$04DA/$04DE`; its 4,145 differences
-split 3,795 physics / 350 animation (7 lag, zero bootstrap), and it enters SS7.
-The terminal outside-HCZ boundary remains SS7 results at movie cursor97208;
-its cause is unproven and no timing/loader/comparator owner was changed.
-The existing audit records exact command/fingerprint, 58.066-second Maven /
-58.751-second wrapper timing with zero queue wait, separate receiving297,
-Jawz69, raw186 and Turbo81 focused qualifications, all zero-skip, and remaining
-fan/SS7 questions. Parent retains final review, combined smoke and delivery.
 
 
 Jawz publication-phase correction (2026-10-26): the earlier Jawz69 evidence

@@ -10,6 +10,7 @@ import com.openggf.game.GameStateManager;
 import com.openggf.game.palette.PaletteOwnershipRegistry;
 import com.openggf.game.palette.PaletteSurface;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
+import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.level.Block;
 import com.openggf.level.Chunk;
 import com.openggf.level.Level;
@@ -81,6 +82,27 @@ class TestAizEndBossInstance {
         assertColorWord(services.level.getPalette(1), 1, 0x0888);
         assertEquals(0x4880, camera.getMinX() & 0xFFFF);
         assertEquals(0x4880, camera.getMaxX() & 0xFFFF);
+    }
+
+    @Test
+    void bossMainInitRunsOnTheDispatchAfterTheMusicCallback() throws Exception {
+        camera.setX((short) 0x48A0);
+        RecordingServices services = new RecordingServices();
+        services.withCamera(camera);
+        services.withGameState(new GameStateManager());
+        AizEndBossInstance boss = buildBoss(services);
+
+        boss.update(0, null);
+        for (int frame = 1; frame <= 0x78; frame++) {
+            boss.update(frame, null);
+        }
+        assertEquals(-1, services.lastPlayedMusic, "Obj_Wait has reached zero");
+        boss.update(0x79, null);
+        assertEquals(Sonic3kMusic.BOSS.id, services.lastPlayedMusic);
+        assertFalse(readBoolean(boss, "renderActivated"),
+                "Obj_AIZEndBossMusic returns before the main routine can allocate the ship");
+        boss.update(0x7A, null);
+        assertTrue(readBoolean(boss, "renderActivated"));
     }
 
     @Test
@@ -590,6 +612,13 @@ class TestAizEndBossInstance {
     }
 
     private static final class RecordingServices extends TestObjectServices {
+        private int lastPlayedMusic = -1;
+
+        @Override
+        public void playMusic(int musicId) {
+            lastPlayedMusic = musicId;
+        }
+
         private final StubLevel level = new StubLevel();
         private final PaletteOwnershipRegistry registry = new PaletteOwnershipRegistry();
 

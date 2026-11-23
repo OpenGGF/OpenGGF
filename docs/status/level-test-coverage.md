@@ -111,7 +111,7 @@ sampled cuts remain open. Participants are fixed by the ROM; viewport width is
 unassessed and held rewind is off by decision. No act is certified. ROM-backed Competition HUD tests cover signpost pole/face
 uploads and rewind, digit-five SAT mapping selection, and the interrupt-before-goal
 timer boundary. Scattered-ring recollection remains V-int-origin dependent under
-[S2 Whole-Run V-int Clock Cannot Be Made Exact](known-discrepancies.md#s2-whole-run-v-int-clock-cannot-be-made-exact);
+[S2 replay limits at sub-frame load boundaries](known-discrepancies.md#s2-replay-limits-at-sub-frame-load-boundaries);
 progressive HUD pixels and integrated recollection remain lead qualification work.
 
 LRZ title-owned enemy art (2026-11-07): the [submission audit](../architecture/audits/2026-11-07-lrz-enemy-art-submission.md)
@@ -177,6 +177,8 @@ MGZ swinging-platform arithmetic (2026-11-03): the [MGZ1 matrix](../architecture
 HCZ slice parity (2026-11-03): the [HCZ2 matrix](../architecture/validation/levels/s3k-hcz2.md#native-capsuleresults-handoff-and-green-slice--2026-11-03) records the green native Sonic+Tails cross-act slice, unchanged sibling frontiers, 97 focused/terminal/rewind/startup checks, absent aux schemas and remaining breadth/restore limits.
 
 HCZ2 boss setup (2026-11-03): the [HCZ2 matrix](../architecture/validation/levels/s3k-hcz2.md#end-boss-setup-and-platform-animation--2026-11-03) records callback/init/movement and raw-animation controls, unchanged sibling trace results and the remaining pending-initialization restore obligation. Broader route/configuration gaps remain inherited.
+
+HCZ2 end-boss platform landing (2026-11-22): the [HCZ2 matrix](../architecture/validation/levels/s3k-hcz2.md#end-boss-platform-allocation-and-rolling-tails-landing) covers same-pass turbine allocation, rolling P2 placement, fractional position, continued riding, and the passing boss graph rewind selection.
 
 S3K shake/visibility maintenance (2026-11-03; contributor cleanup 2026-11-07): the
 [HCZ2 matrix](../architecture/validation/levels/s3k-hcz2.md) records pending shake
@@ -485,6 +487,10 @@ full native SST comparison, missing advertised auxiliary observations,
 viewport/donor/roster breadth and the full continuous chain remain open. These
 bounded results do not certify a complete act.
 
+
+[The AIZ2 act matrix](../architecture/validation/levels/s3k-aiz2.md)
+records focused defeat-fragment allocation, motion and rewind checks. The
+earlier records below describe the missing debris at their historical SHAs.
 
 The subsequent [R7 child-retirement owner](../architecture/validation/levels/s3k-aiz2.md#r7-physical-parent-and-five-child-defeat-retirement--2026-10-17)
 closes the demonstrated early five-child cleanup: actual own-SST routines retain
@@ -2914,3 +2920,8 @@ trace regressions are resolved: all eleven reports exactly match baseline;
 The [MGZ1](../architecture/validation/levels/s3k-mgz-act1.md) and
 [MGZ2](../architecture/validation/levels/s3k-mgz-act2.md) matrices retain their
 wider route, donor, team and viewport obligations.
+
+AIZ2 end-boss head art (2026-11-22): the [AIZ2 matrix](../architecture/validation/levels/s3k-aiz2.md#native-aiz2-boss-head-art-2026-11-22)
+verifies that Knuckles gets EggRobo's head and Sonic and Tails keep Eggman's
+head. It also covers queue restoration, the head's graph rewind and the Mega
+return window. The outgoing campaign and other configurations remain open.

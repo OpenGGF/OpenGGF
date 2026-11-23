@@ -763,9 +763,11 @@ qualification is false. No title/provider activation belongs to this child.
   host child's object ownership; no ordinary CPU equivalence is assumed. The
   streaming worker also owns the missing all-fields slot-machine rewind codec;
   this Host must consume its committed accessor once available, not invent one.
-- The outer native-world module decorator currently hides nominal
-  `SpriteTableBuildProfile` checks in existing ring/lost-ring/render consumers.
-  Restoring only the inner module's interface cannot qualify those paths.
+- `SpriteTableBuildProfile` resolves through the outer native-world module
+  decorator after #464 (`766cb71d7d`). Wrapped modes inherit the native
+  placed-ring sprite-table rule. The profile-resolution and KiS2 top-edge
+  culling regressions cover delegation and draw behavior.
+  Exact per-scanline sprite masking remains a VDP hardware limit.
 - Full physical routes, native split-field drawing, P1 checkpoint globals and
   actual post activation, teleport, exhaustive CNZ dual-bumper lifetime,
   competitive special stages and connected act/zone/game result pages remain
