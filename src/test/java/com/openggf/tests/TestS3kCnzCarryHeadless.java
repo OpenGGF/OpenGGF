@@ -1,8 +1,10 @@
 package com.openggf.tests;
 
+import com.openggf.audio.AudioRequestObserver;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameServices;
+import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.SidekickCpuController;
 import com.openggf.tests.rules.RequiresRom;
@@ -13,6 +15,10 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -241,6 +247,42 @@ class TestS3kCnzCarryHeadless {
                 "Frame 108: carry release must restore Tails's ordinary flight animation");
         assertEquals(0xA0, tails.getMappingFrame(),
                 "Frame 108: Tails's ordinary flight mapping must be visible on the release frame");
+        assertEquals(8, tails.getYSpeed(), "Release integrates one +$08 flight step");
+
+        List<Integer> expectedFlightRequests = new ArrayList<>();
+        List<Integer> actualFlightRequests = new ArrayList<>();
+        List<Integer> expectedTimers = new ArrayList<>();
+        List<Integer> actualTimers = new ArrayList<>();
+        int expectedTimer = tails.getDoubleJumpProperty() & 0xFF;
+        GameServices.audio().setRequestObserver((kind, id) -> {
+            if (id == Sonic3kSfx.FLYING.id) {
+                actualFlightRequests.add(tails.currentGameplayFrameCounter());
+            }
+        });
+        try {
+            for (int i = 0; i < 12; i++) {
+                assertTrue(tails.getAir(), "Tails is still airborne in the release window");
+                boolean wasOnScreen = tails.isRenderFlagOnScreen();
+                fixture.stepFrame(false, false, false, false, false);
+                int levelFrame = tails.currentGameplayFrameCounter();
+                expectedTimer -= levelFrame & 1;
+                expectedTimers.add(expectedTimer);
+                actualTimers.add(tails.getDoubleJumpProperty() & 0xFF);
+                if (wasOnScreen && ((levelFrame + 8) & 0xF) == 0) {
+                    expectedFlightRequests.add(levelFrame);
+                }
+            }
+        } finally {
+            GameServices.audio().setRequestObserver(AudioRequestObserver.NONE);
+        }
+        assertFalse(expectedFlightRequests.isEmpty(), "The release window includes a visible sound opportunity");
+        assertAll(
+                () -> assertEquals(expectedTimers, actualTimers,
+                        "Tails_Move_FlySwim decrements the timer on odd level frames after release"),
+                () -> assertEquals(expectedFlightRequests, actualFlightRequests,
+                        "loc_148F4 requests one flight sound on each visible cadence tick"),
+                () -> assertEquals(0x3B - 12, tails.getTailsCarryController().capture().cooldown(),
+                        "The later carry pass decrements the release cooldown once per flying tick"));
     }
 
     @Test

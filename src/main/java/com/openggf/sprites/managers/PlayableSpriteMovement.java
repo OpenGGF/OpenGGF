@@ -1243,7 +1243,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		boolean hurt = sprite.isHurt();
 		if (!hurt) {
 			doJumpHeight();
-			updateManualTailsFlight();
+			updateTailsFlight();
 			if (!tailsFlightVerticalUpdatedThisFrame
 					&& sidekickCpu != null
 					&& sidekickCpu.usesFlyingCarryMovement()) {
@@ -1820,10 +1820,10 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		return true;
 	}
 
-	private void updateManualTailsFlight() {
+	private void updateTailsFlight() {
 		// Tails_Stand_Freespace only branches to Tails_FlyingSwimming on entry, so
 		// Tails_Move_FlySwim first runs on the frame after activation.
-		if (tailsFlightActivatedThisFrame || !isManualTailsFlightActive()) {
+		if (tailsFlightActivatedThisFrame || !isTailsFlightActive()) {
 			return;
 		}
 		// Native flight consumes flap edges outside JumpHeight's double-jump gate.
@@ -1840,7 +1840,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		tailsFlightVerticalUpdatedThisFrame = true;
 	}
 
-	private boolean isManualTailsFlightActive() {
+	private boolean isTailsFlightActive() {
 		PlayerCapabilityRules capabilityRules = playerCapabilityRulesOrNull();
 		if (capabilityRules == null
 				|| !(capabilityRules.tailsFlightEnabled()
@@ -1852,7 +1852,13 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			return false;
 		}
 		SidekickCpuController cpu = sprite.getCpuController();
-		return !sprite.isCpuControlled() || (cpu != null && cpu.isUnderManualControl())
+		// loc_14016 (sonic3k.asm:26963-26986) returns a persistent carrier
+		// to normal follow with its flight flag intact. Tails_Stand_Freespace
+		// (sonic3k.asm:27593-27595) dispatches on that flag.
+		return !sprite.isCpuControlled()
+				|| (cpu != null && (cpu.isUnderManualControl()
+						|| (cpu.getState() == SidekickCpuController.State.NORMAL
+						&& PlayableSpriteInternalAccess.isFlyingAfterIntroRelease(sprite))))
 				|| hasScriptedNativeInput();
 	}
 

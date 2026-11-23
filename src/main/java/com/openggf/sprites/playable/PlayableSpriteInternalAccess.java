@@ -4,6 +4,10 @@ import com.openggf.level.objects.ObjectInstance;
 
 /** Engine-only cross-package access to playable controller internals. */
 public final class PlayableSpriteInternalAccess {
+    public static boolean isFlyingAfterIntroRelease(AbstractPlayableSprite player) {
+        return player.getTailsCarryController().isFlyingAfterIntroRelease();
+    }
+
     /** Bind ordinary resources before temporary native presentation or rewind reconciliation. */
     public static void bindNormalAnimationProfile(AbstractPlayableSprite player) {
         var controller = player.getSuperStateController();

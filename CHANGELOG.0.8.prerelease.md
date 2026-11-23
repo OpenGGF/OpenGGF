@@ -46,6 +46,10 @@ under the matching area heading; see the
 - **Knuckles in Sonic 2 and Sonic 3 & Knuckles:** grabbing a wall initializes
   Knuckles' animation duration and cursor to the cartridge values.
 
+- **Carnival Night Act 1:** Tails keeps flying and playing his flight sound
+  after setting Sonic down. The carry cooldown starts at the cartridge value
+  and advances during the team flight pass.
+
 - **Angel Island Act 2:** defeating the miniboss sends four flickering pieces
   of wreckage falling from the ship, as on the cartridge.
 
