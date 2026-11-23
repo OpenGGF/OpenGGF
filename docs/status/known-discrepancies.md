@@ -132,7 +132,6 @@ no discrepancy entry was added or reclassified by the cutover.
 28. [PSG Tone-2-Linked Noise at Period 0/1 Follows the Reference Cores](#psg-tone-2-linked-noise-at-period-01-follows-the-reference-cores) — Other
 29. [FM:PSG Mix Balance Is Pre-Rewrite Parity, Not a Hardware Calibration](#fmpsg-mix-balance-is-pre-rewrite-parity-not-a-hardware-calibration) — Other
 30. [S2 Compressed-Music Load Timing Omits Sub-Frame Bus Contention](#s2-compressed-music-load-timing-omits-sub-frame-bus-contention) — Hardware limit
-31. [S2 stopMusic Bypasses the Mailbox While a Compressed Load Blocks It](#s2-stopmusic-bypasses-the-mailbox-while-a-compressed-load-blocks-it) — Other
 32. [Fast FM Register-Level Timing and Output](#fast-fm-register-level-timing-and-output) — Engine feature
 33. [Knuckles in Sonic 2 Runs Tier Two With the Lock-On Dump and Tier One Without It](#knuckles-in-sonic-2-runs-tier-two-with-the-lock-on-dump-and-tier-one-without-it) — Other
 34. [Fixed Native Sprite Capacity in Wider Presentation](#fixed-native-sprite-capacity-in-wider-presentation) — Engine feature
@@ -2764,29 +2763,6 @@ become ready one presentation earlier or later than hardware.
 
 Remove this entry when the engine models the shared 68K/Z80/VDP/YM bus phase
 closely enough for compressed-load readiness to include those stalls directly.
-
-## S2 stopMusic Bypasses the Mailbox While a Compressed Load Blocks It
-
-**Kind:** Other
-
-**Location:** `AudioManager.playMusic`/`stopMusic`, `AudioPresentationProducer`,
-`Sonic2SoundRequestService`
-
-`AudioManager.playMusic` enters Sonic 2's real mailbox
-(`Sonic2SoundRequestService`, modelling `PlayMusic` at `s2.asm:1520-1528`), but
-`stopMusic` still enqueues directly into the plain presentation command queue.
-While a compressed load blocks mailbox consumption
-(`SmpsDriverSession#blocksForwardRequestConsumption`), the producer holds both
-queues shut and, on release, applies held plain commands before held mailbox
-requests — so a play and a stop issued in the same blocked span are not
-issue-ordered. A faithful fix routes the stop through the mailbox as the
-shipped `MusID_Stop` command (`CmdPtr_Stop` → `zStopSoundAndMusic`,
-`s2.sounddriver.asm:1598,2545`), but that command shares `Music1` with the
-`fixBugs = 0` slot-3 `VoiceTblPtr` alias bug (the unfixed four-iteration SFX
-scan reads `SoundQueue.SFX0+3`, which is `Music1`'s struct offset,
-`s2.asm:1270-1332`, `s2.constants.asm:1879-1885`) — on real hardware a second
-same-frame mailbox write can itself be silently lost this way, so the fix must
-accept that loss rather than paper over it. Deferred; not fixed by this entry.
 
 ## YM2612 Output Scale, Resting Level and DAC Presentation
 

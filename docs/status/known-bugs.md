@@ -22,6 +22,20 @@ Entries should include:
 
 ---
 
+## S2 game-over host fade stops music before the destination owns audio
+
+- **Location** — `GameLoopGameOverExit.startToBlack`.
+- **Symptom** — the shared host fade issues a plain music stop before opening
+  the destination. Under a compressed load, this stop can precede an older
+  mailbox play when the queues resume.
+- **ROM behavior** — `Obj39_Dismiss` (s2.asm:27737-27748) selects Continue or
+  SEGA. `ContinueScreen` (s2.asm:10319-10329) begins its fade without issuing
+  a stop. `SegaScreen` (s2.asm:4095-4099) submits `MusID_Stop` through
+  `PlayMusic` before its own fade.
+- **Removal condition** — the destination owns the game-over handoff's fade
+  and audio entry. Continue adds no stop and the SEGA fade services only the
+  destination's native mailbox stop.
+
 ## Solid on-screen gate: render-pass approximations — 2026-11-02
 
 The gate now reads `render_flags.on_screen` as the previous frame's BuildSprites /
