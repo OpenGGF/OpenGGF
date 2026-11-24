@@ -3,6 +3,7 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.level.objects.PlayerControlOwners;
 import com.openggf.game.PlayableEntity;
 import com.openggf.camera.Camera;
+import com.openggf.game.sonic3k.Sonic3kCartridgePolicy;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.Sonic3kObjectArtProvider;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
@@ -204,11 +205,12 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance imp
             this.state = State.MARKED_DELETE;
             return;
         }
-        // Obj_SSEntryRing loc_616C6: a negative subtype is always presented
+        // SSEntryRing_Init (sonic3k.asm:128292-128314): a negative subtype is always presented
         // as a Super Emerald ring. In locked-on S3K, an ordinary ring also
         // gets that presentation on the SK side once all Chaos Emeralds exist.
         this.superEmeraldRing = forcedSanctuaryRoute
-                || (Sonic3kZoneIds.isSkSideZone(services().currentZone()) && gameState.hasAllEmeralds());
+                || (gameState.hasAllEmeralds() && Sonic3kZoneIds.isSkSideZone(services().currentZone())
+                && !Sonic3kCartridgePolicy.isStandaloneSk(services()));
     }
 
     @Override
@@ -453,7 +455,7 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance imp
         services().playSfx(Sonic3kSfx.BIG_RING.id);
 
         if (awardRings) {
-            // Path B: ROM loc_61794 (sonic3k.asm:128379-128387) marks the ring
+            // Path B: ROM loc_61794 (sonic3k.asm:128373-128382) marks the ring
             // collected, sets the retirement bit and awards 50 rings. It does
             // not delete here — the following display pass sees
             // btst #5,$38 and retires through loc_6196A, which re-queues
@@ -474,39 +476,17 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance imp
     }
 
     /**
-     * ROM {@code SSEntryRing_Main}'s collision branch
-     * (skdisasm/sonic3k.asm:128337-128345):
-     * <pre>
-     *   cmpi.b  #7,(Chaos_emerald_count).w
-     *   bne.s   loc_6173A          ; fewer than 7 Chaos Emeralds -> capture sequence
-     *   tst.w   (SK_alone_flag).w
-     *   bne.s   loc_61794          ; S&amp;K alone -> award 50 rings
-     *   bsr.w   SSEntry_CheckLevel
-     *   beq.s   loc_61794          ; d1 = 0, an S3 level -> award 50 rings
-     *   cmpi.b  #7,(Super_emerald_count).w
-     *   beq.s   loc_61794          ; S&amp;K level with all Super Emeralds -> 50 rings
-     *   ; falls through to loc_6173A: capture sequence for the Super Emerald stage
-     * </pre>
-     * The previous engine predicate stopped at "all Chaos Emeralds collected",
-     * so an S&amp;K-half level ring was awarding 50 rings where the ROM starts the
-     * Super Emerald capture sequence.
-     * <p>
-     * {@code SK_alone_flag} is always zero here: the engine only models the
-     * locked-on Sonic 3 &amp; Knuckles ROM (see {@code Sonic3k.java:424-427}),
-     * so the S&amp;K-alone branch is unreachable and is not modelled.
-     * <p>
-     * The ROM's touch branch does not test {@code subtype} at all — the
-     * Hidden-Palace/arena decision belongs to {@code SSEntryFlash_GoSS}
-     * (sonic3k.asm:128442-128454), after the capture sequence. The engine's
-     * so a subtype-bit-7 ring is not a 50-ring award here either. MHZ's ring is
-     * one of those, which is why the fixture shows it entering the capture
-     * sequence with fewer than 7 Super Emeralds.
+     * loc_6170A (sonic3k.asm:128331-128345) tests the Chaos count first.
+     * With seven, standalone S&amp;K and locked-on S3 levels branch to
+     * loc_61794 (sonic3k.asm:128373-128382). A locked-on S&amp;K level requires
+     * seven Super Emeralds to take that path.
      */
     private boolean awardsFiftyRingsInsteadOfCapture(com.openggf.game.GameStateManager gameState) {
         if (!gameState.hasAllEmeralds()) {
             return false;
         }
-        return isSonic3HalfLevel() || gameState.hasAllSuperEmeralds();
+        return isSonic3HalfLevel() || gameState.hasAllSuperEmeralds()
+                || Sonic3kCartridgePolicy.isStandaloneSk(services());
     }
 
     /**
