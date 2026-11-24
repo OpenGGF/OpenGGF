@@ -131,7 +131,7 @@ no discrepancy entry was added or reclassified by the cutover.
 27. [FM:PSG Mix Balance Is Pre-Rewrite Parity, Not a Hardware Calibration](#fmpsg-mix-balance-is-pre-rewrite-parity-not-a-hardware-calibration) — Other
 28. [S2 Compressed-Music Load Timing Omits Sub-Frame Bus Contention](#s2-compressed-music-load-timing-omits-sub-frame-bus-contention) — Hardware limit
 29. [Fast FM Register-Level Timing and Output](#fast-fm-register-level-timing-and-output) — Engine feature
-30. [Knuckles in Sonic 2 Runs Tier Two With the Lock-On Dump and Tier One Without It](#knuckles-in-sonic-2-runs-tier-two-with-the-lock-on-dump-and-tier-one-without-it) — Other
+30. [Knuckles in Sonic 2 Runs Tier Two With the Lock-On Dump and Tier One Without It](#knuckles-in-sonic-2-runs-tier-two-with-the-lock-on-dump-and-tier-one-without-it) — Engine feature
 31. [Fixed Native Sprite Capacity in Wider Presentation](#fixed-native-sprite-capacity-in-wider-presentation) — Engine feature
 32. [S2 Sideways Platform Safe Admission and Owned-Child Retirement](#s2-sideways-platform-safe-admission-and-owned-child-retirement) — Other
 33. [Knuckles Climbs Sonic 1 Edge Walls](#knuckles-climbs-sonic-1-edge-walls) — Engine feature
@@ -3209,7 +3209,7 @@ The priority clear on a refused Sonic 1 request is tracked in
 
 ## Knuckles in Sonic 2 Runs Tier Two With the Lock-On Dump and Tier One Without It
 
-**Kind:** Other
+**Kind:** Engine feature
 
 **Status:** Open (tier two, 2026-09-14). Owner: `com.openggf.game.sonic2.kis2`;
 catalogue: [docs/kis2/BRANCH_DIFFS.md](../kis2/BRANCH_DIFFS.md).
@@ -3220,11 +3220,10 @@ S3K image and the Sonic 2 cart. The shipped Knuckles in Sonic 2 also runs
 code and data from a 256 KiB chip that only the user-supplied S&K + Sonic 2
 lock-on dump (3,407,872 bytes, MD5 `3E5E4B18D035775B916A06F2B3DC5031`)
 holds. With that dump present the patch runs **tier two** and reads the
-chip's in-level data; without it the patch runs **tier one** and this entry's
-tier-one list applies. The hub warns before launching tier one, explains the
-stock Sonic 2 presentation and unavailable Super Knuckles, and tells players
-how to supply the optional lock-on image. Players can hide this notice.
-Neither tier is the full presentation of Knuckles in Sonic 2 yet.
+chip data. Tier one is the engine's fallback when that optional input is
+unavailable. The hub lists the tier-one losses and explains how to supply
+the image. Players can hide this notice. Tier-two presentation gaps listed
+below remain open implementation work.
 
 ### Original Implementation
 

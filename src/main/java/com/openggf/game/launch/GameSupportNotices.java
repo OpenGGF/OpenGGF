@@ -3,6 +3,7 @@ package com.openggf.game.launch;
 import com.openggf.configuration.ConfigurationPersistence;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.i18n.UiMessages;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -38,6 +39,20 @@ public final class GameSupportNotices {
         Stage(String code) { this.code = code; }
 
         public String code() { return code; }
+
+        public boolean showsSupportLinks() {
+            return this != KIS2_TIER_ONE;
+        }
+
+        public String bodyText(String gameName) {
+            if (this == KIS2_TIER_ONE) return UiMessages.text("hub.notice.kis2_tier_one.body");
+            return UiMessages.text("hub.notice.body", Map.of("game", gameName, "stage", code));
+        }
+
+        public String stageTag() {
+            if (this == KIS2_TIER_ONE) return UiMessages.text("hub.notice.kis2_tier_one.tag_caps");
+            return UiMessages.text("hub.notice.stage_caps", Map.of("stage", code));
+        }
     }
 
     /** Stock games that are playable but not yet ready, keyed by game ID. */

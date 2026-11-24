@@ -781,7 +781,7 @@
   "@hub.notice.kis2_tier_one.tag_caps": {
     "description": "Short amber status tag for the limited Knuckles in Sonic 2 launch."
   },
-  "hub.notice.kis2_tier_one.body": "Knuckles in Sonic 2 uses the Sonic 2 title screen, special stages and ending in tier one. Super Knuckles is unavailable.\nFor tier two, put your Sonic & Knuckles + Sonic 2 lock-on image in your ROM folder.",
+  "hub.notice.kis2_tier_one.body": "Knuckles in Sonic 2 uses Sonic 2's title screen, level select, special stages and ending in tier one, without Super Knuckles or the chip's artwork, palettes and Casino Night layouts.\nFor tier two, put your Sonic & Knuckles + Sonic 2 lock-on image in your ROM folder.",
   "@hub.notice.kis2_tier_one.body": {
     "description": "Shown before starting Knuckles in Sonic 2 when the optional lock-on image is missing. The newline starts a second paragraph."
   },

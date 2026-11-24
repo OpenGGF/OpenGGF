@@ -7,7 +7,6 @@ import com.openggf.graphics.PixelFont;
 import com.openggf.i18n.UiMessages;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -52,7 +51,7 @@ public final class GameSupportNoticeDialog {
     public GameSupportNoticeDialog(String gameName, GameSupportNotices.Stage stage) {
         this.gameName = Objects.requireNonNull(gameName, "gameName");
         this.stage = Objects.requireNonNull(stage, "stage");
-        this.links = stage == GameSupportNotices.Stage.KIS2_TIER_ONE ? List.of() : LINKS;
+        this.links = stage.showsSupportLinks() ? LINKS : List.of();
     }
 
     public GameSupportNotices.Stage stage() { return stage; }
@@ -161,7 +160,7 @@ public final class GameSupportNoticeDialog {
 
         // Title and stage tag centred together as one run; the tag carries the emphasis.
         String title = UiMessages.text("hub.notice.title_caps");
-        String tag = stageTag();
+        String tag = stage.stageTag();
         int run = MenuChrome.labelWidth(title) + 6 + MenuChrome.tagWidth(tag);
         int titleX = l.x() + (l.w() - run) / 2;
         MenuChrome.label(font, title, titleX, l.titleY() + labelAbove(), MenuChrome.GOLD);
@@ -295,15 +294,8 @@ public final class GameSupportNoticeDialog {
     private static int tagHeight() { return Math.max(10, MenuChrome.compactLineHeight() + 2); }
     private static int labelAbove() { return Math.max(0, MenuChrome.labelLineHeight() - 10); }
 
-    String bodyText() {
-        if (stage == GameSupportNotices.Stage.KIS2_TIER_ONE) return UiMessages.text("hub.notice.kis2_tier_one.body");
-        return UiMessages.text("hub.notice.body", Map.of("game", gameName, "stage", stage.code()));
-    }
+    String bodyText() { return stage.bodyText(gameName); }
 
-    private String stageTag() {
-        if (stage == GameSupportNotices.Stage.KIS2_TIER_ONE) return UiMessages.text("hub.notice.kis2_tier_one.tag_caps");
-        return UiMessages.text("hub.notice.stage_caps", Map.of("stage", stage.code()));
-    }
     private static String dontShowAgainLabel() { return UiMessages.text("hub.notice.dont_show_again"); }
     private static String continueLabel() { return UiMessages.text("hub.notice.continue"); }
 }

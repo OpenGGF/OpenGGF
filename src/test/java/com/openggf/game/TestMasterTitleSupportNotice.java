@@ -215,8 +215,9 @@ class TestMasterTitleSupportNotice {
         assertNotNull(notice, "tier-one KiS2 asks before starting");
         assertFalse(screen.isGameSelected());
         assertEquals(GameSupportNotices.Stage.KIS2_TIER_ONE, notice.stage());
-        assertTrue(notice.bodyText().contains("title screen, special stages and ending"));
-        assertTrue(notice.bodyText().contains("Super Knuckles is unavailable."));
+        assertTrue(notice.bodyText().contains("title screen, level select, special stages and ending"));
+        assertTrue(notice.bodyText().contains("Super Knuckles"));
+        assertTrue(notice.bodyText().contains("artwork, palettes and Casino Night layouts"));
         assertTrue(notice.bodyText().contains("lock-on image"));
 
         press(screen, GLFW_KEY_LEFT);
