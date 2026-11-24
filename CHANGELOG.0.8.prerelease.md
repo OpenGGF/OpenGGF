@@ -7,6 +7,12 @@ under the matching area heading; see the
 
 ## Gameplay and presentation
 
+- Sonic 1 and Sonic 3 & Knuckles special stages now award a Continue at 50
+  rings and lives at 100 and 200 rings. Sonic 1's 1UP block grants a life
+  and shows its four-frame sparkle. Sonic 2 and Knuckles in Sonic 2 award
+  a Continue and show the mini-Sonic cue when the completed act bonus
+  reaches 10,000 points. Earned Continues can be spent after game over.
+
 - In standalone Sonic & Knuckles, star posts cycle between Slots and Pachinko.
   A star post activated with 50 rings opens Slots. Once all seven Chaos Emeralds
   are collected, giant rings award 50 rings.

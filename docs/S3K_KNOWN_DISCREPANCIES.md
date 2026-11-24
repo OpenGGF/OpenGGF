@@ -662,6 +662,11 @@ with no collected rings and the initial rotation. Stock zone saves resume at the
 zone start, including the native Hidden Palace and Knuckles Sky Sanctuary acts.
 Checkpoints remain session-only.
 
+With an active slot, `SaveGame_SpecialStage` caps the live continue byte at 99
+as the results open. Full `SaveGame` caps lives at 99, and
+`SaveGame_LivesContinues` caps both bytes. No Save keeps the live bytes,
+including any award above 99, until the next byte increment or decrement.
+
 Native full SaveGame clears after SRAM writing. Java clears before capturing its
 asynchronous persistence request, so the next-zone payload also contains a zero
 mask. This does not claim identical SRAM ordering.

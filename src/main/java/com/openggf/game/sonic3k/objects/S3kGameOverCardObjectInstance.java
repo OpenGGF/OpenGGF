@@ -1,7 +1,9 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.JoypadPressSnapshot;
+import com.openggf.game.NativeGameStateOps;
 import com.openggf.game.save.SaveReason;
+import com.openggf.game.sonic3k.S3kFullSaveGame;
 import com.openggf.game.sonic3k.Sonic3kGameOverPlcService;
 import com.openggf.level.objects.AbstractGameOverCardObjectInstance;
 import com.openggf.level.objects.ObjectConstructionContext;
@@ -52,8 +54,13 @@ public final class S3kGameOverCardObjectInstance extends AbstractGameOverCardObj
     @Override
     protected void onArtReady() {
         if (getMappingFrame() == FRAME_GAME && !ObjectConstructionContext.isRewindActiveRestore()) {
-            // SaveGame_LivesContinues: no-op for S&K alone / no save pointer, which
-            // the session save request reproduces by ignoring sessions without a slot.
+            // SaveGame_LivesContinues / loc_C54C / loc_C560 (sonic3k.asm:16011-16033)
+            // also caps the live bytes before Continue can read or spend them.
+            if (S3kFullSaveGame.hasNativeSaveSlot(services().worldSession())) {
+                var state = services().gameState();
+                NativeGameStateOps.restoreLives(state, Math.min(state.getLives() & 0xFF, 99));
+                NativeGameStateOps.capContinues(state, 99);
+            }
             services().requestSessionSave(SaveReason.LIVES_CONTINUES_SAVE);
         }
     }

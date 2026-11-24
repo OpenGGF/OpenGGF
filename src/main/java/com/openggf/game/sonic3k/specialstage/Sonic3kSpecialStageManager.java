@@ -6,6 +6,7 @@ import com.openggf.game.GameServices;
 import com.openggf.game.sonic3k.difficulty.BlueSphereLayoutPolicy;
 import com.openggf.game.sonic3k.difficulty.S3kDifficultyRules;
 import com.openggf.game.GameStateManager;
+import com.openggf.game.NativeGameStateOps;
 import com.openggf.game.EmeraldRewardKind;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.SpecialStageViewport;
@@ -61,6 +62,7 @@ public class Sonic3kSpecialStageManager implements com.openggf.game.internal.Nat
     private com.openggf.game.sonic3k.bluespheres.S3kBlueSpheresStage blueSpheresStage;
     private PlayerCharacter blueSpheresCharacter;
     private int ringsCollected;
+    private int ringAwardFlags;
     private int spheresLeft;
     private int frameCounter;
 
@@ -310,6 +312,7 @@ public class Sonic3kSpecialStageManager implements com.openggf.game.internal.Nat
         this.emeraldCollected = false;
         this.superEmeraldMode = false;
         this.ringsCollected = 0;
+        this.ringAwardFlags = 0;
         this.frameCounter = 0;
         this.clearRoutine = 0;
         this.clearTimer = 0;
@@ -1097,12 +1100,12 @@ public class Sonic3kSpecialStageManager implements com.openggf.game.internal.Nat
             ringsLeft--;
             if (ringsLeft == 0) {
                 // All rings collected — play PERFECT SFX and show PERFECT banner
-                GameServices.audio().playSfx(Sonic3kSfx.PERFECT.id);
+                GameServices.audio().playMusicMailboxNativeRequest(Sonic3kSfx.PERFECT.id);
                 banner.triggerReEntry(); // Shows "PERFECT" text
             }
         }
 
-        ringsCollected++;
+        ringsCollected = (ringsCollected + 1) & 0xFFFF;
 
         if (blueSpheresStage != null) {
             // loc_984C: Blue_spheres_stage_flag branches straight to the
@@ -1111,11 +1114,13 @@ public class Sonic3kSpecialStageManager implements com.openggf.game.internal.Nat
             return;
         }
 
-        // Extra life thresholds
-        if (ringsCollected == EXTRA_LIFE_THRESHOLD_CONTINUE) {
-            GameServices.audio().playSfx(Sonic3kSfx.CONTINUE.id);
-        } else if (ringsCollected == EXTRA_LIFE_THRESHOLD_1
-                || ringsCollected == EXTRA_LIFE_THRESHOLD_2) {
+        // loc_984C / loc_987E / loc_98A0 (sonic3k.asm:12225-12256).
+        if (claimRingAward(EXTRA_LIFE_THRESHOLD_CONTINUE, 0x01)) {
+            GameServices.gameState().addContinue();
+            GameServices.audio().playMusicMailboxNativeRequest(Sonic3kSfx.CONTINUE.id);
+        } else if (claimRingAward(EXTRA_LIFE_THRESHOLD_1, 0x02)
+                || claimRingAward(EXTRA_LIFE_THRESHOLD_2, 0x04)) {
+            NativeGameStateOps.awardByteLife(GameServices.gameState());
             GameServices.audio().playSfx(Sonic3kSfx.RING_LOSS.id);
         } else {
             // ROM: loc_984C seeds sfx_RingRight before the Blue_spheres_stage_flag
@@ -1126,6 +1131,12 @@ public class Sonic3kSpecialStageManager implements com.openggf.game.internal.Nat
             // so the audio manager alternates this request the same way.
             GameServices.audio().playSfx(Sonic3kSfx.RING_RIGHT.id);
         }
+    }
+
+    private boolean claimRingAward(int threshold, int flag) {
+        if (ringsCollected < threshold || (ringAwardFlags & flag) != 0) return false;
+        ringAwardFlags |= flag;
+        return true;
     }
 
     /**
@@ -1393,6 +1404,7 @@ public class Sonic3kSpecialStageManager implements com.openggf.game.internal.Nat
                 emeraldCollected,
                 superEmeraldMode,
                 ringsCollected,
+                ringAwardFlags,
                 spheresLeft,
                 ringsLeft,
                 frameCounter,
@@ -1452,6 +1464,7 @@ public class Sonic3kSpecialStageManager implements com.openggf.game.internal.Nat
         emeraldCollected = snapshot.emeraldCollected();
         superEmeraldMode = snapshot.superEmeraldMode();
         ringsCollected = snapshot.ringsCollected();
+        ringAwardFlags = snapshot.ringAwardFlags();
         spheresLeft = snapshot.spheresLeft();
         ringsLeft = snapshot.ringsLeft();
         frameCounter = snapshot.frameCounter();
@@ -1590,6 +1603,7 @@ public class Sonic3kSpecialStageManager implements com.openggf.game.internal.Nat
         finished = false;
         emeraldCollected = false;
         ringsCollected = 0;
+        ringAwardFlags = 0;
         spheresLeft = 0;
         currentStage = 0;
         frameCounter = 0;

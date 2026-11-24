@@ -35,6 +35,8 @@ import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -274,6 +276,56 @@ class TestSonic3kSpecialStageManagerSnapshot {
 
         assertTrue(hasSpeedMultiplier(24));
         assertOnlyAudioSpeedRestoreCalls();
+    }
+
+    @ParameterizedTest
+    @CsvSource({"50,3", "100,4", "200,5"})
+    void specialStageRingAwardRoundTripsWithStageProgress(int threshold, int lives) throws Exception {
+        attachRuntime();
+        var manager = new Sonic3kSpecialStageManager();
+        seedInitializedManager(manager);
+        set(manager, "stagePalettesUploaded", true);
+        set(manager, "firstUpdateCall", false);
+        manager.getBanner().initialize();
+
+        for (int earlier : new int[]{50, 100}) {
+            if (earlier >= threshold) break;
+            set(manager, "ringsCollected", earlier - 1);
+            touchRingOnNextUpdate(manager, earlier);
+            manager.update();
+            assertEquals(earlier, manager.getRingsCollected());
+        }
+        set(manager, "ringsCollected", threshold - 1);
+        touchRingOnNextUpdate(manager, threshold);
+        var before = manager.captureRewindSnapshot();
+        manager.update();
+        var after = manager.captureRewindSnapshot();
+        assertEquals(threshold, after.hud().displayedRingCount());
+        assertEquals(lives, gameState.getLives());
+        assertEquals(1, gameState.getContinues());
+
+        manager.restoreRewindSnapshot(before);
+        assertEquals(lives - (threshold == 50 ? 0 : 1), gameState.getLives());
+        assertEquals(threshold == 50 ? 0 : 1, gameState.getContinues());
+        manager.update();
+        assertEquals(lives, gameState.getLives());
+        assertEquals(1, gameState.getContinues());
+
+        manager.restoreRewindSnapshot(after);
+        touchRingOnNextUpdate(manager, threshold + 1);
+        manager.update();
+        assertEquals(threshold + 1, manager.getRingsCollected());
+        assertEquals(lives, gameState.getLives());
+        assertEquals(1, gameState.getContinues());
+    }
+
+    private static void touchRingOnNextUpdate(Sonic3kSpecialStageManager manager, int column) {
+        int x = (column & 31) << 8;
+        int y = 0x1000;
+        manager.getPlayer().initialize(0, x, y, false);
+        manager.getGrid().setCellByIndex(Sonic3kSpecialStageGrid.positionToIndex(x, y),
+                Sonic3kSpecialStageConstants.CELL_RING);
+        manager.handleInput(1, 0);
     }
 
     @Test
