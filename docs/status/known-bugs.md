@@ -37,6 +37,35 @@ Entries should include:
   ranges. For any observable overlap or early reader, project the serviced
   range into its mapping and check before, during and after service.
 
+## S2 and KiS2 special-stage results rewind
+
+- **Location** — `GameLoopSpecialStageLifecycle` and `Sonic2SpecialStageResultsScreen`.
+- **Symptom** — rewind can replay the live half-pipe, while the results card
+  and its tally have no results-mode rewind owner.
+- **Scope** — the live-stage snapshot retains the ring words and admitted ring
+  total used to select Obj6F's ordinary or perfect path
+  (`SpecialStage`, s2.asm:6740-6746; `Obj6F_TallyScore`, s2.asm:28395-28414).
+  KiS2's split-name message snapshots cover only the message state.
+- **Removal condition** — rewind across results frames restores score,
+  countdowns, routine, message state and the phase of the V-int sound gate,
+  including a repeatable return to the level.
+
+## S2 and KiS2 special-stage results timing before and after the tally
+
+- **Location** — `Sonic2SpecialStageProvider` and `Sonic2SpecialStageResultsScreen`.
+- **Symptom** — Obj6F's results scans advance the inherited object V-int clock.
+  The preceding half-pipe loop does not yet count every admitted wait into
+  that inherited phase. Ordinary and stock Super-message results publish
+  completion on the timer-expiry pass.
+- **ROM behavior** — `VintRet` (s2.asm:507-510) advances the same longword
+  through the `SpecialStage` wait (s2.asm:6695-6703) and Obj6F results loop
+  (s2.asm:6797-6805). `Obj6F_TimedDisplay` (s2.asm:28367-28373) selects
+  `Obj6F_DisplayOnly` (s2.asm:28427-28429), which sets the level-inactive
+  flag on the following object pass.
+- **Removal condition** — the carry into results accounts for the represented
+  half-pipe waits, and ordinary and Super-message exits match the separate
+  display-only pass.
+
 ## Sonic 1 title attract demos are absent
 
 - **Location** — `Sonic1TitleScreenManager` and the title attract provider.

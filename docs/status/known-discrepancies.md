@@ -3295,9 +3295,8 @@ the owning KiS2 routine in the catalogue):
   `TestKis2HeadlessBoot#kiS2PlacedRingDisappearsWhenItsCentreCrossesTheTopEdge`).
   Exact per-scanline sprite masking depends on VDP timing outside the engine's
   hardware model. Level-select extra PLC work and debug sprite maps remain
-  open. Special-stage perfect-bonus progression and tally sound timing retain
-  shared-owner gaps.
-  Results-mode rewind is absent; message-core snapshots alone do not supply it.
+  open. [Special-stage results rewind](known-bugs.md#s2-and-kis2-special-stage-results-rewind)
+  is tracked separately.
   The formerly listed ending walk cadence is not a KiS2 gap: its forced
   Ending_Routine=0 never takes that walk branch.
 - **Super Knuckles.** Chip palettes, sparse colour writes (2/3/5), 16-pass

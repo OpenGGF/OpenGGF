@@ -5,6 +5,7 @@ import static com.openggf.game.sonic2.Sonic2RomAddresses.address;
 import com.openggf.game.ResultsScreen;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.session.ActiveGameplayTeamResolver;
+import com.openggf.game.session.EngineTiming;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
 import com.openggf.game.sonic2.constants.Sonic2Constants;
 import com.openggf.game.sonic2.resources.Sonic2PlcService;
@@ -51,6 +52,15 @@ public class Sonic2SpecialStageResultsScreen implements ResultsScreen {
     private static final int STATE_TALLY = 2;
     private static final int STATE_WAIT = 3;
     private static final int STATE_EXIT = 4;
+    private static final int STATE_PRE_PERFECT_REVEAL = 5;
+    private static final int STATE_PRE_PERFECT_TALLY = 6;
+    private static final int STATE_TALLY_PERFECT = 7;
+    private static final int STATE_PERFECT_WAIT = 8;
+    private static final int STATE_PERFECT_EXIT = 9;
+
+    private static final int PERFECT_DELAY = 0x5A;
+    private static final int PERFECT_BONUS = 5000;
+    private static final int PERFECT_TALLY_DECREMENT = 20;
 
     // Movement speed from s2.asm Obj34_MoveTowardsTargetPosition: moveq #$10,d0
     private static final int SLIDE_SPEED_PIXELS_PER_FRAME = 16;
@@ -90,6 +100,7 @@ public class Sonic2SpecialStageResultsScreen implements ResultsScreen {
     // For single-player, we move GEMS BONUS up to Y=168 for consistent 16px spacing
     private static final int SCORE_LINE_Y = 136;
     private static final int SONIC_RINGS_Y = 152;
+    private static final int PERFECT_BONUS_Y = 160;
     private static final int MILES_RINGS_Y = 168;
     private static final int GEMS_BONUS_Y = 168;  // Moved up from 184 for consistent spacing in single-player
     private static final int GEMS_BONUS_TWO_PLAYER_Y = 184;
@@ -147,7 +158,7 @@ public class Sonic2SpecialStageResultsScreen implements ResultsScreen {
     // State tracking
     private int state = STATE_SLIDE_IN;
     private int stateTimer = 0;
-    private int frameCounter = 0;
+    private int vIntRunCount;
     private int totalFrames = 0;
     private int slideProgress = 0;
     private boolean complete = false;
@@ -163,6 +174,7 @@ public class Sonic2SpecialStageResultsScreen implements ResultsScreen {
     private final int ringsCollected;
     private final int ringsCollectedP2;
     private final boolean gotEmerald;
+    private final boolean perfect;
     private final int stageIndex;
     private final int totalEmeraldCount;
     private final ObjectServices services;
@@ -214,10 +226,10 @@ public class Sonic2SpecialStageResultsScreen implements ResultsScreen {
 
     // Number display positions in the mapping frames:
     // Frame 13 (RING_BONUS): numbers at tile $528 - $520 = 8 (offset 8 in numbers area)
-    // Frame 16 (PERFECT_BONUS): numbers at tile $520 - $520 = 0 (offset 0 in numbers area)
+    // Frame 16 (GEMS_BONUS): numbers at tile $520 - $520 = 0 (offset 0 in numbers area)
     // Note: Frame 12 (EMERALD_BONUS) doesn't have a numbers piece
     private static final int RING_BONUS_DIGIT_OFFSET = 8;   // $528 - $520 for Frame 13
-    private static final int PERFECT_DIGIT_OFFSET = 0;      // $520 - $520 for Frame 16
+    private static final int GEMS_DIGIT_OFFSET = 0;      // $520 - $520 for Frame 16
     private static final int DIGITS_PER_VALUE = 8;          // 4 digits x 2 tiles each
 
     public Sonic2SpecialStageResultsScreen(int ringsCollected, boolean gotEmerald,
@@ -237,9 +249,17 @@ public class Sonic2SpecialStageResultsScreen implements ResultsScreen {
                                                     boolean gotEmerald,
                                                     int stageIndex, int totalEmeraldCount,
                                                     ObjectServices services) {
+        this(ringsCollected, ringsCollectedP2, gotEmerald, false, stageIndex, totalEmeraldCount, services);
+    }
+
+    public Sonic2SpecialStageResultsScreen(int ringsCollected, int ringsCollectedP2,
+                                          boolean gotEmerald, boolean perfect,
+                                          int stageIndex, int totalEmeraldCount,
+                                          ObjectServices services) {
         this.ringsCollected = ringsCollected;
         this.ringsCollectedP2 = ringsCollectedP2;
         this.gotEmerald = gotEmerald;
+        this.perfect = perfect;
         this.stageIndex = stageIndex;
         this.totalEmeraldCount = totalEmeraldCount;
         this.services = Objects.requireNonNull(services, "services");
@@ -654,9 +674,9 @@ public class Sonic2SpecialStageResultsScreen implements ResultsScreen {
         writeBonusValue(numbersOffset + RING_BONUS_DIGIT_OFFSET, displayedRingCount, sourceDigitPatterns);
 
         // Update emerald bonus digits (at VRAM $520, which is offset 0 in numbers area)
-        // Used by Frame 16 (PERFECT_BONUS) when showing gems bonus
+        // Used by Frame 16 (GEMS_BONUS) when showing gems bonus
         if (gotEmerald) {
-            writeBonusValue(numbersOffset + PERFECT_DIGIT_OFFSET, emeraldBonus, sourceDigitPatterns);
+            writeBonusValue(numbersOffset + GEMS_DIGIT_OFFSET, emeraldBonus, sourceDigitPatterns);
         }
 
         // Re-cache the updated patterns to GPU
@@ -672,7 +692,7 @@ public class Sonic2SpecialStageResultsScreen implements ResultsScreen {
             // Re-cache emerald bonus digit patterns (offset 0-7)
             if (gotEmerald) {
                 for (int i = 0; i < DIGITS_PER_VALUE; i++) {
-                    int patternIndex = numbersOffset + PERFECT_DIGIT_OFFSET + i;
+                    int patternIndex = numbersOffset + GEMS_DIGIT_OFFSET + i;
                     if (patternIndex < combinedPatterns.length && combinedPatterns[patternIndex] != null) {
                         graphicsManager.cachePatternTexture(combinedPatterns[patternIndex], PATTERN_BASE + patternIndex);
                     }
@@ -768,7 +788,6 @@ public class Sonic2SpecialStageResultsScreen implements ResultsScreen {
     }
 
     private void updateTally() {
-        boolean anyRemaining = false;
         int totalIncrement = 0;
 
         // Decrement ring count by 1, add multiplied value (10) to score
@@ -776,7 +795,6 @@ public class Sonic2SpecialStageResultsScreen implements ResultsScreen {
         if (displayedRingCount > 0) {
             displayedRingCount--;
             totalIncrement += Sonic2SpecialStageConstants.RESULTS_RING_MULTIPLIER;
-            anyRemaining = true;
         }
 
         // ROM Obj6F_TallyScore tests and decrements Bonus_Countdown_2 in the
@@ -785,7 +803,6 @@ public class Sonic2SpecialStageResultsScreen implements ResultsScreen {
         if (displayedRingCountP2 > 0) {
             displayedRingCountP2--;
             totalIncrement += Sonic2SpecialStageConstants.RESULTS_RING_MULTIPLIER;
-            anyRemaining = true;
         }
 
         // Decrement emerald bonus
@@ -793,32 +810,60 @@ public class Sonic2SpecialStageResultsScreen implements ResultsScreen {
         if (decrement > 0) {
             emeraldBonus -= decrement;
             totalIncrement += decrement;
-            anyRemaining = true;
         }
 
-        // Update total
-        totalBonus += totalIncrement;
-
-        if (totalIncrement > 0) {
-            // AddPoints stores tens of points; GameStateManager stores points.
-            services().gameState().addScore(totalIncrement * 10);
-        }
-
-        // Play tick sound every N frames while tallying
-        if (anyRemaining && (stateTimer % Sonic2SpecialStageConstants.RESULTS_TALLY_TICK_INTERVAL) == 0) {
-            playTickSound();
-        }
-
-        // Check if tally complete
-        if (!anyRemaining) {
-            playTallyEndSound();
-            state = STATE_WAIT;
+        if (totalIncrement != 0) {
+            awardTallyPoints(totalIncrement);
+        } else if (perfect) {
+            // Obj6F_TallyScore (s2.asm:28376-28424) selects $24 and
+            // leaves the final message check to the perfect tally.
+            playSound(Sonic2Sfx.TALLY_END);
+            state = STATE_PRE_PERFECT_REVEAL;
             stateTimer = 0;
-            if (shouldStartSuperSequence()) {
-                // Obj6F_TallyScore sets routine $30 on this pass, without the $78 wait.
-                if (messagePresentation != null) messagePresentation.startSuper();
-                state = STATE_SUPER_SONIC_DISPLAY;
-            }
+        } else {
+            finishTally(STATE_WAIT);
+        }
+    }
+
+    private void revealPerfectBonus() {
+        // The title's $24 timer advances to $26 before the ring-row children
+        // run. Obj6F_P1Rings replaces its countdown and Obj6F_P2Rings goes
+        // away on this same pass (s2.asm:28306-28330, 28367-28371).
+        displayedRingCount = PERFECT_BONUS;
+        state = STATE_PRE_PERFECT_TALLY;
+        stateTimer = 0;
+        playSound(Sonic2Sfx.SIGNPOST);
+    }
+
+    private void updatePerfectTally() {
+        // Obj6F_TallyPerfect (s2.asm:28432-28461) drains in 20 native
+        // score units per pass before the separate exhausted pass.
+        if (displayedRingCount != 0) {
+            displayedRingCount -= PERFECT_TALLY_DECREMENT;
+            awardTallyPoints(PERFECT_TALLY_DECREMENT);
+        } else {
+            finishTally(STATE_PERFECT_WAIT);
+        }
+    }
+
+    private void awardTallyPoints(int nativeScoreUnits) {
+        totalBonus += nativeScoreUnits;
+        // AddPoints works in tens of points. GameStateManager stores full points.
+        services().gameState().addScore(nativeScoreUnits * 10);
+        // Obj6F_TallyScore and Obj6F_TallyPerfect read Vint_runcount+3
+        // (s2.asm:28419-28424, 28443-28448).
+        if ((vIntRunCount & 3) == 0) {
+            playSound(Sonic2Sfx.BLIP);
+        }
+    }
+
+    private void finishTally(int waitState) {
+        playSound(Sonic2Sfx.TALLY_END);
+        state = waitState;
+        stateTimer = 0;
+        if (shouldStartSuperSequence()) {
+            if (messagePresentation != null) messagePresentation.startSuper();
+            state = STATE_SUPER_SONIC_DISPLAY;
         }
     }
 
@@ -852,7 +897,9 @@ public class Sonic2SpecialStageResultsScreen implements ResultsScreen {
         // Prepare on update once a ROM is available; draw remains read-only.
         var romManager = services().romManager();
         if (!artLoaded && romManager != null && romManager.isRomAvailable()) loadArt();
-        this.frameCounter = frameCounter;
+        // VintRet (s2.asm:507-510) increments Vint_runcount before the
+        // results object scan. The native results loop advances this clock.
+        vIntRunCount = EngineTiming.vIntRunCounter().lowByte();
         resolvePresentation();
         if (!plcReadinessPassed) {
             Sonic2PlcService plcService = services().gameService(Sonic2PlcService.class);
@@ -881,6 +928,18 @@ public class Sonic2SpecialStageResultsScreen implements ResultsScreen {
             case STATE_SLIDE_IN -> updateSlideIn();
             case STATE_PRE_TALLY_DELAY -> updatePreTallyDelay();
             case STATE_TALLY -> updateTally();
+            case STATE_PRE_PERFECT_REVEAL -> {
+                if (stateTimer == PERFECT_DELAY) revealPerfectBonus();
+            }
+            case STATE_PRE_PERFECT_TALLY -> {
+                if (stateTimer == PERFECT_DELAY) state = STATE_TALLY_PERFECT;
+            }
+            case STATE_TALLY_PERFECT -> updatePerfectTally();
+            case STATE_PERFECT_WAIT -> {
+                // $2C expires into $2E. DisplayOnly runs on the next pass.
+                if (stateTimer == Sonic2SpecialStageConstants.RESULTS_WAIT_DURATION) state = STATE_PERFECT_EXIT;
+            }
+            case STATE_PERFECT_EXIT -> complete = true;
             case STATE_WAIT -> updateWait();
             case STATE_EXIT -> complete = true;
         }
@@ -1041,6 +1100,10 @@ public class Sonic2SpecialStageResultsScreen implements ResultsScreen {
         // - Y=152, routine $16, frame $D (13): SONIC RINGS - starts at 320+384, target=160, distance=544
         // - Y=184, routine $1A, frame $10 (16): GEMS BONUS - starts at 320+416, target=160, distance=576
 
+        boolean showPerfectRow = perfect && state >= STATE_PRE_PERFECT_TALLY;
+        // Leave native space for the perfect row at Y=160.
+        int gemsBonusY = perfect || ringsCollectedP2 > 0 ? GEMS_BONUS_TWO_PLAYER_Y : GEMS_BONUS_Y;
+
         // Update digit patterns for display (numbers show initial values until tally changes them)
         if (useRomArt) {
             updateBonusPatterns();
@@ -1060,34 +1123,38 @@ public class Sonic2SpecialStageResultsScreen implements ResultsScreen {
             // Numbers always visible with the label
             renderBonusNumber(scoreX + numbersXOffset, SCORE_LINE_Y, totalBonus, true);
 
-            // Line 2: Y=152 - "SONIC RINGS" - distance = 544 (704 - 160)
-            int ringsOffset = getSlideOffset(544);
-            int ringsX = xOff + SCREEN_CENTER_X + ringsOffset;
-            renderMappingFrameWithoutNumbers(Sonic2SpecialStageResultsMappings.FRAME_RING_BONUS,
-                    ringsX, SONIC_RINGS_Y);
-            // Numbers always visible with the label
-            renderBonusNumber(ringsX + 0x40, SONIC_RINGS_Y, displayedRingCount);
+            if (showPerfectRow) {
+                // Obj6F_PerfectBonus (s2.asm:28466-28473) hides the label
+                // on Vint_runcount bit 3, while the countdown stays visible.
+                int frame = (vIntRunCount & 8) == 0
+                        ? Sonic2SpecialStageResultsMappings.FRAME_PERFECT_BONUS
+                        : Sonic2SpecialStageResultsMappings.FRAME_SCORE_NUMBERS;
+                int centerX = xOff + SCREEN_CENTER_X;
+                renderMappingFrameWithoutNumbers(frame, centerX, PERFECT_BONUS_Y);
+                renderBonusNumber(centerX + numbersXOffset, PERFECT_BONUS_Y, displayedRingCount, true);
+            } else {
+                int ringsX = xOff + SCREEN_CENTER_X + getSlideOffset(544);
+                renderMappingFrameWithoutNumbers(Sonic2SpecialStageResultsMappings.FRAME_RING_BONUS,
+                        ringsX, SONIC_RINGS_Y);
+                renderBonusNumber(ringsX + 0x40, SONIC_RINGS_Y, displayedRingCount);
 
-            // Obj6F frame 14 is the separate Miles Rings row in two-player
-            // mode (s2.asm Map_obj6F_02B0). A positive P2 tally identifies that
-            // layout; the one-player layout intentionally has no such row.
-            if (ringsCollectedP2 > 0) {
-                int milesOffset = getSlideOffset(560);
-                int milesX = xOff + SCREEN_CENTER_X + milesOffset;
-                renderMappingFrameWithoutNumbers(Sonic2SpecialStageResultsMappings.FRAME_SCORE_AREA_1,
-                        milesX, MILES_RINGS_Y);
-                renderBonusNumber(milesX + 0x40, MILES_RINGS_Y, displayedRingCountP2);
+                if (ringsCollectedP2 > 0) {
+                    int milesX = xOff + SCREEN_CENTER_X + getSlideOffset(560);
+                    renderMappingFrameWithoutNumbers(Sonic2SpecialStageResultsMappings.FRAME_SCORE_AREA_1,
+                            milesX, MILES_RINGS_Y);
+                    renderBonusNumber(milesX + 0x40, MILES_RINGS_Y, displayedRingCountP2);
+                }
             }
 
             // Line 3: Y=184 - "GEMS BONUS" - distance = 576 (736 - 160)
             if (gotEmerald) {
                 int gemsOffset = getSlideOffset(576);
                 int gemsX = xOff + SCREEN_CENTER_X + gemsOffset;
-                renderMappingFrameWithoutNumbers(Sonic2SpecialStageResultsMappings.FRAME_PERFECT_BONUS,
-                        gemsX, ringsCollectedP2 > 0 ? GEMS_BONUS_TWO_PLAYER_Y : GEMS_BONUS_Y);
+                renderMappingFrameWithoutNumbers(Sonic2SpecialStageResultsMappings.FRAME_GEMS_BONUS,
+                        gemsX, gemsBonusY);
                 // Numbers always visible with the label
                 renderBonusNumber(gemsX + numbersXOffset,
-                        ringsCollectedP2 > 0 ? GEMS_BONUS_TWO_PLAYER_Y : GEMS_BONUS_Y, emeraldBonus, true);
+                        gemsBonusY, emeraldBonus, true);
             }
         } else {
             // Placeholder rendering with slide-in
@@ -1097,19 +1164,24 @@ public class Sonic2SpecialStageResultsScreen implements ResultsScreen {
             renderPlaceholderText(commands, xOff + SCREEN_CENTER_X + scoreOffset, SCORE_LINE_Y,
                     "SCORE: " + totalBonus, 1.0f, 1.0f, 0.5f);
 
-            renderPlaceholderText(commands, xOff + SCREEN_CENTER_X + ringsOffset, SONIC_RINGS_Y,
-                    "SONIC RINGS: " + displayedRingCount, 1.0f, 1.0f, 0.5f);
+            if (showPerfectRow) {
+                String label = (vIntRunCount & 8) == 0 ? "PERFECT BONUS: " : "";
+                renderPlaceholderText(commands, xOff + SCREEN_CENTER_X, PERFECT_BONUS_Y,
+                        label + displayedRingCount * 10, 1.0f, 1.0f, 0.5f);
+            } else {
+                renderPlaceholderText(commands, xOff + SCREEN_CENTER_X + ringsOffset, SONIC_RINGS_Y,
+                        "SONIC RINGS: " + displayedRingCount, 1.0f, 1.0f, 0.5f);
 
-            if (ringsCollectedP2 > 0) {
-                int milesOffset = getSlideOffset(560);
-                renderPlaceholderText(commands, xOff + SCREEN_CENTER_X + milesOffset, MILES_RINGS_Y,
-                        "MILES RINGS: " + displayedRingCountP2, 1.0f, 1.0f, 0.5f);
+                if (ringsCollectedP2 > 0) {
+                    int milesOffset = getSlideOffset(560);
+                    renderPlaceholderText(commands, xOff + SCREEN_CENTER_X + milesOffset, MILES_RINGS_Y,
+                            "MILES RINGS: " + displayedRingCountP2, 1.0f, 1.0f, 0.5f);
+                }
             }
 
             if (gotEmerald) {
                 int gemsOffset = getSlideOffset(576);
-                int gemsY = ringsCollectedP2 > 0 ? GEMS_BONUS_TWO_PLAYER_Y : GEMS_BONUS_Y;
-                renderPlaceholderText(commands, xOff + SCREEN_CENTER_X + gemsOffset, gemsY,
+                renderPlaceholderText(commands, xOff + SCREEN_CENTER_X + gemsOffset, gemsBonusY,
                         "GEMS BONUS: " + emeraldBonus, 0.5f, 1.0f, 0.5f);
             }
         }
@@ -1418,19 +1490,10 @@ public class Sonic2SpecialStageResultsScreen implements ResultsScreen {
         }
     }
 
-    private void playTickSound() {
-        try {
-            services().audioManager().playSfx(Sonic2Sfx.BLIP.id);
-        } catch (Exception e) {
-            // Ignore audio errors
-        }
-    }
-
-    private void playTallyEndSound() {
-        try {
-            services().audioManager().playSfx(Sonic2Sfx.TALLY_END.id);
-        } catch (Exception e) {
-            // Ignore audio errors
+    private void playSound(Sonic2Sfx sound) {
+        var audio = services().audioManager();
+        if (audio != null) {
+            audio.playSfx(sound.id);
         }
     }
 
