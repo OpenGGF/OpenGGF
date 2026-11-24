@@ -67,7 +67,7 @@ public final class Kis2GamePatch implements GamePatch {
         if (!roms.isAvailable(RomIdentity.SK)) return false;
         try {
             return roms.open(RomIdentity.KIS2).size() < Kis2Constants.CHIP_WINDOW_END;
-        } catch (IOException | RuntimeException unavailable) {
+        } catch (IOException unavailable) {
             return true;
         }
     }
