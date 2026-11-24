@@ -16,21 +16,6 @@ import com.openggf.level.objects.ObjectSpawn;
 /**
  * S3K-specific bonus stage coordinator.
  * Provides zone ID and music ID mapping for Gumball, Pachinko, and Slots.
- *
- * <p>Ring-based selection formula: {@code remainder = ((rings - 20) / 15) % 3}
- * <p>ROM loc_2D47E (sonic3k.asm lines 61926-61952):
- * <ul>
- *   <li>0 -> SLOT_MACHINE (zone $1500, music $1D)</li>
- *   <li>1 -> GLOWING_SPHERE / Pachinko (zone $1400, music $1B)</li>
- *   <li>2 -> GUMBALL (zone $1300, music $1E)</li>
- * </ul>
- * <p>Concrete ring ranges: 20–34 rings → SLOT_MACHINE, 35–49 rings → GLOWING_SPHERE, 50–64 rings → GUMBALL.
- * <p>
- * Note: SK_alone_flag handling is not implemented. The only supported S3K ROM
- * is the combined "Sonic and Knuckles &amp; Sonic 3 (W) [!].gen" which always sets
- * SK_alone_flag=0 (3 bonus stages available). For S&amp;K standalone ROMs, the
- * divisor would be 2 and remainder=2 branch would route to Pachinko instead
- * of Gumball (ROM loc_2D47E lines 61897, 61910-61912).
  */
 public class Sonic3kBonusStageCoordinator extends AbstractBonusStageCoordinator
         implements BonusStageShieldEntryPolicy, BonusStagePlayerPriorityPolicy, BonusStageDebugControls {
@@ -45,7 +30,6 @@ public class Sonic3kBonusStageCoordinator extends AbstractBonusStageCoordinator
 
     private static final int RING_THRESHOLD = 20;
     private static final int RING_DIVISOR   = 15;
-    private static final int STAGE_COUNT    = 3;
 
     private static final BonusStageProvider.BootstrapObject PACHINKO_BOOTSTRAP =
             new BonusStageProvider.BootstrapObject(
@@ -116,8 +100,15 @@ public class Sonic3kBonusStageCoordinator extends AbstractBonusStageCoordinator
 
     @Override
     public BonusStageType selectBonusStage(int ringCount) {
+        return selectBonusStage(ringCount, Sonic3kCartridgePolicy.isStandaloneSk());
+    }
+
+    public static BonusStageType selectBonusStage(int ringCount, boolean standaloneSk) {
         if (ringCount < RING_THRESHOLD) return BonusStageType.NONE;
-        int remainder = ((ringCount - RING_THRESHOLD) / RING_DIVISOR) % STAGE_COUNT;
+        // loc_2D47E / loc_2D4AE (sonic3k.asm:61931-61957):
+        // Standalone S&K uses divisor 2, so only Slots and Pachinko are reachable.
+        int stageCount = standaloneSk ? 2 : 3;
+        int remainder = ((ringCount - RING_THRESHOLD) / RING_DIVISOR) % stageCount;
         return switch (remainder) {
             case 0 -> BonusStageType.SLOT_MACHINE;
             case 1 -> BonusStageType.GLOWING_SPHERE;
