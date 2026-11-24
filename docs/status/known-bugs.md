@@ -68,11 +68,14 @@ Entries should include:
 
 ## Sonic 1 title attract demos are absent
 
-- **Location** — `Sonic1TitleScreenManager` and the title attract provider.
+- **Location** — the Sonic 1 title attract provider remains to be implemented.
+  The shared lifecycle supports level and Special Stage entries.
 - **Symptom** — the title stays on screen after its native timeout.
 - **ROM behavior** — `GotoDemo` and `Demo_Levels` (sonic.asm:2361-2440)
   wait another 30 VBlanks, allow Start during that wait, then rotate through
-  GHZ1, MZ1, SYZ1 and a Special Stage with cartridge demo controls.
+  GHZ1, MZ1, SYZ1 and a Special Stage. `GM_Special` (sonic.asm:3275-3281)
+  reads the Special Stage stream from `DemoDataPtr[6]`. `VBlank_SpecialStage`
+  (sonic.asm:882-903) debits the playback timer.
 - **Removal condition** — the production title launches each entry on its
   native wait and returns correctly on timeout and Start.
 

@@ -394,13 +394,24 @@ final class GameLoopNativeMenus {
                 && screen.mode() != currentMode.get()) loop.setGameMode(screen.mode());
     }
 
-    void startAttractDemo(TitleAttractDemo.Launch launch) {
+    void startAttractDemo(TitleAttractDemo.Launch launch, GameLoopSpecialStageLifecycle stages) {
         audioManager.fadeOutMusic();
         switch (launch.destination()) {
             case TitleAttractDemo.Destination.Level level ->
                     startNativeMenuLevel(new com.openggf.game.nativemenu.NativeMenuScreen.Exit(
                             com.openggf.game.nativemenu.NativeMenuScreen.Destination.LEVEL,
                             level.team(), !launch.retainProgress(), level.zone(), level.act()));
+            case TitleAttractDemo.Destination.SpecialStage stage -> {
+                var world = SessionManager.getCurrentWorldSession();
+                var progress = launch.retainProgress() ? GameServices.gameState().capture() : null;
+                openAttractRuntime(world.rootGameModule(), world.resolvedGameModule(), progress);
+                var provider = loop.getActiveSpecialStageProvider();
+                if (provider == null || !provider.hasSpecialStages()) {
+                    throw new IllegalStateException("Attract demo requires a special-stage provider");
+                }
+                stages.doEnterSpecialStage(provider, stage.stageIndex(), false,
+                        com.openggf.game.SpecialStageStartupPolicy.FAST, stage.rewardKind());
+            }
             case TitleAttractDemo.Destination.NativeScreen factory -> {
                 var screen = factory.open(nativeMenuHostContext(), launch.playback());
                 if (nativeMenus.open(screen)) loop.setGameMode(screen.mode());
@@ -413,10 +424,15 @@ final class GameLoopNativeMenus {
         nativeMenus.close();
         engineServices.graphics().clearPaletteFadePresentation();
         loop.resolveFadeManager().cancel();
+        openAttractRuntime(root, module, progress);
+    }
+
+    private void openAttractRuntime(GameModule root, GameModule module,
+            com.openggf.game.rewind.snapshot.GameStateSnapshot progress) {
         try {
             bootstrap.get().openTitleRuntime(root, module, engineServices, publisher, progress);
         } catch (IOException failure) {
-            throw new java.io.UncheckedIOException("Cannot restore the title after its demo", failure);
+            throw new java.io.UncheckedIOException("Cannot open the attract visit runtime", failure);
         }
     }
 

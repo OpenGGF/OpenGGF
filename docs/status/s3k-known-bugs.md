@@ -27,8 +27,10 @@ coverage across the seven layouts.
 The title stays on screen after the native demo timer expires.
 `loc_4278` and `DemoLevels` (sonic3k.asm:5695-5775) choose the next level or
 Special Stage from the cartridge's cycle and advance the entry index using
-the lock-on mode. Remove this entry when the production title selects the
-native entries, plays their cartridge controls and handles timeout and Start.
+the lock-on mode. `GetDemoPtr` and `DemoPtrs` (sonic3k.asm:9488-9510) select
+the dedicated `DemoDat_SpecialStage` stream. `VInt_1C` (sonic3k.asm:926-935)
+debits the timer during the stage. The shared lifecycle supports both destinations. Remove this entry when the Sonic 3 & Knuckles title attract
+provider supplies the ROM entries, controls and return behavior.
 
 ## HCZ geyser child lifetimes and cleanup sound commands
 

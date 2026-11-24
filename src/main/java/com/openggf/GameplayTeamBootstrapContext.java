@@ -79,7 +79,9 @@ final class GameplayTeamBootstrapContext {
         publishMode.accept(mode);
         var team = GameplayTeamBootstrap.registerActiveTeam(module, mode.getSpriteManager(), services.configuration());
         mode.getCamera().setFocusedSprite(team.mainSprite());
-        com.openggf.game.nativemenu.NativeMenuProgress.retainSpecialStageProgress(mode.getGameStateManager(), progress);
+        if (progress != null) {
+            com.openggf.game.nativemenu.NativeMenuProgress.retainSpecialStageProgress(mode.getGameStateManager(), progress);
+        }
     }
 
     private GameplayModeContext openAndLoad(GameModule rootModule, GameModule module,

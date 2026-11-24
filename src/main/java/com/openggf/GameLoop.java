@@ -304,7 +304,7 @@ public class GameLoop {
         this.hostedRuns = new HostedRunController(configService);
         this.userRecordingPlaybackStarter = withPlaybackAppliedFrameReset(userRecordingSessionLauncher::beginPlayback);
         this.masterTitleLaunchCoordinator = new MasterTitleLaunchCoordinator(configService);
-        this.specialStageLifecycle = new GameLoopSpecialStageLifecycle(new SpecialStageHost(), audioManager);
+        this.specialStageLifecycle = new GameLoopSpecialStageLifecycle(new SpecialStageHost(), audioManager, attractDemo::specialStagePlayback);
         this.debugShortcuts = new GameLoopDebugShortcuts(
                 this::getCurrentGameMode, this::getActiveSpecialStageProvider,
                 specialStageLifecycle::enterResultsScreenWithDebugRings);
@@ -2723,7 +2723,7 @@ public class GameLoop {
 
     private void completeNativeMenuFrame() {
         nativeMenuFlow.completeFrame();
-        attractDemo.completeFrame(nativeMenuFlow);
+        attractDemo.completeFrame(nativeMenuFlow, specialStageLifecycle);
         sessionReset.completeFrame(inputHandler);
     }
 

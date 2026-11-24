@@ -62,11 +62,11 @@ public final class Sonic2AttractProgram implements TitleAttractDemo {
     private final class PlaybackProgram implements AttractDemoPlayback.Program {
         @Override public void begin() { service.beginPlayback(); }
         @Override public void reload() { service.restartPlaybackForLevelReload(); }
-        @Override public void serviceLevelWait() { service.onLevelUpdates(); }
+        @Override public void serviceWait() { service.onLevelUpdates(); }
         @Override public LogicalInputSnapshot controllers(LogicalInputSnapshot physical) {
             return service.stepControllers(physical).controllers();
         }
-        @Override public AttractDemoPlayback.Transition finishObjects(boolean inactive) {
+        @Override public AttractDemoPlayback.Transition finishIteration(boolean inactive) {
             var transition = service.finishIteration(inactive);
             return switch (transition.event()) {
                 case NONE -> AttractDemoPlayback.Transition.NONE;

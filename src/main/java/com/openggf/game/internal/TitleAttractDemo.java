@@ -1,7 +1,7 @@
 package com.openggf.game.internal;
 
+import com.openggf.game.EmeraldRewardKind;
 import com.openggf.game.GameplayLaunchTeam;
-import com.openggf.game.TitleScreenProvider;
 import com.openggf.game.nativemenu.NativeMenuHostContext;
 import com.openggf.game.nativemenu.NativeMenuScreen;
 
@@ -17,6 +17,9 @@ public interface TitleAttractDemo {
 
     sealed interface Destination {
         record Level(int zone, int act, GameplayLaunchTeam team) implements Destination { }
+
+        /** The entry's provider supplies ROM controls and the native wait program in Launch. */
+        record SpecialStage(int stageIndex, EmeraldRewardKind rewardKind) implements Destination { }
 
         @FunctionalInterface
         non-sealed interface NativeScreen extends Destination {

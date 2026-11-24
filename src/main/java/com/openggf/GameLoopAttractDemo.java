@@ -51,6 +51,7 @@ final class GameLoopAttractDemo {
     }
 
     static boolean ownsInput(GameMode mode, GameLoopAttractDemo demo) {
+        if (mode == GameMode.SPECIAL_STAGE) return demo.specialStagePlayback() != null;
         return (mode == GameMode.LEVEL || mode == GameMode.TITLE_CARD || mode == GameMode.COMPETITION)
                 && demo.active();
     }
@@ -61,6 +62,11 @@ final class GameLoopAttractDemo {
 
     AttractDemoPlayback levelPlayback() {
         return active() && running.destination() instanceof TitleAttractDemo.Destination.Level
+                ? running.playback() : null;
+    }
+
+    AttractDemoPlayback specialStagePlayback() {
+        return active() && running.destination() instanceof TitleAttractDemo.Destination.SpecialStage
                 ? running.playback() : null;
     }
 
@@ -82,7 +88,7 @@ final class GameLoopAttractDemo {
         return LevelFrameStep.executeAttractFade(LevelFrameContext.from(mode), frame, () -> sprites.update(input));
     }
 
-    void completeFrame(GameLoopNativeMenus menus) {
+    void completeFrame(GameLoopNativeMenus menus, GameLoopSpecialStageLifecycle stages) {
         if (pending != null) {
             var launch = pending;
             pending = null;
@@ -92,7 +98,7 @@ final class GameLoopAttractDemo {
             titleModule = source.resolvedGameModule();
             progress = loop.gameState.capture();
             loop.getTitleScreenProvider().reset();
-            menus.startAttractDemo(launch);
+            menus.startAttractDemo(launch, stages);
             demoWorld = SessionManager.getCurrentWorldSession();
             running = launch;
         } else if (running != null) {
@@ -100,6 +106,7 @@ final class GameLoopAttractDemo {
                 reset();
             } else if (running.playback().returnTarget() != null) {
                 var target = running.playback().returnTarget();
+                if (specialStagePlayback() != null) stages.retireForSessionReset();
                 menus.restoreAttractTitle(root, titleModule, progress);
                 reset();
                 loop.initializeTitleScreenMode(target == AttractDemoPlayback.ReturnTarget.TITLE);
