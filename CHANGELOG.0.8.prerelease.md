@@ -12,6 +12,10 @@ under the matching area heading; see the
   The notice explains how to supply the optional lock-on image for tier two
   and can be hidden for later launches.
 
+- In standalone Sonic & Knuckles, star posts cycle between Slots and Pachinko.
+  A star post activated with 50 rings opens Slots. Once all seven Chaos Emeralds
+  are collected, giant rings award 50 rings.
+
 - Sonic 1 draws the act number over the blue oval on the results card. Drum
   samples resume when level music follows the special-stage theme. Leaving a
   special stage also restores the active display projection, keeping sprites
