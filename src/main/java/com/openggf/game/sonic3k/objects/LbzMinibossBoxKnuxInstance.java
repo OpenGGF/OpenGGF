@@ -115,13 +115,9 @@ public final class LbzMinibossBoxKnuxInstance extends AbstractObjectInstance imp
             ObjectLifetimeOps.deleteNoRespawn(this);
             return;
         }
-        var cameraForRigs = services().camera();
-        int cameraX = cameraForRigs != null
-                ? cameraForRigs.getX() & 0xFFFF
-                : LbzMinibossBoxRig.NO_CAMERA;
         if (leftRig.value != null) {
-            leftRig.value.update(cameraX);
-            rightRig.value.update(cameraX);
+            leftRig.value.update(services());
+            rightRig.value.update(services());
         }
         tickWallExplosions();
         tickChunkSwap();
