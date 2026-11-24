@@ -27,6 +27,11 @@ under the matching area heading; see the
   native finish, tally and exit wait, preserving its phase through the level
   reload. Results setup and straight-line return code add no tick.
 
+- **Sonic 1 and 2 extra-life audio:** a jingle that plays over silence now
+  keeps sound effects blocked for the cartridge's full fade-in hold. Sonic 1
+  music fades finish with the original global stop, which resets FM mode and
+  lets new effects play again on the following service.
+
 - **Sonic 2 extra-life audio:** requests refused during the jingle or its fade-in
   clear the sound-effect priority without advancing ring panning, gloop alternation
   or spindash pitch. The fade-in restores the saved priority, which the cartridge clears before backup.
