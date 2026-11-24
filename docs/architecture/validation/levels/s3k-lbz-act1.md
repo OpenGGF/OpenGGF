@@ -12,6 +12,7 @@ Knuckles that appears in it is the NPC cutscene, not a playable Knuckles.
 | Cup capture/hold control and animation bit | `TestLbzCupElevatorInstance` (native P1/P2, extension, rewind) and `TestS3kLbz1KnucklesSequenceHeadless` | Full-route rewind and load/death boundaries |
 | Rolling drum deletion | `TestLbzRollingDrumDeletion`: real capture and range unload, dead/extension cleanup, rewind | — |
 | Miniboss box creation/recreation | `TestLbz1BoxRigRewind`: fresh owner restore, pre-creation restore, and 180 piece updates for carried and standalone boxes | Full encounter route/render checks remain separate |
+| Miniboss box retirement PLC | `TestS3kLbz1BoxRestorePlc`: carried, standalone and both Knuckles rigs cross the coarse cull boundary with the ROM-backed Nemesis queue. Checks request order, an existing FIFO entry, repeat ticks and rewind/replay. | Positioned production owners at native width. Full route and visible output remain separate checks. |
 | Miniboss fatal hit | `TestS3kLbz1MinibossAndTransitionHeadless`: real P1/P2 sixth hit, explosion cadence, restore/replay | — |
 | Carried results → title | `TestS3kMgzLbzCarriedResultsTitleOwnership`: twelve real children through carry, rewind, publication, control release and title init; 58/59-ring tally oracle | MGZ ring difference that starts at row 9260 |
 | Retained title counter reset | `TestSonic3kTitleCardKosQueue#retainedResetWaitsForArtAndLastChildMovementAndRestoresThatGate` | Full native `Obj_TitleCardWait2` presentation timing |
@@ -25,6 +26,15 @@ The [frontier log](../../../status/trace-frontier-log.md#2026-10-03--s3k-trace-g
 has the error count after each fix.
 
 ## Corrections and ROM owners
+
+**Miniboss box restore.** `loc_8CF1E` and `loc_8CF36` (sonic3k.asm:192607-192629)
+append `PLC_MonitorsSpikesSprings` (sonic3k.asm:176718-176721) for non-Knuckles
+subtype `$C`, then `PLC_LBZRobotnikAfter` (sonic3k.asm:192631-192634). Every
+lingering Knuckles panel takes only the after-list. It includes bubbles at `$45C–$493`. This range
+overlaps the level-backed tube elevator and smashing spikes art from
+`PLC_22_23` (sonic3k.asm:199882-199885), whose tube descriptor covers `$455–$493`.
+The restore requests use the ordinary logical Nemesis queue and preserve the
+tube art and separate boss sheets.
 
 **Cup contact (`bda587a99b`).** `loc_26EEA` calls `SolidObjectFull2_1P` inside
 each player's control routine. It runs after the cooldown and angle gates and

@@ -17,6 +17,11 @@ under the matching area heading; see the
   special stage also restores the active display projection, keeping sprites
   aligned with terrain when switching to a game with a different aspect ratio.
 
+- **Launch Base Act 1 miniboss:** retiring box panels now submit the cartridge's
+  art restore requests in order. Knuckles queues bubbles for each lingering
+  panel. Other characters queue monitors, spikes and springs, then bubbles when
+  the subtype-$C panel retires.
+
 - **Sonic 1 special-stage results** now advance the object V-int clock on each
   native finish, tally and exit wait, preserving its phase through the level
   reload. Results setup and straight-line return code add no tick.
