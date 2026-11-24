@@ -25,7 +25,9 @@ import java.util.TreeMap;
 final class Sonic2PlcArtSlots {
     private record SourcePattern(int address, int index) { }
     private record Binding(int base, ObjectSpriteSheet sheet, PatternSpriteRenderer renderer,
-                           Pattern[] baseline) { }
+                           Pattern[] baseline, boolean initiallyResident) {
+        int end() { return base + baseline.length; }
+    }
 
     private final Rom rom;
     private final String romSha1;
@@ -51,8 +53,31 @@ final class Sonic2PlcArtSlots {
 
     void bind(int base, ObjectSpriteSheet sheet, PatternSpriteRenderer renderer) {
         if (sheet != null && renderer != null) {
-            bindings.add(new Binding(base, sheet, renderer, copyPatterns(sheet.getPatterns())));
+            bind(base, sheet, renderer, sheet.getPatterns().length);
         }
+    }
+
+    void bind(int base, ObjectSpriteSheet sheet, PatternSpriteRenderer renderer, int count) {
+        Pattern[] baseline = copyPatterns(sheet.getPatterns(), count);
+        bindings.add(new Binding(base, sheet, renderer, baseline, true));
+    }
+
+    /** A new mapping reads the same tiles as the preceding owner, including after rewind. */
+    void bindDeferred(int base, ObjectSpriteSheet sheet, PatternSpriteRenderer renderer, int count) {
+        Pattern[] baseline = new Pattern[count];
+        for (int i = 0; i < count; i++) {
+            int tile = base + i;
+            baseline[i] = new Pattern();
+            for (Binding resident : bindings) {
+                if (resident.initiallyResident() && tile >= resident.base() && tile < resident.end()) {
+                    baseline[i].copyFrom(resident.baseline()[tile - resident.base()]);
+                    break;
+                }
+            }
+        }
+        Binding binding = new Binding(base, sheet, renderer, baseline, false);
+        bindings.add(binding);
+        reconcile(binding, base, binding.end(), null);
     }
 
     /** A private mutable view keeps the art loader's cached ROM recipes pristine across loads. */
@@ -60,29 +85,48 @@ final class Sonic2PlcArtSlots {
         if (source == null) return null;
         var frames = new ArrayList<com.openggf.level.render.SpriteMappingFrame>();
         for (int i = 0; i < source.getFrameCount(); i++) frames.add(source.getFrame(i));
-        return new ObjectSpriteSheet(copyPatterns(source.getPatterns()), List.copyOf(frames),
+        return new ObjectSpriteSheet(copyPatterns(source.getPatterns(), source.getPatterns().length), List.copyOf(frames),
                 source.getPaletteIndex(), source.getFrameDelay());
     }
 
-    private static Pattern[] copyPatterns(Pattern[] source) {
-        Pattern[] result = new Pattern[source.length];
-        for (int i = 0; i < source.length; i++) {
+    private static Pattern[] copyPatterns(Pattern[] source, int count) {
+        Pattern[] result = new Pattern[count];
+        for (int i = 0; i < count; i++) {
             result[i] = new Pattern();
             result[i].copyFrom(source[i]);
         }
         return result;
     }
 
+    int sourceCount(int address) throws IOException {
+        return source(address).length;
+    }
+
     List<ArtSlotRange> prepare(int source, int destination) throws IOException {
-        Pattern[] patterns = source(source);
+        return intersectBindings(source, destination, 0, sourceCount(source));
+    }
+
+    private List<ArtSlotRange> intersectBindings(int source, int base, int first, int count) {
         List<ArtSlotRange> ranges = new ArrayList<>();
-        for (int i = 0; i < patterns.length;) {
-            if (!bound(destination + i)) { i++; continue; }
-            int first = i++;
-            while (i < patterns.length && bound(destination + i)) i++;
-            ranges.add(new ArtSlotRange(destination + first, source, first, i - first));
+        int end = first + count;
+        for (int i = first; i < end;) {
+            if (!bound(base + i)) { i++; continue; }
+            int start = i++;
+            while (i < end && bound(base + i)) i++;
+            ranges.add(new ArtSlotRange(base + start, source, start, i - start));
         }
-        return List.copyOf(ranges);
+        return ranges;
+    }
+
+    void service(int source, int base, int first, int count, GraphicsManager graphics) throws IOException {
+        List<ArtSlotRange> writes = intersectBindings(source, base, first, count);
+        if (writes.isEmpty()) return;
+        source(source);
+        for (ArtSlotRange range : writes) put(image, range);
+        capturedImage = null;
+        for (Binding binding : bindings) {
+            reconcile(binding, base + first, base + first + count, graphics);
+        }
     }
 
     void validate(ArtSlotIdentity provenance, List<ArtSlotRange> ranges) throws IOException {
@@ -160,31 +204,38 @@ final class Sonic2PlcArtSlots {
     }
 
     private boolean bound(int tile) {
-        return bindings.stream().anyMatch(binding -> tile >= binding.base()
-                && tile < binding.base() + binding.baseline().length);
+        for (Binding binding : bindings) {
+            if (tile >= binding.base() && tile < binding.end()) return true;
+        }
+        return false;
     }
 
     private boolean reconcile(GraphicsManager graphics) {
         boolean changed = false;
         for (Binding binding : bindings) {
-            Pattern[] target = binding.sheet().getPatterns();
-            int first = target.length, last = -1;
-            for (int i = 0; i < target.length; i++) {
-                SourcePattern owner = image.get(binding.base() + i);
-                Pattern expected = owner == null ? binding.baseline()[i] : sources.get(owner.address())[owner.index()];
-                if (!samePixels(target[i], expected)) {
-                    target[i].copyFrom(expected);
-                    first = Math.min(first, i);
-                    last = i;
-                }
-            }
-            if (last >= first) {
-                // Existing ranges also clear the renderer's pixel-bounds cache, without reallocating it.
-                binding.renderer().updatePatternRange(graphics, first, last - first + 1);
-                changed = true;
-            }
+            changed |= reconcile(binding, binding.base(), binding.end(), graphics);
         }
         return changed;
+    }
+
+    private boolean reconcile(Binding binding, int start, int end, GraphicsManager graphics) {
+        Pattern[] target = binding.sheet().getPatterns();
+        int first = target.length;
+        int last = -1;
+        for (int tile = Math.max(start, binding.base()); tile < Math.min(end, binding.end()); tile++) {
+            int i = tile - binding.base();
+            SourcePattern owner = image.get(tile);
+            Pattern expected = owner == null ? binding.baseline()[i] : sources.get(owner.address())[owner.index()];
+            if (!samePixels(target[i], expected)) {
+                target[i].copyFrom(expected);
+                first = Math.min(first, i);
+                last = i;
+            }
+        }
+        if (last < first) return false;
+        // Keep cached pattern IDs and invalidate pixel bounds for this upload.
+        binding.renderer().updatePatternRange(graphics, first, last - first + 1);
+        return true;
     }
 
     private static boolean samePixels(Pattern first, Pattern second) {

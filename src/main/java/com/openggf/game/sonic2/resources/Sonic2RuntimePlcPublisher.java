@@ -4,7 +4,7 @@ import com.openggf.game.sonic2.Sonic2ObjectArtProvider;
 
 import java.io.IOException;
 
-/** Commits one ROM PLC's logical FIFO work and eager art from a shared preflight. */
+/** Preflights ROM PLCs and allocates their renderer views at submission. */
 public final class Sonic2RuntimePlcPublisher {
     private Sonic2RuntimePlcPublisher() {
     }
@@ -17,7 +17,7 @@ public final class Sonic2RuntimePlcPublisher {
         return transact(artProvider, plcService, refreshRendererCache, operations);
     }
 
-    /** Preflights a full native mixed-operation sequence and commits it with eager art. */
+    /** Commits a native mixed-operation sequence and leaves resident writes to FIFO service. */
     public static boolean transact(Sonic2ObjectArtProvider artProvider, Sonic2PlcService plcService,
                                    Runnable refreshRendererCache,
                                    Sonic2PlcService.Operation... operations) throws IOException {
@@ -31,7 +31,8 @@ public final class Sonic2RuntimePlcPublisher {
             throw new IllegalStateException("Runtime PLC renderer publication requires a cache refresh owner");
         }
         plcService.transact(operations);
-        boolean published = artProvider.publishPreparedPlc(prepared);
+        plcService.bindArtProvider(artProvider);
+        boolean published = artProvider.registerRuntimePlcSheets(prepared);
         if (published) {
             refreshRendererCache.run();
         }
