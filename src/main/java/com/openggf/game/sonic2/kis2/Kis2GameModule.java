@@ -86,10 +86,9 @@ final class Kis2GameModule extends DelegatingGameModule implements com.openggf.g
         // Run the base module's side effects (PLC service, active ROM) and
         // replace only the game data object.
         base().createGame(rom);
-        chipPlcService = kis2Image().map(image ->
+        chipPlcService = lockOnPlcRom().map(image ->
                 new com.openggf.game.sonic2.resources.Sonic2PlcService(
-                        Rom.fromReader(image, "KiS2 lock-on PLC address space"),
-                        Kis2Constants.ART_LOAD_CUES)).orElse(null);
+                        image, Kis2Constants.ART_LOAD_CUES)).orElse(null);
         game = new Kis2Game(rom, skReader(), skKnucklesArt(), kis2Image().orElse(null), chipArt().orElse(null));
         return game;
     }
@@ -111,9 +110,16 @@ final class Kis2GameModule extends DelegatingGameModule implements com.openggf.g
     @Override
     public ObjectArtProvider getObjectArtProvider() {
         if (objectArtProvider == null) {
-            objectArtProvider = new Sonic2ObjectArtProvider(artOverlays());
+            var overlays = artOverlays();
+            objectArtProvider = lockOnPlcRom().map(image ->
+                    new Sonic2ObjectArtProvider(overlays, image, Kis2Constants.S2_WINDOW_START))
+                    .orElseGet(() -> new Sonic2ObjectArtProvider(overlays));
         }
         return objectArtProvider;
+    }
+
+    private Optional<Rom> lockOnPlcRom() {
+        return kis2Image().map(image -> Rom.fromReader(image, "KiS2 lock-on PLC address space"));
     }
 
     private static final com.openggf.game.rules.GamePolicies POLICIES =

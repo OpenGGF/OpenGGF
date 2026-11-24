@@ -7,20 +7,41 @@ under the matching area heading; see the
 
 ## Gameplay and presentation
 
+- In standalone Sonic & Knuckles, star posts cycle between Slots and Pachinko.
+  A star post activated with 50 rings opens Slots. Once all seven Chaos Emeralds
+  are collected, giant rings award 50 rings.
+
 - **Sonic 2 and Knuckles in Sonic 2** now play cartridge demos when the title
   idles. The cycle runs Emerald Hill, Chemical Plant, Aquatic Ruin and Casino
   Night. Stock Sonic 2 opens with split-screen Sonic and Tails. Knuckles in
-  Sonic 2 runs solo, with its demo jump height and glide and Super disabled.
-  The demo returns through SEGA on timeout or directly to the title on Start.
+  Sonic 2 runs solo with its higher demo jump. Gliding and Super are disabled
+  during its demos. The demo returns through SEGA on timeout or directly to
+  the title on Start.
 
 - Sonic 1 draws the act number over the blue oval on the results card. Drum
   samples resume when level music follows the special-stage theme. Leaving a
   special stage also restores the active display projection, keeping sprites
   aligned with terrain when switching to a game with a different aspect ratio.
 
+- **Sonic 2 runtime art:** the Wing Fortress Tornado cue and shared animal
+  and explosion graphics now change tiles as the native queue services them.
+  Their prior pixels remain visible until the write, and rewind restores
+  partially written art. Knuckles in Sonic 2 uses the lock-on ROM for its
+  queue's pattern sources.
+
+- **Launch Base Act 1 miniboss:** retiring box panels now submit the cartridge's
+  art restore requests in order. Knuckles queues bubbles for each lingering
+  panel. Other characters queue monitors, spikes and springs, then bubbles when
+  the subtype-$C panel retires.
+
 - **Sonic 1 special-stage results** now advance the object V-int clock on each
   native finish, tally and exit wait, preserving its phase through the level
   reload. Results setup and straight-line return code add no tick.
+
+- **Sonic 1 and 2 extra-life audio:** a jingle that plays over silence now
+  keeps sound effects blocked for the cartridge's full fade-in hold. Sonic 1
+  music fades finish with the original global stop, which resets FM mode and
+  lets new effects play again on the following service.
 
 - **Sonic 2 extra-life audio:** requests refused during the jingle or its fade-in
   clear the sound-effect priority without advancing ring panning, gloop alternation

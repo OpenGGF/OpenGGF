@@ -22,6 +22,21 @@ Entries should include:
 
 ---
 
+## Sonic 2 preloaded object art outside native PLC slot views
+
+- **Location** — `Sonic2ObjectArtProvider` builds independent object sheets
+  for the signpost, capsule, and several boss composites at level load.
+- **Symptom** — these sheets can be sampled while the corresponding native
+  cue is still pending. Their renderer patterns also do not track writes
+  into the same slots through another cue.
+- **ROM behavior** — `LoadPLC` and `LoadPLC2` (s2.asm:2047-2124) submit or
+  replace descriptors. `ProcessDPLC` and `ProcessDPLC2` (s2.asm:2202-2250)
+  write the serviced tiles and leave all other tiles readable at their
+  preceding values.
+- **Removal condition** — audit each sheet's consumers and native tile
+  ranges. For any observable overlap or early reader, project the serviced
+  range into its mapping and check before, during and after service.
+
 ## Sonic 1 title attract demos are absent
 
 - **Location** — `Sonic1TitleScreenManager` and the title attract provider.
