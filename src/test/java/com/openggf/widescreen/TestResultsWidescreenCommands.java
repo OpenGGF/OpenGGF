@@ -99,19 +99,23 @@ class TestResultsWidescreenCommands {
         for (int width : WIDTHS) {
             graphics.setProjectionWidth(width);
             graphics.clearPatterns();
-            List<PatternCommand> expected = List.of(
-                    command(5, 0x14C - 128, 0xCC - 128, width),
+            // Got_ItemData (_incObj/3A Got Through Card.asm:286-327) sets the slot order.
+            // BuildSprites (_inc/BuildSprites.asm:23-37) reads the shared bucket in order.
+            // The direct painter reverses that order so earlier sprite-table entries stay on top.
+            List<PatternCommand> nativeOrder = List.of(
                     command(0, 0x124 - 128, 0xBC - 128, width),
                     command(1, 0x120 - 128, 0xD0 - 128, width),
                     command(6, 0x14C - 128, 0xD6 - 128, width),
-                    command(9, 0x120 - 128, 0xEC - 128, width),
                     command(2, 0x120 - 128, 0xEC - 128, width),
+                    command(9, 0x120 - 128, 0xEC - 128, width),
                     command(3, 0x120 - 128, 0xFC - 128, width),
-                    command(4, 0x120 - 128, 0x10C - 128, width));
+                    command(4, 0x120 - 128, 0x10C - 128, width),
+                    command(5, 0x14C - 128, 0xCC - 128, width));
 
             results.appendRenderCommands(new ArrayList<>());
 
-            assertEquals(expected, graphics.patterns(), "S1 commands at width " + width);
+            assertEquals(nativeOrder.reversed(), graphics.patterns(),
+                    "S1 direct commands in reverse native submission order at width " + width);
         }
     }
 
