@@ -1,8 +1,16 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.PlayerCharacter;
 import com.openggf.game.rewind.RewindStateful;
+import com.openggf.game.sonic3k.Sonic3kLevelTitlePlcService;
+import com.openggf.game.sonic3k.Sonic3kLevelTitlePlcService.RecipePurpose;
+import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.RenderPriority;
+import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.render.PatternSpriteRenderer;
+
+import java.io.IOException;
+import java.io.UncheckedIOException;
 
 /**
  * Shared state machine for the ten yellow miniboss-box pieces.
@@ -68,6 +76,10 @@ public final class LbzMinibossBoxRig implements RewindStateful<LbzMinibossBoxRig
     /** ROM loc_8CF1E: pieces persist until $280 past the coarse camera-back position. */
     private static final int OFFSCREEN_COARSE_RANGE = 0x280;
     private static final int DRIFTING_PIECE_BASE = 6;
+    // CreateChild3_NormalRepeated assigns even subtypes (sonic3k.asm:177092-177118).
+    private static final int RESTORE_PANEL_INDEX = 0xC / 2;
+    private static final int PLC_MONITORS_SPIKES_SPRINGS = 0x083D3A;
+    private static final int PLC_LBZ_ROBOTNIK_AFTER = 0x08CF62;
     /**
      * ROM loc_8CE64: every piece takes ObjDat3_8D23C priority $100 through SetUp_ObjAttributes
      * (sonic3k.asm:192526-192528, 192885-192888). The art word make_art_tile(ArtTile_LBZMinibossBox,2,0)
@@ -124,15 +136,48 @@ public final class LbzMinibossBoxRig implements RewindStateful<LbzMinibossBoxRig
     /** Camera-less tick for contexts without an active camera (headless tests). */
     public static final int NO_CAMERA = Integer.MIN_VALUE;
 
+    void update(ObjectServices services) {
+        var camera = services.camera();
+        update(camera == null ? NO_CAMERA : camera.getX() & 0xFFFF, services);
+    }
+
     /**
-     * Ticks every piece.
+     * Ticks a detached rig without a world queue.
      *
      * @param cameraX current camera X for the ROM loc_8CF1E off-screen removal,
      *                or {@link #NO_CAMERA} to skip the off-screen cull
      */
     public void update(int cameraX) {
+        update(cameraX, null);
+    }
+
+    private void update(int cameraX, ObjectServices services) {
         for (Piece piece : pieces) {
-            piece.update(cameraX);
+            piece.update(cameraX, services);
+        }
+    }
+
+    private static void queueRestore(int index, ObjectServices services) {
+        var plc = services == null ? null : services.gameService(Sonic3kLevelTitlePlcService.class);
+        if (plc == null) {
+            return; // Detached rigs have no world Nemesis queue.
+        }
+        boolean knuckles = S3kRuntimeStates.resolvePlayerCharacter(
+                services.zoneRuntimeRegistry(), services.configuration()) == PlayerCharacter.KNUCKLES;
+        if (!knuckles && index != RESTORE_PANEL_INDEX) {
+            return;
+        }
+        // loc_8CF36 (sonic3k.asm:192616-192629) appends before deleting.
+        // PLC_LBZRobotnikAfter ends after bubbles (sonic3k.asm:192631-192634).
+        // Publishing those patterns into level storage would overwrite LBZ tube art
+        // still used by the engine. The boss and box use dedicated sheets.
+        try {
+            if (!knuckles) {
+                plc.appendRaw(PLC_MONITORS_SPIKES_SPRINGS, RecipePurpose.EVENT_READINESS);
+            }
+            plc.appendRaw(PLC_LBZ_ROBOTNIK_AFTER, RecipePurpose.EVENT_READINESS);
+        } catch (IOException error) {
+            throw new UncheckedIOException("Unable to queue LBZ miniboss-box art restore", error);
         }
     }
 
@@ -286,7 +331,7 @@ public final class LbzMinibossBoxRig implements RewindStateful<LbzMinibossBoxRig
             this.y = (anchorY + PIECE_PARTS[index][3]) & 0xFFFF;
         }
 
-        private void update(int cameraX) {
+        private void update(int cameraX, ObjectServices services) {
             if (deleted) {
                 return;
             }
@@ -352,6 +397,7 @@ public final class LbzMinibossBoxRig implements RewindStateful<LbzMinibossBoxRig
                     }
                     int coarseDistance = ((x & 0xFF80) - ((cameraX - 0x80) & 0xFF80)) & 0xFFFF;
                     if (coarseDistance > OFFSCREEN_COARSE_RANGE) {
+                        queueRestore(index, services);
                         deleted = true;
                     }
                 }
