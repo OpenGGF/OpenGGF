@@ -18,6 +18,11 @@ under the matching area heading; see the
   partially written art. Knuckles in Sonic 2 uses the lock-on ROM for its
   queue's pattern sources.
 
+- **Launch Base Act 1 miniboss:** retiring box panels now submit the cartridge's
+  art restore requests in order. Knuckles queues bubbles for each lingering
+  panel. Other characters queue monitors, spikes and springs, then bubbles when
+  the subtype-$C panel retires.
+
 - **Sonic 1 special-stage results** now advance the object V-int clock on each
   native finish, tally and exit wait, preserving its phase through the level
   reload. Results setup and straight-line return code add no tick.
