@@ -380,6 +380,10 @@ six-case `TestTitleNewGameSpecialStageProgress` covers these boundaries.
 
 Remaining gaps:
 
+- The Sonic 1 level HUD saturates lives at 99 for presentation. The ROM's
+  `Hud_Lives` (`_inc/HUD Update.asm:537-600`) uses the live byte for two tile
+  lookups. With a byte above 99, the native tens lookup can fetch beyond the
+  digit art. Remove this gap when a ROM-backed test verifies the overflow tiles.
 - S2's shipped `fixBugs = 0` Continue path does not clear stale HTZ DMA, so the
   ROM can corrupt Tails' Continue art with a queued cloud upload. The standalone
   Continue art bank does not reproduce this VRAM alias. The retained Super flag

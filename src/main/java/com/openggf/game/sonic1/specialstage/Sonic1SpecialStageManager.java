@@ -2,14 +2,16 @@ package com.openggf.game.sonic1.specialstage;
 
 import static com.openggf.game.sonic1.Sonic1RomProfile.resolve;
 
+import com.openggf.audio.AudioManagerInternalAccess;
 import com.openggf.audio.GameMusic;
-import com.openggf.audio.GameSound;
 import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.GameServices;
+import com.openggf.game.NativeGameStateOps;
 import com.openggf.game.resources.DynamicArtLifecycleService;
 import com.openggf.game.sonic1.Sonic1PlayerArt;
 import com.openggf.game.sonic1.Sonic1RingArt;
+import com.openggf.game.sonic1.audio.Sonic1Music;
 import com.openggf.game.sonic1.audio.Sonic1Sfx;
 import com.openggf.game.sonic1.constants.Sonic1AnimationIds;
 import com.openggf.game.SpecialStageViewport;
@@ -58,6 +60,7 @@ public final class Sonic1SpecialStageManager implements com.openggf.game.interna
     private static final int ANIM_NONE = 0;
     private static final int ANIM_RING_SPARKLE = 1;
     private static final int ANIM_BUMPER = 2; // SS_AniBumper (ss_ani_id=2)
+    private static final int ANIM_ONE_UP = 3; // SS_Ani1Up
     private static final int ANIM_REVERSE = 4; // SS_AniReverse (ss_ani_id=4)
     private static final int ANIM_GLASS_BLOCK = 6;
     private static final int ANIM_EMERALD_SPARKLE = 5; // SS_AniEmeraldSparks (ss_ani_id=5)
@@ -150,6 +153,7 @@ public final class Sonic1SpecialStageManager implements com.openggf.game.interna
     private boolean debugMode;
     private int currentStage;
     private int ringsCollected;
+    private int ringAwardFlags;
 
     // ROM-observable pre-physics hold (see SS_STARTUP_HOLD_TICKS).
     private int startupHoldTicksRemaining;
@@ -259,6 +263,7 @@ public final class Sonic1SpecialStageManager implements com.openggf.game.interna
         pacingOwner.beginEntry();
         this.currentStage = Math.max(0, Math.min(stageIndex, SS_STAGE_COUNT - 1));
         this.ringsCollected = 0;
+        this.ringAwardFlags = 0;
         this.emeraldCollected = false;
         this.finished = false;
         this.debugMode = false;
@@ -826,15 +831,31 @@ public final class Sonic1SpecialStageManager implements com.openggf.game.interna
 
         // Ring (0x3A)
         if (blockId == 0x3A) {
-            ringsCollected++;
-            playSfx(GameSound.RING);
             startItemAnimation(bufIndex);
+            // CollectRing, FixBugs=0 (_incObj/25, 37 Rings.asm:176-210):
+            // the shipped branch increments the ring word directly. FixBugs
+            // would cap rings at 999; both branches award one life per threshold.
+            ringsCollected = (ringsCollected + 1) & 0xFFFF;
+            int ringSound = Sonic1Sfx.RING.id;
+            if (claimRingAward(100, 0x02) || claimRingAward(200, 0x04)) {
+                NativeGameStateOps.awardByteLife(GameServices.gameState());
+                ringSound = Sonic1Music.EXTRA_LIFE.id;
+            }
+            AudioManagerInternalAccess.playSecondaryNativeRequest(GameServices.audio(), ringSound);
+
+            // SonicSS_GetContinue (_incObj/09 Sonic in Special Stage.asm:632-640).
+            if (claimRingAward(50, 0x01)) {
+                GameServices.gameState().addContinue();
+                GameServices.audio().playMusicMailboxNativeRequest(Sonic1Sfx.GOT_CONTINUE.id);
+            }
             return;
         }
 
         // 1UP (0x28)
         if (blockId == 0x28) {
-            layout[bufIndex] = 0;
+            // SonicSS_Chk1Up / SonicSS_Get1Up (_incObj/09 Sonic in Special Stage.asm:649-663).
+            startSparkleAnimation(bufIndex, ANIM_ONE_UP);
+            NativeGameStateOps.awardByteLife(GameServices.gameState());
             playMusic(GameMusic.EXTRA_LIFE);
             return;
         }
@@ -857,12 +878,12 @@ public final class Sonic1SpecialStageManager implements com.openggf.game.interna
         // round-trip capture at trace frame 2973 by freezing physics one
         // tick after the emerald pickup instead of waiting out the sparkle;
         // that regression is fixed by routing through
-        // {@link #startEmeraldAnimation(int)} below instead of an immediate
+        // {@link #startSparkleAnimation(int, int)} below instead of an immediate
         // clear + trigger.
         if (blockId >= 0x3B && blockId <= 0x40) {
             emeraldCollected = true;
             playMusic(GameMusic.EMERALD);
-            startEmeraldAnimation(bufIndex);
+            startSparkleAnimation(bufIndex, ANIM_EMERALD_SPARKLE);
             return;
         }
 
@@ -1040,6 +1061,12 @@ public final class Sonic1SpecialStageManager implements com.openggf.game.interna
         }
     }
 
+    private boolean claimRingAward(int threshold, int flag) {
+        if (ringsCollected < threshold || (ringAwardFlags & flag) != 0) return false;
+        ringAwardFlags |= flag;
+        return true;
+    }
+
     // ---- Item Animation (from SS_AniRingSparks) ----
 
     private void startItemAnimation(int layoutIndex) {
@@ -1086,7 +1113,7 @@ public final class Sonic1SpecialStageManager implements com.openggf.game.interna
      * {@code SS_ShowLayout}, AFTER {@code ExecuteObjects} in the SAME
      * {@code SS_MainLoop} iteration -- sonic.asm:3306-3309) runs this same
      * game tick and sees the fresh slot's delay=0, so the FIRST script entry
-     * fires on this same tick via the natural {@link #updateEmeraldAnimation(int)}
+     * fires on this same tick via the natural {@link #updateSparkleAnimation(int, boolean)}
      * call below rather than a manual pre-write. Manually pre-writing (as the
      * ring branch does) plus also letting the same-tick
      * {@code updateItemAnimations()} call decrement double-counts one tick,
@@ -1100,13 +1127,13 @@ public final class Sonic1SpecialStageManager implements com.openggf.game.interna
      * completed the script (and froze physics) a full tick early at frame
      * 2996, one before the recorded ROM exit ramp actually starts (frame 2998).
      */
-    private void startEmeraldAnimation(int layoutIndex) {
+    private void startSparkleAnimation(int layoutIndex, int type) {
         if (ssAnimBuffer == null) {
             return;
         }
         for (int i = 0; i < SS_ANIM_BUFFER_SIZE; i++) {
             if (ssAnimBuffer[i][0] == ANIM_NONE) {
-                ssAnimBuffer[i][0] = ANIM_EMERALD_SPARKLE;
+                ssAnimBuffer[i][0] = type;
                 ssAnimBuffer[i][1] = 0; // Trigger first frame immediately on next animation tick
                 ssAnimBuffer[i][2] = 0;
                 ssAnimBuffer[i][3] = layoutIndex;
@@ -1202,8 +1229,8 @@ public final class Sonic1SpecialStageManager implements com.openggf.game.interna
                 updateGlassAnimation(i);
                 continue;
             }
-            if (type == ANIM_EMERALD_SPARKLE) {
-                updateEmeraldAnimation(i);
+            if (type == ANIM_EMERALD_SPARKLE || type == ANIM_ONE_UP) {
+                updateSparkleAnimation(i, type == ANIM_EMERALD_SPARKLE);
                 continue;
             }
             ssAnimBuffer[i][0] = ANIM_NONE;
@@ -1244,8 +1271,10 @@ public final class Sonic1SpecialStageManager implements com.openggf.game.interna
      * GOAL-block branch in {@link #processItemInteraction()} plays. This is
      * how a single-emerald special stage (like the recorded GHZ round-trip
      * maze) ends without ever touching an {@code id_SS_GOAL} ($27) block.
+     * SS_Ani1Up (_inc/Special Stage Loading & Drawing.asm:385-404) uses the
+     * same four blocks and delay, then clears the cell without ending the stage.
      */
-    private void updateEmeraldAnimation(int slot) {
+    private void updateSparkleAnimation(int slot, boolean emerald) {
         ssAnimBuffer[slot][1]--;
         if (ssAnimBuffer[slot][1] > 0) return;
         ssAnimBuffer[slot][1] = ANIM_EMERALD_PERIOD;
@@ -1274,8 +1303,10 @@ public final class Sonic1SpecialStageManager implements com.openggf.game.interna
             layout[layoutIndex] = 0;
         }
         ssAnimBuffer[slot][0] = ANIM_NONE;
-        exitTriggered = true;
-        playSfx(Sonic1Sfx.SS_GOAL);
+        if (emerald) {
+            exitTriggered = true;
+            playSfx(Sonic1Sfx.SS_GOAL);
+        }
     }
 
     /**
@@ -2643,6 +2674,7 @@ public final class Sonic1SpecialStageManager implements com.openggf.game.interna
                 objInitPending,
                 currentStage,
                 ringsCollected,
+                ringAwardFlags,
                 ssAngle,
                 ssRotate,
                 debugSavedAngle,
@@ -2713,6 +2745,7 @@ public final class Sonic1SpecialStageManager implements com.openggf.game.interna
         objInitPending = snapshot.objInitPending;
         currentStage = snapshot.currentStage;
         ringsCollected = snapshot.ringsCollected;
+        ringAwardFlags = snapshot.ringAwardFlags;
         ssAngle = snapshot.ssAngle;
         ssRotate = snapshot.ssRotate;
         debugSavedAngle = snapshot.debugSavedAngle;
@@ -2829,6 +2862,7 @@ public final class Sonic1SpecialStageManager implements com.openggf.game.interna
         debugSavedAngle = 0;
         debugSavedRotate = 0;
         ringsCollected = 0;
+        ringAwardFlags = 0;
         currentStage = 0;
         layout = null;
         dataLoader = null;
@@ -2948,12 +2982,6 @@ public final class Sonic1SpecialStageManager implements com.openggf.game.interna
     private void playSfx(Sonic1Sfx sfx) {
         if (sfx != null) {
             GameServices.audio().playSfx(sfx.id);
-        }
-    }
-
-    private void playSfx(GameSound sfx) {
-        if (sfx != null) {
-            GameServices.audio().playSfx(sfx);
         }
     }
 
