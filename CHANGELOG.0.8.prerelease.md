@@ -16,6 +16,12 @@ under the matching area heading; see the
   special stage also restores the active display projection, keeping sprites
   aligned with terrain when switching to a game with a different aspect ratio.
 
+- **Sonic 2 runtime art:** the Wing Fortress Tornado cue and shared animal
+  and explosion graphics now change tiles as the native queue services them.
+  Their prior pixels remain visible until the write, and rewind restores
+  partially written art. Knuckles in Sonic 2 uses the lock-on ROM for its
+  queue's pattern sources.
+
 - **Launch Base Act 1 miniboss:** retiring box panels now submit the cartridge's
   art restore requests in order. Knuckles queues bubbles for each lingering
   panel. Other characters queue monitors, spikes and springs, then bubbles when

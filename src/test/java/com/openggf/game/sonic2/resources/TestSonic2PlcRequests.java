@@ -39,14 +39,14 @@ class TestSonic2PlcRequests {
         var capacity = mock(Sonic2PlcService.QueueCapacityException.class);
         doThrow(capacity).when(plc).transact(any(Sonic2PlcService.Operation[].class));
         assertFalse(Sonic2PlcRequests.append(services, 1));
-        verify((Sonic2ObjectArtProvider) module.getObjectArtProvider(), never()).publishPreparedPlc(any());
+        verify((Sonic2ObjectArtProvider) module.getObjectArtProvider(), never()).registerRuntimePlcSheets(any());
         verify(services.levelManager(), never()).refreshObjectArtPatterns();
     }
 
     @Test void rendererFailureIsNotReportedAsRetryableSubmission() throws IOException {
         var services = services();
         var provider = (Sonic2ObjectArtProvider) services.gameModule().getObjectArtProvider();
-        when(provider.publishPreparedPlc(any())).thenReturn(true);
+        when(provider.registerRuntimePlcSheets(any())).thenReturn(true);
         var failure = new IllegalStateException("renderer owner failed after publication");
         var level = services.levelManager();
         doThrow(failure).when(level).refreshObjectArtPatterns();
