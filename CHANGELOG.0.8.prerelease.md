@@ -7,6 +7,10 @@ under the matching area heading; see the
 
 ## Gameplay and presentation
 
+- **Pit deaths during camera resize** use the live bottom limit in Sonic 1,
+  Sonic 2 and Sonic 3 & Knuckles. Sky Chase also lowers the live limit before
+  moving the camera with the Tornado, matching the cartridge's update order.
+
 - Sonic 1 draws the act number over the blue oval on the results card. Drum
   samples resume when level music follows the special-stage theme. Leaving a
   special stage also restores the active display projection, keeping sprites

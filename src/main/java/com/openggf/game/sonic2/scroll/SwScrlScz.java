@@ -67,6 +67,10 @@ public class SwScrlScz extends AbstractZoneScrollHandler implements CameraDriven
             updateLevelEvents(camera);
         }
 
+        // DeformBgLayer (s2.asm:15116-15120,15174-15184) skips ordinary camera
+        // tracking in SCZ, but still runs RunDynamicLevelEvents (s2.asm:20329-20364)
+        // before SwScrl_SCZ moves the camera. Ease the live limit from the pre-scroll Y.
+        camera.updateBoundaryEasing();
         camera.setX((short) (camera.getX() + tornadoVelocityX));
         camera.setY((short) (camera.getY() + tornadoVelocityY));
 
