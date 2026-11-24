@@ -35,6 +35,11 @@ public interface HostedGameMedia {
     /** A cheap look at the configured media (no whole-media hashing), for listing the game. */
     Availability probe(SonicConfigurationService config);
 
+    /** Find compatible media among files the player selected, independently of configured paths. */
+    default java.util.Optional<Path> discover(java.util.List<Path> candidates) {
+        return java.util.Optional.empty();
+    }
+
     /**
      * Opens and verifies the media the configuration names. The caller owns and closes the source.
      *

@@ -16,6 +16,13 @@
   },
   "rules": [
     {
+      "match": "com.openggf.game.TestMenuGameOnboarding#identifiesRealDiscAtItsExistingPath",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/game/TestMenuGameOnboarding.java:53",
+      "allowed_when_absent": "soniccd_disc",
+      "note": "Uses the player's disc read-only, with the wrapper preferring a CHD."
+    },
+    {
       "match": "com.openggf.game.rewind.TestRewindTorture#tortureProgressiveLongRewinds",
       "category": "opt-in-benchmark",
       "evidence": "src/test/java/com/openggf/game/rewind/TestRewindTorture.java:99",

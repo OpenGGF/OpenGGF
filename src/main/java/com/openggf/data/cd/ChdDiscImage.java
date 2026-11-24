@@ -399,6 +399,11 @@ public final class ChdDiscImage implements DiscImage {
         }
     }
 
+    /** Unverified raw-data SHA-1 declared by the CHD v5 header. */
+    public String rawDataSha1Hex() {
+        return java.util.HexFormat.of().formatHex(rawSha1);
+    }
+
     @Override
     public List<DiscTrack> tracks() {
         return tracks;

@@ -23,7 +23,7 @@ import java.util.stream.Stream;
  * Every user-supplied ROM image the engine can see, and how each logical ROM
  * is served from them.
  *
- * <p>Built from the three per-game configuration keys plus a scan of
+ * <p>Built from the configured cartridge paths plus a scan of
  * {@code roms.directory}. Identity comes from size and header, never from the
  * filename. A per-game key is an explicit override: when it names an existing
  * file that file is served (as the window that contains the game, or whole
@@ -44,6 +44,12 @@ import java.util.stream.Stream;
 public final class RomImageCatalogue {
     private static final Logger LOGGER = Logger.getLogger(RomImageCatalogue.class.getName());
     private static final List<String> IMAGE_EXTENSIONS = List.of(".gen", ".bin", ".md");
+
+    /** Explicit paths for the ingredients of split and optional lock-on layouts. */
+    public static final Map<RomIdentity, SonicConfiguration> SUPPLEMENTAL_KEYS = Map.of(
+            RomIdentity.S3, SonicConfiguration.SONIC_3_ROM,
+            RomIdentity.SK, SonicConfiguration.SONIC_KNUCKLES_ROM,
+            RomIdentity.KIS2, SonicConfiguration.KNUCKLES_IN_SONIC_2_ROM);
 
     /** How the winning image was chosen. */
     public enum Source {
@@ -113,6 +119,7 @@ public final class RomImageCatalogue {
     /** Non-default configured values that name a file which does not exist: fail closed. */
     private final Map<RomIdentity, String> explicitMissing;
     private final boolean preferComposite;
+    private final boolean verifyTies;
     private final Map<RomIdentity, Optional<Resolution>> resolutions = new EnumMap<>(RomIdentity.class);
     private final Map<RomIdentity, RomByteReader> readers = new EnumMap<>(RomIdentity.class);
 
@@ -126,17 +133,23 @@ public final class RomImageCatalogue {
      */
     public RomImageCatalogue(List<PhysicalImage> images, Map<RomIdentity, PhysicalImage> explicit,
             boolean preferComposite) {
-        this(images, explicit, Map.of(), Map.of(), preferComposite);
+        this(images, explicit, Map.of(), Map.of(), preferComposite, true);
+    }
+
+    /** Resolve probed files in visit order, with no full-image reads during discovery. */
+    public static RomImageCatalogue forDiscovery(List<PhysicalImage> images, boolean preferComposite) {
+        return new RomImageCatalogue(images, Map.of(), Map.of(), Map.of(), preferComposite, false);
     }
 
     private RomImageCatalogue(List<PhysicalImage> images, Map<RomIdentity, PhysicalImage> explicit,
             Map<RomIdentity, String> explicitValues, Map<RomIdentity, String> explicitMissing,
-            boolean preferComposite) {
+            boolean preferComposite, boolean verifyTies) {
         this.images = List.copyOf(images);
         this.explicit = Map.copyOf(explicit);
         this.explicitValues = Map.copyOf(explicitValues);
         this.explicitMissing = Map.copyOf(explicitMissing);
         this.preferComposite = preferComposite;
+        this.verifyTies = verifyTies;
     }
 
     /** Builds the catalogue from the configuration and the process working directory. */
@@ -145,7 +158,7 @@ public final class RomImageCatalogue {
     }
 
     /**
-     * Builds the catalogue: the three per-game keys (resolved against
+     * Builds the catalogue: the per-game and supplemental keys (resolved against
      * {@code workingDirectory}) plus every {@code .gen}, {@code .bin} or
      * {@code .md} file in {@code roms.directory}. Missing or unreadable files
      * are skipped with a log line; header probing reads a few bytes per file
@@ -183,6 +196,16 @@ public final class RomImageCatalogue {
                 explicitMissing.put(game.identity(), configured);
             }
         }
+        for (var entry : SUPPLEMENTAL_KEYS.entrySet()) {
+            String configured = configuration.getString(entry.getValue());
+            if (configured == null || configured.isBlank()) continue;
+            Path path = resolve(base, configured);
+            if (!Files.isRegularFile(path)) continue;
+            PhysicalImage image = probe(byPath, path);
+            if (image != null && RomImageClassifier.windowOf(image, entry.getKey()).isPresent()) {
+                explicit.put(entry.getKey(), image);
+            }
+        }
         String directory = configuration.getString(SonicConfiguration.ROMS_DIRECTORY);
         Path scan = resolve(base, directory == null || directory.isBlank() ? "." : directory);
         if (Files.isDirectory(scan)) {
@@ -199,7 +222,7 @@ public final class RomImageCatalogue {
         }
         boolean preferComposite = configuration.getBoolean(SonicConfiguration.ROMS_PREFER_COMPOSITE);
         return new RomImageCatalogue(new ArrayList<>(byPath.values()), explicit, explicitValues,
-                explicitMissing, preferComposite);
+                explicitMissing, preferComposite, true);
     }
 
     /** Every probed image, explicit files first and then in directory order. */
@@ -305,6 +328,7 @@ public final class RomImageCatalogue {
         for (PhysicalImage image : images) {
             RomImageClassifier.windowOf(image, rom)
                     .ifPresent(window -> candidates.add(new Part(rom, image, window.offset(), window.length())));
+            if (!verifyTies && !candidates.isEmpty()) break;
         }
         if (candidates.size() == 1) {
             return Optional.of(new Resolution(rom, candidates, Source.DIRECTORY_ORDER));

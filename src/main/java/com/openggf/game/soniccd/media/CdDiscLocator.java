@@ -2,6 +2,7 @@ package com.openggf.game.soniccd.media;
 
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.data.cd.ChdDiscImage;
 import com.openggf.data.cd.DiscImage;
 import com.openggf.data.cd.DiscTrack;
 import com.openggf.game.soniccd.CdReleaseVariant;
@@ -19,8 +20,8 @@ import java.util.stream.Stream;
 /**
  * Finds the user's Sonic CD disc image: a {@code .cue} sheet with its track files, or a lossless CHD
  * ({@code .chd}, MAME chdman v5) of the same disc. The disc is
- * identified by content, as the ROM catalogue identifies cartridge images: the Sega CD header of its
- * data track, never the file name.
+ * identified by content, as the ROM catalogue identifies cartridge images: the CHD's raw-data digest
+ * for the known USA layout, or the Sega CD header of the data track.
  *
  * <p>Where it looks, first match wins: the {@value CdHostedMedia#MEDIA_ROOT_PROPERTY} system property (tests
  * and tools: {@code <root>/USA/<disc>.cue} or {@code .chd}); the {@value CdHostedMedia#DISC_PATH_PROPERTY} system
@@ -28,8 +29,9 @@ import java.util.stream.Stream;
  * the sheet's or CHD's path, relative to the working directory); when that is blank, the ROM folder
  * ({@code roms.directory}, default the working directory) and its sub-folders two levels down, CUE sheets before
  * CHDs. A named image that
- * is not the USA disc is refused, not replaced by the folder search. Probing parses each image's layout and reads
- * 512 bytes of its data track; nothing is hashed here. Whole-disc verification happens when the game opens it ({@link CdHostedMedia}).
+ * is not the USA disc is refused, not replaced by the folder search. Probing parses the layout and,
+ * if necessary, reads 512 bytes from the data track. Whole-disc verification happens when the game opens it
+ * ({@link CdHostedMedia}).
  */
 public final class CdDiscLocator {
     /** Sub-folder depth searched under the ROM folder. */
@@ -42,7 +44,21 @@ public final class CdDiscLocator {
         public boolean found() { return disc.isPresent(); }
     }
 
+    /** Raw-data digest of the original USA CHD layout. Other supported layouts use the data header. */
+    private static final String USA_CHD_RAW_SHA1 = "8bcf26f53545dcd560ac9fd8db91766b977f1efd";
+
+    // CUE sheets before CHDs, so a folder holding both forms keeps using the sheet.
+    private static final Comparator<Path> DISC_ORDER = Comparator
+            .comparing((Path p) -> p.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".chd"))
+            .thenComparing(Path::toString, String.CASE_INSENSITIVE_ORDER);
+
     private CdDiscLocator() { }
+
+    static Optional<Path> discover(List<Path> candidates) {
+        return candidates.stream().filter(CdDiscLocator::isDiscImageName).sorted(DISC_ORDER)
+                .takeWhile(path -> !Thread.currentThread().isInterrupted())
+                .filter(path -> probe(path).matchesUsa()).findFirst();
+    }
 
     /** Locates the USA disc under the configured places; never throws for a missing or foreign disc. */
     public static Result locate(SonicConfigurationService config) {
@@ -107,10 +123,7 @@ public final class CdDiscLocator {
             walk.filter(CdDiscLocator::isDiscImageName)
                     .filter(Files::isRegularFile)
                     .filter(p -> !hidden(folder, p))
-                    // CUE sheets before CHDs, so a folder holding both forms of the disc keeps using the sheet.
-                    .sorted(Comparator.comparing((Path p) -> p.getFileName().toString().toLowerCase(Locale.ROOT)
-                                    .endsWith(".chd"))
-                            .thenComparing(Path::toString, String.CASE_INSENSITIVE_ORDER))
+                    .sorted(DISC_ORDER)
                     .forEach(cues::add);
         } catch (IOException | java.io.UncheckedIOException unreadable) {
             // An unreadable sub-folder ends the walk; what was listed so far is still probed.
@@ -128,7 +141,7 @@ public final class CdDiscLocator {
         List<String> seen = new ArrayList<>();
         for (Path cue : cues) {
             Probe probe = probe(cue);
-            if (probe.variant() == CdReleaseVariant.USA && probe.problem() == null) {
+            if (probe.matchesUsa()) {
                 return new Result(Optional.of(cue), cue.toString());
             }
             if (probe.variant() != null || probe.problem() != null) seen.add(probe.describe(cue));
@@ -141,6 +154,8 @@ public final class CdDiscLocator {
 
     /** One sheet's header agreement and track shape; {@code variant} is null for a disc that is not Sonic CD. */
     record Probe(CdReleaseVariant variant, String problem) {
+        boolean matchesUsa() { return variant == CdReleaseVariant.USA && problem == null; }
+
         String describe(Path cue) {
             String name = cue.getFileName().toString();
             if (problem != null) return name + ": " + problem + ".";
@@ -153,6 +168,10 @@ public final class CdDiscLocator {
         try (DiscImage disc = DiscImage.open(cue)) {
             List<DiscTrack> data = disc.tracks().stream().filter(t -> t.mode().isMode1()).toList();
             if (data.size() != 1) return new Probe(null, null);
+            if (disc.tracks().size() == TRACKS && disc instanceof ChdDiscImage chd
+                    && USA_CHD_RAW_SHA1.equals(chd.rawDataSha1Hex())) {
+                return new Probe(CdReleaseVariant.USA, null);
+            }
             CdDiscHeader header = CdDiscHeader.parse(disc.readMode1Bytes(data.getFirst().number(), 0, 0x200));
             CdReleaseVariant variant = header.observedVariant().orElse(null);
             if (variant == null) return new Probe(null, null);

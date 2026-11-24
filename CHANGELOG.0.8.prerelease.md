@@ -7,6 +7,11 @@ under the matching area heading; see the
 
 ## Gameplay and presentation
 
+- **Add your games:** the folder scan now finds Sonic CD (USA) on CHD or CUE,
+  split Sonic 3 + Sonic & Knuckles pairs, and the optional Knuckles in Sonic 2
+  lock-on dump. It saves paths so the launcher can still use media found in
+  separate subfolders.
+
 - In standalone Sonic & Knuckles, star posts cycle between Slots and Pachinko.
   A star post activated with 50 rings opens Slots. Once all seven Chaos Emeralds
   are collected, giant rings award 50 rings.

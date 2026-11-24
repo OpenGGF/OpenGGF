@@ -4,7 +4,11 @@ import com.openggf.InputBindingFactory;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
-import com.openggf.data.RomGame;
+import com.openggf.game.MasterTitleScreen.GameEntry;
+import com.openggf.data.RomIdentity;
+import com.openggf.data.RomImageCatalogue;
+import com.openggf.game.soniccd.CdTestMedia;
+import com.openggf.game.soniccd.CdReleaseVariant;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -20,7 +24,106 @@ import static org.junit.jupiter.api.Assertions.*;
 class TestMenuGameOnboarding {
     @TempDir Path directory;
 
-    @Test void scanningRecognizesAllThreeByContentsIncludingNestedAndUnusualFilenames() throws Exception {
+    @Test void findsCueAndIgnoresUnknownFiles() throws Exception {
+        Path cue = directory.resolve("game.cue");
+        var usa = CdReleaseVariant.USA;
+        byte[] frames = new byte[35 * 2352];
+        java.util.Arrays.fill(frames, 1, 11, (byte) 0xff);
+        frames[15] = 1; // MODE1/2352 sync and mode bytes in the data sector.
+        for (var field : java.util.Map.of(16, usa.discHeaderVolumeId(), 0x50, usa.sourceBuildDate(),
+                0x180, usa.productId(), 0x1f0, usa.headerMarket(), 0, "SEGADISCSYSTEM").entrySet()) {
+            byte[] value = field.getValue().getBytes(StandardCharsets.US_ASCII);
+            System.arraycopy(value, 0, frames, 16 + field.getKey(), value.length);
+        }
+        Files.write(directory.resolve("tracks.bin"), frames);
+        var sheet = new StringBuilder("FILE \"tracks.bin\" BINARY\n  TRACK 01 MODE1/2352\n    INDEX 01 00:00:00\n");
+        for (int track = 2; track <= 35; track++)
+            sheet.append(String.format(java.util.Locale.ROOT, "  TRACK %02d AUDIO%n    INDEX 01 00:00:%02d%n",
+                    track, track - 1));
+        Files.writeString(cue, sheet);
+        Files.writeString(directory.resolve("unknown.bin"), "not a game");
+        Path unknown = Files.writeString(directory.resolve("unknown.chd"), "not a disc");
+        assertTrue(MenuGameOnboarding.discover(unknown, false).games().isEmpty());
+        Path one = image(directory, "one.gen", 0x80000, "SONIC THE HEDGEHOG");
+        var config = scanAndReload(directory, false);
+        assertEquals(cue.toString(), config.getString(SonicConfiguration.SONIC_CD_DISC));
+        assertEquals(one.toString(), config.getString(SonicConfiguration.SONIC_1_ROM));
+    }
+
+    @Test void identifiesRealDiscAtItsExistingPath() throws Exception {
+        Path disc = CdTestMedia.usaCue().toAbsolutePath().normalize();
+        var result = MenuGameOnboarding.discover(disc, false);
+        assertEquals(List.of(disc), result.games().get(GameEntry.SONIC_CD));
+        assertEquals(disc.toString(), result.settings().get(SonicConfiguration.SONIC_CD_DISC));
+    }
+
+    @Test void splitPairInDifferentSubfoldersIsStillLaunchableAfterReload() throws Exception {
+        Path folder = Files.createDirectory(directory.resolve("games"));
+        image(folder, "one.gen", 0x80000, "SONIC THE HEDGEHOG");
+        Path three = image(Files.createDirectory(folder.resolve("three")), "cartridge.backup",
+                0x200000, "SONIC THE HEDGEHOG 3");
+        Path knuckles = image(Files.createDirectory(folder.resolve("knuckles")), "cartridge.backup",
+                0x200000, "SONIC & KNUCKLES");
+        var config = scanAndReload(folder, false);
+        var resolved = RomImageCatalogue.forCurrentWorkingDirectory(config).resolve(RomIdentity.S3K).orElseThrow();
+        assertTrue(resolved.isComposite());
+        assertEquals(folder.toString(), config.getString(SonicConfiguration.ROMS_DIRECTORY));
+        assertEquals(List.of(knuckles, three), resolved.parts().stream().map(part -> part.image().path()).toList());
+    }
+
+    @Test void tierTwoDumpRemainsAvailableWithASeparateSonic2BaseRom() throws Exception {
+        Path folder = Files.createDirectory(directory.resolve("games"));
+        image(folder, "one.gen", 0x80000, "SONIC THE HEDGEHOG");
+        Path two = image(folder, "two.gen", 0x100000, "SONIC THE HEDGEHOG 2");
+        Path kis2 = Files.createDirectory(folder.resolve("lock-on")).resolve("combined.backup");
+        var bytes = new byte[0x340000];
+        putHeader(bytes, 0, "SONIC & KNUCKLES");
+        putHeader(bytes, 0x200000, "SONIC THE HEDGEHOG 2");
+        Files.write(kis2, bytes);
+        var config = scanAndReload(folder, true);
+        config.setConfigValue(SonicConfiguration.SONIC_2_ROM, two.toString());
+        var catalogue = RomImageCatalogue.forCurrentWorkingDirectory(config);
+        assertEquals(two, catalogue.resolve(RomIdentity.S2).orElseThrow().wholeImagePath().orElseThrow());
+        assertEquals(kis2, catalogue.resolve(RomIdentity.KIS2).orElseThrow().wholeImagePath().orElseThrow());
+    }
+
+    @Test void recognizesEachRetailRevisionThroughTheSameCartridgeMatcher() throws Exception {
+        for (GameEntry game : List.of(GameEntry.SONIC_1, GameEntry.SONIC_2)) {
+            for (String suffix : List.of(".rev00.rom.path", ".rom.path")) {
+                String property = game == GameEntry.SONIC_1 ? "sonic1" : "sonic2";
+                String input = System.getProperty(property + suffix);
+                org.junit.jupiter.api.Assumptions.assumeTrue(input != null, "requires " + property + suffix);
+                Path path = Path.of(input).toAbsolutePath().normalize();
+                assertEquals(java.util.Map.of(game, List.of(path)), MenuGameOnboarding.discover(path, false).games());
+            }
+        }
+    }
+
+    private SonicConfigurationService scanAndReload(Path folder, boolean preferComposite) {
+        Path settings = directory.resolve("settings");
+        var config = SonicConfigurationService.createStandalone(settings);
+        config.setConfigValue(SonicConfiguration.ROMS_DIRECTORY, folder.toString());
+        config.setConfigValue(SonicConfiguration.ROMS_PREFER_COMPOSITE, preferComposite);
+        var input = new InputHandler(InputBindingFactory.supplier(config), List::of);
+        var page = new MenuGameOnboarding(config);
+        int[] scan = centre(page.layout().choices().get(1));
+        page.pointer(scan[0], scan[1], true, true, false, 0);
+        tick(page, input);
+        try {
+            assertTimeoutPreemptively(Duration.ofSeconds(15), () -> {
+                while (page.layout().button() == null) {
+                    page.pointer(30, 76, true, true, false, 0);
+                    tick(page, input);
+                    Thread.sleep(5);
+                }
+            });
+        } finally {
+            page.cancel();
+        }
+        return SonicConfigurationService.createStandalone(settings);
+    }
+
+    @Test void scanningRecognizesCartridgesByContentsIncludingNestedAndUnusualFilenames() throws Exception {
         Path one = image(directory, "renamed.backup", 0x80000, "SONIC THE HEDGEHOG");
         Path nested = Files.createDirectory(directory.resolve("nested"));
         Path two = image(nested, "two.gen", 0x100000, "SONIC THE HEDGEHOG 2");
@@ -29,9 +132,9 @@ class TestMenuGameOnboarding {
         putHeader(bytes, 0x200000, "SONIC THE HEDGEHOG 3");
         Files.write(three, bytes);
         Files.writeString(directory.resolve("unrelated.txt"), "not a game");
-        assertEquals(java.util.Map.of(RomGame.S1, one, RomGame.S2, two, RomGame.S3K, three),
+        assertEquals(java.util.Map.of(GameEntry.SONIC_1, List.of(one), GameEntry.SONIC_2, List.of(two), GameEntry.SONIC_3K, List.of(three)),
                 MenuGameOnboarding.discover(directory, true).games());
-        assertEquals(java.util.Map.of(RomGame.S1, one), MenuGameOnboarding.discover(one, false).games());
+        assertEquals(java.util.Map.of(GameEntry.SONIC_1, List.of(one)), MenuGameOnboarding.discover(one, false).games());
         assertTrue(MenuGameOnboarding.discover(directory.resolve("unrelated.txt"), false).games().isEmpty());
     }
 
@@ -39,36 +142,37 @@ class TestMenuGameOnboarding {
         // Every file is recognized, so traversal order cannot affect the partial result.
         for (int i = 0; i < 3; i++) image(directory, "one" + i, 0x80000, "SONIC THE HEDGEHOG");
         var result = MenuGameOnboarding.discover(directory, true, 2);
-        assertEquals(java.util.Set.of(RomGame.S1), result.games().keySet());
+        assertEquals(java.util.Set.of(GameEntry.SONIC_1), result.games().keySet());
         assertTrue(result.limitReached());
         assertFalse(result.unreadable());
         assertEquals("Stopped early; scan the folder with the rest", result.notice());
     }
 
     @Test void noticeSaysOnlyWhatTheScanMissedForAllSomeAndNoGames() {
-        var all = java.util.Map.of(RomGame.S1, directory, RomGame.S2, directory, RomGame.S3K, directory);
-        assertEquals(RomGame.values().length, all.size(), "fixture covers every supported game");
-        var some = java.util.Map.of(RomGame.S2, directory);
-        java.util.Map<RomGame, Path> none = new java.util.EnumMap<>(RomGame.class);
+        var all = java.util.Map.of(GameEntry.SONIC_1, List.of(directory), GameEntry.SONIC_2, List.of(directory),
+                GameEntry.SONIC_3K, List.of(directory), GameEntry.SONIC_CD, List.of(directory));
+        assertEquals(GameEntry.values().length, all.size(), "fixture covers every supported game");
+        var some = java.util.Map.of(GameEntry.SONIC_2, List.of(directory));
+        java.util.Map<GameEntry, List<Path>> none = java.util.Map.of();
         for (boolean limit : new boolean[] {false, true}) for (boolean unreadable : new boolean[] {false, true})
-            assertNull(new MenuGameOnboarding.DiscoveryResult(all, limit, unreadable).notice(),
+            assertNull(new MenuGameOnboarding.DiscoveryResult(all, java.util.Map.of(), limit, unreadable).notice(),
                     "every game found: nothing skipped can matter (limit " + limit + ", unreadable " + unreadable + ")");
-        assertNull(new MenuGameOnboarding.DiscoveryResult(some, false, false).notice());
-        assertNull(new MenuGameOnboarding.DiscoveryResult(none, false, false).notice());
+        assertNull(new MenuGameOnboarding.DiscoveryResult(some, java.util.Map.of(), false, false).notice());
+        assertNull(new MenuGameOnboarding.DiscoveryResult(none, java.util.Map.of(), false, false).notice());
         assertEquals("Stopped early; scan the folder with the rest",
-                new MenuGameOnboarding.DiscoveryResult(some, true, false).notice());
+                new MenuGameOnboarding.DiscoveryResult(some, java.util.Map.of(), true, false).notice());
         assertEquals("Stopped early; scan the folder that holds them",
-                new MenuGameOnboarding.DiscoveryResult(none, true, false).notice());
+                new MenuGameOnboarding.DiscoveryResult(none, java.util.Map.of(), true, false).notice());
         assertEquals("Skipped files that could not be read; check access to them",
-                new MenuGameOnboarding.DiscoveryResult(some, false, true).notice());
+                new MenuGameOnboarding.DiscoveryResult(some, java.util.Map.of(), false, true).notice());
         assertEquals("Some files could not be read; check access to them",
-                new MenuGameOnboarding.DiscoveryResult(none, false, true).notice());
+                new MenuGameOnboarding.DiscoveryResult(none, java.util.Map.of(), false, true).notice());
         assertEquals("Stopped early, skipped unreadable files; scan the rest",
-                new MenuGameOnboarding.DiscoveryResult(some, true, true).notice());
+                new MenuGameOnboarding.DiscoveryResult(some, java.util.Map.of(), true, true).notice());
         assertEquals("Stopped early, skipped unreadable files; scan their folder",
-                new MenuGameOnboarding.DiscoveryResult(none, true, true).notice());
+                new MenuGameOnboarding.DiscoveryResult(none, java.util.Map.of(), true, true).notice());
         for (var games : List.of(some, none)) for (boolean limit : new boolean[] {false, true}) for (boolean unreadable : new boolean[] {false, true}) {
-            String notice = new MenuGameOnboarding.DiscoveryResult(games, limit, unreadable).notice();
+            String notice = new MenuGameOnboarding.DiscoveryResult(games, java.util.Map.of(), limit, unreadable).notice();
             if (notice != null) assertTrue(MenuChrome.compactWidth(notice) <= 300, "fits whole at 320: " + notice);
         }
     }
@@ -141,8 +245,8 @@ class TestMenuGameOnboarding {
             assertCentred(rec, withNotice.top(), withNotice.noticeY() + 8, width);
             assertEquals(10, withNotice.noticeY() - withNotice.messageY());
             // Three found games and a notice: one column for checks, badges and names.
-            set(page, "found", new java.util.EnumMap<>(java.util.Map.of(RomGame.S1, directory, RomGame.S2, directory,
-                    RomGame.S3K, directory)));
+            set(page, "found", new java.util.EnumMap<>(java.util.Map.of(GameEntry.SONIC_1, List.of(directory), GameEntry.SONIC_2, List.of(directory),
+                    GameEntry.SONIC_3K, List.of(directory))));
             set(page, "message", "3 games added");
             rec.clear(); page.render(rec.font, width);
             var found = page.layout();
@@ -160,7 +264,7 @@ class TestMenuGameOnboarding {
             assertTrue(rec.fills.stream().anyMatch(f -> f.x() == button.x() && f.y() == button.y() && f.w() == button.w()
                     && f.h() == 20), "Continue is a 20-row button drawn where it is hit");
             // One found game, no notice: the group shrinks and stays centred.
-            set(page, "found", new java.util.EnumMap<>(java.util.Map.of(RomGame.S2, directory)));
+            set(page, "found", new java.util.EnumMap<>(java.util.Map.of(GameEntry.SONIC_2, List.of(directory))));
             set(page, "scanNotice", null);
             rec.clear(); page.render(rec.font, width);
             var one = page.layout();

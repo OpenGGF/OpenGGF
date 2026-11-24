@@ -56,6 +56,11 @@ public final class CdHostedMedia implements HostedGameMedia {
         return new Availability(found.found(), found.detail());
     }
 
+    @Override
+    public Optional<Path> discover(List<Path> candidates) {
+        return CdDiscLocator.discover(candidates);
+    }
+
     /**
      * Opens the located USA disc and verifies it whole: every track's content must equal the USA
      * release's record ({@link CdRetailReleases#USA}, Redump 29188). Another release, a damaged or

@@ -256,6 +256,9 @@ public class RomManager implements AutoCloseable {
                 String.valueOf(configuration.getString(SonicConfiguration.SONIC_1_ROM)),
                 String.valueOf(configuration.getString(SonicConfiguration.SONIC_2_ROM)),
                 String.valueOf(configuration.getString(SonicConfiguration.SONIC_3K_ROM)),
+                configuration.getString(SonicConfiguration.SONIC_3_ROM),
+                configuration.getString(SonicConfiguration.SONIC_KNUCKLES_ROM),
+                configuration.getString(SonicConfiguration.KNUCKLES_IN_SONIC_2_ROM),
                 configuration.getBoolean(SonicConfiguration.ROMS_PREFER_COMPOSITE));
     }
 

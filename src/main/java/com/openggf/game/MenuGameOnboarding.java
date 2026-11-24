@@ -1,29 +1,37 @@
 package com.openggf.game;
 
-import com.openggf.i18n.UiMessages;
 import com.openggf.configuration.EngineSettingsDraft;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
 import com.openggf.control.MenuInput;
 import com.openggf.data.PhysicalImage;
-import com.openggf.data.RomGame;
+import com.openggf.data.RomIdentity;
+import com.openggf.data.RomImageCatalogue;
 import com.openggf.data.RomImageClassifier;
+import com.openggf.game.MasterTitleScreen.GameEntry;
 import com.openggf.graphics.PixelFont;
+import com.openggf.i18n.UiMessages;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
+import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.FileVisitResult;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.util.EnumSet;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.EnumMap;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 
 /** First-run game discovery. All reads are cancellable; settings publish only on the UI thread. */
 public final class MenuGameOnboarding {
+    private static final int MAX_SCAN_ENTRIES = 20_000;
+
     private final SonicConfigurationService config;
     private MenuPathBrowser browser;
     private MenuLoadTask<DiscoveryResult> discovery;
@@ -38,7 +46,8 @@ public final class MenuGameOnboarding {
     private String scanNotice;
     private String pendingPath;
     private MenuDetailsScreen details;
-    private Map<RomGame, Path> found = Map.of();
+    private Map<GameEntry, List<Path>> found = Map.of();
+    private String kis2Path;
     private Path reading;
     private int frame;
 
@@ -64,7 +73,9 @@ public final class MenuGameOnboarding {
                 pendingPath = selected.toString();
                 browser = null;
                 reading = selected;
-                discovery = new MenuLoadTask<>(() -> discover(selected, scanning));
+                boolean folder = scanning;
+                boolean preferComposite = config.getBoolean(SonicConfiguration.ROMS_PREFER_COMPOSITE);
+                discovery = new MenuLoadTask<>(() -> discover(selected, folder, MAX_SCAN_ENTRIES, preferComposite));
             }
             return;
         }
@@ -81,16 +92,18 @@ public final class MenuGameOnboarding {
             try {
                 DiscoveryResult result = discovery.result();
                 found = result.games();
+                kis2Path = result.settings().get(SonicConfiguration.KNUCKLES_IN_SONIC_2_ROM);
                 scanNotice = result.notice();
                 if (found.isEmpty()) message = scanning ? UiMessages.text("menu.onboarding.no_supported_games_found") : UiMessages.text("menu.onboarding.not_a_supported_rom_image");
                 else {
                     EngineSettingsDraft draft = new EngineSettingsDraft(config);
-                    for (var entry : found.entrySet()) draft.set(entry.getKey().configurationKey(), entry.getValue().toString());
-                    Path first = found.values().iterator().next();
-                    draft.set(SonicConfiguration.ROMS_DIRECTORY, first.getParent().toString());
+                    result.settings().forEach(draft::set);
+                    Path location = reading.toAbsolutePath().normalize();
+                    draft.set(SonicConfiguration.ROMS_DIRECTORY, (scanning ? location : location.getParent()).toString());
                     try { draft.apply(); }
                     catch (IOException | IllegalArgumentException e) {
                         found = Map.of();
+                        kis2Path = null;
                         message = UiMessages.text("menu.onboarding.could_not_save_check_settings_file_access");
                         discovery = null;
                         return;
@@ -98,8 +111,15 @@ public final class MenuGameOnboarding {
                     message = UiMessages.text("menu.onboarding.games_added", java.util.Map.of("count", found.size()));
                     MenuFeedback.emit(MenuFeedback.Cue.CONFIRM);
                 }
-            } catch (Exception e) { found = Map.of(); scanNotice = UiMessages.text("menu.onboarding.check_access_or_choose_another_location");
-                message = scanning ? UiMessages.text("menu.onboarding.could_not_read_this_folder") : UiMessages.text("menu.onboarding.could_not_read_this_file"); }
+            } catch (ExecutionException failure) {
+                found = Map.of();
+                kis2Path = null;
+                scanNotice = UiMessages.text("menu.onboarding.check_access_or_choose_another_location");
+                message = scanning ? UiMessages.text("menu.onboarding.could_not_read_this_folder")
+                        : UiMessages.text("menu.onboarding.could_not_read_this_file");
+            } catch (InterruptedException interrupted) {
+                Thread.currentThread().interrupt();
+            }
             discovery = null;
             return;
         }
@@ -126,16 +146,18 @@ public final class MenuGameOnboarding {
         }
     }
 
-    /** Uses the runtime classifier, including logical games within lock-on images; extensions never gate identity. */
-    record DiscoveryResult(Map<RomGame, Path> games, boolean limitReached, boolean unreadable) {
-        DiscoveryResult { games = java.util.Collections.unmodifiableMap(new EnumMap<>(games)); }
-        /**
-         * What the scan could not cover, said only when it matters: once every supported game is
-         * found, nothing the scan skipped can add another, so there is no notice. The scan stops
-         * after 20,000 entries or eight folders deep; unreadable files and folders are skipped.
-         */
+    record DiscoveryResult(Map<GameEntry, List<Path>> games, Map<SonicConfiguration, String> settings,
+                           boolean limitReached, boolean unreadable) {
+        DiscoveryResult {
+            var ordered = new EnumMap<GameEntry, List<Path>>(GameEntry.class);
+            ordered.putAll(games);
+            games = Collections.unmodifiableMap(ordered);
+            settings = Map.copyOf(settings);
+        }
+
+        /** Report incomplete coverage if the scan could have missed another game. */
         String notice() {
-            if (games.size() == RomGame.values().length || !limitReached && !unreadable) return null;
+            if (games.size() == GameEntry.values().length || !limitReached && !unreadable) return null;
             if (limitReached && unreadable) return "Stopped early, skipped unreadable files; "
                     + (games.isEmpty() ? "scan their folder" : "scan the rest");
             if (limitReached) return "Stopped early; " + (games.isEmpty() ? "scan the folder that holds them" : "scan the folder with the rest");
@@ -144,64 +166,117 @@ public final class MenuGameOnboarding {
         }
     }
 
-    static DiscoveryResult discover(Path selection, boolean folder) throws IOException, InterruptedException {
-        return discover(selection, folder, 20000);
+    static DiscoveryResult discover(Path selection, boolean folder) throws IOException {
+        return discover(selection, folder, MAX_SCAN_ENTRIES, false);
     }
 
     static DiscoveryResult discover(Path selection, boolean folder, int maxEntries) throws IOException {
-        Map<RomGame, Path> result = new EnumMap<>(RomGame.class);
-        if (!folder) { identify(selection, result); return new DiscoveryResult(result, false, false); }
-        if (!Files.isDirectory(selection)) throw new IOException(UiMessages.text("menu.onboarding.choose_a_folder"));
-        // No directory symlinks. Limits and denied subtrees preserve discoveries already made.
-        boolean[] limited = {false};
-        boolean[] unreadable = {false};
-        Files.walkFileTree(selection, EnumSet.noneOf(java.nio.file.FileVisitOption.class), 8,
-                new SimpleFileVisitor<>() {
-                    private int visited;
-                    private FileVisitResult boundary() throws IOException {
-                        if (Thread.currentThread().isInterrupted()) throw new java.io.InterruptedIOException(UiMessages.text("menu.menugameonboarding.scan_cancelled"));
-                        if (result.size() == RomGame.values().length) return FileVisitResult.TERMINATE;
-                        if (++visited > maxEntries) {
-                            limited[0] = true;
-                            return FileVisitResult.TERMINATE;
-                        }
-                        return FileVisitResult.CONTINUE;
-                    }
-                    @Override public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
-                        return boundary();
-                    }
-                    @Override public FileVisitResult visitFile(Path path, BasicFileAttributes attrs) throws IOException {
-                        FileVisitResult next = boundary();
-                        if (next == FileVisitResult.TERMINATE) return next;
-                        if (attrs.isDirectory()) limited[0] = true; // Maximum walk depth reached.
-                        if (attrs.isRegularFile()) {
-                            try { identify(path, result); }
-                            catch (IOException | SecurityException failure) { unreadable[0] = true; }
-                        }
-                        return result.size() == RomGame.values().length ? FileVisitResult.TERMINATE : FileVisitResult.CONTINUE;
-                    }
-                    @Override public FileVisitResult visitFileFailed(Path file, IOException failure) throws IOException {
-                        if (file.equals(selection)) throw failure;
-                        unreadable[0] = true;
-                        return boundary();
-                    }
-                    @Override public FileVisitResult postVisitDirectory(Path dir, IOException failure) throws IOException {
-                        if (failure != null) {
-                            if (dir.equals(selection) && result.isEmpty()) throw failure;
-                            unreadable[0] = true;
-                        }
-                        return FileVisitResult.CONTINUE;
-                    }
-                });
-        return new DiscoveryResult(result, limited[0], unreadable[0]);
+        return discover(selection, folder, maxEntries, false);
     }
 
-    private static void identify(Path path, Map<RomGame, Path> result) throws IOException {
-        if (!Files.isRegularFile(path)) throw new IOException(UiMessages.text("menu.onboarding.choose_a_rom_file"));
-        // Probe just sizes and headers, exactly as MenuRomLocator and the runtime catalogue do.
+    private static DiscoveryResult discover(Path selection, boolean folder, int maxEntries, boolean preferComposite)
+            throws IOException {
+        Path source = selection.toAbsolutePath().normalize();
+        List<Path> files = new ArrayList<>();
+        List<PhysicalImage> cartridges = new ArrayList<>();
+        boolean[] limited = {false};
+        boolean[] unreadable = {false};
+        if (!folder) {
+            if (!Files.isRegularFile(source)) throw new IOException(UiMessages.text("menu.onboarding.choose_a_rom_file"));
+            probeFile(source, files, cartridges);
+        } else {
+            if (!Files.isDirectory(source)) throw new IOException(UiMessages.text("menu.onboarding.choose_a_folder"));
+            // Do not follow directory links. Limits and denied subtrees preserve prior discoveries.
+            Files.walkFileTree(source, EnumSet.noneOf(java.nio.file.FileVisitOption.class), 8,
+                    new SimpleFileVisitor<>() {
+                        private int visited;
+
+                        private FileVisitResult boundary() throws IOException {
+                            checkInterrupted();
+                            if (++visited > maxEntries) {
+                                limited[0] = true;
+                                return FileVisitResult.TERMINATE;
+                            }
+                            return FileVisitResult.CONTINUE;
+                        }
+
+                        @Override public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs)
+                                throws IOException {
+                            return boundary();
+                        }
+
+                        @Override public FileVisitResult visitFile(Path path, BasicFileAttributes attrs) throws IOException {
+                            FileVisitResult next = boundary();
+                            if (next == FileVisitResult.TERMINATE) return next;
+                            if (attrs.isDirectory()) limited[0] = true; // Maximum walk depth reached.
+                            if (attrs.isRegularFile()) {
+                                try { probeFile(path, files, cartridges); }
+                                catch (IOException | SecurityException failure) { unreadable[0] = true; }
+                            }
+                            return FileVisitResult.CONTINUE;
+                        }
+
+                        @Override public FileVisitResult visitFileFailed(Path file, IOException failure) throws IOException {
+                            if (file.equals(source)) throw failure;
+                            unreadable[0] = true;
+                            return boundary();
+                        }
+
+                        @Override public FileVisitResult postVisitDirectory(Path dir, IOException failure) throws IOException {
+                            if (failure != null) {
+                                if (dir.equals(source) && files.isEmpty()) throw failure;
+                                unreadable[0] = true;
+                            }
+                            return FileVisitResult.CONTINUE;
+                        }
+                    });
+        }
+
+        var games = new EnumMap<GameEntry, List<Path>>(GameEntry.class);
+        var settings = new EnumMap<SonicConfiguration, String>(SonicConfiguration.class);
+        var catalogue = RomImageCatalogue.forDiscovery(cartridges, preferComposite);
+        for (GameEntry game : GameEntry.values()) {
+            checkInterrupted();
+            GameId id = GameId.fromCode(game.gameId);
+            if (game.cartridge()) {
+                catalogue.resolve(id.romGame().identity()).ifPresent(resolution -> {
+                    List<Path> paths = resolution.parts().stream().map(part -> part.image().path()).distinct().toList();
+                    games.put(game, paths);
+                    if (paths.size() == 1) {
+                        settings.put(game.romConfigKey, paths.getFirst().toString());
+                    } else {
+                        // A split layout uses the catalogue recipe and each part's own path.
+                        settings.put(game.romConfigKey, "");
+                        for (var part : resolution.parts()) {
+                            settings.put(RomImageCatalogue.SUPPLEMENTAL_KEYS.get(part.rom()), part.image().path().toString());
+                        }
+                    }
+                });
+            } else {
+                GameModuleRegistry.hostedMedia(id).discover(files).ifPresent(path -> {
+                    games.put(game, List.of(path));
+                    settings.put(game.romConfigKey, path.toString());
+                });
+            }
+        }
+        // The chip's source is the lock-on dump even when the catalogue prefers composites.
+        catalogue.resolve(RomIdentity.KIS2_CHIP)
+                .ifPresent(chip -> settings.put(SonicConfiguration.KNUCKLES_IN_SONIC_2_ROM,
+                        chip.parts().getFirst().image().path().toString()));
+        checkInterrupted();
+        return new DiscoveryResult(games, settings, limited[0], unreadable[0]);
+    }
+
+    private static void checkInterrupted() throws IOException {
+        if (Thread.currentThread().isInterrupted()) {
+            throw new InterruptedIOException(UiMessages.text("menu.menugameonboarding.scan_cancelled"));
+        }
+    }
+
+    private static void probeFile(Path path, List<Path> files, List<PhysicalImage> cartridges) throws IOException {
         PhysicalImage image = PhysicalImage.probe(path);
-        for (RomGame game : RomGame.values()) if (RomImageClassifier.windowOf(image, game.identity()).isPresent())
-            result.putIfAbsent(game, path.toAbsolutePath().normalize());
+        if (RomImageClassifier.layoutOf(image).isPresent()) cartridges.add(image);
+        files.add(path);
     }
 
     public boolean completed() { return completed; }
@@ -252,7 +327,8 @@ public final class MenuGameOnboarding {
         if (!found.isEmpty()) {
             // Heading, 7 clear, the badges' rows, (6 clear, notice), 9 clear to Continue's frame.
             int listY = lineHeight() + 7 + 1;
-            int next = listY - 1 + (found.size() - 1) * foundPitch() + 10;
+            int noteRows = (int) found.keySet().stream().filter(game -> mediaNote(game) != null).count();
+            int next = listY - 1 + (found.size() - 1) * foundPitch() + noteRows * paragraphPitch() + 10;
             int noticeY = next + 6;
             if (scanNotice != null) next = noticeY + lineHeight();
             int buttonY = next + 9 + FRAME;
@@ -310,21 +386,28 @@ public final class MenuGameOnboarding {
         } else if (!found.isEmpty()) {
             text(font, message, layout.top(), MenuChrome.GOLD);
             int y = layout.listY();
-            // Found games read as one list: the checks, the badges and the names each share a
-            // column. Every badge is as wide as the widest (S3K), its label centred, so the names
-            // start on one line and the badges read as a set.
+            // Checks, badges and names each share a column. Notes align below the names.
             int badgeColumn = 0, nameWidth = 0;
-            for (RomGame game : found.keySet()) {
-                badgeColumn = Math.max(badgeColumn, MenuChrome.tagWidth(MenuChrome.gameBadgeText(badgeId(game))));
+            for (GameEntry game : found.keySet()) {
+                badgeColumn = Math.max(badgeColumn, MenuChrome.tagWidth(MenuChrome.gameBadgeText(game.gameId)));
                 nameWidth = Math.max(nameWidth, MenuChrome.compactWidth(gameLabel(game)));
+                String note = mediaNote(game);
+                if (note != null) nameWidth = Math.max(nameWidth, MenuChrome.compactWidth(note));
             }
-            int listWidth = MenuChrome.ICON_SIZE + 5 + badgeColumn + 5 + nameWidth;
-            int x = (this.width - listWidth) / 2;
-            for (RomGame game : found.keySet()) {
-                // A found game reads as a confirmed item: check, game badge and its name.
+            int nameOffset = MenuChrome.ICON_SIZE + 5 + badgeColumn + 5;
+            int textPixels = Math.min(nameWidth, this.width - nameOffset - 20);
+            int x = (this.width - nameOffset - textPixels) / 2;
+            for (GameEntry game : found.keySet()) {
                 MenuChrome.icon(font, MenuChrome.Icon.CHECK, x, y, MenuChrome.GREEN);
-                MenuChrome.gameBadge(font, x + MenuChrome.ICON_SIZE + 5, y - 1, badgeId(game), badgeColumn);
-                MenuChrome.compact(font, gameLabel(game), x + MenuChrome.ICON_SIZE + 5 + badgeColumn + 5, y, MenuChrome.TEXT);
+                MenuChrome.gameBadge(font, x + MenuChrome.ICON_SIZE + 5, y - 1, game.gameId, badgeColumn);
+                String label = MenuStyle.pageText(MenuStyle.language(font), gameLabel(game), textPixels, MenuStyle.COMPACT, frame);
+                MenuChrome.compact(font, label, x + nameOffset, y, MenuChrome.TEXT);
+                String note = mediaNote(game);
+                if (note != null) {
+                    y += paragraphPitch();
+                    String shown = MenuStyle.pageText(MenuStyle.language(font), note, textPixels, MenuStyle.COMPACT, frame);
+                    MenuChrome.compact(font, shown, x + nameOffset, y, MenuChrome.MUTED);
+                }
                 y += foundPitch();
             }
             if (scanNotice != null) text(font, scanNotice, layout.noticeY(), MenuChrome.AMBER);
@@ -372,16 +455,33 @@ public final class MenuGameOnboarding {
         text.add(UiMessages.text("menu.onboarding.your_files_stay_where_they_are"));
         if (pendingPath != null) text.add(pendingPath);
         if (message != null) text.add(message);
-        for (var entry : found.entrySet()) { text.add(gameLabel(entry.getKey())); text.add(entry.getValue().toString()); }
+        for (var entry : found.entrySet()) {
+            text.add(gameLabel(entry.getKey()));
+            String note = mediaNote(entry.getKey());
+            if (note != null) text.add(note);
+            for (Path path : entry.getValue()) text.add(path.toString());
+            if (entry.getKey() == GameEntry.SONIC_2 && kis2Path != null) text.add(kis2Path);
+        }
         if (scanNotice != null) text.add(scanNotice);
         if (!found.isEmpty()) text.add(UiMessages.text("menu.onboarding.continue"));
         return String.join("\n", text);
     }
 
-    private static String badgeId(RomGame game) { return game.name().toLowerCase(java.util.Locale.ROOT); }
-    private static String gameLabel(RomGame game) {
-        return switch (game) { case S1 -> UiMessages.text("menu.menugameonboarding.sonic_the_hedgehog"); case S2 -> UiMessages.text("menu.menugameonboarding.sonic_the_hedgehog_2"); case S3K -> UiMessages.text("editor.editor_project_workspace.sonic_3_knuckles_138eayj"); };
+    private String mediaNote(GameEntry game) {
+        if (found.get(game).size() > 1) return UiMessages.text("menu.onboarding.split_s3_and_sk_pair");
+        if (game == GameEntry.SONIC_2 && kis2Path != null) return UiMessages.text("menu.onboarding.kis2_lock_on");
+        return null;
     }
+
+    private static String gameLabel(GameEntry game) {
+        return switch (game) {
+            case SONIC_1 -> UiMessages.text("menu.menugameonboarding.sonic_the_hedgehog");
+            case SONIC_2 -> UiMessages.text("menu.menugameonboarding.sonic_the_hedgehog_2");
+            case SONIC_3K -> UiMessages.text("editor.editor_project_workspace.sonic_3_knuckles_138eayj");
+            case SONIC_CD -> UiMessages.text("menu.onboarding.sonic_cd");
+        };
+    }
+
     private void text(PixelFont font, String value, int y, float[] color) {
         text(font, value, y, width - 20, color);
     }
