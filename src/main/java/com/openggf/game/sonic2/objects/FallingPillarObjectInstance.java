@@ -183,7 +183,7 @@ public class FallingPillarObjectInstance extends AbstractObjectInstance
 
     private void updateWaitForTrigger(AbstractPlayableSprite player) {
         // loc_2595E (s2.asm:51729-51731) returns before testing either player's position.
-        if (player == null || LevelDebugPlacement.isActive(services().gameState())) {
+        if (player == null || LevelDebugPlacement.blocksObjectInteractions(tryServices())) {
             return;
         }
         int dx = x - player.getCentreX();

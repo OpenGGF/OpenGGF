@@ -365,7 +365,7 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance implements
      */
     private void checkEntryCollision(AbstractPlayableSprite player, CharacterState cs) {
         // loc_225FC (s2.asm:48526-48531) returns before reading the cursor position.
-        if (player.isDebugMode() || com.openggf.game.LevelDebugPlacement.isActive(services().gameState())) {
+        if (player.isDebugMode() || com.openggf.game.LevelDebugPlacement.blocksObjectInteractions(tryServices())) {
             return;
         }
 

@@ -285,7 +285,7 @@ public class FlipperObjectInstance extends BoxObjectInstance
      */
     private void processVerticalLaunch(List<PlayableEntity> participants) {
         // Obj86_UpwardsType (s2.asm:58448-58450) leaves launch pending while placing.
-        if (!verticalLaunchTriggered || LevelDebugPlacement.isActive(services().gameState())) {
+        if (!verticalLaunchTriggered || LevelDebugPlacement.blocksObjectInteractions(tryServices())) {
             return;
         }
         verticalLaunchTriggered = false;

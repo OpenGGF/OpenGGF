@@ -176,7 +176,7 @@ public class RisingPillarObjectInstance extends AbstractObjectInstance
      */
     private void updateWaitForTrigger(AbstractPlayableSprite player) {
         // loc_25B3C (s2.asm:51898-51900) returns before testing either player's position.
-        if (player == null || LevelDebugPlacement.isActive(services().gameState())) {
+        if (player == null || LevelDebugPlacement.blocksObjectInteractions(tryServices())) {
             return;
         }
 

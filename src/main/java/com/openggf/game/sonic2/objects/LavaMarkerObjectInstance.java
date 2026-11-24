@@ -153,7 +153,7 @@ public class LavaMarkerObjectInstance extends AbstractObjectInstance
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
         // Obj31_Main (s2.asm:46542-46547) shows the marker during placement.
-        if (LevelDebugPlacement.isActive(services().gameState())) {
+        if (LevelDebugPlacement.blocksObjectInteractions(tryServices())) {
             com.openggf.game.sonic2.Sonic2NativeDebugGeometry.draw(services(),
                     0x20E74, subtypeIndex, spawn.x(), spawn.y(), false, false);
         }

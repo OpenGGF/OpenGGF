@@ -999,7 +999,7 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
 
         if (ps.state == STATE_EMPTY) {
             if (isDiagonal() && !player.isDebugMode() && player.getYSpeed() >= 0
-                    && !LevelDebugPlacement.isActive(services().gameState())) {
+                    && !LevelDebugPlacement.blocksObjectInteractions(tryServices())) {
                 // loc_2AF06's fresh branch calls the single-character solid
                 // helper with the already-computed head as d4, then returns
                 // after capture without running held compression this pass

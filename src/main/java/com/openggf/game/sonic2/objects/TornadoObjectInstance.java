@@ -656,7 +656,7 @@ public class TornadoObjectInstance extends AbstractObjectInstance
         solidActive = true;
         highPriority = player.isHighPriority();
         // ObjB2_Main_SCZ (s2.asm:78931-78933) takes its animation-only path.
-        if (LevelDebugPlacement.isActive(services().gameState())) return;
+        if (LevelDebugPlacement.blocksObjectInteractions(tryServices())) return;
 
         // ObjB2_Move_with_player reads Sonic's live Status_OnObj bit before
         // the inline SolidObject call refreshes this object's own standing bit

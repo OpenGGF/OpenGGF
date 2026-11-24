@@ -264,7 +264,7 @@ public class VineSwitchObjectInstance extends AbstractObjectInstance implements 
      * @param isPlayer2 true if this is player 2
      */
     private void handleGrabbedPlayer(AbstractPlayableSprite player, boolean isPlayer2) {
-        if (player.getDead() || player.isHurt() || player.isDebugMode() || LevelDebugPlacement.isActive(services().gameState())) {
+        if (player.getDead() || player.isHurt() || player.isDebugMode() || LevelDebugPlacement.blocksObjectInteractions(tryServices())) {
             releasePlayer(player, isPlayer2);
             return;
         }

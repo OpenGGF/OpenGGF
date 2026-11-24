@@ -187,7 +187,7 @@ public class SignpostObjectInstance extends BoxObjectInstance implements Sonic2N
             // sees Sonic's post-movement state.
             case STATE_WALK_OFF -> {
                 // Obj0D_Main_State3 (s2.asm:34815-34817) defers the walk-off while placing.
-                if (!LevelDebugPlacement.isActive(services().gameState())) updateWalkOff(player);
+                if (!LevelDebugPlacement.blocksObjectInteractions(tryServices())) updateWalkOff(player);
             }
             case STATE_DONE -> {
                 // ROM: Obj0D_Main_StateNull. The signpost remains visible but

@@ -115,7 +115,7 @@ public class CheckpointObjectInstance extends BoxObjectInstance implements Rewin
         }
         ensureInitialized();
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        if (!activated && player != null && !LevelDebugPlacement.isActive(services().gameState())) {
+        if (!activated && player != null && !LevelDebugPlacement.blocksObjectInteractions(tryServices())) {
             checkActivation(player);
         }
         updateAnimation();

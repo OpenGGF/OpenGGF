@@ -486,7 +486,7 @@ public class SwingingPlatformObjectInstance extends AbstractObjectInstance
 
         // loc_FF6E (s2.asm:22690-22695) suppresses new proximity triggers.
         boolean playerNearby = false;
-        if (player != null && !LevelDebugPlacement.isActive(services().gameState())) {
+        if (player != null && !LevelDebugPlacement.blocksObjectInteractions(tryServices())) {
             int playerX = player.getCentreX();
             int dx = playerX - baseX;
             if (Math.abs(dx) < 0x20) {

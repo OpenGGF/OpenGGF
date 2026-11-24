@@ -8,6 +8,7 @@ import com.openggf.game.internal.LevelDebugPlacementProvider;
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.ObjectManagerInternalAccess;
+import com.openggf.level.objects.ObjectServices;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -84,6 +85,10 @@ public final class LevelDebugPlacement implements RewindSnapshottable<LevelDebug
 
     public static boolean isActive(GameStateManager state) {
         return state != null && of(state).isActive();
+    }
+
+    public static boolean blocksObjectInteractions(ObjectServices services) {
+        return services != null && isActive(services.gameState());
     }
 
     public static boolean preventsTimeOver(AbstractPlayableSprite player) {

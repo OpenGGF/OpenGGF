@@ -354,7 +354,7 @@ public class MTZSpinTubeObjectInstance extends AbstractObjectInstance implements
      */
     private void checkEntry(CharacterState cs, AbstractPlayableSprite player) {
         // ROM: tst.w (Debug_placement_mode).w / bne.w return
-        if (player.isDebugMode() || LevelDebugPlacement.isActive(services().gameState())) {
+        if (player.isDebugMode() || LevelDebugPlacement.blocksObjectInteractions(tryServices())) {
             return;
         }
 

@@ -179,7 +179,7 @@ public class LauncherBallObjectInstance extends AbstractObjectInstance implement
      */
     private void processDetection(AbstractPlayableSprite player, int vIntRunCount) {
         // loc_252F0 (s2.asm:51328-51330) bypasses new capture while placing.
-        if (player.isDebugMode() || LevelDebugPlacement.isActive(services().gameState())) {
+        if (player.isDebugMode() || LevelDebugPlacement.blocksObjectInteractions(tryServices())) {
             return;
         }
 

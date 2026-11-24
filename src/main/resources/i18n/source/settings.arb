@@ -1072,12 +1072,12 @@
   "@settings.key.level_debug_mode.help": {
     "description": "Settings help for LEVEL_DEBUG_MODE."
   },
-  "settings.value.engine_free_fly": "Engine free-fly",
-  "@settings.value.engine_free_fly": {
+  "settings.value.engine": "Engine free-fly",
+  "@settings.value.engine": {
     "description": "Level debug mode setting for the engine movement shortcut."
   },
-  "settings.value.rom_placement": "ROM placement",
-  "@settings.value.rom_placement": {
+  "settings.value.rom": "ROM placement",
+  "@settings.value.rom": {
     "description": "Level debug mode setting for the cartridge item placement controls."
   },
   "settings.key.debug_view_enabled.label": "Debug tools",

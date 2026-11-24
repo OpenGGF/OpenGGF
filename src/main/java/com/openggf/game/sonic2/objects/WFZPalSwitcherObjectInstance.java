@@ -117,7 +117,7 @@ public class WFZPalSwitcherObjectInstance extends BoxObjectInstance implements R
         }
 
         // Obj8B_Main (s2.asm:47022-47024) preserves the previous crossing state.
-        if (LevelDebugPlacement.isActive(services().gameState())) return;
+        if (LevelDebugPlacement.blocksObjectInteractions(tryServices())) return;
 
         // Check Sonic (main character)
         // ROM: lea objoff_34(a0),a2 / lea (MainCharacter).w,a1 / bsr.s loc_2142A

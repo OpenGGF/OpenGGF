@@ -291,7 +291,7 @@ public class GrabObjectInstance extends AbstractObjectInstance implements Rewind
 
         // Check debug placement mode
         // ROM: tst.w (Debug_placement_mode).w / bne.s ObjD9_CheckCharacter_End
-        if (player.isDebugMode() || LevelDebugPlacement.isActive(services().gameState())) {
+        if (player.isDebugMode() || LevelDebugPlacement.blocksObjectInteractions(tryServices())) {
             return;  // In debug mode
         }
 

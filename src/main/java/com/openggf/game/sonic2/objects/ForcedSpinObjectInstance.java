@@ -118,7 +118,7 @@ public class ForcedSpinObjectInstance extends BoxObjectInstance implements Rewin
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         // Obj84_MainX (s2.asm:46829-46832), Obj84_MainY (s2.asm:46906-46909).
-        if (LevelDebugPlacement.isActive(services().gameState())) return;
+        if (LevelDebugPlacement.blocksObjectInteractions(tryServices())) return;
         AbstractPlayableSprite player = resolveMain(playerEntity);
         if (player == null) {
             return;

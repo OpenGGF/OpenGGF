@@ -517,7 +517,7 @@ public class MovingVineObjectInstance extends AbstractObjectInstance implements 
 
         // Check if player should be released (dead, debug mode, etc.)
         // ROM: cmpi.b #4,routine(a1) / bhs.s loc_29B42
-        if (player.getDead() || player.isHurt() || player.isDebugMode() || LevelDebugPlacement.isActive(services().gameState())) {
+        if (player.getDead() || player.isHurt() || player.isDebugMode() || LevelDebugPlacement.blocksObjectInteractions(tryServices())) {
             releasePlayer(player, playerIndex, false);
             return;
         }

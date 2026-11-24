@@ -15,9 +15,11 @@ import com.openggf.tests.HeadlessTestFixture;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -25,6 +27,9 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @RequiresRom(SonicGame.SONIC_2)
 public class TestSonic2NativeDebugPlacement {
+    @TempDir
+    Path tempDir;
+
     @Test
     void controllerPlacesAtCursorAndResumesWithResetState() throws Exception {
         var fixture = fixture("......B.", "........", ".....A..", "...R....", ".......C",
@@ -173,25 +178,21 @@ public class TestSonic2NativeDebugPlacement {
                 object instanceof com.openggf.game.sonic2.objects.Sonic2DebugRingObjectInstance));
     }
 
-    static HeadlessTestFixture fixture(String... pads) throws Exception {
+    private HeadlessTestFixture fixture(String... pads) throws Exception {
         return fixture(0, pads);
     }
 
-    private static HeadlessTestFixture fixture(int zone, String... pads) throws Exception {
-        var path = Files.createTempFile("s2-placement-", ".bk2");
-        try {
-            try (var zip = new ZipOutputStream(Files.newOutputStream(path))) {
-                zip.putNextEntry(new ZipEntry("Input Log.txt"));
-                zip.write("[Input]\nLogKey:|UDLRSABC|\n".getBytes(StandardCharsets.UTF_8));
-                for (String pad : pads) {
-                    zip.write(("|" + pad + "|\n").getBytes(StandardCharsets.UTF_8));
-                }
-                zip.write("[/Input]\n".getBytes(StandardCharsets.UTF_8));
+    private HeadlessTestFixture fixture(int zone, String... pads) throws Exception {
+        Path path = tempDir.resolve("placement.bk2");
+        try (var zip = new ZipOutputStream(Files.newOutputStream(path))) {
+            zip.putNextEntry(new ZipEntry("Input Log.txt"));
+            zip.write("[Input]\nLogKey:|UDLRSABC|\n".getBytes(StandardCharsets.UTF_8));
+            for (String pad : pads) {
+                zip.write(("|" + pad + "|\n").getBytes(StandardCharsets.UTF_8));
             }
-            return HeadlessTestFixture.builder().withZoneAndAct(zone, 0).withRecording(path).build();
-        } finally {
-            Files.deleteIfExists(path);
+            zip.write("[/Input]\n".getBytes(StandardCharsets.UTF_8));
         }
+        return HeadlessTestFixture.builder().withZoneAndAct(zone, 0).withRecording(path).build();
     }
 
     public static void enableFromSoundTest(LevelSelectProvider select, int... code) {
