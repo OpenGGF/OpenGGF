@@ -377,7 +377,11 @@ public class GameLoop {
         this.spriteManager = currentGameplayMode.getSpriteManager();
         this.camera = currentGameplayMode.getCamera();
         this.timerManager = currentGameplayMode.getTimerManager();
-        this.levelManager = currentGameplayMode.getLevelManager();
+        LevelManager nextLevel = currentGameplayMode.getLevelManager();
+        if (nextLevel != null && nextLevel != levelManager) {
+            com.openggf.level.LevelEntryInitialization.bindController(nextLevel, this::getInputHandler);
+        }
+        this.levelManager = nextLevel;
         this.gameState = currentGameplayMode.getGameStateManager();
         this.fadeManager = currentGameplayMode.getFadeManager();
         this.waterSystem = currentGameplayMode.getWaterSystem();
@@ -614,6 +618,9 @@ public class GameLoop {
             com.openggf.control.InputHandlerInternalAccess.discardOrderedGameplayInput(inputHandler);
             if (oldMode == GameMode.SPECIAL_STAGE) {
                 specialStageLifecycle.clearEntryPresentation();
+            }
+            if (nextMode == GameMode.TITLE_SCREEN && gameState != null) {
+                com.openggf.game.LevelDebugPlacement.of(gameState).clearCheatForTitle();
             }
             currentGameMode = nextMode;
             reportRewindModeBoundary(oldMode, nextMode);

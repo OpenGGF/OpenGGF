@@ -1,10 +1,12 @@
 package com.openggf.game.sonic2.debug;
 
+import com.openggf.camera.Camera;
 import com.openggf.control.InputActionMasks;
 import com.openggf.control.PlayerInputState;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.CanonicalAnimation;
 import com.openggf.game.GameServices;
+import com.openggf.game.LevelDebugPlacement;
 import com.openggf.game.internal.LevelDebugPlacementProvider;
 import com.openggf.game.sonic2.Sonic2RomAddresses;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
@@ -27,6 +29,8 @@ public final class Sonic2LevelDebugPlacement implements LevelDebugPlacementProvi
     private static final int RETAIL_TABLE = 0x41D0C;
     private static final int LOCK_ON_TABLE = 0x33A2FC;
     private static final int ZONES = 17;
+    // Debug_Init (s2.asm:88633-88635) and Debug_Control (s2.asm:88657-88736).
+    private static final CursorMotion CURSOR_MOTION = new CursorMotion(12, 1, 0x0f, 1, 0xff, 4);
     private final RomByteReader lockOnImage;
     private int cachedZone = -1;
     private com.openggf.data.Rom cachedRetailRom;
@@ -38,6 +42,21 @@ public final class Sonic2LevelDebugPlacement implements LevelDebugPlacementProvi
 
     public Sonic2LevelDebugPlacement(RomByteReader lockOnImage) {
         this.lockOnImage = lockOnImage;
+    }
+
+    @Override public CursorMotion cursorMotion() { return CURSOR_MOTION; }
+
+    @Override public int cursorTop(Camera camera) { return camera.getMinY(); }
+
+    @Override public int cursorBottom(Camera camera) { return (short) (camera.getMaxYTarget() + 223); }
+
+    @Override
+    public void onLevelLoad(LevelDebugPlacement placement, PlayerInputState input) {
+        // LoadLevel_VDP (s2.asm:4839-4847). KiS2 c336fede has the same held-A
+        // branch in lines 5159-5170, with the C/shadow-highlight branch omitted.
+        if (placement.isCheatUnlocked() && (input.actionHeldMask() & InputActionMasks.ACTION_A) != 0) {
+            placement.enableCheat();
+        }
     }
 
     @Override

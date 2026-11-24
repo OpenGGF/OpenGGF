@@ -612,6 +612,8 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     }
 
 
+    java.util.function.Supplier<com.openggf.control.InputHandler> levelEntryController;
+
     private com.openggf.game.rewind.RewindBoundaryReporter rewindBoundaryReporter =
             com.openggf.game.rewind.RewindBoundaryReporter.NO_OP;
 
@@ -1125,7 +1127,16 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         // Without this, stale endOfLevelFlag=true persists across full zone transitions
         // (e.g. AIZ2 results → HCZ1 load), causing the next zone's act transition to
         // fire immediately when the BG event handler first checks the flag.
-        GameServices.gameState().resetForLevel();
+        var gameState = GameServices.gameState();
+        gameState.resetForLevel();
+        var placement = com.openggf.game.LevelDebugPlacement.provider(this);
+        if (placement != null) {
+            var input = levelEntryController == null ? null : levelEntryController.get();
+            var logical = input == null
+                    ? com.openggf.sprites.managers.SpriteManagerInternalAccess.publishedInput(spriteManager)
+                    : input.logical();
+            placement.onLevelLoad(com.openggf.game.LevelDebugPlacement.of(gameState), logical.player1());
+        }
         gameModule.onLevelLoad();
     }
 

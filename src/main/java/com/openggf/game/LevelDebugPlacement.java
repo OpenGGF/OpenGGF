@@ -25,31 +25,27 @@ import static com.openggf.sprites.playable.AbstractPlayableSprite.INPUT_UP;
 /** State and input for the current gameplay session's placement cursor. */
 public final class LevelDebugPlacement implements RewindSnapshottable<LevelDebugPlacement.Snapshot> {
     private static final String KEY = "level-debug-placement";
-    private static final int CURSOR_STEP = 4;
+    private static final int DIRECTIONS = INPUT_UP | INPUT_DOWN | INPUT_LEFT | INPUT_RIGHT;
 
-    public record Bounds(short minX, short maxX, short minY, short maxY, short minXTarget,
-                         short maxXTarget, short minYTarget, short maxYTarget) {
+    public record Bounds(short minY, short maxYTarget) {
         static Bounds save(Camera camera) {
-            return new Bounds(camera.getMinX(), camera.getMaxX(), camera.getMinY(), camera.getMaxY(),
-                    camera.getMinXTarget(), camera.getMaxXTarget(), camera.getMinYTarget(), camera.getMaxYTarget());
+            return new Bounds(camera.getMinY(), camera.getMaxYTarget());
         }
 
         void apply(Camera camera) {
-            camera.setMinXCurrent(minX);
-            camera.setMaxXCurrent(maxX);
             camera.setMinYCurrent(minY);
-            camera.setMaxYCurrent(maxY);
-            camera.setMinXTarget(minXTarget);
-            camera.setMaxXTarget(maxXTarget);
-            camera.setMinYTarget(minYTarget);
             camera.setMaxYTarget(maxYTarget);
         }
     }
 
-    public record Snapshot(boolean cheatEnabled, int selected, Bounds savedBounds) { }
+    public record Snapshot(boolean cheatUnlocked, boolean cheatEnabled, int selected,
+                           int moveDelay, int moveSpeed, Bounds savedBounds) { }
 
+    private boolean cheatUnlocked;
     private boolean cheatEnabled;
     private int selected;
+    private int moveDelay;
+    private int moveSpeed;
     private Bounds savedBounds;
 
     public static LevelDebugPlacement of(GameStateManager gameState) {
@@ -63,6 +59,20 @@ public final class LevelDebugPlacement implements RewindSnapshottable<LevelDebug
 
     public static boolean engineMode(SonicConfigurationService config, LevelDebugPlacementProvider provider) {
         return provider == null || "engine".equals(config.getString(SonicConfiguration.LEVEL_DEBUG_MODE));
+    }
+
+    public void unlockCheat() {
+        cheatUnlocked = true;
+    }
+
+    public boolean isCheatUnlocked() {
+        return cheatUnlocked;
+    }
+
+    public void clearCheatForTitle() {
+        cheatEnabled = false;
+        selected = 0;
+        resetLevel();
     }
 
     public void enableCheat() {
@@ -111,6 +121,9 @@ public final class LevelDebugPlacement implements RewindSnapshottable<LevelDebug
             player.setDebugMode(false);
             player.setControlLocked(false);
             savedBounds = Bounds.save(camera);
+            var motion = provider.cursorMotion();
+            moveDelay = motion.holdDelay();
+            moveSpeed = motion.entrySpeed();
             camera.setFrozen(false);
             provider.initializeCursor(level, player);
             return true;
@@ -120,7 +133,7 @@ public final class LevelDebugPlacement implements RewindSnapshottable<LevelDebug
             exit(provider, player, camera);
             return true;
         }
-        moveCursor(player, camera, input.heldMask());
+        moveCursor(provider, player, camera, input);
         List<LevelDebugPlacementProvider.Entry> entries = provider.entries(level);
         int pressed = input.actionPressedMask();
         if ((input.actionHeldMask() & ACTION_A) != 0 && (pressed & ACTION_C) != 0) {
@@ -138,17 +151,41 @@ public final class LevelDebugPlacement implements RewindSnapshottable<LevelDebug
         return true;
     }
 
-    private static void moveCursor(AbstractPlayableSprite player, Camera camera, int held) {
-        int dx = ((held & INPUT_RIGHT) != 0 ? CURSOR_STEP : 0) - ((held & INPUT_LEFT) != 0 ? CURSOR_STEP : 0);
-        int dy = ((held & INPUT_DOWN) != 0 ? CURSOR_STEP : 0) - ((held & INPUT_UP) != 0 ? CURSOR_STEP : 0);
-        if (dx != 0) {
-            NativePositionOps.addXPosPreserveSubpixel(player, Math.max(-player.getCentreX(), dx));
+    private void moveCursor(LevelDebugPlacementProvider provider, AbstractPlayableSprite player,
+                            Camera camera, PlayerInputState input) {
+        var motion = provider.cursorMotion();
+        int directions = input.heldMask() & DIRECTIONS;
+        if ((input.pressedMask() & DIRECTIONS) == 0) {
+            if (directions == 0) {
+                moveDelay = motion.holdDelay();
+                moveSpeed = motion.idleSpeed();
+                return;
+            }
+            if (--moveDelay != 0) return;
+            moveDelay = 1;
+            moveSpeed = Math.min(moveSpeed + motion.acceleration(), motion.maxSpeed());
         }
-        if (dy != 0) {
-            int minY = camera.getMinY();
-            int maxY = Math.max(minY, camera.getMaxYTarget() + camera.getHeight() - 1);
-            int nextY = Math.clamp(player.getCentreY() + dy, minY, maxY);
-            NativePositionOps.writeYPosPreserveSubpixel(player, nextY);
+        int delta = ((moveSpeed + 1) << 16) >> motion.speedShift();
+        if ((directions & INPUT_UP) != 0) {
+            int top = provider.cursorTop(camera);
+            NativePositionOps.addYPos16_16(player, -delta);
+            if (player.getCentreY() < top) {
+                NativePositionOps.writeYPosResetSubpixel(player, top);
+            }
+        }
+        if ((directions & INPUT_DOWN) != 0) {
+            int bottom = provider.cursorBottom(camera);
+            NativePositionOps.addYPos16_16(player, delta);
+            if (player.getCentreY() >= bottom) {
+                NativePositionOps.writeYPosResetSubpixel(player, bottom);
+            }
+        }
+        if ((directions & INPUT_LEFT) != 0) {
+            int x = (player.getCentreX() << 16) | player.getXSubpixelRaw();
+            NativePositionOps.addXPos16_16(player, Integer.compareUnsigned(x, delta) < 0 ? -x : -delta);
+        }
+        if ((directions & INPUT_RIGHT) != 0) {
+            NativePositionOps.addXPos16_16(player, delta);
         }
     }
 
@@ -175,18 +212,26 @@ public final class LevelDebugPlacement implements RewindSnapshottable<LevelDebug
 
     void resetLevel() {
         savedBounds = null;
+        moveDelay = 0;
+        moveSpeed = 0;
     }
 
     @Override public String key() { return KEY; }
 
-    @Override public Snapshot capture() { return new Snapshot(cheatEnabled, selected, savedBounds); }
+    @Override
+    public Snapshot capture() {
+        return new Snapshot(cheatUnlocked, cheatEnabled, selected, moveDelay, moveSpeed, savedBounds);
+    }
 
     @Override
     public void restore(Snapshot snapshot) {
+        cheatUnlocked = snapshot.cheatUnlocked();
         cheatEnabled = snapshot.cheatEnabled();
         selected = snapshot.selected();
+        moveDelay = snapshot.moveDelay();
+        moveSpeed = snapshot.moveSpeed();
         savedBounds = snapshot.savedBounds();
     }
 
-    @Override public void resetForMissingSnapshot() { restore(new Snapshot(false, 0, null)); }
+    @Override public void resetForMissingSnapshot() { restore(new Snapshot(false, false, 0, 0, 0, null)); }
 }

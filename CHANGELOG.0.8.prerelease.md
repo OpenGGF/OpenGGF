@@ -13,8 +13,8 @@ under the matching area heading; see the
   aligned with terrain when switching to a game with a different aspect ratio.
 
 - **Sonic 2 and Knuckles in Sonic 2** now recognize their level-select debug
-  cheats and use the cartridge object lists for B/A/C placement. Rewind
-  restores the cursor and its placed objects. Select Engine free-fly in
+  cheats and use the cartridge object lists and accelerating cursor for
+  B/A/C placement. Rewind restores the cursor and its placed objects. Select Engine free-fly in
   Settings to use the debug movement shortcut.
 
 - **Sonic 1 special-stage results** now advance the object V-int clock on each

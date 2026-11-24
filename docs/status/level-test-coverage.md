@@ -1,8 +1,9 @@
 # Level test coverage backlog
 
-S2 native debug placement uses focused EHZ1 controller, placement and
-rewind checks, a CPZ1 tube entry control and the chip-backed EHZ1 sound-test
-launch for Knuckles. The ROM catalogue test checks all list aliases and
+S2 native debug placement uses focused EHZ1 controller, cursor acceleration,
+rewind and sidekick collision checks, a CPZ1 tube entry control, SCZ1 camera
+bound restoration and the chip-backed EHZ1 sound-test launch for Knuckles.
+The retail sound test also covers an ordinary act load after reopening the menu. The ROM catalogue test checks all list aliases and
 row ordering. The [remaining debug placement coverage](known-bugs.md#s2-debug-placement-object-and-gate-coverage)
 includes unimplemented factories, additional viewport/team combinations,
 slot exhaustion and native recordings.

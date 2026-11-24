@@ -984,7 +984,7 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
      * neither a module nor one of its providers.
      */
     public void startNewGameFromTitle() {
-        levelDebugPlacement.resetForMissingSnapshot();
+        levelDebugPlacement.clearCheatForTitle();
         this.lives = 3;
         this.continues = 0;
         this.score = 0;

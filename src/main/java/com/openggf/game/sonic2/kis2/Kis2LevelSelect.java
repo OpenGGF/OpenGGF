@@ -22,7 +22,6 @@ public final class Kis2LevelSelect extends Sonic2LevelSelect {
         if (cheat.accept(value)) GameServices.audio().playMusic(Sonic2Music.GOT_EMERALD.id);
     }
     @Override public void onGameplayStart() {
-        super.onGameplayStart();
         cheat.apply(GameServices.gameState());
     }
 

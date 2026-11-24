@@ -82,9 +82,10 @@ connected pad:
 
 In Level Select, play `01, 09, 09, 02, 01, 01, 02, 04` in the Sound Test.
 For chip-backed Knuckles in Sonic 2, play `01, 09, 09, 04, 01, 00, 01, 08`.
-Hold Genesis A while choosing an act. In the act, B enters and exits placement,
-the directional controls move the cursor, A cycles items and C places one.
-Hold A and press C to cycle backward.
+The code stays unlocked for the session. Hold Genesis A through a level load
+to arm placement. In the act, B enters and exits placement, A cycles items and
+C places one. Tap a direction to nudge the cursor, or hold it to accelerate
+after a short delay. Hold A and press C to cycle backward.
 
 **Level debug mode** defaults to **ROM placement**. Choose **Engine free-fly**
 to use the existing D or north face button shortcut with **Debug tools** enabled.

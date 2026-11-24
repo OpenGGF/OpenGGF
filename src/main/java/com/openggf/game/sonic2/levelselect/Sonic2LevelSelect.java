@@ -1,19 +1,15 @@
 package com.openggf.game.sonic2.levelselect;
 
 import com.openggf.audio.GameSound;
-import com.openggf.control.InputActionMasks;
-import com.openggf.control.PlayerInputState;
 import com.openggf.game.GameServices;
 import com.openggf.game.LevelDebugPlacement;
 
-/** Level-select sound-test cheat and launch-time A latch. */
+/** Sonic 2 level-select sound-test cheat. */
 public class Sonic2LevelSelect extends LevelSelectManager {
     private static final int[] RETAIL_DEBUG_CODE = {1, 9, 9, 2, 1, 1, 2, 4};
 
     private final int[] debugCode;
     private int matchedDebugSounds;
-    private boolean debugOptions;
-    private boolean launchWithDebug;
 
     public Sonic2LevelSelect() {
         this(RETAIL_DEBUG_CODE);
@@ -26,8 +22,6 @@ public class Sonic2LevelSelect extends LevelSelectManager {
     @Override
     public void initialize() {
         matchedDebugSounds = 0;
-        debugOptions = false;
-        launchWithDebug = false;
         super.initialize();
     }
 
@@ -40,20 +34,8 @@ public class Sonic2LevelSelect extends LevelSelectManager {
             matchedDebugSounds = 0;
         } else if (++matchedDebugSounds == debugCode.length) {
             matchedDebugSounds = 0;
-            debugOptions = true;
+            LevelDebugPlacement.of(GameServices.gameState()).unlockCheat();
             GameServices.audio().playSfx(GameSound.RING);
         }
-    }
-
-    @Override
-    protected void onLevelSelected(PlayerInputState input) {
-        // LoadLevel_VDP (s2.asm:4839-4847) requires held A after the sound code.
-        launchWithDebug = debugOptions && (input.actionHeldMask() & InputActionMasks.ACTION_A) != 0;
-    }
-
-    @Override
-    public void onGameplayStart() {
-        if (launchWithDebug) LevelDebugPlacement.of(GameServices.gameState()).enableCheat();
-        launchWithDebug = false;
     }
 }

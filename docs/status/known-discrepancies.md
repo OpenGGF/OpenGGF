@@ -717,8 +717,8 @@ While Knuckles is gliding, climbing or pulling up (`double_jump_flag` 1, 4 or 5)
 
 The cartridge cheat enables B entry and exit, A/C selection and placement
 through the shared session. The ordered lists come from `DebugObjectLists`
-(s2.asm:88869-88887). The engine uses a fixed cursor step, existing object
-sprite sheets for previews and existing runtime factories for placement.
+(s2.asm:88869-88887). Cursor movement uses the cartridge's tap, hold delay and
+acceleration. Placement uses existing object sprite sheets and runtime factories.
 Engine free-fly remains selectable in Settings. See [the controls](../guide/playing/controls.md#sonic-2-item-placement)
 and the [remaining placement gaps](known-bugs.md#s2-debug-placement-object-and-gate-coverage).
 
