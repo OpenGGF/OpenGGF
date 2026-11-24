@@ -1491,10 +1491,9 @@ public class Sonic2SpecialStageResultsScreen implements ResultsScreen {
     }
 
     private void playSound(Sonic2Sfx sound) {
-        try {
-            services().audioManager().playSfx(sound.id);
-        } catch (Exception e) {
-            // Ignore audio errors
+        var audio = services().audioManager();
+        if (audio != null) {
+            audio.playSfx(sound.id);
         }
     }
 
