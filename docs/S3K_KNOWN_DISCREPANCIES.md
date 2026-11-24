@@ -818,6 +818,12 @@ campaigns, full race traversals, every viewport/team/revision or exact frame/pix
 parity. They do not enable a corrupted locked-on mode flag to select another
 cartridge.
 
+`TestS3kCartridgeRingRouting` covers the MHZ1 checkpoint portal cycle and
+the placed LRZ2 giant ring with seven Chaos Emeralds, in both original-SK and
+locked-on cartridge views. The fixture uses solo Sonic, a 320-pixel viewport
+and declared local contact. The [standalone Chaos Special Stage layout gap](status/s3k-known-bugs.md#standalone-sk-chaos-special-stage-layouts)
+and broader route coverage remain open.
+
 Original-cartridge [audio qualification](architecture/validation/2026-10-28-tas-support-audio.md)
 covers NTSC ROM resources, PCM output and restore/reused-boot identity. Live PAL
 music repeats on services 6, 12 and 18 for standalone Sonic 3, and on services 6,
