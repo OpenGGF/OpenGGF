@@ -202,6 +202,7 @@ public class GameLoop {
     }
 
     private InputHandler inputHandler;
+    private final Supplier<InputHandler> levelEntryController = this::getInputHandler;
     private final GameLoopEditorController editorMode = new GameLoopEditorController();
     private Runnable applicationExitHandler = () -> {};
     private GameMode currentGameMode = GameMode.LEVEL;
@@ -375,13 +376,10 @@ public class GameLoop {
         }
         this.gameplayMode = currentGameplayMode;
         this.spriteManager = currentGameplayMode.getSpriteManager();
+        com.openggf.sprites.managers.SpriteManagerInternalAccess.bindLevelEntryController(spriteManager, levelEntryController);
         this.camera = currentGameplayMode.getCamera();
         this.timerManager = currentGameplayMode.getTimerManager();
-        LevelManager nextLevel = currentGameplayMode.getLevelManager();
-        if (nextLevel != null && nextLevel != levelManager) {
-            com.openggf.level.LevelEntryInitialization.bindController(nextLevel, this::getInputHandler);
-        }
-        this.levelManager = nextLevel;
+        this.levelManager = currentGameplayMode.getLevelManager();
         this.gameState = currentGameplayMode.getGameStateManager();
         this.fadeManager = currentGameplayMode.getFadeManager();
         this.waterSystem = currentGameplayMode.getWaterSystem();

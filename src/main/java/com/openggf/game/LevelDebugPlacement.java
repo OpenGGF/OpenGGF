@@ -10,6 +10,8 @@ import com.openggf.level.LevelManager;
 import com.openggf.level.objects.ObjectManagerInternalAccess;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.sprites.NativePositionOps;
+import com.openggf.sprites.managers.SpriteManager;
+import com.openggf.sprites.managers.SpriteManagerInternalAccess;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
@@ -55,6 +57,13 @@ public final class LevelDebugPlacement implements RewindSnapshottable<LevelDebug
     public static LevelDebugPlacementProvider provider(LevelManager level) {
         var module = level == null ? null : level.getGameModule();
         return module == null ? null : module.getGameService(LevelDebugPlacementProvider.class);
+    }
+
+    public static void activateOnLevelLoad(LevelManager level, GameStateManager state, SpriteManager sprites) {
+        var provider = provider(level);
+        if (provider != null) {
+            provider.onLevelLoad(of(state), SpriteManagerInternalAccess.levelEntryPlayerOne(sprites));
+        }
     }
 
     public static boolean engineMode(SonicConfigurationService config, LevelDebugPlacementProvider provider) {

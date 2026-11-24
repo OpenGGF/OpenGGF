@@ -1,17 +1,11 @@
 package com.openggf.level;
 
-import com.openggf.control.InputHandler;
 import com.openggf.game.session.LevelEntryProvenance;
 import java.util.Objects;
-import java.util.function.Supplier;
 
 /** Internal entry assembly access; not part of the creator-facing LevelManager surface. */
 public final class LevelEntryInitialization {
     private LevelEntryInitialization() { }
-
-    public static void bindController(LevelManager level, Supplier<InputHandler> input) {
-        level.levelEntryController = input;
-    }
 
     public static void initializeCamera(LevelManager level, LevelEntryProvenance provenance) {
         initializeCamera(level, provenance, null);

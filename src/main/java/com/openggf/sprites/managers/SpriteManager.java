@@ -147,6 +147,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 	// already-filtered immutable P1 snapshot so level events and movement cannot observe two
 	// callback results for the same raw live/replay input row.
 	private InputHandler publishedInputHandler;
+    private java.util.function.Supplier<InputHandler> levelEntryController;
 	private PlayerInputState publishedRawPlayerOne;
 	private PlayerInputState publishedEffectivePlayerOne;
 	// Scratch for the current admitted native tick; the captured FIFO belongs to MotionMutatorRuntime.
@@ -589,6 +590,15 @@ public class SpriteManager implements PlayableSstDispatcher {
 	public void setFrameCounter(int value) {
 		this.frameCounter = value;
 	}
+
+    void bindLevelEntryController(java.util.function.Supplier<InputHandler> controller) {
+        levelEntryController = controller;
+    }
+
+    PlayerInputState levelEntryPlayerOne() {
+        InputHandler input = levelEntryController == null ? null : levelEntryController.get();
+        return (input == null ? publishedLogicalInput() : input.logical()).player1();
+    }
 
     com.openggf.control.LogicalInputSnapshot publishedLogicalInput() {
         return publishedInputHandler == null ? com.openggf.control.LogicalInputSnapshot.neutral() : publishedInputHandler.logical();
