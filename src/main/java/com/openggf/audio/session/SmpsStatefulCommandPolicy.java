@@ -62,6 +62,11 @@ public interface SmpsStatefulCommandPolicy {
         return SmpsFadeOutEffects.NONE;
     }
 
+    /** Whether the host stops all sound before the terminal local fade's track walk. */
+    default boolean stopsAllSoundAtLocalFadeEnd() {
+        return false;
+    }
+
     /** Whether the terminal driver-owned fade step invokes the host's global stop. */
     default boolean fadeOutCompletesWithGlobalStop() {
         return false;

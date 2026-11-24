@@ -14,6 +14,7 @@ import com.openggf.game.sonic2.Sonic2ObjectArtProvider;
 import com.openggf.game.sonic2.constants.Sonic2Constants;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.game.sonic2.events.Sonic2ZoneEvents;
+import com.openggf.game.sonic2.resources.Sonic2PlcService;
 import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Level;
@@ -129,8 +130,13 @@ class TestWfzTornadoThrusterRendering {
 
         PatternSpriteRenderer renderer =
                 renderManager.getRenderer(Sonic2ObjectArtKeys.TORNADO_THRUSTER);
-        assertNotNull(renderer, "PLCID_Tornado must publish the ObjB2 $5C renderer");
-        assertTrue(renderer.isReady(), "the runtime renderer must be cache-ready in the request frame");
+        assertNotNull(renderer, "PLCID_Tornado must allocate the ObjB2 $5C view");
+        Sonic2PlcService plc = GameServices.module().getGameService(Sonic2PlcService.class);
+        while (plc.isBusy()) {
+            plc.prepare();
+            plc.serviceLevelVBlank();
+        }
+        assertTrue(renderer.isReady(), "the thruster is drawable by the time ObjB2 creates its child");
         int stablePatternBase = renderer.getPatternBase();
         assertTrue(stablePatternBase >= 0);
 

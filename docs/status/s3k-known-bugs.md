@@ -20,6 +20,20 @@ the sidekick crosses the kill plane.
 Remove this entry once the normal and hurt-stop tests use the camera word
 visible on the sidekick's native slot, with replay coverage across a resize.
 
+## Standalone S&K Chaos Special Stage layouts
+
+`sub_85B0` (sonic3k.asm:10845-10865) selects the decompressed S&K layout
+table when `SK_alone_flag` is set. `loc_8630` (sonic3k.asm:10893-10906)
+then skips the lock-on address adjustment. Tier 1 gap 5 in the standalone cartridge
+audit identified that `Sonic3kSpecialStageManager.loadRomData` sends ordinary
+Chaos stages to the Sonic 3 table at `$26A0E0`, above the standalone image's
+`$200000` limit. The source confirms the address mismatch. The audit did
+not reproduce the resulting load failure.
+
+Deferred to 0.9. Remove this entry when ordinary giant-ring entry from the
+standalone cartridge loads the S&K Chaos layout bank, with ROM-backed
+coverage across the seven layouts.
+
 ## HCZ geyser child lifetimes and cleanup sound commands
 
 The water-wall parent's lifetime is covered by the
