@@ -1490,7 +1490,7 @@ public class GameLoop {
         LevelFrameResult admission = levelIterationAdmission.admit(
                 currentGameMode, () -> updateTitleCardMode(doFrameStep),
                 titleCardLifecycle::releaseResult, levelManager, gameplayMode,
-                !overlayOwnsPause && !attractDemo.active()
+                !overlayOwnsPause && !GameLoopAttractDemo.ownsInput(currentGameMode, attractDemo)
                         && GameLoopPauseInput.nativeStartEdge(inputHandler, playbackDebugManager),
                 userRecordingControls,
                 request -> routeHostedRunSeamlessTransitionBeforeApply(
@@ -2300,7 +2300,8 @@ public class GameLoop {
     }
 
     private boolean demoOwnsInput() {
-        return attractDemo.active() || GameLoopLevelDemo.find(currentGameMode, levelManager) != null;
+        return GameLoopAttractDemo.ownsInput(currentGameMode, attractDemo)
+                || GameLoopLevelDemo.find(currentGameMode, levelManager) != null;
     }
 
     private boolean protectedInputSession() {

@@ -50,7 +50,12 @@ final class GameLoopAttractDemo {
         return pending != null;
     }
 
-    boolean active() {
+    static boolean ownsInput(GameMode mode, GameLoopAttractDemo demo) {
+        return (mode == GameMode.LEVEL || mode == GameMode.TITLE_CARD || mode == GameMode.COMPETITION)
+                && demo.active();
+    }
+
+    private boolean active() {
         return running != null && SessionManager.getCurrentWorldSession() == demoWorld;
     }
 
