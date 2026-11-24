@@ -22,6 +22,9 @@ import org.junit.jupiter.api.io.TempDir;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -34,9 +37,11 @@ public class TestSonic2NativeDebugPlacement {
 
     @Test
     void controllerPlacesAtCursorAndResumesWithResetState() throws Exception {
-        var fixture = fixture("......B.", "........", ".....A..", "...R....", ".......C",
-                "...R....", "...R....", "...R....", "...R....",
-                "...R....", "...R....", "...R....", "...R....", "......B.");
+        int moveClearOfMonitorFrames = 40;
+        var pads = new ArrayList<>(List.of("......B.", "........", ".....A..", "...R....", ".......C"));
+        pads.addAll(Collections.nCopies(moveClearOfMonitorFrames, "...R...."));
+        pads.add("......B.");
+        var fixture = fixture(pads.toArray(String[]::new));
         var player = fixture.sprite();
         var camera = fixture.camera();
         fixture.stepIdleFrames(2);
@@ -64,10 +69,10 @@ public class TestSonic2NativeDebugPlacement {
                 object.getSpawn().objectId() == 0x26 && object.getSpawn().x() == cursorX
                         && object.getSpawn().y() == cursorY));
 
-        for (int i = 0; i < 8; i++) fixture.stepFrameFromRecording();
+        for (int i = 0; i < moveClearOfMonitorFrames; i++) fixture.stepFrameFromRecording();
         short exitX = player.getCentreX();
         short exitY = player.getCentreY();
-        camera.setMinY((short) (minY + 8));
+        camera.setMinYCurrent((short) (minY + 8));
         camera.setMaxYTarget((short) (maxY - 8));
         fixture.stepFrameFromRecording(); // B exits.
         assertEquals(exitX, player.getCentreX());
