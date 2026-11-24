@@ -264,31 +264,30 @@ See the [Competition swap design](architecture/designs/2026-11-07-s3k-competitio
 6. [Save System](#save-system) — Engine feature
 7. [MGZ2 Quake Chunk Source Address](#mgz2-quake-chunk-source-address) — Other
 8. [AIZ2 Battleship Ship-Loop Display Compensation](#aiz2-battleship-ship-loop-display-compensation) — Other
-9. [LBZ1 Miniboss Box Pieces: PLC VRAM Restore Skipped](#lbz1-miniboss-box-pieces-plc-vram-restore-skipped) — Other
-10. [LBZ2 Launch Pad Collapse: Mutation Pipeline Offset](#lbz2-launch-pad-collapse-mutation-pipeline-offset) — Other
-11. [Standalone Cartridge Qualification Boundaries](#standalone-cartridge-qualification-boundaries) — Other
-12. [Air Countdown Digits: Rebuilt Mapping Frames Instead of VRAM DMA](#air-countdown-digits-rebuilt-mapping-frames-instead-of-vram-dma) — Other
-13. [s3k_kos_direct.prepared: a sub-frame ROM bit compared against a boundary-granular model](#s3k_kos_directprepared-a-sub-frame-rom-bit-compared-against-a-boundary-granular-model) — Hardware limit
-14. [SEGA Screen: an engine addition the ROM does not have](#sega-screen-an-engine-addition-the-rom-does-not-have) — Engine feature
-15. [SOZ Spring Vine: Failed Display Allocation](#soz-spring-vine-failed-display-allocation) — Other
-16. [SOZ Background Event Modes and Torch Animation](#soz-background-event-modes-and-torch-animation) — Engine feature
-17. [SSZ Act 2 Widescreen Background Columns](#ssz-act-2-widescreen-background-columns) — Engine feature
-18. [Blue Spheres NO WAY! Accepts Any Button](#blue-spheres-no-way-accepts-any-button) — Engine feature
-19. [Hosted solo arena presentation (2026-11-07)](#hosted-solo-arena-presentation-2026-11-07) — Engine feature
-20. [Hosted network arena shoe partner (2026-11-07)](#hosted-network-arena-shoe-partner-2026-11-07) — Engine feature
-21. [KosM Adjacent-Memory Corruption](#kosm-adjacent-memory-corruption) — Other
-22. [SSZ Metropolis orb allocation and first dispatch (resolved local owner, 2026-10-21)](#ssz-metropolis-orb-allocation-and-first-dispatch-resolved-local-owner-2026-10-21) — Other
-23. [Large-bubble character branch (resolved local owner, 2026-10-14)](#large-bubble-character-branch-resolved-local-owner-2026-10-14) — Other
-24. [Death Egg widescreen backgrounds](#death-egg-widescreen-backgrounds) — Engine feature
-25. [LRZ1 and DEZ2 widescreen arena framing](#lrz1-and-dez2-widescreen-arena-framing) — Engine feature
-26. [Ending scenes in a wider picture](#ending-scenes-in-a-wider-picture) — Engine feature
-27. [LRZ boss lava-plane presentation](#lrz-boss-lava-plane-presentation) — Other
-28. [Blue Sphere player projection and shadows (local correction, 2026-10-17)](#blue-sphere-player-projection-and-shadows-local-correction-2026-10-17) — Other
-29. [Retained HCZ replay qualification](#retained-hcz-replay-qualification) — Other
-30. [DDZ, LBZ and ICZ component history](#ddz-lbz-and-icz-component-history) — Other
-31. [Mega AIZ2 return loses source ownership at death/reload](#mega-aiz2-return-loses-source-ownership-at-deathreload) — Other
-32. [HCZ1 direct water art — bounded physical publication coverage](#hcz1-direct-water-art--bounded-physical-publication-coverage) — Other
-33. [Knuckles full-chain first-return pose — 2026-10-29](#knuckles-full-chain-first-return-pose--2026-10-29) — Other
+9. [LBZ2 Launch Pad Collapse: Mutation Pipeline Offset](#lbz2-launch-pad-collapse-mutation-pipeline-offset) — Other
+10. [Standalone Cartridge Qualification Boundaries](#standalone-cartridge-qualification-boundaries) — Other
+11. [Air Countdown Digits: Rebuilt Mapping Frames Instead of VRAM DMA](#air-countdown-digits-rebuilt-mapping-frames-instead-of-vram-dma) — Other
+12. [s3k_kos_direct.prepared: a sub-frame ROM bit compared against a boundary-granular model](#s3k_kos_directprepared-a-sub-frame-rom-bit-compared-against-a-boundary-granular-model) — Hardware limit
+13. [SEGA Screen: an engine addition the ROM does not have](#sega-screen-an-engine-addition-the-rom-does-not-have) — Engine feature
+14. [SOZ Spring Vine: Failed Display Allocation](#soz-spring-vine-failed-display-allocation) — Other
+15. [SOZ Background Event Modes and Torch Animation](#soz-background-event-modes-and-torch-animation) — Engine feature
+16. [SSZ Act 2 Widescreen Background Columns](#ssz-act-2-widescreen-background-columns) — Engine feature
+17. [Blue Spheres NO WAY! Accepts Any Button](#blue-spheres-no-way-accepts-any-button) — Engine feature
+18. [Hosted solo arena presentation (2026-11-07)](#hosted-solo-arena-presentation-2026-11-07) — Engine feature
+19. [Hosted network arena shoe partner (2026-11-07)](#hosted-network-arena-shoe-partner-2026-11-07) — Engine feature
+20. [KosM Adjacent-Memory Corruption](#kosm-adjacent-memory-corruption) — Other
+21. [SSZ Metropolis orb allocation and first dispatch (resolved local owner, 2026-10-21)](#ssz-metropolis-orb-allocation-and-first-dispatch-resolved-local-owner-2026-10-21) — Other
+22. [Large-bubble character branch (resolved local owner, 2026-10-14)](#large-bubble-character-branch-resolved-local-owner-2026-10-14) — Other
+23. [Death Egg widescreen backgrounds](#death-egg-widescreen-backgrounds) — Engine feature
+24. [LRZ1 and DEZ2 widescreen arena framing](#lrz1-and-dez2-widescreen-arena-framing) — Engine feature
+25. [Ending scenes in a wider picture](#ending-scenes-in-a-wider-picture) — Engine feature
+26. [LRZ boss lava-plane presentation](#lrz-boss-lava-plane-presentation) — Other
+27. [Blue Sphere player projection and shadows (local correction, 2026-10-17)](#blue-sphere-player-projection-and-shadows-local-correction-2026-10-17) — Other
+28. [Retained HCZ replay qualification](#retained-hcz-replay-qualification) — Other
+29. [DDZ, LBZ and ICZ component history](#ddz-lbz-and-icz-component-history) — Other
+30. [Mega AIZ2 return loses source ownership at death/reload](#mega-aiz2-return-loses-source-ownership-at-deathreload) — Other
+31. [HCZ1 direct water art — bounded physical publication coverage](#hcz1-direct-water-art--bounded-physical-publication-coverage) — Other
+32. [Knuckles full-chain first-return pose — 2026-10-29](#knuckles-full-chain-first-return-pose--2026-10-29) — Other
 
 ---
 
@@ -739,48 +738,6 @@ the loop without a seam, repeated columns or filler. The foreground ring itself 
 generated from the gameplay step exactly as `DrawTilesAsYouMove` does
 (`LevelForegroundPlane.drawAsYouMove`, `TestAiz2ForestRingCameraGeneration`).
 Validation history: the 2026-05-29 seam plan and the 2026-06-16 capture.
-
----
-
-
-
-
-
-
-
-## LBZ1 Miniboss Box Pieces: PLC VRAM Restore Skipped
-
-**Kind:** Other
-
-**Location:** `LbzMinibossBoxRig.java` (`Phase.LINGER` removal), `Lbz1RobotnikEventController.java`, `LbzMinibossBoxInstance.java`
-**ROM Reference:** `sonic3k.asm` `loc_8CF1E` (`PLC_LBZRobotnikAfter`, `PLC_MonitorsSpikesSprings`)
-
-### Original Implementation
-
-When the last LBZ1 miniboss box piece scrolls off screen, `loc_8CF1E` reloads
-`PLC_MonitorsSpikesSprings` (subtype `$C` only) and `PLC_LBZRobotnikAfter`
-(bubbles + LBZ misc art) before deleting itself, because the box/boss art had
-overwritten those VRAM tile ranges on real hardware.
-
-### Our Implementation
-
-The engine loads the box, boss, and Robotnik ship art as standalone
-`Pattern[]` sheets outside the level's shared pattern buffer, so no VRAM tiles
-are overwritten and there is nothing to restore. The pieces' off-screen
-removal range (`$280` coarse) and lingering drift behaviour are replicated;
-only the PLC reloads are omitted.
-
-### Rationale
-
-Standalone PLC decompression is the project's preferred boss-art strategy
-("Why standalone" in the s3k-implement-boss skill): it avoids the VRAM overlap
-conflict entirely instead of emulating the overwrite-and-restore cycle.
-
-### Verification
-
-`TestS3kLbz1KnucklesSequenceHeadless#lbz1RobotnikFoldsAwayBurstPanelsAndKeepsDriftersUntilOffscreen`
-covers the piece lifecycle including the off-screen cull;
-`TestSonic3kPlcArtRegistry` guards the standalone sheets.
 
 ---
 

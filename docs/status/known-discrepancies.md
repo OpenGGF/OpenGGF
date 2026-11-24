@@ -160,8 +160,7 @@ no discrepancy entry was added or reclassified by the cutover.
 56. [S2 Music DAC Byte Stream Partition (Oracle Comparison)](#s2-music-dac-byte-stream-partition-oracle-comparison) — Hardware limit
 57. [S2 Headless Oracle Capture Starts Mid-Run (Driver Variables Outside The Music Load's Clear)](#s2-headless-oracle-capture-starts-mid-run-driver-variables-outside-the-music-loads-clear) — Other
 58. [Audio Harness Startup and Compatibility Fade Boundaries](#audio-harness-startup-and-compatibility-fade-boundaries) — Other
-59. [S1/S2 Extra-Life SFX Block: Residual Flag Edges](#s1s2-extra-life-sfx-block-residual-flag-edges) — Other
-60. [Sonic CD dust SFX reads the Sega CD boot ROM through the Z80 bank window](#sonic-cd-dust-sfx-reads-the-sega-cd-boot-rom-through-the-z80-bank-window) — Hardware limit
+59. [Sonic CD dust SFX reads the Sega CD boot ROM through the Z80 bank window](#sonic-cd-dust-sfx-reads-the-sega-cd-boot-rom-through-the-z80-bank-window) — Hardware limit
 
 ---
 
@@ -3135,37 +3134,6 @@ meet the unchanged waveform/level bounds without deferrals. Independent
 high-FNUM checks cover global PM sampling across every channel and carrier.
 Final integrated verification and human listening sign-off remain separate
 release gates; this tolerance result does not establish full SMPS parity. See the [fast FM validation record](../architecture/validation/audio/2026-09-06-fast-fm-release.md).
-
-## S1/S2 Extra-Life SFX Block: Residual Flag Edges
-
-**Kind:** Other
-
-**Location:** `AudioVoiceRegistry` (`sfxBlocked`, `sfxBlockHeldThroughFadeIn`),
-`Sonic1StatefulCommandPolicy`, `Sonic2StatefulCommandPolicy`
-
-The engine now models the two flags that refuse SFX around a Sonic 1 / Sonic 2
-extra life: the 1-up flag from the jingle's load to `cfFadeInToPrevious`
-(`s1.sounddriver.asm:784, :2222`; `s2.sounddriver.asm:1712, :3155`) and the
-fade-in flag from there until the fade-in stepper's counter runs down
-(`s1:2220, :1650`; `s2:3151, :2740`), with `Sound_PlaySFX` /
-`zPlaySound_CheckRing` refusing while either is set (`s1:978-982`,
-`s2:2118-2120`). Two edges of the same mechanism remain:
-
-- **A jingle over silence.** With no song to save, the ROM still raises the
-  fade-in flag at `cfFadeInToPrevious` and holds SFX for the `28h`-step fade of
-  nothing. The engine has no song to fade, so it releases when the jingle ends.
-- **Sonic 1 terminal fade-out.** At zero, the shipped `DoFadeOut` branches to
-  `StopAllSound`, which clears `f_1up_playing` in the shipped `FixBugs=0` branch
-  (s1.sounddriver.asm:1371-1381,1461-1482). The save and restore at lines 1490
-  and 1506 belong to `InitMusicPlayback`. An explicit global stop releases the
-  engine's SFX block. The terminal fade still retires tracks locally, leaving
-  the SFX block set during a fade-out of the jingle and omitting the global
-  FM mode-reset write.
-
-The priority clear on a refused Sonic 1 request is tracked in
-[Sonic 1 does not enforce SFX request priority](known-bugs.md#sonic-1-does-not-enforce-sfx-request-priority).
-
----
 
 ## Knuckles in Sonic 2 Runs Tier Two With the Lock-On Dump and Tier One Without It
 
