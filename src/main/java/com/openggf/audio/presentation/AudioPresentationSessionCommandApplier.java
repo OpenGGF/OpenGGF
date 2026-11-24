@@ -68,8 +68,9 @@ public final class AudioPresentationSessionCommandApplier {
             }
         } else if (command
                 instanceof AudioPresentationCommand.RestoreMusicOverride) {
-            session.applyCommand(
-                    new SmpsSessionCommand.RestoreOverride());
+            session.applyCommand(new SmpsSessionCommand.RestoreOverride(
+                    registry.musicOverrideRestorePending()
+                            && registry.activeMusicMetadataUsesSession()));
         } else if (command
                 instanceof AudioPresentationCommand.EndMusicOverride end) {
             if (registry.activeMusicMetadataId() == end.musicId()) {
