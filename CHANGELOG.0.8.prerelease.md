@@ -37,6 +37,11 @@ under the matching area heading; see the
   native finish, tally and exit wait, preserving its phase through the level
   reload. Results setup and straight-line return code add no tick.
 
+- **Sonic 2 and Knuckles in Sonic 2 special-stage results** now show a
+  flashing Perfect Bonus and tally an extra 50,000 points when every spawned
+  ring is kept. Both tally sequences play blips in phase with the results
+  loop's V-int counter.
+
 - **Sonic 1 and 2 extra-life audio:** a jingle that plays over silence now
   keeps sound effects blocked for the cartridge's full fade-in hold. Sonic 1
   music fades finish with the original global stop, which resets FM mode and
