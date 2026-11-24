@@ -4489,7 +4489,7 @@ public class AudioManager implements MusicRestoreSink {
             var session = new com.openggf.audio.session.SmpsDriverSessionSnapshot(s.initialized(),
                     s.pendingGlobalCommand(), s.profile(), s.selectedDacSource(), s.speedShoesEnabled(),
                     s.speedMultiplier(), s.musicTempoPercent(), s.ringLeft(), s.musicFmDacTrackCount(),
-                    s.segaPcmTransport(), s.physical(), s.nativePause(), cursor);
+                    s.segaPcmTransport(), s.physical(), s.nativePause(), cursor, s.silentFadeInServices());
             var presentation = new AudioPresentationSnapshot(p.nextVoiceId(), p.voices(), p.activeMusic(),
                     p.overrideStack(), p.rawPcmVoiceId(), p.fmMuteMask(), p.fmSoloMask(), p.psgMuteMask(),
                     p.psgSoloMask(), p.sfxBlocked(), p.sfxBlockHeldThroughFadeIn(), p.pendingRestore(),
