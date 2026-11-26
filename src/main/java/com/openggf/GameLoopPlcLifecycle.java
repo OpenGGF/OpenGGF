@@ -30,7 +30,8 @@ final class GameLoopPlcLifecycle {
         var load = com.openggf.level.NativeLevelLoadAccess.beginTitleScan(levelManager);
         if (load.parked()) return new TitleLoadScan(true, false, false, false, null);
         // NATIVE widescreen: bake dormant pose slices while the title card holds gameplay (D18).
-        com.openggf.level.objects.DormantObjectPresentationAccess.prepareDuringTitleCard(levelManager, titleCard);
+        com.openggf.level.objects.DormantObjectPresentationAccess.prepareDuringTitleCard(levelManager, titleCard,
+                gameplayMode == null ? null : gameplayMode.getRewindRegistry());
         boolean nativeLoadCompletedBeforeScan = load.completedBeforeScan();
         boolean nativeTitleClockOwned = load.clockOwned()
                 && titleCard != null && titleCard.shouldAdvanceVblankClockDuringLockedPhase();

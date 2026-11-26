@@ -14,10 +14,10 @@ public final class DormantObjectPresentationAccess {
      * branch runs {@code LevelFrameStep.execute}, which bakes at its own boundary instead.
      */
     public static void prepareDuringTitleCard(com.openggf.level.LevelManager level,
-                                              com.openggf.game.TitleCardProvider titleCard) {
+                                              com.openggf.game.TitleCardProvider titleCard,
+                                              com.openggf.game.rewind.RewindRegistry registry) {
         ObjectManager objects = level == null ? null : level.getObjectManager();
         if (objects == null || titleCard == null || titleCard.shouldRunPlayerPhysics()) return;
-        var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
-        objects.prepareDormantPresentation(mode == null ? null : mode.getRewindRegistry());
+        objects.prepareDormantPresentation(registry);
     }
 }
