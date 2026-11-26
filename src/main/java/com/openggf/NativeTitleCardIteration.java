@@ -29,6 +29,13 @@ public final class NativeTitleCardIteration {
         var loadScan = GameLoopPlcLifecycle.scanTitleLoad(titleCard, frame, gameplayMode, levelManager);
         if (loadScan.parked()) return false;
         boolean preparedByFrameStep = loadScan.preparedByFrameStep();
+        // NATIVE widescreen: bake dormant pose slices while the title card holds gameplay,
+        // at this iteration's boundary (LevelFrameStep.execute does it on the physics branch).
+        if (titleCard != null && !titleCard.shouldRunPlayerPhysics() && levelManager.getObjectManager() != null) {
+            var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+            com.openggf.level.objects.DormantObjectPresentationAccess.prepare(levelManager.getObjectManager(),
+                    mode == null ? null : mode.getRewindRegistry());
+        }
 
         // Publish while the provider still owns its fresh mode; completing
         // the title handoff below clears that mode and its terrain-ready gate.

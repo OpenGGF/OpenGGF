@@ -2337,7 +2337,7 @@ public final class LevelRenderer {
             graphicsManager.setCurrentSpriteHighPriority(false);
             graphicsManager.beginPatternBatch();
             if (dormantOnly) {
-                ringAccess(ringManager).drawDormantMargins();
+                ringAccess(ringManager).drawDormantMargins(lm.frameCounter);
             } else {
                 ringManager.draw(lm.frameCounter);
 

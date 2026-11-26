@@ -4,7 +4,7 @@ package com.openggf.level.objects;
 public final class DormantObjectPresentationAccess {
     private DormantObjectPresentationAccess() { }
 
-    /** Bakes dormant poses once per layout; no-op without a presentation margin. */
+    /** Bakes the next slice of dormant poses for the current layout; no-op without a presentation margin. */
     public static void prepare(ObjectManager objects, com.openggf.game.rewind.RewindRegistry registry) {
         objects.prepareDormantPresentation(registry);
     }

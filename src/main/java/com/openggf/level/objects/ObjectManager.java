@@ -447,6 +447,7 @@ public class ObjectManager {
         }
         rewind.clearPendingPlayerBindings();
         nativeSpriteSubmissions.clear();
+        dormantLayer.forgetLastStates();
         // The external resolver/dispatch is owner wiring, not SST state: keep it.
         // Resets that leave the RingManager alive (trace-replay prelude, S3K
         // title-only object system) never rebind, and an unbound pass leaves
@@ -3732,6 +3733,8 @@ public class ObjectManager {
 
     private void removeActiveObject(ObjectSpawn spawn,
             ObjectCallbackRouter.RemovalCallback removalCallback) {
+        // NATIVE widescreen presentation only: a stationary object keeps its last render state.
+        dormantLayer.recordUnloaded(spawn, population.placed.get(spawn));
         population.retirePlaced(spawn, removalCallback,
                 solidContacts::releaseObjectLatchesForAllPlayers,
                 (removed, capturedCallback) -> {
@@ -3925,6 +3928,8 @@ public class ObjectManager {
 
         bucketsDirty = true;
         markActiveObjectCachesDirty();
+        // Derived presentation: a last state recorded after this point in time must not survive.
+        dormantLayer.forgetLastStates();
     }
 
 

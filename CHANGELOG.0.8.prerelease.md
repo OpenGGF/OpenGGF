@@ -398,11 +398,14 @@ under the matching area heading; see the
   the original 320-pixel screen and draws the extra width as scenery, so every screen
   size plays exactly the same game. That makes widescreen fair for time attack, races
   and shared replays. Objects in the extra width that the original game has not woken
-  up yet are drawn frozen where they start, in greyscale by default
-  (`display.widescreenDormantStyle`: `GREYSCALE`, `NORMAL` or `HIDDEN`). They come to
-  life when the original screen reaches them and freeze again when it leaves them,
-  unless they were destroyed for good. Rings work the same way: uncollected rings
-  waiting in the extra width sit still, and rings you have collected stay gone. Title
+  up yet are drawn where they start, in greyscale by default
+  (`display.widescreenDormantStyle`: `GREYSCALE`, `NORMAL` or `HIDDEN`). Objects that
+  animate in place play their animation there; anything that moves is drawn still. They
+  come to life when the original screen reaches them. When it leaves them, an object
+  that was standing still keeps the look it had, and one that moved goes back to where
+  it starts, unless it was destroyed for good. Rings waiting in the extra width spin in
+  step with the live rings, so a ring never jumps when it wakes up, and rings you have
+  collected stay gone. Title
   cards and results screens time their exits from the game's own screen rather than the
   picture, so a wider picture never delays the next act or the enemies' art. That also
   lets recorded Sonic 3 & Knuckles runs be filmed wider than 320: Hydrocity and Marble

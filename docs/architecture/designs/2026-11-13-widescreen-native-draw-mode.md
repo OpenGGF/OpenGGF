@@ -1,6 +1,7 @@
 # Widescreen native draw mode (sync-friendly widescreen)
 
-Status: implemented (2026-11-13); see the decision log for corrections made during delivery. Extends the
+Status: implemented (2026-11-13); animated phantoms and last states added 2026-11-26 (D15–D18). See the
+decision log for corrections made during delivery. Extends the
 [widescreen support design](2026-05-30-widescreen-support-design.md).
 
 ## Problem
@@ -28,9 +29,10 @@ game while the picture is as wide as the display:
   display (a locked arena) is centred instead. The native window is always inside the
   picture (D8).
 - **Dormant objects fill the margins.** Layout objects that the ROM has not loaded
-  (or has unloaded) are drawn frozen at their spawn position, outside the object
-  slot system, unless persistently destroyed. When the ROM loads them they become
-  live; when the ROM unloads them they return to the frozen pose.
+  (or has unloaded) are drawn at their spawn position, outside the object slot system,
+  unless persistently destroyed. Stationary objects play a baked animation loop; moving
+  ones are frozen. When the ROM loads them they become live; when the ROM unloads them a
+  stationary object keeps its last state and a moving one returns to its spawn pose.
 
 ## Configuration
 
@@ -89,22 +91,40 @@ A presentation-only layer, `DormantObjectLayer` (level/objects), owned by the
   presentation viewport (plus a sprite margin), that have no live instance
   (`getActiveObjectForRewind(spawn) == null`) and are not persistently destroyed
   (`remembered` without `stayActive`, S3K `destroyedInWindow`, S1/S2 state bit).
-- **Pose:** a frozen list of draw calls (`DormantPose`) captured from a throwaway
-  copy. The copy is built with `ObjectConstructionContext.withProbeConstruction`
-  (children are not registered), given services, run for one `update()`, and its
-  `appendRenderCommands` output is recorded. Its side effects are discarded by a
-  rewind `capture()`/`restore()` bracket around the whole probe batch, with audio
-  muted for the bracket. A spawn with no registry entry (or a placeholder) has no pose; any other failure propagates (D13).
-- **When:** the probe batch runs at the start of `LevelFrameStep.execute`, once per
-  layout list (a new level load or a spawn-list replacement), whenever the display is
-  wider than the simulation window (D10). Poses are cached by spawn.
-- **Live hand-off:** a live instance always wins. When the ROM unloads the object
-  it is drawn again from its cached pose at the spawn position.
+- **Pose:** detached throwaway copies, built with
+  `ObjectConstructionContext.withProbeConstruction` (children are not registered) and
+  given services; the pose draws them through their own `appendRenderCommands`.
+  `DormantPoseLoop` runs a first copy for up to 64 updates, comparing each update's
+  render output (its prepared sprite tiles plus bucket/priority keys) with the first.
+  If the copy never moves and its output returns to the first frame's, the pose is a
+  loop: one copy per distinct frame, each stepped to that frame from a fresh
+  construction and checked to reproduce it, played back cyclically on the layer's own
+  presentation tick (advanced once per frame boundary, never read by gameplay).
+  Otherwise (it moved, never repeated, drew uncomparable primitives, or a fresh copy
+  disagreed) the pose is a single copy after exactly one update (D16). Side effects of
+  every copy are discarded by one rewind `capture()`/`restore()` bracket around the
+  whole probe batch, with audio muted for the bracket. A spawn with no registry entry
+  (or a placeholder) has no pose; any other failure propagates (D13).
+- **When:** once per layout list (a new level load or a spawn-list replacement),
+  whenever the display is wider than the simulation window (D10), in slices: each frame
+  boundary bakes spawns until it has spent 512 copy updates, inside its own rewind
+  bracket, and the next boundary continues. Boundaries are the start of
+  `LevelFrameStep.execute` and of each locked title-card iteration that does not run the
+  frame step, so a level's bake normally completes during its title card (D18). Poses
+  are cached by spawn; a spawn not yet baked has no dormant draw.
+- **Live hand-off:** a live instance always wins. When the ROM unloads an object that
+  stands at its spawn position, the retired instance and its render buckets become its
+  last state (getters only: no object logic runs), drawn instead of a frozen pose; a
+  looping pose keeps looping. A moving object returns to its pose at the spawn position
+  (D6, D17). Last states are derived presentation: never snapshotted, and forgotten on
+  any rewind restore, object reset and layout replacement, so they cannot show a state
+  from a later frame.
 - **Rings:** placed rings (S2/S3K stage ring list) that the native ring window has not
-  loaded and that are not collected are drawn frozen on their first spin frame at
-  their layout position, in the same style, after the live rings (D12). S1 rings are
-  layout objects, so they get dormant poses like any other object; the pose draw holds
-  the ring manager on the first spin frame.
+  loaded and that are not collected are drawn at their layout position, in the same
+  style, after the live rings, on the spin frame the live placed rings use that frame,
+  so a ring turning live keeps its phase (D12, D15). S1 rings are layout objects, so they
+  get dormant poses like any other object; their pose draws through the ring manager's
+  live spin frame too.
 - **Style:** `GREYSCALE` draws through the existing ghost shader mode with alpha
   1.0 (opaque desaturated); `NORMAL` draws plainly; `HIDDEN` skips the layer.
 
@@ -119,17 +139,21 @@ keep the projection width. In `EDGE` the two are equal; in `NATIVE` and in recor
 capture (which always plays on a 320 camera) only the picture is wider (D14).
 
 The layer never writes gameplay state, is not rewind-snapshotted (it is derived
-from snapshotted placement state), and is inactive whenever the inset is 0, so
+from snapshotted placement state), and is inactive without a presentation margin, so
 trace replay (always `NATIVE_4_3`) cannot observe it.
 
 ## Verification
 
 - Unit: config parsing and defaults; `SimulationViewport` resolution;
-  `insetForPresentation` word/column arithmetic; dormant candidate filtering.
+  `insetForPresentation` word/column arithmetic; dormant candidate filtering; dormant
+  rings on the live spin frame (`TestRingDrawEmission`); loop search
+  (`TestDormantPoseLoop`); last states recorded for stationary objects only and forgotten
+  on reset and rewind restore (`TestDormantObjectLastState`).
 - ROM equivalence: the same input in `NATIVE` at 16:9 and at `NATIVE_4_3` yields
   identical player and object state every frame (S1 GHZ1, S2 EHZ1, S3K AIZ1).
 - Probe isolation: after the probe batch, RNG, slot table, placement state and the
-  rewind composite snapshot are unchanged.
+  rewind composite snapshot are unchanged. The equivalence routes also check that a
+  rewind restore leaves no last state behind.
 - Visual: a surfaceless-EGL capture at 16:9 shows terrain and dormant objects in the
   margins; demo capture for the PR.
 
@@ -142,7 +166,22 @@ genuinely live and drawn in colour; dormant poses appear at the picture's outer
 edges, most visibly at 32:9. Measured on the equivalence routes at 32:9 (900 frames,
 holding right with jumps): S1 GHZ1 baked 214 poses, with dormant draws on 698 frames; S2 EHZ1
 baked 135 poses, with dormant draws on 621 frames; S3K AIZ1 baked 153 poses, with dormant draws on 684 frames.
-Many of those draws lie just outside the picture's edge.
+Many of those draws lie just outside the picture's edge. Of those poses, 10 (S1), 13 (S2)
+and 16 (S3K) are animation loops, and up to 15, 28 and 4 unloaded stationary objects
+held a last state at once on the same routes.
+
+Bake cost (2026-11-26, `DormantBakeTimingProbe`, 32:9, wall clock, 7 repetitions after
+2 warm-ups, median/max). Before: one copy update per pose, a single bake. After: loop
+search and per-frame copies, sliced at 512 updates per frame boundary.
+
+| Route | Before: poses, updates, bake | After: poses (looped), kept frames, updates | After: total | After: slices, worst slice |
+| --- | --- | --- | --- | --- |
+| S1 GHZ1 | 214, 214, 2.35 / 3.41 ms | 214 (10), 264, 12 415 | 48.5 / 54.3 ms | 24, 5.4 / 8.0 ms |
+| S2 EHZ1 | 135, 135, 1.22 / 1.38 ms | 135 (13), 174, 5 959 | 23.0 / 27.1 ms | 12, 3.2 / 3.7 ms |
+| S3K AIZ1 | 153, 153, 3.00 / 4.00 ms | 153 (16), 196, 9 215 | 110.8 / 117.7 ms | 18, 8.3 / 11.1 ms |
+
+Most of the cost is stationary objects that never change: a held first frame cannot be
+told from a static one without watching the whole 64-update window.
 
 ## Known gaps (accepted)
 
@@ -154,6 +193,11 @@ Many of those draws lie just outside the picture's edge.
 - Camera-driven terrain edits fire at native positions; the margin can briefly show
   pre-edit tiles.
 - Objects whose art is only loaded by their own spawn have no pose.
+- Baked loops play on the layer's own tick, so an animated object (unlike a ring) can
+  change phase when it turns live or dormant. Objects whose loop depends on clocks the
+  bake does not advance (a level frame counter, the global oscillators) bake as static.
+- Until a level's sliced bake finishes (normally during its title card), unbaked
+  spawns have no dormant draw.
 
 ## Decision log
 
@@ -177,3 +221,7 @@ recorded here and then folded into the section text.
 | D12 | 2026-11-13 | Frozen rings: uncollected stage-list rings outside the ring window are drawn on spin frame 0 in the dormant style, from `RingManager` (collected and active sets only); S1 ring objects' poses hold spin frame 0 | Leave rings to the object layer only; animate dormant rings | User request ("we should show frozen rings too"). S2/S3K rings are not objects, so the object layer never saw them. A fixed frame matches the other frozen poses. The collected `BitSet` persists across unloads, so a collected ring never reappears. |
 | D13 | 2026-11-14 | **Erratum to D5.** Probe and dormant-draw failures propagate; no catch-and-skip. `PlacementViewportWidth.current()` keeps its original body and a new `simulation()` applies the draw mode. `CameraPresentationAccess` returns the camera's own window when there is no margin | Fail-closed catches around probe and draw; editing the legacy catch body | `TestBroadCatchSwallowingGuard` rejected the new broad catches and the changed legacy site (project rule: no defensive containment). Removing the catches left pose counts unchanged on all three equivalence routes, so no probe there was failing. The smoke run also showed `captureArenaMask` reading presentation values from camera mocks that stub only `getWidth`. |
 | D14 | 2026-11-14 | Lifetime and work-triggering screen checks read the gameplay camera's width, not the projection width; drawing keeps the projection width | Leave them on the projection width; per-site config reads | Investigation report (task-lxbBdWm6): at a 400 picture over a 320 camera the S3K title-card teardown fired `LoadEnemyArt` 2 frames late (row 36 vs 34) and results elements handed the act over 2 frames late, so recorded KosM completions never matched and `hcz_completerun`/`mgz_completerun` captures overflowed the KosM FIFO. The same delay would break `NATIVE`'s same-game claim after any title card or results screen. Ring windows also read the display width; harmless in HCZ but a real leak. |
+| D15 | 2026-11-26 | **Amends D12.** Dormant rings animate: S2/S3K stage-list rings in the margins draw the spin frame the live placed rings use that frame (`stageRingFrame` of the same frame counter), and S1 ring-object poses draw through the ring manager's live spin frame (the frozen-spin hold is removed) | Keep spin frame 0; a separate presentation spin clock | User-approved design (animated phantoms). Rings share one global phase in all three games, so using the live rings' frame means a ring that turns live never changes phase. `TestRingDrawEmission` pins one shared, advancing frame across live and dormant rings. |
+| D16 | 2026-11-26 | Stationary objects play baked loops. The bake runs a copy for up to 64 updates (vertical-blank argument advancing by one per update), compares prepared sprite tiles plus bucket/priority keys, and takes the shortest period seen twice in full; it keeps one copy per distinct frame, each rebuilt from a fresh construction and checked to reproduce its frame, and plays them on the layer's own presentation tick. Moving, never-repeating, uncomparable (primitive geometry) or unreproducible copies keep the single one-update pose | Stop at the first repeat of frame 0, as first briefed; snapshot/restore per-object rewind state per frame; replay recorded tiles | The first-repeat rule made every held first frame look static: 0 loops on all three routes. A period seen twice found 10/13/16 loops. Per-object rewind state needs an identity table for some fields, and replaying recorded tiles would bypass the SAT, mask and head paths, so each frame keeps a real instance drawn by its own `appendRenderCommands`. Copies stay inside the bake's single rewind bracket per slice; the equivalence routes still match 4:3 every frame. `TestDormantPoseLoop` covers static, looping, moving, never-repeating and unreproducible copies. |
+| D17 | 2026-11-26 | **Narrows D6.** When the native loader retires a live object standing at its spawn position (and not destroyed for good), its instance and render buckets become its last state, drawn instead of a frozen pose; a looping pose keeps looping. Moving objects keep the spawn pose. The cache is derived: never snapshotted, forgotten on every object rewind restore (including the bake's own), object reset and layout replacement | Last-seen positions for all objects; snapshotting the cache | The ROM reloads at the spawn position, so only an object that is there can keep its look without a jump. Recording reads getters only (`getPriorityBucket`, `isHighPriority`, render parts); no update or draw runs, which `TestDormantObjectLastState` counts, and no gameplay state is written. A restore could otherwise show a state from a later frame; the equivalence routes assert none survives a restore. |
+| D18 | 2026-11-26 | Bake placement: sliced across frame boundaries at 512 copy updates per boundary, and also run at the boundary of locked title-card iterations that do not run `LevelFrameStep.execute` | Leave the single bake at the first gameplay frame; a background thread | Measured (table above): the full bake grew from 1-4 ms to 23-118 ms, several frames. A 768-update slice still peaked at 15.0 ms on S3K AIZ1; 512 keeps the worst slice at 11.1 ms. Each slice is its own frame-boundary rewind bracket, so the probe contract is unchanged, and a 12-24-slice bake fits inside a title card while gameplay is frozen. A background thread is ruled out: copies mutate live managers, and ROM reads share one file-channel position. |
