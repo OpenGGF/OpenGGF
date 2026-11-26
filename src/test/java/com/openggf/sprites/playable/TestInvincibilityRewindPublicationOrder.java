@@ -53,6 +53,7 @@ class TestInvincibilityRewindPublicationOrder {
         var saved = player.captureRewindState();
         player.setInvincibleFrames(0);
         player.restoreRewindState(saved);
+        capturedStarsFor(manager, player);
         assertEquals(granted, player.getInvincibleFrames());
         assertSame(abandoned, cachedStars(player));
         assertTrue(manager.getActiveObjects().isEmpty(), "the cached handle is not in the restored world");
@@ -121,6 +122,7 @@ class TestInvincibilityRewindPublicationOrder {
         var saved = player.captureRewindState();
         player.setInvincibleFrames(0);
         player.restoreRewindState(saved);
+        capturedStarsFor(manager, player);
         assertSame(abandoned, cachedStars(player));
         assertNull(cachedShield(player), "the shield does not exist when the helper is entered");
         assertTrue(manager.getActiveObjects().isEmpty());
@@ -180,6 +182,42 @@ class TestInvincibilityRewindPublicationOrder {
         verify(callbackShield, times(2)).setVisible(false); // creation, then the helper's live follow-on
         verify(callbackShield, never()).destroy();
         verify(replacement, times(installReplacementSpawner ? 1 : 0)).refreshArtAfterRewindRestore();
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = SonicGame.class, names = {"SONIC_1", "SONIC_2", "SONIC_3K"})
+    void positiveTimerWithoutCapturedStarsRestoresNoStars(SonicGame game) throws Exception {
+        // The S3K Super revert writes invincibility_timer = 1 and spawns no stars, so the timer alone
+        // must not mint a stars object that the captured world never had.
+        TestEnvironment.configureGameModuleFixture(game);
+        ObjectManager manager = new ObjectManager(List.of(), null, 0, null, null);
+        Field managerField = LevelManager.class.getDeclaredField("objectManager");
+        managerField.setAccessible(true);
+        managerField.set(GameServices.level(), manager);
+        Sonic player = new Sonic("sonic", (short) 100, (short) 200);
+        PowerUpSpawner spawner = mock(PowerUpSpawner.class);
+        player.setPowerUpSpawner(spawner);
+        player.setInvincibleFrames(1);
+        var saved = player.captureRewindState();
+        player.setInvincibleFrames(0);
+        player.restoreRewindState(saved);
+
+        player.refreshPowerUpObjectsAfterRewindRestore();
+
+        assertNull(cachedStars(player));
+        assertEquals(1, player.getInvincibleFrames());
+        verify(spawner, never()).spawnInvincibilityStars(player);
+    }
+
+    /** Enqueues the stars entry a snapshot restore would leave pending for {@code owner}. */
+    private static void capturedStarsFor(ObjectManager manager, Sonic owner) throws ReflectiveOperationException {
+        var entry = new com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry(
+                com.openggf.level.objects.InvincibilityStarsObjectInstance.class.getName(), null, 0, null, owner,
+                null, null, false);
+        var enqueue = ObjectManager.class.getDeclaredMethod("enqueuePendingPlayerBoundEntry", Class.class,
+                com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry.class);
+        enqueue.setAccessible(true);
+        enqueue.invoke(manager, com.openggf.level.objects.InvincibilityStarsObjectInstance.class, entry);
     }
 
     private static PowerUpObject cachedShield(Sonic player) throws ReflectiveOperationException {

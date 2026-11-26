@@ -4103,6 +4103,11 @@ public class ObjectManager {
         rewind.enqueuePendingPlayerBoundEntry(baseType, entry);
     }
 
+    /** Whether this restore captured a player-bound object of {@code baseType} for {@code owner}. */
+    boolean hasPendingPlayerBoundEntry(Class<?> baseType, PlayableEntity owner) {
+        return rewind.hasPendingPlayerBoundEntry(baseType, owner);
+    }
+
     /** Checked native restitution retains this restore's admission and pending order. */
     ObjectRewindPlayerBindings.PendingReturn claimPendingPlayerBoundReturn(Class<?> baseType,
             DynamicObjectEntry entry, PlayableEntity owner) {
