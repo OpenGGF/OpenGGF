@@ -49,10 +49,11 @@ class TestInvincibilityRewindPublicationOrder {
         when(spawner.spawnInvincibilityStars(player)).thenReturn(abandoned);
         player.setPowerUpSpawner(spawner);
         player.giveInvincibility(120);
+        int granted = player.getInvincibleFrames(); // in the game's timer units (15 in S3K)
         var saved = player.captureRewindState();
         player.setInvincibleFrames(0);
         player.restoreRewindState(saved);
-        assertEquals(120, player.getInvincibleFrames());
+        assertEquals(granted, player.getInvincibleFrames());
         assertSame(abandoned, cachedStars(player));
         assertTrue(manager.getActiveObjects().isEmpty(), "the cached handle is not in the restored world");
         var events = new ArrayList<String>();
@@ -84,7 +85,7 @@ class TestInvincibilityRewindPublicationOrder {
         assertSame(replacement, cachedStars(player),
                 "an exceptional callback must not roll back the already-published private cache");
         assertSame(replacement, player.getInvincibilityObject());
-        assertEquals(120, player.getInvincibleFrames(), "visual reconstruction does not advance protection");
+        assertEquals(granted, player.getInvincibleFrames(), "visual reconstruction does not advance protection");
         verify(abandoned).destroy();
         verify(replacement).refreshArtAfterRewindRestore();
         verify(replacement, never()).destroy();
@@ -116,6 +117,7 @@ class TestInvincibilityRewindPublicationOrder {
         when(callbackSpawner.spawnShield(player, ShieldType.BASIC)).thenReturn(callbackShield);
         player.setPowerUpSpawner(entrySpawner);
         player.giveInvincibility(120);
+        int granted = player.getInvincibleFrames(); // in the game's timer units (15 in S3K)
         var saved = player.captureRewindState();
         player.setInvincibleFrames(0);
         player.restoreRewindState(saved);
@@ -172,7 +174,7 @@ class TestInvincibilityRewindPublicationOrder {
         assertSame(installReplacementSpawner ? replacement : null, cachedStars(player));
         assertSame(callbackShield, cachedShield(player));
         assertTrue(player.hasShield());
-        assertEquals(120, player.getInvincibleFrames(), "the callbacks changed presentation ownership, not the timer");
+        assertEquals(granted, player.getInvincibleFrames(), "the callbacks changed presentation ownership, not the timer");
         verify(entrySpawner).spawnInvincibilityStars(player); // initial grant only
         verify(callbackSpawner, times(installReplacementSpawner ? 1 : 0)).spawnInvincibilityStars(player);
         verify(callbackShield, times(2)).setVisible(false); // creation, then the helper's live follow-on

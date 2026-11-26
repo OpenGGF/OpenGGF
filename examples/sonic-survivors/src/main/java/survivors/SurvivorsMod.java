@@ -109,12 +109,13 @@ public final class SurvivorsMod implements GgfMod {
             };
             var rules = base.getPolicies().rules();
             var power = rules.powerUp();
+            // Invincibility counts whole frames here (decimation 1): Pickup and Stage set durations in frames.
             var quietExpiry = new com.openggf.game.rules.PowerUpRules(
                     power.shieldObjectFixedSlotIndex(), power.invincibilityStarsFixedSlotIndex(),
                     power.waterSplashFixedSlotIndex(), power.superStarsFixedSlotIndex(),
                     power.speedShoesTimerDecimation(), power.fixedSkidDustAllocatesAfterDynamicObjectPass(),
                     power.waterSplashUsesFixedDustObject(), power.primaryFixedDustSlotIndex(),
-                    power.secondaryFixedDustSlotIndex(), false);
+                    power.secondaryFixedDustSlotIndex(), false, 1);
             arenaPolicies = new com.openggf.game.rules.GamePolicies(new com.openggf.game.rules.GameRules(
                     rules.playerMovement(), rules.playerCapability(),
                     rules.collision(), rules.playerAnimation(), rules.camera(), rules.ring(),
