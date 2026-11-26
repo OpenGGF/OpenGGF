@@ -8,4 +8,16 @@ public final class DormantObjectPresentationAccess {
     public static void prepare(ObjectManager objects, com.openggf.game.rewind.RewindRegistry registry) {
         objects.prepareDormantPresentation(registry);
     }
+
+    /**
+     * A locked title-card iteration's boundary, before its load scan and title work. The physics
+     * branch runs {@code LevelFrameStep.execute}, which bakes at its own boundary instead.
+     */
+    public static void prepareDuringTitleCard(com.openggf.level.LevelManager level,
+                                              com.openggf.game.TitleCardProvider titleCard) {
+        ObjectManager objects = level == null ? null : level.getObjectManager();
+        if (objects == null || titleCard == null || titleCard.shouldRunPlayerPhysics()) return;
+        var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+        objects.prepareDormantPresentation(mode == null ? null : mode.getRewindRegistry());
+    }
 }
