@@ -7,6 +7,11 @@ under the matching area heading; see the
 
 ## Gameplay and presentation
 
+- In Sonic 3 & Knuckles, invincibility now ends on the frame the original
+  does. The game counts it down once every eight frames, so it could last up
+  to seven frames too long. A bubble shield collected while invincible now
+  starts its animation on the right frame and stays in step with the original.
+
 - Sonic 1 and Sonic 3 & Knuckles special stages now award a Continue at 50
   rings and lives at 100 and 200 rings. Sonic 1's 1UP block grants a life
   and shows its four-frame sparkle. Sonic 2 and Knuckles in Sonic 2 award

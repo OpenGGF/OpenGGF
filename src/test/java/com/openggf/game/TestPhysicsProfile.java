@@ -279,6 +279,16 @@ public class TestPhysicsProfile {
                 "S3K byte timer decremented every 8th level frame");
     }
 
+    @Test
+    public void testInvincibilityTimerDecimation_PerGame() {
+        // Sonic_ChkInvin decrements invincibility_timer only when Level_frame_counter & 7 is zero
+        // (docs/skdisasm/sonic3k.asm:22046-22055).
+        assertEquals(1, GameRules.SONIC_1.powerUp().invincibilityTimerDecimation(), "S1 per-frame word timer");
+        assertEquals(1, GameRules.SONIC_2.powerUp().invincibilityTimerDecimation(), "S2 per-frame word timer");
+        assertEquals(8, GameRules.SONIC_3K.powerUp().invincibilityTimerDecimation(),
+                "S3K byte timer decremented every 8th level frame");
+    }
+
     // ========================================
     // PhysicsProvider implementations
     // ========================================
