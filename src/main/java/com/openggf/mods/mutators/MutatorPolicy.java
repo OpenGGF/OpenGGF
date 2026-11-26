@@ -8,7 +8,7 @@ public sealed interface MutatorPolicy permits CharacterSuperFormPolicy, MutatorP
         MutatorPolicy.PlayerStealth, MutatorPolicy.Ringfall, MutatorPolicy.BigHead,
         MutatorPolicy.MonitorFilter, MutatorPolicy.NoCheckpoints, MutatorPolicy.NoRings,
         MutatorPolicy.GameplaySpeed, MutatorPolicy.NoSpecialStages, MutatorPolicy.NoBonusStages,
-        MutatorPolicy.DefeatKnockback, MutatorPolicy.HomingAttack, GameplayHoldPolicy, ScenePresentationPolicy, SpritePresentationPolicy, HudPresentationPolicy, AudioEffectPolicy, OverlayPolicy, EncounterPolicy, EnemyRulePolicy, ProjectileRulePolicy, ObjectFieldPolicy, RingEconomyPolicy, NativePowerupPolicy, RelocationPolicy, TransportPolicy, ChallengePolicy, PlayerMotionPolicy, InputControlPolicy, SignedGravityPolicy, SpringResponsePolicy, FluidContextPolicy {
+        MutatorPolicy.DefeatKnockback, MutatorPolicy.HomingAttack, MutatorPolicy.BetaFlight, GameplayHoldPolicy, ScenePresentationPolicy, SpritePresentationPolicy, HudPresentationPolicy, AudioEffectPolicy, OverlayPolicy, EncounterPolicy, EnemyRulePolicy, ProjectileRulePolicy, ObjectFieldPolicy, RingEconomyPolicy, NativePowerupPolicy, RelocationPolicy, TransportPolicy, ChallengePolicy, PlayerMotionPolicy, InputControlPolicy, SignedGravityPolicy, SpringResponsePolicy, FluidContextPolicy {
     MutatorCapability capability();
 
     /** Dimensionless integer percent; only the host's documented dry Sonic owner consumes it. */
@@ -132,6 +132,16 @@ public sealed interface MutatorPolicy permits CharacterSuperFormPolicy, MutatorP
             characters = java.util.Set.copyOf(characters);
         }
         @Override public MutatorCapability capability() { return MutatorCapability.HOMING_ATTACK; }
+    }
+
+    /**
+     * The leftover player-object flight from the Sonic 3 Winter CES cartridge (12/22/93), used in
+     * place of the native glide by a glide-ability leader the support profile admits. The host
+     * reproduces the routine as found, including its inert in-flight steering.
+     */
+    @com.openggf.game.ModApi
+    record BetaFlight() implements MutatorPolicy {
+        @Override public MutatorCapability capability() { return MutatorCapability.BETA_FLIGHT; }
     }
 
     @com.openggf.game.ModApi

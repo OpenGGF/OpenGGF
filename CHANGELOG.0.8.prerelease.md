@@ -767,6 +767,11 @@ under the matching area heading; see the
 
 ## Modding and tools
 
+- Mutator Lab adds **Beta Flight** for Knuckles in Sonic 3 & Knuckles. It replaces
+  his glide with the flight found in the unused Knuckles object of the Sonic 3 Winter
+  CES cartridge (Dec 22, 1993): an untimed, Tails-style flap whose left and right only
+  turn him around, as in that build. The glide is unchanged while the mutator is off.
+
 - Music-pack patches can replace Sonic 1, Sonic 2 and Sonic 3 & Knuckles songs
   with native SMPS packages exported by external authoring tools. Package tracks keep native
   sequencing, jingle restoration and rewind. Failed package tracks fall back

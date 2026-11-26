@@ -511,6 +511,12 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		return com.openggf.sprites.playable.PlayableSpriteInternalAccess.homingAttack(sprite);
 	}
 
+	/** True while this sprite's non-zero double_jump_flag belongs to the beta-flight mutator. */
+	private boolean betaFlightOwns() {
+		var betaFlight = com.openggf.sprites.playable.PlayableSpriteInternalAccess.betaFlight(sprite);
+		return betaFlight != null && betaFlight.owns(sprite);
+	}
+
 	private CollisionSystem collisionSystem() {
 		CollisionSystem current = sprite.currentCollisionSystemOrNull();
 		return current != null ? current : bootstrapCollisionSystem;
@@ -832,7 +838,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// ROM: Knuckles_Glide dispatch — intercepts normal mode when in glide states
 		int glideState = sprite.getDoubleJumpFlag();
 		if (glideState >= 3 && glideState <= 5
-				&& sprite.getSecondaryAbility() == SecondaryAbility.GLIDE) {
+				&& sprite.getSecondaryAbility() == SecondaryAbility.GLIDE && !betaFlightOwns()) {
 			// Knux_Glide_Freespace / KiS2 GlideControl run the common prelude
 			// before sliding, climbing and ledge-handler early returns. Flags !=1
 			// take only Move_Glide's camera tail, not its active speed controls.
@@ -1135,10 +1141,18 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			openStageMovementMode();
 		}
 
+		// Beta-flight mutator: its flag values are not glide states. The hurt routine
+		// keeps the ordinary shared path below, as the CES object's separate routine does.
+		boolean betaFlight = betaFlightOwns();
+		if (betaFlight && !sprite.isHurt()) {
+			modeBetaFlight(originalX, originalY);
+			return;
+		}
+
 		// Knuckles glide states 1-2 use custom physics
 		int glideState = sprite.getDoubleJumpFlag();
 		boolean inGlide = (glideState == 1 || glideState == 2)
-				&& sprite.getSecondaryAbility() == SecondaryAbility.GLIDE;
+				&& sprite.getSecondaryAbility() == SecondaryAbility.GLIDE && !betaFlight;
 
 		if (inGlide && glideState == 1) {
 			// Active glide — custom physics replace normal airborne.
@@ -1380,6 +1394,33 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				sprite.setForcedAnimationId(-1);
 				sprite.setAnimationId(0x23); // one-shot fall-from-glide landing pose
 			}
+		}
+	}
+
+	/**
+	 * Beta-flight mutator frame: the Sonic 3 CES 12/22/93 Knuckles object's flight branch of its
+	 * airborne mode (cartridge $17044-$1705E): flight vertical ($17060), ground_vel steering
+	 * ($170D8) with the camera-bias tail, Player_LevelBound, MoveSprite2 (no gravity),
+	 * Player_JumpAngle, then Sonic's air level collision. The underwater -$28 step of the ordinary
+	 * air path is not on this branch. Landing clears double_jump_flag through the shared touch-floor
+	 * owner, which ends the flight.
+	 */
+	private void modeBetaFlight(short originalX, short originalY) {
+		var betaFlight = com.openggf.sprites.playable.PlayableSpriteInternalAccess.betaFlight(sprite);
+		betaFlight.stepVertical(sprite, inputJumpPress, PlayerFluidContextAccess.movementUnderwater(sprite),
+				betaFlight.carryFlagSet(), camera());
+		betaFlight.steer(sprite, inputLeft, inputRight);
+		easeNativeKnucklesGlideCameraBias();     // $17124-$1712E, Sonic_Jump_ResetScr's literal tail
+		doLevelBoundary();
+		if (isCpuLevelBoundaryKillActive()) {
+			return;
+		}
+		moveSpriteTestGravity(sprite.getXSpeed(), sprite.getYSpeed());
+		if (!pseudo3dRamp) sprite.returnAngleToZero();
+		advanceAirborneFlipAngle();
+		sprite.updateSensors(originalX, originalY);
+		if (!sprite.isObjectControlSuppressesMovement() && !sprite.isSuppressAirCollision()) {
+			doLevelCollision(sprite.isForceFloorCheck());
 		}
 	}
 
@@ -1905,7 +1946,13 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// gates below; the Super/emerald transform is handled upstream in
 		// tryActivateSuperFromAirAbility (ROM Knux_Test_For_Glide loc_1785E).
 		if (sprite.getSecondaryAbility() == SecondaryAbility.GLIDE) {
-			activateGlide();
+			var betaFlight = com.openggf.sprites.playable.PlayableSpriteInternalAccess.betaFlight(sprite);
+			if (betaFlight != null && betaFlight.enabledFor(sprite)) {
+				// Beta-flight mutator replaces the glide entry (CES $1794C-$179D4).
+				betaFlight.enter(sprite);
+			} else {
+				activateGlide();
+			}
 			return true;
 		}
 		boolean hasElemental = capabilityRules.elementalShieldsEnabled();
