@@ -33,6 +33,10 @@ final class MutatorWorldState implements WorldSessionPolicyState, RewindSnapshot
     private final java.util.Optional<MutatorPreferenceStore> store;
     private final com.openggf.game.mutators.LevelMutatorRuntime entryRuntime;
     private final com.openggf.game.mutators.GameplayMutatorPacing pacing;
+    private final com.openggf.game.mutators.StartingStateRuntime startingState =
+            new com.openggf.game.mutators.StartingStateRuntime();
+    private final com.openggf.game.mutators.RingHungerRuntime ringHunger =
+            new com.openggf.game.mutators.RingHungerRuntime();
     private java.util.Optional<MutatorPreferences> preferences;
     private boolean launched;
     private final java.util.Set<com.openggf.mods.mutators.MutatorConfigurationScreen> screens =
@@ -57,6 +61,9 @@ final class MutatorWorldState implements WorldSessionPolicyState, RewindSnapshot
             if (!loaded.successful()) saveError = loaded.error();
             try { requested = loaded.preferences().forSession(catalog.definitions()); }
             catch (IllegalArgumentException invalid) { saveError = invalid.getMessage(); }
+            // A development capture host's requests are unsaved; invalid ones fail the launch loudly.
+            var launch = world.resolvedGameModule().getGameService(MutatorLaunchRequests.class);
+            if (launch != null) requested = launch.applyTo(catalog.definitions(), requested);
         } else {
             store = java.util.Optional.empty();
             preferences = java.util.Optional.empty();
@@ -97,6 +104,7 @@ final class MutatorWorldState implements WorldSessionPolicyState, RewindSnapshot
 
     @Override public void beforeAssembly(LevelLoadCause cause) {
         loadCause=cause;
+        startingState.beforeAssembly(cause);
         if(cause!=LevelLoadCause.DECODE_ONLY && cause!=LevelLoadCause.PREVIEW) {
             temporary.clear();
             try {
@@ -245,6 +253,8 @@ final class MutatorWorldState implements WorldSessionPolicyState, RewindSnapshot
         if (type == MutatorWorldState.class) return type.cast(this);
         if (type == com.openggf.game.mutators.LevelMutatorRuntime.class) return type.cast(entryRuntime);
         if (type == com.openggf.game.mutators.GameplayMutatorPacing.class) return type.cast(pacing);
+        if (type == com.openggf.game.mutators.StartingStateRuntime.class) return type.cast(startingState);
+        if (type == com.openggf.game.mutators.RingHungerRuntime.class) return type.cast(ringHunger);
         if (type == com.openggf.game.mutators.HomingAttackRuntime.Policy.class) return type.cast(homingPolicy());
         if (type == com.openggf.game.mutators.BetaFlightRuntime.Policy.class) return type.cast(betaFlightPolicy());
         if (type == com.openggf.game.mutators.LevelMutatorPolicySource.class) {
@@ -323,6 +333,27 @@ final class MutatorWorldState implements WorldSessionPolicyState, RewindSnapshot
         } finally { temporary.clear(); }
     }
     @Override public void afterNativeTick(com.openggf.LevelFrameContext context,com.openggf.control.LogicalInputSnapshot input) { nativeTicks++; }
+
+    /**
+     * Starting values and ring hunger act before the active native tick, through the native
+     * counter owners. Policies are the ones this tick will run under; with none admitted the
+     * runtimes only track starts, so native play is untouched.
+     */
+    @Override public void beforeNativeTick(com.openggf.LevelFrameContext context,com.openggf.control.LogicalInputSnapshot input) {
+        if(retired || support==null || state.isClosed() || context.levelManager()==null)return;
+        var level=context.levelManager().getLevelGamestate();
+        if(level==null)return;
+        var available=availableCapabilities();
+        var next=composed(state.effectiveBeforeNextForwardTick());
+        var checkpoint=context.levelManager().getCheckpointState();
+        var start=startingState.beforeNativeTick(next.startingState(available),level,context.gameStateManager(),
+                checkpoint!=null && checkpoint.isActive(),
+                com.openggf.game.mutators.LevelMutatorPolicyAccess.ringsAllowed(world,
+                        com.openggf.game.mutators.RingAcquisitionDomain.MAIN_LEVEL));
+        if(start!=com.openggf.game.mutators.StartingStateRuntime.Start.NONE)ringHunger.beginLife();
+        var leader=context.spriteManager()==null?null:context.spriteManager().getMainPlayable();
+        ringHunger.beforeNativeTick(next.ringHunger(available),leader,level,context.gameStateManager());
+    }
     @Override public void drawOverlay(com.openggf.mods.ui.PixelCanvas canvas) {
         if(observers!=null && observation!=null && !retired)for(var entry:observers.entries())
             if(temporary.ownerAvailable(entry.owner()))entry.observer().drawOverlay(canvas,observation);
@@ -362,7 +393,8 @@ final class MutatorWorldState implements WorldSessionPolicyState, RewindSnapshot
         if(first!=null)throw first;
     }
     @Override public String key() { return "mutators"; }
-    @Override public Snapshot capture() { return new Snapshot(state.snapshot(), entryRuntime.capture(), pacing.capture(),temporary.capture(),visitGeneration,nativeTicks,observation,loadCause); }
+    @Override public Snapshot capture() { return new Snapshot(state.snapshot(), entryRuntime.capture(), pacing.capture(),temporary.capture(),visitGeneration,nativeTicks,observation,loadCause,
+            startingState.capture(),ringHunger.capture()); }
     @Override public void restore(Snapshot snapshot) {
         // The registered world adapter precedes player/object reconstruction. Saved
         // preferences and host owner quarantine remain outside this historical state.
@@ -370,6 +402,8 @@ final class MutatorWorldState implements WorldSessionPolicyState, RewindSnapshot
         entryRuntime.restore(snapshot.entries());
         pacing.restore(snapshot.pacing());
         temporary.restore(snapshot.temporary());
+        startingState.restore(snapshot.startingState());
+        ringHunger.restore(snapshot.ringHunger());
         visitGeneration=snapshot.visitGeneration(); nativeTicks=snapshot.nativeTicks(); observation=snapshot.observation();loadCause=snapshot.loadCause();
         // A registry seek abandons presentation-only work from the former future.
         com.openggf.game.session.WorldSessionPolicyAccess.discardPendingHistory(world);
@@ -378,8 +412,12 @@ final class MutatorWorldState implements WorldSessionPolicyState, RewindSnapshot
                     com.openggf.game.mutators.LevelMutatorRuntime.Snapshot entries,
                     com.openggf.game.mutators.GameplayMutatorPacing.Snapshot pacing,
                     TemporaryMutatorState.Snapshot temporary,long visitGeneration,long nativeTicks,
-                    com.openggf.game.GameplayObservation observation,LevelLoadCause loadCause) {
+                    com.openggf.game.GameplayObservation observation,LevelLoadCause loadCause,
+                    com.openggf.game.mutators.StartingStateRuntime.Snapshot startingState,
+                    com.openggf.game.mutators.RingHungerRuntime.Snapshot ringHunger) {
         Snapshot {
+            java.util.Objects.requireNonNull(startingState);
+            java.util.Objects.requireNonNull(ringHunger);
             java.util.Objects.requireNonNull(policies);
             java.util.Objects.requireNonNull(entries);
             java.util.Objects.requireNonNull(pacing);

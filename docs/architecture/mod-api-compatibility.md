@@ -1051,6 +1051,17 @@ unannotated `RingManagerInternalAccess`, so `RingManager`'s creator surface is
 unchanged. This regenerates the mutable `0.7` pin with three additive entries
 (constructor, accessor, record component) and no removals; `0.7.0` stays unpublished.
 
+Starting-state and ring hunger mutators add five capabilities: `STARTING_RINGS`,
+`STARTING_TIME` and `RING_HUNGER` at LIVE scope, and `STARTING_SCORE` and
+`STARTING_LIVES` at LAUNCH scope, so score and lives can only change when a new
+game session launches. The sealed `StartingStatePolicy` (records `Rings`, `Time`,
+`Score`, `Lives`, with bound constants) and the record `RingHungerPolicy` join
+`MutatorPolicy`'s permitted types. Their consumers are engine-owned
+(`StartingStateRuntime`, `RingHungerRuntime`) and write through the native counter
+owners. Capture hosts use the unannotated `MutatorLaunchRequests`, which is not
+creator surface. This regenerates the mutable `0.7` pin with additive entries only
+and no removals; `0.7.0` stays unpublished.
+
 ## Bounded ROM-part cue candidate
 
 Sitar Hero's fumble follow-up adds `SceneMusicPlayer.PLAYHEAD` and the default

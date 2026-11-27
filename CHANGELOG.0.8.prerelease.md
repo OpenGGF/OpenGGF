@@ -790,6 +790,21 @@ under the matching area heading; see the
   steer him in flight instead, and a **Super Jump** option gives Super and Hyper
   Knuckles that object's higher jump. The glide is unchanged while the mutator is off.
 
+- **Mutator Lab starting values and ring hunger:** five new mutators work in
+  Sonic 1, Sonic 2 and Sonic 3 & Knuckles. Start with Rings grants rings at every
+  act start and life, optionally after a delay, without paying a 100/200-ring
+  extra life. Start with Time puts up to 9:30 on the clock at act starts;
+  checkpoint restarts keep their saved time. Start with Score and Start with
+  Lives seed a new game. Hungry for Rings drains rings after a grace period and
+  kills a player who stays at or under a ring count for too long; a dial beside
+  the RINGS counter, in the HUD's own palette inks, shows the grace, the drain and
+  a red starvation countdown in both widescreen HUD anchors. Its state rewinds.
+  Held Left/Right accelerates on long sliders. `GameplayCaptureTool` and
+  `MutatorGameplayCaptureTool` take a repeatable `--mutator id:option=value,...`
+  flag to set mutators for a capture without touching saved settings. The 0.7
+  candidate API gains `StartingStatePolicy`, `RingHungerPolicy` and five
+  capabilities.
+
 - Music-pack patches can replace Sonic 1, Sonic 2 and Sonic 3 & Knuckles songs
   with native SMPS packages exported by external authoring tools. Package tracks keep native
   sequencing, jingle restoration and rewind. Failed package tracks fall back
