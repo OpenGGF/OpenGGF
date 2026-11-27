@@ -1,13 +1,17 @@
 package com.openggf.game.sonic2.kis2;
 
+import com.openggf.data.RomIdentity;
+import com.openggf.data.RomImageCatalogue;
 import com.openggf.game.GameModule;
 import com.openggf.game.patch.GamePatch;
 import com.openggf.game.patch.GameplayLaunchRequest;
 import com.openggf.game.patch.LogicalRom;
 import com.openggf.game.patch.PatchContext;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Supplier;
 
 /**
  * Knuckles in Sonic 2: the official S&amp;K lock-on program over Sonic 2,
@@ -54,6 +58,18 @@ public final class Kis2GamePatch implements GamePatch {
     @Override
     public Set<LogicalRom> optionalRomPrerequisites() {
         return Set.of(LogicalRom.KIS2);
+    }
+
+    /** Whether this launch can use KiS2 but falls back to tier one without the chip. */
+    public boolean usesTierOne(GameplayLaunchRequest request, Supplier<RomImageCatalogue> catalogue) {
+        if (!baseGameId().equals(request.gameId()) || !activatesFor(request)) return false;
+        RomImageCatalogue roms = catalogue.get();
+        if (!roms.isAvailable(RomIdentity.SK)) return false;
+        try {
+            return roms.open(RomIdentity.KIS2).size() < Kis2Constants.CHIP_WINDOW_END;
+        } catch (IOException unavailable) {
+            return true;
+        }
     }
 
     @Override

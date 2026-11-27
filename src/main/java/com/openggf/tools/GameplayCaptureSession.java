@@ -110,6 +110,8 @@ public final class GameplayCaptureSession implements AutoCloseable {
 
     private boolean startAtTitle;
     private boolean liveRewindKeyHeld;
+    private boolean liveRewindHalfHeld;
+    private boolean liveRewindDoubleHeld;
     private com.openggf.graphics.PixelFontTextRenderer liveRewindHudText;
     private com.openggf.mods.code.DevelopmentPatchLoader.PreparedDecorator developmentMod;
     private final DevelopmentResolverScope developmentResolver = new DevelopmentResolverScope();
@@ -133,16 +135,52 @@ public final class GameplayCaptureSession implements AutoCloseable {
     }
 
     /**
+     * Records live rewind history and pins the plan's budget settings for this capture's session
+     * (unset values keep the configuration's), as the player's settings would.
+     */
+    public void enableLiveRewind(GameplayCaptureRewindPlan plan) {
+        enableLiveRewind();
+        SonicConfigurationService config = GameServices.configuration();
+        if (plan.scope() != null) config.setSessionOverride(SonicConfiguration.REWIND_BUDGET_SCOPE, plan.scope());
+        if (plan.seconds() != null) config.setSessionOverride(SonicConfiguration.REWIND_BUDGET_SECONDS, plan.seconds());
+        if (plan.refillOnLifeLoss() != null)
+            config.setSessionOverride(SonicConfiguration.REWIND_REFILL_ON_LIFE_LOSS, plan.refillOnLifeLoss());
+        if (plan.bonusStages() != null) config.setSessionOverride(SonicConfiguration.REWIND_BONUS_STAGES, plan.bonusStages());
+        if (plan.specialStages() != null)
+            config.setSessionOverride(SonicConfiguration.REWIND_SPECIAL_STAGES, plan.specialStages());
+    }
+
+    /**
      * Holds or releases the configured live rewind key before the next step, as a player
      * would; LiveRewindManager reads the physical key, which the recorded controller
      * override leaves untouched.
      */
     public void holdLiveRewind(boolean held) {
+        holdLiveRewind(held ? GameplayCaptureRewindPlan.Speed.NORMAL : null);
+    }
+
+    /**
+     * Holds the live rewind key with the configured half- or double-speed modifier key for
+     * {@code speed}, or releases all of them when it is null. Key events go through the same
+     * physical input path a player's keyboard uses.
+     */
+    public void holdLiveRewind(GameplayCaptureRewindPlan.Speed speed) {
         requireBooted();
-        if (held == liveRewindKeyHeld) return;
-        liveRewindKeyHeld = held;
-        loop.getInputHandler().handleKeyEvent(
-                GameServices.configuration().getInt(SonicConfiguration.LIVE_REWIND_KEY),
+        SonicConfigurationService config = GameServices.configuration();
+        // Modifiers first, so the rewind key's first held frame already reads its speed.
+        setKey(config.getInt(SonicConfiguration.LIVE_REWIND_HALF_SPEED_KEY),
+                speed == GameplayCaptureRewindPlan.Speed.HALF, liveRewindHalfHeld);
+        liveRewindHalfHeld = speed == GameplayCaptureRewindPlan.Speed.HALF;
+        setKey(config.getInt(SonicConfiguration.LIVE_REWIND_DOUBLE_SPEED_KEY),
+                speed == GameplayCaptureRewindPlan.Speed.DOUBLE, liveRewindDoubleHeld);
+        liveRewindDoubleHeld = speed == GameplayCaptureRewindPlan.Speed.DOUBLE;
+        setKey(config.getInt(SonicConfiguration.LIVE_REWIND_KEY), speed != null, liveRewindKeyHeld);
+        liveRewindKeyHeld = speed != null;
+    }
+
+    private void setKey(int key, boolean held, boolean wasHeld) {
+        if (held == wasHeld) return;
+        loop.getInputHandler().handleKeyEvent(key,
                 held ? org.lwjgl.glfw.GLFW.GLFW_PRESS : org.lwjgl.glfw.GLFW.GLFW_RELEASE);
     }
 
@@ -685,6 +723,17 @@ public final class GameplayCaptureSession implements AutoCloseable {
         if (ui != null) {
             ui.renderFadePass();
         }
+        drawLiveRewindPresentation(graphics);
+        loop.renderHostedRunOverlay();
+        glFinish();
+    }
+
+    /**
+     * Engine's post-scene order for every gameplay mode: after the fade pass, the VHS picture
+     * search while live rewind runs, then the live rewind transport plate. Special stages draw
+     * through their own provider but rewind (and show both) like levels and bonus stages.
+     */
+    private void drawLiveRewindPresentation(GraphicsManager graphics) {
         if (GameServices.configuration().getBoolean(SonicConfiguration.LIVE_REWIND_VHS_EFFECT)) {
             rewindEffect.apply(loop.liveRewindEffectIntensity(), loop.liveRewindEffectSpeed(),
                     RewindVhsEffectPass.REWIND_SCROLL_DIRECTION,
@@ -692,12 +741,9 @@ public final class GameplayCaptureSession implements AutoCloseable {
                     width, HEIGHT, graphics.getViewportX(), graphics.getViewportY(),
                     graphics.getViewportWidth(), graphics.getViewportHeight());
         }
-        // Engine.draw: the live rewind transport plate follows the fade and VHS passes.
         if (liveRewindHudText == null) liveRewindHudText = com.openggf.graphics.PixelFontTextRenderer.compactMenu();
         liveRewindHudText.setProjectionMatrix(com.openggf.mods.scene.host.SceneSurface.projection(width, HEIGHT));
         loop.renderLiveRewindHud(liveRewindHudText);
-        loop.renderHostedRunOverlay();
-        glFinish();
     }
 
     /** Engine.drawSpecialStageResults: optional level backdrop, then the results sprites. */
@@ -740,6 +786,7 @@ public final class GameplayCaptureSession implements AutoCloseable {
         if (ui != null) {
             ui.renderFadePass();
         }
+        drawLiveRewindPresentation(graphics);
         loop.renderHostedRunOverlay();
         glFinish();
     }

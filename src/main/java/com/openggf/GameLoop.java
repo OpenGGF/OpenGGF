@@ -303,7 +303,7 @@ public class GameLoop {
                 userRecordingSessionLauncher, playbackDebugManager, this::isPaused);
         this.hostedRuns = new HostedRunController(configService);
         this.userRecordingPlaybackStarter = withPlaybackAppliedFrameReset(userRecordingSessionLauncher::beginPlayback);
-        this.masterTitleLaunchCoordinator = new MasterTitleLaunchCoordinator(configService);
+        this.masterTitleLaunchCoordinator = new MasterTitleLaunchCoordinator(configService, () -> masterTitleScreenSupplier == null ? null : masterTitleScreenSupplier.get());
         this.specialStageLifecycle = new GameLoopSpecialStageLifecycle(new SpecialStageHost(), audioManager, attractDemo::specialStagePlayback);
         this.debugShortcuts = new GameLoopDebugShortcuts(
                 this::getCurrentGameMode, this::getActiveSpecialStageProvider,

@@ -9,16 +9,26 @@ import java.util.Set;
  * Player allowance, deliberately outside the rewind registry. Replaying gameplay
  * cannot restore spent time or re-award an already reached refill boundary.
  * Storage/history limits remain the rewind controller's separate responsibility.
+ *
+ * <p>A boundary or life-loss refill that restores spent time on the active, finite pool leaves
+ * its pre-refill remaining amount for the HUD ({@link #takeRefillFrom()}); a new run, a new
+ * session owner or a fresh stage visit is not a refill the player sees.
+ *
+ * <p>{@link Scope#NEVER} keeps rewind enabled but never refills the main allowance: it starts full
+ * for a new run or session owner, as every scope does, and no checkpoint, act, zone or life loss
+ * restores it. Each bonus/special-stage visit still gets its own fresh pool, because that pool is
+ * a separate allowance for the visit and never restores the main one.
  */
 final class LiveRewindBudget {
     enum Scope {
-        OFF, CHECKPOINT, ACT, ZONE;
+        OFF, CHECKPOINT, ACT, ZONE, NEVER;
 
         static Scope parse(String value) {
             return switch (value == null ? "" : value.toLowerCase(java.util.Locale.ROOT)) {
                 case "off" -> OFF;
                 case "checkpoint" -> CHECKPOINT;
                 case "zone" -> ZONE;
+                case "never" -> NEVER;
                 default -> ACT;
             };
         }
@@ -38,6 +48,8 @@ final class LiveRewindBudget {
     private GameMode mode = GameMode.LEVEL;
     private Scope scope = Scope.ACT;
     private int maximumFrames = 600;
+    // Presentation hand-off only; like the allowance itself it is outside the rewind registry.
+    private int refillFromFrames = -1;
 
     void configure(String scope, String seconds) { configure(scope, seconds, 60); }
 
@@ -81,15 +93,15 @@ final class LiveRewindBudget {
             Boundary start = new Boundary(game, zone, act, -1);
             boolean fresh = reached.add(start);
             if (checkpoint >= 0) fresh |= reached.add(new Boundary(game, zone, act, checkpoint));
-            if (fresh) main.refill();
+            if (fresh) refillShown(main);
             return;
         }
         Boundary boundary = switch (scope) {
             case ACT -> new Boundary(game, zone, act, -1);
             case ZONE -> new Boundary(game, zone, -1, -1);
-            case CHECKPOINT, OFF -> null;
+            case CHECKPOINT, OFF, NEVER -> null;
         };
-        if (boundary != null && reached.add(boundary)) main.refill();
+        if (boundary != null && reached.add(boundary)) refillShown(main);
     }
 
     void startNewRun() {
@@ -99,10 +111,29 @@ final class LiveRewindBudget {
         visit = new Pool();
         visitIdentity = null;
         mode = GameMode.LEVEL;
+        refillFromFrames = -1;
     }
 
-    void lifeLost(boolean refill) {
-        if (refill) activePool().refill();
+    /** Applies a completed life-loss respawn; returns whether the allowance was refilled. */
+    boolean lifeLost(boolean refill) {
+        if (!refill || scope == Scope.NEVER) return false;
+        refillShown(activePool());
+        return true;
+    }
+
+    /** Refills {@code pool}, noting what was left when that restores spent time the player can see. */
+    private void refillShown(Pool pool) {
+        if (pool == activePool() && pool.spentFrames > 0 && !unlimited() && !off()) {
+            refillFromFrames = remainingFrames();
+        }
+        pool.refill();
+    }
+
+    /** Pre-refill remaining frames of the latest visible refill, or -1; reading clears it. */
+    int takeRefillFrom() {
+        int from = refillFromFrames;
+        refillFromFrames = -1;
+        return from;
     }
 
     boolean off() { return scope == Scope.OFF; }
