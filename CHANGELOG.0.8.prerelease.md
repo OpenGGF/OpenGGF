@@ -32,6 +32,16 @@ under the matching area heading; see the
   once per run until finished or skipped, and again from **Extras › Setup guide**.
   Its text is a machine draft in every shipped language, awaiting native review.
 
+- **Live rewind refills are visible:** when a checkpoint, act, zone or lost life
+  refills spent rewind time, the REW plate appears and its meter and seconds fill
+  back to the maximum, hold for a second and hide. Pressing rewind cancels it.
+  An Unlimited budget now shows a full meter with an infinity mark in place of the
+  frame counter, and the plate's edge pulses slowly while the key is held.
+  A new refill choice, **Never**, gives one allowance for the whole game: it
+  starts full for a new game or loaded save, and no checkpoint, act, zone or lost
+  life refills it (Refill on life loss shows as inactive). Each bonus or special
+  stage visit still has its own fresh allowance. **Off** still disables rewind.
+
 - **Sonic 2 positioned starts:** object loading publishes the new camera
   position before the next object update. Widescreen EDGE keeps Emerald Hill's
   loop switchers alive so Sonic can follow both sides of the loop.
@@ -833,6 +843,13 @@ under the matching area heading; see the
   flag to set mutators for a capture without touching saved settings. The 0.7
   candidate API gains `StartingStatePolicy`, `RingHungerPolicy` and five
   capabilities.
+
+- **Gameplay capture rewind direction:** `GameplayCaptureTool` accepts several
+  `--rewind FRAME:LENGTH[:half|normal|double]` windows, each holding the configured
+  speed modifier with the rewind key, and pins the capture's rewind budget with
+  `--rewind-scope` (now including `never`), `--rewind-seconds`, `--rewind-refill-on-life-loss`,
+  `--rewind-bonus-stages` and `--rewind-special-stages`. Special-stage captures now
+  draw the VHS picture and the REW plate, as the engine window does.
 
 - Music-pack patches can replace Sonic 1, Sonic 2 and Sonic 3 & Knuckles songs
   with native SMPS packages exported by external authoring tools. Package tracks keep native

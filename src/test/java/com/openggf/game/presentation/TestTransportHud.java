@@ -155,4 +155,42 @@ class TestTransportHud {
         order.verify(renderer).drawShadowedText(eq("REC"), anyInt(), anyInt(), any(), eq(1f));
         order.verify(renderer).endBatch();
     }
+
+    @Test
+    void infinityMarkTakesTheValueSlotAsAnAuthoredGlyphNotText() {
+        var plain = new TransportHud.Message(TransportHud.Status.REWIND, "REW", "", "", 100);
+        var endless = new TransportHud.Message(TransportHud.Status.REWIND, "REW", "", "", 100, "",
+                TransportHud.ValueMark.INFINITY, 0);
+        var plainLayout = TransportHud.layout(text, 320, TransportHud.Placement.ABOVE_LIVES, plain);
+        var endlessLayout = TransportHud.layout(text, 320, TransportHud.Placement.ABOVE_LIVES, endless);
+        assertEquals(plainLayout.width() + text.measureWidth(" ", 1) + TransportHud.MARK_WIDTH, endlessLayout.width(),
+                "the plate sizes to the mark like a value");
+        assertTrue(endlessLayout.y() + endlessLayout.height() <= 196, "still above the lives row");
+
+        var graphics = mock(GraphicsManager.class);
+        when(graphics.isGlInitialized()).thenReturn(true);
+        var renderer = spy(PixelFontTextRenderer.compactMenu());
+        doNothing().when(renderer).beginBatch();
+        doNothing().when(renderer).endBatch();
+        doNothing().when(renderer).drawShadowedText(anyString(), anyInt(), anyInt(), any(), anyFloat());
+        TransportHud.render(renderer, graphics, 320, TransportHud.Placement.ABOVE_LIVES, plain);
+        int plainCommands = mockingDetails(graphics).getInvocations().size();
+        clearInvocations(graphics);
+        TransportHud.render(renderer, graphics, 320, TransportHud.Placement.ABOVE_LIVES, endless);
+        assertTrue(mockingDetails(graphics).getInvocations().size() > plainCommands, "the mark is drawn as pixels");
+        verify(renderer, times(2)).drawShadowedText(eq("REW"), anyInt(), anyInt(), any(), eq(1f));
+        verify(renderer, never()).drawShadowedText(eq(""), anyInt(), anyInt(), any(), anyFloat());
+    }
+
+    @Test
+    void edgeGlowMixesTheSharedEdgeTowardTheStatusColour() {
+        assertSame(com.openggf.game.MenuChrome.EDGE,
+                TransportHud.mix(com.openggf.game.MenuChrome.EDGE, com.openggf.game.MenuChrome.CYAN, 0));
+        assertArrayEquals(com.openggf.game.MenuChrome.CYAN,
+                TransportHud.mix(com.openggf.game.MenuChrome.EDGE, com.openggf.game.MenuChrome.CYAN, 100), 1e-6f);
+        assertEquals(100, new TransportHud.Message(TransportHud.Status.REWIND, "REW", "", "", 100, "",
+                null, 250).edgeGlowPercent(), "clamped");
+        assertEquals(TransportHud.ValueMark.NONE, new TransportHud.Message(TransportHud.Status.REWIND, "REW", "", "", 100, "",
+                null, 0).valueMark());
+    }
 }

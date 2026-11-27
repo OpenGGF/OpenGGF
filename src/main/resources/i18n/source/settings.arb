@@ -2480,7 +2480,7 @@
   "@settings.key.rewind_budget_scope.label": {
     "description": "Rewind budget label."
   },
-  "settings.key.rewind_budget_scope.help": "Choose when your rewind allowance refills. Replaying the same boundary never refills it again.",
+  "settings.key.rewind_budget_scope.help": "Choose when your rewind allowance refills, or Never to spend it once. Replaying the same boundary never refills it again.",
   "@settings.key.rewind_budget_scope.help": {
     "description": "Rewind budget help."
   },
@@ -2532,6 +2532,14 @@
   "@settings.rewind.scope.zone": {
     "description": "Rewind budget setting text."
   },
+  "settings.rewind.scope.never": "Never",
+  "@settings.rewind.scope.never": {
+    "description": "Rewind budget setting text: the allowance is spent once and never refills."
+  },
+  "settings.rewind.never_refills_help": "Not used while Rewind is Never.",
+  "@settings.rewind.never_refills_help": {
+    "description": "Rewind budget setting text: why Refill on life loss is inactive under the Never scope."
+  },
   "settings.rewind.unlimited": "Unlimited",
   "@settings.rewind.unlimited": {
     "description": "Rewind budget setting text."
@@ -2559,6 +2567,10 @@
   },
   "settings.value.zone": "Per zone",
   "@settings.value.zone": {
+    "description": "Rewind setting enum display value."
+  },
+  "settings.value.never": "Never",
+  "@settings.value.never": {
     "description": "Rewind setting enum display value."
   },
   "settings.value.unlimited": "Unlimited",

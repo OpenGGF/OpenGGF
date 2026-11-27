@@ -91,8 +91,10 @@ final class EngineSettingLabels {
     /** Whether {@code key} has an effect with its parent stored as {@code parentText}. */
     static boolean inEffect(SonicConfiguration key, String parentText) {
         return switch (key) {
-            case REWIND_BUDGET_SECONDS, REWIND_REFILL_ON_LIFE_LOSS, REWIND_BONUS_STAGES,
+            case REWIND_BUDGET_SECONDS, REWIND_BONUS_STAGES,
                     REWIND_SPECIAL_STAGES -> !"off".equals(parentText);
+            // LiveRewindBudget.lifeLost ignores the refill under scope Never.
+            case REWIND_REFILL_ON_LIFE_LOSS -> !"off".equals(parentText) && !"never".equals(parentText);
             case REWIND_AUDIO_HISTORY_SECONDS -> !"size".equalsIgnoreCase(parentText);
             case REWIND_AUDIO_HISTORY_SIZE_MB -> "size".equalsIgnoreCase(parentText);
             default -> parent(key) == null || Boolean.parseBoolean(parentText);
@@ -100,8 +102,13 @@ final class EngineSettingLabels {
     }
 
     /** The help line when a dependent setting has no effect right now. */
-    static String notInEffect(SonicConfiguration key) {
+    static String notInEffect(SonicConfiguration key) { return notInEffect(key, null); }
+
+    /** The help line when a dependent setting has no effect with its parent stored as {@code parentText}. */
+    static String notInEffect(SonicConfiguration key, String parentText) {
         SonicConfiguration parent = parent(key);
+        if (key == SonicConfiguration.REWIND_REFILL_ON_LIFE_LOSS && "never".equals(parentText))
+            return UiMessages.text("settings.rewind.never_refills_help");
         if (parent == SonicConfiguration.REWIND_BUDGET_SCOPE)
             return UiMessages.text("settings.rewind.enabled_help");
         if (parent == SonicConfiguration.REWIND_AUDIO_HISTORY_LIMIT_TYPE)

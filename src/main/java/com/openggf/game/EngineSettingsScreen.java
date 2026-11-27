@@ -426,7 +426,8 @@ public final class EngineSettingsScreen {
         }
         if (key == SonicConfiguration.AUDIO_HUB_MUSIC_ENABLED || key == SonicConfiguration.AUDIO_HUB_MUSIC_VOLUME)
             return new Timing(UiMessages.text("settings.screen.applies_to_the_hub_as_soon_as_you_save"), MenuChrome.CYAN);
-        if (!inEffect(key)) return new Timing(EngineSettingLabels.notInEffect(key), MenuChrome.MUTED);
+        if (!inEffect(key)) return new Timing(EngineSettingLabels.notInEffect(key,
+                draft.text(EngineSettingLabels.parent(key))), MenuChrome.MUTED);
         if (pausedGameTakes == null) return null;
         return pausedGameTakes.test(key) ? new Timing(UiMessages.text("settings.screen.your_paused_game_takes_this_when_it_resumes"), MenuChrome.CYAN)
                 : new Timing(UiMessages.text("settings.screen.applies_when_you_next_start_a_game"), MenuChrome.MUTED);
