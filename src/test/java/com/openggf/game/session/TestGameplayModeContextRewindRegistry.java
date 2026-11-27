@@ -234,12 +234,12 @@ class TestGameplayModeContextRewindRegistry {
     }
 
     @Test
-    void exactlyTwentyTwoAtomicKeysAfterAttach() {
+    void exactlyTwentyThreeAtomicKeysAfterAttach() {
         GameplayModeContext ctx = buildAttachedContext();
         RewindRegistry registry = ctx.getRewindRegistry();
         CompositeSnapshot snapshot = registry.capture();
-        assertEquals(22, snapshot.entries().keySet().size(),
-                "Expected exactly 22 atomic adapters, got: " + snapshot.entries().keySet());
+        assertEquals(23, snapshot.entries().keySet().size(),
+                "Expected exactly 23 atomic adapters, got: " + snapshot.entries().keySet());
     }
 
     @Test
@@ -492,7 +492,7 @@ class TestGameplayModeContextRewindRegistry {
         RewindRegistry second = ctx.getRewindRegistry();
         assertNotNull(second);
         assertNotSame(first, second, "Re-attach should produce a new RewindRegistry instance");
-        assertEquals(22, second.capture().entries().keySet().size());
+        assertEquals(23, second.capture().entries().keySet().size());
         assertTrue(second.capture().containsKey("sonic2.race-swap"),"reattachment must retain the timer/request adapter");
         var running = second.capture();
         previousState.setGamePaused(true);

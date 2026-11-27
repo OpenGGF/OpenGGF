@@ -394,6 +394,57 @@ class TestKis2HeadlessBoot {
         }
     }
 
+    /** Tier one (no lock-on chip): no attract program, stock S2 placement rows. */
+    @Test
+    void withoutTheChipKis2HasNoAttractAndPlacesFromTheStockList() throws Exception {
+        File s2File = RomTestUtils.ensureSonic2RomAvailable();
+        File s3kFile = RomTestUtils.ensureSonic3kRomAvailable();
+        assumeTrue(s2File != null && s3kFile != null, "KiS2 tier one needs the S2 and S3K ROMs");
+        try (var rom = new Rom()) {
+            assertTrue(rom.open(s2File.getAbsolutePath()));
+            var config = SonicConfigurationService.createStandalone(tempDir);
+            config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "knuckles");
+            config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "");
+            config.setConfigValue(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, false);
+            var engine = injectedContext(config, Files.readAllBytes(s3kFile.toPath()));
+            EngineServices.configure(engine);
+            engine.roms().setRom(rom);
+            var context = HeadlessGameBoot.openResolvedSessionForBoot(engine, new Sonic2GameModule());
+            GameplaySessionFactory.attachManagers(context, engine);
+            engine.graphics().initHeadless();
+            var module = assertInstanceOf(Kis2GameModule.class, SessionManager.requireCurrentGameModule());
+            assertEquals(null, module.getGameService(com.openggf.game.internal.TitleAttractDemo.class),
+                    "tier one has no chip demo program");
+            var served = module.getGameService(com.openggf.game.internal.LevelDebugPlacementProvider.class);
+            assertInstanceOf(Sonic2GameModule.class, module.base());
+            assertSame(module.base().getGameService(com.openggf.game.internal.LevelDebugPlacementProvider.class),
+                    served, "without the image the stock S2 placement service is inherited");
+
+            var team = GameplayTeamBootstrap.registerActiveTeam(module, GameServices.sprites(), config);
+            var player = assertInstanceOf(Knuckles.class, team.mainSprite());
+            GameServices.camera().setFocusedSprite(player);
+            var level = GameServices.level();
+            level.loadZoneAndAct(0, 0);
+            var provider = com.openggf.game.LevelDebugPlacement.provider(level);
+            assertSame(served, provider, "tier one keeps the stock S2 placement");
+            int stockRows = new com.openggf.game.sonic2.debug.Sonic2LevelDebugPlacement().entries(level).size();
+            assertEquals(stockRows, provider.entries(level).size());
+            assertTrue(stockRows > 2, "stock EHZ list, not the chip's two rows");
+
+            var placement = com.openggf.game.LevelDebugPlacement.of(GameServices.gameState());
+            placement.enableCheat();
+            var input = new com.openggf.control.InputHandler();
+            updateDebugPad(input, com.openggf.control.InputActionMasks.ACTION_B);
+            assertTrue(placement.isActive());
+            updateDebugPad(input, com.openggf.control.InputActionMasks.ACTION_C);
+            assertTrue(level.getObjectManager().getActiveObjects().stream().anyMatch(object ->
+                    object.getSpawn().x() == player.getCentreX() && object.getSpawn().y() == player.getCentreY()
+                            && object.getSpawn().objectId() == provider.entries(level).get(0).objectId()));
+            updateDebugPad(input, com.openggf.control.InputActionMasks.ACTION_B);
+            assertFalse(placement.isActive());
+        }
+    }
+
     private static void updateDebugPad(com.openggf.control.InputHandler input, int action) {
         input.setLogicalOverride(com.openggf.control.LogicalInputSnapshot.ofPlayers(
                 com.openggf.control.PlayerInputState.of(0, 0, action, action, false, false),

@@ -57,8 +57,9 @@ under the matching area heading; see the
 
 - **Sonic 2 and Knuckles in Sonic 2** now recognize their level-select debug
   cheats and use the cartridge object lists and accelerating cursor for
-  B/A/C placement. Rewind restores the cursor and its placed objects. Select
-  Engine free-fly in Settings to use the debug movement shortcut.
+  B/A/C placement. Rewind restores the cursor and its placed objects. The
+  unlocked cheat survives title attract demos. Select Engine free-fly in
+  Settings to use the debug movement shortcut.
 - **Sonic 2 runtime art:** the Wing Fortress Tornado cue and shared animal
   and explosion graphics now change tiles as the native queue services them.
   Their prior pixels remain visible until the write, and rewind restores
