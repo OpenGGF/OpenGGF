@@ -387,10 +387,14 @@ display:
 ```
 
 `NATIVE` keeps the game on the original 320-pixel screen and draws the extra width as
-scenery. Objects and rings there that the original game has not woken up yet are shown frozen
-where they start: `GREYSCALE` (the default), `NORMAL` colours, or `HIDDEN`. They come to
-life when the original screen reaches them. `EDGE` (the default draw mode) keeps the
-existing behaviour. Both settings take effect at the next level load.
+scenery. Objects and rings there that the original game has not woken up yet are shown
+where they start: `GREYSCALE` (the default), `NORMAL` colours, or `HIDDEN`. Rings spin
+in step with the live rings, and objects that animate in place (without moving) play
+their animation; anything that moves is shown still. They come to life when the original
+screen reaches them. An object that stood still when the original screen left it keeps
+the look it had then; one that moved goes back to where it starts, because that is where
+the game will bring it back. None of this changes the game itself. `EDGE` (the default
+draw mode) keeps the existing behaviour. Both settings take effect at the next level load.
 
 By default (`display.windowAutosize: true`), the OS window is automatically sized to
 twice the preset pixel width (e.g. `WIDE_16_9` → 800×448). To keep a custom window size,

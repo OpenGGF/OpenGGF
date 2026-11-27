@@ -408,6 +408,10 @@ Focused execution and inherited route limits are recorded in the audit's
 
 Held live rewind is supported only inside rewind-capable special-stage providers. It does not rewind across the LEVEL -> SPECIAL_STAGE or SPECIAL_STAGE -> results/LEVEL boundaries; those transitions intentionally start fresh rewind timelines.
 
+Within a Sonic 1 or Sonic 3 & Knuckles special stage, rewind restores the
+ring-award flags with the maze and the awarded lives and continues with
+session progress. Replaying a pickup after rewinding across it awards it again.
+
 ### Sonic CD stage-load live rewind
 
 A Sonic CD time warp or act advance starts a fresh live rewind timeline.

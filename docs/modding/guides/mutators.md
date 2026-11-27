@@ -174,6 +174,52 @@ revision and the visible draft/error; retry the same action after repairing the
 settings path. Closing the Engine window remains available if the path stays
 unavailable.
 
+### Starting values and ring hunger
+
+`StartingStatePolicy.Rings(rings, delaySeconds)`, `Time(seconds)`, `Score(score)`
+and `Lives(lives)` and `RingHungerPolicy(graceSeconds, ringsLost, periodSeconds,
+threshold, starveSeconds)` are bounded requests; the host's world-owned
+`StartingStateRuntime` and `RingHungerRuntime` act before each active native tick
+and write only through the native counter owners. A full assembly names the start
+it begins (fresh act, restart or death reload); a native level-state replacement
+without an assembly, such as the Sonic 3 & Knuckles results screen's next act, is a
+fresh act. Stage returns, checkpoint restores and seamless handoffs grant nothing.
+`STARTING_SCORE` and `STARTING_LIVES` have a LAUNCH minimum scope: a definition that
+declares them must enable, disable and edit at LAUNCH, because a session value can
+only be seeded when a session begins. Ring grants mark the 100/200 extra-life
+thresholds they reach as paid, so a seeded count never awards a life. Hunger clocks
+hold whenever the native level timer is stopped, during object control and boss
+fights, sharing `MotionMutatorRuntime`'s boss-fight/end-of-level pause gate (Sonic 2's
+boss id stays set after the boss until the act ends, so its clocks stay held); their state is captured with the world's mutator rewind adapter. When
+several owners contribute the same starting value or hunger policy, the first in
+catalogue order applies.
+
+The HUD draws the hunger dial beside the RINGS counter from two indexed sets cached
+at HUD art load: the RINGS label's ink on the text line, and the warning line's
+reddest entry. Each ring is a light band (the digit fill, or the warning line's
+lightest entry) inside the line's darkest entry, so the empty draining dial stays
+legible on any background. Only the palette indices
+come from ROM art and palettes; the dial geometry is host-drawn presentation.
+
+### Long sliders
+
+The common screen accelerates a held Left/Right on sliders with at least 200
+positions: after about half a second of repeating it moves ten steps per repeat,
+then 100 and 1000 steps on sliders long enough to keep 20 positions per step.
+Values stay on the minimum-plus-step lattice and clamp to the last value; single
+presses move one step. A 570-value slider therefore needs no coarser step.
+
+### Capture requests
+
+`GameplayCaptureTool` and `MutatorGameplayCaptureTool` accept a repeatable
+`--mutator <id>[:<option>=<value>,...]` with `--mod`. `<id>` is a local id, or
+`owner/local` when two owners share one; slider values are integers, checkboxes
+`true`/`false`, choices their tokens. The engine-internal `MutatorLaunchRequests`
+service lays them over the saved preferences when the capture's world opens; the
+LAUNCH boundary admits them and nothing is saved. Invalid requests fail the
+launch, and `verifyRequestedMutators` fails the capture if any request was not
+admitted.
+
 ## Observe ordinary play and issue temporary effects
 
 [Sonic3K Chaos Mode](../../../examples/sonic3k-chaos-mode/README.md) uses

@@ -46,6 +46,12 @@ public final class WorldSession {
                         com.openggf.game.mutators.HomingAttackRuntime.Policy.class);
                 return policy == null ? com.openggf.game.mutators.HomingAttackRuntime.Policy.STOCK : policy;
             });
+    final com.openggf.game.mutators.BetaFlightRuntime betaFlight =
+            new com.openggf.game.mutators.BetaFlightRuntime(() -> {
+                var policy = WorldSessionPolicyAccess.getService(this,
+                        com.openggf.game.mutators.BetaFlightRuntime.Policy.class);
+                return policy == null ? com.openggf.game.mutators.BetaFlightRuntime.Policy.STOCK : policy;
+            });
     final WorldSessionPolicyState policies;
     final WorldPolicyHistory policyHistory = new WorldPolicyHistory();
 

@@ -190,7 +190,11 @@ class TestJdkRaceHostServer {
         void send(RawWebSocketClient client) throws IOException;
     }
 
-    private void assertCloseCode(int expected, Sender sender) throws IOException {
+    private void assertCloseCode(int expected, Sender sender)
+            throws IOException, InterruptedException {
+        // The server releases a connection's per-IP slot after the client already sees
+        // EOF; without this wait the fifth sequential connection can exceed the cap of 4.
+        awaitTrue(() -> server.openConnections() == 0, "previous connection released");
         try (RawWebSocketClient client = RawWebSocketClient.connect(server.port())) {
             assertEquals(101, client.upgrade());
             sender.send(client);
