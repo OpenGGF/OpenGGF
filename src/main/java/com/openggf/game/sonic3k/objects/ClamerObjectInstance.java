@@ -4,13 +4,12 @@ import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.audio.GameSound;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
-import com.openggf.game.sonic3k.difficulty.ClamerRecipe;
-import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
+import com.openggf.game.sonic3k.difficulty.ClamerRecipe;
+import com.openggf.game.sonic3k.objects.badniks.Sonic3kBadnikConfig;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
-import com.openggf.level.objects.AnimalObjectInstance;
 import com.openggf.level.objects.DestructionEffects;
 import com.openggf.level.objects.DestructionEffects.DestructionConfig;
 import com.openggf.level.objects.ObjectLifetimeOps;
@@ -103,14 +102,7 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
                     com.openggf.game.profiles.touchresponse.TouchAttackBouncePolicy.STANDARD_ENEMY_KILL,
                     com.openggf.game.profiles.touchresponse.TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY,
                     com.openggf.game.profiles.touchresponse.TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_MAIN_ONLY));
-    private static final DestructionConfig S3K_DESTRUCTION_CONFIG = new DestructionConfig(
-            Sonic3kSfx.BREAK.id,
-            (spawn, services) -> AnimalObjectInstance.deferredArtVariant(spawn, services, null),
-            false,
-            (spawn, svc, pts) -> new Sonic3kPointsObjectInstance(spawn, svc, pts),
-            null,
-            false
-    );
+    private static final DestructionConfig S3K_DESTRUCTION_CONFIG = Sonic3kBadnikConfig.destruction();
 
     /**
      * Spring-child routine state, mirroring the ROM (a0) pointer cycle at

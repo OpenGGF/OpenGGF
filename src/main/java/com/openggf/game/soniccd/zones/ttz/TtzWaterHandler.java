@@ -51,6 +51,21 @@ final class TtzWaterHandler implements DynamicWaterHandler {
         this.player = player;
     }
 
+    // UpdateWaterAnimate (r4/main.asm:573-582) advances the angle and publishes the bob.
+    // WaterEventsAct1Future (r4/main.asm:664-672) and WaterEventsAct3Late (r4/main.asm:762-767)
+    // raise the retained speed. The shared water snapshot holds the effective speed for the current frame.
+    record Snapshot(int angle, int speed, int bob) { }
+
+    Snapshot capture() {
+        return new Snapshot(angle, speed, provider.bob());
+    }
+
+    void restore(Snapshot snapshot) {
+        angle = snapshot.angle();
+        speed = snapshot.speed();
+        provider.setBob(snapshot.bob());
+    }
+
     /** STAGE_TIME: 0 Past, 1 Present, 2 Future (Level/Tidal Tempest/R41A Legacy.asm:6-9). */
     static int timeZone(CdPeriod period) {
         return switch (period) {

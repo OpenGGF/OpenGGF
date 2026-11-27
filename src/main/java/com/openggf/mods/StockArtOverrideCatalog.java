@@ -707,6 +707,7 @@ public final class StockArtOverrideCatalog {
             "ssz_death_egg_cloud",
             "ssz_death_egg_small",
             "ssz_egg_robo",
+            "ssz_egg_robo_fly_by",
             "ssz_elevator_bar",
             "ssz_ending_island_mask",
             "ssz_floating_platform",

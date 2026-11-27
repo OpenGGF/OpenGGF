@@ -6,6 +6,8 @@ import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.soniccd.level.CdLevel;
+import com.openggf.game.soniccd.objects.common.CdMonitor;
+import com.openggf.game.soniccd.objects.common.CdRobotGenerator;
 import com.openggf.game.soniccd.objects.mmz.MmzHvPlatform;
 import com.openggf.game.soniccd.objects.mmz.MmzBuzzsaw;
 import com.openggf.game.soniccd.objects.mmz.MmzInvisibleBlock;
@@ -13,12 +15,18 @@ import com.openggf.game.soniccd.objects.mmz.MmzLaser;
 import com.openggf.game.soniccd.objects.mmz.MmzSpikes;
 import com.openggf.game.soniccd.objects.mmz.MmzTrapDoor;
 import com.openggf.game.soniccd.objects.mmz.MmzMechaBu;
+import com.openggf.game.soniccd.objects.mmz.MmzPohBee;
 import com.openggf.game.soniccd.objects.mmz.MmzSpikeWall;
 import com.openggf.game.soniccd.objects.mmz.MmzSpinDisc;
 import com.openggf.game.soniccd.objects.mmz.MmzVanishPlatform;
+import com.openggf.game.soniccd.player.CdSonicAnimation;
 import com.openggf.game.soniccd.zones.mmz.MmzStageSignals;
+import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectManagerInternalAccess;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.TouchResponseProvider;
+import com.openggf.level.rings.LostRingObjectInstance;
 import com.openggf.physics.GroundSensor;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.HeadlessTestRunner;
@@ -27,8 +35,12 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -160,6 +172,73 @@ class TestMmzObjects {
         assertEquals(x + 5, bu.getX());
     }
 
+    @ParameterizedTest
+    @CsvSource({"0, 16, 3, 98, 130, 128, 259, 9", "1, 11, 1, 82, 258, 128, 515, 3"})
+    void pohBeeFliesAndSwingsItsWeights(int subtype, int parts, int firstBob, int weightY,
+                                        int turnFrame, int turnX, int returnFrame, int endBob) throws Exception {
+        boot(CdStagePayload.R81A);
+        ObjectSpawn spawn = at(0x90, -0x90, 0x2E, subtype);
+        MmzPohBee bee = add(new MmzPohBee(spawn));
+        runner.stepIdleFrames(1);
+        List<Integer> samples = new ArrayList<>();
+        samples.add(pohBeeActors().size() - 1);
+        samples.add(bee.getX() - spawn.x());
+        samples.add(bee.getY() - spawn.y());
+        samples.add(bee.mapFrame());
+        runner.stepIdleFrames(3);
+        samples.add(bee.mapFrame());
+        runner.stepIdleFrames(60);
+        var weight = pohBeeActors().stream().filter(o -> o instanceof TouchResponseProvider p
+                && p.getCollisionFlags() == 0xAF).findFirst().orElseThrow();
+        samples.add(weight.getY() - spawn.y());
+        runner.stepIdleFrames(turnFrame - 64);
+        samples.add(bee.getX() - spawn.x());
+        runner.stepIdleFrames(returnFrame - turnFrame);
+        samples.add(bee.getX() - spawn.x());
+        samples.add(bee.getY() - spawn.y());
+
+        // loc_20DA38 (objects/r8/poh_bee.asm:81-108) and loc_20DB5E (objects/r8/poh_bee.asm:165-216).
+        // The long weight passes the quarter turn before call 64 and is swinging back upward.
+        assertEquals(List.of(parts, -1, firstBob, 0, 1, weightY, turnX, -1, endBob), samples);
+    }
+
+    @Test
+    void pohBeeAttackReplacesItsSlotAndRewindRecreatesTheChains() throws Exception {
+        boot(CdStagePayload.R81A);
+        MmzPohBee bee = add(new MmzPohBee(at(0x80, -0x60, 0x2E, 0)));
+        runner.stepIdleFrames(27);
+        var objects = GameServices.level().getObjectManager();
+        var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+        var snapshot = registry.capture();
+        int slot = bee.getSlotIndex();
+        runner.stepIdleFrames(40);
+        var forward = pohBeePositions();
+        int score = GameServices.gameState().getScore();
+        bee.onPlayerAttack(sonic, null);
+        runner.stepIdleFrames(1);
+        int replacement = objects.objectIdInSlot(slot);
+        int points = GameServices.gameState().getScore() - score;
+        int survivingParts = pohBeeActors().size();
+        registry.restore(snapshot);
+        runner.stepIdleFrames(40);
+
+        // loc_20DC18 (objects/r8/poh_bee.asm:230-239): the explosion ID retires every part.
+        assertEquals(List.of(0x18, 100, 0, forward),
+                List.of(replacement, points, survivingParts, pohBeePositions()));
+    }
+
+    private List<ObjectInstance> pohBeeActors() {
+        return GameServices.level().getObjectManager().getActiveObjects().stream()
+                .filter(o -> !o.isDestroyed() && o.getSpawn().objectId() == 0x2E)
+                .sorted(Comparator.comparingInt(o -> ((AbstractObjectInstance) o).getSlotIndex()))
+                .toList();
+    }
+
+    private List<List<Integer>> pohBeePositions() {
+        return pohBeeActors().stream().map(o -> List.of(((AbstractObjectInstance) o).getSlotIndex(),
+                o.getX(), o.getY(), o instanceof MmzPohBee body ? body.mapFrame() : -1)).toList();
+    }
+
     @Test
     void invisibleBlockIsSolidUnderThePlayer() throws Exception {
         boot(CdStagePayload.R82A);
@@ -265,4 +344,178 @@ class TestMmzObjects {
         int delta = beam.getY() - (emitter.getY() & 0xFFF0);
         assertTrue(delta == 0 || delta == 4, "beam Y " + delta + " below the aligned emitter Y");
     }
+
+    @Test
+    void ordinaryFloorProbeClearsLostRingTilePriority() throws Exception {
+        boot(CdStagePayload.R81B);
+        int x = 0x190;
+        int y = 0x710;
+        assertOrdinaryChunk(x, y + 8);
+        // Begin on the falling leg of LostRingMain, with the tile priority set at spill.
+        var ring = add(LostRingObjectInstance.spawn(0x11, x, y, 0, 0, 0, 255, null));
+        assertTrue(ring.isHighPriority());
+        runner.stepIdleFrames(4);
+        assertFalse(ring.isHighPriority(), "LostRingMain calls CheckBlockDown on its falling cadence");
+    }
+
+    @Test
+    void fallingMonitorClearsTilePriorityWithoutChangingItsBucket() throws Exception {
+        boot(CdStagePayload.R81B);
+        int x = 0x190;
+        int y = 0x710;
+        assertOrdinaryChunk(x, y + 0xE - 2);
+        GameServices.camera().setX((short) (x - 0x60));
+        GameServices.camera().setY((short) (y - 0x50));
+        CdMonitor monitor = add(new CdMonitor(new ObjectSpawn(x, y, 0x19, 1, 0, false, 0)));
+        monitor.snapshotPreUpdatePosition();
+        monitor.update(1, sonic);
+        monitor.refreshPostCameraRenderState();
+        assertTrue(monitor.isOnScreenForTouch());
+        assertTrue(monitor.isHighPriority());
+        int initialBucket = monitor.getPriorityBucket();
+
+        sonic.setCentreY((short) (y + 0x10));
+        sonic.setYSpeed((short) -0x100);
+        monitor.onTouchResponse(sonic, null, 2);
+        monitor.update(2, sonic);
+        assertEquals(y - 2, monitor.getY(), "the hit from below starts the monitor's fall routine");
+        assertFalse(monitor.isHighPriority(), "the monitor probes before its floor contact");
+        assertEquals(initialBucket, monitor.getPriorityBucket());
+    }
+
+    private void assertOrdinaryChunk(int x, int y) {
+        int column = x >> 8;
+        int row = y >> 8;
+        assertTrue(level().getMap().getValue(0, column, row) > 0);
+        assertFalse(level().hasLoopFlag(column, row));
+    }
+
+    @Test
+    void rollingSonicBreaksThePastRobotGeneratorAtTheWiderMmzTouchEdge() throws Exception {
+        boot(CdStagePayload.R81B);
+        CdRobotGenerator generator = add(new CdRobotGenerator(at(0x70, 0, 0x43, 0)));
+        runner.stepIdleFrames(2);
+        var objects = GameServices.level().getObjectManager();
+        int collisionType = generator.getCollisionFlags();
+        // byte_206D2A (r8/player_object_collide.asm:494-552): $22 reaches 40 px horizontally,
+        // $3A reaches 32. Sonic contributes another 8 px.
+        sonic.setCentreX((short) (generator.getX() - 45));
+        sonic.setCentreY((short) generator.getY());
+        sonic.setAnimationId(CdSonicAnimation.WALK.id());
+        objects.runTouchResponsesForPlayer(sonic, 3);
+        generator.update(3, sonic);
+        assertFalse(level().flags().goodFuture, "walking contact leaves the generator intact");
+
+        // loc_206CBE (r8/player_object_collide.asm:439-445) accepts animation 2 on each overlap.
+        sonic.setAnimationId(CdSonicAnimation.ROLL.id());
+        objects.runTouchResponsesForPlayer(sonic, 4);
+        generator.update(4, sonic);
+        assertTrue(level().flags().goodFuture, "rolling contact at 45 px breaks the generator");
+        assertEquals(0xE2, collisionType);
+    }
+
+    @Test
+    void foregroundSpillUsesBucketZeroAndHighPriorityArt() throws Exception {
+        assertSpillPriority(0, 0, true);
+    }
+
+    @Test
+    void backgroundSpillUsesBucketThreeAndLowPriorityArt() throws Exception {
+        assertSpillPriority(1, 3, false);
+    }
+
+    private void assertSpillPriority(int layer, int bucket, boolean highPriority) throws Exception {
+        boot(CdStagePayload.R81A);
+        MmzBuzzsaw saw = add(new MmzBuzzsaw(at(0x70, -0x20, 0x27, 0)));
+        runner.stepIdleFrames(2);
+        if (signals().stageLayer() != layer) signals().flipStageLayer();
+        sonic.setRingCount(2);
+        sonic.setCentreX((short) saw.getX());
+        sonic.setCentreY((short) saw.getY());
+        var objects = GameServices.level().getObjectManager();
+        objects.runTouchResponsesForPlayer(sonic, 2);
+        saw.setDestroyed(true);
+
+        signals().flipStageLayer();
+        runner.stepIdleFrames(2);
+        // loc_208B5A (objects/ring.asm:346-364) uses the spill's layer for both render priorities.
+        var priorities = objects.getActiveObjects().stream()
+                .filter(LostRingObjectInstance.class::isInstance)
+                .map(LostRingObjectInstance.class::cast)
+                .map(ring -> List.of(ring.getPriorityBucket(), ring.isHighPriority()))
+                .toList();
+        assertEquals(List.of(List.of(bucket, highPriority), List.of(bucket, highPriority)), priorities);
+    }
+
+    @Test
+    void spilledRingsCanOnlyBeCollectedOnTheLayerWhereSonicWasHurt() throws Exception {
+        boot(CdStagePayload.R81A);
+        MmzBuzzsaw saw = add(new MmzBuzzsaw(at(0x70, -0x20, 0x27, 0)));
+        runner.stepIdleFrames(2);
+        if (signals().stageLayer() == 0) signals().flipStageLayer();
+        sonic.setRingCount(2);
+        sonic.setCentreX((short) saw.getX());
+        sonic.setCentreY((short) saw.getY());
+        var objects = GameServices.level().getObjectManager();
+        objects.runTouchResponsesForPlayer(sonic, 2);
+        saw.setDestroyed(true);
+
+        // HurtPlayer (r8/player_object_collide.asm:273-282) stamps the layer when it allocates the owner.
+        signals().flipStageLayer();
+        runner.stepIdleFrames(2);
+        var rings = objects.getActiveObjects().stream().filter(LostRingObjectInstance.class::isInstance)
+                .map(LostRingObjectInstance.class::cast).toList();
+        var first = rings.getFirst();
+        sonic.setHurt(false);
+        sonic.setInvulnerableFrames(0);
+        sonic.setCentreX((short) first.getX());
+        sonic.setCentreY((short) first.getY());
+
+        // loc_206978 (r8/player_object_collide.asm:104-127) rejects the other layer before advancing the routine.
+        objects.runTouchResponsesForPlayer(sonic, 5);
+        long collectedOnOtherLayer = rings.stream().filter(LostRingObjectInstance::isCollected).count();
+        signals().flipStageLayer();
+        objects.runTouchResponsesForPlayer(sonic, 6);
+        long collectedOnSpillLayer = rings.stream().filter(LostRingObjectInstance::isCollected).count();
+        assertEquals(List.of(List.of(1, 1), 0L, 1L),
+                List.of(rings.stream().map(LostRingObjectInstance::touchLayer).toList(),
+                        collectedOnOtherLayer, collectedOnSpillLayer));
+    }
+
+    @Test
+    void laserBeamShrinksSonicOnTheNativeContactFrame() throws Exception {
+        boot(CdStagePayload.R82A);
+        var camera = GameServices.camera();
+        camera.setX((short) 6869);
+        camera.setY((short) 1356);
+        sonic.setCentreX((short) 7029);
+        sonic.setCentreY((short) 1452);
+        sonic.applyCustomRadii(9, 19);
+
+        // The USA disc's R82A demo fires at iteration 121, hits at 128, clears
+        // the beam and splash at 148, and fires again at 151. Hold Sonic at
+        // the contact position across one cycle to isolate the object pass.
+        var manager = GameServices.level().getObjectManager();
+        ObjectManagerInternalAccess.refreshPlacementAfterRelocation(manager);
+        for (int frame = 1; frame <= 31; frame++) {
+            manager.update(camera.getX(), sonic, List.of(), frame, false, true, true);
+            List<Integer> laserYs = live(0x1D).stream().filter(laser -> laser.getX() == 7033)
+                    .map(ObjectInstance::getY).sorted().toList();
+
+            if (frame <= 8) {
+                assertEquals(List.of(1415, 1408 + 4 * frame).stream().sorted().toList(), laserYs,
+                        "descending beam on cycle frame " + frame);
+            } else if (frame >= 28) {
+                assertEquals(frame == 31 ? List.of(1412, 1415) : List.of(1415), laserYs,
+                        "beam off and refire on cycle frame " + frame);
+            }
+            assertEquals(frame >= 8, sonic.isHurt(), "knockback on cycle frame " + frame);
+            if (frame == 8) {
+                assertEquals(-0x200, sonic.getXSpeed());
+                assertEquals(-0x400, sonic.getYSpeed());
+                assertTrue(signals().shrunk());
+            }
+        }
+    }
+
 }

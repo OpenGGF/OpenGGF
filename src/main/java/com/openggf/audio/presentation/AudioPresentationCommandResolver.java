@@ -625,8 +625,11 @@ public final class AudioPresentationCommandResolver {
             SourceAccess source,
             int musicId,
             AudioSourceDescriptor descriptor) {
-        SmpsAssetKey key = new SmpsAssetKey(
-                source.gameId(), route, musicId, null);
+        SmpsAssetKey key = route == SmpsAssetKey.Route.BASE_MUSIC
+                ? factory.registerPackageMusic(source.gameId(), musicId, source.dependencyGeneration(),
+                        source.config())
+                : null;
+        if (key == null) key = new SmpsAssetKey(source.gameId(), route, musicId, null);
         SmpsAssetCatalog.ProgramEntry entry =
                 factory.findRegisteredSmpsMusicAsset(
                         key, source.dependencyGeneration());

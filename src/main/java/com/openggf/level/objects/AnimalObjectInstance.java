@@ -2,14 +2,15 @@ package com.openggf.level.objects;
 
 import com.openggf.camera.Camera;
 import com.openggf.game.GameModule;
+import com.openggf.game.PlayableEntity;
+import com.openggf.game.mutators.NativeObjectPolicyAccess;
 import com.openggf.game.rules.GameRules;
 import com.openggf.game.rules.ObjectInteractionRules;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
+import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TerrainCheckResult;
-import com.openggf.level.render.PatternSpriteRenderer;
-import com.openggf.game.PlayableEntity;
 
 import java.util.List;
 import java.util.Objects;
@@ -244,11 +245,14 @@ public class AnimalObjectInstance extends AbstractObjectInstance
         if (objectManager == null) {
             return;
         }
-        // S2 Obj28_InitRandom allocates Obj29 from the animal's own first
-        // routine pass, after Obj27 copied objoff_3E into Obj28
-        // (docs/s2disasm/s2.asm:46711-46715,24596-24636).
-        objectManager.createDynamicObject(() -> pointsFactory.create(
+        // Obj28_InitRandom (s2.asm:24596-24636) and loc_2C940
+        // (sonic3k.asm:61097-61131) allocate from the first free slot.
+        var popup = objectManager.createDynamicObject(() -> pointsFactory.create(
                 new ObjectSpawn(currentX, currentY, 0x29, 0, 0, false, 0), svc, pointsValue));
+        var policies = NativeObjectPolicyAccess.port(svc);
+        if (policies != null && popup != null) {
+            policies.childSpawned(this, popup);
+        }
     }
 
     private void updateMain() {

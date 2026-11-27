@@ -3,7 +3,9 @@ package com.openggf.game.soniccd.flow;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameServices;
+import com.openggf.game.NativeGameStateOps;
 import com.openggf.game.soniccd.CdStagePayload;
+import com.openggf.game.soniccd.audio.CdFmSoundRequestService;
 import com.openggf.game.soniccd.program.CdProgramRequest;
 import com.openggf.game.soniccd.special.CdSpecialStageProvider;
 import com.openggf.game.soniccd.special.CdSpecialStageResults;
@@ -12,6 +14,8 @@ import com.openggf.graphics.FadeManager.FadeState;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledOnOs;
 import org.junit.jupiter.api.condition.OS;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import java.util.Map;
 
@@ -38,7 +42,7 @@ class TestCdGameFlowNative {
 
     private static void kill(CdFlowHarness h) {
         // Setup poke: oY = 2040, below the bottom boundary, so the level-bound check kills the player.
-        h.place(h.player().getCentreX(), 2040, GameServices.camera().getX(), GameServices.camera().getY());
+        h.pokePosition(h.player().getCentreX(), 2040, GameServices.camera().getX(), GameServices.camera().getY());
     }
 
     /** First engine frame index (harness frame) at which {@code test} holds, scanning the replayed rows. */
@@ -61,7 +65,7 @@ class TestCdGameFlowNative {
             int[] routeSize = {h.scenes.route().size()};
             int[] stageEnded = {-1};
             var rows = h.replay(nat, SETUP, nextLevel + 1, r -> {
-                if (r == SETUP) h.place(9728, 489, 9568, 393);
+                if (r == SETUP) h.pokePosition(9728, 489, 9568, 393);
             }, (r, row) -> {
                 if (stageEnded[0] < 0 && h.scenes.route().size() > routeSize[0]) stageEnded[0] = row.frame();
                 return false;
@@ -131,7 +135,10 @@ class TestCdGameFlowNative {
             assertTrue(rows.get(SETUP).dead(), "the setup kills the player");
             h.until(() -> h.row().lives() == 2, 600, 0);
             int engineGone = h.frame;
+            var fm = (CdFmSoundRequestService) h.module.getAudioProfile().createAudioRequestService();
+            assertFalse(fm.snapshot().jumpCondition(), "the death timer has not expired");
             h.until(() -> h.row().fading(), 600, 0);
+            assertTrue(fm.snapshot().jumpCondition(), "death restart releases held FM effects");
             // The fade starts on the frame after the restart request.
             assertEquals(nat.logicFrames(gone + 1, restart + 1), h.frame - 1 - engineGone,
                     "ObjSonic_Restart's 60-frame timer (Sonic/Main.asm:2443-2452)");
@@ -164,7 +171,7 @@ class TestCdGameFlowNative {
         try (CdFlowHarness h = new CdFlowHarness(null)) {
             h.newGame();
             var rows = h.replay(nat, SETUP, killRow + 1, r -> {
-                if (r == SETUP) h.place(2704, 640, 2544, 544);
+                if (r == SETUP) h.pokePosition(2704, 640, 2544, 544);
                 if (r == killRow) kill(h);
             }, null);
             var cp = GameServices.level().getCheckpointState();
@@ -239,7 +246,7 @@ class TestCdGameFlowNative {
             var tt = h.timeTravel();
             tt.restore(new com.openggf.game.soniccd.timetravel.CdTimeTravel.Snapshot(CdTimeZone.PRESENT, false,
                     (byte) nat.hex(setup, "timeWarpDir"), nat.hex(setup, "timeWarpTimer"), nat.hex(setup, "timeWarp") != 0,
-                    null, false, false, 0, 0, false, 0, CdStagePayload.R11A, null));
+                    null, false, false, 0, 0, false, CdStagePayload.R11A, null));
             CdFlowHarness.Row atTrigger = null;
             for (int r = setup + 1; r <= restart; r++) {
                 int[] pad = nat.pad(r);
@@ -313,7 +320,7 @@ class TestCdGameFlowNative {
             int[] touched = {-1};
             h.replay(nat, SETUP, nextLevel + 1, r -> {
                 if (r == SETUP) {
-                    h.place(9728, 489, 9568, 393);
+                    h.pokePosition(9728, 489, 9568, 393);
                     h.player().setRingCount(nat.hex(SETUP, "rings"));          // setup poke: rings = 50
                 }
             }, (r, row) -> {
@@ -384,8 +391,11 @@ class TestCdGameFlowNative {
             }, null);
             h.until(() -> h.row().lives() == 0, 600, 0);
             int engineGone = h.frame;
+            var fm = (CdFmSoundRequestService) h.module.getAudioProfile().createAudioRequestService();
+            assertFalse(fm.snapshot().jumpCondition(), "the death timer has not expired");
             assertEquals(0x1E0, nat.hex(gone, "p_reset"), "native sets the 8-second timer");
             h.until(() -> h.row().fading(), 900, 0);
+            assertTrue(fm.snapshot().jumpCondition(), "death restart releases held FM effects");
             assertEquals(nat.logicFrames(gone + 1, restart + 1), h.frame - 1 - engineGone,
                     "ObjSonic_Restart's game-over timer (Sonic/Main.asm:2439)");
             h.until(() -> h.loop.getCurrentGameMode() == GameMode.TITLE_SCREEN, 600, 0);
@@ -394,6 +404,58 @@ class TestCdGameFlowNative {
             assertNull(h.scenes.flow().route(), "the run is over");
             assertFalse(h.timeTravel().goodFuture(), "GameOver clears goodFuture (IPX.asm:337)");
             assertTrue(h.scenes.route().contains("-> Title[]"), "IPX returns to .GameLoop");
+        }
+    }
+
+    @ParameterizedTest
+    @CsvSource({"129, 0", "128, 127"})
+    void deathUsesTheSignedLivesByte(int startingLives, int remainingLives) throws Exception {
+        try (CdFlowHarness h = new CdFlowHarness(null)) {
+            h.newGame();
+            h.until(() -> !h.row().ctrlLocked(), 300, 0);
+            NativeGameStateOps.restoreLives(GameServices.gameState(), startingLives);
+
+            kill(h);
+            h.until(() -> h.player().isInDeathRestartRoutine(), 300, 0);
+
+            assertEquals(remainingLives, h.row().lives(), "lives when Sonic enters the restart routine");
+            if (remainingLives == 0) {
+                h.step(0, 0, true);
+                assertFalse(GameServices.gameState().isGamePaused(), "Start cannot pause the game-over delay");
+                h.until(() -> h.loop.getCurrentGameMode() == GameMode.TITLE_SCREEN, 1200, 0);
+                assertNull(h.scenes.flow().route(), "the campaign ended");
+            } else {
+                h.until(() -> !h.player().getDead(), 900, 0);
+                assertEquals(GameMode.LEVEL, h.loop.getCurrentGameMode());
+                assertEquals(remainingLives, h.row().lives(), "lives after restarting the act");
+            }
+        }
+    }
+
+    @Test
+    void livingSonicCanPauseAndResumeAfterTheLivesByteWraps() throws Exception {
+        try (CdFlowHarness h = new CdFlowHarness(null)) {
+            h.newGame();
+            var campaign = GameServices.gameState();
+            NativeGameStateOps.restoreLives(campaign, 255);
+            campaign.addScore(50_000);
+            assertEquals(0, campaign.getLives());
+
+            assertTrue(h.row().ctrlLocked(), "the title card still owns the controls");
+            h.idle(1);
+            h.step(0, 0, true);
+            assertFalse(campaign.isGamePaused(), "Start cannot pause the title card");
+            h.until(() -> !h.row().ctrlLocked(), 300, 0);
+            long time = h.row().time();
+
+            h.step(0, 0, true);
+            assertTrue(campaign.isGamePaused(), "a live player can pause with a zero lives byte");
+            h.idle(2);
+            assertEquals(time, h.row().time(), "the level clock stays paused");
+
+            h.step(0, 0, true);
+            assertFalse(campaign.isGamePaused());
+            assertTrue(h.row().time() > time, "the level clock resumes");
         }
     }
 }

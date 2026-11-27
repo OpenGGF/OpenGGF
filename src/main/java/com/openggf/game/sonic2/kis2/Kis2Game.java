@@ -75,6 +75,13 @@ final class Kis2Game extends Sonic2 {
     }
 
     @Override
+    public SpriteArtSet loadSpindashDustArt(String characterCode) throws IOException {
+        // Obj08_Init (docs/kis2disasm/s2.asm:45813-45823) binds MainCharacter
+        // to ArtTile_ArtNem_SonicDust even when the main playable is Knuckles.
+        return super.loadSpindashDustArt(isKnuckles(characterCode) ? "sonic" : characterCode);
+    }
+
+    @Override
     public Palette loadCharacterPalette(String characterCode) {
         if (isKnuckles(characterCode)) {
             return knucklesPalette();

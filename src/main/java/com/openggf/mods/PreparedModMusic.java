@@ -1,5 +1,6 @@
 package com.openggf.mods;
 
+import com.openggf.catalog.StockGameCatalog;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -97,7 +98,7 @@ public final class PreparedModMusic implements AutoCloseable {
             }
             for (ModAudioTrack declaredTrack : registry.tracks()) {
                 String owner = declaredTrack.key().modId();
-                if (owners.contains(owner) && !session.failedOwners().contains(owner)
+                if (!declaredTrack.isSmpsPackage() && owners.contains(owner) && !session.failedOwners().contains(owner)
                         && (exposedOwner == null || exposedOwner.equals(owner))
                         && !localIndices.containsKey(declaredTrack.key())) {
                     throw new IllegalArgumentException(
@@ -132,7 +133,7 @@ public final class PreparedModMusic implements AutoCloseable {
 
             LinkedHashMap<String, LinkedHashMap<Integer, TrackKey>> mutableOverrides = new LinkedHashMap<>();
             Map<String, List<TrackKey>> successfulSources = new java.util.TreeMap<>();
-            for (String game : List.of("s1", "s2", "s3k", "scd")) mutableOverrides.put(game, new LinkedHashMap<>());
+            for (String game : StockGameCatalog.stockCodes()) mutableOverrides.put(game, new LinkedHashMap<>());
             for (ModDescriptor descriptor : descriptors) {
                 String owner = descriptor.manifest().id();
                 if (session.failedOwners().contains(owner)) continue;
@@ -153,7 +154,9 @@ public final class PreparedModMusic implements AutoCloseable {
                     if (!declaredTrack.key().modId().equals(owner)) {
                         throw new IllegalArgumentException("Override target owner differs from manifest owner");
                     }
-                    if (!localIndices.containsKey(target)) {
+                    if (declaredTrack.isSmpsPackage()) {
+                        if (!session.smpsTracks().containsKey(target)) continue;
+                    } else if (!localIndices.containsKey(target)) {
                         throw new IllegalArgumentException("Override target was not prepared: " + target);
                     }
                     mutableOverrides.get(baseGame).put(musicId, target);
@@ -213,8 +216,15 @@ public final class PreparedModMusic implements AutoCloseable {
         TrackKey key = byId == null ? null : byId.get(musicId);
         if (key == null) return null;
         PreparedTrack track = resolve(key);
-        if (track == null) throw new IllegalStateException("Override target index disappeared");
+        if (track == null) return null;
         return new ResolvedMusic(musicId, track);
+    }
+
+    public synchronized PreparedSmpsTrack resolveSmpsOverride(String gameCode, int musicId) {
+        requireOpen();
+        if (session == null) return null;
+        TrackKey key = overrides.getOrDefault(gameCode, Map.of()).get(musicId);
+        return key == null ? null : session.smpsTracks().get(key);
     }
 
     public synchronized java.util.Optional<PreparedSfx> resolveSfx(SfxKey key) {
@@ -279,8 +289,8 @@ public final class PreparedModMusic implements AutoCloseable {
     }
 
     private static String requireGameCode(String gameCode) {
-        if (!"s1".equals(gameCode) && !"s2".equals(gameCode) && !"s3k".equals(gameCode) && !"scd".equals(gameCode)) {
-            throw new IllegalArgumentException("Base game must be exactly s1, s2, s3k, or scd");
+        if (!StockGameCatalog.isStockCode(gameCode)) {
+            throw new IllegalArgumentException("Base game must be one of " + String.join(", ", StockGameCatalog.stockCodes()));
         }
         return gameCode;
     }

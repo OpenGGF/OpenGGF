@@ -7,4 +7,9 @@ import com.openggf.control.InputHandler;
 public interface NativeLevelInputOwner {
     /** Consumes the already published sample; true reserves Start from native pause. */
     boolean handleInput(InputHandler input);
+
+    /** Handles a native exit during user pause. True releases the host pause and claims the input edge. */
+    default boolean handleHostPausedInput(InputHandler input) {
+        return false;
+    }
 }

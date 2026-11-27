@@ -157,8 +157,8 @@ class CreatorKitTest(unittest.TestCase):
         self.assertFalse(any(name.startswith("examples/link-demo/walkthroughs/")
                              for name in kit.export_examples(self.root)))
 
-    def test_generated_test_command_supplies_declared_base_game_rom(self):
-        for game in ("s1", "s2", "s3k", None):
+    def test_generated_commands_supply_supported_game_roms(self):
+        for game in ("s1", "s2", "s3k", "any", "scd", None):
             with self.subTest(base_game=game):
                 name = "native-" + game if game else "standalone-demo"
                 manifest = self.root / "examples" / name / "src/main/resources/META-INF/openggf-mod.yaml"
@@ -168,10 +168,19 @@ class CreatorKitTest(unittest.TestCase):
                 command = next(line for line in readme.splitlines()
                                if line.startswith("python3 ../../tools/build_project.py . --test "))
                 expected = "python3 ../../tools/build_project.py . --test --testkit ../../mod-testkit.jar"
-                if game:
-                    expected += " --" + game + " /absolute/own-" + game + ".gen"
+                if game in ("s1", "s2", "s3k"):
+                    expected += f' --{game} "/absolute/own-{game}.gen"'
+                elif game == "scd":
+                    expected += ' --scd "/absolute/own-scd.chd"'
                 self.assertEqual(expected, command)
                 self.assertIn("other tested games or donors", readme)
+
+                launch = next(line for line in readme.splitlines()
+                              if line.startswith("python3 ../../tools/build_project.py . --run "))
+                launch_game = game if game in ("s1", "s2", "s3k") else "s2"
+                media = ('--scd "/absolute/own-scd.chd"' if game == "scd"
+                         else f'--{launch_game} "/absolute/own-{launch_game}.gen"')
+                self.assertEqual(f"python3 ../../tools/build_project.py . --run {media}", launch)
 
     def test_actual_second_strike_export_preserves_documented_controller_recipes(self):
         root = Path(__file__).resolve().parents[2]
@@ -184,7 +193,7 @@ class CreatorKitTest(unittest.TestCase):
             name = "examples/second-strike/" + source.relative_to(project).as_posix()
             self.assertTrue(name in entries, "Missing authored controller recipe: " + name)
             self.assertEqual(source.read_bytes(), entries[name])
-        self.assertIn(b"--test --testkit ../../mod-testkit.jar --s3k /absolute/own-s3k.gen",
+        self.assertIn(b'--test --testkit ../../mod-testkit.jar --s3k "/absolute/own-s3k.gen"',
                       entries["examples/second-strike/README.md"])
 
     def setUp(self):
@@ -386,9 +395,9 @@ class CreatorKitTest(unittest.TestCase):
         readme = kit.export_examples(self.root)["examples/hello-scene/README.md"].decode()
         self.assertTrue(readme.startswith("# Build hello-scene from the creator kit"))
         self.assertLess(readme.index("python3 ../../tools/build_project.py ."), readme.index("python3 play.py"))
-        for instruction in ("25 JDK", "-Dopenggf.engine.jar=/absolute/kit/engine.jar",
-                            "-Dopenggf.sdk.jar=/absolute/kit/sdk.jar", "target/hello-scene-mod.jar",
-                            "--run --s3k /absolute/own-s3k.gen", "target/play"):
+        for instruction in ("25 JDK", '-Dopenggf.engine.jar="/absolute/kit/engine.jar"',
+                            '-Dopenggf.sdk.jar="/absolute/kit/sdk.jar"', "target/hello-scene-mod.jar",
+                            '--run --s3k "/absolute/own-s3k.gen"', "target/play"):
             self.assertIn(instruction, readme)
         self.assertTrue(readme.endswith(original))
 
@@ -408,7 +417,7 @@ class CreatorKitTest(unittest.TestCase):
         self.assertIn(b"<artifactId>tide-circuit</artifactId>", pom)
         self.assertIn(b"maven-compiler-plugin</artifactId><version>3.14.0", pom)
         self.assertNotIn(b"published-openggf", pom)
-        self.assertIn(b"--run --s2 /absolute/own-s2.gen", entries[prefix + "README.md"])
+        self.assertIn(b'--run --s2 "/absolute/own-s2.gen"', entries[prefix + "README.md"])
         self.assertIn(b"../../handbook/guides/two-act-campaign.md", entries[prefix + "README.md"])
         self.assertIn(b"../../examples/tide-circuit/README.md", entries["handbook/guides/two-act-campaign.md"])
 

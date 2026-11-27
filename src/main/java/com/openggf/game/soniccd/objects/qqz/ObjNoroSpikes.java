@@ -48,8 +48,13 @@ public final class ObjNoroSpikes extends QqzObject {
         y = (live.getY() - 0x14) & 0xFFFF;                // addi.w #-$14,obj.y(a0)
     }
 
-    /** {@code jsr DeleteOtherObject} from the parent. */
+    /**
+     * The parent clears the slot on exit from its proximity window.
+     * See loc_20D0D4 (objects/r5/noro_noro.asm:104-110).
+     * DeleteOtherObject (common/object.asm:180-187) makes it reusable in the same object pass.
+     */
     void deleteFromParent() {
         deleteObject();
+        services().objectManager().removeDynamicObject(this);
     }
 }

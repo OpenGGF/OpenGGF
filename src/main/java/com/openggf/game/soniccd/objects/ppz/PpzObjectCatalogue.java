@@ -30,12 +30,21 @@ public final class PpzObjectCatalogue {
                         int sonicHoleMappings, int breakableWallMappings, int breakableWallFrames,
                         int breakableWallDeltas, int breakableWallSpeeds,
                         int platformMappings, int platformWidths, int platformRanges, int tunnelPathPaths,
-                        int tunnelPathSpeeds, int swingMappings, int swingMotion) { }
+                        int tunnelPathSpeeds, int swingMappings, int swingMotion,
+                        int amyMappings, int amyAnimations, int amyPalette, int amyRestorePalette) { }
 
     private PpzObjectCatalogue() { }
 
     public static Entry entry(CdStagePayload payload) {
         return Objects.requireNonNull(ENTRIES.get(Objects.requireNonNull(payload, "payload")));
+    }
+
+    /**
+     * USA MMD offsets resolved from the live ObjectIndex $35 entry's mapping operand.
+     * ObjTunnelDoorV_Init (Level/Palmtree Panic/Objects/Tunnel Door/Main.asm:34-42).
+     */
+    static int tunnelDoorMappings(CdStagePayload payload) {
+        return o(payload, "tunnelDoorMappings");
     }
 
     private static Map<CdStagePayload, Entry> load() {
@@ -56,12 +65,13 @@ public final class PpzObjectCatalogue {
                     o(p, "springBoardAnimations"), o(p, "sonicHoleMappings"), o(p, "breakableWallMappings"), o(p, "breakableWallFrames"),
                     o(p, "breakableWallDeltas"), o(p, "breakableWallSpeeds"),
                     o(p, "platformMappings"), o(p, "platformWidths"), o(p, "platformRanges"), o(p, "tunnelPathPaths"),
-                    o(p, "tunnelPathSpeeds"), o(p, "swingMappings"), o(p, "swingMotion")));
+                    o(p, "tunnelPathSpeeds"), o(p, "swingMappings"), o(p, "swingMotion"),
+                    o(p, "amyMappings"), o(p, "amyAnimations"), o(p, "amyPalette"), o(p, "amyRestorePalette")));
         }
         return Map.copyOf(out);
     }
 
-    private static int o(CdStagePayload payload, String column) {
+    static int o(CdStagePayload payload, String column) {
         return TABLES.offset(payload, column);
     }
 }

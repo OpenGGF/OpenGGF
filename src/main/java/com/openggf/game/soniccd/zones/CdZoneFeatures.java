@@ -3,6 +3,11 @@ package com.openggf.game.soniccd.zones;
 import com.openggf.camera.Camera;
 import com.openggf.data.Rom;
 import com.openggf.game.ZoneFeatureProvider;
+import com.openggf.game.render.AdvancedRenderFrameState;
+import com.openggf.game.render.AdvancedRenderMode;
+import com.openggf.game.render.AdvancedRenderModeContext;
+import com.openggf.game.render.AdvancedRenderModeController;
+import com.openggf.game.soniccd.CdZone;
 import com.openggf.game.soniccd.player.CdPlayerStage;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -14,6 +19,15 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
  * player's water-current and air-countdown passes run through {@link CdPlayerStage}.
  */
 public final class CdZoneFeatures implements ZoneFeatureProvider {
+    private static final AdvancedRenderMode CCZ_FOREGROUND_SCROLL = new AdvancedRenderMode() {
+        @Override public String id() { return "scd-ccz-foreground-scroll"; }
+
+        @Override
+        public void contribute(AdvancedRenderModeContext context, AdvancedRenderFrameState.Builder builder) {
+            builder.enablePerLineForegroundScroll();
+        }
+    };
+
     private final CdPlayerStage playerStage;
 
     public CdZoneFeatures(CdPlayerStage playerStage) {
@@ -21,6 +35,14 @@ public final class CdZoneFeatures implements ZoneFeatureProvider {
     }
 
     @Override public void initZoneFeatures(Rom rom, int zoneIndex, int actIndex, int cameraX) { }
+
+    @Override
+    public void registerAdvancedRenderModes(AdvancedRenderModeController controller, int zoneIndex, int actIndex) {
+        // Every Collision Chaos variant supplies one foreground scroll word per line.
+        if (zoneIndex == CdZone.COLLISION_CHAOS.ordinal()) {
+            controller.register(CCZ_FOREGROUND_SCROLL);
+        }
+    }
 
     /** The level loop after the scroll ({@code StageMainLoopDraw}, src/r4/main.asm:401-402): the water currents. */
     @Override public void update(AbstractPlayableSprite player, int cameraX, int zoneIndex) {

@@ -7,6 +7,7 @@ import com.openggf.game.resources.PlcLifecyclePhase;
 import com.openggf.game.resources.PlcLifecycleService;
 import com.openggf.game.resources.QueueDiagnosticSnapshot;
 import com.openggf.game.rewind.RewindSnapshottable;
+import com.openggf.game.sonic2.Sonic2ObjectArtProvider;
 import com.openggf.game.sonic2.constants.Sonic2Constants;
 import com.openggf.level.resources.NemesisPlcPatternCounts;
 import com.openggf.level.resources.NemesisPlcServiceQueue;
@@ -35,6 +36,7 @@ public final class Sonic2PlcService
     private final Rom rom;
     private final int tableAddress;
     private final NemesisPlcServiceQueue queue;
+    private Sonic2ObjectArtProvider artProvider;
 
     public Sonic2PlcService(Rom rom) {
         this(rom, address(rom, Sonic2Constants.ART_LOAD_CUES_ADDR));
@@ -129,6 +131,10 @@ public final class Sonic2PlcService
     public enum OperationKind { CLEAR, REPLACE, APPEND }
     public record Operation(OperationKind kind, int plcId) { }
 
+    void bindArtProvider(Sonic2ObjectArtProvider provider) {
+        artProvider = Objects.requireNonNull(provider, "art provider");
+    }
+
     /** Models S2 {@code RunPLC_RAM}, which arms only the current FIFO head. */
     public void prepare() {
         queue.prepareHead();
@@ -136,12 +142,24 @@ public final class Sonic2PlcService
 
     /** Models S2's three-pattern ordinary level VBlank service. */
     public void serviceLevelVBlank() {
-        queue.servicePatterns(3);
+        servicePatterns(3);
     }
 
     /** Models S2's six-pattern normal VBlank service. */
     public void serviceNormalVBlank() {
-        queue.servicePatterns(6);
+        servicePatterns(6);
+    }
+
+    private void servicePatterns(int budget) {
+        var active = queue.activeEntry();
+        // ProcessDPLC and ProcessDPLC2 (s2.asm:2202-2250) write from the current
+        // destination and stop at the frame budget or the end of this descriptor.
+        if (active != null && artProvider != null) {
+            int first = active.totalPatterns() - active.remainingPatterns();
+            artProvider.publishServicedPlcPatterns(active.sourceAddress(), active.destinationTile(),
+                    first, Math.min(budget, active.remainingPatterns()));
+        }
+        queue.servicePatterns(budget);
     }
 
     /** Returns whether either the active decoder or a waiting ROM PLC descriptor remains. */

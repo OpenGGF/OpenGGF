@@ -1,5 +1,6 @@
 package com.openggf.game.soniccd.objects.common;
 
+import com.openggf.game.soniccd.CdZone;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.soniccd.objects.art.CdObjectArtProvider;
 import com.openggf.graphics.GLCommand;
@@ -20,7 +21,7 @@ import java.util.List;
  * Width $22, Y radius $20, priority 4; the base tile is the stage's {@code act*4 + timeZone} entry
  * and the frame {@code (goodFuture ? 0 : 2) + (past ? 1 : 0)}. Only a past generator without the
  * good future is active: it rises $10, floats (1 pixel every 8 frames, direction reversing every
- * $20), is solid and animates, with special collision $FA, which a rolling player sets
+ * $20), is solid and animates, with special collision $FA ($E2 in Metallic Madness), which a rolling player sets
  * (Player_TouchSpecial .CheckIfRoll, Palmtree Panic/Player Object Collision.asm:319-320, 389-394). A hit
  * clears the collision, shows frame 7, sets {@code goodFuture}, adds 1500 points, runs SolidObject and,
  * on a top or bottom contact, GetOffObject; then 21 explosions follow the schedule (FindObjSlot, $18
@@ -35,6 +36,8 @@ public final class CdRobotGenerator extends CdObject implements ReevaluatingSoli
         TouchResponseListener, ObjectVisualFacing.NonDirectional {
     /** move.b #$FA,oColType(a0) (Robot Generator/Main.asm:84). */
     private static final int COLLISION_FLAGS = 0xFA;
+    // loc_20E4B2 (objects/r8/robot_generator.asm:57-65).
+    private static final int MMZ_COLLISION_FLAGS = 0xE2;
     /** move.l #$96,d0; jsr AddPoints: 150 in units of ten (Robot Generator/Main.asm:103-104). */
     private static final int HIT_SCORE = 0x96 * 10;
 
@@ -86,7 +89,7 @@ public final class CdRobotGenerator extends CdObject implements ReevaluatingSoli
         boolean goodFuture = flags().goodFuture;
         mapFrame = (goodFuture ? 0 : 2) + (timeZone() == 0 ? 1 : 0);
         if (goodFuture || timeZone() != 0) return;
-        collisionFlags = COLLISION_FLAGS;
+        collisionFlags = zone() == CdZone.METALLIC_MADNESS.ordinal() ? MMZ_COLLISION_FLAGS : COLLISION_FLAGS;
         y -= 0x10;
     }
 
@@ -171,7 +174,9 @@ public final class CdRobotGenerator extends CdObject implements ReevaluatingSoli
     @Override public int getCollisionFlags() { return collisionFlags; }
     @Override public int getCollisionProperty() { return 0; }
     /**
-     * A $C0-class type is the native special touch, never a boss bounce or hurt in the shared owner: $3A adds to the collision status only while rolling: Player_TouchSpecial .CheckIfRoll (Level/Palmtree Panic/Player Object Collision.asm:302, 319-320, 389-392).
+     * Both $C0-class types use the rolling-only special touch. In r8, loc_206BDE
+     * (r8/player_object_collide.asm:347-357) sends $22 to loc_206CBE
+     * (r8/player_object_collide.asm:439-445).
      */
     @Override public boolean usesS3kTouchSpecialPropertyResponse() { return (getCollisionFlags() & 0xC0) == 0xC0; }
     @Override public TouchResponseProfile getTouchResponseProfile() { return TouchResponseProfile.fromProvider(this); }

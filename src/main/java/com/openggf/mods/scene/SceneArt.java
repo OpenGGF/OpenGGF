@@ -1,5 +1,6 @@
 package com.openggf.mods.scene;
 
+import com.openggf.catalog.StockGameCatalog;
 /**
  * Decodes images: PNGs from the mod's own files, and art from the player's ROM. (Images built
  * from pixels in code are plain {@code new SceneImage(width, height, argb)}.) Mod assets are
@@ -34,9 +35,8 @@ public interface SceneArt {
 
 
     /**
-     * Stock games whose ROM art is available for this scene, in {@code s1}, {@code s2},
-     * {@code s3k} order. The host resolves supplied images through its ROM catalogue;
-     * installing a mod never supplies a missing game's assets.
+     * Stock games whose art is available for this scene. The host resolves supplied
+     * cartridges and discs. Installing a mod cannot supply a missing game's assets.
      */
     default java.util.List<String> availableGames() {
         SceneRomArt running = rom();
@@ -48,7 +48,7 @@ public interface SceneArt {
      * {@code null} when that game is unavailable. Unknown game codes are rejected.
      */
     default SceneRomArt rom(String gameId) {
-        if (gameId == null || !java.util.List.of("s1", "s2", "s3k", "scd").contains(gameId)) {
+        if (!StockGameCatalog.isStockCode(gameId)) {
             throw new IllegalArgumentException("Unknown stock game: " + gameId);
         }
         SceneRomArt running = rom();

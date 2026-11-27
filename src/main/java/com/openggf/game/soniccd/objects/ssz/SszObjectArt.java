@@ -1,7 +1,9 @@
 package com.openggf.game.soniccd.objects.ssz;
 
+import com.openggf.game.soniccd.objects.common.CdAnimalArt;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.soniccd.CdStagePayload;
+import com.openggf.game.soniccd.level.CdLevel;
 import com.openggf.game.soniccd.level.CdStageCatalogue;
 import com.openggf.game.soniccd.level.CdStageImage;
 import com.openggf.game.soniccd.objects.art.CdObjectArtProvider;
@@ -16,7 +18,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.ToIntFunction;
 
 /**
  * Stardust Speedway object art, registered by {@link SszObjects} through the art provider's fragment
@@ -37,6 +38,8 @@ public final class SszObjectArt {
             LAMP = "lamp", SEARCHLIGHT = "searchlight", LIGHT_EDGE = "lightedge", SPIKE_LAUNCH = "spikelaunch",
             JUMP_SPIKE_BALL = "jumpspikeball", KANABUN1 = "kanabun1", KANABUN2 = "kanabun2",
             KABASIRA = "kabasira", DANGO1 = "dango1", DANGO2 = "dango2", HOTARU1 = "hotaru1", HOTARU2 = "hotaru2", SPRING_V = "springv", SPRING_H = "springh", SPRING_45 = "spring45";
+
+    static final String GROUND_ANIMAL = "animal.ground";
 
     /** The tile words each object loads into {@code oTile} (cited on each class). */
     public static final int MESH_TILE = 0x42F8, SPARKS_TILE = 0x8338, LAUNCH_TILE = 0x0300, PATH_SWAP_TILE = 0x034D,
@@ -74,11 +77,6 @@ public final class SszObjectArt {
         return state == null ? null : state.sheets.get(index(kind, tileWord, state.section(cameraX)));
     }
 
-    /** An animator over one of the Stardust Speedway script tables, or {@code null} before art is loaded. */
-    static SszAnimator animator(CdObjectArtProvider art, ToIntFunction<SszObjectCatalogue.Entry> table, int anim) {
-        return art == null ? null : new SszAnimator(art.image(), table.applyAsInt(SszObjectCatalogue.entry(art.payload())), anim);
-    }
-
     private void registerAll(CdObjectArtProvider art, CdStageImage stage, RomByteReader reader) throws IOException {
         if (entry.meshMappings() < 0 && entry.boosterMappings() < 0 && entry.pathSwapMappings() < 0) {
             return;                                                  // not a Stardust Speedway stage
@@ -107,6 +105,14 @@ public final class SszObjectArt {
             vram.loadPlc(stage, stageEntry.plcLists(), TITLE_CARD_PLC);
             sectionVram.add(vram);
         }
+        CdAnimalArt.register(art,
+                SszObjectCatalogue.offset(loaded, "animalBaseTiles"),
+                SszObjectCatalogue.offset(loaded, "flyingAnimalMappings"),
+                -1,
+                SszObjectCatalogue.offset(loaded, "flyingAnimalAnimations"),
+                0, 12, sectionVram, this::section);
+        sheet(art, reader, GROUND_ANIMAL, SszObjectCatalogue.offset(loaded, "groundAnimalMappings"),
+                groundAnimalTile(art));
         sheet(art, reader, MESH, entry.meshMappings(), MESH_TILE);
         sheet(art, reader, SPARKS, entry.sparksMappings(), SPARKS_TILE);
         sheet(art, reader, LAUNCH, entry.boosterMappings(), LAUNCH_TILE);
@@ -138,6 +144,14 @@ public final class SszObjectArt {
             sheet(art, reader, SPRING_H, common.springMappings2(), tile);
             sheet(art, reader, SPRING_45, common.springMappings3(), tile);
         }
+    }
+
+    static int groundAnimalTile(CdObjectArtProvider art) {
+        if (art == null) return 0;
+        // sub_20E97C (objects/r7/animal.asm:193-201).
+        var payload = art.payload();
+        int index = (payload.stage().actNumber() - 1) * 4 + CdLevel.nativeTimeZone(payload.stage().period());
+        return art.image().u16(SszObjectCatalogue.offset(payload, "animalBaseTiles") + index * 2);
     }
 
     /** Registers the kind's sheet for every section, sharing one renderer between sections with equal tiles. */

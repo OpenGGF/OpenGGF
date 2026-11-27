@@ -2,6 +2,7 @@ package com.openggf.game.soniccd;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.openggf.LevelFrameResult;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.game.GameServices;
 import com.openggf.graphics.GraphicsManager;
@@ -114,6 +115,70 @@ class TestWwzBossPictures {
         assertTrue(failures.isEmpty(), "kinds below 95%: " + failures + "\n" + text);
     }
 
+    @Test
+    void badFutureArenaTilesMatchTheNativeFrame() throws Exception {
+        compareArena(CdStagePayload.R63D, "defeat", 4744, 60, 140);
+    }
+
+    @Test
+    void goodFutureArenaTilesMatchTheNativeFrames() throws Exception {
+        compareArena(CdStagePayload.R63C, "defeat", 4493, 140);
+        compareArena(CdStagePayload.R63C, "hit", 2863, 60);
+    }
+
+    private static void compareArena(CdStagePayload payload, String route, int row, int... bandTops)
+            throws Exception {
+        Path discPath = CdTestMedia.usaCue();
+        String fixture = "rehost-boss-wwz/" + payload + "-" + route + "/";
+        Path trace = CdTestMedia.nativeFile(fixture + "trace/physics.csv");
+        Path picture = CdTestMedia.nativeFile(fixture + "screenshot-row" + row + ".png");
+        Map<Integer, int[]> rows = new LinkedHashMap<>();
+        Map<Integer, Integer> levelFrameOfRow = new LinkedHashMap<>();
+        readTrace(trace, rows, levelFrameOfRow);
+        int frame = levelFrameOfRow.get(row) - 1;
+        RgbaImage engine;
+        boolean oldAudio = GameServices.configuration().getBoolean(SonicConfiguration.AUDIO_ENABLED);
+        GameServices.configuration().setSessionOverride(SonicConfiguration.AUDIO_ENABLED, false);
+        try (CdDiscDataSource disc = CdDiscDataSource.open(discPath);
+             CdFreshStageBoots boots = new CdFreshStageBoots(320, 224)) {
+            boots.boot(disc, payload);
+            var runner = new HeadlessTestRunner(GameServices.camera().getFocusedSprite());
+            for (int levelFrame = 2; levelFrame <= frame; levelFrame++) {
+                int input = rows.get(levelFrame)[5];
+                runner.stepFrame((input & 1) != 0, (input & 2) != 0, (input & 4) != 0, (input & 8) != 0,
+                        (input & 0x70) != 0);
+            }
+            assertEquals(rows.get(frame)[1], GameServices.camera().getX(), "camera X");
+            assertEquals(rows.get(frame)[2], GameServices.camera().getY(), "camera Y");
+            engine = render(LevelManager.LevelRenderOptions.tilesOnly());
+            Path out = Path.of("target", "soniccd-boss-wwz");
+            Files.createDirectories(out);
+            ScreenshotCapture.savePNG(engine, out.resolve("arena-" + payload + "-row" + row + ".png"));
+        } finally {
+            GameServices.configuration().setSessionOverride(SonicConfiguration.AUDIO_ENABLED, oldAudio);
+        }
+        RgbaImage nativeFrame = ScreenshotCapture.loadPNG(picture);
+        for (int top : bandTops) {
+            compareArenaTileRows(engine, nativeFrame, top, top + 32, payload + " row " + row + " y=" + top);
+        }
+    }
+
+    private static void compareArenaTileRows(RgbaImage engine, RgbaImage nativeFrame, int top, int bottom, String band) {
+        int matching = 0;
+        int total = 0;
+        for (int y = top; y < bottom; y++) {
+            for (int x = 40; x < 128; x++) {
+                if (TestWwzNativePictures.level(engine.argb(x, y)) == TestWwzNativePictures.level(nativeFrame.argb(x, y))) {
+                    matching++;
+                }
+                total++;
+            }
+        }
+        String result = band + ": " + matching + "/" + total + " pixels match";
+        System.out.println(result);
+        assertEquals(total, matching, result);
+    }
+
     private static void play(String movie, List<Shot> shots, Map<Integer, int[]> rows,
                              Map<Integer, java.util.Set<String>> nativeParts, Map<String, Tally> kinds,
                              List<String> report) throws Exception {
@@ -125,8 +190,11 @@ class TestWwzBossPictures {
             if (row == null) break;
             if (levelFrame > 1) {
                 int input = row[5];
-                runner.stepFrame((input & 1) != 0, (input & 2) != 0, (input & 4) != 0, (input & 8) != 0,
-                        (input & 0x70) != 0);
+                LevelFrameResult result;
+                do {
+                    result = runner.stepFrame((input & 1) != 0, (input & 2) != 0, (input & 4) != 0,
+                            (input & 8) != 0, (input & 0x70) != 0);
+                } while (result == LevelFrameResult.HELD);
             }
             for (Shot shot : shots) {
                 if (shot.levelFrames() != levelFrame) continue;

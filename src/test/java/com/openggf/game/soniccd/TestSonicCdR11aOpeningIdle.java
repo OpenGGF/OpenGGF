@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -73,33 +74,7 @@ class TestSonicCdR11aOpeningIdle {
         Map<Integer, int[]> byLevelFrame = firstRowPerLevelFrame(trace);
 
         try (CdDiscDataSource disc = CdDiscDataSource.open(cue)) {
-            SonicConfigurationService config = SonicConfigurationService.createStandalone(tempDir);
-            config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
-            config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "");
-            config.setConfigValue(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, false);
-            EngineContext old = EngineServices.current();
-            EngineContext injected = new EngineContext(config, old.graphics(), old.audio(), old.roms(),
-                    old.profiler(), old.debugOverlay(), old.playbackDebug(), old.romDetection(),
-                    old.crossGameFeatures());
-            EngineServices.configure(injected);
-
-            SonicCdGameModule root = new SonicCdGameModule();
-            GameplayModeContext gameplay = HeadlessGameBoot.openResolvedSessionForBoot(
-                    injected, root, ModuleResolutionService.LaunchPolicy.DETERMINISTIC, disc);
-            GameplaySessionFactory.attachManagers(gameplay, injected);
-            injected.graphics().initHeadless();
-            GameModuleRegistry.setCurrent(SessionManager.requireCurrentGameModule());
-
-            var team = GameplayTeamBootstrap.registerActiveTeam(
-                    SessionManager.requireCurrentGameModule(), GameServices.sprites(), config);
-            AbstractPlayableSprite sonic = team.mainSprite();
-            GameServices.camera().setFocusedSprite(sonic);
-            int zone = SonicCdZoneRegistry.zoneIndex(CdStagePayload.R11A);
-            int act = SonicCdZoneRegistry.actIndex(CdStagePayload.R11A);
-            GameServices.level().loadZoneAndAct(zone, act);
-            GroundSensor.setLevelManager(GameServices.level());
-            CdLevel level = assertInstanceOf(CdLevel.class, GameServices.level().getCurrentLevel());
-            assertEquals(CdStagePayload.R11A, level.payload());
+            AbstractPlayableSprite sonic = loadPalmtreePanic(disc);
 
             List<String> mismatches = new ArrayList<>();
             compare(1, byLevelFrame.get(1), sonic, mismatches);
@@ -116,6 +91,69 @@ class TestSonicCdR11aOpeningIdle {
             assertTrue(mismatches.isEmpty(), compared + " level frames compared; mismatches:\n"
                     + String.join("\n", mismatches.subList(0, Math.min(20, mismatches.size()))));
         }
+    }
+
+    @Test
+    void heldRightMovesOnlyAfterTheTitleCardAndHeldJumpDoesNotTap() throws Exception {
+        try (CdDiscDataSource disc = CdDiscDataSource.open(CdTestMedia.usaCue())) {
+            AbstractPlayableSprite sonic = loadPalmtreePanic(disc);
+            HeadlessTestRunner runner = new HeadlessTestRunner(sonic);
+            int startX = sonic.getCentreX();
+            assertEquals(1, GameServices.level().getFrameCounter());
+            // ObjTitleCard_WaitPLC (Level/_Objects/Title Card/Main.asm:181-186) clears the
+            // lock after Sonic's slot on iteration 147. The native demo already holds Right.
+            // ReadController (Level/Functions (General).asm:100-104) has already consumed
+            // the held Jump's press edge by then.
+            for (int iteration = 2; iteration <= 147; iteration++) {
+                runner.stepFrame(false, false, false, true, true);
+                assertEquals(startX, sonic.getCentreX(), "horizontal position at iteration " + iteration);
+                assertEquals(0, sonic.getXSubpixelRaw(), "horizontal fraction at iteration " + iteration);
+                assertEquals(0, sonic.getXSpeed(), "horizontal speed at iteration " + iteration);
+                assertFalse(sonic.getAir(), "no jump at iteration " + iteration);
+            }
+
+            runner.stepFrame(false, false, false, true, true);
+            assertEquals(148, GameServices.level().getFrameCounter());
+            assertEquals(startX, sonic.getCentreX());
+            assertEquals(0x0B00, sonic.getXSubpixelRaw(), "first movement at iteration 148");
+            assertEquals(0x0B, sonic.getXSpeed());
+            assertFalse(sonic.getAir(), "the button held through release does not jump");
+
+            runner.stepFrame(false, false, false, true, false);
+            runner.stepFrame(false, false, false, true, true);
+            assertTrue(sonic.getAir(), "a new press after release jumps");
+        }
+    }
+
+    private AbstractPlayableSprite loadPalmtreePanic(CdDiscDataSource disc) throws Exception {
+        SonicConfigurationService config = SonicConfigurationService.createStandalone(tempDir);
+        config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
+        config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "");
+        config.setConfigValue(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, false);
+        EngineContext old = EngineServices.current();
+        EngineContext injected = new EngineContext(config, old.graphics(), old.audio(), old.roms(),
+                old.profiler(), old.debugOverlay(), old.playbackDebug(), old.romDetection(),
+                old.crossGameFeatures());
+        EngineServices.configure(injected);
+
+        SonicCdGameModule root = new SonicCdGameModule();
+        GameplayModeContext gameplay = HeadlessGameBoot.openResolvedSessionForBoot(
+                injected, root, ModuleResolutionService.LaunchPolicy.DETERMINISTIC, disc);
+        GameplaySessionFactory.attachManagers(gameplay, injected);
+        injected.graphics().initHeadless();
+        GameModuleRegistry.setCurrent(SessionManager.requireCurrentGameModule());
+
+        var team = GameplayTeamBootstrap.registerActiveTeam(
+                SessionManager.requireCurrentGameModule(), GameServices.sprites(), config);
+        AbstractPlayableSprite sonic = team.mainSprite();
+        GameServices.camera().setFocusedSprite(sonic);
+        int zone = SonicCdZoneRegistry.zoneIndex(CdStagePayload.R11A);
+        int act = SonicCdZoneRegistry.actIndex(CdStagePayload.R11A);
+        GameServices.level().loadZoneAndAct(zone, act);
+        GroundSensor.setLevelManager(GameServices.level());
+        CdLevel level = assertInstanceOf(CdLevel.class, GameServices.level().getCurrentLevel());
+        assertEquals(CdStagePayload.R11A, level.payload());
+        return sonic;
     }
 
     private static void compare(int levelFrame, int[] row, AbstractPlayableSprite sonic, List<String> mismatches) {

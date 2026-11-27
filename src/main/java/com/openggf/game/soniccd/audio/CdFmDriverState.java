@@ -1,14 +1,22 @@
 package com.openggf.game.soniccd.audio;
 
 /**
- * Driver-resident Sonic CD FM bytes that outlive one effect: {@code ringChannel}
- * (FM/_Variables.inc:95), toggled by {@code TrkCmd_SwapRingChn} (FM/_Driver.asm:1741-1760).
- * The driver is installed once at boot, so the byte carries across stages. Rewind carries it
- * in {@link CdFmSoundRequestService}'s snapshot.
+ * Sonic CD FM driver state shared across effects and stage loads.
+ * {@link CdFmSoundRequestService} captures it for rewind and boundary rollback.
  */
 public final class CdFmDriverState {
     private int ringChannel;
     private int trackQueued;
+    // jumpCondition (Sound Drivers/FM/_Variables.inc:96) is written as 0 or 1.
+    private boolean jumpCondition;
+
+    boolean jumpCondition() {
+        return jumpCondition;
+    }
+
+    void setJumpCondition(boolean value) {
+        jumpCondition = value;
+    }
 
     /** A sound a track wrote to the first priority slot ({@code sndQueues}), 0 when none. */
     public int trackQueued() {

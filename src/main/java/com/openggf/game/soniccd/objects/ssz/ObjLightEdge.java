@@ -1,6 +1,8 @@
 package com.openggf.game.soniccd.objects.ssz;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.schema.RewindCaptureContext;
+import com.openggf.game.soniccd.objects.art.CdObjectArtProvider;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectVisualFacing;
 
@@ -16,7 +18,7 @@ import com.openggf.level.objects.ObjectVisualFacing;
 public final class ObjLightEdge extends SszObject implements ObjectVisualFacing.NonDirectional {
     private static final int[] COLUMN = {0x50, 0xF0};
     private int column;
-    private SszAnimator animator;
+    private final SszAnimator.Rewindable animator = new SszAnimator.Rewindable();
 
     public ObjLightEdge(ObjectSpawn spawn) {
         super(spawn, "Light edge");
@@ -25,12 +27,23 @@ public final class ObjLightEdge extends SszObject implements ObjectVisualFacing.
     @Override protected String sheetKind() { return SszObjectArt.LIGHT_EDGE; }
 
     @Override
+    protected void afterGenericRewindStateRestored(RewindCaptureContext context) {
+        if (initialised) bindAnimationScript(artProvider());
+    }
+
+    /** loc_206662 (objects/r7/light_edge.asm:56-63). */
+    private void bindAnimationScript(CdObjectArtProvider provider) {
+        var entry = SszObjectCatalogue.entry(provider.payload());
+        animator.bindScript(provider.image(), entry.lightEdgeAnimations());
+    }
+
+    @Override
     public void update(int vIntRunCount, PlayableEntity player) {
         if (routine == 0) {                                  // sub_206604 (:18-22)
             if (artProvider() == null) return;
             routine += 2;
             tileWord = SszObjectArt.LIGHT_EDGE_TILE;
-            animator = SszObjectArt.animator(artProvider(), SszObjectCatalogue.Entry::lightEdgeAnimations, 0);
+            bindAnimationScript(artProvider());
             initialised = true;
         }
         statusFlip |= 2;                                     // bset #1,obj.flags(a0) (:27)

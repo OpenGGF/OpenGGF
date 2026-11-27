@@ -8,6 +8,7 @@ import com.openggf.game.soniccd.CdPeriod;
 import com.openggf.game.soniccd.CdStagePayload;
 import com.openggf.game.soniccd.level.CdStageCatalogue;
 import com.openggf.game.soniccd.level.CdStageImage;
+import com.openggf.game.soniccd.zones.CdPaletteCycleGate;
 import com.openggf.level.Level;
 import com.openggf.level.Palette;
 import com.openggf.level.animation.AnimatedPaletteManager;
@@ -104,6 +105,7 @@ final class TtzPaletteCycle implements AnimatedPaletteManager {
 
     @Override
     public void update() {
+        if (CdPaletteCycleGate.isStopped(level)) return;
         Camera camera = GameServices.camera();
         int fgX = camera == null ? 0 : camera.getX() & 0xFFFF;
         int fgY = camera == null ? 0 : camera.getY() & 0xFFFF;

@@ -14,6 +14,14 @@ def STAGES_COVERED(stage: str) -> bool:
 
 
 ANCHORS = [
+    ('flyingAnimalMappings', '217C 08080408 0016 217C AAAAAAAA 0004 3168 0008 002A 3168 000C 002C', 'optional',
+     'AnimalObject_1_Routine0 (objects/r7/animal.asm:22-30)'),
+    ('flyingAnimalAnimations', '1140 002E 43FA PPPP 4EB9 ???????? 4EB9 ???????? 3028 002A', 'optional',
+     'loc_20E81A (objects/r7/animal.asm:60-66)'),
+    ('groundAnimalMappings', '217C 0C080408 0016 217C AAAAAAAA 0004 6100 ???? 4A28 0028', 'optional',
+     'AnimalObject_0_Routine0 (objects/r7/animal.asm:119-126): ground animal loads AnimalSprites2'),
+    ('animalBaseTiles', '43FA PPPP 7000 1039 ???????? E540 D039 ???????? D040 3171 0000 0002 4E75', 'optional',
+     'sub_20E97C (objects/r7/animal.asm:193-201): indexes the tile table by act and time zone'),
     ('meshMappings', '317C 42F8 0002 217C AAAAAAAA 0004', 'optional',
      'MeshObject_0_Routine0 (objects/r7/mesh.asm:19-23): move.w #$42F8,obj.sprite_tile(a0); move.l #MeshSprites,obj.sprite_data(a0)'),
     ('sparksMappings', '317C 8338 0002 217C AAAAAAAA 0004', 'optional',

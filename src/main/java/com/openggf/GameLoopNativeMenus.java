@@ -1,6 +1,9 @@
 package com.openggf;
 
 import com.openggf.audio.AudioManager;
+import com.openggf.audio.GameAudioProfile;
+import com.openggf.audio.RomlessSmpsSource;
+import com.openggf.data.RomManager;
 import com.openggf.control.InputHandler;
 import com.openggf.game.*;
 import com.openggf.game.nativemenu.NativeMenuController;
@@ -57,6 +60,18 @@ final class GameLoopNativeMenus {
         this.publisher = publisher;
         this.input = input;
         this.currentMode = currentMode;
+    }
+
+    void initializeTitleAudio(GameAudioProfile profile, RomManager romManager) {
+        try {
+            // ROM-less profiles supply their own sound data. A cartridge lookup
+            // can fail on a disc-only setup.
+            var rom = profile instanceof RomlessSmpsSource ? null : romManager.getRom();
+            audioManager.setAudioProfile(profile);
+            audioManager.setRom(rom);
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to load ROM for title screen", e);
+        }
     }
 
     void exitTitleScreen() {

@@ -38,7 +38,10 @@ public sealed interface SmpsSessionCommand {
     record SuspendForPcmOverride() implements SmpsSessionCommand {
     }
 
-    record RestoreOverride() implements SmpsSessionCommand {
+    record RestoreOverride(boolean natural) implements SmpsSessionCommand {
+        public RestoreOverride() {
+            this(false);
+        }
     }
 
     record EndOverride(int musicId) implements SmpsSessionCommand {

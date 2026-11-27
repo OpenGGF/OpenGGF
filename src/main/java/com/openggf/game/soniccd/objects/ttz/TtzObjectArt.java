@@ -48,6 +48,7 @@ public final class TtzObjectArt {
             HMOVE1 = "hmove1", HMOVE2 = "hmove2", HMOVE3 = "hmove3", HMOVE4 = "hmove4", HMOVE5 = "hmove5", HMOVE6 = "hmove6",
             TAGA1 = "taga1", TAGA2 = "taga2", TAGA_MISSILE = "tagamissile", ANIMAL1 = "animal1", ANIMAL2 = "animal2",
             SPIKES = "spikes", WOOD_BLOCK = "woodblock", PRIZE_SWITCH = "prizeswitch", RING_PRIZE = "ringprize", POINTS_PRIZE = "pointsprize";
+    public static final String SWING = "swing", SWITCH_ELEVATOR = "switchelevator", ELEVATOR_SWITCH = "elevatorswitch";
     public static final String BREAK_POLE = "breakpole";
     public static final String STATIONARY_SPIKE_BALL = "stationaryspikeball";
 
@@ -80,6 +81,9 @@ public final class TtzObjectArt {
 
     private static final List<Spec> SPECS = List.of(
             new Spec(MOVE_WALL, "moveWallMappings", new int[] {MOVE_WALL_TILE}),
+            new Spec(SWING, "swingMappings", new int[] {ObjTtzSwing.LINK_TILE, ObjTtzSwing.SEAT_TILE}),
+            new Spec(SWITCH_ELEVATOR, "switchElevatorMappings", new int[] {ObjSwitchElevator.TILE}),
+            new Spec(ELEVATOR_SWITCH, "elevatorSwitchMappings", new int[] {ObjElevatorSwitch.TILE}),
             new Spec(DOOR, "doorMappings", new int[] {TtzDoor.TILE}),
             new Spec(SWITCH, "switchMappings", new int[] {TtzSwitch.TILE}),
             new Spec(ROTATE_BLOCK, "rotateBlockMappings", new int[] {ROTATE_BLOCK_TILE}),
@@ -183,6 +187,9 @@ public final class TtzObjectArt {
             CdStageVram vram = CdObjectArtProvider.loadVram(stage, loaded);
             vram.loadPlc(stage, stageEntry.plcLists(), TITLE_CARD_PLC);
             sectionVram.add(vram);
+        }
+        for (var shape : ObjVerticalMoveBlock.Shape.values()) {
+            add(art, shape.sheet, TtzObjectCatalogue.offset(loaded, shape.mappingColumn), ObjVerticalMoveBlock.TILE);
         }
         for (Spec spec : SPECS) {
             for (int tile : spec.tileWords()) add(art, spec.kind(), TtzObjectCatalogue.offset(loaded, spec.mappingsColumn()), tile);

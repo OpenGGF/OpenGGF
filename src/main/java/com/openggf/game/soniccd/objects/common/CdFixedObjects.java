@@ -25,14 +25,12 @@ public final class CdFixedObjects implements NativeFixedLevelObjectPass {
         LevelManager level = GameServices.levelOrNull();
         if (level == null) return;
         var camera = GameServices.cameraOrNull();
-        run(level.getObjectManager(), camera == null ? 0 : camera.getX(),
-                camera == null ? null : camera.getFocusedSprite());
+        run(level.getObjectManager(), camera == null ? null : camera.getFocusedSprite());
     }
 
     /** One frame of the reserved slots, after the frame-start spawner pass. */
-    public static void run(ObjectManager objects, int cameraX, com.openggf.game.PlayableEntity player) {
+    public static void run(ObjectManager objects, com.openggf.game.PlayableEntity player) {
         if (objects == null) return;
-        com.openggf.level.objects.ObjectManagerInternalAccess.runSpawnerBeforeObjectPass(objects, cameraX);
         List<AbstractObjectInstance> fixed = new ArrayList<>();
         for (ObjectInstance instance : objects.getActiveObjects()) {
             if (instance instanceof AbstractObjectInstance object && instance instanceof FixedRuntimeObjectInstance
@@ -45,6 +43,16 @@ public final class CdFixedObjects implements NativeFixedLevelObjectPass {
         for (AbstractObjectInstance object : fixed) {
             if (!object.isDestroyed()) object.update(vInt, player);
             if (object.isDestroyed()) objects.removeDynamicObject(object);
+        }
+    }
+
+    public static void publishHudCounters(ObjectManager objects) {
+        if (objects == null) return;
+        for (ObjectInstance object : objects.getActiveObjects()) {
+            if (object instanceof CdHud hud && hud.kind() == CdHud.Kind.SCORE_TIME) {
+                hud.publishCounters();
+                return;
+            }
         }
     }
 

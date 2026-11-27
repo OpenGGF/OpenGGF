@@ -27,7 +27,9 @@ public final class ObjBubbleSpawner extends TtzObject implements ObjectVisualFac
 
     private int routine;
     private int mapFrame;
-    private CdAnimator animator;
+    private transient CdAnimator animator;
+    private final CdAnimator.StageRewind rewindAnimation =
+            new CdAnimator.StageRewind(() -> artProvider().image(), () -> animator, restored -> animator = restored);
     /** oVar32/oVar33: bursts left before a big bubble, and the reload (subtype & $7F). */
     private int bigCountdown;
     private int bigReload;

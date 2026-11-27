@@ -5,6 +5,7 @@ import com.openggf.game.palette.PaletteOwnershipRegistry;
 import com.openggf.game.palette.PaletteWriteSupport;
 import com.openggf.game.soniccd.CdStagePayload;
 import com.openggf.game.soniccd.level.CdStageImage;
+import com.openggf.game.soniccd.zones.CdPaletteCycleGate;
 import com.openggf.level.Level;
 import com.openggf.level.Palette;
 import com.openggf.level.animation.AnimatedPaletteManager;
@@ -81,6 +82,7 @@ final class CczPaletteCycle implements AnimatedPaletteManager {
 
     @Override
     public void update() {
+        if (CdPaletteCycleGate.isStopped(level)) return;
         if (scripts.isEmpty()) return;
         for (int slot = 0; slot < scripts.size(); slot++) cycleColor(slot, scripts.get(slot));
         Palette[] palettes = new Palette[level.getPaletteCount()];

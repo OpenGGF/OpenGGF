@@ -20,10 +20,6 @@ public final class RingDrawInternalAccess {
     public static void drawPlaced(RingManager manager, int frameCounter, int cameraY, int screenYWrapMask) {
         engineCaller(); manager.drawPlaced(frameCounter, cameraY, screenYWrapMask);
     }
-    /** NATIVE widescreen dormant poses: ring objects drawn inside {@code body} hold their first spin frame. */
-    public static void withFrozenSpin(RingManager manager, Runnable body) {
-        engineCaller(); manager.withFrozenSpin(body);
-    }
     public static void drawAttracted(RingManager manager, int frameCounter) {
         engineCaller(); manager.drawAttracted(frameCounter);
     }
@@ -49,6 +45,10 @@ public final class RingDrawInternalAccess {
         public boolean boundTo(RingManager manager) { return this.manager == manager; }
         public void drawPlaced(int frameCounter, int cameraY, int screenYWrapMask) {
             manager.drawPlaced(frameCounter, cameraY, screenYWrapMask);
+        }
+        /** NATIVE widescreen dormant rings, on the live placed rings' spin frame for {@code frameCounter}. */
+        public void drawDormantMargins(int frameCounter) {
+            manager.drawDormantMargins(frameCounter);
         }
         public void drawPlacedObject(RingSpawn ring, int frameCounter) { manager.drawPlacedObject(ring, frameCounter); }
         public java.util.List<com.openggf.level.render.SpriteSlotEmission> slottedAttracted(int bucket) {

@@ -108,6 +108,55 @@ class TestRingDrawEmission {
         }
     }
 
+    @Test void nativeWidescreenDormantRingsSpinOnTheLiveRingsFrame() {
+        var config = com.openggf.configuration.SonicConfigurationService.getInstance();
+        Object oldAspect = config.getConfigValue(com.openggf.configuration.SonicConfiguration.DISPLAY_ASPECT);
+        Object oldMode = config.getConfigValue(com.openggf.configuration.SonicConfiguration.WIDESCREEN_DRAW_MODE);
+        var camera = com.openggf.game.GameServices.camera();
+        try {
+            config.setConfigValue(com.openggf.configuration.SonicConfiguration.DISPLAY_ASPECT, "SUPER_32_9");
+            config.setConfigValue(com.openggf.configuration.SonicConfiguration.WIDESCREEN_DRAW_MODE, "NATIVE");
+            config.resolveDisplayAspect();
+            camera.refreshViewportDimensions(config);
+            camera.setMinX((short) 0);
+            camera.setMaxX((short) 0x4000);
+            camera.setX((short) 0x800);
+            camera.setY((short) 0);
+            assertTrue(com.openggf.camera.CameraPresentationAccess.hasMargin(camera));
+            // One live ring in the native window, one in each margin beyond the ring window.
+            var live = new RingSpawn(0x840, 64);
+            var spawns = List.of(new RingSpawn(0x800 - 200, 64), live, new RingSpawn(0x800 + 320 + 200, 64));
+            var sheet = new RingSpriteSheet(new Pattern[]{new Pattern(), new Pattern()},
+                    List.of(new RingFrame(List.of(new RingFramePiece(0, 0, 1, 1, 0, false, false, 0))),
+                            new RingFrame(List.of(new RingFramePiece(0, 0, 1, 1, 1, false, false, 0)))),
+                    1, 8, 2, 0);
+            var manager = new RingManager(spawns, sheet, null, null, null);
+            manager.ensurePatternsCached(graphics, 200);
+            manager.reset(0x800);
+            manager.update(0x800, null, 0);
+            int dormant = DormantRingProbe.count(manager, camera);
+            assertTrue(dormant > 0, "a margin ring outside the ring window is a dormant candidate");
+            java.util.Set<Integer> seen = new java.util.HashSet<>();
+            for (int frameCounter : new int[]{0, 8, 16, 24}) {
+                var frame = SpritePresentationRenderer.prepare(graphics, 0, 0, () -> RingDrawInternalAccess.drawPlaced(manager, frameCounter, 0, 0x7FF));
+                var patterns = frame.tiles().stream().map(SpritePresentation.Tile::patternId).distinct().toList();
+                assertTrue(frame.tiles().size() > dormant, "live and dormant rings both draw");
+                assertEquals(1, patterns.size(), "dormant rings share the live rings' spin frame at " + frameCounter);
+                seen.addAll(patterns);
+                var engineDormant = SpritePresentationRenderer.prepare(graphics, 0, 0, () -> RingDrawInternalAccess.engine(manager).drawDormantMargins(frameCounter));
+                assertEquals(dormant, engineDormant.tiles().size());
+                assertEquals(patterns, engineDormant.tiles().stream().map(SpritePresentation.Tile::patternId)
+                        .distinct().toList(), "the dormant-only pass uses the same spin frame");
+            }
+            assertEquals(2, seen.size(), "dormant rings animate instead of holding spin frame 0");
+        } finally {
+            config.setConfigValue(com.openggf.configuration.SonicConfiguration.DISPLAY_ASPECT, oldAspect);
+            config.setConfigValue(com.openggf.configuration.SonicConfiguration.WIDESCREEN_DRAW_MODE, oldMode);
+            config.resolveDisplayAspect();
+            camera.refreshViewportDimensions(config);
+        }
+    }
+
     private RingManager managerFor(SonicGame game, List<RingSpawn> spawns) {
         TestEnvironment.configureGameModuleFixture(game);
         var sheet = new RingSpriteSheet(new Pattern[]{new Pattern()}, List.of(

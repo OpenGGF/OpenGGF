@@ -29,6 +29,7 @@ public final class TtzBossBubble extends TtzBossPart implements TouchResponseLis
     static final int COLLISION = 0xFF;
     /** var_2c bit 1: the bubble has been made touchable once. */
     private static final int TOUCHABLE = 0x02;
+    private static final int POP_ANIMATION = 4;
 
     /** var_2e: Eggman. */
     TtzBossEggman eggman;
@@ -179,8 +180,8 @@ public final class TtzBossBubble extends TtzBossPart implements TouchResponseLis
             regroup();
             return;
         }
-        popCheck();
-        angle = (angle + (eggman != null && eggman.reversed() ? 0x180 : -0x180)) & 0xFFFF;
+        boolean popped = popCheck();
+        angle = (angle + (orbitReversed(popped) ? 0x180 : -0x180)) & 0xFFFF;
         store(orbit(angle, word(radiusX), word(radiusY)));
     }
 
@@ -230,31 +231,52 @@ public final class TtzBossBubble extends TtzBossPart implements TouchResponseLis
             radiusY = 0x100000;
             routine = 6;
         }
-        popCheck();                                                     // loc_20CDA0: bsr.w loc_20CDE0
-        angle = (angle + (eggman != null && eggman.reversed() ? 0x480 : -0x480)) & 0xFFFF;
+        boolean popped = popCheck();
+        angle = (angle + (orbitReversed(popped) ? 0x480 : -0x480)) & 0xFFFF;
         store(orbit(angle, word(radiusX), word(radiusY)));
+    }
+
+    /**
+     * loc_20CC32 (objects/r4/boss.asm:837-842) and loc_20CDA0 (objects/r4/boss.asm:979-984) use the
+     * value left by the pop check. On a pop, AnimateObjectSelectFrame (common/object_animate.asm:15-23)
+     * leaves a1 at the pop script in BossBubbleAnims (objects/r4/boss.asm:1307-1309). The $2C displacement
+     * reaches bubble sprite 3's tile byte in BossBubbleSprites (objects/r4/boss.asm:1311-1313).
+     */
+    private boolean orbitReversed(boolean popped) {
+        if (!popped) return eggman != null && eggman.reversed();
+        CdStageImage image = stageImage();
+        if (image == null) {
+            throw new IllegalStateException("Missing stage image for Tidal Tempest boss bubble in " + payload());
+        }
+        int table = TtzBossCatalogue.offset(payload(), "bubbleAnimations");
+        if (table < 0) {
+            throw new IllegalStateException("Missing bubbleAnimations table for Tidal Tempest boss in " + payload());
+        }
+        int script = table + (short) image.u16(table + POP_ANIMATION * 2);
+        return (image.u8(script + 0x2C) & 0x08) != 0;
     }
 
     /**
      * loc_20CDE0 and loc_20CE0C (objects/r4/boss.asm:1017-1044): when Eggman flees, or the player cleared the type
      * and no other bubble popped this frame, the bubble pops (routine C, pose 4) and Eggman counts one bubble
-     * fewer; a second popped bubble the same frame takes its type back.
+     * fewer; a second popped bubble the same frame takes its type back. Returns true when the pop script runs.
      */
-    private void popCheck() {
-        if (eggman == null) return;
+    private boolean popCheck() {
+        if (eggman == null) return false;
         if (eggman.routine() != 0x14) {
-            if (colType != 0) return;
+            if (colType != 0) return false;
             if (eggman.markPopped()) {                                  // bset #6,obj.var_2c(a1); beq.s loc_20CE0C
                 setCollision(COLLISION, 2);
-                return;
+                return false;
             }
         }
         routine = 0xC;
-        restartAnimation(4);
+        restartAnimation(POP_ANIMATION);
         eggman.bubbles = (eggman.bubbles - 1) & 0xFF;                   // subq.b #1,obj.var_2d(a1)
         // bra.w *+4 (objects/r4/boss.asm:1044) lands on BossBubbleObject_0_RoutineC (:1048-1050): the pop's first
         // AnimateObject runs on the pop frame, then the calling routine goes on.
         animateObject("bubbleAnimations");
+        return true;
     }
 
     /** {@code move.l obj.x(a1),obj.x(a0); move.l obj.y(a1),obj.y(a0)}: centre on Eggman. */

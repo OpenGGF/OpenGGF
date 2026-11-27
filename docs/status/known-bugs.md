@@ -7,7 +7,12 @@
 
 This document tracks **bugs**, incomplete implementations, and known parity gaps that we intend to fix but haven't addressed yet. Entries here are *not* intentional — they're acknowledged problems with a plan (or hope) of eventual resolution.
 
-For **intentional** deviations from the original ROMs (architectural choices, feature extensions, deliberate bug-fixes of ROM data), see [known-discrepancies.md](known-discrepancies.md).
+OpenGGF has no deliberate engine-wide differences. [Known discrepancies](known-discrepancies.md)
+must be limited to hardware OpenGGF does not emulate, such as CPU lag. The Sonic CD
+entries have been audited against this rule and identify engine features
+explicitly as features. The Sonic 1, Sonic 2, Knuckles in Sonic 2 and
+[S3K entries](../S3K_KNOWN_DISCREPANCIES.md) predate the rule and still need
+the same audit.
 
 Entries should include:
 - **Location** — the file(s) where the bug lives, if known
@@ -16,6 +21,138 @@ Entries should include:
 - **Removal condition** — what needs to be true for this entry to be deleted
 
 ---
+
+## Sonic 2 preloaded object art outside native PLC slot views
+
+- **Location** — `Sonic2ObjectArtProvider` builds independent object sheets
+  for the signpost, capsule, and several boss composites at level load.
+- **Symptom** — these sheets can be sampled while the corresponding native
+  cue is still pending. Their renderer patterns also do not track writes
+  into the same slots through another cue.
+- **ROM behavior** — `LoadPLC` and `LoadPLC2` (s2.asm:2047-2124) submit or
+  replace descriptors. `ProcessDPLC` and `ProcessDPLC2` (s2.asm:2202-2250)
+  write the serviced tiles and leave all other tiles readable at their
+  preceding values.
+- **Removal condition** — audit each sheet's consumers and native tile
+  ranges. For any observable overlap or early reader, project the serviced
+  range into its mapping and check before, during and after service.
+
+## S2 and KiS2 special-stage results rewind
+
+- **Location** — `GameLoopSpecialStageLifecycle` and `Sonic2SpecialStageResultsScreen`.
+- **Symptom** — rewind can replay the live half-pipe, while the results card
+  and its tally have no results-mode rewind owner.
+- **Scope** — the live-stage snapshot retains the ring words and admitted ring
+  total used to select Obj6F's ordinary or perfect path
+  (`SpecialStage`, s2.asm:6740-6746; `Obj6F_TallyScore`, s2.asm:28395-28414).
+  KiS2's split-name message snapshots cover only the message state.
+- **Removal condition** — rewind across results frames restores score,
+  countdowns, routine, message state and the phase of the V-int sound gate,
+  including a repeatable return to the level.
+
+## S2 and KiS2 special-stage results timing before and after the tally
+
+- **Location** — `Sonic2SpecialStageProvider` and `Sonic2SpecialStageResultsScreen`.
+- **Symptom** — Obj6F's results scans advance the inherited object V-int clock.
+  The preceding half-pipe loop does not yet count every admitted wait into
+  that inherited phase. Ordinary and stock Super-message results publish
+  completion on the timer-expiry pass.
+- **ROM behavior** — `VintRet` (s2.asm:507-510) advances the same longword
+  through the `SpecialStage` wait (s2.asm:6695-6703) and Obj6F results loop
+  (s2.asm:6797-6805). `Obj6F_TimedDisplay` (s2.asm:28367-28373) selects
+  `Obj6F_DisplayOnly` (s2.asm:28427-28429), which sets the level-inactive
+  flag on the following object pass.
+- **Removal condition** — the carry into results accounts for the represented
+  half-pipe waits, and ordinary and Super-message exits match the separate
+  display-only pass.
+
+## S2 game-over host fade stops music before the destination owns audio
+
+- **Location** — `GameLoopGameOverExit.startToBlack`.
+- **Symptom** — the shared host fade issues a plain music stop before opening
+  the destination. Under a compressed load, this stop can precede an older
+  mailbox play when the queues resume.
+- **ROM behavior** — `Obj39_Dismiss` (s2.asm:27737-27748) selects Continue or
+  SEGA. `ContinueScreen` (s2.asm:10319-10329) begins its fade without issuing
+  a stop. `SegaScreen` (s2.asm:4095-4099) submits `MusID_Stop` through
+  `PlayMusic` before its own fade.
+- **Removal condition** — the destination owns the game-over handoff's fade
+  and audio entry. Continue adds no stop and the SEGA fade services only the
+  destination's native mailbox stop.
+
+## S2 compressed music loads suspend the V-int mailbox transfer
+
+- **Location** — `AudioPresentationProducer` gates the whole
+  `Sonic2SoundRequestService` on `SmpsDriverSession.blocksForwardRequestConsumption()`.
+- **Symptom** — the producer holds the 68K-side transfer while Saxman is
+  pending. A stop submitted to `Music0` stays there until release, so another
+  `PlayMusic` write can go to `Music1` even after a service boundary. Transfers
+  from `SFX0` and `SFX1` to free Z80 queue slots are also held.
+- **ROM behavior** — `zPlaySoundByIndex` (s2.sounddriver.asm:1555-1567) sets
+  `QueueToPlay` to `$80`. `zBGMLoad` (s2.sounddriver.asm:1738-1739,1780-1804)
+  calls `zInitMusicPlayback` (s2.sounddriver.asm:2624-2629), which restores
+  `$80` before Saxman. V-int still calls `sndDriverInput`, including via
+  `Do_ControllerPal` (s2.asm:1153-1173). It can clear `Music0` and place
+  `$FD` in `QueueToPlay` during the load, and transfer SFX into free slots
+  (`sndDriverInput`, s2.asm:1270-1332). The driver dispatches the stop after
+  the synchronous song load returns.
+- **Removal condition** — V-int transfers run during a pending compressed load
+  using the native destination-slot checks, while driver dispatch still waits
+  for load completion. A ROM-backed check covers both transfer and dispatch.
+
+## S2 song loads leave the mailbox voice-table pointer clear
+
+- **Location** — `Sonic2SoundRequestPipeline.onMusicPlaybackInitialized` clears
+  `voiceTablePointer`. The mailbox can write it through the slot-3 alias, but
+  the engine never installs the pointer from the song header.
+- **Symptom** — after a song load, a request still in `Music1` can be consumed
+  by the fourth SFX transfer even when the shipped song would protect it with
+  a nonzero pointer low byte.
+- **ROM behavior** — `zBGMLoad` (s2.sounddriver.asm:1804-1810) copies the
+  first two header bytes to `VoiceTblPtr` for compressed and uncompressed
+  songs. Shipped `sndDriverInput` (s2.asm:1306-1329) with `fixBugs = 0`
+  transfers `Music1` through the slot-3 alias only if that low byte is zero
+  (`SoundQueue`, s2.constants.asm:1879-1885).
+- **Removal condition** — song initialization installs the native pointer
+  in the mailbox model, and a ROM-backed check verifies both retention with a
+  nonzero low byte and the shipped alias transfer with a clear low byte.
+
+## Sonic 1 does not enforce SFX request priority
+
+- **Location** — `Sonic1AudioProfile`, `AudioPresentationSourceFactory.evaluateAdmission`.
+- **Symptom** — lower-priority effects can play in OpenGGF when the cartridge
+  refuses them.
+- **Cause** — `Sonic1AudioProfile` inherits
+  `SmpsRequestAdmissionPolicy.PERMISSIVE`. The live presentation path admits
+  every SFX at the priority check and has no global `v_sndprio` latch.
+  `CycleSoundQueue` (s1.sounddriver.asm:636-670) rejects requests below the
+  latched priority. `Sound_PlaySFX` (s1.sounddriver.asm:977-983) branches to
+  `.clear_sndprio` (s1.sounddriver.asm:1085-1086) when it refuses a request
+  during the extra-life jingle, fade-out, or fade-in. `cfStopTrack`
+  (s1.sounddriver.asm:2502-2506) clears the latch when an SFX track stops.
+- **Removal condition** — ROM-backed tests confirm that live Sonic 1 audio
+  matches the cartridge's priority updates, lower-priority rejection, and
+  latch clears on refusal and SFX track stop.
+
+## S1/S2 recording driver omits locked title-card V-int ticks
+
+- **Location** — `RecordingFrameDriver.stepNormalTitleCard`, used by headless
+  trace replay and capture tools.
+- **Symptom** — the driver advances the title provider without advancing the
+  level-object V-int counter on serviced S1/S2 title waits. S1 waits in
+  `Level_TtlCardLoop` (sonic.asm:2814-2819) and counts in `VBlank_Exit`
+  (sonic.asm:684-685). S2 waits in `Level_TtlCard` (s2.asm:4914-4927) and
+  `LoadZoneTiles` (s2.asm:6517-6523) and counts in `VintRet` (s2.asm:507-509).
+  The driver also skips S2's locked leave-loop object and player passes
+  (s2.asm:5060-5066).
+- **Cause** — the recording driver uses the LAG service path for these rows.
+  Production uses `NativeTitleOnlyVBlankWait` for title-only waits and takes
+  the last S2 upload row's tick from the leading `RunObjects` pass
+  (s2.asm:5007). The recording driver also bypasses that object pass,
+  so using the wait predicate alone would still miss that row.
+- **Removal condition** — ROM-backed recording tests confirm one tick per
+  serviced locked wait, including the S2 upload-to-object-pass handoff, with
+  no extra tick from S1's release prelude (`Level_LoadObj`, sonic.asm:2895-2898).
 
 ## Solid on-screen gate: render-pass approximations — 2026-11-02
 
@@ -272,6 +409,10 @@ six-case `TestTitleNewGameSpecialStageProgress` covers these boundaries.
 
 Remaining gaps:
 
+- The Sonic 1 level HUD saturates lives at 99 for presentation. The ROM's
+  `Hud_Lives` (`_inc/HUD Update.asm:537-600`) uses the live byte for two tile
+  lookups. With a byte above 99, the native tens lookup can fetch beyond the
+  digit art. Remove this gap when a ROM-backed test verifies the overflow tiles.
 - S2's shipped `fixBugs = 0` Continue path does not clear stale HTZ DMA, so the
   ROM can corrupt Tails' Continue art with a queued cloud upload. The standalone
   Continue art bank does not reproduce this VRAM alias. The retained Super flag

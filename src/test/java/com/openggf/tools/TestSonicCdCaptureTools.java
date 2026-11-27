@@ -1,5 +1,6 @@
 package com.openggf.tools;
 
+import com.openggf.capture.FfmpegEncoder;
 import com.openggf.game.internal.HostedGameMedia;
 import com.openggf.game.soniccd.CdTestMedia;
 import com.openggf.game.soniccd.media.CdHostedMedia;
@@ -19,9 +20,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import java.util.zip.ZipFile;
 
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -94,6 +97,62 @@ class TestSonicCdCaptureTools {
             compared++;
         }
         assertTrue(compared > 250, "rows compared: " + compared);
+    }
+
+    @Test
+    void traceCaptureSkipsNativeLagRowsAndTheirAudio() throws Exception {
+        Path traceDir = nativeFile("rehost-long/R31A/trace");
+        Path out = temp.resolve("lag-free");
+        HeadlessGameBoot boot = runTraceCapture(new String[] {"--trace", traceDir.toString(),
+                "--clip", "frames:2884:2982", "--skip-lag-frames", "--width", "320",
+                "--no-ghosts", "--scale", "1", "--codec", "ffv1", "--out-dir", out.toString()});
+        boot.close();
+
+        List<String> state = Files.readAllLines(out.resolve(TraceCaptureStateWriter.FILE_NAME));
+        int rowColumn = List.of(state.getFirst().split(",")).indexOf("trace_row");
+        List<Integer> filmed = state.stream().skip(1)
+                .map(line -> Integer.parseInt(line.split(",", -1)[rowColumn])).toList();
+        List<Integer> lagRows = List.of(2906, 2911, 2938, 2962, 2965);
+        List<Integer> expected = IntStream.rangeClosed(2884, 2982).boxed()
+                .filter(row -> !lagRows.contains(row)).toList();
+
+        byte[] pcm = decodeTrack(out, "0:a:0", "s16le");
+        int bytesPerFrame = (48_000 / 60) * 2 * Short.BYTES;
+        assertAll(
+                () -> assertEquals(expected, filmed, "the clip omits only native lag rows"),
+                () -> assertEquals(expected.size() * bytesPerFrame, pcm.length,
+                        "the clip has one stereo audio frame per video frame"));
+    }
+
+    @Test
+    void traceCaptureKeepsGameplayWhenTheRecorderLagFlagIsLate() throws Exception {
+        Path traceDir = nativeFile("rehost-long/R51B/trace");
+        Path out = temp.resolve("late-lag-flag");
+        HeadlessGameBoot boot = runTraceCapture(new String[] {"--trace", traceDir.toString(),
+                "--clip", "frames:1576:1592", "--skip-lag-frames", "--width", "320",
+                "--no-ghosts", "--scale", "1", "--codec", "ffv1", "--out-dir", out.toString()});
+        boot.close();
+
+        List<String> state = Files.readAllLines(out.resolve(TraceCaptureStateWriter.FILE_NAME));
+        int rowColumn = List.of(state.getFirst().split(",")).indexOf("trace_row");
+        List<Integer> filmed = state.stream().skip(1)
+                .map(line -> Integer.parseInt(line.split(",", -1)[rowColumn])).toList();
+
+        List<String> hashes = new String(decodeTrack(out, "0:v:0", "framemd5"), StandardCharsets.UTF_8)
+                .lines().filter(line -> !line.startsWith("#"))
+                .map(line -> line.substring(line.lastIndexOf(',') + 1).strip()).toList();
+        assertEquals(filmed.size(), hashes.size(), "one picture per exported state row");
+
+        TraceData trace = TraceData.load(traceDir);
+        List<Integer> gameplayRows = IntStream.rangeClosed(1576, 1592)
+                .filter(row -> trace.getFrame(row).gameplayFrameCounter()
+                        != trace.getFrame(row - 1).gameplayFrameCounter()).boxed().toList();
+        List<Integer> duplicateRows = IntStream.range(1, hashes.size())
+                .filter(frame -> hashes.get(frame).equals(hashes.get(frame - 1)))
+                .mapToObj(filmed::get).toList();
+        assertAll(
+                () -> assertEquals(gameplayRows, filmed, "film every gameplay row in the clip"),
+                () -> assertEquals(List.of(), duplicateRows, "no consecutive pictures repeat"));
     }
 
     /**
@@ -226,6 +285,23 @@ class TestSonicCdCaptureTools {
         assertTrue(assertThrows(IllegalArgumentException.class, () -> media.levelNamed("ghz", 1)).getMessage()
                 .contains("Unknown Sonic CD zone"));
         assertThrows(IllegalArgumentException.class, () -> media.levelNamed("ppz", 11));
+    }
+
+    private static byte[] decodeTrack(Path output, String track, String format) throws Exception {
+        Path video;
+        try (Stream<Path> files = Files.list(output)) {
+            video = files.filter(path -> path.toString().endsWith(".mkv") || path.toString().endsWith(".mov"))
+                    .findFirst().orElseThrow();
+        }
+        String ffmpeg = FfmpegEncoder.findFfmpeg().map(Path::toString).orElse("ffmpeg");
+        Process decode = new ProcessBuilder(ffmpeg, "-v", "error", "-i", video.toString(),
+                "-map", track, "-f", format, "pipe:1")
+                .redirectError(ProcessBuilder.Redirect.INHERIT).start();
+        try (var stdout = decode.getInputStream()) {
+            byte[] bytes = stdout.readAllBytes();
+            assertEquals(0, decode.waitFor(), "decode exported track " + track);
+            return bytes;
+        }
     }
 
     private static HeadlessGameBoot runTraceCapture(String[] argv) throws Exception {

@@ -737,7 +737,7 @@ public class TestGameLoop {
         String source = Files.readString(Path.of("src/main/java/com/openggf/GameLoop.java"));
         int classification = source.indexOf(
                 "TraceSessionLauncher.admitsRunLogicalGameplayInput(currentGameMode)");
-        int timers = source.indexOf("timerManager.update();", classification);
+        int timers = source.indexOf("LevelFrameStep.updateTimers(timerManager, levelManager);", classification);
         int skipDecision = source.indexOf("playbackDebugManager.shouldSkipCurrentGameplayTick()", classification);
 
         assertTrue(classification >= 0 && skipDecision > classification,

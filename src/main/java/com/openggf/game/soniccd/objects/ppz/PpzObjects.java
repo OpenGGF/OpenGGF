@@ -1,6 +1,10 @@
 package com.openggf.game.soniccd.objects.ppz;
 
+import com.openggf.game.GameServices;
+import com.openggf.game.soniccd.CdStagePayload;
+import com.openggf.game.soniccd.level.CdLevel;
 import com.openggf.game.soniccd.objects.CdObjectRegistration;
+import com.openggf.game.soniccd.objects.common.CdNullObject;
 
 /**
  * Palmtree Panic object registration fragment; owned by the lane that implements these objects.
@@ -40,6 +44,8 @@ public final class PpzObjects implements CdObjectRegistration {
         registrar.object(0x23, "Missile", (spawn, r) -> new PpzBlankObject(spawn, false));
         registrar.object(0x28, "Springboard", (spawn, r) -> new ObjSpringBoard(spawn));
         registrar.object(0x31, "Sonic hole", (spawn, r) -> new ObjSonicHole(spawn));
+        registrar.object(0x35, "Vertical tunnel door", p -> PpzObjectCatalogue.tunnelDoorMappings(p) >= 0,
+                (spawn, r) -> new PpzTunnelDoor(spawn));
         registrar.object(0x36, "Breakable wall", (spawn, r) -> new ObjBreakableWall(spawn));
         // --- end ppzobjb ---
         // --- ppz: routes A2 ---
@@ -47,13 +53,21 @@ public final class PpzObjects implements CdObjectRegistration {
         registrar.object(0x29, "Swing", p -> PpzObjectCatalogue.entry(p).swingMappings() >= 0,
                 (spawn, r) -> new PpzSwing(spawn));
         // --- end ppz: routes A2 ---
-        // $13 is the checkpoint in the Present indexes and ObjNull in the others (Palmtree Panic/Object Index (Act 1 Past).asm:26);
-        // $2F is Amy Rose in Act 1 Present (unhosted) and ObjNull in every other index (:54). ObjNull deletes itself
-        // (ObjNull, Palmtree Panic/Object Index (Act 1 Past).asm:77-79).
+        // $13 is the checkpoint in Present and ObjNull in the other periods.
+        // ObjectIndex (Level/Palmtree Panic/Object Index (Act 1 Past).asm:26).
         registrar.object(0x13, "Null", p -> com.openggf.game.soniccd.objects.art.CdObjectCatalogue.entry(p).offset("checkpointId") != 0x13,
-                (spawn, r) -> new com.openggf.game.soniccd.objects.common.CdNullObject(spawn));
-        registrar.object(0x2F, "Null", p -> p != com.openggf.game.soniccd.CdStagePayload.R11A,
-                (spawn, r) -> new com.openggf.game.soniccd.objects.common.CdNullObject(spawn));
+                (spawn, r) -> new CdNullObject(spawn));
+        // ObjectIndex (Level/Palmtree Panic/Object Index (Act 1 Past).asm:54) uses ObjNull at $2F.
+        // ObjNull (Level/Palmtree Panic/Object Index (Act 1 Past).asm:77-79) clears the slot.
+        // In Act 3 the boss spawns its own shoulder at this ID (ObjectIndex,
+        // Level/Palmtree Panic/Object Index (Act 3).asm:54).
+        registrar.object(0x2F, "Amy Rose", (spawn, r) ->
+                GameServices.level().getCurrentLevel() instanceof CdLevel level && level.payload() == CdStagePayload.R11A
+                        ? new PpzAmyRose(spawn)
+                        : new CdNullObject(spawn));
+        // ObjectIndex (Level/Palmtree Panic/Object Index (Act 1 Present).asm:54-55).
+        registrar.object(0x30, "Amy heart", p -> PpzObjectCatalogue.entry(p).amyMappings() >= 0,
+                (spawn, r) -> new PpzAmyRose.Heart(spawn));
     }
 
     @Override

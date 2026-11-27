@@ -13,10 +13,13 @@ import com.openggf.level.objects.ObjectSpawn;
  * <p>Routines (Main.asm:19-23): 0 init, 2 wait (collision off, animation 0, Y back to the start),
  * 4 animate until the script's {@code $FC}, 6 jump (animation 1, collision $2E), 8 flight; landing
  * sets routine 2 again. Init, wait and jump have no {@code rts}: init runs the wait and animate code in
- * the same frame (Main.asm:58-74), wait runs animate, jump runs the flight (Main.asm:84-92). The jump and landing sounds {@code FM_A2} are not hosted.
+ * the same frame (Main.asm:58-74), wait runs animate, and jump runs the flight (Main.asm:84-92).
  */
 @com.openggf.level.objects.CameraRelativeDraw(com.openggf.level.objects.CameraRelativeDraw.Use.CULL_ONLY)
 public final class ObjTagaTaga extends PpzBadnik {
+    /** FM_A2 (ObjTagaTaga_Jump, Taga-Taga/Main.asm:84-87). */
+    private static final int FM_A2 = 0xA2;
+
     private int originX;
     private int baseY;
     /** oVar30: jump velocity, oVar34: current vertical velocity, oVar38: gravity (all 16.16). */
@@ -82,7 +85,7 @@ public final class ObjTagaTaga extends PpzBadnik {
         colType = 0x2E;
         setY((baseY & 0xFFFF) << 16);
         velocity = jumpVelocity;
-        // tst.b oSprFlags; bpl; FM_A2 (Main.asm:84-87): not hosted.
+        if (renderFlagOnScreen()) services().playSfx(FM_A2);
         fly();
     }
 
@@ -92,7 +95,7 @@ public final class ObjTagaTaga extends PpzBadnik {
         velocity += gravity;
         if ((short) y > (short) baseY) {                // move.w oY,d0; cmp.w oVar2C,d0; ble.s .DoAnim
             routine = 2;
-            // tst.b oSprFlags; bpl; FM_A2 (Main.asm:101-104): not hosted.
+            if (renderFlagOnScreen()) services().playSfx(FM_A2);
         }
         animate();
     }

@@ -41,6 +41,7 @@ import com.openggf.audio.AudioManager;
 import com.openggf.audio.GameSound;
 import com.openggf.audio.NativeAudioEffectCues;
 import com.openggf.level.objects.SkidDustObjectInstance;
+import com.openggf.game.internal.GlideLandingDustPolicy;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.PlayableSpriteInternalAccess;
@@ -1242,7 +1243,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		boolean hurt = sprite.isHurt();
 		if (!hurt) {
 			doJumpHeight();
-			updateManualTailsFlight();
+			updateTailsFlight();
 			if (!tailsFlightVerticalUpdatedThisFrame
 					&& sidekickCpu != null
 					&& sidekickCpu.usesFlyingCarryMovement()) {
@@ -1819,10 +1820,10 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		return true;
 	}
 
-	private void updateManualTailsFlight() {
+	private void updateTailsFlight() {
 		// Tails_Stand_Freespace only branches to Tails_FlyingSwimming on entry, so
 		// Tails_Move_FlySwim first runs on the frame after activation.
-		if (tailsFlightActivatedThisFrame || !isManualTailsFlightActive()) {
+		if (tailsFlightActivatedThisFrame || !isTailsFlightActive()) {
 			return;
 		}
 		// Native flight consumes flap edges outside JumpHeight's double-jump gate.
@@ -1839,7 +1840,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		tailsFlightVerticalUpdatedThisFrame = true;
 	}
 
-	private boolean isManualTailsFlightActive() {
+	private boolean isTailsFlightActive() {
 		PlayerCapabilityRules capabilityRules = playerCapabilityRulesOrNull();
 		if (capabilityRules == null
 				|| !(capabilityRules.tailsFlightEnabled()
@@ -1851,7 +1852,13 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			return false;
 		}
 		SidekickCpuController cpu = sprite.getCpuController();
-		return !sprite.isCpuControlled() || (cpu != null && cpu.isUnderManualControl())
+		// loc_14016 (sonic3k.asm:26963-26986) returns a persistent carrier
+		// to normal follow with its flight flag intact. Tails_Stand_Freespace
+		// (sonic3k.asm:27593-27595) dispatches on that flag.
+		return !sprite.isCpuControlled()
+				|| (cpu != null && (cpu.isUnderManualControl()
+						|| (cpu.getState() == SidekickCpuController.State.NORMAL
+						&& PlayableSpriteInternalAccess.isFlyingAfterIntroRelease(sprite))))
 				|| hasScriptedNativeInput();
 	}
 
@@ -2284,6 +2291,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		sprite.setAbilityMappingFrameControl(true);
 		sprite.setMappingFrame(0xCC);  // ROM: move.b #$CC,mapping_frame(a0)
 		// Knuckles_BeginSlide changes mapping_frame, not anim: retain glide ID.
+		if (glideLandingDustPolicy() != null && GlideLandingDustPolicy.hasAirForDust(sprite)) {
+			sprite.setFixedSkidDustActive(true);
+		}
 	}
 
 	/**
@@ -3095,10 +3105,13 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// S3K Knuckles_Gliding_HitWall uses the same x_pos+2 alias.
 		sprite.setSubpixelRaw(sprite.getCentreX() & 0xFFFF, sprite.getYSubpixelRaw());
 
-		// Wall climb animation — mapping frame 0xB7
-		// The native grab changes mapping_frame, leaving anim(a0) intact.
+		// KiS2 Knuckles_BeginClimb.success (lines 38307-38311 of s2.asm at c336fede)
+		// and S3K Knuckles_Gliding_HitWall.success (sonic3k.asm:30859-30863)
+		// publish direct mapping and script state without changing anim(a0).
 		sprite.setAbilityMappingFrameControl(true);
 		sprite.setMappingFrame(0xB7);
+		sprite.setAnimationTick(0x7F);
+		sprite.setAnimationFrameIndex(0);
 	}
 
 	// Wall climb boundary checking is now integrated into updateWallClimb()
@@ -5559,12 +5572,20 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		if (!(sprite.getAnimationProfile() instanceof ScriptedVelocityAnimationProfile profile)) {
 			return;
 		}
-		if (sprite.isHurt() || sprite.getDead()) {
+		// loc_18CB6 (sonic3k.asm:34120-34133) and Obj08_CheckSkid
+		// (docs/kis2disasm/s2.asm:45910-45927) read the slide byte even
+		// in a non-control routine. The parent's own floor reset clears it.
+		GlideLandingDustPolicy glideDust = null;
+		if (sprite.getSecondaryAbility() == SecondaryAbility.GLIDE
+				&& sprite.getDoubleJumpFlag() == 3 && sprite.isFixedSkidDustActive()) {
+			glideDust = glideLandingDustPolicy();
+		}
+		if (glideDust == null && (sprite.isHurt() || sprite.getDead())) {
 			sprite.setFixedSkidDustActive(false);
 			return;
 		}
 		int skidAnimId = profile.getSkidAnimId();
-		if (skidAnimId < 0 || sprite.getAnimationId() != skidAnimId) {
+		if (glideDust == null && (skidAnimId < 0 || sprite.getAnimationId() != skidAnimId)) {
 			fixedSkidDustTickPending = false;
 			sprite.setSkidDustTimer(0);
 			sprite.setFixedSkidDustActive(false);
@@ -5577,10 +5598,15 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		fixedSkidDustTickPending = false;
 		processingFixedSkidDustTick = true;
 		try {
-			advanceSkidDustTimer();
+			advanceSkidDustTimer(glideDust);
 		} finally {
 			processingFixedSkidDustTick = false;
 		}
+	}
+
+	private GlideLandingDustPolicy glideLandingDustPolicy() {
+		var host = sprite.currentGameModule();
+		return host == null ? null : host.getGameService(GlideLandingDustPolicy.class);
 	}
 
 	public int captureLastFixedSkidDustTickFrame() {
@@ -5592,6 +5618,10 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	}
 
 	private void advanceSkidDustTimer() {
+		advanceSkidDustTimer(null);
+	}
+
+	private void advanceSkidDustTimer(GlideLandingDustPolicy glideDust) {
 		// ROM Obj08_CheckSkid keeps ticking the fixed Sonic_Dust/Tails_Dust
 		// object while the parent remains in the Stop animation; entering
 		// Sonic_TurnLeft/Right only switches the dust object into that routine
@@ -5608,7 +5638,14 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		int dustTimer = sprite.getSkidDustTimer() - 1;
 		if (dustTimer < 0) {
 			dustTimer = 3;
-			SkidDustObjectInstance.spawn(sprite);
+			if (glideDust != null) {
+				// The timer reloads before the allocation attempt or water check.
+				if (glideDust.canEmit(sprite)) {
+					SkidDustObjectInstance.spawnFromGlideSlide(sprite);
+				}
+			} else {
+				SkidDustObjectInstance.spawn(sprite);
+			}
 		}
 		sprite.setSkidDustTimer(dustTimer);
 	}

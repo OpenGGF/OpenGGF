@@ -4,6 +4,7 @@ import com.openggf.game.patch.GamePatch;
 import com.openggf.io.ModAssetRoot;
 import com.openggf.game.ModKeySyntax;
 import com.openggf.game.GameModuleRouting;
+import com.openggf.catalog.StockGameCatalog;
 import com.openggf.level.objects.ObjectFactory;
 
 import java.util.ArrayList;
@@ -23,7 +24,6 @@ import java.util.Objects;
 public final class ModContext {
     private final String owner;
     private final String baseGame;
-    private static final java.util.Set<String> STOCK_GAMES = java.util.Set.of("s1", "s2", "s3k", "scd");
     static final String ANY_GAME_RULE = "baseGame any needs a startup scene, title entry, per-game patch, playable characters or typed mutator catalogue; "
             + "objects, object art, previews and service bundles require a scene, title entry or patch; "
             + "zones, ROM art intake, launch teams, input/HUD policies and decoded level patches "
@@ -169,7 +169,7 @@ public final class ModContext {
         mutate(() -> {
             if (standalone) throw failure("Standalone manifests cannot register game patches");
             Objects.requireNonNull(patch, "patch");
-            if ("any".equals(baseGame) ? !STOCK_GAMES.contains(patch.baseGameId())
+            if ("any".equals(baseGame) ? !StockGameCatalog.isStockCode(patch.baseGameId())
                     : !baseGame.equals(patch.baseGameId())) {
                 throw failure("Patch targets " + patch.baseGameId() + " instead of " + baseGame);
             }

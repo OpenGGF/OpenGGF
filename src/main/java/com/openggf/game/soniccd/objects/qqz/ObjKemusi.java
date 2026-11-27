@@ -2,6 +2,7 @@ package com.openggf.game.soniccd.objects.qqz;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 
 /**
  * Kemusi, object $22 ({@code KemusiObject}, objects/r5/kemusi.asm:3-28): a four-segment caterpillar. The
@@ -21,7 +22,7 @@ import com.openggf.level.objects.ObjectSpawn;
  * (at its start X). Shipped {@code FixBugs = 0}.
  */
 @com.openggf.level.objects.CameraRelativeDraw(com.openggf.level.objects.CameraRelativeDraw.Use.CULL_ONLY)
-public final class ObjKemusi extends QqzBadnik {
+public final class ObjKemusi extends QqzBadnik implements SpawnRewindRecreatable {
     private int phase;              // oVar2A
     private int cycleLength;        // oVar2C
     private int stepLength;         // oVar30
@@ -29,11 +30,9 @@ public final class ObjKemusi extends QqzBadnik {
     private int stepTimer;          // oVar32
     private int originX;            // oVar34
     private int landed;             // oVar36 (head only)
-    /** oVar3A, oVar3C, oVar3E: the other three segments (a child's first is the head). */
-    private final ObjKemusi[] others = new ObjKemusi[3];
-    /** Their slots, the words {@code movem.w obj.var_3a(a0),a1-a3} loads (:11). */
-    private final int[] otherSlots = {-1, -1, -1};
-    private final boolean segment;
+    /** oVar3A, oVar3C, oVar3E: the slots loaded by KemusiObject (objects/r5/kemusi.asm:3-20). */
+    private int[] otherSlots = {-1, -1, -1};
+    private boolean segment;
 
     public ObjKemusi(ObjectSpawn spawn) {
         super(spawn, "Kemusi");
@@ -99,6 +98,7 @@ public final class ObjKemusi extends QqzBadnik {
         int radius = first ? 0xB : 7;
         int hitbox = first ? 0xB4 : 0x33;
         var objects = services().objectManager();
+        ObjKemusi[] others = new ObjKemusi[3];
         int segmentX = x;
         for (int i = 0; i < 3; i++) {
             segmentX += 0xC;
@@ -120,12 +120,14 @@ public final class ObjKemusi extends QqzBadnik {
         }
         // movem.w ... link: each segment knows the other three.
         ObjKemusi a = others[0], b = others[1], c = others[2];
-        a.others[0] = this; a.others[1] = b; a.others[2] = c;
-        b.others[0] = this; b.others[1] = a; b.others[2] = c;
-        c.others[0] = this; c.others[1] = a; c.others[2] = b;
-        for (ObjKemusi part : new ObjKemusi[] {this, a, b, c}) {
-            for (int i = 0; i < 3; i++) part.otherSlots[i] = part.others[i].getSlotIndex();
-        }
+        int headSlot = getSlotIndex();
+        int aSlot = a.getSlotIndex();
+        int bSlot = b.getSlotIndex();
+        int cSlot = c.getSlotIndex();
+        otherSlots = new int[] {aSlot, bSlot, cSlot};
+        a.otherSlots = new int[] {headSlot, bSlot, cSlot};
+        b.otherSlots = new int[] {headSlot, aSlot, cSlot};
+        c.otherSlots = new int[] {headSlot, aSlot, bSlot};
     }
 
     /** KemusiObject_0_Routine2 (objects/r5/kemusi.asm:135-151): one pixel down until the floor is reached. */
@@ -135,7 +137,7 @@ public final class ObjKemusi extends QqzBadnik {
         if (d1 >= 0) return;
         y = (y + d1) & 0xFFFF;
         routine += 2;
-        ObjKemusi head = segment ? others[0] : this;         // tst.b obj.subtype_2(a0); beq.s; movea.w obj.var_3a
+        ObjKemusi head = segment ? (ObjKemusi) slotOccupant(otherSlots[0]) : this;         // tst.b obj.subtype_2(a0); beq.s; movea.w obj.var_3a
         head.landed++;                                       // addq.w #1,obj.var_36(a1)
     }
 
@@ -143,7 +145,9 @@ public final class ObjKemusi extends QqzBadnik {
     private void waitForAll() {
         if (segment || landed != 4) return;
         routine += 2;
-        for (ObjKemusi other : others) other.routine += 2;
+        for (int slot : otherSlots) {
+            ((ObjKemusi) slotOccupant(slot)).routine += 2;
+        }
         startCycle();
     }
 

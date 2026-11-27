@@ -7,6 +7,7 @@ import com.openggf.game.soniccd.level.CdLevel;
 import com.openggf.game.soniccd.level.CdStageCatalogue;
 import com.openggf.game.soniccd.level.CdStageImage;
 import com.openggf.game.soniccd.player.CdZonePlayerProfile;
+import com.openggf.game.soniccd.timetravel.CdTimeTravel;
 import com.openggf.level.LevelManager;
 import com.openggf.physics.Direction;
 import com.openggf.physics.TrigLookupTable;
@@ -49,8 +50,7 @@ import java.util.Objects;
  * {@code oPlayerRotAngle} and {@code oPlayerHangAni} lives in the movement manager's
  * stage-control word, captured for rewind; {@code oPlayerRotCenter} is {@code oVar3E}, the
  * same word as {@code oPlayerMoveLock} ({@code Level/_Definitions.inc:77,90}), so it is the
- * player's move-lock timer. State that other owners write is read through
- * {@link WwzStageSignals}.
+ * player's move-lock timer. Boss and presentation state comes through {@link WwzStageSignals}.
  */
 public final class WwzPlayerProfile implements CdZonePlayerProfile {
     /** {@code cmpi.b #$14,d1}: the loop chunk that puts the player on the higher path (Collision Floor.asm:522-527). */
@@ -64,14 +64,19 @@ public final class WwzPlayerProfile implements CdZonePlayerProfile {
      */
     @Override
     public int playerLoopChunk(CdLevel level, int loopChunk, boolean onLoopPath) {
-        if (!onLoopPath) {
-            if (loopChunk == PATH_ENTRY_CHUNK && mainPlayer() instanceof AbstractPlayableSprite player) {
-                player.setLoopLowPlane(true);                       // bset #6,oSprFlags(a0)
-                player.setHighPriority(false);                      // andi.b #$7F,oTile(a0)
+        return resolveLoopChunk(loopChunk, onLoopPath, () -> {
+            if (mainPlayer() instanceof AbstractPlayableSprite player) {
+                player.setLoopLowPlane(true);
+                player.setHighPriority(false);
             }
-            return loopChunk;
-        }
-        return loopChunk(loopChunk);
+        });
+    }
+
+    /** GetLevelBlock (Level/Collision Floor.asm:519-555) uses the probing sprite's own path bit. */
+    public static int resolveLoopChunk(int loopChunk, boolean onLoopPath, Runnable enterLoopPath) {
+        if (onLoopPath) return loopChunk(loopChunk);
+        if (loopChunk == PATH_ENTRY_CHUNK) enterLoopPath.run();
+        return loopChunk;
     }
 
     /** The higher path's remap: $15, $1E, $1F, $32 -> $60-$63; other loop chunks read as themselves. */
@@ -123,6 +128,8 @@ public final class WwzPlayerProfile implements CdZonePlayerProfile {
     private static final int BOUNCE_BLOCK = 0x21F;
     /** {@code subi.w #24,d2}: the bar is probed 24px above the centre (WW Main.asm:335-337). */
     private static final int BAR_PROBE_RISE = 24;
+    /** {@code ObjSonic_CheckHangBar} (Level/Wacky Workbench/Objects/Sonic/Main.asm:344-350). */
+    private static final int BAR_WARP_DIRECTION_CUTOFF = 90;
     /** {@code move.w #-$200,d0}: the climb speed taken on the pole (WW Main.asm:297-303). */
     private static final int POLE_CLIMB_SPEED = 0x200;
     /** {@code move.b #$40,oPlayerRotAngle} (WW Main.asm:304). */
@@ -203,9 +210,8 @@ public final class WwzPlayerProfile implements CdZonePlayerProfile {
 
     /**
      * Signals this class reads from the stage's presentation: {@code palCycleSteps+3} and
-     * {@code aniArtFrames+2} come from the loaded palette cycle and animated tiles; the rest read
-     * as cleared RAM until their owners (the boss, time travel) drive them through
-     * {@link #setSignals}.
+     * {@code aniArtFrames+2} come from the loaded palette cycle and animated tiles. The other
+     * signals default to cleared RAM until their owners bind through {@link #setSignals}.
      */
     private final class LiveSignals implements WwzStageSignals {
         LevelManager levels;
@@ -360,12 +366,14 @@ public final class WwzPlayerProfile implements CdZonePlayerProfile {
         player.setRolling(true);                                    // $E/7 radii, SonAni_Roll
         NativePositionOps.writeXPosPreserveSubpixel(player, centreX);
         NativePositionOps.writeYPosPreserveSubpixel(player, centreY + 5);   // addq.w #5,oY
-        // FM_DA, the bounce sound: the zone's sound list is not hosted yet.
+        // ObjSonic_CheckBouncyFloor .Bounce (Level/Wacky Workbench/Objects/Sonic/Main.asm:567-582).
+        player.currentAudioManager().playSfx(0xDA);
     }
 
     /** {@code ObjSonic_CheckSparks} (WW scddisasm/src/Level/Wacky Workbench/Objects/Sonic/Main.asm:440-512; r6:389-460). */
     private void checkSparks(AbstractPlayableSprite player, CdLevel level) {
-        if (player.getAnimationId() == ANIM_GIVE_UP || signals.timeWarping()
+        if (player.getAnimationId() == ANIM_GIVE_UP
+                || CdTimeTravel.starsActive(player.currentGameModule())
                 || player.getInvincibleFrames() > 0) {
             return;
         }
@@ -397,7 +405,8 @@ public final class WwzPlayerProfile implements CdZonePlayerProfile {
     /** {@code ObjSonic_CheckElecBeam} (WW scddisasm/src/Level/Wacky Workbench/Objects/Sonic/Main.asm:374-433; r6:324-385). */
     private void checkBeam(AbstractPlayableSprite player, CdLevel level) {
         if (player.getAnimationId() == ANIM_GIVE_UP || player.isHurt() || player.getDead()
-                || signals.timeWarping() || player.getInvincibleFrames() > 0
+                || CdTimeTravel.starsActive(player.currentGameModule())
+                || player.getInvincibleFrames() > 0
                 || player.getInvulnerableFrames() != 0) {
             return;
         }
@@ -451,7 +460,14 @@ public final class WwzPlayerProfile implements CdZonePlayerProfile {
         int control = movement.stageControlState();
         if ((control & CTRL_HANG) != 0) return;                     // bit 0 never reaches here
         if (blockAt(level, player.getCentreX(), player.getCentreY() - BAR_PROBE_RISE) != BAR_BLOCK) return;
-        signals.stopTimeWarp(player);
+        CdTimeTravel travel = CdTimeTravel.of(player.currentGameModule());
+        if (travel != null && travel.warpTimer() != 0) {
+            if (travel.warpTimer() >= BAR_WARP_DIRECTION_CUTOFF) {
+                travel.stopTimeWarp();
+            } else {
+                travel.clearTimerAndStars();
+            }
+        }
         player.setRollingFlagPreserveRadii(false);                  // bclr #2,oFlags
         player.setXSpeed((short) 0);
         player.setYSpeed((short) 0);

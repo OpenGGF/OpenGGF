@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openggf.data.Rom;
 import com.openggf.game.BuiltInRomDetectors;
 import com.openggf.game.GameId;
+import com.openggf.catalog.StockGameCatalog;
 import com.openggf.mods.scene.host.SceneRomArtFactory;
 import com.openggf.mods.scene.host.SceneRomLibrary;
 import com.openggf.stageplay.runtime.StageplayResources;
@@ -19,6 +20,7 @@ import java.io.PrintStream;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -76,7 +78,8 @@ public final class StageplayTool {
                         "compile --script screenplay.json --out film.stageplay",
                         "decompile --scene film.stageplay --out screenplay.json",
                         "route --scene film.stageplay --actor hero --frame 0 --x 320 --y 640 --out routed.stageplay --s2-rom PATH",
-                        "object-coverage --out coverage.json [--game all|s1|s2|s3k --format json|markdown --observations reviewed.json]",
+                        "object-coverage --out coverage.json [--game all|" + String.join("|", StockGameCatalog.stockCodes())
+                                + " --format json|markdown --observations reviewed.json]",
                         "validate --scene film.stageplay",
                         "inspect --scene film.stageplay [--frame N]",
                         "timeline --scene film.stageplay --out authored.jsonl [--every N]",
@@ -156,16 +159,12 @@ public final class StageplayTool {
     }
 
     private static Object simulate(Map<String, String> flags) throws IOException {
-        allow(flags, "scene", "out", "every", "s1-rom", "s2-rom", "s3k-rom", "scd-rom");
+        var paths = sourcePaths(flags, "scene", "out", "every");
         Path scene = path(flags, "scene").toAbsolutePath().normalize(), out = path(flags, "out");
         var document = StageplayStore.read(scene);
         int every = Integer.parseInt(flags.getOrDefault("every", "1"));
         if (every < 1 || every > document.durationFrames()) throw new IOException("Invalid simulation sampling interval");
-        var paths = new LinkedHashMap<String, Path>();
-        for (String game : List.of("s1", "s2", "s3k", "scd")) {
-            if (flags.containsKey(game + "-rom")) paths.put(game, path(flags, game + "-rom"));
-        }
-        if (paths.isEmpty()) throw new IOException("Simulation requires supplied ROM paths (--s1-rom, --s2-rom or --s3k-rom)");
+        if (paths.isEmpty()) throw new IOException("Simulation requires at least one --<game>-rom media path");
         try (var library = SceneRomLibrary.open(paths);
              var resources = new StageplayResources(library, false)) {
             resources.setProjectRoot(scene.getParent());
@@ -193,7 +192,7 @@ public final class StageplayTool {
     }
 
     private static Object ground(Map<String,String> flags) throws IOException {
-        allow(flags,"set","scene","frame","queries","s1-rom","s2-rom","s3k-rom","scd-rom");
+        var paths = sourcePaths(flags, "set", "scene", "frame", "queries");
         if (flags.containsKey("set") == flags.containsKey("scene")) throw new IOException("Ground needs exactly one --set game/zone/act or --scene");
         StageplayDocument scene = flags.containsKey("scene") ? StageplayStore.read(path(flags,"scene")) : null;
         int frame = Integer.parseInt(flags.getOrDefault("frame","0"));
@@ -211,8 +210,6 @@ public final class StageplayTool {
         if (Files.size(queryFile) > StageplayGround.MAX_BATCH_CHARS * 4L) throw new IOException("Ground queries exceed their bound");
         var batch = StageplayGround.Json.decodeBatch(Files.readString(queryFile),scene);
         StageplayGround.Basis basis = scene == null ? new StageplayGround.EntryLayout(source) : new StageplayGround.SceneFrame(source,frame);
-        var paths = new LinkedHashMap<String,Path>();
-        for (String game : List.of("s1","s2","s3k","scd")) if (flags.containsKey(game+"-rom")) paths.put(game,path(flags,game+"-rom"));
         StageplayGround.Report report;
         try (var library = SceneRomLibrary.open(paths); var resources = new StageplayResources(library,false)) {
             if (scene == null) report = resources.ground(source,batch,() -> Thread.currentThread().isInterrupted());
@@ -367,6 +364,19 @@ public final class StageplayTool {
         }
         return result;
     }
+
+    private static Map<String, Path> sourcePaths(Map<String, String> flags, String... names) throws IOException {
+        var allowed = new ArrayList<>(List.of(names));
+        var paths = new LinkedHashMap<String, Path>();
+        for (String game : StockGameCatalog.stockCodes()) {
+            String flag = game + "-rom";
+            allowed.add(flag);
+            if (flags.containsKey(flag)) paths.put(game, path(flags, flag));
+        }
+        allow(flags, allowed.toArray(String[]::new));
+        return paths;
+    }
+
     private static void allow(Map<String, String> flags, String... names) throws IOException {
         for (String name : flags.keySet()) if (!List.of(names).contains(name)) throw new IOException("Unknown flag: --" + name);
     }

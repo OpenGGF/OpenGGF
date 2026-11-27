@@ -9,7 +9,7 @@ import com.openggf.level.objects.ObjectSpawn;
  * Main.asm:7-199): a ground badnik that patrols $80 pixels either side of its start, stops when the
  * player is within $50 pixels, and fires two missiles ({@link ObjTamabbohMissile}, the same object ID
  * with subtype 1) before patrolling again. A damaged variant (any other non-zero subtype) never fires.
- * Collision $2C. The fire sound {@code FM_A0} is not hosted.
+ * Collision $2C.
  *
  * <p>Routines (Main.asm:21-27): 0 init, 2 settle on the floor, 4 patrol, 6 start the wait animation,
  * 8 animate until the script's {@code $FC}, 10 fire. Init has no {@code rts} and runs the floor
@@ -126,6 +126,8 @@ public final class ObjTamabboh extends PpzBadnik {
             ObjTamabbohMissile missile = new ObjTamabbohMissile(x, y - 10, tileWord, priority + 1, left);
             objects.addDynamicObject(missile);
             if (missile.getSlotIndex() < 0) return;     // bne.s .End: no free slot
+            // ObjTamabboh_Fire requests FM_A0 only after the first allocation (Tamabboh/Main.asm:168-178).
+            if (!left && renderFlagOnScreen()) services().playSfx(0xA0);
         }
     }
 }

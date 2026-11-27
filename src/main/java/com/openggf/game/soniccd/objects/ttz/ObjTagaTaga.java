@@ -1,6 +1,7 @@
 package com.openggf.game.soniccd.objects.ttz;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.soniccd.level.CdLevel;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectVisualFacing;
@@ -145,12 +146,28 @@ public final class ObjTagaTaga extends TtzBadnik {
         if ((spriteFlip & 1) == 0) velocity = -velocity;
     }
 
-    /** A missile: the same ID with subtype $FF ({@code TagaMissileObject}, :269-309). */
+    /**
+     * StageObjectSpawnForwardScan (common/object_spawn.asm:167-176) counts tracked entries
+     * in layout order, before the time-zone filter.
+     * StageObjectSpawnLoadRecord (common/object_spawn.asm:242-257) writes that one-based counter as a byte.
+     */
+    private int stateId() {
+        if (!spawn.respawnTracked()) return 0;
+        var levels = services().levelManager();
+        if (levels == null || !(levels.getCurrentLevel() instanceof CdLevel level)) return 0;
+        int stateId = 0;
+        for (var placement : level.placements()) {
+            if ((placement.idByte() & 0x80) != 0) stateId++;
+            if (placement.layoutIndex() == spawn.layoutIndex()) return stateId & 0xFF;
+        }
+        return 0;
+    }
+
+    /** A missile uses the body's object ID with subtype $FF. */
     @com.openggf.level.objects.CameraRelativeDraw(com.openggf.level.objects.CameraRelativeDraw.Use.CULL_ONLY)
     public static final class Missile extends TtzObject implements ObjectVisualFacing.NonDirectional {
-        private final ObjTagaTaga parent;
-        /** The badnik's slot (oVar2E): the missile tests the ID byte there each turn. */
-        private final int parentSlot;
+        private final int parentSlot;         // oVar3E
+        private final int parentStateId;      // oVar3D
         private int routine;
         private int xFixed;
         private int yFixed;
@@ -161,8 +178,9 @@ public final class ObjTagaTaga extends TtzBadnik {
 
         Missile(ObjTagaTaga parent, int x, int y) {
             super(childSpawn(x, y, 0x2D, 0xFF, 0), "TagaMissile");
-            this.parent = parent;
+            // loc_20DB16 (objects/r4/taga_taga.asm:52-72) copies the state ID and slot to each missile.
             this.parentSlot = parent.getSlotIndex();
+            this.parentStateId = parent.stateId();
             this.xFixed = x << 16;
             this.yFixed = y << 16;
             this.priority = 3;
@@ -197,7 +215,11 @@ public final class ObjTagaTaga extends TtzBadnik {
 
         @Override
         public void update(int vIntRunCount, PlayableEntity player) {
-            if (!slotHoldsId(parentSlot, 0x2D)) {                             // cmpi.b #$2D,obj.id(a1); bne.w loc_20DE8A
+            // TagaMissileObject (objects/r4/taga_taga.asm:278-288) reads both bytes from the live slot.
+            var occupant = slotOccupant(parentSlot);
+            var parentSpawn = occupant == null ? null : occupant.getSpawn();
+            if (parentSpawn == null || parentSpawn.objectId() != 0x2D
+                    || (occupant instanceof ObjTagaTaga body ? body.stateId() : 0) != parentStateId) {
                 setDestroyed(true);
                 return;
             }

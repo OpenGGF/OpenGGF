@@ -7,6 +7,7 @@ import com.openggf.game.soniccd.objects.boss.CdBossPart;
 import com.openggf.game.soniccd.objects.boss.ttz.TtzBossEggman;
 import com.openggf.game.soniccd.objects.boss.ttz.TtzChaseMobile;
 import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectManagerInternalAccess;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.HeadlessTestRunner;
@@ -52,6 +53,7 @@ class TestTtzBossRewind {
             NativePositionOps.writeYPosResetSubpixel(sonic, 0x540);
             GameServices.camera().setX((short) 0x9B0);
             GameServices.camera().setY((short) 0x4C0);
+            ObjectManagerInternalAccess.refreshPlacementAfterRelocation(GameServices.level().getObjectManager());
             // Until Eggman sweeps (routine C) with his ring touchable and a volley in the air.
             for (int i = 0; i < 2400 && !(eggmanRoutine() == 0xC && graph().contains("TtzBossMissile")); i++) {
                 runner.stepFrame(false, false, false, false, false);

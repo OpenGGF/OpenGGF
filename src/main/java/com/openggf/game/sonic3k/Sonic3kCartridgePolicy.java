@@ -3,6 +3,8 @@ package com.openggf.game.sonic3k;
 import com.openggf.data.Rom;
 import com.openggf.data.RomHeaderName;
 import com.openggf.game.GameServices;
+import com.openggf.level.objects.ObjectServices;
+
 import java.io.IOException;
 
 /** Native SK_alone_flag, derived from the actual logical cartridge, never a configured character. */
@@ -26,6 +28,14 @@ public final class Sonic3kCartridgePolicy {
                     && RomHeaderName.of(rom.readDomesticName(), rom.readInternationalName()) == RomHeaderName.S3;
         } catch (IOException failure) {
             throw new IllegalStateException("Cannot resolve the active Sonic 3 cartridge", failure);
+        }
+    }
+
+    public static boolean isStandaloneSk(ObjectServices services) {
+        try {
+            return isStandaloneSk(services.rom());
+        } catch (IOException failure) {
+            throw new IllegalStateException("Cannot read the world cartridge", failure);
         }
     }
 

@@ -8,10 +8,12 @@ import com.openggf.game.soniccd.CdZone;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.BooleanSupplier;
+import java.util.function.IntSupplier;
 
 /**
  * Sonic CD's campaign time state: the one owner of the period, the pending warp, the
- * per-act generator and projector results, good-future progress and the Time Stone input.
+ * per-act generator and projector results, and good-future progress.
  * Every value has the writers and lifetime the disc gives it; other owners read through
  * the accessors and keep no copy. Scddisasm pin {@code 1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff},
  * USA release, {@code FixBugs = 0}.
@@ -49,7 +51,6 @@ import java.util.List;
  *       <td>projector ({@code st projDestroyed}, Palmtree Panic/Objects/Projector/Main.asm:218);
  *       results (Results/Main.asm:285); stage select (IPX.asm:720); game over (IPX.asm:336)</td>
  *       <td>one act: survives death and warps</td></tr>
- *   <tr><td>{@link #timeStones()}</td><td>input from the special-stage owner</td><td>save file</td></tr>
  * </table>
  */
 public final class CdTimeTravel implements RewindSnapshottable<CdTimeTravel.Snapshot> {
@@ -84,7 +85,19 @@ public final class CdTimeTravel implements RewindSnapshottable<CdTimeTravel.Snap
     public record Snapshot(CdTimeZone timeZone, boolean warping, int warpDirection, int warpTimer,
                            boolean starsActive, CdWarpRequest pendingWarp, boolean warpReady,
                            boolean goodFuture, int goodFutureFlags, int goodFutures, boolean projectorDestroyed,
-                           int timeStones, CdStagePayload loadedPayload, Entry nextEntry) { }
+                           CdStagePayload loadedPayload, Entry nextEntry) { }
+
+    private final BooleanSupplier timeAttackMode;
+    private final IntSupplier timeStones;
+
+    public CdTimeTravel() {
+        this(() -> false, () -> 0);
+    }
+
+    public CdTimeTravel(BooleanSupplier timeAttackMode, IntSupplier timeStones) {
+        this.timeAttackMode = timeAttackMode;
+        this.timeStones = timeStones;
+    }
 
     private CdTimeZone timeZone = CdTimeZone.PRESENT;
     private boolean warping;
@@ -97,7 +110,6 @@ public final class CdTimeTravel implements RewindSnapshottable<CdTimeTravel.Snap
     private int goodFutureFlags;
     private int goodFutures;
     private boolean projectorDestroyed;
-    private int timeStones;
     private CdStagePayload loadedPayload;
     private Entry nextEntry;
     private final List<Sound> sounds = new ArrayList<>();
@@ -105,6 +117,16 @@ public final class CdTimeTravel implements RewindSnapshottable<CdTimeTravel.Snap
     /** The module's owner, or null when the module is not Sonic CD's. */
     public static CdTimeTravel of(GameModule module) {
         return module == null ? null : module.getGameService(CdTimeTravel.class);
+    }
+
+    /**
+     * Native collision immunity reads the warp-stars flag. PlayerMakeWarpStars
+     * (objects/player.asm:116-120) sets it before PlayerCheckWarpCommitTimeZone
+     * (objects/player.asm:598-602) sets the destination bit.
+     */
+    public static boolean starsActive(GameModule module) {
+        CdTimeTravel travel = of(module);
+        return travel != null && travel.starsActive();
     }
 
     // ---- Reads -------------------------------------------------------------------
@@ -121,7 +143,8 @@ public final class CdTimeTravel implements RewindSnapshottable<CdTimeTravel.Snap
     /** {@code goodFutures}: one bit per zone whose act 3 ran in the good future (IPX.asm:183-297). */
     public int goodFutures() { return goodFutures; }
     public boolean projectorDestroyed() { return projectorDestroyed; }
-    public int timeStones() { return timeStones; }
+    /** The IPX Time Stones byte shared with the stage (Main CPU Variables.inc:38). */
+    public int timeStones() { return timeStones.getAsInt(); }
     public CdStagePayload loadedPayload() { return loadedPayload; }
 
     /** The ready warp for the program-flow owner, or null: leave the stage and run the cutscene. */
@@ -173,9 +196,8 @@ public final class CdTimeTravel implements RewindSnapshottable<CdTimeTravel.Snap
             }
             case RESTART -> { }
         }
-        // cmpi.b #$7F,timeStones; tst.b timeAttackMode; move.b #1,goodFuture (Level/Main.asm:22-26).
-        // Time Attack is not hosted, so its branch reads clear.
-        if (timeStones == ALL_TIME_STONES) goodFuture = true;
+        // LevelStart (Level/Main.asm:19-26).
+        if (timeStones() == ALL_TIME_STONES && !timeAttackMode.getAsBoolean()) goodFuture = true;
         // .FromWhite: bclr #7,timeZone (Level/Main.asm:314-315).
         warping = false;
         // .ClearCamera covers timeWarpDir and timeWarpTimer (Level/Main.asm:209-216; _Definitions.inc:301-303).
@@ -278,11 +300,6 @@ public final class CdTimeTravel implements RewindSnapshottable<CdTimeTravel.Snap
         projectorDestroyed = true;
     }
 
-    /** The special-stage owner's Time Stone set ({@code timeStones}, bit per stone). */
-    public void setTimeStones(int stones) {
-        timeStones = stones & 0xFF;
-    }
-
     /**
      * {@code ObjResults_NextLevel} for leaving act {@code completedAct} (1, 2 or 3): clears
      * {@code projDestroyed}, sets the next act's {@code timeZone} and credits {@code goodFuture}
@@ -294,13 +311,17 @@ public final class CdTimeTravel implements RewindSnapshottable<CdTimeTravel.Snap
         prepareEntry(Entry.NEXT_ACT);
         if (completedAct >= 3) {
             goodFutureFlags = 0;                                        // Results/Main.asm:316-321
-            if (goodFuture) goodFutures |= 1 << zone.ordinal();         // IPX.asm:185-187
+            // TimeAttack (IPX.asm:1214-1238) loops back to the menu before campaign credit can run.
+            // RunR1 (IPX.asm:185-187) records goodFutures before falling through to RunR3.
+            if (goodFuture && !timeAttackMode.getAsBoolean()) goodFutures |= 1 << zone.ordinal();
             goodFuture = false;
             timeZone = CdTimeZone.PRESENT;
             return;
         }
         timeZone = completedAct == 2 ? CdTimeZone.FUTURE : CdTimeZone.PRESENT;   // Results/Main.asm:293-300
-        if (timeStones == ALL_TIME_STONES) {                            // Results/Main.asm:327-328
+        // ObjResults_NextLevel (Level/_Objects/Results/Main.asm:323-340).
+        if (timeAttackMode.getAsBoolean()) return;
+        if (timeStones() == ALL_TIME_STONES) {
             goodFuture = true;
             return;
         }
@@ -323,7 +344,7 @@ public final class CdTimeTravel implements RewindSnapshottable<CdTimeTravel.Snap
     @Override
     public Snapshot capture() {
         return new Snapshot(timeZone, warping, warpDirection, warpTimer, starsActive, pendingWarp, warpReady,
-                goodFuture, goodFutureFlags, goodFutures, projectorDestroyed, timeStones, loadedPayload, nextEntry);
+                goodFuture, goodFutureFlags, goodFutures, projectorDestroyed, loadedPayload, nextEntry);
     }
 
     @Override
@@ -339,7 +360,6 @@ public final class CdTimeTravel implements RewindSnapshottable<CdTimeTravel.Snap
         goodFutureFlags = s.goodFutureFlags();
         goodFutures = s.goodFutures();
         projectorDestroyed = s.projectorDestroyed();
-        timeStones = s.timeStones();
         loadedPayload = s.loadedPayload();
         nextEntry = s.nextEntry();
         sounds.clear();
@@ -347,6 +367,6 @@ public final class CdTimeTravel implements RewindSnapshottable<CdTimeTravel.Snap
 
     @Override
     public void resetForMissingSnapshot() {
-        restore(new Snapshot(CdTimeZone.PRESENT, false, 0, 0, false, null, false, false, 0, 0, false, 0, null, null));
+        restore(new Snapshot(CdTimeZone.PRESENT, false, 0, 0, false, null, false, false, 0, 0, false, null, null));
     }
 }

@@ -41,7 +41,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Spawner and slot parity of the Palmtree Panic objects B (collapsing platform and its pieces, springboard, breakable
- * wall, spinning disc, Sonic hole, and the blank earthquake and missile objects) against the native stage fixtures
+ * wall, spinning disc, Sonic hole, vertical tunnel door, and the blank earthquake and missile objects) against the native stage fixtures
  * ({@code rehost-fixtures/<payload>/trace}, comparison only): over the level frames where Sonic's position and the
  * camera still equal the trace, every object that appears in a dynamic slot ($20-$7F) appears in the same slot, with
  * the same object ID, on the same level frame; the appearances of this lane's IDs must be equal, slot included, through
@@ -58,8 +58,8 @@ class TestPpzObjectsBAppearances {
     private static final int FIRST_DYNAMIC_SLOT = 32;
     private static final Pattern APPEARED = Pattern.compile(
             "\"vfc\":(\\d+),\"event\":\"object_appeared\",\"slot\":(\\d+),\"object_type\":\"0x([0-9A-F]+)\"");
-    /** This lane's IDs: spinning disc, collapsing platform and pieces, springboard, Sonic hole, breakable wall, blanks. */
-    private static final TreeSet<String> MINE = new TreeSet<>(List.of("09", "20", "28", "31", "36", "05", "08", "23"));
+    /** This lane's IDs: spinning disc, collapsing platform and pieces, springboard, Sonic hole, vertical tunnel door, breakable wall, blanks. */
+    private static final TreeSet<String> MINE = new TreeSet<>(List.of("09", "20", "28", "31", "35", "36", "05", "08", "23"));
 
     @TempDir
     Path tempDir;

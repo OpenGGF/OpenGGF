@@ -10,6 +10,7 @@ import com.openggf.game.GameStateManager;
 import com.openggf.game.palette.PaletteOwnershipRegistry;
 import com.openggf.game.palette.PaletteSurface;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
+import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.level.Block;
 import com.openggf.level.Chunk;
 import com.openggf.level.Level;
@@ -84,19 +85,74 @@ class TestAizEndBossInstance {
     }
 
     @Test
-    void retreatSubmergeAnimationRunsRepositionCallback() throws Exception {
+    void bossMainInitRunsOnTheDispatchAfterTheMusicCallback() throws Exception {
+        camera.setX((short) 0x48A0);
+        RecordingServices services = new RecordingServices();
+        services.withCamera(camera);
+        services.withGameState(new GameStateManager());
+        AizEndBossInstance boss = buildBoss(services);
+
+        boss.update(0, null);
+        for (int frame = 1; frame <= 0x78; frame++) {
+            boss.update(frame, null);
+        }
+        assertEquals(-1, services.lastPlayedMusic, "Obj_Wait has reached zero");
+        boss.update(0x79, null);
+        assertEquals(Sonic3kMusic.BOSS.id, services.lastPlayedMusic);
+        assertFalse(readBoolean(boss, "renderActivated"),
+                "Obj_AIZEndBossMusic returns before the main routine can allocate the ship");
+        boss.update(0x7A, null);
+        assertTrue(readBoolean(boss, "renderActivated"));
+    }
+
+    @Test
+    void firstRepositionExpandsArenaOnEachScrollDispatch() throws Exception {
         RecordingServices services = new RecordingServices();
         services.withCamera(camera);
         services.withGameState(new GameStateManager());
 
         AizEndBossInstance boss = buildBoss(services);
+        camera.setMinX((short) 0x4880);
+        camera.setMaxX((short) 0x4880);
         invokeNoArg(boss, "beginReSubmerge");
 
-        for (int frame = 0; frame < 45; frame++) {
+        int frame = 0;
+        // Thirteen zero-delay updates of the emerge animation lead to the submerge callback.
+        for (; frame < 13; frame++) {
             boss.update(frame, null);
         }
 
-        assertEquals(12, boss.getState().routine);
+        // AIZEndBoss_FinishSubmerge schedules routine $C for the next dispatch.
+        assertEquals(0xC, boss.getState().routine);
+        assertEquals(0x4880, camera.getMinX() & 0xFFFF);
+        assertEquals(0x4880, camera.getMaxX() & 0xFFFF);
+
+        boss.update(frame++, null);
+        assertEquals(0x4882, camera.getMinX() & 0xFFFF, "first scroll dispatch minimum");
+        assertEquals(0x4882, camera.getMaxX() & 0xFFFF, "first scroll dispatch maximum");
+
+        boss.update(frame++, null);
+        assertEquals(0x4884, camera.getMinX() & 0xFFFF);
+        assertEquals(0x4884, camera.getMaxX() & 0xFFFF);
+
+        // Obj_Wait underflows after 128 dispatches from the initial $7F.
+        for (int dispatch = 3; dispatch < 128; dispatch++) {
+            boss.update(frame++, null);
+        }
+        assertEquals(0xC, boss.getState().routine);
+        assertEquals(0x48E0, camera.getMinX() & 0xFFFF);
+        assertEquals(0x497E, camera.getMaxX() & 0xFFFF);
+
+        boss.update(frame++, null);
+        // AIZEndBoss_RestartEmerge (sonic3k.asm:138299-138302) branches to
+        // AIZEndBoss_StartEmerge (sonic3k.asm:138149-138150), which writes routine $2.
+        assertEquals(0x2, boss.getState().routine, "move wait restarts emerge");
+        assertEquals(0x48E0, camera.getMinX() & 0xFFFF);
+        assertEquals(0x4980, camera.getMaxX() & 0xFFFF);
+
+        boss.update(frame, null);
+        assertEquals(0x48E0, camera.getMinX() & 0xFFFF);
+        assertEquals(0x4980, camera.getMaxX() & 0xFFFF);
     }
 
     @Test
@@ -184,11 +240,11 @@ class TestAizEndBossInstance {
         assertEquals(0x4882, camera.getMinX() & 0xFFFF);
         assertEquals(0x4882, camera.getMaxX() & 0xFFFF);
 
-        camera.setMinX((short) 0x48E0);
+        camera.setMinX((short) 0x48DF);
         camera.setMaxX((short) 0x48E0);
         invokeNoArg(boss, "updateCameraScroll");
 
-        assertEquals(0x48E0, camera.getMinX() & 0xFFFF);
+        assertEquals(0x48DF, camera.getMinX() & 0xFFFF, "the proposed minimum would exceed the target");
         assertEquals(0x48E2, camera.getMaxX() & 0xFFFF);
     }
 
@@ -590,6 +646,13 @@ class TestAizEndBossInstance {
     }
 
     private static final class RecordingServices extends TestObjectServices {
+        private int lastPlayedMusic = -1;
+
+        @Override
+        public void playMusic(int musicId) {
+            lastPlayedMusic = musicId;
+        }
+
         private final StubLevel level = new StubLevel();
         private final PaletteOwnershipRegistry registry = new PaletteOwnershipRegistry();
 

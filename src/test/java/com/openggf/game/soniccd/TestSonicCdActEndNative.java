@@ -10,6 +10,7 @@ import com.openggf.trace.TraceExecutionPhase;
 import com.openggf.trace.TraceFrame;
 import com.openggf.trace.TraceReplayBootstrap;
 import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -22,6 +23,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -47,8 +49,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * listed with its first divergence and not asserted, and the test fails once it reaches its window, until it is moved
  * into the asserted set. A route that reaches its window but whose results land on the other side of the signpost's
  * slot than native's (FindObjSlot order, the slot lane's; they then run a frame apart) is pending on slot order, named
- * with both runs' slots, and fails once the slots agree. No alignment is applied. R81B, R81C and R82A never reach a
- * signpost (rehost-long README), so they have no end to check.
+ * with both runs' slots, and fails once the slots agree. No alignment is applied. The longer R81B movie
+ * under {@code native/u50-mmz-act-end} matches through the signpost, results and exit. R81C and R82A still need complete routes.
  */
 class TestSonicCdActEndNative {
     /** Rows before the signpost row at which the end window starts. */
@@ -78,9 +80,7 @@ class TestSonicCdActEndNative {
     }
 
     /** The goal probe's rows by trace row ({@code probe frame = bk2_frame_offset + row + 1}). */
-    static Map<Integer, NativeRow> nativeRows(CdStagePayload payload, int bk2Offset) throws Exception {
-        Path csv = CdTestMedia.nativeFile("rehost-goal/" + payload + "/frames.csv");
-        Assumptions.assumeTrue(Files.isRegularFile(csv), "No goal probe for " + payload);
+    private static Map<Integer, NativeRow> nativeRows(Path csv, int bk2Offset) throws Exception {
         List<String> lines = Files.readAllLines(csv);
         String[] header = lines.getFirst().split(",", -1);
         Map<Integer, NativeRow> out = new HashMap<>();
@@ -133,8 +133,7 @@ class TestSonicCdActEndNative {
      * native's row. {@code pending}: the route diverges before its window. {@code slots}: it reaches its window but its
      * results' slot is on the other side of the signpost's than native's. {@code rings}: it reaches its window with the
      * ring counter different over it.
-     * R81A is asserted although its ring counter differs from row 3466 (the hurt that spills the rings) to before the window:
-     * every channel equals native over the window and the exit row is equal.
+     * R81A matches through its signpost, results and exit. Its earlier spills are checked by {@link TestCdRingNativeParity}.
      * R52A was {@code rings} (25 against native's 24 from row 2005) until the replay
      * admitted its lost V-INT: native's row-1478 VBlank produced no interrupt entry (a handler still running), and the
      * spilled rings' floor check is gated by {@code levelVIntCounter+3} plus RunObjects' {@code d7}
@@ -168,20 +167,56 @@ class TestSonicCdActEndNative {
                 assertTrue(report.first.containsKey("rings"),
                         payload + " rings now equal native over its end window: move it into the asserted set. " + report.line());
             }
-            case "asserted" -> {
-                assertTrue(report.reachesWindow(), payload + " diverges before its end window: " + report.line());
-                assertTrue(!report.slotsDiffer, payload + " results land on the other side of the signpost's slot: " + report.line());
-                if (report.firstDivergence >= 0) {
-                    assertTrue(playerMayDifferFrom > 0 && report.firstDivergence >= playerMayDifferFrom,
-                            "player differs at row " + report.firstDivergence + ": " + report.line());
-                }
-                assertTrue(report.compared > (report.last - report.windowStart) / 2, "too few level frames compared: " + report.line());
-                assertEquals(report.nativeExit, report.engineExit, "the row ObjResults_NextLevel sets levelRestart: " + report.line());
-                assertTrue(report.first.isEmpty(), "differs from native: " + report.line());
-            }
+            case "asserted" -> assertActEnd(report, playerMayDifferFrom);
             default -> throw new IllegalArgumentException(status);
         }
     }
+
+    private static void assertActEnd(Report report, int playerMayDifferFrom) {
+        var payload = report.payload;
+        assertTrue(report.reachesWindow(), payload + " diverges before its end window: " + report.line());
+        assertTrue(!report.slotsDiffer, payload + " results land on the other side of the signpost's slot: " + report.line());
+        if (report.firstDivergence >= 0) {
+            assertTrue(playerMayDifferFrom > 0 && report.firstDivergence >= playerMayDifferFrom,
+                    "player differs at row " + report.firstDivergence + ": " + report.line());
+        }
+        assertTrue(report.compared > (report.last - report.windowStart) / 2, "too few level frames compared: " + report.line());
+        assertEquals(report.nativeExit, report.engineExit, "the row ObjResults_NextLevel sets levelRestart: " + report.line());
+        assertTrue(report.first.isEmpty(), "differs from native: " + report.line());
+    }
+
+    @Test
+    void metallicMadnessPastActEnd() throws Exception {
+        var payload = CdStagePayload.R81B;
+        Path root = CdTestMedia.nativeDir("u50-mmz-act-end");
+        var fixture = CdFixtureReplay.Fixture.under(root, payload);
+        Assumptions.assumeTrue(fixture.present(), "Missing complete R81B movie or trace");
+        TraceData trace = TraceData.load(fixture.traceDir());
+        Path csv = CdTestMedia.nativeFile("u50-mmz-act-end/R81B/goal/frames.csv");
+        var nativeRows = nativeRows(csv, trace.metadata().bk2FrameOffset());
+        int goalRow = 4677;
+        int tallyRow = 4857;
+        int exitRow = 5396;
+        NativeRow goal = nativeRows.get(goalRow);
+        NativeRow tally = nativeRows.get(tallyRow);
+        NativeRow exit = nativeRows.get(exitRow);
+        Report report = run(fixture, trace, nativeRows, goalRow, tempDir);
+        System.out.println("[scd-act-end] " + report.line());
+
+        assertAll(
+                () -> assertEquals(new NativeFinish(5396, 1, 0, 4, 1, 4000, 200, 4200, 2, 6, 1, 1, 0),
+                        new NativeFinish(trace.frameCount(), nativeRows.get(goalRow - 1).hex("updateHUDTime"),
+                                goal.hex("updateHUDTime"), goal.objects(0x17).getFirst()[2], tally.objects(0x3A).size(),
+                                tally.hex("timeBonus"), tally.hex("ringBonus"), (exit.hex("score") - tally.hex("score")) * 10,
+                                exit.hex("levelRestart"), exit.dec("zone"), exit.dec("act"), exit.dec("timeZone"),
+                                exit.dec("goodFuture"))),
+                () -> assertEquals(exitRow, report.nativeExit, "Native exit is one row past the trace"),
+                () -> assertActEnd(report, 0));
+    }
+
+    private record NativeFinish(int rows, int clockBefore, int clockAfter, int signpostRoutine, int results,
+                                int timeBonus, int ringBonus, int scoreGain, int restart, int zone, int act,
+                                int timeZone, int goodFuture) { }
 
     /** One engine level frame's end-of-act state, after that row was stepped. */
     private record EngineRow(CdActEndObjects.Snapshot objects, int score, int rings, String sounds) { }
@@ -202,8 +237,13 @@ class TestSonicCdActEndNative {
         var fixture = CdFixtureReplay.Fixture.under(root, payload);
         Assumptions.assumeTrue(fixture.present(), "Native route absent: " + payload);
         TraceData trace = TraceData.load(fixture.traceDir());
-        Map<Integer, NativeRow> nat = nativeRows(payload, trace.metadata().bk2FrameOffset());
-        Report report = new Report(payload);
+        Path csv = CdTestMedia.nativeFile("rehost-goal/" + payload + "/frames.csv");
+        return run(fixture, trace, nativeRows(csv, trace.metadata().bk2FrameOffset()), goalRow, tempDir);
+    }
+
+    private static Report run(CdFixtureReplay.Fixture fixture, TraceData trace, Map<Integer, NativeRow> nat,
+                              int goalRow, Path tempDir) throws Exception {
+        Report report = new Report(fixture.payload());
         report.goal = goalRow;
         report.last = trace.frameCount() - 1;
         report.windowStart = goalRow - LEAD;
@@ -215,7 +255,7 @@ class TestSonicCdActEndNative {
         StringBuilder requested = new StringBuilder();
         CdStagePayload[] stage = new CdStagePayload[1];
         try (CdDiscDataSource disc = CdDiscDataSource.open(CdTestMedia.usaCue())) {
-            Path config = Files.createDirectories(tempDir.resolve(payload.name()));
+            Path config = Files.createDirectories(tempDir.resolve(fixture.payload().name()));
             var outcome = CdFixtureReplay.replay(disc, config, fixture, Integer.MAX_VALUE, false, -1, -1, new CdFixtureReplay.Hooks() {
                 @Override
                 public void row(int row, AbstractPlayableSprite sonic) {

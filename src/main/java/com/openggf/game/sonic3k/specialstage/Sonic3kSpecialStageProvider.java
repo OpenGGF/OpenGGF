@@ -349,6 +349,12 @@ public class Sonic3kSpecialStageProvider implements SpecialStageProvider, com.op
         try {
             var rom = world.getDataSource().rom().orElseThrow(
                     () -> new IOException("Special-stage results world ROM is unavailable"));
+            // loc_2DF8C calls SaveGame_SpecialStage before results setup
+            // (sonic3k.asm:63072-63093). Only an active slot caps Continue_count
+            // (SaveGame_SpecialStage / loc_C524, sonic3k.asm:15966-15999).
+            if (com.openggf.game.sonic3k.S3kFullSaveGame.hasNativeSaveSlot(world)) {
+                com.openggf.game.NativeGameStateOps.capContinues(context.getGameStateManager(), 99);
+            }
             return new S3kSpecialStageResultsPreparation(rom, character,
                     S3kRuntimeArtCoordinator.from(context.runtimeArtCoordinator()).moduleQueue(),
                     com.openggf.game.session.WorldPlcLifecycleAccess.require(world,

@@ -34,19 +34,26 @@ final class TraceCaptureLagFrames {
     static final int LONGEST_LAG_HOLD = 4;
 
     /** Lag frames stay in the clip: the capture is what it was before the option. */
-    static final TraceCaptureLagFrames KEEP = new TraceCaptureLagFrames(false);
+    static final TraceCaptureLagFrames KEEP = new TraceCaptureLagFrames(false, true);
 
     /** Leaves the original's lag frames out of the clip. */
     static TraceCaptureLagFrames skipLagFrames() {
-        return new TraceCaptureLagFrames(true);
+        return new TraceCaptureLagFrames(true, true);
+    }
+
+    /** Hosted capture may omit VBlank-only rows even when both counters held. */
+    static TraceCaptureLagFrames skipHostedLagFrames() {
+        return new TraceCaptureLagFrames(true, false);
     }
 
     private final boolean skip;
+    private final boolean requireVblankAdvance;
     private final List<Integer> frameRows = new ArrayList<>();
     private final List<Integer> skippedRows = new ArrayList<>();
 
-    private TraceCaptureLagFrames(boolean skip) {
+    private TraceCaptureLagFrames(boolean skip, boolean requireVblankAdvance) {
         this.skip = skip;
+        this.requireVblankAdvance = requireVblankAdvance;
     }
 
     /**
@@ -54,9 +61,10 @@ final class TraceCaptureLagFrames {
      * from the recording's own counters and never from pictures:
      * <ul>
      *   <li>the replay ran no gameplay frame for the row, so the engine has
-     *       nothing new of play to show on it;</li>
-     *   <li>{@code vblank_counter} advanced over the row before, so the
-     *       original displayed a frame;</li>
+     *       nothing new of play to show on it. For hosted replay only
+     *       {@code VBLANK_ONLY} is eligible;</li>
+     *   <li>both rows have a recorded {@code vblank_counter}. Cartridge clips
+     *       also require it to advance, since they present elapsed VBlanks;</li>
      *   <li>{@code gameplay_frame_counter} held, so its level loop did not
      *       complete one; and</li>
      *   <li>the hold is at most {@link #LONGEST_LAG_HOLD} rows long.</li>
@@ -66,43 +74,49 @@ final class TraceCaptureLagFrames {
      * clock of what is on screen.
      */
     static boolean isLagRow(TraceExecutionPhase phase, IntFunction<TraceFrame> rows,
-            int rowCount, int index) {
+            int rowCount, int index, boolean requireVblankAdvance) {
         if (phase == TraceExecutionPhase.FULL_LEVEL_FRAME
-                || phase == TraceExecutionPhase.FULL_LEVEL_FRAME_WITH_SIDEKICK_ANIMATION_HELD) {
+                || phase == TraceExecutionPhase.FULL_LEVEL_FRAME_WITH_SIDEKICK_ANIMATION_HELD
+                || (!requireVblankAdvance && phase != TraceExecutionPhase.VBLANK_ONLY)) {
             return false;
         }
-        int hold = holdRows(rows, rowCount, index);
+        int hold = holdRows(rows, rowCount, index, requireVblankAdvance);
         return hold >= 1 && hold <= LONGEST_LAG_HOLD;
     }
 
     /**
      * Length of the run of held rows containing {@code index}: consecutive rows
-     * on which the gameplay counter stood while the V-blank counter advanced.
+     * on which the gameplay counter stood, optionally requiring VBlank advance.
      * Zero when the row is not held; counting stops once the run is known to be
      * longer than {@link #LONGEST_LAG_HOLD}.
      */
-    static int holdRows(IntFunction<TraceFrame> rows, int rowCount, int index) {
-        if (!held(rows, rowCount, index)) {
+    static int holdRows(IntFunction<TraceFrame> rows, int rowCount, int index, boolean requireVblankAdvance) {
+        if (!held(rows, rowCount, index, requireVblankAdvance)) {
             return 0;
         }
         int length = 1;
-        for (int row = index - 1; length <= LONGEST_LAG_HOLD && held(rows, rowCount, row); row--) {
+        for (int row = index - 1;
+                length <= LONGEST_LAG_HOLD && held(rows, rowCount, row, requireVblankAdvance);
+                row--) {
             length++;
         }
-        for (int row = index + 1; length <= LONGEST_LAG_HOLD && held(rows, rowCount, row); row++) {
+        for (int row = index + 1;
+                length <= LONGEST_LAG_HOLD && held(rows, rowCount, row, requireVblankAdvance);
+                row++) {
             length++;
         }
         return length;
     }
 
-    private static boolean held(IntFunction<TraceFrame> rows, int rowCount, int index) {
+    private static boolean held(IntFunction<TraceFrame> rows, int rowCount, int index,
+            boolean requireVblankAdvance) {
         if (index < 1 || index >= rowCount) {
             return false;
         }
         TraceFrame previous = rows.apply(index - 1);
         TraceFrame current = rows.apply(index);
         return previous.vblankCounter() >= 0 && current.vblankCounter() >= 0
-                && current.vblankCounter() != previous.vblankCounter()
+                && (!requireVblankAdvance || current.vblankCounter() != previous.vblankCounter())
                 && previous.gameplayFrameCounter() >= 0
                 && current.gameplayFrameCounter() == previous.gameplayFrameCounter();
     }
@@ -113,7 +127,7 @@ final class TraceCaptureLagFrames {
 
     /** Whether this capture leaves the trace row at {@code index} out. */
     boolean skips(TraceExecutionPhase phase, TraceData trace, int index) {
-        return skip && isLagRow(phase, trace::getFrame, trace.frameCount(), index);
+        return skip && isLagRow(phase, trace::getFrame, trace.frameCount(), index, requireVblankAdvance);
     }
 
     /** Notes a lag row inside the clip window that was left out. */

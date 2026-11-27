@@ -1,6 +1,12 @@
 package com.openggf.game.soniccd;
 
+import com.openggf.game.GameServices;
 import com.openggf.game.LevelEventProvider;
+import com.openggf.game.internal.StagePaletteWait;
+import com.openggf.game.soniccd.audio.CdSoundRequests;
+import com.openggf.game.soniccd.objects.boss.wwz.WwzBossRam;
+import com.openggf.game.soniccd.objects.common.CdFixedObjects;
+import com.openggf.level.LevelSpritePresentation;
 
 /**
  * Level events: {@code RunLevelEvents} (Level/_Events.asm) through {@link CdStageEvents}, after
@@ -23,6 +29,21 @@ final class CdLevelEventProvider implements LevelEventProvider {
     @Override public void updatePrePhysics() {
         runBoredTimer();
         runTimeWarp();
+        var level = GameServices.levelOrNull();
+        if (level != null && GameServices.module().getObjectArtProvider() instanceof
+                com.openggf.game.soniccd.objects.art.CdObjectArtProvider art) {
+            var boss = art.zoneArt(WwzBossRam.class);
+            if (boss != null && boss.willStartPaletteWait(level)) {
+                LevelSpritePresentation.retainForPaletteWait(level, GameServices.sprites());
+            }
+        }
+    }
+
+    @Override public void updateAtLevelLoopTail() {
+        var level = GameServices.levelOrNull();
+        if (level != null && StagePaletteWait.pending(level) == null) {
+            CdFixedObjects.publishHudCounters(level.getObjectManager());
+        }
     }
 
     /**
@@ -74,8 +95,17 @@ final class CdLevelEventProvider implements LevelEventProvider {
      */
     @Override
     public void updateAfterObjectsBeforeCamera() {
-        com.openggf.game.soniccd.program.CdStageExit.afterObjectPass(com.openggf.game.GameServices.module(),
-                com.openggf.game.GameServices.levelOrNull(), com.openggf.game.GameServices.gameStateOrNull(),
+        var module = GameServices.module();
+        var levels = GameServices.levelOrNull();
+        var sprites = GameServices.spritesOrNull();
+        var player = sprites == null ? null : sprites.getMainPlayable();
+        // ObjSonic_Restart (Level/_Objects/Sonic/Main.asm:2453-2463) sets levelRestart and releases FM loops.
+        // This sees the expired countdown before the host consumes the reload request.
+        if (levels != null && levels.isRespawnRequestedForRewind()
+                && player != null && player.isInDeathRestartRoutine() && player.getDeathCountdown() == 0) {
+            CdSoundRequests.releaseHeldFmEffects(module);
+        }
+        com.openggf.game.soniccd.program.CdStageExit.afterObjectPass(module, levels, GameServices.gameStateOrNull(),
                 id -> com.openggf.game.GameServices.audio().playMusic(id));
         runLevelEvents();
     }

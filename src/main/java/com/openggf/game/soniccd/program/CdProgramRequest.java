@@ -72,6 +72,8 @@ public sealed interface CdProgramRequest {
         /** {@code StageSelect}: one {@code RunMMD}, then back to the title. */
         STAGE_SELECT,
         /** {@code TimeAttack} (IPX.asm:1214-1238): one {@code RunMMD} with {@code timeAttackMode} set, then the menu again. */
-        TIME_ATTACK
+        TIME_ATTACK,
+        /** The title selected an ordinary attract stage. */
+        ATTRACT_DEMO
     }
 }

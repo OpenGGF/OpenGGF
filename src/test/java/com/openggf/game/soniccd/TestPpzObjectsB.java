@@ -2,6 +2,7 @@ package com.openggf.game.soniccd;
 
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.data.compression.NemesisReader;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameServices;
 import com.openggf.game.patch.ModuleResolutionService;
@@ -12,6 +13,7 @@ import com.openggf.game.session.GameplaySessionFactory;
 import com.openggf.game.session.GameplayTeamBootstrap;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.soniccd.level.CdLevel;
+import com.openggf.game.soniccd.level.CdPpzDataLayout;
 import com.openggf.game.soniccd.objects.art.CdObjectArtProvider;
 import com.openggf.game.soniccd.objects.ppz.ObjBreakableWall;
 import com.openggf.game.soniccd.objects.ppz.ObjCollapsePlatform;
@@ -19,9 +21,12 @@ import com.openggf.game.soniccd.objects.ppz.ObjSonicHole;
 import com.openggf.game.soniccd.objects.ppz.ObjSpinningDisc;
 import com.openggf.game.soniccd.objects.ppz.ObjSpringBoard;
 import com.openggf.game.soniccd.objects.ppz.PpzObjectArt;
+import com.openggf.game.soniccd.objects.ppz.PpzTunnelDoor;
+import com.openggf.level.Pattern;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.render.SpriteMappingPiece;
 import com.openggf.physics.GroundSensor;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.HeadlessTestRunner;
@@ -30,9 +35,15 @@ import com.openggf.tools.HeadlessGameBoot;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
+import java.io.ByteArrayInputStream;
+import java.nio.channels.Channels;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -46,7 +57,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Focused behaviour of the Palmtree Panic objects B on the loaded stages (art, tables and collision come from the
  * disc): the collapsing platform and its pieces, the springboard, the breakable wall, the spinning disc, the Sonic
- * hole and the blank earthquake and missile objects. Each case cites the routine it checks in
+ * hole, the vertical tunnel door and the blank earthquake and missile objects. Each case cites the routine it checks in
  * {@code Level/Palmtree Panic/Objects/<name>/Main.asm}; every expected number is read off the assembly or its data
  * tables there, not off the implementation's output. The native comparisons are {@link TestPpzObjectsBAppearances},
  * {@code TestSonicCdFixtureFrontier} and {@link TestPpzObjectsBPictures}.
@@ -197,6 +208,100 @@ class TestPpzObjectsB {
         for (int blank : new int[] {0x05, 0x08, 0x23}) {
             assertFalse(byId.containsKey(blank), String.format("$%02X is placed: %s", blank, byId.get(blank)));
         }
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = CdStagePayload.class, names = "R1[12][ABCD]", mode = EnumSource.Mode.MATCH_ALL)
+    void verticalDoorUsesAllTwelveDiscPatternsAndBothMappings(CdStagePayload payload) throws Exception {
+        boot(payload);
+        var art = art();
+        int tile = art.objectTileId(PpzObjectArt.TILE_ID_TUNNEL_DOOR, 0);
+        var sheet = art.getSheet(PpzObjectArt.TUNNEL_DOOR + tile);
+        var source = CdPpzDataLayout.Programme.valueOf(payload.name()).range("Art_TunnelDoor");
+        byte[] discTiles = NemesisReader.decompress(Channels.newChannel(
+                new ByteArrayInputStream(art.image().slice(source.fileOffset(), source.length()))));
+        byte[] sheetTiles = new byte[sheet.getPatterns().length * Pattern.PATTERN_SIZE_IN_MEM];
+        for (int i = 0; i < sheet.getPatterns().length; i++) {
+            sheet.getPatterns()[i].copyInto(sheetTiles, i * Pattern.PATTERN_SIZE_IN_MEM);
+        }
+        byte[] discPixels = new byte[2 * discTiles.length];
+        for (int i = 0; i < discTiles.length; i++) {
+            discPixels[i * 2] = (byte) ((discTiles[i] >>> 4) & 0xF);
+            discPixels[i * 2 + 1] = (byte) (discTiles[i] & 0xF);
+        }
+        // MapSpr_FlapDoorV (Level/Palmtree Panic/Objects/Tunnel Door/Main.asm:90-92).
+        var expectedPieces = List.of(
+                List.of(new SpriteMappingPiece(-4, -24, 1, 2, 4, true, true, 0),
+                        new SpriteMappingPiece(-4, -8, 1, 4, 0, true, true, 0)),
+                List.of(new SpriteMappingPiece(-4, -24, 4, 1, 6, false, false, 0),
+                        new SpriteMappingPiece(28, -24, 2, 1, 10, false, false, 0)));
+        assertEquals(List.of(2, 12, true, expectedPieces),
+                List.of(sheet.getFrameCount(), sheet.getPatterns().length, Arrays.equals(discPixels, sheetTiles),
+                        List.of(sheet.getFrame(0).pieces(), sheet.getFrame(1).pieces())),
+                "both mappings use the intact standard-PLC door art");
+    }
+
+    @Test
+    void verticalDoorRepeatsTheNativeConstructedOpenCycleAfterRewind() throws Exception {
+        boot(CdStagePayload.R11A);
+        int x = (GameServices.camera().getX() & 0xFFFF) + 192;
+        int y = (GameServices.camera().getY() & 0xFFFF) + 72;
+        PpzTunnelDoor door = add(new PpzTunnelDoor(spawn(x, y, 0x35, 0)));
+        // The R11A constructed native reference runs Init and 32 Reset turns with Sonic 24 px to the left.
+        var initialCycle = new ArrayList<Integer>();
+        for (int row = 1; row <= 34; row++) {
+            dropSonicAt(x - 24, y);
+            runner.stepIdleFrames(1);
+            initialCycle.add(door.mapFrame());
+        }
+        var expected = new ArrayList<>(Collections.nCopies(33, 0));
+        expected.add(1);
+
+        var rewind = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+        var snapshot = rewind.capture();
+        List<Integer> opened = doorResetFrames(door);
+        rewind.restore(snapshot);
+        var restored = live(PpzTunnelDoor.class).getFirst();
+        List<Integer> holdThenClose = new ArrayList<>(Collections.nCopies(32, 1));
+        holdThenClose.add(0);
+        assertEquals(List.of(expected, holdThenClose, holdThenClose),
+                List.of(initialCycle, opened, doorResetFrames(restored)),
+                "native rows 1–34 and the following 32 Reset turns, including after rewind");
+    }
+
+    private List<Integer> doorResetFrames(PpzTunnelDoor door) {
+        List<Integer> frames = new ArrayList<>();
+        frames.add(door.mapFrame());
+        for (int i = 0; i < 32; i++) {
+            dropSonicAt(door.getX() - 24, door.getY());
+            runner.stepIdleFrames(1);
+            frames.add(door.mapFrame());
+        }
+        return frames;
+    }
+
+    @Test
+    void verticalDoorBlocksFromTheRightWhileClosedAndLetsSonicThroughWhileOpen() throws Exception {
+        boot(CdStagePayload.R11A);
+        int x = (GameServices.camera().getX() & 0xFFFF) + 192;
+        int y = (GameServices.camera().getY() & 0xFFFF) + 72;
+        PpzTunnelDoor door = add(new PpzTunnelDoor(spawn(x, y, 0x35, 0)));
+        dropSonicAt(x + 32, y);
+        runner.stepIdleFrames(1);
+
+        dropSonicAt(x + 16, y);
+        sonic.setXSpeed((short) -0x600);
+        runner.stepIdleFrames(1);
+        var closed = List.of(sonic.getCentreX() - x, (int) sonic.getXSpeed());
+
+        dropSonicAt(x - 24, y);
+        runner.stepIdleFrames(1);
+        dropSonicAt(x + 16, y);
+        sonic.setXSpeed((short) -0x600);
+        runner.stepIdleFrames(4);
+        var open = List.of(door.mapFrame(), sonic.getCentreX() < x, (int) sonic.getXSpeed());
+        assertEquals(List.of(List.of(14, 0), List.of(1, true, -0x600)), List.of(closed, open),
+                "SolidObject stops the right-side approach in Main and is skipped during Reset");
     }
 
     // ---- collapsing platform -------------------------------------------------------------------------

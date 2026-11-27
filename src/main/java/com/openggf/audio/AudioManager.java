@@ -1508,9 +1508,10 @@ public class AudioManager implements MusicRestoreSink {
 
         if (source.loader() != null) {
             presentationBinding.ensureShadowPresentation();
-            SmpsAssetKey key = new SmpsAssetKey(
-                    baseGameId(source), SmpsAssetKey.Route.BASE_MUSIC,
-                    musicId, null);
+            SmpsAssetKey packageKey = presentationBinding.shadowFactory.registerPackageMusic(
+                    baseGameId(source), musicId, source.generation(), source.config());
+            SmpsAssetKey key = packageKey != null ? packageKey : new SmpsAssetKey(
+                    baseGameId(source), SmpsAssetKey.Route.BASE_MUSIC, musicId, null);
             boolean registered = presentationBinding.shadowFactory.findRegisteredSmpsMusicAsset(
                     key, source.generation()) != null;
             AbstractSmpsData data = null;
@@ -3304,9 +3305,10 @@ public class AudioManager implements MusicRestoreSink {
                 nativeCompatiblePcmSessions++;
             }
             SmpsDriverSessionConfiguration sessionConfiguration =
-                    new SmpsDriverSessionConfiguration(base.profile() != null
-                            ? base.profile().smpsStatefulCommandPolicy()
-                            : com.openggf.audio.session.SmpsStatefulCommandPolicy.NONE);
+                    new SmpsDriverSessionConfiguration(
+                            base.profile() != null ? base.profile().smpsStatefulCommandPolicy()
+                                    : com.openggf.audio.session.SmpsStatefulCommandPolicy.NONE,
+                            tuning.region());
             SmpsDriverSession smpsSession = new SmpsDriverSession(
                     physicalSettings, physicalPolicy, diagnosticInstallation.chipWriteObserver(),
                     new SmpsSessionProfileFingerprint(
@@ -4035,7 +4037,7 @@ public class AudioManager implements MusicRestoreSink {
                 com.openggf.audio.presentation.SmpsAssetKey.Route route,
                 String donorGameId) {
             return switch (route) {
-                case BASE_MUSIC, BASE_ID, BASE_NAME -> {
+                case BASE_MUSIC, PACKAGE_MUSIC, BASE_ID, BASE_NAME -> {
                     BaseAudioSource source = baseAudioSource;
                     yield new AudioPresentationCommandResolver.SourceAccess(
                             baseGameId(source), source.generation(),
@@ -4487,7 +4489,7 @@ public class AudioManager implements MusicRestoreSink {
             var session = new com.openggf.audio.session.SmpsDriverSessionSnapshot(s.initialized(),
                     s.pendingGlobalCommand(), s.profile(), s.selectedDacSource(), s.speedShoesEnabled(),
                     s.speedMultiplier(), s.musicTempoPercent(), s.ringLeft(), s.musicFmDacTrackCount(),
-                    s.segaPcmTransport(), s.physical(), s.nativePause(), cursor);
+                    s.segaPcmTransport(), s.physical(), s.nativePause(), cursor, s.silentFadeInServices());
             var presentation = new AudioPresentationSnapshot(p.nextVoiceId(), p.voices(), p.activeMusic(),
                     p.overrideStack(), p.rawPcmVoiceId(), p.fmMuteMask(), p.fmSoloMask(), p.psgMuteMask(),
                     p.psgSoloMask(), p.sfxBlocked(), p.sfxBlockHeldThroughFadeIn(), p.pendingRestore(),

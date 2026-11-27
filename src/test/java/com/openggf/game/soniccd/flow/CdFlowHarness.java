@@ -144,8 +144,15 @@ final class CdFlowHarness implements AutoCloseable {
                 state != null && state.isTimerPaused());
     }
 
-    /** Places the player and camera as the native run's setup pokes do (oX, oY, cameraX, cameraY). */
+    /** Starts a scenario at a destination with its local placement window loaded. */
     void place(int x, int y, int cameraX, int cameraY) {
+        pokePosition(x, y, cameraX, cameraY);
+        com.openggf.level.objects.ObjectManagerInternalAccess
+                .refreshPlacementAfterRelocation(GameServices.level().getObjectManager());
+    }
+
+    /** Reproduces the native run's coordinate writes while retaining its live layout scan. */
+    void pokePosition(int x, int y, int cameraX, int cameraY) {
         var p = player();
         com.openggf.sprites.NativePositionOps.writeXPosResetSubpixel(p, x);
         com.openggf.sprites.NativePositionOps.writeYPosResetSubpixel(p, y);
