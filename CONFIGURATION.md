@@ -1015,6 +1015,7 @@ The allowance and stage/life-loss controls are in Settings → Gameplay and are 
 
 | Key | YAML path | Type | Default | Description |
 |-----|-----------|------|---------|-------------|
+| `LEVEL_DEBUG_MODE` | `debug.flags.levelDebugMode` | enum | `"rom"` | Use cartridge item placement in Sonic 2 and Knuckles in Sonic 2. Use `"engine"` for the debug movement shortcut. |
 | `DEBUG_VIEW_ENABLED` | `debug.flags.debugView` | bool | `false` | Eagerly initialise the debug overlay subsystem. Enables gameplay debug shortcuts and most overlay controls. The visible debug HUD starts hidden until toggled; performance overlay, screenshot and recording controls have their own gates. |
 | `EDITOR_ENABLED` | `debug.flags.editor` | bool | `false` | Allow gameplay entry into the experimental level editor with `Shift+Tab`; project authoring is also available from Advanced → Editor projects at the hub. |
 | `LIVE_REWIND_ENABLED` | `rewind.liveEnabled` | bool | `true` | Enable held-key rewind during ordinary live level play. Uses gameplay rewind snapshots, records live input while enabled, and presents reverse audio/fade state while held. |

@@ -4,6 +4,7 @@ import com.openggf.control.InputHandler;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameServices;
+import com.openggf.game.LevelDebugPlacement;
 import com.openggf.game.mode.MenuScreenModeController;
 import com.openggf.game.TitleScreenProvider;
 import com.openggf.game.internal.AttractDemoPlayback;
@@ -26,6 +27,8 @@ final class GameLoopAttractDemo {
     private GameModule root;
     private GameModule titleModule;
     private GameStateSnapshot progress;
+    /** Debug_options_flag is RAM that only a console reset clears; the visit's worlds share it. */
+    private boolean placementUnlocked;
 
     GameLoopAttractDemo(GameLoop loop) {
         this.loop = loop;
@@ -97,8 +100,10 @@ final class GameLoopAttractDemo {
             root = source.rootGameModule();
             titleModule = source.resolvedGameModule();
             progress = loop.gameState.capture();
+            placementUnlocked = LevelDebugPlacement.of(loop.gameState).isCheatUnlocked();
             loop.getTitleScreenProvider().reset();
             menus.startAttractDemo(launch, stages);
+            carryPlacementUnlock();
             demoWorld = SessionManager.getCurrentWorldSession();
             running = launch;
         } else if (running != null) {
@@ -108,10 +113,15 @@ final class GameLoopAttractDemo {
                 var target = running.playback().returnTarget();
                 if (specialStagePlayback() != null) stages.retireForSessionReset();
                 menus.restoreAttractTitle(root, titleModule, progress);
+                carryPlacementUnlock();
                 reset();
                 loop.initializeTitleScreenMode(target == AttractDemoPlayback.ReturnTarget.TITLE);
             }
         }
+    }
+
+    private void carryPlacementUnlock() {
+        if (placementUnlocked) LevelDebugPlacement.of(GameServices.gameState()).unlockCheat();
     }
 
     void reset() {
@@ -119,5 +129,6 @@ final class GameLoopAttractDemo {
         demoWorld = null;
         root = titleModule = null;
         progress = null;
+        placementUnlocked = false;
     }
 }

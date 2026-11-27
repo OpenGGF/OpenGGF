@@ -93,6 +93,78 @@ class TestKis2AndSonic2TitleAttract {
         }
     }
 
+    /**
+     * Full-chip KiS2 from the production title: idle attract and native debug
+     * placement are both lock-on services of the same module. The unlocked cheat
+     * (Debug_options_flag) survives the demo, Title clears Debug_mode_flag
+     * (s2.asm:4400), and a held A at Level init arms it (s2.asm:4836-4848).
+     */
+    @org.junit.jupiter.api.Test
+    void kis2AttractAndPlacementShareTheLockOnModuleThroughTheTitle() throws Exception {
+        try (var capture = boot(true)) {
+            var module = assertInstanceOf(Kis2GameModule.class, GameServices.module());
+            var provider = module.getGameService(com.openggf.game.internal.LevelDebugPlacementProvider.class);
+            var attract = module.getGameService(com.openggf.game.internal.TitleAttractDemo.class);
+            assertNotNull(provider, "full chip serves native placement");
+            assertNotNull(attract, "full chip serves the title attract program");
+            com.openggf.game.LevelDebugPlacement.of(GameServices.gameState()).unlockCheat();
+
+            launch(capture, true);
+            assertSame(provider, com.openggf.game.LevelDebugPlacement.provider(GameServices.level()));
+            assertEquals(2, provider.entries(GameServices.level()).size(), "chip EHZ placement list");
+            assertTrue(placement().isCheatUnlocked(), "the demo world shares Debug_options_flag");
+            for (int i = 0; i < 250; i++) {
+                capture.step(null);
+                assertFalse(placement().isActive(), "the demo never enters placement without the armed cheat");
+            }
+            capture.step(new Bk2FrameInput(250, 0, 0, true, "Start"));
+            returnToTitle(capture, 80);
+            assertTrue(placement().isCheatUnlocked(), "Debug_options_flag survives the attract demo");
+            assertSame(provider, module.getGameService(com.openggf.game.internal.LevelDebugPlacementProvider.class));
+            assertSame(attract, module.getGameService(com.openggf.game.internal.TitleAttractDemo.class));
+
+            advanceToTitle(capture);
+            int a = com.openggf.control.InputActionMasks.ACTION_A;
+            capture.step(new Bk2FrameInput(0, 0, 0, true, "Start")); // skips the remaining intro
+            for (int i = 0; i < 30; i++) capture.step(null);
+            assertEquals(GameMode.TITLE_SCREEN, capture.loop().getCurrentGameMode());
+            capture.step(new Bk2FrameInput(0, 0, a, true, "Start+A"));
+            for (int i = 0; i < 600 && capture.loop().getCurrentGameMode() != GameMode.LEVEL; i++) {
+                capture.step(new Bk2FrameInput(i, 0, a, false, "A"));
+            }
+            assertEquals(GameMode.LEVEL, capture.loop().getCurrentGameMode());
+            for (int i = 0; i < 180; i++) capture.step(null);
+            assertSame(provider, com.openggf.game.LevelDebugPlacement.provider(GameServices.level()));
+
+            int b = com.openggf.control.InputActionMasks.ACTION_B;
+            int c = com.openggf.control.InputActionMasks.ACTION_C;
+            capture.step(new Bk2FrameInput(0, 0, b, false, "B"));
+            var placement = placement();
+            assertTrue(placement.isActive(), "held A at the real level entry armed the lock-on cheat");
+            capture.step(null);
+            capture.step(new Bk2FrameInput(0, 0, a, false, "A"));
+            capture.step(null);
+            var player = capture.player();
+            int x = player.getCentreX();
+            int y = player.getCentreY();
+            capture.step(new Bk2FrameInput(0, 0, c, false, "C"));
+            assertTrue(GameServices.level().getObjectManager().getActiveObjects().stream().anyMatch(object ->
+                    object.getSpawn().objectId() == 0x26 && object.getSpawn().subtype() == 4
+                            && object.getSpawn().x() == x && object.getSpawn().y() == y),
+                    "C places the chip monitor row at the cursor");
+            capture.step(null);
+            capture.step(new Bk2FrameInput(0, 0, b, false, "B"));
+            assertFalse(placement.isActive());
+            assertEquals("knuckles", player.getCode());
+            for (int i = 0; i < 30; i++) capture.step(null);
+            assertFalse(player.getDead());
+        }
+    }
+
+    private static com.openggf.game.LevelDebugPlacement placement() {
+        return com.openggf.game.LevelDebugPlacement.of(GameServices.gameState());
+    }
+
     private static GameplayCaptureSession boot(boolean kis2) throws Exception {
         TestEnvironment.resetAll();
         if (kis2) {

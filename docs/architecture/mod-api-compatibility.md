@@ -60,6 +60,11 @@ is appended to preserve existing enum ordinals. The mutable `0.7` signature pin
 candidate description include it; descriptor candidate `0.7.0` and the empty
 published-baseline set are unchanged.
 
+The appended `SonicConfiguration.LEVEL_DEBUG_MODE` key sets
+`debug.flags.levelDebugMode`. The `rom` default selects cartridge item
+placement when the game module supplies it. The `engine` value selects free-fly.
+This addition retains candidate 0.7.0 and existing enum ordinals.
+
 `SonicConfiguration.SETUP_GUIDE` adds the saved key `hub.setupGuide`: the hub-owned state of
 the first-run setup guide (blank, `done` or `skipped`). It is appended to preserve existing
 enum ordinals. The mutable `0.7` signature pin (regenerated with

@@ -17,7 +17,9 @@ import com.openggf.game.sonic2.credits.Sonic2EndingProvider;
 import com.openggf.game.sonic2.dataselect.S2SaveSnapshotProvider;
 import com.openggf.game.sonic2.dataselect.S2DataSelectImageCacheManager;
 import com.openggf.game.sonic2.debug.Sonic2DebugModeProvider;
-import com.openggf.game.sonic2.levelselect.LevelSelectManager;
+import com.openggf.game.internal.LevelDebugPlacementProvider;
+import com.openggf.game.sonic2.debug.Sonic2LevelDebugPlacement;
+import com.openggf.game.sonic2.levelselect.Sonic2LevelSelect;
 import com.openggf.game.sonic2.objects.BlueBallsObjectInstance;
 import com.openggf.game.sonic2.objects.BonusBlockObjectInstance;
 import com.openggf.game.sonic2.objects.LauncherBallObjectInstance;
@@ -122,7 +124,8 @@ public class Sonic2GameModule implements GameModule, com.openggf.game.internal.S
     private final TitleScreenManager titleScreenProvider = new TitleScreenManager();
     private final com.openggf.game.sonic2.options.Sonic2NativeModeProvider nativeModes =
             new com.openggf.game.sonic2.options.Sonic2NativeModeProvider();
-    private final LevelSelectManager levelSelectProvider = new LevelSelectManager();
+    private final Sonic2LevelSelect levelSelectProvider = new Sonic2LevelSelect();
+    private final Sonic2LevelDebugPlacement levelDebugPlacement = new Sonic2LevelDebugPlacement();
     private final S2DataSelectProfile dataSelectHostProfile = new S2DataSelectProfile(this::getZoneRegistry);
     private final CrossGameDonorProvider donorProvider = new Sonic2CrossGameDonorProvider();
     private final Sonic2ModZoneAdapter modZoneAdapter = new Sonic2ModZoneAdapter(this);
@@ -371,6 +374,7 @@ public class Sonic2GameModule implements GameModule, com.openggf.game.internal.S
     @SuppressWarnings("unchecked")
     @Override
     public <T> T getGameService(Class<T> type) {
+        if (type == LevelDebugPlacementProvider.class) return type.cast(levelDebugPlacement);
         if (type == com.openggf.game.internal.ProfileSuperHostRules.class)
             return type.cast(new com.openggf.game.internal.ProfileSuperHostRules(false, false, 0, com.openggf.game.GameId.S2));
         if (type == com.openggf.game.internal.BadnikChainPolicy.class) return type.cast(badnikChain);

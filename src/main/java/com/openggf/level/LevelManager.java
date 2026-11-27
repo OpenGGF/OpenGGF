@@ -1125,7 +1125,9 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         // Without this, stale endOfLevelFlag=true persists across full zone transitions
         // (e.g. AIZ2 results → HCZ1 load), causing the next zone's act transition to
         // fire immediately when the BG event handler first checks the flag.
-        GameServices.gameState().resetForLevel();
+        var gameState = GameServices.gameState();
+        gameState.resetForLevel();
+        com.openggf.game.LevelDebugPlacement.activateOnLevelLoad(this, gameState, spriteManager);
         gameModule.onLevelLoad();
     }
 
@@ -1682,7 +1684,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     }
 
     public void applyPlaneSwitchers(AbstractPlayableSprite player) {
-        if (player == null) {
+        if (player == null || com.openggf.game.LevelDebugPlacement.isActiveFor(player)) {
             return;
         }
         if (objectManager != null) {

@@ -20,6 +20,8 @@ import com.openggf.game.GameModule;
 import com.openggf.game.GameServices;
 import com.openggf.timer.TimerManager;
 import com.openggf.game.GameStateManager;
+import com.openggf.game.LevelDebugPlacement;
+import com.openggf.game.internal.LevelDebugPlacementProvider;
 import com.openggf.game.GameplayInputFilter;
 import com.openggf.game.session.GameplayInputFilterAccess;
 import com.openggf.game.rules.GameRules;
@@ -126,6 +128,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 
 	private int testKey;
 	private int debugModeKey;
+	private boolean engineLevelDebugSelected;
 	private final KeyChord superSonicDebugKey;
 	private final KeyChord giveEmeraldsKey;
 	private final KeyChord hyperFormDebugKey;
@@ -144,6 +147,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 	// already-filtered immutable P1 snapshot so level events and movement cannot observe two
 	// callback results for the same raw live/replay input row.
 	private InputHandler publishedInputHandler;
+    private java.util.function.Supplier<InputHandler> levelEntryController;
 	private PlayerInputState publishedRawPlayerOne;
 	private PlayerInputState publishedEffectivePlayerOne;
 	// Scratch for the current admitted native tick; the captured FIFO belongs to MotionMutatorRuntime.
@@ -587,6 +591,15 @@ public class SpriteManager implements PlayableSstDispatcher {
 		this.frameCounter = value;
 	}
 
+    void bindLevelEntryController(java.util.function.Supplier<InputHandler> controller) {
+        levelEntryController = controller;
+    }
+
+    PlayerInputState levelEntryPlayerOne() {
+        InputHandler input = levelEntryController == null ? null : levelEntryController.get();
+        return (input == null ? publishedLogicalInput() : input.logical()).player1();
+    }
+
     com.openggf.control.LogicalInputSnapshot publishedLogicalInput() {
         return publishedInputHandler == null ? com.openggf.control.LogicalInputSnapshot.neutral() : publishedInputHandler.logical();
     }
@@ -754,8 +767,18 @@ public class SpriteManager implements PlayableSstDispatcher {
 		boolean slowDown = recordedDebugInput ? handler.isControlDown()
 				: allowLiveDebugInput && isDebugSlowDownModifierDown(handler);
 		boolean debugShortcutsEnabled = configService.getBoolean(SonicConfiguration.DEBUG_VIEW_ENABLED);
-		boolean debugModePressed = debugShortcutsEnabled && (allowLiveDebugInput || recordedDebugInput)
-				&& handler.isKeyPressed(debugModeKey);
+		var placementProvider = LevelDebugPlacement.provider(getLevelManager());
+		boolean engineDebug = LevelDebugPlacement.engineMode(configService, placementProvider);
+		if (engineLevelDebugSelected && !engineDebug) {
+			for (Sprite sprite : getAllSprites()) {
+				if (sprite instanceof AbstractPlayableSprite player && player.isDebugMode()) {
+					player.toggleDebugMode();
+				}
+			}
+		}
+		engineLevelDebugSelected = engineDebug;
+		boolean debugModePressed = engineDebug && debugShortcutsEnabled
+				&& (allowLiveDebugInput || recordedDebugInput) && handler.isKeyPressed(debugModeKey);
 		boolean superSonicDebugPressed = debugShortcutsEnabled && allowLiveDebugInput
 				&& (isChordPressed(handler, superSonicDebugKey)
 				|| isChordPressed(handler, hyperFormDebugKey));
@@ -794,7 +817,8 @@ public class SpriteManager implements PlayableSstDispatcher {
 				speedUp,
 				slowDown,
 				debugModePressed,
-				superSonicDebugPressed));
+				superSonicDebugPressed), placementProvider,
+				suppressInput ? PlayerInputState.neutral() : p1, engineDebug);
 	}
 
 	private static boolean isChordPressed(InputHandler handler, KeyChord chord) {
@@ -895,6 +919,12 @@ public class SpriteManager implements PlayableSstDispatcher {
 	}
 
 	private void processPlayableSlots(PlayableDispatchContext context) {
+		processPlayableSlots(context, null, PlayerInputState.neutral(), true);
+	}
+
+	private void processPlayableSlots(PlayableDispatchContext context,
+			LevelDebugPlacementProvider placementProvider, PlayerInputState placementInput,
+			boolean engineDebug) {
 		// Note: bucketsDirty is already marked in addSprite()/removeSprite(),
 		// no need to unconditionally mark dirty every frame.
 		Collection<Sprite> sprites = getAllSprites();
@@ -921,6 +951,8 @@ public class SpriteManager implements PlayableSstDispatcher {
 		boolean rawJumpPress = (input.p1Pressed() & AbstractPlayableSprite.INPUT_JUMP) != 0;
 		LevelManager levelManager = getLevelManager();
 		int cadence = context.epoch().nativeLevelEpoch();
+		AbstractPlayableSprite placementActor = placementProvider != null && nativeRoster == null
+				? getMainPlayable() : null;
 		try {
 			for (AbstractPlayableSprite playable : playables) {
 				activePlayableUpdate = playable;
@@ -930,6 +962,10 @@ public class SpriteManager implements PlayableSstDispatcher {
 					}
 					if (input.consumeQueuedObjectControlState()) {
 						playable.applyQueuedControlStateForFrameStart();
+					}
+					if (playable == placementActor && LevelDebugPlacement.of(currentGameStateManager())
+							.dispatch(placementProvider, levelManager, playable, placementInput, engineDebug)) {
+						continue;
 					}
 					if (context.debugModePressed()) {
 						playable.toggleDebugMode();
@@ -1717,6 +1753,13 @@ public class SpriteManager implements PlayableSstDispatcher {
 		return handler.isKeyDown(GLFW_KEY_LEFT_CONTROL) || handler.isKeyDown(GLFW_KEY_RIGHT_CONTROL);
 	}
 
+	private static void drawSprite(Sprite sprite) {
+		if (sprite instanceof AbstractPlayableSprite playable && LevelDebugPlacement.drawPreview(playable)) {
+			return;
+		}
+		sprite.draw();
+	}
+
 	public void draw() {
 		boolean wrapEnabled = enableVerticalWrapIfNeeded();
 		try {
@@ -1725,7 +1768,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 				if (isSuppressedSidekickSprite(sprite)) {
 					continue;
 				}
-				sprite.draw();
+				drawSprite(sprite);
 			}
 		} finally {
 			if (wrapEnabled) disableVerticalWrap();
@@ -1739,7 +1782,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 			for (int bucket = RenderPriority.MAX; bucket >= RenderPriority.MIN; bucket--) {
 				int idx = bucket - RenderPriority.MIN;
 				for (Sprite sprite : lowPriorityBuckets[idx]) {
-					sprite.draw();
+					drawSprite(sprite);
 				}
 			}
 		} finally {
@@ -1753,11 +1796,11 @@ public class SpriteManager implements PlayableSstDispatcher {
 			for (int bucket = RenderPriority.MAX; bucket >= RenderPriority.MIN; bucket--) {
 				int idx = bucket - RenderPriority.MIN;
 				for (Sprite sprite : highPriorityBuckets[idx]) {
-					sprite.draw();
+					drawSprite(sprite);
 				}
 				if (bucket == RenderPriority.MIN) {
 					for (Sprite sprite : nonPlayableSprites) {
-						sprite.draw();
+						drawSprite(sprite);
 					}
 				}
 			}
@@ -1775,13 +1818,13 @@ public class SpriteManager implements PlayableSstDispatcher {
 
 			List<Sprite>[] buckets = highPriority ? highPriorityBuckets : lowPriorityBuckets;
 			for (Sprite sprite : buckets[idx]) {
-				sprite.draw();
+				drawSprite(sprite);
 			}
 
 			// Non-playable sprites are only drawn once at the minimum high-priority bucket
 			if (highPriority && targetBucket == RenderPriority.MIN) {
 				for (Sprite sprite : nonPlayableSprites) {
-					sprite.draw();
+					drawSprite(sprite);
 				}
 			}
 		} finally {
@@ -1809,7 +1852,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 			// Terrain priority does not change sprite-to-sprite ordering.
 			for (AbstractPlayableSprite sprite : unifiedBuckets[idx]) {
 				if (callback != null) callback.beforeDraw(sprite, sprite.isHighPriority());
-				sprite.draw();
+				drawSprite(sprite);
 			}
 
 			// Non-playable sprites are drawn at the minimum bucket
@@ -1819,7 +1862,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 					if (callback != null) {
 						callback.beforeDraw(sprite, false);
 					}
-					sprite.draw();
+					drawSprite(sprite);
 				}
 			}
 		} finally {
@@ -1903,8 +1946,8 @@ public class SpriteManager implements PlayableSstDispatcher {
 				if (SpriteMotionInternalAccess.collecting(gfx)
                         && sprite.getClass().getClassLoader() == SpriteManager.class.getClassLoader()) {
                     SpriteMotionInternalAccess.withOwner(gfx,
-                            LevelMotionOwners.playerOwner(this, sprite), sprite::draw);
-                } else sprite.draw();
+                            LevelMotionOwners.playerOwner(this, sprite), () -> drawSprite(sprite));
+                } else drawSprite(sprite);
 				// SAT order is front to back (earlier entries win), so the same layering puts the
 				// hook's entries straight after that layer's last player sprite.
 				if (collectingSat && hook != null && !(high ? highHookDrawn : lowHookDrawn)
@@ -1928,7 +1971,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 				gfx.flushPatternBatch();
 				gfx.setCurrentSpriteHighPriority(false);
 				gfx.beginPatternBatch();
-				for (Sprite sprite : nonPlayableSprites) sprite.draw();
+				for (Sprite sprite : nonPlayableSprites) drawSprite(sprite);
 			}
 		} finally {
 			if (wrapEnabled) disableVerticalWrap();
