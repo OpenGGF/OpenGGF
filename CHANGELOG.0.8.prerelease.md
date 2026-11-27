@@ -7,6 +7,10 @@ under the matching area heading; see the
 
 ## Gameplay and presentation
 
+- **Knuckles in Sonic 2 title with the lock-on ROM:** the strip above the N in
+  SONIC shows the logo again instead of stray tiles. While rising, Knuckles stays
+  behind the emblem as on the cartridge.
+
 - **Knuckles in Sonic 2 starts from the hub again.** Choosing Knuckles for
   Sonic 2 in Game Setup or the setup guide used to start the game as Sonic,
   because Start re-checked the profile without the built-in Knuckles option.
