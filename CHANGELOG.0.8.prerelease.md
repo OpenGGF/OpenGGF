@@ -16,6 +16,8 @@ under the matching area heading; see the
 - **Knuckles' continue icon on Sonic 3 & Knuckles special-stage results** is
   red again instead of Sonic blue. Chaos Emerald stages now apply the same
   Knuckles colours as the cartridge, as Super Emerald stages already did.
+  Sonic 1 special-stage results show the playing character's own continue
+  icon beside CONTINUE, as its continue screen does, instead of mini-Sonic.
 
 - **Controllers with newer firmware are recognised.** The engine now ships the
   SDL_GameControllerDB mapping table on top of GLFW's own, honours
