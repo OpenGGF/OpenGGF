@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import java.nio.file.Path;
 import java.util.Set;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -108,6 +109,55 @@ class TestGameplayCaptureToolArgs {
         flags.add("--interactive-pacing");
         assertThrows(IllegalArgumentException.class,
                 () -> GameplayCaptureTool.Arguments.parse(flags.toArray(String[]::new)));
+    }
+
+    @Test
+    void severalRewindWindowsCarryTheirOwnSpeedsAndTheFirstKeepsTheLegacyFields() {
+        String[] base = {"--zone", "ehz", "--act", "1", "--out-dir", "out"};
+        var args = GameplayCaptureTool.Arguments.parse(with(base,
+                "--rewind", "900:60:double", "--rewind", "100:30", "--rewind", "400:45:HALF"));
+        var plan = args.rewindPlan();
+        assertEquals(3, plan.windows().size());
+        assertEquals(100, args.rewindFrom(), "the earliest window keeps the single-window fields");
+        assertEquals(30, args.rewindFrames());
+        assertEquals(GameplayCaptureRewindPlan.Speed.NORMAL, plan.heldAt(100));
+        assertNull(plan.heldAt(130));
+        assertEquals(GameplayCaptureRewindPlan.Speed.HALF, plan.heldAt(444));
+        assertNull(plan.heldAt(445));
+        assertEquals(GameplayCaptureRewindPlan.Speed.DOUBLE, plan.heldAt(959));
+        assertTrue(args.rewindHeldAt(900));
+        assertTrue(plan.active());
+        assertNull(plan.scope(), "unset budget values keep the configuration's");
+        for (String[] bad : new String[][] {{"--rewind", "10:5:fast"}, {"--rewind", "10:5:half:x"},
+                {"--rewind", "10:20", "--rewind", "29:5"}}) {
+            assertThrows(IllegalArgumentException.class,
+                    () -> GameplayCaptureTool.Arguments.parse(with(base, bad)), String.join(" ", bad));
+        }
+        assertDoesNotThrow(() -> GameplayCaptureTool.Arguments.parse(with(base,
+                "--rewind", "10:20", "--rewind", "30:5")), "adjacent windows release for no frame");
+    }
+
+    @Test
+    void rewindBudgetFlagsPinTheCapturesOwnSettings() {
+        String[] base = {"--zone", "ehz", "--act", "1", "--out-dir", "out"};
+        assertFalse(GameplayCaptureTool.Arguments.parse(base).rewindPlan().active());
+        var plan = GameplayCaptureTool.Arguments.parse(with(base, "--rewind-scope", "Checkpoint",
+                "--rewind-seconds", "6", "--rewind-refill-on-life-loss", "false",
+                "--rewind-bonus-stages", "true", "--rewind-special-stages", "off")).rewindPlan();
+        assertTrue(plan.active(), "budget settings alone record history, so a refill can be filmed");
+        assertEquals("checkpoint", plan.scope());
+        assertEquals("6", plan.seconds());
+        assertEquals(Boolean.FALSE, plan.refillOnLifeLoss());
+        assertEquals(Boolean.TRUE, plan.bonusStages());
+        assertEquals(Boolean.FALSE, plan.specialStages());
+        assertEquals("unlimited", GameplayCaptureTool.Arguments.parse(
+                with(base, "--rewind-seconds", "UNLIMITED")).rewindPlan().seconds());
+        for (String[] bad : new String[][] {{"--rewind-scope", "level"}, {"--rewind-seconds", "0"},
+                {"--rewind-seconds", "ten"}, {"--rewind-refill-on-life-loss", "maybe"},
+                {"--rewind-scope", "act", "--interactive-pacing"}}) {
+            assertThrows(IllegalArgumentException.class,
+                    () -> GameplayCaptureTool.Arguments.parse(with(base, bad)), String.join(" ", bad));
+        }
     }
 
     @Test

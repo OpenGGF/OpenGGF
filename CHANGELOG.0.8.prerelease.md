@@ -785,6 +785,13 @@ under the matching area heading; see the
 
 ## Modding and tools
 
+- **Gameplay capture rewind direction:** `GameplayCaptureTool` accepts several
+  `--rewind FRAME:LENGTH[:half|normal|double]` windows, each holding the configured
+  speed modifier with the rewind key, and pins the capture's rewind budget with
+  `--rewind-scope`, `--rewind-seconds`, `--rewind-refill-on-life-loss`,
+  `--rewind-bonus-stages` and `--rewind-special-stages`. Special-stage captures now
+  draw the VHS picture and the REW plate, as the engine window does.
+
 - Music-pack patches can replace Sonic 1, Sonic 2 and Sonic 3 & Knuckles songs
   with native SMPS packages exported by external authoring tools. Package tracks keep native
   sequencing, jingle restoration and rewind. Failed package tracks fall back
