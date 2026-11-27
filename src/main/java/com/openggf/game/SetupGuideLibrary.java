@@ -216,8 +216,7 @@ public final class SetupGuideLibrary {
     }
 
     private static Optional<HostedGameMedia> hosted(Game game) {
-        try { return Optional.ofNullable(GameModuleRegistry.hostedMedia(GameId.fromCode(game.id()))); }
-        catch (RuntimeException unknown) { return Optional.empty(); }
+        return Optional.ofNullable(GameModuleRegistry.hostedMedia(GameId.fromCode(game.id())));
     }
 
     private static boolean same(Path a, Path b) {

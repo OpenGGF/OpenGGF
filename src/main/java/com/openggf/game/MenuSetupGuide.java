@@ -286,7 +286,7 @@ public final class MenuSetupGuide {
     private void finish(SetupGuidePreset chosen, Outcome result) {
         try {
             (chosen == null ? SetupGuidePreset.KEEP : chosen).finish(config);
-        } catch (IOException | RuntimeException failure) {
+        } catch (IOException failure) {
             message = UiMessages.text("menu.onboarding.could_not_save_check_settings_file_access");
             MenuFeedback.emit(MenuFeedback.Cue.ERROR);
             return;
@@ -327,7 +327,7 @@ public final class MenuSetupGuide {
             case LEAVE -> {
                 if (!consequential) return;
                 try { SetupGuidePreset.skip(config); }
-                catch (IOException | RuntimeException failure) {
+                catch (IOException failure) {
                     message = UiMessages.text("menu.onboarding.could_not_save_check_settings_file_access");
                     return;
                 }
@@ -338,7 +338,7 @@ public final class MenuSetupGuide {
                 var conflict = conflicts.poll();
                 if (conflict != null && consequential) {
                     try { SetupGuideLibrary.replace(config, conflict); refreshLibrary(); host.libraryChanged(); }
-                    catch (IOException | RuntimeException failure) {
+                    catch (IOException failure) {
                         message = UiMessages.text("menu.onboarding.could_not_save_check_settings_file_access");
                     }
                 }
@@ -390,7 +390,7 @@ public final class MenuSetupGuide {
         notice = found.notice();
         var plan = SetupGuideLibrary.plan(found, games, library);
         try { SetupGuideLibrary.apply(config, plan); }
-        catch (IOException | RuntimeException failure) {
+        catch (IOException failure) {
             message = UiMessages.text("menu.onboarding.could_not_save_check_settings_file_access");
             return;
         }
@@ -407,14 +407,23 @@ public final class MenuSetupGuide {
     }
 
     private void finishDiscovery() {
+        MenuLoadTask<SetupGuideLibrary.Findings> finished = discovery;
+        discovery = null;
+        SetupGuideLibrary.Findings found;
         try {
-            acceptFindings(discovery.result());
-        } catch (Exception failure) {
+            found = finished.result();
+        } catch (java.util.concurrent.ExecutionException failure) {
+            // An unreadable folder or file is the player's to fix; anything else is an engine fault.
+            if (!(failure.getCause() instanceof IOException))
+                throw new IllegalStateException("Setup guide discovery failed", failure.getCause());
             message = scanning ? UiMessages.text("menu.onboarding.could_not_read_this_folder")
                     : UiMessages.text("menu.onboarding.could_not_read_this_file");
             notice = UiMessages.text("menu.onboarding.check_access_or_choose_another_location");
+            return;
+        } catch (Exception unexpected) {
+            throw new IllegalStateException("Setup guide discovery failed", unexpected);
         }
-        discovery = null;
+        acceptFindings(found);
     }
 
     private void openDetails() {
