@@ -1,10 +1,13 @@
 package com.openggf.level;
 
+import com.openggf.camera.CameraPresentationAccess;
+import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.game.GameServices;
 import com.openggf.graphics.*;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.render.SpritePieceRenderer;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.RomTestUtils;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
@@ -76,6 +79,37 @@ class TestNativeSpriteSatGameplay {
             assertTrue(differences(ringsOnly, blank, x, y, 16, 16) > 0,
                     "real queued attracted art survives objects-off and disappears with rings-off");
             assertEquals(picture, renderer.captureSceneSpriteTable(GameServices.sprites()));
+        }
+    }
+
+    @Test @RequiresRom(SonicGame.SONIC_2)
+    void sonic2NativeWidescreenKeepsTheHudAcrossTheEmeraldHillArenaLock() throws Exception {
+        assumeTrue(PresentationOffscreenTestContext.requested(), "requires owned surfaceless EGL");
+        int width = 800;
+        var settings = new GameplayCaptureSession.Settings(width, "sonic", "", "off", null,
+                0x2700, 0x3E0, null, false, false, null, null, false, 20, false, false,
+                "NATIVE", "GREYSCALE");
+        try (var session = new GameplayCaptureSession(settings)) {
+            session.boot(RomTestUtils.ensureSonic2RomAvailable().toPath(), 0, 1, settings);
+            for (int frame = 0; frame <= 240; frame++) {
+                session.step(new Bk2FrameInput(frame, AbstractPlayableSprite.INPUT_RIGHT, 0, false, "R"));
+            }
+            assertEquals(0x2940, GameServices.camera().getX());
+            var level = GameServices.level();
+            int inset = CameraPresentationAccess.inset(GameServices.camera());
+            int hudX = (width - 320) / 2 + 16;
+            assertTrue(hudX + 16 <= inset, "the lives icon is left of the simulation camera");
+            assertTrue(LevelScrollPresentation.captureArenaMask(level).left() < hudX,
+                    "the lives icon is within the visible arena");
+            var frame = level.spritePresentationRenderer().captureSceneSpriteTable(GameServices.sprites());
+            var iconColumns = frame.tiles().stream()
+                    .filter(tile -> tile.layer() == SpritePresentation.Layer.HUD && tile.y() == 200)
+                    .map(tile -> (int) tile.x() + inset)
+                    .filter(x -> x >= hudX && x < hudX + 16)
+                    .sorted()
+                    .toList();
+            assertEquals(List.of(hudX, hudX + 8), iconColumns,
+                    "both columns of the lives icon belong to the displayed SAT raster");
         }
     }
 
