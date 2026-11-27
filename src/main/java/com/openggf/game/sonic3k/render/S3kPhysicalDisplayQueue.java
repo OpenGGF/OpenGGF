@@ -33,6 +33,12 @@ final class S3kPhysicalDisplayQueue {
     private int entryOffset = 2;
     private boolean walking;
     private boolean visitOpen;
+    /**
+     * Copy-on-write rewind image shared by captures until the next mutation of
+     * {@code input} or the cursor; every such write path clears it first and
+     * {@link #restore} adopts the restored immutable snapshot.
+     */
+    private Snapshot sharedSnapshot;
 
     enum Consumer { NORMAL, COMPETITION }
 
@@ -109,6 +115,7 @@ final class S3kPhysicalDisplayQueue {
         if (walking) {
             throw new IllegalStateException("Previous consumer pass has not completed");
         }
+        sharedSnapshot = null;
         region = 0;
         entryOffset = 2;
         walking = true;
@@ -132,6 +139,7 @@ final class S3kPhysicalDisplayQueue {
             nextOffset = 2;
         }
         if (nextRegion == REGIONS) {
+            sharedSnapshot = null;
             region = REGIONS;
             entryOffset = 2;
             walking = false;
@@ -154,6 +162,7 @@ final class S3kPhysicalDisplayQueue {
         if (published) {
             projection.writeRenderFlags(address, after); // loc_1ADB2: before SAT/piece tests
         }
+        sharedSnapshot = null;
         region = nextRegion;
         entryOffset = nextOffset;
         visitOpen = true;
@@ -166,7 +175,7 @@ final class S3kPhysicalDisplayQueue {
             throw new IllegalStateException("No published visit is awaiting NextObj");
         }
         int base = region * REGION_BYTES;
-        writeWord(base, word(base) - 2);
+        writeWord(base, word(base) - 2); // clears sharedSnapshot
         entryOffset += 2;
         visitOpen = false;
     }
@@ -176,7 +185,12 @@ final class S3kPhysicalDisplayQueue {
      * consumer side effects belong to the caller and are NOT captured here.
      */
     Snapshot capture() {
-        return new Snapshot(input, region, entryOffset, walking, visitOpen);
+        Snapshot snapshot = sharedSnapshot;
+        if (snapshot == null) {
+            snapshot = new Snapshot(input, region, entryOffset, walking, visitOpen);
+            sharedSnapshot = snapshot;
+        }
+        return snapshot;
     }
 
     void restore(Snapshot snapshot) {
@@ -186,6 +200,7 @@ final class S3kPhysicalDisplayQueue {
         entryOffset = snapshot.entryOffset;
         walking = snapshot.walking;
         visitOpen = snapshot.visitOpen;
+        sharedSnapshot = snapshot; // Immutable and now equal to the live image/cursor.
     }
 
     /** Internal immutable value, not a registered/public rewind snapshot shape. */
@@ -206,6 +221,11 @@ final class S3kPhysicalDisplayQueue {
 
         byte[] image() {
             return input.clone();
+        }
+
+        /** Dimension check without cloning the image. */
+        int imageLength() {
+            return input.length;
         }
 
         @Override
@@ -255,6 +275,7 @@ final class S3kPhysicalDisplayQueue {
     }
 
     private void writeWord(int offset, int value) {
+        sharedSnapshot = null;
         input[offset] = (byte) (value >>> 8);
         input[offset + 1] = (byte) value;
     }
