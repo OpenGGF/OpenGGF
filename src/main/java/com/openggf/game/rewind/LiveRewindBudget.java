@@ -13,16 +13,22 @@ import java.util.Set;
  * <p>A boundary or life-loss refill that restores spent time on the active, finite pool leaves
  * its pre-refill remaining amount for the HUD ({@link #takeRefillFrom()}); a new run, a new
  * session owner or a fresh stage visit is not a refill the player sees.
+ *
+ * <p>{@link Scope#NEVER} keeps rewind enabled but never refills the main allowance: it starts full
+ * for a new run or session owner, as every scope does, and no checkpoint, act, zone or life loss
+ * restores it. Each bonus/special-stage visit still gets its own fresh pool, because that pool is
+ * a separate allowance for the visit and never restores the main one.
  */
 final class LiveRewindBudget {
     enum Scope {
-        OFF, CHECKPOINT, ACT, ZONE;
+        OFF, CHECKPOINT, ACT, ZONE, NEVER;
 
         static Scope parse(String value) {
             return switch (value == null ? "" : value.toLowerCase(java.util.Locale.ROOT)) {
                 case "off" -> OFF;
                 case "checkpoint" -> CHECKPOINT;
                 case "zone" -> ZONE;
+                case "never" -> NEVER;
                 default -> ACT;
             };
         }
@@ -93,7 +99,7 @@ final class LiveRewindBudget {
         Boundary boundary = switch (scope) {
             case ACT -> new Boundary(game, zone, act, -1);
             case ZONE -> new Boundary(game, zone, -1, -1);
-            case CHECKPOINT, OFF -> null;
+            case CHECKPOINT, OFF, NEVER -> null;
         };
         if (boundary != null && reached.add(boundary)) refillShown(main);
     }
@@ -108,8 +114,11 @@ final class LiveRewindBudget {
         refillFromFrames = -1;
     }
 
-    void lifeLost(boolean refill) {
-        if (refill) refillShown(activePool());
+    /** Applies a completed life-loss respawn; returns whether the allowance was refilled. */
+    boolean lifeLost(boolean refill) {
+        if (!refill || scope == Scope.NEVER) return false;
+        refillShown(activePool());
+        return true;
     }
 
     /** Refills {@code pool}, noting what was left when that restores spent time the player can see. */

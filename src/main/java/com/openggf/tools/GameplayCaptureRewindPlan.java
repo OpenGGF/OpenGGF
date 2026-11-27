@@ -11,7 +11,7 @@ import java.util.Locale;
  * Unset budget values read the configuration, as live play does.
  *
  * @param windows           non-overlapping held windows, in frame order
- * @param scope             {@code rewind.budgetScope} (off, checkpoint, act, zone), or null
+ * @param scope             {@code rewind.budgetScope} (off, checkpoint, act, zone, never), or null
  * @param seconds           {@code rewind.budgetSeconds} (a positive count or unlimited), or null
  * @param refillOnLifeLoss  {@code rewind.refillOnLifeLoss}, or null
  * @param bonusStages       {@code rewind.bonusStages}, or null
@@ -81,8 +81,8 @@ public record GameplayCaptureRewindPlan(List<Window> windows, String scope, Stri
     static String parseScope(String raw, String flag) {
         String value = raw.trim().toLowerCase(Locale.ROOT);
         return switch (value) {
-            case "off", "checkpoint", "act", "zone" -> value;
-            default -> throw new IllegalArgumentException(flag + " must be off, checkpoint, act or zone");
+            case "off", "checkpoint", "act", "zone", "never" -> value;
+            default -> throw new IllegalArgumentException(flag + " must be off, checkpoint, act, zone or never");
         };
     }
 

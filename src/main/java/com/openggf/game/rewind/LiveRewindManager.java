@@ -562,9 +562,9 @@ public final class LiveRewindManager {
         if (boundary == RewindBoundary.LIFE_LOSS_RESPAWN) {
             observeBudgetContext();
             if (keyEnabled()) {
-                boolean refill = config.getBoolean(SonicConfiguration.REWIND_REFILL_ON_LIFE_LOSS);
-                budget.lifeLost(refill);
-                if (refill) emptyFeedbackFrames = 0;
+                // Scope Never ignores the life-loss refill setting; the budget reports what it did.
+                if (budget.lifeLost(config.getBoolean(SonicConfiguration.REWIND_REFILL_ON_LIFE_LOSS)))
+                    emptyFeedbackFrames = 0;
                 collectRefill();
             }
             return;

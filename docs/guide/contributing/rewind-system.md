@@ -97,7 +97,10 @@ rewind:
 
 While playing a level, hold `rewind.liveKey` to step backward through the live
 gameplay buffer. Releasing the key resumes normal gameplay from the restored frame.
-`budgetScope: off` disables the live key; `budgetSeconds: "unlimited"` removes the
+`budgetScope: off` disables the live key; `budgetScope: never` keeps it armed but never
+refills the main allowance (it starts full for a new run or session, and checkpoints, acts,
+zones and life loss restore nothing; each bonus/special-stage visit still gets its own fresh
+pool); `budgetSeconds: "unlimited"` removes the
 allowance limit. The allowance is separate from the retained history buffer and
 is not restored by seeking backward.
 

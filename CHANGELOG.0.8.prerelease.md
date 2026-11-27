@@ -12,6 +12,10 @@ under the matching area heading; see the
   back to the maximum, hold for a second and hide. Pressing rewind cancels it.
   An Unlimited budget now shows a full meter with an infinity mark in place of the
   frame counter, and the plate's edge pulses slowly while the key is held.
+  A new refill choice, **Never**, gives one allowance for the whole game: it
+  starts full for a new game or loaded save, and no checkpoint, act, zone or lost
+  life refills it (Refill on life loss shows as inactive). Each bonus or special
+  stage visit still has its own fresh allowance. **Off** still disables rewind.
 
 - **Sonic 2 positioned starts:** object loading publishes the new camera
   position before the next object update. Widescreen EDGE keeps Emerald Hill's
@@ -788,7 +792,7 @@ under the matching area heading; see the
 - **Gameplay capture rewind direction:** `GameplayCaptureTool` accepts several
   `--rewind FRAME:LENGTH[:half|normal|double]` windows, each holding the configured
   speed modifier with the rewind key, and pins the capture's rewind budget with
-  `--rewind-scope`, `--rewind-seconds`, `--rewind-refill-on-life-loss`,
+  `--rewind-scope` (now including `never`), `--rewind-seconds`, `--rewind-refill-on-life-loss`,
   `--rewind-bonus-stages` and `--rewind-special-stages`. Special-stage captures now
   draw the VHS picture and the REW plate, as the engine window does.
 

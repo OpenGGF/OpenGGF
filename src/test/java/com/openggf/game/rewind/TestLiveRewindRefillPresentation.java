@@ -201,6 +201,20 @@ class TestLiveRewindRefillPresentation {
     }
 
     @Test
+    void neverScopeIgnoresTheLifeLossRefillSettingThroughTheManager() {
+        config.setConfigValue(SonicConfiguration.REWIND_BUDGET_SCOPE, "never");
+        assertTrue(config.getBoolean(SonicConfiguration.REWIND_REFILL_ON_LIFE_LOSS), "refill on by default");
+        spendFrames(18);
+        owner.markRewindBoundary(RewindBoundary.LIFE_LOSS_RESPAWN);
+        idle();
+        assertFalse(manager.budgetHudState().visible(), "no refill plate under Never");
+        assertEquals(582, manager.budgetHudState().remainingFrames(), "the spent time stays spent");
+        holdRewind();
+        assertEquals("9.7s", message().value(), "rewind stays enabled under Never");
+        releaseKey();
+    }
+
+    @Test
     void offScopeShowsNoRefill() {
         spendFrames(6);
         config.setConfigValue(SonicConfiguration.REWIND_BUDGET_SCOPE, "off");

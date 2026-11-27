@@ -152,6 +152,8 @@ class TestGameplayCaptureToolArgs {
         assertEquals(Boolean.FALSE, plan.specialStages());
         assertEquals("unlimited", GameplayCaptureTool.Arguments.parse(
                 with(base, "--rewind-seconds", "UNLIMITED")).rewindPlan().seconds());
+        assertEquals("never", GameplayCaptureTool.Arguments.parse(with(base, "--rewind-scope", "never"))
+                .rewindPlan().scope());
         for (String[] bad : new String[][] {{"--rewind-scope", "level"}, {"--rewind-seconds", "0"},
                 {"--rewind-seconds", "ten"}, {"--rewind-refill-on-life-loss", "maybe"},
                 {"--rewind-scope", "act", "--interactive-pacing"}}) {

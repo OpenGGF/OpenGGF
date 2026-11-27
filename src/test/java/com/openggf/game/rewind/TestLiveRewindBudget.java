@@ -102,6 +102,76 @@ class TestLiveRewindBudget {
         assertEquals(540, budget.remainingFrames());
     }
 
+    /**
+     * Scope Never: one allowance per run. Every refill trigger the other scopes use (a new
+     * checkpoint, act and zone, and a life loss with refill on) is driven with time spent before
+     * each; wiring any of them to refill the main pool breaks a remaining-frames assertion.
+     */
+    @Test
+    void neverScopeSpendsOneAllowanceThatNoBoundaryOrLifeLossRefills() {
+        var budget = new LiveRewindBudget();
+        budget.configure("never", "10");
+        assertFalse(budget.off(), "Never keeps rewind enabled");
+        budget.observeMain(owner, "s3k", 0, 0, -1);
+        assertEquals(600, budget.remainingFrames(), "the allowance starts full");
+        budget.spend(100);
+        budget.observeMain(owner, "s3k", 0, 0, 1);
+        assertEquals(500, budget.remainingFrames(), "a new checkpoint does not refill");
+        budget.spend(100);
+        budget.observeMain(owner, "s3k", 0, 0, 2);
+        budget.observeMain(owner, "s3k", 0, 1, -1);
+        assertEquals(400, budget.remainingFrames(), "a new act does not refill");
+        budget.spend(100);
+        budget.observeMain(owner, "s3k", 1, 0, -1);
+        assertEquals(300, budget.remainingFrames(), "a new zone does not refill");
+        budget.spend(100);
+        assertFalse(budget.lifeLost(true), "a life loss with refill on is ignored");
+        budget.observeMain(owner, "s3k", 1, 0, -1);
+        assertEquals(200, budget.remainingFrames(), "a life loss does not refill");
+        assertEquals(-1, budget.takeRefillFrom(), "nothing was refilled to show");
+        budget.spend(200);
+        budget.observeMain(owner, "s3k", 2, 0, 3);
+        budget.observeMain(owner, "s3k", 2, 1, -1);
+        budget.lifeLost(true);
+        assertTrue(budget.empty(), "a spent allowance stays spent");
+        assertEquals(0, budget.permittedSteps(60));
+
+        budget.startNewRun();
+        budget.observeMain(owner, "s3k", 0, 0, -1);
+        assertEquals(600, budget.remainingFrames(), "a new game starts a full allowance");
+        budget.spend(60);
+        budget.observeMain(new Object(), "s3k", 0, 0, -1);
+        assertEquals(600, budget.remainingFrames(), "a new session (save load) starts a full allowance");
+        assertEquals(-1, budget.takeRefillFrom(), "starting play is not a refill");
+    }
+
+    @Test
+    void neverScopeKeepsFreshStageVisitPoolsWithoutRestoringTheMainAllowance() {
+        var budget = new LiveRewindBudget();
+        budget.configure("never", "10");
+        budget.observeMain(owner, "s3k", 0, 0, -1);
+        budget.spend(420);
+        budget.enterMode(GameMode.SPECIAL_STAGE, "stage");
+        assertEquals(600, budget.remainingFrames(), "a stage visit has its own pool");
+        budget.spend(300);
+        assertFalse(budget.lifeLost(true));
+        assertEquals(300, budget.remainingFrames(), "a life lost in a stage does not refill its pool either");
+        budget.enterMode(GameMode.LEVEL, null);
+        budget.observeMain(owner, "s3k", 0, 1, -1);
+        assertEquals(180, budget.remainingFrames(), "the main allowance is unchanged by the visit");
+    }
+
+    @Test
+    void neverScopeWithUnlimitedIsUnlimited() {
+        var budget = new LiveRewindBudget();
+        budget.configure("never", "unlimited");
+        budget.observeMain(owner, "s1", 0, 0, -1);
+        budget.spend(5000);
+        assertTrue(budget.unlimited());
+        assertFalse(budget.empty());
+        assertEquals(5000, budget.permittedSteps(5000));
+    }
+
     @Test
     void eachStageVisitHasItsOwnAllowanceAndPreservesTheMainStage() {
         var budget = new LiveRewindBudget();
