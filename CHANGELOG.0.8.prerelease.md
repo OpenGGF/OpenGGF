@@ -7,6 +7,10 @@ under the matching area heading; see the
 
 ## Gameplay and presentation
 
+- **Sonic 2 positioned starts:** object loading publishes the new camera
+  position before the next object update. Widescreen EDGE keeps Emerald Hill's
+  loop switchers alive so Sonic can follow both sides of the loop.
+
 - In Sonic 3 & Knuckles, invincibility now ends on the frame the original
   does. The game counts it down once every eight frames, so it could last up
   to seven frames too long. A bubble shield collected while invincible now

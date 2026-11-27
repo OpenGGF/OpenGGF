@@ -849,6 +849,13 @@ public class ObjectManager {
             }
             if (execThenLoad && !population.slots.twoAxisCursorPlacement()
                     && !ObjectManagerInternalAccess.placementAtWorldTail(this)) {
+                if (allocationLayout == ObjectSlotLayout.SONIC_2) {
+                    // ObjectsManager_Main (s2.asm:33032-33043) publishes Camera_X_pos_coarse
+                    // on every load pass. MarkObjGone3 (s2.asm:30259-30276) reads it on the
+                    // next object walk, including after a positioned entry streams objects
+                    // without a post-camera pass.
+                    s2LatchedObjectManagerCameraX = cameraX;
+                }
                 cleanupDestroyedDynamicObjects();
                 syncActiveSpawnsLoad(true);
             }
