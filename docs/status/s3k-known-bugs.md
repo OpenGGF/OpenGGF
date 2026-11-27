@@ -8,6 +8,18 @@ deliberate bug-fixes of ROM data), see
 
 For general (cross-game) bugs, see [known-bugs.md](known-bugs.md).
 
+## S3K sidekick death checks can read a cached boundary
+
+`Tails_Check_Screen_Boundaries` (sonic3k.asm:28447-28483) and the hurt-stop
+routine `sub_15716` (sonic3k.asm:29256-29273) read the live camera limit.
+The engine's CPU controller can override that limit with a cached value from a
+level load or event. During the AIZ2 ship loop, the event mirror can also take
+the farther-down of the live and target limits. A mismatch can change the frame
+the sidekick crosses the kill plane.
+
+Remove this entry once the normal and hurt-stop tests use the camera word
+visible on the sidekick's native slot, with replay coverage across a resize.
+
 ## Special-stage award presentation and persistence details
 
 - `SaveGame_SpecialStage` (sonic3k.asm:15966-15999) writes the Continue byte at

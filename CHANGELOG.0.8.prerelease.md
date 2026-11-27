@@ -7,6 +7,10 @@ under the matching area heading; see the
 
 ## Gameplay and presentation
 
+- **Pit deaths during camera resize** use the live bottom limit in Sonic 1,
+  Sonic 2 and Sonic 3 & Knuckles. Sky Chase also lowers the live limit before
+  moving the camera with the Tornado, matching the cartridge's update order.
+
 - **Sonic 2 positioned starts:** object loading publishes the new camera
   position before the next object update. Widescreen EDGE keeps Emerald Hill's
   loop switchers alive so Sonic can follow both sides of the loop.

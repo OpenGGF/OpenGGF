@@ -5257,6 +5257,36 @@ public class TestPlayableSpriteMovement {
                                 "Sonic_Control copies the raw pressed byte; it does not derive an edge from filtered held input");
         }
 
+        @org.junit.jupiter.params.ParameterizedTest
+        @org.junit.jupiter.params.provider.CsvSource({
+                "SONIC_1, doLevelBoundary", "SONIC_1, applyHurtStopBottomKill",
+                "SONIC_2, doLevelBoundary", "SONIC_2, applyHurtStopBottomKill",
+                "SONIC_3K, doLevelBoundary", "SONIC_3K, applyHurtStopBottomKill"
+        })
+        void loweringBottomBoundaryKillsAtLiveLimit(String game, String routine) throws Exception {
+                setGameRulesForTest(switch (game) {
+                        case "SONIC_1" -> GameRules.SONIC_1;
+                        case "SONIC_2" -> GameRules.SONIC_2;
+                        case "SONIC_3K" -> GameRules.SONIC_3K;
+                        default -> throw new IllegalArgumentException(game);
+                });
+                Camera camera = GameServices.camera();
+                camera.setMaxY((short) 0x100);
+                camera.setMaxYTarget((short) 0x200);
+                camera.setLevelStarted(true);
+                mockSprite.setCentreX((short) 0x80);
+
+                Method boundaryCheck = PlayableSpriteMovement.class.getDeclaredMethod(routine);
+                boundaryCheck.setAccessible(true);
+                mockSprite.setCentreY((short) 0x1E0);
+                boundaryCheck.invoke(manager);
+                assertFalse(mockSprite.getDead(), "exactly at the live boundary + $E0");
+
+                mockSprite.setCentreY((short) 0x1E1);
+                boundaryCheck.invoke(manager);
+                assertTrue(mockSprite.getDead(), "one pixel past the live boundary + $E0");
+        }
+
         @Test
         public void hurtStopBottomKillReturnsBeforeTerrainCollision() throws Exception {
                 setGameRulesForTest(GameRules.SONIC_2);

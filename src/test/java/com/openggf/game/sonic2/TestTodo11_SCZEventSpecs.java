@@ -8,6 +8,7 @@ import com.openggf.camera.Camera;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic2.events.Sonic2SCZEvents;
 import com.openggf.game.sonic2.scroll.SwScrlScz;
+import com.openggf.sprites.playable.Sonic;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -131,6 +132,23 @@ public class TestTodo11_SCZEventSpecs {
         assertEquals(-1, scrollHandler.getTornadoVelocityX(), "Tornado X velocity should be -1 (leftward) at $1180");
         assertEquals(1, scrollHandler.getTornadoVelocityY(), "Tornado Y velocity should be 1 (downward) at $1180");
         assertEquals((short) 0x500, cam.getMaxYTarget(), "Max Y target should be set to $500");
+    }
+
+    @Test
+    void sczEasesTheLiveBottomBeforeTornadoScroll() {
+        Sonic sonic = new Sonic("sonic", (short) 0, (short) 0);
+        sonic.setAir(true);
+        cam.setFocusedSprite(sonic);
+        cam.setMaxY((short) 0x100);
+        cam.setY((short) 0xF7);
+        scrollHandler.advanceCameraForFrame(cam, 0);
+
+        cam.setX((short) 0x1180);
+        scrollHandler.advanceCameraForFrame(cam, 0);
+
+        assertEquals(0x500, cam.getMaxYTarget());
+        assertEquals(0x102, cam.getMaxY(), "Pre-scroll Y + 8 is below the old live limit");
+        assertEquals(0xF8, cam.getY(), "Tornado scroll follows the resize tail");
     }
 
     /**

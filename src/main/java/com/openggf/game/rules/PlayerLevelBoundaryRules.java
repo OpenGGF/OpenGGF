@@ -41,18 +41,6 @@ package com.openggf.game.rules;
  *        only at the bottom. S2 and S3K ship the signed form already
  *        (docs/s2disasm/s2.asm:38213-38214; docs/skdisasm/sonic3k.asm:24517-24521),
  *        so this is a genuine per-game divergence, not an S1 carve-out.
- *        <p>The companion divergence — which boundary word the row is measured
- *        from ({@code v_limitbtm2}/target for S1, the live
- *        {@code Camera_Max_Y_pos} for S2 and S3K) — is deliberately NOT modelled
- *        here. Both hurt-stop and {@code Sonic_LevelBound} kill planes currently
- *        run the {@code FixBugs = 1} {@code max(live, target)} expression, which
- *        is held in place because removing it regresses
- *        TestS2SczLevelSelectTraceReplay; see the note on the {@code maxY}
- *        assignment in {@code PlayableSpriteMovement.doLevelBoundary}. Under that
- *        shared mask the per-game word choice makes no observable difference, so
- *        adding a rule for it would be untestable plumbing. When the mask is
- *        lifted, both sites move together and the word choice becomes a real
- *        per-game rule again.
  * @param rightEdgeInset
  *        the right clamp sits this far inside {@code Camera_Max_X_pos + 320}
  *        while the screen is locked: 24 ({@code +$128}) for S1, S2 and S3K
