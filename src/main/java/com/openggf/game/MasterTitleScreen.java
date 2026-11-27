@@ -227,6 +227,11 @@ public class MasterTitleScreen {
     public void setEditorProjectsOpenHandler(Runnable handler) { editorProjectsOpenHandler = handler; }
     private MenuRomLocator romLocator;
     private MenuGameOnboarding onboarding;
+    /** Engine-owned for the whole run; null for hubs built by tools and tests, which never open the guide. */
+    private SetupGuideSession setupGuideSession;
+    private MenuSetupGuide setupGuide;
+    /** The Extras entry Race online opens (the bundled Time Attack mode), or -1 when it is not enabled. */
+    private int multiplayerEntry = -1;
     private HubMusicController hubMusic;
     private MenuLoadTask<?> catalogLoad;
     private java.util.function.Consumer<Object> catalogLoaded;
@@ -383,8 +388,7 @@ public class MasterTitleScreen {
             loadRomPreviews();
             resetRomPreviewTextureFrames();
             hubMusic = new HubMusicController(configService);
-            if (stockAvailability.values().stream().noneMatch(Boolean.TRUE::equals))
-                onboarding = new MenuGameOnboarding(configService);
+            openStartupChild();
 
             state = State.FADE_IN;
             LOGGER.info("Master title screen initialized");
@@ -410,7 +414,7 @@ public class MasterTitleScreen {
         pointer = readPointer(inputHandler);
         frameCounter++;
         if (hubMusic != null) hubMusic.update(getSelectedGameId(), settingsScreen != null || helpOpen || toolsOpen
-                || romLocator != null || onboarding != null || quitPrompt || endPrompt || supportNotice != null
+                || romLocator != null || onboarding != null || setupGuide != null || quitPrompt || endPrompt || supportNotice != null
                 || state != State.ACTIVE);
         advancePreviewAnimationFrame();
         advanceHubAnimation();
@@ -479,6 +483,7 @@ public class MasterTitleScreen {
             childInputPending = false;
         }
         if (catalogLoad != null) { updateCatalogLoad(); return; }
+        if (setupGuide != null) { updateSetupGuide(inputHandler); return; }
         if (onboarding != null) {
             if (pointer != null) onboarding.pointer(pointer.x(), pointer.y(), pointer.moved(), pointer.click(),
                     pointer.backClick(), pointer.wheel());
@@ -701,11 +706,83 @@ public class MasterTitleScreen {
         extrasIncludeBuiltIns = includesBuiltIns;
         titleEntries = List.copyOf(labels);
         titleEntryOpener = Objects.requireNonNull(opener, "opener");
-        navigation.setExtrasVisible(!titleEntries.isEmpty());
+        navigation.setExtrasVisible(!extrasRows().isEmpty());
+    }
+
+    /** Extras rows: the engine's and mods' entries, then the setup guide when this hub has a session. */
+    private List<String> extrasRows() {
+        if (setupGuideSession == null) return titleEntries;
+        List<String> rows = new ArrayList<>(titleEntries);
+        rows.add(UiMessages.text("menu.setup.extras.entry"));
+        return rows;
+    }
+
+    /**
+     * Gives this hub the run's setup guide session: the guide may open on its own once, and Extras gains
+     * its entry. {@code multiplayerEntry} is the Extras index Race online opens, or -1.
+     */
+    public void setSetupGuideSession(SetupGuideSession session, int multiplayerEntry) {
+        this.setupGuideSession = session;
+        this.multiplayerEntry = multiplayerEntry;
+        navigation.setExtrasVisible(!extrasRows().isEmpty());
+    }
+
+    /**
+     * The page the hub opens by itself: the setup guide once per run while it is unsettled and no game is
+     * paused behind the hub; otherwise, as
+     * before the guide, Add your games when no cartridge is available (never in a run whose guide already
+     * opened, so one run never opens two such pages on its own). Hubs without a session keep the old rule.
+     */
+    private void openStartupChild() {
+        // A hub that holds a paused game was opened from play (a direct boot, then the hub): never set up over it.
+        if (setupGuideSession != null && !hasSuspendedGame() && setupGuideSession.claimAutomaticOpen(configService))
+            openSetupGuide(false);
+        else if (stockAvailability.values().stream().noneMatch(Boolean.TRUE::equals)
+                && (setupGuideSession == null || !setupGuideSession.automaticOpenUsed()))
+            onboarding = new MenuGameOnboarding(configService);
+    }
+
+    void openStartupChildForTest() { openStartupChild(); }
+    MenuSetupGuide setupGuideForTest() { return setupGuide; }
+    boolean onboardingOpenForTest() { return onboarding != null; }
+    List<String> extrasRowsForTest() { return extrasRows(); }
+    void openExtrasRowForTest(int index) { extrasIndex = index; extrasOpen = false;
+        if (index >= titleEntries.size()) openSetupGuide(true); else openTitleEntry(index); }
+
+    private void openSetupGuide(boolean reentry) {
+        setupGuide = new MenuSetupGuide(configService, setupGuideSession, new MenuSetupGuide.Host() {
+            @Override public boolean onlineAvailable() { return multiplayerEntry >= 0 && multiplayerEntry < titleEntries.size(); }
+            @Override public void libraryChanged() { refreshStockAvailability(); }
+        }, reentry);
+        childInputPending = true;
+    }
+
+    private void updateSetupGuide(InputHandler inputHandler) {
+        if (pointer != null) setupGuide.pointer(pointer.x(), pointer.y(), pointer.moved(), pointer.click(),
+                pointer.backClick(), pointer.wheel());
+        setupGuide.update(inputHandler);
+        MenuSetupGuide.Outcome outcome = setupGuide.outcome();
+        if (outcome == null) return;
+        setupGuide = null;
+        childInputPending = true;
+        refreshRomPreviews();
+        switch (outcome.exit()) {
+            case PLAY, LOCAL_TWO_PLAYER -> {
+                for (int i = 0; i < entries.size(); i++) {
+                    if (!(entries.get(i) instanceof MasterTitleEntry.Suspended) && entries.get(i).gameId().equals(outcome.gameId())) {
+                        setSelectedIndex(i);
+                        startSelectedEntry();
+                        break;
+                    }
+                }
+            }
+            case ONLINE -> { if (multiplayerEntry >= 0 && multiplayerEntry < titleEntries.size()) openTitleEntry(multiplayerEntry); }
+            default -> { }
+        }
     }
 
     private void openExtras() {
-        if (titleEntries.isEmpty()) {
+        if (extrasRows().isEmpty()) {
             showActionError(UiMessages.text("hub.ui.extras"));
         } else {
             extrasOpen = true;
@@ -730,10 +807,11 @@ public class MasterTitleScreen {
         if (navigation.back() || backClicked()) { extrasOpen = false; playCancelSound(); return; }
         int previous = extrasIndex;
         if (navigation.up()) extrasIndex = Math.max(0, extrasIndex - 1);
-        if (navigation.down()) extrasIndex = Math.min(titleEntries.size() - 1, extrasIndex + 1);
+        int rows = extrasRows().size();
+        if (navigation.down()) extrasIndex = Math.min(rows - 1, extrasIndex + 1);
         boolean clicked = false;
-        int start = chooserStart(titleEntries.size(), extrasIndex);
-        for (int i = start; pointer != null && i < Math.min(titleEntries.size(), start + chooserVisible()); i++) {
+        int start = chooserStart(rows, extrasIndex);
+        for (int i = start; pointer != null && i < Math.min(rows, start + chooserVisible()); i++) {
             if (pointer.over(viewportWidth / 2 - 90, 76 + (i - start) * chooserStep(), 180, chooserStep() - 5) && (pointer.moved() || pointer.click())) {
                 extrasIndex = i;
                 clicked |= pointer.click();
@@ -742,7 +820,8 @@ public class MasterTitleScreen {
         if (extrasIndex != previous) playNavigateSound();
         if (navigation.accept() || clicked) {
             extrasOpen = false;
-            openTitleEntry(extrasIndex);
+            if (extrasIndex >= titleEntries.size()) { playConfirmSound(); openSetupGuide(true); }
+            else openTitleEntry(extrasIndex);
         }
     }
 
@@ -1350,6 +1429,7 @@ public class MasterTitleScreen {
                     MenuChrome.controller(menuInput), frameCounter);
             return;
         }
+        if (setupGuide != null) { setupGuide.render(font, viewportWidth); return; }
         if (onboarding != null) { onboarding.render(font, viewportWidth); return; }
         if (romLocator != null) { romLocator.render(font, viewportWidth); return; }
 
@@ -1724,8 +1804,8 @@ public class MasterTitleScreen {
             return;
         }
         if (extrasOpen) {
-            drawChooser(UiMessages.text("hub.ui.extras_caps"), UiMessages.text(extrasIncludeBuiltIns
-                    ? "hub.ui.extra_modes" : "hub.ui.modes_added_by_your_mods"), titleEntries.stream()
+            drawChooser(UiMessages.text("hub.ui.extras_caps"), UiMessages.text(extrasIncludeBuiltIns || setupGuideSession != null
+                    ? "hub.ui.extra_modes" : "hub.ui.modes_added_by_your_mods"), extrasRows().stream()
                     .toList(), extrasIndex, UiMessages.text("hub.ui.open_caps"));
             return;
         }
@@ -2098,7 +2178,7 @@ public class MasterTitleScreen {
                 case SETTINGS -> restartPending() ? UiMessages.text("hub.ui.restart_openggf_to_finish_applying_saved_settings")
                         : suspended != null ? UiMessages.text("hub.ui.for_all_games_some_reach_your_paused_game")
                         : UiMessages.text("hub.ui.display_sound_controls_and_more_for_all_games");
-                case EXTRAS -> UiMessages.text(extrasIncludeBuiltIns
+                case EXTRAS -> UiMessages.text(extrasIncludeBuiltIns || setupGuideSession != null
                         ? "hub.ui.extra_modes" : "hub.ui.extra_modes_added_by_your_mods");
                 case ADVANCED -> UiMessages.text("hub.ui.playback_browser_advanced_settings_and_tools");
                 case QUIT -> UiMessages.text("hub.ui.close_openggf");
@@ -2913,6 +2993,11 @@ public class MasterTitleScreen {
         return programmaticSelection;
     }
 
+    /** The profile store this hub offers, with its patch-backed characters; Start applies profiles through it. */
+    public LaunchProfileStore launchProfileStore() {
+        return launchProfileStore;
+    }
+
     public boolean tryOpenUserRecordingMenuForSelectedGame() {
         if (state != State.ACTIVE
                 || configService.getBoolean(SonicConfiguration.TEST_MODE_ENABLED)
@@ -2957,6 +3042,8 @@ public class MasterTitleScreen {
         romLocator = null;
         if (onboarding != null) onboarding.cancel();
         onboarding = null;
+        if (setupGuide != null) setupGuide.close();
+        setupGuide = null;
         if (hubMusic != null) hubMusic.close();
         hubMusic = null;
         settingsScreen = null;
@@ -2978,12 +3065,12 @@ public class MasterTitleScreen {
                 || supportNotice != null
                 || settingsScreen != null || launchConfigPanel != null || modManagerScreen != null
                 || playbackBrowser != null || standaloneActionOpen || extrasOpen
-                || toolsOpen || helpOpen || romLocator != null || onboarding != null || catalogLoad != null || configService.getBoolean(SonicConfiguration.TEST_MODE_ENABLED);
+                || toolsOpen || helpOpen || romLocator != null || onboarding != null || setupGuide != null || catalogLoad != null || configService.getBoolean(SonicConfiguration.TEST_MODE_ENABLED);
     }
 
     boolean acceptsContentDrop() {
         return state == State.ACTIVE && !quitPrompt && supportNotice == null && !childInputPending
-                && romLocator == null && onboarding == null && settingsScreen == null && launchConfigPanel == null && modManagerScreen == null
+                && romLocator == null && onboarding == null && setupGuide == null && settingsScreen == null && launchConfigPanel == null && modManagerScreen == null
                 && playbackBrowser == null && catalogLoad == null;
     }
 

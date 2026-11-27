@@ -115,6 +115,7 @@ public final class GameplayCaptureTool {
                      : Files.newBufferedWriter(outDir.resolve("pictures.csv"), StandardCharsets.UTF_8)) {
             if (pictures != null) pictures.write("picture,frame,phase,alpha,outcome,file\n");
             if (arguments.mod() != null) session.applyMod(arguments.mod());
+            if (!arguments.mutators().isEmpty()) session.requestMutators(arguments.mutators());
             if (arguments.extraTeams() != null)
                 GameServices.configuration().setSessionOverride(
                         com.openggf.configuration.SonicConfiguration.DATA_SELECT_EXTRA_PLAYER_COMBOS, arguments.extraTeams());
@@ -137,6 +138,7 @@ public final class GameplayCaptureTool {
             }
             if (hostedSource != null) session.boot(hostedSource, hostedModule, zone, act, settings);
             else session.boot(romPath, zone, act, settings);
+            if (!arguments.mutators().isEmpty()) session.verifyRequestedMutators();
             if (arguments.timerFrames() != null) session.declareTimer(arguments.timerFrames());
             if (nativePcm != null) nativePcm.endBoot();
             var audio = GameServices.audio();
@@ -369,14 +371,18 @@ public final class GameplayCaptureTool {
                             boolean nativePcm, boolean endOfLevel, int rewindFrom, int rewindFrames,
                             Path saveSlots, String extraTeams, Integer timerFrames, boolean noMusic, boolean noHud,
                             String drawMode, String dormantStyle, int picturesPerFrame, boolean interpolation,
-                            GameplayCaptureRewindPlan rewindPlan) {
+                            GameplayCaptureRewindPlan rewindPlan, List<String> mutators) {
 
-        /** {@code rewindPlan} directs every live rewind hold; {@code rewindFrom}/{@code rewindFrames} name its first. */
+        /**
+         * {@code rewindPlan} directs every live rewind hold; {@code rewindFrom}/{@code rewindFrames} name its first.
+         * {@code mutators} are the requested {@code --mutator} launch settings.
+         */
         public Arguments {
             if (rewindPlan == null) rewindPlan = GameplayCaptureRewindPlan.single(rewindFrom, rewindFrames);
+            mutators = List.copyOf(mutators);
         }
 
-        /** The single normal-speed {@code --rewind} window and the configured budget. */
+        /** The single normal-speed {@code --rewind} window, the configured budget and no requested mutators. */
         public Arguments(String game, Path rom, String zone, int act, Integer startX, Integer startY, int width,
                          String mainCharacter, String sidekickCharacter, String donor, Path donorRom, Path input,
                          int settle, int inputStart, Integer frames, int captureFrom, int every, Set<Integer> stills,
@@ -392,7 +398,7 @@ public final class GameplayCaptureTool {
                     outDir, emeralds, titleCard, completeSpecialStage, vIntRunCount, cameraXSub, starPost, rings,
                     reverseGravity, mod, titleScreen, audio, interactivePacing, nativePcm, endOfLevel, rewindFrom,
                     rewindFrames, saveSlots, extraTeams, timerFrames, noMusic, noHud, drawMode, dormantStyle,
-                    picturesPerFrame, interpolation, null);
+                    picturesPerFrame, interpolation, null, List.of());
         }
 
         /** One exact picture per logic frame: no phased pictures and no display interpolation. */
@@ -596,6 +602,7 @@ public final class GameplayCaptureTool {
             String drawMode = "EDGE", dormantStyle = "GREYSCALE";
             int picturesPerFrame = 1;
             boolean interpolation = false;
+            List<String> mutators = new ArrayList<>();
             for (int i = 0; i < argv.length; i++) {
                 String flag = argv[i];
                 switch (flag) {
@@ -652,6 +659,7 @@ public final class GameplayCaptureTool {
                     case "--vint-run-count" -> vIntRunCount = number(value(argv, ++i, flag), flag);
                     case "--camera-x-sub" -> cameraXSub = number(value(argv, ++i, flag), flag);
                     case "--rings" -> rings = number(value(argv, ++i, flag), flag);
+                    case "--mutator" -> mutators.add(value(argv, ++i, flag));
                     case "--timer" -> {
                         timerFrames = number(value(argv, ++i, flag), flag);
                         if (timerFrames < 0) throw new IllegalArgumentException("--timer needs a frame count of 0 or more");
@@ -713,12 +721,17 @@ public final class GameplayCaptureTool {
                         + "it does not combine with --interactive-pacing");
             if (interpolation && rewindPlan.active())
                 throw new IllegalArgumentException("--interpolation does not combine with --rewind");
+            if (!mutators.isEmpty()) {
+                if (mod == null) throw new IllegalArgumentException("--mutator names a mutator of the --mod package: add --mod");
+                // Syntax only; ids, options and values are checked against the loaded definitions at launch.
+                com.openggf.mods.mutators.MutatorLaunchRequests.parse(mutators);
+            }
             return new Arguments(game, rom, zone, act - 1, startX, startY, width, main, sidekick, donor, donorRom, input,
                     settle, inputStart, frames, captureFrom, every, Set.copyOf(stills), stopOnDeath, deathGrace,
                     video, scale, fps, outDir, emeralds, titleCard, completeSpecialStage,
                     vIntRunCount, cameraXSub, starPost, rings, reverseGravity, mod, titleScreen, audio, interactivePacing,
                     nativePcm, endOfLevel, rewindFrom, rewindFrames, saveSlots, extraTeams, timerFrames, noMusic, noHud,
-                    drawMode, dormantStyle, picturesPerFrame, interpolation, rewindPlan);
+                    drawMode, dormantStyle, picturesPerFrame, interpolation, rewindPlan, mutators);
         }
 
         private static String choice(String raw, String flag, String... allowed) {

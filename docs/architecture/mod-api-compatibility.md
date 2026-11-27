@@ -60,6 +60,12 @@ is appended to preserve existing enum ordinals. The mutable `0.7` signature pin
 candidate description include it; descriptor candidate `0.7.0` and the empty
 published-baseline set are unchanged.
 
+`SonicConfiguration.SETUP_GUIDE` adds the saved key `hub.setupGuide`: the hub-owned state of
+the first-run setup guide (blank, `done` or `skipped`). It is appended to preserve existing
+enum ordinals. The mutable `0.7` signature pin (regenerated with
+`ModApiSignatureSurface --snapshot`) and the `ModApiVersion` candidate description include
+it; descriptor candidate `0.7.0` and the empty published-baseline set are unchanged.
+
 Stageplay uses the engine's unpublished 0.7.0 candidate. Canonical documents
 (version seven) and screenplays (version six) accept only their current shape;
 there is no published Stageplay format to migrate. Every set uses the same native
@@ -1050,6 +1056,17 @@ keeps the ceiling. The engine-only spill seams are reached through the
 unannotated `RingManagerInternalAccess`, so `RingManager`'s creator surface is
 unchanged. This regenerates the mutable `0.7` pin with three additive entries
 (constructor, accessor, record component) and no removals; `0.7.0` stays unpublished.
+
+Starting-state and ring hunger mutators add five capabilities: `STARTING_RINGS`,
+`STARTING_TIME` and `RING_HUNGER` at LIVE scope, and `STARTING_SCORE` and
+`STARTING_LIVES` at LAUNCH scope, so score and lives can only change when a new
+game session launches. The sealed `StartingStatePolicy` (records `Rings`, `Time`,
+`Score`, `Lives`, with bound constants) and the record `RingHungerPolicy` join
+`MutatorPolicy`'s permitted types. Their consumers are engine-owned
+(`StartingStateRuntime`, `RingHungerRuntime`) and write through the native counter
+owners. Capture hosts use the unannotated `MutatorLaunchRequests`, which is not
+creator surface. This regenerates the mutable `0.7` pin with additive entries only
+and no removals; `0.7.0` stays unpublished.
 
 ## Bounded ROM-part cue candidate
 

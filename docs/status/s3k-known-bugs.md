@@ -8,6 +8,18 @@ deliberate bug-fixes of ROM data), see
 
 For general (cross-game) bugs, see [known-bugs.md](known-bugs.md).
 
+## S3K sidekick death checks can read a cached boundary
+
+`Tails_Check_Screen_Boundaries` (sonic3k.asm:28447-28483) and the hurt-stop
+routine `sub_15716` (sonic3k.asm:29256-29273) read the live camera limit.
+The engine's CPU controller can override that limit with a cached value from a
+level load or event. During the AIZ2 ship loop, the event mirror can also take
+the farther-down of the live and target limits. A mismatch can change the frame
+the sidekick crosses the kill plane.
+
+Remove this entry once the normal and hurt-stop tests use the camera word
+visible on the sidekick's native slot, with replay coverage across a resize.
+
 ## Special-stage award presentation and persistence details
 
 - `SaveGame_SpecialStage` (sonic3k.asm:15966-15999) writes the Continue byte at
@@ -36,6 +48,16 @@ not reproduce the resulting load failure.
 Deferred to 0.9. Remove this entry when ordinary giant-ring entry from the
 standalone cartridge loads the S&K Chaos layout bank, with ROM-backed
 coverage across the seven layouts.
+
+## Sonic 3 & Knuckles title attract demos are absent
+
+The title stays on screen after the native demo timer expires.
+`loc_4278` and `DemoLevels` (sonic3k.asm:5695-5775) choose the next level or
+Special Stage from the cartridge's cycle and advance the entry index using
+the lock-on mode. `GetDemoPtr` and `DemoPtrs` (sonic3k.asm:9488-9510) select
+the dedicated `DemoDat_SpecialStage` stream. `VInt_1C` (sonic3k.asm:926-935)
+debits the timer during the stage. The shared lifecycle supports both destinations. Remove this entry when the Sonic 3 & Knuckles title attract
+provider supplies the ROM entries, controls and return behavior.
 
 ## HCZ geyser child lifetimes and cleanup sound commands
 

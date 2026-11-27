@@ -204,6 +204,15 @@ class TestMutatorGameplayCaptureTool {
         }
     }
 
+    @Test
+    void mutatorAndTimerFlagsPassThroughToTheProductionCaptureArguments() {
+        var options = options("--mod", "lab.jar", "--mutator", "start-score:score=25000",
+                "--mutator", "start-lives:lives=7", "--timer", "16200");
+        assertEquals(List.of("start-score:score=25000", "start-lives:lives=7"), options.capture().mutators());
+        assertEquals(16200, options.capture().timerFrames());
+        assertThrows(IllegalArgumentException.class, () -> options("--mutator", "--frames"));
+    }
+
     private MutatorGameplayCaptureTool.Options options(String... extra) {
         List<String> args = new ArrayList<>(List.of("--zone", "aiz", "--act", "1", "--frames", "8",
                 "--out-dir", temporary.resolve("capture").toString(), "--no-video"));

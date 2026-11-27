@@ -2314,7 +2314,14 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 				?ExternalContentMode.STARTUP_DETERMINISTIC:ExternalContentMode.NORMAL;
 	}
 
+	/** The bundled mod whose Extras entry the setup guide's Race online opens (Time Attack rooms). */
+	private static final String MULTIPLAYER_MOD_ID = "time-attack";
+	/** One per run, so the setup guide opens on its own at most once however often the hub is rebuilt. */
+	private com.openggf.game.SetupGuideSession setupGuideSession;
+
 	private MasterTitleScreen createMasterTitleScreen() {
+		if (setupGuideSession == null)
+			setupGuideSession = com.openggf.game.SetupGuideSession.forConfiguration(configService);
 		ensureMasterTitleAudioBackend();
 		ModuleResolutionService.LaunchPolicy policy =
 				configService.getBoolean(SonicConfiguration.TEST_MODE_ENABLED)
@@ -2354,6 +2361,10 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 						() -> openTitleEntryScene(titleEntries.get(index - extras.size()), games));
 			});
 		}
+		int multiplayerEntry = -1;
+		for (int i = 0; i < titleEntries.size(); i++)
+			if (MULTIPLAYER_MOD_ID.equals(titleEntries.get(i).ownerModId())) multiplayerEntry = extras.size() + i;
+		screen.setSetupGuideSession(setupGuideSession, multiplayerEntry);
 		return screen;
 	}
 

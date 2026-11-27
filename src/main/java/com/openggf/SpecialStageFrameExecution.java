@@ -4,6 +4,8 @@ import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
 import com.openggf.game.*;
+import com.openggf.game.internal.AttractDemoPlayback;
+import com.openggf.game.internal.NativeSpecialStageFrame;
 import com.openggf.game.rewind.LiveRewindManager;
 import com.openggf.game.resources.PlcFrameLifecycleCoordinator.PlcLifecycleFrame;
 import com.openggf.game.resources.PlcLifecyclePhase;
@@ -34,7 +36,8 @@ final class SpecialStageFrameExecution {
                        BooleanSupplier rewindable,
                        LiveRewindManager rewind,
                        GameMode currentMode,
-                       Consumer<Boolean> enterResults) {
+                       Consumer<Boolean> enterResults,
+                       AttractDemoPlayback demo) {
         SpecialStageDebugCapabilities capabilities =
                 SpecialStageDebugCapabilities.orNone(provider.debugCapabilities());
         if (capabilities.stageSelection()
@@ -63,7 +66,7 @@ final class SpecialStageFrameExecution {
         }
         updateDebugNavigation(provider, capabilities, config, debugKeyPressed);
 
-        TraceSessionLauncher session = TraceSessionLauncher.active();
+        TraceSessionLauncher session = demo == null ? TraceSessionLauncher.active() : null;
         if (session != null) session.applySpecialStageTraceInputIfActive(input);
         boolean skipTick = session != null && session.shouldSkipCurrentSpecialStageTick();
         if (!skipTick) {
@@ -81,18 +84,27 @@ final class SpecialStageFrameExecution {
                     LevelFrameContext.from(gameplayMode), plcFrame,
                     PlcLifecyclePhase.orElse(provider.specialStagePlcLifecyclePhase(),
                             PlcLifecyclePhase.SPECIAL_STAGE), provider,
-                    () -> com.openggf.game.internal.NativeSpecialStageFrame.step(provider,
-                            gameplayMode.getWorldSession(), () -> updateProvider(provider, resolvedPacing, updateInput)));
+                    () -> {
+                        Runnable stage = () -> NativeSpecialStageFrame.step(provider,
+                                gameplayMode.getWorldSession(), () -> updateProvider(provider, resolvedPacing, updateInput));
+                        if (demo == null) {
+                            stage.run();
+                        } else {
+                            demo.stepSpecialStage(input, GameServices.graphics(),
+                                    !presentation.isPending() && !fadeManager.isActive(),
+                                    provider, stage);
+                        }
+                    });
         } else if (session.skippedSpecialStagePlcPhase().isPresent()) {
             LevelFrameStep.serviceVBlankOnly(LevelFrameContext.from(gameplayMode), plcFrame,
                     session.skippedSpecialStagePlcPhase().orElseThrow());
         }
         presentation.update(provider, fadeManager, playStageMusic, gameplayMode.plcFrameLifecycle());
         if (session != null) session.advanceSpecialStageTraceCursorIfActive(input);
-        if (rewindable.getAsBoolean() && session == null) {
+        if (demo == null && rewindable.getAsBoolean() && session == null) {
             rewind.recordExternalFrame(gameplayMode, currentMode, provider, false, input, false);
         }
-        if (provider.isFinished() && (session == null || !session.isSpecialStageSession())) {
+        if (demo == null && provider.isFinished() && (session == null || !session.isSpecialStageSession())) {
             if (TraceSessionLauncher.shouldDeferRunModeBoundaryCommit()) {
                 return;
             }

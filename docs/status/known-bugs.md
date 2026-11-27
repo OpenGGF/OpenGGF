@@ -66,6 +66,19 @@ Entries should include:
   half-pipe waits, and ordinary and Super-message exits match the separate
   display-only pass.
 
+## Sonic 1 title attract demos are absent
+
+- **Location** — the Sonic 1 title attract provider remains to be implemented.
+  The shared lifecycle supports level and Special Stage entries.
+- **Symptom** — the title stays on screen after its native timeout.
+- **ROM behavior** — `GotoDemo` and `Demo_Levels` (sonic.asm:2361-2440)
+  wait another 30 VBlanks, allow Start during that wait, then rotate through
+  GHZ1, MZ1, SYZ1 and a Special Stage. `GM_Special` (sonic.asm:3275-3281)
+  reads the Special Stage stream from `DemoDataPtr[6]`. `VBlank_SpecialStage`
+  (sonic.asm:882-903) debits the playback timer.
+- **Removal condition** — the production title launches each entry on its
+  native wait and returns correctly on timeout and Start.
+
 ## S2 game-over host fade stops music before the destination owns audio
 
 - **Location** — `GameLoopGameOverExit.startToBlack`.
@@ -198,24 +211,6 @@ Three parts of that pass are still approximated.
   for this act-2 load. Not yet instrumented past the offset.
 - **Removal condition** — the engine clock equals the ROM's
   `gameplay_frame_counter` column through the chain's ARZ2 segment.
-
-## Bottom kill plane runs the FixBugs branch — 2026-10-31
-
-- **Location:** `PlayableSpriteMovement.doLevelBoundary` and
-  `applyHurtStopBottomKill`, which compute `max(camera maxY, maxY target)`.
-- **Symptom:** shipped S2 `Sonic_Boundary_CheckBottom` (s2.asm:37254-37270) and
-  S3K `Player_Boundary_CheckBottom` (sonic3k.asm:23223-23231) read the live
-  `Camera_Max_Y_pos` alone. Taking the target as well is the S2 `if fixBugs`
-  block, so a player who outruns a lowering boundary survives where the
-  shipped game kills them. The S1 hurt-stop test also differs: it should read
-  only the target (`v_limitbtm2`).
-- **Suspected cause:** removing the expression regresses
-  `TestS2SczLevelSelectTraceReplay`. That suggests the engine's eased
-  `Camera_Max_Y_pos` lags or leads the ROM's somewhere on that route, and the
-  fixed branch hides it. Not yet measured.
-- **Removal condition:** the shipped branch is restored at both kill planes
-  together, with the SCZ trace green because the camera easing that feeds it
-  matches the ROM.
 
 ## TAS pause clock does not advance during native Start pause — 2026-10-26
 

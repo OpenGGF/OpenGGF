@@ -27,6 +27,9 @@ public final class ModApiVersion {
      * Optional per-form powered GGFP banks and explicit normal aliases extend the unpublished candidate.
      * Host-aware character presentation suppliers extend the unpublished 0.7 candidate.
      * Optional directional canonical homing strike sheet keys extend this same 0.7 candidate.
+     * The beta-flight mutator policy (with its fixedSteering and superJump components) and capability (BETA_FLIGHT) are appended to the 0.7 candidate.
+     * Starting-state (rings/time/score/lives) and ring hunger mutator policies and capabilities
+     * extend the unpublished candidate.
      * Creator strike trail colours (StrikeTrailStyle), per-form powered particles and emitters
      * (PoweredEffects) and the powered-tier query extend the unpublished candidate.
      * Current unpublished compiled-mod API candidate, including the grouped landing animation rule,
@@ -223,6 +226,9 @@ public final class ModApiVersion {
      * CD stage routines.
      * SonicConfiguration appends SONIC_CD_DISC (roms.soniccd), the Sonic CD disc's cue sheet beside the
      * other games' ROM keys; existing ordinals are preserved and the candidate remains 0.7.0.
+     * SonicConfiguration appends SETUP_GUIDE (hub.setupGuide), the first-run setup guide's
+     * finished/skipped state owned by the hub; existing ordinals are preserved and the candidate
+     * remains 0.7.0.
      * GameModule.getPolicies() owns the immutable GamePolicies record (GameRules rules);
      * GameModule/DelegatingGameModule/PhysicsProvider getRules() are removed,
      * PhysicsProvider.fixed drops its rules argument, StandaloneGameSpec gains policies(), and
