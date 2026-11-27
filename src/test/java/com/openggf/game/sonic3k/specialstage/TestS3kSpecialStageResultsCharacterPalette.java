@@ -10,9 +10,6 @@ import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.Test;
 
-import java.util.Arrays;
-
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -61,16 +58,22 @@ class TestS3kSpecialStageResultsCharacterPalette {
     @Test
     void otherCharactersKeepPalResults() throws Exception {
         Rom rom = GameServices.rom().getRom();
-        byte[] raw = rom.readBytes(Sonic3kConstants.PAL_RESULTS_ADDR, 128);
+        Palette stock = PaletteLoader.fromBytes(rom.readBytes(Sonic3kConstants.PAL_RESULTS_ADDR, 0x20))[0];
         for (PlayerCharacter character : new PlayerCharacter[] {
                 PlayerCharacter.SONIC_AND_TAILS, PlayerCharacter.SONIC_ALONE, PlayerCharacter.TAILS_ALONE}) {
-            assertArrayEquals(raw, S3kSpecialStageResultsScreen.withChaosStageCharacterColors(raw, character),
-                    character.name());
+            Palette line = stock.deepCopy();
+            S3kSpecialStageResultsScreen.applyChaosStageCharacterColors(line, character);
+            assertTrue(stock.dataEquals(line), character.name());
         }
-        byte[] knuckles = S3kSpecialStageResultsScreen.withChaosStageCharacterColors(raw, PlayerCharacter.KNUCKLES);
-        assertTrue(!Arrays.equals(raw, knuckles), "Knuckles palette must differ from stock Pal_Results");
-        assertArrayEquals(Arrays.copyOfRange(raw, 12, 128), Arrays.copyOfRange(knuckles, 12, 128),
-                "only line 1 colours 2-5 change");
+        Palette knuckles = stock.deepCopy();
+        S3kSpecialStageResultsScreen.applyChaosStageCharacterColors(knuckles, PlayerCharacter.KNUCKLES);
+        assertTrue(!stock.dataEquals(knuckles), "Knuckles palette must differ from stock Pal_Results");
+        for (int c = 0; c < 16; c++) {
+            if (c >= 2 && c <= 5) continue;
+            assertEquals(stock.getColor(c).r, knuckles.getColor(c).r, "only colours 2-5 change: " + c);
+            assertEquals(stock.getColor(c).g, knuckles.getColor(c).g, "only colours 2-5 change: " + c);
+            assertEquals(stock.getColor(c).b, knuckles.getColor(c).b, "only colours 2-5 change: " + c);
+        }
     }
 
     private static boolean contains(byte[] haystack, byte[] needle) {
