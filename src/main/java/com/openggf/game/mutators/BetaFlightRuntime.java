@@ -39,9 +39,12 @@ public final class BetaFlightRuntime implements RewindSnapshottable<BetaFlightRu
     /** CES $170D0 writes anim $20 every flight frame (S&amp;K AniKnuckles20 is byte-identical). */
     public static final int FLIGHT_ANIMATION = 0x20;
 
-    /** Admitted policy: whether beta flight is on, and which persisted leader keys may use it. */
-    public record Policy(boolean active, Predicate<String> leaderKeys) {
-        public static final Policy STOCK = new Policy(false, key -> false);
+    /**
+     * Admitted policy: whether beta flight is on, whether its steering is fixed to act on x_vel, and
+     * which persisted leader keys may use it.
+     */
+    public record Policy(boolean active, boolean fixedSteering, Predicate<String> leaderKeys) {
+        public static final Policy STOCK = new Policy(false, false, key -> false);
         public Policy {
             Objects.requireNonNull(leaderKeys, "leaderKeys");
         }
@@ -161,11 +164,16 @@ public final class BetaFlightRuntime implements RewindSnapshottable<BetaFlightRu
      * applied to ground_vel ($1C) instead of x_vel. Only facing and ground_vel change; x_vel keeps
      * the entry launch until terrain, the level boundary or a landing rewrites it. This reads as
      * unfinished code; it is reproduced as shipped in the cartridge.
+     *
+     * <p>The Fixed Steering option is not in the cartridge: it runs the same arithmetic on x_vel,
+     * the field Sonic_ChgJumpDir steers, so left and right accelerate him in flight. ground_vel is
+     * then left alone, as in Sonic_ChgJumpDir.
      */
     public void steer(AbstractPlayableSprite sprite, boolean left, boolean right) {
+        boolean fixed = policy().fixedSteering();
         int max = sprite.getMax();
         int accel = 2 * sprite.getRunAccel();               // $170DE asl.w #1,d5
-        int speed = sprite.getGSpeed();
+        int speed = fixed ? sprite.getXSpeed() : sprite.getGSpeed();
         if (left) {
             sprite.setDirection(Direction.LEFT);
             int next = (short) (speed - accel);
@@ -179,7 +187,8 @@ public final class BetaFlightRuntime implements RewindSnapshottable<BetaFlightRu
             if (next < max) speed = next;
             else if ((short) (next - accel) < max) speed = max;
         }
-        sprite.setGSpeed((short) speed);
+        if (fixed) sprite.setXSpeed((short) speed);
+        else sprite.setGSpeed((short) speed);
     }
 
     private static void applyAnimation(AbstractPlayableSprite sprite) {

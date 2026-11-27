@@ -84,6 +84,10 @@ glide-specific collision. Hurt uses the object's separate hurt routine.
   bypassed. That keeps a flight in progress out of the glide state machine, even if
   the mutator is turned off mid-flight. The bit ends when the native landing,
   object-control or death owners clear the flag.
+- **Fixed Steering** (option, off by default, not in the cartridge) runs the same
+  steering arithmetic on `x_vel`, the field `Sonic_ChgJumpDir` steers, and leaves
+  `ground_vel` alone. Left and right then accelerate him by twice the run acceleration
+  per frame up to his top speed. Off, the routine runs as found.
 - Art is the user's S&K Knuckles: anim $20, frame $C0, the same script the
   cartridge's table names.
 

@@ -137,10 +137,11 @@ public sealed interface MutatorPolicy permits CharacterSuperFormPolicy, MutatorP
     /**
      * The leftover player-object flight from the Sonic 3 Winter CES cartridge (12/22/93), used in
      * place of the native glide by a glide-ability leader the support profile admits. The host
-     * reproduces the routine as found, including its inert in-flight steering.
+     * reproduces the routine as found, including its inert in-flight steering, unless
+     * {@code fixedSteering} applies that steering to the horizontal air speed instead.
      */
     @com.openggf.game.ModApi
-    record BetaFlight() implements MutatorPolicy {
+    record BetaFlight(boolean fixedSteering) implements MutatorPolicy {
         @Override public MutatorCapability capability() { return MutatorCapability.BETA_FLIGHT; }
     }
 

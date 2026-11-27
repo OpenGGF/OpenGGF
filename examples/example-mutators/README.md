@@ -107,7 +107,9 @@ with Tails-style flight added: the air press launches him sideways at no less th
 normal top speed, he sinks slowly, and each new press flaps him upward. There is no
 time limit, sound or tired pose. Left and right only turn him around: the cartridge's
 steering writes the ground speed, so he keeps his launch speed until he lands or hits
-a wall. The engine reproduces that as found. He uses the S&K glide pose, the same frame
+a wall. The engine reproduces that as found. The **Fixed Steering** option, which is
+not in the cartridge, applies the same steering to his air speed instead, so left and
+right speed him up and slow him down up to his normal top speed. He uses the S&K glide pose, the same frame
 the cartridge's animation names. Objects that react to a gliding Knuckles also react
 while he sinks in beta flight, because both use the same state value.
 

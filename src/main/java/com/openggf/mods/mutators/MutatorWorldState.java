@@ -86,10 +86,11 @@ final class MutatorWorldState implements WorldSessionPolicyState, RewindSnapshot
 
     /** Beta flight replaces the glide only for leaders the support profile admits. */
     private com.openggf.game.mutators.BetaFlightRuntime.Policy betaFlightPolicy() {
-        if (state.isClosed() || support == null
-                || !composed(state.effective()).betaFlightActive(availableCapabilities()))
+        if (state.isClosed() || support == null) return com.openggf.game.mutators.BetaFlightRuntime.Policy.STOCK;
+        var effective = composed(state.effective());
+        if (!effective.betaFlightActive(availableCapabilities()))
             return com.openggf.game.mutators.BetaFlightRuntime.Policy.STOCK;
-        return new com.openggf.game.mutators.BetaFlightRuntime.Policy(true,
+        return new com.openggf.game.mutators.BetaFlightRuntime.Policy(true, effective.betaFlightFixedSteering(),
                 key -> support.supportsPlayer(MutatorCapability.BETA_FLIGHT, key, true));
     }
 

@@ -64,7 +64,7 @@ class TestBetaFlightMutator {
         else System.setProperty("openggf.saveRoot", oldRoot);
     }
 
-    private enum Session { STOCK, REGISTERED_OFF, ENABLED }
+    private enum Session { STOCK, REGISTERED_OFF, ENABLED, FIXED_STEERING }
 
     /** Opens S3K with Knuckles alone; the Lab-like module is absent, registered off, or enabled. */
     private WorldSession open(Session kind) {
@@ -81,7 +81,7 @@ class TestBetaFlightMutator {
         }
         var definition = new MutatorDefinition("beta-flight", "Beta Flight", "", MutatorScope.LIVE,
                 MutatorScope.LIVE, List.of(), Set.of(MutatorCapability.BETA_FLIGHT),
-                options -> List.of(new MutatorPolicy.BetaFlight()));
+                options -> List.of(new MutatorPolicy.BetaFlight(kind == Session.FIXED_STEERING)));
         var catalog = new MutatorCatalog(List.of(new OwnedMutator("test-mutators", definition)), faults);
         var module = new DelegatingGameModule(s3k, "test-mutators:beta-flight-fixture") {
             @Override public <T> T getGameService(Class<T> type) {
@@ -101,7 +101,7 @@ class TestBetaFlightMutator {
         SessionManager.openGameplaySession(s3k, module, null);
         TestEnvironment.activeGameplayMode();
         var world = SessionManager.getCurrentWorldSession();
-        if (kind == Session.ENABLED) {
+        if (kind == Session.ENABLED || kind == Session.FIXED_STEERING) {
             var state = MutatorWorldAccess.state(world);
             state.requestEnabled(KEY, true);
             assertTrue(state.boundary(MutatorScope.LIVE).accepted());
@@ -225,6 +225,34 @@ class TestBetaFlightMutator {
         assertEquals(0, knuckles.getDoubleJumpFlag());
         assertFalse(runtime.owns(knuckles));
         assertNotEquals(BetaFlightRuntime.FLIGHT_ANIMATION, knuckles.getForcedAnimationId());
+    }
+
+    @Test
+    void fixedSteeringAcceleratesXVelocityInFlight() {
+        var world = open(Session.FIXED_STEERING);
+        var fixture = settledAiz1();
+        var knuckles = fixture.sprite();
+        var runtime = WorldSessionPolicyAccess.getService(world, BetaFlightRuntime.class);
+        fixture.stepFrame(false, false, false, false, true);
+        for (int i = 0; i < 6; i++) fixture.stepFrame(false, false, false, false, false);
+        fixture.stepFrame(false, false, false, false, true);
+        assertTrue(runtime.owns(knuckles));
+        fixture.stepFrame(false, false, false, false, false);
+
+        // Hold left: the CES arithmetic now acts on x_vel, and ground_vel is left alone.
+        int xVel = knuckles.getXSpeed();
+        int gVel = knuckles.getGSpeed();
+        fixture.stepFrame(false, false, true, false, false);
+        assertTrue(runtime.owns(knuckles));
+        assertEquals(Direction.LEFT, knuckles.getDirection());
+        assertEquals(xVel - 2 * knuckles.getRunAccel(), knuckles.getXSpeed(), "Fixed steering writes x_vel");
+        assertEquals(gVel, knuckles.getGSpeed());
+
+        // Holding right accelerates the $400 launch up to the top-speed cap, which the cartridge never reaches.
+        for (int i = 0; i < 40; i++) fixture.stepFrame(false, false, false, true, i % 8 == 0);
+        assertTrue(runtime.owns(knuckles), "Still flying");
+        assertEquals(Direction.RIGHT, knuckles.getDirection());
+        assertEquals(knuckles.getMax(), knuckles.getXSpeed());
     }
 
     @Test

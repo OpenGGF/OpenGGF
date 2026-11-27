@@ -2037,7 +2037,7 @@ CONSTRUCTOR com.openggf.mods.mutators.MutatorOption$Choice public  <init>(java.l
 CONSTRUCTOR com.openggf.mods.mutators.MutatorOption$IntegerSlider public  <init>(java.lang.String,java.lang.String,java.lang.String,com.openggf.mods.mutators.MutatorScope,java.lang.Integer,int,int,int,java.lang.String)
 CONSTRUCTOR com.openggf.mods.mutators.MutatorOption$LegacyChoice public  <init>(java.lang.String,java.lang.String,java.util.Set<java.lang.String>)
 CONSTRUCTOR com.openggf.mods.mutators.MutatorOptions public  <init>(java.util.Map<java.lang.String,java.lang.Object>)
-CONSTRUCTOR com.openggf.mods.mutators.MutatorPolicy$BetaFlight public  <init>()
+CONSTRUCTOR com.openggf.mods.mutators.MutatorPolicy$BetaFlight public  <init>(boolean)
 CONSTRUCTOR com.openggf.mods.mutators.MutatorPolicy$BigHead public  <init>(int,com.openggf.mods.mutators.MutatorPolicy$Target)
 CONSTRUCTOR com.openggf.mods.mutators.MutatorPolicy$BigHead public  <init>(int,com.openggf.mods.mutators.MutatorPolicy$Target,boolean)
 CONSTRUCTOR com.openggf.mods.mutators.MutatorPolicy$BigHead public  <init>(int,java.util.Set<com.openggf.mods.mutators.MutatorPolicy$HeadTarget>)
@@ -13132,6 +13132,7 @@ METHOD com.openggf.mods.mutators.MutatorOptions public,final  boolean equals(jav
 METHOD com.openggf.mods.mutators.MutatorOptions public,final  int hashCode()
 METHOD com.openggf.mods.mutators.MutatorOptions public,final  java.lang.String toString()
 METHOD com.openggf.mods.mutators.MutatorPolicy public,abstract  com.openggf.mods.mutators.MutatorCapability capability()
+METHOD com.openggf.mods.mutators.MutatorPolicy$BetaFlight public  boolean fixedSteering()
 METHOD com.openggf.mods.mutators.MutatorPolicy$BetaFlight public  com.openggf.mods.mutators.MutatorCapability capability()
 METHOD com.openggf.mods.mutators.MutatorPolicy$BetaFlight public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.mods.mutators.MutatorPolicy$BetaFlight public,final  int hashCode()
@@ -20222,6 +20223,7 @@ RECORD-COMPONENT com.openggf.mods.mutators.MutatorOption$LegacyChoice checkedTok
 RECORD-COMPONENT com.openggf.mods.mutators.MutatorOption$LegacyChoice id java.lang.String
 RECORD-COMPONENT com.openggf.mods.mutators.MutatorOption$LegacyChoice tokens java.util.Set<java.lang.String>
 RECORD-COMPONENT com.openggf.mods.mutators.MutatorOptions values java.util.Map<java.lang.String,java.lang.Object>
+RECORD-COMPONENT com.openggf.mods.mutators.MutatorPolicy$BetaFlight fixedSteering boolean
 RECORD-COMPONENT com.openggf.mods.mutators.MutatorPolicy$BigHead afflicts java.util.Set<com.openggf.mods.mutators.MutatorPolicy$HeadTarget>
 RECORD-COMPONENT com.openggf.mods.mutators.MutatorPolicy$BigHead percent int
 RECORD-COMPONENT com.openggf.mods.mutators.MutatorPolicy$BigHead scaleWithRings boolean
