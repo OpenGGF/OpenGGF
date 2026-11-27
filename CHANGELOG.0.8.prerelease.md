@@ -7,6 +7,12 @@ under the matching area heading; see the
 
 ## Gameplay and presentation
 
+- **Angel Island Act 2's bombing run in widescreen** shows the scenery about to
+  scroll in across the whole picture. The camera lock that follows the
+  auto-scroll used to cover the extra width with static that trailed into the
+  original 320-pixel screen, and every loop of the terrain reset it to full
+  static bars, in both widescreen draw modes.
+
 - **Knuckles' continue icon on Sonic 3 & Knuckles special-stage results** is
   red again instead of Sonic blue. Chaos Emerald stages now apply the same
   Knuckles colours as the cartridge, as Super Emerald stages already did.
