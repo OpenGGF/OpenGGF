@@ -49,6 +49,16 @@ Deferred to 0.9. Remove this entry when ordinary giant-ring entry from the
 standalone cartridge loads the S&K Chaos layout bank, with ROM-backed
 coverage across the seven layouts.
 
+## Sonic 3 & Knuckles title attract demos are absent
+
+The title stays on screen after the native demo timer expires.
+`loc_4278` and `DemoLevels` (sonic3k.asm:5695-5775) choose the next level or
+Special Stage from the cartridge's cycle and advance the entry index using
+the lock-on mode. `GetDemoPtr` and `DemoPtrs` (sonic3k.asm:9488-9510) select
+the dedicated `DemoDat_SpecialStage` stream. `VInt_1C` (sonic3k.asm:926-935)
+debits the timer during the stage. The shared lifecycle supports both destinations. Remove this entry when the Sonic 3 & Knuckles title attract
+provider supplies the ROM entries, controls and return behavior.
+
 ## HCZ geyser child lifetimes and cleanup sound commands
 
 The water-wall parent's lifetime is covered by the

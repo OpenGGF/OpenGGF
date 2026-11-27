@@ -18,7 +18,8 @@ import com.openggf.level.render.SpriteMappingFrame;
 import java.util.List;
 
 /** Chip-backed KiS2 title. Retains the engine's S2 boot logo, then runs KiS2 Obj0E without the S2 credit prelude. */
-public final class Kis2TitleScreen implements TitleScreenProvider {
+public final class Kis2TitleScreen implements TitleScreenProvider,
+        com.openggf.game.internal.TitleAttractDemo.TitleClock {
     private static final int BASE = PatternAtlasRange.RESULTS_SCREENS.base();
     private final LockOnAddressSpace rom;
     private final TitleScreenProvider boot;
@@ -29,6 +30,7 @@ public final class Kis2TitleScreen implements TitleScreenProvider {
     private TitleScreenAction exitAction = TitleScreenAction.ONE_PLAYER;
     private PatternSpriteRenderer knuckles, emblem, banner, text, stars;
     private boolean cached, music;
+    private int attractTitleTicks;
     private int starIndex, starTimer, starFrame, fadeFrames;
     private static final int[] STAR_ANIMATION = {0,1,2,1,0};
 
@@ -38,6 +40,7 @@ public final class Kis2TitleScreen implements TitleScreenProvider {
         this.rom = rom; this.boot = boot;
     }
     @Override public void initialize() {
+        attractTitleTicks = 0;
         titleInput.resetSequence();
         exitAction = TitleScreenAction.ONE_PLAYER;
         data = new Kis2TitleData(rom);
@@ -45,13 +48,26 @@ public final class Kis2TitleScreen implements TitleScreenProvider {
         starIndex = 0; starTimer = 0; starFrame = 0; fadeFrames = 0;
         boot.initialize(); state = State.SEGA_LOGO;
     }
+    @Override public int attractTitleTicks() { return attractTitleTicks; }
+
+    @Override public void initializeDirectTitle() {
+        initialize();
+        beginTitleFade();
+    }
+
+    private void beginTitleFade() {
+        boot.reset();
+        animation.tick(false);
+        state = State.FADE_IN;
+        GameServices.audio().playSfx(Sonic2Sfx.SPARKLE.id);
+    }
+
     @Override public void update(InputHandler input) {
         if (state == State.INACTIVE || state == State.EXITING) return;
         if (state == State.SEGA_LOGO) {
             boot.update(input);
             if (boot.getState() != State.SEGA_LOGO) {
-                boot.reset(); animation.tick(false); state = State.FADE_IN;
-                GameServices.audio().playSfx(Sonic2Sfx.SPARKLE.id);
+                beginTitleFade();
             }
             return;
         }
@@ -60,6 +76,7 @@ public final class Kis2TitleScreen implements TitleScreenProvider {
             if (++fadeFrames >= 22) state = State.ACTIVE;
             return;
         }
+        attractTitleTicks++;
         boolean unlocked = titleInput.update(input.logical().player1());
         if (unlocked) GameServices.audio().playSfx(Sonic2Sfx.RING_RIGHT.id);
         // TitleScreen_Loop and Obj0E test Start, not the A/B/C action buttons.
