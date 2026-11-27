@@ -91,6 +91,7 @@ final class MutatorWorldState implements WorldSessionPolicyState, RewindSnapshot
         if (!effective.betaFlightActive(availableCapabilities()))
             return com.openggf.game.mutators.BetaFlightRuntime.Policy.STOCK;
         return new com.openggf.game.mutators.BetaFlightRuntime.Policy(true, effective.betaFlightFixedSteering(),
+                effective.betaFlightSuperJump(),
                 key -> support.supportsPlayer(MutatorCapability.BETA_FLIGHT, key, true));
     }
 

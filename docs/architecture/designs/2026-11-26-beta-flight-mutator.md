@@ -88,6 +88,11 @@ glide-specific collision. Hurt uses the object's separate hurt routine.
   steering arithmetic on `x_vel`, the field `Sonic_ChgJumpDir` steers, and leaves
   `ground_vel` alone. Left and right then accelerate him by twice the run acceleration
   per frame up to his top speed. Off, the routine runs as found.
+- **Super Jump** (option, off by default) uses the object's copied jump routine
+  ($17868–$17882): $600, raised to $700 while `Super_Sonic_Knux_flag` ($FE19) is set
+  (Super or Hyper), then $300 underwater whatever the form. S&K `Knux_Jump`
+  (sonic3k.asm:32494-32497) has no Super raise; Sonic's copy keeps $680/$800/$380.
+  Only the launch value changes; Super speeds and the transformation stay native.
 - Art is the user's S&K Knuckles: anim $20, frame $C0, the same script the
   cartridge's table names.
 
@@ -98,7 +103,7 @@ glide-specific collision. Hurt uses the object's separate hurt routine.
   value. The CES build contains no such Knuckles-aware objects to compare with.
 - Not route-certified: water, hurt mid-flight, Super/Hyper Knuckles, KiS2, and S1/S2
   donors. The Lab admits native S3K Knuckles only.
-- The native glide's Super transform path is unaffected. The CES entry has no
+- The native glide's Super transform path is unaffected. The CES flight entry has no
   Super test, and the engine keeps its shared gate.
 
 ## Rejected approaches

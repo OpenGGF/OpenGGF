@@ -13,8 +13,12 @@ public final class BetaFlight {
                 MutatorScope.LIVE, MutatorScope.LIVE,
                 List.of(new MutatorOption.Checkbox("fixed-steering", "Fixed Steering",
                         "Left and right speed him up and slow him down in flight. Off keeps the cartridge's steering, which only turns him.",
-                        MutatorScope.LIVE, false)),
+                        MutatorScope.LIVE, false),
+                        new MutatorOption.Checkbox("super-jump", "Super Jump",
+                                "Super and Hyper Knuckles jump higher, as the CES object does. Off keeps the S&K jump.",
+                                MutatorScope.LIVE, false)),
                 Set.of(MutatorCapability.BETA_FLIGHT),
-                values -> List.of(new MutatorPolicy.BetaFlight(values.checkbox("fixed-steering"))));
+                values -> List.of(new MutatorPolicy.BetaFlight(values.checkbox("fixed-steering"),
+                        values.checkbox("super-jump"))));
     }
 }

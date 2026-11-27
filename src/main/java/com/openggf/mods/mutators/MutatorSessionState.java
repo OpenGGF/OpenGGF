@@ -539,6 +539,11 @@ public final class MutatorSessionState implements AutoCloseable {
             return contributions(MutatorPolicy.BetaFlight.class).stream().anyMatch(MutatorPolicy.BetaFlight::fixedSteering);
         }
 
+        /** Any contribution asking for the CES Super jump selects it. */
+        public boolean betaFlightSuperJump() {
+            return contributions(MutatorPolicy.BetaFlight.class).stream().anyMatch(MutatorPolicy.BetaFlight::superJump);
+        }
+
         /** Any Instagib contribution selects Instagib; contributed characters are united. */
         public com.openggf.game.mutators.HomingAttackRuntime.Policy homingPolicy(Set<MutatorCapability> available) {
             if (!available.contains(MutatorCapability.HOMING_ATTACK))

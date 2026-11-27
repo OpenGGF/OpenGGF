@@ -39,12 +39,15 @@ public final class BetaFlightRuntime implements RewindSnapshottable<BetaFlightRu
     /** CES $170D0 writes anim $20 every flight frame (S&amp;K AniKnuckles20 is byte-identical). */
     public static final int FLIGHT_ANIMATION = 0x20;
 
+    /** CES $17872: the copied jump raises Knuckles' $600 launch to $700 while Super_Sonic_Knux_flag is set. */
+    static final int SUPER_JUMP = 0x700;
+
     /**
-     * Admitted policy: whether beta flight is on, whether its steering is fixed to act on x_vel, and
-     * which persisted leader keys may use it.
+     * Admitted policy: whether beta flight is on, whether its steering is fixed to act on x_vel,
+     * whether the CES Super jump applies, and which persisted leader keys may use it.
      */
-    public record Policy(boolean active, boolean fixedSteering, Predicate<String> leaderKeys) {
-        public static final Policy STOCK = new Policy(false, false, key -> false);
+    public record Policy(boolean active, boolean fixedSteering, boolean superJump, Predicate<String> leaderKeys) {
+        public static final Policy STOCK = new Policy(false, false, false, key -> false);
         public Policy {
             Objects.requireNonNull(leaderKeys, "leaderKeys");
         }
@@ -189,6 +192,17 @@ public final class BetaFlightRuntime implements RewindSnapshottable<BetaFlightRu
         }
         if (fixed) sprite.setXSpeed((short) speed);
         else sprite.setGSpeed((short) speed);
+    }
+
+    /**
+     * The Super Jump option's launch. CES $17868-$17882 (the object's copy of the jump routine) loads
+     * $600, raises it to $700 while Super_Sonic_Knux_flag ($FE19, Super or Hyper) is set, then
+     * replaces either with $300 underwater. S&amp;K Knux_Jump (sonic3k.asm:32494-32497) has no Super
+     * raise, so the native value is kept in every other case.
+     */
+    public int jumpImpulse(AbstractPlayableSprite sprite, int nativeJump, boolean underwater) {
+        if (!policy().superJump() || !enabledFor(sprite) || !sprite.isSuperSonic() || underwater) return nativeJump;
+        return SUPER_JUMP;
     }
 
     private static void applyAnimation(AbstractPlayableSprite sprite) {

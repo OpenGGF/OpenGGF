@@ -139,9 +139,10 @@ public sealed interface MutatorPolicy permits CharacterSuperFormPolicy, MutatorP
      * place of the native glide by a glide-ability leader the support profile admits. The host
      * reproduces the routine as found, including its inert in-flight steering, unless
      * {@code fixedSteering} applies that steering to the horizontal air speed instead.
+     * {@code superJump} adds the same object's $700 Super jump, which S&amp;K's Knuckles lacks.
      */
     @com.openggf.game.ModApi
-    record BetaFlight(boolean fixedSteering) implements MutatorPolicy {
+    record BetaFlight(boolean fixedSteering, boolean superJump) implements MutatorPolicy {
         @Override public MutatorCapability capability() { return MutatorCapability.BETA_FLIGHT; }
     }
 

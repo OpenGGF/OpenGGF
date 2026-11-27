@@ -26,7 +26,7 @@ public final class ModApiVersion {
      * Optional per-form powered GGFP banks and explicit normal aliases extend the unpublished candidate.
      * Host-aware character presentation suppliers extend the unpublished 0.7 candidate.
      * Optional directional canonical homing strike sheet keys extend this same 0.7 candidate.
-     * The beta-flight mutator policy (with its fixedSteering component) and capability (BETA_FLIGHT) are appended to the 0.7 candidate.
+     * The beta-flight mutator policy (with its fixedSteering and superJump components) and capability (BETA_FLIGHT) are appended to the 0.7 candidate.
      * Creator strike trail colours (StrikeTrailStyle), per-form powered particles and emitters
      * (PoweredEffects) and the powered-tier query extend the unpublished candidate.
      * Current unpublished compiled-mod API candidate, including the grouped landing animation rule,

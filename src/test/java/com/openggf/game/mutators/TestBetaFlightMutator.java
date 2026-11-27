@@ -64,7 +64,7 @@ class TestBetaFlightMutator {
         else System.setProperty("openggf.saveRoot", oldRoot);
     }
 
-    private enum Session { STOCK, REGISTERED_OFF, ENABLED, FIXED_STEERING }
+    private enum Session { STOCK, REGISTERED_OFF, ENABLED, FIXED_STEERING, SUPER_JUMP }
 
     /** Opens S3K with Knuckles alone; the Lab-like module is absent, registered off, or enabled. */
     private WorldSession open(Session kind) {
@@ -81,7 +81,8 @@ class TestBetaFlightMutator {
         }
         var definition = new MutatorDefinition("beta-flight", "Beta Flight", "", MutatorScope.LIVE,
                 MutatorScope.LIVE, List.of(), Set.of(MutatorCapability.BETA_FLIGHT),
-                options -> List.of(new MutatorPolicy.BetaFlight(kind == Session.FIXED_STEERING)));
+                options -> List.of(new MutatorPolicy.BetaFlight(kind == Session.FIXED_STEERING,
+                        kind == Session.SUPER_JUMP)));
         var catalog = new MutatorCatalog(List.of(new OwnedMutator("test-mutators", definition)), faults);
         var module = new DelegatingGameModule(s3k, "test-mutators:beta-flight-fixture") {
             @Override public <T> T getGameService(Class<T> type) {
@@ -101,7 +102,7 @@ class TestBetaFlightMutator {
         SessionManager.openGameplaySession(s3k, module, null);
         TestEnvironment.activeGameplayMode();
         var world = SessionManager.getCurrentWorldSession();
-        if (kind == Session.ENABLED || kind == Session.FIXED_STEERING) {
+        if (kind != Session.REGISTERED_OFF) {
             var state = MutatorWorldAccess.state(world);
             state.requestEnabled(KEY, true);
             assertTrue(state.boundary(MutatorScope.LIVE).accepted());
@@ -253,6 +254,43 @@ class TestBetaFlightMutator {
         assertTrue(runtime.owns(knuckles), "Still flying");
         assertEquals(Direction.RIGHT, knuckles.getDirection());
         assertEquals(knuckles.getMax(), knuckles.getXSpeed());
+    }
+
+    /** Super Knuckles' first airborne y_vel after a standing jump in the given session. */
+    private int superJumpYVelocity(Session kind) {
+        var world = open(kind);
+        var fixture = settledAiz1();
+        var knuckles = fixture.sprite();
+        knuckles.getSuperStateController().debugActivate();
+        // Let the transformation finish and Knuckles settle on the ground.
+        fixture.stepIdleFrames(120);
+        assertTrue(knuckles.isSuperSonic(), "Knuckles must be Super for the probe");
+        assertFalse(knuckles.getAir());
+        fixture.stepFrame(false, false, false, false, true);
+        assertTrue(knuckles.getAir(), "The press must jump");
+        if (kind == Session.SUPER_JUMP) {
+            var runtime = WorldSessionPolicyAccess.getService(world, BetaFlightRuntime.class);
+            assertEquals(0x300, runtime.jumpImpulse(knuckles, 0x300, true), "Underwater keeps $300, as in the CES copy");
+        }
+        return knuckles.getYSpeed();
+    }
+
+    @Test
+    void superJumpRaisesSuperKnucklesLaunchToSevenHundred() {
+        int nativeSuper = superJumpYVelocity(Session.ENABLED);
+        int cesSuper = superJumpYVelocity(Session.SUPER_JUMP);
+        assertEquals(nativeSuper - (BetaFlightRuntime.SUPER_JUMP - 0x600), cesSuper,
+                "The option raises the flat-ground launch from S&K's $600 to the CES $700");
+
+        // Normal-form Knuckles keeps the native jump with the option on.
+        open(Session.ENABLED);
+        var fixture = settledAiz1();
+        fixture.stepFrame(false, false, false, false, true);
+        int nativeNormal = fixture.sprite().getYSpeed();
+        open(Session.SUPER_JUMP);
+        fixture = settledAiz1();
+        fixture.stepFrame(false, false, false, false, true);
+        assertEquals(nativeNormal, fixture.sprite().getYSpeed());
     }
 
     @Test

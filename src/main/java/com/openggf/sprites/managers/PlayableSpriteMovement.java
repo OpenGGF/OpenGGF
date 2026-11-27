@@ -1686,7 +1686,12 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// for negative products. The previous approach of -cosHex(angle)*jump>>8 rounds
 		// differently: -(x>>8) != (-x)>>8 when x%256 != 0 (68000 ASR rounds toward -∞).
 		int adjustedAngle = (hexAngle - 0x40) & 0xFF;
-		int jumpImpulse = motionMutators == null ? sprite.getJump() : motionMutators.jumpImpulse(sprite, sprite.getJump());
+		int nativeJump = sprite.getJump();
+		var betaFlight = com.openggf.sprites.playable.PlayableSpriteInternalAccess.betaFlight(sprite);
+		if (betaFlight != null) {
+			nativeJump = betaFlight.jumpImpulse(sprite, nativeJump, PlayerFluidContextAccess.movementUnderwater(sprite));
+		}
+		int jumpImpulse = motionMutators == null ? nativeJump : motionMutators.jumpImpulse(sprite, nativeJump);
 		int xJumpChange = (TrigLookupTable.cosHex(adjustedAngle) * jumpImpulse) >> 8;
 		int yJumpChange = (TrigLookupTable.sinHex(adjustedAngle) * jumpImpulse) >> 8;
 		if (!objectLaunch) {
