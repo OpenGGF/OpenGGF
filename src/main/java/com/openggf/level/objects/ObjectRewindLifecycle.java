@@ -591,6 +591,10 @@ final class ObjectRewindLifecycle {
         return true;
     }
 
+    boolean hasPendingPlayerBoundEntry(Class<?> baseType, PlayableEntity owner) {
+        return playerBindings.hasPending(baseType, entry -> entry.playerOwner() == owner);
+    }
+
     void enqueuePendingPlayerBoundEntry(Class<?> baseType, DynamicObjectEntry entry) {
         playerBindings.enqueue(baseType, entry);
     }

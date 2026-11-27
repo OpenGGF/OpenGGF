@@ -295,6 +295,12 @@ rebuild compiled mods using that constructor. Candidate `0.7.0` remains unpublis
 the runtime candidate description and normalized pin are updated together. The
 release descriptor retains its existing candidate version and publication state.
 
+`PowerUpRules.invincibilityTimerDecimation` gives the level frames per decrement of
+the invincibility timer: 1 for Sonic 1 and Sonic 2, 8 for Sonic 3&K, whose byte timer
+counts `(20*60)/8` down only when `Level_frame_counter & 7` is zero. The canonical
+record constructor gains this int, so rebuild compiled mods using that constructor.
+Candidate `0.7.0` remains unpublished.
+
 The bundled-mod lane adds bounded binary owner storage: `ModStorage.readBytes`,
 `ModStorage.writeBytes`, and the `MAX_TEXT_BYTES` (1 MiB) and `MAX_BINARY_BYTES` (4 MiB)
 caps. Binary files share the text namespace and name rules, are staged and renamed

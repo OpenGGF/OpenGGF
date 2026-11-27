@@ -119,6 +119,11 @@ final class ObjectRewindPlayerBindings {
                 && entry.playerOwner() == resolvedOwner.get());
     }
 
+    boolean hasPending(Class<?> baseType, Predicate<DynamicObjectEntry> matcher) {
+        List<DynamicObjectEntry> queue = pendingEntries.get(baseType);
+        return queue != null && queue.stream().anyMatch(matcher);
+    }
+
     DynamicObjectEntry consume(Class<?> baseType, Predicate<DynamicObjectEntry> matcher) {
         List<DynamicObjectEntry> queue = pendingEntries.get(baseType);
         if (queue == null || queue.isEmpty()) return null;
