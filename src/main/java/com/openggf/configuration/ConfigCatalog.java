@@ -193,6 +193,8 @@ public final class ConfigCatalog {
         put(HUB_LAST_GAME, of("hub", "lastGame", STRING, "Last selected game or standalone content ID"));
         put(HUB_DISMISSED_NOTICES, of("hub", "dismissedNotices", STRING,
                 "Game support notices hidden with Don't show again (game:stage, comma-separated)"));
+        put(SETUP_GUIDE, of("hub", "setupGuide", STRING,
+                "First-run setup guide state: blank opens it once at startup; done or skipped stops that"));
         put(HUB_CONTINUE_S1_CHARACTER, of("hub", "continueS1Character", STRING, "Legacy hub progress (ignored)"));
         put(HUB_CONTINUE_S1_ZONE, of("hub", "continueS1Zone", INT, "Legacy hub progress (ignored)"));
         put(HUB_CONTINUE_S1_ACT, of("hub", "continueS1Act", INT, "Legacy hub progress (ignored)"));

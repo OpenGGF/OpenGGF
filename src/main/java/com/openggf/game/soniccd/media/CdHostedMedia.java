@@ -48,6 +48,10 @@ public final class CdHostedMedia implements HostedGameMedia {
     public static final String DISC_PATH_PROPERTY = "soniccd.disc.path";
 
     @Override public String displayName() { return "Sonic CD"; }
+
+    @Override public boolean candidate(Path file) { return CdDiscLocator.candidate(file); }
+
+    @Override public Inspection inspect(Path file) { return CdDiscLocator.inspect(file); }
     @Override public String menuLabel() { return "Sonic CD"; }
 
     @Override

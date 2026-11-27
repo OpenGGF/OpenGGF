@@ -72,6 +72,7 @@ final class Kis2GameModule extends DelegatingGameModule implements com.openggf.g
     private Kis2ChipArt chipArt;
     private Kis2SpecialStageProvider specialStageProvider;
     private Kis2TitleScreen titleScreen;
+    private com.openggf.game.sonic2.attract.Sonic2AttractProgram attractProgram;
     private Kis2LevelSelect levelSelect;
     private com.openggf.level.objects.ObjectRegistry objectRegistry;
     private com.openggf.game.ScrollHandlerProvider scrollHandlerProvider;
@@ -88,10 +89,9 @@ final class Kis2GameModule extends DelegatingGameModule implements com.openggf.g
         // Run the base module's side effects (PLC service, active ROM) and
         // replace only the game data object.
         base().createGame(rom);
-        chipPlcService = kis2Image().map(image ->
+        chipPlcService = lockOnPlcRom().map(image ->
                 new com.openggf.game.sonic2.resources.Sonic2PlcService(
-                        Rom.fromReader(image, "KiS2 lock-on PLC address space"),
-                        Kis2Constants.ART_LOAD_CUES)).orElse(null);
+                        image, Kis2Constants.ART_LOAD_CUES)).orElse(null);
         game = new Kis2Game(rom, skReader(), skKnucklesArt(), kis2Image().orElse(null), chipArt().orElse(null));
         return game;
     }
@@ -105,7 +105,7 @@ final class Kis2GameModule extends DelegatingGameModule implements com.openggf.g
     @Override
     public PhysicsProvider getPhysicsProvider() {
         if (physicsProvider == null) {
-            physicsProvider = new Kis2PhysicsProvider();
+            physicsProvider = new Kis2PhysicsProvider(() -> attractProgram != null && attractProgram.demoMode());
         }
         return physicsProvider;
     }
@@ -113,9 +113,16 @@ final class Kis2GameModule extends DelegatingGameModule implements com.openggf.g
     @Override
     public ObjectArtProvider getObjectArtProvider() {
         if (objectArtProvider == null) {
-            objectArtProvider = new Sonic2ObjectArtProvider(artOverlays());
+            var overlays = artOverlays();
+            objectArtProvider = lockOnPlcRom().map(image ->
+                    new Sonic2ObjectArtProvider(overlays, image, Kis2Constants.S2_WINDOW_START))
+                    .orElseGet(() -> new Sonic2ObjectArtProvider(overlays));
         }
         return objectArtProvider;
+    }
+
+    private Optional<Rom> lockOnPlcRom() {
+        return kis2Image().map(image -> Rom.fromReader(image, "KiS2 lock-on PLC address space"));
     }
 
     private static final com.openggf.game.rules.GamePolicies POLICIES =
@@ -210,6 +217,7 @@ final class Kis2GameModule extends DelegatingGameModule implements com.openggf.g
     public void resetModuleScopedState() {
         super.resetModuleScopedState();
         chipPlcService = null;
+        attractProgram = null;
     }
 
     @Override
@@ -219,6 +227,19 @@ final class Kis2GameModule extends DelegatingGameModule implements com.openggf.g
                 levelDebugPlacement = new Sonic2LevelDebugPlacement(kis2Image().orElseThrow());
             }
             return type.cast(levelDebugPlacement);
+        }
+        if (type == com.openggf.game.internal.TitleAttractDemo.class) {
+            // Tier one lacks the chip program and its input streams.
+            if (kis2Image().isEmpty()) return null;
+            if (attractProgram == null) {
+                try {
+                    attractProgram = com.openggf.game.sonic2.attract.Sonic2AttractProgram.forLockOn(
+                            kis2Image().orElseThrow());
+                } catch (java.io.IOException failure) {
+                    throw new java.io.UncheckedIOException("Cannot read the lock-on title demo", failure);
+                }
+            }
+            return type.cast(attractProgram);
         }
         if (type == GlideLandingDustPolicy.class) return type.cast(GLIDE_LANDING_DUST);
         // This inherited scalar rule must not probe the optional chip or initialize special stages.

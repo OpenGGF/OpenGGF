@@ -83,6 +83,11 @@ public class BubbleShieldObjectInstance extends ShieldObjectInstance {
         SolidWireCommands.diamond(commands, cx, cy, half, 0.2f, 0.4f, 1.0f);
     }
 
+    /** The mapping frame {@code Animate_Sprite} last published. */
+    public int mappingFrame() {
+        return animationLifecycle.mappingFrame();
+    }
+
     /** Sets the current animation and resets playback state. */
     public void setAnimation(int animId) {
         if (animId != animationLifecycle.animationId()) {

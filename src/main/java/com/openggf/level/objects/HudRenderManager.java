@@ -53,6 +53,67 @@ public class HudRenderManager {
 
     void setSatLayout(com.openggf.game.internal.HudSatLayout layout) { nativeSatLayout = layout; }
 
+    /** First pattern of the {@link HudHungerDial} frames, or -1 before HUD art is installed. */
+    private int hungerDialPatternIndex = -1;
+    void setHungerDialPatternIndex(int index) { hungerDialPatternIndex = index; }
+
+    /** The admitted ring hunger readout of the presented world; none without the mutator. */
+    private com.openggf.game.mutators.RingHungerRuntime.Indicator hungerIndicator() {
+        if (hungerDialPatternIndex < 0 || presentationWorld == null || bonusStageHudLayout)
+            return com.openggf.game.mutators.RingHungerRuntime.Indicator.NONE;
+        var runtime = com.openggf.game.session.WorldSessionPolicyAccess.getService(presentationWorld,
+                com.openggf.game.mutators.RingHungerRuntime.class);
+        return runtime == null ? com.openggf.game.mutators.RingHungerRuntime.Indicator.NONE : runtime.indicator();
+    }
+
+    /** The visible RINGS row the dial sits beside, or null. */
+    private static HudRow ringsRow(List<HudRow> rows) {
+        for (HudRow row : rows) if (row.visible() && row.metric() == HudMetric.RINGS) return row;
+        return null;
+    }
+
+    /** Four pixels right of the row's widest counter, top-aligned with its 16-pixel digits. */
+    private static int dialX(HudRow row) { return row.valueRightX() + row.maxDigits() * 8 + 4; }
+
+    private void appendHungerDialGeometry(List<com.openggf.graphics.SpriteSatEntry> geometry, int origin,
+                                          PlayableEntity player, LevelState levelState) {
+        if (player != null && player.isDebugMode()) return;
+        var indicator = hungerIndicator();
+        HudRow row = ringsRow(currentProfile().rows());
+        if (indicator.phase() == com.openggf.game.mutators.RingHungerRuntime.Phase.OFF || row == null) return;
+        geometry.add(com.openggf.graphics.SpriteSatEntry.of(origin + dialX(row) + camera.getXWithShake(),
+                row.valueY() + camera.getYWithShake(), 2, 2, 0, dialDesc(indicator, flashCycle(levelState)).getPaletteIndex(),
+                false, false, true, true));
+    }
+
+    /** Starving uses the warning set on the HUD warning line; its last quarter blinks on the native cadence. */
+    private boolean dialWarning(com.openggf.game.mutators.RingHungerRuntime.Indicator indicator, boolean flash) {
+        return indicator.phase() == com.openggf.game.mutators.RingHungerRuntime.Phase.STARVING
+                && (indicator.remainingSixteenths() > 4 || flash);
+    }
+
+    private PatternDesc dialDesc(com.openggf.game.mutators.RingHungerRuntime.Indicator indicator, boolean flash) {
+        return dialWarning(indicator, flash) ? iconPatternDesc : hudPatternDesc;
+    }
+
+    private void drawHungerDial(List<HudRow> rows, int hudOrigin, LevelState levelState) {
+        var indicator = hungerIndicator();
+        HudRow row = ringsRow(rows);
+        if (indicator.phase() == com.openggf.game.mutators.RingHungerRuntime.Phase.OFF || row == null) return;
+        PatternDesc desc = dialDesc(indicator, flashCycle(levelState));
+        boolean warning = dialWarning(indicator, flashCycle(levelState));
+        int base = hungerDialPatternIndex + (warning ? HudHungerDial.SET_SIZE : 0)
+                + indicator.remainingSixteenths() * HudHungerDial.TILES_PER_FRAME;
+        int x = hudOrigin + dialX(row) + camera.getXWithShake(), y = row.valueY() + camera.getYWithShake();
+        SpritePresentation.layer(graphicsManager, SpritePresentation.Layer.HUD_COUNTERS);
+        try {
+            renderSafe(base, desc, x, y);
+            renderSafe(base + 1, desc, x + 8, y);
+            renderSafe(base + 2, desc, x, y + 8);
+            renderSafe(base + 3, desc, x + 8, y + 8);
+        } finally { SpritePresentation.layer(graphicsManager, SpritePresentation.Layer.HUD); }
+    }
+
 
     // One bounded scratch array serves every numeric row synchronously.
     private final int[] numericDigits = new int[9];
@@ -261,6 +322,7 @@ public class HudRenderManager {
                         0, piece.paletteIndex(), piece.hFlip(), piece.vFlip(), true, true));
             }
             appendOptionalTimeGeometry(geometry, satOrigin, player);
+            if (!bonusStageHudLayout) appendHungerDialGeometry(geometry, satOrigin, player, levelGamestate);
             collectingSatFragments = true;
             if (satAccess == null) satAccess = com.openggf.graphics.SpriteSatInternalAccess.engine(graphicsManager);
             try { satAccess.submitGroups(geometry, () -> draw(levelGamestate, player)); }
@@ -293,6 +355,7 @@ public class HudRenderManager {
                 hudOrigin = nativeOrigin();
                 rows = debugMode ? HudProfile.stock().rows() : currentProfile().rows();
                 drawOrdinaryRows(rows, levelGamestate, player, debugMode, hudOrigin);
+                if (!debugMode) drawHungerDial(rows, hudOrigin, levelGamestate);
             }
 
             boolean hasLivesRow = hasVisibleLivesRow(rows);

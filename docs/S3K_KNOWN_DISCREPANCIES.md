@@ -662,6 +662,11 @@ with no collected rings and the initial rotation. Stock zone saves resume at the
 zone start, including the native Hidden Palace and Knuckles Sky Sanctuary acts.
 Checkpoints remain session-only.
 
+With an active slot, `SaveGame_SpecialStage` caps the live continue byte at 99
+as the results open. Full `SaveGame` caps lives at 99, and
+`SaveGame_LivesContinues` caps both bytes. No Save keeps the live bytes,
+including any award above 99, until the next byte increment or decrement.
+
 Native full SaveGame clears after SRAM writing. Java clears before capturing its
 asynchronous persistence request, so the next-zone payload also contains a zero
 mask. This does not claim identical SRAM ordering.
@@ -817,6 +822,12 @@ These proofs cover startup and bounded host consumers, not complete standalone
 campaigns, full race traversals, every viewport/team/revision or exact frame/pixel
 parity. They do not enable a corrupted locked-on mode flag to select another
 cartridge.
+
+`TestS3kCartridgeRingRouting` covers the MHZ1 checkpoint portal cycle and
+the placed LRZ2 giant ring with seven Chaos Emeralds, in both original-SK and
+locked-on cartridge views. The fixture uses solo Sonic, a 320-pixel viewport
+and declared local contact. The [standalone Chaos Special Stage layout gap](status/s3k-known-bugs.md#standalone-sk-chaos-special-stage-layouts)
+and broader route coverage remain open.
 
 Original-cartridge [audio qualification](architecture/validation/2026-10-28-tas-support-audio.md)
 covers NTSC ROM resources, PCM output and restore/reused-boot identity. Live PAL

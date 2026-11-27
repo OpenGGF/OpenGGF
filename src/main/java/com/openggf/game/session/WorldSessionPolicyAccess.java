@@ -14,11 +14,13 @@ public final class WorldSessionPolicyAccess {
 
     public static <T> T getService(WorldSession world, Class<T> type) {
         if (world != null && type == com.openggf.game.mutators.HomingAttackRuntime.class) return type.cast(world.homing);
+        if (world != null && type == com.openggf.game.mutators.BetaFlightRuntime.class) return type.cast(world.betaFlight);
         return hasPolicies(world) ? world.policies.getService(type) : null;
     }
 
     public static void registerRewind(WorldSession world, RewindRegistry registry) {
         if (world != null) registry.register(world.homing);
+        if (world != null) registry.register(world.betaFlight);
         if (hasPolicies(world)) registry.register(world.policies.rewindAdapter());
     }
 
@@ -31,12 +33,16 @@ public final class WorldSessionPolicyAccess {
     }
     public static void bindRoster(WorldSession world, SpriteManager sprites) {
         if (world != null) world.homing.bindRoster(sprites);
+        if (world != null) world.betaFlight.bindRoster(sprites);
         if (hasPolicies(world)) world.policies.bindRoster(sprites);
     }
 
     public static void beforeAssembly(WorldSession world, LevelLoadCause cause) {
         if (world != null && cause != LevelLoadCause.DECODE_ONLY && cause != LevelLoadCause.PREVIEW
-                && cause != LevelLoadCause.SEAMLESS_HANDOFF && cause != LevelLoadCause.CHECKPOINT_RESTORE) world.homing.reset();
+                && cause != LevelLoadCause.SEAMLESS_HANDOFF && cause != LevelLoadCause.CHECKPOINT_RESTORE) {
+            world.homing.reset();
+            world.betaFlight.reset();
+        }
         if (hasPolicies(world)) {
             if(cause!=LevelLoadCause.DECODE_ONLY && cause!=LevelLoadCause.PREVIEW)world.policyHistory.clear();
             world.policies.beforeAssembly(cause);
@@ -44,7 +50,10 @@ public final class WorldSessionPolicyAccess {
     }
 
     public static void failedAssembly(WorldSession world, LevelLoadCause cause) {
-        if (world != null && cause != LevelLoadCause.DECODE_ONLY && cause != LevelLoadCause.PREVIEW) world.homing.reset();
+        if (world != null && cause != LevelLoadCause.DECODE_ONLY && cause != LevelLoadCause.PREVIEW) {
+            world.homing.reset();
+            world.betaFlight.reset();
+        }
         if (hasPolicies(world)) world.policies.failedAssembly(cause);
     }
 
@@ -101,7 +110,10 @@ public final class WorldSessionPolicyAccess {
     public static void endHistoryReplay(WorldSession world) { if(hasPolicies(world))world.policyHistory.endReplay(); }
 
     static void retire(WorldSession world) {
-        if (world != null) world.homing.reset();
+        if (world != null) {
+            world.homing.reset();
+            world.betaFlight.reset();
+        }
         if (hasPolicies(world)) world.policies.retire();
     }
 }

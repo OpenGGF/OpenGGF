@@ -200,6 +200,7 @@ class TestGameplayModeContextRewindRegistry {
                 "sonic2_badnik_chain",
                 "solid-execution",
                 "homing-attack",
+                "beta-flight",
                 "sonic2.race-swap",
                 "kosinski-module-queue");
         assertTrue(snapshot.entries().keySet().containsAll(expectedKeys),

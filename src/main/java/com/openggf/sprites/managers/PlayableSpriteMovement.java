@@ -511,6 +511,12 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		return com.openggf.sprites.playable.PlayableSpriteInternalAccess.homingAttack(sprite);
 	}
 
+	/** True while this sprite's non-zero double_jump_flag belongs to the beta-flight mutator. */
+	private boolean betaFlightOwns() {
+		var betaFlight = com.openggf.sprites.playable.PlayableSpriteInternalAccess.betaFlight(sprite);
+		return betaFlight != null && betaFlight.owns(sprite);
+	}
+
 	private CollisionSystem collisionSystem() {
 		CollisionSystem current = sprite.currentCollisionSystemOrNull();
 		return current != null ? current : bootstrapCollisionSystem;
@@ -832,7 +838,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// ROM: Knuckles_Glide dispatch — intercepts normal mode when in glide states
 		int glideState = sprite.getDoubleJumpFlag();
 		if (glideState >= 3 && glideState <= 5
-				&& sprite.getSecondaryAbility() == SecondaryAbility.GLIDE) {
+				&& sprite.getSecondaryAbility() == SecondaryAbility.GLIDE && !betaFlightOwns()) {
 			// Knux_Glide_Freespace / KiS2 GlideControl run the common prelude
 			// before sliding, climbing and ledge-handler early returns. Flags !=1
 			// take only Move_Glide's camera tail, not its active speed controls.
@@ -1135,10 +1141,18 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			openStageMovementMode();
 		}
 
+		// Beta-flight mutator: its flag values are not glide states. The hurt routine
+		// keeps the ordinary shared path below, as the CES object's separate routine does.
+		boolean betaFlight = betaFlightOwns();
+		if (betaFlight && !sprite.isHurt()) {
+			modeBetaFlight(originalX, originalY);
+			return;
+		}
+
 		// Knuckles glide states 1-2 use custom physics
 		int glideState = sprite.getDoubleJumpFlag();
 		boolean inGlide = (glideState == 1 || glideState == 2)
-				&& sprite.getSecondaryAbility() == SecondaryAbility.GLIDE;
+				&& sprite.getSecondaryAbility() == SecondaryAbility.GLIDE && !betaFlight;
 
 		if (inGlide && glideState == 1) {
 			// Active glide — custom physics replace normal airborne.
@@ -1380,6 +1394,33 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				sprite.setForcedAnimationId(-1);
 				sprite.setAnimationId(0x23); // one-shot fall-from-glide landing pose
 			}
+		}
+	}
+
+	/**
+	 * Beta-flight mutator frame: the Sonic 3 CES 12/22/93 Knuckles object's flight branch of its
+	 * airborne mode (cartridge $17044-$1705E): flight vertical ($17060), ground_vel steering
+	 * ($170D8) with the camera-bias tail, Player_LevelBound, MoveSprite2 (no gravity),
+	 * Player_JumpAngle, then Sonic's air level collision. The underwater -$28 step of the ordinary
+	 * air path is not on this branch. Landing clears double_jump_flag through the shared touch-floor
+	 * owner, which ends the flight.
+	 */
+	private void modeBetaFlight(short originalX, short originalY) {
+		var betaFlight = com.openggf.sprites.playable.PlayableSpriteInternalAccess.betaFlight(sprite);
+		betaFlight.stepVertical(sprite, inputJumpPress, PlayerFluidContextAccess.movementUnderwater(sprite),
+				betaFlight.carryFlagSet(), camera());
+		betaFlight.steer(sprite, inputLeft, inputRight);
+		easeNativeKnucklesGlideCameraBias();     // $17124-$1712E, Sonic_Jump_ResetScr's literal tail
+		doLevelBoundary();
+		if (isCpuLevelBoundaryKillActive()) {
+			return;
+		}
+		moveSpriteTestGravity(sprite.getXSpeed(), sprite.getYSpeed());
+		if (!pseudo3dRamp) sprite.returnAngleToZero();
+		advanceAirborneFlipAngle();
+		sprite.updateSensors(originalX, originalY);
+		if (!sprite.isObjectControlSuppressesMovement() && !sprite.isSuppressAirCollision()) {
+			doLevelCollision(sprite.isForceFloorCheck());
 		}
 	}
 
@@ -1645,7 +1686,13 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// for negative products. The previous approach of -cosHex(angle)*jump>>8 rounds
 		// differently: -(x>>8) != (-x)>>8 when x%256 != 0 (68000 ASR rounds toward -∞).
 		int adjustedAngle = (hexAngle - 0x40) & 0xFF;
-		int jumpImpulse = motionMutators == null ? sprite.getJump() : motionMutators.jumpImpulse(sprite, sprite.getJump());
+		int nativeJump = launchRoutines == null ? sprite.getJump()
+				: launchRoutines.jumpImpulse(sprite, sprite.getJump());
+		var betaFlight = com.openggf.sprites.playable.PlayableSpriteInternalAccess.betaFlight(sprite);
+		if (betaFlight != null) {
+			nativeJump = betaFlight.jumpImpulse(sprite, nativeJump, PlayerFluidContextAccess.movementUnderwater(sprite));
+		}
+		int jumpImpulse = motionMutators == null ? nativeJump : motionMutators.jumpImpulse(sprite, nativeJump);
 		int xJumpChange = (TrigLookupTable.cosHex(adjustedAngle) * jumpImpulse) >> 8;
 		int yJumpChange = (TrigLookupTable.sinHex(adjustedAngle) * jumpImpulse) >> 8;
 		if (!objectLaunch) {
@@ -1791,7 +1838,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	// Internal read-only seam for native input planners; the gameplay gate remains the owner.
 	boolean isAirAbilityWindowOpen() {
 		int threshold = PlayerFluidContextAccess.movementUnderwater(sprite) ? -0x200 : -0x400;
-		return sprite.getDoubleJumpFlag() == 0 && sprite.getYSpeed() >= threshold;
+		PlayerStageRoutines routines = stageRoutinesOrNull();
+		return sprite.getDoubleJumpFlag() == 0 && sprite.getYSpeed() >= threshold
+				&& (routines == null || routines.allowsMidairAbility(sprite));
 	}
 
 	private boolean tryActivateSuperFromAirAbility() {
@@ -1905,7 +1954,13 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// gates below; the Super/emerald transform is handled upstream in
 		// tryActivateSuperFromAirAbility (ROM Knux_Test_For_Glide loc_1785E).
 		if (sprite.getSecondaryAbility() == SecondaryAbility.GLIDE) {
-			activateGlide();
+			var betaFlight = com.openggf.sprites.playable.PlayableSpriteInternalAccess.betaFlight(sprite);
+			if (betaFlight != null && betaFlight.enabledFor(sprite)) {
+				// Beta-flight mutator replaces the glide entry (CES $1794C-$179D4).
+				betaFlight.enter(sprite);
+			} else {
+				activateGlide();
+			}
 			return true;
 		}
 		boolean hasElemental = capabilityRules.elementalShieldsEnabled();
@@ -4145,7 +4200,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// S1/S2 (s1:01 Sonic.asm:736-750, s2.asm:36826-36840): unconditional cap at max.
 		// S3K (sonic3k.asm:23123-23156): preserves speeds already above max (undo+check).
 		PlayerMovementRules movementRules = playerMovementRulesOrNull();
-		boolean preserveSuperspeed = movementRules != null && movementRules.air().airSuperspeedPreserved();
+		boolean preserveSuperspeed = movementRules != null && movementRules.air().airSuperspeedPreserved()
+				&& (stageRoutines == null || !stageRoutines.alwaysCapsAirSpeed(sprite));
 		// Sonic CD's ObjSonic_MoveAir has no roll-jump test (scddisasm
 		// src/Level/_Objects/Sonic/Main.asm:1559-1603).
 		boolean rollJumpKeepsAirControl = movementRules != null && movementRules.air().rollJumpKeepsAirControl();
@@ -4416,11 +4472,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 		int minX = camera.getMinX();
 		int maxX = camera.getMaxX();
-		int maxY = Math.max(camera.getMaxY(), camera.getMaxYTarget());
 		if (sprite.isCpuControlled() && sprite.getCpuController() != null) {
 			minX = sprite.getCpuController().getMinXBound(minX);
 			maxX = sprite.getCpuController().getMaxXBound(maxX);
-			maxY = sprite.getCpuController().getMaxYBound(maxY);
 		}
 
 		int leftBoundary = (minX + LEFT_OFFSET) & 0xFFFF;
@@ -4466,27 +4520,20 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			sprite.setGSpeed((short) 0);
 		}
 
-		// maxY above is max(live, target): the FixBugs = 1 branch of
-		// Sonic_Boundary_CheckBottom (s2.asm:37254-37270), not the shipped one.
-		// Shipped S2 and S3K Player_Boundary_CheckBottom (sonic3k.asm:23223-23231)
-		// read the live Camera_Max_Y_pos alone. The engine keeps the fixed branch
-		// because removing it regresses TestS2SczLevelSelectTraceReplay; see
-		// known-bugs.md#bottom-kill-plane-runs-the-fixbugs-branch--2026-10-31.
 		// ROM: When Level_started_flag is clear, boundary death is suppressed
 		// (camera boundaries may not reflect actual level extents during intro).
 		if (camera.isLevelStarted()) {
-			short effectiveMaxY = (short) maxY;
 			// ROM compares the player's y_pos(a0) word, which is centre-Y, not top-left:
 			//   S1 Sonic_LevelBound .bottom: cmp.w obY(a0),d0 / blt.s .bottom
-			//     (s1disasm/_incObj/01 Sonic.asm:1014).
+			//     (s1disasm/_incObj/01 Sonic.asm:1082-1097).
 			//   S2 Sonic_LevelBound Sonic_Boundary_CheckBottom: cmp.w y_pos(a0),d0
 			//     / blt.s Sonic_Boundary_Bottom (s2.asm:37272).
 			//   S2 Tails_LevelBound Tails_Boundary_CheckBottom: cmp.w y_pos(a0),d0
 			//     / blt.s Tails_Boundary_Bottom (s2.asm:40298).
 			//   S3K Player_LevelBound Player_Boundary_CheckBottom: cmp.w y_pos(a0),d0
-			//     / blt.s Player_Boundary_Bottom (sonic3k.asm:23230).
+			//     / blt.s Player_Boundary_Bottom (sonic3k.asm:23223-23243).
 			//   S3K Tails_Check_Screen_Boundaries loc_14F30: cmp.w y_pos(a0),d0
-			//     / blt.s loc_14F56 (sonic3k.asm:28485-28486).
+			//     / blt.s loc_14F56 (sonic3k.asm:28463-28483).
 			// PlayerMovementRules.levelBoundaryUsesCentreY gates centre-Y semantics
 			// for each game. S1/S2/S3K all enable it because their ROM routines
 			// compare y_pos(a0)/obY(a0), which maps to engine centre-Y.
@@ -4510,10 +4557,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			// (:28463-28481) is the identical pair for the sidekick, which is why this
 			// single owner covers both ROM rows.
 			//
-			// The min-side bound takes min(live, target) as the mirror of the
-			// max-side max(live, target) guard above: that guard is an engine
-			// allowance for a still-easing camera boundary, not a ROM branch, and it
-			// would be an unfair death here for exactly the same reason.
+			// The inverted check retains the engine's allowance for an easing top bound.
 			boolean reverseGravity = isReverseGravityActive();
 			int effectiveMinY = Math.min(camera.getMinY(), camera.getMinYTarget());
 			if (sprite.isCpuControlled() && sprite.getCpuController() != null) {
@@ -4522,7 +4566,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			}
 			boolean pastKillPlane = reverseGravity
 					? playerY <= effectiveMinY
-					: playerY > effectiveMaxY + 224;
+					: playerY > (short) liveBottomBoundary(camera) + 0xE0;
 			if (pastKillPlane) {
 				GameModule module = sprite.currentGameModule();
 				LevelEventProvider levelEvents = module != null ? module.getLevelEventProvider() : null;
@@ -4562,28 +4606,10 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	 * S2 {@code Sonic_HurtStop} (docs/s2disasm/s2.asm:38194-38215), S3K
 	 * {@code sub_12318} (docs/skdisasm/sonic3k.asm:24511-24531).
 	 *
-	 * <p>S1 assembles with {@code FixBugs = 0} (docs/s1disasm/sonic.asm:20) and the
-	 * engine implements that shipped branch, because the traces record shipped-ROM
-	 * behaviour. Two things follow from the conditional:
-	 * <ul>
-	 *   <li>the boundary word would be {@code v_limitbtm2}, the camera's TARGET
-	 *       bottom boundary, with no consideration of the eased real boundary
-	 *       {@code v_limitbtm1} (S2/S3K read the live boundary instead). The
-	 *       {@code FixBugs = 1} branch takes the lower of the two so that
-	 *       outrunning a still-lowering boundary (the GHZ1 S-tunnel) is not an
-	 *       unfair death. This site does NOT yet take the shipped branch: it runs
-	 *       the same {@code max(live, target)} expression as the sibling kill plane
-	 *       in {@link #doLevelBoundary}, which is deliberately held there because
-	 *       removing it regresses TestS2SczLevelSelectTraceReplay. The two kill
-	 *       planes are the same ROM conditional and must move together;</li>
-	 *   <li>the compare is the UNSIGNED {@code blo}, so a hurt Sonic who leaves the
-	 *       TOP of the level -- {@code y_pos} wrapped to {@code $Fxxx}, which reads
-	 *       as a huge unsigned word -- also dies. The {@code FixBugs = 1} branch uses
-	 *       a signed {@code blt} and kills only at the bottom.</li>
-	 * </ul>
-	 * The signed/unsigned divergence is carried by {@link PlayerLevelBoundaryRules},
-	 * not by a game name: S2 and S3K ship the signed compare, so this is a real
-	 * per-game difference in the ROMs.
+	 * <p>S1 ships with FixBugs = 0 (sonic.asm:20). Sonic_HurtStop uses unsigned
+	 * BLO, so a wrapped negative y_pos can also kill above the top of the level
+	 * (Sonic_HurtStop (_incObj/01 Sonic.asm:1919-1941)). FixBugs = 1 uses signed
+	 * BLT, which S2 and S3K already ship.
 	 *
 	 * @return true when the player was killed and the hurt routine must return
 	 */
@@ -4611,11 +4637,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			}
 			return sprite.getCentreY() <= minBoundary && applyHurtStopKill();
 		}
-		// Held mask, shared with doLevelBoundary's kill plane -- see the javadoc above.
-		int boundary = Math.max(camera.getMaxY(), camera.getMaxYTarget());
-		if (sprite.isCpuControlled() && sprite.getCpuController() != null) {
-			boundary = sprite.getCpuController().getMaxYBound(boundary);
-		}
+		int boundary = liveBottomBoundary(camera);
 		// ROM: addi.w #224,d0 / cmp.w y_pos(a0),d0 -- a 16-bit word compare, so both
 		// operands are masked to a word before the unsigned test.
 		int killRow = (boundary + 224) & 0xFFFF;
@@ -4627,6 +4649,21 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			return false;
 		}
 		return applyHurtStopKill();
+	}
+
+	private int liveBottomBoundary(Camera camera) {
+		// Match the shipped S1 FixBugs = 0 and S2 fixBugs = 0 branches:
+		// Sonic_LevelBound (_incObj/01 Sonic.asm:1057-1097) and
+		// Sonic_Boundary_CheckBottom (s2.asm:37254-37270) read the live word.
+		// The optional fixed blocks take max(live, target), allowing a player to
+		// descend ahead of a still-lowering boundary. S3K always reads the live
+		// word in Player_Boundary_CheckBottom (sonic3k.asm:23223-23231).
+		// S2 Tails_Boundary_CheckBottom (s2.asm:40280-40296) uses its own live word.
+		int boundary = camera.getMaxY();
+		if (sprite.isCpuControlled() && sprite.getCpuController() != null) {
+			return sprite.getCpuController().getMaxYBound(boundary);
+		}
+		return boundary;
 	}
 
 	/** The kill half of {@code sub_12318}, shared by its upright and inverted tests. */

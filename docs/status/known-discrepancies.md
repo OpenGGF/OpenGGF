@@ -408,6 +408,10 @@ Focused execution and inherited route limits are recorded in the audit's
 
 Held live rewind is supported only inside rewind-capable special-stage providers. It does not rewind across the LEVEL -> SPECIAL_STAGE or SPECIAL_STAGE -> results/LEVEL boundaries; those transitions intentionally start fresh rewind timelines.
 
+Within a Sonic 1 or Sonic 3 & Knuckles special stage, rewind restores the
+ring-award flags with the maze and the awarded lives and continues with
+session progress. Replaying a pickup after rewinding across it awards it again.
+
 ### Sonic CD stage-load live rewind
 
 A Sonic CD time warp or act advance starts a fresh live rewind timeline.
@@ -1442,9 +1446,12 @@ game-owned frame lifecycle and producer owners.
 S1 and S2 PLC readiness is deterministic ROM-derived production state. The
 engine submits each represented ROM cue to its native-shape FIFO, services it
 at the owning VBlank lifecycle boundary, and lets results, Final Zone, ARZ, and
-other implemented consumers poll that queue. Runtime rendering remains eager
+other implemented consumers poll that queue. S1 runtime rendering remains eager
 so a submitted cue's prepared art can be displayed without tying host decode
-cost to Mega Drive timing.
+cost to Mega Drive timing. S2 decodes ahead of service, then publishes each
+serviced pattern slice to the native slot views used by Wing Fortress Tornado
+art and shared animal and explosion art. Independently preloaded S2 sheets
+are tracked in the [open bug ledger](known-bugs.md#sonic-2-preloaded-object-art-outside-native-plc-slot-views).
 
 Skipped and visible initial title-card paths converge on the same idempotent
 production boundary. S1 drains its locked primary queue, publishes the
@@ -3246,7 +3253,6 @@ the owning KiS2 routine in the catalogue):
   pictures are implemented. KiS2's directional title code opens level select
   with A+Start; its Super sound-test sequence survives new-game initialization.
   Results headings move independently, including the all-emeralds Super message.
-  Attract demos still need a title-owned gameplay/input/return lifecycle.
   Chip-backed play reads its two-entry placement list and recognizes the
   lock-on debug sound-test code. Tier one follows the stock level-select and
   placement data. The wrapper inherits the native
@@ -3254,17 +3260,16 @@ the owning KiS2 routine in the catalogue):
   above the viewport (#464, `766cb71d7d`,
   `TestKis2HeadlessBoot#kiS2PlacedRingDisappearsWhenItsCentreCrossesTheTopEdge`).
   Exact per-scanline sprite masking depends on VDP timing outside the engine's
-  hardware model. Level-select extra PLC work remains open. Special-stage perfect-bonus progression and tally sound timing retain
-  shared-owner gaps.
-  Results-mode rewind is absent; message-core snapshots alone do not supply it.
+  hardware model. Level-select extra PLC work remains open.
+  [Special-stage results rewind](known-bugs.md#s2-and-kis2-special-stage-results-rewind)
+  is tracked separately.
   The formerly listed ending walk cadence is not a KiS2 gap: its forced
   Ending_Routine=0 never takes that walk branch.
 - **Super Knuckles.** Chip palettes, sparse colour writes (2/3/5), 16-pass
   transform freeze, $800/$18/$C0 movement, unchanged $600/$300 jump, seeded ring
   drain, revert and controller rewind are implemented. KiS2 now accepts a fresh
-  second jump-button edge while another remains held. The ROM demo-mode gate
-  still lacks an engine attract-demo owner. Complete powered-form route and
-  gameplay rewind coverage remains open.
+  second jump-button edge while another remains held. Complete powered-form
+  route and gameplay rewind coverage remains open.
 - **Trace coverage.** The EHZ1 KiS2 fixture exists. The published 36-segment all-emeralds chain fixture
   has converted-art and chip SS transfer observations; all 36 segments pass
   v5 validation. The corrected patch launch and chip PLC queue let the first

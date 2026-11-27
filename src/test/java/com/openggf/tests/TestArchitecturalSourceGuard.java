@@ -317,7 +317,8 @@ class TestArchitecturalSourceGuard {
         String root = "class GameLoop { private final GameLoopSpecialStageLifecycle specialStageLifecycle = null; "
                 + "private boolean specialStageRewindBoundaryThisFrame; private final GameLoopSpecialStageInput specialStagePacingInput = null; }";
         String owner = "final class GameLoopSpecialStageLifecycle { " + String.join(" ", SPECIAL_STAGE_FIELDS)
-                + " GameLoopSpecialStageLifecycle(Host host, AudioManager audioManager) { this.host = host; this.audioManager = audioManager; } "
+                + " GameLoopSpecialStageLifecycle(Host host, AudioManager audioManager, Supplier<AttractDemoPlayback> attractPlayback) { "
+                + "this.host = host; this.audioManager = audioManager; this.attractPlayback = attractPlayback; } "
                 + "interface Host { " + SPECIAL_STAGE_HOST_CONTRACT + " } "
                 + SPECIAL_STAGE_METHODS.stream().sorted().map(name -> "void " + name + "() {}")
                         .collect(java.util.stream.Collectors.joining(" ")) + " }";
@@ -341,6 +342,9 @@ class TestArchitecturalSourceGuard {
         assertFalse(specialStageOwnershipViolations(root, owner.replace("void notifyModeChanged(GameMode oldMode);",
                 "void runWholeFrame(Runnable frame);")).isEmpty(), "no concealed whole-frame callback");
         assertFalse(specialStageOwnershipViolations(root, owner.replace("this.host = host;", "this.host = host; host.module();")).isEmpty(), "constructor has no eager Host reads");
+        assertFalse(specialStageOwnershipViolations(root, owner.replace("this.attractPlayback = attractPlayback;",
+                "this.attractPlayback = attractPlayback; attractPlayback.get();")).isEmpty(),
+                "constructor has no eager attract playback reads");
         assertFalse(specialStageOwnershipViolations(root.replace("class GameLoop {", "class GameLoop { private ResultsScreen mirror;"), owner).isEmpty());
     }
 
@@ -375,8 +379,8 @@ class TestArchitecturalSourceGuard {
         Matcher host = Pattern.compile("interface\\s+Host\\s*\\{([^}]*)}").matcher(ownerCode);
         if (!host.find() || !host.group(1).replaceAll("\\s+", "").equals(SPECIAL_STAGE_HOST_CONTRACT.replaceAll("\\s+", "")))
             violations.add("host retains narrow typed live capabilities");
-        Matcher constructor = Pattern.compile("GameLoopSpecialStageLifecycle\\(Host host, AudioManager audioManager\\)\\s*\\{([^}]*)}").matcher(ownerCode);
-        if (!constructor.find() || !constructor.group(1).replaceAll("\\s+", "").equals("this.host=host;this.audioManager=audioManager;"))
+        Matcher constructor = Pattern.compile("GameLoopSpecialStageLifecycle\\(Host host, AudioManager audioManager, Supplier<AttractDemoPlayback> attractPlayback\\)\\s*\\{([^}]*)}").matcher(ownerCode);
+        if (!constructor.find() || !constructor.group(1).replaceAll("\\s+", "").equals("this.host=host;this.audioManager=audioManager;this.attractPlayback=attractPlayback;"))
             violations.add("constructor only retains collaborators");
         return violations;
     }

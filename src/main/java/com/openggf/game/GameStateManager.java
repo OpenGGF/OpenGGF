@@ -356,7 +356,11 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
     }
 
     public void addContinue() {
-        this.continues++;
+        continues = (continues + 1) & 0xFF;
+    }
+
+    void capContinues(int maximum) {
+        continues = Math.min(continues & 0xFF, maximum);
     }
 
     public void restoreSaveProgress(int lives, int continues, List<Integer> chaosEmeralds, List<Integer> superEmeralds) {

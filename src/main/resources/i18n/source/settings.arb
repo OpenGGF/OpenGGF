@@ -480,6 +480,14 @@
   "@settings.key.hub_dismissed_notices.help": {
     "description": "Settings help for stable configuration key HUB_DISMISSED_NOTICES. Technical YAML documentation remains separate."
   },
+  "settings.key.setup_guide.label": "Setup guide",
+  "@settings.key.setup_guide.label": {
+    "description": "Settings label for stable configuration key SETUP_GUIDE (hub.setupGuide)."
+  },
+  "settings.key.setup_guide.help": "Whether the setup guide has finished. Clear it to see the guide at the next start; Extras always opens it.",
+  "@settings.key.setup_guide.help": {
+    "description": "Settings help for stable configuration key SETUP_GUIDE. Technical YAML documentation remains separate."
+  },
   "settings.key.hub_continue_s1_character.label": "Continue s1 character",
   "@settings.key.hub_continue_s1_character.label": {
     "description": "Settings label for stable configuration key HUB_CONTINUE_S1_CHARACTER (hub.continueS1Character)."

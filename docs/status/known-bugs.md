@@ -61,6 +61,63 @@ Entries should include:
   take the sprite count from the native sprite-table submission. Verify
   digit order and the counter with placement active and inactive.
 
+## Sonic 2 preloaded object art outside native PLC slot views
+
+- **Location** — `Sonic2ObjectArtProvider` builds independent object sheets
+  for the signpost, capsule, and several boss composites at level load.
+- **Symptom** — these sheets can be sampled while the corresponding native
+  cue is still pending. Their renderer patterns also do not track writes
+  into the same slots through another cue.
+- **ROM behavior** — `LoadPLC` and `LoadPLC2` (s2.asm:2047-2124) submit or
+  replace descriptors. `ProcessDPLC` and `ProcessDPLC2` (s2.asm:2202-2250)
+  write the serviced tiles and leave all other tiles readable at their
+  preceding values.
+- **Removal condition** — audit each sheet's consumers and native tile
+  ranges. For any observable overlap or early reader, project the serviced
+  range into its mapping and check before, during and after service.
+
+## S2 and KiS2 special-stage results rewind
+
+- **Location** — `GameLoopSpecialStageLifecycle` and `Sonic2SpecialStageResultsScreen`.
+- **Symptom** — rewind can replay the live half-pipe, while the results card
+  and its tally have no results-mode rewind owner.
+- **Scope** — the live-stage snapshot retains the ring words and admitted ring
+  total used to select Obj6F's ordinary or perfect path
+  (`SpecialStage`, s2.asm:6740-6746; `Obj6F_TallyScore`, s2.asm:28395-28414).
+  KiS2's split-name message snapshots cover only the message state.
+- **Removal condition** — rewind across results frames restores score,
+  countdowns, routine, message state and the phase of the V-int sound gate,
+  including a repeatable return to the level.
+
+## S2 and KiS2 special-stage results timing before and after the tally
+
+- **Location** — `Sonic2SpecialStageProvider` and `Sonic2SpecialStageResultsScreen`.
+- **Symptom** — Obj6F's results scans advance the inherited object V-int clock.
+  The preceding half-pipe loop does not yet count every admitted wait into
+  that inherited phase. Ordinary and stock Super-message results publish
+  completion on the timer-expiry pass.
+- **ROM behavior** — `VintRet` (s2.asm:507-510) advances the same longword
+  through the `SpecialStage` wait (s2.asm:6695-6703) and Obj6F results loop
+  (s2.asm:6797-6805). `Obj6F_TimedDisplay` (s2.asm:28367-28373) selects
+  `Obj6F_DisplayOnly` (s2.asm:28427-28429), which sets the level-inactive
+  flag on the following object pass.
+- **Removal condition** — the carry into results accounts for the represented
+  half-pipe waits, and ordinary and Super-message exits match the separate
+  display-only pass.
+
+## Sonic 1 title attract demos are absent
+
+- **Location** — the Sonic 1 title attract provider remains to be implemented.
+  The shared lifecycle supports level and Special Stage entries.
+- **Symptom** — the title stays on screen after its native timeout.
+- **ROM behavior** — `GotoDemo` and `Demo_Levels` (sonic.asm:2361-2440)
+  wait another 30 VBlanks, allow Start during that wait, then rotate through
+  GHZ1, MZ1, SYZ1 and a Special Stage. `GM_Special` (sonic.asm:3275-3281)
+  reads the Special Stage stream from `DemoDataPtr[6]`. `VBlank_SpecialStage`
+  (sonic.asm:882-903) debits the playback timer.
+- **Removal condition** — the production title launches each entry on its
+  native wait and returns correctly on timeout and Start.
+
 ## S2 game-over host fade stops music before the destination owns audio
 
 - **Location** — `GameLoopGameOverExit.startToBlack`.
@@ -193,24 +250,6 @@ Three parts of that pass are still approximated.
   for this act-2 load. Not yet instrumented past the offset.
 - **Removal condition** — the engine clock equals the ROM's
   `gameplay_frame_counter` column through the chain's ARZ2 segment.
-
-## Bottom kill plane runs the FixBugs branch — 2026-10-31
-
-- **Location:** `PlayableSpriteMovement.doLevelBoundary` and
-  `applyHurtStopBottomKill`, which compute `max(camera maxY, maxY target)`.
-- **Symptom:** shipped S2 `Sonic_Boundary_CheckBottom` (s2.asm:37254-37270) and
-  S3K `Player_Boundary_CheckBottom` (sonic3k.asm:23223-23231) read the live
-  `Camera_Max_Y_pos` alone. Taking the target as well is the S2 `if fixBugs`
-  block, so a player who outruns a lowering boundary survives where the
-  shipped game kills them. The S1 hurt-stop test also differs: it should read
-  only the target (`v_limitbtm2`).
-- **Suspected cause:** removing the expression regresses
-  `TestS2SczLevelSelectTraceReplay`. That suggests the engine's eased
-  `Camera_Max_Y_pos` lags or leads the ROM's somewhere on that route, and the
-  fixed branch hides it. Not yet measured.
-- **Removal condition:** the shipped branch is restored at both kill planes
-  together, with the SCZ trace green because the camera easing that feeds it
-  matches the ROM.
 
 ## TAS pause clock does not advance during native Start pause — 2026-10-26
 
@@ -404,6 +443,10 @@ six-case `TestTitleNewGameSpecialStageProgress` covers these boundaries.
 
 Remaining gaps:
 
+- The Sonic 1 level HUD saturates lives at 99 for presentation. The ROM's
+  `Hud_Lives` (`_inc/HUD Update.asm:537-600`) uses the live byte for two tile
+  lookups. With a byte above 99, the native tens lookup can fetch beyond the
+  digit art. Remove this gap when a ROM-backed test verifies the overflow tiles.
 - S2's shipped `fixBugs = 0` Continue path does not clear stale HTZ DMA, so the
   ROM can corrupt Tails' Continue art with a queued cloud upload. The standalone
   Continue art bank does not reproduce this VRAM alias. The retained Super flag

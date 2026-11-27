@@ -80,8 +80,6 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
     // Frame-local phase ownership, deliberately absent from RingSnapshot. The queue
     // restores numeric admissions; binders always dereference this manager's live DTOs.
     private boolean nativeRingPassBegun;
-    /** Spin frame forced while a NATIVE widescreen dormant pose draws a ring object; -1 otherwise. */
-    private int frozenSpinFrame = -1;
     private int nativeRingPassClock;
 
 
@@ -755,17 +753,18 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             }
             drawPlacedObject(ring, frameCounter, drawY);
         }
-        drawDormantMargins();
+        drawDormantMargins(frameCounter);
     }
 
     /**
      * NATIVE widescreen draw mode: layout rings in the extra display width that the native
-     * 320-pixel window has not loaded are drawn frozen (first spin frame) at their layout
-     * position, outside the ring window. Collected rings stay gone. Presentation only: no
+     * 320-pixel window has not loaded are drawn at their layout position, outside the ring
+     * window, on the same spin frame the live placed rings use for {@code frameCounter}, so a
+     * ring turning live keeps its phase. Collected rings stay gone. Presentation only: no
      * placement, collection or touch state is read beyond the collected and active sets.
-     * See docs/architecture/designs/2026-11-13-widescreen-native-draw-mode.md (D12).
+     * See docs/architecture/designs/2026-11-13-widescreen-native-draw-mode.md (D12, D15).
      */
-    void drawDormantMargins() {
+    void drawDormantMargins(int frameCounter) {
         if (!ringsAllowed() || renderer == null) return;
         Camera camera = GameServices.camera();
         var style = dormantStyle(camera);
@@ -780,7 +779,8 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             graphics.beginPatternBatch();
         }
         try {
-            for (RingSpawn ring : dormant) renderer.drawFrameIndex(0, ring.x(), ring.y());
+            int spin = stageRingFrame(frameCounter);
+            for (RingSpawn ring : dormant) renderer.drawFrameIndex(spin, ring.x(), ring.y());
         } finally {
             if (greyscale) {
                 graphics.flushPatternBatch();
@@ -839,17 +839,6 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         return low;
     }
 
-    /** Draws {@code body} with ring objects held on their first spin frame (dormant poses). */
-    void withFrozenSpin(Runnable body) {
-        int previous = frozenSpinFrame;
-        frozenSpinFrame = 0;
-        try {
-            body.run();
-        } finally {
-            frozenSpinFrame = previous;
-        }
-    }
-
     /** Object-slot emission uses the same resident art/collection state without a second list draw. */
     void drawPlacedObject(RingSpawn ring, int frameCounter) {
         drawPlacedObject(ring, frameCounter, ring.y());
@@ -867,8 +856,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         int index = placement.getSpawnIndex(ring);
         if (index < 0) return;
         if (!placement.isCollected(index)) {
-            renderer.drawFrameIndex(frozenSpinFrame >= 0 ? frozenSpinFrame : stageRingFrame(frameCounter),
-                    ring.x(), drawY);
+            renderer.drawFrameIndex(stageRingFrame(frameCounter), ring.x(), drawY);
             return;
         }
         int started = placement.getSparkleStartFrame(index);

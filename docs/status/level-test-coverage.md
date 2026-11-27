@@ -8,6 +8,15 @@ row ordering. The [remaining debug placement coverage](known-bugs.md#s2-debug-pl
 includes unimplemented factories, additional viewport/team combinations,
 slot exhaustion and native recordings.
 
+Wing Fortress runtime art: `TestSonic2RuntimePlcRendererRefresh` checks the
+resident propeller tiles through request, the Tornado body's 27 service passes,
+the first three thruster writes and mid-write rewind.
+`TestSonic2PlcSharedArtRendering` checks the
+six-pattern VBlank against the existing animal and explosion mappings with EGL.
+The positioned propeller and early thruster are controlled witnesses. In both
+stock WFZ traces the thruster child arrives after its cue drains. The tests
+leave full-route pixel parity and other preloaded sprite sheets open.
+
 HCZ1 badnik score allocation (2026-11-22): the [HCZ1 matrix](../architecture/validation/levels/s3k-hcz1-sonic.md#badnik-score-popup-dispatch-2026-11-22)
 records the native slot and movement on rows 417–418. Manager tests cover
 both dispatch orders, a full object table and recreation between passes.
@@ -742,6 +751,10 @@ Starpost Valley integration (2026-10-10): the [integration route matrix](../arch
 Starpost Valley P1 (2026-10-09): the [real valley matrix](../architecture/designs/2026-10-09-starpost-valley.md#actcharacter-route-matrix-and-rewind-spots) records real S3K solo Sonic/Tails/Knuckles routes at 320/400px, both loop paths, source collision/colour equality, native ability/occlusion visuals and a mid-valley restore/replay spot. Checkpoint respawn, interaction and loop-boundary rewind, load/history isolation, broader viewport/donor/team and scene/act handoff obligations remain open. This prototype does not certify stock GHZ or the complete level standard.
 
 Mutator Lab expansion (2026-10-08): the [all-game affected-mechanic matrix](../architecture/validation/levels/mutator-lab-native-games.md) records native S1/S2/S3K focused cells and remaining composed capture/domain/broad obligations. Complete act, team, donor and viewport breadth remains unqualified.
+
+Stock S2 Emerald Hill 1 (2026-11-20): [the positioned loop regression](../../src/test/java/com/openggf/tools/TestSonic2WideLoopCapture.java)
+checks solo Sonic's motion through the loop at 320 and 800 EDGE. Complete act,
+checkpoint, team, donor and rewind coverage remain inherited gaps.
 
 Mutator Lab (2026-10-07): the [S2 EHZ1 prototype matrix](../architecture/validation/levels/mutator-lab-s2-ehz1.md)
 tracks native solo-Sonic opening play, configuration/load boundaries, selective

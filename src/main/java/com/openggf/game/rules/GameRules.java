@@ -198,7 +198,8 @@ public record GameRules(
                     false,
                     -1,
                     -1,
-                    true
+                    true,
+                    1
             ),
             new DrowningBubbleRules(
                     60,
@@ -360,7 +361,8 @@ public record GameRules(
                     true,
                     132,
                     133,
-                    true
+                    true,
+                    1
             ),
             new DrowningBubbleRules(
                     0,
@@ -516,7 +518,8 @@ public record GameRules(
                     true,
                     98,
                     99,
-                    true
+                    true,
+                    8
             ),
             new DrowningBubbleRules(
                     60,

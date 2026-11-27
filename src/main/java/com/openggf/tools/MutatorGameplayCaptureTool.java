@@ -58,7 +58,7 @@ public final class MutatorGameplayCaptureTool {
         private static final Set<String> VALUE_FLAGS = Set.of("--game", "--rom", "--mod", "--zone", "--act",
                 "--x", "--y", "--width", "--main", "--sidekick", "--donor", "--input", "--settle",
                 "--input-start", "--frames", "--capture-from", "--every", "--stop-on-death", "--death-grace",
-                "--fps", "--out-dir", "--emeralds", "--vint-run-count", "--camera-x-sub", "--rings");
+                "--fps", "--out-dir", "--emeralds", "--vint-run-count", "--camera-x-sub", "--rings", "--timer", "--mutator");
 
         static Options parse(String[] argv) {
             boolean showcase = false, interactive = false;
@@ -136,9 +136,12 @@ public final class MutatorGameplayCaptureTool {
                 monitors.write("frame,class,x,y"); monitors.newLine();
             }
             if (a.mod() != null) session.applyMod(a.mod());
+            if (!a.mutators().isEmpty()) session.requestMutators(a.mutators());
             if (a.titleScreen()) session.startAtTitle();
             if (a.audio()) session.enableAudio();
             session.boot(a.rom(), zone, a.act(), settings);
+            if (!a.mutators().isEmpty()) session.verifyRequestedMutators();
+            if (a.timerFrames() != null) session.declareTimer(a.timerFrames());
             var audio = GameServices.audio();
             try (var input = options.interactivePacing() ? PresentationInput.install(session.loop()) : null;
                  var capture = a.audio() ? audio.beginLiveCaptureAudio(a.fps()) : null;
@@ -147,7 +150,8 @@ public final class MutatorGameplayCaptureTool {
                 state.write(a.titleScreen() ? GameplayCaptureSession.stateHeaderWithHostState() : GameplayCaptureSession.stateHeader());
                 state.newLine();
                 obs.write("frame,mode,rings,score,lost_rings,lost_rings_slotless,lost_rings_collectible,head_scale,gravity_pct,"
-                        + "ringfall_pct,ringfall_cap,ringfall_full,rebound_pct,rebound_cap,badniks,x,y,xvel,yvel,air,hurt,dead,cam_x,cam_y,near_badnik,near_dx,near_dy");
+                        + "ringfall_pct,ringfall_cap,ringfall_full,rebound_pct,rebound_cap,badniks,x,y,xvel,yvel,air,hurt,dead,cam_x,cam_y,near_badnik,near_dx,near_dy,"
+                        + "lives,timer_frames,hunger_phase,hunger_sixteenths");
                 obs.newLine();
                 for (int f = 0; f < total; f++) {
                     int si = f - a.settle();
@@ -369,7 +373,20 @@ public final class MutatorGameplayCaptureTool {
                 + (p == null ? ",,,,,," : p.getCentreX() + "," + p.getCentreY() + "," + p.getXSpeed() + "," + p.getYSpeed() + ","
                 + (p.getAir() ? 1 : 0) + "," + (p.isHurt() ? 1 : 0) + "," + (p.getDead() ? 1 : 0)) + ","
                 + (cam == null ? "," : cam.getX() + "," + cam.getY()) + ","
-                + (near == null ? ",," : near + "," + nearDx + "," + nearDy);
+                + (near == null ? ",," : near + "," + nearDx + "," + nearDy) + ","
+                + (gs == null ? "" : gs.getLives()) + ","
+                + (lm == null || lm.getLevelGamestate() == null ? "" : lm.getLevelGamestate().getTimerFrames()) + ","
+                + hunger();
+    }
+
+    /** The admitted ring hunger readout, as the HUD dial draws it. Observation only. */
+    private static String hunger() {
+        var world = SessionManager.getCurrentWorldSession();
+        var runtime = world == null ? null : WorldSessionPolicyAccess.getService(world,
+                com.openggf.game.mutators.RingHungerRuntime.class);
+        if (runtime == null) return ",";
+        var indicator = runtime.indicator();
+        return indicator.phase() + "," + indicator.remainingSixteenths();
     }
 
     static void requireDisplayFreeContext() {

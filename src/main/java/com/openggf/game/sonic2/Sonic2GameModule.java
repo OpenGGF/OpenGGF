@@ -136,6 +136,7 @@ public class Sonic2GameModule implements GameModule, com.openggf.game.internal.S
     private PhysicsProvider physicsProvider;
     private ObjectRegistry objectRegistry;
     private Rom activeRom;
+    private com.openggf.game.sonic2.attract.Sonic2AttractProgram attractProgram;
     private RomByteReader boundRetailReader;
     private Sonic2RevisionProfile revisionProfile = Sonic2RevisionProfile.COMPATIBLE;
     private com.openggf.level.rings.RingSpriteSheet additiveRingSheet;
@@ -394,6 +395,17 @@ public class Sonic2GameModule implements GameModule, com.openggf.game.internal.S
         if (type == Sonic2RevisionProfile.class) return type.cast(revisionProfile);
         boolean verifiedStock = getClass() == Sonic2GameModule.class
                 && revisionProfile.revision().belongsTo(com.openggf.data.RomIdentity.S2);
+        if (type == com.openggf.game.internal.TitleAttractDemo.class && verifiedStock) {
+            if (attractProgram == null) {
+                try {
+                    attractProgram = new com.openggf.game.sonic2.attract.Sonic2AttractProgram(
+                            boundRetailReader, nativeModes.overseasGraphics());
+                } catch (java.io.IOException failure) {
+                    throw new java.io.UncheckedIOException("Cannot read the native title demo", failure);
+                }
+            }
+            return type.cast(attractProgram);
+        }
         if (verifiedStock && type == com.openggf.game.internal.RingCollectionPolicy.class)
             return type.cast(revisionProfile);
         if (verifiedStock && type == com.openggf.game.internal.ScoreAdditionPolicy.class)
@@ -467,6 +479,7 @@ public class Sonic2GameModule implements GameModule, com.openggf.game.internal.S
     @Override
     public void resetModuleScopedState() {
         plcService = null;
+        attractProgram = null;
     }
 
     @Override

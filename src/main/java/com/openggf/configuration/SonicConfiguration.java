@@ -741,6 +741,12 @@ public enum SonicConfiguration {
 	 * found by its header in {@code roms.directory}. Appended to preserve existing enum ordinals.
 	 */
 	SONIC_CD_DISC,
+	/**
+	 * First-run setup guide state (YAML {@code hub.setupGuide}): blank until the guide is
+	 * finished ({@code done}) or skipped ({@code skipped}); the hub opens it automatically only
+	 * while blank. Appended to preserve existing enum ordinals.
+	 */
+	SETUP_GUIDE,
 
 	/** Selects native placement or engine free-fly for supported games. */
 	LEVEL_DEBUG_MODE;
