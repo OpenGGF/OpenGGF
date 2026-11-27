@@ -15,6 +15,11 @@ under the matching area heading; see the
   Sonic 2 in Game Setup or the setup guide used to start the game as Sonic,
   because Start re-checked the profile without the built-in Knuckles option.
 
+- **Knuckles in Sonic 2:** the hub warns when starting tier one with the stock
+  Sonic 2 title screen, special stages and ending and without Super Knuckles.
+  The notice explains how to supply the optional lock-on image for tier two
+  and can be hidden for later launches.
+
 - **Pit deaths during camera resize** use the live bottom limit in Sonic 1,
   Sonic 2 and Sonic 3 & Knuckles. Sky Chase also lowers the live limit before
   moving the camera with the Tornado, matching the cartridge's update order.
