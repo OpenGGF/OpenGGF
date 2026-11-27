@@ -1278,6 +1278,79 @@ public class TestGameLoop {
         verify(fadeManager).startFadeFromBlack(any());
     }
 
+    /**
+     * The hub's Start exit applies the profile through the same patch-character availability the
+     * hub screen offers: a patch-backed Sonic 2 main (Knuckles in Sonic 2) reaches the engine,
+     * while a hub without that availability still falls back to the stock main.
+     */
+    @Test
+    public void hubExitKeepsPatchBackedMainCharacterTheHubOffers() throws Exception {
+        assertEquals("knuckles", hubExitMainCharacter(true, "knuckles", "none")[0]);
+        assertEquals("", hubExitMainCharacter(true, "knuckles", "none")[1], "Knuckles in Sonic 2 starts alone");
+        assertEquals("sonic", hubExitMainCharacter(false, "knuckles", "none")[0],
+                "an unavailable patch-backed main still falls back to Sonic");
+        String[] stockTails = hubExitMainCharacter(true, "tails", "tails");
+        assertEquals("tails", stockTails[0], "stock Sonic 2 choices are unchanged");
+        assertEquals("tails", stockTails[1]);
+    }
+
+    private String[] hubExitMainCharacter(boolean patchAvailable, String main, String sidekick) throws Exception {
+        SonicConfigurationService config = EngineServices.current().configuration();
+        Object[] saved = {config.getConfigValue(SonicConfiguration.LAUNCH_S2_MAIN_CHARACTER),
+                config.getConfigValue(SonicConfiguration.LAUNCH_S2_SIDEKICK),
+                config.getConfigValue(SonicConfiguration.LAUNCH_S2_CROSS_GAME_SOURCE)};
+        try {
+            config.setConfigValue(SonicConfiguration.TEST_MODE_ENABLED, false);
+            config.setConfigValue(SonicConfiguration.LAUNCH_S2_MAIN_CHARACTER, main);
+            config.setConfigValue(SonicConfiguration.LAUNCH_S2_SIDEKICK, sidekick);
+            config.setConfigValue(SonicConfiguration.LAUNCH_S2_CROSS_GAME_SOURCE, "off");
+            LaunchProfileStore hubStore = patchAvailable ? kis2AwareStore(config) : new LaunchProfileStore(config);
+            MasterTitleScreen hub = new MasterTitleScreen(config, hubStore);
+            gameLoop.setMasterTitleScreenSupplier(() -> hub);
+            SessionManager.clear();
+            gameLoop.setGameplayMode(null);
+            setPrivateField(gameLoop, "currentGameMode", GameMode.MASTER_TITLE_SCREEN);
+            setPrivateField(gameLoop, "fadeManager", mock(FadeManager.class));
+            String[] seen = new String[2];
+            gameLoop.setMasterTitleExitHandler(gameId -> {
+                seen[0] = config.getString(SonicConfiguration.MAIN_CHARACTER_CODE);
+                seen[1] = config.getString(SonicConfiguration.SIDEKICK_CHARACTER_CODE);
+                gameLoop.setGameMode(GameMode.MASTER_TITLE_SCREEN);
+            });
+
+            invokePrivateMethod(gameLoop, "doExitMasterTitleScreen",
+                    new Class<?>[] {String.class, boolean.class}, "s2", false);
+            return seen;
+        } finally {
+            config.setConfigValue(SonicConfiguration.LAUNCH_S2_MAIN_CHARACTER, saved[0]);
+            config.setConfigValue(SonicConfiguration.LAUNCH_S2_SIDEKICK, saved[1]);
+            config.setConfigValue(SonicConfiguration.LAUNCH_S2_CROSS_GAME_SOURCE, saved[2]);
+        }
+    }
+
+    /** A hub store whose only patch offers Knuckles for Sonic 2 with its S&K prerequisite present. */
+    private static LaunchProfileStore kis2AwareStore(SonicConfigurationService config) {
+        var service = new com.openggf.game.patch.ModuleResolutionService(java.util.List.of(),
+                com.openggf.game.patch.PatchEnablement.ALL_ENABLED,
+                new com.openggf.game.patch.LogicalRomResolver(() -> new byte[0x200000]), config);
+        var context = service.newContext(java.util.List.of(new com.openggf.game.patch.RegisteredPatch(
+                new com.openggf.game.patch.PatchOwner.Mod("kis2"), "kis2:main", new com.openggf.game.patch.GamePatch() {
+                    @Override public String id() { return "main"; }
+                    @Override public String displayName() { return "Knuckles in Sonic 2"; }
+                    @Override public String baseGameId() { return "s2"; }
+                    @Override public boolean activatesFor(com.openggf.game.patch.GameplayLaunchRequest request) {
+                        return "knuckles".equals(request.mainCharacter());
+                    }
+                    @Override public java.util.Set<com.openggf.game.patch.LogicalRom> romPrerequisites() {
+                        return java.util.Set.of(com.openggf.game.patch.LogicalRom.SK);
+                    }
+                    @Override public java.util.List<String> providedMainCharacters() { return java.util.List.of("knuckles"); }
+                    @Override public com.openggf.game.GameModule apply(com.openggf.game.GameModule base,
+                            com.openggf.game.patch.PatchContext context) { return base; }
+                }, 0)), java.util.Map.of());
+        return new LaunchProfileStore(config, service, context);
+    }
+
     @Test
     public void successfulDirectGameplayExitCanFallbackFromMasterTitleToLevel() throws Exception {
         SonicConfigurationService config = EngineServices.current().configuration();

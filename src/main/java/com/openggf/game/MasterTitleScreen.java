@@ -2993,6 +2993,11 @@ public class MasterTitleScreen {
         return programmaticSelection;
     }
 
+    /** The profile store this hub offers, with its patch-backed characters; Start applies profiles through it. */
+    public LaunchProfileStore launchProfileStore() {
+        return launchProfileStore;
+    }
+
     public boolean tryOpenUserRecordingMenuForSelectedGame() {
         if (state != State.ACTIVE
                 || configService.getBoolean(SonicConfiguration.TEST_MODE_ENABLED)
