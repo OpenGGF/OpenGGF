@@ -12,6 +12,7 @@ public final class ModApiVersion {
     // Rebuild matching creator artifacts after this intentional package migration.
     /**
      * Optional final-orientation stage drawings preserve native selectors, timing, priority and fades.
+     * PowerUpRules.invincibilityTimerDecimation (8 in S3K) extends the unpublished candidate.
      * Appended WIDESCREEN_DRAW_MODE and WIDESCREEN_DORMANT_STYLE preferences extend the unpublished candidate.
      * Sidekick-owned S2/S3K Tornado cockpit crops and explicit solo companion banks extend the unpublished candidate.
      * Solo companion search photos, both S3K cockpit seats, the mid-size S3K Tornado's rider and cockpit head, and
@@ -26,6 +27,7 @@ public final class ModApiVersion {
      * Optional per-form powered GGFP banks and explicit normal aliases extend the unpublished candidate.
      * Host-aware character presentation suppliers extend the unpublished 0.7 candidate.
      * Optional directional canonical homing strike sheet keys extend this same 0.7 candidate.
+     * The beta-flight mutator policy (with its fixedSteering and superJump components) and capability (BETA_FLIGHT) are appended to the 0.7 candidate.
      * Creator strike trail colours (StrikeTrailStyle), per-form powered particles and emitters
      * (PoweredEffects) and the powered-tier query extend the unpublished candidate.
      * Current unpublished compiled-mod API candidate, including the grouped landing animation rule,

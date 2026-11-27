@@ -11,6 +11,7 @@ final class Sonic1SpecialStageSnapshot {
     final boolean objInitPending;
     final int currentStage;
     final int ringsCollected;
+    final int ringAwardFlags;
     final int ssAngle;
     final int ssRotate;
     final int debugSavedAngle;
@@ -73,6 +74,7 @@ final class Sonic1SpecialStageSnapshot {
             boolean objInitPending,
             int currentStage,
             int ringsCollected,
+            int ringAwardFlags,
             int ssAngle,
             int ssRotate,
             int debugSavedAngle,
@@ -133,6 +135,7 @@ final class Sonic1SpecialStageSnapshot {
         this.objInitPending = objInitPending;
         this.currentStage = currentStage;
         this.ringsCollected = ringsCollected;
+        this.ringAwardFlags = ringAwardFlags;
         this.ssAngle = ssAngle;
         this.ssRotate = ssRotate;
         this.debugSavedAngle = debugSavedAngle;

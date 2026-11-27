@@ -1,6 +1,7 @@
 package com.openggf.tests.trace.s3k;
 
 import com.openggf.game.GameServices;
+import com.openggf.game.sonic3k.objects.BubbleShieldObjectInstance;
 import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
@@ -24,8 +25,11 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
+import java.util.Map;
 import java.util.Set;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -44,6 +48,16 @@ public class TestS3kHczZoneSliceTraceReplay extends AbstractTraceReplayTest {
     private static final int POINDEXTER_PRE_HIT_FRAME = 5725;
     private static final Set<Integer> POINDEXTER_OBSERVATION_FRAMES =
             Set.of(5595, 5600, 5650, 5700, POINDEXTER_PRE_HIT_FRAME);
+
+    private static final int INVINCIBILITY_EXPIRY_ROW = 2566;
+    private static final Map<Integer, Integer> ROM_SHIELD_MAPPING_FRAME = Map.ofEntries(
+            Map.entry(2566, 0x00), Map.entry(2567, 0x00), Map.entry(2568, 0x09), Map.entry(2569, 0x09),
+            Map.entry(2570, 0x00), Map.entry(2571, 0x00),
+            Map.entry(3060, 0x0A), Map.entry(3061, 0x0A), Map.entry(3062, 0x05), Map.entry(3063, 0x05),
+            Map.entry(3064, 0x0A), Map.entry(3065, 0x0A), Map.entry(3066, 0x05), Map.entry(3067, 0x05),
+            Map.entry(3068, 0x0A), Map.entry(3069, 0x0A), Map.entry(3070, 0x06), Map.entry(3071, 0x06),
+            Map.entry(3072, 0x06), Map.entry(3073, 0x06));
+    private static final int BUBBLE_LAST_ROW = 3073;
 
     @Override protected SonicGame game() { return SonicGame.SONIC_3K; }
     @Override protected int zone() { return 1; }
@@ -105,6 +119,73 @@ public class TestS3kHczZoneSliceTraceReplay extends AbstractTraceReplayTest {
                             + "(docs/skdisasm/sonic3k.asm:184529-184596,20697-20964). "
                             + "poindexters=" + describePoindexters(objectManager)
                             + "\nobservations:\n" + observations);
+        } finally {
+            if (fixture != null) {
+                fixture.abortHardwareTimingReplayRun();
+            }
+            TestEnvironment.resetAll();
+        }
+    }
+
+    /**
+     * S3K's invincibility timer is a byte of {@code (20*60)/8} that {@code Sonic_ChkInvin} decrements
+     * only when {@code Level_frame_counter & 7} is zero (docs/skdisasm/sonic3k.asm:22046-22055, grant at
+     * :40911). {@code Obj_BubbleShield_Main} neither animates nor draws while the player is invincible
+     * (:34899-34903), so the expiry frame sets the bubble's animation phase for the rest of the act.
+     *
+     * <p>The HCZ complete-run segment collects a bubble shield at row 2254 while invincible. Its aux
+     * {@code interact_state} records Sonic's {@code status_secondary} going 0x43 to 0x41 on row 2566.
+     * The mapping frames below were read from the {@code Shield} SST ($FFFFCCE8, mapping_frame $22) in
+     * BizHawk 2.11/GPGX replaying {@code s3k-complete-sonic-tails.bk2} at movie frame 27171 + row. A
+     * per-frame countdown of 1200 ended invincibility five frames late, which put the bubble one frame
+     * out of phase on screen.
+     */
+    @Test
+    void bubbleShieldAnimationKeepsTheRomPhaseAfterInvincibilityExpires() throws Exception {
+        TraceData trace = TraceData.load(TRACE_DIR);
+        TraceMetadata meta = trace.metadata();
+        Path bk2Path = resolveBk2File(TRACE_DIR, meta);
+        Assumptions.assumeTrue(bk2Path != null, "No BK2 found for " + TRACE_DIR);
+        TraceReplaySessionBootstrap.prepareConfiguration(trace, meta);
+        HeadlessTestFixture fixture = null;
+        try {
+            fixture = HeadlessTestFixture.builder()
+                    .withRecording(bk2Path)
+                    .withRecordingStartFrame(TraceReplayBootstrap.recordingStartFrameForTraceReplay(trace))
+                    .withZoneAndAct(zone(), act())
+                    .withHardwareReadinessAdmissionPolicy(HardwareReadinessAdmissionPolicy.RECORDED)
+                    .startPosition(meta.startX(), meta.startY())
+                    .startPositionIsCentre()
+                    .build();
+            TraceReplaySessionBootstrap.BootstrapResult boot =
+                    TraceReplaySessionBootstrap.applyBootstrap(trace, fixture, -1);
+            TraceReplayBootstrap.ReplayStartState replayStart = boot.replayStart();
+            int row = replayStart.startingTraceIndex();
+            TraceFrame previous = replayStart.hasSeededTraceState()
+                    ? trace.getFrame(replayStart.seededTraceIndex())
+                    : row > 0 ? trace.getFrame(row - 1) : null;
+            TraceReplaySessionBootstrap.alignFrameCountersForReplayStart(
+                    previous, row < trace.frameCount() ? trace.getFrame(row) : null);
+            while (row <= BUBBLE_LAST_ROW) {
+                TraceFrame frame = trace.getFrame(row);
+                fixture.beginTraceRow(row, frame.frame());
+                TraceExecutionPhase phase = TraceReplayBootstrap.phaseForReplay(trace, previous, frame);
+                TraceReplayBootstrap.markVblankStarvedIterationForReplay(previous, frame);
+                driveScenarioReplayFrame(trace, fixture, phase);
+                previous = frame;
+                AbstractPlayableSprite sonic = GameServices.camera().getFocusedSprite();
+                if (row == INVINCIBILITY_EXPIRY_ROW - 1 || row == INVINCIBILITY_EXPIRY_ROW) {
+                    assertEquals(row < INVINCIBILITY_EXPIRY_ROW, sonic.getInvincibleFrames() > 0,
+                            "row " + row + ": Status_Invincible clears on row " + INVINCIBILITY_EXPIRY_ROW);
+                }
+                Integer expected = ROM_SHIELD_MAPPING_FRAME.get(row);
+                if (expected != null) {
+                    BubbleShieldObjectInstance shield =
+                            assertInstanceOf(BubbleShieldObjectInstance.class, sonic.getShieldObject());
+                    assertEquals(expected, shield.mappingFrame(), "row " + row + ": bubble shield mapping frame");
+                }
+                row++;
+            }
         } finally {
             if (fixture != null) {
                 fixture.abortHardwareTimingReplayRun();

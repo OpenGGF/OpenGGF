@@ -20,6 +20,21 @@ the sidekick crosses the kill plane.
 Remove this entry once the normal and hurt-stop tests use the camera word
 visible on the sidekick's native slot, with replay coverage across a resize.
 
+## Special-stage award presentation and persistence details
+
+- `SaveGame_SpecialStage` (sonic3k.asm:15966-15999) writes the Continue byte at
+  results entry and leaves the saved life byte alone. OpenGGF captures the save
+  after results and includes the live life count. Close this gap when active-slot
+  tests verify both the write boundary and the untouched saved life byte.
+- The level HUD caps its display at 99 lives. `HUD_Lives` (sonic3k.asm:18185-18238)
+  uses the live byte for two tile lookups even in No Save. Test the ROM's
+  overflow tiles before closing this gap.
+- The rotating Slot Machine bonus stage's `loc_4BE10` (sonic3k.asm:99218-99225)
+  awards a Continue upon reaching 50 rings. Java's separate bonus-stage ring
+  path increments a deferred life instead. Close this gap when a native route
+  verifies the Continue count and life count before and after the bonus stage.
+
+
 ## Standalone S&K Chaos Special Stage layouts
 
 `sub_85B0` (sonic3k.asm:10845-10865) selects the decompressed S&K layout

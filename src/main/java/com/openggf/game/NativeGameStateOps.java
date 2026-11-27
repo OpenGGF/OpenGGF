@@ -22,6 +22,15 @@ public final class NativeGameStateOps {
         state.restoreLives(lives);
     }
 
+    /** Native special-stage awards increment the unsigned lives byte. */
+    public static void awardByteLife(GameStateManager state) {
+        state.restoreLives((state.getLives() + 1) & 0xFF);
+    }
+
+    public static void capContinues(GameStateManager state, int maximum) {
+        state.capContinues(maximum);
+    }
+
     public static void restoreSpecialStageSaveProgress(GameStateManager state, int rings, int stageIndex) {
         state.restoreSpecialStageSaveProgress(rings, stageIndex);
     }

@@ -447,6 +447,7 @@ public class ObjectManager {
         }
         rewind.clearPendingPlayerBindings();
         nativeSpriteSubmissions.clear();
+        dormantLayer.forgetLastStates();
         // The external resolver/dispatch is owner wiring, not SST state: keep it.
         // Resets that leave the RingManager alive (trace-replay prelude, S3K
         // title-only object system) never rebind, and an unbound pass leaves
@@ -848,6 +849,13 @@ public class ObjectManager {
             }
             if (execThenLoad && !population.slots.twoAxisCursorPlacement()
                     && !ObjectManagerInternalAccess.placementAtWorldTail(this)) {
+                if (allocationLayout == ObjectSlotLayout.SONIC_2) {
+                    // ObjectsManager_Main (s2.asm:33032-33043) publishes Camera_X_pos_coarse
+                    // on every load pass. MarkObjGone3 (s2.asm:30259-30276) reads it on the
+                    // next object walk, including after a positioned entry streams objects
+                    // without a post-camera pass.
+                    s2LatchedObjectManagerCameraX = cameraX;
+                }
                 cleanupDestroyedDynamicObjects();
                 syncActiveSpawnsLoad(true);
             }
@@ -3732,6 +3740,8 @@ public class ObjectManager {
 
     private void removeActiveObject(ObjectSpawn spawn,
             ObjectCallbackRouter.RemovalCallback removalCallback) {
+        // NATIVE widescreen presentation only: a stationary object keeps its last render state.
+        dormantLayer.recordUnloaded(spawn, population.placed.get(spawn));
         population.retirePlaced(spawn, removalCallback,
                 solidContacts::releaseObjectLatchesForAllPlayers,
                 (removed, capturedCallback) -> {
@@ -3925,6 +3935,8 @@ public class ObjectManager {
 
         bucketsDirty = true;
         markActiveObjectCachesDirty();
+        // Derived presentation: a last state recorded after this point in time must not survive.
+        dormantLayer.forgetLastStates();
     }
 
 
@@ -4101,6 +4113,11 @@ public class ObjectManager {
     void enqueuePendingPlayerBoundEntry(Class<?> baseType,
             DynamicObjectEntry entry) {
         rewind.enqueuePendingPlayerBoundEntry(baseType, entry);
+    }
+
+    /** Whether this restore captured a player-bound object of {@code baseType} for {@code owner}. */
+    boolean hasPendingPlayerBoundEntry(Class<?> baseType, PlayableEntity owner) {
+        return rewind.hasPendingPlayerBoundEntry(baseType, owner);
     }
 
     /** Checked native restitution retains this restore's admission and pending order. */

@@ -23,6 +23,14 @@ package com.openggf.game.rules;
  * {@code Super_stars} ({@code docs/skdisasm/sonic3k.asm:23539}), the third entry
  * of {@code Level_object_RAM} ({@code docs/skdisasm/sonic3k.constants.asm:316-322}).
  * Sonic 1 has no super form and no such object.
+ *
+ * <p>{@code invincibilityTimerDecimation} is how many level frames pass per decrement
+ * of the invincibility timer. Sonic 1 and Sonic 2 count a per-frame word down from
+ * 1200. Sonic 3&K stores {@code (20*60)/8} in the byte {@code invincibility_timer}
+ * ({@code docs/skdisasm/sonic3k.asm:40911}) and {@code Sonic_ChkInvin},
+ * {@code loc_13912} (Tails) and {@code loc_1665E} (Knuckles) decrement it only when
+ * {@code Level_frame_counter & 7} is zero, so it is 8 there. The playable's
+ * invincibility count is in the game's own timer units.
  */
 @com.openggf.game.ModApi
 public record PowerUpRules(
@@ -35,7 +43,8 @@ public record PowerUpRules(
         boolean waterSplashUsesFixedDustObject,
         int primaryFixedDustSlotIndex,
         int secondaryFixedDustSlotIndex,
-        boolean restoreLevelMusicAfterInvincibility) {
+        boolean restoreLevelMusicAfterInvincibility,
+        int invincibilityTimerDecimation) {
 
     public int fixedDustSlotIndex(boolean secondaryPlayer) {
         return secondaryPlayer ? secondaryFixedDustSlotIndex : primaryFixedDustSlotIndex;
