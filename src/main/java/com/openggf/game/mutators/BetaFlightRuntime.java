@@ -3,6 +3,7 @@ package com.openggf.game.mutators;
 import com.openggf.camera.Camera;
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.physics.Direction;
+import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.SecondaryAbility;
@@ -106,7 +107,8 @@ public final class BetaFlightRuntime implements RewindSnapshottable<BetaFlightRu
             int oldYRadius = sprite.getYRadius();
             int defaultYRadius = sprite.getStandYRadius();
             sprite.setRolling(false);
-            sprite.setCentreYPreserveSubpixel((short) (oldCentreY + oldYRadius - defaultYRadius));
+            int targetY = (short) (oldCentreY + oldYRadius - defaultYRadius);
+            NativePositionOps.writeYPosPreserveSubpixel(sprite, targetY);
         }
         sprite.setRollingJump(false);                      // $17988 bclr Status_RollJump
         sprite.setDoubleJumpFlag(1);                       // $1798E
