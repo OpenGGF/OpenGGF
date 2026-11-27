@@ -323,6 +323,13 @@ public final class PlayableSpriteInternalAccess {
                         com.openggf.game.mutators.HomingAttackRuntime.class);
     }
 
+    /** The world's beta-flight runtime, or null outside a level world. */
+    public static com.openggf.game.mutators.BetaFlightRuntime betaFlight(AbstractPlayableSprite sprite) {
+        var level = sprite.currentLevelManagerIfAvailable();
+        return level == null ? null : com.openggf.game.session.WorldSessionPolicyAccess.getService(
+                level.getWorldSession(), com.openggf.game.mutators.BetaFlightRuntime.class);
+    }
+
     public static PlayableMutatorPolicy mutatorPolicy(AbstractPlayableSprite sprite) {
         PlayableMutatorPolicySource source = sprite.mutatorPolicySource;
         return source == null ? PlayableMutatorPolicy.STOCK
