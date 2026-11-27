@@ -208,7 +208,7 @@ public final class EngineSettingsDraft {
 
     public static List<String> rewindOptions(SonicConfiguration key) {
         return key == SonicConfiguration.REWIND_BUDGET_SCOPE
-                ? List.of("off", "checkpoint", "act", "zone")
+                ? List.of("off", "checkpoint", "act", "zone", "never")
                 : List.of("5", "10", "15", "20", "30", "60", "unlimited");
     }
 

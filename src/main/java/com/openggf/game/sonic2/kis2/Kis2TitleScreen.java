@@ -116,19 +116,71 @@ public final class Kis2TitleScreen implements TitleScreenProvider,
         int offset = (width - 320) / 2;
         gm.beginPatternBatch();
         drawBackground(gm, width);
-        // The character is a high-priority sprite; the emblem-top object masks its lower edge.
         plane(gm, data.foreground, 40, offset, -animation.scroll, 40);
-        if (animation.frame >= 128 || animation.complete) knuckles.drawFrameIndex(animation.bodyFrame, offset + animation.x, animation.y);
-        emblem.drawFrameIndex(0, offset + 160, 104 - animation.scroll);
-        if (animation.handVisible()) knuckles.drawFrameIndex(animation.handFrame, offset + animation.x, animation.handY);
+        int falling = animation.frame - ("PAL".equalsIgnoreCase(GameServices.configuration().getString(SonicConfiguration.REGION)) ? 400 : 464); // Obj0E_Sonic_SpawnFallingStar, NTSC branch.
+        // Sprite order follows Obj0E priorities: falling star 5, Knuckles 4, hand 3, emblem top and mask 2.
+        // TitleScreen_Loop (docs/kis2disasm/s2.asm:4737-4764) moves the mask to X 0, hiding later sprites on its rows.
+        masked(gm, () -> {
+            if (falling >= 0 && falling <= 140) stars.drawFrameIndex((falling / 4 & 1) == 0 ? 0 : 3, offset + 240 - falling * 2, falling);
+            if (animation.frame >= 128 || animation.complete) knuckles.drawFrameIndex(animation.bodyFrame, offset + animation.x, animation.y);
+            if (animation.handVisible()) knuckles.drawFrameIndex(animation.handFrame, offset + animation.x, animation.handY);
+        });
+        emblemTop(gm, offset, width);
         text.drawFrameIndex(1, offset + 224, 200);
         if (animation.complete) text.drawFrameIndex(0, offset + 160, 184);
         if (animation.bannerVisible) banner.drawFrameIndex(0, offset + 160, animation.bannerY);
         if (starIndex < data.starPositions.length && starTimer <= 10)
             stars.drawFrameIndex(starFrame, offset + data.starPositions[starIndex][0], data.starPositions[starIndex][1]);
-        int falling = animation.frame - ("PAL".equalsIgnoreCase(GameServices.configuration().getString(SonicConfiguration.REGION)) ? 400 : 464); // Obj0E_Sonic_SpawnFallingStar, NTSC branch.
-        if (falling >= 0 && falling <= 140) stars.drawFrameIndex((falling / 4 & 1) == 0 ? 0 : 3, offset + 240 - falling * 2, falling);
         gm.flushPatternBatch();
+    }
+    /**
+     * Obj0E_LogoTop frame 0 (docs/kis2disasm/mappings/sprite/obj0E_emblem_top_and_sprite_mask.asm). Its two
+     * low-priority tile-$10 pieces precede Knuckles and his hand in the sprite list, so they hide them, yet sit
+     * under the high-priority logo plane: the strip shows the logo, never the tile.
+     */
+    private void emblemTop(GraphicsManager gm, int offset, int width) {
+        int x = offset + 160, y = 104 - animation.scroll;
+        var pieces = data.emblem.get(0).pieces();
+        for (int i = 0; i < pieces.size(); i++)
+            if (pieces.get(i).priority()) emblem.drawFramePieceByIndex(0, i, x, y, false, false);
+        float scaleX = (float) gm.getViewportWidth() / width, scaleY = (float) gm.getViewportHeight() / 224;
+        for (int i = 0; i < pieces.size(); i++) {
+            var piece = pieces.get(i);
+            if (piece.priority()) continue;
+            int left = x + piece.xOffset(), top = y + piece.yOffset();
+            int w = piece.widthTiles() * 8, h = piece.heightTiles() * 8;
+            gm.flushPatternBatch();
+            gm.flushScreenSpace();
+            gm.enableScissor(gm.getViewportX() + (int) Math.floor(left * scaleX),
+                    gm.getViewportY() + (int) Math.floor((224 - top - h) * scaleY),
+                    Math.max(1, (int) Math.ceil(w * scaleX)), Math.max(1, (int) Math.ceil(h * scaleY)));
+            gm.beginPatternBatch();
+            emblem.drawFramePieceByIndex(0, i, x, y, false, false);
+            plane(gm, data.foreground, 40, offset, -animation.scroll, 40);
+            gm.flushPatternBatch();
+            gm.flushScreenSpace();
+            gm.disableScissor();
+        }
+        gm.beginPatternBatch();
+    }
+    /** Draws sprites the masking sprite hides, clipped away from its rows (the stock S2 title does the same). */
+    private void masked(GraphicsManager gm, Runnable sprites) {
+        gm.flushPatternBatch();
+        gm.flushScreenSpace();
+        float scale = (float) gm.getViewportHeight() / 224;
+        int top = animation.maskTop();
+        for (int[] band : new int[][] {{0, top}, {top + Kis2TitleAnimation.MASK_ROWS, 224}}) {
+            int from = Math.max(0, band[0]), to = Math.min(224, band[1]);
+            if (to <= from) continue;
+            gm.enableScissor(gm.getViewportX(), gm.getViewportY() + (int) Math.floor((224 - to) * scale),
+                    gm.getViewportWidth(), Math.max(1, (int) Math.ceil((to - from) * scale)));
+            gm.beginPatternBatch();
+            sprites.run();
+            gm.flushPatternBatch();
+            gm.flushScreenSpace();
+        }
+        gm.disableScissor();
+        gm.beginPatternBatch();
     }
     private PatternSpriteRenderer renderer(List<SpriteMappingFrame> frames, int palette) {
         PatternSpriteRenderer result = new PatternSpriteRenderer(new ObjectSpriteSheet(data.patterns, frames, palette, 1));

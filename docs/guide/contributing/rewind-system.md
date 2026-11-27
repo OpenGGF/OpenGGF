@@ -97,7 +97,10 @@ rewind:
 
 While playing a level, hold `rewind.liveKey` to step backward through the live
 gameplay buffer. Releasing the key resumes normal gameplay from the restored frame.
-`budgetScope: off` disables the live key; `budgetSeconds: "unlimited"` removes the
+`budgetScope: off` disables the live key; `budgetScope: never` keeps it armed but never
+refills the main allowance (it starts full for a new run or session, and checkpoints, acts,
+zones and life loss restore nothing; each bonus/special-stage visit still gets its own fresh
+pool); `budgetSeconds: "unlimited"` removes the
 allowance limit. The allowance is separate from the retained history buffer and
 is not restored by seeking backward.
 
@@ -108,14 +111,21 @@ and outlined status glyph. Its content follows the allowance:
 | --- | --- |
 | Finite allowance while rewinding | `REW <seconds>s` and a two-pixel meter; amber at one quarter or less |
 | Allowance exhausted, including a fresh denied press | Amber empty glyph/frame and dashed meter with `0.0s`, even without an active frame counter |
-| Unlimited allowance while rewinding | `REW F:<frame>`, without a meter |
+| Unlimited allowance while rewinding | `REW` with the authored infinity mark and a full meter; the edge line breathes toward cyan once a second while the key is held |
+| Refill restored spent time (new checkpoint, act or zone boundary, or life lost with refill on) | Normal cyan plate whose meter and seconds fill from the pre-refill amount to the maximum in half a second, hold full for one, then hide |
 | Ordinary idle play or module-scripted rewind | Hidden |
 
 Seconds round upward to a tenth, so a remaining frame never reads as `0.0s`.
 The regional simulation cadence supplies the conversion: 60 frames per second
 for NTSC, 50 for PAL. Automatic exhaustion stops live rewind and starts empty
 feedback; a fresh press with nothing left also shows it for one regional second.
-Keeping the key held does not keep extending that feedback. A module's
+Keeping the key held does not keep extending that feedback. The refill and pulse
+timings are OpenGGF UI constants in `LiveRewindHudOverlay`, not ROM timing. Like
+the allowance, the refill presentation sits outside the rewind registry: history
+replay cannot restore or re-trigger it, pressing rewind cancels it, and a new run,
+a pool change (entering or leaving a stage visit) or a level load ends one already
+on screen. A life-loss refill waits, hidden, through the respawn's blocked frames
+and title card and plays once the player can move. A module's
 `ScriptedRewind` controls its own presentation and suppresses both live counter
 and budget plates.
 

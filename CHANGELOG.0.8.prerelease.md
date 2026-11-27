@@ -7,6 +7,10 @@ under the matching area heading; see the
 
 ## Gameplay and presentation
 
+- **Knuckles in Sonic 2 title with the lock-on ROM:** the strip above the N in
+  SONIC shows the logo again instead of stray tiles. While rising, Knuckles stays
+  behind the emblem as on the cartridge.
+
 - **Knuckles in Sonic 2 starts from the hub again.** Choosing Knuckles for
   Sonic 2 in Game Setup or the setup guide used to start the game as Sonic,
   because Start re-checked the profile without the built-in Knuckles option.
@@ -32,6 +36,16 @@ under the matching area heading; see the
   keep their games and settings unless a listed change is accepted. It opens
   once per run until finished or skipped, and again from **Extras › Setup guide**.
   Its text is a machine draft in every shipped language, awaiting native review.
+
+- **Live rewind refills are visible:** when a checkpoint, act, zone or lost life
+  refills spent rewind time, the REW plate appears and its meter and seconds fill
+  back to the maximum, hold for a second and hide. Pressing rewind cancels it.
+  An Unlimited budget now shows a full meter with an infinity mark in place of the
+  frame counter, and the plate's edge pulses slowly while the key is held.
+  A new refill choice, **Never**, gives one allowance for the whole game: it
+  starts full for a new game or loaded save, and no checkpoint, act, zone or lost
+  life refills it (Refill on life loss shows as inactive). Each bonus or special
+  stage visit still has its own fresh allowance. **Off** still disables rewind.
 
 - **Sonic 2 positioned starts:** object loading publishes the new camera
   position before the next object update. Widescreen EDGE keeps Emerald Hill's
@@ -835,6 +849,13 @@ under the matching area heading; see the
   candidate API gains `StartingStatePolicy`, `RingHungerPolicy` and five
   capabilities.
 
+- **Gameplay capture rewind direction:** `GameplayCaptureTool` accepts several
+  `--rewind FRAME:LENGTH[:half|normal|double]` windows, each holding the configured
+  speed modifier with the rewind key, and pins the capture's rewind budget with
+  `--rewind-scope` (now including `never`), `--rewind-seconds`, `--rewind-refill-on-life-loss`,
+  `--rewind-bonus-stages` and `--rewind-special-stages`. Special-stage captures now
+  draw the VHS picture and the REW plate, as the engine window does.
+
 - Music-pack patches can replace Sonic 1, Sonic 2 and Sonic 3 & Knuckles songs
   with native SMPS packages exported by external authoring tools. Package tracks keep native
   sequencing, jingle restoration and rewind. Failed package tracks fall back
@@ -1216,6 +1237,13 @@ under the matching area heading; see the
   no interpolation remain the defaults.
 
 ## Maintenance and release preparation
+
+- Sonic 2 live rewind history uses about 18 MB less memory. Each rewind
+  checkpoint held its own boxed copy of the title card's two plane tables,
+  about 50 KB, even long after the card had gone. Checkpoints now share the
+  tables until the card next writes them, and share the title-card art by
+  reference. Sixty seconds of Emerald Hill 1 history fell from 22.1 MB to
+  4.2 MB. Rewinding during the title card still restores it exactly.
 
 - ICZ background loop history and indoor selection now belong to the event owner,
   so rebuilding scroll output retains the same background. Rewind captures that
