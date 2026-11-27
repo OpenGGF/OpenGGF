@@ -104,7 +104,8 @@ public final class HudProfileAccess {
     /**
      * Caches the two ring hunger dial sets (see {@link HudHungerDial}) at {@code base}: the
      * ordinary set in the RINGS label ink, the warning set in the warning palette line's red,
-     * each outlined in its line's darkest entry. Without ink the dial stays undrawn; without a palette the warning set reuses
+     * each ringed by a light band (the digit fill, or the warning line's lightest entry) inside
+     * its line's darkest entry. Without ink the dial stays undrawn; without a palette the warning set reuses
      * the ordinary inks on the warning line.
      */
     public static void installHungerDial(HudRenderManager hud, com.openggf.graphics.GraphicsManager graphics,
@@ -123,11 +124,13 @@ public final class HudProfileAccess {
         }
         int[] ordinary = HudHungerDial.ordinaryInks(labelTiles, digits);
         if (ordinary == null) { hud.setHungerDialPatternIndex(-1); return; }
-        ordinary = new int[] { ordinary[0], HudHungerDial.darkest(textLine, ordinary[0], ordinary[1]) };
+        int ordinaryEdge = HudHungerDial.darkest(textLine, ordinary[0], ordinary[1]);
+        int ordinaryLight = HudHungerDial.digitFill(digits, ordinary[0],
+                HudHungerDial.lightest(textLine, ordinary[0], ordinaryEdge));
         int[] warning = HudHungerDial.warningInks(warningLine);
-        if (warning == null) warning = ordinary;
-        var first = HudHungerDial.build(ordinary[0], ordinary[1]);
-        var second = HudHungerDial.build(warning[0], warning[1]);
+        var first = HudHungerDial.build(ordinary[0], ordinaryLight, ordinaryEdge);
+        var second = warning == null ? HudHungerDial.build(ordinary[0], ordinaryLight, ordinaryEdge)
+                : HudHungerDial.build(warning[0], HudHungerDial.lightest(warningLine, warning[0], warning[1]), warning[1]);
         for (int i = 0; i < first.length; i++) graphics.cachePatternTexture(first[i], base + i);
         for (int i = 0; i < second.length; i++) graphics.cachePatternTexture(second[i], base + HudHungerDial.SET_SIZE + i);
         hud.setHungerDialPatternIndex(base);

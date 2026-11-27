@@ -10,8 +10,10 @@ import com.openggf.level.Pattern;
  * <p>Two sets are built. The ordinary set uses the RINGS label's most frequent ink (yellow in
  * all three games) on the HUD text palette line, so it reads as part of the native HUD. The
  * warning set is drawn on the HUD warning line (the line S2's RINGS warning switches to): its
- * face is that line's reddest palette entry, the red of the player's own palette. Each set is
- * outlined in its line's darkest entry, which keeps the dial legible over busy scenery. Sonic 3 &amp; Knuckles'
+ * face is that line's reddest palette entry, the red of the player's own palette. Each set's
+ * ring is two-tone: an inner band in a light ink (the HUD digits' own fill on the text line,
+ * the line's lightest entry on the warning line) inside an outer edge in the line's darkest
+ * entry, so the empty dial shown while rings drain reads over dark and light scenery alike. Sonic 3 &amp; Knuckles'
  * native ring warning blinks the label off instead of turning it red, so only the warning
  * line's colours, not the label art, can give every game the same red.
  *
@@ -94,14 +96,36 @@ public final class HudHungerDial {
         return line != null && line.colors != null && line.colors.length >= 16;
     }
 
-    /** One set of seventeen frames drawn in {@code face} and {@code edge}. */
-    public static Pattern[] build(int face, int edge) {
+    /** Lightest opaque entry of {@code line} other than {@code face}, or {@code fallback}. */
+    static int lightest(com.openggf.level.Palette line, int face, int fallback) {
+        if (!complete(line)) return fallback;
+        int light = fallback, best = Integer.MIN_VALUE;
+        for (int i = 1; i < 16; i++) {
+            if (i == face) continue;
+            var c = line.colors[i];
+            int luma = 3 * (c.r & 255) + 6 * (c.g & 255) + (c.b & 255);
+            if (luma > best) { best = luma; light = i; }
+        }
+        return light;
+    }
+
+    /** The digits' dominant fill, the light ink of the ordinary ring; {@code fallback} if it is the face. */
+    static int digitFill(Pattern[] digits, int face, int fallback) {
+        int[] inks = inksByFrequency(decimalDigits(digits));
+        return inks.length > 0 && inks[0] != face ? inks[0] : fallback;
+    }
+
+    /** One set with a single-colour ring (the light band takes the edge ink). */
+    public static Pattern[] build(int face, int edge) { return build(face, edge, edge); }
+
+    /** One set of seventeen frames: {@code face} wedge, {@code light} inner ring band, {@code edge} outer edge. */
+    public static Pattern[] build(int face, int light, int edge) {
         Pattern[] result = new Pattern[SET_SIZE];
         for (int frame = 0; frame < FRAMES; frame++) {
             for (int tile = 0; tile < TILES_PER_FRAME; tile++) result[frame * 4 + tile] = new Pattern();
             for (int y = 0; y < SIZE; y++) {
                 for (int x = 0; x < SIZE; x++) {
-                    int value = pixel(x, y, frame, face, edge);
+                    int value = pixel(x, y, frame, face, light, edge);
                     if (value == 0) continue;
                     int tile = (y / 8) * 2 + x / 8;
                     result[frame * 4 + tile].setPixel(x % 8, y % 8, (byte) value);
@@ -112,11 +136,12 @@ public final class HudHungerDial {
     }
 
     /** One dial pixel for {@code remaining} sixteenths; 0 is transparent. */
-    static int pixel(int x, int y, int remaining, int face, int edge) {
+    static int pixel(int x, int y, int remaining, int face, int light, int edge) {
         double dx = x + 0.5 - 8, dy = y + 0.5 - 8;
         double distance = Math.sqrt(dx * dx + dy * dy);
         if (distance > 7.6) return 0;
-        if (distance > 6.0) return edge;          // outline ring, 1-2 px wide
+        if (distance > 6.6) return edge;          // dark outer edge, about 1 px
+        if (distance > 5.2) return light;         // light ring band, about 1-2 px
         if (distance < 1.2) return edge;          // the hand's pivot
         // Clockwise from twelve o'clock, 0 inclusive .. 1 exclusive.
         double turn = Math.atan2(dx, -dy) / (2 * Math.PI);

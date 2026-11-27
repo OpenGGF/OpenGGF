@@ -189,13 +189,16 @@ declares them must enable, disable and edit at LAUNCH, because a session value c
 only be seeded when a session begins. Ring grants mark the 100/200 extra-life
 thresholds they reach as paid, so a seeded count never awards a life. Hunger clocks
 hold whenever the native level timer is stopped, during object control and boss
-fights; their state is captured with the world's mutator rewind adapter. When
+fights, sharing `MotionMutatorRuntime`'s boss-fight/end-of-level pause gate (Sonic 2's
+boss id stays set after the boss until the act ends, so its clocks stay held); their state is captured with the world's mutator rewind adapter. When
 several owners contribute the same starting value or hunger policy, the first in
 catalogue order applies.
 
 The HUD draws the hunger dial beside the RINGS counter from two indexed sets cached
 at HUD art load: the RINGS label's ink on the text line, and the warning line's
-reddest entry, each outlined in its line's darkest entry. Only the palette indices
+reddest entry. Each ring is a light band (the digit fill, or the warning line's
+lightest entry) inside the line's darkest entry, so the empty draining dial stays
+legible on any background. Only the palette indices
 come from ROM art and palettes; the dial geometry is host-drawn presentation.
 
 ### Long sliders

@@ -169,14 +169,17 @@ not save you; debug mode does. Collecting rings above the starving count cancels
 the countdown. The clocks advance only during active main-level play: pause,
 title cards, special and bonus stages, results, signposts and capsules (any time
 the native level timer is stopped), scripted or object control, and boss fights
-(the native boss flag) hold them. A checkpoint restart, a death and an act change
+(the native boss flag) hold them. The boss pause is the same gate the motion mutators use
+(the native boss-fight and end-of-level flags); Sonic 2 never clears its boss id,
+so in Sonic 2 the clocks stay held from the boss arena until the act ends. A checkpoint restart, a death and an act change
 all begin a fresh grace; returning from a special or bonus stage resumes where it
 stopped. The state is rewind history. No Rings makes Hungry for Rings fatal by
 design.
 
 A 16-pixel dial beside the ring counter shows the hunger. It is drawn with the
-RINGS label's own palette ink: a yellow pie empties clockwise during the grace,
-an empty dial means rings are draining, and a red pie (the red of the HUD's
+RINGS label's own palette ink inside a ring of the HUD digits' light ink with a
+dark outer edge, so it reads over dark and light scenery: a yellow pie empties
+clockwise during the grace, an empty dial means rings are draining, and a red pie (the red of the HUD's
 warning line, as Sonic 2's RINGS warning uses) counts down to starvation,
 blinking on the native warning cadence for its last quarter. The dial follows
 the HUD in both widescreen anchors and is hidden in debug mode and bonus-stage

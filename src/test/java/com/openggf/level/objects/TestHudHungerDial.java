@@ -44,6 +44,20 @@ class TestHudHungerDial {
         assertNull(HudHungerDial.warningInks(null));
         assertEquals(15, HudHungerDial.darkest(line, 5, 9), "the ordinary outline is the text line's darkest entry");
         assertEquals(9, HudHungerDial.darkest(null, 5, 9), "without a palette the digit shadow remains");
+        line.colors[1].r = (byte) 0xFF; line.colors[1].g = (byte) 0xFF; line.colors[1].b = (byte) 0xFF;
+        assertEquals(1, HudHungerDial.lightest(line, 5, 9), "the warning ring's light band is the line's lightest entry");
+        assertEquals(6, HudHungerDial.digitFill(tiles(20, 6, 1), 12, 9), "the ordinary light band is the digit fill");
+        assertEquals(9, HudHungerDial.digitFill(tiles(20, 12, 1), 12, 9), "never the face ink");
+    }
+
+    @Test
+    void theEmptyDialRingIsALightBandInsideADarkEdge() {
+        var frames = HudHungerDial.build(0xE, 0x6, 0x1);
+        assertEquals(0x1, pixel(frames, 0, 8, 0), "dark outer edge at twelve o'clock");
+        assertEquals(0x6, pixel(frames, 0, 8, 1), "light band inside it");
+        assertEquals(0x1, pixel(frames, 0, 0, 8), "dark outer edge at nine o'clock");
+        assertEquals(0x6, pixel(frames, 0, 1, 8), "light band inside it");
+        assertEquals(0, pixel(frames, 0, 4, 11), "the drained interior stays transparent");
     }
 
     @Test
