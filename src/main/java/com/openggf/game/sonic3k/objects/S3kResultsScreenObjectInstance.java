@@ -1643,7 +1643,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         if (camera == null) return;
 
         // xOffset() is (viewportWidth - 320) / 2; 0 at native 320 (byte-identical).
-        int baseX = camera.getX() + xOffset();
+        int baseX = pictureLeftWorldX(camera) + xOffset();
         int baseY = camera.getY();
 
         int worldX = baseX + element.currentScreenX();
@@ -1669,7 +1669,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         var pieces = spriteSheet.getFrame(frameIndex).pieces();
         for (int i = 0; i < pieces.size(); i++) {
             var piece = pieces.get(i);
-            int screenX = worldX - camera.getX() + piece.xOffset();
+            int screenX = worldX - pictureLeftWorldX(camera) + piece.xOffset();
             int screenY = worldY - camera.getY() + piece.yOffset();
             if (screenX > -32 && screenX < width && screenY > -32 && screenY < 224) {
                 renderer.drawFramePieceByIndex(frameIndex, i, worldX, worldY, false, false);
