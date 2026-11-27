@@ -1,14 +1,12 @@
 package com.openggf.game.soniccd.objects.ssz;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.schema.RewindCaptureContext;
+import com.openggf.game.soniccd.objects.art.CdObjectArtProvider;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.TouchOverlapStopPolicy;
-import com.openggf.level.objects.TouchResponseProfile;
+import com.openggf.level.objects.SpawnRewindRecreatable;
+import com.openggf.level.objects.TouchResponseListener;
 import com.openggf.level.objects.TouchResponseResult;
-import com.openggf.level.objects.TouchActorContextPolicy;
-import com.openggf.level.objects.TouchAttackBouncePolicy;
-import com.openggf.level.objects.TouchCategoryDecodeMode;
-import com.openggf.level.objects.TouchShieldDeflectCapability;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -26,7 +24,8 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
  * <p>The three kinds are the same ID told apart by the secondary subtype (:4-8): head (>= 0), follower
  * ({@code $FF}, deleted when its head's slot is no longer ID $22, :12-18) and shot ({@code $FE}, :203-235). The
  * shot flies on its velocity, becomes explosion $18 with {@code oRoutine2 = 1} (no points, no animal) and plays
- * {@code FM_9E} when the player touches it, and is deleted when the player is more than $E0 above or below it.
+ * {@code FM_9E} after rolling contact. Unrolled contact follows the ordinary enemy routine.
+ * The shot despawns when the player is more than $E0 above or below it.
  * Heads and followers end in {@code CheckObjectDespawn}; heads begin with {@code DestroyInGoodFuture}.
  *
  * <p>The sine terms are {@code asr.l} of {@code sine << 16} added to origins whose fraction is $8000; the
@@ -34,15 +33,10 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
  * The shot's velocity low word is the unspecified upper word of {@code d1} at entry, modelled as zero.
  */
 @com.openggf.level.objects.CameraRelativeDraw(com.openggf.level.objects.CameraRelativeDraw.Use.CULL_ONLY)
-public final class ObjKabasira extends SszBadnik {
+public final class ObjKabasira extends SszBadnik implements SpawnRewindRecreatable, TouchResponseListener {
     /** The kinds named by the secondary subtype. */
     private enum Kind { HEAD, FOLLOWER, SHOT }
 
-    /** The shot's touch: the enemy attack path with no bounce (loc_20703E -> loc_206FE8 in r7/player_object_collide.asm). */
-    private static final TouchResponseProfile SHOT_TOUCH = new TouchResponseProfile(
-            TouchCategoryDecodeMode.NORMAL, false, true, false, TouchShieldDeflectCapability.NONE, 0, false,
-            TouchAttackBouncePolicy.NONE, TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY,
-            TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS);
     private static final int HEAD_COLLISION = 0x31;
     private static final int SHOT_COLLISION = 0xF1;
     private static final int SHOT_ANIM = 8;
@@ -51,11 +45,10 @@ public final class ObjKabasira extends SszBadnik {
     private static final int FM_SHOT = 0xA0;
     private static final int FM_BURST = 0x9E;
 
-    private final Kind kind;
-    private ObjKabasira head;
+    private Kind kind;
     /** A follower's obj.var_3e: the head's slot ({@code move.w a0,obj.var_3e(a1)}, objects/r7/kabasira.asm:80). */
-    private final int headSlot;
-    private SszAnimator animator;
+    private int headSlot;
+    private final SszAnimator.Rewindable animator = new SszAnimator.Rewindable();
     /** oVar2A:oVar2C and oVar2E:oVar30 as 16.16 longs: the figure's origin, or the shot's velocity. */
     private int originX;
     private int originY;
@@ -68,19 +61,27 @@ public final class ObjKabasira extends SszBadnik {
     private int stepY;
     /** oVar3A: the shot cooldown. */
     private int cooldown;
-    private int anim;
     private boolean burst;
 
     /** A head placed in the layout. */
     public ObjKabasira(ObjectSpawn spawn) {
-        this(spawn, Kind.HEAD, null);
+        this(spawn, Kind.HEAD, -1);
     }
 
-    private ObjKabasira(ObjectSpawn spawn, Kind kind, ObjKabasira head) {
+    private ObjKabasira(ObjectSpawn spawn, Kind kind, int headSlot) {
         super(spawn, "Kabasira");
         this.kind = kind;
-        this.head = head;
-        this.headSlot = head == null ? -1 : head.getSlotIndex();
+        this.headSlot = headSlot;
+    }
+
+    @Override
+    protected void afterGenericRewindStateRestored(RewindCaptureContext context) {
+        if (initialised) bindAnimationScript(artProvider());
+    }
+
+    /** KabasiraObject (objects/r7/kabasira.asm:3-33) resumes the part's saved animation. */
+    private void bindAnimationScript(CdObjectArtProvider provider) {
+        animator.bindScript(provider.image(), SszObjectCatalogue.entry(provider.payload()).kabasiraAnimations());
     }
 
     @Override protected String sheetKind() { return SszObjectArt.KABASIRA; }
@@ -117,7 +118,6 @@ public final class ObjKabasira extends SszBadnik {
     }
 
     private void animate() {
-        if (animator == null) return;
         animator.step();
         mapFrame = animator.mapFrame();
         if (animator.showedFrame()) spriteFlip = (statusFlip ^ animator.flipBits()) & 3;
@@ -142,8 +142,9 @@ public final class ObjKabasira extends SszBadnik {
         boolean slow = spawn.subtype() != 0;
         stepX = slow ? 0x100 : 0x200;
         stepY = slow ? 0x80 : 0x100;
-        anim = slow ? 0 : 4;
-        animator = SszObjectArt.animator(provider, SszObjectCatalogue.Entry::kabasiraAnimations, anim);
+        int anim = slow ? 0 : 4;
+        animator.anim = anim;
+        bindAnimationScript(provider);
         commonInit();
         int offsetX = slow ? 0x2000 : 0x1000;
         int offsetY = slow ? 0x1000 : 0x800;
@@ -154,15 +155,15 @@ public final class ObjKabasira extends SszBadnik {
             phaseOffsetX -= offsetX;
             phaseOffsetY -= offsetY;
             ObjKabasira follower = new ObjKabasira(new ObjectSpawn(x, y, spawn.objectId(), spawn.subtype(), 0, false, 0),
-                    Kind.FOLLOWER, this);
-            follower.anim = n + anim;                                // add.b obj.anim_id(a0),d0
+                    Kind.FOLLOWER, getSlotIndex());
+            follower.animator.anim = n + anim;                                // add.b obj.anim_id(a0),d0
             follower.phaseX = phaseOffsetX & 0xFFFF;
             follower.phaseY = phaseOffsetY & 0xFFFF;
             follower.originX = originX;
             follower.originY = originY;
             follower.stepX = stepX;
             follower.stepY = stepY;
-            follower.animator = SszObjectArt.animator(provider, SszObjectCatalogue.Entry::kabasiraAnimations, follower.anim);
+            follower.bindAnimationScript(provider);
             follower.commonInit();
             if (objects == null) continue;
             objects.addDynamicObjectAfterCurrent(follower);          // jsr SpawnObjectAfter
@@ -204,11 +205,11 @@ public final class ObjKabasira extends SszBadnik {
         cooldown = SHOOT_COOLDOWN;
         var objects = services().objectManager();
         if (objects == null) return;
-        ObjKabasira shot = new ObjKabasira(new ObjectSpawn(x, y, spawn.objectId(), 0, 0, false, 0), Kind.SHOT, this);
-        shot.anim = SHOT_ANIM;
+        ObjKabasira shot = new ObjKabasira(new ObjectSpawn(x, y, spawn.objectId(), 0, 0, false, 0), Kind.SHOT, getSlotIndex());
+        shot.animator.anim = SHOT_ANIM;
         shot.colType = SHOT_COLLISION;
         shot.commonInit();
-        shot.animator = SszObjectArt.animator(artProvider(), SszObjectCatalogue.Entry::kabasiraAnimations, SHOT_ANIM);
+        shot.bindAnimationScript(artProvider());
         int angle = TrigLookupTable.calcAngle((short) dx, (short) dy);            // jsr Atan2
         shot.velocityX = (TrigLookupTable.cosHex(angle & 0xFF) << 16) >> 7;
         shot.velocityY = (TrigLookupTable.sinHex(angle & 0xFF) << 16) >> 7;
@@ -239,27 +240,21 @@ public final class ObjKabasira extends SszBadnik {
         animate();
     }
 
+    /** loc_20703E (r7/player_object_collide.asm:398-401). */
     @Override
-    public void onPlayerAttack(PlayableEntity player, TouchResponseResult result) {
-        if (kind == Kind.SHOT) {
-            burst = true;                                             // loc_206FE8: addq.b #1,obj.collide_status(a1)
-            return;
+    public void onTouchResponse(PlayableEntity player, TouchResponseResult result, int frameCounter) {
+        if (kind != Kind.SHOT || !(player instanceof AbstractPlayableSprite sprite) || isDestroyed()) return;
+        if (sprite.getRolling()) {
+            burst = true;
+        } else if (attacksOnEnemyTouch(sprite)) {
+            killAsEnemyFromSpecialTouch(sprite, 0, true);
+        } else {
+            hurtFromSpecialEnemyTouch(sprite, frameCounter);
         }
-        super.onPlayerAttack(player, result);
     }
 
     @Override
-    public TouchResponseProfile getTouchResponseProfile() {
-        return getTouchResponseProfile(false);
-    }
-
-    @Override
-    public TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
-        return kind == Kind.SHOT ? SHOT_TOUCH : TouchResponseProfile.fromProvider(this, multiRegionSource);
-    }
-
-    @Override
-    public boolean usesEnemyTouchCategoryOverride() {
+    public boolean usesS3kTouchSpecialPropertyResponse() {
         return kind == Kind.SHOT;
     }
 }

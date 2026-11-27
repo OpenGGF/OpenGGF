@@ -64,7 +64,8 @@ final class CdFirstMainLoopIteration {
         if (level.getLevelGamestate() instanceof com.openggf.game.LevelGamestate clock) clock.update();
         // SpawnObjects and RunObjects: every object's routine 0 (spawned pieces included) in the same pass as
         // ObjSonic_Init, so the loaded state is levelFrames 1 for objects as for Sonic (Level/Main.asm:400-403).
-        com.openggf.game.soniccd.objects.common.CdFixedObjects.run(objects, camera.getX(), player);
+        com.openggf.level.objects.ObjectManagerInternalAccess.runSpawnerBeforeObjectPass(objects, camera.getX());
+        com.openggf.game.soniccd.objects.common.CdFixedObjects.run(objects, player);
         objects.update(camera.getX(), player, java.util.List.of(), 0);
         levelScroll(1);                                  // iteration 1: bsr.w LevelScroll (Level/Main.asm:418)
         var palette = level.getAnimatedPaletteManager();
@@ -72,6 +73,7 @@ final class CdFirstMainLoopIteration {
             palette.update();                            // iteration 1: bsr.w PaletteCycle (Level/Main.asm:423-425)
         }
         animateTiles();                                  // iteration 2's VInt_Level, as the engine's frame runs it
+        com.openggf.game.soniccd.objects.common.CdFixedObjects.publishHudCounters(objects);
     }
 
     /**

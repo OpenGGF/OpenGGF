@@ -15,6 +15,10 @@ import com.openggf.game.OscillationSnapshot;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.TitleCardProvider;
 import com.openggf.graphics.GLCommand;
+import com.openggf.game.rewind.snapshot.NemesisPlcQueueSnapshot;
+import com.openggf.game.session.EngineTiming;
+import com.openggf.game.sonic1.resources.Sonic1PlcService;
+import com.openggf.game.sonic2.resources.Sonic2PlcService;
 import com.openggf.game.session.SessionManager;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -29,7 +33,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.Isolated;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.List;
+import java.util.function.Supplier;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -54,19 +60,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *       calls {@code Process_Sprites} every iteration.</li>
  * </ul>
  *
- * <p><b>Engine current state:</b> the title-card branch in
- * {@code GameLoop.step()} is per-game gated on
- * {@link TitleCardProvider#shouldRunPlayerPhysics()}:
- * <ul>
- *   <li>S2 (returns {@code true}) runs the canonical {@code LevelFrameStep
- *       .execute} every frame, advancing both the {@link ObjectManager}
- *       frame counter and the {@link LevelManager} frame counter.</li>
- *   <li>S1 leaves already-loaded level objects untouched and preserves its
- *       forced camera step while native object RAM still holds title-card SSTs.</li>
- *   <li>S3K likewise leaves loaded level objects untouched, but advances the
- *       VBlank clock once per locked frame; its title-card SSTs are represented
- *       by the provider rather than {@link ObjectManager}.</li>
- * </ul>
+ * <p>Locked arrival waits advance the VBlank clock while player physics,
+ * level objects and the world clock stay parked. The release checks cover
+ * the S1 object prelude and S2 leave loop before the first ordinary wait.
  *
  * <p>Each {@code @Test} method opens its own ROM (and the test is skipped
  * via {@link Assumptions} when that ROM is not available locally). This
@@ -87,7 +83,7 @@ class TestTitleCardObjectExecution {
     }
 
     @Test
-    void titleCardLegacyPath_s1Ghz1() {
+    void titleOnlyWaitAndRelease_s1Ghz1() throws IOException {
         // S1's locked loop executes title-card objects, not the already-loaded
         // level objects represented by ObjectManager. Those level objects must
         // remain fresh until the gameplay handoff pass.
@@ -99,7 +95,7 @@ class TestTitleCardObjectExecution {
     }
 
     @Test
-    void titleCardAdvancesObjectAndLevelFrameCounters_s2Ehz1() {
+    void titleOnlyWaitAndRelease_s2Ehz1() throws IOException {
         // S2: the level's placed objects and the players are both created by
         // the s2.asm:5003-5004 ObjectsManager / InitPlayers pair, which runs
         // after the Level_TtlCard scroll-in loop at :4946-4957. The RunObjects
@@ -113,7 +109,7 @@ class TestTitleCardObjectExecution {
     }
 
     @Test
-    void titleCardLegacyPath_s3kAiz1() {
+    void titleOnlyWaitAndRelease_s3kAiz1() throws IOException {
         // S3K's native wait dispatches title-card SSTs. The provider represents
         // those sprites, so loaded level objects stay fresh while VBlank ticks.
         File romFile = RomTestUtils.ensureSonic3kRomAvailable();
@@ -137,7 +133,7 @@ class TestTitleCardObjectExecution {
                                               boolean skipIntros,
                                               boolean expectObjectsToAdvance,
                                               boolean expectLevelFrameCounterToAdvance,
-                                              boolean checkSonic1ReleaseHandoff) {
+                                              boolean checkSonic1ReleaseHandoff) throws IOException {
         // 1. Load the requested ROM and configure the matching game module.
         Rom rom = new Rom();
         assertTrue(rom.open(romFile.getAbsolutePath()),
@@ -180,13 +176,22 @@ class TestTitleCardObjectExecution {
         }
         provider.reset();
 
+        // The headless fixture replaces the bootstrap EngineContext after the
+        // session attached its managers. Bind the new carrier to the same live
+        // ObjectManager that production services during this test.
+        var carrier = EngineTiming.vIntRunCounter();
+        carrier.bindObjectClock(() -> Integer.toUnsignedLong(objectManager.getVblaCounter()));
+        int clockBeforeEntry = objectManager.getVblaCounter();
         loop.enterTitleCard(zone, act);
+        assertEquals(clockBeforeEntry, objectManager.getVblaCounter(),
+                "staging the provider alone does not own a wait");
         assertEquals(GameMode.TITLE_CARD, loop.getCurrentGameMode(),
                 "loop should be in TITLE_CARD mode after enterTitleCard()");
 
         // 4. Snapshot both counters before stepping any frames.
         int objectFramesBefore = objectManager.getFrameCounter();
-        int vblankFramesBefore = objectManager.getVblaCounter();
+        Supplier<NemesisPlcQueueSnapshot> titlePlc = prepareTitlePlc(game);
+        int patternsBeforeWait = titlePlc == null ? 0 : remainingPatterns(titlePlc.get());
         int levelFramesBefore = levelManager.getFrameCounter();
         int spriteFramesBefore = GameServices.sprites().getFrameCounter();
         ObjectInstance trackedObject = lockedPhaseProbe;
@@ -211,13 +216,25 @@ class TestTitleCardObjectExecution {
             assertEquals(GameMode.TITLE_CARD, loop.getCurrentGameMode(),
                     "loop should remain in TITLE_CARD mode for the duration of the test "
                             + "(frame=" + i + ", game=" + game + ")");
+            int beforeWait = objectManager.getVblaCounter();
             loop.step();
+            if (i == 0 && titlePlc != null) {
+                assertTrue(remainingPatterns(titlePlc.get()) < patternsBeforeWait,
+                        "the wait services the ROM-backed title PLC queue");
+            }
+            assertEquals(beforeWait + 1, objectManager.getVblaCounter(),
+                    game + " locked title wait " + (i + 1) + " owns exactly one V-int");
+            assertEquals(Integer.toUnsignedLong(objectManager.getVblaCounter()),
+                    carrier.value(), "the live object clock owns this service");
         }
 
         // 6. Assert each game's production-owned counter policy.
         int objectFramesAfter = objectManager.getFrameCounter();
-        int vblankFramesAfter = objectManager.getVblaCounter();
         int levelFramesAfter = levelManager.getFrameCounter();
+        if (game != SonicGame.SONIC_3K) {
+            assertEquals(FRAMES_TO_STEP, cameraCallSpy.positionUpdates,
+                    "the S1/S2 wait preserves the forced camera update");
+        }
         int objectDelta = objectFramesAfter - objectFramesBefore;
         int levelDelta = levelFramesAfter - levelFramesBefore;
 
@@ -225,8 +242,6 @@ class TestTitleCardObjectExecution {
                 "Unexpected ObjectManager.frameCounter delta during the title card for " + game);
 
         if (game == SonicGame.SONIC_3K) {
-            assertEquals(FRAMES_TO_STEP, vblankFramesAfter - vblankFramesBefore,
-                    "locked S3K title cards advance only the native VBlank clock");
             assertEquals(trackedObjectXBefore, trackedObject.getX());
             assertEquals(trackedObjectYBefore, trackedObject.getY());
             assertEquals(trackedObjectStateBefore, trackedObject.traceDebugDetails(),
@@ -319,7 +334,10 @@ class TestTitleCardObjectExecution {
             int guard = 2000;
             while (loop.getCurrentGameMode() == GameMode.TITLE_CARD && guard-- > 0) {
                 passesWhileCardUp = objectManager.getFrameCounter() - objectFramesBefore;
+                int beforeWait = objectManager.getVblaCounter();
                 loop.step();
+                assertEquals(beforeWait + 1, objectManager.getVblaCounter(),
+                        "S2 arrival, upload and leave iterations each represent one V-int");
             }
             assertEquals(GameMode.LEVEL, loop.getCurrentGameMode(),
                     "S2 title card should release within the test guard");
@@ -336,7 +354,10 @@ class TestTitleCardObjectExecution {
             assertEquals(0, GameServices.sprites().getFrameCounter(),
                     "the release iteration ends on Level_MainLoop's WaitForVint "
                             + "(s2.asm:5091), before its addq at :5092");
+            int beforeGameplay = objectManager.getVblaCounter();
             loop.step();
+            assertEquals(beforeGameplay + 1, objectManager.getVblaCounter(),
+                    "the first S2 gameplay wait owns a separate V-int");
             assertEquals(1, GameServices.sprites().getFrameCounter(),
                     "Level_MainLoop's first pass past the wait performs the addq");
         }
@@ -351,7 +372,10 @@ class TestTitleCardObjectExecution {
             player.setForcedInputMask(AbstractPlayableSprite.INPUT_RIGHT);
             int guard = 600;
             while (loop.getCurrentGameMode() == GameMode.TITLE_CARD && guard-- > 0) {
+                int beforeWait = objectManager.getVblaCounter();
                 loop.step();
+                assertEquals(beforeWait + 1, objectManager.getVblaCounter(),
+                        "the S1 arrival wait owns the V-int even when its tail releases control");
             }
             assertEquals(GameMode.LEVEL, loop.getCurrentGameMode(),
                     "title card should release within the test guard");
@@ -370,7 +394,10 @@ class TestTitleCardObjectExecution {
             assertEquals(0, player.getXSubpixelRaw(),
                     "the locked release prelude must not move the player");
 
+            int beforeGameplay = objectManager.getVblaCounter();
             loop.step();
+            assertEquals(beforeGameplay + 1, objectManager.getVblaCounter(),
+                    "the first S1 gameplay wait owns a separate V-int");
             assertEquals(2, objectManager.getFrameCounter() - objectFramesBefore,
                     "the first Level_MainLoop iteration runs exactly one more object pass");
             assertEquals(1, GameServices.sprites().getFrameCounter() - spriteFramesBefore,
@@ -380,6 +407,31 @@ class TestTitleCardObjectExecution {
             assertEquals(0x0B00, player.getXSubpixelRaw(),
                     "only the first unlocked Level_MainLoop pass may consume held Right, with slope projection");
         }
+    }
+
+    private static Supplier<NemesisPlcQueueSnapshot> prepareTitlePlc(SonicGame game)
+            throws IOException {
+        if (game == SonicGame.SONIC_1) {
+            var plc = GameServices.module().getGameService(Sonic1PlcService.class);
+            plc.resetForMissingSnapshot();
+            plc.append(1);
+            plc.prepare();
+            return plc::capture;
+        }
+        if (game == SonicGame.SONIC_2) {
+            var plc = GameServices.module().getGameService(Sonic2PlcService.class);
+            plc.resetForMissingSnapshot();
+            plc.append(com.openggf.game.sonic2.constants.Sonic2Constants.PLC_STD2);
+            plc.prepare();
+            return plc::capture;
+        }
+        return null;
+    }
+
+    private static int remainingPatterns(NemesisPlcQueueSnapshot queue) {
+        int active = queue.activeEntry() == null ? 0 : queue.activeEntry().remainingPatterns();
+        return active + queue.queuedEntries().stream()
+                .mapToInt(NemesisPlcQueueSnapshot.Entry::remainingPatterns).sum();
     }
 
     private static void assertOscillationEquals(

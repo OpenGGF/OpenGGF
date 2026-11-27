@@ -42,11 +42,8 @@ public final class TraceRunVblankClock {
 
     /**
      * The clock a special stage's presentation bridge starts on. The bridge is
-     * the results screen the stage exits through: the engine plays every one of
-     * its rows, but no level loop runs on them, so the production counter never
-     * ticks and cannot be projected forward from. The value therefore comes from
-     * the level that entered the stage, plus one tick for each movie row between
-     * that level's tail and the bridge.
+     * the results screen the stage exits through. This entry anchor accounts
+     * for the shortened transition from the source level to the bridge.
      */
     public OptionalInt presentationBridgeEntryTarget(
             int sourceIndex,
@@ -73,9 +70,10 @@ public final class TraceRunVblankClock {
     }
 
     /**
-     * A bridge's own tail is derived, not observed: its recorded rows each
-     * carry a V-int except the profiled ones the ROM builds the results screen
-     * through with interrupts disabled.
+     * Keep the bridge's movie-budget tail anchored to its entry. Live results
+     * waits already increment the observed object clock. Deriving an absolute
+     * destination target from the entry counts each bridge wait once and handles
+     * the recorded masked and hardware lag intervals.
      */
     private int sourceTailVblank(
             int segmentIndex,

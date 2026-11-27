@@ -112,7 +112,11 @@ public final class ObjFallSpikes extends TtzObject implements ReevaluatingSolidO
             yFixed = (yFixed & 0xFFFF) | (y << 16);
             yVel = 0;
             sink = 0x200000;
-            if (tip != null) tip.setDestroyed(true);             // DeleteOtherObject
+            if (tip != null) {
+                tip.setDestroyed(true);
+                services().objectManager().removeDynamicObject(tip); // jmp DeleteOtherObject
+                tip = null;
+            }
         }
     }
 

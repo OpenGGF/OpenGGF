@@ -71,7 +71,7 @@ final class WwzFloorDebris extends WwzBossPiece {
         var level = cdLevel();
         animate(WwzBossCatalogue.offset(level == null ? null : level.payload(), "debrisAnimations"));
         integrateVelocity();
-        int distance = com.openggf.physics.ObjectTerrainUtils.checkFloorDist(x, y, yRadius).distance() - 1;
+        int distance = checkFloor(x, y, yRadius).distance() - 1;
         if (distance > 0) return;
         addY(-distance);
         routine = 4;

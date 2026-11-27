@@ -16,6 +16,16 @@ import sys
 import zipfile
 import zlib
 
+CARTRIDGE_INPUTS = {
+    "s1": ("sonic1", "sonic1.rom.path"),
+    "s2": ("sonic2", "sonic2.rom.path"),
+    "s3k": ("sonic3k", "s3k.rom.path"),
+}
+MEDIA_INPUTS = {
+    **CARTRIDGE_INPUTS,
+    "scd": ("soniccd", "soniccd.disc.path"),
+}
+
 
 def matching_artifacts(engine, sdk, testkit=None):
     identities = []
@@ -45,12 +55,12 @@ def runtime_directory(project, roms):
     play = Path(project) / "target/play"
     play.mkdir(parents=True, exist_ok=True)
     config = 'configFormat: 2\nroms:\n  directory: "roms"\n'
-    for key in ("sonic1", "sonic2", "sonic3k"):
+    for key, _ in MEDIA_INPUTS.values():
         value = (roms or {}).get(key)
         if value is not None:
             value = Path(value).resolve(strict=True)
             if not value.is_file():
-                raise ValueError(f"ROM is not a file: {value}")
+                raise ValueError(f"Game media is not a file: {value}")
         config += f"  {key}: {json.dumps(str(value) if value else '')}\n"
     (play / "config.yaml").write_text(config, encoding="utf-8")
     return play
@@ -159,8 +169,7 @@ def test_project(project, engine, sdk, testkit, *, roms=None):
     if resources.is_dir():
         shutil.copytree(resources, tests, dirs_exist_ok=True)
     properties = []
-    for game, property_name in (("sonic1", "sonic1.rom.path"), ("sonic2", "sonic2.rom.path"),
-                                ("sonic3k", "s3k.rom.path")):
+    for game, property_name in MEDIA_INPUTS.values():
         if (roms or {}).get(game) is not None:
             properties.append("-D" + property_name + "=" + str(Path(roms[game]).resolve(strict=True)))
     subprocess.run([java_tool("java"), "--enable-native-access=ALL-UNNAMED", "-Xmx1g", *properties, "-cp", classpath,
@@ -171,11 +180,11 @@ def test_project(project, engine, sdk, testkit, *, roms=None):
 
 
 LOCAL_CONFIG = "ggfmod.local.json"
-PATH_KEYS = ("engine", "sdk", "testkit", "s1", "s2", "s3k")
+PATH_KEYS = ("engine", "sdk", "testkit", *MEDIA_INPUTS)
 LIMITATIONS = [
     "File availability and candidate identity only; no gameplay correctness is implied.",
     "Manifest inspection checks presence/nonempty text only; use ggfmod validate for semantic validation.",
-    "ROM availability is checked, not ROM identity or required game/donor coverage.",
+    "Game media availability is checked, not identity or required game/donor coverage.",
     "Maven availability is checked without executing it; dependency resolution/network access is not tested.",
 ]
 
@@ -254,8 +263,9 @@ def doctor(project, engine, sdk, *, test=False, testkit=None, roms=None):
                                     "Use engine, SDK and testkit from the same candidate build."))
     for game, path in (roms or {}).items():
         if path is not None and not path.is_file():
-            findings.append(finding("rom.missing", f"Supplied {game} ROM is unavailable", path,
-                                    "Correct the supplied path to your original ROM; ROMs are never downloaded."))
+            kind = "disc" if game == "soniccd" else "ROM"
+            findings.append(finding("rom.missing", f"Supplied {game} {kind} is unavailable", path,
+                                    f"Correct the path to your original {kind}; game media is never downloaded."))
     console = project / "target/test-libs/junit-platform-console-standalone-1.10.3.jar"
     if test and not console.is_file() and shutil.which("mvn") is None:
         findings.append(finding("test.maven", "JUnit Console is not cached and Maven is unavailable.", console,
@@ -303,7 +313,7 @@ def main(argv=None):
     parser.add_argument("--test", action="store_true", help="compile and run the authored Jupiter tests")
     parser.add_argument("--testkit", type=Path, help="verify an optional matching testkit before local test setup")
     parser.add_argument("--verify-only", action="store_true", help="verify artifact version/source identity without compiling")
-    for name in ("s1", "s2", "s3k"):
+    for name in MEDIA_INPUTS:
         parser.add_argument("--" + name, type=Path)
     config_path = None
     try:
@@ -316,7 +326,7 @@ def main(argv=None):
         values = {key: (getattr(args, key).resolve() if getattr(args, key) is not None else config.get(key))
                   for key in PATH_KEYS}
         engine, sdk = values["engine"] or kit / "engine.jar", values["sdk"] or kit / "sdk.jar"
-        roms = dict(zip(("sonic1", "sonic2", "sonic3k"), (values["s1"], values["s2"], values["s3k"])))
+        roms = {key: values[game] for game, (key, _) in MEDIA_INPUTS.items()}
         if args.verify_only:
             print(json.dumps(matching_artifacts(engine, sdk, values["testkit"]), sort_keys=True))
             return 0

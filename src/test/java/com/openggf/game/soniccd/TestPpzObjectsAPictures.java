@@ -22,6 +22,9 @@ import org.junit.jupiter.api.condition.OS;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -66,7 +69,21 @@ class TestPpzObjectsAPictures {
         return (r << 6) | (g << 3) | b;
     }
 
-    private record Shot(int levelFrames, Path file) { }
+    private record Shot(int levelFrames, int probeFrame, Path file) { }
+
+    private static List<Shot> loadShots(CdStagePayload payload) throws Exception {
+        Path index = CdTestMedia.nativeFile("rehost-fixtures-ppzobja/" + payload + "/shots.json");
+        List<Shot> shots = new ArrayList<>();
+        for (JsonNode shot : new ObjectMapper().readTree(index.toFile()).get("shots")) {
+            shots.add(new Shot(shot.get("level_frames").asInt(), shot.get("probe_frame").intValue(),
+                    index.resolveSibling(shot.get("file").asText())));
+        }
+        return shots;
+    }
+
+    private static Map<Integer, int[]> loadTrace(CdStagePayload payload) throws Exception {
+        return firstRowPerLevelFrame(CdTestMedia.nativeFile("rehost-fixtures/" + payload + "/trace/physics.csv"));
+    }
 
     /** Pixels compared and equal, per kind of object. */
     private static final class Tally {
@@ -81,14 +98,8 @@ class TestPpzObjectsAPictures {
         Map<CdStagePayload, List<Shot>> shots = new LinkedHashMap<>();
         Map<CdStagePayload, Map<Integer, int[]>> traces = new LinkedHashMap<>();
         for (CdStagePayload payload : PAYLOADS) {
-            Path index = CdTestMedia.nativeFile("rehost-fixtures-ppzobja/" + payload + "/shots.json");
-            List<Shot> list = new ArrayList<>();
-            for (JsonNode shot : new ObjectMapper().readTree(index.toFile()).get("shots")) {
-                list.add(new Shot(shot.get("level_frames").asInt(), index.resolveSibling(shot.get("file").asText())));
-            }
-            shots.put(payload, list);
-            traces.put(payload, firstRowPerLevelFrame(
-                    CdTestMedia.nativeFile("rehost-fixtures/" + payload + "/trace/physics.csv")));
+            shots.put(payload, loadShots(payload));
+            traces.put(payload, loadTrace(payload));
         }
 
         String oldGl = System.getProperty("openggf.headless.gl");
@@ -111,7 +122,8 @@ class TestPpzObjectsAPictures {
                     GameServices.level().loadZoneAndAct(SonicCdZoneRegistry.zoneIndex(payload),
                             SonicCdZoneRegistry.actIndex(payload));
                 }
-                playStage(payload, shots.get(payload), traces.get(payload), kinds, report);
+                playStage(payload, shots.get(payload), traces.get(payload), report,
+                        (shot, sonic) -> compareObjects(payload, shot, sonic, kinds, report));
             }
         } finally {
             GameServices.configuration().setSessionOverride(SonicConfiguration.AUDIO_ENABLED, oldAudio);
@@ -135,8 +147,13 @@ class TestPpzObjectsAPictures {
         assertTrue(failures.isEmpty(), "kinds below 95%: " + failures + "\n" + text);
     }
 
-    private static void playStage(CdStagePayload payload, List<Shot> shots, Map<Integer, int[]> rows,
-                                  Map<String, Tally> kinds, List<String> report) throws Exception {
+    @FunctionalInterface
+    private interface ShotComparison {
+        void compare(Shot shot, AbstractPlayableSprite sonic) throws Exception;
+    }
+
+    private static int playStage(CdStagePayload payload, List<Shot> shots, Map<Integer, int[]> rows,
+                                 List<String> report, ShotComparison comparison) throws Exception {
         AbstractPlayableSprite sonic = GameServices.camera().getFocusedSprite();
         HeadlessTestRunner runner = new HeadlessTestRunner(sonic);
         int next = 0;
@@ -153,17 +170,18 @@ class TestPpzObjectsAPictures {
                     || (GameServices.camera().getY() & 0xFFFF) != row[2]) {
                 report.add(payload + ": engine left the native route at level frame " + levelFrame
                         + "; later shots not compared");
-                return;
+                break;
             }
             if (levelFrame == shots.get(next).levelFrames()) {
-                compare(payload, shots.get(next), sonic, kinds, report);
+                comparison.compare(shots.get(next), sonic);
                 next++;
             }
         }
+        return next;
     }
 
-    private static void compare(CdStagePayload payload, Shot shot, AbstractPlayableSprite sonic,
-                                Map<String, Tally> kinds, List<String> report) throws Exception {
+    private static void compareObjects(CdStagePayload payload, Shot shot, AbstractPlayableSprite sonic,
+                                       Map<String, Tally> kinds, List<String> report) throws Exception {
         int cx = GameServices.camera().getX(), cy = GameServices.camera().getY();
         List<int[]> boxes = new ArrayList<>();
         List<String> names = new ArrayList<>();
@@ -206,6 +224,127 @@ class TestPpzObjectsAPictures {
             report.add(String.format("%s lf %d %s box(%d,%d): %d/%d", payload, shot.levelFrames(), names.get(i),
                     (b[0] + b[2]) / 2, (b[1] + b[3]) / 2, same, total));
         }
+    }
+
+    // ObjHUD_Init (Level/_Objects/HUD and Points/Main.asm:87-92) sets screen origin (16, 8) and base tile $568.
+    // MapSpr_HUD .Score (Level/_Objects/HUD and Points/Data/Mappings (HUD).asm:17-21) supplies the digit offsets.
+    private static final int[] TIME_DIGIT_X = {56, 72, 80, 96, 104};
+    // UpdateHUD (Level/_Objects/HUD and Points/Main.asm:281-292) writes minutes starting at ($568 + $29) * 32.
+    private static final int TIME_VRAM_START = 0xB220;
+    private static final int TIME_TOP = 24;
+    private static final int GLYPH_ROWS = 16;
+    private static final int ROW_BYTES = 4;
+    private static final int TIME_VRAM_BYTES = TIME_DIGIT_X.length * GLYPH_ROWS * ROW_BYTES;
+    private static final int VISIBLE_LINES = 224;
+
+    private record DigitRow(int scanline, byte[] pixels) { }
+
+    private record HudFrame(byte[] before, byte[] after, Map<Integer, DigitRow> writes) { }
+
+    @Test
+    void hudTimeMatchesRecordedScanout() throws Exception {
+        Map<CdStagePayload, Path> recordings = new LinkedHashMap<>();
+        for (CdStagePayload payload : List.of(CdStagePayload.R11A, CdStagePayload.R12A)) {
+            recordings.put(payload, CdTestMedia.nativeFile("u66-hud-Vwwkbuw8/timed-rows-" + payload + "/timing.tsv"));
+        }
+
+        var config = GameServices.configuration();
+        boolean oldAudio = config.getBoolean(SonicConfiguration.AUDIO_ENABLED);
+        config.setSessionOverride(SonicConfiguration.AUDIO_ENABLED, false);
+        List<String> differences = new ArrayList<>();
+        int total = 0;
+        try (var disc = CdDiscDataSource.open(CdTestMedia.usaCue());
+             var boots = new CdFreshStageBoots(320, VISIBLE_LINES)) {
+            for (var recording : recordings.entrySet()) {
+                CdStagePayload payload = recording.getKey();
+                Map<Shot, HudFrame> frames = loadHudFrames(recording.getValue(), loadShots(payload));
+                assertTrue(!frames.isEmpty(), () -> "No recorded PPZ shots in " + recording.getValue());
+
+                boots.boot(disc, payload);
+                List<String> report = new ArrayList<>();
+                List<Shot> recordedShots = List.copyOf(frames.keySet());
+                int compared = playStage(payload, recordedShots, loadTrace(payload), report,
+                        (shot, sonic) -> compareHudTime(payload, shot, frames.get(shot), differences));
+                assertEquals(recordedShots.size(), compared, () -> payload + " incomplete TIME coverage: " + report);
+                total += compared;
+            }
+        } finally {
+            config.setSessionOverride(SonicConfiguration.AUDIO_ENABLED, oldAudio);
+        }
+        assertTrue(differences.isEmpty(), () -> String.join("\n", differences));
+        System.out.println("PPZ TIME: " + total + " pictures match recorded scanout and resident digit art");
+    }
+
+    private static Map<Shot, HudFrame> loadHudFrames(Path timing, List<Shot> shots) throws Exception {
+        Map<Integer, byte[]> snapshots = new HashMap<>();
+        Map<Integer, Map<Integer, DigitRow>> writes = new HashMap<>();
+        List<String> lines = Files.readAllLines(timing);
+        assertEquals("event\tprobeFrame\tlevelFrames\tvintCount\ttimeHex\tscanline\tvdpMasterCycles\tvalue",
+                lines.getFirst(), timing.toString());
+        for (String line : lines.subList(1, lines.size())) {
+            String[] fields = line.split("\t");
+            int frame = Integer.parseInt(fields[1]);
+            if (fields[0].equals("PostFrame")) {
+                byte[] vram = HexFormat.of().parseHex(fields[7].split(";")[1]);
+                assertEquals(TIME_VRAM_BYTES, vram.length, line);
+                assertTrue(snapshots.put(frame, vram) == null, () -> "Duplicate PostFrame: " + line);
+            } else if (fields[0].equals("DigitRow")) {
+                String[] row = fields[7].split(":");
+                int offset = Integer.parseInt(row[0], 16) - TIME_VRAM_START + Integer.parseInt(row[1]) * ROW_BYTES;
+                DigitRow write = new DigitRow(Integer.parseInt(fields[5]), HexFormat.of().parseHex(row[2]));
+                assertEquals(ROW_BYTES, write.pixels().length, line);
+                assertTrue(writes.computeIfAbsent(frame, ignored -> new HashMap<>()).put(offset, write) == null,
+                        () -> "Duplicate DigitRow: " + line);
+            }
+        }
+
+        Map<Shot, HudFrame> frames = new LinkedHashMap<>();
+        for (Shot shot : shots) {
+            int frame = shot.probeFrame();
+            if (!snapshots.containsKey(frame) && !writes.containsKey(frame)) continue;
+            byte[] before = snapshots.get(frame - 1);
+            byte[] after = snapshots.get(frame);
+            Map<Integer, DigitRow> rows = writes.getOrDefault(frame, Map.of());
+            assertTrue(before != null && after != null, () -> "Missing VRAM snapshot for " + shot);
+            assertEquals(TIME_VRAM_BYTES / ROW_BYTES, rows.size(), () -> "Incomplete digit writes for " + shot);
+            frames.put(shot, new HudFrame(before, after, rows));
+        }
+        return frames;
+    }
+
+    private static void compareHudTime(CdStagePayload payload, Shot shot, HudFrame timing, List<String> differences)
+            throws Exception {
+        RgbaImage reference = ScreenshotCapture.loadPNG(shot.file());
+        RgbaImage engine = render(LevelManager.LevelRenderOptions.gameplay());
+        for (int column = 0; column < TIME_DIGIT_X.length; column++) {
+            int left = TIME_DIGIT_X[column];
+            int engineErrors = 0, nativeErrors = 0;
+            for (int row = 0; row < GLYPH_ROWS; row++) {
+                int y = TIME_TOP + row;
+                int offset = (column * GLYPH_ROWS + row) * ROW_BYTES;
+                DigitRow write = timing.writes().get(offset);
+                assertTrue(write != null && Arrays.equals(timing.after(), offset, offset + ROW_BYTES,
+                        write.pixels(), 0, ROW_BYTES),
+                        () -> "DigitRow disagrees with resident VRAM for " + shot + " at byte " + offset);
+                // Active display fetches each line before the CPU writes on that line.
+                byte[] scanned = write.scanline() < y || write.scanline() >= VISIBLE_LINES
+                        ? timing.after() : timing.before();
+                for (int x = 0; x < 8; x++) {
+                    if (!matchesGlyphPixel(engine, left, y, x, offset, timing.after())) engineErrors++;
+                    if (!matchesGlyphPixel(reference, left, y, x, offset, scanned)) nativeErrors++;
+                }
+            }
+            if (engineErrors != 0 || nativeErrors != 0) {
+                differences.add("%s lf %d probe %d TIME digit x=%d: %d engine and %d native opaque pixel mismatches"
+                        .formatted(payload, shot.levelFrames(), shot.probeFrame(), left, engineErrors, nativeErrors));
+            }
+        }
+    }
+
+    private static boolean matchesGlyphPixel(RgbaImage frame, int left, int y, int x, int offset, byte[] vram) {
+        int index = (vram[offset + x / 2] >>> ((1 - x % 2) * 4)) & 0xF;
+        // Transparent glyph pixels show the stage behind the HUD.
+        return index == 0 || level(frame.argb(left + x, y)) == (index == 1 ? 0 : 0x1FF);
     }
 
     private static RgbaImage render(LevelManager.LevelRenderOptions options) {

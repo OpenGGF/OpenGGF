@@ -1,6 +1,7 @@
 package com.openggf.tests.trace.s3k;
 
 import com.openggf.game.GameServices;
+import com.openggf.game.sonic3k.objects.BubbleShieldObjectInstance;
 import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
@@ -24,8 +25,11 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
+import java.util.Map;
 import java.util.Set;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -33,39 +37,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * transition -> act2 -> the act2->next-zone exit handoff. zone()=1 (S3K zone_id == engine index);
  * act()=0.
  *
- * <p><b>Expected RED since 2026-08-15, deliberately, with the mechanism traced end to end.</b>
- * Two errors: {@code rings} 1 vs 2 at frame 29095 and 0 vs 1 at 29262. Nothing here is weakened,
- * tolerance-fitted or trimmed to reach a green; the measured first error and count live in
- * {@code docs/status/trace-frontier-log.md} and the mechanism in
- * {@code docs/status/known-discrepancies.md}.
- *
- * <p>The cause is <i>not</i> a defect in this zone. Commit {@code b31069c3f} corrected two
- * ROM-cited MegaChopper defects — {@code Obj_MegaChopper}'s opening
- * {@code jsr (Obj_WaitOffscreen)} suppressing every routine including Init until the sprite is
- * drawn (sonic3k.asm:184326, :180362-180393), and its {@code Touch_Special} defeat path owing the
- * player the {@code EnemyDefeated} bounce itself (:184335-184337 -> loc_85758's
- * {@code subi.w #$100,y_vel(a1)}). That moved the HCZ <i>segment</i> frontier 1434 -> 2478.
- *
- * <p>It also moved this class red, and the propagation is fully traced: at frame 1481 the
- * MegaChopper sits at x=3840 with the fix and 3839 without, and this run's own aux records
- * {@code object_x 0x0F00} = 3840 — <b>the fix is the ROM-correct side.</b> That one pixel changes
- * object-slot occupancy on 16,289 of 31,482 rows, so 27,600 frames later the boss-hurt ring
- * scatter puts ring 0 in a different slot (38 vs 4). {@code Obj_Bouncing_Ring} gates its floor
- * probe on its own SST slot — {@code move.b (V_int_run_count+3).w,d0 / add.b d7,d0 /
- * andi.b #7,d0 / bne} (sonic3k.asm:35669-35672), {@code d7} being {@code Process_Sprites}' live
- * slot countdown — and those slots are two apart in the {@code &7} cycle, so the ring bounces
- * differently and is collected four frames early.
- *
- * <p><b>The previous green was accidental, not a baseline.</b> With the slot probe armed,
- * engine-vs-ROM occupancy diverges on 2387 of 2387 sampled frames on <i>both</i> trees; this test
- * compares no object identity, slot or position at all. The old green was a slot-phase lottery
- * that happened to land the boss rings in compatible {@code &7} phases.
- *
- * <p><b>Do not "fix" this by adjusting ring timing, slot allocation or the bounce.</b> The
- * remaining work is slot-occupancy parity, which cannot currently be measured: S3K's SST has no
- * id field at any offset and objects overwrite their own dispatch pointer to advance state, so
- * the recorded type is a live program counter and only 4.26% of entries are object-table entries.
- * See {@code docs/architecture/audits/2026-08-15-s3k-object-code-pointer-identity.md}.
+ * <p>The standalone slice at develop {@code 2a23b59c5b} passed all 29,285 retained
+ * comparisons across 31,482 planned rows, including the two historical ring
+ * mismatches. The strict comparison does not cover object identity or slot
+ * occupancy. The Poindexter check below asserts the active object's position.
  */
 @RequiresRom(SonicGame.SONIC_3K)
 public class TestS3kHczZoneSliceTraceReplay extends AbstractTraceReplayTest {
@@ -73,6 +48,16 @@ public class TestS3kHczZoneSliceTraceReplay extends AbstractTraceReplayTest {
     private static final int POINDEXTER_PRE_HIT_FRAME = 5725;
     private static final Set<Integer> POINDEXTER_OBSERVATION_FRAMES =
             Set.of(5595, 5600, 5650, 5700, POINDEXTER_PRE_HIT_FRAME);
+
+    private static final int INVINCIBILITY_EXPIRY_ROW = 2566;
+    private static final Map<Integer, Integer> ROM_SHIELD_MAPPING_FRAME = Map.ofEntries(
+            Map.entry(2566, 0x00), Map.entry(2567, 0x00), Map.entry(2568, 0x09), Map.entry(2569, 0x09),
+            Map.entry(2570, 0x00), Map.entry(2571, 0x00),
+            Map.entry(3060, 0x0A), Map.entry(3061, 0x0A), Map.entry(3062, 0x05), Map.entry(3063, 0x05),
+            Map.entry(3064, 0x0A), Map.entry(3065, 0x0A), Map.entry(3066, 0x05), Map.entry(3067, 0x05),
+            Map.entry(3068, 0x0A), Map.entry(3069, 0x0A), Map.entry(3070, 0x06), Map.entry(3071, 0x06),
+            Map.entry(3072, 0x06), Map.entry(3073, 0x06));
+    private static final int BUBBLE_LAST_ROW = 3073;
 
     @Override protected SonicGame game() { return SonicGame.SONIC_3K; }
     @Override protected int zone() { return 1; }
@@ -134,6 +119,73 @@ public class TestS3kHczZoneSliceTraceReplay extends AbstractTraceReplayTest {
                             + "(docs/skdisasm/sonic3k.asm:184529-184596,20697-20964). "
                             + "poindexters=" + describePoindexters(objectManager)
                             + "\nobservations:\n" + observations);
+        } finally {
+            if (fixture != null) {
+                fixture.abortHardwareTimingReplayRun();
+            }
+            TestEnvironment.resetAll();
+        }
+    }
+
+    /**
+     * S3K's invincibility timer is a byte of {@code (20*60)/8} that {@code Sonic_ChkInvin} decrements
+     * only when {@code Level_frame_counter & 7} is zero (docs/skdisasm/sonic3k.asm:22046-22055, grant at
+     * :40911). {@code Obj_BubbleShield_Main} neither animates nor draws while the player is invincible
+     * (:34899-34903), so the expiry frame sets the bubble's animation phase for the rest of the act.
+     *
+     * <p>The HCZ complete-run segment collects a bubble shield at row 2254 while invincible. Its aux
+     * {@code interact_state} records Sonic's {@code status_secondary} going 0x43 to 0x41 on row 2566.
+     * The mapping frames below were read from the {@code Shield} SST ($FFFFCCE8, mapping_frame $22) in
+     * BizHawk 2.11/GPGX replaying {@code s3k-complete-sonic-tails.bk2} at movie frame 27171 + row. A
+     * per-frame countdown of 1200 ended invincibility five frames late, which put the bubble one frame
+     * out of phase on screen.
+     */
+    @Test
+    void bubbleShieldAnimationKeepsTheRomPhaseAfterInvincibilityExpires() throws Exception {
+        TraceData trace = TraceData.load(TRACE_DIR);
+        TraceMetadata meta = trace.metadata();
+        Path bk2Path = resolveBk2File(TRACE_DIR, meta);
+        Assumptions.assumeTrue(bk2Path != null, "No BK2 found for " + TRACE_DIR);
+        TraceReplaySessionBootstrap.prepareConfiguration(trace, meta);
+        HeadlessTestFixture fixture = null;
+        try {
+            fixture = HeadlessTestFixture.builder()
+                    .withRecording(bk2Path)
+                    .withRecordingStartFrame(TraceReplayBootstrap.recordingStartFrameForTraceReplay(trace))
+                    .withZoneAndAct(zone(), act())
+                    .withHardwareReadinessAdmissionPolicy(HardwareReadinessAdmissionPolicy.RECORDED)
+                    .startPosition(meta.startX(), meta.startY())
+                    .startPositionIsCentre()
+                    .build();
+            TraceReplaySessionBootstrap.BootstrapResult boot =
+                    TraceReplaySessionBootstrap.applyBootstrap(trace, fixture, -1);
+            TraceReplayBootstrap.ReplayStartState replayStart = boot.replayStart();
+            int row = replayStart.startingTraceIndex();
+            TraceFrame previous = replayStart.hasSeededTraceState()
+                    ? trace.getFrame(replayStart.seededTraceIndex())
+                    : row > 0 ? trace.getFrame(row - 1) : null;
+            TraceReplaySessionBootstrap.alignFrameCountersForReplayStart(
+                    previous, row < trace.frameCount() ? trace.getFrame(row) : null);
+            while (row <= BUBBLE_LAST_ROW) {
+                TraceFrame frame = trace.getFrame(row);
+                fixture.beginTraceRow(row, frame.frame());
+                TraceExecutionPhase phase = TraceReplayBootstrap.phaseForReplay(trace, previous, frame);
+                TraceReplayBootstrap.markVblankStarvedIterationForReplay(previous, frame);
+                driveScenarioReplayFrame(trace, fixture, phase);
+                previous = frame;
+                AbstractPlayableSprite sonic = GameServices.camera().getFocusedSprite();
+                if (row == INVINCIBILITY_EXPIRY_ROW - 1 || row == INVINCIBILITY_EXPIRY_ROW) {
+                    assertEquals(row < INVINCIBILITY_EXPIRY_ROW, sonic.getInvincibleFrames() > 0,
+                            "row " + row + ": Status_Invincible clears on row " + INVINCIBILITY_EXPIRY_ROW);
+                }
+                Integer expected = ROM_SHIELD_MAPPING_FRAME.get(row);
+                if (expected != null) {
+                    BubbleShieldObjectInstance shield =
+                            assertInstanceOf(BubbleShieldObjectInstance.class, sonic.getShieldObject());
+                    assertEquals(expected, shield.mappingFrame(), "row " + row + ": bubble shield mapping frame");
+                }
+                row++;
+            }
         } finally {
             if (fixture != null) {
                 fixture.abortHardwareTimingReplayRun();

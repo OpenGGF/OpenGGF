@@ -1,6 +1,7 @@
 package com.openggf.game.soniccd.objects.ccz;
 
 import com.openggf.data.RomByteReader;
+import com.openggf.game.soniccd.CdPeriod;
 import com.openggf.game.soniccd.CdStagePayload;
 import com.openggf.game.soniccd.level.CdStageCatalogue;
 import com.openggf.game.soniccd.level.CdStageImage;
@@ -39,6 +40,9 @@ public final class CczObjectArt {
             DRAIN_SWITCH = "drainswitch", BUMPER = "bumper", BLOCK = "block", HIDDEN_BLOCK = "hiddenblock", SPIKES = "spikes", FLIPPER = "flipper", AMY = "amy", HEART = "heart",
             ANIMAL_FLYING = "animalflying", ANIMAL_GROUND = "animalground", DOOR = "door";
 
+    static final String FLYING_HOLOGRAM = "flyinghologram", GROUND_HOLOGRAM = "groundhologram";
+    static final String SPIKE_CHAIN_PIVOT = "spikechainpivot", SPIKE_CHAIN_BALL = "spikechainball";
+
     /** ObjDoor_Init: move.w #$371,oTile(a0) (Level/Collision Chaos/Objects/Door/Main.asm, ObjDoor_Init). */
     public static final int DOOR_TILE = 0x0371;
 
@@ -75,6 +79,12 @@ public final class CczObjectArt {
     private static final int TITLE_CARD_PLC = 2;
     /** Amy Rose's init queues PLC $B, Collision Chaos' PLC_Intro (objects/r3/intro.asm:271-277; Graphics Lists (Act 1 Present).asm). */
     private static final int INTRO_PLC = 0xB;
+    /**
+     * ObjProjector_Init (Level/Palmtree Panic/Objects/Projector/Main.asm:73-77) requests PLC 5.
+     * PLC_Projector (Level/Collision Chaos/Graphics Lists (Act 1 Variant).asm:223-226 and
+     * Level/Collision Chaos/Graphics Lists (Act 2 Variant).asm:341-344) loads the hologram tiles at the animal base.
+     */
+    private static final int PROJECTOR_PLC = 5;
     private static final String PREFIX = "cd.ccz.";
 
     private final CdStagePayload loaded;
@@ -144,6 +154,8 @@ public final class CczObjectArt {
         sheet(art, reader, FIRE_SHOOT, "fireShootMappings", FIRE_SHOOT_TILE, -1);
         sheet(art, reader, BUMPER_PLATFORM, "bumperPlatformMappings", BUMPER_PLATFORM_TILE, -1);
         sheet(art, reader, GLASS_BREAK, "glassBreakMappings", act == 2 ? GLASS_TILE_ACT3 : GLASS_TILE, -1);
+        sheet(art, reader, SPIKE_CHAIN_PIVOT, "spikeChainPivotMappings", CczSpikeChain.TILE, -1);
+        sheet(art, reader, SPIKE_CHAIN_BALL, "spikeChainBallMappings", CczSpikeChain.TILE, -1);
         sheet(art, reader, GA1, "gaMappings1", GA_TILE, -1);
         sheet(art, reader, GA2, "gaMappings2", GA_TILE, -1);
         sheet(art, reader, POCKET1, "pocketMappings1", POCKET_TILE, -1);
@@ -167,6 +179,10 @@ public final class CczObjectArt {
         if (animalTile != 0) {
             sheet(art, reader, ANIMAL_FLYING, "animalFlyingMappings", animalTile, -1);
             sheet(art, reader, ANIMAL_GROUND, "animalGroundMappings", animalTile, -1);
+            if (loaded.stage().period() == CdPeriod.PAST) {
+                sheet(art, reader, FLYING_HOLOGRAM, "animalFlyingMappings", animalTile, PROJECTOR_PLC);
+                sheet(art, reader, GROUND_HOLOGRAM, "animalGroundMappings", animalTile, PROJECTOR_PLC);
+            }
         }
         sheet(art, reader, DRAIN_BLOCK, "drainBlockMappings", DRAIN_BLOCK_TILE, -1);
         sheet(art, reader, DRAIN_LIGHT, "drainLightMappings", DRAIN_LIGHT_TILE, -1);

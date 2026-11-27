@@ -348,6 +348,7 @@ public final class SmpsSequencerConfig {
         private final boolean applyModOnNote;
         private final boolean halveModSteps;
         private final PalUpdateMode palUpdateMode;
+        private final int fullPalUpdateReload;
         private final boolean relativePointers; // S1: true (68k PC-relative), S2: false (Z80 absolute)
         private final boolean tempoOnFirstTick; // S1: true (DOTEMPO), S2: false (PlayMusic)
         private final boolean resetTempoOnMusicLoad;
@@ -411,6 +412,7 @@ public final class SmpsSequencerConfig {
             this.applyModOnNote = b.applyModOnNote;
             this.halveModSteps = b.halveModSteps;
             this.palUpdateMode = b.palUpdateMode;
+            this.fullPalUpdateReload = b.fullPalUpdateReload;
             this.relativePointers = b.relativePointers;
             this.tempoOnFirstTick = b.tempoOnFirstTick;
             this.resetTempoOnMusicLoad = b.resetTempoOnMusicLoad;
@@ -533,6 +535,11 @@ public final class SmpsSequencerConfig {
 
     public PalUpdateMode getPalUpdateMode() {
         return settings.palUpdateMode;
+    }
+
+    /** Divider reload after a full PAL repeat, before the same-service decrement. */
+    int fullPalUpdateReload() {
+        return settings.fullPalUpdateReload;
     }
 
     /**
@@ -1012,6 +1019,7 @@ public final class SmpsSequencerConfig {
         private boolean halveModSteps = true;
         private Set<Integer> extraTrkEndFlags = null;
         private PalUpdateMode palUpdateMode = PalUpdateMode.NONE;
+        private int fullPalUpdateReload = 5;
         private boolean relativePointers = false;
         private boolean tempoOnFirstTick = false;
         private boolean resetTempoOnMusicLoad;
@@ -1078,6 +1086,10 @@ public final class SmpsSequencerConfig {
         public Builder halveModSteps(boolean val) { halveModSteps = val; return this; }
         public Builder extraTrkEndFlags(Set<Integer> val) { extraTrkEndFlags = val; return this; }
         public Builder palUpdateMode(PalUpdateMode val) { palUpdateMode = val; return this; }
+        Builder fullPalUpdateReload(int val) {
+            fullPalUpdateReload = val;
+            return this;
+        }
         public Builder relativePointers(boolean val) { relativePointers = val; return this; }
         public Builder tempoOnFirstTick(boolean val) { tempoOnFirstTick = val; return this; }
         public Builder resetTempoOnMusicLoad(boolean val) { resetTempoOnMusicLoad = val; return this; }

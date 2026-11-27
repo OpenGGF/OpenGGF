@@ -43,7 +43,9 @@ abstract class QqzObject extends CdObject implements TouchResponseProvider, Obje
     protected int xSub;
     protected int ySub;
     protected int xRadius;
-    protected CdAnimator animator;
+    protected transient CdAnimator animator;
+    private final CdAnimator.StageRewind rewindAnimation =
+            new CdAnimator.StageRewind(() -> artProvider().image(), () -> animator, restored -> animator = restored);
     /** The catalogue column of the object's script table and {@code oAnim}; the animator is made when art is loaded. */
     protected String animColumn;
     protected int animId;
@@ -55,7 +57,7 @@ abstract class QqzObject extends CdObject implements TouchResponseProvider, Obje
     /** True on frames where the routine returns before its CheckObjectDespawn (an init that returns). */
     protected boolean skipDespawnThisFrame;
     /** {@code oSubtype2} for objects a routine made (they are not in the layout); -1 reads the layout. */
-    private final int fixedSubtype2;
+    private int fixedSubtype2;
 
     protected QqzObject(ObjectSpawn spawn, String name) {
         this(spawn, name, -1);

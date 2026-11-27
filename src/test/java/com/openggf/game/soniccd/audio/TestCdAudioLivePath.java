@@ -5,6 +5,7 @@ import com.openggf.audio.AudioManagerInternalAccess;
 import com.openggf.audio.LiveCaptureAudioHandle;
 import com.openggf.audio.NullAudioBackend;
 import com.openggf.audio.presentation.PresentationMode;
+import com.openggf.audio.synth.ChipWriteObserver;
 import com.openggf.game.soniccd.CdDiscDataSource;
 import com.openggf.game.soniccd.CdNativeFile;
 import com.openggf.game.soniccd.CdReleaseVariant;
@@ -18,10 +19,13 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -80,6 +84,102 @@ class TestCdAudioLivePath {
     }
 
     @Test
+    void dustReplacesTheJumpFm1TrackWithoutChangingItsKey() throws IOException {
+        // BizHawk 2.11 USA Sound Test, u63-dust-fm1-KeIh0GZH/fm1-keys-and-banked-reads.csv.
+        // Compare writes between requests to allow for the video-frame/Timer B phase.
+        for (boolean requestDust : List.of(false, true)) {
+            if (requestDust) {
+                close();
+                install(CdAudioTestMedia.usaCue());
+            }
+            List<Integer> fm1Keys = new ArrayList<>();
+            List<Integer> fm1SsgEg = new ArrayList<>();
+            audio.setChipWriteObserver(new ChipWriteObserver() {
+                @Override
+                public void onYm2612Write(int port, int register, int value) {
+                    if (port == 0 && register == 0x28 && (value & 7) == 0) {
+                        fm1Keys.add(value);
+                    }
+                    if (port == 0 && register >= 0x90 && register <= 0x9C && register % 4 == 0) {
+                        fm1SsgEg.add(register);
+                    }
+                }
+
+                @Override
+                public void onPsgWrite(int value) { }
+            });
+            audio.playSfx(0x96); // Frame 2400 in the native recording.
+            present(10);
+            audio.playSfx(0x92);
+            present(15);
+            List<Integer> beforeDust = List.copyOf(fm1Keys);
+            fm1Keys.clear();
+            fm1SsgEg.clear();
+
+            if (requestDust) audio.playSfx(0xD6); // Frame 2425.
+            present(360);
+            List<Integer> beforeReplacement = List.copyOf(fm1Keys);
+            List<Integer> dustSsgEg = List.copyOf(fm1SsgEg);
+            fm1Keys.clear();
+
+            audio.playSfx(0x92); // Frame 2785.
+            present(36);
+            assertEquals(
+                    List.of(List.of(0, 0, 0xF0, 0, 0xF0),
+                            requestDust ? List.of() : List.of(0), // Control key-off at frame 2435.
+                            List.of(0, 0, 0xF0, 0, 0xF0, 0),
+                            List.of()),
+                    List.of(beforeDust, beforeReplacement, fm1Keys, dustSsgEg),
+                    "FM1 key writes before dust, before replacement and after replacement, then SSG-EG writes "
+                            + "during the dust window. Dust requested=" + requestDust);
+        }
+    }
+
+    @Test
+    void dustHoldsFm1UntilAReplacementAfter7200Frames() {
+        List<String> fm1Writes = new ArrayList<>();
+        audio.setChipWriteObserver(new ChipWriteObserver() {
+            @Override
+            public void onYm2612Write(int port, int register, int value) {
+                boolean fm1Key = register == 0x28 && (value & 7) == 0;
+                boolean fm1Operator = register >= 0x30 && register <= 0x9C && register % 4 == 0;
+                boolean fm1Channel = register == 0xA0 || register == 0xA4
+                        || register == 0xB0 || register == 0xB4;
+                if (port == 0 && (fm1Key || fm1Operator || fm1Channel)) {
+                    fm1Writes.add("$%02X=$%02X".formatted(register, value));
+                }
+            }
+
+            @Override
+            public void onPsgWrite(int value) { }
+        });
+
+        assertTrue(audio.playSfx(0x92));
+        present(15);
+        assertTrue(fm1Writes.contains("$28=$F0"), "Jump keys FM1 on before dust");
+        fm1Writes.clear();
+
+        assertTrue(audio.playSfx(0xD6));
+        short[] packet = new short[capture.maxStereoFramesPerPacket() * 2];
+        for (int frame = 1; frame <= 7200; frame++) {
+            audio.presentFrame(PresentationMode.FORWARD);
+            capture.drainPresentationFrame(packet);
+            assertEquals(List.of(), fm1Writes, "FM1 writes at dust-relative frame " + frame);
+        }
+
+        assertTrue(audio.playSfx(0x92));
+        present(36);
+        assertTrue(fm1Writes.contains("$28=$F0"), "The replacement jump keys FM1 on");
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {0x96, 0xA0, 0xA2, 0xA7})
+    void badnikEffectsProduceAudibleSamples(int id) {
+        assertTrue(audio.playSfx(id));
+        assertTrue(audible(present(60)), "FM $%02X produced sound".formatted(id));
+    }
+
+    @Test
     void theGameSoundMapReachesTheDriverIds() {
         audio.playSfx(com.openggf.audio.GameSound.SPRING);
         assertTrue(audible(present(20)), "FM_SPRING produced sound");
@@ -97,6 +197,18 @@ class TestCdAudioLivePath {
         short[] left = present(20);
         assertTrue(louder(right, 1, 0), "the first ring is panned right");
         assertTrue(louder(left, 0, 1), "the second ring is panned left");
+    }
+
+    @Test
+    void firstRingAfterStopSoundPansRight() {
+        audio.playSfx(com.openggf.audio.GameSound.RING);
+        assertTrue(louder(present(20), 1, 0), "the first ring is panned right");
+
+        // FMC_STOP (FM/_Sound IDs.inc:93-94) reaches StopSound through the driver queue.
+        assertTrue(audio.playSfx(0xE0));
+        present(1);
+        audio.playSfx(com.openggf.audio.GameSound.RING);
+        assertTrue(louder(present(20), 1, 0), "the first ring after StopSound is panned right");
     }
 
     private static boolean louder(short[] pcm, int channel, int other) {
@@ -194,6 +306,37 @@ class TestCdAudioLivePath {
         AudioManagerInternalAccess.installMatchedSource(audio, null, profile);
         present(5);
         assertEquals(3, profile.subCpuAudio().state().cdda().track(), "level re-entry keeps the source");
+    }
+
+    @Test
+    void resultsTallyProducesAudibleFm() {
+        audio.playSfx(0xBD);
+        assertTrue(audible(present(30)), "FM_TALLY produced sound");
+    }
+
+    @Test
+    void resultsChimeProducesAudibleFm() {
+        AudioManagerInternalAccess.playSecondaryNativeRequest(audio, 0x9A);
+        assertTrue(audible(present(30)), "FM_KACHING produced sound");
+    }
+
+    @Test
+    void specialStageWarpProducesAudibleFm() {
+        audio.playSfx(0xC8);
+        assertTrue(audible(present(30)), "FM_SSWARP produced sound");
+    }
+
+    @Test
+    void workbenchBounceProducesAudibleFm() {
+        audio.playSfx(0xDA);
+        assertTrue(audible(present(30)), "FM_DA produced sound");
+    }
+
+    @Test
+    void ringExtraLifeProducesAudiblePcm() {
+        profile.subCpuAudio().loadStage(com.openggf.game.soniccd.CdStagePayload.R11A);
+        AudioManagerInternalAccess.playRingExtraLife(audio);
+        assertTrue(audible(present(30)), "SCMD_YESSFX produced sound");
     }
 
     private short[] present(int frames) {

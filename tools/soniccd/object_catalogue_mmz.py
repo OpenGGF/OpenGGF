@@ -12,6 +12,14 @@ def STAGES_COVERED(stage: str) -> bool:
 
 
 ANCHORS = [
+    ('flyingAnimalMappings', '217C 08080408 0016 217C AAAAAAAA 0004 3168 0008 002A 3168 000C 002C', 'optional',
+     'AnimalObject_1_Routine0 (objects/r8/animal.asm:21-31)'),
+    ('groundAnimalMappings', '217C 07080408 0016 217C AAAAAAAA 0004 6100 ???? 217C 0001 0000 002C', 'optional',
+     'AnimalObject_0_Routine0 (objects/r8/animal.asm:86-94)'),
+    ('flyingAnimalAnimations', '1140 002E 43FA PPPP 4EB9 ???????? 4EB9 ???????? 3028 002A', 'optional',
+     'loc_20E6BA (objects/r8/animal.asm:49-55)'),
+    ('animalBaseTiles', '43FA PPPP 7000 1039 ???????? E540 D039 ???????? D040 3171 0000 0002 4E75', 'optional',
+     'sub_20E796 (objects/r8/animal.asm:132-140)'),
     ('hvPlatformMappings', '317C 041B 0002 217C AAAAAAAA 0004', 'optional',
      'HVPlatformObject_0_Routine0 (objects/r8/hv_platform.asm:24-31): move.w #$41B,oTile(a0); move.l #HVPlatformSprites,oMap(a0)'),
     ('invisibleBlockMappings', '217C AAAAAAAA 0004 117C 0010 0017 117C 0010 0019 117C 0010 0016', 'optional',
@@ -90,6 +98,12 @@ ANCHORS = [
      'BigbomObject_5_Routine2 (objects/r8/bigbom.asm:625-627): cmpi.w #$E0,d0; blt.s; jmp DeleteObject; lea BigbomDebrisAnims(pc),a1'),
     ('twinWalkerMappings', '337C 0318 0002 237C AAAAAAAA 0004', 'optional',
      'TwinWalkerObject_0_Routine0 (objects/r8/twin_walker.asm:22-58): move.w #$318,oTile(a1); move.l #TwinWalkerSprites,oMap(a1)'),
+    ('pohBeeMappings1', '317C 2455 0002 3168 0008 0038 3168 000C 003A 43FA PPPP 203C FFFF0000', 'optional',
+     'loc_20D918 (objects/r8/poh_bee.asm:21-26): lea PohBeeSprites1(pc),a1'),
+    ('pohBeeMappings2', '363C 0003 4A28 0028 67?? 43FA PPPP 203C FFFF8000', 'optional',
+     'loc_20D918 (objects/r8/poh_bee.asm:29-36): lea PohBeeSprites2(pc),a1'),
+    ('pohBeeAnimations', 'D1A8 000C 43FA PPPP 4EB9 ???????? 4EB9 ???????? 3028 0038 4EF9', 'optional',
+     'loc_20DA5C (objects/r8/poh_bee.asm:103-108): lea PohBeeAnims(pc),a1'),
     ('scarabMappings', '317C 243F 0002 217C AAAAAAAA 0004', 'optional',
      'ScarabObject_1_Routine0 (objects/r8/scarab.asm:225-240): move.w #$243F,oTile(a0); move.l #ScarabSprites,oMap(a0)'),
     ('scarabAnimations1', '43FA PPPP 203C 00006000 4A28 0028', 'optional',

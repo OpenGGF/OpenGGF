@@ -282,6 +282,8 @@ Future). `SonicCdEndingCaptureTool --ending good|bad` films an ending.
   and closing effects remain open.
 - The Thank You preview covers a static tile sample. The original screen's
   composition, animations, fades, and exit sequence remain open.
+- The Comin' Soon preview shows the screen's 150 tiles as a static contact
+  sheet. The original screen's composition and fades remain open.
 - Ordinary-stage attract demos, the
   D.A. Garden planet animation, and the original Special Stage 8 credits presentation
   remain unhosted. The attract cycle skips ordinary-stage demos.

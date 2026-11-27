@@ -337,14 +337,61 @@ abstract class OneUpRestoreLivePathSupport {
         assertEquals(1, sfxSequencerCount(audio));
     }
 
+    @Test
+    void coldJingleBlocksSfxThroughTheSilentFadeAndRewindsItsCounter() {
+        AudioManager audio = install();
+        audio.playMusic(extraLifeMusicId());
+        audio.presentFrame(PresentationMode.FORWARD);
+        assertEquals(extraLifeMusicId(), playingMusicId(audio));
+        audio.playSfx(GameSound.RING);
+        audio.presentFrame(PresentationMode.FORWARD);
+        assertEquals(0, sfxSequencerCount(audio), "the jingle refuses the ring");
+
+        for (int frame = 0; frame < 900
+                && !audio.captureLogicalSnapshot().presentation().pendingRestore(); frame++) {
+            audio.presentFrame(PresentationMode.FORWARD);
+        }
+        assertTrue(audio.captureLogicalSnapshot().presentation().pendingRestore(),
+                "the ROM-backed jingle must reach cfFadeInToPrevious");
+
+        // With a cold, zeroed saved delay, the first step uses the very next
+        // service. Each of the 28h steps reloads two waits; service 121
+        // clears the flag before the request (S1 DoFadeIn, S2 zUpdateFadeIn).
+        assertSilentFadeServices(audio, 1, 60);
+        var midFade = audio.captureLogicalSnapshot();
+        assertSilentFadeServices(audio, 61, 120);
+        assertFirstRequestAfterSilentFade(audio);
+
+        audio.restoreLogicalSnapshot(midFade);
+        assertSilentFadeServices(audio, 61, 120);
+        assertFirstRequestAfterSilentFade(audio);
+    }
+
+    private static void assertSilentFadeServices(AudioManager audio, int first, int last) {
+        for (int service = first; service <= last; service++) {
+            audio.playSfx(GameSound.RING);
+            audio.presentFrame(PresentationMode.FORWARD);
+            assertEquals(0, sfxSequencerCount(audio), "ring refused at service " + service);
+            assertTrue(sfxBlocked(audio), "silent fade service " + service);
+            assertEquals(0, musicSequencerCount(audio), "the saved music slots were empty");
+        }
+    }
+
+    private static void assertFirstRequestAfterSilentFade(AudioManager audio) {
+        audio.playSfx(GameSound.RING);
+        audio.presentFrame(PresentationMode.FORWARD);
+        assertFalse(sfxBlocked(audio));
+        assertEquals(1, sfxSequencerCount(audio), "the request on service 121 must play");
+    }
+
     /** Jump is {@code A0h} in both games and takes the ordinary, non-ring path. */
     private static final int JUMP_SFX = 0xA0;
 
-    private static boolean sfxBlocked(AudioManager audio) {
+    protected static boolean sfxBlocked(AudioManager audio) {
         return audio.captureLogicalSnapshot().presentation().sfxBlocked();
     }
 
-    private static int sfxSequencerCount(AudioManager audio) {
+    protected static int sfxSequencerCount(AudioManager audio) {
         return (int) audio.shadowSmpsDriverSnapshotForTesting().sequencers()
                 .stream().filter(SmpsDriverSnapshot.SequencerEntry::sfx).count();
     }
@@ -392,7 +439,7 @@ abstract class OneUpRestoreLivePathSupport {
         return null;
     }
 
-    private static int musicSequencerCount(AudioManager audio) {
+    protected static int musicSequencerCount(AudioManager audio) {
         return (int) audio.shadowSmpsDriverSnapshotForTesting().sequencers()
                 .stream().filter(entry -> !entry.sfx()).count();
     }
@@ -407,7 +454,7 @@ abstract class OneUpRestoreLivePathSupport {
         return -1;
     }
 
-    private AudioManager install() {
+    protected AudioManager install() {
         rom = new Rom();
         assertTrue(rom.open(romFile().getAbsolutePath()));
         GameAudioProfile profile = profile();

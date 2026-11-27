@@ -1,10 +1,12 @@
 package com.openggf.game.soniccd.objects.ttz;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.soniccd.timetravel.CdTimeTravel;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.ReevaluatingSolidObject;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -16,15 +18,15 @@ import java.util.List;
  * is a solid block of spikes (frame 0) that hurts a player standing on it ({@code loc_20C0C0}, :49-77) and slides $20 pixels
  * down and up with a $3C frame pause at each end ({@code sub_20C182}, :115-145; a sound, {@code $B7}, when it
  * restarts on screen); any other subtype is frame 1, solid and hurting by touch ({@code oColType $83}), and subtype 1 does not
- * move. It despawns by its own X ({@code obj.var_36}). The parent-follow of {@code obj.var_34} (:12-31) is used by no
- * object hosted here.
+ * move. It despawns by its own X ({@code obj.var_36}). Subtype 4 vertical blocks spawn the parent-following form.
  */
 @com.openggf.level.objects.CameraRelativeDraw(com.openggf.level.objects.CameraRelativeDraw.Use.CULL_ONLY)
-public final class ObjSpikes extends TtzObject implements ReevaluatingSolidObject, TouchResponseProvider, ObjectVisualFacing.NonDirectional {
+public final class ObjSpikes extends TtzObject implements ReevaluatingSolidObject, TouchResponseProvider, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
     static final int TILE = 0x03A0;
     /** move.w #$B7,d0; jsr PlayFmSound (:120-123). */
     private static final int FM_B7 = 0xB7;
 
+    private int parentSlot = -1;
     private int routine;
     private int originX;           // obj.var_36
     private int homeY;             // obj.var_32
@@ -38,6 +40,12 @@ public final class ObjSpikes extends TtzObject implements ReevaluatingSolidObjec
         super(spawn, "Spikes");
     }
 
+    ObjSpikes(ObjectSpawn spawn, int parentSlot, int originX) {
+        this(spawn);
+        this.parentSlot = parentSlot;
+        this.originX = originX;
+    }
+
     @Override public int getCollisionFlags() { return colType; }
     @Override public int getCollisionProperty() { return 0; }
 
@@ -47,7 +55,7 @@ public final class ObjSpikes extends TtzObject implements ReevaluatingSolidObjec
             routine = 2;
             tileWord = TILE;
             priority = 4;
-            originX = x;
+            if (originX == 0) originX = x;                               // SpikesObject_0_Routine0 (objects/r4/spikes.asm:88-90)
             homeY = y;
             width = 0x12;
             yRadius = 0xC;
@@ -63,16 +71,33 @@ public final class ObjSpikes extends TtzObject implements ReevaluatingSolidObjec
         AbstractPlayableSprite sprite = player instanceof AbstractPlayableSprite p ? p : null;
         if (mapFrame != 0) {                                            // loc_20C0B0: frame 1 is solid only
             solidObject(Entry.SOLID);
+            followBlock();
             return;
         }
         if (!solidObject(Entry.SOLID) || sprite == null || !stoodOn(sprite)) return;   // loc_20C0C0
-        if (sprite.getInvincibleFrames() > 0) return;                  // tst.b invincible
+        // loc_20C0C0 (objects/r4/spikes.asm:49-58).
+        if (CdTimeTravel.starsActive(services().gameModule()) || sprite.getInvincibleFrames() > 0) return;
         if (sprite.isHurt() || sprite.getDead() || sprite.getInvulnerableFrames() > 0) return;   // cmpi.b #4,obj.routine; tst.w obj.var_30
         NativePositionOps.addYPos16_16(sprite, -(sprite.getYSpeed() << 8));   // oY.l -= oYVel << 8
         boolean hadRings = sprite.getRingCount() > 0;
         if (hadRings && !sprite.hasShield()) services().spawnLostRings(sprite, vIntRunCount);
         sprite.applyHurtOrDeath(x, true, hadRings);                     // jsr HurtPlayer
     }
+
+    private void followBlock() {
+        if (parentSlot < 0) return;
+        // SpikesObject and loc_20C082 (objects/r4/spikes.asm:3-31) read
+        // the live slot after SolidObject and follow any occupant with a nonzero ID.
+        var block = slotOccupant(parentSlot);
+        if (block == null) {
+            setDestroyed(true);
+            return;
+        }
+        x = block.getX();
+        y = (block.getY() + 0x40) & 0xFFFF; // loc_20C532 (objects/r4/v_move_block.asm:244-253)
+    }
+
+    @Override protected boolean drawsBeforeDespawnCheck() { return parentSlot >= 0; }
 
     /** sub_20C182 (objects/r4/spikes.asm:115-145). */
     private void slide() {

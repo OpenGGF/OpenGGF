@@ -6,8 +6,10 @@ import com.openggf.game.competition.NativeCompetitionRoster;
 import com.openggf.audio.AudioManager;
 import com.openggf.audio.GameSound;
 import com.openggf.game.GameModule;
+import com.openggf.game.internal.SpriteTableBuildProfile;
 import com.openggf.game.GameServices;
 import com.openggf.game.LevelState;
+import com.openggf.game.internal.RingExtraLifeReplacesPickupSound;
 import com.openggf.physics.BackgroundPlaneCollisionProvider;
 import com.openggf.physics.Direction;
 import com.openggf.graphics.GraphicsManager;
@@ -68,7 +70,8 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
     private final BackgroundPlaneCollisionProvider backgroundPlaneCollisionProvider;
     private final AudioManager audioManager;
     private final boolean stageRingsUseObjectTouchCollection;
-    private final com.openggf.game.internal.SpriteTableBuildProfile spriteTableProfile;
+    private final boolean ringExtraLifeReplacesPickupSound;
+    private final SpriteTableBuildProfile spriteTableProfile;
     private PatternSpriteRenderer.FrameBounds spinBounds;
     private final AttractedRing[] attractedRings;
     private int attractedRingTargetX;
@@ -77,8 +80,6 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
     // Frame-local phase ownership, deliberately absent from RingSnapshot. The queue
     // restores numeric admissions; binders always dereference this manager's live DTOs.
     private boolean nativeRingPassBegun;
-    /** Spin frame forced while a NATIVE widescreen dormant pose draws a ring object; -1 otherwise. */
-    private int frozenSpinFrame = -1;
     private int nativeRingPassClock;
 
 
@@ -94,8 +95,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         // S1 routes stage rings through Obj25's touch-response pipeline (Touch_Rings);
         // S2/S3K collect them via the bounding-box sweep (Touch_Rings_Test).
         GameModule module = GameServices.currentOrBootstrapGameModule();
-        this.spriteTableProfile = module instanceof com.openggf.game.internal.SpriteTableBuildProfile profile
-                ? profile : null;
+        this.spriteTableProfile = SpriteTableBuildProfile.forModule(module);
         var lostRingId = module != null
                 ? module.getGameService(com.openggf.game.internal.LostRingObjectId.class) : null;
         this.lostRingObjectId = lostRingId != null
@@ -122,6 +122,8 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                 && module.getGameService(com.openggf.game.internal.LostRingSpillAtOwnerTurn.class) != null;
         this.stageRingsUseObjectTouchCollection =
                 ringRules != null && ringRules.stageRingsUseObjectTouchCollection();
+        this.ringExtraLifeReplacesPickupSound = module != null
+                && module.getGameService(RingExtraLifeReplacesPickupSound.class) != null;
         this.attractedRings = new AttractedRing[MAX_ATTRACTED_RINGS];
         for (int i = 0; i < MAX_ATTRACTED_RINGS; i++) {
             attractedRings[i] = new AttractedRing();
@@ -560,7 +562,8 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         if (renderer != null && renderer.getSparkleFrameCount() > 0) {
             placement.setSparkleStartFrame(index, frameCounter);
         }
-        playRingAcquisitionSound();
+        if (!ringExtraLifeReplacesPickupSound) playRingAcquisitionSound();
+        boolean awardedExtraLife;
         var roster = nativeCompetitionStreamingActive() ? nativeCompetitionRoster() : null;
         if (roster != null) {
             int slot = roster.slotOf(player);
@@ -568,10 +571,19 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             var state = roster.levelState(slot);
             int previousLifeFlags = state.getRingExtraLifeFlags();
             state.addRings(1);
-            if ((state.getRingExtraLifeFlags() & ~previousLifeFlags) != 0) {
+            awardedExtraLife = (state.getRingExtraLifeFlags() & ~previousLifeFlags) != 0;
+            if (awardedExtraLife) {
                 com.openggf.audio.AudioManagerInternalAccess.playRingExtraLife(audioManager);
             }
-        } else player.addRings(1);
+        } else {
+            LevelState state = ringExtraLifeReplacesPickupSound ? player.currentLevelState() : null;
+            int previousLifeFlags = state != null ? state.getRingExtraLifeFlags() : 0;
+            player.addRings(1);
+            awardedExtraLife = state != null && (state.getRingExtraLifeFlags() & ~previousLifeFlags) != 0;
+        }
+        if (ringExtraLifeReplacesPickupSound && !awardedExtraLife) {
+            playRingAcquisitionSound();
+        }
         notifyNativeRingPickup(player);
     }
 
@@ -716,11 +728,11 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             if (index < 0) continue;
             RingSpawn ring = placement.getSpawn(index);
             var yRule = spriteTableProfile == null
-                    ? com.openggf.game.internal.SpriteTableBuildProfile.PlacedRingY.OBJECT_MAPPING
+                    ? SpriteTableBuildProfile.PlacedRingY.OBJECT_MAPPING
                     : spriteTableProfile.placedRingY();
             int drawY = ring.y();
-            if (yRule != com.openggf.game.internal.SpriteTableBuildProfile.PlacedRingY.OBJECT_MAPPING) {
-                int shifted = yRule == com.openggf.game.internal.SpriteTableBuildProfile.PlacedRingY.MASK_11_BEFORE_BIAS
+            if (yRule != SpriteTableBuildProfile.PlacedRingY.OBJECT_MAPPING) {
+                int shifted = yRule == SpriteTableBuildProfile.PlacedRingY.MASK_11_BEFORE_BIAS
                         ? ((ring.y() - cameraY) & 0x7FF) + 8
                         : (ring.y() - cameraY + 8) & screenYWrapMask;
                 // BuildRings (s2.asm:32043-32057), FixBugs=0: mask before +8;
@@ -731,17 +743,19 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             }
             drawPlacedObject(ring, frameCounter, drawY);
         }
-        drawDormantMargins();
+        drawDormantMargins(frameCounter);
     }
 
     /**
      * NATIVE widescreen draw mode: layout rings in the extra display width that the native
-     * 320-pixel window has not loaded are drawn frozen (first spin frame) at their layout
-     * position, outside the ring window. Collected rings stay gone. Presentation only: no
+     * 320-pixel window has not loaded are drawn at their layout position, outside the ring
+     * window, on the same spin frame the live placed rings use for {@code frameCounter}, so a
+     * ring turning live keeps its phase. Collected rings stay gone. Presentation only: no
      * placement, collection or touch state is read beyond the collected and active sets.
-     * See docs/architecture/designs/2026-11-13-widescreen-native-draw-mode.md (D12).
+     * See docs/architecture/designs/2026-11-13-widescreen-native-draw-mode.md (D12, D15).
      */
-    private void drawDormantMargins() {
+    void drawDormantMargins(int frameCounter) {
+        if (!ringsAllowed() || renderer == null) return;
         Camera camera = GameServices.camera();
         var style = dormantStyle(camera);
         if (style == null) return;
@@ -755,7 +769,8 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             graphics.beginPatternBatch();
         }
         try {
-            for (RingSpawn ring : dormant) renderer.drawFrameIndex(0, ring.x(), ring.y());
+            int spin = stageRingFrame(frameCounter);
+            for (RingSpawn ring : dormant) renderer.drawFrameIndex(spin, ring.x(), ring.y());
         } finally {
             if (greyscale) {
                 graphics.flushPatternBatch();
@@ -814,17 +829,6 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         return low;
     }
 
-    /** Draws {@code body} with ring objects held on their first spin frame (dormant poses). */
-    void withFrozenSpin(Runnable body) {
-        int previous = frozenSpinFrame;
-        frozenSpinFrame = 0;
-        try {
-            body.run();
-        } finally {
-            frozenSpinFrame = previous;
-        }
-    }
-
     /** Object-slot emission uses the same resident art/collection state without a second list draw. */
     void drawPlacedObject(RingSpawn ring, int frameCounter) {
         drawPlacedObject(ring, frameCounter, ring.y());
@@ -842,8 +846,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         int index = placement.getSpawnIndex(ring);
         if (index < 0) return;
         if (!placement.isCollected(index)) {
-            renderer.drawFrameIndex(frozenSpinFrame >= 0 ? frozenSpinFrame : stageRingFrame(frameCounter),
-                    ring.x(), drawY);
+            renderer.drawFrameIndex(stageRingFrame(frameCounter), ring.x(), drawY);
             return;
         }
         int started = placement.getSparkleStartFrame(index);
@@ -1107,9 +1110,18 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                 preallocatedSlots, slotsFullyReserved, true, forceDeferredOwnerRingClear, true);
     }
 
+    void spawnLayeredLostRingsWithInitialObjectStep(AbstractPlayableSprite player, int ringCount,
+                                                    int frameCounter, int x, int y, int[] preallocatedSlots,
+                                                    boolean slotsFullyReserved, boolean forceDeferredOwnerRingClear,
+                                                    boolean beyondNativeLimit, int touchLayer) {
+        lostRings.spawnLostRings(player, ringCount, frameCounter, x, y, preallocatedSlots,
+                slotsFullyReserved, true, forceDeferredOwnerRingClear, beyondNativeLimit, null, touchLayer);
+    }
+
     void spillFromPendingOwner(LostRingObjectInstance owner, AbstractPlayableSprite player, int ringCount,
                                int frameCounter, int x, int y) {
-        lostRings.spawnLostRings(player, ringCount, frameCounter, x, y, new int[0], false, false, false, false, owner);
+        lostRings.spawnLostRings(player, ringCount, frameCounter, x, y, new int[0], false, false, false,
+                false, owner, owner.touchLayer());
     }
 
     /** Shared spilled-ring spin owner feeding the LostRingObjectInstance object path. */
@@ -2235,10 +2247,10 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         }
 
         private void reset() {
-            // Obj37 slots are owned by LostRingObjectInstance now. S1 RingLoss
-            // creates new spilled rings with FindFreeObj and resets the shared
-            // v_ani3_time, but it does not sweep existing Obj37 slots first
-            // (docs/s1disasm/_incObj/25 & 37 Rings.asm:199-219,284-313).
+            // LostRingObjectInstance owns the Obj37 slots.
+            // RingLoss (_incObj/25, 37 Rings.asm:219-229) dispatches to RLoss_Count.
+            // RLoss_Count (_incObj/25, 37 Rings.asm:234-311) uses FindFreeObj and resets
+            // v_ani3_time without sweeping existing Obj37 slots first.
             // Releasing the legacy LostRing slot here can mark a still-live or
             // later-reused SST slot free, corrupting the allocator before the
             // next ObjPosLoad.
@@ -2294,7 +2306,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                                     boolean applyInitialObjectStep,
                                     boolean forceDeferredOwnerRingClear) {
             spawnLostRings(player, ringCount, frameCounter, x, y, preallocatedSlots,
-                    slotsFullyReserved, applyInitialObjectStep, forceDeferredOwnerRingClear, false, null);
+                    slotsFullyReserved, applyInitialObjectStep, forceDeferredOwnerRingClear, false);
         }
 
         private void spawnLostRings(AbstractPlayableSprite player, int ringCount, int frameCounter,
@@ -2304,7 +2316,8 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                                     boolean forceDeferredOwnerRingClear,
                                     boolean beyondNativeLimit) {
             spawnLostRings(player, ringCount, frameCounter, x, y, preallocatedSlots, slotsFullyReserved,
-                    applyInitialObjectStep, forceDeferredOwnerRingClear, beyondNativeLimit, null);
+                    applyInitialObjectStep, forceDeferredOwnerRingClear, beyondNativeLimit, null,
+                    com.openggf.game.internal.PlayerStageRoutines.captureLostRingTouchLayer(player));
         }
 
         /**
@@ -2318,7 +2331,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                                     boolean applyInitialObjectStep,
                                     boolean forceDeferredOwnerRingClear,
                                     boolean beyondNativeLimit,
-                                    LostRingObjectInstance existingOwner) {
+                                    LostRingObjectInstance existingOwner, int touchLayer) {
             if (player == null || renderer == null) {
                 return;
             }
@@ -2342,8 +2355,8 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             // Atomic stop-on-(-1) slot-allocation contract (ROM Obj37_Init s2.asm:25143-25144:
             // `bsr.w AllocateObject; bne.w +++` — a failed AllocateObject branches PAST the
             // spill loop, truncating the spill). S1 allocates every Obj37 from the loop. S2
-            // HurtCharacter preallocates ring 0 with AllocateObject, then Obj37_Init uses
-            // plain AllocateObject for the remainder (s2.asm:85444-85461,25125-25146). S3K
+            // HurtCharacter (s2.asm:85604-85622) preallocates ring 0 with AllocateObject.
+            // Obj37_Init (s2.asm:25125-25146) uses AllocateObject for the remaining rings. S3K
             // uses the owner slot and AllocateObjectAfterCurrent for the rest
             // (sonic3k.asm:21101-21124,35589-35631).
             boolean preallocateOwnerSlot = objectManager != null && objectManager.preallocatesLostRingOwnerSlot();
@@ -2362,11 +2375,11 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                     && objectManager.reservedSlotWaitsForNextObjectPass(firstReservedSlot);
             if (spillAtOwnerTurn && ownerWaitsForNextPass && !beyondNativeLimit && !applyInitialObjectStep
                     && !forceDeferredOwnerRingClear) {
-                // HurtPlayer only writes the owner's ID and position into the free slot (Palmtree Panic/Player Object
-                // Collision.asm:234-238). The loop has passed that slot, so ObjLostRing_Init, and the whole spill
-                // with it, runs on the owner's turn in the next pass.
-                objectManager.spawnLostRingObjectAtSlot(
-                        LostRingObjectInstance.pendingSpillOwner(objectId, x, y, toSpawn), firstReservedSlot);
+                // The loop has passed this slot. The owner keeps the layer written by HurtPlayer
+                // (r8/player_object_collide.asm:273-282) until it spills on its next turn.
+                LostRingObjectInstance owner = LostRingObjectInstance.pendingSpillOwner(objectId, x, y, toSpawn);
+                owner.setTouchLayer(touchLayer);
+                objectManager.spawnLostRingObjectAtSlot(owner, firstReservedSlot);
                 return;
             }
             if (spillInitialized) {
@@ -2460,6 +2473,8 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                     LostRingObjectInstance ringObject = LostRingObjectInstance.spawn(objectId,
                             x, y, xVel, yVel,
                             phase, LIFETIME_FRAMES, spillAnimation);
+                    // loc_208B5A (objects/ring.asm:346-354) copies the owner's layer to every ring.
+                    ringObject.setTouchLayer(touchLayer);
                     if (i == 0 && deferRingCountClear) {
                         // Obj37_Init clears Ring_count when the owner SST runs.
                         // An owner allocated behind the live Process_Sprites

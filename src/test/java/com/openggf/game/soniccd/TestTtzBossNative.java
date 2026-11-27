@@ -6,6 +6,7 @@ import org.junit.jupiter.api.io.TempDir;
 import java.nio.file.Path;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -14,13 +15,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * <movie>/}: BK2, v5 trace and the boss probe's post-frame RAM; comparison only), through {@link TtzBossNativeCheck}.
  * Each movie enters the act 3 stage through the retail stage-select secret.
  *
- * <p>On every row before the first player/camera divergence every boss slot (door, Egg Mobile, pilot, Eggman, his Egg Mobile, missiles, bubbles, capsule) equals
- * native RAM in ID, X, Y, routine and collision type, the chase Egg Mobile's and Eggman's {@code collide_status} too,
- * the appearances (row, ID) equal the aux events and the camera bounds equal native's.
- *
- * <p>The stage's vertical wrap at $800 is hosted and checked by R43C-wrap. The native player's first underwater row
- * bounds the chase and hit movies. The fights run under water with the player's water hosted and are bounded by the
- * first row that is not the player's (see each fight test).
+ * <p>The fight movies compare the player, camera, boss slots and appearances, camera bounds and air timer through
+ * the end. The chase and hit movies also check boss slot state, and R43C-wrap checks the stage's vertical wrap at $800.
  */
 class TestTtzBossNative {
     @TempDir
@@ -36,55 +32,34 @@ class TestTtzBossNative {
         checkChase("R43D-chase", CdStagePayload.R43D);
     }
 
-    /**
-     * The fight under water: bubbles popped by rolling into them (the breath pose $15, {@code PlayerResetDrown}),
-     * missiles, hits, the defeat, the escape and the right bound's release. With the stored-order slots the ring
-     * bubble in slot 36 runs before Eggman (slot 37) as natively, and the player and camera stay equal to native
-     * through row 5959. Row 5960 is not the boss's: native's player enters the water (status bit 6, Y speed halved)
-     * and the engine's does not (the zone player lane's water), as in R43D-fight.
-     */
     @Test
     void r43cFightReplaysUnderWater() throws Exception {
-        checkFight(TtzBossNativeCheck.run(tempDir, "R43C-fight", CdStagePayload.R43C), 5960);
+        checkFight(TtzBossNativeCheck.run(tempDir, "R43C-fight", CdStagePayload.R43C));
     }
 
-    /**
-     * The whole fight, the defeat (Eggman routine $12, row 5620), the escape and the right bound's release (rows
-     * 5851 on) with the player and camera equal to native through row 5959. Row 5960 is not the boss's: native's player
-     * enters the water there (status bit 6, Y speed halved) and the engine's does not (the zone player lane's water).
-     */
     @Test
     void r43dFightReplaysPastTheDefeat() throws Exception {
-        TtzBossNativeCheck.Result r = TtzBossNativeCheck.run(tempDir, "R43D-fight", CdStagePayload.R43D);
-        assertTrue(r.defeatRow() > 0, "R43D-fight: the native fight must reach the defeat");
-        checkFight(r, 5960);
-        assertTrue(r.firstError() < 0 || r.firstError() > r.defeatRow(), "R43D-fight: player/camera diverge at row "
-                + r.firstError() + ", before the defeat at row " + r.defeatRow());
+        checkFight(TtzBossNativeCheck.run(tempDir, "R43D-fight", CdStagePayload.R43D));
     }
 
-    /**
-     * The fight's player and camera rows must be equal to native before {@code greenThrough} (the first row that is
-     * not the player's, see each test); the boss slots, bounds and appearances as in {@link #checkUntilWater} up to
-     * the first native row a popped bubble reaches its last routine ($E): the pop animation's end is a frame later
-     * in the engine (boss-owned, unverified past it). The player's air ({@code drown_timer}) equals native on every
-     * row before the divergence.
-     */
-    private static void checkFight(TtzBossNativeCheck.Result r, int greenThrough) {
-        System.out.printf("TTZBOSS %s: first player/camera divergence row %d %s (must be >= %d); defeat row %d, "
-                        + "first native pop end row %d%n", r.movie(), r.firstError(), r.fields(), greenThrough,
-                r.defeatRow(), r.firstPopEndRow());
-        assertTrue(r.firstError() < 0 || r.firstError() >= greenThrough, r.movie() + ": player/camera diverge at row "
-                + r.firstError() + " " + r.fields() + ", before row " + greenThrough);
-        int slotBound = r.firstPopEndRow() < 0 ? r.firstError()
-                : r.firstError() < 0 ? r.firstPopEndRow() : Math.min(r.firstError(), r.firstPopEndRow());
-        List<TtzBossNativeCheck.Note> mismatches = r.beforeRow(r.mismatches(), slotBound);
-        List<TtzBossNativeCheck.Note> bounds = r.beforeRow(r.bounds(), r.firstError());
-        mismatches.stream().limit(20).forEach(n -> System.out.println("TTZBOSS " + r.movie() + " mismatch " + n));
-        assertEquals(r.appearBefore(r.nativeAppear()), r.appearBefore(r.engineAppear()),
-                r.movie() + ": boss appearances (row:ID:count) before the divergence");
-        assertTrue(mismatches.isEmpty(), r.movie() + ": " + mismatches.size() + " boss slot mismatches before row "
-                + slotBound + ", first " + (mismatches.isEmpty() ? "" : mismatches.getFirst()));
-        assertTrue(bounds.isEmpty(), r.movie() + ": camera bounds differ: " + bounds.stream().limit(5).toList());
+    private static void checkFight(TtzBossNativeCheck.Result r) {
+        // Both movies show Sonic surface at row 5963 and dive again at row 5986.
+        assertTrue(r.lastRow() > 5986 && r.defeatRow() > 0, r.movie() + ": recording must include defeat and re-entry");
+        assertTrue(r.firstPopEndRow() >= 0 && r.firstPopEndRow() < r.lastRow(),
+                r.movie() + ": slot comparison must include a bubble reaching routine $E and being removed");
+        System.out.printf("TTZBOSS %s: %d rows, first player/camera divergence %d %s, defeat row %d, "
+                        + "first pop end row %d, first slot difference %s%n",
+                r.movie(), r.rowsCompared(), r.firstError(), r.fields(), r.defeatRow(), r.firstPopEndRow(),
+                r.mismatches().stream().findFirst().map(Object::toString).orElse("none"));
+        assertAll(r.movie(),
+                () -> assertEquals(-1, r.firstError(),
+                        () -> "player/camera diverge at row " + r.firstError() + " " + r.fields()),
+                () -> assertTrue(r.mismatches().isEmpty(),
+                        () -> "first boss slot mismatch: " + r.mismatches().getFirst()),
+                () -> assertEquals(r.appearBefore(r.nativeAppear()), r.appearBefore(r.engineAppear()),
+                        "boss appearances (row:ID:count)"),
+                () -> assertTrue(r.bounds().isEmpty(), () -> "camera bounds differ: " + r.bounds().getFirst()),
+                () -> assertTrue(r.drown().isEmpty(), () -> "air timer differs: " + r.drown().getFirst()));
     }
 
     /**

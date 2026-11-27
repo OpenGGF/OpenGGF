@@ -1,5 +1,8 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.audio.AudioManager;
+import com.openggf.game.session.EngineTiming;
+import com.openggf.game.sonic2.audio.Sonic2Sfx;
 import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageResultsScreen;
 import com.openggf.game.GameServices;
 import com.openggf.game.GameStateManager;
@@ -9,8 +12,15 @@ import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
 
 /**
  * Pins the length of {@code Obj6F}'s bonus tally.
@@ -87,6 +97,35 @@ class TestSonic2SpecialStageResultsTallyCadence {
         throw new AssertionError("tally never emptied");
     }
 
+    @ParameterizedTest
+    @ValueSource(ints = {2, 3})
+    void tallyBlipsUseVintRunCountInsteadOfCardAge(int firstDrainPhase) {
+        var audio = mock(AudioManager.class);
+        services.withAudioManager(audio);
+        var screen = screen(8, 0, false);
+        List<Integer> blipFrames = new ArrayList<>();
+        var clock = EngineTiming.vIntRunCounter();
+        int frame = 0;
+        while (screen.getState() != 2 && frame < 300) {
+            screen.update(++frame, null);
+        }
+        assertEquals(2, screen.getState(), "card reaches Obj6F_TallyScore");
+        int[] pass = {0};
+        doAnswer(invocation -> {
+            blipFrames.add(pass[0]);
+            return null;
+        }).when(audio).playSfx(Sonic2Sfx.BLIP.id);
+
+        for (int offset = 0; offset <= 8; offset++) {
+            pass[0] = offset;
+            clock.seed(firstDrainPhase + offset);
+            screen.update(++frame, null);
+        }
+        int firstBlip = 4 - firstDrainPhase;
+        assertEquals(List.of(firstBlip, firstBlip + 4), blipFrames,
+                "Obj6F_TallyScore gates two blips on the phase of the global V-int");
+    }
+
     @Test
     void twoPlayerRingCountdownsDrainInParallelSoTheTallyIsTheLongerOfThem() {
         // 91 + 76 would be 168 passes if the countdowns were summed into one.
@@ -108,5 +147,30 @@ class TestSonic2SpecialStageResultsTallyCadence {
     @Test
     void asinglePlayerCountdownIsUnaffectedByTheSecond() {
         assertEquals(162, tallyPasses(screen(161, 0, false)));
+    }
+
+    @Test
+    void specialStageEmeraldAndRingsDoNotAwardAnActClearContinue() {
+        var results = screen(130, 0, true);
+        for (int frame = 1; frame <= 450; frame++) {
+            results.update(frame, null);
+        }
+        assertEquals(0, services.gameState().getContinues(), "Obj6F has no Continue_count write");
+    }
+
+    @Test
+    void endOfActTallyAwardsAtOneThousandNativeUnitsAndWrapsTheByte() {
+        var state = services.gameState();
+        state.restoreSaveProgress(3, 255, List.of(), List.of());
+        // At 285 seconds the time bonus is 50 units. 95 rings add 950 units.
+        for (int ringCount : new int[]{94, 95}) {
+            var results = new ResultsScreenObjectInstance(285, ringCount, 1, false);
+            results.setServices(services);
+            for (int frame = 1; frame <= 350; frame++) {
+                results.update(frame, null);
+            }
+            assertEquals(ringCount == 94 ? 255 : 0, state.getContinues(),
+                    "Obj3A loc_141E6 checks the completed tally, then loc_14220 increments the byte");
+        }
     }
 }

@@ -12,7 +12,6 @@ import com.openggf.level.objects.TouchResponseListener;
 import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchResponseResult;
-import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
@@ -66,6 +65,8 @@ public final class CdMonitor extends CdObject
 
     @Override
     public void update(int vIntRunCount, PlayableEntity player) {
+        // ObjMonitorTimepost (Level/_Objects/Monitor and Time Post/Main.asm:269-274).
+        if (spawn.subtype() == 0 && timeAttackMode()) return;
         if (routine == 0) init();
         if (pendingBreak) {
             pendingBreak = false;
@@ -79,7 +80,8 @@ public final class CdMonitor extends CdObject
         } else {
             if (onPlayerLayer()) solidObject(ReevaluatingSolidObject.Entry.SOLID);   // ObjMonitor_Solid (:242-259)
         }
-        if (animator != null) {
+        // ObjMonitor_Animate (Monitor and Time Post/Main.asm:363-367).
+        if (animator != null && !flags().timeStopped()) {
             animator.step();
             mapFrame = animator.mapFrame();
             animState = animator.scriptState();
@@ -116,7 +118,7 @@ public final class CdMonitor extends CdObject
         if (yVel >= 0 && yVel >= 0x1000) yVel = 0x1000;
         y = position >> 8;
         ySub = position & 0xFF;
-        var floor = ObjectTerrainUtils.checkFloorDist(x, y, yRadius);
+        var floor = checkFloor(x, y, yRadius);
         if (floor.hasCollision()) {
             y += floor.distance();
             yVel = 0;
@@ -166,6 +168,7 @@ public final class CdMonitor extends CdObject
     /** SolidObject: cmpi.b #$19,oID(a0) lets a rolling player through (Object Solid.asm:329-332). */
     @Override public Role solidRole() { return Role.MONITOR; }
 
+    @Override protected boolean calledDrawObjectThisFrame() { return routine != 0; }
     @Override protected boolean despawnsByCheckObjDespawn() { return true; }
 
     public int mapFrame() { return mapFrame; }

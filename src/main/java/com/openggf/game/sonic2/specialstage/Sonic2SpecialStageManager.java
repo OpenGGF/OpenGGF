@@ -3707,6 +3707,17 @@ public class Sonic2SpecialStageManager implements com.openggf.game.internal.Nati
     }
 
     /**
+     * The cooperative/solo SpecialStage exit compares both live ring words
+     * against the count of admitted ring objects (s2.asm:6740-6746, 6951-6966).
+     */
+    public boolean hasPerfectRingCount() {
+        return objectManager != null
+                && getRingsCollected(Sonic2SpecialStagePlayer.PlayerType.SONIC)
+                + getRingsCollected(Sonic2SpecialStagePlayer.PlayerType.TAILS)
+                == objectManager.getPerfectRingsTotal();
+    }
+
+    /**
      * Ring count belonging to a single playable — the engine's equivalent of the
      * ROM's per-player {@code Ring_count} / {@code Ring_count_2P} words.
      *

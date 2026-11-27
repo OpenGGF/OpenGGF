@@ -1,5 +1,6 @@
 package com.openggf.game.sonic1.specialstage;
 
+import com.openggf.game.GameServices;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.tests.reel.S1SpecialStageReel;
 import com.openggf.tests.rules.RequiresRom;
@@ -57,6 +58,52 @@ class TestTasS1SpecialStageContacts {
             GraphicsManager.getInstance().cleanup();
             GraphicsManager.getInstance().resetState();
         } finally { if (reel != null) reel.close(); }
+    }
+
+    @ParameterizedTest
+    @CsvSource({"50,3", "100,4", "200,5"})
+    void ringPickupAwardsAtNativeThreshold(int threshold, int lives) throws Exception {
+        for (int edge : new int[]{50, 100, 200}) {
+            if (edge > threshold) break;
+            manager.setRingsCollected(edge - 1);
+            set("sonicPosX", 460L << 16);
+            set("sonicPosY", 412L << 16);
+            set("sonicVelY", 0);
+            layout[20 * 128 + 20] = 0x3A;
+            S1SpecialStageReel.update(manager);
+        }
+        assertEquals(threshold, manager.getRingsCollected());
+        assertEquals(lives, GameServices.gameState().getLives());
+        assertEquals(1, GameServices.gameState().getContinues());
+    }
+
+    @Test
+    void oneUpAwardsAByteSizedLifeAndUsesAllFourSparkleFrames() throws Exception {
+        var state = GameServices.gameState();
+        state.restoreSaveProgress(255, 0, java.util.List.of(), java.util.List.of());
+        int cell = 20 * 128 + 20;
+        layout[cell] = 0x28;
+        set("sonicVelX", 0x300);
+        var stageBefore = manager.captureRewindSnapshot();
+        var progressBefore = state.capture();
+
+        int[] sparkle = new int[25];
+        for (int tick = 0; tick < sparkle.length; tick++) {
+            S1SpecialStageReel.update(manager);
+            sparkle[tick] = Byte.toUnsignedInt(layout[cell]);
+        }
+        assertEquals(0, state.getLives(), "SonicSS_Get1Up increments v_lives as a byte");
+        for (int tick = 0; tick < 24; tick++) {
+            assertEquals(0x46 + tick / 6, sparkle[tick], "sparkle tick " + tick);
+        }
+        assertEquals(0, sparkle[24]);
+        assertFalse(manager.captureComparisonState().exitTriggered());
+
+        state.restore(progressBefore);
+        manager.restoreRewindSnapshot(stageBefore);
+        assertEquals(255, state.getLives());
+        S1SpecialStageReel.update(manager);
+        assertEquals(0, state.getLives());
     }
 
     @ParameterizedTest

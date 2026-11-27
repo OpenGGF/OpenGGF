@@ -41,7 +41,7 @@ public final class TailsCarryController {
     public boolean isCarryingMainCharacter() { return carrying; }
     /** The native carry owner resolves its target through the carrier's bound world roster. */
     public boolean isCarrying(AbstractPlayableSprite target) { return carrying && target != null && resolveMain() == target; }
-    public CarryContext getContext() { return context; }
+    public CarryContext getContext() { return carrying ? context : CarryContext.NONE; }
 
     public boolean tryGrabMainCharacter() {
         AbstractPlayableSprite main = resolveMain();
@@ -127,6 +127,9 @@ public final class TailsCarryController {
     public void updateAfterTailsCollision(int mainHeldInput) {
         AbstractPlayableSprite main = resolveMain();
         if (!carrying) {
+            if (context == CarryContext.CNZ && (!carrier.getAir() || carrier.getDoubleJumpFlag() == 0)) {
+                context = CarryContext.NONE;
+            }
             if (cooldown > 0) cooldown--;
             if (cooldown == 0) tryGrabMainCharacter();
             return;
@@ -318,6 +321,16 @@ public final class TailsCarryController {
         release(releaseCooldown);
     }
 
+    void retainIntroFlightAfterRelease() {
+        // Retain the scripted flight owner in the captured carry state until
+        // Tails lands. The regrab cooldown runs on its own clock.
+        context = CarryContext.CNZ;
+    }
+
+    boolean isFlyingAfterIntroRelease() {
+        return !carrying && context == CarryContext.CNZ;
+    }
+
     private void release(int releaseCooldown) {
         AbstractPlayableSprite main = resolveMain();
         if (main != null && main != carrier) {
@@ -332,7 +345,7 @@ public final class TailsCarryController {
             // temporarily re-apply the forced carried id over the Walk byte
             // written by Player_TouchFloor. Native object-slot order leaves
             // the landing write intact, so restore it as the carry owner exits.
-            if (!main.getAir() && context == CarryContext.CNZ) {
+            if (!main.getAir() && carrying && context == CarryContext.CNZ) {
                 int walkAnimationId = main.resolveAnimationId(CanonicalAnimation.WALK);
                 if (walkAnimationId >= 0) {
                     main.setAnimationId(walkAnimationId);

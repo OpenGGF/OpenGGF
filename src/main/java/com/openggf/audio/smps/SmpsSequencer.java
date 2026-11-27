@@ -56,6 +56,8 @@ public class SmpsSequencer implements CoordFlagContext {
     private final DacData dacData;
     private final int tempoModBase;
     private final List<Track> tracks = new ArrayList<>();
+    // Derived from the immutable SFX program when the sequencer is constructed.
+    private int heldFmSfxChannels;
     /** Immutable ROM-header-order projection into {@link #tracks}. */
     private int[] sfxHeaderOrderIndices = new int[0];
 
@@ -197,6 +199,7 @@ public class SmpsSequencer implements CoordFlagContext {
         private int fadeAddPsg;
         private boolean fadeActive;
         private boolean fadeOut;
+        private boolean deferFirstFadeStep;
         private double sampleRate;
         private double samplesPerFrame;
         private double sampleCounter;
@@ -267,6 +270,7 @@ public class SmpsSequencer implements CoordFlagContext {
         token.fadeAddPsg = fadeState.addPsg;
         token.fadeActive = fadeState.active;
         token.fadeOut = fadeState.fadeOut;
+        token.deferFirstFadeStep = fadeState.deferFirstStep;
         token.sampleRate = sampleRate;
         token.samplesPerFrame = samplesPerFrame;
         token.sampleCounter = sampleCounter;
@@ -328,6 +332,7 @@ public class SmpsSequencer implements CoordFlagContext {
         fadeState.addPsg = token.fadeAddPsg;
         fadeState.active = token.fadeActive;
         fadeState.fadeOut = token.fadeOut;
+        fadeState.deferFirstStep = token.deferFirstFadeStep;
         sampleRate = token.sampleRate;
         samplesPerFrame = token.samplesPerFrame;
         sampleCounter = token.sampleCounter;
@@ -474,6 +479,7 @@ public class SmpsSequencer implements CoordFlagContext {
         int addPsg;
         boolean active;
         boolean fadeOut; // true = Fade Out, false = Fade In
+        boolean deferFirstStep;
     }
 
     private final FadeState fadeState = new FadeState();
@@ -975,6 +981,14 @@ public class SmpsSequencer implements CoordFlagContext {
         calculateTempo();
     }
 
+    /** Seeds a newly activated classic package after the session applies its speed-shoes state. */
+    public void seedPackageTempoOnActivation() {
+        var parameters = SmpsMusicParameters.of(smpsData);
+        if (speedShoes && parameters.tempoEffects() && parameters.speedUpTempo() != null) {
+            tempoAccumulator = tempoWeight;
+        }
+    }
+
     public void setFm6DacOff(boolean active) {
         this.fm6DacOff = active;
     }
@@ -1206,6 +1220,11 @@ public class SmpsSequencer implements CoordFlagContext {
         return Collections.unmodifiableList(ordered);
     }
 
+    public boolean holdsFmState(Track track) {
+        return heldFmSfxChannels != 0 && track.type == TrackType.FM
+                && (heldFmSfxChannels & (1 << track.channelId)) != 0;
+    }
+
     public int trackCount() {
         return tracks.size();
     }
@@ -1249,11 +1268,16 @@ public class SmpsSequencer implements CoordFlagContext {
         for (int index = 0; index < entries.size(); index++) {
             SmpsSfxData.SmpsSfxTrack entry = entries.get(index);
             int pointer = relocate(entry.pointer(), z80Start);
-            if (pointer < 0 || pointer >= programView.dataLength()) {
+            int channel = entry.channelMask();
+            if (entry.holdsFmState()) {
+                if (mapFmChannel(channel) < 0) {
+                    throw new IllegalArgumentException(
+                            sfxAdmissionError("Only an FM track can hold chip state", index, entry, pointer));
+                }
+            } else if (pointer < 0 || pointer >= programView.dataLength()) {
                 throw new IllegalArgumentException(
                         sfxAdmissionError("SFX track pointer is outside the program", index, entry, pointer));
             }
-            int channel = entry.channelMask();
             boolean valid = channel == 0x16 || channel == 0x10
                     || mapFmChannel(channel) >= 0
                     || mapPsgChannel(channel) >= 0;
@@ -1293,7 +1317,14 @@ public class SmpsSequencer implements CoordFlagContext {
         int base = normalTempo;
 
         if (speedShoes) {
-            base = config.getSpeedUpTempos().getOrDefault(smpsData.getId(), base);
+            var parameters = SmpsMusicParameters.of(smpsData);
+            if (SmpsMusicParameters.isCreatorMusic(smpsData)) {
+                if (parameters.tempoEffects() && parameters.speedUpTempo() != null) {
+                    base = parameters.speedUpTempo();
+                }
+            } else {
+                base = config.getSpeedUpTempos().getOrDefault(smpsData.getId(), base);
+            }
         }
 
         // PAL compensation belongs to the ROM driver's update counter, not to
@@ -1340,7 +1371,7 @@ public class SmpsSequencer implements CoordFlagContext {
 
         for (SmpsSfxData.SmpsSfxTrack entry : sfxData.getTrackEntries()) {
             int ptr = relocate(entry.pointer(), z80Start);
-            if (ptr < 0 || ptr >= programView.dataLength()) {
+            if (!entry.holdsFmState() && (ptr < 0 || ptr >= programView.dataLength())) {
                 continue;
             }
 
@@ -1376,7 +1407,11 @@ public class SmpsSequencer implements CoordFlagContext {
                 t.pan = 0xC0;
                 t.ams = 0;
                 t.fms = 0;
-                primeVoice(t, 0);
+                if (entry.holdsFmState()) {
+                    heldFmSfxChannels |= 1 << linearCh;
+                } else {
+                    primeVoice(t, 0);
+                }
             }
             tracks.add(t);
         }
@@ -1711,9 +1746,16 @@ public class SmpsSequencer implements CoordFlagContext {
     private static final int SPECIAL_SFX_SLOT_WALK_BASE = 32;
 
     private void finishSfxTempoFrame() {
+        if (maxTicks == 0 && heldFmSfxChannels != 0) {
+            return;
+        }
         maxTicks--;
         if (maxTicks <= 0) {
             for (Track track : tracks) {
+                // A held slot has no bytecode to cap. Its retired siblings no longer own their channels.
+                if (heldFmSfxChannels != 0 && (!track.active || holdsFmState(track))) {
+                    continue;
+                }
                 track.active = false;
                 stopNote(track);
             }
@@ -1728,7 +1770,7 @@ public class SmpsSequencer implements CoordFlagContext {
 
     private void tickTrack(Track t) {
         {
-            if (!t.active)
+            if (!t.active || holdsFmState(t))
                 return;
             // Note: In SMPS, overridden tracks continue to process (tick) in the
             // background,
@@ -1873,8 +1915,17 @@ public class SmpsSequencer implements CoordFlagContext {
                 // (:3212-3221).
                 t.tieNext = false;
             }
+            int creatorCommandBudget = 1024;
+            boolean creatorMusic = SmpsMusicParameters.isCreatorMusic(smpsData);
             while (t.duration == 0 && t.active) {
-                if (t.pos >= programView.dataLength()) {
+                if (creatorMusic && --creatorCommandBudget < 0) {
+                    // An external bank can jump forever without yielding a note or duration.
+                    t.active = false;
+                    stopNote(t);
+                    LOGGER.warning("Stopped non-yielding SMPS package channel");
+                    break;
+                }
+                if (t.pos < 0 || t.pos >= programView.dataLength()) {
                     // Running off the end of the data has no ROM counterpart,
                     // since every stream ends with a track-end flag. Keep the
                     // engine's safety stop here rather than after the loop, so
@@ -2265,8 +2316,9 @@ public class SmpsSequencer implements CoordFlagContext {
     }
 
     private void processFade() {
-        if (fadeArmedOutsideService) {
+        if (fadeArmedOutsideService || fadeState.deferFirstStep) {
             fadeArmedOutsideService = false;
+            fadeState.deferFirstStep = false;
             return;
         }
         // ROM: Check if fade counter is already 0 BEFORE processing
@@ -2570,6 +2622,7 @@ public class SmpsSequencer implements CoordFlagContext {
             fadeState.delayCounter = fadeState.delayInit;
             fadeState.active = true;
             fadeState.fadeOut = true;
+            fadeState.deferFirstStep = false;
         }
     }
 
@@ -4454,12 +4507,20 @@ public class SmpsSequencer implements CoordFlagContext {
         fadeState.active = false;
         fadeState.steps = 0;
         fadeState.delayCounter = 0;
+        fadeState.deferFirstStep = false;
         // The clear covers the driver's variables too, so the master tempo and
         // its timeout are both zeroed alongside the track RAM.
         normalTempo = 0;
         tempoWeight = 0;
         tempoAccumulator = 0;
         speedShoes = false;
+    }
+
+    /** A local test-before-decrement fade reaches zero on the next service. */
+    public boolean localFadeOutIsTerminalNextService() {
+        return fadeState.active && fadeState.fadeOut
+                && !fadeState.deferFirstStep
+                && fadeState.steps == 1 && fadeState.delayCounter <= 0;
     }
 
     /** Whether a fade in armed by {@link #triggerFadeIn} is still running. */
@@ -4493,6 +4554,7 @@ public class SmpsSequencer implements CoordFlagContext {
         setFadeDelayCounter(config.isDriverOwnedFadeDelay() ? delay : 0);
         fadeState.active = true;
         fadeState.fadeOut = false; // Fade IN
+        fadeState.deferFirstStep = false;
 
         // Add steps to existing volumeOffset (attenuate by 'steps'), then fade
         // decreases it.
@@ -4582,6 +4644,10 @@ public class SmpsSequencer implements CoordFlagContext {
      * @param delay frames between each volume step (ROM default: 3)
      */
     public void triggerFadeOut(int steps, int delay) {
+        triggerFadeOut(steps, delay, false);
+    }
+
+    public void triggerFadeOut(int steps, int delay, boolean deferFirstStep) {
         if (steps <= 0) {
             return;
         }
@@ -4591,6 +4657,10 @@ public class SmpsSequencer implements CoordFlagContext {
         setFadeSteps(steps);
         setFadeDelayReload(delay);
         setFadeDelayCounter(delay);
+        // UpdateMusic (s1.sounddriver.asm:179-203) runs DoFadeOut before
+        // handling requests. Forward presentation applies requests before
+        // it enters the driver, so defer the new fade past that old phase.
+        fadeState.deferFirstStep = deferFirstStep;
         fadeState.active = true;
 
         // Stop DAC track immediately (can't fade it) - matches ROM zFadeOutMusic
@@ -4627,7 +4697,7 @@ public class SmpsSequencer implements CoordFlagContext {
      */
     public void refreshAllVoices() {
         for (Track t : tracks) {
-            if (!t.active)
+            if (!t.active || holdsFmState(t))
                 continue;
             if (t.type == TrackType.FM) {
                 refreshInstrument(t);
@@ -4725,7 +4795,7 @@ public class SmpsSequencer implements CoordFlagContext {
     // -----------------------------------------------------------------------
 
     public void setSpeedMultiplier(int multiplier) {
-        this.speedMultiplier = Math.max(1, multiplier);
+        this.speedMultiplier = SmpsMusicParameters.of(smpsData).tempoEffects() ? Math.max(1, multiplier) : 1;
         if (this.speedMultiplier <= 1) {
             this.speedupTimeout = 0;
         }
@@ -4796,7 +4866,8 @@ public class SmpsSequencer implements CoordFlagContext {
                         fadeState.addFm,
                         fadeState.addPsg,
                         fadeState.active,
-                        fadeState.fadeOut),
+                        fadeState.fadeOut,
+                        fadeState.deferFirstStep),
                 sampleRate,
                 samplesPerFrame,
                 sampleCounter,
@@ -4836,6 +4907,7 @@ public class SmpsSequencer implements CoordFlagContext {
         fadeState.addPsg = snapshot.fade().addPsg();
         fadeState.active = snapshot.fade().active();
         fadeState.fadeOut = snapshot.fade().fadeOut();
+        fadeState.deferFirstStep = snapshot.fade().deferFirstStep();
         sampleRate = snapshot.sampleRate();
         samplesPerFrame = snapshot.samplesPerFrame();
         sampleCounter = snapshot.sampleCounter();

@@ -6,6 +6,7 @@ import com.openggf.debug.playback.Bk2Movie;
 import com.openggf.game.GameModule;
 import com.openggf.game.LevelEventProvider;
 import com.openggf.game.TitleCardProvider;
+import com.openggf.game.internal.StagePaletteWait;
 import com.openggf.game.patch.DelegatingGameModule;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
@@ -32,6 +33,8 @@ import com.openggf.trace.timing.HardwareCompletionEdge;
 import com.openggf.trace.timing.TraceHardwareTimingBoundaryObserver;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.lang.reflect.Field;
 import java.nio.file.Path;
@@ -56,6 +59,39 @@ class TestRecordingFrameDriverHardwareTiming {
     @AfterEach
     void tearDown() {
         SessionManager.clear();
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void stagePaletteWaitReportsHeldAcrossBothRecordingPaths(boolean suppressed) throws Exception {
+        List<String> events = new ArrayList<>();
+        StagePaletteWait.Source source = ignored -> () -> events.add("palette advanced");
+        TestEnvironment.configureGameModuleFixture(new DelegatingGameModule(new Sonic3kGameModule(), "test:palette") {
+            @Override
+            public <T> T getGameService(Class<T> type) {
+                return type == StagePaletteWait.Source.class ? type.cast(source) : super.getGameService(type);
+            }
+        });
+        var context = SessionManager.getCurrentGameplayMode();
+        var driver = new RecordingFrameDriver(mock(AbstractPlayableSprite.class));
+        var level = mock(LevelManager.class);
+        when(level.getWorldSession()).thenReturn(context.getWorldSession());
+        when(level.getObjectManager()).thenReturn(mock(ObjectManager.class));
+        setField(driver, "levelManager", level);
+        driver.setBk2Movie(oneFrameMovie(), 0);
+
+        try (var fade = context.plcFrameLifecycle().beginNativeBlockingFade()) {
+            if (suppressed) driver.skipFrameFromRecording();
+            else driver.stepFrame(false, false, false, false, false);
+            assertEquals(List.of(LevelFrameResult.HELD, false, List.of()),
+                    List.of(driver.getLastFrameResult(), driver.didLastFrameRunGameplay(), events),
+                    "a preclaimed row holds gameplay without spending a palette step");
+        }
+
+        driver.stepFrame(false, false, false, false, false);
+        assertEquals(List.of(LevelFrameResult.HELD, false, List.of("palette advanced")),
+                List.of(driver.getLastFrameResult(), driver.didLastFrameRunGameplay(), events),
+                "the wait advances on the next VBlank it can claim");
     }
 
     @Test

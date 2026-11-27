@@ -7,7 +7,7 @@ import com.openggf.audio.session.SmpsWriteProgram;
 /** Command side effects owned by the Sonic 1 68000 sound driver. */
 public final class Sonic1StatefulCommandPolicy implements SmpsStatefulCommandPolicy {
     public static final Sonic1StatefulCommandPolicy INSTANCE = new Sonic1StatefulCommandPolicy();
-    private static final Identity IDENTITY = new Identity("sonic1-commands-v1");
+    private static final Identity IDENTITY = new Identity("sonic1-commands-v2");
 
     private Sonic1StatefulCommandPolicy() { }
 
@@ -37,6 +37,12 @@ public final class Sonic1StatefulCommandPolicy implements SmpsStatefulCommandPol
     public boolean stopsSfxWhenOverrideStarts() {
         // The extra-life branch clears bit 7 on all six SFX tracks before
         // the RAM backup (:769-774). Ordinary song loads leave them alone.
+        return true;
+    }
+
+    @Override
+    public boolean stopsAllSoundAtLocalFadeEnd() {
+        // DoFadeOut branches before the final attenuation walk (s1.sounddriver.asm:1371-1381).
         return true;
     }
 

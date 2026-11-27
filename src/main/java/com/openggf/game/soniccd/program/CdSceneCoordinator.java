@@ -64,7 +64,7 @@ public final class CdSceneCoordinator {
         this.specialStagePrimer = Objects.requireNonNull(primer, "primer");
     }
 
-    /** The campaign time owner: stage entries, the warp destination and the Time Stones it receives. */
+    /** The campaign time owner for stage entries and warp destinations. */
     public void bindTimeTravel(java.util.function.Supplier<com.openggf.game.soniccd.timetravel.CdTimeTravel> owner) {
         this.timeTravel = Objects.requireNonNull(owner, "owner");
     }
@@ -85,6 +85,21 @@ public final class CdSceneCoordinator {
         if (source == null) throw new IllegalStateException("Sonic CD programs need the disc");
         if (data == null) data = new CdProgramData(source);
         return data;
+    }
+
+    /** Reads the current run mode without opening IPX or backup RAM for a direct stage load. */
+    public boolean timeAttackMode() {
+        return flow != null && flow.timeAttackMode();
+    }
+
+    /** Reads IPX's Time Stones byte. Direct stage loads start with zero stones. */
+    public int timeStones() {
+        return flow == null ? 0 : flow.timeStones();
+    }
+
+    public static boolean isTimeAttack(com.openggf.game.GameModule module) {
+        var scenes = module == null ? null : module.getGameService(CdSceneCoordinator.class);
+        return scenes != null && scenes.timeAttackMode();
     }
 
     public CdProgramFlow flow() {
@@ -156,7 +171,7 @@ public final class CdSceneCoordinator {
     }
 
     /**
-     * Backup-RAM device state and Time Attack state for gameplay rewind; a restore never writes the host file.
+     * Backup-RAM device state and IPX gameplay variables for rewind; a restore never writes the host file.
      * One instance per coordinator: the rewind registry refreshes adapters by identity.
      */
     public com.openggf.game.rewind.RewindSnapshottable<?> rewindAdapter() { return rewindAdapter; }
@@ -210,6 +225,11 @@ public final class CdSceneCoordinator {
     public int titleStartZone() { return titleRequest instanceof Stage s ? SonicCdZoneRegistry.zoneIndex(s.payload()) : 0; }
 
     public int titleStartAct() { return titleRequest instanceof Stage s ? SonicCdZoneRegistry.actIndex(s.payload()) : 0; }
+
+    public com.openggf.game.soniccd.CdStageDemo titleDemo() {
+        return titleRequest instanceof Stage stage && stage.route() == CdProgramRequest.Route.ATTRACT_DEMO
+                ? com.openggf.game.soniccd.CdStageDemo.valueOf(stage.payload().name()) : null;
+    }
 
     /** The pending title request, for tests and the not-hosted screen. */
     public CdProgramRequest titleRequest() { return titleRequest; }
@@ -300,9 +320,6 @@ public final class CdSceneCoordinator {
         pendingSpecialStage = null;
         CdProgramRequest request = skipNotHosted(flow().specialStageEnded(step, result));
         route.add("-> " + request);
-        // .SpecialStage's Results wrote timeStones (Special Stage/Main.asm:295-296): the time owner's input.
-        var tt = timeTravel.get();
-        if (tt != null && result.showsResults()) tt.setTimeStones(flow().timeStones());
         if (level != null) {
             switch (request) {
                 case Stage stage -> level.requestZoneAndAct(SonicCdZoneRegistry.zoneIndex(stage.payload()),

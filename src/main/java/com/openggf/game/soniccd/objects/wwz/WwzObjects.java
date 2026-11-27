@@ -23,6 +23,7 @@ public final class WwzObjects implements CdObjectRegistration {
         registrar.object(0x21, "Electric beams", (spawn, r) -> new ObjElectricBeams(spawn));
         registrar.object(0x23, "Bouncing platform", (spawn, r) -> new ObjBouncePlatform(spawn));
         registrar.object(0x28, "Spinning platform", (spawn, r) -> new ObjSpinPlatform(spawn));
+        registrar.object(0x29, "Animal", (spawn, r) -> new ObjWwzAnimal(spawn));
         registrar.object(0x2A, "Snake blocks", (spawn, r) -> new ObjSnakeBlocks(spawn));
         registrar.object(0x2B, "Eggman statue", (spawn, r) -> new ObjEggmanStatue(spawn));
         registrar.badnik(0x30, "Bata-pyon", (spawn, r) -> new ObjBataPyon(spawn));

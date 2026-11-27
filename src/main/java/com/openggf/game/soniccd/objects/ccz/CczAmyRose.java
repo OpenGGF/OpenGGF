@@ -1,6 +1,7 @@
 package com.openggf.game.soniccd.objects.ccz;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.soniccd.level.CdLevel;
 import com.openggf.game.soniccd.objects.art.CdObjectArtProvider;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.CameraRelativeDraw;
@@ -20,9 +21,7 @@ import java.util.List;
  * and is carried ({@code AmyRoseCaptured}, routine 4) beside him ({@code $8} ahead, $4 below). Every 32 frames she emits a
  * heart ({@link Heart}) above her leading shoulder. She and the intro end when {@code amy_captured} is set or the player passes X $4C0.
  *
- * <p>Not modelled: {@code AddGfxQueue} of PLC {@code $B} (art is resident, see {@link CczObjectArt}), Amy's palette load
- * ({@code AmyRoseLoadPalette}, objects/r3/intro.asm:478-496: sixteen words into palette line 1) and Time Attack, which need a
- * palette-write and a mode service this lane does not own.
+ * Time Attack takes the capture exit before the intro starts. The intro art is resident (see {@link CczObjectArt}).
  */
 @CameraRelativeDraw(CameraRelativeDraw.Use.CULL_ONLY)
 public final class CczAmyRose extends CczObject implements ObjectVisualFacing.Source {
@@ -43,9 +42,9 @@ public final class CczAmyRose extends CczObject implements ObjectVisualFacing.So
     public void update(int vIntRunCount, PlayableEntity player) {
         if (routine == 0 && CczStage.standDownFromIntro(this, services())) return;
         var level = cdLevel();
-        if (level != null && CczIntroState.of(level).amyCaptured()) {      // tst.b amy_captured; bne MetalSonicCaptureAmy
-            CczIntroState.of(level).restoreStagePalette(services());
-            setDestroyed(true);
+        // AmyRoseObject (objects/r3/intro.asm:248-252).
+        if (timeAttackMode() || (level != null && CczIntroState.of(level).amyCaptured())) {
+            endIntro(level);
             return;
         }
         switch (routine) {
@@ -55,12 +54,16 @@ public final class CczAmyRose extends CczObject implements ObjectVisualFacing.So
         }
         if (isDestroyed()) return;
         if (player instanceof AbstractPlayableSprite sprite && (sprite.getCentreX() & 0xFFFF) >= 0x4C0) {
-            if (level != null) {
-                CczIntroState.of(level).captureAmy();                      // cmpi.w #$4C0,8(a1); bcc MetalSonicCaptureAmy
-                CczIntroState.of(level).restoreStagePalette(services());
-            }
-            setDestroyed(true);
+            endIntro(level);
         }
+    }
+
+    /** MetalSonicCaptureAmy (objects/r3/intro.asm:204-208). */
+    private void endIntro(CdLevel level) {
+        if (level != null) {
+            CczIntroState.of(level).captureAmy(services(), level, provider());
+        }
+        setDestroyed(true);
     }
 
     /** AmyRoseInit (:271-296). */
@@ -68,7 +71,7 @@ public final class CczAmyRose extends CczObject implements ObjectVisualFacing.So
         priority = 1;
         tileWord = CczObjectArt.AMY_TILE;
         var level = cdLevel();
-        if (level != null) CczIntroState.of(level).loadAmyPalette(services(), level, provider());   // AmyRoseLoadPalette
+        if (level != null) CczIntroState.loadAmyPalette(services(), level, provider());   // AmyRoseLoadPalette
         facePlayer(player);
         if (player instanceof AbstractPlayableSprite sprite && (sprite.getCentreX() & 0xFFFF) >= (x & 0xFFFF)) {
             routine += 2;                                                  // cmp.w obj.x(a0),d0; bcs.s .Animate

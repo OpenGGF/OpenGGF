@@ -152,6 +152,21 @@ differences between dialects are script output only and need a hand check
 before K3c relies on them. Japan and Europe differ from USA in 718 file
 deltas, mostly the player, monitor and results code.
 
+### Disassembly compatibility aliases
+
+`DeleteOtherObject EQU DeleteObject` in the R3, R4 and R5 compatibility
+files conflates two entry points. Wacky Workbench's R6 compatibility file
+includes the R5 aliases. For an object-deletion port, resolve the actual
+`jsr`, `jmp` or `bsr` target in the shipped stage MMD. The entry for
+`DeleteObject` starts with `2248` (`movea.l a0,a1`). The entry two bytes
+later starts with `7200` (`moveq #0,d1`) and clears the 64-byte slot already
+addressed by `a1`. See DeleteOtherObject (scddisasm/src/common/object.asm:180-187).
+
+For example, the R52A Noro Noro call at `$20D01E` targets `$203BE4` and
+enters at `7200`. The Collision Chaos and Tidal Tempest boss calls, the
+R41A falling spike call, and the R81A through R81D Scarab and Poh-Bee calls use the
+same entry convention at their own stage addresses.
+
 ## Lanes
 
 Tier S is Opus, Fable or Sol. Tier M is Sonnet-class. Tier C is Haiku-class or a
@@ -359,8 +374,8 @@ Report:     <SHA, command, counts, skips, limits; ten lines>
 
 ## Open items
 
-What is still open at `6c5c0e2764`, from the lane reports' stopped and
-unverified lists. The order is not a priority order.
+These items come from the lane reports through `6c5c0e2764`, with later
+fixes noted below. The order is not a priority order.
 
 **Accuracy frontiers**
 - R42A matches all 6,411 recorded rows and the next-act handoff. R82A
@@ -370,22 +385,25 @@ unverified lists. The order is not a priority order.
 - 28 stages have a full-act route; the other 42 have only the 14-second
   fixture, and 14 of those (the act 3 stages) also have boss movies. No
   complete-run recording exists. Three routes (R81B, R81C, R82A) have no
-  act-end assertion, and R42A's is `pending`.
-- 38 of 70 stages place an object ID the engine does not host (pinned in
+  act-end assertion; R42A's is asserted through its R43D handoff.
+- 16 of 70 stages place an object ID the engine does not host (pinned in
   `TestCdUnhostedObjectCensus`; 54 before Robotnik's projector was hosted).
-- Robotnik's projector: its picture is compared with native in Palmtree Panic
-  only, and its destruction is observed natively there only; the hologram
-  animals draw nothing, Tidal Tempest's and Wacky Workbench's hologram animals
-  are not hosted, and Collision Chaos's ground hologram animation is
-  unverified.
-- Lost rings after a hit differ from native in R81A (from row 3343) and R81C
-  (from row 3968): Metallic Madness's Poh-Bee (`$2E`) is not hosted, so the
-  spilled rings take other slots and their slot-phased floor checks bounce
-  them on other rows. Whether rings collected in one time period stay
-  collected after a time warp is unmeasured (`ObjRing_Init` reads the earlier
-  periods' flags, Ring/Main.asm:96-113; the engine builds a new ring owner per
-  load). The spill when the hurting object runs before the spill's owner has
-  no native row.
+- Robotnik's projector picture and destruction are compared with native in
+  Palmtree Panic only. Wacky Workbench's hologram animals are hosted
+  ([PR #395](https://github.com/OpenGGF/OpenGGF/pull/395), merged).
+  [PR #408](https://github.com/OpenGGF/OpenGGF/pull/408) hosts Tidal Tempest's
+  projector holograms. Collision Chaos's
+  ground hologram animation remains unverified.
+- After [PR #397](https://github.com/OpenGGF/OpenGGF/pull/397) merged at
+  `a9547c71ac`, `TestCdRingNativeParity` matches the ring counter, placed-ring
+  (`$10`) positions, lost-ring (`$11`) counts, and slot identity for both types
+  on R81A, R81B and R81C. Hosting Metallic Madness's Poh-Bee (`$2E`)
+  resolved the earlier divergences at R81A row 3343 and R81C row 3968.
+  Whether rings collected in one period stay collected after a time warp is
+  unmeasured.
+  `ObjRing_Init` reads the earlier periods' flags (Ring/Main.asm:96-113).
+  The engine builds a new ring owner per load. The spill when the hurting
+  object runs before the spill's owner has no native row.
 - About 228 places in the disassembly call `DrawObject` just before the
   despawn check, which clears the on-screen bit so the object leaves by range
   alone; most engine objects read the previous frame's bit there and stay
@@ -402,8 +420,7 @@ unverified lists. The order is not a priority order.
 
 **Programs and presentation not started or not hosted**
 - Visual Mode, D.A. Garden, the pencil test, Thank You, Comin' Soon, the
-  attract demos (the opening plays; the R11A and special-stage demos are
-  skipped), the RAM DATA manager, in-game save erase. Special stage results
+  RAM DATA manager and in-game save erase. Special stage results
   graphics. Start pressed during the opening is unverified.
 
 **Timing, unverified or unmodelled**
@@ -456,7 +473,7 @@ unverified lists. The order is not a priority order.
 | Metallic Madness presentation | done | `47c53799f5`, merged | 50 of 51 native shots match; nine stages certified. R83C early is 99.23% (a freed animal, not background). R82A early: one palette script runs one step behind native, unexplained. Boss-door tile gate and boss palette cycle wait for the boss |
 | Picture tests share one JVM | done | `2d0b405ddb`, merged | Cause was production: `GraphicsManager.init()` kept two GL ids from the destroyed context. Lead run in one fork: 12 CD picture classes plus GL contract tests, 48 tests, 0 failures. New picture classes need no drain |
 | Wacky Workbench player | done | `8136f0cae0`, merged | Floor bounce, sparks, beams, rotating pole, hang bar, and seven smaller differences hosted through the per-zone profile. R62D, R63C and R63D moved 90 to 356 rows later; no stage earlier. Two native movies recorded. Lane: 540 S1/S2/S3K and CD tests, 0 failures. Unverified: hang bar, beams, several gates. Signals other lanes must drive are in `WwzStageSignals` |
-| Time travel | done, carry unverified | `2996602692`, merged | One owner (`timetravel/CdTimeTravel`) for period, warp, good-future, generator and projector state, rewind-registered. Time posts, time icon, stars, the warp and the stage-to-stage carry. R52A: touch, timer, trigger and camera lock equal native through row 583, and the saved payload equals native RAM. Carry into a native destination unverified: both recorded Palmtree Panic warps diverge on terrain at row 753 first. Two native warp movies recorded |
+| Time travel | done, carry unverified | `2996602692`, merged | One owner (`timetravel/CdTimeTravel`) for period, warp, good-future, generator and projector state, rewind-registered. Time posts, time icon, stars, the warp and the stage-to-stage carry. R52A: touch, timer, trigger and camera lock equal native through row 583, and the saved payload equals native RAM. Carry into a native destination unverified: both recorded Palmtree Panic warps diverge on terrain at row 753 first. Two native warp movies recorded. The [stage matrix](../validation/levels/scd-stages.md#standard-obligations) records held-rewind qualification after the warp and act advance. |
 | Time Attack and backup RAM | done, RAM DATA screen open | `4ec6f66aee`, merged | Backup RAM bytes equal a native dump (8,192 of 8,192 after boot; 8,176 unmasked after a new game, a record with initials and two deletions). Time Attack menu video memory equals native at six states. Durable saves were not attached at interactive startup when this lane merged; the launcher lane did that later. The RAM DATA manager is a typed not-hosted step. `CdProgramFiber` runs the menu program on a virtual thread with strict hand-off: a design choice awaiting the user's review |
 | PCM driver and title audio | done | `c5769a0731`, merged | Driver state equals native for Past music in all seven zones; output correlation 0.47 to 0.79 against controls below 0.12. One PCM effect checked. CD seek latency unmodelled |
 | Special stage presentation and flow wiring | done, results open | `1022152ae2`, merged | Every native screenshot of the stage loop equals the engine's in four runs. Results graphics, pause and exit fade not done; a normal special stage, the Time Stone win and stages 2 to 5 and 7 never observed natively; the round trip after results is untested |
@@ -473,7 +490,7 @@ unverified lists. The order is not a priority order.
 | Collision Chaos objects 2 | done | `4ba65f351e`, merged at `c681f7344a` | Bumper, flipper object, Amy Rose and heart, animal, door. R31A equals native on 659 object rows. R32A to R32C still stop at the glass shatter `$29`, spawned by the zone's unhosted player block check (`r3/player_block_check.asm:224-259`). Native frees a collected ring's slot one frame before the engine (common objects). Its picture test picks the best of three engine frames by terrain and skips below 50% agreement: to be replaced by a fixed pairing |
 | Merged-tree check at `c681f7344a` | measured | | Guard profile 836 tests, 0 failures. Sonic CD suite 1,368 tests, 5 failures, each owned (Collision Chaos glass shatter 3, Wacky Workbench palette first pass 1 and appearance 1) |
 | Metallic Madness objects 2 | done | `e82d118861`, merged at `d51bddbf16` | Spike crusher and Scarab equal native (appearances and pictures; one authored movie green on 1,718 rows); Bigbom, twin walker and the Scarab's monitor, grab and kill have no native row. Native draws a spring over a badnik in the same sprite bucket where the engine draws the reverse (shared renderer, open) |
-| Endings, video player, opening, sound test and title secrets (END) | done | `04a68944ad`, merged at `df54c7cb19` | Both endings, credits, opening, sound test with six codes, hidden pictures and best staff times equal native tiles, plane cells, scrolls, palette and pictures. Screen state is typed (`fmv/CdProgramScreenState`), with no video-memory image or register words; the streamer keeps the sector rate, bank rule and the game's audio-sync test and models no interrupts or CPU handshake. Drive seek is an unsupported hardware timing (`SEEK_VINTS` 20; results equal for 12 to 46). Start during the opening is unverified. Not started: Visual Mode, D.A. Garden, Thank You, Comin' Soon, attract demos |
+| Endings, video player, opening, sound test and title secrets (END) | done | `04a68944ad`, merged at `df54c7cb19` | Both endings, credits, opening, sound test with six codes, hidden pictures and best staff times equal native tiles, plane cells, scrolls, palette and pictures. Screen state is typed (`fmv/CdProgramScreenState`), with no video-memory image or register words; the streamer keeps the sector rate, bank rule and the game's audio-sync test and models no interrupts or CPU handshake. Drive seek is an unsupported hardware timing (`SEEK_VINTS` 20; results equal for 12 to 46). Start during the opening is unverified. Not started: Visual Mode, D.A. Garden, Thank You, Comin' Soon |
 | First-iteration presentation timing (PRES1) | done, follow-up done (next row) | `ea94addc61`, merged at `85576f5edf` | `CdFirstMainLoopIteration` runs the load-time scroll, palette and tile calls in native order; zone compensations and the fitted lock frame are removed; one scroll-lock gate for all zones. Wacky Workbench failures gone; Tidal Tempest R41B to R41D end and Metallic Madness R82A early certified. Still uncertified: R63D mid, R12B end (bush band 32 px), R41A end (deformation phase). Follow-up: fixed picture pairing in tests written since |
 | Merged-tree check at `85576f5edf` | measured | | Guard profile 836 tests, 0 failures. Sonic CD suite 1,392 tests, 4 failures (Collision Chaos glass shatter 3, Collision Chaos picture pairing 1) |
 | Picture pairing follow-up (PRES1 part 2) | done | `2149213b42`, merged at `0509f7e513` | One fixed pairing rule in the Collision Chaos, Metallic Madness and Tidal Tempest object pictures (fixture probe shots pair at lf(row+1)−1; boss probe shots at lf(row)−1). Amy and heart equal native exactly. Twenty Collision Chaos R32 shots uncertified: their native frames were captured one input frame ahead |

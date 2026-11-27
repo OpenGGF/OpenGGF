@@ -1,5 +1,6 @@
 package com.openggf.game;
 
+import com.openggf.game.internal.LevelLifePolicy;
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.rewind.snapshot.GameStateSnapshot;
 import java.util.ArrayList;
@@ -351,7 +352,11 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
     }
 
     public void addContinue() {
-        this.continues++;
+        continues = (continues + 1) & 0xFF;
+    }
+
+    void capContinues(int maximum) {
+        continues = Math.min(continues & 0xFF, maximum);
     }
 
     public void restoreSaveProgress(int lives, int continues, List<Integer> chaosEmeralds, List<Integer> superEmeralds) {
@@ -445,9 +450,17 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
     }
 
     public void loseLife() {
-        if (this.lives > 0) {
-            this.lives--;
+        var policy = levelLifePolicy();
+        if (policy != null) {
+            lives = policy.livesAfterDeath(lives);
+        } else if (lives > 0) {
+            lives--;
         }
+    }
+
+    private static LevelLifePolicy levelLifePolicy() {
+        var world = com.openggf.game.session.SessionManager.getCurrentWorldSession();
+        return world == null ? null : world.getGameModule().getGameService(LevelLifePolicy.class);
     }
 
     /**
@@ -645,6 +658,10 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
 
     int specialRingCollection() {
         return collectedSpecialRings;
+    }
+
+    void restoreScore(int score) {
+        this.score = score;
     }
 
     void restoreLives(int lives) {
@@ -912,7 +929,7 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
      * Applies one frame of ROM {@code Pause_Game} toggle logic and reports whether
      * the level update should run this frame.
      * <p>
-     * Mirrors the universal Start-edge toggle (S1 {@code PauseGame}
+     * The default follows the cartridge Start-edge toggle (S1 {@code PauseGame}
      * {@code docs/s1disasm/_inc/PauseGame.asm:5-54}; S2 {@code PauseGame}
      * {@code docs/s2disasm/s2.asm:1585-1633}; S3K {@code Pause_Game}
      * {@code docs/skdisasm/s3.asm:1713-1784}):
@@ -942,11 +959,12 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
      *         paused), false if it should run normally.
      */
     public boolean applyPauseToggle(boolean startEdgePressed) {
-        if (lives == 0) {
+        var policy = levelLifePolicy();
+        if (policy == null && lives == 0) {
             gamePaused = false;
             return false;
         }
-        if (startEdgePressed) {
+        if (startEdgePressed && (policy == null || policy.canTogglePause())) {
             gamePaused = !gamePaused;
         }
         return gamePaused;

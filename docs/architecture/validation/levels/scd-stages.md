@@ -16,9 +16,11 @@ scroll state/player/frame isolation and frozen scroll-lock capture after release
 Per-zone phase tests cover the stage/program variants, immutable dependencies,
 water/ramp/band arithmetic and 448-row sampling. The combined initial check runs
 54 tests without skips. No new native-reference, cold-route or time-travel frontier
-is certified. Rendered pixels for other periods/acts, exhaustive wraps, swap edges
-and complete rewind/load/time-travel histories remain obligations. These checks
-supersede the earlier test that pinned CD's profile exclusion.
+is certified. Rendered pixels for other periods/acts, exhaustive wraps, swap edges,
+and complete within-stage rewind histories remain obligations. Load and time-travel
+rewind histories also remain open beyond the tested R11A → R11D time warp and
+R11A → R12A act clear. The motion checks supersede the earlier test that pinned
+CD's profile exclusion.
 
 Game `scd`, all seven zones, Sonic only. A partial matrix under the
 [zone and act testing standard](../../../guide/contributing/level-test-standard.md):
@@ -43,6 +45,17 @@ retained solid routine. The [development ledger](../../../changelog/v0.8-prerele
 records the original failures and loading correction. This bounded art check
 does not advance the route matrix; section-transition screenshots, broader
 viewport coverage and inherited rewind/lifecycle gaps remain unassessed.
+
+## Time Attack object rules
+
+`TestCdTimeAttackObjects` loads the USA disc for R11A and R31A, both with
+the IPX Time Attack selection and with the flag clear. It checks a placed
+time post, the reserved HUD icon, the 1-Up monitor, the special-stage ring,
+and the two Amy routines and intro spikes. It also checks when all seven
+Time Stones can force a good future. `TestCdTimeAttackFlow` covers entry from
+the title and restores the running mode through the existing rewind adapter.
+The campaign interaction with Amy in R11A still uses a placeholder. These
+checks cover the object rules in the two tested stage files.
 
 ## Playtest follow-up (2026-11-15)
 
@@ -106,7 +119,7 @@ diverging row and the frontier test's cause label (a guess, not a diagnosis).
 | R41D | none | none | green | |
 | R42A | **green** 6,411 | asserted | green | All three break-pole grips, underwater `$37` damage, hurt recovery and signpost match. Results exit on row 6411 and load R43D |
 | R42B, R42C, R42D | none | none | green | |
-| R43C, R43D | boss movies | partial | green | Chase equal in both futures; fight compared to row 4887 of R43D; defeat, escape and capsule recorded, not compared |
+| R43C, R43D | boss movies | partial | green | Chase matches in both futures. Fight player and camera match through row 5959, before the engine misses water entry at row 5960. Slot parity stops at the first bubble pop, which ends a frame late in the engine. Native movies cover the capsule and results through NextLevel. The engine has no parity assertion for that tail. |
 | R51A | **green** 4,756 | asserted | green | |
 | R51B | **green** 5,494 | asserted | **green** 569 | The conveyor switches to its warp step on the trigger frame |
 | R51C | **green** 7,151 | asserted | green | |
@@ -115,12 +128,12 @@ diverging row and the frontier test's cause label (a guess, not a diagnosis).
 | R52B, R52C, R52D | none | none | green | |
 | R53C, R53D | boss movies | boss | green | Both fights green past the capsule to the stage exit; act end reaches R61A |
 | R61A | **green** 4,892 | asserted | green | |
-| R61B | **green** 5,449 | asserted | green | |
-| R61C | **green** 6,767 | asserted | green | |
+| R61B | **green** 5,449 | asserted | green | The full-act recording observes both projector animals entering at row 2749 and leaving at row 3209. The route passes above their sprites. |
+| R61C | **green** 6,767 | asserted | green | The short fixture observes the flying animal placed at `($0488,$04D0)`. Its on-screen region matches native at rows 631 and 647 at 3 bits per color channel. |
 | R61D | none | none | green | |
 | R62A | **green** 4,787 | asserted | green | |
 | R62B, R62C, R62D | none | none | green | |
-| R63C, R63D | boss movies | boss | green | Complete fights by real play: defeat, escape, capsule, results and the next stage equal native |
+| R63C, R63D | boss movies | boss | green | Complete fights by real play: defeat, escape, capsule, results and the next stage equal native. Both defeat fades have per-V-INT palette comparisons. |
 | R71A | **green** 3,977 | asserted | green | |
 | R71B | **green** 4,918 | asserted | green | |
 | R71C | **green** 6,096 | asserted | green | |
@@ -129,12 +142,12 @@ diverging row and the frontier test's cause label (a guess, not a diagnosis).
 | R72B, R72C, R72D | none | none | green | |
 | R73C, R73D | boss movies | boss | green | Both race wins equal native on every row; ten movies with zero slot mismatches |
 | R81A | **green** 4,736 | asserted | green | |
-| R81B | **green** 3,991 | none | green | Route does not reach the goal |
-| R81C | **green** 4,524 | none | green | Route does not reach the goal |
+| R81B | **green** 3,991 | native tail, engine player and camera | green | The separate 5,396-row act-end recording reaches the signpost, tally, and R82A exit state. Engine player and camera match through the last trace row. |
+| R81C | **green** 4,524 | none | green | A separate 4,694-row attempt reaches `($1AD5,$042E)` before stalling against terrain. |
 | R81D | none | none | green | |
-| R82A | **green** 5,697 | none | green | Player and camera match through the recording's end, before the signpost |
+| R82A | **green** 5,697 | none | green | A separate 6,958-row attempt takes Mini Sonic through the lower passage and reaches `($1D9C,$0168)`, below the exit lane. |
 | R82B, R82C, R82D | none | none | green | |
-| R83C, R83D | approach only | none | green | Approach green to row 1,762 of R83C; fight and endings run in the engine with test-driven hits, not compared; no native ending recording |
+| R83C, R83D | boss movies | partial | green | Both fights are recorded through defeat, escape, Amy, and the stage-select return to title. `TestMmzPlayerMovies` matches player and camera through rows 6965 and 5576, respectively. Boss slots and the stage exit lack native assertions. |
 
 Totals at `6c5c0e2764` and `45463c80bd`: routes 146,390 of 149,633 rows (97.8%; 26 of 28 to
 their end); fixtures 56,879 of 57,049 rows (68 of 70). Later focused
@@ -144,8 +157,9 @@ The cells above give the matched prefix length. In the act-end column
 `none` means the route has no end-of-act assertion: it is not in
 `TestSonicCdActEndNative`'s set, either
 because it does not reach the goal or because no assertion was written. All 25
-routes in that set are asserted after the R42A rerun. The per-stage tables
-behind these numbers are local measurement output.
+routes in that set are asserted after the R42A rerun. R81B has a separate
+native act-end assertion and a full player and camera comparison described below. The
+per-stage tables behind these numbers are local measurement output.
 
 ## First-divergence recheck (2026-11-18)
 
@@ -229,23 +243,67 @@ their short recordings. The R51A, R51B, R51C and R52A long routes match through
 their recorded ends. These comparisons use the existing frontier fields and
 recordings. See the [trace frontier log](../../../status/trace-frontier-log.md#2026-11-18--sonic-cd-quartz-quadrant-conveyor-at-warp-trigger).
 
+## Palmtree Panic time-stop monitor
+
+The USA disc places subtype 5 at `$0BF0,$0350` in R13C and R13D
+(`StageObjects`, r1/stage_object_maps_3.asm:65-68). The item writes 300
+(`ObjMonitorItem_Main`, Level/_Objects/Monitor and Time Post/Main.asm:593-611).
+Native R13C captures at completed level frames 98–456 retained 300 and
+the same palette step and timer. The matching unbroken control continued
+cycling. `LevelStart` clears the word with the flower buffer
+(Level/Main.asm:178-184), including death reentry (Level_MainLoop,
+Level/Main.asm:401-408) and loading a warp destination.
+
+`TestSonicCdCommonObjects#placedTimeStopMonitorFreezesTheStageUntilRestart`
+drives Sonic into the disc placement in R13C and checks palette and ring
+mapping frames across 401 subsequent level frames, rewind, and a death
+reload. The ring witness uses an added slot because this part of the layout
+has no rings. The native probe staged a monitor break and sampled palette
+state. The ring witness and alternate future lack a native comparison.
+
 ## Standard obligations
 
 | Obligation | State | Gap |
 | --- | --- | --- |
-| ENTRY | All 70 stages load from the disc (`TestCdStageLoaderAllPayloads`); three fixtures enter through the retail title and stage-select route (`TestCdRetailRouteReplay`); the master title lists Sonic CD and `TestSonicCdPlayerLaunch` starts a new game from it and equals native on 806 compared rows of R11A | Intro-skip and alternate entries not assessed; the attract demos are not hosted |
+| ENTRY | All 70 stages load from the disc (`TestCdStageLoaderAllPayloads`); three fixtures enter through the retail title and stage-select route (`TestCdRetailRouteReplay`); the master title lists Sonic CD and `TestSonicCdPlayerLaunch` starts a new game from it and equals native on 806 compared rows of R11A | Ordinary attract entries R11A, R43C and R82A have idle-title coverage in `TestCdStageDemos`. Intro-skip remains open. |
 | OBJECT | Per-zone object tests and slot-exact appearance windows. `TestTtzObjects#timeStarsAnimateAndRetireInR42a` exercises all four active time-warp stars on the authenticated USA disc from a direct post-touch setup | Many objects have no native picture; layout entries without a saved-state bit respawn while live (R41C); ring collection order (R51A) |
 | EVENT, CAMERA | Level events, boss arenas and scroll locks hosted; routes cover them where they pass | Wide-view triggers unchecked |
-| BOSS | Seven bosses; native fights for six, as above | Tidal Tempest defeat onwards and the Metallic Madness fight have no native comparison |
+| BOSS | Seven bosses with native fight recordings | Tidal Tempest after the fight comparison limits and Metallic Madness boss slots and stage exit lack native assertions |
 | LIFE | Deaths, game over and checkpoints run through the program flow (`TestCdGameFlowNative`, six native runs set up with RAM pokes); the idle timer and give-up equal native on an 11,490-row movie; saves persist across runs, and RAM DATA resets the Sonic CD record through the title menu (`TestCdDurableSaves`) | Checkpoint respawn after time travel unverified |
-| LOAD | Act clear to the next stage, warp to another period, giant ring to the special stage and back; state a stage change leaves behind is cleared as native does (`TestSonicCdStageChangeIsolation`); stage-load and video-read timing in normal play is estimated from emulator measurements (`gameplay.loadTimeSimulation`) | Carry into a native warp destination unverified; the checkpoint and warp entries are single samples, and 12 stages' checkpoint and warp keys may name the wrong queued list ([known discrepancy](../../../status/known-discrepancies.md#sonic-cd-hardware-timings-not-modelled)) |
-| REWIND | Boss rewind tests for six zones, rings, zone signals, the Stardust Speedway lamp, the Collision Chaos drain | Spot coverage per the rewind contract not assessed; cross-load rewind not assessed |
-| PRESENT | Zone pictures per the presentation lanes (most early and end shots equal native); `TestCdTitlePicture` | Uncertified shots listed in each zone test; widths other than 320 draw but have no native reference |
+| LOAD | Act clear to the next stage, warp to another period, giant ring to the special stage and back; state a stage change leaves behind is cleared as native does (`TestSonicCdStageChangeIsolation`); stage-load and video-read timing in normal play is estimated from emulator measurements (`gameplay.loadTimeSimulation`) | Carry into a native warp destination unverified; the checkpoint and warp entries are single samples. The load key uses the list the stage program queues ([known discrepancy](../../../status/known-discrepancies.md#sonic-cd-hardware-timings-not-modelled)) |
+| REWIND | Boss rewind tests for six zones, rings, zone signals, the Stardust Speedway lamp, the Collision Chaos drain. `TestCdStageLoadRewind` verifies that held rewind stops at the destination floor after R11A → R11D (time warp) and R11A → R12A (act clear) on the USA disc. See the [stage-load rewind policy](../../../status/known-discrepancies.md#sonic-cd-stage-load-live-rewind). | Within-stage rewind across complete routes and the other load edges remain unassessed. |
+| PRESENT | Zone pictures per the presentation lanes (most early and end shots equal native); `TestCczBackgroundPicture` also compares the Act 1 Past and Good Future foreground below Y `$5C0` against native frames; `TestCdTitlePicture` | Uncertified shots listed in each zone test; widths other than 320 draw but have no native reference |
 | ROUTE | 28 full-act routes as above | Act 1 Bad Future and act 2 Past and futures: fixtures only; no complete-run recording |
 | ORACLE | Constants and branches cite `docs/scddisasm`; trace rows comparison-only | Lag-frame CPU timing not modelled ([known discrepancy](../../../status/known-discrepancies.md#sonic-cd-hardware-timings-not-modelled)) |
 
-Breadth: Sonic CD has one character and no teams; it is not a donor, and
-donation into it is not assessed. Widths 400, 528 and 800 draw full pictures in
+The USA idle rotation reads 23 controller samples before R11A's first level
+iteration and 42 before each of R43C and R82A. R43C and R82A skip the title card
+and drain a stage-art queue. All three return after sample 2048, for 2025, 2006,
+and 2006 level iterations respectively. The disc-backed test compares Sonic's
+position and rings at iterations 360, 360, and 120 respectively. R43C matches
+native through all 2,006 level iterations.
+
+- **R11A.** The first difference is at iteration 2. The first gameplay
+  samples hold Right (`$0800`). On the disc, controls are locked before the
+  level loop (scddisasm/src/Level/Main.asm:262-275, `LevelStart` sets
+  `ctrlLocked=1`), so Sonic stands still.
+  The engine applies Right for one iteration at X velocity 12, leaving an
+  X sub-pixel offset of `$0C00` before `CdPlayerStage.applyControlLock` takes
+  effect. That offset first shows as a one-pixel difference at iteration 154.
+  Velocities match until Sonic rolls down a slope at iteration 1423. Rings
+  first differ at iteration 1658. Normal stage starts share the control-lock
+  gap, which has its own follow-up.
+- **R82A.** The runs match through iteration 125. The engine hurts Sonic at
+  iteration 126. On the same approach on the disc, Sonic pushes into laser
+  `$1D` at (7033, 1415) at iteration 127 and enters the hurt routine at 128.
+  See `loc_20B62A` (scddisasm/src/objects/r8/laser.asm:183-216) for the
+  overlap check and hurt write. Rings first differ at iteration 212. The
+  follow-up still needs to establish whether the laser cycle or spawn timing
+  causes the earlier contact.
+
+Breadth: Sonic CD has one character and no teams; it is not a donor. Donation
+into it has bounded R11A coverage only (see
+[cartridge donor hosting](#cartridge-donor-hosting-2026-11-16)). Widths 400, 528 and 800 draw full pictures in
 the capture tools but have no native reference; the other presets are unchecked.
 
 ## Sound Test Special Stage 8
@@ -258,6 +316,231 @@ the ending and title cues, held versus fresh confirmation, and unchanged
 backup RAM and campaign progress. A separate case checks Start abort.
 Both local native recordings end with six UFOs remaining. A natural clear
 and parity for the original `SPEEND.MMD` credits presentation remain open.
+
+## Stage pictures and Wacky Workbench defeat fades
+
+`StageMainLoop` (common/main.asm:329-340) waits for `VBlankStage`
+(common/main.asm:854-877). That V-INT uploads the palette, horizontal scroll
+and sprite table prepared by the same stage iteration. It also updates the
+animated tiles in `VBlankStagePlayerGfxDone` (common/main.asm:891-902).
+The other stage dialect does the same in `VInt_Level` (Level/Main.asm:821-847).
+`StageMainLoopUpdate` (common/main.asm:406-410) runs objects and
+`StageMainLoopDraw` (common/main.asm:443-453) cycles colors after drawing
+objects. In Wacky Workbench, `CycleColor` (r6/palette_cycle_c.asm:23-46),
+`BossFadeStageWritePalette` (common/palette_fade.asm:412-434), and
+`ElectricBeamsAnimateMainPalette` (objects/r6/electric_beams.asm:201-211)
+write the palette for that iteration.
+
+The live engine draws the completed iteration's sprites, scroll, palette,
+and animated tiles together. This is the picture the disc displays at the
+next V-INT. The base engine already matched ordinary palette rows at this
+pairing. Comparing engine-after-R to the CRAM sampled at the end of native
+row R made ordinary writes appear early.
+
+`EggmanDefeatSequenceFadeScreen` and `EggmanDefeatSequenceFadeObjects`
+(objects/r6/boss.asm:545-559) hold the stage loop twice. The restore reads
+the separate target buffer filled by `LoadFadePalette`
+(common/palette_load_fade.asm:3-15). The palette cycler changes only the
+active buffer.
+
+The boss calls each fade from inside `UpdateObjects`
+(`StageMainLoopUpdate`, common/main.asm:406-410). The two waits set routine
+`$12` and call VSync 22 times each (`FadeToWhite`,
+common/palette_fade.asm:285-295, and `BossFadeObjectsFromWhite`,
+common/palette_fade.asm:463-484). `VBlank` (common/main.asm:716-738) writes
+vertical scroll before dispatch. `VBlankIndex` (common/main.asm:754-765)
+dispatches `VBlankPaletteFade` (common/main.asm:951-962). Its
+`VBlankCommon` (common/main.asm:1014-1037) reads the pads and uploads CRAM.
+`VBlankCommonResume` (common/main.asm:1039-1054) then transfers the sprite
+table to VRAM `$F800` and H-scroll to `$FC00`, using the buffers that the
+last completed stage iteration prepared. The fade services
+`ProcessGfxQueueFast` (common/gfx_queue.asm:103-112) and advances the
+decompressor setup after VSync, when the fade computes the next step. `VBlankDispatchDone`
+(common/main.asm:740-750) still flushes FM requests and advances its
+interrupt-owned counters.
+
+The blocked object pass has yet to reach `StageMainLoopUpdateScroll` and
+`StageMainLoopDraw` (common/main.asm:440-453). The fade interrupt omits
+`LoadPlayerGfx` and `VBlankStagePlayerGfxDone`
+(`VBlankStage`, common/main.asm:854-900). Existing player art, stage
+animation patterns, plane maps and HUD digit tiles remain resident.
+`DrawStage` (r6/stage_draw_3c.asm:17-34 and r6/stage_draw_3d.asm:17-34)
+would stream the plane-map rows and columns on a regular stage V-INT.
+`UpdateHudNumbers` (objects/hud_points.asm:210-257) ticks the timer and
+writes its centiseconds on that same ordinary V-INT. During the four held
+windows, the native hashes of H-scroll, the SAT, both plane maps, HUD art,
+WWZ animation art and player art were constant within each hold. Timer
+RAM was also constant.
+
+The engine retains the last sprite and scroll picture before the boss
+enters the wait. It displays the fade palette prepared by each held tick
+with that picture, using the same palette pairing as ordinary frames.
+The stage art and HUD publish when the next ordinary picture is due.
+In both restore holds, a duplicate offscreen ring had previously consumed
+16 pixels of the sprite scanline budget and clipped the escape pod.
+Placed rings now enter the table through their object slots, as in
+`ObjRing_Main` (Level/_Objects/Ring/Main.asm:214-232) and `DrawObject`
+(common/object.asm:100-154). Tiles-only pictures already matched in all
+four holds. The full-picture differences came from sprite admission and
+which sprite table was on screen.
+
+The native probe reads CRAM after `FrameAdvance`, alongside the video
+buffer used for pictures. `TestWwzBossFades` compares CRAM and the backdrop
+at each of the 672 recorded V-INTs to the engine after the preceding row.
+The two recordings have no lag in these windows. Good Future hold rows are
+5473-5495 and 5553-5575. Bad Future hold rows are 5724-5746 and 5804-5826.
+The test also compares the stage frame counter at the same replay row,
+including when the stage loop resumes. The user-local CRAM recordings are
+under `rehost-boss-wwz/R63C-fades` and `R63D-fades`. Each hold window
+includes the entry and 22 subsequent V-INTs. A rewind check restores the
+first Good Future hold at row 5481 and checks the held rows, palette words,
+and gameplay resumption at row 5496 on both passes. `TestWwzBossNative`
+checks slots and timers at completed level frames.
+
+`TestWwzBossHoldPictures` compares all 320×224 pixels at native channel
+precision, including the HUD, during both holds in each recording and
+across their boundaries. It also checks the stage animation counters
+during the holds, when the fade can conceal a premature art update.
+Restoring a snapshot inside a wait also restores the last published HUD
+digits from the HUD object's captured values.
+The Good Future picture windows are rows 5475–5495
+and 5555–5575. The Bad Future picture windows are 5726–5746 and 5806–5826. These
+rows have no lag. The lossless PNGs are user-local, under
+`rehost-boss-wwz/{R63C,R63D}-fades/pictures/`, indexed by trace row.
+The cartridge palette upload paths need their own displayed-frame checks.
+
+## Palmtree Panic campaign Amy Rose (hosted)
+
+R11A hosts Amy (`$2F`) and her hearts
+(`$30`). `TestPpzAmyRose` compares slot, sampled position and despawn with
+the stage-select R11A recording. Its disc-backed cases cover the stationary
+chase and wait thresholds, grab, jump release, removal while holding Sonic
+before and after rewind, and the Time Attack write of the level-end palette.
+See `ObjAmyRose` (Level/Palmtree Panic/Objects/Amy Rose/Main.asm:7-26).
+The stage-select route passes Amy without a grab. Native grab and release
+still need a dedicated recording.
+
+## Parked Sonic CD gaps
+
+- **Metallic Madness boss door.** `BossDoorObject_0_Routine4`
+  (objects/r8/boss_door.asm:64-88) clears foreground columns as the door opens.
+  `PlaceBlock` draws to VDP plane A and leaves the layout and collision data
+  intact (r8/stage_draw_3c.asm:398-428, r8/stage_draw_3d.asm:398-428).
+  `PlaceBlock` (r8/stage_draw_3c.asm:415-416) skips the draw when
+  `CheckBlockVisible` fails, so off-screen blocks stay intact.
+  The R83C and R83D fight probes record camera positions and door `$3D`
+  slots. Use those movies to capture the foreground plane A tile entries
+  from before the trigger through the slide and the next camera redraw.
+  Use the visible lifetime of the cleared columns to specify an engine render operation.
+
+The three screen items below stay parked until native picture sequences
+are available to certify parity. Each needs a visual review against its
+capture before it can close.
+
+- **Pencil Test playback.** Visual Mode plays all 840 picture banks. The
+  stream has no measured seek and uses `CdFmvStreamer.SEEK_VINTS` (20 V-INTs).
+  Capture native frames from entry through exit, including the border,
+  palette fades and closing sequence. Use the program's disc data for
+  the border and palettes. See `Start` (FMV/Main (Pencil Test).asm:71-98)
+  and `MainLoop` (FMV/Main (Pencil Test).asm:118-137).
+- **Thank You presentation.** Visual Mode opens an archive contact sheet
+  after the good ending. It reads the Nemesis tiles at `[$0452, $0A1C)`,
+  one lookahead byte at `$0A1C`, and the Enigma map at `[$0A1C, $0AAA)`
+  in `THANKS_D.BIN;1`. The 64 palette words come from `[$19CE, $1A4E)`
+  in `THANKS_M.MMD;1`. Capture native frames from entry through the
+  composition, animations, fades, and exit. See `ThankYou_CommandLoop`
+  and `ThankYou_UpdateFrame` (Thank You/Main.asm:70-107).
+- **Comin' Soon presentation.** Stage select opens an archive contact
+  sheet. It reads the 150 tiles at `[$02D8, $07DC)` and palette at `$02B8`
+  in `COME__.MMD;1`. Capture the native composition and palette changes
+  through the return to title.
+  See `Start` (Comin Soon/Main.asm:49-118) and
+  `VInterrupt` (Comin Soon/Main.asm:119-156).
+
+## Open Sonic CD fixes (owned)
+
+- **Recorded-input pause audio.** [PR #413](https://github.com/OpenGGF/OpenGGF/pull/413) owns the fix.
+  The engine's recorded-input pause omits the music pause requests.
+  `PauseMusic` selects PCM for ordinary Past music and CDDA otherwise,
+  including Past invincibility and speed shoes (Level/Main.asm:620-643).
+- **Extra-life ring sound.** The disc's `CollectRing .GainLife` requests only
+  `SCMD_YESSFX` (Level/_Objects/Ring/Main.asm:290-312). The engine's shared
+  collector also plays the ordinary pickup cue. The pickup cue fix is
+  planned after [PR #399](https://github.com/OpenGGF/OpenGGF/pull/399), which
+  adds the YES voice.
+- **R43C and R43D boss fight.** The fix is in progress on
+  `bugfix/ai-scd-ttz-boss-water-entry`. `TestTtzBossNative` matches player
+  and camera through row 5959. The engine misses water entry on row 5960.
+  The slot check stops at the first bubble pop because the engine ends its
+  animation one frame late. The 6,843- and 6,842-row native traces cover the
+  fight, capsule release, and results through NextLevel. Both probes log the
+  subsequent program changes. The engine still needs a comparison past the
+  two divergences through the exit.
+  [`TestTtzBossNative`](../../../../src/test/java/com/openggf/game/soniccd/TestTtzBossNative.java#L39-L84).
+
+## Metallic Madness act-end routes (2026-11-21)
+
+Cold BizHawk 2.11 replays used the USA disc and controller-only movies from
+retail stage select. The movies, v5 traces and goal probes stay under the
+user-local native root, in `u50-mmz-act-end/R81B` and
+`u50-mmz-act-end/partial/{R81C,R82A}`. The original route pins remain the
+source of the player and camera counts in the table.
+
+- **R81B.** The 7,995-input movie triggers the signpost on trace row 4677 and
+  stops the timer. The results object appears on row 4857 with 4,000 time points
+  and 200 ring points. The score rises from 300 to 4,500. The goal probe
+  continues one row beyond the trace to catch restart 2 and the Act 2 Present
+  (R82A) exit state at row 5396. Retail stage select returns to the title.
+  The results' exit state supplies the campaign selection reference.
+  `TestSonicCdActEndNative#metallicMadnessPastActEnd` checks the native tail
+  and compares the engine's player and camera through all 5,396 rows.
+  At row 2635, the shared enemy defeat rebound reverses Sonic's downward
+  speed from `$0F18` to `-$0F18` when Scarab `$2F` becomes explosion `$18`.
+  `loc_206CD8` (scddisasm/src/r8/player_object_collide.asm:456-463)
+  dispatches the rear touch to `sub_2069E8`.
+  `loc_206A5E` (scddisasm/src/r8/player_object_collide.asm:203-216)
+  awards points, changes the object ID, and negates downward speed when
+  Sonic is above the enemy.
+- **R81C.** The 7,047-input movie stalls against terrain at `($1AD5,$042E)`.
+  Additional branches reached the upper platform and the spring below the
+  ceiling, and no branch reached the signpost.
+- **R82A.** The 9,297-input movie takes the lower passage as Mini Sonic and
+  reaches the upper chamber below the exit lane. The return toward the
+  restoring laser stalls at the one-way door near `$1DA8`.
+  That movie has no signpost trigger.
+
+## Metallic Madness fight comparison
+
+`rehost-boss-mmz` has 7,331 rows for R83C and 6,520 for R83D, with boss,
+child, and door slots in the probes. R83C records three hits, defeat near row
+6666, Amy around 6797, and the stage restart at 7163. R83D records the defeat,
+Amy, and stage end at row 6353.
+`TestMmzPlayerMovies` caps the R83C player and camera comparison at row 6965
+after Amy. It caps R83D at row 5576, before the native player is hurt on
+5577. The remaining rows, boss slots, and stage exits need native assertions.
+[`TestMmzPlayerMovies`](../../../../src/test/java/com/openggf/game/soniccd/TestMmzPlayerMovies.java#L57-L76).
+
+## Unreachable in shipped data
+
+- **Palmtree Panic waterfall.** The Present object index calls `$04` an
+  unused, broken waterfall generator (`ObjectIndex`, Level/Palmtree Panic/Object Index (Act 1 Present).asm:7-11).
+  [`TestPpzObjectsA`](../../../../src/test/java/com/openggf/game/soniccd/TestPpzObjectsA.java#L548-L562)
+  confirms zero placements across all ten USA Palmtree Panic layouts.
+  The generator's `PlaceBlockAtPos` writes are unimplemented
+  (`ObjWaterfall_Main`, Level/Palmtree Panic/Objects/Effects/Main.asm:36-58).
+
+## Native recordings still needed
+
+Use the USA disc in BizHawk 2.11. Keep the starting state and input together
+with the recorded rows or audio and pictures needed by the check.
+
+| Gap | Already recorded | Missing evidence |
+| --- | --- | --- |
+| Campaign endings | R83C and R83D stage-select fights return to the title. `rehost-programs` has video and audio of both endings entered through Visual Mode. | On the campaign route, clear R83C with all Time Stones or all good futures, and clear R83D with neither set complete. Capture the final stage exit, saved flags, `GameDone` selection, and the campaign path through credits back to title (CD Initial Program/IPX.asm:301-326). |
+| Full campaign | `rehost-timetravel` records New Game warps. `rehost-flow` records act and giant-ring handoffs with RAM setup. | One cold-boot movie from empty backup RAM and New Game through the R83 clear. Include ordinary act exits, a warp, a giant-ring return, carryover between acts, and the last save and ending. |
+| Natural Special Stage 8 clear | `rehost-programs/st-ss8` records Sound Test entry. `rehost-special` adds a timeout and a terrain run, both with all six UFOs left at the last active sample. | Clear all six UFOs by controller input. Capture the success state, fade, `SPEEND.MMD` credits with audio, and return to title (`SoundTest_SpecStg8`, CD Initial Program/IPX.asm:1065-1079). |
+| R81C and R82A act ends | The new partial attempts have 4,694 and 6,958 trace rows, respectively. The goal probes capture no signpost trigger. | Complete both routes through the signpost, time and ring tallies, and results exit. |
+| R41A swing and switch elevator ([PR #403](https://github.com/OpenGGF/OpenGGF/pull/403)) | The long trace logs spawn events for the `$29` swing and `$30` elevator. Its player rows show no support by either object. | Ride the swing seat at `($0480,$0180)` and press its switch. At the elevator at `($09E0,$0540)`, press and release the switch and ride the side platform. Capture rider support, swing phase, switch states, and column and platform motion during those interactions. See `StageObjects` (r4/stage_object_maps_1.asm:38-41, 93-94). |
 
 ## Cartridge donor hosting (2026-11-16)
 

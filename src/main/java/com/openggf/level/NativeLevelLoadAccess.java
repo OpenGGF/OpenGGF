@@ -131,6 +131,11 @@ public final class NativeLevelLoadAccess {
         // it cannot execute Sonic again on the fade's final interrupt.
         return phaseAtEntry || servicedWait || isPending(level) || frame.ownerPhase() != null;
     }
+    /** The straight-line release prelude consumes the last title wait's clock. */
+    public static void runTitleReleaseObjectsAfterVBlank(LevelManager level) {
+        level.updateObjectPositionsWithoutTouches(true, false);
+    }
+
     public record TitleScan(boolean parked, boolean completedBeforeScan, boolean clockOwned) { }
     /** Both live and recording loops share the phase fence around their real title scan. */
     public static TitleScan beginTitleScan(LevelManager level) {

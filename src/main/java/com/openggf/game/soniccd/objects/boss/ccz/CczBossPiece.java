@@ -124,8 +124,11 @@ abstract class CczBossPiece extends CdBossPart {
     }
 
     /** {@code jmp DeleteOtherObject}: another slot is cleared. */
-    static void deleteOther(CdBossPart other) {
-        if (other != null && !other.isDestroyed()) other.setDestroyed(true);
+    final void deleteOther(CdBossPart other) {
+        if (other != null) {
+            other.setDestroyed(true);
+            services().objectManager().removeDynamicObject(other);
+        }
     }
 
     @Override

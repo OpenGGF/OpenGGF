@@ -1,5 +1,6 @@
 package com.openggf.game.soniccd.objects.ppz;
 
+import com.openggf.game.soniccd.objects.common.CdAnimalArt;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.soniccd.CdStagePayload;
 import com.openggf.game.soniccd.level.CdLevel;
@@ -43,6 +44,14 @@ public final class PpzObjectArt {
             PPZ_COLLAPSE1 = "collapse1", PPZ_COLLAPSE2 = "collapse2", PPZ_COLLAPSE3 = "collapse3",
             PPZ_COLLAPSE4 = "collapse4", PPZ_WALL = "wall", PPZ_PLATFORM = "platform", PPZ_DISC = "disc", PPZ_SPRINGBOARD = "springboard",
             PPZ_HOLE = "hole", PPZ_SWING = "swing", PPZ_BOULDER = "boulder", PPZ_GENERATOR = "generator";
+    static final String AMY = "amy", HEART = "amyheart";
+    /** ObjAmyRose_Init (Level/Palmtree Panic/Objects/Amy Rose/Main.asm:36-40). */
+    static final int AMY_TILE = 0x2370;
+    /** ObjAmyHeart_Init (Level/Palmtree Panic/Objects/Amy Rose/Main.asm:684-691). */
+    static final int HEART_TILE = 0x0370;
+    public static final String TUNNEL_DOOR = "cd.ppz.tunnelDoor.";
+    /** ObjTunnelDoorV_Init (Level/Palmtree Panic/Objects/Tunnel Door/Main.asm:39-42). */
+    public static final int TILE_ID_TUNNEL_DOOR = 0xC;
     /** SetObjectTileID IDs of the spinning disc and the springboard (Spinning Disc/Main.asm:42-43, Springboard/Main.asm:122-123). */
     public static final int TILE_ID_SPINNING_DISC = 6, TILE_ID_SPRINGBOARD = 7;
     /** moveq #$11,d0; jsr SetObjectTileID (Swing/Main.asm:88-89). */
@@ -93,6 +102,13 @@ public final class PpzObjectArt {
                 && entry.logShadowMappings() < 0 && entry.waterfallMappings() < 0) {
             return;                                                  // not a Palmtree Panic stage
         }
+        // PLC_Std loads the door before section art (Level/Palmtree Panic/Data (Act 1 Present).asm:54-59).
+        int doorMappings = PpzObjectCatalogue.tunnelDoorMappings(loaded);
+        if (doorMappings >= 0) {
+            for (int tile : art.objectTileIds(TILE_ID_TUNNEL_DOOR)) {
+                art.register(TUNNEL_DOOR + tile, art.sheet(reader, doorMappings, tile));
+            }
+        }
         var stageEntry = CdStageCatalogue.entry(loaded);
         if (entry.sectionRanges() >= 0) {
             // SectionRanges, SectionUpdatePLCs, SectionInitPLCs: equal-length word lists, the first ending
@@ -118,6 +134,12 @@ public final class PpzObjectArt {
             sectionVram.add(vram);
         }
 
+        CdAnimalArt.register(art,
+                PpzObjectCatalogue.o(loaded, "animalBaseTiles"),
+                PpzObjectCatalogue.o(loaded, "flyingAnimalMappings"),
+                PpzObjectCatalogue.o(loaded, "groundAnimalMappings"),
+                PpzObjectCatalogue.o(loaded, "flyingAnimalAnimations"),
+                0x8000, 8, sectionVram, this::ppzSection);
         // PLC_Cam1_Full (Palmtree Panic/Data (Act 1 Present).asm:85-89) replaces title-card
         // tiles with Art_Boulder. Use section VRAM, just like the other section-owned objects.
         for (int tile : art.objectTileIds(com.openggf.game.soniccd.objects.common.CommonObjectArt.TILE_ID_BOULDER)) {
@@ -131,6 +153,9 @@ public final class PpzObjectArt {
                     com.openggf.game.soniccd.objects.common.CommonObjectArt.robotGeneratorTile(
                             stage, loaded, generatorTiles));
         }
+        // PLC_Cam5_Full (Level/Palmtree Panic/Data (Act 1 Present).asm:155-160).
+        ppz(art, reader, AMY, entry.amyMappings(), AMY_TILE);
+        ppz(art, reader, HEART, entry.amyMappings(), HEART_TILE);
         ppz(art, reader, PPZ_PLANT, entry.plantMappings(), PLANT_TILE);
         ppz(art, reader, PPZ_RAMP, entry.rampMappings(), RAMP_TILE);
         for (int tile : sceneryTiles()) ppz(art, reader, PPZ_SCENERY, entry.sceneryMappings(), tile);

@@ -9,7 +9,6 @@ import com.openggf.game.soniccd.zones.wwz.WwzPlayerProfile;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.level.objects.ObjectVisualFacing;
-import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 /**
@@ -124,11 +123,10 @@ public final class ObjFreezer extends WwzObject implements ObjectVisualFacing.No
         if (result == 2) routine += 2;                           // $FC: addq.b #2,oRoutine
     }
 
-    /** ObjFreezer_CheckSonic (:306-344). */
+    /** FreezerCheckPlayerOverlap (objects/r6/freezer.asm:284-314). */
     private boolean canFreeze(AbstractPlayableSprite player) {
         if (player.getInvincibleFrames() > 0) return false;      // tst.b invincible
-        var tt = CdTimeTravel.of(services().gameModule());
-        if (tt != null && tt.warping()) return false;            // tst.b timeWarp
+        if (CdTimeTravel.starsActive(services().gameModule())) return false;
         if (player.isHurt() || player.getDead()) return false;   // cmpi.b #4,oRoutine(a1) / bcc.s
         if (WwzPlayerProfile.playerControl(player) != 0) return false;   // tst.b oPlayerCtrl(a1)
         int reachX = player.getXRadius() + 16;
@@ -172,7 +170,7 @@ public final class ObjFreezer extends WwzObject implements ObjectVisualFacing.No
     private void iceBlock(AbstractPlayableSprite player) {
         yVel = (short) (yVel + ICE_GRAVITY);
         addToY((short) yVel << 8);
-        int floor = ObjectTerrainUtils.checkFloorDist(x, y, yRadius).distance();
+        int floor = checkFloor(x, y, yRadius).distance();
         if (floor < 0) {
             services().playMusic(CdSubCpuAudio.commandId("SCMD_BREAKSFX"));
             breakTime = 0xF;

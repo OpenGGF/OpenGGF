@@ -1,6 +1,7 @@
 package com.openggf.game.soniccd;
 
 import com.openggf.data.cd.Iso9660FileSystem;
+import com.openggf.game.soniccd.level.CdStageCatalogue;
 import com.openggf.game.timing.HardwareServiceBoundary;
 import com.openggf.game.timing.HardwareTimingService;
 import com.openggf.game.timing.HardwareWorkHandle;
@@ -62,18 +63,27 @@ public final class CdLoadTiming {
     }
 
     /**
-     * The PLC list {@code LoadLevelData} queues (Palmtree Panic/Load Level Data.asm:37-48): with {@code spawnMode}
-     * set (a checkpoint restart or a time-warp arrival) {@code LoadSectionArt}'s list for the camera's section;
-     * otherwise, with the title card already loaded ({@code plcLoadFlags} bit 1), the level PLC in
-     * {@code LevelDataIndex}'s fifth byte; otherwise none, 0 (the same {@code beq.s .End} a level PLC of 0 takes).
-     *
-     * @param sectionInitPlc {@code SectionInitPLCs} at the camera's section, or -1 where the engine does not
-     *                       catalogue the stage's section table (no measurement exists for those entries)
+     * The PLC list the stage program queues after camera placement. A section-aware loader
+     * selects its initial graphics when {@code spawnMode} is set (checkpoint or warp).
+     * The indexed path queues the fifth byte of the level data index when the title card
+     * is already loaded. See {@code LoadLevelData} (Level/Palmtree Panic/Load Level Data.asm:37-48)
+     * and {@code LoadStageData} (r5/stage_data_load_1a.asm:19-29).
      */
-    public static int levelStartPlc(boolean spawnModeSet, boolean titleCardAlreadyLoaded, int levelDataPlc,
-                                    int sectionInitPlc) {
-        if (spawnModeSet) return sectionInitPlc;
-        return titleCardAlreadyLoaded ? levelDataPlc : 0;
+    static int levelStartPlc(byte[] file, CdStageCatalogue.Entry stage, int cameraX,
+                             boolean spawnModeSet, boolean titleCardAlreadyLoaded) {
+        if (spawnModeSet) {
+            CdStagePayload payload = stage.payload();
+            int sectionPlc = switch (payload) {
+                // InitSectionGfx (r3/section_gfx_1c.asm:3-5) queues list 2 without reading the camera.
+                case R31C, R31D, R32C, R32D -> 2;
+                // These Quartz loaders use only the level index, even though the stage has section tables.
+                // LoadStageData (r5/stage_data_load_1a.asm:19-29, r5/stage_data_load_3c.asm:19-29).
+                case R51A, R51C, R51D, R52A, R52C, R52D, R53C, R53D -> -1;
+                default -> sectionInitPlc(file, sectionRanges(payload), cameraX);
+            };
+            if (sectionPlc >= 0) return sectionPlc;
+        }
+        return titleCardAlreadyLoaded ? file[stage.levelDataIndex() + 4] & 0xFF : 0;
     }
 
     /**
@@ -81,7 +91,7 @@ public final class CdLoadTiming {
      * selects the {@code SectionInitPLCs} word; both tables follow the $FFFF-terminated range list, the update list
      * first. {@code ranges} is the stage file offset of {@code SectionRanges}, -1 when the engine has none.
      */
-    public static int sectionInitPlc(byte[] stageFile, int ranges, int cameraX) {
+    private static int sectionInitPlc(byte[] stageFile, int ranges, int cameraX) {
         if (ranges < 0) return -1;
         int words = 0;
         int section = -1;
@@ -106,7 +116,7 @@ public final class CdLoadTiming {
      * The stage file offset of {@code SectionRanges} from the zone's object catalogue
      * ({@code object-catalogue-<zone>.tsv}), or -1 where the engine does not catalogue one for this stage.
      */
-    public static int sectionRanges(CdStagePayload payload) {
+    private static int sectionRanges(CdStagePayload payload) {
         String owner = SECTION_CATALOGUES.get(payload.stage().zone());
         if (owner == null) return -1;
         var row = TABLES.computeIfAbsent(owner, com.openggf.game.soniccd.objects.art.CdObjectTables::load).row(payload);

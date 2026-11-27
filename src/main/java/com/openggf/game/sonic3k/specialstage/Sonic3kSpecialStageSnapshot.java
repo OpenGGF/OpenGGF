@@ -13,6 +13,7 @@ record Sonic3kSpecialStageSnapshot(
         boolean emeraldCollected,
         boolean superEmeraldMode,
         int ringsCollected,
+        int ringAwardFlags,
         int spheresLeft,
         int ringsLeft,
         int frameCounter,
@@ -64,7 +65,7 @@ record Sonic3kSpecialStageSnapshot(
     static Sonic3kSpecialStageSnapshot uninitializedForTest() {
         return new Sonic3kSpecialStageSnapshot(
                 0, false, false, false, false,
-                0, 0, 0, 0,
+                0, 0, 0, 0, 0,
                 0, 0, 0, null,
                 0, 0, 0, 0, 0, false, 0, 0, false,
                 0, 0, 0, 0, 0,

@@ -6,6 +6,7 @@ import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
 import com.openggf.debug.playback.PlaybackDebugManager;
 import com.openggf.game.*;
+import com.openggf.game.internal.NativeSpecialStageResultsClock;
 import com.openggf.game.internal.SpecialStageStartInput;
 import com.openggf.game.rewind.LiveRewindManager;
 import com.openggf.game.resources.PlcFrameLifecycleCoordinator.PlcLifecycleFrame;
@@ -14,6 +15,7 @@ import com.openggf.game.save.SaveReason;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.GameplayRunPolicy;
 import com.openggf.graphics.FadeManager;
+import com.openggf.graphics.FadeManagerInternalAccess;
 import com.openggf.level.LevelManager;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -142,7 +144,7 @@ final class GameLoopSpecialStageLifecycle {
             // The resource loop has VBlank and queue tails, but no results sprite yet.
             LevelFrameStep.executeHardwareTimedObjectScan(
                     LevelFrameContext.from(host.boundGameplayContext()), host.plcFrame(),
-                    PlcLifecyclePhase.SPECIAL_STAGE_RESULTS, () -> { });
+                    PlcLifecyclePhase.SPECIAL_STAGE_RESULTS, ownsResultsWait(), () -> { });
             preparation.finishResultsPreparationIteration();
             return;
         }
@@ -154,14 +156,27 @@ final class GameLoopSpecialStageLifecycle {
         // arm was never submitted as hardware work.
         LevelFrameStep.executeHardwareTimedObjectScan(
                 LevelFrameContext.from(host.boundGameplayContext()), host.plcFrame(),
-                PlcLifecyclePhase.SPECIAL_STAGE_RESULTS,
+                PlcLifecyclePhase.SPECIAL_STAGE_RESULTS, ownsResultsWait(),
                 this::runSpecialStageResultsIteration);
     }
 
+    private boolean ownsResultsWait() {
+        // SS_NormalExit (sonic.asm:3403-3413) spends one wait before the scan.
+        // The represented PaletteFadeOut waits in GM_Level also tick while
+        // the destination load is held, up to its straight-line continuation.
+        return activeSpecialStageProvider instanceof NativeSpecialStageResultsClock
+                && (!resultsExitReady || resultsExitPreLevelFadeFramesRemaining != 0);
+    }
+
     boolean holdsNativeResultsExitFade() {
+        // PaletteWhiteOut (_inc/Palette Fading.asm:313-322) owns the waits
+        // after the last SS_NormalExit scan, including its completion row.
         return host.currentMode() == GameMode.SPECIAL_STAGE_RESULTS
                 && resultsScreen != null && resultsScreen.isComplete()
-                && continuesResultsLoadAfterFadeWait() && host.fade().hasPendingCompletion();
+                && host.fade().hasPendingCompletion()
+                && (continuesResultsLoadAfterFadeWait()
+                        || activeSpecialStageProvider instanceof NativeSpecialStageResultsClock
+                                && !FadeManagerInternalAccess.isNextUpdateDeferred(host.fade()));
     }
 
     private boolean continuesResultsLoadAfterFadeWait() {

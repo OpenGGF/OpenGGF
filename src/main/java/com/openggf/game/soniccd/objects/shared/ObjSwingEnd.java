@@ -20,6 +20,10 @@ public final class ObjSwingEnd extends ObjSwing implements ReevaluatingSolidObje
     private int xSpeed;
     private int ySpeed;
 
+    ObjSwingEnd(ObjectSpawn spawn) {
+        this(spawn, spawn.subtype() & 0xF, spawn.subtype() & 0xF, spawn.x(), spawn.y());
+    }
+
     ObjSwingEnd(ObjectSpawn spawn, int link, int links, int anchorX, int anchorY) {
         super(spawn, link, links, anchorX, anchorY, 1);
     }

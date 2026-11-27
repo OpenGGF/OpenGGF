@@ -262,27 +262,45 @@ class TestSonic2PlcSharedArtRendering {
     }
 
     @Test
-    void runtimeTransactionPublishesExistingSheetWritesAndRefreshesWithoutAllocatingAgain() throws Exception {
+    void runtimeTransactionPreservesResidentExplosionUntilAnimalTilesAreServiced() throws Exception {
         var logicalPlc = new Sonic2PlcService(rom);
         var renderer = provider.getRenderer(ObjectArtKeys.BOSS_EXPLOSION);
         int base = renderer.getPatternBase();
         int[] refreshes = {0};
         Runnable refresh = () -> { refreshes[0]++; cache(); };
-        Sonic2RuntimePlcPublisher.append(provider, logicalPlc, refresh, Sonic2Constants.PLC_FIERY_EXPLOSION);
         assertExplosion(fiery);
-        int beforeAnimals = refreshes[0];
         assertFalse(Sonic2RuntimePlcPublisher.append(provider, logicalPlc, refresh, Sonic2Constants.PLC_ANIMALS_DEZ),
-                "existing resident sheets refresh their ranges without a new registration");
-        assertEquals(beforeAnimals, refreshes[0]);
-        assertEquals(3, logicalPlc.capture().queuedEntries().size(), "both real ROM lists enter the native queue");
+                "existing resident sheets retain their allocation");
+        assertExplosion(fiery);
+        assertEquals(2, logicalPlc.capture().queuedEntries().size());
+
+        // Clearing/replacing pending descriptors may leave allocated views, but cannot write any tiles.
+        logicalPlc.clearQueued();
+        logicalPlc.prepare();
+        logicalPlc.serviceNormalVBlank();
+        assertExplosion(fiery);
+        Sonic2RuntimePlcPublisher.transact(provider, logicalPlc, refresh,
+                Sonic2PlcService.appendOperation(Sonic2Constants.PLC_FIERY_EXPLOSION),
+                Sonic2PlcService.replaceOperation(Sonic2Constants.PLC_ANIMALS_DEZ));
+        logicalPlc.prepare();
+        assertExplosion(fiery);
+        logicalPlc.serviceNormalVBlank();
+
         Pattern[] expected = fiery.clone();
-        // This helper also submits a repeated write, which must not need another allocation.
-        publishExpected(expected, Sonic2Constants.PLC_ANIMALS_DEZ);
+        var pig = Sonic2PlcLoader.parsePlc(rom, Sonic2Constants.PLC_ANIMALS_DEZ).entries().getFirst();
+        Pattern[] pigPatterns = PatternDecompressor.nemesis(rom, pig.romAddr());
+        System.arraycopy(pigPatterns, 0, expected, 0, 6);
+        assertExplosion(expected);
+
+        while (logicalPlc.isBusy()) {
+            logicalPlc.prepare();
+            logicalPlc.serviceNormalVBlank();
+        }
+        overlayExpected(expected, Sonic2Constants.PLC_ANIMALS_DEZ);
         assertExplosion(expected);
         assertSame(renderer, provider.getRenderer(ObjectArtKeys.BOSS_EXPLOSION));
         assertEquals(base, renderer.getPatternBase());
-        assertFalse(Sonic2RuntimePlcPublisher.append(provider, logicalPlc, refresh, Sonic2Constants.PLC_ANIMALS_DEZ));
-        assertEquals(beforeAnimals, refreshes[0]);
+        assertEquals(0, refreshes[0]);
     }
 
     @Test

@@ -363,6 +363,9 @@ public class TitleScreenManager implements TitleScreenProvider {
         clearCompetitionExitPalette();
         LOGGER.info("Initializing title screen");
 
+        // SegaScreen (s2.asm:4095-4099) submits MusID_Stop through PlayMusic.
+        GameServices.audio().playMusicMailboxNativeRequest(Sonic2SmpsConstants.CMD_STOP_ALL);
+
         // Load data if not already loaded
         if (!dataLoader.isDataLoaded()) {
             dataLoader.loadData();
@@ -542,7 +545,9 @@ public class TitleScreenManager implements TitleScreenProvider {
         if (segaLogoFadePhase == SegaLogoFadePhase.FADING_OUT) {
             return;
         }
-        GameServices.audio().stopSegaPcm();
+        // TitleScreen (s2.asm:4238-4247) submits MusID_Stop before fading.
+        // zPlaySegaSound (s2.sounddriver.asm:1603-1638) exits when QueueToPlay changes.
+        GameServices.audio().playMusicMailboxNativeRequest(Sonic2SmpsConstants.CMD_STOP_ALL);
         segaLogoFadePhase = SegaLogoFadePhase.FADING_OUT;
         segaLogoFadeTimer = 0;
     }

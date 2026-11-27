@@ -40,6 +40,9 @@ public final class AudioConverter {
         }
         LinkedHashMap<Path,byte[]> assets = new LinkedHashMap<>();
         for (ModAudioTrack track : parsed.tracks()) {
+            if (track.isSmpsPackage()) {
+                throw new IOException("SMPS packages are copied into the mod staging tree by the authoring tool");
+            }
             Path asset = requireContainedFile(root, root.resolve(track.assetPath()));
             byte[] encoded = readBounded(asset, limits.maxAssetBytes());
             ModAudioAssetValidation.decodeAndValidate(track, encoded, limits);

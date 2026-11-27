@@ -6,7 +6,6 @@ import com.openggf.game.soniccd.zones.mmz.MmzStageSignals;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectVisualFacing;
-import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
@@ -154,7 +153,7 @@ public final class MmzLaser extends MmzObject implements ObjectVisualFacing.NonD
     }
 
     private int floorDistance() {
-        return ObjectTerrainUtils.checkFloorDist(x, y, yRadius).distance();
+        return checkFloor(x, y, yRadius).distance();
     }
 
     /** loc_20B60A (objects/r8/laser.asm:156-241): the beam catches the player. */
@@ -168,11 +167,13 @@ public final class MmzLaser extends MmzObject implements ObjectVisualFacing.NonD
         int reach = sprite.getXRadius() + 4;
         int dx = ((x - sprite.getCentreX()) + reach) & 0xFFFF;
         if ((dx & 0x8000) != 0 || dx >= reach * 2) return;
-        int radiusY = sprite.getYRadius();
-        int playerBottom = (sprite.getCentreY() + radiusY) & 0xFFFF;
+        // loc_20B62A (objects/r8/laser.asm:196-204): MOVE.W reads height and width together,
+        // then EXT.W sign-extends the low byte (the horizontal radius).
+        int verticalRadius = (byte) sprite.getXRadius();
+        int playerBottom = (sprite.getCentreY() + verticalRadius) & 0xFFFF;
         int tip = (y + REACH[Math.min(anim, 7)]) & 0xFFFF;
         if (tip >= playerBottom) return;
-        int playerTop = (sprite.getCentreY() - radiusY) & 0xFFFF;
+        int playerTop = (sprite.getCentreY() - verticalRadius) & 0xFFFF;
         if (playerTop >= ((y + 4) & 0xFFFF)) return;
         // Hit: routine 4 (knock-back), airborne, flung back and up, anim $38, radii of the new size.
         sprite.setHurt(true);

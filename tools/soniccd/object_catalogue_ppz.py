@@ -10,6 +10,22 @@ def STAGES_COVERED(stage: str) -> bool:
 
 
 ANCHORS = [
+    ('flyingAnimalMappings', '217C 08080408 0016 217C AAAAAAAA 0004 3168 0008 002A 3168 000C 002C', 'optional',
+     'ObjFlyingAnimal_Init (Level/Palmtree Panic/Objects/Animal/Main.asm:34-40)'),
+    ('groundAnimalMappings', '217C 08080408 0016 217C AAAAAAAA 0004 3168 0008 002A 6100 ???? 4A28 0028', 'optional',
+     'ObjGroundAnimal_Init (Level/Palmtree Panic/Objects/Animal/Main.asm:136-143)'),
+    ('flyingAnimalAnimations', '1140 002E 43FA PPPP 4EB9 ???????? 4EB9 ???????? 3028 002A', 'optional',
+     'ObjFlyingAnimal_Flying (Level/Palmtree Panic/Objects/Animal/Main.asm:76-81)'),
+    ('animalBaseTiles', '43FA PPPP 7000 1039 ???????? E540 D039 ???????? D040 3171 0000 0002 4E75', 'optional',
+     'ObjAnimal_SetBaseTile (Level/Palmtree Panic/Objects/Animal/Main.asm:209-217)'),
+    ('amyMappings', '317C 2370 0002 117C 0001 0018 217C AAAAAAAA 0004 117C 000C 0019 117C 0010', 'optional',
+     'ObjAmyRose_Init (Level/Palmtree Panic/Objects/Amy Rose/Main.asm:36-42): move.l #MapSpr_AmyRose,oMap(a0)'),
+    ('amyAnimations', '117C 0005 001C 43F9 AAAAAAAA 6000', 'optional',
+     'ObjAmyRose_Init (Level/Palmtree Panic/Objects/Amy Rose/Main.asm:68-71): lea Ani_AmyRose,a1'),
+    ('amyPalette', '47FA PPPP 49F8 FB20 4CDB 000F', 'optional',
+     'ObjAmyRose_LoadPal (Level/Palmtree Panic/Objects/Amy Rose/Main.asm:649-658): lea Pal_AmyRose(pc),a3'),
+    ('amyRestorePalette', '0C28 002F 0000 670A 47F9 AAAAAAAA 6100 ???? 4E75', 'optional',
+     'ObjAmyRose (Level/Palmtree Panic/Objects/Amy Rose/Main.asm:17-25): lea Pal_LevelEnd,a3'),
     ('plantMappings', '217C AAAAAAAA 0004 317C 4424 0002', 'optional',
      'Obj3DPlant_Init (3D Ramp/Main.asm:24-27): move.l #MapSpr_3DPlant,oMap(a0); move.w #$4424,oTile(a0)'),
     ('rampMappings', '217C AAAAAAAA 0004 317C 0441 0002', 'optional',
@@ -117,7 +133,14 @@ BREAKABLE_WALL_SIGNATURES = [
     ('breakableWallDeltas', '4BFA ???? 7000 1028 ???? E748 DAC0 49FA PPPP 47FA ???? 7C05'),
     ('breakableWallSpeeds', '4BFA ???? 7000 1028 ???? E748 DAC0 49FA ???? 47FA PPPP 7C05'),
 ]
-EXTRA_COLUMNS = [c for c, _ in BREAKABLE_WALL_SIGNATURES]
+# Act 3 links an unused copy, while its live $35 is ObjNull
+# (ObjectIndex in Palmtree Panic/Object Index (Act 3).asm:60).
+TUNNEL_DOOR_ID = 0x35
+# Init starts $32 bytes into ObjTunnelDoorV (Palmtree Panic/Objects/Tunnel Door/Main.asm:7-42).
+TUNNEL_DOOR_INIT = 0x32
+# ObjTunnelDoorV_Init (Palmtree Panic/Objects/Tunnel Door/Main.asm:34-42) loads MapSpr_FlapDoorV.
+TUNNEL_DOOR_SIGNATURE = '5428 ???? 217C AAAAAAAA 0004 117C 0001 ???? 0028 0004 ???? 117C 0004 ???? 117C 0018 ???? 700C'
+EXTRA_COLUMNS = [c for c, _ in BREAKABLE_WALL_SIGNATURES] + ["tunnelDoorMappings"]
 # Init, the main routine and the break-up loop all lie within this many bytes of the entry.
 BREAKABLE_WALL_SPAN = 0x300
 
@@ -129,8 +152,18 @@ def extra_columns(stage: str, data: bytes) -> dict:
     from stage_inventory import require
     tables = operands(data, OBJECT_INDEX)
     require(len(tables) == 1, f"{stage} ObjectIndex: expected one operand, got {tables}")
-    entry = int.from_bytes(data[tables[0] + 4 * (BREAKABLE_WALL_ID - 1):tables[0] + 4 * BREAKABLE_WALL_ID], "big")
-    out = {column: None for column, _ in BREAKABLE_WALL_SIGNATURES}
+    index = tables[0]
+    out = dict.fromkeys(EXTRA_COLUMNS)
+    door_slot = index + 4 * (TUNNEL_DOOR_ID - 1)
+    door_entry = int.from_bytes(data[door_slot:door_slot + 4], "big") - WORD_RAM
+    if 0 <= door_entry < len(data):
+        match = pattern(TUNNEL_DOOR_SIGNATURE).match(data, door_entry + TUNNEL_DOOR_INIT)
+        if match:
+            offset = (int.from_bytes(match["abs"], "big") & 0xFFFFFF) - WORD_RAM
+            require(0 <= offset < len(data), f"{stage} tunnelDoorMappings at {offset:#x} is outside the stage file")
+            out["tunnelDoorMappings"] = offset
+
+    entry = int.from_bytes(data[index + 4 * (BREAKABLE_WALL_ID - 1):index + 4 * BREAKABLE_WALL_ID], "big")
     if not WORD_RAM <= entry < WORD_RAM + len(data):
         return out
     entry -= WORD_RAM

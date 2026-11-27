@@ -3055,6 +3055,10 @@ public final class Sonic3kPlcArtRegistry {
                 0,
                 -1
         ));
+        // ObjDat3_9199A (sonic3k.asm:198961-198965): Map_ScaledArt, palette 1.
+        standalone.add(new StandaloneArtEntry(Sonic3kObjectArtKeys.SSZ_EGG_ROBO_FLY_BY,
+                Sonic3kConstants.ART_SCALED_EGG_ROBO_FLY_ADDR, CompressionType.UNCOMPRESSED,
+                Sonic3kConstants.ART_SCALED_EGG_ROBO_FLY_SIZE, Sonic3kConstants.MAP_SCALED_ART_ADDR, 1, -1));
         // Obj_57C1E's arrival beam and the SSZ branch of Obj_SSZHPZTeleporter render
         // Map_SSZHPZTeleporter from the level's own tiles: PLC_32_33_34_35 loads
         // ArtNem_SSZMisc at ArtTile_SSZMisc, and the beam uses
@@ -3683,6 +3687,13 @@ public final class Sonic3kPlcArtRegistry {
     private static void addAizEntries(int actIndex,
                                       List<StandaloneArtEntry> standalone,
                                       List<LevelArtEntry> levelArt) {
+        if (actIndex == 1) {
+            // Obj_RobotnikHeadInit shares the HCZ2 head's resident art bank.
+            levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.EGG_ROBO_HEAD,
+                    Sonic3kConstants.MAP_EGG_ROBO_HEAD_ADDR,
+                    Sonic3kConstants.ART_TILE_ROBOTNIK_SHIP, 0, null, 4));
+        }
+
         // Badniks (both acts)
         standalone.add(new StandaloneArtEntry(
                 Sonic3kObjectArtKeys.BLOOMINATOR,

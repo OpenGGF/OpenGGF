@@ -7,6 +7,7 @@ import com.openggf.game.GameStateManager;
 import com.openggf.game.HardwareBoundaryDispatch;
 import com.openggf.game.InLevelTitleCardCoordinator;
 import com.openggf.game.LevelEventProvider;
+import com.openggf.game.internal.StagePaletteWait;
 import com.openggf.game.palette.PaletteOwnershipRegistry;
 import com.openggf.game.resources.PlcFrameLifecycleCoordinator.PlcLifecycleFrame;
 import com.openggf.game.resources.PlcLifecyclePhase;
@@ -68,6 +69,9 @@ public final class LevelFrameStep {
     public static FrameAdmission admit(
             LevelFrameContext context, LevelManager levelManager,
             boolean startEdgePressed) {
+        if (StagePaletteWait.pending(levelManager) != null) {
+            return new FrameAdmission(LevelFrameResult.HELD);
+        }
         GameStateManager gameState = context.gameStateManager();
         if (gameState != null && gameState.applyPauseToggle(startEdgePressed)) {
             return new FrameAdmission(LevelFrameResult.PAUSED);
@@ -93,6 +97,7 @@ public final class LevelFrameStep {
      * @param startEdgePressed true only on the leading edge of a Start press
      * @return {@link LevelFrameResult#PAUSED} when pause owns the row,
      *         {@link LevelFrameResult#SETUP_ONLY} for the one-shot setup pass,
+     *         {@link LevelFrameResult#HELD} for a stage palette wait,
      *         otherwise {@link LevelFrameResult#GAMEPLAY_FRAME}
      */
     public static LevelFrameResult executeWithPause(
@@ -100,6 +105,7 @@ public final class LevelFrameStep {
             PlcLifecyclePhase activePhase, PlcLifecyclePhase pausePhase,
             LevelManager levelManager, Camera camera, Runnable spriteUpdate,
             boolean startEdgePressed, StepWrapper wrapper) {
+        if (holdForStagePaletteWait(context, frame, levelManager)) return LevelFrameResult.HELD;
         GameStateManager gameState = context.gameStateManager();
         if (gameState != null && gameState.applyPauseToggle(startEdgePressed)) {
             serviceVBlankOnly(context, frame, pausePhase);
@@ -109,7 +115,29 @@ public final class LevelFrameStep {
     }
 
     public static void updateTimers(LevelFrameContext context) {
-        context.timerManager().update();
+        updateTimers(context.timerManager(), context.levelManager());
+    }
+
+    static void updateTimers(com.openggf.timer.TimerManager timers, LevelManager levelManager) {
+        if (StagePaletteWait.pending(levelManager) == null) timers.update();
+    }
+
+    /** Returns true while a stage wait holds gameplay, even when VBlank already has an owner. */
+    public static boolean holdForStagePaletteWait(
+            LevelFrameContext context, PlcLifecycleFrame frame, LevelManager levelManager) {
+        var wait = StagePaletteWait.pending(levelManager);
+        if (wait == null) return false;
+        if (!frame.claim(PlcLifecyclePhase.PALETTE_FADE)) return true;
+        if (frame.consumedHeldLoopTailPreparation()) {
+            context.runtimeArtCoordinator().deferProductionSubmissionForHeldLoopTailClosure();
+        }
+        serviceHeldVBlank(context, frame, () -> {
+            if (context.levelEventProvider() != null) context.levelEventProvider().advanceVblankOnlyState();
+            levelManager.getObjectManager().advanceVblaCounter();
+        });
+        wait.advancePaletteWait();
+        frame.prepareAfterLoop(PlcLifecyclePhase.PALETTE_FADE);
+        return true;
     }
 
     /**
@@ -117,11 +145,13 @@ public final class LevelFrameStep {
      */
     public static void serviceVBlankOnly(
             LevelFrameContext context, PlcLifecycleFrame frame, PlcLifecyclePhase phase) {
-        serviceVBlankOnly(context, frame, phase, () -> {
-            var level = context.levelManager();
-            var objects = level != null ? level.getObjectManager() : null;
-            if (objects != null) objects.advanceVblaCounter();
-        });
+        serviceVBlankOnly(context, frame, phase, () -> advanceObjectVblankClock(context));
+    }
+
+    private static void advanceObjectVblankClock(LevelFrameContext context) {
+        var level = context.levelManager();
+        var objects = level != null ? level.getObjectManager() : null;
+        if (objects != null) objects.advanceVblaCounter();
     }
 
     /**
@@ -148,8 +178,8 @@ public final class LevelFrameStep {
         //
         // For S3K that loss is ROM-correct, not an open defect. Both blocking
         // fades rewrite V_int_routine = $12 on every loop iteration before
-        // Wait_VSync (Pal_FadeToBlack sonic3k.asm:5077-5082, Pal_FadeFromBlack
-        // :4938-4943), so a V-blank inside an S3K fade always dispatches VInt_12
+        // Wait_VSync in Pal_FadeToBlack (docs/skdisasm/sonic3k.asm:5074-5083)
+        // and Pal_FadeFromBlack (docs/skdisasm/sonic3k.asm:4938-4943), so a V-blank inside an S3K fade always dispatches VInt_12
         // (:871-874) and can never reach VInt_0_Main -- the lag path, taken only
         // when V_int_routine is 0 (:535-536) and the sole bump of Lag_frame_count
         // (:592). VInt_12 does the frame's art work (bra.w Process_Nem_Queue,
@@ -243,6 +273,22 @@ public final class LevelFrameStep {
     public static void executeHardwareTimedObjectScan(
             LevelFrameContext context, PlcLifecycleFrame frame,
             PlcLifecyclePhase phase, Runnable objectScan) {
+        executeHardwareTimedObjectScan(context, frame, phase, false, objectScan);
+    }
+
+    /** The live stage and its rewind stepper service the same finish-loop wait. */
+    public static void executeHardwareTimedSpecialStageScan(
+            LevelFrameContext context, PlcLifecycleFrame frame,
+            PlcLifecyclePhase phase, com.openggf.game.SpecialStageProvider provider,
+            Runnable scan) {
+        executeHardwareTimedObjectScan(context, frame, phase,
+                provider instanceof com.openggf.game.internal.NativeSpecialStageResultsClock clock
+                        && clock.awaitsResultsEntryVblank(), scan);
+    }
+
+    static void executeHardwareTimedObjectScan(
+            LevelFrameContext context, PlcLifecycleFrame frame,
+            PlcLifecyclePhase phase, boolean advancesObjectClock, Runnable objectScan) {
         Objects.requireNonNull(objectScan, "objectScan");
         boolean claimed = frame.claim(phase);
         if (frame.consumedHeldLoopTailPreparation()) {
@@ -250,7 +296,14 @@ public final class LevelFrameStep {
                     .deferProductionSubmissionForHeldLoopTailClosure();
         }
         dispatchGameVBlank(context, frame);
-        serviceBoundary(context, HardwareServiceBoundary.VINT_SERVICE);
+        // A held fade can service V-int before its update. The following scan
+        // still runs its own tail, with the same interrupt already spent.
+        if (!frame.hasServicedHeldFadeVBlank()) {
+            serviceBoundary(context, HardwareServiceBoundary.VINT_SERVICE);
+        }
+        if (claimed && advancesObjectClock) {
+            advanceObjectVblankClock(context);
+        }
         objectScan.run();
         if (phase == PlcLifecyclePhase.LEVEL_TITLE_CARD) {
             // Special stages own a separate scene/table; never scan the parked
@@ -286,10 +339,13 @@ public final class LevelFrameStep {
         if (context == null) {
             throw new NullPointerException("context");
         }
+        if (phase == PlcLifecyclePhase.ORDINARY_LEVEL && holdForStagePaletteWait(context, frame, levelManager)) {
+            return LevelFrameResult.HELD;
+        }
 
-        // S3K fresh-level assembly runs Load_Sprites then Process_Sprites once
-        // before entering LevelLoop (docs/skdisasm/sonic3k.asm:7881-7887,
-        // 7889-7906). executeWithPause reaches this body only after its pause
+        // S3K fresh-level assembly runs Load_Sprites then Process_Sprites in
+        // loc_6468 (docs/skdisasm/sonic3k.asm:7880-7899), ahead of LevelLoop.
+        // executeWithPause reaches this body only after its pause
         // gate, so a paused first frame retains the one-shot authority.
         if (levelManager.consumePendingInitialProcessSpritesPass()) {
             LevelSpritePresentation.prepare(levelManager, context.spriteManager());
@@ -365,7 +421,7 @@ public final class LevelFrameStep {
         levelManager.updateZoneFeaturesPrePhysics();
 
         // 1b. Pre-physics level-event routines that the ROM runs in WaterEffects
-        //     immediately before RunObjects (docs/s2disasm/s2.asm:5094-5095).
+        //     immediately before the object pass in Level_MainLoop (docs/s2disasm/s2.asm:5094-5095).
         //     OOZ OilSlides reads the previous-frame player position and sets the
         //     sliding status bit before the player's friction/move code runs the
         //     same frame; running it post-physics applied oil friction one frame
@@ -414,7 +470,17 @@ public final class LevelFrameStep {
             // 2. Player slots first (ExecuteObjects / RunObjects / Process_Sprites
             //    dispatch slot 0, then slot 1). Touch responses run per player inside
             //    tickPlayablePhysics after movement.
-            if (!objectsFrozen) wrapper.wrap("physics", spriteUpdate);
+            if (!objectsFrozen) {
+                if (context.gameModule().getGameService(
+                        com.openggf.game.internal.SpawnerBeforeObjectPass.class) != null) {
+                    var objects = levelManager.getObjectManager();
+                    if (objects != null) {
+                        com.openggf.level.objects.ObjectManagerInternalAccess.runSpawnerBeforeObjectPass(
+                                objects, camera.getX());
+                    }
+                }
+                wrapper.wrap("physics", spriteUpdate);
+            }
 
             LevelEventProvider fixedSlotEvents = context.levelEventProvider();
             if (!objectsFrozen && fixedSlotEvents != null) {
@@ -571,7 +637,7 @@ public final class LevelFrameStep {
         }
         serviceBoundary(context, HardwareServiceBoundary.POST_OBJECTS);
 
-        // ROM LevelLoop's Process_Kos_Queue (docs/skdisasm/sonic3k.asm:7919)
+        // ROM LevelLoop (docs/skdisasm/sonic3k.asm:7919) services the direct queue
         // runs after this iteration's Process_Kos_Module_Queue (7908) and before
         // Wait_VSync (7888) increments Level_frame_counter (7889), so the direct
         // FIFO service is the tail of THIS frame. Servicing it here lets a
@@ -588,7 +654,7 @@ public final class LevelFrameStep {
         //     boundary easing and post-camera systems observe the changed level.
         levelManager.flushQueuedLayoutMutations();
 
-        // 4c'. ROM ScreenEvents ends in DrawTilesAsYouMove (sonic3k.asm:105024):
+        // 4c'. ROM ScreenEvents jumps to the tile draw in AIZ2SE_End (sonic3k.asm:105023-105024):
         //      the AIZ2 forest-loop plane ring pairs this frame's live camera with
         //      its Level_repeat_offset here, before the VBlank publishes scroll.
         LevelForegroundPlane.drawAsYouMove(levelManager);
@@ -647,8 +713,8 @@ public final class LevelFrameStep {
             wrapper.wrap("level-loop-tail", loopTailEvents::updateAtLevelLoopTail);
         }
 
-        // Native044 Level_NotLRZ: Animate_Tiles -> Process_Nem_Queue_Init
-        // -> Process_Kos_Module_Queue (sonic3k.asm:7938-7940). Preparing here
+        // Level_NotLRZ (sonic3k.asm:7938-7940) animates tiles before preparing
+        // Nemesis work and processing the Kosinski module queue. Preparing here
         // changes no pixels and cannot spend this VBlank's remaining budget.
         if (frame.isOwnedBy(phase) && frame.preparesAfterLevelAnimation()) {
             frame.prepareAfterLoop(phase);

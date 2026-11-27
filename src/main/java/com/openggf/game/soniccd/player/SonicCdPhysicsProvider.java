@@ -1,22 +1,28 @@
 package com.openggf.game.soniccd.player;
 
+import com.openggf.game.CharacterKey;
+import com.openggf.game.CrossGameFeatureProvider;
 import com.openggf.game.PhysicsModifiers;
 import com.openggf.game.PhysicsProfile;
 import com.openggf.game.PhysicsProvider;
+import com.openggf.game.internal.NativePlayerSpeedPolicy;
 import com.openggf.game.internal.PlayerStageRoutines;
+import com.openggf.game.session.WorldSession;
+import com.openggf.game.session.WorldSessionPolicyAccess;
+import com.openggf.game.soniccd.SonicCdGameModule;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.PlayableSpriteInternalAccess;
+import com.openggf.sprites.playable.Sonic;
+import com.openggf.sprites.playable.SuperStateController;
 
 import java.util.Objects;
 
 /**
- * Sonic CD's physics provider. ObjSonic_Init writes the same top speed, acceleration
- * and deceleration as Sonic 1 ($600/$C/$80, scddisasm src/Level/_Objects/Sonic/
- * Main.asm:153-155), so the profile is Sonic 1's; the rule differences are
- * {@link SonicCdRules}. The player's stage routines (3D ramps, special chunks and the
- * per-zone call sites) are {@link CdPlayerStage}'s, offered to the shared movement
- * owner as {@link PlayerStageRoutines}.
+ * Sonic CD's speed-word writers and stage routines. Ground movement reads the words
+ * directly (ObjSonic_MoveGround, Level/_Objects/Sonic/Main.asm:837-840).
+ * The shared player stores them separately from its power-up flags for rewind.
  */
-public final class SonicCdPhysicsProvider implements PhysicsProvider, PlayerStageRoutines {
+public final class SonicCdPhysicsProvider implements PhysicsProvider, PlayerStageRoutines, NativePlayerSpeedPolicy {
     private final CdPlayerStage stage;
     // Binding scratch, as in the cartridge provider: modifiers are copied into each player.
     private boolean bindingKnuckles;
@@ -45,6 +51,55 @@ public final class SonicCdPhysicsProvider implements PhysicsProvider, PlayerStag
         return bindingKnuckles ? PhysicsModifiers.KNUCKLES : PhysicsModifiers.STANDARD;
     }
 
+
+    @Override
+    public boolean supports(AbstractPlayableSprite player, WorldSession ownerWorld) {
+        return ownerWorld != null
+                && ownerWorld.rootGameModule().getClass() == SonicCdGameModule.class
+                && ownerWorld.getGameModule().getClass() == SonicCdGameModule.class
+                && !WorldSessionPolicyAccess.hasPolicies(ownerWorld)
+                && !CrossGameFeatureProvider.isActive()
+                && player.getClass() == Sonic.class
+                && CharacterKey.SONIC.equals(player.characterKey())
+                && player.getPhysicsProfile() == PhysicsProfile.SONIC_2_SONIC;
+    }
+
+    @Override
+    public void initialize(AbstractPlayableSprite player) {
+        // ObjSonic_Init (Level/_Objects/Sonic/Main.asm:152-154).
+        PlayableSpriteInternalAccess.publishNativeSpeedWords(player, 0x600, 0xC, 0x80);
+    }
+
+    @Override
+    public void waterEdge(AbstractPlayableSprite player, boolean underwater) {
+        // ObjSonic_Water (Level/_Objects/Sonic/Main.asm:488-490,509-511).
+        PlayableSpriteInternalAccess.publishNativeSpeedWords(player,
+                underwater ? 0x300 : 0x600, underwater ? 6 : 0xC, underwater ? 0x40 : 0x80);
+    }
+
+    @Override
+    public void giveSpeedShoes(AbstractPlayableSprite player) {
+        // ObjMonitorItem_Main .GiveSpeedShoes (Level/_Objects/Monitor and Time Post/Main.asm:570-580).
+        PlayableSpriteInternalAccess.publishNativeSpeedWords(player, 0xC00, 0x18, 0x80);
+    }
+
+    @Override
+    public void expireSpeedShoes(AbstractPlayableSprite player) {
+        // ObjSonic_Display (Level/_Objects/Sonic/Main.asm:413-423).
+        PlayableSpriteInternalAccess.publishNativeSpeedWords(player, 0x600, 0xC, 0x80);
+    }
+
+    @Override
+    public short neutralGroundFriction(AbstractPlayableSprite player, short acceleration) {
+        // ObjSonic_MoveGround .Settle (Level/_Objects/Sonic/Main.asm:837-839)
+        // subtracts or adds the same d5 acceleration operand.
+        return acceleration;
+    }
+
+    @Override
+    public boolean ownsProfileInstallation(SuperStateController controller) {
+        return false;
+    }
 
     @Override
     public boolean updatePseudo3dRamp(AbstractPlayableSprite player, boolean wasOnRamp) {
@@ -184,6 +239,11 @@ public final class SonicCdPhysicsProvider implements PhysicsProvider, PlayerStag
     @Override
     public boolean admitsSpecialTouch(AbstractPlayableSprite player, com.openggf.level.objects.ObjectInstance object) {
         return stage.admitsSpecialTouch(player, object);
+    }
+
+    @Override
+    public int lostRingTouchLayer(AbstractPlayableSprite player) {
+        return stage.lostRingTouchLayer(player);
     }
 
     @Override

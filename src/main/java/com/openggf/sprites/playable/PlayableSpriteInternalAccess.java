@@ -4,6 +4,10 @@ import com.openggf.level.objects.ObjectInstance;
 
 /** Engine-only cross-package access to playable controller internals. */
 public final class PlayableSpriteInternalAccess {
+    public static boolean isFlyingAfterIntroRelease(AbstractPlayableSprite player) {
+        return player.getTailsCarryController().isFlyingAfterIntroRelease();
+    }
+
     /** Bind ordinary resources before temporary native presentation or rewind reconciliation. */
     public static void bindNormalAnimationProfile(AbstractPlayableSprite player) {
         var controller = player.getSuperStateController();
@@ -187,6 +191,12 @@ public final class PlayableSpriteInternalAccess {
         var policy = player.nativeSpeedPolicy();
         if (policy != null) policy.giveSpeedShoes(player);
         else player.nativeSpeedWords.forget();
+    }
+
+    /** Native flag clear outside the expiry routine. Discard the inactive countdown without applying expiry effects. */
+    public static void clearSpeedShoesFlag(AbstractPlayableSprite player) {
+        player.speedShoes = false;
+        PlayableSpeedShoesLifecycle.restoreTimer(player, false, 0);
     }
 
     static void expireNativeSpeedShoes(AbstractPlayableSprite player) {

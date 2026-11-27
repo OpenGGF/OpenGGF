@@ -2,6 +2,7 @@ package com.openggf.game.soniccd.objects.ccz;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.soniccd.objects.art.CdObjectArtProvider;
+import com.openggf.game.soniccd.timetravel.CdTimeTravel;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
@@ -87,7 +88,8 @@ public final class CczSpikes extends CczObject implements ReevaluatingSolidObjec
         }
         if (!solidObject(Entry.SOLID) || !(player instanceof AbstractPlayableSprite sprite)) return;
         if (!stoodOn(sprite)) return;                                 // btst #3,oFlags(a0)
-        if (sprite.getInvincibleFrames() > 0) return;                 // tst.b invincible (timeWarp is not hosted)
+        // ObjSpikes_Update (Level/Collision Chaos/Objects/Spikes/Main.asm:103-111).
+        if (CdTimeTravel.starsActive(services().gameModule()) || sprite.getInvincibleFrames() > 0) return;
         if (sprite.isHurt() || sprite.getDead() || sprite.getInvulnerableFrames() > 0) return;   // routine >= 4; oPlayerHurt
         NativePositionOps.addYPos16_16(sprite, -(sprite.getYSpeed() << 8));      // oY.l -= oYVel << 8
         boolean hadRings = sprite.getRingCount() > 0;

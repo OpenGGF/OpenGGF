@@ -22,6 +22,16 @@ public final class Sonic1SmpsCompatibilityPolicy
     private static final SmpsWriteProgram ACTIVATE_MUSIC =
             initMusicPlaybackSilenceProgram();
 
+    // zWaitDACLoop enables the DAC for each accepted sample (sound/z80.asm).
+    // zPlayPCMLoop returns to the wait loop with the DAC still enabled.
+    private static final SmpsWriteProgram DAC_SAMPLE_START = new SmpsWriteProgram(
+            List.of(new SmpsChipWrite.Ym2612(0, 0x2B, 0x80)));
+
+    @Override
+    public SmpsWriteProgram enableDacFromIdleLoop() {
+        return DAC_SAMPLE_START;
+    }
+
     private static final SmpsWriteProgram STOP_ALL = stopAllProgram();
 
     private static SmpsWriteProgram stopAllProgram() {
@@ -48,7 +58,7 @@ public final class Sonic1SmpsCompatibilityPolicy
     }
 
     private static final SmpsSegaPcmTransport SEGA_PCM = new SmpsSegaPcmTransport(
-            new SmpsWriteProgram(List.of(new SmpsChipWrite.Ym2612(0, 0x2B, 0x80))),
+            DAC_SAMPLE_START,
             0, 0x2A,
             SmpsWriteProgram.EMPTY,
             16_000, 90);
