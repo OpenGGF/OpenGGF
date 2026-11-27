@@ -84,6 +84,11 @@ public final class LevelDebugPlacement implements RewindSnapshottable<LevelDebug
         resetLevel();
     }
 
+    /** Title clears Debug_mode_flag (s2.asm:4400); Debug_options_flag stays unlocked. */
+    public static void clearCheatOnTitleEntry(GameMode nextMode, GameStateManager state) {
+        if (nextMode == GameMode.TITLE_SCREEN && state != null) of(state).clearCheatForTitle();
+    }
+
     public void enableCheat() {
         cheatEnabled = true;
     }
