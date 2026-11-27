@@ -283,6 +283,18 @@ public final class Sonic2CompetitionSession implements NativeCompetitionRoster,
             default -> { }
         }
     }
+    void initializeAttract(com.openggf.game.GameStateManager source, int nativeZone, int demoAct) {
+        initializeEntry(source, true);
+        zone = switch (nativeZone) {
+            case 0 -> 0;
+            case 11 -> 1;
+            case 12 -> 2;
+            default -> throw new IllegalArgumentException("Unknown competition zone: " + nativeZone);
+        };
+        act = demoAct;
+        startAct();
+    }
+
     private void startAct() {
         for (var state : progress) state.resetAct();
         firstFinisher = -1; loserTimeLeft = 0; spinComplete = false;

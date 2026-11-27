@@ -55,7 +55,8 @@ import static com.openggf.control.InputHandlerInternalAccess.nativeMenuKeyPresse
  *   <li>Lines 192-207 (rows 24-25): Scroll + ripple effect</li>
  * </ul>
  */
-public class TitleScreenManager implements TitleScreenProvider {
+public class TitleScreenManager implements TitleScreenProvider,
+        com.openggf.game.internal.TitleAttractDemo.TitleClock {
     private TitleCharacterPresentation titleLead;
     private TitleCharacterPresentation titleSidekick;
     private boolean titleCharactersResolved;
@@ -85,6 +86,7 @@ public class TitleScreenManager implements TitleScreenProvider {
     // Scrolling - camera starts at -0x280 per disassembly line 4447
     private int cameraX = -0x280;
     private int frameCounter = 0;
+    private int attractTitleTicks;
 
     // Fade timing
     private int fadeTimer = 0;
@@ -388,6 +390,7 @@ public class TitleScreenManager implements TitleScreenProvider {
         creditTextCached = false;
         cameraX = -0x280;  // From disassembly: move.w #-$280,(Camera_X_pos).w
         frameCounter = 0;
+        attractTitleTicks = 0;
         introComplete = false;
         musicPlaying = false;
         sonicPaletteLoaded = false;
@@ -552,6 +555,14 @@ public class TitleScreenManager implements TitleScreenProvider {
         segaLogoFadeTimer = 0;
     }
 
+    @Override public int attractTitleTicks() { return attractTitleTicks; }
+
+    @Override
+    public void initializeDirectTitle() {
+        initialize();
+        beginIntroTextScreen();
+    }
+
     private void beginIntroTextScreen() {
         segaLogoTimer = 0;
         segaPcmStarted = false;
@@ -659,6 +670,8 @@ public class TitleScreenManager implements TitleScreenProvider {
     }
 
     private void updateActive(InputHandler input) {
+        // Vint_Title (s2.asm:679-685) debits Demo_Time_left before TitleScreen_Loop.
+        attractTitleTicks++;
         // Auto-scroll background
         cameraX++;
         frameCounter++;
@@ -2033,6 +2046,7 @@ public class TitleScreenManager implements TitleScreenProvider {
         flashingStarVisible = false;
         cameraX = -0x280;
         frameCounter = 0;
+        attractTitleTicks = 0;
         fadeTimer = 0;
         introTextTimer = 0;
         segaLogoTimer = 0;

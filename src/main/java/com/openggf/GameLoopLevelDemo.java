@@ -1,7 +1,6 @@
 package com.openggf;
 
 import com.openggf.control.InputHandler;
-import com.openggf.control.InputHandlerInternalAccess;
 import com.openggf.control.LogicalInputSnapshot;
 import com.openggf.control.PlayerInputState;
 import com.openggf.game.GameMode;
@@ -27,7 +26,7 @@ final class GameLoopLevelDemo {
             return frame.get();
         }
         var nativeInput = LogicalInputSnapshot.ofPlayers(demo.inputForNextIteration(), PlayerInputState.neutral());
-        return InputHandlerInternalAccess.withNativeInput(input, nativeInput, frame);
+        return LevelDemoPlayback.withControllers(input, nativeInput, frame);
     }
 
     static void requestExitIfFinishedOrInterrupted(LevelDemoPlayback demo, InputHandler input, LevelManager level) {

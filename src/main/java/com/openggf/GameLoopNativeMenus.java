@@ -6,6 +6,7 @@ import com.openggf.audio.RomlessSmpsSource;
 import com.openggf.data.RomManager;
 import com.openggf.control.InputHandler;
 import com.openggf.game.*;
+import com.openggf.game.internal.TitleAttractDemo;
 import com.openggf.game.nativemenu.NativeMenuController;
 import com.openggf.game.nativemenu.NativeMenuHostContext;
 import com.openggf.game.session.EngineContext;
@@ -62,7 +63,22 @@ final class GameLoopNativeMenus {
         this.currentMode = currentMode;
     }
 
-    void initializeTitleAudio(GameAudioProfile profile, RomManager romManager) {
+    GameMode initializeTitleScreen(boolean directTitle) {
+        LOGGER.info("Initializing game in Title Screen mode");
+        initializeTitleAudio(GameServices.module().getAudioProfile(), engineServices.roms());
+        GameMode previous = loop.changeGameModeForBoundary(GameMode.TITLE_SCREEN);
+        loop.camera.setX((short) 0);
+        loop.camera.setY((short) 0);
+        var title = loop.getTitleScreenProviderLazy();
+        if (directTitle && title instanceof TitleAttractDemo.TitleClock clock) {
+            clock.initializeDirectTitle();
+        } else if (title != null) {
+            title.initialize();
+        }
+        return previous;
+    }
+
+    private void initializeTitleAudio(GameAudioProfile profile, RomManager romManager) {
         try {
             // ROM-less profiles supply their own sound data. A cartridge lookup
             // can fail on a disc-only setup.
@@ -376,6 +392,48 @@ final class GameLoopNativeMenus {
         var screen = nativeMenus.screen();
         if (screen != null && NativeMenuController.handles(currentMode.get())
                 && screen.mode() != currentMode.get()) loop.setGameMode(screen.mode());
+    }
+
+    void startAttractDemo(TitleAttractDemo.Launch launch, GameLoopSpecialStageLifecycle stages) {
+        audioManager.fadeOutMusic();
+        switch (launch.destination()) {
+            case TitleAttractDemo.Destination.Level level ->
+                    startNativeMenuLevel(new com.openggf.game.nativemenu.NativeMenuScreen.Exit(
+                            com.openggf.game.nativemenu.NativeMenuScreen.Destination.LEVEL,
+                            level.team(), !launch.retainProgress(), level.zone(), level.act()));
+            case TitleAttractDemo.Destination.SpecialStage stage -> {
+                var world = SessionManager.getCurrentWorldSession();
+                var progress = launch.retainProgress() ? GameServices.gameState().capture() : null;
+                openAttractRuntime(world.rootGameModule(), world.resolvedGameModule(), progress);
+                var provider = loop.getActiveSpecialStageProvider();
+                if (provider == null || !provider.hasSpecialStages()) {
+                    throw new IllegalStateException("Attract demo requires a special-stage provider");
+                }
+                stages.doEnterSpecialStage(provider, stage.stageIndex(), false,
+                        com.openggf.game.SpecialStageStartupPolicy.FAST, stage.rewardKind());
+            }
+            case TitleAttractDemo.Destination.NativeScreen factory -> {
+                var screen = factory.open(nativeMenuHostContext(), launch.playback());
+                if (nativeMenus.open(screen)) loop.setGameMode(screen.mode());
+            }
+        }
+    }
+
+    void restoreAttractTitle(GameModule root, GameModule module,
+            com.openggf.game.rewind.snapshot.GameStateSnapshot progress) {
+        nativeMenus.close();
+        engineServices.graphics().clearPaletteFadePresentation();
+        loop.resolveFadeManager().cancel();
+        openAttractRuntime(root, module, progress);
+    }
+
+    private void openAttractRuntime(GameModule root, GameModule module,
+            com.openggf.game.rewind.snapshot.GameStateSnapshot progress) {
+        try {
+            bootstrap.get().openTitleRuntime(root, module, engineServices, publisher, progress);
+        } catch (IOException failure) {
+            throw new java.io.UncheckedIOException("Cannot open the attract visit runtime", failure);
+        }
     }
 
     void startNativeMenuLevel(com.openggf.game.nativemenu.NativeMenuScreen.Exit exit) {

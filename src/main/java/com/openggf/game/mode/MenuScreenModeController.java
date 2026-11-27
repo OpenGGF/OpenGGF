@@ -45,9 +45,14 @@ public final class MenuScreenModeController {
     public void updateTitleScreen(TitleScreenProvider titleScreen,
                                   InputHandler inputHandler,
                                   Runnable onExit) {
+        updateTitleScreen(titleScreen, inputHandler, () -> false, onExit);
+    }
+
+    public void updateTitleScreen(TitleScreenProvider titleScreen, InputHandler inputHandler,
+                                  java.util.function.BooleanSupplier onUpdated, Runnable onExit) {
         if (titleScreen != null) {
             titleScreen.update(inputHandler);
-            if (titleScreen.isExiting() && onExit != null) {
+            if (!onUpdated.getAsBoolean() && titleScreen.isExiting() && onExit != null) {
                 onExit.run();
             }
         }

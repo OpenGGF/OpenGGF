@@ -1686,7 +1686,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// for negative products. The previous approach of -cosHex(angle)*jump>>8 rounds
 		// differently: -(x>>8) != (-x)>>8 when x%256 != 0 (68000 ASR rounds toward -∞).
 		int adjustedAngle = (hexAngle - 0x40) & 0xFF;
-		int nativeJump = sprite.getJump();
+		int nativeJump = launchRoutines == null ? sprite.getJump()
+				: launchRoutines.jumpImpulse(sprite, sprite.getJump());
 		var betaFlight = com.openggf.sprites.playable.PlayableSpriteInternalAccess.betaFlight(sprite);
 		if (betaFlight != null) {
 			nativeJump = betaFlight.jumpImpulse(sprite, nativeJump, PlayerFluidContextAccess.movementUnderwater(sprite));
@@ -1837,7 +1838,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	// Internal read-only seam for native input planners; the gameplay gate remains the owner.
 	boolean isAirAbilityWindowOpen() {
 		int threshold = PlayerFluidContextAccess.movementUnderwater(sprite) ? -0x200 : -0x400;
-		return sprite.getDoubleJumpFlag() == 0 && sprite.getYSpeed() >= threshold;
+		PlayerStageRoutines routines = stageRoutinesOrNull();
+		return sprite.getDoubleJumpFlag() == 0 && sprite.getYSpeed() >= threshold
+				&& (routines == null || routines.allowsMidairAbility(sprite));
 	}
 
 	private boolean tryActivateSuperFromAirAbility() {
@@ -4197,7 +4200,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// S1/S2 (s1:01 Sonic.asm:736-750, s2.asm:36826-36840): unconditional cap at max.
 		// S3K (sonic3k.asm:23123-23156): preserves speeds already above max (undo+check).
 		PlayerMovementRules movementRules = playerMovementRulesOrNull();
-		boolean preserveSuperspeed = movementRules != null && movementRules.air().airSuperspeedPreserved();
+		boolean preserveSuperspeed = movementRules != null && movementRules.air().airSuperspeedPreserved()
+				&& (stageRoutines == null || !stageRoutines.alwaysCapsAirSpeed(sprite));
 		// Sonic CD's ObjSonic_MoveAir has no roll-jump test (scddisasm
 		// src/Level/_Objects/Sonic/Main.asm:1559-1603).
 		boolean rollJumpKeepsAirControl = movementRules != null && movementRules.air().rollJumpKeepsAirControl();
