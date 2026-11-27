@@ -1,6 +1,6 @@
 # Mutator Lab
 
-A maintained JVM mod with one common settings screen and seventeen independently
+A maintained JVM mod with one common settings screen and eighteen independently
 configurable effects for Sonic 1, Sonic 2 and Sonic 3 & Knuckles. Play uses native
 ROM levels, sprites, music and sound effects. Every mutator starts off; the jar
 contains creator code and declarations, never commercial assets.
@@ -52,6 +52,7 @@ Compiled creator code is unavailable in the engine's standard native image; see 
 | No Bonus Stages | Refuse new Sonic 3 & Knuckles bonus-stage entry | Resume |
 | Violent Explosions | Native badnik rebound at 150–300%; vertical speed cap | Resume |
 | Homing Attack | Homing or Instagib; Sonic, Tails and Knuckles as leader | Resume |
+| Beta Flight | Knuckles as leader in Sonic 3 & Knuckles flies with the unused flight from the Dec 1993 Sonic 3 CES cartridge instead of gliding | Resume |
 | Start with Rings | 0–999 rings (default 50) granted at every act start and life, after a 0–300 s delay (default 0) | Resume; next act or life |
 | Start with Time | 1–570 s already on the level timer (default 300, 5:00) at act starts and restarts from the act start | Resume; next act or life |
 | Start with Score | 0–999,990 points in steps of 10 (default 0) | New game |
@@ -106,6 +107,20 @@ Violent Explosions amplifies the badnik defeat's resolved native vertical reboun
 then applies the selected cap. Horizontal velocity, ground/air flags and ordinary
 hazard damage remain native. This example does not create a new radial blast,
 modify bosses or apply the rebound twice.
+
+Beta Flight replaces Knuckles' glide with the flight left in the Sonic 3 Winter CES
+cartridge (Dec 22, 1993). That build's unused Knuckles object is a copy of Sonic's
+with Tails-style flight added: the air press launches him sideways at no less than
+normal top speed, he sinks slowly, and each new press flaps him upward. There is no
+time limit, sound or tired pose. Left and right only turn him around: the cartridge's
+steering writes the ground speed, so he keeps his launch speed until he lands or hits
+a wall. The engine reproduces that as found. The **Fixed Steering** option, which is
+not in the cartridge, applies the same steering to his air speed instead, so left and
+right speed him up and slow him down up to his normal top speed. The **Super Jump**
+option gives Super and Hyper Knuckles the cartridge object's higher jump ($700 where
+S&K uses $600); underwater he still jumps at $300. He uses the S&K glide pose, the same frame
+the cartridge's animation names. Objects that react to a gliding Knuckles also react
+while he sinks in beta flight, because both use the same state value.
 
 Homing Attack turns the leader's jump re-press into a strike at the best target in
 range, if there is one, and the native double-jump move otherwise: Sonic's

@@ -779,6 +779,13 @@ under the matching area heading; see the
 
 ## Modding and tools
 
+- Mutator Lab adds **Beta Flight** for Knuckles in Sonic 3 & Knuckles. It replaces
+  his glide with the flight found in the unused Knuckles object of the Sonic 3 Winter
+  CES cartridge (Dec 22, 1993): an untimed, Tails-style flap whose left and right only
+  turn him around, as in that build. A **Fixed Steering** option makes left and right
+  steer him in flight instead, and a **Super Jump** option gives Super and Hyper
+  Knuckles that object's higher jump. The glide is unchanged while the mutator is off.
+
 - **Mutator Lab starting values and ring hunger:** five new mutators work in
   Sonic 1, Sonic 2 and Sonic 3 & Knuckles. Start with Rings grants rings at every
   act start and life, optionally after a delay, without paying a 100/200-ring

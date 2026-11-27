@@ -91,6 +91,17 @@ final class MutatorWorldState implements WorldSessionPolicyState, RewindSnapshot
         return new com.openggf.game.mutators.HomingAttackRuntime.Policy(policy.mode(), java.util.Set.copyOf(admitted));
     }
 
+    /** Beta flight replaces the glide only for leaders the support profile admits. */
+    private com.openggf.game.mutators.BetaFlightRuntime.Policy betaFlightPolicy() {
+        if (state.isClosed() || support == null) return com.openggf.game.mutators.BetaFlightRuntime.Policy.STOCK;
+        var effective = composed(state.effective());
+        if (!effective.betaFlightActive(availableCapabilities()))
+            return com.openggf.game.mutators.BetaFlightRuntime.Policy.STOCK;
+        return new com.openggf.game.mutators.BetaFlightRuntime.Policy(true, effective.betaFlightFixedSteering(),
+                effective.betaFlightSuperJump(),
+                key -> support.supportsPlayer(MutatorCapability.BETA_FLIGHT, key, true));
+    }
+
     @Override public void beforeAssembly(LevelLoadCause cause) {
         loadCause=cause;
         startingState.beforeAssembly(cause);
@@ -245,6 +256,7 @@ final class MutatorWorldState implements WorldSessionPolicyState, RewindSnapshot
         if (type == com.openggf.game.mutators.StartingStateRuntime.class) return type.cast(startingState);
         if (type == com.openggf.game.mutators.RingHungerRuntime.class) return type.cast(ringHunger);
         if (type == com.openggf.game.mutators.HomingAttackRuntime.Policy.class) return type.cast(homingPolicy());
+        if (type == com.openggf.game.mutators.BetaFlightRuntime.Policy.class) return type.cast(betaFlightPolicy());
         if (type == com.openggf.game.mutators.LevelMutatorPolicySource.class) {
             return type.cast((com.openggf.game.mutators.LevelMutatorPolicySource)
                     () -> state.isClosed() ? com.openggf.game.mutators.LevelMutatorPolicy.STOCK

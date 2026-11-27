@@ -24,6 +24,7 @@ public enum MutatorCapability {
     RELOCATION(MutatorScope.LIVE), TRANSPORT(MutatorScope.LIVE), CHALLENGE(MutatorScope.LIVE),
     PLAYER_MOTION(MutatorScope.LIVE), INPUT_CONTROL(MutatorScope.LIVE), SIGNED_GRAVITY(MutatorScope.LIVE),
     SPRING_RESPONSE(MutatorScope.LIVE), FLUID_CONTEXT(MutatorScope.LIVE),
+    BETA_FLIGHT(MutatorScope.LIVE),
     /** Act-start and life-restart ring grant. */
     STARTING_RINGS(MutatorScope.LIVE),
     /** Act-start level timer seed; checkpoint restarts keep the native saved time. */

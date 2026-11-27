@@ -22,6 +22,7 @@ public final class MutatorsMod implements GgfMod {
         context.registerMutator(LevelFilters.bonusStages());
         context.registerMutator(ViolentExplosions.definition());
         context.registerMutator(HomingAttack.definition());
+        context.registerMutator(BetaFlight.definition());
         context.registerMutator(StartingState.rings());
         context.registerMutator(StartingState.time());
         context.registerMutator(StartingState.score());

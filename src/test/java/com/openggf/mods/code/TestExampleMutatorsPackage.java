@@ -65,7 +65,7 @@ class TestExampleMutatorsPackage {
                     "example-mutators:stealth","example-mutators:no-powerups","example-mutators:no-checkpoints",
                     "example-mutators:no-rings","example-mutators:game-speed","example-mutators:no-special-stages",
                     "example-mutators:no-bonus-stages","example-mutators:violent-explosions",
-                    "example-mutators:homing-attack","example-mutators:start-rings","example-mutators:start-time",
+                    "example-mutators:homing-attack","example-mutators:beta-flight","example-mutators:start-rings","example-mutators:start-time",
                     "example-mutators:start-score","example-mutators:start-lives",
                     "example-mutators:hungry-for-rings"),plan.mutators().keySet());
             assertEquals(3,plan.explicitPatches().size());assertTrue(plan.objectFactories().isEmpty());

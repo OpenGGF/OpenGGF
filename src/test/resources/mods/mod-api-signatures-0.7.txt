@@ -905,6 +905,7 @@ CF-ANNOTATION TYPE com.openggf.mods.mutators.MutatorOption$IntegerSlider visible
 CF-ANNOTATION TYPE com.openggf.mods.mutators.MutatorOption$LegacyChoice visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.mutators.MutatorOptions visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.mutators.MutatorPolicy visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.mutators.MutatorPolicy$BetaFlight visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.mutators.MutatorPolicy$BigHead visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.mutators.MutatorPolicy$DefeatKnockback visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.mutators.MutatorPolicy$DrySonicGravity visible @com.openggf.game.ModApi
@@ -2042,6 +2043,7 @@ CONSTRUCTOR com.openggf.mods.mutators.MutatorOption$Choice public  <init>(java.l
 CONSTRUCTOR com.openggf.mods.mutators.MutatorOption$IntegerSlider public  <init>(java.lang.String,java.lang.String,java.lang.String,com.openggf.mods.mutators.MutatorScope,java.lang.Integer,int,int,int,java.lang.String)
 CONSTRUCTOR com.openggf.mods.mutators.MutatorOption$LegacyChoice public  <init>(java.lang.String,java.lang.String,java.util.Set<java.lang.String>)
 CONSTRUCTOR com.openggf.mods.mutators.MutatorOptions public  <init>(java.util.Map<java.lang.String,java.lang.Object>)
+CONSTRUCTOR com.openggf.mods.mutators.MutatorPolicy$BetaFlight public  <init>(boolean,boolean)
 CONSTRUCTOR com.openggf.mods.mutators.MutatorPolicy$BigHead public  <init>(int,com.openggf.mods.mutators.MutatorPolicy$Target)
 CONSTRUCTOR com.openggf.mods.mutators.MutatorPolicy$BigHead public  <init>(int,com.openggf.mods.mutators.MutatorPolicy$Target,boolean)
 CONSTRUCTOR com.openggf.mods.mutators.MutatorPolicy$BigHead public  <init>(int,java.util.Set<com.openggf.mods.mutators.MutatorPolicy$HeadTarget>)
@@ -3728,6 +3730,7 @@ FIELD com.openggf.mods.mutators.InputControlPolicy$Mode public,static,final com.
 FIELD com.openggf.mods.mutators.InputControlPolicy$Mode public,static,final com.openggf.mods.mutators.InputControlPolicy$Mode NO_FRESH_JUMP
 FIELD com.openggf.mods.mutators.InputControlPolicy$Mode public,static,final com.openggf.mods.mutators.InputControlPolicy$Mode REVERSE_HORIZONTAL
 FIELD com.openggf.mods.mutators.MutatorCapability public,static,final com.openggf.mods.mutators.MutatorCapability AUDIO_EFFECT
+FIELD com.openggf.mods.mutators.MutatorCapability public,static,final com.openggf.mods.mutators.MutatorCapability BETA_FLIGHT
 FIELD com.openggf.mods.mutators.MutatorCapability public,static,final com.openggf.mods.mutators.MutatorCapability BIG_HEAD
 FIELD com.openggf.mods.mutators.MutatorCapability public,static,final com.openggf.mods.mutators.MutatorCapability CHALLENGE
 FIELD com.openggf.mods.mutators.MutatorCapability public,static,final com.openggf.mods.mutators.MutatorCapability CHARACTER_SUPER_FORM
@@ -4624,6 +4627,7 @@ INTERFACE com.openggf.mods.mutators.MutatorConfigurationScreen com.openggf.game.
 INTERFACE com.openggf.mods.mutators.MutatorOption$Checkbox com.openggf.mods.mutators.MutatorOption
 INTERFACE com.openggf.mods.mutators.MutatorOption$Choice com.openggf.mods.mutators.MutatorOption
 INTERFACE com.openggf.mods.mutators.MutatorOption$IntegerSlider com.openggf.mods.mutators.MutatorOption
+INTERFACE com.openggf.mods.mutators.MutatorPolicy$BetaFlight com.openggf.mods.mutators.MutatorPolicy
 INTERFACE com.openggf.mods.mutators.MutatorPolicy$BigHead com.openggf.mods.mutators.MutatorPolicy
 INTERFACE com.openggf.mods.mutators.MutatorPolicy$DefeatKnockback com.openggf.mods.mutators.MutatorPolicy
 INTERFACE com.openggf.mods.mutators.MutatorPolicy$DrySonicGravity com.openggf.mods.mutators.MutatorPolicy
@@ -13155,6 +13159,12 @@ METHOD com.openggf.mods.mutators.MutatorOptions public,final  boolean equals(jav
 METHOD com.openggf.mods.mutators.MutatorOptions public,final  int hashCode()
 METHOD com.openggf.mods.mutators.MutatorOptions public,final  java.lang.String toString()
 METHOD com.openggf.mods.mutators.MutatorPolicy public,abstract  com.openggf.mods.mutators.MutatorCapability capability()
+METHOD com.openggf.mods.mutators.MutatorPolicy$BetaFlight public  boolean fixedSteering()
+METHOD com.openggf.mods.mutators.MutatorPolicy$BetaFlight public  boolean superJump()
+METHOD com.openggf.mods.mutators.MutatorPolicy$BetaFlight public  com.openggf.mods.mutators.MutatorCapability capability()
+METHOD com.openggf.mods.mutators.MutatorPolicy$BetaFlight public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.mods.mutators.MutatorPolicy$BetaFlight public,final  int hashCode()
+METHOD com.openggf.mods.mutators.MutatorPolicy$BetaFlight public,final  java.lang.String toString()
 METHOD com.openggf.mods.mutators.MutatorPolicy$BigHead public  boolean scaleWithRings()
 METHOD com.openggf.mods.mutators.MutatorPolicy$BigHead public  com.openggf.mods.mutators.MutatorCapability capability()
 METHOD com.openggf.mods.mutators.MutatorPolicy$BigHead public  com.openggf.mods.mutators.MutatorPolicy$Target target()
@@ -17876,6 +17886,7 @@ NESTED com.openggf.mods.mutators.MutatorOption com.openggf.mods.mutators.Mutator
 NESTED com.openggf.mods.mutators.MutatorOption com.openggf.mods.mutators.MutatorOption$Choice
 NESTED com.openggf.mods.mutators.MutatorOption com.openggf.mods.mutators.MutatorOption$IntegerSlider
 NESTED com.openggf.mods.mutators.MutatorOption com.openggf.mods.mutators.MutatorOption$LegacyChoice
+NESTED com.openggf.mods.mutators.MutatorPolicy com.openggf.mods.mutators.MutatorPolicy$BetaFlight
 NESTED com.openggf.mods.mutators.MutatorPolicy com.openggf.mods.mutators.MutatorPolicy$BigHead
 NESTED com.openggf.mods.mutators.MutatorPolicy com.openggf.mods.mutators.MutatorPolicy$DefeatKnockback
 NESTED com.openggf.mods.mutators.MutatorPolicy com.openggf.mods.mutators.MutatorPolicy$DrySonicGravity
@@ -18260,6 +18271,7 @@ PERMITS com.openggf.mods.mutators.MutatorPolicy com.openggf.mods.mutators.FluidC
 PERMITS com.openggf.mods.mutators.MutatorPolicy com.openggf.mods.mutators.GameplayHoldPolicy
 PERMITS com.openggf.mods.mutators.MutatorPolicy com.openggf.mods.mutators.HudPresentationPolicy
 PERMITS com.openggf.mods.mutators.MutatorPolicy com.openggf.mods.mutators.InputControlPolicy
+PERMITS com.openggf.mods.mutators.MutatorPolicy com.openggf.mods.mutators.MutatorPolicy$BetaFlight
 PERMITS com.openggf.mods.mutators.MutatorPolicy com.openggf.mods.mutators.MutatorPolicy$BigHead
 PERMITS com.openggf.mods.mutators.MutatorPolicy com.openggf.mods.mutators.MutatorPolicy$DefeatKnockback
 PERMITS com.openggf.mods.mutators.MutatorPolicy com.openggf.mods.mutators.MutatorPolicy$DrySonicGravity
@@ -20280,6 +20292,8 @@ RECORD-COMPONENT com.openggf.mods.mutators.MutatorOption$LegacyChoice checkedTok
 RECORD-COMPONENT com.openggf.mods.mutators.MutatorOption$LegacyChoice id java.lang.String
 RECORD-COMPONENT com.openggf.mods.mutators.MutatorOption$LegacyChoice tokens java.util.Set<java.lang.String>
 RECORD-COMPONENT com.openggf.mods.mutators.MutatorOptions values java.util.Map<java.lang.String,java.lang.Object>
+RECORD-COMPONENT com.openggf.mods.mutators.MutatorPolicy$BetaFlight fixedSteering boolean
+RECORD-COMPONENT com.openggf.mods.mutators.MutatorPolicy$BetaFlight superJump boolean
 RECORD-COMPONENT com.openggf.mods.mutators.MutatorPolicy$BigHead afflicts java.util.Set<com.openggf.mods.mutators.MutatorPolicy$HeadTarget>
 RECORD-COMPONENT com.openggf.mods.mutators.MutatorPolicy$BigHead percent int
 RECORD-COMPONENT com.openggf.mods.mutators.MutatorPolicy$BigHead scaleWithRings boolean
@@ -22981,6 +22995,7 @@ TYPE record public,static,final com.openggf.mods.mutators.MutatorOption$Checkbox
 TYPE record public,static,final com.openggf.mods.mutators.MutatorOption$Choice SUPER java.lang.Record
 TYPE record public,static,final com.openggf.mods.mutators.MutatorOption$IntegerSlider SUPER java.lang.Record
 TYPE record public,static,final com.openggf.mods.mutators.MutatorOption$LegacyChoice SUPER java.lang.Record
+TYPE record public,static,final com.openggf.mods.mutators.MutatorPolicy$BetaFlight SUPER java.lang.Record
 TYPE record public,static,final com.openggf.mods.mutators.MutatorPolicy$BigHead SUPER java.lang.Record
 TYPE record public,static,final com.openggf.mods.mutators.MutatorPolicy$DefeatKnockback SUPER java.lang.Record
 TYPE record public,static,final com.openggf.mods.mutators.MutatorPolicy$DrySonicGravity SUPER java.lang.Record
@@ -24122,6 +24137,7 @@ TYPE-ANNOTATION com.openggf.mods.mutators.MutatorOption$IntegerSlider @com.openg
 TYPE-ANNOTATION com.openggf.mods.mutators.MutatorOption$LegacyChoice @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.mutators.MutatorOptions @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.mutators.MutatorPolicy @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.mutators.MutatorPolicy$BetaFlight @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.mutators.MutatorPolicy$BigHead @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.mutators.MutatorPolicy$DefeatKnockback @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.mutators.MutatorPolicy$DrySonicGravity @com.openggf.game.ModApi

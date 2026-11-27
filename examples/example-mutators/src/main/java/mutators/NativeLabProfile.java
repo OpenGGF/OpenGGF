@@ -32,7 +32,10 @@ public final class NativeLabProfile implements MutatorSupportProfile {
     @Override public Set<MutatorCapability> capabilities(int zone, int act) {
         if (donorActive.getAsBoolean()) return Set.of();
         var available = EnumSet.allOf(MutatorCapability.class);
-        if (!game.equals("s3k")) available.remove(MutatorCapability.NO_BONUS_STAGES);
+        if (!game.equals("s3k")) {
+            available.remove(MutatorCapability.NO_BONUS_STAGES);
+            available.remove(MutatorCapability.BETA_FLIGHT);
+        }
         return Set.copyOf(available);
     }
     /** The native games expose six ROM-backed character/game combinations. */
@@ -53,12 +56,16 @@ public final class NativeLabProfile implements MutatorSupportProfile {
             case PLAYER_STEALTH -> supportsPlayer(key, leader);
             // The attack belongs to the controlled leader; CPU sidekicks keep native moves.
             case HOMING_ATTACK -> leader && supportsNativeCharacter(key);
+            // The CES flight is a Sonic 3 object; only native S3K Knuckles has its glide pose.
+            case BETA_FLIGHT -> leader && game.equals("s3k") && key.equals("knuckles");
             default -> false;
         };
     }
     @Override public String optionUnavailableReason(String localId, String optionId) {
         if (localId.equals("no-bonus-stages") && !game.equals("s3k"))
             return gameTitle()+" has no bonus stages. This switch applies to Sonic 3 & Knuckles.";
+        if (localId.equals("beta-flight") && !game.equals("s3k"))
+            return "Beta Flight is for Knuckles in Sonic 3 & Knuckles.";
         if (!localId.equals("no-powerups") || optionId.isEmpty()) return "";
         MonitorContent content;
         try { content = MonitorContent.valueOf(optionId.toUpperCase(java.util.Locale.ROOT)); }
