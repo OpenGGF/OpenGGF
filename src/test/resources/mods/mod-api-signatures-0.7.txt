@@ -939,6 +939,7 @@ CF-ANNOTATION TYPE com.openggf.mods.mutators.RelocationPolicy visible @com.openg
 CF-ANNOTATION TYPE com.openggf.mods.mutators.RelocationPolicy$Kind visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.mutators.RingEconomyPolicy visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.mutators.RingEconomyPolicy$Kind visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.mutators.RingHungerPolicy visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.mutators.ScenePresentationPolicy visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.mutators.ScenePresentationPolicy$Mode visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.mutators.SignedGravityPolicy visible @com.openggf.game.ModApi
@@ -946,6 +947,11 @@ CF-ANNOTATION TYPE com.openggf.mods.mutators.SpringResponsePolicy visible @com.o
 CF-ANNOTATION TYPE com.openggf.mods.mutators.SpritePresentationPolicy visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.mutators.SpritePresentationPolicy$Mode visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.mutators.SpritePresentationPolicy$Target visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.mutators.StartingStatePolicy visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.mutators.StartingStatePolicy$Lives visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.mutators.StartingStatePolicy$Rings visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.mutators.StartingStatePolicy$Score visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.mutators.StartingStatePolicy$Time visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.mutators.TemporaryMutators visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.mutators.TemporaryMutators$ActivationOutcome visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.mutators.TemporaryMutators$ActivationResult visible @com.openggf.game.ModApi
@@ -2063,12 +2069,17 @@ CONSTRUCTOR com.openggf.mods.mutators.ProjectileRulePolicy public  <init>(com.op
 CONSTRUCTOR com.openggf.mods.mutators.RelocationPolicy public  <init>(com.openggf.mods.mutators.RelocationPolicy$Kind)
 CONSTRUCTOR com.openggf.mods.mutators.RingEconomyPolicy public  <init>(com.openggf.mods.mutators.RingEconomyPolicy$Kind)
 CONSTRUCTOR com.openggf.mods.mutators.RingEconomyPolicy public  <init>(com.openggf.mods.mutators.RingEconomyPolicy$Kind,int)
+CONSTRUCTOR com.openggf.mods.mutators.RingHungerPolicy public  <init>(int,int,int,int,int)
 CONSTRUCTOR com.openggf.mods.mutators.ScenePresentationPolicy public  <init>(com.openggf.mods.mutators.ScenePresentationPolicy$Mode,int,int)
 CONSTRUCTOR com.openggf.mods.mutators.ScenePresentationPolicy public  <init>(com.openggf.mods.mutators.ScenePresentationPolicy$Mode,int,int,int)
 CONSTRUCTOR com.openggf.mods.mutators.SignedGravityPolicy public  <init>()
 CONSTRUCTOR com.openggf.mods.mutators.SignedGravityPolicy public  <init>(java.util.List<java.lang.Boolean>,int)
 CONSTRUCTOR com.openggf.mods.mutators.SpringResponsePolicy public  <init>(int)
 CONSTRUCTOR com.openggf.mods.mutators.SpritePresentationPolicy public  <init>(com.openggf.mods.mutators.SpritePresentationPolicy$Mode,com.openggf.mods.mutators.SpritePresentationPolicy$Target,int,int)
+CONSTRUCTOR com.openggf.mods.mutators.StartingStatePolicy$Lives public  <init>(int)
+CONSTRUCTOR com.openggf.mods.mutators.StartingStatePolicy$Rings public  <init>(int,int)
+CONSTRUCTOR com.openggf.mods.mutators.StartingStatePolicy$Score public  <init>(int)
+CONSTRUCTOR com.openggf.mods.mutators.StartingStatePolicy$Time public  <init>(int)
 CONSTRUCTOR com.openggf.mods.mutators.TemporaryMutators$ActivationOutcome public  <init>(long,java.lang.String,java.lang.String)
 CONSTRUCTOR com.openggf.mods.mutators.TemporaryMutators$ActivationResult public  <init>(boolean,long,java.lang.String)
 CONSTRUCTOR com.openggf.mods.mutators.TemporaryMutators$ActiveActivation public  <init>(long,java.lang.String,java.util.Map<java.lang.String,java.lang.Object>,long,long,boolean,java.lang.String)
@@ -3747,10 +3758,15 @@ FIELD com.openggf.mods.mutators.MutatorCapability public,static,final com.opengg
 FIELD com.openggf.mods.mutators.MutatorCapability public,static,final com.openggf.mods.mutators.MutatorCapability RELOCATION
 FIELD com.openggf.mods.mutators.MutatorCapability public,static,final com.openggf.mods.mutators.MutatorCapability RINGFALL
 FIELD com.openggf.mods.mutators.MutatorCapability public,static,final com.openggf.mods.mutators.MutatorCapability RING_ECONOMY
+FIELD com.openggf.mods.mutators.MutatorCapability public,static,final com.openggf.mods.mutators.MutatorCapability RING_HUNGER
 FIELD com.openggf.mods.mutators.MutatorCapability public,static,final com.openggf.mods.mutators.MutatorCapability SCENE_PRESENTATION
 FIELD com.openggf.mods.mutators.MutatorCapability public,static,final com.openggf.mods.mutators.MutatorCapability SIGNED_GRAVITY
 FIELD com.openggf.mods.mutators.MutatorCapability public,static,final com.openggf.mods.mutators.MutatorCapability SPRING_RESPONSE
 FIELD com.openggf.mods.mutators.MutatorCapability public,static,final com.openggf.mods.mutators.MutatorCapability SPRITE_PRESENTATION
+FIELD com.openggf.mods.mutators.MutatorCapability public,static,final com.openggf.mods.mutators.MutatorCapability STARTING_LIVES
+FIELD com.openggf.mods.mutators.MutatorCapability public,static,final com.openggf.mods.mutators.MutatorCapability STARTING_RINGS
+FIELD com.openggf.mods.mutators.MutatorCapability public,static,final com.openggf.mods.mutators.MutatorCapability STARTING_SCORE
+FIELD com.openggf.mods.mutators.MutatorCapability public,static,final com.openggf.mods.mutators.MutatorCapability STARTING_TIME
 FIELD com.openggf.mods.mutators.MutatorCapability public,static,final com.openggf.mods.mutators.MutatorCapability TRANSPORT
 FIELD com.openggf.mods.mutators.MutatorConfigurationScreen$Cue public,static,final com.openggf.mods.mutators.MutatorConfigurationScreen$Cue CONFIRM
 FIELD com.openggf.mods.mutators.MutatorConfigurationScreen$Cue public,static,final com.openggf.mods.mutators.MutatorConfigurationScreen$Cue ERROR
@@ -3825,6 +3841,10 @@ FIELD com.openggf.mods.mutators.SpritePresentationPolicy$Target public,static,fi
 FIELD com.openggf.mods.mutators.SpritePresentationPolicy$Target public,static,final com.openggf.mods.mutators.SpritePresentationPolicy$Target BADNIKS_AND_PICKUPS
 FIELD com.openggf.mods.mutators.SpritePresentationPolicy$Target public,static,final com.openggf.mods.mutators.SpritePresentationPolicy$Target LEADER
 FIELD com.openggf.mods.mutators.SpritePresentationPolicy$Target public,static,final com.openggf.mods.mutators.SpritePresentationPolicy$Target PICKUPS
+FIELD com.openggf.mods.mutators.StartingStatePolicy public,static,final int MAX_LIVES
+FIELD com.openggf.mods.mutators.StartingStatePolicy public,static,final int MAX_RINGS
+FIELD com.openggf.mods.mutators.StartingStatePolicy public,static,final int MAX_SCORE
+FIELD com.openggf.mods.mutators.StartingStatePolicy public,static,final int MAX_TIME_SECONDS
 FIELD com.openggf.mods.mutators.TransportPolicy$Kind public,static,final com.openggf.mods.mutators.TransportPolicy$Kind CARRY
 FIELD com.openggf.mods.mutators.TransportPolicy$Kind public,static,final com.openggf.mods.mutators.TransportPolicy$Kind COMPANION
 FIELD com.openggf.mods.mutators.TransportPolicy$Kind public,static,final com.openggf.mods.mutators.TransportPolicy$Kind RIDE
@@ -4627,10 +4647,16 @@ INTERFACE com.openggf.mods.mutators.PlayerMotionPolicy com.openggf.mods.mutators
 INTERFACE com.openggf.mods.mutators.ProjectileRulePolicy com.openggf.mods.mutators.MutatorPolicy
 INTERFACE com.openggf.mods.mutators.RelocationPolicy com.openggf.mods.mutators.MutatorPolicy
 INTERFACE com.openggf.mods.mutators.RingEconomyPolicy com.openggf.mods.mutators.MutatorPolicy
+INTERFACE com.openggf.mods.mutators.RingHungerPolicy com.openggf.mods.mutators.MutatorPolicy
 INTERFACE com.openggf.mods.mutators.ScenePresentationPolicy com.openggf.mods.mutators.MutatorPolicy
 INTERFACE com.openggf.mods.mutators.SignedGravityPolicy com.openggf.mods.mutators.MutatorPolicy
 INTERFACE com.openggf.mods.mutators.SpringResponsePolicy com.openggf.mods.mutators.MutatorPolicy
 INTERFACE com.openggf.mods.mutators.SpritePresentationPolicy com.openggf.mods.mutators.MutatorPolicy
+INTERFACE com.openggf.mods.mutators.StartingStatePolicy com.openggf.mods.mutators.MutatorPolicy
+INTERFACE com.openggf.mods.mutators.StartingStatePolicy$Lives com.openggf.mods.mutators.StartingStatePolicy
+INTERFACE com.openggf.mods.mutators.StartingStatePolicy$Rings com.openggf.mods.mutators.StartingStatePolicy
+INTERFACE com.openggf.mods.mutators.StartingStatePolicy$Score com.openggf.mods.mutators.StartingStatePolicy
+INTERFACE com.openggf.mods.mutators.StartingStatePolicy$Time com.openggf.mods.mutators.StartingStatePolicy
 INTERFACE com.openggf.mods.mutators.TransportPolicy com.openggf.mods.mutators.MutatorPolicy
 INTERFACE com.openggf.mods.objects.AuxiliaryObjectCollection java.lang.AutoCloseable
 INTERFACE com.openggf.mods.scene.SceneCanvas com.openggf.mods.ui.PixelCanvas
@@ -13279,6 +13305,15 @@ METHOD com.openggf.mods.mutators.RingEconomyPolicy public,final  int hashCode()
 METHOD com.openggf.mods.mutators.RingEconomyPolicy public,final  java.lang.String toString()
 METHOD com.openggf.mods.mutators.RingEconomyPolicy$Kind public,static  com.openggf.mods.mutators.RingEconomyPolicy$Kind valueOf(java.lang.String)
 METHOD com.openggf.mods.mutators.RingEconomyPolicy$Kind public,static  com.openggf.mods.mutators.RingEconomyPolicy$Kind[] values()
+METHOD com.openggf.mods.mutators.RingHungerPolicy public  com.openggf.mods.mutators.MutatorCapability capability()
+METHOD com.openggf.mods.mutators.RingHungerPolicy public  int graceSeconds()
+METHOD com.openggf.mods.mutators.RingHungerPolicy public  int periodSeconds()
+METHOD com.openggf.mods.mutators.RingHungerPolicy public  int ringsLost()
+METHOD com.openggf.mods.mutators.RingHungerPolicy public  int starveSeconds()
+METHOD com.openggf.mods.mutators.RingHungerPolicy public  int threshold()
+METHOD com.openggf.mods.mutators.RingHungerPolicy public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.mods.mutators.RingHungerPolicy public,final  int hashCode()
+METHOD com.openggf.mods.mutators.RingHungerPolicy public,final  java.lang.String toString()
 METHOD com.openggf.mods.mutators.ScenePresentationPolicy public  com.openggf.mods.mutators.MutatorCapability capability()
 METHOD com.openggf.mods.mutators.ScenePresentationPolicy public  com.openggf.mods.mutators.ScenePresentationPolicy$Mode mode()
 METHOD com.openggf.mods.mutators.ScenePresentationPolicy public  int magnitude()
@@ -13314,6 +13349,27 @@ METHOD com.openggf.mods.mutators.SpritePresentationPolicy$Mode public,static  co
 METHOD com.openggf.mods.mutators.SpritePresentationPolicy$Mode public,static  com.openggf.mods.mutators.SpritePresentationPolicy$Mode[] values()
 METHOD com.openggf.mods.mutators.SpritePresentationPolicy$Target public,static  com.openggf.mods.mutators.SpritePresentationPolicy$Target valueOf(java.lang.String)
 METHOD com.openggf.mods.mutators.SpritePresentationPolicy$Target public,static  com.openggf.mods.mutators.SpritePresentationPolicy$Target[] values()
+METHOD com.openggf.mods.mutators.StartingStatePolicy$Lives public  com.openggf.mods.mutators.MutatorCapability capability()
+METHOD com.openggf.mods.mutators.StartingStatePolicy$Lives public  int lives()
+METHOD com.openggf.mods.mutators.StartingStatePolicy$Lives public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.mods.mutators.StartingStatePolicy$Lives public,final  int hashCode()
+METHOD com.openggf.mods.mutators.StartingStatePolicy$Lives public,final  java.lang.String toString()
+METHOD com.openggf.mods.mutators.StartingStatePolicy$Rings public  com.openggf.mods.mutators.MutatorCapability capability()
+METHOD com.openggf.mods.mutators.StartingStatePolicy$Rings public  int delaySeconds()
+METHOD com.openggf.mods.mutators.StartingStatePolicy$Rings public  int rings()
+METHOD com.openggf.mods.mutators.StartingStatePolicy$Rings public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.mods.mutators.StartingStatePolicy$Rings public,final  int hashCode()
+METHOD com.openggf.mods.mutators.StartingStatePolicy$Rings public,final  java.lang.String toString()
+METHOD com.openggf.mods.mutators.StartingStatePolicy$Score public  com.openggf.mods.mutators.MutatorCapability capability()
+METHOD com.openggf.mods.mutators.StartingStatePolicy$Score public  int score()
+METHOD com.openggf.mods.mutators.StartingStatePolicy$Score public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.mods.mutators.StartingStatePolicy$Score public,final  int hashCode()
+METHOD com.openggf.mods.mutators.StartingStatePolicy$Score public,final  java.lang.String toString()
+METHOD com.openggf.mods.mutators.StartingStatePolicy$Time public  com.openggf.mods.mutators.MutatorCapability capability()
+METHOD com.openggf.mods.mutators.StartingStatePolicy$Time public  int seconds()
+METHOD com.openggf.mods.mutators.StartingStatePolicy$Time public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.mods.mutators.StartingStatePolicy$Time public,final  int hashCode()
+METHOD com.openggf.mods.mutators.StartingStatePolicy$Time public,final  java.lang.String toString()
 METHOD com.openggf.mods.mutators.TemporaryMutators public  com.openggf.mods.mutators.TemporaryMutators$ActivationResult complete(long,boolean)
 METHOD com.openggf.mods.mutators.TemporaryMutators public  java.util.List<com.openggf.mods.mutators.TemporaryMutators$ActivationOutcome> outcomes()
 METHOD com.openggf.mods.mutators.TemporaryMutators public  java.util.Optional<com.openggf.mods.scene.SceneRomArt> nativeArt()
@@ -17858,6 +17914,10 @@ NESTED com.openggf.mods.mutators.RingEconomyPolicy com.openggf.mods.mutators.Rin
 NESTED com.openggf.mods.mutators.ScenePresentationPolicy com.openggf.mods.mutators.ScenePresentationPolicy$Mode
 NESTED com.openggf.mods.mutators.SpritePresentationPolicy com.openggf.mods.mutators.SpritePresentationPolicy$Mode
 NESTED com.openggf.mods.mutators.SpritePresentationPolicy com.openggf.mods.mutators.SpritePresentationPolicy$Target
+NESTED com.openggf.mods.mutators.StartingStatePolicy com.openggf.mods.mutators.StartingStatePolicy$Lives
+NESTED com.openggf.mods.mutators.StartingStatePolicy com.openggf.mods.mutators.StartingStatePolicy$Rings
+NESTED com.openggf.mods.mutators.StartingStatePolicy com.openggf.mods.mutators.StartingStatePolicy$Score
+NESTED com.openggf.mods.mutators.StartingStatePolicy com.openggf.mods.mutators.StartingStatePolicy$Time
 NESTED com.openggf.mods.mutators.TemporaryMutators com.openggf.mods.mutators.TemporaryMutators$ActivationOutcome
 NESTED com.openggf.mods.mutators.TemporaryMutators com.openggf.mods.mutators.TemporaryMutators$ActivationResult
 NESTED com.openggf.mods.mutators.TemporaryMutators com.openggf.mods.mutators.TemporaryMutators$ActiveActivation
@@ -18231,11 +18291,17 @@ PERMITS com.openggf.mods.mutators.MutatorPolicy com.openggf.mods.mutators.Player
 PERMITS com.openggf.mods.mutators.MutatorPolicy com.openggf.mods.mutators.ProjectileRulePolicy
 PERMITS com.openggf.mods.mutators.MutatorPolicy com.openggf.mods.mutators.RelocationPolicy
 PERMITS com.openggf.mods.mutators.MutatorPolicy com.openggf.mods.mutators.RingEconomyPolicy
+PERMITS com.openggf.mods.mutators.MutatorPolicy com.openggf.mods.mutators.RingHungerPolicy
 PERMITS com.openggf.mods.mutators.MutatorPolicy com.openggf.mods.mutators.ScenePresentationPolicy
 PERMITS com.openggf.mods.mutators.MutatorPolicy com.openggf.mods.mutators.SignedGravityPolicy
 PERMITS com.openggf.mods.mutators.MutatorPolicy com.openggf.mods.mutators.SpringResponsePolicy
 PERMITS com.openggf.mods.mutators.MutatorPolicy com.openggf.mods.mutators.SpritePresentationPolicy
+PERMITS com.openggf.mods.mutators.MutatorPolicy com.openggf.mods.mutators.StartingStatePolicy
 PERMITS com.openggf.mods.mutators.MutatorPolicy com.openggf.mods.mutators.TransportPolicy
+PERMITS com.openggf.mods.mutators.StartingStatePolicy com.openggf.mods.mutators.StartingStatePolicy$Lives
+PERMITS com.openggf.mods.mutators.StartingStatePolicy com.openggf.mods.mutators.StartingStatePolicy$Rings
+PERMITS com.openggf.mods.mutators.StartingStatePolicy com.openggf.mods.mutators.StartingStatePolicy$Score
+PERMITS com.openggf.mods.mutators.StartingStatePolicy com.openggf.mods.mutators.StartingStatePolicy$Time
 PERMITS com.openggf.net.client.RaceClient$InboundEvent com.openggf.net.client.RaceClient$Control
 PERMITS com.openggf.net.client.RaceClient$InboundEvent com.openggf.net.client.RaceClient$Disconnected
 PERMITS com.openggf.net.client.RaceClient$InboundEvent com.openggf.net.client.RaceClient$GhostData
@@ -20258,6 +20324,11 @@ RECORD-COMPONENT com.openggf.mods.mutators.ProjectileRulePolicy kind com.openggf
 RECORD-COMPONENT com.openggf.mods.mutators.RelocationPolicy kind com.openggf.mods.mutators.RelocationPolicy$Kind
 RECORD-COMPONENT com.openggf.mods.mutators.RingEconomyPolicy amount int
 RECORD-COMPONENT com.openggf.mods.mutators.RingEconomyPolicy kind com.openggf.mods.mutators.RingEconomyPolicy$Kind
+RECORD-COMPONENT com.openggf.mods.mutators.RingHungerPolicy graceSeconds int
+RECORD-COMPONENT com.openggf.mods.mutators.RingHungerPolicy periodSeconds int
+RECORD-COMPONENT com.openggf.mods.mutators.RingHungerPolicy ringsLost int
+RECORD-COMPONENT com.openggf.mods.mutators.RingHungerPolicy starveSeconds int
+RECORD-COMPONENT com.openggf.mods.mutators.RingHungerPolicy threshold int
 RECORD-COMPONENT com.openggf.mods.mutators.ScenePresentationPolicy magnitude int
 RECORD-COMPONENT com.openggf.mods.mutators.ScenePresentationPolicy mode com.openggf.mods.mutators.ScenePresentationPolicy$Mode
 RECORD-COMPONENT com.openggf.mods.mutators.ScenePresentationPolicy periodPresentations int
@@ -20269,6 +20340,11 @@ RECORD-COMPONENT com.openggf.mods.mutators.SpritePresentationPolicy mode com.ope
 RECORD-COMPONENT com.openggf.mods.mutators.SpritePresentationPolicy periodPresentations int
 RECORD-COMPONENT com.openggf.mods.mutators.SpritePresentationPolicy strengthPercent int
 RECORD-COMPONENT com.openggf.mods.mutators.SpritePresentationPolicy target com.openggf.mods.mutators.SpritePresentationPolicy$Target
+RECORD-COMPONENT com.openggf.mods.mutators.StartingStatePolicy$Lives lives int
+RECORD-COMPONENT com.openggf.mods.mutators.StartingStatePolicy$Rings delaySeconds int
+RECORD-COMPONENT com.openggf.mods.mutators.StartingStatePolicy$Rings rings int
+RECORD-COMPONENT com.openggf.mods.mutators.StartingStatePolicy$Score score int
+RECORD-COMPONENT com.openggf.mods.mutators.StartingStatePolicy$Time seconds int
 RECORD-COMPONENT com.openggf.mods.mutators.TemporaryMutators$ActivationOutcome activationId long
 RECORD-COMPONENT com.openggf.mods.mutators.TemporaryMutators$ActivationOutcome localDefinitionId java.lang.String
 RECORD-COMPONENT com.openggf.mods.mutators.TemporaryMutators$ActivationOutcome status java.lang.String
@@ -22510,6 +22586,7 @@ TYPE interface public,abstract,sealed com.openggf.io.PackedModAssetRoot SUPER <n
 TYPE interface public,abstract,sealed com.openggf.level.objects.authored.AuthoredObjectProperties SUPER <none>
 TYPE interface public,abstract,sealed com.openggf.mods.mutators.MutatorOption SUPER <none>
 TYPE interface public,abstract,sealed com.openggf.mods.mutators.MutatorPolicy SUPER <none>
+TYPE interface public,abstract,sealed com.openggf.mods.mutators.StartingStatePolicy SUPER <none>
 TYPE interface public,abstract,sealed com.openggf.net.protocol.ControlMessage SUPER <none>
 TYPE interface public,abstract,sealed com.openggf.trace.TraceEvent SUPER <none>
 TYPE interface public,abstract,static com.openggf.audio.StreamedMusicPort$OneShot SUPER <none>
@@ -22726,6 +22803,7 @@ TYPE record public,final com.openggf.mods.mutators.PlayerMotionPolicy SUPER java
 TYPE record public,final com.openggf.mods.mutators.ProjectileRulePolicy SUPER java.lang.Record
 TYPE record public,final com.openggf.mods.mutators.RelocationPolicy SUPER java.lang.Record
 TYPE record public,final com.openggf.mods.mutators.RingEconomyPolicy SUPER java.lang.Record
+TYPE record public,final com.openggf.mods.mutators.RingHungerPolicy SUPER java.lang.Record
 TYPE record public,final com.openggf.mods.mutators.ScenePresentationPolicy SUPER java.lang.Record
 TYPE record public,final com.openggf.mods.mutators.SignedGravityPolicy SUPER java.lang.Record
 TYPE record public,final com.openggf.mods.mutators.SpringResponsePolicy SUPER java.lang.Record
@@ -22930,6 +23008,10 @@ TYPE record public,static,final com.openggf.mods.mutators.MutatorPolicy$NoRings 
 TYPE record public,static,final com.openggf.mods.mutators.MutatorPolicy$NoSpecialStages SUPER java.lang.Record
 TYPE record public,static,final com.openggf.mods.mutators.MutatorPolicy$PlayerStealth SUPER java.lang.Record
 TYPE record public,static,final com.openggf.mods.mutators.MutatorPolicy$Ringfall SUPER java.lang.Record
+TYPE record public,static,final com.openggf.mods.mutators.StartingStatePolicy$Lives SUPER java.lang.Record
+TYPE record public,static,final com.openggf.mods.mutators.StartingStatePolicy$Rings SUPER java.lang.Record
+TYPE record public,static,final com.openggf.mods.mutators.StartingStatePolicy$Score SUPER java.lang.Record
+TYPE record public,static,final com.openggf.mods.mutators.StartingStatePolicy$Time SUPER java.lang.Record
 TYPE record public,static,final com.openggf.mods.mutators.TemporaryMutators$ActivationOutcome SUPER java.lang.Record
 TYPE record public,static,final com.openggf.mods.mutators.TemporaryMutators$ActivationResult SUPER java.lang.Record
 TYPE record public,static,final com.openggf.mods.mutators.TemporaryMutators$ActiveActivation SUPER java.lang.Record
@@ -24089,6 +24171,7 @@ TYPE-ANNOTATION com.openggf.mods.mutators.RelocationPolicy @com.openggf.game.Mod
 TYPE-ANNOTATION com.openggf.mods.mutators.RelocationPolicy$Kind @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.mutators.RingEconomyPolicy @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.mutators.RingEconomyPolicy$Kind @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.mutators.RingHungerPolicy @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.mutators.ScenePresentationPolicy @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.mutators.ScenePresentationPolicy$Mode @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.mutators.SignedGravityPolicy @com.openggf.game.ModApi
@@ -24096,6 +24179,11 @@ TYPE-ANNOTATION com.openggf.mods.mutators.SpringResponsePolicy @com.openggf.game
 TYPE-ANNOTATION com.openggf.mods.mutators.SpritePresentationPolicy @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.mutators.SpritePresentationPolicy$Mode @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.mutators.SpritePresentationPolicy$Target @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.mutators.StartingStatePolicy @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.mutators.StartingStatePolicy$Lives @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.mutators.StartingStatePolicy$Rings @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.mutators.StartingStatePolicy$Score @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.mutators.StartingStatePolicy$Time @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.mutators.TemporaryMutators @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.mutators.TemporaryMutators$ActivationOutcome @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.mutators.TemporaryMutators$ActivationResult @com.openggf.game.ModApi

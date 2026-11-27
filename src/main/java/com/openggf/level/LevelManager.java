@@ -1832,7 +1832,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                 graphicsManager.getUiRenderPipeline().setHudRenderManager(hudRenderManager);
             }
 
-            LevelHudArtPatterns.cache(provider, graphicsManager, hudRenderManager, HUD_PATTERN_BASE);
+            LevelHudArtPatterns.cache(provider, graphicsManager, hudRenderManager, HUD_PATTERN_BASE, level);
             }
 
         } catch (IOException e) {

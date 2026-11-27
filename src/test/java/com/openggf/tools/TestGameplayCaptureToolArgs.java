@@ -327,4 +327,24 @@ class TestGameplayCaptureToolArgs {
         assertThrows(IllegalArgumentException.class, () -> GameplayCaptureTool.ZoneIds.resolve("s3k", "nowhere"));
         assertThrows(IllegalArgumentException.class, () -> GameplayCaptureTool.ZoneIds.resolve("s4", "ghz"));
     }
+
+    @Test
+    void mutatorRequestsAreRepeatableNeedTheirModAndCheckSyntaxEarly() {
+        String[] base = {"--game", "s2", "--zone", "ehz", "--act", "1", "--out-dir", "out", "--mod", "lab.jar",
+                "--mutator", "start-rings:rings=85", "--mutator", "start-time:seconds=270",
+                "--mutator", "hungry-for-rings"};
+        var args = GameplayCaptureTool.Arguments.parse(base);
+        assertEquals(java.util.List.of("start-rings:rings=85", "start-time:seconds=270", "hungry-for-rings"),
+                args.mutators());
+        assertTrue(GameplayCaptureTool.Arguments.parse(new String[] {
+                "--zone", "ehz", "--act", "1", "--out-dir", "out"}).mutators().isEmpty());
+        assertThrows(IllegalArgumentException.class, () -> GameplayCaptureTool.Arguments.parse(new String[] {
+                "--zone", "ehz", "--act", "1", "--out-dir", "out", "--mutator", "start-rings"}), "needs --mod");
+        assertThrows(IllegalArgumentException.class, () -> GameplayCaptureTool.Arguments.parse(new String[] {
+                "--zone", "ehz", "--act", "1", "--out-dir", "out", "--mod", "lab.jar",
+                "--mutator", "start-rings:rings"}), "option without a value");
+        assertThrows(IllegalArgumentException.class, () -> GameplayCaptureTool.Arguments.parse(new String[] {
+                "--zone", "ehz", "--act", "1", "--out-dir", "out", "--mod", "lab.jar",
+                "--mutator", "start-rings", "--mutator", "start-rings"}), "one request per mutator");
+    }
 }
