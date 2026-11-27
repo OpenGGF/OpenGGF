@@ -7,6 +7,15 @@ under the matching area heading; see the
 
 ## Gameplay and presentation
 
+- **Sonic 2 positioned starts:** object loading publishes the new camera
+  position before the next object update. Widescreen EDGE keeps Emerald Hill's
+  loop switchers alive so Sonic can follow both sides of the loop.
+
+- In Sonic 3 & Knuckles, invincibility now ends on the frame the original
+  does. The game counts it down once every eight frames, so it could last up
+  to seven frames too long. A bubble shield collected while invincible now
+  starts its animation on the right frame and stays in step with the original.
+
 - Sonic 1 and Sonic 3 & Knuckles special stages now award a Continue at 50
   rings and lives at 100 and 200 rings. Sonic 1's 1UP block grants a life
   and shows its four-frame sparkle. Sonic 2 and Knuckles in Sonic 2 award
@@ -398,11 +407,14 @@ under the matching area heading; see the
   the original 320-pixel screen and draws the extra width as scenery, so every screen
   size plays exactly the same game. That makes widescreen fair for time attack, races
   and shared replays. Objects in the extra width that the original game has not woken
-  up yet are drawn frozen where they start, in greyscale by default
-  (`display.widescreenDormantStyle`: `GREYSCALE`, `NORMAL` or `HIDDEN`). They come to
-  life when the original screen reaches them and freeze again when it leaves them,
-  unless they were destroyed for good. Rings work the same way: uncollected rings
-  waiting in the extra width sit still, and rings you have collected stay gone. Title
+  up yet are drawn where they start, in greyscale by default
+  (`display.widescreenDormantStyle`: `GREYSCALE`, `NORMAL` or `HIDDEN`). Objects that
+  animate in place play their animation there; anything that moves is drawn still. They
+  come to life when the original screen reaches them. When it leaves them, an object
+  that was standing still keeps the look it had, and one that moved goes back to where
+  it starts, unless it was destroyed for good. Rings waiting in the extra width spin in
+  step with the live rings, so a ring never jumps when it wakes up, and rings you have
+  collected stay gone. Title
   cards and results screens time their exits from the game's own screen rather than the
   picture, so a wider picture never delays the next act or the enemies' art. That also
   lets recorded Sonic 3 & Knuckles runs be filmed wider than 320: Hydrocity and Marble
@@ -906,6 +918,8 @@ under the matching area heading; see the
   with native-style material contours and the complete S3K hanging sequence.
   S3K title wag sprites now own the complete glove and backing context,
   removing doubled thumbs and the cutout halo while retaining native timing.
+  MICA's Sonic 1 title wag frames now share one body and change only her hand,
+  so her scale edges no longer shimmer at each swap.
   TALON's S2/S3K native mapping namespaces now bind all declared poses through
   archetype-owned NFRM aliases, including S2 object tumble, S3K gravity loops,
   corkscrews, swing/grip/chain/carry and later object turns. The audit exposes

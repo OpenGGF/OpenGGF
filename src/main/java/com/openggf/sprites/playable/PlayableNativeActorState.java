@@ -140,6 +140,12 @@ final class PlayableNativeActorState {
                 // Obj01_ChkInvin (s2.asm:36291-36296), Obj02_ChkInvinc (s2.asm:39027-39032).
                 // A clear bit freezes even a nonzero timer; a set bit with time zero remains set.
                 if (Boolean.FALSE.equals(sprite.nativeSecondaryInvincibility())) return;
+                // Sonic_ChkInvin, loc_13912 and loc_1665E (S3K) decrement only when Level_frame_counter & 7 is zero.
+                int decimation = invincibilityTimerDecimation(sprite);
+                if (decimation > 1) {
+                        com.openggf.level.LevelManager level = sprite.currentLevelManagerIfAvailable();
+                        if (level != null && (level.getFrameCounter() & (decimation - 1)) != 0) return;
+                }
                 if (sprite.invincibleFrames > 0) {
                         sprite.invincibleFrames--;
                         if (sprite.invincibleFrames == 0) {
@@ -155,6 +161,12 @@ final class PlayableNativeActorState {
                                 sprite.restoreLevelMusicAfterInvincibility();
                         }
                 }
+            }
+    /** Level frames per invincibility timer decrement (PowerUpRules); 1 without game rules. */
+    static int invincibilityTimerDecimation(AbstractPlayableSprite sprite){
+                com.openggf.game.rules.GameRules rules = sprite.getGameRules();
+                int d = rules != null && rules.powerUp() != null ? rules.powerUp().invincibilityTimerDecimation() : 1;
+                return Math.max(1, d);
             }
     static void tickInvulnerabilityDisplayTimer(AbstractPlayableSprite sprite){
                 if (sprite.invulnerabilityDisplayTimerTickedThisFrame) {

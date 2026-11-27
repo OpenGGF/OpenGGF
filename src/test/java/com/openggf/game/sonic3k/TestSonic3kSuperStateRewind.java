@@ -279,7 +279,8 @@ class TestSonic3kSuperStateRewind {
                 GameServices.level().getLevelGamestate().pauseTimer();
                 controller.update();
                 assertEquals(SuperState.NORMAL, controller.getState());
-                assertEquals(8 - phase, sonic.getInvincibleFrames());
+                // move.b #1,invincibility_timer(a0); Sonic_ChkInvin holds it until the next Level_frame_counter & 7 == 0.
+                assertEquals(1, sonic.getInvincibleFrames());
                 assertEquals(50, sonic.getRingCount(), "timer-stop revert does not drain rings");
             }
         }

@@ -29,7 +29,8 @@ final class WidescreenNativeDrawEquivalence {
                  List<String> objects) { }
 
     record Run(List<Frame> frames, int simulationWidth, int presentationWidth, int poses,
-               Frame beforeBake, Frame afterBake, int dormantFrames, int dormantRingFrames) { }
+               Frame beforeBake, Frame afterBake, int dormantFrames, int dormantRingFrames,
+               int loopedPoses, int maxLastStates, int lastStatesAfterRestore) { }
 
     static Run run(SonicGame game, int zone, int act, String aspect, String drawMode, int frames)
             throws Exception {
@@ -52,13 +53,19 @@ final class WidescreenNativeDrawEquivalence {
             // Probe isolation: bake explicitly and compare the complete fingerprint.
             Frame before = sample(-1, fixture);
             objects.dormantLayer.reset();
-            objects.prepareDormantPresentation(registry);
+            int slices = 0;
+            do {
+                objects.prepareDormantPresentation(registry);
+                slices++;
+            } while (!objects.dormantLayer.bakeComplete() && objects.dormantLayer.active() && slices < 1000);
             Frame after = sample(-1, fixture);
             int poses = objects.dormantLayer.poseCount();
+            int looped = objects.dormantLayer.loopedPoseCount();
 
             List<Frame> trace = new ArrayList<>(frames);
             int dormantFrames = 0;
             int dormantRingFrames = 0;
+            int maxLastStates = 0;
             for (int frame = 0; frame < frames; frame++) {
                 boolean jump = frame % 90 >= 60 && frame % 90 < 64;
                 fixture.stepFrame(false, false, false, true, jump);
@@ -67,9 +74,13 @@ final class WidescreenNativeDrawEquivalence {
                 if (com.openggf.level.rings.DormantRingProbe.count(GameServices.level().getRingManager(), camera) > 0) {
                     dormantRingFrames++;
                 }
+                maxLastStates = Math.max(maxLastStates, objects.dormantLayer.lastStateCount());
             }
+            // Last states are derived presentation: a rewind restore must forget them.
+            registry.restore(registry.capture());
+            int lastStatesAfterRestore = objects.dormantLayer.lastStateCount();
             return new Run(trace, camera.getWidth(), CameraPresentationAccess.width(camera), poses, before, after,
-                    dormantFrames, dormantRingFrames);
+                    dormantFrames, dormantRingFrames, looped, maxLastStates, lastStatesAfterRestore);
         } finally {
             if (level != null) level.dispose();
             config.setConfigValue(SonicConfiguration.DISPLAY_ASPECT, oldAspect);
@@ -135,8 +146,13 @@ final class WidescreenNativeDrawEquivalence {
         assertEquals(0, nativeRun.dormantFrames());
         assertTrue(wide.dormantFrames() > 0, "no frame drew a dormant object in the margins");
         assertEquals(0, nativeRun.dormantRingFrames(), "no margin, no dormant rings");
-        System.out.printf("%s: %d poses, dormant draws on %d of %d frames, dormant rings on %d%n",
-                game, wide.poses(), wide.dormantFrames(), frames, wide.dormantRingFrames());
+        assertEquals(0, nativeRun.maxLastStates(), "no margin, no last states");
+        assertEquals(0, wide.lastStatesAfterRestore(), "a rewind restore forgets recorded last states");
+        assertTrue(wide.loopedPoses() > 0, "no stationary object baked an animation loop");
+        assertTrue(wide.maxLastStates() > 0, "no stationary object kept its last state after unloading");
+        System.out.printf("%s: %d poses (%d looped), dormant draws on %d of %d frames, dormant rings on %d,"
+                        + " up to %d last states%n", game, wide.poses(), wide.loopedPoses(), wide.dormantFrames(),
+                frames, wide.dormantRingFrames(), wide.maxLastStates());
         for (int i = 0; i < frames; i++) {
             assertEquals(nativeRun.frames().get(i), wide.frames().get(i), "gameplay diverged at frame " + i);
         }
