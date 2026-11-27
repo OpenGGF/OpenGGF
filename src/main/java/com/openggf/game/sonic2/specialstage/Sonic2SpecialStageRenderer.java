@@ -105,6 +105,9 @@ public class Sonic2SpecialStageRenderer {
                 intro == null ? 0 : intro.getNativeRingsToGoChildCount());
         com.openggf.graphics.SpriteSatInternalAccess.beginCollection(graphicsManager,
                 com.openggf.graphics.SpriteSatMaskPostProcessor.Raster.h32(origin, 0, H32_HEIGHT));
+        // Admission keeps whole columns of pieces straddling the H32 edge (e.g. Obj5F's
+        // flying START flags); the replay is clipped to the 256-pixel display raster.
+        var raster = new Sonic2SpecialStageRasterClip(specialStageViewport);
         try {
             for (var group : groups) {
                 Runnable producer = () -> group.fragments().forEach(graphicsManager::submitSpriteSatPiece);
@@ -117,7 +120,14 @@ public class Sonic2SpecialStageRenderer {
                 }
             }
         } finally {
-            graphicsManager.endSpriteSatCollectionAndReplay();
+            // Earlier batched plane/tile work must not execute inside the sprite clip.
+            graphicsManager.flushPatternBatch();
+            graphicsManager.registerCommand(raster.begin());
+            try {
+                graphicsManager.endSpriteSatCollectionAndReplay();
+            } finally {
+                graphicsManager.registerCommand(raster.end());
+            }
         }
     }
 

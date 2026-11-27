@@ -7,10 +7,10 @@ import com.openggf.game.SpecialStageViewport;
 import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageBomb;
 import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageObject;
 import com.openggf.game.sonic2.specialstage.Sonic2SpecialStagePlayer;
+import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageRasterClip;
 import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageRing;
 import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageSpriteData;
 import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageSpriteMappings;
-import com.openggf.graphics.GLCommandable;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.PatternAtlasRange;
 import com.openggf.graphics.RenderPriority;
@@ -30,8 +30,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-
-import static org.lwjgl.opengl.GL11.*;
 
 /** Native H32 presentation for a two-human halfpipe, with one shared SAT admission pass. */
 public final class CompetitiveHalfpipeRenderer {
@@ -213,14 +211,14 @@ public final class CompetitiveHalfpipeRenderer {
                         () -> graphics.submitSpriteSatPiece(sprite.piece()));
                 else graphics.submitSpriteSatPiece(sprite.piece());
             }
-            ClipScope raster = new ClipScope(viewport.innerH32OriginX(), 0, 256, 224);
-            graphics.registerCommand(raster.begin);
+            Sonic2SpecialStageRasterClip raster = new Sonic2SpecialStageRasterClip(viewport);
+            graphics.registerCommand(raster.begin());
             try {
                 // The shared renderer resolves source ownership in native SAT order and retains
                 // exact admitted rows, operator metadata and palette-specific terrain occlusion.
                 graphics.endSpriteSatCollectionAndReplay();
             } finally {
-                graphics.registerCommand(raster.end);
+                graphics.registerCommand(raster.end());
             }
         });
     }
@@ -242,53 +240,6 @@ public final class CompetitiveHalfpipeRenderer {
             graphics.cachePaletteTexture(snapshot[line], line);
         }
         planes.setPalettes(snapshot);
-    }
-
-    /** Deferred, nested scissor ownership also unwinds if a later draw command fails. */
-    private final class ClipScope {
-        private final int x, y, width, height;
-        private final int[] previous = new int[4];
-        private boolean enabled;
-        private boolean armed;
-
-        private ClipScope(int x, int y, int width, int height) {
-            this.x = x; this.y = y; this.width = width; this.height = height;
-            begin = (cameraX, cameraY, cameraWidth, cameraHeight) -> open();
-        }
-
-        private final GLCommandable begin;
-
-        private void open() {
-            int[] actualViewport = new int[4];
-            glGetIntegerv(GL_VIEWPORT, actualViewport);
-            glGetIntegerv(GL_SCISSOR_BOX, previous);
-            enabled = glIsEnabled(GL_SCISSOR_TEST);
-            armed = true;
-            double sx = actualViewport[2] / (double) viewport.logicalWidth();
-            double sy = actualViewport[3] / 224.0;
-            int left = actualViewport[0] + (int) Math.floor(x * sx);
-            int right = actualViewport[0] + (int) Math.ceil((x + width) * sx);
-            int bottom = actualViewport[1] + (int) Math.floor((224 - y - height) * sy);
-            int top = actualViewport[1] + (int) Math.ceil((224 - y) * sy);
-            if (enabled) {
-                left = Math.max(left, previous[0]); right = Math.min(right, previous[0] + previous[2]);
-                bottom = Math.max(bottom, previous[1]); top = Math.min(top, previous[1] + previous[3]);
-            }
-            glScissor(left, bottom, Math.max(0, right - left), Math.max(0, top - bottom));
-            glEnable(GL_SCISSOR_TEST);
-        }
-
-        private final GLCommandable end = new GLCommandable() {
-            @Override public void execute(int x, int y, int width, int height) { restore(); }
-            @Override public void unwindAfterFailure(int x, int y, int width, int height) { restore(); }
-        };
-
-        private void restore() {
-            if (!armed) return;
-            glScissor(previous[0], previous[1], previous[2], previous[3]);
-            if (enabled) glEnable(GL_SCISSOR_TEST); else glDisable(GL_SCISSOR_TEST);
-            armed = false;
-        }
     }
 
     private List<Sprite> prepareSprites(int trackFrame, List<Sonic2SpecialStagePlayer> players,

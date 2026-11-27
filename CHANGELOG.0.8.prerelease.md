@@ -7,6 +7,11 @@ under the matching area heading; see the
 
 ## Gameplay and presentation
 
+- **Sonic 2 special stage:** the checkered START flags no longer fly out over
+  the black side bars when the stage begins, or when rewind plays the start
+  back. Special-stage sprites are now cut off at the edge of the original
+  256-pixel picture at every screen width, as on the cartridge.
+
 - **Pit deaths during camera resize** use the live bottom limit in Sonic 1,
   Sonic 2 and Sonic 3 & Knuckles. Sky Chase also lowers the live limit before
   moving the camera with the Tornado, matching the cartridge's update order.
