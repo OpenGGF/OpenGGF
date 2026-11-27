@@ -12,6 +12,7 @@ public class MasterTitleLaunchCoordinator {
     private final SonicConfigurationService configService;
     private final LaunchProfileStore profileStore;
     private final LaunchProfileApplier profileApplier;
+    private final java.util.function.Supplier<MasterTitleScreen> hub;
     private Runnable pendingLaunchCallback;
     private java.util.Map<com.openggf.configuration.SonicConfiguration, Object> pendingSessionOverrides = java.util.Map.of();
     private Runnable afterStepLaunchCallback;
@@ -22,19 +23,39 @@ public class MasterTitleLaunchCoordinator {
         this(configService, new LaunchProfileStore(configService), new LaunchProfileApplier(configService));
     }
 
+    /**
+     * Applies Start profiles through the live hub's store, so a patch-backed main the hub offers
+     * (Knuckles in Sonic 2) is not sanitised away; without a hub the default store applies.
+     */
+    public MasterTitleLaunchCoordinator(SonicConfigurationService configService,
+                                        java.util.function.Supplier<MasterTitleScreen> hub) {
+        this(configService, new LaunchProfileStore(configService), new LaunchProfileApplier(configService), hub);
+    }
+
     public MasterTitleLaunchCoordinator(SonicConfigurationService configService,
                                         LaunchProfileStore profileStore,
                                         LaunchProfileApplier profileApplier) {
+        this(configService, profileStore, profileApplier, () -> null);
+    }
+
+    private MasterTitleLaunchCoordinator(SonicConfigurationService configService,
+                                         LaunchProfileStore profileStore,
+                                         LaunchProfileApplier profileApplier,
+                                         java.util.function.Supplier<MasterTitleScreen> hub) {
         this.configService = Objects.requireNonNull(configService, "configService");
         this.profileStore = Objects.requireNonNull(profileStore, "profileStore");
         this.profileApplier = Objects.requireNonNull(profileApplier, "profileApplier");
+        this.hub = Objects.requireNonNull(hub, "hub");
     }
 
     public void prepareExit(String selectedGameId, boolean programmaticSelection) {
         configService.clearSessionOverrides();
         MasterTitleScreen.GameEntry entry = MasterTitleScreen.GameEntry.fromGameId(selectedGameId);
         if (!programmaticSelection) {
-            profileApplier.apply(profileStore.load(entry), entry, profileStore);
+            MasterTitleScreen screen = hub.get();
+            LaunchProfileStore hubStore = screen != null ? screen.launchProfileStore() : null;
+            LaunchProfileStore store = hubStore != null ? hubStore : profileStore;
+            profileApplier.apply(store.load(entry), entry, store);
         } else {
             pendingSessionOverrides.forEach(configService::setSessionOverride);
         }

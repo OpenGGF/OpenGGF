@@ -9,11 +9,12 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
  * act is loaded. Every default is the behaviour of a game whose player routine has no
  * such call, so a provider that does not implement this interface changes nothing.
  *
- * <p>Sonic CD's player is the only implementer: its {@code ObjSonic_Main} and movement
+ * <p>Sonic CD's {@code ObjSonic_Main} and movement
  * modes call {@code ObjSonic_Handle3DRamp}, {@code ObjSonic_TimeWarp},
  * {@code ObjSonic_SpecialCol}, {@code Player_ObjCollide} behind the
  * {@code oPlayerCtrl} gate and {@code ObjSonic_SpecialChunks} (scddisasm
- * src/Level/_Objects/Sonic/Main.asm:285-353, 675-780).
+ * src/Level/_Objects/Sonic/Main.asm:285-353, 675-780). KiS2 supplies its own
+ * demo-only jump and midair gates through the same call sites.
  */
 public interface PlayerStageRoutines {
     /**
@@ -111,6 +112,15 @@ public interface PlayerStageRoutines {
     default boolean balanceCancelsTimedCharge(AbstractPlayableSprite player) {
         return true;
     }
+
+    /** Jump impulse after the ordinary character, power-up and water modifiers. */
+    default int jumpImpulse(AbstractPlayableSprite player, int impulse) { return impulse; }
+
+    /** Whether this dispatch reaches the native midair ability branch. */
+    default boolean allowsMidairAbility(AbstractPlayableSprite player) { return true; }
+
+    /** Applies the native unconditional horizontal cap inside the air-steering branch. */
+    default boolean alwaysCapsAirSpeed(AbstractPlayableSprite player) { return false; }
 
     /** The per-frame ground-speed step of the timed spin-dash charge; {@code standardStep} otherwise. */
     default int timedSpindashStep(AbstractPlayableSprite player, int standardStep) {

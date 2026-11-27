@@ -9,4 +9,10 @@ public interface LevelDemoPlayback {
     boolean playerCanInterrupt();
 
     boolean hasFinished();
+
+    /** Publishes ROM controls only for this admitted world body. */
+    static <T> T withControllers(com.openggf.control.InputHandler input,
+            com.openggf.control.LogicalInputSnapshot controllers, java.util.function.Supplier<T> body) {
+        return com.openggf.control.InputHandlerInternalAccess.withNativeInput(input, controllers, body);
+    }
 }

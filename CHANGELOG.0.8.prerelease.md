@@ -7,6 +7,10 @@ under the matching area heading; see the
 
 ## Gameplay and presentation
 
+- **Knuckles in Sonic 2 starts from the hub again.** Choosing Knuckles for
+  Sonic 2 in Game Setup or the setup guide used to start the game as Sonic,
+  because Start re-checked the profile without the built-in Knuckles option.
+
 - **Knuckles in Sonic 2:** the hub warns when starting tier one with the stock
   Sonic 2 title screen, special stages and ending and without Super Knuckles.
   The notice explains how to supply the optional lock-on image for tier two
@@ -15,6 +19,19 @@ under the matching area heading; see the
 - **Pit deaths during camera resize** use the live bottom limit in Sonic 1,
   Sonic 2 and Sonic 3 & Knuckles. Sky Chase also lowers the live limit before
   moving the camera with the Tornado, matching the cartridge's update order.
+
+- **First-run setup guide:** the first time you reach the hub, a short guide
+  adds your games, asks **How do you want to play?** and starts one. It finds
+  Sonic 1, Sonic 2, Sonic 3 & Knuckles and Sonic CD by content; Sonic CD shows
+  Found until its whole disc is checked at start, and an incomplete, foreign or
+  unreadable disc names the problem and the fix without blocking the other
+  games. **Stock** keeps 4:3 and the original timing choices, **Balanced**
+  (recommended) is a 16:9 picture with Native widescreen gameplay, **Enhanced**
+  adds smooth motion and rewind, and **Just here for multiplayer** changes no
+  settings and opens Time Attack rooms or Sonic 2's two-player mode. Upgrades
+  keep their games and settings unless a listed change is accepted. It opens
+  once per run until finished or skipped, and again from **Extras › Setup guide**.
+  Its text is a machine draft in every shipped language, awaiting native review.
 
 - **Sonic 2 positioned starts:** object loading publishes the new camera
   position before the next object update. Widescreen EDGE keeps Emerald Hill's
@@ -34,6 +51,13 @@ under the matching area heading; see the
 - In standalone Sonic & Knuckles, star posts cycle between Slots and Pachinko.
   A star post activated with 50 rings opens Slots. Once all seven Chaos Emeralds
   are collected, giant rings award 50 rings.
+
+- **Sonic 2 and Knuckles in Sonic 2** now play cartridge demos when the title
+  idles. The cycle runs Emerald Hill, Chemical Plant, Aquatic Ruin and Casino
+  Night. Stock Sonic 2 opens with split-screen Sonic and Tails. Knuckles in
+  Sonic 2 runs solo with its higher demo jump. Gliding and Super are disabled
+  during its demos. The demo returns through SEGA on timeout or directly to
+  the title on Start.
 
 - Sonic 1 draws the act number over the blue oval on the results card. Drum
   samples resume when level music follows the special-stage theme. Leaving a
@@ -425,7 +449,8 @@ under the matching area heading; see the
   step with the live rings, so a ring never jumps when it wakes up, and rings you have
   collected stay gone. Title
   cards and results screens time their exits from the game's own screen rather than the
-  picture, so a wider picture never delays the next act or the enemies' art. That also
+  picture. The HUD stays fully visible when the wider picture slides to frame
+  a locked boss arena. A wider picture never delays the next act or the enemies' art. That also
   lets recorded Sonic 3 & Knuckles runs be filmed wider than 320: Hydrocity and Marble
   Garden used to stop with a full KosM queue. Tests run Sonic 1, Sonic 2 and Sonic 3 &
   Knuckles at 32:9 and 4:3 with the same input and check that the game state matches on every

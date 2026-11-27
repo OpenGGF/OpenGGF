@@ -574,6 +574,298 @@
   "@menu.onboarding.back_caps": {
     "description": "OpenGGF host UI: menu.onboarding.back_caps. Translate the complete message; preserve named arguments."
   },
+  "menu.setup.games.title_caps": "YOUR GAMES",
+  "@menu.setup.games.title_caps": {
+    "description": "First-run setup guide: Setup guide step 1 page title, capitals."
+  },
+  "menu.setup.style.title_caps": "HOW DO YOU WANT TO PLAY?",
+  "@menu.setup.style.title_caps": {
+    "description": "First-run setup guide: Setup guide step 2 page title: the play-style question, capitals."
+  },
+  "menu.setup.ready.title_caps": "READY TO PLAY",
+  "@menu.setup.ready.title_caps": {
+    "description": "First-run setup guide: Setup guide final page title, capitals."
+  },
+  "menu.setup.mp.title_caps": "PLAY TOGETHER",
+  "@menu.setup.mp.title_caps": {
+    "description": "First-run setup guide: Setup guide multiplayer page title, capitals."
+  },
+  "menu.setup.upgrade.title_caps": "WELCOME TO OPENGGF {version}",
+  "@menu.setup.upgrade.title_caps": {
+    "description": "First-run setup guide: Setup guide step 1 title for players upgrading from an earlier release. {version} is a release line such as 0.8.",
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.setup.games.ready_count": "{count, plural, one {# game ready} other {# games ready}}",
+  "@menu.setup.games.ready_count": {
+    "description": "First-run setup guide: Heading above the game list: how many games can start now (Sonic CD counts only after its disc check).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "menu.setup.games.ready": "Ready",
+  "@menu.setup.games.ready": {
+    "description": "First-run setup guide: Status of a cartridge game that can start."
+  },
+  "menu.setup.games.found": "Found",
+  "@menu.setup.games.found": {
+    "description": "First-run setup guide: Status of Sonic CD when its disc was identified by its header; the whole disc is checked when it starts."
+  },
+  "menu.setup.games.missing": "Not found",
+  "@menu.setup.games.missing": {
+    "description": "First-run setup guide: Status of a game with no image found."
+  },
+  "menu.setup.games.kept": "Already set up",
+  "@menu.setup.games.kept": {
+    "description": "First-run setup guide: Status for an upgrading player's game that was already set up and is kept unchanged."
+  },
+  "menu.setup.games.incomplete": "Incomplete",
+  "@menu.setup.games.incomplete": {
+    "description": "First-run setup guide: Status of a Sonic CD disc image with track files missing."
+  },
+  "menu.setup.games.wrong_release": "Wrong release",
+  "@menu.setup.games.wrong_release": {
+    "description": "First-run setup guide: Status of a Sonic CD disc that is not the USA release."
+  },
+  "menu.setup.games.cd_check_note": "Sonic CD: the whole disc is checked when you start it.",
+  "@menu.setup.games.cd_check_note": {
+    "description": "First-run setup guide: Explains that a found Sonic CD disc is only identified now and verified when the game starts."
+  },
+  "menu.setup.games.cd_hint": "Sonic CD needs the USA disc: its .cue with all 35 track files, or a .chd made from them.",
+  "@menu.setup.games.cd_hint": {
+    "description": "First-run setup guide: The Sonic CD formats OpenGGF accepts: the USA disc's .cue sheet with all 35 track files, or a .chd made from them. Keep .cue and .chd unchanged."
+  },
+  "menu.setup.games.optional": "Not needed to play the other games.",
+  "@menu.setup.games.optional": {
+    "description": "First-run setup guide: Under a Sonic CD problem: the other games do not need Sonic CD."
+  },
+  "menu.setup.games.locate_note": "One ROM file, or a Sonic CD .cue or .chd",
+  "@menu.setup.games.locate_note": {
+    "description": "First-run setup guide: Second line of Locate a game and the file picker's instruction. Keep .cue and .chd unchanged."
+  },
+  "menu.setup.games.empty_title": "No games found yet",
+  "@menu.setup.games.empty_title": {
+    "description": "First-run setup guide: Title of the empty library state."
+  },
+  "menu.setup.games.empty_hint": "Scan the folder that holds your games, or locate one file.",
+  "@menu.setup.games.empty_hint": {
+    "description": "First-run setup guide: Next step in the empty library state."
+  },
+  "menu.setup.games.cd_unusable_title": "This Sonic CD disc can't be used yet",
+  "@menu.setup.games.cd_unusable_title": {
+    "description": "First-run setup guide: Headline over an exact Sonic CD diagnostic."
+  },
+  "menu.setup.games.cd_fix_tracks": "Keep all 35 track files beside the .cue, or choose a .chd made from them.",
+  "@menu.setup.games.cd_fix_tracks": {
+    "description": "First-run setup guide: Fix for a .cue sheet whose track files are missing."
+  },
+  "menu.setup.games.cd_fix_chd": "Convert it with chdman, then choose the new .chd.",
+  "@menu.setup.games.cd_fix_chd": {
+    "description": "First-run setup guide: Fix for a CHD that OpenGGF cannot read (for example an older CHD version). chdman is a program name."
+  },
+  "menu.setup.games.scan_details_caps": "WHAT THE SCAN FOUND",
+  "@menu.setup.games.scan_details_caps": {
+    "description": "First-run setup guide: Title of the details page listing what the scan found, capitals."
+  },
+  "menu.setup.games.conflict": "{game} is already set up. Use the new file instead?",
+  "@menu.setup.games.conflict": {
+    "description": "First-run setup guide: Prompt when a scan finds a different file for a game that already works. {game} is a short game name.",
+    "placeholders": {
+      "game": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.setup.games.keep_current": "Keep current file",
+  "@menu.setup.games.keep_current": {
+    "description": "First-run setup guide: Safe default choice in the conflict prompt."
+  },
+  "menu.setup.games.use_new": "Use the new file",
+  "@menu.setup.games.use_new": {
+    "description": "First-run setup guide: Consequential choice in the conflict prompt."
+  },
+  "menu.setup.later": "Set up later",
+  "@menu.setup.later": {
+    "description": "First-run setup guide: Button that leaves the setup guide without adding games."
+  },
+  "menu.setup.later_note": "Add games from the hub whenever you like.",
+  "@menu.setup.later_note": {
+    "description": "First-run setup guide: Reassurance that games can be added later from the hub."
+  },
+  "menu.setup.style.stock": "Stock",
+  "@menu.setup.style.stock": {
+    "description": "First-run setup guide: Play style name: the original 4:3 games, closest to the originals."
+  },
+  "menu.setup.style.stock_note": "Original 4:3 picture, no rewind",
+  "@menu.setup.style.stock_note": {
+    "description": "First-run setup guide: One-line summary of the Stock play style."
+  },
+  "menu.setup.style.balanced": "Balanced",
+  "@menu.setup.style.balanced": {
+    "description": "First-run setup guide: Play style name: recommended balance of original gameplay and modern screens."
+  },
+  "menu.setup.style.balanced_note": "16:9 picture, original gameplay",
+  "@menu.setup.style.balanced_note": {
+    "description": "First-run setup guide: One-line summary of Balanced: a 16:9 picture whose gameplay stays the original."
+  },
+  "menu.setup.style.enhanced": "Enhanced",
+  "@menu.setup.style.enhanced": {
+    "description": "First-run setup guide: Play style name: Balanced plus smooth motion and rewind."
+  },
+  "menu.setup.style.enhanced_note": "16:9, original gameplay, smooth motion, rewind",
+  "@menu.setup.style.enhanced_note": {
+    "description": "First-run setup guide: One-line summary of the Enhanced play style."
+  },
+  "menu.setup.style.multiplayer": "Just here for multiplayer",
+  "@menu.setup.style.multiplayer": {
+    "description": "First-run setup guide: Play style row for players who only want multiplayer; it is a shortcut, not a settings preset."
+  },
+  "menu.setup.style.multiplayer_note": "Go straight to playing with friends",
+  "@menu.setup.style.multiplayer_note": {
+    "description": "First-run setup guide: One-line summary of the multiplayer shortcut."
+  },
+  "menu.setup.style.keep": "Keep my settings",
+  "@menu.setup.style.keep": {
+    "description": "First-run setup guide: Upgrade-only row that keeps every current setting."
+  },
+  "menu.setup.style.keep_note": "Change nothing",
+  "@menu.setup.style.keep_note": {
+    "description": "First-run setup guide: One-line summary of Keep my settings."
+  },
+  "menu.setup.style.recommended_caps": "RECOMMENDED",
+  "@menu.setup.style.recommended_caps": {
+    "description": "First-run setup guide: Tag on the recommended play style, capitals."
+  },
+  "menu.setup.style.sets_caps": "THIS SETS",
+  "@menu.setup.style.sets_caps": {
+    "description": "First-run setup guide: Caption above the settings a play style writes, capitals."
+  },
+  "menu.setup.style.stock_caveat": "Closest to the original games. OpenGGF is not an emulator; some hardware effects differ.",
+  "@menu.setup.style.stock_caveat": {
+    "description": "First-run setup guide: Honest caveat for Stock: OpenGGF reimplements the games and is not an emulator."
+  },
+  "menu.setup.style.smooth_caveat": "Smooth motion needs a display faster than 60 Hz.",
+  "@menu.setup.style.smooth_caveat": {
+    "description": "First-run setup guide: Caveat for smooth motion (render interpolation)."
+  },
+  "menu.setup.style.multiplayer_sets": "Changes no settings; opens Play together.",
+  "@menu.setup.style.multiplayer_sets": {
+    "description": "First-run setup guide: Says the multiplayer shortcut changes no settings."
+  },
+  "menu.setup.style.keep_sets": "Your current settings stay exactly as they are.",
+  "@menu.setup.style.keep_sets": {
+    "description": "First-run setup guide: Says Keep my settings changes nothing."
+  },
+  "menu.setup.mp.online": "Race online",
+  "@menu.setup.mp.online": {
+    "description": "First-run setup guide: Multiplayer route: online Time Attack rooms."
+  },
+  "menu.setup.mp.online_note": "Time Attack rooms: browse, host or join",
+  "@menu.setup.mp.online_note": {
+    "description": "First-run setup guide: Second line of Race online. Time Attack is the bundled mode's name."
+  },
+  "menu.setup.mp.local": "Two players, one screen",
+  "@menu.setup.mp.local": {
+    "description": "First-run setup guide: Multiplayer route: Sonic 2's own two-player mode on one screen."
+  },
+  "menu.setup.mp.local_note": "Sonic 2: choose 2 PLAYER on its title",
+  "@menu.setup.mp.local_note": {
+    "description": "First-run setup guide: How to reach Sonic 2's two-player mode. Keep 2 PLAYER as the game's own menu text."
+  },
+  "menu.setup.mp.rom_note": "Everyone in a room needs the same game as the host.",
+  "@menu.setup.mp.rom_note": {
+    "description": "First-run setup guide: Rooms admit only players with the host's game."
+  },
+  "menu.setup.mp.unavailable": "Time Attack is turned off. Turn it on in Mods.",
+  "@menu.setup.mp.unavailable": {
+    "description": "First-run setup guide: Shown when the bundled Time Attack mode is disabled."
+  },
+  "menu.setup.ready.play": "Play {game}",
+  "@menu.setup.ready.play": {
+    "description": "First-run setup guide: Primary button that starts a game. {game} is a short game name.",
+    "placeholders": {
+      "game": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.setup.ready.hub": "Go to all games",
+  "@menu.setup.ready.hub": {
+    "description": "First-run setup guide: Button that finishes the guide and shows the game shelf."
+  },
+  "menu.setup.ready.rerun": "Run this guide again any time from Extras.",
+  "@menu.setup.ready.rerun": {
+    "description": "First-run setup guide: Where to open the guide again."
+  },
+  "menu.setup.ready.no_games": "Add a game from the hub to start playing.",
+  "@menu.setup.ready.no_games": {
+    "description": "First-run setup guide: Final page message when no game was added."
+  },
+  "menu.setup.apply.title_caps": "APPLY PLAY STYLE?",
+  "@menu.setup.apply.title_caps": {
+    "description": "First-run setup guide: Title of the prompt that lists the settings a play style would change for an existing install, capitals."
+  },
+  "menu.setup.apply.note": "Game Setup choices for each game are kept.",
+  "@menu.setup.apply.note": {
+    "description": "First-run setup guide: Per-game Game Setup choices are never changed by the guide."
+  },
+  "menu.setup.apply.confirm": "Apply changes",
+  "@menu.setup.apply.confirm": {
+    "description": "First-run setup guide: Consequential choice that applies the listed setting changes."
+  },
+  "menu.setup.leave.title_caps": "LEAVE SETUP?",
+  "@menu.setup.leave.title_caps": {
+    "description": "First-run setup guide: Title of the prompt shown when leaving the guide, capitals."
+  },
+  "menu.setup.leave.detail": "Games you added stay added. Nothing else changes.",
+  "@menu.setup.leave.detail": {
+    "description": "First-run setup guide: What leaving keeps."
+  },
+  "menu.setup.leave.stay": "Keep setting up",
+  "@menu.setup.leave.stay": {
+    "description": "First-run setup guide: Safe default choice: continue the guide."
+  },
+  "menu.setup.leave.skip": "Skip for now",
+  "@menu.setup.leave.skip": {
+    "description": "First-run setup guide: Consequential choice: skip the guide; it then opens only from Extras."
+  },
+  "menu.setup.skip_caps": "SKIP",
+  "@menu.setup.skip_caps": {
+    "description": "First-run setup guide: Footer label for leaving the guide, capitals."
+  },
+  "menu.setup.extras.entry": "Setup guide",
+  "@menu.setup.extras.entry": {
+    "description": "First-run setup guide: Extras menu entry that opens the setup guide again."
+  },
+  "menu.setup.upgrade.kept": "Your games and settings came with you.",
+  "@menu.setup.upgrade.kept": {
+    "description": "First-run setup guide: Heading for upgrading players whose games and settings carried over."
+  },
+  "menu.setup.mp.games_note": "Rooms race Sonic 1, Sonic 2 and Sonic 3 & Knuckles.",
+  "@menu.setup.mp.games_note": {
+    "description": "First-run setup guide: Which games Time Attack rooms race."
+  },
+  "menu.setup.games.new_label": "New",
+  "@menu.setup.games.new_label": {
+    "description": "First-run setup guide: Label before the newly found file's path in the conflict prompt."
+  },
+  "menu.setup.style.native_scope": "Sonic CD: wide picture only; same play as 4:3 not yet verified.",
+  "@menu.setup.style.native_scope": {
+    "description": "First-run setup guide: Native widescreen is verified to play exactly like 4:3 only for the cartridge games; Sonic CD gets the wide picture, unverified."
+  },
+  "menu.setup.style.others_kept": "Other settings keep their current values.",
+  "@menu.setup.style.others_kept": {
+    "description": "First-run setup guide: Says settings not listed keep their current values."
+  },
+  "menu.setup.games.unreadable": "Can't be read",
+  "@menu.setup.games.unreadable": {
+    "description": "First-run setup guide: status of a Sonic CD image that could not be read or uses an unsupported container (for example an older CHD)."
+  },
   "menu.rom.locate_game": "LOCATE {game}",
   "@menu.rom.locate_game": {
     "description": "OpenGGF host UI: menu.rom.locate_game. Translate the complete message; preserve named arguments.",

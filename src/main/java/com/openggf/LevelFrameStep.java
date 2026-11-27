@@ -277,6 +277,30 @@ public final class LevelFrameStep {
     }
 
     /** The live stage and its rewind stepper service the same finish-loop wait. */
+    /**
+     * Demo exit loops can keep RunObjects, sprite publication and placement running
+     * while omitting the ordinary level loop's movement of clocks, water and camera.
+     */
+    public static LevelFrameResult executeAttractFade(LevelFrameContext context, PlcLifecycleFrame frame,
+            Runnable players) {
+        var level = context.levelManager();
+        var sprites = context.spriteManager();
+        executeHardwareTimedObjectScan(context, frame, PlcLifecyclePhase.ORDINARY_LEVEL, () -> {
+            var nativeExecution = com.openggf.level.objects.ObjectManagerInternalAccess.nativeExecution(context);
+            if (nativeExecution != null) nativeExecution.afterNativeWait();
+            else level.getLevelGamestate().update();
+            level.prepareTouchResponseSnapshots();
+            players.run();
+            var events = context.levelEventProvider();
+            if (events != null) events.updateFixedInLevelObjectsBeforeDynamicObjects();
+            runNativeFixedObjectsBeforeDynamic(context, DIRECT_WRAPPER);
+            level.updateObjectPositionsPostPhysicsWithoutTouches(
+                    sprites::advancePlayableFixedSlotsAfterObjectExecution, false);
+            LevelSpritePresentation.prepare(level, sprites);
+        });
+        return LevelFrameResult.GAMEPLAY_FRAME;
+    }
+
     public static void executeHardwareTimedSpecialStageScan(
             LevelFrameContext context, PlcLifecycleFrame frame,
             PlcLifecyclePhase phase, com.openggf.game.SpecialStageProvider provider,

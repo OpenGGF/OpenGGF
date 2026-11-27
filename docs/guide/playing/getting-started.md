@@ -134,7 +134,15 @@ The legal disclaimer appears first by default. After accepting it:
    "PRESS START BUTTON" screen).
 3. **Gameplay.** The first zone of the selected game.
 
-If no ROMs are found, **Add your games** lets you locate a game or scan a folder
+The first time you reach the master title, the **setup guide** opens once. It
+finds your games (scan a folder or locate one file; a Sonic CD disc is its USA
+`.cue` with all 35 track files beside it, or a `.chd` made from them), asks how you
+want to play (Stock 4:3; Balanced, a 16:9 picture whose gameplay stays the
+original's; Enhanced, Balanced plus smooth motion and rewind; or straight to
+multiplayer), then starts a game. Upgrades keep their settings unless you choose
+otherwise. Reopen it from **Extras › Setup guide**.
+
+Afterwards, if no ROMs are found, **Add your games** lets you locate a game or scan a folder
 for all three supported games. A missing game's card also opens its ROM browser.
 The browser has Home, Downloads and Last folder shortcuts and lists likely ROM
 files first. Your files stay in their original locations.

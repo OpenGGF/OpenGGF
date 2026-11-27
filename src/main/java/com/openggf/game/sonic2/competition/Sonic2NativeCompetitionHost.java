@@ -82,6 +82,7 @@ public final class Sonic2NativeCompetitionHost implements Sonic2CompetitionHost,
     private BooleanSupplier nativeSlowMotionFlag;
     private Supplier<Sonic2CompetitionCheckpoints.PrimaryEnvironment> checkpointEnvironment;
     private boolean pendingTitleExit;
+    private boolean attractVisit;
     private enum Entry { ARRIVAL, POST_ARRIVAL, UPLOAD, LEAVE, PLAY }
     private Entry entry = Entry.PLAY;
     private int uploadWaits;
@@ -328,6 +329,39 @@ public final class Sonic2NativeCompetitionHost implements Sonic2CompetitionHost,
                 ObjectManagerInternalAccess.completeDeferredPlacement(context().getObjectManager());
         }
         return result;
+    }
+
+    void enableAttractVisit() {
+        if (world != null) throw new IllegalStateException("Attract mode must be set before loading");
+        attractVisit = true;
+    }
+
+    void stepAttract(InputHandler input, com.openggf.game.internal.AttractDemoPlayback playback) {
+        var frame = NativeCompetitionIterationAccess.currentFrame();
+        if (entry != Entry.PLAY) {
+            NativeCompetitionIterationAccess.runLoop(frame, () -> stepEntry(frame));
+            return;
+        }
+        var mode = context();
+        var level = mode.getLevelManager();
+        if (level.hasPendingInitialProcessSpritesPass()) {
+            requireWorld().step(input, frame);
+            return;
+        }
+        playback.step(input, services.graphics(), level::isLevelInactiveForTransition, () -> {
+            LevelFrameResult result = playback.isFading()
+                    ? NativeCompetitionIterationAccess.runLoop(frame, () -> {
+                        mode.getSpriteManager().publishHeldInputForLevelEvents(input);
+                        return LevelFrameStep.executeAttractFade(LevelFrameContext.from(mode), frame,
+                                () -> mode.getSpriteManager().update(input));
+                    })
+                    : requireWorld().step(input, frame);
+            views.prepare(mode, session, profile, art);
+            if (!level.isLevelInactiveForTransition()) {
+                ObjectManagerInternalAccess.completeDeferredPlacement(mode.getObjectManager());
+            }
+            return result;
+        });
     }
 
     @Override public boolean consumePendingTitleExit() {
@@ -646,7 +680,10 @@ public final class Sonic2NativeCompetitionHost implements Sonic2CompetitionHost,
                 return type.cast(new ObjectManagerInternalAccess.NativeExecution() {
                     @Override public void afterNativeWait() {
                         session.teleportClock().afterNativeWait(pause.gamePaused());
-                        if (pause.capture().continuation() == Sonic2CompetitionPause.Continuation.AWAITING_ORDINARY_SAMPLE) {
+                        if (attractVisit) {
+                            serviceNativeCountdown();
+                        } else if (pause.capture().continuation()
+                                == Sonic2CompetitionPause.Continuation.AWAITING_ORDINARY_SAMPLE) {
                             var sampled = sampleNativeInput();
                             if (!sampled.equals(SpriteManagerInternalAccess.publishedInput(context().getSpriteManager())))
                                 throw new IllegalStateException("Native wait and playable dispatcher disagree on controller sample");

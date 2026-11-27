@@ -68,8 +68,17 @@ public final class Sonic2CompetitionViews implements Sonic2NativeCompetitionHost
         }
     }
     private int backdropRgb(int word) {
-        return DisplayColorConverter.toPackedRgb(((word >>> 1) & 7) * 255 / 7,
-                ((word >>> 5) & 7) * 255 / 7, ((word >>> 9) & 7) * 255 / 7,
+        int red = ((word >>> 1) & 7) * 255 / 7;
+        int green = ((word >>> 5) & 7) * 255 / 7;
+        int blue = ((word >>> 9) & 7) * 255 / 7;
+        var fade = com.openggf.graphics.PaletteUploadPresentation.displayedFade(graphics);
+        if (fade.affects(2)) {
+            int rgb = fade.fadeRgb(red, green, blue);
+            red = (rgb >>> 16) & 255;
+            green = (rgb >>> 8) & 255;
+            blue = rgb & 255;
+        }
+        return DisplayColorConverter.toPackedRgb(red, green, blue,
                 graphics.getDisplayColorProfile(), graphics.getDisplayColorExpansion());
     }
     private static Sonic2CompetitionVideoFrame world(GameplayModeContext context) {

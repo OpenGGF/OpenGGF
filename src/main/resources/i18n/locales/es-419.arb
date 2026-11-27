@@ -564,5 +564,69 @@
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
+  },
+  "menu.setup.games.empty_hint": "Escanea la carpeta con tus juegos o busca un archivo.",
+  "menu.setup.later_note": "Agrega juegos desde el hub cuando quieras.",
+  "menu.setup.style.stock_note": "Imagen original 4:3, sin retroceso",
+  "menu.setup.style.balanced_note": "Imagen original, con retroceso",
+  "menu.setup.style.enhanced_note": "Pantalla panorámica, movimiento fluido, retroceso",
+  "menu.setup.ready.no_games": "Agrega un juego desde el hub para empezar a jugar.",
+  "menu.setup.leave.detail": "Los juegos agregados se quedan. No cambia nada más.",
+  "menu.setup.upgrade.kept": "Tus juegos y configuración se conservaron.",
+  "@menu.setup.games.empty_hint": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "2db683867ba424d4a1f5b8b9418f4d9cd268703de94a8a158fb739fffe2884de",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.later_note": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "2f4fa5e018cb8a10fd94d586b262eb4a586b3fc8ca325ad7b0b7d9eace755fe7",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.leave.detail": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "5d51bcc6b90d59343413e23a937f70fd3e0bb109bf074599e58bf02927626c2c",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.ready.no_games": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "533d0b61dd21d5d28b41f73d7dca749c81ee284c29603ecebd2340c9ee598fb4",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.style.balanced_note": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "0c77eb6abcbf6cfd496041bf089527dae038cf7d23855af252b37111cdd55cd2",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.style.enhanced_note": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "37f3fc5ecda3ba8dfe0a8b56c426a581642f72402f7ea3c126e07af8a293672b",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.style.stock_note": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "8f873594efdc109f289502bfb9c4f12c8a69aae5be7d74e16959b8486737739f",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.upgrade.kept": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "18b64c5f8773f754f98ad1a307ec052787879ff82e93cff64664052d2bcf4735",
+      "reviewed": false
+    }
   }
 }
