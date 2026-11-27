@@ -153,6 +153,16 @@ public final class SpriteManagerInternalAccess {
         return manager.publishedLogicalInput();
     }
 
+    /** Use current physical input at the level-load boundary, including title or menu fades. */
+    public static void bindLevelEntryController(SpriteManager manager,
+            java.util.function.Supplier<com.openggf.control.InputHandler> controller) {
+        manager.bindLevelEntryController(controller);
+    }
+
+    public static com.openggf.control.PlayerInputState levelEntryPlayerOne(SpriteManager manager) {
+        return manager.levelEntryPlayerOne();
+    }
+
     /** S2's locked pre-main-loop player slots, without advancing the level clock. */
     public static void runNativeCompetitionTitlePlayablePass(SpriteManager manager) {
         manager.runNativeCompetitionTitlePlayablePass();

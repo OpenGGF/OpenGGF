@@ -47,6 +47,13 @@ class TestEngineSettingsDraft {
         draft.apply();
         assertTrue(config.getBoolean(LIVE_REWIND_ENABLED));
         assertEquals("zone", config.getString(REWIND_BUDGET_SCOPE));
+        draft.step(REWIND_BUDGET_SCOPE, 1);
+        assertEquals("never", draft.text(REWIND_BUDGET_SCOPE), "Never follows Per zone");
+        draft.apply();
+        assertTrue(config.getBoolean(LIVE_REWIND_ENABLED), "Never keeps rewind enabled");
+        assertEquals("never", service().getString(REWIND_BUDGET_SCOPE));
+        draft.step(REWIND_BUDGET_SCOPE, 1);
+        assertEquals("off", draft.text(REWIND_BUDGET_SCOPE));
     }
 
     @Test

@@ -1,5 +1,6 @@
 package com.openggf.game.sonic2;
 
+import com.openggf.game.LevelDebugPlacement;
 import com.openggf.level.objects.ObjectServices;
 
 /** ROM debug-placement sprites share the resident monitor-art bank. */
@@ -11,7 +12,7 @@ public final class Sonic2NativeDebugGeometry {
         var camera = services.camera();
         var player = camera == null ? null : camera.getFocusedSprite();
         return profile != null && profile.displaysNativeDebugGeometry()
-                && player != null && player.isDebugMode();
+                && player != null && LevelDebugPlacement.bypassesInteractions(player);
     }
 
     public static void draw(ObjectServices services, int fixedMapping, int frame,

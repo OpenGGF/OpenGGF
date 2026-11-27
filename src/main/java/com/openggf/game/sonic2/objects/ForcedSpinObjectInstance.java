@@ -1,5 +1,6 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.game.LevelDebugPlacement;
 import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.BoxObjectInstance;
 
@@ -116,6 +117,8 @@ public class ForcedSpinObjectInstance extends BoxObjectInstance implements Rewin
 
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
+        // Obj84_MainX (s2.asm:46829-46832), Obj84_MainY (s2.asm:46906-46909).
+        if (LevelDebugPlacement.blocksObjectInteractions(tryServices())) return;
         AbstractPlayableSprite player = resolveMain(playerEntity);
         if (player == null) {
             return;

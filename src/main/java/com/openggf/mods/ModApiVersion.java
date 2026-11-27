@@ -224,6 +224,8 @@ public final class ModApiVersion {
      * Wacky Workbench's own player grows the movement rewind record by a stage-control word
      * and adds stageControlState()/setStageControlState(int) and cancelTimedCharge() for the
      * CD stage routines.
+     * SonicConfiguration appends LEVEL_DEBUG_MODE (debug.flags.levelDebugMode) for ROM placement
+     * and engine free-fly selection within the unpublished 0.7.0 candidate.
      * SonicConfiguration appends SONIC_CD_DISC (roms.soniccd), the Sonic CD disc's cue sheet beside the
      * other games' ROM keys; existing ordinals are preserved and the candidate remains 0.7.0.
      * SonicConfiguration appends SETUP_GUIDE (hub.setupGuide), the first-run setup guide's

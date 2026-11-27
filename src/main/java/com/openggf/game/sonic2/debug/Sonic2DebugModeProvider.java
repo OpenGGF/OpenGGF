@@ -40,8 +40,7 @@ public class Sonic2DebugModeProvider implements DebugModeProvider {
 
     @Override
     public boolean hasLevelDebug() {
-        // Level debug is handled by the generic DebugRenderer
-        return false;
+        return true;
     }
 
     /**

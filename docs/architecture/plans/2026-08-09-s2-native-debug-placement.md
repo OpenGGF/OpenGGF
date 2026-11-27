@@ -1,6 +1,10 @@
 # Sonic 2 Native Debug Placement Contract Ratchet Implementation Plan
 
-> **Execution scope:** strengthen the exact REV01 contract and current-status
+> The 2026-11-22 owner ruling supersedes this plan's runtime activation
+> conditions. The plan records the historical ROM contract ratchet. See the
+> [current design](../designs/2026-08-09-s2-native-debug-placement.md).
+>
+> **Original execution scope:** strengthen the exact REV01 contract and current-status
 > evidence without adding an inaccessible partial runtime capability. The full
 > production implementation remains the coherent activation slice defined by
 > `docs/architecture/designs/2026-08-09-s2-native-debug-placement.md`.

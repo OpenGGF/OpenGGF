@@ -121,7 +121,7 @@ no discrepancy entry was added or reclassified by the cutover.
 18. [Special-stage Live Rewind Scope](#special-stage-live-rewind-scope) — Engine feature
    - [Sonic CD stage-load live rewind](#sonic-cd-stage-load-live-rewind) — Engine feature
 19. [Mod Music Uses PCM Presentation Rather Than Mega Drive SMPS](#mod-music-uses-pcm-presentation-rather-than-mega-drive-smps) — Engine feature
-20. [S2 Native Debug Placement Capability Boundary](#s2-native-debug-placement-capability-boundary) — Other
+20. [S2 Native Debug Placement](#s2-native-debug-placement) — Engine feature
 21. [S2 Competition Split Screen, Native Lag and Rewind Scope](#s2-competition-split-screen-native-lag-and-rewind-scope) — Hardware limit
 22. [S2 replay limits at sub-frame load boundaries](#s2-replay-limits-at-sub-frame-load-boundaries) — Hardware limit
 23. [S2 CPZ Boss Truncates The Object Pass (`fixBugs = 0`)](#s2-cpz-boss-truncates-the-object-pass-fixbugs--0) — Other
@@ -131,7 +131,7 @@ no discrepancy entry was added or reclassified by the cutover.
 27. [FM:PSG Mix Balance Is Pre-Rewrite Parity, Not a Hardware Calibration](#fmpsg-mix-balance-is-pre-rewrite-parity-not-a-hardware-calibration) — Other
 28. [S2 Compressed-Music Load Timing Omits Sub-Frame Bus Contention](#s2-compressed-music-load-timing-omits-sub-frame-bus-contention) — Hardware limit
 29. [Fast FM Register-Level Timing and Output](#fast-fm-register-level-timing-and-output) — Engine feature
-30. [Knuckles in Sonic 2 Runs Tier Two With the Lock-On Dump and Tier One Without It](#knuckles-in-sonic-2-runs-tier-two-with-the-lock-on-dump-and-tier-one-without-it) — Other
+30. [Knuckles in Sonic 2 Runs Tier Two With the Lock-On Dump and Tier One Without It](#knuckles-in-sonic-2-runs-tier-two-with-the-lock-on-dump-and-tier-one-without-it) — Engine feature
 31. [Fixed Native Sprite Capacity in Wider Presentation](#fixed-native-sprite-capacity-in-wider-presentation) — Engine feature
 32. [S2 Sideways Platform Safe Admission and Owned-Child Retirement](#s2-sideways-platform-safe-admission-and-owned-child-retirement) — Other
 33. [Knuckles Climbs Sonic 1 Edge Walls](#knuckles-climbs-sonic-1-edge-walls) — Engine feature
@@ -714,56 +714,16 @@ While Knuckles is gliding, climbing or pulling up (`double_jump_flag` 1, 4 or 5)
 
 ---
 
-## S2 Native Debug Placement Capability Boundary
+## S2 Native Debug Placement
 
-**Kind:** Other
+**Kind:** Engine feature
 
-**Location:** S2 level-session/debug ownership; `CPZSpinTubeObjectInstance.java`
-**ROM Reference:** `docs/s2disasm/s2.asm:36224-36230,88453-89079`
-
-### Original Implementation
-
-S2 enters the ROM-global `Debug_placement_mode` from `Debug_mode_flag` plus B
-and can do so from the normal, hurt, or dead player routines. The native mode
-owns cursor movement, preview selection, first-free object allocation, player
-entry/exit state, camera/scroll behavior, and more than thirty compiled REV01
-behavioral gates. CPZ Obj1E's tube-entry check is one of those gates, not the
-owner of the capability.
-
-The World REV01 ROM's `DebugObjectLists` table is at `$41D0C`. Its 17 zone
-slots expand to 340 rows; counting each shared list definition once gives 265
-rows and 117 unique object IDs. The current S2 registry has factories for 113.
-The four exceptions are `$25` Ring (owned by `RingManager`), `$46` OOZ Ball,
-`$73` Rotating Rings, and the parent-dependent `$D3` Bomb Prize.
-
-### Engine Implementation
-
-OpenGGF does not expose that native level-wide placement mode. Its supported
-level debug capability is the engine free-fly mode toggled by `D`; CPZ's entry
-test now rejects a player in that mode, matching the shared touch/solid debug
-boundary. Normal tube gameplay remains ROM-driven; the existing engine
-free-fly mid-traversal reset is unchanged. `DebugModeProvider.hasLevelDebug()`
-therefore remains false.
-
-### Rationale and Verification
-
-Mapping free-fly movement to native placement would invent the missing mode
-owner. Factory count also is not placement readiness: debug previews use ROM
-mapping pointers plus VDP `art_tile` destinations, while the engine's virtual
-object atlas does not preserve that address relationship; dynamic stage-ring
-creation and three object lifecycle paths remain absent. A complete route also
-needs a distinct module-owned controller, every shipped global gate, rewind and
-session ownership, and dedicated native-debug BK2 evidence.
-
-`TestSonic2DebugPlacementRomContract` pins the exact table, shipped
-`fixBugs = 0` rows, and registry gap. The CPZ and module-graph tests keep the
-supported boundary honest. The reviewed design and activation criteria are in
-`docs/architecture/designs/2026-08-09-s2-native-debug-placement.md`; current
-validation is in
-`docs/architecture/validation/2026-08-09-s2-native-debug-placement.md`.
-Native placement remains unavailable until the coherent production activation
-slice satisfies every criterion; no object-local or CPZ-only carve-out is
-accepted.
+The cartridge cheat enables B entry and exit, A/C selection and placement
+through the shared session. The ordered lists come from `DebugObjectLists`
+(s2.asm:88869-88887). Cursor movement uses the cartridge's tap, hold delay and
+acceleration. Placement uses existing object sprite sheets and runtime factories.
+Engine free-fly remains selectable in Settings. See [the controls](../guide/playing/controls.md#sonic-2-item-placement)
+and the [remaining placement gaps](known-bugs.md#s2-debug-placement-object-and-gate-coverage).
 
 ---
 
@@ -3184,7 +3144,7 @@ release gates; this tolerance result does not establish full SMPS parity. See th
 
 ## Knuckles in Sonic 2 Runs Tier Two With the Lock-On Dump and Tier One Without It
 
-**Kind:** Other
+**Kind:** Engine feature
 
 **Status:** Open (tier two, 2026-09-14). Owner: `com.openggf.game.sonic2.kis2`;
 catalogue: [docs/kis2/BRANCH_DIFFS.md](../kis2/BRANCH_DIFFS.md).
@@ -3195,9 +3155,10 @@ S3K image and the Sonic 2 cart. The shipped Knuckles in Sonic 2 also runs
 code and data from a 256 KiB chip that only the user-supplied S&K + Sonic 2
 lock-on dump (3,407,872 bytes, MD5 `3E5E4B18D035775B916A06F2B3DC5031`)
 holds. With that dump present the patch runs **tier two** and reads the
-chip's in-level data; without it the patch runs **tier one** and this entry's
-tier-one list applies. Neither tier is the full presentation of Knuckles in
-Sonic 2 yet.
+chip data. Tier one is the engine's fallback when that optional input is
+unavailable. The hub lists the tier-one losses and explains how to supply
+the image. Players can hide this notice. Tier-two presentation gaps listed
+below remain open implementation work.
 
 ### Original Implementation
 
@@ -3293,13 +3254,15 @@ the owning KiS2 routine in the catalogue):
   pictures are implemented. KiS2's directional title code opens level select
   with A+Start; its Super sound-test sequence survives new-game initialization.
   Results headings move independently, including the all-emeralds Super message.
-  Native debug placement and its cheat remain absent. The wrapper inherits the native
+  Chip-backed play reads its two-entry placement list and recognizes the
+  lock-on debug sound-test code. Tier one follows the stock level-select and
+  placement data. The wrapper inherits the native
   placed-ring sprite-table rule, including rejecting a ring whose centre is
   above the viewport (#464, `766cb71d7d`,
   `TestKis2HeadlessBoot#kiS2PlacedRingDisappearsWhenItsCentreCrossesTheTopEdge`).
   Exact per-scanline sprite masking depends on VDP timing outside the engine's
-  hardware model. Level-select extra PLC work and debug sprite maps remain
-  open. [Special-stage results rewind](known-bugs.md#s2-and-kis2-special-stage-results-rewind)
+  hardware model. Level-select extra PLC work remains open.
+  [Special-stage results rewind](known-bugs.md#s2-and-kis2-special-stage-results-rewind)
   is tracked separately.
   The formerly listed ending walk cadence is not a KiS2 gap: its forced
   Ending_Routine=0 never takes that walk branch.

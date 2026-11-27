@@ -1,5 +1,6 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.game.LevelDebugPlacement;
 import com.openggf.level.objects.ObjectVisualFacing;
 
 import com.openggf.game.PlayableEntity;
@@ -177,8 +178,8 @@ public class LauncherBallObjectInstance extends AbstractObjectInstance implement
      * Check 32x32 bounding box for player entry.
      */
     private void processDetection(AbstractPlayableSprite player, int vIntRunCount) {
-        // Skip if debug mode
-        if (player.isDebugMode()) {
+        // loc_252F0 (s2.asm:51328-51330) bypasses new capture while placing.
+        if (player.isDebugMode() || LevelDebugPlacement.blocksObjectInteractions(tryServices())) {
             return;
         }
 

@@ -813,6 +813,7 @@ public class SonicConfigurationService {
 		putDefaultKey(SonicConfiguration.NEXT_ACT, GLFW_KEY_PAGE_UP);
 		putDefaultKey(SonicConfiguration.NEXT_ZONE, GLFW_KEY_PAGE_DOWN);
 		putDefaultKey(SonicConfiguration.DEBUG_MODE_KEY, GLFW_KEY_D);
+		putDefault(SonicConfiguration.LEVEL_DEBUG_MODE, "rom");
 		putDefault(SonicConfiguration.FPS, "AUTO");
 		putDefault(SonicConfiguration.DISPLAY_PACING, "AUTO");
 		putDefault(SonicConfiguration.DISPLAY_INTERPOLATION, false);

@@ -239,7 +239,7 @@ public final class ConfigCatalog {
         // rewind (player-facing live rewind)
         put(LIVE_REWIND_ENABLED, of("rewind", "liveEnabled", BOOL,
                 "Enable held-key rewind during ordinary live play"));
-        put(REWIND_BUDGET_SCOPE, ofEnum("rewind", "budgetScope", "When the consumable rewind allowance refills", Set.of("off", "checkpoint", "act", "zone")));
+        put(REWIND_BUDGET_SCOPE, ofEnum("rewind", "budgetScope", "When the consumable rewind allowance refills", Set.of("off", "checkpoint", "act", "zone", "never")));
         put(REWIND_BUDGET_SECONDS, ofEnum("rewind", "budgetSeconds", "Seconds available per refill, or unlimited", Set.of("5", "10", "15", "20", "30", "60", "unlimited")));
         put(REWIND_REFILL_ON_LIFE_LOSS, of("rewind", "refillOnLifeLoss", BOOL, "Refill after a completed life-loss respawn"));
         put(REWIND_BONUS_STAGES, of("rewind", "bonusStages", BOOL, "Allow rewind in supported bonus stages with a fresh allowance per visit"));
@@ -410,6 +410,9 @@ public final class ConfigCatalog {
         // ───────────────── DEBUG BLOCK ─────────────────
 
         // debug.flags
+        put(LEVEL_DEBUG_MODE, ofEnum("debug.flags", "levelDebugMode",
+                "Select ROM item placement or engine free-fly in games that support native placement",
+                Set.of("rom", "engine")));
         put(DEBUG_VIEW_ENABLED, of("debug.flags", "debugView", BOOL,
                 "Enable the debug overlay subsystem; visible HUD starts hidden until toggled"));
         put(EDITOR_ENABLED, of("debug.flags", "editor", BOOL, "Allow entering the level editor from gameplay"));

@@ -364,11 +364,8 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance implements
      * Mode 0: Check if player enters the tube activation zone.
      */
     private void checkEntryCollision(AbstractPlayableSprite player, CharacterState cs) {
-        // The shipped S2 ROM gates Obj1E capture on Debug_placement_mode.
-        // Native placement is not yet an engine capability, but the supported
-        // engine debug/free-fly mode must stay outside the normal object-touch
-        // route just as it does for shared solids and touch responses.
-        if (player.isDebugMode()) {
+        // loc_225FC (s2.asm:48526-48531) returns before reading the cursor position.
+        if (player.isDebugMode() || com.openggf.game.LevelDebugPlacement.blocksObjectInteractions(tryServices())) {
             return;
         }
 
@@ -403,7 +400,7 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance implements
         }
 
         // ROM loc_225FC (docs/s2disasm/s2.asm:48520-48536) gates capture ONLY on:
-        //   - not Debug_placement_mode (not modelled here)
+        //   - not Debug_placement_mode
         //   - x_pos(a1)-x_pos(a0) < objoff_2A (collisionDistance)  [checked above]
         //   - y_pos(a1)-y_pos(a0) < 0x80                           [checked above]
         //   - anim(a1) != $20 (raw S2 anim index: AniIDSonAni_Lying for Sonic,

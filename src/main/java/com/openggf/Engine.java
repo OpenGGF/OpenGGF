@@ -3947,11 +3947,13 @@ public class Engine implements com.openggf.graphics.RenderProjection {
             resetCameraForScreenSpace();
             var screen = gameLoop.getNativeMenuScreen();
             if (screen != null) screen.draw();
+            graphicsManager.flushScreenSpace();
         }
 		@Override public void continueScreen() {
 			resetCameraForScreenSpace();
 			var provider = gameLoop.getContinueScreenProvider();
 			if (provider != null) provider.draw();
+			graphicsManager.flushScreenSpace();
 		}
 		@Override public void levelSelect() { drawLevelSelect(); }
 		@Override public void dataSelect() { drawDataSelect(); }
@@ -4555,6 +4557,9 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		return viewport;
 	}
 
+	// Front-end screens centre their own 320 composition in the projection width, so they flush
+	// with the screen-space camera: the end-of-scene flush adds the NATIVE widescreen picture
+	// inset (CameraPresentationAccess.leftWithShake), which would shift them right a second time.
 	private void drawTitleScreen() {
 		resetCameraForScreenSpace();
 		TitleScreenProvider titleScreen = gameLoop.getTitleScreenProvider();
@@ -4563,6 +4568,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			titleScreen.drawOverlay(new com.openggf.mods.ui.LevelOverlayCanvas(graphicsManager,
 					graphicsManager.getProjectionWidth(), graphicsManager.getConfiguredScreenHeightPx()));
 		}
+		graphicsManager.flushScreenSpace();
 	}
 
 	private void drawLevelSelect() {
@@ -4572,6 +4578,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			applyViewportWidth(levelSelect, (int) projectionWidth);
 			levelSelect.draw();
 		}
+		graphicsManager.flushScreenSpace();
 	}
 
 	private void drawDataSelect() {
@@ -4581,6 +4588,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			applyViewportWidth(dataSelect, (int) projectionWidth);
 			dataSelect.draw();
 		}
+		graphicsManager.flushScreenSpace();
 	}
 
 	private void drawEndingCutscene() {

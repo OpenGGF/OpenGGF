@@ -342,7 +342,7 @@ final class ObjectTouchResponseController {
             return;
         }
 
-        if (player.isDebugMode()) {
+        if (com.openggf.game.LevelDebugPlacement.bypassesInteractions(player)) {
             overlapping.clear();
             debugState.clear();
             return;

@@ -1,5 +1,6 @@
 package com.openggf.game.sonic2.scroll;
 
+import com.openggf.game.LevelDebugPlacement;
 import com.openggf.camera.Camera;
 import com.openggf.level.scroll.AbstractZoneScrollHandler;
 import com.openggf.level.scroll.ScrollProjectionContext;
@@ -60,6 +61,8 @@ public class SwScrlScz extends AbstractZoneScrollHandler implements CameraDriven
 
     @Override
     public boolean advanceCameraForFrame(Camera camera, int actId) {
+        // DeformBgLayer (s2.asm:15117-15123) follows the cursor instead of the Tornado.
+        if (LevelDebugPlacement.isActiveFor(camera.getFocusedSprite())) return false;
         // ROM: LevEvents_SCZ is reached from SwScrl_SCZ before the camera words
         // are advanced by Tornado_Velocity_X/Y. Keep this in gameplay logic so
         // headless trace replay and rendering observe the same camera state.

@@ -303,7 +303,7 @@ public class GameLoop {
                 userRecordingSessionLauncher, playbackDebugManager, this::isPaused);
         this.hostedRuns = new HostedRunController(configService);
         this.userRecordingPlaybackStarter = withPlaybackAppliedFrameReset(userRecordingSessionLauncher::beginPlayback);
-        this.masterTitleLaunchCoordinator = new MasterTitleLaunchCoordinator(configService);
+        this.masterTitleLaunchCoordinator = new MasterTitleLaunchCoordinator(configService, () -> masterTitleScreenSupplier == null ? null : masterTitleScreenSupplier.get());
         this.specialStageLifecycle = new GameLoopSpecialStageLifecycle(new SpecialStageHost(), audioManager, attractDemo::specialStagePlayback);
         this.debugShortcuts = new GameLoopDebugShortcuts(
                 this::getCurrentGameMode, this::getActiveSpecialStageProvider,
@@ -376,6 +376,7 @@ public class GameLoop {
         }
         this.gameplayMode = currentGameplayMode;
         this.spriteManager = currentGameplayMode.getSpriteManager();
+        com.openggf.sprites.managers.SpriteManagerInternalAccess.bindLevelEntryController(spriteManager, this::getInputHandler);
         this.camera = currentGameplayMode.getCamera();
         this.timerManager = currentGameplayMode.getTimerManager();
         this.levelManager = currentGameplayMode.getLevelManager();
@@ -613,9 +614,8 @@ public class GameLoop {
         GameMode oldMode = currentGameMode;
         if (oldMode != nextMode) {
             com.openggf.control.InputHandlerInternalAccess.discardOrderedGameplayInput(inputHandler);
-            if (oldMode == GameMode.SPECIAL_STAGE) {
-                specialStageLifecycle.clearEntryPresentation();
-            }
+            specialStageLifecycle.clearEntryPresentationAfter(oldMode);
+            com.openggf.game.LevelDebugPlacement.clearCheatOnTitleEntry(nextMode, gameState);
             currentGameMode = nextMode;
             reportRewindModeBoundary(oldMode, nextMode);
         }

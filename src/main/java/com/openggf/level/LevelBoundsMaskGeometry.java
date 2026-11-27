@@ -15,6 +15,10 @@ final class LevelBoundsMaskGeometry {
             var origin = framing.presentationNativeHorizontalOrigin();
             if (origin.isPresent()) return new Bounds(origin.getAsInt(), origin.getAsInt());
             if (framing.ownsWidescreenMargins()) return Bounds.UNMASKED;
+            // An auto-scroll lock is the camera itself, not an arena: masking it drew a
+            // world-anchored fade trailing 4px/frame into the native window, and each loop
+            // wrap (a camera jump wider than the picture) restarted it as full margins.
+            if (framing.nativeBoundsFollowAutoScroll()) return Bounds.UNMASKED;
         }
         // The ROM shared boss gate (loc_85D06/loc_85D28) first ratchets a
         // temporary boundary with the camera. loc_85D36 installs the final arena

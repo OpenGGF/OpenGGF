@@ -12,6 +12,35 @@ under the matching area heading; see the
   back. Special-stage sprites are now cut off at the edge of the original
   256-pixel picture at every screen width, as on the cartridge.
 
+- **Angel Island Act 2's bombing run in widescreen** shows the scenery about to
+  scroll in across the whole picture. The camera lock that follows the
+  auto-scroll used to cover the extra width with static that trailed into the
+  original 320-pixel screen, and every loop of the terrain reset it to full
+  static bars, in both widescreen draw modes.
+
+- **Knuckles' continue icon on Sonic 3 & Knuckles special-stage results** is
+  red again instead of Sonic blue. Chaos Emerald stages now apply the same
+  Knuckles colours as the cartridge, as Super Emerald stages already did.
+
+- **Controllers with newer firmware are recognised.** The engine now ships the
+  SDL_GameControllerDB mapping table on top of GLFW's own, honours
+  `SDL_GAMECONTROLLERCONFIG`, and maps a controller whose firmware is newer
+  than both tables from the nearest known version of the same device. An Xbox
+  Wireless Controller on Bluetooth with firmware 0x0523 was ignored entirely.
+
+- **Knuckles in Sonic 2 title with the lock-on ROM:** the strip above the N in
+  SONIC shows the logo again instead of stray tiles. While rising, Knuckles stays
+  behind the emblem as on the cartridge.
+
+- **Knuckles in Sonic 2 starts from the hub again.** Choosing Knuckles for
+  Sonic 2 in Game Setup or the setup guide used to start the game as Sonic,
+  because Start re-checked the profile without the built-in Knuckles option.
+
+- **Knuckles in Sonic 2:** the hub warns when starting tier one with the stock
+  Sonic 2 title screen, special stages and ending and without Super Knuckles.
+  The notice explains how to supply the optional lock-on image for tier two
+  and can be hidden for later launches.
+
 - **Pit deaths during camera resize** use the live bottom limit in Sonic 1,
   Sonic 2 and Sonic 3 & Knuckles. Sky Chase also lowers the live limit before
   moving the camera with the Tornado, matching the cartridge's update order.
@@ -28,6 +57,16 @@ under the matching area heading; see the
   keep their games and settings unless a listed change is accepted. It opens
   once per run until finished or skipped, and again from **Extras › Setup guide**.
   Its text is a machine draft in every shipped language, awaiting native review.
+
+- **Live rewind refills are visible:** when a checkpoint, act, zone or lost life
+  refills spent rewind time, the REW plate appears and its meter and seconds fill
+  back to the maximum, hold for a second and hide. Pressing rewind cancels it.
+  An Unlimited budget now shows a full meter with an infinity mark in place of the
+  frame counter, and the plate's edge pulses slowly while the key is held.
+  A new refill choice, **Never**, gives one allowance for the whole game: it
+  starts full for a new game or loaded save, and no checkpoint, act, zone or lost
+  life refills it (Refill on life loss shows as inactive). Each bonus or special
+  stage visit still has its own fresh allowance. **Off** still disables rewind.
 
 - **Sonic 2 positioned starts:** object loading publishes the new camera
   position before the next object update. Widescreen EDGE keeps Emerald Hill's
@@ -60,6 +99,11 @@ under the matching area heading; see the
   special stage also restores the active display projection, keeping sprites
   aligned with terrain when switching to a game with a different aspect ratio.
 
+- **Sonic 2 and Knuckles in Sonic 2** now recognize their level-select debug
+  cheats and use the cartridge object lists and accelerating cursor for
+  B/A/C placement. Rewind restores the cursor and its placed objects. The
+  unlocked cheat survives title attract demos. Select Engine free-fly in
+  Settings to use the debug movement shortcut.
 - **Sonic 2 runtime art:** the Wing Fortress Tornado cue and shared animal
   and explosion graphics now change tiles as the native queue services them.
   Their prior pixels remain visible until the write, and rewind restores
@@ -445,7 +489,8 @@ under the matching area heading; see the
   step with the live rings, so a ring never jumps when it wakes up, and rings you have
   collected stay gone. Title
   cards and results screens time their exits from the game's own screen rather than the
-  picture. The HUD stays fully visible when the wider picture slides to frame
+  picture, and results screens and title, level select and save menus sit centred in the
+  wider picture instead of one margin's width to the right. The HUD stays fully visible when the wider picture slides to frame
   a locked boss arena. A wider picture never delays the next act or the enemies' art. That also
   lets recorded Sonic 3 & Knuckles runs be filmed wider than 320: Hydrocity and Marble
   Garden used to stop with a full KosM queue. Tests run Sonic 1, Sonic 2 and Sonic 3 &
@@ -831,6 +876,13 @@ under the matching area heading; see the
   candidate API gains `StartingStatePolicy`, `RingHungerPolicy` and five
   capabilities.
 
+- **Gameplay capture rewind direction:** `GameplayCaptureTool` accepts several
+  `--rewind FRAME:LENGTH[:half|normal|double]` windows, each holding the configured
+  speed modifier with the rewind key, and pins the capture's rewind budget with
+  `--rewind-scope` (now including `never`), `--rewind-seconds`, `--rewind-refill-on-life-loss`,
+  `--rewind-bonus-stages` and `--rewind-special-stages`. Special-stage captures now
+  draw the VHS picture and the REW plate, as the engine window does.
+
 - Music-pack patches can replace Sonic 1, Sonic 2 and Sonic 3 & Knuckles songs
   with native SMPS packages exported by external authoring tools. Package tracks keep native
   sequencing, jingle restoration and rewind. Failed package tracks fall back
@@ -1212,6 +1264,13 @@ under the matching area heading; see the
   no interpolation remain the defaults.
 
 ## Maintenance and release preparation
+
+- Sonic 2 live rewind history uses about 18 MB less memory. Each rewind
+  checkpoint held its own boxed copy of the title card's two plane tables,
+  about 50 KB, even long after the card had gone. Checkpoints now share the
+  tables until the card next writes them, and share the title-card art by
+  reference. Sixty seconds of Emerald Hill 1 history fell from 22.1 MB to
+  4.2 MB. Rewinding during the title card still restores it exactly.
 
 - ICZ background loop history and indoor selection now belong to the event owner,
   so rebuilding scroll output retains the same background. Rewind captures that

@@ -1,5 +1,6 @@
 package com.openggf.game.sonic2;
 
+import com.openggf.game.LevelDebugPlacement;
 import com.openggf.audio.GameSound;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
@@ -166,6 +167,8 @@ public class OilSurfaceManager {
     // =========================================================================
 
     private void updateOilSurface(AbstractPlayableSprite player) {
+        // Obj07_Main (s2.asm:50145-50149) bypasses both native player slots.
+        if (LevelDebugPlacement.isActive(player.currentGameStateOrNull())) return;
         PlayerOilState state = stateFor(player);
         if (player.getDead() || player.isDebugMode()) {
             clearOilTrackingOnly(state);

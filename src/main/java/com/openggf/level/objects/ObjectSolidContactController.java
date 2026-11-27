@@ -1018,7 +1018,9 @@ public final class ObjectSolidContactController {
             contactState.clearRidingObject(player);
             return null;
         }
-        if (player.isDebugMode()) {
+        // SolidObject_ChkBounds (s2.asm:35375-35382) gates both player slots.
+        if (player.isDebugMode() || player instanceof AbstractPlayableSprite actor
+                && com.openggf.game.LevelDebugPlacement.isActive(actor.currentGameStateOrNull())) {
             contactState.clearRidingObject(player);
             return null;
         }

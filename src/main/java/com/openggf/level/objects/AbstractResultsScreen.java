@@ -93,6 +93,16 @@ public abstract class AbstractResultsScreen extends AbstractObjectInstance imple
         return (viewportWidth() - SCREEN_WIDTH) / 2;
     }
 
+    /**
+     * World X of the drawn picture's left edge. In NATIVE widescreen draw mode the picture
+     * starts {@code CameraPresentationAccess.inset} pixels left of the simulation camera, so
+     * screen-anchored content must start there before adding {@link #xOffset()}; otherwise
+     * the camera's own X (EDGE mode and native 320).
+     */
+    protected static int pictureLeftWorldX(com.openggf.camera.Camera camera) {
+        return camera.getX() - com.openggf.camera.CameraPresentationAccess.inset(camera);
+    }
+
     /** Resolves the live projection width, falling back to the lifecycle width. */
     protected int viewportWidth() {
         try {

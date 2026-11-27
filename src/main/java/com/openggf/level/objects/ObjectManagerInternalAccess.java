@@ -53,6 +53,14 @@ public final class ObjectManagerInternalAccess {
         manager.solidContacts().repairNativeTeleportStanding(p1, p2);
     }
 
+    /** Debug placement reserves an ordinary runtime slot before calling the live factory. */
+    public static boolean placeDebugObject(ObjectManager manager, ObjectSpawn spawn) {
+        return manager.createDynamicObjectWithReservedSlot(() -> {
+            ObjectInstance object = manager.objectCallbacks().construct(spawn, () -> manager.registry.create(spawn));
+            return object instanceof PlaceholderObjectInstance ? null : object;
+        }) != null;
+    }
+
     /** Preserve the object's registered callback/fault owner while applying a native field write. */
     public static void mutateNativeObject(ObjectManager manager, ObjectInstance object, Runnable write) {
         manager.objectCallbacks().run(object, write);

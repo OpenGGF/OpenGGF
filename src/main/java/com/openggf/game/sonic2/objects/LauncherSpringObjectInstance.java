@@ -1,5 +1,6 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.game.LevelDebugPlacement;
 import com.openggf.sprites.playable.PlayableArchetype;
 
 import com.openggf.level.objects.ObjectVisualFacing;
@@ -997,7 +998,8 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
         }
 
         if (ps.state == STATE_EMPTY) {
-            if (isDiagonal() && !player.isDebugMode() && player.getYSpeed() >= 0) {
+            if (isDiagonal() && !player.isDebugMode() && player.getYSpeed() >= 0
+                    && !LevelDebugPlacement.blocksObjectInteractions(tryServices())) {
                 // loc_2AF06's fresh branch calls the single-character solid
                 // helper with the already-computed head as d4, then returns
                 // after capture without running held compression this pass
