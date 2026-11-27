@@ -907,6 +907,8 @@ under the matching area heading; see the
   with native-style material contours and the complete S3K hanging sequence.
   S3K title wag sprites now own the complete glove and backing context,
   removing doubled thumbs and the cutout halo while retaining native timing.
+  MICA's Sonic 1 title wag frames now share one body and change only her hand,
+  so her scale edges no longer shimmer at each swap.
   TALON's S2/S3K native mapping namespaces now bind all declared poses through
   archetype-owned NFRM aliases, including S2 object tumble, S3K gravity loops,
   corkscrews, swing/grip/chain/carry and later object turns. The audit exposes
