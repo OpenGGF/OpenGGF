@@ -1,7 +1,9 @@
 package com.openggf.game.soniccd.objects.wwz;
 
 import com.openggf.data.RomByteReader;
+import com.openggf.game.soniccd.CdPeriod;
 import com.openggf.game.soniccd.CdStagePayload;
+import com.openggf.game.soniccd.level.CdLevel;
 import com.openggf.game.soniccd.level.CdStageCatalogue;
 import com.openggf.game.soniccd.objects.art.CdObjectArtProvider;
 import com.openggf.game.soniccd.objects.art.CdStageVram;
@@ -24,7 +26,7 @@ public final class WwzObjectArt {
             SPIN_PLATFORM = "spin", EGGMAN_STATUE = "statue", SPIKE_BOMB = "spikebomb", BEAMS = "beams",
             FREEZER = "freezer", ICE = "ice", BATA = "bata", BATA_DAMAGED = "bata2", MINOMUSI = "mino",
             MINOMUSI_DAMAGED = "mino2", SEMI = "semi", SEMI_DAMAGED = "semi2", SEMI_BOMB = "semibomb",
-            SNAKE_BLOCKS = "snake";
+            SNAKE_BLOCKS = "snake", ANIMAL_FLYING = "animal.flying", ANIMAL_GROUND = "animal.ground";
 
     /** {@code move.w #imm,oTile(a0)} of each object's init. */
     public static final int LAUNCHER_TILE = 0x0400,        // ObjLauncher_Init (Launcher/Main.asm:33)
@@ -74,6 +76,30 @@ public final class WwzObjectArt {
         sheet(art, reader, vram, SEMI_DAMAGED, "semiMappings2", SEMI_TILE);
         sheet(art, reader, vram, SEMI_BOMB, "semiBombMappings", SEMI_BOMB_TILE);
         sheet(art, reader, vram, SNAKE_BLOCKS, "snakeMappings", SNAKE_BLOCKS_TILE);
+        int tile = animalTile(art, CdLevel.nativeTimeZone(payload.stage().period()));
+        registerAnimalSheets(art, reader, vram, "", tile);
+        if (payload.stage().period() == CdPeriod.PAST) {
+            // ProjectorGfxList (r6/gfx_lists_1b.asm:75-78) replaces the normal animal art at $9A00.
+            vram.loadPlc(art.image(), stageEntry.plcLists(), 5);
+            registerAnimalSheets(art, reader, vram, ".hologram", tile);
+        }
+    }
+
+    private static void registerAnimalSheets(CdObjectArtProvider art, RomByteReader reader, CdStageVram vram,
+                                            String suffix, int tile) {
+        sheet(art, reader, vram, ANIMAL_FLYING + suffix, "animalFlyingMappings", tile);
+        sheet(art, reader, vram, ANIMAL_GROUND + suffix, "animalGroundMappings", tile);
+    }
+
+    static int animalTile(CdObjectArtProvider art, int timeZone) {
+        // AnimalSelectSpriteTile (objects/r6/animal.asm:197-205).
+        int table = WwzObjectCatalogue.offset(art.payload(), "animalBaseTiles");
+        int act = art.payload().stage().actNumber() - 1;
+        return art.image().u16(table + 2 * (act * 4 + timeZone));
+    }
+
+    public static String animalKey(boolean flying, boolean hologram) {
+        return key((flying ? ANIMAL_FLYING : ANIMAL_GROUND) + (hologram ? ".hologram" : ""));
     }
 
     private static void sheet(CdObjectArtProvider art, RomByteReader reader, CdStageVram vram, String kind,

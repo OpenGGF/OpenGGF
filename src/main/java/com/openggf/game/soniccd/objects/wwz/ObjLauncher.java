@@ -6,6 +6,8 @@ import com.openggf.game.soniccd.objects.art.CdObjectArtProvider;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.ReevaluatingSolidObject;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -22,7 +24,8 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
  * <p>The player's captured state is {@code oPlayerCtrl} bit 0 (object control); the launch
  * animation is $3A. Positions are 16.16: {@code oX} moves by {@code oXVel << 8}.
  */
-public final class ObjLauncher extends WwzObject implements ReevaluatingSolidObject, ObjectVisualFacing.NonDirectional {
+public final class ObjLauncher extends WwzObject implements ReevaluatingSolidObject,
+        ObjectVisualFacing.NonDirectional, RewindRecreatable {
     /** Routines, as {@code oRoutine} (Launcher/Main.asm:22-27). */
     private static final int INIT = 0, MAIN = 2, LAUNCH = 4, REVERT = 6, SOLID_SIDE = 8;
     /** {@code move.w #$C00,oXVel(a0)} (Launcher/Main.asm:63). */
@@ -54,8 +57,10 @@ public final class ObjLauncher extends WwzObject implements ReevaluatingSolidObj
     private ObjLauncher(ObjectSpawn spawn, ObjLauncher parent) {
         super(spawn, "LauncherSide");
         this.parent = parent;
-        this.parentSpawnX = parent.getSpawn().x();
-        this.parentSpawnY = parent.getSpawn().y();
+        if (parent != null) {
+            this.parentSpawnX = parent.getSpawn().x();
+            this.parentSpawnY = parent.getSpawn().y();
+        }
         routine = SOLID_SIDE;
         spriteFlip = 0;                          // ori.b #4,oSprFlags(a1): a cleared slot has no flips
         mapFrame = 1;
@@ -93,11 +98,14 @@ public final class ObjLauncher extends WwzObject implements ReevaluatingSolidObj
         yRadius = 4;
         width = 28;
         routine = MAIN;
-        var objects = services().objectManager();
-        if (objects != null) {
-            ObjLauncher side = new ObjLauncher(new ObjectSpawn(x, y, 0x04, 0, 0, false, 0), this);
-            objects.addDynamicObjectAfterCurrent(side);
+        if (services().objectManager() != null) {
+            spawnChild(() -> new ObjLauncher(new ObjectSpawn(x, y, 0x04, 0, 0, false, 0), this));
         }
+    }
+
+    @Override
+    public ObjLauncher recreateForRewind(RewindRecreateContext context) {
+        return new ObjLauncher(context.spawn(), context.capturedParent(ObjLauncher.class));
     }
 
     /** ObjLauncher_Main (Launcher/Main.asm:54-66). */

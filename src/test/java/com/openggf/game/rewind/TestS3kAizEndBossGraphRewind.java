@@ -24,6 +24,7 @@ import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
@@ -100,6 +101,62 @@ class TestS3kAizEndBossGraphRewind {
         assertAllReferencesPointAtRestoredGraph(restored);
         assertRestoredObjectsAreFresh(before, restored);
         assertImportantScalarsRestored(before, restored);
+    }
+
+    @Test
+    void shipHeadRestoresItsOwnerAndContinuesMidAnimation() {
+        ObjectManager objects = Harness.createWithBoss().objectManager();
+        AizEndBossInstance boss = only(objects, AizEndBossInstance.class);
+        invokeNoArg(boss, "spawnShipChild");
+        AizEndBossShipChild ship = only(objects, AizEndBossShipChild.class);
+        boss.getState().lastUpdatedVIntRunCount = 1;
+        ship.update(1, null);
+        ObjectInstance head = onlyShipHead(objects);
+        head.update(1, null);
+        head.update(2, null);
+        assertEquals(1, readIntField(head, "mappingFrame"));
+        assertEquals(5, readIntField(head, "animTimer"));
+
+        ObjectRefId headId = objects.captureIdentityContext().requireIdentityTable().idFor(head);
+        RewindRegistry registry = new RewindRegistry();
+        registry.register(objects.rewindSnapshottable());
+        CompositeSnapshot snapshot = registry.capture();
+        objects.removeDynamicObject(head);
+        objects.removeDynamicObject(ship);
+        registry.restore(snapshot);
+
+        AizEndBossInstance restoredBoss = only(objects, AizEndBossInstance.class);
+        AizEndBossShipChild restoredShip = only(objects, AizEndBossShipChild.class);
+        ObjectInstance restoredHead = onlyShipHead(objects);
+        assertNotSame(ship, restoredShip);
+        assertNotSame(head, restoredHead);
+        assertSame(restoredShip, readObjectField(restoredHead, "ship"));
+        assertEquals(headId, objects.captureIdentityContext().requireIdentityTable().idFor(restoredHead));
+        assertEquals(1, readIntField(restoredHead, "mappingFrame"));
+        assertEquals(5, readIntField(restoredHead, "animTimer"));
+
+        restoredBoss.getState().x += 0x20;
+        restoredBoss.getState().lastUpdatedVIntRunCount = 3;
+        restoredShip.update(3, null);
+        assertSame(restoredHead, onlyShipHead(objects), "Restored ship must not allocate a second head");
+        for (int frame = 3; frame < 8; frame++) {
+            restoredHead.update(frame, null);
+            assertEquals(1, readIntField(restoredHead, "mappingFrame"));
+        }
+        assertEquals(head.getX() + 0x20, restoredShip.getX());
+        assertEquals(restoredShip.getX(), restoredHead.getX());
+        assertEquals(restoredShip.getY() - 0x1C, restoredHead.getY());
+        restoredHead.update(8, null);
+        assertEquals(0, readIntField(restoredHead, "mappingFrame"),
+                "The captured raw animation must restart on the sixth dispatch");
+    }
+
+    private static ObjectInstance onlyShipHead(ObjectManager objects) {
+        List<ObjectInstance> heads = objects.getActiveObjects().stream()
+                .filter(object -> object.getName().equals("AIZEndBossHead") && !object.isDestroyed())
+                .toList();
+        assertEquals(1, heads.size(), "expected exactly one live AIZ end-boss head");
+        return heads.getFirst();
     }
 
     @Test
@@ -201,7 +258,7 @@ class TestS3kAizEndBossGraphRewind {
         assertEquals(occupiedA.getSlotIndex() + 1, occupiedB.getSlotIndex(),
                 "test fixture must occupy contiguous forward slots");
 
-        invokeBooleanArg(boss, "beginEmerge", false);
+        invokeNoArg(boss, "beginEmerge");
         AizEndBossWaterfallChild emerge = only(objectManager, AizEndBossWaterfallChild.class);
         assertEquals(0, emerge.getSpawn().subtype(),
                 "ChildObjDat_69D2E starts subtype 0 for the first emerge");
@@ -311,7 +368,7 @@ class TestS3kAizEndBossGraphRewind {
         ObjectManager objectManager = harness.objectManager();
         AizEndBossInstance boss = only(objectManager, AizEndBossInstance.class);
 
-        invokeBooleanArg(boss, "beginEmerge", true);
+        invokeNoArg(boss, "loopBackToEmerge");
         AizEndBossWaterfallChild child = only(objectManager, AizEndBossWaterfallChild.class);
         assertEquals(0, child.getSpawn().subtype(), "re-emerge also uses ChildObjDat subtype 0");
         int x = child.getX();
@@ -460,7 +517,7 @@ class TestS3kAizEndBossGraphRewind {
                 @Override public Camera camera() { return camera; }
                 @Override public SonicConfigurationService configuration() { return DEFAULT_CONFIGURATION; }
                 @Override public GameStateManager gameState() { return gameState; }
-            };
+            }.withPlayerQuery(new ObjectPlayerQuery(() -> null, List::of));
             ObjectManager objectManager = new ObjectManager(
                     List.of(BOSS_SPAWN),
                     new Sonic3kObjectRegistry(),
@@ -730,16 +787,6 @@ class TestS3kAizEndBossGraphRewind {
             Method method = target.getClass().getDeclaredMethod(methodName);
             method.setAccessible(true);
             method.invoke(target);
-        } catch (ReflectiveOperationException e) {
-            throw new AssertionError("Unable to invoke " + methodName + " on " + target.getClass(), e);
-        }
-    }
-
-    private static void invokeBooleanArg(Object target, String methodName, boolean value) {
-        try {
-            Method method = target.getClass().getDeclaredMethod(methodName, boolean.class);
-            method.setAccessible(true);
-            method.invoke(target, value);
         } catch (ReflectiveOperationException e) {
             throw new AssertionError("Unable to invoke " + methodName + " on " + target.getClass(), e);
         }

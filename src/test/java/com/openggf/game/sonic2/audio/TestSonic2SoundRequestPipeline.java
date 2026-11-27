@@ -203,7 +203,11 @@ class TestSonic2SoundRequestPipeline {
         assertEquals(0, pipeline.snapshot().sfxPriorityValue());
 
         pipeline = pipelineWithRingPriority();
-        pipeline.onSfxSuppressedDuringOneUpOrFadeIn();
+        pipeline.submitSound(0xB5, "blocked ring");
+        pipeline.bridge();
+        pipeline.cycleQueue();
+        assertEquals(Sonic2SoundRequestPipeline.DispatchKind.REFUSED_ONE_UP_OR_FADE_IN,
+                pipeline.dispatchQueuedRequest(true).kind());
         assertEquals(0, pipeline.snapshot().sfxPriorityValue());
 
         pipeline = pipelineWithRingPriority();

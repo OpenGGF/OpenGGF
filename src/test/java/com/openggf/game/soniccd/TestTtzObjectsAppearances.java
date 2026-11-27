@@ -61,11 +61,11 @@ class TestTtzObjectsAppearances {
     /**
      * This lane's hosted object IDs. Left out, with the reason: $04 (the water surface: InitStage creates it in
      * the first dynamic slot, r4/main.asm:249, which no layout entry can do), $0B-$0E and $21 (splashes and
-     * bubbles the player's water code creates), and the routines not hosted yet ($23 vertical blocks, $24 horizontal
+     * bubbles the player's water code creates), and the routines not hosted yet ($24 horizontal
      * blocks, $2D Taga-Taga, $30 switch elevator, $3E platform chain, $3F-$41 prizes, $44 wood
      * block, $50 break block, $05 break pole).
      */
-    private static final TreeSet<String> MINE = new TreeSet<>(List.of("20", "25", "26", "2A", "2B", "32", "33", "35",
+    private static final TreeSet<String> MINE = new TreeSet<>(List.of("20", "23", "25", "26", "2A", "2B", "32", "33", "35",
             "36", "38", "3D", "42", "45", "48", "49", "2C", "3E", "2E", "24", "39", "2D"));
 
     @TempDir

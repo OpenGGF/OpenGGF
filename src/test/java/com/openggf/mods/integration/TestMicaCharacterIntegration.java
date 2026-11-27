@@ -1162,10 +1162,12 @@ class TestMicaCharacterIntegration {
         com.openggf.graphics.PaletteUploadPresentation.release(GameServices.graphics());
         presentation.initialize();
         assertEquals(DataSelectProvider.State.FADE_IN,presentation.getState());
-        var method=presentation.getClass().getDeclaredMethod("resolveCustomPortraitFrame",com.openggf.game.save.SelectedTeam.class);
+        var method=presentation.getClass().getDeclaredMethod("resolveCustomPortraitFrame",com.openggf.game.save.SelectedTeam.class,
+                Class.forName("com.openggf.game.sonic3k.dataselect.S3kCustomTeamPortraitComposer$Window"));
+        var slotWindow=method.getParameterTypes()[1].getEnumConstants()[0];
         method.setAccessible(true);
         for(var sidekicks:List.of(List.<String>of(),List.of("tails"))) {
-            var frame=(com.openggf.level.render.SpriteMappingFrame)method.invoke(presentation,new com.openggf.game.save.SelectedTeam(CODE,sidekicks));
+            var frame=(com.openggf.level.render.SpriteMappingFrame)method.invoke(presentation,new com.openggf.game.save.SelectedTeam(CODE,sidekicks),slotWindow);
             assertTrue(frame.pieces().stream().anyMatch(piece->piece.tileIndex()>=0x2000));
             if(!sidekicks.isEmpty()) assertTrue(frame.pieces().stream().anyMatch(piece->piece.tileIndex()<0x2000),"Stock Tails remains in team composition");
         }
@@ -2311,10 +2313,12 @@ class TestMicaCharacterIntegration {
         var continueIcon = presentation.getClass().getDeclaredMethod("characterContinueIcon", String.class);
         continueIcon.setAccessible(true);
         assertNotNull(continueIcon.invoke(presentation, "mica-and-talon:talon"), "TALON miniature fits the native 16 by 24 menu cell");
-        var method=presentation.getClass().getDeclaredMethod("resolveCustomPortraitFrame",com.openggf.game.save.SelectedTeam.class);
+        var method=presentation.getClass().getDeclaredMethod("resolveCustomPortraitFrame",com.openggf.game.save.SelectedTeam.class,
+                Class.forName("com.openggf.game.sonic3k.dataselect.S3kCustomTeamPortraitComposer$Window"));
+        var slotWindow=method.getParameterTypes()[1].getEnumConstants()[0];
         method.setAccessible(true);
         for(var team:teams) {
-            var frame=(com.openggf.level.render.SpriteMappingFrame)method.invoke(presentation,team);
+            var frame=(com.openggf.level.render.SpriteMappingFrame)method.invoke(presentation,team,slotWindow);
             assertTrue(frame.pieces().stream().anyMatch(piece->piece.tileIndex()>=0x2000));
             if(!team.sidekicks().isEmpty()) assertTrue(frame.pieces().stream().anyMatch(piece->piece.tileIndex()>=0x2000),"Both mod portraits are authored");
         }

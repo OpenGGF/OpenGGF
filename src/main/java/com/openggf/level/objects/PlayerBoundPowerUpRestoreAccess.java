@@ -56,7 +56,11 @@ public final class PlayerBoundPowerUpRestoreAccess {
         } else {
             if (currentStars.get() != null && !currentStars.get().isDestroyed()) currentStars.get().destroy();
             publishStars.accept(null);
-            if (spawner.get() != null) {
+            // A positive timer does not imply stars: the S3K Super revert writes invincibility_timer = 1
+            // with none. Recreate only the stars this restore captured for the owner.
+            boolean captured = manager == null
+                    || manager.hasPendingPlayerBoundEntry(InvincibilityStarsObjectInstance.class, owner);
+            if (spawner.get() != null && captured) {
                 publishStars.accept(spawner.get().spawnInvincibilityStars(owner));
                 if (currentStars.get() != null) currentStars.get().refreshArtAfterRewindRestore();
             }

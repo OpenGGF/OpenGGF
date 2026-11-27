@@ -254,6 +254,11 @@ public class FadeManager implements RewindSnapshottable<FadeManagerSnapshot> {
         this.holdRestoredFrameForNextUpdate = true;
     }
 
+    /** Whether the next update holds the current fade step. */
+    boolean isNextUpdateDeferred() {
+        return holdRestoredFrameForNextUpdate;
+    }
+
     /** Holds a fully opaque white overlay until another fade is started or cancelled. */
     public void holdWhite() {
         holdOpaque(FadeState.HOLD_WHITE, FadeType.WHITE);

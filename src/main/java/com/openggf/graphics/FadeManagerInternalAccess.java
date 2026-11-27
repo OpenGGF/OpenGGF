@@ -11,6 +11,10 @@ public final class FadeManagerInternalAccess {
                 .bindWhiteFadePresentation(paletteWhiteFade, fromWhiteVintsPerStep);
     }
 
+    public static boolean isNextUpdateDeferred(FadeManager fade) {
+        return fade.isNextUpdateDeferred();
+    }
+
     /** Native palette routines may retain counted waits after their colour steps. */
     public static void startFadeFromWhite(FadeManager fade, Runnable onComplete, int terminalNoOpFrames) {
         java.util.Objects.requireNonNull(fade, "fade").startFadeFromWhite(onComplete, terminalNoOpFrames);

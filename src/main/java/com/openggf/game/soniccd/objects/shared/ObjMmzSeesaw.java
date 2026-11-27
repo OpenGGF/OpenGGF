@@ -124,7 +124,8 @@ public final class ObjMmzSeesaw extends CdObject
     // ---- Body (:96-153) ---------------------------------------------------------------------------
 
     private void body() {
-        if ((bits & BIT_ACTIVE) == 0) return;                           // btst #5; beq locret_20B710
+        // SeesawObject_0_Routine2 (objects/r8/seesaw.asm:88-99).
+        if ((bits & BIT_ACTIVE) == 0 || flags().timeStopped()) return;
         ySpeed = 0;
         if ((bits & BIT_BODY_STARTED) == 0) {                           // loc_20B67x: subq.b #1,obj.var_30
             boolean borrow = var30 == 0;
@@ -169,7 +170,8 @@ public final class ObjMmzSeesaw extends CdObject
     // ---- Ball (:167-221) --------------------------------------------------------------------------
 
     private void ball() {
-        if ((body.bits & BIT_ACTIVE) != 0) {                            // btst #5,obj.var_3e(a1)
+        // loc_20B716 (objects/r8/seesaw.asm:167-171) still applies the retained velocity while stopped.
+        if (!flags().timeStopped() && (body.bits & BIT_ACTIVE) != 0) {
             if ((bits & BIT_BODY_STARTED) == 0) {
                 ySpeed = (short) 0xD000;                                // move.w #object_pool,obj.y_speed(a0)
                 bits |= BIT_BODY_STARTED;
@@ -210,6 +212,8 @@ public final class ObjMmzSeesaw extends CdObject
     // ---- Platform (:224-262) ----------------------------------------------------------------------
 
     private void platform(PlayableEntity player) {
+        // loc_20B7B8 (objects/r8/seesaw.asm:224-229).
+        if (flags().timeStopped()) return;
         if ((body.bits & BIT_ACTIVE) != 0 || solidObject(ReevaluatingSolidObject.Entry.SOLID)) {   // loc_20B7B8 / loc_20B7E2
             body.bits |= BIT_ACTIVE;
         }

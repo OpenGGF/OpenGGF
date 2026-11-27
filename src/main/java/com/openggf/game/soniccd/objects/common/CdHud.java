@@ -2,6 +2,7 @@ package com.openggf.game.soniccd.objects.common;
 
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.game.soniccd.objects.art.CdObjectArtProvider;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
@@ -9,6 +10,8 @@ import com.openggf.level.Pattern;
 import com.openggf.level.objects.FixedRuntimeObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectVisualFacing;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.Arrays;
@@ -19,15 +22,16 @@ import java.util.List;
  * in its reserved slots: score and time ({@code objHUDScoreSlot}), lives ({@code objHUDLivesSlot},
  * subtype 1) and rings ({@code objHUDRingsSlot}, secondary subtype 1), loaded by LevelStart
  * (Level/Main.asm:262-266). The sprites are screen-positioned mappings over tile $8568; the
- * digits are tiles rewritten by {@code UpdateHUD} (HUD and Points/Main.asm:186-339), which the
- * score object performs here into the HUD sheet's own tiles once per frame.
+ * digits are tiles rewritten by {@code UpdateHUD} (HUD and Points/Main.asm:186-339) for the
+ * picture prepared by the preceding main-loop iteration.
  *
  * <p>Differences from Sonic 1: the time reads minutes, seconds and centiseconds
  * ({@code mulu #100; divu #60}, HUD and Points/Main.asm:292-305); the HUD is three objects, not
  * Sonic 1's single HUD sprite. The debug position tracker (frame 2) is not hosted.
  */
 @com.openggf.level.objects.CameraRelativeDraw(com.openggf.level.objects.CameraRelativeDraw.Use.SCREEN_POSITION)
-public final class CdHud extends CdObject implements FixedRuntimeObjectInstance, ObjectVisualFacing.NonDirectional {
+public final class CdHud extends CdObject implements FixedRuntimeObjectInstance, ObjectVisualFacing.NonDirectional,
+        RewindRecreatable {
     public enum Kind {
         /** Frame 0 at (16+128, 8+128): SCORE, TIME and the ring digits (HUD and Points/Main.asm:91-92,134). */
         SCORE_TIME(2, 0, 8),
@@ -62,6 +66,7 @@ public final class CdHud extends CdObject implements FixedRuntimeObjectInstance,
     private static final int DIGIT_BYTES = 0x40;
 
     private final Kind kind;
+    // Values in the presented tiles. The game state can be ahead during a palette wait.
     private int lastScore = -1;
     private int lastRings = -1;
     private long lastTime = -1;
@@ -74,11 +79,23 @@ public final class CdHud extends CdObject implements FixedRuntimeObjectInstance,
         this.priority = 0;
     }
 
+    private CdHud() {
+        this(Kind.SCORE_TIME);
+    }
+
+    @Override
+    public CdHud recreateForRewind(RewindRecreateContext context) {
+        int slot = context.state().slotIndex();
+        for (Kind candidate : Kind.values()) {
+            if (candidate.slot() == slot) return new CdHud(candidate);
+        }
+        throw new IllegalStateException("No Sonic CD HUD object in slot " + slot);
+    }
+
     public Kind kind() { return kind; }
 
     @Override
     public void update(int vIntRunCount, PlayableEntity player) {
-        if (kind == Kind.SCORE_TIME) updateDigits();
         if (kind == Kind.RINGS) updateRingsFlash(vIntRunCount);
     }
 
@@ -95,35 +112,50 @@ public final class CdHud extends CdObject implements FixedRuntimeObjectInstance,
         }
     }
 
-    /** UpdateHUD's counters, rewritten only when their value changes (HUD and Points/Main.asm:219-311). */
-    private void updateDigits() {
-        var sheet = services().renderManager() == null ? null : services().renderManager().getSheet(CdObjectArtProvider.HUD);
-        var provider = artProvider();
-        if (sheet == null || provider == null || provider.image() == null) return;
-        Pattern[] tiles = sheet.getPatterns();
-        int numbers = provider.entry().hudNumbersArt();
+    /** UpdateHudNumbers (objects/hud_points.asm:153-263) writes the digit tiles on the ordinary V-INT. */
+    void publishCounters() {
         var state = services().levelGamestate();
         var game = services().gameState();
         int score = game != null ? game.getScore() : 0;
         int rings = state != null ? Math.min(state.getRings(), 999) : 0;
         int lives = game != null ? Math.min(game.getLives(), 9) : 0;
         long time = state != null ? state.getTimerFrames() : 0;
+        writeCounters(score, rings, time, lives, false);
+    }
+
+    @Override
+    protected void afterGenericRewindStateRestored(RewindCaptureContext context) {
+        super.afterGenericRewindStateRestored(context);
+        if (kind == Kind.SCORE_TIME && lastScore >= 0) {
+            writeCounters(lastScore, lastRings, lastTime, lastLives, true);
+        }
+    }
+
+    private void writeCounters(int score, int rings, long time, int lives, boolean restore) {
+        var sheet = services().renderManager() == null ? null : services().renderManager().getSheet(CdObjectArtProvider.HUD);
+        var provider = artProvider();
+        if (sheet == null || provider == null || provider.image() == null) return;
+        Pattern[] tiles = sheet.getPatterns();
+        int numbers = provider.entry().hudNumbersArt();
         boolean changed = false;
-        if (score != lastScore) {
+        if (restore || score != lastScore) {
             // HUD_ResetScore writes six blanks and a 0 (HUD and Points/Main.asm:369-418), then HUD_DrawScore.
-            if (lastScore < 0) writeCells(tiles, numbers, SCORE_DIGITS, new int[] {-1, -1, -1, -1, -1, -1, 0});
-            drawCounter(tiles, numbers, SCORE_DIGITS, score, 6);
+            if (restore || lastScore < 0) {
+                writeCells(tiles, numbers, SCORE_DIGITS, new int[] {-1, -1, -1, -1, -1, -1, 0});
+            }
+            // HUD_DrawScore (Level/_Objects/HUD and Points/Main.asm:516-518) receives the score in tens.
+            drawCounter(tiles, numbers, SCORE_DIGITS, score / 10, 6);
             lastScore = score;
             changed = true;
         }
-        if (rings != lastRings) {
+        if (restore || rings != lastRings) {
             // HUD_ResetRings: blank, blank, 0 (HUD and Points/Main.asm:359-363,417-418); HUD_DrawRings: 3 digits, leading zeros kept blank.
             writeCells(tiles, numbers, RING_DIGITS, new int[] {-1, -1, 0});
             drawCounter(tiles, numbers, RING_DIGITS, rings, 3);
             lastRings = rings;
             changed = true;
         }
-        if (time != lastTime) {
+        if (restore || time != lastTime) {
             long minutes = Math.min(9, time / 3600);
             int seconds = (int) (time / 60 % 60);
             int frames = (int) (time % 60);
@@ -134,7 +166,7 @@ public final class CdHud extends CdObject implements FixedRuntimeObjectInstance,
             lastTime = time;
             changed = true;
         }
-        if (lives != lastLives) {
+        if (restore || lives != lastLives) {
             drawNumber(tiles, numbers, LIVES_DIGIT, lives, 1);   // HUD_DrawLives (HUD and Points/Main.asm:639-651)
             lastLives = lives;
             changed = true;

@@ -1,5 +1,6 @@
 package com.openggf.audio.rewind;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.openggf.audio.smps.SmpsSequencer.Region;
 
 import java.util.List;
@@ -48,6 +49,11 @@ public record SmpsSequencerSnapshot(
             int addFm,
             int addPsg,
             boolean active,
-            boolean fadeOut) {
+            boolean fadeOut,
+            @JsonInclude(JsonInclude.Include.NON_DEFAULT) boolean deferFirstStep) {
+        public FadeSnapshot(int steps, int delayInit, int delayCounter,
+                int addFm, int addPsg, boolean active, boolean fadeOut) {
+            this(steps, delayInit, delayCounter, addFm, addPsg, active, fadeOut, false);
+        }
     }
 }

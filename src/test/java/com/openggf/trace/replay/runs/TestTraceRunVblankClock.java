@@ -81,7 +81,7 @@ class TestTraceRunVblankClock {
      * and hands ghz2 0x24C5 to tick into 0x24C6.
      */
     @Test
-    void aPresentationBridgeCarriesTheClockItsOwnRowsCouldNotTick() {
+    void destinationBudgetCountsServicedBridgeWaitsOnce() {
         TraceRunManifest.Segment ghz1 = level("ghz1", 860, 4_115, 1);
         TraceRunManifest.Segment bridge = level("ghz2", 8_705, 800, 2);
         TraceRunManifest.Segment ghz2 = level("ghz2_2", 9_741, 3_606, 2);
@@ -93,10 +93,8 @@ class TestTraceRunVblankClock {
                 clock.presentationBridgeEntryTarget(0, ghz1, 2, bridge)
                         .orElseThrow());
 
-        // The bridge's own production counter never ticks, so its observed
-        // tail is the value it was seeded with -- the derived span must not
-        // consult it.
-        clock.captureLevelSourceTail(2, bridge, 9_504, 0x20C6);
+        // The observed tail already includes the bridge's wait ticks.
+        clock.captureLevelSourceTail(2, bridge, 9_504, 0x23DF);
         assertEquals(0x24C5,
                 clock.levelDestinationTarget(2, bridge, ghz2, 0).orElseThrow());
     }

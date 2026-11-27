@@ -429,7 +429,7 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
             return null;
         }
         releaseSfxBlockWhenFadeInEnds();
-        if (sfxBlocked) {
+        if (sfxBlocked || smpsSession.willStopAllSoundBeforeSfxAdmission()) {
             // Native policy, not a fault: the drivers drop SFX requests while
             // the extra-life jingle owns the music (S3K zUpdateMusic .clr_sfx,
             // Sound/Z80 Sound Driver.asm:662-679; S1/S2 f_1up_playing and
@@ -1243,8 +1243,17 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
 
     boolean areSfxRequestsBlocked() {
         assertOwnerBoundary();
-        releaseSfxBlockWhenFadeInEnds();
-        return sfxBlocked;
+        return blocksSfxBeforeDispatch();
+    }
+
+    boolean blocksSfxBeforeDispatch() {
+        assertOwnerBoundary();
+        return (sfxBlocked && !sfxBlockFadeInFinished())
+                || (smpsSession != null && smpsSession.willStopAllSoundBeforeSfxAdmission());
+    }
+
+    boolean musicOverrideRestorePending() {
+        return pendingRestore;
     }
 
     private void blockOverrideSfx() {
@@ -1287,13 +1296,16 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
      * admitted, whatever the flag said a frame earlier.
      */
     private void releaseSfxBlockWhenFadeInEnds() {
-        if (!sfxBlocked || !sfxBlockHeldThroughFadeIn || smpsSession == null) {
-            return;
-        }
-        if (!smpsSession.isMusicFadingIn()) {
+        if (sfxBlocked && sfxBlockFadeInFinished()) {
             sfxBlocked = false;
             sfxBlockHeldThroughFadeIn = false;
         }
+    }
+
+    private boolean sfxBlockFadeInFinished() {
+        return sfxBlockHeldThroughFadeIn && smpsSession != null
+                && !smpsSession.isMusicFadingIn()
+                && !smpsSession.silentFadeInBlocksNextRequest();
     }
 
     public void setPendingRestore(boolean pending) {
@@ -1401,7 +1413,12 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
     private boolean restoreMusicOverride() {
         if (overrideCount == 0) {
             pendingRestore = false;
-            releaseOverrideSfx();
+            if (smpsSession != null && smpsSession.hasSilentFadeIn()) {
+                activeMusic = null;
+                releaseOrHoldOverrideSfxAtRestore();
+            } else {
+                releaseOverrideSfx();
+            }
             return false;
         }
         MusicSlot restored = overrideStack[overrideCount - 1];
@@ -1576,7 +1593,7 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
 
     private void admitSampleSfx(SampleVoiceDescriptor descriptor) {
         releaseSfxBlockWhenFadeInEnds();
-        if (sfxBlocked) {
+        if (sfxBlocked || (smpsSession != null && smpsSession.willStopAllSoundBeforeSfxAdmission())) {
             warnRejected(descriptor.voiceId(),
                     "sample SFX blocked at presentation boundary");
             return;

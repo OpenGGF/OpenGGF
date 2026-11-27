@@ -24,7 +24,10 @@ public record HyperFormTrailSample(
 
     public static HyperFormTrailSample sample(
             AbstractPlayableSprite player, int levelFrameCounter) {
-        int framesBehind = (levelFrameCounter & 1) == 0 ? 3 : 5;
+        // Obj_HyperSonicKnux_Trail_Main (sonic3k.asm:35418-35443) subtracts
+        // $C/$14 from the next write slot (Sonic_RecordPos, sonic3k.asm:22155-22170).
+        // The engine's history cursor points at the latest entry, one slot earlier.
+        int framesBehind = (levelFrameCounter & 1) == 0 ? 2 : 4;
         return new HyperFormTrailSample(
                 player.getCentreX(framesBehind),
                 player.getCentreY(framesBehind),

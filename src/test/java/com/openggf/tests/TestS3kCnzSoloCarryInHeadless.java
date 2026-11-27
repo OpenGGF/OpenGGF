@@ -183,6 +183,9 @@ class TestS3kCnzSoloCarryInHeadless {
         AbstractPlayableSprite carrier = GameServices.sprites().getRegisteredSidekicks().isEmpty()
                 ? null
                 : GameServices.sprites().getRegisteredSidekicks().get(0);
+        assertNotNull(carrier);
+        assertEquals(0x3C, carrier.getTailsCarryController().capture().cooldown(),
+                "Solo fly-off skips the later carry pass, leaving loc_1446A's cooldown intact");
         int maxStepPx = 0;
         boolean despawned = controller.isTransientFlyoffDespawned();
         int prevX = carrier != null ? (carrier.getCentreX() & 0xFFFF) : 0;

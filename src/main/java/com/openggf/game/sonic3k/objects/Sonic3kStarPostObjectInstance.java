@@ -3,6 +3,8 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.game.BonusStageType;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.CheckpointState;
+import com.openggf.game.sonic3k.Sonic3kBonusStageCoordinator;
+import com.openggf.game.sonic3k.Sonic3kCartridgePolicy;
 import com.openggf.game.sonic3k.Sonic3kObjectArtProvider;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
@@ -77,7 +79,7 @@ public class Sonic3kStarPostObjectInstance extends AbstractObjectInstance
 
     /**
      * Bonus star variant determined by ring count at checkpoint activation.
-     * ROM: loc_2D436 (sonic3k.asm lines 61896-61921).
+     * ROM: loc_2D436 (sonic3k.asm:61901-61922).
      * <p>
      * Formula: {@code remainder = ((rings - 20) / 15) % divisor}
      * where divisor=3 for S3K (locked-on) and 2 for S&K standalone.
@@ -121,32 +123,13 @@ public class Sonic3kStarPostObjectInstance extends AbstractObjectInstance
         }
     }
 
-    /**
-     * Computes the bonus star variant from ring count using the ROM formula.
-     * ROM: loc_2D436 (sonic3k.asm lines 61897-61917).
-     * <pre>
-     * subi.w #20,d0      ; rings - 20
-     * divu.w #15,d0      ; / 15
-     * ext.l  d0          ; clear remainder
-     * moveq  #3,d2       ; divisor (2 for SK alone, 3 for S3K)
-     * divu.w d2,d0       ; / divisor
-     * swap   d0          ; remainder
-     * </pre>
-     */
-    static BonusStarVariant computeBonusStarVariant(int ringCount) {
-        // ROM formula: remainder = ((rings - 20) / 15) % divisor
-        // S3K locked-on: divisor=3 (all 3 bonus stages available)
-        // ROM loc_2D47E dispatch (sonic3k.asm lines 61926-61952):
-        //   remainder 0 -> SLOTS ($1500)
-        //   remainder 1 -> PACHINKO / GLOWING_SPHERE ($1400)
-        //   remainder 2 -> GUMBALL ($1300)
-        int quotient = (ringCount - 20) / 15;
-        int remainder = quotient % 3;
-        return switch (remainder) {
-            case 0 -> BonusStarVariant.RED;       // SLOT_MACHINE
-            case 1 -> BonusStarVariant.BLUE;      // GLOWING_SPHERE
-            case 2 -> BonusStarVariant.YELLOW;    // GUMBALL
-            default -> BonusStarVariant.YELLOW;
+    private BonusStarVariant computeBonusStarVariant(int ringCount) {
+        return switch (Sonic3kBonusStageCoordinator.selectBonusStage(
+                ringCount, Sonic3kCartridgePolicy.isStandaloneSk(services()))) {
+            case SLOT_MACHINE -> BonusStarVariant.RED;
+            case GLOWING_SPHERE -> BonusStarVariant.BLUE;
+            case GUMBALL -> BonusStarVariant.YELLOW;
+            case NONE -> throw new IllegalArgumentException("Bonus stars require at least 20 rings");
         };
     }
 

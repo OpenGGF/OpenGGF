@@ -1,6 +1,7 @@
 package com.openggf.game.soniccd.objects.ssz;
 
 import com.openggf.game.soniccd.objects.CdObjectRegistration;
+import com.openggf.game.soniccd.objects.common.CdAnimal;
 
 /**
  * Stardust Speedway object registration fragment; owned by the Stardust Speedway object lane. An ID is the
@@ -16,6 +17,9 @@ public final class SszObjects implements CdObjectRegistration {
         // Metal Sonic's projector (ObjProjector), in the stages whose index starts it (acts 1 and 2; the stage's own code is the test).
         registrar.object(0x27, "Projector", com.openggf.game.soniccd.objects.projector.ProjectorObjectCatalogue::indexedIn,
                 (spawn, r) -> new com.openggf.game.soniccd.objects.projector.CdProjector(spawn));
+        // ObjectIndex (r7/object_index_1_2.asm:43-43) and ObjectIndex (r7/object_index_3.asm:43-43).
+        registrar.object(0x28, "Animal", (spawn, r) -> (spawn.subtype() & 0x80) == 0 && (spawn.subtype() & 0x7F) != 0
+                ? new ObjSszGroundAnimal(spawn) : new CdAnimal(spawn));
         // --- sszobja ---
         registrar.object(0x04, "Mesh", (spawn, r) -> new ObjMesh(spawn));
         registrar.object(0x08, "Booster", (spawn, r) -> new ObjBooster(spawn));

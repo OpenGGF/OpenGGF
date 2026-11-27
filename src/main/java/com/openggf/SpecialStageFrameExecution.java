@@ -77,10 +77,10 @@ final class SpecialStageFrameExecution {
                 provider.setLagCompensation(0);
             }
             GameLoop.SpecialStageObservationPacing resolvedPacing = installed;
-            LevelFrameStep.executeHardwareTimedObjectScan(
+            LevelFrameStep.executeHardwareTimedSpecialStageScan(
                     LevelFrameContext.from(gameplayMode), plcFrame,
                     PlcLifecyclePhase.orElse(provider.specialStagePlcLifecyclePhase(),
-                            PlcLifecyclePhase.SPECIAL_STAGE),
+                            PlcLifecyclePhase.SPECIAL_STAGE), provider,
                     () -> com.openggf.game.internal.NativeSpecialStageFrame.step(provider,
                             gameplayMode.getWorldSession(), () -> updateProvider(provider, resolvedPacing, updateInput)));
         } else if (session.skippedSpecialStagePlcPhase().isPresent()) {

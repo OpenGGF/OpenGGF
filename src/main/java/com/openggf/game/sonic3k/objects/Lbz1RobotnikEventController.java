@@ -686,8 +686,7 @@ public final class Lbz1RobotnikEventController extends AbstractObjectInstance
             int anchorY = droppedBoxArmed ? droppedBoxY : getY() + BOX_ANCHOR_Y_OFFSET;
             boxRig.value.follow(anchorX, anchorY);
         }
-        var camera = services().camera();
-        boxRig.value.update(camera != null ? camera.getX() & 0xFFFF : LbzMinibossBoxRig.NO_CAMERA);
+        boxRig.value.update(services());
     }
 
     private void drawMinibossBox(int bucket) {

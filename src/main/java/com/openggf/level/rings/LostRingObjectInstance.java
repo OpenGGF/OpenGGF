@@ -1,9 +1,16 @@
 package com.openggf.level.rings;
 
+import com.openggf.audio.GameSound;
 import com.openggf.camera.Camera;
 import com.openggf.game.GameModule;
+import com.openggf.game.internal.LostRingDisplayProfile;
+import com.openggf.game.internal.SpriteTableBuildProfile;
+import com.openggf.game.LevelState;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.competition.NativeCompetitionRoster;
+import com.openggf.game.internal.ObjectTerrainProbeLayout;
+import com.openggf.game.internal.ObjectTerrainProbeLayout.SpriteState;
+import com.openggf.game.internal.RingExtraLifeReplacesPickupSound;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.game.rules.GameRules;
 import com.openggf.game.rules.RingRules;
@@ -20,6 +27,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
+import com.openggf.physics.ObjectTerrainUtils;
 
 import java.util.List;
 
@@ -46,7 +54,7 @@ import java.util.List;
  * listener path.
  */
 public class LostRingObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, RewindRecreatable, NativeSpriteSubmissionSource {
+        implements TouchResponseProvider, RewindRecreatable, NativeSpriteSubmissionSource, SpriteState {
 
     /** ROM Obj37 collision_flags while uncollected: $40 SPECIAL + size index $07. */
     public static final int LOST_RING_COLLISION_FLAGS = 0x47;
@@ -88,6 +96,7 @@ public class LostRingObjectInstance extends AbstractObjectInstance
     // Native mapping word: conversion retains it, then each routine2 dispatch copies the global.
     private int retainedMappingFrame = -1;
     private boolean retainedArtPriority;
+    private boolean terrainProbeLoopPath;
     private boolean hasRetainedArtPriority;
     private boolean directSharedSpillFrame;
     private boolean nativeDisplaySubmissions;
@@ -99,6 +108,7 @@ public class LostRingObjectInstance extends AbstractObjectInstance
     private int pendingSpillRings;
     private int pendingSpillX;
     private int pendingSpillY;
+    private int touchLayer = -1;
 
     /**
      * Shared spin owner; the displayed frame = owner.frame() + phaseOffset. This is
@@ -361,8 +371,8 @@ public class LostRingObjectInstance extends AbstractObjectInstance
         int vblaCounter = resolveVblaCounter() + resolveFloorCheckCounterPhase();
         boolean boundaryChecksOnlyOnCadence =
                 lostRingBoundaryChecksOnlyOnProbeCadence();
-        // ROM: both bodies test the same sign. loc_1A75C `bmi.s loc_1A7B0` (:35807) and
-        // loc_1A7E8 `bmi.s loc_1A83C` (:35719) both skip the probe while y_vel is negative,
+        // loc_1A75C (sonic3k.asm:35664-35668) and loc_1A7E8 (sonic3k.asm:35715-35719)
+        // both skip the probe while y_vel is negative,
         // because positive y_vel always means "falling", toward whichever surface is the floor.
         boolean movingTowardSurface = yVel >= 0;
         if (!movingTowardSurface) {
@@ -496,18 +506,26 @@ public class LostRingObjectInstance extends AbstractObjectInstance
             // Obj37 slot next executes (loc_1A7C2), which can be later in the
             // same object pass or on the following frame depending on slot order.
             ObjectServices services = servicesOrNull();
-            if (collectorRoster != null) {
-                collectorRoster.levelState(nativeCollectorSlot).addRings(1);
-            } else if (services != null && services.levelGamestate() != null) {
-                services.levelGamestate().addRings(1);
-            } else if (player instanceof com.openggf.sprites.playable.AbstractPlayableSprite playable) {
+            LevelState pickupState = collectorRoster != null ? collectorRoster.levelState(nativeCollectorSlot)
+                    : services != null ? services.levelGamestate() : null;
+            GameModule module = pickupState != null && services != null ? services.gameModule() : null;
+            boolean replacesPickupSound = module != null
+                    && module.getGameService(RingExtraLifeReplacesPickupSound.class) != null;
+            int previousLifeFlags = replacesPickupSound ? pickupState.getRingExtraLifeFlags() : 0;
+            if (pickupState != null) {
+                pickupState.addRings(1);
+            } else if (player instanceof AbstractPlayableSprite playable) {
                 playable.addRings(1);
             }
             if (services != null) {
                 var policies = com.openggf.game.mutators.NativeObjectPolicyAccess.port(services);
                 if (policies != null) policies.ringAcquired(collectorRoster != null
                         ? collectorRoster.player(nativeCollectorSlot) : player);
-                services.playSfx(com.openggf.audio.GameSound.RING);
+                // ObjLostRing_Collect (Level/_Objects/Ring/Main.asm:440-444) calls CollectRing
+                // (Level/_Objects/Ring/Main.asm:290-312), which selects one cue.
+                if (!replacesPickupSound || (pickupState.getRingExtraLifeFlags() & ~previousLifeFlags) == 0) {
+                    services.playSfx(GameSound.RING);
+                }
             }
             sparkleStartFrame = executedFrame;
         }
@@ -590,10 +608,10 @@ public class LostRingObjectInstance extends AbstractObjectInstance
     }
 
     /**
-     * ROM {@code Level_MainLoop} runs the object pass, then the camera step, then
-     * BuildSprites (s2.asm:5088-5112), and BuildSprites is what latches
-     * {@code render_flags.on_screen} against {@code Camera_X_pos_copy}
-     * (s2.asm:30560-30575). Latching at the tail of the object pass instead would
+     * ROM Level_MainLoop (s2.asm:5088-5112) runs the object pass, the camera step, and then BuildSprites.
+     * BuildSprites_ObjLoop (s2.asm:30542-30578) gates on {@code Camera_X_pos_copy}.
+     * BuildSprites_DrawSprite (s2.asm:30613-30627) latches {@code render_flags.on_screen}.
+     * Latching at the tail of the object pass instead would
      * read the pre-scroll camera, i.e. a camera one frame stale, which for a ring
      * skirting the screen edge flips the gate on {@link #hasRomRenderFlagForFloorProbe}
      * and skips a floor probe.
@@ -789,18 +807,25 @@ public class LostRingObjectInstance extends AbstractObjectInstance
      */
     protected int ringCheckFloorDist(int x, int y) {
         ObjectServices objectServices = servicesOrNull();
-        if (objectServices == null || objectServices.levelManager() == null) {
-            return 0;
-        }
-        com.openggf.physics.TerrainCheckResult result =
-                com.openggf.physics.ObjectTerrainUtils.checkFloorDist(
-                        objectServices.levelManager(),
-                        objectServices.backgroundPlaneCollisionProvider(),
+        var levels = objectServices == null ? null : objectServices.levelManager();
+        if (levels == null) return 0;
+        var result = levels.getCurrentLevel() instanceof ObjectTerrainProbeLayout
+                ? ObjectTerrainUtils.checkObjectFloor(levels, x, y, this)
+                : ObjectTerrainUtils.checkFloorDist(levels, objectServices.backgroundPlaneCollisionProvider(),
                         objectServices.useSecondaryTerrainCollisionPath(), x, y);
         if (!result.foundSurface()) {
             return 0;
         }
         return result.distance();
+    }
+
+    @Override public boolean terrainProbeLoopPath() { return terrainProbeLoopPath; }
+    @Override public void setTerrainProbeLoopPath(boolean onLoopPath) { terrainProbeLoopPath = onLoopPath; }
+
+    @Override
+    public void setTerrainProbePriority(boolean high) {
+        retainedArtPriority = high;
+        hasRetainedArtPriority = true;
     }
 
     /**
@@ -843,6 +868,14 @@ public class LostRingObjectInstance extends AbstractObjectInstance
     @Override
     public int getCollisionProperty() {
         return 0;
+    }
+
+    public int touchLayer() {
+        return touchLayer;
+    }
+
+    void setTouchLayer(int layer) {
+        touchLayer = layer;
     }
 
     public boolean isCollected() {
@@ -973,20 +1006,32 @@ public class LostRingObjectInstance extends AbstractObjectInstance
         ringManager.drawRingFrameAt(getX(), getY(), spinFrame);
     }
 
+    private LostRingDisplayProfile.Priority layerDisplayPriority() {
+        if (touchLayer < 0) return null;
+        ObjectServices services = servicesOrNull();
+        GameModule module = services != null ? services.gameModule() : null;
+        var profile = module != null ? module.getGameService(LostRingDisplayProfile.class) : null;
+        return profile != null ? profile.priorityForLayer(touchLayer) : null;
+    }
+
     @Override
     public boolean isHighPriority() {
         if (hasRetainedArtPriority) return retainedArtPriority;
+        var priority = layerDisplayPriority();
+        if (priority != null) return priority.highPriority();
         ObjectServices services = servicesOrNull();
         GameModule module = services != null ? services.gameModule() : null;
-        return !(module instanceof com.openggf.game.internal.SpriteTableBuildProfile profile)
-                || profile.lostRingHighPriority();
+        var profile = SpriteTableBuildProfile.forModule(module);
+        return profile == null || profile.lostRingHighPriority();
     }
 
     @Override
     public int getPriorityBucket() {
         // GiveRing's own slot writes priority$80. A converted attracted ring
         // bypasses Init and keeps priority$100 for its entire uncollected life.
-        return RenderPriority.clamp(collectionRoutineStarted ? 1 : displayPriorityBucket);
+        if (collectionRoutineStarted) return 1;
+        var priority = layerDisplayPriority();
+        return RenderPriority.clamp(priority != null ? priority.bucket() : displayPriorityBucket);
     }
 
     private void drawSparkle(RingManager ringManager) {

@@ -158,11 +158,22 @@ class TestS3kCustomTeamPortraitComposer {
     void compose_bottomAlignsCharactersUsingTheirOwnFrameBounds() {
         S3kCustomTeamPortraitComposer composer = new S3kCustomTeamPortraitComposer(variableHeightFrames());
 
-        SpriteMappingFrame frame = composer.compose(new SelectedTeam("sonic", List.of("tails", "knuckles")));
+        SpriteMappingFrame frame = composer.compose(new SelectedTeam("sonic", List.of("knuckles", "tails")));
 
         assertEquals(5, maxBottom(frame.pieces().subList(0, 1)));
         assertEquals(-5, maxBottom(frame.pieces().subList(1, 2)));
         assertEquals(-5, maxBottom(frame.pieces().subList(2, 3)));
+    }
+
+    @Test
+    void compose_authoredRosterPlacesFeetOnItsOwnLinesUsingFrameBounds() {
+        S3kCustomTeamPortraitComposer composer = new S3kCustomTeamPortraitComposer(variableHeightFrames());
+
+        SpriteMappingFrame frame = composer.compose(new SelectedTeam("sonic", List.of("tails", "knuckles")));
+
+        assertEquals(0, maxBottom(frame.pieces().subList(0, 1)));
+        assertEquals(-4, maxBottom(frame.pieces().subList(1, 2)));
+        assertEquals(-4, maxBottom(frame.pieces().subList(2, 3)));
     }
 
     @Test

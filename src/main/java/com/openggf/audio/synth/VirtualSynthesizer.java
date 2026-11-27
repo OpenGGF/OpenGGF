@@ -356,7 +356,7 @@ public class VirtualSynthesizer implements SmpsLogicalWriteTarget {
 
     /** Sets the music and sound-effect gains, {@link FmChip#UNITY_GAIN} = 1.0. */
     public void setMixGains(int musicGain, int sfxGain) {
-        this.musicGain = Math.clamp(musicGain, 0, FmChip.UNITY_GAIN);
+        this.musicGain = Math.clamp(musicGain, 0, 4 * FmChip.UNITY_GAIN);
         this.sfxGain = Math.clamp(sfxGain, 0, FmChip.UNITY_GAIN);
         for (int ch = 0; ch < fmSfxRole.length; ch++) {
             ym.setOutputGain(ch, fmSfxRole[ch] ? this.sfxGain : this.musicGain);

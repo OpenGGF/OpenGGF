@@ -82,6 +82,8 @@ final class TtzPatternAnimator implements AnimatedPatternManager {
 
     @Override
     public void update() {
+        // VBlankStagePlayerGfxDone (r4/main.asm:1135-1138).
+        if (level instanceof com.openggf.game.soniccd.level.CdLevel stage && stage.flags().timeStopped()) return;
         Camera camera = GameServices.camera();
         int x = camera == null ? 0 : camera.getX() & 0xFFFF;
         int y = camera == null ? 0 : camera.getY() & 0xFFFF;

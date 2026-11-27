@@ -5,6 +5,7 @@ import com.openggf.game.LevelBackdropResultsScreen;
 import com.openggf.game.ResultsScreen;
 import com.openggf.game.internal.SpecialStageStartInput;
 import com.openggf.game.soniccd.program.CdProgramScreenRenderer;
+import com.openggf.game.soniccd.program.CdScorePolicy;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.Palette;
 
@@ -13,7 +14,7 @@ import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.function.IntConsumer;
+import java.util.function.Consumer;
 
 /**
  * The special stage results ({@code Results}, scddisasm/src/Special Stage/Main.asm:281-402). The ring bonus is 20 per
@@ -29,8 +30,8 @@ import java.util.function.IntConsumer;
  * those V-blanks, so the numbers and icons are drawn from the first frame. The engine owns the
  * closing {@code FadeToWhite} (Main.asm:400).
  *
- * <p>Scores are in units of ten, as the program keeps them. When the screen ends, the points it
- * added go to the campaign once through {@code award}, which applies {@code AddScore}'s thresholds.
+ * <p>Scores are in units of ten, as the program keeps them. The campaign receives
+ * the stored score, next threshold and lives when the screen ends.
  */
 public final class CdSpecialStageResults implements ResultsScreen, LevelBackdropResultsScreen, SpecialStageStartInput {
     public enum Header { SPECIAL_STAGE, TIME_STONES, GOT_THEM_ALL }
@@ -41,7 +42,6 @@ public final class CdSpecialStageResults implements ResultsScreen, LevelBackdrop
     private int ringBonus;
     private int timeBonus;
     private int score;
-    private final int startScore;
     private int nextLifeScore;
     private int lives;
     private int extraLives;
@@ -53,7 +53,9 @@ public final class CdSpecialStageResults implements ResultsScreen, LevelBackdrop
     private final List<CdSpecialSound> sounds = new ArrayList<>(2);
     private final CdSpecialStageResultsPicture picture;
     private final CdProgramScreenRenderer renderer = new CdProgramScreenRenderer();
-    private final IntConsumer award;
+    record Tally(int score, int nextLifeScore, int lives) { }
+
+    private final Consumer<Tally> onComplete;
 
     /** The tally alone, without a picture or campaign (for the tally's own checks). */
     public CdSpecialStageResults(CdSpecialStageResult result, int score, int nextLifeScore, int lives) {
@@ -62,17 +64,16 @@ public final class CdSpecialStageResults implements ResultsScreen, LevelBackdrop
 
     /**
      * @param assets the stage program's data, for the picture
-     * @param award  receives the points the screen added (units of ten), once, when it ends
+     * @param onComplete receives the stored tally (score and threshold in units of ten)
      */
-    public CdSpecialStageResults(CdSpecialStageResult result, int score, int nextLifeScore, int lives,
-                                 CdSpecialStageAssets assets, IntConsumer award) {
+    CdSpecialStageResults(CdSpecialStageResult result, int score, int nextLifeScore, int lives,
+                          CdSpecialStageAssets assets, Consumer<Tally> onComplete) {
         this.ringBonus = result.ringBonus();
         this.timeBonus = result.timeBonus();
         this.score = score;
-        this.startScore = score;
         this.nextLifeScore = nextLifeScore;
         this.lives = lives;
-        this.award = Objects.requireNonNull(award, "award");
+        this.onComplete = Objects.requireNonNull(onComplete, "onComplete");
         this.header = timeBonus == 0 ? Header.SPECIAL_STAGE
                 : result.timeStones() == 0x7F ? Header.GOT_THEM_ALL : Header.TIME_STONES;
         try {
@@ -111,7 +112,7 @@ public final class CdSpecialStageResults implements ResultsScreen, LevelBackdrop
             sounds.add(CdSpecialSound.WARP);
             vint(); // FadeToWhite's first V-blank shows the final score
             complete = true;
-            award.accept(score - startScore);
+            onComplete.accept(new Tally(score, nextLifeScore, lives));
         }
     }
 
@@ -130,12 +131,12 @@ public final class CdSpecialStageResults implements ResultsScreen, LevelBackdrop
     }
 
     private void addScore(int points) {
+        // AddScore (Special Stage/Main.asm:433-452) applies thresholds before storing the capped score.
         int total = score + points;
         while (Integer.compareUnsigned(total, nextLifeScore) >= 0) {
             nextLifeScore += 5000;
-            lives++;
+            lives = CdScorePolicy.capSpecialStageLives(lives + 1);
             extraLives++;
-            if (lives >= 250) lives = 249;
         }
         score = total >= 1_000_000 ? 999_999 : total;
     }

@@ -40,7 +40,7 @@ final class MmzBossFireflyShot extends MmzBossPiece {
                 anim = 8;
                 addY(8);
                 animate(table("hotaruAnimations"));
-                int distance = com.openggf.physics.ObjectTerrainUtils.checkFloorDist(x, y, yRadius).distance();
+                int distance = checkFloor(x, y, yRadius).distance();
                 if (distance < 0) {
                     routine = 4;
                     countdown = 0;

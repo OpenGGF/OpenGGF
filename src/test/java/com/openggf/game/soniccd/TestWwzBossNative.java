@@ -43,7 +43,6 @@ class TestWwzBossNative {
      * inside his own update (objects/r6/boss.asm:545-559), so for $16 rows native RAM holds a level frame whose later
      * slots (the smoke) and palette cycle have not run; those rows repeat the level frame counter, so
      * {@code CdBossNativeReplay} reads the row where that frame is complete ({@code CdFixtureReplay.completedRow}).
-     * The engine applies each fade within one frame (the lane report's unmodelled blocking fade).
      */
     static CdBossNativeReplay.RowCheck zoneRows(String movie) throws Exception {
         java.util.List<String> lines = java.nio.file.Files.readAllLines(

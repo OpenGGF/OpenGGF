@@ -2,6 +2,7 @@ package com.openggf.game.soniccd;
 
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.game.DamageCause;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameServices;
 import com.openggf.game.patch.ModuleResolutionService;
@@ -14,19 +15,20 @@ import com.openggf.game.session.SessionManager;
 import com.openggf.game.soniccd.level.CdLevel;
 import com.openggf.game.soniccd.objects.art.CdObjectArtProvider;
 import com.openggf.game.soniccd.objects.common.CdTimeStars;
+import com.openggf.game.soniccd.objects.projector.CdProjector;
 import com.openggf.game.soniccd.objects.ttz.*;
 import com.openggf.game.soniccd.player.CdSonicAnimation;
 import com.openggf.game.soniccd.release.CdRetailReleases;
 import com.openggf.game.soniccd.timetravel.CdTimeTravel;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectManagerInternalAccess;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.physics.GroundSensor;
 import com.openggf.physics.Direction;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
-import com.openggf.sprites.playable.ObjectControlState;
 import com.openggf.tests.HeadlessTestRunner;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tools.HeadlessGameBoot;
@@ -38,8 +40,12 @@ import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.nio.file.Path;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -120,6 +126,118 @@ class TestTtzObjects {
     }
 
     @ParameterizedTest
+    @EnumSource(value = CdStagePayload.class, names = {"R41B", "R42B"})
+    void pastProjectorsSpawnBothAnimalForms(CdStagePayload payload) throws Exception {
+        CdProjector projector = bootWithProjector(payload);
+        assertEquals(List.of(
+                new AnimalPosition(projector.getX() - 0x4C, projector.getY() - 0x1C, 5),
+                new AnimalPosition(projector.getX() - 0x54, projector.getY() - 0x11, 5)),
+                positions());
+    }
+
+    @Test
+    void projectorAnimalsMatchNativePositionsAcrossAnOrbit() throws Exception {
+        Path movie = CdTestMedia.nativeFile("rehost-long/R41B/movie.bk2");
+        Path trace = CdTestMedia.nativeFile("rehost-long/R41B/trace/physics.csv").getParent();
+        // Read-only BizHawk 2.11 playback of this movie. Slots 82 and 83, level frames 1750 through 1879.
+        record NativeSample(int row, AnimalPosition first, AnimalPosition second) { }
+        List<NativeSample> samples = List.of(
+                new NativeSample(1844, new AnimalPosition(0x0884, 0x0558, 5), new AnimalPosition(0x087c, 0x0563, 5)),
+                new NativeSample(1846, new AnimalPosition(0x08a4, 0x0558, 5), new AnimalPosition(0x0888, 0x0572, 5)),
+                new NativeSample(1848, new AnimalPosition(0x08a4, 0x0559, 5), new AnimalPosition(0x088a, 0x0571, 5)),
+                new NativeSample(1850, new AnimalPosition(0x08a4, 0x055a, 5), new AnimalPosition(0x088b, 0x0571, 5)),
+                new NativeSample(1888, new AnimalPosition(0x0892, 0x0566, 5), new AnimalPosition(0x089c, 0x0564, 3)),
+                new NativeSample(1889, new AnimalPosition(0x0890, 0x0567, 5), new AnimalPosition(0x089c, 0x0563, 3)),
+                new NativeSample(1897, new AnimalPosition(0x0884, 0x0568, 5), new AnimalPosition(0x089a, 0x055d, 3)),
+                new NativeSample(1928, new AnimalPosition(0x0864, 0x0559, 3), new AnimalPosition(0x0871, 0x0554, 3)),
+                new NativeSample(1929, new AnimalPosition(0x0864, 0x0558, 3), new AnimalPosition(0x0870, 0x0554, 3)),
+                new NativeSample(1954, new AnimalPosition(0x0876, 0x054a, 3), new AnimalPosition(0x085c, 0x0562, 5)),
+                new NativeSample(1955, new AnimalPosition(0x0878, 0x0549, 3), new AnimalPosition(0x085c, 0x0563, 5)),
+                new NativeSample(1963, new AnimalPosition(0x0884, 0x0548, 3), new AnimalPosition(0x085f, 0x0569, 5)),
+                new NativeSample(1994, new AnimalPosition(0x08a4, 0x0557, 5), new AnimalPosition(0x0887, 0x0572, 5)),
+                new NativeSample(1995, new AnimalPosition(0x08a4, 0x0558, 5), new AnimalPosition(0x0888, 0x0572, 5)));
+        var pending = new ArrayDeque<>(samples);
+        try (CdDiscDataSource source = CdDiscDataSource.open(CdTestMedia.usaCue())) {
+            var fixture = new CdFixtureReplay.Fixture(CdStagePayload.R41B, trace, movie);
+            CdFixtureReplay.replay(source, tempDir, fixture, samples.getLast().row(), false, -1, -1, row -> {
+                var sample = pending.peek();
+                if (sample == null || row != sample.row()) return;
+                assertEquals(List.of(sample.first(), sample.second()), positions(), "native R41B row " + row);
+                pending.remove();
+            });
+        }
+        assertTrue(pending.isEmpty(), "all native samples were reached");
+    }
+
+    @Test
+    void projectorAnimalsRetireWhenTheProjectorShutsDown() throws Exception {
+        var projector = bootWithProjector(CdStagePayload.R41B);
+        hitProjector(projector);
+        assertTrue(projector.childrenInvalid());
+        assertEquals(List.of(), positions());
+    }
+
+    @Test
+    void rewindAcrossProjectorDestructionRestoresTheAnimalsAndTheirMotion() throws Exception {
+        var projector = bootWithProjector(CdStagePayload.R41B);
+        runner.stepIdleFrames(31);
+        var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+        var snapshot = registry.capture();
+        var captured = hologramState();
+        assertEquals(2, captured.size());
+        var forward = new ArrayList<List<AnimalFrame>>();
+        for (int frame = 0; frame < 40; frame++) {
+            runner.stepIdleFrames(1);
+            forward.add(hologramState());
+        }
+        hitProjector(projector);
+        runner.stepIdleFrames(160);
+        assertTrue(projector.isDestroyed());
+        assertEquals(List.of(), hologramState());
+        registry.restore(snapshot);
+        assertEquals(captured, hologramState(), "the removed pair returns in its saved slots");
+        for (int frame = 0; frame < forward.size(); frame++) {
+            runner.stepIdleFrames(1);
+            assertEquals(forward.get(frame), hologramState(), "frame " + frame + " after restoration");
+        }
+    }
+
+    private CdProjector bootWithProjector(CdStagePayload payload) throws Exception {
+        boot(payload);
+        var projector = add(new CdProjector(spawn(sonic.getCentreX() + 120, sonic.getCentreY(), 0x52, 0)));
+        runner.stepIdleFrames(1);
+        return projector;
+    }
+
+    private void hitProjector(CdProjector projector) {
+        sonic.setAnimationId(CdSonicAnimation.ROLL);
+        projector.onTouchResponse(sonic, null, 0);
+        runner.stepIdleFrames(2);
+    }
+
+    private record AnimalPosition(int x, int y, int layer) { }
+
+    private List<TtzAnimal> holograms() {
+        return live(0x2F).stream()
+                .filter(o -> (o.getSpawn().subtype() & 0x80) != 0)
+                .map(TtzAnimal.class::cast)
+                .sorted(Comparator.comparingInt(o -> o.getSpawn().subtype()))
+                .toList();
+    }
+
+    private List<AnimalPosition> positions() {
+        return holograms().stream()
+                .map(o -> new AnimalPosition(o.getX(), o.getY(), o.getPriorityBucket())).toList();
+    }
+
+    private record AnimalFrame(int slot, int x, int y, String pose) { }
+
+    private List<AnimalFrame> hologramState() {
+        return holograms().stream()
+                .map(o -> new AnimalFrame(o.getSlotIndex(), o.getX(), o.getY(), o.traceDebugDetails())).toList();
+    }
+
+    @ParameterizedTest
     @ValueSource(ints = {-1, 1})
     void breakPoleGripsClimbsAndBreaksOnAFreshPress(int approach) throws Exception {
         boot(CdStagePayload.R42A);
@@ -170,8 +288,12 @@ class TestTtzObjects {
         var pole = addBreakPole(subtype);
         pole.update(0, sonic);
         int ticks = subtype == 0 ? 180 : 60;
-        for (int i = 1; i < ticks; i++) pole.update(0, sonic);
-        assertTrue(sonic.isObjectControlled());
+        for (int i = 1; i < ticks - 1; i++) pole.update(0, sonic);
+        sonic.setInvulnerableFrames(0);
+        assertTrue(sonic.applyHurtOrDeath(sonic.getCentreX() + 32, DamageCause.SPIKE, true));
+        assertTrue(sonic.isHurt());
+        pole.update(0, sonic);
+        assertTrue(sonic.isObjectControlled(), "hurt leaves the pole's control intact before timeout");
         pole.update(0, sonic);
         assertFalse(sonic.isObjectControlled());
     }
@@ -201,23 +323,128 @@ class TestTtzObjects {
     }
 
     @Test
-    void breakPoleRetiresADeadOrReplacedOwner() throws Exception {
+    void breakPoleClimbsAndTimesOutDuringDrowning() throws Exception {
         boot(CdStagePayload.R42A);
-        var deathPole = addBreakPole(0);
-        deathPole.update(0, sonic);
-        sonic.setDead(true);
-        deathPole.update(0, sonic);
-        assertFalse(sonic.isObjectControlled());
-        sonic.setDead(false);
-
-        var stalePole = addBreakPole(0);
-        stalePole.update(0, sonic);
-        // A replacement can claim the same flag combination. Only the generation distinguishes the owners.
-        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(sonic);
+        var pole = addBreakPole(1);
+        pole.update(0, sonic);
+        assertTrue(sonic.applyDrownDeath());
         sonic.setDirectionalInputPressed(true, false, false, false);
-        stalePole.update(0, sonic);
-        assertTrue(sonic.isObjectControlled());
-        assertEquals(stalePole.getY(), sonic.getCentreY());
+        pole.update(0, sonic);
+        assertEquals(pole.getY() - 1, sonic.getCentreY(), "Up still climbs during the drowning sink");
+        sonic.setDirectionalInputPressed(false, true, false, false);
+        pole.update(0, sonic);
+        assertEquals(pole.getY(), sonic.getCentreY(), "Down still climbs during the drowning sink");
+        sonic.setDirectionalInputPressed(false, false, false, false);
+        for (int i = 2; i < 59; i++) pole.update(0, sonic);
+        assertTrue(sonic.isObjectControlSuppressesMovement(), "bit 0 stays set until timeout");
+
+        pole.update(0, sonic);
+        assertFalse(sonic.isObjectControlSuppressesMovement(), "the pole clears bit 0 on timeout");
+        assertTrue(sonic.isTouchResponseSuppressedByObjectControl(), "drowning keeps bit 7 set");
+    }
+
+    @Test
+    void breakPoleReleaseRestoresAirControlDuringDrowning() throws Exception {
+        boot(CdStagePayload.R42A);
+        sonic.setCentreX((short) 5170);
+        sonic.setCentreY((short) 1608);
+        sonic.setAir(true);
+        GameServices.camera().updatePosition(true);
+        ObjectManagerInternalAccess.refreshPlacementAfterRelocation(GameServices.level().getObjectManager());
+
+        runner.stepIdleFrames(1680);
+        for (int i = 0; i < 22; i++) runner.stepFrame(false, false, false, true, false);
+        for (int i = 0; i < 180 && !sonic.isDrowningPreDeath(); i++) runner.stepIdleFrames(1);
+        assertTrue(sonic.isDrowningPreDeath(), "air runs out while Sonic holds the placed pole");
+        assertTrue(sonic.isObjectControlSuppressesMovement());
+        for (int i = 0; i < 180 && sonic.isObjectControlSuppressesMovement(); i++) {
+            // Climb down during the hold so the first released steps have clear water below.
+            runner.stepFrame(false, true, false, false, false);
+        }
+        assertFalse(sonic.isObjectControlSuppressesMovement());
+
+        // PlayerFallState (objects/player.asm:673-696) moves first and adds $38 - $28.
+        // loc_206364 (objects/r4/player_bubbles.asm:249-255) moves again and adds $10.
+        // PlayerMoveAir (objects/player.asm:1494-1547) uses twice the water acceleration (6).
+        int x = (sonic.getCentreX() << 16) + sonic.getXSubpixelRaw();
+        int y = (sonic.getCentreY() << 16) + sonic.getYSubpixelRaw();
+        int dy = sonic.getYSpeed();
+        int[] steeredSpeeds = {-12, 0, 12, 24};
+        for (int vx : steeredSpeeds) {
+            x += 2 * vx << 8;
+            y += (2 * dy + 0x10) << 8;
+            dy += 0x20;
+            int expectedX = x;
+            int expectedY = y;
+            int expectedYSpeed = dy;
+            runner.stepFrame(false, false, vx < 0, vx >= 0, false);
+            assertAll("released underwater step",
+                    () -> assertTrue(sonic.isDrowningPreDeath(), "the bubbles slot still owns the sink"),
+                    () -> assertEquals(CdSonicAnimation.WALK.id(), sonic.getAnimationId(), "falling writes Walk"),
+                    () -> assertEquals(vx, sonic.getXSpeed(), "directional input steers the fall"),
+                    () -> assertEquals(expectedX, (sonic.getCentreX() << 16) + sonic.getXSubpixelRaw(), "two X moves"),
+                    () -> assertEquals(expectedYSpeed, sonic.getYSpeed(), "combined underwater gravity"),
+                    () -> assertEquals(expectedY, (sonic.getCentreY() << 16) + sonic.getYSubpixelRaw(), "two Y moves"));
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void breakPoleGripsDeadAndDrowningPlayers(boolean drowning) throws Exception {
+        boot(CdStagePayload.R42A);
+        var pole = addBreakPole(1);
+        if (drowning) {
+            assertTrue(sonic.applyDrownDeath());
+        } else {
+            sonic.setInvulnerableFrames(0);
+            assertTrue(sonic.applyHurtOrDeath(sonic.getCentreX() + 32, DamageCause.SPIKE, false));
+        }
+
+        pole.update(0, sonic);
+        assertEquals(pole.getX() + 24, sonic.getCentreX());
+        assertEquals(CdSonicAnimation.HANG.id(), sonic.getAnimationId());
+        assertTrue(sonic.isObjectControlSuppressesMovement());
+        assertEquals(drowning, sonic.isTouchResponseSuppressedByObjectControl());
+        for (int i = 0; i < 60; i++) pole.update(0, sonic);
+        assertFalse(sonic.isObjectControlSuppressesMovement());
+        assertEquals(drowning, sonic.isTouchResponseSuppressedByObjectControl());
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void breakPoleLetsHurtAndDeadPlayersMoveInTheFrameLoop(boolean hadRings) throws Exception {
+        boot(CdStagePayload.R42A);
+        var placement = GameServices.level().getObjectManager().getAllSpawns().stream()
+                .filter(spawn -> spawn.objectId() == 0x05).findFirst().orElseThrow();
+        sonic.setCentreX((short) placement.x());
+        sonic.setCentreY((short) placement.y());
+        GameServices.camera().updatePosition(true);
+        ObjectManagerInternalAccess.refreshPlacementAfterRelocation(GameServices.level().getObjectManager());
+        runner.stepIdleFrames(1);
+        assertEquals(CdSonicAnimation.HANG.id(), sonic.getAnimationId());
+        assertTrue(sonic.isObjectControlSuppressesMovement(), "the disc-placed pole gripped Sonic");
+        assertTrue(sonic.isInWater(), "the R42A pole is underwater");
+
+        int ticks = placement.subtype() == 0 ? 180 : 60;
+        runner.stepIdleFrames(ticks - 2);
+        assertTrue(sonic.isObjectControlSuppressesMovement(), "the pole is still intact two ticks before timeout");
+        sonic.setSubpixelRaw(0, 0);
+        int x = sonic.getCentreX();
+        int y = sonic.getCentreY();
+        sonic.setInvulnerableFrames(0);
+        assertTrue(sonic.applyHurtOrDeath(x + 32, DamageCause.SPIKE, hadRings));
+        runner.stepIdleFrames(1);
+
+        // HurtPlayer (r4/player_object_collide.asm:243-263) starts underwater recoil.
+        // PlayerHurt (objects/player.asm:2206-2219) moves before adding $10.
+        // KillPlayer (r4/player_object_collide.asm:273-288) starts the death bounce.
+        // PlayerDead (objects/player.asm:2244-2249) uses MoveObjectFall (common/object.asm:27-61).
+        assertEquals(x - (hadRings ? 1 : 0), sonic.getCentreX(), "horizontal recoil while held");
+        assertEquals(y - (hadRings ? 2 : 7), sonic.getCentreY(), "vertical recoil while held");
+        assertEquals(hadRings ? -0x200 + 0x10 : -0x700 + 0x38, sonic.getYSpeed(), "gravity during recoil");
+        assertTrue(sonic.isObjectControlSuppressesMovement(), "the pole still holds during recoil");
+        runner.stepIdleFrames(1);
+        assertFalse(sonic.isObjectControlSuppressesMovement(), "the pole releases on its original timeout");
     }
 
     @Test
@@ -644,17 +871,133 @@ class TestTtzObjects {
         var stars = live(0x03).stream().filter(CdTimeStars.class::isInstance).map(CdTimeStars.class::cast).toList();
         assertEquals(List.of(5, 6, 7, 8), stars.stream().map(CdTimeStars::animation).sorted().toList());
 
-        // The creation frame only initialises each star. Later object passes read PowerupAnims
-        // and animate the live trail (loc_2060B2, scddisasm/src/objects/powerup.asm:127-141).
-        for (int i = 0; i < 12; i++) {
+        // PowerupAnims (r4/data_2a.asm:426-428) selects .Anim5 through .Anim8 in anims/powerup.asm.
+        // These are the first twelve displayed frames, including .Anim5's $FF loop.
+        int[][] mappingFrames = {
+                {8, 9, 10, 11, 12, 11, 10, 9, 8, 0, 8, 9},
+                {8, 8, 0, 8, 8, 0, 9, 9, 0, 9, 9, 0},
+                {8, 8, 0, 8, 0, 0, 9, 9, 0, 9, 0, 0},
+                {8, 0, 0, 8, 0, 0, 9, 0, 0, 9, 0, 0}
+        };
+        for (int i = 0; i < mappingFrames[0].length; i++) {
             // Keep the warp speed on the opening slope so the production star pass can run.
             sonic.setGSpeed((short) 0x700);
             runner.stepFrame(false, false, false, true, false);
             assertTrue(timeTravel.starsActive(), "warp stars should stay active during the run");
+            for (var star : stars) {
+                assertEquals(mappingFrames[star.animation() - 5][i], star.mappingFrame(),
+                        "animation " + star.animation() + ", tick " + (i + 1));
+            }
         }
         assertTrue(stars.stream().noneMatch(CdTimeStars::isDestroyed));
         timeTravel.stopTimeWarp();
         runner.stepIdleFrames(1);
         assertTrue(stars.stream().allMatch(CdTimeStars::isDestroyed));
     }
+
+    // ---- Vertical move blocks ----
+
+    @Test
+    void verticalBlockSheetsUseDiscMappingsAndVisibleTiles() throws Exception {
+        boot(CdStagePayload.R42B);
+        var provider = art();
+        // First piece of VMoveBlockSprites1/2/3/7 (objects/r4/v_move_block.asm:149-151,
+        // 193-195, 297-299, 798-800) and their disc-backed five-byte mappings.
+        for (int[] shape : new int[][]{
+                {1, 4, -16, -64, 0}, {2, 12, -32, -96, 0},
+                {3, 3, -16, -48, 0}, {7, 1, -16, -16, 0x10}}) {
+            int x = shape[0] == 3 ? 0x1940 : 0x570;
+            var sheet = provider.getSheet(TtzObjectArt.key(provider, "vmove" + shape[0], 0x446A, x));
+            assertNotNull(sheet, "vertical block sheet " + shape[0]);
+            var pieces = sheet.getFrame(0).pieces();
+            var piece = pieces.getFirst();
+            assertEquals(List.of(shape[1], shape[2], shape[3], shape[4], 4, 4, 2),
+                    List.of(pieces.size(), piece.xOffset(), piece.yOffset(), piece.tileIndex(),
+                            piece.widthTiles(), piece.heightTiles(), sheet.getPaletteIndex()));
+            assertTrue(java.util.Arrays.stream(sheet.getPatterns()).anyMatch(pattern -> {
+                for (int row = 0; row < 8; row++) {
+                    for (int col = 0; col < 8; col++) {
+                        if (pattern.getPixel(col, row) != 0) return true;
+                    }
+                }
+                return false;
+            }), "stage PLC supplies visible art for shape " + shape[0]);
+        }
+    }
+
+    @Test
+    void verticalWaveCarriesSonicAndRepeatsAfterRewind() throws Exception {
+        boot(CdStagePayload.R41B);
+        var manager = GameServices.level().getObjectManager();
+        var block = add(new ObjVerticalMoveBlock(spawn(0xC0, 0x53, 0x23, 0xA)));
+        runner.stepIdleFrames(2);
+        sonic.setCentreX((short) block.getX());
+        sonic.setCentreY((short) (block.getY() - 16 - sonic.getYRadius()));
+        sonic.setYSpeed((short) 0);
+        sonic.setAir(true);
+        runner.stepIdleFrames(1);
+        assertTrue(sonic.isOnObject(), "Sonic lands on the short moving block");
+        int sonicY = sonic.getCentreY();
+        runner.stepIdleFrames(12);
+        assertTrue(sonic.getCentreY() > sonicY, "the short block carries Sonic as it descends");
+
+        int slot = block.getSlotIndex();
+        var rewind = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+        var checkpoint = rewind.capture();
+        int cycleY = block.getY();
+        runner.stepIdleFrames(256);
+        assertEquals(cycleY, block.getY());
+        var positions = verticalBlockPositions();
+        for (var object : live(0x23)) {
+            manager.removeDynamicObject((AbstractObjectInstance) object);
+        }
+        rewind.restore(checkpoint);
+        var restored = live(0x23).stream().map(AbstractObjectInstance.class::cast)
+                .filter(object -> object.getSlotIndex() == slot).findFirst().orElseThrow();
+        assertNotSame(block, restored);
+        runner.stepIdleFrames(256);
+        assertEquals(positions, verticalBlockPositions());
+    }
+
+    private List<List<Integer>> verticalBlockPositions() {
+        return live(0x23).stream().map(AbstractObjectInstance.class::cast)
+                .sorted(java.util.Comparator.comparingInt(AbstractObjectInstance::getSlotIndex))
+                .map(object -> List.of(object.getSlotIndex(), object.getX(), object.getY())).toList();
+    }
+
+    @Test
+    void verticalSpikedBlocksCarryAndRetireTheirHurtSpikes() throws Exception {
+        boot(CdStagePayload.R41B);
+        var manager = GameServices.level().getObjectManager();
+        var block = add(new ObjVerticalMoveBlock(spawn(0xE0, 0x60, 0x23, 4)));
+        runner.stepIdleFrames(2);
+        var spike = live(0x22).stream().filter(object -> object.getX() == block.getX())
+                .map(ObjSpikes.class::cast).findFirst().orElseThrow();
+        int blockSlot = block.getSlotIndex();
+        int spikeSlot = spike.getSlotIndex();
+        var rewind = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+        var attached = rewind.capture();
+        manager.removeDynamicObject(spike);
+        rewind.restore(attached);
+        var restoredBlock = live(0x23).stream().map(ObjVerticalMoveBlock.class::cast)
+                .filter(object -> object.getSlotIndex() == blockSlot).findFirst().orElseThrow();
+        var restoredSpike = live(0x22).stream().map(ObjSpikes.class::cast)
+                .filter(object -> object.getSlotIndex() == spikeSlot).findFirst().orElseThrow();
+        assertNotSame(spike, restoredSpike);
+        runner.stepIdleFrames(28);
+        assertEquals(List.of(0x83, restoredBlock.getY() + 0x40),
+                List.of(restoredSpike.getCollisionFlags(), restoredSpike.getY()));
+        sonic.setInvulnerableFrames(0);
+        sonic.setCentreX((short) restoredSpike.getX());
+        sonic.setCentreY((short) restoredSpike.getY());
+        sonic.giveShield();
+        // The nearby ring takes the first touch pass. The second reaches the attached spikes.
+        manager.runTouchResponsesForPlayer(sonic, 1);
+        manager.runTouchResponsesForPlayer(sonic, 2);
+        assertTrue(sonic.isHurt(), "the attached spikes damage Sonic on contact");
+        manager.removeDynamicObject(restoredBlock);
+        runner.stepIdleFrames(1);
+        assertTrue(restoredSpike.isDestroyed(), "the spikes retire when the block's slot clears");
+    }
+
 }

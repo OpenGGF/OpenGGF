@@ -11,6 +11,7 @@ import com.openggf.graphics.color.DisplayColorExpansion;
 import com.openggf.graphics.color.DisplayColorProfile;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectManagerInternalAccess;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.HeadlessTestRunner;
@@ -150,6 +151,7 @@ class TestTtzBossFightPictures {
         GameServices.camera().setY((short) 0x4F0);
         // The bottom boundary the chase leaves: R43Events holds $4F0 once the chase Eggman sets boss_flags.
         GameServices.camera().setMaxY((short) 0x4F0);
+        ObjectManagerInternalAccess.refreshPlacementAfterRelocation(GameServices.level().getObjectManager());
         for (int i = 0; i < 30; i++) runner.stepFrame(false, false, false, false, false);
         NativePositionOps.writeXPosResetSubpixel(sonic, 0xAAF);
         NativePositionOps.writeYPosResetSubpixel(sonic, 0x5AC);

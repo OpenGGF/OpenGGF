@@ -1405,12 +1405,21 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * that row along with the rest of the loop tail.
      */
     public void updateObjectPositionsWithoutTouches(boolean advanceOscillation) {
+        updateObjectPositionsWithoutTouches(advanceOscillation, true);
+    }
+
+    void updateObjectPositionsWithoutTouches(boolean advanceOscillation, boolean advanceVblankClock) {
         if (objectManager != null) {
             Sprite player = spriteManager.getSprite(resolveMainCharacterCode());
             AbstractPlayableSprite playable = player instanceof AbstractPlayableSprite ? (AbstractPlayableSprite) player : null;
 
             List<AbstractPlayableSprite> sidekicks = spriteManager.getSidekicks();
-            objectManager.update(camera.getX(), playable, sidekicks, frameCounter, false);
+            if (advanceVblankClock) {
+                objectManager.update(camera.getX(), playable, sidekicks, frameCounter, false);
+            } else {
+                com.openggf.level.objects.ObjectManagerInternalAccess.runTitleReleaseObjectPass(
+                        objectManager, camera.getX(), playable, sidekicks, frameCounter);
+            }
         }
 
         // ROM parity: OscillateNumDo runs AFTER ExecuteObjects in both S1
@@ -1458,7 +1467,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     }
 
     /**
-     * Advances the native VBlank clock while S3K dispatches title-card SSTs.
+     * Advances the native VBlank clock during a title-only wait.
      * The engine renders those SSTs outside {@link ObjectManager}, so this must
      * not execute already-loaded level objects or advance level-frame state.
      */
@@ -3126,7 +3135,12 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                             getFeatureZoneId(), getFeatureActId(), savedEntry);
                 }
             }
-            if (!nativeLoads.prefix && objectManager != null
+            if (!initializeLoadRegisters && !nativeLoads.prefix && objectManager != null
+                    && camera.getX() != preSnapCameraX && activeGameModule()
+                            .getGameService(com.openggf.game.internal.SpawnerBeforeObjectPass.class) != null) {
+                com.openggf.level.objects.ObjectManagerInternalAccess
+                        .refreshPlacementAfterRelocation(objectManager);
+            } else if (!nativeLoads.prefix && objectManager != null
                     && (objectManager.usesTwoAxisCursorPlacement()
                             || (camera.getX() != preSnapCameraX
                                     && (!objectManager.usesCounterBasedRespawn()
@@ -3238,8 +3252,9 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             return;
         }
         if (initializeLeaderHistory && player instanceof AbstractPlayableSprite leaderInit) {
-            // ROM Obj01_Init_Continued (s2.asm:36201-36217) / Sonic_Init_Continued
-            // -> Reset_Player_Position_Array (sonic3k.asm:21967-21977, 22202-22214):
+            // ROM Obj01_Init_Continued (s2.asm:36201-36217) and Sonic_Init_Continued
+            // (sonic3k.asm:21967-21977) call Reset_Player_Position_Array
+            // (sonic3k.asm:22202-22214):
             // the leader's own init offsets its position by (-$20, +4), zeroes
             // Sonic_Pos_Record_Index, then runs Sonic_RecordPos 64 times while
             // re-zeroing each Stat_table entry it writes. Neither buffer sits in a
@@ -3330,8 +3345,8 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * (docs/s2disasm/s2.asm:14695-14706), on <em>every</em> entry to the
      * {@code Level:} routine — including the special-stage return, which
      * re-runs the whole level routine. Those words are what
-     * {@code Obj02_CheckGameOver} reads before branching to
-     * {@code TailsCPU_Despawn} (s2.asm:41146-41155) and what
+     * {@code Obj02_CheckGameOver} (s2.asm:41142-41154) reads before calling
+     * {@code TailsCPU_Despawn}, and what
      * {@code Tails_LevelBound} clamps against, so leaving them unset disables
      * the sidekick kill plane entirely.
      *
@@ -3632,7 +3647,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             // the rebuild so slot-phased object gates (e.g. Batbrain) retain
             // their native timing.
             // A session's first object clock continues the power-on V_int_run_count
-            // (CrossResetRAM, never cleared by Level: sonic3k.asm:558-559).
+            // (VInt_Done, sonic3k.asm:558-559), which the Level load leaves intact.
             // A game whose stage load clears its V-int count starts each stage's clock from zero.
             int inheritedVblaCounter = com.openggf.game.internal.StageLoadClearsStageRam.appliesTo(activeGameModule())
                     ? 0 : objectManager != null ? objectManager.getVblaCounter()
@@ -4339,9 +4354,8 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
 
     /**
      * Ends the level's dynamic-art comparison window on the ROM iteration that
-     * writes the special-stage game mode. {@code Obj79_Star} performs
-     * {@code move.b #GameModeID_SpecialStage,(Game_Mode).w} from inside
-     * {@code RunObjects} (docs/s2disasm/s2.asm:44877), and S3K's
+     * writes the special-stage game mode. {@code Obj79_Star} (s2.asm:44872-44880) writes
+     * {@code GameModeID_SpecialStage} from inside {@code RunObjects}, and S3K's
      * {@code SSEntryFlash_GoSS} does the same from its object tick, so the rest
      * of that iteration -- {@code BuildSprites} and its DPLC queueing at
      * docs/s2disasm/s2.asm:5108-5110 -- already runs with the level's game mode

@@ -96,7 +96,9 @@ final class CdSaveManagerScreen implements NativeMenuScreen {
     }
 
     @Override public void draw() {
-        text.setProjectionMatrix(GameServices.graphics().getProjectionMatrixBuffer());
+        var graphics = GameServices.graphics();
+        if (graphics.isHeadlessMode()) return;
+        text.setProjectionMatrix(graphics.getProjectionMatrixBuffer());
         PixelFont font = text.font();
         boolean blending = glIsEnabled(GL_BLEND);
         if (!blending) glEnable(GL_BLEND);
@@ -143,7 +145,9 @@ final class CdSaveManagerScreen implements NativeMenuScreen {
         return reset ? FIRST_ROW + ROW_HEIGHT + ROW_GAP : FIRST_ROW;
     }
 
-    @Override public void setClearColor() { glClearColor(0, 0, 0, 1); }
+    @Override public void setClearColor() {
+        if (!GameServices.graphics().isHeadlessMode()) glClearColor(0, 0, 0, 1);
+    }
 
     @Override public void reset() {
         text.cleanup();

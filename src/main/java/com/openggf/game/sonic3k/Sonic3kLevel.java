@@ -1424,11 +1424,15 @@ public class Sonic3kLevel extends AbstractLevel implements com.openggf.game.inte
         collisionLayout.clearUnusedLayoutTail(this);
     }
 
-    /** Internal native row-pointer mutation, invoked inside the zone mutation pipeline. */
     public void copyLayoutRowPointer(int layer, int sourceRow, int destRow) {
+        copyLayoutRowPointer(layer, sourceRow, layer, destRow);
+    }
+
+    /** Internal native row-pointer mutation, invoked inside the zone mutation pipeline. */
+    public void copyLayoutRowPointer(int sourceLayer, int sourceRow, int destLayer, int destRow) {
         if (collisionLayout == null) throw new IllegalStateException("No encoded layout row owner");
-        collisionLayout.copyRowPointer(this, layer, sourceRow, destRow);
-        if (layer == 1) backgroundCollisionRows[destRow] = backgroundCollisionRows[sourceRow];
+        int pointer = collisionLayout.copyRowPointer(this, sourceLayer, sourceRow, destLayer, destRow);
+        if (destLayer == 1) backgroundCollisionRows[destRow] = decodeLayoutRowOffset(pointer) >= 0;
     }
 
     /** Logical layout geometry is separate from the shared level snapshot's table bytes. */

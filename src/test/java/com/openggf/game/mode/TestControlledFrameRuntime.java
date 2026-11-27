@@ -11,6 +11,7 @@ import com.openggf.control.InputHandler;
 import com.openggf.control.LogicalInputSnapshot;
 import com.openggf.control.PlayerInputState;
 import com.openggf.game.GameServices;
+import com.openggf.game.internal.StagePaletteWait;
 import com.openggf.game.patch.DelegatingGameModule;
 import com.openggf.game.session.GameplayInputFilterAccess;
 import com.openggf.level.objects.ObjectServices;
@@ -21,6 +22,9 @@ import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 /** Real native stepping: one row decision, shared filters/P2, exact HOLD and legacy neutral policy. */
@@ -44,12 +48,19 @@ class TestControlledFrameRuntime {
         fixture.stepIdleFrames(2);
     }
     void controller(GameplayFrameController controller) throws Exception {
+        controller(controller, null);
+    }
+
+    void controller(GameplayFrameController controller, StagePaletteWait.Source paletteWait) throws Exception {
         var world = fixture.runtime().getWorldSession();
         var base = world.getGameModule();
         var field = world.getClass().getDeclaredField("gameModule");
         field.setAccessible(true);
         field.set(world, new DelegatingGameModule(base, "test:frames") {
             @Override public GameplayFrameController gameplayFrameController() { return controller; }
+            @Override public <T> T getGameService(Class<T> type) {
+                return type == StagePaletteWait.Source.class ? type.cast(paletteWait) : super.getGameService(type);
+            }
         });
     }
     static LogicalInputSnapshot right(boolean jump, boolean pressed) {
@@ -67,6 +78,21 @@ class TestControlledFrameRuntime {
             decisions++; escaped = course.objectServices(); return disposition;
         }
         public void afterTick(CourseControl course, boolean advance) { afterTicks++; if (advance) advanced++; }
+    }
+
+    @Test void nativePaletteWaitReportsHeldToCallerAndController() throws Exception {
+        load();
+        var decision = new Decision(GameplayFrameDisposition.ADVANCE_NATIVE_INPUT);
+        int[] paletteSteps = {0};
+        controller(decision, ignored -> () -> paletteSteps[0]++);
+        int before = GameServices.level().getFrameCounter();
+
+        var result = ControlledFrameRuntime.step(fixture.runtime(), new InputHandler(), right(false, false));
+
+        assertEquals(List.of(LevelFrameResult.HELD, 1, 0, before, 1),
+                List.of(result, decision.afterTicks, decision.advanced, GameServices.level().getFrameCounter(),
+                        paletteSteps[0]),
+                "an advancing controller request still yields to the stage palette wait");
     }
 
     @Test void nativeAdvanceMatchesOrdinaryMovementAndAirborneInput() throws Exception {

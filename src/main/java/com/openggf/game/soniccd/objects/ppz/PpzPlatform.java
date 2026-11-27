@@ -22,7 +22,7 @@ import java.util.List;
  * frames after it is stood on, 6 dips and stays, 7 rises to the ceiling, 8 and 9 slide along X once, to the right or left.
  * The still and sliding forms (1 and 4-9) press down 1/2 pixel per frame (up to 4) under a rider; forms 0, 2 and 3 bob without. A non-zero
  * {@code oSubtype2} puts a spring on top (the shared attached spring). It is destroyed, and respawns, when its start chunk is
- * more than $280 from the camera's. {@code timeStopTimer} (time stop item) is not modelled.
+ * more than $280 from the camera's. While stopped the platform runs only its top-solid check.
  */
 @com.openggf.level.objects.CameraRelativeDraw(com.openggf.level.objects.CameraRelativeDraw.Use.CULL_ONLY)
 public final class PpzPlatform extends CdObject implements ReevaluatingSolidObject, ObjectVisualFacing.NonDirectional {
@@ -95,6 +95,10 @@ public final class PpzPlatform extends CdObject implements ReevaluatingSolidObje
 
     /** ObjPlatform_Main (scddisasm/src/Level/Palmtree Panic/Objects/Platform/Main.asm:89-118). */
     private void main(PlayableEntity player) {
+        if (flags().timeStopped()) {
+            solidObject(Entry.TOP);
+            return;
+        }
         switch ((getSpawn().subtype() >> 4) & 0xF) {          // ObjPlatform_Subtypes (:122-133)
             case 0 -> { angle = (angle + 1) & 0xFF; y = baseY + oscillation(); solidObject(Entry.TOP); }
             case 1 -> slideX(1, player);

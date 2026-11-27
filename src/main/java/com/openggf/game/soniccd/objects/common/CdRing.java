@@ -3,6 +3,7 @@ package com.openggf.game.soniccd.objects.common;
 import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
+import com.openggf.graphics.SpritePresentation;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
@@ -61,6 +62,7 @@ public final class CdRing extends CdObject
     /** oVar32: the entry's X, which every ring of the group despawns by (restored by the rewind capture). */
     private int anchorX;
     private State state;
+    private int mapFrame;
 
     /** A layout entry; its ring group comes from the level's ring placement mapping at routine 0. */
     public CdRing(ObjectSpawn spawn) {
@@ -88,7 +90,13 @@ public final class CdRing extends CdObject
         switch (state) {
             case INIT -> init(rings);
             case MAIN -> {
-                if (rings != null && rings.isCollected(ring)) state = State.SPARKLE;
+                if (rings != null && rings.isCollected(ring)) {
+                    state = State.SPARKLE;
+                } else if (!flags().timeStopped()) {
+                    // ObjRing_Main copies the running clock into this slot (Ring/Main.asm:226-232).
+                    ObjectManager objects = services().objectManager();
+                    mapFrame = CdGlobalAnimations.ringAnimFrame(objects != null ? objects.getFrameCounter() : 1);
+                }
             }
             case SPARKLE -> {
                 // ObjRing_Collect: move.b #1,oPriority(a0) (Ring/Main.asm:240); Ani_Ring ends in $FC
@@ -188,12 +196,20 @@ public final class CdRing extends CdObject
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
         RingManager rings = services().ringManager();
-        if (rings == null || state == State.INIT || ring == null) return;
-        // ObjRing_Main .DoAnim: oMapFrame = ringAnimFrame (Ring/Main.asm:226-229), read through the
-        // shared ring owner's retained clock (CdGlobalAnimations).
+        if (rings == null || state == State.INIT || ring == null || !admitsWorldSprite()) return;
+        if (state == State.MAIN && flags().timeStopped() && !rings.isCollected(ring)) {
+            if (rings.isRenderable(ring, 0)) {
+                SpritePresentation.withLayer(services().graphicsManager(), SpritePresentation.Layer.RINGS,
+                        () -> rings.drawRingFrameAt(x, y, mapFrame));
+            }
+            return;
+        }
+        // The shared owner handles the running spin and collection sparkle.
         var level = services().levelManager();
         RingDrawInternalAccess.drawPlacedObject(rings, ring, level != null ? level.getFrameCounter() : 0);
     }
+
+    public int mapFrame() { return mapFrame; }
 
     @Override
     public int getPriorityBucket() {

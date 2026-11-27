@@ -1,5 +1,7 @@
 package com.openggf.sprites.managers;
 
+import com.openggf.configuration.SonicConfiguration;
+import com.openggf.game.GameServices;
 import com.openggf.game.rules.GameRules;
 import com.openggf.control.InputActionMasks;
 import com.openggf.control.InputHandler;
@@ -19,6 +21,7 @@ import com.openggf.timer.TimerManager;
 import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.game.sonic2.kis2.Kis2Rules;
 import com.openggf.game.sonic2.kis2.Kis2Physics;
+import com.openggf.game.sonic2.kis2.Kis2SpecialStageProvider;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.animation.ScriptedVelocityAnimationProfile;
 import com.openggf.physics.ObjectTerrainUtils;
@@ -27,8 +30,12 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.Knuckles;
 import com.openggf.sprites.playable.SuperStateController;
 import com.openggf.tests.FullReset;
+import com.openggf.tests.RomTestUtils;
 import com.openggf.tests.SingletonResetExtension;
 import com.openggf.tests.TestEnvironment;
+import com.openggf.tests.rules.RequiresRom;
+import com.openggf.tests.rules.SonicGame;
+import com.openggf.tools.GameplayCaptureSession;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -36,8 +43,11 @@ import org.junit.jupiter.api.parallel.Isolated;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.mockito.Mockito.*;
 
 /** KiS2 gameRevision=3 branches, alongside the unchanged stock rule defaults. */
@@ -396,6 +406,58 @@ class TestKis2MovementRules {
                 assertEquals(0x20, player.getForcedAnimationId(), "the grab changes mappings, not anim(a0)");
                 assertEquals(0xB7, player.getMappingFrame());
             }
+        }
+    }
+
+    @Test
+    @RequiresRom(SonicGame.SONIC_2)
+    void nativeWallGrabPublishesAnimationStateBeforeWallRelease() throws Exception {
+        String lockOn = System.getProperty("kis2.rom.path");
+        assumeTrue(lockOn != null && Files.isRegularFile(Path.of(lockOn)), "KiS2 lock-on ROM required");
+        var sk = RomTestUtils.ensureSonic3kRomAvailable();
+        assumeTrue(sk != null, "S3&K character ROM required");
+        var config = GameServices.configuration();
+        config.setConfigValue(SonicConfiguration.ROMS_DIRECTORY,
+                Path.of(lockOn).toAbsolutePath().getParent().toString());
+        config.setConfigValue(SonicConfiguration.SONIC_3K_ROM, sk.getAbsolutePath());
+
+        var settings = new GameplayCaptureSession.Settings(320, "knuckles", "", "off", null, null, null);
+        try (var session = new GameplayCaptureSession(settings)) {
+            session.boot(RomTestUtils.ensureSonic2RomAvailable().toPath(), 0, 0, settings);
+            var knuckles = assertInstanceOf(Knuckles.class, session.player());
+            assertInstanceOf(Kis2SpecialStageProvider.class, knuckles.currentGameModule().getSpecialStageProvider());
+            var nativeMovement = knuckles.getMovementManager();
+
+            // EHZ1 right-wall ledge fit near the end of the act, before .checkFloorCommon
+            // corrects Y by two pixels and publishes Knuckles_BeginClimb.success.
+            knuckles.applyCustomRadii(10, 10);
+            knuckles.setAir(true);
+            knuckles.setDoubleJumpFlag(1);
+            knuckles.setCentreX((short) 0x21F5);
+            knuckles.setCentreY((short) 0x198);
+            knuckles.setAnimationId(0x20);
+            knuckles.setForcedAnimationId(0x20);
+            knuckles.setMappingFrame(0xC0);
+            knuckles.setAnimationTick(0x20);
+            knuckles.setAnimationFrameIndex(3);
+
+            method("glideHitWall", boolean.class).invoke(nativeMovement, true);
+            assertEquals(4, knuckles.getDoubleJumpFlag(), "real EHZ terrain admits the grab");
+            assertEquals(0x19A, knuckles.getCentreY());
+            assertEquals(0x21F5, knuckles.getXSubpixelRaw());
+            assertEquals(0xB7, knuckles.getMappingFrame());
+            assertEquals(0x20, knuckles.getAnimationId());
+            assertAll(
+                    () -> assertEquals(0x7F, knuckles.getAnimationTick(), "grab duration"),
+                    () -> assertEquals(0, knuckles.getAnimationFrameIndex(), "grab script cursor"));
+
+            knuckles.setOnObject(true);
+            method("updateWallClimb").invoke(nativeMovement);
+            assertEquals(2, knuckles.getDoubleJumpFlag());
+            assertEquals(0x21, knuckles.getAnimationId());
+            assertEquals(0xCB, knuckles.getMappingFrame());
+            assertEquals(7, knuckles.getAnimationTick(), "release duration");
+            assertEquals(1, knuckles.getAnimationFrameIndex(), "release script cursor");
         }
     }
 

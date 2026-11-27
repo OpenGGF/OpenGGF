@@ -33,6 +33,8 @@ public final class MmzObjects implements CdObjectRegistration {
         // Bigbom, Scarab, twin walker and spike crusher are in one index each ($23 R82x, $2F R81x, $26 R82x, $33 R82x/R83x):
         // elsewhere the ID is a null object, so they are scoped to the stages that link their art.
         registrar.object(0x23, "Bigbom", p -> MmzObjectCatalogue.offset(p, "bigbomMappings") >= 0, (spawn, r) -> new MmzBigbom(spawn));
+        registrar.object(MmzPohBee.ID, "Poh-Bee", p -> MmzObjectCatalogue.offset(p, "pohBeeMappings1") >= 0,
+                (spawn, r) -> new MmzPohBee(spawn));
         registrar.object(0x2F, "Scarab", p -> MmzObjectCatalogue.offset(p, "scarabMappings") >= 0, (spawn, r) -> new MmzScarab(spawn));
         registrar.object(0x26, "Twin walker", p -> MmzObjectCatalogue.offset(p, "twinWalkerMappings") >= 0, (spawn, r) -> new MmzTwinWalker(spawn));
         registrar.object(0x33, "Spike crusher", p -> MmzObjectCatalogue.offset(p, "spikeCrusherMappings") >= 0, (spawn, r) -> new MmzSpikeCrusher(spawn));

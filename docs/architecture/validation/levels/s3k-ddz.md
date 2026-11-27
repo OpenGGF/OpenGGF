@@ -72,7 +72,7 @@ extensions; their field/behavior evidence is not native character-route parity.
 | ROUTE / REWIND (fresh Super): entry → both phases → wraps → `$D01` | Authored controller-only BK2; seven Chaos Emeralds, no inherited clock/fraction/position seed; restore and 45-frame replay at first body damage, first chase wrap and exit | Sonic solo, donor off, actual320/800 | `TestS3kDdzAuthoredRoutes` | implemented | 2 passed, no skips, 2026-09-23 19:08 BST | Completion evidence, not native parity or full incoming DEZ continuity |
 | REWIND: phase-1 fight, first wrap, exit fade | Restore equals capture (object graph summary); 45 divergent frames discarded; recorded route continues with exact native parity to the exit | native 320 | `TestS3kDdzColdRoutes#rewindAtBossWrapAndExitRestoresTheNativeRoute` | implemented | see execution evidence | Hurt spin, asteroid split and final-hit spots are covered only inside these windows |
 | REWIND: mid-transformation, mid-flight | Registry restore equals capture; forward replay equals original | 97 rows × 2 spots × 2 restore/replay cycles | `TestS3kDdzCompatibilityMatrix` | implemented | 97/0/0/0 below; entire-registry equality, actual main/camera/roster/preset ownership | These are bounded transformation/flight spots, not every local object/phase/complete route |
-| PRESENT: background bands, FG-plane boss body, explosions, wrap | `sub_596EA` six speeds from `Events_bg+6`, `DDZ_BGDeformArray`; `DDZ_ScreenEvent` stages 0/4/8/`$C`; `PLC_BossExplosion` | native 320 every frame at entry, boss arrival, first wrap, exit | side-by-side clips `30-33-ddz-native-vs-engine-*.mp4` (engine capture exact to native positions) | implemented | historical whole-scene inspection left Hyper sparkle/HUD entry and Master Emerald flicker phase / white-fade tint; Hyper queue phase and HUD entry now have matching native follow-ups below | Pixel comparison not automated |
+| PRESENT: background bands, FG-plane boss body, explosions, wrap | `sub_596EA` six speeds from `Events_bg+6`, `DDZ_BGDeformArray`; `DDZ_ScreenEvent` stages 0/4/8/`$C`; `PLC_BossExplosion` | native 320 every frame at entry, boss arrival, first wrap, exit | side-by-side clips `30-33-ddz-native-vs-engine-*.mp4` (engine capture exact to native positions) | implemented | seeded 320px crops match native for phase-2 boss height, Hyper after-image and exit tint; Hyper queue phase and HUD entry also have matching native follow-ups below | Pixel comparison not automated |
 | OBJECT: asteroids, missiles, boss graph, slot/load order | `Obj_DDZAsteroid`, `Obj_DDZMissile`, `Obj_DDZEndBoss`; native slot histories `probe-slots0/1` | native route | seeded route test (slot order drives hit order) | implemented; native behaviour matched through the route | pass | Super branch now has `loc_8242A/82452` fixed-slot stars and six ROM frames; Hyper owner now waits for native art-queue completion;506 entry child rows match (dated follow-up below) |
 | LIFE: ring-out death and restart | Ring drain ends the form; `loc_8179E` fall below `Camera_Y + $F0`; `Kill_Character`; death countdown reload with one fresh controller | Native Sonic, all five production presets | `TestS3kDdzLifecycleProduction#ringOutEndsTheFormFallsAndReloadsDoomsday` | implemented | 5/0/0/0 below | Actual ring-out/fall/reload and live-history isolation; donor/main extensions and remaining death causes remain separate |
 | LOAD: `$D01` handover freeze | `StartNewLevel` leaves the level loop; native fade frozen | GameLoop and recording driver | `TestS3kDdzColdRoutes` | recording driver now honors the shared inactive-transition flag | focused route check passes | Exit fade freezes source gameplay while palette work continues |
@@ -842,3 +842,41 @@ this zero-error recorded-entry result against `663b86216` (676 errors, first
 row 5 X). Final ordinary/guard smoke on `c2575e4d2` changes no production or
 trace-selected input from that profile source. Full native-pixel, team/viewport,
 ending and fresh-route breadth remain the separate obligations above.
+
+
+## Boss height, Hyper trail and exit palette (2026-11-20)
+
+- `loc_81A28` (sonic3k.asm:173694-173707) writes the integer Y word at the
+  phase-2 rise. The fraction survives into the chase, where it affects both the
+  foreground ship and the attached sprites. The seeded route checks the
+  published boss Y at movie frame 521680, after the first wrap.
+- `Obj_HyperSonicKnux_Trail_Main` (sonic3k.asm:35418-35443) reads three or
+  five four-byte entries back from the next write slot. `Sonic_RecordPos`
+  (sonic3k.asm:22155-22170) advances that slot after writing. The engine
+  indexes from its latest entry, so it reads two or four ticks back.
+- `SuperHyper_PalCycle` (sonic3k.asm:4640-4645) runs before the objects.
+  `loc_85E74` (sonic3k.asm:180760-180771) whitens the resulting palette on
+  its scheduled ticks. Its rotation-disable flag stops
+  `Run_PalRotationScript` (sonic3k.asm:180167-180170), while the Hyper
+  cycle continues until the exit clears `Super_palette_status`. The
+  seeded route checks both yellow and white quill rows while rotation is
+  disabled, including after the route's wrap rewind.
+
+The 10,130-frame 320px surfaceless EGL run repeated the raw-19 command
+(Sonic, seven Super Emeralds, complete-run BK2 starting at 514214, one
+settle tick, VInt 512489, camera X fraction `$2700`). Against BizHawk 2.11,
+the selected crops now have zero differing pixels after reverse scaling RGB to
+the Genesis's three bits per component. Before the fix, the crops differed by
+1,160 ship, 948 pod and 103 spike-ball pixels at movie frame 521680, and by
+1,907 ship, 872 Master Emerald and 217 explosion pixels at 524160. The four
+Hyper trail crops differed by 303–627 pixels, including 627 at 517900. The
+two five-frame exit-flash windows differed by 317–546 pixels per frame. The
+phase-1 ship control crops stayed at zero. Local raw-20 capture evidence contains
+the crop bounds and the original colour-pair metric as well.
+
+Sonic and camera X/Y and rings match the corresponding `zone0c` trace rows
+exactly across capture frames 1–10079 (trace row ID plus one). The first
+greater-than-one difference from `native/compare_trace.py` stays at capture
+frame 10080, as the captures leave DDZ. All 10,130 engine state CSV rows agree
+with raw-19. This comparison covers the selected crops and seeded route.
+Broader whole-scene pixel, viewport and team coverage remains open.

@@ -340,6 +340,7 @@ com.openggf.game.sonic3k.objects.AizHollowTreeObjectInstance$AizTreeRevealContro
 com.openggf.game.sonic3k.objects.AizLrzRockObjectInstance
 com.openggf.game.sonic3k.objects.AizMinibossCutsceneInstance
 com.openggf.game.sonic3k.objects.AizMinibossDebrisChild
+com.openggf.game.sonic3k.objects.AizMinibossDefeatDebrisChild
 com.openggf.game.sonic3k.objects.AizMinibossImpactFlameChild
 com.openggf.game.sonic3k.objects.AizMinibossInstance
 com.openggf.game.sonic3k.objects.AizMinibossNapalmExplosionChild

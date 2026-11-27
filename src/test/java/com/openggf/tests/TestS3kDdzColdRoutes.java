@@ -3,6 +3,7 @@ package com.openggf.tests;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameServices;
+import com.openggf.game.palette.PaletteWriteSupport;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
@@ -176,6 +177,24 @@ class TestS3kDdzColdRoutes {
                 assertTrue(GameServices.level().getObjectManager().getActiveObjects().stream()
                         .filter(o -> o.getClass().getSimpleName().equals("DdzBossExplosionObjectInstance"))
                         .anyMatch(o -> (o.getX() & 0xFFFF) < 0x100), "orphaned defeat bursts spawn from (0,0)");
+            }
+            if (hyper && frame == 7466) {
+                // Native wrap observation at movie frame 521680. The integer boss Y
+                // feeds both the foreground window and the attached sprites.
+                assertEquals(194, ddz.bossY(), "phase-2 boss Y retains the fraction from phase 1");
+            }
+            if (hyper && (frame == 9973 || frame == 9978)) {
+                // Native exit observations at movie frames 524187 and 524192.
+                // Palette_rotation_disable is set throughout both Hyper cycle rows.
+                assertTrue(GameServices.paletteOwnershipRegistryOrNull().isPaletteRotationDisabled());
+                Palette line = GameServices.level().getCurrentLevel().getPalette(0);
+                List<Integer> expectedQuills = frame == 9973
+                        ? List.of(0xAEC, 0x4EC, 0x0CC) : List.of(0xEEE, 0xEEE, 0xEEE);
+                assertEquals(expectedQuills, List.of(
+                        PaletteWriteSupport.segaWordFromColor(line.getColor(2)),
+                        PaletteWriteSupport.segaWordFromColor(line.getColor(3)),
+                        PaletteWriteSupport.segaWordFromColor(line.getColor(4))),
+                        "Hyper quill palette at DDZ exit frame " + frame);
             }
             if (hyper && frame == BOMBS_ACROSS_WRAP_FRAME) {
                 // Native slot history (probe-slots1): the two bombs launched before the first wrap stay

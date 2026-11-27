@@ -232,10 +232,17 @@ public class Sonic3kSuperStateController extends SuperStateController implements
      * sonic3k.asm:7923-7926; AnPal_Load, sonic3k.asm:3137-3138). That object writes
      * {@code Palette_timer} after Player_1's pass, so the player-tick pass below
      * would release {@code object_control} after the player's movement instead of
-     * before it. Ordinary transformations keep the player-tick pass.
+     * before it. The active cycle also runs here and uses only Super_palette_status
+     * (SuperHyper_PalCycle, sonic3k.asm:4640-4645). Palette_rotation_disable
+     * gates Run_PalRotationScript (sonic3k.asm:180167-180170).
      */
-    public void advanceDoomsdayTransformationAtAnPal() {
-        if (!doomsdayForm || getState() != SuperState.TRANSFORMING) return;
+    void advanceDoomsdayPaletteAtAnPal() {
+        if (!doomsdayForm) return;
+        if (paletteState == -1) {
+            updateActivePaletteCycle();
+            return;
+        }
+        if (getState() != SuperState.TRANSFORMING) return;
         doomsdayAnPalPass = true;
         try {
             if (updateTransformationAnimation()) {
@@ -996,7 +1003,7 @@ public class Sonic3kSuperStateController extends SuperStateController implements
      */
     @Override
     protected boolean updateTransformationAnimation() {
-        // The loc_8160A form owns its AnPal_Load pass (advanceDoomsdayTransformationAtAnPal).
+        // The loc_8160A form owns its AnPal_Load pass (advanceDoomsdayPaletteAtAnPal).
         if (doomsdayForm && !doomsdayAnPalPass) return false;
         // SuperHyper_PalCycle is a separate ROM routine from
         // SonicKnux_SuperHyper. This method owns its one palette pass for the
@@ -1020,9 +1027,12 @@ public class Sonic3kSuperStateController extends SuperStateController implements
     @Override
     protected void onSuperActivated() {
         paletteState = -1;
-        paletteTimer = activeCycleTimer;
-        if (usesSonicFormPresentation()) {
-            paletteFrame = activeCycleStart;
+        // The native DDZ palette pass already owns the cursor and timer at release.
+        if (!doomsdayForm) {
+            paletteTimer = activeCycleTimer;
+            if (usesSonicFormPresentation()) {
+                paletteFrame = activeCycleStart;
+            }
         }
         // Play invincibility music (S3K Super Sonic uses mus_Invincibility).
         // loc_8160A does not call Sonic_Transform, so a Doomsday form keeps mus_DDZ.
@@ -1064,6 +1074,7 @@ public class Sonic3kSuperStateController extends SuperStateController implements
             transformationPaletteAdvancedThisFrame = false;
             return;
         }
+        if (doomsdayForm) return; // AnPal_Load already handled this cycle.
         var paletteRegistry = GameServices.paletteOwnershipRegistryOrNull();
         if (paletteRegistry != null && paletteRegistry.isPaletteRotationDisabled()) {
             return;
@@ -1110,10 +1121,9 @@ public class Sonic3kSuperStateController extends SuperStateController implements
         // period, this is how SonicKnux_SuperHyper.revertToNormal restores the
         // zone music: it plays none itself and lets Sonic_ChkInvin re-issue
         // Current_music when the timer expires.
-        // Sonic_ChkInvin decrements the native timer only when Level_frame_counter & 7 is zero.
-        // Our public timer counts individual frames; preserve protection until that boundary.
-        LevelManager nativeLevel = GameServices.levelOrNull();
-        player.setInvincibleFrames(8 - ((nativeLevel == null ? 0 : nativeLevel.getFrameCounter()) & 7));
+        // Sonic_ChkInvin decrements it only when Level_frame_counter & 7 is zero, so protection
+        // lasts until that boundary (PowerUpRules.invincibilityTimerDecimation).
+        player.setInvincibleFrames(1);
         if (normalAnimSet != null) {
             player.setAnimationSet(normalAnimSet);
         }

@@ -2,6 +2,9 @@ package com.openggf.game.soniccd;
 
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.openggf.data.compression.NemesisReader;
+import com.openggf.game.CanonicalAnimation;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameServices;
 import com.openggf.game.patch.ModuleResolutionService;
@@ -11,7 +14,16 @@ import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.GameplaySessionFactory;
 import com.openggf.game.session.GameplayTeamBootstrap;
 import com.openggf.game.session.SessionManager;
+import com.openggf.game.soniccd.level.CdStageCatalogue;
 import com.openggf.game.soniccd.objects.art.CdObjectArtProvider;
+import com.openggf.game.soniccd.objects.projector.CdProjector;
+import com.openggf.game.soniccd.player.CdAnimationIds;
+import com.openggf.game.soniccd.objects.wwz.ObjWwzAnimal;
+import com.openggf.game.soniccd.timetravel.CdTimeTravel;
+import com.openggf.level.Pattern;
+import com.openggf.level.objects.ObjectSpriteSheet;
+import com.openggf.level.render.SpriteMappingPiece;
+import com.openggf.level.resources.PlcParser;
 import com.openggf.game.soniccd.objects.wwz.ObjBataPyon;
 import com.openggf.game.soniccd.objects.wwz.ObjBouncePlatform;
 import com.openggf.game.soniccd.objects.wwz.ObjEggmanStatue;
@@ -32,6 +44,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.physics.GroundSensor;
 import com.openggf.sprites.managers.PlayableSpriteMovement;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.trace.TraceData;
 import com.openggf.tests.HeadlessTestRunner;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tools.HeadlessGameBoot;
@@ -39,7 +52,17 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import java.io.ByteArrayInputStream;
+import java.nio.channels.Channels;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.HexFormat;
+import java.util.TreeMap;
+import java.util.stream.Collectors;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -150,6 +173,217 @@ class TestWwzObjects {
         ObjSemi semi = add(new ObjSemi(spawn(sonic.getCentreX() + 0x80, sonic.getCentreY(), 0x32, 0)));
         runner.stepIdleFrames(2);
         assertTrue(launcher.isDestroyed() && freezer.isDestroyed() && goddess.isDestroyed() && semi.isDestroyed());
+    }
+
+    @Test
+    void animalPicturesUseTheDiscArtForEachForm() throws Exception {
+        boot(CdStagePayload.R61B);
+        CdObjectArtProvider art = art();
+        // In r6/gfx_lists_1b.asm MainGfxList and ProjectorGfxList both write the animal tiles at $9A00.
+        // AnimalSprites1 and AnimalSprites2 (objects/r6/animal.asm:217-223) select these pieces.
+        assertEquals(List.of(
+                animalPicture(cueAnimalPatterns(art, 1), new SpriteMappingPiece(-12, -8, 3, 2, 0, false, false, 0, false)),
+                animalPicture(cueAnimalPatterns(art, 1), new SpriteMappingPiece(-8, -12, 2, 3, 0x12, false, false, 0, false)),
+                animalPicture(cueAnimalPatterns(art, 5), new SpriteMappingPiece(-12, -8, 3, 2, 6, false, false, 0, false)),
+                animalPicture(cueAnimalPatterns(art, 5), new SpriteMappingPiece(-12, -8, 3, 2, 0xC, false, false, 0, false))),
+                List.of(animalPicture(art, true, false, 0), animalPicture(art, false, false, 0),
+                        animalPicture(art, true, true, 1), animalPicture(art, false, true, 3)));
+    }
+
+    private static Pattern[] cueAnimalPatterns(CdObjectArtProvider art, int cue) throws Exception {
+        int lists = CdStageCatalogue.entry(art.payload()).plcLists();
+        var entry = PlcParser.parse(art.image().reader(), lists, cue).entries().stream()
+                .filter(e -> e.tileIndex() == 0x4D0).findFirst().orElseThrow();
+        byte[] bytes = NemesisReader.decompress(Channels.newChannel(
+                new ByteArrayInputStream(art.image().tail(art.image().offsetOf(entry.romAddr())))));
+        Pattern[] patterns = new Pattern[bytes.length / 32];
+        for (int i = 0; i < patterns.length; i++) {
+            patterns[i] = new Pattern();
+            patterns[i].fromSegaFormat(Arrays.copyOfRange(bytes, i * 32, i * 32 + 32));
+        }
+        return patterns;
+    }
+
+    private static AnimalPicture animalPicture(CdObjectArtProvider art, boolean flying, boolean hologram, int index) {
+        ObjectSpriteSheet sheet = art.getSheet(WwzObjectArt.animalKey(flying, hologram));
+        return animalPicture(sheet.getPatterns(), sheet.getFrame(index).pieces().getFirst());
+    }
+
+    private static AnimalPicture animalPicture(Pattern[] patterns, SpriteMappingPiece piece) {
+        int width = piece.widthTiles() * 8, height = piece.heightTiles() * 8;
+        byte[] pixels = new byte[width * height];
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                int tile = piece.tileIndex() + (x / 8) * piece.heightTiles() + y / 8;
+                pixels[y * width + x] = patterns[tile].getPixel(x % 8, y % 8);
+            }
+        }
+        return new AnimalPicture(piece, HexFormat.of().formatHex(pixels));
+    }
+
+    private record AnimalPicture(SpriteMappingPiece piece, String pixels) { }
+
+    @Test
+    void realAnimalsWaitForProjectorDestructionThenFlyAndHop() throws Exception {
+        boot(CdStagePayload.R61B);
+        int x = sonic.getCentreX();
+        int y = sonic.getCentreY() - 0x70;
+        var flying = add(new ObjWwzAnimal(spawn(x, y, 0x29, 0)));
+        var hopping = add(new ObjWwzAnimal(spawn(x, y, 0x29, 1)));
+        runner.stepIdleFrames(3);
+        List<List<Integer>> actual = new ArrayList<>();
+        actual.add(animalState(flying, x, y));
+        CdTimeTravel.of(SessionManager.requireCurrentGameModule()).destroyProjector();
+        runner.stepIdleFrames(2);
+        actual.add(animalState(hopping, x, y));
+        actual.add(animalState(flying, x, y));
+        runner.stepIdleFrames(19);
+        actual.add(animalState(flying, x, y));
+        runner.stepIdleFrames(1);
+        actual.add(animalState(flying, x, y));
+        runner.stepIdleFrames(107);
+        actual.add(animalState(flying, x, y));
+        // AnimalObject_1_Routine2 (objects/r6/animal.asm:49-69) and
+        // AnimalObject_0_Routine2 (objects/r6/animal.asm:143-161).
+        assertEquals(List.of(List.of(0, 0, 0, 0), List.of(1, -4, 0, 0), List.of(127, 3, 0, 1),
+                List.of(112, 60, 0, 1), List.of(111, 63, 1, 1), List.of(-128, 3, 0, 0)), actual);
+    }
+
+    @Test
+    void projectorChildrenCircleAndFlickerThroughRewindAndVanishOnShutdown() throws Exception {
+        boot(CdStagePayload.R61B);
+        int x = sonic.getCentreX() + 0x50;
+        int y = sonic.getCentreY() - 0x40;
+        var parent = add(new CdProjector(spawn(x, y, 0x2F, 0)));
+        runner.stepIdleFrames(4);
+        int parentSlot = parent.getSlotIndex();
+        var children = live(ObjWwzAnimal.class).stream().map(ObjWwzAnimal.class::cast)
+                .filter(a -> a.projectorSlot() == parentSlot).toList();
+        var flying = animalOfSubtype(children, 0x80);
+        var ground = animalOfSubtype(children, 0x81);
+        var rewind = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+        var snapshot = rewind.capture();
+        var first = hologramCycle(flying, ground);
+        rewind.restore(snapshot);
+        var restored = live(ObjWwzAnimal.class).stream().map(ObjWwzAnimal.class::cast)
+                .filter(a -> a.projectorSlot() == parentSlot).toList();
+        var second = hologramCycle(animalOfSubtype(restored, 0x80), animalOfSubtype(restored, 0x81));
+        // AnimalObject_1_Routine4 (objects/r6/animal.asm:73-88) and
+        // AnimalObject_0_Routine8 (objects/r6/animal.asm:173-181).
+        assertEquals(first, second);
+        var samples = first.stream().map(row -> row.subList(0, 2)).collect(Collectors.toSet());
+        assertEquals(List.of(true, 64, List.of(0, 1, 2), List.of(2, 3, 4), List.of(List.of(0, 0))),
+                List.of(samples.containsAll(List.of(List.of(32, 0), List.of(0, 16), List.of(-32, 0), List.of(0, -16))),
+                        samples.size(), first.stream().map(row -> row.get(2)).distinct().sorted().toList(),
+                        first.stream().map(row -> row.get(6)).distinct().sorted().toList(),
+                        first.stream().map(row -> row.subList(4, 6)).distinct().toList()));
+        var restoredParent = (CdProjector) live(CdProjector.class).stream()
+                .filter(a -> a.getSpawn().equals(parent.getSpawn())).findFirst().orElseThrow();
+        sonic.setAnimationId(CdAnimationIds.resolve(sonic, CanonicalAnimation.ROLL));
+        restoredParent.onTouchResponse(sonic, null, 0);
+        runner.stepIdleFrames(3);
+        assertEquals(List.of(true, 0L), List.of(restoredParent.childrenInvalid(),
+                live(ObjWwzAnimal.class).stream().map(ObjWwzAnimal.class::cast)
+                        .filter(a -> a.projectorSlot() == parentSlot).count()));
+    }
+
+    private List<List<Integer>> hologramCycle(ObjWwzAnimal flying, ObjWwzAnimal ground) {
+        List<List<Integer>> states = new ArrayList<>();
+        for (int i = 0; i < 64; i++) {
+            runner.stepIdleFrames(1);
+            var state = new ArrayList<>(animalState(flying, flying.getSpawn().x(), flying.getSpawn().y()));
+            state.addAll(animalState(ground, ground.getSpawn().x(), ground.getSpawn().y()));
+            states.add(state);
+        }
+        return states;
+    }
+
+    private static ObjWwzAnimal animalOfSubtype(List<ObjWwzAnimal> animals, int subtype) {
+        return animals.stream().filter(a -> a.getSpawn().subtype() == subtype).findFirst().orElseThrow();
+    }
+
+    private static List<Integer> animalState(ObjWwzAnimal animal, int x, int y) {
+        return List.of(animal.objectX() - x, animal.objectY() - y, animal.mapFrame(), animal.spriteFlip());
+    }
+
+    @Test
+    void projectorChildrenAppearAndLeaveWithTheNativeR61bRoute() throws Exception {
+        Path trace = CdTestMedia.nativeFile("rehost-long/R61B/trace/aux_state.jsonl").getParent();
+        var json = new ObjectMapper();
+        var nativeEvents = new TreeMap<Integer, List<String>>();
+        var children = new HashSet<Integer>();
+        for (String line : Files.readAllLines(trace.resolve("aux_state.jsonl"))) {
+            if (!line.contains("\"object_type\":\"0x29\"")) continue;
+            var event = json.readTree(line);
+            int row = event.get("frame").asInt(), slot = event.get("slot").asInt();
+            if (event.get("event").asText().equals("object_appeared") && row == 2749) {
+                children.add(slot);
+                nativeEvents.computeIfAbsent(row, key -> new ArrayList<>()).add(event.get("x").asText() + "," + event.get("y").asText());
+            } else if (event.get("event").asText().equals("object_removed") && children.remove(slot)) {
+                nativeEvents.putIfAbsent(row, List.of());
+            }
+            if (row > 3210) break;
+        }
+        var actual = new TreeMap<Integer, List<String>>();
+        List<String> prior = new ArrayList<>();
+        try (var media = CdDiscDataSource.open(CdTestMedia.usaCue())) {
+            var replay = CdFixtureReplay.replay(media, tempDir,
+                    new CdFixtureReplay.Fixture(CdStagePayload.R61B, trace, trace.resolveSibling("movie.bk2")),
+                    3210, false, -1, -1, new CdFixtureReplay.Hooks() {
+                        @Override
+                        public void row(int row, AbstractPlayableSprite player) {
+                            List<String> positions = live(ObjWwzAnimal.class).stream().map(ObjWwzAnimal.class::cast)
+                                    .filter(a -> a.projectorSlot() >= 0)
+                                    .map(a -> String.format("0x%04X,0x%04X", a.getSpawn().x(), a.getSpawn().y()))
+                                    .sorted().toList();
+                            if (!prior.equals(positions)) {
+                                actual.put(row, positions);
+                                prior.clear();
+                                prior.addAll(positions);
+                            }
+                        }
+                    });
+            assertEquals(-1, replay.firstErrorRow(), "Sonic and camera must follow the native route");
+        }
+        nativeEvents.replaceAll((row, values) -> values.stream().sorted().toList());
+        assertEquals(List.of(2, 0), nativeEvents.values().stream().map(List::size).toList(),
+                "the native route must record both children entering and leaving");
+        assertEquals(nativeEvents, actual);
+    }
+
+    @Test
+    void goodFutureFlightMatchesTheNativeR61cPlacement() throws Exception {
+        Path trace = CdTestMedia.nativeFile("rehost-fixtures/R61C/trace/aux_state.jsonl").getParent();
+        var data = TraceData.load(trace);
+        var json = new ObjectMapper();
+        var nativePositions = new TreeMap<Integer, List<Integer>>();
+        for (String line : Files.readAllLines(trace.resolve("aux_state.jsonl"))) {
+            if (!line.contains("\"event\":\"object_near\"") || !line.contains("\"type\":\"0x29\"")) continue;
+            var event = json.readTree(line);
+            int row = event.get("frame").asInt();
+            if (row < 596 || row > 649 || event.get("slot").asInt() != 45
+                    || CdFixtureReplay.completedRow(data, row) != row) continue;
+            nativePositions.put(row, List.of(Integer.decode(event.get("x").asText()),
+                    Integer.decode(event.get("y").asText()), Integer.decode(event.get("routine").asText())));
+        }
+        var actual = new TreeMap<Integer, List<Integer>>();
+        try (var media = CdDiscDataSource.open(CdTestMedia.usaCue())) {
+            var replay = CdFixtureReplay.replay(media, tempDir,
+                    new CdFixtureReplay.Fixture(CdStagePayload.R61C, trace, trace.resolveSibling("movie.bk2")),
+                    649, false, -1, -1, new CdFixtureReplay.Hooks() {
+                        @Override
+                        public void row(int row, AbstractPlayableSprite player) {
+                            int complete = CdFixtureReplay.completedRow(data, row);
+                            if (!nativePositions.containsKey(complete)) return;
+                            live(ObjWwzAnimal.class).stream().map(ObjWwzAnimal.class::cast)
+                                    .filter(a -> a.getSpawn().x() == 0x488 && a.getSpawn().y() == 0x4D0)
+                                    .findFirst().ifPresent(a -> actual.put(complete, List.of(a.objectX(), a.objectY(), a.routine())));
+                        }
+                    });
+            assertEquals(-1, replay.firstErrorRow(), "Sonic and camera must follow the native route");
+        }
+        assertTrue(nativePositions.size() >= 40, "the route must observe the flying animal for at least 40 rows");
+        assertEquals(nativePositions, actual);
     }
 
     // ---- Piston ------------------------------------------------------------------------------------
@@ -419,4 +653,57 @@ class TestWwzObjects {
         assertEquals(2, launcher.routine(), "waiting: no rider");
         assertEquals(1, ((WwzObject) sides.get(0)).mapFrame());
     }
+
+    @Test
+    void projectorChildrenReturnWhenRewindingAcrossDestruction() throws Exception {
+        boot(CdStagePayload.R61B);
+        var spawn = spawn(sonic.getCentreX() + 0x50, sonic.getCentreY() - 0x40, 0x2F, 0);
+        var projector = add(new CdProjector(spawn));
+        runner.stepIdleFrames(12);
+        int parentSlot = projector.getSlotIndex();
+        var rewind = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+        var snapshot = rewind.capture();
+        List<List<HologramState>> reference = new ArrayList<>();
+        for (int frame = 0; frame < 40; frame++) {
+            runner.stepIdleFrames(1);
+            reference.add(hologramStates(parentSlot));
+        }
+
+        rewind.restore(snapshot);
+        var restoredParent = (CdProjector) live(CdProjector.class).stream()
+                .filter(p -> p.getSpawn().equals(spawn)).findFirst().orElseThrow();
+        sonic.setAnimationId(CdAnimationIds.resolve(sonic, CanonicalAnimation.ROLL));
+        restoredParent.onTouchResponse(sonic, null, 0);
+        runner.stepIdleFrames(3);
+        // ProjectorObject_0_Routine4 (objects/r6/projector.asm:111-120) invalidates both children.
+        assertTrue(restoredParent.childrenInvalid());
+        assertEquals(List.of(), hologramStates(parentSlot), "both holograms disappear within three frames");
+        // ProjectorExplosionRecords (objects/r6/projector.asm:220-233) ends at $28, then
+        // ProjectorStartShutdown (objects/r6/projector.asm:150-153) waits another $3C frames.
+        runner.stepIdleFrames(0x28 + 0x3C);
+        assertTrue(restoredParent.isDestroyed(), "the projector finishes its shutdown before rewind");
+
+        rewind.restore(snapshot);
+        // AnimalObject_1_Routine4 (objects/r6/animal.asm:73-88) and
+        // AnimalObject_0_Routine8 (objects/r6/animal.asm:173-181).
+        assertEquals(List.of(List.of(0x80, 0x2F, 4), List.of(0x81, 0x2F, 8)),
+                hologramStates(parentSlot).stream()
+                        .map(state -> List.of(state.subtype(), state.parentId(), state.routine())).toList(),
+                "rewind recreates the flying and ground holograms linked to the projector");
+        for (int frame = 0; frame < reference.size(); frame++) {
+            runner.stepIdleFrames(1);
+            assertEquals(reference.get(frame), hologramStates(parentSlot), "replayed frame " + (frame + 1));
+        }
+    }
+
+    private List<HologramState> hologramStates(int parentSlot) {
+        return live(ObjWwzAnimal.class).stream().map(ObjWwzAnimal.class::cast)
+                .filter(animal -> animal.projectorSlot() == parentSlot)
+                .map(animal -> new HologramState(animal.getSpawn().subtype(), animal.projectorId(), animal.routine(),
+                        animal.objectX(), animal.objectY(), animal.mapFrame(), animal.spriteFlip()))
+                .sorted(Comparator.comparingInt(HologramState::subtype))
+                .toList();
+    }
+
+    private record HologramState(int subtype, int parentId, int routine, int x, int y, int mapFrame, int spriteFlip) { }
 }

@@ -5,6 +5,7 @@ import com.openggf.audio.GameMusic;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.GameServices;
 import com.openggf.game.ResultsScreen;
+import com.openggf.game.internal.NativeSpecialStageResultsClock;
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.SpecialStageAccessType;
 import com.openggf.game.SpecialStageDebugCapabilities;
@@ -39,21 +40,15 @@ import java.util.Optional;
  * when the player has 50 or more rings. Each stage awards one of seven
  * Chaos Emeralds upon successful completion.
  */
-public class Sonic2SpecialStageProvider implements SpecialStageProvider, com.openggf.game.internal.NativeSpecialStagePacing {
+public class Sonic2SpecialStageProvider implements SpecialStageProvider,
+        com.openggf.game.internal.NativeSpecialStagePacing, NativeSpecialStageResultsClock {
     private final Sonic2SpecialStageManager manager;
     private SpecialStageViewport viewport = SpecialStageViewport.nativeViewport();
     private boolean resultsPlcSubmitted;
-    /**
-     * The two per-player ring totals latched at the ROM's own copy point, the
-     * {@code move.w (Ring_count).w,(Bonus_Countdown_1).w} /
-     * {@code move.w (Ring_count_2P).w,(Bonus_Countdown_2).w} pair that runs
-     * immediately before {@code Obj6F} is created (docs/s2disasm/s2.asm:6784-6785,
-     * :6797). They must be read before {@link #resetForResults()} clears the
-     * stage's players.
-     */
-    private int bonusCountdown1;
-    private int bonusCountdown2;
-    private boolean ringsLatched;
+    // Created after the live-stage rewind boundary, immediately before Obj6F.
+    private ResultsRings resultsRings;
+
+    private record ResultsRings(int p1, int p2, boolean perfect) {}
 
     @Override
     public SpecialStageDebugCapabilities debugCapabilities() {
@@ -167,6 +162,7 @@ public class Sonic2SpecialStageProvider implements SpecialStageProvider, com.ope
     @Override
     public void initializeStage(int stageIndex, SpecialStageStartupPolicy policy) throws IOException {
         Objects.requireNonNull(policy, "policy");
+        resultsRings = null;
         manager.reset();
         manager.initialize(stageIndex);
         if (policy == SpecialStageStartupPolicy.FAST) {
@@ -202,14 +198,23 @@ public class Sonic2SpecialStageProvider implements SpecialStageProvider, com.ope
 
     @Override
     public void resetForResults() {
-        bonusCountdown1 = manager.getRingsCollected(
-                Sonic2SpecialStagePlayer.PlayerType.SONIC);
-        bonusCountdown2 = manager.getRingsCollected(
-                Sonic2SpecialStagePlayer.PlayerType.TAILS);
-        ringsLatched = true;
+        // Read the ring words and Perfect_rings_flag before reset discards the stage.
+        // The stage rewind snapshot already owns both inputs to the flag.
+        var rings = new ResultsRings(
+                manager.getRingsCollected(Sonic2SpecialStagePlayer.PlayerType.SONIC),
+                manager.getRingsCollected(Sonic2SpecialStagePlayer.PlayerType.TAILS),
+                manager.hasPerfectRingCount());
         reset();
+        resultsRings = rings;
         resultsPlcSubmitted = false;
         onEnterResults();
+    }
+
+    @Override
+    public boolean awaitsResultsEntryVblank() {
+        // Opt in to the existing results clock for the VintID_Level loop
+        // (SpecialStage, s2.asm:6797-6805). The S1 finish-loop wait is separate.
+        return false;
     }
 
     @Override
@@ -348,18 +353,11 @@ public class Sonic2SpecialStageProvider implements SpecialStageProvider, com.ope
         }
         DefaultObjectServices services = new DefaultObjectServices(
                 gameplayMode, EngineServices.current());
-        // The ROM's two bonus countdowns drain in parallel, one ring each per
-        // frame (Obj6F_TallyScore, docs/s2disasm/s2.asm:28376-28396), so the
-        // tally lasts as long as the LONGER of them -- never their sum. Use the
-        // split latched at the ROM's copy point; a caller that never ran
-        // resetForResults() has no split to offer, which is the ROM's
-        // single-player shape (one countdown loaded, the other left at zero,
-        // s2.asm:6773-6785).
-        int countdown1 = ringsLatched ? bonusCountdown1 : ringsCollected;
-        int countdown2 = ringsLatched ? bonusCountdown2 : 0;
+        // Standalone callers may create a card without a live-stage handoff.
+        ResultsRings rings = resultsRings != null ? resultsRings : new ResultsRings(ringsCollected, 0, false);
         return ResultsScreen.withBeforeUpdate(ObjectConstructionContext.construct(services,
                 () -> new Sonic2SpecialStageResultsScreen(
-                        countdown1, countdown2, gotEmerald, stageIndex, totalEmeraldCount, services)),
+                        rings.p1(), rings.p2(), gotEmerald, rings.perfect(), stageIndex, totalEmeraldCount, services)),
                 this::onEnterResults);
     }
 
@@ -404,6 +402,7 @@ public class Sonic2SpecialStageProvider implements SpecialStageProvider, com.ope
 
     @Override
     public void reset() {
+        resultsRings = null;
         manager.reset();
     }
 

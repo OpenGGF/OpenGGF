@@ -2,6 +2,7 @@ package com.openggf.game.soniccd.zones.ccz;
 
 import com.openggf.game.GameServices;
 import com.openggf.game.soniccd.CdStagePayload;
+import com.openggf.game.soniccd.level.CdStageCatalogue;
 import com.openggf.game.soniccd.level.CdStageImage;
 import com.openggf.level.scroll.AbstractZoneScrollHandler;
 import com.openggf.level.scroll.ScrollOutputRebuilder;
@@ -70,6 +71,7 @@ public final class CczScrollHandler extends AbstractZoneScrollHandler implements
     private final ScrollEffectComposer composer = new ScrollEffectComposer();
 
     private byte[] wobble;
+    private int backgroundPeriod;
 
     // Native RAM this routine owns: cameraBgX/Bg2X/Bg3X/BgY are 16.16 longs (_Definitions.inc), the
     // deformation array is deformBuffer (rates first, then the 64-entry curve), bgWaterDeform is a word.
@@ -107,11 +109,15 @@ public final class CczScrollHandler extends AbstractZoneScrollHandler implements
         return null;
     }
 
+    private CdStageImage stageImage() {
+        CdStageImage stage = image.get();
+        if (stage == null) throw new IllegalStateException(payload + ": stage file not loaded yet");
+        return stage;
+    }
+
     private byte[] wobble() {
         if (wobble == null) {
-            CdStageImage stage = image.get();
-            if (stage == null) throw new IllegalStateException(payload + ": stage file not loaded yet");
-            wobble = stage.slice(CczDiscTables.rows(payload, "wobble").get(0).a(), WOBBLE_SIZE);
+            wobble = stageImage().slice(CczDiscTables.rows(payload, "wobble").get(0).a(), WOBBLE_SIZE);
         }
         return wobble;
     }
@@ -324,7 +330,19 @@ public final class CczScrollHandler extends AbstractZoneScrollHandler implements
     }
 
     /**
-     * The hscroll pass (…Act1Present_ScrollWaterRowsSetup :451-476, ...ScrollWriteWaterRowsMain :506-542).
+     * Each stage writes the foreground word in the high half of the packed line, with a
+     * wobble at and below world Y $5C0:
+     * R31A CollisionChaos_Act1Present_ScrollWriteWaterRow (Level/Collision Chaos/Scroll (Act 1 Present).asm:514-539);
+     * R31B loc_202AFE (r3/scroll_1b.asm:502-526);
+     * R31C loc_202C22 (r3/scroll_1c.asm:476-500);
+     * R31D loc_202BEA (r3/scroll_1d.asm:464-488);
+     * R32A loc_202C1A (r3/scroll_2a.asm:477-501);
+     * R32B loc_202AE4 (r3/scroll_2b.asm:493-517);
+     * R32C loc_202C1E (r3/scroll_2c.asm:474-498);
+     * R32D loc_202BEE (r3/scroll_2d.asm:464-488);
+     * R33C loc_202C10 (r3/scroll_3c.asm:473-497);
+     * R33D loc_202BD8 (r3/scroll_3d.asm:460-484).
+     *
      * Registers: d1 groups left, d2 first-group skip, d4 background line of the next group, a2 row word,
      * a3 section bound, d5 wobble phase.
      */
@@ -505,6 +523,20 @@ public final class CczScrollHandler extends AbstractZoneScrollHandler implements
         lastXDiff = s.lastXDiff();
         lastFrame = s.lastFrame();
         initialised = s.initialised();
+    }
+
+    @Override
+    public int getBgPeriodWidth() {
+        if (backgroundPeriod == 0) {
+            CdStageImage stage = stageImage();
+            int layouts = CdStageCatalogue.entry(payload).levelLayouts();
+            int background = layouts + stage.u16(layouts + 2);
+            // StageMapBg (r3/data_1a.asm:76-78) begins with the last 256px column index.
+            // Align the window to the 512px repeat so static rows keep their phase at the edge.
+            int width = (stage.u8(background) + 1) * 256;
+            backgroundPeriod = Math.ceilDiv(width, 512) * 512;
+        }
+        return backgroundPeriod;
     }
 
     @Override

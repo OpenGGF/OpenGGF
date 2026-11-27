@@ -220,7 +220,7 @@ public class PsgChip {
         if (ch < 0 || ch >= CHANNELS) {
             return;
         }
-        int clamped = Math.clamp(gain, 0, 256);
+        int clamped = Math.clamp(gain, 0, 4 * 256);
         if (outputGains[ch] != clamped) {
             outputGains[ch] = clamped;
             updateAmplitude(ch);

@@ -5,6 +5,7 @@ import com.openggf.game.soniccd.objects.art.CdObjectArtProvider;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectVisualFacing;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 
 import java.util.List;
 
@@ -13,7 +14,7 @@ import java.util.List;
  * frame {@code subtype & $7F} over tile $6C6, rising 2 pixels a frame for 24 frames, then deleted.
  * Sonic 1's Obj29 instead rises with a velocity and gravity.
  */
-public final class CdPoints extends CdObject implements ObjectVisualFacing.NonDirectional {
+public final class CdPoints extends CdObject implements ObjectVisualFacing.NonDirectional, SpawnRewindRecreatable {
     private int routine;
     private int timer;
 

@@ -262,8 +262,7 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
 
     /**
      * Adjusts tracking state after a camera wrap-back so that the next
-     * {@link #update(int)} call sees a small positive delta instead of a
-     * large negative one, preventing a spurious {@link #refreshWindow(int)}.
+     * {@link #update(int)} call advances from the wrapped coarse position.
      *
      * @param wrapDelta positive distance the camera X was decreased
      */
@@ -350,8 +349,8 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
     /**
      * Counter-based placement whose spawner runs before the object pass, as Sonic CD's
      * {@code SpawnObjects; RunObjects} (Level/Main.asm:402-403) with the camera the previous
-     * frame left, instead of Sonic 1's ObjPosLoad after DeformLayers. The cursor and respawn
-     * semantics are unchanged; only the point in the frame moves.
+     * frame left. Its scan uses that camera's coarse X while preserving both layout cursors
+     * (SpawnObjects_Main, Level/Object Spawner.asm:109-120).
      *
      * <p>The level's first window loads in that same pass: {@code objSpawnRoutine} 0 runs
      * {@code SpawnObjects_Init} and falls into the forward walk inside the first main-loop
@@ -570,7 +569,7 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
     }
 
     /**
-     * Load_Sprites' Camera_Y strip start d3 (sonic3k.asm:37719-37763), or -1 when
+     * Camera_Y strip start d3 in loc_1B91A (sonic3k.asm:37720-37766), or -1 when
      * the pass loads nothing. The coarse words compare signed ({@code bge}), so a
      * wrapped camera moving from $FF00 to $0680 counts as moving down.
      */
@@ -649,7 +648,7 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
      * <ul>
      *   <li>forward load / right trim edge = {@code loadCoarse + $280} at native width,
      *       widened only to {@code viewportWidth + $80} when that is larger
-     *       ({@code ObjectsManager_GoingForward} right cursor, s2.asm:33099;
+     *       ({@code ObjectsManager_GoingForward} right cursor, s2.asm:33101-33117;
      *       {@code GoingBackward} right trim, s2.asm:33076)</li>
      *   <li>backward load / left trim edge = {@code loadCoarse - $80}
      *       ({@code GoingBackward} left cursor, s2.asm:33045;
@@ -1154,13 +1153,9 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
         }
 
         int cameraChunk = toCoarseChunk(cameraX);
-        if (counterBasedRespawn
+        if (counterBasedRespawn && !spawnerBeforeObjectPass
                 && Math.abs((long) cameraX - lastCameraX) > (getLoadAhead() + UNLOAD_BEHIND)) {
-            // Engine-specific catch-up for teleports/manual camera jumps.
-            // The ROM only advances one 0x80 chunk at a time because camera
-            // movement is continuous, but tests/editor flows can relocate the
-            // camera by several chunks between frames. Rebuild the current
-            // window immediately so the active set matches the jumped camera.
+            // Rebuild the destination window after an engine camera jump.
             lastScrollBackward = cameraX < lastCameraX;
             refreshCounterBased(cameraX);
             return;
@@ -1187,10 +1182,22 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
             return;
         }
 
-        if (counterBasedRespawn) {
-            // S1 mode: two-cursor system with counter tracking.
-            // ROM processes exactly one chunk step per frame via v_opl_screen.
-            // Do not jump the cursor state directly to the current camera chunk.
+        if (counterBasedRespawn && spawnerBeforeObjectPass) {
+            // SpawnObjects_Main (Level/Object Spawner.asm:107-127) scans from
+            // the live coarse X and keeps the existing layout cursors.
+            lastScrollBackward = cameraChunk < lastCameraChunk;
+            if (lastScrollBackward) {
+                if (cameraChunk >= UNLOAD_BEHIND) {
+                    spawnBackwardCountered(cameraChunk);
+                }
+                trimRightCountered(cameraChunk);
+            } else {
+                spawnForwardCountered(cameraChunk);
+                trimLeftCountered(cameraChunk);
+            }
+            lastCameraChunk = cameraChunk;
+        } else if (counterBasedRespawn) {
+            // Engine policy for incremental counter-based cursor advancement.
             if (cameraChunk > lastCameraChunk) {
                 lastScrollBackward = false;
                 int oplChunk = Math.min(lastCameraChunk + CHUNK_STEP, cameraChunk);
@@ -1294,6 +1301,27 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
         // ROM parity: do NOT clear destroyedInWindow on window-leave (see update()).
         lastCameraX = cameraX;
         lastCameraChunk = cameraChunk;
+    }
+
+    void rebuildRelocatedWindow(int cameraX, SpawnCallback create) {
+        lastCameraX = cameraX;
+        lastCameraChunk = toCoarseChunk(cameraX);
+        lastScrollBackward = false;
+        if (counterBasedRespawn) {
+            firstWindowPending = false;
+            inlineCallback = create;
+            try {
+                refreshCounterBased(cameraX);
+            } finally {
+                inlineCallback = null;
+            }
+        } else if (twoAxisCursorPlacement) {
+            resetTwoAxisWindow(cameraX);
+            cursorLoadPassPending = true;
+        } else {
+            refreshWindow(cameraX);
+            cursorLoadPassPending = true;
+        }
     }
 
     public List<ObjectSpawn> getAllSpawns() {
@@ -1973,10 +2001,14 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
         if (spawn.respawnTracked()) {
             // ROM: OPL_MovedRight increments the forward respawn counter
             // before OPL_SpawnObj tests/skips the remembered object
-            // (docs/s1disasm/s1disasm/_inc/ObjPosLoad.asm:195-203).
+            // (docs/s1disasm/_inc/ObjPosLoad.asm:195-203).
             int counter = fwdCounter & 0xFF;
             fwdCounter = (fwdCounter + 1) & 0xFF;
-            return trySpawnCountered(index, counter);
+            boolean canContinue = trySpawnCountered(index, counter);
+            // SpawnObjects_Forward (Level/Object Spawner.asm:198-204) also
+            // rewinds the saved-flags counter before parking on the failed entry.
+            if (!canContinue && failedSpawnUnmarksEntry) fwdCounter = counter;
+            return canContinue;
         } else {
             // Non-tracked objects always spawn (ROM: loc_DA3C bpl → OPL_MakeItem)
             if (!(remembered.get(index) && !stayActive.get(index))

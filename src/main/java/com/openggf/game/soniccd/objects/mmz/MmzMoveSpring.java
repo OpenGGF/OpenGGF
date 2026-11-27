@@ -6,7 +6,6 @@ import com.openggf.game.soniccd.objects.common.CdSpring;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectVisualFacing;
-import com.openggf.physics.ObjectTerrainUtils;
 
 import java.util.List;
 
@@ -76,11 +75,8 @@ public final class MmzMoveSpring extends MmzObject implements ObjectVisualFacing
     private void move() {
         boolean right = xSpeed >= 0;
         int probeX = x + (right ? 0x20 : -0x18);
-        // CheckBlockLeft passes X unflipped (common/object_block_collide.asm:384-403, no eori.w #$F, FixBugs = 0):
-        // Sonic CD's object left-wall rule (ObjectLeftWallProbeEntry.RAW).
-        int wall = right
-                ? ObjectTerrainUtils.checkRightWallDist(probeX, y).distance()
-                : ObjectTerrainUtils.checkLeftWallDist(probeX, y).distance();
+        // MoveSpringMain (objects/r8/move_spring.asm:69-82) probes before the floor check.
+        int wall = checkWall(probeX, y, !right).distance();
         boolean turn = true;
         if (wall >= 7) {                                            // cmpi.w #7,d1; bmi
             int travelled = Math.abs((short) (x - initialX));
@@ -102,7 +98,7 @@ public final class MmzMoveSpring extends MmzObject implements ObjectVisualFacing
     }
 
     private int floorDistance() {
-        return ObjectTerrainUtils.checkFloorDist(x, y, yRadius).distance();
+        return checkFloor(x, y, yRadius).distance();
     }
 
     @Override protected boolean despawnsByCheckObjDespawn() { return true; }

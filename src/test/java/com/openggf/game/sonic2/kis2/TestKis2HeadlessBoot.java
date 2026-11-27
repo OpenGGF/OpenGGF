@@ -19,9 +19,15 @@ import com.openggf.game.session.GameplaySessionFactory;
 import com.openggf.game.session.GameplayTeamBootstrap;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic2.Sonic2GameModule;
+import com.openggf.graphics.SpritePresentation;
+import com.openggf.graphics.SpriteSatInternalAccess;
+import com.openggf.graphics.SpriteSatMaskPostProcessor;
 import com.openggf.level.Level;
 import com.openggf.level.Palette;
 import com.openggf.level.Pattern;
+import com.openggf.level.render.SpritePresentationRenderer;
+import com.openggf.level.rings.RingDrawInternalAccess;
+import com.openggf.level.rings.RingManager;
 import com.openggf.physics.GroundSensor;
 import com.openggf.sprites.playable.Knuckles;
 import com.openggf.game.CanonicalAnimation;
@@ -38,8 +44,10 @@ import org.junit.jupiter.api.io.TempDir;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
@@ -384,6 +392,53 @@ class TestKis2HeadlessBoot {
             level.loadZoneAndAct(0, 1);
             assertNotSame(current, module.getGameService(
                     com.openggf.game.resources.PlcLifecycleService.class));
+        }
+    }
+
+    @Test
+    void kiS2PlacedRingDisappearsWhenItsCentreCrossesTheTopEdge() throws Exception {
+        File s2File = RomTestUtils.ensureSonic2RomAvailable();
+        assumeTrue(Kis2TestRoms.lockOnDumpOrNull() != null, "KiS2 lock-on dump required");
+        try (var rom = new Rom()) {
+            assertTrue(rom.open(s2File.getAbsolutePath()));
+            var config = SonicConfigurationService.createStandalone(tempDir);
+            config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "knuckles");
+            config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "");
+            config.setConfigValue(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, false);
+            var engine = catalogueBackedContext(config);
+            EngineServices.configure(engine);
+            engine.roms().setRom(rom);
+            var context = HeadlessGameBoot.openResolvedSessionForBoot(engine, new Sonic2GameModule());
+            GameplaySessionFactory.attachManagers(context, engine);
+            var graphics = engine.graphics();
+            graphics.initHeadless();
+
+            var module = assertInstanceOf(Kis2GameModule.class, SessionManager.requireCurrentGameModule());
+            assertEquals(Kis2GameModule.Fidelity.TIER_TWO, module.fidelity());
+            var team = GameplayTeamBootstrap.registerActiveTeam(module, GameServices.sprites(), config);
+            var camera = GameServices.camera();
+            camera.setFocusedSprite(team.mainSprite());
+            var levelManager = GameServices.level();
+            levelManager.loadZoneAndAct(0, 0);
+            Level level = levelManager.getCurrentLevel();
+            var ring = level.getRings().stream()
+                    .filter(spawn -> spawn.y() - 4 >= camera.getMinY() && spawn.y() + 4 <= camera.getMaxY())
+                    .findFirst().orElseThrow();
+            int cameraX = Math.max(0, ring.x() - 32);
+            var rings = new RingManager(List.of(ring), level.getRingSpriteSheet(), null, null, null);
+            rings.ensurePatternsCached(graphics, 200);
+            rings.reset(cameraX);
+
+            java.util.function.IntFunction<SpritePresentation.Frame> frameAt = cameraY ->
+                    SpritePresentationRenderer.prepare(graphics, cameraX, cameraY, () -> {
+                        SpriteSatInternalAccess.beginCollection(graphics,
+                                SpriteSatMaskPostProcessor.Raster.h40(cameraX, cameraY, 224));
+                        RingDrawInternalAccess.drawPlaced(rings, 0, cameraY, camera.screenYWrapValue());
+                        graphics.endSpriteSatCollectionAndReplay();
+                    });
+            assertFalse(frameAt.apply(ring.y() - 4).tiles().isEmpty(), "centre four pixels on screen");
+            assertTrue(frameAt.apply(ring.y() + 4).tiles().isEmpty(),
+                    "the shipped mask-before-bias cull rejects a ring centred four pixels above the screen");
         }
     }
 

@@ -1,9 +1,12 @@
 package com.openggf.game.soniccd.objects.mmz;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.soniccd.objects.common.CdAnimator;
 import com.openggf.graphics.GLCommand;
+import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectVisualFacing;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
 
 import java.util.List;
@@ -14,10 +17,10 @@ import java.util.List;
  * It is deleted once the parent is gone. It has no despawn check of its own.
  */
 @com.openggf.level.objects.CameraRelativeDraw(com.openggf.level.objects.CameraRelativeDraw.Use.CULL_ONLY)
-final class MmzMechaBuSaw extends MmzObject implements TouchResponseProvider, ObjectVisualFacing.NonDirectional {
-    private final MmzMechaBu parent;
+final class MmzMechaBuSaw extends MmzObject implements TouchResponseProvider, ObjectVisualFacing.NonDirectional,
+        SpawnRewindRecreatable {
     /** oVar3E: the badnik's slot, which the saw tests each turn (objects/r8/mecha_bu.asm:130-131). */
-    private final int parentSlot;
+    private int parentSlot;
     private int routine;
     private int timer;                           // oVar2A
     private int dx;                              // oVar2C
@@ -25,13 +28,18 @@ final class MmzMechaBuSaw extends MmzObject implements TouchResponseProvider, Ob
     private int anim;
     private int statusFlip;
     private int mapFrame;
-    private com.openggf.game.soniccd.objects.common.CdAnimator animator;
+    private transient CdAnimator animator;
+    private final CdAnimator.StageRewind rewindAnimation =
+            new CdAnimator.StageRewind(() -> artProvider().image(), () -> animator, restored -> animator = restored);
     private int spriteFlip;
 
     MmzMechaBuSaw(ObjectSpawn spawn, MmzMechaBu parent) {
-        super(spawn, "MechaBuSaw");
-        this.parent = parent;
+        this(spawn);
         this.parentSlot = parent.getSlotIndex();
+    }
+
+    private MmzMechaBuSaw(ObjectSpawn spawn) {
+        super(spawn, "MechaBuSaw");
     }
 
     void flipHorizontally() {
@@ -49,7 +57,8 @@ final class MmzMechaBuSaw extends MmzObject implements TouchResponseProvider, Ob
             width = 0xC;
             yRadius = 0x10;
         }
-        if (!slotHoldsId(parentSlot, 0x24)) {                       // cmpi.b #$24,oID(a1); bne DeleteObject
+        if (!(slotOccupant(parentSlot) instanceof AbstractObjectInstance parent)
+                || parent.getLiveObjectId() != 0x24) {              // cmpi.b #$24,oID(a1); bne DeleteObject
             setDestroyed(true);
             return;
         }

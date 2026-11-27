@@ -2,6 +2,7 @@ package com.openggf.game.soniccd.objects.mmz;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.soniccd.objects.common.CdSpring;
+import com.openggf.game.soniccd.timetravel.CdTimeTravel;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManagerInternalAccess;
@@ -201,14 +202,13 @@ public final class MmzSpikes extends MmzObject
     }
 
     /**
-     * SolidObject, then hurt a player who stands on the top spikes (trap_1.asm:166-198): not during a warp, not
-     * invincible, not already hurt, and with the Y rewound by one frame of speed first, as Sonic 1's spikes do.
+     * The warp gate follows the top contact in loc_20BF64 (objects/r8/trap_1.asm:169-193),
+     * loc_20D382 (objects/r8/trap_2.asm:650-673), and loc_20DEAC (objects/r8/trap_3.asm:592-616).
      */
     private void standOnSpikes(AbstractPlayableSprite sprite) {
         if (!solidObject(Entry.SOLID)) return;                                         // beq: d0 = 0, no top or bottom contact
         if (!stoodOn(sprite)) return;                                                  // btst #3,oFlags(a0)
-        var tt = com.openggf.game.soniccd.timetravel.CdTimeTravel.of(services().gameModule());
-        if ((tt != null && tt.warping()) || sprite.getInvincibleFrames() > 0) return;  // tst.b warping / invincible
+        if (CdTimeTravel.starsActive(services().gameModule()) || sprite.getInvincibleFrames() > 0) return;
         if (sprite.isHurt() || sprite.getDead() || sprite.getInvulnerableFrames() > 0) return;
         NativePositionOps.addYPos16_16(sprite, -(sprite.getYSpeed() << 8));
         boolean hadRings = sprite.getRingCount() > 0;

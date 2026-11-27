@@ -1,12 +1,12 @@
-# Audio manifest v1
+# Audio manifest
 
-`audio/audio-manifest.yaml` is present only when streamed audio is declared. Its
-authoritative field sets are `ModAudioManifestParser.ROOT`, `TRACK`, and `SFX` in
+`audio/audio-manifest.yaml` is present when music or SFX assets are declared. Its
+authoritative field sets are `ModAudioManifestParser.ROOT`, `TRACK`, `PACKAGE_TRACK`, and `SFX` in
 [`ModAudioManifestParser`](../../../src/main/java/com/openggf/mods/ModAudioManifestParser.java).
 Decode, duration, PCM-byte, sample-rate, channel, and gain bounds come from
 [`ModInputLimits`](../../../src/main/java/com/openggf/io/ModInputLimits.java).
 
-Tracks require `id`, `assetPath`, `loop`, `loopStartFrame`, `gain`, and
+Streamed tracks in versions 1 and 2 require `id`, `assetPath`, `loop`, `loopStartFrame`, `gain`, and
 `tempoEffects`; `loopEndFrame` may appear only for a looping track. A non-looping
 track requires start frame 0 and no end frame. SFX entries require `id`, `assetPath`,
 and `gain`. Assets are normalized contained WAV/Ogg paths. Ids are local names; the
@@ -44,3 +44,17 @@ launch preparation enforces the same decode/cache bounds. See
 [scene audio](../guides/mod-scenes.md#5-audio-and-storage) and the
 [Eggman's Sky bank](../../../examples/eggmans-sky/README.md#system-voice).
 Base-game SFX override mapping is not part of manifest v1 today.
+
+## Version 2 native music
+
+With `formatVersion: 2`, a track may use `smpsPackage` in place of the
+streamed path and loop fields. Its fields are `id`, `smpsPackage`, `gain` and
+`tempoEffects`. The package path is a lower-case contained directory of the
+form `audio/smps/<id>/`. The slash is required. `gain` is in 0–4.
+The patch's `baseGame` must match the package driver (`s1`, `s2` or `s3k`).
+When `tempoEffects` is true, S1 and S2 use the package's
+`driverOptions.speedUpTempo` byte if provided, and S3K uses its native
+speed-shoes multiplier. SFX declarations and version 1 manifests keep their
+existing semantics.
+
+See the [SMPS package format](smps-package.md) for the contents of that directory.

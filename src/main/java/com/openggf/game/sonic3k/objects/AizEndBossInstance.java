@@ -49,7 +49,7 @@ import java.util.logging.Logger;
  *   <li>Revealed: animation + becomes hittable, spawns flame column</li>
  *   <li>Hover: sine oscillation (Swing_UpAndDown)</li>
  *   <li>Attack wait: countdown (fire window)</li>
- *   <li>Re-emerge: reuses routine 2 (submerge splash, reposition)</li>
+ *   <li>Submerge: reuses the emerge handler (submerge splash, reposition)</li>
  *   <li>Camera scroll: incrementally move camera min/max X</li>
  *   <li>Move + wait: travel to new random position</li>
  * </ol>
@@ -75,7 +75,7 @@ public class AizEndBossInstance extends AbstractBossInstance
     private static final int ROUTINE_REVEALED = 4;
     private static final int ROUTINE_HOVER = 6;
     private static final int ROUTINE_ATTACK_WAIT = 8;
-    private static final int ROUTINE_RE_EMERGE = 10;
+    private static final int ROUTINE_SUBMERGE = 10;
     private static final int ROUTINE_CAMERA_SCROLL = 12;
     private static final int ROUTINE_MOVE_WAIT = 14;
     private static final int ROUTINE_DEFEATED = 16;
@@ -150,10 +150,6 @@ public class AizEndBossInstance extends AbstractBossInstance
 
     private int waitTimer = -1;
     private WaitCallback waitCallback = WaitCallback.NONE;
-    /** Defers the first camera-bound write until the camera pass after routine $C is installed. */
-    private boolean cameraScrollBoundsPending;
-    /** Restores the skipped right-bound increment once it can no longer move the camera early. */
-    private boolean cameraScrollMaxCatchUpPending;
 
     private enum WaitCallback {
         NONE,
@@ -169,7 +165,8 @@ public class AizEndBossInstance extends AbstractBossInstance
         /** ROM {@code AIZEndBoss_StartDefeat}, installed in {@code $34} by the defeat callback. */
         START_DEFEAT,
         /** ROM {@code AIZEndBoss_StartCapsuleSequence}, installed in {@code $34} by StartDefeat. */
-        START_CAPSULE_SEQUENCE
+        START_CAPSULE_SEQUENCE,
+        START_MAIN_INIT
     }
 
     /** ROM: angle ($26) — selects position index (0, 4, 8, or $C). */
@@ -253,8 +250,6 @@ public class AizEndBossInstance extends AbstractBossInstance
         state.hitCount = HIT_COUNT;
         waitTimer = -1;
         waitCallback = WaitCallback.NONE;
-        cameraScrollBoundsPending = false;
-        cameraScrollMaxCatchUpPending = false;
         defeatRenderComplete = false;
         defeatExplosionController = null;
         fireSignalActive = false;
@@ -396,11 +391,6 @@ public class AizEndBossInstance extends AbstractBossInstance
             collisionEnabled = true;
             collisionEnablePending = false;
         }
-        if (cameraScrollMaxCatchUpPending && state.routine != ROUTINE_CAMERA_SCROLL) {
-            int camMaxX = (services().camera().getMaxX() & 0xFFFF) + 2;
-            services().camera().setMaxX((short) camMaxX);
-            cameraScrollMaxCatchUpPending = false;
-        }
         // Custom palette flash on hit
         if (state.invulnerable) {
             updateCustomFlash();
@@ -416,7 +406,7 @@ public class AizEndBossInstance extends AbstractBossInstance
 
         switch (state.routine) {
             case ROUTINE_INIT -> updateInit();
-            case ROUTINE_EMERGE, ROUTINE_RE_EMERGE -> updateEmerge();
+            case ROUTINE_EMERGE, ROUTINE_SUBMERGE -> updateEmerge();
             case ROUTINE_REVEALED -> updateRevealed();
             case ROUTINE_HOVER -> updateHover();
             case ROUTINE_ATTACK_WAIT -> updateAttackWait();
@@ -499,18 +489,14 @@ public class AizEndBossInstance extends AbstractBossInstance
         // Transition to wait-then-play-music
         waitTimer = WAIT_BEFORE_MUSIC;
         waitCallback = WaitCallback.START_BOSS_MUSIC;
-        state.routine = ROUTINE_EMERGE; // Will be overridden after wait
-        // But first we wait — handle via the emerge routine checking waitTimer
-
-        // Actually, the ROM flows: lock → Obj_Wait($78) → Obj_AIZEndBossMusic → Obj_AIZEndBossMain
-        // Let's use ROUTINE_ATTACK_WAIT as a generic "wait" state for the pre-music delay
         state.routine = ROUTINE_ATTACK_WAIT;
     }
 
-    /** ROM: Obj_AIZEndBossMusic — Play boss music, transition to main init. */
+    /** Obj_AIZEndBossMusic (sonic3k.asm:138107-138112) installs the main handler for the next dispatch. */
     private void startBossMusic() {
         services().playMusic(Sonic3kMusic.BOSS.id);
-        doMainInit();
+        waitTimer = 0;
+        waitCallback = WaitCallback.START_MAIN_INIT;
     }
 
     /**
@@ -535,13 +521,12 @@ public class AizEndBossInstance extends AbstractBossInstance
         // Right arm at offset -$14, -4 (subtype != 0)
         spawnArmChildren();
 
-        // Begin first emerge sequence (ROM: loc_692A0)
-        beginEmerge(false);
+        beginEmerge();
     }
 
-    /** ROM: loc_692A0 — Begin submerge/emerge cycle. */
-    private void beginEmerge(boolean isReEmerge) {
-        state.routine = isReEmerge ? ROUTINE_RE_EMERGE : ROUTINE_EMERGE;
+    /** ROM: AIZEndBoss_StartEmerge (sonic3k.asm:138149-138164). */
+    private void beginEmerge() {
+        state.routine = ROUTINE_EMERGE;
         services().playSfx(Sonic3kSfx.WATERFALL_SPLASH.id);
 
         // ROM: bset #3,$38 ; bset #6,$38 — child reveal + hidden
@@ -761,9 +746,9 @@ public class AizEndBossInstance extends AbstractBossInstance
         fireSignalActive = false;
     }
 
-    /** ROM: loc_693FA — Re-submerge (splash + move to new position). */
+    /** ROM: AIZEndBoss_StartSubmerge (sonic3k.asm:138258-138268). */
     private void beginReSubmerge() {
-        state.routine = ROUTINE_RE_EMERGE;
+        state.routine = ROUTINE_SUBMERGE;
         services().playSfx(Sonic3kSfx.WATERFALL_SPLASH.id);
 
         // Clear collision while submerged
@@ -789,7 +774,6 @@ public class AizEndBossInstance extends AbstractBossInstance
             // First time: scroll camera, set second cycle flag
             state.routine = ROUTINE_CAMERA_SCROLL;
             flags38 |= FLAG_SECOND_CYCLE;
-            cameraScrollBoundsPending = true;
         } else {
             // Second time: move to new position directly
             state.routine = ROUTINE_MOVE_WAIT;
@@ -805,30 +789,16 @@ public class AizEndBossInstance extends AbstractBossInstance
         waitCallback = WaitCallback.LOOP_BACK_TO_EMERGE;
     }
 
-    /** ROM: loc_69456 — Incrementally scroll camera right during reposition. */
+    /** ROM: AIZEndBoss_ScrollCamera (sonic3k.asm:138284-138296). */
     private void updateCameraScroll() {
-        if (cameraScrollBoundsPending) {
-            // loc_6942A installs routine $C during the boss object's pass. The
-            // camera has already consumed this frame's bounds, so loc_69456's
-            // first +2 becomes camera-visible on the following pass. Boss
-            // movement still begins now through loc_6946A/MoveSprite2.
-            cameraScrollBoundsPending = false;
-            cameraScrollMaxCatchUpPending = true;
-        } else {
-            // ROM: addq.w #2,(Camera_min_X_pos) until >= _unkFA84
-            int camMinX = services().camera().getMinX() & 0xFFFF;
-            if (camMinX < targetMaxX) {
-                camMinX += 2;
-                if (camMinX > targetMaxX) {
-                    camMinX = targetMaxX;
-                }
-                services().camera().setMinX((short) camMinX);
-            }
-            int camMaxX = (services().camera().getMaxX() & 0xFFFF) + 2;
-            services().camera().setMaxX((short) camMaxX);
+        // The camera reads these bounds after the object pass on this frame.
+        var camera = services().camera();
+        short nextMinX = (short) (camera.getMinX() + 2);
+        if ((nextMinX & 0xFFFF) <= targetMaxX) {
+            camera.setMinX(nextMinX);
         }
+        camera.setMaxX((short) (camera.getMaxX() + 2));
 
-        // Also do move+wait
         updateMoveWait();
     }
 
@@ -844,11 +814,11 @@ public class AizEndBossInstance extends AbstractBossInstance
         }
     }
 
-    /** ROM: loc_69476 — Loop back to emerge for next attack cycle. */
+    /** ROM: AIZEndBoss_RestartEmerge (sonic3k.asm:138299-138302). */
     private void loopBackToEmerge() {
         state.xVel = 0;
         state.yVel = 0;
-        beginEmerge(true);
+        beginEmerge();
     }
 
     /** ROM: loc_693F0 — Generic wait state (countdown + hit check). */
@@ -1190,7 +1160,6 @@ public class AizEndBossInstance extends AbstractBossInstance
 
     private void spawnShipChild() {
         shipChild = spawnChild(() -> new AizEndBossShipChild(this));
-        childComponents.add(shipChild);
     }
 
     private void spawnArmChildren() {
@@ -1213,9 +1182,6 @@ public class AizEndBossInstance extends AbstractBossInstance
 
     void rewindAttachShipChild(AizEndBossShipChild shipChild) {
         this.shipChild = shipChild;
-        if (shipChild != null && !childComponents.contains(shipChild)) {
-            childComponents.add(shipChild);
-        }
     }
 
     void rewindAttachArmChild(AizEndBossArmChild armChild) {
@@ -1340,6 +1306,7 @@ public class AizEndBossInstance extends AbstractBossInstance
         waitCallback = WaitCallback.NONE;
         switch (callback) {
             case START_BOSS_MUSIC -> startBossMusic();
+            case START_MAIN_INIT -> doMainInit();
             case ON_EMERGE_COMPLETE -> onEmergeComplete();
             case BEGIN_HOVER -> beginHover();
             case ON_HOVER_COMPLETE -> onHoverComplete();

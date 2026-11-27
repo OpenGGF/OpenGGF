@@ -297,9 +297,15 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
                 || (getUpAnimId >= 0 && interruptAnim == getUpAnimId)) {
             return null;
         }
-        // Drowning uses its own animation (0x17) throughout both pre-death and dead phases
         if (sprite.isDrowningDeath() && drownAnimId >= 0) {
-            return drownAnimId;
+            // PlayerBubblesObject_0_RoutineA (objects/r4/player_bubbles.asm:215-237) writes Drown once.
+            // After an object clears the movement gate, PlayerFallState (objects/player.asm:673-696)
+            // can replace it with Walk. The regular animation rules then apply during the sink.
+            var rules = sprite.getGameRules();
+            if (rules == null || rules.playerAnimation() == null
+                    || !rules.playerAnimation().fallingAirStateRestoresWalk()) {
+                return drownAnimId;
+            }
         }
         SidekickCpuController cpu = sprite.getCpuController();
         boolean cpuDeadDispatch = sprite.isCpuControlled() && cpu != null
@@ -312,7 +318,7 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
             // animates. A later SolidObject_TestClearPush word remains authoritative,
             // just as for Hurt below (S3K loc_1E0A2; retail FixBugs=0).
             // S1 Sonic_Death (_incObj/01 Sonic.asm:1967-1987) and S2
-            // Obj01_Dead/Obj02_Dead (s2.asm:38255,41131) likewise never write anim.
+            // Obj01_Dead (s2.asm:38255-38269) and Obj02_Dead (s2.asm:41131-41137) likewise never write anim.
             return sprite.getAnimationId() == deathAnimId ? deathAnimId : null;
         }
         // Hurt state uses separate hurt animation (animation 0x19).
@@ -347,8 +353,7 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
         // animation owner. Spring objects write anim explicitly on the launch
         // frame, and variants may instead write Walk for a twirl/horizontal
         // launch. Reasserting Spring for the whole synthetic lock overwrites
-        // those later/native bytes (S2 Obj41: s2.asm:33732-33752,
-        // 33867-33915,34023-34043).
+        // those later bytes (loc_189CA, s2.asm:33925-33947; loc_18B1C, s2.asm:34030-34049).
         // The spindash flag is state, not a continuous animation owner. CheckSpindash
         // writes Spindash on entry, and UpdateSpindash writes it again only on a
         // fresh charge press (S2 Tails: s2.asm:40470-40483,40568-40587). Between
@@ -386,9 +391,8 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
             // External object releases can place the player in the air without
             // writing a fresh jump/roll anim byte. S2 Obj80 moving vines release
             // with Status_Roll still set, but leave AniIDSonAni_Hang2 active until
-            // Sonic_ResetOnFloor lands and rewrites Walk (s2.asm:56761-56775,
-            // 38120-38160). Preserve those object-written bytes before applying
-            // the generic airborne roll rule.
+            // Sonic_ResetOnFloor (s2.asm:38123-38154) lands and rewrites Walk.
+            // Preserve those object-written bytes before applying the generic airborne roll rule.
             // The ROM anim byte stays AniIDSonAni_Roll for the airborne arc of an
             // actual roll/jump: Sonic_Jump writes anim=Roll + sets status.rolling
             // together (s2.asm:37387-37388), Sonic_RollJump only sets the

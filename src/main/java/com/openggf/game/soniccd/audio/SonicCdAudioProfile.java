@@ -1,8 +1,10 @@
 package com.openggf.game.soniccd.audio;
 
 import com.openggf.audio.AbstractAudioProfile;
+import com.openggf.audio.AudioManager;
 import com.openggf.audio.GameMusic;
 import com.openggf.audio.GameSound;
+import com.openggf.audio.RingExtraLifeRequestOwner;
 import com.openggf.audio.RomlessSmpsSource;
 import com.openggf.audio.presentation.AudioRequestService;
 import com.openggf.audio.smps.SmpsCoordFlagHandlerOwner;
@@ -34,7 +36,7 @@ import java.util.function.Supplier;
  *       tracks through {@link CdCddaPlayer}, mixed into the shared producer.</li>
  * </ul>
  */
-public final class SonicCdAudioProfile extends AbstractAudioProfile implements RomlessSmpsSource, com.openggf.audio.ExternalMusicCommands {
+public final class SonicCdAudioProfile extends AbstractAudioProfile implements RomlessSmpsSource, com.openggf.audio.ExternalMusicCommands, RingExtraLifeRequestOwner {
     public static final String PRESENTATION_GAME_ID = "soniccd";
     /** {@code SCMD_INVINCMUS} (_Include/System.inc:253); command values come from subcpu-audio-commands.tsv. */
     public static final int INVINCIBILITY_COMMAND = 0x6D;
@@ -125,6 +127,10 @@ public final class SonicCdAudioProfile extends AbstractAudioProfile implements R
         return SOUND_MAP;
     }
 
+    void releaseHeldFmEffects() {
+        fmDriver.setJumpCondition(true);
+    }
+
     public CdSubCpuAudio subCpuAudio() {
         return subCpu;
     }
@@ -198,6 +204,13 @@ public final class SonicCdAudioProfile extends AbstractAudioProfile implements R
     @Override public int getSpeedShoesOffCommandId() { return -1; }
     @Override public int getInvincibilityMusicId() { return INVINCIBILITY_COMMAND; }
     @Override public int getExtraLifeMusicId() { return -1; }
+
+    /** CollectRing .GainLife requests SCMD_YESSFX at 100 and 200 rings (Level/_Objects/Ring/Main.asm:290-307). */
+    @Override
+    public void playRingExtraLife(AudioManager audio) {
+        audio.playMusic(CdSoundRequests.YES_VOICE);
+    }
+
     @Override public int getDrowningMusicId() { return -1; }
 
     private synchronized CdFmSoundAssets assets() {

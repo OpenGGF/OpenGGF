@@ -491,6 +491,31 @@ class TestLiveRewindOwnerLifetime {
     }
 
     @Test
+    void pruningOntoAnInLevelCallbackFadePreservesLaterRewindHistory() {
+        config.setConfigValue(SonicConfiguration.REWIND_HISTORY_SECONDS, 1);
+        mode.set(GameMode.LEVEL);
+        GameplayModeContext owner = privateOwner();
+        manager.bindOwner(owner, false, GameMode.LEVEL);
+        InputHandler input = new InputHandler();
+        var fade = owner.getFadeManager();
+        for (int frame = 1; frame <= 70; frame++) {
+            if (frame == 10) fade.startFadeToBlack(() -> { }, 0, 6);
+            fade.update();
+            manager.recordExternalFrame(GameMode.LEVEL, false, input);
+        }
+        RewindController controller = owner.getRewindController();
+        assertFalse(fade.hasPendingCompletion());
+        assertEquals(10, controller.earliestAvailableFrame(), "pruning reaches the callback-bearing checkpoint");
+
+        manager.recordExternalFrame(GameMode.LEVEL, false, input);
+
+        assertEquals(71, controller.currentFrame(), "the completed tick preserves recorded history");
+        input.handleKeyEvent(config.getInt(SonicConfiguration.LIVE_REWIND_KEY), GLFW_PRESS);
+        assertTrue(manager.handleRealtimeRewindInput(GameMode.LEVEL, false, input));
+        assertEquals(70, controller.currentFrame(), "held rewind can still reach a later, safe checkpoint");
+    }
+
+    @Test
     void registeredSpecialStageStillInstallsWhileItsOutgoingLevelIsInactive() {
         GameplayModeContext owner = privateOwner();
         CountingStage stage = registerStage(owner, 0);

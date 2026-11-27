@@ -1,5 +1,19 @@
 # Level test coverage backlog
 
+Wing Fortress runtime art: `TestSonic2RuntimePlcRendererRefresh` checks the
+resident propeller tiles through request, the Tornado body's 27 service passes,
+the first three thruster writes and mid-write rewind.
+`TestSonic2PlcSharedArtRendering` checks the
+six-pattern VBlank against the existing animal and explosion mappings with EGL.
+The positioned propeller and early thruster are controlled witnesses. In both
+stock WFZ traces the thruster child arrives after its cue drains. The tests
+leave full-route pixel parity and other preloaded sprite sheets open.
+
+HCZ1 badnik score allocation (2026-11-22): the [HCZ1 matrix](../architecture/validation/levels/s3k-hcz1-sonic.md#badnik-score-popup-dispatch-2026-11-22)
+records the native slot and movement on rows 417–418. Manager tests cover
+both dispatch orders, a full object table and recreation between passes.
+Other placements, routes and full-world rewind remain open.
+
 Temporal scroll matching (2026-11-16): [HCZ1](../architecture/validation/levels/s3k-hcz1-sonic.md#temporal-scroll-matching-2026-11-16)
 and [HCZ2](../architecture/validation/levels/s3k-hcz2.md#temporal-scroll-matching-2026-11-16)
 record 12 typed-publication motion checks, retaining event lifecycle, history,
@@ -76,6 +90,26 @@ smoke remains FAILED with input/skip gaps; end-to-end rewind and user acceptance
 remain pending. These
 checks do not advance the historical route totals.
 
+Palmtree Panic's vertical tunnel door ($35) uses the USA disc's two mappings
+and twelve patterns in all eight act 1 and 2 programs. The R11A constructed
+check covers the silent first trigger, the 32-update reset, side contact, and
+rewind while open. The native R11A fixture matches its spawn in slot 32 at level
+frame 556. The R12A native full-act movie passes the placed door at
+`($24BC,$02E0)`. The disc and OpenGGF agree on the closed and open sprite
+regions at trace rows 3165 and 3166. The placement masks select no active door
+in R11B. Passage and frame-by-frame picture evidence cover R12A.
+
+S2 Mystic Cave rotating crates ($6A): the
+[slot and rewind checks](../../src/test/java/com/openggf/game/sonic2/objects/TestS2MczRotPformsGraphRewind.java)
+cover each crate's final movement at both native-width horizontal unload
+boundaries and the 528-pixel right-hand range limit. Exhausted, partial and full
+admission exercise graph restoration, one-shot initialization and camera-return
+respawn. The [two-player block-delete test](../../src/test/java/com/openggf/level/objects/TestNativeCompetitionOccupiedFullDelete.java)
+covers the display flags of both children when they spill into the next block
+and the x-flipped parent's block unloads. Natural slot exhaustion, player
+contact on the retirement frame and
+broader character, donor and viewport coverage remain open.
+
 S2 Competition monitor outcomes (2026-11-09): eight cold-title EHZ1 fixtures
 exercise P1 breaking for all eight outcomes and hold the award for six seconds.
 The [bounded matrix](../architecture/plans/2026-11-07-s2-competition-parity.md#question-mark-monitor-outcomes-2026-11-09)
@@ -97,7 +131,7 @@ sampled cuts remain open. Participants are fixed by the ROM; viewport width is
 unassessed and held rewind is off by decision. No act is certified. ROM-backed Competition HUD tests cover signpost pole/face
 uploads and rewind, digit-five SAT mapping selection, and the interrupt-before-goal
 timer boundary. Scattered-ring recollection remains V-int-origin dependent under
-[S2 Whole-Run V-int Clock Cannot Be Made Exact](known-discrepancies.md#s2-whole-run-v-int-clock-cannot-be-made-exact);
+[S2 replay limits at sub-frame load boundaries](known-discrepancies.md#s2-replay-limits-at-sub-frame-load-boundaries);
 progressive HUD pixels and integrated recollection remain lead qualification work.
 
 LRZ title-owned enemy art (2026-11-07): the [submission audit](../architecture/audits/2026-11-07-lrz-enemy-art-submission.md)
@@ -160,9 +194,19 @@ or the broader configuration matrix; see the
 
 MGZ swinging-platform arithmetic (2026-11-03): the [MGZ1 matrix](../architecture/validation/levels/s3k-mgz-act1.md#swinging-platform-fractional-input--2026-11-03) records native fractional input ownership, spring timer/read and rewind bindings, and the unchanged wider route/configuration/presentation obligations.
 
+HCZ water walls: the [HCZ1 water-wall checks](../architecture/validation/levels/s3k-hcz1-sonic.md#water-wall-lifetime-and-spray-admission)
+cover placement deletion and readmission, render-bit transitions, cleanup
+art and spray admission through rewind. The dispatch tests cover the native
+coarse boundary and the first wall's admission at 528 px. Other viewport,
+donor and team combinations and the
+[child lifetime and cleanup audio gaps](s3k-known-bugs.md#hcz-geyser-child-lifetimes-and-cleanup-sound-commands)
+remain open.
+
 HCZ slice parity (2026-11-03): the [HCZ2 matrix](../architecture/validation/levels/s3k-hcz2.md#native-capsuleresults-handoff-and-green-slice--2026-11-03) records the green native Sonic+Tails cross-act slice, unchanged sibling frontiers, 97 focused/terminal/rewind/startup checks, absent aux schemas and remaining breadth/restore limits.
 
 HCZ2 boss setup (2026-11-03): the [HCZ2 matrix](../architecture/validation/levels/s3k-hcz2.md#end-boss-setup-and-platform-animation--2026-11-03) records callback/init/movement and raw-animation controls, unchanged sibling trace results and the remaining pending-initialization restore obligation. Broader route/configuration gaps remain inherited.
+
+HCZ2 end-boss platform landing (2026-11-22): the [HCZ2 matrix](../architecture/validation/levels/s3k-hcz2.md#end-boss-platform-allocation-and-rolling-tails-landing) covers same-pass turbine allocation, rolling P2 placement, fractional position, continued riding, and the passing boss graph rewind selection.
 
 S3K shake/visibility maintenance (2026-11-03; contributor cleanup 2026-11-07): the
 [HCZ2 matrix](../architecture/validation/levels/s3k-hcz2.md) records pending shake
@@ -175,6 +219,10 @@ MGZ Bubbles activation (2026-11-03): the
 records the wait/restore/init boundary, object restore/forward regression and
 bounded native-pair trace evidence. Wider route, donor, viewport and team
 obligations remain inherited.
+
+AIZ2 end-boss camera scroll (2026-11-23): the [Act 2 matrix](../architecture/validation/levels/s3k-aiz2.md#obligations)
+records the focused first-dispatch and exit checks and the Sonic+Tails route
+replay. Broader character, viewport, donor and team obligations remain open.
 
 ## Shared act-reload shield ownership
 
@@ -472,6 +520,10 @@ viewport/donor/roster breadth and the full continuous chain remain open. These
 bounded results do not certify a complete act.
 
 
+[The AIZ2 act matrix](../architecture/validation/levels/s3k-aiz2.md)
+records focused defeat-fragment allocation, motion and rewind checks. The
+earlier records below describe the missing debris at their historical SHAs.
+
 The subsequent [R7 child-retirement owner](../architecture/validation/levels/s3k-aiz2.md#r7-physical-parent-and-five-child-defeat-retirement--2026-10-17)
 closes the demonstrated early five-child cleanup: actual own-SST routines retain
 physical parent XY/flags through64wait, pending deletion and forced recreation.
@@ -691,6 +743,10 @@ Starpost Valley integration (2026-10-10): the [integration route matrix](../arch
 Starpost Valley P1 (2026-10-09): the [real valley matrix](../architecture/designs/2026-10-09-starpost-valley.md#actcharacter-route-matrix-and-rewind-spots) records real S3K solo Sonic/Tails/Knuckles routes at 320/400px, both loop paths, source collision/colour equality, native ability/occlusion visuals and a mid-valley restore/replay spot. Checkpoint respawn, interaction and loop-boundary rewind, load/history isolation, broader viewport/donor/team and scene/act handoff obligations remain open. This prototype does not certify stock GHZ or the complete level standard.
 
 Mutator Lab expansion (2026-10-08): the [all-game affected-mechanic matrix](../architecture/validation/levels/mutator-lab-native-games.md) records native S1/S2/S3K focused cells and remaining composed capture/domain/broad obligations. Complete act, team, donor and viewport breadth remains unqualified.
+
+Stock S2 Emerald Hill 1 (2026-11-20): [the positioned loop regression](../../src/test/java/com/openggf/tools/TestSonic2WideLoopCapture.java)
+checks solo Sonic's motion through the loop at 320 and 800 EDGE. Complete act,
+checkpoint, team, donor and rewind coverage remain inherited gaps.
 
 Mutator Lab (2026-10-07): the [S2 EHZ1 prototype matrix](../architecture/validation/levels/mutator-lab-s2-ehz1.md)
 tracks native solo-Sonic opening play, configuration/load boundaries, selective
@@ -1293,6 +1349,12 @@ entry checks close the reference inventory at112 covered/four not applicable.
 A mirrored slope-snap error was reproduced and fixed;161 focused checks pass,
 zero skips. This is reference coverage, not full-act or combined delivery approval.
 
+
+DDZ presentation follow-up (2026-11-20): the
+[DDZ matrix](../architecture/validation/levels/s3k-ddz.md#boss-height-hyper-trail-and-exit-palette-2026-11-20)
+records seeded 320px native comparisons for phase-2 boss height, the Hyper
+after-image and the exit fade. Other viewports, teams and whole-scene pixel
+coverage remain open.
 
 DDZ presentation follow-up (2026-09-25): Hyper-star startup now follows native
 module completion, matching506 observed child updates. Focused, full DDZ route
@@ -2124,9 +2186,10 @@ records the source-bound122focused,5exactguards and unchanged7route cases, all
 with zero skips. Native continuation retains actual known128/16 ROM writes with
 final collision bank; first production ScreenInit clears FF80F8..FF8FFF once,
 with two forced world replays before all tail assertions. Prior five route deaths
-no longer reproduce in that class. Four native alias writes, native whole-route
-descriptors/pixels/clocks, additional supported products/lifecycle and the separate
-cold campaign remain open; no full-suite/native-equivalence claim.
+no longer reproduced in that source epoch. Cold and native-continuation entry
+also cover the four installed row aliases, cross-layer edits and full-world
+restore. Whole-route native descriptors/pixels/clocks, additional supported
+products/lifecycle and the separate cold campaign remain open.
 
 
 ### Local ship and launcher presentation corrections — 2026-10-20
@@ -2894,3 +2957,8 @@ trace regressions are resolved: all eleven reports exactly match baseline;
 The [MGZ1](../architecture/validation/levels/s3k-mgz-act1.md) and
 [MGZ2](../architecture/validation/levels/s3k-mgz-act2.md) matrices retain their
 wider route, donor, team and viewport obligations.
+
+AIZ2 end-boss head art (2026-11-22): the [AIZ2 matrix](../architecture/validation/levels/s3k-aiz2.md#native-aiz2-boss-head-art-2026-11-22)
+verifies that Knuckles gets EggRobo's head and Sonic and Tails keep Eggman's
+head. It also covers queue restoration, the head's graph rewind and the Mega
+return window. The outgoing campaign and other configurations remain open.

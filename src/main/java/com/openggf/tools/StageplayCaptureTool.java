@@ -4,6 +4,7 @@ import com.openggf.capture.*;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.data.RomIdentity;
 import com.openggf.game.GameServices;
+import com.openggf.catalog.StockGameCatalog;
 import com.openggf.mods.scene.host.SceneRomLibrary;
 import com.openggf.mods.scene.host.SceneSurface;
 import com.openggf.stageplay.StageplayDocument;
@@ -17,8 +18,8 @@ import java.util.*;
 
 /**
  * Renders a saved Stageplay scene to lossless video and synchronized final mixed audio.
- * Inputs: --scene file --out new-file.mkv [--rom file | --game s1|s2|s3k], optional
- * --s1-rom/--s2-rom/--s3k-rom, --scale 1..8, --ffmpeg executable. Without --rom the
+ * Inputs: --scene file --out new-file.mkv [--rom file | --game GAME], optional
+ * --<game>-rom, --scale 1..8, --ffmpeg executable. Without --rom the
  * existing logical-ROM catalogue resolves the set's game, including composite images.
  * Origin: OpenGGF Stageplay first authoring/runtime delivery, 2026-10-21.
  */
@@ -35,7 +36,7 @@ public final class StageplayCaptureTool {
             Objects.requireNonNull(scene); Objects.requireNonNull(output); Objects.requireNonNull(ffmpeg);
             suppliedRoms = Map.copyOf(suppliedRoms);
             if (scale < 1 || scale > 8) throw new IllegalArgumentException("Scale must be 1..8");
-            if (game != null && !List.of("s1", "s2", "s3k", "scd").contains(game)) throw new IllegalArgumentException("Unknown game");
+            if (game != null && !StockGameCatalog.isStockCode(game)) throw new IllegalArgumentException("Unknown game");
             if (!output.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".mkv"))
                 throw new IllegalArgumentException("Lossless Stageplay exports use .mkv");
             if (scene.toAbsolutePath().normalize().equals(output.toAbsolutePath().normalize()))
@@ -60,8 +61,14 @@ public final class StageplayCaptureTool {
                     case "--game" -> game = value;
                     case "--scale" -> scale = Integer.parseInt(value);
                     case "--ffmpeg" -> ffmpeg = value;
-                    case "--s1-rom", "--s2-rom", "--s3k-rom", "--scd-rom" -> supplied.put(key.substring(2, key.length() - 4), Path.of(value));
-                    default -> throw new IllegalArgumentException("Unknown argument " + key);
+                    default -> {
+                        if (!key.startsWith("--") || !key.endsWith("-rom") || key.length() <= 6) {
+                            throw new IllegalArgumentException("Unknown argument " + key);
+                        }
+                        String code = key.substring(2, key.length() - 4);
+                        if (!StockGameCatalog.isStockCode(code)) throw new IllegalArgumentException("Unknown argument " + key);
+                        supplied.put(code, Path.of(value));
+                    }
                 }
             }
             if (scene == null || output == null) throw new IllegalArgumentException("--scene and --out are required");

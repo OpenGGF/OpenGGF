@@ -8,8 +8,8 @@ package com.openggf.game.soniccd.objects.common;
  * <p>{@code ctrlLocked} stops ObjSonic copying the pad into {@code playerCtrl}
  * (Sonic/Main.asm:297-299) and {@code scrollLock} stops the zone scroll (Palmtree Panic/Scroll
  * (Act 1 Present).asm:178) and selects the large PLC batch (Functions (General).asm:721-726).
- * The player and camera owners do not read them yet; the PLC wait does. Not rewind-captured, except
- * {@link #bossFlags} ({@code CdBossFlagsRewind}).
+ * The player and camera owners do not read them yet; the PLC wait does. Rewind captures
+ * {@link #bossFlags} and {@link #timeStopWord}.
  */
 public final class CdLevelFlags {
     public boolean ctrlLocked;
@@ -25,6 +25,16 @@ public final class CdLevelFlags {
      * still hold their own. Rewind-captured by {@code CdBossFlagsRewind}.
      */
     public int bossFlags;
+
+    /**
+     * LevelStart clears this word with the flower buffer (Level/Main.asm:178-184).
+     * The item writes 300 and the shipped readers test for nonzero.
+     */
+    public int timeStopWord;
+
+    public boolean timeStopped() {
+        return timeStopWord != 0;
+    }
 
     public CdLevelFlags(boolean goodFuture) {
         this.goodFuture = goodFuture;

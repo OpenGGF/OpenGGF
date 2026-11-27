@@ -630,6 +630,10 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
             return true;
         }
 
+        public boolean hasServicedHeldFadeVBlank() {
+            return heldFadeVblankServiced;
+        }
+
         /** Existing hardware-loop declarations, latched by claim, not reference state. */
         public boolean hasExplicitDmaQueueService() { return explicitDmaQueueService; }
 

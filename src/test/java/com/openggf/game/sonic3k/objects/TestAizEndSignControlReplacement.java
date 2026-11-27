@@ -16,7 +16,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import java.util.Comparator;
 import java.util.List;
+import java.util.stream.IntStream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -100,6 +102,7 @@ class TestAizEndSignControlReplacement {
         var fixture = HeadlessTestFixture.builder().withZoneAndAct(0, 1).build();
         var manager = GameServices.level().getObjectManager();
         fixture.camera().setX((short) 0x10E0);
+        fixture.camera().setY((short) 0x210);
         var boss = manager.createDynamicObject(() -> new AizMinibossInstance(
                 new ObjectSpawn(0x11F0, 0x289, 0x91, 0, 0, false, 0x289)));
         for (int pass = 0; pass < 256 && boss.getState().routine != 6; pass++) scan(fixture, pass);
@@ -119,8 +122,20 @@ class TestAizEndSignControlReplacement {
         var wait = AizMinibossInstance.class.getDeclaredField("defeatHandoffTimer");
         wait.setAccessible(true);
         int freshWait = wait.getInt(boss);
-        for (int pass = 2; pass <= 65; pass++) scan(fixture, pass);
+        for (int pass = 2; pass <= 64; pass++) scan(fixture, pass);
+        var occupiedBeforeHandoff = manager.occupiedDynamicSlotIdsWithReservations();
+        scan(fixture, 65);
         var flow = NativeSstSlotAccess.currentOwner(manager, controlSlot);
+        var debris = manager.activeObjectsOfType(AizMinibossDefeatDebrisChild.class).stream()
+                .sorted(Comparator.comparingInt(AizMinibossDefeatDebrisChild::getSlotIndex))
+                .toList();
+        assertEquals(4, debris.size(), "the native end-sign callback allocates all four defeat fragments");
+        int musicSlot = manager.activeObjectsOfType(SongFadeTransitionInstance.class).getFirst().getSlotIndex();
+        var expectedSlots = IntStream.range(controlSlot + 1, manager.getObjectSlotCapacity())
+                .filter(slot -> slot != musicSlot && !occupiedBeforeHandoff.containsKey(slot))
+                .limit(4).boxed().toList();
+        assertEquals(expectedSlots, debris.stream().map(AbstractObjectInstance::getSlotIndex).toList());
+        assertDebris(debris, boss.getState().x, yAtPoll, 0);
         int flowWait = -1;
         if (flow instanceof S3kBossDefeatSignpostFlow) {
             var timer = S3kBossDefeatSignpostFlow.class.getDeclaredField("timer");
@@ -131,6 +146,26 @@ class TestAizEndSignControlReplacement {
         long musicChildren = manager.activeObjectsOfType(SongFadeTransitionInstance.class).size();
         long explosionTail = manager.activeObjectsOfType(MhzMinibossExplosionController.class).size();
         var after = registry.capture();
+        for (int step = 1; step <= 3; step++) {
+            scan(fixture, 65 + step);
+            assertDebris(debris, boss.getState().x, yAtPoll, step);
+        }
+        fixture.camera().setY((short) (yAtPoll + 0x100));
+        scan(fixture, 69);
+        // Go_Delete_Sprite_3 stops drawing but each physical slot survives one more dispatch.
+        for (var fragment : debris) {
+            assertSame(fragment, NativeSstSlotAccess.currentOwner(manager, fragment.getSlotIndex()));
+            assertFalse(fragment.drawPublished());
+        }
+        var pendingDelete = registry.capture();
+        scan(fixture, 70);
+        assertTrue(manager.activeObjectsOfType(AizMinibossDefeatDebrisChild.class).isEmpty());
+        var deleted = registry.capture();
+        registry.restore(pendingDelete);
+        same(pendingDelete, registry.capture());
+        assertEquals(4, manager.activeObjectsOfType(AizMinibossDefeatDebrisChild.class).size());
+        scan(fixture, 70);
+        same(deleted, registry.capture());
         for (int cycle = 0; cycle < 2; cycle++) {
             registry.restore(before); same(before, registry.capture());
             for (int pass = 1; pass <= 65; pass++) scan(fixture, pass);
@@ -156,6 +191,26 @@ class TestAizEndSignControlReplacement {
             registry.restore(tailStart); same(tailStart, registry.capture());
             for (int pass = 66; pass <= 110; pass++) scan(fixture, pass);
             same(tailEnd, registry.capture());
+        }
+    }
+
+    private static void assertDebris(List<AizMinibossDefeatDebrisChild> debris,
+                                     int parentX, int parentY, int movementSteps) {
+        // ChildObjDat_AIZMiniboss_DefeatDebris, then up to three Obj_FlickerMove dispatches.
+        int[] offsetX = {-16, 12, -16, 16};
+        int[] offsetY = {-8, -16, 20, 12};
+        int[] velocityX = {-0x200, 0x200, -0x300, 0x300};
+        int[] deltaY = {0, -2, -4, -6};
+        int[] velocityY = {-0x200, -0x1C8, -0x190, -0x158};
+        for (int index = 0; index < debris.size(); index++) {
+            var fragment = debris.get(index);
+            assertEquals(index * 2, fragment.getSpawn().subtype());
+            assertEquals(0x0E + index, fragment.mappingFrame());
+            assertEquals(parentX + offsetX[index] + movementSteps * (velocityX[index] >> 8), fragment.getX());
+            assertEquals(parentY + offsetY[index] + deltaY[movementSteps], fragment.getY());
+            assertEquals(velocityX[index], fragment.xVelocity());
+            assertEquals(velocityY[movementSteps], fragment.yVelocity());
+            assertEquals(movementSteps == 2, fragment.drawPublished());
         }
     }
 

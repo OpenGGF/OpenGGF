@@ -2,6 +2,7 @@ package com.openggf.game.soniccd.objects.shared;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.soniccd.objects.common.CdObject;
+import com.openggf.game.soniccd.timetravel.CdTimeTravel;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectVisualFacing;
@@ -52,14 +53,15 @@ public final class ObjQqzSpikes extends CdObject implements ReevaluatingSolidObj
             solidObject(ReevaluatingSolidObject.Entry.SOLID);   // SpikesMain (objects/r5/spikes.asm:94-99)
             return;
         }
-        // .Upwards: SolidObject; beq; btst #3,obj.flags(a0); warping; invincible (:101-110).
+        // SpikesMain .Upwards (objects/r5/spikes.asm:107-116).
         if (!solidObject(ReevaluatingSolidObject.Entry.SOLID) || !(player instanceof AbstractPlayableSprite sprite)
-                || !stoodOn(sprite) || sprite.getInvincibleFrames() > 0) {
+                || !stoodOn(sprite)) {
             return;
         }
-        // cmpi.b #4,obj.routine(a0); bcc; tst.w obj.var_30(a0); bne (:114-117).
+        if (CdTimeTravel.starsActive(services().gameModule()) || sprite.getInvincibleFrames() > 0) return;
+        // cmpi.b #4,obj.routine(a0); bcc; tst.w obj.var_30(a0); bne (:122-125).
         if (sprite.isHurt() || sprite.getDead() || sprite.getInvulnerableFrames() > 0) return;
-        // obj.y.l -= y_speed << 8, then HurtPlayer with the spikes as the source (:119-126).
+        // obj.y.l -= y_speed << 8, then HurtPlayer with the spikes as the source (:127-134).
         NativePositionOps.addYPos16_16(sprite, -(sprite.getYSpeed() << 8));
         boolean hadRings = sprite.getRingCount() > 0;
         if (hadRings && !sprite.hasShield()) services().spawnLostRings(sprite, vIntRunCount);

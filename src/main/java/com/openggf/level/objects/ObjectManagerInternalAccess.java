@@ -87,6 +87,14 @@ public final class ObjectManagerInternalAccess {
         manager.completeDeferredPlacement();
     }
 
+    /** Level objects resume in the tail of a wait that already counted its VBlank. */
+    public static void runTitleReleaseObjectPass(ObjectManager manager, int cameraX,
+            com.openggf.game.PlayableEntity player, List<? extends com.openggf.game.PlayableEntity> sidekicks,
+            int touchFrameCounter) {
+        manager.executeObjectPass(cameraX, player, sidekicks, touchFrameCounter,
+                false, false, false, null);
+    }
+
     /** RunObjects was skipped; V-int and placement still belong to their actual owners. */
     public static void runFrozenPlacementPass(ObjectManager manager) {
         manager.advanceVblaCounter();
@@ -98,6 +106,13 @@ public final class ObjectManagerInternalAccess {
         manager.prepareInitialPlacementWindow(spawns, cameraX, respawn);
     }
     private ObjectManagerInternalAccess() { }
+
+
+    /** Rebuilds the object window and collision responses after the host repositions a loaded viewport. */
+    public static void refreshPlacementAfterRelocation(ObjectManager manager) {
+        manager.refreshPlacementAfterRelocation();
+        manager.captureCollisionResponseListForNextFrame();
+    }
 
     /**
      * A ROM write to the object loop counter made by the main player's slot, which the engine runs before the object
@@ -148,7 +163,7 @@ public final class ObjectManagerInternalAccess {
         if (manager != null) manager.solidContacts().reevaluatingGetOffObject(player, instance);
     }
 
-    /** Frame-start spawner pass for a game's fixed-slot owner; a no-op unless enabled. */
+    /** Frame-start spawner pass for games that place layout entries before the player slot. */
     public static void runSpawnerBeforeObjectPass(ObjectManager manager, int cameraX) {
         manager.placement.runSpawnerBeforeObjectPass(cameraX);
     }

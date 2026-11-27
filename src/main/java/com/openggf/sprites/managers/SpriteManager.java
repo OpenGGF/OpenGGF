@@ -2338,9 +2338,12 @@ public class SpriteManager implements PlayableSstDispatcher {
 		if (cpuController != null) {
 			cpuController.finishCarryAfterCarrierMovement();
 		}
+		// Tails_FlyingSwimming (sonic3k.asm:27610-27624) calls the carry
+		// tail after movement in Sonic+Tails mode. The solo fly-off skips it.
 		if (cpuController == null
 				|| (cpuController.getState() != SidekickCpuController.State.CARRYING
-				&& cpuController.getState() != SidekickCpuController.State.CARRY_INIT)) {
+				&& cpuController.getState() != SidekickCpuController.State.CARRY_INIT
+				&& cpuController.getState() != SidekickCpuController.State.CARRY_FLYOFF)) {
 			SpriteManager sprites = playable.currentSpriteManagerOrNull();
 			AbstractPlayableSprite main = sprites != null ? sprites.getMainPlayable() : null;
 			int mainCarryInput = 0;

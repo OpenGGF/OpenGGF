@@ -18,6 +18,10 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
 
+import static com.openggf.game.sonic3k.constants.Sonic3kConstants.EGG_ROBO_FLY_SCALE_FLOOR;
+import static com.openggf.game.sonic3k.constants.Sonic3kConstants.EGG_ROBO_FLY_SCALE_START;
+import static com.openggf.game.sonic3k.constants.Sonic3kConstants.EGG_ROBO_FLY_SCALE_STEP;
+
 /**
  * ROM {@code Obj_EggRobo} ({@code $A0}, sonic3k.asm:198545-198867): Sky Sanctuary's EggRobo, in
  * three distinct shapes chosen by the subtype's low nibble through {@code sub_9185E}'s
@@ -50,10 +54,6 @@ import java.util.List;
  * {@code loc_9167E} brings it back down at {@code +$20} until {@code y_vel} reaches {@code $100},
  * and only then does it join {@code loc_9159A} as a hovering fighter — without the
  * {@code _unkFA82} gate, which only {@code sub_91914} applies.
- *
- * <p>The fly-by still draws the badnik sheet rather than {@code ArtScaled_EggRoboFly} through
- * {@code Perform_Art_Scaling}, because the engine has no runtime art scaler
- * (filed in {@code docs/status/s3k-known-bugs.md}).
  */
 public final class EggRoboBadnikInstance extends AbstractS3kBadnikInstance
         implements SpawnRewindRecreatable, ObjectVisualFacing.Source {
@@ -69,10 +69,6 @@ public final class EggRoboBadnikInstance extends AbstractS3kBadnikInstance
     /** {@code sub_91988}: frame 1 or 3 by {@code V_int_run_count+3} bit 0. */
     private static final int HOVER_FRAME_A = 1;
     private static final int HOVER_FRAME_B = 3;
-    /** {@code move.b #$7F,$40(a0)} and the {@code subi.b #3,d0} / {@code cmpi.b #4,d0} step. */
-    static final int SCALE_START = 0x7F;
-    static final int SCALE_STEP = 3;
-    static final int SCALE_FLOOR = 4;
     /** {@code move.w #$180,y_vel(a0)}. */
     static final int FLYBY_Y_VEL = 0x180;
     /**
@@ -115,7 +111,7 @@ public final class EggRoboBadnikInstance extends AbstractS3kBadnikInstance
     private int flyX;
     private int flyY;
     /** {@code $40}/{@code $41}: the scale index and the last one {@code Perform_Art_Scaling} saw. */
-    private int scaleIndex = SCALE_START;
+    private int scaleIndex = EGG_ROBO_FLY_SCALE_START;
     private int lastScaleIndex = -1;
     /** {@code $3C}: the per-frame {@code y_vel} delta, which decrements every frame. */
     private int velocityDelta;
@@ -294,11 +290,10 @@ public final class EggRoboBadnikInstance extends AbstractS3kBadnikInstance
 
     /** {@code loc_91526}. */
     private void updateFlyBy() {
-        int next = (scaleIndex - SCALE_STEP) & 0xFF;
-        if (next >= SCALE_FLOOR && next != lastScaleIndex) {
+        int next = (scaleIndex - EGG_ROBO_FLY_SCALE_STEP) & 0xFF;
+        if (next >= EGG_ROBO_FLY_SCALE_FLOOR && next != lastScaleIndex) {
             scaleIndex = next;
             lastScaleIndex = next;
-            // jsr (Perform_Art_Scaling): no runtime art scaler here, so only the index moves.
         }
         velocityDelta = (short) (velocityDelta - 1);
         yVelocity = (short) (yVelocity + velocityDelta);
@@ -539,10 +534,13 @@ public final class EggRoboBadnikInstance extends AbstractS3kBadnikInstance
         if (renderManager == null) {
             return;
         }
-        var renderer = renderManager.getRenderer(Sonic3kObjectArtKeys.SSZ_EGG_ROBO);
+        boolean flyBy = mode == Mode.FLY_BY;
+        var renderer = renderManager.getRenderer(flyBy
+                ? Sonic3kObjectArtKeys.SSZ_EGG_ROBO_FLY_BY : Sonic3kObjectArtKeys.SSZ_EGG_ROBO);
         if (renderer != null && renderer.isReady()) {
+            int frame = flyBy ? (scaleIndex - EGG_ROBO_FLY_SCALE_FLOOR) / EGG_ROBO_FLY_SCALE_STEP : mappingFrame;
             renderer.drawFrameIndexForcedPriority(
-                    mappingFrame, getRenderAnchorX(), getRenderAnchorY(), !facingLeft, nativeVFlip(), -1, artHigh);
+                    frame, getRenderAnchorX(), getRenderAnchorY(), !facingLeft, nativeVFlip(), -1, artHigh);
         }
     }
 

@@ -88,6 +88,10 @@ final class DdzPalette {
 
     /** Sixty-four {@code sub_85EB4} calls: every colour one step towards white. */
     static void whitenAll(ObjectServices services) {
+        // loc_85E74 (sonic3k.asm:180760-180771) reads Normal_palette after
+        // AnPal_Load. Resolve earlier writes before incrementing those colors.
+        S3kPaletteWriteSupport.resolvePendingWritesNow(services.paletteOwnershipRegistryOrNull(),
+                services.currentLevel(), services.graphicsManager());
         for (int line = 0; line < 4; line++) {
             int[] words = readLine(services, line);
             for (int i = 0; i < words.length; i++) {
@@ -115,6 +119,8 @@ final class DdzPalette {
         if (registry == null) {
             return;
         }
+        S3kPaletteWriteSupport.resolvePendingWritesNow(registry, services.currentLevel(),
+                services.graphicsManager());
         for (int line = 0; line < 4; line++) {
             int[] words = readLine(services, line);
             byte[] target = registry.targetSegaData(line, 0, 16);

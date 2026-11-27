@@ -64,8 +64,7 @@ public final class LbzMinibossBoxInstance extends AbstractObjectInstance impleme
             return;
         }
         if (boxRig.value != null) {
-            var camera = services().camera();
-            boxRig.value.update(camera != null ? camera.getX() & 0xFFFF : LbzMinibossBoxRig.NO_CAMERA);
+            boxRig.value.update(services());
         }
         switch (phase) {
             case INIT -> initialize();

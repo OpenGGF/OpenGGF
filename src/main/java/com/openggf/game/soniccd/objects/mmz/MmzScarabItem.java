@@ -88,7 +88,8 @@ final class MmzScarabItem extends MmzObject
         } else if (player instanceof AbstractPlayableSprite) {
             solidObject(Entry.SOLID);                                // sub_20E2F6
         }
-        if (animator != null) {
+        // ScarabObject_0_Routine6 (objects/r8/scarab.asm:548-552).
+        if (animator != null && !flags().timeStopped()) {
             animator.step();
             mapFrame = animator.mapFrame();
         }
@@ -124,8 +125,10 @@ final class MmzScarabItem extends MmzObject
 
     boolean gone() { return gone; }
 
+    /** loc_20DE4A (scddisasm/src/objects/r8/scarab.asm:182-185). */
     void deleteOther() {
         setDestroyed(true);
+        services().objectManager().removeDynamicObject(this);
     }
 
     @Override public int solidXVelocity() { return xVel; }

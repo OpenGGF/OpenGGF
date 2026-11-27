@@ -9,6 +9,8 @@ import com.openggf.audio.rewind.SmpsDriverSnapshot;
 import com.openggf.audio.rewind.SmpsSourceDescriptor;
 import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsSequencer;
+import com.openggf.audio.smps.SmpsMusicParameters;
+import com.openggf.audio.synth.FmChip;
 import com.openggf.audio.smps.SmpsLoadReadiness;
 import com.openggf.audio.synth.ChipWriteObserver;
 import com.openggf.audio.synth.VirtualSynthesizer;
@@ -180,6 +182,7 @@ public final class SmpsDriverSession implements AutoCloseable {
         private final PendingService pendingService;
         private final SavedOverride[] overrides;
         private final int overrideCount;
+        private final int silentFadeInServices;
         private final boolean speedShoesEnabled;
         private final int speedMultiplier;
         private final int musicTempoPercent;
@@ -211,6 +214,7 @@ public final class SmpsDriverSession implements AutoCloseable {
                     SmpsDriverSession.this.overrideCount);
             overrides = mutationOverrides;
             this.overrideCount = SmpsDriverSession.this.overrideCount;
+            silentFadeInServices = SmpsDriverSession.this.silentFadeInServices;
             speedShoesEnabled =
                     SmpsDriverSession.this.speedShoesEnabled;
             speedMultiplier = SmpsDriverSession.this.speedMultiplier;
@@ -550,7 +554,13 @@ public final class SmpsDriverSession implements AutoCloseable {
     private SmpsSourceDescriptor selectedDacSource;
     private PendingService pendingService;
     private int overrideCount;
+    private int silentFadeInServices;
     private boolean speedShoesEnabled;
+    private int musicMixGain = FmChip.UNITY_GAIN;
+    private int sfxMixGain = FmChip.UNITY_GAIN;
+    private int appliedMusicGain = musicMixGain;
+    private int appliedSfxGain = sfxMixGain;
+
     private int speedMultiplier = 1;
     private int musicTempoPercent = 100;
     private boolean ringLeft = true;
@@ -568,6 +578,7 @@ public final class SmpsDriverSession implements AutoCloseable {
     // Per-call outcome, not driver state: reset before every forward service.
     private boolean globalStopConsumedDuringService;
     private boolean transactionOpen;
+    private boolean restoredMusicOverrideInMutation;
     private boolean logicalMaterialization;
     private boolean closed;
     private SmpsDriverServiceObserver driverServiceObserver =
@@ -685,6 +696,7 @@ public final class SmpsDriverSession implements AutoCloseable {
                     }
                 });
         directRenderer = (buffer, frameOffset, frames) -> {
+            applyMusicGain();
             device.renderFrames(buffer, frameOffset * 2, frames);
             emitPendingDacSampleEnds();
         };
@@ -703,6 +715,7 @@ public final class SmpsDriverSession implements AutoCloseable {
         }
         driver = SmpsDriver.createSessionDriver(
                 new SmpsSessionSynthesizerAccess());
+        driver.setRegion(configuration.region());
         driver.setDiagnosticIdentity(driverIdentity);
         installDriverObservers();
         withPort(driverIdentity, port -> {
@@ -803,7 +816,8 @@ public final class SmpsDriverSession implements AutoCloseable {
         if (nativePause.paused()) {
             return SmpsServiceOutcome.ORDINARY;
         }
-        if (pendingGlobalCommand == SmpsPendingGlobalCommand.STOP_ALL) {
+        if (pendingGlobalCommand == SmpsPendingGlobalCommand.STOP_ALL
+                || willStopAllSoundBeforeSfxAdmission()) {
             applyGlobalStopNow();
             return SmpsServiceOutcome.GLOBAL_STOP_CONSUMED;
         }
@@ -842,6 +856,9 @@ public final class SmpsDriverSession implements AutoCloseable {
             });
             pendingService = null;
         } else {
+            if (silentFadeInServices > 0) {
+                silentFadeInServices--;
+            }
             withPort(driverIdentity, port -> {
                 driver.serviceOuterFrame();
                 return null;
@@ -864,8 +881,7 @@ public final class SmpsDriverSession implements AutoCloseable {
      *
      * <p>Its other half is the disable, emitted from
      * {@link #emitPendingDacSampleEnds()} when the chip exhausts the sample.
-     * The two must ship together: an enable without a disable leaves the DAC
-     * on holding its last level once the sample has finished.</p>
+     * That disable belongs to S3K. S1 leaves the DAC enabled between samples.</p>
      */
     private void emitDacIdleLoopEnableIfQueued() {
         if (!driver.consumeDacIdleLoopPass()) {
@@ -944,12 +960,26 @@ public final class SmpsDriverSession implements AutoCloseable {
      */
     public void setMixGains(int musicGain, int sfxGain) {
         requireInstalled();
-        device.setMixGains(musicGain, sfxGain);
+        musicMixGain = musicGain;
+        sfxMixGain = sfxGain;
+        applyMusicGain();
+    }
+
+    private void applyMusicGain() {
+        SmpsSequencer music = driver.firstMusicSequencer();
+        int gain = music == null ? musicMixGain : Math.round(musicMixGain
+                * SmpsMusicParameters.of(music.getSmpsData()).gain());
+        if (gain != appliedMusicGain || sfxMixGain != appliedSfxGain) {
+            device.setMixGains(gain, sfxMixGain);
+            appliedMusicGain = gain;
+            appliedSfxGain = sfxMixGain;
+        }
     }
 
     public int renderFrames(
             short[] target, int offsetSamples, int stereoFrames) {
         requireInstalled();
+        applyMusicGain();
         if (segaPcmTransport == null) {
             return device.renderFrames(target, offsetSamples, stereoFrames);
         }
@@ -1127,6 +1157,7 @@ public final class SmpsDriverSession implements AutoCloseable {
         PreparedSmpsMusicActivation resolved = Objects.requireNonNull(
                 activation, "activation");
         interruptSegaPcmForRequest();
+        silentFadeInServices = 0;
         SmpsLogicalTransitionPolicy.Result transition =
                 resolved.logicalPolicy().prepareMusicStart(
                         driver.captureSnapshot(),
@@ -1146,6 +1177,7 @@ public final class SmpsDriverSession implements AutoCloseable {
         if (resolved.readiness().immediate()) {
             restoreLogicalWithoutWrites(transition.logical());
             applyCurrentLogicalControls();
+            driver.firstMusicSequencer().seedPackageTempoOnActivation();
         } else {
             withPort(driverIdentity, port -> {
                 applyProgram(port, policy.beginMusicLoad());
@@ -1190,13 +1222,13 @@ public final class SmpsDriverSession implements AutoCloseable {
                     pushOverride(push.activation());
             case SmpsSessionCommand.SuspendForPcmOverride ignored ->
                     suspendForPcmOverride();
-            case SmpsSessionCommand.RestoreOverride ignored ->
-                    restoreOverride();
+            case SmpsSessionCommand.RestoreOverride restore ->
+                    restoreOverride(restore.natural());
             case SmpsSessionCommand.EndOverride end ->
                     endOverride(end.musicId());
             case SmpsSessionCommand.FadeMusic fade -> {
                 prepareFadeOut();
-                armFadeOut(fade.steps(), fade.delay());
+                armFadeOut(fade.steps(), fade.delay(), true);
             }
             case SmpsSessionCommand.SetSpeedMultiplier speed -> {
                 speedMultiplier = speed.multiplier();
@@ -1265,6 +1297,34 @@ public final class SmpsDriverSession implements AutoCloseable {
         return music != null && music.isFadingIn();
     }
 
+    public boolean hasSilentFadeIn() {
+        return silentFadeInServices != 0;
+    }
+
+    /** The silent fade's last service clears the flag before dispatch. */
+    public boolean silentFadeInBlocksNextRequest() {
+        return silentFadeInServices > 1 || (silentFadeInServices == 1
+                && (nativePause.paused() || nativePause.request() != null || segaPcmTransport != null));
+    }
+
+    /**
+     * A terminal DoFadeOut (s1.sounddriver.asm:1371-1381) enters
+     * StopAllSound (s1.sounddriver.asm:1461-1482), clearing the pending queue.
+     */
+    public boolean willStopAllSoundBeforeSfxAdmission() {
+        if (pendingService != null || !configuration.statefulCommandPolicy().stopsAllSoundAtLocalFadeEnd()) {
+            return false;
+        }
+        SmpsSequencer music = driver.firstMusicSequencer();
+        return music != null && music.getConfig().isDirect68kDriver()
+                && music.localFadeOutIsTerminalNextService();
+    }
+
+    private boolean usesLocalGlobalStopFade(SmpsSequencer music) {
+        return music != null && music.getConfig().isDirect68kDriver()
+                && configuration.statefulCommandPolicy().stopsAllSoundAtLocalFadeEnd();
+    }
+
     /**
      * Applies the host policy's complete global stop and clears the matching
      * logical save area at the same physical ownership boundary. Package
@@ -1273,6 +1333,7 @@ public final class SmpsDriverSession implements AutoCloseable {
      */
     void applyGlobalStopNow() {
         requireInstalled();
+        silentFadeInServices = 0;
         pendingService = null;
         clearOverrides();
         // S3K zStopAllSound clears zTempoSpeedup before silencing channels
@@ -1331,7 +1392,7 @@ public final class SmpsDriverSession implements AutoCloseable {
                                 segaPcmTransport.cursor,
                                 segaPcmTransport.cycleAccumulator,
                                 segaPcmTransport.stopRequested),
-                device.captureSnapshot(), nativePause, nativeHistoryCursor);
+                device.captureSnapshot(), nativePause, nativeHistoryCursor, silentFadeInServices);
     }
 
     /** Captures the one logical driver memento, including override save RAM. */
@@ -1424,6 +1485,7 @@ public final class SmpsDriverSession implements AutoCloseable {
         musicFmDacTrackCount = resolved.session().musicFmDacTrackCount();
         nativePause = resolved.session().nativePause();
         nativeHistoryCursor = resolved.session().nativeHistoryCursor();
+        silentFadeInServices = resolved.session().silentFadeInServices();
         nativePauseConsumed = null;
         segaPcmTransport = materializeSegaPcmTransport(
                 resolved.session().segaPcmTransport());
@@ -1450,6 +1512,7 @@ public final class SmpsDriverSession implements AutoCloseable {
                     "an SMPS session mutation is already active");
         }
         transactionOpen = true;
+        restoredMusicOverrideInMutation = false;
         try {
             return new SessionLiveMutation(device.captureSessionMutation());
         } catch (RuntimeException failure) {
@@ -1457,6 +1520,12 @@ public final class SmpsDriverSession implements AutoCloseable {
             if (mutationOverrides != null) Arrays.fill(mutationOverrides, null);
             throw failure;
         }
+    }
+
+    /** Reports only a saved override popped by the current command mutation. */
+    public boolean restoredMusicOverrideInLiveMutation() {
+        requireActive();
+        return transactionOpen && restoredMusicOverrideInMutation;
     }
 
     public void commitLiveMutation(LiveMutationToken token) {
@@ -1541,6 +1610,7 @@ public final class SmpsDriverSession implements AutoCloseable {
         musicFmDacTrackCount = state.musicFmDacTrackCount;
         nativePause = state.nativePause;
         nativeHistoryCursor = state.nativeHistoryCursor;
+        silentFadeInServices = state.silentFadeInServices;
         nativePauseConsumed = null;
         segaPcmTransport = state.segaPcmTransport;
         truncateDiagnostics(state.diagnosticCount);
@@ -1795,6 +1865,7 @@ public final class SmpsDriverSession implements AutoCloseable {
     }
 
     private void stopMusic(boolean discardOverrides) {
+        silentFadeInServices = 0;
         SmpsSequencer music = driver.firstMusicSequencer();
         if (music != null) {
             withPort(driverIdentity, port -> {
@@ -1926,8 +1997,17 @@ public final class SmpsDriverSession implements AutoCloseable {
                 SmpsDriverServiceObserver.LifecycleKind.SAVE);
     }
 
-    private void restoreOverride() {
+    private void restoreOverride(boolean natural) {
         if (overrideCount == 0) {
+            if (natural && suppressesSfxDuringOverride() && !releasesSfxSuppressionAtRestore()) {
+                stopMusic(false);
+                // cfFadeInToPrevious arms 28h steps even with no playing slots
+                // (s1.sounddriver.asm:2219-2224, s2.sounddriver.asm:3150-3155).
+                // DoFadeIn (s1.sounddriver.asm:1604-1650) and zUpdateFadeIn
+                // (s2.sounddriver.asm:2725-2745) start at delay zero, reload
+                // two waits per step, then clear the flag before the queue.
+                silentFadeInServices = 0x28 * (1 + 2) + 1;
+            }
             return;
         }
         SavedOverride saved = overrideStack[--overrideCount];
@@ -1953,13 +2033,16 @@ public final class SmpsDriverSession implements AutoCloseable {
                                     speedShoesEnabled)));
         }
         applyCurrentLogicalControls();
+        if (transactionOpen) {
+            restoredMusicOverrideInMutation = true;
+        }
     }
 
     private void endOverride(int musicId) {
         SmpsSequencer active = driver.firstMusicSequencer();
         if (active != null
                 && active.getSourceDescriptor().id() == musicId) {
-            restoreOverride();
+            restoreOverride(false);
             return;
         }
         for (int index = overrideCount - 1; index >= 0; index--) {
@@ -1992,6 +2075,10 @@ public final class SmpsDriverSession implements AutoCloseable {
 
     /** Arms the fade at the host's command-dispatch boundary. */
     public void armFadeOut(int steps, int delay) {
+        armFadeOut(steps, delay, false);
+    }
+
+    private void armFadeOut(int steps, int delay, boolean beforeService) {
         requireInstalled();
         SmpsFadeOutEffects effects = configuration.statefulCommandPolicy().fadeOutEffects();
         if (effects.driverOwnedCounters()) {
@@ -2000,7 +2087,7 @@ public final class SmpsDriverSession implements AutoCloseable {
         SmpsSequencer music = driver.firstMusicSequencer();
         withPort(driverIdentity, port -> {
             if (music != null) {
-                music.triggerFadeOut(steps, delay);
+                music.triggerFadeOut(steps, delay, beforeService && usesLocalGlobalStopFade(music));
             }
             port.applyTransientPsgSilence(effects.psgSilence());
             return null;
@@ -2008,6 +2095,7 @@ public final class SmpsDriverSession implements AutoCloseable {
     }
 
     private void hardReset() {
+        silentFadeInServices = 0;
         nativePause = SmpsNativePauseState.RUNNING;
         nativePauseConsumed = null;
         musicTempoPercent = 100;

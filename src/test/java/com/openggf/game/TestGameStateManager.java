@@ -1,7 +1,12 @@
 package com.openggf.game;
 
+import com.openggf.game.session.SessionManager;
+import com.openggf.tests.TestEnvironment;
+import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -23,6 +28,20 @@ public class TestGameStateManager {
         assertEquals(0, gsm.getContinues(), "Initial continues should be 0");
         assertEquals(0, gsm.getScore(), "Initial score should be 0");
         assertEquals(0, gsm.getEmeraldCount(), "Initial emerald count should be 0");
+    }
+
+    @ParameterizedTest
+    @EnumSource(SonicGame.class)
+    void cartridgesRejectStartAtZeroLives(SonicGame game) {
+        TestEnvironment.configureGameModuleFixture(game);
+        try {
+            NativeGameStateOps.restoreLives(gsm, 0);
+            assertFalse(gsm.applyPauseToggle(true));
+            assertFalse(gsm.isGamePaused());
+        } finally {
+            SessionManager.clear();
+            GameModuleRegistry.reset();
+        }
     }
 
     @Test

@@ -7,7 +7,10 @@ import com.openggf.game.rules.GameRules;
 import com.openggf.level.LevelManager;
 import com.openggf.game.GroundMode;
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.rules.GameRules;
+import com.openggf.game.PlayerCharacter;
+import com.openggf.game.sonic3k.Sonic3kLoadBootstrap;
+import com.openggf.game.sonic3k.events.Sonic3kAIZEvents;
+import com.openggf.game.sonic3k.runtime.AizZoneRuntimeState;
 import com.openggf.physics.*;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectRegistry;
@@ -669,6 +672,111 @@ public class CollisionSystemTest {
     }
 
     @Test
+    void aiz1RightWallProbeArmsAndHoldsAcrossAngleSelection() {
+        var player = newCollisionTestSprite();
+        player.setGameRules(GameRules.SONIC_3K);
+        installAizRuntime(0);
+        player.setGroundMode(GroundMode.RIGHTWALL);
+        player.setCentreX((short) 0x100);
+        player.setSubpixelRaw(0x1234, 0x5678);
+
+        attachWithProbes(player, 0xD6, 0xE2, Direction.RIGHT, -15);
+        assertEquals(3, player.getRightWallPenetrationTimer(), "Deep AIZ1 right-wall probe arms the counter");
+        assertEquals(0xC0, player.getAngle() & 0xFF);
+        assertEquals(GroundMode.RIGHTWALL, player.getGroundMode());
+        assertEquals(0x100, player.getCentreX());
+
+        for (int remaining = 2; remaining >= 0; remaining--) {
+            // Present the mixed-angle case for each count, including the last held probe.
+            attachWithProbes(player, 0xD6, 0xE2, Direction.RIGHT, -14);
+            assertEquals(remaining, player.getRightWallPenetrationTimer());
+            assertEquals(0xC0, player.getAngle() & 0xFF);
+            assertEquals(0x100, player.getCentreX());
+        }
+        assertEquals(0x1234, player.getXSubpixelRaw());
+
+        attachWithProbes(player, 0xD6, 0xE2, Direction.RIGHT, -2);
+        assertEquals(0, player.getRightWallPenetrationTimer());
+        assertEquals(0xE2, player.getAngle() & 0xFF);
+        assertEquals(0xFE, player.getCentreX(), "With the counter exhausted, correct X along the probe direction");
+    }
+
+    @Test
+    void aiz1FloorProbeCannotArmOrConsumeRightWallCounter() {
+        var player = newCollisionTestSprite();
+        player.setGameRules(GameRules.SONIC_3K);
+        installAizRuntime(0);
+        player.setCentreX((short) 0x100);
+        player.setCentreY((short) 0x200);
+
+        attachWithProbes(player, 0xE2, 0xD6, Direction.DOWN, -15);
+        assertEquals(0, player.getRightWallPenetrationTimer(), "Selecting a wall angle cannot arm a floor probe");
+        assertEquals(0xD6, player.getAngle() & 0xFF);
+        assertEquals(0x200, player.getCentreY());
+
+        player.setRightWallPenetrationTimer(3);
+        attachWithProbes(player, 0xE2, 0xD6, Direction.DOWN, -2);
+        assertEquals(3, player.getRightWallPenetrationTimer(), "Selecting a wall angle cannot consume the counter");
+        assertEquals(0xD6, player.getAngle() & 0xFF);
+        assertEquals(0x100, player.getCentreX());
+        assertEquals(0x1FE, player.getCentreY());
+    }
+
+    @Test
+    void aiz1NonnegativeRightWallDistancesBypassCounter() {
+        var player = newCollisionTestSprite();
+        player.setGameRules(GameRules.SONIC_3K);
+        installAizRuntime(0);
+        player.setCentreX((short) 0x100);
+        player.setRightWallPenetrationTimer(3);
+
+        attachWithProbes(player, 0xD6, 0xE2, Direction.RIGHT, 0);
+        assertEquals(3, player.getRightWallPenetrationTimer());
+        assertEquals(0xE2, player.getAngle() & 0xFF);
+        assertEquals(0x100, player.getCentreX());
+
+        attachWithProbes(player, 0xD6, 0xE2, Direction.RIGHT, 2);
+        assertEquals(3, player.getRightWallPenetrationTimer());
+        assertEquals(0xE2, player.getAngle() & 0xFF);
+        assertEquals(0x102, player.getCentreX());
+    }
+
+    @Test
+    void rightWallDeepProbeOutsideAiz1DoesNotArmCounter() {
+        for (GameRules rules : List.of(GameRules.SONIC_1, GameRules.SONIC_2, GameRules.SONIC_3K)) {
+            var player = newCollisionTestSprite();
+            player.setGameRules(rules);
+            player.setCentreX((short) 0x100);
+
+            attachWithProbes(player, 0xC0, 0xD6, Direction.RIGHT, -15);
+            assertEquals(0, player.getRightWallPenetrationTimer());
+            assertEquals(0xD6, player.getAngle() & 0xFF);
+            assertEquals(0x100, player.getCentreX());
+        }
+        installAizRuntime(1);
+        var player = newCollisionTestSprite();
+        player.setGameRules(GameRules.SONIC_3K);
+        attachWithProbes(player, 0xD6, 0xE2, Direction.RIGHT, -15);
+        assertEquals(0, player.getRightWallPenetrationTimer(), "AIZ2 cannot arm the counter");
+        assertEquals(0xE2, player.getAngle() & 0xFF);
+    }
+
+    private static void installAizRuntime(int actIndex) {
+        var events = new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
+        GameServices.zoneRuntimeRegistry().install(new AizZoneRuntimeState(actIndex, PlayerCharacter.SONIC_ALONE, events));
+    }
+
+    private void attachWithProbes(AbstractPlayableSprite player, int entryAngle, int selectedAngle,
+                                  Direction direction, int distance) {
+        player.setAngle((byte) entryAngle);
+        player.setGroundSensors(new Sensor[] {
+                new FixedSensor(player, direction, distance + 1, entryAngle),
+                new FixedSensor(player, direction, distance, selectedAngle)
+        });
+        collisionSystem.resolveGroundAttachment(FrameCollisionPlan.terrainOnly(), player, 4);
+    }
+
+    @Test
     public void typedCollisionRuleDisablesRightWallDeepProbePreservationForS3k() throws Exception {
         GameRulesCollisionTestSprite player = newCollisionTestSprite();
         player.setGameRules(GameRules.SONIC_1);
@@ -879,15 +987,21 @@ public class CollisionSystemTest {
 
     private static final class FixedSensor extends Sensor {
         private final int distance;
+        private final byte angle;
 
         private FixedSensor(AbstractPlayableSprite sprite, Direction direction, int distance) {
+            this(sprite, direction, distance, 0);
+        }
+
+        private FixedSensor(AbstractPlayableSprite sprite, Direction direction, int distance, int angle) {
             super(sprite, direction, (byte) 0, (byte) 0, true);
             this.distance = distance;
+            this.angle = (byte) angle;
         }
 
         @Override
         protected SensorResult doScan(short dx, short dy) {
-            return new SensorResult((byte) 0, (byte) distance, 0, direction);
+            return new SensorResult(angle, (byte) distance, 0, direction);
         }
     }
 }

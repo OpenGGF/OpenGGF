@@ -5,6 +5,7 @@ import com.openggf.game.soniccd.objects.common.CdObject;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectVisualFacing;
+import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.physics.TrigLookupTable;
 
 import java.util.List;
@@ -21,8 +22,8 @@ import java.util.List;
  * <p>An anchor with a zero link count would spawn 256 pieces in the original ({@code dbf} on a byte
  * decrement, :80-99); no placement does and it is not modelled.
  */
-public class ObjSwing extends CdObject implements ObjectVisualFacing.NonDirectional {
-    protected final int link;                // obj.var_3c: the link number (0 for the anchor)
+public class ObjSwing extends CdObject implements ObjectVisualFacing.NonDirectional, SpawnRewindRecreatable {
+    protected int link;                // obj.var_3c: the link number (0 for the anchor)
     protected final int links;               // obj.var_2f: the link count (subtype & 15)
     protected int anchorX;                   // obj.var_36
     protected int anchorY;                   // obj.var_32

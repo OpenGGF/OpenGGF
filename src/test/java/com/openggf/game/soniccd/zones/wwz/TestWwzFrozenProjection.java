@@ -23,11 +23,15 @@ class TestWwzFrozenProjection {
             h.init(0, 512, 128);
             int[] nativeWords = new int[224];
             h.rebuildOutput(nativeWords, 512, 128, 7, 0);
+            int period = h.getBgPeriodWidth();
+            assertTrue(period >= 2560, "the full moving background span must be resident");
             var output = new ScrollProjection(nativeWords, null, null, null, (short)128,
-                    h.getVscrollFactorBG(), 0, 512, 0, 0, BgTilemapUpdateMode.STATIC_WINDOW);
+                    h.getVscrollFactorBG(), 0, period, 0, 0, BgTilemapUpdateMode.STATIC_WINDOW);
             var phase = h.captureProjection(new ScrollProjectionContext(512,128,7,0,320,224,output));
             var nativeSample = phase.sample(new ScrollView(512,128,320,224));
             assertEquals(output, nativeSample);
+            var farView = phase.sample(new ScrollView(2400, 128, 800, 224));
+            assertEquals(period, farView.backgroundPeriod(), "projecting a wider view must keep the stage period");
             var before = h.captureRewindState();
             var tall = phase.sample(new ScrollView(512,128,320,448));
             assertArrayEquals(nativeWords, java.util.Arrays.copyOf(tall.horizontal(),224));
@@ -48,6 +52,10 @@ class TestWwzFrozenProjection {
             h.rebuildOutput(after,512,128,7,0);
             assertArrayEquals(nativeWords,after);
             assertEquals(before, h.captureRewindState());
+            for (int cameraX = 528; cameraX <= 2400; cameraX += 16) {
+                h.update(after, cameraX, 128, cameraX / 16, 0);
+                assertEquals(period, h.getBgPeriodWidth(), "camera movement must keep the stage period");
+            }
         }
         }
     }

@@ -1,5 +1,6 @@
 package com.openggf.game.soniccd.objects.ssz;
 
+import com.openggf.game.rewind.RewindStateful;
 import com.openggf.game.soniccd.level.CdStageImage;
 
 /**
@@ -10,9 +11,9 @@ import com.openggf.game.soniccd.level.CdStageImage;
  * routine+2, $FB loop and clear routine 2 and $FA routine 2 +2; {@link #step()} returns 2 for $FC, -1 for $FB
  * and -2 for $FA.
  */
-final class SszAnimator {
-    private final CdStageImage image;
-    private final int table;
+class SszAnimator {
+    private CdStageImage image;
+    private int table;
     int anim;
     private int prevAnim;
     private int animFrame;
@@ -21,10 +22,30 @@ final class SszAnimator {
     private int flipBits;
     private boolean showed;
 
-    SszAnimator(CdStageImage image, int table, int anim) {
+    void bindScript(CdStageImage image, int table) {
         this.image = image;
         this.table = table;
-        this.anim = anim;
+    }
+
+    record State(int anim, int prevAnim, int frame, int time, int mapFrame, int flipBits, boolean showed) { }
+
+    final State captureScriptState() {
+        return new State(anim, prevAnim, animFrame, animTime, mapFrame, flipBits, showed);
+    }
+
+    final void restoreScriptState(State state) {
+        anim = state.anim();
+        prevAnim = state.prevAnim();
+        animFrame = state.frame();
+        animTime = state.time();
+        mapFrame = state.mapFrame();
+        flipBits = state.flipBits();
+        showed = state.showed();
+    }
+
+    static final class Rewindable extends SszAnimator implements RewindStateful<State> {
+        @Override public State captureRewindStateValue() { return captureScriptState(); }
+        @Override public void restoreRewindStateValue(State state) { restoreScriptState(state); }
     }
 
     /** One AnimateObject call. */

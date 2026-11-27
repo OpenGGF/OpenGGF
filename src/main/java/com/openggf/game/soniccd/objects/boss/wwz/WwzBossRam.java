@@ -1,5 +1,6 @@
 package com.openggf.game.soniccd.objects.boss.wwz;
 
+import com.openggf.game.internal.StagePaletteWait;
 import com.openggf.game.soniccd.level.CdLevel;
 import com.openggf.game.soniccd.player.SonicCdPhysicsProvider;
 import com.openggf.game.soniccd.zones.wwz.WwzPlayerProfile;
@@ -7,6 +8,7 @@ import com.openggf.game.soniccd.zones.wwz.WwzStageSignals;
 import com.openggf.game.soniccd.zones.wwz.WwzStageState;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectSpawn;
 
 /**
  * The Wacky Workbench act 3 level RAM the boss objects own (Level/_Definitions.inc:314-316; Main CPU Variables.inc:185;
@@ -34,6 +36,27 @@ public final class WwzBossRam implements WwzStageSignals {
     private boolean playerKilled;
     private WwzPlayerProfile bound;
     private LevelManager levels;
+    private ObjectSpawn paletteWaitOwner;
+
+    void publishPaletteWait(ObjectSpawn bossPlacement) {
+        paletteWaitOwner = bossPlacement;
+    }
+
+    public boolean willStartPaletteWait(LevelManager level) {
+        var objects = level.getObjectManager();
+        if (objects == null || (bossFlags & 0x0F) == 0) return false;
+        return objects.getActiveObjects().stream().anyMatch(object ->
+                object instanceof WwzBossEggman boss && !boss.isDestroyed() && boss.willStartPaletteWait());
+    }
+
+    public StagePaletteWait pendingPaletteWait(LevelManager level) {
+        var objects = level.getObjectManager();
+        if (paletteWaitOwner == null || objects == null) return null;
+        // Resolve the placement each time so rewinding across an unload can recreate the owner.
+        var object = objects.getActiveObjectForRewind(paletteWaitOwner);
+        return object instanceof WwzBossEggman boss && !boss.isDestroyed() && boss.hasPendingPaletteWait()
+                ? boss : null;
+    }
 
     public int flags() { return bossFlags; }
 

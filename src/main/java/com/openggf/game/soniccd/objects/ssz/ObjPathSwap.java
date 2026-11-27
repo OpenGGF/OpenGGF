@@ -1,6 +1,8 @@
 package com.openggf.game.soniccd.objects.ssz;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.schema.RewindCaptureContext;
+import com.openggf.game.soniccd.objects.art.CdObjectArtProvider;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -31,7 +33,7 @@ public final class ObjPathSwap extends SszObject implements ObjectVisualFacing.N
     private static final int RADIUS = 0x18;
 
     private int cooldown;
-    private SszAnimator animator;
+    private final SszAnimator.Rewindable animator = new SszAnimator.Rewindable();
 
     public ObjPathSwap(ObjectSpawn spawn) {
         super(spawn, "Path swap");
@@ -40,6 +42,17 @@ public final class ObjPathSwap extends SszObject implements ObjectVisualFacing.N
     @Override protected String sheetKind() { return SszObjectArt.PATH_SWAP; }
 
     @Override protected boolean despawnsByCheckObjDespawn() { return true; }
+
+    @Override
+    protected void afterGenericRewindStateRestored(RewindCaptureContext context) {
+        if (initialised) bindAnimationScript(artProvider());
+    }
+
+    /** PathSwapObject_0_Routine4 (objects/r7/path_swap.asm:106-108). */
+    private void bindAnimationScript(CdObjectArtProvider provider) {
+        var entry = SszObjectCatalogue.entry(provider.payload());
+        animator.bindScript(provider.image(), entry.pathSwapAnimations());
+    }
 
     @Override
     public void update(int vIntRunCount, PlayableEntity entity) {
@@ -63,13 +76,13 @@ public final class ObjPathSwap extends SszObject implements ObjectVisualFacing.N
         if (!SszStageLayer.of(cdLevel()).isSet()) tileWord |= 0x8000;     // ori.b #$80,obj.sprite_tile(a0)
         width = RADIUS;
         yRadius = RADIUS;
-        animator = SszObjectArt.animator(artProvider(), SszObjectCatalogue.Entry::pathSwapAnimations, 0);
+        bindAnimationScript(artProvider());
         initialised = true;
     }
 
     /** PathSwapObject_0_Routine2 (:41-102). */
     private void wait(PlayableEntity entity) {
-        if (cooldown != 0) {                                 // loc_20B894's guard (:42-45)
+        if (cooldown != 0) {                                 // PathSwapObject_0_Routine2 (:41-45)
             cooldown--;
             return;
         }

@@ -4,6 +4,7 @@ import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameServices;
+import com.openggf.game.NativeGameStateOps;
 import com.openggf.game.patch.ModuleResolutionService;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.EngineServices;
@@ -15,12 +16,19 @@ import com.openggf.game.soniccd.player.CdSonicAnimation;
 import com.openggf.game.soniccd.level.CdLevel;
 import com.openggf.game.soniccd.objects.common.CdExplosion;
 import com.openggf.game.soniccd.objects.common.CdMonitor;
+import com.openggf.game.soniccd.objects.common.CdMonitorItem;
+import com.openggf.game.soniccd.objects.common.CdRing;
 import com.openggf.game.soniccd.objects.common.CdPoints;
 import com.openggf.game.soniccd.objects.common.CdSpikes;
 import com.openggf.game.soniccd.objects.common.CdSpring;
+import com.openggf.game.soniccd.objects.ppz.PpzPlatform;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectManagerInternalAccess;
+import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.TouchCategory;
+import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.physics.Direction;
 import com.openggf.physics.GroundSensor;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -31,14 +39,23 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import java.nio.file.Path;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockingDetails;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * Focused behaviour of the common Sonic CD objects on the loaded R11A stage (its object art
@@ -101,6 +118,140 @@ class TestSonicCdCommonObjects {
     }
 
     @Test
+    void placedTimeStopMonitorFreezesTheStageUntilRestart() throws Exception {
+        var levels = GameServices.level();
+        levels.loadZoneAndAct(SonicCdZoneRegistry.zoneIndex(CdStagePayload.R13C),
+                SonicCdZoneRegistry.actIndex(CdStagePayload.R13C));
+        CdLevel stage = (CdLevel) levels.getCurrentLevel();
+        sonic.setCentreX((short) 0xB58);
+        sonic.setCentreY((short) 0x346);
+        GameServices.camera().updatePosition(true);
+        ObjectManagerInternalAccess.refreshPlacementAfterRelocation(GameServices.level().getObjectManager());
+        // This part of the disc layout has no ring placements. Keep a witness slot in the same object pass.
+        CdRing ring = add(new CdRing(new ObjectSpawn(0xB90, 0x338, 0x10, 0, 0, false, 0)));
+        runner.stepIdleFrames(128);
+        var color = stage.getPalette(3).getColor(5);
+        Set<Integer> controlColors = new HashSet<>();
+        Set<Integer> controlRingFrames = new HashSet<>();
+        for (int frame = 0; frame < 32; frame++) {
+            runner.stepIdleFrames(1);
+            controlColors.add(paletteColor(color));
+            controlRingFrames.add(ring.mapFrame());
+        }
+        CdMonitor box = live(0x19).stream().filter(CdMonitor.class::isInstance).map(CdMonitor.class::cast)
+                .filter(o -> o.getSpawn().x() == 0xBF0 && o.getSpawn().y() == 0x350
+                        && o.getSpawn().subtype() == 5).findFirst().orElseThrow();
+        var rewind = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+        var beforeBreak = rewind.capture();
+        runner.stepFrame(false, true, false, false, false);
+        for (int frame = 0; frame < 44; frame++) {
+            runner.stepFrame(false, true, false, false, true);
+        }
+        for (int frame = 0; frame < 18 && box.mapFrame() != 0x11; frame++) {
+            runner.stepIdleFrames(1);
+        }
+        int brokenFrame = box.mapFrame();
+        // Eggman lowers the bottom boundary during the pickup rise. Observe the reward from the upper ledge.
+        sonic.setCentreX((short) 0xBF0);
+        sonic.setCentreY((short) 0x1A4);
+        sonic.setGSpeed((short) 0);
+        sonic.setXSpeed((short) 0);
+        sonic.setYSpeed((short) 0);
+        GameServices.camera().updatePosition(true);
+        runner.stepIdleFrames(40);
+        var afterBreak = rewind.capture();
+        int frozenColor = paletteColor(color);
+        int frozenRingFrame = ring.mapFrame();
+        int startFrame = levels.getFrameCounter();
+        Set<Integer> stoppedWords = new HashSet<>();
+        Set<Integer> stoppedColors = new HashSet<>();
+        Set<Integer> stoppedRingFrames = new HashSet<>();
+        for (int frame = 0; frame < 401; frame++) {
+            runner.stepIdleFrames(1);
+            stoppedWords.add(stage.flags().timeStopWord);
+            stoppedColors.add(paletteColor(color));
+            stoppedRingFrames.add(ring.mapFrame());
+        }
+        int completedFrames = levels.getFrameCounter() - startFrame;
+        rewind.restore(beforeBreak);
+        int rewoundWord = stage.flags().timeStopWord;
+        rewind.restore(afterBreak);
+        int restoredWord = stage.flags().timeStopWord;
+        levels.restartCurrentLevelAfterDeath();
+        CdLevel restarted = (CdLevel) levels.getCurrentLevel();
+
+        assertAll(
+                () -> assertEquals(3, controlColors.size(), "all R13C palette phases while the box is intact"),
+                () -> assertEquals(Set.of(0, 1, 2, 3), controlRingFrames, "ring completes a spin while the box is intact"),
+                () -> assertEquals(0x11, brokenFrame, "Sonic breaks the disc placement while rolling into it"),
+                () -> assertEquals(401, completedFrames, "freeze is observed across completed level frames"),
+                () -> assertEquals(Set.of(300), stoppedWords, "the stop word does not count down"),
+                () -> assertEquals(Set.of(frozenColor), stoppedColors, "PPZ palette cycling is held"),
+                () -> assertEquals(Set.of(frozenRingFrame), stoppedRingFrames, "the ring keeps its mapping frame"),
+                () -> assertEquals(0, rewoundWord, "rewind before the break restores the clear word"),
+                () -> assertEquals(300, restoredWord, "rewind after the pickup restores the stop word"),
+                () -> assertEquals(0, restarted.flags().timeStopWord, "death reload clears the stop word"));
+    }
+
+    @Test
+    void palmtreePanicPlatformHoldsItsPositionDuringTimeStop() throws Exception {
+        var levels = GameServices.level();
+        levels.loadZoneAndAct(SonicCdZoneRegistry.zoneIndex(CdStagePayload.R13C),
+                SonicCdZoneRegistry.actIndex(CdStagePayload.R13C));
+        CdLevel stage = (CdLevel) levels.getCurrentLevel();
+        int x = sonic.getCentreX() + 0x60;
+        int y = sonic.getCentreY() - 0x80;
+        // R13C includes ObjPlatform, but has no platform placement in its layout.
+        PpzPlatform platform = add(new PpzPlatform(new ObjectSpawn(x, y, 0x21, 0, 0, false, 0)));
+        runner.stepIdleFrames(1);
+
+        // ObjPlatform_Subtype0X advances the angle one step per update (Level/Palmtree Panic/Objects/Platform/Main.asm:135-140).
+        runner.stepIdleFrames(64);
+        int movingY = platform.getY();
+        stage.flags().timeStopWord = 300;
+        runner.stepIdleFrames(64);
+        int stoppedY = platform.getY();
+        stage.flags().timeStopWord = 0;
+        runner.stepIdleFrames(64);
+
+        assertEquals(List.of(y + 32, y + 32, y), List.of(movingY, stoppedY, platform.getY()),
+                "the platform holds at the crest and resumes from the same phase");
+    }
+
+    @Test
+    void combineRingItemRequestsOnlyTheSignpostSound() {
+        var campaign = GameServices.gameState();
+        var level = GameServices.level().getLevelGamestate();
+        campaign.addScore(100);
+        level.setRings(17);
+        int lives = campaign.getLives();
+        int score = campaign.getScore();
+        int rings = level.getRings();
+
+        var item = new CdMonitorItem(0, 0, 6, 0);
+        var services = mock(ObjectServices.class);
+        when(services.gameState()).thenReturn(campaign);
+        when(services.levelGamestate()).thenReturn(level);
+        item.setServices(services);
+        for (int frame = 0; frame < 64; frame++) item.update(frame, sonic);
+
+        verify(services).playSfx(0x9D);
+        long soundRequests = mockingDetails(services).getInvocations().stream()
+                .map(invocation -> invocation.getMethod().getName())
+                .filter(name -> name.equals("playSfx") || name.startsWith("playMusic"))
+                .count();
+        assertEquals(1, soundRequests, "FM_SIGNPOST is the only sound request");
+        assertAll(
+                () -> assertEquals(lives, campaign.getLives(), "lives"),
+                () -> assertEquals(rings, level.getRings(), "rings"),
+                () -> assertEquals(score, campaign.getScore(), "score"));
+    }
+
+    private static int paletteColor(com.openggf.level.Palette.Color color) {
+        return (color.r & 0xFF) << 16 | (color.g & 0xFF) << 8 | (color.b & 0xFF);
+    }
+
+    @Test
     void ringGroupsUseTheStageDeltas() {
         CdLevel level = (CdLevel) GameServices.level().getCurrentLevel();
         // ObjRing_Deltas row 2 is $20,0 (Ring/Main.asm:22); the F0 entry places its second ring at $110.
@@ -129,6 +280,35 @@ class TestSonicCdCommonObjects {
         // The item rises from -$300 by $18 a frame: 32 frames until its velocity is non-negative.
         runner.stepIdleFrames(40);
         assertEquals(rings + 10, GameServices.level().getLevelGamestate().getRings(), ".GiveRings adds 10");
+    }
+
+    @ParameterizedTest
+    @CsvSource({"0, 0", "1, 90"})
+    void monitorOneUpWrapsTheLivesByte(int item, int startingRings) {
+        var campaign = GameServices.gameState();
+        NativeGameStateOps.restoreLives(campaign, 255);
+        GameServices.level().getLevelGamestate().setRings(startingRings);
+        add(new CdMonitorItem(sonic.getCentreX(), sonic.getCentreY(), item, 0));
+
+        runner.stepIdleFrames(40);
+
+        assertEquals(0, campaign.getLives(), "the 1-Up and ten-ring items both reach the byte increment");
+    }
+
+    @Test
+    void hundredthPlacedRingWrapsTheLivesByte() {
+        var campaign = GameServices.gameState();
+        NativeGameStateOps.restoreLives(campaign, 255);
+        GameServices.level().getLevelGamestate().setRings(99);
+        var stage = (CdLevel) GameServices.level().getCurrentLevel();
+        var spawn = stage.ringObjectPlacementMapping().keySet().stream()
+                .filter(entry -> entry.x() == 0xF0).findFirst().orElseThrow();
+        var ring = add(new CdRing(spawn));
+        ring.update(0, sonic);
+
+        ring.onTouchResponse(sonic, new TouchResponseResult(7, 8, 8, TouchCategory.SPECIAL), 0);
+
+        assertEquals(0, campaign.getLives(), "CollectRing increments the lives byte at 100 rings");
     }
 
     /** Steps single frames until {@code done} holds (at most {@code max}); returns the count. */

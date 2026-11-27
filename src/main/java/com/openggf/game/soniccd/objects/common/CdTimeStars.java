@@ -54,6 +54,8 @@ public final class CdTimeStars extends CdObject implements FixedRuntimeObjectIns
 
     public int animation() { return animation; }
 
+    public int mappingFrame() { return mapFrame; }
+
     @Override
     public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
         return new CdTimeStars(animation);

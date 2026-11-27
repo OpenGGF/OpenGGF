@@ -125265,3 +125265,165 @@ same queue and GL settings. The test selection was
 This covers the fields selected by the R11C
 frontier comparator and the recorded route. The broader Sonic CD matrix,
 act-end assertions and pixel checks were outside this rerun.
+
+## 2026-11-21 — Sonic CD R81B Scarab defeat rebound
+
+The U50 act-end movie for Metallic Madness Act 1 Past matched through row
+2634 on develop base `b4042035e9`. Its first error was row 2635. Sonic's
+native Y speed was `-$0F18` after defeating the Scarab. OpenGGF held
+`+$0F18`. The replay stopped with one error row.
+
+`loc_206CD8` (r8/player_object_collide.asm:456-463) takes a vulnerable-side
+Scarab contact into the ordinary enemy routine.
+`loc_206A5E` (r8/player_object_collide.asm:203-228) applies its defeat rebound. The
+Sonic CD special-touch kill now calls the shared rebound helper. The same
+path handles curled Dango and Kabasira's shot when their special contact
+selects the ordinary enemy kill.
+
+`TestCdScarabRebound` replayed the longer R81B movie from
+`u50-mmz-act-end/R81B` on the verified USA disc. The patched worktree
+reached the end of the 5,396-row trace at row 5395 with zero comparator
+errors and matched the exact signed Y speed at the kill. This covers the
+replay's player and camera fields. Signpost objects, tally and exit state
+have their own act-end comparison.
+
+The focused run passed 429 tests with zero skips. The negative control
+reported four expected rebound assertion failures and zero skips. It
+used develop for Scarab and Kabasira and temporarily removed Dango's
+existing rebound for both disc variants.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsoniccd.disc.path=<USA CHD>" "-Dsoniccd.media.root=<media root>" \
+  "-Dsoniccd.native.root=<native root>" "-Dsonic1.rom.path=<Sonic 1 REV01>" \
+  "-Dsonic2.rom.path=<Sonic 2 REV01>" "-Ds3k.rom.path=<Sonic 3 & Knuckles>" \
+  -Dopenggf.surefire.reports=target/u54-focused \
+  '-Dtest=TestCdScarabRebound,TestCdDangoTouch,TestMmzObjects2,TestSszObjects,TestSonicCdRoutesBLongNative,TestEnemyDefeatMutator,TestTouchResponseManager,TestTouchResponseProfileMapping,TestSonic1PoleThatBreaksObjectInstance,TestCrawlBadnikInstance,TestS3kSnaleBlasterBadnik,TestBroadCatchSwallowingGuard,TestZoneEventRuntimeAccessGuard,TestObjectPhysicsStandardizationGuard,TestRewindCoverageGuard,TestAudioPresentationArchitectureGuard,TestCameraRelativeDrawGuard,TestBuildToolingGuard,TestBootstrapModuleProviderCachingGuard' test -B
+```
+
+
+## 2026-11-22 — HCZ end-boss platform landing
+
+In `bugfix/ai-hcz-boss-platform-landing` over develop
+`a3e55ad37a06b7364bd1050190ddffcda062d02c`, `HCZEndBossFan_SpawnPlatform` allocates
+after the turbine, so the water platform initializes on its spawn pass.
+On outgoing HCZ segment 15 row 1941, native and corrected rolling Tails land at
+`$07BA` where develop recorded `$07BB`. The native floor callback retains
+`$EC00`. [Checkpoint evidence and regression scope](../architecture/validation/levels/s3k-hcz2.md#end-boss-platform-allocation-and-rolling-tails-landing).
+
+The queued Java 25 checks used `-Dmse=off -Dopenggf.headless.gl=surfaceless-egl
+-Dsurefire.forkCount=1 -Dtrace.print.summary=true` and fresh trace and Surefire
+report directories. All configured ROM and disc inputs were found.
+
+- `-Ptrace-replay -Dtest=TestS3kSonicTailsCompleteEmeraldRunChain#aiz1ToDoomsdayCollectingEverySevenEmeralds test -B`
+  completes the same nine compared segment windows on both sources. Segment 15's
+  first strict error is still camera X at row 940 (`$3941/$3940`). The first
+  non-camera error moves from row 1941 `sidekick_y` (`$07BA/$07BB`) to row 2008
+  `y` (`$07CE/$07D0`). Physics field errors fall from 19,236 to 18,976 and
+  animation field errors from 5,155 to 5,153. Both reports have 145 lag rows and
+  zero bootstrap errors or warnings. MGZ admission still fails at movie cursor
+  100896. One test fails the strict full-campaign gate in each run, with zero
+  skips.
+- `-Ptrace-segments -Dtest=TestS3kHczZoneSliceTraceReplay test -B` passes both
+  tests before and after with zero skips. Both comparison gates retain 29,285
+  comparisons from 31,482 planned rows, with zero differences.
+
+## 2026-11-22 — Mega AIZ2 boss head queue
+
+- Matched run: `TestS3kMegaRunChain#multiBonusSpecialStageRoundTrip` under
+  `-Ptrace-replay-r7`, one fork, surfaceless EGL, all ROM properties found.
+  Base `766cb71d7d`. Both invocations report one failed test at the same
+  segment 8 source-closure assertion (LEVEL, generation 11, BK2 cursor 25811).
+- Segments 0–7 report zero errors on both sources. Segment 8's first error
+  moves from row 1117 `queue.s3k_kos_direct.busy` ROM true / Java false to
+  row 1168 `player_animation_id` ROM 0x0021 / Java 0x0020.
+  The incomplete slice has 3,447 → 3,453 field errors. The net +6 is
+  10 queue errors fixed at rows 1117–1118 and 16 added `camera_x` errors at
+  rows 1452–1467, downstream of the row-1168 divergence. The animation count
+  stays at 581. The first remaining physics error is row 1169 `y_sub`
+  ($7700/$9700) in the glide-rebound window.
+  The head consumes recorded direct completion #137 at PRE_MAIN_LOOP and
+  module #87 at POST_OBJECTS. The previous #137 miss masked the next unmatched
+  edge, `KOS_DECOMPRESSION_QUEUE#138` / `KOS_MODULE_QUEUE#88` at raw frame
+  2759. Production holds the recorded identity with a different descriptor.
+  The source-closure assertion remains at the same movie cursor.
+- An intermediate candidate submitted one row early at 1116. Separating
+  `Obj_AIZEndBossMusic` from the next dispatch of `Obj_AIZEndBossMain` aligns
+  the native allocation pass. See the [AIZ2 matrix](../architecture/validation/levels/s3k-aiz2.md#native-aiz2-boss-head-art-2026-11-22).
+
+## 2026-11-22 — Knuckles AIZ glide dust and giant vine capture
+
+Branch `bugfix/ai-aiz-vine-angle-phase` in `.worktrees/aiz-vine-angle-phase`,
+based on `a3e55ad37a06b7364bd1050190ddffcda062d02c`. The original BK2
+was replayed with Java 25 and the verified locked-on ROM.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless \
+  LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl -Dsurefire.forkCount=1 \
+  -Dtrace.print.summary=true -Dopenggf.surefire.reports=target/u4b-green/surefire \
+  -Dopenggf.trace.reports=target/u4b-green/trace -Ptrace-replay-r7 \
+  '-Dtest=TestS3kKnucklesSuperEmeraldRunChain#firstGiantRingEntryAndReturnPreserveVineClock+aiz1ToDoomsdayAcrossEverySpecialAndBonusStage' test -B
+```
+
+Before, segment 2 first disagreed at row 446, player X `$2026/$201B`
+(ROM/engine). The incomplete segment recorded 37,726 errors before it lost
+level ownership at input 12011. With glide-slide dust active, the focused
+clock test passes and segment 2 compares past the native vine grab. Its
+first strict error is row 4194, camera X `$02A4/$02A2`. The incomplete
+segment records 142 camera X errors before production takes the Act 2 load
+at input 12780. Skipped tests and bootstrap errors were zero on both runs.
+Segment 0 and the two observed dynamic-art gaps pass in both runs.
+The campaign still fails on the early Act 2 transition and unconsumed
+hardware completions.
+
+At the first source glide landing, `Knux_Gliding_HitFloor` and its
+`loc_1693E` branch (sonic3k.asm:30776-30809) arm the fixed Dust object.
+`loc_18CB6` and `loc_18CE4` (sonic3k.asm:34115-34178) emit puffs every
+four iterations. The ROM's first five puffs occupy SSTs 7–11 until the
+next placement pass, changing the slots chosen by later objects that stay
+in the scene. At the ring touch on BK2 input 2421 the native ring is in
+SST 8 and allocates its flash in SST 9. Develop uses SSTs 10 and 7,
+deferring the flash's first dispatch by one iteration.
+
+`LevelLoop` (sonic3k.asm:7916-7953) reaches `ChangeRingFrame` after
+`SSEntryFlash_GoSS` writes special-stage mode. The ROM preserves the
+resulting vine word `$B100` until the returned object pass at input 8423.
+The extra engine iteration had advanced it to `$B280`. Restoring the
+glide dust's native cadence and slot lifetime also restores the last
+level iteration and the vine phase at return.
+
+## 2026-11-23 AIZ2 end-boss camera scroll
+
+- Base `241932f546`, worktree `.worktrees/aiz2-boss-camera-scroll`. The
+  Sonic+Tails fixture `aiz1_to_hcz_fullrun` went from two grouped camera-X
+  errors to zero errors and zero warnings. Both runs reached the comparison
+  gate and compared 20,463 of 20,798 planned rows. The old spans were
+  18849–18910 (starting ROM `$4882`, engine `$4880`) and 18960–18976
+  (starting ROM `$495F`, engine `$495E`).
+- `AIZEndBoss_FinishSubmerge` (sonic3k.asm:138271-138281) installs routine
+  `$C`. `AIZEndBoss_ScrollCamera` (sonic3k.asm:138284-138296) applies the
+  bound increments before movement and wait. `LevelLoop`
+  (sonic3k.asm:7916-7930) processes sprites before deformation.
+  `loc_1BFF0` (sonic3k.asm:38342-38348) passes the live bounds to
+  `MoveCameraX` (sonic3k.asm:38409-38465) on that frame.
+- Round 42 (`800887a54f`) corrected the revealed animation and also
+  deferred the first scroll write to compensate for the earlier dispatch.
+  PR #468 moved main initialization to the dispatch after the music callback
+  and exposed the stale defer and catch-up. R2 removes the skipped first step
+  and the deferred right-bound increment. It keeps the revealed-animation and
+  main-init timing.
+- Java 25 and the Maven queue, `-Dmse=off -Ptrace-replay
+  -Dsurefire.forkCount=1 -Dsurefire.reuseForks=false
+  -Dopenggf.headless.gl=surfaceless-egl -Dtrace.print.summary=true` with
+  `TestS3kAizTraceReplay` in the focused selection. All ROM inputs were found.
+  All 17 cases in that replay class passed with zero skips. The focused
+  `firstRepositionExpandsArenaOnEachScrollDispatch` test failed on develop at
+  the first minimum write (`$4882/$4880`) and passed with the correction.
+- Skipping only the first maximum write also failed the same test
+  (`$4882/$4880` at the maximum assertion). After restoration,
+  `-Ptrace-replay-r7` passed the focused regression and
+  `TestS3kKnucklesSuperAizSegmentTraceReplay`. The Knuckles segment
+  reached its comparison gate with 1,653 rows and zero divergences.

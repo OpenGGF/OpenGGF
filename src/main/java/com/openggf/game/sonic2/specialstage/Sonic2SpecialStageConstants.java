@@ -372,7 +372,6 @@ public final class Sonic2SpecialStageConstants {
      * flag on the following frame (s2.asm:28428-28430).
      */
     public static final int RESULTS_WAIT_DURATION = 0x78;
-    public static final int RESULTS_TALLY_TICK_INTERVAL = 4; // Sound every 4 frames
 
     /** Results screen bonus values */
     public static final int RESULTS_EMERALD_BONUS = 1000;   // Points for collecting emerald
