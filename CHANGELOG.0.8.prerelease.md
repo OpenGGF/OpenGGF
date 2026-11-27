@@ -7,6 +7,10 @@ under the matching area heading; see the
 
 ## Gameplay and presentation
 
+- **Pit deaths during camera resize** use the live bottom limit in Sonic 1,
+  Sonic 2 and Sonic 3 & Knuckles. Sky Chase also lowers the live limit before
+  moving the camera with the Tornado, matching the cartridge's update order.
+
 - **First-run setup guide:** the first time you reach the hub, a short guide
   adds your games, asks **How do you want to play?** and starts one. It finds
   Sonic 1, Sonic 2, Sonic 3 & Knuckles and Sonic CD by content; Sonic CD shows
