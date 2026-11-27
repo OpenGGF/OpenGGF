@@ -728,12 +728,15 @@ public class MasterTitleScreen {
     }
 
     /**
-     * The page the hub opens by itself: the setup guide once per run while it is unsettled; otherwise, as
+     * The page the hub opens by itself: the setup guide once per run while it is unsettled and no game is
+     * paused behind the hub; otherwise, as
      * before the guide, Add your games when no cartridge is available (never in a run whose guide already
      * opened, so one run never opens two such pages on its own). Hubs without a session keep the old rule.
      */
     private void openStartupChild() {
-        if (setupGuideSession != null && setupGuideSession.claimAutomaticOpen(configService)) openSetupGuide(false);
+        // A hub that holds a paused game was opened from play (a direct boot, then the hub): never set up over it.
+        if (setupGuideSession != null && !hasSuspendedGame() && setupGuideSession.claimAutomaticOpen(configService))
+            openSetupGuide(false);
         else if (stockAvailability.values().stream().noneMatch(Boolean.TRUE::equals)
                 && (setupGuideSession == null || !setupGuideSession.automaticOpenUsed()))
             onboarding = new MenuGameOnboarding(configService);

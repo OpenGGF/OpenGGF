@@ -46,6 +46,20 @@ class TestMasterTitleSetupGuide {
         assertFalse(rebuilt.onboardingOpenForTest(), "and no second startup page of any kind");
     }
 
+    @Test void aHubOpenedFromPlayNeverStartsTheGuideOverThePausedGame() {
+        var config = SonicConfigurationService.createStandalone(dir);
+        var session = new SetupGuideSession(false);
+        var paused = hub(config, session, true);
+        paused.setSuspendedGame(new MasterTitleEntry.Suspended(new MasterTitleEntry.Stock(MasterTitleScreen.GameEntry.SONIC_2),
+                "Emerald Hill Zone, Act 1", true), 2, 2, new byte[16]);
+        paused.openStartupChildForTest();
+        assertNull(paused.setupGuideForTest());
+        assertFalse(session.automaticOpenUsed(), "the run's one automatic opening is still available");
+        var later = hub(config, session, true);
+        later.openStartupChildForTest();
+        assertNotNull(later.setupGuideForTest(), "the next hub without a paused game may open it");
+    }
+
     @Test void aSettledGuideLeavesTheEarlierRuleInPlace() throws Exception {
         var config = SonicConfigurationService.createStandalone(dir);
         SetupGuidePreset.skip(config);
