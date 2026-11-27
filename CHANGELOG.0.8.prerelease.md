@@ -469,7 +469,8 @@ under the matching area heading; see the
   step with the live rings, so a ring never jumps when it wakes up, and rings you have
   collected stay gone. Title
   cards and results screens time their exits from the game's own screen rather than the
-  picture. The HUD stays fully visible when the wider picture slides to frame
+  picture, and results screens and title, level select and save menus sit centred in the
+  wider picture instead of one margin's width to the right. The HUD stays fully visible when the wider picture slides to frame
   a locked boss arena. A wider picture never delays the next act or the enemies' art. That also
   lets recorded Sonic 3 & Knuckles runs be filmed wider than 320: Hydrocity and Marble
   Garden used to stop with a full KosM queue. Tests run Sonic 1, Sonic 2 and Sonic 3 &
