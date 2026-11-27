@@ -26,4 +26,11 @@ public interface NativeArenaCameraFraming {
      * The native-bounds mask would otherwise cover that presentation extension.
      */
     default boolean ownsWidescreenMargins() { return false; }
+
+    /** Whether an auto-scroll currently writes the native camera bounds to the camera
+     * position every frame, so they track the moving 320px window instead of a finite
+     * arena. The world beyond that window scrolls into view, and the scroll may wrap the
+     * camera back by a loop distance; the native-bounds mask must not conceal it.
+     */
+    default boolean nativeBoundsFollowAutoScroll() { return false; }
 }
