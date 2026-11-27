@@ -7,6 +7,10 @@ under the matching area heading; see the
 
 ## Gameplay and presentation
 
+- **Knuckles in Sonic 2 starts from the hub again.** Choosing Knuckles for
+  Sonic 2 in Game Setup or the setup guide used to start the game as Sonic,
+  because Start re-checked the profile without the built-in Knuckles option.
+
 - **Pit deaths during camera resize** use the live bottom limit in Sonic 1,
   Sonic 2 and Sonic 3 & Knuckles. Sky Chase also lowers the live limit before
   moving the camera with the Tornado, matching the cartridge's update order.
