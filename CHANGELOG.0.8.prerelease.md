@@ -7,6 +7,25 @@ under the matching area heading; see the
 
 ## Gameplay and presentation
 
+- **Pit deaths during camera resize** use the live bottom limit in Sonic 1,
+  Sonic 2 and Sonic 3 & Knuckles. Sky Chase also lowers the live limit before
+  moving the camera with the Tornado, matching the cartridge's update order.
+
+- **Sonic 2 positioned starts:** object loading publishes the new camera
+  position before the next object update. Widescreen EDGE keeps Emerald Hill's
+  loop switchers alive so Sonic can follow both sides of the loop.
+
+- In Sonic 3 & Knuckles, invincibility now ends on the frame the original
+  does. The game counts it down once every eight frames, so it could last up
+  to seven frames too long. A bubble shield collected while invincible now
+  starts its animation on the right frame and stays in step with the original.
+
+- Sonic 1 and Sonic 3 & Knuckles special stages now award a Continue at 50
+  rings and lives at 100 and 200 rings. Sonic 1's 1UP block grants a life
+  and shows its four-frame sparkle. Sonic 2 and Knuckles in Sonic 2 award
+  a Continue and show the mini-Sonic cue when the completed act bonus
+  reaches 10,000 points. Earned Continues can be spent after game over.
+
 - In standalone Sonic & Knuckles, star posts cycle between Slots and Pachinko.
   A star post activated with 50 rings opens Slots. Once all seven Chaos Emeralds
   are collected, giant rings award 50 rings.
@@ -399,13 +418,17 @@ under the matching area heading; see the
   the original 320-pixel screen and draws the extra width as scenery, so every screen
   size plays exactly the same game. That makes widescreen fair for time attack, races
   and shared replays. Objects in the extra width that the original game has not woken
-  up yet are drawn frozen where they start, in greyscale by default
-  (`display.widescreenDormantStyle`: `GREYSCALE`, `NORMAL` or `HIDDEN`). They come to
-  life when the original screen reaches them and freeze again when it leaves them,
-  unless they were destroyed for good. Rings work the same way: uncollected rings
-  waiting in the extra width sit still, and rings you have collected stay gone. Title
+  up yet are drawn where they start, in greyscale by default
+  (`display.widescreenDormantStyle`: `GREYSCALE`, `NORMAL` or `HIDDEN`). Objects that
+  animate in place play their animation there; anything that moves is drawn still. They
+  come to life when the original screen reaches them. When it leaves them, an object
+  that was standing still keeps the look it had, and one that moved goes back to where
+  it starts, unless it was destroyed for good. Rings waiting in the extra width spin in
+  step with the live rings, so a ring never jumps when it wakes up, and rings you have
+  collected stay gone. Title
   cards and results screens time their exits from the game's own screen rather than the
-  picture, so a wider picture never delays the next act or the enemies' art. That also
+  picture. The HUD stays fully visible when the wider picture slides to frame
+  a locked boss arena. A wider picture never delays the next act or the enemies' art. That also
   lets recorded Sonic 3 & Knuckles runs be filmed wider than 320: Hydrocity and Marble
   Garden used to stop with a full KosM queue. Tests run Sonic 1, Sonic 2 and Sonic 3 &
   Knuckles at 32:9 and 4:3 with the same input and check that the game state matches on every
@@ -768,6 +791,28 @@ under the matching area heading; see the
 
 ## Modding and tools
 
+- Mutator Lab adds **Beta Flight** for Knuckles in Sonic 3 & Knuckles. It replaces
+  his glide with the flight found in the unused Knuckles object of the Sonic 3 Winter
+  CES cartridge (Dec 22, 1993): an untimed, Tails-style flap whose left and right only
+  turn him around, as in that build. A **Fixed Steering** option makes left and right
+  steer him in flight instead, and a **Super Jump** option gives Super and Hyper
+  Knuckles that object's higher jump. The glide is unchanged while the mutator is off.
+
+- **Mutator Lab starting values and ring hunger:** five new mutators work in
+  Sonic 1, Sonic 2 and Sonic 3 & Knuckles. Start with Rings grants rings at every
+  act start and life, optionally after a delay, without paying a 100/200-ring
+  extra life. Start with Time puts up to 9:30 on the clock at act starts;
+  checkpoint restarts keep their saved time. Start with Score and Start with
+  Lives seed a new game. Hungry for Rings drains rings after a grace period and
+  kills a player who stays at or under a ring count for too long; a dial beside
+  the RINGS counter, in the HUD's own palette inks, shows the grace, the drain and
+  a red starvation countdown in both widescreen HUD anchors. Its state rewinds.
+  Held Left/Right accelerates on long sliders. `GameplayCaptureTool` and
+  `MutatorGameplayCaptureTool` take a repeatable `--mutator id:option=value,...`
+  flag to set mutators for a capture without touching saved settings. The 0.7
+  candidate API gains `StartingStatePolicy`, `RingHungerPolicy` and five
+  capabilities.
+
 - Music-pack patches can replace Sonic 1, Sonic 2 and Sonic 3 & Knuckles songs
   with native SMPS packages exported by external authoring tools. Package tracks keep native
   sequencing, jingle restoration and rewind. Failed package tracks fall back
@@ -900,6 +945,8 @@ under the matching area heading; see the
   with native-style material contours and the complete S3K hanging sequence.
   S3K title wag sprites now own the complete glove and backing context,
   removing doubled thumbs and the cutout halo while retaining native timing.
+  MICA's Sonic 1 title wag frames now share one body and change only her hand,
+  so her scale edges no longer shimmer at each swap.
   TALON's S2/S3K native mapping namespaces now bind all declared poses through
   archetype-owned NFRM aliases, including S2 object tumble, S3K gravity loops,
   corkscrews, swing/grip/chain/carry and later object turns. The audit exposes

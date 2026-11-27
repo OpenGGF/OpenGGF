@@ -199,7 +199,7 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
         }
         Row selected = choices.get(Math.min(row, choices.size() - 1));
         if (horizontal != 0 && (selected.action() == Action.OPTION || selected.action() == Action.ENABLE
-                || selected.action() == Action.MUTATOR)) edit(selected, horizontal);
+                || selected.action() == Action.MUTATOR)) edit(selected, horizontal * sliderAcceleration(selected, horizontal));
         if (MenuInput.accept(input)) activate(selected);
         // Pointer uses the same native grid and the same actions as keyboard/controller controls.
         var pointer = MenuInput.pointer(input, width(), 224);
@@ -253,6 +253,36 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
             }
         }
     }
+    // Held Left/Right on one slider row: consecutive menu-repeat pulses, counted to accelerate.
+    private int repeatRowIndex = -1, repeatDirection, repeatPulses, repeatAge = Integer.MIN_VALUE / 2;
+
+    /**
+     * Step multiplier for a held slider. Menu repeat pulses fifteen times a second; after about
+     * half a second, two and four seconds of repeating, long sliders move 10, 100 and 1000 steps
+     * per pulse, but only while that leaves at least {@link #ACCELERATED_MINIMUM_POSITIONS}
+     * positions per step. Every value stays on the slider's minimum-plus-step lattice and is
+     * clamped to its last value, so the 570-position time slider sweeps end to end in about
+     * five seconds and a 100,000-position score slider in about ten. Short sliders, checkboxes
+     * and choices always move one step, and single presses always move one step.
+     */
+    private int sliderAcceleration(Row item, int direction) {
+        boolean repeat = row == repeatRowIndex && direction == repeatDirection
+                && age - repeatAge <= com.openggf.control.MenuRepeat.INTERVAL + 1;
+        repeatPulses = repeat ? repeatPulses + 1 : 0;
+        repeatRowIndex = row; repeatDirection = direction; repeatAge = age;
+        if (item.option() == null || !(definition(item.key()).definition().option(item.option())
+                instanceof MutatorOption.IntegerSlider slider)) return 1;
+        long positions = ((long) slider.maximum() - slider.minimum()) / slider.step() + 1;
+        int multiplier = 1;
+        for (int[] tier : ACCELERATION_TIERS) {
+            if (repeatPulses >= tier[0] && positions / tier[1] >= ACCELERATED_MINIMUM_POSITIONS) multiplier = tier[1];
+        }
+        return multiplier;
+    }
+    /** Repeat pulses held (fifteen a second) before each multiplier applies. */
+    private static final int[][] ACCELERATION_TIERS = { { 8, 10 }, { 30, 100 }, { 60, 1000 } };
+    private static final int ACCELERATED_MINIMUM_POSITIONS = 20;
+
     private void edit(Row item, int direction) {
         var d=definition(item.key()).definition();
         var value=settings.requested().get(item.key());

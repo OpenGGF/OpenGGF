@@ -16,31 +16,43 @@ import static org.lwjgl.glfw.GLFW.*;
 class TestContinueScreenRoundTrip {
     @Nested @RequiresRom(SonicGame.SONIC_1)
     class Sonic1 {
-        @Test void acceptedContinueReloadsAct() throws Exception { roundTrip(SonicGame.SONIC_1); }
+        @Test void continueEarnedInSpecialStageSurvivesGameOver() throws Exception { roundTrip(SonicGame.SONIC_1, true); }
+        @Test void acceptedContinueReloadsAct() throws Exception { roundTrip(SonicGame.SONIC_1, false); }
     }
     @Nested @RequiresRom(SonicGame.SONIC_2)
     class Sonic2 {
-        @Test void acceptedContinueReloadsAct() throws Exception { roundTrip(SonicGame.SONIC_2); }
+        @Test void acceptedContinueReloadsAct() throws Exception { roundTrip(SonicGame.SONIC_2, false); }
     }
     @Nested @RequiresRom(SonicGame.SONIC_3K)
     class Sonic3k {
-        @Test void acceptedContinueReloadsAct() throws Exception { roundTrip(SonicGame.SONIC_3K); }
+        @Test void acceptedContinueReloadsAct() throws Exception { roundTrip(SonicGame.SONIC_3K, false); }
     }
 
-    private static void roundTrip(SonicGame game) throws Exception {
+    private static void roundTrip(SonicGame game, boolean earnInSpecialStage) throws Exception {
         var shared = SharedLevel.load(game, 0, 0);
         try {
-            HeadlessTestFixture.builder().withSharedLevel(shared).build();
+            var fixture = HeadlessTestFixture.builder().withSharedLevel(shared).build();
             var input = new InputHandler();
             var loop = new GameLoop(input);
             loop.setGameMode(GameMode.LEVEL);
             var state = GameServices.gameState();
-            while (state.getLives() > 0) state.loseLife();
-            state.addContinue();
-            state.addContinue();
             state.addScore(1200);
             var level = GameServices.level();
-            level.requestGameOverExit(GameOverExit.CONTINUE_SCREEN);
+            if (earnInSpecialStage) {
+                earnSonic1Continue();
+                while (state.getLives() > 1) state.loseLife();
+                var sprite = fixture.sprite();
+                assertTrue(sprite.applyHurtOrDeath(sprite.getCentreX(), DamageCause.SPIKE, false));
+                for (int frame = 0; frame < 1200 && level.getGameOverExitRequested() == null; frame++) {
+                    fixture.stepIdleFrames(1);
+                }
+                assertEquals(GameOverExit.CONTINUE_SCREEN, level.getGameOverExitRequested());
+            } else {
+                while (state.getLives() > 0) state.loseLife();
+                state.addContinue();
+                state.addContinue();
+                level.requestGameOverExit(GameOverExit.CONTINUE_SCREEN);
+            }
             for (int i = 0; i < 120 && loop.getCurrentGameMode() != GameMode.CONTINUE_SCREEN; i++) loop.step();
             assertEquals(GameMode.CONTINUE_SCREEN, loop.getCurrentGameMode());
             assertNotNull(loop.getContinueScreenProvider());
@@ -53,13 +65,33 @@ class TestContinueScreenRoundTrip {
             for (int i = 0; i < 180 && loop.getContinueScreenProvider() != null; i++) loop.step();
             assertNull(loop.getContinueScreenProvider(), "departure and fade must reach reload");
             assertEquals(3, state.getLives());
-            assertEquals(1, state.getContinues());
+            assertEquals(earnInSpecialStage ? 0 : 1, state.getContinues());
             assertEquals(0, state.getScore());
             assertEquals(0, level.getCurrentZone());
             assertTrue(loop.getCurrentGameMode() == GameMode.LEVEL || loop.getCurrentGameMode() == GameMode.TITLE_CARD);
             assertFalse(level.isLevelInactiveForTransition());
         } finally {
             shared.dispose();
+        }
+    }
+
+    private static void earnSonic1Continue() throws Exception {
+        var stage = new com.openggf.game.sonic1.specialstage.Sonic1SpecialStageManager();
+        try {
+            stage.initialize(0);
+            stage.advanceToEntryPresentation();
+            stage.update();
+            var position = stage.captureComparisonState();
+            int row = ((int) (position.sonicPosY() >> 16) + 0x50) / 24;
+            int column = ((int) (position.sonicPosX() >> 16) + 0x20) / 24;
+            var layout = stage.getClass().getDeclaredField("layout");
+            layout.setAccessible(true);
+            ((byte[]) layout.get(stage))[row * 128 + column] = 0x3A;
+            stage.setRingsCollected(49);
+            stage.update();
+            assertEquals(50, stage.getRingsCollected());
+        } finally {
+            stage.reset();
         }
     }
 }

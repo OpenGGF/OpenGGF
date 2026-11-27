@@ -155,6 +155,13 @@ public final class SpritePresentationRenderer {
      */
     public static void drawNative(GraphicsManager graphics, Frame frame, int cameraX, int cameraY,
                                   Predicate<Layer> visible, com.openggf.game.mutators.LivePresentationRuntime runtime) {
+        drawNative(graphics, frame, cameraX, cameraY, visible, runtime, 0);
+    }
+
+    /** Replay camera-relative tiles into a raster extending inset pixels left of that camera. */
+    public static void drawNative(GraphicsManager graphics, Frame frame, int cameraX, int cameraY,
+                                  Predicate<Layer> visible, com.openggf.game.mutators.LivePresentationRuntime runtime,
+                                  int inset) {
         if (SpritePresentation.isPreparing(graphics)) {
             draw(graphics, frame, cameraX, cameraY, visible, runtime);
             return;
@@ -162,19 +169,19 @@ public final class SpritePresentationRenderer {
         try {
             frame = runtime == null ? com.openggf.level.objects.HudProfileAccess.projectPresentation(graphics, frame)
                     : com.openggf.level.objects.HudProfileAccess.projectPresentation(runtime.world(), graphics, frame);
-            if (runtime != null && !runtime.trails().isEmpty()) drawTrails(graphics, frame, cameraX, cameraY, visible, runtime);
+            if (runtime != null && !runtime.trails().isEmpty()) drawTrails(graphics, frame, cameraX, cameraY, visible, runtime, inset);
             // The frame's tile list is immutable: draw through a reversed view instead of
             // copying it into a second Frame (and copying each native layer span again).
             var nativeTiles = frame.tiles().reversed();
             var versions = frame.patternVersions();
             satAccess(graphics).replayNativeLayers(nativeTiles, Tile::ghost,
                     tiles -> drawPicture(graphics, tiles, java.util.List.of(), versions,
-                            cameraX, cameraY, visible, runtime, 1));
+                            cameraX, cameraY, visible, runtime, 1, inset));
             if (!frame.primitives().isEmpty()) {
                 var overlays = frame.primitives().stream()
                         .map(primitive -> new Primitive(0, primitive.layer(), primitive.primitive(), primitive.subject())).toList();
                 drawPicture(graphics, java.util.List.of(), overlays, java.util.Map.of(),
-                        cameraX, cameraY, visible, runtime, 1);
+                        cameraX, cameraY, visible, runtime, 1, inset);
             }
         } catch (RuntimeException | Error failure) {
             if (runtime != null) runtime.releaseTrailArt();
@@ -188,8 +195,8 @@ public final class SpritePresentationRenderer {
         try {
             frame=runtime==null?com.openggf.level.objects.HudProfileAccess.projectPresentation(graphics,frame):
                     com.openggf.level.objects.HudProfileAccess.projectPresentation(runtime.world(),graphics,frame);
-            if(runtime!=null&&!runtime.trails().isEmpty())drawTrails(graphics,frame,cameraX,cameraY,visible,runtime);
-            drawPicture(graphics,frame,cameraX,cameraY,visible,runtime,1);
+            if(runtime!=null&&!runtime.trails().isEmpty())drawTrails(graphics,frame,cameraX,cameraY,visible,runtime,0);
+            drawPicture(graphics,frame,cameraX,cameraY,visible,runtime,1,0);
         } catch(RuntimeException|Error failure) {
             if(runtime!=null)runtime.releaseTrailArt();
             throw failure;
@@ -197,7 +204,7 @@ public final class SpritePresentationRenderer {
     }
 
     private static void drawTrails(GraphicsManager graphics,Frame current,int cameraX,int cameraY,Predicate<Layer> visible,
-                                    com.openggf.game.mutators.LivePresentationRuntime runtime) {
+                                    com.openggf.game.mutators.LivePresentationRuntime runtime, int inset) {
         var displayed=current.tiles().stream().filter(t->!t.subject().suppressed()&&t.subject().body()!=null
                 &&(t.subject().part()==Part.BODY||t.subject().part()==Part.APPENDAGE))
                 .map(t->new DisplayPart(t.subject().id(),t.subject().part())).collect(java.util.stream.Collectors.toSet());
@@ -220,20 +227,20 @@ public final class SpritePresentationRenderer {
             }
             // Every retained actor stays clearly readable; the newest echoes are nearly opaque.
             float opacity=.65f+.30f*poseIndex++/Math.max(1,poses.size()-1);
-            drawPicture(graphics,new Frame(tiles,java.util.List.of(),versions),cameraX,cameraY,visible,runtime,opacity);
+            drawPicture(graphics,new Frame(tiles,java.util.List.of(),versions),cameraX,cameraY,visible,runtime,opacity,inset);
         }
     }
     private record DisplayPart(String id,Part part) { }
     private static void drawPicture(GraphicsManager graphics,Frame frame,int cameraX,int cameraY,Predicate<Layer> visible,
-                                     com.openggf.game.mutators.LivePresentationRuntime runtime,float opacity) {
+                                     com.openggf.game.mutators.LivePresentationRuntime runtime,float opacity,int inset) {
         drawPicture(graphics, frame.tiles(), frame.primitives(), frame.patternVersions(),
-                cameraX, cameraY, visible, runtime, opacity);
+                cameraX, cameraY, visible, runtime, opacity, inset);
     }
 
     private static void drawPicture(GraphicsManager graphics, java.util.List<Tile> tiles, java.util.List<Primitive> primitives,
                                     java.util.Map<Integer, PatternVersion> patternVersions, int cameraX, int cameraY,
                                     Predicate<Layer> visible, com.openggf.game.mutators.LivePresentationRuntime runtime,
-                                    float opacity) {
+                                    float opacity, int inset) {
         boolean priority = graphics.isUseSpritePriorityShader();
         int mask = graphics.getCurrentSpriteTileOcclusionPaletteMask();
         boolean ghost = graphics.isGhostRenderEffectActive();
@@ -249,6 +256,9 @@ public final class SpritePresentationRenderer {
         } finally { graphics.endPatternAtlasBatch(); }
         var viewport = presentation.viewport();
         var cameraMotion = com.openggf.graphics.SpriteMotionInternalAccess.cameraOffset(graphics);
+        // Deferred drawing subtracts the picture's left edge (camera X minus
+        // inset). Cull in the same coordinate system before submitting tiles.
+        int rasterOffsetX = cameraMotion.x() - inset;
         Tile previous = null;
         boolean previousPictureGeometry = false;
         var policies = runtime == null ? java.util.List.<com.openggf.game.mutators.TransientMutatorPolicySource.Entry>of()
@@ -289,14 +299,14 @@ public final class SpritePresentationRenderer {
                 }
                 if (viewport != null) {
                     boolean outside;
-                    if (pictureGeometry || shadow) outside = viewport.outside(quad, cameraX + cameraMotion.x(), cameraY + cameraMotion.y());
+                    if (pictureGeometry || shadow) outside = viewport.outside(quad, cameraX + rasterOffsetX, cameraY + cameraMotion.y());
                     else if (tile.rowClipped()) {
                         // The native row path emits integer-positioned 8-pixel strips.
-                        float left = (int) (tile.x() + cameraX + motion.x()) - cameraX - cameraMotion.x();
+                        float left = (int) (tile.x() + cameraX + motion.x()) - cameraX - rasterOffsetX;
                         float top = (int) (tile.y() + cameraY + motion.y()) - cameraY - cameraMotion.y();
                         outside = viewport.outside(left, top + tile.rowStart(), left + 8, top + tile.rowEnd());
-                    } else outside = viewport.outside(tile.x() + motion.x() - cameraMotion.x(), tile.y() + motion.y() - cameraMotion.y(),
-                            tile.x() + motion.x() - cameraMotion.x() + tile.width(),
+                    } else outside = viewport.outside(tile.x() + motion.x() - rasterOffsetX, tile.y() + motion.y() - cameraMotion.y(),
+                            tile.x() + motion.x() - rasterOffsetX + tile.width(),
                             tile.y() + motion.y() - cameraMotion.y() + tile.height());
                     if (outside) continue;
                 }

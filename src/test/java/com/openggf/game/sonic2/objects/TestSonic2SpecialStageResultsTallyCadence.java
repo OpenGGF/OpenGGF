@@ -148,4 +148,29 @@ class TestSonic2SpecialStageResultsTallyCadence {
     void asinglePlayerCountdownIsUnaffectedByTheSecond() {
         assertEquals(162, tallyPasses(screen(161, 0, false)));
     }
+
+    @Test
+    void specialStageEmeraldAndRingsDoNotAwardAnActClearContinue() {
+        var results = screen(130, 0, true);
+        for (int frame = 1; frame <= 450; frame++) {
+            results.update(frame, null);
+        }
+        assertEquals(0, services.gameState().getContinues(), "Obj6F has no Continue_count write");
+    }
+
+    @Test
+    void endOfActTallyAwardsAtOneThousandNativeUnitsAndWrapsTheByte() {
+        var state = services.gameState();
+        state.restoreSaveProgress(3, 255, List.of(), List.of());
+        // At 285 seconds the time bonus is 50 units. 95 rings add 950 units.
+        for (int ringCount : new int[]{94, 95}) {
+            var results = new ResultsScreenObjectInstance(285, ringCount, 1, false);
+            results.setServices(services);
+            for (int frame = 1; frame <= 350; frame++) {
+                results.update(frame, null);
+            }
+            assertEquals(ringCount == 94 ? 255 : 0, state.getContinues(),
+                    "Obj3A loc_141E6 checks the completed tally, then loc_14220 increments the byte");
+        }
+    }
 }
