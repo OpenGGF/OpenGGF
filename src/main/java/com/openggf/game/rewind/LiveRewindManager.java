@@ -44,21 +44,71 @@ public final class LiveRewindManager {
     private final LiveRewindBudget budget = new LiveRewindBudget();
     private int emptyFeedbackFrames;
     private boolean rewindKeyWasHeld;
+    // Refill and pulse presentation. Like the allowance, it stays outside the rewind registry, so
+    // history replay can neither restore nor re-trigger it.
+    private int refillFromFrames;
+    private int refillFrame = -1;
+    private boolean refillShownThisFrame;
+    private int pulseFrame = -1;
+    private int heldPulseFrames;
+    private GameMode refillMode;
 
-    /** Read-only presentation model; allowance never participates in rewind snapshots. */
+    /**
+     * Read-only presentation model; allowance never participates in rewind snapshots.
+     * {@code refillFrame} counts frames into a refill's presentation (-1 when none) that started
+     * from {@code refillFromFrames}; {@code pulseFrame} counts frames of a held unlimited rewind
+     * (-1 when the key is up).
+     */
     public record BudgetHudState(boolean visible, boolean unlimited, int remainingFrames,
-                                 int maximumFrames, boolean empty, int framesPerSecond) {
+                                 int maximumFrames, boolean empty, int framesPerSecond,
+                                 int refillFromFrames, int refillFrame, int pulseFrame) {
         public BudgetHudState(boolean visible, boolean unlimited, int remainingFrames, int maximumFrames, boolean empty) {
             this(visible, unlimited, remainingFrames, maximumFrames, empty, 60);
+        }
+
+        public BudgetHudState(boolean visible, boolean unlimited, int remainingFrames, int maximumFrames,
+                              boolean empty, int framesPerSecond) {
+            this(visible, unlimited, remainingFrames, maximumFrames, empty, framesPerSecond, -1, -1, -1);
         }
     }
 
     private int framesPerSecond() { return com.openggf.configuration.FrameRateResolver.simulation(config); }
 
     public BudgetHudState budgetHudState() {
-        boolean visible = keyEnabled() && !scriptedRewinding && (rewinding || emptyFeedbackFrames > 0);
+        boolean refilling = refillFrame >= 0 && refillShownThisFrame;
+        boolean visible = keyEnabled() && !scriptedRewinding && (rewinding || emptyFeedbackFrames > 0 || refilling);
         return new BudgetHudState(visible, budget.unlimited(), budget.remainingFrames(),
-                budget.maximumFrames(), budget.empty(), framesPerSecond());
+                budget.maximumFrames(), budget.empty(), framesPerSecond(),
+                refilling ? refillFromFrames : -1, refilling ? refillFrame : -1, rewinding ? pulseFrame : -1);
+    }
+
+    /** Starts the refill presentation when the budget just restored visible spent time. */
+    private void collectRefill() {
+        int from = budget.takeRefillFrom();
+        if (from < 0 || !keyEnabled() || budget.unlimited()) return;
+        refillFromFrames = from;
+        refillFrame = 0;
+        refillShownThisFrame = false;
+        emptyFeedbackFrames = 0;
+    }
+
+    private boolean refillStarted() {
+        return refillFrame > 0 || refillFrame == 0 && refillShownThisFrame;
+    }
+
+    private void cancelRefill() {
+        budget.takeRefillFrom();
+        refillFrame = -1;
+        refillShownThisFrame = false;
+    }
+
+    /** Advances a shown refill one frame, ending it after its fill and hold. */
+    private void advanceRefill() {
+        if (refillFrame >= 0 && refillShownThisFrame
+                && ++refillFrame >= LiveRewindHudOverlay.refillAnimationFrames(framesPerSecond())) {
+            refillFrame = -1;
+        }
+        refillShownThisFrame = false;
     }
 
     private void refreshBudgetConfiguration() {
@@ -77,6 +127,11 @@ public final class LiveRewindManager {
         // Visit boundaries outlive history installations and must be observed
         // even when a stage's rewind toggle is disabled or its owner is gone.
         budget.enterMode(mode, identity);
+        // The refill belongs to the pool it filled: entering or leaving a stage visit ends it.
+        // A title card or other transient mode keeps it pending until gameplay resumes.
+        GameMode pool = mode == GameMode.BONUS_STAGE || mode == GameMode.SPECIAL_STAGE ? mode : GameMode.LEVEL;
+        if (pool != refillMode || budget.unlimited() || !keyEnabled()) cancelRefill();
+        refillMode = pool;
         if (!ready || !keyEnabled()) return;
         if (mode == GameMode.LEVEL) {
             var level = boundOwner.getLevelManager();
@@ -85,6 +140,7 @@ public final class LiveRewindManager {
             budget.observeMain(boundOwner.getWorldSession(), module == null ? "" : module.getGameCode(),
                     level.getCurrentZone(), level.getCurrentAct(),
                     checkpoint == null ? -1 : checkpoint.getStarPostActivationMark());
+            collectRefill();
         }
     }
 
@@ -240,6 +296,10 @@ public final class LiveRewindManager {
      */
     public boolean handleRealtimeRewindInput(GameMode mode, boolean rewindBlocked, InputHandler input) {
         if (emptyFeedbackFrames > 0) emptyFeedbackFrames--;
+        // A refill holds still and hidden through blocked frames (a respawn's fade or title
+        // card) and plays once gameplay may rewind again.
+        advanceRefill();
+        pulseFrame = -1;
         observeBudgetContext();
         reconcileBinding();
         drainBoundaries();
@@ -257,6 +317,7 @@ public final class LiveRewindManager {
         if (releasePending) {
             return retryPendingRelease();
         }
+        refillShownThisFrame = refillFrame >= 0;
         activeInputHandler = input;
         // A module's scripted rewind runs the held-key presentation at its own pace.
         boolean scripted = script != null && script.requested();
@@ -264,6 +325,11 @@ public final class LiveRewindManager {
         boolean held = keyEnabled() && input.isKeyDown(rewindKey);
         boolean pressed = held && !rewindKeyWasHeld;
         rewindKeyWasHeld = held;
+        // Rewinding takes the plate over; a restored allowance is not replayed afterwards.
+        if (held || scripted) cancelRefill();
+        // Pulse frames come from the previous held frame's count; the key going up stops it.
+        if (held && !scripted && budget.unlimited()) pulseFrame = heldPulseFrames++;
+        else heldPulseFrames = 0;
         if (!scripted && budget.empty()) {
             if (pressed) emptyFeedbackFrames = framesPerSecond();
             if (rewinding) {
@@ -499,8 +565,17 @@ public final class LiveRewindManager {
                 boolean refill = config.getBoolean(SonicConfiguration.REWIND_REFILL_ON_LIFE_LOSS);
                 budget.lifeLost(refill);
                 if (refill) emptyFeedbackFrames = 0;
+                collectRefill();
             }
             return;
+        }
+        // A level load or a non-rewindable mode ends a refill already on screen. A life-loss
+        // refill is marked inside the death reload, before that reload's own title card and
+        // level-load reports, and has not been shown yet: it waits and appears once the player
+        // can move again.
+        if ((boundary == RewindBoundary.LEVEL_LOAD || boundary == RewindBoundary.MODE_EXIT_TO_NON_REWINDABLE)
+                && refillStarted()) {
+            cancelRefill();
         }
         if (releasePending) {
             if (!retireAfterRelease && boundary == pendingReleaseBoundary) retryPendingRelease();
@@ -555,6 +630,9 @@ public final class LiveRewindManager {
         budget.startNewRun();
         emptyFeedbackFrames = 0;
         rewindKeyWasHeld = false;
+        cancelRefill();
+        heldPulseFrames = 0;
+        pulseFrame = -1;
     }
 
     /** A drained/disabled held key must not bypass ordinary gameplay pacing. */
@@ -975,6 +1053,8 @@ public final class LiveRewindManager {
         pendingReleaseBoundary = null;
         emptyFeedbackFrames = 0;
         rewindKeyWasHeld = false;
+        heldPulseFrames = 0;
+        pulseFrame = -1;
         effectEnvelope.reset();
         return true;
     }

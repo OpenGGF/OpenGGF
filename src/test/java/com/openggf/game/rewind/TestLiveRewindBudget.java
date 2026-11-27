@@ -176,4 +176,76 @@ class TestLiveRewindBudget {
         budget.configure("act", "1");
         assertTrue(budget.empty());
     }
+
+    @Test
+    void boundaryAndLifeLossRefillsReportWhatWasLeftOnlyWhenTimeWasSpent() {
+        var budget = new LiveRewindBudget();
+        budget.configure("checkpoint", "10");
+        budget.observeMain(owner, "s2", 0, 0, -1);
+        assertEquals(-1, budget.takeRefillFrom(), "binding a session is not a refill");
+        budget.observeMain(owner, "s2", 0, 0, 1);
+        assertEquals(-1, budget.takeRefillFrom(), "a full pool restores nothing");
+        budget.spend(150);
+        budget.observeMain(owner, "s2", 0, 0, 2);
+        assertEquals(450, budget.takeRefillFrom(), "a new checkpoint restores spent time");
+        assertEquals(-1, budget.takeRefillFrom(), "reading consumes the event");
+        budget.spend(30);
+        budget.observeMain(owner, "s2", 0, 0, 2);
+        assertEquals(-1, budget.takeRefillFrom(), "a reached checkpoint is not refilled again");
+        budget.lifeLost(false);
+        assertEquals(-1, budget.takeRefillFrom());
+        budget.lifeLost(true);
+        assertEquals(570, budget.takeRefillFrom());
+    }
+
+    @Test
+    void actAndZoneBoundariesReportTheirRefills() {
+        var act = new LiveRewindBudget();
+        act.configure("act", "10");
+        act.observeMain(owner, "s2", 0, 0, -1);
+        act.spend(600);
+        act.observeMain(owner, "s2", 0, 1, -1);
+        assertEquals(0, act.takeRefillFrom(), "a drained pool fills from zero");
+        var zone = new LiveRewindBudget();
+        zone.configure("zone", "10");
+        zone.observeMain(owner, "s2", 0, 0, -1);
+        zone.spend(60);
+        zone.observeMain(owner, "s2", 0, 1, -1);
+        assertEquals(-1, zone.takeRefillFrom(), "a new act inside the zone is no boundary");
+        zone.observeMain(owner, "s2", 1, 0, -1);
+        assertEquals(540, zone.takeRefillFrom());
+    }
+
+    @Test
+    void newRunsSessionsVisitsUnlimitedAndOffReportNoRefill() {
+        var budget = new LiveRewindBudget();
+        budget.configure("act", "10");
+        budget.observeMain(owner, "s2", 0, 0, -1);
+        budget.spend(60);
+        budget.startNewRun();
+        budget.observeMain(owner, "s2", 0, 0, -1);
+        assertEquals(-1, budget.takeRefillFrom(), "a new run is a fresh allowance, not a refill");
+        budget.spend(60);
+        budget.observeMain(new Object(), "s2", 0, 0, -1);
+        assertEquals(-1, budget.takeRefillFrom(), "a new session owner starts fresh");
+        budget.enterMode(GameMode.SPECIAL_STAGE, "stage");
+        assertEquals(-1, budget.takeRefillFrom(), "a visit's fresh pool is not a refill");
+        budget.spend(30);
+        budget.lifeLost(true);
+        assertEquals(570, budget.takeRefillFrom(), "a life lost in a stage refills the visit pool");
+
+        var unlimited = new LiveRewindBudget();
+        unlimited.configure("act", "unlimited");
+        unlimited.observeMain(owner, "s2", 0, 0, -1);
+        unlimited.spend(60);
+        unlimited.lifeLost(true);
+        unlimited.observeMain(owner, "s2", 0, 1, -1);
+        assertEquals(-1, unlimited.takeRefillFrom());
+
+        var off = new LiveRewindBudget();
+        off.configure("off", "10");
+        off.spend(60);
+        off.lifeLost(true);
+        assertEquals(-1, off.takeRefillFrom());
+    }
 }

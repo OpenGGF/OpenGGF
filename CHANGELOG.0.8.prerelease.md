@@ -7,6 +7,12 @@ under the matching area heading; see the
 
 ## Gameplay and presentation
 
+- **Live rewind refills are visible:** when a checkpoint, act, zone or lost life
+  refills spent rewind time, the REW plate appears and its meter and seconds fill
+  back to the maximum, hold for a second and hide. Pressing rewind cancels it.
+  An Unlimited budget now shows a full meter with an infinity mark in place of the
+  frame counter, and the plate's edge pulses slowly while the key is held.
+
 - **Sonic 2 positioned starts:** object loading publishes the new camera
   position before the next object update. Widescreen EDGE keeps Emerald Hill's
   loop switchers alive so Sonic can follow both sides of the loop.

@@ -64,6 +64,14 @@ public final class TransportHudDesignCaptureTool {
                 save(session, out, width, "06-rewind-budget-mid", () -> render.invoke(null, text, GameServices.graphics(), width, 1248, mid));
                 save(session, out, width, "07-rewind-budget-low", () -> render.invoke(null, text, GameServices.graphics(), width, 1248, low));
                 save(session, out, width, "08-rewind-budget-empty", () -> render.invoke(null, text, GameServices.graphics(), width, null, empty));
+                save(session, out, width, "09-rewind-refill-filling", () -> render.invoke(null, text, GameServices.graphics(), width, null,
+                        new LiveRewindManager.BudgetHudState(true, false, 600, 600, false, 60, 107, 15, -1)));
+                save(session, out, width, "10-rewind-refill-held", () -> render.invoke(null, text, GameServices.graphics(), width, null,
+                        new LiveRewindManager.BudgetHudState(true, false, 600, 600, false, 60, 107, 60, -1)));
+                save(session, out, width, "11-rewind-unlimited", () -> render.invoke(null, text, GameServices.graphics(), width, 1248,
+                        new LiveRewindManager.BudgetHudState(true, true, -1, -1, false, 60, -1, -1, 0)));
+                save(session, out, width, "12-rewind-unlimited-pulse-peak", () -> render.invoke(null, text, GameServices.graphics(), width, 1248,
+                        new LiveRewindManager.BudgetHudState(true, true, -1, -1, false, 60, -1, -1, 30)));
                 save(session, out, width, "13-recording-hold", () -> UserRecordingHud.render(text, GameServices.graphics(),
                         UserRecordingHud.holdPromptState(30, 60)));
                 var active = new UserRecordingHudState(true, "REC frame 1248", "ehz1-review.bk2", 1248, false, false);

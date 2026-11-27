@@ -86,12 +86,64 @@ class TestLiveRewindHudOverlay {
     }
 
     @Test
-    void unlimitedOrHiddenBudgetKeepsTheFrameCounterWithoutAMeter() {
+    void unlimitedBudgetShowsAFullMeterWithTheInfinityMarkInsteadOfACounter() {
         var unlimited = LiveRewindHudOverlay.message(12,
-                new LiveRewindManager.BudgetHudState(true, true, 0, 0, false));
-        assertEquals("F:12", unlimited.value());
-        assertEquals(-1, unlimited.progressPercent());
+                new LiveRewindManager.BudgetHudState(true, true, -1, -1, false));
+        assertEquals(TransportHud.Status.REWIND, unlimited.status());
+        assertEquals("", unlimited.value(), "no counter to read");
+        assertEquals(TransportHud.ValueMark.INFINITY, unlimited.valueMark());
+        assertEquals(100, unlimited.progressPercent(), "the meter is full");
+        assertEquals(0, unlimited.edgeGlowPercent(), "no pulse without a held key");
         assertNull(LiveRewindHudOverlay.message(null, new LiveRewindManager.BudgetHudState(false, false, 0, 600, true)));
+        assertEquals("F:12", LiveRewindHudOverlay.message(12,
+                new LiveRewindManager.BudgetHudState(false, true, -1, -1, false)).value(),
+                "a hidden budget (scripted rewind) keeps the frame counter");
+    }
+
+    @Test
+    void heldUnlimitedPulseIsASlowLowContrastCycleOfOneSecond() {
+        int peak = LiveRewindHudOverlay.PULSE_PEAK_PERCENT;
+        assertTrue(peak > 0 && peak <= 50, "low contrast");
+        assertEquals(0, pulse(0, 60), "starts at the resting edge");
+        assertTrue(Math.abs(peak / 2 - pulse(15, 60)) <= 1, "a quarter cycle is half way");
+        assertEquals(peak, pulse(30, 60), "peaks half way through the second");
+        assertEquals(pulse(10, 60), pulse(50, 60), "eases back symmetrically");
+        assertEquals(0, pulse(60, 60), "one cycle per second");
+        assertEquals(peak, pulse(25, 50), "PAL keeps a one-second cycle");
+        for (int frame = 1; frame < 60; frame++) {
+            assertTrue(Math.abs(pulse(frame, 60) - pulse(frame - 1, 60)) <= 3, "no hard blink at " + frame);
+        }
+        assertEquals(0, LiveRewindHudOverlay.pulsePercent(-1, 60), "released");
+    }
+
+    private static int pulse(int frame, int framesPerSecond) {
+        return LiveRewindHudOverlay.message(null, new LiveRewindManager.BudgetHudState(
+                true, true, -1, -1, false, framesPerSecond, -1, -1, frame)).edgeGlowPercent();
+    }
+
+    @Test
+    void refillCountsUpOnTheNormalStatusThenHoldsFull() {
+        int fill = LiveRewindHudOverlay.refillFillFrames(60);
+        assertEquals(30, fill, "half a second to fill");
+        assertEquals(90, LiveRewindHudOverlay.refillAnimationFrames(60), "then a second held full");
+        assertEquals(25, LiveRewindHudOverlay.refillFillFrames(50));
+        var start = refill(60, 0);
+        assertEquals(TransportHud.Status.REWIND, start.status(), "a low pre-refill amount does not read amber");
+        assertEquals("1.0s", start.value());
+        assertEquals(10, start.progressPercent());
+        assertEquals("10.0s", start.valueReserve());
+        var half = refill(60, fill / 2);
+        assertEquals("5.5s", half.value());
+        assertEquals(TransportHud.Status.REWIND, refill(0, 0).status(), "not the drained plate either");
+        for (int frame = fill; frame < 90; frame++) {
+            assertEquals("10.0s", refill(60, frame).value());
+            assertEquals(100, refill(60, frame).progressPercent());
+        }
+    }
+
+    private static TransportHud.Message refill(int from, int frame) {
+        return LiveRewindHudOverlay.message(null, new LiveRewindManager.BudgetHudState(
+                true, false, 600, 600, false, 60, from, frame, -1));
     }
 
     @Test

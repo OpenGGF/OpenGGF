@@ -276,7 +276,7 @@ rewind:
 
 With that enabled, hold the configured live rewind key during normal level play to rewind the live
 gameplay buffer. The on-screen live rewind HUD is hidden during ordinary play and
-shows remaining seconds and a draining bar while rewinding. At zero, rewind stops immediately; pressing again shows an amber empty frame and dashed meter for one second.
+shows remaining seconds and a draining bar while rewinding. At zero, rewind stops immediately; pressing again shows an amber empty frame and dashed meter for one second. When a checkpoint, act, zone or life lost refills time you had spent, the plate appears briefly and its bar and seconds fill back to the maximum. With an **Unlimited** budget the plate shows a full bar with an infinity mark instead of seconds, and its border pulses gently while you hold the key.
 
 Choose **Off**, **Per checkpoint**, **Per act** (default), or **Per zone** to set when the consumable allowance refills. **Rewind budget** defaults to **10 seconds**, with **Unlimited** available instead of zero. Starting a new game always starts a fresh allowance. Forward play does not refund time, and replaying the same refill boundary does not refill again. **Refill on life loss** defaults to On and refills after respawn completes.
 
