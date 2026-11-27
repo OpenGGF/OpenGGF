@@ -223,6 +223,7 @@ com.openggf.game.sonic2.objects.SmallMetalPformObjectInstance
 com.openggf.game.sonic2.objects.SmallMetalPformObjectInstance$SmallMetalPformChildInstance
 com.openggf.game.sonic2.objects.SmashableGroundObjectInstance
 com.openggf.game.sonic2.objects.SmashableGroundObjectInstance$SmashableGroundFragmentInstance
+com.openggf.game.sonic2.objects.Sonic2DebugRingObjectInstance
 com.openggf.game.sonic2.objects.Sonic2GameOverCardObjectInstance
 com.openggf.game.sonic2.objects.Sonic2LayerSwitcherObjectInstance
 com.openggf.game.sonic2.objects.SpeedBoosterObjectInstance

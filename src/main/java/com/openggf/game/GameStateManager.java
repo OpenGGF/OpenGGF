@@ -211,6 +211,8 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
      * </ul>
      */
     private boolean gamePaused;
+    final LevelDebugPlacement levelDebugPlacement = new LevelDebugPlacement();
+
 
     public GameStateManager() {
         configureSpecialStageProgress(DEFAULT_SPECIAL_STAGE_COUNT, DEFAULT_CHAOS_EMERALD_COUNT);
@@ -221,6 +223,7 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
      * Resets the game session state to defaults (Score: 0, Lives: 3, no emeralds).
      */
     public void resetSession() {
+        levelDebugPlacement.resetForMissingSnapshot();
         this.score = 0;
         this.lives = 3;
         this.continues = 0;
@@ -268,6 +271,7 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
      * Session-persistent state (score, lives, emeralds) is NOT reset.
      */
     public void resetForLevel() {
+        levelDebugPlacement.resetLevel();
         endOfLevelActive = false;
         endOfLevelFlag = false;
         actCompletionSignalActive = false;
@@ -984,6 +988,7 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
      * neither a module nor one of its providers.
      */
     public void startNewGameFromTitle() {
+        levelDebugPlacement.clearCheatForTitle();
         this.lives = 3;
         this.continues = 0;
         this.score = 0;

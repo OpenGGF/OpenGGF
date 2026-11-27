@@ -410,6 +410,9 @@ public final class ConfigCatalog {
         // ───────────────── DEBUG BLOCK ─────────────────
 
         // debug.flags
+        put(LEVEL_DEBUG_MODE, ofEnum("debug.flags", "levelDebugMode",
+                "Select ROM item placement or engine free-fly in games that support native placement",
+                Set.of("rom", "engine")));
         put(DEBUG_VIEW_ENABLED, of("debug.flags", "debugView", BOOL,
                 "Enable the debug overlay subsystem; visible HUD starts hidden until toggled"));
         put(EDITOR_ENABLED, of("debug.flags", "editor", BOOL, "Allow entering the level editor from gameplay"));

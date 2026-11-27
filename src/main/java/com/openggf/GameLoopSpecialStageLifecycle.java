@@ -90,6 +90,10 @@ final class GameLoopSpecialStageLifecycle {
     boolean transitionPending() { return specialStageTransitionPending; }
     boolean returningFromSpecialStage() { return returningFromSpecialStage; }
     void clearEntryPresentation() { specialStageEntryPresentation.clear(); }
+
+    void clearEntryPresentationAfter(GameMode oldMode) {
+        if (oldMode == GameMode.SPECIAL_STAGE) clearEntryPresentation();
+    }
     void retireForSessionReset() {
         activeSpecialStageProvider.reset();
         activeSpecialStageProvider = NoOpSpecialStageProvider.INSTANCE;

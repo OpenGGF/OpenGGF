@@ -562,6 +562,16 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         if (renderer != null && renderer.getSparkleFrameCount() > 0) {
             placement.setSparkleStartFrame(index, frameCounter);
         }
+        awardStageRing(player);
+    }
+
+    boolean awardDynamicStageRing(AbstractPlayableSprite player) {
+        if (!ringsAllowed()) return false;
+        awardStageRing(player);
+        return true;
+    }
+
+    private void awardStageRing(AbstractPlayableSprite player) {
         if (!ringExtraLifeReplacesPickupSound) playRingAcquisitionSound();
         boolean awardedExtraLife;
         var roster = nativeCompetitionStreamingActive() ? nativeCompetitionRoster() : null;

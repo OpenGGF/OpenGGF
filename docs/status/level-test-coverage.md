@@ -1,5 +1,17 @@
 # Level test coverage backlog
 
+S2 native debug placement uses focused EHZ1 controller, cursor acceleration,
+rewind and sidekick collision checks, a CPZ1 tube entry control, SCZ1 camera
+bound restoration and the chip-backed EHZ1 sound-test launch for Knuckles.
+`TestSonic2SkyChaseDebugPlacementGameplay` plays SCZ1 from its ordinary start
+through the Tornado scroll, placement entry and exit, the live-bottom pit
+death and rewind. Full-chip KiS2 reaches placement through the title after an
+idle attract demo; a tier-one boot keeps the stock placement rows.
+The retail sound test also covers an ordinary act load after reopening the menu. The ROM catalogue test checks all list aliases and
+row ordering. The [remaining debug placement coverage](known-bugs.md#s2-debug-placement-object-and-gate-coverage)
+includes unimplemented factories, additional viewport/team combinations,
+slot exhaustion and native recordings.
+
 Wing Fortress runtime art: `TestSonic2RuntimePlcRendererRefresh` checks the
 resident propeller tiles through request, the Tornado body's 27 service passes,
 the first three thruster writes and mid-write rewind.

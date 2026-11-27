@@ -1,5 +1,6 @@
 package com.openggf.game.sonic2.objects.badniks;
 
+import com.openggf.game.LevelDebugPlacement;
 import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.AbstractBadnikInstance;
 
@@ -100,7 +101,7 @@ public class SolBadnikInstance extends AbstractBadnikInstance implements RewindR
     }
 
     private void checkForPlayer(AbstractPlayableSprite player) {
-        if (player == null || player.isDebugMode()) {
+        if (player == null || LevelDebugPlacement.bypassesInteractions(player)) {
             return;
         }
 

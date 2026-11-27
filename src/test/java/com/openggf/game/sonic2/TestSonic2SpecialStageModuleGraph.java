@@ -41,11 +41,9 @@ public class TestSonic2SpecialStageModuleGraph {
     }
 
     @Test
-    public void moduleDoesNotAdvertiseNativeLevelDebugPlacement() {
+    public void moduleAdvertisesNativeLevelDebugPlacement() {
         Sonic2GameModule module = new Sonic2GameModule();
 
-        assertFalse(module.getDebugModeProvider().hasLevelDebug(),
-                "S2 exposes special-stage debug only; native Debug_placement_mode ring/item placement "
-                        + "has no engine capability or input route.");
+        assertTrue(module.getDebugModeProvider().hasLevelDebug());
     }
 }

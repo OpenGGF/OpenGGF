@@ -746,6 +746,9 @@ public enum SonicConfiguration {
 	 * finished ({@code done}) or skipped ({@code skipped}); the hub opens it automatically only
 	 * while blank. Appended to preserve existing enum ordinals.
 	 */
-	SETUP_GUIDE;
+	SETUP_GUIDE,
+
+	/** Selects native placement or engine free-fly for supported games. */
+	LEVEL_DEBUG_MODE;
 
 }

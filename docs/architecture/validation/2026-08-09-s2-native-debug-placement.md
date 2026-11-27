@@ -4,10 +4,19 @@
 **Branch:** `feature/ai-s2-native-debug-placement`
 **Base:** `e2aa50cd5980efc720f70c1c2a6209b2637b3042` (`origin/develop` at execution)
 
-## Outcome
+## Current runtime
 
-Native Sonic 2 level debug placement remains unavailable, but the deferral is
-now exact and reproducible rather than CPZ-centric. A test-only ROM decoder
+The 2026-11-22 owner ruling replaces the activation conditions used by this
+validation run. Sonic 2 and chip-backed Knuckles in Sonic 2 now use shared ROM
+placement by default, and engine free-fly remains selectable. The runtime
+checks exercise cursor acceleration and rewind, SCZ's two restored vertical
+bounds, sound-test unlock across menu entry and ordinary loads, and the lead
+and sidekick solid gate. The [remaining placement and HUD differences](../../status/known-bugs.md#s2-debug-placement-object-and-gate-coverage)
+are tracked separately.
+
+## Historical outcome
+
+At the time of this run, native placement was unavailable. A test-only ROM decoder
 pins the World REV01 catalog, shipped conditional rows, and current object
 factory gap. The reviewed design assigns the future preview, spawn,
 controller, global-gate, rewind, and trace owners and forbids partial production
@@ -78,7 +87,7 @@ The 113 factories are an inventory, not proof that their catalog subtypes can
 all be directly constructed. Zone-aware and parent/child implementations still
 need row-by-row lifecycle probes.
 
-## Architectural findings
+## Historical architectural findings
 
 ### Preview
 

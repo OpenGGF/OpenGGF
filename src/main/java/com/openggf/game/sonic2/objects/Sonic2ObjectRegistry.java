@@ -86,6 +86,10 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry implements com.
         if (spawn.objectKey() != null) return editorPreviewArtKey(spawn.objectKey())
                 .map(key -> com.openggf.level.metadata.ObjectPreview.frame(key, 0))
                 .orElseGet(com.openggf.level.metadata.ObjectPreview::empty);
+        return staticPlacementPreview(spawn);
+    }
+
+    public static com.openggf.level.metadata.ObjectPreview staticPlacementPreview(ObjectSpawn spawn) {
         return Sonic2ObjectPreviews.preview(spawn);
     }
 
@@ -251,6 +255,7 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry implements com.
                 (spawn, registry) -> new Sonic2LayerSwitcherObjectInstance(
                         spawn, registry.getPrimaryName(spawn.objectId())));
 
+        registerFactory(Sonic2ObjectIds.RING, (spawn, registry) -> new Sonic2DebugRingObjectInstance(spawn));
         registerFactory(Sonic2ObjectIds.SPRING,
                 (spawn, registry) -> new SpringObjectInstance(spawn, registry.getPrimaryName(spawn.objectId())));
         registerFactory(Sonic2ObjectIds.SPIKES,

@@ -1,5 +1,6 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.game.LevelDebugPlacement;
 import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.BoxObjectInstance;
 
@@ -114,7 +115,7 @@ public class CheckpointObjectInstance extends BoxObjectInstance implements Rewin
         }
         ensureInitialized();
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        if (!activated && player != null) {
+        if (!activated && player != null && !LevelDebugPlacement.blocksObjectInteractions(tryServices())) {
             checkActivation(player);
         }
         updateAnimation();

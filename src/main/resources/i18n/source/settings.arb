@@ -1072,6 +1072,22 @@
   "@settings.key.capture_toggle_key.help": {
     "description": "Settings help for stable configuration key CAPTURE_TOGGLE_KEY. Technical YAML documentation remains separate."
   },
+  "settings.key.level_debug_mode.label": "Level debug mode",
+  "@settings.key.level_debug_mode.label": {
+    "description": "Settings label for LEVEL_DEBUG_MODE (debug.flags.levelDebugMode)."
+  },
+  "settings.key.level_debug_mode.help": "Use the cartridge cheat and placement controls where supported, or select engine free-fly for the debug movement shortcut.",
+  "@settings.key.level_debug_mode.help": {
+    "description": "Settings help for LEVEL_DEBUG_MODE."
+  },
+  "settings.value.engine": "Engine free-fly",
+  "@settings.value.engine": {
+    "description": "Level debug mode setting for the engine movement shortcut."
+  },
+  "settings.value.rom": "ROM placement",
+  "@settings.value.rom": {
+    "description": "Level debug mode setting for the cartridge item placement controls."
+  },
   "settings.key.debug_view_enabled.label": "Debug tools",
   "@settings.key.debug_view_enabled.label": {
     "description": "Settings label for stable configuration key DEBUG_VIEW_ENABLED (debug.flags.debugView)."

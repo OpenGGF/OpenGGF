@@ -7,6 +7,12 @@ under the matching area heading; see the
 
 ## Gameplay and presentation
 
+- **Angel Island Act 2's bombing run in widescreen** shows the scenery about to
+  scroll in across the whole picture. The camera lock that follows the
+  auto-scroll used to cover the extra width with static that trailed into the
+  original 320-pixel screen, and every loop of the terrain reset it to full
+  static bars, in both widescreen draw modes.
+
 - **Knuckles' continue icon on Sonic 3 & Knuckles special-stage results** is
   red again instead of Sonic blue. Chaos Emerald stages now apply the same
   Knuckles colours as the cartridge, as Super Emerald stages already did.
@@ -90,6 +96,11 @@ under the matching area heading; see the
   special stage also restores the active display projection, keeping sprites
   aligned with terrain when switching to a game with a different aspect ratio.
 
+- **Sonic 2 and Knuckles in Sonic 2** now recognize their level-select debug
+  cheats and use the cartridge object lists and accelerating cursor for
+  B/A/C placement. Rewind restores the cursor and its placed objects. The
+  unlocked cheat survives title attract demos. Select Engine free-fly in
+  Settings to use the debug movement shortcut.
 - **Sonic 2 runtime art:** the Wing Fortress Tornado cue and shared animal
   and explosion graphics now change tiles as the native queue services them.
   Their prior pixels remain visible until the write, and rewind restores
@@ -475,7 +486,8 @@ under the matching area heading; see the
   step with the live rings, so a ring never jumps when it wakes up, and rings you have
   collected stay gone. Title
   cards and results screens time their exits from the game's own screen rather than the
-  picture. The HUD stays fully visible when the wider picture slides to frame
+  picture, and results screens and title, level select and save menus sit centred in the
+  wider picture instead of one margin's width to the right. The HUD stays fully visible when the wider picture slides to frame
   a locked boss arena. A wider picture never delays the next act or the enemies' art. That also
   lets recorded Sonic 3 & Knuckles runs be filmed wider than 320: Hydrocity and Marble
   Garden used to stop with a full KosM queue. Tests run Sonic 1, Sonic 2 and Sonic 3 &

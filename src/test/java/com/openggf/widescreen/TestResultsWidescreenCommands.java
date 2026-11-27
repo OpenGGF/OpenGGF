@@ -142,6 +142,50 @@ class TestResultsWidescreenCommands {
         }
     }
 
+    /**
+     * NATIVE draw mode: the 400px picture starts 40px left of the 320px gameplay camera,
+     * so results centred in the picture start at the camera's own X (not 40px right of it).
+     */
+    @Test
+    void nativeDrawModeCentresResultsInThePictureNotTheGameplayWindow() throws Exception {
+        SonicConfigurationService configuration = mock(SonicConfigurationService.class);
+        when(configuration.getShort(SonicConfiguration.SCREEN_WIDTH_PIXELS)).thenReturn((short) 400);
+        when(configuration.getShort(SonicConfiguration.SCREEN_HEIGHT_PIXELS)).thenReturn((short) 224);
+        when(configuration.getString(SonicConfiguration.WIDESCREEN_DRAW_MODE)).thenReturn("NATIVE");
+        Camera nativeCamera = new Camera(configuration);
+        nativeCamera.setMinX((short) 0);
+        nativeCamera.setMaxX((short) 0x4000);
+        nativeCamera.setX((short) 0x1000);
+        assertEquals(40, com.openggf.camera.CameraPresentationAccess.inset(nativeCamera),
+                "precondition: the picture extends 40px left of the gameplay window");
+        TestObjectServices nativeServices = new TestObjectServices() {
+            @Override
+            public ObjectRenderManager renderManager() {
+                return renderManager;
+            }
+        }.withCamera(nativeCamera).withGraphicsManager(graphics)
+                .withGameState(mock(GameStateManager.class));
+        graphics.setProjectionWidth(400);
+
+        ResultsScreenObjectInstance sonic2 = new ResultsScreenObjectInstance(0, 0, 1, false);
+        sonic2.setServices(nativeServices);
+        graphics.clearPatterns();
+        sonic2.appendRenderCommands(new ArrayList<>());
+        assertEquals(0x1000 + 160 - 256, graphics.patterns().get(0).x(),
+                "S2 Got Through text at native X in the picture, not doubled by the inset");
+
+        Sonic1ResultsScreenObjectInstance sonic1 = new Sonic1ResultsScreenObjectInstance(0, 0, 1);
+        sonic1.setServices(nativeServices);
+        setField(sonic1, "plcReadinessPassed", true);
+        setIntArrayField(sonic1, "elemCurrentX",
+                0x124, 0x120, 0x14C, 0x120, 0x120, 0x120, 0x14C);
+        graphics.clearPatterns();
+        sonic1.appendRenderCommands(new ArrayList<>());
+        assertTrue(graphics.patterns().contains(new PatternCommand("PATTERN", TEST_PATTERN_BASE, 0,
+                        0x1000 + 0x124 - 128, 0xBC - 128)),
+                "S1 Got Through text at native X in the picture: " + graphics.patterns());
+    }
+
     @Test
     void sonic1FallbackCommandsUseTheCenteredOriginForLiveViewportCulling() throws Exception {
         Sonic1ResultsScreenObjectInstance results = new Sonic1ResultsScreenObjectInstance(0, 0, 1);
