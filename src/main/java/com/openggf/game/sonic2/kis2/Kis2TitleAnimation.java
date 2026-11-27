@@ -89,4 +89,7 @@ public final class Kis2TitleAnimation {
         bannerVisible = true; bannerSettled = true; bannerY = 32;
     }
     public boolean handVisible() { return handPhase >= 0; }
+    /** Obj0E_MaskingSprite (docs/kis2disasm/s2.asm:27485-27529): Y 112 tracks the emblem drop; frame 2 covers 96 rows. */
+    public int maskTop() { return 112 - scroll; }
+    public static final int MASK_ROWS = 96;
 }
