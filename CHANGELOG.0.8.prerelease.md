@@ -1212,6 +1212,13 @@ under the matching area heading; see the
 
 ## Maintenance and release preparation
 
+- Sonic 2 live rewind history uses about 18 MB less memory. Each rewind
+  checkpoint held its own boxed copy of the title card's two plane tables,
+  about 50 KB, even long after the card had gone. Checkpoints now share the
+  tables until the card next writes them, and share the title-card art by
+  reference. Sixty seconds of Emerald Hill 1 history fell from 22.1 MB to
+  4.2 MB. Rewinding during the title card still restores it exactly.
+
 - ICZ background loop history and indoor selection now belong to the event owner,
   so rebuilding scroll output retains the same background. Rewind captures that
   continuation together with the shared ROM shake words; ICZ objects request

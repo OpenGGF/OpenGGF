@@ -23,6 +23,8 @@ final class Obj34 {
                         : TitleCardNativeDisplayAccess.Foreground.PLAYER_TWO, column, row), null);
     }
     private final int[][] planes = new int[2][64*32];
+    /** Immutable copy of {@link #planes} shared by every capture until the next write; null when stale. */
+    private PlaneImage capturedPlanes;
     List<PartState> publishedParts = List.of();
     boolean leave;
     boolean twoPlayer;
@@ -32,8 +34,34 @@ final class Obj34 {
     record PartState(int routine, int frame, int width, int duration, int x, int y,
                      int source, int target, int location, Target dest, Target dest2,
                      int split, boolean alive, boolean displayed) {}
-    record Snapshot(boolean leave, boolean twoPlayer, boolean singleAct, int zoneFrame, int actFrame, List<PartState> parts, List<PartState> publishedParts, List<Integer> foreground1, List<Integer> foreground2) {
-        Snapshot { parts=List.copyOf(parts);publishedParts=List.copyOf(publishedParts);foreground1=List.copyOf(foreground1);foreground2=List.copyOf(foreground2); }
+    record Snapshot(boolean leave, boolean twoPlayer, boolean singleAct, int zoneFrame, int actFrame, List<PartState> parts, List<PartState> publishedParts, PlaneImage planes) {
+        Snapshot { parts=List.copyOf(parts);publishedParts=List.copyOf(publishedParts);java.util.Objects.requireNonNull(planes,"planes"); }
+        List<Integer> foreground1() { return planes.words(0); }
+        List<Integer> foreground2() { return planes.words(1); }
+    }
+    /**
+     * The two DrawLevelTitleCard plane tables (loc_155AE..loc_15758, s2.asm:28977-29179)
+     * as an immutable value. The tables change only on title-card fill/reveal passes, so
+     * consecutive checkpoints share one image instead of each holding its own copy.
+     */
+    static final class PlaneImage {
+        private final int[] foreground1, foreground2;
+        private PlaneImage(int[] foreground1, int[] foreground2) {
+            this.foreground1=foreground1.clone();this.foreground2=foreground2.clone();
+        }
+        List<Integer> words(int player) {
+            return Arrays.stream(player==0?foreground1:foreground2).boxed().toList();
+        }
+        private void copyInto(int[][] planes) {
+            System.arraycopy(foreground1,0,planes[0],0,planes[0].length);
+            System.arraycopy(foreground2,0,planes[1],0,planes[1].length);
+        }
+        @Override public boolean equals(Object o) {
+            return o instanceof PlaneImage other && Arrays.equals(foreground1,other.foreground1)
+                    && Arrays.equals(foreground2,other.foreground2);
+        }
+        @Override public int hashCode() { return 31*Arrays.hashCode(foreground1)+Arrays.hashCode(foreground2); }
+        @Override public String toString() { return "PlaneImage[hash="+hashCode()+"]"; }
     }
     static final class Part {
         int routine, frame, width, duration, x, y, source, target, location, split;
@@ -69,6 +97,7 @@ final class Obj34 {
     void init(int zoneFrame,int actFrame,boolean twoPlayer) {
         publishedParts=List.of();
         for(int[] plane:planes) Arrays.fill(plane,0);
+        capturedPlanes=null;
         this.zoneFrame=zoneFrame;this.actFrame=actFrame;
         this.twoPlayer=twoPlayer;singleAct=actFrame<0;leave=false;
         // Level_GetBgm allocates only the routine-zero parent. Obj34_Init
@@ -235,12 +264,14 @@ final class Obj34 {
         // This is a retained projection, never a second animation clock.
         publishedParts=Arrays.stream(parts).map(Part::capture).toList();
         for(var fill:pendingFills()) {
+            capturedPlanes=null;
             int player=fill.destination().plane()==TitleCardNativeDisplayAccess.Foreground.PLAYER_ONE?0:1;
             int start=fill.destination().row()*64+fill.destination().column();
             for(int y=0;y<fill.rows();y++) for(int x=0;x<fill.columns();x++)
                 planes[player][(start+y*64+x)&2047]=fill.tileWord();
         }
         for(var reveal:pendingRowReveals()) {
+            capturedPlanes=null;
             int player=reveal.plane()==TitleCardNativeDisplayAccess.Foreground.PLAYER_ONE?0:1;
             int row=reveal.screenY()>>(twoPlayer?4:3);
             // The overlay relinquishes coverage; the production world plane
@@ -250,13 +281,15 @@ final class Obj34 {
         }
         for(Part p:parts) {p.dest=null;p.dest2=null;}
     }
-    Snapshot capture() { return new Snapshot(leave,twoPlayer,singleAct,zoneFrame,actFrame,
-            Arrays.stream(parts).map(Part::capture).toList(),publishedParts,
-            Arrays.stream(planes[0]).boxed().toList(),Arrays.stream(planes[1]).boxed().toList()); }
+    Snapshot capture() {
+        if(capturedPlanes==null) capturedPlanes=new PlaneImage(planes[0],planes[1]);
+        return new Snapshot(leave,twoPlayer,singleAct,zoneFrame,actFrame,
+            Arrays.stream(parts).map(Part::capture).toList(),publishedParts,capturedPlanes); }
     void restore(Snapshot s) {
         leave=s.leave;twoPlayer=s.twoPlayer;singleAct=s.singleAct;zoneFrame=s.zoneFrame;actFrame=s.actFrame;
         publishedParts=s.publishedParts;
         for(int i=0;i<6;i++) parts[i]=new Part(s.parts.get(i));
-        for(int i=0;i<2048;i++){planes[0][i]=s.foreground1.get(i);planes[1][i]=s.foreground2.get(i);}
+        s.planes.copyInto(planes);
+        capturedPlanes=s.planes;
     }
 }
