@@ -253,6 +253,10 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen, LevelBackdro
 
         // Load art
         loadArt();
+        // sub_2E2C0 follows the Pal_Results copy; the Super Emerald model applies its own variant.
+        if (!superEmeraldStage && paletteLoaded) {
+            applyChaosStageCharacterColors(resultsPalettes[0], character);
+        }
 
         // Create initial elements
         createPhase1Elements();
@@ -867,6 +871,10 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen, LevelBackdro
         return phase1Elements.get(index).currentX;
     }
 
+    Palette resultsPaletteLineForTest(int line) {
+        return resultsPalettes == null ? null : resultsPalettes[line];
+    }
+
     int continueIconXForTest() {
         return continueIconX;
     }
@@ -1418,6 +1426,23 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen, LevelBackdro
             }
         } catch (Exception e) {
             LOG.warning("Failed to load SS results palette: " + e.getMessage());
+        }
+    }
+
+    /**
+     * {@code sub_2E2C0} (sonic3k.asm:63282-63311) right after {@code Pal_Results} is copied
+     * (sonic3k.asm:63155-63163): with Player_mode 3 it writes $84E,$40C,$206,$080 to line 1
+     * colours 2-5, turning the Sonic-blue ramp red for Knuckles' continue icon
+     * ({@code Map_Results} frame $2B) and other line-1 art. The $EE colour-5 variant and the
+     * non-Knuckles line-2 write only apply on a Super Emerald stage ({@code SK_special_stage_flag}).
+     */
+    static void applyChaosStageCharacterColors(Palette lineOne, PlayerCharacter character) {
+        if (character != PlayerCharacter.KNUCKLES) {
+            return;
+        }
+        int[] colors = {0x084E, 0x040C, 0x0206, 0x0080};
+        for (int i = 0; i < colors.length; i++) {
+            lineOne.getColor(2 + i).fromSegaFormat(colors[i]);
         }
     }
 
