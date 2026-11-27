@@ -243,6 +243,8 @@ public class TitleCardManager implements TitleCardProvider, TitleCardLoopTail,
 
     // Unified VRAM-aligned pattern array
     // Index = VRAM address - VRAM_BASE
+    // Copy-on-write: never written in place once assigned, so rewind snapshots
+    // can retain this array by reference instead of cloning it every checkpoint.
     private Pattern[] combinedPatterns;
 
     // Raw ArtNem_TitleCard2 patterns (full alphabet, stays in "RAM")
@@ -267,7 +269,12 @@ public class TitleCardManager implements TitleCardProvider, TitleCardLoopTail,
 
     /** Whether the gameplay-phase Obj34_WaitAndGoAway tail is running. */
     private boolean exitTailActive;
-    /** Immutable live-title state used by the gameplay rewind registry. */
+    /**
+     * Immutable live-title state used by the gameplay rewind registry.
+     * The pattern arrays are held by reference: the owner never writes an
+     * assigned array in place (loadArt assigns fresh arrays and loadZoneLetters
+     * copies before writing), so consecutive checkpoints share them.
+     */
     public record Snapshot(
             TitleCardState state,
             int stateTimer,
@@ -288,10 +295,6 @@ public class TitleCardManager implements TitleCardProvider, TitleCardLoopTail,
             Obj34.Snapshot obj34) {
         public Snapshot {
             Objects.requireNonNull(state, "state");
-            combinedPatterns = copy(combinedPatterns);
-            titleCard2RawPatterns = copy(titleCard2RawPatterns);
-            titleCardBasePatterns = copy(titleCardBasePatterns);
-
         }
 
         @Override
@@ -360,9 +363,10 @@ public class TitleCardManager implements TitleCardProvider, TitleCardLoopTail,
         leavePass = snapshot.leavePass();
         exitTailActive = snapshot.exitTailActive();
         presentationOmitted = snapshot.presentationOmitted();
-        combinedPatterns = snapshot.combinedPatterns();
-        titleCard2RawPatterns = snapshot.titleCard2RawPatterns();
-        titleCardBasePatterns = snapshot.titleCardBasePatterns();
+        // Shared by reference; see Snapshot. The accessors return defensive copies.
+        combinedPatterns = snapshot.combinedPatterns;
+        titleCard2RawPatterns = snapshot.titleCard2RawPatterns;
+        titleCardBasePatterns = snapshot.titleCardBasePatterns;
 
         obj34 = snapshot.obj34() == null ? null : new Obj34();
         if (obj34 != null) obj34.restore(snapshot.obj34());
@@ -534,6 +538,9 @@ public class TitleCardManager implements TitleCardProvider, TitleCardLoopTail,
         int vramDest = VRAM_TITLE_CARD2_START - VRAM_BASE;
 
         LOGGER.info("Loading letters for zone: " + zoneName);
+
+        // Copy-on-write: retained rewind snapshots may share the current array.
+        combinedPatterns = combinedPatterns.clone();
 
         // Process each character in the zone name
         for (char c : zoneName.toCharArray()) {
