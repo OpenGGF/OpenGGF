@@ -7,6 +7,12 @@ under the matching area heading; see the
 
 ## Gameplay and presentation
 
+- **Controllers with newer firmware are recognised.** The engine now ships the
+  SDL_GameControllerDB mapping table on top of GLFW's own, honours
+  `SDL_GAMECONTROLLERCONFIG`, and maps a controller whose firmware is newer
+  than both tables from the nearest known version of the same device. An Xbox
+  Wireless Controller on Bluetooth with firmware 0x0523 was ignored entirely.
+
 - **Knuckles in Sonic 2 title with the lock-on ROM:** the strip above the N in
   SONIC shows the logo again instead of stray tiles. While rising, Knuckles stays
   behind the emblem as on the cartridge.

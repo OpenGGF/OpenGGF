@@ -6,6 +6,7 @@
       { "pattern": "config\\.yaml" },
       { "pattern": "config\\.json" },
       { "pattern": "collisionindexes\\.txt" },
+      { "pattern": "control/gamecontrollerdb.*\\.txt" },
       { "pattern": "pixel-font\\.png" },
       { "pattern": "pixel-font-ns\\.png" },
       { "pattern": "titlescreen/.*\\.png" },
