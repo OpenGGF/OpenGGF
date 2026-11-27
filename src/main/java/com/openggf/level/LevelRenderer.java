@@ -1045,13 +1045,14 @@ public final class LevelRenderer {
     }
     private void drawPresentedSprites(SpritePresentation.Frame frame, int cameraX, int cameraY,
                                       java.util.function.Predicate<SpritePresentation.Layer> visible) {
+        int inset = CameraPresentationAccess.inset(lm.camera);
         if (motionSpriteProjection == null) {
             com.openggf.level.render.SpritePresentationRenderer.drawNative(lm.graphicsManager, frame,
-                    cameraX, cameraY, visible, presentationRuntime());
+                    cameraX, cameraY, visible, presentationRuntime(), inset);
         } else {
             com.openggf.graphics.SpriteMotionInternalAccess.withProjection(lm.graphicsManager, motionSpriteProjection,
                     () -> com.openggf.level.render.SpritePresentationRenderer.drawNative(lm.graphicsManager, frame,
-                            cameraX, cameraY, visible, presentationRuntime()));
+                            cameraX, cameraY, visible, presentationRuntime(), inset));
         }
     }
 
@@ -2196,15 +2197,18 @@ public final class LevelRenderer {
             if (satAccess == null || !satAccess.boundTo(graphicsManager)) {
                 satAccess = com.openggf.graphics.SpriteSatInternalAccess.engine(graphicsManager);
             }
+            // SAT visibility uses the displayed raster. In NATIVE mode its left
+            // edge can be well outside the simulation camera, even inside an arena.
+            int rasterX = CameraPresentationAccess.leftWithShake(lm.camera);
             if ((lm.cachedScreenWidth & 7) == 0) {
                 satAccess.beginCollection(
                         com.openggf.graphics.SpriteSatMaskPostProcessor.Raster.extended(
-                                lm.camera.getXWithShake(), lm.camera.getYWithShake(),
+                                rasterX, lm.camera.getYWithShake(),
                                 lm.cachedScreenWidth, lm.cachedScreenHeight));
             } else {
                 satAccess.beginLogicalCollection(
                         com.openggf.graphics.SpriteSatMaskPostProcessor.LogicalViewport.h40(
-                                lm.camera.getXWithShake(), lm.camera.getYWithShake(),
+                                rasterX, lm.camera.getYWithShake(),
                                 lm.cachedScreenWidth, lm.cachedScreenHeight));
             }
             // BuildHUD/Render_HUD occupy the table head, before ordinary object buckets.

@@ -79,6 +79,7 @@ Use a task directory outside the repository for captures the user should keep.
 | --- | --- | --- |
 | `--game s1\|s2\|s3k` | `s3k` | Host game; ROM from configuration unless `--rom <path>` |
 | `--mod <jar>` | none | Apply a packaged patch mod (as an enabled, trusted mod would be) before boot, to film mod gameplay |
+| `--mutator <id>[:opt=val,...]` | none | Repeatable, needs `--mod`: enable one of that package's mutators for this capture with the given options, unsaved, admitted at launch like the mutator title's Start. Fails if the id/option/value is invalid or the launch did not admit it. Mutator Lab ids: `start-rings:rings=85,delay=0`, `start-time:seconds=270` (4:30), `start-score:score=25000`, `start-lives:lives=7`, `hungry-for-rings:grace=30,loss=1,period=1,threshold=0,starve=5` |
 | `--zone <name\|n>` | required | Zone constant name (`aiz`, `fbz`, `ghz`, `ehz`) or number |
 | `--act <n>` | required | One-based act |
 | `--x`, `--y` | level start | Teleport the leader (ROM `x_pos`/`y_pos`, hex `0x`/`$` ok) |
@@ -114,6 +115,26 @@ Use a task directory outside the repository for captures the user should keep.
 | `--pictures-per-frame <n>` | `1` | Write n pictures (1-16) of every captured logic frame as `frames/<frame>-<phase>.png`, list them in `pictures.csv`, and encode the video at fps × n (4 gives 240 fps). Alone, the exact picture is repeated n times. Not with `--interactive-pacing` |
 | `--interpolation` | off | With `--pictures-per-frame` 2 or more: draw picture k through the production `display.interpolation` path at phase k/n of the logic frame. Render-only; `state.csv` is identical to the exact capture. Not with `--rewind` |
 | `--out-dir <dir>` | required | Output root |
+
+## Film mutator starting values
+
+To start a demo with realistic counters, build Mutator Lab
+(`python3 examples/example-mutators/build.py`) and pass its jar with `--mutator`
+flags; the seeds land on the first active frame, so frame 0 already shows them:
+
+```bash
+... GameplayCaptureTool --game s3k --zone aiz --act 1 \
+    --mod target/example-mutators/example-mutators.jar \
+    --mutator start-rings:rings=85 --mutator start-time:seconds=270 \
+    --mutator start-score:score=25000 --mutator start-lives:lives=7 \
+    --input <task>/walk.txt --out-dir <task>/seeded
+```
+
+Start with Rings adds to rings already held, so do not combine it with `--rings`;
+use `--timer` instead of Start with Time only when the clock must match a trace row.
+`MutatorGameplayCaptureTool` takes the same flags and adds `lives`, `timer_frames`,
+`hunger_phase` and `hunger_sixteenths` to `observe.csv`; find the grace, drain and
+starving frames there before choosing stills.
 
 ## Film display interpolation
 

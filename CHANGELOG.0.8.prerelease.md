@@ -433,7 +433,8 @@ under the matching area heading; see the
   step with the live rings, so a ring never jumps when it wakes up, and rings you have
   collected stay gone. Title
   cards and results screens time their exits from the game's own screen rather than the
-  picture, so a wider picture never delays the next act or the enemies' art. That also
+  picture. The HUD stays fully visible when the wider picture slides to frame
+  a locked boss arena. A wider picture never delays the next act or the enemies' art. That also
   lets recorded Sonic 3 & Knuckles runs be filmed wider than 320: Hydrocity and Marble
   Garden used to stop with a full KosM queue. Tests run Sonic 1, Sonic 2 and Sonic 3 &
   Knuckles at 32:9 and 4:3 with the same input and check that the game state matches on every
@@ -802,6 +803,21 @@ under the matching area heading; see the
   turn him around, as in that build. A **Fixed Steering** option makes left and right
   steer him in flight instead, and a **Super Jump** option gives Super and Hyper
   Knuckles that object's higher jump. The glide is unchanged while the mutator is off.
+
+- **Mutator Lab starting values and ring hunger:** five new mutators work in
+  Sonic 1, Sonic 2 and Sonic 3 & Knuckles. Start with Rings grants rings at every
+  act start and life, optionally after a delay, without paying a 100/200-ring
+  extra life. Start with Time puts up to 9:30 on the clock at act starts;
+  checkpoint restarts keep their saved time. Start with Score and Start with
+  Lives seed a new game. Hungry for Rings drains rings after a grace period and
+  kills a player who stays at or under a ring count for too long; a dial beside
+  the RINGS counter, in the HUD's own palette inks, shows the grace, the drain and
+  a red starvation countdown in both widescreen HUD anchors. Its state rewinds.
+  Held Left/Right accelerates on long sliders. `GameplayCaptureTool` and
+  `MutatorGameplayCaptureTool` take a repeatable `--mutator id:option=value,...`
+  flag to set mutators for a capture without touching saved settings. The 0.7
+  candidate API gains `StartingStatePolicy`, `RingHungerPolicy` and five
+  capabilities.
 
 - Music-pack patches can replace Sonic 1, Sonic 2 and Sonic 3 & Knuckles songs
   with native SMPS packages exported by external authoring tools. Package tracks keep native

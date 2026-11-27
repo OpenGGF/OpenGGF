@@ -28,6 +28,8 @@ public final class ModApiVersion {
      * Host-aware character presentation suppliers extend the unpublished 0.7 candidate.
      * Optional directional canonical homing strike sheet keys extend this same 0.7 candidate.
      * The beta-flight mutator policy (with its fixedSteering and superJump components) and capability (BETA_FLIGHT) are appended to the 0.7 candidate.
+     * Starting-state (rings/time/score/lives) and ring hunger mutator policies and capabilities
+     * extend the unpublished candidate.
      * Creator strike trail colours (StrikeTrailStyle), per-form powered particles and emitters
      * (PoweredEffects) and the powered-tier query extend the unpublished candidate.
      * Current unpublished compiled-mod API candidate, including the grouped landing animation rule,

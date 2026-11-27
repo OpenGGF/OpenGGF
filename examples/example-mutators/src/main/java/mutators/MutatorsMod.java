@@ -23,6 +23,11 @@ public final class MutatorsMod implements GgfMod {
         context.registerMutator(ViolentExplosions.definition());
         context.registerMutator(HomingAttack.definition());
         context.registerMutator(BetaFlight.definition());
+        context.registerMutator(StartingState.rings());
+        context.registerMutator(StartingState.time());
+        context.registerMutator(StartingState.score());
+        context.registerMutator(StartingState.lives());
+        context.registerMutator(HungryForRings.definition());
         for (String game : List.of("s1", "s2", "s3k")) context.registerGamePatch(new Patch(game));
     }
     public static final class Patch implements GamePatch {

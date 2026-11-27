@@ -17,10 +17,17 @@ import java.util.logging.Logger;
 final class LevelHudArtPatterns {
     private static final Logger LOGGER = Logger.getLogger(LevelManager.class.getName());
 
+    /** Offset of the ring hunger dial frames inside the 0x8000-pattern HUD range. */
+    static final int HUNGER_DIAL_OFFSET = 0x7F00;
+
     private LevelHudArtPatterns() { }
 
+    private static com.openggf.level.Palette paletteLine(com.openggf.level.Level level, int line) {
+        return level == null || line < 0 || line > 3 ? null : level.getPalette(line);
+    }
+
     static void cache(ObjectArtProvider provider, GraphicsManager graphicsManager, HudRenderManager hudRenderManager,
-                      int hudBaseIndex) {
+                      int hudBaseIndex, com.openggf.level.Level level) {
         Pattern[] hudDigits = provider.getHudDigitPatterns();
         if (hudDigits != null) {
             LOGGER.info("Cached " + hudDigits.length + " HUD Digit patterns at index " + hudBaseIndex);
@@ -29,6 +36,10 @@ final class LevelHudArtPatterns {
             }
             hudRenderManager.setDigitPatternIndex(hudBaseIndex);
             HudProfileAccess.measureTimeSeparators(hudRenderManager, hudDigits);
+            // Mutator presentation art sits at the top of the HUD range, clear of every ROM set below.
+            HudProfileAccess.installHungerDial(hudRenderManager, graphicsManager, hudDigits, provider.getHudStaticArt(),
+                    paletteLine(level, provider.getHudTextPaletteLine()),
+                    paletteLine(level, provider.getHudFlashPaletteLine()), hudBaseIndex + HUNGER_DIAL_OFFSET);
 
             int nextHudIndex = hudBaseIndex + hudDigits.length;
             com.openggf.level.objects.HudProfileAccess.installSatLayout(hudRenderManager,

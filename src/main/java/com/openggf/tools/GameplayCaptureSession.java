@@ -182,7 +182,55 @@ public final class GameplayCaptureSession implements AutoCloseable {
         if (developmentMod != null) developmentMod.close();
         developmentMod = next;
         boot.setLaunchModuleDecorator((module, request) ->
-                developmentResolver.decorate(developmentMod, module, request));
+                withMutatorRequests(developmentResolver.decorate(developmentMod, module, request)));
+    }
+
+    private com.openggf.mods.mutators.MutatorLaunchRequests mutatorRequests;
+
+    /**
+     * Declared capture setup: enables mutators of the applied mod package for this capture's
+     * world, each {@code id[:option=value,...]}. They are laid over the saved preferences as
+     * requested settings, admitted at the world's LAUNCH boundary like a Start from the
+     * mutator title, and never saved. Call after {@link #applyMod} and before boot.
+     */
+    public void requestMutators(java.util.List<String> specs) {
+        if (loop != null) throw new IllegalStateException("capture session is already booted");
+        if (developmentMod == null) throw new IllegalStateException("--mutator needs --mod");
+        mutatorRequests = specs.isEmpty() ? null : com.openggf.mods.mutators.MutatorLaunchRequests.parse(specs);
+    }
+
+    private com.openggf.game.GameModule withMutatorRequests(com.openggf.game.GameModule decorated) {
+        var requests = mutatorRequests;
+        if (requests == null || decorated == null) return decorated;
+        return new com.openggf.game.patch.DelegatingGameModule(decorated, decorated.getIdentifier()) {
+            @Override public <T> T getGameService(Class<T> type) {
+                if (type == com.openggf.mods.mutators.MutatorLaunchRequests.class) return type.cast(requests);
+                return super.getGameService(type);
+            }
+        };
+    }
+
+    /**
+     * After boot, every requested mutator must be admitted and enabled. A package that does
+     * not support this game/team, or a launch that refused the settings, fails the capture
+     * instead of filming stock play.
+     */
+    public void verifyRequestedMutators() {
+        requireBooted();
+        if (mutatorRequests == null) return;
+        var world = com.openggf.game.session.SessionManager.getCurrentWorldSession();
+        var state = world == null ? null : com.openggf.mods.mutators.MutatorWorldAccess.state(world);
+        if (state == null) throw new IllegalStateException("--mutator: the --mod package installed no mutators for this "
+                + "game and team");
+        String admission = com.openggf.mods.mutators.MutatorWorldAccess.admissionError(world);
+        for (var request : mutatorRequests.requests()) {
+            var owned = state.definitions().stream().filter(o -> o.key().equals(request.id().replace('/', ':'))
+                    || o.definition().localId().equals(request.id())).findFirst().orElseThrow();
+            var admitted = state.admitted().get(owned.key());
+            if (admitted == null || !admitted.enabled())
+                throw new IllegalStateException("--mutator " + request.id() + " was not admitted"
+                        + (admission.isBlank() ? "" : ": " + admission));
+        }
     }
 
     /** Boots the level, consumes the title card, and optionally teleports the leader. */
