@@ -11,6 +11,19 @@ under the matching area heading; see the
   Sonic 2 and Sonic 3 & Knuckles. Sky Chase also lowers the live limit before
   moving the camera with the Tornado, matching the cartridge's update order.
 
+- **First-run setup guide:** the first time you reach the hub, a short guide
+  adds your games, asks **How do you want to play?** and starts one. It finds
+  Sonic 1, Sonic 2, Sonic 3 & Knuckles and Sonic CD by content; Sonic CD shows
+  Found until its whole disc is checked at start, and an incomplete, foreign or
+  unreadable disc names the problem and the fix without blocking the other
+  games. **Stock** keeps 4:3 and the original timing choices, **Balanced**
+  (recommended) is a 16:9 picture with Native widescreen gameplay, **Enhanced**
+  adds smooth motion and rewind, and **Just here for multiplayer** changes no
+  settings and opens Time Attack rooms or Sonic 2's two-player mode. Upgrades
+  keep their games and settings unless a listed change is accepted. It opens
+  once per run until finished or skipped, and again from **Extras › Setup guide**.
+  Its text is a machine draft in every shipped language, awaiting native review.
+
 - **Sonic 2 positioned starts:** object loading publishes the new camera
   position before the next object update. Widescreen EDGE keeps Emerald Hill's
   loop switchers alive so Sonic can follow both sides of the loop.

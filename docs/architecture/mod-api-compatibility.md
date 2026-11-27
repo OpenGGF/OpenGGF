@@ -60,6 +60,12 @@ is appended to preserve existing enum ordinals. The mutable `0.7` signature pin
 candidate description include it; descriptor candidate `0.7.0` and the empty
 published-baseline set are unchanged.
 
+`SonicConfiguration.SETUP_GUIDE` adds the saved key `hub.setupGuide`: the hub-owned state of
+the first-run setup guide (blank, `done` or `skipped`). It is appended to preserve existing
+enum ordinals. The mutable `0.7` signature pin (regenerated with
+`ModApiSignatureSurface --snapshot`) and the `ModApiVersion` candidate description include
+it; descriptor candidate `0.7.0` and the empty published-baseline set are unchanged.
+
 Stageplay uses the engine's unpublished 0.7.0 candidate. Canonical documents
 (version seven) and screenplays (version six) accept only their current shape;
 there is no published Stageplay format to migrate. Every set uses the same native

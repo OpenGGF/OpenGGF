@@ -329,7 +329,17 @@ public final class MenuChrome {
         /** A beetle: a bug-report link. */
         BUG("22", "1C", "5D", "3E", "5D", "1C", "22"),
         /** A lit bomb: the crash screen's row of Atari ST style exception bombs. */
-        BOMB("02", "04", "1C", "2E", "3E", "3E", "1C");
+        BOMB("02", "04", "1C", "2E", "3E", "3E", "1C"),
+        /** A cartridge with its label and contacts: the setup guide's Stock style. */
+        CARTRIDGE("7F", "41", "5D", "41", "7F", "3E", "2A"),
+        /** A level scale: the setup guide's Balanced style. */
+        BALANCE("08", "7F", "49", "49", "63", "08", "3E"),
+        /** A wide frame with a picture: the setup guide's Enhanced style. */
+        WIDE("00", "7F", "41", "5D", "41", "7F", "00"),
+        /** Two players side by side: multiplayer and local two-player. */
+        PLAYERS("22", "22", "00", "77", "77", "77", "00"),
+        /** A globe: online rooms. */
+        GLOBE("1C", "2A", "7F", "49", "7F", "2A", "1C");
 
         private final int[] rows;
 
