@@ -7,6 +7,10 @@ under the matching area heading; see the
 
 ## Gameplay and presentation
 
+- **Knuckles' continue icon on Sonic 3 & Knuckles special-stage results** is
+  red again instead of Sonic blue. Chaos Emerald stages now apply the same
+  Knuckles colours as the cartridge, as Super Emerald stages already did.
+
 - **Knuckles in Sonic 2 title with the lock-on ROM:** the strip above the N in
   SONIC shows the logo again instead of stray tiles. While rising, Knuckles stays
   behind the emblem as on the cartridge.

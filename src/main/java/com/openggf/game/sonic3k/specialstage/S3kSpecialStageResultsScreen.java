@@ -867,6 +867,10 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen, LevelBackdro
         return phase1Elements.get(index).currentX;
     }
 
+    Palette resultsPaletteLineForTest(int line) {
+        return resultsPalettes == null ? null : resultsPalettes[line];
+    }
+
     int continueIconXForTest() {
         return continueIconX;
     }
@@ -1411,7 +1415,12 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen, LevelBackdro
     private void loadPalette(com.openggf.data.Rom rom) {
         try {
             byte[] paletteData = rom.readBytes(Sonic3kConstants.PAL_RESULTS_ADDR, 128);
-            resultsPalettes = PaletteLoader.fromBytes(paletteData);
+            if (superEmeraldStage) {
+                // S3kSanctuaryResultsPalette applies sub_2E2C0's Super Emerald variant itself.
+                resultsPalettes = PaletteLoader.fromBytes(paletteData);
+            } else {
+                resultsPalettes = PaletteLoader.fromBytes(withChaosStageCharacterColors(paletteData, character));
+            }
             paletteLoaded = true;
             if (superEmeraldStage) {
                 loadSanctuaryPalette(rom, paletteData);
@@ -1419,6 +1428,26 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen, LevelBackdro
         } catch (Exception e) {
             LOG.warning("Failed to load SS results palette: " + e.getMessage());
         }
+    }
+
+    /**
+     * {@code sub_2E2C0} (sonic3k.asm:63282-63311) right after {@code Pal_Results} is copied
+     * (sonic3k.asm:63155-63163): with Player_mode 3 it writes $84E,$40C,$206,$080 to line 1
+     * colours 2-5, turning the Sonic-blue ramp red for Knuckles' continue icon
+     * ({@code Map_Results} frame $2B) and other line-1 art. The $EE colour-5 variant and the
+     * non-Knuckles line-2 write only apply on a Super Emerald stage ({@code SK_special_stage_flag}).
+     */
+    static byte[] withChaosStageCharacterColors(byte[] resultsPalette, PlayerCharacter character) {
+        if (character != PlayerCharacter.KNUCKLES) {
+            return resultsPalette;
+        }
+        byte[] patched = resultsPalette.clone();
+        int[] colors = {0x084E, 0x040C, 0x0206, 0x0080};
+        for (int i = 0; i < colors.length; i++) {
+            patched[4 + i * 2] = (byte) (colors[i] >> 8);
+            patched[5 + i * 2] = (byte) colors[i];
+        }
+        return patched;
     }
 
     /**
