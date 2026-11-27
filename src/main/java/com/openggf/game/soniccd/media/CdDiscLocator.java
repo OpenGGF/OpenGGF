@@ -1,5 +1,8 @@
 package com.openggf.game.soniccd.media;
 
+import com.openggf.game.internal.HostedGameMedia;
+import com.openggf.game.internal.HostedGameMedia.MediaKind;
+
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.data.cd.DiscImage;
@@ -147,6 +150,31 @@ public final class CdDiscLocator {
             return name + " is the " + variant.name().charAt(0) + variant.name().substring(1).toLowerCase(Locale.ROOT)
                     + " release.";
         }
+    }
+
+    /**
+     * Classifies one user-chosen {@code .cue} or {@code .chd} for the setup guide with the same probe the
+     * folder search uses (layout and the data track's header; nothing is hashed). The detail is the exact
+     * diagnostic the search would report.
+     */
+    public static HostedGameMedia.Inspection inspect(Path image) {
+        Path absolute = image.toAbsolutePath().normalize();
+        Probe probe = probe(absolute);
+        if (probe.variant() == CdReleaseVariant.USA && probe.problem() == null)
+            return new HostedGameMedia.Inspection(MediaKind.READY, absolute.toString());
+        if (probe.variant() != null && probe.problem() != null)
+            return new HostedGameMedia.Inspection(MediaKind.INCOMPLETE, probe.describe(absolute));
+        if (probe.variant() != null)
+            return new HostedGameMedia.Inspection(MediaKind.OTHER_RELEASE,
+                    probe.describe(absolute) + " OpenGGF plays the USA release of Sonic CD.");
+        if (probe.problem() != null)
+            return new HostedGameMedia.Inspection(MediaKind.UNREADABLE, probe.describe(absolute));
+        return new HostedGameMedia.Inspection(MediaKind.NOT_THIS_GAME, "");
+    }
+
+    /** True for the files {@link #inspect} looks at: CUE sheets and CHDs, by name. */
+    public static boolean candidate(Path path) {
+        return isDiscImageName(path);
     }
 
     static Probe probe(Path cue) {

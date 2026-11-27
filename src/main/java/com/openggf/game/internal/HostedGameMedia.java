@@ -23,6 +23,38 @@ public interface HostedGameMedia {
     /** Whether the configured media is present and looks right, and what to tell the player. */
     record Availability(boolean available, String detail) { }
 
+    /**
+     * What a user-chosen file is, judged as cheaply as {@link #probe}: its layout and header, never a
+     * whole-media hash. {@code READY} media is identified, not verified; verification happens when the
+     * game opens it.
+     */
+    enum MediaKind {
+        /** The supported release, identified by its header and layout. */
+        READY,
+        /** This game, but a release the engine does not play. */
+        OTHER_RELEASE,
+        /** This game's media with parts missing (for a disc, tracks). */
+        INCOMPLETE,
+        /** An image of this kind that could not be read or is in an unsupported container. */
+        UNREADABLE,
+        /** Not this game's media. */
+        NOT_THIS_GAME
+    }
+
+    /** One inspected file: its kind and the exact English diagnostic, for logs and the details reader. */
+    record Inspection(MediaKind kind, String detail) {
+        public Inspection {
+            java.util.Objects.requireNonNull(kind, "kind");
+            detail = detail == null ? "" : detail;
+        }
+    }
+
+    /** Whether {@code file} is a candidate this game's {@link #inspect} should look at (by name only). */
+    default boolean candidate(Path file) { return false; }
+
+    /** Inspects one candidate file; never throws for a missing, foreign or damaged image. */
+    default Inspection inspect(Path file) { return new Inspection(MediaKind.NOT_THIS_GAME, ""); }
+
     /** The game's full name, for the master title's header. */
     String displayName();
 
