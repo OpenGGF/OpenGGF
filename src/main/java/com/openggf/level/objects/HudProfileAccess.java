@@ -101,6 +101,38 @@ public final class HudProfileAccess {
 
     public static void bindWorld(HudRenderManager hud,WorldSession world) { hud.presentationWorld=world; }
 
+    /**
+     * Caches the two ring hunger dial sets (see {@link HudHungerDial}) at {@code base}: the
+     * ordinary set in the RINGS label ink, the warning set in the warning palette line's red,
+     * each outlined in its line's darkest entry. Without ink the dial stays undrawn; without a palette the warning set reuses
+     * the ordinary inks on the warning line.
+     */
+    public static void installHungerDial(HudRenderManager hud, com.openggf.graphics.GraphicsManager graphics,
+                                         com.openggf.level.Pattern[] digits, HudStaticArt labels,
+                                         com.openggf.level.Palette textLine, com.openggf.level.Palette warningLine,
+                                         int base) {
+        if (hud == null || graphics == null) return;
+        com.openggf.level.Pattern[] labelTiles = null;
+        if (labels != null && labels.ringsFrame() != null && labels.patterns() != null) {
+            var tiles = new java.util.ArrayList<com.openggf.level.Pattern>();
+            for (var piece : labels.ringsFrame().pieces())
+                for (int t = 0; t < piece.widthTiles() * piece.heightTiles(); t++)
+                    if (piece.tileIndex() + t >= 0 && piece.tileIndex() + t < labels.patterns().length)
+                        tiles.add(labels.patterns()[piece.tileIndex() + t]);
+            labelTiles = tiles.toArray(com.openggf.level.Pattern[]::new);
+        }
+        int[] ordinary = HudHungerDial.ordinaryInks(labelTiles, digits);
+        if (ordinary == null) { hud.setHungerDialPatternIndex(-1); return; }
+        ordinary = new int[] { ordinary[0], HudHungerDial.darkest(textLine, ordinary[0], ordinary[1]) };
+        int[] warning = HudHungerDial.warningInks(warningLine);
+        if (warning == null) warning = ordinary;
+        var first = HudHungerDial.build(ordinary[0], ordinary[1]);
+        var second = HudHungerDial.build(warning[0], warning[1]);
+        for (int i = 0; i < first.length; i++) graphics.cachePatternTexture(first[i], base + i);
+        for (int i = 0; i < second.length; i++) graphics.cachePatternTexture(second[i], base + HudHungerDial.SET_SIZE + i);
+        hud.setHungerDialPatternIndex(base);
+    }
+
     /** See {@link com.openggf.level.LevelHudCoverAccess}. */
     public static void setCoveredByHost(HudRenderManager hud, boolean covered) {
         if (hud != null) hud.coveredByHost = covered;

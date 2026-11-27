@@ -8,7 +8,7 @@ public sealed interface MutatorPolicy permits CharacterSuperFormPolicy, MutatorP
         MutatorPolicy.PlayerStealth, MutatorPolicy.Ringfall, MutatorPolicy.BigHead,
         MutatorPolicy.MonitorFilter, MutatorPolicy.NoCheckpoints, MutatorPolicy.NoRings,
         MutatorPolicy.GameplaySpeed, MutatorPolicy.NoSpecialStages, MutatorPolicy.NoBonusStages,
-        MutatorPolicy.DefeatKnockback, MutatorPolicy.HomingAttack, GameplayHoldPolicy, ScenePresentationPolicy, SpritePresentationPolicy, HudPresentationPolicy, AudioEffectPolicy, OverlayPolicy, EncounterPolicy, EnemyRulePolicy, ProjectileRulePolicy, ObjectFieldPolicy, RingEconomyPolicy, NativePowerupPolicy, RelocationPolicy, TransportPolicy, ChallengePolicy, PlayerMotionPolicy, InputControlPolicy, SignedGravityPolicy, SpringResponsePolicy, FluidContextPolicy {
+        MutatorPolicy.DefeatKnockback, MutatorPolicy.HomingAttack, GameplayHoldPolicy, ScenePresentationPolicy, SpritePresentationPolicy, HudPresentationPolicy, AudioEffectPolicy, OverlayPolicy, EncounterPolicy, EnemyRulePolicy, ProjectileRulePolicy, ObjectFieldPolicy, RingEconomyPolicy, NativePowerupPolicy, RelocationPolicy, TransportPolicy, ChallengePolicy, PlayerMotionPolicy, InputControlPolicy, SignedGravityPolicy, SpringResponsePolicy, FluidContextPolicy, StartingStatePolicy, RingHungerPolicy {
     MutatorCapability capability();
 
     /** Dimensionless integer percent; only the host's documented dry Sonic owner consumes it. */

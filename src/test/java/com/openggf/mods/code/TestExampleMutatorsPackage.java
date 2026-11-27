@@ -65,7 +65,9 @@ class TestExampleMutatorsPackage {
                     "example-mutators:stealth","example-mutators:no-powerups","example-mutators:no-checkpoints",
                     "example-mutators:no-rings","example-mutators:game-speed","example-mutators:no-special-stages",
                     "example-mutators:no-bonus-stages","example-mutators:violent-explosions",
-                    "example-mutators:homing-attack"),plan.mutators().keySet());
+                    "example-mutators:homing-attack","example-mutators:start-rings","example-mutators:start-time",
+                    "example-mutators:start-score","example-mutators:start-lives",
+                    "example-mutators:hungry-for-rings"),plan.mutators().keySet());
             assertEquals(3,plan.explicitPatches().size());assertTrue(plan.objectFactories().isEmpty());
             assertEquals(List.of("s1","s2","s3k","scd"),plan.stockScenePlans().stream().map(ModRegistrationPlan::baseGameId).toList());
             for(var game:plan.stockScenePlans()) {
@@ -145,14 +147,21 @@ class TestExampleMutatorsPackage {
             }
             for(var owned:plan.mutators().values()) {
                 assertEquals("example-mutators",owned.ownerModId());
-                var scope=Set.of("no-powerups","no-checkpoints","no-rings").contains(owned.definition().localId())
-                        ? MutatorScope.LOAD : MutatorScope.LIVE;
+                String local=owned.definition().localId();
+                var scope=Set.of("no-powerups","no-checkpoints","no-rings").contains(local) ? MutatorScope.LOAD
+                        : Set.of("start-score","start-lives").contains(local) ? MutatorScope.LAUNCH : MutatorScope.LIVE;
                 assertEquals(scope,owned.definition().enableScope());assertEquals(scope,owned.definition().disableScope());
                 assertTrue(owned.definition().options().stream().allMatch(o->o.editScope()==scope));
                 assertEquals(owned.definition().capabilities(),owned.definition().factory()
                         .prepare(new MutatorOptions(owned.definition().defaults())).stream()
                         .map(MutatorPolicy::capability).collect(java.util.stream.Collectors.toSet()));
             }
+            var startRings=plan.mutators().get("example-mutators:start-rings").definition();
+            assertEquals(List.of(new StartingStatePolicy.Rings(50,0)),startRings.factory().prepare(new MutatorOptions(startRings.defaults())));
+            var startTime=plan.mutators().get("example-mutators:start-time").definition();
+            assertEquals(List.of(new StartingStatePolicy.Time(300)),startTime.factory().prepare(new MutatorOptions(startTime.defaults())));
+            var hunger=plan.mutators().get("example-mutators:hungry-for-rings").definition();
+            assertEquals(List.of(new RingHungerPolicy(30,1,1,0,5)),hunger.factory().prepare(new MutatorOptions(hunger.defaults())));
             var gravity=plan.mutators().get("example-mutators:gravity").definition();
             assertEquals(List.of(new MutatorPolicy.DrySonicGravity(100)),gravity.factory().prepare(new MutatorOptions(gravity.defaults())));
             assertEquals(1,gravity.schemaVersion(),"Existing saved Gravity options remain valid");

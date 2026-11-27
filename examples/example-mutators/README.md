@@ -1,6 +1,6 @@
 # Mutator Lab
 
-A maintained JVM mod with one common settings screen and twelve independently
+A maintained JVM mod with one common settings screen and seventeen independently
 configurable effects for Sonic 1, Sonic 2 and Sonic 3 & Knuckles. Play uses native
 ROM levels, sprites, music and sound effects. Every mutator starts off; the jar
 contains creator code and declarations, never commercial assets.
@@ -52,13 +52,20 @@ Compiled creator code is unavailable in the engine's standard native image; see 
 | No Bonus Stages | Refuse new Sonic 3 & Knuckles bonus-stage entry | Resume |
 | Violent Explosions | Native badnik rebound at 150–300%; vertical speed cap | Resume |
 | Homing Attack | Homing or Instagib; Sonic, Tails and Knuckles as leader | Resume |
+| Start with Rings | 0–999 rings (default 50) granted at every act start and life, after a 0–300 s delay (default 0) | Resume; next act or life |
+| Start with Time | 1–570 s already on the level timer (default 300, 5:00) at act starts and restarts from the act start | Resume; next act or life |
+| Start with Score | 0–999,990 points in steps of 10 (default 0) | New game |
+| Start with Lives | 1–99 lives (default 3) | New game |
+| Hungry for Rings | Grace 0–300 s (30), lose 1–100 rings (1) every 1–60 s (1); at or under 0–999 rings (0) for 1–60 s (5) you die | Resume |
 
 Each toggle and option declares its own lifecycle. The screen displays requested
 values, admitted values and pending boundaries separately. Resume applies LIVE
 edits; a full restart, death reload or qualifying full stage return applies LOAD
 edits. Loading a preview, restoring a checkpoint or a seamless handoff does not.
-The host also supports LAUNCH-scoped authoring, which requires a new game session;
-these twelve examples do not invent a launch-only setting.
+The host also supports LAUNCH-scoped authoring, which requires a new game session:
+Start with Score and Start with Lives are launch-only, because score and lives belong to
+the whole game session. Edit them from the Lab title before Start; an edit during play
+waits for the next new game.
 
 No Powerups, No Checkpoints and No Rings leave the existing world intact while an
 edit is pending. Native placement order, stable layout indices and object slots
@@ -124,6 +131,57 @@ pass through, which can chain. Bosses never take shard hits. Each shard is drawn
 on-screen tiles, so parts repeat; a world that never rendered draws sparks instead.
 The heat, embers, afterimages and reticle are presentation only.
 
+## Starting values and ring hunger
+
+The four starting mutators write through each game's native counter owners at
+real boundaries; enabled at their defaults, Start with Score (0) and Start with
+Lives (3) are identity settings.
+
+- **Start with Rings** grants its rings on the first active frame of every act
+  start (including the Sonic 3 & Knuckles results screen's move to act 2) and
+  every life restart, checkpoint restarts included. With a delay, the grant
+  arrives after that many seconds of active play and joins any rings already
+  collected. The count is written directly rather than collected, so reaching
+  100 or 200 this way gives **no extra life**: the thresholds it reaches are
+  marked as already paid in the native extra-life bank, and later pickups still
+  award the thresholds it did not reach. No Rings dominates the grant.
+  Turning the mutator off during the delay cancels that grant.
+- **Start with Time** adds its seconds to the level timer at a fresh act start
+  and at a life restarted from the act start. A checkpoint restart keeps the
+  native saved checkpoint time, which already includes the seed if the
+  checkpoint was reached under it. The 570-second maximum is 9:30, which leaves
+  the native 10:00 time over 30 seconds away. The default, 5:00, visibly changes
+  the clock while leaving more time than an ordinary act needs, so the setting
+  alone rarely forces a time over.
+- **Start with Score** and **Start with Lives** apply once, at the first act
+  start of a new game session. The score is capped at 999,990 (the six-digit HUD
+  counter) in native units of ten; lives at 99 (the two-digit counter, and Sonic
+  3 & Knuckles' own clamp). A native continue keeps its own score/lives reset.
+- Stage returns, checkpoint restores and seamless act handoffs restore their own
+  saved counters and grant nothing.
+
+**Hungry for Rings** starts a grace countdown at every act start and life
+restart. When it ends, the chosen number of rings leaves the native ring counter
+every period (a drain is not a hurt: nothing scatters and the extra-life bank is
+kept). Holding the starving count or fewer for the chosen time kills the player
+through the native kill routine, as a crush does, so shields and invincibility do
+not save you; debug mode does. Collecting rings above the starving count cancels
+the countdown. The clocks advance only during active main-level play: pause,
+title cards, special and bonus stages, results, signposts and capsules (any time
+the native level timer is stopped), scripted or object control, and boss fights
+(the native boss flag) hold them. A checkpoint restart, a death and an act change
+all begin a fresh grace; returning from a special or bonus stage resumes where it
+stopped. The state is rewind history. No Rings makes Hungry for Rings fatal by
+design.
+
+A 16-pixel dial beside the ring counter shows the hunger. It is drawn with the
+RINGS label's own palette ink: a yellow pie empties clockwise during the grace,
+an empty dial means rings are draining, and a red pie (the red of the HUD's
+warning line, as Sonic 2's RINGS warning uses) counts down to starvation,
+blinking on the native warning cadence for its last quarter. The dial follows
+the HUD in both widescreen anchors and is hidden in debug mode and bonus-stage
+HUD layouts.
+
 ## Presentation and support limits
 
 The Lab decorates each native game. Effects are unavailable while cross-game
@@ -184,6 +242,11 @@ cue, synthetic screenshot or nonzero audio amplitude alone is not audible proof.
 | Apply load edits | Choose Restart from act start | Same |
 | Leave | Choose Return to game hub | Same |
 
+Holding Left or Right on a long slider speeds up after about half a second, then
+moves ten (and, on very long sliders, a hundred or a thousand) steps at a time;
+single presses always move one step. The 570-second time slider sweeps end to end
+in about five seconds.
+
 How to play quotes your actual bindings. Esc inside gameplay configuration backs
 out of options and keeps play held. Simultaneous cancel/confirm cancels. Native
 fade commands stay visibly queued until the fade completes. Resume releases user
@@ -229,6 +292,26 @@ of the `any` transaction. Installation refresh, hot code replacement, modified
 recordings and universal character/pose coverage remain separate work.
 
 ## Maintained capture inputs
+
+`GameplayCaptureTool` and `MutatorGameplayCaptureTool` enable Lab mutators for one
+capture with a repeatable `--mutator <id>[:<option>=<value>,...]` flag (it needs
+`--mod`). The requests are laid over the saved preferences, admitted at the
+capture's launch boundary like Start, and never saved; an unknown id, option or
+out-of-range value fails before filming, and a mutator the launch did not admit
+fails after boot. For example, a mid-act demo on 85 rings, 4:30, 25,000 points and
+seven lives:
+
+```bash
+... GameplayCaptureTool --game s2 --zone ehz --act 1 --mod target/example-mutators/example-mutators.jar \
+  --mutator start-rings:rings=85 --mutator start-time:seconds=270 \
+  --mutator start-score:score=25000 --mutator start-lives:lives=7 \
+  --mutator hungry-for-rings:grace=10,loss=1,period=1,threshold=0,starve=5 --out-dir <task>/demo
+```
+
+Option ids are the Lab's: `start-rings` (`rings`, `delay`), `start-time`
+(`seconds`), `start-score` (`score`), `start-lives` (`lives`) and
+`hungry-for-rings` (`grace`, `loss`, `period`, `threshold`, `starve`); every other
+mutator's ids are in its class under `src/main/java/mutators`.
 
 The development launcher opens this package's declared Sonic 2 base game. The
 Sonic 1 and Sonic 3 & Knuckles window recipes first finish that intro, return

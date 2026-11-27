@@ -23,7 +23,17 @@ public enum MutatorCapability {
     OBJECT_FIELD(MutatorScope.LIVE), RING_ECONOMY(MutatorScope.LIVE), NATIVE_POWERUP(MutatorScope.LIVE),
     RELOCATION(MutatorScope.LIVE), TRANSPORT(MutatorScope.LIVE), CHALLENGE(MutatorScope.LIVE),
     PLAYER_MOTION(MutatorScope.LIVE), INPUT_CONTROL(MutatorScope.LIVE), SIGNED_GRAVITY(MutatorScope.LIVE),
-    SPRING_RESPONSE(MutatorScope.LIVE), FLUID_CONTEXT(MutatorScope.LIVE);
+    SPRING_RESPONSE(MutatorScope.LIVE), FLUID_CONTEXT(MutatorScope.LIVE),
+    /** Act-start and life-restart ring grant. */
+    STARTING_RINGS(MutatorScope.LIVE),
+    /** Act-start level timer seed; checkpoint restarts keep the native saved time. */
+    STARTING_TIME(MutatorScope.LIVE),
+    /** New-game-session score; it can change only when a new session launches. */
+    STARTING_SCORE(MutatorScope.LAUNCH),
+    /** New-game-session lives; it can change only when a new session launches. */
+    STARTING_LIVES(MutatorScope.LAUNCH),
+    /** Grace countdown, ring drain and starvation death. */
+    RING_HUNGER(MutatorScope.LIVE);
 
     private final MutatorScope minimumScope;
     MutatorCapability(MutatorScope minimumScope) { this.minimumScope = minimumScope; }

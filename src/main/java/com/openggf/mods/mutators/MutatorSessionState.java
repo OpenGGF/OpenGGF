@@ -529,6 +529,37 @@ public final class MutatorSessionState implements AutoCloseable {
                     speeds.stream().anyMatch(MutatorPolicy.GameplaySpeed::audioFollowsSpeed));
         }
 
+        /**
+         * Each starting value takes the first available contribution in catalogue order, so
+         * two owners never sum into a value neither requested.
+         */
+        public com.openggf.game.mutators.StartingStateMutatorPolicy startingState(Set<MutatorCapability> available) {
+            var rings = available.contains(MutatorCapability.STARTING_RINGS)
+                    ? contributions(StartingStatePolicy.Rings.class).stream().findFirst().orElse(null) : null;
+            var time = available.contains(MutatorCapability.STARTING_TIME)
+                    ? contributions(StartingStatePolicy.Time.class).stream().findFirst().orElse(null) : null;
+            var score = available.contains(MutatorCapability.STARTING_SCORE)
+                    ? contributions(StartingStatePolicy.Score.class).stream().findFirst().orElse(null) : null;
+            var lives = available.contains(MutatorCapability.STARTING_LIVES)
+                    ? contributions(StartingStatePolicy.Lives.class).stream().findFirst().orElse(null) : null;
+            if (rings == null && time == null && score == null && lives == null)
+                return com.openggf.game.mutators.StartingStateMutatorPolicy.STOCK;
+            return new com.openggf.game.mutators.StartingStateMutatorPolicy(
+                    rings == null ? -1 : rings.rings(), rings == null ? 0 : rings.delaySeconds(),
+                    time == null ? -1 : time.seconds(), score == null ? -1 : score.score(),
+                    lives == null ? -1 : lives.lives());
+        }
+
+        /** The first available hunger contribution in catalogue order; none is inactive. */
+        public com.openggf.game.mutators.RingHungerMutatorPolicy ringHunger(Set<MutatorCapability> available) {
+            if (!available.contains(MutatorCapability.RING_HUNGER))
+                return com.openggf.game.mutators.RingHungerMutatorPolicy.STOCK;
+            return contributions(RingHungerPolicy.class).stream().findFirst()
+                    .map(value -> com.openggf.game.mutators.RingHungerMutatorPolicy.ofSeconds(value.graceSeconds(),
+                            value.ringsLost(), value.periodSeconds(), value.threshold(), value.starveSeconds()))
+                    .orElse(com.openggf.game.mutators.RingHungerMutatorPolicy.STOCK);
+        }
+
         /** Any Instagib contribution selects Instagib; contributed characters are united. */
         public com.openggf.game.mutators.HomingAttackRuntime.Policy homingPolicy(Set<MutatorCapability> available) {
             if (!available.contains(MutatorCapability.HOMING_ATTACK))

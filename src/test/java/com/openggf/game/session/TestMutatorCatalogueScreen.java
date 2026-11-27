@@ -529,6 +529,45 @@ class TestMutatorCatalogueScreen {
         GameModuleRegistry.setCurrent(resolved);SessionManager.openGameplaySession(root,resolved,null);TestEnvironment.activeGameplayMode();
         return SessionManager.getCurrentWorldSession();
     }
+    @org.junit.jupiter.api.Test
+    void heldLongSlidersAccelerateOnTheirLatticeWhileShortSlidersStepOnce() {
+        var definitions=List.of(new OwnedMutator("catalogue",new MutatorDefinition("time","Start with Time","",
+                MutatorScope.LIVE,MutatorScope.LIVE,
+                List.of(new MutatorOption.IntegerSlider("seconds","Time","",MutatorScope.LIVE,1,1,570,1," s"),
+                        new MutatorOption.IntegerSlider("speed","Speed","",MutatorScope.LIVE,400,25,400,25,"%")),
+                Set.of(MutatorCapability.STARTING_TIME),o->List.of(new StartingStatePolicy.Time(o.integer("seconds"))))));
+        var world=open("s2",new Sonic2GameModule(),definitions);var state=MutatorWorldAccess.state(world);
+        var screen=new MutatorConfigurationScreen(world,"Catalogue",null,c->{});screen.initialize();
+        var input=new InputHandler();
+        press(screen,input,GLFW_KEY_DOWN,false);press(screen,input,GLFW_KEY_ENTER,false); // Configure mutators
+        press(screen,input,GLFW_KEY_ENTER,false);press(screen,input,GLFW_KEY_DOWN,false); // Time slider row
+        press(screen,input,GLFW_KEY_RIGHT,false);
+        assertEquals(2,state.requested().get("catalogue:time").options().get("seconds"),"a single press is one step");
+        var seen=new ArrayList<Integer>();
+        input.handleKeyEvent(GLFW_KEY_RIGHT,GLFW_PRESS);
+        for(int frame=0;frame<5*60+30;frame++) {
+            screen.update(input);input.update();
+            seen.add((Integer)state.requested().get("catalogue:time").options().get("seconds"));
+        }
+        input.handleKeyEvent(GLFW_KEY_RIGHT,GLFW_RELEASE);input.update();
+        assertEquals(570,seen.getLast(),"held Right sweeps the whole 570-position slider in about five seconds");
+        assertTrue(seen.containsAll(List.of(3,4,5,6,7,8,9,10,11)),
+                "the first half second still moves one step per pulse: "+seen.subList(0,60));
+        for(int i=1;i<seen.size();i++) assertTrue(seen.get(i)-seen.get(i-1)<=10 && seen.get(i)>=seen.get(i-1),
+                "570 positions never jump past tenfold steps: "+seen.get(i-1)+" -> "+seen.get(i));
+        press(screen,input,GLFW_KEY_DOWN,false); // Speed slider: 16 positions
+        input.handleKeyEvent(GLFW_KEY_LEFT,GLFW_PRESS);
+        int pulses=0;Object last=400;
+        for(int frame=0;frame<80;frame++) {
+            screen.update(input);input.update();
+            Object now=state.requested().get("catalogue:time").options().get("speed");
+            if(!now.equals(last)) { pulses++; assertEquals(25,(Integer)last-(Integer)now,"short sliders always step once"); }
+            last=now;
+        }
+        input.handleKeyEvent(GLFW_KEY_LEFT,GLFW_RELEASE);input.update();
+        assertTrue(pulses>3);
+    }
+
     private static void press(MutatorConfigurationScreen screen,InputHandler input,int key,boolean overlay) {
         input.handleKeyEvent(key,GLFW_PRESS);if(overlay) screen.handleInput(input);else screen.update(input);
         input.update();input.handleKeyEvent(key,GLFW_RELEASE);input.update();
