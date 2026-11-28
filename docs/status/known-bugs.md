@@ -25,7 +25,7 @@ Entries should include:
 ## Sonic CD recordings from the hub
 
 - **Symptom** — The Sonic CD card offers Start and Game Setup. Its Playback
-  action and setup chips are pending hosted playback support.
+  action is pending hosted playback support.
 - **Blocker** — The hub's `tryOpenUserRecordingMenuForSelectedGame` requires a
   Stock entry. `GameplayTeamBootstrapContext.restartRecording` opens a
   cartridge through `RomManager`, whose legacy game lookup maps `scd` to

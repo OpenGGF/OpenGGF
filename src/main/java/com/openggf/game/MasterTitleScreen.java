@@ -1628,10 +1628,15 @@ public class MasterTitleScreen {
 
     /** Chips for the selected game, read from the saved profile so they never go stale. */
     List<HubSetupChips.Chip> hubChips() {
-        MasterTitleEntry entry = selectedEntry();
-        if (!(entry instanceof MasterTitleEntry.Stock stock) || !isEntryAvailable(stock)) return List.of();
+        MasterTitleEntry.Stock stock = hubSetupStock();
+        if (stock == null) return List.of();
         return HubSetupChips.forStock(stock.game(), launchProfileStore.load(stock.game()), launchProfileStore,
                 configService, enabledModsByGame.getOrDefault(stock.game(), List.of()).size());
+    }
+
+    private MasterTitleEntry.Stock hubSetupStock() {
+        MasterTitleEntry entry = selectedEntry();
+        return entry instanceof MasterTitleEntry.Suspended || !isEntryAvailable(entry) ? null : stockOf(entry);
     }
 
     private void refreshHubRows() {
@@ -2116,8 +2121,8 @@ public class MasterTitleScreen {
      * chips already say everything.
      */
     List<HubSetupChips.Segment> hubStatus() {
-        MasterTitleEntry entry = selectedEntry();
-        if (!(entry instanceof MasterTitleEntry.Stock stock) || !isEntryAvailable(stock)) return List.of();
+        MasterTitleEntry.Stock stock = hubSetupStock();
+        if (stock == null) return List.of();
         boolean card = navigation.zone() == TitleHubNavigation.Zone.CARD;
         boolean start = navigation.zone() == TitleHubNavigation.Zone.ACTIONS
                 && focusedAction() == TitleHubNavigation.Action.START;

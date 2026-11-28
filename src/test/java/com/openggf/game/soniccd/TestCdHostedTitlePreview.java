@@ -33,13 +33,29 @@ class TestCdHostedTitlePreview {
                 () -> assertEquals(0, rgba(image, 100, 175), "outside the emblem edge"));
     }
 
-    @Test void cardKeepsTheNativePressStartBlink() throws Exception {
+    @Test void cardLeavesLittlePlanetAndPressStartOutOfThePicture() throws Exception {
         var sequence = discPreview();
-        // ObjMenu_PressStart toggles the sprite mapping every 16 title ticks.
-        int first = rgba(sequence.imageAt(0), 84, 181);
-        int second = rgba(sequence.imageAt(16), 84, 181);
-        assertNotEquals(first, second);
-        assertTrue(first == 0 || second == 0, "the hidden text reveals the hub backdrop");
+        for (int tick : new int[]{0, 16, sequence.stillTick()}) {
+            var image = sequence.imageAt(tick);
+            assertEquals(0, rgba(image, 226, 12), "Little Planet");
+            assertEquals(0, rgba(image, 84, 181), "PRESS START");
+            for (int x = 0; x < image.width(); x++) {
+                assertEquals(0, rgba(image, x, 0), "top margin");
+                assertEquals(0, rgba(image, x, image.height() - 1), "bottom margin");
+            }
+            for (int y = 0; y < image.height(); y++) {
+                assertEquals(0, rgba(image, 0, y), "left margin");
+                assertEquals(0, rgba(image, image.width() - 1, y), "right margin");
+            }
+        }
+    }
+
+    @Test void cardKeepsSonicArmAnimation() throws Exception {
+        var sequence = discPreview();
+        var first = sequence.imageAt(0).rgba();
+        assertTrue(java.util.stream.IntStream.rangeClosed(1, 40)
+                .anyMatch(tick -> !java.util.Arrays.equals(first, sequence.imageAt(tick).rgba())),
+                "the emblem animates after the entrance fade");
     }
 
     private static Sequence discPreview() throws Exception {

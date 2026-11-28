@@ -5,6 +5,7 @@ import com.openggf.game.preview.TitlePreviewProvider.Image;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.launch.GameSupportNotices;
+import com.openggf.game.launch.LaunchProfile;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -43,12 +44,19 @@ class TestMasterTitleSuspendedGame {
 
     @Test void hostedDiscCardOpensItsOwnSetup() {
         var config = SonicConfigurationService.createStandalone(directory);
+        config.setConfigValue(SonicConfiguration.DISPLAY_ASPECT, "NATIVE_4_3");
+        config.setConfigValue(SonicConfiguration.LIVE_REWIND_ENABLED, true);
+        config.setConfigValue(SonicConfiguration.DEBUG_VIEW_ENABLED, false);
         var screen = new MasterTitleScreen(config);
         screen.replaceEntries(List.of(MasterTitleEntry.Hosted.of(GameId.SCD)));
         screen.setHostedAvailabilityForTest(GameId.SCD, true, "");
         screen.setStateForTest(MasterTitleScreen.State.ACTIVE);
         assertEquals(List.of(TitleHubNavigation.Action.START, TitleHubNavigation.Action.SETUP),
                 screen.hubActionsForTest());
+        assertEquals(List.of(LaunchProfile.Row.MAIN_CHARACTER, LaunchProfile.Row.WIDESCREEN, LaunchProfile.Row.REWIND),
+                screen.hubChips().stream().map(HubSetupChips.Chip::row).toList());
+        assertEquals(List.of("SONIC", "4:3", "REWIND ON"),
+                screen.hubChips().stream().map(HubSetupChips.Chip::label).toList());
         press(screen, GLFW_KEY_TAB);
         assertTrue(screen.isLaunchConfigPanelOpenForTest());
         assertEquals("sonic", screen.currentLaunchProfileForTest().mainCharacter());
@@ -63,6 +71,7 @@ class TestMasterTitleSuspendedGame {
         assertEquals("scd", screen.getSelectedGameId());
         assertEquals(List.of(TitleHubNavigation.Action.RESUME, TitleHubNavigation.Action.SETUP, TitleHubNavigation.Action.END),
                 screen.hubActionsForTest());
+        assertTrue(screen.hubChips().isEmpty());
         press(screen, GLFW_KEY_ENTER);
         assertTrue(screen.consumeResumeRequest());
         assertFalse(screen.isGameSelected());

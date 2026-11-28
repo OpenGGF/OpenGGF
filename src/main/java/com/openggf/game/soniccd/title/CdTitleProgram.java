@@ -36,6 +36,7 @@ public final class CdTitleProgram {
     private final CdTitleAssets assets;
     private final CdTitleClouds clouds;
     private final int titleFlags;
+    private final boolean emblemPreview;
     final byte[] vram = new byte[0x10000];
     final BitSet dirtyTiles = new BitSet(0x800);
     final int[] planeA = new int[64 * 32];
@@ -67,9 +68,14 @@ public final class CdTitleProgram {
     private long frames;
 
     public CdTitleProgram(CdTitleAssets assets, int titleFlags) {
+        this(assets, titleFlags, false);
+    }
+
+    CdTitleProgram(CdTitleAssets assets, int titleFlags, boolean emblemPreview) {
         this.assets = Objects.requireNonNull(assets, "assets");
         this.clouds = new CdTitleClouds(assets);
         this.titleFlags = titleFlags & 0xFF;
+        this.emblemPreview = emblemPreview;
     }
 
     /**
@@ -335,8 +341,18 @@ public final class CdTitleProgram {
         for (TitleObject object : slots) if (object != null) object.run();
         for (int i = OBJECTS - 1; i >= 0; i--) {
             TitleObject object = slots[i];
-            if (object != null && object.visible) object.draw();
+            if (object != null && object.visible && (!emblemPreview || isEmblemSprite(object))) object.draw();
         }
+    }
+
+    // ObjSonic spawns the arm and banner together (scddisasm/src/Title Screen/Objects/Sonic/Main.asm:66-80).
+    // ObjCopyright (scddisasm/src/Title Screen/Objects/Copyright/Main.asm:7-26) and
+    // ObjTM (scddisasm/src/Title Screen/Objects/Copyright/Main.asm:42-58) supply the title marks.
+    // The main program identifies ObjPlanet as background scenery and spawns ObjMenu separately
+    // (scddisasm/src/Title Screen/Main.asm:253-262).
+    private static boolean isEmblemSprite(TitleObject object) {
+        return object instanceof Sonic || object instanceof SonicArm || object instanceof Banner
+                || object instanceof Copyright || object instanceof Tm;
     }
 
     private TitleObject spawn(TitleObject object) {

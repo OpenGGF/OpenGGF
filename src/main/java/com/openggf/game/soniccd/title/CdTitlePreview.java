@@ -8,12 +8,14 @@ import com.openggf.game.soniccd.program.CdProgramScreenRenderer.Frame;
 
 /** Detached disc title clip. Native program state stays private to this preview. */
 public final class CdTitlePreview {
+    private static final int CLIP_TICKS = 120;
+
     private CdTitlePreview() { }
 
     public static TitlePreviewProvider.Sequence load(CdDiscDataSource disc) {
         var assets = new CdTitleAssets(new CdProgramData(disc));
-        // A bounded presentation clip after the native entrance; no gameplay clock is changed.
-        return new GeneratedTitlePreviewSequence(256, 224, 0, tick -> tick % 120, new Clip(assets)::image);
+        return new GeneratedTitlePreviewSequence(256, 224, CLIP_TICKS - 1,
+                tick -> tick % CLIP_TICKS, new Clip(assets)::image);
     }
 
     private static final class Clip {
@@ -23,9 +25,12 @@ public final class CdTitlePreview {
         private Clip(CdTitleAssets assets) { this.assets = assets; }
         private TitlePreviewProvider.Image image(int tick) {
             if (program == null || tick < at) {
-                program = new CdTitleProgram(assets, 0);
-                for (int i = 0; i < 400; i++) program.frame(0, 0);
-                at = -1;
+                program = new CdTitleProgram(assets, 0, true);
+                // Start with the title palette in place and the arm wave still ahead.
+                do {
+                    program.frame(0, 0);
+                } while (program.phase() != CdTitleProgram.Phase.MENU_A2);
+                at = 0;
             }
             while (at < tick) { program.frame(0, 0); at++; }
             return raster(program.screen());
@@ -34,8 +39,7 @@ public final class CdTitlePreview {
 
     // DrawTilemaps (scddisasm/src/Title Screen/Main.asm:1732-1757) puts the emblem on plane A
     // and the sea and mountains on plane B. DrawCloudsMap (scddisasm/src/Title Screen/Main.asm:646-659)
-    // also uses plane B. ObjPlanet (scddisasm/src/Title Screen/Objects/Planet/Main.asm:15-50)
-    // supplies Little Planet as a hovering sprite, which remains part of the clip.
+    // also uses plane B.
     private static TitlePreviewProvider.Image raster(Frame frame) {
         var image = new TitlePreviewProvider.Image(frame.width(), 224, new byte[frame.width() * 224 * 4]);
         for (int y = 0; y < 224; y++) for (int x = 0; x < frame.width(); x++) {
