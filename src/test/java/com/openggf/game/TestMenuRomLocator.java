@@ -47,6 +47,17 @@ class TestMenuRomLocator {
     }
 
     @Test
+    void explainsHowToReplaceAnArchiveOrInterleavedDump() throws IOException {
+        var game = MasterTitleScreen.GameEntry.SONIC_1;
+        Path archive = Files.write(directory.resolve("Game.zip"), new byte[] {0x50, 0x4b, 3, 4});
+        Path smd = Files.write(directory.resolve("Game.smd"), new byte[0x80200]);
+        assertTrue(assertThrows(IOException.class, () -> MenuRomLocator.validate(game, archive))
+                .getMessage().contains("Extract it"));
+        assertTrue(assertThrows(IOException.class, () -> MenuRomLocator.validate(game, smd))
+                .getMessage().contains("plain .bin or .gen"));
+    }
+
+    @Test
     void acceptsLogicalRomInsideLockOnImage() throws IOException {
         Path image = image("cartridge.bin", 0x280000, "SONIC & KNUCKLES");
         byte[] bytes = Files.readAllBytes(image);

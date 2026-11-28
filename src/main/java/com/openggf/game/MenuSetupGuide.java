@@ -1,7 +1,10 @@
 package com.openggf.game;
 
 import com.openggf.configuration.SonicConfiguration;
+import com.openggf.configuration.ConfigurationPersistence;
 import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.data.RomGame;
+import com.openggf.data.RomIdentityTable;
 import com.openggf.control.InputHandler;
 import com.openggf.control.MenuInput;
 import com.openggf.graphics.PixelFont;
@@ -359,7 +362,8 @@ public final class MenuSetupGuide {
         scanning = folder;
         message = null;
         notice = null;
-        String initial = config.getString(SonicConfiguration.ROMS_DIRECTORY);
+        String initial = ConfigurationPersistence.configDirectory(config)
+                .resolve(config.getString(SonicConfiguration.ROMS_DIRECTORY)).normalize().toString();
         browser = folder
                 ? MenuPathBrowser.folder(initial, UiMessages.text("menu.onboarding.scan_folder_caps"),
                         UiMessages.text("menu.onboarding.choose_a_folder_containing_your_games"))
@@ -388,6 +392,7 @@ public final class MenuSetupGuide {
     void acceptFindings(SetupGuideLibrary.Findings found) {
         findings = found;
         notice = found.notice();
+        message = found.formatNotice();
         var plan = SetupGuideLibrary.plan(found, games, library);
         try { SetupGuideLibrary.apply(config, plan); }
         catch (IOException failure) {
@@ -399,9 +404,9 @@ public final class MenuSetupGuide {
         conflicts.clear();
         conflicts.addAll(plan.conflicts());
         boolean anything = !found.findings().isEmpty();
-        if (!anything) message = scanning ? UiMessages.text("menu.onboarding.no_supported_games_found")
+        if (!anything && message == null) message = scanning ? UiMessages.text("menu.onboarding.no_supported_games_found")
                 : UiMessages.text("menu.onboarding.not_a_supported_rom_image");
-        else MenuFeedback.emit(plan.added().isEmpty() ? MenuFeedback.Cue.NAVIGATE : MenuFeedback.Cue.CONFIRM);
+        if (anything) MenuFeedback.emit(plan.added().isEmpty() ? MenuFeedback.Cue.NAVIGATE : MenuFeedback.Cue.CONFIRM);
         if (!conflicts.isEmpty()) { prompt = Prompt.CONFLICT; promptChoice = 0; }
         focus = anyAvailable() || hasUsableHosted() ? continueIndex() : (scanning ? 0 : 1);
     }
@@ -437,11 +442,18 @@ public final class MenuSetupGuide {
             details = new MenuDetailsScreen(UiMessages.text("menu.setup.style.title_caps"), String.join("\n", text));
         } else {
             for (SetupGuideLibrary.Game g : games) {
-                text.add(gameName(g.id()) + ": " + statusLabel(status(g)));
+                var status = status(g);
+                text.add(gameName(g.id()) + ": " + statusLabel(status));
+                if (status == SetupGuideLibrary.Status.UNVERIFIED) {
+                    var identity = RomGame.valueOf(g.id().toUpperCase(java.util.Locale.ROOT)).identity();
+                    var recommended = RomIdentityTable.knownImages(identity).getFirst();
+                    text.add(UiMessages.text("menu.setup.games.unverified_help", Map.of("release", recommended.label())));
+                }
                 library.file(g).ifPresent(p -> text.add(p.toString()));
                 if (findings != null) findings.findings().stream().filter(f -> f.gameId().equals(g.id()) && !f.usable())
                         .forEach(f -> { text.add(UiMessages.text("crash.field.error") + ": " + f.detail()); text.add(problemFix(f)); });
             }
+            if (message != null) text.add(message);
             if (notice != null) text.add(notice);
             text.add(UiMessages.text("menu.setup.games.cd_hint"));
             text.add(UiMessages.text("menu.setup.games.locate_note"));
@@ -466,6 +478,7 @@ public final class MenuSetupGuide {
             case READY -> UiMessages.text("menu.setup.games.ready");
             case FOUND -> UiMessages.text("menu.setup.games.found");
             case KEPT -> UiMessages.text("menu.setup.games.kept");
+            case UNVERIFIED -> UiMessages.text("menu.setup.games.unverified");
             case MISSING -> UiMessages.text("menu.setup.games.missing");
             case INCOMPLETE -> UiMessages.text("menu.setup.games.incomplete");
             case WRONG_RELEASE -> UiMessages.text("menu.setup.games.wrong_release");
@@ -758,7 +771,7 @@ public final class MenuSetupGuide {
             boolean good = status == SetupGuideLibrary.Status.READY || status == SetupGuideLibrary.Status.KEPT
                     || status == SetupGuideLibrary.Status.FOUND;
             boolean problemRow = status == SetupGuideLibrary.Status.INCOMPLETE || status == SetupGuideLibrary.Status.WRONG_RELEASE
-                    || status == SetupGuideLibrary.Status.UNREADABLE;
+                    || status == SetupGuideLibrary.Status.UNREADABLE || status == SetupGuideLibrary.Status.UNVERIFIED;
             float[] colour = status == SetupGuideLibrary.Status.FOUND ? MenuChrome.CYAN : good ? MenuChrome.GREEN
                     : problemRow ? MenuChrome.AMBER : MenuChrome.DIM;
             MenuChrome.Icon icon = good ? MenuChrome.Icon.CHECK : problemRow ? MenuChrome.Icon.WARNING : MenuChrome.Icon.INFO;

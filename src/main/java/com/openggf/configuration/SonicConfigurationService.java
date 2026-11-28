@@ -1089,6 +1089,10 @@ public class SonicConfigurationService {
 		return f;
 	}
 
+	Path configDirectory() {
+		return resolveConfigFile().toPath().toAbsolutePath().normalize().getParent();
+	}
+
 	private File resolveConfigFile() {
 		if (System.getProperty("org.graalvm.nativeimage.imagecode") != null) {
 			File execConfig = findConfigNextToExecutable();

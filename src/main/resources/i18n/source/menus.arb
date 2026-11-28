@@ -458,6 +458,27 @@
       }
     }
   },
+  "menu.onboarding.compressed_archive": "Compressed archive. Extract it, then pick the .gen, .bin or .md file inside.",
+  "@menu.onboarding.compressed_archive": {
+    "description": "Setup advice for a selected or scanned ZIP or 7z archive."
+  },
+  "menu.onboarding.interleaved_smd": "Interleaved .smd files are unsupported. Choose a plain .bin or .gen dump.",
+  "@menu.onboarding.interleaved_smd": {
+    "description": "Setup advice for an unsupported interleaved cartridge ROM file."
+  },
+  "menu.setup.games.unverified": "Unrecognised version",
+  "@menu.setup.games.unverified": {
+    "description": "Cartridge status when the contents do not match a known retail dump."
+  },
+  "menu.setup.games.unverified_help": "This version may not work. Try {release}.",
+  "@menu.setup.games.unverified_help": {
+    "description": "Explain the unrecognised cartridge warning and name one verified retail release.",
+    "placeholders": {
+      "release": {
+        "type": "String"
+      }
+    }
+  },
   "menu.onboarding.no_supported_games_found": "No supported games found.",
   "@menu.onboarding.no_supported_games_found": {
     "description": "OpenGGF host UI: menu.onboarding.no_supported_games_found. Translate the complete message; preserve named arguments."

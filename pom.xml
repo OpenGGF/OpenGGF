@@ -899,10 +899,9 @@
                                                 <include name="**/*.dll"/>
                                             </fileset>
                                         </copy>
-                                        <!-- Copy config.yaml next to the native binary so it
-                                             can be edited without rebuilding -->
+                                        <!-- Ship the reference separately from the player's active config. -->
                                         <copy file="${basedir}/src/main/resources/config.yaml"
-                                              todir="${project.build.directory}"/>
+                                              tofile="${project.build.directory}/config.yaml.example"/>
                                     </target>
                                 </configuration>
                             </execution>

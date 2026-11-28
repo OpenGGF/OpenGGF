@@ -2649,22 +2649,22 @@ class TestBuildToolingGuard {
     }
 
     @Test
-    void nativeReleasePackagesShouldIncludeEditableConfigYaml() throws Exception {
+    void nativeReleasePackagesShouldIncludeConfigReference() throws Exception {
         String workflow = Files.readString(Path.of(".github/workflows/release.yml"));
         List<String> violations = new ArrayList<>();
 
-        if (!workflow.contains("Copy-Item \"$env:BUILD_ROOT/config.yaml\" \"$env:DISTRIBUTION_ROOT/OpenGGF/\"")) {
-            violations.add(".github/workflows/release.yml Windows package does not include the session config.yaml");
+        if (!workflow.contains("Copy-Item \"$env:BUILD_ROOT/config.yaml.example\" \"$env:DISTRIBUTION_ROOT/OpenGGF/\"")) {
+            violations.add(".github/workflows/release.yml Windows package does not include config.yaml.example");
         }
-        if (!workflow.contains("zip -r OpenGGF-macos.zip OpenGGF.app config.yaml")) {
-            violations.add(".github/workflows/release.yml macOS package does not include exported config.yaml");
+        if (!workflow.contains("zip -r OpenGGF-macos.zip OpenGGF.app config.yaml.example ")) {
+            violations.add(".github/workflows/release.yml macOS package does not include config.yaml.example");
         }
-        if (!workflow.contains("cp \"$BUILD_ROOT/config.yaml\" \"$DISTRIBUTION_ROOT/OpenGGF/\"")) {
-            violations.add(".github/workflows/release.yml Linux package does not include the session config.yaml");
+        if (!workflow.contains("cp \"$BUILD_ROOT/config.yaml.example\" \"$DISTRIBUTION_ROOT/OpenGGF/\"")) {
+            violations.add(".github/workflows/release.yml Linux package does not include config.yaml.example");
         }
 
         if (!violations.isEmpty()) {
-            fail("native release packages must include editable config.yaml next to the executable/app:\n  "
+            fail("native release packages must include config.yaml.example next to the executable/app:\n  "
                     + String.join("\n  ", new TreeSet<>(violations)));
         }
     }
@@ -2706,8 +2706,8 @@ class TestBuildToolingGuard {
         if (!workflow.contains("META-INF/MANIFEST.MF") || !workflow.contains("Main-Class: com.openggf.Engine")) {
             violations.add(".github/workflows/release.yml does not validate manifest bootstrap metadata");
         }
-        if (!workflow.contains("config.yaml")) {
-            violations.add(".github/workflows/release.yml does not validate packaged config.yaml presence");
+        if (!workflow.contains("config.yaml.example") || !workflow.contains("require_fresh_install(archive_path,")) {
+            violations.add(".github/workflows/release.yml must require the reference and reject an active config");
         }
         if (!workflow.contains("CFBundleShortVersionString") || !workflow.contains("CFBundleVersion")) {
             violations.add(".github/workflows/release.yml does not validate macOS bundle version metadata");

@@ -39,7 +39,7 @@ final class Kis2TestRoms {
             }
         }
         try {
-            RomImageCatalogue catalogue = RomImageCatalogue.forCurrentWorkingDirectory(
+            RomImageCatalogue catalogue = RomImageCatalogue.forConfiguration(
                     SonicConfigurationService.getInstance());
             if (!catalogue.isAvailable(RomIdentity.KIS2)) {
                 return null;

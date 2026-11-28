@@ -1,5 +1,6 @@
 package com.openggf.data;
 
+import com.openggf.configuration.ConfigurationPersistence;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameServices;
@@ -125,7 +126,7 @@ public class RomManager implements AutoCloseable {
         SonicConfigurationService configuration = configService();
         List<Object> key = catalogueKey(configuration);
         if (catalogue == null || !key.equals(catalogueKey)) {
-            catalogue = RomImageCatalogue.forCurrentWorkingDirectory(configuration);
+            catalogue = RomImageCatalogue.forConfiguration(configuration);
             catalogueKey = key;
         }
         return catalogue;
@@ -251,7 +252,7 @@ public class RomManager implements AutoCloseable {
 
     private static List<Object> catalogueKey(SonicConfigurationService configuration) {
         return List.of(
-                RomLocationResolver.currentWorkingDirectory().toString(),
+                ConfigurationPersistence.configDirectory(configuration),
                 String.valueOf(configuration.getString(SonicConfiguration.ROMS_DIRECTORY)),
                 String.valueOf(configuration.getString(SonicConfiguration.SONIC_1_ROM)),
                 String.valueOf(configuration.getString(SonicConfiguration.SONIC_2_ROM)),

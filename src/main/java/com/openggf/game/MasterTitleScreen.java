@@ -1275,7 +1275,7 @@ public class MasterTitleScreen {
                 java.util.List.of(profile.sidekick()));
         var stage = supportNotices.pendingNotice(stock.gameId(),
                 () -> com.openggf.game.session.BuiltInPatches.launchNotice(request, () -> romCatalogue != null
-                        ? romCatalogue : RomImageCatalogue.forCurrentWorkingDirectory(configService)));
+                        ? romCatalogue : RomImageCatalogue.forConfiguration(configService)));
         if (stage.isEmpty()) return false;
         supportNotice = new GameSupportNoticeDialog(stock.displayName(), stage.get());
         supportNoticeEntry = stock;
@@ -1322,7 +1322,7 @@ public class MasterTitleScreen {
      * lock-on dump or a pair of separate cartridges is offered like any other.
      */
     private void refreshStockAvailability() {
-        romCatalogue = RomImageCatalogue.forCurrentWorkingDirectory(configService);
+        romCatalogue = RomImageCatalogue.forConfiguration(configService);
         for (GameEntry game : GameEntry.values()) {
             if (!game.cartridge()) continue;
             stockAvailability.put(game, romCatalogue.isAvailable(logicalRomFor(game)));

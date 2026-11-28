@@ -1,6 +1,8 @@
 # Configuration
 
-The engine reads `config.yaml` from the working directory. This sparse file holds
+Native packages read `config.yaml` beside the executable or macOS `.app`
+bundle. JAR launches read it from the working directory. Relative `roms.*` paths
+start in the directory holding that file. This sparse file holds
 only your overrides; missing keys use built-in defaults. Each run writes the bundled
 reference to `config.yaml.example` without replacing your settings. A legacy
 `config.json` is migrated automatically on first run. This page answers common setup
@@ -428,7 +430,7 @@ roms:
   sonic3k: "my-s3k.bin"
 ```
 
-Paths are relative to the working directory, or may be absolute. An explicit
+Paths are relative to the folder holding `config.yaml`, or may be absolute. An explicit
 non-default path that does not exist is an error; blank/default hints allow
 discovery. The hub also offers **Locate ROM** and **Scan a folder**. See the
 [image identity table](../../../CONFIGURATION.md#image-identity) for verified dumps

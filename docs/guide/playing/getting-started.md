@@ -7,7 +7,7 @@ download for that release.
 ```mermaid
 flowchart LR
     A[Get your ROMs] --> B[Download a package<br/>or build from source]
-    B --> C[Put ROMs next to config.yaml]
+    B --> C[Put ROMs in the extracted folder]
     C --> D[Start OpenGGF]
     D --> E[Pick a game on the title screen]
 ```
@@ -89,7 +89,9 @@ Choose one option. Native release packages need no Java install.
 
    The 0.7.20261105 release has no macOS native package, so use the universal JAR there.
 2. Extract the package to a folder.
-3. Place your ROM files next to the editable `config.yaml` included in the package.
+3. Place your ROM files beside the executable or `.app` bundle. The package
+   includes `config.yaml.example` for reference. OpenGGF creates your own
+   `config.yaml` on launch.
 4. Start OpenGGF with the command in the table.
 5. If a game card says its ROM is missing, set the path in Settings or `config.yaml`.
    In development builds, **Locate ROM** and **Add your games** also locate images
@@ -126,7 +128,9 @@ If the window does not open, see [Troubleshooting](troubleshooting.md).
 
 ## First Launch
 
-The legal disclaimer appears first by default. After accepting it:
+The legal disclaimer appears on every launch by default. You can turn it off
+under **Settings → Gameplay → Show the startup disclaimer** and save the
+change. After accepting the disclaimer:
 
 1. **Master title screen.** A shelf of game cards. Left/right changes game and
    Enter (A) starts it.
@@ -139,8 +143,15 @@ finds your games (scan a folder or locate one file; a Sonic CD disc is its USA
 `.cue` with all 35 track files beside it, or a `.chd` made from them), asks how you
 want to play (Stock 4:3; Balanced, a 16:9 picture whose gameplay stays the
 original's; Enhanced, Balanced plus smooth motion and rewind; or straight to
-multiplayer), then starts a game. Upgrades keep their settings unless you choose
-otherwise. Reopen it from **Extras › Setup guide**.
+multiplayer), then starts a game. **Balanced** is preselected on a fresh install.
+Upgrades keep their settings unless you choose otherwise. Reopen the guide from
+**Extras › Setup guide**.
+
+The guide marks cartridges whose fingerprints it cannot verify as
+**Unrecognised version**. You can still try to play them. Open **Details** for a
+recommended release. For a ZIP or 7z archive, extract it and choose the `.gen`,
+`.bin` or `.md` inside. Interleaved `.smd` files require a plain `.bin` or
+`.gen` dump instead.
 
 Afterwards, if no ROMs are found, **Add your games** lets you locate a game or scan a folder
 for all three supported games. A missing game's card also opens its ROM browser.
@@ -215,9 +226,11 @@ for details.
 
 </details>
 
-The engine reads settings from `config.yaml` in the working directory. It stores only your overrides;
-`config.yaml.example` lists the bundled reference settings. Missing keys use built-in
-defaults. A few settings you might want to change immediately:
+Native packages read `config.yaml` beside the executable or macOS `.app`
+bundle. JAR launches read it from the working directory. Relative `roms.*`
+paths start in the directory holding that file. Your config stores only your
+overrides, and missing keys use built-in defaults. See `config.yaml.example` for
+the full reference.
 
 | Setting | What it does | Default |
 |---------|-------------|---------|
