@@ -433,7 +433,7 @@ public final class GameplayCaptureTool {
                     settle, inputStart, frames, captureFrom, every, stills, stopOnDeath, deathGrace, video, scale, fps,
                     outDir, emeralds, titleCard, completeSpecialStage, vIntRunCount, cameraXSub, starPost, rings,
                     reverseGravity, mod, titleScreen, audio, interactivePacing, nativePcm, endOfLevel, rewindFrom,
-                    rewindFrames, saveSlots, extraTeams, timerFrames, noMusic, noHud, "EDGE", "GREYSCALE");
+                    rewindFrames, saveSlots, extraTeams, timerFrames, noMusic, noHud, "EDGE", "NORMAL");
         }
 
         /** Without a HUD choice (the game HUD is drawn), with a widescreen draw mode and dormant style. */
@@ -468,7 +468,7 @@ public final class GameplayCaptureTool {
                     settle, inputStart, frames, captureFrom, every, stills, stopOnDeath, deathGrace, video, scale, fps,
                     outDir, emeralds, titleCard, completeSpecialStage, vIntRunCount, cameraXSub, starPost, rings,
                     reverseGravity, mod, titleScreen, audio, interactivePacing, nativePcm, endOfLevel, rewindFrom,
-                    rewindFrames, saveSlots, extraTeams, timerFrames, noMusic, false, "EDGE", "GREYSCALE");
+                    rewindFrames, saveSlots, extraTeams, timerFrames, noMusic, false, "EDGE", "NORMAL");
         }
 
         /** With music in the audio capture. */
@@ -599,7 +599,7 @@ public final class GameplayCaptureTool {
             Boolean rewindRefill = null, rewindBonus = null, rewindSpecial = null;
             Path saveSlots = null;
             String extraTeams = null;
-            String drawMode = "EDGE", dormantStyle = "GREYSCALE";
+            String drawMode = "EDGE", dormantStyle = "NORMAL";
             int picturesPerFrame = 1;
             boolean interpolation = false;
             List<String> mutators = new ArrayList<>();

@@ -74,6 +74,7 @@ class TestGameplayCaptureToolArgs {
         assertEquals(0x1CF0, args.startX());
         assertEquals(0x76C, args.startY());
         assertEquals(400, args.width());
+        assertEquals("NORMAL", args.dormantStyle());
         assertEquals("s1", args.donor());
         assertEquals("", args.sidekickCharacter());
         assertEquals(Path.of("in.txt"), args.input());

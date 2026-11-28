@@ -383,14 +383,15 @@ little differently from a 4:3 one. To play exactly the original game at any widt
 display:
   aspect: "WIDE_16_9"
   widescreenDrawMode: "NATIVE"
-  widescreenDormantStyle: "GREYSCALE"
+  widescreenDormantStyle: "NORMAL"
 ```
 
 `NATIVE` keeps the game on the original 320-pixel screen and draws the extra width as
 scenery. Objects and rings there that the original game has not woken up yet are shown
-where they start: `GREYSCALE` (the default), `NORMAL` colours, or `HIDDEN`. Rings spin
-in step with the live rings, and objects that animate in place (without moving) play
-their animation; anything that moves is shown still. They come to life when the original
+where they start in `NORMAL` colours (the default). Choose `GREYSCALE` to desaturate
+them or `HIDDEN` to hide them. Rings spin in step with the live rings. Objects that
+animate in place play their animation, while moving objects are shown still. They come
+to life when the original
 screen reaches them. An object that stood still when the original screen left it keeps
 the look it had then; one that moved goes back to where it starts, because that is where
 the game will bring it back. None of this changes the game itself. `EDGE` (the default

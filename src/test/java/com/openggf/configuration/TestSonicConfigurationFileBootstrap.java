@@ -82,6 +82,7 @@ class TestSonicConfigurationFileBootstrap {
         assertFalse(service.getString(SonicConfiguration.DEFAULT_ROM).isEmpty());
         assertTrue(Files.readString(configPath).contains(ConfigYamlWriter.FORMAT_KEY));
         // The registered defaults are what every unset key reads.
+        assertEquals("NORMAL", service.getString(SonicConfiguration.WIDESCREEN_DORMANT_STYLE));
         assertEquals("Q", service.getString(SonicConfiguration.FRAME_STEP_KEY));
         assertEquals("", service.getString(SonicConfiguration.PLAYBACK_MOVIE_PATH));
         assertTrue(service.getBoolean(SonicConfiguration.LIVE_REWIND_ENABLED));

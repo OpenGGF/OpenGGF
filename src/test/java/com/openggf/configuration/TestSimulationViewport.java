@@ -20,7 +20,10 @@ class TestSimulationViewport {
         assertEquals(WidescreenDrawMode.EDGE, WidescreenDrawMode.parse(null));
         assertEquals(WidescreenDrawMode.EDGE, WidescreenDrawMode.parse("sideways"));
         assertEquals(WidescreenDrawMode.NATIVE, WidescreenDrawMode.parse(" native "));
-        assertEquals(WidescreenDormantStyle.GREYSCALE, WidescreenDormantStyle.parse(""));
+        assertEquals(WidescreenDormantStyle.NORMAL, WidescreenDormantStyle.parse(null));
+        assertEquals(WidescreenDormantStyle.NORMAL, WidescreenDormantStyle.parse(""));
+        assertEquals(WidescreenDormantStyle.NORMAL, WidescreenDormantStyle.parse("unknown"));
+        assertEquals(WidescreenDormantStyle.GREYSCALE, WidescreenDormantStyle.parse("greyscale"));
         assertEquals(WidescreenDormantStyle.HIDDEN, WidescreenDormantStyle.parse("hidden"));
     }
 }

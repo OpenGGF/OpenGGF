@@ -39,7 +39,7 @@ game while the picture is as wide as the display:
 | Key | Values | Default | Meaning |
 | --- | --- | --- | --- |
 | `WIDESCREEN_DRAW_MODE` | `EDGE`, `NATIVE` | `EDGE` | `EDGE`: today's behaviour, objects load and run to the edge of the wide screen. `NATIVE`: simulation at 320, wide picture with dormant objects. |
-| `WIDESCREEN_DORMANT_STYLE` | `GREYSCALE`, `NORMAL`, `HIDDEN` | `GREYSCALE` | How dormant objects are drawn in `NATIVE`. `HIDDEN` draws terrain only. |
+| `WIDESCREEN_DORMANT_STYLE` | `NORMAL`, `GREYSCALE`, `HIDDEN` | `NORMAL` | How dormant objects and rings are drawn in `NATIVE`. `HIDDEN` draws terrain only. |
 
 Both are ignored at `NATIVE_4_3` (no margin). Both are level-load timing settings
 (the simulation width is fixed for a loaded level).
@@ -132,8 +132,9 @@ A presentation-only layer, `DormantObjectLayer` (level/objects), owned by the
   so a ring turning live keeps its phase (D12, D15). S1 rings are layout objects, so they
   get dormant poses like any other object; their pose draws through the ring manager's
   live spin frame too.
-- **Style:** `GREYSCALE` draws through the existing ghost shader mode with alpha
-  1.0 (opaque desaturated); `NORMAL` draws plainly; `HIDDEN` skips the layer.
+- **Style.** `NORMAL` draws dormant objects and rings in their usual palette colours
+  by default. `GREYSCALE` draws through the existing ghost shader mode with alpha
+  1.0 (opaque desaturated). `HIDDEN` skips the layer.
 
 ### 4. ROM screen checks that start or end work
 
@@ -233,3 +234,4 @@ recorded here and then folded into the section text.
 | D17 | 2026-11-26 | **Narrows D6.** When the native loader retires a live object standing at its spawn position (and not destroyed for good), its instance and render buckets become its last state, drawn instead of a frozen pose; a looping pose keeps looping. Moving objects keep the spawn pose. The cache is derived: never snapshotted, forgotten on every object rewind restore (including the bake's own), object reset and layout replacement | Last-seen positions for all objects; snapshotting the cache | The ROM reloads at the spawn position, so only an object that is there can keep its look without a jump. Recording reads getters only (`getPriorityBucket`, `isHighPriority`, render parts); no update or draw runs, which `TestDormantObjectLastState` counts, and no gameplay state is written. A restore could otherwise show a state from a later frame; the equivalence routes assert none survives a restore. |
 | D18 | 2026-11-26 | Bake placement: sliced across frame boundaries at 512 copy updates per boundary, and also run at the boundary of locked title-card iterations that do not run `LevelFrameStep.execute` | Leave the single bake at the first gameplay frame; a background thread | Measured (table above): the full bake grew from 1-4 ms to 23-118 ms, several frames. A 768-update slice still peaked at 15.0 ms on S3K AIZ1; 512 keeps the worst slice at 11.1 ms. Each slice is its own frame-boundary rewind bracket, so the probe contract is unchanged, and a 12-24-slice bake fits inside a title card while gameplay is frozen. A background thread is ruled out: copies mutate live managers, and ROM reads share one file-channel position. |
 | D19 | 2026-11-28 | **Amends D4.** A held picture (D8) resamples the background from the frozen scroll phase (`ScrollProjectionSource`) at the centred native camera; `ParallaxManager` captures the phase whenever the camera has a presentation margin. Parallax sprites (S1/S2 pylons, AIZ foreground plants, SSZ roaming clouds; FBZ clouds through the phase's sprite positions) use `pictureCameraX` when drawing. The BG tile window follows the presentation background X instead of being re-selected from the native one | Rebase only (D4), which scrolls the BG behind a still FG while the inset absorbs camera motion; re-running live handlers | User report: S1 GHZ parallax moved before the camera at 16:9. Rebasing by a varying inset moves each band at (rate - 1). Resampling performs composition only and never advances a handler, so `state.csv` is identical with and without it on all swept zones. The window re-selection wrapped the left margin onto background one period ahead: a 400-pixel picture disagreed with the matching crop of an 800-pixel one in GHZ's mountain rows on develop, and agrees exactly after. Trade-off: while held, the native window's background shows the centred camera's phase rather than the ROM camera's; it is exact again once the picture is centred. |
+| D20 | 2026-11-28 | **Amends D7.** Dormant objects and rings default to `NORMAL` in `NATIVE` draw mode. `GREYSCALE` and `HIDDEN` remain opt-ins. | Keep `GREYSCALE` as the default | User decision to show dormant objects and rings in their normal colours by default. |
