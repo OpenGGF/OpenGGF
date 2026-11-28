@@ -2,6 +2,7 @@ package com.openggf.game.patch;
 
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameModule;
+import com.openggf.game.mutators.MutatorHostPatch;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -341,7 +342,20 @@ public final class ModuleResolutionService {
                 }
             }
         }
-        return new ResolutionResult.Resolved(module, context.failures());
+        var resolved = new ResolutionResult.Resolved(module, context.failures());
+        for (RegisteredPatch registration : survivors) {
+            if (context.ownerEligible(registration.owner())
+                    && registration.patch() instanceof MutatorHostPatch host && host.contributesMutators()) {
+                var result = host.hostMutators(resolved, request, patchContext);
+                if (result instanceof ResolutionResult.LaunchAborted aborted) {
+                    context.failOwnerAndDependents(aborted.failedOwner(), aborted.cause());
+                    return new ResolutionResult.LaunchAborted(aborted.failedOwner(), aborted.patchId(),
+                            aborted.cause(), context.failedOwners());
+                }
+                return result;
+            }
+        }
+        return resolved;
     }
 
     /** Patch-backed extra main characters whose owner and ROM metadata are usable. */

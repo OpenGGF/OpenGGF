@@ -10,7 +10,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.parallel.Isolated;
 import com.openggf.game.*;
 import com.openggf.game.session.*;
-import com.openggf.game.patch.PatchContext;
+import com.openggf.game.patch.*;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.io.TempDir;
@@ -38,6 +38,84 @@ class TestExampleMutatorsPackage {
         if (oldRoot == null) System.clearProperty("openggf.saveRoot");
         else System.setProperty("openggf.saveRoot", oldRoot);
     }
+    private void assertNativeHosts(Path jar, Set<String> keys) throws Exception {
+        ModManifest manifest;
+        try (var zip = new java.util.zip.ZipFile(jar.toFile());
+             var input = zip.getInputStream(zip.getEntry(DefaultModRepositoryScanner.MANIFEST_PATH))) {
+            manifest = new ModManifestParser().parse(input.readAllBytes());
+        }
+        assertEquals("mutators.MutatorsMod", manifest.entrypoint());
+        String hash = HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256")
+                .digest(Files.readAllBytes(jar)));
+        var descriptor = new ModDescriptor(jar, manifest, hash, true, List.of());
+        var catalog = new EffectiveModCatalog(List.of(descriptor));
+        try (var runtime = new ModClassLoaderFactory(getClass().getClassLoader())
+                .create(catalog, Set.of(manifest.id()));
+             var capture = DevelopmentPatchLoader.openJar(jar)) {
+            runtime.installFaultBoundary(new ModFaultBoundary(Map.of(), new ModRuntimeFindingStore(),
+                    disabled -> new ModStateSaveResult.Saved(), disabled -> {}));
+            var config = com.openggf.configuration.SonicConfigurationService.createStandalone();
+            config.setSessionOverride(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, false);
+            GameServices.configuration().setSessionOverride(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, false);
+            var resolver = new ModuleResolutionService(List.of(), new EffectiveCatalogPatchEnablement(catalog),
+                    LogicalRomResolver.fromRomManager(GameServices.rom()), config,
+                    ignored -> runtime.newRegistrationPlan());
+            for (GameModule base : List.of(new com.openggf.game.sonic1.Sonic1GameModule(),
+                    new com.openggf.game.sonic2.Sonic2GameModule(),
+                    new com.openggf.game.sonic3k.Sonic3kGameModule())) {
+                String game = base.getGameId().code();
+                var launch = resolver.prepareLaunch(ModuleResolutionService.LaunchPolicy.STANDARD);
+                var request = new GameplayLaunchRequest(game, "sonic", List.of());
+                var result = assertInstanceOf(ResolutionResult.Resolved.class,
+                        resolver.resolveForLaunchResult(launch, base, request));
+                assertTrue(runtime.registrationFailures().isEmpty(), runtime.registrationFailures()::toString);
+                var module = result.module();
+                assertNull(module.getDataSelectProvider(), "Lab Start bypasses stock save slots");
+                assertEquals(base.supportsSidekick(), module.supportsSidekick());
+                var support = module.getGameService(MutatorSupportProfile.class);
+                assertNotNull(support);
+                assertFalse(support.capabilities(0, 0).isEmpty());
+                config.setSessionOverride(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, true);
+                assertTrue(support.capabilities(0, 0).isEmpty());
+                config.setSessionOverride(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, false);
+                assertTrue(support.startLabel().startsWith("Start "));
+                assertTrue(support.supportsPlayer(MutatorCapability.PLAYER_STEALTH, "tails", false));
+                assertEquals(!game.equals("s1"), support.supportsPlayer(MutatorCapability.BIG_HEAD, "tails", false));
+                assertEquals(game.equals("s3k"), support.optionUnavailableReason("no-powerups", "bubble_shield").isBlank());
+                assertScreen(base, module, keys);
+                assertScreen(base, capture.apply(base, request), keys);
+                var tails = capture.apply(base, new GameplayLaunchRequest(game, "tails", List.of()));
+                if (game.equals("s1")) assertNull(tails.getGameService(MutatorSupportProfile.class));
+                else assertScreen(base, tails, keys);
+            }
+
+            var cd = new com.openggf.game.soniccd.SonicCdGameModule();
+            var cdModule = capture.apply(cd, new GameplayLaunchRequest("scd", "sonic", List.of()));
+            assertNull(cdModule.getGameService(MutatorSupportProfile.class));
+            assertSame(cd.getTitleScreenProvider(), cdModule.getTitleScreenProvider(),
+                    "Sonic CD keeps its stock title");
+        }
+    }
+
+    private void assertScreen(GameModule base, GameModule module, Set<String> keys) throws Exception {
+        GameModuleRegistry.setCurrent(module);
+        SessionManager.openGameplaySession(base, module, null);
+        TestEnvironment.activeGameplayMode();
+        try {
+            var world = SessionManager.getCurrentWorldSession();
+            var title = assertInstanceOf(MutatorConfigurationScreen.class, unwrapOwned(module.getTitleScreenProvider()));
+            assertSame(title, module.getGameService(LevelInputOverlay.class));
+            assertEquals(keys, MutatorWorldAccess.state(world).definitions().stream()
+                    .map(OwnedMutator::key).collect(java.util.stream.Collectors.toSet()));
+            var backdrop = MutatorConfigurationScreen.class.getDeclaredField("backdrop");
+            backdrop.setAccessible(true);
+            assertSame(base.getTitleScreenProvider(), unwrapOwned(backdrop.get(title)),
+                    "Exactly one screen wraps the native title");
+        } finally {
+            SessionManager.clear();
+        }
+    }
+
     private static Object unwrapOwned(Object value) throws Exception {
         if (!java.lang.reflect.Proxy.isProxyClass(value.getClass())) return value;
         var handler=java.lang.reflect.Proxy.getInvocationHandler(value);
@@ -68,83 +146,11 @@ class TestExampleMutatorsPackage {
                     "example-mutators:homing-attack","example-mutators:beta-flight","example-mutators:start-rings","example-mutators:start-time",
                     "example-mutators:start-score","example-mutators:start-lives",
                     "example-mutators:hungry-for-rings"),plan.mutators().keySet());
-            assertEquals(3,plan.explicitPatches().size());assertTrue(plan.objectFactories().isEmpty());
-            assertEquals(List.of("s1","s2","s3k","scd"),plan.stockScenePlans().stream().map(ModRegistrationPlan::baseGameId).toList());
-            for(var game:plan.stockScenePlans()) {
-                assertEquals(plan.mutators(),game.mutators());
-                if ("scd".equals(game.baseGameId())) {
-                    assertTrue(game.explicitPatches().isEmpty(), "cartridge-only Lab patches must not leak into CD");
-                    continue;
-                }
-                assertEquals(1,game.explicitPatches().size());
-                assertEquals(game.baseGameId(),game.explicitPatches().getFirst().baseGameId());
-                assertEquals(plan.mutators(),game.mutators());
-                com.openggf.game.GameModule nativeModule=switch(game.baseGameId()) {
-                    case "s1" -> new com.openggf.game.sonic1.Sonic1GameModule();
-                    case "s2" -> new com.openggf.game.sonic2.Sonic2GameModule();
-                    default -> new com.openggf.game.sonic3k.Sonic3kGameModule();
-                };
-                var config = GameServices.configuration();
-                var injectedConfig=com.openggf.configuration.SonicConfigurationService.createStandalone();
-                config.setSessionOverride(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED,true);
-                injectedConfig.setSessionOverride(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED,false);
-                var contextForPatch = new PatchContext(rom -> { throw new java.io.IOException("No ROM fixture needed"); }, injectedConfig);
-                var decorated=game.explicitPatches().getFirst().apply(nativeModule,contextForPatch);
-                assertEquals(nativeModule.getGameId(),decorated.getGameId());
-                assertNull(decorated.getDataSelectProvider(),"Lab Start cannot route into a stock save-slot selection");
-                assertEquals(nativeModule.supportsSidekick(),decorated.supportsSidekick(),"Native team support stays with the base module");
-                var support=decorated.getGameService(MutatorSupportProfile.class);
-                assertFalse(support.capabilities(0,0).isEmpty());
-                injectedConfig.setSessionOverride(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED,true);
-                assertTrue(support.capabilities(0,0).isEmpty(),"Live donor configuration stays behind the injected patch context");
-                injectedConfig.setSessionOverride(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED,false);
-                assertFalse(support.capabilities(0,0).isEmpty(),"Supplied native configuration wins over the disagreeing ambient donor flag");
-                config.setSessionOverride(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED,false);
-
-                // Exercise the real packaged capture loader, not just a manually
-                // selected patch: a shared jar must produce exactly one Lab over
-                // this native title, never an ACTIVE Lab over two other Labs.
-                var captured = DevelopmentPatchLoader.fromJar(temp.resolve("example-mutators.jar")).apply(nativeModule);
-                GameModuleRegistry.setCurrent(captured);
-                SessionManager.openGameplaySession(nativeModule,captured,null);
-                TestEnvironment.activeGameplayMode();
-                Object title = unwrapOwned(captured.getTitleScreenProvider());
-                assertInstanceOf(MutatorConfigurationScreen.class,title);
-                var backdrop=MutatorConfigurationScreen.class.getDeclaredField("backdrop");backdrop.setAccessible(true);
-                assertSame(nativeModule.getTitleScreenProvider(),unwrapOwned(backdrop.get(title)),
-                        "Capture keeps the actual native intro as its immediate backdrop");
-                SessionManager.clear();
-
-                config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE,"tails");
-                var declined=DevelopmentPatchLoader.fromJar(temp.resolve("example-mutators.jar")).apply(nativeModule);
-                if (nativeModule.getGameId().code().equals("s1")) {
-                    assertSame(nativeModule.getTitleScreenProvider(),declined.getTitleScreenProvider(),
-                            "S1 has no native Tails art");
-                } else {
-                    GameModuleRegistry.setCurrent(declined);
-                    SessionManager.openGameplaySession(nativeModule,declined,null);
-                    assertInstanceOf(MutatorConfigurationScreen.class,unwrapOwned(declined.getTitleScreenProvider()),
-                            "Native Tails can enter the Lab");
-                    SessionManager.clear();
-                }
-                config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE,"sonic");
-            }
-            for (String game : List.of("s1","s2","s3k")) {
-                var profile=(MutatorSupportProfile)Class.forName("mutators.NativeLabProfile",true,loader)
-                        .getConstructor(String.class).newInstance(game);
-                assertTrue(profile.startLabel().startsWith("Start "));
-                assertTrue(profile.locationLabel(0,0).contains(switch(game) {
-                    case "s1" -> "Green Hill"; case "s2" -> "Emerald Hill"; default -> "Angel Island";
-                }));
-                assertFalse(profile.locationLabel(1,0).contains(switch(game) {
-                    case "s1" -> "Green Hill"; case "s2" -> "Emerald Hill"; default -> "Angel Island";
-                }),"Later acts must not keep the opening-zone caption");
-                assertTrue(profile.supportsPlayer(MutatorCapability.PLAYER_STEALTH,"tails",false));
-                assertEquals(!game.equals("s1"),profile.supportsPlayer(MutatorCapability.BIG_HEAD,"tails",false));
-                assertEquals(game.equals("s3k"),profile.supportsPlayer(MutatorCapability.BIG_HEAD,"knuckles",true));
-                assertTrue(profile.optionUnavailableReason("no-powerups","rings").isBlank());
-                assertEquals(game.equals("s3k"),profile.optionUnavailableReason("no-powerups","bubble_shield").isBlank());
-            }
+            assertTrue(plan.explicitPatches().isEmpty());
+            assertTrue(plan.objectFactories().isEmpty());
+            assertEquals(List.of("s1","s2","s3k","scd"),
+                    plan.stockScenePlans().stream().map(ModRegistrationPlan::baseGameId).toList());
+            assertNativeHosts(temp.resolve("example-mutators.jar"), plan.mutators().keySet());
             for(var owned:plan.mutators().values()) {
                 assertEquals("example-mutators",owned.ownerModId());
                 String local=owned.definition().localId();

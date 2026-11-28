@@ -21,6 +21,7 @@ public record ModManifest(int formatVersion, String id, String name,
                           Map<Integer, String> audioOverrides, Map<String, String> artOverrides,
                           String insertAfter, OptionalInt patternWindows, ModCompositionMetadata composition,
                           String campaign) {
+    static final int CURRENT_FORMAT_VERSION = 1;
     private static final Pattern ENTRYPOINT = Pattern.compile(
             "[A-Za-z_$][A-Za-z0-9_$]*(?:\\.[A-Za-z_$][A-Za-z0-9_$]*)+");
     private static final Pattern INSERT_AFTER = Pattern.compile("[a-z0-9][a-z0-9-]{0,31}");
@@ -28,18 +29,20 @@ public record ModManifest(int formatVersion, String id, String name,
     public ModManifest {
         composition = Objects.requireNonNull(composition, "composition");
         composition.requireDistinctOwner(id);
-        if (formatVersion != 1) throw new IllegalArgumentException("formatVersion must be 1");
+        if (formatVersion != CURRENT_FORMAT_VERSION) throw new IllegalArgumentException("formatVersion must be 1");
         id = ModKeySyntax.requireManifestId(id);
         if(com.openggf.level.objects.HostObjectKeyRegistry.RESERVED_OWNER.equals(id))
             throw new IllegalArgumentException("The openggf owner is reserved for engine-provided content");
         name = requireDisplayText(name, "name");
         Objects.requireNonNull(version, "version");
         authors = List.copyOf(Objects.requireNonNull(authors, "authors"));
-        if (authors.isEmpty() || authors.size() > 32) {
-            throw new IllegalArgumentException("authors must contain 1 through 32 entries");
+        if (authors.size() > 32) {
+            throw new IllegalArgumentException("authors must contain at most 32 entries");
         }
         authors.forEach(author -> requireDisplayText(author, "author"));
-        description = requireDisplayText(description, "description");
+        if (!Objects.requireNonNull(description, "description").isEmpty()) {
+            description = requireDisplayText(description, "description");
+        }
         Objects.requireNonNull(engineApiRange, "engineApiRange");
         Objects.requireNonNull(type, "type");
         requireBaseGame(type, baseGame);

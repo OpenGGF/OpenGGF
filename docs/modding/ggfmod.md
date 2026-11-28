@@ -23,11 +23,12 @@ playable art or terrain sensors; complete it from the
 [character guide](characters.md) before selecting it in gameplay.
 
 `init <project> --id <id> [--package <java.package>] --kind <kind>` selects a complete
-starter for `music`, `reskin`, `object`, `character`, `zone`, `scene`, or `standalone`.
+starter for `music`, `reskin`, `object`, `character`, `zone`, `scene`, `standalone`, or `tweak`.
 Music and reskin projects use original generated assets and need no Java authoring.
 Object and zone projects include an object placed in a small playable test zone.
 Character and standalone projects contain the maintained playable fixtures, including
-art and sensors. Scene projects own the screen through a startup scene. Without
+art and sensors. Scene projects own the screen through a startup scene. A tweak
+project adds a Low Gravity switch with one manifest and one Java class. Without
 `--kind`, `init` preserves the original object/zone starter. Existing outputs are
 never replaced; generate into a new directory.
 

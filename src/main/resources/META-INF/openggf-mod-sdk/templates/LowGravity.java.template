@@ -1,0 +1,21 @@
+package {{PACKAGE}};
+
+import com.openggf.mods.code.GgfMod;
+import com.openggf.mods.code.ModContext;
+import com.openggf.mods.mutators.MutatorCapability;
+import com.openggf.mods.mutators.MutatorDefinition;
+import com.openggf.mods.mutators.MutatorPolicy;
+import com.openggf.mods.mutators.MutatorScope;
+import java.util.List;
+import java.util.Set;
+
+public final class LowGravity implements GgfMod {
+    @Override
+    public void register(ModContext context) {
+        context.registerMutator(new MutatorDefinition(
+                "low-gravity", "Low Gravity", "Halve Sonic's normal dry fall acceleration.",
+                MutatorScope.LIVE, MutatorScope.LIVE, List.of(),
+                Set.of(MutatorCapability.DRY_SONIC_GRAVITY),
+                options -> List.of(new MutatorPolicy.DrySonicGravity(50))));
+    }
+}

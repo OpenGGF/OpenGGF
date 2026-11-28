@@ -55,18 +55,7 @@ public interface PhysicsProvider {
     /** Applies an immutable edit only to matching characters, including their optional init profile. */
     default PhysicsProvider transform(java.util.function.Predicate<String> characters,
                                       java.util.function.Function<PhysicsProfile, PhysicsProfile> edit) {
-        java.util.Objects.requireNonNull(characters, "characters");
-        java.util.Objects.requireNonNull(edit, "edit");
-        PhysicsProvider source = this;
-        return new PhysicsProvider() {
-            private PhysicsProfile map(String character, PhysicsProfile profile) {
-                return profile == null || !characters.test(character) ? profile
-                        : java.util.Objects.requireNonNull(edit.apply(profile), "Profile transform returned null");
-            }
-            @Override public PhysicsProfile getProfile(String character) { return map(character, source.getProfile(character)); }
-            @Override public PhysicsProfile getInitProfile(String character) { return map(character, source.getInitProfile(character)); }
-            @Override public PhysicsModifiers getModifiers() { return source.getModifiers(); }
-        };
+        return new com.openggf.game.internal.PhysicsProfileOverrides(this, characters, edit);
     }
 
 }

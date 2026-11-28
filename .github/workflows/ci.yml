@@ -277,9 +277,18 @@ jobs:
       - name: Run tests (pull request)
         if: github.event_name == 'pull_request'
         shell: bash
-        # The multiplayer channel (each build's default master) follows the base branch;
-        # bases other than master/develop/next use develop's, like local builds.
-        run: mvn -Dmse=off test -B -DmodApi.destinationBranch="${{ github.base_ref }}" -Dopenggf.multiplayer.channel="${{ contains(fromJSON('["master","develop","next"]'), github.base_ref) && github.base_ref || 'develop' }}"
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        # Integration PRs can target feature branches without claiming a release destination.
+        run: |
+          case "$BASE_REF" in
+            master|develop|next)
+              mvn -Dmse=off test -B -DmodApi.destinationBranch="$BASE_REF" -Dopenggf.multiplayer.channel="$BASE_REF"
+              ;;
+            *)
+              mvn -Dmse=off test -B -Dopenggf.multiplayer.channel=develop
+              ;;
+          esac
 
       - name: Run tests (manual)
         if: github.event_name == 'workflow_dispatch'

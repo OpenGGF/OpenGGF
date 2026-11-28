@@ -22,27 +22,63 @@ The host creates one policy owner per world through its engine module service.
 Shared catalogs/providers contain no session settings; two worlds have independent
 requested, admitted and effective graphs.
 
-A shared compiled package may use `baseGame: any` for a typed mutator catalogue.
-The catalogue can stand alone. It cannot by itself publish objects, object art,
-previews or service bundles. Add a startup scene, title entry or concrete stock-game
-`GamePatch` to give the package a code role; mixed packages may then share those
-contributions while retaining the catalogue. No scene is required for patches.
-The host expands the package into three owned plans, copying shared contributions
-and filtering each plan's patches to its concrete game. Zones, characters, ROM-art
-intake, launch teams, input/HUD policies and decoded level patches always require
-a single base game. Manifest stock overrides remain unavailable to `any` packages.
+A mutator-only mod can use a specific cartridge `baseGame` or `baseGame: any`.
+The engine adds one configuration screen over the native title and makes it
+available from Pause for supported native teams in Sonic 1, Sonic 2 and Sonic 3
+& Knuckles. The hub's game-selection flow is unchanged. Custom hosts can still
+supply their own support profile and screen.
+
+A shared catalogue alone cannot publish objects, object art, previews or service
+bundles. Mixed packages that share those contributions still need a startup scene,
+title entry or concrete stock-game `GamePatch`. Stock overrides and zone-specific
+contributions still require a single base game.
+
+### Minimal gravity tweak
+
+Generate this starter with `ggfmod init my-gravity --id my-gravity --kind tweak --package example.tweak`.
+The complete manifest goes in `src/main/resources/META-INF/openggf-mod.yaml`.
+
+```yaml
+id: my-gravity
+name: My Gravity
+version: 1.0.0
+engineApiRange: ">=0.7.0 <0.8.0"
+type: patch
+baseGame: any
+```
+
+Put the one entrypoint in `src/main/java/example/tweak/LowGravity.java`.
 
 ```java
-context.registerMutator(new MutatorDefinition(
-    "gravity", "Sonic Gravity", "Dry ordinary air only",
-    MutatorScope.LIVE, MutatorScope.LIVE,
-    List.of(new MutatorOption.IntegerSlider(
-        "percent", "Gravity", "Jump impulse stays native",
-        MutatorScope.LIVE, 100, 25, 200, 5, "%")),
-    Set.of(MutatorCapability.DRY_SONIC_GRAVITY),
-    options -> List.of(new MutatorPolicy.DrySonicGravity(
-        options.integer("percent")))));
+package example.tweak;
+
+import com.openggf.mods.code.GgfMod;
+import com.openggf.mods.code.ModContext;
+import com.openggf.mods.mutators.MutatorCapability;
+import com.openggf.mods.mutators.MutatorDefinition;
+import com.openggf.mods.mutators.MutatorPolicy;
+import com.openggf.mods.mutators.MutatorScope;
+import java.util.List;
+import java.util.Set;
+
+public final class LowGravity implements GgfMod {
+    @Override
+    public void register(ModContext context) {
+        context.registerMutator(new MutatorDefinition(
+                "low-gravity", "Low Gravity", "Halve Sonic's normal dry fall acceleration.",
+                MutatorScope.LIVE, MutatorScope.LIVE, List.of(),
+                Set.of(MutatorCapability.DRY_SONIC_GRAVITY),
+                options -> List.of(new MutatorPolicy.DrySonicGravity(50))));
+    }
+}
 ```
+
+Build using the [getting-started commands](../getting-started.md#first-project).
+Enable and trust the jar in **Mods**, choose **Apply**, and launch a cartridge
+game as Sonic. Turn on **Low Gravity** in **Configure Mutators** and choose
+**Start**, or enable it from Pause and choose **Resume**. The policy halves
+normal dry fall acceleration. For an adjustable version, see
+[Gravity.java](../../../examples/example-mutators/src/main/java/mutators/Gravity.java).
 
 The declared ENABLE and DISABLE scopes are independent. Each slider, checkbox or
 choice must declare its own edit scope. IDs/tokens, labels, schema size, integer
@@ -295,13 +331,13 @@ timers use native ticks, while the scheduler's lease uses active presentations.
 
 ## Human and agent walkthrough
 
-1. Read the example README, one class per effect, `NativeLabProfile.java`,
-   `MutatorsMod.java` and the format-1 manifest. Verify Java 25 and the original
+1. Read the example README, one class per effect, `MutatorsMod.java`, and the
+   manifest. Verify Java 25 and the original
    ROMs for the games you will launch. Keep commercial bytes outside Git.
 2. Run `python3 examples/example-mutators/build.py` from this checkout. It queues
    the actual Maven build and `ggfmod package`; inspect the result and jar contents.
 3. Run the builder with `--run`, or install/enable/trust the jar in the JVM Mod
-   Manager and restart. Select a native game with Sonic as leader. Open How to
+   Manager and choose Apply. Select a native game with Sonic as leader. Open How to
    play, configure Gravity at 50%, enable it, then start that game's opening act.
 4. Jump/run through real terrain; Pause, enable Stealth, and Resume. Collision,
    rings, targeting and sound remain. Pause, turn effects off, Resume; restart
@@ -368,10 +404,6 @@ same `LevelInputOverlay` host command owner. Failed persistence keeps the title
 and visible error. Accepted title exits hold input throughout the exit fade.
 Null overlay commands are treated as `NONE`, never as a restart request.
 
-The native Lab builds its common title/settings screen with
-`MutatorConfigurationScreen.forCurrentWorld(title, inheritedTitle, navigateId,
-confirmId, startId, errorId)`. The host pins the prepared world and copies the four
-native ROM sound IDs; the example receives no global session or audio manager.
-Game-specific support reads configuration from the `PatchContext` passed to its
-`apply` method. Development capture applies only the concrete game's eligible
-decorators, including the requested team's activation predicate.
+The engine binds the common screen to each prepared cartridge world, supplies
+native sound cues and keeps the inherited native title as the backdrop.
+Development capture uses the same host as normal launch.

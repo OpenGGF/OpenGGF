@@ -20,6 +20,65 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestJarPackager {
     @TempDir Path temp;
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(ints = {0, 1, 2})
+    void infersOneConcreteEntrypointFromCompiledClasses(int count) throws Exception {
+        Path input = temp.resolve("input");
+        Path manifest = input.resolve("META-INF/openggf-mod.yaml");
+        Files.createDirectories(manifest.getParent());
+        String yaml = """
+                id: infer-mod
+                name: Inferred Mod
+                version: 1.0.0
+                engineApiRange: ">=0.7.0 <0.8.0"
+                type: patch
+                baseGame: any
+                """;
+        Files.writeString(manifest, yaml);
+        Path source = temp.resolve("First.java");
+        String classes = """
+                package test.inference;
+                import com.openggf.mods.code.GgfMod;
+                import com.openggf.mods.code.ModContext;
+                abstract class Base implements GgfMod {
+                    public void register(ModContext context) {}
+                }
+                """;
+        if (count >= 1) classes += "public final class First extends Base {}\n";
+        Files.writeString(source, classes);
+        var args = new java.util.ArrayList<>(List.of("-classpath", System.getProperty("java.class.path"),
+                "-d", input.toString(), source.toString()));
+        if (count == 2) {
+            Path second = temp.resolve("Second.java");
+            Files.writeString(second, "package test.inference; public final class Second extends Base {}");
+            args.add(second.toString());
+        }
+        assertEquals(0, javax.tools.ToolProvider.getSystemJavaCompiler().run(
+                null, null, null, args.toArray(String[]::new)));
+        Path jar = temp.resolve("inferred.jar");
+        var messages = new java.io.ByteArrayOutputStream();
+        int exit = GgfModCli.run(new String[]{"package", "--input", input.toString(), "--out", jar.toString()},
+                new java.io.PrintStream(messages, true, StandardCharsets.UTF_8));
+        if (count == 1) {
+            assertEquals(0, exit, messages::toString);
+            try (var packed = new JarFile(jar.toFile());
+                 var contents = packed.getInputStream(packed.getJarEntry("META-INF/openggf-mod.yaml"))) {
+                var inferred = new com.openggf.mods.ModManifestParser().parse(contents.readAllBytes());
+                assertEquals("test.inference.First", inferred.entrypoint());
+            }
+            try (var development = com.openggf.mods.DevelopmentModSource.snapshot(input, ModInputLimits.production())) {
+                var descriptor = (com.openggf.mods.ModDescriptor) development.scan().getFirst();
+                assertEquals("test.inference.First", descriptor.manifest().entrypoint());
+            }
+        } else {
+            assertEquals(1, exit);
+            String candidates = count == 0 ? "none" : "test.inference.First, test.inference.Second";
+            assertTrue(messages.toString().contains("candidates: " + candidates), messages::toString);
+            assertFalse(Files.exists(jar));
+        }
+        assertEquals(yaml, Files.readString(manifest), "Source manifest stays intact");
+    }
+
     @Test
     void packageBytesAreIndependentOfHostTimeZone() throws Exception {
         Path input = validInput(temp.resolve("time-zone-input"));

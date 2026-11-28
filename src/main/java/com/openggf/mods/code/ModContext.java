@@ -24,7 +24,7 @@ import java.util.Objects;
 public final class ModContext {
     private final String owner;
     private final String baseGame;
-    static final String ANY_GAME_RULE = "baseGame any needs a startup scene, title entry, per-game patch, playable characters or typed mutator catalogue; "
+    static final String ANY_GAME_RULE = "baseGame any needs a startup scene, title entry, per-game patch, playable characters, physics transform or typed mutator catalogue; "
             + "objects, object art, previews and service bundles require a scene, title entry or patch; "
             + "zones, ROM art intake, launch teams, input/HUD policies and decoded level patches "
             + "need a single base game";
@@ -62,6 +62,7 @@ public final class ModContext {
     private com.openggf.mods.scene.ModSceneFactory startupScene;
     private ModTitleEntry titleEntry;
     private String requiredDisplayAspect;
+    private final java.util.List<PhysicsTransform> physicsTransforms = new java.util.ArrayList<>();
     private final Map<String, com.openggf.mods.mutators.OwnedMutator> mutators = new LinkedHashMap<>();
 
     ModContext(String owner, String baseGame, ModAssetRoot assets) {
@@ -390,6 +391,20 @@ public final class ModContext {
         });
     }
 
+    /**
+     * Stages a stock-game physics profile edit for matching character codes.
+     * Edits compose in registration and mod load order. Both the normal and optional
+     * initial profiles are edited; host water and speed-shoes modifiers are preserved.
+     * Both callbacks must be deterministic and side-effect-free.
+     */
+    public void transformPhysics(java.util.function.Predicate<String> characters,
+                                 java.util.function.Function<com.openggf.game.PhysicsProfile, com.openggf.game.PhysicsProfile> edit) {
+        mutate(() -> {
+            if (standalone) throw failure("Physics transforms require a stock-game patch owner");
+            physicsTransforms.add(new PhysicsTransform(characters, edit));
+        });
+    }
+
     /** Stages a dormant mutator; ownership comes only from this registration transaction. */
     public void registerMutator(com.openggf.mods.mutators.MutatorDefinition definition) {
         mutate(() -> {
@@ -452,7 +467,7 @@ public final class ModContext {
             boolean codeRole = startupScene != null || titleEntry != null || !patches.isEmpty();
             boolean sharedRuntimeContent = !objects.isEmpty() || !art.isEmpty()
                     || !objectPreviewArtKeys.isEmpty() || !serviceBundles.isEmpty();
-            if ("any".equals(baseGame) && ((!codeRole && mutators.isEmpty() && characters.isEmpty())
+            if ("any".equals(baseGame) && ((!codeRole && mutators.isEmpty() && characters.isEmpty() && physicsTransforms.isEmpty())
                     || (sharedRuntimeContent && !codeRole) || !zones.isEmpty()
                     || !romArt.isEmpty() || !launchTeams.isEmpty()
                     || !inputFilters.isEmpty() || !hudProfiles.isEmpty() || !decodedLevelPatches.isEmpty())) {
@@ -481,7 +496,7 @@ public final class ModContext {
             return new ModRegistrationPlan(owner, baseGame, objects, art, Map.of(), patches,
                     zones, prepared,objectPreviewArtKeys,characters,gameModule,romArt,
                     launchTeams, inputFilters, hudProfiles, startupScene, requiredDisplayAspect,
-                    serviceBundles, decodedLevelPatches, assets.limits().maxCollectionEntries(), mutators);
+                    serviceBundles, decodedLevelPatches, assets.limits().maxCollectionEntries(), mutators, physicsTransforms);
         } catch (java.io.IOException | RuntimeException rejected) {
             if (rejected instanceof ModRegistrationException registration) poison = registration;
             else poison = new ModRegistrationException(owner, "MOD_LEVEL_ASSET_INVALID",

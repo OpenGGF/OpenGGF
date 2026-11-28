@@ -21,7 +21,7 @@ public final class MutatorWorldProvider implements WorldSessionPolicyProvider {
     }
 
     @Override public WorldSessionPolicyState open(WorldSession world) {
-        // The explicit presentation patch may add support outside the backing catalog module.
+        // The resolved title/overlay host supplies support outside the backing catalog module.
         var support=world.resolvedGameModule().getGameService(MutatorSupportProfile.class);
         var observers=world.resolvedGameModule().getGameService(
                 com.openggf.mods.code.GameplayObserverRegistry.class);

@@ -1,5 +1,7 @@
 package com.openggf.sprites.playable;
 
+import com.openggf.game.internal.PhysicsProfileOverrides;
+
 import com.openggf.game.internal.NativePlayerSpeedPolicy;
 
 /** Per-actor effective WORDs. UNKNOWN is independent of every possible unsigned word value. */
@@ -50,7 +52,7 @@ final class NativePlayerSpeedWords {
         try {
             var world = player.nativeSpeedWords.ownerWorld;
             var module = world != null ? world.getGameModule() : null;
-            var provider = module != null ? module.getPhysicsProvider() : null;
+            var provider = module != null ? PhysicsProfileOverrides.nativeSource(module.getPhysicsProvider()) : null;
             return provider instanceof NativePlayerSpeedPolicy policy && policy.supports(player, world) ? policy : null;
         } catch (IllegalStateException unavailable) {
             return null;

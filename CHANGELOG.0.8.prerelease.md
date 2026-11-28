@@ -868,6 +868,12 @@ under the matching area heading; see the
 
 ## Modding and tools
 
+- **Small mods can start with a manifest and one Java file.** Empty manifest
+  metadata defaults automatically, and the SDK infers a sole Java entrypoint.
+  `ggfmod init --kind tweak` creates a Low Gravity switch that uses the engine's
+  existing mutator title and pause menu. Always-on character tuning can use
+  `ModContext.transformPhysics` to edit the stock profile in one registration.
+
 - Mutator Lab adds **Beta Flight** for Knuckles in Sonic 3 & Knuckles. It replaces
   his glide with the flight found in the unused Knuckles object of the Sonic 3 Winter
   CES cartridge (Dec 22, 1993): an untimed, Tails-style flap whose left and right only

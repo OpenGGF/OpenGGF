@@ -27,7 +27,9 @@ validation and fault handling on either build.
    individually. Enable cascades never grant unseen dependencies code trust.
 5. Use Order to arrange independent mods. Dependencies load before their dependents;
    later applicable art/music/startup-scene overrides win. Details/Notices explain
-   blocked entries and conflicts. Apply saves pending settings and reloads mods at the title.
+   blocked entries and conflicts. **Apply** saves pending settings, rescans jars,
+   and rebuilds the compiled-mod runtime at the master title. The next launch uses
+   the applied selection. Apply retires any suspended game, so start a fresh session.
 
 If no mod appears, check working directory, `.jar` extension, manifest compatibility
 and whether deterministic test/trace/time-attack mode excludes external mods.
@@ -76,7 +78,7 @@ other code mod. Time Attack starts enabled; MICA and TALON starts disabled.
 Enable either mod in the manager and Apply; saved choices survive upgrades
 (see [trust](concepts/trust.md#first-party-bundled-mods-a-deliberate-narrowing)).
 
-- Disable or re-enable one like any mod, then Apply and restart. Your choice is kept in
+- Disable or re-enable one like any mod, then choose **Apply**. Your choice is kept in
   `mods/modstate.json` and survives engine upgrades. A bundled mod cannot be uninstalled
   from the manager; disabling it is the supported opt-out.
 - The universal jar carries bundled mods inside itself and extracts them to

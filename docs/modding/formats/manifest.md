@@ -6,14 +6,22 @@ is `ModManifestParser.ROOT_FIELDS` in
 and input limits come from
 [`ModInputLimits`](../../../src/main/java/com/openggf/io/ModInputLimits.java).
 
-Required fields are `formatVersion`, `id`, `name`, `version`, `authors`,
-`description`, `engineApiRange`, `type`, `dependencies`, `audioOverrides`, and
-`artOverrides`. `baseGame` is required only for `patch`; it is forbidden for
-`standalone`. `entrypoint` is syntactically optional, but validation requires it when
-the jar contains classes. `insertAfter` is valid only with a supported patch-game
-stock anchor. `patternWindows` and `composition` are optional.
-Unknown, duplicate, null, alias/merge, shorthand dependency, and alternate-union
-shapes are errors.
+Required fields are `id`, `name`, `version`, `engineApiRange` and `type`.
+A `patch` also requires `baseGame`. A `standalone` manifest omits it.
+`formatVersion` defaults to `1`. Omitted `authors` and `dependencies` default
+to empty lists, `description` to empty text, and `audioOverrides` and
+`artOverrides` to empty maps. A supplied description must be nonblank.
+
+For a compiled mod with one concrete `GgfMod`, omit `entrypoint` in the source
+manifest. `ggfmod package` writes the inferred binary class name into the jar's
+manifest. The source stays intact. `ggfmod run` also infers it for exploded
+development builds. If several concrete implementations are present, select
+one with an explicit `entrypoint`. Packaged jars with classes always need the
+field. A data-only patch targeting a single stock game can omit it.
+
+`insertAfter` is valid only with a supported patch-game stock anchor.
+`patternWindows` and `composition` are optional. Unknown fields, duplicate keys,
+nulls, aliases, merges and shorthand dependencies are errors.
 
 Use the checked [music](../samples/phase4-gallery-music-pack/META-INF/openggf-mod.yaml),
 [reskin](../../../src/test/resources/mods/sample-reskin-src/META-INF/openggf-mod.yaml),

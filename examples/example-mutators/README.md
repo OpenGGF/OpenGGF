@@ -30,11 +30,10 @@ Green Hill, Emerald Hill or Angel Island respectively. Lab Start opens a fresh
 challenge rather than the Sonic 3 & Knuckles stock save-slot screen. Native
 progression and supported native teammates remain available. For packaging only, omit `--run`.
 
-Ordinary JVM launches can install that jar in the Mod Manager: enable it, trust
-its exact hash and restart the executable. Code installation/replacement remains
-boot-scoped. Prepared settings can be changed without restarting the executable.
-Compiled creator code is unavailable in the engine's standard native image; see the
-[trust guide](../../docs/modding/concepts/trust.md).
+Install the jar in the Mod Manager, enable it, trust its exact hash, and choose
+**Apply**. The engine reloads the compiled catalogue at the master title. Launch
+a supported cartridge game and use the built-in **Configure Mutators** screen.
+See the [installation guide](../../docs/modding/installing-mods.md).
 
 ## Catalogue and boundaries
 
@@ -331,7 +330,7 @@ Option ids are the Lab's: `start-rings` (`rings`, `delay`), `start-time`
 `hungry-for-rings` (`grace`, `loss`, `period`, `threshold`, `starve`); every other
 mutator's ids are in its class under `src/main/java/mutators`.
 
-The development launcher opens this package's declared Sonic 2 base game. The
+The development launcher chooses an available game for this shared package. The
 Sonic 1 and Sonic 3 & Knuckles window recipes first finish that intro, return
 to the master hub with Escape, and select their native game there. Read the
 actual title and game subtitle before interpreting the following screenshots;

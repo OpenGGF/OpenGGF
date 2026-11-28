@@ -1331,8 +1331,12 @@ public final class ModManagerScreen {
                 // The effective catalog assigns windows only to mods it loaded.
                 .orElse(UiMessages.text("menu.mods.merge.none_assigned_until_it_loads"));
         lines.add(UiMessages.text("menu.mods.pattern_windows", Map.of("count",requestedWindows,"allocation",allocation)));
-        lines.add(UiMessages.text("menu.mods.authors", Map.of("authors",String.join(", ",manifest.authors()))));
-        lines.add(UiMessages.text("menu.mods.description", Map.of("description",manifest.description())));
+        if (!manifest.authors().isEmpty()) {
+            lines.add(UiMessages.text("menu.mods.authors", Map.of("authors", String.join(", ", manifest.authors()))));
+        }
+        if (!manifest.description().isEmpty()) {
+            lines.add(UiMessages.text("menu.mods.description", Map.of("description", manifest.description())));
+        }
         if (manifest.dependencies().isEmpty()) {
             lines.add(UiMessages.text("menu.mods.ui.dependencies_none"));
         } else {

@@ -137,6 +137,28 @@ class TestProjectScaffolder {
         assertFalse(manifest.name().isBlank());
     }
 
+    @Test void tweakStarterBuildsOneSourceAndInfersItsEntrypoint() throws Exception {
+        Path project = new ProjectScaffolder().scaffold(temp.resolve("low-gravity"), "null", "example.tweak", "tweak");
+        Path classes = temp.resolve("classes");
+        Files.createDirectories(classes.resolve("META-INF"));
+        compileSources(project.resolve("src/main/java"), classes,
+                TestSessionOutputPaths.compiledClasses().toAbsolutePath().toString());
+        try (var classFiles = Files.walk(classes)) {
+            assertEquals(1, classFiles.filter(path -> path.toString().endsWith(".class")).count());
+        }
+        Files.copy(project.resolve("src/main/resources/META-INF/openggf-mod.yaml"),
+                classes.resolve("META-INF/openggf-mod.yaml"));
+        var jar = temp.resolve("low-gravity.jar");
+        JarPackager.packageDirectory(classes, jar);
+        assertTrue(new ModJarValidator().validate(jar).valid());
+        try (var archive = new java.util.jar.JarFile(jar.toFile());
+             var contents = archive.getInputStream(archive.getJarEntry("META-INF/openggf-mod.yaml"))) {
+            var manifest = new com.openggf.mods.ModManifestParser().parse(contents.readAllBytes());
+            assertEquals("null", manifest.id());
+            assertEquals("example.tweak.LowGravity", manifest.entrypoint());
+        }
+    }
+
     @ParameterizedTest
     @ValueSource(strings = {"music", "reskin", "scene"})
     void generatedIntegrationTestsCoverDataOnlyAndCodeStarters(String kind) throws Exception {

@@ -1,5 +1,7 @@
 package com.openggf.sprites.managers;
 
+import com.openggf.game.internal.PhysicsProfileOverrides;
+
 import com.openggf.sprites.playable.PlayableArchetype;
 
 import com.openggf.level.objects.ObjectManagerInternalAccess;
@@ -489,7 +491,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	private PlayerStageRoutines stageRoutinesOrNull() {
 		GameModule module = sprite.currentGameModule();
 		com.openggf.game.PhysicsProvider provider = module != null ? module.getPhysicsProvider() : null;
-		return provider instanceof PlayerStageRoutines routines ? routines : null;
+		return PhysicsProfileOverrides.nativeSource(provider) instanceof PlayerStageRoutines routines ? routines : null;
 	}
 
 	/**

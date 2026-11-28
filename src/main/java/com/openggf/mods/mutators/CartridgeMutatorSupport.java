@@ -1,25 +1,27 @@
-package mutators;
+package com.openggf.mods.mutators;
 
-import com.openggf.game.patch.LogicalRom;
+import com.openggf.catalog.StockGameCatalog;
+import com.openggf.game.GameId;
 import com.openggf.game.mutators.MonitorContent;
-import com.openggf.mods.mutators.*;
 import java.util.EnumSet;
 import java.util.Set;
+import java.util.function.BooleanSupplier;
 
-/** The example owns native-game metadata; shared engine policy consumers use semantic values. */
-public final class NativeLabProfile implements MutatorSupportProfile {
+/** Native cartridge presentation and capability metadata for the default mutator host. */
+final class CartridgeMutatorSupport implements MutatorSupportProfile {
     private final String game;
-    private final java.util.function.BooleanSupplier donorActive;
-    public NativeLabProfile(String game) { this(game, () -> false); }
-    public NativeLabProfile(String game, java.util.function.BooleanSupplier donorActive) {
-        if (!Set.of("s1", "s2", "s3k").contains(game)) throw new IllegalArgumentException("Native Lab requires a stock game");
+    private final BooleanSupplier donorActive;
+
+    static CartridgeMutatorSupport forGame(GameId game, BooleanSupplier donorActive) {
+        String code = game.code();
+        return StockGameCatalog.isCartridgeCode(code) ? new CartridgeMutatorSupport(code, donorActive) : null;
+    }
+
+    private CartridgeMutatorSupport(String game, BooleanSupplier donorActive) {
         this.game = game;
         this.donorActive = java.util.Objects.requireNonNull(donorActive);
     }
-    public String game() { return game; }
-    public String patchId() { return "example-mutators:lab" + (game.equals("s2") ? "" : "-" + game); }
-    public LogicalRom rom() { return switch (game) { case "s1" -> LogicalRom.S1; case "s2" -> LogicalRom.S2; default -> LogicalRom.S3K; }; }
-    public String gameTitle() { return switch (game) { case "s1" -> "Sonic 1"; case "s2" -> "Sonic 2"; default -> "Sonic 3 & Knuckles"; }; }
+    private String gameTitle() { return switch (game) { case "s1" -> "Sonic 1"; case "s2" -> "Sonic 2"; default -> "Sonic 3 & Knuckles"; }; }
     @Override public String startLabel() {
         return switch (game) { case "s1" -> "Start Green Hill"; case "s2" -> "Start Emerald Hill"; default -> "Start Angel Island"; };
     }
@@ -72,7 +74,7 @@ public final class NativeLabProfile implements MutatorSupportProfile {
         catch (IllegalArgumentException invalid) { return "Unknown native monitor type."; }
         return monitorContents().contains(content) ? "" : "This monitor type is not present in " + gameTitle() + ".";
     }
-    public Set<MonitorContent> monitorContents() {
+    private Set<MonitorContent> monitorContents() {
         return switch (game) {
             case "s1" -> Set.of(MonitorContent.STATIC, MonitorContent.EGGMAN, MonitorContent.LIFE,
                     MonitorContent.SPEED_SHOES, MonitorContent.BASIC_SHIELD, MonitorContent.INVINCIBILITY,

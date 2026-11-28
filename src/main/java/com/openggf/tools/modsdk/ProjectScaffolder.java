@@ -26,7 +26,7 @@ public final class ProjectScaffolder {
             "[a-z_][a-z0-9_]*(\\.[a-z_][a-z0-9_]*)*");
 
     public Path scaffold(Path outputDirectory, String modId, String javaPackage, String kind) throws IOException {
-        if (kind == null || !java.util.Set.of("music", "reskin", "object", "character", "zone", "scene", "standalone").contains(kind))
+        if (kind == null || !java.util.Set.of("music", "reskin", "object", "character", "zone", "scene", "standalone", "tweak").contains(kind))
             throw new IllegalArgumentException("Unknown starter kind: " + kind);
         if (kind.equals("object") || kind.equals("zone")) {
             Path project = scaffold(outputDirectory, modId, javaPackage);
@@ -52,7 +52,14 @@ public final class ProjectScaffolder {
             } else {
                 writeSimpleProject(staging, kind, modId, javaPackage);
             }
-            writeTestSupport(staging, modId, javaPackage);
+            String testInstructions = "";
+            if (!kind.equals("tweak")) {
+                writeTestSupport(staging, modId, javaPackage);
+                testInstructions = "The included src/test/java integration test uses the opt-in creator-tests profile. "
+                        + "Follow handbook/testing.md to verify and install the matching separate mod-testkit, "
+                        + "then run mvn test -Pcreator-tests -Dopenggf.testkit.version=<kit-version> with the same jar properties. "
+                        + "The portable builder also accepts --test with a matching --testkit.\n";
+            }
             writeText(staging.resolve("README.md"), "# " + displayName(modId) + "\n\n"
                     + "Complete " + kind + " starter for the unpublished Mod API 0.7 candidate.\n\n"
                     + "Use Java 25 and matching engine/SDK jars from the same commit. Build twice after an edit:\n\n"
@@ -60,11 +67,9 @@ public final class ProjectScaffolder {
                     + "-Dopenggf.sdk.jar=/absolute/path/sdk.jar\n```\n\n"
                     + "The validated distributable is target/" + modId + "-mod.jar. "
                     + "Run target/classes with ggfmod run, then validate the jar before sharing it.\n"
-                    + "The included src/test/java integration test uses the opt-in creator-tests profile. "
-                    + "Follow handbook/testing.md to verify and install the matching separate mod-testkit, "
-                    + "then run mvn test -Pcreator-tests -Dopenggf.testkit.version=<kit-version> with the same jar properties.\n"
+                    + testInstructions
                     + "For the portable workflow, run python3 /absolute/kit/tools/build_project.py . --doctor, "
-                    + "then omit --doctor to build; add --test with a matching --testkit or --run to play. "
+                    + "then omit --doctor to build; add --run to play. "
                     + "See the creator kit handbook's getting-started.md and installing-mods.md.\n");
             Files.move(staging, output);
             return output;
@@ -136,13 +141,27 @@ public final class ProjectScaffolder {
             writeTone(root.resolve("src/main/resources/audio/theme.wav"));
             writeText(root.resolve("src/main/resources/audio/audio-manifest.yaml"), "formatVersion: 1\ntracks:\n  - id: theme\n    assetPath: audio/theme.wav\n    loop: true\n    loopStartFrame: 0\n    gain: 0.25\n    tempoEffects: true\nsfx: []\n");
             manifestExtras = "artOverrides: {}\n";
+        } else if (kind.equals("tweak")) {
+            writeText(root.resolve("src/main/java/" + pkg.replace('.', '/') + "/LowGravity.java"),
+                    render("LowGravity.java.template", Map.of("{{PACKAGE}}", pkg)));
         } else {
             String entry = pkg + ".SceneMod";
             manifestExtras = "entrypoint: " + entry + "\nartOverrides: {}\n";
             writeText(root.resolve("src/main/java/" + pkg.replace('.', '/') + "/SceneMod.java"), "package " + pkg + ";\nimport com.openggf.mods.code.GgfMod;\nimport com.openggf.mods.code.ModContext;\npublic final class SceneMod implements GgfMod { public void register(ModContext context) { context.registerStartupScene(StarterScene::new); } }\n");
             writeText(root.resolve("src/main/java/" + pkg.replace('.', '/') + "/StarterScene.java"), "package " + pkg + ";\nimport com.openggf.mods.scene.*;\npublic final class StarterScene implements ModScene { private int ticks; public void enter(SceneContext ctx) { } public void update(SceneContext ctx) { ticks++; if (ctx.buttonPressed(SceneButtons.B)) ctx.exitToGameTitle(); } public void draw(SceneContext ctx, SceneCanvas canvas) { canvas.clear(0x102040); canvas.text(\"MY SCENE \" + ticks, 16, 16, 0xFFFFFFFF); } }\n");
         }
-        writeText(root.resolve("src/main/resources/META-INF/openggf-mod.yaml"), "formatVersion: 1\nid: \"" + id + "\"\nname: \"" + displayName(id) + "\"\nversion: 1.0.0\nauthors: [Mod Author]\ndescription: Original " + kind + " starter.\nengineApiRange: \">=0.7.0 <0.8.0\"\ntype: patch\nbaseGame: s2\ndependencies: []\naudioOverrides: " + (kind.equals("music") ? "{129: theme}" : "{}") + "\n" + manifestExtras);
+        if (kind.equals("tweak")) {
+            writeText(root.resolve("src/main/resources/META-INF/openggf-mod.yaml"), """
+                    id: "%s"
+                    name: "%s"
+                    version: 1.0.0
+                    engineApiRange: ">=0.7.0 <0.8.0"
+                    type: patch
+                    baseGame: any
+                    """.formatted(id, displayName(id)));
+        } else {
+            writeText(root.resolve("src/main/resources/META-INF/openggf-mod.yaml"), "formatVersion: 1\nid: \"" + id + "\"\nname: \"" + displayName(id) + "\"\nversion: 1.0.0\nauthors: [Mod Author]\ndescription: Original " + kind + " starter.\nengineApiRange: \">=0.7.0 <0.8.0\"\ntype: patch\nbaseGame: s2\ndependencies: []\naudioOverrides: " + (kind.equals("music") ? "{129: theme}" : "{}") + "\n" + manifestExtras);
+        }
         String pom = render("simple-pom.xml.template", Map.of("{{MOD_ID}}", id, "{{PACKAGE}}", pkg, "{{CONVERSION}}", conversion));
         writeText(root.resolve("pom.xml"), pom);
     }

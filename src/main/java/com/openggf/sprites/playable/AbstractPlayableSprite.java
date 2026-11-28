@@ -4103,6 +4103,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                                 this.canonicalProfile = null;
                                 this.initPhysicsActive = false;
                         }
+                } catch (com.openggf.level.objects.ObjectCallbackAbortException aborted) {
+                        throw aborted;
                 } catch (Exception e) {
                         // Graceful fallback: defineSpeeds() values remain
                         LOGGER.fine("PhysicsProvider unavailable, using defineSpeeds() values: " + e.getMessage());

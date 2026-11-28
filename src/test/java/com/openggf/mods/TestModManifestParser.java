@@ -15,6 +15,29 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestModManifestParser {
+    @Test void minimalManifestDefaultsOmittedMetadata() throws Exception {
+        String minimal = """
+                id: minimal
+                name: Minimal
+                version: 1.0.0
+                engineApiRange: ">=0.7.0 <0.8.0"
+                type: patch
+                baseGame: s2
+                """;
+        ModManifest manifest = parser().parse(bytes(minimal));
+        assertEquals(1, manifest.formatVersion());
+        assertEquals(List.of(), manifest.authors());
+        assertEquals("", manifest.description());
+        assertEquals(List.of(), manifest.dependencies());
+        assertEquals(Map.of(), manifest.audioOverrides());
+        assertEquals(Map.of(), manifest.artOverrides());
+        rejects(minimal + "description: null\n");
+        rejects(minimal + "typo: true\n");
+        for (String required : List.of("id", "name", "version", "engineApiRange", "type", "baseGame")) {
+            rejects(minimal.replaceFirst("(?m)^" + required + ":.*\n", ""));
+        }
+    }
+
     @Test void sonicCdIsAnExplicitPatchHost() throws Exception {
         assertEquals("scd", parser().parse(bytes(canonicalPatch().replace("baseGame: s2", "baseGame: scd"))).baseGame());
     }

@@ -1,5 +1,7 @@
 package com.openggf.game.soniccd.player;
 
+import com.openggf.game.internal.PhysicsProfileOverrides;
+
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.ObjectSpawn;
@@ -151,7 +153,7 @@ public final class CdPlayerWater implements RewindSnapshottable<CdPlayerWater.Sn
      */
     public static void resetDrownFor(com.openggf.game.PlayableEntity entity) {
         if (entity instanceof AbstractPlayableSprite player
-                && player.currentGameModule().getPhysicsProvider() instanceof SonicCdPhysicsProvider provider) {
+                && PhysicsProfileOverrides.nativeSource(player.currentGameModule().getPhysicsProvider()) instanceof SonicCdPhysicsProvider provider) {
             provider.stage().water().resetDrown(player);
         }
     }
@@ -166,7 +168,7 @@ public final class CdPlayerWater implements RewindSnapshottable<CdPlayerWater.Sn
         if (!(entity instanceof AbstractPlayableSprite player) || !touchesBubble(player, bubbleX, bubbleY)) {
             return false;
         }
-        if (!(player.currentGameModule().getPhysicsProvider() instanceof SonicCdPhysicsProvider provider)) {
+        if (!(PhysicsProfileOverrides.nativeSource(player.currentGameModule().getPhysicsProvider()) instanceof SonicCdPhysicsProvider provider)) {
             return false;
         }
         provider.stage().water().breathe(player);

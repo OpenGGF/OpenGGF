@@ -326,7 +326,7 @@ public final class GgfModCli {
     private static Path path(Map<String,String> flags, String name) { return Path.of(required(flags, name)); }
 
     private static int usage(PrintStream output) {
-        output.println("Usage: ggfmod validate <mod.jar> [--format text|json] [--warnings allow|error] | init <dir> --id <id> --package <java.pkg> [--kind music|reskin|object|character|zone|scene|standalone]");
+        output.println("Usage: ggfmod validate <mod.jar> [--format text|json] [--warnings allow|error] | init <dir> --id <id> --package <java.pkg> [--kind music|reskin|object|character|zone|scene|standalone|tweak]");
         output.println("       ggfmod convert art [--playable] --image <png> --sheet <yaml> --out <ggfs|ggfp>");
         output.println("       ggfmod convert level --from-export <dir> --out <dir>");
         output.println("       ggfmod convert level --from-tmx <map.tmx> --palette <GPAL>"

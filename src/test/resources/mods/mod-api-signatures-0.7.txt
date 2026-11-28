@@ -12841,6 +12841,7 @@ METHOD com.openggf.mods.code.ModContext public  void registerStartupScene(com.op
 METHOD com.openggf.mods.code.ModContext public  void registerTitleEntry(java.lang.String,com.openggf.mods.scene.ModSceneFactory)
 METHOD com.openggf.mods.code.ModContext public  void registerZone(com.openggf.mods.code.ModZoneContribution)
 METHOD com.openggf.mods.code.ModContext public  void requireDisplayWidth(int)
+METHOD com.openggf.mods.code.ModContext public  void transformPhysics(java.util.function.Predicate<java.lang.String>,java.util.function.Function<com.openggf.game.PhysicsProfile,com.openggf.game.PhysicsProfile>)
 METHOD com.openggf.mods.code.ModContext public <T> void registerService(java.lang.String,java.lang.Class<T>,T)
 METHOD com.openggf.mods.code.ModContext public,synchronized  com.openggf.mods.ModStorage storage()
 METHOD com.openggf.mods.code.ModHudProfileContribution public  com.openggf.game.ZoneKey destination()

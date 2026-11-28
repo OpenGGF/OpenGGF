@@ -5,6 +5,7 @@ import com.fasterxml.jackson.core.StreamReadConstraints;
 import com.fasterxml.jackson.core.StreamReadFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.openggf.io.ModInputLimits;
 import com.openggf.game.ModKeySyntax;
@@ -76,6 +77,32 @@ public final class ModManifestParser {
     }
 
     public ModManifest parse(byte[] yamlBytes) throws ModManifestException {
+        try {
+            return toManifest(readRoot(yamlBytes));
+        } catch (IllegalArgumentException ex) {
+            throw new ModManifestException("Invalid mod manifest: " + ex.getMessage(), ex);
+        }
+    }
+
+    /** Completes a source manifest for packaging or an explicit SDK development run. */
+    byte[] completeEntrypoint(byte[] yamlBytes, boolean containsClasses,
+                              java.util.function.Supplier<String> infer) throws ModManifestException {
+        var root = readRoot(yamlBytes);
+        requireOnlyFields(root, ROOT_FIELDS, "manifest");
+        if (root.has("entrypoint") || (!containsClasses
+                && !"any".equals(optionalText(root, "baseGame"))
+                && parseType(requiredText(root, "type")) != ModType.STANDALONE)) {
+            return yamlBytes;
+        }
+        root.put("entrypoint", infer.get());
+        try {
+            return mapper.writeValueAsBytes(root);
+        } catch (java.io.IOException failure) {
+            throw new ModManifestException("Unable to serialize inferred mod manifest", failure);
+        }
+    }
+
+    private ObjectNode readRoot(byte[] yamlBytes) throws ModManifestException {
         Objects.requireNonNull(yamlBytes, "yamlBytes");
         if (yamlBytes.length > limits.maxMetadataBytes()) {
             throw new ModManifestException("Manifest exceeds metadata byte limit");
@@ -94,7 +121,7 @@ public final class ModManifestParser {
                 throw new ModManifestException("Manifest root must be a mapping");
             }
             validateTreeLimits(root);
-            return toManifest(root);
+            return (ObjectNode) root;
         } catch (ModManifestException ex) {
             throw ex;
         } catch (IllegalArgumentException | CharacterCodingException ex) {
@@ -106,22 +133,26 @@ public final class ModManifestParser {
 
     private ModManifest toManifest(JsonNode root) throws ModManifestException {
         requireOnlyFields(root, ROOT_FIELDS, "manifest");
-        int formatVersion = requiredInt(root, "formatVersion");
-        if (formatVersion != 1) {
+        int formatVersion = root.has("formatVersion") ? requiredInt(root, "formatVersion")
+                : ModManifest.CURRENT_FORMAT_VERSION;
+        if (formatVersion != ModManifest.CURRENT_FORMAT_VERSION) {
             throw new ModManifestException("Unsupported manifest formatVersion: " + formatVersion);
         }
         String id = ModKeySyntax.requireManifestId(requiredText(root, "id"));
         String name = requiredNonblankText(root, "name");
         SemanticVersion version = SemanticVersion.parse(requiredText(root, "version"));
-        List<String> authors = parseAuthors(required(root, "authors"));
-        String description = requiredNonblankText(root, "description");
+        List<String> authors = root.has("authors") ? parseAuthors(root.get("authors")) : List.of();
+        String description = root.has("description") ? requiredNonblankText(root, "description") : "";
         VersionRange engineApiRange = VersionRange.parse(requiredText(root, "engineApiRange"));
         ModType type = parseType(requiredText(root, "type"));
         String baseGame = optionalText(root, "baseGame");
         String entrypoint = optionalText(root, "entrypoint");
-        List<ModDependency> dependencies = parseDependencies(required(root, "dependencies"));
-        Map<Integer, String> audioOverrides = parseAudioOverrides(required(root, "audioOverrides"));
-        Map<String, String> artOverrides = parseArtOverrides(required(root, "artOverrides"));
+        List<ModDependency> dependencies = root.has("dependencies")
+                ? parseDependencies(root.get("dependencies")) : List.of();
+        Map<Integer, String> audioOverrides = root.has("audioOverrides")
+                ? parseAudioOverrides(root.get("audioOverrides")) : Map.of();
+        Map<String, String> artOverrides = root.has("artOverrides")
+                ? parseArtOverrides(root.get("artOverrides")) : Map.of();
         String insertAfter = optionalText(root, "insertAfter");
         OptionalInt patternWindows = parsePatternWindows(root);
         return new ModManifest(formatVersion, id, name, version, authors, description,
@@ -147,8 +178,8 @@ public final class ModManifestParser {
     }
 
     private List<String> parseAuthors(JsonNode node) throws ModManifestException {
-        if (!node.isArray() || node.size() < 1 || node.size() > 32) {
-            throw new ModManifestException("authors must contain 1 through 32 entries");
+        if (!node.isArray() || node.size() > 32) {
+            throw new ModManifestException("authors must be a sequence of up to 32 entries");
         }
         List<String> authors = new ArrayList<>(node.size());
         for (JsonNode author : node) {
