@@ -487,10 +487,10 @@ under the matching area heading; see the
   the original 320-pixel screen and draws the extra width as scenery, so every screen
   size plays exactly the same game. That makes widescreen fair for time attack, races
   and shared replays. Objects in the extra width that the original game has not woken
-  up yet are drawn where they start, in greyscale by default
-  (`display.widescreenDormantStyle`: `GREYSCALE`, `NORMAL` or `HIDDEN`). Objects that
-  animate in place play their animation there; anything that moves is drawn still. They
-  come to life when the original screen reaches them. When it leaves them, an object
+  up yet are drawn where they start. Dormant objects and rings use normal colours
+  by default. Set `display.widescreenDormantStyle` to `GREYSCALE` or `HIDDEN` to change
+  their appearance. Objects that animate in place play their animation there, while
+  moving objects are drawn still. They come to life when the original screen reaches them. When it leaves them, an object
   that was standing still keeps the look it had, and one that moved goes back to where
   it starts, unless it was destroyed for good. Rings waiting in the extra width spin in
   step with the live rings, so a ring never jumps when it wakes up, and rings you have

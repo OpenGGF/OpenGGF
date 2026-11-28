@@ -82,7 +82,7 @@ public final class GameplayCaptureSession implements AutoCloseable {
         config.setSessionOverride(SonicConfiguration.WIDESCREEN_DRAW_MODE,
                 settings.drawMode() == null ? "EDGE" : settings.drawMode());
         config.setSessionOverride(SonicConfiguration.WIDESCREEN_DORMANT_STYLE,
-                settings.dormantStyle() == null ? "GREYSCALE" : settings.dormantStyle());
+                settings.dormantStyle() == null ? "NORMAL" : settings.dormantStyle());
         config.setSessionOverride(SonicConfiguration.DISPLAY_WINDOW_AUTOSIZE, false);
         config.setSessionOverride(SonicConfiguration.SCREEN_WIDTH, settings.width());
         config.setSessionOverride(SonicConfiguration.SCREEN_HEIGHT, HEIGHT);
@@ -1007,7 +1007,7 @@ public final class GameplayCaptureSession implements AutoCloseable {
                         boolean endOfLevel) {
             this(width, mainCharacter, sidekickCharacter, donor, donorRom, startX, startY, emeraldStates,
                     showTitleCard, completeSpecialStage, vIntRunCount, cameraXSub, starPost, rings, reverseGravity,
-                    endOfLevel, "EDGE", "GREYSCALE");
+                    endOfLevel, "EDGE", "NORMAL");
         }
 
         public Settings(int width, String mainCharacter, String sidekickCharacter, String donor,

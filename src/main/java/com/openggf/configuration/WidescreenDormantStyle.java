@@ -11,13 +11,13 @@ public enum WidescreenDormantStyle {
     /** Terrain only; dormant objects are not drawn. */
     HIDDEN;
 
-    /** Parses a value case-insensitively; unknown or blank values select {@link #GREYSCALE}. */
+    /** Parses a value case-insensitively; missing, blank or unknown values select {@link #NORMAL}. */
     public static WidescreenDormantStyle parse(String value) {
-        if (value == null || value.isBlank()) return GREYSCALE;
+        if (value == null || value.isBlank()) return NORMAL;
         try {
             return valueOf(value.trim().toUpperCase(Locale.ROOT));
         } catch (IllegalArgumentException unknown) {
-            return GREYSCALE;
+            return NORMAL;
         }
     }
 }

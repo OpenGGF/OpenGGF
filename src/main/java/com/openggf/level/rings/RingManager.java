@@ -794,7 +794,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
     private static com.openggf.configuration.WidescreenDormantStyle dormantStyle(Camera camera) {
         if (camera == null || !com.openggf.camera.CameraPresentationAccess.hasMargin(camera)) return null;
         var config = GameServices.configuration();
-        var style = config == null ? com.openggf.configuration.WidescreenDormantStyle.GREYSCALE
+        var style = config == null ? com.openggf.configuration.WidescreenDormantStyle.NORMAL
                 : com.openggf.configuration.WidescreenDormantStyle.parse(
                         config.getString(com.openggf.configuration.SonicConfiguration.WIDESCREEN_DORMANT_STYLE));
         return style == com.openggf.configuration.WidescreenDormantStyle.HIDDEN ? null : style;

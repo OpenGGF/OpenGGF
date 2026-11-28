@@ -104,7 +104,7 @@ final class DormantObjectLayer {
 
     private WidescreenDormantStyle style() {
         var config = manager.objectServices == null ? null : manager.objectServices.configuration();
-        return config == null ? WidescreenDormantStyle.GREYSCALE
+        return config == null ? WidescreenDormantStyle.NORMAL
                 : WidescreenDormantStyle.parse(config.getString(SonicConfiguration.WIDESCREEN_DORMANT_STYLE));
     }
 

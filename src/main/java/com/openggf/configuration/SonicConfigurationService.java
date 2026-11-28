@@ -752,7 +752,7 @@ public class SonicConfigurationService {
 		putDefault(SonicConfiguration.DISPLAY_ASPECT, "NATIVE_4_3");
 		putDefault(SonicConfiguration.WIDESCREEN_DEADZONE_MODE, "PROPORTIONAL");
 		putDefault(SonicConfiguration.WIDESCREEN_DRAW_MODE, "EDGE");
-		putDefault(SonicConfiguration.WIDESCREEN_DORMANT_STYLE, "GREYSCALE");
+		putDefault(SonicConfiguration.WIDESCREEN_DORMANT_STYLE, "NORMAL");
 		putDefault(SonicConfiguration.DISPLAY_HUD_ANCHOR, "DEFAULT");
 		putDefault(SonicConfiguration.DISPLAY_HUD_TIME_HUNDREDTHS, false);
 		putDefault(SonicConfiguration.DISPLAY_SPRITE_SCANLINE_LIMIT, false);
