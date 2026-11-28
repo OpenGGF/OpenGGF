@@ -1285,7 +1285,8 @@ public final class LevelRenderer {
         var base = currentScrollPresentation != null ? currentScrollPresentation
                 : LevelScrollPresentation.capture(lm, currentAdvancedRenderFrameState);
         var sampled = boundsMask.sample();
-        currentScrollPresentation = base.insetForPresentation(inset, CameraPresentationAccess.width(lm.camera),
+        currentScrollPresentation = base.insetForPresentation(inset, CameraPresentationAccess.centredInset(lm.camera),
+                lm.camera.getWidth(), CameraPresentationAccess.width(lm.camera),
                 sampled != null ? sampled : LevelScrollPresentation.captureArenaMask(lm));
     }
 
@@ -1912,7 +1913,7 @@ public final class LevelRenderer {
         boolean mgzStateEightPerLineTilemap;
         if (cinematicBackground == null) {
             mgzStateEightPerLineTilemap = lm.applyBackgroundTilemapWindowSelection(bgCameraX);
-            lm.ensureBackgroundTilemapData();
+            lm.ensureBackgroundTilemapData(bgCameraX);
         } else {
             mgzStateEightPerLineTilemap = LevelCinematicBackground.prepare(lm, backgroundTiles, currentScrollPresentation);
         }
@@ -2042,7 +2043,7 @@ public final class LevelRenderer {
         // Compute screen-space waterline for BG parallax shimmer
         float bgWaterlineScreenY = (float) (waterLevelWorldY - presentationCameraY());
 
-        if (cinematicBackground == null) lm.ensureBackgroundTilemapData();
+        if (cinematicBackground == null) lm.ensureBackgroundTilemapData(bgCameraX);
         pendingBgTilePassRenderWidth = renderWidth;
         pendingBgTilePassRenderHeight = renderHeight;
         pendingBgTilePassHasWater = hasWater && !suppressUnderwaterPalette;

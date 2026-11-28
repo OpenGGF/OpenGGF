@@ -63,9 +63,11 @@ public class CPZPylonObjectInstance extends AbstractObjectInstance implements Re
 
     @Override
     public int getX() {
+        return screenX(services().camera().getX());
+    }
+
+    private static int screenX(int cameraX) {
         // X position uses parallax: -3 * (cameraX & 0x3FF) / 4
-        Camera camera = services().camera();
-        int cameraX = camera.getX();
         int masked = cameraX & CAMERA_X_MASK;
         // Original: asr.w #1,d1 -> d1/2; move.w d1,d0; asr.w #1,d1 -> d1/4; add.w d1,d0 -> 3/4; neg.w d0
         int x = (masked >> 1) + (masked >> 2);  // 3/4 of masked value
@@ -97,9 +99,7 @@ public class CPZPylonObjectInstance extends AbstractObjectInstance implements Re
     /**
      * Checks if the pylon should be visible based on camera position.
      */
-    private boolean isVisible() {
-        Camera camera = services().camera();
-        int cameraX = camera.getX();
+    private static boolean isVisible(int cameraX) {
         return (cameraX & CAMERA_X_MASK) < VISIBILITY_THRESHOLD;
     }
 
@@ -111,19 +111,21 @@ public class CPZPylonObjectInstance extends AbstractObjectInstance implements Re
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
-        if (!isVisible()) {
+        Camera camera = services().camera();
+        // Parallax from the camera the drawn picture shows (a held widescreen picture's
+        // centre); equals Camera_X_pos otherwise. Draw-only.
+        int cameraX = com.openggf.camera.CameraPresentationAccess.pictureCameraX(camera);
+        if (!isVisible(cameraX)) {
             return;
         }
 
         PatternSpriteRenderer renderer = getRenderer(Sonic2ObjectArtKeys.CPZ_PYLON);
         if (renderer == null) return;
 
-        Camera camera = services().camera();
-        int cameraX = camera.getX();
         int cameraY = camera.getY();
 
         // Calculate screen position using correct parallax formulas
-        int screenX = getX();
+        int screenX = screenX(cameraX);
         int screenY = getY();
 
         // Convert to world position for rendering

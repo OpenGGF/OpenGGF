@@ -437,6 +437,52 @@ final class LevelScrollPresentation {
         return rebase(-inset, 0, width, horizontal.length, mask);
     }
 
+    /**
+     * NATIVE widescreen draw mode with the picture held against a camera bound: the picture
+     * is centred on the native window ({@code centredInset}) except where that would show
+     * world outside the ROM camera bounds, where it holds still ({@code inset} absorbs the
+     * native camera's movement). Shifting the ROM's background words by that varying inset
+     * would scroll the background behind a stationary foreground, so the background is
+     * resampled from the frozen phase at the native camera the held picture is centred on.
+     * The foreground keeps its native words. Without a phase the native words are kept.
+     */
+    LevelScrollPresentation insetForPresentation(int inset, int centredInset, int nativeWidth,
+                                                 int width, ArenaMaskState mask) {
+        int dx = centredInset - inset;
+        if (dx == 0 || phase == null) return insetForPresentation(inset, width, mask);
+        var held = withBackgroundSampledAt(dx, nativeWidth);
+        return held == null ? insetForPresentation(inset, width, mask)
+                : held.insetForPresentation(centredInset, width, mask);
+    }
+
+    /** Native foreground moved by {@code dx} with the phase's background at that camera. */
+    private LevelScrollPresentation withBackgroundSampledAt(int dx, int nativeWidth) {
+        var output = phase.sample(new com.openggf.level.scroll.ScrollView(
+                registers.cameraX() + dx, registers.cameraY(), nativeWidth, horizontal.length));
+        if (output.horizontal().length != horizontal.length
+                || !sameSize(output.backgroundLines(), backgroundLines)
+                || !sameSize(output.backgroundColumns(), backgroundColumns)) return null;
+        int[] words = new int[horizontal.length];
+        for (int row = 0; row < words.length; row++) {
+            short foreground = (short) ((short) (horizontal[row] >>> 16) - dx);
+            words[row] = (foreground << 16) | (output.horizontal()[row] & 0xffff);
+        }
+        var view = new Registers(registers.cameraX() + dx, registers.cameraY(),
+                registers.cameraXWithShake() + dx, registers.foregroundY(), registers.backgroundY(),
+                output.backgroundX(),
+                // Handlers size the period for the display width; a native-width sample must not narrow it.
+                Math.max(output.backgroundPeriod(), registers.backgroundPeriod()), registers.heatHaze(),
+                registers.perLineForeground(), registers.reversePlanes(), registers.overrideForegroundY(),
+                registers.overriddenForegroundY(), registers.overrideBackgroundY(),
+                registers.overriddenBackgroundY(), registers.arenaMask());
+        return new LevelScrollPresentation(view, words, output.backgroundLines(), output.backgroundColumns(),
+                foregroundColumns, overrideColumns, phase, columnPhaseX, output.tilemapMode(),
+                columnProjection, columnsRemap,
+                // Background-linked sprites (FBZ clouds) are placed by the same sample.
+                output.spritePositions().isEmpty() ? spritePositions : output.spritePositions(),
+                backgroundBuild);
+    }
+
     private LevelScrollPresentation rebase(int left, int top, int width, int height, ArenaMaskState mask) {
         int[] words = new int[height];
         for (int row = 0; row < height; row++) {

@@ -182,7 +182,7 @@ public final class SszRoamingCloudObjectInstance extends AbstractObjectInstance
             return;
         }
         var camera = services().camera();
-        int cameraX = (short) camera.getXCopy();
+        worldX = horizontalWorldX((short) camera.getXCopy(), camera.getX());
         int cameraY = (short) camera.getYCopy();
         SszZoneRuntimeState state =
                 S3kRuntimeStates.currentSsz(services().zoneRuntimeRegistry()).orElse(null);
@@ -194,15 +194,17 @@ public final class SszRoamingCloudObjectInstance extends AbstractObjectInstance
         reference = (short) (reference + (reference >> 2));
         int oscillatorTerm = (short) (oscillator + (oscillator >> 2));
         reference = (short) (reference + (oscillatorTerm >> 1) + shake);
-        // d1 = camX * 5/4
-        int horizontal = (short) (cameraX + (cameraX >> 2));
-
         int screenY = (((oscillatingY - reference) & SCREEN_Y_MASK) + SCREEN_Y_BIAS);
-        int screenX = ((((xFixed >> 16) - horizontal) & SCREEN_X_MASK) + SCREEN_X_BIAS);
-
-        worldX = (camera.getX() + screenX - SPRITE_ORIGIN) & 0xFFFF;
         worldY = (camera.getY() + screenY - SPRITE_ORIGIN) & 0xFFFF;
         updateDynamicSpawn(worldX, worldY);
+    }
+
+    /** {@code sub_5758A}'s X: screen X from {@code cameraXCopy}, placed against {@code cameraX}. */
+    private int horizontalWorldX(int cameraXCopy, int cameraX) {
+        // d1 = camX * 5/4
+        int horizontal = (short) (cameraXCopy + (cameraXCopy >> 2));
+        int screenX = ((((xFixed >> 16) - horizontal) & SCREEN_X_MASK) + SCREEN_X_BIAS);
+        return (cameraX + screenX - SPRITE_ORIGIN) & 0xFFFF;
     }
 
     /** {@code Screen_shake_offset} as {@code sub_5758A} reads it. */
@@ -226,7 +228,13 @@ public final class SszRoamingCloudObjectInstance extends AbstractObjectInstance
         resolveScreenPosition();
         PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.SSZ_ROAMING_CLOUD);
         if (renderer != null && renderer.isReady()) {
-            renderer.drawFrameIndex(mappingFrame, worldX, worldY, false, false);
+            // Draw-only: a held widescreen picture places the cloud from the camera it is
+            // centred on, so it holds still with the background. worldX keeps the ROM value.
+            var camera = services().camera();
+            int held = com.openggf.camera.CameraPresentationAccess.pictureCameraX(camera) - camera.getX();
+            int drawX = held == 0 ? worldX
+                    : horizontalWorldX((short) (camera.getXCopy() + held), camera.getX() + held);
+            renderer.drawFrameIndex(mappingFrame, drawX, worldY, false, false);
         }
     }
 

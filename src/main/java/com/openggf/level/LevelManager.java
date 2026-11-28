@@ -2123,13 +2123,24 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
 
 
     void ensureBackgroundTilemapData() {
+        ensureBackgroundTilemapData(parallaxManager != null ? parallaxManager.getBgCameraX() : Integer.MIN_VALUE);
+    }
+
+    /**
+     * {@code windowBgCameraX} selects the wrapped static window. The renderer passes its
+     * displayed scroll generation's value, which in NATIVE widescreen starts at the picture's
+     * left margin rather than the native window; reselecting from the native value here would
+     * wrap that margin onto background a period further along. The persistent 64x32 ring
+     * still follows the native background camera.
+     */
+    void ensureBackgroundTilemapData(int windowBgCameraX) {
         if (tilemapManager != null) {
             int bgCameraX = parallaxManager != null ? parallaxManager.getBgCameraX() : Integer.MIN_VALUE;
             int bgCameraY = parallaxManager != null ? parallaxManager.getVscrollFactorBG() : 0;
             BgTilemapUpdateMode updateMode = parallaxManager != null
                     ? parallaxManager.getBgTilemapUpdateMode()
                     : BgTilemapUpdateMode.STATIC_WINDOW;
-            applyBackgroundTilemapWindowSelection(bgCameraX);
+            applyBackgroundTilemapWindowSelection(windowBgCameraX);
             if (updateMode == BgTilemapUpdateMode.PERSISTENT_NAMETABLE_64X32) {
                 tilemapManager.ensureBackgroundTilemapData(this::getBlockAtPosition,
                         zoneFeatureProvider, currentZone, parallaxManager,

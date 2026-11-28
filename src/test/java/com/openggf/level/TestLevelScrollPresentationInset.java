@@ -54,4 +54,51 @@ class TestLevelScrollPresentationInset {
         assertEquals(0, inset.columnPhaseX());
         assertEquals(25, inset.backgroundColumns().length);
     }
+
+    /** A quarter-speed background whose frozen phase can be resampled at another camera X. */
+    private static LevelScrollPresentation quarterSpeedRaster(int cameraX) throws ReflectiveOperationException {
+        int[] words = new int[224];
+        java.util.Arrays.fill(words, ((short) -cameraX << 16) | ((short) -(cameraX >> 2) & 0xFFFF));
+        var registers = new LevelScrollPresentation.Registers(cameraX, 0, cameraX, (short) 0, (short) 0,
+                Integer.MIN_VALUE, 512, false, false, false, false, (short) 0, false, (short) 0,
+                new ArenaMaskState(0, 320, 0));
+        var raster = new LevelScrollPresentation(registers, words, null, null, null, null);
+        var field = LevelScrollPresentation.class.getDeclaredField("phase");
+        field.setAccessible(true);
+        field.set(raster, (com.openggf.level.scroll.ScrollProjectionPhase) view -> {
+            int[] sampled = new int[view.height()];
+            java.util.Arrays.fill(sampled, ((short) -view.cameraX() << 16) | ((short) -(view.cameraX() >> 2) & 0xFFFF));
+            return new com.openggf.level.scroll.ScrollProjection(sampled, null, null, null, (short) 0, (short) 0,
+                    Integer.MIN_VALUE, 512, 0, 0, com.openggf.level.scroll.BgTilemapUpdateMode.STATIC_WINDOW);
+        });
+        return raster;
+    }
+
+    @Test
+    void aPictureHeldAtTheLevelStartHoldsItsBackgroundToo() throws ReflectiveOperationException {
+        // 400-pixel picture, centred inset 40. Camera.getPresentationInset holds the picture
+        // at minX 0 while the native camera moves 0..40, so the inset equals the camera X.
+        int[] held = null;
+        for (int cameraX = 0; cameraX <= 40; cameraX++) {
+            var picture = quarterSpeedRaster(cameraX).insetForPresentation(cameraX, 40, 320, 400,
+                    new ArenaMaskState(0, 400, 0));
+            int[] words = picture.horizontal();
+            assertEquals(0, (short) (words[0] >>> 16), "FG stays at the level start, camera " + cameraX);
+            assertEquals(0, picture.registers().cameraX());
+            if (held == null) held = words;
+            assertArrayEquals(held, words, "BG must not scroll behind a held FG, camera " + cameraX);
+        }
+        // Once centred, the background resumes at its own rate from the same place.
+        var centred = quarterSpeedRaster(44).insetForPresentation(40, 40, 320, 400, new ArenaMaskState(0, 400, 0));
+        assertEquals(-4, (short) (centred.horizontal()[0] >>> 16));
+        assertEquals((short) (-(44 >> 2) + 40), (short) centred.horizontal()[0]);
+        assertEquals((short) (-(40 >> 2) + 40), (short) held[0]);
+    }
+
+    @Test
+    void withoutAPhaseTheNativeWordsAreShiftedAsBefore() {
+        var plain = nativeRaster().insetForPresentation(20, 40, 320, 400, new ArenaMaskState(0, 400, 0));
+        assertArrayEquals(nativeRaster().insetForPresentation(20, 400, new ArenaMaskState(0, 400, 0)).horizontal(),
+                plain.horizontal());
+    }
 }

@@ -466,7 +466,10 @@ public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
         boolean directed = level != null && level.gameModule != null
                 && level.gameModule.getGameService(
                         com.openggf.level.scroll.DirectedScrollPresentation.class) != null;
-        if (!directed && (!motionCaptureEnabled
+        // A NATIVE widescreen picture held at a camera bound resamples the background
+        // from this phase (LevelScrollPresentation.insetForPresentation).
+        boolean heldPicture = camera != null && com.openggf.camera.CameraPresentationAccess.hasMargin(camera);
+        if (!directed && (!(motionCaptureEnabled || heldPicture)
                 || !(handler instanceof com.openggf.level.scroll.ScrollProjectionSource))) {
             projectionPhase = null;
             backgroundBuild = null;

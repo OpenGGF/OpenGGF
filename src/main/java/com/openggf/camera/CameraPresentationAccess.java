@@ -19,6 +19,23 @@ public final class CameraPresentationAccess {
     /** Picture pixels left of the simulation window. */
     public static int inset(Camera camera) { return camera.getPresentationInset(); }
 
+    /** {@link #inset} when the picture is centred on the window, before any bound holds it. */
+    public static int centredInset(Camera camera) {
+        return Math.max(0, camera.getPresentationWidth() - camera.getWidth()) / 2;
+    }
+
+    /**
+     * Draw-only camera X for sprites the ROM places on screen at a parallax rate from
+     * {@code Camera_X_pos}. It equals {@link Camera#getX()} except while a NATIVE widescreen
+     * picture is held at a camera bound ({@link #inset} differs from {@link #centredInset});
+     * then it is the native camera the held picture is centred on, which is also the camera
+     * the background is resampled at, so such a sprite holds still with the background
+     * instead of sliding over a still foreground. Never use it for gameplay or culling.
+     */
+    public static int pictureCameraX(Camera camera) {
+        return camera.getX() + centredInset(camera) - inset(camera);
+    }
+
     /** Left edge of the drawn picture, including shake; the camera's own without a margin. */
     public static short leftWithShake(Camera camera) {
         return camera.hasPresentationMargin() ? camera.getPresentationXWithShake() : camera.getXWithShake();

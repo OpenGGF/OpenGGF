@@ -161,6 +161,7 @@ no discrepancy entry was added or reclassified by the cutover.
 57. [S2 Headless Oracle Capture Starts Mid-Run (Driver Variables Outside The Music Load's Clear)](#s2-headless-oracle-capture-starts-mid-run-driver-variables-outside-the-music-loads-clear) — Other
 58. [Audio Harness Startup and Compatibility Fade Boundaries](#audio-harness-startup-and-compatibility-fade-boundaries) — Other
 59. [Sonic CD dust SFX reads the Sega CD boot ROM through the Z80 bank window](#sonic-cd-dust-sfx-reads-the-sega-cd-boot-rom-through-the-z80-bank-window) — Hardware limit
+60. [Held NATIVE Widescreen Picture Draws the Background From Its Centred Camera](#held-native-widescreen-picture-draws-the-background-from-its-centred-camera) — Engine feature
 
 ---
 
@@ -3383,6 +3384,31 @@ pieces. Reserved attracted rings submit at their actual object-slot phase, and
 ring visibility is filtered after admission. Explicit native FIFO entries precede
 the existing legacy SST suffix; this mixed bridge does not establish every
 object's native DisplaySprite topology. See the [design and source evidence](../architecture/designs/2026-10-22-native-sprite-scanline-budgets.md).
+
+## Held NATIVE Widescreen Picture Draws the Background From Its Centred Camera
+
+**Kind:** Engine feature
+
+Only `display.widescreenDrawMode: NATIVE` at a display wider than 320 pixels is
+affected. At 4:3 (320 pixels) and in `EDGE` mode nothing changes.
+
+The wider picture slides to stay inside the camera's bounds, so at the start and
+end of an act, and in a narrow arena, it holds still while the original 320-pixel
+screen moves inside it. While it is held, the background, and sprites that the
+original places at a background speed (Sonic 1 and Chemical Plant pylons, Angel
+Island foreground plants, Flying Battery and Sky Sanctuary clouds), are drawn for
+the camera the held picture is centred on, not the original camera. They hold
+still with the picture. Following the original camera would scroll them behind a
+still foreground. For example, at the start of Chemical Plant the background
+behind the original screen sits about 40 pixels of camera further along than at
+4:3, the centred inset of a 16:9 picture. It matches the original again once the
+picture is centred.
+
+This is presentation only. The background is resampled from the scroll handler's
+frozen phase, which never advances a handler or writes gameplay state, and the
+sprites read the centred camera only when drawing. Captures of act 1 of every
+Sonic 1, Sonic 2 and Sonic 3 & Knuckles zone kept `state.csv` identical with and
+without it. See D19 in the [NATIVE draw-mode design](../architecture/designs/2026-11-13-widescreen-native-draw-mode.md#decision-log).
 
 ## Sonic CD dust SFX reads the Sega CD boot ROM through the Z80 bank window
 

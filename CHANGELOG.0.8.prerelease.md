@@ -498,7 +498,14 @@ under the matching area heading; see the
   cards and results screens time their exits from the game's own screen rather than the
   picture, and results screens and title, level select and save menus sit centred in the
   wider picture instead of one margin's width to the right. The HUD stays fully visible when the wider picture slides to frame
-  a locked boss arena. A wider picture never delays the next act or the enemies' art. That also
+  a locked boss arena. Where the wider picture holds still against the level's edge (the
+  start and end of an act, or a narrow arena) while the original screen moves inside it,
+  the background and background-speed objects (Sonic 1 and Chemical Plant pylons, Angel
+  Island foreground plants, Flying Battery and Sky Sanctuary clouds) hold still with it
+  instead of scrolling behind a still foreground, and resume from the same place when the
+  picture starts to move. The background in the side margins is the right scenery: Green
+  Hill's mountains and bushes no longer swap for scenery further along the level at the
+  left edge. A wider picture never delays the next act or the enemies' art. That also
   lets recorded Sonic 3 & Knuckles runs be filmed wider than 320: Hydrocity and Marble
   Garden used to stop with a full KosM queue. Tests run Sonic 1, Sonic 2 and Sonic 3 &
   Knuckles at 32:9 and 4:3 with the same input and check that the game state matches on every
