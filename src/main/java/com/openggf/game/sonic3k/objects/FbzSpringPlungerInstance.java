@@ -23,6 +23,11 @@ public final class FbzSpringPlungerInstance extends AbstractObjectInstance
     public FbzSpringPlungerInstance(ObjectSpawn spawn) { super(spawn, "FBZSpringPlunger"); }
 
     @Override public void update(int vIntRunCount, PlayableEntity player) {
+        if (ObjectConstructionContext.isProbeConstruction()) {
+            // The detached pose has no SST dispatch or solid participants.
+            // Its initial mapping is already the unpressed pose.
+            return;
+        }
         // loc_89C86 calls sub_86A3E (SolidObjectFull) and immediately tests the
         // standing bits established by that same call before returning from the
         // object's SST entry (sonic3k.asm:187187-187212). Manual checkpoints

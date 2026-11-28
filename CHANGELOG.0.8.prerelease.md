@@ -505,11 +505,14 @@ under the matching area heading; see the
   instead of scrolling behind a still foreground, and resume from the same place when the
   picture starts to move. The background in the side margins is the right scenery: Green
   Hill's mountains and bushes no longer swap for scenery further along the level at the
-  left edge. A wider picture never delays the next act or the enemies' art. That also
-  lets recorded Sonic 3 & Knuckles runs be filmed wider than 320: Hydrocity and Marble
-  Garden used to stop with a full KosM queue. Tests run Sonic 1, Sonic 2 and Sonic 3 &
-  Knuckles at 32:9 and 4:3 with the same input and check that the game state matches on every
-  frame. The capture tool gained `--draw-mode` and `--dormant-style`; both are pinned so
+  left edge. A wider picture never delays the next act or the enemies' art.
+  Flying Battery Act 1, Lava Reef Act 1 and Sonic CD's Stardust Speedway Act 1
+  now open with dormant objects visible in the margins. Recorded Sonic 3 &
+  Knuckles runs can also be filmed wider than 320 in Hydrocity and Marble
+  Garden, where they used to stop with a full KosM queue. Tests run Sonic 1,
+  Sonic 2 and Sonic 3 & Knuckles at 32:9 and 4:3 with the same input and check
+  that the game state matches on every frame. The capture tool gained
+  `--draw-mode` and `--dormant-style`; both are pinned so
   a personal setting never changes a capture.
 
 - **Walking partners jump back in where there is no floor:** a CPU partner that
