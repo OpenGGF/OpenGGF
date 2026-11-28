@@ -449,6 +449,18 @@
   "@menu.path.back_caps": {
     "description": "OpenGGF host UI: menu.path.back_caps. Translate the complete message; preserve named arguments."
   },
+  "menu.onboarding.split_s3_and_sk_pair": "Split S3 + S&K pair",
+  "@menu.onboarding.split_s3_and_sk_pair": {
+    "description": "OpenGGF host UI: menu.onboarding.split_s3_and_sk_pair. Translate the complete message; preserve named arguments."
+  },
+  "menu.onboarding.kis2_lock_on": "Knuckles in Sonic 2 lock-on",
+  "@menu.onboarding.kis2_lock_on": {
+    "description": "OpenGGF host UI: menu.onboarding.kis2_lock_on. Translate the complete message; preserve named arguments."
+  },
+  "menu.onboarding.sonic_cd": "Sonic CD",
+  "@menu.onboarding.sonic_cd": {
+    "description": "OpenGGF host UI: menu.onboarding.sonic_cd. Translate the complete message; preserve named arguments."
+  },
   "menu.onboarding.games_added": "{count, plural, one {# game added} other {# games added}}",
   "@menu.onboarding.games_added": {
     "description": "OpenGGF host UI: menu.onboarding.games_added. Translate the complete message; preserve named arguments.",
@@ -494,7 +506,7 @@
   "@menu.onboarding.locate_game_caps": {
     "description": "OpenGGF host UI: menu.onboarding.locate_game_caps. Translate the complete message; preserve named arguments."
   },
-  "menu.onboarding.choose_a_rom_file_any_filename": "Choose a ROM file (any filename)",
+  "menu.onboarding.choose_a_rom_file_any_filename": "Choose a cartridge or disc image",
   "@menu.onboarding.choose_a_rom_file_any_filename": {
     "description": "OpenGGF host UI: menu.onboarding.choose_a_rom_file_any_filename. Translate the complete message; preserve named arguments."
   },
@@ -514,7 +526,7 @@
   "@menu.onboarding.choose_a_folder": {
     "description": "OpenGGF host UI: menu.onboarding.choose_a_folder. Translate the complete message; preserve named arguments."
   },
-  "menu.onboarding.choose_a_rom_file": "Choose a ROM file",
+  "menu.onboarding.choose_a_rom_file": "Choose a game file",
   "@menu.onboarding.choose_a_rom_file": {
     "description": "OpenGGF host UI: menu.onboarding.choose_a_rom_file. Translate the complete message; preserve named arguments."
   },
@@ -538,11 +550,11 @@
   "@menu.onboarding.continue": {
     "description": "OpenGGF host UI: menu.onboarding.continue. Translate the complete message; preserve named arguments."
   },
-  "menu.onboarding.play_sonic_1_sonic_2_and_sonic_3_knuckles": "Play Sonic 1, Sonic 2 and Sonic 3 & Knuckles.",
+  "menu.onboarding.play_sonic_1_sonic_2_and_sonic_3_knuckles": "Play Sonic 1, Sonic 2, Sonic 3 & Knuckles and Sonic CD.",
   "@menu.onboarding.play_sonic_1_sonic_2_and_sonic_3_knuckles": {
     "description": "OpenGGF host UI: menu.onboarding.play_sonic_1_sonic_2_and_sonic_3_knuckles. Translate the complete message; preserve named arguments."
   },
-  "menu.onboarding.choose_your_own_mega_drive_genesis_roms": "Choose your own Mega Drive / Genesis ROMs.",
+  "menu.onboarding.choose_your_own_mega_drive_genesis_roms": "Choose your own cartridge or disc images.",
   "@menu.onboarding.choose_your_own_mega_drive_genesis_roms": {
     "description": "OpenGGF host UI: menu.onboarding.choose_your_own_mega_drive_genesis_roms. Translate the complete message; preserve named arguments."
   },
@@ -3918,7 +3930,7 @@
   "@menu.menugameonboarding.scan_cancelled": {
     "description": "Host menu presentation. Scan cancelled Preserve the complete message."
   },
-  "menu.menugameonboarding.choose_one_rom_file": "Choose one ROM file",
+  "menu.menugameonboarding.choose_one_rom_file": "Choose one cartridge or disc image",
   "@menu.menugameonboarding.choose_one_rom_file": {
     "description": "Host menu presentation. Choose one ROM file Preserve the complete message."
   },

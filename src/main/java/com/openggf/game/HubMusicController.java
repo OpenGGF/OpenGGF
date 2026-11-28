@@ -64,6 +64,7 @@ public final class HubMusicController implements AutoCloseable {
                 && config.getBoolean(AUDIO_HUB_MUSIC_ENABLED), config.getInt(AUDIO_HUB_MUSIC_VOLUME), ducked,
                 config.getString(ROMS_DIRECTORY) + "|" + config.getString(SONIC_1_ROM) + "|"
                         + config.getString(SONIC_2_ROM) + "|" + config.getString(SONIC_3K_ROM)
+                        + "|" + config.getString(SONIC_3_ROM) + "|" + config.getString(SONIC_KNUCKLES_ROM)
                         + "|" + config.getBoolean(ROMS_PREFER_COMPOSITE) + "|" + config.getString(SONIC_CD_DISC));
         if (pending.compareAndSet(false, true)) executor.execute(() -> {
             try { if (!closed) present(request); }

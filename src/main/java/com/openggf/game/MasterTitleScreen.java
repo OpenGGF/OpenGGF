@@ -239,6 +239,7 @@ public class MasterTitleScreen {
     private java.util.function.Consumer<Object> catalogLoaded;
     private String catalogLoadingTitle;
     private final Map<GameId, RomPreviewState> hostedPreviews = new EnumMap<>(GameId.class);
+    private MenuLoadTask<Map<GameId, Sequence>> hostedPreviewLoad;
     private final Map<GameEntry, String> previewSources = new EnumMap<>(GameEntry.class);
     /** User-supplied images as last scanned; rebuilt on initialise and after Settings apply. */
     private RomImageCatalogue romCatalogue;
@@ -418,6 +419,7 @@ public class MasterTitleScreen {
         if (hubMusic != null) hubMusic.update(getSelectedGameId(), settingsScreen != null || helpOpen || toolsOpen
                 || romLocator != null || onboarding != null || setupGuide != null || quitPrompt || endPrompt || supportNotice != null
                 || state != State.ACTIVE);
+        finishHostedPreviews();
         advancePreviewAnimationFrame();
         advanceHubAnimation();
         if (resumeZooming) {
@@ -739,7 +741,8 @@ public class MasterTitleScreen {
         // A hub that holds a paused game was opened from play (a direct boot, then the hub): never set up over it.
         if (setupGuideSession != null && !hasSuspendedGame() && setupGuideSession.claimAutomaticOpen(configService))
             openSetupGuide(false);
-        else if (stockAvailability.values().stream().noneMatch(Boolean.TRUE::equals)
+        else if (entries.stream().noneMatch(entry -> (entry instanceof MasterTitleEntry.Stock
+                || entry instanceof MasterTitleEntry.Hosted) && isEntryAvailable(entry))
                 && (setupGuideSession == null || !setupGuideSession.automaticOpenUsed()))
             onboarding = new MenuGameOnboarding(configService);
     }
@@ -2390,23 +2393,49 @@ public class MasterTitleScreen {
 
 
     private void loadHostedPreviews() {
+        if (hostedPreviewLoad != null) {
+            hostedPreviewLoad.cancel();
+            hostedPreviewLoad = null;
+        }
         hostedPreviews.values().forEach(preview -> PngTextureLoader.deleteTexture(preview.textureId));
         hostedPreviews.clear();
         if (renderer == null) return;
-        for (MasterTitleEntry entry : entries) {
-            if (!(entry instanceof MasterTitleEntry.Hosted hosted) || !isEntryAvailable(entry)) continue;
-            try {
-                var decoded = GameModuleRegistry.hostedMedia(hosted.game()).titlePreview(configService);
-                if (decoded.isEmpty()) continue;
-                var preview = new RomPreviewState();
-                preview.sequence = decoded.get();
-                Image image = preview.sequence.imageAt(0);
-                preview.textureId = MasterTitleRomPreview.uploadTexture(image);
-                preview.width = image.width(); preview.height = image.height();
-                hostedPreviews.put(hosted.game(), preview);
-            } catch (IOException failure) {
-                LOGGER.warning("Cannot load hosted title preview: " + failure.getMessage());
+        List<GameId> available = entries.stream().filter(MasterTitleEntry.Hosted.class::isInstance)
+                .map(MasterTitleEntry.Hosted.class::cast).filter(this::isEntryAvailable)
+                .map(MasterTitleEntry.Hosted::game).toList();
+        if (available.isEmpty()) return;
+        hostedPreviewLoad = new MenuLoadTask<>(() -> {
+            Map<GameId, Sequence> sequences = new EnumMap<>(GameId.class);
+            for (GameId game : available) {
+                try {
+                    GameModuleRegistry.hostedMedia(game).titlePreview(configService)
+                            .ifPresent(sequence -> sequences.put(game, sequence));
+                } catch (IOException failure) {
+                    LOGGER.warning("Cannot load hosted title preview: " + failure.getMessage());
+                }
             }
+            return sequences;
+        });
+    }
+
+    private void finishHostedPreviews() {
+        if (hostedPreviewLoad == null || !hostedPreviewLoad.done()) return;
+        try {
+            hostedPreviewLoad.result().forEach((game, sequence) -> {
+                var preview = new RomPreviewState();
+                preview.sequence = sequence;
+                Image image = sequence.imageAt(0);
+                preview.textureId = MasterTitleRomPreview.uploadTexture(image);
+                preview.width = image.width();
+                preview.height = image.height();
+                hostedPreviews.put(game, preview);
+            });
+        } catch (java.util.concurrent.ExecutionException failure) {
+            LOGGER.log(java.util.logging.Level.WARNING, "Cannot load hosted title previews", failure.getCause());
+        } catch (InterruptedException interrupted) {
+            Thread.currentThread().interrupt();
+        } finally {
+            hostedPreviewLoad = null;
         }
     }
 
@@ -3031,6 +3060,10 @@ public class MasterTitleScreen {
         if (settingsScreen != null) settingsScreen.cancelDisplayTrial();
         hubProgress.flush();
         cancelCatalogLoad();
+        if (hostedPreviewLoad != null) {
+            hostedPreviewLoad.cancel();
+            hostedPreviewLoad = null;
+        }
         if (font != null) font.cleanup();
         PngTextureLoader.deleteTexture(bgTextureId);
         PngTextureLoader.deleteTexture(solidWhiteTextureId);

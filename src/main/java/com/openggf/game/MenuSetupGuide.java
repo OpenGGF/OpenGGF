@@ -375,8 +375,8 @@ public final class MenuSetupGuide {
         browser = null;
         reading = selected;
         boolean folder = scanning;
-        discovery = new MenuLoadTask<>(() -> folder ? SetupGuideLibrary.scan(selected, games)
-                : SetupGuideLibrary.locate(selected, games));
+        boolean preferComposite = config.getBoolean(SonicConfiguration.ROMS_PREFER_COMPOSITE);
+        discovery = new MenuLoadTask<>(() -> SetupGuideLibrary.find(selected, folder, games, preferComposite));
     }
 
     void showForTest(Step shown, int focused, SetupGuidePreset chosen) {
@@ -395,7 +395,7 @@ public final class MenuSetupGuide {
             return;
         }
         refreshLibrary();
-        if (!plan.added().isEmpty()) host.libraryChanged();
+        if (!plan.writes().isEmpty()) host.libraryChanged();
         conflicts.clear();
         conflicts.addAll(plan.conflicts());
         boolean anything = !found.findings().isEmpty();
@@ -439,6 +439,17 @@ public final class MenuSetupGuide {
             for (SetupGuideLibrary.Game g : games) {
                 text.add(gameName(g.id()) + ": " + statusLabel(status(g)));
                 library.file(g).ifPresent(p -> text.add(p.toString()));
+                if (findings != null) findings.best(g.id()).filter(SetupGuideLibrary.Finding::usable).ifPresent(found -> {
+                    if (found.paths().size() > 1) {
+                        text.add(UiMessages.text("menu.onboarding.split_s3_and_sk_pair"));
+                        found.paths().forEach(path -> text.add(path.toString()));
+                    }
+                    String tierTwo = found.settings().get(SonicConfiguration.KNUCKLES_IN_SONIC_2_ROM);
+                    if (tierTwo != null) {
+                        text.add(UiMessages.text("menu.onboarding.kis2_lock_on"));
+                        text.add(tierTwo);
+                    }
+                });
                 if (findings != null) findings.findings().stream().filter(f -> f.gameId().equals(g.id()) && !f.usable())
                         .forEach(f -> { text.add(UiMessages.text("crash.field.error") + ": " + f.detail()); text.add(problemFix(f)); });
             }
@@ -703,6 +714,8 @@ public final class MenuSetupGuide {
             if (cd != null && status(cd) == SetupGuideLibrary.Status.FOUND) note = UiMessages.text("menu.setup.games.cd_check_note");
             else if (cd != null && status(cd) == SetupGuideLibrary.Status.MISSING) note = UiMessages.text("menu.setup.games.cd_hint");
         }
+        if (problem == null && findings != null && findings.findings().stream().anyMatch(f -> f.paths().size() > 1))
+            note = UiMessages.text("menu.onboarding.split_s3_and_sk_pair");
         int labelW = MenuChrome.compactWidth(UiMessages.text("crash.field.error")) + 6;
         int diagAll = problem == null ? 0 : tall() ? 1
                 : MenuStyle.wrapPath(problem.detail(), w + 4 - labelW, MenuStyle.COMPACT).size();
@@ -1114,7 +1127,8 @@ public final class MenuSetupGuide {
         int inner = Math.min(width - 24, 296) - 24;
         List<String> body = new ArrayList<>();
         body.add(UiMessages.text("settings.screen.current") + ": " + String.join("\n", MenuStyle.wrapPath(MenuPathBrowser.friendlyPath(conflict.current()), inner - 50, MenuStyle.COMPACT)));
-        body.add(UiMessages.text("menu.setup.games.new_label") + ": " + String.join("\n", MenuStyle.wrapPath(MenuPathBrowser.friendlyPath(conflict.found()), inner - 50, MenuStyle.COMPACT)));
+        body.add(UiMessages.text("menu.setup.games.new_label") + ": " + String.join("\n", conflict.paths().stream().flatMap(path ->
+                MenuStyle.wrapPath(MenuPathBrowser.friendlyPath(path), inner - 50, MenuStyle.COMPACT).stream()).toList()));
         renderChoice(font, UiMessages.text("menu.setup.games.conflict", Map.of("game", gameLabel)), body, null,
                 UiMessages.text("menu.setup.games.keep_current"), UiMessages.text("menu.setup.games.use_new"));
     }

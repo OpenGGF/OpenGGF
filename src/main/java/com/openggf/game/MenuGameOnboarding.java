@@ -1,32 +1,25 @@
 package com.openggf.game;
 
-import com.openggf.i18n.UiMessages;
 import com.openggf.configuration.EngineSettingsDraft;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
 import com.openggf.control.MenuInput;
-import com.openggf.data.PhysicalImage;
-import com.openggf.data.RomGame;
-import com.openggf.data.RomImageClassifier;
+import com.openggf.game.MasterTitleScreen.GameEntry;
 import com.openggf.graphics.PixelFont;
+import com.openggf.i18n.UiMessages;
 
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.FileVisitResult;
-import java.nio.file.SimpleFileVisitor;
-import java.nio.file.attribute.BasicFileAttributes;
-import java.util.EnumSet;
-import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 
 /** First-run game discovery. All reads are cancellable; settings publish only on the UI thread. */
 public final class MenuGameOnboarding {
     private final SonicConfigurationService config;
     private MenuPathBrowser browser;
-    private MenuLoadTask<DiscoveryResult> discovery;
+    private MenuLoadTask<SetupGuideLibrary.DiscoveryResult> discovery;
     private MasterTitlePointer pointer;
     private InputHandler menuInput;
     private int width = 320;
@@ -38,7 +31,8 @@ public final class MenuGameOnboarding {
     private String scanNotice;
     private String pendingPath;
     private MenuDetailsScreen details;
-    private Map<RomGame, Path> found = Map.of();
+    private Map<GameEntry, List<Path>> found = Map.of();
+    private String kis2Path;
     private Path reading;
     private int frame;
 
@@ -64,7 +58,9 @@ public final class MenuGameOnboarding {
                 pendingPath = selected.toString();
                 browser = null;
                 reading = selected;
-                discovery = new MenuLoadTask<>(() -> discover(selected, scanning));
+                boolean folder = scanning;
+                boolean preferComposite = config.getBoolean(SonicConfiguration.ROMS_PREFER_COMPOSITE);
+                discovery = new MenuLoadTask<>(() -> SetupGuideLibrary.discover(selected, folder, preferComposite));
             }
             return;
         }
@@ -79,18 +75,20 @@ public final class MenuGameOnboarding {
         if (discovery != null) {
             if (!discovery.done()) return;
             try {
-                DiscoveryResult result = discovery.result();
+                var result = discovery.result();
                 found = result.games();
+                kis2Path = result.settings().get(SonicConfiguration.KNUCKLES_IN_SONIC_2_ROM);
                 scanNotice = result.notice();
                 if (found.isEmpty()) message = scanning ? UiMessages.text("menu.onboarding.no_supported_games_found") : UiMessages.text("menu.onboarding.not_a_supported_rom_image");
                 else {
                     EngineSettingsDraft draft = new EngineSettingsDraft(config);
-                    for (var entry : found.entrySet()) draft.set(entry.getKey().configurationKey(), entry.getValue().toString());
-                    Path first = found.values().iterator().next();
-                    draft.set(SonicConfiguration.ROMS_DIRECTORY, first.getParent().toString());
+                    result.settings().forEach(draft::set);
+                    Path location = reading.toAbsolutePath().normalize();
+                    draft.set(SonicConfiguration.ROMS_DIRECTORY, (scanning ? location : location.getParent()).toString());
                     try { draft.apply(); }
                     catch (IOException | IllegalArgumentException e) {
                         found = Map.of();
+                        kis2Path = null;
                         message = UiMessages.text("menu.onboarding.could_not_save_check_settings_file_access");
                         discovery = null;
                         return;
@@ -98,8 +96,15 @@ public final class MenuGameOnboarding {
                     message = UiMessages.text("menu.onboarding.games_added", java.util.Map.of("count", found.size()));
                     MenuFeedback.emit(MenuFeedback.Cue.CONFIRM);
                 }
-            } catch (Exception e) { found = Map.of(); scanNotice = UiMessages.text("menu.onboarding.check_access_or_choose_another_location");
-                message = scanning ? UiMessages.text("menu.onboarding.could_not_read_this_folder") : UiMessages.text("menu.onboarding.could_not_read_this_file"); }
+            } catch (ExecutionException failure) {
+                found = Map.of();
+                kis2Path = null;
+                scanNotice = UiMessages.text("menu.onboarding.check_access_or_choose_another_location");
+                message = scanning ? UiMessages.text("menu.onboarding.could_not_read_this_folder")
+                        : UiMessages.text("menu.onboarding.could_not_read_this_file");
+            } catch (InterruptedException interrupted) {
+                Thread.currentThread().interrupt();
+            }
             discovery = null;
             return;
         }
@@ -124,84 +129,6 @@ public final class MenuGameOnboarding {
             scanNotice = null;
             MenuFeedback.emit(MenuFeedback.Cue.CONFIRM);
         }
-    }
-
-    /** Uses the runtime classifier, including logical games within lock-on images; extensions never gate identity. */
-    record DiscoveryResult(Map<RomGame, Path> games, boolean limitReached, boolean unreadable) {
-        DiscoveryResult { games = java.util.Collections.unmodifiableMap(new EnumMap<>(games)); }
-        /**
-         * What the scan could not cover, said only when it matters: once every supported game is
-         * found, nothing the scan skipped can add another, so there is no notice. The scan stops
-         * after 20,000 entries or eight folders deep; unreadable files and folders are skipped.
-         */
-        String notice() {
-            if (games.size() == RomGame.values().length || !limitReached && !unreadable) return null;
-            if (limitReached && unreadable) return "Stopped early, skipped unreadable files; "
-                    + (games.isEmpty() ? "scan their folder" : "scan the rest");
-            if (limitReached) return "Stopped early; " + (games.isEmpty() ? "scan the folder that holds them" : "scan the folder with the rest");
-            return games.isEmpty() ? "Some files could not be read; check access to them"
-                    : "Skipped files that could not be read; check access to them";
-        }
-    }
-
-    static DiscoveryResult discover(Path selection, boolean folder) throws IOException, InterruptedException {
-        return discover(selection, folder, 20000);
-    }
-
-    static DiscoveryResult discover(Path selection, boolean folder, int maxEntries) throws IOException {
-        Map<RomGame, Path> result = new EnumMap<>(RomGame.class);
-        if (!folder) { identify(selection, result); return new DiscoveryResult(result, false, false); }
-        if (!Files.isDirectory(selection)) throw new IOException(UiMessages.text("menu.onboarding.choose_a_folder"));
-        // No directory symlinks. Limits and denied subtrees preserve discoveries already made.
-        boolean[] limited = {false};
-        boolean[] unreadable = {false};
-        Files.walkFileTree(selection, EnumSet.noneOf(java.nio.file.FileVisitOption.class), 8,
-                new SimpleFileVisitor<>() {
-                    private int visited;
-                    private FileVisitResult boundary() throws IOException {
-                        if (Thread.currentThread().isInterrupted()) throw new java.io.InterruptedIOException(UiMessages.text("menu.menugameonboarding.scan_cancelled"));
-                        if (result.size() == RomGame.values().length) return FileVisitResult.TERMINATE;
-                        if (++visited > maxEntries) {
-                            limited[0] = true;
-                            return FileVisitResult.TERMINATE;
-                        }
-                        return FileVisitResult.CONTINUE;
-                    }
-                    @Override public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
-                        return boundary();
-                    }
-                    @Override public FileVisitResult visitFile(Path path, BasicFileAttributes attrs) throws IOException {
-                        FileVisitResult next = boundary();
-                        if (next == FileVisitResult.TERMINATE) return next;
-                        if (attrs.isDirectory()) limited[0] = true; // Maximum walk depth reached.
-                        if (attrs.isRegularFile()) {
-                            try { identify(path, result); }
-                            catch (IOException | SecurityException failure) { unreadable[0] = true; }
-                        }
-                        return result.size() == RomGame.values().length ? FileVisitResult.TERMINATE : FileVisitResult.CONTINUE;
-                    }
-                    @Override public FileVisitResult visitFileFailed(Path file, IOException failure) throws IOException {
-                        if (file.equals(selection)) throw failure;
-                        unreadable[0] = true;
-                        return boundary();
-                    }
-                    @Override public FileVisitResult postVisitDirectory(Path dir, IOException failure) throws IOException {
-                        if (failure != null) {
-                            if (dir.equals(selection) && result.isEmpty()) throw failure;
-                            unreadable[0] = true;
-                        }
-                        return FileVisitResult.CONTINUE;
-                    }
-                });
-        return new DiscoveryResult(result, limited[0], unreadable[0]);
-    }
-
-    private static void identify(Path path, Map<RomGame, Path> result) throws IOException {
-        if (!Files.isRegularFile(path)) throw new IOException(UiMessages.text("menu.onboarding.choose_a_rom_file"));
-        // Probe just sizes and headers, exactly as MenuRomLocator and the runtime catalogue do.
-        PhysicalImage image = PhysicalImage.probe(path);
-        for (RomGame game : RomGame.values()) if (RomImageClassifier.windowOf(image, game.identity()).isPresent())
-            result.putIfAbsent(game, path.toAbsolutePath().normalize());
     }
 
     public boolean completed() { return completed; }
@@ -252,7 +179,8 @@ public final class MenuGameOnboarding {
         if (!found.isEmpty()) {
             // Heading, 7 clear, the badges' rows, (6 clear, notice), 9 clear to Continue's frame.
             int listY = lineHeight() + 7 + 1;
-            int next = listY - 1 + (found.size() - 1) * foundPitch() + 10;
+            int noteRows = (int) found.keySet().stream().filter(game -> mediaNote(game) != null).count();
+            int next = listY - 1 + (found.size() - 1) * foundPitch() + noteRows * paragraphPitch() + 10;
             int noticeY = next + 6;
             if (scanNotice != null) next = noticeY + lineHeight();
             int buttonY = next + 9 + FRAME;
@@ -310,21 +238,28 @@ public final class MenuGameOnboarding {
         } else if (!found.isEmpty()) {
             text(font, message, layout.top(), MenuChrome.GOLD);
             int y = layout.listY();
-            // Found games read as one list: the checks, the badges and the names each share a
-            // column. Every badge is as wide as the widest (S3K), its label centred, so the names
-            // start on one line and the badges read as a set.
+            // Checks, badges and names each share a column. Notes align below the names.
             int badgeColumn = 0, nameWidth = 0;
-            for (RomGame game : found.keySet()) {
-                badgeColumn = Math.max(badgeColumn, MenuChrome.tagWidth(MenuChrome.gameBadgeText(badgeId(game))));
+            for (GameEntry game : found.keySet()) {
+                badgeColumn = Math.max(badgeColumn, MenuChrome.tagWidth(MenuChrome.gameBadgeText(game.gameId)));
                 nameWidth = Math.max(nameWidth, MenuChrome.compactWidth(gameLabel(game)));
+                String note = mediaNote(game);
+                if (note != null) nameWidth = Math.max(nameWidth, MenuChrome.compactWidth(note));
             }
-            int listWidth = MenuChrome.ICON_SIZE + 5 + badgeColumn + 5 + nameWidth;
-            int x = (this.width - listWidth) / 2;
-            for (RomGame game : found.keySet()) {
-                // A found game reads as a confirmed item: check, game badge and its name.
+            int nameOffset = MenuChrome.ICON_SIZE + 5 + badgeColumn + 5;
+            int textPixels = Math.min(nameWidth, this.width - nameOffset - 20);
+            int x = (this.width - nameOffset - textPixels) / 2;
+            for (GameEntry game : found.keySet()) {
                 MenuChrome.icon(font, MenuChrome.Icon.CHECK, x, y, MenuChrome.GREEN);
-                MenuChrome.gameBadge(font, x + MenuChrome.ICON_SIZE + 5, y - 1, badgeId(game), badgeColumn);
-                MenuChrome.compact(font, gameLabel(game), x + MenuChrome.ICON_SIZE + 5 + badgeColumn + 5, y, MenuChrome.TEXT);
+                MenuChrome.gameBadge(font, x + MenuChrome.ICON_SIZE + 5, y - 1, game.gameId, badgeColumn);
+                String label = MenuStyle.pageText(MenuStyle.language(font), gameLabel(game), textPixels, MenuStyle.COMPACT, frame);
+                MenuChrome.compact(font, label, x + nameOffset, y, MenuChrome.TEXT);
+                String note = mediaNote(game);
+                if (note != null) {
+                    y += paragraphPitch();
+                    String shown = MenuStyle.pageText(MenuStyle.language(font), note, textPixels, MenuStyle.COMPACT, frame);
+                    MenuChrome.compact(font, shown, x + nameOffset, y, MenuChrome.MUTED);
+                }
                 y += foundPitch();
             }
             if (scanNotice != null) text(font, scanNotice, layout.noticeY(), MenuChrome.AMBER);
@@ -372,16 +307,33 @@ public final class MenuGameOnboarding {
         text.add(UiMessages.text("menu.onboarding.your_files_stay_where_they_are"));
         if (pendingPath != null) text.add(pendingPath);
         if (message != null) text.add(message);
-        for (var entry : found.entrySet()) { text.add(gameLabel(entry.getKey())); text.add(entry.getValue().toString()); }
+        for (var entry : found.entrySet()) {
+            text.add(gameLabel(entry.getKey()));
+            String note = mediaNote(entry.getKey());
+            if (note != null) text.add(note);
+            for (Path path : entry.getValue()) text.add(path.toString());
+            if (entry.getKey() == GameEntry.SONIC_2 && kis2Path != null) text.add(kis2Path);
+        }
         if (scanNotice != null) text.add(scanNotice);
         if (!found.isEmpty()) text.add(UiMessages.text("menu.onboarding.continue"));
         return String.join("\n", text);
     }
 
-    private static String badgeId(RomGame game) { return game.name().toLowerCase(java.util.Locale.ROOT); }
-    private static String gameLabel(RomGame game) {
-        return switch (game) { case S1 -> UiMessages.text("menu.menugameonboarding.sonic_the_hedgehog"); case S2 -> UiMessages.text("menu.menugameonboarding.sonic_the_hedgehog_2"); case S3K -> UiMessages.text("editor.editor_project_workspace.sonic_3_knuckles_138eayj"); };
+    private String mediaNote(GameEntry game) {
+        if (found.get(game).size() > 1) return UiMessages.text("menu.onboarding.split_s3_and_sk_pair");
+        if (game == GameEntry.SONIC_2 && kis2Path != null) return UiMessages.text("menu.onboarding.kis2_lock_on");
+        return null;
     }
+
+    private static String gameLabel(GameEntry game) {
+        return switch (game) {
+            case SONIC_1 -> UiMessages.text("menu.menugameonboarding.sonic_the_hedgehog");
+            case SONIC_2 -> UiMessages.text("menu.menugameonboarding.sonic_the_hedgehog_2");
+            case SONIC_3K -> UiMessages.text("editor.editor_project_workspace.sonic_3_knuckles_138eayj");
+            case SONIC_CD -> UiMessages.text("menu.onboarding.sonic_cd");
+        };
+    }
+
     private void text(PixelFont font, String value, int y, float[] color) {
         text(font, value, y, width - 20, color);
     }

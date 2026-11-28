@@ -3,18 +3,26 @@ package com.openggf.game;
 import com.openggf.configuration.ConfigurationPersistence;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.data.PhysicalImage;
 import com.openggf.data.RomGame;
+import com.openggf.data.RomIdentity;
 import com.openggf.data.RomImageCatalogue;
-import com.openggf.game.internal.HostedGameMedia;
+import com.openggf.data.RomImageClassifier;
+import com.openggf.game.MasterTitleScreen.GameEntry;
 import com.openggf.game.internal.HostedGameMedia.MediaKind;
+import com.openggf.game.internal.HostedGameMedia;
+import com.openggf.i18n.UiMessages;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -38,7 +46,12 @@ public final class SetupGuideLibrary {
     public record Game(String id, SonicConfiguration key, boolean hosted) { }
 
     /** What a scan or a chosen file found for one game: its file, kind and exact English diagnostic. */
-    public record Finding(String gameId, Path file, MediaKind kind, String detail) {
+    public record Finding(String gameId, Path file, MediaKind kind, String detail, List<Path> paths,
+                          Map<SonicConfiguration, String> settings) {
+        Finding(String gameId, Path file, MediaKind kind, String detail) {
+            this(gameId, file, kind, detail, List.of(file), Map.of());
+        }
+
         public boolean usable() { return kind == MediaKind.READY; }
     }
 
@@ -57,7 +70,12 @@ public final class SetupGuideLibrary {
     }
 
     /** A different file found for a game that already works; applied only when the player chooses it. */
-    public record Conflict(Game game, Path current, Path found) { }
+    public record Conflict(Game game, Path current, Path found, List<Path> paths,
+                           Map<SonicConfiguration, String> settings) {
+        public Conflict(Game game, Path current, Path found) {
+            this(game, current, found, List.of(found), Map.of(game.key(), found.toString()));
+        }
+    }
 
     /** The writes adding findings needs, and the conflicts left for the player. */
     public record Plan(Map<SonicConfiguration, Object> writes, List<Game> added, List<Conflict> conflicts) {
@@ -71,9 +89,12 @@ public final class SetupGuideLibrary {
     /** Reads the current library: which games are available now, and through which file. */
     public interface Current {
         boolean available(Game game);
+        default boolean hasTierTwoDump() { return false; }
         /** The file the game currently plays from, if it is one whole file. */
         Optional<Path> file(Game game);
     }
+
+    private static final int MAX_SCAN_ENTRIES = 20_000;
 
     private SetupGuideLibrary() { }
 
@@ -93,6 +114,9 @@ public final class SetupGuideLibrary {
     public static Current current(SonicConfigurationService config) {
         RomImageCatalogue catalogue = RomImageCatalogue.forCurrentWorkingDirectory(config);
         return new Current() {
+            @Override public boolean hasTierTwoDump() {
+                return catalogue.isAvailable(RomIdentity.KIS2_CHIP);
+            }
             @Override public boolean available(Game game) {
                 if (game.hosted()) return hosted(game).map(media -> media.probe(config).available()).orElse(false);
                 return catalogue.isAvailable(RomGame.valueOf(game.id().toUpperCase(java.util.Locale.ROOT)).identity());
@@ -111,24 +135,189 @@ public final class SetupGuideLibrary {
         };
     }
 
-    /** Scans a folder: cartridges with the onboarding walker, hosted media with each game's own probe. */
-    public static Findings scan(Path folder, List<Game> games) throws IOException {
-        var cartridges = MenuGameOnboarding.discover(folder, true, 20000);
-        List<Finding> findings = new ArrayList<>();
-        cartridges.games().forEach((game, path) -> findings.add(
-                new Finding(game.name().toLowerCase(java.util.Locale.ROOT), path, MediaKind.READY, path.toString())));
-        findings.addAll(hostedUnder(folder, games));
-        return new Findings(findings, cartridges.notice());
+    record DiscoveryResult(Map<GameEntry, List<Path>> games, Map<SonicConfiguration, String> settings,
+                           boolean limitReached, boolean unreadable, List<Finding> hostedFindings) {
+        DiscoveryResult(Map<GameEntry, List<Path>> games, Map<SonicConfiguration, String> settings,
+                        boolean limitReached, boolean unreadable) {
+            this(games, settings, limitReached, unreadable, List.of());
+        }
+
+        DiscoveryResult {
+            var ordered = new EnumMap<GameEntry, List<Path>>(GameEntry.class);
+            ordered.putAll(games);
+            games = Collections.unmodifiableMap(ordered);
+            settings = Map.copyOf(settings);
+            hostedFindings = List.copyOf(hostedFindings);
+        }
+
+        /** Report incomplete coverage if the scan could have missed another game. */
+        String notice() {
+            if (games.size() == GameEntry.values().length || !limitReached && !unreadable) return null;
+            if (limitReached && unreadable) return "Stopped early, skipped unreadable files; "
+                    + (games.isEmpty() ? "scan their folder" : "scan the rest");
+            if (limitReached) return "Stopped early; " + (games.isEmpty() ? "scan the folder that holds them" : "scan the folder with the rest");
+            return games.isEmpty() ? "Some files could not be read; check access to them"
+                    : "Skipped files that could not be read; check access to them";
+        }
     }
 
-    /** Identifies one chosen file as a cartridge, else as any hosted game's media. */
+    static DiscoveryResult discover(Path selection, boolean folder) throws IOException {
+        return discover(selection, folder, MAX_SCAN_ENTRIES, false);
+    }
+
+    static DiscoveryResult discover(Path selection, boolean folder, int maxEntries) throws IOException {
+        return discover(selection, folder, maxEntries, false);
+    }
+
+    static DiscoveryResult discover(Path selection, boolean folder, boolean preferComposite) throws IOException {
+        return discover(selection, folder, MAX_SCAN_ENTRIES, preferComposite);
+    }
+
+    private static DiscoveryResult discover(Path selection, boolean folder, int maxEntries, boolean preferComposite)
+            throws IOException {
+        Path source = selection.toAbsolutePath().normalize();
+        List<Path> files = new ArrayList<>();
+        List<PhysicalImage> cartridges = new ArrayList<>();
+        boolean[] limited = {false};
+        boolean[] unreadable = {false};
+        if (!folder) {
+            if (!Files.isRegularFile(source)) throw new IOException(UiMessages.text("menu.onboarding.choose_a_rom_file"));
+            probeFile(source, files, cartridges);
+        } else {
+            if (!Files.isDirectory(source)) throw new IOException(UiMessages.text("menu.onboarding.choose_a_folder"));
+            // Do not follow directory links. Limits and denied subtrees preserve prior discoveries.
+            Files.walkFileTree(source, EnumSet.noneOf(java.nio.file.FileVisitOption.class), 8,
+                    new SimpleFileVisitor<>() {
+                        private int visited;
+
+                        private FileVisitResult boundary() throws IOException {
+                            checkInterrupted();
+                            if (++visited > maxEntries) {
+                                limited[0] = true;
+                                return FileVisitResult.TERMINATE;
+                            }
+                            return FileVisitResult.CONTINUE;
+                        }
+
+                        @Override public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs)
+                                throws IOException {
+                            return boundary();
+                        }
+
+                        @Override public FileVisitResult visitFile(Path path, BasicFileAttributes attrs) throws IOException {
+                            FileVisitResult next = boundary();
+                            if (next == FileVisitResult.TERMINATE) return next;
+                            if (attrs.isDirectory()) limited[0] = true; // Maximum walk depth reached.
+                            if (attrs.isRegularFile()) {
+                                try { probeFile(path, files, cartridges); }
+                                catch (IOException | SecurityException failure) { unreadable[0] = true; }
+                            }
+                            return FileVisitResult.CONTINUE;
+                        }
+
+                        @Override public FileVisitResult visitFileFailed(Path file, IOException failure) throws IOException {
+                            if (file.equals(source)) throw failure;
+                            unreadable[0] = true;
+                            return boundary();
+                        }
+
+                        @Override public FileVisitResult postVisitDirectory(Path dir, IOException failure) throws IOException {
+                            if (failure != null) {
+                                if (dir.equals(source) && files.isEmpty()) throw failure;
+                                unreadable[0] = true;
+                            }
+                            return FileVisitResult.CONTINUE;
+                        }
+                    });
+        }
+
+        var hosted = new ArrayList<Finding>();
+        List<Game> hostedGames = games().stream().filter(Game::hosted).toList();
+        for (Path file : files) {
+            checkInterrupted();
+            hosted.addAll(inspect(file, hostedGames));
+        }
+        var games = new EnumMap<GameEntry, List<Path>>(GameEntry.class);
+        var settings = new EnumMap<SonicConfiguration, String>(SonicConfiguration.class);
+        var catalogue = RomImageCatalogue.forDiscovery(cartridges, preferComposite);
+        for (GameEntry game : GameEntry.values()) {
+            checkInterrupted();
+            GameId id = GameId.fromCode(game.gameId);
+            if (game.cartridge()) {
+                catalogue.resolve(id.romGame().identity()).ifPresent(resolution -> {
+                    List<Path> paths = resolution.parts().stream().map(part -> part.image().path()).distinct().toList();
+                    games.put(game, paths);
+                    if (paths.size() == 1) {
+                        settings.put(game.romConfigKey, paths.getFirst().toString());
+                    } else {
+                        // A split layout uses the catalogue recipe and each part's own path.
+                        settings.put(game.romConfigKey, "");
+                        for (var part : resolution.parts()) {
+                            settings.put(RomImageCatalogue.SUPPLEMENTAL_KEYS.get(part.rom()), part.image().path().toString());
+                        }
+                    }
+                });
+            } else {
+                hosted.stream().filter(Finding::usable).filter(f -> f.gameId().equals(game.gameId)).findFirst()
+                        .map(Finding::file).ifPresent(path -> {
+                    games.put(game, List.of(path));
+                    settings.put(game.romConfigKey, path.toString());
+                });
+            }
+        }
+        // The chip's source is the lock-on dump even when the catalogue prefers composites.
+        catalogue.resolve(RomIdentity.KIS2_CHIP)
+                .ifPresent(chip -> settings.put(SonicConfiguration.KNUCKLES_IN_SONIC_2_ROM,
+                        chip.parts().getFirst().image().path().toString()));
+        checkInterrupted();
+        return new DiscoveryResult(games, settings, limited[0], unreadable[0], hosted);
+    }
+
+    private static void checkInterrupted() throws IOException {
+        if (Thread.currentThread().isInterrupted()) {
+            throw new InterruptedIOException(UiMessages.text("menu.menugameonboarding.scan_cancelled"));
+        }
+    }
+
+    private static void probeFile(Path path, List<Path> files, List<PhysicalImage> cartridges) throws IOException {
+        PhysicalImage image = PhysicalImage.probe(path);
+        if (RomImageClassifier.layoutOf(image).isPresent()) cartridges.add(image);
+        files.add(path);
+    }
+
+    /** Scans a bounded folder tree and keeps hosted-media diagnostics. */
+    public static Findings scan(Path folder, List<Game> games) throws IOException {
+        return find(folder, true, games, false);
+    }
+
     public static Findings locate(Path file, List<Game> games) throws IOException {
-        var cartridges = MenuGameOnboarding.discover(file, false, 20000);
+        return find(file, false, games, false);
+    }
+
+    static Findings find(Path selection, boolean folder, List<Game> games, boolean preferComposite) throws IOException {
+        var result = discover(selection, folder, preferComposite);
         List<Finding> findings = new ArrayList<>();
-        cartridges.games().forEach((game, path) -> findings.add(
-                new Finding(game.name().toLowerCase(java.util.Locale.ROOT), path, MediaKind.READY, path.toString())));
-        if (findings.isEmpty()) findings.addAll(inspect(file.toAbsolutePath().normalize(), games));
-        return new Findings(findings, null);
+        for (Game game : games) {
+            var entry = MasterTitleScreen.GameEntry.fromGameId(game.id());
+            var paths = result.games().get(entry);
+            if (paths == null) continue;
+            Map<SonicConfiguration, String> settings = new LinkedHashMap<>();
+            settings.put(game.key(), result.settings().get(game.key()));
+            if (paths.size() > 1) {
+                for (var key : List.of(SonicConfiguration.SONIC_3_ROM, SonicConfiguration.SONIC_KNUCKLES_ROM))
+                    settings.put(key, result.settings().get(key));
+            }
+            if (game.key() == SonicConfiguration.SONIC_2_ROM) {
+                var key = SonicConfiguration.KNUCKLES_IN_SONIC_2_ROM;
+                if (result.settings().containsKey(key)) settings.put(key, result.settings().get(key));
+            }
+            Path first = paths.getFirst();
+            findings.add(new Finding(game.id(), first, MediaKind.READY, first.toString(), paths, Map.copyOf(settings)));
+        }
+        result.hostedFindings().stream().filter(f -> !f.usable())
+                .filter(f -> games.stream().anyMatch(game -> game.id().equals(f.gameId())))
+                .forEach(findings::add);
+        return new Findings(findings, folder ? result.notice() : null);
     }
 
     /**
@@ -145,13 +334,18 @@ public final class SetupGuideLibrary {
         for (Game game : games) {
             Optional<Finding> found = findings.best(game.id()).filter(Finding::usable);
             if (found.isEmpty()) continue;
-            Path file = found.get().file().toAbsolutePath().normalize();
+            Finding finding = found.get();
+            Path file = finding.file().toAbsolutePath().normalize();
+            var settings = finding.settings().isEmpty() ? Map.of(game.key(), file.toString()) : finding.settings();
+            var tierTwo = SonicConfiguration.KNUCKLES_IN_SONIC_2_ROM;
+            if (settings.containsKey(tierTwo) && !current.hasTierTwoDump()) writes.put(tierTwo, settings.get(tierTwo));
             if (current.available(game)) {
                 Optional<Path> existing = current.file(game);
-                if (existing.isPresent() && !same(existing.get(), file)) conflicts.add(new Conflict(game, existing.get(), file));
+                if (existing.isPresent() && (finding.paths().size() > 1 || !same(existing.get(), file)))
+                    conflicts.add(new Conflict(game, existing.get(), file, finding.paths(), settings));
                 continue;
             }
-            writes.put(game.key(), file.toString());
+            writes.putAll(settings);
             added.add(game);
             if (folder == null && !game.hosted()) folder = file.getParent();
         }
@@ -166,7 +360,7 @@ public final class SetupGuideLibrary {
 
     /** Replaces one game's file after the player chose the new file in the conflict prompt. */
     public static void replace(SonicConfigurationService config, Conflict conflict) throws IOException {
-        ConfigurationPersistence.apply(config, Map.of(conflict.game().key(), conflict.found().toString()));
+        ConfigurationPersistence.apply(config, Map.copyOf(conflict.settings()));
     }
 
     /** A game's status for the guide's list, combining the live library with this visit's findings. */
@@ -180,26 +374,6 @@ public final class SetupGuideLibrary {
             case UNREADABLE -> Status.UNREADABLE;
             case NOT_THIS_GAME -> Status.MISSING;
         }).orElse(Status.MISSING);
-    }
-
-    private static List<Finding> hostedUnder(Path folder, List<Game> games) {
-        List<Finding> found = new ArrayList<>();
-        int[] visited = {0};
-        try {
-            Files.walkFileTree(folder, EnumSet.noneOf(java.nio.file.FileVisitOption.class), 8, new SimpleFileVisitor<>() {
-                @Override public FileVisitResult visitFile(Path path, BasicFileAttributes attrs) {
-                    if (++visited[0] > 20000 || Thread.currentThread().isInterrupted()) return FileVisitResult.TERMINATE;
-                    if (attrs.isRegularFile()) found.addAll(inspect(path.toAbsolutePath().normalize(), games));
-                    return FileVisitResult.CONTINUE;
-                }
-                @Override public FileVisitResult visitFileFailed(Path file, IOException failure) {
-                    return FileVisitResult.CONTINUE;
-                }
-            });
-        } catch (IOException unreadable) {
-            // The cartridge walker reports access problems; hosted findings made so far are kept.
-        }
-        return found;
     }
 
     private static List<Finding> inspect(Path file, List<Game> games) {

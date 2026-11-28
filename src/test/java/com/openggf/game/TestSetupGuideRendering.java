@@ -62,6 +62,10 @@ class TestSetupGuideRendering {
 
     @Test void everyStateFitsTheFrameInEveryLanguageAtBothWidths() throws Exception {
         Path cd = SyntheticProgramDisc.write(dir.resolve("cd"), CdReleaseVariant.USA);
+        writeCartridge(dir.resolve("cd/three/cartridge.bin"), 0x200000, "SONIC THE HEDGEHOG 3");
+        writeCartridge(dir.resolve("cd/knuckles/cartridge.bin"), 0x200000, "SONIC & KNUCKLES");
+        writeCartridge(dir.resolve("cd/sonic1.bin"), 0x80000, "SONIC THE HEDGEHOG");
+        writeCartridge(dir.resolve("cd/sonic2.bin"), 0x100000, "SONIC THE HEDGEHOG 2");
         Path broken = SyntheticProgramDisc.write(dir.resolve("broken"), CdReleaseVariant.USA);
         Files.delete(broken.resolveSibling("audio12.bin"));
         List<String> failures = new ArrayList<>();
@@ -78,6 +82,14 @@ class TestSetupGuideRendering {
         } finally { textLog.removeHandler(capture); }
         assertTrue(failures.isEmpty(), () -> String.join("\n", failures));
         assertTrue(warnings.isEmpty(), () -> "ellipsized text:\n" + String.join("\n", warnings));
+    }
+
+    private static void writeCartridge(Path path, int size, String title) throws Exception {
+        Files.createDirectories(path.getParent());
+        byte[] bytes = new byte[size];
+        byte[] name = title.getBytes(java.nio.charset.StandardCharsets.US_ASCII);
+        System.arraycopy(name, 0, bytes, 0x120, name.length);
+        Files.write(path, bytes);
     }
 
     private void render(int width, Path cd, Path broken, List<String> failures) throws Exception {
@@ -142,6 +154,21 @@ class TestSetupGuideRendering {
             var g = guide(config, Map.of("s1", Path.of("s1.gen"), "s2", Path.of("s2.gen"), "s3k", Path.of("s3k.gen")), false);
             g.acceptFindings(SetupGuideLibrary.locate(broken, SetupGuideLibrary.games()));
             return g;
+        }, keyboard));
+        states.add(new State("games-scan-result", () -> {
+            var scanConfig = SonicConfigurationService.createStandalone(Files.createDirectory(settings.resolve("scan")));
+            scanConfig.setConfigValue(SonicConfiguration.ROMS_DIRECTORY, settings.toString());
+            for (var game : SetupGuideLibrary.games()) {
+                if (!game.hosted()) scanConfig.setConfigValue(game.key(), settings.resolve(game.id() + "-missing.bin").toString());
+            }
+            try (var cleared = com.openggf.game.soniccd.CdTestMedia.withoutDiscProperties()) {
+                var g = new MenuSetupGuide(scanConfig, new SetupGuideSession(false), new MenuSetupGuide.Host() {
+                    @Override public boolean onlineAvailable() { return true; }
+                    @Override public void libraryChanged() { }
+                }, false);
+                g.acceptFindings(SetupGuideLibrary.scan(cd.getParent(), SetupGuideLibrary.games()));
+                return g;
+            }
         }, keyboard));
         states.add(new State("games-upgrade", () -> guide(config, partial, true), keyboard));
         for (SetupGuidePreset preset : List.of(SetupGuidePreset.STOCK, SetupGuidePreset.BALANCED, SetupGuidePreset.ENHANCED,

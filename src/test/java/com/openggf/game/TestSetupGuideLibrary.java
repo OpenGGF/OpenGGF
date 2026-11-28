@@ -54,6 +54,25 @@ class TestSetupGuideLibrary {
         assertEquals(List.of(game("scd")), plan.added());
     }
 
+    @Test void aSplitPairInSeparateDirectoriesIsSavedAsTwoComponentPaths() throws Exception {
+        Path three = writeCartridge("three", "SONIC THE HEDGEHOG 3");
+        Path knuckles = writeCartridge("knuckles", "SONIC & KNUCKLES");
+        var findings = SetupGuideLibrary.scan(dir, GAMES);
+        var plan = SetupGuideLibrary.plan(findings, GAMES, library(Map.of()));
+        assertEquals(List.of(knuckles, three), findings.best("s3k").orElseThrow().paths());
+        assertEquals("", plan.writes().get(SonicConfiguration.SONIC_3K_ROM));
+        assertEquals(three.toString(), plan.writes().get(SonicConfiguration.SONIC_3_ROM));
+        assertEquals(knuckles.toString(), plan.writes().get(SonicConfiguration.SONIC_KNUCKLES_ROM));
+    }
+
+    private Path writeCartridge(String folder, String title) throws Exception {
+        Path path = Files.createDirectories(dir.resolve(folder)).resolve("image.bin");
+        byte[] bytes = new byte[0x200000];
+        byte[] titleBytes = title.getBytes(java.nio.charset.StandardCharsets.US_ASCII);
+        System.arraycopy(titleBytes, 0, bytes, 0x120, titleBytes.length);
+        return Files.write(path, bytes).toAbsolutePath().normalize();
+    }
+
     @Test void problemDiscsAreReportedByKindAndWriteNothing() throws Exception {
         SyntheticProgramDisc.write(dir.resolve("eu"), CdReleaseVariant.EUROPE);
         var findings = SetupGuideLibrary.scan(dir, GAMES);

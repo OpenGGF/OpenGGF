@@ -749,6 +749,10 @@ public enum SonicConfiguration {
 	SETUP_GUIDE,
 
 	/** Selects native placement or engine free-fly for supported games. */
-	LEVEL_DEBUG_MODE;
+	LEVEL_DEBUG_MODE,
+
+    SONIC_3_ROM,
+    SONIC_KNUCKLES_ROM,
+    KNUCKLES_IN_SONIC_2_ROM;
 
 }

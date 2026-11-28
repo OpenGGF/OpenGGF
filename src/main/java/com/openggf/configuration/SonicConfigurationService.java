@@ -887,6 +887,9 @@ public class SonicConfigurationService {
 		putDefault(SonicConfiguration.SONIC_2_ROM, "s2.gen");
 		putDefault(SonicConfiguration.SONIC_3K_ROM, "s3k.gen");
 		putDefault(SonicConfiguration.SONIC_CD_DISC, "");
+        putDefault(SonicConfiguration.SONIC_3_ROM, "");
+        putDefault(SonicConfiguration.SONIC_KNUCKLES_ROM, "");
+        putDefault(SonicConfiguration.KNUCKLES_IN_SONIC_2_ROM, "");
 		putDefault(SonicConfiguration.ROMS_DIRECTORY, ".");
 		putDefault(SonicConfiguration.ROMS_PREFER_COMPOSITE, false);
 		// Migrate renamed config key: S3K_SKIP_AIZ1_INTRO → S3K_SKIP_INTROS

@@ -8,6 +8,7 @@ import com.openggf.graphics.ScreenshotCapture;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.lwjgl.opengl.GL11.*;
@@ -32,7 +33,15 @@ class TestCdHostedMenuRendering {
                 assertEquals("scd", screen.getSelectedGameId());
                 var field = MasterTitleScreen.class.getDeclaredField("hostedPreviews");
                 field.setAccessible(true);
-                assertTrue(((java.util.Map<?, ?>) field.get(screen)).containsKey(GameId.SCD));
+                // Decode runs in the background. Keep pumping publication on the thread that owns GL.
+                long deadline = System.nanoTime() + Duration.ofSeconds(15).toNanos();
+                while (!((java.util.Map<?, ?>) field.get(screen)).containsKey(GameId.SCD)
+                        && System.nanoTime() < deadline) {
+                    Thread.sleep(10);
+                    screen.update(input);
+                }
+                assertTrue(((java.util.Map<?, ?>) field.get(screen)).containsKey(GameId.SCD),
+                        "The hosted title preview is published on the selected card");
                 glViewport(0, 0, 960, 672);
                 glClear(GL_COLOR_BUFFER_BIT);
                 screen.draw(); glFinish();

@@ -24108,5 +24108,21 @@
       "sourceHash": "2249ed46ced29f4648b0cf5b2c274447bb34c13e2781b7ab54d53034c4f873c8",
       "reviewed": false
     }
+  },
+  "menu.onboarding.split_s3_and_sk_pair": "Paire S3 et S&K séparés",
+  "@menu.onboarding.split_s3_and_sk_pair": {
+    "x-openggf": {
+      "sourceHash": "9ba65fc494b3c3dfc830600b0db02835c12521e4e0388e1981eadca9b02690cf",
+      "origin": "openai-codex-gpt-6",
+      "reviewed": false
+    }
+  },
+  "menu.onboarding.kis2_lock_on": "Lock-on de Knuckles in Sonic 2",
+  "@menu.onboarding.kis2_lock_on": {
+    "x-openggf": {
+      "sourceHash": "0e92b552cd0ff8a701d5770b1d81fab7bcedfb17d6bd384b62fdff7d73755588",
+      "origin": "openai-codex-gpt-6",
+      "reviewed": false
+    }
   }
 }

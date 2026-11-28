@@ -218,6 +218,10 @@ public final class ConfigCatalog {
         put(SONIC_3K_ROM, of("roms", "sonic3k", STRING, "Filename of the Sonic 3&K ROM"));
         put(SONIC_CD_DISC, of("roms", "soniccd", STRING,
                 "Path of the Sonic CD (USA) disc's .cue sheet or lossless .chd; blank finds the disc in roms.directory"));
+        put(SONIC_3_ROM, of("roms", "sonic3", STRING, "Path to the Sonic 3 half of a split pair"));
+        put(SONIC_KNUCKLES_ROM, of("roms", "sonicKnuckles", STRING, "Path to the Sonic & Knuckles half of a split pair"));
+        put(KNUCKLES_IN_SONIC_2_ROM, of("roms", "knucklesInSonic2", STRING,
+                "Path to the optional Knuckles in Sonic 2 lock-on dump"));
         put(ROMS_DIRECTORY, of("roms", "directory", STRING,
                 "Directory scanned for ROM images (*.gen, *.bin, *.md); images are identified by size and header"));
         put(ROMS_PREFER_COMPOSITE, of("roms", "preferComposite", BOOL,

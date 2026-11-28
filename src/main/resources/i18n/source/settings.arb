@@ -616,6 +616,30 @@
   "@settings.key.sonic_cd_disc.help": {
     "description": "Settings help for stable configuration key SONIC_CD_DISC. Technical YAML documentation remains separate."
   },
+  "settings.key.sonic_3_rom.label": "Sonic 3 cartridge",
+  "@settings.key.sonic_3_rom.label": {
+    "description": "Settings label for stable configuration key SONIC_3_ROM (roms.sonic3)."
+  },
+  "settings.key.sonic_3_rom.help": "Path to the Sonic 3 half of a split pair",
+  "@settings.key.sonic_3_rom.help": {
+    "description": "Settings help for stable configuration key SONIC_3_ROM. Technical YAML documentation remains separate."
+  },
+  "settings.key.sonic_knuckles_rom.label": "Sonic & Knuckles cartridge",
+  "@settings.key.sonic_knuckles_rom.label": {
+    "description": "Settings label for stable configuration key SONIC_KNUCKLES_ROM (roms.sonicKnuckles)."
+  },
+  "settings.key.sonic_knuckles_rom.help": "Path to the Sonic & Knuckles half of a split pair",
+  "@settings.key.sonic_knuckles_rom.help": {
+    "description": "Settings help for stable configuration key SONIC_KNUCKLES_ROM. Technical YAML documentation remains separate."
+  },
+  "settings.key.knuckles_in_sonic_2_rom.label": "Knuckles in Sonic 2 lock-on",
+  "@settings.key.knuckles_in_sonic_2_rom.label": {
+    "description": "Settings label for stable configuration key KNUCKLES_IN_SONIC_2_ROM (roms.knucklesInSonic2)."
+  },
+  "settings.key.knuckles_in_sonic_2_rom.help": "Path to the optional Knuckles in Sonic 2 lock-on dump",
+  "@settings.key.knuckles_in_sonic_2_rom.help": {
+    "description": "Settings help for stable configuration key KNUCKLES_IN_SONIC_2_ROM. Technical YAML documentation remains separate."
+  },
   "settings.key.roms_directory.label": "ROM folder",
   "@settings.key.roms_directory.label": {
     "description": "Settings label for stable configuration key ROMS_DIRECTORY (roms.directory)."
