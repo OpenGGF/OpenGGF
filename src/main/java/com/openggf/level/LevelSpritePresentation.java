@@ -79,15 +79,35 @@ public final class LevelSpritePresentation {
     record HeldPicture(SpritePresentation.Frame sprites, LevelScrollPresentation scroll) { }
 
     static final class Tables implements RewindSnapshottable<Tables.State> {
-        record State(SpritePresentation.Frame prepared, SpritePresentation.Frame published,
-                     SpritePresentation.Frame counters, LevelScrollPresentation preparedScroll,
+        /**
+         * One checkpoint of the CPU tables. Frames are held packed (see {@link SpriteFrameRewindPack});
+         * the accessors decode equal frames whose tiles keep their subject identities. Aliased
+         * tables (a lag frame's prepared and published SAT) share one packed frame.
+         */
+        record State(SpriteFrameRewindPack.Packed preparedTiles, SpriteFrameRewindPack.Packed publishedTiles,
+                     SpriteFrameRewindPack.Packed counterTiles, LevelScrollPresentation preparedScroll,
                      LevelScrollPresentation publishedScroll,
-                     PaletteUploadPresentation.DisplayedFade displayedFade, HeldPicture heldPicture) { }
+                     PaletteUploadPresentation.DisplayedFade displayedFade,
+                     SpriteFrameRewindPack.Packed heldTiles, LevelScrollPresentation heldScroll) {
+            SpritePresentation.Frame prepared() { return preparedTiles.decode(); }
+            SpritePresentation.Frame published() { return publishedTiles.decode(); }
+            SpritePresentation.Frame counters() { return counterTiles.decode(); }
+            HeldPicture heldPicture() {
+                return heldTiles == null ? null : new HeldPicture(heldTiles.decode(), heldScroll);
+            }
+        }
         HeldPicture heldPicture;
         private SpritePresentation.Frame prepared = SpritePresentation.Frame.empty();
         private SpritePresentation.Frame published = SpritePresentation.Frame.empty();
         private SpritePresentation.Frame counters = SpritePresentation.Frame.empty();
         private LevelScrollPresentation preparedScroll, publishedScroll;
+        private final SpriteFrameRewindPack packer = new SpriteFrameRewindPack();
+        // Frames are immutable: the last checkpoint's live frames map to their packed form, so an
+        // unchanged table (or one published from the last prepared) is not packed again, and
+        // unchanged arrays are shared with the previous checkpoint.
+        private static final int SLOTS = 4;
+        private final SpritePresentation.Frame[] packedFrames = new SpritePresentation.Frame[SLOTS * 2];
+        private final SpriteFrameRewindPack.Packed[] packs = new SpriteFrameRewindPack.Packed[SLOTS * 2];
         void prepare(SpritePresentation.Frame frame) { prepare(frame, null); }
         void prepare(SpritePresentation.Frame frame, LevelScrollPresentation scroll) {
             prepared = frame;
@@ -103,6 +123,7 @@ public final class LevelSpritePresentation {
         void publishCounters(SpritePresentation.Frame frame) { counters = frame; }
         SpritePresentation.Frame counters() { return counters; }
         SpritePresentation.Frame published() { return published; }
+        SpritePresentation.Frame prepared() { return prepared; }
         void invalidateScrollForActReload() {
             // SAT coordinates are already screen-relative. Scroll presentation
             // addresses the engine's full level layout, which Load_Level replaces;
@@ -117,13 +138,53 @@ public final class LevelSpritePresentation {
             preparedScroll = null;
             publishedScroll = null;
             heldPicture = null;
+            java.util.Arrays.fill(packedFrames, null);
+            java.util.Arrays.fill(packs, null);
         }
         @Override public String key() { return "level-sprite-presentation"; }
         @Override public State capture() {
             // The displayed CRAM fade belongs to the same V-int publication as the SAT and scroll.
             var graphics = com.openggf.game.GameServices.hasRuntime() ? com.openggf.game.GameServices.graphics() : null;
-            return new State(prepared, published, counters, preparedScroll, publishedScroll,
-                    PaletteUploadPresentation.captureDisplayedFade(graphics), heldPicture);
+            var held = heldPicture;
+            var preparedTiles = pack(0, prepared);
+            var publishedTiles = pack(1, published);
+            var counterTiles = pack(2, counters);
+            var heldTiles = held == null ? null : pack(3, held.sprites());
+            retainPacked();
+            return new State(preparedTiles, publishedTiles, counterTiles, preparedScroll, publishedScroll,
+                    PaletteUploadPresentation.captureDisplayedFade(graphics), heldTiles,
+                    held == null ? null : held.scroll());
+        }
+        /** Slots {@code 0..SLOTS-1} are the last checkpoint's frames; this capture fills {@code SLOTS+slot}. */
+        private SpriteFrameRewindPack.Packed pack(int slot, SpritePresentation.Frame frame) {
+            SpriteFrameRewindPack.Packed packed = null;
+            for (int i = 0; i < packedFrames.length && packed == null; i++) {
+                if (packedFrames[i] == frame) packed = packs[i];
+            }
+            if (packed == null) packed = packer.pack(frame, packs);
+            packedFrames[SLOTS + slot] = frame;
+            packs[SLOTS + slot] = packed;
+            return packed;
+        }
+        private void retainPacked() {
+            System.arraycopy(packedFrames, SLOTS, packedFrames, 0, SLOTS);
+            System.arraycopy(packs, SLOTS, packs, 0, SLOTS);
+            java.util.Arrays.fill(packedFrames, SLOTS, SLOTS * 2, null);
+            java.util.Arrays.fill(packs, SLOTS, SLOTS * 2, null);
+        }
+        /**
+         * Held rewind restores consecutive checkpoints: the frame published by one was the
+         * frame prepared by the one before, so a pack already decoded (or captured) is reused.
+         */
+        private SpritePresentation.Frame unpack(int slot, SpriteFrameRewindPack.Packed packed) {
+            SpritePresentation.Frame frame = null;
+            for (int i = 0; i < SLOTS + slot && frame == null; i++) {
+                if (packs[i] == packed) frame = packedFrames[i];
+            }
+            if (frame == null) frame = packed.decode();
+            packedFrames[SLOTS + slot] = frame;
+            packs[SLOTS + slot] = packed;
+            return frame;
         }
         @Override public void restore(State state) {
             // A restore redraws without a V-int publication: upload any latched palette
@@ -136,12 +197,16 @@ public final class LevelSpritePresentation {
                 // owners' newer request (which reaches CRAM at the next V-int).
                 PaletteUploadPresentation.restoreDisplayedFade(graphics, state.displayedFade());
             }
-            prepared = state.prepared();
-            published = state.published();
-            counters = state.counters();
+            java.util.Arrays.fill(packedFrames, SLOTS, SLOTS * 2, null);
+            java.util.Arrays.fill(packs, SLOTS, SLOTS * 2, null);
+            prepared = unpack(0, state.preparedTiles());
+            published = unpack(1, state.publishedTiles());
+            counters = unpack(2, state.counterTiles());
+            heldPicture = state.heldTiles() == null ? null
+                    : new HeldPicture(unpack(3, state.heldTiles()), state.heldScroll());
             preparedScroll = state.preparedScroll();
             publishedScroll = state.publishedScroll();
-            heldPicture = state.heldPicture();
+            retainPacked();
         }
         @Override public void resetForMissingSnapshot() { reset(); }
     }

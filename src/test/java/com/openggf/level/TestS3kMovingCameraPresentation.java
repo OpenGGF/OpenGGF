@@ -31,7 +31,7 @@ class TestS3kMovingCameraPresentation {
             LevelManager level = GameServices.level();
             LevelRenderer renderer = level.spritePresentationRenderer();
             for (var inputFrame : movie.getFrames()) {
-                var prepared = renderer.spriteTables.capture().prepared();
+                var prepared = renderer.spriteTables.prepared();
                 int cameraX = level.camera.getXWithShake();
                 short foregroundY = level.parallaxManager.getVscrollFactorFG();
                 int[] horizontal = level.parallaxManager.getHScrollForShader().clone();

@@ -10,7 +10,7 @@ public final class SozWrapPresentationAssertions {
 
     public static void assertPlayerArtPresent() {
         var tiles = GameServices.level().spritePresentationRenderer().spriteTables
-                .capture().prepared().tiles();
+                .prepared().tiles();
         var renderer = GameServices.sprites().getMainPlayable().getSpriteRenderer();
         int base = renderer.patternBankBase();
         int end = base + renderer.patternBankCapacity();

@@ -56,7 +56,7 @@ class TestLevelSpritePreparationOwnership {
 
     @Test void freshWorldCountersAndAnotherWorldKeepIndependentFrames() {
         renderer.prepareSpritePresentation(null);
-        var world = renderer.spriteTables.capture().prepared();
+        var world = renderer.spriteTables.prepared();
         assertEquals(1, world.tiles().size());
         assertTrue(renderer.spriteTables.published().tiles().isEmpty());
         renderer.publishHudCounters(false);
@@ -64,17 +64,17 @@ class TestLevelSpritePreparationOwnership {
         assertEquals(world, counters, "same values intentionally test owner isolation");
         assertNotSame(world.tiles().getFirst(), counters.tiles().getFirst());
         renderer.prepareSpritePresentation(null);
-        assertNotSame(world.tiles().getFirst(), renderer.spriteTables.capture().prepared().tiles().getFirst(),
+        assertNotSame(world.tiles().getFirst(), renderer.spriteTables.prepared().tiles().getFirst(),
                 "fresh CPU output must not be mistaken for a publication");
         renderer.publishHudCounters(true);
         assertNotSame(counters.tiles().getFirst(), renderer.spriteTables.counters().tiles().getFirst());
         var another = renderer();
         another.prepareSpritePresentation(null);
-        assertEquals(world, another.spriteTables.capture().prepared());
-        assertNotSame(world.tiles().getFirst(), another.spriteTables.capture().prepared().tiles().getFirst(),
+        assertEquals(world, another.spriteTables.prepared());
+        assertNotSame(world.tiles().getFirst(), another.spriteTables.prepared().tiles().getFirst(),
                 "even identical worlds sharing one graphics host do not share a previous-frame cache");
         renderer.spriteTables.publish();
-        assertSame(renderer.spriteTables.capture().prepared(), renderer.spriteTables.published());
+        assertSame(renderer.spriteTables.prepared(), renderer.spriteTables.published());
     }
 
     @Test void failureCannotReplacePendingPublishedOrCounterFramesAndRetryIsFresh() {
@@ -82,41 +82,50 @@ class TestLevelSpritePreparationOwnership {
         renderer.spriteTables.publish();
         renderer.publishHudCounters(false);
         var before = renderer.spriteTables.capture();
+        var preparedBefore = renderer.spriteTables.prepared();
+        var publishedBefore = renderer.spriteTables.published();
+        var countersBefore = renderer.spriteTables.counters();
         fail.set(true);
         assertThrows(IllegalStateException.class, () -> renderer.prepareSpritePresentation(null));
         assertThrows(IllegalStateException.class, () -> renderer.publishHudCounters(false));
         assertEquals(before, renderer.spriteTables.capture());
-        assertSame(before.prepared(), renderer.spriteTables.capture().prepared());
-        assertSame(before.published(), renderer.spriteTables.published());
-        assertSame(before.counters(), renderer.spriteTables.counters());
+        assertSame(preparedBefore, renderer.spriteTables.prepared());
+        assertSame(publishedBefore, renderer.spriteTables.published());
+        assertSame(countersBefore, renderer.spriteTables.counters());
         fail.set(false);
         renderer.prepareSpritePresentation(null);
         renderer.publishHudCounters(false);
-        assertNotSame(before.prepared().tiles().getFirst(), renderer.spriteTables.capture().prepared().tiles().getFirst());
-        assertNotSame(before.counters().tiles().getFirst(), renderer.spriteTables.counters().tiles().getFirst());
+        assertNotSame(preparedBefore.tiles().getFirst(), renderer.spriteTables.prepared().tiles().getFirst());
+        assertNotSame(countersBefore.tiles().getFirst(), renderer.spriteTables.counters().tiles().getFirst());
     }
 
     @Test void rewindRestoresImmutableFramesAndResetReleasesThem() {
         renderer.prepareSpritePresentation(null);
         renderer.publishHudCounters(false);
         var retained = renderer.spriteTables.capture();
+        var retainedPrepared = renderer.spriteTables.prepared();
+        var retainedCounters = renderer.spriteTables.counters();
         renderer.resetState();
-        assertTrue(renderer.spriteTables.capture().prepared().tiles().isEmpty());
+        assertTrue(renderer.spriteTables.prepared().tiles().isEmpty());
         assertTrue(renderer.spriteTables.counters().tiles().isEmpty());
         renderer.prepareSpritePresentation(null);
         renderer.publishHudCounters(false);
-        assertNotSame(retained.prepared().tiles().getFirst(), renderer.spriteTables.capture().prepared().tiles().getFirst());
-        assertNotSame(retained.counters().tiles().getFirst(), renderer.spriteTables.counters().tiles().getFirst());
+        assertNotSame(retainedPrepared.tiles().getFirst(), renderer.spriteTables.prepared().tiles().getFirst());
+        assertNotSame(retainedCounters.tiles().getFirst(), renderer.spriteTables.counters().tiles().getFirst());
         renderer.spriteTables.restore(retained);
-        assertSame(retained.prepared(), renderer.spriteTables.capture().prepared());
-        assertSame(retained.counters(), renderer.spriteTables.counters());
+        // Checkpoints hold a packed copy: restore rebuilds equal immutable frames.
+        assertEquals(retainedPrepared, renderer.spriteTables.prepared());
+        assertEquals(retainedCounters, renderer.spriteTables.counters());
+        assertEquals(retained, renderer.spriteTables.capture());
+        var restoredPrepared = renderer.spriteTables.prepared();
+        var restoredCounters = renderer.spriteTables.counters();
         renderer.prepareSpritePresentation(null);
         renderer.publishHudCounters(false);
-        assertNotSame(retained.prepared().tiles().getFirst(), renderer.spriteTables.capture().prepared().tiles().getFirst());
-        assertNotSame(retained.counters().tiles().getFirst(), renderer.spriteTables.counters().tiles().getFirst());
+        assertNotSame(restoredPrepared.tiles().getFirst(), renderer.spriteTables.prepared().tiles().getFirst());
+        assertNotSame(restoredCounters.tiles().getFirst(), renderer.spriteTables.counters().tiles().getFirst());
         assertTrue(renderer.spriteTables.published().tiles().isEmpty(), "rewind must not publish the pending table");
         renderer.spriteTables.resetForMissingSnapshot();
-        assertTrue(renderer.spriteTables.capture().prepared().tiles().isEmpty());
+        assertTrue(renderer.spriteTables.prepared().tiles().isEmpty());
         assertTrue(renderer.spriteTables.published().tiles().isEmpty());
         assertTrue(renderer.spriteTables.counters().tiles().isEmpty());
     }
