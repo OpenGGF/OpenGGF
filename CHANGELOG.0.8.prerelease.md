@@ -904,8 +904,8 @@ under the matching area heading; see the
   S3K retail patch packages rebuild the song bank from the active cartridge
   and display a retail-derivation warning in the Mod Manager and log.
 
-- **Sonic CD menu media:** show the native disc title on its master-title card
-  and play its title theme in an isolated optional hub audio session. The preview
+- **Sonic CD menu media:** show the native title emblem and animated sprites over
+  the hub backdrop and play the title theme in an isolated optional audio session. The preview
   closes its media after decoding; menu audio retains its own media until closed.
   Native editor persistence now retains a bounded disc/stage reference and validates
   it before native materialization. The flat-project collision guard remains
