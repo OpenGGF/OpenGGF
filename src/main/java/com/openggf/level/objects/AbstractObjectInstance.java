@@ -220,6 +220,11 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
     protected AbstractObjectInstance(ObjectSpawn spawn, String name) {
         this.spawn = spawn;
         this.name = name;
+        if (ObjectConstructionContext.isProbeConstruction()) {
+            // Probe children bypass slot admission. Keep their service handle so
+            // the parent can finish initialization after the factory scope closes.
+            this.services = currentConstructionContext();
+        }
         // ROM parity: consume the pre-allocated slot so that getSlotIndex()
         // returns the correct value if the constructor spawns children.
         // Only the first super() call gets the slot; child constructors see null.

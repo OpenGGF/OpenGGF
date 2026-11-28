@@ -295,9 +295,11 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance implements Rew
 
     @Override
     protected void afterGenericRewindStateRestored(com.openggf.game.rewind.schema.RewindCaptureContext context) {
-        // Rewind can redraw a freshly recreated actor before another update.
-        // Rebuild creator inputs here so that redraw cannot latch native Sonic art.
-        prepareCreatorIntroRenderers();
+        // A managed actor can redraw before its next update. An isolated public
+        // state round-trip has no presentation owner to rebuild creator inputs.
+        if (tryServices() != null) {
+            prepareCreatorIntroRenderers();
+        }
     }
 
     // -----------------------------------------------------------------------
