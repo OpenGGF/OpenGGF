@@ -1267,6 +1267,14 @@ under the matching area heading; see the
 
 ## Maintenance and release preparation
 
+- Sonic 3 & Knuckles live rewind history uses about 18 MB less memory. Every
+  rewind checkpoint held its own roughly 52 KB copy of the physical object-RAM
+  and sprite-queue display data, although nothing between checkpoints changes
+  it. Checkpoints now share one copy until the next write, a restore shares the
+  copy it restored from, and restoring no longer clones the data just to check
+  its size. Angel Island Act 1's 60-second history falls from about 36 MB to
+  about 17 MB.
+
 - Sonic 2 live rewind history uses about 18 MB less memory. Each rewind
   checkpoint held its own boxed copy of the title card's two plane tables,
   about 50 KB, even long after the card had gone. Checkpoints now share the

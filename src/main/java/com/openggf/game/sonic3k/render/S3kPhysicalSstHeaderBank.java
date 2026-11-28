@@ -32,6 +32,13 @@ final class S3kPhysicalSstHeaderBank implements S3kPhysicalDisplayQueue.Projecti
     private final byte[] bytes = new byte[BYTES];
     private final boolean[] known = new boolean[BYTES];
     private final Provenance[] provenance = new Provenance[BYTES];
+    /**
+     * Copy-on-write rewind image: the last immutable snapshot whose contents
+     * still equal the live arrays, shared by every capture until the next write.
+     * Every mutation of {@code bytes}, {@code known} or {@code provenance} must
+     * clear it first; {@link #restore} adopts the restored snapshot instead.
+     */
+    private Snapshot sharedSnapshot;
 
     enum WriteKind {
         LEVEL_CLEAR, SPRITE_CLEAR, PARTIAL_BYTE, PARTIAL_WORD, PARTIAL_LONG, RENDER_PUBLICATION
@@ -143,6 +150,7 @@ final class S3kPhysicalSstHeaderBank implements S3kPhysicalDisplayQueue.Projecti
             throw new IllegalArgumentException("Expected one native position word/long");
         }
         int first = index(addressWord, offset, width);
+        sharedSnapshot = null;
         Arrays.fill(known, first, first + width, false);
     }
 
@@ -151,11 +159,18 @@ final class S3kPhysicalSstHeaderBank implements S3kPhysicalDisplayQueue.Projecti
         if (width != 1 && width != 2 && width != 4)
             throw new IllegalArgumentException("Expected an actual native field width");
         int first = index(addressWord, offset, width);
+        sharedSnapshot = null;
         Arrays.fill(known, first, first + width, false);
     }
 
+    /** Unchanged contents since the last capture or restore return that same immutable snapshot. */
     Snapshot capture() {
-        return new Snapshot(bytes, known, provenance);
+        Snapshot snapshot = sharedSnapshot;
+        if (snapshot == null) {
+            snapshot = new Snapshot(bytes, known, provenance);
+            sharedSnapshot = snapshot;
+        }
+        return snapshot;
     }
 
     void restore(Snapshot snapshot) {
@@ -163,12 +178,14 @@ final class S3kPhysicalSstHeaderBank implements S3kPhysicalDisplayQueue.Projecti
         System.arraycopy(snapshot.bytes, 0, bytes, 0, BYTES);
         System.arraycopy(snapshot.known, 0, known, 0, BYTES);
         System.arraycopy(snapshot.provenance, 0, provenance, 0, BYTES);
+        sharedSnapshot = snapshot; // Immutable and now equal to the live arrays.
     }
 
     /** Ephemeral failed-construction rollback only; never a free/allocation/reset hook. */
     void restoreSlot(int addressWord, Snapshot snapshot) {
         Objects.requireNonNull(snapshot);
         int start = index(addressWord, 0, SLOT_BYTES);
+        sharedSnapshot = null;
         System.arraycopy(snapshot.bytes, start, bytes, start, SLOT_BYTES);
         System.arraycopy(snapshot.known, start, known, start, SLOT_BYTES);
         System.arraycopy(snapshot.provenance, start, provenance, start, SLOT_BYTES);
@@ -189,6 +206,10 @@ final class S3kPhysicalSstHeaderBank implements S3kPhysicalDisplayQueue.Projecti
         byte[] image() { return bytes.clone(); }
         boolean[] knownBytes() { return known.clone(); }
         Provenance[] provenance() { return provenance.clone(); }
+        /** Dimension checks without cloning the arrays. */
+        int imageLength() { return bytes.length; }
+        int knownLength() { return known.length; }
+        int provenanceLength() { return provenance.length; }
 
         @Override
         public boolean equals(Object other) {
@@ -226,6 +247,7 @@ final class S3kPhysicalSstHeaderBank implements S3kPhysicalDisplayQueue.Projecti
     }
 
     private void store(int index, int width, long value, Provenance source) {
+        sharedSnapshot = null;
         for (int n = 0; n < width; n++) {
             bytes[index + n] = (byte) (value >>> ((width - 1 - n) * 8));
             known[index + n] = true;
@@ -234,6 +256,7 @@ final class S3kPhysicalSstHeaderBank implements S3kPhysicalDisplayQueue.Projecti
     }
 
     private void clear(int first, int count, Provenance source) {
+        sharedSnapshot = null;
         Arrays.fill(bytes, first, first + count, (byte) 0);
         Arrays.fill(known, first, first + count, true);
         Arrays.fill(provenance, first, first + count, source);
