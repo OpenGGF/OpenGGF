@@ -7,6 +7,11 @@ under the matching area heading; see the
 
 ## Gameplay and presentation
 
+- **Sonic 2 special stage:** the checkered START flags no longer fly out over
+  the black side bars when the stage begins, or when rewind plays the start
+  back. Special-stage sprites are now cut off at the edge of the original
+  256-pixel picture at every screen width, as on the cartridge.
+
 - **The hub header carries the new OpenGGF logo,** the quilled, two-tailed mark
   from the README. It is drawn from a high-resolution image with smooth
   filtering, so its edges stay clean at every window size instead of breaking
