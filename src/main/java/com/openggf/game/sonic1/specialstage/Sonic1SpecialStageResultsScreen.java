@@ -148,6 +148,17 @@ public final class Sonic1SpecialStageResultsScreen implements ResultsScreen {
     private static final int PATTERN_BASE = PatternAtlasRange.TITLE_CARDS.base();
     private static final int EMERALD_PATTERN_BASE = PatternAtlasRange.TITLE_CARDS.base() + 0x1000;
     private static final int CONTINUE_PATTERN_BASE = PatternAtlasRange.TITLE_CARDS.base() + 0x2000;
+    private static final int CONTINUE_ICON_PATTERN_BASE = PatternAtlasRange.TITLE_CARDS.base() + 0x3000;
+    /** Map_SSR frame 6: the CONTINUE text without mini-Sonic. */
+    private static final int CONTINUE_TEXT_ONLY_FRAME = 2;
+    /**
+     * {@code M_SSR_ContSon1/2} place mini-Sonic at (+$40,-8) from the continue row. Its
+     * tiles are the continue screen's {@code .cont_Mini1/.cont_Mini2} (Map_ContScr frames
+     * 6 and 7), so a character's {@code continue/icon} poses 6/7 replace it.
+     */
+    private static final int CONTINUE_ICON_OFFSET_X = 0x40;
+    private static final int CONTINUE_ICON_OFFSET_Y = -8;
+    private static final int CONTINUE_ICON_FIRST_POSE = 6;
 
     // Score digit copy constants (matching Sonic1ObjectArtProvider).
     private static final int RESULTS_SCORE_DIGIT_PAIR_COUNT = 8;
@@ -195,6 +206,8 @@ public final class Sonic1SpecialStageResultsScreen implements ResultsScreen {
     private PatternSpriteRenderer resultsRenderer;
     private PatternSpriteRenderer emeraldRenderer;
     private PatternSpriteRenderer continueRenderer;
+    /** The active character's {@code continue/icon} poses, or null for native mini-Sonic. */
+    private com.openggf.game.presentation.ScreenFrameRenderer continueIconReplacement;
     private boolean artLoaded;
     private boolean artCached;
 
@@ -220,7 +233,12 @@ public final class Sonic1SpecialStageResultsScreen implements ResultsScreen {
 
     @Override
     public void update(int frameCounter, Object context) {
-        if (!artLoaded) loadArt();
+        if (!artLoaded) {
+            loadArt();
+            if (artLoaded) {
+                continueIconReplacement = loadContinueIconReplacement(GameServices.graphics());
+            }
+        }
         this.frameCounter = Math.max(this.frameCounter, frameCounter);
         if (complete) {
             return;
@@ -397,8 +415,15 @@ public final class Sonic1SpecialStageResultsScreen implements ResultsScreen {
                 toWorldX(ringX, camera), toWorldY(RING_Y, camera), false, false);
 
         if (ringsCollected >= CONTINUE_RINGS && continueRenderer != null) {
-            continueRenderer.drawFrameIndex(continueFrame,
-                    toWorldX(continueX, camera), toWorldY(CONTINUE_Y, camera), false, false);
+            int worldX = toWorldX(continueX, camera);
+            int worldY = toWorldY(CONTINUE_Y, camera);
+            if (continueFrame != CONTINUE_TEXT_ONLY_FRAME && continueIconReplacement != null
+                    && continueIconReplacement.draw("continue/icon", CONTINUE_ICON_FIRST_POSE + continueFrame,
+                    worldX + CONTINUE_ICON_OFFSET_X, worldY + CONTINUE_ICON_OFFSET_Y, false)) {
+                continueRenderer.drawFrameIndex(CONTINUE_TEXT_ONLY_FRAME, worldX, worldY, false, false);
+            } else {
+                continueRenderer.drawFrameIndex(continueFrame, worldX, worldY, false, false);
+            }
         }
 
         appendEmeraldIndicators(commands, camera);
@@ -504,6 +529,23 @@ public final class Sonic1SpecialStageResultsScreen implements ResultsScreen {
             LOGGER.warning("Failed to load S1 SS results art: " + e.getMessage());
             combinedPatterns = null;
         }
+    }
+
+    /** The character presentation's S1 {@code continue/icon} poses, drawn on a private palette line. */
+    private static com.openggf.game.presentation.ScreenFrameRenderer loadContinueIconReplacement(
+            GraphicsManager graphicsManager) {
+        com.openggf.game.PresentationFrameSet frames;
+        try {
+            frames = com.openggf.game.presentation.ScreenFrameRenderer.active(
+                    com.openggf.game.CharacterPresentation.Host.S1);
+        } catch (IOException e) {
+            throw new IllegalStateException("Cannot load character continue icon", e);
+        }
+        if (frames == null || !frames.banks().containsKey("continue/icon")) {
+            return null;
+        }
+        return com.openggf.game.presentation.ScreenFrameRenderer.privatePalette(
+                frames, graphicsManager, CONTINUE_ICON_PATTERN_BASE);
     }
 
     static ObjectSpriteSheet loadContinueSheet(Rom rom) throws IOException {

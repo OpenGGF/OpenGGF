@@ -67,7 +67,7 @@ class TestLevelSpritePresentation {
         tables.publish();
         assertEquals(second, tables.published());
         tables.reset();
-        assertTrue(tables.capture().prepared().tiles().isEmpty());
+        assertTrue(tables.prepared().tiles().isEmpty());
         assertTrue(tables.published().tiles().isEmpty());
         assertTrue(tables.counters().tiles().isEmpty());
     }

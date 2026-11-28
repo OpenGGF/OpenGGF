@@ -12,6 +12,11 @@ under the matching area heading; see the
   back. Special-stage sprites are now cut off at the edge of the original
   256-pixel picture at every screen width, as on the cartridge.
 
+- **The hub header carries the new OpenGGF logo,** the quilled, two-tailed mark
+  from the README. It is drawn from a high-resolution image with smooth
+  filtering, so its edges stay clean at every window size instead of breaking
+  into uneven pixels like the shrunken old wordmark.
+
 - **Angel Island Act 2's bombing run in widescreen** shows the scenery about to
   scroll in across the whole picture. The camera lock that follows the
   auto-scroll used to cover the extra width with static that trailed into the
@@ -21,6 +26,8 @@ under the matching area heading; see the
 - **Knuckles' continue icon on Sonic 3 & Knuckles special-stage results** is
   red again instead of Sonic blue. Chaos Emerald stages now apply the same
   Knuckles colours as the cartridge, as Super Emerald stages already did.
+  Sonic 1 special-stage results show the playing character's own continue
+  icon beside CONTINUE, as its continue screen does, instead of mini-Sonic.
 
 - **Controllers with newer firmware are recognised.** The engine now ships the
   SDL_GameControllerDB mapping table on top of GLFW's own, honours
@@ -1265,12 +1272,28 @@ under the matching area heading; see the
 
 ## Maintenance and release preparation
 
+- Sonic 3 & Knuckles live rewind history uses about 18 MB less memory. Every
+  rewind checkpoint held its own roughly 52 KB copy of the physical object-RAM
+  and sprite-queue display data, although nothing between checkpoints changes
+  it. Checkpoints now share one copy until the next write, a restore shares the
+  copy it restored from, and restoring no longer clones the data just to check
+  its size. Angel Island Act 1's 60-second history falls from about 36 MB to
+  about 17 MB.
+
 - Sonic 2 live rewind history uses about 18 MB less memory. Each rewind
   checkpoint held its own boxed copy of the title card's two plane tables,
   about 50 KB, even long after the card had gone. Checkpoints now share the
   tables until the card next writes them, and share the title-card art by
   reference. Sixty seconds of Emerald Hill 1 history fell from 22.1 MB to
   4.2 MB. Rewinding during the title card still restores it exactly.
+
+- Sonic 3 & Knuckles live rewind history uses about 9 MB less memory. Each
+  checkpoint kept its own copies of the prepared, displayed and HUD-counter
+  sprite tables, about 33 KB of tile records and boxed art versions. Checkpoints
+  now store the tables packed into number arrays, reuse pieces that have not
+  changed since the previous checkpoint, and rebuild equal tables when rewinding.
+  Sixty seconds of Angel Island 1 history fell from 35.7 MB to 26.2 MB. Packing
+  and rebuilding take microseconds per checkpoint, with no change in frame times.
 
 - ICZ background loop history and indoor selection now belong to the event owner,
   so rebuilding scroll output retains the same background. Rewind captures that
