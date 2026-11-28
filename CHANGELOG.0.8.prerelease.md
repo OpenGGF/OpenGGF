@@ -487,7 +487,7 @@ under the matching area heading; see the
   the original 320-pixel screen and draws the extra width as scenery, so every screen
   size plays exactly the same game. That makes widescreen fair for time attack, races
   and shared replays. Objects in the extra width that the original game has not woken
-  up yet are drawn where they start, in greyscale by default
+  up yet are drawn where they start in either margin, in greyscale by default
   (`display.widescreenDormantStyle`: `GREYSCALE`, `NORMAL` or `HIDDEN`). Objects that
   animate in place play their animation there; anything that moves is drawn still. They
   come to life when the original screen reaches them. When it leaves them, an object

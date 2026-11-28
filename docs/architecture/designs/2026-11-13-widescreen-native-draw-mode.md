@@ -135,6 +135,17 @@ A presentation-only layer, `DormantObjectLayer` (level/objects), owned by the
 - **Style:** `GREYSCALE` draws through the existing ghost shader mode with alpha
   1.0 (opaque desaturated); `NORMAL` draws plainly; `HIDDEN` skips the layer.
 
+
+Sprite-table admission and sprite replay cull against the displayed raster
+(`61012c7598`). Prepared sprite positions remain relative to the simulation
+camera. The presentation inset converts them to the displayed raster so a
+sprite with negative simulation-screen X can still appear in the left margin.
+Either stage using the simulation origin hid the GHZ3 bridge and ring even
+though the finished bake supplied both poses before their first native load.
+`TestNativeDormantMarginRendering` checks framebuffer pixels for a Sonic 1
+bridge and ring in each 32:9 margin, before the native loader reaches them
+and after it unloads them.
+
 ### 4. ROM screen checks that start or end work
 
 Render_Sprites-style "has it left the screen" tests whose result ends an object or
