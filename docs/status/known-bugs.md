@@ -22,6 +22,20 @@ Entries should include:
 
 ---
 
+## Sonic CD recordings from the hub
+
+- **Symptom** — The Sonic CD card offers Start and Game Setup. Its Playback
+  action is pending hosted playback support.
+- **Blocker** — The hub's `tryOpenUserRecordingMenuForSelectedGame` requires a
+  Stock entry. `GameplayTeamBootstrapContext.restartRecording` opens a
+  cartridge through `RomManager`, whose legacy game lookup maps `scd` to
+  Sonic 2. The visual trace path filters for cartridge codes in `TraceCatalog`
+  and launches through the Stock-only `MasterTitleScreen.selectEntry`.
+  `CdHostedMedia.levelOfTrace` and `declareRunPastTrace` serve the offline
+  `HostedTraceCapture` path.
+- **Removal condition** — The shared browser can discover a Sonic CD recording
+  and start playback with the verified disc and the recorded stage program.
+
 ## S2 debug placement object and gate coverage
 
 - **Location** — Sonic 2 placement catalogue and runtime object factories.
