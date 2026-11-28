@@ -474,7 +474,7 @@
   "@menu.onboarding.no_supported_games_found": {
     "description": "OpenGGF host UI: menu.onboarding.no_supported_games_found. Translate the complete message; preserve named arguments."
   },
-  "menu.onboarding.not_a_supported_rom_image": "Not a supported game image.",
+  "menu.onboarding.not_a_supported_rom_image": "Not a supported ROM image.",
   "@menu.onboarding.not_a_supported_rom_image": {
     "description": "OpenGGF host UI: menu.onboarding.not_a_supported_rom_image. Translate the complete message; preserve named arguments."
   },

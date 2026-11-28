@@ -18,7 +18,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_ROOT = REPO_ROOT / 'src/main/resources/i18n'
 MESSAGE_ID = re.compile(r'[A-Za-z][A-Za-z0-9_.-]*\Z')
 HASH = re.compile(r'[0-9a-f]{64}\Z')
-ORIGINS = {'human', 'claude-haiku-5-5', 'claude-opus-5-5'}
+ORIGINS = {'human', 'claude-haiku-5-5', 'claude-opus-5-5', 'openai-codex-gpt-6'}
 PLACEHOLDER_TYPES = {'String', 'string', 'int', 'long', 'double', 'num', 'number', 'Number'}
 
 

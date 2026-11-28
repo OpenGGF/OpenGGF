@@ -7,11 +7,6 @@ under the matching area heading; see the
 
 ## Gameplay and presentation
 
-- **Add your games:** the folder scan now finds Sonic CD (USA) on CHD or CUE,
-  split Sonic 3 + Sonic & Knuckles pairs, and the optional Knuckles in Sonic 2
-  lock-on dump. It saves paths so the launcher can still use media found in
-  separate subfolders.
-
 - **The hub header carries the new OpenGGF logo,** the quilled, two-tailed mark
   from the README. It is drawn from a high-resolution image with smooth
   filtering, so its edges stay clean at every window size instead of breaking
@@ -54,12 +49,15 @@ under the matching area heading; see the
 
 - **First-run setup guide:** the first time you reach the hub, a short guide
   adds your games, asks **How do you want to play?** and starts one. It finds
-  Sonic 1, Sonic 2, Sonic 3 & Knuckles and Sonic CD by content; Sonic CD shows
-  Found until its whole disc is checked at start, and an incomplete, foreign or
-  unreadable disc names the problem and the fix without blocking the other
-  games. **Stock** keeps 4:3 and the original timing choices, **Balanced**
-  (recommended) is a 16:9 picture with Native widescreen gameplay, **Enhanced**
-  adds smooth motion and rewind, and **Just here for multiplayer** changes no
+  Sonic 1 and Sonic 2 (REV00 or REV01), combined Sonic 3 & Knuckles or a split
+  Sonic 3 + Sonic & Knuckles pair, and the optional Knuckles in Sonic 2 lock-on
+  dump. It saves the paths even when the files are in separate subfolders.
+  Sonic CD (USA) in CHD or CUE format shows Found until its whole disc is checked
+  at start. An incomplete, foreign or unreadable disc names the problem and the
+  fix without blocking the other games. **Stock** keeps 4:3 and the original
+  timing choices, **Balanced** (recommended) is a 16:9 picture with Native
+  widescreen gameplay, **Enhanced** adds smooth motion and rewind, and
+  **Just here for multiplayer** changes no
   settings and opens Time Attack rooms or Sonic 2's two-player mode. Upgrades
   keep their games and settings unless a listed change is accepted. It opens
   once per run until finished or skipped, and again from **Extras › Setup guide**.
