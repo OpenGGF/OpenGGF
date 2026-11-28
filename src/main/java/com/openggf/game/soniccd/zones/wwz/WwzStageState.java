@@ -1,5 +1,7 @@
 package com.openggf.game.soniccd.zones.wwz;
 
+import com.openggf.game.internal.PhysicsProfileOverrides;
+
 import com.openggf.level.LevelManager;
 
 /**
@@ -45,7 +47,7 @@ public final class WwzStageState {
     private static WwzStageSignals signals(com.openggf.level.Level level) {
         var module = com.openggf.game.GameServices.module();
         if (!(level instanceof com.openggf.game.soniccd.level.CdLevel cd) || module == null
-                || !(module.getPhysicsProvider() instanceof com.openggf.game.soniccd.player.SonicCdPhysicsProvider p)) {
+                || !(PhysicsProfileOverrides.nativeSource(module.getPhysicsProvider()) instanceof com.openggf.game.soniccd.player.SonicCdPhysicsProvider p)) {
             return null;
         }
         return p.stage().profile(cd) instanceof WwzPlayerProfile profile ? profile.signals() : null;

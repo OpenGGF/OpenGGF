@@ -141,7 +141,8 @@ public final class DevelopmentPatchLoader {
                     effective = owned.apply(effective, patchContext);
             }
             accepted = true;
-            return effective;
+            return nativePlan.mutators().isEmpty() ? effective
+                    : com.openggf.mods.mutators.DefaultMutatorHost.decorate(effective, request, patchContext);
         }
 
         @Override public void close() throws IOException {

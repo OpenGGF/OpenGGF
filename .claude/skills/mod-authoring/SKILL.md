@@ -20,7 +20,8 @@ then its minimal source links. Do not load every example or handbook chapter.
 | User intent | Read first | Key decision |
 |---|---|---|
 | Enemy in an existing stock act | [Badnik](../../../docs/modding/task-recipes.md#badnik-in-a-stock-act) | Bind an existing slot through owned registration; true additions need explicit expert level assembly |
-| Tune one character | [Movement](../../../docs/modding/task-recipes.md#one-characters-movement) | Scoped `PhysicsProvider.transform`, preserving modifiers and optional init profile; game-wide rules stay on `GameModule.getPolicies()` |
+| Small player-configurable tweak | [Minimal gravity](../../../docs/modding/guides/mutators.md#minimal-gravity-tweak) | `ggfmod init --kind tweak`; one manifest and one `GgfMod` using `registerMutator`; engine hosts the cartridge title and pause screen |
+| Tune one character | [Movement](../../../docs/modding/task-recipes.md#one-characters-movement) | Scoped `ModContext.transformPhysics`, preserving modifiers and optional init profile; game-wide rules stay on `GameModule.getPolicies()` |
 | Pause world simulation for a creator menu | [Gameplay hold](../../../docs/modding/task-recipes.md#hold-gameplay-for-a-menu) | One captured `GameplayFrameController`; HOLD versus native or controlled input |
 | Keep an earned upgrade after restart | [Persistence](../../../docs/modding/task-recipes.md#persistent-upgrade) | Owned `ModSaveSlot` plus separate reversible effects and durable settlement |
 | Reuse native AI with supported parameters | [Native recipe](../../../docs/modding/task-recipes.md#parameterized-native-enemy) | Existing facade/finite recipe; verify donor art and linked-child lifecycle |
@@ -38,6 +39,9 @@ reskins or other creator tasks outside the table, use the
   the engine classpath is not automatically a creator contract. If the helper
   cannot express the request, name the gap and choose a documented expert seam
   or a scoped API extension; do not invent support or silently narrow the request.
+- Use manifest defaults for omitted metadata and empty maps. Let `ggfmod package`
+  infer the sole concrete `GgfMod` entrypoint. For play, enable, trust and Apply at
+  the master title before launching a new game.
 - Let `ModContext` derive ownership and publish the registration transaction.
   Use injected object services after construction, bounded assets and owner
   storage. A creator-reported owner or numeric id never grants authority.

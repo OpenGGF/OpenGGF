@@ -1,5 +1,7 @@
 package com.openggf.game.soniccd.objects.common;
 
+import com.openggf.game.internal.PhysicsProfileOverrides;
+
 import com.openggf.audio.GameSound;
 import com.openggf.camera.CameraPresentationAccess;
 import com.openggf.configuration.SonicConfiguration;
@@ -289,7 +291,7 @@ public abstract class CdObject extends AbstractObjectInstance implements SpriteS
         var level = cdLevel();
         var module = services().gameModule();
         if (level == null || module == null
-                || !(module.getPhysicsProvider() instanceof com.openggf.game.soniccd.player.SonicCdPhysicsProvider p)) {
+                || !(PhysicsProfileOverrides.nativeSource(module.getPhysicsProvider()) instanceof com.openggf.game.soniccd.player.SonicCdPhysicsProvider p)) {
             return -1;
         }
         return p.stage().profile(level).playerLayerForObjects();

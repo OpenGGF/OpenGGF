@@ -105,7 +105,12 @@ In a source checkout the launcher takes **absolute** engine and SDK paths first:
 sh docs/modding/ggfmod /absolute/path/engine.jar /absolute/path/sdk.jar init /absolute/path/my-mod --id my-mod --kind scene --package example.mymod
 ```
 
-Choose a purpose using `--kind music|reskin|object|character|zone|scene|standalone`.
+For a small gameplay tweak, use `--kind tweak` instead. Edit one Java file and a
+six-field manifest. The starter adds a Low Gravity switch to the existing mutator
+screen. The packager infers the Java entrypoint. See the complete starter source
+in the [mutator guide](guides/mutators.md#minimal-gravity-tweak).
+
+Choose a purpose using `--kind music|reskin|object|character|zone|scene|standalone|tweak`.
 Without `--kind`, the backwards-compatible starter contains an object and Sonic 2
 zone. The object/zone starter also includes an inactive character source stub;
 finish its art and sensors before registering it for gameplay.
@@ -200,7 +205,7 @@ For a worked campaign, the kit's `examples/tide-circuit` contains two hosted act
 all original binary assets and their reproducible Python generator. Follow its
 portable README and the [two-act campaign guide](guides/two-act-campaign.md).
 Compile/package without a ROM; playing requires your own Sonic 2 World REV01 ROM.
-This maintained example complements the seven starter purposes.
+This maintained example complements the generated starters.
 
 The portable `--run` command uses only this project's exploded `target/classes`
 and generated `target/play/config.yaml`; saves remain under `target/play` too.

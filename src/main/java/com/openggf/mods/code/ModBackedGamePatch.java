@@ -3,7 +3,11 @@ package com.openggf.mods.code;
 import com.openggf.game.GameId;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameServices;
-import com.openggf.game.patch.GamePatch;
+import com.openggf.game.PhysicsProvider;
+import com.openggf.game.mutators.MutatorHostPatch;
+import com.openggf.game.patch.PatchOwner;
+import com.openggf.game.patch.ResolutionResult;
+import com.openggf.mods.mutators.DefaultMutatorHost;
 import com.openggf.game.patch.GameplayLaunchRequest;
 import com.openggf.game.patch.LogicalRom;
 import com.openggf.game.patch.PatchContext;
@@ -23,7 +27,7 @@ import java.util.Objects;
 import java.util.Set;
 
 /** Engine-owned backing decorator for one frozen content registration plan. */
-public final class ModBackedGamePatch implements GamePatch {
+public final class ModBackedGamePatch implements MutatorHostPatch {
     private final ModRegistrationPlan plan;
     private final ModFaultBoundary faultBoundary;
     private final java.util.function.BiConsumer<String,
@@ -152,6 +156,8 @@ public final class ModBackedGamePatch implements GamePatch {
         if (!plan.hasContent()) throw new IllegalArgumentException("Backing patch requires content");
         if (!plan.mutators().isEmpty() && faultBoundary == null)
             throw new IllegalArgumentException("Mutators require an installed owner fault boundary");
+        if (!plan.physicsTransforms().isEmpty() && faultBoundary == null)
+            throw new IllegalArgumentException("Physics transforms require an installed owner fault boundary");
         if (!plan.objectArt().isEmpty()
                 && !plan.preparedObjectArt().keySet().equals(plan.objectArt().keySet())) {
             throw new IllegalArgumentException("Backing patch requires validated object art");
@@ -177,6 +183,20 @@ public final class ModBackedGamePatch implements GamePatch {
     }
 
     public ModRegistrationPlan plan() { return plan; }
+
+    @Override public boolean contributesMutators() { return !plan.mutators().isEmpty(); }
+
+    @Override public ResolutionResult hostMutators(ResolutionResult.Resolved resolved,
+                                                   GameplayLaunchRequest request, PatchContext context) {
+        try {
+            return new ResolutionResult.Resolved(DefaultMutatorHost.decorate(resolved.module(), request, context),
+                    resolved.ownerFailures());
+        } catch (ModFaultBoundary.CallbackAborted failure) {
+            var owner = new PatchOwner.Mod(failure.owner());
+            return new ResolutionResult.LaunchAborted(owner, "mutator-host", failure, Set.of(owner));
+        }
+    }
+
     @Override public String id() { return plan.ownerModId() + ":" + contentId; }
     @Override public String displayName() { return plan.ownerModId() + " content"; }
     @Override public String baseGameId() { return plan.baseGameId(); }
@@ -242,6 +262,8 @@ public final class ModBackedGamePatch implements GamePatch {
             private com.openggf.game.dataselect.DataSelectHostProfile dataSelectHost;
             private com.openggf.game.dataselect.DataSelectPresentationProvider dataSelectPresentation;
             private com.openggf.game.GameplayPolicyProvider gameplayPolicies;
+            private PhysicsProvider physicsSource;
+            private PhysicsProvider physicsProvider;
             private com.openggf.game.session.WorldSessionPolicyProvider worldPolicies;
 
             @Override
@@ -367,6 +389,21 @@ public final class ModBackedGamePatch implements GamePatch {
              * game service (so the game package never depends on mod scene types). Only this
              * package can build one, and it runs every scene callback inside the fault boundary.
              */
+            @Override
+            public synchronized PhysicsProvider getPhysicsProvider() {
+                PhysicsProvider inherited = super.getPhysicsProvider();
+                if (plan.physicsTransforms().isEmpty() || inherited == null) return inherited;
+                if (physicsSource != inherited) {
+                    PhysicsProvider edited = inherited;
+                    for (var transform : plan.physicsTransforms()) {
+                        edited = transform.apply(edited, plan.ownerModId(), faultBoundary);
+                    }
+                    physicsProvider = edited;
+                    physicsSource = inherited;
+                }
+                return physicsProvider;
+            }
+
             /** The width the mod asked for ({@code ModContext.requireDisplayWidth}), else the base's. */
             @Override
             public String requiredDisplayAspect() {

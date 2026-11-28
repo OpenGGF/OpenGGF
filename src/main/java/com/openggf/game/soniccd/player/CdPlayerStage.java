@@ -1,5 +1,7 @@
 package com.openggf.game.soniccd.player;
 
+import com.openggf.game.internal.PhysicsProfileOverrides;
+
 import com.openggf.game.internal.PlayerStageRoutines;
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.soniccd.SonicCdGame;
@@ -387,7 +389,7 @@ public final class CdPlayerStage implements PlayerStageRoutines {
     /** The Sonic CD stage routines of {@code player}'s game, or {@code null} in another game. */
     public static CdPlayerStage of(AbstractPlayableSprite player) {
         var module = player == null ? null : player.currentGameModule();
-        return module != null && module.getPhysicsProvider() instanceof SonicCdPhysicsProvider provider ? provider.stage() : null;
+        return module != null && PhysicsProfileOverrides.nativeSource(module.getPhysicsProvider()) instanceof SonicCdPhysicsProvider provider ? provider.stage() : null;
     }
 
     /** {@code tst.b miniSonic} for the loaded stage. */

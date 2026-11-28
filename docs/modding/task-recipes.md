@@ -60,19 +60,29 @@ registration pass alone proves neither placement nor a playable encounter.
 
 ## One character's movement
 
-**Edit the existing provider, not every character or the game loop.** A registered
-[GamePatch](../../src/main/java/com/openggf/game/patch/GamePatch.java) can return a [DelegatingGameModule](../../src/main/java/com/openggf/game/patch/DelegatingGameModule.java) overriding `getPhysicsProvider()`
-with `base.getPhysicsProvider().transform("sonic"::equals, p -> p.withMax(0x0C00))`.
-[PhysicsProvider](../../src/main/java/com/openggf/game/PhysicsProvider.java).transform preserves source modifiers, edits matching normal
-and optional initialization profiles, and leaves other characters untouched.
-[PhysicsProfile](../../src/main/java/com/openggf/game/PhysicsProfile.java).toBuilder() supports wider immutable edits; speeds use fixed-point
-units. Keep launch scope in the patch's `activatesFor` and preserve composition by
-forwarding through the supplied base.
+Call `transformPhysics` from `GgfMod.register` in a patch mod:
+
+```java
+context.transformPhysics("sonic"::equals, profile -> profile.withMax(0x0C00));
+```
+
+This stages an always-on edit for the manifest's `baseGame`. It composes with
+earlier edits in mod load order, preserves host water and speed-shoes modifiers,
+and updates matching normal and optional initialization profiles. Keep both
+callbacks deterministic and side-effect-free. The engine attributes callback
+failures to the registering mod. Use
+[`PhysicsProfile.toBuilder()`](../../src/main/java/com/openggf/game/PhysicsProfile.java)
+for grouped immutable edits. Speeds use fixed-point units.
+
+For a configurable gravity effect, use the
+[mutator starter](guides/mutators.md#minimal-gravity-tweak). Gravity is a distinct
+movement policy. For launch-specific admission or changes beyond profile values,
+use an expert [GamePatch](../../src/main/java/com/openggf/game/patch/GamePatch.java).
 
 **State:** a constant profile needs no extra mutable rewind state. If an earned
 upgrade controls the choice, its session state needs an owned captured service;
 its durable purchase record belongs in storage (next recipe). Verify initialization,
-death reload, water and speed-shoes changes, including S3K's separate init profile.
+death reload, water and speed-shoes changes, including any separate init profile the provider supplies.
 
 **Verify:** [TestPhysicsProfileEditing](../../src/test/java/com/openggf/game/TestPhysicsProfileEditing.java) demonstrates preservation and character
 scoping; add a session test proving the intended character changes while another

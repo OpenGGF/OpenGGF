@@ -1,5 +1,7 @@
 package com.openggf.game.soniccd.objects.boss.wwz;
 
+import com.openggf.game.internal.PhysicsProfileOverrides;
+
 import com.openggf.game.internal.StagePaletteWait;
 import com.openggf.game.soniccd.level.CdLevel;
 import com.openggf.game.soniccd.player.SonicCdPhysicsProvider;
@@ -111,7 +113,7 @@ public final class WwzBossRam implements WwzStageSignals {
     /** Binds this RAM to the stage's player profile ({@link WwzPlayerProfile#setSignals}); idempotent. */
     void bind(com.openggf.game.GameModule module, CdLevel level, LevelManager levels) {
         this.levels = levels;
-        if (level == null || module == null || !(module.getPhysicsProvider() instanceof SonicCdPhysicsProvider p)) return;
+        if (level == null || module == null || !(PhysicsProfileOverrides.nativeSource(module.getPhysicsProvider()) instanceof SonicCdPhysicsProvider p)) return;
         if (p.stage().profile(level) instanceof WwzPlayerProfile profile && profile != bound) {
             profile.setSignals(this);
             bound = profile;

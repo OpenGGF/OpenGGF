@@ -1,5 +1,7 @@
 package com.openggf.sprites.playable;
 
+import com.openggf.game.internal.PhysicsProfileOverrides;
+
 import com.openggf.game.GameModule;
 import com.openggf.game.internal.PlayerStageRoutines;
 
@@ -19,7 +21,7 @@ final class PlayerStageHooks {
         } catch (IllegalStateException ex) {
             return null;
         }
-        return module != null && module.getPhysicsProvider() instanceof PlayerStageRoutines r ? r : null;
+        return module != null && PhysicsProfileOverrides.nativeSource(module.getPhysicsProvider()) instanceof PlayerStageRoutines r ? r : null;
     }
 
     /**

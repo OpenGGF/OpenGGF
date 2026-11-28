@@ -42,8 +42,7 @@ public final class DevelopmentModSource implements AutoCloseable {
             List<String> names=root.validatedEntryNames();
             if(!names.contains(DefaultModRepositoryScanner.MANIFEST_PATH))
                 throw new IOException("Required manifest is missing");
-            ModManifest manifest=new ModManifestParser(limits).parse(root.readBounded(
-                    DefaultModRepositoryScanner.MANIFEST_PATH,limits.maxMetadataBytes()));
+            ModManifest manifest=new ModManifestParser(limits).parse(ModEntrypointInference.completeManifest(root, names));
             ModDescriptor descriptor=new ModDescriptor(root.immutableContentPath(),manifest,
                     root.immutableSha256(),names.stream().anyMatch(n->n.endsWith(".class")),List.of(),root);
             return new DevelopmentModSource(root,descriptor);

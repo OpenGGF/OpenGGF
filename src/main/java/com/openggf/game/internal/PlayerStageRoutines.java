@@ -226,7 +226,7 @@ public interface PlayerStageRoutines {
 
     static int captureLostRingTouchLayer(AbstractPlayableSprite player) {
         var module = player == null ? null : player.currentGameModule();
-        var provider = module == null ? null : module.getPhysicsProvider();
+        var provider = module == null ? null : PhysicsProfileOverrides.nativeSource(module.getPhysicsProvider());
         return provider instanceof PlayerStageRoutines stage ? stage.lostRingTouchLayer(player) : -1;
     }
 

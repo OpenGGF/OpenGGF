@@ -19,6 +19,9 @@ import com.openggf.io.ModAssetRoot;
 import com.openggf.io.ModInputLimits;
 import com.openggf.io.DirectoryAccess;
 import com.openggf.io.SnapshotModAssetRoot;
+import com.openggf.mods.DefaultModRepositoryScanner;
+import com.openggf.mods.ModEntrypointInference;
+import com.openggf.mods.ModManifestException;
 
 /** Deterministically packages and validates an exploded mod directory. */
 public final class JarPackager {
@@ -80,11 +83,20 @@ public final class JarPackager {
                 Objects.requireNonNull(limits),DirectoryAccess.DEVELOPMENT)){
           Path retained=snapshot.immutableContentPath();Objects.requireNonNull(afterSnapshot).accept(retained);
           List<String> names=snapshot.validatedEntryNames().stream().sorted().toList();validateEntryNames(names);
-          List<Path> files=names.stream().map(retained::resolve).toList();
+          byte[] manifest = null;
+          if (names.contains(DefaultModRepositoryScanner.MANIFEST_PATH)) {
+              try {
+                  manifest = ModEntrypointInference.completeManifest(snapshot, names);
+              } catch (ModManifestException failure) {
+                  throw new ValidationFailure(new ModJarValidator.Report(List.of(new ModJarValidator.Finding(
+                          ModJarValidator.Severity.ERROR, "MANIFEST_INVALID",
+                          DefaultModRepositoryScanner.MANIFEST_PATH, "", failure.getMessage()))));
+              }
+          }
           Path staging = Files.createTempFile(parent, ".ggfmod-package-", ".jar");
           boolean published = false;
           try {
-            writeJar(files,names,staging);
+            writeJar(retained, names, manifest, staging);
             ModJarValidator.Report report = new ModJarValidator().validate(staging);
             if (!report.valid() || (failOnWarnings && !report.findings().isEmpty())) {
                 throw new ValidationFailure(report);
@@ -140,17 +152,21 @@ public final class JarPackager {
         }
     }
 
-    private static void writeJar(List<Path> files, List<String> names, Path staging) throws IOException {
+    private static void writeJar(Path root, List<String> names, byte[] manifest, Path staging) throws IOException {
         try (JarOutputStream output = new JarOutputStream(Files.newOutputStream(staging))) {
             byte[] buffer = new byte[8192];
-            for (int index = 0; index < files.size(); index++) {
-                JarEntry entry = new JarEntry(names.get(index));
+            for (String name : names) {
+                JarEntry entry = new JarEntry(name);
                 entry.setTimeLocal(ENTRY_TIME);
                 output.putNextEntry(entry);
-                try (InputStream input = Files.newInputStream(files.get(index))) {
-                    int read;
-                    while ((read = input.read(buffer)) != -1) {
-                        output.write(buffer, 0, read);
+                if (name.equals(DefaultModRepositoryScanner.MANIFEST_PATH)) {
+                    output.write(manifest);
+                } else {
+                    try (InputStream input = Files.newInputStream(root.resolve(name))) {
+                        int read;
+                        while ((read = input.read(buffer)) != -1) {
+                            output.write(buffer, 0, read);
+                        }
                     }
                 }
                 output.closeEntry();

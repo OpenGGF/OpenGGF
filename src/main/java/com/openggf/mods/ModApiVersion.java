@@ -231,6 +231,7 @@ public final class ModApiVersion {
      * SonicConfiguration appends SETUP_GUIDE (hub.setupGuide), the first-run setup guide's
      * finished/skipped state owned by the hub; existing ordinals are preserved and the candidate
      * remains 0.7.0.
+     * ModContext.transformPhysics stages owner-bound character profile edits in the 0.7 candidate.
      * GameModule.getPolicies() owns the immutable GamePolicies record (GameRules rules);
      * GameModule/DelegatingGameModule/PhysicsProvider getRules() are removed,
      * PhysicsProvider.fixed drops its rules argument, StandaloneGameSpec gains policies(), and

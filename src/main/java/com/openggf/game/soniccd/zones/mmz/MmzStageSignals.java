@@ -1,5 +1,7 @@
 package com.openggf.game.soniccd.zones.mmz;
 
+import com.openggf.game.internal.PhysicsProfileOverrides;
+
 import com.openggf.game.GameModule;
 import com.openggf.game.soniccd.level.CdLevel;
 import com.openggf.game.soniccd.player.CdPlayerStage;
@@ -122,7 +124,7 @@ public final class MmzStageSignals {
     /** The loaded Metallic Madness stage's signals, or {@code null} outside one. */
     public static MmzStageSignals of(GameModule module, CdLevel level) {
         if (module == null || level == null
-                || !(module.getPhysicsProvider() instanceof SonicCdPhysicsProvider provider)) {
+                || !(PhysicsProfileOverrides.nativeSource(module.getPhysicsProvider()) instanceof SonicCdPhysicsProvider provider)) {
             return null;
         }
         CdPlayerStage stage = provider.stage();
