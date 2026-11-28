@@ -88,6 +88,12 @@ class TestExampleMutatorsPackage {
                 if (game.equals("s1")) assertNull(tails.getGameService(MutatorSupportProfile.class));
                 else assertScreen(base, tails, keys);
             }
+
+            var cd = new com.openggf.game.soniccd.SonicCdGameModule();
+            var cdModule = capture.apply(cd, new GameplayLaunchRequest("scd", "sonic", List.of()));
+            assertNull(cdModule.getGameService(MutatorSupportProfile.class));
+            assertSame(cd.getTitleScreenProvider(), cdModule.getTitleScreenProvider(),
+                    "Sonic CD keeps its stock title");
         }
     }
 

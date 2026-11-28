@@ -1,5 +1,6 @@
 package com.openggf.mods.mutators;
 
+import com.openggf.catalog.StockGameCatalog;
 import com.openggf.game.GameId;
 import com.openggf.game.mutators.MonitorContent;
 import java.util.EnumSet;
@@ -8,12 +9,12 @@ import java.util.function.BooleanSupplier;
 
 /** Native cartridge presentation and capability metadata for the default mutator host. */
 final class CartridgeMutatorSupport implements MutatorSupportProfile {
-    private static final Set<GameId> SUPPORTED_GAMES = Set.of(GameId.S1, GameId.S2, GameId.S3K);
     private final String game;
     private final BooleanSupplier donorActive;
 
     static CartridgeMutatorSupport forGame(GameId game, BooleanSupplier donorActive) {
-        return SUPPORTED_GAMES.contains(game) ? new CartridgeMutatorSupport(game.code(), donorActive) : null;
+        String code = game.code();
+        return StockGameCatalog.isCartridgeCode(code) ? new CartridgeMutatorSupport(code, donorActive) : null;
     }
 
     private CartridgeMutatorSupport(String game, BooleanSupplier donorActive) {

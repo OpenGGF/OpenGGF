@@ -1606,11 +1606,10 @@ class TestBuildToolingGuard {
         String release = normalizeLineEndings(Files.readString(Path.of(".github/workflows/release.yml")));
         List<String> violations = new ArrayList<>();
 
-        // Pull requests check their base branch and pushes (develop/next smoke in
-        // ci.yml, master in release.yml) their own ref; manual runs make no
-        // destination claim.
-        assertDestinationAwareMavenStep(ci, ".github/workflows/ci.yml", "Run tests (pull request)",
-                "github.event_name == 'pull_request'", "github.base_ref", violations);
+        // Pull requests to release branches check their base. Feature-stack and
+        // manual runs make no release destination claim. Pushes check their own ref.
+        assertPullRequestMavenDestinations(
+                workflowStep(ci, "Run tests (pull request)"), ".github/workflows/ci.yml", violations);
         assertDestinationAwareMavenStep(ci, ".github/workflows/ci.yml", "Run smoke suite (push)",
                 "github.event_name == 'push'", "github.ref_name", violations);
         assertMavenStepOmitsDestination(ci, ".github/workflows/ci.yml", "Run tests (manual)",
@@ -5542,6 +5541,30 @@ class TestBuildToolingGuard {
         }
     }
 
+    private static void assertPullRequestMavenDestinations(String step, String file, List<String> violations) {
+        if (step == null || !step.contains("if: github.event_name == 'pull_request'")) {
+            violations.add(file + " must define a Maven test step gated to pull requests");
+            return;
+        }
+        String shell = """
+                case "$BASE_REF" in
+                  master|develop|next)
+                    mvn -Dmse=off test -B -DmodApi.destinationBranch="$BASE_REF" -Dopenggf.multiplayer.channel="$BASE_REF"
+                    ;;
+                  *)
+                    mvn -Dmse=off test -B -Dopenggf.multiplayer.channel=develop
+                    ;;
+                esac
+                """;
+        String run = yamlIndentedBlock(step, "        run: |", 8);
+        String script = run.substring(run.indexOf('\n') + 1).stripTrailing().stripIndent();
+        if (!step.contains("BASE_REF: ${{ github.base_ref }}")
+                || !step.contains("shell: bash")
+                || !script.equals(shell.stripTrailing())) {
+            violations.add(file + " must validate the API destination for master/develop/next and test feature bases without it");
+        }
+    }
+
     private static void assertMavenStepOmitsDestination(String workflow, String file, String stepName,
                                                         List<String> violations) {
         String step = workflowStep(workflow, stepName);
@@ -5594,9 +5617,8 @@ class TestBuildToolingGuard {
                 continue;
             }
             String name = step.lines().findFirst().orElse("unnamed Maven step").strip();
-            if (step.contains("github.event_name == 'pull_request'")
-                    && !step.contains("-DmodApi.destinationBranch=\"${{ github.base_ref }}\"")) {
-                violations.add(file + " " + name + " is a PR Maven test path without github.base_ref");
+            if (step.contains("github.event_name == 'pull_request'")) {
+                assertPullRequestMavenDestinations(step, file + " " + name, violations);
             }
             if (step.contains("github.event_name == 'push'")
                     && !step.contains("-DmodApi.destinationBranch=\"${{ github.ref_name }}\"")) {
