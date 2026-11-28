@@ -7,6 +7,11 @@ under the matching area heading; see the
 
 ## Gameplay and presentation
 
+- **The hub header carries the new OpenGGF logo** as native-resolution pixel
+  art: the quilled, two-tailed mark from the README, redrawn at 92 by 22 pixels
+  in its four brand colours and drawn one-to-one, so it stays crisp beside the
+  menu's pixel font instead of a shrunken copy of the old wordmark.
+
 - **Angel Island Act 2's bombing run in widescreen** shows the scenery about to
   scroll in across the whole picture. The camera lock that follows the
   auto-scroll used to cover the extra width with static that trailed into the
