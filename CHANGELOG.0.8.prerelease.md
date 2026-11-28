@@ -1282,6 +1282,14 @@ under the matching area heading; see the
   reference. Sixty seconds of Emerald Hill 1 history fell from 22.1 MB to
   4.2 MB. Rewinding during the title card still restores it exactly.
 
+- Sonic 3 & Knuckles live rewind history uses about 9 MB less memory. Each
+  checkpoint kept its own copies of the prepared, displayed and HUD-counter
+  sprite tables, about 33 KB of tile records and boxed art versions. Checkpoints
+  now store the tables packed into number arrays, reuse pieces that have not
+  changed since the previous checkpoint, and rebuild equal tables when rewinding.
+  Sixty seconds of Angel Island 1 history fell from 35.7 MB to 26.2 MB. Packing
+  and rebuilding take microseconds per checkpoint, with no change in frame times.
+
 - ICZ background loop history and indoor selection now belong to the event owner,
   so rebuilding scroll output retains the same background. Rewind captures that
   continuation together with the shared ROM shake words; ICZ objects request
