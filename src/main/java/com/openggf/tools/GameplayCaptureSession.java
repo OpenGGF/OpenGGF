@@ -110,6 +110,8 @@ public final class GameplayCaptureSession implements AutoCloseable {
 
     private boolean startAtTitle;
     private boolean liveRewindKeyHeld;
+    private boolean liveRewindHalfHeld;
+    private boolean liveRewindDoubleHeld;
     private com.openggf.graphics.PixelFontTextRenderer liveRewindHudText;
     private com.openggf.mods.code.DevelopmentPatchLoader.PreparedDecorator developmentMod;
     private final DevelopmentResolverScope developmentResolver = new DevelopmentResolverScope();
@@ -133,16 +135,52 @@ public final class GameplayCaptureSession implements AutoCloseable {
     }
 
     /**
+     * Records live rewind history and pins the plan's budget settings for this capture's session
+     * (unset values keep the configuration's), as the player's settings would.
+     */
+    public void enableLiveRewind(GameplayCaptureRewindPlan plan) {
+        enableLiveRewind();
+        SonicConfigurationService config = GameServices.configuration();
+        if (plan.scope() != null) config.setSessionOverride(SonicConfiguration.REWIND_BUDGET_SCOPE, plan.scope());
+        if (plan.seconds() != null) config.setSessionOverride(SonicConfiguration.REWIND_BUDGET_SECONDS, plan.seconds());
+        if (plan.refillOnLifeLoss() != null)
+            config.setSessionOverride(SonicConfiguration.REWIND_REFILL_ON_LIFE_LOSS, plan.refillOnLifeLoss());
+        if (plan.bonusStages() != null) config.setSessionOverride(SonicConfiguration.REWIND_BONUS_STAGES, plan.bonusStages());
+        if (plan.specialStages() != null)
+            config.setSessionOverride(SonicConfiguration.REWIND_SPECIAL_STAGES, plan.specialStages());
+    }
+
+    /**
      * Holds or releases the configured live rewind key before the next step, as a player
      * would; LiveRewindManager reads the physical key, which the recorded controller
      * override leaves untouched.
      */
     public void holdLiveRewind(boolean held) {
+        holdLiveRewind(held ? GameplayCaptureRewindPlan.Speed.NORMAL : null);
+    }
+
+    /**
+     * Holds the live rewind key with the configured half- or double-speed modifier key for
+     * {@code speed}, or releases all of them when it is null. Key events go through the same
+     * physical input path a player's keyboard uses.
+     */
+    public void holdLiveRewind(GameplayCaptureRewindPlan.Speed speed) {
         requireBooted();
-        if (held == liveRewindKeyHeld) return;
-        liveRewindKeyHeld = held;
-        loop.getInputHandler().handleKeyEvent(
-                GameServices.configuration().getInt(SonicConfiguration.LIVE_REWIND_KEY),
+        SonicConfigurationService config = GameServices.configuration();
+        // Modifiers first, so the rewind key's first held frame already reads its speed.
+        setKey(config.getInt(SonicConfiguration.LIVE_REWIND_HALF_SPEED_KEY),
+                speed == GameplayCaptureRewindPlan.Speed.HALF, liveRewindHalfHeld);
+        liveRewindHalfHeld = speed == GameplayCaptureRewindPlan.Speed.HALF;
+        setKey(config.getInt(SonicConfiguration.LIVE_REWIND_DOUBLE_SPEED_KEY),
+                speed == GameplayCaptureRewindPlan.Speed.DOUBLE, liveRewindDoubleHeld);
+        liveRewindDoubleHeld = speed == GameplayCaptureRewindPlan.Speed.DOUBLE;
+        setKey(config.getInt(SonicConfiguration.LIVE_REWIND_KEY), speed != null, liveRewindKeyHeld);
+        liveRewindKeyHeld = speed != null;
+    }
+
+    private void setKey(int key, boolean held, boolean wasHeld) {
+        if (held == wasHeld) return;
+        loop.getInputHandler().handleKeyEvent(key,
                 held ? org.lwjgl.glfw.GLFW.GLFW_PRESS : org.lwjgl.glfw.GLFW.GLFW_RELEASE);
     }
 
@@ -182,7 +220,55 @@ public final class GameplayCaptureSession implements AutoCloseable {
         if (developmentMod != null) developmentMod.close();
         developmentMod = next;
         boot.setLaunchModuleDecorator((module, request) ->
-                developmentResolver.decorate(developmentMod, module, request));
+                withMutatorRequests(developmentResolver.decorate(developmentMod, module, request)));
+    }
+
+    private com.openggf.mods.mutators.MutatorLaunchRequests mutatorRequests;
+
+    /**
+     * Declared capture setup: enables mutators of the applied mod package for this capture's
+     * world, each {@code id[:option=value,...]}. They are laid over the saved preferences as
+     * requested settings, admitted at the world's LAUNCH boundary like a Start from the
+     * mutator title, and never saved. Call after {@link #applyMod} and before boot.
+     */
+    public void requestMutators(java.util.List<String> specs) {
+        if (loop != null) throw new IllegalStateException("capture session is already booted");
+        if (developmentMod == null) throw new IllegalStateException("--mutator needs --mod");
+        mutatorRequests = specs.isEmpty() ? null : com.openggf.mods.mutators.MutatorLaunchRequests.parse(specs);
+    }
+
+    private com.openggf.game.GameModule withMutatorRequests(com.openggf.game.GameModule decorated) {
+        var requests = mutatorRequests;
+        if (requests == null || decorated == null) return decorated;
+        return new com.openggf.game.patch.DelegatingGameModule(decorated, decorated.getIdentifier()) {
+            @Override public <T> T getGameService(Class<T> type) {
+                if (type == com.openggf.mods.mutators.MutatorLaunchRequests.class) return type.cast(requests);
+                return super.getGameService(type);
+            }
+        };
+    }
+
+    /**
+     * After boot, every requested mutator must be admitted and enabled. A package that does
+     * not support this game/team, or a launch that refused the settings, fails the capture
+     * instead of filming stock play.
+     */
+    public void verifyRequestedMutators() {
+        requireBooted();
+        if (mutatorRequests == null) return;
+        var world = com.openggf.game.session.SessionManager.getCurrentWorldSession();
+        var state = world == null ? null : com.openggf.mods.mutators.MutatorWorldAccess.state(world);
+        if (state == null) throw new IllegalStateException("--mutator: the --mod package installed no mutators for this "
+                + "game and team");
+        String admission = com.openggf.mods.mutators.MutatorWorldAccess.admissionError(world);
+        for (var request : mutatorRequests.requests()) {
+            var owned = state.definitions().stream().filter(o -> o.key().equals(request.id().replace('/', ':'))
+                    || o.definition().localId().equals(request.id())).findFirst().orElseThrow();
+            var admitted = state.admitted().get(owned.key());
+            if (admitted == null || !admitted.enabled())
+                throw new IllegalStateException("--mutator " + request.id() + " was not admitted"
+                        + (admission.isBlank() ? "" : ": " + admission));
+        }
     }
 
     /** Boots the level, consumes the title card, and optionally teleports the leader. */
@@ -637,6 +723,17 @@ public final class GameplayCaptureSession implements AutoCloseable {
         if (ui != null) {
             ui.renderFadePass();
         }
+        drawLiveRewindPresentation(graphics);
+        loop.renderHostedRunOverlay();
+        glFinish();
+    }
+
+    /**
+     * Engine's post-scene order for every gameplay mode: after the fade pass, the VHS picture
+     * search while live rewind runs, then the live rewind transport plate. Special stages draw
+     * through their own provider but rewind (and show both) like levels and bonus stages.
+     */
+    private void drawLiveRewindPresentation(GraphicsManager graphics) {
         if (GameServices.configuration().getBoolean(SonicConfiguration.LIVE_REWIND_VHS_EFFECT)) {
             rewindEffect.apply(loop.liveRewindEffectIntensity(), loop.liveRewindEffectSpeed(),
                     RewindVhsEffectPass.REWIND_SCROLL_DIRECTION,
@@ -644,12 +741,9 @@ public final class GameplayCaptureSession implements AutoCloseable {
                     width, HEIGHT, graphics.getViewportX(), graphics.getViewportY(),
                     graphics.getViewportWidth(), graphics.getViewportHeight());
         }
-        // Engine.draw: the live rewind transport plate follows the fade and VHS passes.
         if (liveRewindHudText == null) liveRewindHudText = com.openggf.graphics.PixelFontTextRenderer.compactMenu();
         liveRewindHudText.setProjectionMatrix(com.openggf.mods.scene.host.SceneSurface.projection(width, HEIGHT));
         loop.renderLiveRewindHud(liveRewindHudText);
-        loop.renderHostedRunOverlay();
-        glFinish();
     }
 
     /** Engine.drawSpecialStageResults: optional level backdrop, then the results sprites. */
@@ -692,6 +786,7 @@ public final class GameplayCaptureSession implements AutoCloseable {
         if (ui != null) {
             ui.renderFadePass();
         }
+        drawLiveRewindPresentation(graphics);
         loop.renderHostedRunOverlay();
         glFinish();
     }

@@ -14,7 +14,7 @@ class TestLevelSpritePresentationLifecycle {
         var fixture = HeadlessTestFixture.builder().withZoneAndAct(4, 0).build();
         LevelManager level = GameServices.level();
         var tables = level.spritePresentationRenderer().spriteTables;
-        for (int i = 0; i < 120 && tables.capture().prepared().tiles().isEmpty(); i++) {
+        for (int i = 0; i < 120 && tables.prepared().tiles().isEmpty(); i++) {
             fixture.stepFrame(false, false, false, true, false);
         }
         var before = tables.capture();
@@ -40,7 +40,7 @@ class TestLevelSpritePresentationLifecycle {
         fixture.stepFrame(false, false, false, true, false);
         assertEquals(next, tables.capture(), "forward replay after restore must reproduce all presentation buffers");
         level.resetZoneScopedRegistriesForLevelLoad();
-        assertTrue(tables.capture().prepared().tiles().isEmpty());
+        assertTrue(tables.prepared().tiles().isEmpty());
         assertTrue(tables.published().tiles().isEmpty());
         assertTrue(tables.counters().tiles().isEmpty());
         assertNull(tables.publishedScroll());
@@ -55,6 +55,9 @@ class TestLevelSpritePresentationLifecycle {
         for (int i = 0; i < 120 && tables.published().tiles().isEmpty(); i++)
             fixture.stepFrame(false, false, false, false, false);
         var before = tables.capture();
+        var preparedBefore = tables.prepared();
+        var publishedBefore = tables.published();
+        var countersBefore = tables.counters();
         assertFalse(before.prepared().tiles().isEmpty());
         assertFalse(before.published().tiles().isEmpty());
         // Native Load_Level changes the layout inside LevelLoop. It neither
@@ -62,14 +65,14 @@ class TestLevelSpritePresentationLifecycle {
         level.executeActTransition(SeamlessLevelTransitionRequest.builder(
                 SeamlessLevelTransitionRequest.TransitionType.RELOAD_TARGET_LEVEL)
                 .targetZoneAct(zone, 1).build());
-        assertSame(before.prepared(), tables.capture().prepared(), "retain pending Render_Sprites output");
-        assertSame(before.published(), tables.published(), "retain the currently displayed SAT");
-        assertSame(before.counters(), tables.counters(), "retain the displayed HUD counters");
+        assertSame(preparedBefore, tables.prepared(), "retain pending Render_Sprites output");
+        assertSame(publishedBefore, tables.published(), "retain the currently displayed SAT");
+        assertSame(countersBefore, tables.counters(), "retain the displayed HUD counters");
         // Engine full-layout coordinates change on reload; the next scroll
         // producer must use the new layout, rather than stale source offsets.
         assertNull(tables.publishedScroll());
         tables.publish();
-        assertSame(before.prepared(), tables.published(), "ordinary publication resumes from retained CPU output");
+        assertSame(preparedBefore, tables.published(), "ordinary publication resumes from retained CPU output");
     }
 
 }

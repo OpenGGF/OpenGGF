@@ -24,6 +24,8 @@ public final class S3kPhysicalDisplayWorld implements NativePhysicalWorldData, W
     private final S3kPhysicalSstHeaderBank bank = new S3kPhysicalSstHeaderBank();
     private final S3kPhysicalDisplayQueue queue = new S3kPhysicalDisplayQueue();
     private final RewindSnapshottable<Object> rewindAdapter = new S3kPhysicalDisplayRewindAdapter(this);
+    /** Last captured/restored composite; reused while both leaves return their shared snapshots. */
+    private State sharedState;
 
     private S3kPhysicalDisplayWorld() { }
 
@@ -53,7 +55,15 @@ public final class S3kPhysicalDisplayWorld implements NativePhysicalWorldData, W
     @Override public RewindSnapshottable<?> dataRewindState() { return rewindAdapter; }
 
     Object capture() {
-        return new State(owner, new BankState(owner, bank.capture()), new QueueState(owner, queue.capture()));
+        // Leaves are copy-on-write: identical leaf instances mean nothing has written since.
+        var bankValue = bank.capture();
+        var queueValue = queue.capture();
+        State state = sharedState;
+        if (state == null || state.bank.value != bankValue || state.queue.value != queueValue) {
+            state = new State(owner, new BankState(owner, bankValue), new QueueState(owner, queueValue));
+            sharedState = state;
+        }
+        return state;
     }
     void restore(Object value) {
         // Preflight BOTH channels before either leaf writes. Leaf values can only
@@ -63,13 +73,14 @@ public final class S3kPhysicalDisplayWorld implements NativePhysicalWorldData, W
                 || state.bank.owner != owner || state.queue.owner != owner
                 || state.bank.value == null || state.queue.value == null)
             throw new IllegalArgumentException("Snapshot does not belong wholly to this world DATA owner");
-        if (state.bank.value.image().length != 0x1FCC
-                || state.bank.value.knownBytes().length != 0x1FCC
-                || state.bank.value.provenance().length != 0x1FCC
-                || state.queue.value.image().length != 0x400)
+        if (state.bank.value.imageLength() != 0x1FCC
+                || state.bank.value.knownLength() != 0x1FCC
+                || state.bank.value.provenanceLength() != 0x1FCC
+                || state.queue.value.imageLength() != 0x400)
             throw new IllegalArgumentException("Malformed physical DATA snapshot dimensions");
         bank.restore(state.bank.value);
         queue.restore(state.queue.value);
+        sharedState = state; // Both leaves now share the restored values; later captures reuse it.
     }
 
     // Static, fieldless identity: snapshots retain no owner/world/context/actor or executable capability.

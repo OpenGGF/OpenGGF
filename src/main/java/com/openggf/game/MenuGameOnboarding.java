@@ -5,36 +5,21 @@ import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
 import com.openggf.control.MenuInput;
-import com.openggf.data.PhysicalImage;
-import com.openggf.data.RomIdentity;
-import com.openggf.data.RomImageCatalogue;
-import com.openggf.data.RomImageClassifier;
 import com.openggf.game.MasterTitleScreen.GameEntry;
 import com.openggf.graphics.PixelFont;
 import com.openggf.i18n.UiMessages;
 
 import java.io.IOException;
-import java.io.InterruptedIOException;
-import java.nio.file.FileVisitResult;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.SimpleFileVisitor;
-import java.nio.file.attribute.BasicFileAttributes;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.EnumMap;
-import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
 /** First-run game discovery. All reads are cancellable; settings publish only on the UI thread. */
 public final class MenuGameOnboarding {
-    private static final int MAX_SCAN_ENTRIES = 20_000;
-
     private final SonicConfigurationService config;
     private MenuPathBrowser browser;
-    private MenuLoadTask<DiscoveryResult> discovery;
+    private MenuLoadTask<SetupGuideLibrary.DiscoveryResult> discovery;
     private MasterTitlePointer pointer;
     private InputHandler menuInput;
     private int width = 320;
@@ -75,7 +60,7 @@ public final class MenuGameOnboarding {
                 reading = selected;
                 boolean folder = scanning;
                 boolean preferComposite = config.getBoolean(SonicConfiguration.ROMS_PREFER_COMPOSITE);
-                discovery = new MenuLoadTask<>(() -> discover(selected, folder, MAX_SCAN_ENTRIES, preferComposite));
+                discovery = new MenuLoadTask<>(() -> SetupGuideLibrary.discover(selected, folder, preferComposite));
             }
             return;
         }
@@ -90,7 +75,7 @@ public final class MenuGameOnboarding {
         if (discovery != null) {
             if (!discovery.done()) return;
             try {
-                DiscoveryResult result = discovery.result();
+                var result = discovery.result();
                 found = result.games();
                 kis2Path = result.settings().get(SonicConfiguration.KNUCKLES_IN_SONIC_2_ROM);
                 scanNotice = result.notice();
@@ -144,139 +129,6 @@ public final class MenuGameOnboarding {
             scanNotice = null;
             MenuFeedback.emit(MenuFeedback.Cue.CONFIRM);
         }
-    }
-
-    record DiscoveryResult(Map<GameEntry, List<Path>> games, Map<SonicConfiguration, String> settings,
-                           boolean limitReached, boolean unreadable) {
-        DiscoveryResult {
-            var ordered = new EnumMap<GameEntry, List<Path>>(GameEntry.class);
-            ordered.putAll(games);
-            games = Collections.unmodifiableMap(ordered);
-            settings = Map.copyOf(settings);
-        }
-
-        /** Report incomplete coverage if the scan could have missed another game. */
-        String notice() {
-            if (games.size() == GameEntry.values().length || !limitReached && !unreadable) return null;
-            if (limitReached && unreadable) return "Stopped early, skipped unreadable files; "
-                    + (games.isEmpty() ? "scan their folder" : "scan the rest");
-            if (limitReached) return "Stopped early; " + (games.isEmpty() ? "scan the folder that holds them" : "scan the folder with the rest");
-            return games.isEmpty() ? "Some files could not be read; check access to them"
-                    : "Skipped files that could not be read; check access to them";
-        }
-    }
-
-    static DiscoveryResult discover(Path selection, boolean folder) throws IOException {
-        return discover(selection, folder, MAX_SCAN_ENTRIES, false);
-    }
-
-    static DiscoveryResult discover(Path selection, boolean folder, int maxEntries) throws IOException {
-        return discover(selection, folder, maxEntries, false);
-    }
-
-    private static DiscoveryResult discover(Path selection, boolean folder, int maxEntries, boolean preferComposite)
-            throws IOException {
-        Path source = selection.toAbsolutePath().normalize();
-        List<Path> files = new ArrayList<>();
-        List<PhysicalImage> cartridges = new ArrayList<>();
-        boolean[] limited = {false};
-        boolean[] unreadable = {false};
-        if (!folder) {
-            if (!Files.isRegularFile(source)) throw new IOException(UiMessages.text("menu.onboarding.choose_a_rom_file"));
-            probeFile(source, files, cartridges);
-        } else {
-            if (!Files.isDirectory(source)) throw new IOException(UiMessages.text("menu.onboarding.choose_a_folder"));
-            // Do not follow directory links. Limits and denied subtrees preserve prior discoveries.
-            Files.walkFileTree(source, EnumSet.noneOf(java.nio.file.FileVisitOption.class), 8,
-                    new SimpleFileVisitor<>() {
-                        private int visited;
-
-                        private FileVisitResult boundary() throws IOException {
-                            checkInterrupted();
-                            if (++visited > maxEntries) {
-                                limited[0] = true;
-                                return FileVisitResult.TERMINATE;
-                            }
-                            return FileVisitResult.CONTINUE;
-                        }
-
-                        @Override public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs)
-                                throws IOException {
-                            return boundary();
-                        }
-
-                        @Override public FileVisitResult visitFile(Path path, BasicFileAttributes attrs) throws IOException {
-                            FileVisitResult next = boundary();
-                            if (next == FileVisitResult.TERMINATE) return next;
-                            if (attrs.isDirectory()) limited[0] = true; // Maximum walk depth reached.
-                            if (attrs.isRegularFile()) {
-                                try { probeFile(path, files, cartridges); }
-                                catch (IOException | SecurityException failure) { unreadable[0] = true; }
-                            }
-                            return FileVisitResult.CONTINUE;
-                        }
-
-                        @Override public FileVisitResult visitFileFailed(Path file, IOException failure) throws IOException {
-                            if (file.equals(source)) throw failure;
-                            unreadable[0] = true;
-                            return boundary();
-                        }
-
-                        @Override public FileVisitResult postVisitDirectory(Path dir, IOException failure) throws IOException {
-                            if (failure != null) {
-                                if (dir.equals(source) && files.isEmpty()) throw failure;
-                                unreadable[0] = true;
-                            }
-                            return FileVisitResult.CONTINUE;
-                        }
-                    });
-        }
-
-        var games = new EnumMap<GameEntry, List<Path>>(GameEntry.class);
-        var settings = new EnumMap<SonicConfiguration, String>(SonicConfiguration.class);
-        var catalogue = RomImageCatalogue.forDiscovery(cartridges, preferComposite);
-        for (GameEntry game : GameEntry.values()) {
-            checkInterrupted();
-            GameId id = GameId.fromCode(game.gameId);
-            if (game.cartridge()) {
-                catalogue.resolve(id.romGame().identity()).ifPresent(resolution -> {
-                    List<Path> paths = resolution.parts().stream().map(part -> part.image().path()).distinct().toList();
-                    games.put(game, paths);
-                    if (paths.size() == 1) {
-                        settings.put(game.romConfigKey, paths.getFirst().toString());
-                    } else {
-                        // A split layout uses the catalogue recipe and each part's own path.
-                        settings.put(game.romConfigKey, "");
-                        for (var part : resolution.parts()) {
-                            settings.put(RomImageCatalogue.SUPPLEMENTAL_KEYS.get(part.rom()), part.image().path().toString());
-                        }
-                    }
-                });
-            } else {
-                GameModuleRegistry.hostedMedia(id).discover(files).ifPresent(path -> {
-                    games.put(game, List.of(path));
-                    settings.put(game.romConfigKey, path.toString());
-                });
-            }
-        }
-        // The chip's source is the lock-on dump even when the catalogue prefers composites.
-        catalogue.resolve(RomIdentity.KIS2_CHIP)
-                .ifPresent(chip -> settings.put(SonicConfiguration.KNUCKLES_IN_SONIC_2_ROM,
-                        chip.parts().getFirst().image().path().toString()));
-        checkInterrupted();
-        return new DiscoveryResult(games, settings, limited[0], unreadable[0]);
-    }
-
-    private static void checkInterrupted() throws IOException {
-        if (Thread.currentThread().isInterrupted()) {
-            throw new InterruptedIOException(UiMessages.text("menu.menugameonboarding.scan_cancelled"));
-        }
-    }
-
-    private static void probeFile(Path path, List<Path> files, List<PhysicalImage> cartridges) throws IOException {
-        PhysicalImage image = PhysicalImage.probe(path);
-        if (RomImageClassifier.layoutOf(image).isPresent()) cartridges.add(image);
-        files.add(path);
     }
 
     public boolean completed() { return completed; }

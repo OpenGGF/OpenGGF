@@ -323,6 +323,35 @@ class TestEngine {
         assertEquals(1, Engine.computeIntegerScaleUpperBound(320, 224, 160, 112));
     }
 
+    /**
+     * Front-end screens centre their own 320 composition; the end-of-scene flush would add
+     * the NATIVE widescreen picture inset on top, so each flushes with the screen-space camera.
+     */
+    @Test
+    void frontEndScreensFlushWithTheScreenSpaceCamera() throws Exception {
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.configureGameModuleFixture(new Sonic2GameModule() {
+            @Override public com.openggf.game.TitleScreenProvider getTitleScreenProvider() { return null; }
+            @Override public com.openggf.game.LevelSelectProvider getLevelSelectProvider() { return null; }
+            @Override public com.openggf.game.DataSelectProvider getDataSelectProvider() { return null; }
+        });
+        SonicConfigurationService config = SonicConfigurationService.createStandalone(tempDir);
+        AtomicInteger screenSpaceFlushes = new AtomicInteger();
+        GraphicsManager graphics = new GraphicsManager() {
+            @Override
+            public void flushScreenSpace() {
+                screenSpaceFlushes.incrementAndGet();
+            }
+        };
+        Engine engine = newTestEngine(config, graphics);
+        setPrivateField(engine, "camera", mock(Camera.class));
+        for (String draw : List.of("drawTitleScreen", "drawLevelSelect", "drawDataSelect")) {
+            int before = screenSpaceFlushes.get();
+            invokePrivateMethod(engine, draw, new Class<?>[]{});
+            assertEquals(before + 1, screenSpaceFlushes.get(), draw + " flushes in screen space");
+        }
+    }
+
     @Test
     void refreshLaunchSessionCachedConfig_updatesDebugViewCacheFromSessionOverride() throws Exception {
         SonicConfigurationService config = SonicConfigurationService.createStandalone(tempDir);

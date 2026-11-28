@@ -1,5 +1,6 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.game.LevelDebugPlacement;
 import com.openggf.level.objects.ObjectVisualFacing;
 
 import com.openggf.game.PlayableEntity;
@@ -174,7 +175,8 @@ public class RisingPillarObjectInstance extends AbstractObjectInstance
      * Corresponds to loc_25B3C in disassembly.
      */
     private void updateWaitForTrigger(AbstractPlayableSprite player) {
-        if (player == null) {
+        // loc_25B3C (s2.asm:51898-51900) returns before testing either player's position.
+        if (player == null || LevelDebugPlacement.blocksObjectInteractions(tryServices())) {
             return;
         }
 

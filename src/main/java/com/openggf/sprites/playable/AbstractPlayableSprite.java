@@ -1700,6 +1700,9 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 if (durationFrames < 1 || durationFrames > 3600) {
                         throw new IllegalArgumentException("Invincibility duration must be 1..3600 native frames");
                 }
+                // The timer counts in the game's units: S3K stores (20*60)/8 and decrements every 8th level frame.
+                int cadence = PlayableNativeActorState.invincibilityTimerDecimation(this);
+                durationFrames = (durationFrames + cadence - 1) / cadence;
                 if (nativeSecondaryInvincibility() != null) {
                         // invincible_monitor (s2.asm:25977-26000): raw status, literal time, recipient's fixed ID/parent.
                         writeNativeSecondaryInvincibility(true);
@@ -3145,7 +3148,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         private boolean applyDeath(DamageCause cause) {
-                if (dead) {
+                if (dead || com.openggf.game.LevelDebugPlacement.isActiveFor(this)) {
                         return false;
                 }
                 setDead(true);

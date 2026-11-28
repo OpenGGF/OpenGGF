@@ -46,6 +46,9 @@ public class ResultsScreenObjectInstance extends AbstractResultsScreen
             50, 50, 50, 50, 0
     };
     private static final int PERFECT_BONUS_POINTS = 5000;
+    private static final int CONTINUE_BONUS = 1000; // native units (10,000 displayed points)
+    private static final int CONTINUE_DELAY = 60;
+    private static final int CONTINUE_POSE_DURATION = 20;
 
     // Obj3A master sub-object slide geometry. Row 0 of Obj3A_SubObjectMetadata
     // (docs/s2disasm/s2.asm:28159) is the row loc_140CE writes over the
@@ -189,8 +192,22 @@ public class ResultsScreenObjectInstance extends AbstractResultsScreen
     }
 
     @Override
+    protected void updateTally() {
+        super.updateTally();
+        // loc_141E6 / loc_14220 (s2.asm:27935-27965). Obj6F_TallyScore
+        // (s2.asm:28376-28428) serves the special stage and awards no continue.
+        if (state == STATE_WAIT && earnedContinue()) {
+            services().gameState().addContinue();
+        }
+    }
+
+    private boolean earnedContinue() {
+        return totalBonus >= CONTINUE_BONUS;
+    }
+
+    @Override
     protected int getWaitDuration() {
-        return totalBonus >= 1000 ? 0x12C : 0xB4;
+        return earnedContinue() ? 0x12C : 0xB4;
     }
 
     /**
@@ -213,6 +230,11 @@ public class ResultsScreenObjectInstance extends AbstractResultsScreen
      */
     @Override
     protected void updateWait() {
+        // loc_142B0 / loc_142BC (s2.asm:28007-28017): the new child has
+        // already run its first wait pass on the parent's award tick.
+        if (earnedContinue() && stateTimer == CONTINUE_DELAY) {
+            services().playSfx(Sonic2Sfx.CONTINUE_JINGLE.id);
+        }
         if (stateTimer >= getWaitDuration() + ROM_EXIT_ROUTINE_PASS) {
             state = STATE_EXIT;
             onExitReady();
@@ -301,7 +323,7 @@ public class ResultsScreenObjectInstance extends AbstractResultsScreen
 
         // Screen-space rendering - convert screen coords to world coords.
         // xOffset() is (viewportWidth - 320) / 2; 0 at native 320 (byte-identical).
-        int worldBaseX = camera.getX() + xOffset();
+        int worldBaseX = pictureLeftWorldX(camera) + xOffset();
         int worldBaseY = camera.getY();
 
         // All elements use ROM-accurate 16 pixels/frame slide speed
@@ -338,6 +360,15 @@ public class ResultsScreenObjectInstance extends AbstractResultsScreen
         int actNumOffset = getSlideOffset(256);
         int actNumX = (SCREEN_CENTER_X + 88) + actNumOffset;
         renderer.drawFrameIndex(actFrame, worldBaseX + actNumX, worldBaseY + 62, false, false);
+
+        // loc_142CC / loc_142E2 (s2.asm:28019-28032) selects the two
+        // poses every 20 frames and displays only when Level_frame_counter bit 4 is set.
+        if (state == STATE_WAIT && earnedContinue() && stateTimer >= CONTINUE_DELAY
+                && (services().levelManager().getFrameCounter() & 0x10) != 0) {
+            int pose = 0xD - ((stateTimer - CONTINUE_DELAY) / CONTINUE_POSE_DURATION & 1);
+            renderer.drawFrameIndex(pose, worldBaseX + SCREEN_CENTER_X + 104,
+                    worldBaseY + SCREEN_HEIGHT / 2 + 40, false, false);
+        }
 
         // Bonus displays - all start sliding at frame 0 along with title elements
         // Update bonus patterns for display (numbers show initial values until tally changes them)
@@ -456,7 +487,7 @@ public class ResultsScreenObjectInstance extends AbstractResultsScreen
             return;
         }
 
-        int worldBaseX = camera.getX() + xOffset();
+        int worldBaseX = pictureLeftWorldX(camera) + xOffset();
         int worldBaseY = camera.getY();
 
         // All elements use ROM-accurate 16 pixels/frame slide, starting at frame 0

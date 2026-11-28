@@ -43,7 +43,7 @@ class TestMenuGameOnboarding {
         Files.writeString(cue, sheet);
         Files.writeString(directory.resolve("unknown.bin"), "not a game");
         Path unknown = Files.writeString(directory.resolve("unknown.chd"), "not a disc");
-        assertTrue(MenuGameOnboarding.discover(unknown, false).games().isEmpty());
+        assertTrue(SetupGuideLibrary.discover(unknown, false).games().isEmpty());
         Path one = image(directory, "one.gen", 0x80000, "SONIC THE HEDGEHOG");
         var config = scanAndReload(directory, false);
         assertEquals(cue.toString(), config.getString(SonicConfiguration.SONIC_CD_DISC));
@@ -52,7 +52,7 @@ class TestMenuGameOnboarding {
 
     @Test void identifiesRealDiscAtItsExistingPath() throws Exception {
         Path disc = CdTestMedia.usaCue().toAbsolutePath().normalize();
-        var result = MenuGameOnboarding.discover(disc, false);
+        var result = SetupGuideLibrary.discover(disc, false);
         assertEquals(List.of(disc), result.games().get(GameEntry.SONIC_CD));
         assertEquals(disc.toString(), result.settings().get(SonicConfiguration.SONIC_CD_DISC));
     }
@@ -94,7 +94,7 @@ class TestMenuGameOnboarding {
                 String input = System.getProperty(property + suffix);
                 org.junit.jupiter.api.Assumptions.assumeTrue(input != null, "requires " + property + suffix);
                 Path path = Path.of(input).toAbsolutePath().normalize();
-                assertEquals(java.util.Map.of(game, List.of(path)), MenuGameOnboarding.discover(path, false).games());
+                assertEquals(java.util.Map.of(game, List.of(path)), SetupGuideLibrary.discover(path, false).games());
             }
         }
     }
@@ -133,15 +133,15 @@ class TestMenuGameOnboarding {
         Files.write(three, bytes);
         Files.writeString(directory.resolve("unrelated.txt"), "not a game");
         assertEquals(java.util.Map.of(GameEntry.SONIC_1, List.of(one), GameEntry.SONIC_2, List.of(two), GameEntry.SONIC_3K, List.of(three)),
-                MenuGameOnboarding.discover(directory, true).games());
-        assertEquals(java.util.Map.of(GameEntry.SONIC_1, List.of(one)), MenuGameOnboarding.discover(one, false).games());
-        assertTrue(MenuGameOnboarding.discover(directory.resolve("unrelated.txt"), false).games().isEmpty());
+                SetupGuideLibrary.discover(directory, true).games());
+        assertEquals(java.util.Map.of(GameEntry.SONIC_1, List.of(one)), SetupGuideLibrary.discover(one, false).games());
+        assertTrue(SetupGuideLibrary.discover(directory.resolve("unrelated.txt"), false).games().isEmpty());
     }
 
     @Test void boundedScanPreservesGamesAndReportsIncompleteCoverage() throws Exception {
         // Every file is recognized, so traversal order cannot affect the partial result.
         for (int i = 0; i < 3; i++) image(directory, "one" + i, 0x80000, "SONIC THE HEDGEHOG");
-        var result = MenuGameOnboarding.discover(directory, true, 2);
+        var result = SetupGuideLibrary.discover(directory, true, 2);
         assertEquals(java.util.Set.of(GameEntry.SONIC_1), result.games().keySet());
         assertTrue(result.limitReached());
         assertFalse(result.unreadable());
@@ -155,24 +155,24 @@ class TestMenuGameOnboarding {
         var some = java.util.Map.of(GameEntry.SONIC_2, List.of(directory));
         java.util.Map<GameEntry, List<Path>> none = java.util.Map.of();
         for (boolean limit : new boolean[] {false, true}) for (boolean unreadable : new boolean[] {false, true})
-            assertNull(new MenuGameOnboarding.DiscoveryResult(all, java.util.Map.of(), limit, unreadable).notice(),
+            assertNull(new SetupGuideLibrary.DiscoveryResult(all, java.util.Map.of(), limit, unreadable).notice(),
                     "every game found: nothing skipped can matter (limit " + limit + ", unreadable " + unreadable + ")");
-        assertNull(new MenuGameOnboarding.DiscoveryResult(some, java.util.Map.of(), false, false).notice());
-        assertNull(new MenuGameOnboarding.DiscoveryResult(none, java.util.Map.of(), false, false).notice());
+        assertNull(new SetupGuideLibrary.DiscoveryResult(some, java.util.Map.of(), false, false).notice());
+        assertNull(new SetupGuideLibrary.DiscoveryResult(none, java.util.Map.of(), false, false).notice());
         assertEquals("Stopped early; scan the folder with the rest",
-                new MenuGameOnboarding.DiscoveryResult(some, java.util.Map.of(), true, false).notice());
+                new SetupGuideLibrary.DiscoveryResult(some, java.util.Map.of(), true, false).notice());
         assertEquals("Stopped early; scan the folder that holds them",
-                new MenuGameOnboarding.DiscoveryResult(none, java.util.Map.of(), true, false).notice());
+                new SetupGuideLibrary.DiscoveryResult(none, java.util.Map.of(), true, false).notice());
         assertEquals("Skipped files that could not be read; check access to them",
-                new MenuGameOnboarding.DiscoveryResult(some, java.util.Map.of(), false, true).notice());
+                new SetupGuideLibrary.DiscoveryResult(some, java.util.Map.of(), false, true).notice());
         assertEquals("Some files could not be read; check access to them",
-                new MenuGameOnboarding.DiscoveryResult(none, java.util.Map.of(), false, true).notice());
+                new SetupGuideLibrary.DiscoveryResult(none, java.util.Map.of(), false, true).notice());
         assertEquals("Stopped early, skipped unreadable files; scan the rest",
-                new MenuGameOnboarding.DiscoveryResult(some, java.util.Map.of(), true, true).notice());
+                new SetupGuideLibrary.DiscoveryResult(some, java.util.Map.of(), true, true).notice());
         assertEquals("Stopped early, skipped unreadable files; scan their folder",
-                new MenuGameOnboarding.DiscoveryResult(none, java.util.Map.of(), true, true).notice());
+                new SetupGuideLibrary.DiscoveryResult(none, java.util.Map.of(), true, true).notice());
         for (var games : List.of(some, none)) for (boolean limit : new boolean[] {false, true}) for (boolean unreadable : new boolean[] {false, true}) {
-            String notice = new MenuGameOnboarding.DiscoveryResult(games, java.util.Map.of(), limit, unreadable).notice();
+            String notice = new SetupGuideLibrary.DiscoveryResult(games, java.util.Map.of(), limit, unreadable).notice();
             if (notice != null) assertTrue(MenuChrome.compactWidth(notice) <= 300, "fits whole at 320: " + notice);
         }
     }
@@ -181,10 +181,10 @@ class TestMenuGameOnboarding {
         Path nested = directory;
         for (int i = 0; i < 9; i++) nested = Files.createDirectory(nested.resolve("nested"));
         image(nested, "one", 0x80000, "SONIC THE HEDGEHOG");
-        var result = MenuGameOnboarding.discover(directory, true);
+        var result = SetupGuideLibrary.discover(directory, true);
         assertTrue(result.limitReached());
         assertTrue(result.games().isEmpty());
-        assertThrows(IOException.class, () -> MenuGameOnboarding.discover(directory.resolve("missing"), false));
+        assertThrows(IOException.class, () -> SetupGuideLibrary.discover(directory.resolve("missing"), false));
     }
 
     @Test void scanSavesRecognizedGamesAndContinuesOnlyAfterAcknowledgement() throws IOException {
@@ -281,7 +281,7 @@ class TestMenuGameOnboarding {
         var page = new MenuGameOnboarding(config);
         var gate = new java.util.concurrent.CountDownLatch(1);
         set(page, "reading", directory);
-        set(page, "discovery", new MenuLoadTask<MenuGameOnboarding.DiscoveryResult>(() -> { gate.await(); return null; }));
+        set(page, "discovery", new MenuLoadTask<SetupGuideLibrary.DiscoveryResult>(() -> { gate.await(); return null; }));
         try {
             for (int width : new int[] {320, 400}) for (boolean scanning : new boolean[] {false, true}) {
                 set(page, "scanning", scanning);

@@ -79,6 +79,7 @@ Use a task directory outside the repository for captures the user should keep.
 | --- | --- | --- |
 | `--game s1\|s2\|s3k` | `s3k` | Host game; ROM from configuration unless `--rom <path>` |
 | `--mod <jar>` | none | Apply a packaged patch mod (as an enabled, trusted mod would be) before boot, to film mod gameplay |
+| `--mutator <id>[:opt=val,...]` | none | Repeatable, needs `--mod`: enable one of that package's mutators for this capture with the given options, unsaved, admitted at launch like the mutator title's Start. Fails if the id/option/value is invalid or the launch did not admit it. Mutator Lab ids: `start-rings:rings=85,delay=0`, `start-time:seconds=270` (4:30), `start-score:score=25000`, `start-lives:lives=7`, `hungry-for-rings:grace=30,loss=1,period=1,threshold=0,starve=5` |
 | `--zone <name\|n>` | required | Zone constant name (`aiz`, `fbz`, `ghz`, `ehz`) or number |
 | `--act <n>` | required | One-based act |
 | `--x`, `--y` | level start | Teleport the leader (ROM `x_pos`/`y_pos`, hex `0x`/`$` ok) |
@@ -92,7 +93,9 @@ Use a task directory outside the repository for captures the user should keep.
 | `--settle <n>` | `0` | Neutral frames before the input log starts |
 | `--input-start <n>` | `0` | First movie frame to play (e.g. a level start late in a complete-run `.bk2`) |
 | `--emeralds <6-7 digits>` | unchanged | `Collected_emeralds_array` setup applied after boot: seven S3K values (0 none, 1 Chaos, 2 grey Super, 3 Super), or six for S1/S2 (1 collected) |
-| `--rewind FRAME:LENGTH` | off | Hold the live rewind key for `LENGTH` frames from capture frame `FRAME`: production held-key rewind with its VHS picture, reverse audio and transport plate. Play then resumes from the restored state with the movie's later input; not with `--interactive-pacing` |
+| `--rewind FRAME:LENGTH[:SPEED]` | off | Hold the live rewind key for `LENGTH` frames from capture frame `FRAME`: production held-key rewind with its VHS picture, reverse audio and transport plate, in levels, supported bonus stages and special stages. Repeat the flag for several non-overlapping windows; `SPEED` `half`, `normal` (default) or `double` also holds the configured `liveRewindHalfSpeedKey`/`liveRewindDoubleSpeedKey` modifier through the same key path. Play then resumes from the restored state with the movie's later input; not with `--interactive-pacing` |
+| `--rewind-scope`, `--rewind-seconds` | configuration | Pin this capture's budget: scope `off`, `checkpoint`, `act`, `zone` or `never` (spent once, no refills); seconds a positive count or `unlimited`. Any rewind budget flag records history even without a `--rewind` window, so a refill can be filmed. Unset values read the configuration, which may be the user's own (often Unlimited): pin both for footage about the budget |
+| `--rewind-refill-on-life-loss`, `--rewind-bonus-stages`, `--rewind-special-stages` | configuration | `true` or `false` for this capture's session |
 | `--timer FRAMES` | unset | Declared level timer in frames, written after boot (3600 per minute). A positioned start deep in an act otherwise shows TIME 0:00; take the value from the trace row the position came from. Not with `--title-screen` |
 | `--vint-run-count <n>` | fresh | Declared inherited `V_int_run_count` (objects gating on its low bits, e.g. DDZ turret aim) |
 | `--end-of-level` | off | Direct-level only: seed declared inherited `End_of_level_flag` once after declared setup; does not prove boss or route completion |
@@ -114,6 +117,50 @@ Use a task directory outside the repository for captures the user should keep.
 | `--pictures-per-frame <n>` | `1` | Write n pictures (1-16) of every captured logic frame as `frames/<frame>-<phase>.png`, list them in `pictures.csv`, and encode the video at fps × n (4 gives 240 fps). Alone, the exact picture is repeated n times. Not with `--interactive-pacing` |
 | `--interpolation` | off | With `--pictures-per-frame` 2 or more: draw picture k through the production `display.interpolation` path at phase k/n of the logic frame. Render-only; `state.csv` is identical to the exact capture. Not with `--rewind` |
 | `--out-dir <dir>` | required | Output root |
+
+## Film live rewind
+
+Hold windows and budget flags drive the production live rewind, so the REW plate shows
+what a player would see: seconds and a meter for a finite budget, the infinity mark for
+Unlimited, and the refill animation after a new checkpoint, act, zone or lost life. This
+Sonic 2 shot spends half of a five-second checkpoint budget, then walks back through the
+Emerald Hill star post, which refills it on screen:
+
+```bash
+python3 tools/testing/maven_queue.py exec:java "-Dexec.mainClass=com.openggf.tools.InputLogAuthorTool" \
+  "-Dexec.args=--inline '360 -; 60 L; 200 -' --out target/capture/refill.txt"
+python3 tools/testing/maven_queue.py exec:java "-Dexec.mainClass=com.openggf.tools.GameplayCaptureTool" \
+  "-Dexec.args=--game s2 --zone ehz --act 1 --x 3660 --y 172 --input target/capture/refill.txt \
+    --frames 600 --capture-from 150 --rewind 200:150 --rewind-scope checkpoint --rewind-seconds 5 \
+    --out-dir target/capture/s2-checkpoint-refill"
+```
+
+Read the plate's seconds to check a speed: from a fresh budget, 60 held frames leave
+`9.0s` at normal speed, `9.5s` at half and `8.0s` at double. `state.csv` carries the level
+player's columns, which do not move during a special stage; judge special-stage rewinds
+from the pictures. To reach a special or bonus stage from a positioned start, stand at a
+star post with enough rings (`--rings`) or beside a giant ring, as a player would: a
+long recorded run replayed from a fresh boot can drift from its trace.
+
+## Film mutator starting values
+
+To start a demo with realistic counters, build Mutator Lab
+(`python3 examples/example-mutators/build.py`) and pass its jar with `--mutator`
+flags; the seeds land on the first active frame, so frame 0 already shows them:
+
+```bash
+... GameplayCaptureTool --game s3k --zone aiz --act 1 \
+    --mod target/example-mutators/example-mutators.jar \
+    --mutator start-rings:rings=85 --mutator start-time:seconds=270 \
+    --mutator start-score:score=25000 --mutator start-lives:lives=7 \
+    --input <task>/walk.txt --out-dir <task>/seeded
+```
+
+Start with Rings adds to rings already held, so do not combine it with `--rings`;
+use `--timer` instead of Start with Time only when the clock must match a trace row.
+`MutatorGameplayCaptureTool` takes the same flags and adds `lives`, `timer_frames`,
+`hunger_phase` and `hunger_sixteenths` to `observe.csv`; find the grace, drain and
+starving frames there before choosing stills.
 
 ## Film display interpolation
 

@@ -276,11 +276,11 @@ rewind:
 
 With that enabled, hold the configured live rewind key during normal level play to rewind the live
 gameplay buffer. The on-screen live rewind HUD is hidden during ordinary play and
-shows remaining seconds and a draining bar while rewinding. At zero, rewind stops immediately; pressing again shows an amber empty frame and dashed meter for one second.
+shows remaining seconds and a draining bar while rewinding. At zero, rewind stops immediately; pressing again shows an amber empty frame and dashed meter for one second. When a checkpoint, act, zone or life lost refills time you had spent, the plate appears briefly and its bar and seconds fill back to the maximum. With an **Unlimited** budget the plate shows a full bar with an infinity mark instead of seconds, and its border pulses gently while you hold the key.
 
-Choose **Off**, **Per checkpoint**, **Per act** (default), or **Per zone** to set when the consumable allowance refills. **Rewind budget** defaults to **10 seconds**, with **Unlimited** available instead of zero. Starting a new game always starts a fresh allowance. Forward play does not refund time, and replaying the same refill boundary does not refill again. **Refill on life loss** defaults to On and refills after respawn completes.
+Choose **Off**, **Per checkpoint**, **Per act** (default), **Per zone** or **Never** to set when the consumable allowance refills. **Off** disables rewind. **Never** (`budgetScope: never`) keeps rewind on but gives you one allowance for the whole game: it starts full when you start a new game or load a save, and no checkpoint, act, zone or lost life refills it. **Refill on life loss** has no effect under **Never**, and Settings shows it dimmed with that reason. **Rewind budget** defaults to **10 seconds**, with **Unlimited** available instead of zero. Starting a new game always starts a fresh allowance. Forward play does not refund time, and replaying the same refill boundary does not refill again. **Refill on life loss** defaults to On and refills after respawn completes.
 
-**Bonus-stage rewind** and **Special-stage rewind** both default to On. Each supported stage visit gets a fresh allowance using the same maximum; your main-stage balance is preserved until you return. These options and the budget controls are inactive while Rewind is Off. Unlimited still uses the retained gameplay history; it does not remove storage limits. Rewind history resets at committed level and act transition boundaries.
+**Bonus-stage rewind** and **Special-stage rewind** both default to On. Each supported stage visit gets a fresh allowance using the same maximum, also under **Never**; your main-stage balance is preserved until you return, and a stage visit never refills it. These options and the budget controls are inactive while Rewind is Off. Unlimited still uses the retained gameplay history; it does not remove storage limits. Rewind history resets at committed level and act transition boundaries.
 
 Live rewind currently requires native level geometry. Standalone creator levels using custom geometry run normally without live rewind.
 
@@ -387,10 +387,14 @@ display:
 ```
 
 `NATIVE` keeps the game on the original 320-pixel screen and draws the extra width as
-scenery. Objects and rings there that the original game has not woken up yet are shown frozen
-where they start: `GREYSCALE` (the default), `NORMAL` colours, or `HIDDEN`. They come to
-life when the original screen reaches them. `EDGE` (the default draw mode) keeps the
-existing behaviour. Both settings take effect at the next level load.
+scenery. Objects and rings there that the original game has not woken up yet are shown
+where they start: `GREYSCALE` (the default), `NORMAL` colours, or `HIDDEN`. Rings spin
+in step with the live rings, and objects that animate in place (without moving) play
+their animation; anything that moves is shown still. They come to life when the original
+screen reaches them. An object that stood still when the original screen left it keeps
+the look it had then; one that moved goes back to where it starts, because that is where
+the game will bring it back. None of this changes the game itself. `EDGE` (the default
+draw mode) keeps the existing behaviour. Both settings take effect at the next level load.
 
 By default (`display.windowAutosize: true`), the OS window is automatically sized to
 twice the preset pixel width (e.g. `WIDE_16_9` → 800×448). To keep a custom window size,

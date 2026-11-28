@@ -1,5 +1,6 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.game.LevelDebugPlacement;
 import com.openggf.level.objects.ObjectVisualFacing;
 
 import com.openggf.game.PlayableEntity;
@@ -35,6 +36,8 @@ public class Sonic2LayerSwitcherObjectInstance extends AbstractObjectInstance im
 
     @Override
     public void update(int vIntRunCount, PlayableEntity player) {
+        // Obj03_MainX (s2.asm:45682-45684), Obj03_MainY (s2.asm:45764-45766).
+        if (LevelDebugPlacement.blocksObjectInteractions(tryServices())) return;
         for (PlayableEntity participant : services().playerQuery().playersFor(
                 ObjectPlayerParticipationPolicy.NATIVE_P1_P2)) {
             services().objectManager().applyPlaneSwitcher(getSpawn(), participant);

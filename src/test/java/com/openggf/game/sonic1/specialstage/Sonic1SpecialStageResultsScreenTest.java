@@ -4,6 +4,7 @@ import com.openggf.game.GameServices;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.session.SessionManager;
 import com.openggf.graphics.GLCommand;
+import com.openggf.game.presentation.ScreenFrameRenderer;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.tests.FullReset;
 import com.openggf.tests.SingletonResetExtension;
@@ -24,6 +25,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.clearInvocations;
+import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.eq;
 
 @FullReset
 @ExtendWith(SingletonResetExtension.class)
@@ -118,6 +121,49 @@ public class Sonic1SpecialStageResultsScreenTest {
         clearInvocations(continueRenderer);
         screen.appendRenderCommands(new ArrayList<GLCommand>());
         verify(continueRenderer).drawFrameIndex(initialFrame ^ 1, x, y, false, false);
+    }
+
+    @Test
+    void characterContinueIconReplacesMiniSonicBesideTheNativeText() throws Exception {
+        Sonic1SpecialStageResultsScreen screen = new Sonic1SpecialStageResultsScreen(50, false, 0, 0);
+        PatternSpriteRenderer continueRenderer = installRenderers(screen);
+        ScreenFrameRenderer icon = mock(ScreenFrameRenderer.class);
+        when(icon.draw(eq("continue/icon"), anyInt(), anyInt(), anyInt(), anyBoolean())).thenReturn(true);
+        setField(screen, "continueIconReplacement", icon);
+        int frame = 0;
+        while (!screen.isContinueAwarded() && frame < 1000) {
+            screen.update(++frame, null);
+        }
+        assertTrue(screen.isContinueAwarded());
+        int x = GameServices.camera().getX() + 160;
+        int y = GameServices.camera().getY() + 184;
+        // M_SSR_ContSon1/2 put mini-Sonic at (+$40,-8); its tiles are Map_ContScr frames 6/7.
+        int pose = 6 + ((frame & 15) == 0 ? 1 : 0);
+        clearInvocations(continueRenderer);
+        screen.appendRenderCommands(new ArrayList<GLCommand>());
+        verify(continueRenderer).drawFrameIndex(2, x, y, false, false);
+        verify(continueRenderer, never()).drawFrameIndex(0, x, y, false, false);
+        verify(continueRenderer, never()).drawFrameIndex(1, x, y, false, false);
+        verify(icon).draw("continue/icon", pose, x + 0x40, y - 8, false);
+    }
+
+    @Test
+    void missingCharacterPoseFallsBackToNativeMiniSonic() throws Exception {
+        Sonic1SpecialStageResultsScreen screen = new Sonic1SpecialStageResultsScreen(50, false, 0, 0);
+        PatternSpriteRenderer continueRenderer = installRenderers(screen);
+        ScreenFrameRenderer icon = mock(ScreenFrameRenderer.class);
+        setField(screen, "continueIconReplacement", icon);
+        int frame = 0;
+        while (!screen.isContinueAwarded() && frame < 1000) {
+            screen.update(++frame, null);
+        }
+        int x = GameServices.camera().getX() + 160;
+        int y = GameServices.camera().getY() + 184;
+        int nativeFrame = (frame & 15) == 0 ? 1 : 0;
+        clearInvocations(continueRenderer);
+        screen.appendRenderCommands(new ArrayList<GLCommand>());
+        verify(continueRenderer).drawFrameIndex(nativeFrame, x, y, false, false);
+        verify(continueRenderer, never()).drawFrameIndex(2, x, y, false, false);
     }
 
     @Test

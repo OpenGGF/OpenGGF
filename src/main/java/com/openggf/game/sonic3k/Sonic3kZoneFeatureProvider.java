@@ -218,6 +218,18 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Bac
     }
 
     /**
+     * AIZ2_DoShipLoop (sonic3k.asm:105251-105272) writes Camera_X_pos + 4 to both
+     * Camera_min_X_pos and Camera_max_X_pos every frame of the battleship loop, and
+     * subtracts the $200 loop distance once it reaches Events_bg+$02. Those bounds are the
+     * moving screen, so a wide picture's margins show the scenery about to scroll in.
+     */
+    @Override public boolean nativeBoundsFollowAutoScroll() {
+        if (getFeatureZoneId() != Sonic3kZoneIds.ZONE_AIZ || !GameServices.hasRuntime()) return false;
+        AizZoneRuntimeState aizState = getAizState();
+        return aizState != null && aizState.isBattleshipAutoScrollActive();
+    }
+
+    /**
      * Width of the raster being drawn. Gameplay uses its camera width, but trace capture keeps
      * the native 320px camera and widens only the raster to the camera's right.
      */

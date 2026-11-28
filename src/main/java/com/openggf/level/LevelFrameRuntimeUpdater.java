@@ -67,9 +67,14 @@ final class LevelFrameRuntimeUpdater {
         if (levelManager.levelGamestate != null) {
             var roster = com.openggf.game.competition.NativeCompetitionRoster.from(worldSession);
             if (roster == null) {
-                if (!levelManager.isHudSuppressed()) levelManager.levelGamestate.update();
-                if (levelManager.levelGamestate.isTimeOver() && playable != null && !playable.getDead()) {
-                    playable.applyHurtOrDeath(0, com.openggf.game.DamageCause.TIME_OVER, false);
+                var state = levelManager.levelGamestate;
+                if (!levelManager.isHudSuppressed()) state.update();
+                if (state.isTimeOver() && playable != null) {
+                    if (com.openggf.game.LevelDebugPlacement.preventsTimeOver(playable)) {
+                        state.setTimerFrames(state.getTimerFrames() - 60L * 60L);
+                    } else if (!playable.getDead()) {
+                        playable.applyHurtOrDeath(0, com.openggf.game.DamageCause.TIME_OVER, false);
+                    }
                 }
             } else {
                 // One canonical world tick owns both native timer banks. Split

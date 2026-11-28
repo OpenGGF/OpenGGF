@@ -480,6 +480,14 @@
   "@settings.key.hub_dismissed_notices.help": {
     "description": "Settings help for stable configuration key HUB_DISMISSED_NOTICES. Technical YAML documentation remains separate."
   },
+  "settings.key.setup_guide.label": "Setup guide",
+  "@settings.key.setup_guide.label": {
+    "description": "Settings label for stable configuration key SETUP_GUIDE (hub.setupGuide)."
+  },
+  "settings.key.setup_guide.help": "Whether the setup guide has finished. Clear it to see the guide at the next start; Extras always opens it.",
+  "@settings.key.setup_guide.help": {
+    "description": "Settings help for stable configuration key SETUP_GUIDE. Technical YAML documentation remains separate."
+  },
   "settings.key.hub_continue_s1_character.label": "Continue s1 character",
   "@settings.key.hub_continue_s1_character.label": {
     "description": "Settings label for stable configuration key HUB_CONTINUE_S1_CHARACTER (hub.continueS1Character)."
@@ -1087,6 +1095,22 @@
   "settings.key.capture_toggle_key.help": "Start or stop a video recording of play.",
   "@settings.key.capture_toggle_key.help": {
     "description": "Settings help for stable configuration key CAPTURE_TOGGLE_KEY. Technical YAML documentation remains separate."
+  },
+  "settings.key.level_debug_mode.label": "Level debug mode",
+  "@settings.key.level_debug_mode.label": {
+    "description": "Settings label for LEVEL_DEBUG_MODE (debug.flags.levelDebugMode)."
+  },
+  "settings.key.level_debug_mode.help": "Use the cartridge cheat and placement controls where supported, or select engine free-fly for the debug movement shortcut.",
+  "@settings.key.level_debug_mode.help": {
+    "description": "Settings help for LEVEL_DEBUG_MODE."
+  },
+  "settings.value.engine": "Engine free-fly",
+  "@settings.value.engine": {
+    "description": "Level debug mode setting for the engine movement shortcut."
+  },
+  "settings.value.rom": "ROM placement",
+  "@settings.value.rom": {
+    "description": "Level debug mode setting for the cartridge item placement controls."
   },
   "settings.key.debug_view_enabled.label": "Debug tools",
   "@settings.key.debug_view_enabled.label": {
@@ -2496,7 +2520,7 @@
   "@settings.key.rewind_budget_scope.label": {
     "description": "Rewind budget label."
   },
-  "settings.key.rewind_budget_scope.help": "Choose when your rewind allowance refills. Replaying the same boundary never refills it again.",
+  "settings.key.rewind_budget_scope.help": "Choose when your rewind allowance refills, or Never to spend it once. Replaying the same boundary never refills it again.",
   "@settings.key.rewind_budget_scope.help": {
     "description": "Rewind budget help."
   },
@@ -2548,6 +2572,14 @@
   "@settings.rewind.scope.zone": {
     "description": "Rewind budget setting text."
   },
+  "settings.rewind.scope.never": "Never",
+  "@settings.rewind.scope.never": {
+    "description": "Rewind budget setting text: the allowance is spent once and never refills."
+  },
+  "settings.rewind.never_refills_help": "Not used while Rewind is Never.",
+  "@settings.rewind.never_refills_help": {
+    "description": "Rewind budget setting text: why Refill on life loss is inactive under the Never scope."
+  },
   "settings.rewind.unlimited": "Unlimited",
   "@settings.rewind.unlimited": {
     "description": "Rewind budget setting text."
@@ -2575,6 +2607,10 @@
   },
   "settings.value.zone": "Per zone",
   "@settings.value.zone": {
+    "description": "Rewind setting enum display value."
+  },
+  "settings.value.never": "Never",
+  "@settings.value.never": {
     "description": "Rewind setting enum display value."
   },
   "settings.value.unlimited": "Unlimited",

@@ -411,6 +411,7 @@ public final class GameplayModeContext implements ModeContext {
         this.rewindRegistry.register(directedPlayerLease);
         this.rewindRegistry.registerPostRestoreCallback(directedPlayerLease.key(), directedPlayerLease::afterRestore);
         this.rewindRegistry.register(gameStateManager);
+        this.rewindRegistry.register(com.openggf.game.LevelDebugPlacement.of(gameStateManager));
         com.openggf.game.internal.NativePauseRewindAccess.register(this.rewindRegistry, gameStateManager);
         this.rewindRegistry.register(rng);
         // Power-on V_int_run_count carrier: the ObjectManager snapshot restores the

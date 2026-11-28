@@ -1,5 +1,6 @@
 package com.openggf.game.sonic2;
 
+import com.openggf.game.LevelDebugPlacement;
 import com.openggf.game.sonic2.events.*;
 import java.nio.ByteBuffer;
 import com.openggf.game.sonic2.runtime.CnzRuntimeStateView;
@@ -298,7 +299,7 @@ public class Sonic2LevelEventManager extends AbstractLevelEventManager {
             return;
         }
         AbstractPlayableSprite player = camera.getFocusedSprite();
-        if (player != null && player.isDebugMode()) {
+        if (player != null && LevelDebugPlacement.bypassesInteractions(player)) {
             return;
         }
         // move.w (Camera_Max_X_pos).w,d1 / subi.w #$100,d1 / cmp.w d1,d0 / blt.s

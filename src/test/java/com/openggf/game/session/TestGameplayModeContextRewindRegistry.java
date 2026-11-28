@@ -184,6 +184,7 @@ class TestGameplayModeContextRewindRegistry {
                 "directed-player-lease",
                 "controlled-native-presentation",
                 "gamestate",
+                "level-debug-placement",
                 com.openggf.game.internal.NativePauseRewindAccess.KEY,
                 "gamerng",
                 com.openggf.game.timing.VIntRunCounter.REWIND_KEY,
@@ -199,6 +200,7 @@ class TestGameplayModeContextRewindRegistry {
                 "sonic2_badnik_chain",
                 "solid-execution",
                 "homing-attack",
+                "beta-flight",
                 "sonic2.race-swap",
                 "kosinski-module-queue");
         assertTrue(snapshot.entries().keySet().containsAll(expectedKeys),
@@ -232,12 +234,12 @@ class TestGameplayModeContextRewindRegistry {
     }
 
     @Test
-    void exactlyTwentyOneAtomicKeysAfterAttach() {
+    void exactlyTwentyThreeAtomicKeysAfterAttach() {
         GameplayModeContext ctx = buildAttachedContext();
         RewindRegistry registry = ctx.getRewindRegistry();
         CompositeSnapshot snapshot = registry.capture();
-        assertEquals(21, snapshot.entries().keySet().size(),
-                "Expected exactly 21 atomic adapters, got: " + snapshot.entries().keySet());
+        assertEquals(23, snapshot.entries().keySet().size(),
+                "Expected exactly 23 atomic adapters, got: " + snapshot.entries().keySet());
     }
 
     @Test
@@ -490,7 +492,7 @@ class TestGameplayModeContextRewindRegistry {
         RewindRegistry second = ctx.getRewindRegistry();
         assertNotNull(second);
         assertNotSame(first, second, "Re-attach should produce a new RewindRegistry instance");
-        assertEquals(21, second.capture().entries().keySet().size());
+        assertEquals(23, second.capture().entries().keySet().size());
         assertTrue(second.capture().containsKey("sonic2.race-swap"),"reattachment must retain the timer/request adapter");
         var running = second.capture();
         previousState.setGamePaused(true);

@@ -643,7 +643,7 @@ public class Sonic1ResultsScreenObjectInstance extends AbstractResultsScreen
         // Since our elemCurrentX stores VDP coords, world X = camera.getX() + (vdpX - 128).
         // xOffset() shifts the whole content block right for widescreen centering.
         // xOffset() == 0 at native 320 (byte-identical).
-        int worldXBase = camera.getX() - 128 + xOffset();
+        int worldXBase = pictureLeftWorldX(camera) - 128 + xOffset();
 
         // Earlier opaque SAT pieces own the pixel. The direct painter needs
         // the reverse order, including the two pieces of the score group.
@@ -780,6 +780,7 @@ public class Sonic1ResultsScreenObjectInstance extends AbstractResultsScreen
      */
     private void appendPlaceholderRenderCommands(List<GLCommand> commands, Camera camera) {
         int worldBaseY = camera.getY();
+        int pictureLeft = pictureLeftWorldX(camera);
         int offset = xOffset();
         int liveWidth = viewportWidth();
 
@@ -788,7 +789,7 @@ public class Sonic1ResultsScreenObjectInstance extends AbstractResultsScreen
         int sonicHasScreenX = elemCurrentX[ELEM_SONIC_HAS] - 128 + offset;
         if (sonicHasScreenX >= 0 && sonicHasScreenX < liveWidth + 100) {
             renderPlaceholderBox(commands,
-                    camera.getX() + sonicHasScreenX,
+                    pictureLeft + sonicHasScreenX,
                     worldBaseY + ELEM_SCREEN_Y[ELEM_SONIC_HAS],
                     80, 16, 0.2f, 0.6f, 1.0f);
         }
@@ -797,7 +798,7 @@ public class Sonic1ResultsScreenObjectInstance extends AbstractResultsScreen
         int passedScreenX = elemCurrentX[ELEM_PASSED] - 128 + offset;
         if (passedScreenX >= -100 && passedScreenX < liveWidth + 100) {
             renderPlaceholderBox(commands,
-                    camera.getX() + passedScreenX,
+                    pictureLeft + passedScreenX,
                     worldBaseY + ELEM_SCREEN_Y[ELEM_PASSED],
                     60, 16, 0.2f, 0.6f, 1.0f);
         }
@@ -806,7 +807,7 @@ public class Sonic1ResultsScreenObjectInstance extends AbstractResultsScreen
         int actScreenX = elemCurrentX[ELEM_ACT] - 128 + offset;
         if (actScreenX >= 0 && actScreenX < liveWidth + 100) {
             renderPlaceholderBox(commands,
-                    camera.getX() + actScreenX,
+                    pictureLeft + actScreenX,
                     worldBaseY + ELEM_SCREEN_Y[ELEM_ACT],
                     48, 16, 0.2f, 0.8f, 0.4f);
         }
@@ -815,7 +816,7 @@ public class Sonic1ResultsScreenObjectInstance extends AbstractResultsScreen
         int scoreScreenX = elemCurrentX[ELEM_SCORE] - 128 + offset;
         if (scoreScreenX >= 0 && scoreScreenX < liveWidth + 100) {
             renderPlaceholderBox(commands,
-                    camera.getX() + scoreScreenX,
+                    pictureLeft + scoreScreenX,
                     worldBaseY + ELEM_SCREEN_Y[ELEM_SCORE],
                     80, 12, 1.0f, 1.0f, 0.4f);
         }
@@ -824,7 +825,7 @@ public class Sonic1ResultsScreenObjectInstance extends AbstractResultsScreen
         int timeBonusScreenX = elemCurrentX[ELEM_TIME_BONUS] - 128 + offset;
         if (timeBonusScreenX >= 0 && timeBonusScreenX < liveWidth + 100) {
             renderPlaceholderBox(commands,
-                    camera.getX() + timeBonusScreenX,
+                    pictureLeft + timeBonusScreenX,
                     worldBaseY + ELEM_SCREEN_Y[ELEM_TIME_BONUS],
                     80, 12, 1.0f, 1.0f, 0.4f);
         }
@@ -833,7 +834,7 @@ public class Sonic1ResultsScreenObjectInstance extends AbstractResultsScreen
         int ringBonusScreenX = elemCurrentX[ELEM_RING_BONUS] - 128 + offset;
         if (ringBonusScreenX >= 0 && ringBonusScreenX < liveWidth + 100) {
             renderPlaceholderBox(commands,
-                    camera.getX() + ringBonusScreenX,
+                    pictureLeft + ringBonusScreenX,
                     worldBaseY + ELEM_SCREEN_Y[ELEM_RING_BONUS],
                     80, 12, 1.0f, 0.8f, 0.2f);
         }
@@ -842,7 +843,7 @@ public class Sonic1ResultsScreenObjectInstance extends AbstractResultsScreen
         int ovalScreenX = elemCurrentX[ELEM_OVAL] - 128 + offset;
         if (ovalScreenX >= 0 && ovalScreenX < liveWidth + 100) {
             renderPlaceholderBox(commands,
-                    camera.getX() + ovalScreenX,
+                    pictureLeft + ovalScreenX,
                     worldBaseY + ELEM_SCREEN_Y[ELEM_OVAL],
                     32, 24, 0.6f, 0.6f, 0.6f);
         }

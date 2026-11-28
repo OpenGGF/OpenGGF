@@ -29,6 +29,19 @@ public class PngTextureLoader {
      * @throws IOException if the resource cannot be found or read
      */
     public static int loadTexture(String resourcePath) throws IOException {
+        return loadTexture(resourcePath, false);
+    }
+
+    /**
+     * Loads a high-resolution PNG drawn smaller than its pixel size (a vector-style logo), with
+     * mipmapped linear filtering so it stays smooth at every window scale. Its texels should carry
+     * edge colour into transparent pixels so filtering leaves no dark fringe.
+     */
+    public static int loadSmoothTexture(String resourcePath) throws IOException {
+        return loadTexture(resourcePath, true);
+    }
+
+    private static int loadTexture(String resourcePath, boolean smooth) throws IOException {
         // Read the entire resource into a direct ByteBuffer for STBImage
         byte[] bytes;
         try (InputStream is = PngTextureLoader.class.getClassLoader().getResourceAsStream(resourcePath)) {
@@ -68,8 +81,14 @@ public class PngTextureLoader {
         int textureId = glGenTextures();
         glBindTexture(GL_TEXTURE_2D, textureId);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        if (smooth) {
+            glGenerateMipmap(GL_TEXTURE_2D);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        } else {
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        }
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         glBindTexture(GL_TEXTURE_2D, 0);

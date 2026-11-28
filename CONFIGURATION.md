@@ -1024,12 +1024,13 @@ The allowance and stage/life-loss controls are in Settings → Gameplay and are 
 
 | Key | YAML path | Type | Default | Description |
 |-----|-----------|------|---------|-------------|
+| `LEVEL_DEBUG_MODE` | `debug.flags.levelDebugMode` | enum | `"rom"` | Use cartridge item placement in Sonic 2 and Knuckles in Sonic 2. Use `"engine"` for the debug movement shortcut. |
 | `DEBUG_VIEW_ENABLED` | `debug.flags.debugView` | bool | `false` | Eagerly initialise the debug overlay subsystem. Enables gameplay debug shortcuts and most overlay controls. The visible debug HUD starts hidden until toggled; performance overlay, screenshot and recording controls have their own gates. |
 | `EDITOR_ENABLED` | `debug.flags.editor` | bool | `false` | Allow gameplay entry into the experimental level editor with `Shift+Tab`; project authoring is also available from Advanced → Editor projects at the hub. |
 | `LIVE_REWIND_ENABLED` | `rewind.liveEnabled` | bool | `true` | Enable held-key rewind during ordinary live level play. Uses gameplay rewind snapshots, records live input while enabled, and presents reverse audio/fade state while held. |
-| `REWIND_BUDGET_SCOPE` | `rewind.budgetScope` | enum | `"act"` | Rewind refill scope: `off`, `checkpoint`, `act`, `zone`. Gameplay shows Off / Per checkpoint / Per act / Per zone. |
+| `REWIND_BUDGET_SCOPE` | `rewind.budgetScope` | enum | `"act"` | Rewind refill scope: `off`, `checkpoint`, `act`, `zone`, `never`. Gameplay shows Off / Per checkpoint / Per act / Per zone / Never. `off` disables rewind; `never` keeps it on and never refills the main allowance after it starts full (bonus/special-stage visits keep their own fresh pools). |
 | `REWIND_BUDGET_SECONDS` | `rewind.budgetSeconds` | enum | `"10"` | Shared allowance: `5`, `10`, `15`, `20`, `30`, `60` seconds, or `unlimited`; there is no zero option. Actual game frames rewound consume it, including speed modifiers and coast. |
-| `REWIND_REFILL_ON_LIFE_LOSS` | `rewind.refillOnLifeLoss` | bool | `true` | Refill after completed life-loss respawn, never merely entering the death animation. |
+| `REWIND_REFILL_ON_LIFE_LOSS` | `rewind.refillOnLifeLoss` | bool | `true` | Refill after completed life-loss respawn, never merely entering the death animation. No effect while `budgetScope` is `never`. |
 | `REWIND_BONUS_STAGES` | `rewind.bonusStages` | bool | `true` | Enable supported bonus-stage rewind, with an independent fresh allowance each visit. |
 | `REWIND_SPECIAL_STAGES` | `rewind.specialStages` | bool | `true` | Enable supported special-stage rewind, with an independent fresh allowance each visit. |
 | `LIVE_REWIND_DETERMINISM_AUDIT` | `debug.rewind.determinismAudit` | bool | `false` | Audit live-rewind determinism: re-simulates each completed rewind keyframe segment during live play and logs the first state divergence, pinpointing state that is missing from rewind capture. Disarms after the first divergence because replayed out-of-snapshot state cannot be rolled back. |
@@ -1534,7 +1535,50 @@ paused-game card to resume an exact live session. The former `hub.continueS1*`,
 `hub.continueS2*` and `hub.continueS3k*` values are retained for configuration
 compatibility but are ignored; the hub no longer records or restarts reached acts.
 
-With no games found, **Add your games** offers **Locate a game** and
+### Setup guide
+
+The first time an eligible build reaches the hub, the **setup guide** opens once:
+it adds games (Sonic 1, Sonic 2, Sonic 3 & Knuckles and Sonic CD), asks **How do
+you want to play?** and offers **Play**. It is eligible while `hub.setupGuide` is
+blank, never in test mode, and never twice in one run, however often the hub is
+rebuilt. **Extras › Setup guide** opens it at any time; Extras is then always shown.
+
+- **Games** are found by content, as with Add your games. A scan or a chosen file
+  only adds games that do not already work; a different file for a working game
+  asks **Keep current file** (default) or **Use the new file**. The ROM folder
+  (`roms.directory`) is set only while no game works. A Sonic CD disc (the USA
+  release's `.cue` with its 35 track files, or a lossless `.chd`) is written to
+  `roms.soniccd` when added. It shows **Found**, not Ready: discovery reads only its
+  header and layout, and the whole disc is checked when the game starts. Problem
+  discs show their kind (Incomplete, Wrong release, Can't be read) with the exact
+  diagnostic and a fix; the other games never need Sonic CD.
+- **Play styles** write only these all-games keys, and only values that differ:
+  **Stock** `display.aspect: NATIVE_4_3`, `rewind.budgetScope: off`,
+  `display.interpolation: false`, `display.spriteScanlineLimit: true`,
+  `audio.fmCore: accurate`, `gameplay.loadTimeSimulation: PROFILED`;
+  **Balanced** (recommended) `display.aspect: WIDE_16_9` and
+  `display.widescreenDrawMode: NATIVE`; **Enhanced** Balanced's two plus
+  `display.interpolation: true` and rewind on (the default `act` scope only when
+  rewind was off). **Just here for multiplayer** writes nothing and opens **Play
+  together** (Extras › Time Attack, or Sonic 2 for its own 2 PLAYER mode).
+  Native widescreen is verified frame for frame against 4:3 for Sonic 1, 2 and
+  3 & Knuckles only, and the guide says so for Sonic CD. Per-game Game Setup
+  values (`launch.*`) are never changed.
+- **Upgrades** (a `config.yaml` that existed before the run) and visits from
+  Extras add **Keep my settings**, first and recommended; any other style lists
+  its before ▸ after changes and applies only after **Apply changes**.
+- **Finishing** writes the chosen style and `hub.setupGuide: done` in one save.
+  **Skip for now** writes `hub.setupGuide: skipped`. Closing the window mid-guide
+  saves only games already added, so the guide opens again next time. Clear
+  `hub.setupGuide` to see it at the next start. Design and evidence:
+  [first-run setup guide](docs/architecture/designs/2026-11-27-first-run-setup-guide.md).
+
+| Key | YAML path | Type | Default | Description |
+|-----|-----------|------|---------|-------------|
+| `SETUP_GUIDE` | `hub.setupGuide` | string | `""` | Setup guide state, owned by the hub: blank (opens once at the next start), `done` or `skipped`. |
+
+When the setup guide is finished or skipped and no game is found, or for hubs
+built by tools without the guide, **Add your games** offers **Locate a game** and
 **Scan a folder**. Discovery recognizes supported images by their contents,
 including all supported games found in the selected folder. Original files stay
 in place. The browser offers Home, Downloads and Last folder shortcuts and puts

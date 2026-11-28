@@ -51,7 +51,7 @@ class TestSozSpriteMaskPresentation {
             if (doors.isEmpty() || doors.getFirst().getY() < 0x9F4) continue;
             assertFalse(level.getObjectManager().activeObjectsOfType(SozAct1ArenaController.Mask.class).isEmpty());
             var camera = GameServices.camera();
-            var tiles = level.spritePresentationRenderer().spriteTables.capture().prepared().tiles().stream()
+            var tiles = level.spritePresentationRenderer().spriteTables.prepared().tiles().stream()
                     .filter(t -> t.layer() == SpritePresentation.Layer.OBJECT)
                     .filter(t -> t.x() + camera.getX() >= 0x4378 && t.x() + camera.getX() < 0x43C0)
                     .toList();

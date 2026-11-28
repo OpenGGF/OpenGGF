@@ -22,6 +22,45 @@ Entries should include:
 
 ---
 
+## S2 debug placement object and gate coverage
+
+- **Location** — Sonic 2 placement catalogue and runtime object factories.
+- **Symptom** — The OOZ Ball ($46), Rotating Rings ($73) and Bomb Prize ($D3)
+  remain selectable, but C cannot admit them into the live object table.
+  Some rows have no preview from the resident object sheets. The retail
+  two-player host does not dispatch native placement. The runtime prepares
+  the cursor on the `Obj01_Control` B edge (s2.asm:36223-36230), one object
+  dispatch before `Debug_Init` (s2.asm:88592-88611), and does not explicitly
+  mask the background camera Y in that routine. Obj7D's end-point bonus
+  initializer and its placement gate have no production owner
+  (`Obj7D_Init`, s2.asm:44986-45004).
+- **ROM behavior** — `Debug_SpawnObject` (s2.asm:88759-88786) admits these IDs
+  through the ordinary slot allocator. Obj46 (s2.asm:50647-50848) owns a ball
+  and pressure spring. Obj73 (s2.asm:55464-55625) claims a rotating chain of
+  solid pieces. ObjD3 (s2.asm:58832-58886) normally depends on parent-owned
+  prize state, which raw debug allocation omits. The game also reads
+  `Debug_placement_mode` from individual object, results and scroll routines.
+- **Removal condition** — Provide bounded lifetimes and previews for these
+  rows, exercise each active-placement gate and qualify the cases with native
+  input, including allocation exhaustion and two-player entry.
+
+## S2 and KiS2 debug cheat HUD
+
+- **Location** — The single-player level HUD while the debug cheat is armed,
+  including normal movement before B and after leaving placement.
+- **Symptom** — ROM mode still shows the standard score and time. The
+  engine free-fly coordinate view groups X/Y per actor and keeps regular
+  time, so it cannot represent the cartridge's readout as-is.
+- **ROM behavior** — `HudUpdate` (s2.asm:87867-87874) tests
+  `Debug_mode_flag`; `loc_40E9A` (s2.asm:87961-87980) calls `HudDb_XY` and
+  draws `Sprite_count` in the seconds field. `HudDb_XY` and `HudDb_XY2`
+  (s2.asm:88237-88266) interleave the player's and camera's hexadecimal
+  nibbles, with X on the first line and Y on the second. KiS2's chip
+  revision `c336fede` reaches the same HUD branch from its debug flag.
+- **Removal condition** — Select the native HUD from the armed flag and
+  take the sprite count from the native sprite-table submission. Verify
+  digit order and the counter with placement active and inactive.
+
 ## Sonic 2 preloaded object art outside native PLC slot views
 
 - **Location** — `Sonic2ObjectArtProvider` builds independent object sheets
@@ -65,6 +104,19 @@ Entries should include:
 - **Removal condition** — the carry into results accounts for the represented
   half-pipe waits, and ordinary and Super-message exits match the separate
   display-only pass.
+
+## Sonic 1 title attract demos are absent
+
+- **Location** — the Sonic 1 title attract provider remains to be implemented.
+  The shared lifecycle supports level and Special Stage entries.
+- **Symptom** — the title stays on screen after its native timeout.
+- **ROM behavior** — `GotoDemo` and `Demo_Levels` (sonic.asm:2361-2440)
+  wait another 30 VBlanks, allow Start during that wait, then rotate through
+  GHZ1, MZ1, SYZ1 and a Special Stage. `GM_Special` (sonic.asm:3275-3281)
+  reads the Special Stage stream from `DemoDataPtr[6]`. `VBlank_SpecialStage`
+  (sonic.asm:882-903) debits the playback timer.
+- **Removal condition** — the production title launches each entry on its
+  native wait and returns correctly on timeout and Start.
 
 ## S2 game-over host fade stops music before the destination owns audio
 
@@ -198,24 +250,6 @@ Three parts of that pass are still approximated.
   for this act-2 load. Not yet instrumented past the offset.
 - **Removal condition** — the engine clock equals the ROM's
   `gameplay_frame_counter` column through the chain's ARZ2 segment.
-
-## Bottom kill plane runs the FixBugs branch — 2026-10-31
-
-- **Location:** `PlayableSpriteMovement.doLevelBoundary` and
-  `applyHurtStopBottomKill`, which compute `max(camera maxY, maxY target)`.
-- **Symptom:** shipped S2 `Sonic_Boundary_CheckBottom` (s2.asm:37254-37270) and
-  S3K `Player_Boundary_CheckBottom` (sonic3k.asm:23223-23231) read the live
-  `Camera_Max_Y_pos` alone. Taking the target as well is the S2 `if fixBugs`
-  block, so a player who outruns a lowering boundary survives where the
-  shipped game kills them. The S1 hurt-stop test also differs: it should read
-  only the target (`v_limitbtm2`).
-- **Suspected cause:** removing the expression regresses
-  `TestS2SczLevelSelectTraceReplay`. That suggests the engine's eased
-  `Camera_Max_Y_pos` lags or leads the ROM's somewhere on that route, and the
-  fixed branch hides it. Not yet measured.
-- **Removal condition:** the shipped branch is restored at both kill planes
-  together, with the SCZ trace green because the camera easing that feeds it
-  matches the ROM.
 
 ## TAS pause clock does not advance during native Start pause — 2026-10-26
 
@@ -409,6 +443,10 @@ six-case `TestTitleNewGameSpecialStageProgress` covers these boundaries.
 
 Remaining gaps:
 
+- The Sonic 1 level HUD saturates lives at 99 for presentation. The ROM's
+  `Hud_Lives` (`_inc/HUD Update.asm:537-600`) uses the live byte for two tile
+  lookups. With a byte above 99, the native tens lookup can fetch beyond the
+  digit art. Remove this gap when a ROM-backed test verifies the overflow tiles.
 - S2's shipped `fixBugs = 0` Continue path does not clear stale HTZ DMA, so the
   ROM can corrupt Tails' Continue art with a queued cloud upload. The standalone
   Continue art bank does not reproduce this VRAM alias. The retained Super flag

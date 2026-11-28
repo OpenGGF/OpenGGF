@@ -648,6 +648,11 @@ public class SonicConfigurationService {
 		throw new IllegalStateException("Could not find unique backup name for " + preferred);
 	}
 
+	/** Whether configuration was read from an existing file when this service was created. */
+	boolean loadedFromExistingFile() {
+		return loadedFromExistingFile;
+	}
+
 	public void ensureConfigFileExists() {
 		File target = resolveConfigFile();
 		if (!target.exists()) {
@@ -771,6 +776,7 @@ public class SonicConfigurationService {
         putDefault(SonicConfiguration.MULTIPLAYER_CHAT_DISABLED, false);
         putDefault(SonicConfiguration.HUB_LAST_GAME, "s2");
         putDefault(SonicConfiguration.HUB_DISMISSED_NOTICES, "");
+        putDefault(SonicConfiguration.SETUP_GUIDE, "");
         putDefault(SonicConfiguration.HUB_CONTINUE_S1_CHARACTER, "");
         putDefault(SonicConfiguration.HUB_CONTINUE_S1_ZONE, -1);
         putDefault(SonicConfiguration.HUB_CONTINUE_S1_ACT, 0);
@@ -807,6 +813,7 @@ public class SonicConfigurationService {
 		putDefaultKey(SonicConfiguration.NEXT_ACT, GLFW_KEY_PAGE_UP);
 		putDefaultKey(SonicConfiguration.NEXT_ZONE, GLFW_KEY_PAGE_DOWN);
 		putDefaultKey(SonicConfiguration.DEBUG_MODE_KEY, GLFW_KEY_D);
+		putDefault(SonicConfiguration.LEVEL_DEBUG_MODE, "rom");
 		putDefault(SonicConfiguration.FPS, "AUTO");
 		putDefault(SonicConfiguration.DISPLAY_PACING, "AUTO");
 		putDefault(SonicConfiguration.DISPLAY_INTERPOLATION, false);

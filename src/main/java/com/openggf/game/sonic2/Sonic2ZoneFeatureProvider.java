@@ -1,5 +1,6 @@
 package com.openggf.game.sonic2;
 
+import com.openggf.game.LevelDebugPlacement;
 import com.openggf.camera.Camera;
 import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
@@ -436,6 +437,8 @@ public class Sonic2ZoneFeatureProvider implements ZoneFeatureProvider {
     }
 
     private void updateWfzWindTunnel(AbstractPlayableSprite player) {
+        // WindTunnel (s2.asm:5474-5477) bypasses player control while placing.
+        if (LevelDebugPlacement.isActiveFor(player)) return;
         if (player == null) {
             wfzWindTunnelActive = false;
             return;

@@ -1044,6 +1044,46 @@ class TestMicaCharacterIntegration {
     @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_3K)
     void continuePixelsS3k() throws Exception { captureContinue("s3k", "s3k.rom.path"); }
 
+    /**
+     * M_SSR_ContSon1/2 draw mini-Sonic at (+$40,-8) from the continue row; with MICA the
+     * results screen draws her S1 continue/icon poses 6/7 there instead.
+     */
+    @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_1)
+    void specialStageResultsContinueIconPixelsS1() throws Exception {
+        var settings=new com.openggf.tools.GameplayCaptureSession.Settings(320,CODE,"","off",null,null,null);
+        try(var session=new com.openggf.tools.GameplayCaptureSession(settings)) {
+            session.applyMod(buildSample());
+            session.boot(Path.of(System.getProperty("sonic1.rom.path")),0,0,settings);
+            var screen=new com.openggf.game.sonic1.specialstage.Sonic1SpecialStageResultsScreen(50,false,0,0);
+            int frame=0;
+            while(!screen.isContinueAwarded() && frame<1000) screen.update(++frame,null);
+            assertTrue(screen.isContinueAwarded());
+            var graphics=GameServices.graphics();
+            org.lwjgl.opengl.GL11.glClearColor(0,0,0,1);
+            org.lwjgl.opengl.GL11.glClear(org.lwjgl.opengl.GL11.GL_COLOR_BUFFER_BIT | org.lwjgl.opengl.GL11.GL_DEPTH_BUFFER_BIT);
+            graphics.resetForFixedFunction();
+            GameServices.camera().setX((short)0); GameServices.camera().setY((short)0);
+            // Engine.drawSpecialStageResults order.
+            graphics.beginPatternBatch();
+            var commands=new ArrayList<com.openggf.graphics.GLCommand>();
+            screen.appendRenderCommands(commands);
+            graphics.flushPatternBatch();
+            if(!commands.isEmpty()) graphics.registerCommand(new com.openggf.graphics.GLCommandGroup(org.lwjgl.opengl.GL11.GL_LINES, commands));
+            graphics.flushScreenSpace();
+            org.lwjgl.opengl.GL11.glFinish();
+            var image=com.openggf.graphics.ScreenshotCapture.captureFramebuffer(320,224);
+            writeCapture(image,"s1-ss-results-continue");
+            long jade=0, blue=0;
+            // Continue row centre (160,184); the icon slot is (+$40,-8), 16x24.
+            for(int y=176;y<200;y++) for(int x=224;x<240;x++) {
+                int pixel=image.argb(x,y),r=(pixel>>16)&255,g=(pixel>>8)&255,b=pixel&255;
+                if(g>r+25 && g>=b) jade++;
+                if(b>r+60 && b>g+20) blue++;
+            }
+            assertTrue(jade>15,"MICA continue icon must replace mini-Sonic: jade="+jade+" blue="+blue);
+        }
+    }
+
     @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_3K)
     void snowboardPixelsS3k() throws Exception {
         Path jar=buildSample();

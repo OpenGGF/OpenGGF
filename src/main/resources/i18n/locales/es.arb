@@ -23500,5 +23500,613 @@
       "sourceHash": "ffdf4762e94320b9d8a0faaabaef9ae1b70cdf647fb0c7d58a4ef29cd7f8b740",
       "reviewed": false
     }
+  },
+  "menu.setup.games.title_caps": "TUS JUEGOS",
+  "menu.setup.style.title_caps": "¿CÓMO QUIERES JUGAR?",
+  "menu.setup.ready.title_caps": "LISTO PARA JUGAR",
+  "menu.setup.mp.title_caps": "JUGAR JUNTOS",
+  "menu.setup.upgrade.title_caps": "BIENVENIDO A OPENGGF {version}",
+  "menu.setup.games.ready_count": "{count, plural, one {# juego listo} other {# juegos listos}}",
+  "menu.setup.games.ready": "Listo",
+  "menu.setup.games.found": "Encontrado",
+  "menu.setup.games.missing": "No encontrado",
+  "menu.setup.games.kept": "Ya configurado",
+  "menu.setup.games.incomplete": "Incompleto",
+  "menu.setup.games.wrong_release": "Versión incorrecta",
+  "menu.setup.games.cd_check_note": "Sonic CD: el disco completo se comprueba al iniciarlo.",
+  "menu.setup.games.cd_hint": "Sonic CD necesita el disco de EE. UU.: su .cue con los 35 archivos de pistas, o un .chd creado a partir de ellos.",
+  "menu.setup.games.optional": "No hace falta para jugar a los demás.",
+  "menu.setup.games.locate_note": "Un archivo ROM, o un .cue o .chd de Sonic CD",
+  "menu.setup.games.empty_title": "Aún no se han encontrado juegos",
+  "menu.setup.games.empty_hint": "Analiza la carpeta con tus juegos o busca un archivo.",
+  "menu.setup.games.cd_unusable_title": "Este disco de Sonic CD aún no se puede usar",
+  "menu.setup.games.cd_fix_tracks": "Deja los 35 archivos de pistas junto al .cue o elige un .chd creado a partir de ellos.",
+  "menu.setup.games.cd_fix_chd": "Conviértelo con chdman y elige el nuevo .chd.",
+  "menu.setup.games.scan_details_caps": "LO QUE ENCONTRÓ EL ANÁLISIS",
+  "menu.setup.games.conflict": "{game} ya está configurado. ¿Usar el archivo nuevo?",
+  "menu.setup.games.keep_current": "Mantener el archivo actual",
+  "menu.setup.games.use_new": "Usar el archivo nuevo",
+  "menu.setup.later": "Configurar más tarde",
+  "menu.setup.later_note": "Añade juegos desde el hub cuando quieras.",
+  "menu.setup.style.stock": "Original",
+  "menu.setup.style.stock_note": "Imagen original 4:3, sin rebobinar",
+  "menu.setup.style.balanced": "Equilibrado",
+  "menu.setup.style.balanced_note": "Imagen 16:9, jugabilidad original",
+  "menu.setup.style.enhanced": "Mejorado",
+  "menu.setup.style.enhanced_note": "16:9, jugabilidad original, movimiento fluido, rebobinado",
+  "menu.setup.style.multiplayer": "Solo vengo a jugar en multijugador",
+  "menu.setup.style.multiplayer_note": "Ir directo a jugar con amigos",
+  "menu.setup.style.keep": "Mantener mis ajustes",
+  "menu.setup.style.keep_note": "No cambiar nada",
+  "menu.setup.style.recommended_caps": "RECOMENDADO",
+  "menu.setup.style.sets_caps": "ESTO SE AJUSTA",
+  "menu.setup.style.stock_caveat": "Lo más fiel a los juegos originales. OpenGGF no es un emulador; algunos efectos de hardware difieren.",
+  "menu.setup.style.smooth_caveat": "El movimiento fluido necesita una pantalla de más de 60 Hz.",
+  "menu.setup.style.multiplayer_sets": "No cambia ningún ajuste; abre Jugar juntos.",
+  "menu.setup.style.keep_sets": "Tus ajustes actuales se quedan tal como están.",
+  "menu.setup.mp.online": "Carreras en línea",
+  "menu.setup.mp.online_note": "Salas de Time Attack: explorar, crear o unirse",
+  "menu.setup.mp.local": "Dos jugadores, una pantalla",
+  "menu.setup.mp.local_note": "Sonic 2: elige 2 PLAYER en su pantalla de título",
+  "menu.setup.mp.rom_note": "Todos en una sala necesitan el mismo juego que el anfitrión.",
+  "menu.setup.mp.unavailable": "Time Attack está desactivado. Actívalo en Mods.",
+  "menu.setup.ready.play": "Jugar a {game}",
+  "menu.setup.ready.hub": "Ir a todos los juegos",
+  "menu.setup.ready.rerun": "Vuelve a abrir esta guía cuando quieras desde Extras.",
+  "menu.setup.ready.no_games": "Añade un juego desde el hub para empezar a jugar.",
+  "menu.setup.apply.title_caps": "¿APLICAR ESTILO DE JUEGO?",
+  "menu.setup.apply.note": "Se conservan los ajustes de partida de cada juego.",
+  "menu.setup.apply.confirm": "Aplicar cambios",
+  "menu.setup.leave.title_caps": "¿SALIR DE LA CONFIGURACIÓN?",
+  "menu.setup.leave.detail": "Los juegos añadidos se quedan. No cambia nada más.",
+  "menu.setup.leave.stay": "Seguir configurando",
+  "menu.setup.leave.skip": "Omitir por ahora",
+  "menu.setup.skip_caps": "OMITIR",
+  "menu.setup.extras.entry": "Guía de configuración",
+  "menu.setup.upgrade.kept": "Tus juegos y ajustes se han conservado.",
+  "menu.setup.mp.games_note": "Las salas compiten en Sonic 1, Sonic 2 y Sonic 3 & Knuckles.",
+  "menu.setup.games.new_label": "Nuevo",
+  "menu.setup.style.native_scope": "Sonic CD: solo imagen ancha; juego igual que en 4:3 sin verificar.",
+  "menu.setup.style.others_kept": "Los demás ajustes conservan sus valores actuales.",
+  "menu.setup.games.unreadable": "No se puede leer",
+  "settings.key.setup_guide.label": "Guía de configuración",
+  "settings.key.setup_guide.help": "Indica si la guía de configuración terminó. Déjalo vacío para verla al próximo inicio; Extras siempre la abre.",
+  "crash.field.error": "Error",
+  "settings.key.display_interpolation.label": "Interpolación",
+  "settings.value.scd": "Sonic CD",
+  "settings.key.widescreen_draw_mode.label": "Juego en pantalla ancha",
+  "settings.value.NATIVE": "Nativo",
+  "settings.value.EDGE": "Borde",
+  "@crash.field.error": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "ceae337ebb760ea18924c567784ac0951ca5c43d53f2885fa35c94291e40abe9",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.apply.confirm": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "28fb0fe6351bfaa2c4b4536f37c72e1b64fe076799651d13b197e693f88f6e92",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.apply.note": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "a9bcdaeadef821359c8069f8f494be192331daf85e13a9e087656b544c73fc92",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.apply.title_caps": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "0c21aad9bebb7c1b16b96c6443007708f3f63906299f47aba8e697ebd89f5f17",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.extras.entry": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "83e434b8f70505292ee76a0cde5ca5e0fcb89cc6f63d799d760554e333da1cdc",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.games.cd_check_note": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "cbac2ffe1a6941c2897fdc695395c30ff9b4d93f764ec19c279bfbba051c8465",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.games.cd_fix_chd": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "e5f7b834f012dd7e7e3255e10865c9815d62b2579824ae00205cc728218cea81",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.games.cd_fix_tracks": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "e8a64777d670fbb66f7331aeb3b9f0dffe611dc25b13f0920a9e56cec56e2068",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.games.cd_hint": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "07f0e25809279f346f0c3cd2e2eae25052f8050acccd274d18be9fd9f25de906",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.games.cd_unusable_title": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "b5f5288f7962f42d6807e95f5dbdc2d7d79f25cf07d937a1e8323adcf83708f8",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.games.conflict": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "0d90e1c7c49f90f8b72465073070148127c7cdf58646cc5008f5b9f3bed9da05",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.games.empty_hint": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "2db683867ba424d4a1f5b8b9418f4d9cd268703de94a8a158fb739fffe2884de",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.games.empty_title": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "40019e6c900252182074faaea14267c0ead57498009299ca9fa1bf82b9ef02c4",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.games.found": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "23828bd908662e55aa16543922c21bc641fe15fe04b1368922a0a0c1ad66b50b",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.games.incomplete": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "b9435b5029cce9dd245ed70836312fc6e4180adebc8902cb7524976189434c0c",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.games.keep_current": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "98e55d7a790b6139914da9100d9342249bf893331be6e9145dde7273187637c9",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.games.kept": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "8ccc616c3bc4103cbd91f53e5db868e9c9a3fc938ebc45bddd2e1c449a3c7ffb",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.games.locate_note": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "0e8e373600003395e1f4e9ae601ac6b81f97473a9d900104c438f42ce7b8bd7e",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.games.missing": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "b6f5f1775733494178731f9731878b122a894cef7f5f64184a8ea7a08cf10935",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.games.new_label": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "f10a830aba7ce118c5a1c7af5bec1299be3c7a7e66656546e88c8969bdd62248",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.games.optional": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "02ef696c43ff62b6799ad753fee90b7d00434eb51f28aaeb2bd65fdd1ef2aebb",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.games.ready": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "4b5169afe82dda9d213fdac1d5a88304aa12b7c642fd996bdf1b79a33583f071",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.games.ready_count": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "60f7af874336b344c6e7118bedb5650c5bfca8e54d7b5940c70d073634be5b6b",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.games.scan_details_caps": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "898c3600b4159c341a70a25082caa85f9ba4a5b736b740ae71d20f2413a50cdb",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.games.title_caps": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "004e4bdab216be2c1c6dc0bf9e103d93228283e01d3d79681399fd9e866eb3b6",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.games.unreadable": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "746be7322a5d58691309e35a91d1728dbbcc587119ea15d1336314e2f287eed8",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.games.use_new": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "a5959ccdcce6562df4af48aecaa86292bd76324fd04e0feb952d294ef10eb229",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.games.wrong_release": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "97780253c899667d8c4ebf0876eba0d5c312f6c52ce06b51c4c4b6328b48e641",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.later": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "6b644e61059bdbfd0a32a5a745c33d7a9172ee0a298b1b99a7ab7f51ed06ca88",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.later_note": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "2f4fa5e018cb8a10fd94d586b262eb4a586b3fc8ca325ad7b0b7d9eace755fe7",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.leave.detail": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "5d51bcc6b90d59343413e23a937f70fd3e0bb109bf074599e58bf02927626c2c",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.leave.skip": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "b2af1a5f0b857b5f945805d6a40d6cebc88809382d81ca0156265ce4d06a5cc0",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.leave.stay": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "d64ecc8509e2cb4aa55f3e614fd607f879688f87ab73e4cd7ce71a5baa74c04e",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.leave.title_caps": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "4336c9fa9512931c2229ab1e68f357d07a13c24ebd1cb53c3531473066b201ce",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.mp.games_note": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "7d196becbe29cf053641672d172106f81746b56b72c26d24fe028df7248aec2d",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.mp.local": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "2ba04e8f65bf7f7d816553cb21cae125f5aef9a2a19234b73e78661f0dae1b42",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.mp.local_note": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "1690dd3ec6fa23a7055c8897811b6546ceb7fe563b60fd91bb74e4b97e0d89f9",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.mp.online": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "e21398f01d68c3b40bd4e1c5a0414629595cd391788c3a769829219dab8db35b",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.mp.online_note": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "8e9db31e60cece09228676c44ae6b863ff8aa7ad07fc9d2e60242f3f4a5fe9d3",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.mp.rom_note": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "c8b0a00a83afa3f5645390bfa7d6ba826ffa4add4171a4e8aefed3c50a7bf1c8",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.mp.title_caps": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "c9590617455149ecca7a9f4848ebe02e2dab2df045c980fed732a6c65e39ca6e",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.mp.unavailable": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "7993a14fd858458c3fe7f2bfb3fdb9e736ba92919d48b7ddf426461b92ddf5ba",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.ready.hub": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "6eb28ff7d08b8465bc4d952c78e66e116866cfa91446a254a3d701d3e80780ab",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.ready.no_games": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "533d0b61dd21d5d28b41f73d7dca749c81ee284c29603ecebd2340c9ee598fb4",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.ready.play": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "af981c4e3f1e7294cbadcc6fdd2239f32030149b4e227b21b3d214b5964ca95b",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.ready.rerun": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "e7b8122cfedfd2755ddac632daf9ab97c26ea1b6be2a33448ae18a705e7e3f17",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.ready.title_caps": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "467b403ff49d8ea9f839682bcb1da1d0f662d33daa38a1f17f63a77c65ff59c2",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.skip_caps": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "6789c9a025c862a6b55238edbb47d2dae57f1fcae3d73bcdf102eaeb6c510c7f",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.style.balanced": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "e89457a4a1afc451144aaae089cefea47b44b2fa9857fea955bb5ed7ddde3799",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.style.balanced_note": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "0c77eb6abcbf6cfd496041bf089527dae038cf7d23855af252b37111cdd55cd2",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.style.enhanced": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "1e55f7483ef25cfb89ec3acf8fbfd8d5f30e6c8f2aafef07dc4839b417be082a",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.style.enhanced_note": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "37f3fc5ecda3ba8dfe0a8b56c426a581642f72402f7ea3c126e07af8a293672b",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.style.keep": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "e0bc44e65895158af091576869c10012f54b41d7464c5a2cee1a15ecff984f51",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.style.keep_note": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "06a6b6fb0294b780e3da9102eb9ff7e55987db693ec8d733f4f9e47858434246",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.style.keep_sets": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "c4574c81a127ec134d378afce80bee0f2eebe32c0d6b64133c9994b00d3e3262",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.style.multiplayer": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "5f8c44dfd4f702ceb20cc1e438da94b1dbf0f3c150c3090b5ec08f01fc194d38",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.style.multiplayer_note": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "fe725f316ff593aabaeb9b6d330d6f28b73f528051ae3cab85f7965c599d4dcc",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.style.multiplayer_sets": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "2f97da4d7a5169205f3e8855748c8c773326a3ed9039d3720d8a933838ebbfdb",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.style.native_scope": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "95a4b010b3925a4b38b83dad4128380ff2f86045483b833fb35b9c681381860f",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.style.others_kept": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "ed76e748e0d78fa8f8d2ec235cf52d553089a3153c4713fa9ad889d6b31a8cdf",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.style.recommended_caps": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "2b00ce44502d1a1b3a5d0c5e86aa4f6f6e9eaaf0d1271bd3ebb7c13913d7d83b",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.style.sets_caps": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "58db066aba62a9f8bab5ea415f62799158bdc5ec98cf3936e633fa4f920bd934",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.style.smooth_caveat": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "852cfe89342104fc28dedac8bc68a1e6b32d3b15d6b718987daa99ef5075daf1",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.style.stock": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "39113ff4d0bc51242e72dd5492a44218e031dbacb5b3ba9f68c427b183885482",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.style.stock_caveat": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "06ab83aaa24b674fcb1654a958af844395636d75d0cb2c25ae2931615294868a",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.style.stock_note": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "8f873594efdc109f289502bfb9c4f12c8a69aae5be7d74e16959b8486737739f",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.style.title_caps": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "e4c7f58bc2e08937a03a2bcaa047273dca400795b7d5ef3acc45719d31519f05",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.upgrade.kept": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "18b64c5f8773f754f98ad1a307ec052787879ff82e93cff64664052d2bcf4735",
+      "reviewed": false
+    }
+  },
+  "@menu.setup.upgrade.title_caps": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "3e5a026b965b2947881c61a03097edc4c0bc7df3011848f80ab27aef0a5a5ccc",
+      "reviewed": false
+    }
+  },
+  "@settings.key.display_interpolation.label": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "75191d7145fc2028af8fce20b2fada4689044c068c4cae6de3c93fde66961d08",
+      "reviewed": false
+    }
+  },
+  "@settings.key.setup_guide.help": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "710d1359545b6c5b5156f0257e0b878d4601fd9fbeb26f53bfdbd6484bd9677b",
+      "reviewed": false
+    }
+  },
+  "@settings.key.setup_guide.label": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "c091a1da01e5d87d083ed328524a545c028b33aa6338750af9cc1e4f4743bc41",
+      "reviewed": false
+    }
+  },
+  "@settings.key.widescreen_draw_mode.label": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "cd991fdf7686fa2a483661234a3a35f2f4a64e568ea08c407bc6c6947b631c34",
+      "reviewed": false
+    }
+  },
+  "@settings.value.EDGE": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "30c9c3fba74209749508ecf2c0a59ba1071ba11505dd63865ff760df1cb07734",
+      "reviewed": false
+    }
+  },
+  "@settings.value.NATIVE": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "451cc5bae2af520c8d90af443edc0875b5b38bc9fbff9948de36fc1e75f477c4",
+      "reviewed": false
+    }
+  },
+  "@settings.value.scd": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "2249ed46ced29f4648b0cf5b2c274447bb34c13e2781b7ab54d53034c4f873c8",
+      "reviewed": false
+    }
   }
 }

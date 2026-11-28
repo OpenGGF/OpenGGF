@@ -131,7 +131,7 @@ mods:
 # ── Rewind (live) ──
 rewind:
   liveEnabled: true # Legacy enable gate for launch profiles and tools
-  budgetScope: act # off, checkpoint, act, zone
+  budgetScope: act # off, checkpoint, act, zone, never
   budgetSeconds: "10" # 5, 10, 15, 20, 30, 60, unlimited
   refillOnLifeLoss: true
   bonusStages: true
@@ -253,6 +253,7 @@ capture:
 # ════════════════════════════════════════════
 debug:
   flags:
+    levelDebugMode: "rom"  # ROM item placement where available, or "engine" for free-fly
     debugView: false   # Enable the debug overlay subsystem; visible HUD starts hidden until toggled
     editor: false   # Allow entering the level editor from gameplay
   keys:

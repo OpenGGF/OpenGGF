@@ -1,6 +1,7 @@
 package com.openggf.game.sonic2.constants;
 
 public final class Sonic2ObjectIds {
+    public static final int RING = 0x25;
     public static final int LAYER_SWITCHER = 0x03;
     public static final int OIL = 0x07;                  // OOZ oil surface (Obj07)
     public static final int SPRING = 0x41;

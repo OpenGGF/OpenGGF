@@ -48,20 +48,43 @@ public final class TransportHud {
         }
     }
 
+    /** An authored glyph drawn in the value position when there is no value text. */
+    public enum ValueMark {
+        NONE,
+        /** An endless allowance: a full meter with no counter to read. */
+        INFINITY
+    }
+
     /**
      * {@code title} and {@code value} share the only routine row; {@code note} adds a second row
      * for an exception. A negative progress value omits the hold meter. A non-empty
      * {@code valueReserve} keeps room for that wider value and right-aligns the value in it, so a
-     * counting value and the meter under it keep one plate width.
+     * counting value and the meter under it keep one plate width. {@code valueMark} draws an
+     * authored glyph in place of an empty value. {@code edgeGlowPercent} (0 for none, at most 100)
+     * mixes the plate's edge line toward the status colour, for a low-contrast pulse.
      */
     public record Message(Status status, String title, String value, String note, int progressPercent,
-                          String valueReserve) {
+                          String valueReserve, ValueMark valueMark, int edgeGlowPercent) {
+        public Message {
+            valueMark = valueMark == null ? ValueMark.NONE : valueMark;
+            edgeGlowPercent = Math.clamp(edgeGlowPercent, 0, 100);
+        }
+
         public Message(Status status, String title, String value, String note, int progressPercent) {
             this(status, title, value, note, progressPercent, "");
+        }
+
+        public Message(Status status, String title, String value, String note, int progressPercent,
+                       String valueReserve) {
+            this(status, title, value, note, progressPercent, valueReserve, ValueMark.NONE, 0);
         }
     }
 
     record Layout(int x, int y, int width, int height, String title, String value, String note, int valueWidth) { }
+
+    // Authored 9x5 infinity mark; every set bit is one projection pixel, like the status icons.
+    private static final int[] INFINITY_ROWS = {0xC6, 0x129, 0x111, 0x129, 0xC6};
+    static final int MARK_WIDTH = 9;
 
     /** Logical-frame rectangle a plate occupies, so other overlays can keep clear of it. */
     public record Bounds(int x, int y, int width, int height) {
@@ -80,13 +103,20 @@ public final class TransportHud {
             // a filled opaque frame underneath would erase the scenery before alpha blending.
             rect(graphics, layout.x + 1, layout.y + 1, layout.width - 2, layout.height - 2, MenuChrome.NAVY, 209);
             // A drained rewind takes its status colour into the frame: the plate itself reads as spent.
-            float[] edge = message.status == Status.REWIND_EMPTY ? message.status.color : MenuChrome.EDGE;
+            float[] edge = message.status == Status.REWIND_EMPTY ? message.status.color
+                    : mix(MenuChrome.EDGE, message.status.color, message.edgeGlowPercent);
             rect(graphics, layout.x, layout.y, layout.width, 1, edge, 255);
             rect(graphics, layout.x, layout.y + layout.height - 1, layout.width, 1, edge, 255);
             rect(graphics, layout.x, layout.y + 1, 1, layout.height - 2, edge, 255);
             rect(graphics, layout.x + layout.width - 1, layout.y + 1, 1, layout.height - 2, edge, 255);
             if (!usesWarningGlyph(message.status)) {
                 icon(graphics, layout.x + PAD_X, layout.y + PAD_Y + 2, message.status);
+            }
+            if (layout.value.isEmpty() && message.valueMark == ValueMark.INFINITY) {
+                // Centred on the capitals' height, in the value's colour and right-aligned like a value.
+                int markX = layout.x + TEXT_X + text.measureWidth(layout.title, TEXT_SCALE)
+                        + text.measureWidth(" ", TEXT_SCALE) + layout.valueWidth - MARK_WIDTH;
+                mask(graphics, markX, layout.y + PAD_Y + 2, INFINITY_ROWS, MARK_WIDTH, MenuChrome.TEXT);
             }
             if (message.progressPercent >= 0) {
                 int trackWidth = layout.width - 2 * PAD_X;
@@ -153,9 +183,10 @@ public final class TransportHud {
         String value = fit(text, message.value, textRoom - titleWidth - gap);
         String note = fit(text, message.note, textRoom);
         String reserve = fit(text, message.valueReserve, textRoom - titleWidth - gap);
-        int valueWidth = value.isEmpty() ? 0
+        int valueWidth = value.isEmpty()
+                ? (message.valueMark == ValueMark.NONE ? 0 : MARK_WIDTH)
                 : Math.max(text.measureWidth(value, TEXT_SCALE), text.measureWidth(reserve, TEXT_SCALE));
-        int rowWidth = titleWidth + (value.isEmpty() ? 0 : gap + valueWidth);
+        int rowWidth = titleWidth + (valueWidth == 0 ? 0 : gap + valueWidth);
         int width = TEXT_X + Math.max(rowWidth, text.measureWidth(note, TEXT_SCALE)) + PAD_X;
         int height = 2 * PAD_Y + ROW * (note.isEmpty() ? 1 : 2) + (message.progressPercent >= 0 ? 3 : 0);
         // All three games place lives at y=200 and score/time/rings at the upper left.
@@ -193,6 +224,10 @@ public final class TransportHud {
             case PAUSE -> new int[] {0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0};
             case WARNING, ERROR -> throw new IllegalArgumentException("Warnings use the font's ! glyph");
         };
+        mask(graphics, x, y, rows, 9, status.color);
+    }
+
+    private static void mask(GraphicsManager graphics, int x, int y, int[] rows, int width, float[] rgb) {
         // One-pixel silhouette like the font's own outline. Horizontal runs keep both
         // passes cheaper than submitting each filled icon pixel as a separate rectangle.
         for (int row = -1; row <= rows.length; row++) {
@@ -203,10 +238,10 @@ public final class TransportHud {
             }
             int mask = neighbours << 1;
             mask |= (mask << 1) | (mask >>> 1);
-            iconRow(graphics, x - 1, y + row, mask, 11, MenuChrome.INK);
+            iconRow(graphics, x - 1, y + row, mask, width + 2, MenuChrome.INK);
         }
         for (int row = 0; row < rows.length; row++) {
-            iconRow(graphics, x, y + row, rows[row], 9, status.color);
+            iconRow(graphics, x, y + row, rows[row], width, rgb);
         }
     }
 
@@ -225,6 +260,14 @@ public final class TransportHud {
 
     private static boolean usesWarningGlyph(Status status) {
         return status == Status.WARNING || status == Status.ERROR;
+    }
+
+    /** {@code percent} of the way from {@code from} to {@code to}; both are {@link MenuChrome} colours. */
+    static float[] mix(float[] from, float[] to, int percent) {
+        if (percent <= 0) return from;
+        float t = Math.min(100, percent) / 100f;
+        return new float[] {from[0] + (to[0] - from[0]) * t, from[1] + (to[1] - from[1]) * t,
+                from[2] + (to[2] - from[2]) * t};
     }
 
     private static DebugColor color(float[] rgb) {

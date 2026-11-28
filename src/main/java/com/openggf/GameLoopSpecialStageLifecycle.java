@@ -6,6 +6,8 @@ import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
 import com.openggf.debug.playback.PlaybackDebugManager;
 import com.openggf.game.*;
+import com.openggf.game.internal.AttractDemoPlayback;
+import com.openggf.game.internal.NativeSpecialStageInput;
 import com.openggf.game.internal.NativeSpecialStageResultsClock;
 import com.openggf.game.internal.SpecialStageStartInput;
 import com.openggf.game.rewind.LiveRewindManager;
@@ -21,6 +23,7 @@ import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.io.IOException;
+import java.util.function.Supplier;
 import java.util.logging.Logger;
 
 /** Loop-lifetime authority for special entry, retained identity, results and return completion. */
@@ -28,6 +31,7 @@ final class GameLoopSpecialStageLifecycle {
     private static final Logger LOGGER = Logger.getLogger(GameLoopSpecialStageLifecycle.class.getName());
     private final Host host;
     private final AudioManager audioManager;
+    private final Supplier<AttractDemoPlayback> attractPlayback;
     private SpecialStageProvider activeSpecialStageProvider = NoOpSpecialStageProvider.INSTANCE;
     private GameLoop.SpecialStageObservationPacing specialStageObservationPacing;
     private ResultsScreen resultsScreen;
@@ -46,8 +50,13 @@ final class GameLoopSpecialStageLifecycle {
     private int resultsExitPreLevelFadeFramesRemaining = -1;
 
     GameLoopSpecialStageLifecycle(Host host, AudioManager audioManager) {
+        this(host, audioManager, () -> null);
+    }
+
+    GameLoopSpecialStageLifecycle(Host host, AudioManager audioManager, Supplier<AttractDemoPlayback> attractPlayback) {
         this.host = host;
         this.audioManager = audioManager;
+        this.attractPlayback = attractPlayback;
     }
 
     interface Host {
@@ -81,6 +90,10 @@ final class GameLoopSpecialStageLifecycle {
     boolean transitionPending() { return specialStageTransitionPending; }
     boolean returningFromSpecialStage() { return returningFromSpecialStage; }
     void clearEntryPresentation() { specialStageEntryPresentation.clear(); }
+
+    void clearEntryPresentationAfter(GameMode oldMode) {
+        if (oldMode == GameMode.SPECIAL_STAGE) clearEntryPresentation();
+    }
     void retireForSessionReset() {
         activeSpecialStageProvider.reset();
         activeSpecialStageProvider = NoOpSpecialStageProvider.INSTANCE;
@@ -119,15 +132,17 @@ final class GameLoopSpecialStageLifecycle {
      * matching the original dispatcher.
      */
     void updateSpecialStageMode() {
+        AttractDemoPlayback demo = attractPlayback.get();
         SpecialStageProvider ssProvider = host.activeProvider();
         SpecialStageFrameExecution.updateCapturedFrame(ssProvider, host.config(),
-                host::debugKeyPressed,
+                demo == null ? host::debugKeyPressed : key -> false,
                 host.debugCompletionCallback(), host.debugFailureCallback(),
                 host.input(), host.boundGameplayContext(), host.plcFrame(),
-                specialStageObservationPacing, this::updateSpecialStageInput,
+                demo == null ? specialStageObservationPacing : null,
+                demo == null ? this::updateSpecialStageInput : () -> NativeSpecialStageInput.dispatch(ssProvider, host.input()),
                 specialStageEntryPresentation, host.fade(),
                 () -> revealSpecialStage(ssProvider), host::rewindable,
-                host.rewind(), host.currentMode(), this::enterResultsScreen);
+                host.rewind(), host.currentMode(), this::enterResultsScreen, demo);
     }
 
     void updateSpecialStageResultsMode() {

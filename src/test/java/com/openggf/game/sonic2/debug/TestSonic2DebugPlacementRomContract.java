@@ -19,14 +19,12 @@ import java.util.TreeSet;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Pins the native S2 debug-placement catalog and the engine's current readiness boundary.
+ * Pins the native S2 debug-placement catalogue and production decoding.
  *
- * <p>This deliberately decodes the user-supplied ROM in test code. It is evidence for a future
- * production capability, not a dormant production catalog or a gameplay data source.</p>
+ * The independent ROM decoder verifies the ordered rows supplied to the controller.
  */
 @RequiresRom(SonicGame.SONIC_2)
 class TestSonic2DebugPlacementRomContract {
@@ -100,7 +98,7 @@ class TestSonic2DebugPlacementRomContract {
     }
 
     @Test
-    void registryGapIsExactAndTheModuleKeepsPlacementUnavailable() throws Exception {
+    void registryInventoryAndProductionCatalogueMatchTheRom() throws Exception {
         Contract contract = loadContract();
         Set<Integer> uniqueIds = new TreeSet<>();
         Set<Integer> distinctOffsets = new LinkedHashSet<>();
@@ -117,13 +115,19 @@ class TestSonic2DebugPlacementRomContract {
                 .filter(id -> !registry.hasRegisteredFactory(id))
                 .forEach(missingFactories::add);
 
-        assertEquals(Set.of(0x25, 0x46, 0x73, 0xD3), missingFactories,
-                "Ring uses RingManager; OOZ Ball, Rotating Rings, and Bomb Prize lack placement-safe factories");
-        assertEquals(113, uniqueIds.size() - missingFactories.size());
-
-        assertFalse(new Sonic2GameModule().getDebugModeProvider().hasLevelDebug(),
-                "Native level placement stays unavailable until preview art, dynamic ring/object lifecycle, "
-                        + "global gates, rewind, and dedicated REV01 trace evidence are complete");
+        assertEquals(Set.of(0x46, 0x73, 0xD3), missingFactories,
+                "OOZ Ball, Rotating Rings and Bomb Prize lack placement-safe factories");
+        assertTrue(new Sonic2GameModule().getDebugModeProvider().hasLevelDebug());
+        var reader = RomByteReader.fromRom(GameServices.rom().getRom());
+        for (int zone = 0; zone < EXPECTED_LIST_OFFSETS.length; zone++) {
+            var expected = contract.rowsByOffset(EXPECTED_LIST_OFFSETS[zone]);
+            var actual = Sonic2LevelDebugPlacement.decode(reader, DEBUG_OBJECT_LISTS, zone);
+            assertEquals(expected.size(), actual.size());
+            for (int row = 0; row < actual.size(); row++) {
+                assertEquals(expected.get(row).objectId(), actual.get(row).objectId());
+                assertEquals(expected.get(row).subtype(), actual.get(row).subtype());
+            }
+        }
     }
 
     private static Contract loadContract() throws Exception {

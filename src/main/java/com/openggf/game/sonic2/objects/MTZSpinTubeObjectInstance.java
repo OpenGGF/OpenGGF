@@ -1,5 +1,6 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.game.LevelDebugPlacement;
 import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.RewindStateful;
@@ -353,7 +354,7 @@ public class MTZSpinTubeObjectInstance extends AbstractObjectInstance implements
      */
     private void checkEntry(CharacterState cs, AbstractPlayableSprite player) {
         // ROM: tst.w (Debug_placement_mode).w / bne.w return
-        if (player.isDebugMode()) {
+        if (player.isDebugMode() || LevelDebugPlacement.blocksObjectInteractions(tryServices())) {
             return;
         }
 

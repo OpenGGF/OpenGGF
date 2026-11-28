@@ -12,6 +12,7 @@ public final class ModApiVersion {
     // Rebuild matching creator artifacts after this intentional package migration.
     /**
      * Optional final-orientation stage drawings preserve native selectors, timing, priority and fades.
+     * PowerUpRules.invincibilityTimerDecimation (8 in S3K) extends the unpublished candidate.
      * Appended WIDESCREEN_DRAW_MODE and WIDESCREEN_DORMANT_STYLE preferences extend the unpublished candidate.
      * Sidekick-owned S2/S3K Tornado cockpit crops and explicit solo companion banks extend the unpublished candidate.
      * Solo companion search photos, both S3K cockpit seats, the mid-size S3K Tornado's rider and cockpit head, and
@@ -26,6 +27,9 @@ public final class ModApiVersion {
      * Optional per-form powered GGFP banks and explicit normal aliases extend the unpublished candidate.
      * Host-aware character presentation suppliers extend the unpublished 0.7 candidate.
      * Optional directional canonical homing strike sheet keys extend this same 0.7 candidate.
+     * The beta-flight mutator policy (with its fixedSteering and superJump components) and capability (BETA_FLIGHT) are appended to the 0.7 candidate.
+     * Starting-state (rings/time/score/lives) and ring hunger mutator policies and capabilities
+     * extend the unpublished candidate.
      * Creator strike trail colours (StrikeTrailStyle), per-form powered particles and emitters
      * (PoweredEffects) and the powered-tier query extend the unpublished candidate.
      * Current unpublished compiled-mod API candidate, including the grouped landing animation rule,
@@ -220,8 +224,13 @@ public final class ModApiVersion {
      * Wacky Workbench's own player grows the movement rewind record by a stage-control word
      * and adds stageControlState()/setStageControlState(int) and cancelTimedCharge() for the
      * CD stage routines.
+     * SonicConfiguration appends LEVEL_DEBUG_MODE (debug.flags.levelDebugMode) for ROM placement
+     * and engine free-fly selection within the unpublished 0.7.0 candidate.
      * SonicConfiguration appends SONIC_CD_DISC (roms.soniccd), the Sonic CD disc's cue sheet beside the
      * other games' ROM keys; existing ordinals are preserved and the candidate remains 0.7.0.
+     * SonicConfiguration appends SETUP_GUIDE (hub.setupGuide), the first-run setup guide's
+     * finished/skipped state owned by the hub; existing ordinals are preserved and the candidate
+     * remains 0.7.0.
      * GameModule.getPolicies() owns the immutable GamePolicies record (GameRules rules);
      * GameModule/DelegatingGameModule/PhysicsProvider getRules() are removed,
      * PhysicsProvider.fixed drops its rules argument, StandaloneGameSpec gains policies(), and

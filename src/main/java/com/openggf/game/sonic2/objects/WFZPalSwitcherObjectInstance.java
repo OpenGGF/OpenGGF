@@ -1,5 +1,6 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.game.LevelDebugPlacement;
 import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.BoxObjectInstance;
 
@@ -115,10 +116,8 @@ public class WFZPalSwitcherObjectInstance extends BoxObjectInstance implements R
             initialized = true;
         }
 
-        // ROM: Obj8B_Main (s2.asm:46993-47049)
-        // Skip processing when in debug placement mode
-        // ROM: tst.w (Debug_placement_mode).w / bne.s return_2146A
-        // (Engine handles this by not calling update in debug mode)
+        // Obj8B_Main (s2.asm:47022-47024) preserves the previous crossing state.
+        if (LevelDebugPlacement.blocksObjectInteractions(tryServices())) return;
 
         // Check Sonic (main character)
         // ROM: lea objoff_34(a0),a2 / lea (MainCharacter).w,a1 / bsr.s loc_2142A

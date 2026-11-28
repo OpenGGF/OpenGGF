@@ -222,13 +222,14 @@ class TestSszEggRoboArtPriority {
         assertFalse(oldPrepared.tiles().isEmpty());
         LevelSpritePresentation.publish(level, PlcLifecyclePhase.ORDINARY_LEVEL);
         assertEquals(oldPrepared, LevelSpritePresentation.published(level));
+        SpritePresentation.Frame displayed = LevelSpritePresentation.published(level);
 
         raiseBody(low.body());
         LevelSpritePresentation.prepare(level, GameServices.sprites());
         CompositeSnapshot checkpoint = registry.capture();
         SpritePresentation.Frame nextPrepared = prepared(checkpoint);
         assertNotEquals(oldPrepared, nextPrepared);
-        assertSame(oldPrepared, LevelSpritePresentation.published(level),
+        assertSame(displayed, LevelSpritePresentation.published(level),
                 "owner writes and a new CPU preparation cannot mutate an already published generation");
         LevelSpritePresentation.publish(level, PlcLifecyclePhase.ORDINARY_LEVEL);
         assertEquals(nextPrepared, LevelSpritePresentation.published(level));

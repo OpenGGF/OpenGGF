@@ -749,7 +749,30 @@ class TestEngineSettingsScreen {
         assertFalse(f.descriptionLines().contains("Used while Rewind is not Off."));
         assertTrue(f.texts().contains("15 s"), f.texts().toString());
         assertEquals("Per zone", EngineSettingLabels.value(REWIND_BUDGET_SCOPE, "zone"));
+        assertEquals("Never", EngineSettingLabels.value(REWIND_BUDGET_SCOPE, "never"));
         assertEquals("Unlimited", EngineSettingLabels.value(REWIND_BUDGET_SECONDS, "unlimited"));
+    }
+
+    @Test
+    void neverScopeDimsOnlyTheLifeLossRefillAndSaysWhy() {
+        Fixture f = new Fixture();
+        f.tab(GAMEPLAY);
+        f.focus(REWIND_BUDGET_SCOPE);
+        f.press(GLFW_KEY_RIGHT); // Per act -> Per zone
+        f.press(GLFW_KEY_RIGHT); // Per zone -> Never
+        assertTrue(f.texts().contains("Never"), f.texts().toString());
+        f.press(GLFW_KEY_DOWN);
+        assertEquals(REWIND_BUDGET_SECONDS, f.screen.selectedForTest());
+        assertFalse(f.descriptionLines().contains("Used while Rewind is not Off."), "the budget still applies");
+        f.press(GLFW_KEY_DOWN);
+        assertEquals(REWIND_REFILL_ON_LIFE_LOSS, f.screen.selectedForTest());
+        String why = "Not used while Rewind is Never.";
+        assertTrue(f.descriptionLines().contains(why), f.descriptionLines().toString());
+        assertTrue(EngineSettingLabels.inEffect(REWIND_BONUS_STAGES, "never"));
+        assertTrue(EngineSettingLabels.inEffect(REWIND_SPECIAL_STAGES, "never"));
+        assertFalse(EngineSettingLabels.inEffect(REWIND_REFILL_ON_LIFE_LOSS, "never"));
+        assertTrue(EngineSettingLabels.inEffect(REWIND_REFILL_ON_LIFE_LOSS, "act"));
+        assertEquals("Used while Rewind is not Off.", EngineSettingLabels.notInEffect(REWIND_REFILL_ON_LIFE_LOSS, "off"));
     }
 
     @Test

@@ -18,7 +18,8 @@ import com.openggf.level.render.SpriteMappingFrame;
 import java.util.List;
 
 /** Chip-backed KiS2 title. Retains the engine's S2 boot logo, then runs KiS2 Obj0E without the S2 credit prelude. */
-public final class Kis2TitleScreen implements TitleScreenProvider {
+public final class Kis2TitleScreen implements TitleScreenProvider,
+        com.openggf.game.internal.TitleAttractDemo.TitleClock {
     private static final int BASE = PatternAtlasRange.RESULTS_SCREENS.base();
     private final LockOnAddressSpace rom;
     private final TitleScreenProvider boot;
@@ -29,6 +30,7 @@ public final class Kis2TitleScreen implements TitleScreenProvider {
     private TitleScreenAction exitAction = TitleScreenAction.ONE_PLAYER;
     private PatternSpriteRenderer knuckles, emblem, banner, text, stars;
     private boolean cached, music;
+    private int attractTitleTicks;
     private int starIndex, starTimer, starFrame, fadeFrames;
     private static final int[] STAR_ANIMATION = {0,1,2,1,0};
 
@@ -38,6 +40,7 @@ public final class Kis2TitleScreen implements TitleScreenProvider {
         this.rom = rom; this.boot = boot;
     }
     @Override public void initialize() {
+        attractTitleTicks = 0;
         titleInput.resetSequence();
         exitAction = TitleScreenAction.ONE_PLAYER;
         data = new Kis2TitleData(rom);
@@ -45,13 +48,26 @@ public final class Kis2TitleScreen implements TitleScreenProvider {
         starIndex = 0; starTimer = 0; starFrame = 0; fadeFrames = 0;
         boot.initialize(); state = State.SEGA_LOGO;
     }
+    @Override public int attractTitleTicks() { return attractTitleTicks; }
+
+    @Override public void initializeDirectTitle() {
+        initialize();
+        beginTitleFade();
+    }
+
+    private void beginTitleFade() {
+        boot.reset();
+        animation.tick(false);
+        state = State.FADE_IN;
+        GameServices.audio().playSfx(Sonic2Sfx.SPARKLE.id);
+    }
+
     @Override public void update(InputHandler input) {
         if (state == State.INACTIVE || state == State.EXITING) return;
         if (state == State.SEGA_LOGO) {
             boot.update(input);
             if (boot.getState() != State.SEGA_LOGO) {
-                boot.reset(); animation.tick(false); state = State.FADE_IN;
-                GameServices.audio().playSfx(Sonic2Sfx.SPARKLE.id);
+                beginTitleFade();
             }
             return;
         }
@@ -60,6 +76,7 @@ public final class Kis2TitleScreen implements TitleScreenProvider {
             if (++fadeFrames >= 22) state = State.ACTIVE;
             return;
         }
+        attractTitleTicks++;
         boolean unlocked = titleInput.update(input.logical().player1());
         if (unlocked) GameServices.audio().playSfx(Sonic2Sfx.RING_RIGHT.id);
         // TitleScreen_Loop and Obj0E test Start, not the A/B/C action buttons.
@@ -99,19 +116,71 @@ public final class Kis2TitleScreen implements TitleScreenProvider {
         int offset = (width - 320) / 2;
         gm.beginPatternBatch();
         drawBackground(gm, width);
-        // The character is a high-priority sprite; the emblem-top object masks its lower edge.
         plane(gm, data.foreground, 40, offset, -animation.scroll, 40);
-        if (animation.frame >= 128 || animation.complete) knuckles.drawFrameIndex(animation.bodyFrame, offset + animation.x, animation.y);
-        emblem.drawFrameIndex(0, offset + 160, 104 - animation.scroll);
-        if (animation.handVisible()) knuckles.drawFrameIndex(animation.handFrame, offset + animation.x, animation.handY);
+        int falling = animation.frame - ("PAL".equalsIgnoreCase(GameServices.configuration().getString(SonicConfiguration.REGION)) ? 400 : 464); // Obj0E_Sonic_SpawnFallingStar, NTSC branch.
+        // Sprite order follows Obj0E priorities: falling star 5, Knuckles 4, hand 3, emblem top and mask 2.
+        // TitleScreen_Loop (docs/kis2disasm/s2.asm:4737-4764) moves the mask to X 0, hiding later sprites on its rows.
+        masked(gm, () -> {
+            if (falling >= 0 && falling <= 140) stars.drawFrameIndex((falling / 4 & 1) == 0 ? 0 : 3, offset + 240 - falling * 2, falling);
+            if (animation.frame >= 128 || animation.complete) knuckles.drawFrameIndex(animation.bodyFrame, offset + animation.x, animation.y);
+            if (animation.handVisible()) knuckles.drawFrameIndex(animation.handFrame, offset + animation.x, animation.handY);
+        });
+        emblemTop(gm, offset, width);
         text.drawFrameIndex(1, offset + 224, 200);
         if (animation.complete) text.drawFrameIndex(0, offset + 160, 184);
         if (animation.bannerVisible) banner.drawFrameIndex(0, offset + 160, animation.bannerY);
         if (starIndex < data.starPositions.length && starTimer <= 10)
             stars.drawFrameIndex(starFrame, offset + data.starPositions[starIndex][0], data.starPositions[starIndex][1]);
-        int falling = animation.frame - ("PAL".equalsIgnoreCase(GameServices.configuration().getString(SonicConfiguration.REGION)) ? 400 : 464); // Obj0E_Sonic_SpawnFallingStar, NTSC branch.
-        if (falling >= 0 && falling <= 140) stars.drawFrameIndex((falling / 4 & 1) == 0 ? 0 : 3, offset + 240 - falling * 2, falling);
         gm.flushPatternBatch();
+    }
+    /**
+     * Obj0E_LogoTop frame 0 (docs/kis2disasm/mappings/sprite/obj0E_emblem_top_and_sprite_mask.asm). Its two
+     * low-priority tile-$10 pieces precede Knuckles and his hand in the sprite list, so they hide them, yet sit
+     * under the high-priority logo plane: the strip shows the logo, never the tile.
+     */
+    private void emblemTop(GraphicsManager gm, int offset, int width) {
+        int x = offset + 160, y = 104 - animation.scroll;
+        var pieces = data.emblem.get(0).pieces();
+        for (int i = 0; i < pieces.size(); i++)
+            if (pieces.get(i).priority()) emblem.drawFramePieceByIndex(0, i, x, y, false, false);
+        float scaleX = (float) gm.getViewportWidth() / width, scaleY = (float) gm.getViewportHeight() / 224;
+        for (int i = 0; i < pieces.size(); i++) {
+            var piece = pieces.get(i);
+            if (piece.priority()) continue;
+            int left = x + piece.xOffset(), top = y + piece.yOffset();
+            int w = piece.widthTiles() * 8, h = piece.heightTiles() * 8;
+            gm.flushPatternBatch();
+            gm.flushScreenSpace();
+            gm.enableScissor(gm.getViewportX() + (int) Math.floor(left * scaleX),
+                    gm.getViewportY() + (int) Math.floor((224 - top - h) * scaleY),
+                    Math.max(1, (int) Math.ceil(w * scaleX)), Math.max(1, (int) Math.ceil(h * scaleY)));
+            gm.beginPatternBatch();
+            emblem.drawFramePieceByIndex(0, i, x, y, false, false);
+            plane(gm, data.foreground, 40, offset, -animation.scroll, 40);
+            gm.flushPatternBatch();
+            gm.flushScreenSpace();
+            gm.disableScissor();
+        }
+        gm.beginPatternBatch();
+    }
+    /** Draws sprites the masking sprite hides, clipped away from its rows (the stock S2 title does the same). */
+    private void masked(GraphicsManager gm, Runnable sprites) {
+        gm.flushPatternBatch();
+        gm.flushScreenSpace();
+        float scale = (float) gm.getViewportHeight() / 224;
+        int top = animation.maskTop();
+        for (int[] band : new int[][] {{0, top}, {top + Kis2TitleAnimation.MASK_ROWS, 224}}) {
+            int from = Math.max(0, band[0]), to = Math.min(224, band[1]);
+            if (to <= from) continue;
+            gm.enableScissor(gm.getViewportX(), gm.getViewportY() + (int) Math.floor((224 - to) * scale),
+                    gm.getViewportWidth(), Math.max(1, (int) Math.ceil((to - from) * scale)));
+            gm.beginPatternBatch();
+            sprites.run();
+            gm.flushPatternBatch();
+            gm.flushScreenSpace();
+        }
+        gm.disableScissor();
+        gm.beginPatternBatch();
     }
     private PatternSpriteRenderer renderer(List<SpriteMappingFrame> frames, int palette) {
         PatternSpriteRenderer result = new PatternSpriteRenderer(new ObjectSpriteSheet(data.patterns, frames, palette, 1));

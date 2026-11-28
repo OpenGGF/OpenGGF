@@ -17,7 +17,9 @@ import com.openggf.game.sonic2.credits.Sonic2EndingProvider;
 import com.openggf.game.sonic2.dataselect.S2SaveSnapshotProvider;
 import com.openggf.game.sonic2.dataselect.S2DataSelectImageCacheManager;
 import com.openggf.game.sonic2.debug.Sonic2DebugModeProvider;
-import com.openggf.game.sonic2.levelselect.LevelSelectManager;
+import com.openggf.game.internal.LevelDebugPlacementProvider;
+import com.openggf.game.sonic2.debug.Sonic2LevelDebugPlacement;
+import com.openggf.game.sonic2.levelselect.Sonic2LevelSelect;
 import com.openggf.game.sonic2.objects.BlueBallsObjectInstance;
 import com.openggf.game.sonic2.objects.BonusBlockObjectInstance;
 import com.openggf.game.sonic2.objects.LauncherBallObjectInstance;
@@ -122,7 +124,8 @@ public class Sonic2GameModule implements GameModule, com.openggf.game.internal.S
     private final TitleScreenManager titleScreenProvider = new TitleScreenManager();
     private final com.openggf.game.sonic2.options.Sonic2NativeModeProvider nativeModes =
             new com.openggf.game.sonic2.options.Sonic2NativeModeProvider();
-    private final LevelSelectManager levelSelectProvider = new LevelSelectManager();
+    private final Sonic2LevelSelect levelSelectProvider = new Sonic2LevelSelect();
+    private final Sonic2LevelDebugPlacement levelDebugPlacement = new Sonic2LevelDebugPlacement();
     private final S2DataSelectProfile dataSelectHostProfile = new S2DataSelectProfile(this::getZoneRegistry);
     private final CrossGameDonorProvider donorProvider = new Sonic2CrossGameDonorProvider();
     private final Sonic2ModZoneAdapter modZoneAdapter = new Sonic2ModZoneAdapter(this);
@@ -133,6 +136,7 @@ public class Sonic2GameModule implements GameModule, com.openggf.game.internal.S
     private PhysicsProvider physicsProvider;
     private ObjectRegistry objectRegistry;
     private Rom activeRom;
+    private com.openggf.game.sonic2.attract.Sonic2AttractProgram attractProgram;
     private RomByteReader boundRetailReader;
     private Sonic2RevisionProfile revisionProfile = Sonic2RevisionProfile.COMPATIBLE;
     private com.openggf.level.rings.RingSpriteSheet additiveRingSheet;
@@ -370,6 +374,7 @@ public class Sonic2GameModule implements GameModule, com.openggf.game.internal.S
     @SuppressWarnings("unchecked")
     @Override
     public <T> T getGameService(Class<T> type) {
+        if (type == LevelDebugPlacementProvider.class) return type.cast(levelDebugPlacement);
         if (type == com.openggf.game.internal.ProfileSuperHostRules.class)
             return type.cast(new com.openggf.game.internal.ProfileSuperHostRules(false, false, 0, com.openggf.game.GameId.S2));
         if (type == com.openggf.game.internal.BadnikChainPolicy.class) return type.cast(badnikChain);
@@ -390,6 +395,17 @@ public class Sonic2GameModule implements GameModule, com.openggf.game.internal.S
         if (type == Sonic2RevisionProfile.class) return type.cast(revisionProfile);
         boolean verifiedStock = getClass() == Sonic2GameModule.class
                 && revisionProfile.revision().belongsTo(com.openggf.data.RomIdentity.S2);
+        if (type == com.openggf.game.internal.TitleAttractDemo.class && verifiedStock) {
+            if (attractProgram == null) {
+                try {
+                    attractProgram = new com.openggf.game.sonic2.attract.Sonic2AttractProgram(
+                            boundRetailReader, nativeModes.overseasGraphics());
+                } catch (java.io.IOException failure) {
+                    throw new java.io.UncheckedIOException("Cannot read the native title demo", failure);
+                }
+            }
+            return type.cast(attractProgram);
+        }
         if (verifiedStock && type == com.openggf.game.internal.RingCollectionPolicy.class)
             return type.cast(revisionProfile);
         if (verifiedStock && type == com.openggf.game.internal.ScoreAdditionPolicy.class)
@@ -463,6 +479,7 @@ public class Sonic2GameModule implements GameModule, com.openggf.game.internal.S
     @Override
     public void resetModuleScopedState() {
         plcService = null;
+        attractProgram = null;
     }
 
     @Override

@@ -62,7 +62,7 @@ class TestCdStageRingSubmissions {
     }
 
     @Test
-    void nativeWidescreenDrawsDormantLayoutRingsFrozen() throws Exception {
+    void nativeWidescreenDrawsDormantLayoutRingsOnTheLiveSpinFrame() throws Exception {
         var settings = settings(800);
         try (var disc = CdDiscDataSource.open(CdTestMedia.usaCue());
              var session = new GameplayCaptureSession(settings)) {
@@ -79,10 +79,17 @@ class TestCdStageRingSubmissions {
             assertTrue(dormant != null && !level.getRingManager().getActiveSpawns().contains(dormant),
                     "the second ring of the group must be outside the active window");
             var centre = new RingSpawn(dormant.x(), dormant.y());
-            assertEquals(List.of(0), ringEntries(session).stream()
+            var entries = ringEntries(session);
+            var live = new java.util.HashSet<RingSpawn>();
+            for (var spawn : level.getRingManager().getActiveSpawns()) live.add(new RingSpawn(spawn.x(), spawn.y()));
+            var liveWords = entries.stream().filter(entry -> live.contains(centre(entry)))
+                    .map(entry -> entry.piece().rawTileWordLow11()).distinct().toList();
+            assertEquals(1, liveWords.size(), "live placed rings share one spin frame");
+            // D15: the dormant ring spins with the live rings, so it keeps its phase when it turns live.
+            assertEquals(liveWords, entries.stream()
                     .filter(entry -> centre(entry).equals(centre))
                     .map(entry -> entry.piece().rawTileWordLow11())
-                    .toList(), "submit the dormant ring once with its first spin frame");
+                    .toList(), "submit the dormant ring once on the live rings' spin frame");
         }
     }
 
