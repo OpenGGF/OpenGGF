@@ -1,8 +1,13 @@
 package com.openggf.game.soniccd.objects.ssz;
 
+import com.openggf.camera.CameraPresentationAccess;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.soniccd.objects.art.CdObjectArtProvider;
+import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectVisualFacing;
+
+import java.util.List;
 
 /**
  * Lamp, object $36 in act 3 ({@code LampObject}, objects/r7/lamp.asm:3-116): a street lamp whose head sits at a
@@ -106,6 +111,24 @@ public final class ObjLamp extends SszObject
         if (partner == null) return;                                 // the ROM reads the freed slot
         x = partner.headX;
         y = (partner.headY + 0x7C) & 0xFFFF;
+    }
+
+    @Override
+    public void appendRenderCommands(List<GLCommand> commands) {
+        if (!initialised || !admitsWorldSprite()) return;
+        int nativeCameraX = cameraX();
+        String key = SszObjectArt.key(artProvider(), sheetKind(), tileWord, nativeCameraX);
+        if (key == null) return;
+        var renderer = art(key);
+        if (renderer == null) return;
+
+        int pictureX = CameraPresentationAccess.pictureCameraX(services().camera());
+        ObjLamp head = routine == 2 ? this : partner;
+        boolean columnPublished = head != null && head.headX != 0 && x == head.headX;
+        // The pole and head use the same picture column once their native positions have been published.
+        int drawX = pictureX != nativeCameraX && columnPublished ? column(pictureX) : x;
+        renderer.drawFrameIndex(mapFrame, drawX, y, (spriteFlip & 1) != 0, (spriteFlip & 2) != 0,
+                CdObjectArtProvider.tilePalette(tileWord));
     }
 
     /** A shell from the captured spawn ($36, subtype 1 for the pole); the capture restores its fields and link. */

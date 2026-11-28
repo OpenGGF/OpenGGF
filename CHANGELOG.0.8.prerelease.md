@@ -491,9 +491,10 @@ under the matching area heading; see the
   a locked boss arena. Where the wider picture holds still against the level's edge (the
   start and end of an act, or a narrow arena) while the original screen moves inside it,
   the background and background-speed objects (Sonic 1 and Chemical Plant pylons, Angel
-  Island foreground plants, Flying Battery and Sky Sanctuary clouds) hold still with it
-  instead of scrolling behind a still foreground, and resume from the same place when the
-  picture starts to move. The background in the side margins is the right scenery: Green
+  Island foreground plants, Flying Battery and Sky Sanctuary clouds, and Stardust
+  Speedway Act 3 lamps) hold still with it instead of scrolling behind a still
+  foreground, and resume from the same place when the picture starts to move.
+  The background in the side margins is the right scenery: Green
   Hill's mountains and bushes no longer swap for scenery further along the level at the
   left edge. A wider picture never delays the next act or the enemies' art. That also
   lets recorded Sonic 3 & Knuckles runs be filmed wider than 320: Hydrocity and Marble

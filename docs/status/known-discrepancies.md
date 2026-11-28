@@ -3396,10 +3396,10 @@ The wider picture slides to stay inside the camera's bounds, so at the start and
 end of an act, and in a narrow arena, it holds still while the original 320-pixel
 screen moves inside it. While it is held, the background, and sprites that the
 original places at a background speed (Sonic 1 and Chemical Plant pylons, Angel
-Island foreground plants, Flying Battery and Sky Sanctuary clouds), are drawn for
-the camera the held picture is centred on, not the original camera. They hold
-still with the picture. Following the original camera would scroll them behind a
-still foreground. For example, at the start of Chemical Plant the background
+Island foreground plants, Flying Battery and Sky Sanctuary clouds, and Stardust
+Speedway Act 3 lamps), are drawn for the camera the held picture is centred on.
+They hold still with the picture. Following the original camera would scroll
+them behind a still foreground. For example, at the start of Chemical Plant the background
 behind the original screen sits about 40 pixels of camera further along than at
 4:3, the centred inset of a 16:9 picture. It matches the original again once the
 picture is centred.
