@@ -78,12 +78,17 @@ public class AizForegroundPlantInstance extends AbstractObjectInstance implement
                 int drawX = origX;
                 int drawY = origY;
 
+                // A held widescreen picture is drawn from the camera it is centred on;
+                // equals cameraX otherwise. Draw-only: the cull below keeps the ROM camera.
+                int pictureDrawX = drawX;
                 if (scrollRate > 0) {
                     // Delta from screen center (160=half width, 112=half height)
                     int deltaX = origX - 160 - cameraX;
                     int deltaY = origY - 112 - cameraY;
                     drawX += xParallaxOffset(deltaX);
                     drawY += yParallaxOffset(deltaY);
+                    pictureDrawX += xParallaxOffset(origX - 160
+                            - com.openggf.camera.CameraPresentationAccess.pictureCameraX(camera));
                 }
 
                 // Render_Sprites / loc_1AD54 (sonic3k.asm:36376-36407) culls the
@@ -98,7 +103,7 @@ public class AizForegroundPlantInstance extends AbstractObjectInstance implement
                     return;
                 }
 
-                renderer.drawFrameIndex(mappingFrame, drawX, drawY, false, false);
+                renderer.drawFrameIndex(mappingFrame, pictureDrawX, drawY, false, false);
                 return;
             }
         }

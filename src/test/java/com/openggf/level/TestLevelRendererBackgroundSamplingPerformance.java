@@ -370,7 +370,7 @@ class TestLevelRendererBackgroundSamplingPerformance {
         }
 
         @Override
-        void ensureBackgroundTilemapData() {
+        void ensureBackgroundTilemapData(int windowBgCameraX) {
         }
 
         @Override

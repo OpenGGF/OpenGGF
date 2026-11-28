@@ -97,8 +97,10 @@ public class Sonic1PylonObjectInstance extends AbstractObjectInstance implements
      * which includes subpixel carry for smooth scrolling.
      */
     private int getScreenX() {
-        Camera camera = services().camera();
-        int cameraX = camera.getX();
+        return getScreenX(services().camera().getX());
+    }
+
+    private static int getScreenX(int cameraX) {
         // Screen X = -(3 * cameraX)
         // Wraps at 16-bit boundary as in original hardware
         return (short) (-(3 * cameraX));
@@ -145,13 +147,15 @@ public class Sonic1PylonObjectInstance extends AbstractObjectInstance implements
         if (renderer == null) return;
 
         Camera camera = services().camera();
-        int cameraX = camera.getX();
+        // Parallax from the camera the drawn picture shows (a held widescreen picture's
+        // centre); equals Camera_X_pos otherwise. Draw-only.
+        int cameraX = com.openggf.camera.CameraPresentationAccess.pictureCameraX(camera);
         int cameraY = camera.getY();
 
         // Convert screen-space positions to world-space for the renderer.
         // The renderer subtracts camera position internally, so:
         // worldX = cameraX + screenX, worldY = cameraY + screenY
-        int screenX = getScreenX();
+        int screenX = getScreenX(cameraX);
         int screenY = getScreenY();
         int worldX = cameraX + screenX;
         int worldY = cameraY + screenY;
