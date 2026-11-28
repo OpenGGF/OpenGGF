@@ -95,8 +95,8 @@ class TestOrdinaryTitleScreenCommandEvidence {
         setField(title, "bgTextureId", 1);
         setField(title, "solidWhiteTextureId", 2);
         setField(title, "titleTextId", 3);
-        setField(title, "titleTextWidth", 92);
-        setField(title, "titleTextHeight", 22);
+        setField(title, "titleTextWidth", 719);
+        setField(title, "titleTextHeight", 176);
         setField(title, "state", MasterTitleScreen.State.ACTIVE);
 
         Method drawForRecording = MasterTitleScreen.class.getDeclaredMethod("drawForRecording");
@@ -108,8 +108,8 @@ class TestOrdinaryTitleScreenCommandEvidence {
             drawForRecording.invoke(title);
 
             assertEquals(new Quad(1, 0, 0, width, 224), renderer.quads().get(0));
-            // The 92x22 pixel-art logo draws 1:1, 8 pixels in and 1 below the top.
-            assertTrue(renderer.quads().contains(new Quad(3, 8, 224 - 1 - 22, 92, 22)),
+            // The 719x176 logo texture draws 22 rows tall, 8 pixels in and 1 below the top.
+            assertTrue(renderer.quads().contains(new Quad(3, 8, 224 - 1 - 22, 719 * 22 / 176, 22)),
                     "OpenGGF logo stays in the title header");
             for (String hint : new String[] {"GAME", "START", "QUIT"}) {
                 // Footer hints are right-aligned on the bottom bar (labels at y 211).

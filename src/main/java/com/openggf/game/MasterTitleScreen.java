@@ -58,8 +58,8 @@ public class MasterTitleScreen {
     private static final Logger LOGGER = Logger.getLogger(MasterTitleScreen.class.getName());
     static final int SCREEN_W = 320;
     private static final int SCREEN_H = 224;
-    /** The pixel logo's top row inside the 24-row hub header. */
-    private static final int TITLE_LOGO_TOP = 1;
+    /** The logo's top row and height inside the 24-row hub header. */
+    private static final int TITLE_LOGO_TOP = 1, TITLE_LOGO_H = 22;
     private static final int TITLE_LOGO_BASE_SCALE_NUMERATOR = 35;
     private static final int TITLE_LOGO_BASE_SCALE_DENOMINATOR = 100;
     private static final int TITLE_LOGO_SCALE_NUMERATOR = 9;
@@ -359,8 +359,8 @@ public class MasterTitleScreen {
             // Create 1x1 solid white texture for overlays
             solidWhiteTextureId = SolidColorTexture.createWhite();
 
-            // Native-resolution pixel cut of docs/assets/brand/openggf-logo-animated.svg (final frame)
-            titleTextId = PngTextureLoader.loadTexture("titlescreen/openggf-logo.png");
+            // Final frame of docs/assets/brand/openggf-logo-animated.svg at 8x the drawn height
+            titleTextId = PngTextureLoader.loadSmoothTexture("titlescreen/openggf-logo.png");
             titleTextWidth = PngTextureLoader.getLastWidth();
             titleTextHeight = PngTextureLoader.getLastHeight();
 
@@ -1839,8 +1839,9 @@ public class MasterTitleScreen {
         font.endMegaBatch();
         // Keep OpenGGF branding and ROM-decoded game logos, never mockup artwork.
         int room = layout.tabs().isEmpty() ? w - 16 : layout.tabs().getFirst().x() - 16;
-        // The logo is pixel art authored at native size: draw it 1:1 and only shrink when tabs crowd it.
-        int logoW = Math.max(1, titleTextWidth), logoH = Math.max(1, titleTextHeight);
+        // The smooth high-resolution logo fills 22 header rows, shrinking only when tabs crowd it.
+        int logoH = TITLE_LOGO_H;
+        int logoW = titleTextHeight == 0 ? 1 : titleTextWidth * logoH / titleTextHeight;
         if (logoW > room) { logoW = Math.max(1, room); logoH = Math.max(1, titleTextHeight * logoW / Math.max(1, titleTextWidth)); }
         renderer.drawTexture(titleTextId, 8, SCREEN_H - TITLE_LOGO_TOP - logoH, logoW, logoH);
         font.beginMegaBatch();
