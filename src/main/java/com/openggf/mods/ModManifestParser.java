@@ -419,8 +419,9 @@ public final class ModManifestParser {
     private static ModType parseType(String text) throws ModManifestException {
         return switch (text) {
             case "patch" -> ModType.PATCH;
+            case "game" -> ModType.GAME;
             case "standalone" -> ModType.STANDALONE;
-            default -> throw new ModManifestException("type must be patch or standalone");
+            default -> throw new ModManifestException("type must be patch, game or standalone");
         };
     }
 

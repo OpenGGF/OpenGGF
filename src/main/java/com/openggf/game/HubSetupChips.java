@@ -63,7 +63,10 @@ final class HubSetupChips {
         addToggle(chips, "hub.chip.debug", profile.debugTools(), config.getBoolean(SonicConfiguration.DEBUG_VIEW_ENABLED),
                 LaunchProfile.Row.DEBUG_TOOLS);
         if (modCount > 0) {
-            chips.add(new Chip(UiMessages.text("hub.chip.mods", java.util.Map.of("count", modCount)), false, null, UiMessages.text("hub.chip.mods_summary", java.util.Map.of("count", modCount))));
+            chips.add(new Chip(store.modsOn(game) ? UiMessages.text("hub.chip.mod_count", java.util.Map.of("count", modCount))
+                    : UiMessages.text("hub.chip.mods_off"), !store.modsOn(game), null,
+                    store.modsOn(game) ? UiMessages.text("hub.chip.mods_summary", java.util.Map.of("count", modCount))
+                            : UiMessages.text("hub.chip.mods_off")));
         }
         return List.copyOf(chips);
     }

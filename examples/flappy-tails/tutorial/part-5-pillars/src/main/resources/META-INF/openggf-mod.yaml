@@ -7,7 +7,7 @@ authors:
 description: >-
   Checkpoint 5 of the Flappy Tails tutorial: pillars cut from the level, a score and a best.
 engineApiRange: ">=0.7.0 <0.8.0"
-type: patch
+type: game
 baseGame: s3k
 entrypoint: flappytails.FlappyTailsMod
 dependencies: []

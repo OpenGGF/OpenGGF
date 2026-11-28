@@ -32,8 +32,9 @@ packages: `com.openggf.mods.code` (`GgfMod`, `ModContext`) to register, and
 
 ## 1. Register a startup scene
 
-A **patch** mod registers a startup scene. When the player picks the mod's base game on
-the master title, the scene opens instead of that game's title screen.
+A `type: game` manifest gives a mod its own card in the hub. Start opens the
+startup scene registered by that mod. Its launch admits the mod and its declared
+dependencies. Players can still open the base game's title from the Sonic card.
 
 ```yaml
 # src/main/resources/META-INF/openggf-mod.yaml
@@ -45,7 +46,7 @@ authors:
   - Your Name
 description: What the mod does, in a sentence or two.
 engineApiRange: ">=0.7.0 <0.8.0"
-type: patch
+type: game
 baseGame: s3k
 entrypoint: hello.HelloSceneMod
 dependencies: []
@@ -67,12 +68,11 @@ public final class HelloSceneMod implements GgfMod {
 }
 ```
 
-A mod registers at most one startup scene (a second call fails registration). If several
-enabled mods register one for the same game, the mod applied last in load order wins.
+A game mod can register one startup scene. A second call fails registration.
 
-Use `baseGame: any` for a game-independent ROM-backed startup scene or a mod that
-plays in several stock games. It registers the same scene on each installed stock
-game; `ggfmod run` chooses an available configured game. An `any` mod may also
+Use `baseGame: any` for a ROM-backed scene that plays in several stock games. The
+game card opens on an available host and the scene can switch games. A scene that
+uses the hosted run API can register a title entry for its card. An `any` mod may also
 register objects, object art, service bundles and game patches: each patch names
 its own game (`s1`, `s2` or `s3k`) and applies only when that game launches, so one
 jar can carry a patch per game while sharing its code and its save folder. A startup

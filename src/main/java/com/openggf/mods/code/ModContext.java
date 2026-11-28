@@ -29,6 +29,7 @@ public final class ModContext {
             + "zones, ROM art intake, launch teams, input/HUD policies and decoded level patches "
             + "need a single base game";
     private final boolean standalone;
+    private final boolean gameCard;
     private final ModAssetRoot assets;
     private final java.nio.file.Path storageRoot;
     /** Static Sonic 2 World REV01 ROM length; registration-time bound (no ROM open here). */
@@ -79,6 +80,14 @@ public final class ModContext {
 
     ModContext(String owner, String baseGame, ModAssetRoot assets, String defaultInsertAfter,
             boolean standalone, java.nio.file.Path storageRoot) {
+        this(owner, baseGame, assets, defaultInsertAfter, standalone
+                ? com.openggf.mods.ModType.STANDALONE : com.openggf.mods.ModType.PATCH, storageRoot);
+    }
+
+    ModContext(String owner, String baseGame, ModAssetRoot assets, String defaultInsertAfter,
+            com.openggf.mods.ModType type, java.nio.file.Path storageRoot) {
+        this.gameCard = type == com.openggf.mods.ModType.GAME;
+        boolean standalone = type == com.openggf.mods.ModType.STANDALONE;
         this.storageRoot = Objects.requireNonNull(storageRoot, "storageRoot").toAbsolutePath().normalize();
         this.owner = ModKeySyntax.requireManifestId(owner);
         this.standalone = standalone;
@@ -325,16 +334,15 @@ public final class ModContext {
     }
 
     /**
-     * Opens a full-screen {@link com.openggf.mods.scene.ModScene} instead of the base game's
-     * title screen whenever this patch mod is active. The scene draws with a
+     * Opens a full-screen {@link com.openggf.mods.scene.ModScene} from this game's own hub card.
+     * Requires a {@code type: game} manifest. The scene draws with a
      * {@link com.openggf.mods.scene.SceneCanvas} and can return to the stock title
      * ({@link com.openggf.mods.scene.SceneContext#exitToGameTitle()}) or the master title.
-     * Every scene callback runs inside the mod fault boundary. One startup scene per mod;
-     * when several enabled mods register one, the last mod applied wins.
+     * Every scene callback runs inside the mod fault boundary. One startup scene per mod.
      */
     public void registerStartupScene(com.openggf.mods.scene.ModSceneFactory factory) {
         mutate(() -> {
-            if (standalone) throw failure("Standalone manifests cannot register a startup scene");
+            if (!gameCard) throw failure("Only game manifests can register a startup scene");
             Objects.requireNonNull(factory, "factory");
             if (startupScene != null) throw failure("Startup scene is already registered");
             startupScene = factory;

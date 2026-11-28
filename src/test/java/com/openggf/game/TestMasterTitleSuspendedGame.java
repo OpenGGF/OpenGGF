@@ -188,7 +188,7 @@ class TestMasterTitleSuspendedGame {
 
     @Test void startingAnotherGameAsksFirstAndKeepsTheGameByDefault() {
         var screen = screenWithSuspendedGame();
-        press(screen, GLFW_KEY_LEFT); // the shelf wraps from the paused card to Sonic 3K
+        press(screen, GLFW_KEY_RIGHT); // the next card after the suspended game is Sonic 1
 
         press(screen, GLFW_KEY_ENTER);
         assertTrue(screen.isEndPromptOpenForTest());
@@ -202,7 +202,7 @@ class TestMasterTitleSuspendedGame {
 
     @Test void endingTheGameThenStartsTheChosenOne() {
         var screen = screenWithSuspendedGame();
-        press(screen, GLFW_KEY_LEFT);
+        press(screen, GLFW_KEY_RIGHT);
         String chosen = screen.getSelectedGameId();
 
         press(screen, GLFW_KEY_ENTER);

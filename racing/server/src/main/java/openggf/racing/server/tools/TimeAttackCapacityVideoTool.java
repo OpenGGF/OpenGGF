@@ -229,11 +229,6 @@ public final class TimeAttackCapacityVideoTool {
         Object scene = com.openggf.mods.code.OwnedSceneFactory.unwrap((com.openggf.mods.scene.ModScene) ownedScene);
         session = field(scene, "session");
         chapter("Time Attack setup");
-        capture.frames(90);
-        for (int i = 0; i < 3; i++) capture.tap(GLFW_KEY_DOWN);
-        for (int i = 0; i < 3; i++) capture.tap(GLFW_KEY_RIGHT);
-        for (int i = 0; i < 4; i++) capture.tap(GLFW_KEY_DOWN); // past policy, window and vote pool
-        capture.tap(GLFW_KEY_ENTER);
         await(() -> state().equals("BROWSING"), 1200, "server browser");
         chapter("Server browser");
         capture.frames(150);

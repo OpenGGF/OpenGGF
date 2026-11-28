@@ -177,7 +177,7 @@ public final class ModCatalogValidator {
             if (track.isSmpsPackage()) {
                 var warnings = new java.util.LinkedHashSet<String>();
                 try {
-                    String baseGame = descriptor.manifest().type() == ModType.PATCH
+                    String baseGame = descriptor.manifest().type() != ModType.STANDALONE
                             ? descriptor.manifest().baseGame() : null;
                     new SmpsPackageReader(assets, inventory, track.smpsPackage(), limits, null, warnings::add)
                             .read(baseGame);
@@ -251,7 +251,7 @@ public final class ModCatalogValidator {
     private void validateOverrides(ModDescriptor descriptor, ModAudioManifest audio,
                                    List<ModFinding> findings) {
         Map<Integer, String> overrides = descriptor.manifest().audioOverrides();
-        if (!overrides.isEmpty() && descriptor.manifest().type() != ModType.PATCH) {
+        if (!overrides.isEmpty() && descriptor.manifest().type() == ModType.STANDALONE) {
             findings.add(error("STANDALONE_AUDIO_OVERRIDE",
                     "Standalone manifests cannot override stock music ids", AUDIO_MANIFEST_PATH));
         }

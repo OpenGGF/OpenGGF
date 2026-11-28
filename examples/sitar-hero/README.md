@@ -198,7 +198,7 @@ A mod is a jar with a manifest and an entry point:
 ```yaml
 # src/main/resources/META-INF/openggf-mod.yaml (abridged)
 id: sitar-hero
-type: patch
+type: game
 baseGame: any                    # runs on whichever supported ROM the player launches
 entrypoint: sitarhero.SitarHeroMod
 ```
@@ -207,7 +207,7 @@ entrypoint: sitarhero.SitarHeroMod
 public final class SitarHeroMod implements GgfMod {
     @Override public void register(ModContext context) {
         context.requireDisplayWidth(400);               // lay out for a 400x224 screen
-        context.registerStartupScene(SitarScene::new);  // replaces the game's title screen
+        context.registerStartupScene(SitarScene::new);  // opens from this mod's game card
     }
 }
 ```

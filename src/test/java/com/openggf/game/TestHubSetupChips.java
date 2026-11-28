@@ -40,7 +40,7 @@ class TestHubSetupChips {
         var store = new LaunchProfileStore(config);
 
         var inherited = HubSetupChips.forStock(SONIC_2, LaunchProfile.stockFor(SONIC_2), store, config, 2);
-        assertEquals(List.of("SONIC & TAILS", "16:9", "REWIND ON", "2 MODS"), labels(inherited));
+        assertEquals(List.of("SONIC & TAILS", "16:9", "REWIND ON", "2 mods"), labels(inherited));
         assertTrue(inherited.stream().noneMatch(HubSetupChips.Chip::thisGameOnly));
 
         var overridden = HubSetupChips.forStock(SONIC_2,
@@ -60,7 +60,7 @@ class TestHubSetupChips {
         var chips = HubSetupChips.forStock(SONIC_2,
                 new LaunchProfile(LaunchToggle.ON, "off", LaunchToggle.DEFAULT, "global", "sonic", "tails"), store, config, 1);
         assertNull(chips.getLast().row(), "the mods chip reports mods, not a setup row");
-        assertEquals("1 MOD", chips.getLast().label());
+        assertEquals("1 mod", chips.getLast().label());
         assertEquals(List.of(), HubSetupChips.status(chips, HubSetupChips.fit(chips, 304), false),
                 "nothing to add when every chip is shown");
         var shown = HubSetupChips.fit(chips, 100);

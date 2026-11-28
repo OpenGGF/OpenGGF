@@ -59,14 +59,15 @@ class TestMasterTitleScreenAudio {
     }
 
     @Test
-    void carouselWrapEmitsOneNavigationCue() {
+    void reachingTheEndOfTheShelfEmitsOneNavigationCue() {
         MasterTitleScreen screen = activeScreen(true);
-        screen.setSelectedIndexForTest(MasterTitleScreen.GameEntry.SONIC_3K.ordinal());
+        screen.setSelectedIndexForTest(MasterTitleScreen.GameEntry.SONIC_2.ordinal());
         InputHandler input = new InputHandler();
 
         pressFrame(screen, input, GLFW_KEY_RIGHT);
+        pressFrame(screen, input, GLFW_KEY_RIGHT);
 
-        assertEquals("s1", screen.getSelectedGameId());
+        assertEquals("s3k", screen.getSelectedGameId());
         assertEquals(List.of("UI_NAVIGATE"), emittedSfxNames());
     }
 

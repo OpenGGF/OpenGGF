@@ -6,7 +6,7 @@ authors:
   - OpenGGF contributors
 description: The smallest useful mod scene. Sonic runs and jumps over Angel Island's background collecting rings, drawn and played from your Sonic 3 & Knuckles ROM. A starting point for your own scene mod.
 engineApiRange: ">=0.7.0 <0.8.0"
-type: patch
+type: game
 baseGame: s3k
 entrypoint: hello.HelloSceneMod
 dependencies: []

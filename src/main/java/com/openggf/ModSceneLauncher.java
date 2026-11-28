@@ -35,15 +35,22 @@ final class ModSceneLauncher {
      */
     static boolean openStartupScene(GameLoop gameLoop, SonicConfigurationService config, long window,
             GraphicsManager graphics, int logicalWidth, int logicalHeight) {
+        return openStartupScene(gameLoop, config, null, window, graphics, logicalWidth, logicalHeight, null);
+    }
+
+    static boolean openStartupScene(GameLoop gameLoop, SonicConfigurationService config, String gameOwner,
+            long window, GraphicsManager graphics, int logicalWidth, int logicalHeight,
+            java.util.function.Consumer<com.openggf.mods.scene.SceneLaunch> scopedRelaunch) {
         GameModule module = GameServices.module();
         // Only the engine-internal key opens a scene: ModBackedGamePatch serves it for the mod that
         // registered one, with its fault boundary. A ModSceneFactory served by any patch is ignored.
         OwnedSceneFactory factory = module == null ? null : module.getGameService(OwnedSceneFactory.class);
-        if (factory == null || config.getBoolean(SonicConfiguration.TEST_MODE_ENABLED)) {
+        if (factory == null || gameOwner != null && !gameOwner.equals(factory.ownerModId())
+                || config.getBoolean(SonicConfiguration.TEST_MODE_ENABLED)) {
             return false;
         }
         gameLoop.modSceneNavigation.setStartupSceneOpener(
-                () -> openStartupScene(gameLoop, config, window, graphics, logicalWidth, logicalHeight));
+                () -> openStartupScene(gameLoop, config, gameOwner, window, graphics, logicalWidth, logicalHeight, scopedRelaunch));
         prepareSceneAudio(module);
         SceneRomLibrary library = romLibrary(module);
         SceneServices services = new SceneServices(
@@ -58,7 +65,7 @@ final class ModSceneLauncher {
                             () -> new IllegalArgumentException("Unregistered mod zone: " + launch.destination()));
                     if (launch.act() >= module.getZoneRegistry().getActCount(zone))
                         throw new IllegalArgumentException("Unregistered mod act: " + launch.act());
-                }, null, gameLoop.modSceneNavigation.forVisit(library));
+                }, null, gameLoop.modSceneNavigation.forVisit(library, scopedRelaunch));
         gameLoop.setGameMode(GameMode.MOD_SCENE);
         gameLoop.modSceneHost.open(factory, services, logicalWidth, logicalHeight);
         gameLoop.resolveFadeManager().startFadeFromBlack(null);

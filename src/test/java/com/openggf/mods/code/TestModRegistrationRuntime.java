@@ -51,7 +51,8 @@ class TestModRegistrationRuntime {
 
     @Test
     void contributionReportScopesAnyRegistrationToSonicCd() {
-        var context = new ModContext("demo", "any", ModAssetRoot.forTests("demo"));
+        var context = new ModContext("demo", "any", ModAssetRoot.forTests("demo"), null,
+                ModType.GAME, temp);
         new SharedSceneEntrypoint().register(context);
         assertEquals(List.of("s1", "s2", "s3k", "scd"), ModContributionReport.scopes(context.freeze()));
     }
@@ -539,7 +540,8 @@ class TestModRegistrationRuntime {
             archive.closeEntry();
         }
         ModManifest manifest = new ModManifest(1, id, id, SemanticVersion.parse("1.0.0"),
-                List.of("test"), "test", VersionRange.parse("*"), ModType.PATCH, baseGame,
+                List.of("test"), "test", VersionRange.parse("*"),
+                entrypoint == SharedSceneEntrypoint.class ? ModType.GAME : ModType.PATCH, baseGame,
                 entrypoint.getName(), dependencies, Map.of(), Map.of(), null, OptionalInt.empty());
         String hash = java.util.HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
                 .digest(Files.readAllBytes(jar)));

@@ -24,27 +24,26 @@ class TestMasterTitleCarousel {
         return entries;
     }
 
-    @Test void bothPanesWrapThroughArbitraryCatalogSizes() {
-        for (int count : new int[]{1, 2, 3, 4, 37, 100}) {
-            var screen = screen(games(count));
-            press(screen, GLFW_KEY_LEFT);
-            assertEquals("game-" + (count - 1), screen.getSelectedGameId());
-            press(screen, GLFW_KEY_RIGHT);
-            assertEquals("game-0", screen.getSelectedGameId(), "the card wraps in both directions");
-            for (int i = 0; i < count; i++) press(screen, GLFW_KEY_RIGHT);
-            assertEquals("game-0", screen.getSelectedGameId());
-        }
+    @Test void shelfStopsAtBothEnds() {
+        var screen = screen(games(10));
+        press(screen, GLFW_KEY_LEFT);
+        assertEquals("game-0", screen.getSelectedGameId());
+        for (int i = 0; i < 10; i++) press(screen, GLFW_KEY_RIGHT);
+        assertInstanceOf(MasterTitleEntry.Library.class, screen.entriesForTest().getLast());
+        assertEquals("", screen.getSelectedGameId());
     }
 
     @Test void reorderedCatalogKeepsGameIdentityAndRemovalSelectsANeighbor() {
         var entries = games(5);
         var screen = screen(entries);
-        screen.setSelectedIndexForTest(3);
-        screen.replaceEntries(List.of(entries.get(3), entries.get(1), entries.get(4)));
-        assertEquals("game-3", screen.getSelectedGameId());
+        screen.setSelectedIndexForTest(2);
+        screen.replaceEntries(List.of(entries.get(2), entries.get(1), entries.get(4)));
+        assertEquals("game-2", screen.getSelectedGameId());
         screen.replaceEntries(List.of(entries.get(1), entries.get(4)));
         assertEquals("game-1", screen.getSelectedGameId());
         press(screen, GLFW_KEY_LEFT);
+        assertEquals("game-1", screen.getSelectedGameId());
+        press(screen, GLFW_KEY_RIGHT);
         assertEquals("game-4", screen.getSelectedGameId());
     }
 

@@ -7,6 +7,11 @@ under the matching area heading; see the
 
 ## Gameplay and presentation
 
+- The hub gives complete games made with mods their own cards. The game library
+  groups Sonic games and mod games, remembers recent play, and lets players keep
+  favourites on the shelf. Individual Sonic games can start with external mods
+  off from Game Setup. Time Attack opens directly to online room browsing.
+
 - **Sonic 2 special stage:** the checkered START flags no longer fly out over
   the black side bars when the stage begins, or when rewind plays the start
   back. Special-stage sprites are now cut off at the edge of the original

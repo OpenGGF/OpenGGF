@@ -75,10 +75,18 @@ public final class ModRuntime implements AutoCloseable {
 
     /** Builds fresh entrypoint instances and private transactions for one launch preparation. */
     public synchronized ModuleResolutionService.PatchPlan newRegistrationPlan() {
+        return register(owner -> true, true);
+    }
+
+    /** Builds launch-local transactions while keeping the title catalogue intact. */
+    public synchronized ModuleResolutionService.PatchPlan newLaunchRegistrationPlan(
+            com.openggf.game.patch.PatchEnablement enablement) {
+        return register(owner -> enablement.isEnabled(new PatchOwner.Mod(owner)), false);
+    }
+
+    private ModuleResolutionService.PatchPlan register(java.util.function.Predicate<String> admit,
+            boolean publishTitleCatalogue) {
         if (closed) throw new IllegalStateException("Mod runtime is closed");
-        registrationPlans = Map.of();
-        titleEntries = List.of();
-        contributionReport = new ModContributionReport(List.of());
         Map<String, ModRegistrationPlan> currentPlans = new LinkedHashMap<>();
         List<RegisteredPatch> registrations = new ArrayList<>();
         Map<PatchOwner, Set<PatchOwner>> dependencies = new LinkedHashMap<>();
@@ -87,6 +95,7 @@ public final class ModRuntime implements AutoCloseable {
         Map<String, com.openggf.game.GameModule> currentStandaloneModules = new LinkedHashMap<>();
         Map<String, OwnedTitleEntry> currentTitleEntries = new LinkedHashMap<>();
         for (String owner : owners) {
+            if (!admit.test(owner)) continue;
             ModDescriptor descriptor = descriptors.get(owner);
             if (descriptor == null) continue;
             if (runtimeDisabledOwners.contains(owner)) {
@@ -110,7 +119,7 @@ public final class ModRuntime implements AutoCloseable {
                         snapshots.get(owner), "owner assets"))) {
                     ModContext context = new ModContext(owner, descriptor.manifest().baseGame(), assets,
                             descriptor.manifest().insertAfter(),
-                            descriptor.manifest().type() == com.openggf.mods.ModType.STANDALONE, storageRoot);
+                            descriptor.manifest().type(), storageRoot);
                     descriptor.manifest().artOverrides().forEach((key, path) ->
                             context.registerManifestArtOverride(key, new BakedSheetRef(path)));
                     ModCampaignRegistration.register(descriptor.manifest(), context);
@@ -226,13 +235,19 @@ public final class ModRuntime implements AutoCloseable {
             for (String successor : metadata.before()) if (currentPlans.containsKey(successor))
                 ordering.computeIfAbsent(new PatchOwner.Mod(successor), ignored -> new java.util.LinkedHashSet<>()).add(key);
         });
-        contributionReport = ModContributionReport.build(currentPlans, descriptors);
-        registrationPlans = java.util.Collections.unmodifiableMap(new LinkedHashMap<>(currentPlans));
-        registrationFailures = Map.copyOf(currentFailures);
-        standaloneModules = Map.copyOf(currentStandaloneModules);
-        currentTitleEntries.keySet().retainAll(currentPlans.keySet());
-        titleEntries = List.copyOf(currentTitleEntries.values());
-        notifyPreparationObserver();
+        if (publishTitleCatalogue) {
+            contributionReport = ModContributionReport.build(currentPlans, descriptors);
+            registrationPlans = java.util.Collections.unmodifiableMap(new LinkedHashMap<>(currentPlans));
+            registrationFailures = Map.copyOf(currentFailures);
+            standaloneModules = Map.copyOf(currentStandaloneModules);
+            currentTitleEntries.keySet().retainAll(currentPlans.keySet());
+            titleEntries = List.copyOf(currentTitleEntries.values());
+            notifyPreparationObserver();
+        } else if (!currentFailures.isEmpty()) {
+            var failures = new LinkedHashMap<>(registrationFailures);
+            failures.putAll(currentFailures);
+            registrationFailures = Map.copyOf(failures);
+        }
         return new ModuleResolutionService.PatchPlan(registrations, dependencies, ordering);
     }
 

@@ -381,13 +381,14 @@ class TestModTestKit {
                 authors: [OpenGGF]
                 description: Original production pipeline test fixture
                 engineApiRange: ">=0.7.0 <0.8.0"
-                type: patch
+                type: %s
                 baseGame: %s
                 entrypoint: fixture.Entry
                 dependencies:%s
                 audioOverrides: {}
                 artOverrides: {}
-                """.formatted(owner, gameId, dependencies.isEmpty()?" []":"\n"+dependencies.stripTrailing()));
+                """.formatted(owner, registration.contains("registerStartupScene") ? "game" : "patch",
+                        gameId, dependencies.isEmpty()?" []":"\n"+dependencies.stripTrailing()));
         for (var resource : resources.entrySet()) {
             Path destination = classes.resolve(resource.getKey());
             Files.createDirectories(destination.getParent());

@@ -19,9 +19,28 @@ class TestAnyGameSceneRegistration {
         @Override public void draw(SceneContext context, SceneCanvas canvas) { }
     };
 
+    private static ModContext context(String owner, com.openggf.mods.ModType type) {
+        return new ModContext(owner, type == com.openggf.mods.ModType.STANDALONE ? null : "any",
+                ModAssetRoot.forTests(owner), null, type, com.openggf.game.save.SavePaths.root());
+    }
+
+    @Test
+    void onlyGameManifestsCanRegisterStartupScenes() {
+        for (var type : com.openggf.mods.ModType.values()) {
+            ModContext context = context("arcade", type);
+            if (type == com.openggf.mods.ModType.GAME) {
+                context.registerStartupScene(SCENE);
+                assertSame(SCENE, context.freeze().startupScene());
+            } else {
+                assertThrows(ModRegistrationException.class, () -> context.registerStartupScene(SCENE));
+                assertThrows(ModRegistrationException.class, context::freeze);
+            }
+        }
+    }
+
     @Test
     void sharedSceneExpandsToFourOrdinaryDistinctDecorators() {
-        ModContext context = new ModContext("arcade", "any", ModAssetRoot.forTests("arcade"));
+        ModContext context = context("arcade", com.openggf.mods.ModType.GAME);
         context.registerStartupScene(SCENE);
         ModRegistrationPlan plan = context.freeze();
         List<ModRegistrationPlan> expanded = plan.stockScenePlans();
@@ -40,7 +59,7 @@ class TestAnyGameSceneRegistration {
         ModContext missing = new ModContext("arcade", "any", ModAssetRoot.forTests("arcade"));
         assertThrows(ModRegistrationException.class, missing::freeze);
 
-        ModContext hostile = new ModContext("arcade", "any", ModAssetRoot.forTests("arcade"));
+        ModContext hostile = context("arcade", com.openggf.mods.ModType.GAME);
         hostile.registerStartupScene(SCENE);
         ModRegistrationException failure = assertThrows(ModRegistrationException.class,
                 () -> hostile.registerGamePatch(patch("any")));
@@ -49,7 +68,7 @@ class TestAnyGameSceneRegistration {
 
     @ParameterizedTest @CsvSource({"scene,false", "scene,true", "title,false", "title,true", "patch,false", "patch,true"})
     void codeRolesShareContentWithOrWithoutMutators(String role, boolean catalogue) {
-        ModContext context = new ModContext("typing", "any", ModAssetRoot.forTests("typing"));
+        ModContext context = context("typing", "scene".equals(role) ? com.openggf.mods.ModType.GAME : com.openggf.mods.ModType.PATCH);
         if ("scene".equals(role)) context.registerStartupScene(SCENE);
         if ("title".equals(role)) context.registerTitleEntry("Shared", SCENE);
         if (catalogue) context.registerMutator(new com.openggf.mods.mutators.MutatorDefinition(
@@ -80,7 +99,12 @@ class TestAnyGameSceneRegistration {
         ModContext context = new ModContext("typing", "any", ModAssetRoot.forTests("typing"));
         context.registerGamePatch(patch("s2"));
         context.registerGamePatch(patch("scd"));
-        assertEquals(List.of(0, 1, 0, 1), context.freeze().stockScenePlans().stream()
+        var plan = context.freeze();
+        assertFalse(com.openggf.game.patch.ScopedLaunch.contributesTo(plan, "s1"));
+        assertTrue(com.openggf.game.patch.ScopedLaunch.contributesTo(plan, "s2"));
+        assertFalse(com.openggf.game.patch.ScopedLaunch.contributesTo(plan, "s3k"));
+        assertTrue(com.openggf.game.patch.ScopedLaunch.contributesTo(plan, "scd"));
+        assertEquals(List.of(0, 1, 0, 1), plan.stockScenePlans().stream()
                 .map(stock -> stock.explicitPatches().size()).toList());
     }
 

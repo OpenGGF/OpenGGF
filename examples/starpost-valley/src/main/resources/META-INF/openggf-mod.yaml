@@ -6,7 +6,7 @@ authors:
   - OpenGGF contributors
 description: A farming and life-sim adventure in Green Hill, after the credits. Look-test build. Needs Sonic 3 & Knuckles and Sonic 1.
 engineApiRange: ">=0.7.0 <0.8.0"
-type: patch
+type: game
 baseGame: s3k
 entrypoint: starpost.StarpostValleyMod
 dependencies: []

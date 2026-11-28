@@ -1,6 +1,7 @@
 package com.openggf.game.launch;
 
 import com.openggf.configuration.SonicConfiguration;
+import com.openggf.configuration.HubPreference;
 import com.openggf.configuration.ConfigurationPersistence;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.MasterTitleScreen;
@@ -20,6 +21,8 @@ public class LaunchProfileStore {
 
     private final SonicConfigurationService configService;
     private final Map<MasterTitleScreen.GameEntry, List<String>> patchMainCharacters;
+    private Map<MasterTitleScreen.GameEntry, List<String>> builtInCharacters = Map.of();
+    private Map<MasterTitleScreen.GameEntry, com.openggf.game.PlayableCharacterRegistry> builtInRegistries = Map.of();
     private final Map<MasterTitleScreen.GameEntry, com.openggf.game.PlayableCharacterRegistry>
             patchCharacterRegistries;
 
@@ -62,6 +65,23 @@ public class LaunchProfileStore {
         }
         this.patchMainCharacters = Map.copyOf(characters);
         this.patchCharacterRegistries = Map.copyOf(registries);
+    }
+
+    public LaunchProfileStore(SonicConfigurationService configService,
+            ModuleResolutionService resolutionService, ModuleResolutionService.PreparedLaunch preparedLaunch,
+            ModuleResolutionService.PreparedLaunch builtIns) {
+        this(configService, resolutionService, preparedLaunch);
+        var builtInStore = new LaunchProfileStore(configService, resolutionService, builtIns);
+        builtInCharacters = builtInStore.patchMainCharacters;
+        builtInRegistries = builtInStore.patchCharacterRegistries;
+    }
+
+    public boolean modsOn(MasterTitleScreen.GameEntry entry) {
+        return !modsOff().contains(entry.gameId);
+    }
+
+    private java.util.Set<String> modsOff() {
+        return new java.util.TreeSet<>(List.of(HubPreference.MODS_OFF.read(configService).split(",")));
     }
 
     private static AvailabilitySnapshot snapshotAvailability(
@@ -114,9 +134,17 @@ public class LaunchProfileStore {
      * @throws UncheckedIOException if persistence fails; live preferences remain unchanged
      */
     public void save(MasterTitleScreen.GameEntry entry, LaunchProfile profile) {
+        save(entry, profile, modsOn(entry));
+    }
+
+    public void save(MasterTitleScreen.GameEntry entry, LaunchProfile profile, boolean modsOn) {
         Objects.requireNonNull(profile, "profile");
         Keys keys = keysFor(entry);
-        LaunchProfile sanitized = sanitize(profile, entry);
+        LaunchProfile sanitized = profile.sanitizedFor(entry, (modsOn ? patchMainCharacters : builtInCharacters)
+                .getOrDefault(entry, List.of()));
+        var off = modsOff();
+        off.remove("");
+        if (modsOn) off.remove(entry.gameId); else off.add(entry.gameId);
         // Keep sanitization with the launch-profile owner; publish all six values together.
         Map<SonicConfiguration, Object> values = Map.of(
                 keys.rewind(), sanitized.rewind().persisted(),
@@ -126,7 +154,8 @@ public class LaunchProfileStore {
                 keys.mainCharacter(), sanitized.mainCharacter(),
                 keys.sidekick(), sanitized.sidekick());
         try {
-            ConfigurationPersistence.apply(configService, values);
+            ConfigurationPersistence.apply(configService, values,
+                    Map.of(HubPreference.MODS_OFF, String.join(",", off)));
         } catch (IOException e) {
             throw new UncheckedIOException("Unable to save launch profile for " + entry.gameId, e);
         }
@@ -152,7 +181,7 @@ public class LaunchProfileStore {
     private LaunchProfile applyDefaultTeam(LaunchProfile before, LaunchProfile after,
             LaunchProfile.Row row, MasterTitleScreen.GameEntry entry) {
         if (row != LaunchProfile.Row.MAIN_CHARACTER || before.mainCharacter().equals(after.mainCharacter())) return after;
-        var definition = patchCharacterRegistries.getOrDefault(entry,
+        var definition = (modsOn(entry) ? patchCharacterRegistries : builtInRegistries).getOrDefault(entry,
                 com.openggf.game.PlayableCharacterRegistry.empty())
                 .find(com.openggf.game.CharacterKey.parsePersisted(after.mainCharacter()));
         var sidekick = definition.map(com.openggf.game.CharacterDefinition::defaultSidekick).orElse(null);
@@ -176,13 +205,13 @@ public class LaunchProfileStore {
     public String displayValue(LaunchProfile profile, LaunchProfile.Row row,
                                MasterTitleScreen.GameEntry entry) {
         return Objects.requireNonNull(profile, "profile").displayValue(row, entry,
-                patchCharacterRegistries.getOrDefault(entry,
+                (modsOn(entry) ? patchCharacterRegistries : builtInRegistries).getOrDefault(entry,
                         com.openggf.game.PlayableCharacterRegistry.empty()));
     }
 
     private List<String> patchMainCharacters(MasterTitleScreen.GameEntry entry) {
         Objects.requireNonNull(entry, "entry");
-        return patchMainCharacters.getOrDefault(entry, List.of());
+        return (modsOn(entry) ? patchMainCharacters : builtInCharacters).getOrDefault(entry, List.of());
     }
 
     private static Map<MasterTitleScreen.GameEntry, List<String>> emptyAvailability() {

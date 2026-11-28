@@ -72,6 +72,9 @@ import com.openggf.game.session.SessionManager;
 import com.openggf.game.patch.GameplayLaunchRequest;
 import com.openggf.game.patch.GameplayTeamAvailability;
 import com.openggf.game.patch.ModuleResolutionService;
+import com.openggf.game.patch.ScopedLaunch;
+import com.openggf.game.MasterTitleEntry;
+import com.openggf.mods.ModType;
 import com.openggf.game.startup.DonatedDataSelectWarmupTask;
 import com.openggf.data.Rom;
 import com.openggf.physics.Direction;
@@ -1304,6 +1307,16 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	 * exitMasterTitleScreen() after game selection.
 	 */
 	public void initializeGame() {
+		initializeGame(null, true);
+	}
+
+	private java.util.function.Predicate<String> launchModOwners = owner -> true;
+	private boolean launchUsesExternalMods = true;
+
+	private void initializeGame(String gameOwner, boolean modsOn) {
+		var scope = ScopedLaunch.owners(ModSubsystem.current().processCatalog().effective(), gameOwner);
+		launchUsesExternalMods = modsOn && !configService.getBoolean(SonicConfiguration.TEST_MODE_ENABLED);
+		launchModOwners = launchUsesExternalMods ? scope::contains : owner -> false;
 		GameModule rootModule;
 		GameDataSource dataSource;
 		var hostedGame = com.openggf.game.launch.HostedMediaLaunch.hostedGame(
@@ -1331,7 +1344,9 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			showStartupRomError("Failed to load ROM during game initialization: " + e.getMessage());
 			return;
 		}
-		GameModule module = resolveInitialModuleForLaunch(rootModule);
+		var launch = ScopedLaunch.prepare(moduleResolutionService, launchUsesExternalMods, launchModOwners);
+		GameModule module = consumePatchResolution(moduleResolutionService.resolveForLaunchResult(launch,
+				rootModule, GameplayLaunchRequest.fromConfig(configService, rootModule.getGameId().code())), false);
 		if (module == null) {
 			return;
 		}
@@ -1356,7 +1371,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		} else {
 			graphicsManager.runPendingRenderThreadTasks();
 		}
-		enterConfiguredStartupMode();
+		enterConfiguredStartupMode(gameOwner);
 	}
 
 	/** Detection-free boot for one effective standalone descriptor. */
@@ -1639,6 +1654,12 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	 * Performs the Phase 2 init for the selected game.
 	 */
 	public void exitMasterTitleScreen(String gameId) {
+		boolean modsOn = masterTitleScreen == null || masterTitleScreen.isProgrammaticSelection()
+				|| masterTitleScreen.launchProfileStore().modsOn(MasterTitleScreen.GameEntry.fromGameId(gameId));
+		exitMasterTitleScreen(gameId, null, modsOn);
+	}
+
+	private void exitMasterTitleScreen(String gameId, String gameOwner, boolean modsOn) {
 		refreshLaunchSessionCachedConfig();
 		applyResolvedDisplayDimensions();
 
@@ -1657,7 +1678,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		resetForGameplayFromMasterTitle();
 
 		// Phase 2: load ROM, sprites, audio, level
-		initializeGame();
+		initializeGame(gameOwner, modsOn);
 	}
 
 	private void exitStandaloneMasterTitle(com.openggf.game.MasterTitleEntry.Launch launch) {
@@ -1752,6 +1773,9 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			masterTitleScreen = createMasterTitleScreen();
 			masterTitleScreen.initialize();
 			gameLoop.setGameMode(GameMode.MASTER_TITLE_SCREEN);
+			var developmentCard = configService.getBoolean(SonicConfiguration.TEST_MODE_ENABLED)
+					? java.util.Optional.<String>empty() : ModSubsystem.current().developmentGameCard();
+			if (developmentCard.isPresent() && masterTitleScreen.launchDevelopmentModGame(developmentCard.get())) return;
 			if (developmentGame.isPresent() && launchDevelopmentGame(developmentGame.get())) {
 				return;
 			}
@@ -2273,7 +2297,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 				() -> Path.of("mods").toAbsolutePath().normalize(),
 				ModInputLimits.production(), StockMusicDomains::containsSupported,
 				ModSubsystem.SessionAudioBoundary.audioManager(audioManager),
-				com.openggf.mods.BundledModSource.Locator.NONE, romManager::loadedRom).get();
+				com.openggf.mods.BundledModSource.Locator.production(), romManager::loadedRom).get();
 		ModRuntime replacement;
 		try {
 			replacement = new ModClassLoaderFactory(Engine.class.getClassLoader())
@@ -2303,7 +2327,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		var effectiveMods = subsystem.processCatalog().effective();
 		moduleResolutionService.installModPlanSource(
 				new EffectiveCatalogPatchEnablement(effectiveMods), enablement -> {
-					var plan = replacement.newRegistrationPlan();
+					var plan = replacement.newLaunchRegistrationPlan(enablement);
 					subsystem.recordRegistrationFailures(replacement.registrationFailures());
 					return plan;
 				});
@@ -2314,7 +2338,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 				?ExternalContentMode.STARTUP_DETERMINISTIC:ExternalContentMode.NORMAL;
 	}
 
-	/** The bundled mod whose Extras entry the setup guide's Race online opens (Time Attack rooms). */
+	/** The bundled game card opened by the setup guide's Race online choice. */
 	private static final String MULTIPLAYER_MOD_ID = "time-attack";
 	/** One per run, so the setup guide opens on its own at most once however often the hub is rebuilt. */
 	private com.openggf.game.SetupGuideSession setupGuideSession;
@@ -2327,12 +2351,19 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 				configService.getBoolean(SonicConfiguration.TEST_MODE_ENABLED)
 						? ModuleResolutionService.LaunchPolicy.DETERMINISTIC
 						: ModuleResolutionService.LaunchPolicy.STANDARD;
-		ModuleResolutionService.PreparedLaunch preparedLaunch =
-				moduleResolutionService.prepareLaunch(policy);
+		if (policy == ModuleResolutionService.LaunchPolicy.STANDARD
+				&& ModSubsystem.current().policy().mayScanAtBoot()) {
+			modRuntime.newRegistrationPlan();
+		}
+		var stockOwners = ScopedLaunch.owners(ModSubsystem.current().processCatalog().effective(), null);
+		ModuleResolutionService.PreparedLaunch preparedLaunch = ScopedLaunch.prepare(moduleResolutionService,
+				policy == ModuleResolutionService.LaunchPolicy.STANDARD, stockOwners::contains);
+		var builtIns = moduleResolutionService.prepareLaunch(ModuleResolutionService.LaunchPolicy.DETERMINISTIC);
+		var entries = masterTitleEntries();
 		MasterTitleScreen screen = new MasterTitleScreen(configService,
 				new com.openggf.game.launch.LaunchProfileStore(
-						configService, moduleResolutionService, preparedLaunch),
-				masterTitleEntries(),
+						configService, moduleResolutionService, preparedLaunch, builtIns),
+				entries,
 				cue -> audioManager.playSfx(cue.sfxName()));
 		screen.setPlaybackSelectionMemory(playbackSelection);
 		screen.setEditorProjectsOpenHandler(editorProjects::openMenu);
@@ -2346,6 +2377,8 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			screen.setModManagerScreenFactory(font -> ModSubsystem.current().createManager(font));
 			screen.setModManagerApplyHandler(this::reloadExternalContentAtTitle);
 		}
+		screen.setModGameOpener(card -> gameLoop.requestTitleEntryOpen(
+				() -> openModGameCard(card, screen.availableStockGames())));
 		// Built-in extras come first; each launches its host game, not a game of its own.
 		List<com.openggf.game.nativemenu.NativeExtra> extras =
 				com.openggf.game.BuiltInNativeExtras.available(romManager);
@@ -2353,18 +2386,22 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 				modsAtBoot ? modRuntime.titleEntries() : List.of();
 		List<String> extraLabels = new ArrayList<>();
 		for (var extra : extras) extraLabels.add(extra.label());
-		for (var entry : titleEntries) extraLabels.add(entry.label());
+		var gameOwners = entries.stream().filter(MasterTitleEntry.ModGame.class::isInstance)
+				.map(MasterTitleEntry::gameId).collect(java.util.stream.Collectors.toSet());
+		var extrasEntries = titleEntries.stream().filter(entry -> !gameOwners.contains(entry.ownerModId())).toList();
+		for (var entry : extrasEntries) extraLabels.add(entry.label());
 		if (!extraLabels.isEmpty()) {
 			screen.setTitleEntries(extraLabels, !extras.isEmpty(), (games, index) -> {
 				if (index < extras.size()) gameLoop.requestNativeExtraOpen(extras.get(index));
 				else gameLoop.requestTitleEntryOpen(
-						() -> openTitleEntryScene(titleEntries.get(index - extras.size()), games));
+						() -> openTitleEntryScene(extrasEntries.get(index - extras.size()), games));
 			});
 		}
 		int multiplayerEntry = -1;
-		for (int i = 0; i < titleEntries.size(); i++)
-			if (MULTIPLAYER_MOD_ID.equals(titleEntries.get(i).ownerModId())) multiplayerEntry = extras.size() + i;
+		for (int i = 0; i < extrasEntries.size(); i++)
+			if (MULTIPLAYER_MOD_ID.equals(extrasEntries.get(i).ownerModId())) multiplayerEntry = extras.size() + i;
 		screen.setSetupGuideSession(setupGuideSession, multiplayerEntry);
+		screen.setOnlineGameCard(MULTIPLAYER_MOD_ID);
 		return screen;
 	}
 
@@ -2379,12 +2416,17 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 				: modRuntime.registrationFailures().keySet();
 		var disabled = modRuntime == null ? java.util.Set.<String>of()
 				: modRuntime.runtimeDisabledOwners();
+		var catalog = subsystem.processCatalog().effective();
+		var stockOwners = ScopedLaunch.owners(catalog, null);
+		var plans = modRuntime == null ? Map.<String, com.openggf.mods.code.ModRegistrationPlan>of()
+				: modRuntime.registrationPlans();
 		for (MasterTitleScreen.GameEntry game : MasterTitleScreen.GameEntry.values()) {
 			List<String> gameNames = new ArrayList<>();
 			for (var descriptor : subsystem.processCatalog().effective().orderedEnabled()) {
 				var manifest = descriptor.manifest();
-				if (manifest.type() != com.openggf.mods.ModType.PATCH
-						|| !(game.gameId.equals(manifest.baseGame()) || "any".equals(manifest.baseGame()))
+				if (!stockOwners.contains(manifest.id())
+						|| !(game.gameId.equals(manifest.baseGame()) || "any".equals(manifest.baseGame())
+								&& ScopedLaunch.contributesTo(plans.get(manifest.id()), game.gameId))
 						|| descriptor.containsCode() && !trusted.contains(manifest.id())
 						|| rejected.contains(manifest.id()) || failed.contains(manifest.id())
 						|| disabled.contains(manifest.id())) continue;
@@ -2421,8 +2463,14 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		SaveManager saves = new SaveManager(com.openggf.game.save.SavePaths.root());
 		for (com.openggf.mods.ModDescriptor descriptor
 				: ModSubsystem.current().processCatalog().effective().orderedEnabled()) {
-			if (descriptor.manifest().type() != com.openggf.mods.ModType.STANDALONE) continue;
-			String owner = descriptor.manifest().id();
+			var manifest = descriptor.manifest();
+			String owner = manifest.id();
+			if (manifest.type() == ModType.GAME && modRuntime != null
+					&& modRuntime.registrationPlans().containsKey(owner)
+					&& !modRuntime.runtimeDisabledOwners().contains(owner)) {
+				entries.add(new MasterTitleEntry.ModGame(owner, manifest.name(), manifest.baseGame()));
+			}
+			if (manifest.type() != ModType.STANDALONE) continue;
 			boolean canContinue = false;
 			try {
 				SaveSlotSummary summary = saves.readSlotSummary(owner, 1);
@@ -2472,7 +2520,11 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			// tracks/SFX through the launch-owned port, so prepare that port for
 			// every content-enabled session even when no device backend is opened.
 			if (subsystem.policy().mayUseInSession()) {
-				subsystem.beginNormalSession(audioManager.outputSampleRate(), module.getGameCode());
+				subsystem.beginNormalSession(audioManager.outputSampleRate(), module.getGameCode(),
+						standaloneOwner == null ? owner -> launchModOwners.test(owner)
+								&& !modRuntime.runtimeDisabledOwners().contains(owner)
+								&& !modRuntime.rejectedOwners().containsKey(owner)
+								: ScopedLaunch.owners(subsystem.processCatalog().effective(), standaloneOwner)::contains);
 			}
 			return true;
 		} catch (RuntimeException error) {
@@ -2513,14 +2565,14 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		graphicsManager.runPendingRenderThreadTasks();
 	}
 
-	private void enterConfiguredStartupMode() {
-		if (ModSceneLauncher.openStartupScene(gameLoop, configService, window, graphicsManager,
-				(int) projectionWidth, (int) realHeight)) {
+	private void enterConfiguredStartupMode(String gameOwner) {
+		if (gameOwner != null && ModSceneLauncher.openStartupScene(gameLoop, configService, gameOwner, window, graphicsManager,
+				(int) projectionWidth, (int) realHeight, launch -> relaunchModGame(gameOwner, launch))) {
 			return;
 		}
 		boolean titleScreenOnStartup = configService.getBoolean(SonicConfiguration.TITLE_SCREEN_ON_STARTUP);
 		boolean levelSelectOnStartup = configService.getBoolean(SonicConfiguration.LEVEL_SELECT_ON_STARTUP);
-		if (titleScreenOnStartup) {
+		if (titleScreenOnStartup || gameOwner != null) {
 			gameLoop.initializeTitleScreenMode();
 		} else if (levelSelectOnStartup
 				&& (GameServices.module() == null || !GameServices.module().suppressesLevelSelect())) {
@@ -2549,7 +2601,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	private com.openggf.game.dataselect.NativeDataSelectLaunchFlow.Host dataSelectLaunchHost() {
 		return new com.openggf.game.dataselect.NativeDataSelectLaunchFlow.Host() {
 			@Override public ModuleResolutionService.PreparedLaunch prepareLaunch() {
-				return moduleResolutionService.prepareLaunch(ModuleResolutionService.LaunchPolicy.STANDARD);
+				return ScopedLaunch.prepare(moduleResolutionService, launchUsesExternalMods, launchModOwners);
 			}
 			@Override public GameModule resolve(ModuleResolutionService.PreparedLaunch launch,
 					GameModule root, GameplayLaunchRequest request) {
@@ -2721,12 +2773,35 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		}
 	}
 
+	private void relaunchModGame(String owner, com.openggf.mods.scene.SceneLaunch launch) {
+		configService.clearSessionOverrides();
+		configService.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, launch.mainCharacter());
+		configService.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE, String.join(",", launch.sidekicks()));
+		configService.resolveDisplayAspect();
+		exitMasterTitleScreen(launch.gameId(), owner, true);
+	}
+
+	private void openModGameCard(MasterTitleEntry.ModGame card, List<String> availableGames) {
+		var entry = modRuntime.titleEntries().stream()
+				.filter(candidate -> candidate.ownerModId().equals(card.owner())).findFirst();
+		var plan = modRuntime.registrationPlans().get(card.owner());
+		if (entry.isPresent() && (plan == null || plan.startupScene() == null)) {
+			openTitleEntryScene(entry.orElseThrow(), availableGames);
+			return;
+		}
+		String host = "any".equals(card.baseGame()) ? availableGames.getFirst() : card.baseGame();
+		new com.openggf.game.launch.MasterTitleLaunchCoordinator(configService).prepareHostedExit();
+		exitMasterTitleScreen(host, card.owner(), true);
+	}
+
 	/** Opens a mod's master-title entry; the scene may launch runs and is resumed after each. */
 	void openTitleEntryScene(com.openggf.mods.code.OwnedTitleEntry entry, List<String> availableGames) {
 		if (masterTitleScreen != null) {
 			masterTitleScreen.cleanup();
 			masterTitleScreen = null;
 		}
+		var owners = ScopedLaunch.owners(ModSubsystem.current().processCatalog().effective(), entry.ownerModId());
+		ModSubsystem.current().beginNormalSession(audioManager.outputSampleRate(), entry.ownerModId(), owners::contains);
 		ModSceneLauncher.openTitleEntryScene(gameLoop, window, graphicsManager,
 				(int) projectionWidth, (int) realHeight, entry,
 				new SceneRunLauncher(gameLoop, entry.scene()::guard, availableGames,

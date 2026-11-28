@@ -43,6 +43,8 @@ public final class ConfigFlattener {
                 SonicConfiguration key = ConfigCatalog.byPath(path);
                 if (key != null) {
                     flat.put(key.name(), value);
+                } else if (HubPreference.atPath(path) != null) {
+                    flat.put(path, value);
                 } else {
                     unknown.add(path);
                 }

@@ -55,7 +55,7 @@ class TestLaunchConfigPanel {
 
         assertEquals(LaunchProfile.Row.CROSS_GAME, panel.selectedRowForTest(), "Game Setup opens on Players: Borrow from");
         pressFrame(panel, input, GLFW_KEY_W);
-        assertTrue(panel.isModsRowFocusedForTest(), "Up from the first row wraps to the Mods row");
+        assertTrue(panel.isModsRowFocusedForTest(), "Up wraps to the last row");
         pressFrame(panel, input, GLFW_KEY_S);
         assertEquals(LaunchProfile.Row.CROSS_GAME, panel.selectedRowForTest());
         for (int i = 0; i < 4; i++) pressFrame(panel, input, GLFW_KEY_S);
@@ -165,6 +165,7 @@ class TestLaunchConfigPanel {
         InputHandler input = new InputHandler(InputBindingFactory.supplier(config));
         panel.focus(REWIND);
         pressFrame(panel, input, GLFW_KEY_D);
+        panel.setEnabledMods(List.of("Sample Mod"));
         panel.focusMods();
         pressFrame(panel, input, GLFW_KEY_S);
         assertTrue(panel.isSaveFocusedForTest());
@@ -187,6 +188,7 @@ class TestLaunchConfigPanel {
         pressFrame(panel, input, GLFW_KEY_D);
         pressFrame(panel, input, GLFW_KEY_BACKSPACE);
         assertEquals(0, panel.unsavedCount());
+        panel.setEnabledMods(List.of("Sample Mod"));
         panel.focusMods();
         pressFrame(panel, input, GLFW_KEY_S);
         assertEquals(LaunchProfile.Row.CROSS_GAME, panel.selectedRowForTest(), "Down from Mods wraps to the first row");
@@ -332,7 +334,7 @@ class TestLaunchConfigPanel {
     }
 
     @Test
-    void enterOnModsRowAsksTheOwnerToOpenTheModManagerAndResumes() {
+    void enterOnModsRowSwitchesAndSavesTheGamePreference() {
         SonicConfigurationService config = configuredWasd();
         LaunchConfigPanel panel = panel(config, LaunchProfile.stockFor(SONIC_3K), new TrackingStore(config));
         InputHandler input = new InputHandler(InputBindingFactory.supplier(config));
@@ -341,10 +343,8 @@ class TestLaunchConfigPanel {
         assertTrue(panel.isModsRowFocusedForTest());
 
         pressFrame(panel, input, GLFW_KEY_ENTER);
-        assertEquals(LaunchConfigPanel.Result.OPEN_MODS, panel.consumeResult());
-        panel.resumeAfterMods();
-        pressFrame(panel, input, GLFW_KEY_S);
-        assertEquals(LaunchProfile.Row.CROSS_GAME, panel.selectedRowForTest(), "the panel keeps working after the mod manager");
+        assertEquals(LaunchConfigPanel.Result.CLOSED, panel.consumeResult());
+        assertFalse(panel.modsOn());
     }
 
     @Test

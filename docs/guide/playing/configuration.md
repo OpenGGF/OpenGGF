@@ -444,6 +444,13 @@ debug:
 
 This skips sequences like the AIZ biplane intro and boots straight into gameplay.
 
+## How do I choose which mods a game starts with?
+
+The hub remembers the last played card, up to three recent mod games, and the
+mod games you keep on the shelf. Open the library with **L** or the right
+shoulder button. A stock game's **Mods** switch in **Game Setup** applies to
+its next launch. Choose **Off** to play with only built-in patches.
+
 Sonic CD's Game Setup profile is saved under `launch.cd`: `crossGameSource`
 (`off`, `s1`, `s2`, `s3k`), `mainCharacter`, `sidekick`, `aspect`, `rewind`
 and `debugTools`. Defaults are donation off, Sonic alone, and global display,

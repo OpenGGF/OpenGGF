@@ -146,7 +146,10 @@ class TestMutatorRegistration {
 
     @ParameterizedTest @ValueSource(strings={"catalogue", "scene", "title", "patch"})
     void decodedPatchesNeedASingleGameEvenWithAValidCodeRole(String role) {
-        var placements = context("owner", "any");
+        var placements = "scene".equals(role)
+                ? new ModContext("owner", "any", ModAssetRoot.forTests("owner"), null,
+                        com.openggf.mods.ModType.GAME, com.openggf.game.save.SavePaths.root())
+                : context("owner", "any");
         placements.registerMutator(definition("gravity"));
         switch (role) {
             case "scene" -> placements.registerStartupScene(() -> { fail("Scene must stay deferred"); return null; });

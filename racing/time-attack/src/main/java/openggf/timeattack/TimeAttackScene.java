@@ -75,6 +75,7 @@ public final class TimeAttackScene implements ModScene {
     /** Hints name controller buttons after a pad press, keyboard keys after a key press. */
     private MenuPage.Keys keys = MenuPage.Keys.keyboard();
     private final String buildDefaultMaster;
+    private final boolean quickBrowse;
 
     /**
      * The scene as the title entry opens it: ghosts and identity in the working directory.
@@ -86,11 +87,20 @@ public final class TimeAttackScene implements ModScene {
         this(Path.of("ghosts"), Path.of("identity"), buildDefaultMaster);
     }
 
+    static TimeAttackScene online(String buildDefaultMaster) {
+        return new TimeAttackScene(Path.of("ghosts"), Path.of("identity"), buildDefaultMaster, true);
+    }
+
     TimeAttackScene(Path ghostsRoot, Path identityDir) {
         this(ghostsRoot, identityDir, "");
     }
 
     TimeAttackScene(Path ghostsRoot, Path identityDir, String buildDefaultMaster) {
+        this(ghostsRoot, identityDir, buildDefaultMaster, false);
+    }
+
+    TimeAttackScene(Path ghostsRoot, Path identityDir, String buildDefaultMaster, boolean quickBrowse) {
+        this.quickBrowse = quickBrowse;
         this.ghostStore = new GhostStore(ghostsRoot);
         this.identityDir = identityDir;
         this.legacyConfigDirectory = ghostsRoot.toAbsolutePath().getParent();
@@ -121,6 +131,17 @@ public final class TimeAttackScene implements ModScene {
         if (!games.isEmpty()) {
             state = new TimeAttackMenuState(games, games.get(0), ghostStore, poolChoices());
         }
+        if (quickBrowse && state != null) {
+            if (settings.displayName().isEmpty()) {
+                settings.setDisplayName(generatedDisplayName(java.util.concurrent.ThreadLocalRandom.current().nextInt(100_000)));
+                settingsChanged();
+            }
+            state.selectBrowse();
+            state.pressGo();
+            TimeAttackLaunchRequest request = state.consumeLaunchRequest();
+            if (request != null) start(ctx, request);
+            return;
+        }
         // A new player names themselves before anything else. Profiles from before names were
         // asked for (an identity but no name) keep racing under their identity prefix.
         if (state != null && settings.displayName().isEmpty()
@@ -128,6 +149,13 @@ public final class TimeAttackScene implements ModScene {
             namePrompt = TextEntry.name("CHOOSE YOUR NAME", "")
                     .withPrompt("Other racers see it. Any script works.");
         }
+    }
+
+    TimeAttackMenuState.Mode entryMode() { return state.mode(); }
+    String currentDisplayName() { return settings.displayName(); }
+
+    private static String generatedDisplayName(int number) {
+        return "Racer " + number;
     }
 
     /** The menu's vote-pool row, backed by the saved custom pools and the per-game choice. */

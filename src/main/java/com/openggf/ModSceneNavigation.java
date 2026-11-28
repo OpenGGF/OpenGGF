@@ -42,6 +42,10 @@ final class ModSceneNavigation {
 
     /** Navigation for one scene visit; {@code library} lists the supplied games. */
     SceneNavigator forVisit(SceneRomLibrary library) {
+        return forVisit(library, null);
+    }
+
+    SceneNavigator forVisit(SceneRomLibrary library, java.util.function.Consumer<SceneLaunch> scopedRelaunch) {
         return new SceneNavigator() {
             @Override public Runnable prepareStockAct(int zone, int act) {
                 var module = GameServices.module();
@@ -68,6 +72,7 @@ final class ModSceneNavigation {
             @Override public Runnable prepareRelaunch(SceneLaunch launch) {
                 List<String> available = library == null ? List.of() : library.availableGames();
                 if (!available.contains(launch.gameId()) || loop.resolveFadeManager().isActive()) return null;
+                if (scopedRelaunch != null) return () -> loop.fadeOutTo(() -> scopedRelaunch.accept(launch));
                 return () -> loop.fadeOutTo(() -> {
                     loop.returnToMasterTitle();
                     pendingRelaunch = launch;

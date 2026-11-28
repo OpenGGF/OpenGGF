@@ -88,6 +88,9 @@ multiplayer:
 # Hub navigation history (managed by OpenGGF)
 hub:
   lastGame: "s2"
+  keptModGames: ""
+  recentModGames: ""
+  modsOff: ""
   dismissedNotices: ""   # Support notices hidden with Don't show again (game:stage)
   continueS1Character: ""
   continueS1Zone: -1

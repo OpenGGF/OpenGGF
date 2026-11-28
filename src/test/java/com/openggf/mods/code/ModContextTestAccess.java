@@ -16,7 +16,8 @@ public final class ModContextTestAccess {
     }
 
     public static ModRegistrationPlan freezeWithStartupScene(String owner, String baseGame, ModSceneFactory factory) {
-        ModContext context = new ModContext(owner, baseGame, ModAssetRoot.forTests(owner));
+        ModContext context = new ModContext(owner, baseGame, ModAssetRoot.forTests(owner), null,
+                com.openggf.mods.ModType.GAME, com.openggf.game.save.SavePaths.root());
         context.registerStartupScene(factory);
         return context.freeze();
     }

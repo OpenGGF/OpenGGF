@@ -6,7 +6,7 @@ authors:
   - OpenGGF contributors
 description: Practise a stock act against your previous attempt. Adds an Act Practice entry to the master title; each run plays the shipped act, shows a timer, and races the ghost of your last try.
 engineApiRange: ">=0.7.0 <0.8.0"
-type: patch
+type: game
 baseGame: any
 entrypoint: practice.ActPracticeMod
 dependencies: []

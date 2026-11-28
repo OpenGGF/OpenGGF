@@ -19,11 +19,16 @@ public final class ConfigurationPersistence {
     /** Publish the candidate file before exposing any changes to live configuration readers. */
     public static void apply(SonicConfigurationService config, Map<SonicConfiguration, Object> changes)
             throws IOException {
+        apply(config, changes, Map.of());
+    }
+
+    public static void apply(SonicConfigurationService config, Map<SonicConfiguration, Object> changes,
+            Map<HubPreference, String> hubPreferences) throws IOException {
         Objects.requireNonNull(config, "config");
         Map<SonicConfiguration, Object> candidate = Map.copyOf(changes);
         for (SonicConfiguration key : candidate.keySet()) {
             if (!ConfigCatalog.meta(key).persisted()) throw new IllegalArgumentException("Derived setting: " + key);
         }
-        config.applySettings(candidate);
+        config.applySettings(candidate, Map.copyOf(hubPreferences));
     }
 }

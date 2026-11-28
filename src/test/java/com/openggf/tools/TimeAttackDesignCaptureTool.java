@@ -102,13 +102,11 @@ public class TimeAttackDesignCaptureTool {
     static void run(Master master, int logical) throws Exception {
         t.frame();
         t.openTimeAttack();
-        shot("ta01-name-empty");
-        tap(GLFW_KEY_ENTER);
-        shot("ta02-name-error");
-        type("Tails");
-        shot("ta03-name-typed");
-        tap(GLFW_KEY_ENTER);
+        Object session = field(scene(), "session");
+        if (!call(session, "state").toString().equals("IDLE")) tap(GLFW_KEY_ESCAPE);
         expectView("menu");
+        mode("SOLO");
+        menuTo("GAME");
         t.frames(20);
         shot("ta04-menu-solo");
         menuTo("TRACK");

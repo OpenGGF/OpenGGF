@@ -190,7 +190,7 @@ public final class ConfigCatalog {
                 "Hide typed and quick player chat and discard incoming chat; connection and race notices remain visible"));
 
         // hub history (owned by the hub, hidden from Settings)
-        put(HUB_LAST_GAME, of("hub", "lastGame", STRING, "Last selected game or standalone content ID"));
+        put(HUB_LAST_GAME, of("hub", "lastGame", STRING, "Last played game or mod ID"));
         put(HUB_DISMISSED_NOTICES, of("hub", "dismissedNotices", STRING,
                 "Game support notices hidden with Don't show again (game:stage, comma-separated)"));
         put(SETUP_GUIDE, of("hub", "setupGuide", STRING,

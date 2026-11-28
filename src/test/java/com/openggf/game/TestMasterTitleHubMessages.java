@@ -186,14 +186,14 @@ class TestMasterTitleHubMessages {
         screen.setRomAvailableForTest(MasterTitleScreen.GameEntry.SONIC_3K, true);
 
         draw(screen);
-        assertTrue(font.has("2 MODS"));
+        assertTrue(font.has("2 mods"));
         assertTrue(font.has("MODS 3"), "the Mods tab counts every enabled mod once");
         screen.setSelectedIndexForTest(0);
         draw(screen);
-        assertTrue(font.has("1 MOD"));
+        assertTrue(font.has("1 mod"));
         screen.setSelectedIndexForTest(2);
         draw(screen);
-        assertFalse(font.allText().contains(" MOD"), "no mods chip when no mod changes the game");
+        assertFalse(font.allText().contains(" mod"), "no mods chip when no mod changes the game");
     }
 
     @Test void optionalExtrasRetainBrandSpaceAtNativeWidth() throws Exception {

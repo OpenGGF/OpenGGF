@@ -111,8 +111,8 @@ public record ModManifest(int formatVersion, String id, String name,
     }
 
     static void requireBaseGame(ModType type, String baseGame) {
-        if (type == ModType.PATCH && !"any".equals(baseGame) && !StockGameCatalog.isStockCode(baseGame)) {
-            throw new IllegalArgumentException("patch manifests require baseGame " + String.join(", ", StockGameCatalog.stockCodes()) + ", or any");
+        if (type != ModType.STANDALONE && !"any".equals(baseGame) && !StockGameCatalog.isStockCode(baseGame)) {
+            throw new IllegalArgumentException("patch and game manifests require baseGame " + String.join(", ", StockGameCatalog.stockCodes()) + ", or any");
         }
         if (type == ModType.STANDALONE && baseGame != null) {
             throw new IllegalArgumentException("standalone manifests forbid baseGame");

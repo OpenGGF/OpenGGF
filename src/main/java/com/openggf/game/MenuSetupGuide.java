@@ -355,6 +355,11 @@ public final class MenuSetupGuide {
 
     // ------------------------------------------------------------------ files
 
+    void openLocateGame() {
+        go(Step.GAMES, 1);
+        openBrowser(false);
+    }
+
     private void openBrowser(boolean folder) {
         scanning = folder;
         message = null;

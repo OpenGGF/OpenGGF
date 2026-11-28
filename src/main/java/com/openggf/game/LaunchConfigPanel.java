@@ -34,7 +34,7 @@ public final class LaunchConfigPanel {
     private static final int DESC_Y = 163;
     private static final int DESC_H = 41;
 
-    public enum Result { NONE, CLOSED, CANCELLED, OPEN_MODS }
+    public enum Result { NONE, CLOSED, CANCELLED }
 
     /**
      * One visible row of the panel, in reading order. Borrow from leads Players because the donor
@@ -78,6 +78,8 @@ public final class LaunchConfigPanel {
     private LaunchProfile profile;
     private final LaunchProfile originalProfile;
     private List<String> enabledMods = List.of();
+    private final boolean originalModsOn;
+    private boolean modsOn;
     private InputHandler lastInput;
     private int focusIndex;
     private int ticks;
@@ -103,6 +105,7 @@ public final class LaunchConfigPanel {
         this.profile = this.store.sanitize(
                 Objects.requireNonNull(currentProfile, "currentProfile"), entry);
         this.originalProfile = this.profile;
+        this.originalModsOn = this.modsOn = store.modsOn(entry);
         this.configService = Objects.requireNonNull(configService, "configService");
         this.font = font;
     }
@@ -118,7 +121,7 @@ public final class LaunchConfigPanel {
         pausedInLevel = inLevel;
     }
 
-    /** Names of enabled mods that apply to this game, shown read-only in the Mods row. */
+    /** Names of enabled mods that apply to this game. */
     public void setEnabledMods(List<String> names) {
         enabledMods = List.copyOf(Objects.requireNonNull(names, "names"));
     }
@@ -136,12 +139,6 @@ public final class LaunchConfigPanel {
         focusIndex = focusableItems().indexOf(Item.MODS);
     }
 
-    /** Re-arms the panel after the mod manager it opened has closed. */
-    public void resumeAfterMods() {
-        closed = false;
-        pendingResult = Result.NONE;
-    }
-
     public void update(InputHandler inputHandler) {
         if (closed || inputHandler == null) {
             return;
@@ -157,6 +154,7 @@ public final class LaunchConfigPanel {
         }
         int beforeFocus = focusIndex;
         LaunchProfile beforeProfile = profile;
+        boolean beforeMods = modsOn;
         boolean confirmCue = false;
 
         if (MenuInput.back(inputHandler) || pointer.rightPressed()) {
@@ -187,7 +185,7 @@ public final class LaunchConfigPanel {
             if (pointer.leftPressed()) {
                 item = candidate;
                 if (item == Item.SAVE) { close(Result.CLOSED); MenuFeedback.emit(CONFIRM); return; }
-                if (item == Item.MODS) { openMods(); return; }
+                if (item == Item.MODS) { modsOn = !modsOn; continue; }
                 profile = step(item, pointer.x() >= viewportWidth / 2);
             }
         }
@@ -195,7 +193,13 @@ public final class LaunchConfigPanel {
         if (item == Item.SAVE) {
             if (MenuInput.accept(inputHandler)) { close(Result.CLOSED); MenuFeedback.emit(CONFIRM); return; }
         } else if (item == Item.MODS) {
-            if (MenuInput.accept(inputHandler)) { openMods(); return; }
+            if (MenuInput.accept(inputHandler)) {
+                modsOn = !modsOn;
+                close(Result.CLOSED);
+                return;
+            }
+            if (MenuInput.left(inputHandler)) modsOn = false;
+            if (MenuInput.right(inputHandler)) modsOn = true;
         } else if (item.row != null) {
             if (MenuInput.left(inputHandler)) profile = step(item, false);
             if (MenuInput.right(inputHandler) || MenuInput.accept(inputHandler)) profile = step(item, true);
@@ -209,8 +213,8 @@ public final class LaunchConfigPanel {
         int kept = focusableItems().indexOf(items.get(focusIndex));
         focusIndex = kept >= 0 ? kept : Math.clamp(focusIndex, 0, focusableItems().size() - 1);
         if (beforeFocus != focusIndex) focusTicks = 0;
-        if (!beforeProfile.equals(profile)) changeTicks = 0;
-        if (beforeFocus != focusIndex || !beforeProfile.equals(profile)) {
+        if (!beforeProfile.equals(profile) || beforeMods != modsOn) changeTicks = 0;
+        if (beforeFocus != focusIndex || !beforeProfile.equals(profile) || beforeMods != modsOn) {
             saveError = null;
             MenuFeedback.emit(confirmCue ? CONFIRM : NAVIGATE);
         }
@@ -252,12 +256,6 @@ public final class LaunchConfigPanel {
         lastPointerX = pointer.x();
         lastPointerY = pointer.y();
         return moved;
-    }
-
-    private void openMods() {
-        MenuFeedback.emit(CONFIRM);
-        closed = true;
-        pendingResult = Result.OPEN_MODS;
     }
 
     private LaunchProfile step(Item item, boolean forward) {
@@ -391,7 +389,7 @@ public final class LaunchConfigPanel {
         List<MenuChrome.Hint> hints = new ArrayList<>();
         // The Mods row's own key (Enter) is shown in its description box.
         if (focused == Item.SAVE) hints.add(MenuChrome.hint(MenuChrome.confirmKey(lastInput), UiMessages.text("launch.ui.save_caps")));
-        else if (focused != Item.MODS) hints.add(MenuChrome.leftRight(lastInput, UiMessages.text("launch.ui.change_caps")));
+        else hints.add(MenuChrome.leftRight(lastInput, UiMessages.text("launch.ui.change_caps")));
         hints.add(MenuChrome.hint(MenuChrome.backKey(lastInput), unsavedCount() == 0 || focused == Item.SAVE ? UiMessages.text("launch.ui.back_caps") : UiMessages.text("launch.ui.save_or_discard_caps")));
         return hints;
     }
@@ -426,7 +424,7 @@ public final class LaunchConfigPanel {
         if (item == Item.MODS) {
             String caption = MenuChrome.fitCompact(item.label(), (w - 48) / 2);
             MenuChrome.compact(font, caption, 18, y + 1, focused ? MenuChrome.WHITE : MenuChrome.TEXT);
-            String names = enabledMods.isEmpty() ? UiMessages.text("launch.ui.none_for_this_game") : String.join(", ", enabledMods);
+            String names = UiMessages.text(modsOn ? "launch.mods_on" : "launch.mods_off");
             int labelEnd = 18 + MenuChrome.compactWidth(caption) + 10;
             names = pageCompact(names, w - 30 - labelEnd);
             MenuChrome.compact(font, names, w - 26 - MenuChrome.compactWidth(names), y + 1,
@@ -494,7 +492,7 @@ public final class LaunchConfigPanel {
         int end = Math.min(wrapped.size(), first + capacity);
         MenuChrome.descriptionBox(font, 8, DESC_Y, w - 16, DESC_H, wrapped.subList(first, end), wrappedColors.subList(first, end));
         if (item == Item.MODS) {
-            MenuChrome.hints(font, 14, keyLineY(Math.min(capacity, wrapped.size())), List.of(MenuChrome.hint(MenuChrome.confirmKey(lastInput), UiMessages.text("launch.ui.manage_mods_caps"))),
+            MenuChrome.hints(font, 14, keyLineY(Math.min(capacity, wrapped.size())), List.of(MenuChrome.hint(MenuChrome.confirmKey(lastInput), UiMessages.text("launch.mods_toggle_save"))),
                     MenuChrome.controller(lastInput), MenuChrome.MUTED);
         }
         if (item != null && item.row != null) {
@@ -571,7 +569,7 @@ public final class LaunchConfigPanel {
             case MODS -> {
                 lines.add(enabledMods.isEmpty() ? UiMessages.text("launch.no_mods_change_game", java.util.Map.of("game", game))
                         : UiMessages.text("launch.mods_change_game", java.util.Map.of("count", enabledMods.size(), "game", game)));
-                lines.add(UiMessages.text("launch.mods_global"));
+                lines.add(String.join(", ", enabledMods));
             }
         }
     }
@@ -770,12 +768,18 @@ public final class LaunchConfigPanel {
                     Math.min(viewportWidth - 24, 300) - 20, com.openggf.graphics.text.TextFace.COMPACT,
                     com.openggf.graphics.text.HostTextContext.current()));
         }
+        if (modsOn != originalModsOn) {
+            changes.add(Item.MODS.label());
+            changes.add(UiMessages.text(modsOn ? "launch.mods_on" : "launch.mods_off"));
+        }
         return changes;
     }
 
+    boolean modsOn() { return modsOn; }
+
     /** Rows whose draft value differs from the value the panel opened with. */
     int unsavedCount() {
-        int count = 0;
+        int count = modsOn == originalModsOn ? 0 : 1;
         for (LaunchProfile.Row row : LaunchProfile.Row.values()) {
             boolean same = switch (row) {
                 case REWIND -> profile.rewind() == originalProfile.rewind();

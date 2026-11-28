@@ -15,6 +15,21 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestModManifestParser {
+    @Test
+    void gameManifestsRequireAStockHostOrAny() throws Exception {
+        String game = canonicalPatch().replace("type: patch", "type: game");
+        for (String host : java.util.List.of("s1", "s2", "s3k", "scd")) {
+            var manifest = parser().parse(bytes(game.replace("baseGame: s2", "baseGame: " + host)));
+            assertEquals(ModType.GAME, manifest.type());
+            assertEquals(host, manifest.baseGame());
+        }
+        rejects(game.replace("baseGame: s2\n", ""));
+        rejects(game.replace("baseGame: s2", "baseGame: unknown"));
+        String anyHost = game.replace("baseGame: s2", "baseGame: any")
+                .replace("audioOverrides:\n  12: boss-remix", "entrypoint: fixture.GameMod\naudioOverrides: {}");
+        assertEquals(ModType.GAME, parser().parse(bytes(anyHost)).type());
+    }
+
     @Test void sonicCdIsAnExplicitPatchHost() throws Exception {
         assertEquals("scd", parser().parse(bytes(canonicalPatch().replace("baseGame: s2", "baseGame: scd"))).baseGame());
     }

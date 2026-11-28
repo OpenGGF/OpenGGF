@@ -207,11 +207,14 @@ public final class TimeAttackLobbyVideoTool {
         session = field(scene, "session");
         Object menu = field(scene, "state");
         chapter("Time Attack menu");
+        if (!state().equals("IDLE")) capture.tap(GLFW_KEY_ESCAPE);
+        await(() -> state().equals("IDLE"), 120, "leaving online Browse");
         capture.frames(30);
         for (int i = 0; i < 4 && !gameId.equals(call(menu, "currentGameId")); i++) capture.tap(GLFW_KEY_RIGHT);
         if (!gameId.equals(call(menu, "currentGameId"))) throw new IllegalStateException("game " + gameId + " not offered");
         for (int i = 0; i < 3; i++) capture.tap(GLFW_KEY_DOWN); // MODE
-        capture.tap(GLFW_KEY_RIGHT);                             // HOST LAN
+        for (int i = 0; i < 4 && !call(menu, "mode").toString().equals("HOST_LAN"); i++)
+            capture.tap(GLFW_KEY_RIGHT);
         for (int i = 0; i < 4; i++) capture.tap(GLFW_KEY_DOWN); // past policy, window and vote pool
         capture.tap(GLFW_KEY_ENTER);                             // CREATE LAN ROOM
         await(() -> safe(() -> field(scene, "accessView") != null), 120, "room access");

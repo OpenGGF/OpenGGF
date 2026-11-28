@@ -24,7 +24,7 @@ guide for the contribution you are building:
   characters, music, and SFX that launch without a ROM.
 - [The `ggfmod` CLI](ggfmod.md) — launcher syntax, project scaffolding, and all
   converters.
-- [Mod scenes](guides/mod-scenes.md) — a patch mod's startup scene
+- [Mod scenes](guides/mod-scenes.md) — a game card's startup scene
   (`ModContext.registerStartupScene`): a full-screen menu, minigame or whole game drawn by
   the mod with the player's ROM art, starting from `examples/hello-scene`.
 - [Native-Tails Flappy](guides/native-tails-flappy.md) — a maintained S3K patch

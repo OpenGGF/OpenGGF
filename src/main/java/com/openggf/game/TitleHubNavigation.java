@@ -2,6 +2,7 @@ package com.openggf.game;
 
 import com.openggf.control.InputHandler;
 import com.openggf.control.MenuInput;
+import com.openggf.control.HubMenuInput;
 
 /**
  * Focus model for the cartridge-shelf hub. Three rows from top to bottom: engine-wide
@@ -36,9 +37,15 @@ final class TitleHubNavigation {
     private int tab;
     private int action;
     private boolean extrasVisible;
+    private int horizontalDirection;
+    private int horizontalTicks;
+
     private int actionCount = Action.values().length;
 
     void capture(InputHandler input) {
+        int held = HubMenuInput.horizontalHeld(input);
+        horizontalTicks = held == horizontalDirection && held != 0 ? horizontalTicks + 1 : 0;
+        horizontalDirection = held;
         boolean[] current = { MenuInput.left(input), MenuInput.right(input), MenuInput.up(input),
                 MenuInput.down(input), MenuInput.accept(input), MenuInput.back(input) };
         for (int i = 0; i < current.length; i++) {
@@ -49,6 +56,11 @@ final class TitleHubNavigation {
 
     boolean left() { return pressed[0]; }
     boolean right() { return pressed[1]; }
+
+    int shelfStep() {
+        int direction = left() ? -1 : right() ? 1 : 0;
+        return direction * (horizontalTicks >= 48 ? 3 : horizontalTicks >= 24 ? 2 : 1);
+    }
     boolean up() { return pressed[2]; }
     boolean down() { return pressed[3]; }
     boolean accept() { return pressed[4]; }

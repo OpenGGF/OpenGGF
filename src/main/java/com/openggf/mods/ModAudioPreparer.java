@@ -150,7 +150,7 @@ public final class ModAudioPreparer {
                             continue;
                         }
                         String baseGame = descriptor.manifest().baseGame();
-                        if (descriptor.manifest().type() != ModType.PATCH
+                        if (descriptor.manifest().type() == ModType.STANDALONE
                                 || !Objects.equals(baseGame, game)) continue;
                         var warnings = new LinkedHashSet<String>();
                         try {

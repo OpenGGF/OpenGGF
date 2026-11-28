@@ -13,6 +13,6 @@ public final class TimeAttackMod implements GgfMod {
     public void register(ModContext context) {
         // The build's default master comes from the generated asset, read while registration is open.
         String buildDefaultMaster = NetworkDefaults.defaultMaster(context.modAssets());
-        context.registerTitleEntry("Time Attack", () -> new TimeAttackScene(buildDefaultMaster));
+        context.registerTitleEntry("Time Attack", () -> TimeAttackScene.online(buildDefaultMaster));
     }
 }

@@ -3,6 +3,13 @@ package com.openggf.game.patch;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameModule;
 import com.openggf.game.sonic2.Sonic2GameModule;
+import com.openggf.mods.EffectiveModCatalog;
+import com.openggf.mods.ModDependency;
+import com.openggf.mods.ModDescriptor;
+import com.openggf.mods.ModManifest;
+import com.openggf.mods.ModType;
+import com.openggf.mods.SemanticVersion;
+import com.openggf.mods.VersionRange;
 import com.openggf.mods.code.BakedLevelRef;
 import com.openggf.mods.code.ModBackedGamePatch;
 import com.openggf.mods.code.ModRegistrationPlan;
@@ -58,6 +65,40 @@ class TestModuleResolutionService {
                 return new Patched();
             }
         };
+    }
+
+    @Test
+    void gameCardAndModsOffOnlyResolveOwnersInTheirLaunchScope() {
+        var builtIn = new PatchOwner.BuiltIn("built-in");
+        var game = new PatchOwner.Mod("game-card");
+        var dependency = new PatchOwner.Mod("dependency");
+        var extra = new PatchOwner.Mod("extra");
+        var resolver = ModuleResolutionService.forTests(List.of(
+                new RegisteredPatch(builtIn, "built-in", stubPatch("built-in", "s2", true), 0),
+                new RegisteredPatch(game, "game-card:patch", stubPatch("game-card", "s2", true), 1),
+                new RegisteredPatch(dependency, "dependency:patch", stubPatch("dependency", "s2", true), 2),
+                new RegisteredPatch(extra, "extra:patch", stubPatch("extra", "s2", true), 3)),
+                PatchEnablement.ALL_ENABLED);
+        var catalogue = new EffectiveModCatalog(List.of(
+                descriptor(dependency.modId(), ModType.PATCH),
+                descriptor(game.modId(), ModType.GAME, new ModDependency(dependency.modId(), VersionRange.parse("*"))),
+                descriptor(extra.modId(), ModType.PATCH)));
+        var admitted = ScopedLaunch.owners(catalogue, game.modId());
+        assertEquals(Set.of(game.modId(), dependency.modId()), admitted);
+        assertEquals(Set.of(dependency.modId(), extra.modId()), ScopedLaunch.owners(catalogue, null));
+        var card = ScopedLaunch.prepare(resolver, true, admitted::contains);
+        var off = ScopedLaunch.prepare(resolver, false, owner -> true);
+        assertEquals(List.of("built-in", "game-card", "dependency"), ((PatchTrail)
+                resolver.resolveForLaunch(card, new Sonic2GameModule(), anyRequest())).appliedPatchIds());
+        assertEquals(List.of("built-in"), ((PatchTrail)
+                resolver.resolveForLaunch(off, new Sonic2GameModule(), anyRequest())).appliedPatchIds());
+    }
+
+    private static ModDescriptor descriptor(String id, ModType type, ModDependency... dependencies) {
+        var manifest = new ModManifest(1, id, id, SemanticVersion.parse("1.0.0"), List.of("Tests"),
+                "Launch scope fixture", VersionRange.parse("*"), type, "s2", null, List.of(dependencies),
+                Map.of(), Map.of(), null, java.util.OptionalInt.empty());
+        return new ModDescriptor(java.nio.file.Path.of(id + ".jar"), manifest, "1".repeat(64), false, List.of());
     }
 
     @Test

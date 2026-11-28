@@ -7,6 +7,7 @@ import com.openggf.game.preview.TitlePreviewProvider.Sequence;
 import com.openggf.TraceSessionLauncher;
 import com.openggf.control.InputHandler;
 import com.openggf.control.MenuInput;
+import com.openggf.control.HubMenuInput;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.data.Rom;
@@ -209,6 +210,10 @@ public class MasterTitleScreen {
     private final SonicConfigurationService configService;
     private final LaunchProfileStore launchProfileStore;
     private final HubProgressStore hubProgress;
+    private final TitleGameLibrary library;
+    private boolean libraryOpen;
+    private String onlineGameCard = "";
+    private java.util.function.Consumer<MasterTitleEntry.ModGame> modGameOpener = card -> { };
     private com.openggf.game.launch.GameSupportNotices supportNotices;
     /** Please-note dialog asked before starting a game whose support is unfinished, and its game. */
     private GameSupportNoticeDialog supportNotice;
@@ -336,7 +341,9 @@ public class MasterTitleScreen {
         this.launchProfileStore = Objects.requireNonNull(launchProfileStore, "launchProfileStore");
         this.hubProgress = new HubProgressStore(configService);
         this.supportNotices = new com.openggf.game.launch.GameSupportNotices(configService);
-        this.entries = List.copyOf(Objects.requireNonNull(entries, "entries"));
+        this.library = new TitleGameLibrary(configService);
+        library.catalog(Objects.requireNonNull(entries, "entries"));
+        this.entries = library.shelf();
         this.audioSink = Objects.requireNonNull(audioSink, "audioSink");
         this.selectedIndex = rememberedSelectionIndex(this.entries);
         for (GameEntry game : GameEntry.values()) stockAvailability.put(game, false);
@@ -544,11 +551,7 @@ public class MasterTitleScreen {
             if (modManagerScreen == menu && menu.consumeCloseRequested()) {
                 modManagerScreen = null;
                 if (entrySource != null) replaceEntries(entrySource.get());
-                if (launchConfigPanel != null && selectedEntry() instanceof MasterTitleEntry.Stock stock) {
-                    launchConfigPanel.setEnabledMods(enabledModsByGame.getOrDefault(stock.game(), List.of()));
-                    launchConfigPanel.resumeAfterMods();
-                    childInputPending = true;
-                }
+                childInputPending = true;
             }
             return;
         }
@@ -582,15 +585,15 @@ public class MasterTitleScreen {
             LaunchConfigPanel.Result result = launchConfigPanel.consumeResult();
             if (result == LaunchConfigPanel.Result.CANCELLED) {
                 launchConfigPanel = null;
-            } else if (result == LaunchConfigPanel.Result.OPEN_MODS) {
-                // Game Setup stays open underneath; it resumes when the mod manager closes.
-                openModManager(selectedEntry().gameId());
-                // A host without an in-title manager screen opens it elsewhere: resume at once.
-                if (modManagerScreen == null) launchConfigPanel.resumeAfterMods();
             } else if (result == LaunchConfigPanel.Result.CLOSED) {
                 MasterTitleEntry.Stock stock = stockOf(selectedEntry());
                 try {
-                    launchProfileStore.save(stock.game(), launchConfigPanel.currentProfile());
+                    var profile = launchConfigPanel.currentProfile();
+                    if (launchConfigPanel.modsOn() == launchProfileStore.modsOn(stock.game())) {
+                        launchProfileStore.save(stock.game(), profile);
+                    } else {
+                        launchProfileStore.save(stock.game(), profile, launchConfigPanel.modsOn());
+                    }
                     launchConfigPanel = null;
                     playConfirmSound();
                 } catch (java.io.UncheckedIOException failure) {
@@ -610,6 +613,9 @@ public class MasterTitleScreen {
             updateExtrasChooser();
             return;
         }
+
+        if (libraryOpen) { updateGameLibrary(inputHandler); return; }
+        if (library.hasMods() && HubMenuInput.library(inputHandler)) { openGameLibrary(); return; }
 
         boolean helpShortcut = MenuInput.details(inputHandler);
         boolean openHelp = helpShortcut && !helpShortcutHeld;
@@ -632,6 +638,10 @@ public class MasterTitleScreen {
         }
         if (inputHandler.isKeyPressed(GLFW_KEY_TAB) || inputHandler.isGamepadBackButtonPressed()) {
             if (!openLaunchOptions(null)) showActionError(UiMessages.text("hub.ui.game_setup"));
+            else if (selectedEntry() != null && stockOf(selectedEntry()) != null
+                    && !enabledModsByGame.getOrDefault(stockOf(selectedEntry()).game(), List.of()).isEmpty()) {
+                launchConfigPanel.focusMods();
+            }
             return;
         }
 
@@ -647,7 +657,7 @@ public class MasterTitleScreen {
         }
         if (navigation.left() || navigation.right()) {
             int delta = navigation.left() ? -1 : 1;
-            boolean moved = zone == TitleHubNavigation.Zone.CARD ? cycleSelectedEntry(delta) : navigation.moveWithin(delta);
+            boolean moved = zone == TitleHubNavigation.Zone.CARD ? cycleSelectedEntry(navigation.shelfStep()) : navigation.moveWithin(delta);
             if (moved) playNavigateSound();
             return;
         }
@@ -751,9 +761,19 @@ public class MasterTitleScreen {
     void openExtrasRowForTest(int index) { extrasIndex = index; extrasOpen = false;
         if (index >= titleEntries.size()) openSetupGuide(true); else openTitleEntry(index); }
 
+    public void setModGameOpener(java.util.function.Consumer<MasterTitleEntry.ModGame> opener) {
+        modGameOpener = Objects.requireNonNull(opener);
+    }
+
+    public void setOnlineGameCard(String owner) { onlineGameCard = Objects.requireNonNull(owner); }
+
+    private MasterTitleEntry.ModGame onlineCard() {
+        return library.find(onlineGameCard) instanceof MasterTitleEntry.ModGame card ? card : null;
+    }
+
     private void openSetupGuide(boolean reentry) {
         setupGuide = new MenuSetupGuide(configService, setupGuideSession, new MenuSetupGuide.Host() {
-            @Override public boolean onlineAvailable() { return multiplayerEntry >= 0 && multiplayerEntry < titleEntries.size(); }
+            @Override public boolean onlineAvailable() { return onlineCard() != null || multiplayerEntry >= 0 && multiplayerEntry < titleEntries.size(); }
             @Override public void libraryChanged() { refreshStockAvailability(); }
         }, reentry);
         childInputPending = true;
@@ -778,7 +798,10 @@ public class MasterTitleScreen {
                     }
                 }
             }
-            case ONLINE -> { if (multiplayerEntry >= 0 && multiplayerEntry < titleEntries.size()) openTitleEntry(multiplayerEntry); }
+            case ONLINE -> {
+                if (onlineCard() != null) startEntry(onlineCard());
+                else if (multiplayerEntry >= 0 && multiplayerEntry < titleEntries.size()) openTitleEntry(multiplayerEntry);
+            }
             default -> { }
         }
     }
@@ -795,14 +818,17 @@ public class MasterTitleScreen {
 
     private void openTitleEntry(int index) {
         if (askToEndSuspended(UiMessages.text("hub.ui.opening_extras_ends_it"), () -> openTitleEntry(index))) return;
-        List<String> games = entries.stream()
+        playConfirmSound();
+        titleEntryOpener.accept(availableStockGames(), index);
+    }
+
+    public List<String> availableStockGames() {
+        return entries.stream()
                 .filter(MasterTitleEntry.Stock.class::isInstance)
                 .map(MasterTitleEntry.Stock.class::cast)
                 .filter(this::isEntryAvailable)
                 .map(stock -> stock.game().gameId)
                 .toList();
-        playConfirmSound();
-        titleEntryOpener.accept(games, index);
     }
 
     private void updateExtrasChooser() {
@@ -899,6 +925,12 @@ public class MasterTitleScreen {
      */
     private boolean updateHubPointer() {
         if (pointer == null) return false;
+        if (pointer.click() && library.hasMods() && MenuChrome.footerLayout(viewportWidth,
+                restartPending() ? EngineSettingsScreen.restartStatus() : null, hubHints(), frameCounter)
+                .targets().stream().anyMatch(target -> target.index() == 2 && target.contains(pointer))) {
+            openGameLibrary();
+            return true;
+        }
         Rect help = helpHintBounds();
         if (pointer.click() && help != null && help.contains(pointer)) {
             helpOpen = true; childInputPending = true; playConfirmSound(); return true;
@@ -1246,13 +1278,43 @@ public class MasterTitleScreen {
     }
 
     private void startSelectedEntry() {
-        MasterTitleEntry entry = selectedEntry();
+        startEntry(selectedEntry());
+    }
+
+    public boolean launchDevelopmentModGame(String owner) {
+        if (!(library.find(owner) instanceof MasterTitleEntry.ModGame card) || !isEntryAvailable(card)) return false;
+        startEntry(card);
+        return true;
+    }
+
+    private void openGuideLocator() {
+        openSetupGuide(true);
+        setupGuide.openLocateGame();
+    }
+
+    private void startEntry(MasterTitleEntry entry) {
         if (entry == null) { showActionError(UiMessages.text("hub.ui.start_game")); return; }
+        if (entry instanceof MasterTitleEntry.Library) { openGameLibrary(); return; }
         if (entry instanceof MasterTitleEntry.Suspended) { requestResume(); return; }
         // The notice comes before ending a suspended game, so backing out of it loses nothing.
         if (isEntryAvailable(entry) && entry instanceof MasterTitleEntry.Stock stock && openSupportNotice(stock)) return;
         if (isEntryAvailable(entry) && askToEndSuspended(UiMessages.text("hub.starting_ends_game", java.util.Map.of("game", entry.menuLabel())),
-                this::startSelectedEntry)) return;
+                () -> startEntry(entry))) return;
+        if (entry instanceof MasterTitleEntry.ModGame card) {
+            if (isEntryAvailable(card)) {
+                rememberPlayed(card);
+                state = State.EXITING;
+                playConfirmSound();
+                modGameOpener.accept(card);
+            } else if (!"any".equals(card.baseGame())) {
+                GameEntry host = GameEntry.fromGameId(card.baseGame());
+                if (host.cartridge()) openRomLocator(new MasterTitleEntry.Stock(host));
+                else if (setupGuideSession != null) openGuideLocator();
+                else showActionError(UiMessages.text("hub.ui.start_game"));
+            } else if (setupGuideSession != null) openGuideLocator();
+            else showActionError(UiMessages.text("hub.ui.start_game"));
+            return;
+        }
         if (!isEntryAvailable(entry) && entry instanceof MasterTitleEntry.Stock stock) {
             openRomLocator(stock);
         } else if (!isEntryAvailable(entry)) {
@@ -1379,13 +1441,22 @@ public class MasterTitleScreen {
     }
 
     private void confirmLaunch(MasterTitleEntry.Launch launch, boolean programmatic) {
-        if (!programmatic) hubProgress.rememberGame(launch.entry().gameId());
-        hubProgress.flush();
+        if (!programmatic) rememberPlayed(launch.entry());
         selectedLaunch = launch;
         state = State.CONFIRMING;
         if (!programmatic) playConfirmSound();
         programmaticSelection = programmatic;
         gameSelected = true;
+    }
+
+    private void rememberPlayed(MasterTitleEntry card) {
+        try {
+            library.rememberPlayed(card);
+        } catch (java.io.IOException error) {
+            LOGGER.warning("Could not save recently played game: " + error.getMessage());
+        }
+        hubProgress.rememberGame(card.gameId());
+        hubProgress.flush();
     }
 
     /**
@@ -1619,6 +1690,7 @@ public class MasterTitleScreen {
                     ? List.of(TitleHubNavigation.Action.RESUME, TitleHubNavigation.Action.SETUP, TitleHubNavigation.Action.END)
                     : List.of(TitleHubNavigation.Action.RESUME, TitleHubNavigation.Action.END);
         return selectedEntry() instanceof MasterTitleEntry.Standalone
+                || selectedEntry() instanceof MasterTitleEntry.ModGame || selectedEntry() instanceof MasterTitleEntry.Library
                 ? List.of(TitleHubNavigation.Action.START)
                 : selectedEntry() instanceof MasterTitleEntry.Hosted
                         ? List.of(TitleHubNavigation.Action.START, TitleHubNavigation.Action.SETUP)
@@ -1629,7 +1701,9 @@ public class MasterTitleScreen {
     /** Chips for the selected game, read from the saved profile so they never go stale. */
     List<HubSetupChips.Chip> hubChips() {
         MasterTitleEntry entry = selectedEntry();
-        if (!(entry instanceof MasterTitleEntry.Stock stock) || !isEntryAvailable(stock)) return List.of();
+        MasterTitleEntry.Stock stock = stockOf(entry);
+        if (stock == null || entry instanceof MasterTitleEntry.Suspended || !isEntryAvailable(entry)) return List.of();
+        if (entry instanceof MasterTitleEntry.Hosted && enabledModsByGame.getOrDefault(stock.game(), List.of()).isEmpty()) return List.of();
         return HubSetupChips.forStock(stock.game(), launchProfileStore.load(stock.game()), launchProfileStore,
                 configService, enabledModsByGame.getOrDefault(stock.game(), List.of()).size());
     }
@@ -1656,6 +1730,10 @@ public class MasterTitleScreen {
     }
 
     private String actionLabel(TitleHubNavigation.Action action) {
+        if (action == TitleHubNavigation.Action.START && selectedEntry() instanceof MasterTitleEntry.Library)
+            return UiMessages.text("hub.library.open");
+        if (action == TitleHubNavigation.Action.START && selectedEntry() instanceof MasterTitleEntry.ModGame card
+                && !isEntryAvailable(card)) return findForCard(card);
         if (action == TitleHubNavigation.Action.START && selectedEntry() instanceof MasterTitleEntry.Stock stock
                 && !isEntryAvailable(stock)) return UiMessages.text("hub.action.locate_rom");
         return action == TitleHubNavigation.Action.RECORDINGS ? UiMessages.text("hub.ui.playback_caps")
@@ -1730,8 +1808,8 @@ public class MasterTitleScreen {
         List<CardSlot> cards = new ArrayList<>();
         int n = entries.size();
         if (n > 0) {
-            int left = Math.min(2, (n - 1) / 2);
-            int right = Math.min(2, n - 1 - (n - 1) / 2);
+            int left = Math.min(2, selectedIndex);
+            int right = Math.min(2, n - 1 - selectedIndex);
             // Draw far cards first so the selected card overlaps its neighbours.
             List<Integer> offsets = new ArrayList<>();
             for (int k = -left; k <= right; k++) offsets.add(k);
@@ -1742,7 +1820,7 @@ public class MasterTitleScreen {
                 int cw = Math.round(CARD_W + (SIDE_W - CARD_W) * t);
                 int ch = Math.round(CARD_H + (SIDE_H - CARD_H) * t);
                 Rect rect = new Rect(Math.round(centre - cw / 2f), CARD_CENTER_Y - ch / 2, cw, ch);
-                cards.add(new CardSlot(k, Math.floorMod(selectedIndex + k, n), rect, t));
+                cards.add(new CardSlot(k, selectedIndex + k, rect, t));
             }
         }
 
@@ -1825,10 +1903,167 @@ public class MasterTitleScreen {
         // Darken the sky slightly so cards and text keep their contrast over bright clouds.
         box(0, 0, w, SCREEN_H, 0.02f, 0.07f, 0.23f, 0.34f);
         drawTwinkles(w);
+        if (libraryOpen) { drawGameLibrary(w); return; }
         HubLayout layout = hubLayout();
         drawHubHeader(w, layout);
         for (CardSlot card : layout.cards()) drawCard(card);
         drawHubDetails(w, layout);
+    }
+
+    private void openGameLibrary() {
+        if (libraryOpen) return;
+        library.open(onlineGameCard);
+        libraryOpen = true;
+        childInputPending = true;
+        playConfirmSound();
+    }
+
+    private void closeGameLibrary() {
+        libraryOpen = false;
+        refreshShelf();
+        navigation.focus(TitleHubNavigation.Zone.CARD);
+        playCancelSound();
+    }
+
+    private void updateGameLibrary(InputHandler input) {
+        if (navigation.back() || backClicked()) { closeGameLibrary(); return; }
+        MasterTitleEntry card = library.selected();
+        if (HubMenuInput.library(input)) {
+            if (TitleGameLibrary.isMod(card) && !library.tabs()) toggleKeepOnShelf(card);
+            return;
+        }
+        int before = library.index();
+        boolean tabs = library.tabs();
+        var filter = library.filter();
+        if (navigation.left()) library.horizontal(-1);
+        if (navigation.right()) library.horizontal(1);
+        if (navigation.up()) library.vertical(-1);
+        if (navigation.down()) library.vertical(1);
+        if (pointer != null && pointer.wheel() != 0) library.select(library.index() - pointer.wheel() * TitleGameLibrary.COLUMNS);
+        if (clicked()) {
+            for (var value : TitleGameLibrary.Filter.values()) {
+                if (libraryTab(value, viewportWidth).contains(pointer)) {
+                    library.filter(value);
+                    playNavigateSound();
+                    return;
+                }
+            }
+            int first = library.firstRow() * TitleGameLibrary.COLUMNS;
+            int end = Math.min(library.filtered().size(), first + TitleGameLibrary.COLUMNS * TitleGameLibrary.VISIBLE_ROWS);
+            for (int i = first; i < end; i++) {
+                if (!libraryCard(i - first, viewportWidth).contains(pointer)) continue;
+                if (i == library.index() && !library.tabs()) startSelectedEntry();
+                else { library.select(i); playNavigateSound(); }
+                return;
+            }
+            if (card != null && libraryAction(viewportWidth, false).contains(pointer)) { startEntry(card); return; }
+            if (TitleGameLibrary.isMod(card) && libraryAction(viewportWidth, true).contains(pointer)) {
+                toggleKeepOnShelf(card);
+                return;
+            }
+            if (pointer.over(viewportWidth - 76, MenuChrome.FOOTER_Y, 76, MenuChrome.FOOTER_H)) {
+                closeGameLibrary();
+                return;
+            }
+        }
+        if (navigation.accept()) {
+            if (library.tabs()) library.select(library.index());
+            else if (library.selected() != null) startSelectedEntry();
+            return;
+        }
+        if (before != library.index() || tabs != library.tabs() || filter != library.filter()) playNavigateSound();
+    }
+
+    private void toggleKeepOnShelf(MasterTitleEntry card) {
+        try {
+            library.toggleKept(card);
+            playConfirmSound();
+        } catch (java.io.IOException error) {
+            LOGGER.warning("Could not save shelf: " + error.getMessage());
+            showUnavailableAction(UiMessages.text("launch.ui.save_failed_try_again"));
+        }
+    }
+
+    private static Rect libraryTab(TitleGameLibrary.Filter filter, int w) {
+        return new Rect(w / 2 - 98 + filter.ordinal() * 66, 29, 64, 16);
+    }
+
+    private static Rect libraryCard(int index, int w) {
+        int grid = Math.min(w - 24, 416);
+        int gap = 6;
+        int cw = (grid - gap * (TitleGameLibrary.COLUMNS - 1)) / TitleGameLibrary.COLUMNS;
+        int col = index % TitleGameLibrary.COLUMNS;
+        int row = index / TitleGameLibrary.COLUMNS;
+        return new Rect((w - grid) / 2 + col * (cw + gap), 51 + row * 43, cw, 38);
+    }
+
+    private static Rect libraryAction(int w, boolean keep) {
+        return new Rect(w / 2 + (keep ? 3 : -148), 188, 145, 17);
+    }
+
+    private void drawGameLibrary(int w) {
+        var cards = library.filtered();
+        int first = library.firstRow() * TitleGameLibrary.COLUMNS;
+        int end = Math.min(cards.size(), first + TitleGameLibrary.COLUMNS * TitleGameLibrary.VISIBLE_ROWS);
+        font.beginMegaBatch();
+        MenuChrome.header(font, w, UiMessages.text("hub.library.title"),
+                cards.isEmpty() ? "" : UiMessages.text("hub.library.range",
+                        Map.of("first", first + 1, "last", end, "total", cards.size())));
+        for (var filter : TitleGameLibrary.Filter.values()) {
+            Rect tab = libraryTab(filter, w);
+            boolean active = filter == library.filter();
+            if (active && library.tabs()) MenuChrome.focus(font, tab.x(), tab.y(), tab.w(), tab.h(), frameCounter);
+            else MenuChrome.panel(font, tab.x(), tab.y(), tab.w(), tab.h());
+            String label = hubPageCompact(UiMessages.text("hub.library." + filter.name().toLowerCase(java.util.Locale.ROOT)), tab.w() - 8);
+            MenuChrome.compact(font, label, tab.x() + (tab.w() - MenuChrome.compactWidth(label)) / 2,
+                    tab.y() + 4, active ? MenuChrome.GOLD : MenuChrome.TEXT);
+        }
+        font.endMegaBatch();
+        for (int i = first; i < end; i++) {
+            drawCard(cards.get(i), libraryCard(i - first, w), i == library.index(), 0, !library.tabs());
+        }
+        font.beginMegaBatch();
+        MasterTitleEntry card = library.selected();
+        if (card == null) {
+            String empty = UiMessages.text("hub.library.empty");
+            MenuChrome.compact(font, empty, (w - MenuChrome.compactWidth(empty)) / 2, 112, MenuChrome.DIM);
+        } else {
+            String subtitle = card instanceof MasterTitleEntry.ModGame mod ? modGameSubtitle(mod) : card.displayName();
+            subtitle = hubPageCompact(subtitle, w - 16);
+            MenuChrome.compact(font, subtitle, (w - MenuChrome.compactWidth(subtitle)) / 2, 177,
+                    isEntryAvailable(card) ? MenuChrome.TEXT : MenuChrome.DIM);
+            drawLibraryAction(libraryAction(w, false), actionLabel(TitleHubNavigation.Action.START));
+            if (TitleGameLibrary.isMod(card)) drawLibraryAction(libraryAction(w, true),
+                    UiMessages.text(library.kept(card) ? "hub.library.kept" : "hub.library.unkept"));
+        }
+        var hints = new ArrayList<MenuChrome.Hint>();
+        hints.add(MenuChrome.hint(MenuChrome.confirmKey(menuInput), UiMessages.text("hub.ui.select_caps")));
+        if (TitleGameLibrary.isMod(card)) hints.add(MenuChrome.hint(HubMenuInput.libraryLabel(menuInput), UiMessages.text("hub.library.keep")));
+        hints.add(MenuChrome.hint(MenuChrome.backKey(menuInput), UiMessages.text("hub.ui.games_caps")));
+        MenuChrome.footer(font, w, null, hints, MenuChrome.controller(menuInput), frameCounter);
+        font.endMegaBatch();
+    }
+
+    private void drawLibraryAction(Rect rect, String title) {
+        MenuChrome.panel(font, rect.x(), rect.y(), rect.w(), rect.h());
+        String label = hubPageCompact(title, rect.w() - 12);
+        MenuChrome.compact(font, label, rect.x() + (rect.w() - MenuChrome.compactWidth(label)) / 2,
+                rect.y() + 4, MenuChrome.TEXT);
+    }
+
+    private static String modBaseName(MasterTitleEntry.ModGame card) {
+        GameEntry game = GameEntry.fromGameId(card.baseGame());
+        return game == GameEntry.SONIC_3K ? "Sonic 3&K" : game.menuLabel;
+    }
+
+    private static String modGameSubtitle(MasterTitleEntry.ModGame card) {
+        return "any".equals(card.baseGame()) ? UiMessages.text("hub.library.uses_any")
+                : UiMessages.text("hub.library.uses", Map.of("game", modBaseName(card)));
+    }
+
+    private static String findForCard(MasterTitleEntry.ModGame card) {
+        return "any".equals(card.baseGame()) ? UiMessages.text("hub.library.add_games")
+                : UiMessages.text("hub.library.find", Map.of("game", modBaseName(card)));
     }
 
     private void drawHubHeader(int w, HubLayout layout) {
@@ -1882,9 +2117,11 @@ public class MasterTitleScreen {
     }
 
     private void drawCard(CardSlot card) {
-        Rect r = card.rect();
-        MasterTitleEntry entry = entries.get(card.index());
-        boolean selected = card.offset() == 0;
+        drawCard(entries.get(card.index()), card.rect(), card.offset() == 0,
+                card.distance(), navigation.zone() == TitleHubNavigation.Zone.CARD);
+    }
+
+    private void drawCard(MasterTitleEntry entry, Rect r, boolean selected, float distance, boolean cardFocus) {
         boolean available = isEntryAvailable(entry);
         // Card body with a one-pixel drop shadow.
         font.beginMegaBatch();
@@ -1906,7 +2143,11 @@ public class MasterTitleScreen {
             renderer.drawTexture(suspendedTextureId, layout.x(), layout.y(), layout.width(), layout.height());
         }
         font.beginMegaBatch();
-        if (!available && entry instanceof MasterTitleEntry.Stock stock) {
+        if (r.h() < MISSING_BLOCK_H && (!available || preview == null) && !TitleGameLibrary.isMod(entry)) {
+            String title = hubPageCompact(entry.menuLabel(), r.w() - 8);
+            MenuChrome.compact(font, title, r.x() + (r.w() - MenuChrome.compactWidth(title)) / 2,
+                    r.y() + 15, available ? MenuChrome.TEXT : MenuChrome.DIM);
+        } else if (!available && entry instanceof MasterTitleEntry.Stock stock) {
             // Icon, title, game and hint read as one block centred in the card: 7 icon rows, 5 clear,
             // then three lines on a 10-row pitch (the hint's descender ends the block).
             int top = r.y() + (r.h() - MISSING_BLOCK_H) / 2;
@@ -1918,6 +2159,14 @@ public class MasterTitleScreen {
             String hint = UiMessages.text("hub.ui.locate_rom_below");
             MenuChrome.compact(font, hubPageCompact(hint, r.w() - 6),
                     r.x() + Math.max(3, (r.w() - MenuChrome.compactWidth(hint)) / 2), top + 32, MenuChrome.DIM);
+        } else if (entry instanceof MasterTitleEntry.ModGame || entry instanceof MasterTitleEntry.Library) {
+            var lines = MenuDetailsScreen.wrapText(entry.displayName(), r.w() - 10);
+            int top = r.y() + (r.h() - Math.min(lines.size(), 3) * 10) / 2;
+            for (int i = 0; i < Math.min(lines.size(), 3); i++) {
+                String line = hubPageCompact(lines.get(i), r.w() - 8);
+                MenuChrome.compact(font, line, r.x() + (r.w() - MenuChrome.compactWidth(line)) / 2,
+                        top + i * 10, available ? MenuChrome.WHITE : MenuChrome.DIM);
+            }
         } else if (entry instanceof MasterTitleEntry.Standalone standalone) {
             List<String> lines = MenuDetailsScreen.wrapText(standalone.displayName().toUpperCase(java.util.Locale.ROOT),
                     r.w() - 10);
@@ -1965,9 +2214,9 @@ public class MasterTitleScreen {
                     r.y() + r.h() / 2 - 5, MenuChrome.WHITE);
         }
         // Neighbours recede: darker the further they sit from the centre.
-        float dim = Math.min(1f, card.distance());
+        float dim = Math.min(1f, distance);
         if (dim > 0f) box(r.x(), r.y(), r.w(), r.h(), 0.01f, 0.03f, 0.12f, 0.5f * dim);
-        boolean focused = selected && card.distance() < 0.5f && navigation.zone() == TitleHubNavigation.Zone.CARD;
+        boolean focused = selected && distance < 0.5f && cardFocus;
         if (focused) {
             float glow = MenuChrome.pulse(frameCounter);
             float[] c = MenuChrome.mix(MenuChrome.GOLD, MenuChrome.WHITE, glow * .35f);
@@ -1976,7 +2225,7 @@ public class MasterTitleScreen {
             MenuChrome.fill(font, r.x() - 1, r.y() + r.h(), r.w() + 2, 2, c);
             MenuChrome.fill(font, r.x() - 2, r.y() - 1, 2, r.h() + 2, c);
             MenuChrome.fill(font, r.x() + r.w(), r.y() - 1, 2, r.h() + 2, c);
-        } else if (selected && card.distance() < 0.5f) {
+        } else if (selected && distance < 0.5f) {
             outlineBox(r.x() - 1, r.y() - 1, r.w() + 2, r.h() + 2, new float[] {.62f, .52f, .2f}, 1);
         } else {
             outlineBox(r.x(), r.y(), r.w(), r.h(), MenuChrome.EDGE, 1);
@@ -1997,7 +2246,9 @@ public class MasterTitleScreen {
     private void drawHubDetails(int w, HubLayout layout) {
         MasterTitleEntry entry = selectedEntry();
         font.beginMegaBatch();
-        String name = entry == null ? UiMessages.text("hub.ui.no_games_available_caps") : entry.displayName().toUpperCase(java.util.Locale.ROOT);
+        String name = entry == null ? UiMessages.text("hub.ui.no_games_available_caps") : entry.displayName();
+        if (!(entry instanceof MasterTitleEntry.ModGame || entry instanceof MasterTitleEntry.Library))
+            name = name.toUpperCase(java.util.Locale.ROOT);
         name = carouselName(name, w - 16);
         MenuChrome.label(font, name, (w - MenuChrome.labelWidth(name)) / 2, NAME_Y,
                 isEntryAvailable(entry) ? MenuChrome.WHITE : MenuChrome.DIM);
@@ -2016,6 +2267,10 @@ public class MasterTitleScreen {
         } else if (chips.isEmpty() && entry instanceof MasterTitleEntry.Hosted hosted && !isEntryAvailable(hosted)) {
             String help = hubPageCompact(UiMessages.text("hub.choose_game_disc", java.util.Map.of("game", hosted.menuLabel())), w - 16);
             MenuChrome.compact(font, help, (w - MenuChrome.compactWidth(help)) / 2, CHIP_Y + 2, MenuChrome.AMBER);
+        } else if (entry instanceof MasterTitleEntry.ModGame card) {
+            String subtitle = hubPageCompact(modGameSubtitle(card), w - 16);
+            MenuChrome.compact(font, subtitle, (w - MenuChrome.compactWidth(subtitle)) / 2, CHIP_Y + 2,
+                    isEntryAvailable(card) ? MenuChrome.CYAN : MenuChrome.DIM);
         } else if (chips.isEmpty() && entry instanceof MasterTitleEntry.Standalone standalone) {
             String help = hubPageCompact(standalone.continueAvailable() ? UiMessages.text("hub.ui.a_saved_game_is_ready_to_continue") : UiMessages.text("hub.ui.a_standalone_game_from_your_mods"), w - 16);
             MenuChrome.compact(font, help, (w - MenuChrome.compactWidth(help)) / 2, CHIP_Y + 2, MenuChrome.CYAN);
@@ -2162,6 +2417,8 @@ public class MasterTitleScreen {
     private String hubSummary(MasterTitleEntry entry, List<HubSetupChips.Chip> chips) {
         if (entry == null) return UiMessages.text("hub.ui.add_a_game_in_settings_files_or_mods");
         String game = entry.menuLabel();
+        if (entry instanceof MasterTitleEntry.Library) return "";
+        if (entry instanceof MasterTitleEntry.ModGame && !isEntryAvailable(entry)) return "";
         if (entry instanceof MasterTitleEntry.Stock && !isEntryAvailable(entry)) return UiMessages.text("hub.ui.locate_your_game_file_any_filename_is_accepted");
         if (entry instanceof MasterTitleEntry.Suspended paused && navigation.zone() != TitleHubNavigation.Zone.TABS) {
             TitleHubNavigation.Action action = navigation.zone() == TitleHubNavigation.Zone.ACTIONS ? focusedAction() : null;
@@ -2197,7 +2454,7 @@ public class MasterTitleScreen {
     private List<MenuChrome.Hint> hubHints() {
         String ok = MenuChrome.confirmKey(menuInput);
         String back = MenuChrome.backKey(menuInput);
-        return switch (navigation.zone()) {
+        List<MenuChrome.Hint> hints = switch (navigation.zone()) {
             case CARD -> List.of(MenuChrome.leftRight(menuInput, UiMessages.text("hub.ui.game_caps")), MenuChrome.hint(ok,
                     selectedEntry() instanceof MasterTitleEntry.Suspended ? UiMessages.text("hub.ui.resume_caps") : actionLabel(TitleHubNavigation.Action.START)), MenuChrome.hint(MenuChrome.detailsKey(menuInput), UiMessages.text("hub.ui.help_caps")), MenuChrome.hint(back, UiMessages.text("hub.ui.quit_caps")));
             case ACTIONS -> List.of(MenuChrome.leftRight(menuInput, UiMessages.text("hub.ui.button_caps")), MenuChrome.hint(ok, switch (focusedAction()) {
@@ -2211,9 +2468,14 @@ public class MasterTitleScreen {
             case TABS -> List.of(MenuChrome.leftRight(menuInput, UiMessages.text("hub.ui.tab_caps")), MenuChrome.hint(ok, UiMessages.text("hub.open_tab", java.util.Map.of("tab", tabLabel(navigation.tab())))),
                     MenuChrome.hint(MenuChrome.detailsKey(menuInput), UiMessages.text("hub.ui.help_caps")), MenuChrome.hint(back, UiMessages.text("hub.ui.games_caps")));
         };
+        if (!library.hasMods()) return hints;
+        var withLibrary = new ArrayList<>(hints);
+        withLibrary.set(2, MenuChrome.hint(HubMenuInput.libraryLabel(menuInput), UiMessages.text("hub.library.title")));
+        return withLibrary;
     }
 
     Rect helpHintBounds() {
+        if (library.hasMods()) return null;
         List<MenuChrome.Hint> shown = hubHints();
         MenuChrome.Hint help = shown.get(2);
         int left = 6;
@@ -2482,7 +2744,7 @@ public class MasterTitleScreen {
         Objects.requireNonNull(entry, "entry");
         int index = indexOfStock(entry);
         if (index < 0) throw new IllegalArgumentException("Stock entry is not present: " + entry.gameId);
-        setSelectedIndex(index, false);
+        setSelectedIndex(index);
         if (!isEntryAvailable(selectedEntry())) {
             throw new IllegalStateException("Selected ROM is unavailable: " + entry.gameId);
         }
@@ -2556,11 +2818,17 @@ public class MasterTitleScreen {
     }
 
     private MasterTitleEntry selectedEntry() {
-        return entries.isEmpty() ? null : entries.get(selectedIndex);
+        return libraryOpen ? library.selected() : entries.isEmpty() ? null : entries.get(selectedIndex);
     }
 
     private boolean isEntryAvailable(MasterTitleEntry entry) {
-        return entry instanceof MasterTitleEntry.Standalone || entry instanceof MasterTitleEntry.Suspended
+        if (entry instanceof MasterTitleEntry.ModGame card) {
+            if ("any".equals(card.baseGame())) return !availableStockGames().isEmpty();
+            GameEntry host = GameEntry.fromGameId(card.baseGame());
+            return host.cartridge() ? stockAvailability.getOrDefault(host, false)
+                    : hostedAvailability(MasterTitleEntry.Hosted.of(GameId.fromCode(host.gameId))).available();
+        }
+        return entry instanceof MasterTitleEntry.Library || entry instanceof MasterTitleEntry.Standalone || entry instanceof MasterTitleEntry.Suspended
                 || entry instanceof MasterTitleEntry.Stock stock
                 && stockAvailability.getOrDefault(stock.game(), false)
                 || entry instanceof MasterTitleEntry.Hosted hosted && hostedAvailability(hosted).available();
@@ -2604,7 +2872,7 @@ public class MasterTitleScreen {
     }
 
     private boolean cycleSelectedEntry(int direction) {
-        boolean changed = entries.size() > 1 && setSelectedIndex(Math.floorMod(selectedIndex + direction, entries.size()));
+        boolean changed = entries.size() > 1 && setSelectedIndex(selectedIndex + direction);
         // The newly selected card starts where it sat on the shelf and eases into the centre.
         if (changed) slide += direction * CARD_SPACING;
         return changed;
@@ -2620,10 +2888,15 @@ public class MasterTitleScreen {
         for (MasterTitleEntry entry : replacement) {
             if (!ids.add(entry.gameId())) throw new IllegalArgumentException("Duplicate title game: " + entry.gameId());
         }
-        List<MasterTitleEntry> next = withSuspendedFirst(replacement);
+        library.catalog(replacement);
+        refreshShelf();
+    }
+
+    private void refreshShelf() {
+        List<MasterTitleEntry> next = withSuspendedFirst(library.shelf());
         if (entries.equals(next)) return;
-        MasterTitleEntry selected = selectedEntry();
-        String selectedId = getSelectedGameId();
+        MasterTitleEntry selected = entries.isEmpty() ? null : entries.get(selectedIndex);
+        String selectedId = selected == null ? null : selected.gameId();
         int previousIndex = selectedIndex;
         entries = next;
         selectedIndex = Math.max(0, Math.min(previousIndex, entries.size() - 1));
@@ -2637,16 +2910,14 @@ public class MasterTitleScreen {
         if (renderer != null) refreshRomPreviews();
     }
 
-    boolean setSelectedIndex(int newIndex) { return setSelectedIndex(newIndex, true); }
-
-    private boolean setSelectedIndex(int newIndex, boolean remember) {
+    boolean setSelectedIndex(int newIndex) {
         int clamped = Math.max(0, Math.min(entries.size() - 1, newIndex));
         if (clamped == selectedIndex) {
             return false;
         }
         selectedIndex = clamped;
         previewAnimationFrame = 0;
-        if (remember && !(selectedEntry() instanceof MasterTitleEntry.Suspended)) hubProgress.rememberGame(getSelectedGameId());
+
         return true;
     }
 

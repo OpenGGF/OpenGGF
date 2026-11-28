@@ -6,7 +6,7 @@ authors:
   - OpenGGF contributors
 description: Industrial Action! Protect Robotnik's base from unionised Flickies with six badnik defenses.
 engineApiRange: ">=0.7.0 <0.8.0"
-type: patch
+type: game
 baseGame: s3k
 entrypoint: towerdefense.TowerDefenseMod
 dependencies: []

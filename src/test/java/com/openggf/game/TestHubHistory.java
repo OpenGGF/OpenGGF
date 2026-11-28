@@ -15,10 +15,12 @@ import static org.lwjgl.glfw.GLFW.*;
 class TestHubHistory {
     @TempDir Path root;
 
-    @Test void lastFocusedGameSurvivesNewConfigurationAndMissingEntryFallsBackToSonic2() {
+    @Test void lastPlayedGameSurvivesNewConfigurationAndMissingEntryFallsBackToSonic2() {
         var config = SonicConfigurationService.createStandalone(root);
-        var screen = new MasterTitleScreen(config);
+        var screen = active(config);
+        screen.setSupportNoticesForTest(new com.openggf.game.launch.GameSupportNotices(config, java.util.Map.of()));
         screen.setSelectedIndexForTest(2);
+        press(screen, GLFW_KEY_ENTER);
         screen.cleanup();
         var fresh = SonicConfigurationService.createStandalone(root);
         assertEquals("s3k", new MasterTitleScreen(fresh).getSelectedGameId());

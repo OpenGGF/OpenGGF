@@ -5,7 +5,7 @@ import java.util.Objects;
 /** Immutable master-title selection model for stock, hosted-media and standalone games, and a suspended one. */
 public sealed interface MasterTitleEntry
         permits MasterTitleEntry.Stock, MasterTitleEntry.Hosted, MasterTitleEntry.Standalone,
-        MasterTitleEntry.Suspended {
+        MasterTitleEntry.Suspended, MasterTitleEntry.ModGame, MasterTitleEntry.Library {
     String displayName();
     String menuLabel();
     String gameId();
@@ -39,6 +39,24 @@ public sealed interface MasterTitleEntry
         }
 
         @Override public String gameId() { return game.code(); }
+    }
+
+    record ModGame(String owner, String displayName, String baseGame) implements MasterTitleEntry {
+        public ModGame {
+            owner = ModKeySyntax.requireManifestId(owner);
+            Objects.requireNonNull(displayName, "displayName");
+            if (!"any".equals(baseGame)) MasterTitleScreen.GameEntry.fromGameId(baseGame);
+        }
+        @Override public String menuLabel() { return displayName; }
+        @Override public String gameId() { return owner; }
+    }
+
+    record Library(int count) implements MasterTitleEntry {
+        @Override public String displayName() {
+            return com.openggf.i18n.UiMessages.text("hub.library.count", java.util.Map.of("count", count));
+        }
+        @Override public String menuLabel() { return displayName(); }
+        @Override public String gameId() { return ""; }
     }
 
     record Standalone(String owner, String displayName, boolean continueAvailable)

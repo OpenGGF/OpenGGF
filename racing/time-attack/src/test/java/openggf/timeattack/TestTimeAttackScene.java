@@ -66,6 +66,22 @@ class TestTimeAttackScene {
 
     private Optional<String> fingerprint = Optional.empty();
     private TimeAttackScene scene;
+    private boolean quickBrowse;
+
+    @Test
+    void cardOpensBrowseAndCreatesANameWithoutTyping() {
+        quickBrowse = true;
+        fingerprint = Optional.of(FP);
+        openFresh(List.of("s2"));
+        assertEquals(TimeAttackMenuState.Mode.BROWSE, scene.entryMode());
+        assertFalse(scene.isPromptingForName());
+        String name = scene.currentDisplayName();
+        assertTrue(name.matches("Racer [0-9]+"));
+        host.close();
+        openFresh(List.of("s2"));
+        assertEquals(TimeAttackMenuState.Mode.BROWSE, scene.entryMode());
+        assertEquals(name, scene.currentDisplayName());
+    }
 
     /** Opens the scene and answers the first-run name prompt, as a new player does. */
     private void open(List<String> games) {
@@ -102,7 +118,7 @@ class TestTimeAttackScene {
         ModFaultBoundary boundary = new ModFaultBoundary(Map.of(), new ModRuntimeFindingStore(),
                 owners -> new ModStateSaveResult.Saved(), owners -> { });
         host.open(ModContextTestAccess.ownedScene("time-attack", () -> {
-                    scene = new TimeAttackScene(temp.resolve("ghosts"), temp.resolve("identity"));
+                    scene = new TimeAttackScene(temp.resolve("ghosts"), temp.resolve("identity"), "", quickBrowse);
                     return scene;
                 }, boundary),
                 new SceneServices(null, null, temp, null, () -> exits.add("game"), () -> exits.add("master"),

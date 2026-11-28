@@ -9,7 +9,7 @@ description: >-
   pillars cut from each act's ground, title cards, badniks, medals and records.
   Everything you see and hear comes from your own ROM.
 engineApiRange: ">=0.7.0 <0.8.0"
-type: patch
+type: game
 baseGame: s3k
 entrypoint: flappytails.FlappyTailsMod
 dependencies: []

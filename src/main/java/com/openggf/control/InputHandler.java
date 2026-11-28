@@ -824,6 +824,8 @@ public class InputHandler {
 				: gamepadInputManager.isRewindHeld();
 	}
 
+    boolean menuLibraryPressed() { return gamepadEdgesVisible() && mappedFrameStepPressed(); }
+
 	boolean menuDetailsPressed() { return gamepadEdgesVisible() && gamepadInputManager.isDebugModeTogglePressed(); }
 
 	void setGamepadSuppressed(boolean suppressed) {

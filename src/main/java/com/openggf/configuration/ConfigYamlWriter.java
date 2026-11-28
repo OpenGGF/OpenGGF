@@ -30,11 +30,10 @@ public final class ConfigYamlWriter {
         String[] prev = new String[0];
         boolean debugOpened = false;
 
-        for (SonicConfiguration key : ConfigCatalog.emitOrder()) {
-            if (!flat.containsKey(key.name())) {
-                continue;
-            }
-            ConfigKeyMeta m = ConfigCatalog.meta(key);
+        for (var setting : emitOrder().entrySet()) {
+            String key = setting.getKey();
+            if (!flat.containsKey(key)) continue;
+            ConfigKeyMeta m = setting.getValue();
             String[] segs = m.section().split("\\.");
             boolean isDebug = segs[0].equals("debug");
 
@@ -55,7 +54,7 @@ public final class ConfigYamlWriter {
                 sb.append(segs[d]).append(":\n");
             }
             indent(sb, segs.length);
-            sb.append(m.leaf()).append(": ").append(format(m, flat.get(key.name())));
+            sb.append(m.leaf()).append(": ").append(format(m, flat.get(key)));
             if (m.description() != null && !m.description().isBlank()) {
                 sb.append("   # ").append(m.description());
             }
@@ -63,6 +62,19 @@ public final class ConfigYamlWriter {
             prev = segs;
         }
         return sb.toString();
+    }
+
+    private static Map<String, ConfigKeyMeta> emitOrder() {
+        var settings = new java.util.LinkedHashMap<String, ConfigKeyMeta>();
+        for (SonicConfiguration key : ConfigCatalog.emitOrder()) {
+            settings.put(key.name(), ConfigCatalog.meta(key));
+            if (key == SonicConfiguration.HUB_LAST_GAME) {
+                for (HubPreference preference : HubPreference.values()) {
+                    settings.put(preference.storageKey(), preference.metadata());
+                }
+            }
+        }
+        return settings;
     }
 
     private static int commonPrefix(String[] a, String[] b) {

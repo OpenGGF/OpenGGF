@@ -208,8 +208,7 @@ public final class ModCompatibilityReporter {
         for (String candidate : preparedOwners) {
             ModDescriptor descriptor = descriptors.get(candidate);
             // Shared stock decorators are not registered into standalone modules.
-            if (descriptor != null && descriptor.manifest().type()
-                    == (standaloneScope ? ModType.STANDALONE : ModType.PATCH)
+            if (descriptor != null && (descriptor.manifest().type() == ModType.STANDALONE) == standaloneScope
                     && appliesTo(descriptor, scope)) participants.add(candidate);
         }
         return diagnostic(SUSPECTED_INCOMPATIBILITY, "MOD_CALLBACK_INTERACTION_UNKNOWN", scope + "/callback/" + owner,

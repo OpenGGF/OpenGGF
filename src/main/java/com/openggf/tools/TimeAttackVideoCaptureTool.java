@@ -88,6 +88,7 @@ public final class TimeAttackVideoCaptureTool implements AutoCloseable {
         config.setSessionOverride(SonicConfiguration.TEST_MODE_ENABLED, false);
         config.setSessionOverride(SonicConfiguration.MASTER_TITLE_SCREEN_ON_STARTUP, true);
         config.setSessionOverride(SonicConfiguration.SHOW_LEGAL_DISCLAIMER_ON_STARTUP, true);
+        config.setSessionOverride(SonicConfiguration.SETUP_GUIDE, com.openggf.game.SetupGuidePreset.SKIPPED);
         config.setSessionOverride(SonicConfiguration.DEBUG_VIEW_ENABLED, false);
         EngineContext context = new EngineContext(config, process.graphics(), audio,
                 process.roms(), process.profiler(), process.debugOverlay(),
@@ -177,9 +178,7 @@ public final class TimeAttackVideoCaptureTool implements AutoCloseable {
 
     /**
      * Ordinary fresh-start route; every transition is driven by the actual input handler. Time
-     * Attack is a bundled mod: it reaches Extras only when the engine's classpath carries the
-     * bundled-mod manifest that {@code package} writes, so a build without it fails here instead of
-     * navigating the title into some other page.
+     * Attack's card requires the classpath's bundled-mod manifest produced by packaging.
      */
     public void openTimeAttack() throws Exception {
         requireBundledTimeAttack();
@@ -192,52 +191,23 @@ public final class TimeAttackVideoCaptureTool implements AutoCloseable {
             throw new IllegalStateException("startup did not reach master title: " + engine.getCurrentGameMode());
         frames(80);
         png("02-master-title.png");
-        tap(GLFW_KEY_UP);
-        tap(GLFW_KEY_RIGHT);
-        tap(GLFW_KEY_RIGHT);
-        tap(GLFW_KEY_ENTER);
+        tap(GLFW_KEY_L);
         frames(30);
-        // Extras lists the engine's own extras before the mods' entries, so Time Attack's row
-        // depends on which ROMs are present. The list opens on its first row.
-        int row = extrasRow(extrasLabels(), TIME_ATTACK_LABEL);
-        for (int i = 0; i < row; i++) tap(GLFW_KEY_DOWN);
-        png("03-extras.png");
+        String card = engine.getMasterTitleScreen().getSelectedGameId();
+        if (!"time-attack".equals(card)) throw new IllegalStateException("Time Attack card unavailable: " + card);
+        png("03-library.png");
         tap(GLFW_KEY_ENTER);
         frames(80);
         png("04-time-attack.png");
         if (engine.getCurrentGameMode() != GameMode.MOD_SCENE)
-            throw new IllegalStateException("Extras did not open Time Attack: " + engine.getCurrentGameMode());
+            throw new IllegalStateException("The card did not open Time Attack: " + engine.getCurrentGameMode());
         Object scene = openScene();
         if (scene == null || !TIME_ATTACK_SCENE.equals(scene.getClass().getName()))
-            throw new IllegalStateException("Extras opened " + (scene == null ? "no scene" : scene.getClass().getName())
-                    + ", not Time Attack");
+            throw new IllegalStateException("Expected the Time Attack scene, got "
+                    + (scene == null ? "no scene" : scene.getClass().getName()));
     }
 
     private static final String TIME_ATTACK_SCENE = "openggf.timeattack.TimeAttackScene";
-    /** The label TimeAttackMod registers its title entry under. */
-    static final String TIME_ATTACK_LABEL = "Time Attack";
-
-    /** The row of an Extras entry by its label. */
-    static int extrasRow(java.util.List<String> labels, String label) {
-        for (int i = 0; i < labels.size(); i++) if (labels.get(i).equalsIgnoreCase(label)) return i;
-        throw new IllegalStateException("Extras has no " + label + " entry: " + labels);
-    }
-
-    /** The open title screen's Extras labels, in display order (capture inspection only). */
-    private java.util.List<String> extrasLabels() throws ReflectiveOperationException {
-        Object title = field(Engine.class, EXTRAS_OWNER_FIELD).get(engine);
-        if (title == null) throw new IllegalStateException("no title screen is open");
-        Object labels = field(title.getClass(), EXTRAS_LABELS_FIELD).get(title);
-        return ((java.util.List<?>) labels).stream().map(String::valueOf).toList();
-    }
-
-    static final String EXTRAS_OWNER_FIELD = "masterTitleScreen", EXTRAS_LABELS_FIELD = "titleEntries";
-
-    static java.lang.reflect.Field field(Class<?> owner, String name) throws NoSuchFieldException {
-        java.lang.reflect.Field field = owner.getDeclaredField(name);
-        field.setAccessible(true);
-        return field;
-    }
 
     /** The creator's open scene, read from the game loop's scene host (capture inspection only). */
     public Object openScene() throws ReflectiveOperationException {

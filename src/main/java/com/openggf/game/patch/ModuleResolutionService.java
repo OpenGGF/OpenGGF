@@ -198,11 +198,24 @@ public final class ModuleResolutionService {
     }
 
     public PreparedLaunch prepareLaunch(LaunchPolicy policy) {
+        return prepareLaunch(policy, owner -> true);
+    }
+
+    PreparedLaunch prepareLaunch(LaunchPolicy policy, Predicate<String> admitOwner) {
         Objects.requireNonNull(policy, "policy");
         PatchEnablement configuredEnablement = installedEnablement;
+        PatchEnablement scoped = new PatchEnablement() {
+            @Override public boolean isEnabled(PatchOwner owner) {
+                return configuredEnablement.isEnabled(owner)
+                        && (!(owner instanceof PatchOwner.Mod mod) || admitOwner.test(mod.modId()));
+            }
+            @Override public int orderOf(PatchOwner owner) {
+                return configuredEnablement.orderOf(owner);
+            }
+        };
         PatchPlanSource configuredSource = installedPatchPlanSource;
         PatchEnablement launchEnablement = policy == LaunchPolicy.DETERMINISTIC
-                ? builtInsOnly(configuredEnablement) : configuredEnablement;
+                ? builtInsOnly(scoped) : scoped;
         // Deterministic surfaces must not touch external mod storage at all.
         PatchPlan plan = policy == LaunchPolicy.DETERMINISTIC
                 ? PatchPlan.empty()

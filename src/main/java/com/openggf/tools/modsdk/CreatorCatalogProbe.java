@@ -166,7 +166,7 @@ public final class CreatorCatalogProbe {
     private static void writeFixture(Path jar, String id, Path compiled, long assetBytes) throws Exception {
         try (JarOutputStream out = new JarOutputStream(Files.newOutputStream(jar))) {
             out.setLevel(1);
-            String manifest = "formatVersion: 1\nid: " + id + "\nname: Catalog Probe\nversion: 1.0.0\nauthors: [OpenGGF]\ndescription: Original bounded scalability fixture.\nengineApiRange: \">=0.7.0 <0.8.0\"\ntype: patch\nbaseGame: s2\ndependencies: []\naudioOverrides: {}\nartOverrides: {}\n" + (compiled == null ? "" : "entrypoint: creatorprobe.ProbeMod\n");
+            String manifest = "formatVersion: 1\nid: " + id + "\nname: Catalog Probe\nversion: 1.0.0\nauthors: [OpenGGF]\ndescription: Original bounded scalability fixture.\nengineApiRange: \">=0.7.0 <0.8.0\"\ntype: " + (compiled == null ? "patch" : "game") + "\nbaseGame: s2\ndependencies: []\naudioOverrides: {}\nartOverrides: {}\n" + (compiled == null ? "" : "entrypoint: creatorprobe.ProbeMod\n");
             entry(out, "META-INF/openggf-mod.yaml"); out.write(manifest.getBytes(StandardCharsets.UTF_8)); out.closeEntry();
             if (compiled != null) try (var paths = Files.walk(compiled)) {
                 for (Path file : paths.filter(Files::isRegularFile).sorted().toList()) {

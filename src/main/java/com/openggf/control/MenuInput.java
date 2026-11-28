@@ -136,7 +136,7 @@ public final class MenuInput {
 
     private static boolean rawHeld(InputHandler input, int key) { return input.menuKeyDown(key); }
 
-    private static LogicalInputSnapshot mapped(InputHandler input) {
+    static LogicalInputSnapshot mapped(InputHandler input) {
         // Fixed menu keys own this frame's keyboard intent. Their gameplay bindings
         // may point elsewhere (Enter -> C, Left -> Right), so retain only the pad
         // contribution alongside them. In particular a simultaneous physical B still

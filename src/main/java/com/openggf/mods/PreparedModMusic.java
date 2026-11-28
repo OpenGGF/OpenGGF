@@ -138,9 +138,9 @@ public final class PreparedModMusic implements AutoCloseable {
                 String owner = descriptor.manifest().id();
                 if (session.failedOwners().contains(owner)) continue;
                 Map<Integer, String> declared = descriptor.manifest().audioOverrides();
-                if (declared.isEmpty()) continue;
-                if (descriptor.manifest().type() != ModType.PATCH) {
-                    throw new IllegalArgumentException("Only patch mods may override stock music");
+                if (exposedOwner != null || declared.isEmpty()) continue;
+                if (descriptor.manifest().type() == ModType.STANDALONE) {
+                    throw new IllegalArgumentException("Standalone mods cannot override stock music");
                 }
                 String baseGame = requireGameCode(descriptor.manifest().baseGame());
                 ArrayList<Map.Entry<Integer, String>> ordered = new ArrayList<>(declared.entrySet());

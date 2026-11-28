@@ -1519,9 +1519,10 @@ notice once. Developers gate or release a game in
 
 ### Hub history and game discovery
 
-The hub remembers the last focused game, falling back to Sonic 2 if that entry is
-no longer available. History is persisted under `hub.lastGame` and is maintained
-by the launcher rather than exposed as an ordinary Settings row. Use the
+The hub remembers the last played game in `hub.lastGame`, falling back to Sonic 2
+when that card is unavailable. The library manages `hub.keptModGames` and
+`hub.recentModGames` as comma-separated mod IDs. Game Setup saves games with
+external mods off as comma-separated stock game IDs in `hub.modsOff`. Use the
 paused-game card to resume an exact live session. The former `hub.continueS1*`,
 `hub.continueS2*` and `hub.continueS3k*` values are retained for configuration
 compatibility but are ignored; the hub no longer records or restarts reached acts.

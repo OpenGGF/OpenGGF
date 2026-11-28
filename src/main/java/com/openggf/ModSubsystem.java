@@ -229,6 +229,13 @@ public final class ModSubsystem implements AutoCloseable {
                 .findFirst();
     }
 
+    synchronized java.util.Optional<String> developmentGameCard() {
+        if (!DevelopmentModSource.isConfigured()) return java.util.Optional.empty();
+        return processCatalog.effective().orderedEnabled().stream().map(com.openggf.mods.ModDescriptor::manifest)
+                .filter(manifest -> manifest.type() == com.openggf.mods.ModType.GAME)
+                .map(com.openggf.mods.ModManifest::id).findFirst();
+    }
+
     private static String availableDevelopmentGame() {
         String preferred = com.openggf.game.GameServices.configuration().getString(
                 com.openggf.configuration.SonicConfiguration.DEFAULT_ROM);
@@ -361,13 +368,17 @@ public final class ModSubsystem implements AutoCloseable {
     }
 
     public void beginNormalSession(int outputRate, String gameCode) {
+        beginNormalSession(outputRate, gameCode, owner -> true);
+    }
+
+    void beginNormalSession(int outputRate, String gameCode, java.util.function.Predicate<String> owners) {
         long expectedEpoch;
         synchronized (this) {
             if (!policy.mayUseInSession()) return;
             expectedEpoch = sessionEpoch;
         }
         SessionExternalContentView replacement = Objects.requireNonNull(
-                sessionFactory.prepare(outputRate, gameCode), "prepared session view");
+                sessionFactory.prepare(outputRate, gameCode, owners), "prepared session view");
         synchronized (this) {
             if (sessionEpoch != expectedEpoch || !policy.mayUseInSession()) {
                 replacement.close();
@@ -469,26 +480,47 @@ public final class ModSubsystem implements AutoCloseable {
         Objects.requireNonNull(effective, "effective");
         Objects.requireNonNull(registry, "registry");
         Objects.requireNonNull(sfxRegistry, "sfxRegistry");
-        return (outputRate, gameCode) -> {
-            boolean cartridge = StockGameCatalog.isCartridgeCode(gameCode);
-            boolean stock = StockGameCatalog.isStockCode(gameCode);
-            boolean selectedTrack = stock ? !registry.tracks().isEmpty() : registry.tracks().stream()
-                    .anyMatch(track -> track.key().modId().equals(gameCode));
-            boolean selectedSfx = stock ? !sfxRegistry.sfx().isEmpty() : sfxRegistry.sfx().stream()
-                    .anyMatch(sfx -> sfx.key().modId().equals(gameCode));
-            if (!selectedTrack && !selectedSfx) return SessionExternalContentView.EMPTY;
-            PreparedAudioSession audio = preparer.prepare(effective, registry, sfxRegistry, outputRate,
-                    gameCode, cartridge ? loadedRom.get() : null);
-            PreparedModMusic music;
-            try {
-                music = PreparedModMusic.build(effective, registry, sfxRegistry, audio, outputRate,
-                        stock ? null : gameCode);
-            } catch (RuntimeException error) {
-                audio.close();
-                throw error;
+        return new SessionViewFactory() {
+            @Override public SessionExternalContentView prepare(int outputRate, String gameCode) {
+                return prepare(outputRate, gameCode, owner -> true);
             }
-            return SessionExternalContentView.fromPreparedMusic(music, gameCode);
+
+            @Override public SessionExternalContentView prepare(int outputRate, String gameCode,
+                    java.util.function.Predicate<String> owners) {
+                var admitted = new java.util.HashSet<String>();
+                var selected = new EffectiveModCatalog(effective.orderedEnabled().stream().filter(mod -> {
+                    var manifest = mod.manifest();
+                    return owners.test(manifest.id()) && manifest.dependencies().stream()
+                            .allMatch(dep -> admitted.contains(dep.id())) && admitted.add(manifest.id());
+                }).toList());
+                return prepareAudioForOwners(preparer, selected, registry, sfxRegistry, loadedRom,
+                        outputRate, gameCode);
+            }
         };
+    }
+
+    private static SessionExternalContentView prepareAudioForOwners(ModAudioPreparer preparer,
+            EffectiveModCatalog effective, ModTrackRegistry registry, ModSfxRegistry sfxRegistry,
+            Supplier<Rom> loadedRom, int outputRate, String gameCode) {
+        if (effective.orderedEnabled().isEmpty()) return SessionExternalContentView.EMPTY;
+        boolean cartridge = StockGameCatalog.isCartridgeCode(gameCode);
+        boolean stock = StockGameCatalog.isStockCode(gameCode);
+        boolean selectedTrack = stock ? !registry.tracks().isEmpty() : registry.tracks().stream()
+                .anyMatch(track -> track.key().modId().equals(gameCode));
+        boolean selectedSfx = stock ? !sfxRegistry.sfx().isEmpty() : sfxRegistry.sfx().stream()
+                .anyMatch(sfx -> sfx.key().modId().equals(gameCode));
+        if (!selectedTrack && !selectedSfx) return SessionExternalContentView.EMPTY;
+        PreparedAudioSession audio = preparer.prepare(effective, registry, sfxRegistry, outputRate,
+                gameCode, cartridge ? loadedRom.get() : null);
+        PreparedModMusic music;
+        try {
+            music = PreparedModMusic.build(effective, registry, sfxRegistry, audio, outputRate,
+                    stock ? null : gameCode);
+        } catch (RuntimeException error) {
+            audio.close();
+            throw error;
+        }
+        return SessionExternalContentView.fromPreparedMusic(music, gameCode);
     }
 
     /**
@@ -648,6 +680,11 @@ public final class ModSubsystem implements AutoCloseable {
     @FunctionalInterface
     public interface SessionViewFactory {
         SessionExternalContentView prepare(int outputRate, String gameCode);
+
+        default SessionExternalContentView prepare(int outputRate, String gameCode,
+                java.util.function.Predicate<String> owners) {
+            return prepare(outputRate, gameCode);
+        }
     }
 
     public interface SessionAudioBoundary {

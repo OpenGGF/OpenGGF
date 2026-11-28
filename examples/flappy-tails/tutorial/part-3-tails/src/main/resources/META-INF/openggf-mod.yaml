@@ -7,7 +7,7 @@ authors:
 description: >-
   Checkpoint 3 of the Flappy Tails tutorial: Tails drawn from your ROM, rotor spinning.
 engineApiRange: ">=0.7.0 <0.8.0"
-type: patch
+type: game
 baseGame: s3k
 entrypoint: flappytails.FlappyTailsMod
 dependencies: []

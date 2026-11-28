@@ -516,8 +516,18 @@ public class SonicConfigurationService {
 
 	/** Publish a validated settings patch before making it visible to readers. */
 	void applySettings(Map<SonicConfiguration, Object> changes) throws IOException {
+		applySettings(changes, Map.of());
+	}
+
+	String hubPreference(HubPreference preference) {
+		return java.util.Objects.toString(config.get(preference.storageKey()), "");
+	}
+
+	void applySettings(Map<SonicConfiguration, Object> changes, Map<HubPreference, String> preferences)
+			throws IOException {
 		Map<String, Object> candidate = new HashMap<>(config);
 		changes.forEach((key, value) -> candidate.put(key.name(), value));
+		preferences.forEach((key, value) -> candidate.put(key.storageKey(), value));
         // The scope selector replaces the old UI switch. Publish its legacy
         // launch/tool gate atomically without showing a duplicate unsaved row.
         if (changes.containsKey(SonicConfiguration.REWIND_BUDGET_SCOPE))

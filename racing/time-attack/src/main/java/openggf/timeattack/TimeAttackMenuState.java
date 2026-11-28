@@ -475,6 +475,8 @@ public final class TimeAttackMenuState {
         return focusedRow;
     }
 
+    void selectBrowse() { modeIndex = Mode.BROWSE.ordinal(); }
+
     public Mode mode() {
         return Mode.values()[modeIndex];
     }

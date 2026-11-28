@@ -37,7 +37,8 @@ class TestSonicCdModRuntime {
     }
 
     @Test void anyPlanPublishesCdAndNoOtherGamesDecorators() {
-        var context = new ModContext("shared", "any", ModAssetRoot.forTests("shared"));
+        var context = new ModContext("shared", "any", ModAssetRoot.forTests("shared"), null,
+                com.openggf.mods.ModType.GAME, com.openggf.game.save.SavePaths.root());
         context.registerStartupScene(() -> new com.openggf.mods.scene.ModScene() {
             public void enter(com.openggf.mods.scene.SceneContext ctx) {}
             public void update(com.openggf.mods.scene.SceneContext ctx) {}

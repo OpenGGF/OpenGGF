@@ -1,6 +1,8 @@
 package com.openggf.tools;
 
 import com.openggf.configuration.SonicConfiguration;
+import com.openggf.configuration.ConfigurationPersistence;
+import com.openggf.configuration.HubPreference;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
 import com.openggf.game.MasterTitleEntry;
@@ -33,6 +35,8 @@ import static org.lwjgl.system.MemoryUtil.NULL;
  * REV01 file) and write only to each scene's scratch configuration; the scan-limit scene scans a scratch tree
  * nine folders deep with one unreadable folder, so the real walker reports both and finds no game (no ROM is
  * copied or linked into it). On macOS run with {@code -XstartOnFirstThread}.
+ * Set `openggf.capture.scenePrefix=checkpoint-` for the player-model prototype. The extra
+ * catalogue is authored for UI review, with real ROM availability for the stock cards.
  * Originating task: the 2026-10 master title redesign (branch
  * {@code feature/ai-master-title-redesign}); suspended scenes from the hold-Escape suspend task.
  */
@@ -56,6 +60,14 @@ public final class MasterTitleCaptureTool {
         int up = GLFW_KEY_UP, down = GLFW_KEY_DOWN, left = GLFW_KEY_LEFT, right = GLFW_KEY_RIGHT;
         int enter = GLFW_KEY_ENTER, esc = GLFW_KEY_ESCAPE;
         List<Scene> scenes = List.of(
+                new Scene("checkpoint-no-mods", List.of(), 40),
+                new Scene("checkpoint-shelf", List.of(), 40),
+                new Scene("checkpoint-library-all", List.of(GLFW_KEY_L), 20),
+                new Scene("checkpoint-library-sonic", List.of(GLFW_KEY_L, up, up, right, down), 20),
+                new Scene("checkpoint-library-mods", List.of(GLFW_KEY_L, up, up, right, right, down), 20),
+                new Scene("checkpoint-stock-chip", List.of(), 40),
+                new Scene("checkpoint-game-setup", List.of(GLFW_KEY_TAB), 20),
+                new Scene("checkpoint-missing-rom", List.of(), 40),
                 new Scene("01-hub", List.of(), 40),
                 new Scene("02-hub-sliding", List.of(right), 2),
                 new Scene("03-hub-next-game", List.of(right), 40),
@@ -226,7 +238,33 @@ public final class MasterTitleCaptureTool {
                             com.openggf.game.launch.LaunchToggle.ON, "NATIVE_4_3", "sonic", "tails"));
                 }
                 MasterTitleScreen screen;
-                if (scene.name().contains("standalone")) {
+                if (scene.name().startsWith("checkpoint-")) {
+                    var entries = new java.util.ArrayList<MasterTitleEntry>();
+                    for (var game : MasterTitleScreen.GameEntry.values()) {
+                        entries.add(game.cartridge() ? new MasterTitleEntry.Stock(game)
+                                : MasterTitleEntry.Hosted.of(com.openggf.game.GameId.fromCode(game.gameId)));
+                    }
+                    boolean modCards = !scene.name().equals("checkpoint-no-mods")
+                            && !scene.name().equals("checkpoint-stock-chip")
+                            && !scene.name().equals("checkpoint-game-setup");
+                    if (modCards) entries.addAll(List.of(
+                            new MasterTitleEntry.ModGame("time-attack", "Time Attack", "any"),
+                            new MasterTitleEntry.ModGame("flappy-tails", "Flappy Tails", "s3k"),
+                            new MasterTitleEntry.ModGame("eggmans-sky", "Eggman's Sky", "s3k"),
+                            new MasterTitleEntry.ModGame("sonic-survivors", "Sonic Survivors", "s2"),
+                            new MasterTitleEntry.ModGame("act-practice", "Act Practice", "any"),
+                            new MasterTitleEntry.ModGame("starpost-valley", "Starpost Valley", "s3k"),
+                            new MasterTitleEntry.ModGame("robotnik-tower-defense", "Robotnik Tower Defense", "s2")));
+                    if (scene.name().equals("checkpoint-shelf"))
+                        ConfigurationPersistence.apply(config, Map.of(), Map.of(HubPreference.KEPT_MOD_GAMES,
+                                "time-attack,flappy-tails,eggmans-sky,sonic-survivors,starpost-valley,act-practice"));
+                    if (modCards) config.setConfigValue(SonicConfiguration.HUB_LAST_GAME,
+                            scene.name().equals("checkpoint-shelf") ? "act-practice" : "flappy-tails");
+                    screen = new MasterTitleScreen(config, new com.openggf.game.launch.LaunchProfileStore(config), entries);
+                    screen.setOnlineGameCard("time-attack");
+                    config.setConfigValue(SonicConfiguration.SETUP_GUIDE, com.openggf.game.SetupGuidePreset.SKIPPED);
+                    screen.setSetupGuideSession(new com.openggf.game.SetupGuideSession(true), -1);
+                } else if (scene.name().contains("standalone")) {
                     var entries = new java.util.ArrayList<MasterTitleEntry>();
                     for (var game : MasterTitleScreen.GameEntry.values()) if (game.cartridge()) entries.add(new MasterTitleEntry.Stock(game));
                     entries.add(new MasterTitleEntry.Standalone("sample", "Sample game", false));
@@ -239,9 +277,10 @@ public final class MasterTitleCaptureTool {
                     screen.setEditorProjectsOpenHandler(() -> { });
                     com.openggf.game.TitleContentImportAccess.bind(screen, () -> { });
                 }
-                screen.setEnabledModsByGame(Map.of(MasterTitleScreen.GameEntry.SONIC_2, scene.name().contains("overflow")
+                if (!scene.name().startsWith("checkpoint-") || scene.name().equals("checkpoint-stock-chip")
+                        || scene.name().equals("checkpoint-game-setup")) screen.setEnabledModsByGame(Map.of(MasterTitleScreen.GameEntry.SONIC_2, scene.name().contains("overflow")
                         ? java.util.stream.IntStream.rangeClosed(1, 12).mapToObj(i -> "Mod " + i).toList()
-                        : List.of("Widescreen+", "HUD Tweaks")));
+                        : List.of("Widescreen+", "Extra Lives")));
                 if (paused != null && scene.name().contains("paused")) {
                     screen.setSuspendedGame(new MasterTitleEntry.Suspended(
                                     new MasterTitleEntry.Stock(MasterTitleScreen.GameEntry.SONIC_2), "Emerald Hill, Act 1", true),
@@ -251,6 +290,8 @@ public final class MasterTitleCaptureTool {
                 InputHandler input = new InputHandler(com.openggf.InputBindingFactory.supplier(config), pad::get);
                 for (int i = 0; i < 20; i++) screen.update(input);
                 if (scene.name().contains("standalone")) screen.setSelectedIndexForTest(3);
+                if (scene.name().equals("checkpoint-missing-rom"))
+                    screen.setRomAvailableForTest(MasterTitleScreen.GameEntry.SONIC_3K, false);
                 if (scene.name().contains("not-found")) screen.showRomLoadError("s2");
                 final long seqWindow = window;
                 Sequence shoot = name -> {
