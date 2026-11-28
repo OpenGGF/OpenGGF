@@ -2,7 +2,6 @@ package com.openggf.game;
 
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
-import com.openggf.game.internal.HostedGameMedia.MediaKind;
 import com.openggf.game.soniccd.CdReleaseVariant;
 import com.openggf.game.soniccd.media.SyntheticProgramDisc;
 import org.junit.jupiter.api.Assumptions;
@@ -47,7 +46,7 @@ class TestSetupGuideLibrary {
         Path usa = SyntheticProgramDisc.write(dir.resolve("Games/Sonic CD"), CdReleaseVariant.USA);
         var findings = SetupGuideLibrary.scan(dir.resolve("Games"), GAMES);
         var cd = findings.best("scd").orElseThrow();
-        assertEquals(MediaKind.READY, cd.kind());
+        assertEquals(SetupGuideLibrary.Status.FOUND, cd.status());
         var plan = SetupGuideLibrary.plan(findings, GAMES, library(Map.of("s2", dir.resolve("s2.gen"))));
         assertEquals(Map.of(SonicConfiguration.SONIC_CD_DISC, usa.toAbsolutePath().normalize().toString()), plan.writes(),
                 "only the new disc; the ROM folder stays because a game already works");
@@ -57,7 +56,7 @@ class TestSetupGuideLibrary {
     @Test void problemDiscsAreReportedByKindAndWriteNothing() throws Exception {
         SyntheticProgramDisc.write(dir.resolve("eu"), CdReleaseVariant.EUROPE);
         var findings = SetupGuideLibrary.scan(dir, GAMES);
-        assertEquals(MediaKind.OTHER_RELEASE, findings.best("scd").orElseThrow().kind());
+        assertEquals(SetupGuideLibrary.Status.WRONG_RELEASE, findings.best("scd").orElseThrow().status());
         var current = library(Map.of());
         assertEquals(SetupGuideLibrary.Status.WRONG_RELEASE, SetupGuideLibrary.status(game("scd"), current, findings, false));
         assertTrue(SetupGuideLibrary.plan(findings, GAMES, current).writes().isEmpty());
@@ -96,16 +95,49 @@ class TestSetupGuideLibrary {
 
     @Test void anUnrelatedFileIsNotAGame() throws Exception {
         Path text = Files.writeString(dir.resolve("notes.cue"), "REM not a disc\n");
-        assertTrue(SetupGuideLibrary.locate(text, GAMES).findings().stream().allMatch(f -> f.kind() == MediaKind.UNREADABLE),
+        assertTrue(SetupGuideLibrary.locate(text, GAMES).findings().stream().allMatch(f -> f.status() == SetupGuideLibrary.Status.UNREADABLE),
                 "a malformed sheet is reported as unreadable, never as a game");
         Path other = Files.write(dir.resolve("other.bin"), new byte[4096]);
         assertTrue(SetupGuideLibrary.locate(other, GAMES).findings().isEmpty());
+    }
+
+    @Test void unknownCartridgeRevisionIsWarnedAboutAndStillUsable() throws Exception {
+        Path rom = TestMenuGameOnboarding.image(dir, "unknown.gen", 0x100000, "SONIC THE HEDGEHOG 2");
+        var findings = SetupGuideLibrary.locate(rom, GAMES);
+        var before = library(Map.of());
+        var finding = findings.best("s2").orElseThrow();
+        assertEquals(SetupGuideLibrary.Status.UNVERIFIED, finding.status());
+        assertTrue(finding.usable());
+        assertEquals(SetupGuideLibrary.Status.UNVERIFIED, SetupGuideLibrary.status(game("s2"), before, findings, false));
+        var config = SonicConfigurationService.createStandalone(dir);
+        SetupGuideLibrary.apply(config, SetupGuideLibrary.plan(findings, GAMES, before));
+        var current = SetupGuideLibrary.current(config);
+        assertTrue(current.available(game("s2")));
+        assertEquals(SetupGuideLibrary.Status.UNVERIFIED, SetupGuideLibrary.status(game("s2"), current, null, true));
+        assertEquals(SetupGuideLibrary.Status.UNVERIFIED,
+                SetupGuideLibrary.status(game("s2"), before, SetupGuideLibrary.scan(dir, GAMES), false));
+    }
+
+    @Test void locatingOrScanningAnUnsupportedFormatGivesAnActionableMessage() throws Exception {
+        Path zip = Files.write(dir.resolve("Game.ZIP"), new byte[] {0x50, 0x4b, 3, 4});
+        Path sevenZip = Files.write(dir.resolve("Game.7z"), new byte[] {0x37, 0x7a, (byte) 0xbc, (byte) 0xaf, 0x27, 0x1c});
+        Path smd = Files.write(dir.resolve("Game.smd"), new byte[0x80200]);
+        String archiveAdvice = com.openggf.i18n.UiMessages.text("menu.onboarding.compressed_archive");
+        String smdAdvice = com.openggf.i18n.UiMessages.text("menu.onboarding.interleaved_smd");
+        assertEquals(archiveAdvice, SetupGuideLibrary.locate(zip, GAMES).formatNotice());
+        assertEquals(archiveAdvice, SetupGuideLibrary.locate(sevenZip, GAMES).formatNotice());
+        assertEquals(smdAdvice, SetupGuideLibrary.locate(smd, GAMES).formatNotice());
+        var scan = SetupGuideLibrary.scan(dir, GAMES);
+        assertEquals(archiveAdvice + "\n" + smdAdvice, scan.formatNotice());
+        assertTrue(scan.findings().isEmpty());
     }
 
     @Test void aRealCartridgeIsIdentifiedByContentAndSetsTheRomFolderOnlyForAnEmptyLibrary() throws Exception {
         String rom = System.getProperty("sonic2.rom.path");
         Assumptions.assumeTrue(rom != null && Files.isRegularFile(Path.of(rom)), "sonic2.rom.path not set");
         var findings = SetupGuideLibrary.locate(Path.of(rom), GAMES);
+        assertEquals(SetupGuideLibrary.Status.READY,
+                SetupGuideLibrary.status(game("s2"), library(Map.of()), findings, false));
         assertEquals(Set.of("s2"), Set.copyOf(findings.findings().stream().map(SetupGuideLibrary.Finding::gameId).toList()));
         var empty = SetupGuideLibrary.plan(findings, GAMES, library(Map.of()));
         assertEquals(Path.of(rom).toAbsolutePath().normalize().getParent().toString(),

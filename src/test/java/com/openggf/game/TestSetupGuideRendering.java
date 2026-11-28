@@ -37,6 +37,7 @@ import java.util.logging.Logger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.opengl.GL11.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyFloat;
@@ -59,6 +60,53 @@ class TestSetupGuideRendering {
     private record Draw(String text, int x, int y, float scale, TextLanguage language) { }
 
     @AfterEach void english() { UiMessages.selectLanguage("en"); }
+
+    @Test void firstRunWarningsAndDisclaimerSettingFitTheNativeFrame() throws Exception {
+        UiMessages.selectLanguage("en");
+        Path install = Files.createDirectory(dir.resolve("install"));
+        Path games = Files.createDirectory(dir.resolve("downloads"));
+        TestMenuGameOnboarding.image(games, "unverified.gen", 0x100000, "SONIC THE HEDGEHOG 2");
+        Files.write(games.resolve("game.zip"), new byte[] {0x50, 0x4b, 3, 4});
+        Files.write(games.resolve("game.smd"), new byte[0x80200]);
+        var config = SonicConfigurationService.createStandalone(install);
+        var guide = new MenuSetupGuide(config, SetupGuideSession.forConfiguration(config), new MenuSetupGuide.Host() {
+            @Override public boolean onlineAvailable() { return false; }
+            @Override public void libraryChanged() { }
+        }, false);
+        guide.acceptFindings(SetupGuideLibrary.scan(games, SetupGuideLibrary.games()));
+
+        int width = 320;
+        try (var context = PresentationOffscreenTestContext.openConfigured(width, 224,
+                PresentationOffscreenTestContext.LegacyProfile.CORE_41)) {
+            var renderer = new TexturedQuadRenderer();
+            var font = new MenuPixelFont();
+            try {
+                renderer.init();
+                renderer.setProjectionMatrix(new Matrix4f().ortho(0, width, 0, 224, -1, 1).get(new float[16]));
+                font.init(null, renderer);
+
+                clear(width);
+                guide.render(font, width);
+                assertTrue(guide.gamesLayout().bottom() < MenuChrome.FOOTER_Y);
+                export("first-run-your-games", width);
+
+                var settings = new EngineSettingsScreen(config, font);
+                var input = new InputHandler(InputBindingFactory.supplier(config), List::of);
+                for (int key : new int[] {GLFW_KEY_UP, GLFW_KEY_RIGHT, GLFW_KEY_RIGHT, GLFW_KEY_RIGHT,
+                        GLFW_KEY_DOWN, GLFW_KEY_DOWN, GLFW_KEY_DOWN}) {
+                    input.handleKeyEvent(key, GLFW_PRESS);
+                    input.refreshLogicalSnapshot(); settings.update(input); input.update();
+                    input.handleKeyEvent(key, GLFW_RELEASE);
+                    input.refreshLogicalSnapshot(); settings.update(input); input.update();
+                }
+                assertEquals(SonicConfiguration.SHOW_LEGAL_DISCLAIMER_ON_STARTUP, settings.selectedForTest());
+                clear(width);
+                settings.render(width);
+                export("first-run-startup-disclaimer", width);
+                assertEquals(GL_NO_ERROR, glGetError());
+            } finally { font.cleanup(); renderer.cleanup(); }
+        }
+    }
 
     @Test void everyStateFitsTheFrameInEveryLanguageAtBothWidths() throws Exception {
         Path cd = SyntheticProgramDisc.write(dir.resolve("cd"), CdReleaseVariant.USA);

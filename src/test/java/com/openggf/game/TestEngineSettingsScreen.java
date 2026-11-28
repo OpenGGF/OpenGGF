@@ -733,6 +733,23 @@ class TestEngineSettingsScreen {
     }
 
     @Test
+    void startupDisclaimerIsOnByDefaultAndCanBeToggledAndSavedFromGameplaySettings() {
+        Fixture f = new Fixture();
+        f.tab(GAMEPLAY);
+        assertEquals(TITLE_SCREEN_ON_STARTUP, f.screen.selectedForTest());
+        assertTrue(f.texts().contains("Show the startup disclaimer"));
+        f.focus(SHOW_LEGAL_DISCLAIMER_ON_STARTUP);
+        assertTrue(f.config.getBoolean(SHOW_LEGAL_DISCLAIMER_ON_STARTUP));
+        f.press(GLFW_KEY_RIGHT);
+        assertEquals("Off", EngineSettingLabels.value(SHOW_LEGAL_DISCLAIMER_ON_STARTUP, "false"));
+        assertTrue(f.config.getBoolean(SHOW_LEGAL_DISCLAIMER_ON_STARTUP), "the change is still a draft");
+        f.press(GLFW_KEY_ESCAPE);
+        f.press(GLFW_KEY_ENTER);
+        assertTrue(f.screen.consumeApplied());
+        assertFalse(SonicConfigurationService.createStandalone(directory).getBoolean(SHOW_LEGAL_DISCLAIMER_ON_STARTUP));
+    }
+
+    @Test
     void rewindBudgetControlsFollowScopeAndRemainEditableWhileOff() {
         Fixture f = new Fixture();
         f.tab(GAMEPLAY);

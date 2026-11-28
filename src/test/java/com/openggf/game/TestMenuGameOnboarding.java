@@ -4,7 +4,9 @@ import com.openggf.InputBindingFactory;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
+import com.openggf.data.PhysicalImage;
 import com.openggf.data.RomGame;
+import com.openggf.data.RomImageCatalogue.Part;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -46,29 +48,30 @@ class TestMenuGameOnboarding {
     }
 
     @Test void noticeSaysOnlyWhatTheScanMissedForAllSomeAndNoGames() {
-        var all = java.util.Map.of(RomGame.S1, directory, RomGame.S2, directory, RomGame.S3K, directory);
-        assertEquals(RomGame.values().length, all.size(), "fixture covers every supported game");
-        var some = java.util.Map.of(RomGame.S2, directory);
-        java.util.Map<RomGame, Path> none = new java.util.EnumMap<>(RomGame.class);
+        var all = new java.util.EnumMap<RomGame, Part>(RomGame.class);
+        var stub = PhysicalImage.ofBytes(directory.resolve("fixture.gen"), new byte[1]);
+        for (RomGame game : RomGame.values()) all.put(game, new Part(game.identity(), stub, 0, 1));
+        var some = java.util.Map.of(RomGame.S2, all.get(RomGame.S2));
+        java.util.Map<RomGame, Part> none = new java.util.EnumMap<>(RomGame.class);
         for (boolean limit : new boolean[] {false, true}) for (boolean unreadable : new boolean[] {false, true})
-            assertNull(new MenuGameOnboarding.DiscoveryResult(all, limit, unreadable).notice(),
+            assertNull(new MenuGameOnboarding.DiscoveryResult(all, limit, unreadable, java.util.Set.of()).notice(),
                     "every game found: nothing skipped can matter (limit " + limit + ", unreadable " + unreadable + ")");
-        assertNull(new MenuGameOnboarding.DiscoveryResult(some, false, false).notice());
-        assertNull(new MenuGameOnboarding.DiscoveryResult(none, false, false).notice());
+        assertNull(new MenuGameOnboarding.DiscoveryResult(some, false, false, java.util.Set.of()).notice());
+        assertNull(new MenuGameOnboarding.DiscoveryResult(none, false, false, java.util.Set.of()).notice());
         assertEquals("Stopped early; scan the folder with the rest",
-                new MenuGameOnboarding.DiscoveryResult(some, true, false).notice());
+                new MenuGameOnboarding.DiscoveryResult(some, true, false, java.util.Set.of()).notice());
         assertEquals("Stopped early; scan the folder that holds them",
-                new MenuGameOnboarding.DiscoveryResult(none, true, false).notice());
+                new MenuGameOnboarding.DiscoveryResult(none, true, false, java.util.Set.of()).notice());
         assertEquals("Skipped files that could not be read; check access to them",
-                new MenuGameOnboarding.DiscoveryResult(some, false, true).notice());
+                new MenuGameOnboarding.DiscoveryResult(some, false, true, java.util.Set.of()).notice());
         assertEquals("Some files could not be read; check access to them",
-                new MenuGameOnboarding.DiscoveryResult(none, false, true).notice());
+                new MenuGameOnboarding.DiscoveryResult(none, false, true, java.util.Set.of()).notice());
         assertEquals("Stopped early, skipped unreadable files; scan the rest",
-                new MenuGameOnboarding.DiscoveryResult(some, true, true).notice());
+                new MenuGameOnboarding.DiscoveryResult(some, true, true, java.util.Set.of()).notice());
         assertEquals("Stopped early, skipped unreadable files; scan their folder",
-                new MenuGameOnboarding.DiscoveryResult(none, true, true).notice());
+                new MenuGameOnboarding.DiscoveryResult(none, true, true, java.util.Set.of()).notice());
         for (var games : List.of(some, none)) for (boolean limit : new boolean[] {false, true}) for (boolean unreadable : new boolean[] {false, true}) {
-            String notice = new MenuGameOnboarding.DiscoveryResult(games, limit, unreadable).notice();
+            String notice = new MenuGameOnboarding.DiscoveryResult(games, limit, unreadable, java.util.Set.of()).notice();
             if (notice != null) assertTrue(MenuChrome.compactWidth(notice) <= 300, "fits whole at 320: " + notice);
         }
     }
@@ -252,7 +255,7 @@ class TestMenuGameOnboarding {
     private static void tick(MenuGameOnboarding page, InputHandler input) {
         input.refreshLogicalSnapshot(); page.update(input); input.update();
     }
-    private static Path image(Path folder, String name, int size, String title) throws IOException {
+    static Path image(Path folder, String name, int size, String title) throws IOException {
         byte[] bytes = new byte[size]; putHeader(bytes, 0, title);
         return Files.write(folder.resolve(name), bytes).toAbsolutePath().normalize();
     }

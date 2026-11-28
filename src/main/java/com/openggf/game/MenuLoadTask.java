@@ -1,6 +1,7 @@
 package com.openggf.game;
 
 import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
 
 /** One cancellable background read. Only the owning UI thread consumes its result. */
@@ -14,6 +15,6 @@ final class MenuLoadTask<T> {
     }
 
     boolean done() { return task.isDone(); }
-    T result() throws Exception { return task.get(); }
+    T result() throws ExecutionException, InterruptedException { return task.get(); }
     void cancel() { task.cancel(true); worker.interrupt(); }
 }

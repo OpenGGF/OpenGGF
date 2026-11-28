@@ -39,8 +39,17 @@ class TestSetupGuideSession {
     }
 
     @Test void anUpgradeIsAConfigurationFileThatExistedBeforeTheRun() throws Exception {
-        assertFalse(SetupGuideSession.forConfiguration(SonicConfigurationService.createStandalone(dir)).existingInstall());
+        try (var reference = getClass().getResourceAsStream("/config.yaml")) {
+            Files.copy(reference, dir.resolve("config.yaml.example"));
+        }
+        var firstRun = SonicConfigurationService.createStandalone(dir);
+        var fresh = SetupGuideSession.forConfiguration(firstRun);
+        firstRun.ensureConfigFileExists();
+        assertFalse(fresh.existingInstall(), "The extracted reference and subsequent bootstrap are a fresh install");
+        assertTrue(fresh.claimAutomaticOpen(firstRun));
+
         Files.writeString(dir.resolve("config.yaml"), "display:\n  aspect: \"NATIVE_4_3\"\n");
-        assertTrue(SetupGuideSession.forConfiguration(SonicConfigurationService.createStandalone(dir)).existingInstall());
+        var existing = SonicConfigurationService.createStandalone(dir);
+        assertTrue(SetupGuideSession.forConfiguration(existing).existingInstall());
     }
 }

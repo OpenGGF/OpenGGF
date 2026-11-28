@@ -115,7 +115,7 @@ public final class HubMusicController implements AutoCloseable {
         var source = GameModuleRegistry.createStockMenuAudio(selected);
         GameAudioProfile profile = source.profile();
         int titleId = source.titleMusicId();
-        try (Rom rom = Rom.fromReader(RomImageCatalogue.forCurrentWorkingDirectory(config).open(identity), "hub " + gameId)) {
+        try (Rom rom = Rom.fromReader(RomImageCatalogue.forConfiguration(config).open(identity), "hub " + gameId)) {
             SmpsLoader loader = profile.createSmpsLoader(rom);
             var music = loader.loadMusic(titleId);
             var dac = loader.loadDacData();

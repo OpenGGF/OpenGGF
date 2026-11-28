@@ -6,7 +6,6 @@ import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.GamepadStateSource;
 import com.openggf.InputBindingFactory;
 import com.openggf.control.InputHandler;
-import com.openggf.game.internal.HostedGameMedia.MediaKind;
 import com.openggf.game.soniccd.CdReleaseVariant;
 import com.openggf.game.soniccd.media.SyntheticProgramDisc;
 import org.junit.jupiter.api.Test;
@@ -271,7 +270,7 @@ class TestMenuSetupGuide {
         var europe = SyntheticProgramDisc.write(dir.resolve("eu"), CdReleaseVariant.EUROPE);
         guide.acceptFindings(SetupGuideLibrary.locate(europe, SetupGuideLibrary.games()));
         assertEquals(SetupGuideLibrary.Status.WRONG_RELEASE, guide.status(cd));
-        assertEquals(MediaKind.OTHER_RELEASE, SetupGuideLibrary.locate(europe, SetupGuideLibrary.games()).findings().getFirst().kind());
+        assertEquals(SetupGuideLibrary.Status.WRONG_RELEASE, SetupGuideLibrary.locate(europe, SetupGuideLibrary.games()).findings().getFirst().status());
     }
 
     @Test void everyStepRendersWithoutTruncationWarningsAt320And400() {

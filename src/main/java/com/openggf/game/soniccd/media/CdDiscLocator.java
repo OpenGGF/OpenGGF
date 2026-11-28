@@ -3,6 +3,7 @@ package com.openggf.game.soniccd.media;
 import com.openggf.game.internal.HostedGameMedia;
 import com.openggf.game.internal.HostedGameMedia.MediaKind;
 
+import com.openggf.configuration.ConfigurationPersistence;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.data.cd.DiscImage;
@@ -28,8 +29,8 @@ import java.util.stream.Stream;
  * <p>Where it looks, first match wins: the {@value CdHostedMedia#MEDIA_ROOT_PROPERTY} system property (tests
  * and tools: {@code <root>/USA/<disc>.cue} or {@code .chd}); the {@value CdHostedMedia#DISC_PATH_PROPERTY} system
  * property (tests and tools: the sheet or CHD itself); the {@code roms.soniccd} key ({@code SONIC_CD_DISC}:
- * the sheet's or CHD's path, relative to the working directory); when that is blank, the ROM folder
- * ({@code roms.directory}, default the working directory) and its sub-folders two levels down, CUE sheets before
+ * the sheet's or CHD's path, relative to the active config file); when that is blank, the ROM folder
+ * ({@code roms.directory}, default the config directory) and its sub-folders two levels down, CUE sheets before
  * CHDs. A named image that
  * is not the USA disc is refused, not replaced by the folder search. Probing parses each image's layout and reads
  * 512 bytes of its data track; nothing is hashed here. Whole-disc verification happens when the game opens it ({@link CdHostedMedia}).
@@ -62,8 +63,8 @@ public final class CdDiscLocator {
         String configured = config == null ? null : config.getString(SonicConfiguration.SONIC_CD_DISC);
         if (configured != null && !configured.isBlank()) {
             // roms.soniccd names the sheet or CHD itself, as roms.sonic1/2/3k name an image: resolved against the
-            // working directory, and refused (never replaced by the folder search) when it is not the USA disc.
-            Path disc = workingDirectory().resolve(configured.trim()).normalize();
+            // config directory, and refused (never replaced by the folder search) when it is not the USA disc.
+            Path disc = ConfigurationPersistence.configDirectory(config).resolve(configured.trim()).normalize();
             if (!Files.isRegularFile(disc)) {
                 return new Result(Optional.empty(), "roms.soniccd names " + disc + ", which is not a file. Set it to "
                         + "the Sonic CD (USA) disc's .cue sheet or .chd, or leave it blank to search the ROM folder.");
@@ -77,9 +78,9 @@ public final class CdDiscLocator {
         return identify(discsUnder(folder), folder.toString());
     }
 
-    /** The folder the cartridge ROM scan uses: {@code roms.directory}, resolved against the working directory. */
+    /** The folder the cartridge ROM scan uses: {@code roms.directory}, resolved against the active config file. */
     static Path romFolder(SonicConfigurationService config) {
-        Path base = workingDirectory();
+        Path base = config == null ? workingDirectory() : ConfigurationPersistence.configDirectory(config);
         String directory = config == null ? null : config.getString(SonicConfiguration.ROMS_DIRECTORY);
         Path path = Path.of(directory == null || directory.isBlank() ? "." : directory);
         return (path.isAbsolute() ? path : base.resolve(path)).normalize();

@@ -40,6 +40,20 @@ class TestRomImageCatalogue {
     private static final PhysicalImage KIS2 = physical("sk-s2.gen", image(0x340000, (byte) 0x22, SK_TITLE, S2_TITLE));
 
     @Test
+    void explicitAndScannedPathsUseTheActiveConfigDirectory(@TempDir Path directory) throws IOException {
+        var config = SonicConfigurationService.createStandalone(directory);
+        Path roms = Files.createDirectory(directory.resolve("cartridges"));
+        Path explicit = Files.write(roms.resolve("one.gen"), image(S1_SIZE, S1_TITLE, null));
+        Path scanned = Files.write(roms.resolve("two.bin"), image(S2_SIZE, S2_TITLE, null));
+        config.setConfigValue(SonicConfiguration.SONIC_1_ROM, "cartridges/one.gen");
+        config.setConfigValue(SonicConfiguration.ROMS_DIRECTORY, "cartridges");
+
+        var catalogue = RomImageCatalogue.forConfiguration(config);
+        assertEquals(explicit, catalogue.resolve(RomIdentity.S1).orElseThrow().wholeImagePath().orElseThrow());
+        assertEquals(scanned, catalogue.resolve(RomIdentity.S2).orElseThrow().wholeImagePath().orElseThrow());
+    }
+
+    @Test
     void firstImageInDirectoryOrderWinsWhenNothingIsVerified() {
         RomImageCatalogue catalogue = new RomImageCatalogue(List.of(S1_B, S1_A), Map.of(), false);
         Resolution resolution = catalogue.resolve(RomIdentity.S1).orElseThrow();

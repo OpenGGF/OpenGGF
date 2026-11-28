@@ -20,14 +20,21 @@ Find your symptom, then follow its section.
 REV00 or REV01, and the Sonic 3 & Knuckles lock-on image. Each revision is selected
 from its own bytes. Other editions and modified images remain unverified and can
 load data from the wrong addresses, which shows as crashes, garbled graphics or a
-black screen. Compare your file's CRC32 or SHA-1 with that table.
+black screen. If the setup guide shows **Unrecognised version**, open **Details**
+for a recommended release or compare your file's CRC32 or SHA-1 with that table.
 
 **Missing ROM file.** Current development builds keep missing games on the hub
 and offer **Locate ROM** or **Add your games → Scan a folder**. Files may remain
-in their original locations. The default scan reads the working directory;
-`roms.directory` changes it. A non-default explicit path must exist, so correct
+in their original locations. The default scan reads the folder holding
+`config.yaml`. Relative ROM and Sonic CD paths, including `roms.directory`,
+start in that folder, even if you launched OpenGGF from another directory.
+A non-default explicit path must exist, so correct
 or clear a stale override in **Settings → Files** or `config.yaml`. See
 [Configuration](configuration.md#how-do-i-use-different-rom-filenames).
+
+**Compressed or interleaved cartridge file.** Extract ZIP and 7z archives, then
+point OpenGGF to the `.gen`, `.bin` or `.md` file inside. For an interleaved
+`.smd`, use a plain `.bin` or `.gen` dump instead.
 
 **Java version too old.** JAR builds require Java 25 or later; native release
 executables do not need a separate Java installation. Run `java -version` to

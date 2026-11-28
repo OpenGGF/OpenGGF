@@ -216,7 +216,7 @@ lefty flip, reduced flashes and highway speed are also player-specific. Network
 host/join is opened only by the Direct-connect menu, using an explicit IP or
 localhost and port. See [Sitar Hero controls](examples/sitar-hero/README.md#controls).
 
-Paths are relative to the working directory (where the JAR is launched).
+Relative ROM and disc paths start in the folder holding `config.yaml`.
 
 The engine builds a catalogue of every image it can see: the files named by the
 three per-game keys plus every `*.gen`, `*.bin` or `*.md` file in
@@ -246,8 +246,8 @@ costs a few header reads at startup.
 | `SONIC_1_ROM` | `roms.sonic1` | string | `"s1.gen"` | Explicit image for Sonic 1. May name any image that contains it, including an S&K + Sonic 1 lock-on dump. Blank, or the default name when that file is absent, means the catalogue scan applies; any other missing file is an error. |
 | `SONIC_2_ROM` | `roms.sonic2` | string | `"s2.gen"` | Explicit image for Sonic 2. May name any image that contains it, including an S&K + Sonic 2 lock-on dump. Blank, or the default name when that file is absent, means the catalogue scan applies; any other missing file is an error. |
 | `SONIC_3K_ROM` | `roms.sonic3k` | string | `"s3k.gen"` | Explicit image for Sonic 3 & Knuckles: a 4 MiB lock-on dump. Blank, or the default name when that file is absent, means the catalogue scan applies (including the Sonic 3 + Sonic & Knuckles composite); any other missing file is an error. |
-| `SONIC_CD_DISC` | `roms.soniccd` | string | `""` | Path of the Sonic CD (USA) disc image, relative to the working directory: its `.cue` sheet with the 35 track files beside it, or a lossless `.chd` made from them with MAME's chdman (CHD v5, codecs `cdzl`, `cdlz`, `cdfl`, `cdzs` or none). Blank means the disc is found by its header in `roms.directory` and two sub-folders below. A path that is not the USA disc is refused, not replaced by the search. |
-| `ROMS_DIRECTORY` | `roms.directory` | string | `"."` | Directory scanned for images (`*.gen`, `*.bin`, `*.md`), relative to the working directory. A Sonic CD disc image (`*.cue` with its tracks, or `*.chd`) is found here or up to two sub-folders down. |
+| `SONIC_CD_DISC` | `roms.soniccd` | string | `""` | Path of the Sonic CD (USA) disc image, relative to the folder holding `config.yaml`: its `.cue` sheet with the 35 track files beside it, or a lossless `.chd` made from them with MAME's chdman (CHD v5, codecs `cdzl`, `cdlz`, `cdfl`, `cdzs` or none). Blank means the disc is found by its header in `roms.directory` and two sub-folders below. A path that is not the USA disc is refused, not replaced by the search. |
+| `ROMS_DIRECTORY` | `roms.directory` | string | `"."` | Directory scanned for images (`*.gen`, `*.bin`, `*.md`), relative to the folder holding `config.yaml`. A Sonic CD disc image (`*.cue` with its tracks, or `*.chd`) is found here or up to two sub-folders down. |
 | `ROMS_PREFER_COMPOSITE` | `roms.preferComposite` | bool | `false` | When true, a Sonic 3 & Knuckles assembled from separate Sonic 3 and Sonic & Knuckles images is preferred over a single lock-on dump. |
 
 ### Image identity
@@ -289,7 +289,7 @@ A player's Sonic CD disc is resolved in this order, first match wins:
 1. the `soniccd.media.root` system property below (tests and tools), else the
    `soniccd.disc.path` system property;
 2. `roms.soniccd` (`SONIC_CD_DISC`), the path of the disc's `.cue` sheet or `.chd`;
-3. when that key is blank, the ROM folder (`roms.directory`, default the working
+3. when that key is blank, the ROM folder (`roms.directory`, default the config
    directory) and up to two sub-folders below it: the `.cue` sheet or `.chd` whose data track
    carries the USA release's header (sheets are probed before CHDs).
 

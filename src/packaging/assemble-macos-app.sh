@@ -96,14 +96,14 @@ export DYLD_LIBRARY_PATH="${DIR}${DYLD_LIBRARY_PATH:+:$DYLD_LIBRARY_PATH}"
 LAUNCHER
 chmod +x "${APP_BUNDLE}/Contents/MacOS/${APP_NAME}"
 
-# Copy config.yaml next to the .app bundle so it can be edited without rebuilding
-CONFIG_SRC="$(cd "$(dirname "${BINARY}")" && pwd)/config.yaml"
-CONFIG_DST="$(cd "${OUTPUT_DIR}" && pwd)/config.yaml"
+# Put the settings reference next to the .app bundle.
+CONFIG_SRC="$(cd "$(dirname "${BINARY}")" && pwd)/config.yaml.example"
+CONFIG_DST="$(cd "${OUTPUT_DIR}" && pwd)/config.yaml.example"
 if [ -f "${CONFIG_SRC}" ] && [ "${CONFIG_SRC}" != "${CONFIG_DST}" ]; then
     cp "${CONFIG_SRC}" "${CONFIG_DST}"
-    echo "Exported config.yaml to ${OUTPUT_DIR}/"
+    echo "Exported config.yaml.example to ${OUTPUT_DIR}/"
 elif [ -f "${CONFIG_DST}" ]; then
-    echo "config.yaml already present in ${OUTPUT_DIR}/"
+    echo "config.yaml.example already present in ${OUTPUT_DIR}/"
 fi
 
 # Build the bundle icon from the same packaged PNG used by direct JAR launches.

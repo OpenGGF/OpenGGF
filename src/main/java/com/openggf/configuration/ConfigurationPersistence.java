@@ -1,6 +1,7 @@
 package com.openggf.configuration;
 
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.Map;
 import java.util.Objects;
 
@@ -14,6 +15,11 @@ public final class ConfigurationPersistence {
      */
     public static boolean loadedExistingFile(SonicConfigurationService config) {
         return Objects.requireNonNull(config, "config").loadedFromExistingFile();
+    }
+
+    /** Directory containing the active config, even before it has been written. */
+    public static Path configDirectory(SonicConfigurationService config) {
+        return Objects.requireNonNull(config, "config").configDirectory();
     }
 
     /** Publish the candidate file before exposing any changes to live configuration readers. */

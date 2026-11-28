@@ -1,6 +1,7 @@
 package com.openggf.game;
 
 import com.openggf.i18n.UiMessages;
+import com.openggf.configuration.ConfigurationPersistence;
 import com.openggf.configuration.EngineSettingsDraft;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
@@ -14,6 +15,7 @@ import com.openggf.graphics.PixelFont;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.concurrent.ExecutionException;
 
 /** Select and identify a user-supplied image before atomically saving its location. */
 public final class MenuRomLocator {
@@ -38,7 +40,7 @@ public final class MenuRomLocator {
         draft = new EngineSettingsDraft(config);
         lastPath = config.getString(game.romConfigKey);
         if (lastPath == null || lastPath.isBlank()) lastPath = config.getString(SonicConfiguration.ROMS_DIRECTORY);
-        if (lastPath == null) lastPath = "";
+        lastPath = ConfigurationPersistence.configDirectory(config).resolve(lastPath).normalize().toString();
         browse();
     }
 
@@ -86,16 +88,23 @@ public final class MenuRomLocator {
             if (!validation.done()) return;
             try {
                 validated = validation.result();
-                draft.set(game.romConfigKey, validated.toString());
-                save();
-            } catch (Exception e) {
-                Throwable failure = e instanceof java.util.concurrent.ExecutionException ? e.getCause() : e;
-                incompatible = failure instanceof IncompatibleImageException;
-                error = incompatible ? UiMessages.text("menu.rom.wrong_game", java.util.Map.of("game", game.menuLabel.toUpperCase(UiMessages.locale())))
+            } catch (ExecutionException failure) {
+                if (!(failure.getCause() instanceof IOException unreadable))
+                    throw new IllegalStateException("ROM identification failed", failure.getCause());
+                incompatible = unreadable instanceof IncompatibleImageException;
+                if (unreadable instanceof UnsupportedFormatException unsupported) error = unsupported.getMessage();
+                else error = incompatible ? UiMessages.text("menu.rom.wrong_game", java.util.Map.of("game", game.menuLabel.toUpperCase(UiMessages.locale())))
                         : UiMessages.text("menu.rom.could_not_read_this_rom_file");
                 MenuFeedback.emit(MenuFeedback.Cue.CANCEL);
+                validation = null;
+                return;
+            } catch (InterruptedException interrupted) {
+                Thread.currentThread().interrupt();
+                throw new IllegalStateException("Interrupted while collecting ROM identification", interrupted);
             }
             validation = null;
+            draft.set(game.romConfigKey, validated.toString());
+            save();
             return;
         }
         if (error != null && (MenuInput.textAccept(input)
@@ -122,9 +131,20 @@ public final class MenuRomLocator {
         Path path = selection.toAbsolutePath().normalize();
         if (!Files.isRegularFile(path)) throw new IOException(UiMessages.text("menu.rom.choose_a_rom_file"));
         var identity = RomGame.valueOf(game.gameId.toUpperCase(java.util.Locale.ROOT)).identity();
-        if (RomImageClassifier.windowOf(PhysicalImage.probe(path), identity).isEmpty())
+        var image = PhysicalImage.probe(path);
+        if (RomImageClassifier.windowOf(image, identity).isEmpty()) {
+            var format = MenuGameOnboarding.UnsupportedFormat.of(path);
+            if (format.isPresent() && RomImageClassifier.layoutOf(image).isEmpty())
+                throw new UnsupportedFormatException(format.get());
             throw new IncompatibleImageException(game.menuLabel);
+        }
         return path;
+    }
+
+    private static final class UnsupportedFormatException extends IOException {
+        UnsupportedFormatException(MenuGameOnboarding.UnsupportedFormat format) {
+            super(format.message());
+        }
     }
 
     static final class IncompatibleImageException extends IOException {

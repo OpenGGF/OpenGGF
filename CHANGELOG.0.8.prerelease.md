@@ -63,7 +63,13 @@ under the matching area heading; see the
   settings and opens Time Attack rooms or Sonic 2's two-player mode. Upgrades
   keep their games and settings unless a listed change is accepted. It opens
   once per run until finished or skipped, and again from **Extras › Setup guide**.
-  Its text is a machine draft in every shipped language, awaiting native review.
+  Native archives ship a settings example so the first launch recommends
+  Balanced. Relative ROM and disc paths resolve from the settings folder.
+  The guide warns about unrecognised cartridge versions while keeping them
+  playable, and explains what to do with ZIP, 7z and interleaved SMD files.
+  The startup disclaimer is on by default and its toggle appears with the
+  startup options at the top of **Settings › Gameplay**. Guide translations
+  are machine drafts awaiting native review, with English fallback for new hints.
 
 - **Live rewind refills are visible:** when a checkpoint, act, zone or lost life
   refills spent rewind time, the REW plate appears and its meter and seconds fill

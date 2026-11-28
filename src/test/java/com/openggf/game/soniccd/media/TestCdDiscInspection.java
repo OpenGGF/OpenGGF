@@ -1,9 +1,12 @@
 package com.openggf.game.soniccd.media;
 
+import com.openggf.configuration.SonicConfiguration;
+import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.internal.HostedGameMedia.MediaKind;
 import com.openggf.game.soniccd.CdReleaseVariant;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.parallel.Isolated;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -21,8 +24,27 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * track's header, no hashing), by kind rather than by parsing messages. Synthetic discs carry only generated
  * metadata ({@link SyntheticProgramDisc}); no disc content is needed.
  */
+@Isolated
 class TestCdDiscInspection {
     @TempDir Path dir;
+
+    @Test void relativeDiscPathAndScanUseTheActiveConfigDirectory() throws IOException {
+        Path cue = SyntheticProgramDisc.write(dir.resolve("games/usa"), CdReleaseVariant.USA);
+        var config = SonicConfigurationService.createStandalone(dir);
+        config.setConfigValue(SonicConfiguration.ROMS_DIRECTORY, "games");
+        config.setConfigValue(SonicConfiguration.SONIC_CD_DISC, dir.relativize(cue).toString());
+
+        String root = System.clearProperty(CdHostedMedia.MEDIA_ROOT_PROPERTY);
+        String disc = System.clearProperty(CdHostedMedia.DISC_PATH_PROPERTY);
+        try {
+            assertEquals(cue, CdDiscLocator.locate(config).disc().orElseThrow());
+            config.setConfigValue(SonicConfiguration.SONIC_CD_DISC, "");
+            assertEquals(cue, CdDiscLocator.locate(config).disc().orElseThrow());
+        } finally {
+            if (root != null) System.setProperty(CdHostedMedia.MEDIA_ROOT_PROPERTY, root);
+            if (disc != null) System.setProperty(CdHostedMedia.DISC_PATH_PROPERTY, disc);
+        }
+    }
 
     @Test void aCompleteUsaSheetIsReadyButOnlyIdentified() throws IOException {
         Path cue = SyntheticProgramDisc.write(dir.resolve("usa"), CdReleaseVariant.USA);

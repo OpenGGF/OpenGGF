@@ -1,6 +1,7 @@
 package com.openggf.game;
 
 import com.openggf.i18n.UiMessages;
+import com.openggf.configuration.ConfigurationPersistence;
 import com.openggf.configuration.EngineSettingsDraft;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
@@ -8,6 +9,7 @@ import com.openggf.control.InputHandler;
 import com.openggf.control.MenuInput;
 import com.openggf.data.PhysicalImage;
 import com.openggf.data.RomGame;
+import com.openggf.data.RomImageCatalogue.Part;
 import com.openggf.data.RomImageClassifier;
 import com.openggf.graphics.PixelFont;
 
@@ -21,6 +23,7 @@ import java.util.EnumSet;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 
 /** First-run game discovery. All reads are cancellable; settings publish only on the UI thread. */
 public final class MenuGameOnboarding {
@@ -78,28 +81,44 @@ public final class MenuGameOnboarding {
         }
         if (discovery != null) {
             if (!discovery.done()) return;
+            DiscoveryResult result;
             try {
-                DiscoveryResult result = discovery.result();
-                found = result.games();
-                scanNotice = result.notice();
-                if (found.isEmpty()) message = scanning ? UiMessages.text("menu.onboarding.no_supported_games_found") : UiMessages.text("menu.onboarding.not_a_supported_rom_image");
-                else {
-                    EngineSettingsDraft draft = new EngineSettingsDraft(config);
-                    for (var entry : found.entrySet()) draft.set(entry.getKey().configurationKey(), entry.getValue().toString());
-                    Path first = found.values().iterator().next();
-                    draft.set(SonicConfiguration.ROMS_DIRECTORY, first.getParent().toString());
-                    try { draft.apply(); }
-                    catch (IOException | IllegalArgumentException e) {
-                        found = Map.of();
-                        message = UiMessages.text("menu.onboarding.could_not_save_check_settings_file_access");
-                        discovery = null;
-                        return;
-                    }
-                    message = UiMessages.text("menu.onboarding.games_added", java.util.Map.of("count", found.size()));
-                    MenuFeedback.emit(MenuFeedback.Cue.CONFIRM);
+                result = discovery.result();
+            } catch (ExecutionException failure) {
+                if (!(failure.getCause() instanceof IOException))
+                    throw new IllegalStateException("Game discovery failed", failure.getCause());
+                found = Map.of();
+                scanNotice = UiMessages.text("menu.onboarding.check_access_or_choose_another_location");
+                message = scanning ? UiMessages.text("menu.onboarding.could_not_read_this_folder")
+                        : UiMessages.text("menu.onboarding.could_not_read_this_file");
+                discovery = null;
+                return;
+            } catch (InterruptedException interrupted) {
+                Thread.currentThread().interrupt();
+                throw new IllegalStateException("Interrupted while collecting game discovery", interrupted);
+            }
+            found = result.games();
+            String formatNotice = result.formatNotice();
+            scanNotice = formatNotice == null ? result.notice() : formatNotice;
+            if (found.isEmpty()) {
+                message = formatNotice != null ? null : scanning
+                        ? UiMessages.text("menu.onboarding.no_supported_games_found")
+                        : UiMessages.text("menu.onboarding.not_a_supported_rom_image");
+            } else {
+                EngineSettingsDraft draft = new EngineSettingsDraft(config);
+                for (var entry : found.entrySet()) draft.set(entry.getKey().configurationKey(), entry.getValue().toString());
+                Path first = found.values().iterator().next();
+                draft.set(SonicConfiguration.ROMS_DIRECTORY, first.getParent().toString());
+                try { draft.apply(); }
+                catch (IOException | IllegalArgumentException e) {
+                    found = Map.of();
+                    message = UiMessages.text("menu.onboarding.could_not_save_check_settings_file_access");
+                    discovery = null;
+                    return;
                 }
-            } catch (Exception e) { found = Map.of(); scanNotice = UiMessages.text("menu.onboarding.check_access_or_choose_another_location");
-                message = scanning ? UiMessages.text("menu.onboarding.could_not_read_this_folder") : UiMessages.text("menu.onboarding.could_not_read_this_file"); }
+                message = UiMessages.text("menu.onboarding.games_added", java.util.Map.of("count", found.size()));
+                MenuFeedback.emit(MenuFeedback.Cue.CONFIRM);
+            }
             discovery = null;
             return;
         }
@@ -117,7 +136,8 @@ public final class MenuGameOnboarding {
         if (MenuInput.textUp(input) || MenuInput.textDown(input)) { choice = 1 - choice; MenuFeedback.emit(MenuFeedback.Cue.NAVIGATE); }
         if (MenuInput.textAccept(input) || click) {
             scanning = choice == 1;
-            String initial = config.getString(SonicConfiguration.ROMS_DIRECTORY);
+            String initial = ConfigurationPersistence.configDirectory(config)
+                    .resolve(config.getString(SonicConfiguration.ROMS_DIRECTORY)).normalize().toString();
             browser = scanning ? MenuPathBrowser.folder(initial, UiMessages.text("menu.onboarding.scan_folder_caps"), UiMessages.text("menu.onboarding.choose_a_folder_containing_your_games"))
                     : new MenuPathBrowser(initial, true, UiMessages.text("menu.onboarding.locate_game_caps"), UiMessages.text("menu.onboarding.choose_a_rom_file_any_filename"));
             message = null;
@@ -126,20 +146,54 @@ public final class MenuGameOnboarding {
         }
     }
 
+    enum UnsupportedFormat {
+        ARCHIVE, SMD;
+
+        String message() {
+            return switch (this) {
+                case ARCHIVE -> UiMessages.text("menu.onboarding.compressed_archive");
+                case SMD -> UiMessages.text("menu.onboarding.interleaved_smd");
+            };
+        }
+
+        static java.util.Optional<UnsupportedFormat> of(Path path) {
+            String name = path.getFileName().toString().toLowerCase(java.util.Locale.ROOT);
+            if (name.endsWith(".zip") || name.endsWith(".7z")) return java.util.Optional.of(ARCHIVE);
+            if (name.endsWith(".smd")) return java.util.Optional.of(SMD);
+            return java.util.Optional.empty();
+        }
+    }
+
     /** Uses the runtime classifier, including logical games within lock-on images; extensions never gate identity. */
-    record DiscoveryResult(Map<RomGame, Path> games, boolean limitReached, boolean unreadable) {
-        DiscoveryResult { games = java.util.Collections.unmodifiableMap(new EnumMap<>(games)); }
+    record DiscoveryResult(Map<RomGame, Part> parts, boolean limitReached, boolean unreadable,
+                           java.util.Set<UnsupportedFormat> unsupported) {
+        DiscoveryResult {
+            parts = java.util.Collections.unmodifiableMap(new EnumMap<>(parts));
+            unsupported = java.util.Set.copyOf(unsupported);
+        }
+
+        Map<RomGame, Path> games() {
+            Map<RomGame, Path> paths = new EnumMap<>(RomGame.class);
+            parts.forEach((game, part) -> paths.put(game, part.image().path()));
+            return java.util.Collections.unmodifiableMap(paths);
+        }
+
+        String formatNotice() {
+            return unsupported.isEmpty() ? null : unsupported.stream().sorted()
+                    .map(UnsupportedFormat::message).collect(java.util.stream.Collectors.joining("\n"));
+        }
+
         /**
          * What the scan could not cover, said only when it matters: once every supported game is
          * found, nothing the scan skipped can add another, so there is no notice. The scan stops
          * after 20,000 entries or eight folders deep; unreadable files and folders are skipped.
          */
         String notice() {
-            if (games.size() == RomGame.values().length || !limitReached && !unreadable) return null;
+            if (parts.size() == RomGame.values().length || !limitReached && !unreadable) return null;
             if (limitReached && unreadable) return "Stopped early, skipped unreadable files; "
-                    + (games.isEmpty() ? "scan their folder" : "scan the rest");
-            if (limitReached) return "Stopped early; " + (games.isEmpty() ? "scan the folder that holds them" : "scan the folder with the rest");
-            return games.isEmpty() ? "Some files could not be read; check access to them"
+                    + (parts.isEmpty() ? "scan their folder" : "scan the rest");
+            if (limitReached) return "Stopped early; " + (parts.isEmpty() ? "scan the folder that holds them" : "scan the folder with the rest");
+            return parts.isEmpty() ? "Some files could not be read; check access to them"
                     : "Skipped files that could not be read; check access to them";
         }
     }
@@ -149,8 +203,12 @@ public final class MenuGameOnboarding {
     }
 
     static DiscoveryResult discover(Path selection, boolean folder, int maxEntries) throws IOException {
-        Map<RomGame, Path> result = new EnumMap<>(RomGame.class);
-        if (!folder) { identify(selection, result); return new DiscoveryResult(result, false, false); }
+        Map<RomGame, Part> result = new EnumMap<>(RomGame.class);
+        var unsupported = EnumSet.noneOf(UnsupportedFormat.class);
+        if (!folder) {
+            identify(selection, result, unsupported);
+            return new DiscoveryResult(result, false, false, unsupported);
+        }
         if (!Files.isDirectory(selection)) throw new IOException(UiMessages.text("menu.onboarding.choose_a_folder"));
         // No directory symlinks. Limits and denied subtrees preserve discoveries already made.
         boolean[] limited = {false};
@@ -175,7 +233,7 @@ public final class MenuGameOnboarding {
                         if (next == FileVisitResult.TERMINATE) return next;
                         if (attrs.isDirectory()) limited[0] = true; // Maximum walk depth reached.
                         if (attrs.isRegularFile()) {
-                            try { identify(path, result); }
+                            try { identify(path, result, unsupported); }
                             catch (IOException | SecurityException failure) { unreadable[0] = true; }
                         }
                         return result.size() == RomGame.values().length ? FileVisitResult.TERMINATE : FileVisitResult.CONTINUE;
@@ -193,15 +251,22 @@ public final class MenuGameOnboarding {
                         return FileVisitResult.CONTINUE;
                     }
                 });
-        return new DiscoveryResult(result, limited[0], unreadable[0]);
+        return new DiscoveryResult(result, limited[0], unreadable[0], unsupported);
     }
 
-    private static void identify(Path path, Map<RomGame, Path> result) throws IOException {
+    private static void identify(Path path, Map<RomGame, Part> result, EnumSet<UnsupportedFormat> unsupported)
+            throws IOException {
         if (!Files.isRegularFile(path)) throw new IOException(UiMessages.text("menu.onboarding.choose_a_rom_file"));
         // Probe just sizes and headers, exactly as MenuRomLocator and the runtime catalogue do.
         PhysicalImage image = PhysicalImage.probe(path);
-        for (RomGame game : RomGame.values()) if (RomImageClassifier.windowOf(image, game.identity()).isPresent())
-            result.putIfAbsent(game, path.toAbsolutePath().normalize());
+        boolean recognised = false;
+        for (RomGame game : RomGame.values()) {
+            var window = RomImageClassifier.windowOf(image, game.identity());
+            if (window.isEmpty()) continue;
+            result.putIfAbsent(game, new Part(game.identity(), image, window.get().offset(), window.get().length()));
+            recognised = true;
+        }
+        if (!recognised) UnsupportedFormat.of(path).ifPresent(unsupported::add);
     }
 
     public boolean completed() { return completed; }
@@ -387,7 +452,7 @@ public final class MenuGameOnboarding {
     }
 
     private void text(PixelFont font, String value, int y, int pixels, float[] color) {
-        String shown = MenuStyle.pageText(MenuStyle.language(font), value, pixels, MenuStyle.COMPACT, frame);
+        String shown = MenuStyle.pageText(MenuStyle.language(font), value.replace('\n', ' '), pixels, MenuStyle.COMPACT, frame);
         MenuChrome.compact(font, shown, (width - MenuChrome.compactWidth(shown)) / 2, y, color);
     }
 }

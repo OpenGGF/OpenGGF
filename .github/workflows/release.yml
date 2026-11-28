@@ -342,7 +342,7 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force -Path "$env:DISTRIBUTION_ROOT/OpenGGF"
           Copy-Item "$env:BUILD_ROOT/OpenGGF.exe" "$env:DISTRIBUTION_ROOT/OpenGGF/"
-          Copy-Item "$env:BUILD_ROOT/config.yaml" "$env:DISTRIBUTION_ROOT/OpenGGF/"
+          Copy-Item "$env:BUILD_ROOT/config.yaml.example" "$env:DISTRIBUTION_ROOT/OpenGGF/"
           Copy-Item "$env:BUILD_ROOT/*.dll" "$env:DISTRIBUTION_ROOT/OpenGGF/"
           Copy-Item LICENSE, NOTICE.md, CREDITS.md "$env:DISTRIBUTION_ROOT/OpenGGF/"
           Copy-Item -Recurse LICENSES "$env:DISTRIBUTION_ROOT/OpenGGF/LICENSES"
@@ -362,7 +362,7 @@ jobs:
           cp LICENSE NOTICE.md CREDITS.md "$DISTRIBUTION_ROOT/"
           cp -R LICENSES "$DISTRIBUTION_ROOT/LICENSES"
           cd "$DISTRIBUTION_ROOT"
-          zip -r OpenGGF-macos.zip OpenGGF.app config.yaml LICENSE LICENSES NOTICE.md CREDITS.md
+          zip -r OpenGGF-macos.zip OpenGGF.app config.yaml.example LICENSE LICENSES NOTICE.md CREDITS.md
           rm -rf OpenGGF.app LICENSES
 
       - name: Package (Linux)
@@ -375,7 +375,7 @@ jobs:
         run: |
           mkdir -p "$DISTRIBUTION_ROOT/OpenGGF"
           cp "$BUILD_ROOT/OpenGGF" "$DISTRIBUTION_ROOT/OpenGGF/"
-          cp "$BUILD_ROOT/config.yaml" "$DISTRIBUTION_ROOT/OpenGGF/"
+          cp "$BUILD_ROOT/config.yaml.example" "$DISTRIBUTION_ROOT/OpenGGF/"
           cp "$BUILD_ROOT"/*.so "$DISTRIBUTION_ROOT/OpenGGF/"
           cp LICENSE NOTICE.md CREDITS.md "$DISTRIBUTION_ROOT/OpenGGF/"
           cp -R LICENSES "$DISTRIBUTION_ROOT/OpenGGF/LICENSES"
@@ -414,6 +414,10 @@ jobs:
           def fail(message):
               print(f"::error ::{message}", file=sys.stderr)
               sys.exit(1)
+
+          def require_fresh_install(archive_path, names):
+              if any(Path(name).name == "config.yaml" for name in names):
+                  fail(f"{archive_path} includes an active config.yaml and would start as an upgrade")
 
           # Every native package carries the same pinned first-party jars and CE notices.
           def require_bundled(archive_path, names):
@@ -469,7 +473,7 @@ jobs:
                   fail(f"Missing Windows archive: {archive_path}")
               with zipfile.ZipFile(archive_path) as archive:
                   names = set(archive.namelist())
-              required = {"OpenGGF/OpenGGF.exe", "OpenGGF/config.yaml"} | {f"OpenGGF/{name}" for name in LICENCE_FILES}
+              required = {"OpenGGF/OpenGGF.exe", "OpenGGF/config.yaml.example"} | {f"OpenGGF/{name}" for name in LICENCE_FILES}
               missing = sorted(required - names)
               if missing:
                   fail(f"{archive_path} is missing required entries: {', '.join(missing)}")
@@ -486,7 +490,7 @@ jobs:
                       "OpenGGF.app/Contents/Info.plist",
                       "OpenGGF.app/Contents/MacOS/OpenGGF",
                       "OpenGGF.app/Contents/MacOS/OpenGGF.bin",
-                      "config.yaml",
+                      "config.yaml.example",
                   } | LICENCE_FILES
                   missing = sorted(required - names)
                   if missing:
@@ -509,7 +513,7 @@ jobs:
                   fail(f"Missing Linux archive: {archive_path}")
               with tarfile.open(archive_path, "r:gz") as archive:
                   members = {member.name: member for member in archive.getmembers()}
-              required = {"OpenGGF/OpenGGF", "OpenGGF/config.yaml"} | {f"OpenGGF/{name}" for name in LICENCE_FILES}
+              required = {"OpenGGF/OpenGGF", "OpenGGF/config.yaml.example"} | {f"OpenGGF/{name}" for name in LICENCE_FILES}
               missing = sorted(required - set(members))
               if missing:
                   fail(f"{archive_path} is missing required entries: {', '.join(missing)}")
@@ -521,6 +525,7 @@ jobs:
           else:
               fail(f"Unknown release platform: {platform}")
 
+          require_fresh_install(archive_path, members if platform == "linux" else names)
           print(f"Smoke validated {platform} release artifact for version {version}")
           PY
 

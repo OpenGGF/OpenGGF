@@ -30,7 +30,8 @@ class LinuxPackageTests(unittest.TestCase):
             payload = b"#!/bin/sh\nexit 0\n"
             executable.write_bytes(payload)
             executable.chmod(0o755)
-            (build / "config.yaml").write_text("{}\n", encoding="utf-8")
+            (build / "config.yaml.example").write_text("# Settings reference\n", encoding="utf-8")
+            (build / "config.yaml").write_text("startup: {legalDisclaimer: false}\n", encoding="utf-8")
             (build / "native-libs/liblwjgl.so").write_bytes(b"native fixture")
             (build / "liblwjgl.so").write_bytes(b"native fixture")
             (build / "libjvm.so").write_bytes(b"runtime-loading support fixture")
@@ -55,7 +56,7 @@ class LinuxPackageTests(unittest.TestCase):
             # This is the location consumed by both artifact validation and upload.
             with tarfile.open(project / "target/OpenGGF-linux.tar.gz", "r:gz") as archive:
                 required = {
-                    "OpenGGF/OpenGGF", "OpenGGF/config.yaml", "OpenGGF/liblwjgl.so",
+                    "OpenGGF/OpenGGF", "OpenGGF/config.yaml.example", "OpenGGF/liblwjgl.so",
                     "OpenGGF/LICENSE", "OpenGGF/NOTICE.md", "OpenGGF/CREDITS.md",
                     "OpenGGF/LICENSES/LGPL-2.1.txt",
                     "OpenGGF/libjvm.so", "OpenGGF/bundled/time-attack-1.0.0.jar",
@@ -63,6 +64,8 @@ class LinuxPackageTests(unittest.TestCase):
                     "OpenGGF/LICENSES/GraalVM/legal/fixture.txt",
                 }
                 self.assertTrue(required.issubset(archive.getnames()))
+                self.assertNotIn("OpenGGF/config.yaml", archive.getnames())
+                self.assertEqual(archive.extractfile("OpenGGF/config.yaml.example").read(), b"# Settings reference\n")
                 self.assertEqual(archive.extractfile("OpenGGF/OpenGGF").read(), payload)
                 self.assertEqual(archive.extractfile("OpenGGF/libjvm.so").read(),
                                  b"runtime-loading support fixture")

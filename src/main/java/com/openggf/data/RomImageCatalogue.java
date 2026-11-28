@@ -1,5 +1,6 @@
 package com.openggf.data;
 
+import com.openggf.configuration.ConfigurationPersistence;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.data.RomImageClassifier.LogicalWindow;
@@ -59,6 +60,10 @@ public final class RomImageCatalogue {
             return offset == 0 && length == image.size();
         }
 
+        public boolean verified() {
+            return isVerified(this);
+        }
+
         @Override
         public String toString() {
             return rom + " from " + image.path().getFileName()
@@ -80,6 +85,11 @@ public final class RomImageCatalogue {
         public Optional<Path> wholeImagePath() {
             return parts.size() == 1 && parts.get(0).wholeImage()
                     ? Optional.of(parts.get(0).image().path()) : Optional.empty();
+        }
+
+        /** Whether every logical window in this resolution matches a known dump. */
+        public boolean verified() {
+            return parts.stream().allMatch(Part::verified);
         }
 
         /** A key that changes when any contributing file changes on disk. */
@@ -139,9 +149,9 @@ public final class RomImageCatalogue {
         this.preferComposite = preferComposite;
     }
 
-    /** Builds the catalogue from the configuration and the process working directory. */
-    public static RomImageCatalogue forCurrentWorkingDirectory(SonicConfigurationService configuration) {
-        return build(configuration, RomLocationResolver.currentWorkingDirectory());
+    /** Builds the catalogue with paths relative to the active configuration file. */
+    public static RomImageCatalogue forConfiguration(SonicConfigurationService configuration) {
+        return build(configuration, ConfigurationPersistence.configDirectory(configuration));
     }
 
     /**
@@ -311,7 +321,7 @@ public final class RomImageCatalogue {
         }
         if (candidates.size() > 1) {
             for (Part candidate : candidates) {
-                if (isVerified(candidate)) {
+                if (candidate.verified()) {
                     LOGGER.info("Several images contain " + rom + "; choosing the verified " + candidate);
                     return Optional.of(new Resolution(rom, List.of(candidate), Source.VERIFIED_IMAGE));
                 }
@@ -344,6 +354,9 @@ public final class RomImageCatalogue {
     }
 
     private static boolean isVerified(Part part) {
+        if (RomIdentityTable.knownImages(part.rom()).stream().noneMatch(known -> known.size() == part.length())) {
+            return false;
+        }
         try {
             return RomIdentityTable.verify(part.rom(),
                     part.image().fingerprint(part.offset(), part.length())).isPresent();

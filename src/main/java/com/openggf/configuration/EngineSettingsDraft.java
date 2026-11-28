@@ -23,9 +23,9 @@ public final class EngineSettingsDraft {
     private static final Map<Category, List<SonicConfiguration>> CATEGORY_KEYS = new EnumMap<>(Category.class);
     static {
         for (Category category : Category.values()) {
-            // Stable sort: within Controls, player bindings come before engine shortcuts.
+            // Stable sort: startup first on Gameplay, and player bindings first on Controls.
             CATEGORY_KEYS.put(category, ConfigCatalog.emitOrder().stream().filter(k -> k != SonicConfiguration.LIVE_REWIND_ENABLED).filter(k -> category(k) == category && !ConfigCatalog.meta(k).section().startsWith("hub"))
-                    .sorted(java.util.Comparator.comparingInt(k -> controlGroupOrder(k)))
+                    .sorted(java.util.Comparator.comparingInt(k -> pageOrder(k)))
                     .toList());
         }
     }
@@ -58,8 +58,9 @@ public final class EngineSettingsDraft {
         return CATEGORY_KEYS.get(category);
     }
 
-    private static int controlGroupOrder(SonicConfiguration key) {
+    private static int pageOrder(SonicConfiguration key) {
         String section = ConfigCatalog.meta(key).section();
+        if (section.equals("startup")) return -1;
         if (section.equals("input.player1")) return 0;
         if (section.equals("input.player2")) return 1;
         if (section.equals("input.controller")) return 2;
